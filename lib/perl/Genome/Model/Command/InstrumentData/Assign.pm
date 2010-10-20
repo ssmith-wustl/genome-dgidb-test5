@@ -45,11 +45,22 @@ class Genome::Model::Command::InstrumentData::Assign {
             is => 'Text',
             valid_values => ['forward-only','reverse-only'],
         },
+        all_within_maximum_allowed_error => {
+             is => 'Boolean',
+             default => 0,
+             doc => 'Assign all available unassigned instrument data withing maximum allowed error (default = 3.0) as paired/forward/reverse data.',
+        },
+        maximum_allowed_error => {
+            type => 'Float',
+            is_optional => 1,
+            doc => "The maximum allowed gerald error rate to assign to a model",
+            default => 3.0,
+        },
         force => {
             is => 'Boolean',
             default => 0,
             doc => 'Allow assignment of data even if the subject does not match the model',
-        }
+        },
     ],
 };
 
@@ -131,6 +142,9 @@ sub execute {
             }
         }
         return 1;
+    }
+    elsif ( $self->all_within_maximum_allowed_error ) {
+        return $self->_assign_all_within_maximum_allowed_error;
     }
     elsif ( $self->all ) { # assign all
         return $self->_assign_all_instrument_data;
@@ -303,6 +317,84 @@ sub _assign_by_instrument_data_ids {
             or return;
     }
 
+    return 1;
+}
+
+sub _assign_all_within_maximum_allowed_error {
+    my $self = shift;
+
+    $self->status_message("Attempting to assign all available instrument data within maximum allowed error of " . $self->maximum_allowed_error . ".");
+
+    my $model_id = $self->model_id;
+
+    my $instdata_iterator = Genome::InstrumentData->create_iterator(
+        where => [ id => [ map { $_->id } $self->model->unassigned_instrument_data ] ],
+    );
+
+    # add as all if fwderr is null. Assuming fragment run if this is the case
+    my (@allin, @reverse, @forward);
+    while (my $instdata = <$instdata_iterator>) {
+        my $instdata_id = $instdata->id;
+        my $flowcell    = $instdata->flow_cell_id;
+        my $lane        = $instdata->subset_name;
+        my $libname     = $instdata->library_name;
+        my $reverr      = $instdata->filt_error_rate_avg;
+        my $fwderr      = $instdata->fwd_filt_error_rate_avg;
+        if(($reverr < $self->maximum_allowed_error) && ($fwderr eq '<NULL>' || ($fwderr < $self->maximum_allowed_error))) {
+            push(@allin, $instdata_id);
+        }
+        elsif($reverr < $self->maximum_allowed_error) {
+            push(@reverse, $instdata_id);
+            $self->status_message("Excluding forward read of $flowcell lane $lane with id $instdata_id due to error rate of $fwderr%"); 
+        }
+        elsif($fwderr ne '<NULL>' && $fwderr < $self->maximum_allowed_error) {
+            push(@forward, $instdata_id);
+            $self->status_message("Excluding reverse read of $flowcell lane $lane with id $instdata_id due to error rate of $reverr%"); 
+        }
+        else {
+            my $error_report_string = $fwderr eq '<NULL>' ? "($reverr%)" : "($fwderr%, $reverr%)";
+            $self->status_message("Excluding $flowcell lane $lane with id $instdata_id due to error rate $error_report_string");
+        }
+    }
+
+    #report how many lanes of each type were found
+    $self->status_message(sprintf("%d all good\n",scalar(@allin)));
+    $self->status_message(sprintf("%d forward only\n",scalar(@forward)));
+    $self->status_message(sprintf("%d reverse only\n",scalar(@reverse)));
+
+    #add in the new data
+    if($self->add) {    
+        # TODO: should assign data rather than calling a new command
+        if(@allin) {
+            my $add_instdata = Genome::Model::Command::InstrumentData::Assign->create(
+                model_id => $model_id,
+                instrument_data_ids => \@allin,
+            );
+            unless ($add_instdata->execute) {
+                $self->error_message("Failed to add instrument data to model $model_id for IDs (" . join(", ", @allin) . ").");
+            }
+        }
+        if(@forward) {
+            my $add_instdata = Genome::Model::Command::InstrumentData::Assign->create(
+                model_id => $model_id,
+                instrument_data_ids => \@allin,
+                filter => 'forward-only',
+            );
+            unless ($add_instdata->execute) {
+                $self->error_message("Failed to add instrument data to model $model_id for IDs (" . join(", ", @allin) . ").");
+            }
+        }
+        if(@reverse) {
+            my $add_instdata = Genome::Model::Command::InstrumentData::Assign->create(
+                model_id => $model_id,
+                instrument_data_ids => \@allin,
+                filter => 'reverse-only',
+            );
+            unless ($add_instdata->execute) {
+                $self->error_message("Failed to add instrument data to model $model_id for IDs (" . join(", ", @allin) . ").");
+            }
+        }
+    }
     return 1;
 }
 

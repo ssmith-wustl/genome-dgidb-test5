@@ -53,7 +53,6 @@ class Genome::FeatureList {
 
         #TODO This will point to a subclass of Genome::Feature at such point as that class exists.
         content_type => { is => 'VARCHAR2', len => 255, doc => 'The kind of features in the list' },
-        doc => 'A feature-list is, generically, a set of coördinates for some reference',
     },
     has_optional_transient => {
         #TODO These could be pre-computed and stored in the allocation rather than re-generated every time
@@ -70,7 +69,7 @@ class Genome::FeatureList {
             doc => 'The path to the temporary dumped copy of the merged post-processed BED file',
         }
     },
-
+    doc => 'A feature-list is, generically, a set of coördinates for some reference',
     data_source => 'Genome::DataSource::GMSchema',
 };
 

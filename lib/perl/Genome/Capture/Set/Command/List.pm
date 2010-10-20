@@ -12,7 +12,7 @@ class Genome::Capture::Set::Command::List {
             is_constant => 1, 
             value => 'Genome::Capture::Set',
         },
-        show => { default_value => 'id,barcode,name,status,description' },
+        show => { default_value => 'id,barcode_string,name,status,description' },
     ],
 };
 
