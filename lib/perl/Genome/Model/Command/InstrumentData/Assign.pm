@@ -333,26 +333,26 @@ sub _assign_all_within_maximum_allowed_error {
 
     # add as all if fwderr is null. Assuming fragment run if this is the case
     my (@allin, @reverse, @forward);
-    while (my $instdata = <$instdata_iterator>) {
+    while (my $instdata = $instdata_iterator->next) {
         my $instdata_id = $instdata->id;
         my $flowcell    = $instdata->flow_cell_id;
         my $lane        = $instdata->subset_name;
         my $libname     = $instdata->library_name;
         my $reverr      = $instdata->filt_error_rate_avg;
         my $fwderr      = $instdata->fwd_filt_error_rate_avg;
-        if(($reverr < $self->maximum_allowed_error) && ($fwderr eq '<NULL>' || ($fwderr < $self->maximum_allowed_error))) {
+        if(($reverr < $self->maximum_allowed_error) && (!$fwderr || ($fwderr < $self->maximum_allowed_error))) {
             push(@allin, $instdata_id);
         }
         elsif($reverr < $self->maximum_allowed_error) {
             push(@reverse, $instdata_id);
             $self->status_message("Excluding forward read of $flowcell lane $lane with id $instdata_id due to error rate of $fwderr%"); 
         }
-        elsif($fwderr ne '<NULL>' && $fwderr < $self->maximum_allowed_error) {
+        elsif($fwderr && $fwderr < $self->maximum_allowed_error) {
             push(@forward, $instdata_id);
             $self->status_message("Excluding reverse read of $flowcell lane $lane with id $instdata_id due to error rate of $reverr%"); 
         }
         else {
-            my $error_report_string = $fwderr eq '<NULL>' ? "($reverr%)" : "($fwderr%, $reverr%)";
+            my $error_report_string = !$fwderr ? "($reverr%)" : "($fwderr%, $reverr%)";
             $self->status_message("Excluding $flowcell lane $lane with id $instdata_id due to error rate $error_report_string");
         }
     }
@@ -362,37 +362,34 @@ sub _assign_all_within_maximum_allowed_error {
     $self->status_message(sprintf("%d forward only\n",scalar(@forward)));
     $self->status_message(sprintf("%d reverse only\n",scalar(@reverse)));
 
-    #add in the new data
-    if($self->add) {    
-        # TODO: should assign data rather than calling a new command
-        if(@allin) {
-            my $add_instdata = Genome::Model::Command::InstrumentData::Assign->create(
-                model_id => $model_id,
-                instrument_data_ids => \@allin,
-            );
-            unless ($add_instdata->execute) {
-                $self->error_message("Failed to add instrument data to model $model_id for IDs (" . join(", ", @allin) . ").");
-            }
+    # TODO: should assign data rather than calling a new command
+    if(@allin) {
+        my $add_instdata = Genome::Model::Command::InstrumentData::Assign->create(
+            model_id => $model_id,
+            instrument_data_ids => join(' ', @allin),
+        );
+        unless ($add_instdata->execute) {
+            $self->error_message("Failed to add instrument data to model $model_id for IDs (" . join(", ", @allin) . ").");
         }
-        if(@forward) {
-            my $add_instdata = Genome::Model::Command::InstrumentData::Assign->create(
-                model_id => $model_id,
-                instrument_data_ids => \@allin,
-                filter => 'forward-only',
-            );
-            unless ($add_instdata->execute) {
-                $self->error_message("Failed to add instrument data to model $model_id for IDs (" . join(", ", @allin) . ").");
-            }
+    }
+    if(@forward) {
+        my $add_instdata = Genome::Model::Command::InstrumentData::Assign->create(
+            model_id => $model_id,
+            instrument_data_ids => join(' ', @forward),
+            filter => 'forward-only',
+        );
+        unless ($add_instdata->execute) {
+            $self->error_message("Failed to add instrument data to model $model_id for IDs (" . join(", ", @allin) . ").");
         }
-        if(@reverse) {
-            my $add_instdata = Genome::Model::Command::InstrumentData::Assign->create(
-                model_id => $model_id,
-                instrument_data_ids => \@allin,
-                filter => 'reverse-only',
-            );
-            unless ($add_instdata->execute) {
-                $self->error_message("Failed to add instrument data to model $model_id for IDs (" . join(", ", @allin) . ").");
-            }
+    }
+    if(@reverse) {
+        my $add_instdata = Genome::Model::Command::InstrumentData::Assign->create(
+            model_id => $model_id,
+            instrument_data_ids => join(' ', @reverse),
+            filter => 'reverse-only',
+        );
+        unless ($add_instdata->execute) {
+            $self->error_message("Failed to add instrument data to model $model_id for IDs (" . join(", ", @allin) . ").");
         }
     }
     return 1;
