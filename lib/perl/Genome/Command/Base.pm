@@ -74,13 +74,14 @@ sub resolve_param_value_from_cmdline_text {
         my $arg = $param_args[$i];
         my @arg_results;
         (my $arg_display = $arg) =~ s/,/ AND /g; 
-        $self->status_message("Looking for parameters using '$arg_display'...");
 
         for my $param_class (@param_class) {
+            print STDERR "Looking for $param_class using '$arg_display'... ";
             #$self->debug_message("Trying to find $param_class...");
             %SEEN_FROM_CLASS = ();
             # call resolve_param_value_from_text without a via_method to bootstrap recursion
             @arg_results = eval{$self->resolve_param_value_from_text($arg, $param_class)};
+            print STDERR "found " . @arg_results . " result(s).\n";
         } 
         last if ($@ && !@arg_results);
 
