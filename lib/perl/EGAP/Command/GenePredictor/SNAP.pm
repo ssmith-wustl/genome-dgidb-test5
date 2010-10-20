@@ -186,6 +186,7 @@ sub _create_prediction_objects {
     my $source = $predicted_exons[0]->{source};
     my $gene_name = join('.', $current_seq_name, $source, $gene_count);
     my $transcript_name = $gene_name . '.1';
+    my $protein_name = $transcript_name . "_protein.1";
 
     # Check that we have all the exons we expect.
     # If there is only one exon, it has label Esngl. For more than one exon, the first should be 
@@ -294,11 +295,12 @@ sub _create_prediction_objects {
         coding_end => ($end - $start) + 1,
         sequence_name => $current_seq_name,
         sequence_string => $transcript_seq->seq(),
+        protein_name => $protein_name,
     );
 
     my $protein = EGAP::Protein->create(
         directory => $self->prediction_directory,
-        protein_name => $transcript_name . "_protein.1",
+        protein_name => $protein_name,
         internal_stops => $internal_stops,
         fragment => $fragment,
         transcript_name => $transcript_name,

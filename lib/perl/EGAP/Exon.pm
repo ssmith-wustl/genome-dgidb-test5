@@ -25,6 +25,20 @@ class EGAP::Exon {
         gene_name => { is => 'Text' },
         sequence_name => { is => 'Text' },
         sequence_string => { is => 'Text' },
+        transcript => {
+            calculate_from => ['directory', 'transcript_name'],
+            calculate => q|
+                my ($transcript) = EGAP::Transcript->get(directory => $directory, transcript_name => $transcript_name);
+                return $transcript;
+            |,
+        },
+        coding_gene => {
+            calculate_from => ['directory', 'gene_name'],
+            calculate => q|
+                my ($gene) = EGAP::CodingGene->get(directory => $directory, gene_name => $gene_name);
+                return $gene
+            |,
+        },
     ],
 };
 

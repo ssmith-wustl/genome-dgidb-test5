@@ -24,6 +24,20 @@ class EGAP::CodingGene {
         sequence_name => { is => 'Number' },
         start => { is => 'Number' },
         end => { is => 'Number' },
+        transcript => { 
+            calculate_from => ['directory', 'gene_name'],
+            calculate => q|
+                my ($transcript) = EGAP::Transcript->get(directory => $directory, coding_gene_name => $gene_name);
+                return $transcript;
+            |,
+        }
+        protein => {
+            calculate_from => ['directory', 'gene_name'],
+            calculate => q|
+                my ($protein) = EGAP::Protein->get(directory => $directory, gene_name => $gene_name);
+                return $protein;
+            |,
+        },
     ],
 };
 

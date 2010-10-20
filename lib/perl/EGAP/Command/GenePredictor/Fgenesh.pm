@@ -74,6 +74,7 @@ sub execute {
             my $source = $gene->source_tag();
             my $gene_name = join('.', $current_seq_name, $source, $gene_count);
             my $transcript_name = $gene_name . '.1';
+            my $protein_name = $transcript_name . "_protein.1";
             $gene_count++;
 
             my @predicted_exons = $gene->exons();
@@ -203,11 +204,12 @@ sub execute {
                 coding_end => ($end - $start) + 1,
                 sequence_name => $current_seq_name,
                 sequence_string => $transcript_seq->seq(),
+                protein_name => $protein_name,
             );
 
             my $protein = EGAP::Protein->create(
                 directory => $self->prediction_directory,
-                protein_name => $transcript_name . "_protein.1",
+                protein_name => $protein_name,
                 internal_stops => $internal_stops,
                 fragment => $fragment,
                 transcript_name => $transcript_name,
