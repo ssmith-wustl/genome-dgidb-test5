@@ -210,11 +210,11 @@ sub AddSVs{
 			     #|| ($type eq 'ITX' ) && ($size>99999) && ($f_cna<$opts{C})
 			     #|| ($type eq 'INV' ) && ($size>99999)
 			     #|| $microhomology>=200
-			     || $size<$opts{s} || $type ne $pre_type || abs($size-$pre_size)/$pre_size>$opts{z} || abs($start-$pre_pos1)>$loc_diff_cutoff
+			     || $size<$opts{s} || $type ne $pre_type || ($pre_size>0 && abs($size-$pre_size)/$pre_size>$opts{z}) || abs($start-$pre_pos1)>$loc_diff_cutoff
 			     || $wAsmscore >0 && $wAsmscore<$opts{w}
 			    )
       ){
-      printf STDERR  "%s\t%d\t%s\t%d\t%s\t%d\t%s\t%s\t%d\t%d\t%d%%\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%s\t%s\n", $chr,$start,$chr2,$end,$ori,$size,$type,$het,$wAsmscore,$read_len,$perc_aligned,$n_seg,$n_sub,$n_indel,$nbp_indel,$microhomology,$scarstr,$prestr,$asm_parm,$extra_info;
+      printf STDERR  "%s\t%s\t%d\t%s\t%d\t%s\t%d\t%s\t%s\t%d\t%d\t%d%%\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%s\t%s\n",$set,$chr,$start,$chr2,$end,$ori,$size,$type,$het,$wAsmscore,$read_len,$perc_aligned,$n_seg,$n_sub,$n_indel,$nbp_indel,$microhomology,$scarstr,$prestr,$asm_parm,$extra_info;
       next;
     }
 
