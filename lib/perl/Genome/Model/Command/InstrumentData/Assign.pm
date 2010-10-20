@@ -338,7 +338,7 @@ sub _assign_all_within_maximum_allowed_error {
         my $flowcell    = $instdata->flow_cell_id;
         my $lane        = $instdata->subset_name;
         my $libname     = $instdata->library_name;
-        my $reverr      = $instdata->filt_error_rate_avg;
+        my $reverr      = $instdata->filt_error_rate_avg; #this is intentionally not rev_filt_error_rate_avg
         my $fwderr      = $instdata->fwd_filt_error_rate_avg;
         if(($reverr < $self->maximum_allowed_error) && (!$fwderr || ($fwderr < $self->maximum_allowed_error))) {
             push(@allin, $instdata_id);
