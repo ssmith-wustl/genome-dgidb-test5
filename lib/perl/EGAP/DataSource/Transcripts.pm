@@ -30,7 +30,7 @@ sub delimiter {
 }
 
 sub constant_values {
-    return ['file_path'];
+    return ['directory'];
 }
 
 sub skip_first_line {
@@ -38,12 +38,12 @@ sub skip_first_line {
 }
 
 sub required_for_get {
-    return ['file_path'];
+    return ['directory'];
 }
 
 sub file_resolver {
-    my $file_path = shift;
-    return $file_path;
+    my $directory = shift;
+    return $directory . "/transcripts.csv";
 }
 
 1;

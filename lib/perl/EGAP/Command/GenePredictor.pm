@@ -7,6 +7,8 @@ use EGAP;
 use File::Temp;
 use File::Basename;
 use Bio::SeqIO;
+use Genome::Utility::FileSystem;
+use Carp 'confess';
 
 class EGAP::Command::GenePredictor {
     is => 'EGAP::Command',
@@ -22,6 +24,12 @@ class EGAP::Command::GenePredictor {
             is_input => 1,
             doc => 'Raw output of predictor goes into this directory',
         },
+        prediction_directory => {
+            is => 'Path',
+            is_input => 1,
+            is_output => 1,
+            doc => 'Predictions are written to files in this directory',
+        },
     ],
 };
 
@@ -35,6 +43,11 @@ sub help_synopsis {
 
 sub help_detail {
     return 'Abstract base class for EGAP gene prediction modules, defines input and output parameters';
+}
+
+sub valid_prediction_types {
+    my $self = shift;
+    return qw/ EGAP::RNAGene EGAP::CodingGene EGAP::Transcript EGAP::Protein EGAP::Exon /;
 }
 
 # Searches the fasta file for the named sequence and returns a Bio::Seq object representing it.
@@ -54,4 +67,47 @@ sub get_sequence_by_name {
     return;
 }
 
+# For the given type, determine if its valid, resolve the file that needs to be locked, and lock it.
+sub lock_files_for_predictions {
+    my ($self, @types) = @_;
+    my @locks;
+    for my $type (@types) {
+        unless ($self->is_valid_prediction_type($type)) {
+            confess "$type is not a valid prediction type!";
+        }
+    
+        my $ds = $type->__meta__->data_source;
+        my $file_resolver = $ds->can('file_resolver');
+        my $file = $file_resolver->($self->prediction_directory);
+
+        my $resource_lock = "/gsc/var/lock/EGAP/$file";
+        my $lock = Genome::Utility::FileSystem->lock_resource(
+            resource_lock => $resource_lock,
+            block_sleep => 60,
+            max_try => 10,
+        );
+        confess "Could not get lock on $file for type $type!" unless $lock;
+        push @locks, $lock;
+    }
+    return @locks;
+}
+
+# Release locks for prediction files
+sub release_prediction_locks {
+    my ($self, @locks) = @_;
+    for my $lock (@locks) {
+        Genome::Utility::FileSystem->unlock_resource(
+            resource_lock => $lock,
+        );
+    }
+    return 1;
+}
+
+sub is_valid_prediction_type {
+    my ($self, $type) = @_;
+    for my $valid_type ($self->valid_prediction_types) {
+        return 1 if $type eq $valid_type;
+    }
+    return 0;
+}
 1;

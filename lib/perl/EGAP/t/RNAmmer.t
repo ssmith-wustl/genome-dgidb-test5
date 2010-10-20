@@ -30,16 +30,15 @@ ok(-e $fasta, "fasta file exists at $fasta");
 my $command = EGAP::Command::GenePredictor::RNAmmer->create(
     fasta_file => $fasta,
     raw_output_directory => $test_output_dir,
-    rna_prediction_file => $test_output_dir . "/rna_predictions.csv",
+    prediction_directory => $test_output_dir,
 );
 
 isa_ok($command, 'EGAP::Command::GenePredictor');
 isa_ok($command, 'EGAP::Command::GenePredictor::RNAmmer');
 ok($command->execute(), "executed rnammer command");
 
-$DB::single = 1;
 my @rna = EGAP::RNAGene->get(
-    file_path => $command->rna_prediction_file,
+    directory => $test_output_dir,
 );
 my $num_rna = scalar @rna;
 ok ($num_rna > 0, "able to retrieve $num_rna RNAGene objects");

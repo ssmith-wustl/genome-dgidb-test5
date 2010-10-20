@@ -15,30 +15,6 @@ use File::Path 'make_path';
 class EGAP::Command::GenePredictor::Fgenesh {
     is => 'EGAP::Command::GenePredictor',
     has => [
-        coding_gene_prediction_file => {
-            is => 'Path',
-            is_input => 1,
-            is_output => 1,
-            doc => 'File containing coding gene predictions',
-        },
-        transcript_prediction_file => {
-            is => 'Path',
-            is_input => 1,
-            is_output => 1,
-            doc => 'File containing transcript predictions',
-        },
-        exon_prediction_file => {
-            is => 'Path',
-            is_input => 1,
-            is_output => 1,
-            doc => 'File containing exon predictions',
-        },
-        protein_prediction_file => {
-            is => 'Path',
-            is_input => 1,
-            is_output => 1,
-            doc => 'File containing protein predictions',
-        },
         model_file => { 
             is => 'Path', 
             is_input => 1,
@@ -164,7 +140,7 @@ sub execute {
                 $exon_sequence_string .= $exon_seq;
 
                 my $exon = EGAP::Exon->create(
-                    file_path => $self->exon_prediction_file,
+                    directory => $self->prediction_directory,
                     exon_name => $exon_name,
                     start => $predicted_exon->start(),
                     end => $predicted_exon->end(),
@@ -187,11 +163,11 @@ sub execute {
             );
             $transcript_seq = $transcript_seq->revcom() if $strand eq '-1';
 
-            # If this sequence is a fragment, need to trim off overhanging sequence prior to translating
-            if ($fragment) {
+            # If this sequence is missing the starting exon, need to trim off overhanging sequence prior to translating
+            if ($missing_start) {
                 my $first_exon_overhang = $exons[0]->five_prime_overhang;
                 $first_exon_overhang = $exons[-1]->five_prime_overhang if $strand eq '-1';
-                $transcript_seq = $transcript_seq->trunc($first_exon_overhang, $transcript_seq->length());
+                $transcript_seq = $transcript_seq->trunc($first_exon_overhang + 1, $transcript_seq->length());
             }
 
             my $protein_seq = $transcript_seq->translate();
@@ -204,7 +180,7 @@ sub execute {
 
             # Now create CodingGene, Transcript, and Protein objects!
             my $coding_gene = EGAP::CodingGene->create(
-                file_path => $self->coding_gene_prediction_file,
+                directory => $self->prediction_directory,
                 gene_name => $gene_name,
                 fragment => $fragment,
                 internal_stops => $internal_stops,
@@ -218,7 +194,7 @@ sub execute {
             );
 
             my $transcript = EGAP::Transcript->create(
-                file_path => $self->transcript_prediction_file,
+                directory => $self->prediction_directory,
                 transcript_name => $transcript_name,
                 coding_gene_name => $gene_name,
                 start => $start,
@@ -230,7 +206,7 @@ sub execute {
             );
 
             my $protein = EGAP::Protein->create(
-                file_path => $self->protein_prediction_file,
+                directory => $self->prediction_directory,
                 protein_name => $transcript_name . "_protein.1",
                 internal_stops => $internal_stops,
                 fragment => $fragment,
@@ -242,8 +218,10 @@ sub execute {
         }
     }
 
-    # TODO add file locking
+    my @locks = $self->lock_files_for_predictions(qw/ EGAP::Protein EGAP::Transcript EGAP::Exon EGAP::CodingGene /);
     UR::Context->commit;
+    $self->release_prediction_locks(@locks);
+
     $self->status_message("Fgenesh parsing complete!");
     return 1;
 }

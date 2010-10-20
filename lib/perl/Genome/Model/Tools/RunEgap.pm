@@ -8,6 +8,7 @@ use Workflow::Simple;
 
 use Carp 'confess';
 use File::Temp 'tempdir';
+use File::Path 'make_path';
 
 class Genome::Model::Tools::RunEgap {
     is => 'EGAP::Command',
@@ -24,25 +25,9 @@ class Genome::Model::Tools::RunEgap {
             is => 'Path',
             doc => 'Split and masked fastas are put in this directory',
         },
-        rna_prediction_file => {
+        prediction_directory => {
             is => 'Path',
-            doc => 'File in which parsed rna gene predictions should be placed',
-        },
-        coding_gene_prediction_file => {
-            is => 'Path',
-            doc => 'File in which parsed coding gene predictions should be placed',
-        },
-        exon_prediction_file => {
-            is => 'Path',
-            doc => 'Exon predictions written to this file',
-        },
-        transcript_prediction_file => {
-            is => 'Path',
-            doc => 'Transcript predictions written to this file',
-        },
-        protein_prediction_file => {
-            is => 'Path',
-            doc => 'Protein predictions written to this file',
+            doc => 'Predictions (RNA, coding gene, transcript, etc) are written to files in this directory',
         },
         snap_models => {
             is => 'Text',
@@ -80,8 +65,8 @@ class Genome::Model::Tools::RunEgap {
         domain => {
             is => 'Text',
             doc => 'Domain of organism being analyzed',
-            default => 'eukaryota',
-            valid_values => ['eukaryota', 'archaea', 'bacteria', 'virus'],
+            default => 'eukaryotic',
+            valid_values => ['eukaryotic', 'archaeal', 'bacterial', 'viral'],
         },
         workflow_xml_file => {
             is => 'Path',
@@ -111,6 +96,14 @@ sub execute {
 
     $self->status_message("Kicking off EGAP workflow, using definition at " . $self->workflow_xml_file);
 
+    for my $dir ($self->split_fastas_output_directory, $self->raw_output_directory, $self->prediction_directory, $self->workflow_log_directory) {
+        next unless defined $dir;
+        unless (-d $dir) {
+            my $rv = make_path($dir);
+            confess "Could not make directory $dir!" unless defined $rv and $rv;
+        }
+    }
+
     my $workflow = Workflow::Operation->create_from_xml($self->workflow_xml_file);
     confess 'Could not create workflow object!' unless $workflow;
 
@@ -125,13 +118,9 @@ sub execute {
         max_bases_per_fasta => $self->max_bases_per_fasta,
         split_fastas_output_directory => $self->split_fastas_output_directory,
         raw_output_directory => $self->raw_output_directory,
-        rna_prediction_file => $self->rna_prediction_file,
-        coding_gene_prediction_file => $self->coding_gene_prediction_file,
-        transcript_prediction_file => $self->transcript_prediction_file,
-        protein_prediction_file => $self->protein_prediction_file,
-        exon_prediction_file => $self->exon_prediction_file,
         snap_models => $self->snap_models,
         fgenesh_model => $self->fgenesh_model,
+        prediction_directory => $self->prediction_directory,
     );
 
     if (@Workflow::Simple::ERROR or not defined $output) {
@@ -139,7 +128,6 @@ sub execute {
             my $msg = join("\n", $error->name(), $error->error(), $error->stdout(), $error->stderr());
             $self->error_message($msg);
         }
-
         confess "Workflow errors encountered!";
     }
 

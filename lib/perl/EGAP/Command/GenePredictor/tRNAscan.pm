@@ -10,14 +10,6 @@ use Carp 'confess';
 
 class EGAP::Command::GenePredictor::tRNAscan {
     is => 'EGAP::Command::GenePredictor',
-    has => [
-        rna_prediction_file => {
-            is => 'Path',
-            is_input => 1,
-            is_output => 1,
-            doc => 'RNA gene predictions are placed in this file',
-        },
-    ],
     has_optional => [
         domain => {
             is => 'Text',
@@ -91,7 +83,7 @@ sub execute {
         my $seq_string = $sequence->subseq($begin, $end);
 
         my $rna_gene = EGAP::RNAGene->create(
-            file_path => $self->rna_prediction_file,
+            directory => $self->prediction_directory,
             gene_name => $seq_name . $trna_num,
             description => $type,
             start => $begin,
@@ -104,8 +96,10 @@ sub execute {
         );
     }
 
-    # TODO Need to add locking here
+    my @locks = $self->lock_files_for_predictions(qw/ EGAP::RNAGene /);
     UR::Context->commit;
+    $self->release_prediction_locks(@locks);
+
     $self->status_message("trnascan successfully completed!");
     return 1;
 }

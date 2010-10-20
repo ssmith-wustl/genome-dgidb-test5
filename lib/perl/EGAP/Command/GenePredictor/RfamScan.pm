@@ -10,14 +10,6 @@ use File::Path 'make_path';
 
 class EGAP::Command::GenePredictor::RfamScan {
     is => 'EGAP::Command::GenePredictor',    
-    has => [
-        rna_prediction_file => {
-            is => 'Path',
-            is_input => 1,
-            is_output => 1,
-            doc => 'RNA gene predictions are placed in this file',
-        },
-    ],
     has_optional => [
         rfam_install_path => {
             is => 'Path',
@@ -118,7 +110,7 @@ sub execute {
         my $seq_string = $sequence->subseq($start, $end);
 
         my $rna_gene = EGAP::RNAGene->create(
-            file_path => $self->rna_prediction_file,
+            directory => $self->prediction_directory,
             gene_name => $gene_name,
             description => $rfam_id,
             start => $start,
@@ -132,8 +124,10 @@ sub execute {
         );
     }
 
-    # TODO Add file locking
+    my @locks = $self->lock_files_for_predictions(qw/ EGAP::RNAGene /);
     UR::Context->commit;
+    $self->release_prediction_locks(@locks);
+
     $self->status_message("rfamscan successfully completed!");
     return 1;
 }

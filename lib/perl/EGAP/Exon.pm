@@ -12,9 +12,9 @@ class EGAP::Exon {
     data_source => 'EGAP::DataSource::Exons',
     id_by => [
         exon_name => { is => 'Text' },
+        directory => { is => 'Path' },
     ],
     has => [
-        file_path => { is => 'Path' },
         start => { is => 'Number' },
         end => { is => 'Number' },
         strand => { is => 'Text' },
@@ -27,17 +27,5 @@ class EGAP::Exon {
         sequence_string => { is => 'Text' },
     ],
 };
-
-sub transcripts {
-    my ($self, $transcripts_file) = @_;
-    confess 'Not implemented!';
-    return;
-}
-
-sub coding_genes {
-    my ($self, $coding_genes_file) = @_;
-    confess 'Not implemented!';
-    return;
-}
 
 1;

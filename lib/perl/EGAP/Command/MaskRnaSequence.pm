@@ -12,10 +12,10 @@ use Genome::Utility::FileSystem;
 class EGAP::Command::MaskRnaSequence {
     is => 'EGAP::Command',
     has => [
-        rna_predictions => {
+        prediction_directory => {
             is => 'Path',
             is_input => 1,
-            doc => 'File containing RnaGene predictions',
+            doc => 'Directory containing predictions, used to grab RNA predictions',
         },
         fasta_file => {
             is => 'Path',
@@ -64,9 +64,14 @@ sub execute {
         $masked_fh->close;
     }
 
-    unless (-e $self->rna_predictions) {
+    # If no RNA genes are found, there won't be an rna file. This is a valid situation, so if no RNA gene file
+    # and the skip flag is set, just copy the input fasta to the masked fasta location. To figure out the path
+    # to the RNA file, need to use the data source and call its file resolver method.
+    my $rna_data_source = EGAP::RNAGene->__meta__->data_source;
+    my $rna_file = $rna_data_source->file_resolver($self->prediction_directory);
+    unless (-e $rna_file) {
         if ($self->skip_if_no_rna_file) {
-            $self->status_message("No rna predictions file found at " . $self->rna_predictions .
+            $self->status_message("No rna predictions file found at $rna_file" .
                 " and skip_if_no_rna_file flag is set to true. Assuming that no rna predictions were" .
                 " made and setting input fasta " . $self->fasta_file . " as masked output fasta!");
 
@@ -77,7 +82,7 @@ sub execute {
             return 1;
         }
         else {
-            confess 'No rna prediction file found at ' . $self->rna_predictions . '!';
+            confess "No rna prediction file found at $rna_file";
         }
     }
 
@@ -86,9 +91,9 @@ sub execute {
     }
             
     # This pre-loads all the predictions, which makes grabbing predictions per sequence faster below
-    $self->status_message("Loading RNAGene objects from file at " . $self->rna_predictions);
+    $self->status_message("Loading RNAGene objects from " . $self->prediction_directory);
     my @rna_predictions = EGAP::RNAGene->get(
-        file_path => $self->rna_predictions,
+        directory => $self->prediction_directory
     );
 
     my $masked_fasta = Bio::SeqIO->new(
@@ -101,8 +106,7 @@ sub execute {
         -format => 'Fasta',
     );
 
-    $self->status_message("Masking sequences in " . $self->fasta_file . " that contain rna prediction stored in " .
-            $self->rna_predictions . " and writing to " . $self->masked_fasta_file);
+    $self->status_message("Masking sequences in " . $self->fasta_file . " and writing to " . $self->masked_fasta_file);
 
     # Iterate through every sequence in the fasta and find the predictions associated with each one,
     # then mask out sequence associated with an rna prediction
@@ -113,7 +117,7 @@ sub execute {
         my $seq_string = $seq->seq();
         
         my @predictions = EGAP::RNAGene->get(
-            file_path => $self->rna_predictions,
+            directory => $self->prediction_directory,
             sequence_id => $seq_id,
         );
 

@@ -12,9 +12,9 @@ class EGAP::Protein {
     data_source => 'EGAP::DataSource::Proteins',
     id_by => [
         protein_name => { is => 'Text' },
+        directory => { is => 'Path' },
     ],
     has => [
-        file_path => { is => 'Path' },
         internal_stops => { is => 'Boolean' },
         fragment => { is => 'Boolean' },
         transcript_name => { is => 'Text' },
@@ -29,9 +29,4 @@ class EGAP::Protein {
     ],
 };
 
-sub transcripts {
-    my ($self, $transcripts_file) = @_;
-    confess 'Not implemented!';
-    return;
-}
 1;

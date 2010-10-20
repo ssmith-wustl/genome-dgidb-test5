@@ -12,9 +12,9 @@ class EGAP::RNAGene {
     data_source => 'EGAP::DataSource::RNAGenes',
     id_by => [
         gene_name => { is => 'Text' },
+        directory => { is => 'Path' },
     ],
     has => [
-        file_path => { is => 'Path' },
         description => { is => 'Text' },
         start => { is => 'Number' },
         end => { is => 'Number' },
@@ -30,11 +30,5 @@ class EGAP::RNAGene {
         codon => { is => 'Text' },
     ],
 };
-
-sub sequence {
-    my ($self, $sequence_file) = @_;
-    confess 'Not implemented!';
-    return;
-}
 
 1;

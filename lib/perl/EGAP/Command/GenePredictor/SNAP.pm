@@ -12,30 +12,6 @@ use File::Path 'make_path';
 class EGAP::Command::GenePredictor::SNAP {
     is  => 'EGAP::Command::GenePredictor',
     has => [
-        coding_gene_prediction_file => {
-            is => 'Path',
-            is_input => 1,
-            is_output => 1,
-            doc => 'File containing coding gene predictions',
-        },
-        transcript_prediction_file => {
-            is => 'Path',
-            is_input => 1,
-            is_output => 1,
-            doc => 'File containing transcript predictions',
-        },
-        exon_prediction_file => {
-            is => 'Path',
-            is_input => 1,
-            is_output => 1,
-            doc => 'File containing exon predictions',
-        },
-        protein_prediction_file => {
-            is => 'Path',
-            is_input => 1,
-            is_output => 1,
-            doc => 'File containing protein predictions',
-        },
         model_files => {
             is => 'Text',
             is_input => 1,
@@ -72,8 +48,6 @@ EOS
 # readable and to reduce redundancy between this module and the fgenesh module.
 sub execute {
     my $self = shift;
-
-    $DB::single = 1;
     $self->status_message("Starting SNAP prediction wrapper");
 
     # Use full path to snap executable, with version, instead of the symlink.
@@ -195,8 +169,10 @@ sub execute {
     }
     $self->_create_prediction_objects(\@predicted_exons, $gene_count, $current_seq_name, $current_group, $seq_obj);
 
-    # TODO Add file locking
+    my @locks = $self->lock_files_for_predictions(qw/ EGAP::CodingGene EGAP::Protein EGAP::Transcript EGAP::Exon /);
     UR::Context->commit;
+    $self->release_prediction_locks(@locks);
+
     $self->status_message("Successfully finished parsing SNAP output and creating prediction objects!");
     return 1;
 }
@@ -255,7 +231,7 @@ sub _create_prediction_objects {
         $exon_seq_string .= $exon_seq;
 
         my $exon = EGAP::Exon->create(
-            file_path => $self->exon_prediction_file,
+            directory => $self->prediction_directory,
             exon_name => $exon_name,
             start => $predicted_exon->{start},
             end => $predicted_exon->{end},
@@ -295,7 +271,7 @@ sub _create_prediction_objects {
 
     # Finally have all the information needed to create gene, protein, and transcript objects
     my $coding_gene = EGAP::CodingGene->create(
-        file_path => $self->coding_gene_prediction_file,
+        directory => $self->prediction_directory,
         gene_name => $gene_name,
         fragment => $fragment,
         internal_stops => $internal_stops,
@@ -309,7 +285,7 @@ sub _create_prediction_objects {
     );
 
     my $transcript = EGAP::Transcript->create(
-        file_path => $self->transcript_prediction_file,
+        directory => $self->prediction_directory,
         transcript_name => $transcript_name,
         coding_gene_name => $gene_name,
         start => $start,
@@ -321,7 +297,7 @@ sub _create_prediction_objects {
     );
 
     my $protein = EGAP::Protein->create(
-        file_path => $self->protein_prediction_file,
+        directory => $self->prediction_directory,
         protein_name => $transcript_name . "_protein.1",
         internal_stops => $internal_stops,
         fragment => $fragment,

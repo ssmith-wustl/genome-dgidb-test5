@@ -12,9 +12,9 @@ class EGAP::CodingGene {
     data_source => 'EGAP::DataSource::CodingGenes',
     id_by => [
         gene_name => { is => 'Text' },
+        directory => { is => 'Path' },
     ],
     has => [
-        file_path => { is => 'Path' },
         fragment => { is => 'Boolean' },
         internal_stops => { is => 'Boolean' },
         missing_start => { is => 'Boolean' },
@@ -26,11 +26,5 @@ class EGAP::CodingGene {
         end => { is => 'Number' },
     ],
 };
-
-sub transcripts {
-    my ($self, $transcripts_file) = @_;
-    confess 'Not implemented!';
-    return;
-}
 
 1;

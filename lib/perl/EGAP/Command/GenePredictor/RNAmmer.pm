@@ -9,14 +9,6 @@ use Bio::Tools::GFF;
 
 class EGAP::Command::GenePredictor::RNAmmer {
     is => 'EGAP::Command::GenePredictor',
-    has => [
-        rna_prediction_file => {
-            is => 'Path',
-            is_input => 1,
-            is_output => 1,
-            doc => 'RNA gene predictions are placed in this file',
-        },
-    ],
     has_optional => [
         domain => {
             is => 'Text',
@@ -132,7 +124,7 @@ sub execute {
     my $cmd = join(" ", $rnammer_path, @params);
     $self->status_message("Executing rnammer: $cmd");
     my $rna_rv = system($cmd);
-    confess "Trouble executing rrnamer!" unless defined $rna_rv and $rna_rv == 0;
+    confess "Trouble executing rnammer!" unless defined $rna_rv and $rna_rv == 0;
 
     # TODO Add parsing logic for fasta and xml
     if ($self->output_format eq 'gff') {
@@ -157,7 +149,7 @@ sub execute {
             my $seq_string = $sequence->subseq($start, $end);
 
             my $rna_gene = EGAP::RNAGene->create(
-                file_path => $self->rna_prediction_file,
+                directory => $self->prediction_directory,
                 gene_name => $gene_name,
                 source => $feature->source_tag(),
                 description => $description,
@@ -172,8 +164,10 @@ sub execute {
         }
     }
 
-    # TODO Add locking here
+    my @locks = $self->lock_files_for_predictions(qw/ EGAP::RNAGene /);
     UR::Context->commit;
+    $self->release_prediction_locks(@locks);
+
     $self->status_message("rnammer suceessfully completed!");
     return 1;
 }

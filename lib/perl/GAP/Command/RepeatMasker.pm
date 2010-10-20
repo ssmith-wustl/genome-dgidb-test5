@@ -83,7 +83,7 @@ sub execute {
     # If masked fasta path not given, then put it in the same location as the input fasta file... Using
     # File::Spec's rel2abs function to convert fasta path to an absolute location if needed.
     if (not defined $self->masked_fasta) {
-        my $fasta_path = rel2abs($self->fasta_file);
+        my $fasta_path = File::Spec->rel2abs($self->fasta_file);
         my $default_masked_location =  "$fasta_path.repeat_masker";
         $self->status_message("Masked fasta file path not given, defaulting to $default_masked_location");
         $self->masked_fasta($default_masked_location);
