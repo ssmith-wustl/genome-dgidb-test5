@@ -182,7 +182,7 @@ sub execute {                               # replace with real execution logic.
 				## Build the model ##
 				if(!$self->assign_only)
 				{
-					my $cmd = "genome model build start --model-id $model_id";
+					my $cmd = "genome model build start $model_id";
 					print "RUN: $cmd\n";
 					system($cmd);
 				}
@@ -510,15 +510,15 @@ sub old
 					{
 						if($model_status eq "Failed" && $self->restart_failed)
 						{
-							system("bsub -q long genome model build start --model-identifier $model_id --force 1");							
+							system("bsub -q long genome model build start $model_id --force 1");							
 						}
 						elsif($model_status eq "Running" && $self->restart_running)
 						{
-							system("bsub -q long genome model build start --model-identifier $model_id --force 1");							
+							system("bsub -q long genome model build start $model_id --force 1");							
 						}
 						elsif($model_status eq "Scheduled" && $self->restart_scheduled)
 						{
-							system("bsub -q long genome model build start --model-identifier $model_id --force 1");							
+							system("bsub -q long genome model build start $model_id --force 1");							
 						}
 					}
 				}
@@ -579,7 +579,7 @@ sub old
 					system("genome model instrument-data assign --model-id $model_id --capture");
 					
 					## If possible, start the build ##
-					system("bsub -q long genome model build start --model-identifier $model_id");
+					system("bsub -q long genome model build start $model_id");
 					$model_status = "Started";
 				}
 				else

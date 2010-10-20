@@ -54,6 +54,7 @@ sub resolve_param_value_from_cmdline_text {
         @param_class = ($param_class);
     }
     undef($param_class);
+    #this splits a bool_expr if multiples of the same field are listed, e.g. name=foo,name=bar
     if (@param_args > 1) {
         my %bool_expr_type_count;
         my @bool_expr_type = map {split(/[=~]/, $_)} @param_args;
@@ -73,14 +74,16 @@ sub resolve_param_value_from_cmdline_text {
         my $arg = $param_args[$i];
         my @arg_results;
         (my $arg_display = $arg) =~ s/,/ AND /g; 
-        $self->status_message("Looking for parameters using '$arg_display'...");
 
         for my $param_class (@param_class) {
+            print STDERR "Looking for $param_class using '$arg_display'... ";
             #$self->debug_message("Trying to find $param_class...");
             %SEEN_FROM_CLASS = ();
             # call resolve_param_value_from_text without a via_method to bootstrap recursion
-            @arg_results = $self->resolve_param_value_from_text($arg, $param_class);
+            @arg_results = eval{$self->resolve_param_value_from_text($arg, $param_class)};
+            print STDERR "found " . @arg_results . " result(s).\n";
         } 
+        last if ($@ && !@arg_results);
 
         $force_verify = 1 if (@arg_results > 1);
         if (@arg_results) {
@@ -136,6 +139,11 @@ sub resolve_param_value_from_text {
     my @results;
     # try getting BoolExpr, otherwise fallback on '_resolve_param_value_from_text_by_name_or_id' parser
     eval { @results = $self->_resolve_param_value_from_text_by_bool_expr($param_class, $param_arg); };
+    if (!@results && !$@) {
+        # no result and was valid BoolExpr then we don't want to break it apart because we
+        # could query enormous amounts of info
+        die $@;
+    }
     # the first param_arg is all param_args to try BoolExpr so skip if it has commas
     if (!@results && $param_arg !~ /,/) {
         my @results_by_string;
@@ -203,7 +211,7 @@ sub _resolve_param_value_via_related_class_method {
                 }
                 $method_choices .= (scalar(@methods) + 1) . ": none\n";
                 $method_choices .= "Which method would you like to use?";
-                my $response = $self->_ask_user_question($method_choices, 300, '\d+', 1, '#');
+                my $response = $self->_ask_user_question($method_choices, 0, '\d+', 1, '#');
                 if ($response =~ /^\d+$/) {
                     $response--;
                     if ($response == @methods) {
@@ -227,7 +235,7 @@ sub _resolve_param_value_via_related_class_method {
             }
             unless($SEEN_FROM_CLASS{$from_class}) {
                 #$self->debug_message("Trying to find $via_class via $from_class->$method...");
-                @results = $self->resolve_param_value_from_text($param_arg, $from_class, $method);
+                @results = eval {$self->resolve_param_value_from_text($param_arg, $from_class, $method)};
             }
         } # END for my $from_class (@from_classes)
     } # END if ($via_class)
@@ -238,12 +246,14 @@ sub _resolve_param_value_from_text_by_bool_expr {
     my ($self, $param_class, $arg) = @_;
 
     my @results;
-    my $bx;
-    eval {
-        $bx = UR::BoolExpr->resolve_for_string($param_class, $arg);
+    my $bx = eval {
+        UR::BoolExpr->resolve_for_string($param_class, $arg);
     };
-    unless ($@) {
+    if ($bx) {
         @results = $param_class->get($bx);
+    }
+    else {
+        die "Not a valid BoolExpr";
     }
     #$self->debug_message("B: $param_class '$arg' " . scalar(@results));
 
@@ -272,7 +282,7 @@ sub _get_user_verification_for_param_value {
 
     my $n_list = scalar(@list);
     if ($n_list > 20 && !$ENV{GENOME_NO_REQUIRE_USER_VERIFY}) {
-        my $response = $self->_ask_user_question("Would you [v]iew all $n_list item(s), (p)roceed, or e(x)it?", 300, '[v]|p|x', 'v');
+        my $response = $self->_ask_user_question("Would you [v]iew all $n_list item(s), (p)roceed, or e(x)it?", 0, '[v]|p|x', 'v');
         if(!$response || $response eq 'x') {
             $self->status_message("Exiting...");
             exit;
@@ -335,7 +345,7 @@ sub _get_user_verification_for_param_value_drilldown {
             $pretty_values .= ', (b)ack';
             $valid_values .= '|b';
         }
-        $response = $self->_ask_user_question("Confirmation or trimming required...", 300, $valid_values, 'h', $pretty_values.', or specify items to use');
+        $response = $self->_ask_user_question("Confirmation or trimming required...", 0, $valid_values, 'h', $pretty_values.', or specify items to use');
         if (lc($response) eq 'h' || !$self->_validate_user_response_for_param_value_verification($response)) {
             $MESSAGE .= "\n" if ($MESSAGE);
             $MESSAGE .=
@@ -612,19 +622,20 @@ sub resolve_class_and_params_for_argv {
 sub _ask_user_question {
     my $self = shift;
     my $question = shift;
-    my $timeout = shift || 60;
+    my $timeout = shift;
     my $valid_values = shift || "yes|no";
     my $default_value = shift || undef;
     my $pretty_valid_values = shift || $valid_values;
     $valid_values = lc($valid_values);
     my $input;
+    $timeout = 60 unless(defined($timeout));
     eval {
         local $SIG{ALRM} = sub { print STDERR "Exiting, failed to reply to question '$question' within '$timeout' seconds.\n"; exit; };
         print STDERR "$question\n";
         print STDERR "Please reply with $pretty_valid_values: ";
-        alarm($timeout);
+        alarm($timeout) if ($timeout);
         chomp($input = <STDIN>);
-        alarm(0);
+        alarm(0) if ($timeout);
     };
     print STDERR "\n";
 
@@ -649,6 +660,27 @@ sub _unique_elements {
     my %seen = ();
     my @unique = grep { ! $seen{$_} ++ } @list;
     return @unique;
+}
+
+sub display_summary_report {
+    my ($self, $total_count, @errors) = @_;
+
+    if (@errors) {
+        $self->status_message("\n\nError Summary:");
+        for my $error (@errors) {
+            ($error) = split("\n", $error);
+            $error =~ s/\ at\ \/.*//;
+            $self->status_message("* ".$error);
+        }
+    }
+
+    if ($total_count > 1) {
+        my $error_count = scalar(@errors);
+        $self->status_message("\n\nCommand Summary:");
+        $self->status_message(" Successful: " . ($total_count - $error_count));
+        $self->status_message("     Errors: " . $error_count);
+        $self->status_message("      Total: " . $total_count);
+    }
 }
 
 1;

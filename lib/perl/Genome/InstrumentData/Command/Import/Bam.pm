@@ -20,6 +20,10 @@ my %properties = (
         is => 'Text',
         doc => 'sample name for imported file, like TCGA-06-0188-10B-01D',
     },
+    library => {
+        is => 'String',
+        doc => 'The library name or id associated with the data to be imported.',
+    },
     import_source_name => {
         is => 'Text',
         doc => 'source name for imported file, like Broad Institute',
@@ -81,6 +85,13 @@ class Genome::InstrumentData::Command::Import::Bam {
 sub execute {
     my $self     = shift;
     my $bam_path = $self->original_data_path;
+
+    my $library = Genome::Command::Base->resolve_param_value_from_text($self->library,'Genome::Library');
+    print "library name = ".$library->name." and id = ".$library->id."\n";
+    unless($library){
+        $self->error_message("A library was not resolved from the input string ".$self->library);
+        die $self->error_message;
+    }
     
     unless (-s $bam_path and $bam_path =~ /\.bam$/) {
         $self->error_message('Original data path of import bam: '. $bam_path .' is either empty or not with .bam as name suffix');
@@ -97,6 +108,7 @@ sub execute {
             }
         }
         next if $property_name =~ /^(species|reference)_name$/;
+        next if $property_name =~ /^library$/;
         $params{$property_name} = $self->$property_name if $self->$property_name;
     }
     
@@ -123,6 +135,7 @@ sub execute {
     $params{sequencing_platform} = "solexa";
     $params{import_format} = "bam";
     $params{reference_sequence_build_id} = $self->reference_sequence_build_id;
+    $params{library_id} = $library->id;
     
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
     unless ($import_instrument_data) {
