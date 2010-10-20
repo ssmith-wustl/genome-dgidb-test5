@@ -113,7 +113,7 @@ sub process_imported_files {
         print $self->status_message."\n";
     }
     $self->status_message("finished creating genotype file, importing genotype and defining model.");
-    print $self->status_message;
+    print $self->status_message."\n";
 
     unless(Genome::InstrumentData::Command::Import::Genotype->create(
         source_data_file => $genotype_path_and_file,
