@@ -26,14 +26,19 @@ sub process_imported_files {
     my $self = shift;
     $self->sequencing_platform('affymetrix genotype array');
     $self->SUPER::process_imported_files(@_);
-    my $instrument_data = Genome::InstrumentData::Imported->get( sample_name => $self->sample_name, sequencing_platform => $self->sequencing_platform);
+    my @instrument_data = Genome::InstrumentData::Imported->get( sample_name => $self->sample_name, sequencing_platform => $self->sequencing_platform);
+    unless(scalar(@instrument_data)==1){
+        $self->error_message("Found ".scalar(@instrument_data)." imported instrument data records with the sample name of ".$self->sample_name." and sequencing-platform of ".$self->sequencing_platform);
+        die $self->error_message;
+    }
+    my $instrument_data = $instrument_data[0];
     my $disk_alloc = $self->allocation;
 
     unless(defined($self->annotation_file)){
         my $annotation_file;
-        if($self->sample_name =~ /^(H_LC|H_LR)/){
+        if($self->sample_name =~ /^(H_LS|H_LR)/){
             $annotation_file = "/gscmnt/sata160/info/medseq/tcga/GenomeWideSNP_6.na31.annot.csv";
-            $self->status_message("H_LC or H_LR project detected, using annotation file with build37 coordinates.");
+            $self->status_message("H_LS or H_LR project detected, using annotation file with build37 coordinates.");
         } else {
             $annotation_file = "/gscmnt/sata160/info/medseq/tcga/GenomeWideSNP_6.na28.annot.csv";
             $self->status_message("Using annotation file with build36 coordinates.");
@@ -107,7 +112,8 @@ sub process_imported_files {
         $self->status_message( "Created genotype file at ".$genotype_path_and_file."\n");
         print $self->status_message."\n";
     }
-
+    $self->status_message("finished creating genotype file, importing genotype and defining model.");
+    print $self->status_message;
 
     unless(Genome::InstrumentData::Command::Import::Genotype->create(
         source_data_file => $genotype_path_and_file,

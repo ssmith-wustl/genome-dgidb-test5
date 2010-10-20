@@ -4,7 +4,6 @@ use strict;
 use warnings;
 use Getopt::Std;
 use DBI;
-use strict;
 use lib "/gscuser/jwallis/svn/perl_modules/test_project/jwallis";
 
 my %opts = (s=>0,q=>0,l=>0,m=>0,x=>0);
@@ -565,8 +564,11 @@ sub Overlap{
   if(!$reg2->{end} || !$reg1->{start} || !$reg1->{end} || !$reg2->{start}){
     return $overlap;
   }
-  if($opts{x} && (!$reg1->{chr1} || !$reg1->{chr2} || !$reg2->{chr1} || !$reg2->{chr2})){ # to get rid of no chromosomes if ctx
+  if($opts{x} && ((!$reg1->{chr1} || !$reg1->{chr2} || !$reg2->{chr1} || !$reg2->{chr2}) ||  $reg1->{chr1} eq $reg1->{chr2} || $reg2->{chr1} eq $reg2->{chr2} ) ){ # to get rid of no chromosomes if ctx
     return $overlap;
+  }
+  if(!$opts{x} && ($reg1->{chr1} ne $reg1->{chr2} || $reg2->{chr1} ne $reg2->{chr2})){
+      return $overlap;
   }
 
   if(!$opts{x}){ # check the overlap of per chromosome
@@ -610,7 +612,7 @@ sub parse_header_sp_reads{
   for(my $i = 0; $i < $#u + 1; $i ++ ){
   	my @v = split(/\|/, $u[$i]);
   	if($#v + 1 != 2){
-  		print "parsing sp reads failed: ". $sp_reads. "\n";
+            #print "parsing sp reads failed: ". $sp_reads. "\n";
   		next;
   	}
   	#print "hello ".$v[0]. ": ". $v[1];
@@ -689,6 +691,12 @@ sub ReadRegions{
 
     # basic forms
     ($reg->{chr1},$reg->{start},$reg->{chr2},$reg->{end})=($u[$c[0]],$u[$c[1]],$u[$c[2]],$u[$c[3]]);
+    if($opts{x} && $reg->{chr1} eq $reg->{chr2}){
+        next;
+    }
+    if((!$opts{x}) && $reg->{chr1} ne $reg->{chr2}){
+        next;
+    }
     if($opts{h}){
 	# extra ones
 	for(my $p = 4; $p <= 12; $p++){

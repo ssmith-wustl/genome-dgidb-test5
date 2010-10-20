@@ -81,6 +81,11 @@ class Genome::Model::Build {
                               doc => 'variants linked to this build... currently only for Somatic builds but need this accessor for get_all_objects' },
         group_ids        => { via => 'model', to => 'group_ids', is_many => 1, },
         group_names      => { via => 'model', to => 'group_names', is_many => 1, },
+
+        projects         => { is => 'Genome::Project', via => 'model' },
+        work_orders      => { is => 'Genome::WorkOrder', via => 'projects' },
+        work_order_names => { via => 'work_orders', to => 'name' },
+        work_order_numbers => { via => 'work_orders', to => 'id' },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
@@ -190,7 +195,6 @@ sub create {
 
     # model
     return unless ($class->_validate_model_id($model_id));
-    return unless ($class->_lock_model_and_create_commit_and_rollback_observers($model_id));
 
     #unless ($bx->value_for('subclass_name')) {
     #    $bx = $bx->add_filter(subclass_name => $class);
@@ -238,7 +242,7 @@ sub create {
 }
 
 sub _lock_model_and_create_commit_and_rollback_observers {
-    my ($class, $model_id) = @_;
+    my ($self, $model_id, $job_id) = @_;
 
     # lock
     my $lock_id = '/gsc/var/lock/build_start/'.$model_id;
@@ -255,11 +259,12 @@ sub _lock_model_and_create_commit_and_rollback_observers {
     # create observers to unlock
     my $commit_observer;
     my $rollback_observer;
+    my $context = UR::Context->current();
 
-    $commit_observer = UR::Context->add_observer(
+    $commit_observer = $context->add_observer(
         aspect => 'commit',
         callback => sub {
-            #print "Commit\n";
+            `bresume $job_id`;
             # unlock - no error on failure
             Genome::Utility::FileSystem->unlock_resource(
                 resource_lock => $lock_id,
@@ -272,10 +277,10 @@ sub _lock_model_and_create_commit_and_rollback_observers {
         }
     );
 
-    $rollback_observer = UR::Context->add_observer(
+    $rollback_observer = $context->add_observer(
         aspect => 'rollback',
         callback => sub {
-            #print "Rollback\n";
+            `bkill $job_id`;
             # unlock - no error on failure
             Genome::Utility::FileSystem->unlock_resource(
                 resource_lock => $lock_id,
@@ -842,41 +847,11 @@ sub _launch {
     
         my $job_id = $self->_execute_bsub_command($lsf_command)
             or return;
+        return unless ($self->_lock_model_and_create_commit_and_rollback_observers($model->id, $job_id));
     
         $build_event->lsf_job_id($job_id);
 
-        my $commit_observer;
-        my $rollback_observer;
         
-        $commit_observer = UR::Context->add_observer(
-            aspect => 'commit',
-            callback => sub {
-                `bresume $job_id`;
-                $commit_observer->delete;
-                undef $commit_observer;
-                $rollback_observer->delete;
-                undef $rollback_observer;
-            }
-        );
-
-        $rollback_observer = UR::Context->add_observer(
-            aspect => 'rollback',
-            callback => sub {
-                `bkill $job_id`;
-                # delete and undef observers so they don't persist
-                # they should have been deleted in the rollback, 
-                #  but attempt to delete again just in case
-                if ( $rollback_observer ) {
-                    $rollback_observer->delete unless $rollback_observer->isa('UR::DeletedRef');
-                    undef $rollback_observer;
-                }
-                if ( $commit_observer ) {
-                    $commit_observer->delete unless $commit_observer->isa('UR::DeletedRef');
-                    undef $commit_observer;
-                }
-            }
-        );
-
         return 1;
     }
 }

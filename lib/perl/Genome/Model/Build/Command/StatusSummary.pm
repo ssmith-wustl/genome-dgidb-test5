@@ -12,12 +12,14 @@ class Genome::Model::Build::Command::StatusSummary {
         builds => {
             is => 'Genome::Model::Build',
             is_many => 1,
+            require_user_verify => 0,
             doc => 'Build(s) to check status. Resolved from command line via text string.',
         },
         models => {
             is => 'Genome::Model',
             is_many => 1,
             doc => 'Model(s) to check latest build status. Resolved from command line via text string.',
+            require_user_verify => 0,
             shell_args_position => 1,
         },
     ],
@@ -32,20 +34,33 @@ sub execute {
 
     my %status;
     if ($self->builds) {
-        for my $build ($self->builds) {
-            $status{$build->status}++;
+        my @builds = sort {$a->model_name cmp $b->model_name} $self->builds;
+        my $model_name;
+        for my $build (@builds) {
+            if ($model_name ne $build->model_name) {
+                $model_name = $build->model_name;
+                $self->status_message("Model: ".$model_name);
+            }
+            my $build_status = $build->status;
+            $status{$build_status}++;
+            $self->status_message("\t".$build->id."\t$build_status");
         }
     }
     elsif ($self->models) {
         for my $model ($self->models) {
-            my $build_id = $model->latest_build;
+            $self->status_message("Model: ".$model->name);
+            my $build_id = $model->latest_build->id;
+            my $build_status;
             if ($build_id) {
                 my $build = Genome::Model::Build->get($build_id);
-                $status{$build->status}++;
+                $build_status = $build->status;
             }
             else {
-                $status{Other}++;
+                $build_status = "Buildless";
             }
+            $build_id ||= "N/A";
+            $status{$build_status}++;
+            $self->status_message("\t".$build_id."\t$build_status");
         }
     }
     else {
