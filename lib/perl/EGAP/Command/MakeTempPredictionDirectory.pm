@@ -54,6 +54,7 @@ sub execute {
         UNLINK => 0,
         DIR => $prediction_base,
     );
+    chmod(0775, $temp_dir);
     $self->temp_prediction_directory($temp_dir);
     $self->status_message("Temporary directory created at $temp_dir");
     return 1;
