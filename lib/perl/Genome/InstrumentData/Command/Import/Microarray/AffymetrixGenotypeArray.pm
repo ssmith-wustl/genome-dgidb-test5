@@ -115,7 +115,7 @@ sub process_imported_files {
     $self->status_message("finished creating genotype file, importing genotype and defining model.");
     print $self->status_message;
 
-    unless(Genome::InstrumentData::Command::Import::Genotype->execute(
+    unless(Genome::InstrumentData::Command::Import::Genotype->create(
         source_data_file => $genotype_path_and_file,
         sample_name => $self->sample_name,
         import_source_name => $self->import_source_name,

@@ -116,15 +116,21 @@ sub execute {
         }
         $self->stats_file($self->final_directory .'/'. $bam_basename .'_'. $regions_basename .'_STATS.tsv');
     }
-    my $cmd = $self->execute_path .'/one_pass_refcov-64.pl '. $self->bam_file .' '. $self->bed_file .' '. $self->stats_file .' '. $self->min_depth_filter .' '. $wingspan;
+
+    my $temp_stats_file = Genome::Utility::FileSystem->create_temp_file_path;
+
+    my $cmd = $self->execute_path .'/one_pass_refcov-64.pl '. $self->bam_file .' '. $self->bed_file .' '. $temp_stats_file .' '. $self->min_depth_filter .' '. $wingspan;
     if ($self->min_base_quality || $self->min_mapping_quality) {
         $cmd .= ' '. $self->min_base_quality .' '. $self->min_mapping_quality;
     }
     Genome::Utility::FileSystem->shellcmd(
         cmd => $cmd,
         input_files => [$self->bam_file,$self->bed_file],
-        output_files => [$self->stats_file],
+        output_files => [$temp_stats_file],
     );
+
+    Genome::Utility::FileSystem->copy_file($temp_stats_file, $self->stats_file);
+
     return 1;
 }
 
