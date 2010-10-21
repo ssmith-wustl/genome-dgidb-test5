@@ -101,7 +101,6 @@ sub execute {
 
             my $build_started = $build->start(%start_params);
             unless ($build_started) {
-                $build->delete; #This will deallocate
                 die $self->error_message("Failed to start build (" . $build->__display_name__ . "): $@.");
             }
             return $build;
