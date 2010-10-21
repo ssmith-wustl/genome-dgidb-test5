@@ -28,7 +28,7 @@ ok($pg, 'created pg');
 isa_ok($pg, 'Genome::PopulationGroup');
 isa_ok($pg, 'Genome::Measurable');
 is($pg->id, $id, "id: $id");
-is($pg->subject_type, 'population_group', 'subject type is population_group');
+is($pg->subject_type, 'population group', 'subject type is population group');
 print Data::Dumper::Dumper($pg);
 
 my $commit = eval{ UR::Context->commit; };

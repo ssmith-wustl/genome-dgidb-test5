@@ -314,10 +314,11 @@ sub GetGeneAnnotation{
     }
     else{
       $gene.=sprintf ",%s\|%s\:%s\-%s\|%s\:%s",$e1->{name}||'NA',$e1->{name2}||'NA',$annot1||'NA',$e2->{name}||'NA',$e2->{name2}||'NA',$annot2||'NA';
-      $gene.=',Fusion';
+      $gene.=',AffectCoding,Fusion';
     }
   }
   elsif(defined $e1 || defined $e2){
+    $gene.=sprintf ",%s\|%s\:%s\-%s\|%s\:%s",$e1->{name}||'NA',$e1->{name2}||'NA',$annot1||'NA',$e2->{name}||'NA',$e2->{name2}||'NA',$annot2||'NA';
     $gene.=',AffectCoding';
   }
   else{}
