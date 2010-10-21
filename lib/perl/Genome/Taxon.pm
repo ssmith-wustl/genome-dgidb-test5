@@ -18,7 +18,7 @@ class Genome::Taxon {
                                                 calculate_from => ['name'],
                                                 #TODO: this actually embeds the strain name, parse it away
                                             },
-        subject_type => { is => 'Text', is_constant => 1, value => 'organism_taxon', column_name => '', },
+        subject_type => { is => 'Text', is_constant => 1, value => 'organism taxon', column_name => '', },
     ],
     has_optional => [
         strain_name                     => { is => "Text",   len => 32 },

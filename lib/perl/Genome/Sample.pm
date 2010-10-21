@@ -60,7 +60,7 @@ class Genome::Sample {
                                         doc => 'the fully qualified name for the sample (the "DNA NAME" in LIMS for both DNA and RNA)', 
                                         column_name => 'FULL_NAME',
                                     },
-        subject_type => { is => 'Text', is_constant => 1, value => 'organism_sample', column_name => '', },
+        subject_type => { is => 'Text', is_constant => 1, value => 'organism sample', column_name => '', },
     ],
     has_optional => [	
         common_name                 => { is => 'Text', 

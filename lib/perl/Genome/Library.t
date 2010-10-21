@@ -43,6 +43,9 @@ sub _create_and_get_library {
     $library = Genome::Library->get($library->id);
     ok($library, 're-get library');
 
+    ok($library->taxon_id, 'taxon id: '.$library->taxon_id);
+    ok($library->species_name, 'species name: '.$library->species_name);
+
     return 1;
 }
 
