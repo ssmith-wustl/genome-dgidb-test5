@@ -178,13 +178,24 @@ sub execute {
     my $ctx_file = "$dir/$genome_name.ctx";
 
     #launching blade jobs
-    print `bsub -N -u $user\@genome.wustl.edu -R 'select[type==LINUX64]' -J '$genome_name CTX' 'breakdancer_max -t -q 10 -d $ctx_file $cfg_name > $ctx_file'`;
-
+    
+    # CTX job
+    my $jobid=`bsub -N -u $user\@genome.wustl.edu -R 'select[type==LINUX64]' -J '$genome_name CTX' 'breakdancer_max -t -q 10 -d $ctx_file $cfg_name > $ctx_file'`;
+    $jobid=~/<(\d+)>/;
+    $jobid= $1;
+    my $jobid2=`bsub -N -u $user\@genome.wustl.edu -R 'select[type==LINUX64 && mem>8000] rusage[mem=8000]' -M 8000000 -w 'ended($jobid)' -J '$genome_name SV6' '~kchen/MPrelease/BreakDancer/novoRealign.pl $cfg_name'`;
+    $jobid2=~/<(\d+)>/;
+    $jobid2= $1;
+    my $novo_ctx_file="$dir/$genome_name.novo.ctx";
+    my $novo_cfg_file="$dir/$genome_name.novo.cfg";
+    print `bsub -N -u $user\@genome.wustl.edu -R 'select[type==LINUX64 && mem>8000] rusage[mem=8000]' -M 8000000 -w 'ended($jobid2)' -J '$genome_name SV7' 'breakdancer_max -t $novo_cfg_file > $novo_ctx_file'`;
+    
     #submit per chromosome bams
     
    for my $chr (1..22,"X","Y") { 
        print `bsub -N -u $user\@genome.wustl.edu -R 'select[type==LINUX64]' -J '$genome_name chr$chr' 'breakdancer_max -o $chr -q 10 -f $cfg_name > $genome_name.chr$chr.sv'`;
    } 
+
 
     return 1;
 
