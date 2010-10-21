@@ -7,10 +7,29 @@ use Genome;
 
 class Genome::Model::Command::Define::Benchmark {
     is => 'Genome::Model::Command::Define',
-    has => [
+    has_optional => [
+        subject_id => {
+            is => 'Number',
+            len => 15,
+            is_input => 1,
+            doc => '(unused for benchmark)',
+            value => '42'  
+        },
+        subject_class_name => {
+            is => 'Text',
+            len => 500,
+            is_input => 1,
+            doc => '(unused for benchmark)', 
+            value => 'UR::Value'
+        },
+        subject_name => {
+            is => 'Text',
+            len => 255,
+            is_input => 1,
+            doc => '(unused for benchmark)',
+        },
         command_arguments => {
             doc => 'arguments for the command used in the processing profile',
-            is_optional => 1,
             value => ' '
         }
     ]
@@ -38,6 +57,11 @@ sub execute {
 
     return $result;
 }
+
+sub listed_params {
+    return qw/ id name data_directory processing_profile_id processing_profile_name /;
+}
+
 
 1;
 

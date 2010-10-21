@@ -85,11 +85,10 @@ class Genome::Model {
                     'Genome::Taxon' => 'species_name',
                     'Genome::Library' => 'library_name',
                     'Genome::Sample::Genomic' => 'genomic_dna',
-                    'Genome::Sys::Command' => 'command',
                 );
 
                 return $types{$subject_class_name};
-            ), valid_values => ["species_name","sample_group","flow_cell_id","genomic_dna","library_name","sample_name","dna_resource_item_name","command"] },
+            ), valid_values => ["species_name","sample_group","flow_cell_id","genomic_dna","library_name","sample_name","dna_resource_item_name"] },
         auto_assign_inst_data   => { is => 'Number', len => 4, is_optional => 1 },
         auto_build_alignments   => { is => 'Number', len => 4, is_optional => 1 },
         build_requested         => { is => 'Number', len => 4, is_optional => 1 },
