@@ -174,7 +174,7 @@ sub execute {
 		$gap_type7b = 'fragment';
 		$linkage8b = 'yes';
 		$filler9b = '';
-	    } elsif ( $substring_sequence =~ m/^[ACGTN]+$/i ) {
+	    } elsif ( $substring_sequence =~ m/^[ACGTN]+$/i ) { #<-- should remove the N
 		### This is a contig
 		$i++; # a counter, used for generating unique contig names
 		$component_type5 = 'W';

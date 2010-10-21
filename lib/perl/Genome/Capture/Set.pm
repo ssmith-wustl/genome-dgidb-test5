@@ -24,7 +24,6 @@ class Genome::Capture::Set {
         description => { },
         status => { },
         _capture_set => {
-            doc => 'Solexa Lane Summary from LIMS.',
             is => 'GSC::Setup::CaptureSet',
             calculate => q| GSC::Setup::CaptureSet->get($id); |,
             calculate_from => ['id']
@@ -91,18 +90,20 @@ sub print_bed_file {
     my $bed_file = shift;
 
     my $bed_file_content = $self->bed_file_content;
-    my $barcode = $self->barcode;
-    unless ($barcode) {
-        $self->error_message('Failed to find barcode.');
+    my @barcodes = $self->barcodes;
+    unless (@barcodes) {
+        $self->error_message('Failed to find barcodes.');
         die($self->error_message);
     }
+    my $barcode = join('-', @barcodes);
+    
     my $tmp_file = Genome::Utility::FileSystem->create_temp_file_path($barcode .'.bed');
     if ($bed_file_content) {
         my $tmp_fh = Genome::Utility::FileSystem->open_file_for_writing($tmp_file);
         print $tmp_fh $bed_file_content;
         $tmp_fh->close;
     } else {
-        my $cmd = '/gsc/scripts/bin/capture_file_dumper --barcode='. $barcode .' --output-type=region-bed --output-file='. $tmp_file;
+        my $cmd = '/gsc/scripts/bin/capture_file_dumper --barcode='. $barcodes[0] .' --output-type=region-bed --output-file='. $tmp_file;
         Genome::Utility::FileSystem->shellcmd(
             cmd => $cmd,
             output_files => [$tmp_file],
@@ -131,6 +132,26 @@ sub print_bed_file {
     return 1;
 }
 
+sub barcodes {
+    my $self = shift;
+    my @barcodes = $self->get_barcodes;
+    unless (@barcodes) { return; }
+    return map {$_->barcode} @barcodes;
+}
+
+sub get_barcodes {
+    my $self = shift;
+    my $cs = $self->_capture_set;
+    return $cs->get_barcodes;
+}
+
+sub barcode_string{
+    my $self = shift;
+    return join(',', $self->barcodes);
+}
+
+
+#---- the following are legacy and should be deleted on or after Nov 1, 2010:
 sub barcode {
     my $self = shift;
     my $barcode = $self->get_barcode;
@@ -144,4 +165,5 @@ sub get_barcode {
     return $cs->get_barcode;
 }
 
+#---- end 
 1;

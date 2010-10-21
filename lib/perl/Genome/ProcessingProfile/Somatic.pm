@@ -43,6 +43,24 @@ class Genome::ProcessingProfile::Somatic{
         sniper_params => {
             doc => "Parameters to pass to bam-somaticsniper for detecting snps and indels",
         },
+        snv_detector_name => {
+            doc => "The name of the variant detector to use for snv detection",
+        },
+        snv_detector_version => {
+            doc => "The version of the variant detector to use for snv detection",
+        },
+        snv_detector_params => {
+            doc => "The params to pass to the variant detector to use for snv detection",
+        },
+        indel_detector_name => {
+            doc => "The name of the variant detector to use for indel detection",
+        },
+        indel_detector_version => {
+            doc => "The version of the variant detector to use for indel detection",
+        },
+        indel_detector_params => {
+            doc => "The params to pass to the variant detector to use for indel detection",
+        },
         bam_readcount_version => {
             doc => "Version to use for bam-readcount in the high confidence step.",
         },
@@ -149,7 +167,7 @@ sub _map_workflow_inputs {
 
     # Set (hardcoded) defaults for tools that have defaults that do not agree with somatic pipeline
     push @inputs,
-        skip_if_output_present => 1,
+        skip_if_output_present => 0,
         imported_bams => 0,
         lookup_variants_report_mode => "novel-only",
         lookup_variants_filter_out_submitters => "SNP500CANCER,OMIMSNP,CANCER-GENOME,CGAP-GAI,LCEISEN,ICRCG,DEVINE_LAB",

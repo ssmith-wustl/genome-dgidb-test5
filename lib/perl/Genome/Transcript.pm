@@ -844,10 +844,15 @@ sub gff3_string {
 
 sub gtf_string {
     my $self = shift;
-    my @sub_structure = grep {$_->structure_type ne 'flank'} $self->ordered_sub_structures;
+    my @sub_structure = grep {$_->structure_type ne 'flank' && $_->structure_type ne 'intron'} $self->ordered_sub_structures;
     my %exon_sub_structures;
+    my $i = 1;
     for my $ss (@sub_structure){
-        push @{$exon_sub_structures{$ss->ordinal}}, $ss;
+        if ($ss->ordinal) {
+            push @{$exon_sub_structures{$ss->ordinal}}, $ss;
+        } else {
+            push @{$exon_sub_structures{$i++}}, $ss;
+        }
     }
     my $string;
     for my $ordinal ( sort {$a <=> $b} keys %exon_sub_structures ) {
@@ -862,6 +867,15 @@ sub gtf_string {
             } elsif ($type eq 'cds_exon') {
                 $type = 'CDS';
                 push @cds_strings, $ss->chrom_name ."\t". $ss->source .'_'. $ss->version ."\t". $type ."\t". $ss->structure_start ."\t". $ss->structure_stop ."\t.\t". $ss->strand ."\t". $ss->frame ."\t".' gene_id "'. $ss->gene_name .'"; transcript_id "'. $ss->transcript_name .'"; exon_number "'. $ordinal .'";';
+            } elsif ($type eq 'rna') {
+                # Should RNA even be included as if it's coding, just as an exon or included at all...
+                $type = 'RNA';
+                my $frame = $ss->frame;
+                if (!defined($frame) || $frame =~ /^\s*$/) {
+                    # No frame attribute for rna
+                    $frame = '.';
+                }
+                push @cds_strings, $ss->chrom_name ."\t". $ss->source .'_'. $ss->version ."\t". $type ."\t". $ss->structure_start ."\t". $ss->structure_stop ."\t.\t". $ss->strand ."\t". $frame ."\t".' gene_id "'. $ss->gene_name .'"; transcript_id "'. $ss->transcript_name .'"; exon_number "'. $ordinal .'";';
             }
             unless ($exon_start && $exon_stop) {
                 $exon_start = $ss->structure_start;
@@ -880,6 +894,9 @@ sub gtf_string {
                     die('Inconsistent strand on transcript '. $self->transcript_name);
                 }
             }
+        }
+        unless ($exon_start && $exon_stop) {
+            die(Data::Dumper::Dumper($self));
         }
         $string .= $self->chrom_name ."\t". $self->source .'_'. $self->version ."\texon\t". $exon_start ."\t". $exon_stop ."\t.\t". $exon_strand ."\t.\t".' gene_id "'. $self->gene->name .'"; transcript_id "'. $self->transcript_name .'"; exon_number "'. $ordinal .'";' ."\n";
         if (scalar(@cds_strings)) {

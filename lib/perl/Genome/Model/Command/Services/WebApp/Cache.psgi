@@ -140,6 +140,8 @@ sub {
                 if (!$found) {
                     push @{ $resp->[1] }, 'Set-Cookie' => 'cacheon=1';
                 }
+
+                $resp->[3] = time;
                 if (!$class->set($url,freeze($resp))) {
                     $class->unlock($url);
 
@@ -189,7 +191,16 @@ sub {
                 $no_cache = '';
             }
 
-            if (defined $v && $no_cache ne 'no-cache') {
+            if (exists $env->{'HTTP_X_MAX_AGE'}) {
+                my $age = $env->{'HTTP_X_MAX_AGE'};
+
+                $resp = thaw($v);
+
+                if (!$resp->[3] || (time - $resp->[3]) > $age) {
+                    undef $resp;
+                }
+
+            } elsif (defined $v && $no_cache ne 'no-cache') {
                 $resp = thaw($v);
             }
         }
@@ -198,7 +209,7 @@ sub {
             $resp = $gen->();
         }
 
-        return $resp;
+        return [@$resp[0,1,2]];
     } else {
         my $skip_cache = 0;
         for my $re (@never_cache) {
@@ -227,7 +238,7 @@ sub {
 
         if (defined $v && $no_cache ne 'no-cache') {
             my $s = thaw($v);
-            return $s;
+            return [@$s[0,1,2]];
         } else {
             my $content = q[
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">

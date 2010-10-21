@@ -86,7 +86,7 @@ sub valid_param_sets {
             build_id => $_[0]->_build->id,
             after_execute => sub{
                 my ($self, $obj, $param_set) = @_;
-                is($self->_build->build_status, 'Succeeded', 'Build status is succeeded');
+                is($self->_build->status, 'Succeeded', 'Build status is succeeded');
                 return 1;
             },
         },
@@ -100,7 +100,7 @@ sub valid_param_sets {
             },
             after_execute => sub{
                 my ($self, $obj, $param_set) = @_;
-                is($self->_build->build_status, 'Failed', 'Build status is failed');
+                is($self->_build->status, 'Failed', 'Build status is failed');
                 $self->_mock_build_success; # reset to be ok
                 return 1;
             },
@@ -117,7 +117,7 @@ sub valid_param_sets {
             },
             after_execute => sub{
                 my ($self, $obj, $param_set) = @_;
-                is($self->_build->build_status, 'Failed', 'Build status is failed');
+                is($self->_build->status, 'Failed', 'Build status is failed');
                 return 1;
             },
         },
@@ -131,7 +131,7 @@ sub valid_param_sets {
             },
             after_execute => sub{
                 my ($self, $obj, $param_set) = @_;
-                is($self->_build->build_status, 'Failed', 'Build status is failed');
+                is($self->_build->status, 'Failed', 'Build status is failed');
                 return 1;
             },
         },
@@ -145,7 +145,7 @@ sub valid_param_sets {
             },
             after_execute => sub{
                 my ($self, $obj, $param_set) = @_;
-                is($self->_build->build_status, 'Failed', 'Build status is failed');
+                is($self->_build->status, 'Failed', 'Build status is failed');
                 $self->_mock_build_fail; # reset to be ok
                 return 1;
             },

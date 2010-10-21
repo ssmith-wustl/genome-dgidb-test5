@@ -289,7 +289,7 @@ sub _eviscerate_old_builds_for_this_model {
     # The calling build will not have been marked as succeeded yet, so allow an "or" here to catch our own build
     my @builds = sort {$a->build_id <=> $b->build_id}
     grep {$_->can('eviscerate')}
-    grep {$_->build_status eq "Succeeded" || $_->id == $self->build->id} 
+    grep {$_->status eq "Succeeded" || $_->id == $self->build->id}
     $model->builds;
 
     my @builds_to_eviscerate = splice @builds, 0, scalar @builds - $recent_keep_count;
@@ -305,16 +305,16 @@ sub _eviscerate_old_builds_for_this_model {
             unless ($lock) {
                 $self->error_message("Failed to get a build lock to eviscerate!  Skipping this build.");
                 next;
-                }
             }
-
-            $doomed_build->eviscerate;        
-
-            Genome::Utility::FileSystem->unlock_resource(resource_lock=>$lock);
         }
-    }
 
-    1;
+        $doomed_build->eviscerate;
+
+        Genome::Utility::FileSystem->unlock_resource(resource_lock=>$lock);
+    }
+}
+
+1;
 
 #$HeadURL$
 #$Id$
