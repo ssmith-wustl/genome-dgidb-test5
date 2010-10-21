@@ -213,6 +213,10 @@ sub processed_bed_file_content {
     my $self = shift;
 
     my $file = $self->file_path;
+    unless($self->verify_file_md5) {
+        $self->error_message('MD5 mismatch! BED file modified or corrupted?');
+        die $self->error_message;
+    }
 
     my $fh = Genome::Utility::FileSystem->open_file_for_reading($file);
 
