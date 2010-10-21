@@ -6,7 +6,6 @@ class Genome::Model::Build::Command::Base {
     has         => [
         builds => {
             is                  => 'Genome::Model::Build',
-            require_user_verify => 1,
             is_many             => 1,
             shell_args_position => 1,
             doc =>

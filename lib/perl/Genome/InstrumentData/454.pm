@@ -89,7 +89,7 @@ EOS
         sample              => { is => 'Genome::Sample', id_by => ['sample_id'] },
         sample_id           => { is => 'Number', },
 
-        sample_source       => { is => 'Genome::SampleSource', via => 'sample', to => 'source' },
+        sample_source       => { via => 'sample', to => 'source', },
         sample_source_name  => { via => 'sample_source', to => 'name' },
 
         # indirect via the sample source, but we let the sample manage that
