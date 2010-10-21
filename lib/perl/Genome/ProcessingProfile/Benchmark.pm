@@ -52,7 +52,7 @@ sub _system_snapshot {
     my $dir = shift;
 
     # We create a cache file for this build
-    my $cache = "$dir/systemp_snapshot.cache";
+    my $cache = "$dir/system_snapshot.cache";
     return if (! defined $dir);
 
     my $s = snapshot->new($cache);
