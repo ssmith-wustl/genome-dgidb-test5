@@ -34,7 +34,7 @@ $taxon = Genome::Taxon->create(
 ok($taxon, "created a new genome taxon");
 isa_ok($taxon, 'Genome::Taxon');
 is($taxon->id, $id, "id is set");
-is($taxon->subject_type, 'organism_taxon', 'subject type is organism_taxon');
+is($taxon->subject_type, 'organism taxon', 'subject type is organism taxon');
 print Data::Dumper::Dumper($taxon);
 
 my $commit = eval{ UR::Context->commit; };

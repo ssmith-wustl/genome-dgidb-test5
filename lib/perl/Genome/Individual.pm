@@ -24,7 +24,7 @@ class Genome::Individual {
         taxon => { is => 'Genome::Taxon', id_by => 'taxon_id', },
         species_name    => { via => 'taxon' },
         description => { is => 'Text', is_optional => 1, len => 500, },
-        subject_type => { is => 'Text', is_constant => 1, value => 'organism_individual', column_name => '', },
+        subject_type => { is => 'Text', is_constant => 1, value => 'organism individual', column_name => '', },
     ],
     has_optional => [
         father  => { is => 'Genome::Individual', id_by => 'father_id' },
