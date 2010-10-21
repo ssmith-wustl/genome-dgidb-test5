@@ -1509,6 +1509,17 @@ sub get_metric {
     }
 }
 
+# This method should be overridden in base classes. It should take a build ID from another
+# build of this model and compare various files in the build directory. Any files that are
+# found to be different should be added to a hash, where the keys are the files that differ
+# and the values are the reasons (ie, one file doesn't exist, line count doesn't match, etc).
+# If there are no differences, return undef. 
+sub _compare_output {
+    my ($self, $other_build_id) = @_;
+    die "Override _compare_output in your build subclass!";
+}
+
+
 # why hide this here? -ss
 package Genome::Model::Build::AbstractBaseTest;
 
