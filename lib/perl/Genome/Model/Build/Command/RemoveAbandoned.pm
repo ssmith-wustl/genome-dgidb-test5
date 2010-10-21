@@ -51,7 +51,7 @@ sub execute {
 
  
     my $remove_abandoned = Genome::Model::Build::Command::Remove->create(
-        builds => @builds,
+        builds => \@builds,
         keep_build_directory => $self->keep_build_directory,
     );
     return $remove_abandoned->execute();
