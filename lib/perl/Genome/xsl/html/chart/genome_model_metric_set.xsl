@@ -56,10 +56,15 @@
       <xsl:text disable-output-escaping="yes">
         <![CDATA[
 
+function dropDown(data) {
+    var options_metrics = '<option>Metric<\/option>'
+    $.each(data, function(index,value){
+      options_metrics += '<option value="' + value + '">' + value + '<\/option>'
+    })
+    $("select#metric").html(options_metrics)
+}
 
-function renderGraph(data) {
-
-    console.log(data.length);
+function renderGraph(data,field) {
 
     /* Sizing and scales. */
     var w = 400,
@@ -82,12 +87,20 @@ function renderGraph(data) {
         .left(function(d) x(this.index))
         .strokeStyle("#eee")
         .add(pv.Rule)
-        .bottom(-25)
+        .bottom(0)
         .height(0)
         .strokeStyle("#000")
         .anchor("bottom").add(pv.Label)
         .textAngle(Math.PI/2)
+        .textAlign("left")
         .text(function(d) { return d.x } );
+        //.bottom(-25)
+
+    vis.add(pv.Label)
+        .left(200)
+        .bottom(-95)
+        .textAlign("center")
+        .text(field + " vs. build ID")
 
     /* Y-axis ticks. */
     vis.add(pv.Rule)
@@ -108,32 +121,63 @@ function renderGraph(data) {
     vis.render();
 }
 
+var jsonData = {};
+var jsonFields = [];
+
+function renderData(data,field) {
+         var chartData = data["members"].filter(function(m) {
+             if (m.name == field) {
+                 return true;
+             }
+         }).map(function(m) {
+             return { x: m.build_id, y: m.value };
+         });
+         renderGraph(chartData,field);
+}
+
+function redrawGraph(menuform) {
+  selecteditem = menuform.metric.selectedIndex ;
+  metric = menuform.metric.options[ selecteditem ].value
+  renderData(jsonData,metric)
+}
+
 $(document).ready(function () {
 
     $.ajax({
         url: location.href.replace('.html','.json'),
         dataType: 'json',
         success: function(data) {
-
-            var chartData = data["members"].filter(function(m) {
-                if (m.name == "rbytes") {
-                    return true;
-                }
-            }).map(function(m) {
-                return { x: m.build_id, y: m.value };
-            });
-
-            renderGraph(chartData);
+            jsonData = data;
+            // fixme: change default field to walltime
+            renderData(data,'rbytes');
+            var fields = {};
+            $.each(data['members'].map(function(m) {
+                return m.name;
+            }), function(index, value) {
+                fields[value] = 1
+            })
+            jsonFields = []
+            $.each(fields, function(index, value) {
+              jsonFields.push(index)
+            })
+            dropDown(jsonFields);
         }
-    });
+    })
 
-});
+    $('select#metric').change(function() {
+      dropDown(jsonFields);
+    })
+})
         ]]>
       </xsl:text>
     </script>
 
   <div id="fig"></div>
-  <div id="out"></div>
+  <form id="menu" action="" name="menu">
+  <select name="metric" id="metric" onchange="redrawGraph(this.form)">
+    <option>Metric</option>
+  </select>
+  </form>
 
   </xsl:template>
 
