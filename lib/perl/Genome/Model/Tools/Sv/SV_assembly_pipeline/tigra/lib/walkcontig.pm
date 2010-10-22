@@ -208,7 +208,7 @@ sub converge{
 	    $x=0;
 	  }
 	  else {
-	    if ((grep /$x/, @b)>0){
+	    if ((grep /^$x$/, @b)>0){
 	      $lengthb=0;
 	      for(@b) {last if ($_==$x);$lengthb+=$Contiglens[abs $_]-$self->{k}+1;}
 	      my $xx=abs ($lengtha-$lengthb);
@@ -224,7 +224,7 @@ sub converge{
 	my @temp=$self->step($b[-1],$stepcutoff,$stepratiocutoff);
 	my $x=$temp[0];
 	if ($x!=0){
-	  if ((grep /$x/, @a)>0) {
+	  if ((grep /^$x$/, @a)>0) {
 	    $lengtha=0;
 	    for(@a) {
 	      last if ($_==$x);

@@ -74,13 +74,14 @@ sub resolve_param_value_from_cmdline_text {
         my $arg = $param_args[$i];
         my @arg_results;
         (my $arg_display = $arg) =~ s/,/ AND /g; 
-        $self->status_message("Looking for parameters using '$arg_display'...");
 
         for my $param_class (@param_class) {
+            print STDERR "Looking for $param_class using '$arg_display'... ";
             #$self->debug_message("Trying to find $param_class...");
             %SEEN_FROM_CLASS = ();
             # call resolve_param_value_from_text without a via_method to bootstrap recursion
             @arg_results = eval{$self->resolve_param_value_from_text($arg, $param_class)};
+            print STDERR "found " . @arg_results . " result(s).\n";
         } 
         last if ($@ && !@arg_results);
 
@@ -280,7 +281,7 @@ sub _get_user_verification_for_param_value {
     my ($self, @list) = @_;
 
     my $n_list = scalar(@list);
-    if ($n_list > 20 && !$ENV{GENOME_NO_REQUIRE_USER_VERIFY}) {
+    if ($n_list > 200 && !$ENV{GENOME_NO_REQUIRE_USER_VERIFY}) {
         my $response = $self->_ask_user_question("Would you [v]iew all $n_list item(s), (p)roceed, or e(x)it?", 0, '[v]|p|x', 'v');
         if(!$response || $response eq 'x') {
             $self->status_message("Exiting...");
