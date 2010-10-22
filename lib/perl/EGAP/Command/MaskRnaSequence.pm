@@ -7,6 +7,7 @@ use EGAP;
 use Carp 'confess';
 use File::Temp;
 use File::Basename;
+use File::Spec;
 use Genome::Utility::FileSystem;
 
 class EGAP::Command::MaskRnaSequence {
@@ -50,13 +51,19 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    $self->status_message("Starting rna masking command");
+    $DB::single = 1;
+    $self->status_message("Starting rna masking command, masking sequences in " . $self->fasta_file);
+
+    unless (-e $self->fasta_file) {
+        confess 'No fasta file found at ' . $self->fasta_file . '!';
+    }
 
     unless (defined $self->masked_fasta_file) {
-        my ($fasta_name, $fasta_dir) = basename($self->fasta_file);
+        my $full_fasta_path = File::Spec->rel2abs($self->fasta_file);
+        my ($fasta_name, $fasta_dir) = fileparse($full_fasta_path);
         my $masked_fh = File::Temp->new(
+            TEMPLATE => $fasta_name . ".rna_masked_XXXXXX",
             DIR => $fasta_dir,
-            TEMPLATE => $fasta_name . "_rna_masked_XXXXXX",
             CLEANUP => 0,
             UNLINK => 0,
         );
@@ -64,11 +71,14 @@ sub execute {
         $masked_fh->close;
     }
 
+    $self->status_message("Masked sequences are being written to fasta file at " . $self->masked_fasta_file);
+
     # If no RNA genes are found, there won't be an rna file. This is a valid situation, so if no RNA gene file
     # and the skip flag is set, just copy the input fasta to the masked fasta location. To figure out the path
     # to the RNA file, need to use the data source and call its file resolver method.
     my $rna_data_source = EGAP::RNAGene->__meta__->data_source;
-    my $rna_file = $rna_data_source->file_resolver($self->prediction_directory);
+    my $file_resolver = $rna_data_source->can('file_resolver');
+    my $rna_file = $file_resolver->($self->prediction_directory);
     unless (-e $rna_file) {
         if ($self->skip_if_no_rna_file) {
             $self->status_message("No rna predictions file found at $rna_file" .
@@ -79,19 +89,17 @@ sub execute {
             unless (defined $cp_rv and $cp_rv) {
                 confess 'Could not copy input fasta ' . $self->fasta_file . ' to ' . $self->masked_fasta_file . "!";
             }
+
+            $self->status_message("Copy successful! Masked fasta file now at " . $self->masked_fasta_file . ", exiting!");
             return 1;
         }
         else {
             confess "No rna prediction file found at $rna_file";
         }
     }
-
-    unless (-e $self->fasta_file) {
-        confess 'No fasta file found at ' . $self->fasta_file . '!';
-    }
-            
+    
     # This pre-loads all the predictions, which makes grabbing predictions per sequence faster below
-    $self->status_message("Loading RNAGene objects from " . $self->prediction_directory);
+    $self->status_message("Found RNA predictions in $rna_file, now loading them into memory!");
     my @rna_predictions = EGAP::RNAGene->get(
         directory => $self->prediction_directory
     );
