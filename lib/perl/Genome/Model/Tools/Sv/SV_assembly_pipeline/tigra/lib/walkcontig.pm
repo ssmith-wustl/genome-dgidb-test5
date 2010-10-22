@@ -294,7 +294,7 @@ sub dump_contigs2 {
     my %a=$self->nextcontigs_warc($contig);
     my $i="";
     my $o="";
-    foreach my $con (keys %a) {
+    foreach my $con (sort keys %a) {
       $i.=$Contigtags[abs $con]*$con/(abs $con);
       $i.=":".$a{$con}.",";
     }
@@ -302,7 +302,7 @@ sub dump_contigs2 {
     ($truenode,$dir)=&true($node);
     $contig=$HH{$truenode}{tag}*$dir;
     %a=$self->nextcontigs_warc($contig);
-    foreach my $con (keys %a) {
+    foreach my $con (sort keys %a) {
       $o.=$Contigtags[abs $con]*$con/(abs $con);
       $o.=":".$a{$con}.",";
     }
