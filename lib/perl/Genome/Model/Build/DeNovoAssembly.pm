@@ -29,9 +29,24 @@ class Genome::Model::Build::DeNovoAssembly {
         },
 
 	#TODO - best place for this??
-	processed_reads_count => { is => 'Integer', is_optional => 1, is_mutable => 1, doc => 'Number of reads processed for assembling',
+	processed_reads_count => {
+	    is => 'Integer',
+	    is_optional => 1,
+	    is_mutable => 1,
+	    doc => 'Number of reads processed for assembling',
 	},
-
+	_genome_size_used => {
+	    is => 'Integer',
+	    is_optional => 1,
+	    is_mutable => 1,
+	    doc => 'Genome size used to assemble',
+	},
+	_average_insert_size_used => {
+	    is => 'Integer',
+	    is_optional => 1,
+	    is_mutable => 1,
+	    doc => 'Average insert size used to assemble',
+	},
         (
             map { 
                 join('_', split(m#\s#)) => {
@@ -125,6 +140,8 @@ sub calculate_estimated_kb_usage {
 sub genome_size {
     my $self = shift;
 
+    return $self->_genome_size_used if $self->_genome_size_used;
+
     my $model = $self->model;
     my $subject = $model->subject;
     unless ( $subject ) { # Should not happen
@@ -145,16 +162,30 @@ sub genome_size {
     }
 
     if ( defined $taxon->estimated_genome_size ) {
+	$self->_genome_size_used( $taxon->estimated_genome_size );
         return $taxon->estimated_genome_size;
     }
-    elsif ( $taxon->domain =~ /bacteria/i ) {
+    elsif ( defined $taxon->domain and $taxon->domain =~ /bacteria/i ) {
+	$self->_genome_size_used ( 4500000 );
         return 4500000;
     }
     # TODO add more
     print Dumper($taxon);
     
     Carp::confess('Cannot determine genom size for De Novo Assembly model\'s ('.$self->model->id.' '.$self->model->name.') associated taxon ('.$taxon->id.')');
+
 }
+
+sub genome_size_used {
+    my $self = shift;
+
+    return $self->_genome_size_used if $self->_genome_size_used;
+
+    my $genome_size_used = $self->genome_size;
+
+    return $genome_size_used;
+}
+
 
 sub calculate_base_limit_from_coverage {
     my $self = shift;
@@ -183,6 +214,8 @@ sub interesting_metric_names {
         'reads processed', 'reads processed success',
         'reads assembled', 'reads assembled success', 'reads not assembled pct',
         'read_depths_ge_5x',
+	'genome_size_used',
+	'average_insert_size_used',
     );
 }
 
@@ -232,6 +265,8 @@ sub calculate_reads_attempted {
 sub calculate_average_insert_size {
     my $self = shift;
 
+    return $self->_average_insert_size_used if $self->_average_insert_size_used;
+
     my @instrument_data = $self->instrument_data;
     unless ( @instrument_data ) {
         Carp::confess(
@@ -256,12 +291,28 @@ sub calculate_average_insert_size {
 
     unless ( @insert_sizes ) {
         $self->status_message("No insert sizes found in instrument data for ".$self->description);
-        return;
+	return;
     }
 
     my $sum = List::Util::sum(@insert_sizes);
 
-    return $sum / scalar(@insert_sizes);
+    my $average_insert_size = $sum / scalar(@insert_sizes);
+
+    $self->_average_insert_size_used( $average_insert_size );
+    
+    return $average_insert_size;
+}
+
+sub average_insert_size_used {
+    my $self = shift;
+
+    return $self->_average_insert_size_used if $self->_average_insert_size_used;
+
+    my $average_insert_size_used = $self->calculate_average_insert_size;
+
+    return $average_insert_size_used if $average_insert_size_used;
+
+    return;
 }
 
 #< Files / Dirs >#
@@ -400,12 +451,19 @@ sub calculate_metrics {
     }
 
     #further processing of metric values
+    
+    #add genome and average insert size used values to metrics and report
+    $stat_to_metric_names{'genome size used'} = 'genome_size_used';
+    $stat_to_metric_names{'average insert size used'} = 'average_insert_size_used';
+
 
     #unused reads .. NA for soap assemblies, a number for others
     unless ($metrics{reads_not_assembled_pct} eq 'NA') {
 	$metrics{reads_not_assembled_pct} =~ s/%//;
 	$metrics{reads_not_assembled_pct} = sprintf('%0.3f', $metrics{reads_not_assembled_pct} / 100);
     }
+
+    #additional calculations needed to derive metric values
 
     #reads attempted, total input reads
     $metrics{reads_attempted} = $self->calculate_reads_attempted
@@ -422,6 +480,10 @@ sub calculate_metrics {
 
     #5x coverage stats - not defined for soap assemblies
     $metrics{read_depths_ge_5x} = ( $metrics{read_depths_ge_5x} ) ? sprintf ('%0.1f', $metrics{read_depths_ge_5x} * 100) : 'NA';
+
+    #genome and average insert size used
+    $metrics{genome_size_used} = ( $self->genome_size_used ) ? $self->genome_size_used :'NA';
+    $metrics{average_insert_size_used} = ( $self->average_insert_size_used ) ? $self->average_insert_size_used : 'NA';
 
     return %metrics;
 }
