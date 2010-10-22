@@ -243,7 +243,10 @@ sub create {
         aspect => 'rollback',
         callback => sub {
             if ($self->data_directory && -e $self->data_directory) {
-                unless (rmtree($self->data_directory, { error => \my $remove_errors })) {
+                if (rmtree($self->data_directory, { error => \my $remove_errors })) {
+                    $self->status_message("Removed build's data directory (" . $self->data_directory . ").");
+                }
+                else {
                     if (@$remove_errors) {
                         my $error_summary;
                         for my $error (@$remove_errors) {
