@@ -56,6 +56,16 @@ sub execute {
         -file => $self->fasta_file
     );
 
+    my $output_fh = File::Temp->new(
+        TEMPLATE => 'fgenesh_raw_output_XXXXXX',
+        DIR => $self->raw_output_directory,
+        CLEANUP => 1,
+        UNLINK => 1,
+    );
+    my $output_file = $output_fh->filename;
+    $output_fh->close;
+    chmod(0666, $output_file);
+
     my $gene_count = 0;
     while (my $seq = $seqio->next_seq()) {
         $self->status_message("Now parsing predictions from sequence " . $seq->id());
@@ -68,6 +78,14 @@ sub execute {
         my $parser = $factory->run($seq);
         my $current_seq_name = $seq->id();
 
+        # Since fgenesh only runs on a single sequence at a time and generates a new output file for each
+        # run and I don't want a bazillion output files to look at, I'll just append each file generated
+        # by fgenesh into the raw output file I've created above
+        my $fgenesh_file = $parser->{_file};
+        if (-e $fgenesh_file) {
+            system("cat $fgenesh_file >> $output_file");
+        }
+
         # Parse and process each prediction...
         while (my $gene = $parser->next_prediction()) {
             my $strand = $gene->strand();
@@ -76,6 +94,8 @@ sub execute {
             my $transcript_name = $gene_name . '.1';
             my $protein_name = $transcript_name . "_protein.1";
             $gene_count++;
+
+            $DB::single = 1 if $transcript_name eq "TRISPI_Contig1483.Fgenesh.11.1";
 
             my @predicted_exons = $gene->exons();
 
@@ -168,12 +188,13 @@ sub execute {
             if ($missing_start) {
                 my $first_exon_overhang = $exons[0]->five_prime_overhang;
                 $first_exon_overhang = $exons[-1]->five_prime_overhang if $strand eq '-1';
-                $transcript_seq = $transcript_seq->trunc($first_exon_overhang + 1, $transcript_seq->length());
+                my $skipped_bases = (3 - $first_exon_overhang) % 3;
+                $transcript_seq = $transcript_seq->trunc($skipped_bases + 1, $transcript_seq->length());
             }
 
-            my $protein_seq = $transcript_seq->translate();
-
-            # Now check the translated sequence for internal stop codons
+            # fgenesh produces the translated sequence for us, which is stored on the predicted gene object (which
+            # is a bioperl Bio::Seq object). Get that sequence and check it for internal stop codons
+            my $protein_seq = $gene->predicted_protein;
             my $stop = index($protein_seq->seq(), '*');
             unless ($stop == -1 or $stop == (length($protein_seq->seq()) - 1)) {
                 $internal_stops = 1;
@@ -205,6 +226,7 @@ sub execute {
                 sequence_name => $current_seq_name,
                 sequence_string => $transcript_seq->seq(),
                 protein_name => $protein_name,
+                strand => $strand,
             );
 
             my $protein = EGAP::Protein->create(
