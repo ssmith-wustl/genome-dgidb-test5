@@ -3,6 +3,8 @@
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <xsl:template name="genome_model_build" match="build-status">
+    <xsl:comment>template: /html/status/genome_model_build.xsl match="build-status"</xsl:comment>
+
     <!-- global object for data, uses YUI Module Pattern -->
     <script type="text/javascript">
       window.page_data = function(){
@@ -29,7 +31,7 @@
 
     <xsl:call-template name="view_header">
       <xsl:with-param name="label_name" select="'Build:'" />
-      <xsl:with-param name="display_name" select="build/@build-id" />
+      <xsl:with-param name="display_name" select="$displayName" />
       <xsl:with-param name="icon" select="'genome_model_build_32'" />
     </xsl:call-template>
 
@@ -454,7 +456,7 @@
               <tr>
                 <td class="name"><br/></td>
                 <td class="value">
-                  <xsl:variable name="button"> 
+                  <xsl:variable name="button">
                     <xsl:call-template name="object_link_button">
                       <xsl:with-param name="type" select="'Genome::Model::Metric::Set'"/>
                       <xsl:with-param name="key" select="'build_id'"/>
@@ -465,7 +467,7 @@
                     </xsl:call-template>
                   </xsl:variable>
 
-                  <xsl:copy-of select="$button"/> 
+                  <xsl:copy-of select="$button"/>
                 </td>
               </tr>
             </xsl:if>
