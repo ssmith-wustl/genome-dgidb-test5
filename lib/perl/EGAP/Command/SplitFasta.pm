@@ -91,7 +91,7 @@ sub execute {
         if (not defined $current_fasta or ($current_chunk_size + $length) > $upper_limit) {
             $total_bases += $current_chunk_size;
 
-            my $filename = $output_directory . "/fasta_$counter.fa";
+            my $filename = $output_directory . "/fasta_$counter";
             $current_fasta = Bio::SeqIO->new(
                 -file => ">$filename",
                 -format => 'Fasta',
