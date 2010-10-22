@@ -65,17 +65,19 @@ sub execute {
 	print "$common_name\n";
 	my $user = getlogin || getpwuid($<); #get current user name
         	# submit samtool assembly for each tier of indels for a sample
+       	
+       	my $sample_dir=$analysis_dir."/".$common_name."/samtools/";
+	my $normal_dir=$analysis_dir."/".$common_name."/samtools/normal";
+	my $tumor_dir=$analysis_dir."/".$common_name."/samtools/tumor";
+	`mkdir $sample_dir`;
+	`mkdir $normal_dir`;
+	`mkdir $tumor_dir`; 
        	foreach my $tier (keys %indel_tiers) {
        		my $indel_file = $indel_tiers{$tier};
-       		unless (-d $indel_file){
+       		unless (-e $indel_file){
 	       		$self->error_message("The $indel_file doesn't exist, exit now!");
        			return;
        		}
-       		my $sample_dir=$analysis_dir."/".$common_name."/samtools/";
-       		my $normal_dir=$analysis_dir."/".$common_name."/samtools/normal";
-       		my $tumor_dir=$analysis_dir."/".$common_name."/samtools/tumor";
-       		`mkdir -p $normal_dir`;
-       		`mkdir -p $tumor_dir`; 
        		
        		# Normal data
        		my $jobid1 =`bsub -N -u $user\@genome.wustl.edu -J $common_name.$tier.N -R 'select[type==LINUX64]' 'gmt somatic assemble-indel --assembly-indel-list=$sample_dir/$tier.normal --bam-file=$normal_wgs_bam --data-directory=$normal_dir --indel-file=$indel_file'`;
@@ -102,7 +104,7 @@ sub execute {
             	my $jobid5=`bsub -N -u $user\@genome.wustl.edu -J $common_name.$tier.N.somatic -R 'select\[type==LINUX64\]' -w 'ended($jobid2) && ended($jobid4)' 'gmt somatic intersect-assembled-indels --normal-indel-file=$sample_dir/$tier.normal.noNT --tumor-indel-file=$sample_dir/$tier.tumor.noNT --tumor-assembly-data-directory=$tumor_dir --germline-output-list=$sample_dir/$tier.noNT.germline  --somatic-output-list=$sample_dir/$tier.noNT.somatic\'`;
             	$jobid5=~ /<(\d+)>/;
 		$jobid5=$1;
-       		print "$jobid5\n";
+       		print "intersect tumor/normal $tier in job $jobid5\n";
        	}
 
         return 1;
