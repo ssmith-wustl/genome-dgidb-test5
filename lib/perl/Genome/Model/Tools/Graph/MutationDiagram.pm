@@ -16,8 +16,13 @@ class Genome::Model::Tools::Graph::MutationDiagram {
         },
         annotation => {
             type => 'String',
-            doc => "Annotator output",
+            doc => "Annotator output.  Requires --reference-transcripts option",
             is_optional => 1,
+        },
+        reference_transcripts => {
+            type => 'String',
+            doc => 'name/version number of the reference transcripts set ("NCBI-human.combined-annotation/0") Defaults to "NCBI-human.combined-annotation/54_36p_v2"',
+            default => 'NCBI-human.combined-annotation/54_36p_v2',
         },
         genes   => { 
             type => 'String',  
@@ -30,6 +35,8 @@ class Genome::Model::Tools::Graph::MutationDiagram {
             is_optional => 1
         },
 
+    ],
+    has_optional => [
     ],
 };
 
@@ -59,6 +66,7 @@ sub execute {
             maf_file => $maf_file,
             hugos => $self->genes,
             custom_domains => $self->custom_domains,
+            reference_transcripts => $self->reference_transcripts,
         );
     }
     elsif($anno_file) {
@@ -66,6 +74,7 @@ sub execute {
             annotation => $anno_file,
             hugos => $self->genes,
             custom_domains => $self->custom_domains,
+            reference_transcripts => $self->reference_transcripts,
         );
     }
     else {
