@@ -21,6 +21,7 @@ class EGAP::Transcript {
         coding_end => { is => 'Number' },
         start => { is => 'Number' },
         end => { is => 'Number' },
+        strand => { is => 'Text' },
         sequence_name => { is => 'Text' },
         sequence_string => { is => 'Text' },
         coding_gene => {

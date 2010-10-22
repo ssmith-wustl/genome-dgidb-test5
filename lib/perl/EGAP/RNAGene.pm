@@ -18,7 +18,7 @@ class EGAP::RNAGene {
         description => { is => 'Text' },
         start => { is => 'Number' },
         end => { is => 'Number' },
-        strand => { is => 'Number' },
+        strand => { is => 'Text' },
         source => { is => 'Text' },
         score => { is => 'Number' },
         sequence_name => { is => 'Text' },

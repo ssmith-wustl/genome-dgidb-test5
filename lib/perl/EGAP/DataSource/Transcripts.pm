@@ -17,6 +17,7 @@ sub column_order {
         coding_end
         start
         end
+        strand
         sequence_name
         sequence_string
     )];

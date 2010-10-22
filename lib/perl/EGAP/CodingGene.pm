@@ -20,7 +20,7 @@ class EGAP::CodingGene {
         missing_start => { is => 'Boolean' },
         missing_stop => { is => 'Boolean' },
         source => { is => 'Text' },
-        strand => { is => 'Number' },
+        strand => { is => 'Text' },
         sequence_name => { is => 'Number' },
         start => { is => 'Number' },
         end => { is => 'Number' },
