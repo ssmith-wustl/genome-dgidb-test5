@@ -294,34 +294,56 @@ sub _lock_model_and_create_commit_and_rollback_observers {
     my $commit_observer;
     my $rollback_observer;
     my $context = UR::Context->current();
-
-    $commit_observer = $context->add_observer(
-        aspect => 'commit',
-        callback => sub {
-            `bresume $job_id`;
-            # unlock - no error on failure
+    my ($rollback_callback, $commit_callback);
+    $rollback_callback = sub {
+        system("bkill $job_id");
+        Genome::Utility::FileSystem->unlock_resource(
+            resource_lock => $lock_id,
+        );
+    };
+    $commit_callback = sub {
+        if ($context->isa('UR::Context::Transaction')) {
+            my $parent = $context->parent;
+            if ($parent->isa('UR::Context::Transaction')) {
+                $self->status_message("Passing build's commit and rollback observers to parent.");
+                $context = $parent;
+            }
+            else {
+                $self->status_message("Passing build's commit and rollback observers to UR::Context.");
+                $context = 'UR::Context';
+            }
+            $commit_observer = $context->add_observer(
+                aspect => 'commit',
+                callback => $commit_callback,
+            );
+            $rollback_observer = $context->add_observer(
+                aspect => 'rollback',
+                callback => $rollback_callback,
+            );
+            return;
+        }
+        else {
+            system("bresume $job_id");
             Genome::Utility::FileSystem->unlock_resource(
                 resource_lock => $lock_id,
             );
-            # delete and undef observers
+        }
+    };
+    $commit_observer = $context->add_observer(
+        aspect => 'commit',
+        callback => sub {
             $commit_observer->delete;
             undef $commit_observer;
             $rollback_observer->delete;
             undef $rollback_observer;
+            &$commit_callback;
         }
     );
+
 
     $rollback_observer = $context->add_observer(
         aspect => 'rollback',
         callback => sub {
-            `bkill $job_id`;
-            # unlock - no error on failure
-            Genome::Utility::FileSystem->unlock_resource(
-                resource_lock => $lock_id,
-            );
-            # delete and undef observers so they do not persist
-            # they should have been deleted in the rollback, 
-            #  but try to delete again just in case
             if ( $rollback_observer ) {
                 $rollback_observer->delete unless $rollback_observer->isa('UR::DeletedRef');
                 undef $rollback_observer;
@@ -330,6 +352,7 @@ sub _lock_model_and_create_commit_and_rollback_observers {
                 $commit_observer->delete unless $commit_observer->isa('UR::DeletedRef');
                 undef $commit_observer;
             }
+            &$rollback_callback;
         }
     );
 
