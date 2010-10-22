@@ -31,7 +31,7 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    my @dirs = $self->directories;
+    my @dirs = @{$self->directories};
     for my $dir (@dirs) {
         $self->status_message("Removing $dir");
         next unless -d $dir;
