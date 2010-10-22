@@ -61,7 +61,7 @@ sub _generate_content {
     } else {
         $name = $subject->id;
     }
-    $object->addChild( $xml_doc->createAttribute('name',$name) );
+    $object->addChild( $xml_doc->createAttribute('display_name',$name) );
     $object->addChild( $xml_doc->createAttribute('type', $subject->class));
     $object->addChild( $self->get_alignment_summary_node() );
     $object->addChild( $self->get_coverage_summary_node() );
