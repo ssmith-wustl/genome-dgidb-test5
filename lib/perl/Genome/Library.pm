@@ -12,22 +12,25 @@ package Genome::Library;
 use strict;
 use warnings;
 
+use Genome;
+
+use Data::Dumper 'Dumper';
+
 class Genome::Library {
     is => ['Genome::Notable'],
     table_name => 'GSC.LIBRARY_SUMMARY',
     id_by => [
-        library_id          => { is => 'Number', len => 20 },
+        library_id          => { is => 'Number', len => 20, column_name => 'LIBRARY_ID', },
     ],
     has => [
-        name                => { is => 'Text',     len => 64, column_name => 'FULL_NAME' },
-    ],
-    has_optional => [
-        sample_id           => { is => 'Number', len => 20 },
+        name                => { is => 'Text', len => 64, column_name => 'FULL_NAME' },
         sample              => { is => 'Genome::Sample', id_by => 'sample_id' },
         sample_name         => { is => 'Text', via => 'sample', to => 'name' },
-        taxon_id            => { is => 'Number', via => 'sample', to => 'taxon_id' },
-        taxon               => { is => 'Genome::Taxon', id_by => 'taxon_id' },
-        species_name        => { via => 'taxon', to => 'species_name' },
+    ],
+    has_optional => [
+        taxon_id            => { is => 'Number', via => 'sample', },
+        taxon               => { is => 'Genome::Taxon', via => 'sample', },
+        species_name        => { is => 'Text', via => 'taxon', },
         protocol_name       => { is_transient => 1, is => 'Text', },
     ],
     has_many => [
@@ -37,4 +40,29 @@ class Genome::Library {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    return if not defined $self;
+
+    if ( $self->name ) {
+        $self->error_message("Cannot set library name. It is derived from the sample name.");
+        $self->delete;
+        return;
+    }
+
+    if ( not defined $self->sample ) {
+        $self->error_message('No sample found for id: '.$self->sample_id);
+        $self->delete;
+        return;
+    }
+
+    my @sample_libraries = $self->sample->libraries;
+    my @sample_external_librairies = grep { defined $_->name and $_->name =~ /\-extlib\d+$/ } @sample_libraries;
+    $self->name($self->sample->name.'-extlib'.(scalar(@sample_external_librairies) + 1));
+
+    return $self;
+}
+
 1;
+

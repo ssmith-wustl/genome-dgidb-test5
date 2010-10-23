@@ -46,6 +46,8 @@ class Genome::Model::Build {
         the_master_event        => { is => 'Genome::Model::Event', via => 'the_events', to => '-filter', reverse_as => 'build', where => [ event_type => 'genome model build' ] },
         run_by                  => { via => 'the_master_event', to => 'user_name' },
         status                  => { via => 'the_master_event', to => 'event_status', is_mutable => 1 },
+        date_scheduled          => { via => 'the_master_event', to => 'date_scheduled', },
+        date_completed          => { via => 'the_master_event', to => 'date_completed' },
         master_event_status     => { via => 'the_master_event', to => 'event_status' },
     ],
     has_optional => [
@@ -79,6 +81,11 @@ class Genome::Model::Build {
                               doc => 'variants linked to this build... currently only for Somatic builds but need this accessor for get_all_objects' },
         group_ids        => { via => 'model', to => 'group_ids', is_many => 1, },
         group_names      => { via => 'model', to => 'group_names', is_many => 1, },
+
+        projects         => { is => 'Genome::Project', via => 'model' },
+        work_orders      => { is => 'Genome::WorkOrder', via => 'projects' },
+        work_order_names => { via => 'work_orders', to => 'name' },
+        work_order_numbers => { via => 'work_orders', to => 'id' },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
@@ -188,7 +195,6 @@ sub create {
 
     # model
     return unless ($class->_validate_model_id($model_id));
-    return unless ($class->_lock_model_and_create_commit_and_rollback_observers($model_id));
 
     #unless ($bx->value_for('subclass_name')) {
     #    $bx = $bx->add_filter(subclass_name => $class);
@@ -232,11 +238,45 @@ sub create {
         return;
     }
 
+    my $context = UR::Context->current();
+    $context->add_observer(
+        aspect => 'rollback',
+        callback => sub {
+            if ($self->data_directory && -e $self->data_directory) {
+                if (rmtree($self->data_directory, { error => \my $remove_errors })) {
+                    $self->status_message("Removed build's data directory (" . $self->data_directory . ").");
+                }
+                else {
+                    if (@$remove_errors) {
+                        my $error_summary;
+                        for my $error (@$remove_errors) {
+                            my ($file, $error_message) = %$error;
+                            if ($file eq '') {
+                                $error_summary .= "General error removing build directory: $error_message\n";
+                            }
+                            else {
+                                $error_summary .= "Error removing file $file : $error_message\n";
+                            }
+                        }
+                        $self->error_message($error_summary);
+                    }
+
+                    confess "Failed to remove build directory tree at " . $self->data_directory . ", cannot remove build!";
+                }
+            }
+            my $disk_allocation = $self->disk_allocation;
+            if ($disk_allocation) {
+                unless ($disk_allocation->deallocate) {
+                    $self->warning_message('Failed to deallocate disk space.');
+                }
+            }   
+        },
+    );
     return $self;
 }
 
 sub _lock_model_and_create_commit_and_rollback_observers {
-    my ($class, $model_id) = @_;
+    my ($self, $model_id, $job_id) = @_;
 
     # lock
     my $lock_id = '/gsc/var/lock/build_start/'.$model_id;
@@ -253,34 +293,57 @@ sub _lock_model_and_create_commit_and_rollback_observers {
     # create observers to unlock
     my $commit_observer;
     my $rollback_observer;
-
-    $commit_observer = UR::Context->add_observer(
-        aspect => 'commit',
-        callback => sub {
-            #print "Commit\n";
-            # unlock - no error on failure
+    my $context = UR::Context->current();
+    my ($rollback_callback, $commit_callback);
+    $rollback_callback = sub {
+        system("bkill $job_id");
+        Genome::Utility::FileSystem->unlock_resource(
+            resource_lock => $lock_id,
+        );
+    };
+    $commit_callback = sub {
+        if ($context->isa('UR::Context::Transaction')) {
+            my $parent = $context->parent;
+            if ($parent->isa('UR::Context::Transaction')) {
+                $self->status_message("Passing build's commit and rollback observers to parent.");
+                $context = $parent;
+            }
+            else {
+                $self->status_message("Passing build's commit and rollback observers to UR::Context.");
+                $context = 'UR::Context';
+            }
+            $commit_observer = $context->add_observer(
+                aspect => 'commit',
+                callback => $commit_callback,
+            );
+            $rollback_observer = $context->add_observer(
+                aspect => 'rollback',
+                callback => $rollback_callback,
+            );
+            return;
+        }
+        else {
+            system("bresume $job_id");
             Genome::Utility::FileSystem->unlock_resource(
                 resource_lock => $lock_id,
             );
-            # delete and undef observers
+        }
+    };
+    $commit_observer = $context->add_observer(
+        aspect => 'commit',
+        callback => sub {
             $commit_observer->delete;
             undef $commit_observer;
             $rollback_observer->delete;
             undef $rollback_observer;
+            &$commit_callback;
         }
     );
 
-    $rollback_observer = UR::Context->add_observer(
+
+    $rollback_observer = $context->add_observer(
         aspect => 'rollback',
         callback => sub {
-            #print "Rollback\n";
-            # unlock - no error on failure
-            Genome::Utility::FileSystem->unlock_resource(
-                resource_lock => $lock_id,
-            );
-            # delete and undef observers so they do not persist
-            # they should have been deleted in the rollback, 
-            #  but try to delete again just in case
             if ( $rollback_observer ) {
                 $rollback_observer->delete unless $rollback_observer->isa('UR::DeletedRef');
                 undef $rollback_observer;
@@ -289,6 +352,7 @@ sub _lock_model_and_create_commit_and_rollback_observers {
                 $commit_observer->delete unless $commit_observer->isa('UR::DeletedRef');
                 undef $commit_observer;
             }
+            &$rollback_callback;
         }
     );
 
@@ -432,33 +496,6 @@ sub newest_workflow_instance {
     } else {
         return;
     }
-}
-
-sub build_status {
-    my $self = shift;
-    my $build_event = $self->build_event;
-    unless ($build_event) {
-        return;
-    }
-    return $build_event->event_status;
-}
-
-sub date_scheduled {
-    my $self = shift;
-    my $build_event = $self->build_event;
-    unless ($build_event) {
-        return;
-    }
-    return $build_event->date_scheduled;
-}
-
-sub date_completed {
-    my $self = shift;
-    my $build_event = $self->build_event;
-    unless ($build_event) {
-        return;
-    }
-    return $build_event->date_completed;
 }
 
 sub calculate_estimated_kb_usage {
@@ -867,41 +904,11 @@ sub _launch {
     
         my $job_id = $self->_execute_bsub_command($lsf_command)
             or return;
+        return unless ($self->_lock_model_and_create_commit_and_rollback_observers($model->id, $job_id));
     
         $build_event->lsf_job_id($job_id);
 
-        my $commit_observer;
-        my $rollback_observer;
         
-        $commit_observer = UR::Context->add_observer(
-            aspect => 'commit',
-            callback => sub {
-                `bresume $job_id`;
-                $commit_observer->delete;
-                undef $commit_observer;
-                $rollback_observer->delete;
-                undef $rollback_observer;
-            }
-        );
-
-        $rollback_observer = UR::Context->add_observer(
-            aspect => 'rollback',
-            callback => sub {
-                `bkill $job_id`;
-                # delete and undef observers so they don't persist
-                # they should have been deleted in the rollback, 
-                #  but attempt to delete again just in case
-                if ( $rollback_observer ) {
-                    $rollback_observer->delete unless $rollback_observer->isa('UR::DeletedRef');
-                    undef $rollback_observer;
-                }
-                if ( $commit_observer ) {
-                    $commit_observer->delete unless $commit_observer->isa('UR::DeletedRef');
-                    undef $commit_observer;
-                }
-            }
-        );
-
         return 1;
     }
 }
@@ -1527,6 +1534,17 @@ sub get_metric {
         return $metric->value;
     }
 }
+
+# This method should be overridden in base classes. It should take a build ID from another
+# build of this model and compare various files in the build directory. Any files that are
+# found to be different should be added to a hash, where the keys are the files that differ
+# and the values are the reasons (ie, one file doesn't exist, line count doesn't match, etc).
+# If there are no differences, return undef. 
+sub _compare_output {
+    my ($self, $other_build_id) = @_;
+    die "Override _compare_output in your build subclass!";
+}
+
 
 # why hide this here? -ss
 package Genome::Model::Build::AbstractBaseTest;

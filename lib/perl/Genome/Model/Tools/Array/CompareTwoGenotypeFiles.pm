@@ -32,47 +32,52 @@ class Genome::Model::Tools::Array::CompareTwoGenotypeFiles {
     ]
 };
 
+sub help_brief {
+    "Compare two genotype files of our standard format: [chromosome  position  alleles(usually 2, such as AA,CC,etc.)]. Genotype files typically have no header, so remove headers or adjust the script, or it will probably just call them a 'match'."
+}
+
+sub help_detail {
+    "Compare two genotype files of our standard format: [chromosome  position  alleles(usually 2, such as AA,CC,etc.)]. Genotype files typically have no header, so remove headers or adjust the script, or it will probably just call them a 'match'."
+}
+
 sub execute {
     my $self = shift;
 
-#parse inputs
+    #parse inputs
     my $geno1 = $self->genotype_file1;
     my $geno2 = $self->genotype_file2;
     my $detailed_report = $self->detailed_report;
     my $output_summary = $self->summary_report;
 
-#print detailed report?
-    my $print_details = 0;
-    $print_details = 1 if (defined($detailed_report));
+    #print detailed report?
+    my $print_details = int( defined( $detailed_report ));
 
-#hash for recording results
+    #hash for recording results
     my %results;
     my $results = \%results;
 
-#parse geno1
+    #parse geno1
     my %geno1;
-    my $geno1fh = new IO::File $geno1,"r";
+    my $geno1fh = IO::File->new( $geno1 );
     while (my $line = $geno1fh->getline) {
         chomp $line;
-
         #remove extraneous control characters
         $line =~ s/\s+$//;
-
-        my ($chr,$pos,$alleles) = split /\t/,$line;
+        my ($chr, $pos, $alleles) = split /\t/,$line;
         $alleles = sort_alleles($alleles);
         $geno1{$chr}{$pos} = $alleles;
     }
     $geno1fh->close;
 
-#if printing details, prepare to print
+    #if printing details, prepare to print
     my $det_rep_fh;
     if ($print_details) {
-        $det_rep_fh = new IO::File ">$detailed_report";
+        $det_rep_fh = IO::File->new( $detailed_report, ">" );
         print $det_rep_fh "Chr\tPos\tGeno_file1\tGeno_file2\tStatus\n";
     }
 
-#parse geno2 and compare
-    my $geno2fh = new IO::File $geno2,"r";
+    #parse geno2 and compare
+    my $geno2fh = IO::File->new( $geno2 );
     while (my $line = $geno2fh->getline) {
         chomp $line;
 
@@ -87,7 +92,7 @@ sub execute {
             $alleles = sort_alleles($alleles);
             my $rev_comp_alleles = rev_comp($alleles);
             $rev_comp_alleles = sort_alleles($rev_comp_alleles);
-            
+
             if ($print_details) {
                 my $file_line = $chr . "\t" . $pos . "\t" . $geno1{$chr}{$pos} . "\t" . $alleles;
                 print $det_rep_fh $file_line;
@@ -134,9 +139,9 @@ sub execute {
         $det_rep_fh->close;
     }
 
-#print results summary
+    #print results summary
     if (defined($output_summary)) {
-        my $summaryfh = new IO::File $output_summary,"w";
+        my $summaryfh = IO::File->new( $output_summary, ">" );
         print $summaryfh "There were $results{'total'} probes shared between the 2 files.\n";
         for my $type (sort keys %results) {
             next if $type eq "total";
@@ -178,24 +183,15 @@ sub rev_comp {
     return $alleles;
 }
 
-
 sub sort_alleles {
     my $alleles = shift;
-    if($alleles =~ m/NoCall/) {
+    if($alleles =~ m/NO|NoCall/) {
         return "--";
     }
     my @alleles = split(//,$alleles);
     @alleles = sort @alleles;
     my $sorted_alleles = join("",sort @alleles);
     return $sorted_alleles;
-}
-
-sub help_brief {
-    "Compare two genotype files of our standard format: [chromosome  position  alleles(usually 2, such as AA,CC,etc.)]. Genotype files typically have no header also, so remove headers or adjust the script, or it will probably just call them a 'match'."
-}
-
-sub help_detail {
-    "Compare two genotype files of our standard format: [chromosome  position  alleles(usually 2, such as AA,CC,etc.)]. Genotype files typically have no header also, so remove headers or adjust the script, or it will probably just call them a 'match'."
 }
 
 1;

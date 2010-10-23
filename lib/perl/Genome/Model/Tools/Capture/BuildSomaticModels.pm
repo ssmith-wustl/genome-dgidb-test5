@@ -121,7 +121,7 @@ sub execute {                               # replace with real execution logic.
 
 		if($self->start_models && $model_id)
 		{
-			my $cmd = "genome model build start --model-id $model_id";
+			my $cmd = "genome model build start $model_id";
 			print "RUN: $cmd\n";
 
 			if(!$self->report_only)

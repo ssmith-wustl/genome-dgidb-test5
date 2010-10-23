@@ -12,19 +12,23 @@ class Genome::Model::Event::Build::DeNovoAssembly::PostAssemble::Soap {
 sub execute {
     my $self = shift;
 
-    #create PGA post assembly output files
-    $self->status_message("Creating fasta-to-agp tool");
-    my $fa = Genome::Model::Tools::Soap::FastaToAgp->create(
-	scaffold_fasta_file => $self->build->soap_scaffold_sequence_file,
-	scaffold_size_cutoff => 300,
-	output_dir => $self->build->data_directory,
-	file_prefix => $self->build->file_prefix,
-	);
-    unless ($fa->execute) {
-	$self->error_message("Failed to successfully execute soap fasta-to-agp tool");
-	return;
+    #create PGA post assembly output files for PGA assemblies
+    if ($self->processing_profile->name =~ /\s+PGA$/) {
+	$self->status_message("Creating fasta-to-agp tool");
+
+	my $fa = Genome::Model::Tools::Soap::RunFastaToAgpScript->create (
+	    scaffold_fasta_file => $self->build->soap_scaffold_sequence_file,
+	    output_dir => $self->build->data_directory,
+	    output_file_prefix => $self->build->file_prefix,
+	    version => '9.27.10',
+	    scaffold_size_cutoff => '300',
+	    );
+	unless ($fa->execute) {
+	    $self->error_message("Failed to successfully execute soap fasta-to-agp tool");
+	    return;
+	}
+	$self->status_message("Finished running fasta-to-agp tool");
     }
-    $self->status_message("Finished running fasta-to-agp tool");
 
     #create regular GC post assembly output
     #create edit_dir for post assemble files

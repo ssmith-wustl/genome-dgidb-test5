@@ -44,7 +44,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 Get Instrument Data for samples in a capture set
-EXAMPLE:	gt capture get-instrument-data ...
+EXAMPLE:	gmt capture get-instrument-data ...
 EOS
 }
 

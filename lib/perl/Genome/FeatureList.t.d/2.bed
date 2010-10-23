@@ -1,0 +1,10 @@
+track name=tiled_region description="NimbleGen Tiled Regions"
+1	5	5	example-tile1
+1	25	27	tile2
+track name=target_region description="Target Regions"
+1	3	3	feature1-beginning
+1	10	100	another-feature2
+1	25	26	overlapping-feature2a
+1	1000	1001	feature3-middle
+2	5	6	some-feature4
+X	9	1000	feature5-end

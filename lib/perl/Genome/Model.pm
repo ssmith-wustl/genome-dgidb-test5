@@ -640,7 +640,7 @@ sub completed_builds {
 
     my @completed_builds;
     for my $build ( $self->builds ) {
-        my $build_status = $build->build_status;
+        my $build_status = $build->status;
         next unless defined $build_status and $build_status eq 'Succeeded';
         next unless defined $build->date_completed; # error?
         push @completed_builds, $build;
@@ -687,8 +687,8 @@ sub builds_with_status {
     unless (scalar(@builds)) {
         return;
     }
-    my @builds_with_a_status = grep { $_->build_status } @builds;
-    my @builds_with_requested_status = grep {$_->build_status eq $status} @builds_with_a_status;
+    my @builds_with_a_status = grep { $_->status } @builds;
+    my @builds_with_requested_status = grep {$_->status eq $status} @builds_with_a_status;
     my @builds_wo_date = grep { !$_->date_scheduled } @builds_with_requested_status;
     if (scalar(@builds_wo_date)) {
         my $error_message = 'Found '. scalar(@builds_wo_date) ." $status builds without date scheduled.\n";

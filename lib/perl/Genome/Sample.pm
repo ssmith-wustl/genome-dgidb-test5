@@ -60,6 +60,7 @@ class Genome::Sample {
                                         doc => 'the fully qualified name for the sample (the "DNA NAME" in LIMS for both DNA and RNA)', 
                                         column_name => 'FULL_NAME',
                                     },
+        subject_type => { is => 'Text', is_constant => 1, value => 'organism sample', column_name => '', },
     ],
     has_optional => [	
         common_name                 => { is => 'Text', 
@@ -92,9 +93,12 @@ class Genome::Sample {
                                         doc => 'the name of the organ from which the sample was taken' }, 
         
         # these are optional only b/c our data is not fully back-filled
-        source                      => { is => 'Genome::SampleSource', id_by => 'source_id',
-                                        doc => 'The patient/individual organism from which the sample was taken, or the population for pooled samples.' },
-        
+        source => { 
+            is => 'Genome::Measurable',
+            id_by => 'source_id',
+            where => [ subject_type => [qw/ organism_individual population_group /, 'organism individual', 'population group', ]],
+            doc => 'The patient/individual organism from which the sample was taken, or the population for pooled samples.',
+        },
         source_type                 => { is => 'Text',
                                         doc => 'either "organism individual" for individual patients, or "population group" for cross-individual samples' },
         
@@ -125,6 +129,16 @@ class Genome::Sample {
     doc         => 'a single specimen of DNA or RNA extracted from some tissue sample',
     data_source => 'Genome::DataSource::GMSchema',
 };
+
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    return if not defined $self;
+
+    # FIXME add tissue, nomenclature?
+
+    return $self;
+}
 
 sub sample_type {
     shift->extraction_type(@_);
