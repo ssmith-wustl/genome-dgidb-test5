@@ -167,7 +167,7 @@ sub _map_workflow_inputs {
 
     # Set (hardcoded) defaults for tools that have defaults that do not agree with somatic pipeline
     push @inputs,
-        skip_if_output_present => 1,
+        skip_if_output_present => 0,
         imported_bams => 0,
         lookup_variants_report_mode => "novel-only",
         lookup_variants_filter_out_submitters => "SNP500CANCER,OMIMSNP,CANCER-GENOME,CGAP-GAI,LCEISEN,ICRCG,DEVINE_LAB",

@@ -12,58 +12,61 @@ require File::Copy;
 class Genome::Model::Tools::Velvet::OneButton {
     is => 'Command',
     has => [
-    file                => {    shell_args_position => 1,
-        doc => 'the input fasta or fastq file'
-    },
-
-    output_dir          => {    is => 'Text',
-        doc => 'the directory for the results' 
-    },
-
-    hash_sizes          => {    is => 'Integer',
-        is_many => 1,
-        # NOTE: if you use this, setting hash sizes ADDs to the list: BUG
-        # default_value => [25,27,29],
-        doc => 'the has sizes to test, defaults to 25,27,19',
-    }, 
-
-    version             => {    is => 'Text',
-        default_value => '0.7.57-64',
-        doc => 'the version of velvet to use'
-    }, 
+	file => {
+	    shell_args_position => 1,
+	    doc => 'the input fasta or fastq file'
+	},
+	output_dir => {
+	    is => 'Text',
+	    doc => 'the directory for the results' 
+	},
+	hash_sizes => {
+	    is => 'Integer',
+	    is_many => 1,
+	    # NOTE: if you use this, setting hash sizes ADDs to the list: BUG
+	    # default_value => [25,27,29],
+	    doc => 'the has sizes to test, defaults to 25,27,19',
+	}, 
+	version => {
+	    is => 'Text',
+	    doc => 'the version of velvet to use'
+	},
+	ins_length => {
+	    is => 'Integer',
+	    doc => 'fragment length (average/estimated)',
+	    #default_value => 280,
+	},
+	genome_len  => {
+	    is => 'Integer',
+	    doc => 'estimated genome length in bases',
+	    #default_value => 3000000,
+	}, 
     ],
 
     has_optional => [
-    ins_length          => {    is => 'Integer',
-        doc => 'fragment length (average/estimated)',
-        default_value => 280,
-    }, 
-
-    genome_len          => {    is => 'Integer',
-        doc => 'estimated genome length in bases',
-        default_value => 3000000,
-    }, 
-
-    bound_enumeration   => {    is => 'Integer',
-        doc => 'conduct binary search only if the number of candidates greater than b, or conduct enumeration',
-        default_value => 5,
-    }, 
-
-    dev_ins_length      => {    is => 'Integer',
-        doc => 'fragment length std deviation'
-    }, 
-
-    exp_covs            => {    is => 'Float', is_many => 1, }, 
-
-    cov_cutoffs         => {    is => 'Float', is_many => 1, }, 
-    read_type => 
-    { 
-        is => 'string', 
-        default_value => 'shortPaired', 
-        doc => 'The read type that velvet is run on, default is shortPaired',
-        valid_values => ['short', 'shortPaired', 'short2', 'shortPaired2', 'long','longPaired'],
-    }
-
+ 	bound_enumeration => {
+	    is => 'Integer',
+	    doc => 'conduct binary search only if the number of candidates greater than b, or conduct enumeration',
+	    default_value => 5,
+	}, 
+	dev_ins_length => {
+	    is => 'Integer',
+	    doc => 'fragment length std deviation'
+	}, 
+	exp_covs => {
+	    is => 'Float',
+	    is_many => 1,
+	}, 
+	cov_cutoffs => {
+	    is => 'Float',
+	    is_many => 1,
+	}, 
+	read_type => { 
+	    is => 'string', 
+	    default_value => 'shortPaired', 
+	    doc => 'The read type that velvet is run on, default is shortPaired',
+	    valid_values => ['short', 'shortPaired', 'short2', 'shortPaired2', 'long','longPaired'],
+	},
     ],
 
     has_optional_transient => [

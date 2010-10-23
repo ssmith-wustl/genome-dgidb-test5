@@ -96,11 +96,11 @@ sub get_mock_subject { # for 454, can't find subject for sanger
     
     # 2847038554
     my $source = Genome::Utility::TestBase->create_mock_object(
-        class => 'Genome::SampleSource',
+        class => 'Genome::Individual',
         id => 2847038554,
         taxon_id => $taxon->id,
         name => $sample_name,
-    ) or Carp::confess("Can't create mock source");
+    ) or Carp::confess("Can't create mock Individual");
 
     # 2847037746
     my $subject = Genome::Utility::TestBase->create_mock_object(
@@ -108,7 +108,7 @@ sub get_mock_subject { # for 454, can't find subject for sanger
         id => 2847037746,
         name => $sample_name,
         source_id => $source->id,
-        source_type => 'organism individual',
+        source_type => 'organism_individual',
         taxon_id => $taxon->id,
         common_name => undef,
         species_name => 'unkown',

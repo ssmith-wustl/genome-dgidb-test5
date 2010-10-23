@@ -50,7 +50,7 @@ is($avg_insert_size, 260, 'average insert size');
 
 # metrics
 my @interesting_metric_names = $build->interesting_metric_names;
-is(scalar(@interesting_metric_names), 24, 'interesting metric names');
+is(scalar(@interesting_metric_names), 26, 'interesting metric names');
 for my $metric_name ( @interesting_metric_names ) {
     $metric_name =~ s/\s/_/g;
     can_ok('Genome::Model::Build::DeNovoAssembly', $metric_name);

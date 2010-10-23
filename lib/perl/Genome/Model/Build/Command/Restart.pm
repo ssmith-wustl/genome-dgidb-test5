@@ -52,35 +52,23 @@ sub execute {
 
     my @builds = $self->builds;
     my $build_count = scalar(@builds);
-    my $failed_count = 0;
     my @errors;
     for my $build (@builds) {
-        my $rv = eval {$build->restart(%params)};
-        if ($rv) {
+        my $transaction = UR::Context::Transaction->begin();
+        my $successful = eval {$build->restart(%params)};
+        if ($successful) {
             $self->status_message("Build (".$build->__display_name__.") launched to LSF.\nAn initialization email will be sent once the build begins running.");
+            $transaction->commit();
         }
         else {
-            $self->error_message($@);
-            $failed_count++;
-            push @errors, "Failed to restart build (" . $build->__display_name__ . ").";
+            push @errors, "Failed to restart build (" . $build->__display_name__ . "): $@.";
+            $transaction->rollback;
         }
     }
-    for my $error (@errors) {
-        $self->status_message($error);
-    }
-    if ($build_count > 1) {
-        $self->status_message("Stats:");
-        $self->status_message(" Restarted: " . ($build_count - $failed_count));
-        $self->status_message("    Errors: " . $failed_count);
-        $self->status_message("     Total: " . $build_count);
-    }
 
-    if (@errors) {
-        return;
-    }
-    else {
-        return 1;
-    }
+    $self->display_summary_report(scalar(@builds), @errors);
+
+    return !scalar(@errors);
 }
 
 1;
