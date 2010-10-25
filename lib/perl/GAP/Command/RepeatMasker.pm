@@ -41,8 +41,14 @@ class GAP::Command::RepeatMasker {
             is  => 'Boolean',
             is_input => 1,
             default => 0,
-            doc => 'xsmall option',
+            doc => 'If set, masked sequence is marked by lowercasing bases instead of using N',
 		},
+        temp_working_directory => {
+            is => 'Path',
+            is_input => 1,
+            default => '/tmp/',
+            doc => 'Temporary working files are written here',
+        }
     ], 
 };
 
@@ -110,12 +116,22 @@ sub execute {
     # tracked in any repo...
     my $masker;
     if (defined $self->repeat_library) {
-    	$masker = Bio::Tools::Run::RepeatMasker->new(lib => $self->repeat_library,  xsmall => $self->xsmall, verbose => -1);
+    	$masker = Bio::Tools::Run::RepeatMasker->new(
+            lib => $self->repeat_library, 
+            xsmall => $self->xsmall, 
+            verbose => -1,
+            dir => $self->temp_working_directory,
+        );
     }
     elsif (defined $self->species) {
-    	$masker = Bio::Tools::Run::RepeatMasker->new(species => $self->species, xsmall => $self->xsmall, verbose => -1);
+    	$masker = Bio::Tools::Run::RepeatMasker->new(
+            species => $self->species, 
+            xsmall => $self->xsmall, 
+            verbose => -1,
+            dir => $self->temp_working_directory,
+        );
     } 
-    
+
     # FIXME RepeatMasker emits a warning when no repetitive sequence is found. I'd prefer to not have
     # this displayed, as this situation is expected and the warning message just clutters the logs.
     while (my $seq = $input_fasta->next_seq()) {
