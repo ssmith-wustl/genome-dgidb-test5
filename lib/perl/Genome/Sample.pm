@@ -105,7 +105,19 @@ class Genome::Sample {
         source_name                 => { via => 'source', to => 'name' },
         
         source_common_name          => { via => 'source', to => 'common_name' },
+
+
+        # the above are overly generic, since all of our sources are Genome::Individuals, and slow, so...
+        patient                      => { is => 'Genome::Individual', id_by => 'source_id',
+                                           doc => 'The patient/individual organism from which the sample was taken.' },
         
+        patient_name                 => { via => 'patient', to => 'name', doc => 'the system name for a patient (subset of the sample name)' },
+        
+        patient_common_name          => { via => 'patient', to => 'common_name', doc => 'names like AML1, BRC50, etc' },
+
+
+        tcga_name                   => { via => 'attributes', where => [ 'nomenclature like' => 'TCGA%', name => 'biospecimen_barcode_side'], to => 'value' },
+
         taxon                       => { is => 'Genome::Taxon', id_by => 'taxon_id', 
                                         doc => 'the taxon of the sample\'s source' },
         
