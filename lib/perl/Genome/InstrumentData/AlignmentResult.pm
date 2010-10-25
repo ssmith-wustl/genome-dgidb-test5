@@ -26,7 +26,7 @@ class Genome::InstrumentData::AlignmentResult {
                                     is => 'Genome::Model::Build::ImportedReferenceSequence',
                                     id_by => 'reference_build_id',
                                 },
-        reference_name          => { via => 'reference_build', to => 'name', is_mutable => 0 },
+        reference_name          => { via => 'reference_build', to => 'name', is_mutable => 0, is_optional => 1 },
 
         aligner                 => { 
                                     calculate_from => [qw/aligner_name aligner_version aligner_params/], 
@@ -51,7 +51,8 @@ class Genome::InstrumentData::AlignmentResult {
                                     is => 'Number',
                                     doc => 'the local database id of the instrument data (reads) to align',
                                 },
-        reference_build_id            => {
+        reference_build_id      => {
+                                    is => 'Number',
                                     doc => 'the reference to use by id',
                                 },
     ],
