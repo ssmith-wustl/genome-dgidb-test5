@@ -74,7 +74,8 @@ class Genome::Model {
                                         where => [ property_name => 'keep_n_most_recent_builds', entity_class_name => 'Genome::Model' ] },
         _last_complete_build_id     => { is => 'Number', len => 10, 
                                         column_name => 'last_complete_build_id', 
-                                        doc => 'The last complete build id' },
+                                        doc => 'The last complete build id' ,
+                                        is_optional => 1 },
     ],
     has_optional_many => [
         # TODO: the new project will internally have generalized assignments of models and other things
