@@ -8,37 +8,7 @@ use Carp;
 
 class Genome::Model::Command::Define::GenePrediction::Bacterial {
     is => 'Genome::Model::Command::Define::GenePrediction',
-    has => [
-        taxon_id => {
-            is => 'Number',
-            doc => 'ID of taxon to be used, this can be derived from the assembly model',
-        },
-        taxon => {
-            is => 'Genome::Taxon',
-            id_by => 'taxon_id',
-            doc => 'Taxon that will be used as the subject of this model',
-        },
-    ],
     has_optional => [
-        start_assembly_build => {
-            is => 'Boolean',
-            default => 0,
-            doc => 'If set, an assembly build is started if a completed build is not found on the assembly model',
-        },
-        create_assembly_model => {
-            is => 'Boolean',
-            default => 0,
-            doc => 'If set, an assembly model is created if one cannot be found with the supplied taxon',
-        },
-        assembly_processing_profile_name => {
-            is => 'Number',
-            default => 'Velvet Solexa BWA Qual 10 Filter Length 35',
-            doc => 'The processing profile used to create assembly models, if necessary',
-        },
-        subject_name => {
-            is => 'Text',
-            doc => 'The name of the subject all the reads originate from',
-        },
         dev => {
             is => 'Boolean',
             default => 0,
@@ -85,7 +55,7 @@ class Genome::Model::Command::Define::GenePrediction::Bacterial {
 
 sub help_detail {
     return <<"EOS"
-Two things are needed to define a bacterial gene annotation model: a processing profile
+Two things are needed to define a bacterial gene prediction model: a processing profile
 name and a taxon ID. The taxon ID is used to find an assembly model that would correspond
 to this annotation model. If such a model cannot be found, it will be created if the 
 --create-assembly-model flag is set. If a model IS found and no successful build is found,
@@ -100,12 +70,7 @@ EOS
 sub execute {
     my $self = shift;
 
-    $DB::single = 1;
     $self->status_message("Creating bacterial gene prediction model!");
-
-    $self->subject_name($self->taxon->name);
-    $self->subject_type('species_name');
-    $self->subject_class_name('Genome::Taxon');
 
     my $rv = $self->SUPER::_execute_body();
     unless ($rv) {
@@ -119,13 +84,14 @@ sub execute {
         confess;
     }
 
-    $self->status_message("Successfully created gene annotation model!");
+    $self->status_message("Successfully created gene prediction model!");
     return 1;
 }
 
 sub type_specific_parameters_for_create {
     my $self = shift;
     return (
+        assembly_contigs_file => $self->assembly_contigs_file,
         create_assembly_model => $self->create_assembly_model, 
         start_assembly_build => $self->start_assembly_build,
         assembly_processing_profile_name => $self->assembly_processing_profile_name,
