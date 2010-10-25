@@ -174,12 +174,14 @@ $DB::single=1;
             $variant_stop < $last_variant_stop
         ) {
             my $chrom_name = $variant->{'chromosome_name'};
+            #Genome::TranscriptStructure->unload();
             $self->status_message("Resetting iterator for chromosome $chrom_name");
     
             $loaded_substructures = [];
             $structure_iterator = Genome::TranscriptStructure->create_iterator(
                                       chrom_name => $chrom_name,
-                                      data_directory => $self->data_directory);
+                                      data_directory => $self->data_directory,
+                                      -order_by => ['structure_start']);
             $next_substructure = $structure_iterator->next;
         }
 
@@ -204,7 +206,7 @@ $DB::single=1;
             }
             $next_substructure = $structure_iterator->next();
         }
-
+$DB::single=1;
         $loaded_substructures = \@keep_structures;
 
         $last_variant_start = $variant_start;
@@ -250,13 +252,23 @@ $DB::single=1;
         $windowing_iterator = $self->{'_windowing_iterator'} = $self->_create_iterator_for_variant_intersection();
     }
     my $crossing_substructures = $windowing_iterator->(\%variant);
-    my @crossing_substructures = Genome::TranscriptStructure->get(
-                                     chrom_name => $variant{'chromosome_name'},
-                                     'structure_stop >=' => $variant_start,
-                                     'structure_start <=' => $variant_stop,
-                                     #'transcript_transcript_start >=' => $variant_start - 4500000,
-                                     #'transcript_transcript_stop <=' => $variant_stop + 4500000,
-                                     data_directory => $self->data_directory);
+    #my @crossing_substructures = Genome::TranscriptStructure->get(
+    #                                 chrom_name => $variant{'chromosome_name'},
+    #                                 'structure_stop >=' => $variant_start,
+    #                                 'structure_start <=' => $variant_stop,
+    #                                 #'transcript_transcript_start >=' => $variant_start - 4500000,
+    #                                 #'transcript_transcript_stop <=' => $variant_stop + 4500000,
+    #                                 data_directory => $self->data_directory);
+#if (@crossing_substructures != @$crossing_substructures) {
+#  print STDERR "Count doesn't match\n";
+#  my $fh = IO::File->new('>/tmp/from_iterator');
+#  $fh->print(Data::Dumper::Dumper($crossing_substructures));
+#  $fh->close;
+#  $fh = IO::File->new('>/tmp/from_get');
+#  $fh->print(Data::Dumper::Dumper(\@crossing_substructures));
+#  $fh->close;
+#  exit;
+#}
     return unless @$crossing_substructures;
 
     my @annotations;
