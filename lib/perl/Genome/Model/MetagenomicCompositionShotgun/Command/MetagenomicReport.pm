@@ -72,20 +72,27 @@ sub execute {
     }
     $self->status_message("Report path: " . $self->report_dir);
 
-    my ($metagenomic_ref_build) = grep { $_->model_name=~/part 1 of/ } $model->metagenomic_references;
-    unless ($metagenomic_ref_build){
-        die $self->error_message("couldn't get build for metagenomic reference part 1 model");
-    }
-    my $metagenomic_ref_hmp_dir = $metagenomic_ref_build->data_directory."/hmp";
-    unless (-d $metagenomic_ref_hmp_dir){
-        die $self->error_message("Couldn't find hmp dir in latest build of metagenomic reference part 1: $metagenomic_ref_hmp_dir");
+    my $metagenomic_ref_build;
+    my $metagenomic_ref_hmp_dir;
+    if ($self->include_taxonomy_report){
+        ($metagenomic_ref_build) = grep { $_->model_name=~/part 1 of/ } $model->metagenomic_references;
+        unless ($metagenomic_ref_build){
+            die $self->error_message("couldn't get build for metagenomic reference part 1 model");
+        }
+        $metagenomic_ref_hmp_dir = $metagenomic_ref_build->data_directory."/hmp";
+        unless (-d $metagenomic_ref_hmp_dir){
+            die $self->error_message("Couldn't find hmp dir in latest build of metagenomic reference part 1: $metagenomic_ref_hmp_dir");
+        }
     }
     #TODO these names are bad and should be improved as this pipeline becomes more generic, don't know if taxonomy files will always be available when this is done again.
-    
+
     unless ($self->regions_file){
+        unless (-d $metagenomic_ref_hmp_dir){
+            die $self->error_message("regions profile not defined and no derived directory from reference to look in!");
+        }
         $self->regions_file("$metagenomic_ref_hmp_dir/combined_refcov_regions_file.regions.txt");
         unless (-s $self->regions_file){
-            $self->error_message("refcov regions bed file doesn't exist or have size: ".$self->regions_file);
+            die $self->error_message("refcov regions bed file doesn't exist or have size: ".$self->regions_file);
         }
     }
     if ($self->include_taxonomy_report) {
