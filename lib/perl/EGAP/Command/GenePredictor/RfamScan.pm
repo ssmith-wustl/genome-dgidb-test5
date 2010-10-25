@@ -18,6 +18,7 @@ class EGAP::Command::GenePredictor::RfamScan {
         },
         version => {
             is => 'Text',
+            is_input => 1,
             valid_values => ['7.0', '8.0', '8.1'],
             default => '8.1',
             doc => 'Version of rfam to use',
