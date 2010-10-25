@@ -387,11 +387,15 @@ sub AssembleBestSV{
 	printf STDERR "#Reads:%d\t#SVReads:%d\tRegionSize:%d\tAvgCoverage:%.2f\n",$nreads,$nSVreads,$regionsize,$avgdepth;
 
 	#Assemble
+	$cmd="time $FindBin::Bin/tigra/tigra.pl ";
+	if($type=~/ITX/i || $type=~/INS/i){  #Tandem duplication
+	  $cmd.="-N 1 ";
+	}
 	if($opts{H}){
-	  $cmd="time $FindBin::Bin/tigra/tigra.pl -h $datadir/$prefix.a$a.b$b.fa.contigs.het.fa -o $datadir/$prefix.a$a.b$b.fa.contigs.fa -k25 -p SV -r $datadir/$prefix.ref.fa $datadir/$prefix.a$a.b$b.fa";
+	  $cmd.="-h $datadir/$prefix.a$a.b$b.fa.contigs.het.fa -o $datadir/$prefix.a$a.b$b.fa.contigs.fa -k25 -p SV -r $datadir/$prefix.ref.fa $datadir/$prefix.a$a.b$b.fa";
 	}
 	else{
-	  $cmd="time $FindBin::Bin/tigra/tigra.pl -h $datadir/$prefix.a$a.b$b.fa.contigs.het.fa -o $datadir/$prefix.a$a.b$b.fa.contigs.fa -k15,25 -p SV -r $datadir/$prefix.ref.fa $datadir/$prefix.a$a.b$b.fa";
+	  $cmd.="-h $datadir/$prefix.a$a.b$b.fa.contigs.het.fa -o $datadir/$prefix.a$a.b$b.fa.contigs.fa -k15,25 -p SV -r $datadir/$prefix.ref.fa $datadir/$prefix.a$a.b$b.fa";
 	}
 	if((!defined $opts{I}) || (!-s "$datadir/$prefix.a$a.b$b.fa.contigs.fa") || (!-s "$datadir/$prefix.a$a.b$b.fa.contigs.het.fa")){
 	  print STDERR "$cmd\n";
@@ -597,7 +601,7 @@ sub ReadBDCoor{
     $cr->{gene}=$fields[$col_gene] if($col_gene);
     $cr->{database}=$fields[$col_database] if($col_database);
 
-    $ignore=0 if($cr->{line}=~/cancer/i || $cr->{line}=~/exon/i);
+    $ignore=0 if($cr->{line}=~/cancer/i || $cr->{line}=~/coding/i);
     $ignore=0 if($cr->{line}=~/gene/i && $cr->{type}=~/ctx/i);  #assemble all translocation overlapping gene
     next if($ignore>0);
 
