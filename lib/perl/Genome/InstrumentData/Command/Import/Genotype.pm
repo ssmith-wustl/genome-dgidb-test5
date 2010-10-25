@@ -43,7 +43,6 @@ my %properties = (
     sequencing_platform => {
         is => 'Text',
         doc => 'sequencing platform of import data, like solexa',
-        is_optional => 1,
     },
     description  => {
         is => 'Text',
@@ -161,6 +160,7 @@ sub execute {
     $params{import_format} = $self->import_format;
     $params{sample_id} = $sample->id;
     $params{library_id} = $library->id;
+    $params{library_name} = $library->name;
     if(defined($self->allocation)){
         $params{disk_allocations} = $self->allocation;
     }
@@ -224,6 +224,7 @@ sub execute {
         $self->error_message("Failed to get disk allocation with params:\n". Data::Dumper::Dumper(%alloc_params));
         return 1;
     }
+    $self->allocation($disk_alloc);
     $self->status_message("Disk allocation created for $instrument_data_id ." . $disk_alloc->absolute_path);
     
     $self->status_message("About to calculate the md5sum of the genotype.");

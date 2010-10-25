@@ -238,14 +238,12 @@ EOS
         # basic relationship to the "source" of the lane
         library         => { is => 'Genome::Library', id_by => ['library_id'] },
         library_id      => { is => 'Number', },
-        library_name    => { is => 'Text', via => 'library', to => 'name'},
 
         # these are indirect via library, but must be set directly for lanes missing library info
         sample              => { is => 'Genome::Sample', id_by => ['sample_id'] },
         sample_id           => { is => 'Number', },
-        sample_name         => { is => 'Text', via => 'sample', to => 'name'},
 
-        sample_source       => { is => 'Genome::SampleSource', via => 'sample', to => 'source' },
+        sample_source       => { via => 'sample', to => 'source' },
         sample_source_name  => { via => 'sample_source', to => 'name' },
 
         # indirect via the sample source, but we let the sample manage that
@@ -439,7 +437,7 @@ sub dump_sanger_fastq_files {
                                                                     solexa_fastq_file => $illumina_fastq_pathname,
                                                                     sanger_fastq_file => $converted_fastq_pathname)) {
                 $self->error_message('Failed to execute sol2sanger quality conversion $illumina_fastq_pathname $converted_fastq_pathname.');
-                $self->die($self->error_message);
+                die($self->error_message);
             }
         } elsif ($self->resolve_quality_converter eq 'sol2phred') {
             $converted_fastq_pathname = $requested_directory . '/' . $self->id . '-sanger-fastq-'. $counter . ".fastq";
@@ -448,7 +446,7 @@ sub dump_sanger_fastq_files {
             unless (Genome::Model::Tools::Fastq::Sol2phred->execute(fastq_file => $illumina_fastq_pathname,
                                                                     phred_fastq_file => $converted_fastq_pathname)) {
                 $self->error_message('Failed to execute sol2phred quality conversion.');
-                $self->die($self->error_message);
+                die($self->error_message);
             }
         } elsif ($self->resolve_quality_converter eq 'none') {
             $self->status_message("No quality conversion required.");
@@ -459,7 +457,7 @@ sub dump_sanger_fastq_files {
         }
         unless (-e $converted_fastq_pathname && -f $converted_fastq_pathname && -s $converted_fastq_pathname) {
             $self->error_message('Failed to validate the conversion of solexa fastq file '. $illumina_fastq_pathname .' to sanger quality scores');
-            $self->die($self->error_message);
+            die($self->error_message);
         }
         $counter++;
 

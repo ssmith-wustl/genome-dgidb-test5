@@ -55,7 +55,8 @@ sub execute {
     }
 
     #figure out what version of sffinfo to use
-    my $bin_path = ($self->bin_path) ? $self->bin_path : '/gsc/pkg/bio/454/installed-64';
+    #my $bin_path = ($self->bin_path) ? $self->bin_path : '/gsc/pkg/bio/454/installed-64';
+    my $bin_path = ($self->bin_path) ? $self->bin_path : '/gsc/pkg/bio/454/DataProcessing-2.6';
     my $sff_info = $bin_path.'/bin/sffinfo';
     unless (-s $sff_info) {
 	$self->error_message("Failed to find sffinfo in bin: ".$bin_path.'/bin');

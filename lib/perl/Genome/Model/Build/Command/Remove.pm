@@ -6,16 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Build::Command::Remove {
-    is => 'Genome::Command::Base',
-    has => [
-        builds => {
-            is => 'Genome::Model::Build',
-            require_user_verify => 1,
-            is_many => 1,
-            shell_args_position => 1,
-            doc => 'Build(s) to use. Resolved from command line via text string.',
-        },
-    ],
+    is => 'Genome::Model::Build::Command::Base',
     has_optional => [
         keep_build_directory => {
             is => 'Boolean',
@@ -40,37 +31,34 @@ sub execute {
 
     my @builds = $self->builds;
     my $build_count = scalar(@builds);
-    my $failed_count = 0;
     my @errors;
     for my $build (@builds) {
+        my $transaction = UR::Context::Transaction->begin();
         my $display_name = $build->__display_name__;
         my $remove_build = Genome::Command::Remove->create(items => [$build], _deletion_params => [keep_build_directory => $self->keep_build_directory]);
-        eval {$remove_build->execute};
-        if (!$@) {
+        my $successful = eval {
+            my @__errors__ = $build->__errors__;
+            unless (@__errors__) {
+                push @__errors__, map { $_->__errors__ } $build->instrument_data_assignments;
+            }
+            if (@__errors__) {
+                die "build or instrument data has __errors__, cannot remove: " . join('; ', @__errors__);
+            }
+            $remove_build->execute;
+        };
+        if ($successful) {
             $self->status_message("Successfully removed build (" . $display_name . ").");
+            $transaction->commit();
         }
         else {
-            $self->error_message($@);
-            $failed_count++;
-            push @errors, "Failed to remove build (" . $display_name . ").";
+            push @errors, "Failed to remove build (" . $display_name . "): $@.";
+            $transaction->rollback();
         }
     }
-    for my $error (@errors) {
-        $self->status_message($error);
-    }
-    if ($build_count > 1) {
-        $self->status_message("Stats:");
-        $self->status_message(" Removed: " . ($build_count - $failed_count));
-        $self->status_message("  Errors: " . $failed_count);
-        $self->status_message("   Total: " . $build_count);
-    }
 
-    if (@errors) {
-        return;
-    }
-    else {
-        return 1;
-    }
+    $self->display_summary_report(scalar(@builds), @errors);
+
+    return !scalar(@errors);
 }
 
 1;

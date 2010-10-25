@@ -14,7 +14,7 @@ BEGIN {
 }
 
 my $tool_db = Genome::Model::Tools::Ber::BerRunFinish->create(
-                    'locus_tag'      => "PRABACTJOHNDFTBMGTEST",
+            'locus_tag'      => "PRABACTJOHNDFTBMGTEST",
 		    'outdirpath'     => "/gscmnt/temp110/analysis/ktmp/BER_TEST/hmp/autoannotate.090715.old/out",
 		    'sqlitedatafile' => "sqlite-PRABACTJOHNDFTBMGTEST-090417f.dat",
 		    'sqliteoutfile'  => "sqlite-PRABACTJOHNDFTBMGTEST-090417f.out",

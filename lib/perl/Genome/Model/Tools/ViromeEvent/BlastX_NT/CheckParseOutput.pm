@@ -167,7 +167,7 @@ sub clean_up_tmp_dir {
 sub run_parser {
     my ($self, $blast_out_file) = @_;
     
-    #my $E_cutoff = 1e-5;
+    my $E_cutoff = 1e-5;
 
     my @unassigned = (); # query should be kept for further analysis
     my $total_records = 0;
@@ -229,8 +229,8 @@ sub run_parser {
 	    }
    
 	    # check whether the hit should be kept for further analysis
-#	    if ($hit->significance <= $E_cutoff){ # similar to known, need Phylotyped
-	    if ($highest_bit_value >= $bits_cutoff) { 
+	    if ($hit->significance <= $E_cutoff){ # similar to known, need Phylotyped
+#	    if ($highest_bit_value >= $bits_cutoff) { 
 
 		my $have_significant_hit = 1;
 #		if ($hit->significance == $best_e) {      <--------------------------- OLD

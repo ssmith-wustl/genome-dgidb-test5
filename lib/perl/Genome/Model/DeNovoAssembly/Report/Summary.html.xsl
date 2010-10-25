@@ -227,6 +227,20 @@
 	      <td class="value"><xsl:value-of select="//metric/read-depths-ge-5x"/><xsl:text>&#37;</xsl:text></td>
 	    </tr>
 	  </xsl:if>
+
+
+	    <tr>
+	      <td class="label">Genome Size Used</td>
+	      <td class="value"><xsl:value-of select="//metric/genome-size-used"/></td>
+	    </tr>
+
+
+
+	    <tr>
+	      <td class="label">Average Insert Size Used</td>
+	      <td class="value"><xsl:value-of select="//metric/average-insert-size-used"/></td>
+	    </tr>
+
 			  </table>
 			</td>
       </tr>

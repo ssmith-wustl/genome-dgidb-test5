@@ -10,14 +10,8 @@ require Cwd;
 use Data::Dumper 'Dumper';
 
 class Genome::Model::Build::Command::Restart {
-    is => 'Genome::Command::Base',
+    is => 'Genome::Model::Build::Command::Base',
     has => [
-        builds => {
-            is => 'Genome::Model::Build',
-            shell_args_position => 1,
-            is_many => 1,
-            doc => 'Build(s) to use. Resolved from command line via text string.',
-        },
         lsf_queue => {
             is => 'Text',
             default_value => 'workflow',
@@ -58,35 +52,23 @@ sub execute {
 
     my @builds = $self->builds;
     my $build_count = scalar(@builds);
-    my $failed_count = 0;
     my @errors;
     for my $build (@builds) {
-        eval {$build->restart(%params)};
-        if (!$@) {
+        my $transaction = UR::Context::Transaction->begin();
+        my $successful = eval {$build->restart(%params)};
+        if ($successful) {
             $self->status_message("Build (".$build->__display_name__.") launched to LSF.\nAn initialization email will be sent once the build begins running.");
+            $transaction->commit();
         }
         else {
-            $self->error_message($@);
-            $failed_count++;
-            push @errors, "Failed to restart build (" . $build->__display_name__ . ").";
+            push @errors, "Failed to restart build (" . $build->__display_name__ . "): $@.";
+            $transaction->rollback;
         }
     }
-    for my $error (@errors) {
-        $self->status_message($error);
-    }
-    if ($build_count > 1) {
-        $self->status_message("Stats:");
-        $self->status_message(" Restarted: " . ($build_count - $failed_count));
-        $self->status_message("    Errors: " . $failed_count);
-        $self->status_message("     Total: " . $build_count);
-    }
 
-    if (@errors) {
-        return;
-    }
-    else {
-        return 1;
-    }
+    $self->display_summary_report(scalar(@builds), @errors);
+
+    return !scalar(@errors);
 }
 
 1;

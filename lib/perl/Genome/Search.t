@@ -22,9 +22,11 @@ print Dumper \@searchable_classes;
 ### Tests adding/removing documents
 
 my $individual = Genome::Individual->create(
-    common_name => 'search_test_1',
+    id => -54321,
+    common_name => 'search_1',
     name => 'search_test_1',
     gender => 'Female',
+    taxon_id => 1653198737,
 );
 
 #Test commit hook

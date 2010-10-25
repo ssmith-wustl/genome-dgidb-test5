@@ -157,14 +157,19 @@ sub execute {
                 );
 
 
-                my $num_assigned = $self->assign_instrument_data_to_models($genome_instrument_data, $reference_sequence_build, @models);
+                my @assigned = $self->assign_instrument_data_to_models($genome_instrument_data, $reference_sequence_build, @models);
 
-                unless(defined $num_assigned) {
+                #returns an explicit undef on error
+                if(scalar(@assigned) eq 1 and not defined $assigned[0]) {
                     push @process_errors, $self->error_message;
                     next PP;
                 }
 
-                unless($num_assigned > 0) {
+                if(scalar(@assigned > 0)) {
+                    for my $m (@assigned) {
+                        $pse->add_param('genome_model_id', $m->id);
+                    }
+                } else {
                     # no model found for this PP, make one (or more) and assign all applicable data
                     my $ok = $self->create_default_models_and_assign_all_applicable_instrument_data($genome_instrument_data, $subject, $processing_profile, $reference_sequence_build, $pse);
                     unless($ok) {
@@ -224,8 +229,8 @@ sub execute {
 	           } @found_models;
 
             #Don't care here what ref. seq. was used (if any)
-            my $num_assigned = $self->assign_instrument_data_to_models($genome_instrument_data, undef, @found_models);
-            unless(defined $num_assigned) {
+            my @assigned = $self->assign_instrument_data_to_models($genome_instrument_data, undef, @found_models);
+            if(scalar(@assigned) eq 1 and not defined $assigned[0]) {
                 push @process_errors, $self->error_message;
             }
         } # end of adding instdata to non-autogen models
@@ -521,7 +526,7 @@ sub assign_instrument_data_to_models {
                     instrument_data_id => $instrument_data_id,
                     model_id           => $model->id,
                 );
-                    
+
             unless ( $assign->execute ) {
                 $self->error_message(
                     'Failed to execute instrument-data assign for '
@@ -529,15 +534,15 @@ sub assign_instrument_data_to_models {
                     . $model->id
                     . ' and instrument data '
                     . $instrument_data_id );
-                return;
+                return undef;
             }
 
             my $existing_models = $self->_existing_models_assigned_to;
-            $existing_models->{$model->id} = $model;                        
+            $existing_models->{$model->id} = $model;
         }
     }
-    
-    return scalar @models;
+
+    return @models;
 }
 
 sub create_default_models_and_assign_all_applicable_instrument_data {
@@ -659,6 +664,8 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
 
         my $new_models = $self->_newly_created_models;
         $new_models->{$m->id} = $m;
+
+        $pse->add_param('genome_model_id', $m->id);
     }
 
     return scalar @new_models;
@@ -744,7 +751,9 @@ sub add_model_to_default_modelgroups {
             }
         }
 
-        $model_group->assign_models($model);
+        unless(grep($_ eq $model, $model_group->models)) {
+            $model_group->assign_models($model);
+        }
     }
 
     return 1;

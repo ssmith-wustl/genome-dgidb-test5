@@ -42,7 +42,8 @@ my %TOPHAT_VERSIONS = (
     # These are 64-bit installations.  tophat is really a python script and is OS dependent.
     '1.0.12' => '/gsc/pkg/bio/tophat/tophat-1.0.12/bin/tophat',
     '1.0.13' => '/gsc/pkg/bio/tophat/tophat-1.0.13/bin/tophat',
-    '1.0.14' => '/gsc/pkg/bio/tophat/tophat-1.0.14/bin/tophat',
+    '1.0.14' => '/gsc/pkg/bio/tophat/tophat-1.0.14/tophat',
+    '1.1.0'  => '/gsc/pkg/bio/tophat/tophat-1.1.0/tophat',
     'tophat' => 'tophat',
 );
 

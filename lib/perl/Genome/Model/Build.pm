@@ -46,6 +46,8 @@ class Genome::Model::Build {
         the_master_event        => { is => 'Genome::Model::Event', via => 'the_events', to => '-filter', reverse_as => 'build', where => [ event_type => 'genome model build' ] },
         run_by                  => { via => 'the_master_event', to => 'user_name' },
         status                  => { via => 'the_master_event', to => 'event_status', is_mutable => 1 },
+        date_scheduled          => { via => 'the_master_event', to => 'date_scheduled', },
+        date_completed          => { via => 'the_master_event', to => 'date_completed' },
         master_event_status     => { via => 'the_master_event', to => 'event_status' },
     ],
     has_optional => [
@@ -77,6 +79,13 @@ class Genome::Model::Build {
                               doc => 'Build metrics' },
         variants         => { is => 'Genome::Model::BuildVariant', reverse_as => 'build', 
                               doc => 'variants linked to this build... currently only for Somatic builds but need this accessor for get_all_objects' },
+        group_ids        => { via => 'model', to => 'group_ids', is_many => 1, },
+        group_names      => { via => 'model', to => 'group_names', is_many => 1, },
+
+        projects         => { is => 'Genome::Project', via => 'model' },
+        work_orders      => { is => 'Genome::WorkOrder', via => 'projects' },
+        work_order_names => { via => 'work_orders', to => 'name' },
+        work_order_numbers => { via => 'work_orders', to => 'id' },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
@@ -186,7 +195,6 @@ sub create {
 
     # model
     return unless ($class->_validate_model_id($model_id));
-    return unless ($class->_lock_model_and_create_commit_and_rollback_observers($model_id));
 
     #unless ($bx->value_for('subclass_name')) {
     #    $bx = $bx->add_filter(subclass_name => $class);
@@ -230,67 +238,55 @@ sub create {
         return;
     }
 
-    return $self;
-}
+    my $data_directory_undo =  sub {
+        if ($self->data_directory && -e $self->data_directory) {
+            if (rmtree($self->data_directory, { error => \my $remove_errors })) {
+                $self->status_message("Removed build's data directory (" . $self->data_directory . ").");
+            }
+            else {
+                if (@$remove_errors) {
+                    my $error_summary;
+                    for my $error (@$remove_errors) {
+                        my ($file, $error_message) = %$error;
+                        if ($file eq '') {
+                            $error_summary .= "General error removing build directory: $error_message\n";
+                        }
+                        else {
+                            $error_summary .= "Error removing file $file : $error_message\n";
+                        }
+                    }
+                    $self->error_message($error_summary);
+                }
 
-sub _lock_model_and_create_commit_and_rollback_observers {
-    my ($class, $model_id) = @_;
-
-    # lock
-    my $lock_id = '/gsc/var/lock/build_start/'.$model_id;
-    my $lock = Genome::Utility::FileSystem->lock_resource(
-        resource_lock => $lock_id, 
-        block_sleep => 3,
-        max_try => 3,
-    );
-    unless ( $lock ) {
-        print STDERR "Failed to get build start lock for model $model_id. This means someone|thing else is attempting to build this model. Please wait a moment, and try again. If you think that this model is incorrectly locked, please put a ticket into the apipe support queue.";
-        return;
+                confess "Failed to remove build directory tree at " . $self->data_directory . ", cannot remove build!";
+            }
+        }
+    };
+    my $data_directory_change = UR::Context::Transaction->log_change($self, 'UR::Object::External::DataDirectory', $self->data_directory, 'external_change', $data_directory_undo);
+    if ($data_directory_change) {
+        $self->status_message("Recorded creation of data directory (" . $self->data_directory . ").");
+    }
+    else {
+        die $self->error_message("Failed to record creation of data directory (" . $self->data_directory . ").");
     }
 
-    # create observers to unlock
-    my $commit_observer;
-    my $rollback_observer;
-
-    $commit_observer = UR::Context->add_observer(
-        aspect => 'commit',
-        callback => sub {
-            #print "Commit\n";
-            # unlock - no error on failure
-            Genome::Utility::FileSystem->unlock_resource(
-                resource_lock => $lock_id,
-            );
-            # delete and undef observers
-            $commit_observer->delete;
-            undef $commit_observer;
-            $rollback_observer->delete;
-            undef $rollback_observer;
-        }
-    );
-
-    $rollback_observer = UR::Context->add_observer(
-        aspect => 'rollback',
-        callback => sub {
-            #print "Rollback\n";
-            # unlock - no error on failure
-            Genome::Utility::FileSystem->unlock_resource(
-                resource_lock => $lock_id,
-            );
-            # delete and undef observers so they do not persist
-            # they should have been deleted in the rollback, 
-            #  but try to delete again just in case
-            if ( $rollback_observer ) {
-                $rollback_observer->delete unless $rollback_observer->isa('UR::DeletedRef');
-                undef $rollback_observer;
+    my $disk_allocation = $self->disk_allocation;
+    if ($disk_allocation) {
+        my $allocation_undo = sub {
+            unless ($disk_allocation->deallocate) {
+                $self->warning_message('Failed to deallocate disk space.');
             }
-            if ( $commit_observer ) {
-                $commit_observer->delete unless $commit_observer->isa('UR::DeletedRef');
-                undef $commit_observer;
-            }
+        };
+        my $allocation_change = UR::Context::Transaction->log_change($self, 'UR::Object::External::Allocation', $self->disk_allocation->id, 'external_change', $allocation_undo);
+        if ($allocation_change) {
+            $self->status_message("Recorded creation of disk allocation (" . $self->disk_allocation->id . ")");
         }
-    );
+        else {
+            die $self->error_message("Failed to record creation of disk allocation (" . $self->disk_allocation->id . ")");
+        }
+    }   
 
-    return 1;
+    return $self;
 }
 
 sub _validate_model_id {
@@ -430,33 +426,6 @@ sub newest_workflow_instance {
     } else {
         return;
     }
-}
-
-sub build_status {
-    my $self = shift;
-    my $build_event = $self->build_event;
-    unless ($build_event) {
-        return;
-    }
-    return $build_event->event_status;
-}
-
-sub date_scheduled {
-    my $self = shift;
-    my $build_event = $self->build_event;
-    unless ($build_event) {
-        return;
-    }
-    return $build_event->date_scheduled;
-}
-
-sub date_completed {
-    my $self = shift;
-    my $build_event = $self->build_event;
-    unless ($build_event) {
-        return;
-    }
-    return $build_event->date_completed;
 }
 
 sub calculate_estimated_kb_usage {
@@ -717,7 +686,6 @@ sub restart {
     my $self = shift;
     my %params = @_;
 
-    $DB::single = 1;
     $self->status_message('Attempting to restart build: '.$self->id);
    
     if (delete $params{job_dispatch}) {
@@ -774,7 +742,6 @@ sub _launch {
     my $self = shift;
     my %params = @_;
 
-    $DB::single = 1;
     # right now it is "inline" or the name of an LSF queue.
     # ultimately, it will be the specification for parallelization
     #  including whether the server is inline, forked, or bsubbed, and the
@@ -818,7 +785,6 @@ sub _launch {
     my $build_event = $self->the_master_event;
 
     # TODO: send the workflow to the dispatcher instead of having LSF logic here.
-    $DB::single = 1;
     if ($server_dispatch eq 'inline') {
         # TODO: redirect STDOUT/STDERR to these files
         #$build_event->output_log_file,
@@ -841,11 +807,13 @@ sub _launch {
             $add_args .= ' --restart';
         }
 
-	my $host_group = '';
-	if ($server_dispatch ne 'workflow') {
-            $host_group = '-m blades';
-	}
- 
+        my $host_group = `bqueues -l $server_dispatch | grep ^HOSTS:`;
+        chomp $host_group;
+        $host_group =~ s/^HOSTS:\s+//;
+        $host_group =~ s/\///g;
+        $host_group =~ s/\s+$//g;
+        $host_group = "-m '$host_group'";
+
         # bsub into the queue specified by the dispatch spec
         my $lsf_command = sprintf(
             'bsub -N -H -q %s %s %s -u %s@genome.wustl.edu -o %s -e %s annotate-log genome model services build run%s --model-id %s --build-id %s',
@@ -866,38 +834,7 @@ sub _launch {
     
         $build_event->lsf_job_id($job_id);
 
-        my $commit_observer;
-        my $rollback_observer;
         
-        $commit_observer = UR::Context->add_observer(
-            aspect => 'commit',
-            callback => sub {
-                `bresume $job_id`;
-                $commit_observer->delete;
-                undef $commit_observer;
-                $rollback_observer->delete;
-                undef $rollback_observer;
-            }
-        );
-
-        $rollback_observer = UR::Context->add_observer(
-            aspect => 'rollback',
-            callback => sub {
-                `bkill $job_id`;
-                # delete and undef observers so they don't persist
-                # they should have been deleted in the rollback, 
-                #  but attempt to delete again just in case
-                if ( $rollback_observer ) {
-                    $rollback_observer->delete unless $rollback_observer->isa('UR::DeletedRef');
-                    undef $rollback_observer;
-                }
-                if ( $commit_observer ) {
-                    $commit_observer->delete unless $commit_observer->isa('UR::DeletedRef');
-                    undef $commit_observer;
-                }
-            }
-        );
-
         return 1;
     }
 }
@@ -943,6 +880,18 @@ sub _initialize_workflow {
 
     my $workflow = $processing_profile->_resolve_workflow_for_build($self,$lsf_queue_eliminate_me);
 
+    ## so developers dont fail before the workflow changes get deployed to /gsc/scripts
+    if ($workflow->can('notify_url')) {
+        require UR::Object::View::Default::Xsl;
+
+        my $cachetrigger = Genome::Config->base_web_uri;
+        $cachetrigger =~ s/view$/cachetrigger/;
+
+        my $url = $cachetrigger . '/' . UR::Object::View::Default::Xsl::type_to_url(ref($self)) . '/status.html?id=' . $self->id;
+        $url .= ' ' . $cachetrigger . '/workflow/operation/instance/statuspopup.html?id=[WORKFLOW_ID]';
+
+        $workflow->notify_url($url);
+    }
     $workflow->save_to_xml(OutputFile => $self->data_directory . '/build.xml');
     
     return $workflow;
@@ -951,23 +900,76 @@ sub _initialize_workflow {
 sub _execute_bsub_command { # here to overload in testing
     my ($self, $cmd) = @_;
 
+    local $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 1;
+
     if ($ENV{UR_DBI_NO_COMMIT}) {
         $self->warning_message("Skipping bsub when NO_COMMIT is turned on (job will fail)\n$cmd");
         return 1;
     }
 
+    # lock
+    my $model_id = $self->model->id;
+    my $lock_id = '/gsc/var/lock/build_start/'.$model_id;
+    my $lock = Genome::Utility::FileSystem->lock_resource(
+        resource_lock => $lock_id, 
+        block_sleep => 3,
+        max_try => 3,
+    );
+    if ($lock) {
+        $self->status_message("Locked model ($model_id) while launching " . $self->__display_name__ . ".");
+    }
+    else {
+        print STDERR "Failed to get build start lock for model $model_id. This means someone|thing else is attempting to build this model. Please wait a moment, and try again. If you think that this model is incorrectly locked, please put a ticket into the apipe support queue.";
+        return;
+    }
+
     my $bsub_output = `$cmd`;
+
     my $rv = $? >> 8;
     if ( $rv ) {
         $self->error_message("Failed to launch bsub (exit code: $rv) command:\n$bsub_output");
+        Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock_id);
         return;
     }
 
     if ( $bsub_output =~ m/Job <(\d+)>/ ) {
-        return "$1";
+        my $job_id = $1;
+
+        # create a change record so that if it is "undone" it will kill the job
+        my $bsub_undo = sub {
+            $self->status_message("Killing LSF job ($job_id) for build " . $self->__display_name__ . ".");
+            system("bkill $job_id");
+            Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock_id);
+        };
+        my $lsf_change = UR::Context::Transaction->log_change($self, 'UR::Object::External::LSF', $job_id, 'external_change', $bsub_undo);
+        if ($lsf_change) {
+            $self->status_message("Recorded LSF job submission ($job_id).");
+        }
+        else {
+            die $self->error_message("Failed to record LSF job submission ($job_id).");
+        }
+
+        # create a commit observer to resume the job when build is committed to database
+        my $commit_observer = $self->add_observer(
+            aspect => 'commit',
+            callback => sub {
+                $self->status_message("Resuming LSF job ($job_id) for build " . $self->__display_name__ . ".");
+                system("bresume $job_id");
+                Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock_id);
+            }
+        );
+        if ($commit_observer) {
+            $self->status_message("Added commit observer to resume LSF job ($job_id).");
+        }
+        else {
+            $self->error_message("Failed to add commit observer to resume LSF job ($job_id).");
+        }
+
+        return "$job_id";
     } 
     else {
         $self->error_message("Launched busb command, but unable to parse bsub output: $bsub_output");
+        Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock_id);
         return;
     }
 }
@@ -1509,6 +1511,17 @@ sub get_metric {
         return $metric->value;
     }
 }
+
+# This method should be overridden in base classes. It should take a build ID from another
+# build of this model and compare various files in the build directory. Any files that are
+# found to be different should be added to a hash, where the keys are the files that differ
+# and the values are the reasons (ie, one file doesn't exist, line count doesn't match, etc).
+# If there are no differences, return undef. 
+sub _compare_output {
+    my ($self, $other_build_id) = @_;
+    die "Override _compare_output in your build subclass!";
+}
+
 
 # why hide this here? -ss
 package Genome::Model::Build::AbstractBaseTest;

@@ -60,6 +60,7 @@ class Genome::Sample {
                                         doc => 'the fully qualified name for the sample (the "DNA NAME" in LIMS for both DNA and RNA)', 
                                         column_name => 'FULL_NAME',
                                     },
+        subject_type => { is => 'Text', is_constant => 1, value => 'organism sample', column_name => '', },
     ],
     has_optional => [	
         common_name                 => { is => 'Text', 
@@ -92,16 +93,31 @@ class Genome::Sample {
                                         doc => 'the name of the organ from which the sample was taken' }, 
         
         # these are optional only b/c our data is not fully back-filled
-        source                      => { is => 'Genome::SampleSource', id_by => 'source_id',
-                                        doc => 'The patient/individual organism from which the sample was taken, or the population for pooled samples.' },
-        
+        source => { 
+            is => 'Genome::Measurable',
+            id_by => 'source_id',
+            where => [ subject_type => [qw/ organism_individual population_group /, 'organism individual', 'population group', ]],
+            doc => 'The patient/individual organism from which the sample was taken, or the population for pooled samples.',
+        },
         source_type                 => { is => 'Text',
                                         doc => 'either "organism individual" for individual patients, or "population group" for cross-individual samples' },
         
         source_name                 => { via => 'source', to => 'name' },
         
         source_common_name          => { via => 'source', to => 'common_name' },
+
+
+        # the above are overly generic, since all of our sources are Genome::Individuals, and slow, so...
+        patient                      => { is => 'Genome::Individual', id_by => 'source_id',
+                                           doc => 'The patient/individual organism from which the sample was taken.' },
         
+        patient_name                 => { via => 'patient', to => 'name', doc => 'the system name for a patient (subset of the sample name)' },
+        
+        patient_common_name          => { via => 'patient', to => 'common_name', doc => 'names like AML1, BRC50, etc' },
+
+
+        tcga_name                   => { via => 'attributes', where => [ 'nomenclature like' => 'TCGA%', name => 'biospecimen_barcode_side'], to => 'value' },
+
         taxon                       => { is => 'Genome::Taxon', id_by => 'taxon_id', 
                                         doc => 'the taxon of the sample\'s source' },
         
@@ -125,6 +141,16 @@ class Genome::Sample {
     doc         => 'a single specimen of DNA or RNA extracted from some tissue sample',
     data_source => 'Genome::DataSource::GMSchema',
 };
+
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    return if not defined $self;
+
+    # FIXME add tissue, nomenclature?
+
+    return $self;
+}
 
 sub sample_type {
     shift->extraction_type(@_);

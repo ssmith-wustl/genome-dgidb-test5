@@ -34,7 +34,7 @@ our %ALTERNATE_FROM_CLASS = (
         'Genome::ModelGroup' => ['models'],
     },
     'Genome::Model::Build' => {
-        'Genome::Model' => ['builds', 'latest_build', 'last_successful_build', 'running_builds'],
+        'Genome::Model' => ['builds'],
     },
 );
 # This will prevent infinite loops during recursion.
@@ -54,6 +54,7 @@ sub resolve_param_value_from_cmdline_text {
         @param_class = ($param_class);
     }
     undef($param_class);
+    #this splits a bool_expr if multiples of the same field are listed, e.g. name=foo,name=bar
     if (@param_args > 1) {
         my %bool_expr_type_count;
         my @bool_expr_type = map {split(/[=~]/, $_)} @param_args;
@@ -73,25 +74,34 @@ sub resolve_param_value_from_cmdline_text {
         my $arg = $param_args[$i];
         my @arg_results;
         (my $arg_display = $arg) =~ s/,/ AND /g; 
-        $self->status_message("Looking for parameters using '$arg_display'...");
 
         for my $param_class (@param_class) {
+            print STDERR "Looking for $param_class using '$arg_display'... ";
             #$self->debug_message("Trying to find $param_class...");
             %SEEN_FROM_CLASS = ();
             # call resolve_param_value_from_text without a via_method to bootstrap recursion
-            @arg_results = $self->resolve_param_value_from_text($arg, $param_class);
+            @arg_results = eval{$self->resolve_param_value_from_text($arg, $param_class)};
+            print STDERR "found " . @arg_results . " result(s).\n";
         } 
+        last if ($@ && !@arg_results);
 
         $force_verify = 1 if (@arg_results > 1);
         if (@arg_results) {
             push @results, @arg_results;
             last if ($arg =~ /,/); # the first arg is all param_args as BoolExpr, if it returned values finish; basically enforicing AND (vs. OR)
         }
-        elsif ($i != 0) {
+        elsif ( $i != 0 || @param_args == 1 ) {
             print STDERR "WARNING: No match found for $arg!\n";
         }
     }
 
+    return unless (@results);
+
+    my $limit_results_method = "_limit_results_for_$param_name";
+    if ( $self->can($limit_results_method) ) {
+        @results = $self->$limit_results_method(@results);
+        return unless (@results);
+    }
     @results = $self->_unique_elements(@results);
     my $pmeta = $self->__meta__->property($param_name);
     unless (defined($pmeta->{'require_user_verify'}) && $pmeta->{'require_user_verify'} == 0) {
@@ -129,6 +139,11 @@ sub resolve_param_value_from_text {
     my @results;
     # try getting BoolExpr, otherwise fallback on '_resolve_param_value_from_text_by_name_or_id' parser
     eval { @results = $self->_resolve_param_value_from_text_by_bool_expr($param_class, $param_arg); };
+    if (!@results && !$@) {
+        # no result and was valid BoolExpr then we don't want to break it apart because we
+        # could query enormous amounts of info
+        die $@;
+    }
     # the first param_arg is all param_args to try BoolExpr so skip if it has commas
     if (!@results && $param_arg !~ /,/) {
         my @results_by_string;
@@ -186,7 +201,7 @@ sub _resolve_param_value_via_related_class_method {
             my $from_class  = shift @from_classes;
             my @methods = @{$ALTERNATE_FROM_CLASS{$via_class}{$from_class}};
             my $method;
-            if (@methods > 1 && !$via_method) {
+            if (@methods > 1 && !$via_method && !$ENV{GENOME_NO_REQUIRE_USER_VERIFY}) {
                 $self->status_message("Trying to find $via_class via $from_class...\n");
                 my $method_choices;
                 for (my $i = 0; $i < @methods; $i++) {
@@ -196,7 +211,7 @@ sub _resolve_param_value_via_related_class_method {
                 }
                 $method_choices .= (scalar(@methods) + 1) . ": none\n";
                 $method_choices .= "Which method would you like to use?";
-                my $response = $self->_ask_user_question($method_choices, 300, '\d+', 1, '#');
+                my $response = $self->_ask_user_question($method_choices, 0, '\d+', 1, '#');
                 if ($response =~ /^\d+$/) {
                     $response--;
                     if ($response == @methods) {
@@ -220,7 +235,7 @@ sub _resolve_param_value_via_related_class_method {
             }
             unless($SEEN_FROM_CLASS{$from_class}) {
                 #$self->debug_message("Trying to find $via_class via $from_class->$method...");
-                @results = $self->resolve_param_value_from_text($param_arg, $from_class, $method);
+                @results = eval {$self->resolve_param_value_from_text($param_arg, $from_class, $method)};
             }
         } # END for my $from_class (@from_classes)
     } # END if ($via_class)
@@ -231,12 +246,14 @@ sub _resolve_param_value_from_text_by_bool_expr {
     my ($self, $param_class, $arg) = @_;
 
     my @results;
-    my $bx;
-    eval {
-        $bx = UR::BoolExpr->resolve_for_string($param_class, $arg);
+    my $bx = eval {
+        UR::BoolExpr->resolve_for_string($param_class, $arg);
     };
-    unless ($@) {
+    if ($bx) {
         @results = $param_class->get($bx);
+    }
+    else {
+        die "Not a valid BoolExpr";
     }
     #$self->debug_message("B: $param_class '$arg' " . scalar(@results));
 
@@ -254,9 +271,6 @@ sub _resolve_param_value_from_text_by_name_or_id {
         unless (@results) {
             @results = $param_class->get("name like" => "$str");
         }
-        unless (@results) {
-            @results = $param_class->get("name like" => "%$str%");
-        }
     }
     #$self->debug_message("S: $param_class '$str' " . scalar(@results));
 
@@ -267,8 +281,8 @@ sub _get_user_verification_for_param_value {
     my ($self, @list) = @_;
 
     my $n_list = scalar(@list);
-    if ($n_list > 20) {
-        my $response = $self->_ask_user_question("Would you [v]iew all $n_list item(s), (p)roceed, or e(x)it?", 300, '[v]|p|x', 'v');
+    if ($n_list > 200 && !$ENV{GENOME_NO_REQUIRE_USER_VERIFY}) {
+        my $response = $self->_ask_user_question("Would you [v]iew all $n_list item(s), (p)roceed, or e(x)it?", 0, '[v]|p|x', 'v');
         if(!$response || $response eq 'x') {
             $self->status_message("Exiting...");
             exit;
@@ -304,6 +318,7 @@ sub _get_user_verification_for_param_value_drilldown {
 
     $self->status_message("Found $n_results match(es):");
     my $response;
+    my @caller = caller(1);
     while (!$response) {
         # TODO: Replace this with lister?
         for (my $i = 1; $i <= $n_results; $i++) {
@@ -315,7 +330,7 @@ sub _get_user_verification_for_param_value_drilldown {
             if ($param->can('status')) {
                 $status = $param->status;
             }
-            $msg .= "\t" . $self->_pad_string($param->status, $max_status_length, 'suffix');
+            $msg .= "\t" . $self->_pad_string($status, $max_status_length, 'suffix');
             $msg .= "\t" . $param->class if (@classes > 1);
             $self->status_message($msg);
         }
@@ -324,14 +339,23 @@ sub _get_user_verification_for_param_value_drilldown {
             $self->status_message($MESSAGE);
             $MESSAGE = '';
         }
-        $response = $self->_ask_user_question("Proceed using the above list?", 300, '\*|y|b|h|x|[-+]?[\d\-, ]+', 'h', '(y)es|(b)ack|(h)elp|e(x)it|LIST');
+        my $pretty_values = '(c)ontinue, (h)elp, e(x)it';
+        my $valid_values = '\*|c|h|x|[-+]?[\d\-\., ]+';
+        if ($caller[3] =~ /_trim_list_from_response/) {
+            $pretty_values .= ', (b)ack';
+            $valid_values .= '|b';
+        }
+        $response = $self->_ask_user_question("Confirmation or trimming required...", 0, $valid_values, 'h', $pretty_values.', or specify items to use');
         if (lc($response) eq 'h' || !$self->_validate_user_response_for_param_value_verification($response)) {
             $MESSAGE .= "\n" if ($MESSAGE);
             $MESSAGE .=
             "Help:\n".
-            "* Specify which elements to keep by listing them, e.g. '1,3,12' would keep items 1, 3, and 12.\n".
-            "* Begin list with a minus to remove elements, e.g. '-1,3,9' would remove items 1, 3, and 9.\n".
-            "* Ranges can be used, e.g. '-11-17, 5' would remove items 11 through 17 and remove item 5.";
+            "* Specify which elements to keep by listing them, e.g. '1,3,12' would keep\n".
+            "  items 1, 3, and 12.\n".
+            "* Begin list with a minus to remove elements, e.g. '-1,3,9' would remove\n".
+            "  items 1, 3, and 9.\n".
+            "* Ranges can be used, e.g. '-11-17, 5' would remove items 11 through 17 and\n".
+            "  remove item 5.";
             $response = '';
         }
     }
@@ -342,10 +366,10 @@ sub _get_user_verification_for_param_value_drilldown {
     elsif (lc($response) eq 'b') {
         return;
     }
-    elsif (lc($response) eq 'y' | $response eq '*') {
+    elsif (lc($response) eq 'c' | $response eq '*') {
         return @results;
     }
-    elsif ($response =~ /^[-+]?[\d\-, ]+$/) {
+    elsif ($response =~ /^[-+]?[\d\-\., ]+$/) {
         @results = $self->_trim_list_from_response($response, @results);
         return @results;
     }
@@ -359,10 +383,10 @@ sub _validate_user_response_for_param_value_verification {
     $response_text = substr($response_text, 1) if ($response_text =~ /^[+-]/);
     my @response = split(/[\s\,]/, $response_text);
     for my $response (@response) {
-        if ($response =~ /^[xby*]$/) {
+        if ($response =~ /^[xbc*]$/) {
             return 1;
         }
-        if ($response !~ /^(\d+)(-(\d+))?$/) {
+        if ($response !~ /^(\d+)([-\.]+(\d+))?$/) {
             $MESSAGE .= "\n" if ($MESSAGE);
             $MESSAGE .= "ERROR: Invalid list provided ($response)";
             return 0;
@@ -393,7 +417,7 @@ sub _trim_list_from_response {
     @indices{0..$#list} = 0..$#list if ($method eq '-');
 
     for my $response (@response) {
-        $response =~ /^(\d+)(-(\d+))?$/;
+        $response =~ /^(\d+)([-\.]+(\d+))?$/;
         my $low = $1; $low--;
         my $high = $3 || $1; $high--;
         die if ($high < $low);
@@ -532,6 +556,8 @@ sub resolve_class_and_params_for_argv {
         return ($class, $params);
     }
     
+    local $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 1;
+
     if ($params) {
         my $cmeta = $self->__meta__;
         for my $param_name (keys %$params) {
@@ -593,52 +619,23 @@ sub resolve_class_and_params_for_argv {
     return ($class, $params);
 }
 
-# TODO: Remove this and replace references with resolve_param_value_from_cmdline_text
-sub default_cmdline_selector {
-    my $class = shift;
-    my @obj;
-    while (my $txt = shift) {
-        eval {
-            my $bx = UR::BoolExpr->resolve_for_string($class,$txt);
-            my @matches = $class->get($bx);
-            push @obj, @matches;
-        };
-        if ($@) {
-            my @matches = $class->get($txt);
-            push @obj, @matches;
-        }
-    }
-
-    if (wantarray) {
-        return @obj;
-    }
-    elsif (not defined wantarray) {
-        return;
-    }
-    elsif (@obj > 1) {
-        Carp::confess("Multiple matches found!");
-    }
-    else {
-        return $obj[0];
-    }
-}
-
 sub _ask_user_question {
     my $self = shift;
     my $question = shift;
-    my $timeout = shift || 60;
+    my $timeout = shift;
     my $valid_values = shift || "yes|no";
     my $default_value = shift || undef;
     my $pretty_valid_values = shift || $valid_values;
     $valid_values = lc($valid_values);
     my $input;
+    $timeout = 60 unless(defined($timeout));
     eval {
         local $SIG{ALRM} = sub { print STDERR "Exiting, failed to reply to question '$question' within '$timeout' seconds.\n"; exit; };
         print STDERR "$question\n";
         print STDERR "Please reply with $pretty_valid_values: ";
-        alarm($timeout);
+        alarm($timeout) if ($timeout);
         chomp($input = <STDIN>);
-        alarm(0);
+        alarm(0) if ($timeout);
     };
     print STDERR "\n";
 
@@ -663,6 +660,27 @@ sub _unique_elements {
     my %seen = ();
     my @unique = grep { ! $seen{$_} ++ } @list;
     return @unique;
+}
+
+sub display_summary_report {
+    my ($self, $total_count, @errors) = @_;
+
+    if (@errors) {
+        $self->status_message("\n\nError Summary:");
+        for my $error (@errors) {
+            ($error) = split("\n", $error);
+            $error =~ s/\ at\ \/.*//;
+            $self->status_message("* ".$error);
+        }
+    }
+
+    if ($total_count > 1) {
+        my $error_count = scalar(@errors);
+        $self->status_message("\n\nCommand Summary:");
+        $self->status_message(" Successful: " . ($total_count - $error_count));
+        $self->status_message("     Errors: " . $error_count);
+        $self->status_message("      Total: " . $total_count);
+    }
 }
 
 1;

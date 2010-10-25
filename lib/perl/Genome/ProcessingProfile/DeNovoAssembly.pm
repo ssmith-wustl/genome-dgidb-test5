@@ -11,32 +11,32 @@ use Regexp::Common;
 class Genome::ProcessingProfile::DeNovoAssembly{
     is => 'Genome::ProcessingProfile::Staged',
     has_param => [
-       sequencing_platform => {
-           doc => 'The sequencing platform used to produce the reads.',
-           valid_values => [qw/ 454 solexa /],
-       },
-       coverage => {
-           is => 'Integer',
-           is_optional => 1,
-           doc => 'Use genome size to limit the number of reads used in the assembly to obtain this coverage.',
-       },
-       # Assembler
-       assembler_name => {
-           doc => 'Name of the assembler.',
-           valid_values => [qw/ velvet newbler soap /],
-       },
-       assembler_version => {
-           doc => 'Version of assembler.',
-       },
-       assembler_params => {
-           is_optional => 1,
-           doc => 'A string of parameters to pass to the assembler.',
-       },
-       # Read Coverage, Trimmer and Filter
-       read_processor => {
-           is_optional => 1,
-           doc => "String of read trimmers, filters and sorters to use. Find processors in 'gmt fast-qual.' List each porocessor in order of execution as they would be run on the command line. Do not include 'gmt fast-qual', as this is assumed. List params starting w/ a dash (-), followed by the value. Separate processors by a pipe w/ a space on each side ( | ). The read processors will be validated. Ex:\n\ttrimmer bwa-style --trim-qual-length | filter by-length filter-length 70",
-       },
+	sequencing_platform => {
+	    doc => 'The sequencing platform used to produce the reads.',
+	    valid_values => [qw/ 454 solexa /],
+	},
+	coverage => {
+	    is => 'Integer',
+	    is_optional => 1,
+	    doc => 'Use genome size to limit the number of reads used in the assembly to obtain this coverage.',
+	},
+	# Assembler
+	assembler_name => {
+	    doc => 'Name of the assembler.',
+	    valid_values => [qw/ velvet newbler soap /],
+	},
+	assembler_version => {
+	    doc => 'Version of assembler.',
+	},
+	assembler_params => {
+	    is_optional => 1,
+	    doc => 'A string of parameters to pass to the assembler.',
+	},
+	# Read Coverage, Trimmer and Filter
+	read_processor => {
+	    is_optional => 1,
+	    doc => "String of read trimmers, filters and sorters to use. Find processors in 'gmt fast-qual.' List each porocessor in order of execution as they would be run on the command line. Do not include 'gmt fast-qual', as this is assumed. List params starting w/ a dash (-), followed by the value. Separate processors by a pipe w/ a space on each side ( | ). The read processors will be validated. Ex:\n\ttrimmer bwa-style --trim-qual-length | filter by-length filter-length 70",
+	},
    ],
 };
 
@@ -75,7 +75,7 @@ sub create {
         $self->delete;
         return;
     }
-    
+
     return $self;
 }
 

@@ -10,12 +10,18 @@ use File::Copy;
 use IO::File;
 use File::stat;
 
+my $MAX_JVM_HEAP_SIZE = 12;
+
 class Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries::Picard {
     is => ['Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries'],
 };
 
 sub bsub_rusage {
     return "-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[tmp=90000:mem=16000]' -M 16000000";
+}
+
+sub max_jvm_heap_size {
+    return $MAX_JVM_HEAP_SIZE;
 }
 
 sub execute {
@@ -149,6 +155,7 @@ sub execute {
         software => $merge_software,
         use_version => $samtools_version,
         use_picard_version => $rmdup_version,
+        max_jvm_heap_size => $self->max_jvm_heap_size,
     ); 
 
     my $merge_rv = $merge_cmd->execute();
@@ -214,7 +221,7 @@ sub execute {
            tmp_dir => $tmp_dir->dirname,
            log_file => $markdup_log_file, 
            use_picard_version => $rmdup_version,
-           max_jvm_heap_size => 12,
+           max_jvm_heap_size => $self->max_jvm_heap_size,
         );
         if (defined($processing_profile->picard_max_sequences_for_disk_read_ends_map)) {
             $mark_duplicates_params{max_sequences_for_disk_read_ends_map} = $processing_profile->picard_max_sequences_for_disk_read_ends_map;

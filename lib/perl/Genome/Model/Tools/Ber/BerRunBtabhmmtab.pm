@@ -18,6 +18,9 @@ use File::Slurp;
 
 use Cwd;
 
+use Archive::Tar;
+use constant COMPRESS_BZIP => 1;
+
 UR::Object::Type->define(
 			 class_name => __PACKAGE__,
 			 is         => 'Command',
@@ -70,7 +73,7 @@ EOS
 
 sub execute
   {
-      my $self = shift;
+    my $self = shift;
 
     my @berrunbtabhmmtab = $self->gather_details();
 
@@ -96,10 +99,13 @@ sub execute
     }
        print qq{\n\nTotal for Btab/Htab:\t$i\n\n};
 
-      while ( 1 ) {
-
-	  my $berdirpath = $self->berdirpath;
+      my $berdirpath = $self->berdirpath;
 	  my $hmmdirpath = $self->hmmdirpath;
+	  my $fastadirpath = $self->fastadirpath;
+	  
+	  my $locus_tag = $self->locus_tag;
+	  
+      while ( 1 ) {
 
 	  opendir (BERDIR, "$berdirpath") or die "Can't open '$berdirpath' ...  from BerRunBtabhmmtab.pm : $OS_ERROR\n";
 	  my @berfile = readdir (BERDIR);
@@ -150,8 +156,68 @@ sub execute
 	      last;
 	  }
       }
-
-      return 1;
+      
+	  ## btab/htab run is complete
+	  ## We will tar/bz2 the files in fasta directories
+	  my $cwd = getcwd();
+      unless ($cwd eq $fastadirpath) {
+	  	chdir($fastadirpath) or die "Failed to change to '$fastadirpath'...  from BerRunBtabhmmtab.pm: $OS_ERROR\n\n";
+  	  }
+  	  
+  	  my $tar = Archive::Tar->new;
+	  $tar->setcwd(cwd());
+	  
+  	  opendir (my $fastadir, $fastadirpath) || confess "Unable to open $fastadirpath: $!\n";
+  	  my @fasta_files;
+  	  @fasta_files = grep {!/^\.|fof/} readdir ($fastadir);
+  	  close $fastadir;
+  	 
+  	  $tar->create_archive( "$locus_tag.tar.gz", COMPRESS_BZIP, @fasta_files );
+  	  $tar->clear();
+  	  
+  	  foreach my $file (@fasta_files ){
+  	  	unlink $file or confess "Could not unlink $file: $!";
+  	  }
+  	  
+  	  ## tar hmmpfam/htab files in hmm directory
+  	  unless ($cwd eq $hmmdirpath) {
+	  	chdir($hmmdirpath) or die "Failed to change to '$hmmdirpath'...  from BerRunBtabhmmtab.pm: $OS_ERROR\n\n";
+  	  }
+  	  
+	  $tar->setcwd(cwd());
+	  
+  	  opendir (my $hmmdir, $hmmdirpath) || confess "Unable to open $hmmdirpath: $!\n";
+  	  my @hmm_files;
+  	  @hmm_files = grep {/hmmpfam$|htab$/} readdir ($hmmdir);
+  	  close $hmmdir;
+  	 
+  	  $tar->create_archive( "$locus_tag.tar.gz", COMPRESS_BZIP, @hmm_files);
+  	  $tar->clear();
+  	  
+  	  foreach my $file (@hmm_files ){
+  	  	unlink $file or confess "Could not unlink $file: $!";
+  	  }
+  	  
+  	  ## tar nr/btab files in hmm directory
+  	  unless ($cwd eq $berdirpath) {
+	  	chdir($berdirpath) or die "Failed to change to '$berdirpath'...  from BerRunBtabhmmtab.pm: $OS_ERROR\n\n";
+  	  }
+  	  
+	  $tar->setcwd(cwd());
+	  
+  	  opendir (my $berdir, $berdirpath) || confess "Unable to open $berdirpath: $!\n";
+  	  my @ber_files;
+  	  @ber_files = grep {/nr$|btab$/} readdir ($berdir);
+  	  close $berdir;
+  	 
+  	  $tar->create_archive( "$locus_tag.tar.gz", COMPRESS_BZIP, @ber_files);
+  	  $tar->clear();
+  	  
+  	  foreach my $file (@ber_files ){
+  	  	unlink $file or confess "Could not unlink $file: $!";
+  	  }
+  	  
+	return 1;
   }
 
 sub gather_details
