@@ -89,6 +89,7 @@ sub execute {
         # Parse and process each prediction...
         while (my $gene = $parser->next_prediction()) {
             my $strand = $gene->strand();
+            $strand = '+1' if $strand eq '1';  # I want the + to be there a la variant annotation, also consistent with snap 
             my $source = $gene->source_tag();
             my $gene_name = join('.', $current_seq_name, $source, $gene_count);
             my $transcript_name = $gene_name . '.1';
