@@ -5322,20 +5322,6 @@ $Genome::Model::Tools::OPTS_SPEC = [
     'help!',
     undef
   ],
-  '>compare-builds',
-  [
-    '>reference-alignment',
-    [
-      'first-build-id=s',
-      undef,
-      'second-build-id=s',
-      undef,
-      'help!',
-      undef
-    ],
-    'help!',
-    undef
-  ],
   '>consed',
   [
     '>ace-reference',
@@ -13277,6 +13263,15 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'help!',
       undef
     ],
+    '>copy-number-plots',
+    [
+      'output-basename=s',
+      undef,
+      'regions-file=s',
+      undef,
+      'help!',
+      undef
+    ],
     '>filter-snps',
     [
       'indel-file=s',
@@ -13352,6 +13347,19 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'skip-if-output-present=s',
       undef,
       'somatic-out=s',
+      undef,
+      'help!',
+      undef
+    ],
+    '>process-validation',
+    [
+      'filtered-validation-file=s',
+      undef,
+      'output-file=s',
+      undef,
+      'validation-file=s',
+      undef,
+      'variants-file=s',
       undef,
       'help!',
       undef
@@ -13607,7 +13615,11 @@ $Genome::Model::Tools::OPTS_SPEC = [
     ],
     '>one-button',
     [
+      'genome-len=s',
+      undef,
       'hash-sizes=s@',
+      undef,
+      'ins-length=s',
       undef,
       'output-dir=s',
       undef,
@@ -13620,10 +13632,6 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'dev-ins-length=s',
       undef,
       'exp-covs=s@',
-      undef,
-      'genome-len=s',
-      undef,
-      'ins-length=s',
       undef,
       'read-type=s',
       [

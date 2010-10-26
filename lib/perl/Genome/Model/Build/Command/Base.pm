@@ -18,19 +18,21 @@ sub _limit_results_for_builds {
     my ( $class, @builds ) = @_;
 
     $class->status_message("Filtering matching builds for builds you ran.");
-    my $other_users_builds_count;
     my @run_by_builds;
     for my $build (@builds) {
-        if ( $build->run_by && $build->run_by ne $ENV{USER} ) {
-            $other_users_builds_count++;
+        my $apipe_members = (getgrnam('apipe'))[3];
+        my $user = $ENV{USER};
+        if ($build->status eq 'Running' && $build->run_by && $build->run_by ne $user) {
+            next;
         }
-        else {
-            push @run_by_builds, $build;
+        if ($build->status ne 'Running' && $apipe_members !~ /$user/ && $build->run_by && $build->run_by ne $user) {
+            next;
         }
+        push @run_by_builds, $build;
     }
+    my $other_users_builds_count = @builds - @run_by_builds;
     if ($other_users_builds_count) {
-        $class->warning_message(
-            "Filtered $other_users_builds_count builds not run by you.");
+        $class->warning_message("Filtered $other_users_builds_count builds not run by you.");
     }
     else {
         $class->status_message("No builds filtered.");
