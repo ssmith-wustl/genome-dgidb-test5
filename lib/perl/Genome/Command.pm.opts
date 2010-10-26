@@ -1265,6 +1265,19 @@ $Genome::Command::OPTS_SPEC = [
         'help!',
         undef
       ],
+      '>chip-seq',
+      [
+        'name=s',
+        undef,
+        'based-on=s',
+        undef,
+        'describe!',
+        undef,
+        'supersedes=s',
+        undef,
+        'help!',
+        undef
+      ],
       '>combine-variants',
       [
         'name=s',
@@ -1323,8 +1336,6 @@ $Genome::Command::OPTS_SPEC = [
         'coverage=s',
         undef,
         'describe!',
-        undef,
-        'fasta-to-agp-params=s',
         undef,
         'read-processor=s',
         undef,
@@ -1920,6 +1931,19 @@ $Genome::Command::OPTS_SPEC = [
         'help!',
         undef
       ],
+      '>chip-seq',
+      [
+        'show=s',
+        'files',
+        'filter=s',
+        undef,
+        'noheaders!',
+        undef,
+        'style=s',
+        undef,
+        'help!',
+        undef
+      ],
       '>combine-variants',
       [
         'show=s',
@@ -2386,6 +2410,45 @@ $Genome::Command::OPTS_SPEC = [
         undef
       ],
       '>benchmark',
+      [
+        'subject-name=s',
+        undef,
+        'auto-assign-inst-data!',
+        undef,
+        'auto-build-alignments!',
+        undef,
+        'data-directory=s',
+        undef,
+        'groups=s',
+        'files',
+        'model-name=s',
+        undef,
+        'processing-profile-id=s',
+        undef,
+        'processing-profile-name=s',
+        undef,
+        'result-model-id=s',
+        undef,
+        'subject-class-name=s',
+        undef,
+        'subject-id=s',
+        undef,
+        'subject-type=s',
+        [
+          'species_name',
+          'sample_group',
+          'flow_cell_id',
+          'genomic_dna',
+          'library_name',
+          'sample_name',
+          'dna_resource_item_name'
+        ],
+        'bare-args=s@',
+        'files',
+        'help!',
+        undef
+      ],
+      '>chip-seq',
       [
         'subject-name=s',
         undef,
@@ -9800,20 +9863,6 @@ $Genome::Command::OPTS_SPEC = [
         'full',
         'abbreviated',
         'summary'
-      ],
-      'help!',
-      undef
-    ],
-    '>compare-builds',
-    [
-      '>reference-alignment',
-      [
-        'first-build-id=s',
-        undef,
-        'second-build-id=s',
-        undef,
-        'help!',
-        undef
       ],
       'help!',
       undef
@@ -17759,6 +17808,15 @@ $Genome::Command::OPTS_SPEC = [
         'help!',
         undef
       ],
+      '>copy-number-plots',
+      [
+        'output-basename=s',
+        undef,
+        'regions-file=s',
+        undef,
+        'help!',
+        undef
+      ],
       '>filter-snps',
       [
         'indel-file=s',
@@ -17834,6 +17892,19 @@ $Genome::Command::OPTS_SPEC = [
         'skip-if-output-present=s',
         undef,
         'somatic-out=s',
+        undef,
+        'help!',
+        undef
+      ],
+      '>process-validation',
+      [
+        'filtered-validation-file=s',
+        undef,
+        'output-file=s',
+        undef,
+        'validation-file=s',
+        undef,
+        'variants-file=s',
         undef,
         'help!',
         undef
@@ -18089,7 +18160,11 @@ $Genome::Command::OPTS_SPEC = [
       ],
       '>one-button',
       [
+        'genome-len=s',
+        undef,
         'hash-sizes=s@',
+        undef,
+        'ins-length=s',
         undef,
         'output-dir=s',
         undef,
@@ -18102,10 +18177,6 @@ $Genome::Command::OPTS_SPEC = [
         'dev-ins-length=s',
         undef,
         'exp-covs=s@',
-        undef,
-        'genome-len=s',
-        undef,
-        'ins-length=s',
         undef,
         'read-type=s',
         [

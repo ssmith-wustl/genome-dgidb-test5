@@ -12,7 +12,7 @@ class Genome::Sample::Command::List {
             is_constant => 1, 
             value => 'Genome::Sample' 
         },
-        show => { default_value => 'id,name,species_name,source_name,source_common_name,common_name,tissue_label,tissue_desc,extraction_type,extraction_label,extraction_desc' },
+        show => { default_value => 'id,name,species_name,patient_common_name,common_name,tissue_label,tissue_desc,extraction_type,extraction_label,extraction_desc' },
     ],
 };
 

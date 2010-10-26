@@ -179,6 +179,27 @@ sub execute {
     }
     $self->status_message("Finished calculating md5 sum.");
     $self->status_message("MD5 sum = ".$md5);
+
+    #check for existing md5 sum
+
+    if(-s $bam_path . ".md5"){
+        $self->status_message("Found an md5 sum, comparing it with the calculated sum...");
+        my $md5_fh = IO::File->new($bam_path . ".md5");
+        unless($md5_fh){
+            $self->error_message("Could not open md5sum file.");
+            die $self->error_message;
+        }
+        my $md5_from_file = $md5_fh->getline;
+        $self->error_message("md5 sum from file = ".$md5_from_file);
+        unless($md5 eq $md5_from_file){
+            $self->error_message("Calculated md5 sum and sum read from file did not match, aborting.");
+            $disk_alloc->deallocate;
+            $self->error_message("Now removing instrument-data record from the database.");
+            $import_instrument_data->delete;
+            die "Import Failed";
+        }
+    }
+
     $self->status_message("Copying bam file into the allocation, this could take some time.");
     unless(copy($bam_path, $bam_destination)) {
         $self->error_message("Failed to copy to allocated space (copy returned bad value).  Unlinking and deallocating.");
