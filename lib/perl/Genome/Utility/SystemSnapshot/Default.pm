@@ -5,4 +5,4 @@ use warnings;
 
 use base qw(Genome::Utility::SystemSnapshot);
 
-
+1;

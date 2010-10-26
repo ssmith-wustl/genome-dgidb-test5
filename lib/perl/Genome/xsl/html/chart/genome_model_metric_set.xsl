@@ -148,8 +148,7 @@ $(document).ready(function () {
         dataType: 'json',
         success: function(data) {
             jsonData = data;
-            // fixme: change default field to walltime
-            renderData(data,'rbytes');
+            renderData(data,'walltime');
             var fields = {};
             $.each(data['members'].map(function(m) {
                 return m.name;
