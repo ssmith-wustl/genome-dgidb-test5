@@ -30,6 +30,14 @@ class Genome::ProcessingProfile::Benchmark {
             is_optional => 1,
             doc => 'the arguments to prepend before the model input \'command_arguments\'',
         },
+        lsf_queue => {
+            is_optional => 1,
+            value => 'long'
+        },
+        lsf_param => {
+            is_optional => 1,
+            value => ''
+        },
         snapshot_type => {
             is_optional => 1,
             value => 'default'
@@ -63,6 +71,18 @@ sub _initialize_build {
     $self->status_message("defining new build " . $build->__display_name__ . " for profile " . $self->__display_name__);
     return 1;
 }
+
+sub _resolve_workflow_for_build {
+    my $self = shift;
+    my $workflow = $self->SUPER::_resolve_workflow_for_build(@_);
+
+    my $operation_type = Workflow::OperationType::Command->get('Genome::Model::Eve    nt::Build::ProcessingProfileMethodWrapper');
+    $operation_type->lsf_resource($self->lsf_param);
+    $operation_type->lsf_queue($self->lsf_queue);
+
+    return $workflow;
+}
+
 
 sub _system_snapshot_package {
     my $self = shift;
