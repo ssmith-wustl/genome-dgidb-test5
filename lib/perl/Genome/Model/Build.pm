@@ -262,7 +262,7 @@ sub create {
             }
         }
     };
-    my $data_directory_change = UR::Context::Transaction->log_change($self, 'UR::Object::External::DataDirectory', $self->data_directory, 'external_change', $data_directory_undo);
+    my $data_directory_change = UR::Context::Transaction->log_change($self, 'UR::Value', $self->data_directory, 'external_change', $data_directory_undo);
     if ($data_directory_change) {
         $self->status_message("Recorded creation of data directory (" . $self->data_directory . ").");
     }
@@ -277,7 +277,7 @@ sub create {
                 $self->warning_message('Failed to deallocate disk space.');
             }
         };
-        my $allocation_change = UR::Context::Transaction->log_change($self, 'UR::Object::External::Allocation', $self->disk_allocation->id, 'external_change', $allocation_undo);
+        my $allocation_change = UR::Context::Transaction->log_change($self, 'UR::value', $self->disk_allocation->id, 'external_change', $allocation_undo);
         if ($allocation_change) {
             $self->status_message("Recorded creation of disk allocation (" . $self->disk_allocation->id . ")");
         }
@@ -962,7 +962,7 @@ sub _execute_bsub_command { # here to overload in testing
             $self->status_message("Killing LSF job ($job_id) for build " . $self->__display_name__ . ".");
             system("bkill $job_id");
         };
-        my $lsf_change = UR::Context::Transaction->log_change($self, 'UR::Object::External::LSF', $job_id, 'external_change', $bsub_undo);
+        my $lsf_change = UR::Context::Transaction->log_change($self, 'UR::Value', $job_id, 'external_change', $bsub_undo);
         if ($lsf_change) {
             $self->status_message("Recorded LSF job submission ($job_id).");
         }
