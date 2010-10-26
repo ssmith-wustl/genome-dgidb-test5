@@ -17,5 +17,14 @@ class Genome::Model::Benchmark {
     ],
 };
 
+sub default_model_name {
+    my $self  = shift;
+    return join(
+        '.',
+        Genome::Utility::Text::sanitize_string_for_filesystem(getpwuid($<)),
+        $self->processing_profile_name
+    );
+}
+
 1;
 
