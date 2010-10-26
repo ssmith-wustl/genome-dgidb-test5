@@ -76,7 +76,7 @@ sub _resolve_workflow_for_build {
     my $self = shift;
     my $workflow = $self->SUPER::_resolve_workflow_for_build(@_);
 
-    my $operation_type = Workflow::OperationType::Command->get('Genome::Model::Eve    nt::Build::ProcessingProfileMethodWrapper');
+    my $operation_type = Workflow::OperationType::Command->get('Genome::Model::Event::Build::ProcessingProfileMethodWrapper');
     $operation_type->lsf_resource($self->lsf_param);
     $operation_type->lsf_queue($self->lsf_queue);
 
