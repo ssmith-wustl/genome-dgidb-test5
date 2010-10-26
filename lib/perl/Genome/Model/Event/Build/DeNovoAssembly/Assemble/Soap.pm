@@ -27,6 +27,7 @@ sub execute {
     # check for input fastq files
     $self->status_message('Validating fastq files for libraires');
     my @libraries = $self->build->libraries_with_existing_assembler_input_files;
+
     if  ( not @libraries ) {
         $self->error_message("No assembler input files were found for libraries");
         return;
@@ -47,6 +48,7 @@ sub execute {
     $self->status_message('OK...soap config file');
 
     my %assembler_params = $self->processing_profile->assembler_params_as_hash();
+    delete $assembler_params{'insert_size'} if $assembler_params{'insert_size'}; #used in config file not command line
 
     $self->status_message('Getting number of cpus');
     my $cpus = $self->_get_number_of_cpus;
@@ -80,7 +82,7 @@ sub _get_config_for_libraries {
 
     my $config = "max_rd_len=120\n";
     for my $library ( @libraries ) {
-        my $insert_size = $library->{insert_size} || 320;
+        my $insert_size = $library->{insert_size};# || 320;# die if no insert size
         $config .= <<CONFIG;
 [LIB]
 avg_ins=$insert_size
