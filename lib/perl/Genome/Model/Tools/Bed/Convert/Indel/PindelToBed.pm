@@ -86,7 +86,7 @@ sub initialize_filehandles {
     return $self->SUPER::initialize_filehandles(@_);
 }
 
-sub close_filehandes {
+sub close_filehandles {
     my $self = shift;
 
     # close big deletions fh
