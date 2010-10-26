@@ -307,7 +307,7 @@ sub execute {
 }
 
 sub listed_params {
-    return qw/ id name data_directory subject_name subject_type processing_profile_i    d processing_profile_name /;
+    return qw/ id name data_directory subject_name subject_type processing_profile_id processing_profile_name /;
 }
 
 sub type_specific_parameters_for_create {
