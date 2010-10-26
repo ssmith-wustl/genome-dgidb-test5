@@ -258,33 +258,11 @@ sub transcripts {
         return { transcript_error => 'invalid_sequence_on_variant' }
     }
 
-    # The magic number 4500000 is because of the longest transcript.  NM_014141 is about 2.3Mb long.
-    # The filter for transcript start and stop is to give the file datasource some hints so it
-    # can seek into the file and/or stop looking early.
-    # Conservatively we'll double that number and it should still help the speed.
-$DB::single=1;
     my $windowing_iterator = $self->{'_windowing_iterator'};
     unless ($windowing_iterator) {
         $windowing_iterator = $self->{'_windowing_iterator'} = $self->_create_iterator_for_variant_intersection();
     }
     my $crossing_substructures = $windowing_iterator->(\%variant);
-    #my @crossing_substructures = Genome::TranscriptStructure->get(
-    #                                 chrom_name => $variant{'chromosome_name'},
-    #                                 'structure_stop >=' => $variant_start,
-    #                                 'structure_start <=' => $variant_stop,
-    #                                 #'transcript_transcript_start >=' => $variant_start - 4500000,
-    #                                 #'transcript_transcript_stop <=' => $variant_stop + 4500000,
-    #                                 data_directory => $self->data_directory);
-#if (@crossing_substructures != @$crossing_substructures) {
-#  print STDERR "Count doesn't match\n";
-#  my $fh = IO::File->new('>/tmp/from_iterator');
-#  $fh->print(Data::Dumper::Dumper($crossing_substructures));
-#  $fh->close;
-#  $fh = IO::File->new('>/tmp/from_get');
-#  $fh->print(Data::Dumper::Dumper(\@crossing_substructures));
-#  $fh->close;
-#  exit;
-#}
     return unless @$crossing_substructures;
 
     my @annotations;
@@ -297,7 +275,12 @@ $DB::single=1;
                 my $chrom = $variant{chromosome_name};
                 my $species = $substruct->transcript_species;
                 Genome::Model::Tools::Annotate::LookupConservationScore->class();
-                my $ref_seq = Genome::Model::Tools::Sequence::lookup_sequence(chromosome => $chrom, start => $variant_start, stop => $variant_stop, species => $species);
+                my $ref_seq = Genome::Model::Tools::Sequence::lookup_sequence(
+                                  chromosome => $chrom,
+                                  start => $variant_start,
+                                  stop => $variant_stop,
+                                  species => $species,
+                              );
 
                 unless ($ref_seq eq $variant{reference}) {
                     $self->warning_message("Sequence on variant on chromosome $chrom between $variant_start and $variant_stop does not match $species reference!");
