@@ -13,6 +13,8 @@ use Benchmark;
 use Genome::Info::UCSCConservation;
 use DateTime;
 use Sys::Hostname;
+use Cwd;
+use File::Basename;
 
 class Genome::Model::Tools::Annotate::TranscriptVariants{
     is => 'Genome::Model::Tools::Annotate',
@@ -249,12 +251,17 @@ sub execute {
     # establish the output handle for the transcript variants
     my $output_fh;
     my $output_file = $self->output_file;
+    my $temp_output_file;
     if ($self->output_file =~ /STDOUT/i) {
         $output_fh = 'STDOUT';
     }
     else {
-        $output_fh = $self->_create_file($output_file);
-        chmod(0664, $output_file);
+        my ($output_file_basename) = File::Basename::fileparse($output_file);
+        ($output_fh, $temp_output_file) = File::Temp::tempfile(
+                                              "$output_file_basename-XXXXXX",
+                                              DIR => Cwd::abs_path(dirname($self->output_file)),
+                                              UNLINK => 1);
+        chmod(0664, $temp_output_file);
     }
     $self->_transcript_report_fh($output_fh);
 
@@ -446,6 +453,15 @@ sub execute {
                           . sprintf("%2.2f", $variants_per_sec) . " variants per second");
 
     $output_fh->close unless $output_fh eq 'STDOUT';
+    if ($temp_output_file){
+        my $mv_return_value = Genome::Utility::FileSystem->shellcmd(cmd => "mv $temp_output_file $output_file");
+        unless($mv_return_value){
+            $self->error_message("Failed to mv results at $temp_output_file to final location at $output_file: $!");
+            return 0;
+        }
+        $output_fh->close unless $output_fh eq 'STDOUT';
+    }
+
     return 1;
 }
 
