@@ -150,6 +150,9 @@ sub prioritized_transcript{
 # TranscriptStructures it has read from the iterator.
 # It does some "bad" things like poke directly into the object's hash instead of 
 # going through the accessors
+use constant TRANSCRIPT_STRUCTURE_ID => 0;
+use constant STRUCTURE_START => 3;
+use constant STRUCTURE_STOP => 4;
 sub _create_iterator_for_variant_intersection {
     my $self = shift;
 
@@ -160,24 +163,37 @@ sub _create_iterator_for_variant_intersection {
     my $last_chrom_name = '';
     my $next_substructure;
 
-    return sub {
-        my $variant = $_[0];
+    my $variant;   # needs to be visible in both closures below
 
-$DB::single=1;
+    # This sub plugs into a hook in the Genome::DataSource::TranscriptStructures loader
+    # to reject data that does not intersect the given variation to avoid passing the
+    # data up the call stack and creating objects for TranscriptStructures we aren't 
+    # interested in
+    $Genome::DataSource::TranscriptStructures::intersector_sub = sub {
+        my $struct = $_[0];
+        if ( $variant->{'start'} <= $struct->[STRUCTURE_STOP]) {
+            return 1;
+        } else {
+            return 0;
+        }
+    };
+
+    return sub {
+        $variant = $_[0];
+
         my $variant_start = $variant->{'start'};
         my $variant_stop  = $variant->{'stop'};
 
         if ($variant->{'chromosome_name'} ne $last_chrom_name
             or
             $variant_start < $last_variant_start
-            or
-            $variant_stop < $last_variant_stop
         ) {
             my $chrom_name = $variant->{'chromosome_name'};
-            #Genome::TranscriptStructure->unload();
             $self->status_message("Resetting iterator for chromosome $chrom_name");
-    
+
             $loaded_substructures = [];
+            $structure_iterator = undef;
+
             $structure_iterator = Genome::TranscriptStructure->create_iterator(
                                       chrom_name => $chrom_name,
                                       data_directory => $self->data_directory,
