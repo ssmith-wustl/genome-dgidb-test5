@@ -5,6 +5,7 @@ use warnings;
 
 use Genome;
 use Data::Dumper 'Dumper';
+require Carp;
 
 class Genome::Model::Build::DeNovoAssembly::Soap {
     is => 'Genome::Model::Build::DeNovoAssembly',
@@ -131,11 +132,18 @@ sub libraries_with_existing_assembler_input_files {
         return;
     }
 
+    my %params = $self->processing_profile->assembler_params_as_hash;    
+
     my @libraries;
     for my $instrument_data ( @instrument_data ) {
         my $library_id = $instrument_data->library_id || 'unknown';
         next if grep { $library_id eq $_->{library_id} } @libraries;
-        my $insert_size = $instrument_data->median_insert_size;
+	#Over ride ins-data insert size if inert size is specified in pp assembler param .. if no ins-data insert size defined
+	#and no pp specified insert size, die
+	my $insert_size = ( exists $params{'insert_size'} ) ? $params{'insert_size'} : $instrument_data->median_insert_size;
+	unless ( $insert_size ) {
+	    Carp::confess("Failed to set insert size for library id: $library_id.  Neither instrument data is set in assembler params no found instrument data insert size");
+	}
         my %files = $self->existing_assembler_input_files_for_library_id($library_id);
         next if not %files;
         my %library = (
