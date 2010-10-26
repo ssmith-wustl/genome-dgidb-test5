@@ -60,7 +60,7 @@ sub create {
 sub calculate_estimated_kb_usage {
     my $self = shift;
     my $model = $self->model;
-    my $reference_build = $model->reference_build;
+    my $reference_build = $model->reference_sequence_build;
     my $reference_file_path = $reference_build->full_consensus_path;
 
     my $du_output = `du -sk $reference_file_path`;
@@ -490,14 +490,14 @@ sub genes_file {
     my $self = shift;
 
     my $model = $self->model;
-    my $reference_build = $model->reference_build;
+    my $reference_build = $model->reference_sequence_build;
     return $reference_build->data_directory .'/BACKBONE.tsv';
 }
 
 sub transcript_bed_file {
     my $self = shift;
     my $model = $self->model;
-    my $reference_build = $model->reference_build;
+    my $reference_build = $model->reference_sequence_build;
     return $reference_build->data_directory .'/transcripts.bed';
 }
 
@@ -593,7 +593,7 @@ sub accumulate_maps {
     } 
     else {
         my @all_map_lists;
-        my @chromosomes = $model->reference_build->subreference_names;
+        my @chromosomes = $model->reference_sequence_build->subreference_names;
         foreach my $c (@chromosomes) {
             my $a_ref_seq = Genome::Model::RefSeq->get(model_id => $model->id, ref_seq_name=>$c);
             my @map_list = $a_ref_seq->combine_maplists;
@@ -1078,5 +1078,107 @@ sub minimum_mapping_quality {
 
 ####END REGION OF INTEREST SECTION####
 
+# Overriding comparison method used by hudson (or possibly other scripts too) that compares this build
+# with another reference alignment build of the same model. 
+sub _compare_output {
+    my ($self, $other_build_id) = @_;
+    my $build_id = $self->build_id;
+    my $other_build = Genome::Model::Build->get($other_build_id);
+    confess "Could not get build with ID $other_build_id" unless $other_build;
+
+    unless ($self->model_id eq $other_build->model_id) {
+        confess "Build $build_id has model " . $self->model_id . " and build $other_build_id has model " .
+            $other_build->model_id . ", these builds must come from the same model in order to be compared!";
+    }
+
+    unless ($other_build->class =~ /ReferenceAlignment/i) {
+        confess "Other build $other_build_id is not ReferenceAlignment, type is " . $other_build->class;
+    }
+
+    my @files_to_compare = qw(
+        snp_related_metrics/indels_all_sequences
+        snp_related_metrics/indels_all_sequences.bed
+        snp_related_metrics/indels_all_sequences.filtered
+        snp_related_metrics/indels_all_sequences.filtered.bed
+        snp_related_metrics/snps_all_sequences
+        snp_related_metrics/snps_all_sequences.bed
+        snp_related_metrics/snps_all_sequences.filtered
+        snp_related_metrics/snps_all_sequences.filtered.bed
+        snp_related_metrics/report_input_all_sequences
+        snp_related_metrics/filtered.variants.pre_annotation
+        snp_related_metrics/filtered.variants.post_annotation
+        alignments/*merged_rmdup.bam.flagstat
+    );
+
+    my %diffs;
+    FILE: for my $file (@files_to_compare) {
+        my $old_file = $self->data_directory . "/" . $file;
+        my $new_file = $other_build->data_directory . "/" . $file;
+
+        # If the file name contains a *, assume that some regex is needed to determine full name
+        # For now, only expecting one file to match... any more or less is a problem
+        unless (index($file, "*") == -1) {
+            my @old_files = glob($old_file);
+            my @new_files = glob($new_file);
+           
+            unless (@old_files or @new_files) {
+                $diffs{$file} = "neither build ($other_build_id and $build_id) had a file matching this pattern";
+                next FILE;
+            }
+
+            if (@old_files and not @new_files) {
+                $diffs{$file} = "current stable build $other_build_id has at least one file matching this pattern, new build $build_id has none";
+                next FILE;
+            }
+            elsif (@new_files and not @old_files) {
+                $diffs{$file} = "new build $build_id has at least one file matching this pattern, current stable build $other_build_id has none";
+                next FILE;
+            }
+
+            if (@old_files > 1 and @new_files > 1) {
+                $diffs{$file} = "both builds ($other_build_id and $build_id) have more than one file matching this pattern";
+                next FILE;
+            }
+            elsif (@old_files > 1) {
+                $diffs{$file} = "current stable build $other_build_id has more than one file matching this pattern";
+                next FILE;
+            }
+            elsif (@new_files > 1) {
+                $diffs{$file} = "new build $build_id has more than one file matching this pattern";
+                next FILE;
+            }
+
+            $old_file = shift @old_files;
+            $new_file = shift @new_files;
+        }
+        
+        # Make sure that both builds have the file
+        unless (-e $old_file and -e $new_file) {
+            if (-e $old_file) {
+                $diffs{$file} = "current stable build $other_build_id has file $old_file, new build $build_id does not";
+                next FILE;
+            }
+            elsif (-e $new_file) {
+                $diffs{$file} = "new build $build_id has file $file, current stable build $other_build_id does not";
+                next FILE;
+            }
+            else {
+                $diffs{$file} = "neither build ($other_build_id and $build_id) have file $file";
+                next FILE;
+            }
+        }
+
+        # If we get this far, both builds have one (and only one) file of this name, compare their md5sums
+        my $old_md5 = Genome::Utility::FileSystem->md5sum($old_file);
+        my $new_md5 = Genome::Utility::FileSystem->md5sum($new_file);
+
+        unless ($old_md5 eq $new_md5) {
+            $diffs{$file} = "$file is different between current stable build $other_build_id and new build $build_id";
+            next FILE;
+        }
+    }
+
+    return %diffs;
+}
 1;
 

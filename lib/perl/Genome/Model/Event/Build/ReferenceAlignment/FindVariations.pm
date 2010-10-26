@@ -86,7 +86,7 @@ sub _run_variant_detector {
 
     my $model = $self->model;
     my $build = $self->build;
-    my $reference_build = $model->reference_build;
+    my $reference_build = $model->reference_sequence_build;
     my $reference_sequence = $reference_build->full_consensus_path('fa');
     my $aligned_reads_input = $build->whole_rmdup_bam_file;
     my $snv_params = $model->snv_detector_params;

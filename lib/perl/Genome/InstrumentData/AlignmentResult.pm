@@ -26,7 +26,7 @@ class Genome::InstrumentData::AlignmentResult {
                                     is => 'Genome::Model::Build::ImportedReferenceSequence',
                                     id_by => 'reference_build_id',
                                 },
-        reference_name          => { via => 'reference_build', to => 'name', is_mutable => 0 },
+        reference_name          => { via => 'reference_build', to => 'name', is_mutable => 0, is_optional => 1 },
 
         aligner                 => { 
                                     calculate_from => [qw/aligner_name aligner_version aligner_params/], 
@@ -51,7 +51,8 @@ class Genome::InstrumentData::AlignmentResult {
                                     is => 'Number',
                                     doc => 'the local database id of the instrument data (reads) to align',
                                 },
-        reference_build_id            => {
+        reference_build_id      => {
+                                    is => 'Number',
                                     doc => 'the reference to use by id',
                                 },
     ],
@@ -262,23 +263,6 @@ sub required_rusage {
 sub extra_metrics {
     # this will probably go away: override in subclasses if the aligner has custom metrics
     ()
-}
-
-sub from_cmdline {
-    my $class = shift;
-    my @obj;
-    while (my $txt = shift) {
-        eval {
-            my $bx = UR::BoolExpr->resolve_for_string($class,$txt);
-            my @matches = $class->get($bx);
-            push @obj, @matches;
-        };
-        if ($@) {
-            my @matches = $class->get($txt);
-            push @obj, @matches;
-        }
-    }
-    return @obj;
 }
 
 sub _resolve_subclass_name {
@@ -568,6 +552,12 @@ sub postprocess_bam_file {
         die $self->error_message;
     }
     
+    #request by RT#62311 for submission and data integrity
+    $self->status_message('Creating all_sequences.bam.md5 ...');
+    unless ($self->_create_bam_md5) {
+        $self->error_message('Fail to create bam md5');
+        die $self->error_message;
+    }
     return 1;
 }
 
@@ -797,6 +787,25 @@ sub _verify_bam {
 
     return 1;
 }
+
+
+sub _create_bam_md5 {
+    my $self = shift;
+
+    my $bam_file = $self->temp_staging_directory . '/all_sequences.bam';
+    my $md5_file = $bam_file . '.md5';
+    my $cmd      = "md5sum $bam_file > $md5_file";
+
+    my $rv  = Genome::Utility::FileSystem->shellcmd(
+        cmd                        => $cmd, 
+        input_files                => [$bam_file],
+        output_files               => [$md5_file],
+        skip_if_output_is_present  => 0,
+    ); 
+    $self->error_message("Fail to run: $cmd") and return unless $rv == 1;
+    return 1;
+}
+
 
 sub _promote_validated_data {
     my $self = shift;

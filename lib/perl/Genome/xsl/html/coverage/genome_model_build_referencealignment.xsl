@@ -4,12 +4,12 @@
 
 
   <xsl:template name="genome_model_build_referencealignment" match="object[@type='Genome::Model::Build::ReferenceAlignment::Solexa']">
+    <xsl:comment>template: /html/coverage/genome_model_build_referencealignment.xsl match="object[@type='Genome::Model::Build::ReferenceAlignment::Solexa']"</xsl:comment>
 
     <xsl:call-template name="control_bar_view"/>
 
     <xsl:call-template name="view_header">
-      <xsl:with-param name="label_name" select="'Coverage Metrics for Build:'" />
-      <xsl:with-param name="display_name" select="@id" />
+      <xsl:with-param name="display_name" select="$displayName" />
       <xsl:with-param name="icon" select="'genome_model_build_32'" />
     </xsl:call-template>
 

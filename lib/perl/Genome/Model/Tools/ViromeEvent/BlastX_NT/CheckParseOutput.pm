@@ -203,7 +203,7 @@ sub run_parser {
 	my $assigned = 0;
 
 	# only take the best hits
-	my $best_e = 100;
+	#my $best_e = 100;
 	my $hit_count = 0;
 	my $determined = 0;
 
@@ -211,8 +211,10 @@ sub run_parser {
 	my $best_bit_value = 0;
 	my $highest_bit_value = 0;
 	while(my $hit = $result->next_hit) {
+	    my $hsp_count = 0;
 	    foreach my $hsp ($hit->hsps) {
 		$highest_bit_value = $hsp->bits if $hsp->bits > $highest_bit_value;
+		$hsp_count++;
 	    }
 
 	    my @temp_arr = split(/\|/, $hit->name); # gi|num|database|accessionNum|
@@ -227,12 +229,13 @@ sub run_parser {
 	    }
    
 	    # check whether the hit should be kept for further analysis
-#	    if ($hit->significance <= $E_cutoff){ # similar to known, need Phylotyped
-	    if ($highest_bit_value >= $bits_cutoff) { 
+	    if ($hit->significance <= $E_cutoff){ # similar to known, need Phylotyped
+#	    if ($highest_bit_value >= $bits_cutoff) { 
 
 		my $have_significant_hit = 1;
 #		if ($hit->significance == $best_e) {      <--------------------------- OLD
 		if ($highest_bit_value == $best_bit_value) {
+
 		    # from gi get taxonomy lineage
 		    my $sth = $dbh_sqlite->prepare("SELECT * FROM gi_taxid where gi = $gi");
 		    $sth->execute();
@@ -250,9 +253,11 @@ sub run_parser {
 			    my $tree_function = Bio::Tree::Tree->new();
 			    my @lineage = $tree_function->get_lineage_nodes($taxon_obj);
 			    # each lineage node is a Bio::Tree::NodeI object
-			    if (scalar @lineage) {				
+
+			    if (scalar @lineage) {
 				$determined = 1;
-				$self->PhyloType(\@lineage,$hit, $best_e, $dbh_sqlite, $dbh, \%assignment);
+				#$self->PhyloType(\@lineage,$hit, $best_e, $dbh_sqlite, $dbh, \%assignment);
+				$self->PhyloType(\@lineage,$hit, $dbh_sqlite, $dbh, \%assignment);
 			    }
 			}
 		    }
@@ -287,6 +292,7 @@ sub run_parser {
 	# artificial sequences", or no taxon id in taxon database it will be reported only as
 	# the real taxon name
 	# If a query is assigned both Homo and Primates, it will be reported as Homo only
+
 	my $num_assignment = keys %assignment;
 	if ($num_assignment > 1) { # have multiple assignment
 	    # handle the situation that assigned both "Homo" and "other"
@@ -354,7 +360,8 @@ sub run_parser {
 		
 ############################################
 sub PhyloType {
-    my ($self, $lineage_ref, $hit_ref, $best_e, $dbh_sqlite, $dbh_taxonomy, $assignment_ref) = @_;
+    #my ($self, $lineage_ref, $hit_ref, $best_e, $dbh_sqlite, $dbh_taxonomy, $assignment_ref) = @_;
+    my ($self, $lineage_ref, $hit_ref, $dbh_sqlite, $dbh_taxonomy, $assignment_ref) = @_;
     my $description = "";
     my $node_id; 
     my $obj;
@@ -374,25 +381,31 @@ sub PhyloType {
 	$node_id = $lineage_ref->[3]->id;
 	$obj = $dbh_taxonomy->get_taxon(-taxonid=>$node_id);
 	$name = $obj->scientific_name;
+
+	#looks like if assigned 'Homo' don't do rest of classification??
+
 	if ($name eq "Metazoa") {
 	    # make assignment
-	    for (my $i = 0; $i <= $#$lineage_ref; $i++) { 
-		my $temp_node_id = $lineage_ref->[$i]->id;
-		my $temp_obj = $dbh_taxonomy->get_taxon(-taxonid=>$temp_node_id);
-		my $temp_name = $temp_obj->scientific_name;
-		if ($temp_name eq "Homo") {
-		    $description = "Homo\t".$hit_ref->name."\t".$hit_ref->significance;
-		    $assignment_ref->{"Homo"} = $description;
-		    $assigned = 1;
-		    last;
-		}
-	    }
-	    if (!$assigned) {
+	    if (not exists $assignment_ref->{'Homo'}) {
 		for (my $i = 0; $i <= $#$lineage_ref; $i++) { 
 		    my $temp_node_id = $lineage_ref->[$i]->id;
 		    my $temp_obj = $dbh_taxonomy->get_taxon(-taxonid=>$temp_node_id);
 		    my $temp_name = $temp_obj->scientific_name;
 		    
+		    if ($temp_name eq "Homo") {
+			$description = "Homo\t".$hit_ref->name."\t".$hit_ref->significance;
+			$assignment_ref->{"Homo"} = $description;
+			$assigned = 1;
+			last;
+		    }
+		}
+	    }
+	    if (!$assigned and not exists $assignment_ref->{'Mus'}) {
+		for (my $i = 0; $i <= $#$lineage_ref; $i++) { 
+		    my $temp_node_id = $lineage_ref->[$i]->id;
+		    my $temp_obj = $dbh_taxonomy->get_taxon(-taxonid=>$temp_node_id);
+		    my $temp_name = $temp_obj->scientific_name;
+
 		    if ($temp_name eq "Mus") {
 			$description = "Mus\t".$hit_ref->name."\t".$hit_ref->significance;
 			$assignment_ref->{"Mus"} = $description;
@@ -401,7 +414,7 @@ sub PhyloType {
 		    }
 		}
 	    }
-	    if (!$assigned) {
+	    if (!$assigned and not exists $assignment_ref->{'other'}) {
 		$description = $Lineage."\t".$hit_ref->name."\t".$hit_ref->significance;
 		$assignment_ref->{"other"} = $description;
 		$assigned = 1;
@@ -410,10 +423,11 @@ sub PhyloType {
     }
     
     # check to see if it is bacteria sequence
-    if ((scalar @{$lineage_ref} >= 2)&&(!$assigned)) {
+    if ((scalar @{$lineage_ref} >= 2) && (!$assigned) and not exists $assignment_ref->{'Bacteria'}) {
 	$node_id = $lineage_ref->[1]->id;
 	$obj = $dbh_taxonomy->get_taxon(-taxonid=>$node_id);
 	$name = $obj->scientific_name;
+
 	if ($name eq "Bacteria") {
 	    $description = $Lineage."\t".$hit_ref->name."\t".$hit_ref->significance;
 	    $assignment_ref->{"Bacteria"} = $description;
@@ -422,10 +436,11 @@ sub PhyloType {
     }
 
     # check to see if it is a phage virus sequence
-    if (!$assigned) {
+    if (!$assigned and not exists $assignment_ref->{'Phage'}) {
 	$node_id = $lineage_ref->[0]->id;
 	$obj = $dbh_taxonomy->get_taxon(-taxonid=>$node_id);
 	$name = $obj->scientific_name;
+
 	if ($name eq "Viruses") {
 	    for (my $i = 0; $i <= $#$lineage_ref; $i++) { 
 		my $temp_node_id = $lineage_ref->[$i]->id;
@@ -442,10 +457,11 @@ sub PhyloType {
     }
     
     # check to see if it is a virus sequence
-    if (!$assigned) {
+    if (!$assigned and not exists $assignment_ref->{'Viruses'}) {
 	$node_id = $lineage_ref->[0]->id;
 	$obj = $dbh_taxonomy->get_taxon(-taxonid=>$node_id);
 	$name = $obj->scientific_name;
+
 	if ($name eq "Viruses") {
 	    $description = $Lineage."\t".$hit_ref->name."\t".$hit_ref->significance;
 	    $assignment_ref->{"Viruses"} = $description;
@@ -454,10 +470,11 @@ sub PhyloType {
     }
     
     # check to see if it is a fungi sequence
-    if ((scalar @{$lineage_ref} >= 4)&&(!$assigned)) {
+    if ((scalar @{$lineage_ref} >= 4) && (!$assigned) and not exists $assignment_ref->{'Fungi'}) {
 	$node_id = $lineage_ref->[3]->id;
 	$obj = $dbh_taxonomy->get_taxon(-taxonid=>$node_id);
 	$name = $obj->scientific_name;
+
 	if ($name eq "Fungi") {
 	    $description = $Lineage."\t".$hit_ref->name."\t".$hit_ref->significance;
 	    $assignment_ref->{"Fungi"} = $description;
@@ -465,12 +482,11 @@ sub PhyloType {
 	}
     }
     
-    if (!$assigned) {
+    if (!$assigned and not exists $assignment_ref->{'other'}) {
 	$description = $Lineage."\t".$hit_ref->name."\t".$hit_ref->significance;
 	$assignment_ref->{"other"} = $description;
 	$assigned = 1;
     }
-    
     return $assigned;
 }
 

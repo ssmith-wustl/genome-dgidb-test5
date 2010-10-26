@@ -69,7 +69,7 @@ class Genome::Model::Tools::DetectVariants::Somatic::Breakdancer{
         ],
     has_param => [ 
         lsf_resource => {
-            default_value => 'rusage[mem=4000] select[type==LINUX64] span[hosts=1]',
+            default_value => "-M 8000000 -R 'select[type==LINUX64 && mem>8000] rusage[mem=8000]'",
         },
         lsf_queue => {
             default_value => 'long'

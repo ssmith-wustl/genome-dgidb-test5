@@ -825,10 +825,10 @@
 
       <div id="flagstat_table">
         <table class="name-value" width="100%">
-          <cols>
+          <colgroup>
             <col width="60%"/>
             <col width="40%"/>
-          </cols>
+          </colgroup>
           <tbody>
             <xsl:for-each select="item">
               <xsl:variable name="value" select="."/>

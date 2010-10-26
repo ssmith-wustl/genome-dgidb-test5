@@ -129,6 +129,19 @@ sub {
 
             $resp = Plack::Util::run_app $rest_app, $env;
             if ( ref($resp->[2]) eq 'ARRAY') {
+                my $found = 0;
+                for (my $i=0; $i < scalar(@{ $resp->[1] }); $i += 2) {
+                    if ($resp->[1][$i] eq 'Set-Cookie') {
+                        $resp->[1][$i+1] = 'cacheon=1';
+                        $found=1;
+                        last;
+                    }
+                }
+                if (!$found) {
+                    push @{ $resp->[1] }, 'Set-Cookie' => 'cacheon=1';
+                }
+
+                $resp->[3] = time;
                 if (!$class->set($url,freeze($resp))) {
                     $class->unlock($url);
 
@@ -170,8 +183,24 @@ sub {
 
         my $resp;
         if (my $v = $class->get($url)) {
+
             my $no_cache = $env->{'HTTP_CACHE_CONTROL'} || $env->{'HTTP_PRAGMA'};
-            if (defined $v && $no_cache ne 'no-cache') {
+            # opera always sends no-cache header, so we can't reliably detect
+            # a shift-reload
+            if ($env->{'HTTP_USER_AGENT'} =~ /Opera/) {
+                $no_cache = '';
+            }
+
+            if (exists $env->{'HTTP_X_MAX_AGE'}) {
+                my $age = $env->{'HTTP_X_MAX_AGE'};
+
+                $resp = thaw($v);
+
+                if (!$resp->[3] || (time - $resp->[3]) > $age) {
+                    undef $resp;
+                }
+
+            } elsif (defined $v && $no_cache ne 'no-cache') {
                 $resp = thaw($v);
             }
         }
@@ -180,7 +209,7 @@ sub {
             $resp = $gen->();
         }
 
-        return $resp;
+        return [@$resp[0,1,2]];
     } else {
         my $skip_cache = 0;
         for my $re (@never_cache) {
@@ -201,9 +230,15 @@ sub {
 
         my $no_cache = $env->{'HTTP_CACHE_CONTROL'} || $env->{'HTTP_PRAGMA'};
 
+        # opera always sends no-cache header, so we can't reliably detect
+        # a shift-reload
+        if ($env->{'HTTP_USER_AGENT'} =~ /Opera/) {
+            $no_cache = '';
+        }
+
         if (defined $v && $no_cache ne 'no-cache') {
             my $s = thaw($v);
-            return $s;
+            return [@$s[0,1,2]];
         } else {
             my $content = q[
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -258,20 +293,21 @@ sub {
       <div class="header rounded-top gradient-grey">
         <div class="container" style="width: 480px;">
           <div class="title app_cache_miss_32">
-            <h1>Caching Page</h1>
+            <h1>Loading View</h1>
           </div>
         </div>
-    </div>
+      </div>
 
     <div class="container" style="width: 480px;">
       <div class="span-12 last">
         <div class="rounded" style="margin-bottom: 10px;">
           <div class="padding10">
-            <p>Please wait while this page is generated and added to the cache. Subsequent loads will be returned rapidly from the cache.<p>
-            <div id="ajax_status"/>
+            <p>Please wait while this view is generated and added to the cache. Subsequent loads will be returned rapidly from the cache.<p>
+            <div id="ajax_status"></div>
           </div>
         </div>
       </div>
+    </div>
     </div>
   </div>
  </body>

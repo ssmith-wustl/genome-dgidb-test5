@@ -10,67 +10,73 @@ BEGIN {
 
 use above 'Genome';
 
-use Test::More tests => 10;
+use Data::Dumper 'Dumper';
+use Genome::Utility::TestBase;
+use Test::MockObject;
+use Test::More;
 
-use_ok('Genome::Model::Command::Services::BuildQueuedModels');
+use_ok('Genome::Model::Command::Services::BuildQueuedModels') or die;
 
-my $processing_profile = Genome::ProcessingProfile::ReferenceAlignment->create(
-    dna_type => 'genomic dna',
-    name => 'AQID-test-pp',
-    read_aligner_name => 'bwa',
-    sequencing_platform => 'solexa',
-    read_aligner_params => '#this is a test',
-);
+# mock dem models
+my @models;
+for my $id (1..3) {
+    my $model = Test::MockObject->new();
+    $model->set_always('id', $id);
+    $model->mock(
+        'build_requested',
+        sub{ 
+            my ($self, $build_requested) = @_;
+            if ( defined $build_requested ) {
+                $self->{build_requested} = $build_requested;
+            }
+            return $self->{build_requested};
+        }
+    );
+    $model->set_always('__display_name__', "Mocked Model $id");
+    $model->build_requested($id % 2); 
+    push @models, $model;
+}
+ok(@models, 'created mock models');
 
-my $taxon = Genome::Taxon->get( species_name => 'human' );
+# overload models get, locking and shellcmd during tests
+no warnings;
+*Genome::Model::get = sub{ return grep { $_->build_requested } @models; };
+*Genome::Utility::FileSystem::shellcmd = sub{
+    my $class = shift;
+    my %params = @_;
+    my $line = $params{cmd};
 
-my $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
-ok($reference_sequence_build, 'got reference sequence build') or die;
+    unless($line) {
+        return -1;
+    }
 
-my $model_1 = Genome::Model::ReferenceAlignment->create(
-    id => '-100',
-    reference_sequence_build => $reference_sequence_build,
-    name => 'bqm-test-1',
-    processing_profile_id => $processing_profile->id,
-    subject_id => $taxon->id,
-    subject_class_name => $taxon->class,
-    build_requested => 1,
-);
+    my $id = (split(/\s+/, $line))[-1];
+    if($id) {
+        my ($model) = grep( $_->id eq $id, @models);
+        $model->build_requested(0); #Simulate starting the build
+    } else {
+        die 'Could not find id in line: ' . $line;
+    }
+};
+*Genome::Utility::FileSystem::lock_resource = sub{ return 1; };
+*Genome::Utility::FileSystem::unlock_resource= sub{ return 1; };
+use warnings;
 
-my $model_2 = Genome::Model::ReferenceAlignment->create(
-    id => '-101',
-    reference_sequence_build => $reference_sequence_build,
-    name => 'bqm-test-2',
-    processing_profile_id => $processing_profile->id,
-    subject_id => $taxon->id,
-    subject_class_name => $taxon->class,
-    build_requested => 1,
-);
+is_deeply([ Genome::Model->get ], [ $models[0], $models[2] ], 'models get overloaded') or die;
+ok(Genome::Utility::FileSystem->lock_resource, 'lock_resource overloaded') or die;
+ok(Genome::Utility::FileSystem->unlock_resource, 'unlock_resource overloaded') or die;
+ok(Genome::Utility::FileSystem->shellcmd, 'shellcmd overloaded') or die;
 
-my $model_3 = Genome::Model::ReferenceAlignment->create(
-    id => '-102',
-    reference_sequence_build => $reference_sequence_build,
-    name => 'bqm-test-3',
-    processing_profile_id => $processing_profile->id,
-    subject_id => $taxon->id,
-    subject_class_name => $taxon->class,
-    build_requested => 0,
-);
-
-my $command_1 = Genome::Model::Command::Services::BuildQueuedModels->create(
-    test => 1,
-);
+my $command_1 = Genome::Model::Command::Services::BuildQueuedModels->create();
 isa_ok($command_1, 'Genome::Model::Command::Services::BuildQueuedModels');
 ok($command_1->execute(), 'executed build command');
-
 is($command_1->_builds_started, 2, 'started builds for the two applicable models');
-ok(!$model_1->build_requested, 'build no longer requested for model');
-ok(!$model_2->build_requested, 'build no longer requested for model');
+is_deeply([ map { $_->build_requested } @models ], [qw/ 0 0 0 /], 'builds no longer requested for models');
 
-my $command_2 = Genome::Model::Command::Services::BuildQueuedModels->create(
-    test => 1,
-);
+my $command_2 = Genome::Model::Command::Services::BuildQueuedModels->create();
 isa_ok($command_2, 'Genome::Model::Command::Services::BuildQueuedModels');
 ok($command_2->execute(), 'executed build command');
-
 is($command_2->_builds_started, 0, 'started no builds since no applicable models');
+
+done_testing();
+exit;

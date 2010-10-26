@@ -410,19 +410,11 @@ sub test01_send_report : Test(5) {
         $self->test_report_dir,
     ) or die "Can't get report\n";
 
+
     my %valid_params = (
         report => $report,
         to => [$ENV{USER}.'@genome.wustl.edu'], # can be string or aryref
         xsl_files => [ $report->generator->get_xsl_file_for_html ],
-        attachments => [ # TODO test better??
-        {
-            description => 'GC Logo GIF',
-            ctype => 'image/jpeg',
-            encoding => 'base64',
-            disposition => "inline; filename=\"genome_center_logo.gif\";\r\nContent-ID: <footerimg>",
-            file => '/gscmnt/839/info/medseq/images/genome_center_logo.gif'
-        },
-        ],
     );
 
     #< Valid >#

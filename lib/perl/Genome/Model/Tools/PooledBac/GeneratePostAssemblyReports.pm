@@ -4,8 +4,8 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::Assembly::Pcap::Ace;
-use Genome::Assembly::Pcap::Phd;
+use Genome::Model::Tools::Pcap::Ace;
+use Genome::Model::Tools::Pcap::Phd;
 use Genome::Model::Tools::PooledBac::Utils;
 use Genome::Utility::FileSystem;
 use List::Util qw(max min);
@@ -52,7 +52,7 @@ sub print_assembly_size_report
         my $size = 0;        
         if (-e "$name/edit_dir/$name.ace")
         {
-            my $ao = Genome::Assembly::Pcap::Ace->new(input_file => "$name/edit_dir/$name.ace", using_db => 1);
+            my $ao = Genome::Model::Tools::Pcap::Ace->new(input_file => "$name/edit_dir/$name.ace", using_db => 1);
             my $contig_names = $ao->get_contig_names;
             
             foreach my $contig_name (@{$contig_names})
@@ -77,7 +77,7 @@ sub print_contig_size_report
         $fh->print ("$name:\n");
         if (-e "$name/edit_dir/$name.ace")
         {
-            my $ao = Genome::Assembly::Pcap::Ace->new(input_file => "$name/edit_dir/$name.ace", using_db => 1);
+            my $ao = Genome::Model::Tools::Pcap::Ace->new(input_file => "$name/edit_dir/$name.ace", using_db => 1);
             my $contig_names = $ao->get_contig_names;
             
             foreach my $contig_name (@{$contig_names})
@@ -118,7 +118,7 @@ sub print_contigs_only_consensus_report
         $fh->print ("$name:\n");
         if (-e "$name/edit_dir/$name.ace")
         {
-            my $ao = Genome::Assembly::Pcap::Ace->new(input_file=>"$name/edit_dir/$name.ace", using_db => 1);
+            my $ao = Genome::Model::Tools::Pcap::Ace->new(input_file=>"$name/edit_dir/$name.ace", using_db => 1);
             my $contig_names = $ao->get_contig_names;
             foreach my $contig_name (@{$contig_names})
             {

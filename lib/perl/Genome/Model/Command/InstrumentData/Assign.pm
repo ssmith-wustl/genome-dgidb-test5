@@ -45,11 +45,22 @@ class Genome::Model::Command::InstrumentData::Assign {
             is => 'Text',
             valid_values => ['forward-only','reverse-only'],
         },
+        all_within_maximum_allowed_error => {
+             is => 'Boolean',
+             default => 0,
+             doc => 'Assign all available unassigned instrument data withing maximum allowed error (default = 3.0) as paired/forward/reverse data.',
+        },
+        maximum_allowed_error => {
+            type => 'Float',
+            is_optional => 1,
+            doc => "The maximum allowed gerald error rate to assign to a model",
+            default => 3.0,
+        },
         force => {
             is => 'Boolean',
             default => 0,
             doc => 'Allow assignment of data even if the subject does not match the model',
-        }
+        },
     ],
 };
 
@@ -132,6 +143,9 @@ sub execute {
         }
         return 1;
     }
+    elsif ( $self->all_within_maximum_allowed_error ) {
+        return $self->_assign_all_within_maximum_allowed_error;
+    }
     elsif ( $self->all ) { # assign all
         return $self->_assign_all_instrument_data;
     }
@@ -143,8 +157,24 @@ sub execute {
 sub _assign_instrument_data {
     my ($self, $instrument_data) = @_;
 
-    # Check if already assigned
-    my $existing_ida = Genome::Model::InstrumentDataAssignment->get(
+    # Non imported solexa needs to have the copy sequences file pse run ok
+   if ( $instrument_data->sequencing_platform eq 'solexa' and $instrument_data->class !~ /imported/i ) {
+       my $index_illumina = $instrument_data->index_illumina;
+       if ( not $index_illumina ) {
+           $self->error_message('No index illumina for solexa instrument data '.$instrument_data->id);
+           return;
+       }
+       if ( not $index_illumina->copy_sequence_files_confirmed_successfully ) {
+           $self->warning_message(
+               'SKIPPING instrument data ('.join(' ', map { $instrument_data->$_ } (qw/ id sequencing_platform /)).' because '
+               .'it does not have a successfully confirmed copy sequence files pse. This means it is not ready or may be corrupted. It cannot be assigned individually.'
+           );
+           return 1; # OK, just skipping
+       }
+   }
+
+   # Check if already assigned
+   my $existing_ida = Genome::Model::InstrumentDataAssignment->get(
         model_id => $self->model->id,
         instrument_data_id => $instrument_data->id
     );
@@ -189,9 +219,8 @@ sub _assign_instrument_data {
 
     $self->status_message(
         sprintf(
-            'Instrument data (id<%s> name<%s>) assigned to model (id<%s> name<%s>)%s.',
+            'Instrument data (id<%s>) assigned to model (id<%s> name<%s>)%s.',
             $instrument_data->id,
-            $instrument_data->run_name,
             $self->model->id,
             $self->model->name,
             (
@@ -291,6 +320,81 @@ sub _assign_by_instrument_data_ids {
     return 1;
 }
 
+sub _assign_all_within_maximum_allowed_error {
+    my $self = shift;
+
+    $self->status_message("Attempting to assign all available instrument data within maximum allowed error of " . $self->maximum_allowed_error . ".");
+
+    my $model_id = $self->model_id;
+
+    my $instdata_iterator = Genome::InstrumentData->create_iterator(
+        where => [ id => [ map { $_->id } $self->model->unassigned_instrument_data ] ],
+    );
+
+    # add as all if fwderr is null. Assuming fragment run if this is the case
+    my (@allin, @reverse, @forward);
+    while (my $instdata = $instdata_iterator->next) {
+        my $instdata_id = $instdata->id;
+        my $flowcell    = $instdata->flow_cell_id;
+        my $lane        = $instdata->subset_name;
+        my $libname     = $instdata->library_name;
+        my $reverr      = $instdata->filt_error_rate_avg; #this is intentionally not rev_filt_error_rate_avg
+        my $fwderr      = $instdata->fwd_filt_error_rate_avg;
+        if(($reverr < $self->maximum_allowed_error) && (!$fwderr || ($fwderr < $self->maximum_allowed_error))) {
+            push(@allin, $instdata_id);
+        }
+        elsif($reverr < $self->maximum_allowed_error) {
+            push(@reverse, $instdata_id);
+            $self->status_message("Excluding forward read of $flowcell lane $lane with id $instdata_id due to error rate of $fwderr%"); 
+        }
+        elsif($fwderr && $fwderr < $self->maximum_allowed_error) {
+            push(@forward, $instdata_id);
+            $self->status_message("Excluding reverse read of $flowcell lane $lane with id $instdata_id due to error rate of $reverr%"); 
+        }
+        else {
+            my $error_report_string = !$fwderr ? "($reverr%)" : "($fwderr%, $reverr%)";
+            $self->status_message("Excluding $flowcell lane $lane with id $instdata_id due to error rate $error_report_string");
+        }
+    }
+
+    #report how many lanes of each type were found
+    $self->status_message(sprintf("%d all good\n",scalar(@allin)));
+    $self->status_message(sprintf("%d forward only\n",scalar(@forward)));
+    $self->status_message(sprintf("%d reverse only\n",scalar(@reverse)));
+
+    # TODO: should assign data rather than calling a new command
+    if(@allin) {
+        my $add_instdata = Genome::Model::Command::InstrumentData::Assign->create(
+            model_id => $model_id,
+            instrument_data_ids => join(' ', @allin),
+        );
+        unless ($add_instdata->execute) {
+            $self->error_message("Failed to add instrument data to model $model_id for IDs (" . join(", ", @allin) . ").");
+        }
+    }
+    if(@forward) {
+        my $add_instdata = Genome::Model::Command::InstrumentData::Assign->create(
+            model_id => $model_id,
+            instrument_data_ids => join(' ', @forward),
+            filter => 'forward-only',
+        );
+        unless ($add_instdata->execute) {
+            $self->error_message("Failed to add instrument data to model $model_id for IDs (" . join(", ", @allin) . ").");
+        }
+    }
+    if(@reverse) {
+        my $add_instdata = Genome::Model::Command::InstrumentData::Assign->create(
+            model_id => $model_id,
+            instrument_data_ids => join(' ', @reverse),
+            filter => 'reverse-only',
+        );
+        unless ($add_instdata->execute) {
+            $self->error_message("Failed to add instrument data to model $model_id for IDs (" . join(", ", @allin) . ").");
+        }
+    }
+    return 1;
+}
+
 sub _assign_all_instrument_data {
     my $self = shift;
 
@@ -313,34 +417,38 @@ sub _assign_all_instrument_data {
         # Skip imported, w/ warning
         unless($self->include_imported){
             if ($id->isa("Genome::InstrumentData::Imported")) {
-                $self->warning_message("IGNORING IMPORTED INSTRUMENT DATA: " . $id->id 
-                    . " sequencing platform " . $id->sequencing_platform
-                    . " imported by " . $id->user_name
-                    . ".  Add this explicitly if you want it in the model."
+                $self->warning_message(
+                    'SKIPPING instrument data ('.join(' ', map { $id->$_ } (qw/ id sequencing_platform user_name /)).' because '
+                    .'it is imported. Assign it explicitly, if desired.'
                 );
-                next ID;
-            }
-        }
-        if(defined($id->target_region_set_name)){
-            unless(@inputs){
                 next ID;
             }
         }
 
-        # Only assign inst data only w/ the same target
-        if ( %model_capture_targets ) {
-            my $id_capture_target;
-            eval { 
-                $id_capture_target = $id->target_region_set_name;
-            };
-            if ( not defined $id_capture_target or not exists $model_capture_targets{$id_capture_target} ) {
-                $self->warning_message("IGNORING INSTRUMENT DATA: " . $id->id 
-                    . " sequencing platform " . $id->sequencing_platform
-                    . ".\nThe model's and instrument data's capture targets do not match, and you've requestied that only matching capture data should be added.\n"
-                    ."Assign the instrument data explicitly if you want it in the model."
-                );
-                next ID;
-            }
+        # Get inst data region set name
+        my $id_capture_target;
+        eval { 
+            $id_capture_target = $id->target_region_set_name;
+        };
+
+        # Skip if no mpdel_capture targets and the inst data has a target
+        if( not %model_capture_targets and defined $id_capture_target) {
+            $self->warning_message(
+                'SKIPPING instrument data ('.$id->id.' '.$id->sequencing_platform.') because '
+                .' it does not have a capture target and the model does. Assign it explicitly, if desired.'
+            );
+            next ID;
+        }
+
+        # Skip if the model has capture targets and the inst data's target is undef OR 
+        #  is not in the list of the model's targets
+        if ( %model_capture_targets 
+                and ( not defined $id_capture_target or not exists $model_capture_targets{$id_capture_target} ) ) {
+            $self->warning_message(
+                'SKIPPING instrument data ('.$id->id.' '.$id->sequencing_platform.') because '
+                .' the model\'s and instrument data\'s capture targets do not match. Assign it explicitly, if desired.' 
+            );
+            next ID;
         }
 
         $self->_assign_instrument_data($id)

@@ -72,7 +72,7 @@ sub create_ace_from_contig_names
 {
     my ($self, $ao, $ace_fn, $contig_names) = @_;
     #`touch /tmp/temp.ace`;
-    my $out_ao = Genome::Assembly::Pcap::Ace->new();#input_file => '/tmp/temp.ace');
+    my $out_ao = Genome::Model::Tools::Pcap::Ace->new();#input_file => '/tmp/temp.ace');
     $self->error_message("File $ace_fn failed to open for writing.") and die unless defined $out_ao;
     
     foreach my $contig_name (@{$contig_names})

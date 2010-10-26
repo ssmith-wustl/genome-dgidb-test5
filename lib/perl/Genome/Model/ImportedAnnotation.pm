@@ -42,16 +42,12 @@ sub build_by_version {
     my $version = shift;
 
     # Due to recent change in data format for transcript and strucures, previous versions are invalid
-    my $old_version;
     if ($self->species_name eq 'human' and $version ne '54_36p_v2') {
-        $old_version = $version;
-        $version = "54_36p_v2";
+        die "Version $version for human is not currently supported.  The following versions are supported: 54_36p_v2";
     }
     elsif ($self->species_name eq 'mouse' and $version ne '54_37g_v2') {
-        $old_version = $version;
-        $version = "54_37g_v2";
+        die "Version $version for mouse is not currently supported.  The following versions are supported: 54_37g_v2";
     }
-    $self->status_message("Annotation version changed from $old_version to $version due to recent refactoring.") if defined $old_version;
 
     my @builds =  grep { $_->version eq $version } $self->completed_builds;
     if (@builds > 1) {

@@ -118,9 +118,6 @@ EOS
     data_source => 'Genome::DataSource::GMSchema',
 };
 
-use Genome::Command::OO;
-*from_cmdline = \&Genome::Command::OO::default_cmdline_selector;
-
 #< UR Methods >#
 sub delete {
     my $self = shift;

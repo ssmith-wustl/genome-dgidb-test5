@@ -87,11 +87,11 @@ body {
 }
 
 .title {
-    height: 54px;
+    min-height: 54px;
 }
 
 .title h1 {
-    line-height: 54px;
+    padding-top: 15px;
     padding-left: 45px;
     font-weight: bold;
     font-size: 2em;
@@ -377,7 +377,6 @@ table.name-value-row td.value {
 /* lister */
 table.lister {
     margin-bottom: 1em;
-    border-bottom: 2px solid #CDCDCD
 }
 
 table.lister thead tr th {
@@ -811,19 +810,62 @@ div.control_bar_base {
     height: 8px;
 }
 
-div.control_bar_menu ul {
+/* app menu items */
+
+div.control_bar_menu ul.app_menu {
     margin: 7px 12px;
     padding: 0;
     float: right;
 }
 
-div.control_bar_menu ul li {
+div.control_bar_menu ul.app_menu li {
     list-style: none;
     float: left;
     margin-left: 12px !important;
 }
 
-div.control_bar_menu ul li a {
+div.control_bar_menu ul.app_menu li a {
     color: #FFF;
     font-weight: bold;
+}
+
+/* cache info items */
+
+div.control_bar_menu div.cache_info {
+    background: transparent url("../img/components/control_bar/cache_info_bg.png");
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    float: left;
+    width: 150px;
+    height: 36px;
+}
+
+div.cache_info div.cache_time p {
+    color: #FFF;
+    text-align: center;
+    font-size: 10px;
+    line-height: 12px;
+    margin-top: 4px;
+    text-shadow: #23231d 0 0 2px;
+}
+
+div.cache_info div.cache_time {
+    width: 110px;
+    float: left;
+}
+
+div.cache_info div.cache_refresh {
+    width: 35px;
+    margin-top: 5px;
+    height: 32px;
+    float: right;
+}
+
+a.btn_cache_refresh {
+    width: 25px;
+    height: 25px;
+    display: block;
+    background: #2a2a27 url("../img/components/buttons/btn_cache_refresh_icon.png") center no-repeat;
+    cursor: pointer;
 }

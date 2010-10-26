@@ -22,19 +22,25 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    # Get build
-    my $build = $self->_resolve_build
-        or return;
-
-    # Abandon
-    unless ( $build->abandon ) {
-        $self->error_message("Failed to abandon build. See above errors.");
-        return;
+    my @builds = $self->builds;
+    my $build_count = scalar(@builds);
+    my @errors;
+    for my $build (@builds) {
+        my $transaction = UR::Context::Transaction->begin();
+        my $successful = eval { $build->abandon };
+        if ($successful) {
+            $self->status_message("Successfully abandoned build (" . $build->__display_name__ . ").");
+            $transaction->commit();
+        }
+        else {
+            push @errors, "Failed to abandon build (" . $build->__display_name__ . "): $@.";
+            $transaction->rollback;
+        }
     }
 
-    printf("Successfully abandoned build (%s).\n", $build->id);
+    $self->display_summary_report(scalar(@builds), @errors);
 
-    return 1;
+    return !scalar(@errors);
 }
 
 1;

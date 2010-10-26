@@ -29,16 +29,36 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    # Get build
-    my $build = $self->_resolve_build
-        or return;
-
-    # Remove
-    my $remove_build = Genome::Command::Remove->create(items => [$build], _deletion_params => [keep_build_directory => $self->keep_build_directory]);
-    unless ($remove_build->execute()) {
-        die $self->error_message("Failed to remove build.");
+    my @builds = $self->builds;
+    my $build_count = scalar(@builds);
+    my @errors;
+    for my $build (@builds) {
+        my $transaction = UR::Context::Transaction->begin();
+        my $display_name = $build->__display_name__;
+        my $remove_build = Genome::Command::Remove->create(items => [$build], _deletion_params => [keep_build_directory => $self->keep_build_directory]);
+        my $successful = eval {
+            my @__errors__ = $build->__errors__;
+            unless (@__errors__) {
+                push @__errors__, map { $_->__errors__ } $build->instrument_data_assignments;
+            }
+            if (@__errors__) {
+                die "build or instrument data has __errors__, cannot remove: " . join('; ', @__errors__);
+            }
+            $remove_build->execute;
+        };
+        if ($successful) {
+            $self->status_message("Successfully removed build (" . $display_name . ").");
+            $transaction->commit();
+        }
+        else {
+            push @errors, "Failed to remove build (" . $display_name . "): $@.";
+            $transaction->rollback();
+        }
     }
-    return 1;
+
+    $self->display_summary_report(scalar(@builds), @errors);
+
+    return !scalar(@errors);
 }
 
 1;

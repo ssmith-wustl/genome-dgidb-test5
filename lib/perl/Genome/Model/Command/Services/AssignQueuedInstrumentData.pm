@@ -81,32 +81,27 @@ sub execute {
     }
 
     my @pses = $self->load_pses;
-    $self->status_message('Going to process' . (scalar @pses) . ' PSEs.');
-
-    #for efficiency--load the data we need all together instead of separate queries for each PSE
-    $self->preload_data(@pses);
+    $self->status_message('Processing '.scalar(@pses).' PSEs');
+    return 1 unless scalar @pses;
 
     my @completable_pses;    
 
     PSE: 
     foreach my $pse (@pses) {
-        $self->status_message('Starting PSE #' . $pse->id);
-
-        unless($self->check_pse($pse)) {
-            next PSE;
-        }
+        $self->status_message('Starting PSE ' . $pse->id);
 
         my ($instrument_data_type) = $pse->added_param('instrument_data_type');
         my ($instrument_data_id)   = $pse->added_param('instrument_data_id');
         my ($subject_class_name)   = $pse->added_param('subject_class_name');
         my ($subject_id)           = $pse->added_param('subject_id');
 
-        my @processing_profile_ids =
-            $pse->added_param('processing_profile_id');
+        my @processing_profile_ids = $pse->added_param('processing_profile_id');
 
         if ( $instrument_data_type =~ /sanger/i ) {
             #for sanger data the pse param actually holds the id of an AnalyzeTraces PSE.
-            my $run_name = $pse->run_name();
+            my $analyze_traces_pse = GSC::PSE::AnalyzeTraces->get($instrument_data_id);
+
+            my $run_name = $analyze_traces_pse->run_name();
             $instrument_data_id = $run_name;
         }
 
@@ -117,15 +112,6 @@ sub execute {
         if ($subject_class_name and $subject_id and @processing_profile_ids) {
             my $subject      = $subject_class_name->get($subject_id);
 
-            unless (defined $subject) {
-                $self->error_message(
-                    'failed to get a subject via subject_class_name'
-                    . " '$subject_class_name' with subject_id"
-                    . " '$subject_id'"
-                );
-                next PSE;
-            }
-	            
             PP: 
             foreach my $processing_profile_id (@processing_profile_ids) {
                 my $processing_profile = Genome::ProcessingProfile->get( $processing_profile_id );
@@ -139,23 +125,53 @@ sub execute {
                     next PP;
                 }
 
+                my $reference_sequence_build;
+                if($processing_profile->isa('Genome::ProcessingProfile::ReferenceAlignment')) {
+                    my @reference_sequence_build_ids = $pse->reference_sequence_build_param_for_processing_profile($processing_profile);
+                    unless ( scalar @reference_sequence_build_ids ) {
+                        $self->error_message('No imported reference sequence build id found on pse ('.$pse->id.') to create a reference alignment model');
+                        push @process_errors, $self->error_message;
+                        next PP;
+                    }
+
+                    if( scalar @reference_sequence_build_ids > 1) {
+                        $self->error_message('This script is not currently set up to handle multiple reference sequences per processing profile!');
+                        push @process_errors, $self->error_message;
+                        next PP;
+                    }
+
+                    my $reference_sequence_build_id = $reference_sequence_build_ids[0];
+                    $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get($reference_sequence_build_id);
+                    if ( not defined $reference_sequence_build ) {
+                        $self->error_message("Cannot get imported reference sequence build for id $reference_sequence_build_id");
+                        push @process_errors, $self->error_message;
+                        next PP;
+                    }
+                }
+
                 my @models = Genome::Model->get(
                     subject_id            => $subject_id,
-                    subject_class_name    => $subject_class_name, 
+                    subject_class_name    => $subject_class_name,
                     processing_profile_id => $processing_profile->id,
                     auto_assign_inst_data => 1,
                 );
 
-                my $num_assigned = $self->assign_instrument_data_to_models($genome_instrument_data, @models);
 
-                unless(defined $num_assigned) {
+                my @assigned = $self->assign_instrument_data_to_models($genome_instrument_data, $reference_sequence_build, @models);
+
+                #returns an explicit undef on error
+                if(scalar(@assigned) eq 1 and not defined $assigned[0]) {
                     push @process_errors, $self->error_message;
                     next PP;
                 }
 
-                unless($num_assigned > 0) {
+                if(scalar(@assigned > 0)) {
+                    for my $m (@assigned) {
+                        $pse->add_param('genome_model_id', $m->id);
+                    }
+                } else {
                     # no model found for this PP, make one (or more) and assign all applicable data
-                    my $ok = $self->create_default_models_and_assign_all_applicable_instrument_data($genome_instrument_data, $subject, $processing_profile, $pse);
+                    my $ok = $self->create_default_models_and_assign_all_applicable_instrument_data($genome_instrument_data, $subject, $processing_profile, $reference_sequence_build, $pse);
                     unless($ok) {
                         push @process_errors, $self->error_message;
                         next PP;
@@ -164,14 +180,6 @@ sub execute {
             } # looping through processing profiles for this instdata, finding or creating the default model
 
         } # done with PSEs which specify a $subject_class_name, $subject_id, and @processing_profile_ids
-        elsif ($subject_class_name or $subject_id or @processing_profile_ids) {
-            $self->error_message(
-                "PSE " . $pse->id . " specifies incomplete model find/create fields: "
-                . " subject_class_name $subject_class_name subject_id $subject_id"
-                . " processing_profile_ids @processing_profile_ids"
-            );
-            next PSE;
-        }
 
         if (!$subject_class_name or !$subject_id) {
             $self->warning_message(
@@ -219,9 +227,10 @@ sub execute {
                 grep {
                     $_->processing_profile->sequencing_platform() eq $sequencing_platform 
 	           } @found_models;
-            
-            my $num_assigned = $self->assign_instrument_data_to_models($genome_instrument_data, @found_models);
-            unless(defined $num_assigned) {
+
+            #Don't care here what ref. seq. was used (if any)
+            my @assigned = $self->assign_instrument_data_to_models($genome_instrument_data, undef, @found_models);
+            if(scalar(@assigned) eq 1 and not defined $assigned[0]) {
                 push @process_errors, $self->error_message;
             }
         } # end of adding instdata to non-autogen models
@@ -297,6 +306,7 @@ sub load_pses {
         ps_id      => $ps->ps_id,
         pse_status => 'inprogress',
     );
+    return unless @pses;
 
     if($self->test) {
         @pses = grep($_->pse_id < 0, @pses);
@@ -304,14 +314,12 @@ sub load_pses {
 
     @pses = sort $pse_sorter @pses;
 
-    my @pse_params = GSC::PSEParam->get(pse_id => [ map { $_->pse_id } @pses ]);
-    my %skip = map { ( ($_->param_value =~ /genotyper/) ? ($_->pse_id => 1) : () ) } @pse_params;
-    #my @pses = GSC::PSE->get(id => [keys %skip]);
-    #for my $pse(@pses) { $_->pse_status("wait") };
-    #(App::DB->sync_database and App::DB->commit) or die;
-    #exit;
-    $self->status_message("Skipping " . scalar(%skip) . " PSEs with genotyper data");
-    @pses = grep(!$skip{$_->pse_id}, @pses);
+    $self->status_message('Found '.scalar(@pses));
+
+    $self->preload_data(@pses); #The checking uses this data, to need to load it first
+
+    @pses = grep($self->check_pse($_), @pses);
+    $self->status_message('Of those, '.scalar(@pses). ' PSEs passed check_pse.');
 
     # Don't bite off more than we can process in a couple hours
     my $max_pses = $self->max_pses;
@@ -346,7 +354,7 @@ sub preload_data {
     my @models = Genome::Model->get(subject_id => \@sample_ids);
     $self->status_message("  got " . scalar(@models) . " models");
 
-    my %taxon_ids = map { $_->taxon_id => 1 } @samples;
+    my %taxon_ids = map { $_->taxon_id => 1 } grep($_->taxon_id, @samples);
     my @taxon_ids = sort keys %taxon_ids;
     $self->status_message("Pre-loading models for " . scalar(@taxon_ids) . " taxons");
     push @models, Genome::Model->get(subject_id => \@taxon_ids);
@@ -366,6 +374,14 @@ sub check_pse {
 
     my $pse_id = $pse->id;
 
+    $self->status_message('Check PSE for #' . $pse_id);
+
+    my @pse_params = GSC::PSEParam->get(pse_id => $pse_id);
+    if(grep{ $_->param_value =~ /genotyper/ } @pse_params) {
+        $self->status_message("Skipping PSE with genotyper data");
+        return;
+    }
+
     my ($instrument_data_type) = $pse->added_param('instrument_data_type');
     my ($instrument_data_id)   = $pse->added_param('instrument_data_id');
 
@@ -374,7 +390,7 @@ sub check_pse {
         $self->error_message('encountered unkown instrument data type: ' . $instrument_data_type);
         return;
     }
-    
+
     if ( $instrument_data_type =~ /sanger/i ) {
         my $analyze_traces_pse = GSC::PSE::AnalyzeTraces->get($instrument_data_id);
 
@@ -385,7 +401,7 @@ sub check_pse {
             return;
         }
 
-        my $run_name = $pse->run_name();
+        my $run_name = $analyze_traces_pse->run_name();
 
         unless ( defined($run_name) ) {
             $self->error_message(
@@ -407,12 +423,57 @@ sub check_pse {
         return;
     }
 
+    if ( $instrument_data_type =~ /solexa/i ) {
+        # solexa inst data nee to have the copy sequence file pse successful
+        my $index_illumina = $genome_instrument_data->index_illumina;
+        if ( not $index_illumina ) {
+            $self->error_message('No index illumina for solexa instrument data '.$instrument_data_id);
+            return;
+        }
+        if ( not $index_illumina->copy_sequence_files_confirmed_successfully ) {
+            $self->error_message(
+                'Solexa instrument data ('.$instrument_data_id.') does not have a successfully confirmed copy sequence files pse. This means it is not ready or may be corrupted.'
+            );
+            return;
+        }
+    }
+
+    my ($subject_class_name)   = $pse->added_param('subject_class_name');
+    my ($subject_id)           = $pse->added_param('subject_id');
+
+    my @processing_profile_ids = $pse->added_param('processing_profile_id');
+
+    #If it has one, it should have all.
+    if($subject_class_name or $subject_id or @processing_profile_ids) {
+        unless($subject_class_name and $subject_id and @processing_profile_ids) {
+            $self->error_message(
+                "PSE " . $pse->id . " specifies incomplete model find/create fields: "
+                . " subject_class_name $subject_class_name subject_id $subject_id"
+                . " processing_profile_ids @processing_profile_ids"
+            );
+            return;
+        }
+
+        my $subject = $subject_class_name->get($subject_id);
+        unless (defined $subject) {
+            $self->error_message(
+                'failed to get a subject via subject_class_name'
+                . " '$subject_class_name' with subject_id"
+                . " '$subject_id'"
+            );
+            return;
+        }
+    }
+
+    $self->status_message('Check PSE OK');
+
     return 1;
 }
 
 sub assign_instrument_data_to_models {
     my $self = shift;
     my $genome_instrument_data = shift;
+    my $reference_sequence_build = shift;
     my @models = @_;
 
     my $instrument_data_id = $genome_instrument_data->id;
@@ -440,6 +501,10 @@ sub assign_instrument_data_to_models {
         }
     }
 
+    if($reference_sequence_build) {
+        @models = grep($_->reference_sequence_build eq $reference_sequence_build, @models);
+    }
+
     foreach my $model (@models) {
         my @existing_instrument_data =
             Genome::Model::InstrumentDataAssignment->get(
@@ -461,7 +526,7 @@ sub assign_instrument_data_to_models {
                     instrument_data_id => $instrument_data_id,
                     model_id           => $model->id,
                 );
-                    
+
             unless ( $assign->execute ) {
                 $self->error_message(
                     'Failed to execute instrument-data assign for '
@@ -469,15 +534,15 @@ sub assign_instrument_data_to_models {
                     . $model->id
                     . ' and instrument data '
                     . $instrument_data_id );
-                return;
+                return undef;
             }
 
             my $existing_models = $self->_existing_models_assigned_to;
-            $existing_models->{$model->id} = $model;                        
+            $existing_models->{$model->id} = $model;
         }
     }
-    
-    return scalar @models;
+
+    return @models;
 }
 
 sub create_default_models_and_assign_all_applicable_instrument_data {
@@ -485,6 +550,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     my $genome_instrument_data = shift;
     my $subject = shift;
     my $processing_profile = shift;
+    my $reference_sequence_build = shift;
     my $pse = shift;
 
     my @new_models;
@@ -514,19 +580,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         auto_assign_inst_data   => 1,
     );
 
-    if($processing_profile->isa('Genome::ProcessingProfile::ReferenceAlignment')) {
-        my ($reference_sequence_build_id) = $pse->added_param('reference_sequence_build_id');
-        if ( not defined $reference_sequence_build_id ) {
-            $self->error_message('No imported reference sequence build id found on pse ('.$pse->id.') to create a reference sequence model');
-            return;
-        }
-
-        my $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get($reference_sequence_build_id);
-        if ( not defined $reference_sequence_build ) {
-            $self->error_message("Cannot get imported reference sequence build for id $reference_sequence_build_id");
-            return;
-        }
-
+    if($reference_sequence_build) {
         $model_params{reference_sequence_build} = $reference_sequence_build;
     }
 
@@ -610,6 +664,8 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
 
         my $new_models = $self->_newly_created_models;
         $new_models->{$m->id} = $m;
+
+        $pse->add_param('genome_model_id', $m->id);
     }
 
     return scalar @new_models;
@@ -672,14 +728,19 @@ sub add_model_to_default_modelgroups {
         return;
     }
 
-    my $common_name = $source->common_name;
-    my ($source_grouping) = $common_name =~ /^([a-z]+)\d+$/i;
-
     my @group_names = @project_names;
-    push @group_names, $source_grouping if $source_grouping;
+
+    my $common_name = $source->common_name;
+    if($common_name) {
+        my ($source_grouping) = $common_name =~ /^([a-z]+)\d+$/i;
+        push @group_names, $source_grouping if $source_grouping;
+    }
 
     for my $group_name (@group_names) {
         my $name = 'apipe-auto ' . $group_name;
+        if(length($name) > 50) {
+            $name = substr($name,0,50);
+        }
         my $model_group = Genome::ModelGroup->get(name => $name);
 
         unless($model_group) {
@@ -690,7 +751,9 @@ sub add_model_to_default_modelgroups {
             }
         }
 
-        $model_group->assign_models($model);
+        unless(grep($_ eq $model, $model_group->models)) {
+            $model_group->assign_models($model);
+        }
     }
 
     return 1;

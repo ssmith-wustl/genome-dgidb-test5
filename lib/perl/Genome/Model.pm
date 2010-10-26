@@ -1,17 +1,6 @@
-
-# review jlolofie gsanders
-# 2. remove stuff that is not generic to models (goldsnp path... should be in model/ReferenceAlignment? )
-#
-#    (need to think about / work on "star" models)
-# 4.  Genome::Config calls... 4 methods below with : TODO: remove these since they're not supposed to vary on a per-model basis....
-#    what needs to be done with these?
-
-
 package Genome::Model;
-
 use strict;
 use warnings;
-
 use Genome;
 
 use Regexp::Common;
@@ -24,230 +13,242 @@ use YAML;
 use Archive::Tar;
 
 class Genome::Model {
-    type_name => 'genome model',
-    table_name => 'GENOME_MODEL',
-    is_abstract => 1,
-    subclassify_by => 'subclass_name',
+    is_abstract     => 1,
+    subclassify_by  => 'subclass_name',
+
     id_by => [
-        genome_model_id => { is => 'Number', len => 11 },
+        genome_model_id             => { is => 'Number', len => 11 },
     ],
+
     has => [
+        name                        => { is => 'Text', len => 255 },
+        Xsubclass_name               => { is => 'Text', len => 255, is_mutable => 0, 
+                                        column_name => 'SUBCLASS_NAME',
+                                        calculate_from => ['processing_profile_id'],
+                                        calculate => sub {
+                                            my $processing_profile_id = $_[0];
+                                            # subclass via our processing profile's type_name
+                                            return unless $processing_profile_id;
+                                            my $pp = Genome::ProcessingProfile->get($processing_profile_id);
+                                            Carp::croak("Can't find Processing Profile with ID $processing_profile_id jwhile resolving subclass for Model") unless $pp;
+                                            return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($pp->type_name);
+                                        } },
+
         subclass_name           => { is => 'VARCHAR2', len => 255, is_mutable => 0, column_name => 'SUBCLASS_NAME',
                                      calculate_from => ['processing_profile_id'],
                                      # We subclass via our processing profile's type_name
                                      calculate => sub {
-                                        my($pp_id) = @_;
-                                        return unless $pp_id;
-                                        my $pp = Genome::ProcessingProfile->get($pp_id);
-                                        Carp::croak("Can't find Processing Profile with ID $pp_id while resolving subclass for Model") unless $pp;
-                                        return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($pp->type_name);
+                                                      my($pp_id) = @_;
+                                                      return unless $pp_id;
+                                                      my $pp = Genome::ProcessingProfile->get($pp_id);
+                                                      Carp::croak("Can't find Processing Profile with ID $pp_id while resolving subclass for Model") unless $pp;
+                                                      return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($pp->type_name);
+                                                  },
                                     },
-                                },
-        name                    => { is => 'Text', len => 255 },
+
+        subject                     => { # is => 'Genome::Measurable', 
+                                        calculate_from => [ 'subject_id', 'subject_class_name' ],
+                                        calculate => q|return unless $subject_class_name; return $subject_class_name->get($subject_id); |},
+        subject_class_name          => { is => 'Text', len => 500 },
+        subject_id                  => { is => 'Number', len => 15 },
+        is_default                  => { is => 'Boolean', is_optional => 1,
+                                        doc => 'flag the model as the default system "answer" for its subject' },
+        
+        processing_profile          => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
+        processing_profile_name     => { via => 'processing_profile', to => 'name' },
+
+        type_name                   => { via => 'processing_profile' },
+        user_name                   => { is => 'Text', len => 64, is_optional => 1 },
+        creation_date               => { is => 'TIMESTAMP', len => 6, is_optional => 1 },
+        
+        inputs                      => { is => 'Genome::Model::Input', reverse_as => 'model', is_optional => 1, is_many => 1,
+                                        doc => 'links to data currently assigned to the model for processing' },
+        
+        auto_assign_inst_data       => { is => 'Boolean', is_optional => 1 },
+        auto_build_alignments       => { is => 'Boolean', is_optional => 1 }, # TODO: rename to auto_build
+        build_requested             => { is => 'Boolean', is_optional => 1 },
+        
+        builds                      => { is => 'Genome::Model::Build', reverse_as => 'model', is_many => 1, is_optional => 1,
+                                        doc => 'versions of a model over time, with varying quantities of evidence' },
+        keep_n_most_recent_builds   => { via => 'attributes', to => 'value', is_mutable => 1, 
+                                        where => [ property_name => 'keep_n_most_recent_builds', entity_class_name => 'Genome::Model' ] },
+        _last_complete_build_id     => { is => 'Number', len => 10, 
+                                        column_name => 'last_complete_build_id', 
+                                        doc => 'The last complete build id' },
+    ],
+    has_optional_many => [
+        # TODO: the new project will internally have generalized assignments of models and other things
+        projects                    => { is => 'Genome::Project', via => 'project_assignments', to => 'project' },
+        project_assignments         => { is => 'Genome::Model::ProjectAssignment', reverse_as => 'model' },
+        project_names               => { is => 'Text', via => 'projects', to => 'name' },
+        
+        # TODO: the new projects will suck in all of the model groups as a special case of a named project containing only models
+        model_groups                => { is => 'Genome::ModelGroup', via => 'model_bridges', to => 'model_group', is_many => 1 },
+        model_bridges               => { is => 'Genome::ModelGroupBridge', reverse_as => 'model', is_many => 1 },
+
+        group_ids                   => { via => 'model_groups', to => 'id', is_many => 1 },
+        group_names                 => { via => 'model_groups', to => 'name', is_many => 1 },
+        
+        # TODO: replace the internals of these with a specific case of model inputs
+        from_model_links            => { is => 'Genome::Model::Link', reverse_as => 'to_model',
+                                        doc => 'bridge table entries where this is the "to" model (used to retrieve models this model is "from"' },
+
+        from_models                 => { is => 'Genome::Model', via => 'from_model_links', to => 'from_model',
+                                        doc => 'Genome models that contribute "to" this model' },
+
+        to_model_links              => { is => 'Genome::Model::Link', reverse_as => 'from_model',
+                                        doc => 'bridge entries where this is the "from" model(used to retrieve models models this model is "to")' },
+        
+        to_models                   => { is => 'Genome::Model', via => 'to_model_links', to => 'to_model',
+                                        doc => 'Genome models this model contributes "to"' },
+        
+        # TODO: ensure all misc attributes actually go into the db table so we don't need this 
+        attributes                  => { is => 'Genome::MiscAttribute', 
+                                        reverse_as => '_model', 
+                                        where => [ entity_class_name => 'Genome::Model' ] },
+        
+        # TODO: relocated
+        # TODO: these go into a model subclass for models which apply directly to sequencer data
+        sequencing_platform         => { via => 'processing_profile' },
+        instrument_data_class_name  => { is => 'Text',
+                                        calculate_from => 'sequencing_platform',
+                                        calculate => q| 'Genome::InstrumentData::' . ucfirst($sequencing_platform) |,
+                                        doc => 'the class of instrument data assignable to this model' },
+        
+        # refactor to use the inputs entirely
+        instrument_data_assignments => { is => 'Genome::Model::InstrumentDataAssignment', reverse_as => 'model' },
+        instrument_data             => { is => 'Genome::InstrumentData', via => 'instrument_data_assignments' },
+        inst_data                   => { is => 'Genome::InstrumentData', via => 'inputs', to => 'value', is_mutable => 1, 
+                                        where => [ name => 'instrument_data' ],
+                                        doc => 'Instrument data currently assigned to the model.' },
+    ],    
+    has_optional_deprecated => [
+        # this is all junk but things really use them right now 
         data_directory          => { is => 'Text', len => 1000, is_optional => 1 },
-        subject_name            => { is => 'Text', len => 255, calculate_from => 'subject',
-                                     calculate => q(
-                unless($subject) {
-                    #$self->error_message('Subject not found.');
-                    return;
-                }
-
-                if($subject->class eq 'GSC::Equipment::Solexa::Run') {
-                   return $subject->flow_cell_id;
-                } elsif($subject->class eq 'Genome::Sample') {
-                    return $subject->name || $subject->common_name;
-                } elsif($subject->class eq 'Genome::Individual') {
-                    return $subject->name || $subject->common_name;
-                } elsif($subject->isa('GSC::DNA')) {
-                    return $subject->dna_name;
-                } elsif($subject->can('name')) {
-                    return $subject->name;
-                } else {
-                    #$self->error_message('Unable to determine name for subject');
-                    return;
-                }
-            ) },
-        subject_type            => { is => 'Text', len => 255, calculate_from => 'subject_class_name',
-                                     calculate => q(
-                if($subject_class_name->class and $subject_class_name->isa('GSC::DNA')) {
-                    $subject_class_name = 'GSC::DNA'; #Avoid needing to list entire DNA heirarchy
-                }
-
-                #This could potentially live someplace else like the previous giant hash
-                my %types = (
-                    'Genome::Sample' => 'sample_name',
-                    'GSC::DNA' => 'dna_resource_item_name',
-                    'GSC::DNAResourceItem' => 'dna_resource_item_name',
-                    'GSC::Equipment::Solexa::Run' => 'flow_cell_id',
-                    'Genome::ModelGroup' => 'sample_group',
-                    'Genome::PopulationGroup' => 'sample_group',
-                    'Genome::Individual' => 'sample_group',
-                    'Genome::Taxon' => 'species_name',
-                    'Genome::Library' => 'library_name',
-                    'Genome::Sample::Genomic' => 'genomic_dna',
-                );
-
-                return $types{$subject_class_name};
-            ), valid_values => ["species_name","sample_group","flow_cell_id","genomic_dna","library_name","sample_name","dna_resource_item_name"] },
-        auto_assign_inst_data   => { is => 'Number', len => 4, is_optional => 1 },
-        auto_build_alignments   => { is => 'Number', len => 4, is_optional => 1 },
-        build_requested         => { is => 'Number', len => 4, is_optional => 1 },
-        subject                 => { calculate_from => [ 'subject_id', 'subject_class_name' ],
-                                     calculate => q| Carp::confess("No subject_class_name set on model!") unless $subject_class_name; return $subject_class_name->get($subject_id);| },
-        processing_profile      => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
-        processing_profile_name => { via => 'processing_profile', to => 'name' },
-        type_name               => { via => 'processing_profile' },
+        ref_seqs                => { is => 'Genome::Model::RefSeq', reverse_as => 'model', is_many => 1, is_optional => 1 },
         events                  => { is => 'Genome::Model::Event', reverse_as => 'model', is_many => 1,
-                                     doc => 'all events which have occurred for this model' },
-        subject_class_name      => { is => 'VARCHAR2', len => 500 },
-        subject_id              => { is => 'NUMBER', len => 15 },
+                                    doc => 'all events which have occurred for this model' },
         reports                 => { via => 'last_succeeded_build' },
         reports_directory       => { via => 'last_succeeded_build' },
-        is_default              => { is => 'NUMBER', len => 4, is_optional => 1 },
-        model_bridges           => { is => 'Genome::ModelGroupBridge', reverse_as => 'model', is_many => 1 },
-        model_groups            => { is => 'Genome::ModelGroup', via => 'model_bridges', to => 'model_group', is_many => 1 },
-    ],
-    has_optional => [
-        user_name                        => { is => 'VARCHAR2', len => 64 },
-        creation_date                    => { is => 'TIMESTAMP', len => 6 },
-        _last_complete_build_id                   => { is => 'NUMBER', len => 10, column_name => 'last_complete_build_id', doc => 'The last complete build id' },
-        builds                           => { is => 'Genome::Model::Build', reverse_as => 'model', is_many => 1 },
-        build_statuses                   => { via => 'builds', to => 'master_event_status', is_many => 1 },
-        build_ids                        => { via => 'builds', to => 'id', is_many => 1 },
-        keep_n_most_recent_builds        => { via => 'attributes', to => 'value', is_mutable => 1, where => [ property_name => 'keep_n_most_recent_builds', entity_class_name => 'Genome::Model' ] },
-        input_instrument_data_class_name => { calculate_from => 'instrument_data_class_name',
-                                              calculate => q($instrument_data_class_name->_dw_class),
-                                              doc => 'the class of instrument_data assignable to this model in the dw' },
-        instrument_data_class_name       => { calculate_from => 'sequencing_platform',
-                                              calculate => q( 'Genome::InstrumentData::' . ucfirst($sequencing_platform) ),
-                                              doc => 'the class of instrument data assignable to this model' },
-        test                             => { is => 'Boolean', is_transient => 1,
-                                              doc => 'testing flag' },
-        _printable_property_names_ref    => { is => 'array_ref', is_transient => 1 },
-        comparable_normal_model_id       => { is => 'Number', len => 10, implied_by => 'comparable_normal_model' },
-        comparable_normal_model          => { is => 'Genome::Model', id_by => 'comparable_normal_model_id' },
-        sample_name                      => { is => 'Text', len => 255 },
-        sequencing_platform              => { via => 'processing_profile' },
-        last_complete_build_directory    => { calculate => q($b = $self->last_complete_build; return unless $b; return $b->data_directory) },
-        last_succeeded_build_directory   => { calculate => q($b = $self->last_succeeded_build; return unless $b; return $b->data_directory) },
-        last_complete_build_flagstat     => { calculate => q( return $self->lcb_flagstat(); ) },
+        
+        # these go on refalign models
+        last_complete_build_flagstat     => { calculate => q| return $self->lcb_flagstat(); | },
         region_of_interest_set_value     => { via => 'inputs', to => 'value', where => [ name => 'region_of_interest_set_name'] },
         region_of_interest_set_name      => { via => 'region_of_interest_set_value', to => 'id', },
     ],
-    has_many_optional => [
-        ref_seqs                          => { is => 'Genome::Model::RefSeq', reverse_as => 'model' },
-        project_assignments               => { is => 'Genome::Model::ProjectAssignment', reverse_as => 'model' },
-        projects                          => { is => 'Genome::Project', via => 'project_assignments', to => 'project' },
-        project_names                     => { is => 'Text', via => 'projects', to => 'name' },
-        attributes                        => { is => 'Genome::MiscAttribute', reverse_as => '_model', where => [ entity_class_name => 'Genome::Model' ] },
-        inputs                            => { is => 'Genome::Model::Input', reverse_as => 'model',
-                                               doc => 'Inputs currently assigned to the model.' },
-        inst_data                         => { is => 'Genome::InstrumentData', via => 'inputs', to => 'value', is_mutable => 1, where => [ name => 'instrument_data' ],
-                                               doc => 'Instrument data currently assigned to the model.' },
-        instrument_data                   => { is => 'Genome::InstrumentData', via => 'instrument_data_assignments' },
-        assigned_instrument_data          => { is => 'Genome::InstrumentData', via => 'instrument_data_assignments', to => 'instrument_data' },
-        instrument_data_assignments       => { is => 'Genome::Model::InstrumentDataAssignment', reverse_as => 'model' },
-        built_instrument_data             => { calculate => q(
-                                                                                                   return
+    has_many_optional_deprecated => [
+        # these go only on somatic models
+        variant_validations               => { is => 'Genome::Model::VariantValidation', reverse_as => 'model',
+                                                doc => 'variantvalidation linked to this model... currently only for Somatic models but need this accessor for get_all_objects for successful deletion' },
+        
+        putative_variant_validations      => { is => 'Genome::Model::VariantValidation', reverse_as => 'model', where => [ validation_type => 'Official', validation_result => 'P' ],
+                                                doc => 'putative (only) variantvalidation linked to this model... currently only for Somatic models but need this accessor for get_all_objects for successful deletion' },
+    ],
+    has_optional_calculated => [
+        # TODO: make the subject a Genome::Measurable, and get these through delegation
+        subject_name    => { is => 'Text', len => 255, 
+                            calculate_from => 'subject',
+                            calculate => q|
+                                unless($subject) {
+                                    #$self->error_message('Subject not found.');
+                                    return;
+                                }
+                                if($subject->class eq 'GSC::Equipment::Solexa::Run') {
+                                    return $subject->flow_cell_id;
+                                } elsif($subject->class eq 'Genome::Sample') {
+                                    return $subject->name or $subject->common_name;
+                                } elsif($subject->class eq 'Genome::Individual') {
+                                    return $subject->name or $subject->common_name;
+                                } elsif($subject->isa('GSC::DNA')) {
+                                    return $subject->dna_name;
+                                } elsif($subject->can('name')) {
+                                    return $subject->name;
+                                } else {
+                                    #$self->error_message('Unable to determine name for subject');
+                                    return;
+                                }
+                            | },
+        subject_type    => { is => 'Text', len => 255, 
+                            valid_values => ["species_name","sample_group","flow_cell_id","genomic_dna","library_name","sample_name","dna_resource_item_name"], 
+                            calculate_from => 'subject_class_name',
+                            calculate => q|
+                                if($subject_class_name->class and $subject_class_name->isa('GSC::DNA')) {
+                                        $subject_class_name = 'GSC::DNA'; #Avoid needing to list entire DNA heirarchy
+                                }
+                                #This could potentially live someplace else like the previous giant hash
+                                my %types = (
+                                        'Genome::Sample' => 'sample_name',
+                                        'GSC::DNA' => 'dna_resource_item_name',
+                                        'GSC::DNAResourceItem' => 'dna_resource_item_name',
+                                        'GSC::Equipment::Solexa::Run' => 'flow_cell_id',
+                                        'Genome::ModelGroup' => 'sample_group',
+                                        'Genome::PopulationGroup' => 'sample_group',
+                                        'Genome::Individual' => 'sample_group',
+                                        'Genome::Taxon' => 'species_name',
+                                        'Genome::Library' => 'library_name',
+                                        'Genome::Sample::Genomic' => 'genomic_dna',
+                                );
+                                return $types{$subject_class_name};
+                            |, },
+    ],
+    has_deprecated_optional => [
+        # we probably don't need to store this do we?
+        _printable_property_names_ref   => { is => 'array_ref', is_transient => 1 },
+        
+        # duplicate of instrument_data, and equivalent of inst_data :(
+        assigned_instrument_data        => { is => 'Genome::InstrumentData', via => 'instrument_data_assignments', to => 'instrument_data' },
+        
+        # TODO: add an is_in_latest_build flag to the input and make these a parameter
+        built_instrument_data           => { is => 'Genome::Model::InstrumentDataAssignment',
+                                                calculate => q|
+                                                    return
                                                         map { $_->instrument_data }
                                                         grep { defined $_->first_build_id }
                                                         $self->instrument_data_assignments;
-                                                ) },
-        unbuilt_instrument_data           => { calculate => q(
-                                                                                                   return
+
+                                                | },
+        
+        
+        unbuilt_instrument_data           => { is => 'Genome::Model::InstrumentDataAssignment',
+                                                calculate => q|
+                                                    return
                                                         map { $_->instrument_data }
                                                         grep { !defined $_->first_build_id }
                                                         $self->instrument_data_assignments;
-                                                ) },
-        from_model_links                  => { is => 'Genome::Model::Link', reverse_as => 'to_model',
-                                               doc => 'bridge table entries where this is the \\\"to\\\" model(used to retrieve models this model is \\\"from\\\")' },
-        from_models                       => { is => 'Genome::Model', via => 'from_model_links', to => 'from_model',
-                                               doc => 'Genome models that contribute \\\"to\\\" this model' },
-        to_model_links                    => { is => 'Genome::Model::Link', reverse_as => 'from_model',
-                                               doc => 'bridge entries where this is the \\\"from\\\" model(used to retrieve models models this model is \\\"to\\\")' },
-        to_models                         => { is => 'Genome::Model', via => 'to_model_links', to => 'to_model',
-                                               doc => 'Genome models this model contributes \\\"to\\\"' },
-        variant_validations               => { is => 'Genome::Model::VariantValidation', reverse_as => 'model',
-                                               doc => 'variantvalidation linked to this model... currently only for Somatic models but need this accessor for get_all_objects for successful deletion' },
-        putative_variant_validations      => { is => 'Genome::Model::VariantValidation', reverse_as => 'model', where => [ validation_type => 'Official', validation_result => 'P' ],
-                                               doc => 'putative (only) variantvalidation linked to this model... currently only for Somatic models but need this accessor for get_all_objects for successful deletion' },
+                                                | },
+    
+        # TODO: add an is_in_latest_build flag to the input and make these a parameter
+        # clean up tracking on last_complete_build and make these delegate, or throw them away
+        last_complete_build_directory    => { calculate => q|$b = $self->last_complete_build; return unless $b; return $b->data_directory| },
+        last_succeeded_build_directory   => { calculate => q|$b = $self->last_succeeded_build; return unless $b; return $b->data_directory| },
+
+        # used in a few odd places 
+        build_statuses                  => { via => 'builds', to => 'master_event_status', is_many => 1 },
+        build_ids                       => { via => 'builds', to => 'id', is_many => 1 },
+   
+        # this should match the subject_name for models with samples as subjects
+        # sadly, existing capture code uses this method
+        sample_name                     => { is => 'Text', doc => 'deprecated column with explicit sample_name tracking' },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
-    doc => 'The GENOME_MODEL table represents a particular attempt to model knowledge about a genome with a particular type of evidence, and a specific processing plan. Individual assemblies will reference the model for which they are assembling reads.',
+    table_name => 'GENOME_MODEL',
+    doc => 'a versioned data model describing one the sequence and features of a genome' 
 };
 
-# TODO: improve the logic in Genome::Command::OO to handle more of this
-sub from_cmdline {
-    my $class = shift;
-    my @matches;
-    my %missing;
-    @missing{@_} = @_;
-    eval {
-        my @numbers = grep { $_ !~ /\D/ } @_;
-        if (@numbers) {
-            @matches = $class->get(\@numbers);
+=pod
 
-            my @found = map { $_->id } @matches;
-            delete @missing{@found};
-            return @matches if @matches == @numbers;
 
-            my @builds = Genome::Model::Build->get(\@numbers);
-            my @models = $class->get(builds => \@builds);
-            push @found, @models;
-            @found = map { $_->id } @builds;
-            delete @missing{@found};
+=cut
 
-            return @matches unless %missing;
-
-        }
-        my @models = $class->get(name => [keys %missing]);
-        my @found;
-        if (@models) {
-            push @matches, @models;
-            @found = map { $_->name } @models;
-            delete @missing{@found};
-            return @matches unless %missing;
-        }
-        my @groups = Genome::ModelGroup->get(name => [keys %missing]);
-        if (@groups) {
-            my @models = map { $_->models } @groups;
-            push @matches, @models;
-            @found = map { $_->name } @groups;
-            delete @missing{@found};
-            return @matches unless %missing;
-        }
-        for my $name (sort keys %missing) {
-            my @models = $class->get("name like" => $name);
-            delete $missing{$name} if @models;
-            push @matches, @models;
-        }
-    };
-    if (%missing) {
-        my @missing = sort keys %missing;
-        die "Failed to find @missing!";
-    }
-    if (wantarray) {
-        return @matches;
-    }
-    elsif (not defined wantarray) {
-        return;
-    }
-    elsif (@matches > 1) {
-        Carp::confess("Multiple matches found for @_!");
-    }
-    else {
-        return $matches[0]
-    }
-}
 
 sub __display_name__ {
     my $self = shift;
     return $self->name . ' (' . $self->id . ')';
 }
 
-# auto generate sub-classes for any valid processing profile
 sub __extend_namespace__ {
+    # auto generate sub-classes for any valid processing profile
     my ($self,$ext) = @_;
 
     my $meta = $self->SUPER::__extend_namespace__($ext);
@@ -288,7 +289,8 @@ sub create {
     #The second time we get the UR::BoolExpr handed to us.
     if(ref $_[0]) {
         $params = $class->define_boolexpr(@_);
-    } else {
+    } 
+    else {
         my %input_params = @_;
 
         if(exists $input_params{subject_name} or exists $input_params{subject_type}) {
@@ -374,22 +376,18 @@ sub create {
 
 sub _validate_processing_profile_id {
     my ($class, $pp_id) = @_;
-
     unless ( $pp_id ) {
         $class->error_message("No processing profile id given");
         return;
     }
-
     unless ( $pp_id =~ m/^$RE{num}{int}$/) {
         $class->error_message("Processing profile id is not an integer");
         return;
     }
-
     unless ( Genome::ProcessingProfile->get(id => $pp_id) ) {
         $class->error_message("Can't get processing profile for id ($pp_id)");
         return;
     }
-
     return 1;
 }
 
@@ -434,7 +432,6 @@ sub _verify_no_other_models_with_same_name_and_type_name_exist {
 
 sub default_model_name {
     my $self  = shift;
-
     return join(
         '.',
         Genome::Utility::Text::sanitize_string_for_filesystem($self->subject_name),
@@ -644,7 +641,7 @@ sub completed_builds {
 
     my @completed_builds;
     for my $build ( $self->builds ) {
-        my $build_status = $build->build_status;
+        my $build_status = $build->status;
         next unless defined $build_status and $build_status eq 'Succeeded';
         next unless defined $build->date_completed; # error?
         push @completed_builds, $build;
@@ -655,11 +652,8 @@ sub completed_builds {
 }
 
 sub latest_build {
-
     # this is the latest build with no filtering on status, etc.
-
     my ($self) = @_;
-
     my @sorted_builds = sort { $b->id <=> $a->id } $self->builds();
     return $sorted_builds[0] if @sorted_builds;
     return;
@@ -669,7 +663,6 @@ sub last_succeeded_build { return $_[0]->resolve_last_complete_build; }
 sub last_complete_build { return $_[0]->resolve_last_complete_build; }
 sub resolve_last_complete_build {
     my $self = shift;
-
     my @completed_builds = $self->completed_builds;
     return unless @completed_builds;
     my $last = pop @completed_builds;
@@ -677,7 +670,6 @@ sub resolve_last_complete_build {
             and $self->_last_complete_build_id == $last->id ) {
         $self->_last_complete_build_id( $last->id );
     }
-
     return $last;
 }
 
@@ -690,29 +682,49 @@ sub last_complete_build_id {
 }
 #<>#
 
-sub running_builds {
-    my $self = shift;
+sub builds_with_status {
+    my ($self, $status) = @_;
     my @builds = $self->builds;
     unless (scalar(@builds)) {
         return;
     }
-    my @builds_w_status = grep { $_->build_status } @builds;
-    my @running_builds = grep {$_->build_status eq 'Running'} @builds_w_status;
-    my @builds_wo_date = grep { !$_->date_scheduled } @running_builds;
+    my @builds_with_a_status = grep { $_->status } @builds;
+    my @builds_with_requested_status = grep {$_->status eq $status} @builds_with_a_status;
+    my @builds_wo_date = grep { !$_->date_scheduled } @builds_with_requested_status;
     if (scalar(@builds_wo_date)) {
-        my $error_message = 'Found '. scalar(@builds_wo_date) .' Running builds without date scheduled.' ."\n";
+        my $error_message = 'Found '. scalar(@builds_wo_date) ." $status builds without date scheduled.\n";
         for (@builds_wo_date) {
             $error_message .= "\t". $_->desc ."\n";
         }
         die($error_message);
     }
-    my @sorted_running_builds = sort {$a->date_scheduled cmp $b->date_scheduled} @running_builds;
-    return @sorted_running_builds;
+    my @sorted_builds_with_requested_status = sort {$a->date_scheduled cmp $b->date_scheduled} @builds_with_requested_status;
+    return @sorted_builds_with_requested_status;
+}
+
+sub abandoned_builds {
+    my $self = shift;
+    my @abandoned_builds = $self->builds_with_status('Abandoned');
+    return @abandoned_builds;
+}
+sub failed_builds {
+    my $self = shift;
+    my @failed_builds = $self->builds_with_status('Failed');
+    return @failed_builds;
+}
+sub running_builds {
+    my $self = shift;
+    my @running_builds = $self->builds_with_status('Running');
+    return @running_builds;
+}
+sub scheduled_builds {
+    my $self = shift;
+    my @scheduled_builds = $self->builds_with_status('Scheduled');
+    return @scheduled_builds;
 }
 
 sub current_running_build {
     my $self = shift;
-
     my @running_builds = $self->running_builds;
     my $current_running_build = pop(@running_builds);
     return $current_running_build;
@@ -720,7 +732,6 @@ sub current_running_build {
 
 sub current_running_build_id {
     my $self = shift;
-
     my $current_running_build = $self->current_running_build;
     unless ($current_running_build) {
         return;
@@ -767,32 +778,6 @@ sub available_reports {
     return \@reports;
 }
 
-
-# This is called by the infrastructure to appropriately classify abstract processing profiles
-# according to their type name because of the "sub_classification_method_name" setting
-# in the class definiton...
-sub _X_resolve_subclass_name {
-    my $class = shift;
-    my $proper_subclass_name;
-    if (ref($_[0]) and $_[0]->isa(__PACKAGE__)) {
-        my $type_name = $_[0]->type_name;
-        $proper_subclass_name = $class->_resolve_subclass_name_for_type_name($type_name);
-    }
-    # access the type according to the processing profile being used
-    elsif (my $processing_profile_id = $class->get_rule_for_params(@_)->specified_value_for_property_name('processing_profile_id')) {
-        my $processing_profile = Genome::ProcessingProfile->get(id => $processing_profile_id);
-        unless ( $processing_profile ) {
-            $class->error_message("Can't resolve subclass because can't get processing profile for id: ".$processing_profile_id);
-            return;
-        }
-        my $type_name = $processing_profile->type_name;
-        $proper_subclass_name = $class->_resolve_subclass_name_for_type_name($type_name);
-    }
-    # Adding a hack to call class to force autoload
-    $proper_subclass_name->class if $proper_subclass_name;
-    return $proper_subclass_name;
-}
-
 # This is called by both of the above.
 sub _resolve_subclass_name_for_type_name {
     my ($class,$type_name) = @_;
@@ -814,9 +799,9 @@ sub _resolve_type_name_for_subclass_name {
     return $type_name;
 }
 
+# TODO: please rename this -ss
 sub get_all_objects {
     my $self = shift;
-
     my $sorter = sub { # not sure why we sort, but I put it in a anon sub for convenience
         return unless @_;
         if ( $_[0]->id =~ /^\-/) {
@@ -840,6 +825,7 @@ sub yaml_string {
     return $string;
 }
 
+# please rename this -ss
 sub add_to_model{
     my $self = shift;
     my (%params) = @_;
@@ -876,6 +862,7 @@ sub add_to_model{
     return $bridge;
 }
 
+# please rename this -ss
 sub add_from_model{
     my $self = shift;
     $DB::single = 1;
@@ -913,6 +900,7 @@ sub add_from_model{
     return $bridge;
 }
 
+# this goes into refalign models only
 sub lcb_flagstat {
     my $self = shift;
 
@@ -978,8 +966,7 @@ sub delete {
         }
     }
     #make sure the model directory doesn't contain any builds if we are saving them
-    if ($keep_build_directories && !$keep_model_directory)
-    {
+    if ($keep_build_directories && !$keep_model_directory) {
         my $model_directory = $self->data_directory;
         $keep_model_directory = grep { /$model_directory/ } @build_directories;
     }
@@ -1010,7 +997,6 @@ sub _build_model_filesystem_paths {
     }
 
     return 1;
-
 }
 
 sub inputs_necessary_for_copy {
@@ -1027,5 +1013,3 @@ sub additional_params_for_copy {
 
 1;
 
-#$HeadURL$
-#$Id$

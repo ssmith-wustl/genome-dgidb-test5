@@ -9,7 +9,7 @@ use Bit::Vector;
 use Benchmark;
 
 class Genome::Model::Tools::Bmr::ClassSummaryQuick {
-  is => 'Genome::Command::OO',
+  is => 'Genome::Command::Base',
   has_input => [
   roi_bedfile => {
     type => 'String',

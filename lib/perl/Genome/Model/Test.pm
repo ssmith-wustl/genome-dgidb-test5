@@ -228,7 +228,8 @@ sub test04_subjects : Tests() {
     ok(!$self->test_class->create(%params), 'Failed to create model with nonexistent sample');
     
     delete $params{subject_id}; 
-    ok(!$self->test_class->create(%params), 'Failed to create model without subject_id');
+    my $rv = eval { $self->test_class->create(%params) };
+    ok(!$rv, 'Failed to create model without subject_id');
     
     $params{subject_id} = $mock_sample->id;
     my $created = $self->test_class->create(%params);
@@ -329,7 +330,8 @@ sub create_basic_mock_model {
         $model, # added inst data until it gets back into the class def
         (qw/
             instrument_data
-            running_builds current_running_build current_running_build_id
+            builds_with_status abandoned_builds failed_builds running_builds scheduled_builds
+            current_running_build current_running_build_id
             completed_builds last_complete_build last_complete_build_id 
             resolve_last_complete_build _last_complete_build_id 
             succeeded_builds last_succeeded_build last_succeeded_build_id
@@ -380,15 +382,15 @@ sub create_mock_sample {
     ) or confess "Can't create mock taxon";
 
     my $source = $self->create_mock_object(
-        class => 'Genome::SampleSource',
+        class => 'Genome::Individual',
         taxon_id => $taxon->id,
         name => $self->mock_sample_name,
-    ) or confess "Can't create mock source";
+    ) or confess "Can't create individual";
 
     my $sample = $self->create_mock_object(
         class => 'Genome::Sample',
         source_id => $source->id,
-        source_type => 'organism individual',
+        source_type => 'organism_individual',
         taxon_id => $taxon->id,
         name => $self->mock_sample_name,
         common_name => 'normal',
@@ -431,7 +433,7 @@ sub add_mock_build_to_model {
         $build,
         (qw/
             reports_directory resolve_reports_directory
-            build_event build_events build_status
+            build_event build_events status
             date_completed date_scheduled
             add_report get_report reports 
             start initialize success fail abandon delete
@@ -893,7 +895,8 @@ sub get_mock_model {
         $model, # added inst data until it gets back into the class def
         (qw/
             instrument_data
-            running_builds current_running_build current_running_build_id
+            builds_with_status abandoned_builds failed_builds running_builds scheduled_builds
+            current_running_build current_running_build_id
             completed_builds last_complete_build last_complete_build_id 
             resolve_last_complete_build _last_complete_build_id 
             succeeded_builds last_succeeded_build last_succeeded_build_id
@@ -931,7 +934,7 @@ sub get_mock_build {
         $build,
         (qw/
             reports_directory resolve_reports_directory
-            build_event build_events build_status
+            build_event build_events status
             date_completed date_scheduled
             add_report get_report reports 
             start initialize success fail abandon delete

@@ -89,9 +89,8 @@ sub _generate_summary {
     for my $ida (@idas) {
         my @alignments = $ida->results;
         for my $alignment (@alignments) {
-            my $stats = $alignment->get_alignment_statistics;
-            $total_reads += $stats->{total};
-            $aligned_reads += $stats->{mapped};
+            $total_reads += $alignment->total_read_count;
+            $aligned_reads += $alignment->total_aligned_read_count;
             #May need to handle PE differently
         }
     }
