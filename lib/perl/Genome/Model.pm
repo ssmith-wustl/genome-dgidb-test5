@@ -63,7 +63,8 @@ class Genome::Model {
         
         inputs                      => { is => 'Genome::Model::Input', reverse_as => 'model', is_optional => 1, is_many => 1,
                                         doc => 'links to data currently assigned to the model for processing' },
-        
+    ],
+    has_optional => [
         auto_assign_inst_data       => { is => 'Boolean', is_optional => 1 },
         auto_build_alignments       => { is => 'Boolean', is_optional => 1 }, # TODO: rename to auto_build
         build_requested             => { is => 'Boolean', is_optional => 1 },
