@@ -109,12 +109,12 @@ sub header_check {
     my $cmd = "samtools view -H $combined_bam | tail | grep \@RG | wc -l";
     my $rg_count = `$cmd`;
     if ($rg_count == $data_count) {
-        $msg .= "PASS (found $rg_count read groups)";
+        $msg .= "PASS (found $rg_count read group(s))";
         $flag = $self->test_to_bit('Header');
         $self->status_message($msg) if ($self->verbose);
     }
     else {
-        $msg .= "FAIL (only found $rg_count read group)";
+        $msg .= "FAIL (only found $rg_count read group(s), expected $data_count!)";
         $self->status_message($msg);
         return $flag;
     }
