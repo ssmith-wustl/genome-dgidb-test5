@@ -48,7 +48,13 @@ class GAP::Command::RepeatMasker {
             is_input => 1,
             default => '/tmp/',
             doc => 'Temporary working files are written here',
-        }
+        },
+        skip_masking => {
+            is => 'Boolean',
+            is_input => 1,
+            default => 0,
+            doc => 'If set, masking is skipped',
+        },
     ], 
 };
 
@@ -69,10 +75,11 @@ EOS
 
 sub execute {
     my $self = shift;
+
     unless (-e $self->fasta_file and -s $self->fasta_file) {
         confess "File does not exist or has no size at " . $self->fasta_file;
     }
-    
+
     unless (defined $self->repeat_library or defined $self->species) {
         confess "Either repeat library or species must be defined!";
     }
@@ -98,6 +105,15 @@ sub execute {
     if (-e $self->masked_fasta) {
         $self->warning_message("Removing existing file at " . $self->masked_fasta);
         unlink $self->masked_fasta;
+    }
+
+    if ($self->skip_masking) {
+        $self->status_message("skip_masking flag is set, copying input fasta to masked fasta location");
+        my $rv = Genome::Utility::FileSystem->copy_file($self->fasta_file, $self->masked_fasta);
+        confess "Trouble executing copy of " . $self->fasta_file . " to " . $self->masked_fasta unless defined $rv and $rv;
+        $self->status_message("Copy of input fasta at " . $self->fasta_file . " to masked fasta path at " .
+            $self->masked_fasta . " successful, exiting!");
+        return 1;
     }
 
     my $input_fasta = Bio::SeqIO->new(
