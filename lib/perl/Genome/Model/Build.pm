@@ -277,7 +277,7 @@ sub create {
                 $self->warning_message('Failed to deallocate disk space.');
             }
         };
-        my $allocation_change = UR::Context::Transaction->log_change($self, 'UR::value', $self->disk_allocation->id, 'external_change', $allocation_undo);
+        my $allocation_change = UR::Context::Transaction->log_change($self, 'UR::Value', $self->disk_allocation->id, 'external_change', $allocation_undo);
         if ($allocation_change) {
             $self->status_message("Recorded creation of disk allocation (" . $self->disk_allocation->id . ")");
         }
