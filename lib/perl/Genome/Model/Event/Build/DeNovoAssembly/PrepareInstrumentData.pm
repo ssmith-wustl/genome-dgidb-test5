@@ -13,11 +13,12 @@ require IPC::Run;
 class Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData {
     is => 'Genome::Model::Event::Build::DeNovoAssembly',
     has => [
-        _read_processor_pipe_command => {
-            is => 'Text',
+        _metrics => {
+            is => 'Hash',
             is_optional => 1,
+            default_value => { bases => 0, count => 0 },
         },
-        _current_base_limit => {
+        _base_limit => {
             is => 'Integer',
             is_optional => 1,
         },
@@ -41,7 +42,7 @@ sub _tempdir {
 }
 
 sub _metrics_file { 
-    return $_[0]->_tempdir.'/coverage.metrics';
+    return $_[0]->_tempdir.'/metrics.txt';
 }
 
 #< Execute >#
@@ -50,16 +51,17 @@ sub execute {
 
     $self->status_message('Preparing instrument data for '.$self->processing_profile->assembler_name);
 
-    $self->status_message('Checking instrument data...');
+    $self->status_message('Verifying instrument data...');
     my @instrument_data = $self->build->instrument_data;
     unless ( @instrument_data ) {
         $self->error_message("No instrument data found for ".$self->build->description);
         return;
     }
-    $self->status_message('Instrument data OK');
+    $self->status_message('OK...instrument data');
 
     $self->status_message('Setup base limit');
     $self->_setup_base_limit;
+    $self->status_message('OK...setup base limit');
 
     my @existing_assembler_input_files = $self->build->existing_assembler_input_files;
     if ( @existing_assembler_input_files ) { 
@@ -73,17 +75,18 @@ sub execute {
         }
     }
 
-    $self->status_message('Start processing instrument data');
+    $self->status_message('Processing instrument data');
     my $sequencing_platform = $self->processing_profile->sequencing_platform;
     my $file_method = '_fastq_files_from_'.$sequencing_platform;
     INST_DATA: for my $instrument_data ( @instrument_data ) {
         $self->_process_instrument_data($instrument_data)
             or return;
         if ( $self->_is_there_a_base_limit_and_has_it_been_exceeded ) {
+            $self->status_message('Reached base limit: '.$self->_base_limit);
             last INST_DATA;
         }
     }
-    $self->status_message('Done processing instrument data');
+    $self->status_message('OK...processing instrument data');
 
     $self->status_message('Verifying assembler input files');
     @existing_assembler_input_files = $self->build->existing_assembler_input_files;
@@ -92,6 +95,8 @@ sub execute {
         return;
     }
     $self->status_message('OK...assembler input files');
+
+    $self->status_message('OK...prepare instrument data');
 
     return 1;
 }
@@ -103,7 +108,7 @@ sub _setup_base_limit {
 
     my $base_limit = $self->build->calculate_base_limit_from_coverage;
     if ( defined $base_limit ) {
-        $self->_current_base_limit($base_limit);
+        $self->_base_limit($base_limit);
     }
 
     return 1;
@@ -112,58 +117,61 @@ sub _setup_base_limit {
 sub _is_there_a_base_limit_and_has_it_been_exceeded {
     my $self = shift;
 
-    my $base_limit = $self->_current_base_limit;
-    if ( defined $base_limit and $base_limit > 0 ) {
+    return if not defined $self->_base_limit; # ok
+
+    my $metrics = $self->_metrics;
+    if ( not defined $metrics->{bases} ) {
+        $self->error_message("No bases metric found in read processor metric when trying to determine if the base limit has been exceeded.");
+        return;
+    }
+
+    if ( ($self->_base_limit - $metrics->{bases}) <= 0 ) {
         return 1;
     }
 
     return;
 }
 
-sub _update_current_base_limit {
+sub _update_metrics {
     my $self = shift;
 
-    $self->status_message("Updating current base limit...");
+    $self->status_message("Updating metrics...");
 
-    my $current_base_limit = $self->_current_base_limit;
     my $metrics_file = $self->_metrics_file;
-    if ( defined $current_base_limit and not -s $metrics_file ) {
-        $self->error_message("Current base limit is set, but there is not metrics file ($metrics_file) to be able to update it.");
+    $self->status_message("Getting metrics from file: $metrics_file");
+    if ( not -s $metrics_file ) {
+        $self->error_message("No metrics file ($metrics_file) from read processor command.");
         return;
     }
 
-    # get coverage
-    $self->status_message("Getting coverage from metrics file: $metrics_file");
-    my  $fh;
-    eval {
-        $fh = Genome::Utility::FileSystem->open_file_for_reading($metrics_file);
+    my  $fh = eval {
+        Genome::Utility::FileSystem->open_file_for_reading($metrics_file);
     };
-    unless ( $fh ) {
+    if ( not $fh ) {
         $self->error_message("Cannot open coverage metrics file ($metrics_file): $@");
         return;
     }
-    my $coverage;
-    while ( my $line = $fh->getline ) {
-        if ( $line =~ /^bases=(\d+)/ ) {
-            $coverage = $1;
-            last;
-        }
-    }
-    if ( not defined $coverage ) {
-        $self->error_message("No coverage found in metrics file ($metrics_file)");
-        return;
-    }
-    elsif ( $coverage <= 0 ) {
-        $self->error_message("Coverage in metrics file ($metrics_file) is less than 0. This is impossible.");
-        return;
-    }
-    $self->status_message("Got coverage: $coverage");
 
-    # set new
-    $current_base_limit -= $coverage;
-    $self->_current_base_limit( $current_base_limit );
-    $self->status_message("Setting new current base limit: $current_base_limit");
-    $self->status_message('Updating current base limit OK');
+    my %metrics_from_file;
+    while ( my $line = $fh->getline ) {
+        chomp $line;
+        my ($metric, $val) = split('=', $line);
+        $self->status_message($metric.' from metrics file is '.$val);
+        $metrics_from_file{$metric} = $val;
+    }
+
+    my $metrics = $self->_metrics;
+    for my $metric (qw/ bases count /) { # these are reauired. There may be more...
+        if ( not defined $metrics_from_file{$metric} ) {
+            $self->error_message("Metric ($metric) not found in metrics file");
+            return;
+        }
+        $metrics->{$metric} += $metrics_from_file{$metric};
+        $self->status_message("Updated $metric to ".$metrics->{$metric});
+    }
+    $self->_metrics($metrics);
+
+    $self->status_message('OK...Updated metrics');
 
     return 1;
 }
@@ -187,33 +195,34 @@ sub _process_instrument_data {
 
     $self->status_message('Processing: '.join(' ', $instrument_data_class, $instrument_data->id, $qual_type) );
 
-    # Inst data files
+    # In/out files
     my @input_files = $self->_fastq_files_from_solexa($instrument_data)
+        or return;
+    my @output_files = $self->build->read_processor_output_files_for_instrument_data($instrument_data)
         or return;
 
     # Fast qual command
     my $read_processor = $self->processing_profile->read_processor;
-    my $base_limit = $self->_current_base_limit;
     my $fast_qual_class;
     my %fast_qual_params = (
         input => \@input_files,
-        output => [ $self->build->read_processor_output_files_for_instrument_data($instrument_data) ],
+        output => \@output_files,
         type_in => $qual_type,
         type_out => $qual_type, # TODO make sure this is sanger
+        metrics_file => $self->_metrics_file,
     );
-    if ( not defined $read_processor and not defined $base_limit ) {
-        # If no read processor or base limt - just rename
-        $fast_qual_class = 'Genome::Model::Tools::FastQual::Rename';
-        $fast_qual_params{matches} = ['qr{#.*/1$}=.b1,qr{#.*/2$}=.g1'];
+    if ( not defined $read_processor and not defined $self->_base_limit ) {
+        # Run through the base fast qual command. This will rm quality headers and get metrics
+        $fast_qual_class = 'Genome::Model::Tools::FastQual';
     }
     else {
         # Got multiple commands, use pipe
         $fast_qual_class = 'Genome::Model::Tools::FastQual::Pipe';
-        my @commands = ( 'rename --matches qr{#.*/1$}=.b1,qr{#.*/2$}=.g1' ); # rename
-
-        if ( defined $base_limit ) { # coverage limit by bases
-            unshift @commands, 'limit by-coverage --bases '.$base_limit;
-            $fast_qual_params{metrics_file} = $self->_metrics_file;
+        my @commands;
+        if ( defined $self->_base_limit ) { # coverage limit by bases
+            my $metrics = $self->_metrics;
+            my $current_base_limit = $self->_base_limit - $metrics->{bases};
+            unshift @commands, 'limit by-coverage --bases '.$current_base_limit;
         }
 
         if ( defined $read_processor ) { # read processor from pp
@@ -238,10 +247,8 @@ sub _process_instrument_data {
     }
     $self->status_message('Execute OK');
 
-    if ( defined $base_limit ) {
-        $self->_update_current_base_limit
-            or return;
-    }
+    $self->_update_metrics
+        or return;
 
     return 1;
 }

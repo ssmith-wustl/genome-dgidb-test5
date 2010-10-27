@@ -28,12 +28,12 @@ sub processing_profile_params_for_assembler_and_platform {
             coverage => 0.5,#25000,
             assembler_version => '0.7.57-64',
             assembler_params => '-hash_sizes 31 33 35',
-            read_processor => 'trimmer by-length -trim-length 10',
+            read_processor => 'trimmer by-length -trim-length 10 | rename illumina-to-pcap',
         },
         soap_solexa => {
             assembler_version => '1.04',
             assembler_params => '-kmer_size 31 -resolve_repeats -kmer_frequency_cutoff 1',
-            read_processor => 'trimmer bwa-style -trim-qual-level 10 | filter by-length --filter-length 35',
+            read_processor => 'trimmer bwa-style -trim-qual-level 10 | filter by-length --filter-length 35 | rename illumina-to-pcap',
         },
         newbler_454 => {
         },
@@ -99,18 +99,18 @@ sub get_mock_subject {
 
     # 2851686381
     my $source = Genome::Utility::TestBase->create_mock_object(
-        class => 'Genome::Individual',
+        class => 'Genome::SampleSource',
         id => 2851686381,
         taxon_id => $taxon->id,
         name => $sample_name,
-    ) or Carp::confess "Can't create mock individual";
+    ) or Carp::confess "Can't create mock source";
 
     # 2851686382
     my $subject = Genome::Utility::TestBase->create_mock_object(
         class => 'Genome::Sample',
         id => 2851686382,
         source_id => $source->id,
-        source_type => 'organism_individual',
+        source_type => 'organism individual',
         name => 'H_KT-185-1-0089515594',
         common_name => undef,
         extraction_label => '0089515594',
