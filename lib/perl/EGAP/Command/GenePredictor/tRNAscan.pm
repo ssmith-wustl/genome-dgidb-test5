@@ -93,6 +93,8 @@ sub execute {
             score => $score,
             sequence_name => $seq_string,
             sequence_string => $seq_string,
+            codon => $codon,
+            amino_acid => $type,
         );
     }
 

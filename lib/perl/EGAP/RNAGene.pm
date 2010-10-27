@@ -28,6 +28,7 @@ class EGAP::RNAGene {
         accession => { is => 'Text' },
         product => { is => 'Text' },
         codon => { is => 'Text' },
+        amino_acid => { is => 'Text' },
     ],
 };
 

@@ -22,6 +22,7 @@ sub column_order {
         accession
         product
         codon
+        amino_acid
     )];
 }
 
