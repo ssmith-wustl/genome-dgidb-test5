@@ -25,12 +25,10 @@
         <div class="span-24 last">
           <table width="100%" cellpadding="0" cellspacing="0" border="0" id="set" class="dataTable">
             <thead>
-              <xsl:apply-templates select="aspect[@name='members']/object[1]" mode="set_header" />
+              <xsl:apply-templates select="aspect[@name='members']" mode="set_header" />
             </thead>
             <tbody>
-              <xsl:for-each select="aspect[@name='members']">
-                <xsl:apply-templates mode="set_row" />
-              </xsl:for-each>
+              <xsl:apply-templates select="aspect[@name='members']" mode="set_row" />
             </tbody>
           </table>
         </div>
