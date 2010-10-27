@@ -164,7 +164,7 @@ sub execute {                               # replace with real execution logic.
 			$maf_line .=  "dbGAP\t";
 			$maf_line .=  "$platform\n";			
 
-			print OUTFILE "$maf_line\n";
+			print OUTFILE "$maf_line";
 		}
 	}
 	
@@ -219,7 +219,7 @@ sub execute {                               # replace with real execution logic.
 			$maf_line .=  "dbGAP\t";
 			$maf_line .=  "$platform\n";			
 
-			print OUTFILE "$maf_line\n";
+			print OUTFILE "$maf_line";
 		}
 	}
 	
