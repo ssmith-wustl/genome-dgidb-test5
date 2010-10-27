@@ -1542,7 +1542,8 @@ sub get_metric {
 # If there are no differences, return undef. 
 sub _compare_output {
     my ($self, $other_build_id) = @_;
-    die "Override _compare_output in your build subclass!";
+    $self->warning_message("Override _compare_output in your build subclass!");
+    return;
 }
 
 
