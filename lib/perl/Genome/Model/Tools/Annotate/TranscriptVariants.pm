@@ -280,33 +280,26 @@ sub execute {
     if ($self->build) {
         my $version = $self->build->version;
         my $name = $self->build->model->name;
-        if ($name =~ /human/i and $version ne "54_36p_v2") {
+        if ($name =~ /human/i) {
             my $model = Genome::Model->get(name => "NCBI-human.combined-annotation");
-            my $build = $model->build_by_version("54_36p_v2");
+            my $build = $model->build_by_version($version);
             $self->build($build);
         }
-        elsif ($name =~ /mouse/i and $version ne "54_37g_v2") {
+        elsif ($name =~ /mouse/i) {
             my $model = Genome::Model->get(name => "NCBI-mouse.combined-annotation");
-            my $build = $model->build_by_version("54_37g_v2");
+            my $build = $model->build_by_version($version);
             $self->build($build);
         }
     }
     else {
         my $ref = $self->reference_transcripts;
         $ref = "NCBI-human.combined-annotation/54_36p_v2" unless defined $ref;
-        my ($name) = split(/\//, $ref); # For now, version is ignored since only v2 is usable
+        my ($name, $version) = split(/\//, $ref); # For now, version is ignored since only v2 is usable
                                         # This will need to be changed when other versions are available
 
         my $model = Genome::Model->get(name => $name);
         unless ($model){
             $self->error_message("couldn't get reference transcripts set for $name");
-            return;
-        }
-
-        my $version = "54_37g_v2" if $name =~ /mouse/i;
-        $version = "54_36p_v2" if $name =~ /human/i;
-        unless (defined $version) {
-            $self->error_message("Couldn't determine latest version for model $name");
             return;
         }
 
