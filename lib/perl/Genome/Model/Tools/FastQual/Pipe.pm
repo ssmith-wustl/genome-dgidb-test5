@@ -81,7 +81,6 @@ sub execute {
             $errors .= $line;
         }
         $self->error_message('Process '.$process->{pid}." failed. Command: ".join(' ', @{$process->{command_parts}})."\nFrom STDERR:\n$errors");
-        #<STDIN>;
         return;
     }
 
@@ -209,7 +208,7 @@ sub validate_command {
     join(
         '::', 
         map { Genome::Utility::Text::string_to_camel_case($_) }
-        map { s/\-/ /; $_; }
+        map { s/\-/ /g; $_; }
         @subclass_parts
     );
 
