@@ -177,6 +177,8 @@ sub _validate_assembler_and_params {
         return;
     }
 
+    %assembler_params = $self->_filter_non_assembler_params(%assembler_params);
+    
     my $assembler;
     eval{
         $assembler = $assembler_class->create(
@@ -194,6 +196,15 @@ sub _validate_assembler_and_params {
     $self->status_message("Assembler and params OK");
 
     return 1;
+}
+
+sub _filter_non_assembler_params {
+    my ($self, %params)  = @_;
+    
+    if ($self->assembler_name eq 'soap' and exists $params{'insert_size'}) {
+	delete $params{'insert_size'};
+    }
+    return %params;
 }
 
 #< Read Processor >#

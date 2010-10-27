@@ -46,18 +46,18 @@ $assemble->dump_status_messages(1);
 
 # check config file w/ fragment data and default insert size
 my @libraries = ( { fragment_fastq_file => 'fragment.fastq' } );
-my $config = $assemble->_get_config_for_libraries(@libraries);
-my $expected_config = <<CONFIG;
-max_rd_len=120
-[LIB]
-avg_ins=320
-reverse_seq=0
-asm_flags=3
-pair_num_cutoff=2
-map_len=60
-q=fragment.fastq
-CONFIG
-is($config, $expected_config, 'config for fragment file and default insert size');
+#my $config = $assemble->_get_config_for_libraries(@libraries);
+#my $expected_config = <<CONFIG;
+#max_rd_len=120
+#[LIB]
+#avg_ins=320
+#reverse_seq=0
+#asm_flags=3
+#pair_num_cutoff=2
+#map_len=60
+#q=fragment.fastq
+#CONFIG
+#is($config, $expected_config, 'config for fragment file and default insert size');
 
 # lsf params
 my $lsf_params = $assemble->bsub_rusage;
