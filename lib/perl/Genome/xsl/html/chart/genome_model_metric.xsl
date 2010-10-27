@@ -24,29 +24,31 @@
   </xsl:template>
 
   <!-- describes the columns for model set views -->
-  <xsl:template name="genome_model_metric_set_header" match="object[./types[./isa[@type='Genome::Model::Metric']]]" mode="set_header">
-    <xsl:comment>template: status/genome_model_metric.xsl match: object[./types[./isa[@type='Genome::Model::Metric']]] mode: set_header</xsl:comment>
+  <xsl:template name="genome_model_metric_set_header" match="aspect[@name='members']" mode="set_header">
+  <xsl:comment>template: status/genome_model_metric.xsl match: aspect[@name='members'] mode: set_header</xsl:comment>
     <tr>
       <th>
-        name
+        build ID
       </th>
+      <xsl:for-each select="object">
       <th>
-        value
+        <xsl:value-of select="aspect[@name='name']"/>
       </th>
+      </xsl:for-each>
     </tr>
   </xsl:template>
 
   <!-- describes the row for model set views -->
-  <xsl:template name="genome_model_metric_set_row" match="object[./types[./isa[@type='Genome::Model::Metric']]]" mode="set_row">
-    <xsl:comment>template: status/genome_model_metric.xsl match: object[./types[./isa[@type='Genome::Model::Metric']]] mode: set_row</xsl:comment>
-
+  <xsl:template name="genome_model_metric_set_row" match="aspect[@name='members']" mode="set_row">
     <tr>
       <td>
-        <xsl:value-of select="aspect[@name='name']"/>
+        <xsl:value-of select="object[1]/aspect[@name='build_id']"/>
       </td>
-      <td>
-        <xsl:value-of select="aspect[@name='value']"/>
-      </td>
+      <xsl:for-each select="object">
+        <td>
+          <xsl:value-of select="aspect[@name='value']"/>
+        </td>
+      </xsl:for-each>
     </tr>
   </xsl:template>
 
