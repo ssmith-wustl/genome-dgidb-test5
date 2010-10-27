@@ -1,4 +1,4 @@
-package Genome::Model::GenePrediction::Bacterial::Command::Finish;
+package Genome::Model::GenePrediction::Bacterial::Finish;
 
 use strict;
 use warnings;
@@ -22,7 +22,7 @@ use File::Path;
 use MIME::Lite;
 use File::Path 'make_path';
 
-class Genome::Model::GenePrediction::Bacterial::Command::Finish {
+class Genome::Model::GenePrediction::Bacterial::Finish {
     is  => 'Command',
     doc => "BAP finish project",
     has => [

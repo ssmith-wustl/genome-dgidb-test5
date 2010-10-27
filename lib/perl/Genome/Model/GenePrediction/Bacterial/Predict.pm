@@ -1,4 +1,4 @@
-package Genome::Model::GenePrediction::Bacterial::Command::Predict;
+package Genome::Model::GenePrediction::Bacterial::Predict;
 
 #use lib '/gsc/scripts/opt/bacterial-bioperl';
 
@@ -6,7 +6,6 @@ use strict;
 use warnings;
 
 use Genome;
-use Command;
 
 use BAP::Config;
 use BAP::DB::CodingGene;
@@ -36,7 +35,7 @@ use Getopt::Long;
 use MIME::Lite;
 use Pod::Usage;
 
-class Genome::Model::GenePrediction::Bacterial::Command::Predict {
+class Genome::Model::GenePrediction::Bacterial::Predict {
     is  => 'Command',
     doc => "",
     has => [
