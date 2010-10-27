@@ -52,6 +52,11 @@ sub seek_pos_from_contigs_file {
 	}
 	#purpose of indexing by contig number is to be able
 	#to sort by contig number and allow quicker access to seq or qual
+
+	#temp fix for something that happened that's causing seek pos to be off by one
+	#not sure what the problem is yet .. files did not change so likely due to Bio SeqIO changes
+	$seek_pos = ( $seek_pos == 0 ) ? $seek_pos : $seek_pos - 1;
+
 	push @{$contig_infos{$contig_number}}, $seek_pos;
 	#push @{$contig_infos{$contig_number}}, $seq->primary_id;
         $seek_pos = $fh->tell;

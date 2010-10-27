@@ -144,13 +144,12 @@ sub execute {
             $sth->execute or return $self->error_handle("Failed to insert for $name : ".$DBI::errstr);
         }
         else {
-            #$seqinfo->{$ct}->{name} = $name;
 	    push @{$seqinfo[$ct]}, $name;
-            #$seqinfo->{$ct}->{pos}  = $seekpos;
 	    push @{$seqinfo[$ct]}, $seekpos;
         }
         $seekpos = $seq_fh->tell;
     }
+
     $self->status_message('Finished storing read info');
 
     if ($self->sqlite_yes) {
@@ -243,13 +242,6 @@ sub execute {
                         $read_dup{$ori_read_id}++;
                     }
                     else {
-			#my $info = $seqinfo->{$ori_read_id};
-                        #return $self->error_handle("Sequence of $ori_read_id (iid) not found") unless $info;
-			#$read_id = $info->{name};
-                        #$pos     = $info->{pos};
-                        #$read_id .= '-' . $info->{ct} if exists $info->{ct};
-                        #$seqinfo->{$ori_read_id}->{ct}++;
-			#converted hash of hash to array or array to reduce foot print
 			return $self->error_handle("Sequence of $ori_read_id (iid) not found") unless
 			    defined $seqinfo[$ori_read_id];
 			$read_id = ${$seqinfo[$ori_read_id]}[0];
@@ -454,8 +446,12 @@ sub get_sqlite_dbh {
 sub get_seq {
     my ($self, $seekpos, $name, $id) = @_;
 
+    #TODO - temp patch .. Bio::seqio seek pos seems to be off by 1
+    $seekpos = ( $seekpos == 0 ) ? $seekpos : $seekpos - 1;
+
     my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->seq_file) or return;
     $fh->seek($seekpos, 0);
+
     my $fa_bio = Bio::SeqIO->new(-fh => $fh, -format => 'fasta');
     my $fasta  = $fa_bio->next_seq;
 

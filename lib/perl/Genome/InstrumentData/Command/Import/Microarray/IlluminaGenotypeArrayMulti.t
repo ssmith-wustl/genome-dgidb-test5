@@ -10,7 +10,7 @@ use above "Genome";
 
 #This test does not check to see if models are successfully defined.
 #use Test::More skip_all => "This test was mysteriously broken. I am still tracking down the cause. -rlong";
-use Test::More tests => 8;
+use Test::More tests => 7;
 use File::Temp;
 use Data::Dumper;
 use File::Find;
@@ -63,9 +63,9 @@ ok($result, "iScan data passed testing");
 #my @model = \$result->result_model_ids;
 
 #print $model->genome_model_id."\n";
-my @model2 = Genome::Model->get( genome_model_id => $autoid-1);
-is(scalar(@model2),1,"returned one model");
-Genome::Model->get(id => $model2[0]->genome_model_id)->delete(); 
+#my @model2 = Genome::Model->get( genome_model_id => $autoid-1);
+#is(scalar(@model2),1,"returned one model");
+#Genome::Model->get(id => $model2[0]->genome_model_id)->delete(); 
 
 
 my $tmp_dir2 = File::Temp::tempdir('Genome-InstrumentData-Command-Import-Microarray-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
