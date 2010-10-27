@@ -92,7 +92,15 @@ sub execute {                               # replace with real execution logic.
 
 		my @lineContents = split(/\t/, $line);
 	
-		if($lineCounter == 1 && $line =~ "Chrom")
+		if($lineCounter == 1 && !($line =~ "Chrom"))
+		{
+			## Print the version number ##
+			if($self->output_file)
+			{
+				print OUTFILE "$line\n";
+			}
+		}
+		elsif($lineCounter <= 2 && $line =~ "Chrom")
 		{
 			if($self->output_file)
 			{
@@ -111,7 +119,6 @@ sub execute {                               # replace with real execution logic.
 			
 			foreach my $column (keys %column_index)
 			{
-				print "$column_index{$column}\t$column\n";
 				$columns[$column_index{$column}] = $column;	## Save the column order ##
 			}
 		}
@@ -121,6 +128,7 @@ sub execute {                               # replace with real execution logic.
 		}
 		else
 		{
+			$stats{'num_mutations'}++;
 			## Build a record for this line, assigning all values to respective fields ##
 			
 			my %record = ();
@@ -169,7 +177,7 @@ sub execute {                               # replace with real execution logic.
 				}
 				
 				## Check validation alleles ##
-				if($record{'Validation_Status'} ne "unknown")
+				if(lc($record{'Validation_Status'}) ne "unknown")
 				{
 #					if(!$record{'Match_Norm_Validation_Allele1'} || !$record{'Match_Norm_Validation_Allele2'} || !$record{'Tumor_Validation_Allele1'} || !$record{'Tumor_Validation_Allele2'})
 #					{
@@ -189,50 +197,40 @@ sub execute {                               # replace with real execution logic.
 #							}
 #						}
 #					}
-					if($record{'Validation_Status'} eq "Somatic")
+					if($record{'Validation_Status'} eq "Valid" && $record{'Mutation_Status'} eq "Somatic")
 					{
 						$record{'Match_Norm_Validation_Allele1'} = $ref_allele;
 						$record{'Match_Norm_Validation_Allele2'} = $ref_allele;
+						$stats{'validation_alleles_fixed'}++ if(!$record{'Tumor_Validation_Allele1'} || !$record{'Tumor_Validation_Allele2'});
 						$record{'Tumor_Validation_Allele1'} = $record{'Tumor_Seq_Allele1'};
 						$record{'Tumor_Validation_Allele2'} = $record{'Tumor_Seq_Allele2'};
-						print "Somatic\t" . $record{'Match_Norm_Validation_Allele1'} . "\t" . $record{'Match_Norm_Validation_Allele2'} . "\t";
-						print $record{'Tumor_Validation_Allele1'} . "\t" . $record{'Tumor_Validation_Allele2'} . "\n";
 					}
-					elsif($record{'Validation_Status'} eq "LOH")
+					elsif($record{'Validation_Status'} eq "Valid" && $record{'Mutation_Status'} eq "LOH")
 					{
 						$record{'Match_Norm_Validation_Allele1'} = $record{'Match_Norm_Seq_Allele1'} if(!$record{'Match_Norm_Validation_Allele1'} || ($record{'Match_Norm_Validation_Allele1'} ne $ref_allele && $record{'Match_Norm_Validation_Allele1'} ne $var_allele));
 						$record{'Match_Norm_Validation_Allele2'} = $record{'Match_Norm_Seq_Allele2'} if(!$record{'Match_Norm_Validation_Allele2'} || ($record{'Match_Norm_Validation_Allele2'} ne $ref_allele && $record{'Match_Norm_Validation_Allele2'} ne $var_allele));
 						$record{'Tumor_Validation_Allele1'} = $ref_allele if(!$record{'Tumor_Validation_Allele1'} || ($record{'Tumor_Validation_Allele1'} ne $ref_allele && $record{'Tumor_Validation_Allele1'} ne $var_allele));
 						$record{'Tumor_Validation_Allele2'} = $var_allele if(!$record{'Tumor_Validation_Allele2'} || ($record{'Tumor_Validation_Allele2'} ne $ref_allele && $record{'Tumor_Validation_Allele2'} ne $var_allele));												
-						print "LOH\t" . $record{'Match_Norm_Validation_Allele1'} . "\t" . $record{'Match_Norm_Validation_Allele2'} . "\t";
-						print $record{'Tumor_Validation_Allele1'} . "\t" . $record{'Tumor_Validation_Allele2'} . "\n";
 					}
-					elsif($record{'Validation_Status'} eq "Germline")
+					elsif($record{'Validation_Status'} eq "Valid" && $record{'Mutation_Status'} eq "Germline")
 					{
 						$record{'Match_Norm_Validation_Allele1'} = $record{'Tumor_Seq_Allele1'};
 						$record{'Match_Norm_Validation_Allele2'} = $record{'Tumor_Seq_Allele2'};
 						$record{'Tumor_Validation_Allele1'} = $record{'Tumor_Seq_Allele1'};
 						$record{'Tumor_Validation_Allele2'} = $record{'Tumor_Seq_Allele2'};
-						print "Germline\t" . $record{'Match_Norm_Validation_Allele1'} . "\t" . $record{'Match_Norm_Validation_Allele2'} . "\t";
-						print $record{'Tumor_Validation_Allele1'} . "\t" . $record{'Tumor_Validation_Allele2'} . "\n";
 					}
-					elsif($record{'Validation_Status'} eq "WildType")
+					elsif(lc($record{'Validation_Status'}) eq "wildtype")
 					{
 						$record{'Match_Norm_Validation_Allele1'} = $ref_allele;
 						$record{'Match_Norm_Validation_Allele2'} = $ref_allele; 
 						$record{'Tumor_Validation_Allele1'} = $ref_allele;
 						$record{'Tumor_Validation_Allele2'} = $ref_allele;
-						print "WildType\t" . $record{'Match_Norm_Validation_Allele1'} . "\t" . $record{'Match_Norm_Validation_Allele2'} . "\t";
-						print $record{'Tumor_Validation_Allele1'} . "\t" . $record{'Tumor_Validation_Allele2'} . "\n";
 					}
 					else
 					{
 						print "WARNING: Unknown val status: ";
 						print $record{'Chromosome'} . "\t" . $record{'Start_position'} . "\t" . $record{'End_position'} . "\t";
-						print $record{'Variant_Type'} . "\t" . $record{'Validation_Status'} . "\t";
-#						print $record{'Match_Norm_Validation_Allele1'} . "\t" . $record{'Match_Norm_Validation_Allele2'};
-#						print $record{'Tumor_Validation_Allele1'} . "\t" . $record{'Tumor_Validation_Allele2'};
-						print "\n";						
+						print $record{'Variant_Type'} . "\t" . $record{'Validation_Status'} . "\t" . $record{'Mutation_Status'} . "\n";
 					}
 
 				}
@@ -256,15 +254,21 @@ sub execute {                               # replace with real execution logic.
 			{
 				my $column_name = $columns[$colCounter];
 				my $column_value = $record{$column_name};
-				$newline .= "$column_value\t";
+				if($column_value)
+				{
+					$newline .= "$column_value\t";					
+				}
+				else
+				{
+					$newline .= "\t";
+				}
+
 			}
 			
 			if($self->output_file)
 			{
 				print OUTFILE "$newline\n";
 			}
-
-			
 
 		}
 
@@ -273,6 +277,8 @@ sub execute {                               # replace with real execution logic.
 	close($input);	
 		
 
+	print $stats{'num_mutations'} . " mutations in the MAF file\n";
+	print $stats{'validation_alleles_fixed'} . " were missing validation alleles and were fixed\n";
 
 
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)

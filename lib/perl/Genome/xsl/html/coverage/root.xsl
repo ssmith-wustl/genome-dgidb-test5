@@ -14,23 +14,11 @@
   <!-- BASE PAGE TEMPLATE -->
 
   <xsl:template match="/">
-    <xsl:variable name="title">
-      <xsl:choose>
-        <xsl:when test="/object">
-          <xsl:value-of select="/object/label_name" />: <xsl:value-of select="/object/display_name" /> - Status
-        </xsl:when>
-        <xsl:otherwise>
-          Status
-        </xsl:otherwise>
-      </xsl:choose>
-    </xsl:variable>
 
     <xsl:comment>template: /html/coverage/root.xsl; match="/" </xsl:comment>
     <html>
       <head>
-        <xsl:call-template name="html_head_page">
-          <xsl:with-param name="title" select="$title"/>
-        </xsl:call-template>
+        <xsl:call-template name="html_head_page"/>
       </head>
 
       <body>

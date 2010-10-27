@@ -18,9 +18,15 @@ my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fasta/To';
 my $fasta_file = $dir .'/test.fasta';
 my $expected_fastq = $dir .'/test.fastq.ori';
 
+my $tmp_dir = File::Temp::tempdir(
+    "FastaTo_XXXXXX", 
+    DIR     => '/gsc/var/cache/testsuite/running_testsuites',
+    CLEANUP => 1,
+);
+
 my %params = (
     fasta_file => $fasta_file,
-    dir        => $dir,
+    dir        => $tmp_dir,
 );
 
 my $to_fastq = Genome::Model::Tools::Fasta::To::Fastq->create(%params);

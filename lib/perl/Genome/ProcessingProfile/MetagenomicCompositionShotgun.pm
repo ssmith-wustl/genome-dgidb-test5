@@ -1325,7 +1325,7 @@ sub _process_unaligned_fastq {
         }
     } else {
         $self->status_message("No n-removal cutoff specified, skipping");
-        Genome::Utility::FileSystem::copy_file($dusted_fastq, $output_path);
+        Genome::Utility::FileSystem->copy_file($dusted_fastq, $output_path);
     }
     if ($self->dust_unaligned_reads){
         unlink $dusted_fastq;

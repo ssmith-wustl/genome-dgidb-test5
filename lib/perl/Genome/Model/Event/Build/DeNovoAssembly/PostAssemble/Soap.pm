@@ -16,13 +16,12 @@ sub execute {
     if ($self->processing_profile->name =~ /\s+PGA$/) {
 	$self->status_message("Creating fasta-to-agp tool");
 
-	my %params = $self->processing_profile->fasta_to_agp_params_as_hash();
-
 	my $fa = Genome::Model::Tools::Soap::RunFastaToAgpScript->create (
 	    scaffold_fasta_file => $self->build->soap_scaffold_sequence_file,
 	    output_dir => $self->build->data_directory,
 	    output_file_prefix => $self->build->file_prefix,
-	    %params, #adds version and scaffold_size_cutoff
+	    version => '9.27.10',
+	    scaffold_size_cutoff => '300',
 	    );
 	unless ($fa->execute) {
 	    $self->error_message("Failed to successfully execute soap fasta-to-agp tool");

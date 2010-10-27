@@ -1,14 +1,6 @@
 
 package Genome::Library; 
 
-# Adaptor for GSC::Organism::Sample
-
-# Do NOT use this module from anything in the GSC schema,
-# though the converse will work just fine.
-
-# This module should contain only UR class definitions,
-# relationships, and support methods.
-
 use strict;
 use warnings;
 
@@ -32,10 +24,6 @@ class Genome::Library {
         taxon               => { is => 'Genome::Taxon', via => 'sample', },
         species_name        => { is => 'Text', via => 'taxon', },
         protocol_name       => { is_transient => 1, is => 'Text', },
-    ],
-    has_many => [
-        #solexa_lanes        => { is => 'Genome::InstrumentData::Solexa', reverse_id_by => 'library' },
-        #solexa_lane_names   => { via => 'solexa_lanes', to => 'full_name' },
     ],
     data_source => 'Genome::DataSource::GMSchema',
 };

@@ -5,6 +5,7 @@
 
   <xsl:strip-space elements="*"/>
 
+  <xsl:include href="common_includes/xsltsl/stdlib.xsl"/>
   <xsl:include href="common_includes/components.xsl"/>
   <xsl:include href="common_includes/functions.xsl"/>
   <xsl:include href="common_includes/links.xsl"/>

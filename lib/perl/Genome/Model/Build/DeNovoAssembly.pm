@@ -29,9 +29,12 @@ class Genome::Model::Build::DeNovoAssembly {
         },
 
 	#TODO - best place for this??
-	processed_reads_count => { is => 'Integer', is_optional => 1, is_mutable => 1, doc => 'Number of reads processed for assembling',
+	processed_reads_count => {
+	    is => 'Integer',
+	    is_optional => 1,
+	    is_mutable => 1,
+	    doc => 'Number of reads processed for assembling',
 	},
-
         (
             map { 
                 join('_', split(m#\s#)) => {
@@ -125,6 +128,8 @@ sub calculate_estimated_kb_usage {
 sub genome_size {
     my $self = shift;
 
+    return $self->genome_size_used if $self->genome_size_used;
+
     my $model = $self->model;
     my $subject = $model->subject;
     unless ( $subject ) { # Should not happen
@@ -145,15 +150,23 @@ sub genome_size {
     }
 
     if ( defined $taxon->estimated_genome_size ) {
+	$self->genome_size_used( $taxon->estimated_genome_size );
         return $taxon->estimated_genome_size;
     }
-    elsif ( $taxon->domain =~ /bacteria/i ) {
-        return 4500000;
+    elsif ( defined $taxon->domain and $taxon->domain =~ /bacteria/i ) {
+	$self->genome_size_used( 4000000 );
+        return 4000000;
     }
+    elsif ( $self->processing_profile->assembler_name eq 'soap' ) {
+	#This only gets called for soap when setting metrics, ie, it's not needed for assembling
+	return;
+    }
+
     # TODO add more
     print Dumper($taxon);
     
     Carp::confess('Cannot determine genom size for De Novo Assembly model\'s ('.$self->model->id.' '.$self->model->name.') associated taxon ('.$taxon->id.')');
+
 }
 
 sub calculate_base_limit_from_coverage {
@@ -183,6 +196,8 @@ sub interesting_metric_names {
         'reads processed', 'reads processed success',
         'reads assembled', 'reads assembled success', 'reads not assembled pct',
         'read_depths_ge_5x',
+	'genome size used',
+	'average insert size used',
     );
 }
 
@@ -197,7 +212,7 @@ sub set_metrics {
     for my $name ( keys %metrics ) {
         $self->$name( $metrics{$name} );
     }
-    
+
     return %metrics;
 }
 
@@ -232,6 +247,17 @@ sub calculate_reads_attempted {
 sub calculate_average_insert_size {
     my $self = shift;
 
+    return $self->average_insert_size_used if $self->average_insert_size_used;
+
+    #check if insert size is set in processing-profile
+    my %assembler_params = $self->processing_profile->assembler_params_as_hash;
+    if ( exists $assembler_params{'insert_size'} and $self->processing_profile->assembler_name eq 'soap') { #bad
+	$self->status_message("Using insert size set in assembler params");
+	my $insert_size = $assembler_params{'insert_size'};
+	$self->average_insert_size_used( $insert_size );
+	return $insert_size;
+    }
+
     my @instrument_data = $self->instrument_data;
     unless ( @instrument_data ) {
         Carp::confess(
@@ -256,12 +282,26 @@ sub calculate_average_insert_size {
 
     unless ( @insert_sizes ) {
         $self->status_message("No insert sizes found in instrument data for ".$self->description);
-        return;
+	return;
     }
 
     my $sum = List::Util::sum(@insert_sizes);
 
-    return $sum / scalar(@insert_sizes);
+    my $average_insert_size = $sum / scalar(@insert_sizes);
+
+    $self->average_insert_size_used( $average_insert_size );
+    
+    return $average_insert_size;
+}
+
+sub is_insert_size_set_by_pp { #remove??
+    my $self = shift;
+
+    my %params = $self->processing_profile->assembler_params_as_hash;
+
+    return $params{'insert_size'} if exists $params{'insert_size'};
+
+    return;
 }
 
 #< Files / Dirs >#
@@ -344,6 +384,9 @@ sub calculate_metrics {
         'total contig bases' => 'assembly_length',
         # read depths
         'depth >= 5' => 'read_depths_ge_5x',
+	#add'l metrics .. really not part of stats but is build metrics			 
+	'genome size used' => 'genome_size_used',
+        'average insert size used' => 'average_insert_size_used',
     );
 
     my %metrics;
@@ -400,12 +443,13 @@ sub calculate_metrics {
     }
 
     #further processing of metric values
-
     #unused reads .. NA for soap assemblies, a number for others
     unless ($metrics{reads_not_assembled_pct} eq 'NA') {
 	$metrics{reads_not_assembled_pct} =~ s/%//;
 	$metrics{reads_not_assembled_pct} = sprintf('%0.3f', $metrics{reads_not_assembled_pct} / 100);
     }
+
+    #additional calculations needed to derive metric values
 
     #reads attempted, total input reads
     $metrics{reads_attempted} = $self->calculate_reads_attempted
@@ -423,6 +467,10 @@ sub calculate_metrics {
     #5x coverage stats - not defined for soap assemblies
     $metrics{read_depths_ge_5x} = ( $metrics{read_depths_ge_5x} ) ? sprintf ('%0.1f', $metrics{read_depths_ge_5x} * 100) : 'NA';
 
+    #genome and average insert size used
+    $metrics{genome_size_used} = $self->genome_size if $self->processing_profile->assembler_name eq 'velvet'; #bad
+    $metrics{average_insert_size_used} = $self->calculate_average_insert_size;
+    
     return %metrics;
 }
 
