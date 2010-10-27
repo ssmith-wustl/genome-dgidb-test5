@@ -11,14 +11,14 @@ class Genome::ProcessingProfile::Benchmark {
             is_constant => 1,
             is_class_wide => 1,
             # If value is not specified, or not 'inline', will default to 'workflow' queue
-            value => 'inline',
+            value => 'workflow',
             doc => 'lsf queue to submit the launcher or \'inline\''
         },
         job_dispatch => {
             is_constant => 1,
             is_class_wide => 1,
             # This is a queue name, but 'inline' is reserved for run on local machine.
-            value => 'inline',
+            value => 'benchmark',
             doc => 'lsf queue to submit jobs or \'inline\' to run them in the launcher'
         }
     ],
@@ -133,7 +133,7 @@ sub _execute_build {
 
     my @inputs = $build->inputs(name => 'command_arguments');
     @inputs = map { $_->{value_id} } @inputs ;
-    my $args .= join(' ', @inputs);
+    my $args = join(' ', @inputs);
 
     my $dir = $build->data_directory;
 
@@ -142,7 +142,7 @@ sub _execute_build {
     my $exit_code = system "$cmd $args >$dir/output 2>$dir/errors";
     $exit_code = $exit_code >> 8;
     if ($exit_code != 0) {
-        $self->error_message("Failed to run $cmd with args $args!  Exit code: $exit_code.");
+        $self->status_message("Failed to run $cmd with args $args!  Exit code: $exit_code.");
         return;
     }
 
