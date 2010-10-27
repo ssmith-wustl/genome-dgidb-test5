@@ -72,18 +72,14 @@ sub execute {
     }
     $self->status_message("Report path: " . $self->report_dir);
 
-    my $metagenomic_ref_build;
     my $metagenomic_ref_hmp_dir;
-    if ($self->include_taxonomy_report){
-        ($metagenomic_ref_build) = grep { $_->model_name=~/part 1 of/ } $model->metagenomic_references;
-        unless ($metagenomic_ref_build){
-            die $self->error_message("couldn't get build for metagenomic reference part 1 model");
-        }
-        $metagenomic_ref_hmp_dir = $metagenomic_ref_build->data_directory."/hmp";
-        unless (-d $metagenomic_ref_hmp_dir){
-            die $self->error_message("Couldn't find hmp dir in latest build of metagenomic reference part 1: $metagenomic_ref_hmp_dir");
-        }
+    #TODO, don't derive this shit in the report, pass it in to the command
+    for my $ref_build ($model->metagenomic_references){
+        $metagenomic_ref_hmp_dir = $ref_build->data_directory."/hmp";
+        last if -d $metagenomic_ref_hmp_dir;
+        $metagenomic_ref_hmp_dir = undef;
     }
+
     #TODO these names are bad and should be improved as this pipeline becomes more generic, don't know if taxonomy files will always be available when this is done again.
 
     unless ($self->regions_file){
