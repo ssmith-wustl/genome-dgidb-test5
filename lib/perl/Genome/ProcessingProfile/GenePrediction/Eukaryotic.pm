@@ -47,6 +47,12 @@ class Genome::ProcessingProfile::GenePrediction::Eukaryotic {
             doc => 'If set, rna sequence masking is skipped if no rna files are found. If this is false, not ' .
                    'finding an rna file is a fatal error',
         },
+        skip_repeat_masker => {
+            is => 'Boolean',
+            is_optional => 1,
+            default => 0,
+            doc => 'If set, the repeat masker step is skipped',
+        },
     ],
 };
 
@@ -89,6 +95,7 @@ sub _map_workflow_inputs {
         split_fastas_output_directory => $build->split_fastas_output_directory,
         raw_output_directory => $build->raw_output_directory,
         prediction_directory => $build->prediction_directory;
+        skip_repeat_masker => $self->skip_repeat_masker,
 
     return @inputs;
 }

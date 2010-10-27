@@ -15,6 +15,7 @@
     <link fromOperation="input connector"          fromProperty="rfamscan_version"               toOperation="contig_predict_genes"     toProperty="rfamscan_version" />
     <link fromOperation="input connector"          fromProperty="snap_version"                   toOperation="contig_predict_genes"     toProperty="snap_version" />
     <link fromOperation="input connector"          fromProperty="skip_masking_if_no_rna"         toOperation="contig_predict_genes"     toProperty="skip_masking_if_no_rna" />
+    <link fromOperation="input connector"          fromProperty="skip_repeat_masker"             toOperation="contig_predict_genes"     toProperty="skip_repeat_masker" />
     <link fromOperation="contig_predict_genes"     fromProperty="temp_prediction_directory"      toOperation="merge_predictions"        toProperty="temp_prediction_directories" />
     <link fromOperation="input connector"          fromProperty="prediction_directory"           toOperation="merge_predictions"        toProperty="prediction_directory" />
     <link fromOperation="merge_predictions"        fromProperty="temp_prediction_directories"    toOperation="cleanup_temp_files"       toProperty="directories" />
@@ -34,6 +35,7 @@
         <link fromOperation="input connector"          fromProperty="fasta_file"                  toOperation="repeat_masker"            toProperty="fasta_file" />
         <link fromOperation="input connector"          fromProperty="xsmall"                      toOperation="repeat_masker"            toProperty="xsmall" />
         <link fromOperation="input connector"          fromProperty="repeat_library"              toOperation="repeat_masker"            toProperty="repeat_library" />
+        <link fromOperation="input connector"          fromProperty="skip_repeat_masker"          toOperation="repeat_masker"            toProperty="skip_masking" />
         <link fromOperation="repeat_masker"            fromProperty="masked_fasta"                toOperation="rnammer"                  toProperty="fasta_file" />
         <link fromOperation="repeat_masker"            fromProperty="masked_fasta"                toOperation="trnascan"                 toProperty="fasta_file" />
         <link fromOperation="repeat_masker"            fromProperty="masked_fasta"                toOperation="rfamscan"                 toProperty="fasta_file" />
@@ -108,6 +110,7 @@
         </operation>
 
         <operationtype typeClass="Workflow::OperationType::Model">
+            <inputproperty>skip_repeat_masker</inputproperty>
             <inputproperty>rnammer_version</inputproperty>
             <inputproperty>rfamscan_version</inputproperty>
             <inputproperty>snap_version</inputproperty>
@@ -126,6 +129,7 @@
     </operation>
 
     <operationtype typeClass="Workflow::OperationType::Model">
+        <inputproperty>skip_repeat_masker</inputproperty>
         <inputproperty>rnammer_version</inputproperty>
         <inputproperty>rfamscan_version</inputproperty>
         <inputproperty>snap_version</inputproperty>
