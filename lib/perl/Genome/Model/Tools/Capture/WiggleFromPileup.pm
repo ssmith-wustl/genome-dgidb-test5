@@ -112,7 +112,9 @@ sub execute {                               # replace with real execution logic.
 
 	print "Bam indexing complete, checking bam file...\n";
 	#get chromosome lengths
-	my $tmp_name = "$output_dir/tempbamheader.txt";
+	my $tempdir = "/tmp/$output_file/";
+	mkdir($tempdir);
+	my $tmp_name = "$tempdir/tempbamheader.txt";
 	my @command = `samtools view -H $normal_bam > $tmp_name`;
 	my %chr_len;
 	my $header = new FileHandle ($tmp_name);
@@ -133,8 +135,6 @@ sub execute {                               # replace with real execution logic.
 
 	my $lineCounter_normal = 0;
 	my $lineCounter_tumor = 0;
-	my $tempdir = "/tmp/$output_file/";
-	mkdir($tempdir);
 	my $out_normal = "$tempdir/temppileup_normal.txt";
 	my $out_tumor = "$tempdir/temppileup_tumor.txt";
 	my $pileupfh;

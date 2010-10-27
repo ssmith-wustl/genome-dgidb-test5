@@ -253,86 +253,16 @@ sub process_imported_files {
             die $self->error_message;
         }
         my $gen = "$temp_dir/$internal{$sample_name}.genotype";
-        unless(-e $gen) {
-            $self->status_message("no genotype file found for sample: ".$sample_name." expected file to be at ".$temp_dir."/".$internal{$sample_name}.".genotype");
-            print "no genotype file found for sample: ".$sample_name." expected file to be at ".$temp_dir."/".$internal{$sample_name}.".genotype\n";
-            die $self->status_message;
-        }
-        print "imported_instrument_data id = ".$imported_instrument_data->id."\n";
-        print "Beginning copy of genotype data into allocation\n";
-        unless(copy($gen,$imported_instrument_data->data_directory)){
-            unless(-s "$imported_instrument_data->data_directory/$internal{$sample_name}.genotype") {
-                $self->error_message("Unable to copy genotype file to data directory for sample:  ".$sample_name);
-                die $self->error_message;
-            }
-        }
-        print "completed copy of genotype data\n";
-        $genotype_path = $imported_instrument_data->data_directory;
-        $genotype_path_and_file = "$genotype_path/$internal{$sample_name}.genotype";
-        unless(-e $genotype_path_and_file) {
-            $self->error_message("no genotype file found for ".$sample_name);
+
+
+        unless(Genome::InstrumentData::Command::Import::Genotype->create(
+                source_data_file    => $gen,
+                sample_name         => $sample_name,
+                define_model        => 1,)){
+            $self->error_message("Could not define model for ".$sample_name."\n");
             die $self->error_message;
         }
-
-        unless(defined($processing_profile)) {
-            $processing_profile = "illumina/wugc";
-        }
-
-        #create SNP Array Genotype (goldSNP)
-        my $genotype_path_and_SNP = $genotype_path."/".$sample_name."_SNPArray.genotype";
-        $self->status_message("Now running Genome::Model::Tools::Array::CreateGoldSnpFromGenotypes");
-        print $self->status_message."\n";
-        unless(Genome::Model::Tools::Array::CreateGoldSnpFromGenotypes->execute(    
-            genotype_file1 => $genotype_path_and_file,
-            genotype_file2 => $genotype_path_and_file,
-            output_file    => $genotype_path_and_SNP,)) {
-
-            $self->error_message("SNP Array Genotype creation failed");
-            die $self->error_message;
-        }
-        $self->status_message("finished call to Genome::Model::Tools::Array::CreateGoldSnpFromGenotypes"); 
-        print $self->status_message;
-        my @disks = $imported_instrument_data->disk_allocations;
-        unless(scalar(@disks)==1){
-            $self->error_message("found multiple disk allocations for the instrument data " . $imported_instrument_data->id);
-            die $self->error_message;
-        }
-        $disks[0]->reallocate;
-        #create genotype model
-        my $define = Genome::Model->get( name => "$sample_name/$processing_profile");
-
-        if($define) {
-            print "found an existing model for $sample_name/$processing_profile.\n";
-            $self->error_message("Found an existing model for $sample_name/$processing_profile");
-            die $self->error_message
-        }
-
-        my $no_build;
-        if($imported_instrument_data->id < 0) {
-            $no_build = 1;
-        } else {
-            $no_build = 0;
-        }
-        unless($define = Genome::Model::Command::Define::GenotypeMicroarray->execute(     
-                        file =>  $genotype_path_and_SNP,
-                        processing_profile_name =>  $processing_profile,
-                        subject_name =>  $sample_name,
-                        no_build =>  $no_build,
-                )) {
-            $self->error_message("GenotpeMicroarray Model Define failed.");
-            die $self->error_message;
-        }
-
-        push(@model_ids, $define->result_model_id);
-        $count++;
-        $self->status_message("finished call to Genome::Model::Command::Define::GenotypeMicroarray");
     }
-    $self->result_model_ids(\@model_ids);
-    print "\n\nModel ID's:\n";
-    for (@model_ids) {
-        print "\t\t".$_."\n";
-    }
-
     return 1;
 }
 

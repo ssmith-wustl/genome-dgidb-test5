@@ -16,7 +16,7 @@ require Genome::Utility::IO::StdoutRefWriter;
 
 class Genome::Model::Tools::FastQual {
     is  => 'Command',
-    is_abstract => 1,
+    #is_abstract => 1,
     has => [
         input => {
             is => 'Text',
@@ -75,8 +75,34 @@ HELP
 
 sub help_detail { # empty ok
     return <<HELP 
+    Process fastq and fasta/quality sequences. See sub-commands for a variety of functionality.
+
+    Types Handled
+    * illumina (fastq) - 
+    * sanger (fastq) - 
+    * phred (fasta/quality) - (NOT IMPLEMENTED) original format w/ sequences and qualities in separate files.
+    
+    Things This Base Command Can Do
+    * collate two files into one 
+    * decollate one file into two (NOT IMPLEMENTED)
+    * get metrics
+    * remove quality fastq headers
+
+    Requirements
+    * this base command cannot be used in a pipe
+
+    Metrics
+    * count
+    * bases
+    ...
+
+    Contact ebelter\@genome.wustl.edu for help
 HELP
 }
+
+# TODO 
+# mv types handles doc into method
+# mv metrics generated doc into method
 
 my %supported_types = (
     sanger => { format => 'fastq', },
@@ -145,6 +171,34 @@ sub create {
     }
 
     return $self;
+}
+
+sub execute {
+    my $self = shift;
+
+    my $reader = $self->_open_reader
+        or return;
+    if ( $reader->isa('Genome::Utility::IO::StdinRefReader') ) {
+        $self->error_message('Cannot read from a PIPE! Can only collate files!');
+        return;
+    }
+    my $writer = $self->_open_writer
+        or return;
+    if ( $writer->isa('Genome::Utility::IO::StdoutRefWriter') ) {
+        $self->error_message('Cannot write to a PIPE! Can only collate files!');
+        return;
+    }
+
+    if ( scalar(@{$reader->files}) == 1 and scalar(@{$writer->files}) == 2 ) {
+        $self->error_message("Cannot decollate from one input file to two output files! (YET)");
+        return;
+    }
+
+    while ( my $seqs = $reader->next ) {
+        $writer->write($seqs);
+    }
+
+    return 1;
 }
 
 sub _open_reader {

@@ -63,7 +63,8 @@ class Genome::Model {
         
         inputs                      => { is => 'Genome::Model::Input', reverse_as => 'model', is_optional => 1, is_many => 1,
                                         doc => 'links to data currently assigned to the model for processing' },
-        
+    ],
+    has_optional => [
         auto_assign_inst_data       => { is => 'Boolean', is_optional => 1 },
         auto_build_alignments       => { is => 'Boolean', is_optional => 1 }, # TODO: rename to auto_build
         build_requested             => { is => 'Boolean', is_optional => 1 },
@@ -74,7 +75,8 @@ class Genome::Model {
                                         where => [ property_name => 'keep_n_most_recent_builds', entity_class_name => 'Genome::Model' ] },
         _last_complete_build_id     => { is => 'Number', len => 10, 
                                         column_name => 'last_complete_build_id', 
-                                        doc => 'The last complete build id' },
+                                        doc => 'The last complete build id' ,
+                                        is_optional => 1 },
     ],
     has_optional_many => [
         # TODO: the new project will internally have generalized assignments of models and other things

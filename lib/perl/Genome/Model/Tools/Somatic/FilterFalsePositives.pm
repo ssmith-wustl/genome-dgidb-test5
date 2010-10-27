@@ -159,7 +159,7 @@ EOS
 sub help_detail {                           
     return <<EOS 
 This module uses detailed readcount information from bam-readcounts to filter likely false positives
-For questions, e-mail Dan Koboldt (dlarson\@genome.wustl.edu) or Dave Larson (dlarson\@genome.wustl.edu)
+For questions, e-mail Dan Koboldt (dkoboldt\@genome.wustl.edu) or Dave Larson (dlarson\@genome.wustl.edu)
 EOS
 }
 
@@ -184,12 +184,12 @@ sub execute {
     }
 
     #check on BAM file
-    unless(-e $self->tumor_bam_file) {
-        $self->error_message("Tumor bam file: " . $self->tumor_bam_file . " does not exist");
+    unless(-e $self->bam_file) {
+        $self->error_message("Tumor bam file: " . $self->bam_file . " does not exist");
         die;
     }
 
-    unless(-e $self->tumor_bam_file . ".bai") {
+    unless(-e $self->bam_file . ".bai") {
         $self->error_message("Tumor bam must be indexed");
         die;
     }
@@ -295,7 +295,7 @@ sub capture_filter
     ## Run BAM readcounts in batch mode to get read counts for all positions in file ##
 
     print "Running BAM Readcounts...\n";
-    my $cmd = readcount_program() . " -b 15 " . $self->tumor_bam_file . " -l $temp_path";
+    my $cmd = readcount_program() . " -b 15 " . $self->bam_file . " -l $temp_path";
     my $readcounts = `$cmd 2>/dev/null`;
     chomp($readcounts) if($readcounts);
 
@@ -379,7 +379,7 @@ sub capture_filter
 		    else
 		    {
 			## Run Readcounts ##
-#			my $cmd = readcount_program() . " -b 15 " . $self->tumor_bam_file . " $query_string";
+#			my $cmd = readcount_program() . " -b 15 " . $self->bam_file . " $query_string";
 #			my $readcounts = `$cmd`;
 #			chomp($readcounts) if($readcounts);
 

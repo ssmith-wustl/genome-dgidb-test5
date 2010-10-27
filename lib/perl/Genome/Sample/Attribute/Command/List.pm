@@ -12,7 +12,7 @@ class Genome::Sample::Attribute::Command::List {
             is_constant => 1, 
             value => 'Genome::Sample::Attribute' 
         },
-        show => { default_value => 'sample_id,sample_name,nomenclature,name,value' },
+        show => { default_value => 'sample_id,common_name,sample_name,nomenclature,name,value' },
     ],
 };
 
