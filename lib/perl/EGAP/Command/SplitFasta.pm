@@ -106,6 +106,8 @@ sub execute {
         $current_chunk_size += $length;
     }
 
+    $total_bases += $current_chunk_size;
+
     $self->fasta_files(\@filenames);
     $self->genome_size($total_bases);
     $self->status_message("Created $counter fasta files in $output_directory.");
