@@ -180,8 +180,7 @@ sub _resolve_lims_bed_file_for_file_id {
     my $file_id = shift;
     my $file_name = shift;
 
-    #FIXME Make Genome::Site::WUGC::FileStorage or otherwise discontinue use of a GSC class
-    my $file_storage = GSC::FileStorage->get(file_storage_id => $file_id);
+    my $file_storage = Genome::Site::WUGC::FileStorage->get(file_storage_id => $file_id);
     unless($file_storage) {
         $class->error_message('Could not find the file storage for ID #' . $file_id);
         die $class->error_message;
