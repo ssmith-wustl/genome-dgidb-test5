@@ -182,7 +182,10 @@ sub _create_iterator_for_variant_intersection {
         $variant = $_[0];
 
         my $variant_start = $variant->{'start'};
-        my $variant_stop  = $variant->{'stop'};
+        # Hack to keep broken behavior of old annotator where we only
+        # consider the start position of the variation
+        #my $variant_stop  = $variant->{'stop'};
+        my $variant_stop = $variant_start;
 
         if ($variant->{'chromosome_name'} ne $last_chrom_name
             or
@@ -222,7 +225,6 @@ sub _create_iterator_for_variant_intersection {
             }
             $next_substructure = $structure_iterator->next();
         }
-$DB::single=1;
         $loaded_substructures = \@keep_structures;
 
         $last_variant_start = $variant_start;
