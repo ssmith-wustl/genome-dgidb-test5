@@ -266,6 +266,21 @@ sub transcripts {
     my $crossing_substructures = $windowing_iterator->(\%variant);
     return unless @$crossing_substructures;
 
+    # Hack to support the old standard of only annotating the start of a deletion, but adding a col
+    my %transcript_substructures;
+    if ($variant{'type'} eq 'DEL') {
+        my @less;
+        foreach my $substructure ( @$crossing_substructures ) {
+            my $transcript_id = $substructure->transcript_transcript_id;
+            if (! exists $transcript_substructures{$transcript_id}) {
+                push @less, $substructure;
+                $transcript_substructures{$transcript_id} = [];
+            }
+            push @{$transcript_substructures{$transcript_id}}, $substructure;
+        }
+        $crossing_substructures = \@less;
+    }
+
     my @annotations;
     my $variant_checked = 0;
 
@@ -295,6 +310,13 @@ sub transcripts {
         }
         
         my %annotation = $self->_transcript_substruct_annotation($substruct, %variant) or next;
+
+        # Continuation of the hack above about annotating a deletion
+        if ($variant{'type'} eq 'DEL') {
+            my @del_strings = map { $_->structure_type . '[' . $_->structure_start . ',' . $_->structure_stop . ']' }
+                                  @{$transcript_substructures{$substruct->transcript_transcript_id}};
+            $annotation{'deletion_substructures'} = '(deletion:' . join(', ', @del_strings) . ')';
+        }
         push @annotations, \%annotation;
     }
     return @annotations;
