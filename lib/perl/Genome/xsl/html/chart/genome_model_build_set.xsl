@@ -2,7 +2,7 @@
 <xsl:stylesheet version="1.0"
     xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
-  <xsl:template name="genome_model_metric_set" match="object[./types[./isa[@type='Genome::Model::Metric::Set']]]">
+  <xsl:template name="genome_model_build_set" match="object[./types[./isa[@type='Genome::Model::Build::Set']]]">
 
     <xsl:call-template name="control_bar_view"/>
 
@@ -18,7 +18,7 @@
           </div>
         </div>
 
-        <xsl:call-template name="genome_model_metric_set_chart"/>
+        <xsl:call-template name="genome_model_build_set_chart"/>
 
         <hr class="space" style="height: 10px; margin: 0;"/>
 
@@ -44,7 +44,7 @@
 
   </xsl:template>
 
-  <xsl:template name="genome_model_metric_set_chart">
+  <xsl:template name="genome_model_build_set_chart">
     <script type="text/javascript" src="/res/js/pkg/protovis.js"></script>
     <script type="text/javascript">
     </script>
@@ -124,12 +124,18 @@ var jsonFields = [];
 
 function renderData(data,field) {
          var chartData = data["members"].filter(function(m) {
-             if (m.name == field) {
-                 return true;
+             if (m.hasOwnProperty('metrics')) {
+               return true
              }
          }).map(function(m) {
-             return { x: m.build_id, y: m.value };
-         });
+             for ( var metric in m['metrics'] ) {
+               //console.log(m['metrics'][metric].id)
+               var items = m['metrics'][metric].id.split('\t',3)
+               if ( items[2] == field ) {
+                 return { x: items[0], y: items[1] }
+               }
+             }
+         })
          renderGraph(chartData,field);
 }
 
@@ -145,18 +151,28 @@ $(document).ready(function () {
         url: location.href.replace('.html','.json'),
         dataType: 'json',
         success: function(data) {
+            // store our initial json data
             jsonData = data;
+            // draw our default graph with default walltime metric
             renderData(data,'walltime');
+            // create a hash of metric names for use in dropdown menu
             var fields = {};
-            $.each(data['members'].map(function(m) {
-                return m.name;
-            }), function(index, value) {
-                fields[value] = 1
-            })
+            for ( var member in data['members'] ) {
+              if ( data['members'][member].hasOwnProperty('metrics') ) {
+                $.each( data['members'][member]['metrics'].map(function(m) {
+                        var items = m.id.split('\t',3)
+                        return items[2]
+                        }), function(index, value) {
+                        fields[value] = 1
+                      })
+              }
+            }
+
             jsonFields = []
             $.each(fields, function(index, value) {
-              jsonFields.push(index)
-            })
+                jsonFields.push(index)
+              }
+            )
             dropDown(jsonFields);
         }
     })
