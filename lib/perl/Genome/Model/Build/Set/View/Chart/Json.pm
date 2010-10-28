@@ -14,21 +14,26 @@ class Genome::Model::Build::Set::View::Chart::Json {
                 'rule_display',
                 {
                     name => 'members',
+                    subject_class_name => 'Genome::Model::Build',
                     perspective => 'default',
                     toolkit => 'json',
                     aspects => [
-                        'metrics',
+                        {
+                          name => 'metrics',
+                          subject_class_name => 'Genome::Model::Metric',
+                          perspective => 'default',
+                          toolkit => 'json',
+                          aspects => [
+                            'build_id',
+                            'name',
+                            'value'
+                          ],
+                        }
                     ],
-                    subject_class_name => 'Genome::Model::Metric',
                 },
             ]
         }
     ]
 };
-                    #name => 'members',
-                    #aspects => [
-                    #    'build_id',
-                    #    'metrics'
-                    #],
 
 1;
