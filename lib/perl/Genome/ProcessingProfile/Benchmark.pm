@@ -139,7 +139,7 @@ sub _execute_build {
 
     $self->_system_snapshot($dir);
 
-    my $exit_code = system "$cmd $args >$dir/output 2>$dir/errors";
+    my $exit_code = system "/usr/bin/time -v $cmd $args >$dir/output 2>$dir/errors";
     $exit_code = $exit_code >> 8;
     if ($exit_code != 0) {
         $self->status_message("Failed to run $cmd with args $args!  Exit code: $exit_code.");
