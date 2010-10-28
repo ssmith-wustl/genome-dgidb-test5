@@ -4,16 +4,31 @@ use strict;
 use warnings;
 
 use above "Genome";
-
-use Test::More tests => 4;
+use File::Temp 'tempdir';
+use Test::More tests => 6;
 
 BEGIN {
     use_ok('Genome::Model::Tools::Velvet::Graph');
 }
 
-my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Velvet/Graph';
+# The directory contains files that this tool needs to run (apparently), and it
+# also writes to that diretory. So copy the data in /gsc/var/cache/testsuite/data to
+# the temp dir created in /gsc/var/cache/testsuite/running_testsuites
+my $test_dir = tempdir(
+    'Genome-Model-Tools-Velvet-XXXXXX',
+    DIR => '/gsc/var/cache/testsuite/running_testsuites/',
+    UNLINK => 1,
+    CLEANUP => 1,
+);
 my $dir = $test_dir.'/velvet_run';
 
+my $file_location = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Velvet/Graph/velvet_run/';
+ok(-d $file_location, "input directory found at $file_location");
+
+my $cp_rv = system("cp -r $file_location $test_dir");
+ok($cp_rv == 0, "copy from $file_location to $test_dir successful");
+
+chmod(0775, $dir);
 my $vg1 = Genome::Model::Tools::Velvet::Graph->create(
     directory  => $dir,
     cov_cutoff => 3.3,
