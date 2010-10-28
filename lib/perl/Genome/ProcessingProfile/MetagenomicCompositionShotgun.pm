@@ -43,8 +43,13 @@ class Genome::ProcessingProfile::MetagenomicCompositionShotgun {
         },
         skip_contamination_screen => {
             is => 'Boolean',
-            default_value=>0,
-            doc => "If this flag is specified, the instrument data assigned to this model will not be human screened, but will undergo dusting and n-removal before undergoing metagenomic alignment",
+            default_value => 0,
+            doc => "If this flag is enabled, the instrument data assigned to this model will not be human screened, but will undergo dusting and n-removal before undergoing metagenomic alignment",
+        },
+        include_taxonomy_report => {
+            is => 'Boolean',
+            default_value => 1,
+            doc => 'When this flag is enabled, the model will attempt to grab taxonomic data for the metagenomic reports and produce a combined refcov-taxonomic final report.  Otherwise, only refcov will be run on the final metagenomic bam',
         },
     ],
     has => [
@@ -286,14 +291,28 @@ sub _execute_build {
             die $self->error_message("Failed to create QC report!");
         }
     }
+
+    my $final_metagenomic_bam = $build->_final_metagenomic_bam();
+    if (@meta_bams > 1){
+        $final_metagenomic_bam = $self->merge_metagenomic_bams(\@meta_bams, $final_metagenomic_bam);
+    }else{
+        $self->symlink($meta_bams[0], $final_metagenomic_bam);
+    }
+
+    #TODO, these taxonomic files need to be retrieved from to one or all metagenomic references
+
     my %meta_report_properties = (
         build_id => $build->id,
-        taxonomy_file => '/gscmnt/sata409/research/mmitreva/databases/Bact_Arch_Euky.taxonomy.txt',
-        viral_taxonomy_file => '/gscmnt/sata409/research/mmitreva/databases/viruses_taxonomy_feb_25_2010.txt'
     );
-    
+
     if ($self->skip_contamination_screen){
-        $meta_report_properties{exclude_fragments} = 0; 
+        $meta_report_properties{include_fragments} = 1; 
+    }
+    
+    if ($self->include_taxonomy_report){
+        $meta_report_properties{include_taxonomy_report} = 1;
+        $meta_report_properties{taxonomy_file} = '/gscmnt/sata409/research/mmitreva/databases/Bact_Arch_Euky.taxonomy.txt';
+        $meta_report_properties{viral_taxonomy_file} = '/gscmnt/sata409/research/mmitreva/databases/viruses_taxonomy_feb_25_2010.txt';
     }
 
     my $meta_report = Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport->create(
@@ -311,6 +330,46 @@ sub _execute_build {
     }
 
     return 1;
+}
+
+sub merge_metagenomic_bams{
+    my ($self, $meta_bams, $sorted_bam) = @_;
+    if (-e $sorted_bam and -e $sorted_bam.".OK"){  
+        $self->status_message("sorted metagenomic merged bam already produced, skipping");
+    }else{
+        my $merged_bam = $sorted_bam.".name_sorted.bam";
+        $self->status_message("starting sort and merge");
+
+        my $sort_and_merge_meta = Genome::Model::Tools::Sam::SortAndMergeSplitReferenceAlignments->create(
+            input_files => $meta_bams,
+            output_file => $merged_bam,
+        );
+        unless($sort_and_merge_meta->execute()) {
+            die $self->error_message("Failed to sort and merge metagenomic bams: $@");
+        }
+
+        unless (-s $merged_bam){
+            die $self->error_message("Merged bam has no size!");
+        }
+
+        $self->status_message("starting position sort of merged bam");
+
+        my $sort_merged_bam = Genome::Model::Tools::Sam::SortBam->create(
+            file_name => $merged_bam,
+            output_file => $sorted_bam,
+        );
+        unless($sort_merged_bam->execute()) {
+            die $self->error_message("Failed to position sort merged metagenomic bam.");
+        }
+
+        unless (-s $sorted_bam){
+            die $self->error_message("Sorted bam has no size!");
+        }
+
+        system ("touch $sorted_bam.OK");
+        unlink $merged_bam;
+    }
+    return $sorted_bam;
 }
 
 sub extract_unaligned_reads_from_alignment_result {
@@ -501,32 +560,6 @@ sub execute_or_die {
 
 sub assign_missing_instrument_data_to_model{
     my ($self, $model, @instrument_data) = shift;
-=cut this doesn't compile     
-for my $assignment (@assignments) {
-            my $instrument_data = $assignment->instrument_data;
-            my $screen_assignment = $screen_model->instrument_data_assignment(
-                instrument_data_id => $instrument_data->id
-            );
-            if ($screen_assignment) {
-                $self->status_message("Instrument data " . $instrument_data->__display_name__ . " is already assigned to the screening model");
-            }
-            else {
-                $screen_assignment = 
-                $screen_model->add_instrument_data_assignment(
-                    instrument_data_id => $assignment->instrument_data_id,
-                    filter_desc => $assignment->filter_desc,
-                );
-                if ($screen_assignment) {
-                    $self->status_message("Assigning instrument data " . $instrument_data->__display_name__ . " is already to the screening model");
-                }
-                else {
-                    $self->error_message("Failed to assign instrument data " . $instrument_data->__display_name__ . " is already to the screening model");
-                    Carp::confess($self->error_message());
-                }
-            }
-        }
-=cut
-
 }
 
 sub symlink {
@@ -1325,7 +1358,7 @@ sub _process_unaligned_fastq {
         }
     } else {
         $self->status_message("No n-removal cutoff specified, skipping");
-        Genome::Utility::FileSystem::copy_file($dusted_fastq, $output_path);
+        Genome::Utility::FileSystem->copy_file($dusted_fastq, $output_path);
     }
     if ($self->dust_unaligned_reads){
         unlink $dusted_fastq;

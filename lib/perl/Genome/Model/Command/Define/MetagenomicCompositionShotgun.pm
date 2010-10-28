@@ -56,6 +56,14 @@ genome model define metagenomic-composition-shotgun --subject-name H_LA-639-9080
 genome model define metagenomic-composition-shotgun \
     --subject-name H_LA-639-9080-cDNA-1 \
     --processing-profile-name "human microbiome metageomic shotgun"
+
+genome model define metagenomic-composition-shotgun \
+    --subject-name H_LA-639-9080-cDNA-1 \
+    --processing-profile-name "human microbiome metageomic shotgun"
+    --contamination-reference "contamination-human"
+    --metagenomic-references "microbial reference 1 of 2","microbial reference 2 of 2"
+
+    
 EOS
 }
 

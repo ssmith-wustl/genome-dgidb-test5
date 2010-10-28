@@ -9,20 +9,27 @@ use warnings;
 
 use Genome;
 use File::Copy;
-
+use GSCApp;
 
 my %properties = (
     original_data_path => {
         is => 'Text',
         doc => 'original data path of import data file',
     },
-    sample_name => {
+    sample => {
         is => 'Text',
-        doc => 'sample name for imported file, like TCGA-06-0188-10B-01D',
+        doc => 'sample name or ID for imported file',
     },
     library => {
         is => 'String',
         doc => 'The library name or id associated with the data to be imported.',
+        is_optional => 1,
+    },
+    create_library => {
+        is => 'Boolean',
+        doc => 'If the library (specified by name in the library parameter) does not exist, create it.',
+        default => 0,
+        is_optional => 1,
     },
     import_source_name => {
         is => 'Text',
@@ -39,12 +46,6 @@ my %properties = (
         doc => 'sequencing platform of import data, like solexa',
         valid_values => ['solexa'],
         is_optional => 1,
-    },
-    import_format => {
-        is => 'Text',
-        doc => 'import format, should be bam',
-        valid_values => ['bam'],
-        is_optional =>1,
     },
     description  => {
         is => 'Text',
@@ -83,16 +84,36 @@ class Genome::InstrumentData::Command::Import::Bam {
 
 
 sub execute {
-    my $self     = shift;
+    my $self = shift;
     my $bam_path = $self->original_data_path;
-
-    my $library = Genome::Command::Base->resolve_param_value_from_text($self->library,'Genome::Library');
-    print "library name = ".$library->name." and id = ".$library->id."\n";
-    unless($library){
-        $self->error_message("A library was not resolved from the input string ".$self->library);
+    my $sample = Genome::Command::Base->resolve_param_value_from_text($self->sample, 'Genome::Sample');
+    unless($sample){
+        $self->error_message("Unable to find the sample name based on the parameter: ".$self->sample);
+        my $possible_name;
+        if($self->sample =~ /TCGA/){
+            print "got here.\n";
+            $possible_name = GSC::Organism::Sample->get(sample_name => $self->sample);
+            if($possible_name){
+                $self->error_message("There is an organism_sample which matches the TCGA name, which has a full_name of ".$possible_name->full_name);
+            }
+        }
         die $self->error_message;
     }
-    
+    my $library = Genome::Command::Base->resolve_param_value_from_text($self->library,'Genome::Library');
+    unless($library){
+        unless($self->create_library){
+            $self->error_message("A library was not resolved from the input string ".$self->library);
+            die $self->error_message;
+        }
+        $library = Genome::Library->create(name=>$sample->name.'-extlibs',sample_id=>$sample->id);
+        unless($library){
+            $self->error_message("Unable to create a library.");
+            die $self->error_message;
+        }
+        $self->status_message("Created a library named ".$library->name);
+        print $self->status_message;
+    }
+
     unless (-s $bam_path and $bam_path =~ /\.bam$/) {
         $self->error_message('Original data path of import bam: '. $bam_path .' is either empty or not with .bam as name suffix');
         return;
@@ -109,29 +130,11 @@ sub execute {
         }
         next if $property_name =~ /^(species|reference)_name$/;
         next if $property_name =~ /^library$/;
+        next if $property_name =~/^sample$/;
         $params{$property_name} = $self->$property_name if $self->$property_name;
     }
-    
-    my $sample_name   = $self->sample_name;
-    my $genome_sample = Genome::Sample->get(name => $sample_name);
-
-    if ($genome_sample) {
-        $self->status_message("Sample with full_name: $sample_name is found in database");
-    }
-    else {
-        $genome_sample = Genome::Sample->get(extraction_label => $sample_name);
-        $self->status_message("Sample with sample_name: $sample_name is found in database")
-            if $genome_sample;
-    }
-
-    unless ($genome_sample) {
-        $self->error_message("Could not locate Genome::Sample named :  " . $sample_name);
-        die $self->error_message;
-    }
-    
-    my $sample_id = $genome_sample->id;
-    $self->status_message("genome sample $sample_name has id: $sample_id");
-    $params{sample_id} = $sample_id;
+    $params{sample_id} = $sample->id;
+    $params{sample_name} = $sample->name;
     $params{sequencing_platform} = "solexa";
     $params{import_format} = "bam";
     $params{reference_sequence_build_id} = $self->reference_sequence_build_id;
@@ -190,8 +193,12 @@ sub execute {
             die $self->error_message;
         }
         my $md5_from_file = $md5_fh->getline;
+        ($md5_from_file) = split " ", $md5_from_file;
+        chomp $md5_from_file;
+        #chomp $md5;
         $self->error_message("md5 sum from file = ".$md5_from_file);
         unless($md5 eq $md5_from_file){
+            $self->status_message("calcmd5 = ".$md5." and file md5 = ".$md5_from_file);
             $self->error_message("Calculated md5 sum and sum read from file did not match, aborting.");
             $disk_alloc->deallocate;
             $self->error_message("Now removing instrument-data record from the database.");
@@ -199,7 +206,9 @@ sub execute {
             die "Import Failed";
         }
     }
-
+    
+    #copy the bam into the allocation
+    
     $self->status_message("Copying bam file into the allocation, this could take some time.");
     unless(copy($bam_path, $bam_destination)) {
         $self->error_message("Failed to copy to allocated space (copy returned bad value).  Unlinking and deallocating.");
@@ -210,6 +219,9 @@ sub execute {
         die "Import Failed.";
     }
     $self->status_message("Bam successfully copied to allocation. Now calculating md5sum of the copied bam, to compare with pre-copy md5sum. Again, this could take some time.");
+    
+    #calculate and compare md5 sums
+
     unless(Genome::Utility::FileSystem->md5sum($bam_destination) eq $md5) {
         $self->error_message("Failed to copy to allocated space (md5 mismatch).  Unlinking and deallocating.");
         unlink($bam_destination);
@@ -218,16 +230,11 @@ sub execute {
         $import_instrument_data->delete;
         die "Import Failed.";
     }
+
     $self->status_message("Importation of BAM completed successfully.");
     $self->status_message("Your instrument-data id is ".$instrument_data_id);
+
     return 1;
 }
 
-
 1;
-
-    
-
-
-    
-

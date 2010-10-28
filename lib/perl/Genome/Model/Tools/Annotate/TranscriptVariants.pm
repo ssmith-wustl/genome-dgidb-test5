@@ -17,11 +17,14 @@ use Cwd 'abs_path';
 use File::Basename;
 use File::Temp qw/ tempfile /;
 
+use MIME::Lite;
+use Sys::Hostname;
+
 class Genome::Model::Tools::Annotate::TranscriptVariants{
     is => 'Genome::Model::Tools::Annotate',
     has => [ 
         variant_file => {
-            is => 'Text',   
+            is => 'FilePath',   
             is_input => 1,
             doc => "File of variants. Tab separated columns: chromosome_name start stop reference variant",
         },
@@ -280,33 +283,26 @@ sub execute {
     if ($self->build) {
         my $version = $self->build->version;
         my $name = $self->build->model->name;
-        if ($name =~ /human/i and $version ne "54_36p_v2") {
+        if ($name =~ /human/i) {
             my $model = Genome::Model->get(name => "NCBI-human.combined-annotation");
-            my $build = $model->build_by_version("54_36p_v2");
+            my $build = $model->build_by_version($version);
             $self->build($build);
         }
-        elsif ($name =~ /mouse/i and $version ne "54_37g_v2") {
+        elsif ($name =~ /mouse/i) {
             my $model = Genome::Model->get(name => "NCBI-mouse.combined-annotation");
-            my $build = $model->build_by_version("54_37g_v2");
+            my $build = $model->build_by_version($version);
             $self->build($build);
         }
     }
     else {
         my $ref = $self->reference_transcripts;
         $ref = "NCBI-human.combined-annotation/54_36p_v2" unless defined $ref;
-        my ($name) = split(/\//, $ref); # For now, version is ignored since only v2 is usable
+        my ($name, $version) = split(/\//, $ref); # For now, version is ignored since only v2 is usable
                                         # This will need to be changed when other versions are available
 
         my $model = Genome::Model->get(name => $name);
         unless ($model){
             $self->error_message("couldn't get reference transcripts set for $name");
-            return;
-        }
-
-        my $version = "54_37g_v2" if $name =~ /mouse/i;
-        $version = "54_36p_v2" if $name =~ /human/i;
-        unless (defined $version) {
-            $self->error_message("Couldn't determine latest version for model $name");
             return;
         }
 
@@ -326,7 +322,10 @@ sub execute {
     if ($self->build and $self->cache_annotation_data_directory) {
         my $cache_start = Benchmark->new;
         $self->status_message('Caching annotation data directory');
-        $self->build->cache_annotation_data;
+        #Caching is a quagmire.  Politely inform the user we aren't doing it.
+        $self->cache_annotation_data_directory(0);
+        $self->status_message("--cache-annotation-data-directory is currently disabled.  Operating from the annotation data directory instead.");
+        $self->_notify_cache_attempt;
         my $cache_stop = Benchmark->new;
         my $cache_time = timediff($cache_stop, $cache_start);
         $self->status_message('Annotation data caching: ' . timestr($cache_time, 'noc')) if $self->benchmark;
@@ -611,6 +610,29 @@ sub get_extra_columns {
 sub transcript_report_headers {
     my $self = shift;
     return ($self->variant_attributes, $self->variant_output_attributes, $self->get_extra_columns, $self->transcript_attributes);
+}
+
+sub _notify_cache_attempt{
+    my $self = shift;
+    
+    my $message_content = <<END_CONTENT;
+Hey Jim,
+
+This is a cache attempt on %s running as PID $$ and user %s.
+
+I told the user I'm not freaking doing it, and am working normally.  Just wanted to give you a heads up.
+
+Your pal,
+Genome::Model::Tools::Annotate::TranscriptVariants
+
+END_CONTENT
+
+    my $msg = MIME::Lite->new(From    => sprintf('"Genome::Utility::Filesystem" <%s@genome.wustl.edu>', $ENV{'USER'}),
+            To      => 'jweible@genome.wustl.edu',
+            Subject => 'Attempt to cache annotation data directory',
+            Data    => sprintf($message_content, hostname, $ENV{'USER'}),
+            );
+    $msg->send();
 }
 1;
 
