@@ -4,9 +4,9 @@ use strict;
 use warnings;
 
 use above "Genome";
-use File::Temp 'tempdir';
 use Test::More tests => 6;
-
+use File::Copy;
+use File::Temp 'tempdir';
 BEGIN {
     use_ok('Genome::Model::Tools::Velvet::Graph');
 }
@@ -54,8 +54,5 @@ my $vg3 = Genome::Model::Tools::Velvet::Graph->create(
 );
 
 ok($vg3->execute, 'velvetg runs ok, but contigs.fa is empty');
-
-my @outputs = map{$dir."/$_"}qw(Log contigs.fa LastGraph stats.txt stats.txt.prev velvet_asm.afg);
-map{unlink}@outputs;
 
 exit;
