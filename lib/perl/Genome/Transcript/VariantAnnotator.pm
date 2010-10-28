@@ -182,10 +182,7 @@ sub _create_iterator_for_variant_intersection {
         $variant = $_[0];
 
         my $variant_start = $variant->{'start'};
-        # Hack to keep broken behavior of old annotator where we only
-        # consider the start position of the variation
-        #my $variant_stop  = $variant->{'stop'};
-        my $variant_stop = $variant_start;
+        my $variant_stop  = $variant->{'stop'};
 
         if ($variant->{'chromosome_name'} ne $last_chrom_name
             or
