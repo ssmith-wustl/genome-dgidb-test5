@@ -133,7 +133,7 @@ sub _execute_build {
 
     my @inputs = $build->inputs(name => 'command_arguments');
     @inputs = map { $_->{value_id} } @inputs ;
-    my $args .= join(' ', @inputs);
+    my $args = join(' ', @inputs);
 
     my $dir = $build->data_directory;
 

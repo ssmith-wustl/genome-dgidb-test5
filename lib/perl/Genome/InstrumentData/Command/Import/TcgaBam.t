@@ -8,16 +8,16 @@ $ENV{UR_DBI_NO_COMMIT} = "1";
 use above "Genome";
 use Test::More tests => 7;
 
-my $s = Genome::Sample->get(2824113569);
+#my $s = Genome::Sample->get(2865333474);
+my $tcga_name = "TCGA-AB-2804-03B-01W-0728-08";
 
-my $i = Genome::InstrumentData::Command::Import::Bam->create(
-    sample              => $s->name,  
-    library             => 'TEST-patient1-sample1-lib1',
+my $i = Genome::InstrumentData::Command::Import::TcgaBam->create(
+    tcga_name           => $tcga_name,  
     import_source_name  => 'Broad',
     original_data_path  => '/gsc/var/cache/testsuite/data/Genome-InstrumentData--Command-Import-Bam/test.bam',
-    description         => 'bwa file',
+    #description         => 'test TCGA importer',
     species_name        => 'human',
-    reference_sequence_build_id => 103107618,
+    #reference_sequence_build_id => 103107618,
 );
 
 ok($i, "Import Bam Command created ok");
@@ -28,8 +28,9 @@ note "instrument data id is ". $i->import_instrument_data_id."\n";
 my $i_d = Genome::InstrumentData::Imported->get($i->import_instrument_data_id);
 is($i_d->sequencing_platform,'solexa','platform is correct');
 is($i_d->user_name, $ENV{USER}, "user name is correct");
+ok($i_d->description,"description was created: ".$i_d->description);
 ok($i_d->import_date, "date is set");
-is($i_d->reference_sequence_build_id, 103107618, "Reference sequence properly retreived, " . $i_d->reference_sequence_build_id. ".");
+#is($i_d->reference_sequence_build_id, 103107618, "Reference sequence properly retreived, " . $i_d->reference_sequence_build_id. ".");
 
 my $ok;
 eval { $ok = UR::Context->_sync_databases(); };

@@ -1,11 +1,10 @@
-package Genome::InstrumentData::Command::Import::Bam;
-
-#REVIEW fdu
-#Long: need more specific external bam info like patient source, and add
-#methods to calculate read/base count
+package Genome::InstrumentData::Command::Import::TcgaBam;
 
 use strict;
 use warnings;
+
+
+#  TODO   rlong:    Add support for creating organism_samples and libraries for TCGA samples which originated outside of the center.
 
 use Genome;
 use File::Copy;
@@ -16,35 +15,24 @@ my %properties = (
         is => 'Text',
         doc => 'original data path of import data file',
     },
-    sample => {
+    tcga_name => {
         is => 'Text',
-        doc => 'sample name or ID for imported file',
+        doc => 'TCGA name for imported file',
     },
-    library => {
-        is => 'String',
-        doc => 'The library name or id associated with the data to be imported.',
-        is_optional => 1,
-    },
-    create_library => {
+    create_sample => {
         is => 'Boolean',
-        doc => 'If the library (specified by name in the library parameter) does not exist, create it.',
+        doc => 'Set this switch to automatically create organism_sample, library, and individual, if they are not not found.',
         default => 0,
         is_optional => 1,
     },
     import_source_name => {
         is => 'Text',
-        doc => 'source name for imported file, like Broad Institute',
+        doc => 'source name for imported file, like broad',
         is_optional => 1,
     },
     species_name => {
         is => 'Text',
         doc => 'species name for imported file, like human, mouse',
-        is_optional => 1,
-    },
-    sequencing_platform => {
-        is => 'Text',
-        doc => 'sequencing platform of import data, like solexa',
-        valid_values => ['solexa'],
         is_optional => 1,
     },
     description  => {
@@ -70,7 +58,7 @@ my %properties = (
 );
     
 
-class Genome::InstrumentData::Command::Import::Bam {
+class Genome::InstrumentData::Command::Import::TcgaBam {
     is  => 'Command',
     has => [%properties],
     doc => 'create an instrument data AND and alignment for a BAM',
@@ -86,32 +74,39 @@ class Genome::InstrumentData::Command::Import::Bam {
 sub execute {
     my $self = shift;
     my $bam_path = $self->original_data_path;
-    my $sample = Genome::Command::Base->resolve_param_value_from_text($self->sample, 'Genome::Sample');
-    unless($sample){
-        $self->error_message("Unable to find the sample name based on the parameter: ".$self->sample);
-        my $possible_name;
-        if($self->sample =~ /TCGA/){
-            print "got here.\n";
-            $possible_name = GSC::Organism::Sample->get(sample_name => $self->sample);
-            if($possible_name){
-                $self->error_message("There is an organism_sample which matches the TCGA name, which has a full_name of ".$possible_name->full_name);
-            }
+
+    my $tcga_name = $self->tcga_name;
+
+    my $organism_sample = GSC::Organism::Sample->get(sample_name => $tcga_name);
+
+    my $sample;
+    unless($organism_sample){
+        $self->status_message("Did not find an organism_sample associated with this TCGA name.");
+        unless(defined($self->create_sample)&& $self->create_sample == 1){
+            $self->error_message("Since --create-sample was not set, this process is dead.\n");
+            die $self->error_message;
         }
+        unless(defined($self->species_name)){
+            $self->error_message("If an organism_sample is to be created, a species_name is required.");
+            die $self->error_message;
+        }
+        my ($first, $second, $third) = split "-", $tcga_name;
+        my $individual_name = join "-", ($first,$second,$third);
+        unless( Genome::Sample::Command::Import->execute(sample_name => $tcga_name, individual_name => $individual_name, taxon_name => $self->species_name)){
+            $self->error_message("Sample Importation failed.");
+            die $self->error_message;
+        }
+    }
+    $sample = Genome::Sample->get(name=>$tcga_name);
+    unless($sample){
+        $self->error_message("Found an organism_sample for ".$tcga_name." but could not get a Genome::Sample.");
         die $self->error_message;
     }
-    my $library = Genome::Command::Base->resolve_param_value_from_text($self->library,'Genome::Library');
+    $self->status_message("Found an organism_sample associate with this TCGA name.");
+    my $library = Genome::Library->get(sample_id => $sample->id);
     unless($library){
-        unless($self->create_library){
-            $self->error_message("A library was not resolved from the input string ".$self->library);
-            die $self->error_message;
-        }
-        $library = Genome::Library->create(name=>$sample->name.'-extlibs',sample_id=>$sample->id);
-        unless($library){
-            $self->error_message("Unable to create a library.");
-            die $self->error_message;
-        }
-        $self->status_message("Created a library named ".$library->name);
-        print $self->status_message;
+        $self->status_message("Not able to find a library associated with this sample. If create_sample was set, it failed to create an appropriate library.");
+        die "We don't currently allow for creating libraries.\n";
     }
 
     unless (-s $bam_path and $bam_path =~ /\.bam$/) {
@@ -130,7 +125,8 @@ sub execute {
         }
         next if $property_name =~ /^(species|reference)_name$/;
         next if $property_name =~ /^library$/;
-        next if $property_name =~/^sample$/;
+        next if $property_name =~ /tcga/;
+        next if $property_name =~ /^create_sample$/;
         $params{$property_name} = $self->$property_name if $self->$property_name;
     }
     $params{sample_id} = $sample->id;
@@ -139,6 +135,9 @@ sub execute {
     $params{import_format} = "bam";
     $params{reference_sequence_build_id} = $self->reference_sequence_build_id;
     $params{library_id} = $library->id;
+    unless(exists($params{description})){
+        $params{description} = "imported ".$self->import_source_name." bam, tcga name is ".$tcga_name;
+    }
     
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
     unless ($import_instrument_data) {
