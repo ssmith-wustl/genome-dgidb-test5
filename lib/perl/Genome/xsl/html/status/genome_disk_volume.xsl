@@ -34,15 +34,15 @@
 -->
       <xsl:for-each select="//aspect[@name='allocations']">
 
-        var allocation_data_kb = {
-            allocations: {
+        var allocations = [
         <xsl:for-each select="object">
-
-          "<xsl:value-of select="display_name"/>": <xsl:value-of select="aspect[@name='kilobytes_requested']/value"/>,
-
+            {
+                "owner_class_name": "<xsl:value-of select="aspect[@name='owner_class_name']/value"/>",
+                "display_name": "<xsl:value-of select="display_name"/>",
+                "kilobytes_requested": "<xsl:value-of select="aspect[@name='kilobytes_requested']/value"/>"
+            },
         </xsl:for-each>
-        }
-        };
+        ];
       </xsl:for-each>
 
 
@@ -106,7 +106,7 @@
 
         <div class="span-24 last" style="margin-bottom: 10px">
           <script type="text/javascript">
-            render_treemap(allocation_data_kb, 950, 600);
+            render_treemap(allocations, 950, 600);
           </script>
         </div>
 
