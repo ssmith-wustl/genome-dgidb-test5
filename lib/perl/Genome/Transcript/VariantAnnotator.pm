@@ -270,13 +270,14 @@ sub transcripts {
     my @annotations;
     my $variant_checked = 0;
 
+    Genome::Model::Tools::Annotate::LookupConservationScore->class(); # get it loaded so we can call lookup_sequence
+
     foreach my $substruct ( @$crossing_substructures ) {
         # If specified, check that the reference sequence stored on the variant correctly matches our reference
         if ($self->check_variants and not $variant_checked) {
             unless ($variant{reference} eq '-') {
                 my $chrom = $variant{chromosome_name};
                 my $species = $substruct->transcript_species;
-                Genome::Model::Tools::Annotate::LookupConservationScore->class();
                 my $ref_seq = Genome::Model::Tools::Sequence::lookup_sequence(
                                   chromosome => $chrom,
                                   start => $variant_start,
