@@ -5,6 +5,49 @@
 
   <xsl:template name="genome_disk_volume" match="object[./types[./isa[@type='Genome::Disk::Volume']]]">
     <xsl:comment>template: status/genome_disk_volume.xsl match: object[./types[./isa[@type='Genome::Disk::Volume']]]</xsl:comment>
+    <script type="text/javascript" src="/res/js/pkg/protovis.js"></script>
+    <script type="text/javascript" src="/res/js/app/status/genome_disk_volume_treemap.js"></script>
+    <script type="text/javascript" src="/res/js/pkg/json2.js"></script>
+    <script type="text/javascript" src="/res/tmp/flare.js"></script>
+
+    <xsl:comment>allocation data JSON</xsl:comment>
+    <script type="text/javascript">
+
+<!--      <xsl:for-each select="//aspect[@name='allocations']">
+
+        var allocation_data = {
+        <xsl:for-each select="object">
+          {
+          "owner_id": "<xsl:value-of select="aspect[@name='owner_id']/value"/>",
+          "owner_class_name": "<xsl:call-template name="str:substring-after-last"><xsl:with-param name="text"> <xsl:value-of select="aspect[@name='owner_class_name']/value"/></xsl:with-param><xsl:with-param name="chars"><xsl:text>Genome::Model::</xsl:text></xsl:with-param></xsl:call-template>",
+
+          "kilobytes_requested": <xsl:value-of select="aspect[@name='kilobytes_requested']/value"/>,
+          <xsl:if test="aspect[@name='build']">
+            "build_id": "<xsl:value-of select="aspect[@name='build']/object/aspect[@name='build_id']/value"/>",
+            "model_id": "<xsl:value-of select="aspect[@name='build']/object/aspect[@name='model_id']/value"/>",
+            "build_status": "<xsl:value-of select="aspect[@name='build']/object/aspect[@name='status']/value"/>",
+          </xsl:if>
+          },
+        </xsl:for-each>
+        };
+      </xsl:for-each>
+-->
+      <xsl:for-each select="//aspect[@name='allocations']">
+
+        var allocation_data_kb = {
+            allocations: {
+        <xsl:for-each select="object">
+
+          "<xsl:value-of select="display_name"/>": <xsl:value-of select="aspect[@name='kilobytes_requested']/value"/>,
+
+        </xsl:for-each>
+        }
+        };
+      </xsl:for-each>
+
+
+    </script>
+
     <xsl:call-template name="control_bar_view"/>
 
     <xsl:call-template name="view_header">
@@ -57,12 +100,18 @@
                 </tbody>
               </table>
             </div>
-
-                <xsl:call-template name="genome_disk_volume_table"></xsl:call-template>
           </div>
 
-
         </div> <!-- end .objects -->
+
+        <div class="span-24 last" style="margin-bottom: 10px">
+          <script type="text/javascript">
+            render_treemap(allocation_data_kb, 950, 600);
+          </script>
+        </div>
+
+        <xsl:call-template name="genome_disk_volume_table"></xsl:call-template>
+
       </div> <!-- end container -->
     </div> <!-- end content -->
 
@@ -94,8 +143,8 @@
           <tbody>
 
             <xsl:for-each select="/object/aspect[@name='allocations']/object">
-                <xsl:sort select="aspect[@name='owner_id']/value" data-type="number" order="ascending"/>
-                <xsl:call-template name="genome_disk_volume_table_row"/>
+              <xsl:sort select="aspect[@name='owner_id']/value" data-type="number" order="ascending"/>
+              <xsl:call-template name="genome_disk_volume_table_row"/>
             </xsl:for-each>
           </tbody>
         </table>
@@ -108,22 +157,33 @@
     <xsl:comment>template: status/genome_disk_volume.xsl name: genome_disk_volume_table_row</xsl:comment>
     <tr>
       <td><xsl:value-of select="aspect[@name='owner_id']/value"/></td>
-      <td> <xsl:call-template name="str:substring-after-last">
-            <xsl:with-param name="text"> <xsl:value-of select="aspect[@name='owner_class_name']/value"/> </xsl:with-param>
-            <xsl:with-param name="chars"> <xsl:text>Genome::Model::</xsl:text> </xsl:with-param>
-           </xsl:call-template>
+      <td>
+        <xsl:call-template name="str:substring-after-last">
+          <xsl:with-param name="text"> <xsl:value-of select="aspect[@name='owner_class_name']/value"/> </xsl:with-param>
+          <xsl:with-param name="chars"> <xsl:text>Genome::Model::</xsl:text> </xsl:with-param>
+        </xsl:call-template>
       </td>
-      <td> <xsl:value-of select="aspect[@name='build_status']/value"/> </td>
+      <td>
+        <xsl:choose>
+          <xsl:when test="aspect[@name='build']">
+            <xsl:value-of select="aspect[@name='build']/object/aspect[@name='status']/value"/>
+          </xsl:when>
+          <xsl:otherwise>
+            --
+          </xsl:otherwise>
+        </xsl:choose>
+      </td>
+
       <td> <xsl:value-of select="aspect[@name='kilobytes_requested']/value"/> </td>
       <td> <xsl:value-of select="aspect[@name='kilobytes_used']/value"/> </td>
-      <td> <a> 
-            <xsl:variable name="absolute_path" select="aspect[@name='absolute_path']/value"/>
-            <xsl:attribute name="href"> 
-                <xsl:value-of select="$absolute_path"/>
-            </xsl:attribute> 
-            <xsl:value-of select="substring($absolute_path,1,30)"/>...
-            </a> 
-       </td>
+      <td> <a>
+        <xsl:variable name="absolute_path" select="aspect[@name='absolute_path']/value"/>
+        <xsl:attribute name="href">
+          <xsl:value-of select="$absolute_path"/>
+        </xsl:attribute>
+        <xsl:value-of select="substring($absolute_path,1,30)"/>...
+      </a>
+      </td>
     </tr>
   </xsl:template>
 
