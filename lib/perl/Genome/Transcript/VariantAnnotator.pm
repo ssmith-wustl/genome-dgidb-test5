@@ -242,6 +242,8 @@ sub transcripts {
     my $variant_start = $variant{'start'};
     my $variant_stop = $variant{'stop'};
 
+    $variant{'type'} = uc($variant{'type'});
+
     # Make sure variant is set properly
     unless (defined($variant_start) and defined($variant_stop) and defined($variant{variant})
             and defined($variant{reference}) and defined($variant{type})
@@ -301,11 +303,11 @@ sub transcripts {
 # Checks that the sequence on the variant is valid
 sub is_valid_variant {
     my ($self, $variant) = @_;
-    unless ($variant->{type} =~ /del/i) {
+    unless ($variant->{type} eq 'DEL') {
         return 0 if $variant->{variant} =~ /\d/; 
     }
 
-    unless ($variant->{type} =~ /ins/i) {
+    unless ($variant->{type} eq 'INS') {
         return 0 if $variant->{reference} =~ /\d/; 
     }
     return 1;
@@ -351,17 +353,47 @@ sub _transcript_substruct_annotation {
     # structure at variant start position that will also need removed once this is fixed, and there is still
     # a definite bias for variant start over variant stop throughout this module
 
+#    # If the variant extends beyond the current substructure, it needs to be resized
+#    if ($variant{start} < $substruct->{structure_start}) {
+#       my $diff = $substruct->{structure_start} - $variant{start};
+#       $variant{start} = $variant{start} + $diff;
+#       unless ($variant{type} eq 'DEL') {
+#           $variant{variant} = substr($variant{variant}, $diff);
+#       }
+#       unless ($variant{type} eq 'INS') {
+#           $variant{reference} = substr($variant{reference}, $diff);
+#       }
+#    }
+#    elsif ($variant{stop} > $substruct->{structure_stop}) {
+#        my $diff = $variant{stop} - $substruct->{structure_stop};
+#        $variant{stop} = $variant{stop} - $diff;
+#        unless ($variant{type} eq 'DEL') {
+#            $variant{variant} = substr($variant{variant}, 0, length($variant{variant}) - $diff);
+#        }
+#        unless ($variant{type} eq 'INS') {
+#            $variant{reference} = substr($variant{reference}, 0, length($variant{reference}) - $diff);
+#        }
+#    }
+
     # All sequence stored on the variant is forward stranded and needs to be reverse
     # complemented if the transcript is reverse stranded.
     my $strand = $substruct->transcript_strand;
     if ($strand eq '-1') {
         my ($new_variant, $new_reference);
-        unless ($variant{type} =~ /del/i) {
+        unless ($variant{type} eq 'DEL') {
             $new_variant = $self->reverse_complement($variant{variant});
+if ($new_variant eq "ARGH!!!") {
+print "variant Reverse compliment failed... variant ",Data::Dumper::Dumper(\%variant)," substruct ",Data::Dumper::Dumper($substruct),"\n";
+croak;
+}
             $variant{variant} = $new_variant;
         }
-        unless ($variant{type} =~ /ins/i) {
+        unless ($variant{type} eq 'INS') {
             $new_reference = $self->reverse_complement($variant{reference});
+if ($new_reference eq "ARGH!!!") {
+print "reference Reverse compliment failed... variant ",Data::Dumper::Dumper(\%variant)," substruct ",Data::Dumper::Dumper($substruct),"\n";
+croak;
+}
             $variant{reference} = $new_reference;
         }
     }
@@ -486,7 +518,7 @@ sub _transcript_annotation_for_intron {
     # If variant occurs within 3-10bp, it's splice region
     # Otherwise, it's intronic
     my $trv_type;
-    if ($variant->{type} =~ /ins|del/i) {
+    if ($variant->{type} eq 'INS' or $variant->{'type'} eq 'DEL') {
         $trv_type = "intronic";
         $trv_type = "splice_region_" . lc $variant->{type} if $distance_to_edge <= 10;
         $trv_type = "splice_site_" . lc $variant->{type} if $distance_to_edge <= 2;
@@ -533,13 +565,14 @@ sub _transcript_annotation_for_intron {
 sub _transcript_annotation_for_cds_exon {
     my ($self, $variant, $structure) = @_;
     
+
     # If the variant continues beyond the stop position of the exon, then the variant sequence
     # needs to be modified to stop at the exon's stop position. The changes after the exon's stop
     # affect the intron, not the coding sequence, and shouldn't be annotated here. Eventually,
     # it's possible that variants may always be split up so they only touch one structure, but for 
     # now this will have to do.
     # TODO This can be removed once variants spanning structures are handled properly
-    if ($variant->{stop} > $structure->structure_stop and $variant->{type} =~ /del/i) {
+    if ($variant->{stop} > $structure->structure_stop and $variant->{type} eq 'DEL') {
         my $bases_beyond_stop = $variant->{stop} - $structure->structure_stop;
         my $new_variant_length = (length $variant->{reference}) - $bases_beyond_stop;
         $variant->{reference} = substr($variant->{reference}, 0, $new_variant_length);
@@ -556,7 +589,7 @@ sub _transcript_annotation_for_cds_exon {
 
     my ($trv_type, $protein_string);
     my ($reduced_original_aa, $reduced_mutated_aa, $offset) = ($original_aa, $mutated_aa, 0);
-    if ($variant->{type} =~ /ins/i) {
+    if ($variant->{type} eq 'INS') {
         ($reduced_original_aa, $reduced_mutated_aa, $offset) = $self->_reduce($original_aa, $mutated_aa);
         $protein_position += $offset;
 
@@ -596,7 +629,7 @@ sub _transcript_annotation_for_cds_exon {
             }
         }
     }
-    elsif ($variant->{type} =~ /del/i) {
+    elsif ($variant->{type} eq 'DEL') {
         ($reduced_original_aa, $reduced_mutated_aa, $offset) = $self->_reduce($original_aa, $mutated_aa);
         $protein_position += $offset;
 
@@ -618,7 +651,7 @@ sub _transcript_annotation_for_cds_exon {
             }
         }
     }
-    elsif ($variant->{type} =~ /dnp/i or $variant->{type} =~ /snp/i) {
+    elsif ($variant->{type} eq 'DNP' or $variant->{type} eq 'SNP') {
         if ($mutated_aa eq $original_aa) {
             $trv_type = 'silent';
             $protein_string = "p." . $original_aa . $protein_position;
@@ -749,7 +782,7 @@ sub _apply_indel_and_translate{
     $sequence = substr($sequence, $first_affected_codon_start);
 
     my $mutated_seq;
-    if ($variant->{type} =~ /del/i) {
+    if ($variant->{type} eq 'DEL') {
         my $first = shift @structures;
         #my $deleted_bases = abs(min($first->stop_with_strand, $stop) - $start) + 1;
         my $deleted_bases = min(abs($first->stop_with_strand - $start), abs($stop - $start)) + 1;
@@ -766,7 +799,7 @@ sub _apply_indel_and_translate{
         }
         $mutated_seq = substr($sequence, 0, $codon_position) . substr($sequence, $codon_position + $deleted_bases);
     }
-    elsif ($variant->{type} =~ /ins/i) {
+    elsif ($variant->{type} eq 'INS') {
         $mutated_seq = substr($sequence, 0, $codon_position + 1) . $variant->{variant} . substr($sequence, $codon_position + 1);
         $mutated_seq = substr($mutated_seq, 3) if $codon_position == 2; #When codon_position == 2, there's an extra leading codon that needs to get hacked off here so we don't mislead the analysts into thinking an extra codon changed
     }
@@ -1010,13 +1043,13 @@ sub _get_affected_sequence {
     my $protein_position = int(($coding_bases_before + $variant_position - $phase_bases) / 3) + 1;
 
     my ($orig_seq, $orig_codon_pos, $mutated_seq, $relative_start, $relative_stop);
-    if ($variant->{type} =~ /snp/i) {
+    if ($variant->{type} eq 'SNP') {
         ($orig_seq, $orig_codon_pos) = $structure->codon_at_position($variant->{start});
         $mutated_seq = substr($orig_seq, 0, $orig_codon_pos) .
             $variant->{variant} . 
             substr($orig_seq, $orig_codon_pos + 1);
     }
-    elsif ($variant->{type} =~ /dnp/i) {
+    elsif ($variant->{type} eq 'DNP') {
         ($orig_seq, $relative_start, $relative_stop) = $structure->codons_in_range($variant->{start}, $variant->{stop}, $dnp_extra_codons);
 
         my $codon_position = ($relative_start - 1) % 3;
@@ -1042,11 +1075,11 @@ sub _get_affected_sequence {
         my $codons_before = int($bases_before / 3);
         $protein_position -= $codons_before;
 
-        if ($variant->{type} =~ /del/i) {
+        if ($variant->{type} eq 'DEL') {
             $mutated_seq = substr($orig_seq, 0, $relative_start - 1) .
                            substr($orig_seq, $relative_stop);
         }
-        elsif ($variant->{type} =~ /ins/i) {
+        elsif ($variant->{type} eq 'INS') {
             $protein_position-- if $codon_position == 2; # This little fix is due to the variant start of insertions being
                                                          # the base before the insertion instead of the first base of variation
                                                          # as is the case with deletions. 
