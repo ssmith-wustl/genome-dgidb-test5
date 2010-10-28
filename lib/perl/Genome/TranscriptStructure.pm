@@ -402,7 +402,7 @@ sub last_codons_of_previous_exon {
 
     my $seq_obj = Genome::TranscriptCodingSequence->get(
         data_directory => $self->data_directory,
-        transcript_id => $self->transcript_transcript_id,
+        transcript_id => $self->transcript_id,
     );
     return unless $seq_obj;
     my $seq = $seq_obj->sequence;
@@ -427,7 +427,7 @@ sub first_codons_of_next_exon {
 
     my $seq_obj = Genome::TranscriptCodingSequence->get(
         data_directory => $self->data_directory,
-        transcript_id => $self->transcript_transcript_id,
+        transcript_id => $self->transcript_id,
     );
     return unless $seq_obj;
     my $seq = $seq_obj->sequence;
