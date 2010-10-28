@@ -755,7 +755,7 @@ Region_calls = function(datafile,chr,start,end,permun=NA,output_dir=".")
 
 {
 
-start=as.numeric(start);
+start=as.integer(start);
 end=as.integer(end);
 #end=as.numeric(end);
 permun=as.numeric(permun);
