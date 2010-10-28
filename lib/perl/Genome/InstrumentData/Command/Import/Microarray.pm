@@ -174,6 +174,7 @@ sub process_imported_files {
     $self->status_message("Microarray allocation created at $target_path .");
     print "attempting to copy data to allocation\n";
     if(defined($self->original_data_path)){
+        local $File::Copy::Recursive::KeepMode = 0;
         my $status = File::Copy::Recursive::dircopy($self->original_data_path,$target_path);
         unless($status) {
             $self->error_message("Directory copy failed to complete.\n");
