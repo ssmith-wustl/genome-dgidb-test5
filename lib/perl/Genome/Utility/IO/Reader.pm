@@ -10,8 +10,6 @@ use warnings;
 
 use Genome;
 
-require Cwd;
-
 class Genome::Utility::IO::Reader {
     is => 'UR::Object',
     has => [
@@ -57,7 +55,6 @@ sub create {
         $self->input($input);
     }
     else {
-        $input = Cwd::abs_path($input);
         my $fh = eval { Genome::Utility::FileSystem->open_file_for_reading($input) };
         if (!$fh or $@) {
             $self->error_message("Can't open file $input for reading: $@");
