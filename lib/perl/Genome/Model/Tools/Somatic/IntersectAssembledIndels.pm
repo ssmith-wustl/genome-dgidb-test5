@@ -167,60 +167,16 @@ sub collate_and_output_daterz {
         my $type = $fields[8];
 
 
-=pod
-        #find ORIGINAL call closest to assembled call we decided was somatic 
-                my @candidates = grep { /^$chr\t/ } @original_calls;
-        for my $candidate (@candidates) {
-            my ($cchr, $cpos)  = split /\t/, $candidate;
-            if($original_call) {
-                if(abs($cpos - $pos) < abs($original_pos - $pos)) {
-                    $original_call=$candidate;
-                    $original_pos=$cpos;              
-                }
-            }
-            else {
-                $original_call = $candidate;
-                $original_pos = $cpos;
-            }
-
-        } 
-=cut
-
-#        my @orig_fields = split /\t/, $original_call;
-#        my $ref = $orig_fields[3];
-#        my $var = $orig_fields[4];
-#        my $otype = $orig_fields[5];
-#        my $comments;
         my $start;
         my $stop;
-        #compare the original call we found to the call we have.
-#        if ($original_pos != $pos) {
-        #    print "$original_pos\t$pos\n";
-#            $comments = "POSITION SHIFTED:" . abs($original_pos - $pos);
-#        }
-#        if($otype ne $type) {
-#            $comments .= " TYPE CHANGE";
-#            $ref = "-";
-#            $var = "-";
-#            $start = $pos;
-#            $stop  = $pos+1;
-#        }
-#        else{
         if ($type =~ m/DEL/) {
             $start=$pos; 
             $stop= $pos + $size;
-#                if (length($ref) != $size) {
-#                    $comments .= " SIZE SHIFTED:" . abs($size - length($ref));
-#                }
         }
         elsif($type =~ m/INS/ ) {
             $start=$pos;
             $stop=$pos+1;
-#                if (length($var) != $size) {
-#                    $comments .= " SIZE SHIFTED:" . abs($size - length($var));
-#                }
         }
-#        }
         my ($ref, $var) = $self->generate_alleles($DONE, @fields);
         my $output_line = join("\t",$chr,$start,$stop,$ref,$var);
 
