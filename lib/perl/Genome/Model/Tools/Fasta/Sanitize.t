@@ -24,7 +24,8 @@ my $DIR = Cwd::abs_path('/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fasta-
 ok(-d $DIR, "Test dir ($DIR) exists");
 my $DIRTY_FASTA = $DIR.'/dirty.fasta';
 ok(-f $DIRTY_FASTA, "Dirty fasta ($DIRTY_FASTA) exists");
-my $TMPDIR = tempdir(DIR => $DIR, CLEANUP => 1);
+#my $TMPDIR = tempdir(DIR => $DIR, CLEANUP => 1);
+my $TMPDIR = Genome::Utility::FileSystem->create_temp_directory;
 ok(-d $TMPDIR, "Temp dir ($TMPDIR) exists");
 
 my $san = Genome::Model::Tools::Fasta::Sanitize->create(
