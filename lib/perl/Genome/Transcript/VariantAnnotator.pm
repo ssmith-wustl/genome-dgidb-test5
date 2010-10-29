@@ -404,18 +404,10 @@ sub _transcript_substruct_annotation {
         my ($new_variant, $new_reference);
         unless ($variant{type} eq 'DEL') {
             $new_variant = $self->reverse_complement($variant{variant});
-if ($new_variant eq "ARGH!!!") {
-print "variant Reverse compliment failed... variant ",Data::Dumper::Dumper(\%variant)," substruct ",Data::Dumper::Dumper($substruct),"\n";
-croak;
-}
             $variant{variant} = $new_variant;
         }
         unless ($variant{type} eq 'INS') {
             $new_reference = $self->reverse_complement($variant{reference});
-if ($new_reference eq "ARGH!!!") {
-print "reference Reverse compliment failed... variant ",Data::Dumper::Dumper(\%variant)," substruct ",Data::Dumper::Dumper($substruct),"\n";
-croak;
-}
             $variant{reference} = $new_reference;
         }
     }
