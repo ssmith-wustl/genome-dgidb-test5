@@ -11,9 +11,10 @@ my $start = 126008345;
 my $stop = 126010576;
 my $organism = "human"; # or mouse
 
-my $out = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Snp-GetDbsnps/GetDbsnps.testout";
 
-my $dbsnpout ="/gsc/var/cache/testsuite/data/Genome-Model-Tools-Snp-GetDbsnps/GetDbsnps.testout.dbsnp.gff";
+my $output_dir = Genome::Utility::FileSystem->create_temp_directory('Genome-Model-Tools-Snp-GetDbsnps');
+my $out = "$output_dir/GetDbsnps.testout";
+my $dbsnpout ="$output_dir/GetDbsnps.testout.dbsnp.gff";
 if ($dbsnpout && -e $dbsnpout) {`rm $dbsnpout`;}
 my $expected_output = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Snp-GetDbsnps/GetDbsnps.expectedout.dbsnp.gff";
 
