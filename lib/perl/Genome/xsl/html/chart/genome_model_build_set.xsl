@@ -129,10 +129,8 @@ function renderData(data,field) {
              }
          }).map(function(m) {
              for ( var metric in m['metrics'] ) {
-               //console.log(m['metrics'][metric].id)
-               var items = m['metrics'][metric].id.split('\t',3)
-               if ( items[2] == field ) {
-                 return { x: items[0], y: items[1] }
+               if ( m['metrics'][metric].name == field ) {
+                 return { x: m['metrics'][metric].build_id, y: m['metrics'][metric].value }
                }
              }
          })
@@ -160,8 +158,7 @@ $(document).ready(function () {
             for ( var member in data['members'] ) {
               if ( data['members'][member].hasOwnProperty('metrics') ) {
                 $.each( data['members'][member]['metrics'].map(function(m) {
-                        var items = m.id.split('\t',3)
-                        return items[2]
+                          return m.name
                         }), function(index, value) {
                         fields[value] = 1
                       })
