@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Somatic::AssembleAdaptedIndel;
+package Genome::Model::Tools::Somatic::AssembleIndelBed;
 
 use strict;
 use warnings;
@@ -11,7 +11,7 @@ my $SAM_DEFAULT = Genome::Model::Tools::Sam->default_samtools_version;
 
 
 
-class Genome::Model::Tools::Somatic::AssembleAdaptedIndel {
+class Genome::Model::Tools::Somatic::AssembleIndelBed {
     is => 'Command',
        has => [
            indel_file =>
