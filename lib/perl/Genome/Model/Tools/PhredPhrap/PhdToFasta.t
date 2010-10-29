@@ -2,34 +2,30 @@
 
 use strict;
 use warnings;
-use Test::More tests => 3;
+
 use above 'Genome';
 
-BEGIN {
-        use_ok('Genome::Model::Tools::PhredPhrap::PhdToFasta');
-}
+use File::Compare;
+use File::Temp;
+use Test::More;
+
+use_ok('Genome::Model::Tools::PhredPhrap::PhdToFasta') or die;
 
 my $path = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-PhredPhrap'; #directory for sample data and output
 my $static = "$path/PhdToFasta/_fasta_output.static"; #static file for comparison to output
-my %params =
-(
+my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
+my $fasta_file = $tmpdir.'/fasta';
+
+my $phd_to_fasta = Genome::Model::Tools::PhredPhrap::PhdToFasta->create(
     phd_dir => "$path/phd_dir/",
     phd_file => "$path/PhdToFasta/phd.txt",  
-    fasta_file => "$path/PhdToFasta/fasta_output.txt",
+    fasta_file => $fasta_file,
     _error_file => "$path/PhdToFasta/error.txt", 
 );
-
-my $phd_to_fasta = Genome::Model::Tools::PhredPhrap::PhdToFasta->create(%params);
-
 isa_ok($phd_to_fasta, "Genome::Model::Tools::PhredPhrap::PhdToFasta");
-
 ok($phd_to_fasta->execute,'execute PhdToFasta');
+is(File::Compare::compare($phd_to_fasta->fasta_file, "$path/PhdToFasta/_fasta_output.static"), 0, 'fasta file matches');
+is(File::Compare::compare($phd_to_fasta->qual_file, "$path/PhdToFasta/_fasta_output.qual.static"), 0, 'qual file matches');
 
-(unlink $phd_to_fasta->fasta_file . ".qual" and 
- unlink $phd_to_fasta->fasta_file)              
-                                   if ((-e $phd_to_fasta->fasta_file or 
-                                        die("Output file was not created"))
-                                   and (-s $phd_to_fasta->fasta_file == 
-                                        -s $static or
-                                        die("Generated file $phd_to_fasta->fasta_file does not match static file:$static")));
+done_testing();
 exit;
