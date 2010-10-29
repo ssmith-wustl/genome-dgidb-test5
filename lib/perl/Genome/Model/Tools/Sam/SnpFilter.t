@@ -15,10 +15,11 @@ BEGIN {
 }
 
 my $root_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sam/SnpFilter';
+my $run_dir  = '/gsc/var/cache/testsuite/running_testsuites';
 
 my $tmp_dir  = File::Temp::tempdir(
     "SnpFilter_XXXXXX", 
-    DIR     => $root_dir,
+    DIR     => $run_dir,
     CLEANUP => 1,
 );
 

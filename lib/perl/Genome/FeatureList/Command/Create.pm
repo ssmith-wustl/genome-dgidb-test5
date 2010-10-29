@@ -80,6 +80,7 @@ sub execute {
         return;
     }
 
+    $self->status_message('Created feature-list "' . $feature_list->name . '" with ID: ' . $feature_list->id);
     return $feature_list;
 }
 

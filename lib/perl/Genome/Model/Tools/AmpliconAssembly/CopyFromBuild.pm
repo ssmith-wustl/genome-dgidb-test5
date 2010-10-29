@@ -182,16 +182,14 @@ sub _create_amplicon_assembly {
 sub _recursive_copy {
     my ($self, $from_dir, $to_dir) = @_;
 
-    eval {
-        File::Copy::Recursive::dircopy($from_dir, $to_dir);
-    };
-
-    if ( $@ ) {
+    my $rv = eval { File::Copy::Recursive::dircopy($from_dir, $to_dir); };
+    if ( not $rv ) {
         $self->error_message(
             sprintf(
-                'Can\'t copy build directory (%s) to directory (%s)',
+                'Can\'t copy build directory (%s) to directory (%s): %s',
                 $from_dir,
                 $to_dir,
+                ( $@ ? $@ : ( $! ? $! : 'No error set' )),
             )
         );
         return;

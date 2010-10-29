@@ -77,7 +77,8 @@ sub execute {                               # replace with real execution logic.
 	my $snv_file = $self->snv_file;
 	my $snv_annotation_file = $self->snv_annotation_file;
 	my $output_file = $self->output_file;
-#	my $indel_file = $self->indel_file;
+	my $indel_file = $self->indel_file;
+	my $indel_annotation_file = $self->indel_annotation_file;
 
 	## Declare parameter defaults ##
 
@@ -114,7 +115,6 @@ sub execute {                               # replace with real execution logic.
 	
 	open(OUTFILE, ">$output_file") or die "Can't open output file: $!\n";
 	print OUTFILE "Hugo_Symbol\tEntrez_Gene_Id\tCenter\tNCBI_Build\tChromosome\tStart_position\tEnd_position\tStrand\tVariant_Classification\tVariant_Type\tReference_Allele\tTumor_Seq_Allele1\tTumor_Seq_Allele2\tdbSNP_RS\tdbSNP_Val_Status\tTumor_Sample_Barcode\tMatched_Norm_Sample_Barcode\tMatch_Norm_Seq_Allele1\tMatch_Norm_Seq_Allele2\tTumor_Validation_Allele1\tTumor_Validation_Allele2\tMatch_Norm_Validation_Allele1\tMatch_Norm_Validation_Allele2\tVerification_Status\tValidation_Status\tMutation_Status\tSequencing_Phase\tSequence_Source\tValidation_Method\tScore\tBAM_file\tSequencer\n";		
-
 
 
 	## Load the annotations ##
@@ -164,11 +164,68 @@ sub execute {                               # replace with real execution logic.
 			$maf_line .=  "dbGAP\t";
 			$maf_line .=  "$platform\n";			
 
-			print OUTFILE "$maf_line\n";
+			print OUTFILE "$maf_line";
 		}
 	}
 	
 	close($input);
+	
+	
+	
+	## Load the annotations ##
+	
+	%annotations = load_annotations($indel_annotation_file);
+	
+	
+	## Parse the Indel file ##
+	
+	## Parse the variant file ##
+
+	$input = new FileHandle ($indel_file);
+	$lineCounter = 0;
+	
+	while (<$input>)
+	{
+		chomp;
+		my $line = $_;
+		$lineCounter++;		
+	
+		my @lineContents = split(/\t/, $line);			
+
+		my $chrom = $lineContents[0];
+		my $chr_start = $lineContents[1];
+		my $chr_stop = $lineContents[2];
+		my $ref = $lineContents[3];
+		my $var = $lineContents[4];
+
+		my $key = "$chrom\t$chr_start\t$chr_stop\t$ref\t$var";	
+
+		if($annotations{$key})
+		{
+			(my $var_type, my $gene, my $trv_type) = split(/\t/, $annotations{$key});
+
+			my $maf_line = "";
+
+			$maf_line .=  "$gene\t0\t$center\t$genome_build\t$chrom\t$chr_start\t$chr_stop\t+\t";
+			$maf_line .=  "$trv_type\t$var_type\t$ref\t";
+			$maf_line .=  "$var\t$var\t";
+			$maf_line .=  "\t\t"; #dbSNP
+			$maf_line .=  "$tumor_sample\t$normal_sample\t$ref\t$ref\t";
+			$maf_line .=  "\t\t\t\t"; # Validation alleles
+			$maf_line .=  "Unknown\tUnknown\tSomatic\t";
+			$maf_line .=  "$phase\tCapture\t";
+			$maf_line .=  "\t"; # Val method
+			$maf_line .=  "1\t"; # Score
+			$maf_line .=  "dbGAP\t";
+			$maf_line .=  "$platform\n";			
+
+			print OUTFILE "$maf_line";
+		}
+	}
+	
+	close($input);
+		
+	
 	
 	close(OUTFILE);
 	

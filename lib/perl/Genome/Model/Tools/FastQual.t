@@ -36,8 +36,9 @@ sub Genome::Model::Tools::FastQual::Tester::execute {
 
 # Files
 my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastQual';
+my $example_in_file = $dir.'/fast_qual.example.fastq';
 my $example_out_file = $dir.'/fast_qual.example.fastq';
-ok(-s $example_out_file, 'example out file exists');
+ok(-s $example_out_file, 'example out fastq file exists');
 my $example_metrics_file = $dir.'/fast_qual.example.metrics';
 ok(-s $example_metrics_file, 'example metrics file exists');
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
@@ -47,8 +48,8 @@ my $metrics_file = $tmpdir.'/metrics.txt';
 my $metrics2_file = $tmpdir.'/metrics2.txt';
 
 # Create and execute
-my $fastq_tester = Genome::Model::Tools::FastQual::Tester->create(
-    input => [ "/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastQual/in.fastq" ],
+my $fastq_tester = Genome::Model::Tools::FastQual->create(
+    input => [ $example_in_file ],
     output => [ $out_file ],
     metrics_file => $metrics_file,
 );
@@ -58,8 +59,8 @@ is(File::Compare::compare($out_file, $example_out_file), 0, 'output file ok');
 is(File::Compare::compare($metrics_file, $example_metrics_file), 0, 'metrics file ok');
 
 # Create and execute, again making sure metrcis are not stomped on
-my $fastq_tester2 = Genome::Model::Tools::FastQual::Tester->create(
-    input => [ "/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastQual/in.fastq" ],
+my $fastq_tester2 = Genome::Model::Tools::FastQual->create(
+    input => [ $example_in_file ],
     output => [ $out2_file ],
     metrics_file => $metrics2_file,
 );
@@ -69,7 +70,7 @@ is(File::Compare::compare($out2_file, $example_out_file), 0, 'output 2 file ok')
 is(File::Compare::compare($metrics2_file, $example_metrics_file), 0, 'metrics 2 file ok');
 
 # Test pipes
-my $pipe_tester = Genome::Model::Tools::FastQual::Tester->create(
+my $pipe_tester = Genome::Model::Tools::FastQual->create(
     input => [qw/ PIPE /],
     output => [qw/ PIPE /], 
 );
@@ -84,6 +85,7 @@ eval{
 diag("\n".$@);
 ok((!$rv && $@ =~ /No pipe meta info/), 'failed to open reader b/c no meta info');
 
+#print "$tmpdir\n"; <STDIN>;
 done_testing();
 exit;
     

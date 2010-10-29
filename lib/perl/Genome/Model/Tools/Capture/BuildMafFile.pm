@@ -633,6 +633,10 @@ sub trv_to_mutation_type
   return("In_Frame_Del") if($trv_type eq "in_frame_del");
   return("In_Frame_Ins") if($trv_type eq "in_frame_ins");
   return("RNA") if($trv_type eq "rna");
+  return("3'UTR") if($trv_type eq "3_prime_untranslated_region");
+  return("5'UTR") if($trv_type eq "5_prime_untranslated_region");
+  return("3'Flank") if($trv_type eq "3_prime_flanking_region");
+  return("5'Flank") if($trv_type eq "5_prime_flanking_region");
 
   warn "Unknown mutation type $trv_type\n";
   return("Unknown");

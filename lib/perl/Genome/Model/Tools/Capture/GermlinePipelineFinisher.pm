@@ -146,7 +146,7 @@ sub execute {                               # replace with real execution logic.
 			my $strandfilter_junk_file = $snv_tier1_file . '.strandfilter_filtered';
 			if(!(-e $strandfilter_file))
 			{
-				my $strandfilter_cmd = "gmt somatic strand-filter --variant-file $snv_tier1_file --tumor-bam-file $bam_file --output-file $strandfilter_file --filtered-file $strandfilter_junk_file";
+				my $strandfilter_cmd = "gmt somatic strand-filter --variant-file $snv_tier1_file --tumor-bam $bam_file --output-file $strandfilter_file --filtered-file $strandfilter_junk_file";
 				system ($strandfilter_cmd);
 			}
 
@@ -222,7 +222,6 @@ sub execute {                               # replace with real execution logic.
 			}
 		}
 
-
 		## Write indels to file ##
 		my %indels_written = ();
 	
@@ -233,16 +232,16 @@ sub execute {                               # replace with real execution logic.
 			my %indels = load_mutations($indel_tier1_file);
 			my %indel_annotation = load_annotation($indel_annotation_file);
 	
-#			## Build Strandfilter File
-#			my $strandfilter_file = $sample_output_dir . '/indel.tier1.strandfilter';
-#			my $strandfilter_junk_file = $sample_output_dir . '/indel.tier1.strandfilter_filtered';
-#			if(!(-e $strandfilter_file))
-#			{
-#				my $strandfilter_cmd = "gmt somatic strand-filter --variant-file $indel_tier1_file --tumor-bam-file $bam_file --output-file $strandfilter_file --filtered-file $strandfilter_junk_file";
-#				system ($strandfilter_cmd);
-#			}
-#			## Load strandfilter ##
-#			my %strandfilter_lines = load_strandfilter($strandfilter_file, $strandfilter_junk_file);
+			## Build Strandfilter File
+			my $strandfilter_file = $sample_output_dir . '/indel.tier1.strandfilter';
+			my $strandfilter_junk_file = $sample_output_dir . '/indel.tier1.strandfilter_filtered';
+			if(!(-e $strandfilter_file))
+			{
+				my $strandfilter_cmd = "gmt somatic filter-false-indels --variant-file $indel_tier1_file --bam-file $bam_file --output-file $strandfilter_file --filtered-file $strandfilter_junk_file";
+				system ($strandfilter_cmd);
+			}
+			## Load strandfilter ##
+			my %strandfilter_lines = load_strandfilter($strandfilter_file, $strandfilter_junk_file);
 
 			foreach my $key (sort byChrPos keys %indels)
 			{
@@ -293,6 +292,9 @@ sub execute {                               # replace with real execution logic.
 	
 					my $mutation_type = trv_to_mutation_type($trv_type);
 
+					##Get Strandfilter Status
+					my $strandfilter_status = $strandfilter_lines{$key};
+
 					## Get dbSNP Status 	
 					my $dbsnp_rs = "novel(indel)";
 					my $dbsnp_status = "unknown";
@@ -300,7 +302,7 @@ sub execute {                               # replace with real execution logic.
 					my $indel_key = "$chromosome\t$chr_start\t$chr_stop\t$variant_type";
 					$indels_written{$indel_key} = 1;
 
-					print OUTFILE join("\t", $gene_name,$gene_id,$center,$build,$chromosome,$chr_start,$chr_stop,$strand,$mutation_type,$variant_type,$ref,$tumor_gt_allele1,$tumor_gt_allele2,$dbsnp_rs,$dbsnp_status,$sample_name,$sample_name,$ref,$ref,"","","","","Unknown","Unknown","Germline",$sequence_phase,$sequence_source,"","1",$bam_file,$sequencer, @annotation) . "\n";				
+					print OUTFILE join("\t", $gene_name,$gene_id,$center,$build,$chromosome,$chr_start,$chr_stop,$strand,$mutation_type,$variant_type,$ref,$tumor_gt_allele1,$tumor_gt_allele2,$dbsnp_rs,$dbsnp_status,$sample_name,$sample_name,$ref,$ref,"","","","",$strandfilter_status,"Unknown","Germline",$sequence_phase,$sequence_source,"","1",$bam_file,$sequencer, @annotation) . "\n";				
 					$stats{'tier1_indels_written'}++;
 				}
 				else

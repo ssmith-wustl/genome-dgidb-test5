@@ -10,6 +10,7 @@ use Test::More tests => 5;
 #use Test::More skip_all => 'workflow and lsf issues taking a long time to test this and randomly failing';
 use File::Compare;
 use File::Temp;
+use File::Copy;
 
 BEGIN {
         $ENV{NO_LSF} = 1;
@@ -21,6 +22,9 @@ my $expected_psl = $data_dir .'/test.psl';
 # Must use a network dis
 #my $tmp_dir = Genome::Utility::FileSystem->create_temp_directory('Genome-Model-Tools-Blat-Subjects-'. $ENV{USER});
 my $tmp_dir = File::Temp::tempdir('Genome-Model-Tools-Blat-Subjects-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+
+my $tmp_query_file = $tmp_dir . '/test.fa';
+copy $query_file, $tmp_query_file;
 
 my $psl_path = $tmp_dir .'/test_tmp.psl';
 my $blat_output_path = $tmp_dir .'/test_tmp.out';
@@ -34,7 +38,7 @@ closedir(DIR);
 is(scalar(@ref_seq_files),3,'expected three input subject files');
 
 my $blat = Genome::Model::Tools::Blat::Subjects->create(
-                                                        query_file => $query_file,
+                                                        query_file => $tmp_query_file,
                                                         subject_files => \@ref_seq_files,
                                                         psl_path => $psl_path,
                                                         blat_params => $blat_params,
