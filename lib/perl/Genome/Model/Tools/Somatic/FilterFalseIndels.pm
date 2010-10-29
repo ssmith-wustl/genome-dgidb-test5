@@ -167,7 +167,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-    gmt somatic strand-filter --variant-file somatic.snvs --tumor-bam tumor.bam --output-file somatic.snvs.FilterFalseIndels 
+    gmt somatic filter-false-indels --variant-file somatic.indels --tumor-bam tumor.bam --output-file somatic.indels.FilterFalseIndels 
 EOS
 }
 
