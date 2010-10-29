@@ -3,6 +3,7 @@ package Genome::InstrumentData::Command::PostProcessAndImport;
 use strict;
 use warnings;
 use Genome;
+use File::Basename;
 
 our $UNALIGNED_TEMPDIR = '/tmp'; #'/gscmnt/sata844/info/hmp-mgs-test-temp';
 
@@ -55,9 +56,12 @@ sub execute {
 
     # TODO: dust, n-remove and set the sub-dir based on the formula
     # and use a subdir name built from that formula
-    my $subdir='';
-    if ($self->dust_unaligned_reads){
+    my $subdir=$tmp_dir;
+    if ($self->dust){
         $subdir.='/dusted';
+    }
+    unless (-d $subdir or mkdir $subdir) {
+        die "Failed to create temp directory $subdir : $!";
     }
     if ($self->n_removal_threshold){
         $subdir .= '/n-remove_'.$self->n_removal_threshold;
@@ -65,17 +69,15 @@ sub execute {
         $subdir .= '/non-n-base-filter_'.$self->non_n_base_threshold;
     }
 
-    unless (-d "$tmp_dir/$subdir" or mkdir "$tmp_dir/$subdir") {
+    unless (-d $subdir or mkdir $subdir) {
         die "Failed to create temp directory $subdir : $!";
     }
 
-    unless (-d "$tmp_dir/$subdir" or mkdir "$tmp_dir/$subdir") {
-        die "Failed to create temp directory $subdir : $!";
-    }
+   
 
-    $self->status_message("Preparing imported instrument data for import path $tmp_dir/$subdir");
+    $self->status_message("Preparing imported instrument data for import path $subdir");
 
-    # proceed extracting and uploading unaligned reads into $tmp_dir/$subdir....
+    # proceed extracting and uploading unaligned reads into $subdir....
 
     # resolve the paths at which we will place processed instrument data
     # we're currently using these paths to find previous unaligned reads processed the same way
@@ -91,12 +93,12 @@ sub execute {
     my $expected_path_fragment; #for paired end w/ n-removal, potentially
 
     if ($instrument_data->is_paired_end){
-        $expected_path1 = "$tmp_dir/$subdir/$forward_basename";
-        $expected_path2 = "$tmp_dir/$subdir/$reverse_basename";
-        $expected_path_fragment = "$tmp_dir/$subdir/$n_removed_fragment_basename";
+        $expected_path1 = "$subdir/$forward_basename";
+        $expected_path2 = "$subdir/$reverse_basename";
+        $expected_path_fragment = "$subdir/$n_removed_fragment_basename";
         $expected_path = $expected_path1 . ',' . $expected_path2;
     }else{
-        $expected_path = "$tmp_dir/$subdir/$fragment_basename";
+        $expected_path = "$subdir/$fragment_basename";
     }
 
     $self->status_message("Checking for previously post-processed and reimported reads from: $expected_path");
@@ -108,7 +110,7 @@ sub execute {
         my @return = ($post_processed_inst_data);
         #check if we produced a fragment from pairwise n-removal to return shortcut
 
-        if ($expected_path_fragment and $self->n_removal_cutoff){
+        if ($expected_path_fragment and ($self->n_removal_threshold or $self->non_n_base_threshold) ){
             my $n_removed_fragment = Genome::InstrumentData::Imported->get(original_data_path => $expected_path_fragment);
             push @return, $n_removed_fragment if $n_removed_fragment;
         }
@@ -117,8 +119,7 @@ sub execute {
 
     my @instrument_data = eval {
 
-        my $upload_path;
-        my $import_lock;
+	my $import_lock;
 
         # check for previous unaligned reads
         my $lock = basename($expected_path);
@@ -131,11 +132,7 @@ sub execute {
         unless ($import_lock) {
             die $self->error_message("Failed to lock $expected_path.");
         }
-        $upload_path = $expected_path;
-
-        unless ($upload_path){
-            die $self->error_message("Couldn't create an upload path for importing instrument data");
-        }
+        my $upload_path = $expected_path;
 
         # extract
         $self->status_message("Preparing imported instrument data for import path $expected_path");
@@ -225,7 +222,7 @@ sub execute {
 
         #now create fragment instrument data for $expected_path_fragment, as a result of pairwise n-removal, if the file exists and has size
 
-        if (-s $expected_path_fragment){
+        if ($expected_path_fragment and -s $expected_path_fragment){
             $params{source_data_files} = $expected_path_fragment;
             $params{is_paired_end} = 0;
             $self->status_message("importing fastq with the following params:" . Data::Dumper::Dumper(\%params));
@@ -258,7 +255,7 @@ sub execute {
         }
         push @return_inst_data, $new_instrument_data;
 
-        if (-s $expected_path_fragment){
+        if ($expected_path_fragment and -s $expected_path_fragment){
             my $new_instrument_data = Genome::InstrumentData::Imported->get(
                 original_data_path => $expected_path_fragment,
             );
@@ -297,7 +294,7 @@ sub _process_unaligned_fastq_pair {
     my $forward_dusted;
     my $reverse_dusted;
 
-    if ($self->dust_unaligned_reads){
+    if ($self->dust){
         $self->status_message("Dusting fastq pair $forward, $reverse");
         $forward_dusted = "$forward.DUSTED";
         $reverse_dusted = "$reverse.DUSTED";
@@ -311,16 +308,23 @@ sub _process_unaligned_fastq_pair {
     }
 
     #run pairwise n-removal
-    if ($self->n_removal_cutoff){
+    if ($self->n_removal_threshold or $self->non_n_base_threshold){
         $self->status_message("running remove-n-pairwise on $forward, $reverse");
-        my $cmd = Genome::Model::Tools::Fastq::RemoveNPairwise->create(
-            forward_fastq => $forward_dusted,
+	my %params= (forward_fastq => $forward_dusted,
             reverse_fastq => $reverse_dusted,
             forward_n_removed_file => $forward_out,
             reverse_n_removed_file => $reverse_out,
-            singleton_n_removed_file => $fragment_out,
-            cutoff => $self->n_removal_cutoff,
-        );
+            singleton_n_removed_file => $fragment_out
+	    );
+	if ($self->n_removal_threshold){
+	    $params{n_removal_threshold}=$self->n_removal_threshold;
+	}elsif ($self->non_n_base_threshold){
+	    $params{non_n_base_threshold}=$self->non_n_base_threshold;
+	}
+        my $cmd = Genome::Model::Tools::Fastq::RemoveNPairwise->create(
+            %params
+	    );
+	
         unless ($cmd){
             die $self->error_message("couldn't create remove-n-pairwise command for $forward_dusted, $reverse_dusted!");
         }
@@ -332,7 +336,7 @@ sub _process_unaligned_fastq_pair {
             die $self->error_message("couldn't find all expected output files! $forward_out, $reverse_out, $fragment_out");
         }
         #clean up, maybe make these temp files
-        if ($self->dust_unaligned_reads){
+        if ($self->dust){
             #only need to do this if we actually dusted
             unlink $forward_dusted;
             unlink $reverse_dusted;
@@ -344,7 +348,7 @@ sub _process_unaligned_fastq_pair {
         $self->status_message("skipping n-removal");
         Genome::Utility::FileSystem::copy_file($forward_dusted, $forward_out);
         Genome::Utility::FileSystem::copy_file($reverse_dusted, $reverse_out);
-        if ($self->dust_unaligned_reads){
+        if ($self->dust){
             #only need to do this if we actually dusted
             unlink $forward_dusted;
             unlink $reverse_dusted;
@@ -358,7 +362,7 @@ sub _process_unaligned_fastq {
     my ($fastq_file, $output_path) = @_;
 
     my $dusted_fastq;
-    if ($self->dust_unaligned_reads){
+    if ($self->dust){
         $dusted_fastq = "$fastq_file.DUSTED";
         $self->dust_fastq($fastq_file, $dusted_fastq);
     }else{
@@ -366,13 +370,17 @@ sub _process_unaligned_fastq {
         $dusted_fastq = $fastq_file;
     }
 
-    if ($self->n_removal_cutoff){
+    if ($self->n_removal_threshold or $self->non_n_base_threshold){
         $self->status_message("Running n-removal on file $fastq_file");
-        my $cmd = Genome::Model::Tools::Fastq::RemoveN->create(
-            fastq_file => $dusted_fastq,
-            n_removed_file => $output_path,
-            cutoff => $self->n_removal_cutoff,
-        ); 
+	my %params=( fastq_file => $dusted_fastq,
+		     n_removed_file => $output_path
+	    ); 
+	if ($self->n_removal_threshold){
+	    $params{n_removal_threshold}=$self->n_removal_threshold;
+	}elsif ($self->non_n_base_threshold){
+	    $params{non_n_base_threshold}=$self->non_n_base_threshold;
+	}
+        my $cmd = Genome::Model::Tools::Fastq::RemoveN->create(%params);
         unless ($cmd){
             die $self->error_message("couldn't create remove-n command for $dusted_fastq");
         }
@@ -381,10 +389,10 @@ sub _process_unaligned_fastq {
             die $self->error_message("couldn't execute remove-n command for $dusted_fastq");
         }
     } else {
-        $self->status_message("No n-removal cutoff specified, skipping");
+        $self->status_message("No n-removal params specified, skipping");
         Genome::Utility::FileSystem->copy_file($dusted_fastq, $output_path);
     }
-    if ($self->dust_unaligned_reads){
+    if ($self->dust){
         unlink $dusted_fastq;
     }
     return $output_path;
