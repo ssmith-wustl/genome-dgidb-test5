@@ -64,12 +64,13 @@ sub execute {
     }
 
     $cmd .= sprintf(' > %s 2> %s ', $self->out, $self->memlog);
+    $self->status_message("Phrap: $cmd");
+    my $phrap = eval{ Genome::Utility::FileSystem->shellcmd(cmd => $cmd); };
+    if ( not $phrap ) {
+        $self->error_message("Phrap failed: $@");
+        return;
+    }
 
-    $self->error_message("Error running phrap:\n$cmd") 
-        and return if system $cmd;
-
-    $self->status_message("$cmd\nDone\n");
-    
     return 1;
 }
 
