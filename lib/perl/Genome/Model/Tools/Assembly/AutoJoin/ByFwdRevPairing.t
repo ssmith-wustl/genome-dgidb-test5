@@ -16,12 +16,10 @@ ok ( -d $test_dir, "Test data dir exists");
 my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
 ok( -d $temp_dir, "Created test directory");
 
-#phd_dir
-foreach (qw/ phd_dir /) { #small enough to copy
-    ok ( -d $test_dir."/$_", "Test dir $_ directory exists" );
-    Genome::Utility::FileSystem->copy_directory( $test_dir."/$_", $temp_dir."/$_" );
-    ok (-d $temp_dir."/$_", "Copied temp $_ directory");
-}
+#phd_dir and files
+ok (-d $test_dir.'/phd_dir', "Test dir phd dir exists");
+symlink ($test_dir.'/phd_dir', $temp_dir.'/phd_dir');
+ok (-l $temp_dir.'/phd_dir', "Linked phd_dir in temp test dir");
 
 #phdball_dir
 Genome::Utility::FileSystem->create_directory( $temp_dir.'/phdball_dir' );
