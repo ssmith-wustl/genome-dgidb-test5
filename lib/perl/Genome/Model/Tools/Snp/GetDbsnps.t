@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use above "Genome";
-
+use File::Temp;
 use Test::More tests => 5;
 
 my $chromosome = "10";
@@ -11,21 +11,26 @@ my $start = 126008345;
 my $stop = 126010576;
 my $organism = "human"; # or mouse
 
+my $out_fh = File::Temp->new(
+    TEMPLATE => 'Genome-Model-Tools-Snp-GetDbsnps-XXXXXX',
+    DIR => '/gsc/var/cache/testsuite/running_testsuites/',
+    CLEANUP => 1,
+    UNLINK => 1,
+);
+my $out = $out_fh->filename;
+$out_fh->close;
 
-my $output_dir = Genome::Utility::FileSystem->create_temp_directory('Genome-Model-Tools-Snp-GetDbsnps');
-my $out = "$output_dir/GetDbsnps.testout";
-my $dbsnpout ="$output_dir/GetDbsnps.testout.dbsnp.gff";
-if ($dbsnpout && -e $dbsnpout) {`rm $dbsnpout`;}
+my $dbsnpout = $out . ".dbsnp.gff";
+
 my $expected_output = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Snp-GetDbsnps/GetDbsnps.expectedout.dbsnp.gff";
 
-#ok(-e $expected_output);
+ok(-e $expected_output, "expected output found at $expected_output");
 
 my $dbsnps = Genome::Model::Tools::Snp::GetDbsnps->create(chromosome=>$chromosome,start=>$start,stop=>$stop,organism=>$organism,gff=>1,out=>$out);
-ok($dbsnps);
+ok($dbsnps, "command object created");
 
-ok($dbsnps->execute());
-ok(-e $dbsnpout);
-ok(-e $expected_output);
+ok($dbsnps->execute(), "executed command");
+ok(-e $dbsnpout, "dbsnp output file exists");
 
 my $diff = `diff $dbsnpout $expected_output`;
 ok($diff eq '', "output as expected");
