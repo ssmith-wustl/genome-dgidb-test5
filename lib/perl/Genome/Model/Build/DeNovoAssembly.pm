@@ -157,10 +157,10 @@ sub genome_size {
 	$self->genome_size_used( 4000000 );
         return 4000000;
     }
-    elsif ( $self->processing_profile->assembler_name eq 'soap' ) {
+#    elsif ( $self->processing_profile->assembler_name eq 'soap' ) {
 	#This only gets called for soap when setting metrics, ie, it's not needed for assembling
-	return;
-    }
+#	return;
+#    }
 
     # TODO add more
     print Dumper($taxon);
@@ -468,7 +468,15 @@ sub calculate_metrics {
     $metrics{read_depths_ge_5x} = ( $metrics{read_depths_ge_5x} ) ? sprintf ('%0.1f', $metrics{read_depths_ge_5x} * 100) : 'NA';
 
     #genome and average insert size used
-    $metrics{genome_size_used} = $self->genome_size if $self->processing_profile->assembler_name eq 'velvet'; #bad
+    my $genome_size_used;
+
+    eval { $genome_size_used = $self->genome_size; };
+    if ( $@ ) { #okay for this to fail for soap assemblies for now .. 
+	$genome_size_used = 'NA';
+    }
+
+    #$metrics{genome_size_used} = $self->genome_size if $self->processing_profile->assembler_name eq 'velvet'; #bad
+    $metrics{genome_size_used} = $genome_size_used;
     $metrics{average_insert_size_used} = $self->calculate_average_insert_size;
     
     return %metrics;

@@ -19,9 +19,15 @@ my %properties = (
         is => 'Text',
         doc => 'TCGA name for imported file',
     },
+    create_sample => {
+        is => 'Boolean',
+        doc => 'Set this switch to automatically create organism_sample, library, and individual, if they are not not found.',
+        default => 0,
+        is_optional => 1,
+    },
     import_source_name => {
         is => 'Text',
-        doc => 'source name for imported file, like Broad Institute',
+        doc => 'source name for imported file, like broad',
         is_optional => 1,
     },
     species_name => {
@@ -74,23 +80,32 @@ sub execute {
     my $organism_sample = GSC::Organism::Sample->get(sample_name => $tcga_name);
 
     my $sample;
-
-    if($organism_sample){
-        $sample = Genome::Sample->get(id=>$organism_sample->id);
-        unless($sample){
-            $self->error_message("Found an organism_sample for ".$tcga_name." but could not get a Genome::Sample.");
+    unless($organism_sample){
+        $self->status_message("Did not find an organism_sample associated with this TCGA name.");
+        unless(defined($self->create_sample)&& $self->create_sample == 1){
+            $self->error_message("Since --create-sample was not set, this process is dead.\n");
             die $self->error_message;
         }
-        $self->status_message("Found an organism_sample associate with this TCGA name.");
-    } else {
-        $self->status_message("Did not find an organism_sample associated with this TCGA name.");
-        #TODO rlong: Add support for creating organism_samples and libraries for TCGA samples which originated outside of the center.
-        die "We don't currently allow for creating organism_samples.\n";
+        unless(defined($self->species_name)){
+            $self->error_message("If an organism_sample is to be created, a species_name is required.");
+            die $self->error_message;
+        }
+        my ($first, $second, $third) = split "-", $tcga_name;
+        my $individual_name = join "-", ($first,$second,$third);
+        unless( Genome::Sample::Command::Import->execute(sample_name => $tcga_name, individual_name => $individual_name, taxon_name => $self->species_name)){
+            $self->error_message("Sample Importation failed.");
+            die $self->error_message;
+        }
     }
+    $sample = Genome::Sample->get(name=>$tcga_name);
+    unless($sample){
+        $self->error_message("Found an organism_sample for ".$tcga_name." but could not get a Genome::Sample.");
+        die $self->error_message;
+    }
+    $self->status_message("Found an organism_sample associate with this TCGA name.");
     my $library = Genome::Library->get(sample_id => $sample->id);
     unless($library){
-        $self->status_message("Not able to find a library associated with this sample.");
-        #TODO rlong: Add support for creating organism_samples and libraries for TCGA samples which originated outside of the center.
+        $self->status_message("Not able to find a library associated with this sample. If create_sample was set, it failed to create an appropriate library.");
         die "We don't currently allow for creating libraries.\n";
     }
 
@@ -111,6 +126,7 @@ sub execute {
         next if $property_name =~ /^(species|reference)_name$/;
         next if $property_name =~ /^library$/;
         next if $property_name =~ /tcga/;
+        next if $property_name =~ /^create_sample$/;
         $params{$property_name} = $self->$property_name if $self->$property_name;
     }
     $params{sample_id} = $sample->id;

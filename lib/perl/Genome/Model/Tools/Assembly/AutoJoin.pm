@@ -111,12 +111,12 @@ sub create_alignments
 sub _gather_phd_data { #and _remove_duplicates
     my $self = shift;
 
-    my $phdball_dir = '../phdball_dir';
+    my $phdball_dir = $self->dir.'/../phdball_dir';
 
     if (-d $phdball_dir) {
 	my @files = glob("$phdball_dir/*");
-	my $out_fh = IO::File->new("> $phdball_dir/autoJoinPhdBall") || die
-	    "Can not create phdball out file\n";
+	#my $out_fh = IO::File->new("> $phdball_dir/autoJoinPhdBall") || die
+	my $out_fh = Genome::Utility::FileSystem->open_file_for_writing( $phdball_dir.'/autoJoinPhdBall' );
 	my $reads = {};
 	foreach my $ball (@files) {
 	    my $fh = IO::File->new("< $ball") || die "Can not open file: $ball\n";

@@ -26,7 +26,14 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
         variant_file => {
             is => 'FilePath',   
             is_input => 1,
-            doc => "File of variants. Tab separated columns: chromosome_name start stop reference variant",
+            is_optional => 1,
+            doc => "File of variants. Tab separated columns: chromosome_name start stop reference variant.",
+        },
+        variant_bed_file => {
+            is => 'FilePath',   
+            is_input => 1,
+            is_optional => 1,
+            doc => "File of variants in BED format.  ", #TODO: figure out how one specifies a variant file in bed, then list the format
         },
         output_file => {
             is => 'Text',
@@ -211,6 +218,17 @@ EOS
 
 sub execute { 
     my $self = shift;
+
+    unless($self->variant_file xor $self->variant_bed_file){
+        $self->error_message("Please specify either a --variant-file or a --variant-bed-file");
+        return;
+    }
+
+    if($self->variant_bed_file){
+        my $converted_bed_file = Genome::Utility::FileSystem->create_temp_file_path();
+        Genome::Model::Tools::Bed::Convert::BedToAnnotation->execute(snv_file => $self->variant_bed_file, output => $converted_bed_file) || ($self->error_message("Could not convert BED file to annotator format") and return); 
+        $self->variant_file($converted_bed_file);
+    }
 
     my $variant_file = $self->variant_file;
     
@@ -535,6 +553,12 @@ sub execute {
         }
         $output_fh->close unless $output_fh eq 'STDOUT';
     }
+
+    #clean up the temporary annotation data file 
+    if ($self->variant_bed_file and $self->variant_file){
+        unlink $self->variant_file || die("Could not remove converted variant file " . $self->variant_file);
+    }
+
     return 1;
 }
 
