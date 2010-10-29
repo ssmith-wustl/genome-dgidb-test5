@@ -277,7 +277,7 @@ sub create {
                 $self->warning_message('Failed to deallocate disk space.');
             }
         };
-        my $allocation_change = UR::Context::Transaction->log_change($self, 'UR::value', $self->disk_allocation->id, 'external_change', $allocation_undo);
+        my $allocation_change = UR::Context::Transaction->log_change($self, 'UR::Value', $self->disk_allocation->id, 'external_change', $allocation_undo);
         if ($allocation_change) {
             $self->status_message("Recorded creation of disk allocation (" . $self->disk_allocation->id . ")");
         }
@@ -1523,7 +1523,8 @@ sub get_metric {
 # If there are no differences, return undef. 
 sub _compare_output {
     my ($self, $other_build_id) = @_;
-    die "Override _compare_output in your build subclass!";
+    $self->warning_message("Override _compare_output in your build subclass!");
+    return;
 }
 
 

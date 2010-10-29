@@ -24,7 +24,7 @@ my $temp_filename = $temp->filename;
 
 Genome::Model::Tools::Annotate::TranscriptVariants->execute(
     variant_file => $test_variants_file,
-    reference_transcripts => "NCBI-human.combined-annotation/54_36p",
+    reference_transcripts => "NCBI-human.combined-annotation/54_36p_v2",
     get_frame_shift_sequence => 1,
     output_file => $temp_filename, 
     annotation_filter => "none",

@@ -169,6 +169,7 @@ sub _create_individual {
 
     my %individual_attrs = $self->_attrs_for('individual');
     $individual_attrs{name} = $self->individual_name;
+    $individual_attrs{upn} = $self->individual_name if not defined $individual_attrs{upn};
     $individual_attrs{taxon_id} = $self->_taxon->id;
 
     $self->status_message('Creating individual: '.Dumper(\%individual_attrs));
@@ -216,6 +217,7 @@ sub _create_sample {
     $sample_attrs{extraction_label} = $self->sample_name if not defined $sample_attrs{extraction_label};
     $sample_attrs{taxon_id} = $self->_taxon->id;
     $sample_attrs{source_id} = $self->_individual->id;
+    $sample_attrs{source_type} = 'organism individual';
     $sample_attrs{cell_type} = 'unknown' if not defined $sample_attrs{cell_type};
 
     # organ
