@@ -2,27 +2,43 @@
 
 use strict;
 use warnings;
-use Test::More tests => 17;
-use above 'Genome';
-use Genome::Model::Tools::Pcap::Assemble;
-use Data::Dumper;
 
-my $obj = Genome::Model::Tools::Pcap::Assemble->create
-    (
+use Test::More skip_all => 'Tools needs some refactoring';
+use above 'Genome';
+
+#check test suite dir/files
+my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-AssemblReads-Pcap/Proteus_penneri_ATCC_35198-1.0_080509.pcap';
+ok (-d $test_dir, "Test suite directory exists");
+
+#create temp test dir
+my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+ok (-d $temp_dir, "Created temp test directory");
+
+#create/execute tool
+my $obj = Genome::Model::Tools::Pcap::Assemble->create (
      project_name       => 'Proteus_penneri_ATCC_35198',
-     disk_location      => '/gsc/var/cache/testsuite/data/Genome-Model-Tools-AssemblReads-Pcap',
+     disk_location      => $temp_dir,#'/gsc/var/cache/testsuite/data/Genome-Model-Tools-AssemblReads-Pcap',
      parameter_setting  => 'RELAXED',
      assembly_version   => '1.0',
      assembly_date      => '080509',
      read_prefixes      => 'PPBA',
      pcap_run_type      => 'NORMAL',
     );
- 
-$obj->_project_path();  # Makes the object discover it's project_path
-$obj->delete_completed_assembly;  # Clean out the cruft from any past semi-completed test
+ok ($obj, "Instance of pcap-assemble tool created"); 
+ok ($obj->_project_path(), "Object set project path");
+ok ($obj->create_project_directories, "Created project dirs");
 
-ok($obj->create_project_directories, "created project dirs");
-#ok($obj->validate_organism_name, "organism name validated"); #SKIP .. NOT ALL ASSEMBLIES HAVE VALID ORG NAME
+#check is assembly directory created
+ok (-d $temp_dir.'/Proteus_penneri_ATCC_35198-1.0_080509.pcap', "Temp assembly dir created");
+#link/copy input files into assembly directory
+foreach (qw/ PPBA.fasta.gz PPBA.fasta.qual.gz /) {
+    ok (-s $test_dir."/input/$_", "Test suite $_ input file exists");
+    symlink ($test_dir."/input/$_", $temp_dir."/Proteus_penneri_ATCC_35198-1.0_080509.pcap/input/$_");
+    ok (-l $temp_dir."/Proteus_penneri_ATCC_35198-1.0_080509.pcap/input/$_", "Input $_ file linked");
+}
+
+#test methods .. really should just run execute but tool runs off config file
+#TODO - have test write config file and run execute with it
 ok($obj->copy_test_data_set, "test data set copied");
 ok($obj->create_pcap_input_fasta_fof, "pcap fasta fof created");
 ok($obj->create_constraint_file, "constraint file created successfully");
@@ -38,5 +54,7 @@ ok($obj->create_gap_file, "test create_gap_file");
 ok($obj->create_agp_file, "test create_agp_file");
 ok($obj->create_sctg_fa_file, "test create_sctg_fa_file");
 ok($obj->add_wa_tags_to_ace, "test add WA tags to ace");
-ok($obj->delete_completed_assembly, "remove this assembly");
-#ok($obj->clean_up, "test clean up step");
+
+done_testing();
+
+exit;

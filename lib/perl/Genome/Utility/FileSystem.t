@@ -254,9 +254,12 @@ sub test2_directory : Test(22) {
     ok(!$worked, 'Failed as expected - can\'t read from dir');
     like($@, qr/Directory .* is not readable/, 'Exception message is correct');
 
+    #test data directory is now read-only so make a temporary directory we know will have write access for testing
+    my $tmp_dir = File::Temp::tempdir('Genome-Utility-FileSystem-writetest-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+
     # Write access
     ok( # good
-        Genome::Utility::FileSystem->validate_directory_for_write_access( _base_test_dir() ),
+        Genome::Utility::FileSystem->validate_directory_for_write_access( $tmp_dir ),
         'validate_directory_for_write_access',
     );
     $worked = eval { Genome::Utility::FileSystem->validate_directory_for_write_access( _no_write_dir() ) };
@@ -265,7 +268,7 @@ sub test2_directory : Test(22) {
 
     # R+W access
     ok( # good
-        Genome::Utility::FileSystem->validate_directory_for_read_write_access( _base_test_dir() ),
+        Genome::Utility::FileSystem->validate_directory_for_read_write_access( $tmp_dir ),
         'validate_directory_for_read_write_access',
     );
     $worked = eval { Genome::Utility::FileSystem->validate_directory_for_read_write_access( _no_read_dir() ) };
