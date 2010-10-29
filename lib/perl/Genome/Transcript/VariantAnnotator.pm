@@ -266,9 +266,11 @@ sub transcripts {
     my $crossing_substructures = $windowing_iterator->(\%variant);
     return unless @$crossing_substructures;
 
-    # Hack to support the old standard of only annotating the start of a deletion, but adding a col
+    # Hack to support the old behavior of only annotating against the first structure
+    # of a transcript.  We need to keep a list of all the other structures for later
+    # listing them in the deletions column of the output
     my %transcript_substructures;
-    if ($variant{'type'} eq 'DEL') {
+    {
         my @less;
         foreach my $substructure ( @$crossing_substructures ) {
             my $transcript_id = $substructure->transcript_transcript_id;
