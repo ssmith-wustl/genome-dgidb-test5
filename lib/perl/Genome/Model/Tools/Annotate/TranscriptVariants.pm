@@ -363,8 +363,15 @@ sub execute {
 
     Genome::DataSource::GMSchema->disconnect_default_handle if Genome::DataSource::GMSchema->has_default_handle;
 
+    my $we_are_done_flag = 0;
+
     my $processed_variants = 0;
     while ( my $variant = $variant_svr->next ) {
+
+        END {
+            print STDERR "\n\nThe last variant we worked on is\n",Data::Dumper::Dumper($variant),"\n\n" unless ($we_are_done_flag);
+        };
+
         $variant->{type} = $self->infer_variant_type($variant);
         #make sure both the reference and the variant are in upper case
         $variant->{reference} = uc $variant->{reference};
@@ -436,6 +443,7 @@ sub execute {
         $processed_variants++;
         $self->status_message("$processed_variants variants processed " . scalar(localtime)) unless ($processed_variants % 10000);
     }
+    $we_are_done_flag = 1;
 
     my $annotation_loop_stop_time = time();
 
