@@ -5,6 +5,8 @@ use warnings;
 
 use Test::More;
 use File::Compare;
+use File::Copy;
+use File::Temp;
 
 use above 'Genome';
 
@@ -16,16 +18,19 @@ if (`uname -a` =~ /x86_64/){
 
 use_ok('Genome::Model::Tools::Sam::BamToSam');
 
-my $tmp_dir = Genome::Utility::FileSystem->create_temp_directory('Genome-Model-Tools-Sam-BamToFastq-'. $ENV{USER});
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sam-BamToSam';
-my $bam_file = $data_dir .'/test.bam';
 
-my $result = Genome::Model::Tools::Sam::BamToSam->execute( bam_file => $bam_file);
+my $tmp_dir  = File::Temp::tempdir(
+    "BamToSam_XXXXXX", 
+    DIR     => '/gsc/var/cache/testsuite/running_testsuites',
+    CLEANUP => 1,
+);
 
+my $bam_file = $tmp_dir .'/test.bam';
+copy $data_dir.'/test.bam', $bam_file;
 
-ok(-e $data_dir."/test.sam","Found output file, properly named.");
+my $result = Genome::Model::Tools::Sam::BamToSam->execute(bam_file => $bam_file);
+
+ok(-e $tmp_dir."/test.sam","Found output file, properly named.");
 ok($result,"Tool exited properly.");
 
-if(-e $data_dir."/test.sam") {
-    unlink($data_dir."/test.sam");
-}
