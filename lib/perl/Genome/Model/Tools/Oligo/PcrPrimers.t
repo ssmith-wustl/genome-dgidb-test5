@@ -10,20 +10,24 @@ use Test::More tests => 3;
 use_ok('Genome::Model::Tools::Oligo::PcrPrimers');
 
 my $fasta = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Oligo-PcrPrimers/10_126009344.c1.refseq.fasta";
-#my $fasta = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Oligo-PcrPrimers/10_126009344.c1.refseq.fasta.test";
-
 ok (-e $fasta);
 
 my $note = "Chr10:126009344";
-#system qq(gmt oligo pcr-primers -fasta $fasta -output-name pcrprimer_test);
 
-#my @command = ["gmt" , "oligo" , "pcr-primers" , "-fasta" , "$fasta" , "-output-name" , "pcrprimer_test" , "-output-dir" , "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Oligo-PcrPrimers" , "-keep-blast"];
-my $output_dir = Genome::Utility::FileSystem->create_temp_directory('Genome-Model-Tools-Oligo-PcrPrimers');
+my $output_dir = File::Temp::tempdir(
+    'Genome-Model-Tools-Oligo-PcrPrimers-XXXXXX',
+    DIR => '/gsc/var/cache/testsuite/running_testsuites/',
+    CLEANUP => 1,
+    UNLINK => 1,
+);
+
 my @command = ["gmt" , "oligo" , "pcr-primers" , "-fasta" , "$fasta" , "-output-dir" , $output_dir , "-display-blast" , "-note" , "$note" , "-primer3-defaults" , "-header" , "Target"];
 
 &ipc_run(@command);
 
-ok (-e "$output_dir/chr10:126009460.1116.ordered_primer_pairs.txt");
+ok (-e $output_dir.  "/chr10:126009460.1116.ordered_primer_pairs.txt");
+
+system qq(rm $output_dir/chr10:126009460.1116.ordered_primer_pairs.txt $output_dir/chr10:126009460.1116.primer3.result.txt);
 
 sub ipc_run {
 
