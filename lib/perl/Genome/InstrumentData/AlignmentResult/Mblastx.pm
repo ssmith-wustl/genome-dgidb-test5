@@ -20,20 +20,12 @@ class Genome::InstrumentData::AlignmentResult::Mblastx {
 sub required_arch_os { 'x86_64' }
 
 sub required_rusage {
-"-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>32000] span[hosts=1] rusage[tmp=90000, mem=32000]' -M 32000000 -n 4 -m hmp -q hmp";
+"-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>32000] span[hosts=1] rusage[tmp=90000, mem=32000]' -M 32000000 -n 8 -m hmp -q hmp";
 }
 
 sub _decomposed_aligner_params {
 	my $self = shift;
 
-	# -U = report unmapped reads
-	# --read-names print real read names
-
-#    $ENV{'RTG_MEM'} = ($ENV{'TEST_MODE'} ? '1G' : '15G');
-# $ENV{'MBLASTX_DATADIR'} = "/gscmnt/sata895/research/mmitreva/SOFTWARE/MCW_09242010";
-
-	$self->status_message(
-		"mblastx data dir variable set to $ENV{MBLASTX_DATADIR}");
 	my $aligner_params = ( $self->aligner_params || '' );
 
 	my $cpu_count = $self->_available_cpu_count;
@@ -87,11 +79,11 @@ sub _run_aligner {
 		}
 
  #________________________________________________________________________
- #   To run MCW, have to first input fastq file into a fasta file using a utility script,
+ #   To run MCW, have to first convert fastq file into a fasta file using a utility script,
  #   for which you have to designate a destination directory
 
 
-		#STEP 1 - convert input to sdf
+		#STEP 1 - convert input to fasta
 		my $input_fasta = File::Temp::tempnam( $scratch_directory, "input-XXX" )
 		  . ".fasta";    #destination of converted input
 
@@ -145,6 +137,7 @@ sub _run_aligner {
 		my $cmd = sprintf( '%s -q %s -o %s %s',
 			$mblastx, $input_fasta, $output_file, $mblastx_aligner_params );
 
+		$self->status_message("mblastx data dir variable set to $ENV{MBLASTX_DATADIR}");
 		local $ENV{MBLASTX_DATADIR} = $reference_mblastx_path;
 		
 		Genome::Utility::FileSystem->shellcmd(
