@@ -20,15 +20,32 @@ ok(-f $fasta, "Fasta ($fasta) exists");
 my $qual = $fasta .'.qual';
 ok(-f $qual, "Qual ($qual) exists");
 
+my $tmp_dir  = File::Temp::tempdir(
+    "Fasta_TrimQuality_XXXXXX", 
+    DIR     => '/gsc/var/cache/testsuite/running_testsuites',
+    CLEANUP => 1,
+);
+
+my @test_tmp_dirs = map{$tmp_dir.'/test'.$_}qw(1 4 5);
+map{mkdir $_}@test_tmp_dirs;
+
+my @test_fastas;
+my @test_quals;
+
+for my $test_tmp_dir (@test_tmp_dirs) {
+    copy $dir.'/test.fasta', $test_tmp_dir.'/test.fasta';
+    push @test_fastas, $test_tmp_dir.'/test.fasta';
+    copy $dir.'/test.fasta.qual', $test_tmp_dir.'/test.fasta.qual';
+    push @test_quals, $test_tmp_dir.'/test.fasta.qual';
+}   
+
 # Should work
 my $trim1 = Genome::Model::Tools::Fasta::TrimQuality->create(
-    fasta_file => $fasta,
+    fasta_file => $test_fastas[0],
     min_trim_quality => 10,
     min_trim_length  => 100,
 );
 ok($trim1->execute, "trim1 finished ok");
-
-reset_file($fasta, $qual, $dir);
 
 # No fasta
 ok(
@@ -51,17 +68,16 @@ ok(
 );
 
 my $trim4 = Genome::Model::Tools::Fasta::TrimQuality->create(
-    fasta_file => $fasta,
+    fasta_file => $test_fastas[1],
 );
 
 ok($trim4->execute, "trim4 running ok");
-is(compare("$dir/test.fasta.ori.clip", $fasta),0, "using default, fasta is ok");
-cmp_ok(compare("$dir/test.fasta.qual.ori.clip", $qual),'==', 0, "using default, qual is ok");
+is(compare("$dir/test.fasta.ori.clip", $test_fastas[1]),0, "using default, fasta is ok");
+cmp_ok(compare("$dir/test.fasta.qual.ori.clip", $test_quals[1]),'==', 0, "using default, qual is ok");
 
-reset_file($fasta, $qual, $dir);
 
 my $trim5 = Genome::Model::Tools::Fasta::TrimQuality->create(
-    fasta_file       => $fasta,
+    fasta_file       => $test_fastas[2],
     min_trim_length => 'hello',
 );
 
@@ -69,20 +85,6 @@ my $trim5 = Genome::Model::Tools::Fasta::TrimQuality->create(
 #print $rv;
 ok(!$trim5->execute, "This supposed to fail because trim5 uses non-integer as min_trim_length");
 
-reset_file($fasta, $qual, $dir);
-
 exit;
 
-sub reset_file {
-    my ($fasta, $qual, $dir) = @_;
-    unlink $fasta;
-    unlink $qual;
-    unlink "$fasta.preclip";
-    unlink "$qual.preclip";
-
-    copy "$dir/test.fasta.ori", $fasta;
-    copy "$dir/test.fasta.qual.ori", $qual;
-
-    return;
-};
 

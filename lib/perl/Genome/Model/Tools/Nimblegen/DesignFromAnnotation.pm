@@ -6,44 +6,42 @@ use warnings;
 use Genome;
 use Command;
 use IO::File;
-use Sort::Naturally qw( nsort );
-use Genome::Utility::FileSystem;
 
 class Genome::Model::Tools::Nimblegen::DesignFromAnnotation {
     is => 'Command',
     has => [
-    annotation_file => { 
+    annotation_file => {
         type => 'String',
         is_optional => 1,
-        doc => "An annotation file of sites to generate probe regions for. Assumes STDIN if not specified",
+        doc => "An annotation file of sites to validate. Assumes STDIN if not specified",
     },
     output_file => {
         type => 'String',
         is_optional => 1,
-        doc => "Output file. Assumes STDOUT if not specified",
+        doc => "Output file. A list of probe regions for capture validation. Assumes STDOUT if not specified",
     },
     span => {
-    	type => 'Integer',
-    	is_optional => 1,
-    	default => 100,
-    	doc => "The region to be spanned",
+        type => 'Integer',
+        is_optional => 1,
+        default => 200,
+        doc => "The number of bases to span the region upstream and downstream of a variant locus",
     },
     exclude_non_canonical_sites => {
         type => 'Bool',
         is_optional => 1,
         default => 1,
-        doc => "whether or not to remove sites on the mitochondria or non-chromosomal contigs",
+        doc => "Whether or not to remove sites on the mitochondria or non-chromosomal contigs",
     },
     include_y => {
         type => 'Bool',
         is_optional => 1,
         default => 1,
-        doc => "whether or not to include sites on the Y chromosome in the output",
+        doc => "Whether or not to include sites on the Y chromosome in the output",
     },
     reference_index => {
         type => 'String',
         is_optional => 0,
-        doc => "samtools index of the reference sequence",
+        doc => "Samtools index of the reference sequence (To check chromosomal bounds of regions)",
         default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa.fai",
     },
     ]
@@ -55,15 +53,14 @@ sub execute {
     $DB::single = 1;
 
     my $reference_index = $self->reference_index;
+    my $span = $self->span;
 
-    my $span = $self->span;  #
-
-    my $fh = IO::File->new($reference_index,"r"); 
+    my $fh = IO::File->new($reference_index,"r");
     unless($fh) {
         $self->error_message("Unable to open the reference sequence index: $reference_index");
         return;
     }
-    
+
     #read in the index to get the chromosome lengths
     my %chromosome_lengths;
     while(my $line = $fh->getline) {
@@ -104,44 +101,42 @@ sub execute {
             return;
         }
     }
-    
-    while(my $line = $input_fh->getline) {
-        if($self->exclude_non_canonical_sites && $line =~ /^[MN]T/) {
-            next;
-        }
-        if(!$self->include_y && $line =~ /^Y/) {
-            next;
-        }
-        chomp $line;
-        next if($line =~ /^chromosome_name/ || $line =~ /^Chr/);
-        my ($chr,$start,$stop,) = split /\t/, $line;
-        if($start - $span < 1 || $start - $span > $chromosome_lengths{$chr} - 1) {
-            $self->error_message("Start coordinate out of bounds. Skipping $line");
-	    print STDOUT "$line\n";
-            next;
-        }
-        if($stop + $span < 1 || $stop + $span > $chromosome_lengths{$chr} - 1) {
-            $self->error_message("Stop coordinate out of bounds. Skipping $line");
-	    print STDOUT "$line\n";
-            next;
-        }
-        printf $output_fh "chr%s\t%d\t%d\t%d\t%s\n",$chr,$start - $span, $stop + $span, (($stop + $span) - ($start - $span)), $line;
-    }
 
-    
+    my %canonical_chrs = map{ $_ => 1 } (1..22, qw( X Y x y));
+    while(my $line = $input_fh->getline) {
+        next if( $line =~ /^(#|chromosome_name|Chr\t)/ ); #Skip headers
+        next if( !$self->include_y && $line =~ /(^y\t|^chry\t)/i );
+        chomp $line;
+        my ($chr,$start,$stop,) = split /\t/, $line;
+        $chr =~ s/chr//i;
+        next if( $self->exclude_non_canonical_sites && ( !defined $canonical_chrs{$chr} ));
+
+        if( $start < 1 || $stop < 1 || $start > $chromosome_lengths{$chr} || $stop > $chromosome_lengths{$chr}) {
+            $self->error_message("Coordinates out of bounds. Skipping line: $line");
+            next;
+        }
+
+        #If the span goes out of bounds of the chromosome, then clip it
+        my $new_start = (( $start - $span < 1 ) ? 0 : $start - $span - 1 );
+        my $new_stop = (( $stop + $span > $chromosome_lengths{$chr} ) ? $chromosome_lengths{$chr} : $stop + $span );
+        printf $output_fh "chr%s\t%d\t%d\t%d\t%s\n", $chr, $new_start, $new_stop, ($new_stop - $new_start), $line;
+    }
+    $input_fh->close;
+    $output_fh->close;
+
     return 1;
 
 }
 
 sub help_brief {
-    "Takes a file in annotation format and produces a list of regions to target for validation.";
+    "Takes an annotation file and produces a BED file for capture validation.";
 }
 
-sub help_detail {                           
-    return <<EOS 
-   Takes a file in annotation format and produces a list of regions to target for validation via Nimblegen Solid Phase Capture Array. 
+sub help_detail {
+    return <<EOS
+Takes a file in annotation format and produces a list of regions to target for validation via
+Nimblegen Solid Phase Capture Array.
 EOS
 }
 
 1;
-
