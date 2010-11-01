@@ -18,7 +18,7 @@
     <link fromOperation="input connector"          fromProperty="skip_repeat_masker"             toOperation="contig_predict_genes"     toProperty="skip_repeat_masker" />
     <link fromOperation="contig_predict_genes"     fromProperty="temp_prediction_directory"      toOperation="merge_predictions"        toProperty="temp_prediction_directories" />
     <link fromOperation="input connector"          fromProperty="prediction_directory"           toOperation="merge_predictions"        toProperty="prediction_directory" />
-    <link fromOperation="merge_predictions"        fromProperty="temp_prediction_directories"    toOperation="cleanup_temp_files"       toProperty="directories" />
+    <link fromOperation="merge_predictions"        fromProperty="prediction_directory"           toOperation="cleanup_temp_files"       toProperty="directory" />
     <link fromOperation="cleanup_temp_files"       fromProperty="result"                         toOperation="output connector"         toProperty="result" />
   
     <operation name="split_fasta">
@@ -36,6 +36,7 @@
         <link fromOperation="input connector"          fromProperty="xsmall"                      toOperation="repeat_masker"            toProperty="xsmall" />
         <link fromOperation="input connector"          fromProperty="repeat_library"              toOperation="repeat_masker"            toProperty="repeat_library" />
         <link fromOperation="input connector"          fromProperty="skip_repeat_masker"          toOperation="repeat_masker"            toProperty="skip_masking" />
+        <link fromOperation="input connector"          fromProperty="raw_output_directory"        toOperation="repeat_masker"            toProperty="temp_working_directory" />
         <link fromOperation="repeat_masker"            fromProperty="masked_fasta"                toOperation="rnammer"                  toProperty="fasta_file" />
         <link fromOperation="repeat_masker"            fromProperty="masked_fasta"                toOperation="trnascan"                 toProperty="fasta_file" />
         <link fromOperation="repeat_masker"            fromProperty="masked_fasta"                toOperation="rfamscan"                 toProperty="fasta_file" />

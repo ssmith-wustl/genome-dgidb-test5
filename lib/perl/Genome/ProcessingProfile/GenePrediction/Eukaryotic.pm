@@ -94,8 +94,14 @@ sub _map_workflow_inputs {
         contig_fasta => $model->assembly_contigs_file,
         split_fastas_output_directory => $build->split_fastas_output_directory,
         raw_output_directory => $build->raw_output_directory,
-        prediction_directory => $build->prediction_directory;
-        skip_repeat_masker => $self->skip_repeat_masker,
+        prediction_directory => $build->prediction_directory,
+        skip_repeat_masker => $self->skip_repeat_masker;
+
+    my $params;
+    for (my $i = 0; $i < (scalar @inputs); $i += 2) {
+        $params .= $inputs[$i] . " : " . $inputs[$i + 1] . "\n";
+    }
+    $self->status_message("Parameters for workflow are: \n$params");
 
     return @inputs;
 }
