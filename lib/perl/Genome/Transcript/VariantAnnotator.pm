@@ -880,6 +880,7 @@ sub _protein_domain {
             transcript_name => $structure->transcript_transcript_name,
             data_directory => $structure->data_directory,
             chrom_name => $variant->{chromosome_name},
+            -order_by  => ['start'],   # This order_by is strictly for file compatability with with old annotator code
             );
     return 'NULL', 'NULL' unless @all_domains;
 
