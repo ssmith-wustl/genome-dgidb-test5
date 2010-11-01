@@ -625,6 +625,27 @@ sub _get_sum_of_metric_values_from_events {
     return $sum;
 }
 
+sub validate_created_object{ 
+    my $self = shift;
+    $DB::single = 1; #TODO: debug code, delete me
+    my $reference_sequence_name = $self->reference_sequence_name;
+    my $reference_transcripts = $self->processing_profile->annotation_reference_transcripts;
+    return 1 unless $reference_transcripts; #exit if there's no annotation build to compare to
+    my ($ref_sequence_organization, $ref_sequence_species, $ref_sequence_build) = split('-', $reference_sequence_name);
+    my ($ref_transcripts_organization_and_species, undef, $ref_transcripts_version) = split(/\.|\//, $reference_transcripts);
+    my ($ref_transcripts_organization, $ref_transcripts_species) = split(/-/, $ref_transcripts_organization_and_species);
+    my (undef, $ref_transcripts_build) = split(/_/, $ref_transcripts_version);
+    $ref_transcripts_build =~ s/[a-zA-Z]//g; #remove the letter for $ref_transcripts_versions like "54_36p";
+
+    unless($ref_transcripts_build eq $ref_sequence_build and 
+           $ref_transcripts_organization eq $ref_sequence_organization and 
+           $ref_transcripts_species eq $ref_sequence_species){        
+        $self->error_message("reference sequence: $reference_sequence_name does not match annotation reference transcripts: $reference_transcripts"); 
+        return 0;
+    }
+    return 1;
+}
+
 sub region_of_interest_set_name {
     my $self = shift;
     if ($self->capture_set_name) {
