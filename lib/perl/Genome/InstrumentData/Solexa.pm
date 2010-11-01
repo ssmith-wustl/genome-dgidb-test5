@@ -513,7 +513,7 @@ sub fragment_fastq_name {
 
 sub resolve_fastq_filenames {
     my $self = shift;
-    my $lane = $self->subset_name;
+    my $lane = $self->lane;
     my $desc = $self->desc;
 
     my %params = @_;
