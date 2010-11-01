@@ -264,7 +264,6 @@ sub transcripts {
         $windowing_iterator = $self->{'_windowing_iterator'} = $self->_create_iterator_for_variant_intersection();
     }
     my $crossing_substructures = $windowing_iterator->(\%variant);
-    return unless @$crossing_substructures;
 
     # Hack to support the old behavior of only annotating against the first structure
     # of a transcript.  We need to keep a list of all the other structures for later
@@ -273,6 +272,7 @@ sub transcripts {
     {
         my @less;
         foreach my $substructure ( @$crossing_substructures ) {
+            next unless ($substructure->{'structure_start'} <= $variant_start and $substructure->{'structure_stop'} >= $variant_start);
             my $transcript_id = $substructure->transcript_transcript_id;
             if (! exists $transcript_substructures{$transcript_id}) {
                 push @less, $substructure;
@@ -282,6 +282,8 @@ sub transcripts {
         }
         $crossing_substructures = \@less;
     }
+
+    return unless @$crossing_substructures;
 
     my @annotations;
     my $variant_checked = 0;
