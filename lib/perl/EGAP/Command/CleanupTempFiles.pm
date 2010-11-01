@@ -8,10 +8,10 @@ use Carp 'confess';
 class EGAP::Command::CleanupTempFiles {
     is => 'EGAP::Command',
     has => [
-       directories => {
-           is => 'ARRAY',
-           is_input => 1,
-           doc => 'An array of directories to be removed',
+        directory => {
+            is => 'Path',
+            is_input => 1,
+            doc => 'All temp prediction directories located here are removed',
         },
     ],
 };
@@ -31,7 +31,9 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    my @dirs = @{$self->directories};
+    my @dirs = glob("fasta_*_temp_predictions*");
+    $self->status_message("Found " . scalar @dirs . " temp directories to remove:\n" . join("\n", @dirs));
+
     for my $dir (@dirs) {
         $self->status_message("Removing $dir");
         next unless -d $dir;
