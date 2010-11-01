@@ -27,6 +27,7 @@ my @SUB_COMMANDS = qw/
     disk
     report
     capture
+    feature-list
 /;
 
 our %SUB_COMMAND_CLASSES = 
