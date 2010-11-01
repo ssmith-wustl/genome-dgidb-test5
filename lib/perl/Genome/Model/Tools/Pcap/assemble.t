@@ -3,8 +3,10 @@
 use strict;
 use warnings;
 
-use Test::More skip_all => 'Tools needs some refactoring';
 use above 'Genome';
+
+use Test::More;
+use Cwd;
 
 #check test suite dir/files
 my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-AssemblReads-Pcap/Proteus_penneri_ATCC_35198-1.0_080509.pcap';
@@ -13,6 +15,9 @@ ok (-d $test_dir, "Test suite directory exists");
 #create temp test dir
 my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
 ok (-d $temp_dir, "Created temp test directory");
+
+#parts of pcap must run in assembly directory
+my $pre_test_dir = cwd();
 
 #create/execute tool
 my $obj = Genome::Model::Tools::Pcap::Assemble->create (
@@ -54,6 +59,9 @@ ok($obj->create_gap_file, "test create_gap_file");
 ok($obj->create_agp_file, "test create_agp_file");
 ok($obj->create_sctg_fa_file, "test create_sctg_fa_file");
 ok($obj->add_wa_tags_to_ace, "test add WA tags to ace");
+
+#retrun to original dir to clean up test dir before existing
+chdir $pre_test_dir;
 
 done_testing();
 

@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Somatic::AssembleIndel;
+package Genome::Model::Tools::Somatic::AssembleIndelBed;
 
 use strict;
 use warnings;
@@ -11,7 +11,7 @@ my $SAM_DEFAULT = Genome::Model::Tools::Sam->default_samtools_version;
 
 
 
-class Genome::Model::Tools::Somatic::AssembleIndel {
+class Genome::Model::Tools::Somatic::AssembleIndelBed {
     is => 'Command',
        has => [
            indel_file =>
@@ -182,8 +182,8 @@ sub execute {
             }
             $ref_fh->close;
 
-            #`/gsc/scripts/pkg/bio/tigra/installed/local_var_asm_wrapper.sh $read_file`; #assemble the reads
-            #    `cross_match $read_file.contigs.fa $ref_file -bandwidth 20 -minmatch 20 -minscore 25 -penalty -4 -discrep_lists -tags -gap_init -4 -gap_ext -1 > $prefix.stat`;
+            print `/gsc/scripts/pkg/bio/tigra/installed/local_var_asm_wrapper.sh $read_file`; #assemble the reads
+            `cross_match $read_file.contigs.fa $ref_file -bandwidth 20 -minmatch 20 -minscore 25 -penalty -4 -discrep_lists -tags -gap_init -4 -gap_ext -1 > $prefix.stat`;
 #            `~kchen/1000genomes/analysis/scripts/hetAtlas.pl -n 100 $read_file.contigs.fa > $read_file.contigs.fa.het`;
 #            `cross_match $read_file.contigs.fa.het $ref_file -bandwidth 20 -minmatch 20 -minscore 25 -penalty -4 -discrep_lists -tags -gap_init -4 -gap_ext -1 > $prefix.het.stat`;
 #            my ($result) = `~kchen/1000genomes/analysis/scripts/getCrossMatchIndel_ctx.pl -i -s 1 -x ${chr}_${region_start} $prefix.het.stat`; #this should return the crossmatch discrepancy with the highest score
@@ -262,7 +262,7 @@ sub generate_alleles {
     if($type =~ /INS/) {
         my ($original_position) = $reference_name =~ m/_(\d+)/;
         $original_position += 100; #regenerate the original position
-            my $glob_pattern = $self->tumor_assembly_data_directory . "/$chr/$chr" . "_" . $original_position . "_*.reads.fa.contigs.fa";
+            my $glob_pattern = $self->data_directory . "/$chr/$chr" . "_" . $original_position . "_*.reads.fa.contigs.fa";
         my ($contig_filename,@others) = glob($glob_pattern);
 
         #if there is more than one glob_pattern found
@@ -321,7 +321,7 @@ sub generate_alleles {
     else {
         #fetch reference sequence
         #for this the first deleted base should be the first base listed in the file
-        my $ref_seq = $self->reference;
+        my $ref_seq = $self->refseq;
         my $end = $pos + $size - 1;
         my ($header,$sequence) = `samtools faidx $ref_seq ${chr}:$pos-$end`;
         chomp $sequence;
