@@ -126,7 +126,7 @@ sub execute {
         
         my @predictions = EGAP::RNAGene->get(
             directory => $self->prediction_directory,
-            sequence_id => $seq_id,
+            sequence_name => $seq_id,
         );
 
         for my $prediction (@predictions) {
