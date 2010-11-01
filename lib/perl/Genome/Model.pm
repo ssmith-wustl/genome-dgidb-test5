@@ -373,12 +373,6 @@ sub create {
         return;
     }
 
-    unless($self->validate_created_object){ 
-        $self->error_message("Could not validate model"); 
-        $self->delete;
-        return;
-    }
-
     return $self;
 }
 
@@ -396,12 +390,6 @@ sub _validate_processing_profile_id {
         $class->error_message("Can't get processing profile for id ($pp_id)");
         return;
     }
-    return 1;
-}
-
-# Override in subclass if you want some kind of validation of the model object
-sub validate_created_object{
-    my $self = shift;
     return 1;
 }
 

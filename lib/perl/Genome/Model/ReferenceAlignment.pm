@@ -173,6 +173,33 @@ sub create {
     return $self;
 }
 
+sub __errors__ {
+    my ($self) = shift;
+
+    my @tags = $self->SUPER::__errors__(@_);
+
+    #Make sure reference sequence build and annotation build match up
+
+    my $reference_sequence_name = $self->reference_sequence_name;
+    my $reference_transcripts = $self->processing_profile->annotation_reference_transcripts;
+    return @tags unless $reference_transcripts; #exit if there's no annotation build to compare to
+    my $reference_sequence_build = $self->reference_sequence_build;
+    my ($ref_transcripts_organization_and_species, undef, $ref_transcripts_version) = split(/\.|\//, $reference_transcripts);
+    my (undef, $ref_transcripts_species) = split(/-/, $ref_transcripts_organization_and_species);
+    my (undef, $ref_transcripts_build) = split(/_/, $ref_transcripts_version);
+    $ref_transcripts_build =~ s/[a-zA-Z]//g; #remove the letter for $ref_transcripts_versions like "54_36p";
+
+    unless($ref_transcripts_build eq $reference_sequence_build->version and 
+           $ref_transcripts_species eq $reference_sequence_build->model->subject->species_name){        
+        push @tags, UR::Object::Tag->create(
+            type => 'invalid',
+            properties => ['reference_sequence_name', 'annotation_reference_transcripts'],
+            desc => "reference sequence: $reference_sequence_name does not match annotation reference transcripts: $reference_transcripts",
+        );
+    }
+    return @tags;
+}
+
 sub libraries {
     my $self = shift;
     my %libraries = map {$_->library_name => 1} $self->instrument_data;
@@ -623,27 +650,6 @@ sub _get_sum_of_metric_values_from_events {
         }
     }
     return $sum;
-}
-
-sub validate_created_object{ 
-    my $self = shift;
-    $DB::single = 1; #TODO: debug code, delete me
-    my $reference_sequence_name = $self->reference_sequence_name;
-    my $reference_transcripts = $self->processing_profile->annotation_reference_transcripts;
-    return 1 unless $reference_transcripts; #exit if there's no annotation build to compare to
-    my ($ref_sequence_organization, $ref_sequence_species, $ref_sequence_build) = split('-', $reference_sequence_name);
-    my ($ref_transcripts_organization_and_species, undef, $ref_transcripts_version) = split(/\.|\//, $reference_transcripts);
-    my ($ref_transcripts_organization, $ref_transcripts_species) = split(/-/, $ref_transcripts_organization_and_species);
-    my (undef, $ref_transcripts_build) = split(/_/, $ref_transcripts_version);
-    $ref_transcripts_build =~ s/[a-zA-Z]//g; #remove the letter for $ref_transcripts_versions like "54_36p";
-
-    unless($ref_transcripts_build eq $ref_sequence_build and 
-           $ref_transcripts_organization eq $ref_sequence_organization and 
-           $ref_transcripts_species eq $ref_sequence_species){        
-        $self->error_message("reference sequence: $reference_sequence_name does not match annotation reference transcripts: $reference_transcripts"); 
-        return 0;
-    }
-    return 1;
 }
 
 sub region_of_interest_set_name {
