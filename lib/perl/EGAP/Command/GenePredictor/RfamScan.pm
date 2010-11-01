@@ -70,6 +70,7 @@ sub execute {
     );
     my $raw_output_file = $raw_output_fh->filename;
     $raw_output_fh->close;
+    chmod(0666, $raw_output_file);
 
     # Create a list of parameters and then create the command string
     my @params;

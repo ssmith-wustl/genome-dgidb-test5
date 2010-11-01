@@ -116,6 +116,7 @@ sub execute {
     );
     my $output_file = $output_file_fh->filename;
     $output_file_fh->close;
+    chmod(0666, $output_file);
     push @params, $param . $output_file;
 
     push @params, $fasta_file;
