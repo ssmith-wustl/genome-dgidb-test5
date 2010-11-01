@@ -84,6 +84,11 @@ sub execute
     my $n_removed_file = ($self->n_removed_file ? $self->n_removed_file : $fastq_file . "n_removed");
     my $save_screened_reads = $self->save_screened_reads;
 
+    if (!$self->n_removal_threshold && !$self->non_n_base_threshold) {
+        $self->error_message("Need one threshold set.");
+        return;
+    }
+
     my $input_fh = IO::File->new($fastq_file);
     unless ($input_fh) {
         $self->error_message("Failed to open input file " . $fastq_file . ": $!");
