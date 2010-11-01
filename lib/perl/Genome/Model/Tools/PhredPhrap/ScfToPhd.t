@@ -2,32 +2,32 @@
 
 use strict;
 use warnings;
-use Test::More tests => 3;
+
 use above 'Genome';
 
-BEGIN {
-        use_ok('Genome::Model::Tools::PhredPhrap::ScfToPhd');
-}
+use File::Compare;
+use File::Temp;
+use Test::More;
+
+use_ok('Genome::Model::Tools::PhredPhrap::ScfToPhd') or die;
+
 my $path = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-PhredPhrap'; #directory for sample data and output
-my $static = "$path/ScfToPhd/_phd_output.static"; #static file for comparison to output
-my %params = (
-        phd_dir => "$path/phd_dir/",
-        chromat_dir => "$path/chromat_dir/",
-        scf_file => "$path/ScfToPhd/scf.txt",
-        phd_file => "$path/ScfToPhd/phd_output.txt", 
-        );
 
-my $scf_to_phd = Genome::Model::Tools::PhredPhrap::ScfToPhd->create(%params);
+my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
+my $phd_dir = $tmpdir.'/phd_dir';
+mkdir $phd_dir;
+ok(-d $phd_dir, 'created phd dir') or die;
+my $phd_file = $tmpdir.'/scf.phd';
 
-
-
+my $scf_to_phd = Genome::Model::Tools::PhredPhrap::ScfToPhd->create(
+    phd_dir => $phd_dir,
+    chromat_dir => "$path/chromat_dir/",
+    scf_file => "$path/ScfToPhd/scf.txt",
+    phd_file => $phd_file, 
+);
 isa_ok($scf_to_phd,'Genome::Model::Tools::PhredPhrap::ScfToPhd');
-
 ok($scf_to_phd->execute,'execute ScfToPhd');
+is(File::Compare::compare($scf_to_phd->phd_file, "$path/ScfToPhd/phd.txt"), 0, 'phds file is the same');
 
-unlink $scf_to_phd->phd_file if ((-e $scf_to_phd->phd_file or 
-                                 die("Output file was not created"))
-                             and
-                                 (-s $scf_to_phd->phd_file) == -s $static or 
-                                 die("Generated file $scf_to_phd->phd_file does not match static file:$static"));
+done_testing();
 exit;

@@ -39,6 +39,7 @@ sub execute {
                 return;
             }
 
+            $phrap->dump_status_messages(1);
             $phrap->execute;
 
             $self->build->load_bioseq_for_amplicon($amplicon)

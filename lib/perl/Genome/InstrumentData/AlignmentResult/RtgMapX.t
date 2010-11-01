@@ -6,12 +6,13 @@ use Test::More;
 use Sys::Hostname;
 
 use above 'Genome';
+use File::Copy;
 
 $ENV{'TEST_MODE'} = 1;
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 28;
+        plan tests => 34;
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -194,6 +195,18 @@ sub generate_fake_instrument_data {
 
     #my $fastq_directory = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Align-Maq/test_sample_name';
     my $fastq_directory = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-AlignmentResult-RtgMapX';
+    my $tmp_fastq_dir = File::Temp::tempdir(
+        'AlignmentResult-RtgMapX-XXXXXX',
+        DIR => '/gsc/var/cache/testsuite/running_testsuites/',
+        UNLINK => 1,
+        CLEANUP => 1,
+    );
+    for my $name ('s_1_1_sequence.txt', 's_1_2_sequence.txt') {
+        copy $fastq_directory."/$name", $tmp_fastq_dir."/$name";
+        ok(-s $tmp_fastq_dir."/$name", "$name copied ok");
+    }
+    chmod 02775, $tmp_fastq_dir;
+
     my $instrument_data = Genome::InstrumentData::Solexa->create_mock(
                                                                       id => $FAKE_INSTRUMENT_DATA_ID,
                                                                       sequencing_platform => 'solexa',
@@ -206,7 +219,7 @@ sub generate_fake_instrument_data {
                                                                       run_name => 'test_run_name',
                                                                       subset_name => 4,
                                                                       run_type => 'Paired End Read 2',
-                                                                      gerald_directory => $fastq_directory,
+                                                                      gerald_directory => $tmp_fastq_dir,
                                                                   );
 
 
