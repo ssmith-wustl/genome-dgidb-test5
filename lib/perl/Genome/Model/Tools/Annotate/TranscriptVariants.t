@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use Data::Dumper;
-use Test::More tests => 9;
+use Test::More tests => 11;
 use File::Compare;
 use above "Genome";
 
@@ -15,10 +15,14 @@ my $input = "$test_dir/input";
 
 ok(-e $input, 'input exists');
 
+my $bed_input = __FILE__ . '.bed';
+
+ok(-e $bed_input, 'bed input exists');
+
 my $ref_transcript = "$test_dir/known_output.transcript";
 ok(-e $ref_transcript, 'ref transcript exists');
 
-my $output_base = "$test_dir/output";
+my $output_base = "/gsc/var/cache/testsuite/running_testsuites/transcript_variants_output";
 my $command = Genome::Model::Tools::Annotate::TranscriptVariants->create(
     variant_file => $input,
     output_file => "$output_base.transcript",
@@ -43,6 +47,13 @@ my $command_reference_transcripts = Genome::Model::Tools::Annotate::TranscriptVa
     output_file => "$output_base.transcript",
 );
 is($command_reference_transcripts->execute(),1, "executed transcript variants with reference transcripts w/ return value of 1");
+
+my $command_bed_file = Genome::Model::Tools::Annotate::TranscriptVariants->create(
+    reference_transcripts => "NCBI-human.ensembl/54_36p_v2",
+    variant_bed_file => $bed_input,
+    output_file => "$output_base.transcript",
+);
+is($command_bed_file->execute(),1, "executed transcript variants with bed file w/ return value of 1");
 
 SKIP: {
    skip 'skipping for warnings', 2;

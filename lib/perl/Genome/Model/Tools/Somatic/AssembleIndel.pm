@@ -13,62 +13,62 @@ my $SAM_DEFAULT = Genome::Model::Tools::Sam->default_samtools_version;
 
 class Genome::Model::Tools::Somatic::AssembleIndel {
     is => 'Command',
-    has => [
-    indel_file =>
-    {
-        type => 'String',
-        is_optional => 0,
-        is_input => 1,
-        doc => 'Indel sites to assemble in annotator input format',
-    },
-    bam_file =>
-    {
-        type => 'String',
-        is_optional => 0,
-        is_input => 1,
-        doc => 'File from which to retrieve reads',
-    },
-    buffer_size =>
-    {
-        type => 'Integer',
-        is_optional => 1,
-        default => 100,
-        doc => 'Size in bp around start and end of the indel to include for reads for assembly',
-    },
-    data_directory =>
-    {
-        type => 'String',
-        is_optional => 0,
-        is_input => 1,
-        doc => "Location to dump individual chr results etc",
-    },
-    refseq =>
-    {
-        type => 'String',
-        is_optional => 1,
-        default => Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fasta',
-        doc => "reference sequence to use for reference assembly",
-    },
-    assembly_indel_list =>
-    {
-       type => 'String',
-       is_output=>1,
-       doc => "List of assembly results",
-   },
-   sam_version => {
-       is  => 'String',
-       doc => "samtools version to be used, default is $SAM_DEFAULT",
-       default_value => $SAM_DEFAULT,
-       is_optional => 1,
-   },
-        lsf_resource => {
-            is_param => 1,
-            default_value => 'rusage[mem=2000] select[type==LINUX64 & mem > 2000] span[hosts=1]',
-        },
-        lsf_queue => {
-            is_param => 1,
-            default_value => 'long'
-        } 
+       has => [
+           indel_file =>
+           {
+               type => 'String',
+               is_optional => 0,
+               is_input => 1,
+               doc => 'Indel sites to assemble in annotator input format',
+           },
+       bam_file =>
+       {
+           type => 'String',
+           is_optional => 0,
+           is_input => 1,
+           doc => 'File from which to retrieve reads',
+       },
+       buffer_size =>
+       {
+           type => 'Integer',
+           is_optional => 1,
+           default => 100,
+           doc => 'Size in bp around start and end of the indel to include for reads for assembly',
+       },
+       data_directory =>
+       {
+           type => 'String',
+           is_optional => 0,
+           is_input => 1,
+           doc => "Location to dump individual chr results etc",
+       },
+       refseq =>
+       {
+           type => 'String',
+           is_optional => 1,
+           default => Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fasta',
+           doc => "reference sequence to use for reference assembly",
+       },
+       assembly_indel_list =>
+       {
+           type => 'String',
+           is_output=>1,
+           doc => "List of assembly results",
+       },
+       sam_version => {
+           is  => 'String',
+           doc => "samtools version to be used, default is $SAM_DEFAULT",
+           default_value => $SAM_DEFAULT,
+           is_optional => 1,
+       },
+       lsf_resource => {
+           is_param => 1,
+           default_value => 'rusage[mem=2000] select[type==LINUX64 & mem > 2000] span[hosts=1]',
+       },
+       lsf_queue => {
+           is_param => 1,
+           default_value => 'long'
+       } 
 
     ]
 };
@@ -92,12 +92,14 @@ sub dir_for_chrom {
 sub execute {
     my $self=shift;
     $DB::single = 1;
-    
-    #test architecture to make sure we can run samtools
-    #copied from G::M::T::Maq""Align.t 
+    my %DONE;
+    my $DONE = \%DONE;
+
+#test architecture to make sure we can run samtools
+#copied from G::M::T::Maq""Align.t 
     unless (`uname -a` =~ /x86_64/) {
-       $self->error_message("Must run on a 64 bit machine");
-       return;
+        $self->error_message("Must run on a 64 bit machine");
+        return;
     }
     my $bam_file = $self->bam_file;
     unless(-s $bam_file) {
@@ -124,7 +126,7 @@ sub execute {
         return;
     }
 
-    
+
     my $indel_file = $self->indel_file;
     my $fh = IO::File->new($indel_file, "r");
     unless($fh) {
@@ -133,7 +135,7 @@ sub execute {
     }
 
     my $sam_pathname = Genome::Model::Tools::Sam->path_for_samtools_version($self->sam_version);
-    
+
     while(my $line = $fh->getline) {
         chomp $line;
         $DB::single=1;
@@ -167,7 +169,7 @@ sub execute {
             }
             $fa_fh->close;
 
-            #make reference fasta
+#make reference fasta
             my $ref_file = "$prefix.ref.fa";
             my $ref_fh = IO::File->new($ref_file,"w");
             unless($ref_fh) {
@@ -180,8 +182,8 @@ sub execute {
             }
             $ref_fh->close;
 
-            `/gsc/scripts/pkg/bio/tigra/installed/local_var_asm_wrapper.sh $read_file`; #assemble the reads
-            `cross_match $read_file.contigs.fa $ref_file -bandwidth 20 -minmatch 20 -minscore 25 -penalty -4 -discrep_lists -tags -gap_init -4 -gap_ext -1 > $prefix.stat`;
+            #`/gsc/scripts/pkg/bio/tigra/installed/local_var_asm_wrapper.sh $read_file`; #assemble the reads
+            #    `cross_match $read_file.contigs.fa $ref_file -bandwidth 20 -minmatch 20 -minscore 25 -penalty -4 -discrep_lists -tags -gap_init -4 -gap_ext -1 > $prefix.stat`;
 #            `~kchen/1000genomes/analysis/scripts/hetAtlas.pl -n 100 $read_file.contigs.fa > $read_file.contigs.fa.het`;
 #            `cross_match $read_file.contigs.fa.het $ref_file -bandwidth 20 -minmatch 20 -minscore 25 -penalty -4 -discrep_lists -tags -gap_init -4 -gap_ext -1 > $prefix.het.stat`;
 #            my ($result) = `~kchen/1000genomes/analysis/scripts/getCrossMatchIndel_ctx.pl -i -s 1 -x ${chr}_${region_start} $prefix.het.stat`; #this should return the crossmatch discrepancy with the highest score
@@ -189,37 +191,155 @@ sub execute {
 #                print $result;
 #            }
 #            else {
-                #   print "No assembled indel\n";
-                $DB::single=1;
-                
-                my $cmd = "gmt parse crossmatch --chr-pos ${chr}_${region_start} --crossmatch=$prefix.stat --min-indel-size=1";
-                print "$cmd\n";
-                my ($stupid_header1, $stupid_header2, $result) = `$cmd`;
-                if(defined $result && $result =~ /\S+/) {
-                    $output_fh->print($result);
-                    print $result . "\n";
-                }
-                print STDERR "########################\n";
+#   print "No assembled indel\n";
+    $DB::single=1;
+
+            my $cmd = "gmt parse crossmatch --chr-pos ${chr}_${region_start} --crossmatch=$prefix.stat --min-indel-size=1";
+            print "$cmd\n";
+            my ($stupid_header1, $stupid_header2, $result) = `$cmd`;
+            if(defined $result && $result =~ /\S+/) {
+                my $output = $self->thing($result, $DONE);
+                $output_fh->print($output);
+                print $result . "\n";
+            }
+            print STDERR "########################\n";
 
         }
-        
+
     }
-        
-    return 1;
+
+return 1;
 }
 
 
 1;
 
+sub thing {
+    my $self = shift;
+    my $somatic_event = shift;
+    my $DONE = shift;
+    my @fields = split /\t/, $somatic_event;
+    my $chr = $fields[0];
+    if($chr =~m /:/) {
+        my ($new_chr, ) = split ":", $chr;
+        $chr = $new_chr;
+        $fields[0]=$chr;
+    }
+    my $pos = $fields[1];
+    my $size = $fields[7];
+    my $type = $fields[8];
+
+
+    my $start;
+    my $stop;
+    if ($type =~ m/DEL/) {
+        $start=$pos; 
+        $stop= $pos + $size;
+    }
+    elsif($type =~ m/INS/ ) {
+        $start=$pos;
+        $stop=$pos+1;
+    }
+    my ($ref, $var) = $self->generate_alleles($DONE, @fields);
+    my $output_line = join("\t",$chr,$start,$stop,$ref,$var);
+
+#if line has already been printed, go to next event
+    if ($DONE->{$output_line}) {
+        next;
+    }
+#else, record printed event
+    else {
+        $DONE->{$output_line} = 1;
+        return "$output_line\n";
+    }
+}
+
+#returns a list of the reference allele and the variant allele in that order 
+sub generate_alleles {
+    my ($self, $DONE, @assembled_event_fields) = @_;
+    my ($chr,$pos,$contig_pos,$size,$type,$contig_name,$reference_name) = @assembled_event_fields[0,1,5,7,8,9,11];
+
+    if($type =~ /INS/) {
+        my ($original_position) = $reference_name =~ m/_(\d+)/;
+        $original_position += 100; #regenerate the original position
+            my $glob_pattern = $self->tumor_assembly_data_directory . "/$chr/$chr" . "_" . $original_position . "_*.reads.fa.contigs.fa";
+        my ($contig_filename,@others) = glob($glob_pattern);
+
+        #if there is more than one glob_pattern found
+        if(@others) {
+            $DB::single=1;
+
+            #if any of the filenames have already been used, find one which hasn't been used
+            if (exists($DONE->{'glob'}{$chr}{$original_position})) {
+                #roll through the filenames
+                for my $filename ($contig_filename, @others) {
+                    #if it's been used, go to the next one
+                    if (scalar grep { m/^$filename$/ } @{$DONE->{'glob'}{$chr}{$original_position}}) {
+                        next;
+                    }
+                    #if it hasn't been used, push it on the array of used filenames and use it
+                    else {
+                        push @{$DONE->{'glob'}{$chr}{$original_position}},$filename;
+                        $contig_filename = $filename;
+                        last;
+                    }
+                }
+            }
+            #if the hash key doesn't exist, none of the filenames have been used, so record this first one
+            else {
+                $DONE->{'glob'}{$chr}{$original_position} = [$contig_filename];
+            }               
+
+            $self->error_message("Hey, there are multiple contig files this thingy could belong too. Choosing the first filename and logging its use so that it is avoided if glob'ed again.");
+            $self->error_message("Glob Pattern: $glob_pattern; Used file $contig_filename");
+            #$self->error_message("Choosing first file in the hope that the calls ended up identical.");
+        }
+
+        my $contig_fh = IO::File->new($contig_filename, "r");
+        unless($contig_fh) {
+            $self->error_message("Unable to open $contig_filename");
+            $self->error_message("Glob Pattern: $glob_pattern");
+            $self->error_message("contig data for event not found: @assembled_event_fields");
+            die;
+        }
+        while(my $line = $contig_fh->getline) {
+            chomp $line;
+            next if($line !~ /^>$contig_name/);
+            my $sequence = '';
+            while($line = $contig_fh->getline) {
+                chomp $line;
+                $sequence .= $line if $line !~ /^>Contig/;;
+                if($line =~ /^>Contig/ || $contig_fh->eof) {
+                    #inserted sequence first nucleotide is the base reported in the assembly results
+                    return (0, substr $sequence,$contig_pos-1,$size);
+                }
+            }
+        }
+        $self->error_message("Unable to find _${contig_name}_ in $contig_filename");
+        return;
+    }
+    else {
+        #fetch reference sequence
+        #for this the first deleted base should be the first base listed in the file
+        my $ref_seq = $self->reference;
+        my $end = $pos + $size - 1;
+        my ($header,$sequence) = `samtools faidx $ref_seq ${chr}:$pos-$end`;
+        chomp $sequence;
+        unless($sequence) {
+            $self->error_message("Unable to retrieve sequence from reference");
+            return;
+        }
+        return ($sequence, 0);
+    }
+
+}
+
+
+
 sub help_brief {
     "Scans a snp file and finds adjacent sites. Then identifies if these are DNPs and annotates appropriately."
 }
 
-sub help_detail {
-    <<'HELP';
-    Need to fill in help detail
-HELP
-}
 
 #copied directly from Ken
 sub ComputeTigraN50{

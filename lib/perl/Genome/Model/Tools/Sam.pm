@@ -52,6 +52,7 @@ EOS
 
 
 my %SAMTOOLS_VERSIONS = (
+    r783    => '/gsc/pkg/bio/samtools/samtools-0.1.9/samtools',
     r613    => '/gsc/pkg/bio/samtools/samtools-0.1.8/samtools',
     r599    => '/gsc/pkg/bio/samtools/samtools-0.1.7ar599/samtools',
     r544    => '/gsc/pkg/bio/samtools/samtools-0.1.7ar544/samtools',
@@ -125,7 +126,7 @@ sub open_bamsam_in {
         $fh->open('samtools view -h "' . $in_filename . '" |');
     }
     elsif($type eq 'SAM') {
-        $fh = new IO::File($in_filename);
+        $fh = IO::File->new($in_filename);
     }
     else {
         die 'Unknown type specified for "' . $in_filename . "\".\n";
@@ -147,7 +148,7 @@ sub open_bamsam_out {
         $fh->open('| samtools view -S -b /dev/stdin > "' . $out_filename . '"');
     }
     elsif($type eq 'SAM') {
-        $fh = new IO::File($out_filename eq '-' ? stdout : '> ' . $out_filename);
+        $fh = IO::File->new($out_filename eq '-' ? stdout : '> ' . $out_filename);
     }
     else {
         die 'Unknown type specified for "' . $out_filename . "\".\n";

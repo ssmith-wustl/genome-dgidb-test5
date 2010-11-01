@@ -326,8 +326,8 @@ sub _get_mock_solexa_instrument_data {
         median_insert_size => 260,# 181, but 260 was used to generate assembly
         sd_above_insert_size => 62,
         sd_below_insert_size => 38,
-
     ) or Carp::confess "Can't create mock solexa instrument data";
+    $inst_data->set_always('sra_sample_id', 'SRS000001');
 
     return $inst_data;
 }
