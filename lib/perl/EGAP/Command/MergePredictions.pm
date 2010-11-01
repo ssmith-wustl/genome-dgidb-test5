@@ -11,12 +11,12 @@ class EGAP::Command::MergePredictions {
         temp_prediction_directories => {
             is => 'ARRAY',
             is_input => 1,
-            is_output => 1,
             doc => 'An array of temporary directories containing prediction files that need merged',
         },
         prediction_directory => {
             is => 'Path',
             is_input => 1,
+            is_output => 1,
             doc => 'The directory that all predictions should be merged into',
         },
     ],
