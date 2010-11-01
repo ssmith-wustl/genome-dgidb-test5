@@ -43,6 +43,9 @@ EOS
 
 sub execute {
     my $self = shift;
+
+    $self->status_message("Running fgenesh gene predictor!");
+
     my @features;
     my $output_directory = $self->raw_output_directory;
 
@@ -66,7 +69,7 @@ sub execute {
     $output_fh->close;
     chmod(0666, $output_file);
 
-    my $gene_count = 0;
+    my %gene_count_by_seq;
     while (my $seq = $seqio->next_seq()) {
         $self->status_message("Now parsing predictions from sequence " . $seq->id());
 
@@ -88,13 +91,13 @@ sub execute {
 
         # Parse and process each prediction...
         while (my $gene = $parser->next_prediction()) {
+            $gene_count_by_seq{$current_seq_name}++;
             my $strand = $gene->strand();
             $strand = '+1' if $strand eq '1';  # I want the + to be there a la variant annotation, also consistent with snap 
-            my $source = $gene->source_tag();
-            my $gene_name = join('.', $current_seq_name, $source, $gene_count);
+            my $source = lc $gene->source_tag();
+            my $gene_name = join('.', $current_seq_name, $source, $gene_count_by_seq{$current_seq_name});
             my $transcript_name = $gene_name . '.1';
             my $protein_name = $transcript_name . "_protein.1";
-            $gene_count++;
 
             $DB::single = 1 if $transcript_name eq "TRISPI_Contig1483.Fgenesh.11.1";
 

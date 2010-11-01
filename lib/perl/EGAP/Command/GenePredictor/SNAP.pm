@@ -67,6 +67,7 @@ sub execute {
     );
     my $raw_output = $raw_output_fh->filename;
     $raw_output_fh->close;
+    chmod(0666, $raw_output);
 
     my $raw_error_fh = File::Temp->new(
         DIR => $self->raw_output_directory,
@@ -76,6 +77,7 @@ sub execute {
     );
     my $raw_error = $raw_error_fh->filename;
     $raw_error_fh->close;
+    chmod(0666, $raw_error);
 
     my @models = split(",", $self->model_files);
     confess 'Received no SNAP models, not running predictor!' unless @models;
@@ -110,6 +112,7 @@ sub execute {
     my @predicted_exons;
     my $gene_count = 0;
     my ($current_seq_name, $current_group, $seq_obj);
+    my %gene_count_by_seq;
 
     # SNAP output is grouped by sequence name. Each line of output is an exon, and these exons are grouped into genes. If 
     # a line starts with a >, this indicates a new sequence's predictions come next, so any exons we've recorded for the
@@ -128,6 +131,7 @@ sub execute {
             $seq_obj = $self->get_sequence_by_name($current_seq_name);
             confess "Couldn't get sequence $current_seq_name!" unless $seq_obj;
             $self->status_message("Parsing predictions from $current_seq_name");
+            $DB::single = 1 if $current_seq_name eq 'TRISPI_Contig8672';
         }
         else {
             my (
@@ -143,8 +147,14 @@ sub execute {
             ) = split /\t/, $line;
 
             if (defined $current_group and $current_group ne $group and @predicted_exons) {
-                $self->_create_prediction_objects(\@predicted_exons, $gene_count, $current_seq_name, $current_group, $seq_obj);
-                $gene_count++;
+                $gene_count_by_seq{$current_seq_name}++;
+                $self->_create_prediction_objects(
+                    \@predicted_exons, 
+                    $gene_count_by_seq{$current_seq_name}, 
+                    $current_seq_name, 
+                    $current_group, 
+                    $seq_obj
+                );
                 @predicted_exons = ();
             }
 
@@ -158,7 +168,7 @@ sub execute {
                 end => $end,
                 strand => $strand,
                 score => $score,
-                source => 'SNAP',
+                source => 'snap',
                 exon_type => $label,
                 five_prime_overhang => $five_prime_overhang,
                 three_prime_overhang => $three_prime_overhang,
@@ -167,7 +177,17 @@ sub execute {
             push @predicted_exons, \%exon_hash;
         }
     }
-    $self->_create_prediction_objects(\@predicted_exons, $gene_count, $current_seq_name, $current_group, $seq_obj);
+
+    if (@predicted_exons) {
+        $gene_count_by_seq{$current_seq_name}++;
+        $self->_create_prediction_objects(
+            \@predicted_exons, 
+            $gene_count_by_seq{$current_seq_name}, 
+            $current_seq_name, 
+            $current_group, 
+            $seq_obj
+        );
+    }
 
     my @locks = $self->lock_files_for_predictions(qw/ EGAP::CodingGene EGAP::Protein EGAP::Transcript EGAP::Exon /);
     UR::Context->commit;
@@ -183,7 +203,7 @@ sub _create_prediction_objects {
     my $start = $predicted_exons[0]->{start};
     my $end = $predicted_exons[-1]->{end};
     my $strand = $predicted_exons[0]->{strand};
-    my $source = $predicted_exons[0]->{source};
+    my $source = lc $predicted_exons[0]->{source};
     my $gene_name = join('.', $current_seq_name, $source, $gene_count);
     my $transcript_name = $gene_name . '.1';
     my $protein_name = $transcript_name . "_protein.1";
