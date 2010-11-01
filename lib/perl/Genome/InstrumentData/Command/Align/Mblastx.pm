@@ -10,7 +10,7 @@ class Genome::InstrumentData::Command::Align::Mblastx {
         aligner_name  => { value => 'mblastx' },
     ],
     has_param => [
-        version       => { default_value => '1.01' },
+        version       => { default_value => '1.1.0x' },
         mhashgen_format => { is => 'Text', valid_values=>["K","N"]},
     ],
     doc => 'align instrument data using MCW mblastx',

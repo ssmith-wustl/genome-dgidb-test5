@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use File::Temp;
 
 class Genome::Model::Tools::Bed::Somatic {
     is => ['Command'],
@@ -26,9 +27,35 @@ class Genome::Model::Tools::Bed::Somatic {
 
 sub execute {
     my $self = shift;
+    
+    my @tumor_files = split ",",$self->tumor_bed_file;
+    my @normal_files = split ",",$self->normal_bed_file;
+    my $tumor_temp = File::Temp->new('gmt-bed-somatic-tumor-XXXX', DIR => "/tmp", CLEANUP => 1);
+    my $normal_temp = File::Temp->new('gmt-bed-somatic-normal-XXXX', DIR => "/tmp", CLEANUP => 1);
+    my $tumor_out;
+    my $normal_out;
+    if(scalar(@tumor_files)>1){
+        for my $file (@tumor_files){
+            system("cat ".$file." >> ".$tumor_temp);
+        }
+        $tumor_out = $tumor_temp;
+    }else{
+        $tumor_out = $self->tumor_bed_file;
+    }
+    if(scalar(@normal_files)>1){
+        for my $file (@normal_files){
+            system("cat ".$file." >> ".$normal_temp);
+        }
+        $normal_out = $normal_temp;
+    }else{
+        $normal_out = $self->normal_bed_file;
+    }
 
-    my $tier1_cmd = "/gsc/pkg/bio/bedtools/installed-64/intersectBed -wa -v -a " . $self->tumor_bed_file . " -b " . $self->normal_bed_file . " > " . $self->somatic_file;  
 
-  
-       return 1;
+    
+    my $tier1_cmd = "/gsc/pkg/bio/bedtools/installed-64/intersectBed -wa -v -a " . $tumor_out . " -b " . $normal_out . " > " . $self->somatic_file;  
+
+    my $result = system($tier1_cmd);
+    
+    return 1;
 }
