@@ -31,6 +31,9 @@ EOS
 sub pre_execute {
     my $self = shift;
 
+    $self->error_message("The CMDS pipeline is currently not producing consistent results, and is broken. Please run the tools by hand. You can find instructions to do so at https://gscweb.gsc.wustl.edu/wiki/User:Ndees#How_To_Run_CMDS_By_Hand. RT# 63413 is open regarding fixing this.");
+    die;
+
     # make sure either model group or model id list was provided
     unless($self->model_ids || $self->model_group) {
         $self->error_message("Either model_ids or model_group must be provided");
