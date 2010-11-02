@@ -257,8 +257,8 @@ sub library_name {
 sub lane {
     my $self = shift;
     my $subset_name = $self->subset_name;
-    if ($subset_name =~/-/){
-        my ($lane) = $subset_name =~ /(\d)-/;
+    if ($subset_name =~/[-\.]/){
+        my ($lane) = $subset_name =~ /(\d)[-\.]/;
         return $lane;
     }else{
         return $subset_name;

@@ -19112,6 +19112,63 @@ $Genome::Command::OPTS_SPEC = [
     'help!',
     undef
   ],
+  '>feature-list',
+  [
+    '>create',
+    [
+      'format=s',
+      [
+        '1-based',
+        'true-BED',
+        'multi-tracked',
+        'multi-tracked 1-based'
+      ],
+      'name=s',
+      'files',
+      'content-type=s',
+      'files',
+      'create-capture-container!',
+      undef,
+      'file-id=s',
+      undef,
+      'file-path=s',
+      'files',
+      'reference=s',
+      undef,
+      'source=s',
+      'files',
+      'subject=s',
+      undef,
+      'help!',
+      undef
+    ],
+    '>dump-merged-list',
+    [
+      'feature-list=s',
+      undef,
+      'output-path=s',
+      'files',
+      'help!',
+      undef
+    ],
+    '>list',
+    [
+      'show=s',
+      'files',
+      'csv-delimiter=s',
+      'files',
+      'filter=s',
+      'files',
+      'noheaders!',
+      undef,
+      'style=s',
+      'files',
+      'help!',
+      undef
+    ],
+    'help!',
+    undef
+  ],
   'help!',
   undef
 ];

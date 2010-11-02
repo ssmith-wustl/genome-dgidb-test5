@@ -1284,7 +1284,7 @@ sub _process_unaligned_fastq_pair {
             forward_n_removed_file => $forward_out,
             reverse_n_removed_file => $reverse_out,
             singleton_n_removed_file => $fragment_out,
-            cutoff => $self->n_removal_cutoff,
+            n_removal_threshold => $self->n_removal_cutoff,
         );
         unless ($cmd){
             die $self->error_message("couldn't create remove-n-pairwise command for $forward_dusted, $reverse_dusted!");
@@ -1355,7 +1355,7 @@ sub _process_unaligned_fastq {
         my $cmd = Genome::Model::Tools::Fastq::RemoveN->create(
             fastq_file => $dusted_fastq,
             n_removed_file => $output_path,
-            cutoff => $self->n_removal_cutoff,
+            n_removal_threshold => $self->n_removal_cutoff,
         ); 
         unless ($cmd){
             die $self->error_message("couldn't create remove-n command for $dusted_fastq");
