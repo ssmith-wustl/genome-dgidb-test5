@@ -36,8 +36,14 @@ var allocation_data = {
 
         var allocations = [
         <xsl:for-each select="object">
+          <xsl:variable name="short_class_name">
+            <xsl:call-template name="str:substring-after-last">
+              <xsl:with-param name="text"> <xsl:value-of select="aspect[@name='owner_class_name']/value"/> </xsl:with-param>
+              <xsl:with-param name="chars"> <xsl:text>Genome::Model::</xsl:text> </xsl:with-param>
+            </xsl:call-template>
+          </xsl:variable>
           {
-          "owner_class_name": "<xsl:value-of select="aspect[@name='owner_class_name']/value"/>",
+          "owner_class_name": "<xsl:value-of select="$short_class_name"/>",
           "display_name": "<xsl:value-of select="display_name"/>",
           "kilobytes_requested": "<xsl:value-of select="aspect[@name='kilobytes_requested']/value"/>"
           },
@@ -120,11 +126,11 @@ var allocation_data = {
             <table border="0" cellpadding="0" cellspacing="0" class="name-value" style="margin:0;">
               <tr>
                 <td class="name">unallocated (kb):</td>
-                <td class="value"><xsl:value-of select="aspect[@name='unallocated_kb']/value"/></td>
+                <td class="value"><xsl:value-of select="format-number(aspect[@name='unallocated_kb']/value, '#,##0')"/></td>
               </tr>
               <tr>
                 <td class="name">total (kb):</td>
-                <td class="value"><xsl:value-of select="aspect[@name='total_kb']/value"/></td>
+                <td class="value"><xsl:value-of select="format-number(aspect[@name='total_kb']/value, '#,##0')"/></td>
               </tr>
               <tr>
                 <td class="name">&#160;</td>
@@ -169,38 +175,62 @@ var allocation_data = {
 
   <xsl:template name="genome_disk_volume_table">
     <xsl:comment>template: status/genome_disk_volume.xsl name: genome_disk_volume_table</xsl:comment>
-    <div class="generic_lister">
-      <div class="box_header span-24 last rounded-top">
-        <div class="box_title"><h3 class="nontyped span-24 last">Allocations</h3></div>
-      </div>
-      <div class="box_content rounded-bottom span-24 last">
-        <table class="lister">
-          <thead>
-            <tr>
-              <th>build id</th>
-              <th>genome model class</th>
-              <th>build status</th>
-              <th>requested (kb)</th>
-              <th>absolute path</th>
-            </tr>
-          </thead>
-          <tbody>
+    <table id="set" class="dataTable">
+      <thead>
+        <tr>
+          <th>owner id</th>
+          <th>owner class</th>
+          <th>build status</th>
+          <th>requested</th>
+          <th>absolute path</th>
+        </tr>
+      </thead>
+      <tbody>
 
-            <xsl:for-each select="/object/aspect[@name='allocations']/object">
-              <xsl:sort select="aspect[@name='owner_id']/value" data-type="number" order="ascending"/>
-              <xsl:call-template name="genome_disk_volume_table_row"/>
-            </xsl:for-each>
-          </tbody>
-        </table>
-      </div> <!-- end box_content -->
-    </div> <!-- end generic lister -->
+        <xsl:for-each select="/object/aspect[@name='allocations']/object">
+          <xsl:sort select="aspect[@name='owner_id']/value" data-type="number" order="ascending"/>
+          <xsl:call-template name="genome_disk_volume_table_row"/>
+        </xsl:for-each>
+      </tbody>
+    </table>
 
+    <script type="text/javascript">
+      <xsl:text disable-output-escaping="yes">
+        <![CDATA[
+                 $(document).ready(
+                 window.setTable = $('#set').dataTable({
+                 "sScrollX": "100%",
+                 "sScrollInner": "110%",
+                 "bJQueryUI": true,
+                 "sPaginationType": "full_numbers",
+                 "bStateSave": true,
+                 "iDisplayLength": 25
+                 })
+                 );
+        ]]>
+      </xsl:text>
+    </script>
   </xsl:template>
 
   <xsl:template name="genome_disk_volume_table_row">
     <xsl:comment>template: status/genome_disk_volume.xsl name: genome_disk_volume_table_row</xsl:comment>
     <tr>
-      <td><xsl:value-of select="aspect[@name='owner_id']/value"/></td>
+      <td>
+        <xsl:choose>
+          <xsl:when test="aspect[@name='build']">
+            <xsl:for-each select="aspect[@name='build']">
+              <xsl:call-template name="object_link_button">
+                <xsl:with-param name="linktext" select="@id" />
+                <xsl:with-param name="icon" select="'sm-icon-extlink'" />
+              </xsl:call-template>
+            </xsl:for-each>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:value-of select="aspect[@name='owner_id']/value"/>
+          </xsl:otherwise>
+        </xsl:choose>
+
+      </td>
       <td>
         <xsl:call-template name="str:substring-after-last">
           <xsl:with-param name="text"> <xsl:value-of select="aspect[@name='owner_class_name']/value"/> </xsl:with-param>
@@ -210,7 +240,10 @@ var allocation_data = {
       <td>
         <xsl:choose>
           <xsl:when test="aspect[@name='build']">
-            <xsl:value-of select="aspect[@name='build']/object/aspect[@name='status']/value"/>
+            <xsl:variable name="e_status" select="aspect[@name='build']/object/aspect[@name='status']/value"/>
+            <xsl:variable name="lc_e_status" select="translate($e_status,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')"/>
+            <xsl:attribute name="class"><xsl:text disable-output-escaping="yes">status </xsl:text><xsl:value-of select="$lc_e_status"/></xsl:attribute>
+            <xsl:value-of select="$lc_e_status"/>
           </xsl:when>
           <xsl:otherwise>
             --
@@ -218,15 +251,20 @@ var allocation_data = {
         </xsl:choose>
       </td>
 
-      <td> <xsl:value-of select="aspect[@name='kilobytes_requested']/value"/> </td>
-      <td> <xsl:value-of select="aspect[@name='kilobytes_used']/value"/> </td>
-      <td> <a>
+      <td>
+        <xsl:variable name="kb_req" select="aspect[@name='kilobytes_requested']/value"/>
+        <xsl:value-of select="format-number($kb_req, '#,##0')"/>
+      </td>
+
+      <td>
         <xsl:variable name="absolute_path" select="aspect[@name='absolute_path']/value"/>
-        <xsl:attribute name="href">
-          <xsl:value-of select="$absolute_path"/>
-        </xsl:attribute>
-        <xsl:value-of select="substring($absolute_path,1,30)"/>...
-      </a>
+        <xsl:value-of select="$absolute_path"/>
+        <!-- <a> -->
+        <!--   <xsl:attribute name="href"> -->
+        <!--     <xsl:value-of select="$absolute_path"/> -->
+        <!--   </xsl:attribute> -->
+        <!--   <xsl:value-of select="substring($absolute_path,1,30)"/>... -->
+        <!-- </a> -->
       </td>
     </tr>
   </xsl:template>
