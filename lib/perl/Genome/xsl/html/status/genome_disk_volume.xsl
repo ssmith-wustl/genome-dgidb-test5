@@ -13,38 +13,75 @@
     <xsl:comment>allocation data JSON</xsl:comment>
     <script type="text/javascript">
 
-<!--      <xsl:for-each select="//aspect[@name='allocations']">
+      <!--      <xsl:for-each select="//aspect[@name='allocations']">
 
-        var allocation_data = {
-        <xsl:for-each select="object">
-          {
-          "owner_id": "<xsl:value-of select="aspect[@name='owner_id']/value"/>",
-          "owner_class_name": "<xsl:call-template name="str:substring-after-last"><xsl:with-param name="text"> <xsl:value-of select="aspect[@name='owner_class_name']/value"/></xsl:with-param><xsl:with-param name="chars"><xsl:text>Genome::Model::</xsl:text></xsl:with-param></xsl:call-template>",
+var allocation_data = {
+<xsl:for-each select="object">
+{
+"owner_id": "<xsl:value-of select="aspect[@name='owner_id']/value"/>",
+"owner_class_name": "<xsl:call-template name="str:substring-after-last"><xsl:with-param name="text"> <xsl:value-of select="aspect[@name='owner_class_name']/value"/></xsl:with-param><xsl:with-param name="chars"><xsl:text>Genome::Model::</xsl:text></xsl:with-param></xsl:call-template>",
 
-          "kilobytes_requested": <xsl:value-of select="aspect[@name='kilobytes_requested']/value"/>,
-          <xsl:if test="aspect[@name='build']">
-            "build_id": "<xsl:value-of select="aspect[@name='build']/object/aspect[@name='build_id']/value"/>",
-            "model_id": "<xsl:value-of select="aspect[@name='build']/object/aspect[@name='model_id']/value"/>",
-            "build_status": "<xsl:value-of select="aspect[@name='build']/object/aspect[@name='status']/value"/>",
-          </xsl:if>
-          },
-        </xsl:for-each>
-        };
-      </xsl:for-each>
--->
+"kilobytes_requested": <xsl:value-of select="aspect[@name='kilobytes_requested']/value"/>,
+<xsl:if test="aspect[@name='build']">
+"build_id": "<xsl:value-of select="aspect[@name='build']/object/aspect[@name='build_id']/value"/>",
+"model_id": "<xsl:value-of select="aspect[@name='build']/object/aspect[@name='model_id']/value"/>",
+"build_status": "<xsl:value-of select="aspect[@name='build']/object/aspect[@name='status']/value"/>",
+</xsl:if>
+},
+</xsl:for-each>
+};
+</xsl:for-each>
+      -->
       <xsl:for-each select="//aspect[@name='allocations']">
 
         var allocations = [
         <xsl:for-each select="object">
-            {
-                "owner_class_name": "<xsl:value-of select="aspect[@name='owner_class_name']/value"/>",
-                "display_name": "<xsl:value-of select="display_name"/>",
-                "kilobytes_requested": "<xsl:value-of select="aspect[@name='kilobytes_requested']/value"/>"
-            },
+          {
+          "owner_class_name": "<xsl:value-of select="aspect[@name='owner_class_name']/value"/>",
+          "display_name": "<xsl:value-of select="display_name"/>",
+          "kilobytes_requested": "<xsl:value-of select="aspect[@name='kilobytes_requested']/value"/>"
+          },
         </xsl:for-each>
         ];
       </xsl:for-each>
 
+
+      <xsl:for-each select="//aspect[@name='allocations']">
+
+        var allocation_build_info = {
+        <xsl:for-each select="object">
+          <xsl:choose>
+            <xsl:when test="aspect[@name='build']">
+              <xsl:for-each select="aspect[@name='build']/object">
+                "<xsl:value-of select="../../@id"/>": {
+                "build_id": "<xsl:value-of select="aspect[@name='build_id']/value"/>",
+                "model_id": "<xsl:value-of select="aspect[@name='model_id']/value"/>",
+                "status": "<xsl:value-of select="aspect[@name='status']/value"/>",
+                "run_by": "<xsl:value-of select="aspect[@name='run_by']/value"/>",
+                "date_scheduled": "<xsl:value-of select="aspect[@name='date_scheduled']/value"/>",
+                "date_completed": "<xsl:value-of select="aspect[@name='date_completed']/value"/>",
+                },
+              </xsl:for-each>
+            </xsl:when>
+            <xsl:otherwise>
+              "<xsl:value-of select="@id"/>": {
+              "build_id": "--",
+              "model_id": "--",
+              "status": "--",
+              "run_by": "--",
+              "date_scheduled": "--",
+              "date_completed": "--",
+              },
+            </xsl:otherwise>
+          </xsl:choose>
+        </xsl:for-each>
+        };
+      </xsl:for-each>
+
+      var total_allocation = {
+      "total_kb": <xsl:value-of select="aspect[@name='total_kb']/value"/>,
+      "unallocated_kb": <xsl:value-of select="aspect[@name='unallocated_kb']/value"/>
+      }
 
     </script>
 
@@ -58,56 +95,63 @@
 
     <div class="content rounded shadow">
       <div class="container">
-        <div id="objects" class="span-24 last">
+        <div class="box rounded">
+          <div style="width: 25%; margin-right; 2%; display: inline-block">
+            <table border="0" cellpadding="0" cellspacing="0" class="name-value" style="margin:0;">
+              <tr>
+                <td class="name">disk group:</td>
+                <td class="value"><xsl:value-of select="aspect[@name='disk_group_names']/value"/></td>
+              </tr>
 
-          <div class="span_8_box_masonry">
-            <div class="box_header span-8 last rounded-top">
-              <div class="box_title"><h3 class="nontyped span-7 last">Summary</h3></div>
-              <div class="box_button">
+              <tr>
+                <td class="name">status:</td>
+                <td class="value"><xsl:value-of select="aspect[@name='disk_status']/value"/></td>
+              </tr>
 
-              </div>
-            </div>
+              <tr>
+                <td class="name">can allocate:</td>
+                <td class="value"><xsl:value-of select="aspect[@name='can_allocate']/value"/></td>
+              </tr>
 
-            <div class="box_content rounded-bottom span-8 last">
-              <table class="name-value">
-                <tbody>
-
-                  <tr>
-                    <td class="name">Status:</td>
-                    <td class="value"><xsl:value-of select="aspect[@name='disk_status']/value"/></td>
-                  </tr>
-
-                  <tr>
-                    <td class="name">Can Allocate:</td>
-                    <td class="value"><xsl:value-of select="aspect[@name='can_allocate']/value"/></td>
-                  </tr>
-
-                  <tr>
-                    <td class="name">Unallocated (kb):</td>
-                    <td class="value"><xsl:value-of select="aspect[@name='unallocated_kb']/value"/></td>
-                  </tr>
-
-                  <tr>
-                    <td class="name">Total (kb):</td>
-                    <td class="value"><xsl:value-of select="aspect[@name='total_kb']/value"/></td>
-                  </tr>
-
-                  <tr>
-                    <td class="name">Disk Group:</td>
-                    <td class="value"><xsl:value-of select="aspect[@name='disk_group_names']/value"/></td>
-                  </tr>
-
-                </tbody>
-              </table>
-            </div>
+            </table>
           </div>
 
-        </div> <!-- end .objects -->
+          <div style="width: 50%; display: inline-block;">
+            <table border="0" cellpadding="0" cellspacing="0" class="name-value" style="margin:0;">
+              <tr>
+                <td class="name">unallocated (kb):</td>
+                <td class="value"><xsl:value-of select="aspect[@name='unallocated_kb']/value"/></td>
+              </tr>
+              <tr>
+                <td class="name">total (kb):</td>
+                <td class="value"><xsl:value-of select="aspect[@name='total_kb']/value"/></td>
+              </tr>
+              <tr>
+                <td class="name">&#160;</td>
+                <td class="value">&#160;</td>
+              </tr>
 
-        <div class="span-24 last" style="margin-bottom: 10px">
-          <script type="text/javascript">
-            render_treemap(allocations, 950, 600);
-          </script>
+            </table>
+
+          </div>
+        </div>
+
+        <div class="generic_lister">
+          <div class="box_header span-24 last rounded-top">
+            <div class="box_title"><h3 class="nontyped span-24 last">Disk Allocation Treemap</h3></div>
+          </div>
+          <div class="box_content rounded-bottom span-24 last">
+            <div style="float: left; height: 600px; margin-bottom: 10px;border-bottom: 1px solid #cdcdcd;">
+              <script type="text/javascript">
+                // console.group("Build Info (XSL):");
+                // console.dir(allocation_build_info);
+                // console.groupEnd();
+
+                render_treemap(allocations, 950, 600, allocation_build_info, total_allocation);
+
+              </script>
+            </div>
+          </div>
         </div>
 
         <xsl:call-template name="genome_disk_volume_table"></xsl:call-template>
