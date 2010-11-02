@@ -73,6 +73,8 @@ EOS
 
 sub execute {
     my $self = shift;
+    $self->status_message("Running core gene coverage command");
+
     if($self->option eq 'assembly') {
         # xdformat -n -I subj file
         # bsub a tblastn on the subj/query file
@@ -103,24 +105,24 @@ sub execute {
         {
             $blast_query_file = $self->archaea_query_file;
         }
-        my @blastp = ( 'bsub','-K','-q','long',
-                       '-o', $bsubout,
-                       '-e', $bsuberr,
-                       'blastp',
-                       $self->fasta_file,
-                       $blast_query_file,
-                       '-o',
-                       $blastresults );
-        my ($bstdout, $bstderr);
-        my $bsub_rv = IPC::Run::run(\@blastp,
-                                    '>',
-                                    \$bstdout,
-                                    '2>',
-                                    \$bstderr, );
-        unless($bsub_rv) {
-            $self->error_message("failed to bsub blastp job:\n".$bstderr);
-            croak;
-        } 
+
+        $DB::single = 1;
+        my $blastp_cmd = join(' ', 'blastp', $self->fasta_file, $blast_query_file, '-o', $blastresults);
+        $self->status_message("bsubbing blastp command: $blastp_cmd");
+        my $blastp_job = PP::LSF->create(
+            command => $blastp_cmd,
+            q => 'long',
+            o => $bsubout,
+            e => $bsuberr,
+        );
+        my $start_rv = $blastp_job->start;
+        confess "Trouble starting LSF job for blastp ($blastp_cmd)" unless defined $start_rv and $start_rv;
+
+        my $wait_rv = $blastp_job->wait_on;
+        confess "Trouble while waiting for LSF job for blastp ($blastp_cmd) to complete!" unless defined $wait_rv and $wait_rv;
+
+        $self->status_message("Blastp done, parsing");
+
         # run parse_blast_results_percid_fraction_oflength on the output
         my @parse = (
                      'gmt','bacterial','parse-blast-results',
@@ -142,6 +144,9 @@ sub execute {
             $self->error_message("failed to parse output ".$blastresults."\n".$parse_stderr);
             return 0;
         }
+
+        $self->status_message("Done parsing, calculating core gene coverage percentage");
+
         my $core_gene_lines = read_file("Cov_30_PID_30");
         #@core_gene_lines = grep /====/
         my $core_groups_ref_arry = $self->get_core_groups_coverage(

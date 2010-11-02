@@ -8,6 +8,8 @@ use Genome;
 use Carp;
 use Data::Dumper 'Dumper';
 use File::Path;
+use File::Find 'find';
+use File::Basename 'fileparse';
 use Regexp::Common;
 use Workflow;
 use YAML;
@@ -1523,10 +1525,52 @@ sub get_metric {
 # If there are no differences, return undef. 
 sub _compare_output {
     my ($self, $other_build_id) = @_;
-    $self->warning_message("Override _compare_output in your build subclass!");
-    return;
-}
 
+    my $other_build = Genome::Model::Build->get($other_build_id);
+    confess "Could not get build $other_build_id!" unless $other_build;
+
+    # Get files from this build data directory, full path
+    my %files;
+    find(sub { $files{$File::Find::name}++ }, $self->data_directory . '/');
+
+    # Ditto for the other build 
+    my %other_files;
+    my %other_full_paths;
+    find(sub { $other_files{$_}++; $other_full_paths{$_} = $File::Find::name; }, $other_build->data_directory . '/');
+
+    # Cycle through files in this build's directory
+    my %diffs;
+    FILE: for my $file_path (sort keys %files) {
+        delete $files{$file_path};
+        my ($file_name) = fileparse($file_path);
+
+        my $other_file_name = delete $other_files{$file_name};
+        my $other_full_path = delete $other_full_paths{$file_name};
+
+        next FILE if -d $file_path;
+
+        unless (defined $other_file_name and defined $other_full_path) {
+            $diffs{$file_name} = "build $other_build_id does not have file corresponding to $file_path";
+            next FILE;
+        }
+        
+        my $file_md5 = Genome::Utility::FileSystem->md5sum($file_path);
+        my $other_md5 = Genome::Utility::FileSystem->md5sum($other_full_path);
+
+        unless ($file_md5 eq $other_md5) {
+            $diffs{$file_name} = "files $file_path and $other_full_path are not the same!";
+        }
+    }
+
+    # Make sure there aren't any files the other builds has that this one lacks
+    for my $leftover (sort keys %other_files) {
+        my $full_path = $other_full_paths{$leftover};
+        next if -d $full_path;
+        $diffs{$leftover} = "build " . $self->build_id . " does not have file corresponding to $full_path";
+    }
+
+    return %diffs;
+}
 
 # why hide this here? -ss
 package Genome::Model::Build::AbstractBaseTest;
@@ -1535,4 +1579,4 @@ class Genome::Model::Build::AbstractBaseTest {
     is => 'Genome::Model::Build',
 };
 
-1;
+1;;
