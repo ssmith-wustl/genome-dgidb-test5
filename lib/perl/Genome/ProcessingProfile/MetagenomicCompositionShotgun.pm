@@ -51,6 +51,11 @@ class Genome::ProcessingProfile::MetagenomicCompositionShotgun {
             default_value => 1,
             doc => 'When this flag is enabled, the model will attempt to grab taxonomic data for the metagenomic reports and produce a combined refcov-taxonomic final report.  Otherwise, only refcov will be run on the final metagenomic bam',
         },
+        skip_qc_on_untrimmed_reads => {
+            is => 'Boolean',
+            default_value => 0,
+            doc => "If this flag is specified, QC report will skip metric on the human-free, untrimmed data.",
+        },
     ],
     has => [
         _contamination_screen_pp => {
@@ -286,7 +291,10 @@ sub _execute_build {
     local $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 1;
 
     unless ($self->skip_contamination_screen){
-        my $qc_report = Genome::Model::MetagenomicCompositionShotgun::Command::QcReport->create(build_id => $build->id);
+        my $qc_report = Genome::Model::MetagenomicCompositionShotgun::Command::QcReport->create(
+            build_id => $build->id,
+            skip_qc_on_untrimmed_reads => $self->skip_qc_on_untrimmed_reads,
+        );
         unless($qc_report->execute()) {
             die $self->error_message("Failed to create QC report!");
         }
