@@ -105,9 +105,9 @@ sub execute {                               # replace with real execution logic.
 
 	## Verify existence of files ##
 
-	if(!(-e $snv_file && -e $snv_annotation_file))
+	if(!(-e $snv_file || -e $indel_file))
 	{
-		warn "Error: SNV file or SNV annotation file does not exist!\n";
+		warn "Error: SNV file or indel file does not exist!\n";
 		return 0;
 	}
 
@@ -118,8 +118,8 @@ sub execute {                               # replace with real execution logic.
 
 
 	## Load the annotations ##
-	
-	my %annotations = load_annotations($snv_annotation_file);
+	if ($snv_annotation_file) {
+            my %annotations = load_annotations($snv_annotation_file);
 	
 	
 	## Parse the SNV file ##
@@ -137,6 +137,7 @@ sub execute {                               # replace with real execution logic.
 	
 		my @lineContents = split(/\t/, $line);			
 
+    next if $line =~ /gene_name/;
 		my $chrom = $lineContents[0];
 		my $chr_start = $lineContents[1];
 		my $chr_stop = $lineContents[2];
@@ -169,20 +170,21 @@ sub execute {                               # replace with real execution logic.
 	}
 	
 	close($input);
+    }
 	
 	
 	
 	## Load the annotations ##
-	
-	%annotations = load_annotations($indel_annotation_file);
+        if ($indel_annotation_file) {	
+	my %annotations = load_annotations($indel_annotation_file);
 	
 	
 	## Parse the Indel file ##
 	
 	## Parse the variant file ##
 
-	$input = new FileHandle ($indel_file);
-	$lineCounter = 0;
+	my $input = new FileHandle ($indel_file);
+	my $lineCounter = 0;
 	
 	while (<$input>)
 	{
@@ -191,7 +193,7 @@ sub execute {                               # replace with real execution logic.
 		$lineCounter++;		
 	
 		my @lineContents = split(/\t/, $line);			
-
+    next if $line =~ /gene_name/;
 		my $chrom = $lineContents[0];
 		my $chr_start = $lineContents[1];
 		my $chr_stop = $lineContents[2];
@@ -224,6 +226,7 @@ sub execute {                               # replace with real execution logic.
 	}
 	
 	close($input);
+    }
 		
 	
 	
