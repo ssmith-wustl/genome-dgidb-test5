@@ -666,12 +666,12 @@ sub region_of_interest_set_name {
 
 sub region_of_interest_set {
     my $self = shift;
-    # TODO: Refactor Genome::Capture::Set to something more generic that will work for PCR, Transcriptome, etc.
+
     my $name = $self->region_of_interest_set_name;
     return unless $name;
-    my $roi_set = Genome::Capture::Set->get(name => $name);
+    my $roi_set = Genome::FeatureList->get(name => $name);
     unless ($roi_set) {
-        die('Failed to find capture set with name: '. $name);
+        die('Failed to find feature-list with name: '. $name);
     }
     return $roi_set;
 }
