@@ -149,12 +149,7 @@ var allocation_data = {
           <div class="box_content rounded-bottom span-24 last">
             <div style="float: left; height: 600px; margin-bottom: 10px;border-bottom: 1px solid #cdcdcd;">
               <script type="text/javascript">
-                // console.group("Build Info (XSL):");
-                // console.dir(allocation_build_info);
-                // console.groupEnd();
-
                 render_treemap(allocations, 950, 600, allocation_build_info, total_allocation);
-
               </script>
             </div>
           </div>
@@ -218,7 +213,7 @@ var allocation_data = {
       <td>
         <xsl:choose>
           <xsl:when test="aspect[@name='build']">
-            <xsl:for-each select="aspect[@name='build']">
+            <xsl:for-each select="aspect[@name='build']/object">
               <xsl:call-template name="object_link_button">
                 <xsl:with-param name="linktext" select="@id" />
                 <xsl:with-param name="icon" select="'sm-icon-extlink'" />
