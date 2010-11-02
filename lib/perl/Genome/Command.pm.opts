@@ -1223,6 +1223,19 @@ $Genome::Command::OPTS_SPEC = [
       'help!',
       undef
     ],
+    '>post-process-and-import',
+    [
+      'dust!',
+      undef,
+      'instrument-data=s',
+      undef,
+      'n-removal-threshold=s',
+      undef,
+      'non-n-base-threshold=s',
+      undef,
+      'help!',
+      undef
+    ],
     '>print-summary-xml',
     [
       'instrument-data-id=s',
@@ -1599,6 +1612,8 @@ $Genome::Command::OPTS_SPEC = [
         'name=s',
         'files',
         'skip-contamination-screen!',
+        undef,
+        'skip-qc-on-untrimmed-reads!',
         undef,
         'based-on=s',
         'files',
@@ -3215,7 +3230,7 @@ $Genome::Command::OPTS_SPEC = [
         'files',
         'groups=s',
         'files',
-        'metagenomic-references=s@',
+        'metagenomic-references=s',
         'files',
         'model-name=s',
         'files',
@@ -4239,6 +4254,13 @@ $Genome::Command::OPTS_SPEC = [
         'help!',
         undef
       ],
+      '>abandon-and-queue',
+      [
+        'builds=s@',
+        undef,
+        'help!',
+        undef
+      ],
       '>list',
       [
         'show=s',
@@ -4337,6 +4359,18 @@ $Genome::Command::OPTS_SPEC = [
       'help!',
       undef
     ],
+    '>de-novo-assembly',
+    [
+      '>upload-to-dacc',
+      [
+        'model=s',
+        undef,
+        'help!',
+        undef
+      ],
+      'help!',
+      undef
+    ],
     '>metagenomic-composition-16s',
     [
       '>copy-files',
@@ -4388,15 +4422,15 @@ $Genome::Command::OPTS_SPEC = [
         'overwrite!',
         undef,
         'regions-file=s',
-        undef,
+        'files',
         'report-dir=s',
         'files',
         'taxonomy-file=s',
         undef,
         'viral-headers-file=s',
-        undef,
+        'files',
         'viral-taxonomy-file=s',
-        undef,
+        'files',
         'help!',
         undef
       ],
@@ -4408,6 +4442,8 @@ $Genome::Command::OPTS_SPEC = [
         undef,
         'report-dir=s',
         'files',
+        'skip-qc-on-untrimmed-reads!',
+        undef,
         'help!',
         undef
       ],
@@ -6787,8 +6823,6 @@ $Genome::Command::OPTS_SPEC = [
         'files',
         'output-file=s',
         'files',
-        'variant-file=s',
-        'files',
         'annotation-filter=s',
         'files',
         'benchmark!',
@@ -6817,6 +6851,10 @@ $Genome::Command::OPTS_SPEC = [
         undef,
         'sloppy!',
         undef,
+        'variant-bed-file=s',
+        'files',
+        'variant-file=s',
+        'files',
         'help!',
         undef
       ],
@@ -6825,8 +6863,6 @@ $Genome::Command::OPTS_SPEC = [
         'lsf-queue=s',
         'files',
         'lsf-resource=s',
-        'files',
-        'variant-file=s',
         'files',
         'annotation-filter=s',
         'files',
@@ -6864,6 +6900,10 @@ $Genome::Command::OPTS_SPEC = [
         undef,
         'split-by-number=s',
         undef,
+        'variant-bed-file=s',
+        'files',
+        'variant-file=s',
+        'files',
         'help!',
         undef
       ],
@@ -7924,6 +7964,17 @@ $Genome::Command::OPTS_SPEC = [
         'output-bed-file=s',
         'files',
         'gene-list=s',
+        'files',
+        'help!',
+        undef
+      ],
+      '>somatic',
+      [
+        'normal-bed-file=s',
+        'files',
+        'somatic-file=s',
+        'files',
+        'tumor-bed-file=s',
         'files',
         'help!',
         undef
@@ -11273,12 +11324,14 @@ $Genome::Command::OPTS_SPEC = [
       [
         'fastq-file=s',
         'files',
-        'cutoff=s',
-        undef,
         'failed-read-count=s',
+        undef,
+        'n-removal-threshold=s',
         undef,
         'n-removed-file=s',
         'files',
+        'non-n-base-threshold=s',
+        undef,
         'passed-read-count=s',
         undef,
         'save-screened-reads!',
@@ -11300,7 +11353,9 @@ $Genome::Command::OPTS_SPEC = [
         'files',
         'singleton-n-removed-file=s',
         'files',
-        'cutoff=s',
+        'n-removal-threshold=s',
+        undef,
+        'non-n-base-threshold=s',
         undef,
         'pairs-passed=s',
         undef,
@@ -16887,6 +16942,17 @@ $Genome::Command::OPTS_SPEC = [
         'help!',
         undef
       ],
+      '>process-cmds-calls',
+      [
+        'cmds-file=s',
+        'files',
+        'map-file=s',
+        'files',
+        'output-basename=s',
+        'files',
+        'help!',
+        undef
+      ],
       'help!',
       undef
     ],
@@ -17039,6 +17105,29 @@ $Genome::Command::OPTS_SPEC = [
     '>somatic',
     [
       '>assemble-indel',
+      [
+        'assembly-indel-list=s',
+        'files',
+        'bam-file=s',
+        'files',
+        'data-directory=s',
+        'files',
+        'indel-file=s',
+        'files',
+        'lsf-queue=s',
+        'files',
+        'lsf-resource=s',
+        'files',
+        'buffer-size=s',
+        undef,
+        'refseq=s',
+        'files',
+        'sam-version=s',
+        'files',
+        'help!',
+        undef
+      ],
+      '>assemble-indel-bed',
       [
         'assembly-indel-list=s',
         'files',
@@ -18011,6 +18100,11 @@ $Genome::Command::OPTS_SPEC = [
       'help!',
       undef
     ],
+    '>update-tab-completion',
+    [
+      'help!',
+      undef
+    ],
     '>varscan',
     [
       '>consensus',
@@ -18859,6 +18953,19 @@ $Genome::Command::OPTS_SPEC = [
         'files',
         'force!',
         undef,
+        'help!',
+        undef
+      ],
+      '>check-libs',
+      [
+        'above-cutoff=s',
+        undef,
+        'below-cutoff=s',
+        undef,
+        'builds=s',
+        'files',
+        'group=s',
+        'files',
         'help!',
         undef
       ],
