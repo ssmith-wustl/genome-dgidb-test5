@@ -11,7 +11,7 @@ class Genome::InstrumentData::Command::PostProcessAndImport{
     is => "Genome::Command::Base",
     has => {
         instrument_data => {
-            is => 'Genome::InstrumentData',
+            is => 'Genome::InstrumentData::Imported',
             doc => 'Instrument Data to dust, n-remove and import as new instrument data',
         },
         n_removal_threshold => {
@@ -35,6 +35,7 @@ class Genome::InstrumentData::Command::PostProcessAndImport{
 
 sub execute {
     my $self = shift;
+    $DB::single = 1;
     my $instrument_data = $self->instrument_data;
     my $lane = $instrument_data->lane;
     my $instrument_data_id = $instrument_data->id;
@@ -140,7 +141,8 @@ sub execute {
         my $fastq_filenames = $instrument_data->resolve_fastq_filenames;
         for (@$fastq_filenames){
             unless (-s $_){
-                $self->error_message("expected fastq ($_) extracted from instrument data ".$instrument_data->display_name." doesn't have size!");
+                $self->error_message("expected fastq ($_) extracted from instrument data ".$instrument_data->__display_name__." doesn't have size!");
+                system("ls -l $_");
                 die $self->error_message;
             }
         }

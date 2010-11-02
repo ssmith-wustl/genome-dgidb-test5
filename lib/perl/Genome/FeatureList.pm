@@ -97,6 +97,10 @@ sub create {
             return;
         }
 
+        #If we rollback the create, need to get rid of the allocation.
+        my $upon_delete_callback = $self->_cleanup_allocation_sub;
+        $self->create_subscription(method=>'rollback', callback=>$upon_delete_callback);
+
         my $retval = eval {
             Genome::Utility::FileSystem->copy_file($file, $self->file_path);
         };
@@ -135,8 +139,17 @@ sub _next_id {
 sub delete {
     my $self = shift;
 
-    #creating an anonymous sub to delete allocations when commit happens
-    my $upon_delete_callback = sub { 
+    #If we commit the delete, need to get rid of the allocation.
+    my $upon_delete_callback = $self->_cleanup_allocation_sub;
+    $self->create_subscription(method=>'commit', callback=>$upon_delete_callback);
+
+    return $self->SUPER::delete(@_);
+}
+
+sub _cleanup_allocation_sub {
+    my $self = shift;
+
+    return sub {
         $self->status_message('Now deleting allocation with owner_id = ' . $self->id);
         print $self->status_message;
         my $allocation = $self->disk_allocation;
@@ -149,11 +162,6 @@ sub delete {
            $allocation->deallocate; 
         }
     };
-
-    #hook our anonymous sub into the commit callback
-    $self->create_subscription(method=>'commit', callback=>$upon_delete_callback);
-
-    return $self->SUPER::delete(@_);
 }
 
 sub _resolve_lims_bed_file {
