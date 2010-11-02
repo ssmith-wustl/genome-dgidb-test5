@@ -552,7 +552,6 @@ sub resolve_class_and_params_for_argv {
         return ($class, $params);
     }
     unless (@_ && $self->_check_for_missing_parameters($params)) {
-        $params->{help} = 1;
         return ($class, $params);
     }
     
