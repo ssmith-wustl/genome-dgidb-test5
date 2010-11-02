@@ -19,7 +19,6 @@ class Genome::Model::Command::Define::MetagenomicCompositionShotgun {
             is => 'Text',
             is_optional => 1,
             is_input => 1,
-            default_value => 'human microbiome metagenomic alignment with samtools merge',
             doc => 'identifies the processing profile by name',
         },
         contamination_reference => {
@@ -31,10 +30,9 @@ class Genome::Model::Command::Define::MetagenomicCompositionShotgun {
         },
         metagenomic_references => {
             is => 'Text',
-            is_many => 1,
             is_optional => 1,
             is_input => 1,
-            default_value => ['microbial reference part 1 of 2', 'microbial reference part 2 of 2'],
+            default_value => 'microbial reference part 1 of 2,microbial reference part 2 of 2',
             doc => 'the reference sequence to use for the metagenomic reference alignment',
         },
         # TODO: move these up, and make this subclass default to true for both values        
@@ -61,7 +59,7 @@ genome model define metagenomic-composition-shotgun \
     --subject-name H_LA-639-9080-cDNA-1 \
     --processing-profile-name "human microbiome metageomic shotgun"
     --contamination-reference "contamination-human"
-    --metagenomic-references "microbial reference 1 of 2","microbial reference 2 of 2"
+    --metagenomic-references "microbial reference part 1 of 2","microbial reference part 2 of 2"
 
     
 EOS
@@ -95,18 +93,20 @@ sub type_specific_parameters_for_create {
     }
     $self->status_message("Set contamination_reference build to " . $self->contamination_reference . " model's latest build");
 
-    my @metagenomic_references;
-    @metagenomic_references = map { Genome::Model->get(name => $_) } $self->metagenomic_references;
-    unless ( (scalar $self->metagenomic_references) == grep { $_->isa('Genome::Model::ImportedReferenceSequence') } @metagenomic_references ){
-        $self->error_message("Couldn't grab imported-reference-sequence models (".join(",", $self->metagenomic_references).") to set default metagenomic_screen_references");
+    my @metagenomic_references = split(',', $self->metagenomic_references);
+    my @metagenomic_reference_models = map { Genome::Model->get(name => $_) } @metagenomic_references;
+    @metagenomic_reference_models = grep { $_->isa('Genome::Model::ImportedReferenceSequence') } @metagenomic_reference_models;
+    unless ( @metagenomic_reference_models == @metagenomic_references && @metagenomic_reference_models > 0) {
+        $self->error_message("Couldn't grab imported-reference-sequence models (".join(', ', @metagenomic_references).") to set default metagenomic_screen_references");
         return;
     }
-    my @metagenomic_reference_builds = map { $_->last_complete_build } @metagenomic_references;
-    unless ( (scalar $self->metagenomic_references) == grep { $_->isa('Genome::Model::Build::ImportedReferenceSequence') } @metagenomic_reference_builds){
-        $self->error_message("Couldn't grab imported-reference-sequence builds (".join(",", $self->metagenomic_references).") to set default metagenomic_screen_references");
+    my @metagenomic_reference_builds = map { $_->last_complete_build } @metagenomic_reference_models;
+    @metagenomic_reference_builds = grep { $_->isa('Genome::Model::Build::ImportedReferenceSequence') } @metagenomic_reference_builds;
+    unless ( @metagenomic_reference_builds == @metagenomic_references && @metagenomic_reference_builds > 0) {
+        $self->error_message("Couldn't grab imported-reference-sequence builds (".join(', ', @metagenomic_references).") to set default metagenomic_screen_references");
         return;
     }
-    $self->status_message("Set metagenomic reference builds to ".join(", ", $self->metagenomic_references)." models latest builds");
+    $self->status_message("Set metagenomic reference builds to ".join(', ', @metagenomic_references)." models latest builds");
 
     my @params = (
         contamination_screen_reference => $contamination_screen_reference_build,

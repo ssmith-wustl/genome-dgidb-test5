@@ -19127,6 +19127,8 @@ $Genome::Command::OPTS_SPEC = [
       'files',
       'content-type=s',
       'files',
+      'create-capture-container!',
+      undef,
       'file-id=s',
       undef,
       'file-path=s',
