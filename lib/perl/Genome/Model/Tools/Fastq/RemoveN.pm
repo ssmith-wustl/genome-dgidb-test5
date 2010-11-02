@@ -18,14 +18,20 @@ class Genome::Model::Tools::Fastq::RemoveN
                                     is => 'Text',
                                     is_output => 1,
                                     is_optional => 1,
-                                },
-            cutoff =>   {
+                                }, 
+
+	   n_removal_threshold =>   {
                                     doc => 'minimum # of N\'s to screen on.  Set to 0 to disable',
                                     is => 'Number',
                                     is_optional => 1,
-                                    default => 1, 
-                        },
-            save_screened_reads => 
+	                        },
+	  non_n_base_threshold =>   {
+                                    doc => 'minimum # of consecutive non N\'s to screen on. Set to 0 to disable',
+                                    is => 'Number',
+                                    is_optional => 1,
+                                    
+                                },
+	save_screened_reads => 
                                 {
                                     doc => 'save screened reads in separate file',
                                     is => 'Boolean',
@@ -49,12 +55,12 @@ class Genome::Model::Tools::Fastq::RemoveN
 
 sub help_brief 
 {
-    "remove reads from file containing N";
+    "Remove reads from file containing N or remove reads without expected number of non-N bases";
 }
 
 sub help_detail
 {   
-    "Removes reads that have internal N's, or more than cutoff amount of N's on ends.  By default, removes for a single N.  Set cutoff to 0 to disable";
+    "If N removal cut=off is set, removes reads that have internal N's, or more than cutoff amount of N's on ends.  By default, removes for a single N.  Set cutoff to 0 to disable. If the non-N threshold is set, it removed reads that have lesser than the desired number of non-N bases.  "; 
 }
 
 sub help_synopsis 
@@ -76,8 +82,12 @@ sub execute
     my $self = shift;
     my $fastq_file = $self->fastq_file;
     my $n_removed_file = ($self->n_removed_file ? $self->n_removed_file : $fastq_file . "n_removed");
-    my $cutoff = $self->cutoff;
     my $save_screened_reads = $self->save_screened_reads;
+
+    if (!$self->n_removal_threshold && !$self->non_n_base_threshold) {
+        $self->error_message("Need one threshold set.");
+        return;
+    }
 
     my $input_fh = IO::File->new($fastq_file);
     unless ($input_fh) {
@@ -100,16 +110,28 @@ sub execute
         my $sep = $input_fh->getline;
         my $qual = $input_fh->getline;
         my $count = 0;
-
-        $seq=~s/(N)/$count++;$1/eg; # get N-count
-        if ($cutoff > 0 and $count >= $cutoff) {
-            $failed_reads++;
-        } else {
-            $passed_reads++;   
-            $output_fh->print("$header$seq$sep$qual");
-        }
-    }   
-
+	my $cutoff;
+	if ($self->n_removal_threshold){
+	    $cutoff=$self->n_removal_threshold;
+	    $seq=~s/(N)/$count++;$1/eg; # get N-count
+	    if($cutoff > 0 and $count >= $cutoff) {
+		$failed_reads++;
+	    }else {
+		$passed_reads++;   
+		$output_fh->print("$header$seq$sep$qual");
+	    }
+	}   
+	elsif ($self->non_n_base_threshold){
+	    $cutoff=$self->non_n_base_threshold;
+	    $seq=~s/([AGCTagct])/$count++;$1/eg; # get non=-N-count
+	    if ($cutoff > 0 and $count < $cutoff) {
+		$failed_reads++;
+	    } else {
+		$passed_reads++;   
+		$output_fh->print("$header$seq$sep$qual");
+	    }
+	}
+    }
     $input_fh->close;
     $output_fh->close;
 

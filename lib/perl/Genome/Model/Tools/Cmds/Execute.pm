@@ -68,7 +68,7 @@ sub execute {
         my $job = "gmt r call-r --command \"$command\" --library 'cmds_lib.R'";
         my $job_name = "cmds_" . $file . "_index_" . $index;
         my $oo = $output_dir . "/cmds_" . $file . "_index_" . $index . "_STDOUT";
-        LSF::Job->submit(-oo => $oo, -J => $job_name, $job);
+        LSF::Job->submit(-oo => $oo, -J => $job_name, -R => 'select[type==LINUX64]', $job);
         $index++;
     }
 

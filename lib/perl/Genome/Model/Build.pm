@@ -8,6 +8,8 @@ use Genome;
 use Carp;
 use Data::Dumper 'Dumper';
 use File::Path;
+use File::Find 'find';
+use File::Basename 'dirname';
 use Regexp::Common;
 use Workflow;
 use YAML;
@@ -277,7 +279,7 @@ sub create {
                 $self->warning_message('Failed to deallocate disk space.');
             }
         };
-        my $allocation_change = UR::Context::Transaction->log_change($self, 'UR::value', $self->disk_allocation->id, 'external_change', $allocation_undo);
+        my $allocation_change = UR::Context::Transaction->log_change($self, 'UR::Value', $self->disk_allocation->id, 'external_change', $allocation_undo);
         if ($allocation_change) {
             $self->status_message("Recorded creation of disk allocation (" . $self->disk_allocation->id . ")");
         }
@@ -1516,16 +1518,146 @@ sub get_metric {
     }
 }
 
-# This method should be overridden in base classes. It should take a build ID from another
-# build of this model and compare various files in the build directory. Any files that are
-# found to be different should be added to a hash, where the keys are the files that differ
-# and the values are the reasons (ie, one file doesn't exist, line count doesn't match, etc).
-# If there are no differences, return undef. 
-sub _compare_output {
-    my ($self, $other_build_id) = @_;
-    die "Override _compare_output in your build subclass!";
+# Returns a list of files contained in the build's data directory
+sub files_in_data_directory { 
+    my $self = shift;
+    my @files;
+    find(
+        sub {
+            my $file = $File::Find::name;
+            push @files, $file if -f $file;
+        },
+        $self->data_directory,
+    );
+    return \@files;
 }
 
+# Given a full path to a file, return a path relative to the build directory
+sub full_path_to_relative {
+    my ($self, $path) = @_;
+    my $rel_path = $path;
+    my $dir = $self->data_directory;
+    $dir .= '/' unless substr($dir, -1, 1) eq '/';
+    $rel_path =~ s/$dir//;
+    $rel_path .= '/' if -d $path and substr($rel_path, -1, 1) ne '/';
+    return $rel_path;
+}
+
+# Returns a list of files that should be ignored by the diffing done by compare_output
+# Files should be relative to the data directory of the build and can contain regex.
+# Override in subclasses!
+sub files_ignored_by_diff {
+    return ();
+}
+
+# Returns a list of directories that should be ignored by the diffing done by compare_output
+# Directories should be relative to the data directory of the build and can contain regex.
+# Override in subclasses!
+sub dirs_ignored_by_diff {
+    return ();
+}
+
+# A list of regexes that, when applied to file paths that are relative to the build's data
+# directory, return only one result. This is useful for files that don't have consistent
+# names between builds (for example, if they have the build_id embedded in them. Override
+# in subclasses!
+sub regex_files_for_diff {
+    return ();
+}
+
+# This method takes another build id and compares that build against this one. It gets
+# a list of all the files in both builds and attempts to find pairs of corresponding
+# files. The files/dirs listed in the files_ignored_by_diff and dirs_ignored_by_diff
+# are ignored entirely, while files listed by regex_files_for_diff are retrieved
+# using regex instead of a simple string eq comparison. 
+sub compare_output {
+    my ($self, $other_build_id) = @_;
+    my $build_id = $self->build_id;
+    confess "Require build ID argument!" unless defined $other_build_id;
+    my $other_build = Genome::Model::Build->get($other_build_id);
+    confess "Could not get build $other_build_id!" unless $other_build;
+
+    unless ($self->model_id eq $other_build->model_id) {
+        confess "Builds $build_id and $other_build_id are not from the same model!";
+    }
+    unless ($self->class eq $other_build->class) {
+        confess "Builds $build_id and $other_build_id are not the same type!";
+    }
+
+    # Create hashes for each build, keys are paths relative to build directory and 
+    # values are full file paths
+    my (%file_paths, %other_file_paths);
+    for my $file (@{$self->files_in_data_directory}) {
+        $file_paths{$self->full_path_to_relative($file)} = $file;
+    }
+    for my $other_file (@{$other_build->files_in_data_directory}) {
+        $other_file_paths{$other_build->full_path_to_relative($other_file)} = $other_file;
+    }
+
+    # Now cycle through files in this build's data directory and compare with 
+    # corresponding files in other build's dir
+    my %diffs;
+    FILE: for my $rel_path (sort keys %file_paths) {
+        my $abs_path = delete $file_paths{$rel_path};
+        my $dir = $self->full_path_to_relative(dirname($abs_path));
+       
+        next FILE if -d $abs_path;
+        next FILE if grep { $dir =~ /$_/ } $self->dirs_ignored_by_diff;
+        next FILE if grep { $rel_path =~ /$_/ } $self->files_ignored_by_diff;
+
+        # Gotta check if this file matches any of the supplied regex patterns. 
+        # If so, find the one (and only one) file from the other build that 
+        # matches the same pattern
+        my ($other_rel_path, $other_abs_path);
+        REGEX: for my $regex ($self->regex_files_for_diff) {
+            next REGEX unless $rel_path =~ /$regex/;
+
+            my @other_keys = grep { $_ =~ /$regex/ } sort keys %other_file_paths;
+            if (@other_keys > 1) {
+                $diffs{$rel_path} = "multiple files from $other_build_id matched file name pattern $regex\n" . join("\n", @other_keys);
+                map { delete $other_file_paths{$_} } @other_keys;
+                next FILE;
+            }
+            elsif (@other_keys < 1) {
+                $diffs{$rel_path} = "no files from $other_build_id matched file name pattern $regex";
+                next FILE;
+            }
+            else {
+                $other_rel_path = shift @other_keys;
+                $other_abs_path = delete $other_file_paths{$other_rel_path};
+            }
+        }
+
+        # If file name doesn't match any regex, assume relative paths are the same
+        unless (defined $other_rel_path and defined $other_abs_path) {
+            $other_rel_path = $rel_path;
+            $other_abs_path = delete $other_file_paths{$other_rel_path};
+            unless (defined $other_abs_path) {
+                $diffs{$rel_path} = "no file $rel_path from build $other_build_id";
+                next FILE;
+            }
+        }
+       
+        my $file_md5 = Genome::Utility::FileSystem->md5sum($abs_path);
+        my $other_md5 = Genome::Utility::FileSystem->md5sum($other_abs_path);
+
+        unless ($file_md5 eq $other_md5) {
+            $diffs{$rel_path} = "files $abs_path and $other_abs_path are not the same!";
+        }
+    }
+
+    # Make sure the other build doesn't have any extra files
+    for my $rel_path (sort keys %other_file_paths) {
+        my $abs_path = delete $other_file_paths{$rel_path};
+        my $dir = $self->full_path_to_relative(dirname($abs_path));
+        next if -d $abs_path;
+        next if grep { $dir =~ /$_/ } $self->dirs_ignored_by_diff;
+        next if grep { $rel_path =~ /$_/ } $self->files_ignored_by_diff;
+        $diffs{$rel_path} = "no file $rel_path from build $build_id";
+    }
+
+    return %diffs;
+}
 
 # why hide this here? -ss
 package Genome::Model::Build::AbstractBaseTest;
@@ -1534,4 +1666,4 @@ class Genome::Model::Build::AbstractBaseTest {
     is => 'Genome::Model::Build',
 };
 
-1;
+1;;

@@ -307,4 +307,21 @@ sub calculate_estimated_kb_usage {
     return 15728640;
 }
 
+sub files_ignored_by_diff {
+    return qw(
+        build.xml
+        circos_graph*.png
+        cno_copy_number.csv.png
+        file_summary_report.html
+        cancer_report.html
+    );
+}
+
+sub dirs_ignored_by_diff {
+    return qw(
+        logs/
+        reports/
+    );
+}
+
 1;

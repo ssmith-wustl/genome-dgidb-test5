@@ -20,15 +20,14 @@ class Genome::Model::Tools::Xhong::CreateRecurrenceExcel {
 };
 
 sub help_brief {
-    	"Generates tier1 hc SNV table for model-groups, and found recurrent events"
+    "Generates tier1 hc SNV table for model-groups, and found recurrent events"
 }
 
 sub help_detail {
-    	<<'HELP';
+    <<'HELP';
 Hopefully this script will run the ucsc annotator on indels and then tier them for an already completed somatic model. Since this is done in the data directory, the model is then reallocated.
 HELP
 }
-
 
 sub execute {
 	my $self=shift;
@@ -218,16 +217,6 @@ sub execute {
 
 
 1;
-
-sub help_brief {
-    "Generates tier1 hc SNV table for model-groups, and found recurrent events"
-}
-
-sub help_detail {
-    <<'HELP';
-Hopefully this script will run the ucsc annotator on indels and then tier them for an already completed somatic model. Since this is done in the data directory, the model is then reallocated.
-HELP
-}
 
 sub write_tabbed_output_to_sheet {
     my ($self, $sheet, $location, $output_lines, $format) = @_;
