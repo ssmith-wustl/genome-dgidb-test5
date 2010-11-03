@@ -744,6 +744,19 @@ sub _apply_indel_and_translate{
     my ($self, $structure, $variant) = @_;
 
     my $chrom_name = $structure->chrom_name;
+
+    #
+    # WARNING - GIANT HACK AHEAD!!!!!
+    #
+    # Above in _create_iterator_for_variant_intersection(), it adds a function ref to
+    # $Genome::DataSource::TranscriptStructures::intersector_sub which is a hook into 
+    # the data loader for dynamically changing filters while an iterator is in progress.
+    #
+    # For the get() immediately below, we actually want to get TranscriptStructures without
+    # that extra filtering.  So, to temporarily turn off the hook, set that subref to undef
+    #
+
+    local($Genome::DataSource::TranscriptStructures::intersector_sub);
     my @sibling_structures = Genome::TranscriptStructure->get(transcript_transcript_id => $structure->transcript_transcript_id,
                                                                chrom_name => $chrom_name,
                                                                data_directory => $structure->data_directory,
