@@ -110,7 +110,6 @@ sub execute {
     }
 
     my @predicted_exons;
-    my $gene_count = 0;
     my ($current_seq_name, $current_group, $seq_obj);
     my %gene_count_by_seq;
 
@@ -122,8 +121,14 @@ sub execute {
         chomp $line;
         if ($line =~ /^>(.+)$/) {
             if (@predicted_exons) {
-                $self->_create_prediction_objects(\@predicted_exons, $gene_count, $current_seq_name, $current_group, $seq_obj);
-                $gene_count++;
+                $gene_count_by_seq{$current_seq_name}++;
+                $self->_create_prediction_objects(
+                    \@predicted_exons, 
+                    $gene_count_by_seq{$current_seq_name}, 
+                    $current_seq_name, 
+                    $current_group, 
+                    $seq_obj
+                );
                 @predicted_exons = ();
             }
 
@@ -131,7 +136,6 @@ sub execute {
             $seq_obj = $self->get_sequence_by_name($current_seq_name);
             confess "Couldn't get sequence $current_seq_name!" unless $seq_obj;
             $self->status_message("Parsing predictions from $current_seq_name");
-            $DB::single = 1 if $current_seq_name eq 'TRISPI_Contig8672';
         }
         else {
             my (
