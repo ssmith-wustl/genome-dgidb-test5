@@ -4,6 +4,8 @@
 
 
   <xsl:template name="genome_model_set_coverage" match="object[@type='Genome::Model::Set'] | object[@type='Genome::ModelGroup']">
+    <xsl:comment>template: /html/coverage/genome_model.xsl match="object[@type='Genome::Model::Set'] | object[@type='Genome::ModelGroup']"</xsl:comment>
+
     <script type="text/javascript" src="/res/js/pkg/protovis.js"></script>
     <script type="text/javascript">
       window.aSummary = [
@@ -67,21 +69,10 @@
 
     <xsl:call-template name="control_bar_view"/>
 
-
-    <xsl:variable name="display_name">
-      <xsl:choose>
-        <xsl:when test="@name">
-          <xsl:value-of select="@name" />
-        </xsl:when>
-        <xsl:otherwise>
-          <xsl:value-of select="@id" />
-        </xsl:otherwise>
-      </xsl:choose>
-    </xsl:variable>
-
     <xsl:call-template name="view_header">
-      <xsl:with-param name="label_name" select="'Coverage:'" />
-      <xsl:with-param name="display_name" select="$display_name" />
+      <xsl:with-param name="perspective" select="$currentPerspective" />
+      <xsl:with-param name="display_name" select="'Human Buffycoat AMD Pool 1 Test Human Buffycoat AMD Pool 1 Test Human Buffycoat AMD Pool 1 Test'" />
+      <!-- <xsl:with-param name="display_name" select="$displayName" /> -->
       <xsl:with-param name="icon" select="'genome_modelgroup_32'" />
     </xsl:call-template>
 
@@ -93,7 +84,7 @@
             <table border="0" cellpadding="0" cellspacing="0" class="name-value" style="margin:0;">
               <tr>
                 <td class="name">model group name:</td>
-                <td class="value"><xsl:value-of select="@name"/></td>
+                <td class="value"><xsl:value-of select="@display_name"/></td>
               </tr>
               <tr>
                 <td class="name">models in group:</td>

@@ -169,6 +169,7 @@ sub _create_individual {
 
     my %individual_attrs = $self->_attrs_for('individual');
     $individual_attrs{name} = $self->individual_name;
+    $individual_attrs{upn} = $self->individual_name if not defined $individual_attrs{upn};
     $individual_attrs{taxon_id} = $self->_taxon->id;
 
     $self->status_message('Creating individual: '.Dumper(\%individual_attrs));
@@ -192,34 +193,6 @@ sub _create_individual {
     return $self->_individual($individual);
 }
 
-
-sub X_create_individual {
-    my $self = shift;
-
-    my %individual_attrs = $self->_attrs_for('individual');
-    $individual_attrs{name} = $self->individual_name;
-    $individual_attrs{taxon_id} = $self->_taxon->id;
-
-    $self->status_message('Creating individual: '.Dumper(\%individual_attrs));
-    my $individual = Genome::Individual->create(%individual_attrs);
-    if ( not defined $individual ) {
-        $self->_bail('Could not create individual');
-        return;
-    }
-
-    unless ( UR::Context->commit ) {
-        $self->_bail('Cannot commit new individual to DB');
-        return;
-    }
-
-    my $created_objects = $self->_created_objects;
-    push @$created_objects, $individual;
-    $self->_created_objects($created_objects);
-
-    $self->status_message('Created individual: '.join(' ', map{ $individual->$_ } (qw/ id name/)));
-    #print Dumper($individual);
-    return $self->_individual($individual);
-}
 
 sub _get_sample {
     my $self = shift;
@@ -244,6 +217,7 @@ sub _create_sample {
     $sample_attrs{extraction_label} = $self->sample_name if not defined $sample_attrs{extraction_label};
     $sample_attrs{taxon_id} = $self->_taxon->id;
     $sample_attrs{source_id} = $self->_individual->id;
+    $sample_attrs{source_type} = 'organism individual';
     $sample_attrs{cell_type} = 'unknown' if not defined $sample_attrs{cell_type};
 
     # organ
@@ -315,6 +289,7 @@ sub _get_or_create_tissue {
         return 1;
     }
 
+    $self->status_message('Creating tissue: '.Dumper({ tissue_name => $tissue_name }));
     $tissue = GSC::Tissue->create(tissue_name => $tissue_name);
     if ( not defined $tissue ) {
         $self->error_message('Cannot create tissue: '.$tissue_name);
@@ -344,6 +319,7 @@ sub _get_or_create_nomenclature {
         return 1;
     }
 
+    $self->status_message('Creating nomenclature: '.Dumper({ nomenclature => $nom }));
     $nomenclature = GSC::Tissue->create(nomenclature => $nom);
     if ( not defined $nomenclature ) {
         $self->error_message('Cannot create nomenclature: '.$nom);
@@ -366,6 +342,7 @@ sub _get_or_create_nomenclature {
 sub _create_library {
     my $self = shift;
 
+    $self->status_message('Creating library: '.Dumper({ sample_id => $self->_sample->id }));
     my $library = Genome::Library->create(
         sample_id => $self->_sample->id,
     );

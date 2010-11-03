@@ -26,7 +26,7 @@ class Genome::InstrumentData::AlignmentResult {
                                     is => 'Genome::Model::Build::ImportedReferenceSequence',
                                     id_by => 'reference_build_id',
                                 },
-        reference_name          => { via => 'reference_build', to => 'name', is_mutable => 0 },
+        reference_name          => { via => 'reference_build', to => 'name', is_mutable => 0, is_optional => 1 },
 
         aligner                 => { 
                                     calculate_from => [qw/aligner_name aligner_version aligner_params/], 
@@ -51,7 +51,8 @@ class Genome::InstrumentData::AlignmentResult {
                                     is => 'Number',
                                     doc => 'the local database id of the instrument data (reads) to align',
                                 },
-        reference_build_id            => {
+        reference_build_id      => {
+                                    is => 'Number',
                                     doc => 'the reference to use by id',
                                 },
     ],
@@ -424,7 +425,7 @@ sub extract_fastqs_and_run_aligner {
 
         for my $input_pathname (@fastqs) {
             my $n_removed_file = $input_pathname . ".n-removed.fastq";
-            my $n_remove_cmd = Genome::Model::Tools::Fastq::RemoveN->create(n_removed_file=>$n_removed_file, cutoff=>$self->n_remove_threshold, fastq_file=>$input_pathname); 
+            my $n_remove_cmd = Genome::Model::Tools::Fastq::RemoveN->create(n_removed_file=>$n_removed_file, n_removal_threshold=>$self->n_remove_threshold, fastq_file=>$input_pathname); 
             unless ($n_remove_cmd->execute) {
                 $self->error_message("Error running RemoveN: " . $n_remove_cmd->error_message);
                 die $self->error_message;

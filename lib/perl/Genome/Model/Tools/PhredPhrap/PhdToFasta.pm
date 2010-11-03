@@ -65,9 +65,6 @@ sub execute {
     )
         and return unless -d $self->phd_dir;
 
-    # Check phd file
-    $self->phd_file( Cwd::abs_path($self->phd_file) );
-
     $self->error_message(
         sprintf('File of PHDs (%s) does not exist', $self->phd_file)
     )
@@ -81,9 +78,7 @@ sub execute {
     $self->_error_file( $self->fasta_file . ".error" );
     unlink $self->_error_file if -e $self->_error_file;
 
-    $self->fasta_file( Cwd::abs_path($self->fasta_file) );
     unlink $self->fasta_file if -e $self->fasta_file;
-    $self->qual_file( Cwd::abs_path($self->qual_file) );
     unlink $self->qual_file if -e $self->qual_file;
 
     $self->_cwd( Cwd::getcwd() );

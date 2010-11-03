@@ -33,7 +33,7 @@ ok($individual, 'created individual');
 isa_ok($individual, 'Genome::Individual');
 isa_ok($individual, 'Genome::Measurable');
 is($individual->id, $id, "id");
-is($individual->subject_type, 'organism_individual', 'subject type is organism_individual');
+is($individual->subject_type, 'organism individual', 'subject type is organism individual');
 print Data::Dumper::Dumper($individual);
 
 my $commit = eval{ UR::Context->commit; };

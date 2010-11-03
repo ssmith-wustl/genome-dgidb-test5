@@ -14,8 +14,13 @@ BEGIN {
 }
 
 my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-WuBlast';
-my @output_files = map{$test_dir."/blast$_.blast"}(1..3);
-map{unlink $_ if -e $_}@output_files;
+my $tmp_dir  = File::Temp::tempdir(
+    "WuBlast_Blastn_XXXXXX", 
+    DIR     => '/gsc/var/cache/testsuite/running_testsuites',
+    CLEANUP => 1,
+);
+
+my @output_files = map{$tmp_dir."/blast$_.blast"}(1..3);
 
 my $blast1 = Genome::Model::Tools::WuBlast::Blastn->create(
     database   => $test_dir.'/subject',

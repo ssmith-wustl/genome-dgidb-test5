@@ -1001,7 +1001,8 @@ sub region_of_interest_set_bed_file {
 
     my $bed_file_path = $self->reference_coverage_directory .'/'. $roi_set->id .'.bed';
     unless (-e $bed_file_path) {
-        unless ($roi_set->print_bed_file($bed_file_path)) {
+        my $dump_command = Genome::FeatureList::Command::DumpMergedList->create(feature_list => $roi_set, output_path => $bed_file_path);
+        unless ($dump_command->execute) {
             die('Failed to print bed file to path '. $bed_file_path);
         }
     }
@@ -1078,5 +1079,29 @@ sub minimum_mapping_quality {
 
 ####END REGION OF INTEREST SECTION####
 
+# These methods are used to diff reference alignment builds. See the compare_output
+# method defined in the superclass for implementation.
+sub files_ignored_by_diff {
+    return qw(
+        build.xml
+        alignments/*_merged_rmdup_bam.md5
+    );
+}
+
+sub dirs_ignored_by_diff {
+    return qw(
+        logs/
+        reports/
+    );
+}
+
+sub regex_files_for_diff {
+    return qw( 
+        alignments/*_merged_rmdup.bam$
+        alignments/*_merged_rmdup.bam.bai$
+        alignments/*_merged_rmdup.bam.flagstat$
+        alignments/*.bam.flagstat$
+    );
+}
 1;
 

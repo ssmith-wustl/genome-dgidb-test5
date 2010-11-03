@@ -8,6 +8,8 @@ use Genome;
 use Carp;
 use Data::Dumper 'Dumper';
 use File::Path;
+use File::Find 'find';
+use File::Basename 'dirname';
 use Regexp::Common;
 use Workflow;
 use YAML;
@@ -238,68 +240,55 @@ sub create {
         return;
     }
 
-    return $self;
-}
+    my $data_directory_undo =  sub {
+        if ($self->data_directory && -e $self->data_directory) {
+            if (rmtree($self->data_directory, { error => \my $remove_errors })) {
+                $self->status_message("Removed build's data directory (" . $self->data_directory . ").");
+            }
+            else {
+                if (@$remove_errors) {
+                    my $error_summary;
+                    for my $error (@$remove_errors) {
+                        my ($file, $error_message) = %$error;
+                        if ($file eq '') {
+                            $error_summary .= "General error removing build directory: $error_message\n";
+                        }
+                        else {
+                            $error_summary .= "Error removing file $file : $error_message\n";
+                        }
+                    }
+                    $self->error_message($error_summary);
+                }
 
-sub _lock_model_and_create_commit_and_rollback_observers {
-    my ($self, $model_id, $job_id) = @_;
-
-    # lock
-    my $lock_id = '/gsc/var/lock/build_start/'.$model_id;
-    my $lock = Genome::Utility::FileSystem->lock_resource(
-        resource_lock => $lock_id, 
-        block_sleep => 3,
-        max_try => 3,
-    );
-    unless ( $lock ) {
-        print STDERR "Failed to get build start lock for model $model_id. This means someone|thing else is attempting to build this model. Please wait a moment, and try again. If you think that this model is incorrectly locked, please put a ticket into the apipe support queue.";
-        return;
+                confess "Failed to remove build directory tree at " . $self->data_directory . ", cannot remove build!";
+            }
+        }
+    };
+    my $data_directory_change = UR::Context::Transaction->log_change($self, 'UR::Value', $self->data_directory, 'external_change', $data_directory_undo);
+    if ($data_directory_change) {
+        $self->status_message("Recorded creation of data directory (" . $self->data_directory . ").");
+    }
+    else {
+        die $self->error_message("Failed to record creation of data directory (" . $self->data_directory . ").");
     }
 
-    # create observers to unlock
-    my $commit_observer;
-    my $rollback_observer;
-    my $context = UR::Context->current();
-
-    $commit_observer = $context->add_observer(
-        aspect => 'commit',
-        callback => sub {
-            `bresume $job_id`;
-            # unlock - no error on failure
-            Genome::Utility::FileSystem->unlock_resource(
-                resource_lock => $lock_id,
-            );
-            # delete and undef observers
-            $commit_observer->delete;
-            undef $commit_observer;
-            $rollback_observer->delete;
-            undef $rollback_observer;
-        }
-    );
-
-    $rollback_observer = $context->add_observer(
-        aspect => 'rollback',
-        callback => sub {
-            `bkill $job_id`;
-            # unlock - no error on failure
-            Genome::Utility::FileSystem->unlock_resource(
-                resource_lock => $lock_id,
-            );
-            # delete and undef observers so they do not persist
-            # they should have been deleted in the rollback, 
-            #  but try to delete again just in case
-            if ( $rollback_observer ) {
-                $rollback_observer->delete unless $rollback_observer->isa('UR::DeletedRef');
-                undef $rollback_observer;
+    my $disk_allocation = $self->disk_allocation;
+    if ($disk_allocation) {
+        my $allocation_undo = sub {
+            unless ($disk_allocation->deallocate) {
+                $self->warning_message('Failed to deallocate disk space.');
             }
-            if ( $commit_observer ) {
-                $commit_observer->delete unless $commit_observer->isa('UR::DeletedRef');
-                undef $commit_observer;
-            }
+        };
+        my $allocation_change = UR::Context::Transaction->log_change($self, 'UR::Value', $self->disk_allocation->id, 'external_change', $allocation_undo);
+        if ($allocation_change) {
+            $self->status_message("Recorded creation of disk allocation (" . $self->disk_allocation->id . ")");
         }
-    );
+        else {
+            die $self->error_message("Failed to record creation of disk allocation (" . $self->disk_allocation->id . ")");
+        }
+    }   
 
-    return 1;
+    return $self;
 }
 
 sub _validate_model_id {
@@ -699,7 +688,6 @@ sub restart {
     my $self = shift;
     my %params = @_;
 
-    $DB::single = 1;
     $self->status_message('Attempting to restart build: '.$self->id);
    
     if (delete $params{job_dispatch}) {
@@ -756,7 +744,8 @@ sub _launch {
     my $self = shift;
     my %params = @_;
 
-    $DB::single = 1;
+    local $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 1;
+
     # right now it is "inline" or the name of an LSF queue.
     # ultimately, it will be the specification for parallelization
     #  including whether the server is inline, forked, or bsubbed, and the
@@ -800,7 +789,6 @@ sub _launch {
     my $build_event = $self->the_master_event;
 
     # TODO: send the workflow to the dispatcher instead of having LSF logic here.
-    $DB::single = 1;
     if ($server_dispatch eq 'inline') {
         # TODO: redirect STDOUT/STDERR to these files
         #$build_event->output_log_file,
@@ -845,13 +833,52 @@ sub _launch {
         );
         print $lsf_command."\n";
     
-        my $job_id = $self->_execute_bsub_command($lsf_command)
-            or return;
-        return unless ($self->_lock_model_and_create_commit_and_rollback_observers($model->id, $job_id));
     
+
+        # lock model
+        my $model_id = $self->model->id;
+        my $lock_id = '/gsc/var/lock/build_start/'.$model_id;
+        my $lock = Genome::Utility::FileSystem->lock_resource(
+            resource_lock => $lock_id, 
+            block_sleep => 3,
+            max_try => 3,
+        );
+        if ($lock) {
+            $self->status_message("Locked model ($model_id) while launching " . $self->__display_name__ . ".");
+        }
+        else {
+            print STDERR "Failed to get build start lock for model $model_id. This means someone|thing else is attempting to build this model. Please wait a moment, and try again. If you think that this model is incorrectly locked, please put a ticket into the apipe support queue.";
+            return;
+        }
+
+        my $job_id = $self->_execute_bsub_command($lsf_command);
+        unless ($job_id) {
+            Genome::Utility::FileSystem->lock_resource(resource_lock => $lock) if ($lock);
+            return;
+        }
+        
+        # create a commit observer to resume the job when build is committed to database
+        my $commit_observer = $build_event->add_observer(
+            aspect => 'commit',
+            callback => sub {
+                $self->status_message("Resuming LSF job ($job_id) for build " . $self->__display_name__ . ".");
+                my $bresume_output = `bresume $job_id`; chomp $bresume_output;
+                unless ( $bresume_output =~ /^Job <$job_id> is being resumed$/ ) {
+                    $self->status_message($bresume_output);
+                }
+                Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock_id);
+            }
+        );
+        if ($commit_observer) {
+            $self->status_message("Added commit observer to resume LSF job ($job_id).");
+        }
+        else {
+            $self->error_message("Failed to add commit observer to resume LSF job ($job_id).");
+        }
+
         $build_event->lsf_job_id($job_id);
 
-        
+
         return 1;
     }
 }
@@ -925,6 +952,7 @@ sub _execute_bsub_command { # here to overload in testing
     }
 
     my $bsub_output = `$cmd`;
+
     my $rv = $? >> 8;
     if ( $rv ) {
         $self->error_message("Failed to launch bsub (exit code: $rv) command:\n$bsub_output");
@@ -932,7 +960,22 @@ sub _execute_bsub_command { # here to overload in testing
     }
 
     if ( $bsub_output =~ m/Job <(\d+)>/ ) {
-        return "$1";
+        my $job_id = $1;
+
+        # create a change record so that if it is "undone" it will kill the job
+        my $bsub_undo = sub {
+            $self->status_message("Killing LSF job ($job_id) for build " . $self->__display_name__ . ".");
+            system("bkill $job_id");
+        };
+        my $lsf_change = UR::Context::Transaction->log_change($self, 'UR::Value', $job_id, 'external_change', $bsub_undo);
+        if ($lsf_change) {
+            $self->status_message("Recorded LSF job submission ($job_id).");
+        }
+        else {
+            die $self->error_message("Failed to record LSF job submission ($job_id).");
+        }
+
+        return "$job_id";
     } 
     else {
         $self->error_message("Launched busb command, but unable to parse bsub output: $bsub_output");
@@ -1478,6 +1521,147 @@ sub get_metric {
     }
 }
 
+# Returns a list of files contained in the build's data directory
+sub files_in_data_directory { 
+    my $self = shift;
+    my @files;
+    find(
+        sub {
+            my $file = $File::Find::name;
+            push @files, $file if -f $file;
+        },
+        $self->data_directory,
+    );
+    return \@files;
+}
+
+# Given a full path to a file, return a path relative to the build directory
+sub full_path_to_relative {
+    my ($self, $path) = @_;
+    my $rel_path = $path;
+    my $dir = $self->data_directory;
+    $dir .= '/' unless substr($dir, -1, 1) eq '/';
+    $rel_path =~ s/$dir//;
+    $rel_path .= '/' if -d $path and substr($rel_path, -1, 1) ne '/';
+    return $rel_path;
+}
+
+# Returns a list of files that should be ignored by the diffing done by compare_output
+# Files should be relative to the data directory of the build and can contain regex.
+# Override in subclasses!
+sub files_ignored_by_diff {
+    return ();
+}
+
+# Returns a list of directories that should be ignored by the diffing done by compare_output
+# Directories should be relative to the data directory of the build and can contain regex.
+# Override in subclasses!
+sub dirs_ignored_by_diff {
+    return ();
+}
+
+# A list of regexes that, when applied to file paths that are relative to the build's data
+# directory, return only one result. This is useful for files that don't have consistent
+# names between builds (for example, if they have the build_id embedded in them. Override
+# in subclasses!
+sub regex_files_for_diff {
+    return ();
+}
+
+# This method takes another build id and compares that build against this one. It gets
+# a list of all the files in both builds and attempts to find pairs of corresponding
+# files. The files/dirs listed in the files_ignored_by_diff and dirs_ignored_by_diff
+# are ignored entirely, while files listed by regex_files_for_diff are retrieved
+# using regex instead of a simple string eq comparison. 
+sub compare_output {
+    my ($self, $other_build_id) = @_;
+    my $build_id = $self->build_id;
+    confess "Require build ID argument!" unless defined $other_build_id;
+    my $other_build = Genome::Model::Build->get($other_build_id);
+    confess "Could not get build $other_build_id!" unless $other_build;
+
+    unless ($self->model_id eq $other_build->model_id) {
+        confess "Builds $build_id and $other_build_id are not from the same model!";
+    }
+    unless ($self->class eq $other_build->class) {
+        confess "Builds $build_id and $other_build_id are not the same type!";
+    }
+
+    # Create hashes for each build, keys are paths relative to build directory and 
+    # values are full file paths
+    my (%file_paths, %other_file_paths);
+    for my $file (@{$self->files_in_data_directory}) {
+        $file_paths{$self->full_path_to_relative($file)} = $file;
+    }
+    for my $other_file (@{$other_build->files_in_data_directory}) {
+        $other_file_paths{$other_build->full_path_to_relative($other_file)} = $other_file;
+    }
+
+    # Now cycle through files in this build's data directory and compare with 
+    # corresponding files in other build's dir
+    my %diffs;
+    FILE: for my $rel_path (sort keys %file_paths) {
+        my $abs_path = delete $file_paths{$rel_path};
+        my $dir = $self->full_path_to_relative(dirname($abs_path));
+       
+        next FILE if -d $abs_path;
+        next FILE if grep { $dir =~ /$_/ } $self->dirs_ignored_by_diff;
+        next FILE if grep { $rel_path =~ /$_/ } $self->files_ignored_by_diff;
+
+        # Gotta check if this file matches any of the supplied regex patterns. 
+        # If so, find the one (and only one) file from the other build that 
+        # matches the same pattern
+        my ($other_rel_path, $other_abs_path);
+        REGEX: for my $regex ($self->regex_files_for_diff) {
+            next REGEX unless $rel_path =~ /$regex/;
+
+            my @other_keys = grep { $_ =~ /$regex/ } sort keys %other_file_paths;
+            if (@other_keys > 1) {
+                $diffs{$rel_path} = "multiple files from $other_build_id matched file name pattern $regex\n" . join("\n", @other_keys);
+                map { delete $other_file_paths{$_} } @other_keys;
+                next FILE;
+            }
+            elsif (@other_keys < 1) {
+                $diffs{$rel_path} = "no files from $other_build_id matched file name pattern $regex";
+                next FILE;
+            }
+            else {
+                $other_rel_path = shift @other_keys;
+                $other_abs_path = delete $other_file_paths{$other_rel_path};
+            }
+        }
+
+        # If file name doesn't match any regex, assume relative paths are the same
+        unless (defined $other_rel_path and defined $other_abs_path) {
+            $other_rel_path = $rel_path;
+            $other_abs_path = delete $other_file_paths{$other_rel_path};
+            unless (defined $other_abs_path) {
+                $diffs{$rel_path} = "no file $rel_path from build $other_build_id";
+                next FILE;
+            }
+        }
+       
+        my $file_md5 = Genome::Utility::FileSystem->md5sum($abs_path);
+        my $other_md5 = Genome::Utility::FileSystem->md5sum($other_abs_path);
+
+        unless ($file_md5 eq $other_md5) {
+            $diffs{$rel_path} = "files $abs_path and $other_abs_path are not the same!";
+        }
+    }
+
+    # Make sure the other build doesn't have any extra files
+    for my $rel_path (sort keys %other_file_paths) {
+        my $abs_path = delete $other_file_paths{$rel_path};
+        my $dir = $self->full_path_to_relative(dirname($abs_path));
+        next if -d $abs_path;
+        next if grep { $dir =~ /$_/ } $self->dirs_ignored_by_diff;
+        next if grep { $rel_path =~ /$_/ } $self->files_ignored_by_diff;
+        $diffs{$rel_path} = "no file $rel_path from build $build_id";
+    }
+
+    return %diffs;
+}
+
 # why hide this here? -ss
 package Genome::Model::Build::AbstractBaseTest;
 
@@ -1485,4 +1669,4 @@ class Genome::Model::Build::AbstractBaseTest {
     is => 'Genome::Model::Build',
 };
 
-1;
+1;;

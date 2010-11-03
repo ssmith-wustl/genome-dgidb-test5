@@ -12,12 +12,14 @@ BEGIN {
 }
 
 my $root_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Velvet/ToAce';
+my $run_dir  = '/gsc/var/cache/testsuite/running_testsuites';
+
 my $file = $root_dir.'/velvet_asm.afg';
 my $ori_ace = $root_dir.'/velvet_asm.ace';
 
 my $tmp_dir = File::Temp::tempdir(
     'ToAce_XXXXXX', 
-    DIR     => $root_dir,
+    DIR     => $run_dir,
     CLEANUP => 1,
 );
 

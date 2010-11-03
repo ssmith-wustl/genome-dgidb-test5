@@ -1,13 +1,9 @@
 package Genome::Model::Tools::Annotate::CompareMutationsSpeedup;
 
-use strict;
-use warnings;
-
-use Genome; 
-
 #__STANDARD PERL PACKAGES
    use warnings;
    use strict;
+   use Genome; 
    use FileHandle;
    use Data::Dumper;
    use Storable;

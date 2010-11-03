@@ -17,23 +17,35 @@ class Genome::Model::Build::Command::Base {
 sub _limit_results_for_builds {
     my ( $class, @builds ) = @_;
 
-    $class->status_message("Filtering matching builds for builds you ran.");
-    my $other_users_builds_count;
+    my $user = $ENV{USER};
+    my $apipe_members = (getgrnam('apipe'))[3];
+    print STDERR "Filtering any builds from list not ran by $user...";
     my @run_by_builds;
     for my $build (@builds) {
-        if ( $build->run_by && $build->run_by ne $ENV{USER} ) {
-            $other_users_builds_count++;
+        if ($build->status eq 'Running' && $build->run_by && $build->run_by ne $user) {
+            next;
+        }
+        if ($build->status ne 'Running' && $apipe_members !~ /$user/ && $build->run_by && $build->run_by ne $user) {
+            next;
+        }
+        push @run_by_builds, $build;
+    }
+    my $other_users_builds_count = @builds - @run_by_builds;
+    if ($apipe_members =~ /$user/) {
+        if ($other_users_builds_count) {
+            print STDERR " filtered $other_users_builds_count running builds.\n";
         }
         else {
-            push @run_by_builds, $build;
+            print STDERR " none filtered.\n";
         }
     }
-    if ($other_users_builds_count) {
-        $class->warning_message(
-            "Filtered $other_users_builds_count builds not run by you.");
-    }
     else {
-        $class->status_message("No builds filtered.");
+        if ($other_users_builds_count) {
+            print STDERR " $other_users_builds_count not ran by $user.\n";
+        }
+        else {
+            print STDERR " all builds ran by $user.\n";
+        }
     }
     @builds = @run_by_builds;
 
