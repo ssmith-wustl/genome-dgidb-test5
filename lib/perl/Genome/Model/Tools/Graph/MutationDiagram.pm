@@ -9,15 +9,9 @@ use Genome::Model::Tools::Graph::MutationDiagram::MutationDiagram;
 class Genome::Model::Tools::Graph::MutationDiagram {
     is => 'Command',
     has => [
-        maf => { 
-            type => 'String',  
-            doc => "MAF file", 
-            is_optional => 1,
-        },
         annotation => {
             type => 'String',
             doc => "Annotator output.  Requires --reference-transcripts option",
-            is_optional => 1,
         },
         reference_transcripts => {
             type => 'String',
@@ -59,17 +53,8 @@ EOS
 sub execute {
     $DB::single = $DB::stopper;
     my $self = shift;
-    my $maf_file = $self->maf;
     my $anno_file = $self->annotation;
-    if($maf_file) {
-        my $maf_obj = new Genome::Model::Tools::Graph::MutationDiagram::MutationDiagram(
-            maf_file => $maf_file,
-            hugos => $self->genes,
-            custom_domains => $self->custom_domains,
-            reference_transcripts => $self->reference_transcripts,
-        );
-    }
-    elsif($anno_file) {
+    if($anno_file) {
         my $anno_obj = new Genome::Model::Tools::Graph::MutationDiagram::MutationDiagram(
             annotation => $anno_file,
             hugos => $self->genes,
@@ -78,8 +63,7 @@ sub execute {
         );
     }
     else {
-        #must have one or the other
-        $self->error_message("Must provide either maf or annotation output format");
+        $self->error_message("Must provide annotation output format");
         return;
     }
     return 1;

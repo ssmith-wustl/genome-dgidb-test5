@@ -13,7 +13,6 @@ use strict;
 use warnings;
 use Carp;
 
-use MG::Transform::Process::MutationCSV;
 use FileHandle;
 use Genome;
 
@@ -30,7 +29,7 @@ sub new {
     my ($class, %arg) = @_;
 
     my $self = {
-        _mutation_file => $arg{maf_file} || $arg{annotation} || '',
+        _mutation_file => $arg{annotation} || '',
         _basename => $arg{basename} || './',
         _reference_transcripts => $arg{reference_transcripts} || '',
     };
@@ -70,10 +69,7 @@ sub new {
     }
     $self->{_hugos} = \@hugos;
     bless($self, ref($class) || $class);
-    if($arg{maf_file}) {
-        $self->Maf();
-    }
-    elsif($arg{annotation}) {
+    if($arg{annotation}) {
         $self->Annotation;
     }
     else {
@@ -160,100 +156,6 @@ sub Annotation {
         }
     }
     $self->{_data} = \%data;
-}
-
-
-sub Maf {
-#TODO:test this
-    my ($self) = @_;
-    my %maf_args = (
-        all => 1,
-        no_process => 1,
-        version => 3, #TODO change to parameter
-    );
-    my $build = $self->{_build};
-    my $parser = MG::Transform::Process::MutationCSV->new;
-    my $fh = new FileHandle;
-    my $mutation_file = $self->{_mutation_file};
-    unless ($fh->open (qq{$mutation_file})) {
-        die "Could not open csv file '$mutation_file' for reading $$";
-    }
-    print STDERR "Parsing maf file...\n";
-    my $mutations = $parser->Parse($fh,$mutation_file,%maf_args);
-    $fh->close;
-
-    my $hugo;
-    my $transcript_name;
-    if ($self->{_hugos}->[0] eq 'ALL') {
-        my @hugos = (keys %{$mutations});
-        $self->{_hugos} = \@hugos;
-    }
-    foreach $hugo (@{$self->{_hugos}}) {
-        if(exists($mutations->{$hugo})) {
-            foreach my $sample (keys %{$mutations->{$hugo}}) {
-                foreach my $line_num (keys %{$mutations->{$hugo}{$sample}}) {
-                    my $aa_change = $mutations->{$hugo}{$sample}{$line_num}{PROT_STRING};
-#               my $aa_change = $mutations->{$hugo}{$sample}{$line_num}{AA_CHANGE};
-                    unless (defined($aa_change)) {
-                        next;
-                    }
-                    my $source = $mutations->{$hugo}{$sample}{$line_num}{VARIANT_TYPE};
-                    my $class = $mutations->{$hugo}{$sample}{$line_num}{VARIANT_CLASSIFICATION};
-                    $class =~ s/_mutation$//i;
-                    Genome::Model::Tools::Annotate::AminoAcidChange->class();  # Get the module loaded
-                    my ($residue1, $res_start, $residue2, $res_stop, $new_residue) = @{Genome::Model::Tools::Annotate::AminoAcidChange::check_amino_acid_change_string(amino_acid_change_string => $aa_change)};
-                    my $mutation = $aa_change;
-                    $mutation =~ s/p\.//g;
-
-                    $transcript_name = $mutations->{$hugo}{$sample}{$line_num}{TRANSCRIPT};
-                    unless (defined($transcript_name) && $transcript_name !~ /^\s*$/) {
-                        next;
-                    }
-                    my $transcript;
-                    my @features;
-                    for my $data_directory ($build->determine_data_directory){
-                        $transcript = Genome::Transcript->get(data_directory => $data_directory, transcript_name => $transcript_name);
-                        next unless $transcript;
-                        my @transcript_features = Genome::InterproResult->get(data_directory => $data_directory, transcript_name => $transcript_name, chrom_name => $transcript->chrom_name);
-                        @features = (@features, @transcript_features);
-                    }
-                    my @domains;
-                    my $protein_length = get_protein_length($self, $transcript_name);
-                    foreach my $feature (@features) {
-                        my ($source, @domain_name_parts) = split(/_/, $feature->name);
-                        my $domain_name; #Some domain names are underbar delimited, but sources aren't.  Reassemble the damn domain name if necessary
-                            if (scalar (@domain_name_parts) > 1){
-                                $domain_name = join("_", @domain_name_parts);
-                            }else{
-                                $domain_name = pop @domain_name_parts;
-                            }
-                        push @domains, {
-                            name => $domain_name,
-                            source => $source, 
-                            start => $feature->start,
-                            end => $feature->stop
-                        };
-                    }
-                    $self->{_data}{$hugo}{$transcript_name}{length} = $protein_length;
-                    push @{$self->{_data}{$hugo}{$transcript_name}{domains}}, @domains;
-                    if (defined($res_start)) {
-                        unless (exists($self->{_data}{$hugo}{$transcript_name}{mutations}{$mutation})) {
-                            $self->{_data}{$hugo}{$transcript_name}{mutations}{$mutation} = 
-                            {
-                                res_start => $res_start,
-                                #                      maf => $mutations->{$hugo}{$sample}{$line_num},
-                                source => $source,
-                                class => $class
-                            };
-                        }
-                        $self->{_data}{$hugo}{$transcript_name}{mutations}{$mutation}{frequency} += 1;
-                    }
-                }
-            }
-        }
-    }
-
-    return $self;
 }
 
 sub get_protein_length{
