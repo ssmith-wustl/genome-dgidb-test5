@@ -272,12 +272,11 @@ sub transcripts {
     {
         my @less;
         foreach my $substructure ( @$crossing_substructures ) {
-            next unless ($substructure->{'structure_start'} <= $variant_start and $substructure->{'structure_stop'} >= $variant_start);
             my $transcript_id = $substructure->transcript_transcript_id;
-            if (! exists $transcript_substructures{$transcript_id}) {
+            if ($substructure->{'structure_start'} <= $variant_start and $substructure->{'structure_stop'} >= $variant_start) {
                 push @less, $substructure;
-                $transcript_substructures{$transcript_id} = [];
             }
+            $transcript_substructures{$transcript_id} ||= [];
             push @{$transcript_substructures{$transcript_id}}, $substructure;
         }
         $crossing_substructures = \@less;
