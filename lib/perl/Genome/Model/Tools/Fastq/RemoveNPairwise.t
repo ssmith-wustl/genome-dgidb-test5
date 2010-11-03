@@ -19,8 +19,8 @@ my $cmd = Genome::Model::Tools::Fastq::RemoveNPairwise->create(forward_fastq=>$f
                                                                 forward_n_removed_file=>$dir . "/nf.txt",
                                                                 reverse_n_removed_file=>$dir . "/nr.txt",
                                                                 singleton_n_removed_file=>$dir . "/ns.txt",
-                                                                cutoff=>5);
-
+							        n_removal_threshold =>5);
+#    );
 ok($cmd, "successfully created pairwise n remove cmd");
 ok($cmd->execute, "successfully executed pairwise n remove cmd");
 is($cmd->pairs_passed, 1, "correct number of pairs passed");

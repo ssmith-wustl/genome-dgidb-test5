@@ -735,8 +735,11 @@ sub before_execute {
         or return;
     for my $amplicon ( @$amplicons ) {
         my $ace_file = $build->ace_file_for_amplicon($amplicon);
-        unlink $ace_file 
-            or die "Could not remove ace file: $ace_file\n";
+        unlink $ace_file;
+        for my $ext (qw/ log memlog phrap.out problems problems.qual singlets contigs contigs.qual view /) {
+            my $file = $build->edit_dir.'/'.$amplicon->name.'.fasta.'.$ext;
+            unlink $file;
+        }
     }
 
     return 1;

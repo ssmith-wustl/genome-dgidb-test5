@@ -68,15 +68,12 @@ EOS
 sub execute
 {
     my $self = shift;
-    #my $sequences = $self->sequences;
 
     # bap_export_proteins should be deployed.
     my @pep_export = (
-                     # '/gsc/scripts/gsc/annotation/bap_export_proteins',
                       'gmt','bacterial','export-proteins',
                       '--sequence-set-id', 
                       $self->sequence_set_id(),
-
         );
 
     if($self->dev)
@@ -135,7 +132,7 @@ sub execute
         \$results,
         '2>',
         \$stderr,
-      ) or croak "\n\nfailed to run core genes screen script ... CoreGenes.pm\n\n";
+      ) or confess "\n\nfailed to run core genes screen script ... CoreGenes.pm\n\n";
 
     write_file('Coregene_results',$results);
     unless($results =~ /PASSED/)

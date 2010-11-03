@@ -96,11 +96,6 @@ EOS
         # since we sometimes don't know the source, it also tracks taxon directly
         taxon               => { via => 'sample', to => 'taxon', is => 'Genome::Taxon' },
         species_name        => { via => 'taxon' },
-        target_set         => {
-            is => 'Genome::Capture::Set',
-            calculate_from => 'target_region_set_name',
-            calculate => q|Genome::Capture::Set->get(name => $target_region_set_name)|,
-        },
     ],
 };
 

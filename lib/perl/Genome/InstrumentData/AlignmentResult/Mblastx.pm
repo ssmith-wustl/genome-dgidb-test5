@@ -54,7 +54,7 @@ sub _run_aligner {
 	# get refseq info
 
 	my $reference_build = $self->reference_build;
-
+    my $reference_name = $reference_build->prefix;
 	my $reference_mblastx_path = $reference_build->data_directory . '/mblastx';
 
 	# Check the local cache on the blade for the fasta if it exists.
@@ -122,7 +122,7 @@ sub _run_aligner {
 			$DB::single = 1;
 	for my $input_fasta (@mblastx_input_fastas) {
 
-		my $output_file =  $self->temp_scratch_directory."/".basename($input_fasta)."_mblastx.out";
+		my $output_file =  $self->temp_scratch_directory."/".basename($input_fasta)."_vs_$reference_name"."_mblastx.out";
 
 		#STEP 2 - run mblastx aligner
 		my %aligner_params = $self->_decomposed_aligner_params;
@@ -215,6 +215,11 @@ sub _prepare_reference_sequences {
 	);
 
 	$self->status_message("Reference data generation complete at: $dir");
+	
+	if(!-e "$dir/BLOSUM62_6_26.dat"){
+		`cp /gscmnt/sata895/research/mmitreva/SOFTWARE/MCW_09242010/BLOSUM62_6_26.dat $dir/`;    
+	}
+	
 	return 1;
 }
 
