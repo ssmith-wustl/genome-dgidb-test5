@@ -159,13 +159,18 @@ sub delete {
     my $self = shift;
     my @allocations = Genome::Disk::Allocation->get(owner => $self);
     if (@allocations) {
-        my @ids = map { $_->id } @allocations;
         UR::Context->create_subscription(
             method => 'commit', 
             callback => sub {
-                for my $id (@ids) {
-                    warn "deallocating disk $id...\n";
-                    eval { Genome::Disk::Allocation::Command::Deallocate->execute(allocator_id => $id); };
+                for my $allocation (@allocations) {
+                    my $id = $allocation->id;
+                    $self->status_message('Now deleting allocation with owner_id = ' . $id);
+                    my $path = $allocation->absolute_path;
+                    unless (rmtree($path)) {
+                        $self->error_message("could not rmtree $path");
+                        return;
+                    }
+                    $allocation->deallocate; 
                 }
                 return 1;
             }
@@ -252,8 +257,8 @@ sub library_name {
 sub lane {
     my $self = shift;
     my $subset_name = $self->subset_name;
-    if ($subset_name =~/-/){
-        my ($lane) = $subset_name =~ /(\d)-/;
+    if ($subset_name =~/[-\.]/){
+        my ($lane) = $subset_name =~ /(\d)[-\.]/;
         return $lane;
     }else{
         return $subset_name;

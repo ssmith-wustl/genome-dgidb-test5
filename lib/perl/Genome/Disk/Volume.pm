@@ -31,6 +31,13 @@ class Genome::Disk::Volume {
                                           is => 'Genome::Disk::Assignment',
                                           reverse_id_by => 'volume',
                                       },
+                          allocations => {
+                                        is => 'Genome::Disk::Allocation',
+                            calculate_from => 'mount_path',
+                            calculate => q{
+                                return Genome::Disk::Allocation->get(mount_path => $mount_path);
+                            },
+                          }
                       ],
     data_source => 'Genome::DataSource::GMSchema',
 };

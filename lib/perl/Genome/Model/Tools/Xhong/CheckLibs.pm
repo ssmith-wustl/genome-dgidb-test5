@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Library::CheckLibs;
+package Genome::Model::Tools::Xhong::CheckLibs;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 use Command;
 use IO::File;
 
-class Genome::Model::Tools::Library::CheckLibs {
+class Genome::Model::Tools::Xhong::CheckLibs {
     is => 'Command',
     has => [
     group => { 

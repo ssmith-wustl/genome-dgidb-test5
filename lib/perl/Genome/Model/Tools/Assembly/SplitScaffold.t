@@ -2,20 +2,35 @@
 
 use strict;
 use warnings;
+
 use above 'Genome';
-use Genome;
 
-use Genome::Model::Tools::Assembly::SplitScaffold;
+use Test::More;
+require File::Compare;
 
-use Test::More tests => 1;
+#check test suite dir/files
+my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly-SplitScaffold';
+ok ( -d $test_dir, "Test suite dir exists") or die;
+foreach (qw/ merge.ace split_out.ace /) {
+    ok (-s $test_dir."/$_", "Test suite $_ file exists");
+}
 
-my $path = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly-SplitScaffold';
+#create temp dir
+my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+ok (-d $temp_dir, "Test test directory created") or die;
 
-my $ace_file = 'merge.ace';
-my $out_file_name = 'split_out.ace';
-my $split_contig = 'Contig60.6';
+#create/run tool
+my $create = Genome::Model::Tools::Assembly::SplitScaffold->create(
+    ace_file => $test_dir.'/merge.ace',
+    split_contig => 'Contig60.6',
+    out_file_name => $temp_dir.'/split_out.ace',
+    );
+ok ($create, "Created split-scaffold tool") or die;
+ok ($create->execute, "Successfully executed split-scaffold tool") or die;
 
-chdir($path);
-system "/bin/rm -f *.db";
-ok(Genome::Model::Tools::Assembly::SplitScaffold->execute(ace_file => $ace_file, split_contig  => $split_contig, out_file_name => $out_file_name), "SplitScaffold executed successfully");
+#compare output files
+ok (File::Compare::compare( $test_dir.'/split_out.ace', $temp_dir.'/split_out.ace') == 0, "Test output files match");
 
+done_testing();
+
+exit;

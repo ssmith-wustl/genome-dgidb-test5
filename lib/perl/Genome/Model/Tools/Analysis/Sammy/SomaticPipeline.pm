@@ -372,7 +372,7 @@ sub execute {                               # replace with real execution logic.
 #	{
 		print "Calling variants as Germline or Somatic...\n";
 		my $params = "--min-coverage $min_coverage --min-reads2 $min_reads2 --min-strands2 $min_strands2";
-		my $cmd = call_sammy() . "somatic " . $normal_pileup . " " . $tumor_pileup . " " . $compared_indels . " " . $compared_indels_status . " " . $params;		
+		$cmd = call_sammy() . "somatic " . $normal_pileup . " " . $tumor_pileup . " " . $compared_indels . " " . $compared_indels_status . " " . $params;		
 		system($cmd);
 #	}
 

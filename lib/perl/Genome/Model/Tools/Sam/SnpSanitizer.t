@@ -14,10 +14,11 @@ BEGIN {
 }
 
 my $root_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sam/SnpSanitizer';
+my $run_dir  = '/gsc/var/cache/testsuite/running_testsuites';
 
 my $tmp_dir  = File::Temp::tempdir(
     "SnpSanitizer_XXXXXX", 
-    DIR     => $root_dir,
+    DIR     => $run_dir,
     CLEANUP => 1,
 );
 

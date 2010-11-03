@@ -5,13 +5,23 @@ use warnings;
 
 use above "Genome";
 use Test::More tests => 6;
+use File::Temp;
 
 BEGIN {
         use_ok('Genome::Model::Tools::BioDbFasta::Convert');
 }
 
 my $infile_nonexist = "/blah/not/exists";
-my $outfile = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-BioDbFasta/Convert/testoutput1";
+#my $outfile = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-BioDbFasta/Convert/testoutput1";
+
+my $tmp_dir = File::Temp::tempdir(
+    "BioDbFasta_convert_XXXXXX", 
+    DIR     => '/gsc/var/cache/testsuite/running_testsuites',
+    CLEANUP => 1,
+);
+
+my $outfile = $tmp_dir.'/testoutput1';
+
 my $infile_test = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-BioDbFasta/Convert/testinput1";
 
 my $c_f_noexist = Genome::Model::Tools::BioDbFasta::Convert->create('infile' => $infile_nonexist  ,

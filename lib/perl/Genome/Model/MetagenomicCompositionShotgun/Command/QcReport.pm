@@ -25,6 +25,12 @@ class Genome::Model::MetagenomicCompositionShotgun::Command::QcReport{
             is => 'Text',
             is_optional => 1,
         },
+        skip_qc_on_untrimmed_reads => {
+            is => 'Boolean',
+            is_optional => 1,
+            default_value => 0,
+            doc => "If this flag is specified, QC report will skip metric on the human-free, untrimmed data.",
+        },
     ],
 };
 
@@ -105,6 +111,7 @@ sub execute {
         print $stats_output "\n";
     }
 
+    my %fastq_files;
     # COLLECTING UNTRIMMED SEQUENCES OF NON-HUMAN READS
     # count of unique, non-human bases per lane
     # human-filtered, untrimmed bam
@@ -112,43 +119,45 @@ sub execute {
     mkpath($data_path);
     my @imported_fastq;
     my @original_fastq;
-    my %fastq_files;
 
-    $self->status_message("Extracting FastQ files from original and imported data...");
-    for my $imported_data (@imported_data) {
-        my $imported_id = $imported_data->id;
-        my $original_data = $self->original_data_from_imported_id($imported_id);
+    unless ($self->skip_qc_on_untrimmed_reads) {
+        $self->status_message("Extracting FastQ files from original and imported data...");
+        for my $imported_data (@imported_data) {
+            my $imported_id = $imported_data->id;
+            my $original_data = $self->original_data_from_imported_id($imported_id);
 
-        my $humanfree_bam_path = $self->report_dir . '/data/' . $imported_id . '_humanfree_untrimmed.bam';
-        my $original_bam_path = $self->report_dir . '/data/' . $imported_id . '_original_untrimmed.bam';
-        if (! $self->overwrite && -f $humanfree_bam_path && -f $original_bam_path) {
-            $self->status_message("\t$imported_id: Skipping FastQ extraction for " . $imported_id . ", bam files already exists. Use --overwrite to replace...");
-            next;
-        }
-
-        # untar both imported and original fastq files, only keeping paired files
-        if ($imported_data->is_paired_end) {
-            my @imported_fastq_filenames = $imported_data->dump_sanger_fastq_files;
-            my @original_fastq_filenames = $original_data->dump_sanger_fastq_files;
-            for my $file (@imported_fastq_filenames) {
-                my $name = (split('/', $file))[-1];
-                $name =~ s/\.txt$//;
-                my $output_filename = $temp_dir . '/' . $name . '_imported_trimmed';
-                die "failed to rename $file to $output_filename" unless rename($file, $output_filename);
-                push @imported_fastq, $output_filename;
-                push @{$fastq_files{$imported_id}{imported}}, $output_filename; 
+            my $humanfree_bam_path = $self->report_dir . '/data/' . $imported_id . '_humanfree_untrimmed.bam';
+            my $original_bam_path = $self->report_dir . '/data/' . $imported_id . '_original_untrimmed.bam';
+            if (! $self->overwrite && -f $humanfree_bam_path && -f $original_bam_path) {
+                $self->status_message("\t$imported_id: Skipping FastQ extraction for " . $imported_id . ", bam files already exists. Use --overwrite to replace...");
+                next;
             }
-            for my $file (@original_fastq_filenames) {
-                my $name = (split('/', $file))[-1];
-                $name =~ s/\.txt$//;
-                my $output_filename = $temp_dir . '/' . $imported_id . '_' . $name . '_original';
-                die "failed to rename $file to $output_filename" unless rename($file, $output_filename);
-                push @original_fastq, $output_filename;
-                push @{$fastq_files{$imported_id}{original}}, $output_filename;
+
+            # untar both imported and original fastq files, only keeping paired files
+            if ($imported_data->is_paired_end) {
+                my @imported_fastq_filenames = $imported_data->dump_sanger_fastq_files;
+                my @original_fastq_filenames;
+                @original_fastq_filenames = $original_data->dump_sanger_fastq_files;
+                for my $file (@imported_fastq_filenames) {
+                    my $name = (split('/', $file))[-1];
+                    $name =~ s/\.txt$//;
+                    my $output_filename = $temp_dir . '/' . $name . '_imported_trimmed';
+                    die "failed to rename $file to $output_filename" unless rename($file, $output_filename);
+                    push @imported_fastq, $output_filename;
+                    push @{$fastq_files{$imported_id}{imported}}, $output_filename; 
+                }
+                for my $file (@original_fastq_filenames) {
+                    my $name = (split('/', $file))[-1];
+                    $name =~ s/\.txt$//;
+                    my $output_filename = $temp_dir . '/' . $imported_id . '_' . $name . '_original';
+                    die "failed to rename $file to $output_filename" unless rename($file, $output_filename);
+                    push @original_fastq, $output_filename;
+                    push @{$fastq_files{$imported_id}{original}}, $output_filename;
+                }
             }
-        }
-        else {
-            $self->status_message("\tSkipping unpaired fastq (imported id: " . $imported_data->id . ")...");
+            else {
+                $self->status_message("\tSkipping unpaired fastq (imported id: " . $imported_data->id . ")...");
+            }
         }
     }
 
@@ -160,189 +169,222 @@ sub execute {
         }
     }
 
-    $self->status_message("Generating human-free, untrimmed data...");
-    for my $id (@imported_data_ids) {
-        my $humanfree_bam_path = $self->report_dir . '/data/' . $id . '_humanfree_untrimmed.bam';
-        if (! $self->overwrite && -f $humanfree_bam_path) {
-            $self->status_message("\t$id: Skipping humanfree creation, humanfree bam file already exists. Use --overwrite to replace...");
-            next;
-        }
-
-        my $humanfree_fwd_path = $temp_dir . '/' . $id . '_1_humanfree_untrimmed';
-        my $humanfree_rev_path = $temp_dir . '/' . $id . '_2_humanfree_untrimmed';
-
-        $self->status_message("\tGenerating hash of read names for instrument data: $id...");
-
-        my $imported_path = (@{$fastq_files{$id}{imported}})[0];
-        my $original_fwd_path = @{$fastq_files{$id}{original}}[0];
-        my $original_rev_path = @{$fastq_files{$id}{original}}[1];
-        my $imported_file = Genome::Utility::FileSystem->open_file_for_reading($imported_path);
-        my $humanfree_fwd_file = Genome::Utility::FileSystem->open_file_for_writing($humanfree_fwd_path);
-        my $humanfree_rev_file = Genome::Utility::FileSystem->open_file_for_writing($humanfree_rev_path);
-
-        $self->status_message("\t\tReading in up to 8M read names...");
-        my $reads_left = 1;
-        my $readname_re = '[^:]*:(.*)#.*';
-        while ($reads_left) {
-            my %read_names;
-            # read 12M reads at a time to prevent oom
-            for (my $count = 0; $count < 8e6; $count++) {
-                $self->status_message("\t\t\tHashed $count reads...") unless ($count % 2e6 || ! $count);
-                my $imported_read = read_and_join_lines($imported_file);
-                unless ($imported_read) {
-                    $self->status_message("\t\t\tFinished reading $count reads.");
-                    $reads_left = 0;
-                    last;
-                }
-                $imported_read =~ /$readname_re/;
-                my $imported_readname = $1;
-                $read_names{$imported_readname} = 1;
+    unless ($self->skip_qc_on_untrimmed_reads) {
+        $self->status_message("Generating human-free, untrimmed data...");
+        for my $id (@imported_data_ids) {
+            my $humanfree_bam_path = $self->report_dir . '/data/' . $id . '_humanfree_untrimmed.bam';
+            if (! $self->overwrite && -f $humanfree_bam_path) {
+                $self->status_message("\t$id: Skipping humanfree creation, humanfree bam file already exists. Use --overwrite to replace...");
+                next;
             }
 
-            my $original_fwd_file = Genome::Utility::FileSystem->open_file_for_reading($original_fwd_path);
-            my $original_rev_file = Genome::Utility::FileSystem->open_file_for_reading($original_rev_path);
+            my $humanfree_fwd_path = $temp_dir . '/' . $id . '_1_humanfree_untrimmed';
+            my $humanfree_rev_path = $temp_dir . '/' . $id . '_2_humanfree_untrimmed';
 
-            $self->status_message("\t\tParsing original forward read file with those hashed reads...");
-            while (my $fwd_read = read_and_join_lines($original_fwd_file)) {
-                $fwd_read =~ /$readname_re/;
-                my $fwd_readname = $1;
-                if ($read_names{$fwd_readname}) {
-                    print $humanfree_fwd_file $fwd_read ;
+            $self->status_message("\tGenerating hash of read names for instrument data: $id...");
+
+            my $imported_path = (@{$fastq_files{$id}{imported}})[0];
+            my $original_fwd_path = @{$fastq_files{$id}{original}}[0];
+            my $original_rev_path = @{$fastq_files{$id}{original}}[1];
+            my $imported_file = Genome::Utility::FileSystem->open_file_for_reading($imported_path);
+            my $humanfree_fwd_file = Genome::Utility::FileSystem->open_file_for_writing($humanfree_fwd_path);
+            my $humanfree_rev_file = Genome::Utility::FileSystem->open_file_for_writing($humanfree_rev_path);
+
+            $self->status_message("\t\tReading in up to 8M read names...");
+            my $reads_left = 1;
+            my $readname_re = '[^:]*:(.*)#.*';
+            while ($reads_left) {
+                my %read_names;
+                # read 12M reads at a time to prevent oom
+                for (my $count = 0; $count < 8e6; $count++) {
+                    $self->status_message("\t\t\tHashed $count reads...") unless ($count % 2e6 || ! $count);
+                    my $imported_read = read_and_join_lines($imported_file);
+                    unless ($imported_read) {
+                        $self->status_message("\t\t\tFinished reading $count reads.");
+                        $reads_left = 0;
+                        last;
+                    }
+                    $imported_read =~ /$readname_re/;
+                    my $imported_readname = $1;
+                    $read_names{$imported_readname} = 1;
                 }
-            }
 
-            $self->status_message("\t\tParsing original reverse read file with those hashed reads...");
-            while (my $rev_read = read_and_join_lines($original_rev_file)) {
-                $rev_read =~ /$readname_re/;
-                my $rev_readname = $1;
-                if ($read_names{$rev_readname}) {
-                    print $humanfree_rev_file $rev_read ;
+                my $original_fwd_file = Genome::Utility::FileSystem->open_file_for_reading($original_fwd_path);
+                my $original_rev_file = Genome::Utility::FileSystem->open_file_for_reading($original_rev_path);
+
+                $self->status_message("\t\tParsing original forward read file with those hashed reads...");
+                while (my $fwd_read = read_and_join_lines($original_fwd_file)) {
+                    $fwd_read =~ /$readname_re/;
+                    my $fwd_readname = $1;
+                    if ($read_names{$fwd_readname}) {
+                        print $humanfree_fwd_file $fwd_read ;
+                    }
+                }
+
+                $self->status_message("\t\tParsing original reverse read file with those hashed reads...");
+                while (my $rev_read = read_and_join_lines($original_rev_file)) {
+                    $rev_read =~ /$readname_re/;
+                    my $rev_readname = $1;
+                    if ($read_names{$rev_readname}) {
+                        print $humanfree_rev_file $rev_read ;
+                    }
                 }
             }
         }
     }
 
     # Write human-free, untrimmed bam
-    $self->status_message("Creating bams...");
-    for my $id (@imported_data_ids) {
-        my $humanfree_fwd_path = $temp_dir . '/' . $id . '_1_humanfree_untrimmed';
-        my $humanfree_rev_path = $temp_dir . '/' . $id . '_2_humanfree_untrimmed';
-        my $humanfree_bam_path = $self->report_dir . '/data/' . $id . '_humanfree_untrimmed.bam';
-        my $original_bam_path = $self->report_dir . '/data/' . $id . '_original_untrimmed.bam';
-        my $original_fwd_path = @{$fastq_files{$id}{original}}[0];
-        my $original_rev_path = @{$fastq_files{$id}{original}}[1];
+    unless ($self->skip_qc_on_untrimmed_reads) {
+        $self->status_message("Creating bams...");
+        for my $id (@imported_data_ids) {
+            my $humanfree_fwd_path = $temp_dir . '/' . $id . '_1_humanfree_untrimmed';
+            my $humanfree_rev_path = $temp_dir . '/' . $id . '_2_humanfree_untrimmed';
+            my $humanfree_bam_path = $self->report_dir . '/data/' . $id . '_humanfree_untrimmed.bam';
 
-        if (! $self->overwrite && -f $humanfree_bam_path && -f $original_bam_path) {
-            $self->status_message("\t$id: Skipping humanfree/original bam creation, files already exists. Use --overwrite to replace...");
-            next;
-        }
-        unlink([$humanfree_bam_path, $original_bam_path]);
-        $self->status_message("\t$id: Generating humanfree/original bam files...");
+            if (! $self->overwrite && -f $humanfree_bam_path ) {
+                $self->status_message("\t$id: Skipping humanfree bam creation, files already exists. Use --overwrite to replace...");
+                next;
+            }
+            unlink($humanfree_bam_path);
+            $self->status_message("\t$id: Generating humanfree bam file...");
 
-        $self->status_message('\tVerifying fwd/rev pairs are correct, will swap if not...');
+            $self->status_message("\tVerifying fwd/rev pairs are correct, will swap if not...");
 
-        # If original files are reversed then they probably just have rev in [0] and fwd in [1] so switch "pointer".
-        my $original_fwd_file = Genome::Utility::FileSystem->open_file_for_reading($original_fwd_path);
-        my $line = $original_fwd_file->getline;
-        if ($line =~ /\/2$/) {
-            $self->status_message("\t\t" . (split("/", $original_fwd_path))[-1] . " looks like a reverse file. Swapping...");
-            my $tmp = @{$fastq_files{$id}{original}}[0];
-            @{$fastq_files{$id}{original}}[0] = @{$fastq_files{$id}{original}}[1];
-            @{$fastq_files{$id}{original}}[1] = $tmp;
-            $original_fwd_path = @{$fastq_files{$id}{original}}[0];
-            $original_rev_path = @{$fastq_files{$id}{original}}[1];
-        }
-        # If humanfree_untrimmed files are reversed then file contents are probably switched so switch files.
-        my $humanfree_fwd_file = Genome::Utility::FileSystem->open_file_for_reading($humanfree_fwd_path);
-        $line = $humanfree_fwd_file->getline;
-        if ($line =~ /\/2$/) {
-            $self->status_message("\t\t" . (split("/", $humanfree_fwd_path))[-1] . " looks like a reverse file. Swapping...");
-            rename($humanfree_fwd_path, $humanfree_fwd_path . '.tmp');
-            rename($humanfree_rev_path, $humanfree_fwd_path);
-            rename($humanfree_fwd_path . '.tmp', $humanfree_rev_path);
-        }
+            # If humanfree_untrimmed files are reversed then file contents are probably switched so switch files.
+            my $humanfree_fwd_file = Genome::Utility::FileSystem->open_file_for_reading($humanfree_fwd_path);
+            my $line = $humanfree_fwd_file->getline;
+            if ($line =~ /\/2$/) {
+                $self->status_message("\t\t" . (split("/", $humanfree_fwd_path))[-1] . " looks like a reverse file. Swapping...");
+                rename($humanfree_fwd_path, $humanfree_fwd_path . '.tmp');
+                rename($humanfree_rev_path, $humanfree_fwd_path);
+                rename($humanfree_fwd_path . '.tmp', $humanfree_rev_path);
+            }
 
-        my $idata = Genome::InstrumentData::Imported->get($id);
-        $self->status_message("\t" . (split("/", $humanfree_bam_path))[-1]. "...");
-        my $humanfree_fastq_to_sam = Genome::Model::Tools::Picard::FastqToSam->create(
-            fastq => $humanfree_fwd_path,
-            fastq2 => $humanfree_rev_path,
-            output => $humanfree_bam_path,
-            quality_format => 'Standard',
-            platform => 'illumina', # nnutter: Not sure what these are/should be?
-            sample_name => $idata->sample_name,
-            library_name => $idata->library_name,
-            use_version => '1.21',
-        );
-        unless($humanfree_fastq_to_sam->execute()) {
-            die $self->error_message("Failed to convert FastQ to BAM ($humanfree_fwd_path, $humanfree_rev_path).");
+            my $idata = Genome::InstrumentData::Imported->get($id);
+            $self->status_message("\t" . (split("/", $humanfree_bam_path))[-1]. "...");
+            my $humanfree_fastq_to_sam = Genome::Model::Tools::Picard::FastqToSam->create(
+                fastq => $humanfree_fwd_path,
+                fastq2 => $humanfree_rev_path,
+                output => $humanfree_bam_path,
+                quality_format => 'Standard',
+                platform => 'illumina', # nnutter: Not sure what these are/should be?
+                sample_name => $idata->sample_name,
+                library_name => $idata->library_name,
+                use_version => '1.21',
+            );
+            unless($humanfree_fastq_to_sam->execute()) {
+                die $self->error_message("Failed to convert FastQ to BAM ($humanfree_fwd_path, $humanfree_rev_path).");
+            }
         }
 
-        $self->status_message("\t" . (split("/", $original_bam_path))[-1]. "...");
-        my $original_fastq_to_sam = Genome::Model::Tools::Picard::FastqToSam->create(
-            fastq => $original_fwd_path,
-            fastq2 => $original_rev_path,
-            output => $original_bam_path,
-            quality_format => 'Standard',
-            platform => 'illumina', # nnutter: Not sure what these are/should be?
-            sample_name => $idata->sample_name,
-            library_name => $idata->library_name,
-            use_version => '1.21',
-        );
-        unless($original_fastq_to_sam->execute()) {
-            die $self->error_message("Failed to convert FastQ to BAM ($original_fwd_path, $original_rev_path).");
+        for my $id (@imported_data_ids) {
+            my $original_bam_path = $self->report_dir . '/data/' . $id . '_original_untrimmed.bam';
+            my $original_fwd_path = @{$fastq_files{$id}{original}}[0];
+            my $original_rev_path = @{$fastq_files{$id}{original}}[1];
+
+            if (! $self->overwrite && -f $original_bam_path) {
+                $self->status_message("\t$id: Skipping original bam creation, file already exists. Use --overwrite to replace...");
+                next;
+            }
+            unlink($original_bam_path);
+            $self->status_message("\t$id: Generating original bam file...");
+
+            $self->status_message("\tVerifying fwd/rev pairs are correct, will swap if not...");
+
+            # If original files are reversed then they probably just have rev in [0] and fwd in [1] so switch "pointer".
+            my $original_fwd_file = Genome::Utility::FileSystem->open_file_for_reading($original_fwd_path);
+            my $line = $original_fwd_file->getline;
+            if ($line =~ /\/2$/) {
+                $self->status_message("\t\t" . (split("/", $original_fwd_path))[-1] . " looks like a reverse file. Swapping...");
+                my $tmp = @{$fastq_files{$id}{original}}[0];
+                @{$fastq_files{$id}{original}}[0] = @{$fastq_files{$id}{original}}[1];
+                @{$fastq_files{$id}{original}}[1] = $tmp;
+                $original_fwd_path = @{$fastq_files{$id}{original}}[0];
+                $original_rev_path = @{$fastq_files{$id}{original}}[1];
+            }
+            
+            my $idata = Genome::InstrumentData::Imported->get($id);
+            $self->status_message("\t" . (split("/", $original_bam_path))[-1]. "...");
+            my $original_fastq_to_sam = Genome::Model::Tools::Picard::FastqToSam->create(
+                fastq => $original_fwd_path,
+                fastq2 => $original_rev_path,
+                output => $original_bam_path,
+                quality_format => 'Standard',
+                platform => 'illumina', # nnutter: Not sure what these are/should be?
+                sample_name => $idata->sample_name,
+                library_name => $idata->library_name,
+                use_version => '1.21',
+            );
+            unless($original_fastq_to_sam->execute()) {
+                die $self->error_message("Failed to convert FastQ to BAM ($original_fwd_path, $original_rev_path).");
+            }
         }
     }
 
     # Count bases in humanfree, untrimmed bams
-    $self->status_message("Counting human-free, untrimmed bases per lane...");
     my %humanfree_base_count;
-    for my $id (@imported_data_ids) {
-        my $humanfree_bam_path = $self->report_dir . '/data/' . $id . '_humanfree_untrimmed.bam';
+    unless ($self->skip_qc_on_untrimmed_reads) {
+        $self->status_message("Counting human-free, untrimmed bases per lane...");
+        for my $id (@imported_data_ids) {
+            my $humanfree_bam_path = $self->report_dir . '/data/' . $id . '_humanfree_untrimmed.bam';
 
-        $self->expect64();
-        my $bam_fh = IO::File->new("samtools view $humanfree_bam_path |");
-        while (<$bam_fh>) {
-            my $read = $_;
-            my $bases = (split("\t", $read))[9];
-            $humanfree_base_count{$id} += length($bases);
+            $self->expect64();
+            my $bam_fh = IO::File->new("samtools view $humanfree_bam_path |");
+            while (<$bam_fh>) {
+                my $read = $_;
+                my $bases = (split("\t", $read))[9];
+                $humanfree_base_count{$id} += length($bases);
+            }
         }
     }
 
 
     # Genome::Model::Tools::Picard::EstimateLibraryComplexity
-    $self->status_message("Running Picard EstimateLibraryComplexity report...");
-    for my $id (@imported_data_ids) {
-        my $humanfree_bam_path = $self->report_dir . '/data/' . $id . '_humanfree_untrimmed.bam';
-        my $original_bam_path = $self->report_dir . '/data/' . $id . '_original_untrimmed.bam';
-        my $humanfree_report_path = $self->report_dir . '/' . $id . '_humanfree_untrimmed_estimate_library_complexity_report.txt';
-        my $original_report_path = $self->report_dir . '/' . $id . '_original_untrimmed_estimate_library_complexity_report.txt';
+    unless ($self->skip_qc_on_untrimmed_reads) {
+        $self->status_message("Running Picard EstimateLibraryComplexity report on human-free bam...");
+        for my $id (@imported_data_ids) {
+            my $humanfree_bam_path = $self->report_dir . '/data/' . $id . '_humanfree_untrimmed.bam';
+            my $humanfree_report_path = $self->report_dir . '/' . $id . '_humanfree_untrimmed_estimate_library_complexity_report.txt';
 
-        if (! $self->overwrite && -f $humanfree_report_path && -f $original_report_path) {
-            $self->status_message("\t$id: Skipping EstimateLibraryComplexity, files already exists. Use --overwrite to replace...");
-            next;
+            if (! $self->overwrite && -f $humanfree_report_path) {
+                $self->status_message("\t$id: Skipping EstimateLibraryComplexity, files already exists. Use --overwrite to replace...");
+                next;
+            }
+            unlink($humanfree_report_path);
+            $self->status_message("\t$id: Generating EstimateLibraryComplexity report on human-free bam...");
+
+            $self->status_message("\t\t" . (split("/", $humanfree_report_path))[-1] . "...");
+            my $humanfree_picard_elc = Genome::Model::Tools::Picard::EstimateLibraryComplexity->create(
+                input_file => [$humanfree_bam_path],
+                output_file => $humanfree_report_path,
+                use_version => '1.21',
+            );
+            unless($humanfree_picard_elc->execute()) {
+                die $self->error_message("Failed to convert run Picard ELC on humanfree.");
+            }
         }
-        unlink([$humanfree_report_path, $original_report_path]);
-        $self->status_message("\t$id: Generating EstimateLibraryComplexity report...");
 
-        $self->status_message("\t\t" . (split("/", $original_report_path))[-1] . "...");
-        my $humanfree_picard_elc = Genome::Model::Tools::Picard::EstimateLibraryComplexity->create(
-            input_file => [$humanfree_bam_path],
-            output_file => $humanfree_report_path,
-            use_version => '1.21',
-        );
-        unless($humanfree_picard_elc->execute()) {
-            die $self->error_message("Failed to convert run Picard ELC on humanfree.");
-        }
+        $self->status_message("Running Picard EstimateLibraryComplexity report on \"original bam\"...");
+        for my $id (@imported_data_ids) {
+            my $original_bam_path = $self->report_dir . '/data/' . $id . '_original_untrimmed.bam';
+            my $original_report_path = $self->report_dir . '/' . $id . '_original_untrimmed_estimate_library_complexity_report.txt';
 
-        $self->status_message("\t\t" . (split("/", $original_report_path))[-1] . "...");
-        my $original_picard_elc = Genome::Model::Tools::Picard::EstimateLibraryComplexity->create(
-            input_file => [$original_bam_path],
-            output_file => $original_report_path,
-            use_version => '1.21',
-        );
-        unless($original_picard_elc->execute()) {
-            die $self->error_message("Failed to convert run Picard ELC on humanfree.");
+            if (! $self->overwrite && -f $original_report_path) {
+                $self->status_message("\t$id: Skipping EstimateLibraryComplexity, files already exists. Use --overwrite to replace...");
+                next;
+            }
+            unlink($original_report_path);
+            $self->status_message("\t$id: Generating EstimateLibraryComplexity report on \"original\" bam...");
+
+            $self->status_message("\t\t" . (split("/", $original_report_path))[-1] . "...");
+            my $original_picard_elc = Genome::Model::Tools::Picard::EstimateLibraryComplexity->create(
+                input_file => [$original_bam_path],
+                output_file => $original_report_path,
+                use_version => '1.21',
+            );
+            unless($original_picard_elc->execute()) {
+                die $self->error_message("Failed to convert run Picard ELC on \"original\".");
+            }
         }
     }
 
@@ -352,63 +394,71 @@ sub execute {
     #   duplicate count
     #   unique, non-human bases
     #   percent duplication of raw data
-    my $other_stats_output_path = $self->report_dir . '/other_stats_report.txt';
-    $self->status_message("Generating other stats...");
-    unlink($other_stats_output_path) if (-f $other_stats_output_path);
-    my $other_stats_output = Genome::Utility::FileSystem->open_file_for_writing($other_stats_output_path);
+    unless ($self->skip_qc_on_untrimmed_reads) {
+        my $other_stats_output_path = $self->report_dir . '/other_stats_report.txt';
+        $self->status_message("Generating other stats...");
+        unlink($other_stats_output_path) if (-f $other_stats_output_path);
+        my $other_stats_output = Genome::Utility::FileSystem->open_file_for_writing($other_stats_output_path);
 
-    for my $id (@imported_data_ids) {
-        my $humanfree_report_path = $self->report_dir . '/' . $id . '_humanfree_untrimmed_estimate_library_complexity_report.txt';
-        my $original_report_path = $self->report_dir . '/' . $id . '_original_untrimmed_estimate_library_complexity_report.txt';
-        my $humanfree_report_fh = Genome::Utility::FileSystem->open_file_for_reading($humanfree_report_path);
-        my $original_report_fh = Genome::Utility::FileSystem->open_file_for_reading($original_report_path);
+        for my $id (@imported_data_ids) {
+            my $humanfree_report_path = $self->report_dir . '/' . $id . '_humanfree_untrimmed_estimate_library_complexity_report.txt';
+            my $humanfree_report_fh = Genome::Utility::FileSystem->open_file_for_reading($humanfree_report_path);
 
-        my $orig_data = $self->original_data_from_imported_id($id);
-        my $lane = $orig_data->flow_cell_id . "_" . $orig_data->lane;
+            my $orig_data = $self->original_data_from_imported_id($id);
+            my $lane = $orig_data->flow_cell_id . "_" . $orig_data->lane;
 
-        while (my $line = $humanfree_report_fh->getline) {
-            if ($line =~ /^##\ METRICS/) {
-                my $keys = $humanfree_report_fh->getline();
-                my $values = $humanfree_report_fh->getline();
-                my @keys = split("\t", lc($keys));
-                my @values = split("\t", $values);
-                my %metrics;
-                @metrics{@keys} = @values;
-                print $other_stats_output "$lane: Human-free Percent Duplication: " . $metrics{percent_duplication} . "\n";
+            while (my $line = $humanfree_report_fh->getline) {
+                if ($line =~ /^##\ METRICS/) {
+                    my $keys = $humanfree_report_fh->getline();
+                    my $values = $humanfree_report_fh->getline();
+                    my @keys = split("\t", lc($keys));
+                    my @values = split("\t", $values);
+                    my %metrics;
+                    @metrics{@keys} = @values;
+                    print $other_stats_output "$lane: Human-free Percent Duplication: " . $metrics{percent_duplication} . "\n";
 
-                $metric_name = "$lane\_humanfree_percent_duplication";
-                $metric{$metric_name}->delete() if($metric{$metric_name});
-                unless(Genome::Model::Metric->create(build_id => $self->build_id, name => $metric_name, value => $metrics{percent_duplication})) {
-                    die $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $metric_name)");
-                }
+                    $metric_name = "$lane\_humanfree_percent_duplication";
+                    $metric{$metric_name}->delete() if($metric{$metric_name});
+                    unless(Genome::Model::Metric->create(build_id => $self->build_id, name => $metric_name, value => $metrics{percent_duplication})) {
+                        die $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $metric_name)");
+                    }
 
-                $metric_name = "$lane\_unique_humanfree_bases";
-                $metric{$metric_name}->delete() if($metric{$metric_name});
-                my $unique_bases_count = $humanfree_base_count{$id} * (1 - $metrics{percent_duplication});
-                unless(Genome::Model::Metric->create(build_id => $self->build_id, name => $metric_name, value => $unique_bases_count)) {
-                    die $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $metric_name)");
-                }
-                print $other_stats_output "$lane: Unique, human-free bases: $unique_bases_count\n";
-            }
-        }
-        while (my $line = $original_report_fh->getline) {
-            if ($line =~ /^##\ METRICS/) {
-                my $keys = $original_report_fh->getline();
-                my $values = $original_report_fh->getline();
-                my @keys = split("\t", lc($keys));
-                my @values = split("\t", $values);
-                my %metrics;
-                @metrics{@keys} = @values;
-                print $other_stats_output "$lane: Original Percent Duplication: " . $metrics{percent_duplication} . "\n";
-
-                $metric_name = "$lane\_original_percent_duplication";
-                $metric{$metric_name}->delete() if($metric{$metric_name});
-                unless(Genome::Model::Metric->create(build_id => $self->build_id, name => $metric_name, value => $metrics{percent_duplication})) {
-                    die $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $metric_name)");
+                    $metric_name = "$lane\_unique_humanfree_bases";
+                    $metric{$metric_name}->delete() if($metric{$metric_name});
+                    my $unique_bases_count = $humanfree_base_count{$id} * (1 - $metrics{percent_duplication});
+                    unless(Genome::Model::Metric->create(build_id => $self->build_id, name => $metric_name, value => $unique_bases_count)) {
+                        die $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $metric_name)");
+                    }
+                    print $other_stats_output "$lane: Unique, human-free bases: $unique_bases_count\n";
                 }
             }
         }
 
+        for my $id (@imported_data_ids) {
+            my $original_report_path = $self->report_dir . '/' . $id . '_original_untrimmed_estimate_library_complexity_report.txt';
+            my $original_report_fh = Genome::Utility::FileSystem->open_file_for_reading($original_report_path);
+
+            my $orig_data = $self->original_data_from_imported_id($id);
+            my $lane = $orig_data->flow_cell_id . "_" . $orig_data->lane;
+
+            while (my $line = $original_report_fh->getline) {
+                if ($line =~ /^##\ METRICS/) {
+                    my $keys = $original_report_fh->getline();
+                    my $values = $original_report_fh->getline();
+                    my @keys = split("\t", lc($keys));
+                    my @values = split("\t", $values);
+                    my %metrics;
+                    @metrics{@keys} = @values;
+                    print $other_stats_output "$lane: Original Percent Duplication: " . $metrics{percent_duplication} . "\n";
+
+                    $metric_name = "$lane\_original_percent_duplication";
+                    $metric{$metric_name}->delete() if($metric{$metric_name});
+                    unless(Genome::Model::Metric->create(build_id => $self->build_id, name => $metric_name, value => $metrics{percent_duplication})) {
+                        die $self->error_message("Unable to create build metric (build_id=" . $self->build_id . ", $metric_name)");
+                    }
+                }
+            }
+        }
     }
 
     $self->status_message("Removing unneeded FastQ files...");
