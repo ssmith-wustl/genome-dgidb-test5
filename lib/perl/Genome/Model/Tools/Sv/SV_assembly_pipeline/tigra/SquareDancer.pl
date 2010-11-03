@@ -6,12 +6,19 @@ use strict;
 use warnings;
 use Getopt::Std;
 use FindBin qw($Bin);
-use lib "$FindBin::Bin";
+use lib "$FindBin::Bin/lib";
+use kmergen;
+use graphgen;
+use walknodes;
+use addbridgekmer;
+use walkcontig;
+use processtips;
+use maprdtocontig;
 
-my $version="SquareDancer-0.1r161";
-my %opts = (q=>35,r=>2,k=>25,n=>1,c=>1,m=>3);
+my $version="SquareDancer-0.1r162";
+my %opts = (q=>35,r=>2,k=>25,n=>1,c=>1,m=>3,K=>15);
 my %opts1;
-getopts('o:q:r:k:n:c:l:m:ubdg:', \%opts1);
+getopts('o:q:r:k:n:c:l:m:ubdg:aK:', \%opts1);
 die("
 Usage:   SquareDancer.pl <bams>
 Options:
@@ -23,7 +30,9 @@ Options:
          -n INT   ignore breakpoints connected to more than [$opts{n}] other breakpoints
          -m INT   maximum number of mismatch allowed in aligned portion [$opts{m}]
          -k INT   Kmer size used to establish collection among breakpoints [$opts{k}]
-         -g FILE   dump SVs and supporting reads in BED format for GBrowse
+         -g FILE  dump SVs and supporting reads in BED format for GBrowse
+         -a       assemble soft-clipped reads from matched breakpoints
+         -K INT   Kmer size used to assemble the soft-clipped reads [$opts{K}]
          -u       Output all the unilaterial Breakpoint Pairs
          -b       report read count by library
          -d       print out debug information
@@ -78,12 +87,18 @@ foreach my $chr(@chrs){
 }
 
 printf "#%s %s %s\n",$version,$options,join(" ",@ARGV);
-print "#Chr1\tPos1\tOrientation1\tChr2\tPos2\tOrientation2\tType\tSize\tScore\tnum_Reads\tnum_Reads_lib\n";
+if($opts{a}){
+  print "#Chr1\tPos1\tOrientation1\tChr2\tPos2\tOrientation2\tType\tSize\tScore\tnum_Reads\tnum_Reads_lib\tBreakContig\n";
+}
+else{
+  print "#Chr1\tPos1\tOrientation1\tChr2\tPos2\tOrientation2\tType\tSize\tScore\tnum_Reads\tnum_Reads_lib\n";
+}
 open(BED,">$opts{g}") if (defined $opts{g});
 
 my %Breakpoint;
 my %BKmotif;
 my %BKreceptors;
+my %BKreads;
 
 foreach my $chr(@chrs){
   print STDERR "Read in chr$chr ...\n" if($opts{d});
@@ -213,6 +228,8 @@ foreach my $chr(@chrs){
       foreach my $motif(keys %{$bkmotives{$bkpos}}){
 	$BKmotif{$motif}{$bkpos}=$motivebks{$motif}{$bkpos};
       }
+      $BKreads{$bkpos}=$bkreads{$bkpos} if($opts{a});
+
       if(defined $opts{d}){
 	printf STDERR "breakpoint %s\:%d\n", $bkpos, $breakpoint{$bkpos};
 	printf STDERR "motives:";
@@ -338,7 +355,21 @@ sub BuildBreakPointNetwork{
 	my $score=($#motives+1)*$opts{k};
 	$score=($score>99)?99:$score;
 
-	printf "%s\t%d\t%d%s\t%s\t%d\t%d%s\t%s\t%d\t%d\t%d\t%s\n",$chr1,$pos1,abs($Breakpoint{$start}),$ori1,$chr2,$pos2,abs($Breakpoint{$end}),$ori2,$type,$size,$score,$totalreads,join('|',@libcount);
+	printf "%s\t%d\t%d%s\t%s\t%d\t%d%s\t%s\t%d\t%d\t%d\t%s",$chr1,$pos1,abs($Breakpoint{$start}),$ori1,$chr2,$pos2,abs($Breakpoint{$end}),$ori2,$type,$size,$score,$totalreads,join('|',@libcount);
+
+	if($opts{a}){  #Assemble soft-clipped reads
+	  my @screads;
+	  foreach my $read(@{$BKreads{$start}},@{$BKreads{$end}}){
+	    push @screads,$read;
+	  }
+	  my $contigs=&TIGRA(\@screads,$opts{K});
+	  if(defined $contigs){
+	    printf "\t%s\n",$$contigs[0]->{seq};
+	  }
+	}
+	else{
+	  print "\n";
+	}
 	
 	if($opts{g}){  #print out SV and supporting reads in BED format
 	  # This only provides one SV breakpoints, not both
@@ -471,4 +502,58 @@ sub byChromosome{
     $chr2=23;
     return $chr1 <=> $chr2;
   }
+}
+
+
+sub TIGRA{
+  my ($Reads,$kmersize)=@_;
+  ########################################## asm_1_kmergen2.pl
+  my $kg=new kmergen(k=>$kmersize,c=>1,C=>2e9);
+  my ($hh,$total)=$kg->doit($Reads);
+
+  my $gg=new graphgen(k=>$kmersize,kmers=>$hh);
+  my ($RDnum,$PR,$HH)=$gg->doit($Reads);
+
+  #from de bruigin graph to proto-contig graph
+  my $wn=new walknodes(k=>$kmersize);
+  $wn->strictwalk($HH);
+  my $contigtips;
+  my $protocontigs=$wn->dump_protocontigs();
+
+  #compute tip value: max{nucleotide distances to leaves} for all proto-contigs and the anti-proto-contigs, start from the leaves
+  my $pt=new processtips(k=>$kmersize);
+  $contigtips=$pt->tipwrap(1000,$protocontigs,$HH);
+ 
+  #recover low frequency kmers in high quality reads that bridge separated non-tip proto-contig graphs
+  my $ab=new addbridgekmer(k=>$kmersize);
+  my $newkmers;
+  ($HH,$newkmers)=$ab->doit($HH,$protocontigs,$contigtips,$PR,$Reads);
+
+  undef $contigtips;
+  $wn->strictwalk($HH);
+  $protocontigs=$wn->dump_protocontigs();
+  #updated the set of proto-contigs with the expanded hash
+  undef $pt;
+  $pt=new processtips(k=>$kmersize);
+  $contigtips=$pt->tipwrap(1000,$protocontigs,$HH);
+
+  #extend proto-contigs to contigs by removing tips and collapse bubbles with heuristic cut-offs
+  my $wc=new walkcontig(k=>$kmersize);
+  my $contigs=$wc->walkcontigwrap(cutoff=>3,ratiocutoff=>0.3,HH=>$HH,contig=>$protocontigs,tips=>$contigtips);
+  my $contigs2=$wc->dump_contigs2();
+
+  #relabel tips on proto-contigs connected to the middle of a contig
+  $contigtips=$pt->breaktip(1000,$HH,$contigtips,$contigs,$contigs2);
+
+  #similar to 6, different param, more sensitive to weak branches
+  undef $wc;
+  $wc=new walkcontig(k=>$kmersize);
+  $contigs=$wc->walkcontigwrap(cutoff=>3,ratiocutoff=>0.2,HH=>$HH,contig=>$protocontigs,tips=>$contigtips);
+
+  #use entire read length to resolve small repeats
+  my $mr=new maprdtocontig(k=>$kmersize);
+  $mr->doit(reads=>$Reads,HH=>$HH,contig=>$contigs,contig2=>$contigs2,tips=>$contigtips);
+  $contigs=$mr->dump_contigs2_m();
+
+  return $contigs;
 }
