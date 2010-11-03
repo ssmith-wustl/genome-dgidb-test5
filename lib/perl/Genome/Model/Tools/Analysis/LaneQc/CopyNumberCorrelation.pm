@@ -3,17 +3,15 @@ package Genome::Model::Tools::Analysis::LaneQc::CopyNumberCorrelation;
 use warnings;
 use strict;
 use Genome;
-use Cwd;
-use Statistics::R;
-require Genome::Utility::FileSystem;
+use IO::File;
 
 class Genome::Model::Tools::Analysis::LaneQc::CopyNumberCorrelation {
     is => 'Command',
     has => [
-    copy_number_laneqc_glob => {
+    copy_number_laneqc_file_glob => {
         type => 'FilePath',
         is_optional => 0,
-        doc => 'glob string for grabbing copy-number laneqc files',
+        doc => 'glob string for grabbing copy-number laneqc files to compare',
     },
     output_file => {
         type => 'FilePath',
@@ -32,16 +30,19 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
-    $DB::single = 1;
-    my $fileglob = $self->copy_number_laneqc_glob;
-    my @cnfiles = glob($fileglob);
-    print "@cnfiles\n"; #to test
+
+    #parse inputs
+    my $fileglob = $self->copy_number_laneqc_file_glob;
+    my @cnfiles = sort glob($fileglob);
+    my $num_files = $#cnfiles;
+    my $outfile = $self->output_file;
+    #print "@cnfiles\n"; #to test
 
     #Check that files are reasonably similar
     my $standard_wc;
     for my $file (@cnfiles) {
-        my $wc = `wc -l $file`;
-        $wc =~ s/^(\d+)\s+\w+$/$1/;
+        my $wc_call = `wc -l $file`;
+        my ($wc) = $wc_call =~ m/^(\d+)\s+\w+$/;
         unless ($standard_wc) { 
             $standard_wc = $wc; 
             next;
@@ -49,43 +50,31 @@ sub execute {
         my $wc_diff = $standard_wc - $wc;
         $wc_diff = abs($wc_diff);
         if ($wc_diff > 100) {
-            $self->status_message("Files have varied wordcounts (diff>100) - just letting you know in case this is of concern.");
+            $self->status_message("Files have largely varied wordcounts (diff>100) - just letting you know in case this is of concern.");
         }
     }
 
-    #create temp directory for R to operate within 
-    my $tempdir = Genome::Utility::FileSystem->create_temp_directory();
-    my $cwd = cwd();
-    my $R = Statistics::R->new(tmp_dir => $tempdir);
-    $R->startR();
-
     #Loop through copy-number files to create correlation matrix
-    for my $file (sort @cnfiles) {
-        print "$file\n";
-        $R->send(qq{
-            y=2;
-            stop(paste("printing output",y,sep="\t"), call. = FALSE);
-            });
-        my $ret = $R->read();
-        print "at test\n";
-        my $testfile = "/gscuser/ndees/git/genome/lib/perl/Genome/Model/Tools/Analysis/LaneQc/test.txt";
-        print "here 1\n";
-        my $fh = new IO::File $testfile,"w";
-        print "here 2\n";
-        print $fh "$ret\n";
-        print $fh "2nd line\n";
-        print "here 3\n";
-        $fh->close;
-        print "after test\n";
-        #print "$ret";
+    my %corr_matrix;
+    for my $i1 (0..$num_files) {
+        my $loop2index = $i1 + 1;
+        for my $i2 ($loop2index..$num_files) {
+            next if $cnfiles[$i1] eq $cnfiles[$i2];
+            my $corr = `R --slave --args $cnfiles[$i1] $cnfiles[$i2] < /gscuser/ndees/scripts/cn_correlation_script.R`;
+            $corr_matrix{$cnfiles[$i1]}{$cnfiles[$i2]} = $corr;
+        }
     }
 
+    #print output
+    my $out_fh = new IO::File $outfile,"w";
+    for my $f1 (sort keys %corr_matrix) {
+        for my $f2 (sort keys %{$corr_matrix{$f1}}) {
+            my $line = join("\t",$f1,$f2,$corr_matrix{$f1}{$f2});
+            print $out_fh "$line\n";
+        }
+    }
+    $out_fh->close;
 
-
-    $R->stopR();
-    chdir $cwd;
-
-    #print some output maybe
     return 1;
 }
 1;
