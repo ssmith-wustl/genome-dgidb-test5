@@ -50,11 +50,35 @@ sub column_order { [ qw(
     )]}
 
 sub sort_order {[qw( structure_start transcript_transcript_start transcript_transcript_stop )] }
+#sub sort_order {[qw( structure_stop structure_start transcript_structure_id )] }
 
 sub file_resolver {
     my( $chrom_name, $data_directory) = @_;
 
     return '/' . $data_directory . '/substructures/' . $chrom_name . '.csv';
+    #return '/' . $data_directory . '/substructures/' . $chrom_name . '.new.csv';
+}
+
+sub create_iterator_closure_for_rule {
+    my($self,$rule) = @_;
+
+    my $iterator = $self->SUPER::create_iterator_closure_for_rule($rule);
+
+    return sub {
+        while(1) {
+            my $next_row = $iterator->();
+            return unless $next_row;
+
+            our($intersector_sub);
+            unless ($intersector_sub) {
+                return $next_row;
+            }
+
+            if ($intersector_sub->($next_row)) {
+                return $next_row;
+            }
+        }
+    };
 }
 
 1;
