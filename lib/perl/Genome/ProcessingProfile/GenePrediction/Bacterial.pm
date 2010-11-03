@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
-use Carp;
+use Carp 'confess';
 
 class Genome::ProcessingProfile::GenePrediction::Bacterial {
     is => 'Genome::ProcessingProfile::GenePrediction',
@@ -55,7 +55,7 @@ sub _execute_build {
     my $config_file_path = $build->create_config_file;
     unless (-s $config_file_path) {
         $self->error_message("Configuration file not found at expected location: $config_file_path");
-        croak;
+        confess;
     }
 
     $self->status_message("Configuration file created at $config_file_path, creating hap command object");
@@ -68,7 +68,7 @@ sub _execute_build {
     );
     unless ($hap_object) {
         $self->error_message("Could not create hap command object!");
-        croak;
+        confess;
     }
 
     $self->status_message("Hap command object created, executing!");
@@ -83,7 +83,7 @@ sub _execute_build {
     my $hap_rv = $hap_object->execute;
     unless ($hap_rv) {
         $self->error_message("Trouble executing hap command!");
-        croak;
+        confess;
     }
 
     $self->status_message("Hap executed and no problems detected!");

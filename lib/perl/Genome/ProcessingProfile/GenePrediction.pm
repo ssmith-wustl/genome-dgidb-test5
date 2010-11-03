@@ -24,7 +24,7 @@ class Genome::ProcessingProfile::GenePrediction {
     has_param => [
         domain => {
             is => 'Text',
-            valid_values => ['bacterial', 'archaea', 'eukaryotic'],
+            valid_values => ['bacterial', 'archaeal', 'eukaryotic'],
             doc => 'Domain of organism',
         },
     ],

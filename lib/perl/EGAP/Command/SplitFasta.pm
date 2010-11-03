@@ -5,6 +5,7 @@ use warnings;
 
 use EGAP;
 use Carp 'confess';
+use File::Path 'make_path';
 use Bio::SeqIO;
 
 class EGAP::Command::SplitFasta {
@@ -18,6 +19,7 @@ class EGAP::Command::SplitFasta {
         output_directory => {
             is => 'Path',
             is_input => 1,
+            is_output => 1,
             doc => 'Directory in which split fastas are placed',
         },
     ],
@@ -36,7 +38,7 @@ class EGAP::Command::SplitFasta {
         genome_size => {
             is => 'Number',
             is_output => 1,
-            doc => 'Total number of bases in given fasta file',
+            doc => 'Total number of bases in given fasta file, might be a useful metric',
         },
     ],
 };
@@ -75,13 +77,21 @@ sub execute {
     my $upper_limit = $self->max_bases_per_file;
     my $output_directory = $self->output_directory;
 
+    $self->status_message("Creating smaller fasta files in $output_directory containing sequence " .
+        "from $fasta_file_path and each having no more than $upper_limit bases");
+
+    unless (-d $output_directory) {
+        my $rv = make_path($output_directory);
+        confess "Could not make directory $output_directory!" unless defined $rv and $rv == 1;
+    }
+
     while (my $sequence = $fasta_file->next_seq()) {
         my $length = $sequence->length;
 
         if (not defined $current_fasta or ($current_chunk_size + $length) > $upper_limit) {
             $total_bases += $current_chunk_size;
 
-            my $filename = $output_directory . "/fasta_$counter.fa";
+            my $filename = $output_directory . "/fasta_$counter";
             $current_fasta = Bio::SeqIO->new(
                 -file => ">$filename",
                 -format => 'Fasta',
@@ -96,9 +106,12 @@ sub execute {
         $current_chunk_size += $length;
     }
 
+    $total_bases += $current_chunk_size;
+
     $self->fasta_files(\@filenames);
     $self->genome_size($total_bases);
-
+    $self->status_message("Created $counter fasta files in $output_directory.");
+    $self->status_message("Altogether, there are $total_bases bases of sequence!");
     return 1;
 }
 1;
