@@ -768,9 +768,9 @@ sub _apply_indel_and_translate{
     }
     my $sequence = "";
     $sequence = $structure->phase_bases_before if $structure->phase_bases_before ne 'NULL';
+    Genome::Model::Tools::Sequence->class();
     for my $substructure (@structures) {
         if ($substructure->structure_type eq 'flank') {
-            Genome::Model::Tools::Annotate::LookupConservationScore->class();
             my $flank_sequence = Genome::Model::Tools::Sequence::lookup_sequence(
                     chromosome => $chrom_name,
                     start => $substructure->structure_start,
