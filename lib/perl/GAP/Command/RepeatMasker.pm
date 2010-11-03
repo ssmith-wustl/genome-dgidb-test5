@@ -5,11 +5,11 @@ use warnings;
 
 use GAP;
 use Genome::Utility::FileSystem;
-use File::Basename;
-use File::Spec;
+use File::Temp 'tempdir';
 use Carp 'confess';
 use Bio::SeqIO;
 use Bio::Tools::Run::RepeatMasker;
+use File::chdir;
 
 class GAP::Command::RepeatMasker {
     is => 'GAP::Command',
@@ -46,7 +46,6 @@ class GAP::Command::RepeatMasker {
         temp_working_directory => {
             is => 'Path',
             is_input => 1,
-            default => '/tmp/',
             doc => 'Temporary working files are written here',
         },
         skip_masking => {
@@ -116,6 +115,18 @@ sub execute {
         return 1;
     }
 
+    if (not defined $self->temp_working_directory) {
+        my $temp_dir = tempdir(
+            'RepeatMasker-XXXXXX',
+            DIR => '/tmp/',
+            CLEANUP => 0,
+            UNLINK => 0,
+        );
+        chmod(0775, $temp_dir);
+        $self->temp_working_directory($temp_dir);
+        $self->status_message("Not given temp working directory, using $temp_dir");
+    }
+
     my $input_fasta = Bio::SeqIO->new(
         -file => $self->fasta_file,
         -format => 'Fasta',
@@ -128,14 +139,14 @@ sub execute {
 
     # FIXME I (bdericks) had to patch this bioperl module to not fail if there is no repetitive sequence
     # in a sequence we pass in. This patch either needs to be submitted to BioPerl or a new wrapper for 
-    # RepeatMasker be made for in house. I don't like relying on patched version of bioperl that aren't
+    # RepeatMasker be made for in house. I don't like relying on patched version of bioperl that isn't
     # tracked in any repo...
     my $masker;
     if (defined $self->repeat_library) {
     	$masker = Bio::Tools::Run::RepeatMasker->new(
             lib => $self->repeat_library, 
             xsmall => $self->xsmall, 
-            verbose => -1,
+            verbose => 0,
             dir => $self->temp_working_directory,
         );
     }
@@ -143,14 +154,23 @@ sub execute {
     	$masker = Bio::Tools::Run::RepeatMasker->new(
             species => $self->species, 
             xsmall => $self->xsmall, 
-            verbose => -1,
+            verbose => 0,
             dir => $self->temp_working_directory,
         );
     } 
 
+    # FIXME This is the only way I know of to force this bioperl object to use the temp directory I want. If
+    # this is not specified, the tool fails when it can't open an output file in the temp directory (because
+    # the default temp directory doesn't have the permissions set appropriately...). If some bioperl guru
+    # knows how to specify this during object creation and not have to violate class privacy like I am here,
+    # please do.
+    $masker->{_tmpdir} = $self->temp_working_directory;
+
     # FIXME RepeatMasker emits a warning when no repetitive sequence is found. I'd prefer to not have
     # this displayed, as this situation is expected and the warning message just clutters the logs.
     while (my $seq = $input_fasta->next_seq()) {
+        local $CWD = $self->temp_working_directory; # More shenanigans to get repeat masker to not put temp dir in cwd,
+                                                    # which could be a snapshot and cause problems
         $masker->run($seq);
         my $masked_seq = $masker->masked_seq();
         $masked_seq = $seq unless defined $masked_seq; # If no masked sequence found, write original seq to file
