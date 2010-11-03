@@ -12,7 +12,7 @@ class Genome::Model::Build::Command::AbandonAndQueue {
 sub sub_command_sort_position { 6 }
 
 sub help_brief {
-    return "Abandon a build and it's events";
+    return "Abandon a build and queue the model for another build";
 }
 
 sub help_detail {

@@ -862,7 +862,10 @@ sub _launch {
             aspect => 'commit',
             callback => sub {
                 $self->status_message("Resuming LSF job ($job_id) for build " . $self->__display_name__ . ".");
-                system("bresume $job_id");
+                my $bresume_output = `bresume $job_id`; chomp $bresume_output;
+                unless ( $bresume_output =~ /^Job <$job_id> is being resumed$/ ) {
+                    $self->status_message($bresume_output);
+                }
                 Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock_id);
             }
         );
