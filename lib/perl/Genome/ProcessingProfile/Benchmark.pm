@@ -143,7 +143,9 @@ sub _execute_build {
     $exit_code = $exit_code >> 8;
     if ($exit_code != 0) {
         $self->status_message("Failed to run $cmd with args $args!  Exit code: $exit_code.");
-        return;
+        # FIXME: Not really sure what to do long term here.
+        # We have a case of gmt soap de-novo-assemble not properly returning exit codes.
+        # Don't return, fall through and finish getting metrics.
     }
 
     my $metrics = $self->_system_snapshot($dir);
