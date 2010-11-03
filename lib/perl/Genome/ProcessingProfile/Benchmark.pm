@@ -139,6 +139,9 @@ sub _execute_build {
 
     $self->_system_snapshot($dir);
 
+    # Set the DATA_DIRECTORY for use by executed program.
+    $ENV{DATA_DIRECTORY} = $build->data_directory;
+
     my $exit_code = system "/usr/bin/time -v $cmd $args >$dir/output 2>$dir/errors";
     $exit_code = $exit_code >> 8;
     if ($exit_code != 0) {
