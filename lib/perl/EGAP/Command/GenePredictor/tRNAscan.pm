@@ -7,6 +7,7 @@ use EGAP;
 use File::Temp;
 use IO::File;
 use Carp 'confess';
+use File::Path 'make_path';
 
 class EGAP::Command::GenePredictor::tRNAscan {
     is => 'EGAP::Command::GenePredictor',
@@ -42,6 +43,11 @@ EOS
 
 sub execute {
     my $self = shift;
+
+    unless (-d $self->raw_output_directory) {
+        my $mk_rv = make_path($self->raw_output_directory);
+        confess "Could not make raw ouput directory at " . $self->raw_output_directory unless defined $mk_rv and $mk_rv;
+    }
 
     # Need a unique file name for raw output
     my $raw_output_fh = File::Temp->new(

@@ -5,6 +5,7 @@ use warnings;
 
 use EGAP;
 use Carp 'confess';
+use File::Path 'make_path';
 use Bio::Tools::GFF;
 
 class EGAP::Command::GenePredictor::RNAmmer {
@@ -75,6 +76,11 @@ sub execute {
     my $self = shift;
     my $fasta_file = $self->fasta_file;
 
+    unless (-d $self->raw_output_directory) {
+        my $mk_rv = make_path($self->raw_output_directory);
+        confess "Could not make raw ouput directory at " . $self->raw_output_directory unless defined $mk_rv and $mk_rv;
+    }
+
     # TODO Logic for this output format needs to be added
     if ($self->output_format ne 'gff') {
         $self->error_message("Only GFF output format is currently supported, sorry!");
@@ -93,7 +99,7 @@ sub execute {
     push @params, "-multi " if $self->parallel_execution;
     push @params, "-k " if $self->keep;
    
-    # Get output file name and creaet output param for command
+    # Get output file name and create output param for command
     my ($suffix, $param);
     if ($self->output_format eq 'fasta') {
         $suffix .= ".fa";
