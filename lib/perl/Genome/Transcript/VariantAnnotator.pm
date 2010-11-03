@@ -170,6 +170,8 @@ sub _create_iterator_for_variant_intersection {
     # data up the call stack and creating objects for TranscriptStructures we aren't 
     # interested in
     $Genome::DataSource::TranscriptStructures::intersector_sub = sub {
+        return 1 unless defined $variant;
+
         my $struct = $_[0];
         if ( $variant->{'start'} <= $struct->[STRUCTURE_STOP]) {
             return 1;
