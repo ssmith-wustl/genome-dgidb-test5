@@ -473,6 +473,7 @@ sub execute {
     $self->status_message('Total time to complete: ' . timestr($total_time, 'noc') . "\n\n") if $self->benchmark;
 
     my $timediff = $annotation_loop_stop_time - $annotation_loop_start_time;
+    $timediff ||= 1;  # avoid division by zero below
     my $variants_per_sec = $processed_variants / $timediff;
     $self->status_message("Annotated $processed_variants variants in " . $timediff . " seconds.  "
                           . sprintf("%2.2f", $variants_per_sec) . " variants per second");
