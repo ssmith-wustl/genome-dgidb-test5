@@ -309,7 +309,7 @@ sub GetGeneAnnotation{
       }
       if(defined $struct1 && defined $struct2 && (abs($struct2->{id}-$struct1->{id})>1)
 	){
-	$gene.=',novoSplice';
+	$gene.=',novelSplice';
       }
     }
     else{

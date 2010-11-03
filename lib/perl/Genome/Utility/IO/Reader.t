@@ -5,7 +5,6 @@ use warnings;
 
 use above 'Genome';
 
-use Cwd 'abs_path';
 use Data::Dumper 'Dumper';
 use IO::String;
 use Test::More tests => 19;
@@ -82,7 +81,7 @@ $reader = Album::Reader->create(
 ok($reader, "Created reader w/ file ($albums_file)");
 $reader->headers($albums->{headers});
 $reader->getline; # header line
-is($reader->get_original_input, abs_path($albums_file), 'get_original_input');
+is($reader->get_original_input, $albums_file, 'get_original_input');
 # all
 my @albums_from_all = $reader->all;
 ok(@albums_from_all, 'all');

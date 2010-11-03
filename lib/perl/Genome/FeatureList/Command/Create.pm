@@ -19,6 +19,7 @@ class Genome::FeatureList::Command::Create {
         file_id => { is => 'Integer', doc => 'ID of the file storage for the BED file in LIMS (must supply this or file_name)' },
         file_path => { is => 'Text', doc => 'Path to the BED file on the file system (will be copied into an allocation) (must supply this or file_id)' },
         content_type => { is => 'Text', doc => 'the kind of information in the BED file' },
+        create_capture_container => { is => 'Boolean', default_value => 0, doc => 'If a file_path is supplied, also create the corresponding capture container in the LIMS system' },
     ],
 };
 
@@ -78,6 +79,21 @@ sub execute {
     unless($feature_list) {
         $self->error_message('Failed to create feature-list.');
         return;
+    }
+
+    if($self->file_path and $self->create_capture_container) {
+        eval {
+            my $cmd = '/gsc/scripts/bin/execute_create_capture_container --bed-file='. $self->file_path .' --setup-name=\''. $self->name .'\'';
+            Genome::Utility::FileSystem->shellcmd(
+                cmd => $cmd,
+            );
+        };
+
+        if($@) {
+            $self->error_message('Failed to create capture container!  Aborting feature-list creation.');
+            $feature_list->delete;
+            return;
+        }
     }
 
     $self->status_message('Created feature-list "' . $feature_list->name . '" with ID: ' . $feature_list->id);

@@ -23,7 +23,7 @@ use CrossMatch;
 use Bio::SeqIO;
 use Getopt::Std;
 
-my %opts = (m=>0.02,s=>0,h=>100,u=>30,g=>30,b=>0,z=>0);
+my %opts = (m=>0.02,s=>0,h=>100,u=>30,b=>0,z=>0);
 getopts('x:s:m:h:iu:g:r:c:db:z:',\%opts);
 die("
 Usage:   getCrossMatchIndel.pl <crossmatch alignment result>\n
@@ -35,7 +35,6 @@ Options:
          -i         Only detect Indels
          -s INT     minimal size of the indels to report
          -m INT     percent substitution rate in the flanking alignment [$opts{m}]
-         -g INT     Maximal size of microinsertion allowed at the breakpoint [$opts{g}] (bp)
          -h INT     Maximal microhomology size for Non-homologous end joining [$opts{h}] (bp)
          -u INT     minimal length of unique sequence in the alignment [$opts{u}] (bp)
          -r FILE    fasta file that contains the local reference sequence
@@ -152,7 +151,6 @@ foreach my $read(keys %{$cm->{align}}){
     my $aln1=$alns[$i];
     for(my $j=$i+1;$j<=$#alns;$j++){
       my $aln2=$alns[$j];
-
       my ($perc_mismatch1,$perc_mismatch2)=(0,0);
       foreach my $mistype('perc_sub','perc_del','perc_ins'){
 	$perc_mismatch1+=$aln1->{$mistype};
@@ -167,9 +165,9 @@ foreach my $read(keys %{$cm->{align}}){
       my $uniq_query1=$aln2->{r_start}-$aln1->{r_start};
       my $uniq_query2=$aln2->{r_end}-$aln1->{r_end};
       next unless ($uniq_query1>=$opts{u} && $uniq_query2>=$opts{u});
-      my $overlap=$aln1->{r_end}-$aln2->{r_start}+1;
-      my $microhomology=($overlap>0)?$overlap:0;
-      my $scar=($overlap<0)?-$overlap:0;
+      my $sbj_overlap=$aln1->{r_end}-$aln2->{r_start}+1;
+      my $sbj_homology=($sbj_overlap>0)?$sbj_overlap:0;
+      my $sbj_gain=($sbj_overlap<0)?-$sbj_overlap:0;
       my ($bkpos1,$bkpos2)=($aln2->{r_start},$aln1->{r_end});
 
       my @tmpalns=($aln1,$aln2);
@@ -178,39 +176,45 @@ foreach my $read(keys %{$cm->{align}}){
       if($aln1->{refseq} eq $aln2->{refseq}){  # intra-chromosomal
 	my $readspan=$aln2->{r_start}-$aln1->{r_start};
 	my $refspan=$aln2->{ref_start}-$aln1->{ref_start};
+
 	$size=abs($refspan)-$readspan;
 	if($aln1->{orientation} eq $aln2->{orientation}){   # indel, tandem dup
-	  if($overlap>0){
-	    ($aln1,$aln2)=&FixMicrohomology($read,$overlap,$aln1,$aln2);
-	    $overlap=$aln1->{r_end}-$aln2->{r_start}+1;
+	  if($sbj_overlap>0){
+	    ($aln1,$aln2)=&FixMicrohomology($read,$sbj_overlap,$aln1,$aln2);
+	    $sbj_overlap=$aln1->{r_end}-$aln2->{r_start}+1;
+	    $sbj_homology=($sbj_overlap>0)?$sbj_overlap:0;
+	    $sbj_gain=($sbj_overlap<0)?-$sbj_overlap:0;
 	  }
 	  $readspan=$aln2->{r_start}-$aln1->{r_start};
 	  $refspan=$aln2->{ref_start}-$aln1->{ref_start};
-	  $size=abs($refspan)-$readspan;
+	  my $ref_overlap=($aln1->{orientation} eq 'U')?$aln1->{ref_end}-$aln2->{ref_start}+1:$aln2->{ref_start}-$aln1->{ref_end}+1;
 
+	  if($sbj_gain>0){
+	    $bkpos1=$aln1->{r_end}+1;
+	    $bkpos2=$aln2->{r_start}-1;
+	  }
+	  if($sbj_overlap==0){  # no microhomology
+	    $bkpos1=$aln1->{r_end}+1;
+	    $bkpos2='-';
+	  }
+	  $size=abs($refspan)-$readspan;
 	  $orientation='+-';
-	  if($size>0){
+
+	  if($size>0 || $ref_overlap<0){  # Deletion, loss of bases in the reference
 	    next if($aln1->{orientation} eq 'U' && $refspan<$opts{u} ||   # ignore cross-mapping
 		    $aln1->{orientation} eq 'C' && $refspan>-$opts{u});
 	    $type='DEL';
-	    next if($scar>$opts{g});
-	    if($scar==0){
+	    if($sbj_gain==0){
 	      if($aln1->{orientation} eq 'U'){
-		$refpos1=$aln1->{ref_end}-$overlap+1;
-		$refpos2=$aln2->{ref_start}+$overlap-1;
+		$refpos1=$aln1->{ref_end}-$sbj_overlap+1;
+		$refpos2=$aln2->{ref_start}+$sbj_overlap-1;
 	      }
 	      else{
-		$refpos1=$aln2->{ref_start}-$overlap+1;
-		$refpos2=$aln1->{ref_end}+$overlap-1;
-	      }
-	      if($overlap==0){  #no microhomology
-		$bkpos1=$aln1->{r_end}+1;
-		$bkpos2='-';
+		$refpos1=$aln2->{ref_start}-$sbj_overlap+1;
+		$refpos2=$aln1->{ref_end}+$sbj_overlap-1;
 	      }
 	    }
-	    else{  #non-template insertion
-	      $bkpos1=$aln1->{r_end}+1;
-	      $bkpos2=$aln2->{r_start}-1;
+	    else{  # non-template insertion
 	      if($aln1->{orientation} eq 'U'){
 		$refpos1=$aln1->{ref_end}+1;
 		$refpos2=$aln2->{ref_start}-1;
@@ -221,50 +225,34 @@ foreach my $read(keys %{$cm->{align}}){
 	      }
 	    }
 	  }
-	  else{
-	    if($overlap>=0){  # tandem duplication
-	      $type='ITX';
-	      if($aln1->{orientation} eq 'U'){
-		$refpos1=$aln2->{ref_start};
-		$refpos2=$aln1->{ref_end};
-	      }
-	      else{
-		$refpos1=$aln1->{ref_end};
-		$refpos2=$aln2->{ref_start};
-	      }
+	  else{  # Insertion/Duplication
+	    if($aln1->{orientation} eq 'U'){
+	      $refpos1=$aln2->{ref_start};
+	      $refpos2=$aln1->{ref_end};
 	    }
 	    else{
-#	      next if($aln1->{orientation} eq 'U' && $refspan<$opts{u} ||   #ignore cross-mapping
-#		      $aln1->{orientation} eq 'C' && $refspan>-$opts{u});
-	      $type='INS';
-	      $overlap=$aln1->{ref_end}-$aln2->{ref_start}+1;
-	      if($aln1->{orientation} eq 'U'){
-		$scar=($overlap<0)?-$overlap:0;
-		#$refpos1=$aln2->{ref_start};
-		#$refpos2=$aln1->{ref_end};
-		$refpos1=$aln1->{ref_end};
-		$refpos2=$refpos1+1;
-	      }
-	      else{
-		$scar=($overlap>0)?$overlap:0;
-		#$refpos1=$aln1->{ref_end};
-		#$refpos2=$aln2->{ref_start};
-		$refpos1=$aln2->{ref_start};
-		$refpos2=$refpos1+1;
-	      }
+	      $refpos1=$aln1->{ref_end};
+	      $refpos2=$aln2->{ref_start};
+	    }
+
+	    if($ref_overlap>=-$size-$sbj_gain){  # tandem duplication
+	      $type='ITX';
+	    }
+	    else{
+	      $type='INS';   # insertion
 	    }
 	  }
 	}
-	else{  #inversion
+	else{  # Inversion
 	  $type='INV';
 	  if($aln1->{orientation} eq 'U'){
 	    $orientation='++';
 	    $strand='+';
 	    if($aln1->{ref_end}<$aln2->{ref_start}){   # 1->|    <-2|
-	      $refpos1=$aln1->{ref_end}-$overlap+1;
+	      $refpos1=$aln1->{ref_end}-$sbj_overlap+1;
 	      $refpos2=$aln2->{ref_start};
 	      $refpos2+=$aln2->{r_rest} if($aln2->{ref_rest}<=0);
-	      $size=$refpos2-$refpos1-$overlap+1;
+	      $size=$refpos2-$refpos1-$sbj_overlap+1;
 	    }
 	    else{   # |<-2    1->|
 	      $refpos1=$aln2->{ref_end};
@@ -280,8 +268,8 @@ foreach my $read(keys %{$cm->{align}}){
 	    if($aln1->{ref_end}>$aln2->{ref_start}){   # |2->    |<-1
 	      $refpos1=$aln2->{ref_start};
 	      $refpos1-=$aln2->{r_rest} if($aln2->{ref_rest}<=0);
-	      $refpos2=$aln1->{ref_end}+$overlap-1;
-	      $size=$refpos2-$refpos1-$overlap+1;
+	      $refpos2=$aln1->{ref_end}+$sbj_overlap-1;
+	      $size=$refpos2-$refpos1-$sbj_overlap+1;
 	    }
 	    else{   # |<-1    2->|
 	      $refpos1=$aln1->{ref_end};
@@ -291,10 +279,9 @@ foreach my $read(keys %{$cm->{align}}){
 	      $size=$refpos2-$refpos1+1;
 	    }
 	  }
-
 	}
       }
-      else{  #inter-chromosomal
+      else{  # Inter-chromosomal
 	$size=1;
 	$type='CTX';
 	my ($chrom1)=($aln1->{refseq}=~/\.([\w\d]+)\.fa*/);
@@ -303,70 +290,65 @@ foreach my $read(keys %{$cm->{align}}){
 	  if($aln1->{orientation} eq 'U'){
 	    if(($aln2->{orientation} eq 'U')){
 	      $orientation='+-';
-	      $refpos1=$aln1->{ref_end}-$overlap+1;
-	      $refpos2=$aln2->{ref_start}+$overlap-1;
+	      $refpos1=$aln1->{ref_end}-$sbj_overlap+1;
+	      $refpos2=$aln2->{ref_start}+$sbj_overlap-1;
 	    }
 	    else{
 	      $orientation='++';
-	      $refpos1=$aln1->{ref_end}-$overlap+1;
-	      $refpos2=$aln2->{ref_start}-$overlap+1;
+	      $refpos1=$aln1->{ref_end}-$sbj_overlap+1;
+	      $refpos2=$aln2->{ref_start}-$sbj_overlap+1;
 	    }
 	  }
 	  else{
 	    if(($aln2->{orientation} eq 'U')){
 	      $orientation='--';
-	      $refpos1=$aln1->{ref_end}+$overlap-1;
-	      $refpos2=$aln2->{ref_start}+$overlap-1;
+	      $refpos1=$aln1->{ref_end}+$sbj_overlap-1;
+	      $refpos2=$aln2->{ref_start}+$sbj_overlap-1;
 	    }
 	    else{
 	      $orientation='-+';
-	      $refpos1=$aln1->{ref_end}+$overlap-1;
-	      $refpos2=$aln2->{ref_start}-$overlap+1;
+	      $refpos1=$aln1->{ref_end}+$sbj_overlap-1;
+	      $refpos2=$aln2->{ref_start}-$sbj_overlap+1;
 	    }
-	    #$refpos1=$refpos1+$overlap-1;
+	    #$refpos1=$refpos1+$sbj_overlap-1;
 	  }
 	}
 	else{
 	  if($aln1->{orientation} eq 'U'){
 	    if($aln2->{orientation} eq 'U'){
 	      $orientation='-+';
-	      $refpos1=$aln1->{ref_end}-$overlap+1;
-	      $refpos2=$aln2->{ref_start}+$overlap-1;
+	      $refpos1=$aln1->{ref_end}-$sbj_overlap+1;
+	      $refpos2=$aln2->{ref_start}+$sbj_overlap-1;
 	    }
 	    else{
 	      $orientation='++';
-	      $refpos1=$aln1->{ref_end}-$overlap+1;
-	      $refpos2=$aln2->{ref_start}-$overlap+1;
+	      $refpos1=$aln1->{ref_end}-$sbj_overlap+1;
+	      $refpos2=$aln2->{ref_start}-$sbj_overlap+1;
 	    }
 	  }
 	  else{
 	    if($aln2->{orientation} eq 'U'){
 	      $orientation='--';
-	      $refpos1=$aln1->{ref_end}+$overlap-1;
-	      $refpos2=$aln2->{ref_start}+$overlap-1;
+	      $refpos1=$aln1->{ref_end}+$sbj_overlap-1;
+	      $refpos2=$aln2->{ref_start}+$sbj_overlap-1;
 	    }
 	    else{
 	      $orientation='+-';
-	      $refpos1=$aln1->{ref_end}+$overlap-1;
-	      $refpos2=$aln2->{ref_start}-$overlap+1;
+	      $refpos1=$aln1->{ref_end}+$sbj_overlap-1;
+	      $refpos2=$aln2->{ref_start}-$sbj_overlap+1;
 	    }
-	    #$refpos1=$refpos1+($overlap-1);
+	    #$refpos1=$refpos1+($sbj_overlap-1);
 	  }
 	  my $tmp=$refpos1;$refpos1=$refpos2;$refpos2=$tmp;
 	  $tmp=$aln1;$aln1=$aln2;$aln2=$tmp;
 	}
       }
 
-      next if($scar>$opts{g});  #skip if the microinsertion size is greater than $opts{g}
-      #if($bkpos1 eq '-'){
-#	$bkpos1=$bkpos2;$bkpos2='-';
-#      }
-#      els
       if($bkpos2 ne '-' && $bkpos1>$bkpos2){
 	my $tmp=$bkpos1;$bkpos1=$bkpos2;$bkpos2=$tmp;
       }
       my $var;
-      ($var->{type},$var->{size},$var->{chr1},$var->{refpos1},$var->{chr2},$var->{refpos2},$var->{orientation},$var->{bkpos1},$var->{bkpos2},$var->{read},$var->{score},$var->{scar},$var->{read_len},$var->{fraction_aligned},$var->{n_seg},$var->{n_sub},$var->{n_indel},$var->{nbp_indel},$var->{strand},$var->{microhomology})=($type,abs($size),$aln1->{refseq},$refpos1,$aln2->{refseq},$refpos2,$orientation,$bkpos1,$bkpos2,$read,$score,$scar,$trimmed_readlen,$fraction_aligned,$n_seg,$n_sub,$n_indel,$nbp_indel,$strand,$microhomology);
+      ($var->{type},$var->{size},$var->{chr1},$var->{refpos1},$var->{chr2},$var->{refpos2},$var->{orientation},$var->{bkpos1},$var->{bkpos2},$var->{read},$var->{score},$var->{scar},$var->{read_len},$var->{fraction_aligned},$var->{n_seg},$var->{n_sub},$var->{n_indel},$var->{nbp_indel},$var->{strand},$var->{microhomology})=($type,abs($size),$aln1->{refseq},$refpos1,$aln2->{refseq},$refpos2,$orientation,$bkpos1,$bkpos2,$read,$score,$sbj_gain,$trimmed_readlen,$fraction_aligned,$n_seg,$n_sub,$n_indel,$nbp_indel,$strand,$sbj_homology);
       $var->{alnstrs}=join(',',$aln1->{line},$aln2->{line});
       push @vars,$var if($score>0);
     }
@@ -378,7 +360,6 @@ my $seq;
 my $bestvar;
 my $maxscore=0;
 my $mindist=1e10;
-
 
 foreach my $var(@vars){
   next if($var->{type} eq 'INV' && $opts{i});
@@ -687,6 +668,5 @@ sub FixMicrohomology{
     $aln2->{ref_start}=$refpos+$idx-1;
     $aln2->{r_start}=$rpos-$idx+1;
   }
-
   return ($aln1,$aln2);
 }

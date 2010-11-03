@@ -16,16 +16,25 @@ BEGIN {
 }
 
 #< Test if it really works >#
-my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fasta-Orient';
-my $fasta    = $dir.'/assembled.fasta';
-my $qual     = $dir.'/assembled.fasta.qual';
-my $s_fasta  = $dir.'/primers_sense.fasta';
-my $as_fasta = $dir.'/primers_anti_sense.fasta';
+my $tmp_dir = Genome::Utility::FileSystem->create_temp_directory('Genome-Model-Tools-Fasta-Orient');
+my $orig_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fasta-Orient';
+my %file_path = (
+    fasta => '/assembled.fasta',
+    qual => '/assembled.fasta.qual',
+    s_fasta => '/primers_sense.fasta',
+    as_fasta => '/primers_anti_sense.fasta',
+);
+for my $key (keys %file_path) {
+    my $orig_path = $orig_dir . $file_path{$key};
+    my $tmp_path = $tmp_dir . $file_path{$key};
+    Genome::Utility::FileSystem->create_symlink($orig_path, $tmp_path);
+    $file_path{$key} = $tmp_path;
+}
 
 my $orient = Genome::Model::Tools::Fasta::Orient->create(
-    fasta_file       => $fasta,
-    sense_fasta_file => $s_fasta,
-    anti_sense_fasta_file => $as_fasta,
+    fasta_file       => $file_path{'fasta'},
+    sense_fasta_file => $file_path{'s_fasta'},
+    anti_sense_fasta_file => $file_path{'as_fasta'},
 );
 
 my $confirmed_fasta_file = $orient->confirmed_fasta_file;
@@ -45,10 +54,10 @@ is($unconfirmed_qual_file_name,'assembled.unconfirmed.fasta.qual', "unconfirmed_
 
 ok($orient->execute, "Orient test fine");
 
-is(compare($confirmed_fasta_file, "$dir/expected.confirmed.fasta"), 0, 'Expected and generated confirmed fasta matches');
-is(compare($confirmed_qual_file, "$dir/expected.confirmed.fasta.qual"), 0, 'Expected and generated confirmed qual matches');
-is(compare($unconfirmed_fasta_file, "$dir/expected.unconfirmed.fasta"), 0, 'Expected and generated unconfirmed fasta matches');
-is(compare($unconfirmed_qual_file, "$dir/expected.unconfirmed.fasta.qual"), 0, 'Expected and generated unconfirmed qual matches');
+is(compare($confirmed_fasta_file, "$orig_dir/expected.confirmed.fasta"), 0, 'Expected and generated confirmed fasta matches');
+is(compare($confirmed_qual_file, "$orig_dir/expected.confirmed.fasta.qual"), 0, 'Expected and generated confirmed qual matches');
+is(compare($unconfirmed_fasta_file, "$orig_dir/expected.unconfirmed.fasta"), 0, 'Expected and generated unconfirmed fasta matches');
+is(compare($unconfirmed_qual_file, "$orig_dir/expected.unconfirmed.fasta.qual"), 0, 'Expected and generated unconfirmed qual matches');
 
 unlink $confirmed_fasta_file;
 unlink $confirmed_qual_file;
@@ -58,20 +67,20 @@ unlink $unconfirmed_qual_file;
 #< Test failing conditions #>
 # no primer files
 $orient = Genome::Model::Tools::Fasta::Orient->create(
-    fasta_file => $fasta,
+    fasta_file => $file_path{'fasta'},
 );
 ok(!$orient, "Neither sense nor anti_sense file provided");
 
 # non existing primer files
 $orient = Genome::Model::Tools::Fasta::Orient->create(
-    fasta_file            => $fasta,
-    anti_sense_fasta_file => $dir.'/no_way_this_exists.fasta',
+    fasta_file            => $file_path{'fasta'},
+    anti_sense_fasta_file => $tmp_dir.'/no_way_this_exists.fasta',
 );
 ok(!$orient, "anti_sense file is invalid");
 
 $orient = Genome::Model::Tools::Fasta::Orient->create(
-    fasta_file            => $fasta,
-    sense_fasta_file => $dir.'/no_way_this_exists.fasta',
+    fasta_file            => $file_path{'fasta'},
+    sense_fasta_file => $tmp_dir.'/no_way_this_exists.fasta',
 );
 ok(!$orient, "anti_sense file is invalid");
 

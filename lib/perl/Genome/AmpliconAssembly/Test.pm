@@ -746,6 +746,11 @@ sub _model {
 sub should_copy_traces { 0 }
 sub should_copy_edit_dir { 0 }
 
+sub _pre_execute {
+    $File::Copy::Recursive::KeepMode = 0;
+    return 1;
+}
+
 sub test03_verify : Test(4) {
     my $self = shift;
 
