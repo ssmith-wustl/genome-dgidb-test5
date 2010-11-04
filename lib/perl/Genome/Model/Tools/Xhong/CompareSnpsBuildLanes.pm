@@ -38,11 +38,13 @@ sub execute {
 	$DB::single = 1;
 	my $build_id = "";
     	my $dir = $self->analysis_dir;
-	my $user = getlogin || getpwuid($<); #get current user name	 
+	my $user = getlogin || getpwuid($<); #get current user name
+	my $sample_name ="";
+	my $genotype_file ="";	 
     	my $wgs_model_id = $self->model_id;
-    	my $sample_name = $self->sample_name;
+    	$sample_name = $self->sample_name;
     # step1 : to find genotype file or return;
-    	my $genotype_file = $self->genotype_file;
+    	$genotype_file = $self->genotype_file;
     	if ($sample_name ne "" && $genotype_file eq ""){
     # get owner_id of the microarray_genotype file
     		system("genome instrument-data list imported --filter sample_name=$sample_name --noheader | cut -d ' ' -f1 > /tmp/$sample_name");
