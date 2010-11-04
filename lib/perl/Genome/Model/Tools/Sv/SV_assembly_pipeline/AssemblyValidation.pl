@@ -13,7 +13,7 @@ use lib "$FindBin::Bin/lib";
 my $version='0.0.1-r141';
 
 my %opts = (l=>500,p=>1000,s=>0,q=>1,n=>0,m=>10,x=>3,P=>-10,G=>-10,S=>0.02,A=>500,Q=>0,w=>200,C=>0.5,N=>5,J=>1);
-getopts('l:d:c:p:r:e:s:Q:q:t:n:a:b:f:km:MRzv:hD:x:i:P:G:I:A:S:L:w:C:N:HJ:',\%opts);
+getopts('l:d:c:p:r:e:s:Q:q:t:n:a:b:f:km:MRzv:hD:x:i:P:G:I:A:S:L:w:C:N:HJ:y',\%opts);
 die("
 Usage:   AssemblyValidation.pl <SV file, default in BreakDancer format> <bam files ... >
 Options:
@@ -23,12 +23,13 @@ Options:
          -r FILE    Save relevant cross_match alignment results to file
          -z         Customized SV format, interpret column from header that must start with # and contain chr1, start, chr2, end, type, size
          -H         Assemble high coverage data (such as capture)
+         -y         Highest sensitivity assembly (1 read)
          -e INT     Exhaustively search combinations of $opts{l} bp blocks at the predicted breakpoints from -INT bp to +INT bp
          -v FILE    Save unconfirmed predictions in FILE
          -h         Make homo variants het by adding same amount of randomly selected wiletype reads
          -l INT     Flanking size [$opts{l}]
          -A INT     Esimated maximal insert size [$opts{A}]
-         -q INT     Only assemble reads with mapping quality > [$opts{q}]
+         -q INT     Only assemble reads with mapping quality >= [$opts{q}]
          -m INT     Minimal size (bp) for an assembled SV to be called confirmed [$opts{m}]
          -i INT     invalidate indels are -i bp bigger or smaller than the predicted size, usually 1 std insert size
          -a INT     Get reads with start position bp into the left breakpoint, default [50,100,150]
@@ -76,6 +77,7 @@ printf "#%d SVs to be assembled from\n#Bams: ", $#SVs+1;
 my @FBAMS;
 foreach my $bam(@ARGV){
   my $fbam=`readlink $bam`; chomp $fbam;
+  $fbam = $bam if($fbam eq "");
   push @FBAMS,$fbam;
 }
 print join(",",@FBAMS) . "\n";
@@ -163,6 +165,10 @@ sub AssembleBestSV{
   my $maxSV;
   my ($chr1,$start,$chr2,$end,$type,$size,$ori)=split /\./,$prefix;
   if(defined $opts{M}){$chr1="chr$chr1";$chr2="chr$chr2";}
+  if($start-$opts{l}-$opts{w}<1){
+    print STDERR "$prefix: negative reference start coordinates, skip ...\n";
+    return;
+  }
 
   foreach my $a(@as){
     foreach my $b(@bs){
@@ -390,6 +396,9 @@ sub AssembleBestSV{
 	$cmd="time $FindBin::Bin/tigra/tigra.pl ";
 	if($type=~/ITX/i || $type=~/INS/i){  #Tandem duplication
 	  $cmd.="-N 1 ";
+	}
+	if($opts{y}){
+	  $cmd.='-m 1 ';
 	}
 	if($opts{H}){
 	  $cmd.="-h $datadir/$prefix.a$a.b$b.fa.contigs.het.fa -o $datadir/$prefix.a$a.b$b.fa.contigs.fa -k25 -p SV -r $datadir/$prefix.ref.fa $datadir/$prefix.a$a.b$b.fa";

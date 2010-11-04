@@ -20,20 +20,23 @@ sub _build_all_sub_commands {
     my @subclasses = $self->SUPER::_build_all_sub_commands(@_);
 
     # add an extra one
-    class Genome::ProcessingProfile::Command::List::All {
-        is => 'Genome::ProcessingProfile::Command::List::Base',
-        has => [
-            subject_class_name  => {
-                is_constant => 1, 
-                value => 'Genome::ProcessingProfile' 
-            },
-            show => { default_value => 'id,type_name,name' },
-        ],
-        doc => 'list processing profiles'
-    };
+    if ($self->class eq __PACKAGE__) {
+        class Genome::ProcessingProfile::Command::List::All {
+            is => 'Genome::ProcessingProfile::Command::List::Base',
+            has => [
+                subject_class_name  => {
+                    is_constant => 1, 
+                    value => 'Genome::ProcessingProfile' 
+                },
+                show => { default_value => 'id,type_name,name' },
+            ],
+            doc => 'list processing profiles'
+        };
 
-    # return the whole list
-    push @subclasses, 'Genome::ProcessingProfile::Command::List::All';
+        # return the whole list
+        push @subclasses, 'Genome::ProcessingProfile::Command::List::All';
+    }
+
     return @subclasses;
 }
 

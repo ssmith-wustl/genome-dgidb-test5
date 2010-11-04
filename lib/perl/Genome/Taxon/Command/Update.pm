@@ -43,12 +43,6 @@ sub execute
         return 0;
     }
 
-    if(defined($taxon->$column))
-    {
-        $self->error_message("file a ticket;this column is already defined.");
-        return 0;
-    }
-
     # there are some columns that are 'required'...
     # but they may already be null...
     #$DB::single = 1;

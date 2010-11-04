@@ -4,30 +4,48 @@ use strict;
 use warnings;
 
 use EGAP;
+use Carp 'confess';
 
 class EGAP::Transcript {
     type_name => 'transcript',
-    table_name => 'TRANSCRIPT',
-    id_sequence_generator_name => 'transcript_id_seq',
+    schema_name => 'files',
+    data_source => 'EGAP::DataSource::Transcripts',
     id_by => [
-        transcript_id => { is => 'NUMBER', len => 12 },
+        transcript_name => { is => 'Text' },
+        directory => { is => 'Path' },
     ],
     has => [
-        coding_end      => { is => 'NUMBER', len => 5 },
-        coding_start    => { is => 'NUMBER', len => 5 },
-        gene_id         => { is => 'NUMBER', len => 11 },
-        end             => { is => 'NUMBER', len => 10, column_name => 'SEQ_END' },
-        start           => { is => 'NUMBER', len => 10, column_name => 'SEQ_START' },
-        sequence_string => { is => 'BLOB', len => 2147483647 },
-        transcript_name => { is => 'VARCHAR2', len => 60 },
-        exons           => { is => 'EGAP::Exon', reverse_as => 'transcript', is_many => 1 }, 
-        coding_gene     => { is => 'EGAP::CodingGene', id_by => 'gene_id' },
+        coding_gene_name => { is => 'Text' },
+        protein_name => { is => 'Text' },
+        coding_start => { is => 'Number' },
+        coding_end => { is => 'Number' },
+        start => { is => 'Number' },
+        end => { is => 'Number' },
+        strand => { is => 'Text' },
+        sequence_name => { is => 'Text' },
+        sequence_string => { is => 'Text' },
+        coding_gene => {
+            calculate_from => ['directory', 'coding_gene_name'],
+            calculate => q|
+                my ($gene) = EGAP::CodingGene->get(directory => $directory, gene_name => $coding_gene_name);
+                return $gene;
+            |,
+        },
+        protein => {
+            calculate_from => ['directory', 'protein_name'],
+            calculate => q|
+                my ($protein) = EGAP::Protein->get(directory => $directory, protein_name => $protein_name);
+                return $protein;
+            |,
+        },
+        exons => {
+            calculate_from => ['directory', 'transcript_name'],
+            calculate => q|
+                my @exons = EGAP::Exon->get(directory => $directory, transcript_name => $transcript_name);
+                return @exons;
+            |,
+        },
     ],
-    unique_constraints => [
-        { properties => [qw/gene_id transcript_name/], sql => 'TRANS_GENE_ID_NAME_U' },
-    ],
-    schema_name => 'EGAPSchema',
-    data_source => 'EGAP::DataSource::EGAPSchema',
 };
 
 1;

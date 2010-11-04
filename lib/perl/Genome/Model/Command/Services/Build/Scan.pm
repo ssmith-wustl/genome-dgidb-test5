@@ -268,7 +268,7 @@ sub build_lists {
     {
         my $iter = Genome::Model::Event->create_iterator(
             build_id   => [ keys %$builds_both ],
-            event_type => { operator => '!=', value => 'genome model build' }
+            event_type => { operator => 'ne', value => 'genome model build' }
         );
         while ( my $event = $iter->next ) {
             $inner_events_db->{ $event->build_id } ||= {};

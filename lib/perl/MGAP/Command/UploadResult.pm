@@ -21,11 +21,6 @@ class MGAP::Command::UploadResult {
     ],
 };
 
-operation_io MGAP::Command::UploadResult {
-    input  => [ 'bio_seq_features', 'seq_set_id', 'dev' ],
-    output => [ ],
-};
-
 sub sub_command_sort_position { 10 }
 
 sub help_brief {

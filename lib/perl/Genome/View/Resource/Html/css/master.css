@@ -752,6 +752,12 @@ table.boxy_info td.label {
     text-align:right;
 }
 
+table.boxy_info h3.subhead {
+    margin: 0 0 5px 0;
+    padding: 10px 0 5px 5px;
+    border-bottom: 1px solid #e5e5e3;
+}
+
 /* SET VIEWS */
 
 div.set_query {

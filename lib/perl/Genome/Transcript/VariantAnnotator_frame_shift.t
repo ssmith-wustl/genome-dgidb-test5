@@ -38,7 +38,7 @@ for(my $i = 1; $i < scalar @relevant_new_annotation; $i++){ #the first line is h
     my @old_fields = split("\t", $relevant_annotation[$i]); 
     my $new_aa = $new_fields[15];
     my $old_aa = $old_fields[15];
-    ok($new_aa eq $old_aa, "$new_aa present in both annotaions");
+    is($new_aa, $old_aa, "$new_aa present in both annotaions");
 }
 
 done_testing();
