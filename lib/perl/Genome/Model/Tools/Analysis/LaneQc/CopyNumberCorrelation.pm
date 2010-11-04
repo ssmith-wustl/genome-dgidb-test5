@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Analysis::LaneQc::CopyNumberCorrelationFaster;
+package Genome::Model::Tools::Analysis::LaneQc::CopyNumberCorrelation;
 
 use warnings;
 use strict;
@@ -7,7 +7,7 @@ use IO::File;
 use List::Util qw(sum);
 use Statistics::Descriptive;
 
-class Genome::Model::Tools::Analysis::LaneQc::CopyNumberCorrelationFaster {
+class Genome::Model::Tools::Analysis::LaneQc::CopyNumberCorrelation {
     is => 'Command',
     has => [
     copy_number_laneqc_file_glob => {
@@ -32,14 +32,12 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
-    $DB::single=1;
 
     #parse inputs
     my $fileglob = $self->copy_number_laneqc_file_glob;
     my @cnfiles = sort glob($fileglob);
     my $num_files = $#cnfiles;
     my $outfile = $self->output_file;
-    #print "@cnfiles\n"; #to test
 
     #print outfile headers
     my $outfh = new IO::File $outfile,"w";
@@ -61,7 +59,7 @@ sub execute {
         }
     }
 
-    #Load a hash with the values from all of the files (FIXME or change this later to load one at a time during the loops below)
+    #Load a hash with the values from all of the files
     my %data;
     for my $file (@cnfiles) {
         my $fh = new IO::File $file,"r";
