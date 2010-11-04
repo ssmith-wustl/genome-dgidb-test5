@@ -114,6 +114,9 @@ sub execute {
         $cmd_params{'processing_profile_id'} = undef;
     }
 
+    # ask the model if there's anything else we need to copy 
+    %cmd_params = (%cmd_params, $src_model->additional_params_for_copy); 
+
     for my $key (%property_overrides) {
         # allow overriding data directory on the copy and pass that in
         unless ($key eq "data_directory") {
@@ -124,9 +127,6 @@ sub execute {
     }
     
     $cmd_params{'model_name'} = $self->to;
-
-    # ask the model if there's anything else we need to copy 
-    %cmd_params = (%cmd_params, $src_model->additional_params_for_copy); 
    
     # kick off the command to build it
     my $define_cmd = $define_cmd_class_name->create(%cmd_params);
