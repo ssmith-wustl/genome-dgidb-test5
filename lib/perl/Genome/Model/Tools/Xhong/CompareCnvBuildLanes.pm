@@ -18,12 +18,12 @@ class Genome::Model::Tools::Xhong::CompareCnvBuildLanes {
 };
 
 sub help_brief {
-    "Generates QC gold-snp-concordance data on every lane in a build for one wgs model"
+    "Generates QC CNV plot for every lane in a build for one wgs model"
 }
 
 sub help_detail {
     <<'HELP';
-This script runs QC check on every lane in a build to generate gold-snp-concordance and detect sample swaps. It may also be useful for analysis of quality metrics on a per lane basis.
+This script runs QC check on every lane in a build to generate per lane CNV plot and detect sample swaps. It may also be useful for analysis of quality metrics on a per lane basis.
 HELP
 }
 
@@ -65,8 +65,8 @@ sub execute {
     	       
         #Grab all alignment events so we can filter out ones that are still running or are abandoned
         # get all align events for the current running build
-    	my @align_events = Genome::Model::Event->get(
-    		event_type => {operator => 'like', value => '%align-reads%'},
+=cut    	my @align_events = Genome::Model::Event->get(
+#    		event_type => {operator => 'like', value => '%align-reads%'},
         	build_id => $build,
         	model_id => $model->id,
     	);
@@ -84,7 +84,7 @@ sub execute {
         	$self->error_message(" No alignments have Succeeded on the build ");
         	return;
     	}
-    	printf STDERR "Using %d lanes to calculate metrics\n", scalar(@events);
+=cut   	printf STDERR "Using %d lanes to calculate metrics\n", scalar(@events);
         #Convert events to InstrumentDataAssignment objects
 	my @idas = $build->instrument_data_assignments;
         
@@ -95,6 +95,7 @@ sub execute {
 	# print "Number of idas:$#idas\n";
         for my $ida (@idas) {
 		my @alignments = $ida->results($build);
+		print " $ida\t@alignments\n";
 		for my $alignment (@alignments) {
      		        my $instrument_data = $alignment->instrument_data;
      	        	my $lane=$instrument_data->lane;
@@ -102,13 +103,14 @@ sub execute {
 			my $lane_name="$flow_cell_id"."_"."$lane";	
      			my @bam = $alignment->alignment_bam_file_paths;
      			my $alignment_file = $bam[0];
-
+		#	print "$lane_name\t$alignment_file\n";
 			if ($alignment_file ne ""){
 		        	$self->error_message("$lane_name : $alignment_file");
 				unless(-e $alignment_file) {
 					$self->error_message("$alignment_file does not exist");
 					return;
 		        	}
+		        	
                                 my $lane_outfile = $outfile_prefix . "." . $lane_name . ".cnqc";
 			        my $job1_name = $lane_outfile . "-cn-qc";
         			my $job2_name = $job1_name . "-plot";
