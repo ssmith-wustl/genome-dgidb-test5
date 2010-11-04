@@ -1,11 +1,13 @@
-package Genome::Model::Tools::Analysis::LaneQc::CopyNumberCorrelation;
+package Genome::Model::Tools::Analysis::LaneQc::CopyNumberCorrelationFaster;
 
 use warnings;
 use strict;
 use Genome;
 use IO::File;
+use List::Util qw(sum);
+use Statistics::Descriptive;
 
-class Genome::Model::Tools::Analysis::LaneQc::CopyNumberCorrelation {
+class Genome::Model::Tools::Analysis::LaneQc::CopyNumberCorrelationFaster {
     is => 'Command',
     has => [
     copy_number_laneqc_file_glob => {
@@ -30,6 +32,7 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
+    $DB::single=1;
 
     #parse inputs
     my $fileglob = $self->copy_number_laneqc_file_glob;
@@ -37,6 +40,10 @@ sub execute {
     my $num_files = $#cnfiles;
     my $outfile = $self->output_file;
     #print "@cnfiles\n"; #to test
+
+    #print outfile headers
+    my $outfh = new IO::File $outfile,"w";
+    print $outfh "File1\tFile2\tCommon_Probes\tCorrelation_coefficient(max=1)\n";
 
     #Check that files are reasonably similar
     my $standard_wc;
@@ -54,27 +61,86 @@ sub execute {
         }
     }
 
-    #Loop through copy-number files to create correlation matrix
-    my %corr_matrix;
-    for my $i1 (0..$num_files) {
-        my $loop2index = $i1 + 1;
-        for my $i2 ($loop2index..$num_files) {
-            next if $cnfiles[$i1] eq $cnfiles[$i2];
-            my $corr = `R --slave --args $cnfiles[$i1] $cnfiles[$i2] < /gscuser/ndees/scripts/cn_correlation_script.R`;
-            $corr_matrix{$cnfiles[$i1]}{$cnfiles[$i2]} = $corr;
+    #Load a hash with the values from all of the files (FIXME or change this later to load one at a time during the loops below)
+    my %data;
+    for my $file (@cnfiles) {
+        my $fh = new IO::File $file,"r";
+        while (my $line = $fh->getline) {
+            next if $line =~ m/(^#|CHR)/;
+            chomp $line;
+            my ($chr,$pos,$rc,$cn) = split /\t/,$line;
+            $data{$file}{$chr}{$pos} = $cn;
         }
     }
 
-    #print output
-    my $out_fh = new IO::File $outfile,"w";
-    for my $f1 (sort keys %corr_matrix) {
-        for my $f2 (sort keys %{$corr_matrix{$f1}}) {
-            my $line = join("\t",$f1,$f2,$corr_matrix{$f1}{$f2});
-            print $out_fh "$line\n";
-        }
-    }
-    $out_fh->close;
+    #Loop through copy-number to write correlation output file
+    my %corr_matrix;
+    for my $i1 (0..$num_files) {
+        my $f1 = $cnfiles[$i1];
+        my $loop2index = $i1 + 1;
+        for my $i2 ($loop2index..$num_files) {
+            my $f2 = $cnfiles[$i2];
+            next if $f1 eq $f2;
+
+            #find common probes
+            my (@f1_common,@f2_common);
+            my $f1_common = \@f1_common;
+            my $f2_common = \@f2_common;
+            ($f1_common,$f2_common) = $self->find_common_probes(\%data,$f1,$f2,$f1_common,$f2_common);
+            if ($#f1_common ne $#f2_common) {
+                $self->error_message("Common probe numbers don't match for $f1 and $f2.");
+                return;
+            }
+
+            #find means and standard deviations of common probes
+            my $stats1 = Statistics::Descriptive::Full->new();
+            my $stats2 = Statistics::Descriptive::Full->new();
+            $stats1->add_data(@f1_common);
+            $stats2->add_data(@f2_common);
+            my $mean1 = $stats1->mean();
+            my $mean2 = $stats2->mean();
+            my $std1 = $stats1->standard_deviation();
+            my $std2 = $stats2->standard_deviation();
+            #correlation denominator = $std1*$std2
+            my $corr_denominator = $std1 * $std2;
+
+            #divide data from common probes by the means of the arrays
+            #and multiply them together to start numerator calculation
+            my @numerator_array;
+            for (my $i=0; $i<@f1_common; $i++) {
+                $f1_common[$i] -= $mean1;
+                $f2_common[$i] -= $mean2;
+                $numerator_array[$i] = $f1_common[$i] * $f2_common[$i];
+                #This works since the arrays were required to be equal lengths above.
+            }
+            #finish numerator:
+            my $corr_numerator = sum(@numerator_array);
+
+            #print output:
+            my $corr = $corr_numerator / $corr_denominator;
+            my $num_common_probes = scalar @f1_common;
+            $corr /= ($num_common_probes-1);
+            my $outline = join("\t",$f1,$f2,$num_common_probes,"$corr\n");
+            print $outfh $outline;
+
+        }#end, f2 loop
+    }#end, f1 loop
 
     return 1;
 }
+
+sub find_common_probes {
+    my ($self,$data,$f1,$f2,$f1comref,$f2comref) = @_;
+    #recall that $data{$file}{$chr}{$pos} = $cn;
+    for my $chr (keys %{$data->{$f1}}) {
+        for my $pos (keys %{$data->{$f1}{$chr}}) {
+            if (exists $data->{$f2}{$chr}{$pos}) {
+                push @$f1comref,$data->{$f1}{$chr}{$pos};
+                push @$f2comref,$data->{$f2}{$chr}{$pos};
+            }
+        }
+    }
+    return ($f1comref,$f2comref);
+}
+
 1;
