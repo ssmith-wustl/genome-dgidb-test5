@@ -99,6 +99,7 @@ sub create {
         create_assembly_model            => delete $params{create_assembly_model},
         assembly_processing_profile_name => delete $params{assembly_processing_profile_name},
         start_assembly_build             => delete $params{start_assembly_build},
+        assembly_contigs_file            => delete $params{assembly_contigs_file},
     );
     return unless $self;
 
