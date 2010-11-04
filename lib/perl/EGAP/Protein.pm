@@ -4,28 +4,43 @@ use strict;
 use warnings;
 
 use EGAP;
+use Carp 'confess';
+
 class EGAP::Protein {
     type_name => 'protein',
-    table_name => 'PROTEIN',
-    id_sequence_generator_name => 'protein_id_seq',
+    schema_name => 'files',
+    data_source => 'EGAP::DataSource::Proteins',
     id_by => [
-        protein_id => { is => 'NUMBER', len => 12 },
+        protein_name => { is => 'Text' },
+        directory => { is => 'Path' },
     ],
     has => [
-        cellular_localization => { is => 'VARCHAR2', len => 25, is_optional => 1 },
-        cog_id                => { is => 'VARCHAR2', len => 25, is_optional => 1 },
-        enzymatic_pathway_id  => { is => 'VARCHAR2', len => 25, is_optional => 1 },
-        internal_stops        => { is => 'NUMBER', len => 1 },
-        protein_name          => { is => 'VARCHAR2', len => 60 },
-        sequence_string       => { is => 'BLOB', len => 2147483647 },
-        transcript            => { is => 'EGAP::Transcript', id_by => 'transcript_id', constraint_name => 'PROTEIN_GENE_ID_FK' },
-        transcript_id         => { is => 'NUMBER', len => 11 },
+        internal_stops => { is => 'Boolean' },
+        fragment => { is => 'Boolean' },
+        transcript_name => { is => 'Text' },
+        gene_name => { is => 'Text' },
+        sequence_name => { is => 'Text' },
+        sequence_string => { is => 'Text' },
+        transcript => {
+            calculate_from => ['directory', 'transcript_name'],
+            calculate => q|
+                my ($transcript) = EGAP::Transcript->get(directory => $directory, transcript_name => $transcript_name);
+                return $transcript;
+            |,
+        },
+        coding_gene => {
+            calculate_from => ['directory', 'gene_name'],
+            calculate => q|
+                my ($gene) = EGAP::CodingGene->get(directory => $directory, gene_name => $gene_name);
+                return $gene;
+            |,
+        },
     ],
-    unique_constraints => [
-        { properties => [qw/protein_name transcript_id/], sql => 'PROTEIN_GID_PNAME_U' },
+    has_optional => [
+        cellular_localization => { is => 'Text' },
+        cog_id => { is => 'Text' },
+        enzymatic_pathway_id => { is => 'Text' },
     ],
-    schema_name => 'EGAPSchema',
-    data_source => 'EGAP::DataSource::EGAPSchema',
 };
 
 1;

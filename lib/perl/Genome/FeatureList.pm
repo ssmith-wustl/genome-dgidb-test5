@@ -11,7 +11,7 @@ class Genome::FeatureList {
     has => [
         id => { is => 'VARCHAR2', len => 64 },
         name => { is => 'VARCHAR2', len => 200 },
-        format => { is => 'VARCHAR2', len => 64, doc => 'Indicates whether the file follows the BED spec.', valid_values => ['1-based', 'true-BED', 'multi-tracked', 'multi-tracked 1-based'], },
+        format => { is => 'VARCHAR2', len => 64, doc => 'Indicates whether the file follows the BED spec.', valid_values => ['1-based', 'true-BED', 'multi-tracked', 'multi-tracked 1-based', 'unknown'], },
         file_content_hash => { is => 'VARCHAR2', len => 32, doc => 'MD5 of the BED file (to ensure integrity' },
         is_multitracked => {
             is => 'Boolean', calculate_from => ['format'],
@@ -177,9 +177,6 @@ sub _resolve_lims_bed_file {
         }
     }
 
-    #TODO Support getting BED files from this?
-    #    my $cmd = '/gsc/scripts/bin/capture_file_dumper --barcode='. $barcode .' --output-type=region-bed --output-file='. $tmp_file;
-
     return $self->_lims_file_path;
 }
 
@@ -218,6 +215,11 @@ sub verify_file_md5 {
 #The output of this method is the standardized "true-BED" representation
 sub processed_bed_file_content {
     my $self = shift;
+
+    if($self->format eq 'unknown'){
+        $self->error_message('Cannot process BED file with unknown format');
+        die $self->error_message;
+    }
 
     my $file = $self->file_path;
     unless($self->verify_file_md5) {
@@ -271,6 +273,11 @@ sub processed_bed_file_content {
 sub processed_bed_file {
     my $self = shift;
 
+    if($self->format eq 'unknown'){
+        $self->error_message('Cannot process BED file with unknown format');
+        die $self->error_message;
+    }
+
     unless($self->_processed_bed_file_path) {
         my $content = $self->processed_bed_file_content;
         my $temp_file = Genome::Utility::FileSystem->create_temp_file_path( $self->id . '.processed.bed' );
@@ -283,6 +290,11 @@ sub processed_bed_file {
 
 sub merged_bed_file {
     my $self = shift;
+
+    if ($self->format eq 'unknown'){
+        $self->error_message('Cannot merge BED file with unknown format');
+        die $self->error_message;
+    }
 
     unless($self->_merged_bed_file_path) {
         my $processed_bed_file = $self->processed_bed_file;

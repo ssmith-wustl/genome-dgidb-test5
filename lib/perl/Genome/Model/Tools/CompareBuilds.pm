@@ -45,7 +45,7 @@ sub execute {
     my $first_revision = $self->first_revision;
     confess "No revision found at $first_revision" unless -d $first_revision;
     $first_revision = $self->hudson_build_from_software_revision($first_revision);
-    
+   
     my $second_revision = $self->second_revision;
     unless (defined $second_revision) {
         my $stable = readlink "/gsc/scripts/opt/genome-stable";
@@ -62,7 +62,12 @@ sub execute {
 
     for my $model ($self->models) {
         my $model_id = $model->genome_model_id;
-        $self->status_message("\nWorking on model $model_id, type " . $model->class);
+        my $type = $model->class;
+        $type =~ s/Genome::Model:://;
+        next if $type =~ /Convergence/; # Talk to Tom for details... basically, there's no expectation that the output be
+                                        # the same between builds, so diffing the output at all is pointless.
+    
+        $self->status_message("\nWorking on model $model_id, type $type");
 
         my ($first_build, $second_build);
         my @builds = sort { $b->build_id <=> $a->build_id } $model->builds;

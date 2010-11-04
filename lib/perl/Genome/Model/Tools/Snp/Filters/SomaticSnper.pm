@@ -7,7 +7,6 @@ use Genome;
 use Command;
 use IO::File;
 use Statistics::R;
-use Workflow;
 
 class Genome::Model::Tools::Snp::Filters::SomaticSnper
 {
@@ -52,11 +51,6 @@ class Genome::Model::Tools::Snp::Filters::SomaticSnper
       
         },
     ],
-};
-
-operation_io Genome::Model::Tools::Snp::Filters::SomaticSnper {
-    input  => [ 'ref_seq_id', 'basedir', 'subject_metric_file', 'control_snp_file' ],
-    output => [ 'output_file' ],
 };
 
 sub execute {

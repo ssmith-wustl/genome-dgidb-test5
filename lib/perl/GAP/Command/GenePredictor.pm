@@ -8,12 +8,14 @@ class GAP::Command::GenePredictor {
     has => [
             fasta_file      => { 
                                 is  => 'TEXT', 
-                                doc => 'single fasta file' 
+                                doc => 'single fasta file',
+                                is_input => 1
                                },
             bio_seq_feature => { 
                                  is          => 'ARRAY',
                                  is_optional => 1,
-                                 doc         => 'array of Bio::Seq::Feature' 
+                                 doc         => 'array of Bio::Seq::Feature',
+                                 is_output => 1
                                },
            ],
 };

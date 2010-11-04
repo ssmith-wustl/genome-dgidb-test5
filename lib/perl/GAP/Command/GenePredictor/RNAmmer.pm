@@ -5,8 +5,6 @@ use warnings;
 
 use GAP::Job::RNAmmer;
 
-use Workflow;
-
 use Bio::SeqIO;
 
 
@@ -15,14 +13,10 @@ class GAP::Command::GenePredictor::RNAmmer {
     has => [
             domain => { 
                        is  => 'TEXT',
-                       doc => 'archaea/bacteria/eukaryota' 
+                       doc => 'archaea/bacteria/eukaryota',
+                       is_input => 1 
                       },
            ],
-};
-
-operation_io GAP::Command::GenePredictor::RNAmmer {
-    input  => [ 'fasta_file', 'domain' ],
-    output => [ 'bio_seq_feature' ]
 };
 
 sub sub_command_sort_position { 10 }
