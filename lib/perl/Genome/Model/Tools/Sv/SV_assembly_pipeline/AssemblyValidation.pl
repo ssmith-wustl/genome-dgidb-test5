@@ -76,6 +76,7 @@ printf "#%d SVs to be assembled from\n#Bams: ", $#SVs+1;
 my @FBAMS;
 foreach my $bam(@ARGV){
   my $fbam=`readlink $bam`; chomp $fbam;
+  $fbam = $bam if($fbam eq "");
   push @FBAMS,$fbam;
 }
 print join(",",@FBAMS) . "\n";
