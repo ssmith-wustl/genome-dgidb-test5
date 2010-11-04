@@ -54,7 +54,7 @@ sub execute {
     }
 
     #TODO - move this to velvet base class - used multiple times
-    my $read_names_and_pos = $self->_load_read_names_and_seek_pos();
+    my $read_names_and_pos = $self->load_read_names_and_seek_pos( $self->sequences_file );
     unless ($read_names_and_pos) { #arrayref
 	$self->error_message("Failed to get read names and seek_pos from Sequences file");
 	return;
@@ -139,29 +139,6 @@ sub _remove_placed_reads {
 
     $afg_fh->close;
     return $input_reads;
-}
-
-sub _load_read_names_and_seek_pos {
-    my $self = shift;
-
-    my @seek_positions;
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->sequences_file) ||
-	return;
-    my $seek_pos = $fh->tell;
-    my $io = Bio::SeqIO->new(-format => 'fasta', -fh => $fh);
-    while (my $seq = $io->next_seq) {
-	my ($read_index) = $seq->desc =~ /(\d+)\s+\d+$/;
-	unless ($read_index) {
-            $self->error_message("Failed to get read index number from seq->desc: ".$seq->desc);
-            return;
-        }
-        push @{$seek_positions[$read_index]}, $seek_pos;
-        push @{$seek_positions[$read_index]}, $seq->primary_id;
-
-        $seek_pos = $fh->tell;
-    }
-    $fh->close;
-    return \@seek_positions;
 }
 
 1;

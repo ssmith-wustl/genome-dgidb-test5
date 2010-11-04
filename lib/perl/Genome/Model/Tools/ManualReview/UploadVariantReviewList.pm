@@ -50,19 +50,19 @@ sub help_detail{
 
 BEGIN {
     my @det_property_names;
-    my @props =sort { 
-        $a->property_name cmp $b->property_name
-    } grep {
-        $_->column_name ne ''
-    } Genome::VariantReviewDetail->get_class_object->all_property_metas;
+    my @props =
+        sort { $a->property_name cmp $b->property_name }
+        grep { $_->column_name ne '' }
+        grep { defined($_->column_name) }
+        Genome::VariantReviewDetail->get_class_object->all_property_metas;
     @det_property_names = map { $_->property_name } @props;
     
     my @rev_property_names;
-    my @rev_props =sort { 
-        $a->property_name cmp $b->property_name
-    } grep {
-        $_->column_name ne ''
-    } Genome::SNVManualReview->get_class_object->all_property_metas;
+    my @rev_props =
+        sort { $a->property_name cmp $b->property_name }
+        grep { $_->column_name ne '' }
+        grep { defined($_->column_name) }
+        Genome::SNVManualReview->get_class_object->all_property_metas;
     @rev_property_names = map { $_->property_name } @rev_props;
     sub fix_hash_data
     {

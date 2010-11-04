@@ -91,6 +91,32 @@ sub get_gap_sizes {
     return \%gap_sizes;
 }
 
+sub load_read_names_and_seek_pos {
+    my ($self, $seq_file) = @_;
+
+    my @seek_positions;
+    my $fh = Genome::Utility::FileSystem->open_file_for_reading( $seq_file ) ||
+	return;
+    my $seek_pos = $fh->tell;
+    my $io = Bio::SeqIO->new(-format => 'fasta', -fh => $fh);
+    while (my $seq = $io->next_seq) {
+	my ($read_index) = $seq->desc =~ /(\d+)\s+\d+$/;
+	unless ($read_index) {
+            $self->error_message("Failed to get read index number from seq->desc: ".$seq->desc);
+            return;
+        }
+	
+	$seek_pos = ( $seek_pos == 0 ) ? $seek_pos : $seek_pos - 1;
+
+        push @{$seek_positions[$read_index]}, $seek_pos;
+        push @{$seek_positions[$read_index]}, $seq->primary_id;
+
+        $seek_pos = $fh->tell;
+    }
+    $fh->close;
+    return \@seek_positions;
+}
+
 sub get_contig_lengths {
     my ($self, $afg_file) = @_;
     my %contig_lengths;

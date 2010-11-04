@@ -173,6 +173,33 @@ sub create {
     return $self;
 }
 
+sub __errors__ {
+    my ($self) = shift;
+
+    my @tags = $self->SUPER::__errors__(@_);
+
+    #Make sure reference sequence build and annotation build match up
+
+    my $reference_sequence_name = $self->reference_sequence_name;
+    my $reference_transcripts = $self->processing_profile->annotation_reference_transcripts;
+    return @tags unless $reference_transcripts; #exit if there's no annotation build to compare to
+    my $reference_sequence_build = $self->reference_sequence_build;
+    my ($ref_transcripts_organization_and_species, undef, $ref_transcripts_version) = split(/\.|\//, $reference_transcripts);
+    my (undef, $ref_transcripts_species) = split(/-/, $ref_transcripts_organization_and_species);
+    my (undef, $ref_transcripts_build) = split(/_/, $ref_transcripts_version);
+    $ref_transcripts_build =~ s/[a-zA-Z]//g; #remove the letter for $ref_transcripts_versions like "54_36p";
+
+    unless($ref_transcripts_build eq $reference_sequence_build->version and 
+           $ref_transcripts_species eq $reference_sequence_build->model->subject->species_name){        
+        push @tags, UR::Object::Tag->create(
+            type => 'invalid',
+            properties => ['reference_sequence_name', 'annotation_reference_transcripts'],
+            desc => "reference sequence: $reference_sequence_name does not match annotation reference transcripts: $reference_transcripts",
+        );
+    }
+    return @tags;
+}
+
 sub libraries {
     my $self = shift;
     my %libraries = map {$_->library_name => 1} $self->instrument_data;
@@ -639,12 +666,12 @@ sub region_of_interest_set_name {
 
 sub region_of_interest_set {
     my $self = shift;
-    # TODO: Refactor Genome::Capture::Set to something more generic that will work for PCR, Transcriptome, etc.
+
     my $name = $self->region_of_interest_set_name;
     return unless $name;
-    my $roi_set = Genome::Capture::Set->get(name => $name);
+    my $roi_set = Genome::FeatureList->get(name => $name);
     unless ($roi_set) {
-        die('Failed to find capture set with name: '. $name);
+        die('Failed to find feature-list with name: '. $name);
     }
     return $roi_set;
 }

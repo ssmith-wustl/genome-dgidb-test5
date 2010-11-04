@@ -46,7 +46,6 @@ sub execute {
         output_file => $self->post_annotation_filtered_snp_file,
         annotation_filter => 'top',
         no_headers => 1,
-        cache_annotation_data_directory => 1,
         reference_transcripts => $self->model->annotation_reference_transcripts,
     );
 

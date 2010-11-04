@@ -13,10 +13,12 @@ BEGIN {
     };
 
 my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Snp/GenotypeDetail';
+my $run_dir = '/gsc/var/cache/testsuite/running_testsuites';
+
 my $test_snp_file = "$dir/test.sam.snp";
 my $exp_out_file  = $test_snp_file.'.genotype_detail.ori';
 
-my $tmp_dir =  File::Temp::tempdir('GenotypeDetail-XXXXXX',DIR => $dir, CLEANUP => 1);
+my $tmp_dir =  File::Temp::tempdir('GenotypeDetail-XXXXXX',DIR => $run_dir, CLEANUP => 1);
 my $out_file = $tmp_dir .'/test.sam.snp.genotype_detail';
 
 my $snp_gd = Genome::Model::Tools::Snp::GenotypeDetail->create(

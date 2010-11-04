@@ -74,6 +74,8 @@ my $expected_metrics = {
     'n50_supercontig_length_gt_500' => '0',
     'average_supercontig_length_gt_500' => '0',
     'read_depths_ge_5x' => '1.1',
+    'average_insert_size_used' => '260',
+    'genome_size_used' => '4500000',
 };
 is_deeply(\%metrics, $expected_metrics, 'metrics match');
 for my $name ( keys %metrics ) {

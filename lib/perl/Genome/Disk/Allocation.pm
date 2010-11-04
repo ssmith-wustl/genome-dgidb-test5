@@ -71,9 +71,26 @@ class Genome::Disk::Allocation {
             |,
             doc => 'The allocate disk space PSE',
         },
+        volume => { 
+                        is => 'Genome::Disk::Volume',
+            calculate_from => 'mount_path',
+            calculate => q{
+                return Genome::Disk::Volume->get(mount_path => $mount_path);
+            },
+        }
     ],
     data_source => 'Genome::DataSource::GMSchema',
 };
+
+sub build {
+
+    my ($self) = @_;
+    return if $self->owner_class_name !~ /^Genome::Model::Build/;
+
+    my $build_id = $self->owner_id();
+    my $build = Genome::Model::Build->get($build_id);
+    return $build;
+}
 
 our $test_allocation = 0;
 sub test_allocation {

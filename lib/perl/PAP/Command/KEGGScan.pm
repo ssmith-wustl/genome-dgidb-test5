@@ -134,7 +134,7 @@ sub execute {
     my $kegg_command = PAP::Command::KEGGScan::RunKeggScan->create(
         species_name => "default", 
         query_fasta_path => $self->fasta_file,
-        subject_fasta_path => "/gscmnt/temp212/info/annotation/KEGG/Version_52/genes.v52.faa",
+        subject_fasta_path => "/gscmnt/temp212/info/annotation/KEGG/Version_56/genes.v56.faa",
         output_directory => $self->_working_directory . "/KS-OUTPUT." . $fasta_name,
         blast_lsf_queue => $self->blast_lsf_queue,
         blast_lsf_resource => $self->blast_lsf_resource,

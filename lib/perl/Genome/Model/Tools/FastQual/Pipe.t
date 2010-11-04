@@ -1,5 +1,7 @@
 #!/gsc/bin/perl
 
+$ENV{GENOME_DEV_MODE} = 0;
+
 use strict;
 use warnings;
 
@@ -10,8 +12,6 @@ use Test::More;
 
 # use
 use_ok('Genome::Model::Tools::FastQual::Pipe') or die;
-
-# execute fail
 
 # Files
 my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastQual';
@@ -52,7 +52,7 @@ my $metrics_file = $tmp_dir.'/metrics';
 my $pipe = Genome::Model::Tools::FastQual::Pipe->create(
     input  => [ $in_fastq ],
     output => [ $out_fastq ],
-    commands => 'limit by-coverage --count 10 | rename --matches qr{#.*/1$}=.b1 | limit by-coverage --bases 200',
+    commands => 'limit by-coverage --count 10 | rename illumina-to-pcap | limit by-coverage --bases 200',
     metrics_file => $metrics_file,
 );
 ok($pipe, 'create pipe');
@@ -67,7 +67,7 @@ if ( $pipe->result ) {
 }
 else {
     # We got a failure. If it is b/c of reading from STDIN, that is ok.
-    if ( not defined $pipe->error_message ) { # failed, but not sure why...this should not happen
+    if ( not $pipe->error_message ) { # failed, but not sure why...this should not happen
         ok(0, 'Pipe execute failed, and there was not an error message');
     }
     elsif ( $pipe->error_message =~ /No pipe meta info. Are you sure you wanted to read from a pipe/ ) { # ok
