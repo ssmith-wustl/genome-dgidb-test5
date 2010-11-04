@@ -8,7 +8,9 @@
     <script type="text/javascript" src="/res/js/pkg/protovis.js"></script>
     <script type="text/javascript" src="/res/js/app/status/genome_disk_volume_treemap.js"></script>
     <script type="text/javascript" src="/res/js/pkg/json2.js"></script>
-    <script type="text/javascript" src="/res/tmp/flare.js"></script>
+    <script type="text/javascript" src="/res/js/pkg/jquery.tipsy.js"></script>
+    <script type="text/javascript" src="/res/js/pkg/protovis.tipsy.js"></script>
+    <link href="/res/css/tipsy.css" type="text/css" rel="stylesheet"/>
 
     <xsl:comment>allocation data JSON</xsl:comment>
     <script type="text/javascript">
@@ -43,9 +45,15 @@ var allocation_data = {
             </xsl:call-template>
           </xsl:variable>
           {
-          "owner_class_name": "<xsl:value-of select="$short_class_name"/>",
+          "id": "<xsl:value-of select="@id"/>",
+          "owner_id": "<xsl:value-of select="aspect[@name='owner_id']/value"/>",
+          "absolute_path": "<xsl:value-of select="aspect[@name='absolute_path']/value"/>",
           "display_name": "<xsl:value-of select="display_name"/>",
-          "kilobytes_requested": "<xsl:value-of select="aspect[@name='kilobytes_requested']/value"/>"
+          "label_name": "<xsl:value-of select="label_name"/>",
+          "owner_class_name": "<xsl:value-of select="aspect[@name='owner_class_name']/value"/>",
+          "absolute_path": "<xsl:value-of select="aspect[@name='absolute_path']/value"/>",
+          "owner_class_name": "<xsl:value-of select="$short_class_name"/>",
+          "kilobytes_requested": "<xsl:value-of select="aspect[@name='kilobytes_requested']/value"/>",
           },
         </xsl:for-each>
         ];
@@ -59,13 +67,34 @@ var allocation_data = {
           <xsl:choose>
             <xsl:when test="aspect[@name='build']">
               <xsl:for-each select="aspect[@name='build']/object">
+                <xsl:variable name="build_url">
+                  <xsl:call-template name="object_link_href">
+                    <xsl:with-param name="type" select="@type"/>
+                    <xsl:with-param name="id" select="aspect[@name='build_id']/value"/>
+                    <xsl:with-param name="perspective" select="'status'"/>
+                    <xsl:with-param name="key" select="'id'"/>
+                    <xsl:with-param name="toolkit" select="'html'"/>
+                  </xsl:call-template>
+                </xsl:variable>
+                <xsl:variable name="model_url">
+                  <xsl:call-template name="object_link_href">
+                    <xsl:with-param name="type" select="@type"/>
+                    <xsl:with-param name="id" select="aspect[@name='model_id']/value"/>
+                    <xsl:with-param name="perspective" select="'status'"/>
+                    <xsl:with-param name="key" select="'id'"/>
+                    <xsl:with-param name="toolkit" select="'html'"/>
+                  </xsl:call-template>
+                </xsl:variable>
+
                 "<xsl:value-of select="../../@id"/>": {
-                "build_id": "<xsl:value-of select="aspect[@name='build_id']/value"/>",
-                "model_id": "<xsl:value-of select="aspect[@name='model_id']/value"/>",
+                "model": '<a><xsl:attribute name="href"><xsl:value-of select="$model_url"/></xsl:attribute><xsl:attribute name="class">mini btn</xsl:attribute><xsl:value-of select="aspect[@name='model_id']/value"/></a>',
+                "build": '<a><xsl:attribute name="href"><xsl:value-of select="$build_url"/></xsl:attribute><xsl:attribute name="class">mini btn</xsl:attribute><xsl:value-of select="aspect[@name='build_id']/value"/></a>',
+                "build name": '<xsl:value-of select="display_name"/>',
+                "build class": "<xsl:value-of select="@type"/>",
                 "status": "<xsl:value-of select="aspect[@name='status']/value"/>",
-                "run_by": "<xsl:value-of select="aspect[@name='run_by']/value"/>",
-                "date_scheduled": "<xsl:value-of select="aspect[@name='date_scheduled']/value"/>",
-                "date_completed": "<xsl:value-of select="aspect[@name='date_completed']/value"/>",
+                "run by": "<xsl:value-of select="aspect[@name='run_by']/value"/>",
+                "date scheduled": "<xsl:value-of select="aspect[@name='date_scheduled']/value"/>",
+                "date completed": "<xsl:value-of select="aspect[@name='date_completed']/value"/>",
                 },
               </xsl:for-each>
             </xsl:when>
@@ -173,7 +202,7 @@ var allocation_data = {
     <table id="set" class="dataTable">
       <thead>
         <tr>
-          <th>owner id</th>
+          <th>owner</th>
           <th>owner class</th>
           <th>build status</th>
           <th>requested</th>
