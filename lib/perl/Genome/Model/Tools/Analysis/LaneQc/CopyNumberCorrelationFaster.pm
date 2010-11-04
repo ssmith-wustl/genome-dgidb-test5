@@ -39,7 +39,7 @@ sub execute {
     my @cnfiles = sort glob($fileglob);
     my $num_files = $#cnfiles;
     my $outfile = $self->output_file;
-    print "@cnfiles\n"; #to test
+    #print "@cnfiles\n"; #to test
 
     #print outfile headers
     my $outfh = new IO::File $outfile,"w";
@@ -132,8 +132,6 @@ sub execute {
 sub find_common_probes {
     my ($self,$data,$f1,$f2,$f1comref,$f2comref) = @_;
     #recall that $data{$file}{$chr}{$pos} = $cn;
-    print "$f1\n";
-    print "$f2\n";
     for my $chr (keys %{$data->{$f1}}) {
         for my $pos (keys %{$data->{$f1}{$chr}}) {
             if (exists $data->{$f2}{$chr}{$pos}) {
