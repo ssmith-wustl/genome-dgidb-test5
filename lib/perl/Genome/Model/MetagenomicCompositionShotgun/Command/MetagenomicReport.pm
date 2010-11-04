@@ -21,15 +21,15 @@ class Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport{
             is_optional=>1,
         },
         viral_taxonomy_file => {
-            is => 'Path',
+            is => 'FilePath',
             is_optional=>1,
         },
         viral_headers_file => {
-            is => 'Path',
+            is => 'FilePath',
             is_optional => 1,
         },
         regions_file => {
-            is => 'Path',
+            is => 'FilePath',
             is_optional => 1,
         },
         overwrite => {

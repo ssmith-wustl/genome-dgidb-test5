@@ -44,7 +44,7 @@ UR::Object::Type->define(
         nr_db => {
             is => 'String',
 			doc => 'Path to the default non-redundant sequence database, only used if local copy unavailable',
-			default => '/gscmnt/gpfstest2/analysis/blast_db/gsc_bacterial/bacterial_nr/bacterial_nr',
+			default => '/gscmnt/ams1102/info/annotation/blastdb/gsc_bacterial/bacterial_nr/bacterial_nr',
 		},
         iprpath => {
             is => 'String',

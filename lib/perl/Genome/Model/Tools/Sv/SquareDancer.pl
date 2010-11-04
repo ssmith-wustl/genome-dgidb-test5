@@ -8,7 +8,7 @@ use Getopt::Std;
 use FindBin qw($Bin);
 use lib "$FindBin::Bin";
 
-my $version="SquareDancer-0.1r160";
+my $version="SquareDancer-0.1r161";
 my %opts = (q=>35,r=>2,k=>25,n=>1,c=>1,m=>3);
 my %opts1;
 getopts('o:q:r:k:n:c:l:m:ubdg:', \%opts1);
@@ -163,6 +163,7 @@ foreach my $chr(@chrs){
 	  $bkmotives{$bkpos}{$motif}++;
 	  $motivebks{$motif}{$bkpos}{lib}{$lib}++;
 	  $motivebks{$motif}{$bkpos}{total}++;
+	  push @{$motivebks{$motif}{$bkpos}{reads}},$t;
 	  $motif=~tr/ACGT/TGCA/; $motif=reverse $motif;
 	  $bkmotives{$bkpos}{$motif}++;
 	  $motivebks{$motif}{$bkpos}{lib}{$lib}++;

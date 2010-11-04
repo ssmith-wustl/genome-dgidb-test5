@@ -51,6 +51,11 @@ class Genome::ProcessingProfile::MetagenomicCompositionShotgun {
             default_value => 1,
             doc => 'When this flag is enabled, the model will attempt to grab taxonomic data for the metagenomic reports and produce a combined refcov-taxonomic final report.  Otherwise, only refcov will be run on the final metagenomic bam',
         },
+        skip_qc_on_untrimmed_reads => {
+            is => 'Boolean',
+            default_value => 0,
+            doc => "If this flag is specified, QC report will skip metric on the human-free, untrimmed data.",
+        },
     ],
     has => [
         _contamination_screen_pp => {
@@ -286,7 +291,10 @@ sub _execute_build {
     local $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 1;
 
     unless ($self->skip_contamination_screen){
-        my $qc_report = Genome::Model::MetagenomicCompositionShotgun::Command::QcReport->create(build_id => $build->id);
+        my $qc_report = Genome::Model::MetagenomicCompositionShotgun::Command::QcReport->create(
+            build_id => $build->id,
+            skip_qc_on_untrimmed_reads => $self->skip_qc_on_untrimmed_reads,
+        );
         unless($qc_report->execute()) {
             die $self->error_message("Failed to create QC report!");
         }
@@ -1276,7 +1284,7 @@ sub _process_unaligned_fastq_pair {
             forward_n_removed_file => $forward_out,
             reverse_n_removed_file => $reverse_out,
             singleton_n_removed_file => $fragment_out,
-            cutoff => $self->n_removal_cutoff,
+            n_removal_threshold => $self->n_removal_cutoff,
         );
         unless ($cmd){
             die $self->error_message("couldn't create remove-n-pairwise command for $forward_dusted, $reverse_dusted!");
@@ -1347,7 +1355,7 @@ sub _process_unaligned_fastq {
         my $cmd = Genome::Model::Tools::Fastq::RemoveN->create(
             fastq_file => $dusted_fastq,
             n_removed_file => $output_path,
-            cutoff => $self->n_removal_cutoff,
+            n_removal_threshold => $self->n_removal_cutoff,
         ); 
         unless ($cmd){
             die $self->error_message("couldn't create remove-n command for $dusted_fastq");
