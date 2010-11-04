@@ -177,9 +177,6 @@ sub _resolve_lims_bed_file {
         }
     }
 
-    #TODO Support getting BED files from this?
-    #    my $cmd = '/gsc/scripts/bin/capture_file_dumper --barcode='. $barcode .' --output-type=region-bed --output-file='. $tmp_file;
-
     return $self->_lims_file_path;
 }
 
