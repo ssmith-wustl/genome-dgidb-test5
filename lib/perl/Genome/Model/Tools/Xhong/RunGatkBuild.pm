@@ -36,6 +36,7 @@ sub execute {
     my $force = $self->force;
     #check the passed directory
     my $dir = $self->dir;
+    $dir=$dir."/";
     unless(-d $dir) {
         $self->error_message("$dir is not a directory");
         return;
@@ -94,16 +95,15 @@ sub execute {
     if (-d $dir){
     	$self->error_message("$dir already exist, use force to proceed");
 	return unless $force;
+    }else{
+    	mkdir($dir, 0777) || print $!;
     }
-    
-    mkdir($dir, 0777) || print $!;
     print "gatk output in $dir\n" ;
     
     my $username = getlogin;
 
     #launching blade jobs 
     #Run GATK
-    print "bsub -N -u $user\@genome.wustl.edu -q long -e $genome_name.gatk.err -J '$genome_name gatk' 'perl -I ~xhong/genome-stable \`which gmt\` gatk somatic-indel --normal-bam $normal_bam --tumor-bam $tumor_bam --output-file $dir\/$genome_name.GATK.indel --formatted-file $dir\/$genome_name.GATK.formatted --somatic-file $dir\/$genome_name.GATK.somatic' \n";
     my $jobid1=`bsub -N -u $user\@genome.wustl.edu -q long -e $genome_name.gatk.err -J '$genome_name gatk' 'perl -I ~xhong/genome-stable \`which gmt\` gatk somatic-indel --normal-bam $normal_bam --tumor-bam $tumor_bam --output-file $dir\/$genome_name.GATK.indel --formatted-file $dir\/$genome_name.GATK.formatted --somatic-file $dir\/$genome_name.GATK.somatic' `;
     $jobid1=~/<(\d+)>/;
     $jobid1= $1;
