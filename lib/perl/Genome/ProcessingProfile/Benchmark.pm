@@ -139,11 +139,16 @@ sub _execute_build {
 
     $self->_system_snapshot($dir);
 
+    # Set the DATA_DIRECTORY for use by executed program.
+    $ENV{DATA_DIRECTORY} = $build->data_directory;
+
     my $exit_code = system "/usr/bin/time -v $cmd $args >$dir/output 2>$dir/errors";
     $exit_code = $exit_code >> 8;
     if ($exit_code != 0) {
         $self->status_message("Failed to run $cmd with args $args!  Exit code: $exit_code.");
-        return;
+        # FIXME: Not really sure what to do long term here.
+        # We have a case of gmt soap de-novo-assemble not properly returning exit codes.
+        # Don't return, fall through and finish getting metrics.
     }
 
     my $metrics = $self->_system_snapshot($dir);
