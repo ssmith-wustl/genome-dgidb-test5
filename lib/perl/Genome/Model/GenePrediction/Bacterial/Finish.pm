@@ -341,31 +341,17 @@ sub execute
         }
         my ( $dump_cmd, $dump_dumper );
 
-        if ( $self->dev == 0 )
-        {
-            $dump_cmd
-                = qq{gmt bacterial ace-dump-genes --sequence-set-id $ssid --phase $phase > $dump_output};
-            $self->status_message("running dump from prod");
-            $self->status_message($dump_cmd);
-#            $dump_dumper = `$dump_cmd`;
-            my $rv = system($dump_cmd);
-            unless($rv == 0) {
-                $self->error_message("ace dumping failed from prod with sequence set id $ssid");
-                confess;
-            }
-        }
-        else
-        {
-            $dump_cmd
-                = qq{gmt bacterial ace-dump-genes --dev --sequence-set-id $ssid --phase $phase > $dump_output};
-            $self->status_message("running dump from dev");
-            $self->status_message($dump_cmd);
-#            $dump_dumper = `$dump_cmd`;
-            my $rv = system($dump_cmd);
-            unless($rv == 0) {
-                $self->error_message("ace dumping failed from dev with sequence set id $ssid");
-                confess;
-            }
+        $self->status_message("Running ace dump from " . ($self->dev ? "dev" : "prod"));
+        $self->status_message("sequence set id, $ssid : phase, $phase : ace file, $dump_output");
+        my $rv = Genome::Model::Tools::Bacterial::AceDumpGenes->execute(
+            sequence_set_id => $ssid,
+            phase => $phase,
+            ace_file => $dump_output,
+            dev => $self->dev,
+        );
+        unless ($rv) {
+            $self->error_message("Ace dumping failed with sequence set id $ssid");
+            confess;
         }
 
         my $newACEfilelink = qq{$acedb_acefile_path/$dump_output};
@@ -647,6 +633,7 @@ sub execute
         $location = join( "/", @bugline[ 0 .. 7 ] );
         carp "location is $location";
     }
+    $DB::single = 1;
     print RTFILE "$location\n\n";
     print RTFILE
         "The following analysis have been run via bap_predict_genes:\n\n";

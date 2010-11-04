@@ -8,7 +8,7 @@ __PACKAGE__->columns( All => qw(gene_id tag_id) );
 
 # has a relationships?
 
-__PACKAGE__->has_a('tag_id' => BAP::DB::Tag, );
+__PACKAGE__->has_many('tag_id' => BAP::DB::Tag, );
 
 1;
 
