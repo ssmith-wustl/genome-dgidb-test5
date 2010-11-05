@@ -1,4 +1,4 @@
-package Genome::Transcript::VariantAnnotator;
+package Genome::Model::Tools::VariantAnnotator::Version1;
 #:adukes all annotation methods could be cleaned and documented for better clarity, see cds_exon_modified for an improvement over the current method.  Consider differentiating more between annotating snps/dnps and indeals as opposed to have case statements sprinkled liberally throughought, unit testing for every method needs to happen but doesn't
 
 use strict;
@@ -14,21 +14,20 @@ use Bio::Tools::CodonTable;
 use DateTime;
 use Carp;
 
-class Genome::Transcript::VariantAnnotator{
-    is => 'UR::Object',
+use Genome::Model::Tools::VariantAnnotator::Version1::DataSource::TranscriptStructures;
+use Genome::Model::Tools::VariantAnnotator::Version1::TranscriptStructure;
+
+class Genome::Model::Tools::VariantAnnotator::Version1 {
     has => [
         codon_translator => {
             is => 'Bio::Tools::CodonTable',
-            is_optional => 1,
+            is_constant => 1,
+            calculate => q( Bio::Tools::CodonTable->new( -id => 1) ),
         },
         mitochondrial_codon_translator => {
             is => 'Bio::Tools::CodonTable',
-            is_optional => 1,
-        },
-        ucsc_conservation_directory => {
-            is => 'Path',
-            is_optional => 1,
-#            default => '/gscmnt/sata835/info/medseq/model_data/2741951221/v36-build93636924/ucsc_conservation/',
+            is_constant => 1,
+            calculate => q( Bio::Tools::CodonTable->new( -id => 2) ),
         },
         check_variants => {
             is => 'Boolean',
@@ -54,15 +53,6 @@ my %transcript_source_priorities = Genome::Info::AnnotationPriorities->transcrip
 my %transcript_status_priorities = Genome::Info::AnnotationPriorities->transcript_status_priorities;
 my %variant_priorities = Genome::Info::AnnotationPriorities->variant_priorities;
 my %transcript_error_priorities = Genome::Info::AnnotationPriorities->transcript_error_priorities;
-
-# Override create and instantiate codon_translators
-sub create{
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    $self->codon_translator( Bio::Tools::CodonTable->new( -id => 1) );
-    $self->mitochondrial_codon_translator( Bio::Tools::CodonTable->new( -id => 2) );
-    return $self;
-}
 
 # Given a nucleotide sequence, translate to amino acid sequence and return
 # The translator->translate method can take 1-3 bp of sequence. If given

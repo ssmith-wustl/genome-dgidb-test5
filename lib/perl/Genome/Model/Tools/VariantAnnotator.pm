@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Annotate::TranscriptVariants;
+package Genome::Model::Tools::VariantAnnotator;
 
 use strict;
 use warnings;
@@ -19,8 +19,8 @@ use File::Basename;
 use MIME::Lite;
 use Sys::Hostname;
 
-class Genome::Model::Tools::Annotate::TranscriptVariants{
-    is => 'Genome::Model::Tools::Annotate',
+class Genome::Model::Tools::VariantAnnotator {
+    is => 'Genome::Model::Tools',
     has => [ 
         variant_file => {
             is => 'FilePath',   
@@ -41,8 +41,18 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             doc => "Store annotation in the specified file. Defaults to STDOUT if no file is supplied.",
             default => "STDOUT",
         },
+        _version_subclass_name => {
+            is => 'Text', is_mutable => 0, 
+            calculate_from => ['use_version'],
+            calculate => q( return 'Genome::Model::Tools::VariantAnnotator::Version' . $use_version ),
+        },
     ],
     has_optional => [
+        use_version => {
+            is => 'Text',
+            default_value => '1',
+            doc => 'Annotator version to use',
+        },
         # IO Params
         _is_parallel => {
             is => 'Boolean',
@@ -124,6 +134,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
             is_optional => 1,
             default => 0,
             is_input => 1,
+            is_deprecated => 1,
             doc => 'enable this flag to cache annotation data locally, useful if annotation is being run repeatedly on a pipeline',
         },
         benchmark => {
@@ -159,12 +170,14 @@ class Genome::Model::Tools::Annotate::TranscriptVariants{
     ],
 };
 
+sub is_sub_command_delegator { 0 }
+
 
 ############################################################
 
 sub help_synopsis { 
     return <<EOS
-gmt annotate transcript-variants-simple --variant-file variants.csv --output-file transcript-changes.csv
+gmt variant-annotator --variant-file variants.tsv --output-file transcript-changes.tsv
 EOS
 }
 
@@ -207,6 +220,59 @@ EOS
 }
 
 ############################################################
+
+sub variant_attributes {
+    return (qw/ chromosome_name start stop reference variant /);
+}
+sub variant_output_attributes {
+    return (qw/ type /);
+}
+sub transcript_attributes {
+    return qw( gene_name transcript_name transcript_species transcript_source
+               transcript_version strand transcript_status trv_type c_position
+               amino_acid_change ucsc_cons domain all_domains deletion_substructures
+               transcript_error flank_annotation_distance_to_transcript
+               intron_annotation_substructure_ordinal intron_annotation_substructure_size
+               intron_annotation_substructure_position );
+}
+
+
+# Figures out what the 'type' of this variant should be (snp, dnp, ins, del) based upon
+# the start, stop, reference, and variant
+# Takes in a variant hash, returns the type
+sub infer_variant_type {
+    my ($self, $variant) = @_;
+
+    if(( (!$variant->{reference})||($variant->{reference} eq '0')||($variant->{reference} eq '-')) &&
+        ((!$variant->{variant})||($variant->{variant} eq '0')||($variant->{variant} eq '-'))){
+        $self->error_message("Could not determine variant type from variant:");
+        $self->error_message(Dumper($variant));
+        die;
+    }
+
+    # If the start and stop are the same, and ref and variant are defined its a SNP
+    if (($variant->{stop} == $variant->{start})&&
+        ($variant->{reference} ne '-')&&($variant->{reference} ne '0')&&
+        ($variant->{variant} ne '-')&&($variant->{variant} ne '0')) {
+        return 'SNP';
+    # If start and stop are 1 off, and ref and variant are defined its a DNP
+    } elsif (($variant->{stop} - $variant->{start} == 1)&&
+             ($variant->{reference})&&($variant->{reference} ne '-')&&($variant->{reference} ne '0')&&
+             ($variant->{variant})&&($variant->{variant} ne '-')&&($variant->{variant} ne '0')) {
+        return 'DNP';
+    # If reference is a dash, we have an insertion
+    } elsif (($variant->{reference} eq '-')||($variant->{reference} eq '0')) {
+        return 'INS';
+    } elsif (($variant->{variant} eq '-')||($variant->{variant} eq '0')) {
+        return 'DEL';
+    } else {
+        $self->error_message("Could not determine variant type from variant:");
+        $self->error_message(Dumper($variant));
+        die;
+    }
+}
+
+
 
 sub execute { 
     my $self = shift;
@@ -357,21 +423,22 @@ sub execute {
     my $chromosome_name = '';
 
     # Initialize the annotator object
-    my $annotator = eval {
+    my $annotator_version_subclass = $self->_version_subclass_name;
+    my $annotator;
+    eval {
         my $full_version = $self->build->version;
         my ($version) = $full_version =~ /^\d+_(\d+)[a-z]/;
         my %ucsc_versions = Genome::Info::UCSCConservation->ucsc_conservation_directories;
 
         my @directories = $self->build->determine_data_directory($self->cache_annotation_data_directory);
-        Genome::Transcript::VariantAnnotator->create(
+        $annotator = $annotator_version_subclass->create(
             data_directory => \@directories,
             check_variants => $self->check_variants,
             get_frame_shift_sequence => $self->get_frame_shift_sequence,
-            ucsc_conservation_directory => $ucsc_versions{$version},
         );
     };
     unless ($annotator){
-        $self->error_message("Couldn't create Genome::Transcript::VariantAnnotator");
+        $self->error_message("Couldn't create annotator of class $annotator_version_subclass");
         die;
     }
 
@@ -386,7 +453,7 @@ sub execute {
     while ( my $variant = $variant_svr->next ) {
 
         END {
-            print STDERR "\n\nThe last variant we worked on is\n",Data::Dumper::Dumper($variant),"\n\n" unless ($we_are_done_flag);
+            print STDERR "\n\nThe last variant we worked on is\n",Data::Dumper::Dumper($variant),"\n\n" if ($variant and !$we_are_done_flag);
         };
 
         $variant->{type} = $self->infer_variant_type($variant);
@@ -394,7 +461,7 @@ sub execute {
         $variant->{reference} = uc $variant->{reference};
         $variant->{variant} = uc $variant->{variant};
 
-        # make a new annotator when we begin and when we switch chromosomes
+        # make a note when we begin and when we switch chromosomes
         unless ($variant->{chromosome_name} eq $chromosome_name) {
             if ($annotation_start) {
                 $annotation_stop = Benchmark->new;
@@ -542,15 +609,6 @@ sub _print_annotation {
         );
     }
     return 1;
-}
-
-sub transcript_attributes{
-    my $self = shift;
-    my @attrs = $self->SUPER::transcript_attributes;
-    if ($self->extra_details){
-        push @attrs, (qw/ flank_annotation_distance_to_transcript intron_annotation_substructure_ordinal intron_annotation_substructure_size intron_annotation_substructure_position/);
-    }
-    return @attrs;
 }
 
 sub get_extra_columns {
