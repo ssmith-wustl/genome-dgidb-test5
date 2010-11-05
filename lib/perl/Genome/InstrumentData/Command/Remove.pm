@@ -28,7 +28,6 @@ sub execute {
         $i->delete;
         print "$i\n";
     }
-    $self->status_message("deletion complete.");
     return 1;
 }
 
