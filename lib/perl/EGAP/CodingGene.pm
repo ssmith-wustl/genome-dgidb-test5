@@ -4,37 +4,41 @@ use strict;
 use warnings;
 
 use EGAP;
-
+use Carp 'confess';
 
 class EGAP::CodingGene {
     type_name => 'coding gene',
-    table_name => 'CODING_GENE',
-    id_sequence_generator_name => 'gene_id_seq',
+    schema_name => 'files',
+    data_source => 'EGAP::DataSource::CodingGenes',
     id_by => [
-        gene_id => { is => 'NUMBER', len => 11 },
+        gene_name => { is => 'Text' },
+        directory => { is => 'Path' },
     ],
     has => [
-        sequence        => { is => 'EGAP::Sequence', id_by => 'sequence_id', constraint_name => 'CG_SEQUENCE_ID_FK' },
-        fragment        => { is => 'NUMBER', len => 1 },
-        gene_name       => { is => 'VARCHAR2', len => 60 },
-        internal_stops  => { is => 'NUMBER', len => 1 },
-        missing_start   => { is => 'NUMBER', len => 1 },
-        missing_stop    => { is => 'NUMBER', len => 1 },
-        score           => { is => 'NUMBER', len => 5, is_optional => 1 },
-        end             => { is => 'NUMBER', len => 10, column_name => 'SEQ_END' },
-        start           => { is => 'NUMBER', len => 10, column_name => 'SEQ_START' },
-        sequence_id     => { is => 'NUMBER', len => 9 },
-        sequence_string => { is => 'BLOB', len => 2147483647 },
-        source          => { is => 'VARCHAR2', len => 25 },
-        strand          => { is => 'NUMBER', len => 1 },
-        transcripts     => { is => 'EGAP::Transcript', reverse_as => 'coding_gene', is_many => 1},
+        fragment => { is => 'Boolean' },
+        internal_stops => { is => 'Boolean' },
+        missing_start => { is => 'Boolean' },
+        missing_stop => { is => 'Boolean' },
+        source => { is => 'Text' },
+        strand => { is => 'Text' },
+        sequence_name => { is => 'Number' },
+        start => { is => 'Number' },
+        end => { is => 'Number' },
+        transcript => { 
+            calculate_from => ['directory', 'gene_name'],
+            calculate => q|
+                my ($transcript) = EGAP::Transcript->get(directory => $directory, coding_gene_name => $gene_name);
+                return $transcript;
+            |,
+        },
+        protein => {
+            calculate_from => ['directory', 'gene_name'],
+            calculate => q|
+                my ($protein) = EGAP::Protein->get(directory => $directory, gene_name => $gene_name);
+                return $protein;
+            |,
+        },
     ],
-    unique_constraints => [
-        { properties => [qw/gene_name sequence_id/], sql => 'CG_SEQID_GNAME_U' },
-        { properties => [qw/gene_id sequence_id/], sql => 'CG_CGID_SEQID' },
-    ],
-    schema_name => 'EGAPSchema',
-    data_source => 'EGAP::DataSource::EGAPSchema',
 };
 
 1;

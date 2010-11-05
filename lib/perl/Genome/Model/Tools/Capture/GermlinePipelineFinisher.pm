@@ -255,11 +255,11 @@ sub execute {                               # replace with real execution logic.
 				
 				if($ref eq "0" || $ref eq "-" || length($var) > 1)
 				{
-					$variant_type = "Ins";
+					$variant_type = "INS";
 				}
 				else
 				{
-					$variant_type = "Del";
+					$variant_type = "DEL";
 				}
 				
 				my @temp = split("\t", $indel);
