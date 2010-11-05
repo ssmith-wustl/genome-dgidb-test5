@@ -46,6 +46,13 @@ class PAP::Command::PsortB {
             default_value => "-R 'select[type==LINUX86] rusage[tmp=100]'", 
         },
     ],
+    has_optional => [
+        version => { 
+            is => 'String', 
+            valid_values => ['2.1.0', '3.0.0', '3.0.3'],
+            default => '3.0.3',
+        },
+    ],
 };
 
 sub help_brief {
@@ -65,6 +72,21 @@ EOS
 
 sub execute {
     my $self = shift;
+
+	my $psortb_path = "/gsc/pkg/bio/psort-b/bio-tools-psort-all-" . $self->version ."/psort";
+#my $psortb_path = "/gsc/pkg/bio/psort-b/bio-tools-psort-all-" . $self->version ."/psort/bin/psort";
+
+    ## We will set the ENV variables specific to psort-b
+    ## These were based on the psort-b shell wrapper script /gsc/bin/psort-b
+    $ENV{'LD_LIBRARY_PATH'} = $psortb_path ."/lib";
+	$ENV{'PATH'} = $psortb_path . "/bin";
+
+	my $psortb_bin = $ENV{'PATH'};
+
+	$ENV{'PSORT_ROOT'} = $psortb_bin;
+	$ENV{'PSORT_HMMTOP'} = '/gsc/pkg/bio/hmmtop/installed';
+	$ENV{'PSORT_PFTOOLS'} = '/gsc/pkg/bio/pftools/installed/bin';
+	$ENV{'BLASTDIR'} = '/gsc/pkg/bio/blast/installed';
     
     $DB::single = 1;
     my $fasta_file  = $self->fasta_file();
@@ -87,7 +109,7 @@ sub execute {
     $temp_fh->close();
     
     my @psortb_command = (
-                          'psort-b',
+                          $psortb_bin. '/psort',
                           $gram_stain, 
                           '-o',
                           'terse',
