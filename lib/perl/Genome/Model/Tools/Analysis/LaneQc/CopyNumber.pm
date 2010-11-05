@@ -24,7 +24,7 @@ class Genome::Model::Tools::Analysis::LaneQc::CopyNumber {
     output_file_prefix => {
         type => 'String',
         is_optional => 0,
-        doc => "Prefix for filename to write per-lane copy-number QC data to. The name of the lane plus \".cnqc\" will be added as a suffix for all outputs, and also \".png\" will be further added for a graphical output as well. Use full path!!",
+        doc => "Prefix for filename to write per-lane copy-number QC data to. The name of the lane plus \".cnqc\" will be added as a suffix for all outputs if you give a filename, or the name of the lane will be the beginning of the filename if you just give a path, and also \".png\" will be further added for a graphical output as well. Use full path!!",
     },
     ]
 };
@@ -101,7 +101,7 @@ sub execute {
 
             my $user = $ENV{USER};
 
-            my $lane_outfile = $outfile_prefix . "." . $lane_name . ".cnqc";
+            my $lane_outfile = $outfile_prefix . $lane_name . ".cnqc";
 
             my $job1_name = $lane_outfile . "-cn-qc";
             my $job2_name = $job1_name . "-plot";

@@ -6,32 +6,41 @@ use above 'EGAP';
 use Bio::Seq;
 use Bio::SeqIO;
 
-use File::Temp;
+use File::Temp 'tempdir';
 use File::Basename;
-use Test::More tests => 51;
+use Test::More skip_all => 'Takes an hour, regardless of input sequence size';
 
 BEGIN {
-    use_ok('GAP::Command');
-    use_ok('GAP::Command::GenePredictor::RfamScan');
+    use_ok('EGAP::Command');
+    use_ok('EGAP::Command::GenePredictor::RfamScan');
 }
 
-my $command = GAP::Command::GenePredictor::RfamScan->create(
-                                                            'fasta_file' => File::Basename::dirname(__FILE__).'/data/Contig0a.masked.fasta',
-                                                           );
+my $test_dir = "/gsc/var/cache/testsuite/running_testsuites/";
+my $test_output_dir = tempdir('EGAP-Command-SNAP-XXXXXX',
+    DIR => $test_dir,
+    CLEANUP => 1,
+    UNLINK => 1,
+);
+chmod(0755, $test_output_dir);
+ok(-d $test_output_dir, "test output dir exists");
 
-isa_ok($command, 'GAP::Command::GenePredictor');
-isa_ok($command, 'GAP::Command::GenePredictor::RfamScan');
+my $fasta = File::Basename::dirname(__FILE__).'/data/Contig0a.masked.fasta.short';
+ok(-e $fasta, "fasta file exists at $fasta");
 
-SKIP: {
-    skip "long test, semi redundant in calling from GAP modules, set RUNEGAP=1", 47 unless $ENV{RUNEGAP};
-ok($command->execute());
+my $command = EGAP::Command::GenePredictor::RfamScan->create(
+    fasta_file => File::Basename::dirname(__FILE__).'/data/Contig0a.masked.fasta',
+    prediction_directory => $test_output_dir,
+    raw_output_directory => $test_output_dir,
+);
 
-my @features = @{$command->bio_seq_feature()};
+isa_ok($command, 'EGAP::Command::GenePredictor');
+isa_ok($command, 'EGAP::Command::GenePredictor::RfamScan');
 
-ok(@features > 0);
+ok($command->execute(), "executed rfamscan command");
 
-foreach my $feature (@features) {
-    isa_ok($feature, 'Bio::SeqFeature::Generic');
-}
+my @rna = EGAP::RNAGene->get(
+    directory => $test_output_dir,
+);
+my $num_rna = scalar @rna;
+ok($num_rna > 0, "able to retrieve $num_rna RNAGene objects");
 
-}

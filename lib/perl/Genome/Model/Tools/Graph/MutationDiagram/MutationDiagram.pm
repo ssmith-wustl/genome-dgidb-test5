@@ -221,7 +221,7 @@ sub Draw {
         $document->content_view);
     $backbone->draw;
 
-    my @colors = qw( red green orange blue cyan yellow violet brown magenta aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blueviolet burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk crimson darkblue darkcyan darkgoldenrod darkgray darkgreen darkgrey darkkhaki darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen darkslateblue darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue dimgray dimgrey dodgerblue firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite gold goldenrod greenyellow honeydew hotpink indianred indigo ivory khaki lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan lightgoldenrodyellow lightgray lightgreen lightgrey lightpink lightsalmon lightseagreen lightskyblue lightsteelblue lightyellow lime limegreen linen maroon mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen mediumslateblue mediumspringgreen mediumturquoise mediumvioletred midnightblue mintcream mistyrose moccasin navajowhite navy oldlace olive olivedrab orangered orchid palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum powderblue purple rosybrown royalblue saddlebrown salmon sandybrown seagreen seashell sienna silver skyblue slateblue slategray slategrey snow springgreen steelblue tan teal thistle tomato turquoise wheat whitesmoke yellowgreen );
+    my @colors = qw( aliceblue azure blanchedalmond burlywood coral cyan darkgray darkmagenta darkred darkslategray deeppink dodgerblue fuchsia goldenrod grey indigo lavenderblush lightcoral lightgreen lightseagreen lightsteelblue mediumblue mediumslateblue midnightblue olivedrab palegoldenrod papayawhip plum rosybrown sandybrown slategrey tan );
     my $color = 0;
     my %domains;
     my %domains_location;
@@ -267,15 +267,15 @@ sub Draw {
 
     my @mutation_objects;
     my %mutation_class_colors = (
-        'frame_shift_del' => 'blue',
-        'frame_shift_ins' => 'orange',
-        'in_frame_del' => 'green',
-        'missense' => 'cyan',
-        'nonsense' => 'yellow',
-        'splice_site_del' => 'violet',
-        'splice_site_indel' => 'brown',
-        'splice_site_snp' => 'purple',
-        'other' => 'red'
+        'frame_shift_del' => 'darkolivegreen',
+        'frame_shift_ins' => 'crimson',
+        'in_frame_del' => 'gold',
+        'missense' => 'cornflowerblue',
+        'nonsense' => 'goldenrod',
+        'splice_site_del' => 'orchid',
+        'splice_site_ins' => 'saddlebrown',
+        'splice_site_snp' => 'lightpink',
+        'other' => 'black'
     );
     my %mutation_legend;
     my $max_frequency = 0;

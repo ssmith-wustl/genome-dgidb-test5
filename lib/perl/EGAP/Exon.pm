@@ -4,26 +4,42 @@ use strict;
 use warnings;
 
 use EGAP;
-
+use Carp 'confess';
 
 class EGAP::Exon {
     type_name => 'exon',
-    table_name => 'EXON',
-    id_sequence_generator_name => 'exon_id_seq',
+    schema_name => 'files',
+    data_source => 'EGAP::DataSource::Exons',
     id_by => [
-        exon_id => { is => 'NUMBER', len => 12 },
+        exon_name => { is => 'Text' },
+        directory => { is => 'Path' },
     ],
     has => [
-        end                  => { is => 'NUMBER', len => 10, column_name => 'SEQ_END' },
-        start                => { is => 'NUMBER', len => 10, column_name => 'SEQ_START' },
-        five_prime_overhang  => { is => 'NUMBER', len => 1, is_optional => 1 },
-        three_prime_overhang => { is => 'NUMBER', len => 1, is_optional => 1 },
-        sequence_string      => { is => 'BLOB', len => 2147483647 },
-        transcript           => { is => 'EGAP::Transcript', id_by => 'transcript_id', constraint_name => 'EXON_TRANSCRIPT_ID_FK' },
-        transcript_id        => { is => 'NUMBER', len => 11, implied_by => 'transcript' },
+        start => { is => 'Number' },
+        end => { is => 'Number' },
+        strand => { is => 'Text' },
+        score => { is => 'Text' },
+        five_prime_overhang => { is => 'Number' },
+        three_prime_overhang => { is => 'Number' },
+        transcript_name => { is => 'Text' },
+        gene_name => { is => 'Text' },
+        sequence_name => { is => 'Text' },
+        sequence_string => { is => 'Text' },
+        transcript => {
+            calculate_from => ['directory', 'transcript_name'],
+            calculate => q|
+                my ($transcript) = EGAP::Transcript->get(directory => $directory, transcript_name => $transcript_name);
+                return $transcript;
+            |,
+        },
+        coding_gene => {
+            calculate_from => ['directory', 'gene_name'],
+            calculate => q|
+                my ($gene) = EGAP::CodingGene->get(directory => $directory, gene_name => $gene_name);
+                return $gene
+            |,
+        },
     ],
-    schema_name => 'EGAPSchema',
-    data_source => 'EGAP::DataSource::EGAPSchema',
 };
 
 1;

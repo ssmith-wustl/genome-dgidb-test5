@@ -4,9 +4,10 @@ use strict;
 use warnings;
 
 use EGAP;
-use Bio::SeqIO;
-use GAP::Job::tRNAscan;
-use File::Path qw(make_path);
+use File::Temp;
+use IO::File;
+use Carp 'confess';
+use File::Path 'make_path';
 
 class EGAP::Command::GenePredictor::tRNAscan {
     is => 'EGAP::Command::GenePredictor',
@@ -14,55 +15,102 @@ class EGAP::Command::GenePredictor::tRNAscan {
         domain => {
             is => 'Text',
             is_input => 1,
-            valid_values => ['archaea', 'bacteria', 'eukaryota'],
-            default => 'eukaryota',
+            valid_values => ['archaeal', 'bacterial', 'eukaryotic'],
+            default => 'eukaryotic',
+        },
+        trnascan_install_path => {
+            is => 'Path',
+            default => '/gsc/bin/tRNAscan-SE',
+            doc => 'Path to program executable',
         },
     ],
 };
 
 sub help_brief {
-    "Write a set of fasta files for an assembly";
+    return "Runs tRNAscan on the provided fasta file";
 }
 
 sub help_synopsis {
-    return <<"EOS"
-EOS
+    return "Runs tRNAscan on the provided fasta file";
 }
 
 sub help_detail {
-    return <<"EOS"
-Need documenation here.
+    return <<EOS
+Runs tRNAsca on the provided fasta file, places raw output and prediction
+output into provided directories
 EOS
 }
 
 sub execute {
-    
     my $self = shift;
 
-    # TODO put raw output into output directory
-    my $seqio = Bio::SeqIO->new(-file => $self->fasta_file(), -format => 'Fasta');
+    unless (-d $self->raw_output_directory) {
+        my $mk_rv = make_path($self->raw_output_directory);
+        confess "Could not make raw ouput directory at " . $self->raw_output_directory unless defined $mk_rv and $mk_rv;
+    }
 
-    my $seq = $seqio->next_seq();
-    
-    # TODO Well, that last argument is a job id, which isn't necessary here but is required to create
-    # the tRNAScan job. Kinda lame. Also, this dependency on GAP namespace should be removed.
-    # TODO Just like RNAmmer, it'll be easier to rewrite this as a genome model tool and include
-    # raw output capture then
-    my $legacy_job = GAP::Job::tRNAscan->new(
-        $seq,
-        $self->domain,
-        2112,
+    # Need a unique file name for raw output
+    my $raw_output_fh = File::Temp->new(
+        DIR => $self->raw_output_directory,
+        TEMPLATE => "trnascan_raw_output_XXXXX",
+        CLEANUP => 0,
+        UNLINK => 0,
     );
+    my $raw_output_file = $raw_output_fh->filename;
+    $raw_output_fh->close;
+    chmod(0666, $raw_output_file);
+
+    # Construct command and parameters/switches
+    my @params;
+    push @params, $self->fasta_file;
+    push @params, "-B " if $self->domain eq 'bacterial';
+    push @params, "-A " if $self->domain eq 'archaeal';
+    push @params, "> $raw_output_file ";
+    push @params, "2> $raw_output_file.error ";
+   
+    my $cmd = join(" ", $self->trnascan_install_path, @params);
+    $self->status_message("Preparing to run tRNAscan-SE: $cmd");
     
-    $DB::single = 1;
-    $legacy_job->execute();
-    
-    my @features = $legacy_job->seq()->get_SeqFeatures();
-    
-    $self->bio_seq_feature(\@features);
-           
+    my $rv = system($cmd);
+    confess 'Trouble executing tRNAscan!' unless defined $rv and $rv == 0;
+
+    # Parse output and create UR objects
+    $raw_output_fh = IO::File->new($raw_output_file, 'r');
+    for (1..3) { $raw_output_fh->getline };  # First three lines are headers
+    while (my $line = $raw_output_fh->getline) {
+        chomp $line;
+        my ($seq_name, $trna_num, $begin, $end, $type, $codon, $intron_begin, $intron_end, $score) = split(/\s+/, $line);
+
+        my $strand = 1;
+        $strand = -1 if $begin > $end;
+        ($begin, $end) = ($end, $begin) if $begin > $end;
+
+        my $sequence = $self->get_sequence_by_name($seq_name);
+        confess "Couldn't get sequence $seq_name!" unless $sequence;
+        my $seq_string = $sequence->subseq($begin, $end);
+
+        my $rna_gene = EGAP::RNAGene->create(
+            directory => $self->prediction_directory,
+            gene_name => $seq_name . $trna_num,
+            description => $type,
+            start => $begin,
+            end => $end,
+            strand => $strand,
+            source => 'trnascan',
+            score => $score,
+            sequence_name => $seq_string,
+            sequence_string => $seq_string,
+            codon => $codon,
+            amino_acid => $type,
+        );
+    }
+
+    my @locks = $self->lock_files_for_predictions(qw/ EGAP::RNAGene /);
+    UR::Context->commit;
+    $self->release_prediction_locks(@locks);
+
+    $self->status_message("trnascan successfully completed!");
     return 1;
-    
 }
 
 1;
