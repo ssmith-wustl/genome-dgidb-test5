@@ -46,6 +46,11 @@ class Genome::Model::Tools::VariantAnnotator::Version1 {
             is_optional => 0,
             doc => 'Pathname to the annotation_data of a build containing transcripts.csv and other files',
         },
+        
+        transcript_structure_class_name => {
+            is_constant => 1,
+            value => 'Genome::Model::Tools::VariantAnnotator::Version1::TranscriptStructure',
+        }
     ]
 };
 
@@ -155,20 +160,25 @@ sub _create_iterator_for_variant_intersection {
 
     my $variant;   # needs to be visible in both closures below
 
+    my $structure_class = $self->transcript_structure_class_name;
+    my $intersect_sub_name = $structure_class->__meta__->data_source . '::intersector_sub';
+
     # This sub plugs into a hook in the Genome::DataSource::TranscriptStructures loader
     # to reject data that does not intersect the given variation to avoid passing the
     # data up the call stack and creating objects for TranscriptStructures we aren't 
     # interested in
-    $Genome::DataSource::TranscriptStructures::intersector_sub = sub {
-        return 1 unless defined $variant;
+    {   no strict 'refs'; 
+        $$intersect_sub_name = sub {
+            return 1 unless defined $variant;
 
-        my $struct = $_[0];
-        if ( $variant->{'start'} <= $struct->[STRUCTURE_STOP]) {
-            return 1;
-        } else {
-            return 0;
-        }
-    };
+            my $struct = $_[0];
+            if ( $variant->{'start'} <= $struct->[STRUCTURE_STOP]) {
+                return 1;
+            } else {
+                return 0;
+            }
+        };
+    }
 
     return sub {
         $variant = $_[0];
@@ -186,7 +196,7 @@ sub _create_iterator_for_variant_intersection {
             $loaded_substructures = [];
             $structure_iterator = undef;
 
-            $structure_iterator = Genome::TranscriptStructure->create_iterator(
+            $structure_iterator = $structure_class->create_iterator(
                                       chrom_name => $chrom_name,
                                       data_directory => $self->data_directory,
                                       -order_by => ['structure_start']);
