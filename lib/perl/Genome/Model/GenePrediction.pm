@@ -25,6 +25,15 @@ class Genome::Model::GenePrediction {
         domain => {
             via => 'processing_profile',
         },
+    ],
+    has_many_optional => [
+        inputs => {
+            is => 'Genome::Model::Input',
+            reverse_as => 'model',
+            doc => 'Inputs assigned to the model',
+        },
+    ],
+    has_optional => [
         assembly_model_links => {
             is => 'Genome::Model::Link',
             is_many => 1,
@@ -36,15 +45,6 @@ class Genome::Model::GenePrediction {
             via => 'assembly_model_links',
             to => 'from_model',
         },
-    ],
-    has_many_optional => [
-        inputs => {
-            is => 'Genome::Model::Input',
-            reverse_as => 'model',
-            doc => 'Inputs assigned to the model',
-        },
-    ],
-    has_optional => [
         gram_stain => {
             via => 'subject',
             to => 'gram_stain_category',
@@ -69,6 +69,12 @@ class Genome::Model::GenePrediction {
             via => 'subject',
             to => 'ncbi_taxon_id',
         },
+        assembly_contigs_file => {
+            is => 'Path',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'assembly_contigs_file' ],
+        },
     ],
 };
 
@@ -84,6 +90,7 @@ sub create {
     my $create_assembly_model = delete $params{create_assembly_model} || 0;
     my $assembly_processing_profile_name = delete $params{assembly_processing_profile_name};
     my $start_assembly_build = delete $params{start_assembly_build} || 0;
+    my $assembly_contigs_file = delete $params{assembly_contigs_file};
 
     my $self = $class->SUPER::create(%params) or return;
 
@@ -91,6 +98,23 @@ sub create {
     my $taxon = $self->subject;
     $self->validate_taxon($taxon);
 
+    # If given a path to a contigs file, don't go through the trouble of getting/creating an assembly model
+    # TODO Eventually, this behavior should be phased out so we are completely reliant on assembly builds, but
+    # right now there aren't any assembly models for eukaryotic organisms.
+    if (defined $assembly_contigs_file) {
+        unless (-e $assembly_contigs_file and -s $assembly_contigs_file) {
+            confess "No file or zero-sized file at $assembly_contigs_file, cannot create gene prediction model!";
+        }
+
+        $self->add_input(
+            value_class_name => 'UR::Value',
+            value_id => $assembly_contigs_file,
+            name => 'assembly_contigs_file',
+        );
+
+        return $self;
+    }
+    
     # Either get a denovo assembly model or create one if the create_assembly_model flag is defined
     my $assembly_model = $self->find_or_create_assembly_model(
         create_assembly_model => $create_assembly_model,
@@ -116,15 +140,23 @@ sub create {
             $self->status_message("Starting build of assembly model " . $assembly_model->id);
             $build = $self->start_assembly_build($assembly_model->id);
             $self->status_message("Build started!");
+            # TODO Either wait for the assembly to finish or make sure the assembly model kicks
+            # off the gene prediction build when it's done.
         }
         else {
             $self->status_message(
                 "The --start-assembly-build option is not set, so automatic build of the assembly model will not occur.\n" .
-                "Either rerun this command with the --assemble flag or manually kick off a build by running:\n" .
+                "Either rerun this command with the --start-assembly-build flag or manually kick off a build by running:\n" .
                 "genome model build start --model " . $assembly_model->id);
             confess "No assembly build found and assemble flag not set";
         }
     }
+
+    $self->add_input(
+        value_class_name => 'UR::Value',
+        value_id => $self->find_assembly_contigs_file(),
+        name => 'assembly_contigs_file',
+    );
 
     return $self;
 }
@@ -176,7 +208,8 @@ sub validate_taxon {
     my ($self, $taxon) = @_;
 
     my @missing_fields;
-    push @missing_fields, "gram stain" unless defined $taxon->gram_stain_category;
+    # Gram stain doesn't apply to some (all?) eukaryotes
+    push @missing_fields, "gram stain" if $self->domain =~ /Bacterial/ and not defined $taxon->gram_stain_category;
     push @missing_fields, "domain" unless defined $taxon->domain;
     push @missing_fields, "locus id" unless defined $taxon->locus_tag;
 
@@ -190,7 +223,7 @@ sub validate_taxon {
 }
 
 # Returns the path to the assembly build's contigs.bases file
-sub assembly_contigs_file {
+sub find_assembly_contigs_file {
     my $self = shift;
     my $assembly_model = $self->assembly_model;
     my $assembly_build = $assembly_model->last_succeeded_build;
@@ -286,7 +319,7 @@ sub find_or_create_assembly_model {
                 "That command should give you a model ID. Use it to assign instrument data to the assembly model:\n" .
                 "genome instrument-data assign --model-id <MODEL_ID> --all\n\n" .
                 "Now you have an assembly model with instrument data! Rerun this define command with the " .
-                "--assemble option, which will start a build of that assembly model and kick off gene prediction " .
+                "--start-assembly-build option, which will start a build of that assembly model and kick off gene prediction " .
                 "once that build has completed!"
             );
             confess "Could not find any assemblies for taxon " . $taxon->id;
