@@ -1,4 +1,4 @@
-package Genome::Model::Tools::VariantAnnotator;
+package Genome::Model::Tools::Annotate::TranscriptVariants;
 
 use strict;
 use warnings;
@@ -19,7 +19,7 @@ use File::Basename;
 use MIME::Lite;
 use Sys::Hostname;
 
-class Genome::Model::Tools::VariantAnnotator {
+class Genome::Model::Tools::Annotate::TranscriptVariants {
     is => 'Genome::Model::Tools',
     has => [ 
         variant_file => {
@@ -44,7 +44,7 @@ class Genome::Model::Tools::VariantAnnotator {
         _version_subclass_name => {
             is => 'Text', is_mutable => 0, 
             calculate_from => ['use_version'],
-            calculate => q( return 'Genome::Model::Tools::VariantAnnotator::Version' . $use_version ),
+            calculate => q( return 'Genome::Model::Tools::Annotate::TranscriptVariants::Version' . $use_version ),
         },
     ],
     has_optional => [
@@ -177,7 +177,7 @@ sub is_sub_command_delegator { 0 }
 
 sub help_synopsis { 
     return <<EOS
-gmt variant-annotator --variant-file variants.tsv --output-file transcript-changes.tsv
+gmt annotate transcript-variants --variant-file variants.tsv --output-file transcript-changes.tsv
 EOS
 }
 

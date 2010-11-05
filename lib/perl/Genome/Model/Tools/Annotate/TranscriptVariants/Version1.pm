@@ -1,4 +1,4 @@
-package Genome::Model::Tools::VariantAnnotator::Version1;
+package Genome::Model::Tools::Annotate::TranscriptVariants::Version1;
 #:adukes all annotation methods could be cleaned and documented for better clarity, see cds_exon_modified for an improvement over the current method.  Consider differentiating more between annotating snps/dnps and indeals as opposed to have case statements sprinkled liberally throughought, unit testing for every method needs to happen but doesn't
 
 use strict;
@@ -14,10 +14,8 @@ use Bio::Tools::CodonTable;
 use DateTime;
 use Carp;
 
-use Genome::Model::Tools::VariantAnnotator::Version1::DataSource::TranscriptStructures;
-use Genome::Model::Tools::VariantAnnotator::Version1::TranscriptStructure;
-
-class Genome::Model::Tools::VariantAnnotator::Version1 {
+UR::Object::Type->define(
+    class_name => __PACKAGE__,
     has => [
         codon_translator => {
             is => 'Bio::Tools::CodonTable',
@@ -49,10 +47,10 @@ class Genome::Model::Tools::VariantAnnotator::Version1 {
         
         transcript_structure_class_name => {
             is_constant => 1,
-            value => 'Genome::Model::Tools::VariantAnnotator::Version1::TranscriptStructure',
+            value => __PACKAGE__ . '::TranscriptStructure',
         }
     ]
-};
+);
 
 my %transcript_source_priorities = Genome::Info::AnnotationPriorities->transcript_source_priorities;
 my %transcript_status_priorities = Genome::Info::AnnotationPriorities->transcript_status_priorities;
