@@ -111,11 +111,15 @@ sub resolve_param_value_from_cmdline_text {
     }
     @results = $self->_unique_elements(@results);
     if ($require_user_verify) {
+        if (!$pmeta->{'is_many'} && @results > 1) {
+            $MESSAGE .= "\n" if ($MESSAGE);
+            $MESSAGE .= "'$param_name' expects only one result.";
+        }
         @results = $self->_get_user_verification_for_param_value($param_name, @results);
     }
     while (!$pmeta->{'is_many'} && @results > 1) {
         $MESSAGE .= "\n" if ($MESSAGE);
-        $MESSAGE .= "$param_name expects one result, not many!\n";
+        $MESSAGE .= "'$param_name' expects only one result, not many!";
         @results = $self->_get_user_verification_for_param_value($param_name, @results);
     }
 
@@ -324,7 +328,7 @@ sub _get_user_verification_for_param_value_drilldown {
     my $response;
     my @caller = caller(1);
     while (!$response) {
-        $self->status_message("\n'$param_name':");
+        $self->status_message("\n");
         # TODO: Replace this with lister?
         for (my $i = 1; $i <= $n_results; $i++) {
             my $param = $results[$i - 1];
@@ -350,7 +354,7 @@ sub _get_user_verification_for_param_value_drilldown {
             $pretty_values .= ', (b)ack';
             $valid_values .= '|b';
         }
-        $response = $self->_ask_user_question("Please confirm the above items or modify your selection.", 0, $valid_values, 'h', $pretty_values.', or specify item numbers to use');
+        $response = $self->_ask_user_question("Please confirm the above items for '$param_name' or modify your selection.", 0, $valid_values, 'h', $pretty_values.', or specify item numbers to use');
         if (lc($response) eq 'h' || !$self->_validate_user_response_for_param_value_verification($response)) {
             $MESSAGE .= "\n" if ($MESSAGE);
             $MESSAGE .=
