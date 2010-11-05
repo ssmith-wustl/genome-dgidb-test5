@@ -724,7 +724,7 @@ sub send_mail
         );
 
     my $to = join( ', ',
-#'kpepin@genome.wustl.edu',
+		'kpepin@genome.wustl.edu',
         'ssurulir@watson.wustl.edu',);
 
     my $subject

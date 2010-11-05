@@ -42,7 +42,13 @@ class Genome::Model::Tools::Somatic::FilterFalsePositives {
            is_output => 1,
            doc => 'Filename for variants that fail filter (optional)',
        },
-       
+       'reference' => {
+            type => 'String',
+            default => '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa',
+            is_optional => 1,
+            is_input => 1,
+            doc => 'Reference sequence to use',
+       },       
        ## CAPTURE FILTER OPTIONS ##
        'min_strandedness' => {
             type => 'String',
