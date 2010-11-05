@@ -256,6 +256,8 @@ sub execute {
         if(-s $bam_path){
             $self->error_message("Could not remove file at ".$bam_path."\n");
             $self->error_message("Check file permissions.");
+        }else{
+            $self->status_message("Original bam file has been removed from ".$bam_path);
         }
     }
 
