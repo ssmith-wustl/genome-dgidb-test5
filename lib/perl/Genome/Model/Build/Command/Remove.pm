@@ -7,6 +7,15 @@ use Genome;
 
 class Genome::Model::Build::Command::Remove {
     is => 'Genome::Model::Build::Command::Base',
+    has => [
+        builds => {
+            is                  => 'Genome::Model::Build',
+            is_many             => 1,
+            shell_args_position => 1,
+            doc => 'Build(s) to use. Resolved from command line via text string.',
+            require_user_verify => 1,
+        },
+    ],
     has_optional => [
         keep_build_directory => {
             is => 'Boolean',
