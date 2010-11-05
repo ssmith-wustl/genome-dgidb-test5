@@ -162,6 +162,7 @@ sub execute {
     $params{sequencing_platform} = $self->sequencing_platform; 
     $params{import_format} = $self->import_format;
     $params{library_id} = $library->id;
+    $params{sample_id} = $sample->id;
     if(defined($self->allocation)){
         $params{disk_allocations} = $self->allocation;
     }
