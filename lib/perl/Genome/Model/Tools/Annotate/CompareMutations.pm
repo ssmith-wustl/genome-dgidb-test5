@@ -17,7 +17,6 @@ use Genome;
    #use GSCApp;
    use MG::Transform::Process::MutationCSV;
    use MG::IO::Parse::Cosmic;
-   use MG::Validate::AminoAcidChange;
 
 class Genome::Model::Tools::Annotate::CompareMutations{
     is => 'Command',
@@ -340,7 +339,8 @@ my ($entrez_gene_id, $line, $aa_change,$transcript,
 	   chomp($line_num);
 	   my %results_hash;
 #parse the amino acid string
-	   my ($residue1, $res_start, $residue2, $res_stop, $new_residue) = MG::Validate::AminoAcidChange::Check($aa_change);
+       Genome::Model::Tools::Annotate::AminoAcidChange->class();
+	   my ($residue1, $res_start, $residue2, $res_stop, $new_residue) = @{Genome::Model::Tools::Annotate::AminoAcidChange::check_amino_acid_change_string(amino_acid_change_string => $aa_change)};
 	   if(!$residue2 || $residue2 eq ' '){
 		print "Skipping Silent Mutation";
 #		my $createspreadsheet = "$hugo\t$transcript\t$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$Variant_Type\tSkipped - Silent Mutation\tSkipped - Silent Mutation";
