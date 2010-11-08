@@ -447,13 +447,16 @@ sub execute {
 
     Genome::DataSource::GMSchema->disconnect_default_handle if Genome::DataSource::GMSchema->has_default_handle;
 
-    my $we_are_done_flag = 0;
+    my $we_are_done_flag;
 
     my $processed_variants = 0;
     while ( my $variant = $variant_svr->next ) {
 
+        $we_are_done_flag = 0;
         END {
-            print STDERR "\n\nThe last variant we worked on is\n",Data::Dumper::Dumper($variant),"\n\n" if ($variant and !$we_are_done_flag);
+            if (defined $we_are_done_flag and ! $we_are_done_flag) {
+                print STDERR "\n\nThe last variant we worked on is\n",Data::Dumper::Dumper($variant),"\n\n";
+            }
         };
 
         $variant->{type} = $self->infer_variant_type($variant);
