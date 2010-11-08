@@ -25,7 +25,7 @@ class Genome::Model::Tools::Bmr::WigToBitmask
   reference_index => {
     type => 'String',
     is_optional => 1,
-    default => '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa.fai',
+    default => '/gscmnt/gc2106/info/medseq/ckandoth/refseq/all_sequences.fa.fai',
     doc => 'The Samtools index of the reference genome for which you are creating a bitmask',
   },
   _bitmask => {
