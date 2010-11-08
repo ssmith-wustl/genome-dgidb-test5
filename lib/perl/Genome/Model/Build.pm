@@ -9,7 +9,7 @@ use Carp;
 use Data::Dumper 'Dumper';
 use File::Path;
 use File::Find 'find';
-use File::Basename 'dirname';
+use File::Basename qw/ dirname fileparse /;
 use Regexp::Common;
 use Workflow;
 use YAML;
@@ -1568,6 +1568,25 @@ sub regex_files_for_diff {
     return ();
 }
 
+# A list of file suffixes that require special treatment to diff. This should include those
+# files that have timestamps or other changing fields in them that an md5sum can't handle.
+# Each suffix should have a method called diff_<SUFFIX> that'll contain the logic.
+sub special_suffixes {
+    return qw(
+        gz
+    );
+}
+
+# Gzipped files contain the timestamp and name of the original file, so this prints
+# the uncompressed file to STDOUT and pipes it to md5sum.
+sub diff_gz {
+    my ($self, $first_file, $second_file) = @_;
+    my $first_md5 = `gzip -dc $first_file | md5sum`;
+    my $second_md5 = `gzip -dc $second_file | md5sum`;
+    return 1 if $first_md5 eq $second_md5;
+    return 0;
+}
+
 # This method takes another build id and compares that build against this one. It gets
 # a list of all the files in both builds and attempts to find pairs of corresponding
 # files. The files/dirs listed in the files_ignored_by_diff and dirs_ignored_by_diff
@@ -1640,11 +1659,24 @@ sub compare_output {
                 next FILE;
             }
         }
-       
-        my $file_md5 = Genome::Utility::FileSystem->md5sum($abs_path);
-        my $other_md5 = Genome::Utility::FileSystem->md5sum($other_abs_path);
+      
+        # Check if the files end with a suffix that requires special handling. If not,
+        # just do an md5sum on the files and compare
+        $DB::single = 1;
+        my $diff_result = 0;
+        my (undef, undef, $suffix) = fileparse($abs_path, $self->special_suffixes);
+        my (undef, undef, $other_suffix) = fileparse($other_abs_path, $self->special_suffixes);
+        if ($suffix ne '' and $other_suffix ne '' and $suffix eq $other_suffix) {
+            my $method = "diff_$suffix";
+            $diff_result = $self->$method($abs_path, $other_abs_path);
+        }
+        else {
+            my $file_md5 = Genome::Utility::FileSystem->md5sum($abs_path);
+            my $other_md5 = Genome::Utility::FileSystem->md5sum($other_abs_path);
+            $diff_result = ($file_md5 eq $other_md5);
+        }
 
-        unless ($file_md5 eq $other_md5) {
+        unless ($diff_result) {
             $diffs{$rel_path} = "files $abs_path and $other_abs_path are not the same!";
         }
     }
