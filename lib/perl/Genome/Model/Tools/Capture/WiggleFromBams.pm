@@ -52,33 +52,33 @@ sub execute
   my $min_depth_tumor = $self->min_depth_tumor;
 
   print "Checking BAM files...\n";
-  die "Normal BAM not found ($normal_bam)." unless( -e $normal_bam );
-  die "Tumor BAM not found ($tumor_bam)." unless( -e $tumor_bam );
+  self->error( "Normal BAM not found ($normal_bam)." ) unless( -e $normal_bam );
+  self->error( "Tumor BAM not found ($tumor_bam)." ) unless( -e $tumor_bam );
 
   print "Checking BAM index files...\n";
   unless( -e "$normal_bam.bai" )
   {
     print "Normal BAM index file not found. Using \"samtools index\" to create it...\n";
     my $stdoe = `samtools index $normal_bam 2>&1`;
-    die "samtools failed! Be sure to use 64-bit architecture." if( $stdoe =~ m/syntax error: \S+ unexpected/i );
+    self->error( "samtools failed! Be sure to use 64-bit architecture." ) if( $stdoe =~ m/syntax error: \S+ unexpected/i );
   }
   unless( -e "$tumor_bam.bai" )
   {
     print "Tumor BAM index file not found. Using \"samtools index\" to create it...\n";
     my $stdoe = `samtools index $tumor_bam 2>&1`;
-    die "samtools failed! Be sure to use 64-bit architecture." if( $stdoe =~ m/syntax error: \S+ unexpected/i );
+    self->error( "samtools failed! Be sure to use 64-bit architecture." ) if( $stdoe =~ m/syntax error: \S+ unexpected/i );
   }
 
   print "Checking targeted regions file...\n";
   my $inRgnFh = IO::File->new( $regions_file );
   my $line = $inRgnFh->getline; #Potentially a header. We cannot allow that!
-  die "Cannot recognize format of Line 1 in the targeted regions file." if( $line !~ m/^\w+\t\d+\t\d+\t\S+$/ );
-  $line = $inRgnFh->getline while( $line !~ m/^\w+\t\d+\t\d+\t\S+$/ ); #Grab a line that's actually data
-  die "Please remove 'chr' prefixes for chromosome names in the targeted regions file." if( $line =~ m/^chr/i );
+  self->error( "Cannot recognize format of Line 1 in the targeted regions file." ) if( $line !~ m/^\w+\t\d+\t\d+/ );
+  $line = $inRgnFh->getline while( $line !~ m/^\w+\t\d+\t\d+/ ); #Grab a line that's actually data
+  self->error( "Please remove 'chr' prefixes for chromosome names in the targeted regions file." ) if( $line =~ m/^chr/i );
   $inRgnFh->close;
 
   print "Using bam2wig to generate wiggle files for tumor and normal BAMs...\n";
-  die "bam2wig failed! Be sure to use 64-bit architecture." if( `$bam2wig 2>&1` =~ m/syntax error: \S+ unexpected/i );
+  self->error( "bam2wig failed! Be sure to use 64-bit architecture." ) if( `$bam2wig 2>&1` =~ m/syntax error: \S+ unexpected/i );
   my ( $normal_wig, $tumor_wig ) = ( "$output_wig\_normal", "$output_wig\_tumor" );
   `$bam2wig -q $min_base_qual -d $min_depth_normal -o $normal_wig -l $regions_file $normal_bam`;
   `$bam2wig -q $min_base_qual -d $min_depth_tumor -o $tumor_wig -l $regions_file $tumor_bam`;
