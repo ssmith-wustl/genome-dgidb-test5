@@ -41,7 +41,6 @@ sub execute
   my $self = shift;
   $DB::single = 1;
   my $t0 = Benchmark->new;
-  my $bam2wig = "/gscuser/ckandoth/src/bam2wig/bam2wig";
 
   my $normal_bam = $self->normal_bam;
   my $tumor_bam = $self->tumor_bam;
@@ -78,10 +77,10 @@ sub execute
   $inRgnFh->close;
 
   print "Using bam2wig to generate wiggle files for tumor and normal BAMs...\n";
-  self->error( "bam2wig failed! Be sure to use 64-bit architecture." ) if( `$bam2wig 2>&1` =~ m/syntax error: \S+ unexpected/i );
+  self->error( "bam2wig failed! Be sure to use 64-bit architecture." ) if( `bam2wig 2>&1` =~ m/syntax error: \S+ unexpected/i );
   my ( $normal_wig, $tumor_wig ) = ( "$output_wig\_normal", "$output_wig\_tumor" );
-  `$bam2wig -q $min_base_qual -d $min_depth_normal -o $normal_wig -l $regions_file $normal_bam`;
-  `$bam2wig -q $min_base_qual -d $min_depth_tumor -o $tumor_wig -l $regions_file $tumor_bam`;
+  `bam2wig -q $min_base_qual -d $min_depth_normal -o $normal_wig -l $regions_file $normal_bam`;
+  `bam2wig -q $min_base_qual -d $min_depth_tumor -o $tumor_wig -l $regions_file $tumor_bam`;
 
   print "Merging the two wiggle files into one consolidated wiggle file...\n";
   my $outWigFh = IO::File->new( $output_wig, ">" );
