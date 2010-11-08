@@ -87,9 +87,9 @@ sub execute
 
   #Check the first line for Broad's "track" header to avoid having to check every line for it
   my $line = $wig_fh->getline;
+  #If Broad's header wasn't used, then reset the file handle. Otherwise, proceed with next line
   if( $line !~ m/^track/ )
   {
-    #If Broad's header wasn't used, then reset the file handle. Otherwise, proceed with next line
     $wig_fh->close;
     $wig_fh = IO::File->new($wig_file);
   }
@@ -111,7 +111,7 @@ sub execute
     {
       if($line == 1)
       {
-        $genome{$chromosome}->bit_flip($block_idx);
+        $genome{$chromosome}->Bit_On($block_idx);
       }
       ++$block_idx; #We can also safely assume that step size is 1
     }
