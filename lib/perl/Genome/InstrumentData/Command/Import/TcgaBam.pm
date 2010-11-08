@@ -19,6 +19,12 @@ my %properties = (
         is => 'Text',
         doc => 'TCGA name for imported file',
     },
+    remove_original_bam => {
+        is => 'Boolean',
+        doc => 'By uncluding this in your command, the tool will remove (delete!) the original bam file after importation, without warning.',
+        default => 0,
+        is_optional => 1,
+    },
     create_sample => {
         is => 'Boolean',
         doc => 'Set this switch to automatically create organism_sample, library, and individual, if they are not not found.',
@@ -173,6 +179,25 @@ sub execute {
     $self->status_message("Alignment allocation created for $instrument_data_id .");
 
     my $bam_destination = $disk_alloc->absolute_path . "/all_sequences.bam";
+
+    #check for existing md5 sum
+    my $md5_from_file;
+
+    if(-s $bam_path . ".md5"){
+        $self->status_message("Found an md5 sum, comparing it with the calculated sum...");
+        my $md5_fh = IO::File->new($bam_path . ".md5");
+        unless($md5_fh){
+            $self->error_message("Could not open md5sum file.");
+            die $self->error_message;
+        }
+        $md5_from_file = $md5_fh->getline;
+        ($md5_from_file) = split " ", $md5_from_file;
+        chomp $md5_from_file;
+    } else {
+        #TODO for now, this requirement for an md5 file will be waived.
+        $self->status_message("Not able to locate a pre-calculated md5 sum at ".$bam_path.".md5");
+        #die $self->error_message;
+    }
     $self->status_message("Now calculating the MD5sum of the bam file to be imported, this will take a long time (many minutes) for larger (many GB) files.");
     my $md5 = Genome::Utility::FileSystem->md5sum($bam_path);
     unless($md5){
@@ -182,29 +207,15 @@ sub execute {
     $self->status_message("Finished calculating md5 sum.");
     $self->status_message("MD5 sum = ".$md5);
 
-    #check for existing md5 sum
-
-    if(-s $bam_path . ".md5"){
-        $self->status_message("Found an md5 sum, comparing it with the calculated sum...");
-        my $md5_fh = IO::File->new($bam_path . ".md5");
-        unless($md5_fh){
-            $self->error_message("Could not open md5sum file.");
-            die $self->error_message;
-        }
-        my $md5_from_file = $md5_fh->getline;
-        ($md5_from_file) = split " ", $md5_from_file;
-        chomp $md5_from_file;
-        #chomp $md5;
-        $self->error_message("md5 sum from file = ".$md5_from_file);
-        unless($md5 eq $md5_from_file){
-            $self->status_message("calcmd5 = ".$md5." and file md5 = ".$md5_from_file);
-            $self->error_message("Calculated md5 sum and sum read from file did not match, aborting.");
-            $disk_alloc->deallocate;
-            $self->error_message("Now removing instrument-data record from the database.");
-            $import_instrument_data->delete;
-            die "Import Failed";
-        }
+    $self->status_message("md5 sum from file = ".$md5_from_file);
+    unless($md5 eq $md5_from_file){
+        $self->error_message("Calculated md5 sum and sum read from file did not match, aborting.");
+        $disk_alloc->deallocate;
+        $self->error_message("Now removing instrument-data record from the database.");
+        $import_instrument_data->delete;
+        die "Import Failed";
     }
+    
     
     #copy the bam into the allocation
     
@@ -232,6 +243,24 @@ sub execute {
 
     $self->status_message("Importation of BAM completed successfully.");
     $self->status_message("Your instrument-data id is ".$instrument_data_id);
+    if($self->remove_original_bam){
+        $self->status_message("Now removing original bam in 10 seconds.");
+        for (1..10){
+            sleep 1;
+            print "slept for ".$_." seconds.\n";
+        }
+        unless(-s $bam_path){
+            $self->error_message("Could not locate file to remove at ".$bam_path."\n");
+            die $self->error_message;
+        }
+        unlink($bam_path);
+        if(-s $bam_path){
+            $self->error_message("Could not remove file at ".$bam_path."\n");
+            $self->error_message("Check file permissions.");
+        }else{
+            $self->status_message("Original bam file has been removed from ".$bam_path);
+        }
+    }
 
     return 1;
 }

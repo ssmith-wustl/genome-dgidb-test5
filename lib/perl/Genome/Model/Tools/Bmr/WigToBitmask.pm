@@ -25,7 +25,7 @@ class Genome::Model::Tools::Bmr::WigToBitmask
   reference_index => {
     type => 'String',
     is_optional => 1,
-    default => '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa.fai',
+    default => '/gscmnt/gc2106/info/medseq/ckandoth/refseq/all_sequences.fa.fai',
     doc => 'The Samtools index of the reference genome for which you are creating a bitmask',
   },
   _bitmask => {
@@ -87,9 +87,9 @@ sub execute
 
   #Check the first line for Broad's "track" header to avoid having to check every line for it
   my $line = $wig_fh->getline;
+  #If Broad's header wasn't used, then reset the file handle. Otherwise, proceed with next line
   if( $line !~ m/^track/ )
   {
-    #If Broad's header wasn't used, then reset the file handle. Otherwise, proceed with next line
     $wig_fh->close;
     $wig_fh = IO::File->new($wig_file);
   }
@@ -111,7 +111,7 @@ sub execute
     {
       if($line == 1)
       {
-        $genome{$chromosome}->bit_flip($block_idx);
+        $genome{$chromosome}->Bit_On($block_idx);
       }
       ++$block_idx; #We can also safely assume that step size is 1
     }

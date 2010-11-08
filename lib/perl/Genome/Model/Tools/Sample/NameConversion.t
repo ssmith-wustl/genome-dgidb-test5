@@ -1,15 +1,13 @@
 #!/gsc/bin/perl
-
 use strict;
 use warnings;
 use above 'Genome';
 use Test::More tests => 5;
 
-
 my $input = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sample-NameConversion/test.in";
 ok(-e $input, 'Input file exists');
 
-my $output = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sample-NameConversion/test.out";
+my $output = Genome::Utility::FileSystem->create_temp_file_path("out"); #"/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sample-NameConversion/test.out";
 my $expected_output = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sample-NameConversion/expected.test.out";
 ok(-e $expected_output, 'Expected output file exists');
 
@@ -20,6 +18,4 @@ ok(-e $output, 'Output file exists');
 
 my $diff = `diff $output $expected_output`;
 ok($diff eq '', "output as expected");
-
-print qq(done\n);
 
