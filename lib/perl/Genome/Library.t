@@ -14,7 +14,6 @@ use_ok('Genome::Library') or die;
 
 # create 2X
 _create_and_get_library(1);
-_create_and_get_library(2);
 
 done_testing();
 exit();
@@ -22,19 +21,16 @@ exit();
 #################################
 
 sub _create_and_get_library {
-    my $cnt = shift;
+    my $sample = Genome::Sample->get(2376482668);
     my $library = Genome::Library->create(
-        sample_id => 2376482668,
+        sample => $sample,
+        name => $sample->name . "-extlibs"
     );
     ok($library, 'created library');
     isa_ok($library, 'Genome::Library');
     isa_ok($library, 'Genome::Notable');
     ok($library->id, 'id');
-    is(
-        $library->name, 
-        $library->sample_name.'-extlib'.$cnt,
-        'library name',
-    );
+    is($library->name, $sample->name . "-extlibs", "name is what is expected");
     print Data::Dumper::Dumper($library);
 
     my $commit = eval{ UR::Context->commit; };

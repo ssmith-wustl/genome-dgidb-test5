@@ -105,7 +105,10 @@ sub execute {
             $self->error_message("A library was not resolved from the input string ".$self->library);
             die $self->error_message;
         }
-        $library = Genome::Library->create(name=>$sample->name.'-extlibs',sample_id=>$sample->id);
+        $library = Genome::Library->get(name=>$sample->name.'-extlibs',sample_id=>$sample->id);
+        unless ($library) {
+            $library = Genome::Library->create(name=>$sample->name.'-extlibs',sample_id=>$sample->id);
+        }
         unless($library){
             $self->error_message("Unable to create a library.");
             die $self->error_message;
