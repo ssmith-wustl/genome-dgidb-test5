@@ -100,7 +100,7 @@ sub execute {
         }
 
         unless ($first_build and $second_build) {
-            my $msg = "BUILD NOT FOUND $type_string: Could not find build for model $model_id using revision:";
+            my $msg = "BUILD NOT FOUND $type_string $model_id: Could not find build for model $model_id using revision:";
             $msg .= ' ' . $first_revision unless $first_build;
             $msg .= ' ' . $second_revision unless $second_build;
             $self->warning_message($msg);
@@ -115,7 +115,7 @@ sub execute {
             $self->status_message("All files diffed cleanly!");
         }
         else {
-            my $diff_string = "DIFFERENCES FOUND $type_string\n";
+            my $diff_string = "DIFFERENCES FOUND $type_string $model_id\n";
             for my $file (sort keys %diffs) {
                 my $reason = $diffs{$file};
                 $diff_string .= "  File: $file, Reason: $reason\n";
