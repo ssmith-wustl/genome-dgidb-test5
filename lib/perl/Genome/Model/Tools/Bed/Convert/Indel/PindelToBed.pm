@@ -99,6 +99,8 @@ sub close_filehandes {
 sub process_source { 
     my $self = shift;
     my $input_fh = $self->_input_fh;
+    my %events;
+    my ($chrom,$pos,$size,$type);
     while(my $line = $input_fh->getline) {
         my $normal_support=0;
         my $read = 0;
@@ -117,16 +119,30 @@ sub process_source {
                     $read=$line;
                 }
             }
-            unless($normal_support) {
-                my @bed_line = $self->parse($call, $reference, $read);
-                unless((@bed_line)&& scalar(@bed_line)==5){
-                    next;
-                }
-                $self->write_bed_line(@bed_line);
-
+            my @bed_line = $self->parse($call, $reference, $read);
+            unless((@bed_line)&& scalar(@bed_line)==5){
+                next;
+            }
+            my @call_stuff = split "\w", $call;
+            my $type_and_size = $call_stuff[1]."/".$call_stuff[2];
+            $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'bed'}=join(",",@bed_line);
+            if($normal_support){
+                $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'normal'}=$normal_support;
             }
         }
     }
+    
+    for my $chrom (sort {$a cmp $b} (keys(%events))){
+        for my $pos (sort{$a <=> $b} (keys( %{$events{$chrom}}))){
+            for my $type_and_size (sort(keys( %{$events{$chrom}{$pos}}))){
+                unless(exists($events{$chrom}{$pos}{$type_and_size}{'normal'}){
+                    $self->write_bed_line(split ",", $events{$chrom}{$pos}{$type_and_size}{'bed'});
+                }
+            }
+        }
+    }
+
+
 #    while(my $line = $input_fh->getline) {
 #        next unless($line =~ m/^#+$/);
 #        my $call = $input_fh->getline;
