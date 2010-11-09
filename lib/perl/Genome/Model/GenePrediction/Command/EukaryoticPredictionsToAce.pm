@@ -3,7 +3,6 @@ package Genome::Model::GenePrediction::Command::EukaryoticPredictionsToAce;
 use strict;
 use warnings;
 use Genome;
-use EGAP;
 use Carp 'confess';
 use Sort::Naturally qw/ ncmp nsort /;
 
@@ -56,10 +55,10 @@ sub execute {
     $self->status_message("Using predictions from build " . $build->build_id);
 
     # Pre-fetching all genes now so only one file read is necessary
-    my @coding_genes = EGAP::CodingGene->get(
+    my @coding_genes = Genome::Prediction::CodingGene->get(
         directory => $build->prediction_directory,
     );
-    my @rna_genes = EGAP::RNAGene->get(
+    my @rna_genes = Genome::Prediction::RNAGene->get(
         directory => $build->prediction_directory,
     );
 
@@ -69,12 +68,12 @@ sub execute {
     # Get list of sequences
     my $sequences = $build->sequences;
     for my $sequence (nsort @$sequences) { 
-        my @seq_coding_genes = EGAP::CodingGene->get(
+        my @seq_coding_genes = Genome::Prediction::CodingGene->get(
             directory => $build->prediction_directory,
             sequence_name => $sequence,
         );
         my @seq_rna_genes;
-        @seq_rna_genes = EGAP::RNAGene->get(
+        @seq_rna_genes = Genome::Prediction::RNAGene->get(
             directory => $build->prediction_directory,
             sequence_name => $sequence,
         ) unless $self->protein_coding_only;

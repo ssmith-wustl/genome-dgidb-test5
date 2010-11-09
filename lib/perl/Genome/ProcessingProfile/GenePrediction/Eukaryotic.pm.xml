@@ -22,13 +22,13 @@
     <link fromOperation="cleanup_temp_files"       fromProperty="result"                         toOperation="output connector"         toProperty="result" />
   
     <operation name="split_fasta">
-        <operationtype commandClass="EGAP::Command::SplitFasta" typeClass="Workflow::OperationType::Command" />
+        <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::SplitFasta" typeClass="Workflow::OperationType::Command" />
     </operation>
     <operation name="merge_predictions">
-        <operationtype commandClass="EGAP::Command::MergePredictions" typeClass="Workflow::OperationType::Command" />
+        <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::MergePredictions" typeClass="Workflow::OperationType::Command" />
     </operation>
     <operation name="cleanup_temp_files">
-        <operationtype commandClass="EGAP::Command::CleanupTempFiles" typeClass="Workflow::OperationType::Command" />
+        <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::CleanupTempFiles" typeClass="Workflow::OperationType::Command" />
     </operation>
 
     <operation name="contig_predict_genes" parallelBy="fasta_file">
@@ -73,19 +73,19 @@
         <link fromOperation="mask_rna_sequence"        fromProperty="masked_fasta_file"           toOperation="output connector"         toProperty="masked_fasta_file" />
 
         <operation name="make_temp_prediction_dir">
-            <operationtype commandClass="EGAP::Command::MakeTempPredictionDirectory" typeClass="Workflow::OperationType::Command" />
+            <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::MakeTempPredictionDirectory" typeClass="Workflow::OperationType::Command" />
         </operation>
         <operation name="repeat_masker">
-            <operationtype commandClass="GAP::Command::RepeatMasker" typeClass="Workflow::OperationType::Command" />
+            <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::RepeatMasker" typeClass="Workflow::OperationType::Command" />
         </operation>
         <operation name="rfamscan">
-            <operationtype commandClass="EGAP::Command::GenePredictor::RfamScan" typeClass="Workflow::OperationType::Command" />
+            <operationtype commandClass="Genome::Model::Tools::GenePredictor::RfamScan" typeClass="Workflow::OperationType::Command" />
         </operation>
         <operation name="rnammer">
-            <operationtype commandClass="EGAP::Command::GenePredictor::RNAmmer" typeClass="Workflow::OperationType::Command" />
+            <operationtype commandClass="Genome::Model::Tools::GenePredictor::RNAmmer" typeClass="Workflow::OperationType::Command" />
         </operation>
         <operation name="trnascan">
-            <operationtype commandClass="EGAP::Command::GenePredictor::tRNAscan" typeClass="Workflow::OperationType::Command" />
+            <operationtype commandClass="Genome::Model::Tools::GenePredictor::tRNAscan" typeClass="Workflow::OperationType::Command" />
         </operation>
         <operation name="wait_rna_prediction">
             <operationtype typeClass="Workflow::OperationType::Block">
@@ -95,13 +95,13 @@
             </operationtype>
         </operation>
         <operation name="mask_rna_sequence">
-            <operationtype commandClass="EGAP::Command::MaskRnaSequence" typeClass="Workflow::OperationType::Command" />
+            <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::MaskRnaSequence" typeClass="Workflow::OperationType::Command" />
         </operation>
         <operation name="snap">
-            <operationtype commandClass="EGAP::Command::GenePredictor::SNAP" typeClass="Workflow::OperationType::Command" />
+            <operationtype commandClass="Genome::Model::Tools::GenePredictor::SNAP" typeClass="Workflow::OperationType::Command" />
         </operation>
         <operation name="fgenesh">
-            <operationtype commandClass="EGAP::Command::GenePredictor::Fgenesh" typeClass="Workflow::OperationType::Command" />
+            <operationtype commandClass="Genome::Model::Tools::GenePredictor::Fgenesh" typeClass="Workflow::OperationType::Command" />
         </operation>
         <operation name="wait_gene_prediction">
             <operationtype typeClass="Workflow::OperationType::Block">
