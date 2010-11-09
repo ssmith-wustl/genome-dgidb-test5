@@ -362,6 +362,19 @@ sub annotation_file {
     return;
 }
 
+sub rRNA_MT_file {
+    my $self = shift;
+    my $suffix = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to rRNA_MT_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_annotation_data_directory .'/rRNA_MT.'. $suffix;
+    if (-f $file_name) {
+        return $file_name;
+    }
+    return;
+}
+
 # Cleans up any mess left by the caching process
 sub _caching_cleanup {
     my ($self, $lock) = shift;
