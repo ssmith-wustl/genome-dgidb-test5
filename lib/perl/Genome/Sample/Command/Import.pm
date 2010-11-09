@@ -25,6 +25,16 @@ class Genome::Sample::Command::Import {
             is => 'Text',
             doc => 'Sample name to use or create',
         },
+        library_name => { 
+            is => 'Text',
+            doc => 'Library name to use or create',
+            is_optional => 1,
+        },
+        library_type => { 
+            is => 'Text',
+            doc => 'Library type to use if letting the command autogenerate a library (e.g. microarraylib, extlibs, etc)',
+            is_optional => 1,
+        },
         sample_attrs => {
             is => 'Text',
             is_optional => 1,
@@ -79,7 +89,7 @@ sub execute {
         or return;
 
     # Library
-    $self->_create_library
+    $self->_get_or_create_library
         or return;
 
     return 1;
@@ -339,13 +349,24 @@ sub _get_or_create_nomenclature {
     return 1;
 }
 
-sub _create_library {
+sub _get_or_create_library {
     my $self = shift;
 
     $self->status_message('Creating library: '.Dumper({ sample_id => $self->_sample->id }));
-    my $library = Genome::Library->create(
-        sample_id => $self->_sample->id,
-    );
+
+    my $library;
+    if ($self->library_name) {
+        $library = Genome::Library->get(name=>$self->library_name);
+    } else {
+        if (!$self->library_type) {
+            $self->_bail('You must have a library type (microarraylib, extlibs, etc) defined if letting me autogenerate a library');
+            return;
+        }
+        $library = Genome::Library->create(
+             name => $self->_sample->name .  '-' . $self->library_type,
+             sample_id => $self->_sample->id,
+        );
+    }
     if ( not defined $library ) {
         $self->_bail('Could not create library to import sample');
         return;

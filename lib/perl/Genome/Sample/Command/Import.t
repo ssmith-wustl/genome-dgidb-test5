@@ -28,6 +28,7 @@ my $import = Genome::Sample::Command::Import->create(
     taxon_name => 'klingon',
     individual_name => $individual_name,
     sample_name => $sample_name,
+    library_type => 'extlibs',
 );
 $import->dump_status_messages(1);
 ok($import, 'create');
@@ -38,6 +39,7 @@ $import = Genome::Sample::Command::Import->create(
     taxon_name => 'human',
     individual_name => $individual_name,
     sample_name => $sample_name,
+    library_type => '-extlibs',
     sample_attrs => 'organ_name=blood,tissue_desc=G_DNA_blood' # these exist
 );
 $import->dump_status_messages(1);
