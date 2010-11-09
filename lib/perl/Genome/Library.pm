@@ -28,29 +28,6 @@ class Genome::Library {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    return if not defined $self;
-
-    if ( $self->name ) {
-        $self->error_message("Cannot set library name. It is derived from the sample name.");
-        $self->delete;
-        return;
-    }
-
-    if ( not defined $self->sample ) {
-        $self->error_message('No sample found for id: '.$self->sample_id);
-        $self->delete;
-        return;
-    }
-
-    my @sample_libraries = $self->sample->libraries;
-    my @sample_external_librairies = grep { defined $_->name and $_->name =~ /\-extlib\d+$/ } @sample_libraries;
-    $self->name($self->sample->name.'-extlib'.(scalar(@sample_external_librairies) + 1));
-
-    return $self;
-}
 
 1;
 

@@ -25,6 +25,11 @@ my %properties = (
         is => 'Text',
         doc => 'sample name for imported file, like TCGA-06-0188-10B-01D',
     },
+    library_name => {
+        is => 'Text',
+        doc => 'library name for imported file, like TCGA-06-0188-10B-01D-microarraylib',
+        is_optional => 1,
+    },
     import_source_name => {
         is => 'Text',
         doc => 'source name for imported file, like Broad Institute',
@@ -58,6 +63,11 @@ my %properties = (
         doc => 'this is only needed if the sample being used is not already in the database.',
         is_optional => 1,
     },
+    _library => {
+        is=> 'Genome::Library',
+        is_transient => 1,
+        is_optional => 1,
+    }
 );
     
 class Genome::InstrumentData::Command::Import::Microarray {
@@ -103,6 +113,8 @@ sub process_imported_files {
         next if $property_name =~ /^(species|reference)_name$/;
         next if $property_name eq "allocation";
         next if $property_name eq "original_data_files";
+        next if $property_name eq "_library";
+        next if $property_name eq "library_name";
         $params{$property_name} = $self->$property_name if defined($self->$property_name);
     }
 
@@ -122,6 +134,23 @@ sub process_imported_files {
         $self->error_message("Could not find sample by the name of: ".$sample_name.". To continue, add the sample and rerun.");
         die $self->error_message;
     }
+
+    my $library;
+    if ($self->library_name) {
+        unless ($library = Genome::Library->get(name=>$self->library_name)) {
+            $self->error_message("Can't find library by name of " . $self->library_name . " To continue please give a correct library name"); 
+        }
+    } else {
+        unless ($library = Genome::Library->get(name=>$genome_sample->name."-microarraylib")) {
+            $library = Genome::Library->create(name=>$genome_sample->name . "-microarraylib", sample=>$genome_sample);
+        }
+        unless ($library) {
+            $self->error_message("Can't find library by name of " . $genome_sample->name. "-microarraylib and can't create one either.");
+            die $self->error_message;
+        }
+    }
+    $self->_library($library);
+    $params{library_id} = $library->id;
     
     my $sample_id = $genome_sample->id;
     $self->status_message("genome sample $sample_name has id: $sample_id");
