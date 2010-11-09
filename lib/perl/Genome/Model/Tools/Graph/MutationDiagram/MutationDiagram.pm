@@ -1,3 +1,4 @@
+#TODO:: Remove the dependancies on the MG namespace
 #----------------------------------
 # $Authors: dlarson bshore $
 # $Date: 2008-09-16 16:33:54 -0500 (Tue, 16 Sep 2008) $
@@ -12,10 +13,6 @@ use strict;
 use warnings;
 use Carp;
 
-use MPSampleData::Transcript;
-use MG::Transform::Process::MutationCSV;
-use MG::Validate::AminoAcidChange;
-use Jalview::Feature::Domain;
 use FileHandle;
 use Genome;
 
@@ -32,9 +29,24 @@ sub new {
     my ($class, %arg) = @_;
 
     my $self = {
-        _mutation_file => $arg{maf_file} || $arg{annotation} || '',
+        _mutation_file => $arg{annotation} || '',
         _basename => $arg{basename} || './',
+        _reference_transcripts => $arg{reference_transcripts} || '',
     };
+
+    my ($model_name, $version) = split('/', $self->{_reference_transcripts});
+    my $model = Genome::Model->get(name => $model_name);
+    unless ($model){
+        $self->error_message("couldn't get reference transcripts set for $model_name");
+        return;
+    }
+    my $build = $model->build_by_version($version);
+    unless ($build){
+        $self->error_message("couldn't get build from reference transcripts set $model_name");
+        return;
+    }
+    $self->{_build} = $build;
+
     my @custom_domains =();
     if(defined($arg{custom_domains})) {
         my @domain_specification = split(',',$arg{custom_domains});
@@ -57,10 +69,7 @@ sub new {
     }
     $self->{_hugos} = \@hugos;
     bless($self, ref($class) || $class);
-    if($arg{maf_file}) {
-        $self->Maf();
-    }
-    elsif($arg{annotation}) {
+    if($arg{annotation}) {
         $self->Annotation;
     }
     else {
@@ -73,6 +82,8 @@ sub new {
 sub Annotation {
     #loads from annotation file format
     my $self = shift;
+
+    my $build = $self->{_build};
     my $annotation_file = $self->{_mutation_file};
     my $fh = new FileHandle;
     unless($fh->open("$annotation_file")) {
@@ -90,143 +101,75 @@ sub Annotation {
         chomp $line;
         next if $line =~/^chromosome/;
         my @fields = split /\t/, $line;
-        my ($hugo,$transcript,$class,$aa_change) = @fields[6,7,13,15];
+        my ($hugo,$transcript_name,$class,$aa_change) = @fields[6,7,13,15];
         if($graph_all || exists($hugos{$hugo})) {
             #add to the data hash for later graphing
-            my ($residue1, $res_start, $residue2, $res_stop, $new_residue) = MG::Validate::AminoAcidChange::Check($aa_change);
+            Genome::Model::Tools::Annotate::AminoAcidChange->class();  # Get the module loaded
+            my ($residue1, $res_start, $residue2, $res_stop, $new_residue) = @{Genome::Model::Tools::Annotate::AminoAcidChange::check_amino_acid_change_string(amino_acid_change_string => $aa_change)};
             my $mutation = $aa_change;
             $mutation =~ s/p\.//g;
-            unless(defined($transcript) && $transcript !~ /^\s*$/) {
+            unless(defined($transcript_name) && $transcript_name !~ /^\s*$/) {
                 next;
             }
 
-            my $dom = new Jalview::Feature::Domain();
-            $dom->query_domain_features('-transcript-list' => [ $transcript ]);
-            my (@features) = @{ $dom->get_features(); };
+            my $transcript;
+            my @features;
+            for my $data_directory ($build->determine_data_directory){
+                $transcript = Genome::Transcript->get(data_directory => $data_directory, transcript_name => $transcript_name);
+                next unless $transcript;
+                my @transcript_features = Genome::InterproResult->get(data_directory => $data_directory, transcript_name => $transcript_name, chrom_name => $transcript->chrom_name);
+                @features = (@features, @transcript_features);
+            }
             my @domains;
             if($self->{_custom_domains}->[0]) {
                 push @domains, @{$self->{_custom_domains}};
             }
-            my $protein_length = get_protein_length($transcript);
+            my $protein_length = get_protein_length($self, $transcript_name);
             foreach my $feature (@features) {
-                my ($name) = $feature->get_tag_values("domain");
-                my ($type, @domain_names) = split('_',$name);
-                my $domain_name = join('_',@domain_names);
+                my ($source, @domain_name_parts) = split(/_/, $feature->name);
+                my $domain_name; #Some domain names are underbar delimited, but sources aren't.  Reassemble the damn domain name if necessary
+                if (scalar (@domain_name_parts) > 1){
+                    $domain_name = join("_", @domain_name_parts);
+                }else{
+                    $domain_name = pop @domain_name_parts;
+                }
                 push @domains, {
                     name => $domain_name,
-                    type => $type,
+                    source => $source, 
                     start => $feature->start,
-                    end => $feature->end
+                    end => $feature->stop
                 };
             }
-            $data{$hugo}{$transcript}{length} = $protein_length;
-            push @{$data{$hugo}{$transcript}{domains}}, @domains;
+            $data{$hugo}{$transcript_name}{length} = $protein_length;
+            push @{$data{$hugo}{$transcript_name}{domains}}, @domains;
 
             if (defined($res_start)) {
-                unless (exists($data{$hugo}{$transcript}{mutations}{$mutation})) {
-                    $data{$hugo}{$transcript}{mutations}{$mutation} = 
+                unless (exists($data{$hugo}{$transcript_name}{mutations}{$mutation})) {
+                    $data{$hugo}{$transcript_name}{mutations}{$mutation} = 
                     {
                         res_start => $res_start,
                         class => $class,
                     };
                 }
-                $data{$hugo}{$transcript}{mutations}{$mutation}{frequency} += 1;
+                $data{$hugo}{$transcript_name}{mutations}{$mutation}{frequency} += 1;
             }
         }
     }
     $self->{_data} = \%data;
 }
 
-
-sub Maf {
-    my ($self) = @_;
-    my %maf_args = (
-        all => 1,
-        no_process => 1,
-        version => 3, #TODO change to parameter
-    );
-    my $parser = MG::Transform::Process::MutationCSV->new;
-    my $fh = new FileHandle;
-    my $mutation_file = $self->{_mutation_file};
-    unless ($fh->open (qq{$mutation_file})) {
-        die "Could not open csv file '$mutation_file' for reading $$";
-    }
-    print STDERR "Parsing maf file...\n";
-    my $mutations = $parser->Parse($fh,$mutation_file,%maf_args);
-    $fh->close;
-
-    my $hugo;
-    my $transcript;
-    if ($self->{_hugos}->[0] eq 'ALL') {
-        my @hugos = (keys %{$mutations});
-        $self->{_hugos} = \@hugos;
-    }
-    foreach $hugo (@{$self->{_hugos}}) {
-        if(exists($mutations->{$hugo})) {
-            foreach my $sample (keys %{$mutations->{$hugo}}) {
-                foreach my $line_num (keys %{$mutations->{$hugo}{$sample}}) {
-                    my $aa_change = $mutations->{$hugo}{$sample}{$line_num}{PROT_STRING};
-#               my $aa_change = $mutations->{$hugo}{$sample}{$line_num}{AA_CHANGE};
-                    unless (defined($aa_change)) {
-                        next;
-                    }
-                    my $type = $mutations->{$hugo}{$sample}{$line_num}{VARIANT_TYPE};
-                    my $class = $mutations->{$hugo}{$sample}{$line_num}{VARIANT_CLASSIFICATION};
-                    $class =~ s/_mutation$//i;
-                    my ($residue1, $res_start, $residue2, $res_stop, $new_residue) = MG::Validate::AminoAcidChange::Check($aa_change);
-                    my $mutation = $aa_change;
-                    $mutation =~ s/p\.//g;
-
-                    $transcript = $mutations->{$hugo}{$sample}{$line_num}{TRANSCRIPT};
-                    unless (defined($transcript) && $transcript !~ /^\s*$/) {
-                        next;
-                    }
-                    my $dom = new Jalview::Feature::Domain();
-                    $dom->query_domain_features('-transcript-list' => [ $transcript ]);
-                    my (@features) = @{ $dom->get_features(); };
-                    my @domains;
-                    my $protein_length = get_protein_length($transcript);
-                    foreach my $feature (@features) {
-                        my ($name) = $feature->get_tag_values("domain");
-                        my ($type, @domain_names) = split('_',$name);
-                        my $domain_name = join('_',@domain_names);
-                        push @domains, {
-                            name => $domain_name,
-                            type => $type,
-                            start => $feature->start,
-                            end => $feature->end
-                        };
-                    }
-                    $self->{_data}{$hugo}{$transcript}{length} = $protein_length;
-                    push @{$self->{_data}{$hugo}{$transcript}{domains}}, @domains;
-                    if (defined($res_start)) {
-                        unless (exists($self->{_data}{$hugo}{$transcript}{mutations}{$mutation})) {
-                            $self->{_data}{$hugo}{$transcript}{mutations}{$mutation} = 
-                            {
-                                res_start => $res_start,
-                                #                      maf => $mutations->{$hugo}{$sample}{$line_num},
-                                type => $type,
-                                class => $class
-                            };
-                        }
-                        $self->{_data}{$hugo}{$transcript}{mutations}{$mutation}{frequency} += 1;
-                    }
-                }
-            }
-        }
-    }
-
-    return $self;
-}
-
 sub get_protein_length{
-    #This needs to reference our annotation database to yield the best results...
-    #Going to hardcode this here. In the future we will need to have annotation options exposed...
-    
-    my ($tr)=MPSampleData::Transcript->search("transcript_name"=>shift);
-    my ($protein)=MPSampleData::Protein->search("transcript_id"=>$tr->transcript_id);
-    return 0 unless($protein);
-    return length($protein->amino_acid_seq);
+    my $self = shift; #TODO: this is not at all kosher, inuitive, or good.  Fix it when this becomes a UR object 
+    my $transcript_name = shift;
+    my $build = $self->{_build};
+    my $transcript;
+    for my $dir ($build->determine_data_directory){
+        $transcript = Genome::Transcript->get(data_directory => $dir, transcript_name => $transcript_name);
+        last if $transcript;
+    }
+    return 0 unless $transcript;
+    return 0 unless $transcript->protein;
+    return length($transcript->protein->amino_acid_seq);
 } 
 
 sub Data {
@@ -278,13 +221,13 @@ sub Draw {
         $document->content_view);
     $backbone->draw;
 
-    my @colors = qw( red green orange blue cyan yellow violet brown magenta aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blueviolet burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk crimson darkblue darkcyan darkgoldenrod darkgray darkgreen darkgrey darkkhaki darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen darkslateblue darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue dimgray dimgrey dodgerblue firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite gold goldenrod greenyellow honeydew hotpink indianred indigo ivory khaki lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan lightgoldenrodyellow lightgray lightgreen lightgrey lightpink lightsalmon lightseagreen lightskyblue lightsteelblue lightyellow lime limegreen linen maroon mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen mediumslateblue mediumspringgreen mediumturquoise mediumvioletred midnightblue mintcream mistyrose moccasin navajowhite navy oldlace olive olivedrab orangered orchid palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum powderblue purple rosybrown royalblue saddlebrown salmon sandybrown seagreen seashell sienna silver skyblue slateblue slategray slategrey snow springgreen steelblue tan teal thistle tomato turquoise wheat whitesmoke yellowgreen );
+    my @colors = qw( aliceblue azure blanchedalmond burlywood coral cyan darkgray darkmagenta darkred darkslategray deeppink dodgerblue fuchsia goldenrod grey indigo lavenderblush lightcoral lightgreen lightseagreen lightsteelblue mediumblue mediumslateblue midnightblue olivedrab palegoldenrod papayawhip plum rosybrown sandybrown slategrey tan );
     my $color = 0;
     my %domains;
     my %domains_location;
     my %domain_legend;
     foreach my $domain (@{$domains}) {
-        if ($domain->{type} eq 'superfamily') {
+        if ($domain->{source} eq 'superfamily') {
             next;
         }
         my $domain_color;
@@ -324,15 +267,15 @@ sub Draw {
 
     my @mutation_objects;
     my %mutation_class_colors = (
-        'frame_shift_del' => 'blue',
-        'frame_shift_ins' => 'orange',
-        'in_frame_del' => 'green',
-        'missense' => 'cyan',
-        'nonsense' => 'yellow',
-        'splice_site_del' => 'violet',
-        'splice_site_indel' => 'brown',
-        'splice_site_snp' => 'purple',
-        'other' => 'red'
+        'frame_shift_del' => 'darkolivegreen',
+        'frame_shift_ins' => 'crimson',
+        'in_frame_del' => 'gold',
+        'missense' => 'cornflowerblue',
+        'nonsense' => 'goldenrod',
+        'splice_site_del' => 'orchid',
+        'splice_site_ins' => 'saddlebrown',
+        'splice_site_snp' => 'lightpink',
+        'other' => 'black'
     );
     my %mutation_legend;
     my $max_frequency = 0;

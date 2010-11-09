@@ -151,9 +151,21 @@ sub lookup_conservation_score {
     foreach my $pos (@{$coordinates})
     {
         # start seeking until the first position
-        $fh->seek(($pos -1)*2,0);
+        my $seekpos = ($pos -1)*2;
+        unless ($fh->seek($seekpos,0) ) {
+            Carp::croak("seek to pos $seekpos of $file failed: $!");
+        }
+
         my $tmpval;
-        $fh->read($tmpval,2);
+        my $read_result = $fh->sysread($tmpval,2);
+        if (! defined ($read_result) ) {
+            Carp::croak("Reading from pos $seekpos of $file failed: $!");
+        } elsif (!$read_result) {
+            Carp::croak("Attempt to read from pos $seekpos of $file resulted in EOF");
+        } elsif ($read_result != 2) {
+            Carp::croak("Short read from pos $seekpos of $file.  Asked for 2 bytes, got $read_result");
+        }
+
         # unpack value, divide by 1000 and push onto array.
         my $score = unpack("n",$tmpval)/1000;
         push(@results, [ $pos, $score ]);

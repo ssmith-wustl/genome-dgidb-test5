@@ -5,19 +5,11 @@ use warnings;
 
 use GAP::Job::RfamScan;
 
-use Workflow;
-
 use Bio::SeqIO;
 
 class GAP::Command::GenePredictor::RfamScan {
     is => ['GAP::Command::GenePredictor'],
 };
-
-operation_io GAP::Command::GenePredictor::RfamScan {
-    input  => [ 'fasta_file' ],
-    output => [ 'bio_seq_feature' ]
-};
-
 
 sub sub_command_sort_position { 10 }
 

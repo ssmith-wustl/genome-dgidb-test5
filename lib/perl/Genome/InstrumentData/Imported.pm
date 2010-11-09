@@ -9,6 +9,7 @@ use warnings;
 
 use Genome;
 use File::stat;
+use File::Path;
 
 class Genome::InstrumentData::Imported {
     is => [ 'Genome::InstrumentData','Genome::Utility::FileSystem' ],
@@ -164,13 +165,14 @@ sub delete {
             callback => sub {
                 for my $allocation (@allocations) {
                     my $id = $allocation->id;
-                    $self->status_message('Now deleting allocation with owner_id = ' . $id);
+                    print 'Now deleting allocation with owner_id = ' . $id . "\n";
                     my $path = $allocation->absolute_path;
                     unless (rmtree($path)) {
-                        $self->error_message("could not rmtree $path");
+                        print STDERR "ERROR: could not rmtree $path\n";
                         return;
                     }
                     $allocation->deallocate; 
+                    print "Deletion complete.\n";
                 }
                 return 1;
             }
