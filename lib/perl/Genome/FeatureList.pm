@@ -28,27 +28,16 @@ class Genome::FeatureList {
         reference => { is => 'Genome::Model::Build::ImportedReferenceSequence', id_by => 'reference_id' },
         subject_id => { is => 'NUMBER', len => 10, doc => 'ID of the subject to which the features are relevant' },
         subject => { is => 'Genome::Model::Build', id_by => 'subject_id' },
-        file_id => { is => 'NUMBER', len => 20, doc => 'ID of the file storage for the BED file in LIMS' },
-        disk_allocation   => { is => 'Genome::Disk::Allocation', calculate_from => [ 'class', 'id' ],
-            calculate => q(
-                my $disk_allocation = Genome::Disk::Allocation->get(
-                    owner_class_name => $class,
-                    owner_id => $id,
-                );
-                return $disk_allocation;
-            )
-        },
+        disk_allocation   => { is => 'Genome::Disk::Allocation', is_optional => 1, is_many => 1, reverse_as => 'owner', },
         file_path => {
-            is => 'Text',
-            calculate_from => ['disk_allocation'],
-            calculate => q{
-                if($disk_allocation) {
+               is => 'Text',
+               calculate_from => ['disk_allocation'],
+               calculate => q{
+                  if($disk_allocation) {
                     my $directory = $disk_allocation->absolute_path;
-                    return join('/', $directory, $self->id . '.bed');
-                } else {
-                    return $self->_resolve_lims_bed_file;
-                }
-            },
+                       return join('/', $directory, $self->id . '.bed');
+                  }
+               }
         },
 
         #TODO This will point to a subclass of Genome::Feature at such point as that class exists.
@@ -162,40 +151,6 @@ sub _cleanup_allocation_sub {
            $allocation->deallocate; 
         }
     };
-}
-
-sub _resolve_lims_bed_file {
-    my $self = shift;
-
-    unless($self->_lims_file_path) {
-        if($self->file_id) {
-            my $temp_file = $self->_resolve_lims_bed_file_for_file_id($self->file_id, $self->id);
-            $self->_lims_file_path($temp_file);
-        } else {
-            $self->error_message('No File ID to get BED file from LIMS!');
-            die $self->error_message;
-        }
-    }
-
-    return $self->_lims_file_path;
-}
-
-sub _resolve_lims_bed_file_for_file_id {
-    my $class = shift;
-    my $file_id = shift;
-    my $file_name = shift;
-
-    my $file_storage = Genome::Site::WUGC::FileStorage->get(file_storage_id => $file_id);
-    unless($file_storage) {
-        $class->error_message('Could not find the file storage for ID #' . $file_id);
-        die $class->error_message;
-    }
-    my $content = $file_storage->content;
-        
-    my $temp_file = Genome::Utility::FileSystem->create_temp_file_path( $file_name . '.bed' );
-    Genome::Utility::FileSystem->write_file($temp_file, $content);
-
-    return $temp_file;
 }
 
 sub verify_file_md5 {
