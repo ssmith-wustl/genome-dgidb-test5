@@ -80,12 +80,13 @@ sub execute {
     }
 
     #resolve refseq
-    my $ref_build_name = $self->refseq_build_name;
-    my ( $ref_model_name, $ref_build_version ) = $ref_build_name =~ /^(\S+)-build(\S*)$/;
-    my $ref_model = Genome::Model->get( name=>$ref_model_name );
-    my $ref_build = $ref_model->build_by_version( $ref_build_version );
-    my $ref_index = $ref_build->data_directory . "/all_sequences.fa.fai";
-    #my $ref_index = "/gscmnt/xp4100/info/annotation/ckandoth/bitmasks/all_sequences.fa.fai";
+    #my $ref_build_name = $self->refseq_build_name;
+    #my ( $ref_model_name, $ref_build_version ) = $ref_build_name =~ /^(\S+)-build(\S*)$/;
+    #my $ref_model = Genome::Model->get( name=>$ref_model_name );
+    #my $ref_build = $ref_model->build_by_version( $ref_build_version );
+    #my $ref_dir = $ref_build->data_directory;
+    my $ref_dir = "/gscmnt/gc2106/info/medseq/ckandoth/refseq"; #This is much faster
+    my $ref_index = $ref_dir . "/all_sequences.fa.fai";
 
     #WigToBitmask.pm contains some useful functions for handling bitmasks
     my $bitmasker = Genome::Model::Tools::Bmr::WigToBitmask->create(
@@ -93,12 +94,9 @@ sub execute {
     );
 
     #Load bitmasks
-    my $at_bitmask_file = $ref_build->data_directory . "/all_sequences.AT_bitmask";
-    my $cpg_bitmask_file = $ref_build->data_directory . "/all_sequences.CpG_bitmask";
-    my $cg_bitmask_file = $ref_build->data_directory . "/all_sequences.CG_bitmask";
-    #my $at_bitmask_file = "/gscmnt/xp4100/info/annotation/ckandoth/bitmasks/all_sequences.AT_bitmask";
-    #my $cpg_bitmask_file = "/gscmnt/xp4100/info/annotation/ckandoth/bitmasks/all_sequences.CpG_bitmask";
-    #my $cg_bitmask_file = "/gscmnt/xp4100/info/annotation/ckandoth/bitmasks/all_sequences.CG_bitmask";
+    my $at_bitmask_file = $ref_dir . "/all_sequences.AT_bitmask";
+    my $cpg_bitmask_file = $ref_dir . "/all_sequences.CpG_bitmask";
+    my $cg_bitmask_file = $ref_dir . "/all_sequences.CG_bitmask";
     my $at_bitmask = $bitmasker->read_genome_bitmask( $at_bitmask_file );
     my $cpg_bitmask = $bitmasker->read_genome_bitmask( $cpg_bitmask_file );
     my $cg_bitmask = $bitmasker->read_genome_bitmask( $cg_bitmask_file );

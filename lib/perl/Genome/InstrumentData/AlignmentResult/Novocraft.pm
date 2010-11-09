@@ -130,3 +130,5 @@ sub aligner_params_for_sam_header {
 }
 
 sub fillmd_for_sam { return 0; }
+
+sub _check_read_count { return 1; }

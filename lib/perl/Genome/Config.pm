@@ -6,6 +6,32 @@ package Genome::Config;
 use strict;
 use warnings;
 
+BEGIN {
+    if (my $config = $ENV{GENOME_CONFIG}) {
+        # call the specified configuration module;
+        eval "use Genome::Config::$config";
+        die $@ if $@;
+    }
+    else {
+        # look for a config module matching all or part of the hostname 
+        use Sys::Hostname;
+        my $hostname = Sys::Hostname::hostname();
+        my @hwords = reverse split('\.',$hostname);
+        while (@hwords) {
+            my $pkg = 'Genome::Config::' . join("::",@hwords);
+            local $SIG{__DIE__};
+            local $SIG{__WARN__};
+            eval "use $pkg";
+            if ($@) {
+                pop @hwords;
+                next;
+            }
+            else {
+                last;
+            }
+        }
+    }
+}
 use UR;
 use Sys::Hostname;
 

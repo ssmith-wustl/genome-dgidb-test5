@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use GD::Graph::lines;
 
 class Genome::Model::Tools::RefCov::Progression {
     is => ['Command'],

@@ -5,6 +5,7 @@ use warnings;
 
 use Genome;
 use File::Basename;
+use GD::Graph;
 
 class Genome::Model::Tools::RefCov {
     is => ['Command'],

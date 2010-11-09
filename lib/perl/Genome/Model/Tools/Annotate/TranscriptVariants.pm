@@ -386,7 +386,7 @@ sub execute {
     while ( my $variant = $variant_svr->next ) {
 
         END {
-            print STDERR "\n\nThe last variant we worked on is\n",Data::Dumper::Dumper($variant),"\n\n" unless ($we_are_done_flag);
+            print STDERR "\n\nThe last variant we worked on is\n",Data::Dumper::Dumper($variant),"\n\n" if ($variant and ! $we_are_done_flag);
         };
 
         $variant->{type} = $self->infer_variant_type($variant);

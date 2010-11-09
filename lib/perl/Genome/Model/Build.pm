@@ -1113,6 +1113,10 @@ sub _verify_build_is_not_abandoned_and_set_status_to {
 sub abandon {
     my $self = shift;
 
+    if ($self->status eq 'Abandoned') {
+        return 1;
+    }
+
     # Abandon events
     $self->_abandon_events
         or return;

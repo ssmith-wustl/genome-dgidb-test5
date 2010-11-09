@@ -77,16 +77,18 @@ sub create_aligner_tool {
         );
         my $fastq_directory = $prepare_reads->fastq_directory;
         my $left_reads = $fastq_directory.'/'. $instrument_data->read1_fastq_name;
-        unless (-s $left_reads) {
-            $self->error_message('Failed to find left reads '. $left_reads);
-            return;
-        }
+        #The fastq files are now removed after alignment
+        #unless (-s $left_reads) {
+        #    $self->error_message('Failed to find left reads '. $left_reads);
+        #    return;
+        #}
         push @left_reads, $left_reads;
         my $right_reads = $fastq_directory.'/'. $instrument_data->read2_fastq_name;
-        unless (-s $right_reads) {
-            $self->error_message('Failed to find right reads '. $right_reads);
-            return;
-        }
+        #The fastq files are now removed after alignment
+        #unless (-s $right_reads) {
+        #    $self->error_message('Failed to find right reads '. $right_reads);
+        #    return;
+        #}
         push @right_reads, $right_reads;
         my $median_insert_size = $instrument_data->median_insert_size;
         my $sd_above_insert_size = $instrument_data->sd_above_insert_size;
