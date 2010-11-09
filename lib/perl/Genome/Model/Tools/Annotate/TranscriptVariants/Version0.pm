@@ -1,4 +1,4 @@
-package Genome::Transcript::VariantAnnotator;
+package Genome::Model::Tools::Annotate::TranscriptVariants::Version0;
 #:adukes all annotation methods could be cleaned and documented for better clarity, see cds_exon_modified for an improvement over the current method.  Consider differentiating more between annotating snps/dnps and indeals as opposed to have case statements sprinkled liberally throughought, unit testing for every method needs to happen but doesn't
 
 use strict;
@@ -14,12 +14,14 @@ use Bio::Tools::CodonTable;
 use DateTime;
 use Carp;
 
-class Genome::Transcript::VariantAnnotator{
+UR::Object::Type->define(
+    class_name => __PACKAGE__,
     is => 'UR::Object',
     has => [
         transcript_window => {
             is => 'Genome::Utility::Window::Transcript',
             id_by => 'transcript_window_id',
+            is_optional => 1,
         },
         annotation_build_version => {
             is => 'Text',
@@ -50,8 +52,13 @@ class Genome::Transcript::VariantAnnotator{
             default => 0,
             doc => 'If set, the entire modifed sequence of the transcript is placed in the output file for frameshift mutations, even if the modification is silent',
         },
+
+        build => { is => 'Genome::Model::Build', id_by => 'build_id', is_optional => 1 },
+        data_directory => { is => 'PATHNAME', is_optional => 1 },
+        flank_range => { is => 'Integer', is_optional => 1, default_value => 50000,
+                         doc => 'Range to look around for flanking regions of transcripts' },
     ]
-};
+);
 
 my %transcript_source_priorities = Genome::Info::AnnotationPriorities->transcript_source_priorities;
 my %transcript_status_priorities = Genome::Info::AnnotationPriorities->transcript_status_priorities;
@@ -148,6 +155,50 @@ sub prioritized_transcript{
     return $highest;
 }
 
+sub _create_new_transcript_window {
+    my($self,$chromosome_name) = @_;
+
+    if ($self->transcript_window and ! $self->build and ! $self->data_directory) {
+        # Original style where the caller sets up the window for us
+        return $self->transcript_window;
+    }
+
+    if (my $old_window = $self->transcript_window) {
+        $old_window->{'iterator'} = undef;
+        if (exists $old_window->{'db_committed'}) {
+            $old_window->{'db_committed'}->{'iterator'} = undef;
+        }
+        $old_window->delete();
+    }
+
+    my $transcript_iterator;
+    if ($self->build) {
+        $transcript_iterator = $self->build->transcript_iterator(chrom_name => $chromosome_name);
+    } else {
+        $transcript_iterator = Genome::Transcript->create_iterator(
+                                   data_directory => $self->data_directory,
+                                   chrom_name => $chromosome_name,
+                                );
+    }
+    unless ($transcript_iterator) {
+        $self->error_message("Couldn't get transcript_iterator for chromosome $chromosome_name!");
+        return;
+    }
+
+    my $transcript_window = Genome::Utility::Window::Transcript->create (
+                                iterator => $transcript_iterator,
+                                range => $self->flank_range
+                            );
+    unless ($transcript_window) {
+        $self->error_message("Couldn't create a transcript window from iterator for chromosome $chromosome_name!");
+        die;
+    }
+
+    return $transcript_window;
+}
+
+
+
 # Annotates all transcripts affected by a variant
 # Corresponds to none filter in Genome::Model::Tools::Annotate::TranscriptVariants
 sub transcripts {
@@ -166,6 +217,20 @@ sub transcripts {
 
         return { transcript_error => 'invalid_sequence_on_variant' }
     }
+
+    if (! $self->{'_last_variant'}
+        or
+        ! $self->transcript_window
+        or
+        ($self->{'_last_variant'}->{'chromosome_name'} ne $variant{'chromosome_name'})
+        or
+        ($self->{'_last_variant'}->{'start'} < $variant{'start'})
+    ) {
+        $self->transcript_window($self->_create_new_transcript_window($variant{'chromosome_name'}));
+        die "No transcript window" unless $self->transcript_window;
+    }
+
+    $self->{'_last_variant'} = \%variant;
 
     # TODO Change to use range variant start <-> variant stop
     my @transcripts_to_annotate = $self->transcript_window->scroll($variant{start});
