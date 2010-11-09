@@ -8,7 +8,7 @@ use warnings;
 
 use Genome;
 use File::Copy;
-use GSCApp;
+#use GSCApp;
 
 my %properties = (
     original_data_path => {
@@ -39,6 +39,7 @@ my %properties = (
     species_name => {
         is => 'Text',
         doc => 'species name for imported file, like human, mouse',
+        default => 'human',
         is_optional => 1,
     },
     description  => {
@@ -194,8 +195,9 @@ sub execute {
         ($md5_from_file) = split " ", $md5_from_file;
         chomp $md5_from_file;
     } else {
-        $self->error_message("Not able to locate a pre-calculated md5 sum at ".$bam_path.".md5");
-        die $self->error_message;
+        #TODO for now, this requirement for an md5 file will be waived.
+        $self->status_message("Not able to locate a pre-calculated md5 sum at ".$bam_path.".md5");
+        #die $self->error_message;
     }
     $self->status_message("Now calculating the MD5sum of the bam file to be imported, this will take a long time (many minutes) for larger (many GB) files.");
     my $md5 = Genome::Utility::FileSystem->md5sum($bam_path);

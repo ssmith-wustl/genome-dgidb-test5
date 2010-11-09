@@ -6,7 +6,16 @@ use warnings;
 use Genome;
 
 class Genome::Model::Build::Command::Abandon {
-    is => 'Genome::Model::Build::Command::Base',
+    is  => 'Genome::Model::Build::Command::Base',
+    has => [
+        builds => {
+            is                  => 'Genome::Model::Build',
+            is_many             => 1,
+            shell_args_position => 1,
+            doc => 'Build(s) to use. Resolved from command line via text string.',
+            require_user_verify => 1,
+        },
+    ],
 };
 
 sub sub_command_sort_position { 5 }
@@ -22,23 +31,26 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    my @builds = $self->builds;
+    my @builds      = $self->builds;
     my $build_count = scalar(@builds);
     my @errors;
     for my $build (@builds) {
         my $transaction = UR::Context::Transaction->begin();
         my $successful = eval { $build->abandon };
         if ($successful) {
-            $self->status_message("Successfully abandoned build (" . $build->__display_name__ . ").");
+            $self->status_message( "Successfully abandoned build ("
+                  . $build->__display_name__
+                  . ")." );
             $transaction->commit();
         }
         else {
-            push @errors, "Failed to abandon build (" . $build->__display_name__ . "): $@.";
+            push @errors,
+              "Failed to abandon build (" . $build->__display_name__ . "): $@.";
             $transaction->rollback;
         }
     }
 
-    $self->display_summary_report(scalar(@builds), @errors);
+    $self->display_summary_report( scalar(@builds), @errors );
 
     return !scalar(@errors);
 }

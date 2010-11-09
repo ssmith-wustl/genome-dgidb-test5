@@ -138,3 +138,7 @@ sub fillmd_for_sam {
     return $self->any_fillmd;
 }
 
+sub _check_read_count {
+    return 1;
+}
+

@@ -1,13 +1,4 @@
-
 package Genome::Project; 
-
-# Adaptor for GSC::Setup::Project
-#
-# Do NOT use this module from anything in the GSC schema,
-# though the converse will work just fine.
-#
-# This module should contain only UR class definitions,
-# relationships, and support methods.
 
 use strict;
 use warnings;

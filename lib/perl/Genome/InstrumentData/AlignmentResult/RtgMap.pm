@@ -223,9 +223,10 @@ sub aligner_params_for_sam_header {
     return "$cmd $aln_params"; 
 }
 
-sub fillmd_for_sam
-{
+sub fillmd_for_sam {
     return 1;
 }
 
-
+sub _check_read_count {
+    return 1;
+}

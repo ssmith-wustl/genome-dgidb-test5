@@ -54,6 +54,23 @@ sub ace_file {
     return $_[0]->edit_dir.'/velvet_asm.ace';
 }
 
+#for build diff testing
+
+sub files_ignored_by_diff {
+    return qw/ build.xml Log /;
+}
+
+sub dirs_ignored_by_diff {
+    return qw/ logs reports edit_dir /;
+}
+#TODO - it should test stats.txt and contigs.fa files but this will error since test method
+#thinks contigs.fa and supercontigs.fasta are multiple versions of the same file because of the
+#way it's grepping for the files .. stats.txt file exists in two places and test method does not
+#like that
+sub regex_files_for_diff { 
+    return qw/ Graph2 LastGraph Log PreGraph Roadmaps Sequences build.xml collated.fastq velvet_asm.afg /;
+}
+
 1;
 
 #$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Build/DeNovoAssembly/Velvet.pm $

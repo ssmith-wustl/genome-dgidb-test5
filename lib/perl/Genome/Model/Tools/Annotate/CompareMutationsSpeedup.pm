@@ -10,10 +10,9 @@ package Genome::Model::Tools::Annotate::CompareMutationsSpeedup;
    use Digest::MD5;
 
 #__SPECIAL GENOME CENTER PACKAGES
-   #use GSCApp;
+   ##use GSCApp;
    use MG::Transform::Process::MutationCSV;
    use MG::IO::Parse::Cosmic;
-   use MG::Validate::AminoAcidChange;
 
 class Genome::Model::Tools::Annotate::CompareMutationsSpeedup{
     is => 'Command',
@@ -213,8 +212,8 @@ if ($verbose) {print "Done Parsing Mutation File! Yippee!\n";}
 		   $histology_sub_1 = $parser[$histology_sub_1_col];
 		   $histology_sub_2 = $parser[$histology_sub_2_col];
 
-		   
-		   my ($residue1, $res_start, $residue2, $res_stop, $new_residue) = MG::Validate::AminoAcidChange::Check($amino);
+           Genome::Model::Tools::Annotate::AminoAcidChange->class(); 
+		   my ($residue1, $res_start, $residue2, $res_stop, $new_residue) = @{Genome::Model::Tools::Annotate::AminoAcidChange::check_amino_acid_change_string(amino_acid_change_string =>$amino)};
 		   if (defined $res_start){
 		   	if ($res_start == $res_stop){
 				$residue_match{$gene}{$res_start}{$res_stop}{$residue1}{$residue2}++;
@@ -329,7 +328,8 @@ if ($verbose) {print ".";}   #report that we are starting a sample (For commandl
 	chomp($line_num);
 	my %results_hash;
 #parse the amino acid string
-	my ($residue1, $res_start, $residue2, $res_stop, $new_residue) = MG::Validate::AminoAcidChange::Check($aa_change);
+    Genome::Model::Tools::Annotate::AminoAcidChange->class();
+	my ($residue1, $res_start, $residue2, $res_stop, $new_residue) =@{Genome::Model::Tools::Annotate::AminoAcidChange::check_amino_acid_change_string(amino_acid_change_string => $aa_change)};
 	if(!$residue2 || $residue2 eq ' '){
 		if ($verbose) {print "Skipping Silent Mutation";}
 		my $createspreadsheet = "$line_num\t$fileline{$line_num}\tSkipped - Silent Mutation\tSkipped - Silent Mutation";

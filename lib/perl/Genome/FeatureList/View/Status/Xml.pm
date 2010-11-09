@@ -5,36 +5,6 @@ use warnings;
 
 use Genome;
 
-=cut
-
-        file_id => { is => 'NUMBER', len => 20, doc => 'ID of the file storage for the BED file in LIMS' },
-        disk_allocation   => { is => 'Genome::Disk::Allocation', calculate_from => [ 'class', 'id' ],
-            calculate => q(
-                my $disk_allocation = Genome::Disk::Allocation->get(
-                    owner_class_name => $class,
-                    owner_id => $id,
-                );
-                return $disk_allocation;
-            )
-        },
-        file_path => {
-            is => 'Text',
-            calculate_from => ['disk_allocation'],
-            calculate => q{
-                if($disk_allocation) {
-                    my $directory = $disk_allocation->absolute_path;
-                    return join('/', $directory, $self->id . '.bed');
-                } else {
-                    return $self->_resolve_lims_bed_file;
-                }
-            },
-        },
-
-        #TODO This will point to a subclass of Genome::Feature at such point as that class exists.
-        content_type => { is => 'VARCHAR2', len => 255, doc => 'The kind of features in the list' },
-
-=cut
-
 class Genome::FeatureList::View::Status::Xml {
     is => 'Genome::View::Status::Xml',
     has_constant => [
@@ -112,7 +82,7 @@ class Genome::FeatureList::View::Status::Xml {
                         }
                     ],
                 },
-                'file_id',
+                'file_path',
                 'content_type',
                 {
                     name => 'disk_allocation',
