@@ -39,6 +39,7 @@ my %properties = (
     species_name => {
         is => 'Text',
         doc => 'species name for imported file, like human, mouse',
+        default => 'human',
         is_optional => 1,
     },
     description  => {
