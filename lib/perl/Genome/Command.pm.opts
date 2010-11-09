@@ -108,6 +108,30 @@ $Genome::Command::OPTS_SPEC = [
   [
     '>attribute',
     [
+      '>add',
+      [
+        'name=s',
+        'files',
+        'nomenclature=s',
+        'files',
+        'value=s',
+        'files',
+        'sample=s',
+        undef,
+        'help!',
+        undef
+      ],
+      '>import',
+      [
+        'file=s',
+        'files',
+        'nomenclature=s',
+        'files',
+        'delimiter=s',
+        'files',
+        'help!',
+        undef
+      ],
       '>list',
       [
         'show=s',
