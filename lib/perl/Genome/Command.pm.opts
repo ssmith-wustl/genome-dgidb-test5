@@ -19396,8 +19396,24 @@ $Genome::Command::OPTS_SPEC = [
   ],
   '>feature-list',
   [
+    '>change-format',
+    [
+      'format=s',
+      [
+        '1-based',
+        'true-BED',
+        'multi-tracked',
+        'multi-tracked 1-based'
+      ],
+      'feature-list=s',
+      undef,
+      'help!',
+      undef
+    ],
     '>create',
     [
+      'file-path=s',
+      'files',
       'format=s',
       [
         '1-based',
@@ -19412,10 +19428,6 @@ $Genome::Command::OPTS_SPEC = [
       'files',
       'create-capture-container!',
       undef,
-      'file-id=s',
-      undef,
-      'file-path=s',
-      'files',
       'reference=s',
       undef,
       'source=s',
