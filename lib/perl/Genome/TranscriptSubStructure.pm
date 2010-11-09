@@ -136,6 +136,19 @@ sub strand {
     return $strand;
 }
 
+sub strand_as_string {
+    my $self = shift;
+    my $t = $self->transcript;
+    my $strand = '.';
+    if ($t->strand eq '+1') {
+        $strand = 'fwd';
+    } elsif ($t->strand eq '-1') {
+        $strand = 'rev';
+    }
+    return $strand;
+}
+
+
 sub frame {
     my $self = shift;
     if (defined($self->phase)) {
@@ -409,7 +422,7 @@ sub bed_string {
     my $self = shift;
     # BED format uses zero-based start positions
     my $bed_string = $self->chrom_name ."\t". ($self->structure_start - 1) ."\t". $self->structure_stop ."\t". $self->gene_name .':'. $self->transcript_name
-    .':'. $self->structure_type .":". $self->ordinal ."\t0\t". $self->strand ."\n";
+    .':'. $self->structure_type .":". $self->ordinal .':'. $self->strand_as_string ."\t0\t". $self->strand ."\n";
     return $bed_string;
 }
 
