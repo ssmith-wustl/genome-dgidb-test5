@@ -64,11 +64,6 @@ class Genome::ProcessingProfile::RnaSeq {
             doc => 'command line args for the trimmer',
             is_optional => 1,
         },
-        #TODO This can be removed after all old snapshots relying upon its values are phased out
-        reference_sequence_name => {
-            doc => 'DEPRECATED (use inputs instead): identified the reference sequence used in the model(required if no prior_ref_seq)',
-            is_optional => 1,
-        },
         annotation_reference_transcripts => {
             doc => 'The reference transcript set used for splice junction annotation',
             is_optional => 1,

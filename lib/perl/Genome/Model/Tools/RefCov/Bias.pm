@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 
 use RefCov::Reference;
+use GD::Graph::lines;
 
 class Genome::Model::Tools::RefCov::Bias {
     is => ['Command'],

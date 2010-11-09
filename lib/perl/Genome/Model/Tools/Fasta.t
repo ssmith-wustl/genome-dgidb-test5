@@ -11,6 +11,7 @@ use Test::More tests => 39;
 use File::Temp 'tempdir';
 use File::Compare 'compare';
 use File::Copy 'copy';
+use Bio::SeqIO;
 
 use_ok ('Genome::Model::Tools::Fasta')
     or die;

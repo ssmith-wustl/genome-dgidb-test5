@@ -204,10 +204,10 @@ sub execute {
   #Concatenate the two design files generated to create the final design
   my $outFh = IO::File->new( $self->output_file, ">" );
   my $inFh1 = IO::File->new( "$snv_indel_file.nimblegen" ) or warn "Can't open file $snv_indel_file.nimblegen\n";
-  $outFh->print foreach( $inFh1->getlines );
+  $outFh->print( $_ ) foreach( $inFh1->getlines );
   $inFh1->close;
   my $inFh2 = IO::File->new( "$sv_file.nimblegen" ) or warn "Can't open file $sv_file.nimblegen\n";
-  $outFh->print foreach( $inFh2->getlines );
+  $outFh->print( $_ ) foreach( $inFh2->getlines );
   $inFh2->close;
   $outFh->close;
 
