@@ -64,6 +64,7 @@ EOS
 sub create {
     my $class = shift;
     
+print \&UNIVERSAL::isa, " at " . __FILE__ . "\n";
     my $self = $class->SUPER::create(@_)
         or return;
 
@@ -89,7 +90,7 @@ sub create {
 
 sub execute {
     my $self = shift;
-
+    
     #execute for commands is renamed after some Command.pm magic
     $self->SUPER::_execute_body(@_) or return;
 

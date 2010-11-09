@@ -146,6 +146,7 @@ EOS
 sub execute {
     my $self = shift;
 
+print \&UNIVERSAL::isa, "\n";
     # Make sure there aren't any bare args
     if (my @args = $self->bare_args) {
         $self->error_message("extra arguments: @args");

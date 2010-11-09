@@ -8,7 +8,7 @@ use warnings;
 
 use Genome;
 use File::Copy;
-use GSCApp;
+#use GSCApp;
 
 my %properties = (
     original_data_path => {

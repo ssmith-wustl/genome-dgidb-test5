@@ -44,11 +44,19 @@ sub create {
     
     my $self = $class->SUPER::create($bx);
     
+print \&UNIVERSAL::isa, " at " . __FILE__ . "\n";
+$DB::single = 1;
+
+Genome::Model::Command::Define::Convergence->__meta__;
+
+print \&UNIVERSAL::isa, " at " . __FILE__ . "\n";
+$DB::single = 1;
     my $define_command = Genome::Model::Command::Define::Convergence->create(
         %convergence_model_params,
         model_group_id => $self->id
     );
 
+print \&UNIVERSAL::isa, " at " . __FILE__ . "\n";
     unless ($define_command->execute == 1) {
         $self->error_message("Failed to create convergence model associated with this model group");
         die;
