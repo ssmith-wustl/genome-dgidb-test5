@@ -228,12 +228,17 @@ sub variant_output_attributes {
     return (qw/ type /);
 }
 sub transcript_attributes {
-    return qw( gene_name transcript_name transcript_species transcript_source
-               transcript_version strand transcript_status trv_type c_position
-               amino_acid_change ucsc_cons domain all_domains deletion_substructures
-               transcript_error flank_annotation_distance_to_transcript
-               intron_annotation_substructure_ordinal intron_annotation_substructure_size
-               intron_annotation_substructure_position );
+    my $self = shift;
+    my @attrs = qw( gene_name transcript_name transcript_species transcript_source
+                    transcript_version strand transcript_status trv_type c_position
+                    amino_acid_change ucsc_cons domain all_domains deletion_substructures
+                    transcript_error );
+    if ($self->extra_columns) {
+        push @attrs, qw( flank_annotation_distance_to_transcript
+                         intron_annotation_substructure_ordinal intron_annotation_substructure_size
+                         intron_annotation_substructure_position );
+    }
+    return @attrs;
 }
 
 
