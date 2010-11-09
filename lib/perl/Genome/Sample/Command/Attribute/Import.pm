@@ -24,10 +24,6 @@ class Genome::Sample::Command::Attribute::Import {
             doc => 'The separator for the columns of each row (defaults to a tab).',
             default_value => "\t",
         },
-        prefix => {
-            is => 'Text',
-            doc => 'Some text to prepend to the idenitifiers in the first column',
-        },
     ]
 };
 
@@ -45,8 +41,7 @@ EOS
 sub help_detail {                           
     return <<EOS 
 Add a set of attributes to many samples at once.  The first column should be an identifier for the sample or individual.
-(If an individual is provided all samples for that individual will be updated.)  The optional --prefix parameter will be
-prepended to each identifier in this column before looking for a matching object.  Looking by name or id is currently supported
+(If an individual is provided all samples for that individual will be updated.)  Only looking up by id is currently supported.
 
 The remaining columns should be the values of the attributes to update.  The first row is treated as a header containing
 the names of the attributes to be added.  (The header for the identifer column is ignored.)
@@ -121,16 +116,6 @@ sub execute {
 sub _resolve_samples {
     my $self = shift;
     my $identifier = shift;
-
-    if($self->prefix) {
-        $identifier = $self->prefix . $identifier;
-    }
-
-    my $sample_by_name = Genome::Sample->get(name => $identifier);
-    return $sample_by_name if $sample_by_name;
-
-    my $individual_by_name = Genome::Individual->get(name => $identifier);
-    return $individual_by_name->samples if $individual_by_name;
 
     my $sample_by_id;
     eval { #can fail if datatypes mismatch

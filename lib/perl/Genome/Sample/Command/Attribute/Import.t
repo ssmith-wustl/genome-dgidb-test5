@@ -12,7 +12,7 @@ use above "Genome";
 
 use constant NUM_SAMPLES => 5;
 
-use Test::More tests => 14 + NUM_SAMPLES*9;
+use Test::More tests => 10 + NUM_SAMPLES*5;
 
 use_ok('Genome::Sample::Command::Attribute::Import');
 
@@ -79,51 +79,7 @@ for my $sample (@test_samples) {
     is($attribute->value, 'test_value_2', 'has expected value');
 }
 
-#third test--update samples by name
-my $data_file_3 = Genome::Utility::FileSystem->create_temp_file_path;
-
-my $data_string_3 = join($delimiter, 'sample_name', 'test_attribute_3a', 'test_attribute_3b', 'test_attribute_3c') . $line_separator;
-for my $sample (@test_samples) {
-    my ($distinct_name_part) = $sample->name =~ /(\d+)/;
-    $data_string_3 .= join($delimiter, $distinct_name_part, 'test_value_' . rand(), 'test_value_3b', 'test_value_3c') . $line_separator;
-}
-
-Genome::Utility::FileSystem->write_file($data_file_3, $data_string_3);
-
-my $import_command_3 = Genome::Sample::Command::Attribute::Import->create(
-    file => $data_file_3,
-    prefix => 'GS_attribute_import_test.',
-);
-isa_ok($import_command_3, 'Genome::Sample::Command::Attribute::Import', 'created import command 3');
-ok($import_command_3->execute, 'executed import command 3');
-
-for my $sample (@test_samples) {
-    my $attribute = $sample->attributes(name => 'test_attribute_3c');
-    isa_ok($attribute, 'Genome::Sample::Attribute', 'test_attribute_3c for sample ' . $sample->id);
-    is($attribute->value, 'test_value_3c', 'has expected value');
-}
-
-#fourth test--update all samples for individual by name
-my $data_file_4 = Genome::Utility::FileSystem->create_temp_file_path;
-
-my $data_string_4 = join($delimiter, 'individual_name', 'test_attribute_4a', 'test_attribute_4b') . $line_separator;
-my ($distinct_name_part) = $test_individual->name =~ /(\d+)/;
-$data_string_4 .= join($delimiter, $distinct_name_part, 'test_value_4a', 'test_value_4b') . $line_separator;
-
-Genome::Utility::FileSystem->write_file($data_file_4, $data_string_4);
-
-my $import_command_4 = Genome::Sample::Command::Attribute::Import->create(
-    file => $data_file_4,
-    prefix => 'GS_attribute_test_individual.',
-);
-isa_ok($import_command_4, 'Genome::Sample::Command::Attribute::Import', 'created import command 4');
-ok($import_command_4->execute, 'executed import command 4');
-
-for my $sample (@test_samples) {
-    my $attribute = $sample->attributes(name => 'test_attribute_4a');
-    isa_ok($attribute, 'Genome::Sample::Attribute', 'test_attribute_4a for sample ' . $sample->id);
-    is($attribute->value, 'test_value_4a', 'has expected value');
-}
+#third and fourth tests removed since names are no longer unique
 
 #fifth test--wrong number of columns in data row
 my $data_file_5 = Genome::Utility::FileSystem->create_temp_file_path;
@@ -137,7 +93,9 @@ my $import_command_5 = Genome::Sample::Command::Attribute::Import->create(
     file => $data_file_5,
 );
 isa_ok($import_command_5, 'Genome::Sample::Command::Attribute::Import', 'created import command 5');
-ok(!$import_command_5->execute, 'failed executing import command 5 as expected (column count mismatch)');
+my $ok = eval { $import_command_5->execute(); };
+
+ok(!$@ and !$ok, 'failed executing import command 5 as expected (column count mismatch)');
 
 #sixth test--unknown id
 my $data_file_6 = Genome::Utility::FileSystem->create_temp_file_path;
