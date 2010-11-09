@@ -64,7 +64,6 @@ EOS
 sub create {
     my $class = shift;
     
-print \&UNIVERSAL::isa, " at " . __FILE__ . "\n";
     my $self = $class->SUPER::create(@_)
         or return;
 

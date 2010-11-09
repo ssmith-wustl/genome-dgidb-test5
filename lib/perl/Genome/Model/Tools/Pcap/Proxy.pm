@@ -1,6 +1,8 @@
 package Genome::Model::Tools::Pcap::Proxy;
 
-use UNIVERSAL qw(can);
+#use UNIVERSAL qw(can);
+*can = \&UNIVERSAL::can;
+
 sub new
 {
 	croak("$pkg:new:no class given, quitting") if @_ < 1;

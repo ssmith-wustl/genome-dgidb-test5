@@ -6,6 +6,8 @@ use warnings;
 # this module is called by Genome::Config::edu::wustl::gsc right now on all *.gsc.wustl.edu hosts
 # print STDERR "using " . __PACKAGE__ . "\n";
 
+$INC{"UNIVERSAL/can.pm"} = 'no';
+
 # this callback will load the GSCApp module, and initialize the app to work with GSC modules
 my $initialized = ''; 
 our $checks = 0;
