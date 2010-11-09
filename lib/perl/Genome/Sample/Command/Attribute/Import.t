@@ -95,7 +95,7 @@ my $import_command_5 = Genome::Sample::Command::Attribute::Import->create(
 isa_ok($import_command_5, 'Genome::Sample::Command::Attribute::Import', 'created import command 5');
 my $ok = eval { $import_command_5->execute(); };
 
-ok(!$@ and !$ok, 'failed executing import command 5 as expected (column count mismatch)');
+ok(($@ || !$ok), 'failed executing import command 5 as expected (column count mismatch)');
 
 #sixth test--unknown id
 my $data_file_6 = Genome::Utility::FileSystem->create_temp_file_path;
@@ -109,4 +109,5 @@ my $import_command_6 = Genome::Sample::Command::Attribute::Import->create(
     file => $data_file_6,
 );
 isa_ok($import_command_6, 'Genome::Sample::Command::Attribute::Import', 'created import command 6');
-ok(!$import_command_6->execute, 'failed executing import command 6 as expected (unknown id)');
+$ok = eval { $import_command_6->execute };
+ok(($@ || !$ok), 'failed executing import command 6 as expected (unknown id)');
