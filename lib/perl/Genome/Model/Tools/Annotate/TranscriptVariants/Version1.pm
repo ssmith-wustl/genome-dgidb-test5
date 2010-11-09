@@ -6,7 +6,6 @@ use warnings;
 
 use Data::Dumper;
 use Genome;
-use Genome::Info::AnnotationPriorities;
 use File::Temp;
 use List::Util qw/ max min /;
 use List::MoreUtils qw/ uniq /;
@@ -27,6 +26,12 @@ UR::Object::Type->define(
             is_constant => 1,
             calculate => q( Bio::Tools::CodonTable->new( -id => 2) ),
         },
+        ucsc_conservation_directory => {
+            is => 'Path',
+            is_optional => 1,
+            is_deprecated => 1,
+#            default => '/gscmnt/sata835/info/medseq/model_data/2741951221/v36-build93636924/ucsc_conservation/',
+         },
         check_variants => {
             is => 'Boolean',
             is_optional => 1,
@@ -48,14 +53,81 @@ UR::Object::Type->define(
         transcript_structure_class_name => {
             is_constant => 1,
             value => __PACKAGE__ . '::TranscriptStructure',
-        }
+        },
+
+        #priorities => { is => __PACKAGE__ . '::AnnotationPriorities', is_constant => 1, id_by => 1 },
+        transcript_source_priorities => {  },
+        transcript_status_priorities => {  },
+        variant_priorities           => {  },
+        transcript_error_priorities  => {  },
     ]
 );
 
-my %transcript_source_priorities = Genome::Info::AnnotationPriorities->transcript_source_priorities;
-my %transcript_status_priorities = Genome::Info::AnnotationPriorities->transcript_status_priorities;
-my %variant_priorities = Genome::Info::AnnotationPriorities->variant_priorities;
-my %transcript_error_priorities = Genome::Info::AnnotationPriorities->transcript_error_priorities;
+
+## These originally lived in Genome::Info::AnnotationPriorities
+sub transcript_source_priorities {
+    return (
+        genbank => 1,
+        ensembl => 2,
+    );
+}
+
+sub transcript_status_priorities {
+    return (
+        reviewed    => 1,
+        validated   => 2,
+        provisional => 3,
+        predicted   => 4,
+        model       => 5,
+        inferred    => 6,
+        known       => 7,
+        novel       => 8,
+        unknown     => 9,
+    );
+}
+
+sub variant_priorities  {
+    return (
+        nonsense                        => 1,
+        frame_shift                     => 2,
+        frame_shift_del                 => 3,
+        frame_shift_ins                 => 4,
+        splice_site                     => 5,
+        splice_site_del                 => 6,
+        splice_site_ins                 => 7,
+        in_frame_del                    => 8,
+        in_frame_ins                    => 9,
+        missense                        => 10,
+        nonstop                         => 11,
+        silent                          => 12,
+        rna                             => 13,
+        '5_prime_untranslated_region'   => 14,
+        '3_prime_untranslated_region'   => 15,
+        splice_region                   => 16,
+        splice_region_del               => 17,
+        splice_region_ins               => 18,
+        intronic                        => 19,
+        '5_prime_flanking_region'       => 20,
+        '3_prime_flanking_region'       => 21,
+        #consensus_error                 => 17,
+    );
+}
+    
+sub transcript_error_priorities {
+    return (
+        no_errors                               => 1,
+        gap_between_substructures               => 2,
+        mismatch_between_exon_seq_and_reference => 3,
+        bad_bp_length_for_coding_region         => 4,
+        overly_large_intron                     => 5,
+        rna_with_coding_region                  => 6,
+        no_coding_region                        => 7,
+        no_stop_codon                           => 8,
+        pseudogene                              => 9,
+        no_start_codon                          => 10,
+    );
+}
+    
 
 # Given a nucleotide sequence, translate to amino acid sequence and return
 # The translator->translate method can take 1-3 bp of sequence. If given
@@ -344,6 +416,10 @@ sub is_valid_variant {
 sub _prioritize_annotations {
     my ($self, @annotations) = @_;
 
+    my %transcript_source_priorities = $self->transcript_source_priorities;
+    my %transcript_status_priorities = $self->transcript_status_priorities;
+    my %variant_priorities = $self->variant_priorities;
+
     use sort '_mergesort';  # According to perldoc, performs better than quicksort on large sets with many comparisons
     my @sorted_annotations = sort {
         $variant_priorities{$a->{trv_type}} <=> $variant_priorities{$b->{trv_type}} ||
@@ -361,6 +437,9 @@ sub _prioritize_annotations {
 # Given an annotation, split up the error string and return the highest priority error listed
 sub _highest_priority_error {
     my ($self, $annotation) = @_;
+
+    my %transcript_error_priorities = $self->transcript_error_priorities;
+
     my $error_string = $annotation->{transcript_error};
     my @errors = map { $transcript_error_priorities{$_} } split(":", $error_string);
     my @sorted_errors = sort { $b <=> $a } @errors;
@@ -755,12 +834,13 @@ sub _apply_indel_and_translate{
     #
 
     local($Genome::DataSource::TranscriptStructures::intersector_sub);
-    my @sibling_structures = Genome::TranscriptStructure->get(transcript_transcript_id => $structure->transcript_transcript_id,
-                                                               chrom_name => $chrom_name,
-                                                               data_directory => $structure->data_directory,
-                                                               'structure_start <' => $structure->transcript_transcript_stop + 50000,
-                                                              # structure_type => 'intron',
-                                                            );
+    my $structures_class = $self->transcript_structure_class_name;
+    my @sibling_structures = $structures_class->get(transcript_transcript_id => $structure->transcript_transcript_id,
+                                                    chrom_name => $chrom_name,
+                                                    data_directory => $structure->data_directory,
+                                                    'structure_start <' => $structure->transcript_transcript_stop + 50000,
+                                                    # structure_type => 'intron',
+                                                  );
     if ($structure->transcript_strand eq '+1') {
         @sibling_structures = sort { $a->structure_start <=> $b->structure_start } @sibling_structures;
     } else {

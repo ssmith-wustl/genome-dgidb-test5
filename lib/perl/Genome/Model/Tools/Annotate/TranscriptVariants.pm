@@ -273,6 +273,26 @@ sub infer_variant_type {
 }
 
 
+# This is for version 0 of the annotator; the original one that operated on the transcript window
+# It required different args to create than the new one does
+sub _create_old_annotator {
+    my($self, $annotator_version_subclass) = @_;
+
+    my $full_version = $self->build->version;
+    my ($version) = $full_version =~ /^\d+_(\d+)[a-z]/;
+    my %ucsc_versions = Genome::Info::UCSCConservation->ucsc_conservation_directories;
+
+    my $annotator = $annotator_version_subclass->create(
+                        check_variants => $self->check_variants,
+                        get_frame_shift_sequence => $self->get_frame_shift_sequence,
+                        ucsc_conservation_directory => $ucsc_versions{$version},
+                        annotation_build_version => $self->build->version,
+                        flank_range => $self->flank_range,
+                        build => $self->build,
+                     );
+    return $annotator;
+}
+
 
 sub execute { 
     my $self = shift;
@@ -426,16 +446,22 @@ sub execute {
     my $annotator_version_subclass = $self->_version_subclass_name;
     my $annotator;
     eval {
-        my $full_version = $self->build->version;
-        my ($version) = $full_version =~ /^\d+_(\d+)[a-z]/;
-        my %ucsc_versions = Genome::Info::UCSCConservation->ucsc_conservation_directories;
+        if ($self->use_version == 0) {
+            $annotator = $self->_create_old_annotator($annotator_version_subclass);
+        } else {
+            # The new annotator doesn't use the ucsc_conservation_directory param, so these lines can go away...
+            my $full_version = $self->build->version;
+            my ($version) = $full_version =~ /^\d+_(\d+)[a-z]/;
+            my %ucsc_versions = Genome::Info::UCSCConservation->ucsc_conservation_directories;
 
-        my @directories = $self->build->determine_data_directory($self->cache_annotation_data_directory);
-        $annotator = $annotator_version_subclass->create(
-            data_directory => \@directories,
-            check_variants => $self->check_variants,
-            get_frame_shift_sequence => $self->get_frame_shift_sequence,
-        );
+            my @directories = $self->build->determine_data_directory($self->cache_annotation_data_directory);
+            $annotator = $annotator_version_subclass->create(
+                data_directory => \@directories,
+                check_variants => $self->check_variants,
+                get_frame_shift_sequence => $self->get_frame_shift_sequence,
+                ucsc_conservation_directory => $ucsc_versions{$version},
+            );
+        }
     };
     unless ($annotator){
         $self->error_message("Couldn't create annotator of class $annotator_version_subclass");

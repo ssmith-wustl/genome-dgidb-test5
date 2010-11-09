@@ -28,6 +28,7 @@ Genome::Model::Tools::Annotate::TranscriptVariants->execute(
     get_frame_shift_sequence => 1,
     output_file => $temp_filename, 
     annotation_filter => "none",
+    use_version => 1,
 );
 
 my @relevant_new_annotation = `cat $temp_filename | grep "XM_001717859\\|NM_022552\\|NM_002520"`;
