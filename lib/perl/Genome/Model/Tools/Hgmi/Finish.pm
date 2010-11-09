@@ -37,7 +37,7 @@ class Genome::Model::Tools::Hgmi::Finish {
         nr_db => {
             is => 'String',
             doc => "path to nr seq db",
-            default => "/gscmnt/temp110/analysis/blast_db/gsc_bacterial/bacterial_nr/bacterial_nr"
+            default => "/gscmnt/ams1102/info/annotation/blastdb/gsc_bacterial/bacterial_nr/bacterial_nr"
         },
         locus => {
             is => 'String',
@@ -73,7 +73,7 @@ class Genome::Model::Tools::Hgmi::Finish {
         skip_acedb_parse => {
             is => 'Boolean',
             doc => "skip parsing into acedb for testing",
-            default => 0, # this skips parsing into acedb...
+		    #default => 0, # this skips parsing into acedb...
         },
         assembly_name => {
             is  => 'String',
