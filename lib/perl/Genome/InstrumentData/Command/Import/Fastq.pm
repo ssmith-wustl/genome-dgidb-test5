@@ -179,9 +179,14 @@ sub execute {
             $self->error_message("Could not locate sample with the name ".$self->sample_name);
             die $self->error_message;
         }
-        $library = Genome::Library->get(sample_name => $sample->name);
+
+        # create one.
+        $library = Genome::Library->get(sample_name => $sample->name, name=>$sample->name . '-extlibs');
         unless(defined($library)){
-            $self->error_message("COuld not locate a library associated with the sample-name ".$sample->name);
+            $library = Genome::Library->create(sample_name => $sample->name, name=>$sample->name . '-extlibs');
+        }
+        unless (defined $library) {
+            $self->error_message("COuld not locate a library associated with the sample-name ".$sample->name . "-extlibs and couldn't create one either.");
             die $self->error_message;
         }
         $self->library_name($library->name);
