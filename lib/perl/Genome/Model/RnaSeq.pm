@@ -12,6 +12,7 @@ class Genome::Model::RnaSeq {
         read_aligner_name            => { via => 'processing_profile'},
         read_aligner_version         => { via => 'processing_profile'},
         read_aligner_params          => { via => 'processing_profile'},
+        picard_version               => { via => 'processing_profile'},
         read_trimmer_name            => { via => 'processing_profile'},
         read_trimmer_version         => { via => 'processing_profile'},
         read_trimmer_params          => { via => 'processing_profile'},

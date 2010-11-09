@@ -19,7 +19,8 @@ class Genome::Model::ReferenceSequence::Command::GenerateBitmask {
     bases => {
         is => 'Text',
         shell_args_position => 2,
-        doc => 'List of bases to bitmask. Current options: AT,CG, or CpG.',
+        doc => 'List of bases to bitmask.',
+        valid_values => ['AT','CG','CpG','GC'],
     },
     ],
     doc => 'Generate a set of bitmask data for a given specific reference sequence.'
@@ -28,11 +29,11 @@ class Genome::Model::ReferenceSequence::Command::GenerateBitmask {
 sub help_synopsis {
     my $class = shift;
     return <<EOS;
-genome model reference-sequence generate-bitmask NCBI-human-build36 [AT|CG|CpG]
+genome model reference-sequence generate-bitmask NCBI-human-build36 [AT|CG|CpG|GC]
 
-genome model reference-sequence generate-bitmask -r NCBI-human-build36 [AT|CG|CpG]
+genome model reference-sequence generate-bitmask -r NCBI-human-build36 [AT|CG|CpG|GC]
 
-genome model reference-sequence generate-bitmask MYMODELNAME-buildMYBUILDVERSION [AT|CG|CpG]
+genome model reference-sequence generate-bitmask MYMODELNAME-buildMYBUILDVERSION [AT|CG|CpG|GC]
 
 EOS
 }
@@ -42,6 +43,11 @@ sub help_detail {
     my $class = shift;
     return <<'EOS';
 Creates a bitmask file for a given reference sequence and stores it with the data for that reference.
+Description of each "bases" option:
+AT = All A & T nucleotides
+CG = All C & G nucleotides minus CpG
+CpG = All CpG islands
+GC = All G & C nucleotides
 EOS
 }
 
@@ -49,10 +55,10 @@ sub execute {
     my $self = shift;
     my $refseq = $self->refseq;
     my $bases = $self->bases;
-    unless ($bases =~ /^(AT|CG|CpG)$/) {
-        $self->error_message("Current options for bitmask files are AT, CG, or CpG.");
-        return;
-    }
+    #unless ($bases =~ /^(AT|CG|CpG)$/) {
+    #    $self->error_message("Current options for bitmask files are AT, CG, or CpG.");
+    #    return;
+    #}
     $self->status_message("Building a $bases bitmask files for refseq " . $refseq->__display_name__ . "...");
 
     #Calculate bitmask filename and check for current existence
@@ -112,6 +118,9 @@ sub execute {
         }
         elsif ($bases eq "CpG") {
             ($mask = $seq) =~ s/CG/11/g;
+        }
+        elsif ($bases eq 'GC') {
+            ($mask = $seq) =~ s/[GC]/1/g;
         }
         else {
             $self->error_message("How in the heck did you get down to here - this bitmask is not one of the current options.");

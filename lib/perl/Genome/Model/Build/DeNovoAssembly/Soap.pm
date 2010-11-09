@@ -234,5 +234,20 @@ sub sra_sample_id_for_pga_imported_instrument_data {
     return $sra_ids[0];
 }
 
+#for build diff testing
+
+sub files_ignored_by_diff {
+    return qw/ build.xml Log /;
+}
+
+sub dirs_ignored_by_diff {
+    return qw/ logs reports edit_dir /;
+}
+
+#just comparing input files .. soap output files are always slightly different
+sub regex_files_for_diff {
+    return qw/ H_KT-185-1-0089515594_WUGC.2852968107.forward.fastq H_KT-185-1-0089515594_WUGC.2852968107.reverse.fastq /;
+}
+
 1;
 

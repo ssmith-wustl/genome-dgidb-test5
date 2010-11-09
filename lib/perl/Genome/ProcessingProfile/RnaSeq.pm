@@ -52,6 +52,10 @@ class Genome::ProcessingProfile::RnaSeq {
             doc => 'the expression detection params used for this model',
             is_optional => 1,
         },
+        picard_version => {
+            doc => 'the version of Picard to use when manipulating SAM/BAM files',
+            is_optional => 1,
+        },
         read_trimmer_name => {
             doc => 'trimmer algorithm/software used for this model',
             is_optional => 1,
