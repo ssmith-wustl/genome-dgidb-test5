@@ -19,6 +19,18 @@ class Genome::Site::WUGC::CaptureSet::Command::Synchronize {
             default_value => 1,
             doc => 'Include a report of those feature-lists missing critical information for processing',
         },
+    ],
+    has_optional => [
+        capture_set => {
+            is => 'Genome::Site::WUGC::CaptureSet',
+            is_many => 1,
+            doc => 'specific capture-set(s) to try to synchronize instead of the whole list',
+        },
+        feature_list => {
+            is => 'Genome::FeatureList',
+            is_many => 1,
+            doc => 'specific feature-list(s) to try to synchronize instead of the whole list',
+        },
         _forward => {
             calculate_from => ['direction'],
             calculate => q{ return $direction eq 'forward' or $direction eq 'both' },
@@ -60,14 +72,13 @@ sub backfill_capture_sets_for_feature_lists {
     my $self = shift;
 
     my @capture_sets = Genome::Site::WUGC::CaptureSet->get();  #just preload these--we'll "get" them individually by name later
-    my $feature_list_iterator = Genome::FeatureList->create_iterator('-order_by' => ['name']);
 
-    unless($feature_list_iterator) {
-        $self->error_message('Failed to create iterator for feature lists.');
-        die $self->error_message;
+    my @feature_lists = $self->feature_list;
+    unless(@feature_lists) {
+        @feature_lists = Genome::FeatureList->get();
     }
 
-    while(my $feature_list = $feature_list_iterator->next) {
+    for my $feature_list (@feature_lists) {
         my $existing_capture_set = Genome::Site::WUGC::CaptureSet->get(name => $feature_list->name);
 
         if($existing_capture_set) {
@@ -101,16 +112,15 @@ sub create_capture_set_for_feature_list {
 
 sub backfill_feature_lists_for_capture_sets {
     my $self = shift;
-    
-    my $capture_set_iterator = Genome::Site::WUGC::CaptureSet->create_iterator('-order_by' => ['name']);
-    my @feature_lists = Genome::FeatureList->get(); #just preload these--we'll "get" them individually by name later
 
-    unless($capture_set_iterator) {
-        $self->error_message('Failed to create iterator for capture sets.');
-        die $self->error_message;
+    my @capture_sets = $self->capture_set;
+    unless(@capture_sets) {
+        @capture_sets = Genome::Site::WUGC::CaptureSet->get();
     }
 
-    while(my $capture_set = $capture_set_iterator->next) {
+    my @feature_lists = Genome::FeatureList->get(); #just preload these--we'll "get" them individually by name later
+
+    for my $capture_set (@capture_sets) {
         my $existing_feature_list = Genome::FeatureList->get(name => $capture_set->name);
 
         if($existing_feature_list) {
