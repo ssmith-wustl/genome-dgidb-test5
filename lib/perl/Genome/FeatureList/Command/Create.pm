@@ -19,7 +19,6 @@ class Genome::FeatureList::Command::Create {
         subject => { is => 'Genome::Model::Build', doc => 'subject to which the features are relevant' },
 
         content_type => { is => 'Text', doc => 'the kind of information in the BED file' },
-        create_capture_container => { is => 'Boolean', default_value => 0, doc => 'If a file_path is supplied, also create the corresponding capture container in the LIMS system' },
     ],
 };
 
@@ -34,7 +33,7 @@ sub help_synopsis {
 EOS
 }
 
-sub help_detail {                           
+sub help_detail {
     return <<EOS 
 Create a new feature-list.
 EOS
@@ -62,21 +61,6 @@ sub execute {
     unless($feature_list) {
         $self->error_message('Failed to create feature-list.');
         return;
-    }
-
-    if($self->file_path and $self->create_capture_container) {
-        eval {
-            my $cmd = '/gsc/scripts/bin/execute_create_capture_container --bed-file='. $self->file_path .' --setup-name=\''. $self->name .'\'';
-            Genome::Utility::FileSystem->shellcmd(
-                cmd => $cmd,
-            );
-        };
-
-        if($@) {
-            $self->error_message('Failed to create capture container!  Aborting feature-list creation.');
-            $feature_list->delete;
-            return;
-        }
     }
 
     $self->status_message('Created feature-list "' . $feature_list->name . '" with ID: ' . $feature_list->id);

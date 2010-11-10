@@ -81,6 +81,12 @@ class Genome::Model::Tools::DetectVariants {
             doc => "Where the SNV output should be once all work has been done",
             is_output => 1,
         },
+        snv_bed_output => {
+            calculate_from => ['_snv_base_name', 'output_directory'],
+            calculate => q{ join("/", $output_directory, $_snv_base_name) . ".bed"; },
+            doc => "Where the SNV output which has been converted to .bed format should be once all work has been done",
+            is_output => 1,
+        },
         _snv_staging_output => {
             calculate_from => ['_temp_staging_directory', '_snv_base_name'],
             calculate => q{ join("/", $_temp_staging_directory, $_snv_base_name); },
@@ -94,6 +100,11 @@ class Genome::Model::Tools::DetectVariants {
         indel_output => {
             calculate_from => ['_indel_base_name', 'output_directory'],
             calculate => q{ join("/", $output_directory, $_indel_base_name); },
+            is_output => 1,
+        },
+        indel_bed_output => {
+            calculate_from => ['_indel_base_name', 'output_directory'],
+            calculate => q{ join("/", $output_directory, $_indel_base_name) . ".bed"; },
             is_output => 1,
         },
         _indel_staging_output => {
@@ -124,6 +135,11 @@ class Genome::Model::Tools::DetectVariants {
             calculate => q{ join("/", $output_directory, $_filtered_snv_base_name); },
             is_output => 1,
         },
+        filtered_snv_bed_output => {
+            calculate_from => ['_filtered_snv_base_name', 'output_directory'],
+            calculate => q{ join("/", $output_directory, $_filtered_snv_base_name) . ".bed"; },
+            is_output => 1,
+        },
         _filtered_snv_staging_output => {
             calculate_from => ['_temp_staging_directory', '_filtered_snv_base_name'],
             calculate => q{ join("/", $_temp_staging_directory, $_filtered_snv_base_name); },
@@ -136,6 +152,11 @@ class Genome::Model::Tools::DetectVariants {
         filtered_indel_output => {
             calculate_from => ['_filtered_indel_base_name', 'output_directory'],
             calculate => q{ join("/", $output_directory, $_filtered_indel_base_name); },
+            is_output => 1,
+        },
+        filtered_indel_bed_output => {
+            calculate_from => ['_filtered_indel_base_name', 'output_directory'],
+            calculate => q{ join("/", $output_directory, $_filtered_indel_base_name) . ".bed"; },
             is_output => 1,
         },
         _filtered_indel_staging_output => {

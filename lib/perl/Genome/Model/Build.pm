@@ -781,7 +781,7 @@ sub _launch {
         }
     }
     else {
-        $job_group_spec = ' -g /build/' . $ENV{USER};
+        $job_group_spec = ' -g /build2/' . $ENV{USER};
     }
 
     die "Bad params!  Expected server_dispatch and job_dispatch!" . Data::Dumper::Dumper(\%params) if %params;
@@ -1666,7 +1666,6 @@ sub compare_output {
       
         # Check if the files end with a suffix that requires special handling. If not,
         # just do an md5sum on the files and compare
-        $DB::single = 1;
         my $diff_result = 0;
         my (undef, undef, $suffix) = fileparse($abs_path, $self->special_suffixes);
         my (undef, undef, $other_suffix) = fileparse($other_abs_path, $self->special_suffixes);
@@ -1693,6 +1692,34 @@ sub compare_output {
         next if grep { $dir =~ /$_/ } $self->dirs_ignored_by_diff;
         next if grep { $rel_path =~ /$_/ } $self->files_ignored_by_diff;
         $diffs{$rel_path} = "no file $rel_path from build $build_id";
+    }
+
+    # Now compare metrics of both builds
+    my %metrics;
+    map { $metrics{$_->name} = $_ } $self->metrics;
+    my %other_metrics;
+    map { $other_metrics{$_->name} = $_ } $other_build->metrics;
+
+    METRIC: for my $metric_name (sort keys %metrics) {
+        my $metric = $metrics{$metric_name};
+        my $other_metric = delete $other_metrics{$metric_name};
+        unless ($other_metric) {
+            $diffs{$metric_name} = "no build metric with name $metric_name found for build $other_build_id";
+            next METRIC;
+        }
+
+        my $metric_value = $metric->value;
+        my $other_metric_value = $other_metric->value;
+        unless ($metric_value eq $other_metric_value) {
+            $diffs{$metric_name} = "metric $metric_name has value $metric_value for build $build_id and value " .
+                "$other_metric_value for build $other_build_id";
+            next METRIC;
+        }
+    }
+
+    # Catch any extra metrics that the other build has
+    for my $other_metric_name (sort keys %other_metrics) {
+        $diffs{$other_metric_name} = "no build metric with name $other_metric_name found for build $build_id";
     }
 
     return %diffs;
