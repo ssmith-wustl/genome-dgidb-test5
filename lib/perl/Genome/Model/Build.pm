@@ -781,7 +781,7 @@ sub _launch {
         }
     }
     else {
-        $job_group_spec = ' -g /build/' . $ENV{USER};
+        $job_group_spec = ' -g /build2/' . $ENV{USER};
     }
 
     die "Bad params!  Expected server_dispatch and job_dispatch!" . Data::Dumper::Dumper(\%params) if %params;
