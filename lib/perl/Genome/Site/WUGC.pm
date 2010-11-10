@@ -6,7 +6,21 @@ use warnings;
 # this module is called by Genome::Config::edu::wustl::gsc right now on all *.gsc.wustl.edu hosts
 # print STDERR "using " . __PACKAGE__ . "\n";
 
+# ensure we can get to legacy modules 
+Class::Autouse->autouse(qr/Finishing.*/);
+Class::Autouse->autouse(qr/Finfo.*/);
+Class::Autouse->autouse(qr/Bio.*/);
+
+# this conflicts with all sorts of Finishing/Finfo stuff
+# ironicall it is used by Pcap stuff
 $INC{"UNIVERSAL/can.pm"} = 'no';
+
+# TODO: move these into tools which need them
+use Bio::Seq;
+use Bio::Seq::Quality;
+use Bio::SeqIO;
+use Bio::DB::Fasta;
+use FASTAParse;
 
 # this callback will load the GSCApp module, and initialize the app to work with GSC modules
 my $initialized = ''; 
