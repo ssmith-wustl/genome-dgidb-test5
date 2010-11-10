@@ -30,8 +30,8 @@ class Genome::Model::Command::Diff {
 
 sub hudson_build_from_revision {
     my ($self, $revision) = @_;
-    if ($revision =~ /(genome-\d+)/) {
-        return $1;
+    if ($revision =~ /(genome-\d+(-fix\d+)?)/) {
+        return $1 . '/lib/perl';
     }
     return $revision;
 }
@@ -39,7 +39,8 @@ sub hudson_build_from_revision {
 # Check that the revision ends with lib/perl and add it if its not there
 sub check_and_fix_revision {
     my ($self, $revision) = @_;
-    $revision .= '/lib/perl/' unless $revision =~ '/lib/perl';
+    $revision .= '/' unless $revision =~ /\/$/;
+    $revision .= 'lib/perl' unless $revision =~ 'lib/perl';
     return $revision;
 }
 
@@ -54,7 +55,7 @@ sub execute {
     unless (defined $second_revision) {
         my $stable_target = readlink '/gsc/scripts/opt/genome-stable';
         confess 'Could not readlink genome-stable symlink!' unless defined $stable_target;
-        $second_revision = '/gsc/scripts/opt/' . $stable_target . '/lib/perl/';
+        $second_revision = '/gsc/scripts/opt/' . $stable_target . '/lib/perl';
         confess "No revision found at $second_revision!" unless -d $second_revision;
         $self->status_message("Not given second revision, using genome-stable at $second_revision");
     }
@@ -91,10 +92,10 @@ sub execute {
             last if $first_build and $second_build;
             my $build_revision = $build->software_revision;
             next unless defined $build_revision;
-            if ($build_revision =~ /$fixed_first_revision/) {
+            if (not $first_build and $build_revision =~ /$fixed_first_revision/) {
                 $first_build = $build;
             }
-            elsif ($build_revision =~ /$fixed_second_revision/) {
+            elsif (not $second_build and $build_revision =~ /$fixed_second_revision/) {
                 $second_build = $build;
             }
         }
@@ -112,7 +113,7 @@ sub execute {
 
         my %diffs = $first_build->compare_output($second_build->build_id);
         unless (%diffs) {
-            $self->status_message("All files diffed cleanly!");
+            $self->status_message("All files and metrics diffed cleanly!");
         }
         else {
             my $diff_string = "DIFFERENCES FOUND $type_string $model_id\n";
