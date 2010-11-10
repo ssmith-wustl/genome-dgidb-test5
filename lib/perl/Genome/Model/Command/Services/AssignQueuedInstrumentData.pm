@@ -24,6 +24,13 @@ class Genome::Model::Command::Services::AssignQueuedInstrumentData {
             default     => 200,
             doc         => 'Max # of PSEs to process in one invocation',   
         },
+        max_pses_to_check => {
+            is          => 'Number',
+            is_optional => 1,
+            len         => 5,
+            default     => 1000,
+            doc         => 'Max # of PSEs to check for processability',
+        },
         newest_first => {
             is          => 'Boolean',
             is_optional => 1,
@@ -320,7 +327,13 @@ sub load_pses {
 
     $self->status_message('Found '.scalar(@pses));
 
-    $self->preload_data(@pses); #The checking uses this data, to need to load it first
+    # Don't try to check more PSEs than we might be able to hold information for in memory.
+    if(scalar(@pses) > $self->max_pses_to_check) {
+        @pses = splice(@pses, 0, $self->max_pses_to_check);
+        $self->status_message('Limiting checking to ' . $self->max_pses_to_check);
+    }
+
+    $self->preload_data(@pses); #The checking uses this data, so need to load it first
 
     @pses = grep($self->check_pse($_), @pses);
     $self->status_message('Of those, '.scalar(@pses). ' PSEs passed check_pse.');
@@ -330,6 +343,7 @@ sub load_pses {
 
     if (@pses > $max_pses) {
         @pses = splice(@pses, 0, $max_pses);
+        $self->status_message('Limiting processing to ' . $max_pses);
     }
 
     return @pses;
