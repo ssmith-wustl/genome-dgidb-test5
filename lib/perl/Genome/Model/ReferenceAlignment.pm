@@ -58,7 +58,7 @@ class Genome::Model::ReferenceAlignment {
         read_calibrator_params       => { via => 'processing_profile'},
         capture_set_name             => { via => 'processing_profile'},
         reference_sequence_build_id => {
-            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            is => 'Text',
             via => 'inputs',
             to => 'value_id',
             where => [ name => 'reference_sequence_build', value_class_name => 'Genome::Model::Build::ImportedReferenceSequence' ],
@@ -70,6 +70,36 @@ class Genome::Model::ReferenceAlignment {
         reference_sequence_build => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             id_by => 'reference_sequence_build_id',
+        },
+        annotation_reference_build_id => {
+            is => 'Text',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'annotation_reference_build', 'value_class_name' => 'Genome::Model::Build::ImportedAnnotation' ],
+            is_many => 0,
+            is_mutable => 1,
+            is_optional => 1,
+            doc => 'The reference build used for variant annotation',
+        },
+        annotation_reference_build => {
+            is => 'Genome::Model::Build::ImportedAnnotation',
+            calculate_from => ['annotation_reference_build_id', 'annotation_reference_transcripts'],
+            calculate => q|
+                if ($annotation_reference_build_id) {
+                    my $b = Genome::Model::Build::ImportedAnnotation->get($annotation_reference_build_id);
+                    Carp::confess("Failed to find imported annotation build id '$annotation_reference_build_id'") unless $b;
+                    return $b;
+                }
+                my $art = $annotation_reference_transcripts;
+                return unless $art;
+                my ($model_name, $ver) = split('/', $art);
+                Carp::confess("Unable to determine model and build version from annotation transcripts string '$art'") unless $model_name and $ver;
+                my $model = Genome::Model::ImportedAnnotation->get(name => $model_name);
+                Carp::confess("Failed to find annotation model name='$model_name'") unless $model;
+                my $b = $model->build_by_version($ver);
+                Carp::confess("Failed to find annotation build version='$ver' for model_name='$model_name'") unless $b;
+                return $b;
+            |,
         },
         reference_sequence_name      => { via => 'reference_sequence_build', to => 'name' },
         coverage_stats_params        => { via => 'processing_profile'},
@@ -178,25 +208,16 @@ sub __errors__ {
 
     my @tags = $self->SUPER::__errors__(@_);
 
-    #Make sure reference sequence build and annotation build match up
-
-    my $reference_sequence_name = $self->reference_sequence_name;
-    my $reference_transcripts = $self->processing_profile->annotation_reference_transcripts;
-    return @tags unless $reference_transcripts; #exit if there's no annotation build to compare to
-    my $reference_sequence_build = $self->reference_sequence_build;
-    my ($ref_transcripts_organization_and_species, undef, $ref_transcripts_version) = split(/\.|\//, $reference_transcripts);
-    my (undef, $ref_transcripts_species) = split(/-/, $ref_transcripts_organization_and_species);
-    my (undef, $ref_transcripts_build) = split(/_/, $ref_transcripts_version);
-    $ref_transcripts_build =~ s/[a-zA-Z]//g; #remove the letter for $ref_transcripts_versions like "54_36p";
-
-    unless($ref_transcripts_build eq $reference_sequence_build->version and 
-           $ref_transcripts_species eq $reference_sequence_build->model->subject->species_name){        
+    my $arb = $self->annotation_reference_build;
+    my $rsb = $self->reference_sequence_build;
+    if ($arb and !$arb->is_compatible_with_reference_sequence_build($rsb)) {
         push @tags, UR::Object::Tag->create(
             type => 'invalid',
             properties => ['reference_sequence_name', 'annotation_reference_transcripts'],
-            desc => "reference sequence: $reference_sequence_name does not match annotation reference transcripts: $reference_transcripts",
+            desc => "reference sequence: " . $rsb->name . " is incompatible with annotation reference transcripts: " . $arb->idstring,
         );
     }
+
     return @tags;
 }
 
