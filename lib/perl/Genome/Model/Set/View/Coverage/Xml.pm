@@ -63,8 +63,10 @@ sub _generate_content {
     }
     $object->addChild( $xml_doc->createAttribute('display_name',$name) );
     $object->addChild( $xml_doc->createAttribute('type', $subject->class));
+    $object->addChild( $self->get_enrichment_factor_node() );
     $object->addChild( $self->get_alignment_summary_node() );
     $object->addChild( $self->get_coverage_summary_node() );
+
     return $xml_doc->toString(1);
 }
 
@@ -84,6 +86,83 @@ sub get_last_succeeded_coverage_stats_build_from_model {
     }
     return;
 }
+
+sub get_enrichment_factor_node {
+    my $self = shift;
+    my $xml_doc = $self->_xml_doc;
+    my @models = $self->members;
+    my @included_models;
+    my $ef_node = $xml_doc->createElement('enrichment-factor');
+    for my $model (@models) {
+        my $build = $self->get_last_succeeded_coverage_stats_build_from_model($model);
+
+        if ($build) {
+            push(@included_models, $model);
+            my $model_node = $ef_node->addChild( $xml_doc->createElement('model') );
+            $model_node->addChild( $xml_doc->createAttribute('id',$model->id));
+            $model_node->addChild( $xml_doc->createAttribute('subject_name',$model->subject_name));
+
+            # get wingspan 0 alignment metrics
+            my @alignment_summary_hash_ref = $build->alignment_summary_hash_ref;
+            my @ws_zero = $alignment_summary_hash_ref[0];
+
+            # get BED file
+            # TODO: figure out where the number used to name the bed file comes from instead of iterating
+            # through all the files in the dir.
+            my $bedf;
+            my $refcovd = $build->data_directory . "/reference_coverage";
+            opendir(my $refcovdh, $refcovd) or die "Cannot open reference_coverage directory $refcovd";
+
+            while (my $file = readdir($refcovdh)) {
+                if ($file =~ /.*.bed/) { $bedf = $refcovd . "/" . $file; }
+            }
+
+            # calculate genome_total_bp
+            my $genome_total_bp;
+
+            open(my $bedfh, "<", $bedf) or die "Cannot open BED file $bedf";
+
+            while (<$bedfh>) {
+                chomp;
+                my @f      = split (/\t/, $_);
+                my $chrom  = $f[0];
+                my $start  = $f[1];
+                my $stop   = $f[2];
+                my $id     = $f[3];
+                my $length = ($stop - $start) + 1;
+                $genome_total_bp += $length;
+            }
+
+            # get enrichment factor values
+            my $myEF = Genome::Model::Tools::TechD::CaptureEnrichmentFactor->execute(
+                capture_unique_bp_on_target    => $ws_zero['unique_target_aligned_bp'],
+                capture_duplicate_bp_on_target => $ws_zero['duplicate_target_aligned_bp'],
+                capture_total_bp               => $ws_zero['total_aligned_bp'],
+                target_total_bp                => $ws_zero['total_target_aligned_bp'],
+                genome_total_bp                => $genome_total_bp
+            );
+
+            my $theoretical_max_enrichment_factor  = $myEF->theoretical_max_enrichment_factor();
+            my $unique_on_target_enrichment_factor = $myEF->unique_on_target_enrichment_factor();
+            my $total_on_target_enrichment_factor  = $myEF->total_on_target_enrichment_factor();
+
+            $DB::single = 1;
+
+            my $tmef_node = $model_node->addChild( $xml_doc->createElement('theoretical_max_enrichment_factor') );
+            $tmef_node->addChild( $xml_doc->createTextNode( $theoretical_max_enrichment_factor ) );
+
+            my $uotef_node = $model_node->addChild( $xml_doc->createElement('unique_on_target_enrichment_factor') );
+            $uotef_node->addChild( $xml_doc->createTextNode( $unique_on_target_enrichment_factor ) );
+
+            my $totef_node = $model_node->addChild( $xml_doc->createElement('total_on_target_enrichment_factor') );
+            $totef_node->addChild( $xml_doc->createTextNode( $total_on_target_enrichment_factor ) );
+
+        }
+    }
+
+    return $ef_node;
+}
+
 
 sub get_alignment_summary_node {
     my $self = shift;
@@ -109,8 +188,6 @@ sub get_alignment_summary_node {
             }
         }
     }
-
-    $DB::single = 1;
 
     return $as_node;
 }
