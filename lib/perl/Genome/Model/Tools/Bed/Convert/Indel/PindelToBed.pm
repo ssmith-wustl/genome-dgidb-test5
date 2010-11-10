@@ -123,7 +123,7 @@ sub process_source {
             unless((@bed_line)&& scalar(@bed_line)==5){
                 next;
             }
-            my @call_stuff = split "\w", $call;
+            my @call_stuff = split /\w/, $call;
             my $type_and_size = $call_stuff[1]."/".$call_stuff[2];
             $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'bed'}=join(",",@bed_line);
             if($normal_support){
@@ -135,7 +135,7 @@ sub process_source {
     for my $chrom (sort {$a cmp $b} (keys(%events))){
         for my $pos (sort{$a <=> $b} (keys( %{$events{$chrom}}))){
             for my $type_and_size (sort(keys( %{$events{$chrom}{$pos}}))){
-                unless(exists($events{$chrom}{$pos}{$type_and_size}{'normal'}){
+                unless(exists($events{$chrom}{$pos}{$type_and_size}{'normal'})){
                     $self->write_bed_line(split ",", $events{$chrom}{$pos}{$type_and_size}{'bed'});
                 }
             }
