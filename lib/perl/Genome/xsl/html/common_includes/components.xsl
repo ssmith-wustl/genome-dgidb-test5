@@ -64,6 +64,7 @@
     <link rel="stylesheet" href="/res/css/icons.css" type="text/css" media="screen, projection"/>
     <link rel="stylesheet" href="/res/css/forms.css" type="text/css" media="screen, projection"/>
 
+    <!-- GENOME_DEV_MODE is removed, if this is to be renabled, check for window.console instead -->
     <!--    <xsl:if test="$GENOME_DEV_MODE != 1"> -->
     <!-- prevent console() statements from being called on non-dev servers -->
     <!--      <script type="text/javascript" src="/res/js/app/console.js"></script> -->
