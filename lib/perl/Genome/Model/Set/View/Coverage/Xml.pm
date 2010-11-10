@@ -102,51 +102,62 @@ sub get_enrichment_factor_node {
             $model_node->addChild( $xml_doc->createAttribute('id',$model->id));
             $model_node->addChild( $xml_doc->createAttribute('subject_name',$model->subject_name));
 
-            # get wingspan 0 alignment metrics
-            my @alignment_summary_hash_ref = $build->alignment_summary_hash_ref;
-            my @ws_zero = $alignment_summary_hash_ref[0];
-
             # get BED file
             # TODO: figure out where the number used to name the bed file comes from instead of iterating
-            # through all the files in the dir.
+            # through all the files in the dir to find /.*.bed/
             my $bedf;
             my $refcovd = $build->data_directory . "/reference_coverage";
-            opendir(my $refcovdh, $refcovd) or die "Cannot open reference_coverage directory $refcovd";
+            opendir(my $refcovdh, $refcovd) or die "Could not open reference coverage directory $refcovd";
 
             while (my $file = readdir($refcovdh)) {
                 if ($file =~ /.*.bed/) { $bedf = $refcovd . "/" . $file; }
             }
 
-            # calculate genome_total_bp
-            my $genome_total_bp;
+            # calculate target_total_bp
+            my $target_total_bp;
 
-            open(my $bedfh, "<", $bedf) or die "Cannot open BED file $bedf";
+            open(my $bedfh, "<", $bedf) or die "Could not open BED file $bedf";
 
             while (<$bedfh>) {
                 chomp;
                 my @f      = split (/\t/, $_);
-                my $chrom  = $f[0];
                 my $start  = $f[1];
                 my $stop   = $f[2];
-                my $id     = $f[3];
                 my $length = ($stop - $start) + 1;
-                $genome_total_bp += $length;
+                $target_total_bp += $length;
             }
+
+            # calculate genome_total_bp from reference sequence seqdict.sam
+            my $genome_total_bp;
+            my $seqdictf = $build->model->reference_sequence_build->data_directory . "/seqdict/seqdict.sam";
+
+            open(my $seqdictfh, "<", $seqdictf) or die "Could not open seqdict $seqdictf";
+
+            while (<$seqdictfh>) {
+                chomp;
+                unless($_ =~ /HD/) {
+                    my @f = split(/\t/, $_);
+                    my $ln = $f[2];
+                    $ln =~ s/LN://;
+                    $genome_total_bp += $ln;
+                }
+            }
+
+            # get wingspan 0 alignment metrics
+            my $ws_zero = $build->alignment_summary_hash_ref->{'0'};
 
             # get enrichment factor values
             my $myEF = Genome::Model::Tools::TechD::CaptureEnrichmentFactor->execute(
-                capture_unique_bp_on_target    => $ws_zero['unique_target_aligned_bp'],
-                capture_duplicate_bp_on_target => $ws_zero['duplicate_target_aligned_bp'],
-                capture_total_bp               => $ws_zero['total_aligned_bp'],
-                target_total_bp                => $ws_zero['total_target_aligned_bp'],
+                capture_unique_bp_on_target    => $ws_zero->{'unique_target_aligned_bp'},
+                capture_duplicate_bp_on_target => $ws_zero->{'duplicate_target_aligned_bp'},
+                capture_total_bp               => $ws_zero->{'total_aligned_bp'},
+                target_total_bp                => $target_total_bp,
                 genome_total_bp                => $genome_total_bp
             );
 
             my $theoretical_max_enrichment_factor  = $myEF->theoretical_max_enrichment_factor();
             my $unique_on_target_enrichment_factor = $myEF->unique_on_target_enrichment_factor();
             my $total_on_target_enrichment_factor  = $myEF->total_on_target_enrichment_factor();
-
-            $DB::single = 1;
 
             my $tmef_node = $model_node->addChild( $xml_doc->createElement('theoretical_max_enrichment_factor') );
             $tmef_node->addChild( $xml_doc->createTextNode( $theoretical_max_enrichment_factor ) );
