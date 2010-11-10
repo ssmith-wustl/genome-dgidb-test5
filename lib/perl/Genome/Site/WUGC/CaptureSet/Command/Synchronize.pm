@@ -7,6 +7,27 @@ use Genome;
 
 class Genome::Site::WUGC::CaptureSet::Command::Synchronize {
     is => 'Genome::Command::Base',
+    has => [
+        direction => {
+            is => 'Text',
+            valid_values => ['forward', 'reverse', 'both'],
+            default_value => 'forward',
+            doc => 'Which way to synchronize.  Forward imports feature-lists for capture-sets. Reverse adds back capture-sets for any otherwise created feature-lists'
+        },
+        report => {
+            is => 'Boolean',
+            default_value => 1,
+            doc => 'Include a report of those feature-lists missing critical information for processing',
+        },
+        _forward => {
+            calculate_from => ['direction'],
+            calculate => q{ return $direction eq 'forward' or $direction eq 'both' },
+        },
+        _reverse => {
+            calculate_from => ['direction'],
+            calculate => q{ return $direction eq 'reverse' or $direction eq 'both' },
+        },
+    ],
 };
 
 sub help_brief {
@@ -28,8 +49,9 @@ EOS
 sub execute {
     my $self = shift;
 
-    $self->backfill_feature_lists_for_capture_sets();
-    $self->backfill_capture_sets_for_feature_lists();
+    $self->backfill_feature_lists_for_capture_sets()    if $self->_forward;
+    $self->backfill_capture_sets_for_feature_lists()    if $self->_reverse;
+    $self->report_unusable_feature_lists()              if $self->report;
 
     return 1;
 }
@@ -306,6 +328,31 @@ sub load_bed_file {
     if($@) {
         $self->error_message('Could not dump BED file: ' . $@);
         return;
+    }
+
+    return 1;
+}
+
+#Display a list of all those feature-lists that cannot be used in pipelines because they are missing important values.
+sub report_unusable_feature_lists {
+    my $self = shift;
+
+    $self->status_message('The following feature-lists have an unknown format.');
+    my $unknown_format_command = Genome::FeatureList::Command::List->create(
+        show => 'name,id',
+        filter => 'format=unknown',
+    );
+    unless($unknown_format_command->execute()) {
+        $self->error_message('Error listing feature-lists with unknown format.');
+    }
+
+    $self->status_message('The following feature-lists have no specified reference.');
+    my $unknown_reference_command = Genome::FeatureList::Command::List->create(
+        show => 'name,id',
+        filter => "reference_id=''",
+    );
+    unless($unknown_reference_command->execute()) {
+        $self->error_message('Error listing feature-lists with no specified reference.');
     }
 
     return 1;
