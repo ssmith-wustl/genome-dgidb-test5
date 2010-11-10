@@ -34,9 +34,10 @@
       </th>
       <xsl:for-each select="object[aspect[@name='status'] = 'Succeeded'][1]">
           <xsl:for-each select="aspect[@name='metrics']/object">
-          <th>
-            <xsl:value-of select="aspect[@name='name']/value" />
-          </th>
+            <xsl:sort select="aspect[@name='name']/value"/>
+            <th>
+              <xsl:value-of select="aspect[@name='name']/value" />
+            </th>
           </xsl:for-each>
       </xsl:for-each>
     </tr>
@@ -52,9 +53,10 @@
           <xsl:value-of select="@id" />
         </td>
         <xsl:for-each select="aspect[@name='metrics']/object">
-        <td>
-          <xsl:value-of select="aspect[@name='value']/value" />
-        </td>
+          <xsl:sort select="aspect[@name='name']/value"/>
+          <td>
+            <xsl:value-of select="aspect[@name='value']/value" />
+          </td>
         </xsl:for-each>
       </tr>
     </xsl:for-each>
