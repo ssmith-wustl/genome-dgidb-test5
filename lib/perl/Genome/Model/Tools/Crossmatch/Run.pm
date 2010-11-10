@@ -1,4 +1,4 @@
-package Genome::Model::Tools::CrossMatch::Run;
+package Genome::Model::Tools::Crossmatch::Run;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 use Workflow;
 use File::Basename;
 
-class Genome::Model::Tools::CrossMatch::Run {
+class Genome::Model::Tools::Crossmatch::Run {
     is => 'Command',
     has => [
             query_file => {
