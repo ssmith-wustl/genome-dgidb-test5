@@ -179,6 +179,10 @@ sub execute {
                 }
             } # looping through processing profiles for this instdata, finding or creating the default model
 
+        } else {
+            #record that the above code was skipped so we could reattempt it if more information gained later
+            $pse->add_param('no_model_generation_attempted',1);
+            $self->status_message('No model generation attempted for PSE ' . $pse->id);
         } # done with PSEs which specify a $subject_class_name, $subject_id, and @processing_profile_ids
 
         if (!$subject_class_name or !$subject_id) {
@@ -443,17 +447,8 @@ sub check_pse {
 
     my @processing_profile_ids = $pse->added_param('processing_profile_id');
 
-    #If it has one, it should have all.
+    #If specified, they must exist!
     if($subject_class_name or $subject_id or @processing_profile_ids) {
-        unless($subject_class_name and $subject_id and @processing_profile_ids) {
-            $self->error_message(
-                "PSE " . $pse->id . " specifies incomplete model find/create fields: "
-                . " subject_class_name $subject_class_name subject_id $subject_id"
-                . " processing_profile_ids @processing_profile_ids"
-            );
-            return;
-        }
-
         my $subject = $subject_class_name->get($subject_id);
         unless (defined $subject) {
             $self->error_message(
