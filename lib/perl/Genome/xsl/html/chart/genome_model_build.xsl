@@ -5,11 +5,15 @@
   <!-- initializes the dataTable plugin for model set views -->
   <xsl:template name="genome_model_build_set_table_init" match="object[./types[./isa[@type='Genome::Model::Build']]]" mode="set_table_init">
     <xsl:comment>template: status/genome_model_build.xsl match: object[./types[./isa[@type='Genome::Model::Build']]] mode: set_table_init</xsl:comment>
+    <script type="text/javascript" charset="utf-8" src="/res/js/pkg/ZeroClipboard/ZeroClipboard.js"></script> 
+    <script type="text/javascript" charset="utf-8" src="/res/js/pkg/TableTools/TableTools.js"></script>
     <script type="text/javascript">
       <xsl:text disable-output-escaping="yes">
         <![CDATA[
-                 $(document).ready(
+                 $(document).ready(function() {
+                 TableToolsInit.sSwfPath = "/res/js/pkg/ZeroClipboard/ZeroClipboard.swf";
                  window.setTable = $('#set').dataTable({
+                 /* "sDom": 'T<"clear">lfrtip', */
                  "sScrollX": "100%",
                  "sScrollInner": "110%",
                  "bJQueryUI": true,
@@ -17,7 +21,7 @@
                  "bStateSave": true,
                  "iDisplayLength": 25
                  })
-                 );
+                 });
         ]]>
       </xsl:text>
     </script>
