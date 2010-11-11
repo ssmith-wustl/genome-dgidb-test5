@@ -176,7 +176,6 @@ sub _generate_config_file {
     my $self = shift;
 
     my $config_path = $self->_config_file;
-    $DB::single=1;
     my $config_fh = Genome::Utility::FileSystem->open_file_for_writing($config_path);
     unless ($config_fh) {
         $self->error_message("Could not open $config_path for writing");
@@ -201,8 +200,6 @@ sub _generate_config_file {
 
 sub _detect_variants {
     my $self = shift;
-    $DB::single = 1;
-
     # test architecture to make sure we can run
     unless (`uname -a` =~ /x86_64/) {
         $self->error_message("Must run on a 64 bit machine");
@@ -248,7 +245,6 @@ sub _detect_variants {
 
 sub _run_pindel {
     my $self = shift;
-    
     for my $chromosome (1..22, "X", "Y") {
         unless ( $self->_run_pindel_for_chromosome($chromosome) ) {
             $self->error_message("Failed to run pindel for chromosome $chromosome");
