@@ -121,7 +121,6 @@ Please add help detail!
 EOS
 }
 
-
 # NOTE: I doubt we ever support anything but BAM.  If we do, some common adaptor/iterator will be necessary to do something like $alignments->next_alignment
 sub load_alignments {
     my $self = shift;
@@ -155,6 +154,8 @@ sub load_roi {
     return $regions;
 }
 
+# This is only necessary when running in parallel as a part of a workflow
+# There is probably a better way of doing this
 sub resolve_final_directory {
     my $self = shift;
 
@@ -174,6 +175,8 @@ sub resolve_final_directory {
     return 1;
 }
 
+# This is only necessary when running in parallel as a part of a workflow
+# There is probably a better way of doing this
 sub resolve_stats_file {
     my $self = shift;
     unless (defined($self->stats_file)) {
@@ -258,7 +261,7 @@ sub region_coverage_with_quality_filter {
     return $coverage;
 }
 
-sub print_roi_coverage {
+sub print_standard_roi_coverage {
     my $self = shift;
 
     my $regions = $self->load_roi;

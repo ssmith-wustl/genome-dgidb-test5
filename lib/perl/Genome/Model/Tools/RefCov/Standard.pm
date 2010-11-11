@@ -44,7 +44,7 @@ sub execute {
     # This is only necessary when run in parallel or only an output_directory is defined in params(ie. no stats_file)
     $self->resolve_stats_file;
 
-    unless ($self->print_roi_coverage) {
+    unless ($self->print_standard_roi_coverage) {
         die('Failed to print stats to file '. $self->stats_file);
     }
     return 1;
