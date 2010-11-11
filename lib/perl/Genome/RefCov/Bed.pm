@@ -1,12 +1,12 @@
-package Genome::Reference::Coverage::Bed;
+package Genome::RefCov::Bed;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Reference::Coverage::Bed {
-    is => ['Genome::Reference::Coverage::RegionFileI'],
+class Genome::RefCov::Bed {
+    is => ['Genome::RefCov::RegionFileI'],
 };
 
 sub _read_file {
@@ -34,7 +34,7 @@ sub _read_file {
         if (defined($strand)) {
             $region_params{strand} = $strand;
         }
-        my $region = Genome::Reference::Coverage::Region->create(%region_params);
+        my $region = Genome::RefCov::Region->create(%region_params);
         $self->_add_region($region);
     }
     $fh->close;

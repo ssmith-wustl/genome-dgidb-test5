@@ -1,11 +1,11 @@
-package Genome::Reference::Coverage::Stats;
+package Genome::RefCov::Stats;
 
 use strict;
 use warnings;
 
 use Statistics::Descriptive;
 
-class Genome::Reference::Coverage::Stats {
+class Genome::RefCov::Stats {
     has => [
         coverage => {
             is => 'ArrayRef',

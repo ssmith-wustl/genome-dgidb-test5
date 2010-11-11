@@ -1,11 +1,11 @@
-package Genome::Reference::Coverage::Bam;
+package Genome::RefCov::Bam;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Reference::Coverage::Bam {
+class Genome::RefCov::Bam {
     has => [
         bam_file => {
             is => 'String',

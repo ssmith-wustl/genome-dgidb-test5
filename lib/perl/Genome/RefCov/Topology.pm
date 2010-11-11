@@ -1,4 +1,4 @@
-package Genome::Reference::Coverage::Topology;
+package Genome::RefCov::Topology;
 
 use strict;
 use warnings;
@@ -13,7 +13,7 @@ use Genome;
 # Eventually, we will add plotting/graphing functions to this package for
 # visualizing the coverage topology.
 
-class Genome::Reference::Coverage::Topology {
+class Genome::RefCov::Topology {
     has => [
         coverage => {
             is => 'ArrayRef',

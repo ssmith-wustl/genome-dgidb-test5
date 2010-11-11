@@ -17,14 +17,14 @@ use Test::More;
 
 plan tests => 18;
 
-use_ok('Genome::Reference::Coverage::Stats');
+use_ok('Genome::RefCov::Stats');
 # TODO: Load a BAM file and use the actual coverage method to get array?
 my @coverage = (0,0,5,5,5,5,5,0,5,5,5,5,5,0,0);
 my $expected_length = scalar(@coverage);
-my $stats = Genome::Reference::Coverage::Stats->create(
+my $stats = Genome::RefCov::Stats->create(
    coverage => \@coverage,
 );
-isa_ok($stats,'Genome::Reference::Coverage::Stats');
+isa_ok($stats,'Genome::RefCov::Stats');
 isa_ok(ref($stats->coverage),'ARRAY');
 is($stats->ref_length,$expected_length,'ref_length is '.$expected_length);
 is($stats->percent_ref_bases_covered,66.67,'percent_ref_bases_covered matches expected');

@@ -1,4 +1,4 @@
-package Genome::Reference::Coverage::RPKM;
+package Genome::RefCov::RPKM;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 
 # RPKM (Reads Per Kilobase exon Model per million mapped reads)
 
-class Genome::Reference::Coverage::RPKM {
+class Genome::RefCov::RPKM {
     has => [
         target_alignments_total => { },
         total_alignments => { },
