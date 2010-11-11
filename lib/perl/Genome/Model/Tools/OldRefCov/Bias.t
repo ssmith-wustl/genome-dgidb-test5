@@ -8,7 +8,7 @@ use File::Compare;
 use above 'Genome';
 
 BEGIN {
-        use_ok('Genome::Model::Tools::RefCov::Bias');
+        use_ok('Genome::Model::Tools::OldRefCov::Bias');
 };
 
 my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-RefCov/Bias';
@@ -25,13 +25,13 @@ my $expected_image_file = $dir .'/'. $image_file;
 my $output_data_file = $tmp_dir .'/'. $data_file;
 my $expected_data_file = $dir .'/'. $data_file;
 
-my $cmd = Genome::Model::Tools::RefCov::Bias->create(
+my $cmd = Genome::Model::Tools::OldRefCov::Bias->create(
                                                      frozen_directory => $dir .'/FROZEN',
                                                      image_file => $output_image_file,
                                                      output_file => $output_data_file,
                                                      sample_name => 'test',
                                                  );
-isa_ok($cmd,'Genome::Model::Tools::RefCov::Bias');
+isa_ok($cmd,'Genome::Model::Tools::OldRefCov::Bias');
 ok($cmd->execute,'execute bias command');
 
 for my $size (@sizes) {

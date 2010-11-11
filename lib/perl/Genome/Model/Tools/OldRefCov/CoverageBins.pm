@@ -1,11 +1,11 @@
-package Genome::Model::Tools::RefCov::CoverageBins;
+package Genome::Model::Tools::OldRefCov::CoverageBins;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Tools::RefCov::CoverageBins {
+class Genome::Model::Tools::OldRefCov::CoverageBins {
     is => ['Command'],
     has_input => [
                   stats_file => {

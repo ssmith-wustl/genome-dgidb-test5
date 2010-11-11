@@ -8,7 +8,7 @@ use File::Compare;
 use above 'Genome';
 
 BEGIN {
-        use_ok('Genome::Model::Tools::RefCov::Topology');  
+        use_ok('Genome::Model::Tools::OldRefCov::Topology');  
 };
 
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-RefCov/Topology';
@@ -18,12 +18,12 @@ my $expected_file = $data_dir .'/topology_2.dat';
 my $tmp_dir = File::Temp::tempdir('RefCov-Topology-'. $ENV{USER} .'-XXXX',DIR=>'/gsc/var/cache/testsuite/running_testsuites',CLEANUP=>1);
 my $output_file = $tmp_dir .'/topology.dat';
 
-my $topo_cmd = Genome::Model::Tools::RefCov::Topology->create(
+my $topo_cmd = Genome::Model::Tools::OldRefCov::Topology->create(
                                                               frozen_file => $frozen_file,
                                                               output_file => $output_file,
                                                           );
 
-isa_ok($topo_cmd,'Genome::Model::Tools::RefCov::Topology');
+isa_ok($topo_cmd,'Genome::Model::Tools::OldRefCov::Topology');
 
 ok($topo_cmd->execute,'execute topology command '. $topo_cmd->command_name);
 ok(!compare($expected_file,$output_file),'output matches expected file');

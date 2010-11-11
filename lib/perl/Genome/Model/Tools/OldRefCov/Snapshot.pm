@@ -1,4 +1,4 @@
-package Genome::Model::Tools::RefCov::Snapshot;
+package Genome::Model::Tools::OldRefCov::Snapshot;
 
 use strict;
 use warnings;
@@ -6,12 +6,12 @@ use warnings;
 use Genome;
 use Workflow;
 
-class Genome::Model::Tools::RefCov::Snapshot {
+class Genome::Model::Tools::OldRefCov::Snapshot {
     is => ['Workflow::Operation::Command'],
     workflow => sub {
         my $run = Workflow::Operation->create(
             name => 'run',
-            operation_type => Workflow::OperationType::Command->get('Genome::Model::Tools::RefCov::Run')
+            operation_type => Workflow::OperationType::Command->get('Genome::Model::Tools::OldRefCov::Run')
         );
         my $outer = Workflow::Model->create(
             name => 'parallel ref-cov outer',
@@ -31,7 +31,7 @@ class Genome::Model::Tools::RefCov::Snapshot {
 
         my $merge = $inner->add_operation(
             name => 'merge',
-            operation_type => Workflow::OperationType::Command->get('Genome::Model::Tools::RefCov::MergeStatsFiles')
+            operation_type => Workflow::OperationType::Command->get('Genome::Model::Tools::OldRefCov::MergeStatsFiles')
         );
 
         foreach my $in (@{ $inner->operation_type->input_properties }) {

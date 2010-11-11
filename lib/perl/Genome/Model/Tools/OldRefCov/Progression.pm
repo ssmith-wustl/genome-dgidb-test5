@@ -1,4 +1,4 @@
-package Genome::Model::Tools::RefCov::Progression;
+package Genome::Model::Tools::OldRefCov::Progression;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use GD::Graph::lines;
 
-class Genome::Model::Tools::RefCov::Progression {
+class Genome::Model::Tools::OldRefCov::Progression {
     is => ['Command'],
     has => [
             stats_files => {

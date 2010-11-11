@@ -13,14 +13,14 @@ if (`uname -a` =~ /x86_64/){
     plan skip_all => 'Must run on a 64 bit machine';
 }
 
-use_ok('Genome::Model::Tools::RefCov::ProgressionInstance');
+use_ok('Genome::Model::Tools::OldRefCov::ProgressionInstance');
 
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-RefCov/Progression';
 my @bam_files = glob($data_dir .'/*.bam');
 my $target_query_file = $data_dir .'/BACKBONE.tsv';
 my $output_directory = File::Temp::tempdir(CLEANUP=>1);
 
-my $progression_instance = Genome::Model::Tools::RefCov::ProgressionInstance->create(
+my $progression_instance = Genome::Model::Tools::OldRefCov::ProgressionInstance->create(
     bam_files =>\@bam_files,
     target_query_file => $target_query_file,
     output_directory => $output_directory,

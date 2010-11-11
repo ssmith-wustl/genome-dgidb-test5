@@ -1,4 +1,4 @@
-package Genome::Model::Tools::RefCov::Topology;
+package Genome::Model::Tools::OldRefCov::Topology;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use Genome;
 use RefCov::Reference;
 use Statistics::R;
 
-class Genome::Model::Tools::RefCov::Topology {
+class Genome::Model::Tools::OldRefCov::Topology {
     is => ['Command'],
     has_input => [
                   frozen_file => {

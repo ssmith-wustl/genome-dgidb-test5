@@ -1,11 +1,11 @@
-package Genome::Model::Tools::RefCov::SizeHistos;
+package Genome::Model::Tools::OldRefCov::SizeHistos;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Tools::RefCov::SizeHistos {
+class Genome::Model::Tools::OldRefCov::SizeHistos {
     is => ['Command'],
     has_input => [
                   stats_file => {
