@@ -119,7 +119,7 @@ sub execute {
 
     my $temp_stats_file = Genome::Utility::FileSystem->create_temp_file_path;
 
-    my $regions = Genome::Reference::Coverage::Bed->create(
+    my $regions = Genome::RefCov::Bed->create(
         file => $self->roi_file_path,
         wingspan => $wingspan,
     );
@@ -129,7 +129,7 @@ sub execute {
     open( my $stats_fh, '>'. $temp_stats_file ) || die 'Failed to open stats file for writing '. $temp_stats_file;
 
     # create low level alignment object
-    my $refcov_bam  = Genome::Reference::Coverage::Bam->create(bam_file => $self->alignment_file_path );
+    my $refcov_bam  = Genome::RefCov::Bam->create(bam_file => $self->alignment_file_path );
     unless ($refcov_bam) {
         die('Failed to load alignment file '. $self->alignment_file_path);
     }
@@ -211,7 +211,7 @@ sub execute {
                 die('The length of locus '. $id .' '. $target.':'.$start .'-'. $end.'('.$length.') does not match the coverage array length '. scalar( @{ $coverage }));
             }
             for my $min_depth (@min_depths) {
-                my $myCoverageStat = Genome::Reference::Coverage::Stats->create( coverage => $coverage , min_depth => $min_depth);
+                my $myCoverageStat = Genome::RefCov::Stats->create( coverage => $coverage , min_depth => $min_depth);
                 print $stats_fh join ("\t", $id, @{ $myCoverageStat->stats() }) . "\n";
             }
         }
