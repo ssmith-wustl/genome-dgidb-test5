@@ -142,6 +142,18 @@ sub help_detail {
 EOS
 }
 
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+
+    if ($self->chromosome) {
+        mkdir $self->output_directory . '/' . $self->chromosome;
+        $self->output_directory($self->output_directory . '/' . $self->chromosome);
+    }
+
+    return $self;
+}
+
 # The config file that is internally generated to store bams, average insert size, and tag
 sub _config_file {
     my $self = shift;
@@ -202,6 +214,31 @@ sub _detect_variants {
     my $result;
     if ($self->chromosome) {
         $result  = $self->_run_pindel_for_chromosome($self->chromosome);
+
+        ## this is a hack, because the rest of the DetectVariants wants things to
+        ## be named like all_sequences, there's probably a cleaner way to do this
+        ## Eric
+        my $chromosome = $self->chromosome;
+        for my $target_file ($self->_temp_short_insertion_output, $self->_temp_long_insertion_output, $self->_temp_deletion_output, 
+                             $self->_temp_tandem_duplication_output, $self->_temp_inversion_output, $self->_temp_breakpoint_output) {
+            my $chunk_file = $target_file;
+            $chunk_file =~ s/all_sequences/$chromosome/;
+            unless (-e $chunk_file) {
+                $self->error_message("Output for chromosome $chromosome: file $chunk_file does not appear to exist"); 
+                die;
+            }
+
+            rename($chunk_file,$target_file) or die $!;
+        }
+
+        # Put the insertions and deletions where the rest of the pipe expects them 
+        my $files_to_cat = join(" ", ($self->_temp_short_insertion_output, $self->_temp_long_insertion_output, $self->_temp_deletion_output) );
+
+        my $cmd = "cat $files_to_cat > " . $self->_indel_staging_output;
+        unless (system($cmd) == 0) {
+            $self->error_message("Problem running $cmd");
+            die;
+        }
     } else {
         $result = $self->_run_pindel($self->_indel_staging_output);
     }
