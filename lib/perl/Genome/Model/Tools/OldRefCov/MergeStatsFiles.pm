@@ -1,11 +1,11 @@
-package Genome::Model::Tools::RefCov::MergeStatsFiles;
+package Genome::Model::Tools::OldRefCov::MergeStatsFiles;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Tools::RefCov::MergeStatsFiles {
+class Genome::Model::Tools::OldRefCov::MergeStatsFiles {
     is => ['Command','Genome::Utility::FileSystem'],
     has_input => [
                   input_stats_files => { is => 'List', },

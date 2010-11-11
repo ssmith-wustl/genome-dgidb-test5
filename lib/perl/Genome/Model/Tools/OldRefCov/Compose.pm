@@ -1,4 +1,4 @@
-package Genome::Model::Tools::RefCov::Compose;
+package Genome::Model::Tools::OldRefCov::Compose;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 
 use RefCov::Reference;
 
-class Genome::Model::Tools::RefCov::Compose {
+class Genome::Model::Tools::OldRefCov::Compose {
     is => ['Command'],
     has_input => [
                   snapshot_directories => {

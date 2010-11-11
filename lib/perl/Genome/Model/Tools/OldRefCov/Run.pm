@@ -1,4 +1,4 @@
-package Genome::Model::Tools::RefCov::Run;
+package Genome::Model::Tools::OldRefCov::Run;
 
 use strict;
 use warnings;
@@ -7,8 +7,8 @@ use Genome;
 
 use RefCov;
 
-class Genome::Model::Tools::RefCov::Run {
-    is => ['Genome::Model::Tools::RefCov','Genome::Utility::FileSystem'],
+class Genome::Model::Tools::OldRefCov::Run {
+    is => ['Genome::Model::Tools::OldRefCov','Genome::Utility::FileSystem'],
 
 };
 

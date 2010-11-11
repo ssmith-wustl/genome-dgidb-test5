@@ -1,12 +1,12 @@
-package Genome::Model::Tools::TechD::ReferenceCoverage;
+package Genome::Model::Tools::RefCov::Standard;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Tools::TechD::ReferenceCoverage {
-    is => ['Command'],
+class Genome::Model::Tools::RefCov::Standard {
+    is => ['Genome::Model::Tools::RefCov'],
     has_input => [
         bam_file => {
             doc => 'A BAM file, sorted and indexed, containing alignment/read data',

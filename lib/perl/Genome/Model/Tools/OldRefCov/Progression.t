@@ -8,7 +8,7 @@ use File::Compare;
 use above 'Genome';
 
 BEGIN {
-        use_ok('Genome::Model::Tools::RefCov::Progression');
+        use_ok('Genome::Model::Tools::OldRefCov::Progression');
 };
 
 my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-RefCov/Progression';
@@ -34,12 +34,12 @@ my $expected_image_file = $dir .'/'. $image_file;
 my $output_data_file = $tmp_dir .'/'. $data_file;
 my $expected_data_file = $dir .'/'. $data_file;
 
-my $progression_cmd = Genome::Model::Tools::RefCov::Progression->create(
+my $progression_cmd = Genome::Model::Tools::OldRefCov::Progression->create(
                                                                     stats_files => \@stats_files,
                                                                     image_file => $output_image_file,
                                                                     output_file => $output_data_file,
                                                                 );
-isa_ok($progression_cmd,'Genome::Model::Tools::RefCov::Progression');
+isa_ok($progression_cmd,'Genome::Model::Tools::OldRefCov::Progression');
 
 ok($progression_cmd->execute,'execute progression command');
 # I think comparing the two files is inappropriate with image files, could be meta differences

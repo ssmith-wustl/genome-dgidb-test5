@@ -1,11 +1,11 @@
-package Genome::Model::Tools::RefCov::ProgressionInstance;
+package Genome::Model::Tools::OldRefCov::ProgressionInstance;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Tools::RefCov::ProgressionInstance {
+class Genome::Model::Tools::OldRefCov::ProgressionInstance {
     is => 'Command',
     has_input => [
         bam_files => {

@@ -1,4 +1,4 @@
-package Genome::Model::Tools::RefCov::Parallel;
+package Genome::Model::Tools::OldRefCov::Parallel;
 
 use strict;
 use warnings;
@@ -6,12 +6,12 @@ use warnings;
 use Genome;
 use Workflow;
 
-class Genome::Model::Tools::RefCov::Parallel {
-    is => ['Workflow::Operation::Command','Genome::Model::Tools::RefCov'],
+class Genome::Model::Tools::OldRefCov::Parallel {
+    is => ['Workflow::Operation::Command','Genome::Model::Tools::OldRefCov'],
     workflow => sub {
         my $workflow = Workflow::Operation->create(
                                                    name => 'parallel ref-cov',
-                                                   operation_type => Workflow::OperationType::Command->get('Genome::Model::Tools::RefCov::Run'),
+                                                   operation_type => Workflow::OperationType::Command->get('Genome::Model::Tools::OldRefCov::Run'),
                                                );
         $workflow->parallel_by('genes_file_path');
         return $workflow;
@@ -51,7 +51,7 @@ sub post_execute {
         die($self->error_message);
     }
 
-    my $merge = Genome::Model::Tools::RefCov::MergeStatsFiles->execute(
+    my $merge = Genome::Model::Tools::OldRefCov::MergeStatsFiles->execute(
                                                                        input_stats_files => $self->stats_file_path,
                                                                        output_stats_file => $self->output_directory .'/STATS.tsv',
                                                                    );

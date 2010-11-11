@@ -1,4 +1,4 @@
-package Genome::Model::Tools::RefCov::Bias;
+package Genome::Model::Tools::OldRefCov::Bias;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use Genome;
 use RefCov::Reference;
 use GD::Graph::lines;
 
-class Genome::Model::Tools::RefCov::Bias {
+class Genome::Model::Tools::OldRefCov::Bias {
     is => ['Command'],
     has => [
             frozen_directory => {
