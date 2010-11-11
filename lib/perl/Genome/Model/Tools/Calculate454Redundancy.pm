@@ -33,7 +33,7 @@ class Genome::Model::Tools::Calculate454Redundancy {
 	    doc => 'Maximum number of mismatchs allowed before read is redundant',
 	},
 	newbler => {
-	    type => 'String',
+	    type => 'Text',
 	    is_optional => 1,
 	    default_value => '/gscmnt/temp224/research/lye/rd454_mapasm_08172010/applicationsBin/runAssembly',
 	    doc => 'User specified newbler to run',
