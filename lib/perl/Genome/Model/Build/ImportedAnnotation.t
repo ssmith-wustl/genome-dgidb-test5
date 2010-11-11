@@ -16,8 +16,8 @@ use_ok('Genome::Model::Build::ImportedAnnotation');
 # create a test annotation build and a few reference sequence builds to test compatibility with
 my @species_names = ('human', 'mouse');
 my @versions = ('12_34', '56_78');
-my $pp_ref = Genome::ProcessingProfile::ImportedReferenceSequence->create(name => 'test_pp_ref');
-my $pp_ann = Genome::ProcessingProfile::ImportedAnnotation->get_or_create(name => 'test_pp_ann', annotation_source => 'test_source');
+my $ref_pp = Genome::ProcessingProfile::ImportedReferenceSequence->create(name => 'test_ref_pp');
+my $ann_pp = Genome::ProcessingProfile::ImportedAnnotation->create(name => 'test_ann_pp', annotation_source => 'test_source');
 my $data_dir = File::Temp::tempdir('ImportedAnnotationTest-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 
 my %samples;
@@ -30,7 +30,7 @@ for my $sn (@species_names) {
 
 my $ann_model = Genome::Model::ImportedAnnotation->create(
     name                => "test_annotation",
-    processing_profile  => $pp_ann,
+    processing_profile  => $ann_pp,
     subject_class_name  => ref($samples{'human'}),
     subject_id          => $samples{'human'}->id,
 );
@@ -49,7 +49,7 @@ for my $sn (@species_names) {
 
     my $ref_model = Genome::Model::ImportedReferenceSequence->create(
         name                => "test_ref_sequence_$sn",
-        processing_profile  => $pp_ref,
+        processing_profile  => $ref_pp,
         subject_class_name  => ref($samples{$sn}),
         subject_id          => $samples{$sn}->id,
     );
