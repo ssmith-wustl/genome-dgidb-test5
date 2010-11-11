@@ -306,4 +306,10 @@ sub print_stats {
     return $self;
 }
 
+sub as_string {
+    my $self = shift;
+    my $string = join ("\t", @{ $self->stats() });
+    return $string;
+}
+
 1;

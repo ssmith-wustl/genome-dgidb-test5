@@ -24,6 +24,7 @@ class Genome::RefCov::Bam {
         bio_db_bam => { },
         bio_db_index => { },
         header => { },
+        _chr_to_tid_hash_ref => {},
     },
 };
 
@@ -84,5 +85,34 @@ sub _load {
     return 1;
 }
 
+sub tid_for_chr {
+    my $self = shift;
+    my $chr = shift;
+    my $target_name_index = $self->chr_to_tid_hash_ref;
+    my $tid = $target_name_index->{$chr};
+    unless (defined $tid) { die('Failed to get tid for chromosome '. $chr); }
+    return $tid;
+}
+
+sub chr_to_tid_hash_ref {
+    my $self = shift;
+
+    unless  ($self->_chr_to_tid_hash_ref) {
+        my $header = $self->header();
+        my $targets = $header->n_targets();
+        my $target_names = $header->target_name();
+        my %target_name_index;
+        my $i = 0;
+        for my $target_name (@{ $target_names }) {
+            $target_name_index{$target_name} = $i++;
+        }
+        # Make sure our index is not off
+        unless ($targets == $i) {
+            die 'Expected '. $targets .' targets but counted '. $i .' indices!';
+        }
+        $self->_chr_to_tid_hash_ref(\%target_name_index);
+    }
+    return $self->_chr_to_tid_hash_ref;
+}
 
 1;
