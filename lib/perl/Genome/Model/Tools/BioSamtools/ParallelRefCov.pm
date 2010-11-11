@@ -26,7 +26,7 @@ sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
     unless (defined($self->min_depth_filter)) {
-        #This should look up a class variable like Genome::Model::Tools::RefCov::$DEFAULT_MIN_DEPTH_FILTER
+        #This should look up a class variable like Genome::Model::Tools::OldRefCov::$DEFAULT_MIN_DEPTH_FILTER
         $self->min_depth_filter(1);
     }
     return $self;

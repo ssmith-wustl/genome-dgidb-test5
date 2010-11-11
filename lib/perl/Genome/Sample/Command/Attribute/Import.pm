@@ -82,6 +82,8 @@ sub execute {
 
     while( my $line = <$attribute_fh>) {
         chomp $line;
+        next unless $line; #skip blank lines
+
         my ($id, @values) = split($delimiter, $line);
 
         unless(scalar @values eq scalar @names) {

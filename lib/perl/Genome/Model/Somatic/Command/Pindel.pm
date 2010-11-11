@@ -29,31 +29,39 @@ EOS
 sub pre_execute {
     my $self = shift;
 
-    # TODO switch to using models instead of bams
-    # Make sure the model id provided has a completed build
-=cut
-    my $model = Genome::Model::Somatic->get($self->model_id);
-    unless ($model) {
-        $self->error_message("Could not get a somatic model for id " . $self->model_id);
+    # Obtain normal and tumor bams and check them. Either from somatic model id or from direct specification. 
+    my ($build, $tumor_bam, $normal_bam);
+    if ( ($self->model_id) && ($self->tumor_bam || $self->normal_bam) ) {
+        $self->error_message("Usage error. Please specify either model_id OR tumor_bam and normal_bam, not both");
+        die;
+    } elsif ($self->model_id) {
+        my $model = Genome::Model::Somatic->get($self->model_id);
+        unless ($model) {
+            $self->error_message("Could not get a somatic model for id " . $self->model_id);
+            die;
+        }
+
+        $build = $model->last_succeeded_build;
+        unless ($build) {
+            $self->error_message("Could not get a last_succeeded_build for model id " . $self->model_id);
+            die;
+        }
+
+        $normal_bam = $build->normal_build->whole_rmdup_bam_file;
+        $tumor_bam = $build->tumor_build->whole_rmdup_bam_file;
+    } elsif ($self->tumor_bam && $self->normal_bam) {
+        $normal_bam = $self->normal_bam;
+        $tumor_bam = $self->tumor_bam;
+    } else {
+        $self->error_message("Usage error. Please specify either model_id OR tumor_bam and normal_bam");
         die;
     }
-
-    my $build = $model->last_succeeded_build;
-    unless ($build) {
-        $self->error_message("Could not get a last_succeeded_build for model id " . $self->model_id);
-        die;
-    }
-=cut
-
-#my $normal_bam = $build->normal_build->whole_rmdup_bam_file;
-    my $normal_bam = $self->normal_bam;
+    
     unless (-s $normal_bam) {
         $self->error_message("Normal bam $normal_bam does not exist or has 0 size");
         die;
     }
 
-#    my $tumor_bam = $build->tumor_build->whole_rmdup_bam_file;
-    my $tumor_bam = $self->tumor_bam;
     unless (-s $tumor_bam) {
         $self->error_message("tumor bam $tumor_bam does not exist or has 0 size");
         die;
@@ -68,6 +76,14 @@ sub pre_execute {
         # set a default param if one has not been specified
         my $default_filename = $default_filenames{$param};
         $self->$param( join('/', $self->output_directory, $default_filename) );
+    }
+
+    # create directories
+    for my $directory ( $self->assemble_t1n_dir, $self->assemble_t1t_dir, $self->assemble_t2n_dir, $self->assemble_t2t_dir, $self->assemble_t3n_dir, $self->assemble_t3t_dir) {
+        unless ( Genome::Utility::FileSystem->create_directory($directory) ) {
+            $self->error_message("Failed to create directory $directory");
+            die;
+        }
     }
 
     return 1;
@@ -217,6 +233,7 @@ __DATA__
   </operation>
   
   <operationtype typeClass="Workflow::OperationType::Model">
+    <inputproperty isOptional="Y">model_id</inputproperty>
     <inputproperty isOptional="Y">normal_bam</inputproperty>
     <inputproperty isOptional="Y">tumor_bam</inputproperty>
     <inputproperty isOptional="Y">output_directory</inputproperty>
