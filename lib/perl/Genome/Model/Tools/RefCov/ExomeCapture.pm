@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Tools::RefCov::ExomeCapture {
-    is => ['Genome::Model::Tools::RefCov']
+    is => ['Genome::Model::Tools::RefCov'],
     has => [
 
     ],
