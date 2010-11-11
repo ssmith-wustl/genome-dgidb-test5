@@ -20,14 +20,14 @@ my $tmp_dir = File::Temp::tempdir('BioSamtools-RefCov-'.$ENV{USER}.'-XXXX',DIR =
 
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-BioSamtools/RefCov';
 
-my $bam_file = $data_dir .'/test.bam';
+my $alignment_file_path = $data_dir .'/test.bam';
 my $regions_file = $data_dir .'/test_regions_zero_based_start.bed';
 my $expected_stats_file = $data_dir .'/test_test_regions_STATS-2.tsv';
 
 my $ref_cov = Genome::Model::Tools::RefCov::Standard->create(
     output_directory => $tmp_dir,
-    bam_file => $bam_file,
-    bed_file => $regions_file,
+    alignment_file_path => $alignment_file_path,
+    roi_file_path => $regions_file,
 );
 isa_ok($ref_cov,'Genome::Model::Tools::RefCov::Standard');
 ok($ref_cov->execute,'execute Standard command '. $ref_cov->command_name);
@@ -38,8 +38,8 @@ unlink($ref_cov->stats_file);
 my $expected_q20_stats_file = $data_dir .'/test_test_regions_STATS-q20.tsv';
 my $q20_ref_cov = Genome::Model::Tools::RefCov::Standard->create(
     output_directory => $tmp_dir,
-    bam_file => $bam_file,
-    bed_file => $regions_file,
+    alignment_file_path => $alignment_file_path,
+    roi_file_path => $regions_file,
     min_base_quality => 20,
 );
 isa_ok($q20_ref_cov,'Genome::Model::Tools::RefCov::Standard');
@@ -50,8 +50,8 @@ unlink($q20_ref_cov->stats_file);
 my $expected_q20_q1_stats_file = $data_dir .'/test_test_regions_STATS-q20-q1.tsv';
 my $q20_q1_ref_cov = Genome::Model::Tools::RefCov::Standard->create(
     output_directory => $tmp_dir,
-    bam_file => $bam_file,
-    bed_file => $regions_file,
+    alignment_file_path => $alignment_file_path,
+    roi_file_path => $regions_file,
     min_base_quality => 20,
     min_mapping_quality => 1,
 );

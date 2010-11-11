@@ -14,6 +14,7 @@ class Genome::Model::Tools::RefCov {
         },
         alignment_file_format => {
             is => 'String',
+            is_optional => 1,
             doc => 'The format of the alignment file.',
             default_value => 'bam',
             valid_values => ['bam'],
@@ -24,6 +25,7 @@ class Genome::Model::Tools::RefCov {
         },
         roi_file_format => {
             is => 'String',
+            is_optional => 1,
             doc => 'The format of the region-of-interest file.',
             default_value => 'bed',
             valid_values => ['bed'],
@@ -46,6 +48,7 @@ sub help_detail {
 Please add help detail!
 EOS
 }
+
 
 
 1;

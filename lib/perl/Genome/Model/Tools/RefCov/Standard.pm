@@ -8,12 +8,6 @@ use Genome;
 class Genome::Model::Tools::RefCov::Standard {
     is => ['Genome::Model::Tools::RefCov'],
     has_input => [
-        bam_file => {
-            doc => 'A BAM file, sorted and indexed, containing alignment/read data',
-        },
-        bed_file => {
-            doc => 'The BED format file (tab delimited: chr,start,end,name) file containing annotation or regions of interest.',
-        },
         output_directory => {
             doc => 'When run in parallel, this directory will contain all output and intermediate STATS files. Sub-directories will be made for wingspan and min_depth_filter params. Do not define if stats_file is defined.',
             is_optional => 1,
@@ -110,32 +104,34 @@ sub execute {
         unless (defined($self->output_directory)) {
             die('Failed to define output_directory or stats_file!');
         }
-        my ($bam_basename,$bam_dirname,$bam_suffix) = File::Basename::fileparse($self->bam_file,qw/.bam/);
-        unless (defined($bam_suffix)) {
-            die('Failed to recognize bam_file '. $self->bam_file .' without bam suffix');
+        my $alignment_file_expected_suffix = '.'. $self->alignment_file_format;
+        my ($alignment_basename,$alignment_dirname,$alignment_suffix) = File::Basename::fileparse($self->alignment_file_path,[$alignment_file_expected_suffix]);
+        unless (defined($alignment_suffix)) {
+            die('Failed to recognize file '. $self->alignment_file_path .' without expected suffix '. $alignment_file_expected_suffix);
         }
-        my ($regions_basename,$regions_dirname,$bed_suffix) = File::Basename::fileparse($self->bed_file,qw/.bed/);
-        unless (defined($bed_suffix)) {
-            die('Failed to recognize bed_file '. $self->bed_file .' without bed suffix');
+        my $roi_file_expected_suffix = '.'. $self->roi_file_format;
+        my ($regions_basename,$roi_dirname,$roi_suffix) = File::Basename::fileparse($self->roi_file_path,[$roi_file_expected_suffix]);
+        unless (defined($roi_suffix)) {
+            die('Failed to recognize file '. $self->roi_file_path .' without bed suffix');
         }
-        $self->stats_file($self->final_directory .'/'. $bam_basename .'_'. $regions_basename .'_STATS.tsv');
+        $self->stats_file($self->final_directory .'/'. $alignment_basename .'_'. $regions_basename .'_STATS.tsv');
     }
 
     my $temp_stats_file = Genome::Utility::FileSystem->create_temp_file_path;
 
     my $regions = Genome::Reference::Coverage::Bed->create(
-        file => $self->bed_file,
+        file => $self->roi_file_path,
         wingspan => $wingspan,
     );
     unless ($regions) {
-        die('Failed to load BED region file '. $self->bed_file );
+        die('Failed to load BED region file '. $self->roi_file_path );
     }
     open( my $stats_fh, '>'. $temp_stats_file ) || die 'Failed to open stats file for writing '. $temp_stats_file;
 
-    # create low level bam object
-    my $refcov_bam  = Genome::Reference::Coverage::Bam->create(bam_file => $self->bam_file );
+    # create low level alignment object
+    my $refcov_bam  = Genome::Reference::Coverage::Bam->create(bam_file => $self->alignment_file_path );
     unless ($refcov_bam) {
-        die('Failed to load bam file '. $self->bam_file);
+        die('Failed to load alignment file '. $self->alignment_file_path);
     }
     my $bam  = $refcov_bam->bio_db_bam;
     my $index = $refcov_bam->bio_db_index;
