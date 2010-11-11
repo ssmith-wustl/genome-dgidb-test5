@@ -37,6 +37,21 @@ class Genome::Model::Build::ImportedAnnotation {
     ],
 };
 
+sub idstring {
+    my $self = shift;
+    return $self->model->name . "/" . $self->version;
+}
+
+# Checks to see if this build is compatible with the given imported reference sequence build (species and version match)
+sub is_compatible_with_reference_sequence_build {
+    # rsb: reference sequence build
+    my ($self, $rsb) = @_;
+    my $version = $self->version;
+    $version =~ s/^[^_]*_([0-9]+).*/$1/;
+    return ($rsb->model->subject->species_name eq $self->model->subject->species_name) &&
+        ($rsb->version eq $version);
+}
+
 # Checks if data is cached. Returns the cache location if found and use_cache
 # is true, otherwise returns default location
 sub determine_data_directory {
@@ -356,6 +371,19 @@ sub annotation_file {
         die('Must provide file suffix as parameter to annotation_file method in '.  __PACKAGE__);
     }
     my $file_name = $self->_annotation_data_directory .'/all_sequences.'. $suffix;
+    if (-f $file_name) {
+        return $file_name;
+    }
+    return;
+}
+
+sub rRNA_MT_file {
+    my $self = shift;
+    my $suffix = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to rRNA_MT_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_annotation_data_directory .'/rRNA_MT.'. $suffix;
     if (-f $file_name) {
         return $file_name;
     }

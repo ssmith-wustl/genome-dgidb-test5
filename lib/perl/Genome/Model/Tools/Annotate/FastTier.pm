@@ -15,6 +15,26 @@ class Genome::Model::Tools::Annotate::FastTier {
     },
     ],
     has_optional => [
+    tier1_output => {
+        calculate_from => ['variant_file'],
+        calculate => q{ "$variant_file.tier1"; },
+        is_output => 1,
+    },
+    tier2_output => {
+        calculate_from => ['variant_file'],
+        calculate => q{ "$variant_file.tier2"; },
+        is_output => 1,
+    },
+    tier3_output => {
+        calculate_from => ['variant_file'],
+        calculate => q{ "$variant_file.tier3"; },
+        is_output => 1,
+    },
+    tier4_output => {
+        calculate_from => ['variant_file'],
+        calculate => q{ "$variant_file.tier4"; },
+        is_output => 1,
+    },
     _tier1_bed => {
         type => 'Text',
         default => "/gscmnt/ams1102/info/info/tier_bed_files/tier1.bed",
@@ -57,10 +77,10 @@ sub execute {
     }
     my ($variant_filename, $directory, undef) = fileparse($self->variant_file); 
 
-    my $tier1_output = $variant_filename . ".tier1";
-    my $tier2_output = $variant_filename . ".tier2";
-    my $tier3_output = $variant_filename . ".tier3";
-    my $tier4_output = $variant_filename . ".tier4";
+    my $tier1_output = $self->tier1_output;
+    my $tier2_output = $self->tier2_output;
+    my $tier3_output = $self->tier3_output;
+    my $tier4_output = $self->tier4_output;
 
     my $tier1_cmd = "/gsc/pkg/bio/bedtools/installed-64/intersectBed -wa -a " . $self->variant_file . " -b " . $self->_tier1_bed . " > $tier1_output";  
 

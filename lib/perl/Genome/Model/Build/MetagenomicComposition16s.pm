@@ -513,6 +513,23 @@ sub summary_report {
 sub composition_report {
 }
 
+sub files_ignored_by_diff {
+    return qw(
+        build.xml
+        reports/Build_Initialized/report.xml
+        reports/Build_Succeeded/report.xml
+        reports/Composition/report.xml
+        reports/Summary/report.html
+        reports/Summary/report.xml
+    );
+}
+
+sub dirs_ignored_by_diff {
+    return qw(
+        logs/
+    );
+}
+
 1;
 
 #$HeadURL$

@@ -102,9 +102,10 @@ sub _system_snapshot {
     # FIXME: Make these stubs and subclass when we get closer to finished
     my $self = shift;
     my $dir = shift;
+    my $build_id = shift;
 
     # We create a cache file for this build
-    my $cache = "$dir/system_snapshot.cache";
+    my $cache = "$dir/system_snapshot.$build_id.cache";
     return if (! defined $dir);
 
     my $package = $self->_system_snapshot_package;
@@ -135,14 +136,14 @@ sub _execute_build {
     @inputs = map { $_->{value_id} } @inputs ;
     my $args = join(' ', @inputs);
 
-    my $dir = $build->data_directory;
+    my $datadir = $build->data_directory;
 
-    $self->_system_snapshot($dir);
+    $self->_system_snapshot($datadir,$build->id);
 
     # Set the DATA_DIRECTORY for use by executed program.
     $ENV{DATA_DIRECTORY} = $build->data_directory;
 
-    my $exit_code = system "/usr/bin/time -v $cmd $args >$dir/output 2>$dir/errors";
+    my $exit_code = system "/usr/bin/time -v $cmd $args >$datadir/output 2>$datadir/errors";
     $exit_code = $exit_code >> 8;
     if ($exit_code != 0) {
         $self->status_message("Failed to run $cmd with args $args!  Exit code: $exit_code.");
@@ -151,7 +152,7 @@ sub _execute_build {
         # Don't return, fall through and finish getting metrics.
     }
 
-    my $metrics = $self->_system_snapshot($dir);
+    my $metrics = $self->_system_snapshot($datadir,$build->id);
     $self->_set_metrics($build,$metrics);
 
     return 1;
