@@ -51,7 +51,7 @@ class Genome::Model::Tools::Calculate454Redundancy {
 	cross_match_jobs => {
 	    type => 'Integer',
 	    is_optional => 1,
-	    doc => 'Number of blade jobs to run cross_match, default is 1 job per 7500 reads',
+	    doc => 'Number of blade jobs to run cross_match, default is 1 job per 4500 reads',
 	},
 	cross_match_minscore => {
 	    type => 'Integer',
