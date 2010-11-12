@@ -55,6 +55,18 @@ sub pre_execute {
 
         $normal_bam = $normal_ra_build->whole_rmdup_bam_file;
         $tumor_bam = $tumor_ra_build->whole_rmdup_bam_file;
+        unless(-s $tumor_bam && -s $normal_bam){
+            $self->error_message("Couldn't locate tumor or normal bam files.");
+            die;
+        }
+        if(-l $normal_bam){
+            $normal_bam = readlink($normal_bam);
+            $self->status_message("rmdup normal bam is linked, the bam we will use is at ".$normal_bam."\n");
+        }
+        if(-l $tumor_bam){
+            $tumor_bam = readlink($tumor_bam);
+            $self->status_message("rmdup tumor bam is linked, the bam we will use is at ".$tumor_bam."\n");
+        }
         $self->tumor_bam($tumor_bam);
         $self->normal_bam($normal_bam);
     } elsif ($self->tumor_bam && $self->normal_bam) {
