@@ -256,6 +256,24 @@ sub amplicons_and_headers {
     return \%amplicons_and_headers;
 }
 
+sub files_ignored_by_diff {
+    return qw(
+        build.xml
+        properties.stor
+    );
+}
+
+sub dirs_ignored_by_diff {
+    return qw(
+        logs/
+        phd_dir/
+        reports/
+        edit_dir/
+        chromat_dir/
+        abi_dir/
+    );
+}
+
 1;
 
 #$HeadURL$

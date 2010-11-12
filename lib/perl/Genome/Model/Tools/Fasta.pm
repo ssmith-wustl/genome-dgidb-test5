@@ -7,6 +7,7 @@ use Genome;
 
 use Data::Dumper;
 use Bio::Seq;
+use Bio::SeqIO;
 require File::Copy;
 
 class Genome::Model::Tools::Fasta {

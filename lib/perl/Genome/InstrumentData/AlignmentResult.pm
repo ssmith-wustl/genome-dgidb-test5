@@ -246,6 +246,7 @@ class Genome::InstrumentData::AlignmentResult {
                                 },
         _input_fastq_pathnames => { is => 'ARRAY', is_optional => 1 },
         _input_bfq_pathnames   => { is => 'ARRAY', is_optional => 1 },
+        _fastq_read_count      => { is => 'Number',is_optional => 1 },
     ],
 };
 
@@ -494,7 +495,21 @@ sub extract_fastqs_and_run_aligner {
     }
 
     # STEP 8: RUN THE ALIGNER, APPEND TO all_sequences.sam IN SCRATCH DIRECTORY
+    my $fastq_rd_ct;
     for my $pass (@passes) {
+        for my $file (@$pass) {
+            my $line = `wc -l $file`;
+            my ($wc_ct) = $line =~ /^(\d+)\s/;
+            unless ($wc_ct) {
+                $self->error_message("Fail to count reads in FASTQ file: $file");
+                return;
+            }
+            if ($wc_ct % 4) {
+                $self->warning_message("run has a line count of $wc_ct, which is not divisible by four!");
+            }
+            $fastq_rd_ct += $wc_ct/4;
+        }
+
         $self->status_message("Aligning @$pass...");
         unless ($self->_run_aligner_chunked(@$pass)) {
             if (@$pass == 2) {
@@ -512,13 +527,18 @@ sub extract_fastqs_and_run_aligner {
         }
     }
 
+    unless ($fastq_rd_ct) {
+        $self->error_message('Unable to count reads in FASTQ files');
+        return;
+    }
+
+    $self->_fastq_read_count($fastq_rd_ct);
+
     for (@fastqs) {
        if ($_ =~ m/^\/tmp\//) {
         $self->status_message("Unlinking fastq file to save space now that we've aligned: $_");
        } 
     }
-
-    
 
     return 1;
 }
@@ -785,6 +805,24 @@ sub _verify_bam {
         return;
     } 
 
+    unless ($self->_check_read_count($flag_stat->{total_reads})) {
+        $self->error_message("Bam file $bam_file failed read_count checking");
+        return;
+    }
+
+    return 1;
+}
+
+sub _check_read_count {
+    my ($self, $bam_rd_ct) = @_;
+    my $fq_rd_ct = $self->_fastq_read_count;
+    my $check = "Read count from bam: $bam_rd_ct and fastq: $fq_rd_ct";
+
+    unless ($fq_rd_ct == $bam_rd_ct) {
+        $self->error_message("$check does not match.");
+        return;
+    }
+    $self->status_message("$check matches.");
     return 1;
 }
 

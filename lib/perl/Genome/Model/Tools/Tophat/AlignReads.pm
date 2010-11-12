@@ -267,11 +267,12 @@ sub verify_aligner_successful_completion {
 sub output_files {
     my $self = shift;
     my @output_files;
-    for my $method (qw/aligner_output_file bam_file coverage_file junctions_file/) {
+    for my $method (qw/aligner_output_file bam_file junctions_file/) {
         push @output_files, $self->$method;
     }
     if (version->parse($self->use_version) < version->parse('1.1.0')) {
         push @output_files, $self->sam_file;
+        push @output_files, $self->coverage_file;
     }
     return @output_files;
 }

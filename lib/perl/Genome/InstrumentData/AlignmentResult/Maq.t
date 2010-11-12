@@ -159,7 +159,7 @@ my $tmp_allocation = Genome::Disk::Allocation->__define__(
 mkpath($tmp_allocation->absolute_path);
 
 # manage reallocation since we are not actually doing a real allocation
-*Genome::Disk::Allocation::reallocate = sub { print "I would reallocate here!!"};
+*Genome::Disk::Allocation::reallocate = sub { print "I would reallocate here!!\n"};
 
 isa_ok($tmp_allocation,'Genome::Disk::Allocation');
 

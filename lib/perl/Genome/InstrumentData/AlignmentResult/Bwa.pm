@@ -243,33 +243,31 @@ sub _inspect_log_file {
     my $self = shift;
     my %p = @_;
 
-    my $aligner_output_fh = IO::File->new($p{log_file});
-    unless ($aligner_output_fh) {
-        $self->error_message("Can't open expected log file to verify completion " . $p{log_file} . "$!"
-        );
+    my $log_file = $p{log_file};
+    unless ($log_file and -s $log_file) {
+        $self->error_message("log file $log_file is not valid");
         return;
     }
-    
+
+    my $last_line = `tail -1 $log_file`;    
     my $check_nonzero = 0;
     
     my $log_regex = $p{log_regex};
     if ($log_regex =~ m/\(\\d\+\)/) {
-        
         $check_nonzero = 1;
     }
 
-    while (<$aligner_output_fh>) {
-        if (m/$log_regex/) {
-            $aligner_output_fh->close();
-            if ( !$check_nonzero || $1 > 0 ) {
-                return 1;
-            }
-            return;
+    if ($last_line =~ m/$log_regex/) {
+        if ( !$check_nonzero || $1 > 0 ) {
+            $self->status_message('The last line of aligner.log matches the expected pattern');
+            return 1;
         }
     }
-
+    
+    $self->error_message("The last line of $log_file is not valid: $last_line");
     return;
 }
+
 
 sub decomposed_aligner_params {
     my $self = shift;

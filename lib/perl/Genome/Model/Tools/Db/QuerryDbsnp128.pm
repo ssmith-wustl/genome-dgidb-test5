@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
-use GSCApp;
+#use GSCApp;
 
 class Genome::Model::Tools::Db::QuerryDbsnp128 {
     is => 'Command',                    

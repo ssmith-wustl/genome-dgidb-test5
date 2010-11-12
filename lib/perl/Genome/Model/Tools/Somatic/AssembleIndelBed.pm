@@ -13,63 +13,57 @@ my $SAM_DEFAULT = Genome::Model::Tools::Sam->default_samtools_version;
 
 class Genome::Model::Tools::Somatic::AssembleIndelBed {
     is => 'Command',
-       has => [
-           indel_file =>
-           {
-               type => 'String',
-               is_optional => 0,
-               is_input => 1,
-               doc => 'Indel sites to assemble in annotator input format',
-           },
-       bam_file =>
-       {
-           type => 'String',
-           is_optional => 0,
-           is_input => 1,
-           doc => 'File from which to retrieve reads',
-       },
-       buffer_size =>
-       {
-           type => 'Integer',
-           is_optional => 1,
-           default => 100,
-           doc => 'Size in bp around start and end of the indel to include for reads for assembly',
-       },
-       data_directory =>
-       {
-           type => 'String',
-           is_optional => 0,
-           is_input => 1,
-           doc => "Location to dump individual chr results etc",
-       },
-       refseq =>
-       {
-           type => 'String',
-           is_optional => 1,
-           default => Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fasta',
-           doc => "reference sequence to use for reference assembly",
-       },
-       assembly_indel_list =>
-       {
-           type => 'String',
-           is_output=>1,
-           doc => "List of assembly results",
-       },
-       sam_version => {
-           is  => 'String',
-           doc => "samtools version to be used, default is $SAM_DEFAULT",
-           default_value => $SAM_DEFAULT,
-           is_optional => 1,
-       },
-       lsf_resource => {
-           is_param => 1,
-           default_value => 'rusage[mem=2000] select[type==LINUX64 & mem > 2000] span[hosts=1]',
-       },
-       lsf_queue => {
-           is_param => 1,
-           default_value => 'long'
-       } 
-
+    has => [
+        indel_file =>{
+            type => 'String',
+            is_optional => 0,
+            is_input => 1,
+            doc => 'Indel sites to assemble in annotator input format',
+        },
+        bam_file =>{
+            type => 'String',
+            is_optional => 0,
+            is_input => 1,
+            doc => 'File from which to retrieve reads',
+        },
+        buffer_size =>{
+            type => 'Integer',
+            is_optional => 1,
+            default => 100,
+            doc => 'Size in bp around start and end of the indel to include for reads for assembly',
+        },
+        data_directory =>   {
+            type => 'String',
+            is_optional => 0,
+            is_input => 1,
+            doc => "Location to dump individual chr results etc",
+        },
+        refseq =>{
+            type => 'String',
+            is_optional => 1,
+            default => Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fasta',
+            doc => "reference sequence to use for reference assembly",
+        },
+        assembly_indel_list =>{
+            type => 'String',
+            is_input=>1,
+            is_output=>1,
+            doc => "List of assembly results",
+        },
+        sam_version => {
+            is  => 'String',
+            doc => "samtools version to be used, default is $SAM_DEFAULT",
+            default_value => $SAM_DEFAULT,
+            is_optional => 1,
+        },
+        lsf_resource => {
+            is_param => 1,
+            default_value => 'rusage[mem=2000] select[type==LINUX64 & mem > 2000] span[hosts=1]',
+        },
+        lsf_queue => {
+            is_param => 1,
+            default_value => 'long'
+        } 
     ]
 };
 
@@ -91,12 +85,12 @@ sub dir_for_chrom {
 
 sub execute {
     my $self=shift;
-    $DB::single = 1;
     my %DONE;
     my $DONE = \%DONE;
 
-#test architecture to make sure we can run samtools
-#copied from G::M::T::Maq""Align.t 
+    #test architecture to make sure we can run samtools
+    #copied from G::M::T::Maq""Align.t 
+    
     unless (`uname -a` =~ /x86_64/) {
         $self->error_message("Must run on a 64 bit machine");
         return;
@@ -138,8 +132,8 @@ sub execute {
 
     while(my $line = $fh->getline) {
         chomp $line;
-        $DB::single=1;
-        my ($chr, $start, $stop, $ref, $var) = split /\t/, $line;
+        my ($chr, $start, $stop, $stupid_ref_var_string_gabe_makes_us_use) = split /\t/, $line;
+        my ($ref,$var) = split /\//, $stupid_ref_var_string_gabe_makes_us_use;
         my $dir = $self->dir_for_chrom($chr);
         unless(-e $dir) {
             `mkdir -p $dir`;
@@ -169,7 +163,7 @@ sub execute {
             }
             $fa_fh->close;
 
-#make reference fasta
+            #make reference fasta
             my $ref_file = "$prefix.ref.fa";
             my $ref_fh = IO::File->new($ref_file,"w");
             unless($ref_fh) {
@@ -184,16 +178,14 @@ sub execute {
 
             print `/gsc/scripts/pkg/bio/tigra/installed/local_var_asm_wrapper.sh $read_file`; #assemble the reads
             `cross_match $read_file.contigs.fa $ref_file -bandwidth 20 -minmatch 20 -minscore 25 -penalty -4 -discrep_lists -tags -gap_init -4 -gap_ext -1 > $prefix.stat`;
-#            `~kchen/1000genomes/analysis/scripts/hetAtlas.pl -n 100 $read_file.contigs.fa > $read_file.contigs.fa.het`;
-#            `cross_match $read_file.contigs.fa.het $ref_file -bandwidth 20 -minmatch 20 -minscore 25 -penalty -4 -discrep_lists -tags -gap_init -4 -gap_ext -1 > $prefix.het.stat`;
-#            my ($result) = `~kchen/1000genomes/analysis/scripts/getCrossMatchIndel_ctx.pl -i -s 1 -x ${chr}_${region_start} $prefix.het.stat`; #this should return the crossmatch discrepancy with the highest score
-#            if(defined $result && $result =~ /\S+/) {
-#                print $result;
-#            }
-#            else {
-#   print "No assembled indel\n";
-    $DB::single=1;
-
+            #`~kchen/1000genomes/analysis/scripts/hetAtlas.pl -n 100 $read_file.contigs.fa > $read_file.contigs.fa.het`;
+            #`cross_match $read_file.contigs.fa.het $ref_file -bandwidth 20 -minmatch 20 -minscore 25 -penalty -4 -discrep_lists -tags -gap_init -4 -gap_ext -1 > $prefix.het.stat`;
+            #my ($result) = `~kchen/1000genomes/analysis/scripts/getCrossMatchIndel_ctx.pl -i -s 1 -x ${chr}_${region_start} $prefix.het.stat`; #this should return the crossmatch discrepancy with the highest score
+            #if(defined $result && $result =~ /\S+/) {
+            #     print $result;
+            #}
+            #else {
+            #print "No assembled indel\n";
             my $cmd = "gmt parse crossmatch --chr-pos ${chr}_${region_start} --crossmatch=$prefix.stat --min-indel-size=1";
             print "$cmd\n";
             my ($stupid_header1, $stupid_header2, $result) = `$cmd`;
@@ -203,12 +195,10 @@ sub execute {
                 print $result . "\n";
             }
             print STDERR "########################\n";
-
         }
-
     }
 
-return 1;
+    return 1;
 }
 
 
@@ -228,8 +218,6 @@ sub thing {
     my $pos = $fields[1];
     my $size = $fields[7];
     my $type = $fields[8];
-
-
     my $start;
     my $stop;
     if ($type =~ m/DEL/) {
@@ -243,11 +231,11 @@ sub thing {
     my ($ref, $var) = $self->generate_alleles($DONE, @fields);
     my $output_line = join("\t",$chr,$start,$stop,$ref,$var);
 
-#if line has already been printed, go to next event
+    #if line has already been printed, go to next event
     if ($DONE->{$output_line}) {
         next;
     }
-#else, record printed event
+    #else, record printed event
     else {
         $DONE->{$output_line} = 1;
         return "$output_line\n";

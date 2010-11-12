@@ -67,11 +67,11 @@ ok($result, "execution was successful");
 
 my $i = Genome::InstrumentData::Imported->get(  
     sample_name => $sample_name, 
-    library_id => $library->id,
     sequencing_platform => 'solexa',      
     import_format => 'sanger fastq',
-    
 );
+
+ok($i->library_name =~ m/extlibs$/, "library name was generated w/ extlibs extension: " . $i->library_name);
 
 ok($i, "found Imported instrument data")
     or die "Did not find Imported Instrument Data using sample_name = $sample_name";
@@ -87,8 +87,6 @@ is($owner_class, "Genome::InstrumentData::Imported", "allocation belongs to  G::
 is($disk->owner_id, $i->id, "allocation owner ID matches imported instrument data id");
 
 ok(-e $i->data_directory, "output directory is present");
-
-is($i->library_id,$library->id,"library_id matches");
 
 $i->delete;
 

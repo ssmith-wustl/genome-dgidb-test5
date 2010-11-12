@@ -1,5 +1,3 @@
-#:eclark Code should be ported out of the old MG namespace into this file if it is still used.
-
 package Genome::Model::Tools::Graph::MutationDiagram;
 
 use strict;
@@ -11,15 +9,14 @@ use Genome::Model::Tools::Graph::MutationDiagram::MutationDiagram;
 class Genome::Model::Tools::Graph::MutationDiagram {
     is => 'Command',
     has => [
-        maf => { 
-            type => 'String',  
-            doc => "MAF file", 
-            is_optional => 1,
-        },
         annotation => {
             type => 'String',
-            doc => "Annotator output",
-            is_optional => 1,
+            doc => "Annotator output.  Requires --reference-transcripts option",
+        },
+        reference_transcripts => {
+            type => 'String',
+            doc => 'name/version number of the reference transcripts set ("NCBI-human.combined-annotation/0") Defaults to "NCBI-human.combined-annotation/54_36p_v2"',
+            default => 'NCBI-human.combined-annotation/54_36p_v2',
         },
         genes   => { 
             type => 'String',  
@@ -32,6 +29,8 @@ class Genome::Model::Tools::Graph::MutationDiagram {
             is_optional => 1
         },
 
+    ],
+    has_optional => [
     ],
 };
 
@@ -54,25 +53,17 @@ EOS
 sub execute {
     $DB::single = $DB::stopper;
     my $self = shift;
-    my $maf_file = $self->maf;
     my $anno_file = $self->annotation;
-    if($maf_file) {
-        my $maf_obj = new Genome::Model::Tools::Graph::MutationDiagram::MutationDiagram(
-            maf_file => $maf_file,
-            hugos => $self->genes,
-            custom_domains => $self->custom_domains,
-        );
-    }
-    elsif($anno_file) {
+    if($anno_file) {
         my $anno_obj = new Genome::Model::Tools::Graph::MutationDiagram::MutationDiagram(
             annotation => $anno_file,
             hugos => $self->genes,
             custom_domains => $self->custom_domains,
+            reference_transcripts => $self->reference_transcripts,
         );
     }
     else {
-        #must have one or the other
-        $self->error_message("Must provide either maf or annotation output format");
+        $self->error_message("Must provide annotation output format");
         return;
     }
     return 1;
