@@ -40,6 +40,7 @@ class Genome::Model::Tools::Somatic::IntersectAssembledIndels {
         type => 'String',
         is_optional => 0,
         is_input => 1,
+        is_output => 1,
         doc => 'Output file',
     },
     germline_output_list => 

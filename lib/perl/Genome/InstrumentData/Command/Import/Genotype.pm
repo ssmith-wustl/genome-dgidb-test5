@@ -126,9 +126,12 @@ sub execute {
             $self->error_message("Could not locate sample with the name ".$self->sample_name);
             die $self->error_message;
         }
-        ($library) = Genome::Library->get(sample_name => $sample->name);
+        ($library) = Genome::Library->get(sample=>$sample, name => $sample->name . "-microarraylib");
         unless(defined($library)){
-            $self->error_message("COuld not locate a library associated with the sample-name ".$sample->name);
+            $library = Genome::Library->create(sample=>$sample, name => $sample->name . "-microarraylib");
+        }
+        unless(defined($library)){
+            $self->error_message("Could not locate a library associated with the sample w/ library name ".$sample->name . "-microarraylib and couldn't create one either.");
             die $self->error_message;
         }
         $self->library_name($library->name);
@@ -158,9 +161,8 @@ sub execute {
 
     $params{sequencing_platform} = $self->sequencing_platform; 
     $params{import_format} = $self->import_format;
-    $params{sample_id} = $sample->id;
     $params{library_id} = $library->id;
-    $params{library_name} = $library->name;
+    $params{sample_id} = $sample->id;
     if(defined($self->allocation)){
         $params{disk_allocations} = $self->allocation;
     }

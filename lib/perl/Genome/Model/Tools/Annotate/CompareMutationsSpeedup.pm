@@ -10,7 +10,7 @@ package Genome::Model::Tools::Annotate::CompareMutationsSpeedup;
    use Digest::MD5;
 
 #__SPECIAL GENOME CENTER PACKAGES
-   #use GSCApp;
+   ##use GSCApp;
    use MG::Transform::Process::MutationCSV;
    use MG::IO::Parse::Cosmic;
 

@@ -7,6 +7,7 @@ use above 'Genome';
 
 use Test::More 'no_plan';
 require File::Temp;
+use Bio::Seq::Quality;
 
 #< Bioseqs >#
 my $bioseq = Bio::Seq::Quality->new(

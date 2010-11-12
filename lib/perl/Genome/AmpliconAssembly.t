@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above 'Genome';
-
+use Test::MockObject;
 use Genome::AmpliconAssembly::Test;
 
 Genome::AmpliconAssembly::Test->runtests;

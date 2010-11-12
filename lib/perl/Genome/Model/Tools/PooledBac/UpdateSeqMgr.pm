@@ -7,7 +7,7 @@ use Genome;
 use Genome::Model::Tools::Pcap::Assemble;
 use Bio::SeqIO;
 use Data::Dumper;
-use GSCApp;
+#use GSCApp;
 class Genome::Model::Tools::PooledBac::UpdateSeqMgr {
     is => 'Command',
     has => 
