@@ -268,7 +268,16 @@ sub print_standard_roi_coverage {
     my $alignments = $self->load_alignments;
 
     my $temp_stats_file = Genome::Utility::FileSystem->create_temp_file_path;
-    open( my $stats_fh, '>'. $temp_stats_file ) || die 'Failed to open stats file for writing '. $temp_stats_file;
+    my @headers = Genome::RefCov::Stats->headers;
+    my $writer = Genome::Utility::IO::SeparatedValueWriter->create(
+        separator => "\t",
+        headers => \@headers,
+        output => $temp_stats_file,
+        print_headers => 0,
+    );
+    unless ($writer) {
+        die 'Failed to open stats file for writing '. $temp_stats_file;
+    }
 
     my $bam  = $alignments->bio_db_bam;
     my $index = $alignments->bio_db_index;
@@ -283,12 +292,14 @@ sub print_standard_roi_coverage {
                 my $stat = Genome::RefCov::Stats->create(
                     coverage => $coverage_array_ref,
                     min_depth => $min_depth,
+                    name => $region->name,
                 );
-                print $stats_fh $region->name ."\t". $stat->as_string . "\n";
+                my $data = $stat->stats_hash_ref;
+                $writer->write_one($data);
             }
         }
     }
-    $stats_fh->close;
+    $writer->output->close;
 
     Genome::Utility::FileSystem->copy_file($temp_stats_file, $self->stats_file);
     return 1;

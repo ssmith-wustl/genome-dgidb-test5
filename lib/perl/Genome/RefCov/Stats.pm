@@ -5,11 +5,51 @@ use warnings;
 
 use Statistics::Descriptive;
 
+my @HEADERS = qw/
+                    name
+                    percent_ref_bases_covered
+                    total_ref_bases
+                    total_covered_bases
+                    missing_bases
+                    ave_cov_depth
+                    sdev_ave_cov_depth
+                    med_cov_depth
+                    gap_number
+                    ave_gap_length
+                    sdev_ave_gap_length
+                    med_gap_length
+                    min_depth_filter
+                    min_depth_discarded_bases
+                    percent_min_depth_discarded
+/;
+
+my %HEADER_DESCRIPTIONS = (
+    name                        => 'Name of Coverage Region',
+    percent_ref_bases_covered   => 'Percent of Reference Bases Covered',
+    total_ref_bases             => 'Total Number of Reference Bases',
+    total_covered_bases         => 'Total Number of Covered Bases',
+    missing_bases               => 'Number of Missing Bases',
+    ave_cov_depth               => 'Average Coverage Depth',
+    sdev_ave_cov_depth          => 'Standard Deviation Average Coverage Depth',
+    med_cov_depth               => 'Median Coverage Depth',
+    gap_number                  => 'Number of Gaps',
+    ave_gap_length              => 'Average Gap Length',
+    sdev_ave_gap_length         => 'Standard Deviation Average Gap Length',
+    med_gap_length              => 'Median Gap Length',
+    min_depth_filter            => 'Min. Depth Filter',
+    min_depth_discarded_bases   => 'Discarded Bases (Min. Depth Filter)',
+    percent_min_depth_discarded => 'Percent Discarded Bases (Min. Depth Filter)',
+);
+
 class Genome::RefCov::Stats {
     has => [
         coverage => {
             is => 'ArrayRef',
             doc => 'An array of integers representing the depth of coverage at each base position',
+        },
+        name => {
+            is => 'String',
+            doc => 'A unique name for the coverage region',
         },
         ref_length => {
             is_calculated => 1,
@@ -50,6 +90,9 @@ sub create {
     my $class = shift;
     my %params = @_;
     my $coverage = delete($params{coverage});
+    unless ($coverage) {
+        die('A coverage array ref is required!');
+    }
     my $self = $class->SUPER::create(%params);
     $self->coverage($coverage);
     $self->_main_calculation_code;
@@ -228,50 +271,49 @@ sub _round {
 
 sub stats {
     my $self = shift;
-
-    # STATISTICS (no units attached, just values)
-    my @stats = (
-                 $self->percent_ref_bases_covered(),
-                 $self->total_ref_bases(),
-                 $self->total_covered_bases(),
-                 $self->missing_bases(),
-                 $self->ave_cov_depth(),
-                 $self->sdev_ave_cov_depth(),
-                 $self->med_cov_depth(),
-                 $self->gap_number(),
-                 $self->ave_gap_length(),
-                 $self->sdev_ave_gap_length(),
-                 $self->med_gap_length(),
-                 $self->min_depth_filter(),
-                 $self->min_depth_discarded_bases(),
-                 $self->percent_min_depth_discarded(),
-                );
-
+    my @stats;
+    for my $header ($self->headers) {
+        push @stats,$self->$header;
+    }
     return \@stats;
+}
+
+sub stats_hash_ref {
+    my $self = shift;
+    my %stats;
+    for my $header ($self->headers) {
+        $stats{$header} = $self->$header;
+    }
+    return \%stats;
 }
 
 sub stats_index {
     my $self = shift;
 
-    # STATISTICS (no units attached, just values)
-    my %stats = (
-                 0  => { 'Percent of Reference Bases Covered'           => $self->percent_ref_bases_covered()   },
-                 1  => { 'Total Number of Reference Bases'              => $self->total_ref_bases()             },
-                 2  => { 'Total Number of Covered Bases'                => $self->total_covered_bases()         },
-                 3  => { 'Number of Missing Bases'                      => $self->missing_bases()               },
-                 4  => { 'Average Coverage Depth'                       => $self->ave_cov_depth()               },
-                 5  => { 'Standard Deviation Average Coverage Depth'    => $self->sdev_ave_cov_depth()          },
-                 6  => { 'Median Coverage Depth'                        => $self->med_cov_depth()               },
-                 7  => { 'Number of Gaps'                               => $self->gap_number()                  },
-                 8  => { 'Average Gap Length'                           => $self->ave_gap_length()              },
-                 9  => { 'Standard Deviation Average Gap Length'        => $self->sdev_ave_gap_length()         },
-                 10 => { 'Median Gap Length'                            => $self->med_gap_length()              },
-                 11 => { 'Min. Depth Filter'                            => $self->min_depth_filter()            },
-                 12 => { 'Discarded Bases (Min. Depth Filter)'          => $self->min_depth_discarded_bases()   },
-                 13 => { 'Percent Discarded Bases (Min. Depth Filter)'  => $self->percent_min_depth_discarded() },
-                );
-
+    my @headers = $self->headers;
+    my @descriptions = $self->header_descriptions;
+    unless (scalar(@headers) == scalar(@descriptions)) {
+        die('Failed to find the correct number of headers and descriptions.');
+    }
+    my %stats;
+    for (my $i = 0; $i < scalar(@headers); $i++) {
+        my $header = $headers[$i];
+        my $description = $descriptions[$i];
+        $stats{$i} = { $description => $self->$header};
+    }
     return \%stats;
+}
+
+sub headers {
+    return @HEADERS;
+}
+
+sub header_descriptions{
+    my @descriptions;
+    for my $header (@HEADERS) {
+        push @descriptions, $HEADER_DESCRIPTIONS{$header};
+    }
+    return @descriptions;
 }
 
 sub save_stats {

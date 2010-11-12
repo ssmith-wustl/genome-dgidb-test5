@@ -15,17 +15,22 @@ use Data::Dumper 'Dumper';
 class Genome::Utility::IO::SeparatedValueWriter {
     is => 'Genome::Utility::IO::Writer', 
     has => [
-    headers => {
-        type => 'Array',
-        doc => 'Headers to write and use in ordering value order.'
-    },
+        headers => {
+            type => 'Array',
+            doc => 'Headers to write and use in ordering value order.'
+        },
     ],
     has_optional => [
-    separator => {
-        type => 'String',
-        default => ',',
-        doc => 'The value of the separator character.  Default: ","'
-    },
+        separator => {
+            type => 'String',
+            default => ',',
+            doc => 'The value of the separator character.  Default: ","'
+        },
+        print_headers => {
+            is => 'Boolean',
+            doc => 'A flag to print the headers on the first line.',
+            default_value => 1,
+        },
     ],
 };
 
@@ -43,8 +48,9 @@ sub create {
 
     $self->headers($headers);
     $self->{_column_count} = scalar @$headers;
-    $self->output->print( join($self->separator, @$headers)."\n" );
-    
+    if ($self->print_headers) {
+        $self->output->print( join($self->separator, @$headers)."\n" );
+    }
     return $self;
 }
 
