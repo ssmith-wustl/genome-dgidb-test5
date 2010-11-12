@@ -28,7 +28,6 @@ EOS
 
 sub pre_execute {
     my $self = shift;
-    $DB::single=1;
     # Obtain normal and tumor bams and check them. Either from somatic model id or from direct specification. 
     my ($build, $tumor_bam, $normal_bam);
     if ( ($self->model_id) && ($self->tumor_bam || $self->normal_bam) ) {
@@ -40,15 +39,22 @@ sub pre_execute {
             $self->error_message("Could not get a somatic model for id " . $self->model_id);
             die;
         }
-
-        $build = $model->last_succeeded_build;
-        unless ($build) {
-            $self->error_message("Could not get a last_succeeded_build for model id " . $self->model_id);
+        my $tumor_ra_model = $model->tumor_model;
+        my $normal_ra_model = $model->normal_model;
+        #$build = $model->last_succeeded_build;
+        unless ($tumor_ra_model && $normal_ra_model) {
+            $self->error_message("Could not get tumor or normal model from somatic model " . $self->model_id);
+            die;
+        }
+        my $normal_ra_build = $normal_ra_model->last_succeeded_build;
+        my $tumor_ra_build = $tumor_ra_model->last_succeeded_build;
+        unless ($tumor_ra_build && $normal_ra_build) {
+            $self->error_message("Could not get tumor or normal model from somatic model " . $self->model_id);
             die;
         }
 
-        $normal_bam = $build->normal_build->whole_rmdup_bam_file;
-        $tumor_bam = $build->tumor_build->whole_rmdup_bam_file;
+        $normal_bam = $normal_ra_build->whole_rmdup_bam_file;
+        $tumor_bam = $tumor_ra_build->whole_rmdup_bam_file;
         $self->tumor_bam($tumor_bam);
         $self->normal_bam($normal_bam);
     } elsif ($self->tumor_bam && $self->normal_bam) {
