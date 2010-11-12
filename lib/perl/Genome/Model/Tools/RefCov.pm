@@ -413,8 +413,6 @@ sub region_coverage_with_quality_filter {
 #    die('No class implemented for combination of parameters!');
 #}
 
-<<<<<<< HEAD
-
 sub stitch_exons {
     my $self = shift;
 
@@ -432,12 +430,7 @@ sub stitch_exons {
     return 1;
 }
 
-
-
-sub print_standard_roi_coverage {
-=======
 sub resolve_stats_file_headers {
->>>>>>> 7c2450220b413b90fde39303e37f98f08a58604b
     my $self = shift;
     my @headers = Genome::RefCov::Stats->headers;
     if ($self->evaluate_gc_content) {
