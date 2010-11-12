@@ -22,7 +22,7 @@ ok (-d $temp_dir, "Test test directory created") or die;
 #create/run tool
 my $create = Genome::Model::Tools::Assembly::SplitScaffold->create(
     ace_file => $test_dir.'/merge.ace',
-    split_contig => ['Contig60.6'],
+    split_contigs => ['Contig60.6'],
     out_file_name => $temp_dir.'/split_out.ace',
     );
 ok ($create, "Created split-scaffold tool") or die;
