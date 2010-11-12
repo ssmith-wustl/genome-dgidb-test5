@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use above "Genome";  # forces a 'use lib' when run directly from the cmdline
-use Test::More tests => 7;
+use Test::More tests => 10;
 use FindBin qw($Bin);
 use File::Path;
 use File::Basename;
