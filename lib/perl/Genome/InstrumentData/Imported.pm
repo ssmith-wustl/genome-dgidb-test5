@@ -202,8 +202,6 @@ Genome::InstrumentData::Solexa->class;
 sub dump_sanger_fastq_files {
     my $self = shift;
 
-    print "HEY HERE WE GO\n";
-
     if ($self->import_format eq 'bam') {
         return $self->dump_fastqs_from_bam(@_);
     } else {
@@ -225,7 +223,16 @@ sub dump_fastqs_from_bam {
         die $cmd->error_message;
     }
 
-    my @files = ($fwd_file, $rev_file);
+    if ((-s $fwd_file && !-s $rev_file) ||
+        (!-s $fwd_file && -s $rev_file)) {
+        $self->error_message("Fwd & Rev files are lopsided; one has content and the other doesn't. Can't proceed"); 
+        die $self->error_message;
+    }
+
+    my @files;
+    if (-s $fwd_file && -s $rev_file) { 
+        push @files, ($fwd_file, $rev_file);
+    }
     if (-s $fragment_file) {
         push @files, $fragment_file;
     }
