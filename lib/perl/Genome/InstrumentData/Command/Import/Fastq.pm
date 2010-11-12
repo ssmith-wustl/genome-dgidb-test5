@@ -485,7 +485,7 @@ sub check_last_read {
     my ($read_name) = split "/",$lines[0];
     my $read_length = length $lines[1];
     if(defined $self->read_length){
-        unless($read_length < $self->read_length){
+        unless($read_length <= $self->read_length){
             $self->error_message("Read-Length was set to ".$self->read_length." however, a read of length ".$read_length." was found in the last read.");
             return;
         }

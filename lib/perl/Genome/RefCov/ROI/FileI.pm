@@ -1,4 +1,4 @@
-package Genome::RefCov::RegionFileI;
+package Genome::RefCov::ROI::FileI;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 
 my $DEFAULT_REGION_INDEX_SUBSTRING = 0;
 
-class Genome::RefCov::RegionFileI {
+class Genome::RefCov::ROI::FileI {
     has => [
         file => {
             is => 'String',
@@ -79,8 +79,8 @@ sub all_regions {
 sub _add_region {
     my $self = shift;
     my $region = shift;
-    unless ($region && ref($region) eq 'Genome::RefCov::Region') {
-        die ('Must supply a Genome::RefCov::Region to method _add_region');
+    unless ($region && ref($region) eq 'Genome::RefCov::ROI::Region') {
+        die ('Must supply a Genome::RefCov::ROI::Region to method _add_region');
     }
     my $start = $region->start;
     my $stop = $region->end;

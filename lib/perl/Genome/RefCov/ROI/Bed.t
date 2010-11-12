@@ -9,14 +9,14 @@ use Test::More skip_all => 'The test BED file is way too big';
     #tests => 4;
 
 BEGIN {	
-    use_ok('Genome::RefCov::RegionI');
-    use_ok('Genome::RefCov::Region');
-    use_ok('Genome::RefCov::RegionFileI');
-    use_ok('Genome::RefCov::Bed');
+    use_ok('Genome::RefCov::ROI::RegionI');
+    use_ok('Genome::RefCov::ROI::Region');
+    use_ok('Genome::RefCov::ROI::FileI');
+    use_ok('Genome::RefCov::ROI::Bed');
 }
 # TODO: find much more suitable BED file for test case
 my $file = '/gscmnt/sata141/techd/twylie/CAPTURE_ROUND_ROBIN/SANGER.bed';
-my $region_set = Genome::RefCov::Bed->create(file => $file);
+my $region_set = Genome::RefCov::ROI::Bed->create(file => $file);
 my @chromosomes = $region_set->chromosomes;
 is(scalar(@chromosomes),25,'got 25 chromosomes');
 for my $chrom (@chromosomes) {

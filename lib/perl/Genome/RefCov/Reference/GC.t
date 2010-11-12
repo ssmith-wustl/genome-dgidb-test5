@@ -14,29 +14,24 @@ my $reflen = 17;
 my $myRef   = Genome::RefCov::Reference::GC->create(
     coverage => \@cov,
     sequence => \@seq,
-    reflen   => $reflen,
-    );
+);
 print  Data::Dumper::Dumper($myRef);
 exit;
-print "GC RAW   \t" . $myRef->GC_raw_percent()      . "\n";
 print "GC REFLEN\t" . $myRef->GC_reflen_percent()   . "\n";
 print "GC COV   \t" . $myRef->GC_covlen_percent()   . "\n";
 print "GC UNCOV \t" . $myRef->GC_uncovlen_percent() . "\n";
 print "\n";
 
-print "AT RAW   \t" . $myRef->AT_raw_percent()      . "\n";
 print "AT REFLEN\t" . $myRef->AT_reflen_percent()   . "\n";
 print "AT COV   \t" . $myRef->AT_covlen_percent()   . "\n";
 print "AT UNCOV \t" . $myRef->AT_uncovlen_percent() . "\n";
 print "\n";
 
-print "G RAW   \t" . $myRef->G_raw_percent()      . "\n";
 print "G REFLEN\t" . $myRef->G_reflen_percent()   . "\n";
 print "G COV   \t" . $myRef->G_covlen_percent()   . "\n";
 print "G UNCOV \t" . $myRef->G_uncovlen_percent() . "\n";
 print "\n";
 
-print "N RAW   \t" . $myRef->N_raw_percent()      . "\n";
 print "N REFLEN\t" . $myRef->N_reflen_percent()   . "\n";
 print "N COV   \t" . $myRef->N_covlen_percent()   . "\n";
 print "N UNCOV \t" . $myRef->N_uncovlen_percent() . "\n";
