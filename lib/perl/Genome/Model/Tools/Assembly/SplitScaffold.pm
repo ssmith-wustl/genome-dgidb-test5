@@ -19,7 +19,6 @@ class Genome::Model::Tools::Assembly::SplitScaffold {
 	split_contig => {
 	    type => 'Text',
 	    is_many => 1,
-	    is_optional => 1,
 	    doc => 'Multiple scaffold contigs to split scaffolds by',
 	},
 	out_file_name => {
