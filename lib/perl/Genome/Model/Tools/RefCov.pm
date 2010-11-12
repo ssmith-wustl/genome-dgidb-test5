@@ -134,12 +134,12 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gmt ref-cov ...    
+gmt ref-cov ...
 EOS
 }
 
 sub help_detail {
-    return <<EOS 
+    return <<EOS
 Please add help detail!
 EOS
 }
@@ -393,6 +393,26 @@ sub region_coverage_with_quality_filter {
 #    }
 #    die('No class implemented for combination of parameters!');
 #}
+
+
+sub stitch_exons {
+    my $self = shift;
+
+    # **NOTE**
+    # Operation should be performed post print_standard_roi_coverage()
+    # execution.
+
+    my $myStatsFile = Genome::Utility::IO::SeparatedValueReader->new(
+                                                                     input   => $self->stats_file(),
+                                                                     headers => [
+                                                                                ],
+                                                                     seperator => '\t',
+                                                                    );
+
+    return 1;
+}
+
+
 
 sub print_standard_roi_coverage {
     my $self = shift;
