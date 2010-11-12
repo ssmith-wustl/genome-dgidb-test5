@@ -208,8 +208,8 @@ EOS
 }
 
 sub execute {
-    my $self = shift;
     
+    my $self = shift;
     if($self->_should_skip_execution) {
         $self->status_message('All processes skipped.');
         return 1;

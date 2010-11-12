@@ -1,12 +1,12 @@
-package Genome::RefCov::Bed;
+package Genome::RefCov::ROI::Bed;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::RefCov::Bed {
-    is => ['Genome::RefCov::RegionFileI'],
+class Genome::RefCov::ROI::Bed {
+    is => ['Genome::RefCov::ROI::FileI'],
 };
 
 sub _read_file {
@@ -34,7 +34,7 @@ sub _read_file {
         if (defined($strand)) {
             $region_params{strand} = $strand;
         }
-        my $region = Genome::RefCov::Region->create(%region_params);
+        my $region = Genome::RefCov::ROI::Region->create(%region_params);
         $self->_add_region($region);
     }
     $fh->close;

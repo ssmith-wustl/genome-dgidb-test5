@@ -15,13 +15,14 @@ use Test::More;
 #  plan skip_all => "this test is only runnable on perl 5.12+"
 #}
 
-plan tests => 18;
+plan tests => 20;
 
 use_ok('Genome::RefCov::Stats');
 # TODO: Load a BAM file and use the actual coverage method to get array?
 my @coverage = (0,0,5,5,5,5,5,0,5,5,5,5,5,0,0);
 my $expected_length = scalar(@coverage);
 my $stats = Genome::RefCov::Stats->create(
+    name => 'Test',
    coverage => \@coverage,
 );
 isa_ok($stats,'Genome::RefCov::Stats');
@@ -40,7 +41,7 @@ is($stats->min_depth_discarded_bases,0,'min_depth_discarded_bases matches expect
 is($stats->percent_min_depth_discarded,'0.00','percent_min_depth_discarded matches expected');
 my $stats_ref = $stats->stats;
 isa_ok(ref($stats_ref),'ARRAY');
-is(scalar(@{$stats_ref}),14,'Found expected elements in stats array ref');
+is(scalar(@{$stats_ref}),15,'Found expected elements in stats array ref');
 
 # TODO: Find appropriate tmp location to write test file
 # TODO: Write a validation file to compare
@@ -48,6 +49,12 @@ is(scalar(@{$stats_ref}),14,'Found expected elements in stats array ref');
 
 # TODO: redirect STDOUT and validate output
 ok($stats->print_stats,'Print stats to STDOUT');
+
+my @headers = $stats->headers;
+is(scalar(@headers),15,'Found expected elements in stats headers');
+
+my @descriptions = $stats->header_descriptions;
+is(scalar(@descriptions),15,'Found expected elements in stats descriptions');
 
 # TODO: Repeat tests with min_depth filter on and coverage values sufficient for such test
 exit;
