@@ -253,6 +253,25 @@ sub roi_stats {
     return $self->_roi_stats;
 }
 
+sub _load_genome_stats {
+    my $self = shift;
+    my $alignments = $self->alignments;
+    my $genome_stats = Genome::RefCov::Reference::Stats->create(
+        bam => $alignments->bio_db_bam,
+        bam_index => $alignments->bio_db_index,
+    );
+    $self->_genome_stats($genome_stats);
+    return $genome_stats;
+}
+
+sub genome_stats {
+    my $self = shift;
+    unless ($self->_genome_stats) {
+        $self->_load_genome_stats;
+    }
+    return $self->_genome_stats;
+}
+
 # This is only necessary when running in parallel as a part of a workflow
 # There is probably a better way of doing this
 sub resolve_final_directory {
@@ -394,6 +413,7 @@ sub region_coverage_with_quality_filter {
 #    die('No class implemented for combination of parameters!');
 #}
 
+<<<<<<< HEAD
 
 sub stitch_exons {
     my $self = shift;
@@ -415,11 +435,10 @@ sub stitch_exons {
 
 
 sub print_standard_roi_coverage {
+=======
+sub resolve_stats_file_headers {
+>>>>>>> 7c2450220b413b90fde39303e37f98f08a58604b
     my $self = shift;
-
-    my $regions = $self->roi;
-
-    my $temp_stats_file = Genome::Utility::FileSystem->create_temp_file_path;
     my @headers = Genome::RefCov::Stats->headers;
     if ($self->evaluate_gc_content) {
         push @headers, $self->gc_headers;
@@ -427,6 +446,19 @@ sub print_standard_roi_coverage {
     if ($self->roi_normalized_coverage) {
         push @headers, 'roi_normalized_depth';
     }
+    if ($self->genome_normalized_coverage) {
+        push @headers, 'genome_normalized_depth';
+    }
+    return @headers;
+}
+
+sub print_standard_roi_coverage {
+    my $self = shift;
+
+    my $regions = $self->roi;
+
+    my $temp_stats_file = Genome::Utility::FileSystem->create_temp_file_path;
+    my @headers = $self->resolve_stats_file_headers;
     my $writer = Genome::Utility::IO::SeparatedValueWriter->create(
         separator => "\t",
         headers => \@headers,
@@ -462,8 +494,13 @@ sub print_standard_roi_coverage {
                 }
                 if ($self->roi_normalized_coverage) {
                     my $roi_stats = $self->roi_stats;
-                    my $roi_normalized_depth = ($stat->ave_cov_depth / $roi_stats->mean_coverage);
+                    my $roi_normalized_depth = _round( ($stat->ave_cov_depth / $roi_stats->mean_coverage) );
                     $data->{'roi_normalized_depth'} = $roi_normalized_depth;
+                }
+                if ($self->genome_normalized_coverage) {
+                    my $genome_stats = $self->genome_stats;
+                    my $genome_normalized_depth = _round( ($stat->ave_cov_depth / $genome_stats->mean_coverage) );
+                    $data->{'genome_normalized_depth'} = $genome_normalized_depth;
                 }
                 $writer->write_one($data);
             }
@@ -496,5 +533,9 @@ sub gc_headers {
     return @GC_HEADERS;
 }
 
+sub _round {
+    my $value = shift;
+    return sprintf( "%.2f", $value );
+}
 
 1;

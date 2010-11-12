@@ -5,8 +5,7 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More;
-    #skip_all => 'This test is incomplete';
+use Test::More skip_all => 'This test is incomplete';
 
 my @cov    = qw[0 0 0 12 13 14 0 0 0 0 22 23 25 27 0 0 0];
 my @seq    = qw[A G T  T  T  C G G A C  C  T  G  C C C C];
