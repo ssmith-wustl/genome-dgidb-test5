@@ -28,7 +28,7 @@ EOS
 
 sub pre_execute {
     my $self = shift;
-
+    $DB::single=1;
     # Obtain normal and tumor bams and check them. Either from somatic model id or from direct specification. 
     my ($build, $tumor_bam, $normal_bam);
     if ( ($self->model_id) && ($self->tumor_bam || $self->normal_bam) ) {
@@ -49,6 +49,8 @@ sub pre_execute {
 
         $normal_bam = $build->normal_build->whole_rmdup_bam_file;
         $tumor_bam = $build->tumor_build->whole_rmdup_bam_file;
+        $self->tumor_bam($tumor_bam);
+        $self->normal_bam($normal_bam);
     } elsif ($self->tumor_bam && $self->normal_bam) {
         $normal_bam = $self->normal_bam;
         $tumor_bam = $self->tumor_bam;
