@@ -41,7 +41,12 @@ sub create {
         die "Bio::DB::Sam requires perl 5.12!";
     }
     require Bio::DB::Sam;
+    # There seems to be a problem creating the UR object with these wrapped C classes
+    my $bam = delete($params{bam});
+    my $bam_index = delete($params{bam_index});
     my $self = $class->SUPER::create(%params);
+    $self->bam($bam);
+    $self->bam_index($bam_index);
     unless ($self->_load_stats) {
         die('Failed to load stats for BAM:  '. $self->bam);
     }
@@ -93,7 +98,7 @@ sub _load_stats {
             }
         }
     } else {
-        my $regions = Genome::RefCov::Bed->create(
+        my $regions = Genome::RefCov::ROI::Bed->create(
             file => $self->bed_file,
         );
         unless ($regions) {
@@ -135,7 +140,7 @@ sub _load_stats {
             }
         }
     }
-    $self->{_stats} = $stats;
+    $self->_statistics($stats);
     return 1;
 }
 

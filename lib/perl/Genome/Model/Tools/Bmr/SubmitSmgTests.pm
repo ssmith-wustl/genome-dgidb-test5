@@ -92,7 +92,7 @@ sub execute
     my $outfile = "$output_dir/" . $piece . ".pvalues";
     my $stdout_file = "$stdout_dir/" . $piece . ".stdout";
     sleep(0.2); #Pause for a short while to avoid overloading LDAP, and to help out the disks
-    print `bsub -q tcga -oo $stdout_file -J $jobname gmt bmr smg-test --gene-summary $gene_summary_file --output-file $outfile`;
+    print `bsub -q tcga -M 4000000 -R 'select[type==LINUX64 && mem>4000] rusage[mem=4000]' -oo $stdout_file -J $jobname gmt bmr smg-test --gene-summary $gene_summary_file --output-file $outfile`;
     ++$submitCnt;
   }
 
