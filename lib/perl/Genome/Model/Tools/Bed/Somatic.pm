@@ -12,11 +12,13 @@ class Genome::Model::Tools::Bed::Somatic {
         tumor_bed_file => {
             is => 'Text',
             is_input => 1,
+            is_many => 1,
             doc => 'The BED format file of intervals to pull out bases from reference.',
         },
         normal_bed_file => {
             is => 'Text',
             is_input => 1,
+            is_many => 1,
             doc => 'The BED format file of intervals to pull out bases from reference.',
         },
         somatic_file => {
@@ -31,12 +33,12 @@ class Genome::Model::Tools::Bed::Somatic {
 
 sub execute {
     my $self = shift;
-    
+    $DB::single = 1;
     my @tumor_files = $self->tumor_bed_file;
     my @normal_files= $self->normal_bed_file;
 
-    my $tumor_temp = File::Temp->new('gmt-bed-somatic-tumor-XXXX', DIR => "/tmp", CLEANUP => 1);
-    my $normal_temp = File::Temp->new('gmt-bed-somatic-normal-XXXX', DIR => "/tmp", CLEANUP => 1);
+    my $tumor_temp = Genome::Utility::FileSystem->create_temp_file_path;
+    my $normal_temp = Genome::Utility::FileSystem->create_temp_file_path;
     my $tumor_out;
     my $normal_out;
     if(scalar(@tumor_files)>1){
@@ -55,7 +57,6 @@ sub execute {
     }else{
         $normal_out = $self->normal_bed_file;
     }
-
 
     
     my $tier1_cmd = "/gsc/pkg/bio/bedtools/installed-64/intersectBed -wa -v -a " . $tumor_out . " -b " . $normal_out . " > " . $self->somatic_file;  

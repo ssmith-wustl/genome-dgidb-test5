@@ -17,7 +17,8 @@ class Genome::Model::Tools::Somatic::FilterFalsePositives {
        'analysis_type' => {
             type => 'String',
             doc => 'Type of sequencing analysis for filter optimization (wgs|capture)',
-            is_input => 1,	    
+            is_input => 1,
+	    default => "capture",
        },
        'bam_file' => {
             type => 'String',
@@ -105,6 +106,13 @@ class Genome::Model::Tools::Somatic::FilterFalsePositives {
             is_optional => 1,
             is_input => 1,
             doc => 'Minimum average distance to effective 3prime end of read (real end or Q2) for variant-supporting reads',
+       },
+       'min_homopolymer' => {
+            type => 'String',
+            default => '4',
+            is_optional => 1,
+            is_input => 1,
+            doc => 'Minimum length of a flanking homopolymer of same base to remove a variant',
        },
        
        ## WGS FILTER OPTIONS ##
@@ -521,6 +529,12 @@ sub capture_filter
 					print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarDist3:$var_dist_3\n" if ($self->verbose);
 					$stats{'num_fail_dist3'}++;
 				    }
+				    elsif(fails_homopolymer_check($self, $self->reference, $self->min_homopolymer, $chrom, $chr_start, $chr_stop, $ref, $var))
+				    {
+					print $ffh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tHomopolymer\n";
+					print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tHomopolymer\n" if ($self->verbose);
+					$stats{'num_fail_homopolymer'}++;
+				    }
 				    ## SUCCESS: Pass Filter ##				
 				    else
 				    {
@@ -570,13 +584,65 @@ sub capture_filter
     print $stats{'num_fail_mapqual'} . " had mapping quality difference > $max_mapqual_diff\n";
     print $stats{'num_fail_readlen'} . " had read length difference > $max_readlen_diff\n";	
     print $stats{'num_fail_dist3'} . " had var_distance_to_3' < $min_var_dist_3\n";
+    print $stats{'num_fail_homopolymer'} . " were in a homopolymer of " . $self->min_homopolymer . " or more bases\n";
+
 
     print $stats{'num_pass_filter'} . " passed the strand filter\n";
 
     return 1;
 }
 
+#############################################################
+# Read_Counts_By_Allele - parse out readcount info for an allele
+#
+#############################################################
 
+sub fails_homopolymer_check
+{
+    (my $self, my $reference, my $min_homopolymer, my $chrom, my $chr_start, my $chr_stop, my $ref, my $var) = @_;
+    
+    ## Auto-pass large indels ##
+    
+    my $indel_size = length($ref);
+    $indel_size = length($var) if(length($var) > $indel_size);
+    
+    return(0) if($indel_size > 2);
+    
+    ## Build strings of homopolymer bases ##
+    my $homoRef = $ref x $min_homopolymer;
+    my $homoVar = $var x $min_homopolymer;
+#    my $homoA = 'A' x $min_homopolymer;
+#    my $homoC = 'C' x $min_homopolymer;
+#    my $homoG = 'G' x $min_homopolymer;
+#    my $homoT = 'T' x $min_homopolymer;
+    
+    ## Build a query string for the homopolymer check ##
+    
+    my $query_string = "";
+    
+    if($self->prepend_chr)
+    {
+	$query_string = "chr" . $chrom . ":" . ($chr_start - $min_homopolymer) . "-" . ($chr_stop + $min_homopolymer);
+    }
+    else
+    {
+	$query_string = $chrom . ":" . ($chr_start - $min_homopolymer) . "-" . ($chr_stop + $min_homopolymer);
+    }
+    
+    my $sequence = `samtools faidx $reference $query_string | grep -v \">\"`;
+    chomp($sequence);
+    
+    if($sequence)
+    {
+	if($sequence =~ $homoVar) #$sequence =~ $homoRef || 
+	{
+	    print join("\t", $chrom, $chr_start, $chr_stop, $ref, $var, "Homopolymer: $sequence") . "\n";
+	    return($sequence);
+	}
+    }
+    
+    return(0);
+}
 
 
 

@@ -33,9 +33,10 @@ class Genome::Model::Tools::Calculate454Redundancy {
 	    doc => 'Maximum number of mismatchs allowed before read is redundant',
 	},
 	newbler => {
-	    type => 'String',
+	    type => 'Text',
 	    is_optional => 1,
-	    doc => 'User specified newbler to run, otherwise runs installed runAssembly',
+	    default_value => '/gscmnt/temp224/research/lye/rd454_mapasm_08172010/applicationsBin/runAssembly',
+	    doc => 'User specified newbler to run',
 	},
 	screen_length => { #COULD BE NAMED BETTER
 	    type => 'Number',
@@ -46,6 +47,49 @@ class Genome::Model::Tools::Calculate454Redundancy {
 	    type => 'String',
 	    is_optional => 1,
 	    doc => 'Optional params for newbler',
+	},
+	cross_match_jobs => {
+	    type => 'Integer',
+	    is_optional => 1,
+	    doc => 'Number of blade jobs to run cross_match, default is 1 job per 4500 reads',
+	},
+	cross_match_minscore => {
+	    type => 'Integer',
+	    is_optional => 1,
+	    default_value => 36,
+	    doc => 'Minscore value to use for cross match, default is 36',
+	},
+	cross_match_minmatch => {
+	    type => 'Integer',
+	    is_optional => 1,
+	    default_value => 18,
+	    doc => 'Minmatch value to use for cross match, default is 18',
+	},
+	cross_match_masklevel => {
+	    type => 'Integer',
+	    is_optional => 1,
+	    default_value => 101,
+	    doc => 'Masklevel value to use for cross match, default is 101',
+	},
+	cross_match_penalty => {
+	    type => 'Number',
+	    is_optional => 1,
+	    doc => 'Uses cross match penalty param with specified value to use',
+	},
+	cross_match_gap_init => {
+	    type => 'Number',
+	    is_optional => 1,
+	    doc => 'Uses cross match gap init param with specified value to use',
+	},
+	cross_match_gap_ext => {
+	    type => 'Number',
+	    is_optional => 1,
+	    doc => 'Uses cross match gap ext param with specified value to use',
+	},
+	save_cross_match_directory => {
+	    type => 'Boolean',
+	    is_optional => 1,
+	    doc => 'Allow tool to save cross match run directory, warning: this uses lots of disk space',
 	},
     ],
 };
@@ -117,7 +161,7 @@ sub execute {
 	$self->error_message("Failed to parse cross match files");
 	return;
     }
-    
+
     #PRINT DUPLICATE READ NAMES
     $self->status_message("Printing duplicate read names");
     unless ($self->_print_duplicate_read_names($dup0_reads, $dup1_reads)) {
@@ -305,11 +349,12 @@ sub _parse_cross_match_report_files {
     undef $read_lengths;
 
     #REMOVE CROSS_MATCH DIR
-    my $cm_dir = $dir.'/CROSS_MATCH_'.$screen_length.'_BASES';
-    unless (File::Path::rmtree($cm_dir)) {
-	$self->status_message("Failed to remove cross_match dir");
+    unless ( $self->save_cross_match_directory ) {
+	my $cm_dir = $dir.'/CROSS_MATCH_'.$screen_length.'_BASES';
+	unless (File::Path::rmtree($cm_dir)) {
+	    $self->status_message("Failed to remove cross_match dir");
+	}
     }
-
     return $dup0_reads, $dup1_reads;
 }
 
@@ -405,12 +450,40 @@ sub _farm_low_mem_cross_match {
 	}
     }
 
-    #RUN CROSS-MATCH
-    my $cmd = "/gscmnt/233/info/seqana/scripts/BLADE_CROSSMATCH_for_454_redundancy.pl -outdir $out_dir -q $query_file -s $query_file -b 50  -a \"-raw -tags -minscore 36 -minmatch 18 -gap1_only -masklevel 101\"";
+    my $jobs = ( $self->cross_match_jobs ) ? $self->cross_match_jobs : $self->_get_cm_jobs_by_number_of_reads( $query_file );
+    my $min_score = $self->cross_match_minscore;
+    my $min_match = $self->cross_match_minmatch;
+    my $mask_level = $self->cross_match_masklevel;
+
+    #RUN CROSS-MATCH params
+    my $cmd = "/gscmnt/233/info/seqana/scripts/BLADE_CROSSMATCH_for_454_redundancy.pl -outdir $out_dir -q $query_file -s $query_file -b $jobs  -a ";
+    #blade cross match params
+    my $param = "\"-raw -tags -minscore $min_score -minmatch $min_match -gap1_only -masklevel $mask_level";
+    $param .= ' -penalty '. $self->cross_match_penalty if $self->cross_match_penalty;
+    $param .= ' -gap_init '.$self->cross_match_gap_init if $self->cross_match_gap_init;
+    $param .= ' -gap_ext '. $self->cross_match_gap_ext if $self->cross_match_gap_ext;
+    $param .= "\"";
+    $cmd = $cmd.$param;
+    $self->status_message("Running BLADE_CROSSMATCH with command: $cmd");
     if (system($cmd)) { #MAKE SURE CORRECT VALUE IS RETURNED HERE
 	$self->error_message("Failed to run cross_match");
 	return;
     }
+
+    #check to see if all jobs succeeded
+    my $file_count = 0;         #total number of reports == number of jobs
+    my $done_report_count = 0;  #number of succeeded jobs
+    for my $report_file ( glob("$out_dir/*report") ) {
+	$file_count++;
+	my $out = `tail $report_file`;
+	$done_report_count++ if $out =~ /Times\s+in\s+secs\s+\(/;
+    }
+    unless ( $file_count == $jobs and $done_report_count == $jobs ) {
+	$self->error_message("Some of cross match jobs failed: $file_count reports with $done_report_count reports done. Expected $jobs total number of reports");
+	return;
+    }
+    
+    $self->status_message("All cross match jobs completed successfully");
 
     return 1;
 }
@@ -555,14 +628,19 @@ sub _submit_newbler_to_lsf {
 	}
     }
 
-    my $version_newbler = ($self->newbler) ? $self->newbler : 'runAssembly';
+    #my $version_newbler = ($self->newbler) ? $self->newbler : 'runAssembly';
+    my $version_newbler = $self->newbler;
+    unless ( -x $version_newbler ) {
+	$self->error_message("Failed to find version of newbler or version is to executable: " . $self->newbler);
+	return;
+    }
     #SUBMIT JOB TO 
     my $cmd = "$version_newbler -o $newb_run_dir -cpu 1 ";
     if ($self->newbler_params) {
 	$cmd .= $self->newbler_params;
     }
     $cmd .= ' '.$sff_files_string;
-
+    $self->status_message("Running newbler with command: $cmd");
     my $job_id = 'NwB'.$$;
     my $job = PP::LSF->run(
 	pp_type => "lsf",
@@ -579,7 +657,7 @@ sub _submit_newbler_to_lsf {
     my $trim_file = $newb_run_dir.'/assembly/454TrimStatus.txt';
     my $previous_file_size = 0;
     while (1) {
-	sleep 45;   #<---- 30 seems fine too
+	sleep 120;
 	my $file_size = 0;
 	if (-s $trim_file) {
 	    $file_size = -s $trim_file;
@@ -664,6 +742,21 @@ sub _resolve_sff_files_to_get {
     }
 
     return @sffs;
+}
+
+sub _get_cm_jobs_by_number_of_reads {
+    my ($self, $file) = @_;
+
+    my $c = 0;
+    my $io = Bio::SeqIO->new(-format => 'fasta', -file => $file);
+
+    while (my $seq = $io->next_seq) {
+	$c++;
+    }
+    #run 1 job for each 4500 reads
+    my $number_of_jobs = int( $c / 4500 );
+
+    return $number_of_jobs;
 }
 
 1;

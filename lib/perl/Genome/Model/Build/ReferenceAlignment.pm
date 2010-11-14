@@ -1085,13 +1085,23 @@ sub files_ignored_by_diff {
     return qw(
         build.xml
         alignments/*_merged_rmdup_bam.md5
+        reports/Build_Initialized/report.xml
+        reports/Build_Succeeded/report.xml
+        reports/Input_Base_Counts/report.html
+        reports/Input_Base_Counts/report.xml
+        reports/Summary/report.html
+        reports/Summary/report.xml
+        reports/Summary/report.txt
+        reports/dbSNP_Concordance/report.xml
+        reports/dbSNP_Concordance/report.html
+        reports/Mapcheck/report.xml
+        server_location.txt
     );
 }
 
 sub dirs_ignored_by_diff {
     return qw(
         logs/
-        reports/
     );
 }
 

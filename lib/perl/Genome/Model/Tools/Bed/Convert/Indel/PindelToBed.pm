@@ -98,9 +98,45 @@ sub close_filehandles {
 
 sub process_source { 
     my $self = shift;
+    $DB::single=1;
     my $input_fh = $self->_input_fh;
     my %events;
     my ($chrom,$pos,$size,$type);
+
+    while(my $line = $input_fh->getline){
+        my $normal_support=0;
+        my $read = 0;
+        if($line =~ m/^#+$/){
+            my $call = $input_fh->getline;
+            my $reference = $input_fh->getline;
+            my @call_fields = split /\s/, $call;
+            my $type = $call_fields[1];
+            my $size = $call_fields[2];   #12
+            my $support = ($type eq "I") ? $call_fields[12] : $call_fields[14];
+            for (1..$support){
+                $line = $input_fh->getline;
+                my (undef, undef, undef, undef, $t_or_n, undef) = split /\t/, $line;
+                if($t_or_n =~ m/normal/) {
+                    $normal_support=1;
+                }
+                $read=$line;
+            }
+            
+            my @bed_line = $self->parse($call, $reference, $read);
+            unless((@bed_line)&& scalar(@bed_line)==5){
+                next;
+            }
+            my $type_and_size = $type."/".$size;
+            $self->status_message( $type_and_size . "\t" . join(" ",@bed_line) . "\n");
+            $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'bed'}=join(",",@bed_line);
+            if($normal_support){
+                $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'normal'}=$normal_support;
+            }
+        }
+    }
+            
+
+=cut
     while(my $line = $input_fh->getline) {
         my $normal_support=0;
         my $read = 0;
@@ -123,17 +159,25 @@ sub process_source {
             unless((@bed_line)&& scalar(@bed_line)==5){
                 next;
             }
-            my @call_stuff = split /\w/, $call;
-            my $type_and_size = $call_stuff[1]."/".$call_stuff[2];
+            my @call_fields = split /\w/, $call;
+            my $type = $call_fields[1];
+            my $size = $call_fields[2];
+            my $support = $call_fields[-1];
+            my $type_and_size = $type."/".$size;
+            $self->status_message( $type_and_size . "\t" . join(" ",@bed_line) . "\n");
             $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'bed'}=join(",",@bed_line);
             if($normal_support){
                 $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'normal'}=$normal_support;
             }
         }
     }
-    
-    for my $chrom (sort {$a cmp $b} (keys(%events))){
-        for my $pos (sort{$a <=> $b} (keys( %{$events{$chrom}}))){
+=cut
+
+
+   
+ 
+    for $chrom (sort {$a cmp $b} (keys(%events))){
+        for $pos (sort{$a <=> $b} (keys( %{$events{$chrom}}))){
             for my $type_and_size (sort(keys( %{$events{$chrom}{$pos}}))){
                 unless(exists($events{$chrom}{$pos}{$type_and_size}{'normal'})){
                     $self->write_bed_line(split ",", $events{$chrom}{$pos}{$type_and_size}{'bed'});

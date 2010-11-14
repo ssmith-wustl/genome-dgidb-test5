@@ -33,7 +33,7 @@ sub help_synopsis {
 EOS
 }
 
-sub help_detail {                           
+sub help_detail {
     return <<EOS 
 Create a new feature-list.
 EOS
