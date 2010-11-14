@@ -103,7 +103,8 @@ sub header_check {
     my $meta_build = Genome::Model::Build->get($self->build_id);
     my @data = $meta_build->instrument_data;
     my $data_count = scalar(@data);
-    my $combined_bam = $meta_build->data_directory . "/reports/metagenomic_alignment.combined.bam";
+    my $combined_bam = $build->_final_metagenomic_bam;
+    #my $combined_bam = $meta_build->data_directory . "/reports/metagenomic_alignment.combined.bam";
     # TODO: enable once all whole_rmdup_bams are fixed.
     my $msg = "Checking $combined_bam... ";
     my $cmd = "samtools view -H $combined_bam | tail | grep \@RG | wc -l";
