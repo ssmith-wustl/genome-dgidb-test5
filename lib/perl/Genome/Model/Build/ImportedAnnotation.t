@@ -9,7 +9,7 @@ BEGIN {
 }
 
 use above "Genome";
-use Test::More tests => 16;
+use Test::More tests => 22;
 use Data::Dumper;
 use_ok('Genome::Model::Build::ImportedAnnotation');
 
@@ -43,6 +43,13 @@ my $abuild = Genome::Model::Build::ImportedAnnotation->create(
 );
 ok($abuild, "created annotation build");
 
+my $abuild_event = Genome::Model::Event::Build->create(
+    model_id => $abuild->model->id,
+    build_id => $abuild->id,
+    event_type => 'genome model build',
+    event_status => 'Succeeded',
+);
+
 my %rbuilds;
 for my $sn (@species_names) {
     $rbuilds{$sn} = [];
@@ -75,5 +82,12 @@ ok($abuild->is_compatible_with_reference_sequence_build($rbuilds{'human'}->[0]),
 ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'human'}->[1]), 'reference sequence incompatibility');
 ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'mouse'}->[0]), 'reference sequence incompatibility');
 ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'mouse'}->[1]), 'reference sequence incompatibility');
+
+my @invalid_status = ('', 'Crashed', 'Failed', 'Scheduled', 'Running', 'Abandoned');
+for my $invalid (@invalid_status) {
+    $abuild_event->event_status($invalid);
+    ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'human'}->[0]), "Build status '$invalid' not allowed as annotation build");
+}
+
 
 done_testing();
