@@ -28,7 +28,7 @@ my $unique_on_target_enrichment_factor = $myEF->unique_on_target_enrichment_fact
 ok($unique_on_target_enrichment_factor eq 31.6) or die "unique_on_target_enrichment_factor should equal 31.6, but $unique_on_target_enrichment_factor is returned";
 
 my $total_on_target_enrichment_factor  = $myEF->total_on_target_enrichment_factor();
-ok($total_on_target_enrichment_factor eq 35.4) or die "total_on_target_enrichment_factor should equal 31.6, but $total_on_target_enrichment_factor is returned";
+ok($total_on_target_enrichment_factor eq 35.4) or die "total_on_target_enrichment_factor should equal 35.4, but $total_on_target_enrichment_factor is returned";
 
 __END__
 
