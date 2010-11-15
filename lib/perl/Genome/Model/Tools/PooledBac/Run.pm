@@ -135,7 +135,7 @@ $DB::single =1;
     }
         
     my $params = {};
-    $params = $self->get_params($self->params_file) if(defined $self->params_file &&    -e $self->params_file);
+    $params = $self->get_params($self->params_file) if(defined $self->params_file && -e $self->params_file);
     my $project_dir = $self->project_dir || $self->project_dir($params->{project_dir});
     my $pooled_bac_dir = $self->pooled_bac_dir || $self->pooled_bac_dir($params->{pooled_bac_dir});
     my $ace_file_name = $self->ace_file_name || $self->ace_file_name($params->{ace_file_name} ||'Pcap.454Contigs.ace.1');
@@ -164,8 +164,20 @@ $DB::single =1;
     $self->error_message("Error running run-blast")  and die unless
     Genome::Model::Tools::PooledBac::RunBlast->execute(ref_seq_file=>$ref_seq_file, pooled_bac_dir=>$pooled_bac_dir,ace_file_name => $ace_file_name, project_dir => $project_dir);
 
+    #run gmt map-contigs-to-assembly
+    my %map_contigs_params = (
+	pooled_bac_dir=>$pooled_bac_dir,
+	ace_file_name => $ace_file_name,
+	project_dir => $project_dir,
+	percent_overlap => $percent_overlap,
+	percent_identity => $percent_identity,
+	);
+    #following can be undefined if not $self->pecent_overlap and $self->percent_identity and not specified in params file
+    #delete from params so MapContigsToAssembly can use it's own default param
+    delete $map_contigs_params{'percent_overlap'} unless $percent_overlap;
+    delete $map_contigs_params{'percent_identity'} unless $percent_identity;
     $self->error_message("Error running map-contigs-to-assembly")  and die unless
-    Genome::Model::Tools::PooledBac::MapContigsToAssembly->execute(pooled_bac_dir=>$pooled_bac_dir,ace_file_name => $ace_file_name, project_dir => $project_dir, percent_overlap => $percent_overlap, percent_identity => $percent_identity);
+    Genome::Model::Tools::PooledBac::MapContigsToAssembly->execute( %map_contigs_params );
 
     $self->error_message("Error running add-linking-contigs")  and die unless
     Genome::Model::Tools::PooledBac::AddLinkingContigs->execute( project_dir => $project_dir);
