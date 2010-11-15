@@ -254,15 +254,7 @@ sub execute {                               # replace with real execution logic.
 			{
 				my $column_name = $columns[$colCounter];
 				my $column_value = $record{$column_name};
-				if($column_value)
-				{
-					$newline .= "$column_value\t";					
-				}
-				else
-				{
-					$newline .= "\t";
-				}
-
+				$newline .= "$column_value\t";					
 			}
 			
 			if($self->output_file)

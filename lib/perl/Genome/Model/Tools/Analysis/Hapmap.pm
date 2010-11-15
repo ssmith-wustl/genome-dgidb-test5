@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Analysis::Solexa;
+package Genome::Model::Tools::Analysis::Hapmap;
 
 use strict;
 use warnings;
@@ -8,20 +8,20 @@ use Genome;
 use XML::Simple;
 use File::Basename;
 
-class Genome::Model::Tools::Analysis::Solexa {
+class Genome::Model::Tools::Analysis::Hapmap {
     is => ['Genome::Model::Tools::Analysis'],
 };
 
 sub sub_command_sort_position { 12 }
 
 sub help_brief {
-    "DEPRECATED tools for analysis of Illumina/Solexa data.",
+    "Tools for analysis of HapMap data.",
 }
 
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gmt analysis solexa ...
+gmt analysis mendelian --help ...
 EOS
 }
 
