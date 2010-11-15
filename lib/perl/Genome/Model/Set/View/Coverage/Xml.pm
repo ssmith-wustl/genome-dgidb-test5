@@ -123,7 +123,7 @@ sub get_enrichment_factor_node {
                 my @f      = split (/\t/, $_);
                 my $start  = $f[1];
                 my $stop   = $f[2];
-                my $length = ($stop - $start) + 1;
+                my $length = ($stop - $start);
                 $target_total_bp += $length;
             }
 
@@ -135,7 +135,7 @@ sub get_enrichment_factor_node {
 
             while (<$seqdictfh>) {
                 chomp;
-                unless($_ =~ /HD/) {
+                unless($_ =~ /$@HD/) { # skip the header row
                     my @f = split(/\t/, $_);
                     my $ln = $f[2];
                     $ln =~ s/LN://;
@@ -145,6 +145,7 @@ sub get_enrichment_factor_node {
 
             # get wingspan 0 alignment metrics
             my $ws_zero = $build->alignment_summary_hash_ref->{'0'};
+            # print "=====================================\nModel: " . $model->subject_name . "\n";
 
             # get enrichment factor values
             my $myEF = Genome::Model::Tools::TechD::CaptureEnrichmentFactor->execute(
@@ -155,18 +156,21 @@ sub get_enrichment_factor_node {
                 genome_total_bp                => $genome_total_bp
             );
 
+            # print "\n\n";
+
+
             my $theoretical_max_enrichment_factor  = $myEF->theoretical_max_enrichment_factor();
             my $unique_on_target_enrichment_factor = $myEF->unique_on_target_enrichment_factor();
             my $total_on_target_enrichment_factor  = $myEF->total_on_target_enrichment_factor();
-
-            my $tmef_node = $model_node->addChild( $xml_doc->createElement('theoretical_max_enrichment_factor') );
-            $tmef_node->addChild( $xml_doc->createTextNode( $theoretical_max_enrichment_factor ) );
 
             my $uotef_node = $model_node->addChild( $xml_doc->createElement('unique_on_target_enrichment_factor') );
             $uotef_node->addChild( $xml_doc->createTextNode( $unique_on_target_enrichment_factor ) );
 
             my $totef_node = $model_node->addChild( $xml_doc->createElement('total_on_target_enrichment_factor') );
             $totef_node->addChild( $xml_doc->createTextNode( $total_on_target_enrichment_factor ) );
+
+            my $tmef_node = $model_node->addChild( $xml_doc->createElement('theoretical_max_enrichment_factor') );
+            $tmef_node->addChild( $xml_doc->createTextNode( $theoretical_max_enrichment_factor ) );
 
         }
     }
@@ -188,6 +192,7 @@ sub get_alignment_summary_node {
             my $model_node = $as_node->addChild( $xml_doc->createElement('model') );
             $model_node->addChild( $xml_doc->createAttribute('id',$model->id));
             $model_node->addChild( $xml_doc->createAttribute('subject_name',$model->subject_name));
+            $model_node->addChild( $xml_doc->createAttribute('lane',$model->instrument_data->lane));
             my $alignment_summary_hash_ref = $build->alignment_summary_hash_ref;
             for my $ws_key (keys %{$alignment_summary_hash_ref}) {
                 my $ws_node = $model_node->addChild( $xml_doc->createElement('wingspan') );
@@ -236,6 +241,7 @@ sub get_coverage_summary_node {
             my $model_node = $cs_node->addChild( $xml_doc->createElement('model') );
             $model_node->addChild( $xml_doc->createAttribute('id',$model->id));
             $model_node->addChild( $xml_doc->createAttribute('subject_name',$model->subject_name));
+            $model_node->addChild( $xml_doc->createAttribute('lane',$model->instrument_data->lane));
             my $coverage_stats_summary_hash_ref = $build->coverage_stats_summary_hash_ref;
             for my $min_depth (keys %{$coverage_stats_summary_hash_ref->{0}}) {
                 my $min_depth_node = $model_node->addChild( $xml_doc->createElement('minimum_depth') );
@@ -247,8 +253,6 @@ sub get_coverage_summary_node {
             }
         }
     }
-
-    $DB::single = 1;
 
     return $cs_node;
 }
