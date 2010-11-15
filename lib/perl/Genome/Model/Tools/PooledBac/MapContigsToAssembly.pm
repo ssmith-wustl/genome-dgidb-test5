@@ -17,19 +17,16 @@ class Genome::Model::Tools::PooledBac::MapContigsToAssembly {
         pooled_bac_dir =>
         {
             type => 'String',
-            is_optional => 0,
             doc => "Pooled BAC Assembly Directory",    
         },
         ace_file_name =>
         {
             type => 'String',
-            is_optional => 0,
             doc => "Ace file containing pooled bac contigs"
         },
         project_dir =>
         {
             type => 'String',
-            is_optional => 0,
             doc => "output dir for separate pooled bac projects"        
         },
         contig_map_file =>
@@ -40,14 +37,14 @@ class Genome::Model::Tools::PooledBac::MapContigsToAssembly {
         },
         percent_overlap => 
         {
-            type => 'String',
+            type => 'Number',
             is_optional => 1,
             default_value => 50,
             doc => "this is the percent overlap, default is 50%",
         },
         percent_identity =>
         {
-            type => 'String',
+            type => 'Number',
             is_optional => 1,
             default_value => 85,
             doc => "this is the percent identity, default is 85%",
@@ -79,6 +76,7 @@ sub execute {
     $self->error_message("$blastfile does not exist") and die unless (-e $blastfile);
     my $out = Genome::Model::Tools::WuBlast::Parse->execute(blast_outfile => $blastfile);   
     $self->error_message("Failed to parse $blastfile") and die unless defined $out;
+
     my $percent_overlap = $self->percent_overlap / 100;
     my $percent_identity = $self->percent_identity / 100;
 
