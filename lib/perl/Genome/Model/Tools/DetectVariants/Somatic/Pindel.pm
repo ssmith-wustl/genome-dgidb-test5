@@ -123,6 +123,7 @@ class Genome::Model::Tools::DetectVariants::Somatic::Pindel {
 # FIXME make this the real deployed path
 my %PINDEL_VERSIONS = (
     '0.1' => '/gscmnt/sata921/info/medseq/Pindel_test/' . $PINDEL_COMMAND,
+    'maq' => '/gscmnt/sata921/info/medseq/Pindel_test/maq/'.$PINDEL_COMMAND,
 );
 
 sub help_brief {
