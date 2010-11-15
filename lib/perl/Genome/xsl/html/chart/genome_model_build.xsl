@@ -5,15 +5,18 @@
   <!-- initializes the dataTable plugin for model set views -->
   <xsl:template name="genome_model_build_set_table_init" match="object[./types[./isa[@type='Genome::Model::Build']]]" mode="set_table_init">
     <xsl:comment>template: status/genome_model_build.xsl match: object[./types[./isa[@type='Genome::Model::Build']]] mode: set_table_init</xsl:comment>
-    <script type="text/javascript" charset="utf-8" src="/res/js/pkg/ZeroClipboard/ZeroClipboard.js"></script> 
-    <script type="text/javascript" charset="utf-8" src="/res/js/pkg/TableTools/TableTools.js"></script>
+    <script type="text/javascript" charset="utf-8" src="/res/js/pkg/TableTools/media/ZeroClipboard/ZeroClipboard.js"></script>
+    <script type="text/javascript" charset="utf-8" src="/res/js/pkg/TableTools/media/js/TableTools.js"></script>
+    <style type="text/css">
+      @import "/res/js/pkg/TableTools/media/css/TableTools.css";
+    </style>
     <script type="text/javascript">
       <xsl:text disable-output-escaping="yes">
         <![CDATA[
                  $(document).ready(function() {
-                 TableToolsInit.sSwfPath = "/res/js/pkg/ZeroClipboard/ZeroClipboard.swf";
+                  TableToolsInit.sSwfPath = "/res/js/pkg/TableTools/media/swf/ZeroClipboard.swf";
                  window.setTable = $('#set').dataTable({
-                 /* "sDom": 'T<"clear">lfrtip', */
+                 "sDom": 'T<"clear">lfrtip',
                  "sScrollX": "100%",
                  "sScrollInner": "110%",
                  "bJQueryUI": true,

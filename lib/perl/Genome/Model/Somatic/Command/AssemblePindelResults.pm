@@ -1,9 +1,10 @@
-package Genome::Model::Somatic::Command::Pindel;
+package Genome::Model::Somatic::Command::AssemblePindelResults;
 
 use strict;
 use warnings;
+use IO::File;
 
-class Genome::Model::Somatic::Command::Pindel {
+class Genome::Model::Somatic::Command::AssemblePindelResults {
     is => ['Workflow::Operation::Command'],
     workflow => sub { Workflow::Operation->create_from_xml(\*DATA); }
 };
@@ -28,55 +29,49 @@ EOS
 
 sub pre_execute {
     my $self = shift;
-    # Obtain normal and tumor bams and check them. Either from somatic model id or from direct specification. 
-    my ($build, $tumor_bam, $normal_bam);
-    if ( ($self->model_id) && ($self->tumor_bam || $self->normal_bam) ) {
-        $self->error_message("Usage error. Please specify either model_id OR tumor_bam and normal_bam, not both");
-        die;
-    } elsif ($self->model_id) {
-        my $model = Genome::Model::Somatic->get($self->model_id);
-        unless ($model) {
-            $self->error_message("Could not get a somatic model for id " . $self->model_id);
-            die;
-        }
-        my $tumor_ra_model = $model->tumor_model;
-        my $normal_ra_model = $model->normal_model;
-        #$build = $model->last_succeeded_build;
-        unless ($tumor_ra_model && $normal_ra_model) {
-            $self->error_message("Could not get tumor or normal model from somatic model " . $self->model_id);
-            die;
-        }
-        my $normal_ra_build = $normal_ra_model->last_succeeded_build;
-        my $tumor_ra_build = $tumor_ra_model->last_succeeded_build;
-        unless ($tumor_ra_build && $normal_ra_build) {
-            $self->error_message("Could not get tumor or normal model from somatic model " . $self->model_id);
-            die;
-        }
-
-        $normal_bam = $normal_ra_build->whole_rmdup_bam_file;
-        $tumor_bam = $tumor_ra_build->whole_rmdup_bam_file;
-        unless(-s $tumor_bam && -s $normal_bam){
-            $self->error_message("Couldn't locate tumor or normal bam files.");
-            die;
-        }
-        if(-l $normal_bam){
-            $normal_bam = readlink($normal_bam);
-            $self->status_message("rmdup normal bam is linked, the bam we will use is at ".$normal_bam."\n");
-        }
-        if(-l $tumor_bam){
-            $tumor_bam = readlink($tumor_bam);
-            $self->status_message("rmdup tumor bam is linked, the bam we will use is at ".$tumor_bam."\n");
-        }
-        $self->tumor_bam($tumor_bam);
-        $self->normal_bam($normal_bam);
-    } elsif ($self->tumor_bam && $self->normal_bam) {
-        $normal_bam = $self->normal_bam;
-        $tumor_bam = $self->tumor_bam;
-    } else {
-        $self->error_message("Usage error. Please specify either model_id OR tumor_bam and normal_bam");
-        die;
+    unless(defined($self->output_directory)){
+        $self->error_message("You must specify the output directory.");
+        die $self->error_message;
     }
-    
+    unless((-d $self->output_directory)&&(-d $self->output_directory."/1")){
+        $self->error_message("Could not locate output directory at ".$self->output_directory);
+        die $self->error_message;
+    }
+    # Obtain normal and tumor bams and check them.
+    my ($tumor_bam, $normal_bam);
+    if ($self->tumor_bam || $self->normal_bam ) {
+        if($self->tumor_bam){
+            unless(-s $self->tumor_bam){
+                $self->error_message("Could not locate tumor bam at ".$self->tumor_bam."\n");
+                die $self->error_message;
+            }
+            $tumor_bam = $self->tumor_bam;
+        }
+        if($self->normal_bam){
+            unless(-s $self->normal_bam){
+                $self->error_message("Could not locate normal bam at ".$self->normal_bam."\n");
+            }
+            $normal_bam = $self->normal_bam;
+        }
+    }else{
+        my $cfg = $self->output_directory."/1/pindel.config";
+        my $pindel_cfg = IO::File->new($cfg);
+        my ($normal) = split /\t/,$pindel_cfg->getline;
+        unless(-s $normal){
+            $self->error_message("Could not locate normal bam specified by pindel.config:  ".$normal);
+            die $self->error_message;
+        }
+        $self->normal_bam($normal);
+        $normal_bam = $normal;
+        my ($tumor) = split /\t/,$pindel_cfg->getline;
+        unless(-s $tumor){
+            $self->error_message("Could not locate tumor bam specified by pindel.config:  ".$tumor);
+            die $self->error_message;
+        }
+        $self->tumor_bam($tumor);
+        $tumor_bam = $tumor;
+    }
+
     unless (-s $normal_bam) {
         $self->error_message("Normal bam $normal_bam does not exist or has 0 size");
         die;
@@ -101,13 +96,9 @@ sub pre_execute {
         $self->$param( join('/', $self->output_directory, $default_filename) );
     }
 
-    # create directories
-    for my $directory ( $self->assemble_t1n_dir, $self->assemble_t1t_dir, $self->assemble_t2n_dir, $self->assemble_t2t_dir, $self->assemble_t3n_dir, $self->assemble_t3t_dir) {
-        unless ( Genome::Utility::FileSystem->create_directory($directory) ) {
-            $self->error_message("Failed to create directory $directory");
-            die;
-        }
-    }
+    $self->tier1_output($self->indel_bed_output.".tier1");
+    $self->tier2_output($self->indel_bed_output.".tier2");
+    $self->tier3_output($self->indel_bed_output.".tier3");
 
     return 1;
 }
@@ -139,44 +130,34 @@ sub default_filenames{
 __DATA__
 <?xml version='1.0' standalone='yes'?>
 
-<workflow name="Pindel Assembly" logDir="/gsc/var/log/genome/pindel_assembly">
+<workflow name="Pindel Assembly Only" logDir="/gsc/var/log/genome/pindel_assembly_only">
 
-  <link fromOperation="input connector" fromProperty="normal_bam" toOperation="Pindel" toProperty="control_aligned_reads_input" />
-  <link fromOperation="input connector" fromProperty="tumor_bam" toOperation="Pindel" toProperty="aligned_reads_input" />
-  <link fromOperation="input connector" fromProperty="output_directory" toOperation="Pindel" toProperty="output_directory" />
-  <link fromOperation="input connector" fromProperty="chromosome_list" toOperation="Pindel" toProperty="chromosome" />
-
-  <link fromOperation="Pindel" fromProperty="indel_bed_output" toOperation="Cat" toProperty="source" />
-
-  <link fromOperation="input connector" fromProperty="indel_bed_output" toOperation="Cat" toProperty="dest" />
-  <link fromOperation="Cat" fromProperty="dest" toOperation="Pre-Assembly Tiering" toProperty="variant_file" />
-
-  <link fromOperation="Pre-Assembly Tiering" fromProperty="tier1_output" toOperation="Assemble Tier 1 Normal" toProperty="indel_file" />
+  <link fromOperation="input connector" fromProperty="tier1_output" toOperation="Assemble Tier 1 Normal" toProperty="indel_file" />
   <link fromOperation="input connector" fromProperty="normal_bam" toOperation="Assemble Tier 1 Normal" toProperty="bam_file" />
   <link fromOperation="input connector" fromProperty="assemble_t1n_dir" toOperation="Assemble Tier 1 Normal" toProperty="data_directory" />
   <link fromOperation="input connector" fromProperty="assemble_t1n_output" toOperation="Assemble Tier 1 Normal" toProperty="assembly_indel_list" />
 
-  <link fromOperation="Pre-Assembly Tiering" fromProperty="tier1_output" toOperation="Assemble Tier 1 Tumor" toProperty="indel_file" />
+  <link fromOperation="input connector" fromProperty="tier1_output" toOperation="Assemble Tier 1 Tumor" toProperty="indel_file" />
   <link fromOperation="input connector" fromProperty="tumor_bam" toOperation="Assemble Tier 1 Tumor" toProperty="bam_file" />
   <link fromOperation="input connector" fromProperty="assemble_t1t_dir" toOperation="Assemble Tier 1 Tumor" toProperty="data_directory" />
   <link fromOperation="input connector" fromProperty="assemble_t1t_output" toOperation="Assemble Tier 1 Tumor" toProperty="assembly_indel_list" />
 
-  <link fromOperation="Pre-Assembly Tiering" fromProperty="tier2_output" toOperation="Assemble Tier 2 Normal" toProperty="indel_file" />
+  <link fromOperation="input connector" fromProperty="tier2_output" toOperation="Assemble Tier 2 Normal" toProperty="indel_file" />
   <link fromOperation="input connector" fromProperty="normal_bam" toOperation="Assemble Tier 2 Normal" toProperty="bam_file" />
   <link fromOperation="input connector" fromProperty="assemble_t2n_dir" toOperation="Assemble Tier 2 Normal" toProperty="data_directory" />
   <link fromOperation="input connector" fromProperty="assemble_t2n_output" toOperation="Assemble Tier 2 Normal" toProperty="assembly_indel_list" />
 
-  <link fromOperation="Pre-Assembly Tiering" fromProperty="tier2_output" toOperation="Assemble Tier 2 Tumor" toProperty="indel_file" />
+  <link fromOperation="input connector" fromProperty="tier2_output" toOperation="Assemble Tier 2 Tumor" toProperty="indel_file" />
   <link fromOperation="input connector" fromProperty="tumor_bam" toOperation="Assemble Tier 2 Tumor" toProperty="bam_file" />
   <link fromOperation="input connector" fromProperty="assemble_t2t_dir" toOperation="Assemble Tier 2 Tumor" toProperty="data_directory" />
   <link fromOperation="input connector" fromProperty="assemble_t2t_output" toOperation="Assemble Tier 2 Tumor" toProperty="assembly_indel_list" />
 
-  <link fromOperation="Pre-Assembly Tiering" fromProperty="tier3_output" toOperation="Assemble Tier 3 Normal" toProperty="indel_file" />
+  <link fromOperation="input connector" fromProperty="tier3_output" toOperation="Assemble Tier 3 Normal" toProperty="indel_file" />
   <link fromOperation="input connector" fromProperty="normal_bam" toOperation="Assemble Tier 3 Normal" toProperty="bam_file" />
   <link fromOperation="input connector" fromProperty="assemble_t3n_dir" toOperation="Assemble Tier 3 Normal" toProperty="data_directory" />
   <link fromOperation="input connector" fromProperty="assemble_t3n_output" toOperation="Assemble Tier 3 Normal" toProperty="assembly_indel_list" />
 
-  <link fromOperation="Pre-Assembly Tiering" fromProperty="tier3_output" toOperation="Assemble Tier 3 Tumor" toProperty="indel_file" />
+  <link fromOperation="input connector" fromProperty="tier3_output" toOperation="Assemble Tier 3 Tumor" toProperty="indel_file" />
   <link fromOperation="input connector" fromProperty="tumor_bam" toOperation="Assemble Tier 3 Tumor" toProperty="bam_file" />
   <link fromOperation="input connector" fromProperty="assemble_t3t_dir" toOperation="Assemble Tier 3 Tumor" toProperty="data_directory" />
   <link fromOperation="input connector" fromProperty="assemble_t3t_output" toOperation="Assemble Tier 3 Tumor" toProperty="assembly_indel_list" />
@@ -202,18 +183,6 @@ __DATA__
 
   <link fromOperation="Annotation" fromProperty="output_file" toOperation="output connector" toProperty="output" />
   
-  <operation name="Pindel" parallelBy="chromosome">
-    <operationtype commandClass="Genome::Model::Tools::DetectVariants::Somatic::Pindel" typeClass="Workflow::OperationType::Command" />
-  </operation>
-
-  <operation name="Cat">
-    <operationtype commandClass="Genome::Model::Tools::Cat" typeClass = "Workflow::OperationType::Command" />
-  </operation>
-
-  <operation name="Pre-Assembly Tiering">
-    <operationtype commandClass="Genome::Model::Tools::Annotate::FastTier" typeClass="Workflow::OperationType::Command" />
-  </operation>
-
   <operation name="Assemble Tier 1 Normal">
     <operationtype commandClass="Genome::Model::Tools::Somatic::AssembleIndelBed" typeClass="Workflow::OperationType::Command" />
   </operation>
@@ -281,6 +250,9 @@ __DATA__
     <inputproperty isOptional="Y">assemble_t2t_output</inputproperty>
     <inputproperty isOptional="Y">assemble_t3n_output</inputproperty>
     <inputproperty isOptional="Y">assemble_t3t_output</inputproperty>
+    <inputproperty isOptional="Y">tier1_output</inputproperty>
+    <inputproperty isOptional="Y">tier2_output</inputproperty>
+    <inputproperty isOptional="Y">tier3_output</inputproperty>
 
     <inputproperty isOptional="Y">annotate_no_headers</inputproperty>
     <inputproperty isOptional="Y">transcript_annotation_filter</inputproperty>

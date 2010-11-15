@@ -108,15 +108,17 @@ sub process_source {
         my $read = 0;
         if($line =~ m/^#+$/){
             my $call = $input_fh->getline;
+if($call =~ m/^3/) { $DB::single=1; }
             my $reference = $input_fh->getline;
             my @call_fields = split /\s/, $call;
             my $type = $call_fields[1];
             my $size = $call_fields[2];   #12
-            my $support = ($type eq "I") ? $call_fields[12] : $call_fields[14];
+            my $mod = ($call =~ m/BP_range/) ? 2: -1;
+            my $support = ($type eq "I") ? $call_fields[10+$mod] : $call_fields[12+$mod];
+           
             for (1..$support){
                 $line = $input_fh->getline;
-                my (undef, undef, undef, undef, $t_or_n, undef) = split /\t/, $line;
-                if($t_or_n =~ m/normal/) {
+                if($line =~ m/normal/) {
                     $normal_support=1;
                 }
                 $read=$line;

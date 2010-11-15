@@ -119,7 +119,12 @@ sub execute {
     my $library = Genome::Library->get(sample_id => $sample->id);
     unless($library){
         $self->status_message("Not able to find a library associated with this sample. If create_sample was set, it failed to create an appropriate library.");
-        die "We don't currently allow for creating libraries.\n";
+        #die "We don't currently allow for creating libraries.\n";
+        $library = Genome::Library->create(name => $sample->name."-extlibs", sample_id => $sample->id);
+        unless($library){
+            $self->error_message("Could not find OR create library, exiting.");
+            die;
+        }
     }
 
     unless (-s $bam_path and $bam_path =~ /\.bam$/) {

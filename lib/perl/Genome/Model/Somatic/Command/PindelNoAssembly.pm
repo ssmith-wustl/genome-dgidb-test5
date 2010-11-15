@@ -1,9 +1,9 @@
-package Genome::Model::Somatic::Command::Pindel;
+package Genome::Model::Somatic::Command::PindelNoAssembly;
 
 use strict;
 use warnings;
 
-class Genome::Model::Somatic::Command::Pindel {
+class Genome::Model::Somatic::Command::PindelNoAssembly {
     is => ['Workflow::Operation::Command'],
     workflow => sub { Workflow::Operation->create_from_xml(\*DATA); }
 };
@@ -139,7 +139,7 @@ sub default_filenames{
 __DATA__
 <?xml version='1.0' standalone='yes'?>
 
-<workflow name="Pindel Assembly" logDir="/gsc/var/log/genome/pindel_assembly">
+<workflow name="Pindel No Assembly" logDir="/gsc/var/log/genome/pindel_no_assembly">
 
   <link fromOperation="input connector" fromProperty="normal_bam" toOperation="Pindel" toProperty="control_aligned_reads_input" />
   <link fromOperation="input connector" fromProperty="tumor_bam" toOperation="Pindel" toProperty="aligned_reads_input" />
@@ -151,51 +151,7 @@ __DATA__
   <link fromOperation="input connector" fromProperty="indel_bed_output" toOperation="Cat" toProperty="dest" />
   <link fromOperation="Cat" fromProperty="dest" toOperation="Pre-Assembly Tiering" toProperty="variant_file" />
 
-  <link fromOperation="Pre-Assembly Tiering" fromProperty="tier1_output" toOperation="Assemble Tier 1 Normal" toProperty="indel_file" />
-  <link fromOperation="input connector" fromProperty="normal_bam" toOperation="Assemble Tier 1 Normal" toProperty="bam_file" />
-  <link fromOperation="input connector" fromProperty="assemble_t1n_dir" toOperation="Assemble Tier 1 Normal" toProperty="data_directory" />
-  <link fromOperation="input connector" fromProperty="assemble_t1n_output" toOperation="Assemble Tier 1 Normal" toProperty="assembly_indel_list" />
-
-  <link fromOperation="Pre-Assembly Tiering" fromProperty="tier1_output" toOperation="Assemble Tier 1 Tumor" toProperty="indel_file" />
-  <link fromOperation="input connector" fromProperty="tumor_bam" toOperation="Assemble Tier 1 Tumor" toProperty="bam_file" />
-  <link fromOperation="input connector" fromProperty="assemble_t1t_dir" toOperation="Assemble Tier 1 Tumor" toProperty="data_directory" />
-  <link fromOperation="input connector" fromProperty="assemble_t1t_output" toOperation="Assemble Tier 1 Tumor" toProperty="assembly_indel_list" />
-
-  <link fromOperation="Pre-Assembly Tiering" fromProperty="tier2_output" toOperation="Assemble Tier 2 Normal" toProperty="indel_file" />
-  <link fromOperation="input connector" fromProperty="normal_bam" toOperation="Assemble Tier 2 Normal" toProperty="bam_file" />
-  <link fromOperation="input connector" fromProperty="assemble_t2n_dir" toOperation="Assemble Tier 2 Normal" toProperty="data_directory" />
-  <link fromOperation="input connector" fromProperty="assemble_t2n_output" toOperation="Assemble Tier 2 Normal" toProperty="assembly_indel_list" />
-
-  <link fromOperation="Pre-Assembly Tiering" fromProperty="tier2_output" toOperation="Assemble Tier 2 Tumor" toProperty="indel_file" />
-  <link fromOperation="input connector" fromProperty="tumor_bam" toOperation="Assemble Tier 2 Tumor" toProperty="bam_file" />
-  <link fromOperation="input connector" fromProperty="assemble_t2t_dir" toOperation="Assemble Tier 2 Tumor" toProperty="data_directory" />
-  <link fromOperation="input connector" fromProperty="assemble_t2t_output" toOperation="Assemble Tier 2 Tumor" toProperty="assembly_indel_list" />
-
-  <link fromOperation="Pre-Assembly Tiering" fromProperty="tier3_output" toOperation="Assemble Tier 3 Normal" toProperty="indel_file" />
-  <link fromOperation="input connector" fromProperty="normal_bam" toOperation="Assemble Tier 3 Normal" toProperty="bam_file" />
-  <link fromOperation="input connector" fromProperty="assemble_t3n_dir" toOperation="Assemble Tier 3 Normal" toProperty="data_directory" />
-  <link fromOperation="input connector" fromProperty="assemble_t3n_output" toOperation="Assemble Tier 3 Normal" toProperty="assembly_indel_list" />
-
-  <link fromOperation="Pre-Assembly Tiering" fromProperty="tier3_output" toOperation="Assemble Tier 3 Tumor" toProperty="indel_file" />
-  <link fromOperation="input connector" fromProperty="tumor_bam" toOperation="Assemble Tier 3 Tumor" toProperty="bam_file" />
-  <link fromOperation="input connector" fromProperty="assemble_t3t_dir" toOperation="Assemble Tier 3 Tumor" toProperty="data_directory" />
-  <link fromOperation="input connector" fromProperty="assemble_t3t_output" toOperation="Assemble Tier 3 Tumor" toProperty="assembly_indel_list" />
-
-  <link fromOperation="Assemble Tier 1 Normal" fromProperty="assembly_indel_list" toOperation="Collect Normal Beds" toProperty="tier_1" />
-  <link fromOperation="Assemble Tier 2 Normal" fromProperty="assembly_indel_list" toOperation="Collect Normal Beds" toProperty="tier_2" />
-  <link fromOperation="Assemble Tier 3 Normal" fromProperty="assembly_indel_list" toOperation="Collect Normal Beds" toProperty="tier_3" />
-
-  <link fromOperation="Assemble Tier 1 Tumor" fromProperty="assembly_indel_list" toOperation="Collect Tumor Beds" toProperty="tier_1" />
-  <link fromOperation="Assemble Tier 2 Tumor" fromProperty="assembly_indel_list" toOperation="Collect Tumor Beds" toProperty="tier_2" />
-  <link fromOperation="Assemble Tier 3 Tumor" fromProperty="assembly_indel_list" toOperation="Collect Tumor Beds" toProperty="tier_3" />
-
-  <link fromOperation="Collect Normal Beds" fromProperty="output" toOperation="Intersect Indels" toProperty="normal_bed_file" />
-  <link fromOperation="Collect Tumor Beds" fromProperty="output" toOperation="Intersect Indels" toProperty="tumor_bed_file" />
-  <link fromOperation="input connector" fromProperty="intersect_output" toOperation="Intersect Indels" toProperty="somatic_file" />
-
-  <link fromOperation="Intersect Indels" fromProperty="somatic_file" toOperation="Post-Assembly Tiering" toProperty="variant_file" />
-
-  <link fromOperation="Post-Assembly Tiering" fromProperty="tier1_output" toOperation="Annotation" toProperty="variant_bed_file" />
+  <link fromOperation="Pre-Assembly Tiering" fromProperty="tier1_output" toOperation="Annotation" toProperty="variant_bed_file" />
   <link fromOperation="input connector" fromProperty="annotation_output" toOperation="Annotation" toProperty="output_file" />
   <link fromOperation="input connector" fromProperty="annotate_no_headers" toOperation="Annotation" toProperty="no_headers" />
   <link fromOperation="input connector" fromProperty="transcript_annotation_filter" toOperation="Annotation" toProperty="annotation_filter" />
@@ -211,51 +167,6 @@ __DATA__
   </operation>
 
   <operation name="Pre-Assembly Tiering">
-    <operationtype commandClass="Genome::Model::Tools::Annotate::FastTier" typeClass="Workflow::OperationType::Command" />
-  </operation>
-
-  <operation name="Assemble Tier 1 Normal">
-    <operationtype commandClass="Genome::Model::Tools::Somatic::AssembleIndelBed" typeClass="Workflow::OperationType::Command" />
-  </operation>
-  <operation name="Assemble Tier 1 Tumor">
-    <operationtype commandClass="Genome::Model::Tools::Somatic::AssembleIndelBed" typeClass="Workflow::OperationType::Command" />
-  </operation>
-  <operation name="Assemble Tier 2 Normal">
-    <operationtype commandClass="Genome::Model::Tools::Somatic::AssembleIndelBed" typeClass="Workflow::OperationType::Command" />
-  </operation>
-  <operation name="Assemble Tier 2 Tumor">
-    <operationtype commandClass="Genome::Model::Tools::Somatic::AssembleIndelBed" typeClass="Workflow::OperationType::Command" />
-  </operation>
-  <operation name="Assemble Tier 3 Normal">
-    <operationtype commandClass="Genome::Model::Tools::Somatic::AssembleIndelBed" typeClass="Workflow::OperationType::Command" />
-  </operation>
-  <operation name="Assemble Tier 3 Tumor">
-    <operationtype commandClass="Genome::Model::Tools::Somatic::AssembleIndelBed" typeClass="Workflow::OperationType::Command" />
-  </operation>
-
-  <operation name="Collect Normal Beds">
-      <operationtype typeClass="Workflow::OperationType::Converge">
-        <inputproperty>tier_1</inputproperty>
-        <inputproperty>tier_2</inputproperty>
-        <inputproperty>tier_3</inputproperty>
-        <outputproperty>output</outputproperty>
-    </operationtype>
-  </operation>
-
-  <operation name="Collect Tumor Beds">
-      <operationtype typeClass="Workflow::OperationType::Converge">
-        <inputproperty>tier_1</inputproperty>
-        <inputproperty>tier_2</inputproperty>
-        <inputproperty>tier_3</inputproperty>
-        <outputproperty>output</outputproperty>
-    </operationtype>
-  </operation>
-
-  <operation name="Intersect Indels">
-    <operationtype commandClass="Genome::Model::Tools::Bed::Somatic" typeClass="Workflow::OperationType::Command" />
-  </operation>
-
-  <operation name="Post-Assembly Tiering">
     <operationtype commandClass="Genome::Model::Tools::Annotate::FastTier" typeClass="Workflow::OperationType::Command" />
   </operation>
 
