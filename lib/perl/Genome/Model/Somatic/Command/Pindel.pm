@@ -28,7 +28,6 @@ EOS
 
 sub pre_execute {
     my $self = shift;
-
     # Obtain normal and tumor bams and check them. Either from somatic model id or from direct specification. 
     my ($build, $tumor_bam, $normal_bam);
     if ( ($self->model_id) && ($self->tumor_bam || $self->normal_bam) ) {
@@ -40,15 +39,36 @@ sub pre_execute {
             $self->error_message("Could not get a somatic model for id " . $self->model_id);
             die;
         }
-
-        $build = $model->last_succeeded_build;
-        unless ($build) {
-            $self->error_message("Could not get a last_succeeded_build for model id " . $self->model_id);
+        my $tumor_ra_model = $model->tumor_model;
+        my $normal_ra_model = $model->normal_model;
+        #$build = $model->last_succeeded_build;
+        unless ($tumor_ra_model && $normal_ra_model) {
+            $self->error_message("Could not get tumor or normal model from somatic model " . $self->model_id);
+            die;
+        }
+        my $normal_ra_build = $normal_ra_model->last_succeeded_build;
+        my $tumor_ra_build = $tumor_ra_model->last_succeeded_build;
+        unless ($tumor_ra_build && $normal_ra_build) {
+            $self->error_message("Could not get tumor or normal model from somatic model " . $self->model_id);
             die;
         }
 
-        $normal_bam = $build->normal_build->whole_rmdup_bam_file;
-        $tumor_bam = $build->tumor_build->whole_rmdup_bam_file;
+        $normal_bam = $normal_ra_build->whole_rmdup_bam_file;
+        $tumor_bam = $tumor_ra_build->whole_rmdup_bam_file;
+        unless(-s $tumor_bam && -s $normal_bam){
+            $self->error_message("Couldn't locate tumor or normal bam files.");
+            die;
+        }
+        if(-l $normal_bam){
+            $normal_bam = readlink($normal_bam);
+            $self->status_message("rmdup normal bam is linked, the bam we will use is at ".$normal_bam."\n");
+        }
+        if(-l $tumor_bam){
+            $tumor_bam = readlink($tumor_bam);
+            $self->status_message("rmdup tumor bam is linked, the bam we will use is at ".$tumor_bam."\n");
+        }
+        $self->tumor_bam($tumor_bam);
+        $self->normal_bam($normal_bam);
     } elsif ($self->tumor_bam && $self->normal_bam) {
         $normal_bam = $self->normal_bam;
         $tumor_bam = $self->tumor_bam;
@@ -70,6 +90,9 @@ sub pre_execute {
     # Set default params
     unless ($self->annotate_no_headers) { $self->annotate_no_headers(1); }
     unless ($self->transcript_annotation_filter) { $self->transcript_annotation_filter("top"); }
+
+    unless ($self->chromosome_list) { $self->chromosome_list([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,'X','Y']); }
+    unless ($self->indel_bed_output) { $self->indel_bed_output($self->output_directory . '/indels_all_sequences.bed'); }
 
     my %default_filenames = $self->default_filenames;
     for my $param (keys %default_filenames) {
@@ -121,8 +144,12 @@ __DATA__
   <link fromOperation="input connector" fromProperty="normal_bam" toOperation="Pindel" toProperty="control_aligned_reads_input" />
   <link fromOperation="input connector" fromProperty="tumor_bam" toOperation="Pindel" toProperty="aligned_reads_input" />
   <link fromOperation="input connector" fromProperty="output_directory" toOperation="Pindel" toProperty="output_directory" />
+  <link fromOperation="input connector" fromProperty="chromosome_list" toOperation="Pindel" toProperty="chromosome" />
 
-  <link fromOperation="Pindel" fromProperty="indel_bed_output" toOperation="Pre-Assembly Tiering" toProperty="variant_file" />
+  <link fromOperation="Pindel" fromProperty="indel_bed_output" toOperation="Cat" toProperty="source" />
+
+  <link fromOperation="input connector" fromProperty="indel_bed_output" toOperation="Cat" toProperty="dest" />
+  <link fromOperation="Cat" fromProperty="dest" toOperation="Pre-Assembly Tiering" toProperty="variant_file" />
 
   <link fromOperation="Pre-Assembly Tiering" fromProperty="tier1_output" toOperation="Assemble Tier 1 Normal" toProperty="indel_file" />
   <link fromOperation="input connector" fromProperty="normal_bam" toOperation="Assemble Tier 1 Normal" toProperty="bam_file" />
@@ -175,8 +202,12 @@ __DATA__
 
   <link fromOperation="Annotation" fromProperty="output_file" toOperation="output connector" toProperty="output" />
   
-  <operation name="Pindel">
+  <operation name="Pindel" parallelBy="chromosome">
     <operationtype commandClass="Genome::Model::Tools::DetectVariants::Somatic::Pindel" typeClass="Workflow::OperationType::Command" />
+  </operation>
+
+  <operation name="Cat">
+    <operationtype commandClass="Genome::Model::Tools::Cat" typeClass = "Workflow::OperationType::Command" />
   </operation>
 
   <operation name="Pre-Assembly Tiering">
@@ -256,6 +287,9 @@ __DATA__
     <inputproperty isOptional="Y">annotation_output</inputproperty>
 
     <inputproperty isOptional="Y">intersect_output</inputproperty>
+
+    <inputproperty isOptional="Y">chromosome_list</inputproperty>
+    <inputproperty isOptional="Y">indel_bed_output</inputproperty>
 
     <outputproperty>output</outputproperty>
   </operationtype>
