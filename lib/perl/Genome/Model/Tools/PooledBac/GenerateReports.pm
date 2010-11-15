@@ -146,7 +146,32 @@ sub print_used_contigs_report
     }  
 }
 
+sub combined_used_and_orphan_lists {
+    my $self = shift;
 
+    my $report_dir = $self->project_dir.'/reports';
+    my $out_file = $report_dir.'/complete_contig_list_with_orphan_contigs';
+
+    unlink $out_file;
+
+    my $fh_out = Genome::Utility::FileSystem->open_file_for_writing( $out_file );
+    my $fh_used_in = Genome::Utility::FileSystem->open_file_for_reading( $report_dir.'/complete_contig_list' );
+    my $fh_orph_in = Genome::Utility::FileSystem->open_file_for_reading( $report_dir.'/orphan_contigs' );
+
+    while ( my $line = $fh_used_in->getline ) {
+	$fh_out->print( $line );
+    }
+    while ( my $line = $fh_orph_in->getline ) {
+	chomp $line;
+	$fh_out->print( $line." orphan \n" );
+    }
+
+    $fh_out->close;
+    $fh_used_in->close;
+    $fh_orph_in->close;
+
+    return 1;
+}
 ############################################################
 sub execute { 
     my $self = shift;
@@ -178,6 +203,10 @@ sub execute {
     my $orphan_contig_names = [keys %{$orphan_list}];
     $self->print_orphan_contigs_report($orphan_contig_names, $reports_dir."orphan_contigs");
     $self->print_used_contigs_report($match_list, $reports_dir."complete_contig_list");
+
+    unless ( $self->combined_used_and_orphan_lists() ) {
+	$self->status_message("Failed to create complete_contig_list_with_orphan_contigs list");
+    }
     return 1;
 }
 

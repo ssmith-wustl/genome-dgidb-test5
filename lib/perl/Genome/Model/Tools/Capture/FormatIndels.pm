@@ -122,6 +122,20 @@ sub execute {                               # replace with real execution logic.
 						$var = "-";
 					}
 				}
+				elsif($lineContents[3] =~ 'INS' || $lineContents[3] =~ 'DEL')
+				{
+					my @indelContents = split(/\-/, $lineContents[3]);
+					if($lineContents[3] =~ 'INS')
+					{
+						$ref = "-";
+						$var = $indelContents[2];
+					}
+					else
+					{
+						$ref = $indelContents[2];
+						$var = "-";
+					}
+				}
 				else
 				{
 					$ref = $lineContents[2];
