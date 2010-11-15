@@ -33,6 +33,7 @@ class Genome::Model::Tools::Analysis::Maf::Compare {
 		merged_file	=> { is => 'Text', doc => "Output non-redundant merged file", is_optional => 1 },
 		unique1_file	=> { is => 'Text', doc => "Output entries unique to file 1", is_optional => 1 },
 		unique2_file	=> { is => 'Text', doc => "Output entries unique to file 2", is_optional => 1 },
+		verbose	=> { is => 'Text', doc => "If set to 1, give verbose output", is_optional => 1 },
 	],
 };
 
@@ -142,6 +143,11 @@ sub execute {                               # replace with real execution logic.
 			{
 				$stats{'Mutations1'}++;
 				
+				my ($gene, $gene_id, $center, $build, $chrom, $chr_start, $chr_stop) = split(/\t/, $mutations1{$mutation_key});
+				my @mutationContents1 = split(/\t/, $mutations1{$mutation_key});
+				
+				my $val_status1 = join("\t", $mutationContents1[24], $mutationContents1[25]);
+				
 				if($mutations2{$mutation_key})
 				{
 					$stats{'MutationsInCommon'}++;
@@ -157,6 +163,8 @@ sub execute {                               # replace with real execution logic.
 				}
 				else
 				{
+					print "$mutation_key\tUniqueToFile1\n" if($self->verbose);
+
 					$stats{'MutationsUnique1'}++;
 					if($self->unique1_file)
 					{
@@ -186,6 +194,8 @@ sub execute {                               # replace with real execution logic.
 					{
 						print UNIQUE2 "$mutations2{$mutation_key}\n";
 					}
+
+					print "$mutation_key\tUniqueToFile2\n" if($self->verbose);
 
 					if($self->merged_file)
 					{
@@ -218,6 +228,8 @@ sub execute {                               # replace with real execution logic.
 			}
 
 		}
+		
+		exit(0);
 	}
 
 
@@ -308,7 +320,7 @@ sub load_maf_file
 
 		my @lineContents = split(/\t/, $line);
 	
-		if($lineCounter == 1 && $line =~ "Chrom")
+		if($lineCounter <= 2 && $line =~ "Hugo_Symbol")
 		{
 			$maf_header = $line;
 			
@@ -324,11 +336,11 @@ sub load_maf_file
 			
 			$header_line = $line;
 		}
-		elsif($lineCounter == 1)
+		elsif($lineCounter > 1 && !%column_index)
 		{
 			die "No Header in MAF file!\n";
 		}
-		else
+		elsif(%column_index)
 		{
 			## Build a record for this line, assigning all values to respective fields ##
 			
@@ -339,15 +351,6 @@ sub load_maf_file
 				my $column_number = $column_index{$column_name};
 				$record{$column_name} = $lineContents[$column_number];
 			}			
-
-
-			## Get the ref and variant alleles ##
-			
-			my $ref_allele = $record{'Reference_Allele'};
-			my $var_allele = "";
-			
-			$var_allele = $record{'Tumor_Seq_Allele1'} if($record{'Tumor_Seq_Allele1'} ne $ref_allele);
-			$var_allele = $record{'Tumor_Seq_Allele2'} if($record{'Tumor_Seq_Allele2'} ne $ref_allele);
 
 			my @tempArray = split(/\-/, $record{'Tumor_Sample_Barcode'});
 			my $sample = $tempArray[0] . "-" . $tempArray[1] . "-" . $tempArray[2];# . "-" . $tempArray[3];
@@ -428,6 +431,8 @@ sub load_mutations
 
 			my $mutation_key = $record{'Chromosome'} . "\t" . $record{'Start_position'} . "\t" . $record{'End_position'};
 			$mutations{$mutation_key} = $line;
+			
+			
 #			$mutation .= 	$record{'Variant_Type'} . "\t" . $ref_allele . "\t" . $var_allele . "\t" . $record{'Validation_Status'} . "\t";
 #			print "$sample\n";
 

@@ -66,6 +66,14 @@ sub execute {                               # replace with real execution logic.
 	my $regions_file = $self->regions_file;
 	my $output_basename = $self->output_basename;
 
+	## Open the index HTML file ##
+	my @tempArray = split(/\//, $output_basename);
+	my $numElements = @tempArray;
+	my $image_basename = $tempArray[$numElements - 1];
+	
+
+	my $num_printed_in_column = 0;
+
 	## Parse the variant file ##
 
 	my $input = new FileHandle ($regions_file);
@@ -97,6 +105,33 @@ sub execute {                               # replace with real execution logic.
 	
 	process_results($self, $current_chrom, $current_chrom_results);
 
+
+	open(INDEX, ">$output_basename.index.html") or die "Can't open outfile: $!\n";
+	print INDEX "<HTML><BODY><TABLE CELLSPACING=0 CELLPADDING=5 BORDER=0 WIDTH=\"100%\">\n";
+	print INDEX "<TR>\n";
+
+	for(my $chrom = 1; $chrom <= 24; $chrom++)
+	{
+		my $chrom_name = $chrom;
+		$chrom_name = "X" if($chrom == 23);
+		$chrom_name = "Y" if($chrom == 24);
+
+		my $image_filename = $image_basename . "." . $chrom_name . ".jpg";
+		print INDEX "<TD><A HREF=\"$image_filename\"><IMG SRC=\"$image_filename\" HEIGHT=240 WIDTH=320 BORDER=0></A></TD>\n";
+
+		$num_printed_in_column++;
+
+		if($num_printed_in_column >= 4)
+		{
+			print INDEX "</TR><TR>\n";
+			$num_printed_in_column = 0;
+		}
+
+
+	}
+
+	print INDEX "</TR></TABLE></BODY></HTML>\n";
+	close(INDEX);
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
 
@@ -113,19 +148,32 @@ sub process_results
 
 	my $output_basename = $self->output_basename;
 
-	my $chrom_filename = $output_basename . ".infile";
+	my $chrom_filename = $output_basename . ".$chrom.infile";
 	my $script_filename = $output_basename . ".R";
 	my $image_filename = $output_basename . "." . $chrom . ".jpg";
 
 	my @lines = split(/\n/, $lines);
 	my $num_lines = @lines;
 
+	print "CHROMOSOME $chrom: $num_lines lines\n";
+
 	## Print all lines to file ##
 	open(OUTFILE, ">$chrom_filename") or die "Can't open outfile $chrom_filename: $!\n";
 
+	my $num_columns = 0;
 	foreach my $line (@lines)
-	{
-		print OUTFILE "$line\n";
+	{		
+		if($line =~ 'Infinity')
+		{
+			## Don't try to plot sites with log2 infinity 	
+		}
+		else
+		{
+			my @lineContents = split(/\t/, $line);
+			$num_columns = @lineContents;
+			print OUTFILE "$line\n";			
+		}
+
 	}
 
 	close(OUTFILE);
@@ -138,7 +186,7 @@ sub process_results
 
 	print SCRIPT "regions <- read.table(\"$chrom_filename\")\n";
 	print SCRIPT "png(\"$image_filename\", height=600, width=800)\n";
-	print SCRIPT "plot(regions\$V2, regions\$V7, col=\"blue\", cex=0.5, cex.axis=1.5, cex.lab=1.5, pch=19, ylim=c(-4,4), main=\"Chromosome $chrom\", xlab=\"Position on chromosome $chrom\", ylab=\"Log2 Ratio (Tumor/Normal)\")\n";
+	print SCRIPT "plot(regions\$V2, regions\$V$num_columns, col=\"blue\", cex=0.5, cex.axis=1.5, cex.lab=1.5, pch=19, ylim=c(-4,4), main=\"Chromosome $chrom\", xlab=\"Position on chromosome $chrom\", ylab=\"Log2 Ratio (Tumor/Normal)\")\n";
 	print SCRIPT "dev.off()\n";
 	close(SCRIPT);
 	
