@@ -145,6 +145,7 @@ __DATA__
   <link fromOperation="input connector" fromProperty="tumor_bam" toOperation="Pindel" toProperty="aligned_reads_input" />
   <link fromOperation="input connector" fromProperty="output_directory" toOperation="Pindel" toProperty="output_directory" />
   <link fromOperation="input connector" fromProperty="chromosome_list" toOperation="Pindel" toProperty="chromosome" />
+  <link fromOperation="input connector" fromProperty="version" toOperation="Pindel" toProperty="version" />
 
   <link fromOperation="Pindel" fromProperty="indel_bed_output" toOperation="Cat" toProperty="source" />
 
@@ -179,6 +180,7 @@ __DATA__
     <inputproperty isOptional="Y">normal_bam</inputproperty>
     <inputproperty isOptional="Y">tumor_bam</inputproperty>
     <inputproperty isOptional="Y">output_directory</inputproperty>
+    <inputproperty isOptional="Y">version</inputproperty>
 
     <inputproperty isOptional="Y">assemble_t1n_dir</inputproperty>
     <inputproperty isOptional="Y">assemble_t1t_dir</inputproperty>
