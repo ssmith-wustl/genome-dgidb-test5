@@ -274,7 +274,7 @@ sub _run_pindel {
     }
 
     # Put the insertions and deletions where the rest of the pipe expects them 
-    my $files_to_cat = join(" ", ($self->_temp_short_insertion_output, $self->_temp_long_insertion_output, $self->_temp_deletion_output) );
+    my $files_to_cat = join(" ", ($self->_temp_short_insertion_output, $self->_temp_deletion_output) );
     my $cmd = "cat $files_to_cat > " . $self->_indel_staging_output;
     unless (system($cmd) == 0) {
         $self->error_message("Problem running $cmd");

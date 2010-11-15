@@ -88,6 +88,18 @@ class Genome::Model::Tools::TechD::CaptureEnrichmentFactor {
 sub execute {
     my $self = shift;
 
+    # print "\nCaptureEnrichmentFactor input:\n";
+    # print "capture_unique_bp_on_target: " . $self->capture_unique_bp_on_target . "\n";
+    # print "capture_duplicate_bp_on_target: " . $self->capture_duplicate_bp_on_target . "\n";
+    # print "capture_total_bp: " . $self->capture_total_bp . "\n";
+    # print "target_total_bp: " . $self->target_total_bp . "\n";
+    # print "genome_total_bp: " . $self->genome_total_bp . "\n";
+
+    # print "\nCaptureEnrichmentFactor output:\n";
+    # print "theoretical_max_enrichment_factor: " . $self->theoretical_max_enrichment_factor . "\n";
+    # print "unique_on_target_enrichment_factor: " . $self->unique_on_target_enrichment_factor . "\n";
+    # print "total_on_target_enrichment_factor: " . $self->total_on_target_enrichment_factor . "\n";
+
     return $self;
 }
 
