@@ -46,6 +46,7 @@ class Genome::Model::Tools::Somatic::AssembleIndelBed {
         },
         assembly_indel_list =>{
             type => 'String',
+            is_input=>1,
             is_output=>1,
             doc => "List of assembly results",
         },
@@ -63,7 +64,6 @@ class Genome::Model::Tools::Somatic::AssembleIndelBed {
             is_param => 1,
             default_value => 'long'
         } 
-
     ]
 };
 

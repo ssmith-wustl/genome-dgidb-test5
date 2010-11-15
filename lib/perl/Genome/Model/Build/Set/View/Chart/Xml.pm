@@ -32,6 +32,34 @@ class Genome::Model::Build::Set::View::Chart::Xml {
                             perspective => 'default',
                             toolkit => 'xml',
                             subject_class_name => 'Genome::Model::Metric',
+                        },
+                        {
+                            name => 'inputs',
+                            aspects => [
+                                'name',
+                                'value'
+                            ],
+                            perspective => 'default',
+                            toolkit => 'xml',
+                            subject_class_name => 'Genome::Model::Build::Input',
+                        },
+                        {
+                            name => 'processing_profile',
+                            aspects => [
+                                {
+                                    name => 'params',
+                                    aspects => [
+                                        'name',
+                                        'value'
+                                    ],
+                                    perspective => 'default',
+                                    toolkit => 'xml',
+                                    subject_class_name => 'Genome::ProcessingProfile::Param',
+                                },
+                            ],
+                            perspective => 'default',
+                            toolkit => 'xml',
+                            subject_class_name => 'Genome::ProcessingProfile',
                         }
                     ],
                     subject_class_name => 'Genome::Model::Build',
