@@ -497,7 +497,7 @@ sub execute {
 				    ## FAILURE 5: Read length difference exceeds allowable maximum ##
 				    elsif($readlen_diff > $max_readlen_diff)
 				    {
-					$FilterResult = "";
+					$FilterResult = "ReadLen:$ref_avg_rl-$var_avg_rl=$readlen_diff>$max_readlen_diff";
 					$stats{'num_fail_readlen'}++;
 				    }
 				    ## FAILURE 5: Read length difference exceeds allowable maximum ##
@@ -523,7 +523,7 @@ sub execute {
 				    else
 				    {
 					$stats{'num_fail_filter'}++;
-					print $ffh join("\t", $line, $readcount_info, "ReadLen:$ref_avg_rl-$var_avg_rl=$readlen_diff>$max_readlen_diff") . "\n" if($self->filtered_file);					
+					print $ffh join("\t", $line, $readcount_info, $FilterResult) . "\n" if($self->filtered_file);					
 				    }
 					
 				    print join("\t", $line, $readcount_info) . "\n" if($self->verbose);
