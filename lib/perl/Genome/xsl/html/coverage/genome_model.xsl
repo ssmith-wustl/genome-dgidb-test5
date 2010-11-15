@@ -270,6 +270,44 @@
             </tbody>
           </table>
         </div>
+
+        <div class="box_header span-24 last rounded-top">
+          <div class="box_title"><h3 class="nontyped span-24 last">enrichment factor</h3></div>
+        </div>
+        <div class="box_content rounded-bottom span-24 last">
+
+          <table class="lister" width="100%" cellspacing="0" cellpadding="0" border="0">
+            <thead>
+              <tr>
+                <th>subject</th>
+                <th class="right">unique on-target</th>
+                <th class="right">total on-target</th>
+                <th class="right">theoretical max</th>
+              </tr>
+            </thead>
+            <tbody>
+              <xsl:for-each select="enrichment-factor/model">
+                <xsl:sort select="@subject_name" order="ascending"/>
+                <tr>
+                  <td>
+                    <xsl:value-of select="@subject_name"/> (lane <xsl:value-of select="@lane"/>)
+                  </td>
+                  <td class="right">
+                    <xsl:value-of select="unique_on_target_enrichment_factor"/>
+                  </td>
+                  <td class="right">
+                    <xsl:value-of select="total_on_target_enrichment_factor"/>
+                  </td>
+                  <td class="right">
+                    <xsl:value-of select="theoretical_max_enrichment_factor"/>
+                  </td>
+                </tr>
+              </xsl:for-each>
+            </tbody>
+          </table>
+        </div>
+
+
       </div> <!-- end container -->
     </div> <!-- end content -->
 

@@ -99,15 +99,14 @@ sub get_enrichment_factor_node {
         if ($build) {
             push(@included_models, $model);
             my $model_node = $ef_node->addChild( $xml_doc->createElement('model') );
-            $model_node->addChild( $xml_doc->createAttribute('id',$model->id));
-            $model_node->addChild( $xml_doc->createAttribute('subject_name',$model->subject_name));
+            $model_node->addChild( $xml_doc->createAttribute('id', $model->id) );
+            $model_node->addChild( $xml_doc->createAttribute('subject_name', $model->subject_name) );
+            $model_node->addChild( $xml_doc->createAttribute('lane', $model->instrument_data->lane) );
 
             # get BED file
-            # TODO: figure out where the number used to name the bed file comes from instead of iterating
-            # through all the files in the dir to find /.*.bed/
             my $bedf;
             my $refcovd = $build->data_directory . "/reference_coverage";
-            opendir(my $refcovdh, $refcovd) or die "Could not open reference coverage directory $refcovd";
+            opendir(my $refcovdh, $refcovd) or die "Could not open reference coverage directory at $refcovd";
 
             while (my $file = readdir($refcovdh)) {
                 if ($file =~ /.*.bed/) { $bedf = $refcovd . "/" . $file; }
@@ -116,7 +115,7 @@ sub get_enrichment_factor_node {
             # calculate target_total_bp
             my $target_total_bp;
 
-            open(my $bedfh, "<", $bedf) or die "Could not open BED file $bedf";
+            open(my $bedfh, "<", $bedf) or die "Could not open BED file at $bedf";
 
             while (<$bedfh>) {
                 chomp;
@@ -131,7 +130,7 @@ sub get_enrichment_factor_node {
             my $genome_total_bp;
             my $seqdictf = $build->model->reference_sequence_build->data_directory . "/seqdict/seqdict.sam";
 
-            open(my $seqdictfh, "<", $seqdictf) or die "Could not open seqdict $seqdictf";
+            open(my $seqdictfh, "<", $seqdictf) or die "Could not open seqdict at $seqdictf";
 
             while (<$seqdictfh>) {
                 chomp;
@@ -145,19 +144,15 @@ sub get_enrichment_factor_node {
 
             # get wingspan 0 alignment metrics
             my $ws_zero = $build->alignment_summary_hash_ref->{'0'};
-            # print "=====================================\nModel: " . $model->subject_name . "\n";
 
-            # get enrichment factor values
+            # calculate enrichment factor!
             my $myEF = Genome::Model::Tools::TechD::CaptureEnrichmentFactor->execute(
                 capture_unique_bp_on_target    => $ws_zero->{'unique_target_aligned_bp'},
                 capture_duplicate_bp_on_target => $ws_zero->{'duplicate_target_aligned_bp'},
-                capture_total_bp               => $ws_zero->{'total_aligned_bp'},
+                capture_total_bp               => $ws_zero->{'total_aligned_bp'} + $ws_zero->{'total_unaligned_bp'},
                 target_total_bp                => $target_total_bp,
                 genome_total_bp                => $genome_total_bp
             );
-
-            # print "\n\n";
-
 
             my $theoretical_max_enrichment_factor  = $myEF->theoretical_max_enrichment_factor();
             my $unique_on_target_enrichment_factor = $myEF->unique_on_target_enrichment_factor();
