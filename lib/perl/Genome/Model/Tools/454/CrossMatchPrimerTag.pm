@@ -98,7 +98,7 @@ sub execute {
         die('Failed to dump fasta data from '. $self->sff_file);
     }
 
-    my $cross_match_tool = Genome::Model::Tools::CrossMatch::Run->create(
+    my $cross_match_tool = Genome::Model::Tools::Crossmatch::Run->create(
                                                                          query_file => $self->primer_fasta,
                                                                          subject_file => $tmp_fasta_file,
                                                                          cm_params => '-tags -masklevel 0 -gap1_only -minmatch 6 -minscore 6 -minmargin 1',

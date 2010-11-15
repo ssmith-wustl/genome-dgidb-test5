@@ -243,7 +243,7 @@ sub execute {
         #highly-mutated genes to ignore
         next if (scalar grep { /^$gene$/ } @genes_to_exclude);
         #Ignore Silent variant and those in Introns, RNA, UTRs, or Flanks
-        next if ( $mutation_class =~ m/RNA|Silent|3'Flank|3'UTR|5'Flank|5'UTR/ );
+        next if ( $mutation_class =~ m/RNA|Intron|Silent|3'Flank|3'UTR|5'Flank|5'UTR/ );
         #make sure mutation is inside the ROIs
         if($self->count_bits($roi_bitmask->{$chr},$start,$stop) == 0) {
             print $rejects_fh ( "Variant does not fall within any ROI: $gene, chr$chr:$start-$stop, $center\n" );

@@ -50,7 +50,11 @@ sub execute {
     $self->assembler_output_file($output_directory .'/cufflinks.out');
     
     my $params = $self->params || '';
-    my $cmd = $self->cufflinks_path .' '. $params .' '. $self->sam_file .' > '. $self->assembler_output_file .' 2>&1';;
+    if (version->parse($self->use_version) >= version->parse('0.9.0')) {
+        # The progress bar since v0.9.0 is causing massive(50MB) log files 
+        $params .= ' -q ';
+    }
+    my $cmd = $self->cufflinks_path .' '. $params .' '. $self->sam_file .' > '. $self->assembler_output_file .' 2>&1';
     Genome::Utility::FileSystem->shellcmd(
         cmd => $cmd,
         input_files => [$self->sam_file],

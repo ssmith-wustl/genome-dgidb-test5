@@ -49,7 +49,7 @@ sub execute {
 
 sub check_amino_acid_change_string{
     my %args = @_;
-    my ($amino_acid_change_string) = @args{'amino_acid_change_string'};
+    my $amino_acid_change_string = $args{'amino_acid_change_string'};
     my ($residue1, $res_start, $residue2, $res_stop, $new_residue);
 
     unless (defined($amino_acid_change_string)) {

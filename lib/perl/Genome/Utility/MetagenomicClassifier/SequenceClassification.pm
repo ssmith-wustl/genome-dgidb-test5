@@ -5,6 +5,7 @@ use warnings;
 
 use Carp 'confess';
 use Data::Dumper 'Dumper';
+use Bio::Taxon;
 
 sub new {
     my ($class, %params) = @_;

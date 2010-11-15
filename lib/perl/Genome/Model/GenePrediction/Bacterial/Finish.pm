@@ -73,7 +73,7 @@ class Genome::Model::GenePrediction::Bacterial::Finish {
         no_acedb => {
             is      => 'Boolean',
             doc     => "skip acedb",
-            default => 0,
+		    #default => 0,
         },
         no_mail => {
             is => 'Boolean',

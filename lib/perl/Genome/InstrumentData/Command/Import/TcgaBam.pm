@@ -3,12 +3,9 @@ package Genome::InstrumentData::Command::Import::TcgaBam;
 use strict;
 use warnings;
 
-
-#  TODO   rlong:    Add support for creating organism_samples and libraries for TCGA samples which originated outside of the center.
-
 use Genome;
 use File::Copy;
-use GSCApp;
+#use GSCApp;
 
 my %properties = (
     original_data_path => {
@@ -22,6 +19,11 @@ my %properties = (
     remove_original_bam => {
         is => 'Boolean',
         doc => 'By uncluding this in your command, the tool will remove (delete!) the original bam file after importation, without warning.',
+        default => 0,
+        is_optional => 1,
+    },
+    no_md5 => {
+        is => 'Boolean',
         default => 0,
         is_optional => 1,
     },
@@ -39,6 +41,7 @@ my %properties = (
     species_name => {
         is => 'Text',
         doc => 'species name for imported file, like human, mouse',
+        default => 'human',
         is_optional => 1,
     },
     description  => {
@@ -82,6 +85,10 @@ sub execute {
     my $bam_path = $self->original_data_path;
 
     my $tcga_name = $self->tcga_name;
+    unless(defined($self->import_source_name)){
+        my (undef,$source) = split "-", $tcga_name;
+        $self->import_source_name($source);
+    }
 
     my $organism_sample = GSC::Organism::Sample->get(sample_name => $tcga_name);
 
@@ -112,7 +119,12 @@ sub execute {
     my $library = Genome::Library->get(sample_id => $sample->id);
     unless($library){
         $self->status_message("Not able to find a library associated with this sample. If create_sample was set, it failed to create an appropriate library.");
-        die "We don't currently allow for creating libraries.\n";
+        #die "We don't currently allow for creating libraries.\n";
+        $library = Genome::Library->create(name => $sample->name."-extlibs", sample_id => $sample->id);
+        unless($library){
+            $self->error_message("Could not find OR create library, exiting.");
+            die;
+        }
     }
 
     unless (-s $bam_path and $bam_path =~ /\.bam$/) {
@@ -144,7 +156,9 @@ sub execute {
     unless(exists($params{description})){
         $params{description} = "imported ".$self->import_source_name." bam, tcga name is ".$tcga_name;
     }
-    
+    if($self->no_md5){
+        $params{description} = $params{description} . ", no md5 file was provided with the import.";
+    }
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
     unless ($import_instrument_data) {
        $self->error_message('Failed to create imported instrument data for '.$self->original_data_path);
@@ -182,21 +196,21 @@ sub execute {
 
     #check for existing md5 sum
     my $md5_from_file;
-
-    if(-s $bam_path . ".md5"){
-        $self->status_message("Found an md5 sum, comparing it with the calculated sum...");
-        my $md5_fh = IO::File->new($bam_path . ".md5");
-        unless($md5_fh){
-            $self->error_message("Could not open md5sum file.");
+    unless($self->no_md5){
+        if(-s $bam_path . ".md5"){
+            $self->status_message("Found an md5 sum, comparing it with the calculated sum...");
+            my $md5_fh = IO::File->new($bam_path . ".md5");
+            unless($md5_fh){
+                $self->error_message("Could not open md5sum file.");
+                die $self->error_message;
+            }
+            $md5_from_file = $md5_fh->getline;
+            ($md5_from_file) = split " ", $md5_from_file;
+            chomp $md5_from_file;
+        } else {
+            $self->status_message("Not able to locate a pre-calculated md5 sum at ".$bam_path.".md5");
             die $self->error_message;
         }
-        $md5_from_file = $md5_fh->getline;
-        ($md5_from_file) = split " ", $md5_from_file;
-        chomp $md5_from_file;
-    } else {
-        #TODO for now, this requirement for an md5 file will be waived.
-        $self->status_message("Not able to locate a pre-calculated md5 sum at ".$bam_path.".md5");
-        #die $self->error_message;
     }
     $self->status_message("Now calculating the MD5sum of the bam file to be imported, this will take a long time (many minutes) for larger (many GB) files.");
     my $md5 = Genome::Utility::FileSystem->md5sum($bam_path);

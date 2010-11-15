@@ -5,11 +5,18 @@ use warnings;
 
 use GAP;
 use Genome::Utility::FileSystem;
-use File::Temp 'tempdir';
-use Carp 'confess';
+
 use Bio::SeqIO;
 use Bio::Tools::Run::RepeatMasker;
+
+use File::Temp 'tempdir';
 use File::chdir;
+use File::Basename;
+use File::Copy;
+
+use IO::File;
+use Carp 'confess';
+use Cwd;
 
 class GAP::Command::RepeatMasker {
     is => 'GAP::Command',
@@ -54,6 +61,12 @@ class GAP::Command::RepeatMasker {
             default => 0,
             doc => 'If set, masking is skipped',
         },
+		ace => {
+		    is => 'Boolean',
+			is_input => 1,
+			default => 1,
+			doc => 'If set, dumps ace output',
+		},
     ], 
 };
 
@@ -74,6 +87,7 @@ EOS
 
 sub execute {
     my $self = shift;
+    my $masked_location = $self->masked_fasta;
 
     unless (-e $self->fasta_file and -s $self->fasta_file) {
         confess "File does not exist or has no size at " . $self->fasta_file;
@@ -99,6 +113,7 @@ sub execute {
         my $default_masked_location =  "$fasta_path.repeat_masker";
         $self->status_message("Masked fasta file path not given, defaulting to $default_masked_location");
         $self->masked_fasta($default_masked_location);
+		$masked_location = $default_masked_location;
     }
 
     if (-e $self->masked_fasta) {
@@ -146,6 +161,7 @@ sub execute {
     	$masker = Bio::Tools::Run::RepeatMasker->new(
             lib => $self->repeat_library, 
             xsmall => $self->xsmall, 
+            ace => $self->ace, 
             verbose => 0,
             dir => $self->temp_working_directory,
         );
@@ -154,6 +170,7 @@ sub execute {
     	$masker = Bio::Tools::Run::RepeatMasker->new(
             species => $self->species, 
             xsmall => $self->xsmall, 
+            ace => $self->ace, 
             verbose => 0,
             dir => $self->temp_working_directory,
         );
@@ -176,6 +193,58 @@ sub execute {
         $masked_seq = $seq unless defined $masked_seq; # If no masked sequence found, write original seq to file
         $masked_fasta->write_seq($masked_seq);
     }   
+
+    # Now that masking is complete, we will copy the *ace files from temp_working_directory location to  
+    # the same location where masked fasta file path is stored. There should be multiple ace files
+    # We will concatenate all the ace files and do some formating then copy it over to the new location
+    my @ace_files = glob($self->temp_working_directory."/*ace");
+    $self->warning_message("Ace file $ace_files[0]");
+
+    $self->warning_message("Fasta $masked_location");
+	my ( $masked_file_name, $dir ) = fileparse($masked_location);
+	my @masked_file_name = split(/repeat_masker/, $masked_file_name);
+
+    ## Change dir to /tmp/* location where we have the masked/asc files
+    chdir ($self->temp_working_directory) || confess "Unable to chdir to $self->temp_working_directory: $!";
+	$self->warning_message("CWD(): ". getcwd);
+
+
+	undef my $new_ace_file_name;
+	$new_ace_file_name = $masked_file_name[0]."ace";
+	$self->warning_message("Ace file name: ". $new_ace_file_name);
+	my $ace_tmp_fh = IO::File->new($new_ace_file_name, "a");
+	confess "Could not get handle for ace file($ace_tmp_fh): $!" unless $ace_tmp_fh;
+
+    foreach my $ace_file (@ace_files) {
+		my @file_name = split(/\./, $ace_file);
+		my $masked_fh = IO::File->new($file_name[0], "r");
+		confess "Could not get handle for masked file($file_name[0]): $!" unless $masked_fh;
+		undef my $contig_name;
+		while (my $line = $masked_fh->getline) {
+			chomp $line;
+			if ($line =~ m/^>(.*)/) {
+		  		$contig_name = $1;
+				$self->warning_message("contig_name: ". $contig_name);
+				last;
+			}
+		}
+		$masked_fh->close;
+
+		my $ace_fh = IO::File->new($ace_file, "r");
+		confess "Could not get handle for ace file($ace_file): $!" unless $ace_fh;
+
+		undef my $line_count;
+		$line_count = 0;
+		while (my $line = $ace_fh->getline) {
+			$ace_tmp_fh->print("Sequence $contig_name\n") if ($line_count == 0);
+			$line =~ s/\+|\-//;
+			$ace_tmp_fh->print($line);
+			$line_count++;
+		}
+		$ace_tmp_fh->print("\n");
+	}
+    $ace_tmp_fh->close;
+    copy($new_ace_file_name, $dir)|| confess "Copy failed: $!";
 
     return 1;
 }

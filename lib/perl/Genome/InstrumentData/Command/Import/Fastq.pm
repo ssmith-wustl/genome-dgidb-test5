@@ -179,9 +179,14 @@ sub execute {
             $self->error_message("Could not locate sample with the name ".$self->sample_name);
             die $self->error_message;
         }
-        $library = Genome::Library->get(sample_name => $sample->name);
+
+        # create one.
+        $library = Genome::Library->get(sample_name => $sample->name, name=>$sample->name . '-extlibs');
         unless(defined($library)){
-            $self->error_message("COuld not locate a library associated with the sample-name ".$sample->name);
+            $library = Genome::Library->create(sample_name => $sample->name, name=>$sample->name . '-extlibs');
+        }
+        unless (defined $library) {
+            $self->error_message("COuld not locate a library associated with the sample-name ".$sample->name . "-extlibs and couldn't create one either.");
             die $self->error_message;
         }
         $self->library_name($library->name);
@@ -480,7 +485,7 @@ sub check_last_read {
     my ($read_name) = split "/",$lines[0];
     my $read_length = length $lines[1];
     if(defined $self->read_length){
-        unless($read_length < $self->read_length){
+        unless($read_length <= $self->read_length){
             $self->error_message("Read-Length was set to ".$self->read_length." however, a read of length ".$read_length." was found in the last read.");
             return;
         }

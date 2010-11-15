@@ -105,6 +105,16 @@ sub dedup_bam_file {
     }
 }
 
+sub alignment_stats_file {
+    my $self = shift;
+    return $self->accumulated_alignments_directory .'/alignment_stats.txt';
+}
+
+sub merged_bam_file {
+    my $self = shift;
+    return $self->accumulated_alignments_directory .'/all_reads_merged.bam';
+}
+
 sub generate_tcga_file_name {
     my $self = shift;
     my $model = $self->model;

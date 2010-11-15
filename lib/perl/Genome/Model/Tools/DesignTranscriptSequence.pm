@@ -3,7 +3,7 @@ package Genome::Model::Tools::DesignTranscriptSequence;
 use strict;
 use warnings;
 use Genome;
-use GSCApp;
+#use GSCApp;
 
 class Genome::Model::Tools::DesignTranscriptSequence {
     is => 'Command',                    

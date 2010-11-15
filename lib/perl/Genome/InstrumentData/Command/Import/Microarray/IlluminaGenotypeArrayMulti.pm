@@ -233,12 +233,25 @@ sub process_imported_files {
     # and then deposits the goldSNP file, then kicks off a define/build model.
     for my $k (sort(keys(%samples))) {
         my $sample_name = $samples{$k}->name;
+        my $sample = $samples{$k};
+
         $self->status_message("working on sample ".$sample_name);
         my $num_samples = scalar(keys(%samples));
         print "working on sample ".$sample_name." # ".($count+1)." of $num_samples samples.\n";
+
+        my $library = Genome::Library->get(sample=>$sample, name =>$sample->name . "-microarraylib");
+        unless ($library) {
+            $library = Genome::Library->create(sample=>$sample, name =>$sample->name . "-microarraylib");
+        }
+        unless ($library) {
+            $self->error_message("Can't get or create library for " . $sample->name . "-microarraylib");
+            die $self->error_message;
+        }
+        
         unless(Genome::InstrumentData::Command::Import::Microarray::Misc->execute(
                 original_data_path => $path,
                 sample_name => $sample_name,
+                library_name => $library->name,
                 sequencing_platform => $self->sequencing_platform, )) {
             $self->error_message("unable to import sample data for ".$sample_name);
             die $self->error_message;
@@ -254,10 +267,10 @@ sub process_imported_files {
         }
         my $gen = "$temp_dir/$internal{$sample_name}.genotype";
 
-
         unless(Genome::InstrumentData::Command::Import::Genotype->create(
                 source_data_file    => $gen,
                 sample_name         => $sample_name,
+                library_name        => $library->name,
                 define_model        => 1,)){
             $self->error_message("Could not define model for ".$sample_name."\n");
             die $self->error_message;

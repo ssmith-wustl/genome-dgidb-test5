@@ -8,14 +8,16 @@ use Genome;
 
 class Genome::Model::Event::Build::RnaSeq::AlignReads::Tophat {
     is => ['Genome::Model::Event::Build::RnaSeq::AlignReads'],
-	has => [
+    has => [
+        _unaligned_bam_files => {
+            is_optional => 1,
+        },
     ],
 };
 
 sub bsub_rusage {
     return "-R 'select[model!=Opteron250 && type==LINUX64 && mem>16000 && tmp>150000] span[hosts=1] rusage[tmp=150000, mem=16000]' -M 16000000 -n 4";
 }
-
 
 sub execute {
     my $self = shift;
@@ -26,12 +28,95 @@ sub execute {
     my $aligner = $self->create_aligner_tool;
     unless ($aligner) {
         $self->error_message('Failed to create Tophat aligner tool!');
-        return;
+        die($self->error_message);
     }
     unless ($aligner->execute) {
         $self->error_message('Failed to execute Tophat aligner!');
-        return;
+        die($self->error_message);
     }
+
+    # TODO: Refactor/Move everything below here
+    # This should really be a new step in the pipeline
+    # We used 4 threads for the alignment but
+    # Picard will run for many hours/days on only one CPU
+
+    # Create a merged BAM file of all original FASTQ reads before removing $fastq_dir
+    my $picard_version = $self->model->picard_version;
+    unless ($picard_version) {
+        $picard_version = Genome::Model::Tools::Picard->default_picard_version;
+        $self->warning_message('Picard version not defined in processing profile.  Using default picard version: '. $picard_version);
+    }
+    my $tmp_unaligned_bam_file = Genome::Utility::FileSystem->create_temp_file_path('all_fastq_reads.bam');
+    unless (Genome::Model::Tools::Picard::MergeSamFiles->execute(
+        input_files => $self->_unaligned_bam_files,
+        output_file => $tmp_unaligned_bam_file,
+        maximum_memory => 12,
+        maximum_permgen_memory => 256,
+        sort_order => 'queryname',
+        use_version => $picard_version,
+    )) {
+        die('Failed to merge unaligned BAM files!');
+    }
+
+    # queryname sort the aligned BAM file
+    my $tmp_aligned_bam_file = Genome::Utility::FileSystem->create_temp_file_path('accepted_hits_queryname_sort.bam');
+    unless (Genome::Model::Tools::Picard::SortSam->execute(
+        sort_order => 'queryname',
+        input_file => $alignment_directory .'/accepted_hits.bam',
+        output_file => $tmp_aligned_bam_file,
+        max_records_in_ram => 3000000,
+        maximum_memory => 12,
+        maximum_permgen_memory => 256,
+        temp_directory => Genome::Utility::FileSystem->base_temp_directory,
+        use_version => $picard_version,
+    )) {
+        die('Failed to queryname sort the aligned BAM file!');
+    }
+
+    # Find unaligned reads and merge with aligned while calculating basic alignment metrics
+    my $tmp_merged_bam_file = Genome::Utility::FileSystem->create_temp_file_path('accepted_hits_all_unsorted.bam');
+    unless (Genome::Model::Tools::BioSamtools::TophatAlignmentStats->execute(
+        aligned_bam_file => $tmp_aligned_bam_file,
+        unaligned_bam_file => $tmp_unaligned_bam_file,
+        merged_bam_file => $tmp_merged_bam_file,
+        alignment_stats_file => $self->build->alignment_stats_file,
+    )) {
+        die('Failed to merge aligned/unaligned and calculate alignment metrics!');
+    }
+    unlink($tmp_unaligned_bam_file);
+    unlink($tmp_aligned_bam_file);
+
+    # coordinate sort the merged BAM file
+    unless (Genome::Model::Tools::Picard::SortSam->execute(
+        sort_order => 'coordinate',
+        input_file => $tmp_merged_bam_file,
+        output_file => $self->build->merged_bam_file,
+        max_records_in_ram => 3000000,
+        maximum_memory => 12,
+        maximum_permgen_memory => 256,
+        temp_directory => Genome::Utility::FileSystem->base_temp_directory,
+        use_version => $picard_version,
+    )) {
+        die('Failed to coordinate sort the merged BAM file!');
+    }
+
+    # index the merged BAM file(this is probably optional at this point)
+    if ($picard_version >= 1.23) {
+        unless (Genome::Model::Tools::Picard::BuildBamIndex->execute(
+            input_file => $self->build->merged_bam_file,
+            output_file => $self->build->merged_bam_file .'.bai',
+            maximum_memory => 12,
+            maximum_permgen_memory => 256,
+            temp_directory => Genome::Utility::FileSystem->base_temp_directory,
+            use_version => $picard_version,
+        )) {
+            die('Failed to index the merged BAM file!');
+        }
+    }
+
+    # TODO: Run flagstat and verify the BAM completeness
+
+    #  Remove FASTQ and all unaligned read BAM files
     my $fastq_dir = $self->build->accumulated_fastq_directory;
     unless (File::Path::rmtree($fastq_dir)) {
         $self->error_message('Failed to remove FASTQ directory: '. $fastq_dir);
@@ -45,6 +130,7 @@ sub create_aligner_tool {
     my @instrument_data_assignments = $self->build->instrument_data_assignments;
     my @left_reads;
     my @right_reads;
+    my @unaligned_bams;
     my $sum_insert_sizes;
     my $sum_insert_size_std_dev;
     my $sum_read_length;
@@ -77,17 +163,22 @@ sub create_aligner_tool {
         );
         my $fastq_directory = $prepare_reads->fastq_directory;
         my $left_reads = $fastq_directory.'/'. $instrument_data->read1_fastq_name;
-        unless (-s $left_reads) {
-            $self->error_message('Failed to find left reads '. $left_reads);
-            return;
-        }
+        #The fastq files are now removed after alignment
+        #unless (-s $left_reads) {
+        #    $self->error_message('Failed to find left reads '. $left_reads);
+        #    return;
+        #}
         push @left_reads, $left_reads;
         my $right_reads = $fastq_directory.'/'. $instrument_data->read2_fastq_name;
-        unless (-s $right_reads) {
-            $self->error_message('Failed to find right reads '. $right_reads);
-            return;
-        }
+        #The fastq files are now removed after alignment
+        #unless (-s $right_reads) {
+        #    $self->error_message('Failed to find right reads '. $right_reads);
+        #    return;
+        #}
         push @right_reads, $right_reads;
+
+        push @unaligned_bams, $fastq_directory .'/s_'. $instrument_data->subset_name .'_sequence.bam';
+
         my $median_insert_size = $instrument_data->median_insert_size;
         my $sd_above_insert_size = $instrument_data->sd_above_insert_size;
         # Use the number of reads to somewhat normalize the averages we will calculate later
@@ -105,6 +196,7 @@ sub create_aligner_tool {
         $sum_read_length += ($instrument_data->read_length * $clusters);
         $reads += $clusters;
     }
+    $self->_unaligned_bam_files(\@unaligned_bams);
     unless ($reads) {
         $self->error_message('Failed to calculate the number of reads across all lanes');
         return;
