@@ -195,7 +195,20 @@ sub ace2fastaqual
     }
 }
 
+sub _remove_contigs_idx_directories {
+    my ( $self, $bac_names ) = @_;
 
+    foreach my $bac_name ( @{$bac_names} ) {
+	my $idx_dir = $self->project_dir."/$bac_name/edit_dir/$bac_name".'.ace.idx';
+
+	if ( -d $idx_dir ) {
+	    unless ( File::Path::rmtree( $idx_dir ) ){
+		$self->status_message("Attempted to remove contigs index directory but failed: $idx_dir");
+	    }
+	}
+    }
+    return 1;
+}
 ############################################################
 sub execute { 
     my $self = shift;
@@ -218,6 +231,8 @@ sub execute {
     $self->print_contig_size_report($names, $reports_dir."contig_size_report");
     $self->print_contigs_only_consensus_report($names, $reports_dir."contigs_only_consensus");
     $self->create_fasta_and_qual_files($names);
+    $self->_remove_contigs_idx_directories( $names ); 
+
     return 1;
 }
 

@@ -25,27 +25,24 @@ class Genome::Model::Tools::Analysis::LaneQc::CompareLoh {
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		loh_file	=> { is => 'Text', doc => "Three-column file of genotype calls chrom, pos, genotype", is_optional => 0, is_input => 1 },
-		variant_file	=> { is => 'Text', doc => "Variant calls in SAMtools pileup-consensus format", is_optional => 1, is_input => 1 },
-		bam_file	=> { is => 'Text', doc => "Alternatively, provide a BAM file", is_optional => 1, is_input => 1 },		
-		sample_name	=> { is => 'Text', doc => "Variant calls in SAMtools pileup-consensus format", is_optional => 1, is_input => 1 },
-		min_depth_het	=> { is => 'Text', doc => "Minimum depth to compare a het call [4]", is_optional => 1, is_input => 1},
-		min_depth_hom	=> { is => 'Text', doc => "Minimum depth to compare a hom call [8]", is_optional => 1, is_input => 1},
+		normal_variant_file	=> { is => 'Text', doc => "Variant calls in SAMtools pileup-consensus format", is_optional => 1, is_input => 1 },
+		tumor_variant_file	=> { is => 'Text', doc => "Alternatively, provide a BAM file", is_optional => 1, is_input => 1 },		
+		min_depth_het	=> { is => 'Text', doc => "Minimum depth to compare a het call [8]", is_optional => 1, is_input => 1},
+		output_file	=> { is => 'Text', doc => "Output file for QC result", is_optional => 1, is_input => 1},
 		verbose	=> { is => 'Text', doc => "Turns on verbose output [0]", is_optional => 1, is_input => 1},
-		flip_alleles 	=> { is => 'Text', doc => "If set to 1, try to avoid strand issues by flipping alleles to match", is_optional => 1, is_input => 1},
-		output_file	=> { is => 'Text', doc => "Output file for QC result", is_optional => 1, is_input => 1}
 	],
 };
 
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Compares SAMtools variant calls to array genotypes"                 
+    "Compare tumor and normal variant calls to LOH positions from SNP array"                 
 }
 
 sub help_synopsis {
     return <<EOS
-This command compares SAMtools variant calls to array genotypes
-EXAMPLE:	gmt analysis lane-qc compare-snps --genotype-file affy.genotypes --variant-file lane1.var
+This command compares tumor and normal variant calls to LOH positions from SNP array to identify tumor-normal switches
+EXAMPLE:	gmt analysis lane-qc compare-loh --loh-file [LOH] --normal [normal.snps] --tumor [tumor.snps] --output [output]
 EOS
 }
 
@@ -64,102 +61,125 @@ EOS
 sub execute {                               # replace with real execution logic.
 	my $self = shift;
 
-	## Get required parameters ##
-	my $sample_name = "Sample";
-
-	if($self->sample_name)
-	{
-		$sample_name = $self->sample_name;
-	}
-	elsif($self->variant_file)
-	{
-		$sample_name = $self->variant_file if($self->variant_file);	
-	}
-	elsif($self->bam_file)
-	{
-		$sample_name = $self->bam_file if($self->bam_file);	
-	}
-	
 	my $loh_file = $self->loh_file;
-
-	my $variant_file = "";
+	my $normal_file = $self->normal_variant_file;
+	my $tumor_file = $self->tumor_variant_file;
 
 	print "Loading LOH calls from $loh_file...\n" if($self->verbose);
-	my %genotypes = load_genotypes($loh_file);
-
+	our %genotypes = load_genotypes($loh_file);
 	
-	if($self->bam_file)
-	{
-		my $bam_file = $self->bam_file;
-
-		## Build positions key ##
-		my $search_string = "";
-		my $key_count = 0;
-		foreach my $key (sort byBamOrder keys %genotypes)
-		{
-			$key_count++;
-			(my $chrom, my $position) = split(/\t/, $key);
-			$search_string .= " " if($search_string);
-			
-			$search_string .= $chrom . ":" . $position . "-" . $position;
-		}
-		
-		## If BAM provided, call the variants ##
-		    my ($tfh,$temp_path) = Genome::Utility::FileSystem->create_temp_file;
-		    unless($tfh) {
-		        $self->error_message("Unable to create temporary file $!");
-		        die;
-			}
-
-		## Build consensus ##
-		print "Building pileup to $temp_path\n";
-		my $cmd = "";
-		
-		if($search_string && $key_count < 100)
-		{
-			print "Extracting genotypes for $key_count positions...\n";		
-			$cmd = "samtools view -b $bam_file $search_string | samtools pileup -f /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa - | java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan pileup2cns >$temp_path";			
-			print "$cmd\n";
-		}
-		else
-		{
-			$cmd = "samtools pileup -cf /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa $bam_file | cut --fields=1-8 >$temp_path";			
-		}
-
-		system($cmd);
-		
-		$variant_file = $temp_path;
-	}
-	elsif($self->variant_file)
-	{
-		$variant_file = $self->variant_file;
-	}
-	else
-	{
-		die "Please provide a variant file or a BAM file\n";
-	}
-
-	$sample_name = $self->sample_name if($self->sample_name);
-	my $min_depth_hom = 4;
 	my $min_depth_het = 8;
-	$min_depth_hom = $self->min_depth_hom if($self->min_depth_hom);
 	$min_depth_het = $self->min_depth_het if($self->min_depth_het);
 	
 	if($self->output_file)
 	{
 		open(OUTFILE, ">" . $self->output_file) or die "Can't open outfile: $!\n";
-#		print OUTFILE "file\tnum_snps\tnum_with_genotype\tnum_min_depth\tnum_variant\tvariant_match\thom_was_het\thet_was_hom\thet_was_diff\tconc_variant\tconc_rare_hom\n";
-		#num_ref\tref_was_ref\tref_was_het\tref_was_hom\tconc_overall
 	}
 
+	warn "Comparing normal variants to array LOH calls...\n";
+	my $normal_result = compare_variants($normal_file, $min_depth_het);
+
+	warn "Comparing tumor variants to array LOH calls...\n";	
+	my $tumor_result = compare_variants($tumor_file, $min_depth_het);	
+
+
+	my ($normal_comparisons, $normal_matched_normal, $normal_matched_tumor) = split(/\t/, $normal_result);
+	my ($tumor_comparisons, $tumor_matched_normal, $tumor_matched_tumor) = split(/\t/, $tumor_result);
+
+	my $pct_normal_matched_normal = my $pct_normal_matched_tumor = my $pct_tumor_matched_normal = my $pct_tumor_matched_tumor = "";
 	
-	my %stats = ();
-	$stats{'num_snps'} = $stats{'num_min_depth'} = $stats{'num_with_genotype'} = $stats{'num_with_variant'} = $stats{'num_variant_match'} = 0;
-	$stats{'het_was_hom'} = $stats{'hom_was_het'} = $stats{'het_was_diff_het'} = $stats{'rare_hom_match'} = $stats{'rare_hom_total'} = 0;
-	$stats{'num_ref_was_ref'} = $stats{'num_ref_was_hom'} = $stats{'num_ref_was_het'} = 0;
+	if($normal_comparisons)
+	{
+		$pct_normal_matched_normal = sprintf("%.2f", ($normal_matched_normal / $normal_comparisons * 100));
+		$pct_normal_matched_tumor = sprintf("%.2f", ($normal_matched_tumor / $normal_comparisons * 100));
+	}
+
+	if($tumor_comparisons)
+	{
+		$pct_tumor_matched_normal = sprintf("%.2f", ($tumor_matched_normal / $tumor_comparisons * 100));
+		$pct_tumor_matched_tumor = sprintf("%.2f", ($tumor_matched_tumor / $tumor_comparisons * 100));
+	}
 
 
-	print "Parsing variant calls in $variant_file...\n" if($self->verbose);
+	my $check_result = "Unknown";
+	
+	if($normal_comparisons && $tumor_comparisons)
+	{
+		if($pct_normal_matched_normal > $pct_tumor_matched_normal && $pct_tumor_matched_tumor > $pct_normal_matched_tumor)
+		{
+			$check_result = "OK";
+		}
+		elsif($pct_normal_matched_normal < $pct_tumor_matched_normal && $pct_tumor_matched_tumor < $pct_normal_matched_tumor)
+		{
+			$check_result = "SampleSwitch";
+		}
+	}
+
+	print "normal_comparisons\tmatched_normal\tpct_match_normal\tmatched_tumor\tpct_match_tumor\ttumor_comparisons\tmatched_normal\tpct_match_normal\tmatched_tumor\tpct_match_tumor\tqc_result\n";
+	print join("\t", $normal_comparisons, $normal_matched_normal, $pct_normal_matched_normal . '%', $normal_matched_tumor, $pct_normal_matched_tumor . '%') . "\t";
+	print join("\t", $tumor_comparisons, $tumor_matched_normal, $pct_tumor_matched_normal . '%', $tumor_matched_tumor, $pct_tumor_matched_tumor . '%') . "\t";
+	print "$check_result\n";
+
+	if($self->output_file)
+	{
+		print OUTFILE "normal_comparisons\tmatched_normal\tpct_match_normal\tmatched_tumor\tpct_match_tumor\ttumor_comparisons\tmatched_normal\tpct_match_normal\tmatched_tumor\tpct_match_tumor\tqc_result\n";
+		print OUTFILE join("\t", $normal_comparisons, $normal_matched_normal, $pct_normal_matched_normal . '%', $normal_matched_tumor, $pct_normal_matched_tumor . '%') . "\t";
+		print OUTFILE join("\t", $tumor_comparisons, $tumor_matched_normal, $pct_tumor_matched_normal . '%', $tumor_matched_tumor, $pct_tumor_matched_tumor . '%') . "\t";
+		print OUTFILE "$check_result\n";		
+	}
+
+	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
+}
+
+
+################################################################################################
+# Load Genotypes
+#
+################################################################################################
+
+sub load_genotypes
+{                               # replace with real execution logic.
+	my $loh_file = shift(@_);
+	my %genotypes = ();
+	
+	my $input = new FileHandle ($loh_file);
+	my $lineCounter = 0;
+	my $gtCounter = 0;
+
+	while (<$input>)
+	{
+		chomp;
+		my $line = $_;
+		$lineCounter++;
+
+		(my $chrom, my $position, my $normal_genotype, my $tumor_genotype) = split(/\t/, $line);
+
+		my $key = "$chrom\t$position";
+		
+		$genotypes{$key} = "$normal_genotype\t$tumor_genotype";
+		$gtCounter++;
+	}
+	close($input);
+
+#	print "$gtCounter genotypes loaded\n";
+	
+	return(%genotypes);                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
+}
+
+
+
+
+################################################################################################
+# Execute - the main program logic
+#
+################################################################################################
+
+sub compare_variants
+{
+	my ($variant_file, $min_depth_het) = @_;
+
+	my %stats;
+	our %genotypes;
 
 	my $input = new FileHandle ($variant_file);
 	my $lineCounter = 0;
@@ -268,10 +288,6 @@ sub execute {                               # replace with real execution logic.
 
 						$match_status = "MatchNeither" if(!$match_status);
 					
-						if($self->verbose)
-						{
-							print join("\t", $key, $normal_gt, $tumor_gt, $cons_gt, $match_status) . "\n";
-						}						
 						
 					}
 				}
@@ -285,7 +301,6 @@ sub execute {                               # replace with real execution logic.
 	}
 	
 	close($input);
-
 	
 	## Set zero values ##
 	
@@ -310,45 +325,10 @@ sub execute {                               # replace with real execution logic.
 		$stats{'pct_normal_match'} = $stats{'pct_tumor_match'} = "--";
 	}
 
-	print join("\t", $stats{'num_min_depth'}, $stats{'num_matched_normal'}, $stats{'pct_normal_match'} . '%', $stats{'num_matched_tumor'}, $stats{'pct_tumor_match'} . '%') . "\n";
-
-	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
+	return(join("\t", $stats{'num_min_depth'}, $stats{'num_matched_normal'}, $stats{'num_matched_tumor'}));
+	
 }
 
-
-################################################################################################
-# Load Genotypes
-#
-################################################################################################
-
-sub load_genotypes
-{                               # replace with real execution logic.
-	my $loh_file = shift(@_);
-	my %genotypes = ();
-	
-	my $input = new FileHandle ($loh_file);
-	my $lineCounter = 0;
-	my $gtCounter = 0;
-
-	while (<$input>)
-	{
-		chomp;
-		my $line = $_;
-		$lineCounter++;
-
-		(my $chrom, my $position, my $normal_genotype, my $tumor_genotype) = split(/\t/, $line);
-
-		my $key = "$chrom\t$position";
-		
-		$genotypes{$key} = "$normal_genotype\t$tumor_genotype";
-		$gtCounter++;
-	}
-	close($input);
-
-#	print "$gtCounter genotypes loaded\n";
-	
-	return(%genotypes);                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
-}
 
 
 ################################################################################################

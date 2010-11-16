@@ -123,6 +123,8 @@ class Genome::Model::Tools::DetectVariants::Somatic::Pindel {
 # FIXME make this the real deployed path
 my %PINDEL_VERSIONS = (
     '0.1' => '/gscmnt/sata921/info/medseq/Pindel_test/' . $PINDEL_COMMAND,
+    '0.2' => '/gscmnt/sata921/info/medseq/Pindel_test/maq/'.$PINDEL_COMMAND,     # This version and up works with MAQ aligned bams
+    '0.3' => '/gscmnt/sata921/info/medseq/Pindel_test/merged_with_kai/'.$PINDEL_COMMAND,    #this version is merged with changes from KAI
 );
 
 sub help_brief {
@@ -229,7 +231,7 @@ sub _detect_variants {
         }
 
         # Put the insertions and deletions where the rest of the pipe expects them 
-        my $files_to_cat = join(" ", ($self->_temp_short_insertion_output, $self->_temp_long_insertion_output, $self->_temp_deletion_output) );
+        my $files_to_cat = join(" ", ($self->_temp_short_insertion_output, $self->_temp_deletion_output) );
 
         my $cmd = "cat $files_to_cat > " . $self->_indel_staging_output;
         unless (system($cmd) == 0) {
@@ -273,7 +275,7 @@ sub _run_pindel {
     }
 
     # Put the insertions and deletions where the rest of the pipe expects them 
-    my $files_to_cat = join(" ", ($self->_temp_short_insertion_output, $self->_temp_long_insertion_output, $self->_temp_deletion_output) );
+    my $files_to_cat = join(" ", ($self->_temp_short_insertion_output, $self->_temp_deletion_output) );
     my $cmd = "cat $files_to_cat > " . $self->_indel_staging_output;
     unless (system($cmd) == 0) {
         $self->error_message("Problem running $cmd");

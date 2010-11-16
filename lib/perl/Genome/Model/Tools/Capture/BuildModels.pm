@@ -31,8 +31,8 @@ class Genome::Model::Tools::Capture::BuildModels {
 		model_basename	=> { is => 'Text', doc => "Project string for model naming, e.g. \"TCGA-OV-6K-Capture-bwa\"", is_optional => 0 },
 		processing_profile	=> { is => 'Text', doc => "Processing profile to use", is_optional => 1, default =>"bwa0.5.5 and samtools r544 and picard 1.17 and -q 5" },
 		sample_list	=> { is => 'Text', doc => "Text file with sample names to include, one per line" , is_optional => 0},
-		region_of_interest_set_name	=> { is => 'Text', doc => "Region of interest set name " , is_optional => 0},
-		target_region_set_names	=> { is => 'Text', doc => "Target region set name " , is_optional => 0},	
+		region_of_interest_set_name	=> { is => 'Text', doc => "Region of interest set name " , is_optional => 1},
+		target_region_set_name	=> { is => 'Text', doc => "Target region set name " , is_optional => 1},	
 		subject_type	=> { is => 'Text', doc => "Type of sample name in file (sample_name or library_name)" , is_optional => 1},
 		report_only	=> { is => 'Text', doc => "Flag to skip actual genome model creation" , is_optional => 1},
 		define_only	=> { is => 'Text', doc => "Flag to define models but not add data or build" , is_optional => 1},
@@ -41,6 +41,8 @@ class Genome::Model::Tools::Capture::BuildModels {
 		restart_failed	=> { is => 'Text', doc => "Restarts failed builds" , is_optional => 1},
 		restart_running	=> { is => 'Text', doc => "Forces restart of running builds" , is_optional => 1},
 		restart_scheduled	=> { is => 'Text', doc => "Forces restart of scheduled builds" , is_optional => 1},
+		use_imported_data	=> { is => 'Text', doc => "If set to 1, use imported data over instrument data" , is_optional => 1},
+		verbose	=> { is => 'Text', doc => "If set to 1, verbose output of models and instrument data" , is_optional => 1},
 	],
 };
 
@@ -135,7 +137,7 @@ sub execute {                               # replace with real execution logic.
 				}
 				else
 				{
-					$model_id = define_model($model_name, $sample_name, $subject_type, $processing_profile, $self->region_of_interest_set_name, $self->target_region_set_names);
+					$model_id = define_model($model_name, $sample_name, $subject_type, $processing_profile, $self->region_of_interest_set_name, $self->target_region_set_name);
 				}
 			}
 		}
@@ -147,9 +149,34 @@ sub execute {                               # replace with real execution logic.
 			print "$model_id\t$model_name\t$sample_name\n";
 
 			## Get instrument data ##
-			my $instrument_data = get_instrument_data($sample_name, $subject_type);
-			if($instrument_data && !$self->define_only)
+			#my $instrument_data = get_instrument_data($sample_name, $subject_type);
+			my $instrument_data = "";
+			
+			if($self->use_imported_data)
 			{
+				$instrument_data = `genome instrument-data list imported --filter=$subject_type='$sample_name' --noheaders --style=csv --show=id,sequencing_platform,import_format`;				
+
+				## Parse out the instrument data lines  and automatically assign them ##
+				
+				my @data_lines = split(/\n/, $instrument_data);
+				foreach my $data_line (@data_lines)
+				{
+					#my @dataLineContents = split(/\,/, $data_line);
+					my ($id, $platform, $format) = split(/\,/, $data_line);
+					warn "Found $id\t$platform\t$format\n" if($self->verbose);
+					my $cmd = "genome model instrument-data assign --model-id $model_id --instrument-data-id $id";
+	
+					if(!$self->report_only)
+					{
+						system($cmd);
+					}						
+				}
+			}
+			else
+			{
+				## FOr non-imported data, get a lot more information ##
+				$instrument_data = `genome instrument-data list solexa --filter=$subject_type='$sample_name' --noheaders --style=csv --show=id,flow_cell_id,lane,filt_error_rate_avg,clusters,read_length,target_region_set_name`;				
+
 				## Parse out the instrument data lines ##
 				
 				my @data_lines = split(/\n/, $instrument_data);
@@ -157,16 +184,16 @@ sub execute {                               # replace with real execution logic.
 				{
 					#my @dataLineContents = split(/\,/, $data_line);
 					(my $id, my $flow_cell_id, my $lane, my $filt_error_rate_avg, my $clusters, my $read_length, my $target_region_set_name) = split(/\,/, $data_line);
-					print "$id\t$flow_cell_id\t$lane\t$filt_error_rate_avg\t$clusters\t$read_length\t$target_region_set_name\n";
+					warn "Found $id\t$flow_cell_id\t$lane\t$filt_error_rate_avg\t$clusters\t$read_length\t$target_region_set_name\n" if($self->verbose);
 
 					if(!defined($self->read_length) || $read_length eq $self->read_length)
 					{
-						if($target_region_set_name ne $self->target_region_set_names)
+						if($target_region_set_name ne $self->target_region_set_name)
 						{
-							warn "FYI: Lane target region set name $target_region_set_name does not equal model target region set name " . $self->target_region_set_names . "\n";						
+							warn "FYI: Lane target region set name $target_region_set_name does not equal model target region set name " . $self->target_region_set_name . "\n";
 						}
 
-						warn "Assigning $flow_cell_id lane $lane with read length $read_length\n";
+						warn "Assigning $flow_cell_id lane $lane with read length $read_length\n" if($self->verbose);
 
 						my $cmd = "genome model instrument-data assign --model-id $model_id --instrument-data-id $id";
 	
@@ -177,6 +204,11 @@ sub execute {                               # replace with real execution logic.
 					}
 
 				}
+			}
+
+			if($instrument_data && !$self->define_only)
+			{
+
 				
 
 				## Build the model ##
@@ -191,7 +223,7 @@ sub execute {                               # replace with real execution logic.
 		}
 		else
 		{
-			print "Got no model id for $model_name\n";
+			warn "Got no model id for $model_name\n";
 		}
 		
 #		return(0);
@@ -203,29 +235,6 @@ sub execute {                               # replace with real execution logic.
 
 
 
-################################################################################################
-# Execute - the main program logic
-#
-################################################################################################
-
-sub get_instrument_data
-{
-	(my $sample_name, my $subject_type) = @_;
-	
-	my $instrument_data = `genome instrument-data list solexa --filter=$subject_type='$sample_name' --noheaders --style=csv --show=id,flow_cell_id,lane,filt_error_rate_avg,clusters,read_length,target_region_set_name`;
-	if($instrument_data)
-	{
-#		my @instrument_data = split(/\n/, $instrument_data);
-#		return(@instrument_data);
-		return($instrument_data);
-	}
-	else
-	{
-		warn "No instrument data found with genome instrument-data list solexa --filter=$subject_type='$sample_name' --noheaders --style=csv --show=id,flow_cell_id,lane,filt_error_rate_avg,clusters,read_length,target_region_set_name\n";
-		return();
-	}
-}
-
 
 ################################################################################################
 # Execute - the main program logic
@@ -234,10 +243,30 @@ sub get_instrument_data
 
 sub define_model
 {
-	(my $model_name, my $sample_name, my $subject_type, my $processing_profile, my $region_of_interest_set_name, my $target_region_set_names) = @_;
+	(my $model_name, my $sample_name, my $subject_type, my $processing_profile, my $region_of_interest_set_name, my $target_region_set_name) = @_;
 	my $model_id = 0;
 
-	my $cmd = "genome model define reference-alignment --processing-profile-name \"$processing_profile\" --model-name \"$model_name\" --subject-name=\"$sample_name\" --subject-type=\"$subject_type\" --region-of-interest-set-name \"$region_of_interest_set_name\" --target-region-set-names \"$target_region_set_names\"";
+	my $cmd = "";
+
+	if($target_region_set_name && $region_of_interest_set_name)
+	{
+		$cmd = "genome model define reference-alignment --processing-profile-name \"$processing_profile\" --model-name \"$model_name\" --subject-name=\"$sample_name\" --subject-type=\"$subject_type\" --region-of-interest-set-name \"$region_of_interest_set_name\" --target-region-set-names \"$target_region_set_name\"";		
+	}
+	elsif($target_region_set_name)
+	{
+		## Use the target region set name for both ##
+		$cmd = "genome model define reference-alignment --processing-profile-name \"$processing_profile\" --model-name \"$model_name\" --subject-name=\"$sample_name\" --subject-type=\"$subject_type\" --region-of-interest-set-name \"$target_region_set_name\" --target-region-set-names \"$target_region_set_name\"";		
+	}
+	elsif($region_of_interest_set_name)
+	{
+		## Use the region of interest name for both ##
+		$cmd = "genome model define reference-alignment --processing-profile-name \"$processing_profile\" --model-name \"$model_name\" --subject-name=\"$sample_name\" --subject-type=\"$subject_type\" --region-of-interest-set-name \"$region_of_interest_set_name\" --target-region-set-names \"$region_of_interest_set_name\"";		
+	}
+	else
+	{
+		$cmd = "genome model define reference-alignment --processing-profile-name \"$processing_profile\" --model-name \"$model_name\" --subject-name=\"$sample_name\" --subject-type=\"$subject_type\"";
+	}
+	
 	print "RUN: $cmd\n";
 	
 	if(system($cmd))

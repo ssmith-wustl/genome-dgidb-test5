@@ -216,18 +216,11 @@ sub file_base_name {
     return $_[0]->subject_name;
 }
 
-sub _fasta_files {
+sub _files_for_amplicon_sets {
     my ($self, $type) = @_;
-    die "No type given to get fasta files for ".$self->description unless defined $type;
-    my $method = $type.'_fasta_file_for_set_name';
-    return map { $self->$method($_) } $self->amplicon_set_names
-}
-
-sub _qual_files {
-    my ($self, $type) = @_;
-    die "No type given to get qual files for ".$self->description unless defined $type;
-    my $method = $type.'_qual_file_for_set_name';
-    return map { $self->$method($_) } $self->amplicon_set_names
+    die "No type given to get files for ".$self->description unless defined $type;
+    my $method = $type.'_file_for_set_name';
+    return grep { -s } map { $self->$method($_) } $self->amplicon_set_names;
 }
 
 sub _fasta_file_for_type_and_set_name {
@@ -257,7 +250,7 @@ sub processed_fasta_file { # returns them as a string (legacy)
 }
 
 sub processed_fasta_files {
-    return $_[0]->_fasta_files('processed');
+    return $_[0]->_files_for_amplicon_sets('processed_fasta');
 }
 
 sub processed_fasta_file_for_set_name {
@@ -270,7 +263,7 @@ sub processed_qual_file { # returns them as a string (legacy)
 }
 
 sub processed_qual_files {
-    return $_[0]->_qual_files('processed');
+    return $_[0]->_files_for_amplicon_sets('processed_qual');
 }
 
 sub processed_qual_file_for_set_name {
@@ -284,7 +277,7 @@ sub oriented_fasta_file { # returns them as a string
 }
 
 sub oriented_fasta_files {
-    return $_[0]->_fasta_files('oriented');
+    return $_[0]->_files_for_amplicon_sets('oriented_fasta');
 }
 
 sub oriented_fasta_file_for_set_name {
@@ -297,12 +290,21 @@ sub oriented_qual_file { # returns them as a string (legacy)
 }
 
 sub oriented_qual_files {
-    return $_[0]->_qual_files('oriented');
+    return $_[0]->_files_for_amplicon_sets('oriented_qual');
 }
 
 sub oriented_qual_file_for_set_name {
     my ($self, $set_name) = @_;
     return $self->oriented_fasta_file_for_set_name($set_name).'.qual';
+}
+
+# classification
+sub classification_files_as_string {
+    return join(' ', $_[0]->classification_files);
+}
+
+sub classification_files {
+    return $_[0]->_files_for_amplicon_sets('classifcation');
 }
 
 #< Fasta/Qual Readers/Writers >#
@@ -404,6 +406,13 @@ sub orient_amplicons {
 }
 
 #< Classify >#
+sub classifications_files {
+    my $self = shift;
+}
+
+sub classifications_files_as_string {
+}
+
 sub classification_file_for_set_name {
     my ($self, $set_name) = @_;
     

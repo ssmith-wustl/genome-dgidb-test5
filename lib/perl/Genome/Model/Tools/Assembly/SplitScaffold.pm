@@ -16,10 +16,9 @@ class Genome::Model::Tools::Assembly::SplitScaffold {
             type => 'Text',
             doc => "This is the input ace file"
         }, 
-	split_contig => {
+	split_contigs => {
 	    type => 'Text',
 	    is_many => 1,
-	    is_optional => 1,
 	    doc => 'Multiple scaffold contigs to split scaffolds by',
 	},
 	out_file_name => {
@@ -48,7 +47,7 @@ EOS
 sub execute {
     my $self = shift;
 
-    unless ( $self->split_contig ) {
+    unless ( $self->split_contigs ) {
 	$self->error_message("You must supply contig(s) to split scaffolds by");
 	return;
     }
@@ -175,14 +174,14 @@ sub _get_scaffold_split_contig_names {
     my $self = shift;
     
     #verify contig names in pcap style
-    for my $contig_name ( $self->split_contig ) {
+    for my $contig_name ( $self->split_contigs ) {
 	unless ( $contig_name =~ /Contig\d+\.\d+/i ) {
 	    $self->error_message("Expected pcap style contigs names like Contig4.5 but got: $contig_name");
 	    return;
 	}
     }
     
-    return $self->split_contig;
+    return $self->split_contigs;
 }
 
 sub _get_ace_contig_names {
