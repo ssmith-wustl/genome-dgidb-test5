@@ -29,6 +29,11 @@ class Genome::Model::Tools::Analysis::Mendelian::ReportVariants {
 		variant_file	=> { is => 'Text', doc => "List of variants to consider (annotation format)", is_optional => 0, is_input => 1},
 		affected_files	=> { is => 'Text', doc => "Consensus files for affected individuals", is_optional => 0, is_input => 1},
 		unaffected_files	=> { is => 'Text', doc => "Consensus files for unaffected individuals", is_optional => 1, is_input => 1},
+		inheritance_model	=> { is => 'Text', doc => "Presumed model of mendelian inheritance [autosomal-dominant]", is_optional => 1, is_input => 1},
+		min_coverage_to_refute	=> { is => 'Text', doc => "Minimum coverage to refute a possible variant in an affected [10]", is_optional => 1, is_input => 1, default => 10},
+		max_frequency_to_refute	=> { is => 'Text', doc => "Maximum observed variant allele frequency to refute a possible variant in an affected [5]", is_optional => 1, is_input => 1, default => 10},
+		min_affected_variant	=> { is => 'Text', doc => "Minimum number of affecteds with variant to include", is_optional => 1, is_input => 1, default => 1},
+		max_unaffected_variant	=> { is => 'Text', doc => "Maximum number of affecteds with variant to include", is_optional => 1, is_input => 1, default => 0},
 		output_file	=> { is => 'Text', doc => "Output file for QC result", is_optional => 1, is_input => 1},
 		print_all	=> { is => 'Text', doc => "If set to 1, prints all variants regardless of mendelian pattern", is_optional => 1, is_input => 1},
 	],
@@ -66,14 +71,20 @@ sub execute {                               # replace with real execution logic.
 
 	my $affected_files = $self->affected_files;
 	my $unaffected_files = $self->unaffected_files if($self->unaffected_files);	
+
+	## Get user-defined settings ##
+	my $min_affecteds_variant = $self->min_affected_variant;
+	my $max_unaffecteds_variant = $self->max_unaffected_variant;
+	my $min_coverage_to_refute = $self->min_coverage_to_refute;
+	my $max_frequency_to_refute = $self->max_frequency_to_refute;
+
+	my $inheritance_model = $self->inheritance_model;
 	
 	if($self->output_file)
 	{
 		open(OUTFILE, ">" . $self->output_file) or die "Can't open outfile: $!\n";		
 	}
 	
-	my $min_affecteds_variant = 2;
-	my $max_unaffecteds_variant = 0;
 
 
 	my %stats = ();
@@ -89,8 +100,7 @@ sub execute {                               # replace with real execution logic.
 	print "Loading Affected samples...\n";
 	
 	## Count the files of each type and print the header ##
-	my $header = "";
-	
+	my $header = join("\t", "chrom", "chr_start", "chr_stop", "ref", "var", "unaffecteds_variant", "affecteds_variant", "affecteds_missing", "affecteds_ambiguous");
 	foreach my $affected_file (@affected_files)
 	{
 		$num_affected++;
@@ -160,7 +170,8 @@ sub execute {                               # replace with real execution logic.
 
 			## AFFECTED GENOTYPES ##
 			
-			my $affecteds_variant = my $unaffecteds_variant = 0;
+			my $affecteds_variant = my $affecteds_wildtype = my $affecteds_missing = my $affecteds_ambiguous = my $unaffecteds_variant = 0;
+			my $affecteds_homozygous = 0;
 			
 			## See how many affecteds carry it ##
 			
@@ -174,6 +185,9 @@ sub execute {                               # replace with real execution logic.
 				if($genotypes{$key})
 				{
 					(my $sample_call, my $sample_reads1, my $sample_reads2, my $sample_freq) = split(/\t/, $genotypes{$key});
+					my $sample_coverage = $sample_reads1 + $sample_reads2;
+					my $sample_freq_numeric = $sample_freq;
+					$sample_freq_numeric =~ s/\%//;
 
 					if($sample_call ne $ref)
 					{
@@ -181,7 +195,12 @@ sub execute {                               # replace with real execution logic.
 						{
 							## We have a variant in this affected, so count it ##
 							
-							$affecteds_variant++;							
+							$affecteds_variant++;
+							
+							if($sample_call eq "A" || $sample_call eq "C" || $sample_call eq "G" || $sample_call eq "T")
+							{
+								$affecteds_homozygous++;
+							}
 						}
 						else
 						{
@@ -194,10 +213,27 @@ sub execute {                               # replace with real execution logic.
 						}
 
 					}
+					else
+					{
+						if($sample_coverage >= $min_coverage_to_refute && $sample_freq_numeric <= $max_frequency_to_refute)
+						{
+							$affecteds_wildtype++;							
+						}
+						else
+						{
+							$affecteds_ambiguous++;
+						}
 
-					$sample_call = code_to_genotype($sample_call);
+
+					}
+
+					$sample_call = code_to_genotype($sample_call);					
 
 					$sample_genotype = "$sample_call\t$sample_reads1\t$sample_reads2\t$sample_freq";
+				}
+				else
+				{
+					$affecteds_missing++;
 				}
 				$sample_genotype_string .= $sample_genotype . "\t";
 			}
@@ -252,21 +288,66 @@ sub execute {                               # replace with real execution logic.
 
 				$stats{'multiple_affecteds'}++;
 
-				## Proceed if we found few enough unaffecteds with the variant ##
+				my $include_variant_flag = 0;
 
-				if($unaffecteds_variant <= $max_unaffecteds_variant || $self->print_all)
+				## Proceed if we found few enough unaffecteds with the variant ##
+				if($self->inheritance_model)
 				{
-					$stats{'not_in_unaffected'}++;
+					if($self->inheritance_model eq "autosomal-dominant")
+					{
+						if($unaffecteds_variant > $max_unaffecteds_variant)
+						{
+							$stats{'in_unaffected'}++;
+						}
+						elsif($affecteds_wildtype > 0)
+						{
+							$stats{'affected_was_wildtype'}++;
+						}
+						elsif($affecteds_homozygous == $affecteds_variant)
+						{
+							$stats{'all_affecteds_homozygous'}++;
+						}
+						else
+						{
+							$include_variant_flag = 1;
+							$stats{'included_variants'}++;
+
+							if($affecteds_missing > 0)
+							{
+								$stats{'included_but_missing_affected'}++;
+							}
+							elsif($affecteds_ambiguous > 0)
+							{
+								$stats{'included_but_ambiguous_affected'}++;
+							}
+							else
+							{
+								$stats{'included_and_all_affected'}++;
+							}
+						}
+					}
+				}
+				elsif($unaffecteds_variant <= $max_unaffecteds_variant || $self->print_all)
+				{
+					$include_variant_flag = 1;
+					$stats{'included_variants'}++;
+
+				}
+				
+				if($include_variant_flag)
+				{
 					print "$chromosome\t$chr_start\t$chr_stop\t$ref\t$var\t";
-					print "$affecteds_variant\t$unaffecteds_variant\t";
+					print "$unaffecteds_variant\t$affecteds_variant var, $affecteds_missing miss, $affecteds_ambiguous ambig\t";
 					print "$sample_genotype_string";
 					print "\n";
+
 
 					if($self->output_file)
 					{
 						print OUTFILE "$line\t";
-						print OUTFILE "$affecteds_variant\t$unaffecteds_variant\t";
-						print OUTFILE "$sample_genotype_string";
+#						print OUTFILE "$affecteds_variant\t$unaffecteds_variant\t";
+						print OUTFILE join("\t", $unaffecteds_variant, $affecteds_variant, $affecteds_missing, $affecteds_ambiguous);
+						print OUTFILE "\t$sample_genotype_string";
 						
 						if($self->print_all)
 						{
@@ -277,7 +358,7 @@ sub execute {                               # replace with real execution logic.
 						}
 						
 						print OUTFILE "\n";
-					}
+					}					
 				}
 			}
 
@@ -294,7 +375,16 @@ sub execute {                               # replace with real execution logic.
 	
 	print $stats{'num_variants'} . " variants\n";
 	print $stats{'multiple_affecteds'} . " were present in multiple affected individuals\n";
-	print $stats{'not_in_unaffected'} . " were NOT present in unaffected individuals\n";
+	print $stats{'in_unaffected'} . " were present in a control individual (excluded)\n";
+	print $stats{'affected_was_wildtype'} . " were wildtype in an affected individual (excluded)\n";
+	print $stats{'all_affecteds_homozygous'} . " were excluded because all affecteds were homozygous\n";
+	print $stats{'included_variants'} . " variants were included in output\n";
+	print $stats{'included_and_all_affected'} . " were variant in all affecteds\n";
+	print $stats{'included_but_missing_affected'} . " were variant or missing in all affecteds\n";
+	print $stats{'included_but_ambiguous_affected'} . " were called wildtype but look ambiguous in at least one affected\n";
+
+#	print $stats{'not_in_unaffected'} . " were NOT present in unaffected individuals\n";
+
 	
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
@@ -341,7 +431,11 @@ sub load_consensus
 		}
 #		my $key = "$chrom\t$position";
 		my $key = "$genotype_file\t$chrom\t$position";
-		$genotypes{$key} = "$cns\t$reads1\t$reads2\t$var_freq";	
+		if($cns ne "N")
+		{
+			$genotypes{$key} = "$cns\t$reads1\t$reads2\t$var_freq";				
+		}
+
 	}
 	close($input);
                             # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)

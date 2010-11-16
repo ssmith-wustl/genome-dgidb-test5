@@ -4,8 +4,8 @@ use strict;
 use warnings;
 
 use Genome;
-use File::Copy;
-#use GSCApp;
+
+require File::Basename;
 
 my %properties = (
     original_data_path => {
@@ -76,20 +76,177 @@ class Genome::InstrumentData::Command::Import::TcgaBam {
             is  => 'Number',
             doc => 'output instrument data id after import',
         },
+        _inst_data => { is_optional => 1, },
+        _allocation => { via => '_inst_data', to => 'disk_allocations' },
+        _absolute_path => { via => '_allocation', to => 'absolute_path' },
+        _new_bam => { 
+            calculate_from => [qw/ _absolute_path /], 
+            calculate => q| $_absolute_path.'/all_sequences.bam' |,
+        },
+        _new_md5 => { 
+            calculate_from => [qw/ _new_bam /], 
+            calculate => q| $_new_bam.'.md5' |,
+        },
     ],
 };
 
-
 sub execute {
     my $self = shift;
-    my $bam_path = $self->original_data_path;
 
-    my $tcga_name = $self->tcga_name;
-    unless(defined($self->import_source_name)){
-        my (undef,$source) = split "-", $tcga_name;
-        $self->import_source_name($source);
+    # Validate BAM
+    my $bam_ok = $self->_validate_bam;
+    return if not $bam_ok;
+
+    # Create inst data
+    my $inst_data = $self->_create_imported_instrument_data;
+    return if not $inst_data;
+
+    # Copy and create md5 at the same time w/ tee
+    my $copy = $self->_copy_and_generate_md5;
+    if ( not $copy ) {
+        $self->_bail;
+        return;
     }
 
+    # Validate copied BAM
+    my $validate = $self->_validate_copied_bam;
+    if ( not $validate ) {
+        $self->_bail;
+        return;
+    }
+
+    # Rm Original BAM
+    if($self->remove_original_bam){
+        $self->_remove_original_bam; # no error check
+    }
+
+    $self->status_message("Importation of BAM completed successfully.");
+    $self->status_message("Your instrument-data id is ".$self->import_instrument_data_id);
+
+    return 1;
+}
+
+
+sub Xexecute {
+    my $self = shift;
+
+    # Validate BAM
+    my $bam_ok = $self->_validate_bam;
+    return if not $bam_ok;
+
+    # Validate MD5
+    if ( not $self->no_md5 ) {
+        my $md5_ok = $self->_validate_md5;
+        return if not $md5_ok;
+    }
+    
+    # Create inst data
+    my $inst_data = $self->_create_imported_instrument_data;
+    return if not $inst_data;
+
+    # Rsync the BAM
+    my $rsync_ok = $self->_rsync_bam;
+    return if not $rsync_ok;
+    
+    # Rm Original BAM
+    if($self->remove_original_bam){
+        $self->_remove_original_bam; # no error check
+    }
+
+    $self->status_message("Importation of BAM completed successfully.");
+    $self->status_message("Your instrument-data id is ".$self->import_instrument_data_id);
+
+    return 1;
+}
+
+sub _validate_bam {
+    my $self = shift;
+
+    my $bam = $self->original_data_path;
+    if ( not -s $bam ) {
+        $self->error_message('BAM does not exist: '.$bam);
+        return;
+    }
+
+    if ( $bam !~ /\.bam$/ ) { # why?
+        $self->error_message('BAM does not have extension ".bam": '.$bam);
+        return;
+    }
+
+    return 1;
+}
+
+sub _validate_md5 {
+    my $self = shift;
+
+    $self->status_message('Validate BAM MD5...');
+
+    my $bam = $self->original_data_path;
+    my $md5_file = $bam . ".md5";
+    if ( not -s $md5_file ) {
+        $self->error_message("Did not find md5 file ($md5_file) for bam ($bam)");
+        return;
+    }
+
+    $self->status_message("Getting BAM MD5 from file: $md5_file");
+    my $md5_fh = eval{ Genome::Utility::FileSystem->open_file_for_reading($md5_file); };
+    if ( not $md5_fh ) {
+        print Data::Dumper::Dumper($md5_fh);
+        $self->error_message("Cannot open BAM MD5 file ($md5_file): $@");
+        return;
+    }
+    my $line = $md5_fh->getline;
+    chomp $line;
+    my ($md5) = split(" ", $line);
+    if ( not $md5 ) {
+        $self->error_message('No MD5 in file: '.$md5_file);
+        return;
+    }
+    $self->status_message("Got BAM MD5 from file: $md5");
+
+    $self->status_message("Calculate MD5 for bam: $bam");
+    $self->status_message("This may take a bit...");
+    my $calculated_md5 = $self->_md5_for_file($bam);
+    if ( not $calculated_md5 ) {
+        $self->error_message("Failed to calculate md5 for BAM: $bam.");
+        return;
+    }
+    $self->status_message("Calculated MD5: $calculated_md5");
+
+    $self->status_message('Validate MD5...');
+    if ( $md5 ne $calculated_md5 ) {
+        $self->error_message("Calculated BAM MD5 ($calculated_md5) does not match MD5 from file ($md5)");
+        return;
+    }
+    $self->status_message('Validate MD5...OK');
+
+    return 1;
+}
+
+sub _md5_for_file {
+    my ($self, $file) = @_;
+
+    if ( not -e $file ) {
+        $self->error_message("Cannot get md5 for non existing file: $file");
+        return;
+    }
+
+    my ($md5) = split(/\s+/, `md5sum $file`);
+
+    if ( not defined $md5 ) {
+        $self->error_message("No md5 returned for file: $file");
+        return;
+    }
+
+    return $md5;
+}
+
+sub _create_imported_instrument_data {
+    my $self = shift;
+
+    $self->status_message('Create imported instrument data...');
+
+    my $tcga_name = $self->tcga_name;
     my $organism_sample = GSC::Organism::Sample->get(sample_name => $tcga_name);
 
     my $sample;
@@ -119,21 +276,10 @@ sub execute {
     my $library = Genome::Library->get(sample_id => $sample->id);
     unless($library){
         $self->status_message("Not able to find a library associated with this sample. If create_sample was set, it failed to create an appropriate library.");
-        #die "We don't currently allow for creating libraries.\n";
-        $library = Genome::Library->create(name => $sample->name."-extlibs", sample_id => $sample->id);
-        unless($library){
-            $self->error_message("Could not find OR create library, exiting.");
-            die;
-        }
-    }
-
-    unless (-s $bam_path and $bam_path =~ /\.bam$/) {
-        $self->error_message('Original data path of import bam: '. $bam_path .' is either empty or not with .bam as name suffix');
-        return;
+        die "We don't currently allow for creating libraries.\n";
     }
 
     my %params = (import_format => 'bam');
-
     for my $property_name (keys %properties) {
         unless ($properties{$property_name}->{is_optional}) {
             unless ($self->$property_name) {
@@ -164,6 +310,7 @@ sub execute {
        $self->error_message('Failed to create imported instrument data for '.$self->original_data_path);
        return;
     }
+    $self->_inst_data($import_instrument_data);
 
     my $instrument_data_id = $import_instrument_data->id;
     $self->status_message("Instrument data: $instrument_data_id is imported");
@@ -171,7 +318,8 @@ sub execute {
 
     my $kb_usage = $import_instrument_data->calculate_alignment_estimated_kb_usage;
     unless ($kb_usage) {
-        $self->warning_message('Failed to get estimate kb usage for instrument data '.$instrument_data_id);
+        $self->error_message('Cannot calculate kb usage for BAM: '.$self->original_data_path);
+        $import_instrument_data->delete;
         return 1;
     }
 
@@ -188,95 +336,171 @@ sub execute {
     my $disk_alloc = Genome::Disk::Allocation->allocate(%alloc_params);
     unless ($disk_alloc) {
         $self->error_message("Failed to get disk allocation with params:\n". Data::Dumper::Dumper(%alloc_params));
+        $import_instrument_data->delete;
         return 1;
     }
     $self->status_message("Alignment allocation created for $instrument_data_id .");
 
-    my $bam_destination = $disk_alloc->absolute_path . "/all_sequences.bam";
+    $self->status_message('Create imported instrument data...OK');
 
-    #check for existing md5 sum
-    my $md5_from_file;
-    unless($self->no_md5){
-        if(-s $bam_path . ".md5"){
-            $self->status_message("Found an md5 sum, comparing it with the calculated sum...");
-            my $md5_fh = IO::File->new($bam_path . ".md5");
-            unless($md5_fh){
-                $self->error_message("Could not open md5sum file.");
-                die $self->error_message;
-            }
-            $md5_from_file = $md5_fh->getline;
-            ($md5_from_file) = split " ", $md5_from_file;
-            chomp $md5_from_file;
-        } else {
-            $self->status_message("Not able to locate a pre-calculated md5 sum at ".$bam_path.".md5");
-            die $self->error_message;
-        }
-    }
-    $self->status_message("Now calculating the MD5sum of the bam file to be imported, this will take a long time (many minutes) for larger (many GB) files.");
-    my $md5 = Genome::Utility::FileSystem->md5sum($bam_path);
-    unless($md5){
-        $self->error_message("Failed to calculate md5 sum, exiting import command.");
-        die $self->error_message;
-    }
-    $self->status_message("Finished calculating md5 sum.");
-    $self->status_message("MD5 sum = ".$md5);
+    return $self->_inst_data;
+}
 
-    $self->status_message("md5 sum from file = ".$md5_from_file);
-    unless($md5 eq $md5_from_file){
-        $self->error_message("Calculated md5 sum and sum read from file did not match, aborting.");
-        $disk_alloc->deallocate;
-        $self->error_message("Now removing instrument-data record from the database.");
-        $import_instrument_data->delete;
-        die "Import Failed";
-    }
-    
-    
-    #copy the bam into the allocation
-    
-    $self->status_message("Copying bam file into the allocation, this could take some time.");
-    unless(copy($bam_path, $bam_destination)) {
-        $self->error_message("Failed to copy to allocated space (copy returned bad value).  Unlinking and deallocating.");
-        unlink($bam_destination);
-        $disk_alloc->deallocate;
-        $self->error_message("Now removing instrument-data record from the database.");
-        $import_instrument_data->delete;
-        die "Import Failed.";
-    }
-    $self->status_message("Bam successfully copied to allocation. Now calculating md5sum of the copied bam, to compare with pre-copy md5sum. Again, this could take some time.");
-    
-    #calculate and compare md5 sums
+sub _copy_and_generate_md5 {
+    my $self = shift;
 
-    unless(Genome::Utility::FileSystem->md5sum($bam_destination) eq $md5) {
-        $self->error_message("Failed to copy to allocated space (md5 mismatch).  Unlinking and deallocating.");
-        unlink($bam_destination);
-        $disk_alloc->deallocate;
-        $self->error_message("Now removing instrument-data record from the database.");
-        $import_instrument_data->delete;
-        die "Import Failed.";
+    $self->status_message("Copy BAM and generate MD5");
+
+    my $bam = $self->original_data_path;
+    my $new_bam = $self->_new_bam;
+    my $new_md5 = $self->_new_md5;
+    my $cmd = "tee $new_bam < $bam | md5sum > $new_md5";
+    $self->status_message('Cmd: '.$cmd);
+    my $eval = eval{ Genome::Utility::FileSystem->shellcmd(cmd => $cmd); };
+    if ( not $eval ) {
+        $self->status_message('Copy BAM and generate MD5 FAILED: '.$@);
+        return;
     }
 
-    $self->status_message("Importation of BAM completed successfully.");
-    $self->status_message("Your instrument-data id is ".$instrument_data_id);
-    if($self->remove_original_bam){
-        $self->status_message("Now removing original bam in 10 seconds.");
-        for (1..10){
-            sleep 1;
-            print "slept for ".$_." seconds.\n";
-        }
-        unless(-s $bam_path){
-            $self->error_message("Could not locate file to remove at ".$bam_path."\n");
-            die $self->error_message;
-        }
-        unlink($bam_path);
-        if(-s $bam_path){
-            $self->error_message("Could not remove file at ".$bam_path."\n");
-            $self->error_message("Check file permissions.");
-        }else{
-            $self->status_message("Original bam file has been removed from ".$bam_path);
-        }
-    }
+    $self->status_message("Copy BAM and generate MD5");
 
     return 1;
 }
 
+sub _validate_copied_bam {
+    my $self = shift;
+
+    $self->status_message('Validate copied BAM...');
+
+    $self->status_message('Validate size...');
+    my $bam = $self->original_data_path;
+    my $bam_size = -s $bam;
+    my $new_bam = $self->_new_bam;
+    my $new_bam_size = -s $new_bam;
+    if ( $bam_size != $new_bam_size ) {
+        $self->error_message("Copied BAM ($new_bam) size ($new_bam_size) does not match original BAM ($bam) size ($bam_size)");
+        return;
+    }
+    $self->status_message("Validate size OK: $bam_size v. $new_bam_size");
+
+    if ( $self->no_md5 ) {
+        $self->status_message('Validate copied BAM...OK');
+        return 1;
+    }
+
+    $self->status_message('Validate MD5...');
+    my $md5_file = $bam.".md5";
+    if ( not -s $md5_file ) {
+        $self->error_message("Did not find md5 file ($md5_file) for bam ($bam)");
+        return;
+    }
+    my $md5 = $self->_get_md5_from_file($md5_file);
+    return if not $md5;
+
+    my $new_md5_file = $self->_new_md5;
+    if ( not -s $md5_file ) {
+        $self->error_message("Did not find md5 file ($new_md5_file) for copied bam ($new_bam)");
+        return;
+    }
+    my $new_md5 = $self->_get_md5_from_file($new_md5_file);
+    return if not $new_md5;
+
+    if ( $md5 ne $new_md5 ) {
+        $self->error_message("Copied BAM MD5 ($new_md5) does not match MD5 from file ($md5)");
+        return;
+    }
+    $self->status_message('Validate MD5...OK');
+
+    $self->status_message('Validate copied BAM...OK');
+
+    return 1;
+}
+
+sub _get_md5_from_file {
+    my ($self, $file) = @_;
+
+    $self->status_message("Get MD5 from file: $file");
+
+    my $fh = eval{ Genome::Utility::FileSystem->open_file_for_reading($file); };
+    if ( not $fh ) {
+        $self->error_message("Cannot open file ($file): $@");
+        return;
+    }
+    my $line = $fh->getline;
+    chomp $line;
+    my ($md5) = split(" ", $line);
+    if ( not $md5 ) {
+        $self->error_message('No MD5 in file: '.$file);
+        return;
+    }
+
+    $self->status_message("MD5 for file ($file): $md5");
+
+    return $md5;
+}
+
+sub XX_rsync_bam {
+    my $self = shift;
+
+    my $bam = $self->original_data_path;
+    my $new_bam = $self->_new_bam;
+    $self->status_message("Rsync BAM from $bam to $new_bam");
+
+    my $cmd = "rsync -acv $bam $new_bam";
+    $self->status_message('Rsync cmd: '.$cmd);
+    my $rsync = eval{ Genome::Utility::FileSystem->shellcmd(cmd => $cmd); };
+    if ( not $rsync ) {
+        $self->error_message('Rsync cmd failed: '.$@);
+        $self->status_message('Removing disk allocation: '.$self->_allocation->id);
+        unlink $new_bam if -e $new_bam;
+        $self->_allocation->deallocate;
+        $self->error_message('Removing instrument data: '.$self->_inst_data->id);
+        $self->_inst_data->delete;
+        return;
+    }
+    $self->status_message('Rync BAM...OK');
+
+    return 1;
+}
+ 
+sub _bail {
+    my $self = shift;
+
+    $self->status_message('Copy BAM and generate MD5 FAILED: '.$@);
+    $self->status_message('Removing disk allocation: '.$self->_allocation->id);
+    my $new_bam = $self->_new_bam;
+    unlink $new_bam if -e $new_bam;
+    my $new_md5 = $self->_new_md5;
+    unlink $new_md5 if -e $new_md5;
+    $self->_allocation->deallocate;
+    $self->status_message('Removing instrument data: '.$self->_inst_data->id);
+    $self->_inst_data->delete;
+
+    return 1;
+}
+
+sub _remove_original_bam {
+    my $self = shift;
+
+    $self->status_message("Now removing original bam in 10 seconds.");
+    for (1..10){
+        sleep 1;
+        print "slept for ".$_." seconds.\n";
+    }
+    my $bam_path = $self->original_data_path;
+    unless(-s $bam_path){
+        $self->error_message("Could not locate file to remove at ".$bam_path."\n");
+        die $self->error_message;
+    }
+    unlink($bam_path);
+    if(-s $bam_path){
+        $self->error_message("Could not remove file at ".$bam_path."\n");
+        $self->error_message("Check file permissions.");
+    }else{
+        $self->status_message("Original bam file has been removed from ".$bam_path);
+    }
+
+    return 1;
+}
 1;
+

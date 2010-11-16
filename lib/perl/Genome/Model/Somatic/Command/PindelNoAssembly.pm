@@ -94,6 +94,10 @@ sub pre_execute {
     unless ($self->chromosome_list) { $self->chromosome_list([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,'X','Y']); }
     unless ($self->indel_bed_output) { $self->indel_bed_output($self->output_directory . '/indels_all_sequences.bed'); }
 
+    unless(defined($self->version)){
+        $self->version('0.1');
+    }
+
     my %default_filenames = $self->default_filenames;
     for my $param (keys %default_filenames) {
         # set a default param if one has not been specified
@@ -145,6 +149,7 @@ __DATA__
   <link fromOperation="input connector" fromProperty="tumor_bam" toOperation="Pindel" toProperty="aligned_reads_input" />
   <link fromOperation="input connector" fromProperty="output_directory" toOperation="Pindel" toProperty="output_directory" />
   <link fromOperation="input connector" fromProperty="chromosome_list" toOperation="Pindel" toProperty="chromosome" />
+  <link fromOperation="input connector" fromProperty="version" toOperation="Pindel" toProperty="version" />
 
   <link fromOperation="Pindel" fromProperty="indel_bed_output" toOperation="Cat" toProperty="source" />
 
@@ -179,6 +184,7 @@ __DATA__
     <inputproperty isOptional="Y">normal_bam</inputproperty>
     <inputproperty isOptional="Y">tumor_bam</inputproperty>
     <inputproperty isOptional="Y">output_directory</inputproperty>
+    <inputproperty isOptional="Y">version</inputproperty>
 
     <inputproperty isOptional="Y">assemble_t1n_dir</inputproperty>
     <inputproperty isOptional="Y">assemble_t1t_dir</inputproperty>

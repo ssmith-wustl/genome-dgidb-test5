@@ -23,11 +23,11 @@ use Genome;                                 # using the namespace authorizes Cla
 class Genome::Model::Tools::Varscan::ProcessValidation {
 	is => 'Command',                       
 	
-	has => [                                # specify the command's single-value properties (parameters) <--- 
+	has_input => [                                # specify the command's single-value properties (parameters) <---
 		validation_file		=> { is => 'Text', doc => "VarScan output file for validation data", is_optional => 0 },
 		filtered_validation_file		=> { is => 'Text', doc => "VarScan calls passing strand-filter in validation BAM (recommended)", is_optional => 0 },
 		variants_file 	=> { is => 'Text', doc => "File of variants to report on", is_optional => 0 },
-		output_file 	=> { is => 'Text', doc => "Output file for validation results", is_optional => 0 },
+		output_file 	=> { is => 'Text', doc => "Output file for validation results", is_optional => 0, is_output => 1 },
 		output_plot 	=> { is => 'Text', doc => "Optional plot of variant allele frequencies", is_optional => 1 },
 	],
 };

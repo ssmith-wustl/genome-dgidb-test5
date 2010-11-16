@@ -15,13 +15,13 @@ class Genome::Model::Tools::Analysis::Solexa {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {
-    "Tools for analysis of Illumina/Solexa data.",
+    "DEPRECATED tools for analysis of Illumina/Solexa data.",
 }
 
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-genome-model tools newbler ...
+gmt analysis solexa ...
 EOS
 }
 
