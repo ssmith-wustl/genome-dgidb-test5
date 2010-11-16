@@ -114,7 +114,8 @@ if($call =~ m/^3/) { $DB::single=1; }
             my $type = $call_fields[1];
             my $size = $call_fields[2];   #12
             my $mod = ($call =~ m/BP_range/) ? 2: -1;
-            my $support = ($type eq "I") ? $call_fields[10+$mod] : $call_fields[12+$mod];
+            #my $support = ($type eq "I") ? $call_fields[10+$mod] : $call_fields[12+$mod];
+            my $support = $call_fields[12+$mod];
            
             for (1..$support){
                 $line = $input_fh->getline;
@@ -213,9 +214,12 @@ sub parse {
     my @call_fields = split /\s+/, $call;
     my $type = $call_fields[1];
     my $size = $call_fields[2];
-    my $chr = ($type eq "I") ? $call_fields[4] : $call_fields[6];
-    my $start= ($type eq "I") ? $call_fields[6] : $call_fields[8];
-    my $stop = ($type eq "I") ? $call_fields[7] : $call_fields[9];
+    #my $chr = ($type eq "I") ? $call_fields[4] : $call_fields[6];
+    #my $start= ($type eq "I") ? $call_fields[6] : $call_fields[8];
+    #my $stop = ($type eq "I") ? $call_fields[7] : $call_fields[9];
+    my $chr = $call_fields[6];
+    my $start= $call_fields[8];
+    my $stop = $call_fields[9];
     my $support = $call_fields[-1];
     my ($ref, $var);
     if($type =~ m/D/) {
@@ -226,8 +230,9 @@ sub parse {
         ###also deletions which don't contain their full sequence should be dumped to separate file
        $stop = $stop - 1;
         my $allele_string;
+        my $start_for_faidx = $start+1; 
         my $sam_default = Genome::Model::Tools::Sam->path_for_samtools_version;
-        my $faidx_cmd = "$sam_default faidx " . $self->reference_fasta . " $chr:$start-$stop";
+        my $faidx_cmd = "$sam_default faidx " . $self->reference_fasta . " $chr:$start_for_faidx-$stop"; 
         my @faidx_return= `$faidx_cmd`;
         shift(@faidx_return);
         chomp @faidx_return;
