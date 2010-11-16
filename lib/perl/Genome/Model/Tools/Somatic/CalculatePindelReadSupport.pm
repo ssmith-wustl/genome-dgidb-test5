@@ -147,7 +147,7 @@ sub process_file {
                     my $answer = "neg = ".$neg_strand."\tpos = ".$pos_strand." which gives % pos str = ".$pos_percent."\n";
                     my $reads = $pos_strand + $neg_strand;
                     my @stop = keys(%{$positions{$chrom}{$pos}});
-                    unless(scalar(@stop)){
+                    unless(scalar(@stop)==1){
                         die "too many stop positions at ".$chrom." ".$pos."\n";
                     }
                     my $stop = $stop[0];
