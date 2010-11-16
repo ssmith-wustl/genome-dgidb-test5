@@ -143,7 +143,7 @@ sub default_filenames{
 __DATA__
 <?xml version='1.0' standalone='yes'?>
 
-<workflow name="Pindel No Assembly" logDir="/gsc/var/log/genome/pindel_no_assembly">
+<workflow name="Pindel No Assembly" logDir="/gscmnt/ams1158/info/pindel/logs/pindel_no_assembly">
 
   <link fromOperation="input connector" fromProperty="normal_bam" toOperation="Pindel" toProperty="control_aligned_reads_input" />
   <link fromOperation="input connector" fromProperty="tumor_bam" toOperation="Pindel" toProperty="aligned_reads_input" />
