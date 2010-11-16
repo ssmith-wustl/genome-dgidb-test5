@@ -232,7 +232,7 @@ sub parse {
         my $allele_string;
         my $start_for_faidx = $start+1; 
         my $sam_default = Genome::Model::Tools::Sam->path_for_samtools_version;
-        my $faidx_cmd = "$sam_default faidx " . $self->reference_fasta . " $chr:$start_for_faidx-$stop"; 
+        my $faidx_cmd = "$sam_default faidx " . $reference_fasta . " $chr:$start_for_faidx-$stop"; 
         my @faidx_return= `$faidx_cmd`;
         shift(@faidx_return);
         chomp @faidx_return;
