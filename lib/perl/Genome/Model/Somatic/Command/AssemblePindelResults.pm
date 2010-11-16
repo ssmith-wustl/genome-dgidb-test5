@@ -130,7 +130,7 @@ sub default_filenames{
 __DATA__
 <?xml version='1.0' standalone='yes'?>
 
-<workflow name="Pindel Assembly Only" logDir="/gsc/var/log/genome/pindel_assembly_only">
+<workflow name="Pindel Assembly Only" logDir="/gscmnt/ams1158/info/pindel/logs/pindel_assembly_only">
 
   <link fromOperation="input connector" fromProperty="tier1_output" toOperation="Assemble Tier 1 Normal" toProperty="indel_file" />
   <link fromOperation="input connector" fromProperty="normal_bam" toOperation="Assemble Tier 1 Normal" toProperty="bam_file" />
