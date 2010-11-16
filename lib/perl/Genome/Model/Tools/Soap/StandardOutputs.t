@@ -26,7 +26,7 @@ foreach ( @files ) {
     ok (File::Copy::copy( $data_dir."/$_", $temp_dir ), "Copied $_ file to temp dir" ) or die;
 }
 
-my $tool = Genome::Model::Tools::Soap::Default->create(
+my $tool = Genome::Model::Tools::Soap::StandardOutputs->create(
     assembly_directory => $temp_dir,
     );
 ok ($tool, "Created soap post assemble default tool") or die;
