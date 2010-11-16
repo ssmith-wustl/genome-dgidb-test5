@@ -197,6 +197,12 @@
     <xsl:param name="summary_report_url">
       <xsl:value-of select="$build_directory_url"/><xsl:text>/reports/Summary/report.html</xsl:text>
     </xsl:param>
+    <xsl:param name="metrics_chart_url">
+      <xsl:text>/view/genome/model/build/set/chart.html?model_id=</xsl:text><xsl:value-of select="@id"/>
+    </xsl:param>
+    <xsl:param name="model_attributes_type_name">
+      <xsl:value-of select="normalize-space(aspect[@name='processing_profile']/object/aspect[@name='type_name']/value)"/>
+    </xsl:param>
 
     <xsl:comment>template: genome_model.xsl:genome_model_attributes_box</xsl:comment>
     <!-- details for this model -->
@@ -290,6 +296,15 @@
                 </tr>
               </xsl:otherwise>
             </xsl:choose>
+
+            <xsl:if test="$model_attributes_type_name = 'benchmark'">
+            <tr>
+              <td class="name">metrics:
+              </td>
+              <td class="value"><a class="mini btn"><xsl:attribute name="href"><xsl:value-of select='$metrics_chart_url'/></xsl:attribute><span class="sm-icon sm-icon-extlink"><br/></span>metrics</a>
+              </td>
+            </tr>
+            </xsl:if>
 
             <tr>
               <td class="name">subject type:
