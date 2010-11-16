@@ -1,5 +1,9 @@
 package Genome::Model::Tools::Annotate::TranscriptVariants::Version1;
-#:adukes all annotation methods could be cleaned and documented for better clarity, see cds_exon_modified for an improvement over the current method.  Consider differentiating more between annotating snps/dnps and indeals as opposed to have case statements sprinkled liberally throughought, unit testing for every method needs to happen but doesn't
+
+# v1 - TranscriptStructure-centric annotator designed to produce the same
+#      answers as v0.
+# v0 - The original, transcript-centric annotator code used through
+#      October 2010, adapted to run in the versioned annotator framework
 
 use strict;
 use warnings;
