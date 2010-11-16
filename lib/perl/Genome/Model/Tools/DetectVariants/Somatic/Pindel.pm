@@ -123,7 +123,8 @@ class Genome::Model::Tools::DetectVariants::Somatic::Pindel {
 # FIXME make this the real deployed path
 my %PINDEL_VERSIONS = (
     '0.1' => '/gscmnt/sata921/info/medseq/Pindel_test/' . $PINDEL_COMMAND,
-    'maq' => '/gscmnt/sata921/info/medseq/Pindel_test/maq/'.$PINDEL_COMMAND,
+    '0.2' => '/gscmnt/sata921/info/medseq/Pindel_test/maq/'.$PINDEL_COMMAND,     # This version and up works with MAQ aligned bams
+    '0.3' => '/gscmnt/sata921/info/medseq/Pindel_test/merged_with_kai/'.$PINDEL_COMMAND,    #this version is merged with changes from KAI
 );
 
 sub help_brief {
