@@ -9,15 +9,15 @@ BEGIN {
 }
 
 use above "Genome";
-use Test::More tests => 16;
+use Test::More tests => 22;
 use Data::Dumper;
 use_ok('Genome::Model::Build::ImportedAnnotation');
 
 # create a test annotation build and a few reference sequence builds to test compatibility with
 my @species_names = ('human', 'mouse');
 my @versions = ('12_34', '56_78');
-my $pp_ref = Genome::ProcessingProfile::ImportedReferenceSequence->create(name => 'test_pp_ref');
-my $pp_ann = Genome::ProcessingProfile::ImportedAnnotation->get_or_create(name => 'test_pp_ann', annotation_source => 'test_source');
+my $ref_pp = Genome::ProcessingProfile::ImportedReferenceSequence->create(name => 'test_ref_pp');
+my $ann_pp = Genome::ProcessingProfile::ImportedAnnotation->create(name => 'test_ann_pp', annotation_source => 'test_source');
 my $data_dir = File::Temp::tempdir('ImportedAnnotationTest-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 
 my %samples;
@@ -30,7 +30,7 @@ for my $sn (@species_names) {
 
 my $ann_model = Genome::Model::ImportedAnnotation->create(
     name                => "test_annotation",
-    processing_profile  => $pp_ann,
+    processing_profile  => $ann_pp,
     subject_class_name  => ref($samples{'human'}),
     subject_id          => $samples{'human'}->id,
 );
@@ -43,13 +43,20 @@ my $abuild = Genome::Model::Build::ImportedAnnotation->create(
 );
 ok($abuild, "created annotation build");
 
+my $abuild_event = Genome::Model::Event::Build->create(
+    model_id => $abuild->model->id,
+    build_id => $abuild->id,
+    event_type => 'genome model build',
+    event_status => 'Succeeded',
+);
+
 my %rbuilds;
 for my $sn (@species_names) {
     $rbuilds{$sn} = [];
 
     my $ref_model = Genome::Model::ImportedReferenceSequence->create(
         name                => "test_ref_sequence_$sn",
-        processing_profile  => $pp_ref,
+        processing_profile  => $ref_pp,
         subject_class_name  => ref($samples{$sn}),
         subject_id          => $samples{$sn}->id,
     );
@@ -75,5 +82,12 @@ ok($abuild->is_compatible_with_reference_sequence_build($rbuilds{'human'}->[0]),
 ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'human'}->[1]), 'reference sequence incompatibility');
 ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'mouse'}->[0]), 'reference sequence incompatibility');
 ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'mouse'}->[1]), 'reference sequence incompatibility');
+
+my @invalid_status = ('', 'Crashed', 'Failed', 'Scheduled', 'Running', 'Abandoned');
+for my $invalid (@invalid_status) {
+    $abuild_event->event_status($invalid);
+    ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'human'}->[0]), "Build status '$invalid' not allowed as annotation build");
+}
+
 
 done_testing();
