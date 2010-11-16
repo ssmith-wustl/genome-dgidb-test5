@@ -94,6 +94,10 @@ sub pre_execute {
     unless ($self->chromosome_list) { $self->chromosome_list([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,'X','Y']); }
     unless ($self->indel_bed_output) { $self->indel_bed_output($self->output_directory . '/indels_all_sequences.bed'); }
 
+    unless(defined($self->version)){
+        $self->version('0.1');
+    }
+
     my %default_filenames = $self->default_filenames;
     for my $param (keys %default_filenames) {
         # set a default param if one has not been specified
