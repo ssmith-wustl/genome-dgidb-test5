@@ -48,10 +48,13 @@ sub start {
 
   # Add a command to a condition variable event loop.
   # This gets started by our caller's use of $cmd_cv->recv;
+  # Note that we unset PERL5LIB to ensure that we are using the
+  # correct perl for collectl, in this case /gsc/bin/perl.
   $self->{cv} = Genome::Utility::AsyncFileSystem->shellcmd(
       cmd => "$collectl_cmd $collectl_args",
       '$$' => \( $self->{pid} ),
-      close_all => 1
+      close_all => 1,
+      on_prepare => sub { delete $ENV{PERL5LIB} }
   );
   # Give collectl time to start up
   $self->_sleep(2);
