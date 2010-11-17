@@ -142,6 +142,11 @@ class Genome::Sample {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+sub __display_name__ {
+    my $self = $_[0];
+    return $self->name . ($self->extraction_label and $self->extraction_label ne $self->name ? ' (' . $self->extraction_label . ')' : '');
+}
+
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
