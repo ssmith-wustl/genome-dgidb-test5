@@ -40,11 +40,9 @@ sub execute {
 	my $mf_fh = Genome::Utility::FileSystem->open_file_for_reading($mf_file) or return;
 	my $datetime_string = ctime(stat($mf_file)->mtime); # read the file time
 	$self->_mf_fh($mf_fh);
-	my $line_first = 1;
 	my @VCF;
 	while(my $line = $mf_fh->getline) {
-		if($line_first == 1){
-			$line_first = 0;
+		if($line =~ /^#/){
 			next;
 		}
 		chomp $line;
