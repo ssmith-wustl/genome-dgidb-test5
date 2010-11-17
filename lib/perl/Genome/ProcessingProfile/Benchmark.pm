@@ -19,7 +19,7 @@ class Genome::ProcessingProfile::Benchmark {
             is_constant => 1,
             is_class_wide => 1,
             # This is a queue name, but 'inline' is reserved for run on local machine.
-            value => 'benchmark',
+            value => 'benchmarking',
             doc => 'lsf queue to submit jobs or \'inline\' to run them in the launcher'
         }
     ],
