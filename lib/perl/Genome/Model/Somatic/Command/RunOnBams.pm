@@ -51,7 +51,7 @@ sub execute {
             my @builds = $refalign->builds("status ne" => "Abandoned");
             my $complete = $refalign->last_complete_build;
             my $last = $builds[-1];
-            print "\t" . $from[0]->__display_name__ . " has :" . scalar(@builds) . " builds\n";
+            print "\t" . $refalign->__display_name__ . " has :" . scalar(@builds) . " builds\n";
             for my $build (@builds) {
                 print "\t\t" . $build->id . "\t" . $build->status . "\n";
             }

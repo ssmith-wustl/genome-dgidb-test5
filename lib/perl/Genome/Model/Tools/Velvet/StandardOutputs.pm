@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Velvet::Default;
+package Genome::Model::Tools::Velvet::StandardOutputs;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use Data::Dumper;
 
-class Genome::Model::Tools::Velvet::Default {
+class Genome::Model::Tools::Velvet::StandardOutputs {
     is => 'Command',
     has => [
 	assembly_directory => {
@@ -29,7 +29,7 @@ sub help_brief {
 
 sub help_detail {
     return <<"EOS"
-gmt velvet default --assembly-directory /gscmnt/111/velvet_assembly
+gmt velvet standard-outputs --assembly-directory /gscmnt/111/velvet_assembly
 EOS
 }
 

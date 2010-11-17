@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Soap::Default;
+package Genome::Model::Tools::Soap::StandardOutputs;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use Data::Dumper;
 
-class Genome::Model::Tools::Soap::Default {
+class Genome::Model::Tools::Soap::StandardOutputs {
     is => 'Command',
     has => [
 	assembly_directory => {
@@ -29,7 +29,7 @@ sub help_brief {
 
 sub help_detail {
     return <<"EOS"
-gmt soap default --assembly-directory /gscmnt/111/soap_assembly
+gmt soap standard-outputs --assembly-directory /gscmnt/111/soap_assembly
 EOS
 }
 

@@ -7,7 +7,7 @@ use Test::More;
 use above "Genome";
 require File::Compare;
 
-use_ok ('Genome::Model::Tools::Velvet::Default') or die;
+use_ok ('Genome::Model::Tools::Velvet::StandardOutputs') or die;
 
 #TODO - make a new test suite .. having permission issues currently
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/velvet_solexa_build_post_assemble';
@@ -24,7 +24,7 @@ for my $file (qw/ Sequences contigs.fa velvet_asm.afg H_GV-933124G-S.MOCK.collat
 }
 
 #create/execute tool .. takes about a minute
-my $create = Genome::Model::Tools::Velvet::Default->create(
+my $create = Genome::Model::Tools::Velvet::StandardOutputs->create(
     assembly_directory => $temp_dir,
     );
 ok ($create, "Created gmt velvet default tool") or die;
