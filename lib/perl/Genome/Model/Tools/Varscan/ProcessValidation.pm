@@ -26,6 +26,7 @@ class Genome::Model::Tools::Varscan::ProcessValidation {
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		validation_file		=> { is => 'Text', doc => "VarScan output file for validation data", is_optional => 0 },
 		filtered_validation_file		=> { is => 'Text', doc => "VarScan calls passing strand-filter in validation BAM (recommended)", is_optional => 0 },
+		min_coverage 	=> { is => 'Text', doc => "Minimum coverage to call a site", is_optional => 1 },
 		variants_file 	=> { is => 'Text', doc => "File of variants to report on", is_optional => 0 },
 		output_file 	=> { is => 'Text', doc => "Output file for validation results", is_optional => 0 },
 		output_plot 	=> { is => 'Text', doc => "Optional plot of variant allele frequencies", is_optional => 1 },
@@ -70,9 +71,9 @@ sub execute {                               # replace with real execution logic.
 	open(OUTFILE, ">$output_file") or die "Can't open outfile: $!\n";
 	print OUTFILE "chrom\tchr_start\tchr_stop\tref\tvar\tcalled\tfilter\tstatus\tv_ref\tv_var\tnorm_reads1\tnorm_reads2\tnorm_freq\tnorm_call\ttum_reads1\ttum_reads2\ttum_freq\ttum_call\tsomatic_status\tgermline_p\tsomatic_p\n";
 
-	open(SOMATIC, ">$output_file.SomaticFreqs");
-	open(GERMLINE, ">$output_file.GermlineFreqs");
-	open(REFERENCE, ">$output_file.ReferenceFreqs");
+	open(SOMATIC, ">$output_file.SomaticFreqs") or die "Can't open outfile: $!\n";
+	open(GERMLINE, ">$output_file.GermlineFreqs") or die "Can't open outfile: $!\n";
+	open(REFERENCE, ">$output_file.ReferenceFreqs") or die "Can't open outfile: $!\n";
 
 	my %validation_results = my %filtered_results = ();
 
@@ -106,6 +107,7 @@ sub execute {                               # replace with real execution logic.
 		my $call_status = my $filter_status = my $validation_status = "";
 		my $varscan_results = "";
 		my $varscan_freqs = "";
+		my $normal_coverage = my $tumor_coverage = 0;
 		
 		if($filtered_results{$key})
 		{
@@ -117,6 +119,8 @@ sub execute {                               # replace with real execution logic.
 			$varscan_results = join("\t", $results[3], $results[4], $results[5], $results[6], $results[7], $results[8], $results[9], $results[10], $results[11], $results[12], $results[13], $results[14], $results[15]);
 			$varscan_freqs = join("\t", $results[7], $results[11]);
 			$varscan_freqs =~ s/\%//g;
+			$normal_coverage = $results[5] + $results[6];
+			$tumor_coverage = $results[9] + $results[10];
 		}
 		elsif($validation_results{$key})
 		{
@@ -126,9 +130,25 @@ sub execute {                               # replace with real execution logic.
 			$filter_status = "Fail";
 			$filter_status = "N/A" if(!$self->filtered_validation_file);
 			my @results = split(/\t/, $validation_results{$key});
-			$validation_status = $results[13];
-			$varscan_results = join("\t", $results[3], $results[4], $results[5], $results[6], $results[7], $results[8], $results[9], $results[10], $results[11], $results[12], $results[13], $results[14], $results[15]);
-			$varscan_freqs = join("\t", $results[7], $results[11]);
+
+			if($results[12] && ($results[12] =~ 'Germline' || $results[12] =~ 'Somatic' || $results[12] =~ 'Reference' || $results[12] =~ 'LOH' || $results[12] =~ 'IndelFilter' || $results[12] =~ 'Unknown'))
+			{
+				## STANDARD VARSCAN FORMAT
+				$validation_status = $results[12];		
+				$varscan_results = join("\t", $results[2], $results[3], $results[4], $results[5], $results[6], $results[7], $results[8], $results[9], $results[10], $results[11], $results[12], $results[13], $results[14]);
+				$varscan_freqs = join("\t", $results[6], $results[10]);								
+				$normal_coverage = $results[4] + $results[5];
+				$tumor_coverage = $results[8] + $results[9];
+			}
+			else
+			{
+				## ANNOTATION VARSCAN FORMAT ##
+				$validation_status = $results[13];		
+				$varscan_results = join("\t", $results[3], $results[4], $results[5], $results[6], $results[7], $results[8], $results[9], $results[10], $results[11], $results[12], $results[13], $results[14], $results[15]);
+				$varscan_freqs = join("\t", $results[7], $results[11]);				
+				$normal_coverage = $results[5] + $results[6];
+				$tumor_coverage = $results[9] + $results[10];
+			}
 			$varscan_freqs =~ s/\%//g;
 		}
 		else
@@ -138,21 +158,32 @@ sub execute {                               # replace with real execution logic.
 			$filter_status = $validation_status = "-";
 		}
 		
-		my $result = join("\t", $call_status, $filter_status, $validation_status);
-		$stats{$result}++;
-
-		## Print the results to the output file ##
-		
-		print OUTFILE join("\t", $chrom, $chr_start, $chr_stop, $ref, $var, $result, $varscan_results) . "\n";
-
-		## If plotting, print to correct file ##
-		
-		if($self->output_plot)
+		if(!$self->min_coverage || ($tumor_coverage >= $self->min_coverage && $normal_coverage >= $self->min_coverage))
 		{
-			print SOMATIC "$varscan_freqs\n" if($filter_status eq "Pass" && $validation_status eq "Somatic");
-			print GERMLINE "$varscan_freqs\n" if($filter_status eq "Pass" && $validation_status eq "Germline");
-			print REFERENCE "$varscan_freqs\n" if($filter_status eq "Fail" && $validation_status eq "Reference");
+			my $result = join("\t", $call_status, $filter_status, $validation_status);
+			$stats{$result}++;
+	
+			## Print the results to the output file ##
+			
+			print OUTFILE join("\t", $chrom, $chr_start, $chr_stop, $ref, $var, $result, $varscan_results) . "\n";
+	
+			## If plotting, print to correct file ##
+			
+			if($self->output_plot)
+			{
+				print SOMATIC "$varscan_freqs\n" if($filter_status eq "Pass" && $validation_status eq "Somatic");
+				print GERMLINE "$varscan_freqs\n" if($filter_status eq "Pass" && $validation_status eq "Germline");
+				print REFERENCE "$varscan_freqs\n" if($filter_status eq "Fail" && $validation_status eq "Reference");
+			}			
 		}
+		else
+		{
+			$call_status = "No";
+			$filter_status = $validation_status = "-";
+			my $result = join("\t", $call_status, $filter_status, $validation_status);
+			$stats{$result}++;
+		}
+
 
 	}
 	
@@ -165,18 +196,58 @@ sub execute {                               # replace with real execution logic.
 	if($self->output_plot)
 	{
 		open(SCRIPT, ">$output_file.R") or die "Can't open Script file: $!\n";
-		print SCRIPT qq{
+
+		## Get length of germline file ##
+		
+		my $germline_length = `cat $output_file.GermlineFreqs | wc -l`;
+		chomp($germline_length);
+
+		## IF we have germline calls, print those too ##
+		if($germline_length) #$stats{"Yes\tPass\tGermline"} && $stats{"Yes\tPass\tGermline"} > 0)
+		{
+			print SCRIPT qq{
 somatic <- read.table("$output_file.SomaticFreqs")
 germline <- read.table("$output_file.GermlineFreqs")
 reference <- read.table("$output_file.ReferenceFreqs")
-png("$output_plot", height=600, width=600)
+png("$output_file.FreqPlot.jpg", height=600, width=600)
 plot(germline\$V1, germline\$V2, col="blue", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), xlab="Normal", ylab="Tumor")
 points(somatic\$V1, somatic\$V2, col="red", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100))
 points(reference\$V1, reference\$V2, col="black", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100))
 dev.off()
+			};
+
+
+		}
+		## Otherwise print just Somatic and Reference ##
+		else
+		{
+		print SCRIPT qq{
+somatic <- read.table("$output_file.SomaticFreqs")
+reference <- read.table("$output_file.ReferenceFreqs")
+png("$output_file.FreqPlot.jpg", height=600, width=600)
+plot(somatic\$V1, somatic\$V2, col="red", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), xlab="Normal", ylab="Tumor")
+points(reference\$V1, reference\$V2, col="black", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100))
+dev.off()
 		};
+
+		
+		}
+
+		## Also do somatic sites by themselves ##
+
+		print SCRIPT qq{
+png("$output_file.FreqPlot.Somatic.jpg", height=600, width=600)
+plot(somatic\$V1, somatic\$V2, col="red", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), xlab="Normal", ylab="Tumor")
+dev.off()
+		};
+
+
+
 		
 		close(SCRIPT);
+
+
+
 
 		system("R --no-save <$output_file.R 2>/dev/null");
 		system("rm -rf $output_file.R");
@@ -225,11 +296,32 @@ sub load_validation_results
 		my $line = $_;
 		$lineCounter++;
 		
-		(my $chrom, my $position) = split(/\t/, $line);
+		(my $chrom, my $position, my $chr_stop) = split(/\t/, $line);
 		
 		my $key = join("\t", $chrom, $position);
+
+		## IF this was NOT annotation format (chrom start stop), make it so ##
 		
-		$results{$key} = $line;
+		if($position ne $chr_stop  && 0)
+		{
+			my $newline = "";
+			my @lineContents = split(/\t/, $line);
+			my $numContents = @lineContents;
+			
+			$newline = "$lineContents[0]\t$lineContents[1]\t$lineContents[1]";
+			for(my $colCounter = 2; $colCounter < $numContents; $colCounter++)
+			{
+				$newline .= "\t$lineContents[$colCounter]";
+			}
+			
+			$results{$key} = $newline;
+		}
+		else
+		{
+			$results{$key} = $line;			
+		}
+		
+
 	}
 	
 	close($input);	
