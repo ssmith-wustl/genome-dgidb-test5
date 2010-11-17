@@ -174,12 +174,26 @@ sub process_file {
                 }
                 $read=$line;
             }
-
-            my @bed_line = $self->parse($call, $reference, $read);
-            next unless scalar(@bed_line)>1;
-            unless(exists $indels_by_chrom->{$bed_line[1]}){
+#charris speed hack
+            my ($chr,$start,$stop);
+            if($self->use_old_pindel){
+                $chr = ($type eq "I") ? $call_fields[4] : $call_fields[6];
+                $start= ($type eq "I") ? $call_fields[6] : $call_fields[8];
+                $stop = ($type eq "I") ? $call_fields[7] : $call_fields[9];
+            } else {
+                $chr = $call_fields[6];
+                $start= $call_fields[8];
+                $stop = $call_fields[9];
+            }
+            if($type eq 'I') {
+                $start = $start - 1;
+            }            
+#charris speed hack
+            unless(exists $indels_by_chrom->{$start}){
                 next;
             }
+            my @bed_line = $self->parse($call, $reference, $read);
+            next unless scalar(@bed_line)>1;
             unless((@bed_line)&& scalar(@bed_line)==5){
                 next;
             }
