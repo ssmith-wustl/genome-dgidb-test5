@@ -36,6 +36,18 @@ class Genome::Model::Tools::Somatic::CalculatePindelReadSupport {
             default => 0,
             doc => 'Run on pindel 0.2 or 0.1',
         },
+        _dbsnp_insertions => {
+            type => 'String',
+            is_optional => 1,
+            default => '/gscmnt/ams1102/info/info/dbsnp130_indels/insertions_start_stop_adjusted_dbsnp130',
+            doc => 'dbsnp insertion file',
+        },
+        _dbsnp_deletions => {
+            type => 'String',
+            is_optional => 1,
+            default => '/gscmnt/ams1102/info/info/dbsnp130_indels/deletions_adjusted_dbsnp130',
+            doc => 'dbsnp deletion file',
+        },
     ]
 };
 
@@ -48,8 +60,6 @@ sub execute {
     my $fh = IO::File->new($file);
 
     my %indels;
-
-
     my %answers;
 
     while (<$fh>){
