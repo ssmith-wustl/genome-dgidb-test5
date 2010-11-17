@@ -29,11 +29,13 @@ sub processing_profile_params_for_assembler_and_platform {
             assembler_version => '0.7.57-64',
             assembler_params => '-hash_sizes 31 33 35',
             read_processor => 'trimmer by-length -trim-length 10 | rename illumina-to-pcap',
+	    post_assemble => 'standard-outputs',
         },
         soap_solexa => {
             assembler_version => '1.04',
             assembler_params => '-kmer_size 31 -resolve_repeats -kmer_frequency_cutoff 1',
             read_processor => 'trimmer bwa-style -trim-qual-level 10 | filter by-length --filter-length 35 | rename illumina-to-pcap',
+	    post_assemble => 'standard-outputs',
         },
         newbler_454 => {
         },
