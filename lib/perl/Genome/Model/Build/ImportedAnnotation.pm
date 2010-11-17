@@ -46,7 +46,7 @@ sub idstring {
 sub is_compatible_with_reference_sequence_build {
     # rsb: reference sequence build
     my ($self, $rsb) = @_;
-    return if $self->status ne "Succeeded";
+    return if !defined $self->status || $self->status ne "Succeeded";
     my $version = $self->version;
     $version =~ s/^[^_]*_([0-9]+).*/$1/;
     return ($rsb->model->subject->species_name eq $self->model->subject->species_name) &&
