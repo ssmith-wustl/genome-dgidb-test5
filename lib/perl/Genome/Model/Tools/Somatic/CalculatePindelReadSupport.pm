@@ -98,6 +98,7 @@ sub execute {
         $indels{$chr}{$start} = $refvar;
     }
 
+    print "CHR\tSTART\tSTOP\tREF\tVAR\tINDEL_SUPPORT\tREFERENCE_SUPPORT\t%+STRAND\tDBSNP_ID\n";
     for my $chr (sort(keys(%indels))){
         my %indels_by_chr = %{$indels{$chr}};
         $self->process_file($chr, \%indels_by_chr, $dir);
@@ -222,10 +223,12 @@ sub process_file {
                     my $answer = "neg = ".$neg_strand."\tpos = ".$pos_strand." which gives % pos str = ".$pos_percent."\n";
                     my $reads = $pos_strand + $neg_strand;
                     my @stop = keys(%{$positions{$chrom}{$pos}});
-                    unless(scalar(@stop)==1){
-                        die "too many stop positions at ".$chrom." ".$pos."\n";
-                    }
-                    my $stop = $stop[0];
+                    #unless(scalar(@stop)==1){
+                    #    
+                    #    die "too many stop positions at ".$chrom." ".$pos."\n";
+                    #}
+                    my ($type,$size) = split /\//, $type_and_size;
+                    my $stop = ($type eq 'I') ? $pos+2 : $pos + $size;
                     my @results = `samtools view $tumor_bam $chrom:$pos-$stop | grep -v "XT:A:M"`;
                     my $read_support=0;
                     for my $result (@results){
