@@ -139,10 +139,9 @@ sub _execute_build {
 
     my $snapshotter = $self->_system_snapshot($datadir,$build->id);
 
-    # The collectl snapshotter adds an event loop here
+    # The collectl snapshotter begins an event loop here
     $snapshotter->start();
 
-    # Add another event here
     my $cmd_cv = Genome::Utility::AsyncFileSystem->shellcmd(
       '>' => "$datadir/output",
       '2>' => "$datadir/errors",

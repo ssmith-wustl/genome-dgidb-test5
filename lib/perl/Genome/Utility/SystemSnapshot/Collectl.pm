@@ -26,6 +26,18 @@ sub new {
   return $self;
 }
 
+sub _sleep {
+  # Use an event timer to sleep within the event loop
+  my $self = shift;
+  my $seconds = shift;
+  my $sleep_cv = AnyEvent->condvar;
+  my $w = AnyEvent->timer(
+      after => $seconds,
+      cb => $sleep_cv
+  );
+  $sleep_cv->recv;
+}
+
 sub start {
   my $self = shift;
   my $collectl_cmd = "/usr/bin/collectl";
@@ -41,6 +53,8 @@ sub start {
       '$$' => \( $self->{pid} ),
       close_all => 1
   );
+  # Give collectl time to start up
+  $self->_sleep(2);
 }
 
 sub stop {
