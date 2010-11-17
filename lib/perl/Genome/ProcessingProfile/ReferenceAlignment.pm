@@ -235,7 +235,8 @@ sub params_for_alignment {
                     trimmer_params => $self->read_trimmer_params || undef,
                     picard_version => $self->picard_version || undef,
                     samtools_version => $self->samtools_version || undef,
-                    filter_name => $assignment->filter_desc || undef
+                    filter_name => $assignment->filter_desc || undef,
+                    test_name => undef,
                 );
 
     #print Data::Dumper::Dumper(\%params);

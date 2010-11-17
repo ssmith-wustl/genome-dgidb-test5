@@ -33,6 +33,11 @@ class Genome::ModelGroup {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+sub __display_name__ {
+    my $self = shift;
+    return $self->name.' ('.$self->id.')';
+}
+
 sub create {
     my $class = shift;
     my ($bx,%params) = $class->define_boolexpr(@_);

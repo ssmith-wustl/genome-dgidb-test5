@@ -176,7 +176,7 @@ sub execute {
 		if ($failures == 0) {
 		    $self->status_message("No failures from the download");
                             unless($self->slurp_srr_data(id=>$srr_id,
-                                               directory => $self->$tmp . "/" . $srr_id)) {
+                                               directory => $tmp . "/" . $srr_id)) {
                 $self->error_message("Failed slurping SRR data");
                 return; 
             }
