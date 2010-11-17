@@ -8,6 +8,8 @@ use Genome::Utility::FileSystem;
 use IO::File;
 
 my %positions;
+my %insertions;
+my %deletions;
 
 class Genome::Model::Tools::Somatic::CalculatePindelReadSupport {
     is => 'Command',
@@ -62,6 +64,32 @@ sub execute {
     my %indels;
     my %answers;
 
+    my $ifh = IO::File->new($self->_dbsnp_insertions);
+    while (my $line = $ifh->getline) {
+        chomp $line;
+        my ($chr, $start, $stop, $id, $allele, undef) = split /\t/, $line;
+        next unless ($allele =~ m/-/);
+        $allele = substr($allele, 2);
+        $insertions{$chr}{$start}{$stop}{'allele'}=$allele;
+        $insertions{$chr}{$start}{$stop}{'id'}=$id;
+    }
+    $ifh->close;
+    my $dfh = IO::File->new($self->_dbsnp_deletions);
+
+
+    while (my $line = $dfh->getline) {
+        chomp $line;
+        my ($chr, $start, $stop, $id, $allele, undef) = split /\t/, $line;
+        next unless ($allele =~ m/-/);
+        $allele = substr($allele, 2);
+        $deletions{$chr}{$start}{$stop}{'allele'}=$allele;
+        $deletions{$chr}{$start}{$stop}{'id'}=$id;
+    }
+    $dfh->close;
+
+
+
+
     while (<$fh>){
         my $line = $_;
         my ($chr,$start,$stop,$refvar) = split /\t/, $line;
@@ -106,7 +134,16 @@ sub process_file {
         if($line =~ m/^#+$/){
             my $call = $pindel_output->getline;
             if($call =~ m/^Chr/){
-                last;
+                while(1) {
+                    $line = $pindel_output->getline;
+                    if($line =~ m/#####/) {
+                        $call = $pindel_output->getline;
+                    } 
+                    if($call !~ m/^Chr/) {
+                        $DB::single=1;
+                        last;
+                    }          
+                }
             }
             my $reference = $pindel_output->getline;
             my @call_fields = split /\s/, $call;
@@ -139,6 +176,7 @@ sub process_file {
             }
 
             my @bed_line = $self->parse($call, $reference, $read);
+            next unless scalar(@bed_line)>1;
             unless(exists $indels_by_chrom->{$bed_line[1]}){
                 next;
             }
@@ -187,13 +225,39 @@ sub process_file {
                             }
                         }
                     }
-                    my $output = $events{$chrom}{$pos}{$type_and_size}{'bed'}."\t".$reads."\t".$read_support."\t".$pos_percent."\n";
+                    my $dbsnp_id = $self->dbsnp_lookup($events{$chrom}{$pos}{$type_and_size}{'bed'});
+                    my $output = $events{$chrom}{$pos}{$type_and_size}{'bed'}."\t".$reads."\t".$read_support."\t".$pos_percent."\t$dbsnp_id\n";
                     print $output;
                 }
             }
         }
     }
 }
+
+sub dbsnp_lookup {
+    my $self=shift;
+    my $bed_line =shift;
+    my $dbsnp_id="-";
+    chomp $bed_line;
+    my ($chr, $start, $stop, $ref, $var) = split "\t", $bed_line;
+    if($ref eq "0") {
+        if(exists($insertions{$chr}{$start}{$stop}{'allele'})) {
+            if ($var eq $insertions{$chr}{$start}{$stop}{'allele'}) {
+                $dbsnp_id=$insertions{$chr}{$start}{$stop}{'id'};
+            }
+        }
+    }
+    else {        
+        if(exists($deletions{$chr}{$start}{$stop}{'allele'})) {
+            if ($ref eq $deletions{$chr}{$start}{$stop}{'allele'}) {
+                $dbsnp_id=$deletions{$chr}{$start}{$stop}{'id'};
+            }
+        } 
+    }
+    return $dbsnp_id;
+}
+
+
 
 
 
@@ -206,6 +270,7 @@ sub parse {
     my @call_fields = split /\s+/, $call;
     my $type = $call_fields[1];
     my $size = $call_fields[2];
+    $DB::single=1 if $size == 1445;
     my ($chr,$start,$stop);
     if($self->use_old_pindel){
         $chr = ($type eq "I") ? $call_fields[4] : $call_fields[6];
