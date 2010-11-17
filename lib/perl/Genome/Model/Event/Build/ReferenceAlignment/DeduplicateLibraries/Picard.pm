@@ -345,7 +345,7 @@ sub calculate_required_disk_allocation_kb {
         for my $alignment (@alignments) {
             my @aln_bams = $alignment->alignment_bam_file_paths;
             unless (@aln_bams) {
-                $self->status_message("alignment $alignment has no bams at " . $alignment->output);
+                $self->status_message("alignment $alignment has no bams at " . $alignment->output_dir);
             }
             push @build_bams, @aln_bams;
         }
