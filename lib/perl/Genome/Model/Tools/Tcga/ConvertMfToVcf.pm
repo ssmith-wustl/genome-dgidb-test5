@@ -59,7 +59,7 @@ sub execute {
                 $vcf->{QUAL} = ".";
                 $vcf->{QUAL} = $line_[$#line_-3] if($line_[$#line_-3] =~ /^\d+$/);
 		$vcf->{FILTER} = "PASS";
-		my $size = abs($line_[2] - $line_[1]);
+		my $size = abs($line_[2] - $line_[1] + 1);
 		$vcf->{INFO} = "SZ=" . $size . ";TP=" . $line_[5] . ";GT=" . $line_[$#line_-2] . ";TR=". $line_[$#line_-1]. ";CD=" . $line_[$#line_];
 		$vcf->{REF} = "." if($vcf->{REF} eq "0");
 		$vcf->{ALT} = "." if($vcf->{ALT} eq "0");
