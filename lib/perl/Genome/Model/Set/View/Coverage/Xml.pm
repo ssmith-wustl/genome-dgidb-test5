@@ -91,6 +91,7 @@ sub get_enrichment_factor_node {
     my $self = shift;
     my $xml_doc = $self->_xml_doc;
     my @models = $self->members;
+    $DB::single = 1;
     my @included_models;
     my $ef_node = $xml_doc->createElement('enrichment-factor');
     for my $model (@models) {
@@ -164,9 +165,15 @@ sub get_enrichment_factor_node {
                 genome_total_bp                => $genome_total_bp
             );
 
-            my $theoretical_max_enrichment_factor  = $myEF->theoretical_max_enrichment_factor();
-            my $unique_on_target_enrichment_factor = $myEF->unique_on_target_enrichment_factor();
-            my $total_on_target_enrichment_factor  = $myEF->total_on_target_enrichment_factor();
+            my $theoretical_max_enrichment_factor = 0;
+            my $unique_on_target_enrichment_factor = 0;
+            my $total_on_target_enrichment_factor = 0;
+
+            if ($myEF) {
+                $theoretical_max_enrichment_factor  = $myEF->theoretical_max_enrichment_factor();
+                $unique_on_target_enrichment_factor = $myEF->unique_on_target_enrichment_factor();
+                $total_on_target_enrichment_factor  = $myEF->total_on_target_enrichment_factor();
+            }
 
             my $uotef_node = $model_node->addChild( $xml_doc->createElement('unique_on_target_enrichment_factor') );
             $uotef_node->addChild( $xml_doc->createTextNode( $unique_on_target_enrichment_factor ) );

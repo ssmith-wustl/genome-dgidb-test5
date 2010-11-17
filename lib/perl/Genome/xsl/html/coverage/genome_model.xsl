@@ -21,13 +21,64 @@
           <xsl:variable name="wingspan_500" select="count(../wingspan[@size='500'])"/>
           <xsl:text>//</xsl:text> wingspan_500: <xsl:value-of select="$wingspan_500"/>
 
+          <!-- make sure we have essential values, otherwise assign 0 -->
+          <xsl:choose>
+            <xsl:when test="total_unaligned_bp">
+              <xsl:variable name="total_unaligned_bp" select="total_unaligned_bp"/>
+            </xsl:when>
+            <xsl:otherwise>
+              <xsl:variable name="total_unaligned_bp" select="'0'"/>
+            </xsl:otherwise>
+          </xsl:choose>
+
+          <xsl:choose>
+            <xsl:when test="duplicate_off_target_aligned_bp">
+              <xsl:variable name="duplicate_off_target_aligned_bp" select="duplicate_off_target_aligned_bp"/>
+            </xsl:when>
+            <xsl:otherwise>
+              <xsl:variable name="duplicate_off_target_aligned_bp" select="'0'"/>
+            </xsl:otherwise>
+          </xsl:choose>
+
+          <xsl:choose>
+            <xsl:when test="duplicate_target_aligned_bp">
+              <xsl:variable name="duplicate_target_aligned_bp" select="duplicate_target_aligned_bp"/>
+            </xsl:when>
+            <xsl:otherwise>
+              <xsl:variable name="duplicate_target_aligned_bp" select="'0'"/>
+            </xsl:otherwise>
+          </xsl:choose>
+
           {
           "subject_name": "<xsl:value-of select="../@subject_name"/>",
           "id": <xsl:value-of select="../@id"/>,
           "total_bp": <xsl:value-of select="total_bp"/>,
-          "total_unaligned_bp": <xsl:value-of select="total_unaligned_bp"/>,
-          "duplicate_off_target_aligned_bp": <xsl:value-of select="duplicate_off_target_aligned_bp"/>,
-          "duplicate_target_aligned_bp": <xsl:value-of select="duplicate_target_aligned_bp"/>,
+          "total_unaligned_bp": <xsl:choose>
+          <xsl:when test="total_unaligned_bp">
+            <xsl:value-of  select="total_unaligned_bp"/>
+          </xsl:when>
+          <xsl:otherwise>
+            0
+          </xsl:otherwise>
+        </xsl:choose>,
+
+        "duplicate_off_target_aligned_bp": <xsl:choose>
+        <xsl:when test="duplicate_off_target_aligned_bp">
+          <xsl:value-of select="duplicate_off_target_aligned_bp"/>
+        </xsl:when>
+        <xsl:otherwise>
+          0
+        </xsl:otherwise>
+        </xsl:choose>,
+
+        "duplicate_target_aligned_bp": <xsl:choose>
+        <xsl:when test="duplicate_target_aligned_bp">
+        <xsl:value-of select="duplicate_target_aligned_bp"/>
+        </xsl:when>
+        <xsl:otherwise>
+          0
+        </xsl:otherwise>
+        </xsl:choose>,
           <xsl:choose>
             <!-- if we have wingspan 500 data, we'll want to show both off target and wingspan 500 off target -->
             <xsl:when test="$wingspan_500 &gt; 0">
@@ -176,7 +227,7 @@
                 <xsl:sort select="../@subject_name" order="ascending"/>
                 <tr>
                   <td>
-                    <xsl:value-of select="../@subject_name"/> (lane <xsl:value-of select="../@lane"/>)
+                    <xsl:value-of select="../@subject_name"/> <!-- (lane <xsl:value-of select="../@lane"/>) -->
                   </td>
                   <td class="right">
                     <xsl:value-of select="format-number(unique_target_aligned_bp, '###,###')"/>
@@ -221,7 +272,7 @@
                 <xsl:sort select="@subject_name" order="ascending"/>
                 <tr>
                   <td>
-                    <xsl:value-of select="@subject_name"/> (lane <xsl:value-of select="@lane"/>)
+                    <xsl:value-of select="@subject_name"/> <!-- (lane <xsl:value-of select="@lane"/>) -->
                   </td>
                   <xsl:for-each select="minimum_depth">
                     <xsl:sort select="@value" data-type="number" order="descending"/>
@@ -257,7 +308,7 @@
                 <xsl:sort select="@subject_name" order="ascending"/>
                 <tr>
                   <td>
-                    <xsl:value-of select="@subject_name"/> (lane <xsl:value-of select="@lane"/>)
+                    <xsl:value-of select="@subject_name"/> <!-- (lane <xsl:value-of select="@lane"/>) -->
                   </td>
                   <xsl:for-each select="minimum_depth">
                     <xsl:sort select="@value" data-type="number" order="descending"/>
