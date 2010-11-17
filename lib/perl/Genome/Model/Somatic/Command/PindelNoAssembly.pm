@@ -59,14 +59,19 @@ sub pre_execute {
             $self->error_message("Couldn't locate tumor or normal bam files.");
             die;
         }
+=cut
         if(-l $normal_bam){
-            $normal_bam = readlink($normal_bam);
+            $normal_bam_link = readlink($normal_bam);
+            unless(symlink($normal_bam.".bai",$normal_bam_link.".bai")){
+                die "Failed to symlink bam index to ".$normal_bam_link.".bai";
+            }
             $self->status_message("rmdup normal bam is linked, the bam we will use is at ".$normal_bam."\n");
         }
         if(-l $tumor_bam){
             $tumor_bam = readlink($tumor_bam);
             $self->status_message("rmdup tumor bam is linked, the bam we will use is at ".$tumor_bam."\n");
         }
+=cut
         $self->tumor_bam($tumor_bam);
         $self->normal_bam($normal_bam);
     } elsif ($self->tumor_bam && $self->normal_bam) {
