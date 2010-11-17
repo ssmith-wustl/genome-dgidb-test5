@@ -36,8 +36,11 @@ sub pre_execute {
     } elsif ($self->model_id) {
         my $model = Genome::Model::Somatic->get($self->model_id);
         unless ($model) {
-            $self->error_message("Could not get a somatic model for id " . $self->model_id);
-            die;
+            $model = Genome::Model::SomaticCapture->get($self->model_id);
+            unless($model){
+                $self->error_message("Could not get a somatic model for id " . $self->model_id);
+                die;
+            }
         }
         my $tumor_ra_model = $model->tumor_model;
         my $normal_ra_model = $model->normal_model;
