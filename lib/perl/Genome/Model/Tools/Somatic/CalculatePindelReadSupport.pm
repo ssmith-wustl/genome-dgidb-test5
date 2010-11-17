@@ -154,7 +154,19 @@ sub process_file {
                     }
                     my $stop = $stop[0];
                     my @results = `samtools view $tumor_bam $chrom:$pos-$stop | grep -v "XT:A:M"`;
-                    my $output = $events{$chrom}{$pos}{$type_and_size}{'bed'}."\t".$reads."\t".scalar(@results)."\t".$pos_percent."\n";
+                    my $read_support=0;
+                    for my $result (@results){
+                        #print $result;
+                        chomp $result;
+                        my @details = split /\t/, $result;
+                        unless($details[5] =~ m/[IDS]/){
+                            unless(($details[3] > ($pos - 40))&&($details[3] < ($pos -10))){
+                                $read_support++;
+                                #print "cigar = ".$details[5]."\n";
+                            }
+                        }
+                    }
+                    my $output = $events{$chrom}{$pos}{$type_and_size}{'bed'}."\t".$reads."\t".$read_support."\t".$pos_percent."\n";
                     print $output;
                 }
             }
