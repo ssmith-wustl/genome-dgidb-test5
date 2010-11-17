@@ -19,6 +19,7 @@ use File::Path;
 use File::Basename;
 use IO::File;
 use Sort::Naturally;
+use Data::Dumper;
 
 class Genome::Model::ReferenceAlignment {
     is => 'Genome::Model',
@@ -102,6 +103,7 @@ class Genome::Model::ReferenceAlignment {
             |,
         },
         reference_sequence_name      => { via => 'reference_sequence_build', to => 'name' },
+        annotation_reference_name    => { via => 'annotation_reference_build', to => 'idstring' },
         coverage_stats_params        => { via => 'processing_profile'},
         annotation_reference_transcripts => { via => 'processing_profile'},
         assignment_events => {
@@ -173,7 +175,21 @@ class Genome::Model::ReferenceAlignment {
 sub create {
     my $class = shift;
 
-    my $self = $class->SUPER::create(@_)
+    # This is a temporary hack to allow annotation_reference_build (currently calculated) to be
+    # passed in as an object. Once the transition to using model inputs for this parameter vs
+    # processing profile params, annotation_reference_build can work like reference_sequence_build
+    # and this code can go away.
+    my @args = @_;
+    if (scalar(@_) % 2 == 0) {
+        my %args = @args;
+        if (defined $args{annotation_reference_build}) {
+            $args{annotation_reference_build_id} = (delete $args{annotation_reference_build})->id;
+            @args = %args;
+        }
+    }
+
+
+    my $self = $class->SUPER::create(@args)
         or return;
 
     unless ( $self->reference_sequence_build ) {

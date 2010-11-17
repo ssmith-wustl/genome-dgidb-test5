@@ -11,25 +11,43 @@ my %positions;
 
 class Genome::Model::Tools::Somatic::CalculatePindelReadSupport {
     is => 'Command',
-       has => [
-           indels_all_sequences_bed_file =>{
-               type => 'String',
-               is_optional => 0,
-               is_input => 1,
-               doc => 'Indel sites to assemble in annotator input format',
-           },
-       pindel_output_directory => {
-           type => 'String',
-           is_optional => 0,
-           is_input => 1,
-           doc => "location of the pindel output_directory.",
-       },
-       refseq =>{
-           type => 'String',
-           is_optional => 1,
-           default => Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fasta',
-           doc => "reference sequence to use for reference assembly",
-       },
+    has => [
+        indels_all_sequences_bed_file =>{
+            type => 'String',
+            is_optional => 0,
+            is_input => 1,
+            doc => 'Indel sites to assemble in annotator input format',
+        },
+        pindel_output_directory => {
+            type => 'String',
+            is_optional => 0,
+            is_input => 1,
+            doc => "location of the pindel output_directory.",
+        },
+        refseq =>{
+            type => 'String',
+            is_optional => 1,
+            default => Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fasta',
+            doc => "reference sequence to use for reference assembly",
+        },
+        use_old_pindel => {
+            type => 'Boolean',
+            is_optional => 1,
+            default => 0,
+            doc => 'Run on pindel 0.2 or 0.1',
+        },
+        _dbsnp_insertions => {
+            type => 'String',
+            is_optional => 1,
+            default => '/gscmnt/ams1102/info/info/dbsnp130_indels/insertions_start_stop_adjusted_dbsnp130',
+            doc => 'dbsnp insertion file',
+        },
+        _dbsnp_deletions => {
+            type => 'String',
+            is_optional => 1,
+            default => '/gscmnt/ams1102/info/info/dbsnp130_indels/deletions_adjusted_dbsnp130',
+            doc => 'dbsnp deletion file',
+        },
     ]
 };
 
@@ -42,8 +60,6 @@ sub execute {
     my $fh = IO::File->new($file);
 
     my %indels;
-
-
     my %answers;
 
     while (<$fh>){
@@ -99,7 +115,12 @@ sub process_file {
                 my $pos_strand = 0;
             my $neg_strand = 0;
             my $mod = ($call =~ m/BP_range/) ? 2: -1;
-            my $support = $call_fields[12+$mod];
+            my $support;
+            if($self->use_old_pindel){
+                $support = ($type eq "I") ? $call_fields[10+$mod] : $call_fields[12+$mod];
+            } else {
+                $support = $call_fields[12+$mod];
+            }
             unless(defined($support)){
                 print "No support. Call was:   ".$call."\n";
                 die;
@@ -142,7 +163,7 @@ sub process_file {
                     my $neg_strand = $events{$chrom}{$pos}{$type_and_size}{'neg'};
                     my $pos_percent=0;
                     if($neg_strand==0){
-                        $pos_percent = 100;
+                        $pos_percent = 1.0;
                     } else {
                         $pos_percent = sprintf("%.2f", $pos_strand / ($pos_strand + $neg_strand));
                     }
@@ -185,9 +206,16 @@ sub parse {
     my @call_fields = split /\s+/, $call;
     my $type = $call_fields[1];
     my $size = $call_fields[2];
-    my $chr = $call_fields[6];
-    my $start= $call_fields[8];
-    my $stop = $call_fields[9];
+    my ($chr,$start,$stop);
+    if($self->use_old_pindel){
+        $chr = ($type eq "I") ? $call_fields[4] : $call_fields[6];
+        $start= ($type eq "I") ? $call_fields[6] : $call_fields[8];
+        $stop = ($type eq "I") ? $call_fields[7] : $call_fields[9];
+    } else {
+        $chr = $call_fields[6];
+        $start= $call_fields[8];
+        $stop = $call_fields[9];
+    }
     my $support = $call_fields[-1];
     my ($ref, $var);
     if($type =~ m/D/) {
