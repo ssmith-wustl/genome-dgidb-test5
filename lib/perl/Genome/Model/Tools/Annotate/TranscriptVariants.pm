@@ -46,12 +46,21 @@ class Genome::Model::Tools::Annotate::TranscriptVariants {
             calculate_from => ['use_version'],
             calculate => q( return 'Genome::Model::Tools::Annotate::TranscriptVariants::Version' . $use_version ),
         },
+        available_versions => {
+            is_calculated => 1,
+            is_many => 1,
+            calculate => q( my $path = Genome::Model::Tools::Annotate::TranscriptVariants->base_dir;
+                            my @versions = glob($path.'/Version*.pm');
+                            @versions = map { m/Version(\w+).pm/; $1 } @versions;
+                            return @versions; ),
+        },
     ],
     has_optional => [
         use_version => {
             is => 'Text',
             default_value => '1',
             doc => 'Annotator version to use',
+            valid_values => [0,1],#__PACKAGE__->available_versions,
         },
         # IO Params
         _is_parallel => {
@@ -172,7 +181,6 @@ class Genome::Model::Tools::Annotate::TranscriptVariants {
 
 sub is_sub_command_delegator { 0 }
 
-
 ############################################################
 
 sub help_synopsis { 
@@ -182,6 +190,8 @@ EOS
 }
 
 sub help_detail {
+    my $self = shift;
+
     #Generate the currently available annotation models on the fly
     my @currently_available_models = Genome::Model->get(type_name => "imported annotation");
     my $currently_available_builds; 
@@ -193,6 +203,8 @@ sub help_detail {
             }
         }
     }
+
+    my $available_versions = join (', ', $self->available_versions);
 
     return <<EOS 
 This launches the variant annotator.  It takes genome sequence variants and outputs transcript variants, 
@@ -213,6 +225,8 @@ Any number of additional columns may be in the input following these columns, bu
 
 OUTPUT COLUMNS (COMMMA SEPARATED)
 chromosome_name start stop reference variant type gene_name transcript_name transcript_species transcript_source transcript_version strand transcript_status trv_type c_position amino_acid_change ucsc_cons domain all_domains deletion_substructures transcript_error
+
+The --use-version parameter is used to choose which version of the trasncript variants annotator to run.  The available versions are: $available_versions
 
 CURRENTLY AVAILABLE REFERENCE TRANSCRIPTS WITH VERSIONS
 $currently_available_builds

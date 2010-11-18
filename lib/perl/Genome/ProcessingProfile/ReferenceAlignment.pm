@@ -29,6 +29,10 @@ class Genome::ProcessingProfile::ReferenceAlignment {
             doc => 'the type of dna used in the reads for this model',
             valid_values => ['genomic dna', 'cdna']
         },
+        transcript_variant_annotator_version => {
+            doc => 'Version of the "annotate transcript-variants" tool to run during the annotation step',
+            valid_values => [ 0,1],#Genome::Model::Tools::Annotate::TranscriptVariants->available_versions ],
+        },
         snv_detector_name => {
             doc => 'Name of the snv detector',
             is_optional => 1,
