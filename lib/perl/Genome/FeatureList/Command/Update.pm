@@ -20,10 +20,6 @@ class Genome::FeatureList::Command::Update{
             doc => 'New format for the feature list',
             valid_values => Genome::FeatureList->__meta__->property('format')->valid_values
         },
-        file_path => {
-            is => 'FilePath',
-            doc => 'New file path for the feature list',
-        },
         source => {
             is => 'Text',
             doc => 'New source for the feature list',
