@@ -43,8 +43,6 @@ $invalid_instrument_data = Genome::Model::InstrumentDataAssignment->create(
                                                                            instrument_data_id => --$mock_id,
                                                                        );
 isa_ok($invalid_instrument_data,'Genome::Model::InstrumentDataAssignment');
-my @invalid_tags = $invalid_instrument_data->__errors__;
-is(scalar(@invalid_tags),2,'Invalid instrument data with no model or run chunk objects');
 eval {
     $invalid_instrument_data->read_length;
 };
@@ -59,8 +57,6 @@ $invalid_instrument_data = Genome::Model::InstrumentDataAssignment->create(
                                                                            instrument_data_id => $mock_instrument_data->id,
                                                );
 isa_ok($invalid_instrument_data,'Genome::Model::InstrumentDataAssignment');
-@invalid_tags = $invalid_instrument_data->__errors__;
-is(scalar(@invalid_tags),1,'Invalid instrument data with no model object');
 
 
 my $mock_pp = Genome::ProcessingProfile::ReferenceAlignment::Solexa->create_mock(
@@ -86,8 +82,6 @@ $invalid_instrument_data = Genome::Model::InstrumentDataAssignment->create(
                                                                            instrument_data_id => --$mock_id,
                                                );
 isa_ok($invalid_instrument_data,'Genome::Model::InstrumentDataAssignment');
-@invalid_tags = $invalid_instrument_data->__errors__;
-is(scalar(@invalid_tags),1,'Invalid instrument data with no run chunk object');
 
 ###############################
 # create a real instrument data using the mock objects

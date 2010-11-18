@@ -193,3 +193,7 @@ sub fillmd_for_sam {
 sub _compute_alignment_metrics {
     return 1;
 }
+
+sub _check_read_count { 
+    return 1; 
+} 

@@ -33,6 +33,11 @@ class Genome::ModelGroup {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+sub __display_name__ {
+    my $self = shift;
+    return $self->name.' ('.$self->id.')';
+}
+
 sub create {
     my $class = shift;
     my ($bx,%params) = $class->define_boolexpr(@_);
@@ -171,6 +176,37 @@ sub builds {
     }
 
     return @builds;
+}
+
+sub delete {
+    my $self = shift;
+
+    # unassign existing models
+    my @models = $self->models;
+    if (@models) {
+        $self->status_message("Unassigning " . @models . " models from " . $self->__display_name__ . ".");
+        $self->status_message("Removed convergence model.");
+    }
+    else {
+        $self->unassign_models(@models);
+    }
+
+    # delete convergence model (and indirectly its builds)
+    my $convergence_model = $self->convergence_model;
+    if ($convergence_model) {
+        my $deleted_model = eval {
+            $convergence_model->delete;
+        };
+        if ($deleted_model) {
+            $self->status_message("Removed convergence model.");
+        }
+        else {
+            $self->error_message("Failed to remove convergence model (" . $convergence_model->__display_name__ . "), please investigate and remove manually.");
+        }
+    }
+
+    # delete self
+    return $self->SUPER::delete;
 }
 
 1;

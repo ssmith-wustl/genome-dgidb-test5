@@ -273,20 +273,11 @@ sub execute {
             } else {
                 $model_group = Genome::ModelGroup->get(name => $model_group_id);
             }
-            print Data::Dumper::Dumper $model_group_id;
             unless ($model_group) {
                 $self->error_message("Could not find a model group with the id or name of: $model_group. Please use a valid id/name or create a model-group.");
                 die;
             }
-
-            my $add_command = Genome::ModelGroup::Command::Member::Add->create(
-                  model_group_id => $model_group->id,
-                  model_ids => ($model->id),
-            );
-            unless ($add_command->execute == 1) {
-                $self->error_message("Failed to add model to model group $model_group");
-                die;
-            }
+            $model_group->assign_models($model);
         }
     }
 

@@ -80,6 +80,14 @@ class Genome::InstrumentData::Imported {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+sub __display_name__ {
+    my $self = $_[0];
+    return (
+        join(' ', map { $self->$_ } qw/sequencing_platform import_format id/)
+        . ($self->desc ? ' (' . $self->desc . ')' : '')
+    );
+}
+
 # Other InstrumentData types define an optional UR field target_region_set_name.
 # target_region_set_name is likely undefined for imported data, so this sub will resolve issues
 # with queries that include Imported.
