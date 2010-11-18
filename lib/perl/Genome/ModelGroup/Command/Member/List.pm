@@ -6,8 +6,9 @@ use warnings;
 use Genome;
 
 class Genome::ModelGroup::Command::Member::List {
-    is => ['UR::Object::Command::List', 'Genome::ModelGroup::Command::Member'],
+    is => 'UR::Object::Command::List', 
     has => [
+        model_group => { is => 'Genome::ModelGroup', id_by => 'model_group_id' },
         show => {
             doc => 'properties of the member models to list (comma-delimited)',
             is_optional => 1,

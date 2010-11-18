@@ -188,7 +188,7 @@ sub execute {                               # replace with real execution logic.
 					chomp($snp_list_result) if($snp_list_result);
 					if(!$snp_list_result)
 					{
-						$search_string = "ls " . $model->last_succeeded_build_directory . "/maq*/filtered.indelpe.snps 2>/dev/null | tail -1";
+						$search_string = "ls " . $model->last_succeeded_build_directory . "/snp*/snps_all_sequences.filtered 2>/dev/null | tail -1";
 						$snp_list_result = `$search_string`;
 						chomp($snp_list_result) if($snp_list_result);						
 					}
@@ -212,6 +212,12 @@ sub execute {                               # replace with real execution logic.
 	
 	close(BAMLIST) if($self->output_bam_files);
 	close(SNPLIST) if($self->output_snp_files);	
+
+	print $stats{'models_in_group'} . " models in group\n" if($stats{'models_in_group'});
+	print $stats{'models_running'} . " models running\n" if($stats{'models_running'});
+	print $stats{'models_finished'} . " models finished\n" if($stats{'models_finished'});
+
+
 
 	## Determine normal-tumor pairing and completed models ##
 	if($self->output_model_pairs)
@@ -267,14 +273,12 @@ sub execute {                               # replace with real execution logic.
 		}
 		
 		close(MODELPAIRS) if($self->output_model_pairs);
+
+		print $stats{'num_patients'} . " patients with models in group\n" if($stats{'num_patients'});
+		print $stats{'num_completed_patients'} . " patients with completed tumor+normal builds\n" if($stats{'num_completed_patients'});
 		
 	}
 
-	print $stats{'models_in_group'} . " models in group\n" if($stats{'models_in_group'});
-	print $stats{'models_running'} . " models running\n" if($stats{'models_running'});
-	print $stats{'models_finished'} . " models finished\n" if($stats{'models_finished'});
-	print $stats{'num_patients'} . " patients with models in group\n";
-	print $stats{'num_completed_patients'} . " patients with completed tumor+normal builds\n" if($stats{'num_completed_patients'});
 
 }
 

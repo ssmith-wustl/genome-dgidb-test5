@@ -98,9 +98,48 @@ sub close_filehandles {
 
 sub process_source { 
     my $self = shift;
+    $DB::single=1;
     my $input_fh = $self->_input_fh;
     my %events;
     my ($chrom,$pos,$size,$type);
+
+    while(my $line = $input_fh->getline){
+        my $normal_support=0;
+        my $read = 0;
+        if($line =~ m/^#+$/){
+            my $call = $input_fh->getline;
+if($call =~ m/^3/) { $DB::single=1; }
+            my $reference = $input_fh->getline;
+            my @call_fields = split /\s/, $call;
+            my $type = $call_fields[1];
+            my $size = $call_fields[2];   #12
+            my $mod = ($call =~ m/BP_range/) ? 2: -1;
+            #my $support = ($type eq "I") ? $call_fields[10+$mod] : $call_fields[12+$mod];
+            my $support = $call_fields[12+$mod];
+           
+            for (1..$support){
+                $line = $input_fh->getline;
+                if($line =~ m/normal/) {
+                    $normal_support=1;
+                }
+                $read=$line;
+            }
+            
+            my @bed_line = $self->parse($call, $reference, $read);
+            unless((@bed_line)&& scalar(@bed_line)==5){
+                next;
+            }
+            my $type_and_size = $type."/".$size;
+            $self->status_message( $type_and_size . "\t" . join(" ",@bed_line) . "\n");
+            $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'bed'}=join(",",@bed_line);
+            if($normal_support){
+                $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'normal'}=$normal_support;
+            }
+        }
+    }
+            
+
+=cut
     while(my $line = $input_fh->getline) {
         my $normal_support=0;
         my $read = 0;
@@ -123,17 +162,25 @@ sub process_source {
             unless((@bed_line)&& scalar(@bed_line)==5){
                 next;
             }
-            my @call_stuff = split /\w/, $call;
-            my $type_and_size = $call_stuff[1]."/".$call_stuff[2];
+            my @call_fields = split /\w/, $call;
+            my $type = $call_fields[1];
+            my $size = $call_fields[2];
+            my $support = $call_fields[-1];
+            my $type_and_size = $type."/".$size;
+            $self->status_message( $type_and_size . "\t" . join(" ",@bed_line) . "\n");
             $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'bed'}=join(",",@bed_line);
             if($normal_support){
                 $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'normal'}=$normal_support;
             }
         }
     }
-    
-    for my $chrom (sort {$a cmp $b} (keys(%events))){
-        for my $pos (sort{$a <=> $b} (keys( %{$events{$chrom}}))){
+=cut
+
+
+   
+ 
+    for $chrom (sort {$a cmp $b} (keys(%events))){
+        for $pos (sort{$a <=> $b} (keys( %{$events{$chrom}}))){
             for my $type_and_size (sort(keys( %{$events{$chrom}{$pos}}))){
                 unless(exists($events{$chrom}{$pos}{$type_and_size}{'normal'})){
                     $self->write_bed_line(split ",", $events{$chrom}{$pos}{$type_and_size}{'bed'});
@@ -161,15 +208,19 @@ sub process_source {
 
 sub parse {
     my $self=shift;
+    #my $reference_fasta = $self->refseq;
     my ($call, $reference, $first_read) = @_;
     #parse out call bullshit
     chomp $call;
     my @call_fields = split /\s+/, $call;
     my $type = $call_fields[1];
     my $size = $call_fields[2];
-    my $chr = ($type eq "I") ? $call_fields[4] : $call_fields[6];
-    my $start= ($type eq "I") ? $call_fields[6] : $call_fields[8];
-    my $stop = ($type eq "I") ? $call_fields[7] : $call_fields[9];
+    #my $chr = ($type eq "I") ? $call_fields[4] : $call_fields[6];
+    #my $start= ($type eq "I") ? $call_fields[6] : $call_fields[8];
+    #my $stop = ($type eq "I") ? $call_fields[7] : $call_fields[9];
+    my $chr = $call_fields[6];
+    my $start= $call_fields[8];
+    my $stop = $call_fields[9];
     my $support = $call_fields[-1];
     my ($ref, $var);
     if($type =~ m/D/) {
@@ -178,10 +229,10 @@ sub parse {
         ###conform to our annotators requirements
 
         ###also deletions which don't contain their full sequence should be dumped to separate file
-       $stop = $stop - 1;
         my $allele_string;
+        my $start_for_faidx = $start+1; 
         my $sam_default = Genome::Model::Tools::Sam->path_for_samtools_version;
-        my $faidx_cmd = "$sam_default faidx " . $self->reference_fasta . " $chr:$start-$stop";
+        my $faidx_cmd = "$sam_default faidx " . $self->reference_fasta . " $chr:$start_for_faidx-$stop"; 
         my @faidx_return= `$faidx_cmd`;
         shift(@faidx_return);
         chomp @faidx_return;
@@ -190,12 +241,16 @@ sub parse {
         $ref = $allele_string;
     }
     elsif($type =~ m/I/) {
-        $start = $start - 1;
+        #misunderstanding of bed format
+        #0 based numbers teh gaps so an insertion of any number of bases between base 10 and 11 in 1base
+        #is 10 10 in bed format
+        #$start = $start - 1;
         $ref=0;
         my ($letters_until_space) =   ($reference =~ m/^([ACGTN]+) /);
         my $offset_into_first_read = length($letters_until_space);
         $var = substr($first_read, $offset_into_first_read, $size);
     }
+    $stop = $stop - 1;
     if($size >= 100) {
         my $big_fh = $self->_big_output_fh;
         $big_fh->print("$chr\t$start\t$stop\t$size\t$support\n");

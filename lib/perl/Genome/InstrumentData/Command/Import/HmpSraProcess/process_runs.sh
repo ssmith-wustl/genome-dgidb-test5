@@ -224,7 +224,7 @@ foreach sample ( `grep -f $srr_ids $sra_samples | awk '{print $2}' | sort | uniq
 	if (! -e ${sample}/${sample}.ascp) then
 #_______________TEMPORARY CHANGE JUST FOR TESTING ... jmartin 100902
 		####ascp -QTd $sample/*.md5 $sample/*.xml $sample/*.bz2 $ascp_user@aspera.hmpdacc.org:/WholeMetagenomic/02-ScreenedReads/ProcessedForAssembly/$sample/ > $sample/$sample.ascp
-		ascp -QTd -l100M $sample/*.md5 $sample/*.xml $sample/*.bz2 $ascp_user@aspera.hmpdacc.org:/WholeMetagenomic/02-ScreenedReads/ProcessedForAssembly/WUGC_testing/$sample/ > $sample/$sample.ascp
+		ascp -QTd -l100M $sample/*.md5 $sample/*.xml $sample/*.bz2 $ascp_user@aspera.hmpdacc.org:/WholeMetagenomic/02-ScreenedReads/ProcessedForAssembly/$sample/ > $sample/$sample.ascp
 	else
 		set files = `grep files ${sample}/${sample}.ascp | awk '{print $4}'`
 		if ( $files > 4 ) then
@@ -232,7 +232,7 @@ foreach sample ( `grep -f $srr_ids $sra_samples | awk '{print $2}' | sort | uniq
 		else
 #_______________________TEMPORARY CHANGE JUST FOR TESTING ... jmartin 100902
 	                ####ascp -QTd $sample/*.md5 $sample/*.xml $sample/*.bz2 $ascp_user@aspera.hmpdacc.org:/WholeMetagenomic/02-ScreenedReads/ProcessedForAssembly/$sample/ > $sample/$sample.ascp
-			ascp -QTd -l100M $sample/*.md5 $sample/*.xml $sample/*.bz2 $ascp_user@aspera.hmpdacc.org:/WholeMetagenomic/02-ScreenedReads/ProcessedForAssembly/WUGC_testing/$sample/ > $sample/$sample.ascp
+			ascp -QTd -l100M $sample/*.md5 $sample/*.xml $sample/*.bz2 $ascp_user@aspera.hmpdacc.org:/WholeMetagenomic/02-ScreenedReads/ProcessedForAssembly/$sample/ > $sample/$sample.ascp
 		endif		
 	endif
 	

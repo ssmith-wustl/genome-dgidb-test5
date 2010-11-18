@@ -125,33 +125,6 @@ sub alignment_directory {
     return $results->output_dir;
 }
 
-# NOTE: code which triggers alignment no longer comes here.
-# It passes the assignment object into the current processing profile
-# which has pipeline-specific alignment logic.
-
-sub __errors__ {
-    my ($self) = shift;
-
-    my @tags = $self->SUPER::__errors__(@_);
-
-    unless (Genome::Model->get($self->model_id)) {
-        push @tags, UR::Object::Tag->create(
-                                            type => 'invalid',
-                                            properties => ['model_id'],
-                                            desc => "There is no model with id ". $self->model_id,
-                                        );
-    }
-
-    unless (Genome::InstrumentData->get($self->instrument_data_id)) {
-        push @tags, UR::Object::Tag->create(
-                                            type => 'invalid',
-                                            properties => ['instrument_data_id'],
-                                            desc => "There is no instrument data with id ". $self->instrument_data_id,
-                                        );
-    }
-    return @tags;
-}
-
 # TODO: remove this.  There may be multiple read length per instdata.
 sub read_length {
     my $self = shift;

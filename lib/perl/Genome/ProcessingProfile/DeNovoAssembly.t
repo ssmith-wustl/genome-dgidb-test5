@@ -124,9 +124,8 @@ is_deeply(
     \@stage_classes, 
     [ 
         'Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData',
-        (map { 
-            'Genome::Model::Event::Build::DeNovoAssembly::'.$_.'::Velvet'
-        } (qw/ Assemble PostAssemble /)),
+        'Genome::Model::Event::Build::DeNovoAssembly::Assemble::Velvet',
+        'Genome::Model::Event::Build::DeNovoAssembly::PostAssemble',
         'Genome::Model::Event::Build::DeNovoAssembly::Report',
     ], 
     'Stage classes'
@@ -142,7 +141,19 @@ ok(%valid_soap_params, "Got valid soap pp params");
 
 my $soap_pp = Genome::ProcessingProfile::DeNovoAssembly->create(%valid_soap_params);
 ok($soap_pp, "Created DNA pp") or die;
-#TODO - test soap operation params when/if used
+my @soap_stages = $soap_pp->stages;
+
+is_deeply (\@soap_stages, [qw / assemble /], 'Stages');
+
+my @soap_stage_classes = $soap_pp->assemble_job_classes;
+
+is_deeply ( \@soap_stage_classes,
+	    [
+	     'Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData',
+	     'Genome::Model::Event::Build::DeNovoAssembly::Assemble::Soap',
+	     'Genome::Model::Event::Build::DeNovoAssembly::PostAssemble',
+	     'Genome::Model::Event::Build::DeNovoAssembly::Report',
+	    ], 'Stage classes' );
 
 done_testing();
 exit;

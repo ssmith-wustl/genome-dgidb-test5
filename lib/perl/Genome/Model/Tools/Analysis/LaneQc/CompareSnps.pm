@@ -65,14 +65,45 @@ sub execute {                               # replace with real execution logic.
 	my $self = shift;
 
 	## Get required parameters ##
-	my $sample_name = $self->variant_file;
+	my $sample_name = "Sample";
+
+	if($self->sample_name)
+	{
+		$sample_name = $self->sample_name;
+	}
+	elsif($self->variant_file)
+	{
+		$sample_name = $self->variant_file if($self->variant_file);	
+	}
+	elsif($self->bam_file)
+	{
+		$sample_name = $self->bam_file if($self->bam_file);	
+	}
+	
 	my $genotype_file = $self->genotype_file;
 
 	my $variant_file = "";
+
+
+	print "Loading genotypes from $genotype_file...\n" if($self->verbose);
+	my %genotypes = load_genotypes($genotype_file);
+
 	
 	if($self->bam_file)
 	{
 		my $bam_file = $self->bam_file;
+
+		## Build positions key ##
+		my $search_string = "";
+		my $key_count = 0;
+		foreach my $key (sort byBamOrder keys %genotypes)
+		{
+			$key_count++;
+			(my $chrom, my $position) = split(/\t/, $key);
+			$search_string .= " " if($search_string);
+			
+			$search_string .= $chrom . ":" . $position . "-" . $position;
+		}
 		
 		## If BAM provided, call the variants ##
 		    my ($tfh,$temp_path) = Genome::Utility::FileSystem->create_temp_file;
@@ -82,8 +113,20 @@ sub execute {                               # replace with real execution logic.
 			}
 
 		## Build consensus ##
-		print "Building pileup to $temp_path\n";		
-		my $cmd = "samtools pileup -cf /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa $bam_file >$temp_path";
+		print "Building pileup to $temp_path\n";
+		my $cmd = "";
+		
+		if($search_string && $key_count < 100)
+		{
+			print "Extracting genotypes for $key_count positions...\n";		
+			$cmd = "samtools view -b $bam_file $search_string | samtools pileup -f /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa - | java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan pileup2cns >$temp_path";			
+			print "$cmd\n";
+		}
+		else
+		{
+			$cmd = "samtools pileup -cf /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa $bam_file | cut --fields=1-8 >$temp_path";			
+		}
+
 		system($cmd);
 		
 		$variant_file = $temp_path;
@@ -116,8 +159,6 @@ sub execute {                               # replace with real execution logic.
 	$stats{'het_was_hom'} = $stats{'hom_was_het'} = $stats{'het_was_diff_het'} = $stats{'rare_hom_match'} = $stats{'rare_hom_total'} = 0;
 	$stats{'num_ref_was_ref'} = $stats{'num_ref_was_hom'} = $stats{'num_ref_was_het'} = 0;
 
-	print "Loading genotypes from $genotype_file...\n" if($self->verbose);
-	my %genotypes = load_genotypes($genotype_file);
 
 	print "Parsing variant calls in $variant_file...\n" if($self->verbose);
 
@@ -125,6 +166,7 @@ sub execute {                               # replace with real execution logic.
 	my $lineCounter = 0;
 
 	my $file_type = "samtools";
+	my $verbose_output = "";
 
 	while (<$input>)
 	{
@@ -215,6 +257,7 @@ sub execute {                               # replace with real execution logic.
 							$chip_gt = flip_genotype($chip_gt);
 						}
 					
+						my $comparison_result = "Unknown";
 					
 						if($chip_gt eq $ref_gt)
 						{
@@ -223,22 +266,24 @@ sub execute {                               # replace with real execution logic.
 							if(uc($cons_gt) eq $ref_gt)
 							{
 								$stats{'num_ref_was_ref'}++;
+								$comparison_result = "RefMatch";
 							}
 							elsif(is_heterozygous($cons_gt))
 							{
 								$stats{'num_ref_was_het'}++;
+								$comparison_result = "RefWasHet";
 							}
 							else
 							{
 								$stats{'num_ref_was_hom'}++;
+								$comparison_result = "RefWasHom";
 							}
+						
 						}
 						elsif($chip_gt ne $ref_gt)
 						{
 							$stats{'num_with_variant'}++;
-							
-							my $comparison_result = "Unknown";
-							
+													
 							if(is_homozygous($chip_gt))
 							{
 								$stats{'rare_hom_total'}++;
@@ -252,7 +297,7 @@ sub execute {                               # replace with real execution logic.
 									$stats{'rare_hom_match'}++;
 								}
 								
-								$comparison_result = "Match";
+								$comparison_result = "VarMatch";
 	
 							}
 							elsif(is_homozygous($chip_gt) && is_heterozygous($cons_gt))
@@ -270,14 +315,22 @@ sub execute {                               # replace with real execution logic.
 								$stats{'het_was_diff_het'}++;
 								$comparison_result = "HetMismatch";
 							}
-							
-							if($self->verbose)
+							else
 							{
-								print "$line\t$chip_gt $comparison_result $cons_gt\n";
+								warn "Uncounted comparison: Chip=$chip_gt but Seq=$cons_gt\n";
 							}
+							
+
 							
 							
 						}
+					
+						if($self->verbose)
+						{
+							$verbose_output .= "$key\t$chip_gt\t$comparison_result\t$cons_gt\t$line\n" if($self->output_file);
+							print "$key\t$chip_gt\t$comparison_result\t$cons_gt\t$line\n";
+						}						
+						
 					}
 				}
 			
@@ -302,6 +355,10 @@ sub execute {                               # replace with real execution logic.
 	my $flowcell = $machineContents[$numContents - 1];
 	(my $lane) = split(/\_/, $lane_info);
 
+	## Set zero values ##
+	
+	$stats{'num_ref_was_ref'} = 0 if(!$stats{'num_ref_was_ref'});
+	$stats{'num_chip_was_reference'} = 0 if(!$stats{'num_chip_was_reference'});
 
 	## Calculate pct ##
 	
@@ -383,7 +440,9 @@ sub execute {                               # replace with real execution logic.
 		print OUTFILE $stats{'het_was_diff_het'} . "\t";
 		print OUTFILE $stats{'pct_variant_match'} . "%\t";
 		print OUTFILE $stats{'pct_hom_match'} . "%\t";		
-		print OUTFILE $stats{'pct_overall_match'} . "%\n";		
+		print OUTFILE $stats{'pct_overall_match'} . "%\n";
+		
+		print OUTFILE "\nVERBOSE OUTPUT:\n$verbose_output\n";
 	}
 
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
@@ -427,6 +486,36 @@ sub load_genotypes
 	return(%genotypes);                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
 
+
+################################################################################################
+# Sorting
+#
+################################################################################################
+
+
+sub byBamOrder
+{
+	my ($chrom_a, $pos_a) = split(/\t/, $a);
+	my ($chrom_b, $pos_b) = split(/\t/, $b);
+	
+	$chrom_a =~ s/X/9\.1/;
+	$chrom_a =~ s/Y/9\.2/;
+	$chrom_a =~ s/MT/25/;
+	$chrom_a =~ s/M/25/;
+	$chrom_a =~ s/NT/99/;
+	$chrom_a =~ s/[^0-9\.]//g;
+
+	$chrom_b =~ s/X/9\.1/;
+	$chrom_b =~ s/Y/9\.2/;
+	$chrom_b =~ s/MT/25/;
+	$chrom_b =~ s/M/25/;
+	$chrom_b =~ s/NT/99/;
+	$chrom_b =~ s/[^0-9\.]//g;
+
+	$chrom_a <=> $chrom_b
+	or
+	$pos_a <=> $pos_b;
+}
 
 
 ################################################################################################

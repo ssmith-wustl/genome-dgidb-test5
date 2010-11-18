@@ -99,7 +99,13 @@ sub execute {
         }
         die $self->error_message;
     }
-    my $library = Genome::Command::Base->resolve_param_value_from_text($self->library,'Genome::Library');
+
+    my $library;
+
+    if ($self->library) {
+        $library = Genome::Command::Base->resolve_param_value_from_text($self->library,'Genome::Library');
+    }
+
     unless($library){
         unless($self->create_library){
             $self->error_message("A library was not resolved from the input string ".$self->library);
@@ -134,6 +140,7 @@ sub execute {
         next if $property_name =~ /^(species|reference)_name$/;
         next if $property_name =~ /^library$/;
         next if $property_name =~/^sample$/;
+        next if $property_name  eq 'create_library';
         $params{$property_name} = $self->$property_name if $self->$property_name;
     }
     $params{sample_id} = $sample->id;

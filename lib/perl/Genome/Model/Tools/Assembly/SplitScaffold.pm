@@ -4,129 +4,236 @@ use strict;
 use warnings;
 
 use Genome;
-use Cwd;
 
-class Genome::Model::Tools::Assembly::SplitScaffold
-{
+use Cwd;
+use Data::Dumper;
+use Sort::Naturally;
+
+class Genome::Model::Tools::Assembly::SplitScaffold {
     is => 'Command',
-    has => 
-    [
+    has => [
         ace_file => {
-            type => "String",
-            optional => 0,
+            type => 'Text',
             doc => "This is the input ace file"
         }, 
-        split_contig => {
-            type => "String",
-            optional => 0,
-            doc => "This is the name of the contigs which will be the last contig in the left scaffold",
-        },
-	    out_file_name => {
-            type => "String",
-            optional => 0,
-		    doc => "This is the name of the output file",
-	    },	    
-    ]
+	split_contigs => {
+	    type => 'Text',
+	    is_many => 1,
+	    doc => 'Multiple scaffold contigs to split scaffolds by',
+	},
+	out_file_name => {
+	    type => 'Text',
+	    is_optional => 1,
+	    doc => "This is the name of the output file",
+	},
+    ],
 };
 
 sub help_brief {
-    ""
+    'Tool to split pcap style ace file scaffolds';
 }
 
 sub help_synopsis { 
     return;
 }
+
 sub help_detail {
     return <<EOS 
-    split-scaffold --ace-file=in.ace --split-contig=Contig0.8 --out-file-name=out.ace
+    gmt split-scaffold --ace-file Pcap.Contigs.ace --split-contigs Contig0.8 --out-file-name Pcap.Contigs.ace.split
+    gmt split-scaffold --ace-file Pcap.Contigs.ace --split-contigs Contig0.8,Contig2.5
 EOS
 }
 
-sub get_contig_names
-{
-    my ($self, $ace_file_name) = @_;
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($ace_file_name);
-    $self->error_message("There was an error opening ace file $ace_file_name for reading.") and die unless defined $fh;
-    my @contig_names;
-    while(my $line = <$fh>)
-    {
-        if($line =~ /^CO /)
-        {
-            my @tokens = split /\s+/,$line;
-            push @contig_names, $tokens[1];            
-        }
-    }
-    return \@contig_names;
-}
-
-sub execute
-{
+sub execute {
     my $self = shift;
-    $DB::single = 1;
-    my $ace_file = $self->ace_file;
-    my $split_contig_name = $self->split_contig;
-    my $out_file_name = $self->out_file_name;
 
-    $self->error_mesage("Input ace file $ace_file does not exist\n") and return unless (-e $ace_file);
-    
-    my $contig_names = $self->get_contig_names($ace_file);
-    my ($scaffold_name, $contig_num, $suffix);
-    ($scaffold_name, $contig_num) = $split_contig_name =~ /(Contig\d+)\.(\d+)/;
-    ($suffix) = $split_contig_name =~ /Contig\d+\.\d+(\D+)/;
-    $suffix = '' unless defined $suffix;
-    my @scaffold_contigs = grep 
-    { 
-        my $temp; 
-        my $result = $_ =~ /$scaffold_name\.\d+$suffix/;
-        ($temp) = $_ =~  /$scaffold_name\.\d+$suffix(\D+)/;#check to make sure that we don't count contigs with different extensions as belonging to the same scaffold.
-        ($result && !(defined $temp && length $temp));
-    } @{$contig_names};
-    
-    unless (@scaffold_contigs)
-    {
-        print "Couldn't find scaffold that $split_contig_name belongs to.\n";
-        print "It appears that scaffold $scaffold_name.XX$suffix does not exist.\n";
-        return;    
+    unless ( $self->split_contigs ) {
+	$self->error_message("You must supply contig(s) to split scaffolds by");
+	return;
     }
-    my %scaffold_contigs;
-    foreach my $contig (@scaffold_contigs) 
-    { 
-        my ($curr_scaffold_name, $curr_contig_num) = $contig =~ /(Contig\d+)\.(\d+)/; 
-        if($curr_contig_num <= $contig_num)
-        {
-            $scaffold_contigs{$contig} = $contig.'a';
-        }
-        else
-        {
-            $scaffold_contigs{$contig} = $contig.'b';
-        }
+
+    unless ( -s $self->ace_file ) {
+	$self->error_message("Failed to find input ace file: ".$self->ace_file);
+	return;
     }
-    
-    #do a search and replace for all contig names above
-    my $fh = IO::File->new($ace_file);
-    my $out_fh = IO::File->new(">$out_file_name");
-    while(my $line = <$fh>)
-    {   
-        if($line =~ /Contig/)
-        { 
-            foreach my $sub_contig (keys %scaffold_contigs)
-            {
-                if($line =~/$sub_contig\W+/)
-                {                
-                    $line =~ s/$sub_contig/$scaffold_contigs{$sub_contig}/g;
-                    last;            
-                }            
-            }
-        }
-        $out_fh->print($line);
+
+    unless ( $self->_split_scaffolds ) {
+	$self->error_message("Failed to successfully split scaffolds");
+	return;
     }
+
     return 1;
 }
 
+sub _split_scaffolds {
+    my $self = shift;
+
+    my $rename_contigs = $self->_get_contigs_to_rename;
+
+    my $fh = Genome::Utility::FileSystem->open_file_for_reading( $self->ace_file );
+
+    my $ace_out_file = ( $self->out_file_name ) ? $self->out_file_name : $self->ace_file.'.scaffolds_split';
+
+    unlink $ace_out_file if -e $ace_out_file;
+    my $fh_out = Genome::Utility::FileSystem->open_file_for_writing( $ace_out_file );
+
+    unlink $ace_out_file.'.LOG';# if -e $ace_out_file.'LOG';
+    my $log_fh = Genome::Utility::FileSystem->open_file_for_writing( $ace_out_file.'.LOG' );
+
+    while ( my $line = $fh->getline ) {
+	if ( $line =~ /^CO\s+/ ) {
+	    chomp $line;
+	    my ( $contig_number ) = $line =~ /CO\s+Contig(\d+\.\d+)\s+/;
+	    my $rest_of_line = "$'";
+
+	    if ( exists $rename_contigs->{$contig_number} ) {
+		$fh_out->print( 'CO Contig'. $rename_contigs->{$contig_number}.' '.$rest_of_line."\n" );
+		$log_fh->print( 'Contig'.$contig_number.' split to Contig'.$rename_contigs->{$contig_number}."\n" );
+		$self->status_message( 'Contig'.$contig_number.' split to Contig'.$rename_contigs->{$contig_number}."\n" );
+	    }
+	    else {
+		$fh_out->print( $line."\n" );
+	    }
+	}
+	else {
+	    $fh_out->print( $line );
+	}
+    }
+
+    $fh->close;
+    $fh_out->close;
+    $log_fh->close;
+
+    return 1;
+}
+
+sub _get_contigs_to_rename {
+    my $self = shift;
+
+    my @contigs_to_split_at = $self->_get_scaffold_split_contig_names;
+
+    my $split_points = {};
+    for my $contig ( @contigs_to_split_at ) {
+	my ( $scaffold_number, $contig_number ) = $contig =~ /Contig(\d+)\.(\d+)/i;
+	$split_points->{$scaffold_number}->{$scaffold_number.'.'.$contig_number} = 1;
+    }
+
+    my $sorted_contigs_list = $self->_get_ace_contig_names;
+    
+    #assign first scaffold to current scaffold name space
+    my ( $current_scaffold ) = @{$sorted_contigs_list}[0] =~ /(\d+)\.\d+/;
+    #scalar to hold updated values when scaf number changes
+    my ( $updated_scaffold_number ) = @{$sorted_contigs_list}[0] =~ /(\d+)\.\d+/;
+    #what the next split off scaffold number should be .. 1 greater than current largest scaffold number;
+    my ( $last_scaffold_number ) = @{$sorted_contigs_list}[-1] =~ /(\d+)\.\d+/;
+    #scalar to hold updated value of how much contig number will change
+    my $contig_offset = 0;
+    #store contigs to rename
+    my %rename; 
+    
+    foreach my $contig (  @{$sorted_contigs_list} ) { #make sure it's sorted
+	my ( $scaffold_number, $contig_number ) = $contig =~ /(\d+)\.(\d+)/;
+
+	#when next scaffold reached set contig offset to 0 and reset upate scaffold to current scaffold number
+	if ( not $scaffold_number == $current_scaffold ) {
+	    $contig_offset = 0;
+	    $updated_scaffold_number = $scaffold_number;
+	}
+
+	#when split point reached, figure out new contig number
+	if ( exists $split_points->{$scaffold_number} ) { #split scaffold
+	
+	    my $updated_contig_number = $contig_number;
+	    
+	    #reached split point
+	    if ( exists $split_points->{$scaffold_number}->{$contig} ) {
+		#reset by subtracting contig number from contig number than add 1, ie, 
+		my ( $split_contig_number ) = $contig =~ /\d+\.(\d+)/;
+		$contig_offset = $split_contig_number - 1;
+		$updated_scaffold_number = ++$last_scaffold_number;
+	    }
+
+	    $updated_contig_number -= $contig_offset;
+
+	    my $old = $scaffold_number.'.'.$contig_number;
+	    my $new = $updated_scaffold_number.'.'.$updated_contig_number;
+
+	    #print $old.' updated to '.$new."\n";
+
+	    #scaf contig 0 to first cutoff don't change so don't store it
+	    $rename{$old} = $new unless $old == $new;
+	}
+
+	$current_scaffold = $scaffold_number;
+    }
+
+    return \%rename;
+}
+    
+sub _get_scaffold_split_contig_names {
+    my $self = shift;
+    
+    #verify contig names in pcap style
+    for my $contig_name ( $self->split_contigs ) {
+	unless ( $contig_name =~ /Contig\d+\.\d+/i ) {
+	    $self->error_message("Expected pcap style contigs names like Contig4.5 but got: $contig_name");
+	    return;
+	}
+    }
+    
+    return $self->split_contigs;
+}
+
+sub _get_ace_contig_names {
+    my $self = shift;
+
+    my $contig_numbers = {};
+
+    my $fh = Genome::Utility::FileSystem->open_file_for_reading( $self->ace_file );
+
+    while (my $line = $fh->getline) {
+	if ( $line =~ /^CO\s+/ ) {
+	    my ( $scaffold_number, $contig_number ) = $line =~ /CO\s+Contig(\d+)\.(\d+)\s+/;
+
+	    unless ( defined $scaffold_number and defined $contig_number ) {
+		$self->error_message("Failed to get contig number from line: $line, expected Contig#.#");
+		return;
+	    }
+            # for sorting .. {$a<=>$b} doesn't seem to work with decimal numbers
+	    $contig_numbers->{$scaffold_number}->{$contig_number} = 1; 
+	}
+    }
+
+    $fh->close;
+
+    unless ( scalar keys %{$contig_numbers} > 0 ) {
+	$self->error_message("Failed to get any contig numbers from ace file");
+	return;
+    }
+
+    my $sorted_list = $self->_sorted_array_ref_of_contig_numbers( $contig_numbers );
+
+    $contig_numbers = undef;
+
+    return $sorted_list;
+}
+
+sub _sorted_array_ref_of_contig_numbers {
+    my ( $self, $hash ) = @_;
+    my @ar;
+
+    foreach my $scaf_number ( sort {$a<=>$b} keys %{$hash} ) {
+	foreach my $ctg_number ( sort {$a<=>$b} keys %{$hash->{$scaf_number}} ) {
+	    push @ar, $scaf_number.'.'.$ctg_number;
+	}
+    }
+
+    unless ( scalar @ar > 0 ) {
+	$self->error_message("Found no sorted contigs after attempting to sort a list of contig numbers");
+	return;
+    }
+
+    return \@ar;
+}
 
 1;
-
-
-
-
-

@@ -80,6 +80,14 @@ class Genome::InstrumentData::Imported {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+sub __display_name__ {
+    my $self = $_[0];
+    return (
+        join(' ', map { $self->$_ } qw/sequencing_platform import_format id/)
+        . ($self->desc ? ' (' . $self->desc . ')' : '')
+    );
+}
+
 # Other InstrumentData types define an optional UR field target_region_set_name.
 # target_region_set_name is likely undefined for imported data, so this sub will resolve issues
 # with queries that include Imported.
@@ -187,7 +195,7 @@ sub delete {
 ##################################################
 BEGIN: {
 Genome::InstrumentData::Solexa->class;
-*dump_sanger_fastq_files= \&Genome::InstrumentData::Solexa::dump_sanger_fastq_files;
+*solexa_dump_sanger_fastq_files= \&Genome::InstrumentData::Solexa::dump_sanger_fastq_files;
 *dump_illumina_fastq_files= \&Genome::InstrumentData::Solexa::dump_illumina_fastq_files;
 *dump_solexa_fastq_files= \&Genome::InstrumentData::Solexa::dump_solexa_fastq_files;
 *dump_illumina_fastq_archive = \&Genome::InstrumentData::Solexa::dump_illumina_fastq_archive;
@@ -197,6 +205,47 @@ Genome::InstrumentData::Solexa->class;
 *fragment_fastq_name = \&Genome::InstrumentData::Solexa::fragment_fastq_name;
 *read1_fastq_name = \&Genome::InstrumentData::Solexa::read1_fastq_name;
 *read2_fastq_name = \&Genome::InstrumentData::Solexa::read2_fastq_name;
+}
+
+sub dump_sanger_fastq_files {
+    my $self = shift;
+
+    if ($self->import_format eq 'bam') {
+        return $self->dump_fastqs_from_bam(@_);
+    } else {
+        return $self->solexa_dump_sanger_fastq_files(@_);
+    }
+}
+
+sub dump_fastqs_from_bam {
+    my $self = shift;
+    my $temp_dir = Genome::Utility::FileSystem->create_temp_directory('unpacked_bam');
+
+    my $subset = (defined $self->subset_name ? $self->subset_name : 0);
+
+    my $fwd_file = sprintf("%s/s_%s_1_sequence.txt", $temp_dir, $subset);
+    my $rev_file = sprintf("%s/s_%s_2_sequence.txt", $temp_dir, $subset);
+    my $fragment_file = sprintf("%s/s_%s_sequence.txt", $temp_dir, $subset);
+    my $cmd = Genome::Model::Tools::Picard::SamToFastq->create(input=>$self->data_directory . "/all_sequences.bam", fastq=>$fwd_file, fastq2=>$rev_file, fragment_fastq=>$fragment_file);
+    unless ($cmd->execute()) {
+        die $cmd->error_message;
+    }
+
+    if ((-s $fwd_file && !-s $rev_file) ||
+        (!-s $fwd_file && -s $rev_file)) {
+        $self->error_message("Fwd & Rev files are lopsided; one has content and the other doesn't. Can't proceed"); 
+        die $self->error_message;
+    }
+
+    my @files;
+    if (-s $fwd_file && -s $rev_file) { 
+        push @files, ($fwd_file, $rev_file);
+    }
+    if (-s $fragment_file) {
+        push @files, $fragment_file;
+    }
+   
+    return @files; 
 }
 
 

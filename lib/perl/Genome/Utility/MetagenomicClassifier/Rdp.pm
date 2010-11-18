@@ -126,9 +126,11 @@ sub _build_taxon_from_classification_result {
     my @taxa;
     for my $assignment ( @$assignments ) {
         # print Dumper([map{ $_->getName } @{$assignment->getClass->getMethods}]);
-        # Methods are: getConfidence, getTaxid, getName, getRank
+        # Methods are: getConfidence, getTaxid, getName, getRank	
+	my $id = $assignment->getName;
+	$id =~ s/\s+/_/g;
         push @taxa, Genome::Utility::MetagenomicClassifier->create_taxon(
-            id => $assignment->getName,
+	    id => $id,
             rank => ( @taxa ? $assignment->getRank : 'root'),
             tags => {
                 confidence => $assignment->getConfidence,

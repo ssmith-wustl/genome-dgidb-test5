@@ -123,6 +123,8 @@ class Genome::Model::Tools::DetectVariants::Somatic::Pindel {
 # FIXME make this the real deployed path
 my %PINDEL_VERSIONS = (
     '0.1' => '/gscmnt/sata921/info/medseq/Pindel_test/' . $PINDEL_COMMAND,
+    '0.2' => '/gscmnt/sata921/info/medseq/Pindel_test/maq/'.$PINDEL_COMMAND,     # This version and up works with MAQ aligned bams
+    '0.3' => '/gscmnt/sata921/info/medseq/Pindel_test/merged_with_kai/'.$PINDEL_COMMAND,    #this version is merged with changes from KAI
 );
 
 sub help_brief {
@@ -140,6 +142,18 @@ sub help_detail {
     return <<EOS 
     Provide a tumor and normal BAM file and get a list of somatic indels.  
 EOS
+}
+
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+
+    if ($self->chromosome) {
+        mkdir $self->output_directory . '/' . $self->chromosome;
+        $self->output_directory($self->output_directory . '/' . $self->chromosome);
+    }
+
+    return $self;
 }
 
 # The config file that is internally generated to store bams, average insert size, and tag
@@ -164,7 +178,6 @@ sub _generate_config_file {
     my $self = shift;
 
     my $config_path = $self->_config_file;
-    $DB::single=1;
     my $config_fh = Genome::Utility::FileSystem->open_file_for_writing($config_path);
     unless ($config_fh) {
         $self->error_message("Could not open $config_path for writing");
@@ -189,8 +202,6 @@ sub _generate_config_file {
 
 sub _detect_variants {
     my $self = shift;
-    $DB::single = 1;
-
     # test architecture to make sure we can run
     unless (`uname -a` =~ /x86_64/) {
         $self->error_message("Must run on a 64 bit machine");
@@ -202,6 +213,31 @@ sub _detect_variants {
     my $result;
     if ($self->chromosome) {
         $result  = $self->_run_pindel_for_chromosome($self->chromosome);
+
+        ## this is a hack, because the rest of the DetectVariants wants things to
+        ## be named like all_sequences, there's probably a cleaner way to do this
+        ## Eric
+        my $chromosome = $self->chromosome;
+        for my $target_file ($self->_temp_short_insertion_output, $self->_temp_long_insertion_output, $self->_temp_deletion_output, 
+                             $self->_temp_tandem_duplication_output, $self->_temp_inversion_output, $self->_temp_breakpoint_output) {
+            my $chunk_file = $target_file;
+            $chunk_file =~ s/all_sequences/$chromosome/;
+            unless (-e $chunk_file) {
+                $self->error_message("Output for chromosome $chromosome: file $chunk_file does not appear to exist"); 
+                die;
+            }
+
+            rename($chunk_file,$target_file) or die $!;
+        }
+
+        # Put the insertions and deletions where the rest of the pipe expects them 
+        my $files_to_cat = join(" ", ($self->_temp_short_insertion_output, $self->_temp_deletion_output) );
+
+        my $cmd = "cat $files_to_cat > " . $self->_indel_staging_output;
+        unless (system($cmd) == 0) {
+            $self->error_message("Problem running $cmd");
+            die;
+        }
     } else {
         $result = $self->_run_pindel($self->_indel_staging_output);
     }
@@ -211,7 +247,6 @@ sub _detect_variants {
 
 sub _run_pindel {
     my $self = shift;
-    
     for my $chromosome (1..22, "X", "Y") {
         unless ( $self->_run_pindel_for_chromosome($chromosome) ) {
             $self->error_message("Failed to run pindel for chromosome $chromosome");
@@ -240,7 +275,7 @@ sub _run_pindel {
     }
 
     # Put the insertions and deletions where the rest of the pipe expects them 
-    my $files_to_cat = join(" ", ($self->_temp_short_insertion_output, $self->_temp_long_insertion_output, $self->_temp_deletion_output) );
+    my $files_to_cat = join(" ", ($self->_temp_short_insertion_output, $self->_temp_deletion_output) );
     my $cmd = "cat $files_to_cat > " . $self->_indel_staging_output;
     unless (system($cmd) == 0) {
         $self->error_message("Problem running $cmd");
