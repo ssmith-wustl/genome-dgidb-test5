@@ -12,6 +12,7 @@ class Genome::FeatureList::Command::Update{
             is => 'Genome::FeatureList', 
             doc => 'The feature list to update', 
             shell_args_position => 1,
+            is_many => 1,
         },
     ],
     has_optional_input => [
@@ -53,17 +54,19 @@ sub help_detail{
 
 sub execute{
     my $self = shift;
-    my $feature_list = $self->feature_list;
+    my @feature_lists = $self->feature_list;
     my $properties = $self->__meta__->{__properties_in_class_definition_order};
 
-    for my $property (@$properties){
-        next if $property eq 'feature_list';
-        if ($self->$property){
-            my $new_value = $self->$property; 
-            $feature_list->$property($new_value);
+    for my $feature_list (@feature_lists) {
+        for my $property (@$properties){
+            next if $property eq 'feature_list';
+            if ($self->$property){
+                my $new_value = $self->$property;
+                $feature_list->$property($new_value);
+            }
         }
     }
-    
+
     return 1;
 }
 
