@@ -47,7 +47,7 @@ sub execute {
         my $build = $self->build;
         my $model = $build->model;
         my $pp = $model->processing_profile;
-        $annotator_verison = $pp->transcript_variant_annotator_version;
+        $annotator_version = $pp->transcript_variant_annotator_version;
     }
     
     my $annotator = Genome::Model::Tools::Annotate::TranscriptVariants->create(

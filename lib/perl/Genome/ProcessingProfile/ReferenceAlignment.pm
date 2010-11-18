@@ -180,11 +180,11 @@ sub _initialize_build {
     my($self,$build) = @_;
 
     # Check that the annotator version param is sane before doing the build
-    my $annotator_verison;
+    my $annotator_version;
     my $worked = eval {
         my $model = $build->model;
         my $pp = $model->processing_profile;
-        $annotator_verison = $pp->transcript_variant_annotator_version;
+        $annotator_version = $pp->transcript_variant_annotator_version;
         #unless (defined $annotator_version) {
         #    my $prop_meta = Genome::Model::Tools::Annotate::TranscriptVariants->__meta__->property_meta_for_name('use_version');
         #    $annotator_version = $prop_meta->default_value;
