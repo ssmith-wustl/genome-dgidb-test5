@@ -41,27 +41,13 @@ sub execute {
         return;
     }
 
-    my $annotator_verison;
-    eval {
+    # This has be vetted by the processing profile's _initialize_build method already
+    my $annotator_version;
+    {
         my $build = $self->build;
         my $model = $build->model;
         my $pp = $model->processing_profile;
         $annotator_verison = $pp->transcript_variant_annotator_version;
-        #unless (defined $annotator_version) {
-        #    my $prop_meta = Genome::Model::Tools::Annotate::TranscriptVariants->__meta__->property_meta_for_name('use_version');
-        #    $annotator_version = $prop_meta->default_value;
-        #}
-        
-        my %available_versions = map { $_ => 1 } Genome::Model::Tools::Annotate::TranscriptVariants->available_versions;
-        unless ($available_versions{$annotator_version}) {
-            die "Requested annotator version ($annotator_version) is not in the list of available versions: "
-                . join(', ',keys(%available_versions));
-        }
-        1;
-    };
-    if ($@) {
-        $self->error_message("Could not determine which version of the Transcript Variants annotator to use: $@");
-        return;
     }
     
     my $annotator = Genome::Model::Tools::Annotate::TranscriptVariants->create(
