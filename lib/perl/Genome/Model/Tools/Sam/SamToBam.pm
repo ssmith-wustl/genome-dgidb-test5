@@ -65,8 +65,8 @@ sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
 
-    $self->error_message('Sam file not existing') and return unless -e $self->sam_file;
-    $self->error_message('Ref list not existing') and return unless -s $self->ref_list;
+    $self->error_message('Sam file('.$self->sam_file.') does not exist') and return unless -e $self->sam_file;
+    $self->error_message('Ref list('.$self->ref_list.') does not have size') and return unless -s $self->ref_list;
 
     return $self;
 }

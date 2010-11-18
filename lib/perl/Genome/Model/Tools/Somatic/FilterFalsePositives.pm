@@ -81,10 +81,16 @@ class Genome::Model::Tools::Somatic::FilterFalsePositives {
        },
        'max_mm_qualsum_diff' => {
             type => 'String',
-            default => '100',
+            default => '50',
             is_optional => 1,
             is_input => 1,
             doc => 'Maximum difference of mismatch quality sum between variant and reference reads (paralog filter)',
+       },
+       'max_var_mm_qualsum' => {
+            type => 'String',
+            is_optional => 1,
+            is_input => 1,
+            doc => 'Maximum mismatch quality sum of reference-supporting reads [try 60]',
        },
        'max_mapqual_diff' => {
             type => 'String',
@@ -109,12 +115,17 @@ class Genome::Model::Tools::Somatic::FilterFalsePositives {
        },
        'min_homopolymer' => {
             type => 'String',
-            default => '4',
+            default => '5',
             is_optional => 1,
             is_input => 1,
             doc => 'Minimum length of a flanking homopolymer of same base to remove a variant',
        },
-       
+       'use_readcounts' => {
+           type => 'String',
+           is_input => 1,
+	   is_optional => 1,
+           doc => 'Existing BAM-Readcounts file to save execution time',
+       },       
        ## WGS FILTER OPTIONS ##
        
        
@@ -166,13 +177,14 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-    gmt somatic strand-filter --variant-file somatic.snvs --tumor-bam tumor.bam --output-file somatic.snvs.FilterFalsePositives 
+    gmt somatic strand-filter --variant-file somatic.snvs --tumor-bam tumor.bam --output-file somatic.snvs.pass-filter --filtered-file somatic.snvs.fail-filter
 EOS
 }
 
 sub help_detail {                           
     return <<EOS 
-This module uses detailed readcount information from bam-readcounts to filter likely false positives
+This module uses detailed readcount information from bam-readcounts to filter likely false positives.
+It is HIGHLY recommended that you use the default settings, which have been comprehensively vetted.
 For questions, e-mail Dan Koboldt (dkoboldt\@genome.wustl.edu) or Dave Larson (dlarson\@genome.wustl.edu)
 EOS
 }
@@ -252,6 +264,7 @@ sub capture_filter
     my $max_mapqual_diff = $self->max_mapqual_diff;
     my $max_readlen_diff = $self->max_readlen_diff;
     my $min_var_dist_3 = $self->min_var_dist_3;
+    my $max_var_mm_qualsum = $self->max_var_mm_qualsum if($self->max_var_mm_qualsum);
 
     ## Reset counters ##
     
@@ -267,6 +280,15 @@ sub capture_filter
         $self->error_message("Unable to open " . $self->output_file . " for writing. $!");
         die;
     }
+
+    ## Open the readcounts file ##
+    
+    my $rcfh = IO::File->new($self->output_file . ".readcounts", "w");
+    unless($rcfh) {
+        $self->error_message("Unable to open " . $self->output_file . ".readcounts for writing. $!");
+        die;
+    }
+
 
     my $filtered_file = $self->output_file . ".removed";
     $filtered_file = $self->filtered_file if($self->filtered_file);
@@ -307,10 +329,19 @@ sub capture_filter
     close($input);
 
     ## Run BAM readcounts in batch mode to get read counts for all positions in file ##
+    my $readcounts = "";
+    if($self->use_readcounts)
+    {
+	print "Using existing BAM Readcounts from $self->use_readcounts...\n";	
+	$readcounts = `cat $self->use_readcounts`;
+    }
+    else
+    {
+	print "Running BAM Readcounts...\n";
+	my $cmd = readcount_program() . " -b 15 " . $self->bam_file . " -l $temp_path";
+        $readcounts = `$cmd 2>/dev/null`;	
+    }
 
-    print "Running BAM Readcounts...\n";
-    my $cmd = readcount_program() . " -b 15 " . $self->bam_file . " -l $temp_path";
-    my $readcounts = `$cmd 2>/dev/null`;
     chomp($readcounts) if($readcounts);
 
     ## Load the results of the readcounts ##
@@ -320,6 +351,7 @@ sub capture_filter
     my @readcounts = split(/\n/, $readcounts);
     foreach my $rc_line (@readcounts)
     {
+	print $rcfh "$rc_line\n";
 	(my $chrom, my $pos) = split(/\t/, $rc_line);
 	$readcounts_by_position{"$chrom\t$pos"} = $rc_line;
     }
@@ -535,12 +567,18 @@ sub capture_filter
 					print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tHomopolymer\n" if ($self->verbose);
 					$stats{'num_fail_homopolymer'}++;
 				    }
+				    elsif($max_var_mm_qualsum && $var_mmqs > $max_var_mm_qualsum)
+				    {
+					print $ffh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarMMQS: $var_mmqs > $max_var_mm_qualsum\n";
+					print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarMMQS: $var_mmqs > $max_var_mm_qualsum\n" if ($self->verbose);
+					$stats{'num_fail_var_mmqs'}++;					
+				    }
 				    ## SUCCESS: Pass Filter ##				
 				    else
 				    {
 					$stats{'num_pass_filter'}++;
 					## Print output, and append strandedness information ##
-					print $ofh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\t$ref_mmqs\t$var_mmqs\t$mismatch_qualsum_diff\n";
+					print $ofh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\t$ref_mmqs\t$var_mmqs\t$mismatch_qualsum_diff\t$ref_dist_3\t$var_dist_3\t$ref_avg_rl\t$var_avg_rl\n";
 					print "$line\t\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tPASS\n" if($self->verbose);
 				    }
 				}
@@ -581,11 +619,11 @@ sub capture_filter
     print $stats{'num_fail_varfreq'} . " had var_freq < $min_var_freq\n";
 
     print $stats{'num_fail_mmqs'} . " had mismatch qualsum difference > $max_mm_qualsum_diff\n";
+    print $stats{'num_fail_var_mmqs'} . " had variant MMQS > $max_var_mm_qualsum\n" if($stats{'num_fail_var_mmqs'});
     print $stats{'num_fail_mapqual'} . " had mapping quality difference > $max_mapqual_diff\n";
     print $stats{'num_fail_readlen'} . " had read length difference > $max_readlen_diff\n";	
     print $stats{'num_fail_dist3'} . " had var_distance_to_3' < $min_var_dist_3\n";
     print $stats{'num_fail_homopolymer'} . " were in a homopolymer of " . $self->min_homopolymer . " or more bases\n";
-
 
     print $stats{'num_pass_filter'} . " passed the strand filter\n";
 
