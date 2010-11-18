@@ -14,11 +14,13 @@ class Genome::Model::Command::Define::ReferenceAlignment {
         reference_sequence_build => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             doc => 'ID or name of the reference sequence to align against',
+            is_input => 1,
             default_value => 'NCBI-human-build36',
         },
         annotation_reference_build => {
             is => 'Genome::Model::Build::ImportedAnnotation',
             doc => 'ID or name of the the build containing the reference transcript set used for variant annotation',
+            is_input => 1,
             is_optional => 1,
         },
         target_region_set_names => {
