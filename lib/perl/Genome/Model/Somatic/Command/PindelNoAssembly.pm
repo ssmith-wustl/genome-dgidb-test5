@@ -36,15 +36,15 @@ sub pre_execute {
     } elsif ($self->model_id) {
         my $model = Genome::Model::Somatic->get($self->model_id);
         unless ($model) {
+            $self->status_message("Could not locate somatic model for model-id ".$self->model_id." checking somatic-capture models.");
             $model = Genome::Model::SomaticCapture->get($self->model_id);
             unless($model){
-                $self->error_message("Could not get a somatic model for id " . $self->model_id);
+                $self->error_message("Could not get a somatic capture model for id " . $self->model_id);
                 die;
             }
         }
         my $tumor_ra_model = $model->tumor_model;
         my $normal_ra_model = $model->normal_model;
-        #$build = $model->last_succeeded_build;
         unless ($tumor_ra_model && $normal_ra_model) {
             $self->error_message("Could not get tumor or normal model from somatic model " . $self->model_id);
             die;
@@ -62,19 +62,7 @@ sub pre_execute {
             $self->error_message("Couldn't locate tumor or normal bam files.");
             die;
         }
-=cut
-        if(-l $normal_bam){
-            $normal_bam_link = readlink($normal_bam);
-            unless(symlink($normal_bam.".bai",$normal_bam_link.".bai")){
-                die "Failed to symlink bam index to ".$normal_bam_link.".bai";
-            }
-            $self->status_message("rmdup normal bam is linked, the bam we will use is at ".$normal_bam."\n");
-        }
-        if(-l $tumor_bam){
-            $tumor_bam = readlink($tumor_bam);
-            $self->status_message("rmdup tumor bam is linked, the bam we will use is at ".$tumor_bam."\n");
-        }
-=cut
+        #stuff the bam paths back into self so they are accessible to the workflow input connector.
         $self->tumor_bam($tumor_bam);
         $self->normal_bam($normal_bam);
     } elsif ($self->tumor_bam && $self->normal_bam) {
@@ -114,12 +102,12 @@ sub pre_execute {
     }
 
     # create directories
-    for my $directory ( $self->assemble_t1n_dir, $self->assemble_t1t_dir, $self->assemble_t2n_dir, $self->assemble_t2t_dir, $self->assemble_t3n_dir, $self->assemble_t3t_dir) {
-        unless ( Genome::Utility::FileSystem->create_directory($directory) ) {
-            $self->error_message("Failed to create directory $directory");
-            die;
-        }
-    }
+    #for my $directory ( $self->assemble_t1n_dir, $self->assemble_t1t_dir, $self->assemble_t2n_dir, $self->assemble_t2t_dir, $self->assemble_t3n_dir, $self->assemble_t3t_dir) {
+    #    unless ( Genome::Utility::FileSystem->create_directory($directory) ) {
+    #        $self->error_message("Failed to create directory $directory");
+    #        die;
+    #    }
+    #}
 
     return 1;
 }
@@ -130,18 +118,18 @@ sub default_filenames{
     my %default_filenames = (
         annotation_output => "tier1_annotated.csv",
         intersect_output => "somatic_intersected.bed",
-        assemble_t1n_dir => "assemble_tier1_normal/",
-        assemble_t1t_dir => "assemble_tier1_tumor/",
-        assemble_t2n_dir => "assemble_tier2_normal/",
-        assemble_t2t_dir => "assemble_tier2_tumor/",
-        assemble_t3n_dir => "assemble_tier3_normal/",
-        assemble_t3t_dir => "assemble_tier3_tumor/",
-        assemble_t1n_output => "assembled_normal.tier1",
-        assemble_t1t_output => "assembled_tumor.tier1",
-        assemble_t2n_output => "assembled_normal.tier2",
-        assemble_t2t_output => "assembled_tumor.tier2",
-        assemble_t3n_output => "assembled_normal.tier3",
-        assemble_t3t_output => "assembled_tumor.tier3",
+        #assemble_t1n_dir => "assemble_tier1_normal/",
+        #assemble_t1t_dir => "assemble_tier1_tumor/",
+        #assemble_t2n_dir => "assemble_tier2_normal/",
+        #assemble_t2t_dir => "assemble_tier2_tumor/",
+        #assemble_t3n_dir => "assemble_tier3_normal/",
+        #assemble_t3t_dir => "assemble_tier3_tumor/",
+        #assemble_t1n_output => "assembled_normal.tier1",
+        #assemble_t1t_output => "assembled_tumor.tier1",
+        #assemble_t2n_output => "assembled_normal.tier2",
+        #assemble_t2t_output => "assembled_tumor.tier2",
+        #assemble_t3n_output => "assembled_normal.tier3",
+        #assemble_t3t_output => "assembled_tumor.tier3",
     );
 
     return %default_filenames;
@@ -193,26 +181,10 @@ __DATA__
     <inputproperty isOptional="Y">tumor_bam</inputproperty>
     <inputproperty isOptional="Y">output_directory</inputproperty>
     <inputproperty isOptional="Y">version</inputproperty>
-
-    <inputproperty isOptional="Y">assemble_t1n_dir</inputproperty>
-    <inputproperty isOptional="Y">assemble_t1t_dir</inputproperty>
-    <inputproperty isOptional="Y">assemble_t2n_dir</inputproperty>
-    <inputproperty isOptional="Y">assemble_t2t_dir</inputproperty>
-    <inputproperty isOptional="Y">assemble_t3n_dir</inputproperty>
-    <inputproperty isOptional="Y">assemble_t3t_dir</inputproperty>
-    <inputproperty isOptional="Y">assemble_t1n_output</inputproperty>
-    <inputproperty isOptional="Y">assemble_t1t_output</inputproperty>
-    <inputproperty isOptional="Y">assemble_t2n_output</inputproperty>
-    <inputproperty isOptional="Y">assemble_t2t_output</inputproperty>
-    <inputproperty isOptional="Y">assemble_t3n_output</inputproperty>
-    <inputproperty isOptional="Y">assemble_t3t_output</inputproperty>
-
     <inputproperty isOptional="Y">annotate_no_headers</inputproperty>
     <inputproperty isOptional="Y">transcript_annotation_filter</inputproperty>
     <inputproperty isOptional="Y">annotation_output</inputproperty>
-
     <inputproperty isOptional="Y">intersect_output</inputproperty>
-
     <inputproperty isOptional="Y">chromosome_list</inputproperty>
     <inputproperty isOptional="Y">indel_bed_output</inputproperty>
 
