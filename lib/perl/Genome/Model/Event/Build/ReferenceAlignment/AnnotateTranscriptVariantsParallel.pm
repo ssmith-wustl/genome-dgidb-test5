@@ -48,16 +48,19 @@ sub execute {
         return;
     }
 
-    my $annotator = Genome::Model::Tools::Annotate::TranscriptVariantsParallel->create(
+    my %params = (
         variant_file => $self->pre_annotation_filtered_snp_file,
         output_file => $self->post_annotation_filtered_snp_file,
-        reference_transcripts => $self->model->annotation_reference_transcripts,
         annotation_filter => 'top',
         no_headers => 1,
         cache_annotation_data_directory => 1,
         split_by_chromosome => 1,
         log_directory => $self->annotation_log_directory,
     );
+    my $abuild = $self->model->annotation_reference_build;
+    $params{build_id} = $abuild->id if $abuild;
+
+    my $annotator = Genome::Model::Tools::Annotate::TranscriptVariantsParallel->create(%params);
 
     $self->status_message("Executing parallel annotation");
     my $rv = $annotator->execute;

@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Somatic::CalculatePindelReadSupport;
+package Genome::Model::Tools::Somatic::PindelStats;
 
 use strict;
 use warnings;
@@ -10,13 +10,18 @@ use IO::File;
 my %positions;
 my %insertions;
 my %deletions;
+my %size_type_hist;
+my %tumor_support_hist;
+my %ref_support_hist;
+my %event_support_ratio;
+my $dbsnp_hits;
 
-class Genome::Model::Tools::Somatic::CalculatePindelReadSupport {
+class Genome::Model::Tools::Somatic::PindelStats {
     is => 'Command',
     has => [
         indels_all_sequences_bed_file =>{
             type => 'String',
-            is_optional => 0,
+            is_optional => 1,
             is_input => 1,
             doc => 'Indel sites to assemble in annotator input format',
         },
@@ -38,6 +43,12 @@ class Genome::Model::Tools::Somatic::CalculatePindelReadSupport {
             default => 0,
             doc => 'Run on pindel 0.2 or 0.1',
         },
+        dbsnp_concordance => {
+            type => 'Boolean',
+            is_optional => 1,
+            default => 0,
+            doc => 'Set this to cause dbsnp concordance to be calculated for each event.',
+        },
         _dbsnp_insertions => {
             type => 'String',
             is_optional => 1,
@@ -55,67 +66,150 @@ class Genome::Model::Tools::Somatic::CalculatePindelReadSupport {
 
 sub execute {
     my $self = shift;
-    my $file = $self->indels_all_sequences_bed_file;
+    #my $file = $self->indels_all_sequences_bed_file;
     my $dir = $self->pindel_output_directory;
-    my $reference_fasta = $self->refseq;
+    #my $reference_fasta = $self->refseq;
 
-    my $fh = IO::File->new($file);
+    #my $fh = IO::File->new($file);
 
-    my %indels;
-    my %answers;
-
-    my $ifh = IO::File->new($self->_dbsnp_insertions);
-    while (my $line = $ifh->getline) {
-        chomp $line;
-        my ($chr, $start, $stop, $id, $allele, undef) = split /\t/, $line;
-        next unless ($allele =~ m/-/);
-        $allele = substr($allele, 2);
-        $insertions{$chr}{$start}{$stop}{'allele'}=$allele;
-        $insertions{$chr}{$start}{$stop}{'id'}=$id;
-    }
-    $ifh->close;
-    my $dfh = IO::File->new($self->_dbsnp_deletions);
-
-
-    while (my $line = $dfh->getline) {
-        chomp $line;
-        my ($chr, $start, $stop, $id, $allele, undef) = split /\t/, $line;
-        next unless ($allele =~ m/-/);
-        $allele = substr($allele, 2);
-        $deletions{$chr}{$start}{$stop}{'allele'}=$allele;
-        $deletions{$chr}{$start}{$stop}{'id'}=$id;
-    }
-    $dfh->close;
-
-
-
-
-    while (<$fh>){
-        my $line = $_;
-        my ($chr,$start,$stop,$refvar) = split /\t/, $line;
-        $positions{$chr}{$start}{$stop}=$refvar;
-        my ($ref,$var) = split "/", $refvar;
-        $indels{$chr}{$start} = $refvar;
+    #my %indels;
+    #my %answers;
+    if($self->dbsnp_concordance){
+        my $ifh = IO::File->new($self->_dbsnp_insertions);
+        while (my $line = $ifh->getline) {
+            chomp $line;
+            my ($chr, $start, $stop, $id, $allele, undef) = split /\t/, $line;
+            next unless ($allele =~ m/-/);
+            $allele = substr($allele, 2);
+            $insertions{$chr}{$start}{$stop}{'allele'}=$allele;
+            $insertions{$chr}{$start}{$stop}{'id'}=$id;
+        }
+        $ifh->close;
+        my $dfh = IO::File->new($self->_dbsnp_deletions);
+        while (my $line = $dfh->getline) {
+            chomp $line;
+            my ($chr, $start, $stop, $id, $allele, undef) = split /\t/, $line;
+            next unless ($allele =~ m/-/);
+            $allele = substr($allele, 2);
+            $deletions{$chr}{$start}{$stop}{'allele'}=$allele;
+            $deletions{$chr}{$start}{$stop}{'id'}=$id;
+        }
+        $dfh->close;
     }
 
-    print "CHR\tSTART\tSTOP\tREF\tVAR\tINDEL_SUPPORT\tREFERENCE_SUPPORT\t%+STRAND\tDBSNP_ID\n";
-    for my $chr (sort(keys(%indels))){
-        my %indels_by_chr = %{$indels{$chr}};
-        $self->process_file($chr, \%indels_by_chr, $dir);
-
+    #print "CHR\tSTART\tSTOP\tREF\tVAR\tINDEL_SUPPORT\tREFERENCE_SUPPORT\t%+STRAND\tDBSNP_ID\n";
+    my @chromosomes = qw| 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 X Y|;
+    for my $chr (@chromosomes){
+        $self->process_file($chr);
     }
+    print "Histogram of event size for Deletions\n";
+    $self->display_histogram($size_type_hist{"D"});
+    print "\n\n";
+    print "Histogram of event size for Insertions\n\n";
+    $self->display_histogram($size_type_hist{"I"});
+    my %histogram;
+    for my $type (sort(keys(%size_type_hist))){
+        my $total = 0;
+        for my $size (sort {$a <=> $b} (keys(%{$size_type_hist{$type}}))){
+            $histogram{$size}+= $size_type_hist{$type}{$size};
+        }
+    }
+    print "\n\n";
+    print "Histogram of event size for both INS/DEL\n";
+    my $total_indels = $self->display_histogram(\%histogram);
+    
+    print "\n\n";
+    print "Histogram of read support in tumor for Deletions\n";
+    $self->display_histogram($tumor_support_hist{'D'});
+    print "\n\n";
+    print "Histogram of read support in tumor for Insertions\n";
+    $self->display_histogram($tumor_support_hist{'I'});
+    my %hgram;
+    for my $type (sort(keys(%tumor_support_hist))){
+        my $total = 0;
+        for my $size (sort {$a <=> $b} (keys(%{$tumor_support_hist{$type}}))){
+            $hgram{$size}+= $tumor_support_hist{$type}{$size};
+        }
+    }
+    print "\n\n";
+    print "Histogram of read support in tumor for both INS/DEL\n";
+    $self->display_histogram(\%hgram);
 
+    print "\n\n";
+    print "Histogram of reads supporting reference for Deletions\n";
+    $self->display_histogram($ref_support_hist{'D'});
+    print "\n\n";
+    print "Histogram of reads supporting reference for Insertions\n";
+    $self->display_histogram($ref_support_hist{'I'});
+    my %hgrammer;
+    for my $type (sort(keys(%ref_support_hist))){
+        my $total = 0;
+        for my $size (sort {$a <=> $b} (keys(%{$ref_support_hist{$type}}))){
+            $hgrammer{$size}+= $ref_support_hist{$type}{$size};
+        }
+    }
+    print "\n\n";
+    print "Histogram of reads supporting reference for both INS/DEL\n";
+    $self->display_histogram(\%hgrammer);
+    if($self->dbsnp_concordance){
+        print "dbSNP concordance =  ( dbSNP hits:".$dbsnp_hits." / total indels:".$total_indels.") = ".($dbsnp_hits/$total_indels)."\n";
+    }
+    print "\n\n";
+    print "Histogram of ratios of variant support vs ref support reads\n";
+    $self->display_histogram(\%event_support_ratio);
+    
+}
+
+=cut
+    
+    print "Histogram of event sizes for all events\n";
+    print "size\toccurence\n";
+    print "=============================\n";
+    my $total;
+    for my $size (sort {$a <=> $b} (keys(%histogram))){
+        print $size."\t".$histogram{$size}."\n";
+        $total+=$histogram{$size};
+    }
+    print "=============================\n";
+    print "Total events: ".$total."\n\n";
+
+    $total = 0;
+    print "Histogram of # of reads supporting tumor event\n";
+    print "# of reads\toccurence\n";
+    print "=============================\n";
+    for my $number (sort {$a <=> $b} (keys(%tumor_support_hist))){
+        print $number."\t".$tumor_support_hist{$number}."\n";
+        $total+= $tumor_support_hist{$number};
+    }
+    print "=============================\n";
+    print "Total events: ".$total."\n\n";
+
+}
+=cut
+
+sub display_histogram {
+    my $self = shift;
+    my $histogram = shift;
+    my $total = 0;
+    for my $index(sort {$a <=> $b} (keys(%{$histogram}))){
+        print $index."\t".$histogram->{$index}."\n";
+        $total+=$histogram->{$index};
+        #$histogram{$size}+= $size_type_hist{$type}{$size};
+    }
+    print "============================\n";
+    print "Total events: ".$total."\n";
+    return $total;
 }
 
 sub process_file {
     my $self = shift;
     my $chr = shift;
-    my $indels_by_chrom = shift;
     my $dir = $self->pindel_output_directory;
     my $reference_fasta = $self->refseq;
     my $filename = $dir."/".$chr."/indels_all_sequences";
     unless(-s $filename){
-        die "couldnt find ".$filename."\n";
+        print $filename." had zero size, skipping.\n";
+        return;
     }
     my $pindel_output = IO::File->new($filename);
     my $pindel_config = $dir."/".$chr."/pindel.config";
@@ -150,7 +244,7 @@ sub process_file {
             my @call_fields = split /\s/, $call;
             my $type = $call_fields[1];
             my $size = $call_fields[2];   #12
-                my $pos_strand = 0;
+            my $pos_strand = 0;
             my $neg_strand = 0;
             my $mod = ($call =~ m/BP_range/) ? 2: -1;
             my $support;
@@ -175,6 +269,7 @@ sub process_file {
                 }
                 $read=$line;
             }
+
 #charris speed hack
             my ($chr,$start,$stop);
             if($self->use_old_pindel){
@@ -190,21 +285,18 @@ sub process_file {
                 $start = $start - 1;
             }            
 #charris speed hack
-            unless(exists $indels_by_chrom->{$start}){
-                next;
-            }
-            my @bed_line = $self->parse($call, $reference, $read);
-            next unless scalar(@bed_line)>1;
-            unless((@bed_line)&& scalar(@bed_line)==5){
-                next;
-            }
+
             my $type_and_size = $type."/".$size;
-            $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'neg'}=$neg_strand;
-            $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'pos'}=$pos_strand;
+            $events{$chr}{$start}{$type_and_size}{'neg'}=$neg_strand;
+            $events{$chr}{$start}{$type_and_size}{'pos'}=$pos_strand;
             if($normal_support){
-                $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'normal'}=$normal_support;
+                $events{$chr}{$start}{$type_and_size}{'normal'}=$normal_support;
             }else{
-                $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'bed'}=join("\t",@bed_line);
+                if($self->dbsnp_concordance){
+                    $events{$chr}{$start}{$type_and_size}{'var'}=$self->get_variant_allele($call, $reference, $read);
+                } else {
+                    $events{$chr}{$start}{$type_and_size}{'var'}=1;
+                }
             }
         }
     }
@@ -214,6 +306,12 @@ sub process_file {
                 unless(exists($events{$chrom}{$pos}{$type_and_size}{'normal'})){
                     my $pos_strand = $events{$chrom}{$pos}{$type_and_size}{'pos'};
                     my $neg_strand = $events{$chrom}{$pos}{$type_and_size}{'neg'};
+                    if($self->dbsnp_concordance){
+                        my $dbsnp = $self->dbsnp_lookup($events{$chrom}{$pos}{$type_and_size}{'var'});
+                        if($dbsnp ne '-'){
+                            $dbsnp_hits++;
+                        }
+                    }
                     my $pos_percent=0;
                     if($neg_strand==0){
                         $pos_percent = 1.0;
@@ -222,12 +320,16 @@ sub process_file {
                     }
                     my $answer = "neg = ".$neg_strand."\tpos = ".$pos_strand." which gives % pos str = ".$pos_percent."\n";
                     my $reads = $pos_strand + $neg_strand;
-                    my @stop = keys(%{$positions{$chrom}{$pos}});
+                    my ($type,$size) = split /\//, $type_and_size;
+                    #print "checking on ".$chrom."\t".$pos."\t".$type_and_size."\n";
+                    $tumor_support_hist{$type}{$reads}++;
+                    $size_type_hist{$type}{$size}++;
+                    
+                    #my @stop = keys(%{$positions{$chrom}{$pos}});
                     #unless(scalar(@stop)==1){
                     #    
                     #    die "too many stop positions at ".$chrom." ".$pos."\n";
                     #}
-                    my ($type,$size) = split /\//, $type_and_size;
                     my $stop = ($type eq 'I') ? $pos+2 : $pos + $size;
                     my @results = `samtools view $tumor_bam $chrom:$pos-$stop | grep -v "XT:A:M"`;
                     my $read_support=0;
@@ -236,7 +338,7 @@ sub process_file {
                         chomp $result;
                         my @details = split /\t/, $result;
                         if($result =~ /NM:i:(\d+)/){
-                            if($1>2){
+                            if($1 > 2){
                                 next;
                             }
                         }
@@ -247,9 +349,13 @@ sub process_file {
                             }
                         }
                     }
-                    my $dbsnp_id = $self->dbsnp_lookup($events{$chrom}{$pos}{$type_and_size}{'bed'});
-                    my $output = $events{$chrom}{$pos}{$type_and_size}{'bed'}."\t".$reads."\t".$read_support."\t".$pos_percent."\t$dbsnp_id\n";
-                    print $output;
+                    $ref_support_hist{$type}{$read_support}++;
+                    my $ratio = $reads/($reads+$read_support);
+                    $ratio = int($ratio * 100);
+                    $event_support_ratio{$ratio/100}++;
+                    #my $dbsnp_id = $self->dbsnp_lookup($events{$chrom}{$pos}{$type_and_size}{'bed'});
+                    #my $output = $events{$chrom}{$pos}{$type_and_size}{'bed'}."\t".$reads."\t".$read_support."\t".$pos_percent."\t$dbsnp_id\n";
+                    #print $output;
                 }
             }
         }
@@ -280,8 +386,44 @@ sub dbsnp_lookup {
 }
 
 
-
-
+sub get_variant_allele {
+    my $self = shift;
+    my ($call, $reference, $first_read) = @_;
+    #parse out call bullshit
+    chomp $call;
+    my @call_fields = split /\s+/, $call;
+    my $type = $call_fields[1];
+    my $size = $call_fields[2];
+    $DB::single=1 if $size == 1445;
+    my ($chr,$start,$stop);
+    if($self->use_old_pindel){
+        $chr = ($type eq "I") ? $call_fields[4] : $call_fields[6];
+        $start= ($type eq "I") ? $call_fields[6] : $call_fields[8];
+        $stop = ($type eq "I") ? $call_fields[7] : $call_fields[9];
+    } else {
+        $chr = $call_fields[6];
+        $start= $call_fields[8];
+        $stop = $call_fields[9];
+    }
+    my $support = $call_fields[-1];
+    my ($ref, $var);
+    if($type =~ m/D/) {
+        $var =0;
+    }
+    elsif($type =~ m/I/) {
+        $start = $start - 1;
+        $ref=0;
+        my ($letters_until_space) =   ($reference =~ m/^([ACGTN]+) /);
+        my $offset_into_first_read = length($letters_until_space);
+        $var = substr($first_read, $offset_into_first_read, $size);
+    }
+    if($size >= 100) {
+        #my $big_fh = $self->_big_output_fh;
+        #$big_fh->print("$chr\t$start\t$stop\t$size\t$support\n");
+        return undef;
+    }
+    return $var;
+}
 
 sub parse {
     my $self = shift;

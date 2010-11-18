@@ -73,6 +73,8 @@ sub get_mock_processing_profile {
             _validate_read_processor
             
             status_message
+
+            post_assemble_parts
             /),
     );
 
@@ -218,7 +220,6 @@ sub get_mock_build {
         existing_assembler_input_files
 
         center_name
-
     /);
     my %build_specific_methods_to_mock = (
         newbler => [qw//],
