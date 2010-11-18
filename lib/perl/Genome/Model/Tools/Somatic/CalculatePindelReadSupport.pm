@@ -235,8 +235,13 @@ sub process_file {
                         #print $result;
                         chomp $result;
                         my @details = split /\t/, $result;
+                        if($result =~ /NM:i:(\d+)/){
+                            if($1>2){
+                                next;
+                            }
+                        }
                         unless($details[5] =~ m/[IDS]/){
-                            unless(($details[3] > ($pos - 40))&&($details[3] < ($pos -10))){
+                            if(($details[3] > ($pos - 40))&&($details[3] < ($pos -10))){
                                 $read_support++;
                                 #print "cigar = ".$details[5]."\n";
                             }
