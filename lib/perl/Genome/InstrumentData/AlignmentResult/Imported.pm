@@ -33,7 +33,7 @@ sub extract_fastqs_and_run_aligner {
 sub create_BAM_in_staging_directory {
     my $self = shift;
     my $tmp_dir = $self->temp_staging_directory;
-    my $instrument_data_id = $self->instrument_data;
+    my $instrument_data_id = $self->instrument_data_id;
     my $instrument_data;
     
     if(defined($instrument_data_id)) {
