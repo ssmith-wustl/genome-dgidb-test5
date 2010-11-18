@@ -19,6 +19,9 @@ use File::Basename;
 use MIME::Lite;
 use Sys::Hostname;
 
+# keep this updated to be the latest blessed, non-experimental version
+sub default_annotator_version { 1 };
+
 class Genome::Model::Tools::Annotate::TranscriptVariants {
     is => 'Genome::Model::Tools',
     has => [ 
@@ -58,7 +61,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariants {
     has_optional => [
         use_version => {
             is => 'Text',
-            default_value => '1',
+            default_value => __PACKAGE__->default_annotator_version,
             doc => 'Annotator version to use',
             valid_values => [0,1],#__PACKAGE__->available_versions,
         },
