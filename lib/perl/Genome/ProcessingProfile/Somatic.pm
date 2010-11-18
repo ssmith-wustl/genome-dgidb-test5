@@ -70,6 +70,10 @@ class Genome::ProcessingProfile::Somatic{
         require_dbsnp_allele_match => {
             doc => "If set to true, the pipeline will require the allele to match during Lookup Variants"  
         },
+        transcript_variant_annotator_version => {
+            doc => 'Version of the "annotate transcript-variants" tool to run during the annotation step',
+            valid_values => [ 0,1],#Genome::Model::Tools::Annotate::TranscriptVariants->available_versions ],
+        },
     ],
 };
 
@@ -184,6 +188,7 @@ sub _map_workflow_inputs {
         skip_sv => (defined($self->skip_sv)? $self->skip_sv : 0),
         breakdancer_version => (defined($self->sv_detector_version)? $self->sv_detector_version : ''),
         sv_params => (defined($self->sv_detector_params)? $self->sv_detector_params : ':'),
+        transcript_variant_annotator_version => (defined($self->transcript_variant_annotator_version)? $self->transcript_variant_annotator_version : ':'),
         min_mapping_quality => (defined($self->min_mapping_quality)? $self->min_mapping_quality : 70),
         min_somatic_quality => (defined($self->min_somatic_quality)? $self->min_somatic_quality : 40),
         require_dbsnp_allele_match => (defined($self->require_dbsnp_allele_match)? $self->require_dbsnp_allele_match : 1),

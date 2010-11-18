@@ -19,7 +19,11 @@ class Genome::ProcessingProfile::SomaticCapture{
         },
         skip_sv => {
             doc => "If set to true, the pipeline will skip structural variation detection",
-        }
+        },
+        transcript_variant_annotator_version => {
+            doc => 'Version of the "annotate transcript-variants" tool to run during the annotation step',
+            valid_values => [ 0,1],#Genome::Model::Tools::Annotate::TranscriptVariants->available_versions ],
+        },
     ],
 };
 
@@ -162,6 +166,7 @@ sub _map_workflow_inputs {
     push @inputs,
         only_tier_1 => (defined($self->only_tier_1)? $self->only_tier_1 : 0),
         skip_sv => (defined($self->skip_sv)? $self->skip_sv : 0),
+        transcript_variant_annotator_version => (defined($self->transcript_variant_annotator_version)? $self->transcript_variant_annotator_version : ':'),
         min_mapping_quality => (defined($self->min_mapping_quality) ? $self->min_mapping_quality : 40),
         min_somatic_quality => (defined($self->min_somatic_quality) ? $self->min_somatic_quality : 40);
 
