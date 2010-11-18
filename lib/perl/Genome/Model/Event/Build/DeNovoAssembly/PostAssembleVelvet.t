@@ -10,7 +10,7 @@ use Genome::Model::DeNovoAssembly::Test;
 use Test::More;
 require File::Compare;
 
-use_ok('Genome::Model::Event::Build::DeNovoAssembly::PostAssemble::Velvet') or die;
+use_ok('Genome::Model::Event::Build::DeNovoAssembly::PostAssemble') or die;
 
 my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
     sequencing_platform => 'solexa',
@@ -44,7 +44,7 @@ my $example_contigs_fasta_file = $example_build->contigs_fasta_file;
 symlink($example_contigs_fasta_file, $build->contigs_fasta_file);
 ok(-s $build->contigs_fasta_file, 'Linked contigs.fa file') or die;
 
-my $velvet = Genome::Model::Event::Build::DeNovoAssembly::PostAssemble::Velvet->create( build_id => $build->id);
+my $velvet = Genome::Model::Event::Build::DeNovoAssembly::PostAssemble->create( build_id => $build->id);
 ok($velvet, 'Created post assemble velvet');
 
 ok($velvet->execute, 'Execute post assemble velvet');
@@ -78,7 +78,5 @@ foreach ('collated.fasta.gz', 'collated.fasta.qual.gz') {
 }
 
 done_testing();
-exit;
 
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Command/Build/DeNovoAssembly/PrepareInstrumentData.t $
-#$Id: PrepareInstrumentData.t 45247 2009-03-31 18:33:23Z ebelter $
+exit;

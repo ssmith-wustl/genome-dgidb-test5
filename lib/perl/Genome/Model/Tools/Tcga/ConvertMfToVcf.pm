@@ -40,11 +40,9 @@ sub execute {
 	my $mf_fh = Genome::Utility::FileSystem->open_file_for_reading($mf_file) or return;
 	my $datetime_string = ctime(stat($mf_file)->mtime); # read the file time
 	$self->_mf_fh($mf_fh);
-	my $line_first = 1;
 	my @VCF;
 	while(my $line = $mf_fh->getline) {
-		if($line_first == 1){
-			$line_first = 0;
+		if($line =~ /^#/){
 			next;
 		}
 		chomp $line;
@@ -59,8 +57,8 @@ sub execute {
                 $vcf->{QUAL} = ".";
                 $vcf->{QUAL} = $line_[$#line_-3] if($line_[$#line_-3] =~ /^\d+$/);
 		$vcf->{FILTER} = "PASS";
-		my $size = abs($line_[2] - $line_[1]);
-		$vcf->{INFO} = "SZ=" . $size . ";TP=" . $line_[5] . ";GN=" . $line_[6] . ";GT=" . $line_[$#line_-2] . ";TR=". $line_[$#line_-1]. ";CD=" . $line_[$#line_];
+		my $size = abs($line_[2] - $line_[1] + 1);
+		$vcf->{INFO} = "SZ=" . $size . ";TP=" . $line_[5] . ";GT=" . $line_[$#line_-2] . ";TR=". $line_[$#line_-1]. ";CD=" . $line_[$#line_];
 		$vcf->{REF} = "." if($vcf->{REF} eq "0");
 		$vcf->{ALT} = "." if($vcf->{ALT} eq "0");
 		push @VCF, $vcf;
@@ -77,8 +75,7 @@ sub execute {
 	$out_fh->print("##reference=NCBI36\n");
 	$out_fh->print("##phasing=partial\n");
 	$out_fh->print("##INFO=<ID=SZ,Number=1,Type=Integer,Description=\"Size\">\n");
-	$out_fh->print("##INFO=<ID=TP,Number=1,Type=String,Description=\"Indel Type\">\n");
-	$out_fh->print("##INFO=<ID=GN,Number=.,Type=String,Description=\"Gene Name\">\n");
+	$out_fh->print("##INFO=<ID=TP,Number=1,Type=String,Description=\"Type\">\n");
         $out_fh->print("##INFO=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n");
         $out_fh->print("##INFO=<ID=TR,Number=1,Type=Interger,Description=\"Tier from 1 to 4\">\n");
         $out_fh->print("##INFO=<ID=CD,Number=1,Type=String,Description=\"Confidence of High or Low\">\n");

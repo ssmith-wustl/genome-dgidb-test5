@@ -19,7 +19,7 @@ class Genome::ProcessingProfile::Benchmark {
             is_constant => 1,
             is_class_wide => 1,
             # This is a queue name, but 'inline' is reserved for run on local machine.
-            value => 'benchmark',
+            value => 'benchmarking',
             doc => 'lsf queue to submit jobs or \'inline\' to run them in the launcher'
         }
     ],
@@ -139,10 +139,9 @@ sub _execute_build {
 
     my $snapshotter = $self->_system_snapshot($datadir,$build->id);
 
-    # The collectl snapshotter adds an event loop here
+    # The collectl snapshotter begins an event loop here
     $snapshotter->start();
 
-    # Add another event here
     my $cmd_cv = Genome::Utility::AsyncFileSystem->shellcmd(
       '>' => "$datadir/output",
       '2>' => "$datadir/errors",

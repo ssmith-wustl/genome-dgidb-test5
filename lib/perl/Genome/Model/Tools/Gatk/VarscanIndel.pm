@@ -192,6 +192,10 @@ sub execute {                               # replace with real execution logic.
 			{
 				$somatic_status = "Somatic";
 			}
+			elsif($normal_freq < 5 && $tumor_freq > 15)
+			{
+				$somatic_status = "Somatic";
+			}
 			elsif($variant_p_value < $somatic_p_threshold)
 			{
 				$somatic_status = "Germline";
