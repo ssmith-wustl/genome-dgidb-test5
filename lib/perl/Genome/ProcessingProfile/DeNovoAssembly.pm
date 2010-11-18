@@ -335,8 +335,6 @@ sub validate_post_assemble_class_params {
             return;
         }
 
-	print Dumper \%params;
-
         my $value = $params{$key};
         #check value against list of valid values
         if ( $property->valid_values ) {
