@@ -51,6 +51,7 @@
 
           {
           "subject_name": "<xsl:value-of select="../@subject_name"/>",
+          "model_name": "<xsl:value-of select="../@model_name"/>",
           "id": <xsl:value-of select="../@id"/>,
           "total_bp": <xsl:value-of select="total_bp"/>,
           "total_unaligned_bp": <xsl:choose>
@@ -103,7 +104,8 @@
         {
         "id": "<xsl:value-of select="@id"/>",
         "subject_name": "<xsl:value-of select="@subject_name"/>",
-        "lane": "<xsl:value-of select="@lane"/>",
+        "model_name": "<xsl:value-of select="@model_name"/>",
+        "lane_count": "<xsl:value-of select="@lane_count"/>",
         "pc_target_space_covered": {
         <xsl:for-each select="minimum_depth">
           <xsl:sort data-type="number" order="descending" select="@value"/>
@@ -127,6 +129,7 @@
         {
         "id": "<xsl:value-of select="@id"/>",
         "subject_name": "<xsl:value-of select="@subject_name"/>",
+        "model_name": "<xsl:value-of select="@model_name"/>",
         "enrichment_factors": {
           "unique_on_target": <xsl:value-of select="unique_on_target_enrichment_factor"/>,
           "total_on_target": <xsl:value-of select="total_on_target_enrichment_factor"/>,
@@ -214,7 +217,7 @@
           <table class="lister" width="100%" cellspacing="0" cellpadding="0" border="0">
             <thead>
               <tr>
-                <th>subject</th>
+                <th>model</th>
                 <th class="right">unique on-target</th>
                 <th class="right">duplicate on-target</th>
                 <th class="right">unique off-target</th>
@@ -224,10 +227,11 @@
             </thead>
             <tbody>
               <xsl:for-each select="alignment-summary/model/wingspan[@size='0']">
-                <xsl:sort select="../@subject_name" order="ascending"/>
+                <xsl:sort select="../@model_name" order="ascending"/>
+                <xsl:sort select="../@lane_count" order="ascending"/>
                 <tr>
                   <td>
-                    <xsl:value-of select="../@subject_name"/> <!-- (lane <xsl:value-of select="../@lane"/>) -->
+                    <xsl:value-of select="../@model_name"/> (<xsl:value-of select="../@lane_count"/> lane<xsl:if test="../@lane_count &gt; 1">s</xsl:if>)
                   </td>
                   <td class="right">
                     <xsl:value-of select="format-number(unique_target_aligned_bp, '###,###')"/>
@@ -258,7 +262,7 @@
           <table class="lister" width="100%" cellspacing="0" cellpadding="0" border="0">
             <thead>
               <tr>
-                <th>subject</th>
+                <th>model</th>
                 <xsl:for-each select="coverage-summary/minimum_depth_header">
                   <xsl:sort select="@value" data-type="number" order="descending"/>
                   <th class="right">
@@ -269,10 +273,11 @@
             </thead>
             <tbody>
               <xsl:for-each select="coverage-summary/model">
-                <xsl:sort select="@subject_name" order="ascending"/>
+                <xsl:sort select="@model_name" order="ascending"/>
+                <xsl:sort select="../@lane_count" order="ascending"/>
                 <tr>
                   <td>
-                    <xsl:value-of select="@subject_name"/> <!-- (lane <xsl:value-of select="@lane"/>) -->
+                    <xsl:value-of select="@model_name"/> (<xsl:value-of select="@lane_count"/> lane<xsl:if test="@lane_count &gt; 1">s</xsl:if>)
                   </td>
                   <xsl:for-each select="minimum_depth">
                     <xsl:sort select="@value" data-type="number" order="descending"/>
@@ -294,7 +299,7 @@
           <table class="lister" width="100%" cellspacing="0" cellpadding="0" border="0">
             <thead>
               <tr>
-                <th>subject</th>
+                <th>model</th>
                 <xsl:for-each select="coverage-summary/minimum_depth_header">
                   <xsl:sort select="@value" data-type="number" order="descending"/>
                   <th class="right">
@@ -305,10 +310,12 @@
             </thead>
             <tbody>
               <xsl:for-each select="coverage-summary/model">
-                <xsl:sort select="@subject_name" order="ascending"/>
+                <xsl:sort select="@model_name" order="ascending"/>
+                <xsl:sort select="../@lane_count" order="ascending"/>
+
                 <tr>
                   <td>
-                    <xsl:value-of select="@subject_name"/> <!-- (lane <xsl:value-of select="@lane"/>) -->
+                    <xsl:value-of select="@model_name"/> (<xsl:value-of select="@lane_count"/> lane<xsl:if test="@lane_count &gt; 1">s</xsl:if>)
                   </td>
                   <xsl:for-each select="minimum_depth">
                     <xsl:sort select="@value" data-type="number" order="descending"/>
@@ -330,7 +337,7 @@
           <table class="lister" width="100%" cellspacing="0" cellpadding="0" border="0">
             <thead>
               <tr>
-                <th>subject</th>
+                <th>model</th>
                 <th class="right">unique on-target</th>
                 <th class="right">total on-target</th>
                 <th class="right">theoretical max</th>
@@ -338,10 +345,11 @@
             </thead>
             <tbody>
               <xsl:for-each select="enrichment-factor/model">
-                <xsl:sort select="@subject_name" order="ascending"/>
+                <xsl:sort select="@model_name" order="ascending"/>
+                <xsl:sort select="../@lane_count" order="ascending"/>
                 <tr>
                   <td>
-                    <xsl:value-of select="@subject_name"/> (lane <xsl:value-of select="@lane"/>)
+                    <xsl:value-of select="@model_name"/> (<xsl:value-of select="@lane_count"/> lane<xsl:if test="@lane_count &gt; 1">s</xsl:if>)
                   </td>
                   <td class="right">
                     <xsl:value-of select="unique_on_target_enrichment_factor"/>

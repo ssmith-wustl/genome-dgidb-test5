@@ -102,17 +102,11 @@ sub get_enrichment_factor_node {
             my $model_node = $ef_node->addChild( $xml_doc->createElement('model') );
             $model_node->addChild( $xml_doc->createAttribute('id', $model->id) );
             $model_node->addChild( $xml_doc->createAttribute('subject_name', $model->subject_name) );
+            $model_node->addChild( $xml_doc->createAttribute('model_name',$model->name));
 
             my @idata = $model->instrument_data;
-            my $lane;
-            if (@idata > 1) {
-                my @lanes = map { $_->lane ? $_->lane : "?" } @idata;
-                $lane = join(',', @lanes);
-            } else {
-                $lane = $idata[0]->lane ? $idata[0]->lane : "?";
-            }
 
-            $model_node->addChild( $xml_doc->createAttribute('lane', $lane));
+            $model_node->addChild( $xml_doc->createAttribute('lane_count', scalar(@idata)));
 
             # get BED file
             my $bedf;
@@ -204,17 +198,11 @@ sub get_alignment_summary_node {
             my $model_node = $as_node->addChild( $xml_doc->createElement('model') );
             $model_node->addChild( $xml_doc->createAttribute('id',$model->id));
             $model_node->addChild( $xml_doc->createAttribute('subject_name',$model->subject_name));
+            $model_node->addChild( $xml_doc->createAttribute('model_name',$model->name));
 
             my @idata = $model->instrument_data;
-            my $lane;
-            if (@idata > 1) {
-                my @lanes = map { $_->lane ? $_->lane : "?" } @idata;
-                $lane = join(',', @lanes);
-            } else {
-                $lane = $idata[0]->lane ? $idata[0]->lane : "?";
-            }
 
-            $model_node->addChild( $xml_doc->createAttribute('lane', $lane));
+            $model_node->addChild( $xml_doc->createAttribute('lane_count', scalar(@idata)) );
 
             my $alignment_summary_hash_ref = $build->alignment_summary_hash_ref;
             for my $ws_key (keys %{$alignment_summary_hash_ref}) {
@@ -264,17 +252,11 @@ sub get_coverage_summary_node {
             my $model_node = $cs_node->addChild( $xml_doc->createElement('model') );
             $model_node->addChild( $xml_doc->createAttribute('id',$model->id));
             $model_node->addChild( $xml_doc->createAttribute('subject_name',$model->subject_name));
+            $model_node->addChild( $xml_doc->createAttribute('model_name',$model->name));
 
             my @idata = $model->instrument_data;
-            my $lane;
-            if (@idata > 1) {
-                my @lanes = map { $_->lane ? $_->lane : "?" } @idata;
-                $lane = join(',', @lanes);
-            } else {
-                $lane = $idata[0]->lane ? $idata[0]->lane : "?";
-            }
 
-            $model_node->addChild( $xml_doc->createAttribute('lane', $lane));
+            $model_node->addChild( $xml_doc->createAttribute('lane_count', scalar(@idata)) );
 
             my $coverage_stats_summary_hash_ref = $build->coverage_stats_summary_hash_ref;
             for my $min_depth (keys %{$coverage_stats_summary_hash_ref->{0}}) {
