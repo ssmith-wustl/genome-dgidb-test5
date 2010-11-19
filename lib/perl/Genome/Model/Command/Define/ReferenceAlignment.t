@@ -11,6 +11,7 @@ BEGIN {
 use above 'Genome';
 use Test::More;
 use Carp::Always;
+use Data::Dumper;
 use_ok('Genome::Model::Command::Define::ReferenceAlignment');
 
 # set up required test data
@@ -70,10 +71,32 @@ my $pp = Genome::ProcessingProfile::ReferenceAlignment->create(
     );
 ok($pp, 'created ReferenceAlignment processing profile');
 
+sub translate_cmdline {
+    my %argv = @_;
+    return map {
+            my $name = $_;
+            $name =~ s/_/-/g;
+            "--$name=$argv{$_}"
+        } keys %argv;
+}
+
+sub test_cmdline {
+    my @args = translate_cmdline(@_);
+    my $model_name = "test-model-$$";
+    push(@args, "--model-name=$model_name");
+    my $rv = Genome::Model::Command::Define::ReferenceAlignment->_execute_with_shell_params_and_return_exit_code(@args);
+    is($rv, 0, 'executed with command line args');
+    my $model = Genome::Model->get(name => $model_name);
+    ok($model, 'got model created via command line');
+    ok($model->delete, 'deleted model created via command line');
+}
+
 sub create_model {
+    test_cmdline(@_);
     my $cmd = Genome::Model::Command::Define::ReferenceAlignment->create(@_);
     ok($cmd && !$cmd->__errors__, 'created command without errors');
-    ok($cmd->execute, 'create command succeeded');
+
+    ok($cmd->execute, 'executed on object directly');
     return Genome::Model->get($cmd->result_model_id);
 }
 
@@ -113,17 +136,6 @@ is($model->reference_sequence_build->id, $rbuild->id, 'reference sequence id cor
 ok(!$model->annotation_reference_build, 'annotation build is not defined');
 ok($model->delete, 'deleted model');
 
-# specify reference sequence by object
-$model = create_model(
-    subject_name => $sample->name,
-    processing_profile_id => $pp->id,
-    reference_sequence_build => $rbuild,
-);
-ok($model, 'created model with reference sequence object');
-is($model->reference_sequence_build->id, $rbuild->id, 'reference sequence id correct');
-ok(!$model->annotation_reference_build, 'annotation build is not defined');
-ok($model->delete, 'deleted model');
-
 # specify annotation build by id
 $model = create_model(
     subject_name => $sample->name,
@@ -147,19 +159,6 @@ ok($model, 'created model with annotation build idstring');
 ok($model->annotation_reference_build, 'annotation build is defined');
 is($model->annotation_reference_build->id, $abuild->id, 'annotation build id correct');
 ok($model->delete, 'deleted model');
-
-# specify annotation build by object
-$model = create_model(
-    subject_name => $sample->name,
-    processing_profile_id => $pp->id,
-    reference_sequence_build => $rbuild->name,
-    annotation_reference_build => $abuild,
-);
-ok($model, 'created model with annotation build object');
-ok($model->annotation_reference_build, 'annotation build is defined');
-is($model->annotation_reference_build->id, $abuild->id, 'annotation build id correct');
-ok($model->delete, 'deleted model');
-
 
 # now test the legacy processing profile parameter annotation_reference_transcripts. once migration to the
 # model input is complete, this can go away.

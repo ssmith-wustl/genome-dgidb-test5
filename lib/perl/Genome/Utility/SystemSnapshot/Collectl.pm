@@ -41,7 +41,10 @@ sub _sleep {
 sub start {
   my $self = shift;
   my $collectl_cmd = "/usr/bin/collectl";
-  die "comand not found: $collectl_cmd" if (! -x $collectl_cmd);
+  if (! -x $collectl_cmd) {
+    warn "comand not found: $collectl_cmd: NOT profiling";
+    return;
+  }
   # Note that collectl 3.4.3 butchers export filenames, removing letter "l"
   # It defaults to the letter L for format lexpr
   my $collectl_args = "--all --export lexpr -f /tmp -on";
@@ -54,7 +57,8 @@ sub start {
       cmd => "$collectl_cmd $collectl_args",
       '$$' => \( $self->{pid} ),
       close_all => 1,
-      on_prepare => sub { delete $ENV{PERL5LIB} }
+      on_prepare => sub { delete $ENV{PERL5LIB} },
+      allow_failed_exit_code => 1,
   );
   # Give collectl time to start up
   $self->_sleep(2);

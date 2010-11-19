@@ -15,9 +15,8 @@ my $tmp_dir = Genome::Utility::FileSystem->base_temp_directory;
 my $test_dir = $tmp_dir . "/test";
 mkpath($test_dir);
 
-my $cmd = Genome::Model::Tools::Picard::BamBuster->create(input=>$datadir . "/testrg.bam",
-                                                          output_directory=>$test_dir,
-                                                          use_version=>'1.31'); 
+my $cmd = Genome::Model::Tools::Sam::BamBuster->create(input=>$datadir . "/testrg.bam",
+                                                          output_directory=>$test_dir);
 
 ok($cmd, "created cmd");
 ok($cmd->execute);
