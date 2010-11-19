@@ -174,7 +174,7 @@ __DATA__
   </operation>
 
   <operation name="Pre-Assembly Tiering">
-    <operationtype commandClass="Genome::Model::Tools::Annotate::FastTier" typeClass="Workflow::OperationType::Command" />
+    <operationtype commandClass="Genome::Model::Tools::Annotate::FastTierPindel" typeClass="Workflow::OperationType::Command" />
   </operation>
 
   <operation name="Pindel Read Support Tier1">

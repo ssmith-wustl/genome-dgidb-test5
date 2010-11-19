@@ -14,6 +14,13 @@ class Genome::Model::Tools::Bed::Convert::Indel::PindelToBed {
             default=> Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa',
             doc => "The reference fasta file used to look up the reference sequence with samtools faidx. This is necessary because pindel will truncate long reference sequences.",
         },
+        use_old_pindel => {
+            type => 'Boolean',
+            is_optional => 1,
+            default => 1,
+            doc => 'Run on pindel 0.2 or 0.1',
+        },
+
     ],
     has_transient_optional => [
         _big_output_fh => {
@@ -115,8 +122,18 @@ if($call =~ m/^3/) { $DB::single=1; }
             my $size = $call_fields[2];   #12
             my $mod = ($call =~ m/BP_range/) ? 2: -1;
             #my $support = ($type eq "I") ? $call_fields[10+$mod] : $call_fields[12+$mod];
-            my $support = $call_fields[12+$mod];
-           
+            ###charris patch for use old pindel  
+            my $support;
+            if($self->use_old_pindel){
+                $support = ($type eq "I") ? $call_fields[10+$mod] : $call_fields[12+$mod];
+            } else {
+                $support = $call_fields[12+$mod];
+            }
+            unless(defined($support)){
+                print "No support. Call was:   ".$call."\n";
+                die;
+            }
+            ### end charris patch
             for (1..$support){
                 $line = $input_fh->getline;
                 if($line =~ m/normal/) {
@@ -215,12 +232,18 @@ sub parse {
     my @call_fields = split /\s+/, $call;
     my $type = $call_fields[1];
     my $size = $call_fields[2];
-    #my $chr = ($type eq "I") ? $call_fields[4] : $call_fields[6];
-    #my $start= ($type eq "I") ? $call_fields[6] : $call_fields[8];
-    #my $stop = ($type eq "I") ? $call_fields[7] : $call_fields[9];
-    my $chr = $call_fields[6];
-    my $start= $call_fields[8];
-    my $stop = $call_fields[9];
+    ####use old pindel patch######
+    my ($chr, $start, $stop);
+    if($self->use_old_pindel){
+        $chr = ($type eq "I") ? $call_fields[4] : $call_fields[6];
+        $start= ($type eq "I") ? $call_fields[6] : $call_fields[8];
+        $stop = ($type eq "I") ? $call_fields[7] : $call_fields[9];
+    } else {
+        $chr = $call_fields[6];
+        $start= $call_fields[8];
+        $stop = $call_fields[9];
+    }
+    ####end charris use old pindel patch
     my $support = $call_fields[-1];
     my ($ref, $var);
     if($type =~ m/D/) {
