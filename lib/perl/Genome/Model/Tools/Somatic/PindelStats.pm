@@ -66,6 +66,7 @@ class Genome::Model::Tools::Somatic::PindelStats {
 
 sub execute {
     my $self = shift;
+    $| = 1;
     #my $file = $self->indels_all_sequences_bed_file;
     my $dir = $self->pindel_output_directory;
     #my $reference_fasta = $self->refseq;
@@ -96,12 +97,12 @@ sub execute {
         }
         $dfh->close;
     }
-
+    my $chr = 1;
     #print "CHR\tSTART\tSTOP\tREF\tVAR\tINDEL_SUPPORT\tREFERENCE_SUPPORT\t%+STRAND\tDBSNP_ID\n";
-    my @chromosomes = qw| 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 X Y|;
-    for my $chr (@chromosomes){
+    #my @chromosomes = qw| 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 X Y|;
+    #for my $chr (@chromosomes){
         $self->process_file($chr);
-    }
+    #}
     print "Histogram of event size for Deletions\n";
     $self->display_histogram($size_type_hist{"D"});
     print "\n\n";
@@ -307,7 +308,12 @@ sub process_file {
                     my $pos_strand = $events{$chrom}{$pos}{$type_and_size}{'pos'};
                     my $neg_strand = $events{$chrom}{$pos}{$type_and_size}{'neg'};
                     if($self->dbsnp_concordance){
-                        my $dbsnp = $self->dbsnp_lookup($events{$chrom}{$pos}{$type_and_size}{'var'});
+                        my $var = $events{$chrom}{$pos}{$type_and_size}{'var'};
+                        
+                        my $dbsnp = '-';
+                        if(defined($var)){
+                            $dbsnp = $self->dbsnp_lookup($var);
+                        }
                         if($dbsnp ne '-'){
                             $dbsnp_hits++;
                         }
@@ -367,8 +373,8 @@ sub dbsnp_lookup {
     my $bed_line =shift;
     my $dbsnp_id="-";
     chomp $bed_line;
-    my ($chr, $start, $stop, $ref, $var) = split "\t", $bed_line;
-    if($ref eq "0") {
+    my ($chr, $start, $stop, $type,$var) = split "\t", $bed_line;
+    if($type eq "I") {
         if(exists($insertions{$chr}{$start}{$stop}{'allele'})) {
             if ($var eq $insertions{$chr}{$start}{$stop}{'allele'}) {
                 $dbsnp_id=$insertions{$chr}{$start}{$stop}{'id'};
@@ -377,9 +383,9 @@ sub dbsnp_lookup {
     }
     else {        
         if(exists($deletions{$chr}{$start}{$stop}{'allele'})) {
-            if ($ref eq $deletions{$chr}{$start}{$stop}{'allele'}) {
-                $dbsnp_id=$deletions{$chr}{$start}{$stop}{'id'};
-            }
+            #if ($ref eq $deletions{$chr}{$start}{$stop}{'allele'}) {
+            $dbsnp_id=$deletions{$chr}{$start}{$stop}{'id'};
+           # }
         } 
     }
     return $dbsnp_id;
@@ -422,7 +428,7 @@ sub get_variant_allele {
         #$big_fh->print("$chr\t$start\t$stop\t$size\t$support\n");
         return undef;
     }
-    return $var;
+    return join("\t",($chr,$start,$stop,$type,$var));
 }
 
 sub parse {
