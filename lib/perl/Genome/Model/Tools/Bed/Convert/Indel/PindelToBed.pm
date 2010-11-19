@@ -227,7 +227,7 @@ sub parse {
         $var =0;
         ###Make pindels coordinates(which seem to be last undeleted base and first undeleted base) 
         ###conform to our annotators requirements
-
+        $stop = $stop -1;
         ###also deletions which don't contain their full sequence should be dumped to separate file
         my $allele_string;
         my $start_for_faidx = $start+1; 
@@ -249,8 +249,9 @@ sub parse {
         my ($letters_until_space) =   ($reference =~ m/^([ACGTN]+) /);
         my $offset_into_first_read = length($letters_until_space);
         $var = substr($first_read, $offset_into_first_read, $size);
-    }
+  
     $stop = $stop - 1;
+    }
     if($size >= 100) {
         my $big_fh = $self->_big_output_fh;
         $big_fh->print("$chr\t$start\t$stop\t$size\t$support\n");
