@@ -43,7 +43,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command performs batch-imports of SNP array data for TCGA projects
-EXAMPLE:	gmt snp-array import-batch-tcga-data --level-2-folder broad.mit.edu_COAD.Genome_Wide_SNP_6.Level_2.28.1002.0 --mage-tab-file broad.mit.edu_COAD.Genome_Wide_SNP_6.mage-tab.1.1002.0/broad.mit.edu_COAD.Genome_Wide_SNP_6.sdrf.txt
+EXAMPLE:	gmt snp-array import-batch-tcga-data --level-2-folders broad.mit.edu_COAD.Genome_Wide_SNP_6.Level_2.28.1002.0 --mage-tab-files broad.mit.edu_COAD.Genome_Wide_SNP_6.mage-tab.1.1002.0/broad.mit.edu_COAD.Genome_Wide_SNP_6.sdrf.txt
 EOS
 }
 
