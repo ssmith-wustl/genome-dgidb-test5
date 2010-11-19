@@ -34,6 +34,7 @@ class Genome::Model::Tools::Somatic::CalculatePindelReadSupport {
         },
         use_old_pindel => {
             type => 'Boolean',
+            is_input => 1,
             is_optional => 1,
             default => 0,
             doc => 'Run on pindel 0.2 or 0.1',

@@ -93,6 +93,9 @@ sub pre_execute {
     unless(defined($self->version)){
         $self->version('0.2');
     }
+    unless($self->use_old_pindel){
+        $self->use_old_pindel(0);
+    }
 
     my %default_filenames = $self->default_filenames;
     for my $param (keys %default_filenames) {
@@ -148,10 +151,13 @@ __DATA__
 
   <link fromOperation="Pre-Assembly Tiering" fromProperty="tier1_output" toOperation="Pindel Read Support Tier1" toProperty="indels_all_sequences_bed_file" />
   <link fromOperation="input connector" fromProperty="output_directory" toOperation="Pindel Read Support Tier1" toProperty="pindel_output_directory" />
+  <link fromOperation="input connector" fromProperty="use_old_pindel" toOperation="Pindel Read Support Tier1" toProperty="use_old_pindel" />
   <link fromOperation="Pre-Assembly Tiering" fromProperty="tier2_output" toOperation="Pindel Read Support Tier2" toProperty="indels_all_sequences_bed_file" />
   <link fromOperation="input connector" fromProperty="output_directory" toOperation="Pindel Read Support Tier2" toProperty="pindel_output_directory" />
+  <link fromOperation="input connector" fromProperty="use_old_pindel" toOperation="Pindel Read Support Tier2" toProperty="use_old_pindel" />
   <link fromOperation="Pre-Assembly Tiering" fromProperty="tier3_output" toOperation="Pindel Read Support Tier3" toProperty="indels_all_sequences_bed_file" />
   <link fromOperation="input connector" fromProperty="output_directory" toOperation="Pindel Read Support Tier3" toProperty="pindel_output_directory" />
+  <link fromOperation="input connector" fromProperty="use_old_pindel" toOperation="Pindel Read Support Tier3" toProperty="use_old_pindel" />
 
   <link fromOperation="Pindel Read Support Tier1" fromProperty="_output_filename" toOperation="output connector" toProperty="tier_1_read_support" />
   <link fromOperation="Pindel Read Support Tier2" fromProperty="_output_filename" toOperation="output connector" toProperty="tier_2_read_support" />
@@ -198,6 +204,7 @@ __DATA__
     <inputproperty isOptional="Y">chromosome_list</inputproperty>
     <inputproperty isOptional="Y">indel_bed_output</inputproperty>
     <inputproperty isOptional="Y">tiered_bed_files</inputproperty>
+    <inputproperty isOptional="Y">use_old_pindel</inputproperty>
     <outputproperty>output</outputproperty>
     <outputproperty>tier_1_read_support</outputproperty>
     <outputproperty>tier_2_read_support</outputproperty>
