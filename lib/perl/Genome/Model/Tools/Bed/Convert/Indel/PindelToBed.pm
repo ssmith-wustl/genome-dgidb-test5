@@ -227,9 +227,8 @@ sub parse {
         $var =0;
         ###Make pindels coordinates(which seem to be last undeleted base and first undeleted base) 
         ###conform to our annotators requirements
-
+        $stop = $stop -1;
         ###also deletions which don't contain their full sequence should be dumped to separate file
-       $stop = $stop - 1;
         my $allele_string;
         my $start_for_faidx = $start+1; 
         my $sam_default = Genome::Model::Tools::Sam->path_for_samtools_version;
@@ -242,11 +241,16 @@ sub parse {
         $ref = $allele_string;
     }
     elsif($type =~ m/I/) {
-        $start = $start - 1;
+        #misunderstanding of bed format
+        #0 based numbers teh gaps so an insertion of any number of bases between base 10 and 11 in 1base
+        #is 10 10 in bed format
+        #$start = $start - 1;
         $ref=0;
         my ($letters_until_space) =   ($reference =~ m/^([ACGTN]+) /);
         my $offset_into_first_read = length($letters_until_space);
         $var = substr($first_read, $offset_into_first_read, $size);
+  
+    $stop = $stop - 1;
     }
     if($size >= 100) {
         my $big_fh = $self->_big_output_fh;

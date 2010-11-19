@@ -65,7 +65,7 @@ sub resolve_param_value_from_cmdline_text {
         for my $type (keys %bool_expr_type_count) {
             $duplicate_bool_expr_type++ if ($bool_expr_type_count{$type} > 1);
         }
-        @param_args = (join(',', @param_args), @param_args) unless($duplicate_bool_expr_type);
+        unshift @param_args, $param_arg unless($duplicate_bool_expr_type);
     }
 
     my $pmeta = $self->__meta__->property($param_name);

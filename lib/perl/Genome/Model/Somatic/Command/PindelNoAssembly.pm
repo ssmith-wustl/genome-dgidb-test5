@@ -36,15 +36,15 @@ sub pre_execute {
     } elsif ($self->model_id) {
         my $model = Genome::Model::Somatic->get($self->model_id);
         unless ($model) {
+            $self->status_message("Could not locate somatic model for model-id ".$self->model_id." checking somatic-capture models.");
             $model = Genome::Model::SomaticCapture->get($self->model_id);
             unless($model){
-                $self->error_message("Could not get a somatic model for id " . $self->model_id);
+                $self->error_message("Could not get a somatic capture model for id " . $self->model_id);
                 die;
             }
         }
         my $tumor_ra_model = $model->tumor_model;
         my $normal_ra_model = $model->normal_model;
-        #$build = $model->last_succeeded_build;
         unless ($tumor_ra_model && $normal_ra_model) {
             $self->error_message("Could not get tumor or normal model from somatic model " . $self->model_id);
             die;
@@ -62,19 +62,7 @@ sub pre_execute {
             $self->error_message("Couldn't locate tumor or normal bam files.");
             die;
         }
-=cut
-        if(-l $normal_bam){
-            $normal_bam_link = readlink($normal_bam);
-            unless(symlink($normal_bam.".bai",$normal_bam_link.".bai")){
-                die "Failed to symlink bam index to ".$normal_bam_link.".bai";
-            }
-            $self->status_message("rmdup normal bam is linked, the bam we will use is at ".$normal_bam."\n");
-        }
-        if(-l $tumor_bam){
-            $tumor_bam = readlink($tumor_bam);
-            $self->status_message("rmdup tumor bam is linked, the bam we will use is at ".$tumor_bam."\n");
-        }
-=cut
+        #stuff the bam paths back into self so they are accessible to the workflow input connector.
         $self->tumor_bam($tumor_bam);
         $self->normal_bam($normal_bam);
     } elsif ($self->tumor_bam && $self->normal_bam) {
@@ -103,7 +91,10 @@ sub pre_execute {
     unless ($self->indel_bed_output) { $self->indel_bed_output($self->output_directory . '/indels_all_sequences.bed'); }
 
     unless(defined($self->version)){
-        $self->version('0.1');
+        $self->version('0.2');
+    }
+    unless($self->use_old_pindel){
+        $self->use_old_pindel(0);
     }
 
     my %default_filenames = $self->default_filenames;
@@ -114,12 +105,12 @@ sub pre_execute {
     }
 
     # create directories
-    for my $directory ( $self->assemble_t1n_dir, $self->assemble_t1t_dir, $self->assemble_t2n_dir, $self->assemble_t2t_dir, $self->assemble_t3n_dir, $self->assemble_t3t_dir) {
-        unless ( Genome::Utility::FileSystem->create_directory($directory) ) {
-            $self->error_message("Failed to create directory $directory");
-            die;
-        }
-    }
+    #for my $directory ( $self->assemble_t1n_dir, $self->assemble_t1t_dir, $self->assemble_t2n_dir, $self->assemble_t2t_dir, $self->assemble_t3n_dir, $self->assemble_t3t_dir) {
+    #    unless ( Genome::Utility::FileSystem->create_directory($directory) ) {
+    #        $self->error_message("Failed to create directory $directory");
+    #        die;
+    #    }
+    #}
 
     return 1;
 }
@@ -130,18 +121,6 @@ sub default_filenames{
     my %default_filenames = (
         annotation_output => "tier1_annotated.csv",
         intersect_output => "somatic_intersected.bed",
-        assemble_t1n_dir => "assemble_tier1_normal/",
-        assemble_t1t_dir => "assemble_tier1_tumor/",
-        assemble_t2n_dir => "assemble_tier2_normal/",
-        assemble_t2t_dir => "assemble_tier2_tumor/",
-        assemble_t3n_dir => "assemble_tier3_normal/",
-        assemble_t3t_dir => "assemble_tier3_tumor/",
-        assemble_t1n_output => "assembled_normal.tier1",
-        assemble_t1t_output => "assembled_tumor.tier1",
-        assemble_t2n_output => "assembled_normal.tier2",
-        assemble_t2t_output => "assembled_tumor.tier2",
-        assemble_t3n_output => "assembled_normal.tier3",
-        assemble_t3t_output => "assembled_tumor.tier3",
     );
 
     return %default_filenames;
@@ -168,6 +147,21 @@ __DATA__
   <link fromOperation="input connector" fromProperty="annotation_output" toOperation="Annotation" toProperty="output_file" />
   <link fromOperation="input connector" fromProperty="annotate_no_headers" toOperation="Annotation" toProperty="no_headers" />
   <link fromOperation="input connector" fromProperty="transcript_annotation_filter" toOperation="Annotation" toProperty="annotation_filter" />
+  
+
+  <link fromOperation="Pre-Assembly Tiering" fromProperty="tier1_output" toOperation="Pindel Read Support Tier1" toProperty="indels_all_sequences_bed_file" />
+  <link fromOperation="input connector" fromProperty="output_directory" toOperation="Pindel Read Support Tier1" toProperty="pindel_output_directory" />
+  <link fromOperation="input connector" fromProperty="use_old_pindel" toOperation="Pindel Read Support Tier1" toProperty="use_old_pindel" />
+  <link fromOperation="Pre-Assembly Tiering" fromProperty="tier2_output" toOperation="Pindel Read Support Tier2" toProperty="indels_all_sequences_bed_file" />
+  <link fromOperation="input connector" fromProperty="output_directory" toOperation="Pindel Read Support Tier2" toProperty="pindel_output_directory" />
+  <link fromOperation="input connector" fromProperty="use_old_pindel" toOperation="Pindel Read Support Tier2" toProperty="use_old_pindel" />
+  <link fromOperation="Pre-Assembly Tiering" fromProperty="tier3_output" toOperation="Pindel Read Support Tier3" toProperty="indels_all_sequences_bed_file" />
+  <link fromOperation="input connector" fromProperty="output_directory" toOperation="Pindel Read Support Tier3" toProperty="pindel_output_directory" />
+  <link fromOperation="input connector" fromProperty="use_old_pindel" toOperation="Pindel Read Support Tier3" toProperty="use_old_pindel" />
+
+  <link fromOperation="Pindel Read Support Tier1" fromProperty="_output_filename" toOperation="output connector" toProperty="tier_1_read_support" />
+  <link fromOperation="Pindel Read Support Tier2" fromProperty="_output_filename" toOperation="output connector" toProperty="tier_2_read_support" />
+  <link fromOperation="Pindel Read Support Tier3" fromProperty="_output_filename" toOperation="output connector" toProperty="tier_3_read_support" />
 
   <link fromOperation="Annotation" fromProperty="output_file" toOperation="output connector" toProperty="output" />
   
@@ -183,6 +177,16 @@ __DATA__
     <operationtype commandClass="Genome::Model::Tools::Annotate::FastTier" typeClass="Workflow::OperationType::Command" />
   </operation>
 
+  <operation name="Pindel Read Support Tier1">
+    <operationtype commandClass="Genome::Model::Tools::Somatic::CalculatePindelReadSupport" typeClass="Workflow::OperationType::Command" />
+  </operation>
+  <operation name="Pindel Read Support Tier2">
+    <operationtype commandClass="Genome::Model::Tools::Somatic::CalculatePindelReadSupport" typeClass="Workflow::OperationType::Command" />
+  </operation>
+  <operation name="Pindel Read Support Tier3">
+    <operationtype commandClass="Genome::Model::Tools::Somatic::CalculatePindelReadSupport" typeClass="Workflow::OperationType::Command" />
+  </operation>
+
   <operation name="Annotation">
     <operationtype commandClass="Genome::Model::Tools::Annotate::TranscriptVariants" typeClass="Workflow::OperationType::Command" />
   </operation>
@@ -193,30 +197,19 @@ __DATA__
     <inputproperty isOptional="Y">tumor_bam</inputproperty>
     <inputproperty isOptional="Y">output_directory</inputproperty>
     <inputproperty isOptional="Y">version</inputproperty>
-
-    <inputproperty isOptional="Y">assemble_t1n_dir</inputproperty>
-    <inputproperty isOptional="Y">assemble_t1t_dir</inputproperty>
-    <inputproperty isOptional="Y">assemble_t2n_dir</inputproperty>
-    <inputproperty isOptional="Y">assemble_t2t_dir</inputproperty>
-    <inputproperty isOptional="Y">assemble_t3n_dir</inputproperty>
-    <inputproperty isOptional="Y">assemble_t3t_dir</inputproperty>
-    <inputproperty isOptional="Y">assemble_t1n_output</inputproperty>
-    <inputproperty isOptional="Y">assemble_t1t_output</inputproperty>
-    <inputproperty isOptional="Y">assemble_t2n_output</inputproperty>
-    <inputproperty isOptional="Y">assemble_t2t_output</inputproperty>
-    <inputproperty isOptional="Y">assemble_t3n_output</inputproperty>
-    <inputproperty isOptional="Y">assemble_t3t_output</inputproperty>
-
     <inputproperty isOptional="Y">annotate_no_headers</inputproperty>
     <inputproperty isOptional="Y">transcript_annotation_filter</inputproperty>
     <inputproperty isOptional="Y">annotation_output</inputproperty>
-
     <inputproperty isOptional="Y">intersect_output</inputproperty>
-
     <inputproperty isOptional="Y">chromosome_list</inputproperty>
     <inputproperty isOptional="Y">indel_bed_output</inputproperty>
-
+    <inputproperty isOptional="Y">tiered_bed_files</inputproperty>
+    <inputproperty isOptional="Y">use_old_pindel</inputproperty>
     <outputproperty>output</outputproperty>
+    <outputproperty>tier_1_read_support</outputproperty>
+    <outputproperty>tier_2_read_support</outputproperty>
+    <outputproperty>tier_3_read_support</outputproperty>
+    
   </operationtype>
 
 </workflow>

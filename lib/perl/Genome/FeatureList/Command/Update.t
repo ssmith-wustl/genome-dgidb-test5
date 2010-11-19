@@ -31,14 +31,14 @@ ok($feature_list, 'created a feature list');
 isa_ok($feature_list, 'Genome::FeatureList');
 
 my $update_format = Genome::FeatureList::Command::Update->execute(
-    feature_list => $feature_list,
+    feature_list => [$feature_list],
     format => 'unknown', 
 );
 
 ok($feature_list->format eq 'unknown', 'Successfully updated format');
 
 $update_format = Genome::FeatureList::Command::Update->execute(
-    feature_list => $feature_list,
+    feature_list => [$feature_list],
     format => 'true-BED', 
     source => 'test-data-makers',
     content_type => 'test-data',

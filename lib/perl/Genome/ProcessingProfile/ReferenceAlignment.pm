@@ -162,7 +162,7 @@ class Genome::ProcessingProfile::ReferenceAlignment {
             is_optional => 1,
         },
         annotation_reference_transcripts => {
-            doc => 'The reference transcript set used for variant annotation',
+            doc => 'DEPRECATED (use annotation_reference_build model input instead). The reference transcript set used for variant annotation',
             is_optional => 1,
         },
     ],
@@ -404,15 +404,12 @@ sub deduplication_job_classes {
 
 sub transcript_annotation_job_classes{
     my $self = shift;
-    if (defined($self->annotation_reference_transcripts)){
-        my @steps = (
-            'Genome::Model::Event::Build::ReferenceAlignment::AnnotateAdaptor',
-            'Genome::Model::Event::Build::ReferenceAlignment::AnnotateTranscriptVariants',
-            #'Genome::Model::Event::Build::ReferenceAlignment::AnnotateTranscriptVariantsParallel',
-        );
-        return @steps;
-    }
-    return;
+    my @steps = (
+        'Genome::Model::Event::Build::ReferenceAlignment::AnnotateAdaptor',
+        'Genome::Model::Event::Build::ReferenceAlignment::AnnotateTranscriptVariants',
+        #'Genome::Model::Event::Build::ReferenceAlignment::AnnotateTranscriptVariantsParallel',
+    );
+    return @steps;
 }
 
 sub generate_reports_job_classes {
@@ -497,6 +494,7 @@ sub generate_reports_objects {
 sub transcript_annotation_objects {
     my $self = shift;
     my $model = shift;
+    return unless $model->annotation_reference_build;
     return 'all_sequences';
 }
 

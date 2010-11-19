@@ -91,6 +91,7 @@ sub get_enrichment_factor_node {
     my $self = shift;
     my $xml_doc = $self->_xml_doc;
     my @models = $self->members;
+    $DB::single = 1;
     my @included_models;
     my $ef_node = $xml_doc->createElement('enrichment-factor');
     for my $model (@models) {
@@ -101,17 +102,11 @@ sub get_enrichment_factor_node {
             my $model_node = $ef_node->addChild( $xml_doc->createElement('model') );
             $model_node->addChild( $xml_doc->createAttribute('id', $model->id) );
             $model_node->addChild( $xml_doc->createAttribute('subject_name', $model->subject_name) );
+            $model_node->addChild( $xml_doc->createAttribute('model_name',$model->name));
 
             my @idata = $model->instrument_data;
-            my $lane;
-            if (@idata > 1) {
-                my @lanes = map { $_->lane ? $_->lane : "?" } @idata;
-                $lane = join(',', @lanes);
-            } else {
-                $lane = $idata[0]->lane ? $idata[0]->lane : "?";
-            }
 
-            $model_node->addChild( $xml_doc->createAttribute('lane', $lane));
+            $model_node->addChild( $xml_doc->createAttribute('lane_count', scalar(@idata)));
 
             # get BED file
             my $bedf;
@@ -164,9 +159,15 @@ sub get_enrichment_factor_node {
                 genome_total_bp                => $genome_total_bp
             );
 
-            my $theoretical_max_enrichment_factor  = $myEF->theoretical_max_enrichment_factor();
-            my $unique_on_target_enrichment_factor = $myEF->unique_on_target_enrichment_factor();
-            my $total_on_target_enrichment_factor  = $myEF->total_on_target_enrichment_factor();
+            my $theoretical_max_enrichment_factor = 0;
+            my $unique_on_target_enrichment_factor = 0;
+            my $total_on_target_enrichment_factor = 0;
+
+            if ($myEF) {
+                $theoretical_max_enrichment_factor  = $myEF->theoretical_max_enrichment_factor();
+                $unique_on_target_enrichment_factor = $myEF->unique_on_target_enrichment_factor();
+                $total_on_target_enrichment_factor  = $myEF->total_on_target_enrichment_factor();
+            }
 
             my $uotef_node = $model_node->addChild( $xml_doc->createElement('unique_on_target_enrichment_factor') );
             $uotef_node->addChild( $xml_doc->createTextNode( $unique_on_target_enrichment_factor ) );
@@ -197,17 +198,11 @@ sub get_alignment_summary_node {
             my $model_node = $as_node->addChild( $xml_doc->createElement('model') );
             $model_node->addChild( $xml_doc->createAttribute('id',$model->id));
             $model_node->addChild( $xml_doc->createAttribute('subject_name',$model->subject_name));
+            $model_node->addChild( $xml_doc->createAttribute('model_name',$model->name));
 
             my @idata = $model->instrument_data;
-            my $lane;
-            if (@idata > 1) {
-                my @lanes = map { $_->lane ? $_->lane : "?" } @idata;
-                $lane = join(',', @lanes);
-            } else {
-                $lane = $idata[0]->lane ? $idata[0]->lane : "?";
-            }
 
-            $model_node->addChild( $xml_doc->createAttribute('lane', $lane));
+            $model_node->addChild( $xml_doc->createAttribute('lane_count', scalar(@idata)) );
 
             my $alignment_summary_hash_ref = $build->alignment_summary_hash_ref;
             for my $ws_key (keys %{$alignment_summary_hash_ref}) {
@@ -257,17 +252,11 @@ sub get_coverage_summary_node {
             my $model_node = $cs_node->addChild( $xml_doc->createElement('model') );
             $model_node->addChild( $xml_doc->createAttribute('id',$model->id));
             $model_node->addChild( $xml_doc->createAttribute('subject_name',$model->subject_name));
+            $model_node->addChild( $xml_doc->createAttribute('model_name',$model->name));
 
             my @idata = $model->instrument_data;
-            my $lane;
-            if (@idata > 1) {
-                my @lanes = map { $_->lane ? $_->lane : "?" } @idata;
-                $lane = join(',', @lanes);
-            } else {
-                $lane = $idata[0]->lane ? $idata[0]->lane : "?";
-            }
 
-            $model_node->addChild( $xml_doc->createAttribute('lane', $lane));
+            $model_node->addChild( $xml_doc->createAttribute('lane_count', scalar(@idata)) );
 
             my $coverage_stats_summary_hash_ref = $build->coverage_stats_summary_hash_ref;
             for my $min_depth (keys %{$coverage_stats_summary_hash_ref->{0}}) {

@@ -29,6 +29,13 @@ class Genome::InstrumentData::Command::PostProcessAndImport{
             doc => 'dust before n removal if flag is specified',
             default => 0,
         },
+        post_processed_instrument_data => {
+            is => 'Genome::InstrumentData::Imported',
+            doc => 'this parameter holds the post processed, imported instrument data',
+            is_output => 1,
+            is_many => 1,
+            is_optional => 1,
+        },
     }
 };
 
@@ -115,6 +122,8 @@ sub execute {
             my $n_removed_fragment = Genome::InstrumentData::Imported->get(original_data_path => $expected_path_fragment);
             push @return, $n_removed_fragment if $n_removed_fragment;
         }
+
+        $self->post_processed_instrument_data(\@return);
         return @return;
     }
 
@@ -283,8 +292,13 @@ sub execute {
         system "/bin/rm -rf '$tmp_dir'";
         die $self->error_message("Error processing unaligned reads! $@");
     }
+    
     system "/bin/rm -rf '$tmp_dir'";
+    unless (@instrument_data){
+        die $self->error_message("no resulting post_processed instrument data!");
+    }
 
+    $self->post_processed_instrument_data(\@instrument_data);
     return @instrument_data;
 }
 

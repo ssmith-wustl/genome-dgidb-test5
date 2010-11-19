@@ -1655,12 +1655,12 @@ sub _prepare_reference_sequences {
         die $self->error_message;
     }
 
-    my $reference_fasta_index_path = $reference_fasta_path . ".fai";
+    #my $reference_fasta_index_path = $reference_fasta_path . ".fai";
     
-    unless(-e $reference_fasta_index_path) {
-        $self->error_message("Alignment reference index path $reference_fasta_index_path does not exist. Use 'samtools faidx' to create this");
-        die $self->error_message;
-    }
+    #unless(-e $reference_fasta_index_path) {
+    #    $self->error_message("Alignment reference index path $reference_fasta_index_path does not exist. Use 'samtools faidx' to create this");
+    #    die $self->error_message;
+    #}
 
     return 1;
 }

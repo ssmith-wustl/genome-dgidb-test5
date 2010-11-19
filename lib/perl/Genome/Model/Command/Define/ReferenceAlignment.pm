@@ -12,14 +12,16 @@ class Genome::Model::Command::Define::ReferenceAlignment {
     is => 'Genome::Model::Command::Define',
     has => [
         reference_sequence_build => {
-            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            is => 'Text',
             doc => 'ID or name of the reference sequence to align against',
             default_value => 'NCBI-human-build36',
+            is_input => 1,
         },
         annotation_reference_build => {
-            is => 'Genome::Model::Build::ImportedAnnotation',
+            is => 'Text',
             doc => 'ID or name of the the build containing the reference transcript set used for variant annotation',
             is_optional => 1,
+            is_input => 1,
         },
         target_region_set_names => {
             is => 'Text',
@@ -34,6 +36,26 @@ class Genome::Model::Command::Define::ReferenceAlignment {
         }
     ]
 };
+
+sub create {
+    my $class = shift;
+
+    # temporary hack to allow this command to take objects for reference sequence and annotation build
+    # params. remove this once we inherit from Genome::Command::Base.
+    my @args = @_;
+    if (scalar(@_) % 2 == 0) {
+        my %args = @args;
+        my @object_properties = ('reference_sequence_build', 'annotation_reference_build');
+        for (@object_properties) {
+            if (exists $args{$_} and ref $args{$_}) {
+                $args{$_} = $args{$_}->id;
+            }
+        }
+        @args = %args;
+    }
+
+    return $class->SUPER::create(@args);
+}
 
 sub type_specific_parameters_for_create {
     my $self = shift;

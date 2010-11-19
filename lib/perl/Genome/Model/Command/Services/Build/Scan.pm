@@ -166,6 +166,19 @@ $state,    $build_id,  shift @lsf_id,   $event_status, $action, $owner, $fix
         }
         @lsf_id = @$lsf_job_ids;
 
+        if ( $self->fix ) {
+            if ($action eq 'kill fail') {
+                my $ok = scalar @lsf_id;
+                foreach my $job_id (@lsf_id) {
+                    my $rv = system("bkill $job_id");
+                    if (!$rv) {
+                        $ok--;
+                    }
+                }
+                $fix = $ok == 0 ? 'y' : 'n';
+            }
+        }
+
         write_form();
     }
 
