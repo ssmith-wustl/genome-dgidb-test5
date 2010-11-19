@@ -187,10 +187,11 @@ sub _initialize_build {
         my $model = $build->model;
         my $pp = $model->processing_profile;
         $annotator_version = $pp->transcript_variant_annotator_version;
-        #unless (defined $annotator_version) {
-        #    my $prop_meta = Genome::Model::Tools::Annotate::TranscriptVariants->__meta__->property_meta_for_name('use_version');
-        #    $annotator_version = $prop_meta->default_value;
-        #}
+        # When all processing profiles have a param for this, remove this unless block so
+        # they'll fail if it's missing
+        unless (defined $annotator_version) {
+            $annotator_version = Genome::Model::Tools::Annotate::TranscriptVariants->default_annotator_version;
+        }
 
         my %available_versions = map { $_ => 1 } Genome::Model::Tools::Annotate::TranscriptVariants->available_versions;
         unless ($available_versions{$annotator_version}) {
