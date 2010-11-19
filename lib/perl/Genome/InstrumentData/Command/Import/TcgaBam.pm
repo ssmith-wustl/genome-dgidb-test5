@@ -262,7 +262,7 @@ sub _create_imported_instrument_data {
         }
         my ($first, $second, $third) = split "-", $tcga_name;
         my $individual_name = join "-", ($first,$second,$third);
-        unless( Genome::Sample::Command::Import->execute(sample_name => $tcga_name, individual_name => $individual_name, taxon_name => $self->species_name)){
+        unless( Genome::Sample::Command::Import->execute(sample_name => $tcga_name, individual_name => $individual_name, taxon_name => $self->species_name, library_name => $tcga_name.'-extlibs')){
             $self->error_message("Sample Importation failed.");
             die $self->error_message;
         }
