@@ -50,7 +50,20 @@ class Genome::Model::Tools::Somatic::CalculatePindelReadSupport {
             default => '/gscmnt/ams1102/info/info/dbsnp130_indels/deletions_adjusted_dbsnp130',
             doc => 'dbsnp deletion file',
         },
-    ]
+        _output_filename => {
+            calculate_from => [ 'indels_all_sequences_bed_file'], 
+            calculate => q| $indels_all_sequences_bed_file.".read_support"|,
+            is_output => 1,
+        },
+    ],
+    has_param => [
+         lsf_queue => {
+             default_value => 'tcga',
+         }, 
+         lsf_resource => {
+             default_value => "-M 6000000 -R 'select[type==LINUX64 && mem>16000] rusage[mem=16000]'",
+         },
+     ],
 };
 
 sub execute {
@@ -58,8 +71,24 @@ sub execute {
     my $file = $self->indels_all_sequences_bed_file;
     my $dir = $self->pindel_output_directory;
     my $reference_fasta = $self->refseq;
-
+    unless(-s $file){
+        $self->error_message("The indels_all_sequences_bed_file ".$file." has zero size or does not exist, skipping this module.");
+        return 1;
+    }
     my $fh = IO::File->new($file);
+    unless($fh){
+        $self->error_message("indels_all_sequences_bed_file was not able to be opened at ".$self->indels_all_sequences_bed_file);
+        return;
+    }
+    if(-s $self->_output_filename){
+        $self->error_message("Output for calculate pindel read support at ".$self->_output_filename." already exists. Skipping.");
+        return 1;
+    }
+    my $output = Genome::Utility::FileSystem->open_file_for_writing($self->_output_filename);
+    unless($output){
+        $self->error_message("Could not open output for writing at ".$self->_output_filename);
+        return;
+    }
 
     my %indels;
     my %answers;
@@ -86,9 +115,7 @@ sub execute {
         $deletions{$chr}{$start}{$stop}{'id'}=$id;
     }
     $dfh->close;
-
-
-
+    $DB::single=1;
 
     while (<$fh>){
         my $line = $_;
@@ -98,12 +125,13 @@ sub execute {
         $indels{$chr}{$start} = $refvar;
     }
 
-    print "CHR\tSTART\tSTOP\tREF\tVAR\tINDEL_SUPPORT\tREFERENCE_SUPPORT\t%+STRAND\tDBSNP_ID\n";
+    print $output "CHR\tSTART\tSTOP\tREF/VAR\tINDEL_SUPPORT\tREFERENCE_SUPPORT\t%+STRAND\tDBSNP_ID\n";
     for my $chr (sort(keys(%indels))){
         my %indels_by_chr = %{$indels{$chr}};
-        $self->process_file($chr, \%indels_by_chr, $dir);
+        $self->process_file($chr, \%indels_by_chr, $output);
 
     }
+    $output->close;
 
 }
 
@@ -111,6 +139,7 @@ sub process_file {
     my $self = shift;
     my $chr = shift;
     my $indels_by_chrom = shift;
+    my $output = shift;
     my $dir = $self->pindel_output_directory;
     my $reference_fasta = $self->refseq;
     my $filename = $dir."/".$chr."/indels_all_sequences";
@@ -195,7 +224,7 @@ sub process_file {
             }
             my @bed_line = $self->parse($call, $reference, $read);
             next unless scalar(@bed_line)>1;
-            unless((@bed_line)&& scalar(@bed_line)==5){
+            unless((@bed_line)&& scalar(@bed_line)==4){
                 next;
             }
             my $type_and_size = $type."/".$size;
@@ -248,8 +277,8 @@ sub process_file {
                         }
                     }
                     my $dbsnp_id = $self->dbsnp_lookup($events{$chrom}{$pos}{$type_and_size}{'bed'});
-                    my $output = $events{$chrom}{$pos}{$type_and_size}{'bed'}."\t".$reads."\t".$read_support."\t".$pos_percent."\t$dbsnp_id\n";
-                    print $output;
+                    my $bed_output = $events{$chrom}{$pos}{$type_and_size}{'bed'}."\t".$reads."\t".$read_support."\t".$pos_percent."\t$dbsnp_id\n";
+                    print $output $bed_output;
                 }
             }
         }
@@ -261,7 +290,8 @@ sub dbsnp_lookup {
     my $bed_line =shift;
     my $dbsnp_id="-";
     chomp $bed_line;
-    my ($chr, $start, $stop, $ref, $var) = split "\t", $bed_line;
+    my ($chr, $start, $stop, $refvar) = split "\t", $bed_line;
+    my ($ref,$var) = split "/",$refvar;
     if($ref eq "0") {
         if(exists($insertions{$chr}{$start}{$stop}{'allele'})) {
             if ($var eq $insertions{$chr}{$start}{$stop}{'allele'}) {
@@ -336,6 +366,7 @@ sub parse {
         #$big_fh->print("$chr\t$start\t$stop\t$size\t$support\n");
         return undef;
     }
-    return ($chr,$start,$stop,$ref,$var);
+    my $refvar = "$ref/$var";
+    return ($chr,$start,$stop,$refvar);
 }
 
