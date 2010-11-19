@@ -94,3 +94,5 @@ sub _derive_insert_size_bounds {
 
 sub fillmd_for_sam { return 1; } 
 
+sub _check_read_count {return 1;}
+

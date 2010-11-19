@@ -100,15 +100,15 @@ class Genome::WorkOrder {
             via => 'items',
             to => 'models',
         },
+        items => {
+            is => 'Genome::WorkOrderItem',
+            is_many => 1,
+            reverse_as => 'work_order',
+        },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
-#        build_statuses                   => { via => 'builds', to => 'master_event_status', is_many => 1 },
 
-sub items {
-    return Genome::WorkOrderItem->get(setup_wo_id => $_[0]->id);
-}
+1;
 
-#$HeadURL$
-#$Id$

@@ -39,7 +39,7 @@ our %ALTERNATE_FROM_CLASS = (
 );
 # This will prevent infinite loops during recursion.
 our %SEEN_FROM_CLASS = ();
-
+our @error_tags;
 our $MESSAGE;
 
 sub resolve_param_value_from_cmdline_text {
@@ -65,34 +65,41 @@ sub resolve_param_value_from_cmdline_text {
         for my $type (keys %bool_expr_type_count) {
             $duplicate_bool_expr_type++ if ($bool_expr_type_count{$type} > 1);
         }
-        @param_args = (join(',', @param_args), @param_args) unless($duplicate_bool_expr_type);
+        unshift @param_args, $param_arg unless($duplicate_bool_expr_type);
     }
 
+    my $pmeta = $self->__meta__->property($param_name);
+
+
+    print STDERR "Resolving parameter '$param_name' from command argument '$param_arg'...";
     my @results;
-    my $force_verify = 0;
+    my $require_user_verify = $pmeta->{'require_user_verify'};
     for (my $i = 0; $i < @param_args; $i++) {
         my $arg = $param_args[$i];
         my @arg_results;
         (my $arg_display = $arg) =~ s/,/ AND /g; 
 
         for my $param_class (@param_class) {
-            print STDERR "Looking for $param_class using '$arg_display'... ";
-            #$self->debug_message("Trying to find $param_class...");
             %SEEN_FROM_CLASS = ();
-            # call resolve_param_value_from_text without a via_method to bootstrap recursion
+            # call resolve_param_value_from_text without a via_method to "bootstrap" recursion
             @arg_results = eval{$self->resolve_param_value_from_text($arg, $param_class)};
-            print STDERR "found " . @arg_results . " result(s).\n";
         } 
         last if ($@ && !@arg_results);
 
-        $force_verify = 1 if (@arg_results > 1);
+        $require_user_verify = 1 if (@arg_results > 1 && !defined($require_user_verify));
         if (@arg_results) {
             push @results, @arg_results;
             last if ($arg =~ /,/); # the first arg is all param_args as BoolExpr, if it returned values finish; basically enforicing AND (vs. OR)
         }
-        elsif ( $i != 0 || @param_args == 1 ) {
-            print STDERR "WARNING: No match found for $arg!\n";
+        elsif (@param_args > 1 ) {
+            #print STDERR "WARNING: No match found for $arg!\n";
         }
+    }
+    if (@results) {
+        print STDERR " found " . @results . ".\n";
+    }
+    else {
+        print STDERR " none found.\n";
     }
 
     return unless (@results);
@@ -103,15 +110,17 @@ sub resolve_param_value_from_cmdline_text {
         return unless (@results);
     }
     @results = $self->_unique_elements(@results);
-    my $pmeta = $self->__meta__->property($param_name);
-    unless (defined($pmeta->{'require_user_verify'}) && $pmeta->{'require_user_verify'} == 0) {
-        if ($pmeta->{'require_user_verify'} || $force_verify) {
-            @results = $self->_get_user_verification_for_param_value(@results);
+    if ($require_user_verify) {
+        if (!$pmeta->{'is_many'} && @results > 1) {
+            $MESSAGE .= "\n" if ($MESSAGE);
+            $MESSAGE .= "'$param_name' expects only one result.";
         }
+        @results = $self->_get_user_verification_for_param_value($param_name, @results);
     }
     while (!$pmeta->{'is_many'} && @results > 1) {
-        $self->error_message("$param_name expects one result, not many!");
-        @results = $self->_get_user_verification_for_param_value(@results);
+        $MESSAGE .= "\n" if ($MESSAGE);
+        $MESSAGE .= "'$param_name' expects only one result, not many!";
+        @results = $self->_get_user_verification_for_param_value($param_name, @results);
     }
 
     if (wantarray) {
@@ -278,11 +287,11 @@ sub _resolve_param_value_from_text_by_name_or_id {
 }
 
 sub _get_user_verification_for_param_value {
-    my ($self, @list) = @_;
+    my ($self, $param_name, @list) = @_;
 
     my $n_list = scalar(@list);
     if ($n_list > 200 && !$ENV{GENOME_NO_REQUIRE_USER_VERIFY}) {
-        my $response = $self->_ask_user_question("Would you [v]iew all $n_list item(s), (p)roceed, or e(x)it?", 0, '[v]|p|x', 'v');
+        my $response = $self->_ask_user_question("Would you [v]iew all $n_list item(s) for '$param_name', (p)roceed, or e(x)it?", 0, '[v]|p|x', 'v');
         if(!$response || $response eq 'x') {
             $self->status_message("Exiting...");
             exit;
@@ -292,7 +301,7 @@ sub _get_user_verification_for_param_value {
 
     my @new_list;
     while (!@new_list) {
-        @new_list = $self->_get_user_verification_for_param_value_drilldown(@list);
+        @new_list = $self->_get_user_verification_for_param_value_drilldown($param_name, @list);
     }
 
     my @ids = map { $_->id } @new_list;
@@ -300,7 +309,7 @@ sub _get_user_verification_for_param_value {
     return @new_list;
 }
 sub _get_user_verification_for_param_value_drilldown {
-    my ($self, @results) = @_;
+    my ($self, $param_name, @results) = @_;
     my $n_results = scalar(@results);
     my $pad = length($n_results);
 
@@ -316,10 +325,10 @@ sub _get_user_verification_for_param_value_drilldown {
     @results = sort {$a->class cmp $b->class} @results;
     my @classes = $self->_unique_elements(map {$_->class} @results);
 
-    $self->status_message("Found $n_results match(es):");
     my $response;
     my @caller = caller(1);
     while (!$response) {
+        $self->status_message("\n");
         # TODO: Replace this with lister?
         for (my $i = 1; $i <= $n_results; $i++) {
             my $param = $results[$i - 1];
@@ -335,7 +344,7 @@ sub _get_user_verification_for_param_value_drilldown {
             $self->status_message($msg);
         }
         if ($MESSAGE) {
-            $MESSAGE = '*'x80 . "\n" . $MESSAGE . "\n" . '*'x80 . "\n";
+            $MESSAGE = "\n" . '*'x80 . "\n" . $MESSAGE . "\n" . '*'x80 . "\n";
             $self->status_message($MESSAGE);
             $MESSAGE = '';
         }
@@ -345,7 +354,7 @@ sub _get_user_verification_for_param_value_drilldown {
             $pretty_values .= ', (b)ack';
             $valid_values .= '|b';
         }
-        $response = $self->_ask_user_question("Confirmation or trimming required...", 0, $valid_values, 'h', $pretty_values.', or specify items to use');
+        $response = $self->_ask_user_question("Please confirm the above items for '$param_name' or modify your selection.", 0, $valid_values, 'h', $pretty_values.', or specify item numbers to use');
         if (lc($response) eq 'h' || !$self->_validate_user_response_for_param_value_verification($response)) {
             $MESSAGE .= "\n" if ($MESSAGE);
             $MESSAGE .=
@@ -370,7 +379,7 @@ sub _get_user_verification_for_param_value_drilldown {
         return @results;
     }
     elsif ($response =~ /^[-+]?[\d\-\., ]+$/) {
-        @results = $self->_trim_list_from_response($response, @results);
+        @results = $self->_trim_list_from_response($response, $param_name, @results);
         return @results;
     }
     else {
@@ -401,7 +410,7 @@ sub _validate_user_response_for_param_value_verification {
 }
 
 sub _trim_list_from_response {
-    my ($self, $response_text, @list) = @_;
+    my ($self, $response_text, $param_name, @list) = @_;
 
     my $method;
     if ($response_text =~ /^[+-]/) {
@@ -429,9 +438,9 @@ sub _trim_list_from_response {
         }
     }
     #$self->debug_message("Indices: " . join(',', sort(keys %indices)));
-    my @new_list = $self->_get_user_verification_for_param_value_drilldown(@list[sort keys %indices]);
+    my @new_list = $self->_get_user_verification_for_param_value_drilldown($param_name, @list[sort keys %indices]);
     unless (@new_list) {
-        @new_list = $self->_get_user_verification_for_param_value_drilldown(@list);
+        @new_list = $self->_get_user_verification_for_param_value_drilldown($param_name, @list);
     }
     return @new_list;
 }
@@ -545,6 +554,12 @@ sub _check_for_missing_parameters {
     }
 }
 
+sub __errors__ {
+    my ($self,@property_names) = @_;
+
+    return (@error_tags, $self->SUPER::__errors__);
+}
+
 sub resolve_class_and_params_for_argv {
     my $self = shift;
     my ($class, $params) = $self->SUPER::resolve_class_and_params_for_argv(@_);
@@ -559,6 +574,10 @@ sub resolve_class_and_params_for_argv {
 
     if ($params) {
         my $cmeta = $self->__meta__;
+        my @params_to_resolve;
+        my @params_will_require_verification;
+        my @params_may_require_verification;
+        #my @params_will_not_require_verification;
         for my $param_name (keys %$params) {
             my $pmeta = $cmeta->property($param_name); 
             unless ($pmeta) {
@@ -592,30 +611,76 @@ sub resolve_class_and_params_for_argv {
             next unless (@param_args);
             my $param_arg_str = join(',', @param_args);
 
+            push @params_to_resolve, [$param_name, $param_type, $param_arg_str];
+            my $require_user_verify = $pmeta->{'require_user_verify'};
+            if ( defined($require_user_verify) ) {
+                push @params_will_require_verification, "'$param_name'" if ($require_user_verify);
+                #push @params_will_not_require_verification, "'$param_name'" unless ($require_user_verify);
+            }
+            else {
+                push @params_may_require_verification, "'$param_name'";
+            }
+        }
+
+        my @adverbs = ('will', 'may');
+        #my @adverbs = ('will', 'will not', 'may');
+        my @params_adverb_require_verification = (
+            \@params_will_require_verification,
+            #\@params_will_not_require_verification,
+            \@params_may_require_verification,
+        );
+        for (my $i = 0; $i < @adverbs; $i++) {
+            my $adverb = $adverbs[$i];
+            my @param_adverb_require_verification = @{$params_adverb_require_verification[$i]};
+            next unless (@param_adverb_require_verification);
+
+            if (@param_adverb_require_verification > 1) {
+                $param_adverb_require_verification[-1] = 'and ' . $param_adverb_require_verification[-1];
+            }
+            my $param_str = join(', ', @param_adverb_require_verification);
+            $self->status_message($param_str . " $adverb require verification...");
+        }
+
+        for my $param_to_resolve (@params_to_resolve) {
+            my ($param_name, $param_type, $param_arg_str) = @$param_to_resolve;
+            my $pmeta = $cmeta->property($param_name); 
+
             my @params;
             eval {
                 @params = $self->resolve_param_value_from_cmdline_text($param_name, $param_type, $param_arg_str);
             };
             
-
             if ($@) {
-                $self->error_message("problems resolving $param_name from $param_arg_str: $@");
-                return ($class, undef);
+                push @error_tags, UR::Object::Tag->create(
+                    type => 'invalid',
+                    properties => [$param_name],
+                    desc => "Errors while resolving from $param_arg_str: $@",
+                );
             }
-            unless (@params and $params[0]) {
-                $self->error_message("Failed to find $param_name for $param_arg_str!");
-                return ($class, undef);
-            }
-
-            if ($pmeta->{'is_many'}) {
-                $params->{$param_name} = \@params;
+            if (@params and $params[0]) {
+                if ($pmeta->{'is_many'}) {
+                    $params->{$param_name} = \@params;
+                }
+                else {
+                    $params->{$param_name} = $params[0];
+                }
             }
             else {
-                $params->{$param_name} = $params[0];
+                push @error_tags, UR::Object::Tag->create(
+                    type => 'invalid',
+                    properties => [$param_name],
+                    desc => "Problem resolving from $param_arg_str.",
+                );
+                $self->error_message();
             }
         }
     }
-    return ($class, $params);
+    if (@error_tags) {
+        return ($class, undef);
+    }
+    else {
+        return ($class, $params);
+    }
 }
 
 sub _ask_user_question {
@@ -630,8 +695,8 @@ sub _ask_user_question {
     $timeout = 60 unless(defined($timeout));
     eval {
         local $SIG{ALRM} = sub { print STDERR "Exiting, failed to reply to question '$question' within '$timeout' seconds.\n"; exit; };
-        print STDERR "$question\n";
-        print STDERR "Please reply with $pretty_valid_values: ";
+        print STDERR "\n$question\n";
+        print STDERR "Reply with $pretty_valid_values: ";
         alarm($timeout) if ($timeout);
         chomp($input = <STDIN>);
         alarm(0) if ($timeout);

@@ -1,14 +1,9 @@
 package Genome::Model::Tools::Crossmatch;
-
 use strict;
 use warnings;
-
 use Genome;
 use File::Basename;
 
-
-#declare a default version here
-##########################################
 my $DEFAULT = '1.080721';
 
 class Genome::Model::Tools::Crossmatch {
@@ -43,13 +38,11 @@ sub help_detail {
 EOS
 }
 
-
 my %CROSSMATCH_VERSIONS = (
 	'1.080721' => '/gsc/bin/cross_match',
 	'test' => '/gsc/bin/cross_match.test',
     'crossmatch'   => 'cross_match',
 );
-
 
 sub crossmatch_path {
     my $self = $_[0];

@@ -38,7 +38,7 @@ sub execute {
         $self->report_dir($build->data_directory . "/reports");
     }
 
-    my $test_bit = 0b1101; # if all tests pass result will be 1, if any fail it will be greater than 1
+    my $test_bit = 0b1111; # if all tests pass result will be 1, if any fail it will be greater than 1
 
     # Validate BAM Headers
     $test_bit = $test_bit ^ $self->header_check();
@@ -101,13 +101,22 @@ sub header_check {
     my $flag = 0;
 
     my $meta_build = Genome::Model::Build->get($self->build_id);
-    my @data = $meta_build->instrument_data;
+    my @mga_models = $meta_build->model->_metagenomic_alignment_models;
+    my @data = $mga_models[0]->instrument_data;
     my $data_count = scalar(@data);
-    my $combined_bam = $meta_build->data_directory . "/reports/metagenomic_alignment.combined.bam";
+    my $combined_bam = $meta_build->_final_metagenomic_bam;
     # TODO: enable once all whole_rmdup_bams are fixed.
     my $msg = "Checking $combined_bam... ";
-    my $cmd = "samtools view -H $combined_bam | tail | grep \@RG | wc -l";
-    my $rg_count = `$cmd`;
+    my $rg_ids = `samtools view -H $combined_bam | grep \@RG | cut -f 2`; chomp $rg_ids;
+    my @rg_ids = split("\n", $rg_ids);
+    my $rg_count = 0;
+    for my $data (@data) {
+        my $data_id = $data->id;
+        my @data_found = grep { $_ =~ /$data_id/ } @rg_ids;
+        if (@data_found) {
+            $rg_count++;
+        }
+    }
     if ($rg_count == $data_count) {
         $msg .= "PASS (found $rg_count read group(s))";
         $flag = $self->test_to_bit('Header');
@@ -118,26 +127,6 @@ sub header_check {
         $self->status_message($msg);
         return $flag;
     }
-
-    my @mga_models = $meta_build->model->_metagenomic_alignment_models;
-    for my $model (@mga_models) {
-        my $build = $model->last_complete_build;
-        if ($build) {
-            my $msg = "Checking " . $build->whole_rmdup_bam_file . "... ";
-            my $cmd = "samtools view -H " . $build->whole_rmdup_bam_file . " | tail | grep \@RG | wc -l";
-            my $rg_count = `$cmd`;
-            if ($rg_count > 1) {
-                $msg .= "PASS (found $rg_count read groups)";
-                $flag = $self->test_to_bit('Header');
-                $self->status_message($msg) if ($self->verbose);
-            }
-            else {
-                $msg .= "FAIL (only found $rg_count read group)";
-                $self->status_message($msg);
-                return $flag;
-            }
-        }
-    };
 
     return $flag;
 }

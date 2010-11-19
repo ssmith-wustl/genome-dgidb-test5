@@ -60,13 +60,13 @@ sub create {
 sub calculate_estimated_kb_usage {
     my $self = shift;
     my $model = $self->model;
-    my $reference_build = $model->reference_sequence_build;
-    my $reference_file_path = $reference_build->full_consensus_path;
+    #my $reference_build = $model->reference_sequence_build;
+    #my $reference_file_path = $reference_build->full_consensus_path;
 
-    my $du_output = `du -sk $reference_file_path`;
-    my @fields = split(/\s+/,$du_output);
-    my $reference_kb = $fields[0];
-    my $estimate_from_reference = $reference_kb * 30;
+    #my $du_output = `du -sk $reference_file_path`;
+    #my @fields = split(/\s+/,$du_output);
+    #my $reference_kb = $fields[0];
+    #my $estimate_from_reference = $reference_kb * 30;
 
     my @idas = $model->instrument_data_assignments;
     my $estimate_from_instrument_data = scalar(@idas) * 10000;
@@ -1085,13 +1085,23 @@ sub files_ignored_by_diff {
     return qw(
         build.xml
         alignments/*_merged_rmdup_bam.md5
+        reports/Build_Initialized/report.xml
+        reports/Build_Succeeded/report.xml
+        reports/Input_Base_Counts/report.html
+        reports/Input_Base_Counts/report.xml
+        reports/Summary/report.html
+        reports/Summary/report.xml
+        reports/Summary/report.txt
+        reports/dbSNP_Concordance/report.xml
+        reports/dbSNP_Concordance/report.html
+        reports/Mapcheck/report.xml
+        server_location.txt
     );
 }
 
 sub dirs_ignored_by_diff {
     return qw(
         logs/
-        reports/
     );
 }
 

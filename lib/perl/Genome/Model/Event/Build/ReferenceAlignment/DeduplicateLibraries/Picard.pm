@@ -335,7 +335,7 @@ sub calculate_required_disk_allocation_kb {
     my $build = $self->build;
     my $model = $build->model;
     my $processing_profile = $model->processing_profile;
-    my @idas = $model->instrument_data_assignments;
+    my @idas = $build->instrument_data_assignments;
     $self->status_message("Found " . scalar(@idas) . " assigned instrument data");
 
     my @build_bams;
@@ -345,7 +345,7 @@ sub calculate_required_disk_allocation_kb {
         for my $alignment (@alignments) {
             my @aln_bams = $alignment->alignment_bam_file_paths;
             unless (@aln_bams) {
-                $self->status_message("alignment $alignment has no bams at " . $alignment->output);
+                $self->status_message("alignment $alignment has no bams at " . $alignment->output_dir);
             }
             push @build_bams, @aln_bams;
         }

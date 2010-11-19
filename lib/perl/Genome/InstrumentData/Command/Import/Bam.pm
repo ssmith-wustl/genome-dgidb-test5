@@ -9,7 +9,7 @@ use warnings;
 
 use Genome;
 use File::Copy;
-use GSCApp;
+#use GSCApp;
 
 my %properties = (
     original_data_path => {
@@ -99,13 +99,22 @@ sub execute {
         }
         die $self->error_message;
     }
-    my $library = Genome::Command::Base->resolve_param_value_from_text($self->library,'Genome::Library');
+
+    my $library;
+
+    if ($self->library) {
+        $library = Genome::Command::Base->resolve_param_value_from_text($self->library,'Genome::Library');
+    }
+
     unless($library){
         unless($self->create_library){
             $self->error_message("A library was not resolved from the input string ".$self->library);
             die $self->error_message;
         }
-        $library = Genome::Library->create(name=>$sample->name.'-extlibs',sample_id=>$sample->id);
+        $library = Genome::Library->get(name=>$sample->name.'-extlibs',sample_id=>$sample->id);
+        unless ($library) {
+            $library = Genome::Library->create(name=>$sample->name.'-extlibs',sample_id=>$sample->id);
+        }
         unless($library){
             $self->error_message("Unable to create a library.");
             die $self->error_message;
@@ -131,6 +140,7 @@ sub execute {
         next if $property_name =~ /^(species|reference)_name$/;
         next if $property_name =~ /^library$/;
         next if $property_name =~/^sample$/;
+        next if $property_name  eq 'create_library';
         $params{$property_name} = $self->$property_name if $self->$property_name;
     }
     $params{sample_id} = $sample->id;

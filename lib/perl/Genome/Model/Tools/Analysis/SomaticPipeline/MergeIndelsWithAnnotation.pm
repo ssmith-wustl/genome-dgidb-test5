@@ -118,7 +118,7 @@ sub execute {                               # replace with real execution logic.
 
 				#my $newline = "$chrom\t$position\t$position\t$allele1\t$allele2\tSNP\t$annotation\t$iupac_code\t$p_value";
 				
-				if($trv_type eq "missense" || $trv_type eq "nonsense" || $trv_type eq "nonstop" || $trv_type =~ "splice_site" || $trv_type =~ "frame_shift" || $trv_type =~ "silent" || $trv_type =~ "rna")
+				if($trv_type eq "missense" || $trv_type eq "nonsense" || $trv_type eq "nonstop" || $trv_type =~ "splice_site" || $trv_type =~ "frame" || $trv_type =~ "silent" || $trv_type =~ "rna")
 				{
 					print TIER1 "$newline\n";
 #					print "$gene_name\t$trv_type\t$c_position $aa_change\t$ucsc_cons\t$snp_key\n";
@@ -136,7 +136,10 @@ sub execute {                               # replace with real execution logic.
 	$stats{'nonsense'} = 0 if(!$stats{'nonsense'});
 	$stats{'nonstop'} = 0 if(!$stats{'nonstop'});
 	$stats{'splice_site'} = 0 if(!$stats{'splice_site'});
-	$stats{'frame_shift'} = 0 if(!$stats{'frame_shift'});
+	$stats{'in_frame_ins'} = 0 if(!$stats{'in_frame_ins'});
+	$stats{'in_frame_del'} = 0 if(!$stats{'in_frame_del'});
+	$stats{'frame_shift_ins'} = 0 if(!$stats{'frame_shift_ins'});
+	$stats{'frame_shift_del'} = 0 if(!$stats{'frame_shift_del'});
 	$stats{'silent'} = 0 if(!$stats{'silent'});
 
 	print $stats{'tier1'} . " tier 1 mutations (";
@@ -145,7 +148,10 @@ sub execute {                               # replace with real execution logic.
 	print $stats{'nonsense'} . " nonsense, " if($stats{'nonsense'});
 	print $stats{'nonstop'} . " nonstop, " if($stats{'nonstop'});
 	print $stats{'splice_site'} . " splice_site, " if($stats{'splice_site'});
-	print $stats{'frame_shift'} . " frame_shift, " if($stats{'frame_shift'});
+	print $stats{'in_frame_ins'} . " in_frame_ins, " if($stats{'in_frame_ins'});
+	print $stats{'in_frame_del'} . " in_frame_del, " if($stats{'in_frame_del'});
+	print $stats{'frame_shift_ins'} . " frame_shift_ins, " if($stats{'frame_shift_ins'});
+	print $stats{'frame_shift_del'} . " frame_shift_del, " if($stats{'frame_shift_del'});
 	print $stats{'silent'} . " silent, " if($stats{'silent'});
 	print $stats{'rna'} . " miRNA " if($stats{'rna'});
 	

@@ -41,7 +41,7 @@ sub execute {
         return;
     }
 
-    # This has be vetted by the processing profile's _initialize_build method already
+    # This has been vetted by the processing profile's _initialize_build method already
     my $annotator_version;
     {
         my $build = $self->build;
@@ -50,14 +50,19 @@ sub execute {
         $annotator_version = $pp->transcript_variant_annotator_version;
     }
     
-    my $annotator = Genome::Model::Tools::Annotate::TranscriptVariants->create(
+
+    my %params = (
         variant_file => $self->pre_annotation_filtered_snp_file,
         output_file => $self->post_annotation_filtered_snp_file,
         annotation_filter => 'top',
         no_headers => 1,
-        reference_transcripts => $self->model->annotation_reference_transcripts,
+        #reference_transcripts => $self->model->annotation_reference_transcripts, 
         use_version => $annotator_version,
     );
+    my $abuild = $self->model->annotation_reference_build;
+    $params{build_id} = $abuild->id if $abuild;
+
+    my $annotator = Genome::Model::Tools::Annotate::TranscriptVariants->create(%params);
 
     my $rv = $annotator->execute;
     unless ($rv){

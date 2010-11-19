@@ -1,9 +1,4 @@
-
 package Genome::ProcessingProfile::Somatic;
-
-#:eclark 11/16/2009 Code review.
-
-# Short Term: This processing profile implements a wrapper around a workflow.  ProcessingProfiles should have a more direct interface to them.
 
 use strict;
 use warnings;
