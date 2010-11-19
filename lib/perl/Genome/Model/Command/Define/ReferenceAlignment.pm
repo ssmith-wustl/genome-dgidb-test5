@@ -12,7 +12,7 @@ class Genome::Model::Command::Define::ReferenceAlignment {
     is => 'Genome::Model::Command::Define',
     has => [
         reference_sequence_build => {
-            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            is => 'Text', # 'Genome::Model::Build::ImportedReferenceSequence',
             doc => 'ID or name of the reference sequence to align against',
             is_input => 1,
             default_value => 'NCBI-human-build36',
