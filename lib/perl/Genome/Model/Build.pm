@@ -315,12 +315,6 @@ sub _validate_model_id {
 sub _copy_model_inputs {
     my $self = shift;
 
-    # Create gets called twice, calling this method twice, so
-    #  gotta check if we added the inputs already (and crashes). 
-    #  I tried to figure out how to stop create being called twice, but could not.
-    my @inputs = $self->inputs;
-    return 1 if @inputs;
-
     for my $input ( $self->model->inputs ) {
         my %params = map { $_ => $input->$_ } (qw/ name value_class_name value_id /);
         unless ( $self->add_input(%params) ) {
