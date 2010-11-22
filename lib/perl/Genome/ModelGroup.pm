@@ -64,22 +64,36 @@ sub create {
 
 
 sub assign_models {
-
     my ($self, @models) = @_;
 
-    for my $m (@models) {
+    if ( not @models ) {
+        $self->error_message('No models given to assign to group');
+        return;
+    }
 
-        if(grep($_->id eq $m->id, $self->models)) {
-            die('Model ' . $m->id . ' already in ModelGroup ' . $self->id);
+    my %existing_models = map { $_->id => $_ } $self->models;
+
+    my $added = 0;
+    for my $m (@models) {
+        if ( exists $existing_models{ $m->id } ) {
+            $self->status_message('Skipping model '.$m->__display_name__.', it is already assigned...');
+            next;
         }
-        
         my $bridge = Genome::ModelGroupBridge->create(
             model_group_id => $self->id,
             model_id       => $m->genome_model_id,
         );
+        $existing_models{$m->id} = $m->id;
+        $added++;
     }
 
-    $self->schedule_convergence_rebuild;
+    my $attempted = scalar @models;
+    my $skipped = $attempted - $added;
+    $self->status_message("Added $added models to group: ".$self->__display_name__.". Skipped $skipped of $attempted models because they were already assigned.");
+
+    if ( $added ) {
+        $self->schedule_convergence_rebuild;
+    }
     
     return 1;
 }

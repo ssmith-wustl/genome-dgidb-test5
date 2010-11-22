@@ -19,6 +19,7 @@ class Genome::Model::Tools::Somatic::UploadVariantValidation{
     validation_type => {
         is  => 'String',
         doc => 'The type of validation used for the input file. I.E. "Solexa"',
+        valid_values => ["Illumina", "3730", "Capture", "454"],
     },
     output_file => {
         is  => 'String',
@@ -68,6 +69,7 @@ sub execute {
     # Go through each line in the variant file and get each annotation line that matches from the annotation file
     # For each line, print it to the output file and upload it to the database
     while (my $line = $variant_fh->getline) {
+        chomp $line;
         my ($chr, $start, $stop, $reference, $variant, $result) = split "\t", $line;
         
         my $variant_already_exists = Genome::Model::Variant->get(
@@ -91,6 +93,18 @@ sub execute {
         );
         $overall_validation->validation_result($result);
 
+        my @errors = $overall_validation->__errors__;
+        if (!$overall_validation || @errors) {
+            $self->error_message("Unable to create 'Official' validation object or errors found. Problem input line: $line");
+            # Print each error encountered
+            for my $error (@errors) {
+                print $error->desc . "\n";
+            }
+            $ofh->close;
+            unlink($self->output_file);
+            die;
+        }
+
         # Replace any old validation for this type
         my $type_validation = Genome::Model::VariantValidation->get_or_create(
             variant           => $variant_already_exists,
@@ -99,15 +113,19 @@ sub execute {
         );
         $type_validation->validation_result($result);
 
-        unless($overall_validation && $type_validation) {
-            $self->error_message("Unable to create overall validation OR type validation");
-            $self->error_message("Problem line: $line");
+        @errors = $type_validation->__errors__;
+        if(!$type_validation || @errors) {
+            $self->error_message("Unable to create VariantValidation for validation_type " . $self->validation_type . " or errors found. Problem input line: $line");
+            # Print each error encountered
+            for my $error (@errors) {
+                print $error->desc . "\n";
+            }
             $ofh->close;
             unlink($self->output_file);
             die;
         }
 
-        $ofh->print($line);
+        $ofh->print("$line\n");
     }
 
     $ofh->close;

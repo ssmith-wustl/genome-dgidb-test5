@@ -31,9 +31,6 @@ EOS
 sub pre_execute {
     my $self = shift;
 
-    $self->error_message("The CMDS pipeline is currently not producing consistent results, and is broken. Please run the tools by hand. You can find instructions to do so at https://gscweb.gsc.wustl.edu/wiki/User:Ndees#How_To_Run_CMDS_By_Hand. RT# 63413 is open regarding fixing this.");
-    die;
-
     # make sure either model group or model id list was provided
     unless($self->model_ids || $self->model_group) {
         $self->error_message("Either model_ids or model_group must be provided");
@@ -126,16 +123,10 @@ __DATA__
   <link fromOperation="input connector" fromProperty="merge_output_dir" toOperation="Merge Cna Output By Chrom" toProperty="output_dir" />
   <link fromOperation="Compile Cna Output" fromProperty="output_dir" toOperation="Merge Cna Output By Chrom" toProperty="bam_to_cna_output_dir" />
 
-  <link fromOperation="input connector" fromProperty="r_library" toOperation="begin inner workflow" toProperty="library" />
-  <link fromOperation="Merge Cna Output By Chrom" fromProperty="result" toOperation="begin inner workflow" toProperty="merge_result" />
+  <link fromOperation="Merge Cna Output By Chrom" fromProperty="output_dir" toOperation="Execute" toProperty="data_directory" />
+  <link fromOperation="input connector" fromProperty="data_directory" toOperation="Execute" toProperty="output_directory" />
   
-  <link fromOperation="input connector" fromProperty="r_commands" toOperation="Inner Workflow" toProperty="r_command" />
-  <link fromOperation="begin inner workflow" fromProperty="library" toOperation="Inner Workflow" toProperty="library" />
-  
-  <link fromOperation="input connector" fromProperty="cmds_test_dir" toOperation="end inner workflow" toProperty="cmds_test_dir" />
-  <link fromOperation="Inner Workflow" fromProperty="call_r_results" toOperation="end inner workflow" toProperty="workflow_result" />
-  
-  <link fromOperation="end inner workflow" fromProperty="cmds_test_dir" toOperation="Individual Region Calls" toProperty="cmds_test_dir" />
+  <link fromOperation="Execute" fromProperty="test_output_directory" toOperation="Individual Region Calls" toProperty="cmds_test_dir" />
   <link fromOperation="Merge Cna Output By Chrom" fromProperty="output_dir" toOperation="Individual Region Calls" toProperty="cmds_input_data_dir" />
   <link fromOperation="input connector" fromProperty="region_output_dir" toOperation="Individual Region Calls" toProperty="output_dir" />
 
@@ -151,19 +142,10 @@ __DATA__
   <operation name="Merge Cna Output By Chrom">
     <operationtype commandClass="Genome::Model::Tools::Cmds::MergeCnaOutputByChrom" typeClass="Workflow::OperationType::Command" />
   </operation>
-  
-  <operation name="Inner Workflow" parallelBy="r_command">
-    <link fromOperation="input connector" fromProperty="r_command" toOperation="Call R" toProperty="command" />
-    <link fromOperation="input connector" fromProperty="library" toOperation="Call R" toProperty="library" />
-    <link fromOperation="Call R" fromProperty="result" toOperation="output connector" toProperty="call_r_results" />
-    <operation name="Call R">
-      <operationtype commandClass="Genome::Model::Tools::R::CallR" typeClass="Workflow::OperationType::Command" />
-    </operation>
-    <operationtype typeClass="Workflow::OperationType::Model">
-      <inputproperty>r_command</inputproperty>
-      <inputproperty>library</inputproperty>
-      <outputproperty>call_r_results</outputproperty>
-    </operationtype>
+ 
+
+  <operation name="Execute">
+    <operationtype commandClass="Genome::Model::Tools::Cmds::Execute" typeClass="Workflow::OperationType::Command" />
   </operation>
 
   <operation name="Individual Region Calls">
@@ -172,20 +154,6 @@ __DATA__
 
   <operation name="Create Output Table">
     <operationtype commandClass="Genome::Model::Tools::Cmds::CreateOutputTable" typeClass="Workflow::OperationType::Command" />
-  </operation>
-
-  <operation name="begin inner workflow">
-    <operationtype typeClass="Workflow::OperationType::Block">
-      <property>library</property>
-      <property>merge_result</property>
-    </operationtype>
-  </operation>
-
-  <operation name="end inner workflow">
-    <operationtype typeClass="Workflow::OperationType::Block">
-      <property>cmds_test_dir</property>
-      <property>workflow_result</property>
-    </operationtype>
   </operation>
 
   <operationtype typeClass="Workflow::OperationType::Model">

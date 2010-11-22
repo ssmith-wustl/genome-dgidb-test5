@@ -52,32 +52,7 @@ sub execute {
 
     $model_group->assign_models(@models);
 
-    $self->status_message('Added '.scalar(@models).' to group '.$model_group->__display_name__);
-    
     return 1; #Things might not have gone perfectly, but nothing crazy happened
-}
-
-sub _limit_results_for_models {
-    my ($class, @models) = @_;
-
-    my %existing_models = map { $_->id => $_ } $class->model_group->models;
-
-    return if not %existing_models;
-    
-    my @models_to_add;
-    for my $model ( @models ) {
-        if ( exists $existing_models{ $model->id } ) {
-            next;
-        }
-        push @models_to_add, $model;
-    }
-
-    if ( @models_to_add != @models ) {
-        my $already_existing = @models - @models_to_add;
-        $class->warning_message("Skipping $already_existing of the ".scalar(@models)." models given because thay are already members.");
-    }
-
-    return @models_to_add;
 }
 
 1;

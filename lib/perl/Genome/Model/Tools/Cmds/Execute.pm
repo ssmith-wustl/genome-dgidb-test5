@@ -37,7 +37,13 @@ class Genome::Model::Tools::Cmds::Execute {
         calculate => q{ return $output_directory . "/cmds_plot"; },
         doc => 'Directory containing the plot output files',
     },
-    ]
+    ],
+    # This tool does not actually *require* 64 bit, but produces different results (floating point rounding) on a 32 bit blade. Do this to stay consistent.
+    has_param => [
+        lsf_resource => {
+            default_value => 'select[type==LINUX64]',
+        },
+    ],
 };
 
 sub help_brief {
@@ -50,6 +56,11 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
+
+    unless (`uname -a` =~ /x86_64/){
+        $self->error_message("This tool produces different results when run on a 32 bit system. It can be done, but results will differ from running on a 64 bit system. Please run on 64-bit for the sake of consistency.");
+        die;
+    }
 
     #define input and output directories
     my $data_dir = $self->data_directory;
@@ -65,10 +76,15 @@ sub execute {
     while (my $file = readdir DATA_DIR) {
         next if ($file eq "." || $file eq "..");
         my $command = "cmds.focal.test(data.dir='$data_dir',wsize=30,wstep=1,analysis.ID='$index',chr.colname='CHR',pos.colname='POS',plot.dir='$plot_dir',result.dir='$test_dir');";
-        my $job = "gmt r call-r --command \"$command\" --library 'cmds_lib.R'";
-        my $job_name = "cmds_" . $file . "_index_" . $index;
-        my $oo = $output_dir . "/cmds_" . $file . "_index_" . $index . "_STDOUT";
-        LSF::Job->submit(-oo => $oo, -J => $job_name, -R => 'select[type==LINUX64]', $job);
+        my $callr = Genome::Model::Tools::R::CallR->create(
+            command => $command,
+            library => 'cmds_lib.R',
+        );
+        my $result = $callr->execute;
+        unless ($result == 1) {
+            $self->error_message("CallR failed for command: $command");
+            die;
+        }
         $index++;
     }
 

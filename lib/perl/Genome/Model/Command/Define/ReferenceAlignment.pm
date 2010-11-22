@@ -9,19 +9,22 @@ require Carp;
 use Regexp::Common;
 
 class Genome::Model::Command::Define::ReferenceAlignment {
-    is => 'Genome::Model::Command::Define',
+    is => [
+        'Genome::Model::Command::Define',
+        'Genome::Command::Base',
+        ],
     has => [
         reference_sequence_build => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             doc => 'ID or name of the reference sequence to align against',
-            is_input => 1,
             default_value => 'NCBI-human-build36',
+            is_input => 1,
         },
         annotation_reference_build => {
             is => 'Genome::Model::Build::ImportedAnnotation',
             doc => 'ID or name of the the build containing the reference transcript set used for variant annotation',
-            is_input => 1,
             is_optional => 1,
+            is_input => 1,
         },
         target_region_set_names => {
             is => 'Text',
@@ -36,6 +39,12 @@ class Genome::Model::Command::Define::ReferenceAlignment {
         }
     ]
 };
+
+sub _shell_args_property_meta {
+    my $self = shift;
+    return $self->Genome::Command::Base::_shell_args_property_meta(@_);
+}
+
 
 sub type_specific_parameters_for_create {
     my $self = shift;
