@@ -165,35 +165,31 @@ sub execute {
             $ace_fh->print("Sequence : $gene_name\n");
             $ace_fh->print("Source $sequence\n");
 
-            my ($method, $remark, $score, $transcript, $locus);
+            my ($method, $remark, $transcript, $locus);
             if ($source =~ /trnascan/i) {
                 $method = 'tRNAscan';
-                $remark = "tRNA-$amino_acid Sc=$gene_score";
+                $remark = "\"tRNA-$amino_acid Sc=$gene_score\"";
                 $transcript = "tRNA $codon $amino_acid $amino_acid_code";
             }
             elsif ($source =~ /rfam/i) {
                 $method = 'Rfam';
-                $remark = "Predicted by Rfam ($accession), score $gene_score";
-                $score = "Rfam $gene_score";
+                $remark = "\"Predicted by Rfam ($accession), score $gene_score\"";
                 $locus = $gene->description;
             }
             elsif ($source =~ /rnammer/i) {
                 $method = 'RNAmmer';
-                $remark = "Predicted by RNAmmer, score $gene_score";
-                $score = "RNAMMER $gene_score";
+                $remark = "\"Predicted by RNAmmer, score $gene_score\"";
                 $locus = $gene->description;
             }
             else {
                 $method = $source;
-                $remark = "Predicted by $method, score $gene_score";
-                $score = "$method $gene_score";
+                $remark = "\"Predicted by $method, score $gene_score\$";
                 $locus = $gene->description;
             }
 
             $ace_fh->print("Method $method\n") if defined $method;
             $ace_fh->print("Remark $remark\n") if defined $remark;
             $ace_fh->print("Locus $locus\n") if defined $locus;
-            $ace_fh->print("Score $score\n") if defined $score;
             $ace_fh->print("Transcript $transcript\n") if defined $transcript;
         }
     }
