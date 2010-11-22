@@ -4,10 +4,12 @@ use strict;
 use warnings;
 
 use Genome;
+use Genome::Info::SnapModelFileAbbreviations;
 use English;
 use File::Temp;
 use Carp 'confess';
 use File::Path 'make_path';
+use File::Basename 'basename';
 
 class Genome::Model::Tools::GenePredictor::SNAP {
     is  => 'Genome::Model::Tools::GenePredictor',
@@ -20,7 +22,7 @@ class Genome::Model::Tools::GenePredictor::SNAP {
     ],
     has_optional => [
         version => {
-            is => 'String',
+            is => 'Text',
             is_input => 1,
             valid_values => ['2004-06-17', '2007-12-18', '2010-07-28'],
             default => '2010-07-28',
@@ -93,130 +95,138 @@ sub execute {
         push @params, '-quiet';
         push @params, $model;
         push @params, $self->fasta_file;
-        push @params, ">> $raw_output";
+        push @params, "> $raw_output";
         push @params, "2>> $raw_error";
         my $cmd = join(' ', $snap_path, @params);
 
         $self->status_message("Executing SNAP command: $cmd");
         my $rv = system($cmd);
         confess "Trouble executing SNAP!" unless defined $rv and $rv == 0;
-    }
 
-    $self->status_message('Done running SNAP, now parsing output and creating prediction objects');
+        $self->status_message("Done running SNAP using model file $model, now parsing output and creating prediction objects");
 
-    my $snap_fh = IO::File->new($raw_output, "r");
-    unless ($snap_fh) {
-        confess "Could not open " . $raw_output . ": $OS_ERROR";
-    }
-
-    my @predicted_exons;
-    my ($current_seq_name, $current_group, $seq_obj);
-    my %gene_count_by_seq;
-
-    # SNAP output is grouped by sequence name. Each line of output is an exon, and these exons are grouped into genes. If 
-    # a line starts with a >, this indicates a new sequence's predictions come next, so any exons we've recorded for the
-    # current sequence need to be made into objects. If the group name differs from the previous line's, this indicates
-    # that a new gene is starting and prediction objects need to be made.
-    while (my $line = <$snap_fh>) {
-        chomp $line;
-        if ($line =~ /^>(.+)$/) {
-            if (@predicted_exons) {
-                $gene_count_by_seq{$current_seq_name}++;
-                $self->_create_prediction_objects(
-                    \@predicted_exons, 
-                    $gene_count_by_seq{$current_seq_name}, 
-                    $current_seq_name, 
-                    $current_group, 
-                    $seq_obj
-                );
-                @predicted_exons = ();
-            }
-
-            $current_seq_name = $1;
-            $seq_obj = $self->get_sequence_by_name($current_seq_name);
-            confess "Couldn't get sequence $current_seq_name!" unless $seq_obj;
-            $self->status_message("Parsing predictions from $current_seq_name");
+        my $snap_fh = IO::File->new($raw_output, "r");
+        unless ($snap_fh) {
+            confess "Could not open " . $raw_output . ": $OS_ERROR";
         }
-        else {
-            my (
-                $label,
-                $begin,
-                $end,
-                $strand,
-                $score,
-                $five_prime_overhang,
-                $three_prime_overhang,
-                $frame,
-                $group
-            ) = split /\t/, $line;
 
-            if (defined $current_group and $current_group ne $group and @predicted_exons) {
-                $gene_count_by_seq{$current_seq_name}++;
-                $self->_create_prediction_objects(
-                    \@predicted_exons, 
-                    $gene_count_by_seq{$current_seq_name}, 
-                    $current_seq_name, 
-                    $current_group, 
-                    $seq_obj
-                );
-                @predicted_exons = ();
+        my @predicted_exons;
+        my ($current_seq_name, $current_group, $seq_obj);
+        my %gene_count_by_seq;
+
+        # SNAP output is grouped by sequence name. Each line of output is an exon, and these exons are grouped into genes. If 
+        # a line starts with a >, this indicates a new sequence's predictions come next, so any exons we've recorded for the
+        # current sequence need to be made into objects. If the group name differs from the previous line's, this indicates
+        # that a new gene is starting and prediction objects need to be made.
+        while (my $line = <$snap_fh>) {
+            chomp $line;
+            if ($line =~ /^>(.+)$/) {
+                if (@predicted_exons) {
+                    $gene_count_by_seq{$current_seq_name}++;
+                    $self->_create_prediction_objects(
+                        \@predicted_exons, 
+                        $gene_count_by_seq{$current_seq_name}, 
+                        $current_seq_name, 
+                        $current_group, 
+                        $seq_obj,
+                        $model,
+                    );
+                    @predicted_exons = ();
+                }
+
+                $current_seq_name = $1;
+                $seq_obj = $self->get_sequence_by_name($current_seq_name);
+                confess "Couldn't get sequence $current_seq_name!" unless $seq_obj;
+                $self->status_message("Parsing predictions from $current_seq_name");
             }
+            else {
+                my (
+                    $label,
+                    $begin,
+                    $end,
+                    $strand,
+                    $score,
+                    $five_prime_overhang,
+                    $three_prime_overhang,
+                    $frame,
+                    $group
+                ) = split /\t/, $line;
 
-            $current_group = $group;
+                if (defined $current_group and $current_group ne $group and @predicted_exons) {
+                    $gene_count_by_seq{$current_seq_name}++;
+                    $self->_create_prediction_objects(
+                        \@predicted_exons, 
+                        $gene_count_by_seq{$current_seq_name}, 
+                        $current_seq_name, 
+                        $current_group, 
+                        $seq_obj,
+                        $model,
+                    );
+                    @predicted_exons = ();
+                }
 
-            # Each line of output from SNAP is an exon. Can't create "larger" objects like genes, trancripts, and proteins
-            # until all the exons of a group are available.
-            my %exon_hash = (
-                sequence_name => $current_seq_name,
-                start => $begin,
-                end => $end,
-                strand => $strand,
-                score => $score,
-                source => 'snap',
-                exon_type => $label,
-                five_prime_overhang => $five_prime_overhang,
-                three_prime_overhang => $three_prime_overhang,
-                frame => $frame,
+                $current_group = $group;
+
+                # Each line of output from SNAP is an exon. Can't create "larger" objects like genes, trancripts, and proteins
+                # until all the exons of a group are available.
+                my %exon_hash = (
+                    sequence_name => $current_seq_name,
+                    start => $begin,
+                    end => $end,
+                    strand => $strand,
+                    score => $score,
+                    source => 'snap',
+                    exon_type => $label,
+                    five_prime_overhang => $five_prime_overhang,
+                    three_prime_overhang => $three_prime_overhang,
+                    frame => $frame,
+                );
+                push @predicted_exons, \%exon_hash;
+            }
+        }
+
+        if (@predicted_exons) {
+            $gene_count_by_seq{$current_seq_name}++;
+            $self->_create_prediction_objects(
+                \@predicted_exons, 
+                $gene_count_by_seq{$current_seq_name}, 
+                $current_seq_name, 
+                $current_group, 
+                $seq_obj,
+                $model,
             );
-            push @predicted_exons, \%exon_hash;
         }
-    }
 
-    if (@predicted_exons) {
-        $gene_count_by_seq{$current_seq_name}++;
-        $self->_create_prediction_objects(
-            \@predicted_exons, 
-            $gene_count_by_seq{$current_seq_name}, 
-            $current_seq_name, 
-            $current_group, 
-            $seq_obj
+        my @locks = $self->lock_files_for_predictions(
+            qw/ 
+                Genome::Prediction::CodingGene 
+                Genome::Prediction::Protein
+                Genome::Prediction::Transcript 
+                Genome::Prediction::Exon 
+            /
         );
+
+        UR::Context->commit;
+        $self->release_prediction_locks(@locks);
+        
+        $self->status_message("Successfully finished parsing SNAP output for model $model and created prediction objects!");
     }
-
-    my @locks = $self->lock_files_for_predictions(
-        qw/ 
-            Genome::Prediction::CodingGene 
-            Genome::Prediction::Protein
-            Genome::Prediction::Transcript 
-            Genome::Prediction::Exon 
-        /
-    );
-
-    UR::Context->commit;
-    $self->release_prediction_locks(@locks);
-
-    $self->status_message("Successfully finished parsing SNAP output and creating prediction objects!");
     return 1;
 }
 
 sub _create_prediction_objects {
-    my ($self, $predicted_exons, $gene_count, $current_seq_name, $current_group, $seq_obj) = @_;
+    my ($self, $predicted_exons, $gene_count, $current_seq_name, $current_group, $seq_obj, $model_file) = @_;
     my @predicted_exons = sort { $a->{start} <=> $b->{start}} @{$predicted_exons};
     my $start = $predicted_exons[0]->{start};
     my $end = $predicted_exons[-1]->{end};
     my $strand = $predicted_exons[0]->{strand};
     my $source = lc $predicted_exons[0]->{source};
-    my $gene_name = join('.', $current_seq_name, $source, $gene_count);
+
+    # For SNAP, we need a way to differentiate predictions that came from different models. Each model has a
+    # different abbreviation that is included in the gene name
+    my $model_file_abbrev = $self->_model_file_abbreviation($model_file);
+
+    my $gene_name = join('.', $current_seq_name, $source, $model_file_abbrev, $gene_count);
     my $transcript_name = $gene_name . '.1';
     my $protein_name = $transcript_name . "_protein.1";
 
@@ -346,6 +356,18 @@ sub _create_prediction_objects {
     );
 
     return 1;
+}
+
+# Looks up the abbreviation for the SNAP model, uses the name of the model file if no abbreviation is found
+sub _model_file_abbreviation {
+    $DB::single = 1;
+    my ($self, $model_file) = @_;
+    my $file_name = basename($model_file);
+    confess "Could not determine name of model file $model_file using File::Basename!" unless defined $file_name;
+
+    my $abbrev = Genome::Info::SnapModelFileAbbreviations::abbreviation_for_model_file($file_name);
+    $abbrev = $file_name unless defined $abbrev;
+    return $abbrev;
 }
 
 1;
