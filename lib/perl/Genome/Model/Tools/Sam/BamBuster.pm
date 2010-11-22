@@ -108,7 +108,7 @@ sub process_line {
     my $rg_handles = shift;
 
     my ($rg_id) =  $line =~ m/RG:Z:(.*?)(\t|\s+)/;
-    unless ($rg_id) {
+    unless (defined $rg_id) {
         $self->error_message("can't get read group ID");
         return;
     }
@@ -124,19 +124,19 @@ sub get_read_group_from_sam_header {
     my $line = shift;
     
     my ($id) = $line =~ m/ID:(.*?)\t/;
-    unless ($id)  {
+    unless (defined $id)  {
         $self->error_message("failed to parse read group id from SAM line: $line");
         return;
     }
     
     my ($platform_unit) = $line =~ m/PU:(.*?)\t/;
-    unless ($platform_unit)  {
+    unless (defined $platform_unit)  {
         $self->error_message("failed to parse platform unit from SAM line: $line");
         return;
     }
     
     my ($library_name) = $line =~ m/LB:(.*?)\t/;
-    unless ($library_name)  {
+    unless (defined $library_name)  {
         $self->error_message("failed to parse library name from SAM line: $line");
         return;
     }
