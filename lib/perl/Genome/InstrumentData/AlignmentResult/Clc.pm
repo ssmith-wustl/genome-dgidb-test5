@@ -30,7 +30,7 @@ sub required_rusage {
         $estimated_usage_mb = int(($kb_usage * 5) / 1024)+100;
     }
         
-    return "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>" . $estimated_usage_mb . " && mem>14000] span[hosts=1] rusage[mem=14000]' -M 15000000 -n 4 -q alignment -m alignment";
+    return "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>" . $estimated_usage_mb . " && mem>14000] span[hosts=1] rusage[mem=14000]' -M 15000000 -n 4 -q hmp -m hmp";
 }
 
 sub _run_aligner {
