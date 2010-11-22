@@ -60,6 +60,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariants {
     ],
     has_optional => [
         use_version => {
+            is_input => 1,
             is => 'Text',
             default_value => __PACKAGE__->default_annotator_version,
             doc => 'Annotator version to use',
@@ -491,6 +492,7 @@ sub execute {
     }
 
     $self->status_message("Starting annotation loop at ".scalar(localtime));
+    $self->status_message("  with annotator version ".$self->use_version);
     my $annotation_loop_start_time = time();
 
     Genome::DataSource::GMSchema->disconnect_default_handle if Genome::DataSource::GMSchema->has_default_handle;
