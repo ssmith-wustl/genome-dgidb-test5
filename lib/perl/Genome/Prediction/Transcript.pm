@@ -48,4 +48,13 @@ class Genome::Prediction::Transcript {
     ],
 };
 
+# Returns the first transcribed exon of the transcript (most five prime)
+sub five_prime_exon {
+    my $self = shift;
+    my @exons = sort { $a->start <=> $b->start } $self->exons;
+    return unless @exons;
+    @exons = reverse @exons if $self->strand eq '-1';
+    return shift @exons;
+}
+
 1;
