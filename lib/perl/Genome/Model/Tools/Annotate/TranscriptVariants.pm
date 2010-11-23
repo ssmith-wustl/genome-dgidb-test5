@@ -45,7 +45,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariants {
             default => "STDOUT",
         },
         _version_subclass_name => {
-            is => 'Text', is_mutable => 0, 
+            is => 'Text',# is_mutable => 0, 
             calculate_from => ['use_version'],
             calculate => q( return 'Genome::Model::Tools::Annotate::TranscriptVariants::Version' . $use_version ),
         },
@@ -466,6 +466,11 @@ sub execute {
     my $chromosome_name = '';
 
     # Initialize the annotator object
+    if (! defined ($self->use_version)) {
+        # We're going to use the "default" annotator version for these old processing profiles
+        # that don't have a --transcript-variant-annotator-version defined
+        $self->use_version($self->default_annotator_version);
+    }
     my $annotator_version_subclass = $self->_version_subclass_name;
     my $annotator;
     eval {
