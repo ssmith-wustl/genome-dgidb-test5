@@ -65,7 +65,7 @@ sub execute {
     my $md5s_ok = $self->_validate_md5;
     return if not $md5s_ok;
 
-    #$self->_launch_import; # no error check
+    $self->_launch_import; # no error check
     $instrument_data->[0]->description('downloaded');
 
     $self->status_message('Download...OK');
