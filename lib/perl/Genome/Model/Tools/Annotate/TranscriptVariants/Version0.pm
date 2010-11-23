@@ -16,6 +16,8 @@ use Bio::Tools::CodonTable;
 use DateTime;
 use Carp;
 
+use MG::ConsScore;
+
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     is => 'UR::Object',
