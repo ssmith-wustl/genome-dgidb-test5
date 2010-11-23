@@ -92,6 +92,7 @@ sub execute {
             my ($transcript) = $gene->transcript;
             my @exons = $transcript->exons;
             @exons = sort { $a->start <=> $b->start } @exons;
+            @exons = reverse @exons if $transcript->strand eq '-1';
 
             my $spliced_length = 0;
             for my $exon (@exons) {
