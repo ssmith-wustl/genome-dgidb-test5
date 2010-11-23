@@ -1,9 +1,9 @@
-package Genome::Model::Somatic::Command::PindelNoAssembly;
+package Genome::Model::Somatic::Command::RunPindel;
 
 use strict;
 use warnings;
 
-class Genome::Model::Somatic::Command::PindelNoAssembly {
+class Genome::Model::Somatic::Command::RunPindel {
     is => ['Workflow::Operation::Command'],
     workflow => sub { Workflow::Operation->create_from_xml(\*DATA); }
 };
@@ -15,7 +15,7 @@ sub help_brief {
 sub help_synopsis{
     my $self = shift;
     return <<"EOS"
-genome model somatic pindel --model-id 123 --data-directory /someplace/for/output (do not put this in an allocated build directory, it will make allocations inaccurate)
+genome model somatic pindel --model-id 123 --output-directory /someplace/for/output (do not put this in an allocated build directory, it will make allocations inaccurate)
 EOS
 }
 
@@ -94,7 +94,7 @@ sub pre_execute {
         $self->version('0.2');
     }
     unless($self->use_old_pindel){
-        $self->use_old_pindel(0);
+        $self->use_old_pindel(1);
     }
 
     my %default_filenames = $self->default_filenames;
