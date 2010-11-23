@@ -7,7 +7,7 @@ use Storable 'retrieve';
 use above "Genome";
 use Genome::Info::UCSCConservation;
 
-our $THIS_VERSION_ANNOTATOR_SUBCLASS = 'Genome::Model::Tools::Annotate::TranscriptVariants::Version1';
+our $THIS_VERSION_ANNOTATOR_SUBCLASS = 'Genome::Model::Tools::Annotate::TranscriptVariants::Version2';
 
 # The test variants file can hold 1..n variants
 # Each variant must have a corresponding annotation

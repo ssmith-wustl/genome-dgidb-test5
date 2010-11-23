@@ -1,5 +1,8 @@
-package Genome::Model::Tools::Annotate::TranscriptVariants::Version1;
+package Genome::Model::Tools::Annotate::TranscriptVariants::Version2;
 
+# v2 - Do proper intersections between variations and transcript structures
+#      by considering both entities' start and stop positions rather than just the
+#      start position of the variation
 # v1 - TranscriptStructure-centric annotator designed to produce the same
 #      answers as v0.
 # v0 - The original, transcript-centric annotator code used through
@@ -346,19 +349,19 @@ sub transcripts {
     # Hack to support the old behavior of only annotating against the first structure
     # of a transcript.  We need to keep a list of all the other structures for later
     # listing them in the deletions column of the output
-    my %transcript_substructures;
-    {
-        my @less;
-        foreach my $substructure ( @$crossing_substructures ) {
-            my $transcript_id = $substructure->transcript_transcript_id;
-            if ($substructure->{'structure_start'} <= $variant_start and $substructure->{'structure_stop'} >= $variant_start) {
-                push @less, $substructure;
-            }
-            $transcript_substructures{$transcript_id} ||= [];
-            push @{$transcript_substructures{$transcript_id}}, $substructure;
-        }
-        $crossing_substructures = \@less;
-    }
+#    my %transcript_substructures;
+#    {
+#        my @less;
+#        foreach my $substructure ( @$crossing_substructures ) {
+#            my $transcript_id = $substructure->transcript_transcript_id;
+#            if ($substructure->{'structure_start'} <= $variant_start and $substructure->{'structure_stop'} >= $variant_start) {
+#                push @less, $substructure;
+#            }
+#            $transcript_substructures{$transcript_id} ||= [];
+#            push @{$transcript_substructures{$transcript_id}}, $substructure;
+#        }
+#        $crossing_substructures = \@less;
+#    }
 
     return unless @$crossing_substructures;
 
@@ -392,12 +395,12 @@ sub transcripts {
         
         my %annotation = $self->_transcript_substruct_annotation($substruct, %variant) or next;
 
-        # Continuation of the hack above about annotating a deletion
-        if ($variant{'type'} eq 'DEL') {
-            my @del_strings = map { $_->structure_type . '[' . $_->structure_start . ',' . $_->structure_stop . ']' }
-                                  @{$transcript_substructures{$substruct->transcript_transcript_id}};
-            $annotation{'deletion_substructures'} = '(deletion:' . join(', ', @del_strings) . ')';
-        }
+#        # Continuation of the hack above about annotating a deletion
+#        if ($variant{'type'} eq 'DEL') {
+#            my @del_strings = map { $_->structure_type . '[' . $_->structure_start . ',' . $_->structure_stop . ']' }
+#                                  @{$transcript_substructures{$substruct->transcript_transcript_id}};
+#            $annotation{'deletion_substructures'} = '(deletion:' . join(', ', @del_strings) . ')';
+#        }
         push @annotations, \%annotation;
     }
     return @annotations;
