@@ -1,9 +1,9 @@
-package Genome::Model::Somatic::Command::PindelNoAssembly;
+package Genome::Model::Somatic::Command::RunPindel;
 
 use strict;
 use warnings;
 
-class Genome::Model::Somatic::Command::PindelNoAssembly {
+class Genome::Model::Somatic::Command::RunPindel {
     is => ['Workflow::Operation::Command'],
     workflow => sub { Workflow::Operation->create_from_xml(\*DATA); }
 };
