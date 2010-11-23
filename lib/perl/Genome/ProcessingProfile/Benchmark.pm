@@ -129,6 +129,7 @@ sub _execute_build {
     $DB::single=1;
 
     my $cmd = $self->command;
+    die "Command not present and executable: $cmd" if (! -x $cmd);
 
     my @inputs = $build->inputs(name => 'command_arguments');
     @inputs = map { $_->{value_id} } @inputs ;

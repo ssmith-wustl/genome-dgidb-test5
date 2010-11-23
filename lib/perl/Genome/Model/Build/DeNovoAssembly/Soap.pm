@@ -236,15 +236,42 @@ sub sra_sample_id_for_pga_imported_instrument_data {
 
 #for build diff testing
 
-sub files_ignored_by_diff {
-    return qw/ build.xml Log /;
+sub files_ignored_by_diff { #all output files .. will differ slightly each time .. this is okay
+    return qw/ build.xml Log config_file
+H_KT-185-1-0089515594_WUGC.Arc
+H_KT-185-1-0089515594_WUGC.ContigIndex
+H_KT-185-1-0089515594_WUGC.contig
+H_KT-185-1-0089515594_WUGC.edge
+H_KT-185-1-0089515594_WUGC.gapSeq
+H_KT-185-1-0089515594_WUGC.kmerFreq
+H_KT-185-1-0089515594_WUGC.links
+H_KT-185-1-0089515594_WUGC.markOnEdge
+H_KT-185-1-0089515594_WUGC.newContigIndex
+H_KT-185-1-0089515594_WUGC.path
+H_KT-185-1-0089515594_WUGC.peGrads
+H_KT-185-1-0089515594_WUGC.preArc
+H_KT-185-1-0089515594_WUGC.preGraphBasic
+H_KT-185-1-0089515594_WUGC.readInGap
+H_KT-185-1-0089515594_WUGC.readOnContig
+H_KT-185-1-0089515594_WUGC.scaf
+H_KT-185-1-0089515594_WUGC.scafSeq
+H_KT-185-1-0089515594_WUGC.scaf_gap
+H_KT-185-1-0089515594_WUGC.updated.edge
+H_KT-185-1-0089515594_WUGC.vertex
+/;
+}
+
+sub metrics_ignored_by_diff {
+    return ('assembly length', 'average contig length', 'average contig length gt 300',
+	    'average supercontig length', 'average supercontig length gt 300',
+	    'config_file', 'contigs', 'n50 contig length', 'n50 supercontig length',
+	    'n50_contig_length_gt_300', 'n50_supercontig_length_gt_300');
 }
 
 sub dirs_ignored_by_diff {
     return qw/ logs reports edit_dir /;
 }
 
-#just comparing input files .. soap output files are always slightly different
 sub regex_files_for_diff {
     return qw/ H_KT-185-1-0089515594_WUGC.2852968107.forward.fastq H_KT-185-1-0089515594_WUGC.2852968107.reverse.fastq /;
 }
