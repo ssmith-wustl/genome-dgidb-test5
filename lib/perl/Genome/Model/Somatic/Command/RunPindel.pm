@@ -15,7 +15,7 @@ sub help_brief {
 sub help_synopsis{
     my $self = shift;
     return <<"EOS"
-genome model somatic pindel --model-id 123 --data-directory /someplace/for/output (do not put this in an allocated build directory, it will make allocations inaccurate)
+genome model somatic pindel --model-id 123 --output-directory /someplace/for/output (do not put this in an allocated build directory, it will make allocations inaccurate)
 EOS
 }
 
