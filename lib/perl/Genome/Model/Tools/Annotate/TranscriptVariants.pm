@@ -64,7 +64,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariants {
             is => 'Text',
             default_value => __PACKAGE__->default_annotator_version,
             doc => 'Annotator version to use',
-            valid_values => [0,1],#__PACKAGE__->available_versions,
+            valid_values => [0,1,2],#__PACKAGE__->available_versions,
         },
         # IO Params
         _is_parallel => {
