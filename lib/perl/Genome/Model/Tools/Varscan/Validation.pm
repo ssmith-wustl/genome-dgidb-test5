@@ -116,8 +116,12 @@ sub execute {                               # replace with real execution logic.
 
         my $cmd = "bash -c \"java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) $output --output-snp $output_snp --output-indel $output_indel $varscan_params\"";
 
-        print "Running $cmd\n";
-        system($cmd);
+        Genome::Utility::FileSystem->shellcmd(
+            cmd => $cmd,
+            input_files => [$normal_bam, $tumor_bam, $reference],
+            output_files => [$output_snp, $output_indel],
+            allow_zero_size_output_files => 1,
+        );
 
     } else {
         die "Error: One of your BAM files doesn't exist!\n";
