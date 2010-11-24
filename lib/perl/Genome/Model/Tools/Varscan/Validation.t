@@ -29,11 +29,12 @@ my $tmpdir = File::Temp::tempdir('VarscanValidationXXXXX', DIR => '/gsc/var/cach
 
 my $output_snp = join('/', $tmpdir, 'varscan.snp');
 my $output_indel = join('/', $tmpdir, 'varscan.indel');
-my $output_validation = join('/', $tmpdir, 'varscan.snp.validation'); #Not currently a parameter to the tool, calculated based on output_snp name.
+my $output_validation = join('/', $tmpdir, 'varscan.validation');
 
 my $varscan_command = Genome::Model::Tools::Varscan::Validation->create(
     output_snp => $output_snp,
     output_indel => $output_indel,
+    output_validation => $output_validation,
     tumor_bam => $tumor_bam,
     normal_bam => $normal_bam,
     reference => $ref_seq->fasta_file,
@@ -49,9 +50,9 @@ ok(!$snp_diff, 'snp output matches expected result')
     or diag("Diff:\n" . $snp_diff);
 
 my $indel_diff = Genome::Utility::FileSystem->diff_file_vs_file($output_indel, $expected_indel_file);
-ok(!$indel_diff, 'snp output matches expected result')
+ok(!$indel_diff, 'indel output matches expected result')
     or diag("Diff:\n" . $indel_diff);
     
 my $validation_diff = Genome::Utility::FileSystem->diff_file_vs_file($output_validation, $expected_validation_file);
-ok(!$validation_diff, 'snp output matches expected result')
+ok(!$validation_diff, 'validation output matches expected result')
     or diag("Diff:\n" . $validation_diff);

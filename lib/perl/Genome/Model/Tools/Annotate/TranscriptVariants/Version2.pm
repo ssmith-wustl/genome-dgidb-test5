@@ -1,13 +1,5 @@
 package Genome::Model::Tools::Annotate::TranscriptVariants::Version2;
 
-# v2 - Do proper intersections between variations and transcript structures
-#      by considering both entities' start and stop positions rather than just the
-#      start position of the variation
-# v1 - TranscriptStructure-centric annotator designed to produce the same
-#      answers as v0.
-# v0 - The original, transcript-centric annotator code used through
-#      October 2010, adapted to run in the versioned annotator framework
-
 use strict;
 use warnings;
 
@@ -67,7 +59,9 @@ UR::Object::Type->define(
         transcript_status_priorities => {  },
         variant_priorities           => {  },
         transcript_error_priorities  => {  },
-    ]
+    ],
+    doc => q(Do proper intersections between variations and transcript structures by considering both entities' start and stop positions rather than just the start position of the variation),
+
 );
 
 

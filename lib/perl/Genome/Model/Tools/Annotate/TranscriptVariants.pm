@@ -47,7 +47,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariants {
         _version_subclass_name => {
             is => 'Text',# is_mutable => 0, 
             calculate_from => ['use_version'],
-            calculate => q( return 'Genome::Model::Tools::Annotate::TranscriptVariants::Version' . $use_version ),
+            calculate => q( return $self->_annotator_subclass_for_version($use_version) ),
         },
         available_versions => {
             is_calculated => 1,
@@ -209,6 +209,7 @@ sub help_detail {
     }
 
     my $available_versions = join (', ', $self->available_versions);
+    my $version_docs = join("\n", map { "version $_: " . $self->_annotator_subclass_for_version($_)->__meta__->doc } $self->available_versions);
 
     return <<EOS 
 This launches the variant annotator.  It takes genome sequence variants and outputs transcript variants, 
@@ -230,7 +231,8 @@ Any number of additional columns may be in the input following these columns, bu
 OUTPUT COLUMNS (COMMMA SEPARATED)
 chromosome_name start stop reference variant type gene_name transcript_name transcript_species transcript_source transcript_version strand transcript_status trv_type c_position amino_acid_change ucsc_cons domain all_domains deletion_substructures transcript_error
 
-The --use-version parameter is used to choose which version of the trasncript variants annotator to run.  The available versions are: $available_versions
+The --use-version parameter is used to choose which version of the trasncript variant annotator to run.  The available versions are: $available_versions
+$version_docs
 
 CURRENTLY AVAILABLE REFERENCE TRANSCRIPTS WITH VERSIONS
 $currently_available_builds
@@ -238,6 +240,11 @@ EOS
 }
 
 ############################################################
+
+
+sub _annotator_subclass_for_version {
+    return 'Genome::Model::Tools::Annotate::TranscriptVariants::Version' . $_[1];
+}
 
 sub variant_attributes {
     return (qw/ chromosome_name start stop reference variant /);
