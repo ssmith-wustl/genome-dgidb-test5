@@ -272,8 +272,7 @@ sub parse {
         my ($letters_until_space) =   ($reference =~ m/^([ACGTN]+) /);
         my $offset_into_first_read = length($letters_until_space);
         $var = substr($first_read, $offset_into_first_read, $size);
-  
-    $stop = $stop - 1;
+        $stop = $stop - 1;
     }
     if($size >= 100) {
         my $big_fh = $self->_big_output_fh;
