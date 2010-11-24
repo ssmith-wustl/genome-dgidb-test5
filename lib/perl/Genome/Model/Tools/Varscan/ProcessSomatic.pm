@@ -20,22 +20,16 @@ use FileHandle;
 
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
-
-my $report_only = 0;
-my $p_value_for_hc = 0.07; # changed 6/2/2010 #1.0E-02;
-my $max_normal_freq = 5; # changed 6/2/2010
-my $min_tumor_freq = 10;
-
 class Genome::Model::Tools::Varscan::ProcessSomatic {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		status_file	=> { is => 'Text', doc => "File containing varscan calls, e.g. status.varscan.snp" , is_optional => 0, is_input => 1},
-		p_value_for_hc =>  { is => 'Text', doc => "P-value threshold for high confidence [1.0e-02]", is_optional => 1, is_input => 1},	
-		max_normal_freq =>  { is => 'Text', doc => "Maximum normal frequency for HC Somatic [4]", is_optional => 1, is_input => 1},	
-		min_tumor_freq =>  { is => 'Text', doc => "Minimum tumor freq for HC Somatic [15]", is_optional => 1, is_input => 1},	
-		report_only	=> { is => 'Text', doc => "If set to 1, will not produce output files" , is_optional => 1},
-		skip_if_output_present	=> { is => 'Text', doc => "If set to 1, will not run if output is present" , is_optional => 1, is_input => 1},
+		p_value_for_hc =>  { is => 'Number', doc => "P-value threshold for high confidence", is_optional => 1, is_input => 1, default_value => '0.07'},	
+		max_normal_freq =>  { is => 'Number', doc => "Maximum normal frequency for HC Somatic", is_optional => 1, is_input => 1, default_value => '5'},	
+		min_tumor_freq =>  { is => 'Number', doc => "Minimum tumor freq for HC Somatic", is_optional => 1, is_input => 1, default_value => '10'},	
+		report_only	=> { is => 'Boolean', doc => "If set to 1, will not produce output files" , is_optional => 1, default_value => 0 },
+		skip_if_output_present	=> { is => 'Boolean', doc => "If set to 1, will not run if output is present" , is_optional => 1, is_input => 1, default_value => 0},
 		output_basename => { is => 'Text', doc => 'Base location for output files (e.g. /path/to/results/output.basename', is_optional => 1, is_input => 1 },
 
           #output filenames
@@ -81,10 +75,6 @@ sub execute {                               # replace with real execution logic.
 
 	## Get required parameters ##
 	my $status_file = $self->status_file;
-	$report_only = $self->report_only if($self->report_only);
-	$p_value_for_hc = $self->p_value_for_hc if(defined($self->p_value_for_hc));
-	$max_normal_freq = $self->max_normal_freq if(defined($self->max_normal_freq));
-	$min_tumor_freq = $self->min_tumor_freq if(defined($self->min_tumor_freq));
 	
 	$self->output_basename($status_file) unless $self->output_basename;
 	
@@ -121,6 +111,11 @@ sub process_results
     my $self = shift;
 	my $variants_file = shift(@_);
 	my $file_header = "";
+	
+	my $report_only = $self->report_only;
+	my $max_normal_freq = $self->max_normal_freq;
+	my $min_tumor_freq = $self->min_tumor_freq;
+	my $p_value_for_hc = $self->p_value_for_hc;
 
 	print "Processing variants in $variants_file...\n";
 
