@@ -1,8 +1,5 @@
 package Genome::Model::Tools::Annotate::TranscriptVariants::Version0;
 
-# v0 - The original, transcript-centric annotator code used through
-#      October 2010, adapted to run in the versioned annotator framework
-
 use strict;
 use warnings;
 
@@ -61,7 +58,8 @@ UR::Object::Type->define(
         data_directory => { is => 'PATHNAME', is_optional => 1 },
         flank_range => { is => 'Integer', is_optional => 1, default_value => 50000,
                          doc => 'Range to look around for flanking regions of transcripts' },
-    ]
+    ],
+    doc => 'The original, transcript-centric annotator code used through October 2010, adapted to run in the versioned annotator framework',
 );
 
 ## These originally lived in Genome::Info::AnnotationPriorities

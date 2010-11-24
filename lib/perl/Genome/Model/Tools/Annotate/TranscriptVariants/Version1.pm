@@ -1,10 +1,5 @@
 package Genome::Model::Tools::Annotate::TranscriptVariants::Version1;
 
-# v1 - TranscriptStructure-centric annotator designed to produce the same
-#      answers as v0.
-# v0 - The original, transcript-centric annotator code used through
-#      October 2010, adapted to run in the versioned annotator framework
-
 use strict;
 use warnings;
 
@@ -64,7 +59,8 @@ UR::Object::Type->define(
         transcript_status_priorities => {  },
         variant_priorities           => {  },
         transcript_error_priorities  => {  },
-    ]
+    ],
+    doc => 'TranscriptStructure-centric annotator designed to produce the same answers as version 0 but run faster.',
 );
 
 
