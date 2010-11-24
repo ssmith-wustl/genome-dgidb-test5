@@ -11,7 +11,7 @@ BEGIN {
 use above 'Genome';
 
 require Genome::InstrumentData::Solexa;
-use Test::More tests => 59;
+use Test::More tests => 61;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
 
@@ -51,6 +51,7 @@ my $instrument_data_1 = Genome::InstrumentData::Solexa->create(
     fwd_clusters => 65535,
     rev_clusters => 65536,
 );
+ok($instrument_data_1, 'Created an instrument data');
 
 my $processing_profile = Genome::ProcessingProfile::ReferenceAlignment->create(
     dna_type => 'genomic dna',
@@ -58,7 +59,9 @@ my $processing_profile = Genome::ProcessingProfile::ReferenceAlignment->create(
     read_aligner_name => 'bwa',
     sequencing_platform => 'solexa',
     read_aligner_params => '#this is a test',
+    transcript_variant_annotator_version => 1,
 );
+ok($processing_profile, 'Created a processing_profile');
 
 my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get(name => 'NCBI-human-build36');
 isa_ok($ref_seq_build, 'Genome::Model::Build::ImportedReferenceSequence') or die;

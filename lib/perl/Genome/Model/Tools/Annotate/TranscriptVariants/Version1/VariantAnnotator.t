@@ -7,6 +7,8 @@ use Storable 'retrieve';
 use above "Genome";
 use Genome::Info::UCSCConservation;
 
+our $THIS_VERSION_ANNOTATOR_SUBCLASS = 'Genome::Model::Tools::Annotate::TranscriptVariants::Version1';
+
 # The test variants file can hold 1..n variants
 # Each variant must have a corresponding annotation
 # These annotations are held in three files, one for each type of filter (top, gene, none)
@@ -90,7 +92,7 @@ sub create_annotator {
         $data_directory = \@data_directories;
     }
 
-    my $annotator = Genome::Transcript::VariantAnnotator->create(
+    my $annotator = $THIS_VERSION_ANNOTATOR_SUBCLASS->create(
         data_directory => $data_directory,
         ucsc_conservation_directory => $ucsc_conservation_directory, 
     );

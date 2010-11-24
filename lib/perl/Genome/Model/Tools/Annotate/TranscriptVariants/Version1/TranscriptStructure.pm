@@ -1,4 +1,4 @@
-package Genome::TranscriptStructure;
+package Genome::Model::Tools::Annotate::TranscriptVariants::Version1::TranscriptStructure;
 #:adukes short term: move data directory into id_by, but this has to be done in parallel w/ rewriting all file-based data sources.  It might be better to wait until long term: custom datasource that incorporates data_dir, possibly species/source/version, eliminating the need for these properties in the id, and repeated multiple times in the files
 
 use strict;
@@ -7,9 +7,12 @@ use warnings;
 use Genome;
 use Carp;
 
-class Genome::TranscriptStructure {
-    type_name => 'genome transcript structure',
-    table_name => 'TRANSCRIPT_SUB_STRUCTURE',
+my $data_source_name = __PACKAGE__;
+$data_source_name =~ s/TranscriptStructure/DataSource::TranscriptStructures/;
+
+UR::Object::Type->define(
+    class_name => __PACKAGE__,
+    
     id_by => [
         chrom_name => {
             is => 'Text',
@@ -144,8 +147,8 @@ class Genome::TranscriptStructure {
         },
     ],
     schema_name => 'files',
-    data_source => 'Genome::DataSource::TranscriptStructures',
-};
+    data_source => $data_source_name,
+);
 
 sub length {
     my $self = shift;

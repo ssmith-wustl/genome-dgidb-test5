@@ -88,7 +88,7 @@ sub execute {
         }
         $self->regions_file("$metagenomic_ref_hmp_dir/combined_refcov_regions_file.regions.txt");
         unless (-s $self->regions_file){
-            die $self->error_message("refcov regions bed file doesn't exist or have size: ".$self->regions_file);
+            die $self->error_message("refcov regions file doesn't exist or have size: ".$self->regions_file);
         }
     }
     if ($self->include_taxonomy_report) {

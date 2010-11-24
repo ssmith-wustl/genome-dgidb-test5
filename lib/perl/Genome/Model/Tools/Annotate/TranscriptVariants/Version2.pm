@@ -1,12 +1,18 @@
-package Genome::Transcript::VariantAnnotator;
-#:adukes all annotation methods could be cleaned and documented for better clarity, see cds_exon_modified for an improvement over the current method.  Consider differentiating more between annotating snps/dnps and indeals as opposed to have case statements sprinkled liberally throughought, unit testing for every method needs to happen but doesn't
+package Genome::Model::Tools::Annotate::TranscriptVariants::Version2;
+
+# v2 - Do proper intersections between variations and transcript structures
+#      by considering both entities' start and stop positions rather than just the
+#      start position of the variation
+# v1 - TranscriptStructure-centric annotator designed to produce the same
+#      answers as v0.
+# v0 - The original, transcript-centric annotator code used through
+#      October 2010, adapted to run in the versioned annotator framework
 
 use strict;
 use warnings;
 
 use Data::Dumper;
 use Genome;
-use Genome::Info::AnnotationPriorities;
 use File::Temp;
 use List::Util qw/ max min /;
 use List::MoreUtils qw/ uniq /;
@@ -14,22 +20,25 @@ use Bio::Tools::CodonTable;
 use DateTime;
 use Carp;
 
-class Genome::Transcript::VariantAnnotator{
-    is => 'UR::Object',
+UR::Object::Type->define(
+    class_name => __PACKAGE__,
     has => [
         codon_translator => {
             is => 'Bio::Tools::CodonTable',
-            is_optional => 1,
+            is_constant => 1,
+            calculate => q( Bio::Tools::CodonTable->new( -id => 1) ),
         },
         mitochondrial_codon_translator => {
             is => 'Bio::Tools::CodonTable',
-            is_optional => 1,
+            is_constant => 1,
+            calculate => q( Bio::Tools::CodonTable->new( -id => 2) ),
         },
         ucsc_conservation_directory => {
             is => 'Path',
             is_optional => 1,
+            is_deprecated => 1,
 #            default => '/gscmnt/sata835/info/medseq/model_data/2741951221/v36-build93636924/ucsc_conservation/',
-        },
+         },
         check_variants => {
             is => 'Boolean',
             is_optional => 1,
@@ -47,22 +56,85 @@ class Genome::Transcript::VariantAnnotator{
             is_optional => 0,
             doc => 'Pathname to the annotation_data of a build containing transcripts.csv and other files',
         },
+        
+        transcript_structure_class_name => {
+            is_constant => 1,
+            value => __PACKAGE__ . '::TranscriptStructure',
+        },
+
+        #priorities => { is => __PACKAGE__ . '::AnnotationPriorities', is_constant => 1, id_by => 1 },
+        transcript_source_priorities => {  },
+        transcript_status_priorities => {  },
+        variant_priorities           => {  },
+        transcript_error_priorities  => {  },
     ]
-};
+);
 
-my %transcript_source_priorities = Genome::Info::AnnotationPriorities->transcript_source_priorities;
-my %transcript_status_priorities = Genome::Info::AnnotationPriorities->transcript_status_priorities;
-my %variant_priorities = Genome::Info::AnnotationPriorities->variant_priorities;
-my %transcript_error_priorities = Genome::Info::AnnotationPriorities->transcript_error_priorities;
 
-# Override create and instantiate codon_translators
-sub create{
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    $self->codon_translator( Bio::Tools::CodonTable->new( -id => 1) );
-    $self->mitochondrial_codon_translator( Bio::Tools::CodonTable->new( -id => 2) );
-    return $self;
+## These originally lived in Genome::Info::AnnotationPriorities
+sub transcript_source_priorities {
+    return (
+        genbank => 1,
+        ensembl => 2,
+    );
 }
+
+sub transcript_status_priorities {
+    return (
+        reviewed    => 1,
+        validated   => 2,
+        provisional => 3,
+        predicted   => 4,
+        model       => 5,
+        inferred    => 6,
+        known       => 7,
+        novel       => 8,
+        unknown     => 9,
+    );
+}
+
+sub variant_priorities  {
+    return (
+        nonsense                        => 1,
+        frame_shift                     => 2,
+        frame_shift_del                 => 3,
+        frame_shift_ins                 => 4,
+        splice_site                     => 5,
+        splice_site_del                 => 6,
+        splice_site_ins                 => 7,
+        in_frame_del                    => 8,
+        in_frame_ins                    => 9,
+        missense                        => 10,
+        nonstop                         => 11,
+        silent                          => 12,
+        rna                             => 13,
+        '5_prime_untranslated_region'   => 14,
+        '3_prime_untranslated_region'   => 15,
+        splice_region                   => 16,
+        splice_region_del               => 17,
+        splice_region_ins               => 18,
+        intronic                        => 19,
+        '5_prime_flanking_region'       => 20,
+        '3_prime_flanking_region'       => 21,
+        #consensus_error                 => 17,
+    );
+}
+    
+sub transcript_error_priorities {
+    return (
+        no_errors                               => 1,
+        gap_between_substructures               => 2,
+        mismatch_between_exon_seq_and_reference => 3,
+        bad_bp_length_for_coding_region         => 4,
+        overly_large_intron                     => 5,
+        rna_with_coding_region                  => 6,
+        no_coding_region                        => 7,
+        no_stop_codon                           => 8,
+        pseudogene                              => 9,
+        no_start_codon                          => 10,
+    );
+}
+    
 
 # Given a nucleotide sequence, translate to amino acid sequence and return
 # The translator->translate method can take 1-3 bp of sequence. If given
@@ -167,20 +239,25 @@ sub _create_iterator_for_variant_intersection {
 
     my $variant;   # needs to be visible in both closures below
 
+    my $structure_class = $self->transcript_structure_class_name;
+    my $intersect_sub_name = $structure_class->__meta__->data_source . '::intersector_sub';
+
     # This sub plugs into a hook in the Genome::DataSource::TranscriptStructures loader
     # to reject data that does not intersect the given variation to avoid passing the
     # data up the call stack and creating objects for TranscriptStructures we aren't 
     # interested in
-    $Genome::DataSource::TranscriptStructures::intersector_sub = sub {
-        return 1 unless defined $variant;
+    {   no strict 'refs'; 
+        $$intersect_sub_name = sub {
+            return 1 unless defined $variant;
 
-        my $struct = $_[0];
-        if ( $variant->{'start'} <= $struct->[STRUCTURE_STOP]) {
-            return 1;
-        } else {
-            return 0;
-        }
-    };
+            my $struct = $_[0];
+            if ( $variant->{'start'} <= $struct->[STRUCTURE_STOP]) {
+                return 1;
+            } else {
+                return 0;
+            }
+        };
+    }
 
     return sub {
         $variant = $_[0];
@@ -198,7 +275,7 @@ sub _create_iterator_for_variant_intersection {
             $loaded_substructures = [];
             $structure_iterator = undef;
 
-            $structure_iterator = Genome::TranscriptStructure->create_iterator(
+            $structure_iterator = $structure_class->create_iterator(
                                       chrom_name => $chrom_name,
                                       data_directory => $self->data_directory,
                                       -order_by => ['structure_start']);
@@ -272,19 +349,19 @@ sub transcripts {
     # Hack to support the old behavior of only annotating against the first structure
     # of a transcript.  We need to keep a list of all the other structures for later
     # listing them in the deletions column of the output
-    my %transcript_substructures;
-    {
-        my @less;
-        foreach my $substructure ( @$crossing_substructures ) {
-            my $transcript_id = $substructure->transcript_transcript_id;
-            if ($substructure->{'structure_start'} <= $variant_start and $substructure->{'structure_stop'} >= $variant_start) {
-                push @less, $substructure;
-            }
-            $transcript_substructures{$transcript_id} ||= [];
-            push @{$transcript_substructures{$transcript_id}}, $substructure;
-        }
-        $crossing_substructures = \@less;
-    }
+#    my %transcript_substructures;
+#    {
+#        my @less;
+#        foreach my $substructure ( @$crossing_substructures ) {
+#            my $transcript_id = $substructure->transcript_transcript_id;
+#            if ($substructure->{'structure_start'} <= $variant_start and $substructure->{'structure_stop'} >= $variant_start) {
+#                push @less, $substructure;
+#            }
+#            $transcript_substructures{$transcript_id} ||= [];
+#            push @{$transcript_substructures{$transcript_id}}, $substructure;
+#        }
+#        $crossing_substructures = \@less;
+#    }
 
     return unless @$crossing_substructures;
 
@@ -318,12 +395,12 @@ sub transcripts {
         
         my %annotation = $self->_transcript_substruct_annotation($substruct, %variant) or next;
 
-        # Continuation of the hack above about annotating a deletion
-        if ($variant{'type'} eq 'DEL') {
-            my @del_strings = map { $_->structure_type . '[' . $_->structure_start . ',' . $_->structure_stop . ']' }
-                                  @{$transcript_substructures{$substruct->transcript_transcript_id}};
-            $annotation{'deletion_substructures'} = '(deletion:' . join(', ', @del_strings) . ')';
-        }
+#        # Continuation of the hack above about annotating a deletion
+#        if ($variant{'type'} eq 'DEL') {
+#            my @del_strings = map { $_->structure_type . '[' . $_->structure_start . ',' . $_->structure_stop . ']' }
+#                                  @{$transcript_substructures{$substruct->transcript_transcript_id}};
+#            $annotation{'deletion_substructures'} = '(deletion:' . join(', ', @del_strings) . ')';
+#        }
         push @annotations, \%annotation;
     }
     return @annotations;
@@ -348,6 +425,10 @@ sub is_valid_variant {
 sub _prioritize_annotations {
     my ($self, @annotations) = @_;
 
+    my %transcript_source_priorities = $self->transcript_source_priorities;
+    my %transcript_status_priorities = $self->transcript_status_priorities;
+    my %variant_priorities = $self->variant_priorities;
+
     use sort '_mergesort';  # According to perldoc, performs better than quicksort on large sets with many comparisons
     my @sorted_annotations = sort {
         $variant_priorities{$a->{trv_type}} <=> $variant_priorities{$b->{trv_type}} ||
@@ -365,6 +446,9 @@ sub _prioritize_annotations {
 # Given an annotation, split up the error string and return the highest priority error listed
 sub _highest_priority_error {
     my ($self, $annotation) = @_;
+
+    my %transcript_error_priorities = $self->transcript_error_priorities;
+
     my $error_string = $annotation->{transcript_error};
     my @errors = map { $transcript_error_priorities{$_} } split(":", $error_string);
     my @sorted_errors = sort { $b <=> $a } @errors;
@@ -593,11 +677,14 @@ sub _transcript_annotation_for_cds_exon {
     # it's possible that variants may always be split up so they only touch one structure, but for 
     # now this will have to do.
     # TODO This can be removed once variants spanning structures are handled properly
-    if ($variant->{stop} > $structure->structure_stop and $variant->{type} eq 'DEL') {
-        my $bases_beyond_stop = $variant->{stop} - $structure->structure_stop;
-        my $new_variant_length = (length $variant->{reference}) - $bases_beyond_stop;
-        $variant->{reference} = substr($variant->{reference}, 0, $new_variant_length);
-        $variant->{stop} = $variant->{stop} - $bases_beyond_stop;
+    unless ($self->{'get_frame_shift_sequence'}) {
+        # If we're inspecting the entire sequence, don't chop the variant down...
+        if ($variant->{stop} > $structure->structure_stop and $variant->{type} eq 'DEL') {
+            my $bases_beyond_stop = $variant->{stop} - $structure->structure_stop;
+            my $new_variant_length = (length $variant->{reference}) - $bases_beyond_stop;
+            $variant->{reference} = substr($variant->{reference}, 0, $new_variant_length);
+            $variant->{stop} = $variant->{stop} - $bases_beyond_stop;
+        }
     }
 
     my $coding_position = $self->_determine_coding_position($variant, $structure);
@@ -759,12 +846,13 @@ sub _apply_indel_and_translate{
     #
 
     local($Genome::DataSource::TranscriptStructures::intersector_sub);
-    my @sibling_structures = Genome::TranscriptStructure->get(transcript_transcript_id => $structure->transcript_transcript_id,
-                                                               chrom_name => $chrom_name,
-                                                               data_directory => $structure->data_directory,
-                                                               'structure_start <' => $structure->transcript_transcript_stop + 50000,
-                                                              # structure_type => 'intron',
-                                                            );
+    my $structures_class = $self->transcript_structure_class_name;
+    my @sibling_structures = $structures_class->get(transcript_transcript_id => $structure->transcript_transcript_id,
+                                                    chrom_name => $chrom_name,
+                                                    data_directory => $structure->data_directory,
+                                                    'structure_start <' => $structure->transcript_transcript_stop + 50000,
+                                                    # structure_type => 'intron',
+                                                  );
     if ($structure->transcript_strand eq '+1') {
         @sibling_structures = sort { $a->structure_start <=> $b->structure_start } @sibling_structures;
     } else {
@@ -873,12 +961,16 @@ sub _ucsc_conservation_score {
     Genome::Model::Tools::Annotate::LookupConservationScore->class();  # Get the module loaded
     # NOTE! Not a method.  This is a normal function call.  That class' execute() is just a wrapper
     # around it
-    my $ref = Genome::Model::Tools::Annotate::LookupConservationScore::lookup_conservation_score(
+    my $ref;
+    eval{
+        $ref = Genome::Model::Tools::Annotate::LookupConservationScore::lookup_conservation_score(
                   chromosome => $variant->{chromosome_name},
                   coordinates => $range,
                   species => $substruct->transcript_species,
                   version => $substruct->transcript_version,
-             );
+        );
+    };
+    return '-' unless $ref;
 
     my @ret;
     foreach my $item (@$ref)

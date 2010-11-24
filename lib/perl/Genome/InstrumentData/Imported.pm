@@ -41,7 +41,7 @@ class Genome::InstrumentData::Imported {
         run_name             => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         sd_above_insert_size => { is => 'NUMBER', len => 20, is_optional => 1 },
         subset_name          => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        library_id           => { is => 'NUMBER', len => 20, is_optional => 1 },
+        library_id           => { is => 'NUMBER', len => 20, is_optional => 0 },
     ],
     has_optional =>[
         reference_sequence_build_id => { 

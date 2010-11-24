@@ -1,13 +1,14 @@
-package Genome::DataSource::TranscriptStructures;
+package Genome::Model::Tools::Annotate::TranscriptVariants::Version2::DataSource::TranscriptStructures;
 
 use Genome;
 
-class Genome::DataSource::TranscriptStructures {
+UR::Object::Type->define(
+    class_name => __PACKAGE__,
     is => ['UR::DataSource::FileMux', 'UR::Singleton'],
     has_constant => [
         quick_disconnect => { is => 'Boolean', default_value => 0 },
     ],
-};
+);
 
 sub constant_values { [qw/chrom_name data_directory/] };
 sub required_for_get { ['chrom_name','data_directory'] }
@@ -50,13 +51,11 @@ sub column_order { [ qw(
     )]}
 
 sub sort_order {[qw( structure_start transcript_transcript_start transcript_transcript_stop )] }
-#sub sort_order {[qw( structure_stop structure_start transcript_structure_id )] }
 
 sub file_resolver {
     my( $chrom_name, $data_directory) = @_;
 
     return '/' . $data_directory . '/substructures/' . $chrom_name . '.csv';
-    #return '/' . $data_directory . '/substructures/' . $chrom_name . '.new.csv';
 }
 
 sub create_iterator_closure_for_rule {
