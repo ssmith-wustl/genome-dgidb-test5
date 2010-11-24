@@ -38,6 +38,10 @@ my $output_basename = join('/', $tmpdir, 'varscan.snp');
 my $varscan_command = Genome::Model::Tools::Varscan::ProcessSomatic->create(
     status_file => $snp_file,
     output_basename => $output_basename,
+
+    p_value_for_hc => 0.07,
+    max_normal_freq => 5,
+    min_tumor_freq => 10,
 );
 isa_ok($varscan_command, 'Genome::Model::Tools::Varscan::ProcessSomatic', 'created varscan command');
 ok($varscan_command->execute(), 'executed varscan command');
