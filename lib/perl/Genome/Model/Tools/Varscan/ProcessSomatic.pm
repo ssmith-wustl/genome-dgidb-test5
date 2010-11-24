@@ -16,8 +16,6 @@ package Genome::Model::Tools::Varscan::ProcessSomatic;     # rename this when yo
 use strict;
 use warnings;
 
-use FileHandle;
-
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
 class Genome::Model::Tools::Varscan::ProcessSomatic {
@@ -79,14 +77,15 @@ sub execute {                               # replace with real execution logic.
     $self->output_basename($status_file) unless $self->output_basename;
 
     if(-e $status_file) {
-        if($self->skip_if_output_present && -e "$status_file.Somatic.hc") {
+        if($self->skip_if_output_present && -e $self->output_somatic_hc) {
             ## Skip ##
         } else {
             $self->process_results($status_file);
         }
 
     } else {
-        die "Status file $status_file not found!\n";
+        $self->error_message("Status file $status_file not found!");
+        die $self->error_message;
     }
 
     return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
@@ -99,7 +98,7 @@ sub execute {                               # replace with real execution logic.
 
 sub process_results {
     my $self = shift;
-    my $variants_file = shift(@_);
+    my $variants_file = shift;
     my $file_header = "";
 
     my $report_only = $self->report_only;
@@ -114,7 +113,7 @@ sub process_results {
 
     ## Parse the variant file ##
 
-    my $input = new FileHandle ($variants_file);
+    my $input = Genome::Utility::FileSystem->open_file_for_reading($variants_file);
     my $lineCounter = 0;
 
     while (<$input>) {
@@ -133,7 +132,7 @@ sub process_results {
             } elsif($lineContents[12] && ($lineContents[12] =~ "Reference" || $lineContents[12] =~ "Somatic" || $lineContents[12] =~ "Germline" || $lineContents[12] =~ "Unknown" || $lineContents[12] =~ "LOH")) {
                 $somatic_status = $lineContents[12];
             } else {
-                warn "Unable to parse somatic_status from file $variants_file line $lineCounter\n";
+                $self->warning_message("Unable to parse somatic_status from file $variants_file line $lineCounter");
                 $somatic_status = "Unknown";
             }
 
@@ -151,18 +150,23 @@ sub process_results {
 
         ## Output Germline, Somatic, and LOH ##
 
+        my ($status_fh, $high_confidence_fh, $low_confidence_fh);
+
         if($status eq "Germline" || $status eq "Somatic" || $status eq "LOH") {
             if(!$report_only) {
                 my $status_file_accessor = 'output_' . lc($status);
                 my $hc_file_accessor = $status_file_accessor . '_hc';
                 my $lc_file_accessor = $status_file_accessor . '_lc';
 
-                open(STATUS, '>' . $self->$status_file_accessor) or die "Can't open output file: $!\n";
-                open(HICONF, '>' . $self->$hc_file_accessor) or die "Can't open output file: $!\n";
-                open(LOWCONF, '>' . $self->$lc_file_accessor) or die "Can't open output file: $!\n";
-                print HICONF "$file_header\n" if($file_header);
-                print LOWCONF "$file_header\n" if($file_header);
-                print STATUS "$file_header\n" if($file_header);
+                $status_fh = Genome::Utility::FileSystem->open_file_for_writing($self->$status_file_accessor);
+                $high_confidence_fh = Genome::Utility::FileSystem->open_file_for_writing($self->$hc_file_accessor);
+                $low_confidence_fh = Genome::Utility::FileSystem->open_file_for_writing($self->$lc_file_accessor);
+                
+                if($file_header) {
+                    for my $fh ($status_fh, $high_confidence_fh, $low_confidence_fh) {
+                        $fh->print($file_header,"\n");
+                    }
+                }
             }
 
             my $numHiConf = my $numLowConf = 0;
@@ -198,50 +202,48 @@ sub process_results {
                 }
 
                 ## Determine somatic status ##
-
-                if($status eq "Somatic") {
+                if(!$report_only) {
                     ## Print to master status file ##
-                    print STATUS "$line\n" if(!$report_only);
+                    $status_fh->print("$line\n");
 
-                    if($normal_freq <= $max_normal_freq && $tumor_freq >= $min_tumor_freq && $p_value <= $p_value_for_hc && $tumor_reads2 >= 2) { #1.0E-06
-                        print HICONF "$line\n" if(!$report_only);
-                        $numHiConf++;
-                    } else {
-                        print LOWCONF "$line\n" if(!$report_only);
-                        $numLowConf++;
-                    }
-                } elsif($status eq "Germline") {
-                    ## Print to master status file ##
-                    print STATUS "$line\n" if(!$report_only);
-
-                    if($normal_freq >= $min_tumor_freq && $tumor_freq >= $min_tumor_freq && $p_value <= $p_value_for_hc) { #1.0E-06)
-                        print HICONF "$line\n" if(!$report_only);
-                        $numHiConf++;
-                    } else {
-                        print LOWCONF "$line\n" if(!$report_only);
-                        $numLowConf++;
-                    }
-                } elsif($status eq "LOH") {
-                    ## Print to master status file ##
-                    print STATUS "$line\n" if(!$report_only);
-
-                    if($normal_freq >= $min_tumor_freq && $p_value <= $p_value_for_hc) { #1.0E-06)
-                        print HICONF "$line\n" if(!$report_only);
-                        $numHiConf++;
-                    } else {
-                        print LOWCONF "$line\n" if(!$report_only);
-                        $numLowConf++;
+                    if($status eq "Somatic") {
+                        if($normal_freq <= $max_normal_freq && $tumor_freq >= $min_tumor_freq && $p_value <= $p_value_for_hc && $tumor_reads2 >= 2) {
+                            $high_confidence_fh->print("$line\n");
+                            $numHiConf++;
+                        } else {
+                            $low_confidence_fh->print("$line\n");
+                            $numLowConf++;
+                        }
+                    } elsif($status eq "Germline") {
+                        if($normal_freq >= $min_tumor_freq && $tumor_freq >= $min_tumor_freq && $p_value <= $p_value_for_hc) {
+                            $high_confidence_fh->print("$line\n");
+                            $numHiConf++;
+                        } else {
+                            $low_confidence_fh->print("$line\n");
+                            $numLowConf++;
+                        }
+                    } elsif($status eq "LOH") {
+                        if($normal_freq >= $min_tumor_freq && $p_value <= $p_value_for_hc) {
+                            $high_confidence_fh->print("$line\n");
+                            $numHiConf++;
+                        } else {
+                            $low_confidence_fh->print("$line\n");
+                            $numLowConf++;
+                        }
                     }
                 }
             }
 
-            close(HICONF);
-            close(LOWCONF);
+            for my $fh ($status_fh, $high_confidence_fh, $low_confidence_fh) {
+                $fh->close() if $fh;
+            }
 
             print "\t$numHiConf high confidence\n";
             print "\t$numLowConf low confidence\n";
         }
     }
+
+    return 1;
 }
 
 
