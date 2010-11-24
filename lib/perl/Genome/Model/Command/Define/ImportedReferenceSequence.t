@@ -14,7 +14,7 @@ use Test::More;
 use File::Spec;
 
 if(Genome::Config->arch_os() =~ '64') {
-    plan tests => 46;
+    plan tests => 45;
 } else {
     plan skip_all => 'Must be run on a 64-bit machine',
 }
@@ -101,10 +101,9 @@ my %expected_file_sizes = (
     'all_sequences.bowtie.fai' => 46,
     'all_sequences.bowtie.rev.1.ebwt' => 16178321,
     'all_sequences.bowtie.rev.2.ebwt' => 5242888,
-    'manifest.tsv' => 254, 
 );
 
-my @files_to_test = grep(-f $_ && $_ !~ 'build.xml', @files);
+my @files_to_test = grep(-f $_ && $_ !~ 'build.xml' && $_ !~ 'manifest.tsv', @files);
 
 for my $file (@files_to_test) {
     my ($vol, $dir, $file_base) = File::Spec->splitpath($file);
