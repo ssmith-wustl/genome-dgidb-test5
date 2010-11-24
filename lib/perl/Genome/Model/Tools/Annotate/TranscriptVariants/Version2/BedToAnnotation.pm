@@ -77,8 +77,18 @@ sub _convert_input_file{
        $self->error_message("No separated value reader for $input_file, exiting") and die; 
     }
     while (my $line = $svr->next){
-        my $final = join("\t", $line->{'chromosome'}, $line->{'start'} + 1, $line->{'stop'}, $line->{'reference'}, $line->{'variant'});
-        $final =~ s/\*/-/g; #replace the '*'s with '-' as the annotator expects
+        #replace the '*'s with '-' as the annotator expects
+        $line->{'reference'} =~ s/0|\*/-/g; 
+        $line->{'variant'}   =~ s/0|\*/-/g;
+
+        my $final;
+        if($line->{'reference'} eq '-'){
+            #insertions should have start == stop in Chris's format
+            $final = join("\t", $line->{'chromosome'}, $line->{'start'}, $line->{'stop'} + 1, $line->{'reference'}, $line->{'variant'});
+        }else{
+            $final = join("\t", $line->{'chromosome'}, $line->{'start'} + 1, $line->{'stop'}, $line->{'reference'}, $line->{'variant'});
+        }
+
         print $output $final . "\n";
     }
     #flush the buffer
