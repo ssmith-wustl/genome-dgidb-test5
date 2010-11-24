@@ -142,6 +142,7 @@ sub genome_size {
     }
     elsif ( $subject->isa('Genome::Sample') ) { 
         $taxon = $subject->taxon;
+	$taxon = $subject->source->taxon unless $taxon;
     }
     # TODO add more...
 
