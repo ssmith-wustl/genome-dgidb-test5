@@ -178,8 +178,8 @@ sub _map_workflow_inputs {
         build_id => $build->id,
         normal_bam_file => $normal_bam,
         tumor_bam_file => $tumor_bam,
-        normal_snp_file => $normal_snp_file,
-        tumor_snp_file => $tumor_snp_file,
+        normal_filtered_snp_file => $normal_snp_file,
+        tumor_filtered_snp_file => $tumor_snp_file,
         data_directory => $data_directory;
 
 
@@ -205,8 +205,6 @@ sub _map_workflow_inputs {
         lookup_variants_filter_out_submitters => "SNP500CANCER,OMIMSNP,CANCER-GENOME,CGAP-GAI,LCEISEN,ICRCG,DEVINE_LAB",
         annotate_no_headers => 1,
         transcript_annotation_filter => "top",
-        normal_indelpe_data_directory => join('/', $data_directory, "normal_indelpe_data"),
-        tumor_indelpe_data_directory => join('/', $data_directory, "tumor_indelpe_data"),
         #FIXME Get the reference from the constituent builds instead of hard-coding
         reference_fasta => (Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa');
 
