@@ -203,18 +203,6 @@ sub process_results {
                     ## Print to master status file ##
                     print STATUS "$line\n" if(!$report_only);
 
-                    ## If there's good support in tumor but NO support in normal, call it HC ##
-                    #if($normal_freq == 0 && $tumor_freq >= $min_tumor_freq && $tumor_reads2 >= 2) ## Added 5/28/2010
-                    #{
-                    #    print HICONF "$line\n" if(!$report_only);
-                    #    $numHiConf++;
-                    #}
-                    #elsif($normal_reads2 <= 1 && $tumor_freq >= $min_tumor_freq && $tumor_reads2 >= 2)  ## Added 5/28/2010
-                    #{
-                    #    print HICONF "$line\n" if(!$report_only);
-                    #    $numHiConf++;
-                    #}
-                    #els
                     if($normal_freq <= $max_normal_freq && $tumor_freq >= $min_tumor_freq && $p_value <= $p_value_for_hc && $tumor_reads2 >= 2) { #1.0E-06
                         print HICONF "$line\n" if(!$report_only);
                         $numHiConf++;
