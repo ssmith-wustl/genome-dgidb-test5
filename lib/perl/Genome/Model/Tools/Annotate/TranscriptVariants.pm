@@ -336,7 +336,6 @@ sub execute {
         my $converted_bed_file = Genome::Utility::FileSystem->create_temp_file_path();
         my $bed_converter_class = $self->_version_subclass_name. "::BedToAnnotation";
         $bed_converter_class->execute( snv_file => $self->variant_bed_file, output => $converted_bed_file) || ($self->error_message("Could not convert BED file to annotator format") and return);
-        #Genome::Model::Tools::Bed::Convert::BedToAnnotation->execute(snv_file => $self->variant_bed_file, output => $converted_bed_file) || ($self->error_message("Could not convert BED file to annotator format") and return); 
         $self->variant_file($converted_bed_file);
     }
 
