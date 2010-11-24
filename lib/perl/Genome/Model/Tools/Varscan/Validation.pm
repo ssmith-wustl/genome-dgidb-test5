@@ -89,7 +89,7 @@ sub execute {                               # replace with real execution logic.
 	}
 	else
 	{
-		die "Please provide an output basename (--output) or output files for SNPs (--output-snp) and indels (--output-indels)\n";
+		die "Please provide an output basename (--output) or output files for SNPs (--output-snp) and indels (--output-indel)\n";
 	}
 
 
