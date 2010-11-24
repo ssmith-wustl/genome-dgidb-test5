@@ -332,6 +332,11 @@ sub execute {
     }
 
     my $variant_file = $self->variant_file;
+
+    unless(-s $variant_file){
+        $self->error_message("Variant file has no size, exiting");
+        die;
+    }
     
     
     if (defined $self->data_directory) {
