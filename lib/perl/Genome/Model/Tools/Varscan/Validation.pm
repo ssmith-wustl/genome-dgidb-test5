@@ -28,9 +28,12 @@ class Genome::Model::Tools::Varscan::Validation {
         tumor_bam        => { is => 'Text', doc => "Path to Tumor BAM file", is_optional => 0, is_input => 1 },
         output           => { is => 'Text', doc => "Path to Tumor BAM file", is_optional => 1, is_input => 1, is_output => 1 },
         output_snp       => { is => 'Text', doc => "Basename for SNP output, eg. varscan_out/varscan.status.snp" , is_optional => 1, is_input => 1, is_output => 1},
-        output_indel     => { is => 'Text', doc => "Basename for indel output, eg. varscan_out/varscan.status.snp" , is_optional => 1, is_input => 1, is_output => 1},
+        output_indel     => { is => 'Text', doc => "Basename for indel output, eg. varscan_out/varscan.status.indel" , is_optional => 1, is_input => 1, is_output => 1},
+        output_validation=> { is => 'Text', doc => 'Basename for validation output, eg. varscan_out/varscan.status.validation', is_optional => 1, is_output => 1, calculate_from => ['output', 'output_snp'],
+            #This is determined internally to var-scan based on a value below calculated from one of these two values
+            calculate => q{ if($output) { return $output . '.validation'; } else { return $output_snp . '.validation' } },
+        },
         reference        => { is => 'Text', doc => "Reference FASTA file for BAMs" , is_optional => 1, is_input => 1, default_value => (Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa')},
-        heap_space       => { is => 'Text', doc => "Megabytes to reserve for java heap [1000]" , is_optional => 1, is_input => 1},
         skip_if_output_present => { is => 'Text', doc => "If set to 1, skip execution if output files exist", is_optional => 1, is_input => 1 },
         varscan_params   => { is => 'Text', doc => "Parameters to pass to VarScan" , is_optional => 1, is_input => 1, default_value => '--min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.01 --validation 1 --min-coverage 8'},
         samtools_version => { is => 'Text', doc => 'Version of samtools to use' },
@@ -111,20 +114,7 @@ sub execute {                               # replace with real execution logic.
         my $normal_pileup = "$sam_pathname pileup -f $reference $normal_bam";
         my $tumor_pileup = "$sam_pathname pileup -f $reference $tumor_bam";
 
-        #my $cmd = "bash -c \"java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) --output $output --output-snp $output_snp --output-indel $output_indel $varscan_params\"";
         my $cmd = "bash -c \"java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) $output --output-snp $output_snp --output-indel $output_indel $varscan_params\"";
-#        my $cmd = "java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) --output-snp $output_snp --output-indel $output_indel $varscan_params";
-#        open(SCRIPT, ">$output_snp.sh") or die "Can't open output file!\n";
-#        print SCRIPT "#!/gsc/bin/bash\n";
-#        print SCRIPT "java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) --output-snp $output_snp --output-indel $output_indel $varscan_params\n";
-#        close(SCRIPT);
-#        system("chmod 755 $output_snp.sh");
-#        system("bash $output_snp.sh");
-
-        ## Run VarScan ##
-        if($self->heap_space) {
-#            system("java -Xms" . $self->heap_space . "m -Xmx" . $self->heap_space . "m -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <($normal_pileup) <($tumor_pileup) $output $varscan_params");
-        }
 
         print "Running $cmd\n";
         system($cmd);
