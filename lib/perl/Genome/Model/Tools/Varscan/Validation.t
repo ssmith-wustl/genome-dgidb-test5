@@ -49,9 +49,9 @@ ok(!$snp_diff, 'snp output matches expected result')
     or diag("Diff:\n" . $snp_diff);
 
 my $indel_diff = Genome::Utility::FileSystem->diff_file_vs_file($output_indel, $expected_indel_file);
-ok(!$indel_diff, 'snp output matches expected result')
+ok(!$indel_diff, 'indel output matches expected result')
     or diag("Diff:\n" . $indel_diff);
     
 my $validation_diff = Genome::Utility::FileSystem->diff_file_vs_file($output_validation, $expected_validation_file);
-ok(!$validation_diff, 'snp output matches expected result')
+ok(!$validation_diff, 'validation output matches expected result')
     or diag("Diff:\n" . $validation_diff);
