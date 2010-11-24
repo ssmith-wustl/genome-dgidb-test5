@@ -33,6 +33,7 @@ class Genome::Model::Tools::Varscan::Validation {
 		heap_space	=> { is => 'Text', doc => "Megabytes to reserve for java heap [1000]" , is_optional => 1, is_input => 1},
 		skip_if_output_present	=> { is => 'Text', doc => "If set to 1, skip execution if output files exist", is_optional => 1, is_input => 1 },
 		varscan_params	=> { is => 'Text', doc => "Parameters to pass to VarScan" , is_optional => 1, is_input => 1, default_value => '--min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.01 --validation 1 --min-coverage 8'},
+		samtools_version => { is => 'Text', doc => 'Version of samtools to use' },
 	],	
 
 	has_param => [
@@ -115,8 +116,10 @@ sub execute {                               # replace with real execution logic.
 	{
 		## Prepare pileup commands ##
 		
-		my $normal_pileup = "samtools pileup -f $reference $normal_bam";
-		my $tumor_pileup = "samtools pileup -f $reference $tumor_bam";
+		my $sam_pathname = Genome::Model::Tools::Sam->path_for_samtools_version($self->samtools_version);
+
+		my $normal_pileup = "$sam_pathname pileup -f $reference $normal_bam";
+		my $tumor_pileup = "$sam_pathname pileup -f $reference $tumor_bam";
 		
         #my $cmd = "bash -c \"java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) --output $output --output-snp $output_snp --output-indel $output_indel $varscan_params\"";	
 		my $cmd = "bash -c \"java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) $output --output-snp $output_snp --output-indel $output_indel $varscan_params\"";	
