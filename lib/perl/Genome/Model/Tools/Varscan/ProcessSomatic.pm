@@ -36,7 +36,18 @@ class Genome::Model::Tools::Varscan::ProcessSomatic {
 		min_tumor_freq =>  { is => 'Text', doc => "Minimum tumor freq for HC Somatic [15]", is_optional => 1, is_input => 1},	
 		report_only	=> { is => 'Text', doc => "If set to 1, will not produce output files" , is_optional => 1},
 		skip_if_output_present	=> { is => 'Text', doc => "If set to 1, will not run if output is present" , is_optional => 1, is_input => 1},
-		somatic_out	=> { is => 'Text', doc => "DO NOT USE: Output name for Somatic calls [status_file.Somatic]" , is_optional => 1, is_input => 1, is_output => 1},
+		output_basename => { is => 'Text', doc => 'Base location for output files (e.g. /path/to/results/output.basename', is_optional => 1, is_input => 1 },
+
+          #output filenames
+		output_germline       => { is => 'Text', calculate_from => 'output_basename', calculate => q{ $output_basename . '.Germline' }, is_output => 1, },
+		output_germline_hc    => { is => 'Text', calculate_from => 'output_germline', calculate => q{ $output_germline . '.hc' }, is_output => 1, },
+		output_germline_lc    => { is => 'Text', calculate_from => 'output_germline', calculate => q{ $output_germline . '.lc' }, is_output => 1, },
+		output_loh            => { is => 'Text', calculate_from => 'output_basename', calculate => q{ $output_basename . '.LOH' }, is_output => 1, },
+		output_loh_hc         => { is => 'Text', calculate_from => 'output_loh', calculate => q{ $output_loh . '.hc' }, is_output => 1, },
+		output_loh_lc         => { is => 'Text', calculate_from => 'output_loh', calculate => q{ $output_loh . '.lc' }, is_output => 1, },
+		output_somatic        => { is => 'Text', calculate_from => 'output_basename', calculate => q{ $output_basename . '.Somatic' }, is_output => 1, },
+		output_somatic_hc     => { is => 'Text', calculate_from => 'output_somatic', calculate => q{ $output_somatic . '.hc' }, is_output => 1, },
+		output_somatic_lc     => { is => 'Text', calculate_from => 'output_somatic', calculate => q{ $output_somatic . '.lc' }, is_output => 1, },
 	],
 };
 
@@ -75,6 +86,8 @@ sub execute {                               # replace with real execution logic.
 	$max_normal_freq = $self->max_normal_freq if(defined($self->max_normal_freq));
 	$min_tumor_freq = $self->min_tumor_freq if(defined($self->min_tumor_freq));
 	
+	$self->output_basename($status_file) unless $self->output_basename;
+	
 	if(-e $status_file)
 	{
 		if($self->skip_if_output_present && -e "$status_file.Somatic.hc")
@@ -83,7 +96,7 @@ sub execute {                               # replace with real execution logic.
 		}
 		else
 		{
-			process_results($status_file);			
+			$self->process_results($status_file);			
 		}
 
 	}
@@ -105,6 +118,7 @@ sub execute {                               # replace with real execution logic.
 
 sub process_results
 {
+    my $self = shift;
 	my $variants_file = shift(@_);
 	my $file_header = "";
 
@@ -167,9 +181,13 @@ sub process_results
 		{
 			if(!$report_only)
 			{
-				open(STATUS, ">$variants_file.$status") or die "Can't open output file: $!\n";
-				open(HICONF, ">$variants_file.$status.hc") or die "Can't open output file: $!\n";
-				open(LOWCONF, ">$variants_file.$status.lc") or die "Can't open output file: $!\n";
+			    my $status_file_accessor = 'output_' . lc($status);
+			    my $hc_file_accessor = $status_file_accessor . '_hc';
+			    my $lc_file_accessor = $status_file_accessor . '_lc';
+			    
+				open(STATUS, '>' . $self->$status_file_accessor) or die "Can't open output file: $!\n";
+				open(HICONF, '>' . $self->$hc_file_accessor) or die "Can't open output file: $!\n";
+				open(LOWCONF, '>' . $self->$lc_file_accessor) or die "Can't open output file: $!\n";
 				print HICONF "$file_header\n" if($file_header);
 				print LOWCONF "$file_header\n" if($file_header);
 				print STATUS "$file_header\n" if($file_header);
