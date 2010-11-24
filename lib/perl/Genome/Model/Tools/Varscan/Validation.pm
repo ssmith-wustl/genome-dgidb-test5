@@ -29,10 +29,7 @@ class Genome::Model::Tools::Varscan::Validation {
         output           => { is => 'Text', doc => "Path to Tumor BAM file", is_optional => 1, is_input => 1, is_output => 1 },
         output_snp       => { is => 'Text', doc => "Basename for SNP output, eg. varscan_out/varscan.status.snp" , is_optional => 1, is_input => 1, is_output => 1},
         output_indel     => { is => 'Text', doc => "Basename for indel output, eg. varscan_out/varscan.status.indel" , is_optional => 1, is_input => 1, is_output => 1},
-        output_validation=> { is => 'Text', doc => 'Basename for validation output, eg. varscan_out/varscan.status.validation', is_optional => 1, is_output => 1, calculate_from => ['output', 'output_snp'],
-            #This is determined internally to var-scan based on a value below calculated from one of these two values
-            calculate => q{ if($output) { return $output . '.validation'; } else { return $output_snp . '.validation' } },
-        },
+        output_validation=> { is => 'Text', doc => 'Basename for validation output, eg. varscan_out/varscan.status.validation', is_optional => 1, is_output => 1, is_input => 1, },
         reference        => { is => 'Text', doc => "Reference FASTA file for BAMs" , is_optional => 1, is_input => 1, default_value => (Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa')},
         skip_if_output_present => { is => 'Text', doc => "If set to 1, skip execution if output files exist", is_optional => 1, is_input => 1 },
         varscan_params   => { is => 'Text', doc => "Parameters to pass to VarScan" , is_optional => 1, is_input => 1, default_value => '--min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.01 --validation 1 --min-coverage 8'},
@@ -40,7 +37,7 @@ class Genome::Model::Tools::Varscan::Validation {
     ],
 
     has_param => [
-        lsf_resource => { default_value => 'select[model!=Opteron250 && type==LINUX64] rusage[mem=4000]'},
+        lsf_resource => { default_value => 'select[model!=Opteron250 && type==LINUX64 && tmp>1000] rusage[mem=4000,tmp=1000]'},
        ],
 };
 
@@ -77,16 +74,18 @@ sub execute {                               # replace with real execution logic.
     my $tumor_bam = $self->tumor_bam;
 
     ## Get output directive ##
-    my $output = my $output_snp = my $output_indel = "";
+    my $output = my $output_snp = my $output_indel = my $output_validation = "";
 
     if($self->output) {
         $output = $self->output;
         $output_snp = $output . ".snp";
         $output_indel = $output . ".indel";
+        $output_validation = $output . ".validation";
     } elsif($self->output_snp && $self->output_indel) {
         $output_snp = $self->output_snp;
         $output = $output_snp;
         $output_indel = $self->output_indel;
+        $output_validation = $self->output_validation || $output_snp . '.validation';
     } else {
         die "Please provide an output basename (--output) or output files for SNPs (--output-snp) and indels (--output-indel)\n";
     }
@@ -106,6 +105,12 @@ sub execute {                               # replace with real execution logic.
         }
     }
 
+    my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+    my $temp_snp = join('/', $temp_dir, 'output.snp');
+    my $temp_indel = join('/', $temp_dir, 'output.indel');
+    my $temp_output = join('/', $temp_dir, 'output');
+    my $temp_validation = $temp_output . '.validation'; #generated name in varscan
+
     if(-e $normal_bam && -e $tumor_bam) {
         ## Prepare pileup commands ##
 
@@ -114,15 +119,18 @@ sub execute {                               # replace with real execution logic.
         my $normal_pileup = "$sam_pathname pileup -f $reference $normal_bam";
         my $tumor_pileup = "$sam_pathname pileup -f $reference $tumor_bam";
 
-        my $cmd = "bash -c \"java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) $output --output-snp $output_snp --output-indel $output_indel $varscan_params\"";
+        my $cmd = "bash -c \"java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) $temp_output --output-snp $temp_snp --output-indel $temp_indel $varscan_params\"";
 
         Genome::Utility::FileSystem->shellcmd(
             cmd => $cmd,
             input_files => [$normal_bam, $tumor_bam, $reference],
-            output_files => [$output_snp, $output_indel],
+            output_files => [$temp_snp, $temp_indel],
             allow_zero_size_output_files => 1,
         );
 
+        Genome::Utility::FileSystem->copy_file($temp_snp, $output_snp);
+        Genome::Utility::FileSystem->copy_file($temp_indel, $output_indel);
+        Genome::Utility::FileSystem->copy_file($temp_validation, $output_validation) if Genome::Utility::FileSystem->check_for_path_existence($temp_validation); #optional file
     } else {
         die "Error: One of your BAM files doesn't exist!\n";
     }

@@ -29,11 +29,12 @@ my $tmpdir = File::Temp::tempdir('VarscanValidationXXXXX', DIR => '/gsc/var/cach
 
 my $output_snp = join('/', $tmpdir, 'varscan.snp');
 my $output_indel = join('/', $tmpdir, 'varscan.indel');
-my $output_validation = join('/', $tmpdir, 'varscan.snp.validation'); #Not currently a parameter to the tool, calculated based on output_snp name.
+my $output_validation = join('/', $tmpdir, 'varscan.validation');
 
 my $varscan_command = Genome::Model::Tools::Varscan::Validation->create(
     output_snp => $output_snp,
     output_indel => $output_indel,
+    output_validation => $output_validation,
     tumor_bam => $tumor_bam,
     normal_bam => $normal_bam,
     reference => $ref_seq->fasta_file,
