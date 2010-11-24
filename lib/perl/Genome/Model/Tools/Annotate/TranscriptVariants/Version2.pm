@@ -961,12 +961,16 @@ sub _ucsc_conservation_score {
     Genome::Model::Tools::Annotate::LookupConservationScore->class();  # Get the module loaded
     # NOTE! Not a method.  This is a normal function call.  That class' execute() is just a wrapper
     # around it
-    my $ref = Genome::Model::Tools::Annotate::LookupConservationScore::lookup_conservation_score(
+    my $ref;
+    eval{
+        $ref = Genome::Model::Tools::Annotate::LookupConservationScore::lookup_conservation_score(
                   chromosome => $variant->{chromosome_name},
                   coordinates => $range,
                   species => $substruct->transcript_species,
                   version => $substruct->transcript_version,
-             );
+        );
+    };
+    return '-' unless $ref;
 
     my @ret;
     foreach my $item (@$ref)
