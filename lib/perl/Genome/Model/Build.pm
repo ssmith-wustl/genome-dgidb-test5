@@ -1716,10 +1716,10 @@ sub compare_output {
     METRIC: for my $metric_name (sort keys %metrics) {
         my $metric = $metrics{$metric_name};
 
-	if ( grep { $metric_name =~ /$_/ } $self->metrics_ignored_by_diff ) {
-	    delete $other_metrics{$metric_name} if exists $other_metrics{$metric_name};
-	    next METRIC;
-	}
+        if ( grep { $metric_name =~ /$_/ } $self->metrics_ignored_by_diff ) {
+            delete $other_metrics{$metric_name} if exists $other_metrics{$metric_name};
+            next METRIC;
+        }
 
         my $other_metric = delete $other_metrics{$metric_name};
         unless ($other_metric) {
@@ -1731,7 +1731,7 @@ sub compare_output {
         my $other_metric_value = $other_metric->value;
         unless ($metric_value eq $other_metric_value) {
             $diffs{$metric_name} = "metric $metric_name has value $metric_value for build $build_id and value " .
-                "$other_metric_value for build $other_build_id";
+            "$other_metric_value for build $other_build_id";
             next METRIC;
         }
     }
