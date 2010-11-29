@@ -44,6 +44,7 @@ EOS
 sub execute {
     my $self = shift;
 
+    $DB::single = 1;
     $self->status_message("Running fgenesh gene predictor!");
 
     my @features;
@@ -62,8 +63,8 @@ sub execute {
     my $output_fh = File::Temp->new(
         TEMPLATE => 'fgenesh_raw_output_XXXXXX',
         DIR => $self->raw_output_directory,
-        CLEANUP => 1,
-        UNLINK => 1,
+        CLEANUP => 0,
+        UNLINK => 0,
     );
     my $output_file = $output_fh->filename;
     $output_fh->close;
@@ -113,12 +114,12 @@ sub execute {
                 }
             }
 
-            my $start = $predicted_exons[0]->start();
-            my $end = $predicted_exons[-1]->end();
-
             # Exons are originally sorted in the order they would be transcibed (strand)
             # We always want to start < stop, regardless of strand
             @predicted_exons = sort { $a->start() <=> $b->start() } @predicted_exons;
+
+            my $start = $predicted_exons[0]->start();
+            my $end = $predicted_exons[-1]->end();
 
             # If a gene has multiple exons, it's expected that the first exon have tag InitialExon and the last exon have
             # tag TerminalExon. If a gene has only one exon, it should have tag SingletonExon. If this expected behavior
@@ -153,7 +154,7 @@ sub execute {
             for my $predicted_exon (@predicted_exons) {
                 my $frame = $predicted_exon->frame();
                 my $length = $predicted_exon->length();
-                my $five_prime_overhang = $frame;
+                my $five_prime_overhang = (3 - $frame) % 3;
                 my $three_prime_overhang = ($length - $five_prime_overhang) % 3;
 
                 my $exon_name = $transcript_name . ".exon.$exon_count";
@@ -190,8 +191,7 @@ sub execute {
             if ($missing_start) {
                 my $first_exon_overhang = $exons[0]->five_prime_overhang;
                 $first_exon_overhang = $exons[-1]->five_prime_overhang if $strand eq '-1';
-                my $skipped_bases = (3 - $first_exon_overhang) % 3;
-                $transcript_seq = $transcript_seq->trunc($skipped_bases + 1, $transcript_seq->length());
+                $transcript_seq = $transcript_seq->trunc($first_exon_overhang + 1, $transcript_seq->length());
             }
 
             # fgenesh produces the translated sequence for us, which is stored on the predicted gene object (which
