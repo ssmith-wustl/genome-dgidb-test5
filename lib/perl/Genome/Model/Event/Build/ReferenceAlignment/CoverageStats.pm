@@ -55,6 +55,16 @@ sub execute {
         $self->error_message('Failed to generate coverage stats with params: '.  Data::Dumper::Dumper(%coverage_stats_params));
         die($self->error_message);
     }
+    my $as_ref = $self->build->alignment_summary_hash_ref;
+    unless ($as_ref) {
+        $self->error_message('Failed to load the alignment summary metrics!');
+        die($self->error_message);
+    }
+    my $cov_ref = $self->build->coverage_stats_summary_hash_ref;
+    unless ($cov_ref) {
+        $self->error_message('Failed to load the coverage summary metrics!');
+        die($self->error_message);
+    }
     return 1;
 }
 
