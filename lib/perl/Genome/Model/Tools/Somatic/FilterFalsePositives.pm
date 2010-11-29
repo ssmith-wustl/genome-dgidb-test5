@@ -16,9 +16,10 @@ class Genome::Model::Tools::Somatic::FilterFalsePositives {
 	## INPUT/OUTPUT OPTIONS ##
        'analysis_type' => {
             type => 'String',
-            doc => 'Type of sequencing analysis for filter optimization (wgs|capture)',
+            doc => 'Type of sequencing analysis for filter optimization',
             is_input => 1,
-	    default => "capture",
+            default => "capture",
+            valid_values => ['capture', 'wgs'],
        },
        'bam_file' => {
             type => 'String',
