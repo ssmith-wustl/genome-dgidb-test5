@@ -537,7 +537,7 @@ sub abandon {
     }
     if ($self->event_status =~ /Scheduled|Running/) {
         my $user = getpwuid($<);
-        unless ($user eq $self->user_name) {
+        unless ($user eq 'apipe-builder' || $user eq $self->user_name) {
             my $build_id = $self->build_id || '';
             my $model_id = $self->model_id || '';
             $self->error_message('Attempted to abandon '. $self->event_status .' event '. $self->id ."(model_id:$model_id, build_id:$build_id) owned by ". $self->user_name);
