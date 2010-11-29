@@ -41,6 +41,9 @@ class Genome::Model::Tools::Varscan::ProcessSomatic {
         output_somatic_hc     => { is => 'Text', calculate_from => 'output_somatic', calculate => q{ $output_somatic . '.hc' }, is_output => 1, },
         output_somatic_lc     => { is => 'Text', calculate_from => 'output_somatic', calculate => q{ $output_somatic . '.lc' }, is_output => 1, },
     ],
+    has_param => [
+        lsf_resource => { value => 'select[tmp>1000] rusage[tmp=1000]'},
+    ]
 };
 
 sub sub_command_sort_position { 12 }
@@ -151,6 +154,7 @@ sub process_results {
         ## Output Germline, Somatic, and LOH ##
 
         my ($status_fh, $high_confidence_fh, $low_confidence_fh);
+        my ($status_temp, $high_confidence_temp, $low_confidence_temp);
 
         if($status eq "Germline" || $status eq "Somatic" || $status eq "LOH") {
             if(!$report_only) {
@@ -158,10 +162,10 @@ sub process_results {
                 my $hc_file_accessor = $status_file_accessor . '_hc';
                 my $lc_file_accessor = $status_file_accessor . '_lc';
 
-                $status_fh = Genome::Utility::FileSystem->open_file_for_writing($self->$status_file_accessor);
-                $high_confidence_fh = Genome::Utility::FileSystem->open_file_for_writing($self->$hc_file_accessor);
-                $low_confidence_fh = Genome::Utility::FileSystem->open_file_for_writing($self->$lc_file_accessor);
-                
+                ($status_fh, $status_temp) = Genome::Utility::FileSystem->create_temp_file();
+                ($high_confidence_fh, $high_confidence_temp) = Genome::Utility::FileSystem->create_temp_file();;
+                ($low_confidence_fh, $low_confidence_temp) = Genome::Utility::FileSystem->create_temp_file();;
+
                 if($file_header) {
                     for my $fh ($status_fh, $high_confidence_fh, $low_confidence_fh) {
                         $fh->print($file_header,"\n");
@@ -236,6 +240,19 @@ sub process_results {
 
             for my $fh ($status_fh, $high_confidence_fh, $low_confidence_fh) {
                 $fh->close() if $fh;
+            }
+
+            if(!$report_only) {
+                my $status_file_accessor = 'output_' . lc($status);
+                my $hc_file_accessor = $status_file_accessor . '_hc';
+                my $lc_file_accessor = $status_file_accessor . '_lc';
+
+                Genome::Utility::FileSystem->copy_file($status_temp, $self->$status_file_accessor)
+                    if Genome::Utility::FileSystem->check_for_path_existence($status_temp);
+                Genome::Utility::FileSystem->copy_file($high_confidence_temp, $self->$hc_file_accessor)
+                    if Genome::Utility::FileSystem->check_for_path_existence($high_confidence_temp);
+                Genome::Utility::FileSystem->copy_file($low_confidence_temp, $self->$lc_file_accessor)
+                    if Genome::Utility::FileSystem->check_for_path_existence($low_confidence_temp);
             }
 
             print "\t$numHiConf high confidence\n";

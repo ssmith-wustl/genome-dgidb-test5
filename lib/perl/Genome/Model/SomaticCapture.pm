@@ -13,6 +13,7 @@ class Genome::Model::SomaticCapture {
        min_mapping_quality => { via => 'processing_profile'},
        min_somatic_quality => { via => 'processing_profile'},
        skip_sv => { via => 'processing_profile'},
+       transcript_variant_annotator_version => { via => 'processing_profile' },
     ],
     has_optional => [
          tumor_model_links                  => { is => 'Genome::Model::Link', reverse_as => 'to_model', where => [ role => 'tumor'], is_many => 1,
