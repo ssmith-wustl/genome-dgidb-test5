@@ -101,7 +101,7 @@ class Genome::Model::ReferenceAlignment {
             |,
         },
         reference_sequence_name      => { via => 'reference_sequence_build', to => 'name' },
-        annotation_reference_name    => { via => 'annotation_reference_build', to => 'idstring' },
+        annotation_reference_name    => { via => 'annotation_reference_build', to => 'name' },
         coverage_stats_params        => { via => 'processing_profile'},
         annotation_reference_transcripts => { via => 'processing_profile'},
         assignment_events => {
@@ -228,7 +228,7 @@ sub __errors__ {
         push @tags, UR::Object::Tag->create(
             type => 'invalid',
             properties => ['reference_sequence_name', 'annotation_reference_transcripts'],
-            desc => "reference sequence: " . $rsb->name . " is incompatible with annotation reference transcripts: " . $arb->idstring,
+            desc => "reference sequence: " . $rsb->name . " is incompatible with annotation reference transcripts: " . $arb->name,
         );
     }
 
