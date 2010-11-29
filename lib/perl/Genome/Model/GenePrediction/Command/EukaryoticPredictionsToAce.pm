@@ -96,7 +96,7 @@ sub execute {
 
             my $spliced_length = 0;
             for my $exon (@exons) {
-                $spliced_length += abs($exon->end - $exon->start + 1);
+                $spliced_length += abs($exon->end - $exon->start) + 1;
             }
 
             $ace_fh->print("Sequence : $gene_name\n");
@@ -116,10 +116,6 @@ sub execute {
 
             my $transcript_start = $transcript->start;
             my $transcript_end = $transcript->end;
-
-            $DB::single = 1;
-            @exons = sort { $a->start <=> $b->start } @exons if $strand eq '+1';
-            @exons = sort { $b->start <=> $a->start } @exons if $strand eq '-1';
 
             for my $exon (@exons) {
                 my $exon_start = $exon->start;
@@ -192,6 +188,7 @@ sub execute {
             $ace_fh->print("Remark $remark\n") if defined $remark;
             $ace_fh->print("Locus $locus\n") if defined $locus;
             $ace_fh->print("Transcript $transcript\n") if defined $transcript;
+            $ace_fh->print("\n");
         }
     }
 
