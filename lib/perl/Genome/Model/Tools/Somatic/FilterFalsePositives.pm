@@ -226,15 +226,16 @@ sub execute {
     
     if(lc($self->analysis_type) eq "capture")
     {
-	capture_filter($self);
+	$self->capture_filter();
     }
     elsif(lc($self->analysis_type) eq "wgs")
     {
-	wgs_filter($self);
+	$self->wgs_filter();
     }
     else
     {
-	die "Unknown analysis type $self->analysis_type\n";
+     $self->error_message("Unknown analysis type " . $self->analysis_type . "\n");
+	die;
     }
 
 }
@@ -339,7 +340,7 @@ sub capture_filter
     else
     {
 	print "Running BAM Readcounts...\n";
-	my $cmd = readcount_program() . " -b 15 " . $self->bam_file . " -l $temp_path";
+	my $cmd = $self->readcount_program() . " -b 15 " . $self->bam_file . " -l $temp_path";
         $readcounts = `$cmd 2>/dev/null`;	
     }
 
@@ -405,7 +406,7 @@ sub capture_filter
                 
                 if(!($var =~ /[ACGT]/))
                 {
-                    $var = iupac_to_base($ref, $var);
+                    $var = $self->iupac_to_base($ref, $var);
                 }
     
                 if($var =~ /[ACGT]/)
@@ -443,8 +444,8 @@ sub capture_filter
 
 			## Parse the results for each allele ##
 	    
-			my $ref_result = read_counts_by_allele($readcounts, $ref);
-			my $var_result = read_counts_by_allele($readcounts, $var);
+			my $ref_result = $self->read_counts_by_allele($readcounts, $ref);
+			my $var_result = $self->read_counts_by_allele($readcounts, $var);
 			
 			if($ref_result && $var_result)
 			{
@@ -562,7 +563,7 @@ sub capture_filter
 					print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarDist3:$var_dist_3\n" if ($self->verbose);
 					$stats{'num_fail_dist3'}++;
 				    }
-				    elsif(fails_homopolymer_check($self, $self->reference, $self->min_homopolymer, $chrom, $chr_start, $chr_stop, $ref, $var))
+				    elsif($self->fails_homopolymer_check($self->reference, $self->min_homopolymer, $chrom, $chr_start, $chr_stop, $ref, $var))
 				    {
 					print $ffh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tHomopolymer\n";
 					print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tHomopolymer\n" if ($self->verbose);
@@ -704,8 +705,10 @@ sub wgs_filter
 #############################################################
 
 sub readcount_program {
-    return "/gscuser/dlarson/src/bamsey/readcount/trunk/bam-readcount-test2 -f /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa";
-#    return "/gscuser/dlarson/src/bamsey/readcount/trunk/bam-readcount -f /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa";
+    my $self = shift;
+    my $reference = $self->reference;
+    return "/gscuser/dlarson/src/bamsey/readcount/trunk/bam-readcount-test2 -f $reference";
+#    return "/gscuser/dlarson/src/bamsey/readcount/trunk/bam-readcount -f $reference";
 }
 
 
@@ -716,6 +719,7 @@ sub readcount_program {
 
 sub read_counts_by_allele
 {
+    my $self = shift;
 	(my $line, my $allele) = @_;
 	
 	my @lineContents = split(/\t/, $line);
@@ -763,6 +767,7 @@ sub read_counts_by_allele
 
 sub iupac_to_base
 {
+    my $self = shift;
 	(my $allele1, my $allele2) = @_;
 	
 	return($allele2) if($allele2 eq "A" || $allele2 eq "C" || $allele2 eq "G" || $allele2 eq "T");
