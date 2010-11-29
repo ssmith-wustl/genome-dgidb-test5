@@ -104,10 +104,10 @@ sub execute {
         $self->process_file($chr);
     }
 
-
-    for my $size (sort {$a <=> $b} (keys(%{$tumor_support_hist{'D'}}))){
-        
-    }
+}
+    #for my $size (sort {$a <=> $b} (keys(%{$tumor_support_hist{'D'}}))){
+    #    
+    #}
 
 =cut
     print "Histogram of event size for Deletions\n";
@@ -532,4 +532,3 @@ sub parse {
     }
     return ($chr,$start,$stop,$ref,$var);
 }
-
