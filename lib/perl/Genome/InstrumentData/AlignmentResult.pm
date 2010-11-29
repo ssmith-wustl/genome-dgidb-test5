@@ -326,7 +326,7 @@ sub create {
     $self->status_message("Found " . scalar(@available_volumes) . " disk volumes");
     my $unallocated_kb = 0;
     for my $volume (@available_volumes) {
-        $unallocated_kb += $available_volumes[0]->unallocated_kb 
+        $unallocated_kb += $volume->unallocated_kb;
     }
     $self->status_message("Available disk: " . $unallocated_kb . " kb");
     my $factor = 20;
