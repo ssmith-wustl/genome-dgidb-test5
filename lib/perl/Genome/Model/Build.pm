@@ -604,7 +604,8 @@ sub stop {
 
     $self->status_message('Attempting to stop build: '.$self->id);
 
-    if ($self->run_by ne $ENV{USER}) {
+    my $user = getpwuid($<);
+    if ($self->run_by ne $user) {
         $self->error_message("Can't stop a build originally started by: " . $self->run_by);
         return 0;
     }
@@ -703,7 +704,8 @@ sub restart {
         cluck $self->error_message('job_dispatch cannot be changed on restart');
     }
     
-    if ($self->run_by ne $ENV{USER}) {
+    my $user = getpwuid($<);
+    if ($self->run_by ne $user) {
         croak $self->error_message("Can't restart a build originally started by: " . $self->run_by);
     }
 
@@ -790,7 +792,8 @@ sub _launch {
         }
     }
     else {
-        $job_group_spec = ' -g /build2/' . $ENV{USER};
+        my $user = getpwuid($<);
+        $job_group_spec = ' -g /build2/' . $user;
     }
 
     die "Bad params!  Expected server_dispatch and job_dispatch!" . Data::Dumper::Dumper(\%params) if %params;
@@ -828,12 +831,13 @@ sub _launch {
         $host_group = "-m '$host_group'";
 
         # bsub into the queue specified by the dispatch spec
+        my $user = getpwuid($<);
         my $lsf_command = sprintf(
             'bsub -N -H -q %s %s %s -u %s@genome.wustl.edu -o %s -e %s annotate-log genome model services build run%s --model-id %s --build-id %s',
             $server_dispatch, ## lsf queue
             $host_group,
             $job_group_spec,
-            $ENV{USER}, 
+            $user, 
             $build_event->output_log_file,
             $build_event->error_log_file,
             $add_args,
