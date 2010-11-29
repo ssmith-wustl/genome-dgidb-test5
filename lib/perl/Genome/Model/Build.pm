@@ -605,7 +605,7 @@ sub stop {
     $self->status_message('Attempting to stop build: '.$self->id);
 
     my $user = getpwuid($<);
-    if ($self->run_by ne $user) {
+    if ($user ne 'apipe-builder' && $user ne $self->run_by) {
         $self->error_message("Can't stop a build originally started by: " . $self->run_by);
         return 0;
     }
