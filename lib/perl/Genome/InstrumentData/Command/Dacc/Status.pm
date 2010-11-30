@@ -48,8 +48,7 @@ sub execute {
     }
 
     if ( @$instrument_data == $have_archve_path ) {
-        my $update_library = $self->_update_library;
-        return if not $update_library;
+        $self->_update_library;
         $self->status_message('Status: Done');
         return 1;
     }
@@ -66,7 +65,7 @@ sub execute {
         return 1;
     }
 
-    my $md5_ok = $self->_validate_md5s;
+    my $md5_ok = $self->_validate_md5;
     if ( not $md5_ok ) {
         $self->status_message('Status: Failed to validate md5, needs download');
         return 1;
