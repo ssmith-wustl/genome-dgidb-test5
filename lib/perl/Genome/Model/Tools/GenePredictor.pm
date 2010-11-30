@@ -44,6 +44,24 @@ sub help_detail {
     return 'Abstract base class for gene prediction modules, defines input and output parameters';
 }
 
+# Returns the name of a temp file in the given directory. If no template is given,
+# uses a default (but please supply a template)
+sub get_temp_file_in_directory {
+    my ($self, $dir, $template) = @_;
+    $self->warning_message("No directory found at $dir!") and return unless -d $dir;
+    $template = "temp_file_XXXXXX" unless defined $template;
+    my $fh = File::Temp->new(
+        DIR => $dir,
+        TEMPLATE => $template,
+        CLEANUP => 0,
+        UNLINK => 0,
+    );
+    my $file = $fh->filename;
+    $fh->close;
+    chmod(0666, $file);
+    return $file;
+}
+
 sub valid_prediction_types {
     my $self = shift;
     return qw/ 
