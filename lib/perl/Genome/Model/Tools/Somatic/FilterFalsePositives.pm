@@ -4,10 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
-use Command;
 use IO::File;
-use Readonly;
-use Genome::Info::IUB;
 
 class Genome::Model::Tools::Somatic::FilterFalsePositives {
     is => 'Command',
