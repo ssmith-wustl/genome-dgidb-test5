@@ -101,7 +101,12 @@ sub execute {
     grep {$_->{is_input}}
           map {$cmd_class_object->property_meta_for_name($_)} @cmd_props;
     
-    my %cmd_params = map {$_, $src_model->$_} @usable_props;
+    my %cmd_params;
+    for my $property (@usable_props) {
+        if (defined $src_model->$property) {
+            $cmd_params{$property} = $src_model->$property;
+        } 
+    }
     
     # grab overridden properties and overlay them on top of the
     # parameters from the original model
