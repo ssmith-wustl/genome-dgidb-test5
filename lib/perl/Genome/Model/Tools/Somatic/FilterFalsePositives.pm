@@ -589,8 +589,7 @@ sub capture_filter {
 #
 #############################################################
 
-sub fails_homopolymer_check
-{
+sub fails_homopolymer_check {
     (my $self, my $reference, my $min_homopolymer, my $chrom, my $chr_start, my $chr_stop, my $ref, my $var) = @_;
 
     ## Auto-pass large indels ##
