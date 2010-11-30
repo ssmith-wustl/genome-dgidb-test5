@@ -61,42 +61,27 @@ sub execute {
         confess "Could not make directory " . $self->raw_output_directory unless $mkdir_rv;
     }
 
-    my $raw_output_fh = File::Temp->new(
-        DIR => $self->raw_output_directory,
-        TEMPLATE => 'snap_raw_output_XXXXXX',
-        CLEANUP => 0,
-        UNLINK => 0,
-    );
-    my $raw_output = $raw_output_fh->filename;
-    $raw_output_fh->close;
-    chmod(0666, $raw_output);
-
-    my $raw_error_fh = File::Temp->new(
-        DIR => $self->raw_output_directory,
-        TEMPLATE => 'snap_raw_output_XXXXXX',
-        CLEANUP => 0,
-        UNLINK => 0,
-    );
-    my $raw_error = $raw_error_fh->filename;
-    $raw_error_fh->close;
-    chmod(0666, $raw_error);
-
     my @models = split(",", $self->model_files);
     confess 'Received no Snap models, not running predictor!' unless @models;
     $self->status_message("Running Snap " . scalar @models . " times with different model files!");
 
     # Construct Snap command and execute for each supplied model file
     for my $model (@models) {
+        my $total_gene_count = 0;
         unless (-e $model) {
             confess "No Snap model found at $model!"
         }
+
+        my $raw_output = $self->get_temp_file_in_directory($self->raw_output_directory, 'snap_raw_output_XXXXXX');
+        my $raw_error = $self->get_temp_file_in_directory($self->raw_output_directory, 'snap_raw_error_XXXXXX');
+        confess "Could not create temp files in " . $self->raw_output_directory unless defined $raw_output and defined $raw_error;
 
         my @params;
         push @params, '-quiet';
         push @params, $model;
         push @params, $self->fasta_file;
         push @params, "> $raw_output";
-        push @params, "2>> $raw_error";
+        push @params, "2> $raw_error";
         my $cmd = join(' ', $snap_path, @params);
 
         $self->status_message("Executing Snap command: $cmd");
@@ -154,6 +139,7 @@ sub execute {
 
                 if (defined $current_group and $current_group ne $group and @predicted_exons) {
                     $gene_count_by_seq{$current_seq_name}++;
+                    $total_gene_count++;
                     $self->_create_prediction_objects(
                         \@predicted_exons, 
                         $gene_count_by_seq{$current_seq_name}, 
@@ -196,21 +182,30 @@ sub execute {
                 $model,
             );
         }
-
-        my @locks = $self->lock_files_for_predictions(
-            qw/ 
-                Genome::Prediction::CodingGene 
-                Genome::Prediction::Protein
-                Genome::Prediction::Transcript 
-                Genome::Prediction::Exon 
-            /
-        );
-
-        UR::Context->commit;
-        $self->release_prediction_locks(@locks);
-        
-        $self->status_message("Successfully finished parsing Snap output for model $model and created prediction objects!");
+    
+        $self->status_message("Successfully finished parsing Snap output for model $model and created $total_gene_count objects!");
     }
+
+    $self->status_message("Getting ready for commit, acquiring locks for coding gene, protein, transcript, and exon files...");
+    my @locks = $self->lock_files_for_predictions(
+        qw/ 
+            Genome::Prediction::CodingGene 
+            Genome::Prediction::Protein
+            Genome::Prediction::Transcript 
+            Genome::Prediction::Exon 
+        /
+    );
+
+    $self->status_message("Lock acquired, committing");
+    my $commit_rv = UR::Context->commit;
+    unless (defined $commit_rv and $commit_rv) {
+        $self->error_message("Could not perform UR context commit!");
+        confess $self->error_message;
+    }
+
+    $self->status_message("Commit successful, releasing locks!");
+    $self->release_prediction_locks(@locks);
+
     return 1;
 }
 
