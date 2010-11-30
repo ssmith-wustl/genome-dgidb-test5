@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-use IO::File;
 
 class Genome::Model::Tools::Somatic::FilterFalsePositives {
     is => 'Command',
@@ -271,17 +270,17 @@ sub capture_filter {
 
     ## Open the output file ##
 
-    my $ofh = IO::File->new($self->output_file, "w");
+    my $ofh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
     unless($ofh) {
-        $self->error_message("Unable to open " . $self->output_file . " for writing. $!");
+        $self->error_message("Unable to open " . $self->output_file . " for writing.");
         die;
     }
 
     ## Open the readcounts file ##
 
-    my $rcfh = IO::File->new($self->output_file . ".readcounts", "w");
+    my $rcfh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file . ".readcounts");
     unless($rcfh) {
-        $self->error_message("Unable to open " . $self->output_file . ".readcounts for writing. $!");
+        $self->error_message("Unable to open " . $self->output_file . ".readcounts for writing.");
         die;
     }
 
@@ -291,10 +290,10 @@ sub capture_filter {
 
     ## Open the variants file ##
 
-    my $input = new FileHandle ($self->variant_file);
+    my $input = Genome::Utility::FileSystem->open_file_for_reading($self->variant_file);
 
     unless($input) {
-        $self->error_message("Unable to open " . $self->variant_file . ". $!");
+        $self->error_message("Unable to open " . $self->variant_file . ".");
         die;
     }
 
@@ -303,7 +302,7 @@ sub capture_filter {
 
     my ($tfh,$temp_path) = Genome::Utility::FileSystem->create_temp_file;
     unless($tfh) {
-        $self->error_message("Unable to create temporary file $!");
+        $self->error_message("Unable to create temporary file.");
         die;
     }
     $temp_path =~ s/\:/\\\:/g;
@@ -334,7 +333,7 @@ sub capture_filter {
         }
 
         print "Using existing BAM Readcounts from $readcount_file...\n";
-        $readcounts = `cat $readcount_file`;
+        $readcounts = Genome::Utility::FileSystem->read_file($readcount_file);
     } else {
         print "Running BAM Readcounts...\n";
         my $cmd = $self->readcount_program() . " -b 15 " . $self->bam_file . " -l $temp_path";
@@ -353,15 +352,16 @@ sub capture_filter {
         (my $chrom, my $pos) = split(/\t/, $rc_line);
         $readcounts_by_position{"$chrom\t$pos"} = $rc_line;
     }
+    close($rcfh);
 
     print "Readcounts loaded\n";
 
 
     ## Open the filtered output file ##
-    my $ffh = IO::File->new($filtered_file, "w") if($filtered_file);
+    my $ffh = Genome::Utility::FileSystem->open_file_for_writing($filtered_file) if($filtered_file);
 
     ## Reopen file for parsing ##
-    $input = new FileHandle ($self->variant_file);
+    $input = Genome::Utility::FileSystem->open_file_for_reading($self->variant_file);
 
     ## Parse the variants file ##
     my $lineCounter = 0;
@@ -405,7 +405,7 @@ sub capture_filter {
 #                    print $ofh "$line\n";
                 } else {
                     ## Run Readcounts ##
-#                    my $cmd = readcount_program() . " -b 15 " . $self->bam_file . " $query_string";
+#                    my $cmd = $self->readcount_program() . " -b 15 " . $self->bam_file . " $query_string";
 #                    my $readcounts = `$cmd`;
 #                    chomp($readcounts) if($readcounts);
 
@@ -560,6 +560,7 @@ sub capture_filter {
     }
 
     close($input);
+    close($ofh);
 
     print $stats{'num_variants'} . " variants\n";
     print $stats{'num_MT_sites_autopassed'} . " MT sites were auto-passed\n";
