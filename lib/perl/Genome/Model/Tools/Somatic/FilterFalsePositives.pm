@@ -324,8 +324,14 @@ sub capture_filter {
     ## Run BAM readcounts in batch mode to get read counts for all positions in file ##
     my $readcounts = "";
     if($self->use_readcounts) {
-        print "Using existing BAM Readcounts from $self->use_readcounts...\n";
-        $readcounts = `cat $self->use_readcounts`;
+        my $readcount_file = $self->use_readcounts;
+        unless(Genome::Utility::FileSystem->check_for_path_existence($readcount_file)) {
+            $self->error_message('Supplied readcount file does not exist!');
+            die;
+        }
+
+        print "Using existing BAM Readcounts from $readcount_file...\n";
+        $readcounts = `cat $readcount_file`;
     } else {
         print "Running BAM Readcounts...\n";
         my $cmd = $self->readcount_program() . " -b 15 " . $self->bam_file . " -l $temp_path";
