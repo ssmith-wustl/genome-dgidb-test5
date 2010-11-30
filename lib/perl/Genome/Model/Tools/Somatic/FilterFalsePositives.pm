@@ -276,15 +276,6 @@ sub capture_filter {
         die;
     }
 
-    ## Open the readcounts file ##
-
-    my $rcfh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file . ".readcounts");
-    unless($rcfh) {
-        $self->error_message("Unable to open " . $self->output_file . ".readcounts for writing.");
-        die;
-    }
-
-
     my $filtered_file = $self->output_file . ".removed";
     $filtered_file = $self->filtered_file if($self->filtered_file);
 
@@ -324,35 +315,41 @@ sub capture_filter {
     close($input);
 
     ## Run BAM readcounts in batch mode to get read counts for all positions in file ##
-    my $readcounts = "";
+    my $readcount_file;
     if($self->use_readcounts) {
-        my $readcount_file = $self->use_readcounts;
+        $readcount_file = $self->use_readcounts;
         unless(Genome::Utility::FileSystem->check_for_path_existence($readcount_file)) {
-            $self->error_message('Supplied readcount file does not exist!');
+            $self->error_message('Supplied readcount file ' . $readcount_file . ' does not exist!');
             die;
         }
 
-        $self->status_message('Using existing BAM Readcounts from $readcount_file...');
-        $readcounts = Genome::Utility::FileSystem->read_file($readcount_file);
+        $self->status_message('Using existing BAM Readcounts from ' . $readcount_file . '...');
     } else {
+        $readcount_file = Genome::Utility::FileSystem->create_temp_file_path;
         $self->status_message('Running BAM Readcounts...');
         my $cmd = $self->readcount_program() . " -b 15 " . $self->bam_file . " -l $temp_path";
-        $readcounts = `$cmd 2>/dev/null`;
+        Genome::Utility::FileSystem->shellcmd(
+            cmd => "$cmd > $readcount_file 2> /dev/null",
+            input_files => [$self->bam_file],
+            output_files => [$readcount_file],
+        );
     }
 
+    my $readcounts = Genome::Utility::FileSystem->read_file($readcount_file);
     chomp($readcounts) if($readcounts);
 
     ## Load the results of the readcounts ##
 
     my %readcounts_by_position = ();
 
+    ## Open the readcounts file ##
+    Genome::Utility::FileSystem->copy_file($readcount_file, $self->output_file . ".readcounts");
+
     my @readcounts = split(/\n/, $readcounts);
     foreach my $rc_line (@readcounts) {
-        print $rcfh "$rc_line\n";
         (my $chrom, my $pos) = split(/\t/, $rc_line);
         $readcounts_by_position{"$chrom\t$pos"} = $rc_line;
     }
-    close($rcfh);
 
     $self->status_message('Readcounts loaded');
 
