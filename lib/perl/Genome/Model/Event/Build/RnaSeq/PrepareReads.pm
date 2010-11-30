@@ -30,7 +30,7 @@ sub execute {
     unless (-d $fastq_directory) {
         Genome::Utility::FileSystem->create_directory($fastq_directory);
     }
-    my $instrument_data = Genome::InstrumentData::Solexa->get($self->instrument_data_id);
+    my $instrument_data = Genome::InstrumentData->get($self->instrument_data_id);
     unless ($self->instrument_data->dump_illumina_fastq_archive($fastq_directory)) {
         $self->error_message('Failed to dump fastq file for '. $self->instrument_data_id .' to directory '. $fastq_directory);
         return;
