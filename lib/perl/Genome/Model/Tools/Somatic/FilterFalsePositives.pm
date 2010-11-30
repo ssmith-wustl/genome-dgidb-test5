@@ -308,7 +308,7 @@ sub capture_filter {
     $temp_path =~ s/\:/\\\:/g;
 
     ## Print each line to file, prepending chromosome if necessary ##
-    print "Printing variants to temp file...\n";
+    $self->status_message('Printing variants to temp file...');
     while(my $line = $input->getline) {
         chomp $line;
         my ($chr, $start, $stop) = split /\t/, $line;
@@ -332,10 +332,10 @@ sub capture_filter {
             die;
         }
 
-        print "Using existing BAM Readcounts from $readcount_file...\n";
+        $self->status_message('Using existing BAM Readcounts from $readcount_file...');
         $readcounts = Genome::Utility::FileSystem->read_file($readcount_file);
     } else {
-        print "Running BAM Readcounts...\n";
+        $self->status_message('Running BAM Readcounts...');
         my $cmd = $self->readcount_program() . " -b 15 " . $self->bam_file . " -l $temp_path";
         $readcounts = `$cmd 2>/dev/null`;
     }
@@ -354,7 +354,7 @@ sub capture_filter {
     }
     close($rcfh);
 
-    print "Readcounts loaded\n";
+    $self->status_message('Readcounts loaded');
 
 
     ## Open the filtered output file ##
