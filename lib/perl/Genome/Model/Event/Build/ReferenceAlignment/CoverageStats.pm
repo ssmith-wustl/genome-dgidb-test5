@@ -15,6 +15,10 @@ class Genome::Model::Event::Build::ReferenceAlignment::CoverageStats {
 sub execute {
     my $self = shift;
 
+    unless($self->_reference_sequence_matches) {
+        die $self->error_message;
+    }
+
     my $coverage_dir = $self->build->reference_coverage_directory;
     if (-d $coverage_dir) {
         #just remove the existing one to avoid shortcutting without verification...
@@ -51,6 +55,38 @@ sub execute {
         $self->error_message('Failed to generate coverage stats with params: '.  Data::Dumper::Dumper(%coverage_stats_params));
         die($self->error_message);
     }
+    my $as_ref = $self->build->alignment_summary_hash_ref;
+    unless ($as_ref) {
+        $self->error_message('Failed to load the alignment summary metrics!');
+        die($self->error_message);
+    }
+    my $cov_ref = $self->build->coverage_stats_summary_hash_ref;
+    unless ($cov_ref) {
+        $self->error_message('Failed to load the coverage summary metrics!');
+        die($self->error_message);
+    }
+    return 1;
+}
+
+#TODO This should probably be moved up to __errors__ in Genome::Model::ReferenceAlignment
+#but keeping it here allows the rest of the process to this point to run...
+sub _reference_sequence_matches {
+    my $self = shift;
+
+    my $roi_list = $self->model->region_of_interest_set;
+    my $roi_reference = $roi_list->reference;
+    my $reference = $self->model->reference_sequence_build;
+
+    unless($roi_reference) {
+        $self->error_message('no reference set on region of interest ' . $roi_list->name);
+        return;
+    }
+
+    unless ($roi_reference eq $reference) {
+        $self->error_message('reference sequence: ' . $reference->name . ' does not match the reference on the region of interest: ' . $roi_reference->name);
+        return;
+    }
+
     return 1;
 }
 

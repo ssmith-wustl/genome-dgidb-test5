@@ -18,42 +18,42 @@ sub _limit_results_for_builds {
     my ( $class, @builds ) = @_;
 
     my $user = getpwuid($<);
-    if ($user eq 'apipe') {
-        print STDERR "Filtering any running builds from list...";
+    unless ($user) {
+        die "Could not get username from getpwuid.";
     }
-    else {
-        print STDERR "Filtering any builds not ran by $user from list...";
-    }
+
+    print STDERR "Screening builds that you are not able to modify... ";
+
+    my @apipe_builder_builds;
     my @run_by_builds;
     for my $build (@builds) {
-        if ($build->status eq 'Running' && $build->run_by && $build->run_by ne $user) {
-            next;
+        if (not $build->run_by) { # since we don't know who, we'll let them try
+            push @run_by_builds, $build;
         }
-        if ($build->status ne 'Running' && $user ne 'apipe' && $build->run_by && $build->run_by ne $user) {
-            next;
+        elsif ($user eq $build->run_by) {
+            push @run_by_builds, $build;
         }
-        push @run_by_builds, $build;
-    }
-    my $other_users_builds_count = @builds - @run_by_builds;
-    if ($user eq 'apipe') {
-        if ($other_users_builds_count) {
-            print STDERR " filtered $other_users_builds_count running builds.\n";
-        }
-        else {
-            print STDERR " none filtered, no running builds.\n";
-        }
-    }
-    else {
-        if ($other_users_builds_count) {
-            print STDERR " filtered $other_users_builds_count builds not ran by $user.\n";
+        elsif ($user eq 'apipe-builder') {
+            if ( $class =~ /::Stop$/    || $class =~ /::Remove$/ ||
+                 $class =~ /::Abandon$/ || $class =~ /::Start$/   ) {
+                    push @apipe_builder_builds, $build;
+            }
+            else {
+                next;
+            }
         }
         else {
-            print STDERR " none filtered, all builds ran by $user.\n";
+            next;
         }
     }
-    @builds = @run_by_builds;
 
-    return @builds;
+    if (@apipe_builder_builds) {
+        print STDERR "\n* Allowing " . @apipe_builder_builds . " since you are apipe-builder.\n* ";
+    }
+
+    print STDERR "Found " . @run_by_builds . " builds out of " . @builds . " possible.\n";
+
+    return (@run_by_builds, @apipe_builder_builds);
 }
 
 1;

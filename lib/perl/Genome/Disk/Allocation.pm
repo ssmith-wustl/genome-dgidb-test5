@@ -285,10 +285,6 @@ sub monitor_allocate_command {
     });
     
     $self->status_message('Allocation process started at ' . UR::Time->now);
-    local $ENV{'MONITOR_ALLOCATE_LOCK'} = 1;
-#    local $ENV{'DBI_TRACE'} = 5;   MOVED INTO Allocation::Command.pm
-    local $ENV{'UR_DBI_MONITOR_SQL'} = 1;
-    local $ENV{'APP_DBI_MONITOR_SQL'} = 1;
     my $cv = Genome::Utility::AsyncFileSystem->shellcmd(
         cmd => $cmd,
         '>' => sub {

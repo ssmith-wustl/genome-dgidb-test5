@@ -19,7 +19,13 @@ class Genome::ProcessingProfile::SomaticCapture{
         },
         skip_sv => {
             doc => "If set to true, the pipeline will skip structural variation detection",
-        }
+        },
+        transcript_variant_annotator_version => {
+            doc => 'Version of the "annotate transcript-variants" tool to run during the annotation step',
+            is_optional => 1,
+            default_value => Genome::Model::Tools::Annotate::TranscriptVariants->default_annotator_version,
+            valid_values => [ 0,1],#Genome::Model::Tools::Annotate::TranscriptVariants->available_versions ],
+        },
     ],
 };
 
@@ -53,6 +59,30 @@ sub _initialize_build {
 
     $build->add_from_build(from_build => $tumor_build, role => 'tumor');
     $build->add_from_build(from_build => $normal_build, role => 'normal');
+
+    # Check that the annotator version param is sane before doing the build
+    my $annotator_version;
+    my $worked = eval {
+        my $model = $build->model;
+        my $pp = $model->processing_profile;
+        $annotator_version = $pp->transcript_variant_annotator_version;
+        # When all processing profiles have a param for this, remove this unless block so
+        # they'll fail if it's missing
+        unless (defined $annotator_version) {
+            $annotator_version = Genome::Model::Tools::Annotate::TranscriptVariants->default_annotator_version;
+        }
+    
+        my %available_versions = map { $_ => 1 } Genome::Model::Tools::Annotate::TranscriptVariants->available_versions;
+        unless ($available_versions{$annotator_version}) {
+            die "Requested annotator version ($annotator_version) is not in the list of available versions: "
+                . join(', ',keys(%available_versions));
+        }
+        1;
+    }; 
+    unless ($worked) {
+        $self->error_message("Could not determine which version of the Transcript Variants annotator to use: $@");
+        return; 
+    }
 
     return 1;
 }
@@ -162,6 +192,7 @@ sub _map_workflow_inputs {
     push @inputs,
         only_tier_1 => (defined($self->only_tier_1)? $self->only_tier_1 : 0),
         skip_sv => (defined($self->skip_sv)? $self->skip_sv : 0),
+        transcript_variant_annotator_version => (defined($self->transcript_variant_annotator_version)? $self->transcript_variant_annotator_version : ':'),
         min_mapping_quality => (defined($self->min_mapping_quality) ? $self->min_mapping_quality : 40),
         min_somatic_quality => (defined($self->min_somatic_quality) ? $self->min_somatic_quality : 40);
 

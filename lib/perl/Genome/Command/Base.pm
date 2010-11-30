@@ -65,7 +65,7 @@ sub resolve_param_value_from_cmdline_text {
         for my $type (keys %bool_expr_type_count) {
             $duplicate_bool_expr_type++ if ($bool_expr_type_count{$type} > 1);
         }
-        @param_args = (join(',', @param_args), @param_args) unless($duplicate_bool_expr_type);
+        unshift @param_args, $param_arg unless($duplicate_bool_expr_type);
     }
 
     my $pmeta = $self->__meta__->property($param_name);
@@ -457,6 +457,16 @@ sub _pad_string {
     }
 }
 
+sub _can_interact_with_user {
+    my $self = shift;
+    if ( -t STDERR ) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
+
 sub _shell_args_property_meta
 {
     my $self = shift;
@@ -693,20 +703,22 @@ sub _ask_user_question {
     $valid_values = lc($valid_values);
     my $input;
     $timeout = 60 unless(defined($timeout));
-    eval {
-        local $SIG{ALRM} = sub { print STDERR "Exiting, failed to reply to question '$question' within '$timeout' seconds.\n"; exit; };
-        print STDERR "\n$question\n";
-        print STDERR "Reply with $pretty_valid_values: ";
-        alarm($timeout) if ($timeout);
-        chomp($input = <STDIN>);
-        alarm(0) if ($timeout);
-    };
+
+    local $SIG{ALRM} = sub { print STDERR "Exiting, failed to reply to question '$question' within '$timeout' seconds.\n"; exit; };
+    print STDERR "\n$question\n";
+    print STDERR "Reply with $pretty_valid_values: ";
+
+    unless ($self->_can_interact_with_user) {
+        print STDERR "\n";
+        die $self->error_message("Attempting to ask user question but cannot interact with user!");
+    }
+
+    alarm($timeout) if ($timeout);
+    chomp($input = <STDIN>);
+    alarm(0) if ($timeout);
+
     print STDERR "\n";
 
-    if ($@) {
-        $self->warning_message($@);
-        return;
-    }
     if(lc($input) =~ /^$valid_values$/) {
         return lc($input);
     }

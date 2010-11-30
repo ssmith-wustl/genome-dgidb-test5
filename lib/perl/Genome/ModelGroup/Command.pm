@@ -7,6 +7,7 @@ use Genome;
 
 class Genome::ModelGroup::Command {
     is => ['Genome::Command::Base'],
+    is_abstract => 1,
     has => [],
     doc => "work with model-groups",
 };

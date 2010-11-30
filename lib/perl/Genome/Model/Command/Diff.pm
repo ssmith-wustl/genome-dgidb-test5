@@ -83,23 +83,10 @@ sub execute {
                                         # the same between builds, so diffing the output at all is pointless.
                                         
         my $type_string = Genome::Utility::Text::camel_case_to_string($type, '_');
-        $self->status_message("\nWorking on model $model_id, type $type_string");
+        $self->status_message("\nWorking on model " . $model->name . " ($model_id), type $type_string");
 
         # Find builds for each given revision
-        my ($first_build, $second_build);
-        my @builds = sort { $b->build_id <=> $a->build_id } $model->builds;
-        for my $build (@builds) {
-            last if $first_build and $second_build;
-            my $build_revision = $build->software_revision;
-            next unless defined $build_revision;
-            if (not $first_build and $build_revision =~ /$fixed_first_revision/) {
-                $first_build = $build;
-            }
-            elsif (not $second_build and $build_revision =~ /$fixed_second_revision/) {
-                $second_build = $build;
-            }
-        }
-
+        my ($first_build, $second_build) = $self->find_builds_for_revisions($model, $fixed_first_revision, $fixed_second_revision);
         unless ($first_build and $second_build) {
             my $msg = "BUILD NOT FOUND $type_string $model_id: Could not find build for model $model_id using revision:";
             $msg .= ' ' . $first_revision unless $first_build;
@@ -110,6 +97,8 @@ sub execute {
 
         $self->status_message("Comparing build " . $first_build->build_id . " using revision $first_revision with build " . 
             $second_build->build_id . " using revision $second_revision from model $model_id");
+        $self->status_message("Build " . $first_build->build_id . " has data directory " . $first_build->data_directory .
+            " and build " . $second_build->build_id . " has data directory " . $second_build->data_directory);
 
         my %diffs = $first_build->compare_output($second_build->build_id);
         unless (%diffs) {
@@ -127,5 +116,25 @@ sub execute {
 
     return 1;
 }
+
+sub find_builds_for_revisions {
+    my ($self, $model, $first_revision, $second_revision) = @_;
+    my @builds = sort { $b->build_id <=> $a->build_id } $model->builds;
+    my ($first_build, $second_build);
+    for my $build (@builds) {
+        last if $first_build and $second_build;
+        my $build_revision = $build->software_revision;
+        next unless defined $build_revision;
+        if (not $first_build and $build_revision =~ /$first_revision/) {
+            $first_build = $build;
+        }
+        elsif (not $second_build and $build_revision =~ /$second_revision/) {
+            $second_build = $build;
+        }
+    }
+
+    return ($first_build, $second_build);
+}
+
 1;  
 

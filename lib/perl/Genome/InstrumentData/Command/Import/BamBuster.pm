@@ -124,11 +124,9 @@ sub _bust_bams {
     my $disk_allocation  = $self->_disk_allocation;
     $self->status_message('To: '.$disk_allocation->absolute_path);
 
-    my $buster = Genome::Model::Tools::Picard::BamBuster->create(
+    my $buster = Genome::Model::Tools::Sam::BamBuster->create(
         input => $bam,
         output_directory => $disk_allocation->absolute_path,
-        use_version=>'1.31',
-        maximum_memory=>6,
     );
     if ( not $buster ) {
         $self->error_message("Failed to create bam buster.");

@@ -52,7 +52,16 @@ class Genome::Model::Build::ImportedReferenceSequence {
             doc => 'The source of the sequence (such as NCBI).  May not contain spaces.',
             is_mutable => 1,
             is_many => 0,
-        }        
+        },
+        manifest_file_path => {
+            is => 'Text',
+            calculate_from => ['data_directory'],
+            calculate => q(
+                if($data_directory){
+                    return join('/', $data_directory, 'manifest.tsv');
+                }
+            ),
+        },   
     ]
 };
 

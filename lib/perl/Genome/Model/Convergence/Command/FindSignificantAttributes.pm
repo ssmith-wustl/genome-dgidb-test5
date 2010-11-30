@@ -100,8 +100,7 @@ sub execute {
 
     unless($self->annotation_build) {
         #TODO Be smarter about finding this; possibly verify all subbuilds used same one or support multiples, etc.
-        my $annotation_reference = $applicable_subbuilds[0]->model->annotation_reference_transcripts;
-        my $annotation_build = $self->_resolve_annotation_build($annotation_reference);
+        my $annotation_build = $applicable_subbuilds[0]->model->annotation_reference_build;
 
         unless($annotation_build) {
             $self->error_message('No annotation build provided and one could not be determined from the subbuilds.');
@@ -345,37 +344,6 @@ sub _unload_transcripts {
     delete $UR::Context::all_params_loaded->{$class_name};
 
     return 1;
-}
-
-#FIXME This duplicates code in Genome::Model::Tools::Annotate::TranscriptVariants and includes the version hack therefrom
-#Ideally should just be able to ask the build for this--probably it should be made an input like ref-seq builds
-sub _resolve_annotation_build {
-    my $self = shift;
-    my $ref = shift;
-
-    my ($name, $version) = split(/\//, $ref);
-
-    my $model = Genome::Model->get(name => $name);
-    unless ($model){
-        $self->error_message("couldn't get reference transcripts set for $name");
-        return;
-    }
-
-    # For now, provided version is ignored since only v2 is usable
-    $version = "54_37g_v2" if $name =~ /mouse/i;
-    $version = "54_36p_v2" if $name =~ /human/i;
-    unless (defined $version) {
-        $self->error_message("Couldn't determine latest version for model $name");
-        return;
-    }
-
-    my $build = $model->build_by_version($version);
-    unless ($build){
-        $self->error_message("couldn't get build from reference transcripts set $name");
-        return;
-    }
-
-    return $build;
 }
 
 1;

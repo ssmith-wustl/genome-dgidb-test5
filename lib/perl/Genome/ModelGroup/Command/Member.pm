@@ -6,17 +6,21 @@ use warnings;
 use Genome;
 
 class Genome::ModelGroup::Command::Member {
-    is => ['Command'],
+    is => 'Genome::Command::Base',
+    is_abstract => 1,
     has => [
-        model_group => { is => 'Genome::ModelGroup', id_by => 'model_group_id' },
-        model_group_id => { is => 'Integer', doc => 'id of the model-group to work with'},
+        model_group => { 
+            is => 'Genome::ModelGroup', 
+            shell_args_position => 1,
+            doc => 'Model group name or id.',
+        },
     ],
     doc => "work with the members of model-groups",
 };
 
 sub help_synopsis {
     return <<"EOS"
-genome model-group member ...   
+    work with the members of model-groups   
 EOS
 }
 
@@ -24,10 +28,5 @@ sub help_brief {
     return "work with the members of model-groups";
 }
 
-sub help_detail {                           
-    return <<EOS 
-Top level command to hold commands for working with the list of models belonging to model-groups.
-EOS
-}
-
 1;
+

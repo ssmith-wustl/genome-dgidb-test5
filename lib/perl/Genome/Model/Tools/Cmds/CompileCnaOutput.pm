@@ -6,20 +6,8 @@ use Genome;
 use Cwd;
 
 class Genome::Model::Tools::Cmds::CompileCnaOutput {
-    is => 'Command',
+    is => 'Genome::Command::Base',
     has => [
-    model_ids => {
-        type => 'String',
-        is_optional => 1,
-        is_input => 1,
-        doc => 'Space-delimited somatic build ids to check for CNA output.'
-    },
-    model_group => {
-        type => 'String',
-        is_optional => 1,
-        is_input => 1,
-        doc => "The name or id of the Model Group to use.",
-    },
     window_size=> {
         type => 'String',
         is_optional => 1,
@@ -47,6 +35,13 @@ class Genome::Model::Tools::Cmds::CompileCnaOutput {
         default => 0,
         doc => "If --force is set, continue despite missing somatic models or builds",
     },
+    ],
+    has_many => [
+    models => { 
+        shell_args_position => 1, 
+        is => 'Genome::Model::Somatic', 
+        is_input => 1 
+    },
     ]
 };
 
@@ -66,40 +61,7 @@ sub execute {
     my $window_size = $self->window_size;
     my $output_dir = $self->output_dir;
 
-    if($self->model_ids) {
-        my @model_ids = split /\s+/, $self->model_ids;
-        for my $model_id (@model_ids) {
-            my $model = Genome::Model->get($model_id);
-            unless(defined($model)) {
-                $self->error_message("Unable to find somatic model $model_id. Please check that this model_id is correct.");
-                if ($self->force) {
-                    $self->status_message("Continuing despite the error above, skipping this model");
-                    next;
-                } else {
-                    die;
-                }
-            }
-            push @somatic_models, $model;
-        }
-    }
-    elsif($self->model_group) {
-        # Try to get model group by name or id
-        my $group = Genome::ModelGroup->get(name => $self->model_group);
-        unless ($group) {
-            $group = Genome::ModelGroup->get($self->model_group);
-        }
-        unless($group) {
-            $self->error_message("Unable to find a model group with name or id: " . $self->model_group);
-            die;
-        }
-        push @somatic_models, $group->models;
-    }
-    else {
-        $self->error_message("You must provide either model id(s) or a model group name to run this script");
-        die;
-    }
-
-    for my $somatic_model (@somatic_models) {
+    for my $somatic_model ($self->models) {
         my $somatic_model_id = $somatic_model->id;
         my $somatic_build = $somatic_model->last_succeeded_build;
         unless ($somatic_build) {

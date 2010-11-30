@@ -14,6 +14,13 @@ class Genome::Model::Tools::Bed::Convert::Indel::PindelToBed {
             default=> Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa',
             doc => "The reference fasta file used to look up the reference sequence with samtools faidx. This is necessary because pindel will truncate long reference sequences.",
         },
+        use_old_pindel => {
+            type => 'Boolean',
+            is_optional => 1,
+            default => 1,
+            doc => 'Run on pindel 0.2 or 0.1',
+        },
+
     ],
     has_transient_optional => [
         _big_output_fh => {
@@ -114,8 +121,19 @@ if($call =~ m/^3/) { $DB::single=1; }
             my $type = $call_fields[1];
             my $size = $call_fields[2];   #12
             my $mod = ($call =~ m/BP_range/) ? 2: -1;
-            my $support = ($type eq "I") ? $call_fields[10+$mod] : $call_fields[12+$mod];
-           
+            #my $support = ($type eq "I") ? $call_fields[10+$mod] : $call_fields[12+$mod];
+            ###charris patch for use old pindel  
+            my $support;
+            if($self->use_old_pindel){
+                $support = ($type eq "I") ? $call_fields[10+$mod] : $call_fields[12+$mod];
+            } else {
+                $support = $call_fields[12+$mod];
+            }
+            unless(defined($support)){
+                print "No support. Call was:   ".$call."\n";
+                die;
+            }
+            ### end charris patch
             for (1..$support){
                 $line = $input_fh->getline;
                 if($line =~ m/normal/) {
@@ -207,27 +225,37 @@ if($call =~ m/^3/) { $DB::single=1; }
 
 sub parse {
     my $self=shift;
+    #my $reference_fasta = $self->refseq;
     my ($call, $reference, $first_read) = @_;
     #parse out call bullshit
     chomp $call;
     my @call_fields = split /\s+/, $call;
     my $type = $call_fields[1];
     my $size = $call_fields[2];
-    my $chr = ($type eq "I") ? $call_fields[4] : $call_fields[6];
-    my $start= ($type eq "I") ? $call_fields[6] : $call_fields[8];
-    my $stop = ($type eq "I") ? $call_fields[7] : $call_fields[9];
+    ####use old pindel patch######
+    my ($chr, $start, $stop);
+    if($self->use_old_pindel){
+        $chr = ($type eq "I") ? $call_fields[4] : $call_fields[6];
+        $start= ($type eq "I") ? $call_fields[6] : $call_fields[8];
+        $stop = ($type eq "I") ? $call_fields[7] : $call_fields[9];
+    } else {
+        $chr = $call_fields[6];
+        $start= $call_fields[8];
+        $stop = $call_fields[9];
+    }
+    ####end charris use old pindel patch
     my $support = $call_fields[-1];
     my ($ref, $var);
     if($type =~ m/D/) {
         $var =0;
         ###Make pindels coordinates(which seem to be last undeleted base and first undeleted base) 
         ###conform to our annotators requirements
-
+        $stop = $stop -1;
         ###also deletions which don't contain their full sequence should be dumped to separate file
-       $stop = $stop - 1;
         my $allele_string;
+        my $start_for_faidx = $start+1; 
         my $sam_default = Genome::Model::Tools::Sam->path_for_samtools_version;
-        my $faidx_cmd = "$sam_default faidx " . $self->reference_fasta . " $chr:$start-$stop";
+        my $faidx_cmd = "$sam_default faidx " . $self->reference_fasta . " $chr:$start_for_faidx-$stop"; 
         my @faidx_return= `$faidx_cmd`;
         shift(@faidx_return);
         chomp @faidx_return;
@@ -236,11 +264,15 @@ sub parse {
         $ref = $allele_string;
     }
     elsif($type =~ m/I/) {
-        $start = $start - 1;
+        #misunderstanding of bed format
+        #0 based numbers teh gaps so an insertion of any number of bases between base 10 and 11 in 1base
+        #is 10 10 in bed format
+        #$start = $start - 1;
         $ref=0;
         my ($letters_until_space) =   ($reference =~ m/^([ACGTN]+) /);
         my $offset_into_first_read = length($letters_until_space);
         $var = substr($first_read, $offset_into_first_read, $size);
+        $stop = $stop - 1;
     }
     if($size >= 100) {
         my $big_fh = $self->_big_output_fh;

@@ -315,14 +315,23 @@ sub _validate_model_id {
 sub _copy_model_inputs {
     my $self = shift;
 
-    # Create gets called twice, calling this method twice, so
-    #  gotta check if we added the inputs already (and crashes). 
-    #  I tried to figure out how to stop create being called twice, but could not.
-    my @inputs = $self->inputs;
-    return 1 if @inputs;
-
     for my $input ( $self->model->inputs ) {
         my %params = map { $_ => $input->$_ } (qw/ name value_class_name value_id /);
+
+        if($params{value_class_name}->isa('Genome::Model')) {
+            #We want to add the most recent build as an input of the build instead of the model itself.
+            my $input_model = $input->value;
+            my $input_build = $input_model->last_complete_build;
+
+            unless($input_build) {
+                $self->error_message('Model used as input ' . $input_model->__display_name__ . ' has no succeeded builds.  Cannot create build input.');
+                return;
+            }
+
+            $params{value_class_name} = $input_build->class;
+            $params{value_id} = $input_build->id;
+        }
+
         unless ( $self->add_input(%params) ) {
             $self->error_message("Can't copy model input to build: ".Data::Dumper::Dumper(\%params));
             return;
@@ -595,7 +604,8 @@ sub stop {
 
     $self->status_message('Attempting to stop build: '.$self->id);
 
-    if ($self->run_by ne $ENV{USER}) {
+    my $user = getpwuid($<);
+    if ($user ne 'apipe-builder' && $user ne $self->run_by) {
         $self->error_message("Can't stop a build originally started by: " . $self->run_by);
         return 0;
     }
@@ -694,7 +704,8 @@ sub restart {
         cluck $self->error_message('job_dispatch cannot be changed on restart');
     }
     
-    if ($self->run_by ne $ENV{USER}) {
+    my $user = getpwuid($<);
+    if ($self->run_by ne $user) {
         croak $self->error_message("Can't restart a build originally started by: " . $self->run_by);
     }
 
@@ -781,7 +792,8 @@ sub _launch {
         }
     }
     else {
-        $job_group_spec = ' -g /build2/' . $ENV{USER};
+        my $user = getpwuid($<);
+        $job_group_spec = ' -g /build2/' . $user;
     }
 
     die "Bad params!  Expected server_dispatch and job_dispatch!" . Data::Dumper::Dumper(\%params) if %params;
@@ -819,12 +831,13 @@ sub _launch {
         $host_group = "-m '$host_group'";
 
         # bsub into the queue specified by the dispatch spec
+        my $user = getpwuid($<);
         my $lsf_command = sprintf(
             'bsub -N -H -q %s %s %s -u %s@genome.wustl.edu -o %s -e %s annotate-log genome model services build run%s --model-id %s --build-id %s',
             $server_dispatch, ## lsf queue
             $host_group,
             $job_group_spec,
-            $ENV{USER}, 
+            $user, 
             $build_event->output_log_file,
             $build_event->error_log_file,
             $add_args,
@@ -1572,6 +1585,10 @@ sub regex_files_for_diff {
     return ();
 }
 
+sub metrics_ignored_by_diff {
+    return ();
+}
+
 # A list of file suffixes that require special treatment to diff. This should include those
 # files that have timestamps or other changing fields in them that an md5sum can't handle.
 # Each suffix should have a method called diff_<SUFFIX> that'll contain the logic.
@@ -1702,6 +1719,12 @@ sub compare_output {
 
     METRIC: for my $metric_name (sort keys %metrics) {
         my $metric = $metrics{$metric_name};
+
+        if ( grep { $metric_name =~ /$_/ } $self->metrics_ignored_by_diff ) {
+            delete $other_metrics{$metric_name} if exists $other_metrics{$metric_name};
+            next METRIC;
+        }
+
         my $other_metric = delete $other_metrics{$metric_name};
         unless ($other_metric) {
             $diffs{$metric_name} = "no build metric with name $metric_name found for build $other_build_id";
@@ -1712,7 +1735,7 @@ sub compare_output {
         my $other_metric_value = $other_metric->value;
         unless ($metric_value eq $other_metric_value) {
             $diffs{$metric_name} = "metric $metric_name has value $metric_value for build $build_id and value " .
-                "$other_metric_value for build $other_build_id";
+            "$other_metric_value for build $other_build_id";
             next METRIC;
         }
     }
