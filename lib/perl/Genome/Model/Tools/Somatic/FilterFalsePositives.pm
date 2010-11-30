@@ -165,6 +165,12 @@ class Genome::Model::Tools::Somatic::FilterFalsePositives {
             default => 0,
             doc => 'enable this flag to shortcut through annotation if the output_file is already present. Useful for pipelines.',
         },
+        samtools_version => {
+            is => 'Text',
+            is_optional => 1,
+            is_input => 1,
+            doc => 'version of samtools to use',
+        },
     ]
 };
 
@@ -611,7 +617,8 @@ sub fails_homopolymer_check
         $query_string = $chrom . ":" . ($chr_start - $min_homopolymer) . "-" . ($chr_stop + $min_homopolymer);
     }
 
-    my $sequence = `samtools faidx $reference $query_string | grep -v \">\"`;
+    my $samtools_path = Genome::Model::Tools::Sam->path_for_samtools_version($self->samtools_version);
+    my $sequence = `$samtools_path faidx $reference $query_string | grep -v \">\"`;
     chomp($sequence);
 
     if($sequence) {
