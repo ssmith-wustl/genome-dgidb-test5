@@ -60,17 +60,11 @@ sub execute {
         -file => $self->fasta_file
     );
 
-    my $output_fh = File::Temp->new(
-        TEMPLATE => 'fgenesh_raw_output_XXXXXX',
-        DIR => $self->raw_output_directory,
-        CLEANUP => 0,
-        UNLINK => 0,
-    );
-    my $output_file = $output_fh->filename;
-    $output_fh->close;
-    chmod(0666, $output_file);
+    my $output_file = $self->get_temp_file_in_directory($self->raw_output_directory, 'fgenesh_raw_output_XXXXXX');
+    confess "Could not create temp file in " . $self->raw_output_directory unless defined $output_file;
 
     my %gene_count_by_seq;
+    my $total_gene_count = 0;
     while (my $seq = $seqio->next_seq()) {
         $self->status_message("Now parsing predictions from sequence " . $seq->id());
 
@@ -216,6 +210,7 @@ sub execute {
                 start => $start,
                 end => $end,
             );
+            $total_gene_count++;
 
             my $transcript = Genome::Prediction::Transcript->create(
                 directory => $self->prediction_directory,
@@ -244,6 +239,7 @@ sub execute {
         }
     }
 
+    $self->status_message("Getting locks for protein, transcript, exon, and coding gene files");
     my @locks = $self->lock_files_for_predictions(
         qw/ 
             Genome::Prediction::Protein 
@@ -253,10 +249,17 @@ sub execute {
         /
     );
 
-    UR::Context->commit;
+    $self->status_message("Lock acquired, committing!");
+    my $commit_rv = UR::Context->commit;
+    unless (defined $commit_rv and $commit_rv) {
+        $self->error_message("Could not perform UR context commit!");
+        confess $self->error_message;
+    }
+
+    $self->status_message("Changed committed, releasing locks");
     $self->release_prediction_locks(@locks);
 
-    $self->status_message("Fgenesh parsing complete!");
+    $self->status_message("Fgenesh parsing complete, predicted $total_gene_count genes!");
     return 1;
 }
 
