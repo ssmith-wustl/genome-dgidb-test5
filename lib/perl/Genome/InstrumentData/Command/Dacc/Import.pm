@@ -33,11 +33,20 @@ sub execute {
         return;
     }
 
-    my $main_inst_data = $self->_get_instrument_data(create_allocation => 0);
-    return if not $main_inst_data;
+    my @inst_data = $self->_get_instrument_data;
+    return if not @inst_data;
 
-    my $dl_dir_ok = $self->_dl_directory_exists;
-    return if not $dl_dir_ok;
+    my $been_imported = $self->has_instrument_data_been_imported;
+    return if $been_imported;
+
+    my $dl_dir = $self->_dl_directory_exists;
+    return if not $dl_dir;
+
+    my @data_files = $self->existing_data_files;
+    if ( not @data_files ) {
+        $self->error_message("There are not any data files in download directory: $dl_dir");
+        return;
+    }
 
     my $md5s_ok = $self->_validate_md5;
     return if not $md5s_ok;
@@ -45,14 +54,27 @@ sub execute {
     my $sub_execute_ok = $self->_execute;
     return if not $sub_execute_ok;
 
-    my $update = $self->_update_instrument_data;
-    return if not $update;
-
-    if ( $self->_xml_files ) {
-        $self->_update_library;
-    }
+    $self->_reallocate;
 
     $self->status_message('Import...OK');
+
+    return 1;
+}
+
+sub _reallocate {
+    my $self = shift;
+
+    $self->status_message('Reallocate...');
+
+    my $allocation = $self->_allocation;
+    if ( not $allocation ) {
+        Carp::confess('No main allocation');
+    }
+    if ( not $allocation->reallocate ) { # disregard error
+        $self->error_message('Failed to reallocate main allocation: '.$allocation->id);
+    }
+
+    $self->status_message('Reallocate...OK');
 
     return 1;
 }

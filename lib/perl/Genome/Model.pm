@@ -348,7 +348,8 @@ sub create {
     #</model name>
 
     unless ($self->user_name) {
-        $self->user_name($ENV{USER});
+        my $user = getpwuid($<);
+        $self->user_name($user);
     }
     unless ($self->creation_date) {
         $self->creation_date(UR::Time->now);

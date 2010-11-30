@@ -31,15 +31,6 @@ sub help_detail {
 sub _execute {
     my $self = shift;
 
-    my $rename = $self->_rename_files;
-    return if not $rename;
-
-    return 1;
-}
-
-sub _rename_files {
-    my $self = shift;
-
     $self->status_message('Rename BAM...');
     
     my $dl_directory = $self->_dl_directory;
@@ -64,12 +55,6 @@ sub _rename_files {
     }
 
     $self->status_message('Rename BAM...OK');
-
-    return 1;
-}
-
-sub _update_instrument_data {
-    my $self = shift;
 
     $self->status_message('Update instrument data...');
 
