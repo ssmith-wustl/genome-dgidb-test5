@@ -171,7 +171,13 @@ class Genome::Model::Tools::Sv::AssemblyValidation {
         },
         _maxSV => {
             type => 'HASH',
-        }
+        },
+        _N50size => {
+            type => 'Number',
+        },
+        _WeightAvgSize => {
+            type => 'Number',
+        },
     ],
 };
 
@@ -245,13 +251,17 @@ sub execute {
         return;
     }
 
-    my @tigra_sv_fas = glob("$datadir/*.fa.contigs.fa");
+    my @tigra_sv_fas = glob("$datadir/*.fa.contigs.fa");#get tigra homo ctg list
     @tigra_sv_fas = sort{(basename ($a)=~/^\S+?\.(\d+)\./)[0]<=> (basename ($b)=~/^\S+?\.(\d+)\./)[0]}@tigra_sv_fas; #sort ctg file by chr pos
     
     for my $tigra_sv_fa (@tigra_sv_fas) {
         my ($tigra_sv_name) = basename $tigra_sv_fa =~ /^(\S+)\.fa\.contigs\.fa/;
         my ($chr1,$start,$chr2,$end,$type,$size,$ori,undef) = split /\./, $tigra_sv_name; # you get the $size from $prefix         
         my $prefix = join('.',$chr1,$start,$chr2,$end,$type,$size,$ori);
+
+        $self->_N50size(_ComputeTigraN50($tigra_sv_fa));
+        $self->_WeightAvgSize(_ComputeTigraWeightedAvgSize($tigra_sv_fa));
+
         #test homo, het contigs
         for my $ctg_type ('homo', 'het') {
             $self->_cross_match_validation($ctg_type, $tigra_sv_name);
@@ -290,7 +300,9 @@ sub execute {
         elsif ($self->_unc_pred_fh) {
             $self->_unc_pred_fh->printf("%s\t%d\t%s\t%d\t%s\t%d\t%s\n",$chr1,$start,$chr2,$end,$type,$size,$ori);
         }
-        $self->_maxSV(undef) if $self->_maxSV; #reset for each SV
+        $self->_maxSV(undef)         if $self->_maxSV; #reset for each SV
+        $self->_N50size(undef)       if $self->_N50size;
+        $self->_WeightAvgSize(undef) if $self->_WeightAvgSize;
     }
 
     if (!defined $self->intermediate_read_dir and defined $self->intermediate_save_dir) {
@@ -437,11 +449,9 @@ sub _cross_match_validation {
             
     $cm_indel->execute;
     my $result  = read_file($tmp_out);
-    my $N50size = _ComputeTigraN50($tigra_sv_fa);
-    my $DepthWeightedAvgSize = _ComputeTigraWeightedAvgSize($tigra_sv_fa);
 
     if ($result && $result =~ /\S+/) {
-	    $self->_UpdateSVs($result,$N50size,$DepthWeightedAvgSize,$makeup_size,$regionsize,$tigra_sv_fa,$ctg_type);
+	    $self->_UpdateSVs($result,$makeup_size,$regionsize,$tigra_sv_fa,$ctg_type);
     }
     
     return 1;
@@ -449,9 +459,11 @@ sub _cross_match_validation {
 
 
 sub _UpdateSVs{
-    my ($self,$result,$N50size,$depthWeightedAvgSize,$makeup_size,$regionsize,$tigra_sv_fa,$type) = @_;
+    my ($self,$result,$makeup_size,$regionsize,$tigra_sv_fa,$type) = @_;
     my $datadir = $self->_data_dir;
     my $maxSV   = $self->_maxSV;
+    my $N50size = $self->_N50size;
+    my $depthWeightedAvgSize = $self->_WeightAvgSize;
 
     if (defined $result) {
         my ($pre_chr1,$pre_start1,$pre_chr2,$pre_start2,$ori,$pre_bkstart,$pre_bkend,$pre_size,$pre_type,$pre_contigid,$alnscore,$scar_size,$read_len,$fraction_aligned,$n_seg,$n_sub,$n_indel,$nbp_indel,$strand,$microhomology,$alnstrs) = split /\s+/, $result;
