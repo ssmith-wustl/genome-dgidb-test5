@@ -482,11 +482,11 @@ sub execute {
         #Microhomology Standardization
         if ($bestvar->{size} >= $self->min_indel_size && $bestvar->{score} > 0) {
             if (defined $self->ref_start_pos) {
-                if (defined $bestvar->{chr1} && $bestvar->{chr1}=~/chromosome\.(\S+)\./) { 
+                if (defined $bestvar->{chr1} && ($bestvar->{chr1}=~/^(\S+)\:/ || $bestvar->{chr1}=~/chromosome\.(\S+)\./)) { 
                     $bestvar->{chr1} = $1;
                 }
                       
-                if (defined $bestvar->{chr2} && $bestvar->{chr2}=~/chromosome\.(\S+)\./) {
+                if (defined $bestvar->{chr2} && ($bestvar->{chr2}=~/^(\S+)\:/ || $bestvar->{chr2}=~/chromosome\.(\S+)\./)) {
 	                $bestvar->{chr2}=$1;
                 }
                 my ($pos1, $pos2);
