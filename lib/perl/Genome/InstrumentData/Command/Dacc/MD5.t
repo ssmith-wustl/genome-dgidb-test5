@@ -48,7 +48,7 @@ is_deeply(
     { 'BAM.1.bam' => '10a3588b2babc2a6092bbe635b04169c' },
     'Confirmed md5',
 );
-ok($bam_md5->validate, 'validate bam md5');
+ok($bam_md5->execute, 'BAM: execute');
 
 # SFF
 my @sff_names = (qw/ SFF.1.sff SFF.2.sff /);
@@ -92,7 +92,7 @@ is_deeply(
     },
     'SFF: confirmed md5',
 );
-ok($sff_md5->validate, 'SFF: validate sff md5');
+ok($sff_md5->execute, 'SFF: execute');
 
 # FASTQ
 my @fastq_names = (qw/ FASTQ.1.fastq.bz2 FASTQ.2.fastq.bz2 FASTQ.singleton.fastq.bz2 /);
@@ -128,7 +128,7 @@ is_deeply(
     'FASTQ: DACC md5',
 );
 
-ok($fastq_md5->validate, 'FASTQ: validate fastq md5'); # validate here cuz it will generate
+ok($fastq_md5->execute, 'FASTQ: execute'); # generate is tested here
 
 %confirmed_md5 = $fastq_md5->_load_confirmed_md5;
 #print Dumper(\%confirmed_md5);

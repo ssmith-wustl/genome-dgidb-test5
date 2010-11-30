@@ -51,10 +51,13 @@ sub execute {
     my $md5s_ok = $self->_validate_md5;
     return if not $md5s_ok;
 
+    my $update_library = $self->_update_library;
+    return if not $update_library;
+
     my $sub_execute_ok = $self->_execute;
     return if not $sub_execute_ok;
 
-    $self->_reallocate;
+    $self->_reallocate; # ignore error
 
     $self->status_message('Import...OK');
 
