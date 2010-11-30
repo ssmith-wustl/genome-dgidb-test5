@@ -33,10 +33,12 @@ sub _execute {
 
     my @sffs = $self->existing_data_files;
     my $instrument_data = $self->_instrument_data;
-
     my $instrument_data_needed = scalar(@sffs) - scalar(@$instrument_data);
-    if ( $instrument_data_needed > @$instrument_data ) {
-        $self->error_message('Somehow there are more instrument data than SFFs to import. Please fix.');
+    $self->status_message('Instrument data count: '.scalar(@$instrument_data));
+    $self->status_message('SFFs count: '.scalar(@sffs));
+    $self->status_message('New instrument data needed: '.$instrument_data_needed);
+    if ( $instrument_data_needed < 0 ) {
+        $self->error_message('Somehow there are more instrument data ('.scalar(@$instrument_data).') than SFFs ('.scalar(@sffs).') to import. Please fix.');
         return;
     }
 
