@@ -21,6 +21,7 @@ my $bam_md5 = Genome::InstrumentData::Command::Dacc::MD5->create(
     confirmed_md5_file => $dir.'/BAM.confirmed.md5',
 );
 ok($bam_md5, 'BAM: create');
+$bam_md5->dump_status_messages(1);
 
 is($bam_md5->_sra_id, 'SRS000000', 'BAM: SRA ID');
 is($bam_md5->_directory, $dir, 'Directory');
@@ -59,6 +60,7 @@ my $sff_md5 = Genome::InstrumentData::Command::Dacc::MD5->create(
     confirmed_md5_file => $dir.'/SFF.confirmed.md5',
 );
 ok($sff_md5, 'SFF: create');
+$sff_md5->dump_status_messages(1);
 
 is($sff_md5->_sra_id, 'SRS000000', 'SFF: SRA ID');
 is($sff_md5->_directory, $dir, 'SFF: Directory');
@@ -104,6 +106,7 @@ my $fastq_md5 = Genome::InstrumentData::Command::Dacc::MD5->create(
     confirmed_md5_file => $tmpdir.'/confirmed.md5',
 );
 ok($fastq_md5, 'FASTQ: create');
+$fastq_md5->dump_status_messages(1);
 
 is($fastq_md5->_sra_id, 'SRS000000', 'FASTQ: SRA ID');
 is($fastq_md5->_directory, $dir, 'FASTQ: Directory');

@@ -52,6 +52,10 @@ class Genome::InstrumentData::Command::Dacc {
     ],
 };
 
+sub __display_name__ {
+    return $_[0]->sra_sample_id.' '.$_[0]->format;
+}
+
 #< HELP >#
 sub help_brief {
     return 'Donwload and import from the DACC';
