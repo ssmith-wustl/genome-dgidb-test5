@@ -4,46 +4,45 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::Model::Tools::Pcap::Assemble;
 use Bio::SeqIO;
-use Data::Dumper;
-#use GSCApp;
+
 class Genome::Model::Tools::PooledBac::UpdateSeqMgr {
     is => 'Command',
-    has => 
-    [        
-        project_dir =>
-        {
+    has => [        
+        project_dir => {
             type => 'String',
             is_optional => 0,
             doc => "output dir for separate pooled bac projects"        
-        } 
-    ]
+        },
+    ],
 };
 
 sub help_brief {
-    "Assemble Pooled BAC Reads"
+    'Tool to copy assembly files into seqmgr linke pooled bac project directories';
 }
 
-sub help_synopsis { 
-    return;
+sub help_synopsis {
+    return <<"EOS"
+gmt pooled-bac update-seq-mgr --project-dir /gscmnt/111/New_Pipeline_Pooled_BAC_Fosmid_Testing/Human_Pool_10_101119
+EOS
 }
 sub help_detail {
-    return <<EOS 
-    Assemble Pooled BAC Reads
+    return <<"EOS"
+This tool copies assembly files created by pooled-bac pipline into individual seqmgr
+linked GSC project directories for finishing and manual sequencing improvement
 EOS
 }
 
-############################################################
+
 sub execute { 
     my ($self) = @_;
-    print "Updating Seqmgr Projects...\n";
+    $self->status_message ("Updating Seqmgr Projects ..");
     my $project_dir = $self->project_dir;
-    $DB::single = 1;
+
     chdir($project_dir);
     my $seqio = Bio::SeqIO->new(-format => 'fasta', -file => 'ref_seq.fasta');
     $self->error_message("Erroring opening ref_seq_fasta") and die unless defined $seqio;
-#    App->init;
+
     while (my $seq = $seqio->next_seq)
     {    
         my $clone_name = $seq->display_id;
@@ -67,7 +66,7 @@ sub execute {
         $p->set_project_status('pooled_bac_done'); 
         
         my $seqmgr_link = $p->seqmgr_link;
-        print "Updating $clone_name...\n";
+        $self->status_message ("Updating $clone_name ..");
 
 	unless (-d "$seqmgr_link/edit_dir" ) {
 	    Genome::Utility::FileSystem->create_directory("$seqmgr_link/edit_dir");
