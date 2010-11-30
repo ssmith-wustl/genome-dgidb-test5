@@ -246,6 +246,7 @@ sub execute {
     }
 
     my @tigra_sv_fas = glob("$datadir/*.fa.contigs.fa");
+    @tigra_sv_fas = sort{(basename ($a)=~/^\S+?\.(\d+)\./)[0]<=> (basename ($b)=~/^\S+?\.(\d+)\./)[0]}@tigra_sv_fas; #sort ctg file by chr pos
     
     for my $tigra_sv_fa (@tigra_sv_fas) {
         my ($tigra_sv_name) = basename $tigra_sv_fa =~ /^(\S+)\.fa\.contigs\.fa/;
@@ -289,6 +290,7 @@ sub execute {
         elsif ($self->_unc_pred_fh) {
             $self->_unc_pred_fh->printf("%s\t%d\t%s\t%d\t%s\t%d\t%s\n",$chr1,$start,$chr2,$end,$type,$size,$ori);
         }
+        $self->_maxSV(undef) if $self->_maxSV; #reset for each SV
     }
 
     if (!defined $self->intermediate_read_dir and defined $self->intermediate_save_dir) {
@@ -439,7 +441,7 @@ sub _cross_match_validation {
     my $DepthWeightedAvgSize = _ComputeTigraWeightedAvgSize($tigra_sv_fa);
 
     if ($result && $result =~ /\S+/) {
-	    $self->_UpdateSVs($result,$N50size,$DepthWeightedAvgSize,$makeup_size,$regionsize,$tigra_sv_fa,$type);
+	    $self->_UpdateSVs($result,$N50size,$DepthWeightedAvgSize,$makeup_size,$regionsize,$tigra_sv_fa,$ctg_type);
     }
     
     return 1;

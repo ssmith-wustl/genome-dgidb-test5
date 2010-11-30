@@ -29,8 +29,14 @@ sub required_rusage {
         my $kb_usage = $instrument_data->calculate_alignment_estimated_kb_usage;
         $estimated_usage_mb = int(($kb_usage * 5) / 1024)+100;
     }
+    my $mem_thousand = 14000;
+    my $mem_million = 15000000;
+    if (defined $instrument_data && $instrument_data->is_paired_end){
+        $mem_thousand = 30000;
+        $mem_million = 31000000;
+    }
         
-    return "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>" . $estimated_usage_mb . " && mem>14000] span[hosts=1] rusage[mem=14000]' -M 15000000 -n 4 -q hmp -m hmp";
+    return "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>" . $estimated_usage_mb . " && mem>$mem_thousand] span[hosts=1] rusage[mem=$mem_thousand]' -M $mem_million -n 4 -q hmp -m hmp";
 }
 
 sub _run_aligner {

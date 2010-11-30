@@ -34,13 +34,12 @@ class Genome::Model::Build::ImportedAnnotation {
             where => [ name => 'species_name', value_class_name => 'UR::Value' ],
             is_mutable => 1,
         },
+        name => {
+            calculate_from => ['model_name','version'],
+            calculate => q{ return "$model_name/$version"; },
+        },
     ],
 };
-
-sub idstring {
-    my $self = shift;
-    return $self->model->name . "/" . $self->version;
-}
 
 # Checks to see if this build is compatible with the given imported reference sequence build (species and version match)
 sub is_compatible_with_reference_sequence_build {

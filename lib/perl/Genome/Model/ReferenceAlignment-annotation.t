@@ -68,10 +68,10 @@ my $inp = $m->add_input(
 ok($inp, "created annotation_reference_build input");
 $m = Genome::Model->get($m->id);
 ok($m->annotation_reference_build);
-is($m->annotation_reference_build->idstring, $ann_mouse37->idstring, "annotation_reference_build input overrides empty legacy pp param");
+is($m->annotation_reference_build->name, $ann_mouse37->name, "annotation_reference_build input overrides empty legacy pp param");
 
 # refseq36 vs annotation36 via processing profile
-my $pp36 = make_profile($ann_human36->idstring);
+my $pp36 = make_profile($ann_human36->name);
 ok($pp36, "Created processing profile for build 36 with annotation");
 $m = make_model($pp36, "NCBI-human-build36");
 ok($m && !$m->__errors__, "created model for build 36 with matching annotation data");
@@ -81,7 +81,7 @@ ok($m->annotation_reference_build, "annotation build exists");
 $m = make_model($pp36, "NCBI-human-build37");
 ok($m, "created model with mismatched reference sequence and annotation data");
 ok($m->annotation_reference_build, "bad annotation_reference_build still returned");
-is($m->annotation_reference_build->idstring, $ann_human36->idstring, "expected annotation idstring");
+is($m->annotation_reference_build->name, $ann_human36->name, "expected annotation name");
 ok($m->__errors__, "incompatible reference sequence and annotation data causes __errors__");
 
 # override non-empty processing profile param with model input (with a species mismatch)
@@ -93,7 +93,7 @@ $inp = $m->add_input(
 ok($inp, "created input");
 $m = Genome::Model->get($m->id);
 ok($m->annotation_reference_build);
-is($m->annotation_reference_build->idstring, $ann_mouse37->idstring, "annotation_reference_build input overrides legacy pp param");
+is($m->annotation_reference_build->name, $ann_mouse37->name, "annotation_reference_build input overrides legacy pp param");
 ok($m->__errors__, "species mismatch causes errors");
 
 

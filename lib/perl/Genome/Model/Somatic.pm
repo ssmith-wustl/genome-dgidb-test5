@@ -16,6 +16,7 @@ class Genome::Model::Somatic {
        require_dbsnp_allele_match => { via => 'processing_profile'},
        sv_detector_params => { via => 'processing_profile'},
        sv_detector_version => { via => 'processing_profile'},
+       transcript_variant_annotator_version => { via => 'processing_profile' },
        bam_window_params => { via => 'processing_profile'},
        bam_window_version => { via => 'processing_profile'},
        sniper_params => { via => 'processing_profile'},

@@ -41,7 +41,7 @@ class Genome::InstrumentData::Imported {
         run_name             => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         sd_above_insert_size => { is => 'NUMBER', len => 20, is_optional => 1 },
         subset_name          => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        library_id           => { is => 'NUMBER', len => 20, is_optional => 1 },
+        library_id           => { is => 'NUMBER', len => 20 },
     ],
     has_optional =>[
         reference_sequence_build_id => { 
@@ -367,16 +367,32 @@ sub run_identifier {
  return $self->id;
 }
 
-# okay for first test, before committing switch to getting the allocation and returning the path under it
+sub _archive_file_name { # private for now...can be public
+    my $self = shift;
+
+    my $format = $self->import_format;
+    if ( $format =~ /fastq/ ){
+        return 'archive.tgz';
+    }
+    elsif ( $format eq 'bam' ){
+        return 'all_sequences.bam';
+    }
+    elsif ( $format eq 'sff' ){
+        return 'all_sequences.sff';
+    }
+    else {
+        Carp::confess("Unknown import format: $format");
+    }
+}
+
 sub archive_path {
     my $self = shift;
+
     my $alloc = $self->disk_allocations;
-    return $self->disk_allocations->absolute_path . "/archive.tgz";
-    if($alloc){
-        die "found an alloc!\n";
-    }
-    $self->status_message("Genome::InstrumentData::Imported  alloc->absolute_path = " . $alloc->absolute_path . "\n");
-    return  $alloc->absolute_path."/archive.tgz";
+    return if not $alloc;
+
+    my $file_name = $self->_archive_file_name;
+    return $alloc->absolute_path.'/'.$file_name;
 }
 
 1;

@@ -77,7 +77,7 @@ for my $sn (@species_names) {
     }
 }
 
-is($abuild->idstring, "test_annotation/$versions[0]", "idstring properly formed");
+is($abuild->name, "test_annotation/$versions[0]", "name properly formed");
 ok($abuild->is_compatible_with_reference_sequence_build($rbuilds{'human'}->[0]), 'reference sequence compatibility');
 ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'human'}->[1]), 'reference sequence incompatibility');
 ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'mouse'}->[0]), 'reference sequence incompatibility');

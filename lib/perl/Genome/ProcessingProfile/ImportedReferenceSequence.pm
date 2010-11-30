@@ -176,6 +176,11 @@ sub _execute_build {
         $self->error_message("Unable to symlink all_sequences.bowtie.fa.fai to all_sequences.fa.fai");
         return;
     }
+    
+    #create manifest file
+    unless ($self->create_manifest_file($build)){
+        $self->error_message("Could not create manifest file");
+    }
 
     $self->status_message("Done.");
     return 1;
@@ -226,5 +231,75 @@ sub _make_bases_files {
     $file->close;
     $fafh->close;
 }
+
+sub create_manifest_file {
+    my $self = shift;
+    my $build = shift;
+    
+    my $manifest_path = $build->manifest_file_path;
+    if (-z $manifest_path){
+        $self->warning_message('Manifest file already exists!');
+        return;
+    }
+
+    my $manifest_fh = IO::File->new($manifest_path, 'w');
+    unless ($manifest_fh){
+        $self->error_message("Could not open manifest file path, exiting");
+        die();
+    }
+    
+    my @files = $self->_list_bases_files($build);
+    for my $file (@files){
+        $manifest_fh->print($self->_create_manifest_file_line($file), "\n");
+    }   
+
+    $manifest_fh->close;
+    return 1;
+}
+
+sub _create_manifest_file_line {
+    my $self = shift;
+    my $file = shift;
+
+    my $file_size = -s ($file);
+    my $md5 = Genome::Utility::FileSystem->md5sum($file);
+    return join("\t", $file, $file_size, $md5);
+}
+
+sub _list_bases_files {
+    my $self = shift;
+    my $build = shift;
+
+    my $data_dir = $build->data_directory;
+    my $fa = $build->fasta_file; 
+    my $bases_dir = join('/', $data_dir, 'bases');
+    $bases_dir = $data_dir unless -e $bases_dir; #some builds lack a bases directory 
+    
+    my @bases_files;
+
+    if ($fa and -e $fa){
+        my $fafh = Genome::Utility::FileSystem->open_file_for_reading($fa);
+        unless($fafh){
+            $self->error_message("Could not open file $fa for reading.");
+            die $self->error_message;
+        }
+        while(<$fafh>){
+            my $line = $_;
+            chomp($line);
+            #if the line contains a sequence name, check that name
+            if($line =~ /^>/){
+                my $chr = $';
+                ($chr) = split " ",$chr;
+                $chr =~s/(\/|\\)/_/g;  # "\" or "/" are not allowed in sequence names
+                $chr=~s/(\.1)//; #handle chrom names that end in .1
+                push(@bases_files, join("/", $bases_dir, "$chr.bases")); 
+            }
+        }
+    }else{
+        @bases_files = glob($bases_dir . "/*.bases")
+    }
+    
+    return @bases_files;
+} 
 
 1;

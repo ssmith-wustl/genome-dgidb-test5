@@ -28,6 +28,7 @@ my @SUB_COMMANDS = qw/
     report
     capture
     feature-list
+    completion
 /;
 
 our %SUB_COMMAND_CLASSES = 

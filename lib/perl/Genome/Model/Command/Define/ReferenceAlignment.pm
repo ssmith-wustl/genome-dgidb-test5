@@ -30,12 +30,12 @@ class Genome::Model::Command::Define::ReferenceAlignment {
             is => 'Text',
             is_optional => 1,
             is_many => 1,
-            doc => 'limit the model to take specific capture or PCR instrument data'
+            doc => 'limit the model to take specific capture or PCR instrument data',
         },
         region_of_interest_set_name => {
             is => 'Text',
             is_optional => 1,
-            doc => 'limit coverage and variant detection to within these regions of interest'
+            doc => 'limit coverage and variant detection to within these regions of interest',
         }
     ]
 };
@@ -45,14 +45,13 @@ sub _shell_args_property_meta {
     return $self->Genome::Command::Base::_shell_args_property_meta(@_);
 }
 
-
 sub type_specific_parameters_for_create {
     my $self = shift;
-    my $rsb = $self->_get_reference_sequence_build;
-    my $asb = $self->_get_annotation_reference_build;
+    my $rsb = $self->_resolve_param('reference_sequence_build');
+    my $arb = $self->_resolve_param('annotation_reference_build');
     my @params;
     push(@params, reference_sequence_build => $rsb) if $rsb;
-    push(@params, annotation_reference_build => $asb) if $asb;
+    push(@params, annotation_reference_build => $arb) if $arb;
     return @params;
 }
 
@@ -108,77 +107,23 @@ sub execute {
     return $result;
 }
 
-sub _get_reference_sequence_build {
-    my $self = shift;
+sub _resolve_param {
+    my ($self, $param) = @_;
+    my $param_meta = $self->__meta__->property($param);
+    Carp::confess("Request to resolve unknown property '$param'.") if (!$param_meta);
+    my $param_class = $param_meta->data_type;
 
-    my $rsb_identifier = $self->reference_sequence_build;
-    unless ( $rsb_identifier )  {
-        Carp::confess("No reference sequence build (or name or id) given");
+    my $value = $self->$param;
+    return unless $value; # not specified
+    return $value if ref($value); # already an object
+
+    my @objs = $self->resolve_param_value_from_text($value, $param_class);
+    if (@objs != 1) {
+        Carp::confess("Unable to find unique $param_class identified by '$value'. Results were:\n" .
+            join('\n', map { $_->__display_name__ . '"' } @objs ));
     }
-
-    # We may already have it
-    if ( ref($rsb_identifier) ) {
-        return $rsb_identifier;
-    }
-
-    # from cmd line - this dies if non found
-    local $ENV{GENOME_NO_REQUIRE_USER_VERIFY} = 1;
-    my @reference_sequence_builds = Genome::Command::Base->resolve_param_value_from_text($rsb_identifier, 'Genome::Model::Build::ImportedReferenceSequence');
-    if ( @reference_sequence_builds == 1 ) {
-        return $reference_sequence_builds[0];
-    }
-
-    Carp::confess("Multiple imported reference sequence builds found for identifier ($rsb_identifier): ".join(', ', map { '"'.$_->__display_name__.'"' } @reference_sequence_builds ));
-}
-
-sub _get_annotation_reference_build {
-    my $self = shift;
-
-    my $build = $self->annotation_reference_build;
-    return unless $build; # no annotation is ok
-
-    # may have been passed in as an object instead of an id
-    return $build if ref($build);
-
-    # look up the id and return the object
-    # Either a numeric build id or model-name/build version string is accepted
-    my ($id, $version) = split('/', $build);
-    if ($version) { # specified as model-name/build
-        my $b = Genome::Model::Build::ImportedAnnotation->get( model_name => $id, version => $version );
-        Carp::confess("Unable to find build version '$version' for annotation reference model '$id'") unless $b;
-        return $b;
-    } else {
-        my @builds = Genome::Command::Base->resolve_param_value_from_text($id, 'Genome::Model::Build::ImportedAnnotation');
-        return $builds[0] if $#builds == 0;
-        Carp::confess("Unable to find unique annotation reference build identified by '$build'. Results were:\n" .
-            join('\n', map { $_->idstring . ': build ' . $_->__display_name__ . '"' } @builds));
-    }
-}
-
-sub _get_latest_build_for_imported_reference_sequence_model_name {
-    my ($self, $model_name) = @_;
-
-    $self->status_message("Getting imported reference sequence build for model name: $model_name");
-
-    my @models = Genome::Model::ImportedReferenceSequence->get(name => $model_name);
-    if ( not @models ) {
-        $self->statusr_message("No imported reference sequence models for name: $model_name");
-        return;
-    }
-    elsif ( @models > 1 ) { 
-        $self->error_message(
-            'Multiple models ('.join(',', map { $_->id } @models).") for name: $model_name"
-        );
-        return;
-    }
-
-    my @builds = $models[0]->builds;
-    if ( not @builds ) {
-        $self->statusr_message("No builds for imported reference sequence model: ".$models[0]->__display_name__);
-        return;
-    }
-
-    return $builds[$#builds]; # most recent, not sure if these are 'successful' or not
+    $self->$param($objs[0]);
+    return $self->$param;
 }
 
 1;
