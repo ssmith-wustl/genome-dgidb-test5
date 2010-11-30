@@ -279,41 +279,6 @@ sub capture_filter {
     my $filtered_file = $self->output_file . ".removed";
     $filtered_file = $self->filtered_file if($self->filtered_file);
 
-    ## Open the variants file ##
-
-    my $input = Genome::Utility::FileSystem->open_file_for_reading($self->variant_file);
-
-    unless($input) {
-        $self->error_message("Unable to open " . $self->variant_file . ".");
-        die;
-    }
-
-
-    ## Build temp file for positions where readcounts are needed ##
-
-    my ($tfh,$temp_path) = Genome::Utility::FileSystem->create_temp_file;
-    unless($tfh) {
-        $self->error_message("Unable to create temporary file.");
-        die;
-    }
-    $temp_path =~ s/\:/\\\:/g;
-
-    ## Print each line to file, prepending chromosome if necessary ##
-    $self->status_message('Printing variants to temp file...');
-    while(my $line = $input->getline) {
-        chomp $line;
-        my ($chr, $start, $stop) = split /\t/, $line;
-        if ($self->prepend_chr) {
-            $chr = "chr$chr";
-            $chr =~ s/MT$/M/;
-        };
-
-        print $tfh "$chr\t$start\t$stop\n";
-    }
-    $tfh->close;
-
-    close($input);
-
     ## Run BAM readcounts in batch mode to get read counts for all positions in file ##
     my $readcount_file;
     if($self->use_readcounts) {
@@ -325,8 +290,41 @@ sub capture_filter {
 
         $self->status_message('Using existing BAM Readcounts from ' . $readcount_file . '...');
     } else {
-        $readcount_file = Genome::Utility::FileSystem->create_temp_file_path;
         $self->status_message('Running BAM Readcounts...');
+
+        #First, need to create a variant list file to use for generating the readcounts.
+        my $input = Genome::Utility::FileSystem->open_file_for_reading($self->variant_file);
+
+        unless($input) {
+            $self->error_message("Unable to open " . $self->variant_file . ".");
+            die;
+        }
+
+        ## Build temp file for positions where readcounts are needed ##
+        my ($tfh,$temp_path) = Genome::Utility::FileSystem->create_temp_file;
+        unless($tfh) {
+            $self->error_message("Unable to create temporary file.");
+            die;
+        }
+        $temp_path =~ s/\:/\\\:/g;
+
+        ## Print each line to file, prepending chromosome if necessary ##
+        $self->status_message('Printing variants to temp file...');
+        while(my $line = $input->getline) {
+            chomp $line;
+            my ($chr, $start, $stop) = split /\t/, $line;
+            if ($self->prepend_chr) {
+                $chr = "chr$chr";
+                $chr =~ s/MT$/M/;
+            };
+
+            print $tfh "$chr\t$start\t$stop\n";
+        }
+        $tfh->close;
+        close($input);
+
+        $readcount_file = Genome::Utility::FileSystem->create_temp_file_path;
+
         my $cmd = $self->readcount_program() . " -b 15 " . $self->bam_file . " -l $temp_path";
         Genome::Utility::FileSystem->shellcmd(
             cmd => "$cmd > $readcount_file 2> /dev/null",
@@ -355,10 +353,10 @@ sub capture_filter {
 
 
     ## Open the filtered output file ##
-    my $ffh = Genome::Utility::FileSystem->open_file_for_writing($filtered_file) if($filtered_file);
+    my $ffh = Genome::Utility::FileSystem->open_file_for_writing($filtered_file);
 
     ## Reopen file for parsing ##
-    $input = Genome::Utility::FileSystem->open_file_for_reading($self->variant_file);
+    my $input = Genome::Utility::FileSystem->open_file_for_reading($self->variant_file);
 
     ## Parse the variants file ##
     my $lineCounter = 0;
