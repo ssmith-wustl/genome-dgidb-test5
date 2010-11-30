@@ -9,6 +9,7 @@ require Cwd;
 use Data::Dumper 'Dumper';
 
 class Genome::InstrumentData::Command::Dacc::MD5 {
+    is => 'Command',
     has => [
         data_files => {
             is => 'Text',
@@ -75,6 +76,12 @@ sub create {
     $self->_sra_id( File::Basename::basename($self->_directory) );
 
     return $self;
+}
+
+sub execute {
+    my $self = shift;
+
+    return $self->validate;
 }
 
 # Files

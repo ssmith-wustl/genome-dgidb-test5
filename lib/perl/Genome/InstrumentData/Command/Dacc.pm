@@ -5,10 +5,7 @@ use warnings;
 
 use Genome;
 
-require Cwd;
 use Data::Dumper 'Dumper';
-require File::Path;
-require XML::LibXML;
 
 class Genome::InstrumentData::Command::Dacc {
     is  => 'Command',
@@ -54,6 +51,10 @@ class Genome::InstrumentData::Command::Dacc {
         },
     ],
 };
+
+sub __display_name__ {
+    return $_[0]->sra_sample_id.' '.$_[0]->format;
+}
 
 #< HELP >#
 sub help_brief {
@@ -157,16 +158,6 @@ sub has_instrument_data_been_imported {
     $self->status_message('It appears that sample ('.$self->sra_sample_id.') '.$self->format.' has already been imported. These instrument data have a data file: '.join(' ', map { $_->id } @already_imported));
 
     return 1;
-}
-
-sub _xml_files {
-    my $self = shift;
-
-    my $dl_directory = $self->_dl_directory;
-    return if not -d $dl_directory;
-
-    return glob($dl_directory.'/*.xml');
-
 }
 
 sub existing_data_files {
@@ -405,8 +396,43 @@ sub _validate_md5 {
         return;
     }
 
-    if ( not $md5->validate ) {
+    if ( not $md5->execute ) {
         $self->error_message('Failed to validate MD5');
+        return;
+    }
+
+    return 1;
+}
+#<>#
+
+#< Update Library >#
+sub _update_library {
+    my $self = shift;
+
+    my $dl_directory = $self->_dl_directory;
+    if ( not -d $dl_directory ) {
+        $self->error_message("Download directory ($dl_directory) does not exist.");
+        return;
+    }
+
+    my @xml_files = glob($dl_directory.'/*.xml');
+    if ( not @xml_files ) { # ok
+        $self->status_message('Attempt to update library, but no XMLs in download directory. This is OK.');
+        return 1;
+    }
+
+    my $update_library = Genome::InstrumentData::Command::Dacc::UpdateLibrary->create(
+        sra_sample_id => $self->sra_sample_id,
+        xml_files => \@xml_files,
+    );
+
+    if ( not $update_library ) {
+        $self->error_message('Cannot create update library object.');
+        return;
+    }
+
+    if ( not $update_library->execute ) {
+        $self->error_message('Failed to update library');
         return;
     }
 
