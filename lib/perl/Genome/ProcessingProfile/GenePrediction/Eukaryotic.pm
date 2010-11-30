@@ -29,7 +29,7 @@ class Genome::ProcessingProfile::GenePrediction::Eukaryotic {
         rfamscan_version => {
             is => 'Text',
             is_optional => 1,
-            valid_values => ['7.0', '8.0', '8.1'],
+            valid_values => ['7.0', '8.0', '8.1', '8.1.skip_introns'],
             default => '8.1',
             doc => 'Version of rfamscan predictor to use',
         },
