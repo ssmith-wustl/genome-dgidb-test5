@@ -15,7 +15,8 @@ class Genome::InstrumentData::Command::Dacc::Download {
         import_log_file => {
             is => 'Text',
             is_optional => 1,
-            doc => 'Log file for import',
+            #shell_args_position => 3,
+            doc => 'Log file to use when launching import job. If none given will use email.',
         },
     ],
 };
@@ -34,7 +35,7 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    $self->status_message('Download '.$self->sra_sample_id);
+    $self->status_message('Download '.$self->sra_sample_id.' '.$self->format);
 
     if ( not $self->_is_host_a_blade ) {
         $self->error_message('To download from the DACC, this command must be run on a blade');
@@ -49,7 +50,9 @@ sub execute {
 
     my $instrument_data = $self->_get_instrument_data;
     if ( not $instrument_data ) {
-        $instrument_data = $self->_create_instrument_data;
+        $instrument_data = $self->_create_instrument_data(
+            kilobytes_requested => $self->kb_to_request,
+        );
     }
     return if not $instrument_data;
 
@@ -88,7 +91,7 @@ sub _is_host_a_blade {
 sub _run_aspera {
     my $self = shift;
 
-    $self->status_message('Aspera download...');
+    $self->status_message('Run aspera...');
 
     my $dl_directory = $self->_dl_directory;
     if ( -d $dl_directory ) {
@@ -110,7 +113,10 @@ sub _run_aspera {
     }
     my $dacc_location = $self->dacc_location;
 
-    my $cmd = "ascp -QTd -l100M -i $key_file $user\@aspera.hmpdacc.org:$dacc_location/$sra_sample_id ".$absolute_path;
+    # Exclude other formats 
+    my $exclude = join(' ', map { '-E *'.$_.'*' } grep { $self->format ne $_ } $self->valid_formats);
+
+    my $cmd = "ascp -QTd -l100M -i $key_file $exclude $user\@aspera.hmpdacc.org:$dacc_location/$sra_sample_id ".$absolute_path;
     $self->status_message($cmd);
     my $rv = eval { Genome::Utility::FileSystem->shellcmd(cmd => $cmd); };
     if ( not $rv ) {
@@ -118,7 +124,7 @@ sub _run_aspera {
         return;
     }
 
-    $self->status_message('Aspera download...OK');
+    $self->status_message('Run aapera...OK');
 
     return 1;
 }
@@ -140,6 +146,9 @@ sub _launch_import {
     }
 
     my $cmd = "bsub -q long $logging genome instrument-data dacc import $sub_command_format $sra_sample_id";
+    if ( not $self->validate_md5 ) {
+        $cmd .= ' --novalidate-md5';
+    }
     $self->status_message('Launch import: '.$cmd);
     my $rv = eval { Genome::Utility::FileSystem->shellcmd(cmd => $cmd); };
     if ( not $rv ) {
