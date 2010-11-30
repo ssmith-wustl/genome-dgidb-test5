@@ -40,6 +40,7 @@ sub help_detail {
 }
     
 sub execute {
+    $DB::single = 1;
     my $self = shift;
     my $model = $self->model;
     confess "Could not get model " . $self->model_id unless $model;
@@ -101,7 +102,16 @@ sub execute {
 
             $ace_fh->print("Sequence : $gene_name\n");
             $ace_fh->print("Source $sequence\n");
-            $ace_fh->print("Method $source\n");
+
+            # FIXME Dirty dirty snap hack
+            my $method = $source;
+            if ($method =~ /snap/i) {
+                my @fields = split(/\./, $gene_name);
+                # For snap, the gene name template is contig_name.predictor.model_file_abbrev.gene_number
+                # We are interested in the predictor name (snap, in this case) and the model file
+                $method = join('.', $fields[1], $fields[2]);
+            }
+            $ace_fh->print("Method $method\n");
             $ace_fh->print("CDS\t1 $spliced_length\n");
             $ace_fh->print("CDS_predicted_by $source\n");
 
