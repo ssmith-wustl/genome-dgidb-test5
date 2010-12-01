@@ -41,7 +41,8 @@ my %CUFFLINKS_VERSIONS = (
     '0.8.3'  => '/gsc/pkg/bio/cufflinks/cufflinks-0.8.3.Linux_x86_64',
     '0.9.0'  => '/gsc/pkg/bio/cufflinks/cufflinks-0.9.0.Linux_x86_64',
     '0.9.1'  => '/gsc/pkg/bio/cufflinks/cufflinks-0.9.1.Linux_x86_64',
-    '0.9.2'  => '/gsc/pkg/bio/cufflinks/cufflinks-0.9.2.Linux_x86_64'
+    '0.9.2'  => '/gsc/pkg/bio/cufflinks/cufflinks-0.9.2.Linux_x86_64',
+    '0.9.3'  => '/gsc/pkg/bio/cufflinks/cufflinks-0.9.3.Linux_x86_64',
 );
 
 sub cuffcompare_path {
