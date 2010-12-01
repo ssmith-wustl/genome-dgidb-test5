@@ -124,7 +124,7 @@ class Genome::Model::Tools::Sv::AssemblyValidation {
         min_size_of_confirm_asm_sv => {
             type => 'Integer',
             doc  => 'Minimal size (bp) for an assembled SV to be called confirmed',
-            default_value => 10,
+            default_value => 3,
         },
         invalid_indel_range => {
             type => 'Integer',
