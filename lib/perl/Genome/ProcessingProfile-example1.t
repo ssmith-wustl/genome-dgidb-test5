@@ -19,13 +19,15 @@ my $tname = "test-new-processing-profile";
 
 # create a new sample
 my $s = Genome::Sample->create(name => $tname);
+my $lib = Genome::Library->create(sample => $s, name => $s->name . '-lib1');
 ok($s, "made a sample on which to test");
 
 # create new imported instrument data
 my $i = Genome::InstrumentData::Imported->create(
-    sample_name => $s->name, 
-    sample_id => $s->id,
-    original_data_path => '/tmp/foo'
+    library_id=> $lib->id, 
+    original_data_path => '/tmp/foo',
+    import_format => 'sanger fastq',
+    sequencing_platform => 'solexa',
 );
 ok($i, "made instrument data for the sample");
 

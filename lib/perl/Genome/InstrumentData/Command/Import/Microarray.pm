@@ -55,7 +55,8 @@ my %properties = (
     allocation => {
         is => 'Genome::Disk::Allocation',
         is_optional => 1,
-        reverse_as => 'owner', where => [ allocation_path => {operator => 'like', value => '%imported%'} ], is_optional => 1, is_many => 1, 
+        #reverse_as => 'owner', where => [ allocation_path => {operator => 'like', value => '%imported%'} ], is_optional => 1, is_many => 1, 
+        doc => 'For testing purposes',
 
     },
     species_name => {
@@ -115,6 +116,7 @@ sub process_imported_files {
         next if $property_name eq "original_data_files";
         next if $property_name eq "_library";
         next if $property_name eq "library_name";
+        next if $property_name eq "sample_name";
         $params{$property_name} = $self->$property_name if defined($self->$property_name);
     }
 
@@ -154,7 +156,6 @@ sub process_imported_files {
     
     my $sample_id = $genome_sample->id;
     $self->status_message("genome sample $sample_name has id: $sample_id");
-    $params{sample_id} = $sample_id;
     $params{import_format} = "unknown";
     if($self->allocation) {
         $params{disk_allocations} = $self->allocation;

@@ -239,28 +239,26 @@ sub create_aligner_tool {
 
     # DEFAULT SHOULD BE: NCBI-human.combined-annotation/54_36p_v2
     my $annotation_reference_transcripts = $self->model->annotation_reference_transcripts;
-
-    my ($annotation_name,$annotation_version) = split(/\//, $annotation_reference_transcripts);
-    my $annotation_model = Genome::Model->get(name => $annotation_name);
-    unless ($annotation_model){
-        $self->error_message('Failed to get annotation model for annotation_reference_transcripts: ' . $annotation_reference_transcripts);
-        return;
-    }
-
-    unless (defined $annotation_version) {
-        $self->error_message('Failed to get annotation version from annotation_reference_transcripts: '. $annotation_reference_transcripts);
-        return;
-    }
-
-    my $annotation_build = $annotation_model->build_by_version($annotation_version);
-    unless ($annotation_build){
-        $self->error_message('Failed to get annotation build from annotation_reference_transcripts: '. $annotation_reference_transcripts);
-        return;
-    }
-
-    my $transcripts_path = $annotation_build->annotation_file($suffix);
-    if ($transcripts_path && -f $transcripts_path) {
-        $aligner_params .= ' -G '. $transcripts_path;
+    if ($annotation_reference_transcripts) {
+        my ($annotation_name,$annotation_version) = split(/\//, $annotation_reference_transcripts);
+        my $annotation_model = Genome::Model->get(name => $annotation_name);
+        unless ($annotation_model){
+            $self->error_message('Failed to get annotation model for annotation_reference_transcripts: ' . $annotation_reference_transcripts);
+            return;
+        }
+        unless (defined $annotation_version) {
+            $self->error_message('Failed to get annotation version from annotation_reference_transcripts: '. $annotation_reference_transcripts);
+            return;
+        }
+        my $annotation_build = $annotation_model->build_by_version($annotation_version);
+        unless ($annotation_build){
+            $self->error_message('Failed to get annotation build from annotation_reference_transcripts: '. $annotation_reference_transcripts);
+            return;
+        }
+        my $transcripts_path = $annotation_build->annotation_file($suffix);
+        if ($transcripts_path && -f $transcripts_path) {
+            $aligner_params .= ' -G '. $transcripts_path;
+        }
     }
     $aligner_params .= ' --'. $fastq_format;
     unless ($reference_path) {

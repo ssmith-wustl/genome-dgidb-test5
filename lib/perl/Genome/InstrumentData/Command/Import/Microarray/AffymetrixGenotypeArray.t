@@ -22,7 +22,7 @@ my $sample = Genome::Sample->get(name => $sample_name);
 is($sample->name,$sample_name, "found sample $sample_name")
     or die "exiting because the sample does not exist";
 
-my $tmp_dir = File::Temp::tempdir('Genome-InstrumentData-Command-Import-Microarray-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+my $tmp_dir = File::Temp::tempdir('Genome-InstrumentData-Command-Import-Microarray-XXXXX', DIR => '/tmp', CLEANUP => 1);
 my $tmp_allocation = Genome::Disk::Allocation->__define__(
                                                            id => '-123459',
                                                            disk_group_name => 'info_alignments',
@@ -97,4 +97,3 @@ my $dsize = Genome::Utility::FileSystem->directory_size_recursive($i->data_direc
 
 ok($ssize<=$dsize, "source and destination sizes match")
     or die "Source directory size($ssize bytes) did not match or excede destination directory size($dsize), dircopy did not succeed.";
-                                

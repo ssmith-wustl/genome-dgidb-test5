@@ -210,12 +210,12 @@ sub execute {
         next if $property_name =~ /^source_data_files$/;
         next if $property_name =~ /^allocation$/;
         next if $property_name =~ /^library_name$/;
+        next if $property_name =~ /^sample_name$/;
         $params{$property_name} = $self->$property_name if $self->$property_name;
     }
 
     $params{sequencing_platform} = $self->sequencing_platform; 
     $params{import_format} = $self->import_format;
-    $params{sample_id} = $sample->id;
     $params{library_id} = $library->id;
     $params{library_name} = $library->name;
     if(defined($self->allocation)){

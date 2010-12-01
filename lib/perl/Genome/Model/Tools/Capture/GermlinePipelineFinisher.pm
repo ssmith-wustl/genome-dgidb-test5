@@ -146,7 +146,7 @@ sub execute {                               # replace with real execution logic.
 			my $strandfilter_junk_file = $snv_tier1_file . '.strandfilter_filtered';
 			if(!(-e $strandfilter_file))
 			{
-				my $strandfilter_cmd = "gmt somatic strand-filter --variant-file $snv_tier1_file --tumor-bam $bam_file --output-file $strandfilter_file --filtered-file $strandfilter_junk_file";
+				my $strandfilter_cmd = "gmt somatic filter-false-positives --variant-file $snv_tier1_file --bam-file $bam_file --analysis-type capture --output-file $strandfilter_file --filtered-file $strandfilter_junk_file";
 				system ($strandfilter_cmd);
 			}
 
