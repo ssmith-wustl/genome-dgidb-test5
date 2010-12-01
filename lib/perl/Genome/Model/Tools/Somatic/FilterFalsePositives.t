@@ -52,6 +52,7 @@ my $filter_command = Genome::Model::Tools::Somatic::FilterFalsePositives->create
     min_var_dist_3 => 0.20,
     min_homopolymer => 5,
 );
+$filter_command->dump_status_messages(1);
 isa_ok($filter_command, 'Genome::Model::Tools::Somatic::FilterFalsePositives', 'created filter command');
 ok($filter_command->execute(), 'executed filter command');
 
@@ -91,6 +92,7 @@ my $filter_command2 = Genome::Model::Tools::Somatic::FilterFalsePositives->creat
 
     use_readcounts => $expected_readcount_file,
 );
+$filter_command->dump_status_messages(1);
 isa_ok($filter_command2, 'Genome::Model::Tools::Somatic::FilterFalsePositives', 'created second filter command');
 ok($filter_command2->execute(), 'executed second filter command');
 

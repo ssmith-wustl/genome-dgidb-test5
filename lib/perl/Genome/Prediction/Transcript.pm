@@ -39,13 +39,21 @@ class Genome::Prediction::Transcript {
             |,
         },
         exons => {
-            calculate_from => ['directory', 'transcript_name'],
+            calculate_from => ['directory', 'transcript_name', 'strand'],
             calculate => q|
                 my @exons = Genome::Prediction::Exon->get(directory => $directory, transcript_name => $transcript_name);
+                @exons = sort { $a->start <=> $b->start } @exons;
+                @exons = reverse @exons if $strand eq '-1';
                 return @exons;
             |,
         },
     ],
 };
 
+# Returns the first transcribed exon of the transcript (most five prime)
+sub five_prime_exon {
+    my $self = shift;
+    my @exons = $self->exons;
+    return shift @exons;
+}
 1;
