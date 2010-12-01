@@ -33,40 +33,47 @@ sub _execute {
 
     my @sffs = $self->existing_data_files;
     $self->status_message('SFF count: '.scalar(@sffs));
-    my $instrument_data = $self->_instrument_data;
-    if ( @$instrument_data > @sffs ) {
-        $self->error_message('Somehow there are more instrument data ('.scalar(@$instrument_data).') than SFFs ('.scalar(@sffs).') to import. Please fix.');
+    my @instrument_data;
+    # Get the inst data that need the archive path, as the command may have died
+    for my $instrument_data ( $self->_get_instrument_data ) {
+        my $archive_path = eval{ $instrument_data->archive_path; };
+        next if $archive_path and -e $archive_path;
+        push @instrument_data, $instrument_data
+    }
+
+    if ( @instrument_data > @sffs ) {
+        $self->error_message('Somehow there are more instrument data w/o archive paths ('.scalar(@instrument_data).') than SFFs ('.scalar(@sffs).') to move. Please fix.');
         return;
     }
 
     for ( my $i = 0; $i <= $#sffs; $i++ ) {
-        my $instrument_datum = $instrument_data->[$i];
+        my $instrument_data = $instrument_data[$i];
         my $sff = $sffs[$i];
         my $size = -s $sff;
         my $kilobytes_requested = int($size / 950); # 5% xtra space
         # Make sure we got an inst data for this sff
-        if ( not $instrument_datum ) { 
+        if ( not $instrument_data ) { 
             $kilobytes_requested = int($kilobytes_requested / 950); # 5% xtra space
-            $instrument_datum = $self->_create_instrument_data(kilobytes_requested => $kilobytes_requested);
-            if ( not $instrument_datum ) {
+            $instrument_data = $self->_create_instrument_data(kilobytes_requested => $kilobytes_requested);
+            if ( not $instrument_data ) {
                 $self->error_message('Cannot create instrument data.');
                 return;
             }
         }
         # Make sure the inst data has an allocation
-        my $allocation = $instrument_datum->disk_allocations;
+        my $allocation = $instrument_data->disk_allocations;
         if ( not $allocation ) { # this could happen if a command gets killed
             $allocation = $self->_create_instrument_data_allocation(
-                instrument_data => $instrument_datum,
+                instrument_data => $instrument_data,
                 kilobytes_requested => $kilobytes_requested
             );
             return if not $allocation;
         }
 
         # move sff to archive path
-        my $archive_path = eval{ $instrument_datum->archive_path; };
+        my $archive_path = eval{ $instrument_data->archive_path; };
         if ( not $archive_path ) {
-            $self->error_message('No archive path for instrument data: '.$instrument_datum->id);
+            $self->error_message('No archive path for instrument data: '.$instrument_data->id);
             return;
         }
         $self->status_message("Move $sff to $archive_path");
@@ -85,9 +92,9 @@ sub _execute {
         }
 
         # update inst data, commit
-        $instrument_datum->original_data_path($sff);
+        $instrument_data->original_data_path($sff);
         my $sff_base_name = File::Basename::basename($sff);
-        $instrument_datum->description($self->sra_sample_id." SFF $sff_base_name from the DACC");
+        $instrument_data->description($self->sra_sample_id." SFF $sff_base_name from the DACC");
         if ( not UR::Context->commit ) {
             $self->error_message('Cannot commit after moving SFF and uipdating instrument data.');
             return;

@@ -33,8 +33,11 @@ sub execute {
         return;
     }
 
-    my @inst_data = $self->_get_instrument_data;
-    return if not @inst_data;
+    my @instrument_data = $self->_get_instrument_data;
+    if ( @instrument_data ){
+        $self->error_message('No instrument data for sra id: '.$self->sra_sample_id);
+        return;
+    }
 
     my $been_imported = $self->has_instrument_data_been_imported;
     return if $been_imported;

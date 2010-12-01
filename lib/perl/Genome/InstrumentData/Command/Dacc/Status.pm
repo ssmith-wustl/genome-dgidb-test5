@@ -35,8 +35,8 @@ sub execute {
         return 1;
     }
 
-    my $instrument_data = $self->_get_instrument_data;
-    if ( not $instrument_data ) {
+    my @instrument_data = $self->_get_instrument_data;
+    if ( not @instrument_data ) {
         $self->status_message('Status: No instrument data, needs download');
         return 1;
     }
