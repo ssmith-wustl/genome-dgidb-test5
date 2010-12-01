@@ -45,7 +45,7 @@ sub _execute {
     # make an inst data w/ allocation for each
     for ( my $i = 1; $i <= $instrument_data_needed; $i++ ) {
         my $kilobytes_requested = -s $sffs[$i];
-        $kilobytes_requested = int($kilobytes_requested / 900); # give a little brethin room
+        $kilobytes_requested = int($kilobytes_requested / 950); # 5% xtra space
         my $instrument_data = $self->_create_instrument_data(kilobytes_requested => $kilobytes_requested);
         if ( not $instrument_data ) {
             $self->error_message('Cannot create instrument data');
