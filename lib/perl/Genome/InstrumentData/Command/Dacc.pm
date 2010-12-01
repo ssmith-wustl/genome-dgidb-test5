@@ -33,7 +33,7 @@ class Genome::InstrumentData::Command::Dacc {
         _sample => { is_optional => 1, },
         _library => { is_optional => 1, },
         # inst data
-        _instrument_data => { is => 'Array', is_optional => 1, },
+        _main_instrument_data => { is_optional => 1, },
         _allocation => { via => '_main_instrument_data', to => 'disk_allocations' },
         _absolute_path => { via => '_allocation', to => 'absolute_path' },
         # dl directory
@@ -221,13 +221,6 @@ sub _get_or_create_library {
 #<>#
 
 #< INST DATA >#
-sub _main_instrument_data {
-    my $self = shift;
-    my @instrument_data = $self->_get_instrument_data;
-    return if not @instrument_data;
-    return $instrument_data[0];
-}
-
 sub _get_instrument_data {
     my $self = shift;
 
@@ -241,6 +234,7 @@ sub _get_instrument_data {
         import_format => $self->import_format,
     );
     return if not @instrument_data;
+    $self->_main_instrument_data($instrument_data[0]);
 
     if ( not $self->_allocation ) { # main allocation for downloading
         my $allocation = $self->_create_instrument_data_allocation(

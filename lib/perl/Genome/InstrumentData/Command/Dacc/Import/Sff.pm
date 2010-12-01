@@ -53,7 +53,6 @@ sub _execute {
         my $kilobytes_requested = int($size / 950); # 5% xtra space
         # Make sure we got an inst data for this sff
         if ( not $instrument_data ) { 
-            $kilobytes_requested = int($kilobytes_requested / 950); # 5% xtra space
             $instrument_data = $self->_create_instrument_data(kilobytes_requested => $kilobytes_requested);
             if ( not $instrument_data ) {
                 $self->error_message('Cannot create instrument data.');
