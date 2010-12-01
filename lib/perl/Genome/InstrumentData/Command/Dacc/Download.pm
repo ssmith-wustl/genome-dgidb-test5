@@ -58,8 +58,11 @@ sub execute {
         return if not @instrument_data;
     }
 
-    my $has_been_imported = $self->has_instrument_data_been_imported;
-    return if $has_been_imported;
+    my @instrument_data_w_archives = grep { -e } map { eval{ $_->archive_path} } @instrument_data;
+    if ( @instrument_data_w_archives ) {
+        $self->status_message('Sra sample ('.$self->__display_name__.') has already been imported. These instrument data have a data file: '.join(' ', map { $_->id } @instrument_data_w_archives));
+        return;
+    }
 
     my $download = $self->_run_aspera;
     return if not $download;
