@@ -10,22 +10,6 @@ use File::Copy;
 use strict;
 use warnings;
 
-sub new {
-  my $class = shift;
-  my $output = shift;
-  my $self = {
-    'output' => 'collectl.output.txt',
-    'tempfile' => undef,
-    'pid' => undef,
-    'cv' => undef,
-  };
-  if (defined $output) {
-    $self->{output} = $output;
-  }
-  bless $self, $class;
-  return $self;
-}
-
 sub _sleep {
   # Use an event timer to sleep within the event loop
   my $self = shift;
@@ -38,7 +22,7 @@ sub _sleep {
   $sleep_cv->recv;
 }
 
-sub start {
+sub pre_run {
   my $self = shift;
   my $collectl_cmd = "/usr/bin/collectl";
   if (! -x $collectl_cmd) {
@@ -64,7 +48,22 @@ sub start {
   $self->_sleep(2);
 }
 
-sub stop {
+sub run {
+  my $self = shift;
+  my $cmd = shift;
+  my $args = shift;
+
+  my $cmd_cv = Genome::Utility::AsyncFileSystem->shellcmd(
+    '>' => $self->{output},
+    '2>' => $self->{errors},
+    cmd => "$cmd $args"
+  );
+
+  # This begins the event loop that runs both the snapshotter and the cmd
+  $cmd_cv->recv;
+}
+
+sub post_run {
   my $self = shift;
 
   # Now that cmd_cv->cmd status is true, we're back, and we send SIGTERM to collectl's pid.
@@ -80,18 +79,20 @@ sub stop {
     # unexpected death message from shellcmd.
     die $@;
   }
-  move "/tmp/L", $self->{output} or die "Failed to move collectl output file /tmp/L to $self->{output}: $!";
+  # FIXME: use a tempfile, but know that collectl clobbers some number of letters like "l"
+  move "/tmp/L", $self->{metrics} or die "Failed to move metrics file /tmp/L to $self->{metrics}: $!";
 }
 
 sub report {
   my $self = shift;
   my $metrics;
 
-  open S, "<$self->{output}" or die "Unable to open collectl output file: $self->{output}: $!";
+  open S, "<$self->{metrics}" or die "Unable to open metrics file: $self->{metrics}: $!";
   my @lines = <S>;
   close S;
   foreach my $line (@lines) {
     chomp $line;
+    next if ($line =~ /^$/);
     my ($metric,$value) = split(' ',$line);
     $metrics->{$metric} = $value;
   }
