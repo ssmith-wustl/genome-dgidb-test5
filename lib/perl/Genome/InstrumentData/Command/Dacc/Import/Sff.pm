@@ -39,34 +39,34 @@ sub _execute {
         return;
     }
 
-    for ( my $i = 1; $i <= $#sffs; $i++ ) {
-        my $instrument_data = $instrument_data->[$i];
+    for ( my $i = 0; $i <= $#sffs; $i++ ) {
+        my $instrument_datum = $instrument_data->[$i];
         my $sff = $sffs[$i];
         my $size = -s $sff;
         my $kilobytes_requested = int($size / 950); # 5% xtra space
         # Make sure we got an inst data for this sff
-        if ( not $instrument_data ) { 
+        if ( not $instrument_datum ) { 
             $kilobytes_requested = int($kilobytes_requested / 950); # 5% xtra space
-            my $instrument_data = $self->_create_instrument_data(kilobytes_requested => $kilobytes_requested);
-            if ( not $instrument_data ) {
+            $instrument_datum = $self->_create_instrument_data(kilobytes_requested => $kilobytes_requested);
+            if ( not $instrument_datum ) {
                 $self->error_message('Cannot create instrument data.');
                 return;
             }
         }
         # Make sure the inst data has an allocation
-        my $allocation = $instrument_data->disk_allocations;
+        my $allocation = $instrument_datum->disk_allocations;
         if ( not $allocation ) { # this could happen if a command gets killed
             $allocation = $self->_create_instrument_data_allocation(
-                instrument_data => $instrument_data,
+                instrument_data => $instrument_datum,
                 kilobytes_requested => $kilobytes_requested
             );
             return if not $allocation;
         }
 
         # move sff to archive path
-        my $archive_path = eval{ $instrument_data->archive_path; };
+        my $archive_path = eval{ $instrument_datum->archive_path; };
         if ( not $archive_path ) {
-            $self->error_message('No archive path for instrument data: '.$instrument_data->id);
+            $self->error_message('No archive path for instrument data: '.$instrument_datum->id);
             return;
         }
         $self->status_message("Move $sff to $archive_path");
@@ -85,9 +85,9 @@ sub _execute {
         }
 
         # update inst data, commit
-        $instrument_data->[$i]->original_data_path($sff);
+        $instrument_datum->original_data_path($sff);
         my $sff_base_name = File::Basename::basename($sff);
-        $instrument_data->[$i]->description($self->sra_sample_id." SFF $sff_base_name from the DACC");
+        $instrument_datum->description($self->sra_sample_id." SFF $sff_base_name from the DACC");
         if ( not UR::Context->commit ) {
             $self->error_message('Cannot commit after moving SFF and uipdating instrument data.');
             return;
