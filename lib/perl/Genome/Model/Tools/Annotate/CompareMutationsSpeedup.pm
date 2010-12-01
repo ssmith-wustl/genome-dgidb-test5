@@ -226,7 +226,7 @@ if ($verbose) {print "Done Parsing Mutation File! Yippee!\n";}
 			}
 		   }
 		   else {
-			if ($amino =~ m/\?/ || $amino =~ m/\>/ || $amino eq 'p.V265' || $amino eq 'p.INS' || $amino eq 'p.DEL') {
+			if ($amino =~ m/\?/ || $amino =~ m/\>/ || $amino eq 'p.V265' || $amino eq 'p.INS' || $amino eq 'p.DEL' || $amino eq 'p.R2468' || $amino eq 'p.fs' ) {
 				my $addition = $amino;
 				$addition =~ s/p\.//;
 				$aa_count{$gene}{$addition}++;

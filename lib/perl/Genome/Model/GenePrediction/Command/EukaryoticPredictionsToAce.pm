@@ -40,6 +40,7 @@ sub help_detail {
 }
     
 sub execute {
+    $DB::single = 1;
     my $self = shift;
     my $model = $self->model;
     confess "Could not get model " . $self->model_id unless $model;
@@ -92,15 +93,25 @@ sub execute {
             my ($transcript) = $gene->transcript;
             my @exons = $transcript->exons;
             @exons = sort { $a->start <=> $b->start } @exons;
+            @exons = reverse @exons if $transcript->strand eq '-1';
 
             my $spliced_length = 0;
             for my $exon (@exons) {
-                $spliced_length += abs($exon->end - $exon->start + 1);
+                $spliced_length += abs($exon->end - $exon->start) + 1;
             }
 
             $ace_fh->print("Sequence : $gene_name\n");
             $ace_fh->print("Source $sequence\n");
-            $ace_fh->print("Method $source\n");
+
+            # FIXME Dirty dirty snap hack
+            my $method = $source;
+            if ($method =~ /snap/i) {
+                my @fields = split(/\./, $gene_name);
+                # For snap, the gene name template is contig_name.predictor.model_file_abbrev.gene_number
+                # We are interested in the predictor name (snap, in this case) and the model file
+                $method = join('.', $fields[1], $fields[2]);
+            }
+            $ace_fh->print("Method $method\n");
             $ace_fh->print("CDS\t1 $spliced_length\n");
             $ace_fh->print("CDS_predicted_by $source\n");
 
@@ -115,10 +126,6 @@ sub execute {
 
             my $transcript_start = $transcript->start;
             my $transcript_end = $transcript->end;
-
-            $DB::single = 1;
-            @exons = sort { $a->start <=> $b->start } @exons if $strand eq '+1';
-            @exons = sort { $b->start <=> $a->start } @exons if $strand eq '-1';
 
             for my $exon (@exons) {
                 my $exon_start = $exon->start;
@@ -191,6 +198,7 @@ sub execute {
             $ace_fh->print("Remark $remark\n") if defined $remark;
             $ace_fh->print("Locus $locus\n") if defined $locus;
             $ace_fh->print("Transcript $transcript\n") if defined $transcript;
+            $ace_fh->print("\n");
         }
     }
 

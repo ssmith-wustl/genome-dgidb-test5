@@ -77,13 +77,6 @@ sub _execute {
     $instrument_data->read_count($metrics{reads});
     $instrument_data->description($self->sra_sample_id.' BAM of mapped reads from the DACC');
 
-    # Realloc
-    my ($allocation) = $instrument_data->disk_allocations;
-    Carp::confess('No disk allocation for instrument data: '.$instrument_data->id) if not $allocation;
-    if ( not $allocation->reallocate ) { # disregard error
-        $self->error_message('Failed to reallocate instrument data allocation: '.$instrument_data->id);
-    }
-
     $self->status_message('Update instrument data...OK');
 
     return 1;

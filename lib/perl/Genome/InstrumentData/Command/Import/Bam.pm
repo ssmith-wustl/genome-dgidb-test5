@@ -143,8 +143,6 @@ sub execute {
         next if $property_name  eq 'create_library';
         $params{$property_name} = $self->$property_name if $self->$property_name;
     }
-    $params{sample_id} = $sample->id;
-    $params{sample_name} = $sample->name;
     $params{sequencing_platform} = "solexa";
     $params{import_format} = "bam";
     $params{reference_sequence_build_id} = $self->reference_sequence_build_id;

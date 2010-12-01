@@ -82,10 +82,10 @@
             <operationtype commandClass="Genome::Model::Tools::GenePredictor::RfamScan" typeClass="Workflow::OperationType::Command" />
         </operation>
         <operation name="rnammer">
-            <operationtype commandClass="Genome::Model::Tools::GenePredictor::RNAmmer" typeClass="Workflow::OperationType::Command" />
+            <operationtype commandClass="Genome::Model::Tools::GenePredictor::Rnammer" typeClass="Workflow::OperationType::Command" />
         </operation>
         <operation name="trnascan">
-            <operationtype commandClass="Genome::Model::Tools::GenePredictor::tRNAscan" typeClass="Workflow::OperationType::Command" />
+            <operationtype commandClass="Genome::Model::Tools::GenePredictor::Trnascan" typeClass="Workflow::OperationType::Command" />
         </operation>
         <operation name="wait_rna_prediction">
             <operationtype typeClass="Workflow::OperationType::Block">
@@ -98,7 +98,7 @@
             <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::MaskRnaSequence" typeClass="Workflow::OperationType::Command" />
         </operation>
         <operation name="snap">
-            <operationtype commandClass="Genome::Model::Tools::GenePredictor::SNAP" typeClass="Workflow::OperationType::Command" />
+            <operationtype commandClass="Genome::Model::Tools::GenePredictor::Snap" typeClass="Workflow::OperationType::Command" />
         </operation>
         <operation name="fgenesh">
             <operationtype commandClass="Genome::Model::Tools::GenePredictor::Fgenesh" typeClass="Workflow::OperationType::Command" />

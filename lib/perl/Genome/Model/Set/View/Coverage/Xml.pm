@@ -39,10 +39,12 @@ sub _generate_content {
     my $self = shift;
     my $subject = $self->subject();
 
-    #preload instrument data assignments
+    #preload data for efficiency
     my @members = $self->members;
-
-    my @idas = Genome::Model::InstrumentDataAssignment->get(model_id => [map($_->id, @members)]);
+    my @model_ids = map($_->id, @members);
+    my @idas = Genome::Model::InstrumentDataAssignment->get(model_id => \@model_ids);
+    my @builds = Genome::Model::Build->get(model_id => \@model_ids);
+    my @events = Genome::Model::Event->get(build_id => [map($_->id, @builds)]);
 
     my $xml_doc = XML::LibXML->createDocument();
     $self->_xml_doc($xml_doc);

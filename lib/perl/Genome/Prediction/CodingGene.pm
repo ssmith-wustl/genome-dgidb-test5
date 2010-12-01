@@ -21,7 +21,7 @@ class Genome::Prediction::CodingGene {
         missing_stop => { is => 'Boolean' },
         source => { is => 'Text' },
         strand => { is => 'Text' },
-        sequence_name => { is => 'Number' },
+        sequence_name => { is => 'Text' },
         start => { is => 'Number' },
         end => { is => 'Number' },
         transcript => { 

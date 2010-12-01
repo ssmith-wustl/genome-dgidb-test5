@@ -46,8 +46,8 @@ use warnings;
 isa_ok($tmp_allocation,'Genome::Disk::Allocation'); 
 
 my $cmd = Genome::InstrumentData::Command::Import::Genotype->create(
-    sample_name => $sample_name,
     library_name => $library_name,
+    sample_name => $sample_name,
     source_data_file => $source_data_file,
     allocation =>  $tmp_allocation,
     define_model => 1,
