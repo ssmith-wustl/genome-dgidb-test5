@@ -1,4 +1,4 @@
-package Genome::Model::Tools::GenePredictor::tRNAscan;
+package Genome::Model::Tools::GenePredictor::Trnascan;
 
 use strict;
 use warnings;
@@ -9,7 +9,7 @@ use IO::File;
 use Carp 'confess';
 use File::Path 'make_path';
 
-class Genome::Model::Tools::GenePredictor::tRNAscan {
+class Genome::Model::Tools::GenePredictor::Trnascan {
     is => 'Genome::Model::Tools::GenePredictor',
     has_optional => [
         domain => {
@@ -27,11 +27,11 @@ class Genome::Model::Tools::GenePredictor::tRNAscan {
 };
 
 sub help_brief {
-    return "Runs tRNAscan on the provided fasta file";
+    return "Runs Trnascan on the provided fasta file";
 }
 
 sub help_synopsis {
-    return "Runs tRNAscan on the provided fasta file";
+    return "Runs Trnascan on the provided fasta file";
 }
 
 sub help_detail {
@@ -69,7 +69,7 @@ sub execute {
     push @params, "2> $raw_output_file.error ";
    
     my $cmd = join(" ", $self->trnascan_install_path, @params);
-    $self->status_message("Preparing to run tRNAscan-SE: $cmd");
+    $self->status_message("Preparing to run Trnascan-SE: $cmd");
     
     # FIXME Replace with Genome::Utility::FileSystem->shellcmd
     my $rv = system($cmd);
