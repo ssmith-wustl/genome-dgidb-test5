@@ -20,6 +20,10 @@ my %properties = (
         is => 'Text',
         doc => 'sample name or ID for imported file',
     },
+    target_region => {
+        is => 'Text',
+        doc => 'Provide \'whole genome\' or target region set name',
+    },
     library => {
         is => 'String',
         doc => 'The library name or id associated with the data to be imported.',
@@ -85,6 +89,20 @@ class Genome::InstrumentData::Command::Import::Bam {
 
 sub execute {
     my $self = shift;
+
+    # If the target region is set to whole genome, then we want the imported instrument data's
+    # target_region_set_name column set to undef. Otherwise, we need to make sure the target region
+    # name corresponds to only one Genome::FeatureList.
+    my $target_region;
+    unless ($self->target_region eq 'whole genome') {
+        if ($self->validate_target_region) {
+            $target_region = $self->target_region;
+        } else {
+            $self->error_message("Invalid target region " . $self->target_region);
+            die $self->error_message;
+        }
+    }
+
     my $bam_path = $self->original_data_path;
     my $sample = Genome::Command::Base->resolve_param_value_from_text($self->sample, 'Genome::Sample');
     unless($sample){
@@ -141,12 +159,14 @@ sub execute {
         next if $property_name =~ /^library$/;
         next if $property_name =~/^sample$/;
         next if $property_name  eq 'create_library';
+        next if $property_name eq 'target_region';
         $params{$property_name} = $self->$property_name if $self->$property_name;
     }
     $params{sequencing_platform} = "solexa";
     $params{import_format} = "bam";
     $params{reference_sequence_build_id} = $self->reference_sequence_build_id;
     $params{library_id} = $library->id;
+    $params{target_region_set_name} = $target_region;
     
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
     unless ($import_instrument_data) {
