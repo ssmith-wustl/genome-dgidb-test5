@@ -129,7 +129,7 @@ sub execute {
      $self->modify_insertions($tier3_temp, $self->tier3_output, "+");
      $self->modify_insertions($tier4_temp, $self->tier4_output, "+");
 
-
+    return 1;
 }
 
 sub modify_insertions {

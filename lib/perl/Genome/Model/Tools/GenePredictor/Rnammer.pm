@@ -1,4 +1,4 @@
-package Genome::Model::Tools::GenePredictor::RNAmmer;
+package Genome::Model::Tools::GenePredictor::Rnammer;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use Carp 'confess';
 use File::Path 'make_path';
 use Bio::Tools::GFF;
 
-class Genome::Model::Tools::GenePredictor::RNAmmer {
+class Genome::Model::Tools::GenePredictor::Rnammer {
     is => 'Genome::Model::Tools::GenePredictor',
     has_optional => [
         domain => {

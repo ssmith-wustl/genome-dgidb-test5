@@ -12,11 +12,11 @@ use Test::More tests => 12;
 
 BEGIN {
     use_ok('Genome::Model::Tools::GenePredictor');
-    use_ok('Genome::Model::Tools::GenePredictor::SNAP');
+    use_ok('Genome::Model::Tools::GenePredictor::Snap');
 }
 
 my $test_dir = "/gsc/var/cache/testsuite/running_testsuites/";
-my $test_output_dir = tempdir('Genome-Model-Tools-GenePredictor-SNAP-XXXXXX',
+my $test_output_dir = tempdir('Genome-Model-Tools-GenePredictor-Snap-XXXXXX',
     DIR => $test_dir,
     CLEANUP => 1,
     UNLINK => 1,
@@ -32,7 +32,7 @@ ok(-e $fasta, "fasta file exists at $fasta");
 my $model = '/gsc/pkg/bio/snap/installed/HMM/C.elegans.hmm';
 ok(-e $model, "model file exists at $model");
 
-my $command = Genome::Model::Tools::GenePredictor::SNAP->create(
+my $command = Genome::Model::Tools::GenePredictor::Snap->create(
     fasta_file => $fasta,
     model_files => $model, 
     version => '2010-07-28',
@@ -41,7 +41,7 @@ my $command = Genome::Model::Tools::GenePredictor::SNAP->create(
 );
 
 isa_ok($command, 'Genome::Model::Tools::GenePredictor');
-isa_ok($command, 'Genome::Model::Tools::GenePredictor::SNAP');
+isa_ok($command, 'Genome::Model::Tools::GenePredictor::Snap');
 
 ok($command->execute(), "executed snap command");
 

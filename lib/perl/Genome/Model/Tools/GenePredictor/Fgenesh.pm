@@ -44,6 +44,7 @@ EOS
 sub execute {
     my $self = shift;
 
+    $DB::single = 1;
     $self->status_message("Running fgenesh gene predictor!");
 
     my @features;
@@ -59,17 +60,11 @@ sub execute {
         -file => $self->fasta_file
     );
 
-    my $output_fh = File::Temp->new(
-        TEMPLATE => 'fgenesh_raw_output_XXXXXX',
-        DIR => $self->raw_output_directory,
-        CLEANUP => 1,
-        UNLINK => 1,
-    );
-    my $output_file = $output_fh->filename;
-    $output_fh->close;
-    chmod(0666, $output_file);
+    my $output_file = $self->get_temp_file_in_directory($self->raw_output_directory, 'fgenesh_raw_output_XXXXXX');
+    confess "Could not create temp file in " . $self->raw_output_directory unless defined $output_file;
 
     my %gene_count_by_seq;
+    my $total_gene_count = 0;
     while (my $seq = $seqio->next_seq()) {
         $self->status_message("Now parsing predictions from sequence " . $seq->id());
 
@@ -113,12 +108,12 @@ sub execute {
                 }
             }
 
-            my $start = $predicted_exons[0]->start();
-            my $end = $predicted_exons[-1]->end();
-
             # Exons are originally sorted in the order they would be transcibed (strand)
             # We always want to start < stop, regardless of strand
             @predicted_exons = sort { $a->start() <=> $b->start() } @predicted_exons;
+
+            my $start = $predicted_exons[0]->start();
+            my $end = $predicted_exons[-1]->end();
 
             # If a gene has multiple exons, it's expected that the first exon have tag InitialExon and the last exon have
             # tag TerminalExon. If a gene has only one exon, it should have tag SingletonExon. If this expected behavior
@@ -153,7 +148,7 @@ sub execute {
             for my $predicted_exon (@predicted_exons) {
                 my $frame = $predicted_exon->frame();
                 my $length = $predicted_exon->length();
-                my $five_prime_overhang = $frame;
+                my $five_prime_overhang = (3 - $frame) % 3;
                 my $three_prime_overhang = ($length - $five_prime_overhang) % 3;
 
                 my $exon_name = $transcript_name . ".exon.$exon_count";
@@ -190,8 +185,7 @@ sub execute {
             if ($missing_start) {
                 my $first_exon_overhang = $exons[0]->five_prime_overhang;
                 $first_exon_overhang = $exons[-1]->five_prime_overhang if $strand eq '-1';
-                my $skipped_bases = (3 - $first_exon_overhang) % 3;
-                $transcript_seq = $transcript_seq->trunc($skipped_bases + 1, $transcript_seq->length());
+                $transcript_seq = $transcript_seq->trunc($first_exon_overhang + 1, $transcript_seq->length());
             }
 
             # fgenesh produces the translated sequence for us, which is stored on the predicted gene object (which
@@ -216,6 +210,7 @@ sub execute {
                 start => $start,
                 end => $end,
             );
+            $total_gene_count++;
 
             my $transcript = Genome::Prediction::Transcript->create(
                 directory => $self->prediction_directory,
@@ -244,6 +239,7 @@ sub execute {
         }
     }
 
+    $self->status_message("Getting locks for protein, transcript, exon, and coding gene files");
     my @locks = $self->lock_files_for_predictions(
         qw/ 
             Genome::Prediction::Protein 
@@ -253,10 +249,17 @@ sub execute {
         /
     );
 
-    UR::Context->commit;
+    $self->status_message("Lock acquired, committing!");
+    my $commit_rv = UR::Context->commit;
+    unless (defined $commit_rv and $commit_rv) {
+        $self->error_message("Could not perform UR context commit!");
+        confess $self->error_message;
+    }
+
+    $self->status_message("Changed committed, releasing locks");
     $self->release_prediction_locks(@locks);
 
-    $self->status_message("Fgenesh parsing complete!");
+    $self->status_message("Fgenesh parsing complete, predicted $total_gene_count genes!");
     return 1;
 }
 
