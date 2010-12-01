@@ -199,7 +199,7 @@ sub execute {
    } 
 
     #submit squaredancer job
-    my $jobid3=`bsub -N -u $user\@genome.wustl.edu -J '$genome_name SD' -e SD.err -o SD.out -R 'select[type==LINUX64 && mem>8000] rusage [mem=8000]' -M 8000000 -q long 'perl /gscuser/xhong/git/genome/lib/perl/Genome/Model/Tools/Sv/SquareDancer.pl tumor.bam normal.bam'`;
+    my $jobid3=`bsub -N -u $user\@genome.wustl.edu -J '$genome_name SD' -e SD.err -o SD.out -R 'select[type==LINUX64 && mem>8000] rusage [mem=8000]' -M 8000000 -q long 'perl /gscuser/xhong/git/genome/lib/perl/Genome/Model/Tools/Sv/SquareDancer.pl -l normal tumor.bam normal.bam'`;
     $jobid3=~/<(\d+)>/;
     $jobid3= $1;
     print "$jobid3\n";
