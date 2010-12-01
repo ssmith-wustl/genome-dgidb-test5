@@ -39,9 +39,6 @@ sub execute {
         return;
     }
 
-    my $been_imported = $self->has_instrument_data_been_imported;
-    return if $been_imported;
-
     my $dl_dir = $self->_dl_directory_exists;
     return if not $dl_dir;
 
