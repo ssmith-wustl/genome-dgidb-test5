@@ -40,9 +40,10 @@ sub _execute {
         return;
     }
 
-    my $destination_file = $self->destination_file;
+    my $instrument_data = $self->_main_instrument_data;
+    my $destination_file = $instrument_data->destination_file;
     if ( @bams ) {
-        $self->_main_instrument_data->original_data_path($bams[0]);
+        $instrument_data->original_data_path($bams[0]);
         if ( not UR::Context->commit ) { # must save this now
             $self->error_message('Cannot commit instrument data original path.');
             return;
@@ -58,22 +59,16 @@ sub _execute {
 
     $self->status_message('Update instrument data...');
 
-    # Load metrics
     my %metrics = $self->_load_bam_metric_file;
     return if not %metrics;
-
     if ( $self->sra_sample_id ne $metrics{id} ) {
         $self->error_message('SRA ID does not match the one in the BAM metrics file: '.$self->sra_sample_id.' v. '.$metrics{id});
         return;
     }
-
     if ( not defined $metrics{reads} ) {
         $self->error_message('No read count in BAM metric file');
         return;
     }
-
-    # Inst data attrs
-    my $instrument_data = $self->_main_instrument_data;
     $instrument_data->read_count($metrics{reads});
     $instrument_data->description($self->sra_sample_id.' BAM of mapped reads from the DACC');
 
