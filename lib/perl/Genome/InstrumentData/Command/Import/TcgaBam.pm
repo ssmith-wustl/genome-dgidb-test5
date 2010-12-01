@@ -291,10 +291,9 @@ sub _create_imported_instrument_data {
         next if $property_name =~ /^library$/;
         next if $property_name =~ /tcga/;
         next if $property_name =~ /^create_sample$/;
+        next if $property_name =~ /sample/;
         $params{$property_name} = $self->$property_name if $self->$property_name;
     }
-    $params{sample_id} = $sample->id;
-    $params{sample_name} = $sample->name;
     $params{sequencing_platform} = "solexa";
     $params{import_format} = "bam";
     $params{reference_sequence_build_id} = $self->reference_sequence_build_id;

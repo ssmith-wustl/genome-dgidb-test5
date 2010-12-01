@@ -22,11 +22,9 @@ class Genome::InstrumentData::Imported {
     has => [
         import_date          => { is => 'DATE', len => 19 },
         user_name            => { is => 'VARCHAR2', len => 256 },
-        sample_id            => { is => 'NUMBER', len => 20 },
         original_data_path   => { is => 'VARCHAR2', len => 1000 },
         import_format        => { is => 'VARCHAR2', len => 64 },
         sequencing_platform  => { is => 'VARCHAR2', len => 64 },
-        sample_name          => { is => 'VARCHAR2', len => 64, is_optional => 1 },
         import_source_name   => { is => 'VARCHAR2', len => 64, is_optional => 1 },
         description          => { is => 'VARCHAR2', len => 512, is_optional => 1 },
         read_count           => { is => 'NUMBER', len => 20, is_optional => 1 },
@@ -41,7 +39,9 @@ class Genome::InstrumentData::Imported {
         run_name             => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         sd_above_insert_size => { is => 'NUMBER', len => 20, is_optional => 1 },
         subset_name          => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        library_id           => { is => 'NUMBER', len => 20 },
+        library_id           => { is => 'NUMBER', len => 20, is_optional => 0 },
+        _old_sample_name      => { is => 'NUMBER', len => 20, is_optional => 1, column_name=>'SAMPLE_NAME' },
+        _old_sample_id        => { is => 'NUMBER', len => 20, is_optional => 1, column_name=>'SAMPLE_ID' },
     ],
     has_optional =>[
         reference_sequence_build_id => { 
@@ -160,6 +160,8 @@ sub create {
     $params{user_name}   = $user; 
 
     my $self = $class->SUPER::create(%params);
+
+    $self->_old_sample_id($self->sample_id);
 
     return $self;
 }
