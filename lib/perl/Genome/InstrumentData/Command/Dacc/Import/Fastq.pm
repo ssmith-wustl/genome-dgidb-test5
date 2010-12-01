@@ -19,10 +19,18 @@ class Genome::InstrumentData::Command::Dacc::Import::Fastq {
             value => 'sanger fastq',
         },
         _paired_read_count => { is => 'Integer', is_optional => 1},
+        _fwd_fastq => { 
+            calculate_from => '_absolute_path',
+            calculate => q| return $_absolute_path.'/s_1_1_sequence.txt'; |, 
+        },
+        _rev_fastq => { calculate_from => '_absolute_path',
+            calculate => q| return $_absolute_path.'/s_1_2_sequence.txt'; |,
+        },
+        _singleton_instrument_data => { is_optional => 1},
         _singleton_read_count => { is => 'Integer', is_optional => 1},
-        _fwd_fastq => { calculate_from => '_absolute_path', calculate => q| return $_absolute_path.'/s_1_1_sequence.txt'; |, },
-        _rev_fastq => { calculate_from => '_absolute_path', calculate => q| return $_absolute_path.'/s_1_2_sequence.txt'; |, },
-        _singleton_fastq => { calculate_from => '_absolute_path', calculate => q| return $_absolute_path.'/s_2_sequence.txt'; |, },
+        _singleton_fastq => { calculate_from => '_absolute_path',
+            calculate => q| return $_absolute_path.'/s_2_sequence.txt'; |,
+        },
     ],
 };
 
@@ -167,32 +175,34 @@ sub _read_count_for_fastq {
 sub _get_or_create_singleton_instrument_data {
     my $self = shift;
 
-    my $instrument_data = $self->_instrument_data;
-    if ( @$instrument_data == 2 ) {
-        $self->status_message('Got singelton instrument data: '.$instrument_data->[1]->id);
+    my @instrument_data = $self->_get_instrument_data;
+    if ( @instrument_data == 2 ) {
+        $self->status_message('Got singelton instrument data: '.$instrument_data[1]->id);
+        $self->_singleton_instrument_data($instrument_data[1]);
         return 1;
     }
-    elsif ( @$instrument_data > 2 ) {
+    elsif ( @instrument_data > 2 ) {
         $self->error_message('Somehow there are more than two instrument data to import fastqs. Please fix.');
         return;
     }
 
     $self->status_message('Create singelton instrument data');
 
-    my $singleton_fastq = $self->singleton_fastq;
+    my $singleton_fastq = $self->_singleton_fastq;
     my $size = -s $singleton_fastq;
     my $kilobytes_requested = int($size / 950); # 5% xtra space
-    $instrument_data = $self->_create_instrument_data(
+    my $singleton_instrument_data = $self->_create_instrument_data(
         kilobytes_requested => $kilobytes_requested,
     );
-    if ( not $instrument_data ) {
+    if ( not $singleton_instrument_data ) {
         $self->error_message('Failed to create singelton instrument data. See above errors.');
         return;
     }
+    $self->_singleton_instrument_data($singleton_instrument_data);
 
-    $self->status_message('Create singelton instrument data: '.$instrument_data->[1]->id);
+    $self->status_message('Create singelton instrument data: '.$self->_singleton_instrument_data->id);
 
-    return 1;
+    return $singleton_instrument_data;
 }
 
 sub _archive_and_update {
@@ -200,17 +210,16 @@ sub _archive_and_update {
 
     $self->status_message('Create archives...');
 
-    my $instrument_data = $self->_instrument_data;
-    my $paired_inst_data = $instrument_data->[0];
-    my $singleton_inst_data = $instrument_data->[1];
+    my $paired_instrument_data = $self->_main_instrument_data;
+    my $singleton_instrument_data = $self->_singleton_instrument_data;
     my $dl_directory = $self->_dl_directory;
 
     #<PAIRED>#
-    my $archive = $self->_create_archive($paired_inst_data, $self->_fwd_fastq_base_name, $self->_rev_fastq_base_name);
+    my $archive = $self->_create_archive($paired_instrument_data, $self->_fwd_fastq_base_name, $self->_rev_fastq_base_name);
     return if not $archive;
 
     #<SINGLETON>#
-    $archive = $self->_create_archive($instrument_data->[1], $self->_singleton_fastq);
+    $archive = $self->_create_archive($singleton_instrument_data, $self->_singleton_fastq);
     return if not $archive;
 
     $self->status_message('Removing original fastqs...');
@@ -220,14 +229,14 @@ sub _archive_and_update {
     $self->status_message('Removing original fastqs...OK');
 
     $self->status_message('Update instrument data...');
-    $paired_inst_data->description($self->sra_sample_id.' Pairs that have been human screened, Q2 trimmed and deduped from the DACC');
-    $paired_inst_data->original_data_path(join(',', $self->_fwd_fastq, $self->_rev_fastq));
-    $paired_inst_data->read_count( $self->_paired_read_count );
-    $paired_inst_data->is_paired_end(1);
+    $paired_instrument_data->description($self->sra_sample_id.' Pairs that have been human screened, Q2 trimmed and deduped from the DACC');
+    $paired_instrument_data->original_data_path(join(',', $self->_fwd_fastq, $self->_rev_fastq));
+    $paired_instrument_data->read_count( $self->_paired_read_count );
+    $paired_instrument_data->is_paired_end(1);
 
-    $singleton_inst_data->description($self->sra_sample_id.' Singletons that have been human screened, Q2 trimmed and deduped from the DACC');
-    $singleton_inst_data->original_data_path($self->_singleton_fastq);
-    $singleton_inst_data->read_count( $self->_singleton_read_count );
+    $singleton_instrument_data->description($self->sra_sample_id.' Singletons that have been human screened, Q2 trimmed and deduped from the DACC');
+    $singleton_instrument_data->original_data_path($self->_singleton_fastq);
+    $singleton_instrument_data->read_count( $self->_singleton_read_count );
     $self->status_message('Update instrument data...OK');
 
     $self->status_message('Update instrument data...OK');

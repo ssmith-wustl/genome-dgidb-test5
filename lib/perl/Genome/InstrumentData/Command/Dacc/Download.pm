@@ -48,16 +48,21 @@ sub execute {
     }
     return if not $sample;
 
-    my $instrument_data = $self->_get_instrument_data;
-    if ( not $instrument_data ) {
-        $instrument_data = $self->_create_instrument_data(
+    my @instrument_data = $self->_get_instrument_data;
+    if ( not @instrument_data ) {
+        my $new_instrument_data = $self->_create_instrument_data(
             kilobytes_requested => $self->kb_to_request,
         );
+        return if not $new_instrument_data;
+        @instrument_data = $self->_get_instrument_data;
+        return if not @instrument_data;
     }
-    return if not $instrument_data;
 
-    my $has_been_imported = $self->has_instrument_data_been_imported;
-    return if $has_been_imported;
+    my @instrument_data_w_archives = grep { -e } map { eval{ $_->archive_path} } @instrument_data;
+    if ( @instrument_data_w_archives ) {
+        $self->status_message('Sra sample ('.$self->__display_name__.') has already been imported. These instrument data have a data file: '.join(' ', map { $_->id } @instrument_data_w_archives));
+        return;
+    }
 
     my $download = $self->_run_aspera;
     return if not $download;
@@ -65,11 +70,11 @@ sub execute {
     my $dl_dir_ok = $self->_dl_directory_exists;
     return if not $dl_dir_ok;
 
-    my $md5s_ok = $self->_validate_md5;
-    return if not $md5s_ok;
+    my $md5_ok = $self->_validate_md5;
+    return if not $md5_ok;
 
     $self->_launch_import; # no error check
-    $instrument_data->[0]->description('downloaded');
+    $self->_main_instrument_data->description('downloaded');
 
     $self->status_message('Download...OK');
 
