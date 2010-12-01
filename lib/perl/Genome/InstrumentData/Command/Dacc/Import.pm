@@ -34,7 +34,7 @@ sub execute {
     }
 
     my @instrument_data = $self->_get_instrument_data;
-    if ( @instrument_data ){
+    if ( not @instrument_data ){
         $self->error_message('No instrument data for sra id: '.$self->sra_sample_id);
         return;
     }
