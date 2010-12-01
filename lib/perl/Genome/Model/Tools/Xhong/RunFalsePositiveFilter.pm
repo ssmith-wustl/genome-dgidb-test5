@@ -78,18 +78,18 @@ sub execute {
         
         my $snp_transcript_annotation = "$data_directory/upload_variants_snp_1_output.out";
         my  %snv_tiers = (
-        	"Tier1" => "$data_directory/tier_1_snp_high_confidence_file.out",
-        	"Tier2" => "$data_directory/tier_2_snp_high_confidence_file.out",
-        	"Tier3" => "$data_directory/tier_3_snp_high_confidence_file.out",
+        	"Tier1" => "$data_directory/tier_1_snp_file.out",
+        	"hc2" => "$data_directory/tier_2_snp_high_confidence_file.out",
+        	"hc3" => "$data_directory/tier_3_snp_high_confidence_file.out",
         );
 
 	        # if not exist, check if using new files
 	unless(-e $snp_transcript_annotation) {
         	$snp_transcript_annotation = "$data_directory/uv1_uploaded_tier1_snp.csv";
 	       	%snv_tiers = (
-	               	"Tier1" => "$data_directory/hc1_tier1_snp_high_confidence.csv",
-	               	"Tier2" => "$data_directory/hc2_tier2_snp_high_confidence.csv",
-	               	"Tier3" => "$data_directory/hc3_tier3_snp_high_confidence.csv",
+	               	"Tier1" => "$data_directory/t1v_tier1_snp.csv",
+	               	"hc2" => "$data_directory/hc2_tier2_snp_high_confidence.csv",
+	               	"hc3" => "$data_directory/hc3_tier3_snp_high_confidence.csv",
         	);
         }
 
@@ -99,19 +99,21 @@ sub execute {
 	       		$self->error_message("The $common_name: $snv_file doesn't exist, exit now!");
        			return;
        		}
+       		if ($tier eq "Tier1"){
        		my $cmd ="";
-        	#$cmd ="bsub -N -u $user\@genome.wustl.edu -J $common_name.$tier.FP -R \'select\[type==LINUX64\]\' \'gmt somatic filter-false-positives --bam-file=$tumor_bam --variant-file=$snv_file --output-file=$out_dir/$tier.csv\'";
-        	#my $jobid1 =`$cmd`;
-        	#$jobid1=~ /<(\d+)>/;
-		#$jobid1=$1;
-		#print "$cmd\n$jobid1\n";
+        	$cmd ="bsub -N -u $user\@genome.wustl.edu -J $common_name.$tier.FP -R \'select\[type==LINUX64\]\' \'gmt somatic filter-false-positives --bam-file=$tumor_bam --variant-file=$snv_file --output-file=$out_dir/$tier.csv\'";
+        	my $jobid1 =`$cmd`;
+        	$jobid1=~ /<(\d+)>/;
+		$jobid1=$1;
+		print "$cmd\n$jobid1\n";
 		my $cmd_anno="";
-	        $cmd_anno ="bsub -N -u $user\@genome.wustl.edu -J $common_name.$tier.anno \'perl -I /gscuser/xhong/git/genome/lib/perl \`which gmt\` annotate transcript-variants --use-version 2 --variant-file $out_dir/$tier.csv --output-file $out_dir/$tier.anno --annotation-filter top\'";
-	        # $cmd_anno ="bsub -N -u $user\@genome.wustl.edu -J $common_name.$tier.anno -w \'ended\($jobid1\)\'  \'perl -I /gscuser/xhong/git/genome/lib/perl \`which gmt\` annotate transcript-variants --use-version 2 --variant-file $out_dir/$tier.csv --output-file $out_dir/$tier.anno --annotation-filter top\'";
+	        #$cmd_anno ="bsub -N -u $user\@genome.wustl.edu -J $common_name.$tier.anno \'perl -I /gscuser/xhong/git/genome/lib/perl \`which gmt\` annotate transcript-variants --use-version 2 --variant-file $out_dir/$tier.csv --output-file $out_dir/$tier.anno --annotation-filter top\'";
+	        $cmd_anno ="bsub -N -u $user\@genome.wustl.edu -J $common_name.$tier.anno -w \'ended\($jobid1\)\'  \'perl -I /gscuser/xhong/git/genome/lib/perl \`which gmt\` annotate transcript-variants --use-version 2 --variant-file $out_dir/$tier.csv --output-file $out_dir/$tier.anno --annotation-filter top\'";
        		my $jobid2 =`$cmd_anno`; 
        		$jobid2=~ /<(\d+)>/;
 		$jobid2=$1;
        		print "$cmd_anno\n$jobid2\n";
+       		}
        		
 	}
         return 1;
