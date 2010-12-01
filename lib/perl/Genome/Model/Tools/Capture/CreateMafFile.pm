@@ -26,7 +26,9 @@ class Genome::Model::Tools::Capture::CreateMafFile {
 
   has => [ # specify the command's single-value properties (parameters) <---
     snv_file  => { is => 'Text', doc => "File of SNVs to include", is_optional => 0 },
+    snv_annotation_file => { is => 'Text', doc => "SNVs with WU annotations", is_optional => 0 },
     indel_file  => { is => 'Text', doc => "File of Indels to include", is_optional => 1 },
+    indel_annotation_file => { is => 'Text', doc => "Indels with WU annotations", is_optional => 1 },
     somatic_status => { is => 'Text', doc => "Predicted somatic status of variant (Germline/Somatic/LOH) [Somatic]", is_optional => 1 },
     genome_build  => { is => 'Text', doc => "Reference genome build used for coordinates [36]", is_optional => 1 },
     phase  => { is => 'Text', doc => "Project Phase [Phase_IV]", is_optional => 1 },
@@ -67,10 +69,10 @@ sub execute {                               # replace with real execution logic.
 
   ## Get required parameters ##
   my $snv_file = $self->snv_file;
-  my $snv_annotation_file = $self->snv_file;
+  my $snv_annotation_file = $self->snv_annotation_file;
   my $output_file = $self->output_file;
   my $indel_file = $self->indel_file;
-  my $indel_annotation_file = $self->indel_file;
+  my $indel_annotation_file = $self->indel_annotation_file;
 
   ## Declare parameter defaults ##
   my $genome_build = "36";
