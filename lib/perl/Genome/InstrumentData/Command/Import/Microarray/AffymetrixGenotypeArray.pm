@@ -67,8 +67,8 @@ sub process_imported_files {
 
     my $genome_sample = Genome::Sample->get(name => $self->sample_name);
 
-    my $path = $disk_alloc->absolute_path;
-    my $genotype_path = $disk_alloc->absolute_path;
+    # If an allocation is passed in, use it
+    my $genotype_path = (defined($self->allocation))? $self->allocation->absolute_path: $disk_alloc->absolute_path;
 
     unless (-d $genotype_path) {
         $self->error_message( "Unable to find allocation path\n");
@@ -115,7 +115,7 @@ sub process_imported_files {
     $self->status_message("finished creating genotype file, importing genotype and defining model.");
     print $self->status_message."\n";
 
-    unless(Genome::InstrumentData::Command::Import::Genotype->create(
+    unless(Genome::InstrumentData::Command::Import::Genotype->execute(
         source_data_file => $genotype_path_and_file,
         sample_name => $self->sample_name,
         import_source_name => $self->import_source_name,
