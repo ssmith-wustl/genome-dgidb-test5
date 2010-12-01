@@ -32,7 +32,8 @@ sub help_detail
 {
   return <<EOS
 Builds a wiggle track format file using fixedStep=1, for a given list of targeted regions,
-and two BAM files (tumor and normal).
+and two BAM files (tumor and normal). Two intermediate normal and tumor wiggles files are created
+with the extensions wig_normal and wig_tumor. They can be removed if necessary.
 EOS
 }
 

@@ -166,9 +166,9 @@ sub execute {
     #print "For a hits ratio of ".(int(($exact_hits/$valid_total)*100)/100)."\n";
     print "Total validation events = ".$valid_total."\n";
     print "Alleles different, but positional exact hit = ".$allele_mismatch_hits."\n";
-    print "Fuzzy Hits, within a range of ".$self->intersection_range." = ".$fuzzy_hits."\n";
-    print "Fuzzy Hits, within a range of ".$self->intersection_range.", but having exactly matching allels = ".$fuzzy_hits_exact_allele."\n";
-    print "Complete misses = ".$total_fail."\n";
+    print "Fuzzy Hits, within a range of ".$self->intersection_range." = ".$fuzzy_hits."\n" unless $self->intersection_range==-1;
+    print "Fuzzy Hits, within a range of ".$self->intersection_range.", but having exactly matching allels = ".$fuzzy_hits_exact_allele."\n" unless $self->intersection_range==-1;
+    print "Complete misses = ".$total_fail."\n" unless $self->intersection_range ==-1;
 
     #print Data::Dumper::Dumper(%fuzzy_candidates);
     $self->dump_to_file(\%fuzzy_candidates,$self->fuzzy_output_file) if $self->fuzzy_output_file;

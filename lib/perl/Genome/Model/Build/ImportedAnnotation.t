@@ -1,5 +1,3 @@
-#!/usr/bin/env perl
-
 use strict;
 use warnings;
 
@@ -9,14 +7,13 @@ BEGIN {
 }
 
 use above "Genome";
-use Test::More tests => 22;
+use Test::More tests => 26;
 use Data::Dumper;
 use_ok('Genome::Model::Build::ImportedAnnotation');
 
 # create a test annotation build and a few reference sequence builds to test compatibility with
 my @species_names = ('human', 'mouse');
 my @versions = ('12_34', '56_78');
-my $ref_pp = Genome::ProcessingProfile::ImportedReferenceSequence->create(name => 'test_ref_pp');
 my $ann_pp = Genome::ProcessingProfile::ImportedAnnotation->create(name => 'test_ann_pp', annotation_source => 'test_source');
 my $data_dir = File::Temp::tempdir('ImportedAnnotationTest-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 
@@ -27,6 +24,7 @@ for my $sn (@species_names) {
     ok($s, 'created sample');
     $samples{$sn} = $s;
 }
+my %rbuilds = create_reference_builds(\@species_names, \@versions);
 
 my $ann_model = Genome::Model::ImportedAnnotation->create(
     name                => "test_annotation",
@@ -37,9 +35,9 @@ my $ann_model = Genome::Model::ImportedAnnotation->create(
 ok($ann_model, "created annotation model");
 
 my $abuild = Genome::Model::Build::ImportedAnnotation->create(
-    model           => $ann_model,
-    data_directory  => $data_dir,
-    version         => $versions[0],
+    model                       => $ann_model,
+    data_directory              => $data_dir,
+    version                     => $versions[0],
 );
 ok($abuild, "created annotation build");
 
@@ -50,36 +48,17 @@ my $abuild_event = Genome::Model::Event::Build->create(
     event_status => 'Succeeded',
 );
 
-my %rbuilds;
-for my $sn (@species_names) {
-    $rbuilds{$sn} = [];
-
-    my $ref_model = Genome::Model::ImportedReferenceSequence->create(
-        name                => "test_ref_sequence_$sn",
-        processing_profile  => $ref_pp,
-        subject_class_name  => ref($samples{$sn}),
-        subject_id          => $samples{$sn}->id,
-    );
-    ok($ref_model, "created reference sequence model ($sn)");
-
-    for my $v (@versions) {
-        $v =~ /.*_([0-9]+)/;
-        my $short_version = $1;
-        my $rs = Genome::Model::Build::ImportedReferenceSequence->create(
-            name            => "ref_sequence_${sn}_$short_version",
-            model           => $ref_model,
-            fasta_file      => 'nofile', 
-            data_directory  => $data_dir,
-            version         => $short_version,
-            );
-        ok($rs, "created ref seq build $sn $v");
-        push(@{$rbuilds{$sn}}, $rs);
-    }
-}
-
+# test without having a reference_sequence_build set
 is($abuild->name, "test_annotation/$versions[0]", "name properly formed");
 ok($abuild->is_compatible_with_reference_sequence_build($rbuilds{'human'}->[0]), 'reference sequence compatibility');
 ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'human'}->[1]), 'reference sequence incompatibility');
+ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'mouse'}->[0]), 'reference sequence incompatibility');
+ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'mouse'}->[1]), 'reference sequence incompatibility');
+
+# now set a (different) reference_sequence_build and make sure we get different answers
+$abuild->reference_sequence_build($rbuilds{'human'}[1]);
+ok($abuild->is_compatible_with_reference_sequence_build($rbuilds{'human'}->[1]), 'reference sequence compatibility');
+ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'human'}->[0]), 'reference sequence incompatibility');
 ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'mouse'}->[0]), 'reference sequence incompatibility');
 ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'mouse'}->[1]), 'reference sequence incompatibility');
 
@@ -89,5 +68,36 @@ for my $invalid (@invalid_status) {
     ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'human'}->[0]), "Build status '$invalid' not allowed as annotation build");
 }
 
-
 done_testing();
+
+sub create_reference_builds {
+    my ($species_names, $versions) = @_;
+    my %rbuilds;
+    my $ref_pp = Genome::ProcessingProfile::ImportedReferenceSequence->create(name => 'test_ref_pp');
+    for my $sn (@$species_names) {
+        $rbuilds{$sn} = [];
+
+        my $ref_model = Genome::Model::ImportedReferenceSequence->create(
+            name                => "test_ref_sequence_$sn",
+            processing_profile  => $ref_pp,
+            subject_class_name  => ref($samples{$sn}),
+            subject_id          => $samples{$sn}->id,
+        );
+        ok($ref_model, "created reference sequence model ($sn)");
+
+        for my $v (@$versions) {
+            $v =~ /.*_([0-9]+)/;
+            my $short_version = $1;
+            my $rs = Genome::Model::Build::ImportedReferenceSequence->create(
+                name            => "ref_sequence_${sn}_$short_version",
+                model           => $ref_model,
+                fasta_file      => 'nofile',
+                data_directory  => $data_dir,
+                version         => $short_version,
+                );
+            ok($rs, "created ref seq build $sn $v");
+            push(@{$rbuilds{$sn}}, $rs);
+        }
+    }
+    return %rbuilds;
+}

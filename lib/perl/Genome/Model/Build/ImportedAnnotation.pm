@@ -38,14 +38,46 @@ class Genome::Model::Build::ImportedAnnotation {
             calculate_from => ['model_name','version'],
             calculate => q{ return "$model_name/$version"; },
         },
+        reference_sequence_build_id => {
+            is => 'Text',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'reference_sequence_build', value_class_name => 'Genome::Model::Build::ImportedReferenceSequence' ],
+            is_many => 0,
+            is_optional => 1,
+            is_mutable => 1, # TODO: make this non-optional when all data is updated
+            doc => 'id of the reference sequence build associated with this annotation model',
+        },
+        reference_sequence_build => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            id_by => 'reference_sequence_build_id',
+        },
     ],
 };
+
+sub __errors__ {
+    my $self = shift;
+    my @tags = $self->SUPER::__errors__();
+
+    if (!defined $self->reference_sequence_build) {
+        push @tags, UR::Object::Tag->create(
+            type => 'warning',
+            properties => ['reference_sequence_build'],
+            desc => "ImportedAnnotation model created without reference_sequence_model_id, this will soon be an error",
+        );
+    }
+    return @tags;
+}
+
 
 # Checks to see if this build is compatible with the given imported reference sequence build (species and version match)
 sub is_compatible_with_reference_sequence_build {
     # rsb: reference sequence build
     my ($self, $rsb) = @_;
     return if !defined $self->status || $self->status ne "Succeeded";
+
+    return $rsb->id == $self->reference_sequence_build_id if defined $self->reference_sequence_build_id;
+
     my $version = $self->version;
     $version =~ s/^[^_]*_([0-9]+).*/$1/;
     return ($rsb->model->subject->species_name eq $self->model->subject->species_name) &&

@@ -20,6 +20,12 @@ class Genome::Model::Tools::Bed::Convert::Indel::PindelToBed {
             default => 1,
             doc => 'Run on pindel 0.2 or 0.1',
         },
+        include_normal => {
+            type => 'Boolean',
+            is_optional => 1,
+            default => 0,
+            doc => 'Include events which have some or all normal support alongside events with only tumor support',
+        },
 
     ],
     has_transient_optional => [
@@ -137,7 +143,7 @@ if($call =~ m/^3/) { $DB::single=1; }
             for (1..$support){
                 $line = $input_fh->getline;
                 if($line =~ m/normal/) {
-                    $normal_support=1;
+                    $normal_support++;
                 }
                 $read=$line;
             }
@@ -149,7 +155,7 @@ if($call =~ m/^3/) { $DB::single=1; }
             my $type_and_size = $type."/".$size;
             $self->status_message( $type_and_size . "\t" . join(" ",@bed_line) . "\n");
             $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'bed'}=join(",",@bed_line);
-            if($normal_support){
+            if($normal_support && $self->include_normal){
                 $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'normal'}=$normal_support;
             }
         }

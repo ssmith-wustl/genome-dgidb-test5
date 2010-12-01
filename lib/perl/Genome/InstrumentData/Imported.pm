@@ -39,6 +39,7 @@ class Genome::InstrumentData::Imported {
         run_name             => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         sd_above_insert_size => { is => 'NUMBER', len => 20, is_optional => 1 },
         subset_name          => { is => 'VARCHAR2', len => 255, is_optional => 1 },
+        target_region_set_name => { is => 'VARCHAR2', len => 64, is_optional => 1 },
         library_id           => { is => 'NUMBER', len => 20, is_optional => 0 },
         _old_sample_name      => { is => 'NUMBER', len => 20, is_optional => 1, column_name=>'SAMPLE_NAME' },
         _old_sample_id        => { is => 'NUMBER', len => 20, is_optional => 1, column_name=>'SAMPLE_ID' },
@@ -86,13 +87,6 @@ sub __display_name__ {
         join(' ', map { $self->$_ } qw/sequencing_platform import_format id/)
         . ($self->desc ? ' (' . $self->desc . ')' : '')
     );
-}
-
-# Other InstrumentData types define an optional UR field target_region_set_name.
-# target_region_set_name is likely undefined for imported data, so this sub will resolve issues
-# with queries that include Imported.
-sub target_region_set_name {
-    return ;
 }
 
 sub data_directory {

@@ -12,6 +12,7 @@ use Test::More;
 my $tcga_name = "TCGA-AB-2804-03B-01W-0728-08";
 
 my $i = Genome::InstrumentData::Command::Import::TcgaBam->create(
+    target_region       => 'whole genome',
     tcga_name           => $tcga_name,  
     import_source_name  => 'Broad',
     original_data_path  => '/gsc/var/cache/testsuite/data/Genome-InstrumentData--Command-Import-Bam/test.bam',
