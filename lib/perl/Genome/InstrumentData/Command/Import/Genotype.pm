@@ -85,7 +85,7 @@ class Genome::InstrumentData::Command::Import::Genotype {
 
 sub execute {
     my $self = shift;
-
+    my $allocation = $self->allocation if defined($self->allocation);
     unless(defined($self->sample_name) || defined($self->library_name)){
         $self->error_message("In order to import a genotype, a library-name or sample-name is required.");
         die $self->error_message;
@@ -180,7 +180,7 @@ sub execute {
 
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
     unless ($import_instrument_data) {
-       $self->error_message('Failed to create imported instrument data for '.$self->original_data_path);
+       $self->error_message('Failed to create imported instrument data for '.$self->source_data_file);
        return;
     }
 

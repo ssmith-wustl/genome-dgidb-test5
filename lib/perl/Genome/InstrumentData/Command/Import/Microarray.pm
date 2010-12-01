@@ -55,7 +55,8 @@ my %properties = (
     allocation => {
         is => 'Genome::Disk::Allocation',
         is_optional => 1,
-        reverse_as => 'owner', where => [ allocation_path => {operator => 'like', value => '%imported%'} ], is_optional => 1, is_many => 1, 
+        #reverse_as => 'owner', where => [ allocation_path => {operator => 'like', value => '%imported%'} ], is_optional => 1, is_many => 1, 
+        doc => 'For testing purposes',
 
     },
     species_name => {
