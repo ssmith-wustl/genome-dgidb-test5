@@ -306,12 +306,12 @@ sub _create_instrument_data {
     );
 
     if ( not $instrument_datum ) {
-        $self->error_message('Cannot create main instrument data for sra sample id: '.$self->sra_sample_id);
+        $self->error_message('Cannot create instrument data for sra sample id: '.$self->sra_sample_id);
         return;
     }
 
     if ( not UR::Context->commit ) {
-        $self->error_message('Cannot commit main instrument data.');
+        $self->error_message('Cannot commit instrument data.');
         return;
     }
 
