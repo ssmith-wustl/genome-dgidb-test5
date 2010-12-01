@@ -260,7 +260,7 @@ sub create_aligner_tool {
             $aligner_params .= ' -G '. $transcripts_path;
         }
     }
-    $aligner_params .= ' --'. $fastq_format;
+    $aligner_params .= ' --'. $fastq_format if $fastq_format;
     unless ($reference_path) {
         $self->error_message('Need to make bowtie reference index in directory: '. $reference_build->data_directory);
         return;
