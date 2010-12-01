@@ -156,13 +156,13 @@ sub execute {
         next if $property_name =~ /^allocation$/;
         next if $property_name =~ /^library_name$/;
         next if $property_name =~ /^define_model$/;
+        next if $property_name =~ /^sample_name$/;
         $params{$property_name} = $self->$property_name if $self->$property_name;
     }
 
     $params{sequencing_platform} = $self->sequencing_platform; 
     $params{import_format} = $self->import_format;
     $params{library_id} = $library->id;
-    $params{sample_id} = $sample->id;
     if(defined($self->allocation)){
         $params{disk_allocations} = $self->allocation;
     }

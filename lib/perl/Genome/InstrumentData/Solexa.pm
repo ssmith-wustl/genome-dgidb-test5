@@ -236,12 +236,6 @@ EOS
             calculate_from => [ 'id' ]
         },
         # basic relationship to the "source" of the lane
-        library         => { is => 'Genome::Library', id_by => ['library_id'] },
-        library_id      => { is => 'Number', },
-
-        # these are indirect via library, but must be set directly for lanes missing library info
-        sample              => { is => 'Genome::Sample', id_by => ['sample_id'] },
-        sample_id           => { is => 'Number', },
 
         sample_source       => { via => 'sample', to => 'source' },
         sample_source_name  => { via => 'sample_source', to => 'name' },

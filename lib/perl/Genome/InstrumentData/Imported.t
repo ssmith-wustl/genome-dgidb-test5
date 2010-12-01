@@ -11,8 +11,6 @@ my $l = Genome::Library->get(sample=>$s, name=>'TEST-patient1-sample1-lib1');
 
 my $i = Genome::InstrumentData::Imported->create(
     id => -123,
-    sample_name             => $s->name,  
-    sample_id               => $s->id, 
     library_id              => $l->id, 
     import_source_name      => 'Broad',
     original_data_path      => '/tmp/foo',
@@ -34,8 +32,6 @@ ok($i->import_date, "date is set");
 
 my $i2 = Genome::InstrumentData::Imported->create(
     id => -456,
-    sample_name             => $s->name,  
-    sample_id               => $s->id, 
     library_id              => $l->id, 
     import_source_name      => 'Broad',
     original_data_path      => '/tmp/nst',
@@ -58,8 +54,6 @@ ok($i2->import_date, "date is set");
 
 my $i3 = Genome::InstrumentData::Imported->create(
     id => -789,
-    sample_name             => $s->name,  
-    sample_id               => $s->id, 
     library_id              => $l->id, 
     import_source_name      => 'Broad',
     original_data_path      => '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Command-Import-Fastq/s_5_1_sequence.txt,/gsc/var/cache/testsuite/data/Genome-InstrumentData-Command-Import-Fastq/s_5_2_sequence.txt',

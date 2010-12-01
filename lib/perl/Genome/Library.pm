@@ -24,10 +24,10 @@ class Genome::Library {
         taxon               => { is => 'Genome::Taxon', via => 'sample', },
         species_name        => { is => 'Text', via => 'taxon', },
         protocol_name       => { is_transient => 1, is => 'Text', },
+        name_extension      => { is_transient => 1, is => 'Text', default_value => 'extlib' },
     ],
     data_source => 'Genome::DataSource::GMSchema',
 };
-
 
 1;
 
