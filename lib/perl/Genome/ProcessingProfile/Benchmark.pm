@@ -41,7 +41,7 @@ class Genome::ProcessingProfile::Benchmark {
         },
         snapshot_type => {
             is_optional => 1,
-            value => 'collectl'
+            value => 'usrbintime'
         }
     ],
     doc => "benchmark profile captures statistics after command execution"
@@ -99,20 +99,6 @@ sub _system_snapshot_package {
     return $package;
 }
 
-sub _system_snapshot {
-    my $self = shift;
-    my $dir = shift;
-    my $build_id = shift;
-
-    my $cache = "$dir/system_snapshot.$build_id";
-    return if (! defined $dir);
-
-    my $package = $self->_system_snapshot_package;
-
-    my $s = $package->new($cache);
-    return $s;
-}
-
 sub _set_metrics {
     my ($self,$build,$metrics) = @_;
     foreach my $key (keys %$metrics) {
@@ -135,24 +121,14 @@ sub _execute_build {
     @inputs = map { $_->{value_id} } @inputs ;
     my $args = join(' ', @inputs);
 
-    my $datadir = $build->data_directory;
     $ENV{DATA_DIRECTORY} = $build->data_directory;
 
-    my $snapshotter = $self->_system_snapshot($datadir,$build->id);
+    my $package = $self->_system_snapshot_package;
+    my $snapshotter = $package->new($build->id,$build->data_directory);
 
-    # The collectl snapshotter begins an event loop here
-    $snapshotter->start();
-
-    my $cmd_cv = Genome::Utility::AsyncFileSystem->shellcmd(
-      '>' => "$datadir/output",
-      '2>' => "$datadir/errors",
-      cmd => "$cmd $args"
-    );
-
-    # This begins the event loop that runs both the snapshotter and the cmd
-    $cmd_cv->recv;
-
-    $snapshotter->stop();
+    $snapshotter->pre_run();
+    $snapshotter->run($cmd,$args);
+    $snapshotter->post_run();
 
     my $metrics = $snapshotter->report();
     $self->_set_metrics($build,$metrics);
