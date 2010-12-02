@@ -97,6 +97,7 @@ sub execute {                               # replace with real execution logic.
 	{
 		chomp;
 		my $line = $_;
+		next unless $line; #skip blank lines
 		$lineCounter++;
 		
 		my ($chrom, $chr_start, $chr_stop, $ref, $var) = split(/\t/, $line);
@@ -192,6 +193,7 @@ sub execute {                               # replace with real execution logic.
 	close(SOMATIC);
 	close(GERMLINE);
 	close(REFERENCE);
+	close(OUTFILE);
 	
 	if($self->output_plot)
 	{
