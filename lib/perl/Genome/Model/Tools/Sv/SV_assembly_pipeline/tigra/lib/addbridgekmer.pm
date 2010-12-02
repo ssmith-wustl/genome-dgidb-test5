@@ -67,6 +67,7 @@ sub doit{
 
 sub addbridge{
   my ($self,$rd, $nums)=@_;
+
   my @aqual=split / /, $nums;
   my $lefts=-1;
   my $lefte=0;
@@ -165,6 +166,7 @@ sub addback {
       $HH{$u}={n=>1,AI=>0,CI=>0,GI=>0,TI=>0,AO=>0,CO=>0,GO=>0,TO=>0,tag=>0,tag2=>0};
       push @newKmers,$u;
     }
+
     $self->addedge($w,$u);
   }
 }
@@ -173,6 +175,7 @@ sub addedge {       # a always exist
   my ($self,$a,$b)=@_;
   my ($truea,$dira)=&true($a);
   my ($trueb,$dirb)=&true($b);
+  
   if ($dira==1){
     if ($dirb==1){
       my $next=substr $b, $self->{k}-1,1;
