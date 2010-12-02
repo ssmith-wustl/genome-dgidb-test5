@@ -40,5 +40,5 @@ my $output_diff = Genome::Utility::FileSystem->diff_file_vs_file($expected_outpu
 ok(!$output_diff, 'output file matches expected result')
     or diag("diff:\n" . $output_diff);
 
-ok(-s "$output_file.FreqPlot.jpg", 'created a plot');
-ok(-s "$output_file.FreqPlot.Somatic.jpg", 'created a somatic plot');
+ok(-s $validation_command->output_plot_file, 'created a plot');
+ok(-s $validation_command->output_plot_somatic_file, 'created a somatic plot');

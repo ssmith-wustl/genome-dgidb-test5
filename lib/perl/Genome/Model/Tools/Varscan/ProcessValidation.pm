@@ -29,7 +29,9 @@ class Genome::Model::Tools::Varscan::ProcessValidation {
 		min_coverage 	=> { is => 'Text', doc => "Minimum coverage to call a site", is_optional => 1 },
 		variants_file 	=> { is => 'Text', doc => "File of variants to report on", is_optional => 0 },
 		output_file 	=> { is => 'Text', doc => "Output file for validation results", is_optional => 0, is_output => 1 },
-		output_plot 	=> { is => 'Text', doc => "Optional plot of variant allele frequencies", is_optional => 1 },
+		output_plot 	=> { is => 'Boolean', doc => "Optional plot of variant allele frequencies", is_optional => 1, },
+		output_plot_file => { is => 'Text', calculate_from => ['output_file'], calculate => q{ $output_file . '.FreqPlot.png}, },
+		output_somatic_plot_file => { is => 'Text', calculate_from => ['output_file'], calculate => q{ $output_file . '.FreqPlot.Somatic.png'}, },
 	],
 };
 
@@ -204,6 +206,8 @@ sub execute {                               # replace with real execution logic.
 		my $germline_length = `cat $output_file.GermlineFreqs | wc -l`;
 		chomp($germline_length);
 
+
+          my $output_plot_file = $self->output_plot_file;
 		## IF we have germline calls, print those too ##
 		if($germline_length) #$stats{"Yes\tPass\tGermline"} && $stats{"Yes\tPass\tGermline"} > 0)
 		{
@@ -211,7 +215,7 @@ sub execute {                               # replace with real execution logic.
 somatic <- read.table("$output_file.SomaticFreqs")
 germline <- read.table("$output_file.GermlineFreqs")
 reference <- read.table("$output_file.ReferenceFreqs")
-png("$output_file.FreqPlot.jpg", height=600, width=600)
+png("$output_plot_file", height=600, width=600)
 plot(germline\$V1, germline\$V2, col="blue", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), xlab="Normal", ylab="Tumor")
 points(somatic\$V1, somatic\$V2, col="red", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100))
 points(reference\$V1, reference\$V2, col="black", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100))
@@ -226,7 +230,7 @@ dev.off()
 		print SCRIPT qq{
 somatic <- read.table("$output_file.SomaticFreqs")
 reference <- read.table("$output_file.ReferenceFreqs")
-png("$output_file.FreqPlot.jpg", height=600, width=600)
+png("$output_plot_file", height=600, width=600)
 plot(somatic\$V1, somatic\$V2, col="red", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), xlab="Normal", ylab="Tumor")
 points(reference\$V1, reference\$V2, col="black", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100))
 dev.off()
@@ -236,9 +240,9 @@ dev.off()
 		}
 
 		## Also do somatic sites by themselves ##
-
+          my $output_somatic_plot_file = $self->output_somatic_plot_file;
 		print SCRIPT qq{
-png("$output_file.FreqPlot.Somatic.jpg", height=600, width=600)
+png("$output_somatic_plot_file", height=600, width=600)
 plot(somatic\$V1, somatic\$V2, col="red", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), xlab="Normal", ylab="Tumor")
 dev.off()
 		};
