@@ -41,4 +41,4 @@ ok(!$output_diff, 'output file matches expected result')
     or diag("diff:\n" . $output_diff);
 
 ok(-s $validation_command->output_plot_file, 'created a plot');
-ok(-s $validation_command->output_plot_somatic_file, 'created a somatic plot');
+ok(-s $validation_command->output_somatic_plot_file, 'created a somatic plot');
