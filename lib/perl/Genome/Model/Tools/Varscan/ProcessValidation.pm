@@ -30,7 +30,7 @@ class Genome::Model::Tools::Varscan::ProcessValidation {
 		variants_file 	=> { is => 'Text', doc => "File of variants to report on", is_optional => 0 },
 		output_file 	=> { is => 'Text', doc => "Output file for validation results", is_optional => 0, is_output => 1 },
 		output_plot 	=> { is => 'Boolean', doc => "Optional plot of variant allele frequencies", is_optional => 1, },
-		output_plot_file => { is => 'Text', calculate_from => ['output_file'], calculate => q{ $output_file . '.FreqPlot.png}, },
+        output_plot_file            => { is => 'Text', calculate_from => ['output_file'], calculate => q{ $output_file . '.FreqPlot.png'}, },
 		output_somatic_plot_file => { is => 'Text', calculate_from => ['output_file'], calculate => q{ $output_file . '.FreqPlot.Somatic.png'}, },
 	],
 };
