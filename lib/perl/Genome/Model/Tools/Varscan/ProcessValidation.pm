@@ -97,6 +97,7 @@ sub execute {                               # replace with real execution logic.
 	{
 		chomp;
 		my $line = $_;
+		next unless $line; #skip blank lines
 		$lineCounter++;
 		
 		my ($chrom, $chr_start, $chr_stop, $ref, $var) = split(/\t/, $line);
