@@ -125,7 +125,22 @@ class Genome::Model::Tools::Somatic::FilterFalsePositives {
            is_input => 1,
 	   is_optional => 1,
            doc => 'Existing BAM-Readcounts file to save execution time',
-       },       
+       },
+       'bam_readcount_command' => {
+           type => 'String',
+           is_input => 1,
+	   is_optional => 1,
+           doc => 'Existing BAM-Readcounts file to save execution time',
+	   default => "/gscuser/dlarson/src/bamsey/readcount/trunk/bam-readcount-test2",
+       },
+       'bam_readcount_basequal' => {
+           type => 'String',
+           is_input => 1,
+	   is_optional => 1,
+           doc => 'Minimum base quality to use for BAM readcounts',
+	   default => 15,
+       },
+       
        ## WGS FILTER OPTIONS ##
        
        
@@ -271,7 +286,7 @@ sub capture_filter
     my %stats = ();
     $stats{'num_variants'}  = $stats{'num_no_readcounts'} = $stats{'num_pass_filter'} = $stats{'num_no_allele'} = 0;
     $stats{'num_fail_varcount'} = $stats{'num_fail_varfreq'} = $stats{'num_fail_strand'} = $stats{'num_fail_pos'} = $stats{'num_fail_mmqs'} = $stats{'num_fail_mapqual'} = $stats{'num_fail_readlen'} = $stats{'num_fail_dist3'} = 0;
-    $stats{'num_MT_sites_autopassed'} = 0;
+    $stats{'num_MT_sites_autopassed'} = $stats{'num_fail_homopolymer'} = 0;
 
     ## Open the output file ##
     
@@ -338,7 +353,8 @@ sub capture_filter
     else
     {
 	print "Running BAM Readcounts...\n";
-	my $cmd = readcount_program() . " -b 15 " . $self->bam_file . " -l $temp_path";
+	my $cmd = $self->bam_readcount_command . " -f " . $self->reference . " -b " . $self->bam_readcount_basequal . " " . $self->bam_file . " -l $temp_path";
+	print "RUN $cmd\n";
         $readcounts = `$cmd 2>/dev/null`;	
     }
 
@@ -417,17 +433,9 @@ sub capture_filter
 			$stats{'num_MT_sites_autopassed'}++;
 			print $ofh "$line\n";
 		    }
-#		    elsif($self->prepend_chr && $chrom =~ "random")
-#		    {
-#			$stats{'num_random_sites_autopassed'}++;
-#			print $ofh "$line\n";			
-#		    }
 		    else
 		    {
-			## Run Readcounts ##
-#			my $cmd = readcount_program() . " -b 15 " . $self->bam_file . " $query_string";
-#			my $readcounts = `$cmd`;
-#			chomp($readcounts) if($readcounts);
+			$stats{'num_sites_tested'}++;
 
 			my $readcounts = "";
 			if($self->prepend_chr)
@@ -625,7 +633,12 @@ sub capture_filter
     print $stats{'num_fail_dist3'} . " had var_distance_to_3' < $min_var_dist_3\n";
     print $stats{'num_fail_homopolymer'} . " were in a homopolymer of " . $self->min_homopolymer . " or more bases\n";
 
-    print $stats{'num_pass_filter'} . " passed the strand filter\n";
+    ## Calculate pass percentage ##
+
+    my $pct_pass = "0.00%";    
+    $pct_pass = sprintf("%.2f", ($stats{'num_pass_filter'} / $stats{'num_sites_tested'} * 100)) . '%' if($stats{'num_sites_tested'});    
+
+    print $stats{'num_pass_filter'} . " ($pct_pass of sites tested) passed the strand filter\n";
 
     return 1;
 }
