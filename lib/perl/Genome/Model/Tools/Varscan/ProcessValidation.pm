@@ -193,6 +193,7 @@ sub execute {                               # replace with real execution logic.
 	close(SOMATIC);
 	close(GERMLINE);
 	close(REFERENCE);
+	close(OUTFILE);
 	
 	if($self->output_plot)
 	{
