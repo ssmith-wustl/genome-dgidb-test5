@@ -36,9 +36,12 @@ my $cmd_1 = Genome::Model::Tools::Sam::Merge->create(
     files_to_merge => [$input_normal],
     merged_file    => $merged_file1,
     bam_index      => 0,
+    merger_name    => 'picard',
+    merger_version => '1.22',
+    use_version    => 'r544'
 );
 
-ok($cmd_1, "created command");
+ok($cmd_1, "created command",);
 ok($cmd_1->execute, "executed");
 ok(-s $merged_file1, "output file is nonzero");
 ok(!-s $merged_file1.'.bai', 'Turn off .bai bam index generation');
@@ -62,6 +65,9 @@ ok(-s $input_normal2 and -s $input_tumor2, 'normal, tumor bam are copied to tmp 
 my $cmd_2 = Genome::Model::Tools::Sam::Merge->create(
     files_to_merge => [$input_normal2, $input_tumor2],
     merged_file    => $merged_file2,
+    merger_name    => 'picard',
+    merger_version => '1.22',
+    use_version    => 'r544'
 );
 
 ok($cmd_2, "created command");

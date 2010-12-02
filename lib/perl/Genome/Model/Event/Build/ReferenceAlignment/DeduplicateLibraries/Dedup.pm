@@ -23,6 +23,14 @@ class Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries::Ded
             is  => 'Text',
             doc => 'The maq read aligner version used',
         },
+        dedup_verison  => {
+            is  => 'Text',
+            doc => 'The duplication handler version used',
+        },
+        dedup_params  => {
+            is  => 'Text',
+            doc => 'The duplication handler params used',
+        },
         ref_list    => {
             is  => 'Text',
             doc => 'The ref list that MapToBam uses to convert to bam',
@@ -77,8 +85,12 @@ sub make_real_rmdupped_map_file {
         
         my $working_file = $working_directory . '/' . $library . ".map";
         
-        my $maq_pathname = Genome::Model::Tools::Maq->path_for_maq_version($self->aligner_version);
-        my $cmd = $maq_pathname . " rmdup " . $working_file . " " . $tmp_file;
+        my $maq_pathname = Genome::Model::Tools::Maq->path_for_maq_version($self->dedup_version);
+        my $maq_tool = $maq_pathname . ' rmdup';
+        my $dedup_params = $self->dedup_params;
+        $maq_tool .= " $dedup_params" if $dedup_params;
+
+        my $cmd = $maq_tool. " " . $working_file . " " . $tmp_file;
         print $log_fh "Running $cmd"."\n";
         #my $rv = system($cmd);
         my $rv = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd);
@@ -194,7 +206,7 @@ sub execute {
             print $log_fh "lib_tag: ".$library."\n"; 
             
             my $map_to_bam = Genome::Model::Tools::Maq::MapToBam->create(
-                use_version => $self->aligner_version,
+                use_version => $self->dedup_version,
                 map_file    => $map_file,
                 lib_tag     => $library,
                 ref_list    => $self->ref_list,
