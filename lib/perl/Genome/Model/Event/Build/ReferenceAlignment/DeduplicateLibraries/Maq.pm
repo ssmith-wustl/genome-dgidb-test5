@@ -23,9 +23,7 @@ sub execute {
     my $now = UR::Time->now;
   
     $self->status_message("Starting DeduplicateLibraries::Maq");
-
     my $alignments_dir = $self->resolve_accumulated_alignments_path;
-
     $self->status_message("Accumulated alignments directory: ".$alignments_dir);
    
     unless (-e $alignments_dir) { 
@@ -56,15 +54,6 @@ sub execute {
         }
     }
     
-    #unless (Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries::WholeMap->execute(
-    #    whole_map_file => $self->build->whole_map_file,
-    #    alignments => \@all_alignments,
-    #    aligner_version => $self->model->read_aligner_version,
-    #)) {
-    #    $self->error_message('Failed to create whole map file for cdna or rna.');
-    #    return;
-    #}
-
     $self->status_message("Starting dedup workflow with params:");
     #prepare the input for parallelization
     my @list_of_library_alignments;
@@ -93,19 +82,22 @@ sub execute {
         name => 'Deduplicate libraries.',
         operation_type => Workflow::OperationType::Command->get('Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries::Dedup')
     );
-
     $op->parallel_by('library_alignments');
-
 
     # db disconnect prior to long operation
     Genome::DataSource::GMSchema->disconnect_default_dbh;
     
+    my %extra_params = ();
+    $extra_params{dedup_version} = $self->model->duplication_handler_version if $self->model->duplication_handler_version;
+    $extra_params{dedup_params}  = $self->model->duplication_handler_params  if $self->model->duplicaiton_handler_params;
+
     my $output = Workflow::Simple::run_workflow_lsf(
         $op,
         'ref_list'  => $self->model->reference_sequence_build->full_consensus_sam_index_path($self->model->samtools_version),
         'accumulated_alignments_dir' => $alignments_dir, 
         'library_alignments' => \@list_of_library_alignments,
         'aligner_version' => $self->model->read_aligner_version,
+        %extra_params,
     );
 
     #check workflow for errors 
@@ -130,16 +122,16 @@ sub execute {
    #merge those Bam files...BAM!!!
    $now = UR::Time->now;
    $self->status_message(">>> Beginning Bam merge at $now.");
-   my $sam_path = Genome::Model::Tools::Sam->path_for_samtools_version($self->model->samtools_version);
+   my $sam_path = Genome::Model::Tools::Sam->path_for_samtools_version($self->model->merger_version);
    my $bam_merge_tool = $sam_path.' merge';
    my $bam_index_tool = $sam_path.' index';
    my $bam_merged_output_file = $self->build->whole_rmdup_bam_file; 
    my $bam_final;
  
    if (-s $bam_merged_output_file )  {
-   	$self->error_message("The bam file: $bam_merged_output_file already exists.  Skipping bam processing.  Please remove this file and rerun to generate new bam files.");
-   }  else {
- 
+        $self->error_message("The bam file: $bam_merged_output_file already exists.  Skipping bam processing.  Please remove this file and rerun to generate new bam files.");
+   }  
+   else {
        #get the bam files from the alignments directory
        my @bam_files = <$alignments_dir/*.bam>;
 
@@ -157,7 +149,8 @@ sub execute {
 
        if (scalar(@bam_files) == 0 ) {
             $self->error_message("No bam files have been found at: $alignments_dir");
-       } elsif (scalar(@bam_files) == 1) {
+       } 
+       elsif (scalar(@bam_files) == 1) {
             my $single_file = shift(@bam_files);
             $self->status_message("Only one bam file has been found at: $alignments_dir. Not merging, only renaming.");
             #my $rename_cmd = "mv ".$single_file." ".$bam_non_merged_output_file;
@@ -165,14 +158,19 @@ sub execute {
             my $bam_rename_rv = move($single_file,$bam_merged_output_file); 
             unless ($bam_rename_rv==1) {
                     $self->error_message("Bam file rename error!  Return value: $bam_rename_rv");
-            } else {
+            } 
+            else {
                     #renaming success
                     $bam_final = $bam_merged_output_file; 
             } 
-       } else {
+       } 
+       else {
             $self->status_message("Multiple Bam files found.  Bam files to merge: ".join(",",@bam_files) );
+            my $merger_params = $self->model->merger_params;
+            $bam_merge_tool .= " $merger_params" if $merger_params;
             my $bam_merge_cmd = "$bam_merge_tool $bam_merged_output_file ".join(" ",@bam_files); 
             $self->status_message("Bam merge command: $bam_merge_cmd");
+
             #my $bam_merge_rv = system($bam_merge_cmd);
             my $bam_merge_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$bam_merge_cmd,
                                                                      input_files=>\@bam_files,
@@ -181,7 +179,8 @@ sub execute {
             $self->status_message("Bam merge return value: $bam_merge_rv");
             unless ($bam_merge_rv == 1) {
                     $self->error_message("Bam merge error!  Return value: $bam_merge_rv");
-            } else {
+            } 
+            else {
                     #merging success
                     $bam_final = $bam_merged_output_file;
             }
@@ -198,11 +197,13 @@ sub execute {
                                                                  );
             unless ($bam_index_rv == 1) {
                     $self->error_message("Bam index error!  Return value: $bam_index_rv");
-            } else {
+            } 
+            else {
                     #indexing success
                     $self->status_message("Bam indexed successfully.");
             }
-       }  else {
+       }  
+       else {
             #no final file defined, something went wrong	
             $self->error_message("Bam index error!  Return value: $bam_index_rv");
        }
@@ -281,19 +282,16 @@ sub execute {
 
 
 sub verify_successful_completion {
-
     my $self = shift;
 
     my $return_value = 1;
     my $build = $self->build;
-
             
     unless (-e $build->whole_rmdup_map_file) {
-	$self->error_message("Can't verify successful completeion of Deduplication step. ".$build->whole_rmdup_map_file." does not exist!");	  	
-	return 0;
+	    $self->error_message("Can't verify successful completeion of Deduplication step. ".$build->whole_rmdup_map_file." does not exist!");	  	
+	    return 0;
     } 
     return $return_value;
-
 }
 
 sub calculate_required_disk_allocation_kb {

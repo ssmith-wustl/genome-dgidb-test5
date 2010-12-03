@@ -35,19 +35,19 @@ sub execute {
         return 1;
     }
 
-    my $instrument_data = $self->_get_instrument_data;
-    if ( not $instrument_data ) {
+    my @instrument_data = $self->_get_instrument_data;
+    if ( not @instrument_data ) {
         $self->status_message('Status: No instrument data, needs download');
         return 1;
     }
 
     my $have_archve_path = 0;
-    for my $instrument_data ( @$instrument_data ) {
+    for my $instrument_data ( @instrument_data ) {
         my $archive_path = eval{ $instrument_data->archive_path; };
         $have_archve_path++ if -e $archive_path;
     }
 
-    if ( @$instrument_data == $have_archve_path ) {
+    if ( @instrument_data == $have_archve_path ) {
         $self->_update_library;
         $self->status_message('Status: Done');
         return 1;

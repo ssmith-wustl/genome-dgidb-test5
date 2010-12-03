@@ -1,25 +1,25 @@
-package Genome::Model::Tools::Sv;
+package Genome::Model::Tools::Validation;
 
 use strict;
 use warnings;
 
 use Genome;            
 
-class Genome::Model::Tools::Sv {
+class Genome::Model::Tools::Validation {
     is => 'Command',
     has => [ ],
 };
 
-sub sub_command_sort_position { 16 }
+sub sub_command_sort_position { 15 }
 
 sub help_brief {
-    'Tools for working with SV files of various kinds.'
+    "Tools for working with validation results"
 }
 
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gmt sv ...
+gmt validation ...
 EOS
 }
 

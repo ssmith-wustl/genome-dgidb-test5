@@ -42,15 +42,6 @@ sub execute {
     my $self = shift;
 
     my @models = $self->models;
-    if ( not @models ) {
-        my $answer = $self->_ask_user_question(
-            'No models given or found. Really create model group with name: "'.$self->name.'?"',
-            10,
-            'y|n',
-        );
-        return if not $answer;
-        return 1 if $answer eq 'n';
-    }
 
     my $model_group = Genome::ModelGroup->create(
         name => $self->name,

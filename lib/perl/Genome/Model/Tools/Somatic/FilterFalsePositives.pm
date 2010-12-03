@@ -270,14 +270,12 @@ sub capture_filter {
 
     ## Open the output file ##
 
-    my $ofh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+    my $temp_output_file = Genome::Utility::FileSystem->create_temp_file_path;
+    my $ofh = Genome::Utility::FileSystem->open_file_for_writing($temp_output_file);
     unless($ofh) {
         $self->error_message("Unable to open " . $self->output_file . " for writing.");
         die;
     }
-
-    my $filtered_file = $self->output_file . ".removed";
-    $filtered_file = $self->filtered_file if($self->filtered_file);
 
     ## Run BAM readcounts in batch mode to get read counts for all positions in file ##
     my $readcount_file;
@@ -353,7 +351,8 @@ sub capture_filter {
 
 
     ## Open the filtered output file ##
-    my $ffh = Genome::Utility::FileSystem->open_file_for_writing($filtered_file);
+    my $temp_filtered_file = Genome::Utility::FileSystem->create_temp_file_path();
+    my $ffh = Genome::Utility::FileSystem->open_file_for_writing($temp_filtered_file);
 
     ## Reopen file for parsing ##
     my $input = Genome::Utility::FileSystem->open_file_for_reading($self->variant_file);
@@ -556,6 +555,13 @@ sub capture_filter {
 
     close($input);
     close($ofh);
+    close($ffh);
+
+    my $filtered_file = $self->output_file . ".removed";
+    $filtered_file = $self->filtered_file if($self->filtered_file);
+
+    Genome::Utility::FileSystem->copy_file($temp_output_file, $self->output_file);
+    Genome::Utility::FileSystem->copy_file($temp_filtered_file, $filtered_file);
 
     print $stats{'num_variants'} . " variants\n";
     print $stats{'num_MT_sites_autopassed'} . " MT sites were auto-passed\n";

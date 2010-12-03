@@ -33,11 +33,7 @@ class Genome::InstrumentData::Command::Dacc {
         _sample => { is_optional => 1, },
         _library => { is_optional => 1, },
         # inst data
-        _instrument_data => { is => 'Array', is_optional => 1, },
-        _main_instrument_data => { 
-            calculate_from => '_instrument_data',
-            calculate => q| return $_instrument_data->[0]; |,
-        },
+        _main_instrument_data => { is_optional => 1, },
         _allocation => { via => '_main_instrument_data', to => 'disk_allocations' },
         _absolute_path => { via => '_allocation', to => 'absolute_path' },
         # dl directory
@@ -52,17 +48,31 @@ class Genome::InstrumentData::Command::Dacc {
     ],
 };
 
-sub __display_name__ {
-    return $_[0]->sra_sample_id.' '.$_[0]->format;
-}
-
-#< HELP >#
+#< COMMAND >#
 sub help_brief {
     return 'Donwload and import from the DACC';
 }
 
 sub help_detail {
     return help_brief();
+}
+
+sub __display_name__ {
+    return $_[0]->sra_sample_id.' '.$_[0]->format;
+}
+
+sub create {
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_);
+    return if not $self;
+
+    if ( $self->sra_sample_id !~ /^SRS/ ) {
+        $self->error_message('Invalid sra id: '. $self->sra_sample_id);
+        return;
+    }
+
+    return $self;
 }
 #<>#
 
@@ -73,23 +83,17 @@ sub formats_and_info {
             sequencing_platform => 'solexa',
             import_format => 'sanger fastq',
             dacc_location => '/WholeMetagenomic/02-ScreenedReads/ProcessedForAssembly',
-            destination_file => 'archive.tgz',
             kb_to_request => 100_000_000, # 100 GiB
-            instrument_data_needed => 2,
         },
         sff => {
             sequencing_platform => '454',
             dacc_location => '/WholeMetagenomic/02-ScreenedReads/ProcessedForAssembly',
-            destination_file => 'all_sequences.sff',
             kb_to_request => 15_000_000, # 15 GiB 
-            instrument_data_needed => 2,
         },
         bam => {
             sequencing_platform => 'solexa',
             dacc_location => '/WholeMetagenomic/05-Analysis/ReadMappingToReference',
-            destination_file => 'all_sequences.bam',
             kb_to_request => 20_000_000, # 20 GiB
-            instrument_data_needed => 1,
         }
     );
 }
@@ -117,47 +121,10 @@ sub dacc_location {
     return $formats{ $self->format }->{dacc_location};
 }
 
-sub destination_file_name {
-    my $self = shift;
-    my %formats = formats_and_info();
-    return $formats{ $self->format }->{destination_file};
-}
-
-sub destination_file {
-    my $self = shift;
-    return $self->_absolute_path.'/'.$self->destination_file_name;
-}
-
 sub kb_to_request {
     my $self = shift;
     my %formats = formats_and_info();
     return $formats{ $self->format }->{kb_to_request};
-}
-
-sub instrument_data_needed {
-    my $self = shift;
-    my %formats = formats_and_info();
-    return $formats{ $self->format }->{instrument_data_needed};
-}
-
-sub has_instrument_data_been_imported {
-    my $self = shift;
-
-    my $instrument_data = $self->_instrument_data;
-    Carp::confess('No instruemnt data found to check if has been imported') if not $instrument_data;
-
-    my @already_imported;
-    for my $instrument_data ( @$instrument_data ) {
-        my $data_file = $instrument_data->archive_path;
-        next if not -e $data_file;
-        push @already_imported, $instrument_data;
-    }
-
-    return if not @already_imported;
-
-    $self->status_message('It appears that sample ('.$self->sra_sample_id.') '.$self->format.' has already been imported. These instrument data have a data file: '.join(' ', map { $_->id } @already_imported));
-
-    return 1;
 }
 
 sub existing_data_files {
@@ -257,15 +224,17 @@ sub _get_or_create_library {
 sub _get_instrument_data {
     my $self = shift;
 
-    $self->status_message('Get instrument data...');
+    if ( not $self->_library ) {
+        Carp::confess('No library set! Cannot get instrument data w/o it!');
+    }
 
     my @instrument_data = Genome::InstrumentData::Imported->get(
-        sample_name => $self->sra_sample_id,
+        library_id => $self->_library->id,
         import_source_name => 'DACC',
         import_format => $self->import_format,
     );
     return if not @instrument_data;
-    $self->_instrument_data(\@instrument_data);
+    $self->_main_instrument_data($instrument_data[0]);
 
     if ( not $self->_allocation ) { # main allocation for downloading
         my $allocation = $self->_create_instrument_data_allocation(
@@ -275,10 +244,10 @@ sub _get_instrument_data {
         return if not $allocation;
     }
 
-    $self->status_message('Instrument data: '.join(' ', map { $_->id } @{$self->_instrument_data}));
+    $self->status_message('Instrument data: '.join(' ', map { $_->id } @instrument_data));
     $self->status_message('Absolute path: '.$self->_absolute_path );
 
-    return $self->_instrument_data;
+    return @instrument_data;
 }
 
 sub _create_instrument_data {
@@ -286,48 +255,35 @@ sub _create_instrument_data {
 
     Carp::confess('No kb to request when creating instrument data.') if not $params{kilobytes_requested};
 
-    my $instrument_data = $self->_instrument_data;
-    $instrument_data ||= [];
-    my $instrument_data_cnt = scalar @$instrument_data;
-
     $self->status_message('Create instrument data...');
 
-    my $instrument_datum = Genome::InstrumentData::Imported->create(
-        sample_id => $self->_sample->id,
-        sample_name => $self->sra_sample_id,
+    my @instrument_data = $self->_get_instrument_data;
+    my $instrument_data = Genome::InstrumentData::Imported->create(
         library_id => $self->_library->id,
         sra_sample_id => $self->sra_sample_id, 
-        sequencing_platform => 'solexa',
+        sequencing_platform => $self->sequencing_platform,
         import_format => $self->import_format,
         import_source_name => 'DACC',
         original_data_path => 0, 
         description => 'new',
-        subset_name => $instrument_data_cnt + 1,
+        subset_name => scalar(@instrument_data) + 1,
     );
-
-    if ( not $instrument_datum ) {
+    if ( not $instrument_data ) {
         $self->error_message('Cannot create instrument data for sra sample id: '.$self->sra_sample_id);
         return;
     }
-
     if ( not UR::Context->commit ) {
         $self->error_message('Cannot commit instrument data.');
         return;
     }
 
-    push @$instrument_data, $instrument_datum;
-    $self->_instrument_data($instrument_data);
-    
-    $params{instrument_data} = $instrument_datum;
+    $params{instrument_data} = $instrument_data;
     my $allocation = $self->_create_instrument_data_allocation(%params);
     return if not $allocation;
 
-    $self->status_message('Instrument data: '.join(' ', map { $_->id } @{$self->_instrument_data}));
-    $self->status_message('Absolute path: '.$self->_absolute_path );
+    $self->status_message('Create instrument data: '.$instrument_data->id);
 
-    $self->status_message('Create instrument data...OK');
-
-    return $self->_instrument_data;
+    return $instrument_data;
 }
 
 sub _create_instrument_data_allocation {

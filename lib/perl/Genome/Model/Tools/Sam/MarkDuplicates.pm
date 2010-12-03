@@ -27,13 +27,13 @@ class Genome::Model::Tools::Sam::MarkDuplicates {
             is  => 'Integer',
             doc => 'Denoting whether the output file should have duplicates removed.  Default is 1, duplicates will be removed.',
             default_value => 1,
-	    is_optional => 1
+	        is_optional => 1
         },
         max_jvm_heap_size => {
             is  => 'Integer',
             doc => 'The size in gigabytes of the Java Virtual Machine maximum memory allocation.',
             default_value => 2,
-	    is_optional => 1,
+	        is_optional => 1,
         },
         max_permgen_size => {
             is => 'Integer',
@@ -44,8 +44,8 @@ class Genome::Model::Tools::Sam::MarkDuplicates {
         assume_sorted => {
             is  => 'Integer',
             doc => 'Assume the input file is coordinate order sorted.  Default is 1, true.',
-	    default_value => 1,
-	    is_optional => 1,
+	        default_value => 1,
+	        is_optional => 1,
         },
         validation_stringency => {
             is => 'String',
@@ -57,21 +57,26 @@ class Genome::Model::Tools::Sam::MarkDuplicates {
         log_file => {
             is  => 'String',
             doc => 'The stdout of the mark duplicates tool',
-	    is_optional => 1
+	        is_optional => 1
         },
         tmp_dir => {
             is  => 'String',
             doc => 'The temporary working directory.  Provide this if you are marking duplicates on a whole genome bam file.',
-	    is_optional => 1
+	        is_optional => 1
         },
         max_sequences_for_disk_read_ends_map => {
             is => 'Integer',
             doc => 'The maximum number of sequences allowed in SAM file.  If this value is exceeded, the program will not spill to disk (used to avoid situation where there are not enough file handles',
             is_optional => 1,
         },
-        use_picard_version => {
+        dedup_version => {
             is => 'String',
             doc => 'The version of picard to use for deduplication',
+            is_optional => 1,
+        },
+        dedup_params => {
+            is => 'String',
+            doc => 'All parameters of picard to use for deduplication',
             is_optional => 1,
         },
     ],
@@ -109,21 +114,46 @@ sub execute {
     #merge those Bam files...BAM!!!
     my $now = UR::Time->now;
     $self->status_message(">>> Beginning mark duplicates at $now");
-    
-    my $picard_cmd = Genome::Model::Tools::Picard::MarkDuplicates->create(
-        input_file => $self->file_to_mark,
-        output_file => $self->marked_file,
-        metrics_file => $self->metrics_file,
-        remove_duplicates => $self->remove_duplicates,
-        maximum_memory => $self->max_jvm_heap_size,
+
+    my %params = (
+        input_file             => $self->file_to_mark,
+        output_file            => $self->marked_file,
+        metrics_file           => $self->metrics_file,
+        maximum_memory         => $self->max_jvm_heap_size,
         maximum_permgen_memory => $self->max_permgen_size,
-        assume_sorted => $self->assume_sorted,
-        log_file => $self->log_file,
-        temp_directory => $self->tmp_dir,
-        max_sequences_for_disk_read_ends_map => $self->max_sequences_for_disk_read_ends_map,
-        use_version => $self->use_picard_version,
+        log_file               => $self->log_file,
+        temp_directory         => $self->tmp_dir,
+        use_version            => $self->dedup_version,
+
     );
-    
+
+    my %preset_params = (
+        remove_duplicates => $self->remove_duplicates,
+        assume_sorted     => $self->assume_sorted,
+        max_sequences_for_disk_read_ends_map => $self->max_sequences_for_disk_read_ends_map,
+    );
+
+    my $dedup_params = $self->dedup_params;
+    if ($dedup_params) {
+        $dedup_params =~ s/^\s*//;
+        my %given_params = split /\s+|\=/, $dedup_params;
+        for my $given_param (keys %given_params) {
+            for my $preset_param (keys %preset_params) {
+                if (lc($given_param) =~ /$preset_param/) {
+                    $self->warning_message("$given_param is already preset as ".$preset_params{$preset_param}); 
+                    delete $given_params{$given_param};
+                }
+            }
+        }
+        if (%given_params) {
+            my $params = join ",", keys %given_params;
+            $self->error_message("Need implement following parameters to Genome::Model::Tools::Picard::MarkDuplicates: $params");
+            return;
+        }
+    }
+    %params = (%params, %preset_params);
+
+    my $picard_cmd = Genome::Model::Tools::Picard::MarkDuplicates->create(%params);
     my $md_rv = $picard_cmd->execute();
     
     $self->status_message("Mark duplicates return value: $md_rv");

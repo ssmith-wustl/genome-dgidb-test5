@@ -42,19 +42,38 @@ sub doit{
   my ($self,$rReads,$filter)=@_;
   my %hh;
   my $totalcount=0;
+my $p = -1;  
   foreach (@{$rReads}){
+$p ++;  
     my @segments = split/N+/;
+my $pp = -1;    
     foreach my $seg (@segments){
+$pp ++;    
       my $kmers = length($seg)-$self->{k};
+if($kmers eq "AAAAAGAGACAGGACAGATGGACAG"){
+my $ppp = 0;
+}
       next if($kmers<1);
       foreach my $i (0..$kmers){
 	my $w = substr $seg, $i, $self->{k};
+if(defined $filter){
+	my $test = ($filter=~/$w/i);
+	if($test != 0){
+		my $test1 = 0;
+	}
+}
 	next if(defined $filter && $filter=~/$w/i);
 	if($hh{$w}){
 	  $hh{$w} += 1;
 	}else{
 	  my $vw = reverse $w;
 	  $vw =~ tr/ATGC/TACG/;
+if(defined $filter){
+	my $test = ($filter=~/$vw/i);
+	if($test != 0){
+		my $test1 = 0;
+	}	
+}	  
 	  next if(defined $filter && $filter=~/$vw/i);
 	  if($hh{$vw}){
 	    $hh{$vw} += 1;
@@ -71,7 +90,7 @@ sub doit{
     $aa[$i] = 0;
   }
 
-  foreach my $key (keys %hh){
+  foreach my $key (sort keys %hh){
     ($hh{$key} > 1000) ? ($aa[1000]+=1) : ($aa[$hh{$key}]+=1);
     if ( $hh{$key} < $self->{c} or $hh{$key} > $self->{C} ){
       $totalcount-=$hh{$key};
@@ -84,7 +103,7 @@ sub doit{
 sub printMer{
   my ($self,$fout,$hh)=@_;
   open(FOUT,">$fout") || die "unable to open $fout\n";
-  foreach my $key (keys %{$hh}){
+  foreach my $key (sort keys %{$hh}){
     print FOUT "$key\t${$hh}{$key}\n";
   }
   close(FOUT);

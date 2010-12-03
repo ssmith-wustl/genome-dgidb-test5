@@ -18,7 +18,6 @@ my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Somatic-Fi
 
 my $bam_file = join('/', $test_data_dir, 'tumor.tiny.bam');
 my $variant_file = join('/', $test_data_dir, 'varscan.snp.test');
-my $premade_readcount_file = join('/', $test_data_dir, 'varscan.snp.strandfilter.readcounts'); #for second test
 
 my $expected_result_dir = join('/', $test_data_dir, '1');
 my $expected_output_file = join('/', $expected_result_dir, 'varscan.snp.Somatic.strandfilter');

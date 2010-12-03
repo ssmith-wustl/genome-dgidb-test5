@@ -38,14 +38,59 @@ class Genome::Model::Build::ImportedAnnotation {
             calculate_from => ['model_name','version'],
             calculate => q{ return "$model_name/$version"; },
         },
+        reference_sequence_id => {
+            is => 'Text',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'reference_sequence', value_class_name => 'Genome::Model::Build::ImportedReferenceSequence' ],
+            is_many => 0,
+            is_optional => 1, # TODO: make this non-optional when all data is updated
+            is_mutable => 1,
+            doc => 'id of the reference sequence build associated with this annotation model',
+        },
+        reference_sequence => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            id_by => 'reference_sequence_id',
+        },
     ],
 };
+
+sub _select_build_from_model_input { undef; }
+
+sub __errors__ {
+    my $self = shift;
+    my @tags = $self->SUPER::__errors__();
+
+    # TODO: when having the reference_sequence parameter becomes mandatory, change all of this
+    # to just generate an error if it is not defined or doesn't match the model instead.
+    if (!defined $self->reference_sequence) {
+        push @tags, UR::Object::Tag->create(
+            type => 'warning',
+            properties => ['reference_sequence'],
+            desc => "ImportedAnnotation has no reference_sequence, this will soon be an error",
+        );
+    } elsif (defined $self->model->reference_sequence and $self->model->reference_sequence->id != $self->reference_sequence->model->id) {
+        push @tags, UR::Object::Tag->create(
+            type => 'error',
+            properties => ['reference_sequence'],
+            desc => "reference_sequence " . $self->reference_sequence->__display_name__ . " is not a build of model " .
+                $self->model->reference_sequence->__display_name__ . " as expected."
+        );
+    }
+
+
+    return @tags;
+}
+
 
 # Checks to see if this build is compatible with the given imported reference sequence build (species and version match)
 sub is_compatible_with_reference_sequence_build {
     # rsb: reference sequence build
     my ($self, $rsb) = @_;
     return if !defined $self->status || $self->status ne "Succeeded";
+
+    return $rsb->id == $self->reference_sequence_id if defined $self->reference_sequence_id;
+
     my $version = $self->version;
     $version =~ s/^[^_]*_([0-9]+).*/$1/;
     return ($rsb->model->subject->species_name eq $self->model->subject->species_name) &&

@@ -26,11 +26,17 @@ class Genome::Model::ReferenceAlignment {
     has => [
         align_dist_threshold         => { via => 'processing_profile'},
         dna_type                     => { via => 'processing_profile'},
-        merge_software               => { via => 'processing_profile'},
-        rmdup_name                   => { via => 'processing_profile'},
-        rmdup_version                => { via => 'processing_profile'},
+        merge_software               => { via => 'processing_profile'}, #deprecated
+        rmdup_name                   => { via => 'processing_profile'}, #deprecated
+        rmdup_version                => { via => 'processing_profile'}, #deprecated
         picard_version               => { via => 'processing_profile'},
         samtools_version             => { via => 'processing_profile'},
+        merger_name                  => { via => 'processing_profile'},
+        merger_version               => { via => 'processing_profile'},
+        merger_params                => { via => 'processing_profile'},
+        duplication_handler_name     => { via => 'processing_profile'},
+        duplication_handler_version  => { via => 'processing_profile'},
+        duplication_handler_params   => { via => 'processing_profile'},
         snv_detector_name            => { via => 'processing_profile'},
         snv_detector_version         => { via => 'processing_profile'},
         snv_detector_params          => { via => 'processing_profile'},

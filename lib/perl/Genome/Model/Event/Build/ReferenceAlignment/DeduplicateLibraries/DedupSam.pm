@@ -21,14 +21,26 @@ class Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries::Ded
         is => 'String',
         doc => 'Hash of library names and related alignment files.' 
     },
-    rmdup_version => {
-                        is => 'Text',
-                        doc => 'The version of rmdup tools (samtools) used',
-                    },
-    merge_software => {
+    dedup_version => {
+        is => 'Text',
+        doc => 'The version of rmdup tools (samtools) used',
+    },
+    dedup_params  => {
+        is => 'Text',
+        doc => 'The version of rmdup tools (samtools) used',
+    },
+    merger_name => {
         is => 'Text',
         doc => 'The software used for merging BAM files',
         valid_values => ['picard','samtools'],
+    },
+    merger_version => {
+        is => 'Text',
+        doc => 'The merge software version used for merging BAM files',
+    },
+    merger_params => {
+        is => 'Text',
+        doc => 'The software parameters used for merging BAM files',
     },
     ],
     has_param => [
@@ -36,7 +48,6 @@ class Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries::Ded
             default_value => 'select[model!=Opteron250 && type==LINUX64] rusage[mem=2000]',
         }
     ],
-
 
     has_output => [
     output_file => { 
@@ -51,17 +62,16 @@ class Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries::Ded
 };
 
 sub execute {
-    my $self=shift;
-
-    my $pid = getppid(); 
+    my $self = shift;
+    my $pid  = getppid(); 
     
     #Use Path::Class::Dir to correctly handle relative path when accumulated_alignments_dir is a symlink
     my $log_dir = Path::Class::Dir->new($self->accumulated_alignments_dir)->parent->subdir('logs')->stringify;;
     unless (-e $log_dir ) {
-	unless( Genome::Utility::FileSystem->create_directory($log_dir) ) {
+	    unless( Genome::Utility::FileSystem->create_directory($log_dir) ) {
             $self->error_message("Failed to create log directory for dedup process: $log_dir");
             return;
-	}
+        }
     }
  
     my $log_file = $log_dir.'/parallel_sam_rmdup_'.$pid.'.log';
@@ -74,16 +84,16 @@ sub execute {
     my $now = UR::Time->now;
     print $log_fh "Executing DedupSam.pm at $now"."\n";
 
-       
- 
     my @list;
     if ( ref($self->library_alignments) ne 'ARRAY' ) {
         push @list, $self->library_alignments; 		
-    } else {
+    } 
+    else {
         @list = @{$self->library_alignments};   	#the parallelized code will only receive a list of one item. 
     }
 
     print $log_fh "Input library list length: ".scalar(@list)."\n";
+
     for my $list_item ( @list  ) {
         my %hash = %{$list_item };    		#there will only be one name-value-pair in the hash: $library name -> @list of alignment file paths (maps)
         for my $library ( keys %hash ) {
@@ -98,21 +108,24 @@ sub execute {
             print $log_fh "\n";
             
             my $merged_file =  $self->accumulated_alignments_dir."/".$library.".bam";
-	    # db disconnect prior to sam merge
-	    Genome::DataSource::GMSchema->disconnect_default_dbh; 
+	        # db disconnect prior to sam merge
+	        Genome::DataSource::GMSchema->disconnect_default_dbh; 
             if (-e $merged_file) {
                 print $log_fh "A merged library file already exists at: $merged_file \n";
                 print $log_fh "Please remove this file if you wish to regenerate. Skipping to rmdup phase.\n";
                 $now = UR::Time->now;
                 print $log_fh "<<< Skipped bam merge at $now for library: $library ."."\n";
-            } else {
-		Genome::DataSource::GMSchema->disconnect_default_dbh; 
+            } 
+            else {
+		        Genome::DataSource::GMSchema->disconnect_default_dbh; 
                 my $merge_rv = Genome::Model::Tools::Sam::Merge->execute(
                     files_to_merge => \@library_maps,
                     merged_file => $merged_file,
                     is_sorted => 1,
-                    software => $self->merge_software,
-                    use_version => $self->rmdup_version,
+                    merger_name => $self->merger_name,
+                    merger_version => $self->merger_version,
+                    merger_params =>  $self->merger_params,
+                    use_version => $self->dedup_version,
                 ); 
 
                 unless ($merge_rv) {
@@ -123,9 +136,7 @@ sub execute {
                 
                 $now = UR::Time->now;
                 print $log_fh "<<< Completed bam merge at $now for library: $library ."."\n";
-                
             } 
-            
             print $log_fh ">>> Starting rmdup at $now  for library: $library ."."\n";
      
             #bail if the final file already exists
@@ -141,8 +152,11 @@ sub execute {
       
             #my $rmdup_file =  $self->accumulated_alignments_dir."/".$library."_merged_rmdup.bam";
             #my $rmdup_tool = "/gscuser/dlarson/src/samtools/tags/samtools-0.1.2/samtools rmdup";
-            my $rmdup_tool = Genome::Model::Tools::Sam->path_for_samtools_version($self->rmdup_version);
+            my $rmdup_tool = Genome::Model::Tools::Sam->path_for_samtools_version($self->dedup_version);
             $rmdup_tool .= ' rmdup';
+            my $rmdup_params = $self->dedup_params;
+            $rmdup_tool .= " $rmdup_params" if $rmdup_params;
+
             my $report_file = $log_dir."/".$pid."_".$library."_rmdup.out";
             my $rmdup_cmd = $rmdup_tool . " " . $merged_file . " " . $rmdup_file . " > $report_file 2>&1";
             print $log_fh "Rmduping with cmd: $rmdup_cmd";
@@ -165,8 +179,6 @@ sub execute {
    $log_fh->close;
    return 1;
 } #end execute
-
-
 
 
 1;

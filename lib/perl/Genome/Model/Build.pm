@@ -312,19 +312,30 @@ sub _validate_model_id {
     return 1;
 }
 
+sub _select_build_from_input_model {
+    my ($self, $model) = @_;
+    return $model->last_complete_build;
+}
+
 sub _copy_model_inputs {
     my $self = shift;
 
     for my $input ( $self->model->inputs ) {
         my %params = map { $_ => $input->$_ } (qw/ name value_class_name value_id /);
 
+        # We need to turn model inputs into builds.
         if($params{value_class_name}->isa('Genome::Model')) {
-            #We want to add the most recent build as an input of the build instead of the model itself.
+            # Next if we already have a build defined (e.g., by create params).
+            my $input_name = $input->name;
+            next if defined $self->$input_name and $self->$input_name->isa('Genome::Model::Build');
+
             my $input_model = $input->value;
-            my $input_build = $input_model->last_complete_build;
+            my $input_build = $self->_select_build_from_input_model($input_model);
 
             unless($input_build) {
-                $self->error_message('Model used as input ' . $input_model->__display_name__ . ' has no succeeded builds.  Cannot create build input.');
+                $self->error_message('Failed to select a build to copy for input model ' . 
+                    $input->name . '=' . $input_model->__display_name__ . 
+                    '. Try specifying one.');
                 return;
             }
 

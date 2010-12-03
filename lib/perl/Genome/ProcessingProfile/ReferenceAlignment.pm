@@ -69,7 +69,8 @@ class Genome::ProcessingProfile::ReferenceAlignment {
         },
         picard_max_sequences_for_disk_read_ends_map => {
             doc => 'picard paremeter for MarkDuplicates',
-            is_optional => 1,
+            is_optional   => 1,
+            is_deprecated => 1,
         },
         samtools_version => {
             doc => 'samtools version for SamToBam, samtools merge, etc...',
@@ -77,15 +78,18 @@ class Genome::ProcessingProfile::ReferenceAlignment {
         },
         rmdup_name => {
             doc => 'rmdup tool used for this model ... deprecated',
-            is_optional => 1,
+            is_optional   => 1,
+            is_deprecated => 1,
         },
         rmdup_version => {
             doc => 'rmdup tool version used for this model ... deprecated',
-            is_optional => 1,
+            is_optional   => 1,
+            is_deprecated => 1,
         },
         merge_software => {
             doc => 'picard or samtools for merging ... deprecated',
-            is_optional => 1,
+            is_optional   => 1,
+            is_deprecated => 1,
         },
         merger_name => {
             doc => 'name of bam merger, picard, samtools',
@@ -430,7 +434,7 @@ sub deduplication_job_classes {
         'Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries',
         'Genome::Model::Event::Build::ReferenceAlignment::PostDedupReallocate',
     );
-    if(defined $self->rmdup_name) {
+    if(defined $self->duplication_handler_name) {
         return @steps;
     }
     else {
@@ -453,7 +457,7 @@ sub generate_reports_job_classes {
     my @steps = (
         'Genome::Model::Event::Build::ReferenceAlignment::RunReports'
     );
-    if((defined $self->snv_detector_name || defined $self->indel_detector_name) && defined $self->rmdup_name) {
+    if((defined $self->snv_detector_name || defined $self->indel_detector_name) && defined $self->duplication_handler_name) {
         return @steps;
     }
     else {
