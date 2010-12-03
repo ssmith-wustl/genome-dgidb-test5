@@ -16,6 +16,10 @@ my %properties = (
         is => 'Text',
         doc => 'TCGA name for imported file',
     },
+    target_region => {
+        is => 'Text',
+        doc => 'Provide \'whole genome\' or target region set name',
+    },
     remove_original_bam => {
         is => 'Boolean',
         doc => 'By uncluding this in your command, the tool will remove (delete!) the original bam file after importation, without warning.',
@@ -246,6 +250,16 @@ sub _create_imported_instrument_data {
 
     $self->status_message('Create imported instrument data...');
 
+    my $target_region;
+    unless ($self->target_region eq 'whole genome') {
+        if ($self->validate_target_region) {
+            $target_region = $self->target_region;
+        } else {
+            $self->error_message("Invalid target region " . $self->target_region);
+            die $self->error_message;
+        }
+    }
+
     my $tcga_name = $self->tcga_name;
     my $organism_sample = GSC::Organism::Sample->get(sample_name => $tcga_name);
 
@@ -291,14 +305,15 @@ sub _create_imported_instrument_data {
         next if $property_name =~ /^library$/;
         next if $property_name =~ /tcga/;
         next if $property_name =~ /^create_sample$/;
+        next if $property_name =~ /target_region/;
+        next if $property_name =~ /sample/;
         $params{$property_name} = $self->$property_name if $self->$property_name;
     }
-    $params{sample_id} = $sample->id;
-    $params{sample_name} = $sample->name;
     $params{sequencing_platform} = "solexa";
     $params{import_format} = "bam";
     $params{reference_sequence_build_id} = $self->reference_sequence_build_id;
     $params{library_id} = $library->id;
+    $params{target_region_set_name} = $target_region;
     unless(exists($params{description})){
         $params{description} = "imported ".$self->import_source_name." bam, tcga name is ".$tcga_name;
     }

@@ -57,7 +57,7 @@ sub _initialize_model {
 }
 
 sub _initialize_build {
-    # my ($self,$model) = @_;
+    # my ($self,$build) = @_;
     # override in sub-classes to get custom mods to the build
     return 1;
 }

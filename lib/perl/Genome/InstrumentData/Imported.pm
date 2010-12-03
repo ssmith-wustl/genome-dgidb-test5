@@ -22,11 +22,9 @@ class Genome::InstrumentData::Imported {
     has => [
         import_date          => { is => 'DATE', len => 19 },
         user_name            => { is => 'VARCHAR2', len => 256 },
-        sample_id            => { is => 'NUMBER', len => 20 },
         original_data_path   => { is => 'VARCHAR2', len => 1000 },
         import_format        => { is => 'VARCHAR2', len => 64 },
         sequencing_platform  => { is => 'VARCHAR2', len => 64 },
-        sample_name          => { is => 'VARCHAR2', len => 64, is_optional => 1 },
         import_source_name   => { is => 'VARCHAR2', len => 64, is_optional => 1 },
         description          => { is => 'VARCHAR2', len => 512, is_optional => 1 },
         read_count           => { is => 'NUMBER', len => 20, is_optional => 1 },
@@ -41,7 +39,10 @@ class Genome::InstrumentData::Imported {
         run_name             => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         sd_above_insert_size => { is => 'NUMBER', len => 20, is_optional => 1 },
         subset_name          => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        library_id           => { is => 'NUMBER', len => 20, is_optional => 1 },
+        target_region_set_name => { is => 'VARCHAR2', len => 64, is_optional => 1 },
+        library_id           => { is => 'NUMBER', len => 20, is_optional => 0 },
+        _old_sample_name      => { is => 'NUMBER', len => 20, is_optional => 1, column_name=>'SAMPLE_NAME' },
+        _old_sample_id        => { is => 'NUMBER', len => 20, is_optional => 1, column_name=>'SAMPLE_ID' },
     ],
     has_optional =>[
         reference_sequence_build_id => { 
@@ -86,13 +87,6 @@ sub __display_name__ {
         join(' ', map { $self->$_ } qw/sequencing_platform import_format id/)
         . ($self->desc ? ' (' . $self->desc . ')' : '')
     );
-}
-
-# Other InstrumentData types define an optional UR field target_region_set_name.
-# target_region_set_name is likely undefined for imported data, so this sub will resolve issues
-# with queries that include Imported.
-sub target_region_set_name {
-    return ;
 }
 
 sub data_directory {
@@ -160,6 +154,8 @@ sub create {
     $params{user_name}   = $user; 
 
     my $self = $class->SUPER::create(%params);
+
+    $self->_old_sample_id($self->sample_id);
 
     return $self;
 }
@@ -367,16 +363,32 @@ sub run_identifier {
  return $self->id;
 }
 
-# okay for first test, before committing switch to getting the allocation and returning the path under it
+sub _archive_file_name { # private for now...can be public
+    my $self = shift;
+
+    my $format = $self->import_format;
+    if ( $format =~ /fastq/ ){
+        return 'archive.tgz';
+    }
+    elsif ( $format eq 'bam' ){
+        return 'all_sequences.bam';
+    }
+    elsif ( $format eq 'sff' ){
+        return 'all_sequences.sff';
+    }
+    else {
+        Carp::confess("Unknown import format: $format");
+    }
+}
+
 sub archive_path {
     my $self = shift;
+
     my $alloc = $self->disk_allocations;
-    return $self->disk_allocations->absolute_path . "/archive.tgz";
-    if($alloc){
-        die "found an alloc!\n";
-    }
-    $self->status_message("Genome::InstrumentData::Imported  alloc->absolute_path = " . $alloc->absolute_path . "\n");
-    return  $alloc->absolute_path."/archive.tgz";
+    return if not $alloc;
+
+    my $file_name = $self->_archive_file_name;
+    return $alloc->absolute_path.'/'.$file_name;
 }
 
 1;

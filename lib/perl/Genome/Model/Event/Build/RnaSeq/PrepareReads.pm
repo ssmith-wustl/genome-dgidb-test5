@@ -30,8 +30,26 @@ sub execute {
     unless (-d $fastq_directory) {
         Genome::Utility::FileSystem->create_directory($fastq_directory);
     }
-    my $instrument_data = Genome::InstrumentData::Solexa->get($self->instrument_data_id);
-    unless ($self->instrument_data->dump_illumina_fastq_archive($fastq_directory)) {
+    my $instrument_data = Genome::InstrumentData->get($self->instrument_data_id);
+
+    my $quality_format;
+    my $dump_fastq_method;
+    my $quality_converter = $instrument_data->resolve_quality_converter;
+    if($quality_converter eq 'sol2phred') {
+        $quality_format = 'Illumina';
+        $dump_fastq_method = 'dump_illumina_fastq_files';
+    } elsif ($quality_converter eq 'sol2sanger') {
+        $quality_format = 'Solexa';
+        $dump_fastq_method = 'dump_solexa_fastq_files';
+    } elsif ($quality_converter eq 'none') {
+        $quality_format = 'Standard';
+        $dump_fastq_method = 'dump_sanger_fastq_files';
+    } else {
+        $self->error_message('Unknown or unsupported quality converter ' . $quality_converter . ' encountered.');
+        return;
+    }
+
+    unless ($self->instrument_data->$dump_fastq_method(directory => $fastq_directory)) {
         $self->error_message('Failed to dump fastq file for '. $self->instrument_data_id .' to directory '. $fastq_directory);
         return;
     }
@@ -44,7 +62,7 @@ sub execute {
         fastq => $self->fastq_directory .'/'. $instrument_data->read1_fastq_name,
         fastq2 => $self->fastq_directory .'/'. $instrument_data->read2_fastq_name,
         output => $self->fastq_directory .'/s_'. $instrument_data->subset_name .'_sequence.bam',
-        quality_format => 'Illumina',
+        quality_format => $quality_format,
         sample_name => $instrument_data->sample_name,
         library_name => $instrument_data->library_name,
         log_file => $self->fastq_directory .'/s_'. $instrument_data->subset_name .'_sequence.log',

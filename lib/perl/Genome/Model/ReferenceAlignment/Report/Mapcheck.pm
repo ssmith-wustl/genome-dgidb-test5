@@ -51,7 +51,7 @@ sub generate_report_brief {
 
 sub generate_report_detail {
     my $self       = shift;
-    my $dedup_name = $self->model->rmdup_name;
+    my $dedup_name = $self->model->duplication_handler_name;
 
     if ($dedup_name eq 'maq') { 
         return $self->get_maq_content;

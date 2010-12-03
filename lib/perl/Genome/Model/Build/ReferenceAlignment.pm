@@ -846,46 +846,63 @@ sub alignment_summary_hash_ref {
         my $wingspan_array_ref = $self->wingspan_values_array_ref;
         my %alignment_summary;
         for my $wingspan( @{$wingspan_array_ref}) {
-            my $as_file = $self->alignment_summary_file($wingspan);
-            my $reader = Genome::Utility::IO::SeparatedValueReader->create(
-                separator => "\t",
-                input => $as_file,
+            my $alignment_key_basename = 'wingspan_'. $wingspan;
+            my $coverage_key_regex = $alignment_key_basename .'_\d+';
+            my @metrics = grep { $_->name !~ /^$coverage_key_regex/ } Genome::Model::Metric->get(
+                build_id => $self->build_id,
+                name => { operator => 'like', value => $alignment_key_basename .'%' },
             );
-            unless ($reader) {
-                $self->error_message('Can not create SeparatedValueReader for input file '. $as_file);
-                return;
-            }
-            my $data = $reader->next;
-            $reader->input->close;
-            
-            # Calculate percentages
-            
-            # percent aligned
-            $data->{percent_aligned} = sprintf("%.02f",(($data->{total_aligned_bp} / $data->{total_bp}) * 100));
-            
-            # duplication rate
-            $data->{percent_duplicates} = sprintf("%.03f",(($data->{total_duplicate_bp} / $data->{total_aligned_bp}) * 100));
-            
-            # on-target alignment
-            $data->{percent_target_aligned} = sprintf("%.02f",(($data->{total_target_aligned_bp} / $data->{total_aligned_bp}) * 100));
-            
-            # on-target duplicates
-            if ($data->{total_target_aligned_bp}) {
-                $data->{percent_target_duplicates} = sprintf("%.02f",(($data->{duplicate_target_aligned_bp} / $data->{total_target_aligned_bp}) * 100));
+            my $data;
+            if (@metrics) {
+                for my $metric (@metrics) {
+                    my $metric_name = $metric->name;
+                    my $alignment_key_regex = $alignment_key_basename .'_(\S+)';
+                    unless ($metric_name =~ /^$alignment_key_regex/) {
+                        die('Failed to parse alignment metric name '. $metric_name);
+                    }
+                    my $key = $1;
+                    $data->{$key} = $metric->value;
+                }
             } else {
-                $data->{percent_target_duplicates} = 0;
+                my $as_file = $self->alignment_summary_file($wingspan);
+                my $reader = Genome::Utility::IO::SeparatedValueReader->create(
+                    separator => "\t",
+                    input => $as_file,
+                );
+                unless ($reader) {
+                    $self->error_message('Can not create SeparatedValueReader for input file '. $as_file);
+                    die($self->error_message);
+                }
+                $data = $reader->next;
+                $reader->input->close;
+                # Calculate percentages
+
+                # percent aligned
+                $data->{percent_aligned} = sprintf("%.02f",(($data->{total_aligned_bp} / $data->{total_bp}) * 100));
+
+                # duplication rate
+                $data->{percent_duplicates} = sprintf("%.03f",(($data->{total_duplicate_bp} / $data->{total_aligned_bp}) * 100));
+
+                # on-target alignment
+                $data->{percent_target_aligned} = sprintf("%.02f",(($data->{total_target_aligned_bp} / $data->{total_aligned_bp}) * 100));
+
+                # on-target duplicates
+                if ($data->{total_target_aligned_bp}) {
+                    $data->{percent_target_duplicates} = sprintf("%.02f",(($data->{duplicate_target_aligned_bp} / $data->{total_target_aligned_bp}) * 100));
+                } else {
+                    $data->{percent_target_duplicates} = 0;
+                }
+                # off-target alignment
+                $data->{percent_off_target_aligned} = sprintf("%.02f",(($data->{total_off_target_aligned_bp} / $data->{total_aligned_bp}) * 100));
+
+                # off-target duplicates
+                $data->{percent_off_target_duplicates} = sprintf("%.02f",(($data->{duplicate_off_target_aligned_bp} / $data->{total_off_target_aligned_bp}) * 100));
+
+                for my $key (keys %$data) {
+                    my $metric_key = join('_', 'wingspan', $wingspan, $key);
+                    $self->set_metric($metric_key, $data->{$key});
+                }
             }
-            # off-target alignment
-            $data->{percent_off_target_aligned} = sprintf("%.02f",(($data->{total_off_target_aligned_bp} / $data->{total_aligned_bp}) * 100));
-            
-            # off-target duplicates
-            $data->{percent_off_target_duplicates} = sprintf("%.02f",(($data->{duplicate_off_target_aligned_bp} / $data->{total_off_target_aligned_bp}) * 100));
-            
-            for my $key (keys %$data) {
-                my $metric_key = join('_', 'wingspan', $wingspan, $key);
-                $self->set_metric($metric_key, $data->{$key});
-            }
-            
             $alignment_summary{$wingspan} = $data;
         }
         $self->{_alignment_summary_hash_ref} = \%alignment_summary;
@@ -951,9 +968,11 @@ sub coverage_stats_summary_file {
     unless (defined($wingspan)) {
         die('Must provide wingspan_value to method coverage_stats_file in '. __PACKAGE__);
     }
-    my @stats_files = glob($self->coverage_stats_directory_path($wingspan) .'/*STATS.txt');
+    my $glob_string = $self->coverage_stats_directory_path($wingspan) .'/*STATS.txt';
+    my @stats_files = glob($glob_string);
     unless (@stats_files) {
-        return;
+        $self->error_message('Failed to find coverage stats summary file like '. $glob_string);
+        die($self->error_message);
     }
     unless (scalar(@stats_files) == 1) {
         die("Found multiple stats summary files:\n". join("\n",@stats_files));
@@ -968,25 +987,47 @@ sub coverage_stats_summary_hash_ref {
         my $min_depth_array_ref = $self->minimum_depths_array_ref;
         my $wingspan_array_ref = $self->wingspan_values_array_ref;
         for my $wingspan (@{$wingspan_array_ref}) {
-            my $stats_summary = $self->coverage_stats_summary_file($wingspan);
-            my $reader = Genome::Utility::IO::SeparatedValueReader->create(
-                separator => "\t",
-                input => $stats_summary,
+            my $key_basename = 'wingspan_'. $wingspan;
+            my $min_depth_key_regex = $key_basename .'_(\d+)';
+            my @metrics = grep { $_->name =~ /^$min_depth_key_regex/ } Genome::Model::Metric->get(
+                build_id => $self->build_id,
+                name => { operator => 'like', value => $key_basename .'%' },
             );
-            unless ($reader) {
-                $self->error_message('Can not create SeparatedValueReader for file '. $stats_summary);
-                die $self->error_message;
-            }
-            while (my $data = $reader->next) {
-                $stats_summary{$wingspan}{$data->{minimum_depth}} = $data;
-                
-                # record stats as build metrics
-                for my $key (keys %$data) {
-                    my $metric_key = join('_', 'wingspan', $wingspan, $data->{'minimum_depth'}, $key);
-                    $self->set_metric($metric_key, $data->{$key});
+            if (@metrics) {
+                for my $metric (@metrics) {
+                    my $metric_name = $metric->name;
+                    my $coverage_key_regex = $min_depth_key_regex .'_(\S+)';
+                    unless ($metric_name =~ /^$coverage_key_regex/) {
+                        die('Failed to parse alignment metric name '. $metric_name);
+                    }
+                    my $min_depth = $1;
+                    my $key = $2;
+                    $stats_summary{$wingspan}{$min_depth}->{$key} = $metric->value;
                 }
+            } else {
+                my $stats_summary = $self->coverage_stats_summary_file($wingspan);
+                unless ($stats_summary) {
+                    $self->error_message('Failed to find coverage stats summary file for wingspan '. $wingspan);
+                    die($self->error_message);
+                }
+                my $reader = Genome::Utility::IO::SeparatedValueReader->create(
+                    separator => "\t",
+                    input => $stats_summary,
+                );
+                unless ($reader) {
+                    $self->error_message('Can not create SeparatedValueReader for file '. $stats_summary);
+                    die $self->error_message;
+                }
+                while (my $data = $reader->next) {
+                    $stats_summary{$wingspan}{$data->{minimum_depth}} = $data;
+                    # record stats as build metrics
+                    for my $key (keys %$data) {
+                        my $metric_key = join('_', 'wingspan', $wingspan, $data->{'minimum_depth'}, $key);
+                        $self->set_metric($metric_key, $data->{$key});
+                    }
+                }
+                $reader->input->close;
             }
-            $reader->input->close;
         }
         $self->{_coverage_stats_summary_hash_ref} = \%stats_summary;
     }

@@ -97,12 +97,19 @@ sub execute {
         }
         $dfh->close;
     }
-    my $chr = 1;
+    #my $chr = 1;
     #print "CHR\tSTART\tSTOP\tREF\tVAR\tINDEL_SUPPORT\tREFERENCE_SUPPORT\t%+STRAND\tDBSNP_ID\n";
-    #my @chromosomes = qw| 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 X Y|;
-    #for my $chr (@chromosomes){
+    my @chromosomes = qw| 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 X Y|;
+    for my $chr (@chromosomes){
         $self->process_file($chr);
+    }
+
+}
+    #for my $size (sort {$a <=> $b} (keys(%{$tumor_support_hist{'D'}}))){
+    #    
     #}
+
+=cut
     print "Histogram of event size for Deletions\n";
     $self->display_histogram($size_type_hist{"D"});
     print "\n\n";
@@ -135,6 +142,8 @@ sub execute {
     print "\n\n";
     print "Histogram of read support in tumor for both INS/DEL\n";
     $self->display_histogram(\%hgram);
+    $self->bin_hash(\%hgram,(4,9));
+    return 1;
 
     print "\n\n";
     print "Histogram of reads supporting reference for Deletions\n";
@@ -161,7 +170,6 @@ sub execute {
     
 }
 
-=cut
     
     print "Histogram of event sizes for all events\n";
     print "size\toccurence\n";
@@ -200,6 +208,37 @@ sub display_histogram {
     print "============================\n";
     print "Total events: ".$total."\n";
     return $total;
+}
+
+sub bin_hash {
+    my $self = shift;
+    my $hash = shift;
+    my %hash = %{$hash};
+    my @bins = @_;
+    for my $b (@bins){
+        print "bin size = ".$b."\n";
+    }
+    my %bins;
+    for my $val (sort {$a <=> $b} (keys(%hash))){
+        if($val>$bins[-1]){
+            $bins{$bins[-1]+1}+=$hash{$val};
+        }else{
+            for my $index(0..scalar(@bins)){
+                if($val < $bins[$index]){
+                    #if($index==1){
+                    #    $bins{0}+=$hash{$val};
+                    #    last;
+                    #}else{
+                        $bins{$bins[$index]}+=$hash{$val};
+                        last;
+                   # }
+                }
+            }
+        }
+    }
+    print "Bins\n";
+    $self->display_histogram(\%bins); 
+    return \%bins;
 }
 
 sub process_file {
@@ -328,7 +367,8 @@ sub process_file {
                     my $reads = $pos_strand + $neg_strand;
                     my ($type,$size) = split /\//, $type_and_size;
                     #print "checking on ".$chrom."\t".$pos."\t".$type_and_size."\n";
-                    $tumor_support_hist{$type}{$reads}++;
+                    #$tumor_support_hist{$type}{'reads'}{$reads}++;
+                    $tumor_support_hist{$type}{$size}{$reads}++;
                     $size_type_hist{$type}{$size}++;
                     
                     #my @stop = keys(%{$positions{$chrom}{$pos}});
@@ -337,6 +377,11 @@ sub process_file {
                     #    die "too many stop positions at ".$chrom." ".$pos."\n";
                     #}
                     my $stop = ($type eq 'I') ? $pos+2 : $pos + $size;
+=cut
+                    if($size > 100){
+                        next;
+                    }
+
                     my @results = `samtools view $tumor_bam $chrom:$pos-$stop | grep -v "XT:A:M"`;
                     my $read_support=0;
                     for my $result (@results){
@@ -362,6 +407,7 @@ sub process_file {
                     #my $dbsnp_id = $self->dbsnp_lookup($events{$chrom}{$pos}{$type_and_size}{'bed'});
                     #my $output = $events{$chrom}{$pos}{$type_and_size}{'bed'}."\t".$reads."\t".$read_support."\t".$pos_percent."\t$dbsnp_id\n";
                     #print $output;
+=cut
                 }
             }
         }
@@ -486,4 +532,3 @@ sub parse {
     }
     return ($chr,$start,$stop,$ref,$var);
 }
-

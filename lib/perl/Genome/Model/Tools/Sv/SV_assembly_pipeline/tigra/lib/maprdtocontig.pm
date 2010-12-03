@@ -344,7 +344,7 @@ sub printmapping {
     my ($self,$myfile)=@_;
     open(MYF,">$myfile");
     #print STDERR "Print reads mapping to file $myfile .. \n";
-    for my $k (keys %Interest2) {
+    for my $k (sort {$a <=> $b} keys %Interest2) {
         my %a;
 	my @temp=@{$Interest2{$k}};
 	print MYF "BC\t$k\t@temp\n";   #Big Contig
@@ -478,7 +478,7 @@ sub dump_contigs2_m {
       my %a=&nextcontigs_warc($contig);
       my $i="";
       my $o="";
-      foreach my $con (keys %a) {
+      foreach my $con (sort keys %a) {
 	my $tmp=&realcontig2($Contigtags[abs $con]*$con/(abs $con));
 	my $conhead=($con>0)?(substr $Contigs[$con],0, $K):(&revcom(substr $Contigs[-$con],$Contiglens[-$con]-$K,$K));
 	my $tmphead=($tmp>0)?(substr $Contigs2[$tmp],0, $K):(&revcom(substr $Contigs2[-$tmp],$Contiglens2[-$tmp]-$K,$K));
@@ -490,7 +490,7 @@ sub dump_contigs2_m {
       ($truenode,$dir)=&true($node);
       $contig=$HH{$truenode}{tag}*$dir;
       %a=&nextcontigs_warc($contig);
-      foreach my $con (keys %a) {
+      foreach my $con (sort keys %a) {
 	my $tmp=&realcontig2($Contigtags[abs $con]*$con/(abs $con));
 	my $conhead=($con>0)?(substr $Contigs[$con],0, $K):(&revcom(substr $Contigs[-$con],$Contiglens[-$con]-$K,$K));
 	my $tmphead=($tmp>0)?(substr $Contigs2[$tmp],0, $K):(&revcom(substr $Contigs2[-$tmp],$Contiglens2[-$tmp]-$K,$K));

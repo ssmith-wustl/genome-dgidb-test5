@@ -29,6 +29,7 @@ sub members {
     my $self = shift;
 
     my $set = $self->subject;
+
     my @members = $set->members;
 
     return @members;
@@ -37,6 +38,13 @@ sub members {
 sub _generate_content {
     my $self = shift;
     my $subject = $self->subject();
+
+    #preload data for efficiency
+    my @members = $self->members;
+    my @model_ids = map($_->id, @members);
+    my @idas = Genome::Model::InstrumentDataAssignment->get(model_id => \@model_ids);
+    my @builds = Genome::Model::Build->get(model_id => \@model_ids);
+    my @events = Genome::Model::Event->get(build_id => [map($_->id, @builds)]);
 
     my $xml_doc = XML::LibXML->createDocument();
     $self->_xml_doc($xml_doc);
@@ -61,6 +69,7 @@ sub _generate_content {
     } else {
         $name = $subject->id;
     }
+
     $object->addChild( $xml_doc->createAttribute('display_name',$name) );
     $object->addChild( $xml_doc->createAttribute('type', $subject->class));
     $object->addChild( $self->get_enrichment_factor_node() );
@@ -91,7 +100,7 @@ sub get_enrichment_factor_node {
     my $self = shift;
     my $xml_doc = $self->_xml_doc;
     my @models = $self->members;
-    $DB::single = 1;
+
     my @included_models;
     my $ef_node = $xml_doc->createElement('enrichment-factor');
     for my $model (@models) {
@@ -104,7 +113,7 @@ sub get_enrichment_factor_node {
             $model_node->addChild( $xml_doc->createAttribute('subject_name', $model->subject_name) );
             $model_node->addChild( $xml_doc->createAttribute('model_name',$model->name));
 
-            my @idata = $model->instrument_data;
+            my @idata = $model->instrument_data_assignments;
 
             $model_node->addChild( $xml_doc->createAttribute('lane_count', scalar(@idata)));
 
@@ -200,7 +209,7 @@ sub get_alignment_summary_node {
             $model_node->addChild( $xml_doc->createAttribute('subject_name',$model->subject_name));
             $model_node->addChild( $xml_doc->createAttribute('model_name',$model->name));
 
-            my @idata = $model->instrument_data;
+            my @idata = $model->instrument_data_assignments;
 
             $model_node->addChild( $xml_doc->createAttribute('lane_count', scalar(@idata)) );
 
@@ -254,7 +263,7 @@ sub get_coverage_summary_node {
             $model_node->addChild( $xml_doc->createAttribute('subject_name',$model->subject_name));
             $model_node->addChild( $xml_doc->createAttribute('model_name',$model->name));
 
-            my @idata = $model->instrument_data;
+            my @idata = $model->instrument_data_assignments;
 
             $model_node->addChild( $xml_doc->createAttribute('lane_count', scalar(@idata)) );
 

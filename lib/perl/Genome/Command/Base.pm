@@ -43,14 +43,16 @@ our @error_tags;
 our $MESSAGE;
 
 sub resolve_param_value_from_cmdline_text {
-    my ($self, $param_name, $param_class, $param_arg) = @_;
+    my ($self, $param_info) = @_;
+    my $param_name  = $param_info->{name};
+    my $param_class = $param_info->{class};
+    my @param_args  = @{$param_info->{value}};
+    my $param_str   = join(',', @param_args);
 
-    my @param_args = split(',', $param_arg);
     my @param_class;
     if (ref($param_class) eq 'ARRAY') {
         @param_class = @$param_class;
-    }
-    else {
+    } else {
         @param_class = ($param_class);
     }
     undef($param_class);
@@ -65,13 +67,13 @@ sub resolve_param_value_from_cmdline_text {
         for my $type (keys %bool_expr_type_count) {
             $duplicate_bool_expr_type++ if ($bool_expr_type_count{$type} > 1);
         }
-        unshift @param_args, $param_arg unless($duplicate_bool_expr_type);
+        unshift @param_args, $param_str unless($duplicate_bool_expr_type);
     }
 
     my $pmeta = $self->__meta__->property($param_name);
 
 
-    print STDERR "Resolving parameter '$param_name' from command argument '$param_arg'...";
+    print STDERR "Resolving parameter '$param_name' from command argument '$param_str'...";
     my @results;
     my $require_user_verify = $pmeta->{'require_user_verify'};
     for (my $i = 0; $i < @param_args; $i++) {
@@ -457,6 +459,16 @@ sub _pad_string {
     }
 }
 
+sub _can_interact_with_user {
+    my $self = shift;
+    if ( -t STDERR ) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
+
 sub _shell_args_property_meta
 {
     my $self = shift;
@@ -513,45 +525,35 @@ sub _shell_args_property_meta
     return @result;
 }
 
-sub _check_for_missing_parameters {
+sub _missing_parameters {
     my ($self, $params) = @_;
 
-    my $class_object = $self->__meta__;
-    my $type_name = $class_object->type_name;
+    my $class_meta = $self->__meta__;
 
     my @property_names;
-    my $class_meta = UR::Object::Type->get($self);
     if (my $has = $class_meta->{has}) {
-        push @property_names, keys %$has;
+        @property_names = $self->_unique_elements(keys %$has);
     }
-    @property_names = $self->_unique_elements(@property_names);
-
-    my @property_metas = map { $class_object->property_meta_for_name($_); } @property_names;
+    my @property_metas = map { $class_meta->property_meta_for_name($_); } @property_names;
 
     my @missing_property_values;
     for my $property_meta (@property_metas) {
+        my $pn = $property_meta->property_name;
+
         next if $property_meta->is_optional;
         next if $property_meta->implied_by;
-        my $property_name = $property_meta->property_name;
-        my $property_value_defined = defined($params->{$property_name}) || defined($property_meta->default_value);
-        if ($property_value_defined) {
-            next;
-        }
-        else {
-            push @missing_property_values, $property_name;
-        }
+        next if defined $property_meta->default_value;
+        next if defined $params->{$pn};
+
+        push @missing_property_values, $pn;
     }
 
-    @missing_property_values = map { $_ =~ s/_/-/g; $_ } @missing_property_values;
-    @missing_property_values = map { $_ =~ s/^/--/g; $_ } @missing_property_values;
+    @missing_property_values = map { $_ =~ s/_/-/g; "--$_" } @missing_property_values;
     if (@missing_property_values) {
         $self->status_message('');
         $self->error_message("Missing required parameter(s): " . join(', ', @missing_property_values) . ".");
-        return 0;
     }
-    else {
-        return 1;
-    }
+    return @missing_property_values;
 }
 
 sub __errors__ {
@@ -560,73 +562,67 @@ sub __errors__ {
     return (@error_tags, $self->SUPER::__errors__);
 }
 
-sub resolve_class_and_params_for_argv {
-    my $self = shift;
-    my ($class, $params) = $self->SUPER::resolve_class_and_params_for_argv(@_);
-    unless ($self eq $class) {
-        return ($class, $params);
-    }
-    unless (@_ && $self->_check_for_missing_parameters($params)) {
-        return ($class, $params);
-    }
-    
-    local $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 1;
+sub _can_resolve_type {
+    my ($self, $type) = @_;
 
+    my $non_classes = 0;
+    if (ref($type) ne 'ARRAY') {
+        $non_classes = $type !~ m/::/;
+    } else {
+        $non_classes = scalar grep { ! m/::/ } @$type;
+    }
+    return $non_classes == 0;
+}
+
+sub _params_to_resolve {
+    my ($self, $params) = @_;
+    my @params_to_resolve;
     if ($params) {
         my $cmeta = $self->__meta__;
-        my @params_to_resolve;
         my @params_will_require_verification;
         my @params_may_require_verification;
-        #my @params_will_not_require_verification;
+
         for my $param_name (keys %$params) {
             my $pmeta = $cmeta->property($param_name); 
             unless ($pmeta) {
+                # This message was a die after a next, so I guess it isn't supposed to be fatal?
+                $self->warning_message("No metadata for property '$param_name'");
                 next;
-                die "not meta for $param_name?";
             }
 
             my $param_type = $pmeta->data_type;
-            next unless ($param_type);
-            if (ref($param_type) eq 'ARRAY') {
-                for my $sub_type (@$param_type) {
-                    next unless ($sub_type =~ /::/);
-                }
-            }
-            else {
-                next unless ($param_type =~ /::/);
-            }
+            next if !$self->_can_resolve_type($param_type);
 
             my $param_arg = $params->{$param_name};
-            my @param_args;
-            if (ref($param_arg) eq 'ARRAY') {
-                @param_args = @$param_arg;
+            if (my $arg_type = ref($param_arg)) {
+                next if $arg_type eq $param_type; # param is already the right type
+                if ($arg_type ne 'ARRAY') {
+                    $self->error_message("no handler for property '$param_name' with argument type " . ref($param_arg));
+                    next;
+                }
+            } else {
+                $param_arg = [$param_arg];
             }
-            elsif (ref($param_arg)) {
-                $self->error_message("no handler for param_arg of type " . ref($param_arg));
-                next;
-            }
-            else {
-                @param_args = ($param_arg);
-            }
-            next unless (@param_args);
-            my $param_arg_str = join(',', @param_args);
+            next unless (@$param_arg);
 
-            push @params_to_resolve, [$param_name, $param_type, $param_arg_str];
+            my $resolve_info = {
+                name => $param_name,
+                class => $param_type,
+                value => $param_arg,
+            };
+            push(@params_to_resolve, $resolve_info);
+
             my $require_user_verify = $pmeta->{'require_user_verify'};
             if ( defined($require_user_verify) ) {
                 push @params_will_require_verification, "'$param_name'" if ($require_user_verify);
-                #push @params_will_not_require_verification, "'$param_name'" unless ($require_user_verify);
-            }
-            else {
+            } else {
                 push @params_may_require_verification, "'$param_name'";
             }
         }
 
         my @adverbs = ('will', 'may');
-        #my @adverbs = ('will', 'will not', 'may');
         my @params_adverb_require_verification = (
             \@params_will_require_verification,
-            #\@params_will_not_require_verification,
             \@params_may_require_verification,
         );
         for (my $i = 0; $i < @adverbs; $i++) {
@@ -640,41 +636,57 @@ sub resolve_class_and_params_for_argv {
             my $param_str = join(', ', @param_adverb_require_verification);
             $self->status_message($param_str . " $adverb require verification...");
         }
+    }
+    return @params_to_resolve;
+}
 
-        for my $param_to_resolve (@params_to_resolve) {
-            my ($param_name, $param_type, $param_arg_str) = @$param_to_resolve;
-            my $pmeta = $cmeta->property($param_name); 
+sub resolve_class_and_params_for_argv {
+    my $self = shift;
+    my ($class, $params) = $self->SUPER::resolve_class_and_params_for_argv(@_);
+    unless ($self eq $class) {
+        return ($class, $params);
+    }
+    unless (@_ && scalar($self->_missing_parameters($params)) == 0) {
+        return ($class, $params);
+    }
+    
+    local $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 1;
 
-            my @params;
-            eval {
-                @params = $self->resolve_param_value_from_cmdline_text($param_name, $param_type, $param_arg_str);
-            };
-            
-            if ($@) {
-                push @error_tags, UR::Object::Tag->create(
-                    type => 'invalid',
-                    properties => [$param_name],
-                    desc => "Errors while resolving from $param_arg_str: $@",
-                );
-            }
-            if (@params and $params[0]) {
-                if ($pmeta->{'is_many'}) {
-                    $params->{$param_name} = \@params;
-                }
-                else {
-                    $params->{$param_name} = $params[0];
-                }
+    my @params_to_resolve = $self->_params_to_resolve($params);
+    for my $p (@params_to_resolve) {
+        my $param_arg_str = join(',', @{$p->{value}});
+        my $pmeta = $self->__meta__->property($p->{name}); 
+
+        my @params;
+        eval {
+            @params = $self->resolve_param_value_from_cmdline_text($p);
+        };
+        
+        if ($@) {
+            push @error_tags, UR::Object::Tag->create(
+                type => 'invalid',
+                properties => [$p->{name}],
+                desc => "Errors while resolving from $param_arg_str: $@",
+            );
+        }
+        if (@params and $params[0]) {
+            if ($pmeta->{'is_many'}) {
+                $params->{$p->{name}} = \@params;
             }
             else {
-                push @error_tags, UR::Object::Tag->create(
-                    type => 'invalid',
-                    properties => [$param_name],
-                    desc => "Problem resolving from $param_arg_str.",
-                );
-                $self->error_message();
+                $params->{$p->{name}} = $params[0];
             }
         }
+        else {
+            push @error_tags, UR::Object::Tag->create(
+                type => 'invalid',
+                properties => [$p->{name}],
+                desc => "Problem resolving from $param_arg_str.",
+            );
+            $self->error_message();
+        }
     }
+
     if (@error_tags) {
         return ($class, undef);
     }
@@ -693,20 +705,22 @@ sub _ask_user_question {
     $valid_values = lc($valid_values);
     my $input;
     $timeout = 60 unless(defined($timeout));
-    eval {
-        local $SIG{ALRM} = sub { print STDERR "Exiting, failed to reply to question '$question' within '$timeout' seconds.\n"; exit; };
-        print STDERR "\n$question\n";
-        print STDERR "Reply with $pretty_valid_values: ";
-        alarm($timeout) if ($timeout);
-        chomp($input = <STDIN>);
-        alarm(0) if ($timeout);
-    };
+
+    local $SIG{ALRM} = sub { print STDERR "Exiting, failed to reply to question '$question' within '$timeout' seconds.\n"; exit; };
+    print STDERR "\n$question\n";
+    print STDERR "Reply with $pretty_valid_values: ";
+
+    unless ($self->_can_interact_with_user) {
+        print STDERR "\n";
+        die $self->error_message("Attempting to ask user question but cannot interact with user!");
+    }
+
+    alarm($timeout) if ($timeout);
+    chomp($input = <STDIN>);
+    alarm(0) if ($timeout);
+
     print STDERR "\n";
 
-    if ($@) {
-        $self->warning_message($@);
-        return;
-    }
     if(lc($input) =~ /^$valid_values$/) {
         return lc($input);
     }

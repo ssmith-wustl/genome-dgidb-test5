@@ -124,13 +124,13 @@ sub execute {
 
         $op->parallel_by('bam_files');
         my $output;
-        if ($self->model->rmdup_name eq 'samtools') {
+        if ($self->model->duplication_handler_name eq 'samtools') {
             $output = Workflow::Simple::run_workflow_lsf(
                 $op,
                 'output_directory' => $ref_cov_dir,
                 'bam_files' => $progression_array_ref,
                 'target_query_file' => $self->build->transcript_bed_file,
-                'samtools_version' => $self->model->rmdup_version,
+                'samtools_version' => $self->model->duplication_handler_version,
             );
         } else {
             $output = Workflow::Simple::run_workflow_lsf(

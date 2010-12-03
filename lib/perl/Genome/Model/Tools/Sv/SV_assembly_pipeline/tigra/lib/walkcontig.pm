@@ -101,6 +101,9 @@ sub walkcontigwrap {
   for my $i (sort {$Contigcovs[$b]<=>$Contigcovs[$a]} (1..($#Contigs))) {
     next if ($Contigtags[$i]!=0);
     $Contignum2+=1;
+if($Contignum2 == 37){
+my $j = 0;
+}
     $Contigtags[$i]=$Contignum2;
     my ($right, $rightsum, $righttype)=$self->walkcontig($i,$Contignum2, $cutoff, $ratiocutoff);
     my ($left, $leftsum, $lefttype)=$self->walkcontig(-$i,-$Contignum2, $cutoff, $ratiocutoff);
@@ -255,7 +258,7 @@ sub step {
   my $biglong=0;
   my $biglongcontig=0;
   my %ncontigh;
-  for (keys %n) {
+  for (sort {$a <=> $b} keys %n) {
     $Contigtips{$_}=$self->{DefaultTip} if(!defined $Contigtips{$_});
     if ($n{$_}*$Contigtips{$_}>$bigpro) {
       $bigpro=$n{$_}*$Contigtips{$_};
@@ -273,11 +276,11 @@ sub step {
     $ncontigh{$bigprocontig}=$n{$bigprocontig};
   }
   else {
-    for my $i (keys %long) {
+    for my $i (sort keys %long) {
       if ($long{$i}>$ratiocutoff*$biglong || $long{$i}>$cutoff) {$ncontigh{$i}=$long{$i};}
     }
   }
-  my @aa=sort {$ncontigh{$b}<=>$ncontigh{$a}} (keys %ncontigh);
+  my @aa=sort {$ncontigh{$b}<=>$ncontigh{$a}} (sort keys %ncontigh);
   push @aa, $nx;
   return(@aa);
 }

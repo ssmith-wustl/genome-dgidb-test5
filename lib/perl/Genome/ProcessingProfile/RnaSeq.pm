@@ -75,6 +75,10 @@ class Genome::ProcessingProfile::RnaSeq {
     ],
 };
 
+sub _resolve_type_name_for_class {
+    return 'rna seq';
+}
+
 #< SUBCLASSING >#
 #
 # This is called by the infrastructure to appropriately classify abstract processing profiles
