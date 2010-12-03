@@ -139,8 +139,7 @@ sub translate {
     my ($self, $seq, $chrom_name) = @_;
     return unless defined $seq and defined $chrom_name;
 
-    # Are NT entries actually mitochondrial? What about the new GLXXXXXX.X entries?
-    my $is_mitochondrial = $chrom_name =~ /^[MN]T/;
+    my $is_mitochondrial = $chrom_name =~ /^MT?/; #we use the mitochondrial_codon_translator if the chromosome is either the M or MT.  Everything else should use the normal translator
 
     my $translator;
     if ($is_mitochondrial) {
@@ -948,7 +947,7 @@ sub _coding_bases_after_position {
 sub _ucsc_conservation_score {
     my ($self, $variant, $substruct) = @_;
     # for build 37, we now have GLXXXXXX.X names that we don't have scores for as well as MT,NT
-    return 'NULL' if $variant->{chromosome_name} =~ /^([MN]T|GL)/;
+    return 'NULL' if $variant->{chromosome_name} =~ /^([MN]T?|GL)/;
 
     my $range = [ $variant->{start}..$variant->{stop} ] ;
     
