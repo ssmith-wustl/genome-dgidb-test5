@@ -34,6 +34,21 @@ class Genome::Model::ImportedAnnotation{
             where => [ name => 'version', value_class_name => 'UR::Value'], 
             is_mutable => 1
         },
+        reference_sequence_id => {
+            is => 'Text',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'reference_sequence', value_class_name => 'Genome::Model::ImportedReferenceSequence' ],
+            is_many => 0,
+            is_optional => 1, # TODO: make this non-optional when all data is updated
+            is_mutable => 1,
+            doc => 'id of the reference sequence model associated with this annotation model',
+        },
+        reference_sequence => {
+            is => 'Genome::Model::ImportedReferenceSequence',
+            id_by => 'reference_sequence_id',
+        },
+
     ],
 };
 
