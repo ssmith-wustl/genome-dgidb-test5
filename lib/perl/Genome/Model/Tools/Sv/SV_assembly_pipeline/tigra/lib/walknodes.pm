@@ -65,7 +65,7 @@ sub strictwalk{  #generate proto-contigs
     $HH{$_}{tag}=0;
   }
   #print STDERR "Strictwalk nodes ..   \n";
-  foreach my $key (keys %HH){
+  foreach my $key (sort keys %HH){
     next if ($HH{$key}{tag}!=0);
     $Contignum+=1;
     $HH{$key}{tag}=$Contignum;

@@ -187,6 +187,7 @@ sub process_results
 	print SCRIPT "regions <- read.table(\"$chrom_filename\")\n";
 	print SCRIPT "png(\"$image_filename\", height=600, width=800)\n";
 	print SCRIPT "plot(regions\$V2, regions\$V$num_columns, col=\"blue\", cex=0.5, cex.axis=1.5, cex.lab=1.5, pch=19, ylim=c(-4,4), main=\"Chromosome $chrom\", xlab=\"Position on chromosome $chrom\", ylab=\"Log2 Ratio (Tumor/Normal)\")\n";
+	print SCRIPT "points(regions\$V3, regions\$V$num_columns, col=\"blue\", cex=0.5, cex.axis=1.5, cex.lab=1.5, pch=19, ylim=c(-4,4))\n";
 	print SCRIPT "dev.off()\n";
 	close(SCRIPT);
 	

@@ -7,7 +7,7 @@ BEGIN {
 }
 
 use above "Genome";
-use Test::More tests => 26;
+use Test::More tests => 25;
 use Data::Dumper;
 use_ok('Genome::Model::Build::ImportedAnnotation');
 
@@ -31,13 +31,22 @@ my $ann_model = Genome::Model::ImportedAnnotation->create(
     processing_profile  => $ann_pp,
     subject_class_name  => ref($samples{'human'}),
     subject_id          => $samples{'human'}->id,
+    reference_sequence  => $rbuilds{'human'}->[0]->model,
 );
 ok($ann_model, "created annotation model");
 
 my $abuild = Genome::Model::Build::ImportedAnnotation->create(
-    model                       => $ann_model,
-    data_directory              => $data_dir,
-    version                     => $versions[0],
+    model               => $ann_model,
+    data_directory      => $data_dir,
+    version             => $versions[0],
+);
+ok(!$abuild, "creating annotation build without reference sequence build is an error");
+
+$abuild = Genome::Model::Build::ImportedAnnotation->create(
+    model               => $ann_model,
+    data_directory      => $data_dir,
+    version             => $versions[0],
+    reference_sequence  => $rbuilds{'human'}->[0]
 );
 ok($abuild, "created annotation build");
 
@@ -48,17 +57,9 @@ my $abuild_event = Genome::Model::Event::Build->create(
     event_status => 'Succeeded',
 );
 
-# test without having a reference_sequence_build set
-is($abuild->name, "test_annotation/$versions[0]", "name properly formed");
+# now set a (different) reference_sequence_build and make sure we get different answers
 ok($abuild->is_compatible_with_reference_sequence_build($rbuilds{'human'}->[0]), 'reference sequence compatibility');
 ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'human'}->[1]), 'reference sequence incompatibility');
-ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'mouse'}->[0]), 'reference sequence incompatibility');
-ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'mouse'}->[1]), 'reference sequence incompatibility');
-
-# now set a (different) reference_sequence_build and make sure we get different answers
-$abuild->reference_sequence_build($rbuilds{'human'}[1]);
-ok($abuild->is_compatible_with_reference_sequence_build($rbuilds{'human'}->[1]), 'reference sequence compatibility');
-ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'human'}->[0]), 'reference sequence incompatibility');
 ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'mouse'}->[0]), 'reference sequence incompatibility');
 ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'mouse'}->[1]), 'reference sequence incompatibility');
 
@@ -67,6 +68,12 @@ for my $invalid (@invalid_status) {
     $abuild_event->event_status($invalid);
     ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'human'}->[0]), "Build status '$invalid' not allowed as annotation build");
 }
+
+ok(!$abuild->__errors__, "annotation build has no __errors__");
+$abuild->reference_sequence($rbuilds{'mouse'}[0]);
+my @errs = $abuild->__errors__;
+is(scalar @errs, 1, "attempting to specify a reference build from the wrong model is an error");
+like($errs[0]->desc, qr/is not a build of model/, "error string looks correct");
 
 done_testing();
 

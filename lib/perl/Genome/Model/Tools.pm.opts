@@ -3314,6 +3314,8 @@ $Genome::Model::Tools::OPTS_SPEC = [
           'files',
           'reference-fasta=s',
           undef,
+          'include-normal!',
+          undef,
           'use-old-pindel!',
           undef,
           'source=s',
@@ -4282,19 +4284,6 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'refseq-build-name=s',
       undef,
       'rejected-mutations=s',
-      undef,
-      'help!',
-      undef
-    ],
-    '>class-summary-quick',
-    [
-      'mutation-maf-file=s',
-      undef,
-      'roi-bedfile=s',
-      undef,
-      'wiggle-file-dirs=s',
-      undef,
-      'genes-to-exclude=s',
       undef,
       'help!',
       undef
@@ -6793,19 +6782,6 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'help!',
       undef
     ],
-    '>clipper',
-    [
-      'input=s',
-      'files',
-      'output=s',
-      'files',
-      'version=s',
-      undef,
-      'params=s',
-      undef,
-      'help!',
-      undef
-    ],
     'genome',
     undef,
     '>filter-homopolymer',
@@ -7538,12 +7514,13 @@ $Genome::Model::Tools::OPTS_SPEC = [
       [
         '7.0',
         '8.0',
-        '8.1'
+        '8.1',
+        '8.1.skip_introns'
       ],
       'help!',
       undef
     ],
-    '>r-n-ammer',
+    '>rnammer',
     [
       'fasta-file=s',
       undef,
@@ -7578,7 +7555,7 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'help!',
       undef
     ],
-    '>s-n-a-p',
+    '>snap',
     [
       'fasta-file=s',
       undef,
@@ -7594,6 +7571,25 @@ $Genome::Model::Tools::OPTS_SPEC = [
         '2007-12-18',
         '2010-07-28'
       ],
+      'help!',
+      undef
+    ],
+    '>trnascan',
+    [
+      'fasta-file=s',
+      undef,
+      'prediction-directory=s',
+      undef,
+      'raw-output-directory=s',
+      undef,
+      'domain=s',
+      [
+        'archaeal',
+        'bacterial',
+        'eukaryotic'
+      ],
+      'trnascan-install-path=s',
+      undef,
       'help!',
       undef
     ],
@@ -9162,20 +9158,6 @@ $Genome::Model::Tools::OPTS_SPEC = [
     'merged-file=s',
     undef,
     'force-overwrite=s',
-    undef,
-    'help!',
-    undef
-  ],
-  '>messages',
-  [
-    'message=s',
-    undef,
-    'help!',
-    undef
-  ],
-  '>messages-dos',
-  [
-    'message=s',
     undef,
     'help!',
     undef
@@ -11885,6 +11867,10 @@ $Genome::Model::Tools::OPTS_SPEC = [
       undef,
       'assume-sorted=s',
       undef,
+      'dedup-params=s',
+      undef,
+      'dedup-version=s',
+      undef,
       'log-file=s',
       undef,
       'max-jvm-heap-size=s',
@@ -11898,8 +11884,6 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'remove-duplicates=s',
       undef,
       'tmp-dir=s',
-      undef,
-      'use-picard-version=s',
       undef,
       'use-version=s',
       undef,
@@ -11920,7 +11904,7 @@ $Genome::Model::Tools::OPTS_SPEC = [
       undef,
       'merged-file=s',
       undef,
-      'software=s',
+      'merger-name=s',
       [
         'picard',
         'samtools'
@@ -11935,7 +11919,9 @@ $Genome::Model::Tools::OPTS_SPEC = [
       undef,
       'maximum-memory=s',
       undef,
-      'use-picard-version=s',
+      'merger-params=s',
+      undef,
+      'merger-version=s',
       undef,
       'use-version=s',
       undef,
@@ -13228,6 +13214,21 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'help!',
       undef
     ],
+    '>dbsnp-concordance',
+    [
+      'indel-bed-file=s',
+      undef,
+      'lsf-queue=s',
+      'files',
+      'lsf-resource=s',
+      'files',
+      'output-file=s',
+      undef,
+      'indel-annotation-file=s',
+      undef,
+      'help!',
+      undef
+    ],
     '>filter-ceu-yri',
     [
       'output-file=s',
@@ -13291,7 +13292,10 @@ $Genome::Model::Tools::OPTS_SPEC = [
     '>filter-false-positives',
     [
       'analysis-type=s',
-      undef,
+      [
+        'capture',
+        'wgs'
+      ],
       'bam-file=s',
       undef,
       'lsf-queue=s',
@@ -13327,6 +13331,8 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'prepend-chr!',
       undef,
       'reference=s',
+      undef,
+      'samtools-version=s',
       undef,
       'skip!',
       undef,
@@ -13392,33 +13398,6 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'report-output=s',
       undef,
       'skip-if-output-present!',
-      undef,
-      'help!',
-      undef
-    ],
-    '>indelpe-runner',
-    [
-      'bam-file=s',
-      undef,
-      'lsf-queue=s',
-      'files',
-      'lsf-resource=s',
-      'files',
-      'output-dir=s',
-      undef,
-      'ref-seq-file=s',
-      undef,
-      'filtered-indel-file=s',
-      undef,
-      'filtered-snp-file=s',
-      undef,
-      'indel-output-file=s',
-      undef,
-      'sam-version=s',
-      undef,
-      'skip!',
-      undef,
-      'snp-output-file=s',
       undef,
       'help!',
       undef
@@ -13717,6 +13696,33 @@ $Genome::Model::Tools::OPTS_SPEC = [
         '454'
       ],
       'variant-file=s',
+      undef,
+      'help!',
+      undef
+    ],
+    '>validate-indels',
+    [
+      'intersection-range=s',
+      undef,
+      'lsf-queue=s',
+      'files',
+      'lsf-resource=s',
+      'files',
+      'allele-mismatch-output-file=s',
+      undef,
+      'called-indel-annotation-file=s',
+      undef,
+      'called-indel-bed-file=s',
+      undef,
+      'fuzzy-output-file=s',
+      undef,
+      'missed-output-file=s',
+      undef,
+      'refseq=s',
+      undef,
+      'valid-indel-annotation-file=s',
+      undef,
+      'valid-indel-bed-file=s',
       undef,
       'help!',
       undef
@@ -14194,6 +14200,28 @@ $Genome::Model::Tools::OPTS_SPEC = [
     'help!',
     undef
   ],
+  '>validation',
+  [
+    '>run-varscan-validation',
+    [
+      'normal-build=s',
+      undef,
+      'output-dir=s',
+      undef,
+      'snp-target-file=s',
+      undef,
+      'tumor-build=s',
+      undef,
+      'min-var-freq=s',
+      undef,
+      'normal-purity=s',
+      undef,
+      'help!',
+      undef
+    ],
+    'help!',
+    undef
+  ],
   '>varscan',
   [
     '>compile-readcounts',
@@ -14355,7 +14383,7 @@ $Genome::Model::Tools::OPTS_SPEC = [
       undef,
       'min-coverage=s',
       undef,
-      'output-plot=s',
+      'output-plot!',
       undef,
       'help!',
       undef

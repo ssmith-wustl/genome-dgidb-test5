@@ -112,7 +112,7 @@ sub getPath{
   my ($id,$edges,$visited)=@_;
   my @path;
 
-  my @nds=keys %{$$edges{$id}};
+  my @nds=sort {$a <=> $b} keys %{$$edges{$id}};
   if(@nds){
     foreach my $nd(@nds){
       next if($$visited{$id}{$nd});  #avoid repeat
@@ -145,7 +145,7 @@ sub CreateGraph{
       &InNodes($t,\%neighbor);
       &OutNodes($t,\%neighbor);
       $snodes{$t}=1;
-      foreach my $n(keys %neighbor){
+      foreach my $n(sort {$a <=> $b} keys %neighbor){
 	next if($t eq $n);   #skip looping back to itself
 	next if(defined $edges{$t}{$n});
 	$edges{$t}{$n}=$neighbor{$n};
