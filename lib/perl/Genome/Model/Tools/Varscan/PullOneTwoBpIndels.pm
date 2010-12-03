@@ -28,10 +28,10 @@ class Genome::Model::Tools::Varscan::PullOneTwoBpIndels {
 		tumor_bam	=> { is => 'Text', doc => "Tumor Bam File (Validation Bam)" , is_optional => 0},
 		normal_bam	=> { is => 'Text', doc => "Normal Bam File (Validation Bam)" , is_optional => 0},
 		reference_fasta	=> { is => 'Text', doc => "Reference Fasta" , is_optional => 0, default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa"},
-		output-indel	=> { is => 'Text', doc => "gmt varscan validate input" , is_optional => 0},
-		output-snp	=> { is => 'Text', doc => "gmt varscan validate input" , is_optional => 0},
-		output-validation	=> { is => 'Text', doc => "gmt varscan validate input" , is_optional => 0},
-		final-output-file	=> { is => 'Text', doc => "process-validation-indels output file" , is_optional => 0},
+		output_indel	=> { is => 'Text', doc => "gmt varscan validate input" , is_optional => 0},
+		output_snp	=> { is => 'Text', doc => "gmt varscan validate input" , is_optional => 0},
+		output_validation	=> { is => 'Text', doc => "gmt varscan validate input" , is_optional => 0},
+		final_output_file	=> { is => 'Text', doc => "process-validation-indels output file" , is_optional => 0},
 	],
 };
 
@@ -68,10 +68,10 @@ sub execute {                               # replace with real execution logic.
 	my $normal_bam = $self->normal_bam;
 	my $tumor_bam = $self->tumor_bam;
 	my $reference = $self->reference_fasta;
-	my $output_indel = $self->output-indel;
-	my $output_snp = $self->output-snp;
-	my $output_validation = $self->output-validation;
-	my $final_output_file = $self->final-output-file;
+	my $output_indel = $self->output_indel;
+	my $output_snp = $self->output_snp;
+	my $output_validation = $self->output_validation;
+	my $final_output_file = $self->final_output_file;
 
 	unless ($small_indel_list =~ m/\.bed/i) {
 		die "Indel File Must end in .bed";
@@ -142,7 +142,7 @@ sub execute {                               # replace with real execution logic.
 	   $jobid6= $1;
 	   print "$jobid6\n";
 
-	my $jobid7 = `$bsub -J varscan_validation -w \'ended($jobid5 && $jobid6)\' \'perl -I ~/genome-stable/ \`which gmt\` varscan validation --normal-bam $sorted_normal_bam_file.bam --tumor-bam $sorted_tumor_bam_file.bam --output-indel $output_indel --output-snp $output_snp --output-validation $output_validation\'`;
+	my $jobid7 = `$bsub -J varscan_validation -w \'ended($jobid5 && $jobid6)\' \'gmt varscan validation --normal-bam $sorted_normal_bam_file.bam --tumor-bam $sorted_tumor_bam_file.bam --output-indel $output_indel --output-snp $output_snp --output-validation $output_validation\'`;
 	   $jobid7=~/<(\d+)>/;
 	   $jobid7= $1;
 	   print "$jobid7\n";
