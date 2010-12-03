@@ -1,0 +1,14 @@
+Changes
+MANIFEST
+Makefile.PL
+README
+lib/Music.pm
+lib/Music/Correlation.pm
+lib/Music/CosmicOmim.pm
+lib/Music/MutationRelation.pm
+lib/Music/Pathway.pm
+lib/Music/Proximity.pm
+lib/Music/SMG.pm
+t/00-load.t
+t/pod-coverage.t
+t/pod.t
