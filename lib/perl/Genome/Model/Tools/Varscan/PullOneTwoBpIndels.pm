@@ -28,7 +28,10 @@ class Genome::Model::Tools::Varscan::PullOneTwoBpIndels {
 		tumor_bam	=> { is => 'Text', doc => "Tumor Bam File (Validation Bam)" , is_optional => 0},
 		normal_bam	=> { is => 'Text', doc => "Normal Bam File (Validation Bam)" , is_optional => 0},
 		reference_fasta	=> { is => 'Text', doc => "Reference Fasta" , is_optional => 0, default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa"},
-
+		output-indel	=> { is => 'Text', doc => "gmt varscan validate input" , is_optional => 0},
+		output-snp	=> { is => 'Text', doc => "gmt varscan validate input" , is_optional => 0},
+		output-validation	=> { is => 'Text', doc => "gmt varscan validate input" , is_optional => 0},
+		final-output-file	=> { is => 'Text', doc => "process-validation-indels output file" , is_optional => 0},
 	],
 };
 
@@ -65,6 +68,10 @@ sub execute {                               # replace with real execution logic.
 	my $normal_bam = $self->normal_bam;
 	my $tumor_bam = $self->tumor_bam;
 	my $reference = $self->reference_fasta;
+	my $output_indel = $self->output-indel;
+	my $output_snp = $self->output-snp;
+	my $output_validation = $self->output-validation;
+	my $final_output_file = $self->final-output-file;
 
 	unless ($small_indel_list =~ m/\.bed/i) {
 		die "Indel File Must end in .bed";
@@ -127,7 +134,23 @@ sub execute {                               # replace with real execution logic.
 	   print "$jobid4\n";
 
 	my $jobid5 = `$bsub -J bamindex_normal -w \'ended($jobid3)\' \'samtools index $sorted_normal_bam_file.bam\'`;
+	   $jobid5=~/<(\d+)>/;
+	   $jobid5= $1;
+	   print "$jobid5\n";
 	my $jobid6 = `$bsub -J bamindex_tumor -w \'ended($jobid4)\' \'samtools index $sorted_tumor_bam_file.bam\'`;
+	   $jobid6=~/<(\d+)>/;
+	   $jobid6= $1;
+	   print "$jobid6\n";
+
+	my $jobid7 = `$bsub -J varscan_validation -w \'ended($jobid5 && $jobid6)\' \'perl -I ~/genome-stable/ \`which gmt\` varscan validation --normal-bam $sorted_normal_bam_file.bam --tumor-bam $sorted_tumor_bam_file.bam --output-indel $output_indel --output-snp $output_snp --output-validation $output_validation\'`;
+	   $jobid7=~/<(\d+)>/;
+	   $jobid7= $1;
+	   print "$jobid7\n";
+
+	my $jobid8 = `$bsub -J varscan_validation -w \'ended($jobid7)\' \'gmt varscan process-validation-indels --validation-indel-file $output_indel --validation-snp-file $output_snp --variants-file $small_indel_list --output-file $final_output_file\'`;
+	   $jobid8=~/<(\d+)>/;
+	   $jobid8= $1;
+	   print "$jobid8\n";
 }
 
 
