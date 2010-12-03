@@ -60,7 +60,7 @@ sub execute {
     my $min_var_freq = $self->min_var_freq;
     my $normal_purity = $self->normal_purity;
 
-    my $target_file = $self->target_file;
+    my $target_file = $self->snp_target_file;
 
     my $output_dir = $self->output_dir;
     my $output_file = "$output_dir/varScan.output";
