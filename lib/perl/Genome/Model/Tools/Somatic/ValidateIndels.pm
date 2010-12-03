@@ -9,6 +9,9 @@ use IO::File;
 #my %positions;
 #my %insertions;
 #my %deletions;
+my %ranges;
+
+my $use_ranges=0;
 
 class Genome::Model::Tools::Somatic::ValidateIndels {
     is => 'Command',
@@ -80,7 +83,68 @@ class Genome::Model::Tools::Somatic::ValidateIndels {
 };
 
 #Internally, this tool uses bed format to represent chr start stop of events.
+sub load_bed_file {
+    my $self = shift;
+    my $file = shift;
+    my %data;
 
+    my $fh = Genome::Utility::FileSystem->open_file_for_reading($file);
+    $DB::single=1;
+    while(my $line = $fh->getline){
+        chomp $line;
+        my ($chr,$start,$stop,$ref,$var,$lower_range,$upper_range) = split "\t",$line;
+
+        if($ref =~ m/\//){
+            $upper_range = $lower_range;
+            $lower_range = $var;
+            ($ref,$var) = split "/", $ref;
+        }
+        my $refvar = "$ref/$var";
+        $data{$chr}{$start}{$stop}=$refvar;
+        if(defined($lower_range)){
+            $use_ranges=1;
+            my $ranger = $lower_range.",".$upper_range;
+            $data{$chr}{$start}{ranges}=$ranger;
+        }
+    }
+    $fh->close;
+    return \%data;
+}
+
+sub load_annotation_file {
+    my $self = shift;
+    my $file = shift;
+    my %data;
+
+    my $fh = Genome::Utility::FileSystem->open_file_for_reading($file);
+    while(my $line = $fh->getline){
+        chomp $line;
+        my ($chr,$start,$stop,$ref,$var,$lower_range,$upper_range) = split "\t",$line;
+        if($ref =~ m/\//){
+            $upper_range = $lower_range;
+            $lower_range = $var;
+            ($ref,$var) = split "/", $ref;
+        }
+        if(defined($lower_range)){
+            $use_ranges = 1;
+        }
+        if($var ne '0'){
+            $start++;
+            $lower_range++ if $lower_range;
+        } else {
+            $start--;
+            $lower_range-- if $lower_range;
+        }
+        my $refvar = "$ref/$var";
+        $data{$chr}{$start}{$stop}=$refvar;
+        if(defined($lower_range)){
+            my $ranger = $lower_range.",".$upper_range if $lower_range;
+            $data{$chr}{$start}{ranges}=$ranger if $lower_range;
+        }
+    }
+    $fh->close;
+    return \%data;
+}
 sub execute {
     my $self = shift;
 
@@ -102,6 +166,7 @@ sub execute {
     my $fuzzy_hits=0;
     my $fuzzy_hits_exact_allele=0;
     my $exact_hits=0;
+    my $within_range=0;
     my $allele_mismatch_hits=0;
     my %allele_mismatch;
     my %perfect_match;
@@ -110,20 +175,23 @@ sub execute {
     for my $chr (sort(keys(%called_data))){
         for my $start (sort(keys(%{$called_data{$chr}}))){
             for my $stop (sort(keys(%{$called_data{$chr}{$start}}))){
+                if($stop eq 'ranges'){ next;}
                 $called_total++;
-                if(exists($valid_data{$chr}{$start})){#{$stop})){
-                    if(defined($valid_data{$chr}{$start}{$stop})){
-                        if($valid_data{$chr}{$start}{$stop} eq $called_data{$chr}{$start}{$stop}){
-                            $perfect_match{$chr}{$start}{$stop} = $called_data{$chr}{$start}{$stop};
-                            $exact_hits++;
-                        }else{
-                            $allele_mismatch{$chr}{$start}{$stop} = 1;
-                            $allele_mismatch_hits++;
-                        }
+                if(exists($valid_data{$chr}{$start})&&defined($valid_data{$chr}{$start}{$stop})){
+                    if($valid_data{$chr}{$start}{$stop} eq $called_data{$chr}{$start}{$stop}){
+                        $perfect_match{$chr}{$start}{$stop} = $called_data{$chr}{$start}{$stop};
+                        $exact_hits++;
                     }else{
-                        print $chr." ".$start." ".$stop."\n";
+                        $allele_mismatch{$chr}{$start}{$stop} = 1;
+                        $allele_mismatch_hits++;
                     }
                 } else {
+                    #if($self->in_bp_range(join(",", ($chr,$start,$stop)),$called_data{$chr}{$start}{$stop}{'ranges'})){
+                    #    $perfect_match{$chr}{$start}{$stop} = $called_data{$chr}{$start}{$stop};
+                    #    $within_range++;
+                    #}
+                    
+                    
                     unless($self->intersection_range == -1){
                         my $fuzzy = $self->find_intersection(join(",",($chr,$start,$stop)),\%valid_data);
                         unless(defined($fuzzy)){
@@ -138,6 +206,14 @@ sub execute {
                         } else {
                             $fuzzy_hits++;
                         }
+                        if($use_ranges){
+                            my ($lower_range, $upper_range) = split ",", $called_data{$chr}{$start}{'ranges'};
+                            if($self->inside($chr,$lower_range,$upper_range,$ch,$st,$sp)){
+                                $perfect_match{$chr}{$start}{$stop} = $called_data{$chr}{$start}{$stop};
+                                $within_range++;
+                                #print "In Range = ".join("\t",($chr,$lower_range,$upper_range,$ch,$st,$sp))."\n";
+                            }
+                        }
                     }
                 }
             }
@@ -148,9 +224,10 @@ sub execute {
     
     for my $chr (keys(%valid_data)){
         for my $start (keys(%{$valid_data{$chr}})){
-            for my $stop (keys(%{$valid_data{$chr}{$start}})){
+            #for my $stop (keys(%{$valid_data{$chr}{$start}})){
+            
                 $valid_total++;
-            }
+            #}
         }
     }
 
@@ -160,14 +237,17 @@ sub execute {
 #        }
 #    }
 
-    print "The total exact hits in results = ".$exact_hits."\n";
+    print "The total hits in results =                                 ".($exact_hits+$within_range+$allele_mismatch_hits)."\n";
+    print "    Of which, the total EXACTLY matching hits was =         ".$exact_hits."\n";
+    print "    Of which, the total within bp range =                   ".$within_range."\n" if $use_ranges;
+    print "    Of which, Alleles different, but positional exact hit = ".$allele_mismatch_hits."\n";
     print "Total Calls Read = ".$called_total."\n";
     print "True Positive Hit Ratio = ".(int(($exact_hits/$called_total)*100)/100)."\n";
     #print "For a hits ratio of ".(int(($exact_hits/$valid_total)*100)/100)."\n";
     print "Total validation events = ".$valid_total."\n";
-    print "Alleles different, but positional exact hit = ".$allele_mismatch_hits."\n";
     print "Fuzzy Hits, within a range of ".$self->intersection_range." = ".$fuzzy_hits."\n" unless $self->intersection_range==-1;
     print "Fuzzy Hits, within a range of ".$self->intersection_range.", but having exactly matching allels = ".$fuzzy_hits_exact_allele."\n" unless $self->intersection_range==-1;
+    print "Calls which had a BP Range that included the valid indel = ".$within_range."\n" if $use_ranges;
     print "Complete misses = ".$total_fail."\n" unless $self->intersection_range ==-1;
 
     #print Data::Dumper::Dumper(%fuzzy_candidates);
@@ -194,49 +274,6 @@ sub dump_to_file {
     $fh->close;
 }
 
-sub load_bed_file {
-    my $self = shift;
-    my $file = shift;
-    my %data;
-
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($file);
-    while(my $line = $fh->getline){
-        chomp $line;
-        my ($chr,$start,$stop,$ref,$var) = split "\t",$line;
-
-        if($ref =~ m/\//){
-            ($ref,$var) = split "/", $ref;
-        }
-        my $refvar = "$ref/$var";
-        $data{$chr}{$start}{$stop}=$refvar;
-    }
-    $fh->close;
-    return \%data;
-}
-
-sub load_annotation_file {
-    my $self = shift;
-    my $file = shift;
-    my %data;
-
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($file);
-    while(my $line = $fh->getline){
-        chomp $line;
-        my ($chr,$start,$stop,$ref,$var) = split "\t",$line;
-        if($ref =~ m/\//){
-            ($ref,$var) = split "/", $ref;
-        }
-        if($var ne '0'){
-            $start++;
-        } else {
-            $start--;
-        }
-        my $refvar = "$ref/$var";
-        $data{$chr}{$start}{$stop}=$refvar;
-    }
-    $fh->close;
-    return \%data;
-}
 
 sub find_intersection {
     my $self = shift;
@@ -278,4 +315,25 @@ sub find_intersection {
         #return undef;
     }
     return $answers[0];
+}
+
+sub in_bp_range {
+    my $self = shift;
+    my ($chrom,$start,$stop) = split ",", shift;
+    my ($lower_range,$upper_range) = split ",", shift;
+    unless(defined($lower_range)){
+        return;
+    }
+}
+
+sub inside {
+    my $self = shift;
+    my ($chr,$lower_range,$upper_range,$ch,$st,$sp) = @_;
+    unless($chr eq $ch){
+        return undef;
+    }
+    if(($st>=$lower_range)&&($sp<=$upper_range)){
+        return 1;
+    }
+    return undef;
 }
