@@ -69,32 +69,15 @@ class Genome::Model::Tools::Somatic::CalculatePindelReadSupport {
 
 sub execute {
     my $self = shift;
-    my $file = $self->indels_all_sequences_bed_file;
-    my $dir = $self->pindel_output_directory;
-    my $reference_fasta = $self->refseq;
-    unless(-s $file){
-        $self->error_message("The indels_all_sequences_bed_file ".$file." has zero size or does not exist, skipping this module.");
-        return 1;
-    }
-    my $fh = IO::File->new($file);
-    unless($fh){
-        $self->error_message("indels_all_sequences_bed_file was not able to be opened at ".$self->indels_all_sequences_bed_file);
-        return;
-    }
     if(-s $self->_output_filename){
         $self->error_message("Output for calculate pindel read support at ".$self->_output_filename." already exists. Skipping.");
         return 1;
     }
     my $output = Genome::Utility::FileSystem->open_file_for_writing($self->_output_filename);
-    unless($output){
-        $self->error_message("Could not open output for writing at ".$self->_output_filename);
-        return;
-    }
-
     my %indels;
     my %answers;
 
-    my $ifh = IO::File->new($self->_dbsnp_insertions);
+    my $ifh = Genome::Utility::FileSystem->open_file_for_reading($self->_dbsnp_insertions); #IO::File->new($self->_dbsnp_insertions);
     while (my $line = $ifh->getline) {
         chomp $line;
         my ($chr, $start, $stop, $id, $allele, undef) = split /\t/, $line;
@@ -104,7 +87,7 @@ sub execute {
         $insertions{$chr}{$start}{$stop}{'id'}=$id;
     }
     $ifh->close;
-    my $dfh = IO::File->new($self->_dbsnp_deletions);
+    my $dfh = Genome::Utility::FileSystem->open_file_for_reading($self->_dbsnp_deletions);#IO::File->new($self->_dbsnp_deletions);
 
 
     while (my $line = $dfh->getline) {
@@ -118,6 +101,7 @@ sub execute {
     $dfh->close;
     $DB::single=1;
 
+    my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->indels_all_sequences_bed_file);
     while (<$fh>){
         my $line = $_;
         my ($chr,$start,$stop,$refvar) = split /\t/, $line;
@@ -142,14 +126,10 @@ sub process_file {
     my $indels_by_chrom = shift;
     my $output = shift;
     my $dir = $self->pindel_output_directory;
-    my $reference_fasta = $self->refseq;
     my $filename = $dir."/".$chr."/indels_all_sequences";
-    unless(-s $filename){
-        die "couldnt find ".$filename."\n";
-    }
-    my $pindel_output = IO::File->new($filename);
+    my $pindel_output = Genome::Utility::FileSystem->open_file_for_reading($filename); #IO::File->new($filename);
     my $pindel_config = $dir."/".$chr."/pindel.config";
-    my $pconf = IO::File->new($pindel_config);
+    my $pconf = Genome::Utility::FileSystem->open_file_for_reading($pindel_config);  #IO::File->new($pindel_config);
     $pconf->getline;
     my $tumor_bam = $pconf->getline;
     ($tumor_bam) = split /\s/, $tumor_bam;
