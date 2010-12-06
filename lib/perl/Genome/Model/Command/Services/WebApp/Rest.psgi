@@ -22,14 +22,23 @@ sub load_modules {
         die "failed to load required modules";
     }
 
+    # search's callbacks are expensive, web server can't change anything anyway so don't waste the time
     Genome::Search->unregister_callbacks('UR::Object');
 }
 
 dispatch {
 
-    sub (GET + /**/*/* + .*) {
-        my ( $self, $class, $perspective_toolkit, $filename, $extension ) = @_;
+    # Matcher for Static content related to a view
+    # **/ = class name
+    # */ = perspective.toolkit
+    # * + .* = filename & extension
+    # matches urls like /view/Genome/Model/status.html/foo.jpg
+    # would map to Genome/Model/View/Status/Html/foo.jpg
 
+    sub (GET + /**/*/* + .*) {
+        # these get passed in from the matcher as documented above!
+        my ( $self, $class, $perspective_toolkit, $filename, $extension ) = @_;
+        
         load_modules();
 
         if ( $class =~ /\./ ) {
@@ -63,6 +72,7 @@ dispatch {
             toolkit            => $toolkit
         );
 
+        # 404 handler will rewrite text/plain into a prettier format 
         unless ($view_class) {
             return [
                 404,
@@ -113,6 +123,11 @@ dispatch {
         ];
       },
 
+      # Second matcher maps UR views
+      #/** class
+      #/* perspective
+      #.* toolkit
+      # + ?@*   slurp query portion into a hash of arrays (so you could say ?foo=a&foo=b&foo=c and get foo=>[a,b,c])
       sub (GET + /**/* + .* + ?@*) {
         my ( $self, $class, $perspective, $toolkit, $args ) = @_;
 
@@ -123,6 +138,7 @@ dispatch {
 
         my $mime_type = Plack::MIME->mime_type(".$toolkit");
 
+        # flatten these where only one arg came in (don't want x=>['y'], just x=>'y')
         for my $key ( keys %$args ) {
             if ( index( $key, '_' ) == 0 ) {
                 delete $args->{$key};
