@@ -5,7 +5,9 @@ use warnings;
 
 use Genome;
 
+require File::Copy;
 use Data::Dumper 'Dumper';
+require IPC::Run;
 
 class Genome::InstrumentData::Command::Dacc {
     is  => 'Command',
@@ -330,6 +332,8 @@ sub _create_instrument_data_allocation {
 sub _validate_md5 {
     my $self = shift;
 
+    $self->status_message('Validate MD5...');
+
     if ( not $self->validate_md5 ) {
         $self->status_message('Skip validate md5...');
         return 1;
@@ -341,17 +345,16 @@ sub _validate_md5 {
         return;
     }
 
-    my $md5 = Genome::InstrumentData::Command::Dacc::MD5->create(
+    my $md5 = Genome::InstrumentData::Command::Dacc::Md5->create(
         data_files => \@data_files,
         format => $self->format,
         confirmed_md5_file => $self->_dl_directory.'/confirmed.md5',
     );
-
     if ( not $md5 ) {
         $self->error_message('Cannot create MD5 validate object.');
         return;
     }
-
+    $md5->dump_status_messages(1);
     if ( not $md5->execute ) {
         $self->error_message('Failed to validate MD5');
         return;
@@ -364,6 +367,8 @@ sub _validate_md5 {
 #< Update Library >#
 sub _update_library {
     my $self = shift;
+
+    $self->status_message('Update library...');
 
     my $dl_directory = $self->_dl_directory;
     if ( not -d $dl_directory ) {
@@ -381,16 +386,69 @@ sub _update_library {
         sra_sample_id => $self->sra_sample_id,
         xml_files => \@xml_files,
     );
-
     if ( not $update_library ) {
         $self->error_message('Cannot create update library object.');
         return;
     }
-
+    $update_library->dump_status_messages(1);
     if ( not $update_library->execute ) {
         $self->error_message('Failed to update library');
         return;
     }
+
+    return 1;
+}
+#<>#
+
+#< FILES ON THE DACC SITE >#
+sub data_files_on_the_dacc {
+    my $self = shift;
+
+    my $oringinal_cert = $self->original_certificate;
+
+    my ($in, $out);
+    my $harness = IPC::Run::harness(['ssh', '-i', '/home/archive/dacc.sshkey', 'jmartin@aspera.hmpdacc.org',], \$in, \$out);
+    $harness->pump until $out;
+
+    $out = '';
+    $in = "ls\n";
+    $harness->pump until $out;
+    print $out;
+
+    return 1;
+}
+#<>#
+
+#< MOVE FILE >#
+sub _move_file {
+    my ($self, $file, $new_file) = @_;
+
+    Carp::confess("Cannot move file b/c none given!") if not $file;
+    Carp::confess("Cannot move $file b/c it does not exist!") if not -e $file;
+    Carp::confess("Cannot move $file to $new_file b/c no new file was given!") if not $new_file;
+
+    $self->status_message("Move $file to $new_file");
+
+    my $size = -s $file;
+    $self->status_message("Size: $size");
+
+    my $move_ok = File::Copy::move($file, $new_file);
+    if ( not $move_ok ) {
+        $self->error_message("Failed to move $file to $new_file: $!");
+        return;
+    }
+
+    if ( not -e $new_file ) {
+        $self->error_message('Move succeeded, but archive path does not exist.');
+        return;
+    }
+
+    if ( $size != -s $new_file ) {
+        $self->error_message("Moved $file to $new_file but now file size is different.");
+        return;
+    }
+
+    $self->status_message("Move...OK");
 
     return 1;
 }
