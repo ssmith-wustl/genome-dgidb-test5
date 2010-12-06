@@ -81,7 +81,7 @@ sub execute {
     my ($blastp_out, $blastp_err);
 
     ##FIXME:  This should not be hardcoded.  At least not here.
-    my $bacterial_nr = '/gscmnt/temp110/analysis/blast_db/gsc_bacterial/bacterial_nr/bacterial_nr';
+    my $bacterial_nr = '/gscmnt/ams1102/analysis/blast_db/gsc_bacterial/bacterial_nr/bacterial_nr';
 
     my $fasta_file = $self->fasta_file();
     
