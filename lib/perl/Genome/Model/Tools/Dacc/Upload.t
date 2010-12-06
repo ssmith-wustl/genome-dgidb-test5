@@ -26,7 +26,7 @@ no warnings qw/ once redefine /;
     diag($params{cmd});
     is(
         $params{cmd}, 
-        'ascp -Q -l100M -i '.$up->certificate.' '.join(' ', $up->files).' '.$up->dacc_remote_directory,
+        'ascp -Q -l100M -i '.$up->certificate.' -d '.join(' ', $up->files).' '.$up->dacc_remote_directory,
         'Aspera command matches',
     );
     return 1;

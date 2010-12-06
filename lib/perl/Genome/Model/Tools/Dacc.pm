@@ -102,7 +102,7 @@ sub dacc_directory {
 sub dacc_remote_directory {
     my $self = shift;
     my $dir = $self->base_dacc_directory;
-    return $self->user_and_site.':'.$self->dacc_directory;
+    return $self->user_and_site.':'.$self->dacc_directory.'/';
 }
 
 sub user_and_site {

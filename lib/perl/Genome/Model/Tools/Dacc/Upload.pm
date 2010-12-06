@@ -36,16 +36,16 @@ sub execute {
         return;
     }
 
-    my $file_string;
     for my $file ( $self->files ) {
         if ( not -e $file ) {
             $self->error_message("File to upload ($file) does not exist");
             return;
         }
-        $file_string .= $file.' ';
     }
+    my $file_string = join(' ', $self->files);
+    $self->status_message("Files: $file_string");
 
-    my $cmd = $self->base_command.' '.join(' ', $self->files).' '.$self->dacc_remote_directory;
+    my $cmd = $self->base_command.' -d '.$file_string.' '.$self->dacc_remote_directory;
     my $rv = eval{ Genome::Utility::FileSystem->shellcmd(cmd => $cmd); };
     if ( not $rv ) {
         $self->error_message("Aspera command failed: $cmd");

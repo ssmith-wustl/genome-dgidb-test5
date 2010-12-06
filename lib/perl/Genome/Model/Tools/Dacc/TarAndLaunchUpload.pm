@@ -31,9 +31,21 @@ sub execute {
 
     my $tar_file = $self->tar_file;
     $self->status_message("Tar file: $tar_file");
+    if ( $tar_file !~ /\.tgz$/ and $tar_file !~ /\.tar\.gz/  ) {
+        $self->error_message('Tar file must have .tar.gz or .tgz extension');
+        return;
+    }
+
     my $file_string = join(' ', $self->files);
     $self->status_message("Files: $file_string");
-    my $cmd = "tar cvzf $tar_file ".join(' ', $self->files);
+    for my $file ( $self->files ) {
+        if ( not -e $file ) {
+            $self->error_message("File to upload ($file) does not exist");
+            return;
+        }
+    }
+
+    my $cmd = "tar cvzf $tar_file $file_string";
     my $rv = eval { Genome::Utility::FileSystem->shellcmd(cmd => $cmd); };
     if ( not $rv ) {
         $self->error_message("Tar command failed: $cmd");
