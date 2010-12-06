@@ -16,8 +16,6 @@ package Genome::Model::Tools::Varscan::ProcessValidation;     # rename this when
 use strict;
 use warnings;
 
-use FileHandle;
-
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
 class Genome::Model::Tools::Varscan::ProcessValidation {
@@ -29,8 +27,13 @@ class Genome::Model::Tools::Varscan::ProcessValidation {
         variants_file               => { is => 'Text', doc => "File of variants to report on", is_optional => 0 },
         output_file                 => { is => 'Text', doc => "Output file for validation results", is_optional => 0, is_output => 1 },
         output_plot                 => { is => 'Boolean', doc => "Optional plot of variant allele frequencies", is_optional => 1, },
-        output_plot_file            => { is => 'Text', calculate_from => ['output_file'], calculate => q{ $output_file . '.FreqPlot.png'}, },
-        output_somatic_plot_file    => { is => 'Text', calculate_from => ['output_file'], calculate => q{ $output_file . '.FreqPlot.Somatic.png'}, },
+        output_plot_file            => { is => 'Text', calculate_from => ['output_file'], calculate => q{ $output_file . '.FreqPlot.png'}, is_output => 1,},
+        output_somatic_plot_file    => { is => 'Text', calculate_from => ['output_file'], calculate => q{ $output_file . '.FreqPlot.Somatic.png'}, is_output => 1,},
+    ],
+    has_param => [
+        lsf_resource => {
+            default_value => 'rusage[tmp=2000] select[tmp>2000]',
+        },
     ],
 };
 
@@ -69,12 +72,12 @@ sub execute {                               # replace with real execution logic.
     my $output_file = $self->output_file;
     my $output_plot = $self->output_plot;
 
-    open(OUTFILE, ">$output_file") or die "Can't open outfile: $!\n";
-    print OUTFILE "chrom\tchr_start\tchr_stop\tref\tvar\tcalled\tfilter\tstatus\tv_ref\tv_var\tnorm_reads1\tnorm_reads2\tnorm_freq\tnorm_call\ttum_reads1\ttum_reads2\ttum_freq\ttum_call\tsomatic_status\tgermline_p\tsomatic_p\n";
+    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($output_file);
+    print $output_fh "chrom\tchr_start\tchr_stop\tref\tvar\tcalled\tfilter\tstatus\tv_ref\tv_var\tnorm_reads1\tnorm_reads2\tnorm_freq\tnorm_call\ttum_reads1\ttum_reads2\ttum_freq\ttum_call\tsomatic_status\tgermline_p\tsomatic_p\n";
 
-    open(SOMATIC, ">$output_file.SomaticFreqs") or die "Can't open outfile: $!\n";
-    open(GERMLINE, ">$output_file.GermlineFreqs") or die "Can't open outfile: $!\n";
-    open(REFERENCE, ">$output_file.ReferenceFreqs") or die "Can't open outfile: $!\n";
+    my ($somatic_fh, $somatic_file) = Genome::Utility::FileSystem->create_temp_file;
+    my ($germline_fh, $germline_file) = Genome::Utility::FileSystem->create_temp_file;
+    my ($reference_fh, $reference_file) = Genome::Utility::FileSystem->create_temp_file;
 
     my %validation_results = my %filtered_results = ();
 
@@ -82,14 +85,14 @@ sub execute {                               # replace with real execution logic.
     my %stats = ();
 
     ## Load the validation results ##
-    %validation_results = load_validation_results($validation_file);
+    %validation_results = $self->load_validation_results($validation_file);
 
     ## Load the filtered results ##
-    %filtered_results = load_validation_results($filtered_validation_file) if($filtered_validation_file);
+    %filtered_results = $self->load_validation_results($filtered_validation_file) if($filtered_validation_file);
 
 
     ## Parse the variant file ##
-    my $input = new FileHandle ($variants_file);
+    my $input = Genome::Utility::FileSystem->open_file_for_reading($variants_file);
     my $lineCounter = 0;
 
     while (<$input>) {
@@ -154,13 +157,13 @@ sub execute {                               # replace with real execution logic.
             $stats{$result}++;
 
             ## Print the results to the output file ##
-            print OUTFILE join("\t", $chrom, $chr_start, $chr_stop, $ref, $var, $result, $varscan_results) . "\n";
+            print $output_fh join("\t", $chrom, $chr_start, $chr_stop, $ref, $var, $result, $varscan_results) . "\n";
     
             ## If plotting, print to correct file ##
             if($self->output_plot) {
-                print SOMATIC "$varscan_freqs\n" if($filter_status eq "Pass" && $validation_status eq "Somatic");
-                print GERMLINE "$varscan_freqs\n" if($filter_status eq "Pass" && $validation_status eq "Germline");
-                print REFERENCE "$varscan_freqs\n" if($filter_status eq "Fail" && $validation_status eq "Reference");
+                print $somatic_fh "$varscan_freqs\n" if($filter_status eq "Pass" && $validation_status eq "Somatic");
+                print $germline_fh "$varscan_freqs\n" if($filter_status eq "Pass" && $validation_status eq "Germline");
+                print $reference_fh "$varscan_freqs\n" if($filter_status eq "Fail" && $validation_status eq "Reference");
             }            
         } else {
             $call_status = "No";
@@ -172,27 +175,27 @@ sub execute {                               # replace with real execution logic.
 
     close($input);
 
-    close(SOMATIC);
-    close(GERMLINE);
-    close(REFERENCE);
-    close(OUTFILE);
+    close($somatic_fh);
+    close($germline_fh);
+    close($reference_fh);
+    close($output_fh);
 
     if($self->output_plot) {
-        open(SCRIPT, ">$output_file.R") or die "Can't open Script file: $!\n";
+        my ($r_script_fh, $r_script_file) = Genome::Utility::FileSystem->create_temp_file;
 
         ## Get length of germline file ##
 
-        my $germline_length = `cat $output_file.GermlineFreqs | wc -l`;
+        my $germline_length = `cat $germline_file | wc -l`;
         chomp($germline_length);
 
 
         my $output_plot_file = $self->output_plot_file;
         ## IF we have germline calls, print those too ##
         if($germline_length) { #$stats{"Yes\tPass\tGermline"} && $stats{"Yes\tPass\tGermline"} > 0)
-            print SCRIPT qq{
-somatic <- read.table("$output_file.SomaticFreqs")
-germline <- read.table("$output_file.GermlineFreqs")
-reference <- read.table("$output_file.ReferenceFreqs")
+            print $r_script_fh qq{
+somatic <- read.table("$somatic_file")
+germline <- read.table("$germline_file")
+reference <- read.table("$reference_file")
 png("$output_plot_file", height=600, width=600)
 plot(germline\$V1, germline\$V2, col="blue", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), xlab="Normal", ylab="Tumor")
 points(somatic\$V1, somatic\$V2, col="red", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100))
@@ -202,9 +205,9 @@ dev.off()
         }
         ## Otherwise print just Somatic and Reference ##
         else {
-        print SCRIPT qq{
-somatic <- read.table("$output_file.SomaticFreqs")
-reference <- read.table("$output_file.ReferenceFreqs")
+        print $r_script_fh qq{
+somatic <- read.table("$somatic_file")
+reference <- read.table("$germline_file")
 png("$output_plot_file", height=600, width=600)
 plot(somatic\$V1, somatic\$V2, col="red", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), xlab="Normal", ylab="Tumor")
 points(reference\$V1, reference\$V2, col="black", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100))
@@ -214,22 +217,16 @@ dev.off()
 
         ## Also do somatic sites by themselves ##
         my $output_somatic_plot_file = $self->output_somatic_plot_file;
-        print SCRIPT qq{
+        print $r_script_fh qq{
 png("$output_somatic_plot_file", height=600, width=600)
 plot(somatic\$V1, somatic\$V2, col="red", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), xlab="Normal", ylab="Tumor")
 dev.off()
         };
 
-        close(SCRIPT);
+        close($r_script_fh);
 
-        system("R --no-save <$output_file.R 2>/dev/null");
-        system("rm -rf $output_file.R");
+        system("R --no-save <$r_script_file 2>/dev/null");
     }
-
-    ## Remove the intermediate files ##
-    system("rm -rf $output_file.SomaticFreqs");
-    system("rm -rf $output_file.GermlineFreqs");
-    system("rm -rf $output_file.ReferenceFreqs");
 
     print $stats{'num_variants'} . " variants in $variants_file\n";
 #    print $stats{'with_no_results'} . " had no validation results\n";
@@ -253,11 +250,12 @@ dev.off()
 ################################################################################################
 
 sub load_validation_results {
-    my $filename = shift(@_);
+    my $self = shift;
+    my $filename = shift;
 
     my %results = ();
 
-    my $input = new FileHandle ($filename);
+    my $input = Genome::Utility::FileSystem->open_file_for_reading($filename);
     my $lineCounter = 0;
 
     while (<$input>) {
