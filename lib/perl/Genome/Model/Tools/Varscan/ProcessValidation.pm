@@ -72,7 +72,7 @@ sub execute {                               # replace with real execution logic.
     my $output_file = $self->output_file;
     my $output_plot = $self->output_plot;
 
-    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($output_file);
+    my ($output_fh, $output_temp_file) = Genome::Utility::FileSystem->create_temp_file;
     print $output_fh "chrom\tchr_start\tchr_stop\tref\tvar\tcalled\tfilter\tstatus\tv_ref\tv_var\tnorm_reads1\tnorm_reads2\tnorm_freq\tnorm_call\ttum_reads1\ttum_reads2\ttum_freq\ttum_call\tsomatic_status\tgermline_p\tsomatic_p\n";
 
     my ($somatic_fh, $somatic_file) = Genome::Utility::FileSystem->create_temp_file;
@@ -180,10 +180,15 @@ sub execute {                               # replace with real execution logic.
     close($reference_fh);
     close($output_fh);
 
+    #done producing the file, now copy it to the final location
+    Genome::Utility::FileSystem->copy_file($output_temp_file, $output_file);
+
     if($self->output_plot) {
         my ($r_script_fh, $r_script_file) = Genome::Utility::FileSystem->create_temp_file;
 
-        my $output_plot_file = $self->output_plot_file;
+        my $temp_plot_file_path = Genome::Utility::FileSystem->create_temp_file_path;
+        my $temp_somatic_plot_file_path = Genome::Utility::FileSystem->create_temp_file_path;
+
         if(-s $somatic_file) {
             print $r_script_fh qq{somatic <- read.table("$somatic_file")\n};
         }
@@ -194,7 +199,7 @@ sub execute {                               # replace with real execution logic.
             print $r_script_fh qq{reference <- read.table("$reference_file")\n};
         }
 
-        print $r_script_fh qq{png("$output_plot_file", height=600, width=600)\n};
+        print $r_script_fh qq{png("$temp_plot_file_path", height=600, width=600)\n};
 
         if(-s $germline_file) {
             print $r_script_fh qq{plot(germline\$V1, germline\$V2, col="blue", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), xlab="Normal", ylab="Tumor")\n};
@@ -211,9 +216,8 @@ sub execute {                               # replace with real execution logic.
 
         if(-s $somatic_file) {
             ## Also do somatic sites by themselves ##
-            my $output_somatic_plot_file = $self->output_somatic_plot_file;
             print $r_script_fh qq{
-png("$output_somatic_plot_file", height=600, width=600)
+png("$temp_somatic_plot_file_path", height=600, width=600)
 plot(somatic\$V1, somatic\$V2, col="red", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), xlab="Normal", ylab="Tumor")
 dev.off()
             };
@@ -224,8 +228,12 @@ dev.off()
         Genome::Utility::FileSystem->shellcmd(
             cmd => "R --no-save <$r_script_file 2>/dev/null",
             input_files => [$r_script_file],
-            output_files => [$output_plot_file]
+            output_files => [$temp_plot_file_path]
         );
+
+        Genome::Utility::FileSystem->copy_file($temp_plot_file_path, $self->output_plot_file);
+        Genome::Utility::FileSystem->copy_file($temp_somatic_plot_file_path, $self->output_somatic_plot_file)
+            if Genome::Utility::FileSystem->check_for_path_existence($temp_somatic_plot_file_path);
     }
 
     print $stats{'num_variants'} . " variants in $variants_file\n";
