@@ -183,49 +183,49 @@ sub execute {                               # replace with real execution logic.
     if($self->output_plot) {
         my ($r_script_fh, $r_script_file) = Genome::Utility::FileSystem->create_temp_file;
 
-        ## Get length of germline file ##
-
-        my $germline_length = `cat $germline_file | wc -l`;
-        chomp($germline_length);
-
-
         my $output_plot_file = $self->output_plot_file;
-        ## IF we have germline calls, print those too ##
-        if($germline_length) { #$stats{"Yes\tPass\tGermline"} && $stats{"Yes\tPass\tGermline"} > 0)
-            print $r_script_fh qq{
-somatic <- read.table("$somatic_file")
-germline <- read.table("$germline_file")
-reference <- read.table("$reference_file")
-png("$output_plot_file", height=600, width=600)
-plot(germline\$V1, germline\$V2, col="blue", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), xlab="Normal", ylab="Tumor")
-points(somatic\$V1, somatic\$V2, col="red", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100))
-points(reference\$V1, reference\$V2, col="black", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100))
-dev.off()
-            };
+        if(-s $somatic_file) {
+            print $r_script_fh qq{somatic <- read.table("$somatic_file")\n};
         }
-        ## Otherwise print just Somatic and Reference ##
-        else {
-        print $r_script_fh qq{
-somatic <- read.table("$somatic_file")
-reference <- read.table("$germline_file")
-png("$output_plot_file", height=600, width=600)
-plot(somatic\$V1, somatic\$V2, col="red", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), xlab="Normal", ylab="Tumor")
-points(reference\$V1, reference\$V2, col="black", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100))
-dev.off()
-            };
+        if(-s $germline_file) {
+            print $r_script_fh qq{germline <- read.table("$germline_file")\n};
+        }
+        if(-s $reference_file) {
+            print $r_script_fh qq{reference <- read.table("$reference_file")\n};
         }
 
-        ## Also do somatic sites by themselves ##
-        my $output_somatic_plot_file = $self->output_somatic_plot_file;
-        print $r_script_fh qq{
+        print $r_script_fh qq{png("$output_plot_file", height=600, width=600)\n};
+
+        if(-s $germline_file) {
+            print $r_script_fh qq{plot(germline\$V1, germline\$V2, col="blue", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), xlab="Normal", ylab="Tumor")\n};
+        }
+        if(-s $somatic_file) {
+            print $r_script_fh qq{points(somatic\$V1, somatic\$V2, col="red", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100))\n};
+        }
+        if(-s $reference_file) {
+            print $r_script_fh qq{points(reference\$V1, reference\$V2, col="black", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100))\n};
+        }
+
+        print $r_script_fh qq{dev.off()\n};
+        ## Otherwise print just Somatic and Reference ##
+
+        if(-s $somatic_file) {
+            ## Also do somatic sites by themselves ##
+            my $output_somatic_plot_file = $self->output_somatic_plot_file;
+            print $r_script_fh qq{
 png("$output_somatic_plot_file", height=600, width=600)
 plot(somatic\$V1, somatic\$V2, col="red", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), xlab="Normal", ylab="Tumor")
 dev.off()
-        };
+            };
+        }
 
         close($r_script_fh);
 
-        system("R --no-save <$r_script_file 2>/dev/null");
+        Genome::Utility::FileSystem->shellcmd(
+            cmd => "R --no-save <$r_script_file 2>/dev/null",
+            input_files => [$r_script_file],
+            output_files => [$output_plot_file]
+        );
     }
 
     print $stats{'num_variants'} . " variants in $variants_file\n";
