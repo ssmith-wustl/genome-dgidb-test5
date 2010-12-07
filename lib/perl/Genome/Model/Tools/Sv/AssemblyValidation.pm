@@ -235,7 +235,8 @@ sub execute {
     $self->status_message("Data directory: $datadir");
     $self->_data_dir($datadir);
 
-    my $tigra_sv_cmd = '/gscmnt/sata872/info/medseq/xfan/assembly_testdata/AML52/tigra_sv';
+#    my $tigra_sv_cmd = '/gscmnt/sata872/info/medseq/xfan/assembly_testdata/AML52/tigra_sv';
+    my $tigra_sv_cmd = '/gscuser/xfan/kdevelop/TIGRA_SV/src/tigra_sv';
     my $tigra_sv_options = $self->_get_tigra_options;
     my $bam_files = $self->_check_bam;
     $tigra_sv_cmd .= ' '. $tigra_sv_options . $sv_file . $bam_files;
@@ -262,6 +263,7 @@ sub execute {
         $self->_N50size(_ComputeTigraN50($tigra_sv_fa));
         $self->_WeightAvgSize(_ComputeTigraWeightedAvgSize($tigra_sv_fa));
 
+        
         #test homo, het contigs
         for my $ctg_type ('homo', 'het') {
             $self->_cross_match_validation($ctg_type, $tigra_sv_name);
@@ -284,7 +286,7 @@ sub execute {
                 my $coord = join(".",$maxSV->{chr1},$maxSV->{start1},$maxSV->{chr2},$maxSV->{start2},$maxSV->{type},$maxSV->{size},$maxSV->{ori});
                 my $contigsize = $maxSV->{contiglens};
                 my $seqobj = Bio::Seq->new( 
-                    -display_id => "ID:$prefix,Var:$coord,Ins:$maxSV->{bkstart}\-$maxSV->{bkend},Length:$contigsize,KmerCoverage:$maxSV->{contigcovs},Strand:$maxSV->{strand},Assembly_Score:$maxSV->{weightedsize},PercNonRefKmerUtil:$maxSV->{kmerutil},TIGRA",
+                    -display_id => "ID:$prefix,Var:$coord,Ins:$maxSV->{bkstart}\-$maxSV->{bkend},Length:$contigsize,KmerCoverage:$maxSV->{contigcovs},Strand:$maxSV->{strand},Assembly_Score:$maxSV->{weightedsize},PercNonRefKmerUtil:$maxSV->{kmerutil},TIGRA,id_num:$maxSV->{contigid},ref_start_point:$maxSV->{refpos1},ref_end_point:$maxSV->{refpos2},contig_start_point:$maxSV->{rpos1},contig_end_point:$maxSV->{rpos2}",
                     -seq => $maxSV->{contig}, 
                 );
                 $bp_io->write_seq($seqobj);
@@ -359,13 +361,14 @@ sub _get_tigra_options {
         pad_local_ref         => 'w',
         map_qual_to_asm       => 'q',
         mismatch_limit        => 'N',
-        avg_read_depth_limit  => 'p',
+#        avg_read_depth_limit  => 'p',
         min_breakdancer_score => 'Q',
         skip_libraries        => 'L',
     );
 
-    my $tigra_opts = '-r -I '. $self->_data_dir  . ' ';
+    my $tigra_opts = '-d -r -I '. $self->_data_dir  . ' ';
     $tigra_opts .= '-b ' unless $self->custom_sv_format;
+    $tigra_opts .= '-p 10000 ' if($self->asm_high_coverage);
     for my $opt (keys %tigra_sv_options) {
         if ($self->$opt) {
             $tigra_opts .= '-'.$tigra_sv_options{$opt}.' '.$self->$opt . ' ';
@@ -452,7 +455,7 @@ sub _cross_match_validation {
     my $result  = read_file($tmp_out);
 
     if ($result && $result =~ /\S+/) {
-	    $self->_UpdateSVs($result,$makeup_size,$regionsize,$tigra_sv_fa,$ctg_type);
+	    $self->_UpdateSVs($result,$makeup_size,$regionsize,$tigra_sv_fa,$ctg_type, $cm_out);
     }
     
     return 1;
@@ -460,7 +463,7 @@ sub _cross_match_validation {
 
 
 sub _UpdateSVs{
-    my ($self,$result,$makeup_size,$regionsize,$tigra_sv_fa,$type) = @_;
+    my ($self,$result,$makeup_size,$regionsize,$tigra_sv_fa,$type, $cm_out) = @_;
     my $datadir = $self->_data_dir;
     my $maxSV   = $self->_maxSV;
     my $N50size = $self->_N50size;
@@ -471,6 +474,7 @@ sub _UpdateSVs{
         #$pre_size += $makeup_size if $n_seg >= 2;
         if (defined $pre_size && defined $pre_start1 && defined $pre_start2) {
             my ($contigseq,$contiglens,$contigcovs,$kmerutil) = _GetContig($tigra_sv_fa, $pre_contigid);
+            my ($refpos1, $refpos2, $rpos1, $rpos2) = _GetRefPos($cm_out, $pre_contigid);
             $alnscore = int($alnscore*100/$regionsize); 
             $alnscore = $alnscore>100 ? 100 : $alnscore;
             if (!defined $maxSV || $maxSV->{size}<$pre_size || $maxSV->{alnscore} < $alnscore) {
@@ -482,7 +486,7 @@ sub _UpdateSVs{
 	                $pre_chr2 =~ s/.*\///; 
                     $pre_chr2 =~ s/\.fasta//;
                 }
-	            ($maxSV->{chr1},$maxSV->{start1},$maxSV->{chr2},$maxSV->{start2},$maxSV->{bkstart},$maxSV->{bkend},$maxSV->{size},$maxSV->{type},$maxSV->{contigid},$maxSV->{contig},$maxSV->{contiglens},$maxSV->{contigcovs},$maxSV->{kmerutil},$maxSV->{N50},$maxSV->{weightedsize},$maxSV->{alnscore},$maxSV->{scarsize},$maxSV->{a},$maxSV->{b},$maxSV->{read_len},$maxSV->{fraction_aligned},$maxSV->{n_seg},$maxSV->{n_sub},$maxSV->{n_indel},$maxSV->{nbp_indel},$maxSV->{strand},$maxSV->{microhomology}) = ($pre_chr1,$pre_start1,$pre_chr2,$pre_start2,$pre_bkstart,$pre_bkend,$pre_size,$pre_type,$pre_contigid,$contigseq,$contiglens,$contigcovs,$kmerutil,$N50score,$depthWeightedAvgSize,$alnscore,$scar_size,'50','100',$read_len,$fraction_aligned,$n_seg,$n_sub,$n_indel,$nbp_indel,$strand,$microhomology);
+	            ($maxSV->{chr1},$maxSV->{start1},$maxSV->{chr2},$maxSV->{start2},$maxSV->{bkstart},$maxSV->{bkend},$maxSV->{size},$maxSV->{type},$maxSV->{contigid},$maxSV->{contig},$maxSV->{contiglens},$maxSV->{contigcovs},$maxSV->{kmerutil},$maxSV->{N50},$maxSV->{weightedsize},$maxSV->{alnscore},$maxSV->{scarsize},$maxSV->{a},$maxSV->{b},$maxSV->{read_len},$maxSV->{fraction_aligned},$maxSV->{n_seg},$maxSV->{n_sub},$maxSV->{n_indel},$maxSV->{nbp_indel},$maxSV->{strand},$maxSV->{microhomology},$maxSV->{refpos1},$maxSV->{refpos2},$maxSV->{rpos1},$maxSV->{rpos2}) = ($pre_chr1,$pre_start1,$pre_chr2,$pre_start2,$pre_bkstart,$pre_bkend,$pre_size,$pre_type,$pre_contigid,$contigseq,$contiglens,$contigcovs,$kmerutil,$N50score,$depthWeightedAvgSize,$alnscore,$scar_size,'50','100',$read_len,$fraction_aligned,$n_seg,$n_sub,$n_indel,$nbp_indel,$strand,$microhomology,$refpos1,$refpos2,$rpos1,$rpos2);
 	            $maxSV->{het}     = $type;
 	            $maxSV->{ori}     = $ori;
 	            $maxSV->{alnstrs} = $alnstrs;
@@ -492,6 +496,78 @@ sub _UpdateSVs{
     $self->_maxSV($maxSV);
     return 1;
 }
+
+# only good for small INDELs
+sub _GetRefPos{
+    my ($fin, $contigid) = @_;
+    my ($ref_start, $ref_end, $r_start, $r_end);
+    my ($ref_start1, $ref_end1, $r_start1, $r_end1);
+    my ($refpos1, $refpos2, $rpos1, $rpos2);
+    my ($chr, $ref_1, $ref_2);
+    my $num = 0;
+    open(CM,"<$fin") || die "unable to open $fin\n";
+    while(<CM>){
+        if($_ =~ /^ALIGNMENT/ && $_ =~ /$contigid/){
+            my @a = split(/\s+/, $_);
+            my ($r1, $r2, $r3, $type, $str, $g1, $g2, $g3);
+
+            if($#a == 13){
+                ($r1, $r2, $r3, $type, $str, $g1, $g2, $g3) = ($a[$#a - 7], $a[$#a - 6], $a[$#a - 5], $a[$#a - 4], $a[$#a - 3], $a[$#a - 2], $a[$#a - 1], $a[$#a]);
+            }
+            else{
+                ($r1, $r2, $r3, $str, $g1, $g2, $g3) = ($a[$#a - 6], $a[$#a - 5], $a[$#a - 4], $a[$#a - 3], $a[$#a - 2], $a[$#a - 1], $a[$#a]);
+            }
+
+            print "HHHHHHHHHHHHHH: $r1, $r2, $r3\n";
+            ($chr, $ref_1, $ref_2) = ($str =~ /(\S+):(\d+)-(\d+)/);
+                
+            #print "HHHHHHHHHHHHHHH: $g1\t$g2\t$g3\n";
+            if($g1 =~ /\(/){
+                ($ref_start, $ref_end) = ($g2, $g3) if($num == 0);
+                ($ref_start1, $ref_end1) = ($g2, $g3) if($num == 1);
+            }
+            if($r1 =~ /\(/){
+                ($r_start, $r_end) = ($r2, $r3) if($num == 0);
+                ($r_start1, $r_end1) = ($r2, $r3) if($num == 1);
+            }
+            if($g3 =~ /\(/){
+                ($ref_start, $ref_end) = ($g1, $g2) if($num == 0);
+                ($ref_start1, $ref_end1) = ($g1, $g2) if($num == 1);
+            }
+            if($r3 =~ /\(/){
+                ($r_start, $r_end) = ($r1, $r2) if($num == 0);
+                ($r_start1, $r_end1) = ($r1, $r2) if($num == 1);
+            }
+
+
+            $num ++;
+        }
+    }
+
+    if($num >= 2){
+        $refpos1 = $ref_start > $ref_start1 ? $ref_start1 : $ref_start;
+        $refpos2 = $ref_end > $ref_end1 ? $ref_end : $ref_end1;
+        $rpos1 = $refpos1 == $ref_start ? $r_start : $r_start1;
+        $rpos2 = $refpos2 == $ref_end ? $r_end : $r_end1;
+    }
+    else{
+        $refpos1 = $ref_start;
+        $refpos2 = $ref_end;
+        $rpos1 = $r_start;
+        $rpos2 = $r_end;
+    }
+
+    $refpos1 += $ref_1;
+    $refpos2 += $ref_1;
+
+
+#    print "$refpos1\t$refpos2\n";
+    return ($refpos1, $refpos2, $rpos1, $rpos2);
+}
+
+
+
+
 
 
 sub _GetContig{
