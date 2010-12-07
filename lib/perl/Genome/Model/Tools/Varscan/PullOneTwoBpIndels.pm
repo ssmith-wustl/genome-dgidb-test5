@@ -95,11 +95,9 @@ sub execute {                               # replace with real execution logic.
 	my $indel_outfile = $small_indel_list;
 	open(INDELS_OUT, ">$indel_outfile") or die "Can't open output file: $!\n";
 
-#	my @file_list;
 	my $file_input = new FileHandle ($file_list_file);
 	while (my $file = <$file_input>) {
 		chomp($file);
-#		push(@file_list,$file);
 		my $indel_input = new FileHandle ($file);
 		while (my $line = <$indel_input>) {
 			chomp($line);
@@ -142,7 +140,7 @@ sub execute {                               # replace with real execution logic.
 	   $jobid6= $1;
 	   print "$jobid6\n";
 
-	my $jobid7 = `$bsub -J varscan_validation -w \'ended($jobid5 && $jobid6)\' \'gmt varscan validation --normal-bam $sorted_normal_bam_file.bam --tumor-bam $sorted_tumor_bam_file.bam --output-indel $output_indel --output-snp $output_snp --output-validation $output_validation\'`;
+	my $jobid7 = `$bsub -J varscan_validation -w \'ended($jobid5) && ended($jobid6)\' \'gmt varscan validation --normal-bam $sorted_normal_bam_file.bam --tumor-bam $sorted_tumor_bam_file.bam --output-indel $output_indel --output-snp $output_snp --output-validation $output_validation\'`;
 	   $jobid7=~/<(\d+)>/;
 	   $jobid7= $1;
 	   print "$jobid7\n";

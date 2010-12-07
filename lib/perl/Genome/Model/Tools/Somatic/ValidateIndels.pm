@@ -190,12 +190,6 @@ sub execute {
                         $allele_mismatch_hits++;
                     }
                 } else {
-                    #if($self->in_bp_range(join(",", ($chr,$start,$stop)),$called_data{$chr}{$start}{$stop}{'ranges'})){
-                    #    $perfect_match{$chr}{$start}{$stop} = $called_data{$chr}{$start}{$stop};
-                    #    $within_range++;
-                    #}
-                    
-                    
                     unless($self->intersection_range == -1){
                         my $fuzzy = $self->find_intersection(join(",",($chr,$start,$stop)),\%valid_data);
                         unless(defined($fuzzy)){
@@ -216,7 +210,6 @@ sub execute {
                             if($self->inside($chr,$lower_range,$upper_range,$ch,$st,$sp)){
                                 $perfect_match{$chr}{$start}{$stop} = $called_data{$chr}{$start}{$stop};
                                 $within_range++;
-                                #print "In Range = ".join("\t",($chr,$lower_range,$upper_range,$ch,$st,$sp))."\n";
                             }
                         }
                     }
@@ -224,23 +217,11 @@ sub execute {
             }
         }
     }
-    #$DB::single=1;
-    #print Data::Dumper::Dumper(%valid_data);
-    
     for my $chr (keys(%valid_data)){
         for my $start (keys(%{$valid_data{$chr}})){
-            #for my $stop (keys(%{$valid_data{$chr}{$start}})){
-            
-                $valid_total++;
-            #}
+            $valid_total++;
         }
     }
-
-#    for my $chr (keys(%valid_data)){
-#        for my $start (keys(%{$valid_data{$chr}})){
-#            $valid_total++;
-#        }
-#    }
     my $touched=0;
     for my $chr (keys(%touched_valids)){
         for my $start (keys(%{$touched_valids{$chr}})){
