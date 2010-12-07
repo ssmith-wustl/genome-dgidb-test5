@@ -133,6 +133,7 @@ sub execute {
         $log_fh = Genome::Utility::FileSystem->open_file_for_writing($self->microhomology_log_file) or return;
     }
 
+    my $len_refseq = length($refseq);
     $self->_refseq($refseq);
 
     my ($chr1,$refpos1,$chr2,$refpos2,$pretype,$presize,$preori);
@@ -150,56 +151,124 @@ sub execute {
             if (defined $size && $size =~ /\S+/) {
                 my ($read_len,$trimmed_readlen,$nbp_aligned,$n_seg,$n_sub,$n_indel,$nbp_indel,$strand) = $self->_ReadStats($dc->{read});
                 my $var;
-                my $altseq   = $self->_GetContig($dc->{read});
-                my @altbases = split //, $altseq;
+                my $altseq     = $self->_GetContig($dc->{read});
+                my @altbases   = split //, $altseq;
+                my $len_altseq = length($altseq);
+                my $bkpos      = $dc->{rpos};
+
                 if ($type eq 'D') {
 	                $type = 'DEL';
-	                my $bkpos = $dc->{rpos};
-	                my $len_refseq   = length($refseq);
 	                my ($idx1,$idx2) = (0,0);
 
             	    #Search for microhomology
 	                if ($strand eq '+') {
-	                    $bkpos++;
-	                    while ($refbases[$refpos-$idx1-1-1] eq $refbases[$refpos+$size-$idx1-1-1] && $refpos-$idx1-1-1>=0){
+                        #$bkpos++;
+                        #while ($refbases[$refpos-$idx1-1-1] eq $refbases[$refpos+$size-$idx1-1-1] && $refpos-$idx1-1-1>=0){
+                        while ($refbases[$refpos-$idx1-1-1] eq $refbases[$refpos+$size-$idx1-1-1] &&
+		                    $refbases[$refpos-$idx1-1-1] eq $altbases[$bkpos-$idx1-1] && 
+                            $bkpos-1>=0 && $refpos-$idx1-1-1>=0
+                        ){
 	                        $idx1++;
 	                    }
 	                    my $P5_homology = $idx1;
-	                    if ($refbases[$refpos-1] eq $altbases[$bkpos-1]) {
-	                        while ($refbases[$refpos+$idx2-1] eq $refbases[$refpos+$idx2+$size-1] && $refpos+$idx2+$size-1<$len_refseq){
+	                    if ($refbases[$refpos+$idx2-1] eq $altbases[$bkpos+$idx2+1-1]) {
+	                        while ($refbases[$refpos+$idx2-1] eq $refbases[$refpos+$idx2+$size-1] && 		  
+                                $refbases[$refpos+$idx2-1] eq $altbases[$bkpos+$idx2+1-1] &&
+		                        $bkpos+$idx2-1<$len_altseq && $refpos+$idx2+$size-1<$len_refseq
+                            ){
 	                            $idx2++;
 	                        }
                         }
                         my $P3_homology = $idx2;
-                        $var->{refpos1} = $refpos-$P5_homology;
-	                    $var->{refpos2} = $refpos+$size+$P3_homology-1;
-	                    $var->{bkpos1}  = $bkpos-$P5_homology;
-	                    $var->{bkpos2}  = ($P5_homology+$P3_homology==0) ? '-' : $bkpos+$P3_homology-1;
+                        $var->{refpos1}       = $refpos-$P5_homology;
+	                    $var->{refpos2}       = $refpos+$size+$P3_homology-1;
+	                    $var->{bkpos1}        = $bkpos-$P5_homology+1;
+	                    $var->{bkpos2}        = ($P5_homology+$P3_homology==0) ? '-' : $bkpos+$P3_homology;
+                        $var->{microhomology} = $P5_homology+$P3_homology;
                     }
 	                else {
-	                    while ($refbases[$refpos-$idx1-1] eq $refbases[$refpos-$size-$idx1-1] && $refpos-$size-$idx1-1>=0){
+                        #while ($refbases[$refpos-$idx1-1] eq $refbases[$refpos-$size-$idx1-1] && $refpos-$size-$idx1-1>=0){
+	                    my $refseq2 = $refseq; 
+                        $refseq2 =~ tr/ACGT/TGCA/;
+	                    my @refbases2 = split //,$refseq2;
+	                    while ($refbases2[$refpos-$idx1-1] eq $refbases2[$refpos-$size-$idx1-1] &&
+		                    $refbases2[$refpos-$idx1-1] eq $altbases[$bkpos+$idx1+1-1] &&
+		                    $bkpos+$idx1-1<$len_altseq && $refpos-$size-$idx1-1>=0
+                        ){
 	                        $idx1++;
                         }
 	                    my $P3_homology = $idx1;
-	                    if ($refbases[$refpos-1] eq $altbases[$bkpos-1]) {
-	                        while($refbases[$refpos+$idx2-1] eq $refbases[$refpos-$size+$idx2-1] && $refpos+$idx2-1<$len_refseq){
+	                    if ($refbases2[$refpos] eq $altbases[$bkpos-1]) {
+	                        while ($refbases2[$refpos+$idx2] eq $refbases2[$refpos-$size+$idx2] && 
+                                $refbases2[$refpos+$idx2] eq $altbases[$bkpos-$idx2-1] &&
+		                        $bkpos-$idx2+1-1>=0 && $refpos+$idx2+1<$len_refseq
+                            ){
 	                            $idx2++;
                             }
                         }
 	                    my $P5_homology = $idx2;
-	                    $var->{refpos1} = $refpos-$size-$P3_homology+1;
-	                    $var->{refpos2} = $refpos+$P5_homology+1;
-	                    $var->{bkpos1}  = $bkpos-$P5_homology+1;
-	                    $var->{bkpos2}  = ($P5_homology+$P3_homology==0) ? '-' : $bkpos+$P3_homology+1;
+	                    $var->{refpos1}       = $refpos-$size-$P3_homology+1;
+	                    $var->{refpos2}       = $refpos+$P5_homology;
+	                    $var->{bkpos1}        = $bkpos-$P5_homology+1;
+	                    $var->{bkpos2}        = ($P5_homology+$P3_homology==0) ? '-' : $bkpos+$P3_homology;
+                        $var->{microhomology} = $P5_homology+$P3_homology;
                     }
                 }
                 else {
-	                $type='INS';
-	                $var->{refpos1} = $refpos;
-	                $var->{refpos2} = $refpos+1;
-	                $var->{bkpos1}  = $dc->{rpos};
-	                $var->{bkpos2}  = $dc->{rpos}+$size-1;
-                }
+	                $type = 'INS';
+	                my ($idx1, $idx2) = (0, 0);
+	                #Search for microhomology
+	                if ($strand eq '+') {
+	                    while ($altbases[$bkpos-$idx1-1-1] eq $altbases[$bkpos+$size-$idx1-1-1] &&
+		                    $refbases[$refpos-$idx1-1] eq $altbases[$bkpos-$idx1-1-1] &&
+		                    $bkpos-$idx1-1-1>=0 && $refpos-$idx1-1>=0
+                        ){
+	                        $idx1++;
+                        }
+	                    my $P5_homology = $idx1;
+	                    if ($refbases[$refpos+$idx2] eq $altbases[$bkpos+$idx2-1]) {
+	                        while ($altbases[$bkpos+$idx2-1] eq $altbases[$bkpos+$idx2+$size-1] &&
+		                        $refbases[$refpos+$idx2] eq $altbases[$bkpos+$idx2-1] &&
+		                        $bkpos+$idx2+$size-1<$len_altseq && $refpos+$idx2<$len_refseq
+                            ){
+	                            $idx2++;
+                            }
+                        }
+	                    my $P3_homology = $idx2;
+	                    $var->{refpos1}       = $refpos-$P5_homology+1;
+	                    $var->{refpos2}       = $refpos+$P3_homology+1;
+	                    $var->{microhomology} = $P5_homology+$P3_homology;
+	                    $var->{bkpos1}        = $bkpos-$var->{microhomology};
+	                    $var->{bkpos2}        = $bkpos+$size-1;
+                    }
+	                else {
+	                    my $refseq2 = $refseq; 
+                        $refseq2 =~ tr/ACGT/TGCA/;
+	                    my @refbases2 = split //,$refseq2;
+	                    while ($altbases[$bkpos+$idx1-1] eq $altbases[$bkpos+$idx1+$size-1] &&
+		                    $refbases2[$refpos-$idx1-1-1] eq $altbases[$bkpos+$idx1-1] &&
+		                    $bkpos+$idx1-1<$len_altseq && $refpos-$idx1-1-1>=0
+                        ){
+	                        $idx1++;
+                        }
+	                    my $P3_homology = $idx1;
+	                    if ($refbases2[$refpos-1] eq $altbases[$bkpos-1-1]) {
+	                        while ($altbases[$bkpos-$idx2-1-1] eq $altbases[$bkpos-$idx2+$size-1-1] &&
+		                        $refbases2[$refpos+$idx2-1] eq $altbases[$bkpos-$idx2-1-1] &&
+		                        $bkpos-$idx2-1-1>=0 && $refpos+$idx2-1<$len_refseq
+                            ){
+	                            $idx2++;
+                            }
+                        }
+	                    my $P5_homology = $idx2;
+	                    $var->{refpos1}       = $refpos-$P3_homology;
+	                    $var->{refpos2}       = $refpos+$P5_homology;
+	                    $var->{bkpos1}        = $bkpos;
+	                    $var->{microhomology} = $P5_homology+$P3_homology;
+	                    $var->{bkpos2}        = $bkpos+$size+$var->{microhomology}-1;
+                    }
+                    $var->{microhomology} = 0;
+	            }
                 ($var->{type},$var->{size},$var->{read},$var->{score}) = ($type,$size,$dc->{read},$dc->{score});
                 $var->{orientation} = '+-';
                 $var->{scar}=0;
@@ -207,7 +276,7 @@ sub execute {
                 $nbp_indel-=$size;
                 $n_indel--;
                 my $fraction_aligned = ($nbp_aligned||0)/($trimmed_readlen||1);
-                ($var->{read_len},$var->{fraction_aligned},$var->{n_seg},$var->{n_sub},$var->{n_indel},$var->{nbp_indel},$var->{strand},$var->{microhomology}) = ($trimmed_readlen,$fraction_aligned,$n_seg,$n_sub,$n_indel,$nbp_indel,$strand,0);
+                ($var->{read_len},$var->{fraction_aligned},$var->{n_seg},$var->{n_sub},$var->{n_indel},$var->{nbp_indel},$var->{strand}) = ($trimmed_readlen,$fraction_aligned,$n_seg,$n_sub,$n_indel,$nbp_indel,$strand);
                 
                 my @alnstrs;
                 for my $aln (@{$cm->_align->{$dc->{read}}->{aln}}){
