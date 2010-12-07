@@ -13,7 +13,7 @@ use Test::More;
 my $machine_hardware = `uname -m`;
 like($machine_hardware, qr/x86_64/, 'on 64 bit machine') or die;
 
-use_ok('Genome::Model::Event::Build::DeNovoAssembly::Assemble::Soap') or die;
+use_ok('Genome::Model::Event::Build::DeNovoAssembly::Assemble') or die;
 
 my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
     sequencing_platform => 'solexa',
@@ -40,7 +40,7 @@ for my $target ( @assembler_input_files ) {
 }
 
 # create
-my $assemble = Genome::Model::Event::Build::DeNovoAssembly::Assemble::Soap->create(build_id => $build->id);
+my $assemble = Genome::Model::Event::Build::DeNovoAssembly::Assemble->create(build_id => $build->id);
 ok( $assemble, "Created soap assemble");
 $assemble->dump_status_messages(1);
 
@@ -83,4 +83,3 @@ foreach my $ext ( @file_exts ) {
 #print $build->data_directory."\n"; <STDIN>;
 done_testing();
 exit;
-

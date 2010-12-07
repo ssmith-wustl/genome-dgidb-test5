@@ -254,7 +254,7 @@ sub process_file {
                                 next;
                             }
                         }
-                        unless($details[5] =~ m/[IDS]/){
+                        unless($details[5] =~ m/[ID]/){
                             if(($details[3] > ($pos - 40))&&($details[3] < ($pos -10))){
                                 $read_support++;
                                 #print "cigar = ".$details[5]."\n";
