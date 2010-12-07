@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Sam::StreamSamToBam;
+package Genome::Model::Tools::Sam::StreamToBam;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use File::Copy;
 use File::Basename;
 
 
-class Genome::Model::Tools::Sam::StreamSamToBam {
+class Genome::Model::Tools::Sam::StreamToBam {
     is  => 'Genome::Model::Tools::Sam',
     has => [ 
         bam_file    => {
@@ -53,14 +53,17 @@ sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
 
-    $self->error_message('Ref list not existing') and return unless -s $self->ref_list;
-
     return $self;
 }
 
 
 sub execute {
     my $self = shift;
+
+    unless (defined $self->ref_list and -s $self->ref_list) {
+        $self->error_message('Ref list does not exist');
+        return;
+    }
 
     my $samtools = $self->samtools_path;
     
