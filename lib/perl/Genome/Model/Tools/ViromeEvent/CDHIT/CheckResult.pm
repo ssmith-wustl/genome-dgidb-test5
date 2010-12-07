@@ -52,7 +52,7 @@ sub execute {
         my $result = `grep completed $cdhitReport`;
         if ($result =~ /program completed/) {
 	    $self->log_event("Already completed for sample: $sample_name");
-	    return;
+	    return 1;
         }
     }
 
@@ -71,12 +71,12 @@ sub execute {
     $self->log_event("Executing for sample: $sample_name");
 
     if (system($com)) { #RETURNS 0 WHEN SUCCESSFUL
-	$self->log_event("Failed for sample: $sample_name");
-	return;
+        $self->log_event("Failed for sample: $sample_name");
+        return;
     }
     else {
-	$self->log_event("Ran successfully for sample: $sample_name");
-	return 1;
+        $self->log_event("Ran successfully for sample: $sample_name");
+        return 1;
     }
 }
 
