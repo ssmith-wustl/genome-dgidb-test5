@@ -22,14 +22,23 @@ sub load_modules {
         die "failed to load required modules";
     }
 
+    # search's callbacks are expensive, web server can't change anything anyway so don't waste the time
     Genome::Search->unregister_callbacks('UR::Object');
 }
 
 dispatch {
 
-    sub (GET + /**/*/* + .*) {
-        my ( $self, $class, $perspective_toolkit, $filename, $extension ) = @_;
+    # Matcher for Static content related to a view
+    # **/ = class name
+    # */ = perspective.toolkit
+    # * + .* = filename & extension
+    # matches urls like /view/Genome/Model/status.html/foo.jpg
+    # would map to Genome/Model/View/Status/Html/foo.jpg
 
+    sub (GET + /**/*/* + .*) {
+        # these get passed in from the matcher as documented above!
+        my ( $self, $class, $perspective_toolkit, $filename, $extension ) = @_;
+        
         load_modules();
 
         if ( $class =~ /\./ ) {
@@ -63,6 +72,7 @@ dispatch {
             toolkit            => $toolkit
         );
 
+        # 404 handler will rewrite text/plain into a prettier format 
         unless ($view_class) {
             return [
                 404,
@@ -113,6 +123,11 @@ dispatch {
         ];
       },
 
+      # Second matcher maps UR views
+      #/** class
+      #/* perspective
+      #.* toolkit
+      # + ?@*   slurp query portion into a hash of arrays (so you could say ?foo=a&foo=b&foo=c and get foo=>[a,b,c])
       sub (GET + /**/* + .* + ?@*) {
         my ( $self, $class, $perspective, $toolkit, $args ) = @_;
 
@@ -123,6 +138,7 @@ dispatch {
 
         my $mime_type = Plack::MIME->mime_type(".$toolkit");
 
+        # flatten these where only one arg came in (don't want x=>['y'], just x=>'y')
         for my $key ( keys %$args ) {
             if ( index( $key, '_' ) == 0 ) {
                 delete $args->{$key};
@@ -161,6 +177,8 @@ dispatch {
         }
 
         my $view;
+        # all objects in UR have create_view
+        # this probably ought to be revisited for performance resouns because it has to do a lot of hierarchy walking
         eval { $view = $matches[0]->create_view(%view_args); };
 
         if ( $@ && !$view ) {
@@ -179,7 +197,10 @@ dispatch {
         die 'no_view' unless ($view);
 
         my $content = $view->content();
-
+        
+        # the 'cacheon' cookie is handled by the javascript /View/Resource/Html/js/app/ui-init.js to tell the browser it's a
+        # cached page and show the timer.  
+        #this cookie has an expiration date in the past, so it tells the browser to expire it right now...
         [ 200, [ 'Content-type', $mime_type, 'Set-Cookie', 'cacheon=1; expires=Thu, 01-Jan-2000 00:00:00 GMT' ], [$content] ];
       }
 };

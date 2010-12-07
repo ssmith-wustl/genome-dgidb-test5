@@ -172,6 +172,7 @@ sub execute {
     my %perfect_match;
     my %fuzzy_candidates;
     my %total_fail;
+    my %touched_valids;
     for my $chr (sort(keys(%called_data))){
         for my $start (sort(keys(%{$called_data{$chr}}))){
             for my $stop (sort(keys(%{$called_data{$chr}{$start}}))){
@@ -180,18 +181,15 @@ sub execute {
                 if(exists($valid_data{$chr}{$start})&&defined($valid_data{$chr}{$start}{$stop})){
                     if($valid_data{$chr}{$start}{$stop} eq $called_data{$chr}{$start}{$stop}){
                         $perfect_match{$chr}{$start}{$stop} = $called_data{$chr}{$start}{$stop};
+                        $touched_valids{$chr}{$start}{$stop} = 1;
                         $exact_hits++;
                     }else{
                         $allele_mismatch{$chr}{$start}{$stop} = 1;
+                        $touched_valids{$chr}{$start}{$stop} = 1;
+                    
                         $allele_mismatch_hits++;
                     }
                 } else {
-                    #if($self->in_bp_range(join(",", ($chr,$start,$stop)),$called_data{$chr}{$start}{$stop}{'ranges'})){
-                    #    $perfect_match{$chr}{$start}{$stop} = $called_data{$chr}{$start}{$stop};
-                    #    $within_range++;
-                    #}
-                    
-                    
                     unless($self->intersection_range == -1){
                         my $fuzzy = $self->find_intersection(join(",",($chr,$start,$stop)),\%valid_data);
                         unless(defined($fuzzy)){
@@ -206,12 +204,12 @@ sub execute {
                         } else {
                             $fuzzy_hits++;
                         }
+                        $touched_valids{$ch}{$st}{$st} = 1;
                         if($use_ranges){
                             my ($lower_range, $upper_range) = split ",", $called_data{$chr}{$start}{'ranges'};
                             if($self->inside($chr,$lower_range,$upper_range,$ch,$st,$sp)){
                                 $perfect_match{$chr}{$start}{$stop} = $called_data{$chr}{$start}{$stop};
                                 $within_range++;
-                                #print "In Range = ".join("\t",($chr,$lower_range,$upper_range,$ch,$st,$sp))."\n";
                             }
                         }
                     }
@@ -219,23 +217,17 @@ sub execute {
             }
         }
     }
-    #$DB::single=1;
-    #print Data::Dumper::Dumper(%valid_data);
-    
     for my $chr (keys(%valid_data)){
         for my $start (keys(%{$valid_data{$chr}})){
-            #for my $stop (keys(%{$valid_data{$chr}{$start}})){
-            
-                $valid_total++;
-            #}
+            $valid_total++;
         }
     }
-
-#    for my $chr (keys(%valid_data)){
-#        for my $start (keys(%{$valid_data{$chr}})){
-#            $valid_total++;
-#        }
-#    }
+    my $touched=0;
+    for my $chr (keys(%touched_valids)){
+        for my $start (keys(%{$touched_valids{$chr}})){
+            $touched++;
+        }
+    }
 
     print "The total hits in results =                                 ".($exact_hits+$within_range+$allele_mismatch_hits)."\n";
     print "    Of which, the total EXACTLY matching hits was =         ".$exact_hits."\n";
@@ -248,7 +240,10 @@ sub execute {
     print "Fuzzy Hits, within a range of ".$self->intersection_range." = ".$fuzzy_hits."\n" unless $self->intersection_range==-1;
     print "Fuzzy Hits, within a range of ".$self->intersection_range.", but having exactly matching allels = ".$fuzzy_hits_exact_allele."\n" unless $self->intersection_range==-1;
     print "Calls which had a BP Range that included the valid indel = ".$within_range."\n" if $use_ranges;
+    print "Fuzzy Hits - BP Range hits = ".(($fuzzy_hits_exact_allele+$fuzzy_hits)-$within_range)."\n" unless $self->intersection_range==-1;
     print "Complete misses = ".$total_fail."\n" unless $self->intersection_range ==-1;
+
+    print "Total exclusive number of valid indels touched = ".$touched."\n";
 
     #print Data::Dumper::Dumper(%fuzzy_candidates);
     $self->dump_to_file(\%fuzzy_candidates,$self->fuzzy_output_file) if $self->fuzzy_output_file;

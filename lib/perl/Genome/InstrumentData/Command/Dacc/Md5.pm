@@ -1,4 +1,4 @@
-package Genome::InstrumentData::Command::Dacc::MD5;
+package Genome::InstrumentData::Command::Dacc::Md5;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use Genome;
 require Cwd;
 use Data::Dumper 'Dumper';
 
-class Genome::InstrumentData::Command::Dacc::MD5 {
+class Genome::InstrumentData::Command::Dacc::Md5 {
     is => 'Command',
     has => [
         data_files => {
@@ -27,15 +27,18 @@ class Genome::InstrumentData::Command::Dacc::MD5 {
         # priv
         _sra_id => {
             is => 'Text',
+            is_optional => 1,
             doc => 'SRA sample id',
         },
         _directory => {
             is => 'Text',
+            is_optional => 1,
             doc => 'Directory where the data and md5 files live.',
         },
         _data_file_names => {
             is => 'Text',
             is_many => 1,
+            is_optional => 1,
             doc => 'Data file base names',
         },
     ],
@@ -57,6 +60,12 @@ sub create {
         return;
     }
 
+    my $confirmed_md5_file = $self->confirmed_md5_file;
+    if ( not $confirmed_md5_file ) {
+        $self->error_message('No confirmed Md5 file given');
+        return;
+    }
+
     my %directories;
     my @data_file_names;
     for my $data_file ( $self->data_files ) {
@@ -69,6 +78,7 @@ sub create {
     my @directories = keys %directories;
     if ( @directories > 1 ) {
         $self->error_message('Data files are in multiple directories: '.Dumper(\@directories));
+        $self->delete;
         return;
     }
     $self->_directory($directories[0]);
@@ -79,9 +89,7 @@ sub create {
 }
 
 sub execute {
-    my $self = shift;
-
-    return $self->validate;
+    return $_[0]->_validate;
 }
 
 # Files
@@ -93,7 +101,7 @@ sub expected_md5_files {
 
 sub _expected_md5_files_for_fastq {
     my $self = shift;
-    return ( $self->_sra_id.'.md5' => [ $self->_data_file_names ] );
+    return ( $self->_sra_id.'.md5' => [ map { s/\.bz2$//; $_ } $self->_data_file_names ] );
 }
 
 sub _expected_md5_files_for_bam {
@@ -117,7 +125,7 @@ sub _expected_md5_files_for_sff {
 }
 
 # Validate
-sub validate {
+sub _validate {
     my $self = shift;
 
     $self->status_message('Validate md5...');
@@ -128,7 +136,11 @@ sub validate {
     my %confirmed_md5 =$self->_load_confirmed_md5;
     return if not %confirmed_md5;
 
-    for my $file ( keys %dacc_md5 ) {
+    for my $file ( keys %confirmed_md5 ) {
+        if ( not exists $dacc_md5{$file} ) {
+            $self->error_message("No MD5 from the DACC for file ($file)");
+            return;
+        }
         if ( $dacc_md5{$file} ne $confirmed_md5{$file} ){
             $self->error_message("MD5 for file ($file) does not match: $dacc_md5{$file} <=> $confirmed_md5{$file}");
             return;
@@ -167,10 +179,6 @@ sub _load_dacc_md5 {
             # one md5 file has many md5s - use the file name in the md5 file to associate
             # file names should match here, and exist
             for my $file ( @{$md5_files{$md5_file}} ) {
-                if ( not -e $file ) {
-                    $self->error_message("File ($file) in md5 file ($md5_file) does not exist.");
-                    return;
-                }
                 $files_and_md5{$file} = $current_files_and_md5{$file};
             }
         }
@@ -200,7 +208,7 @@ sub _load_confirmed_md5 {
 
     my $md5_file = $self->confirmed_md5_file;
     if ( not -e $md5_file ) {
-        my $generate = $self->generate;
+        my $generate = $self->_generate;
         return if not $generate;
     }
 
@@ -230,6 +238,7 @@ sub _load_md5 {
         chomp $line;
         my ($md5, $file) = split(/\s+/, $line);
         $file =~ s#^$sra_id/##;
+        $file =~ s/\.bz2$//;
         $files_and_md5{$file} = $md5;
     }
 
@@ -237,7 +246,7 @@ sub _load_md5 {
 }
 
 # Generate
-sub generate {
+sub _generate {
     my $self = shift;
 
     $self->status_message('Generate md5...');

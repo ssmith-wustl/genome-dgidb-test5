@@ -31,7 +31,7 @@ sub help_detail {
 sub _execute {
     my $self = shift;
 
-    $self->status_message('Rename BAM...');
+    $self->status_message('Move BAM...');
     
     my $dl_directory = $self->_dl_directory;
     my @bams = glob($dl_directory.'/*.bam');
@@ -48,14 +48,15 @@ sub _execute {
             $self->error_message('Cannot commit instrument data original path.');
             return;
         }
-        rename($bams[0], $destination_file);
+        my $move = $self->_move_file($bams[0], $destination_file);
+        return if not $move;
     }
     if ( not -e $destination_file ){
-        $self->error_message("Could not rename BAM! Not found in download directory: $dl_directory");
+        $self->error_message("BAM not found in download directory: $dl_directory");
         return;
     }
 
-    $self->status_message('Rename BAM...OK');
+    $self->status_message('Move BAM...OK');
 
     $self->status_message('Update instrument data...');
 

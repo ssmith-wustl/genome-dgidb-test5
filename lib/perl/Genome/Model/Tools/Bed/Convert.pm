@@ -115,11 +115,13 @@ sub write_bed_line {
     my $name = join('/', $values[3], $values[4]);
     my @columns;
     for my $index (0..scalar(@values)){
-        if($_==3){
+        if($index==3){
             push @columns, $name;
-        } elsif ($_==4){
+        } elsif ($index==4){
         } else {
-            push @columns, $values[$index];
+            if(defined($values[$index])){
+                push @columns, $values[$index];
+            }
         }
     }
     #print $output_fh join("\t", $chromosome, $start, $stop, $name), "\n";

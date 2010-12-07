@@ -31,7 +31,7 @@ class Genome::Model::Tools::Varscan::Validation {
         reference        => { is => 'Text', doc => "Reference FASTA file for BAMs" , is_optional => 1, is_input => 1, default_value => (Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa')},
         skip_if_output_present => { is => 'Text', doc => "If set to 1, skip execution if output files exist", is_optional => 1, is_input => 1 },
         varscan_params   => { is => 'Text', doc => "Parameters to pass to VarScan" , is_optional => 1, is_input => 1, default_value => '--min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.01 --validation 1 --min-coverage 8'},
-        samtools_version => { is => 'Text', doc => 'Version of samtools to use' },
+        samtools_version => { is => 'Text', doc => 'Version of samtools to use', default=>'r544' },
     ],
 
     has_param => [

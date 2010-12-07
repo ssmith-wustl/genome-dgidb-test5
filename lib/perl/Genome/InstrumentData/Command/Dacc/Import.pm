@@ -25,7 +25,7 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    $self->status_message('Import: '.$self->sra_sample_id.' '.$self->format);
+    $self->status_message('Import: '.$self->__display_name__);
 
     my $sample = $self->_get_sample;
     if ( not $sample ) {
@@ -35,7 +35,7 @@ sub execute {
 
     my @instrument_data = $self->_get_instrument_data;
     if ( not @instrument_data ){
-        $self->error_message('No instrument data for sra id: '.$self->sra_sample_id);
+        $self->error_message('No instrument data for '.$self->__display_name__);
         return;
     }
 

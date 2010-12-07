@@ -41,7 +41,7 @@ class Genome::InstrumentData::Imported {
         subset_name          => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         target_region_set_name => { is => 'VARCHAR2', len => 64, is_optional => 1 },
         library_id           => { is => 'NUMBER', len => 20, is_optional => 0 },
-        _old_sample_name      => { is => 'NUMBER', len => 20, is_optional => 1, column_name=>'SAMPLE_NAME' },
+        _old_sample_name      => { is => 'VARCHAR2', len => 20, is_optional => 1, column_name=>'SAMPLE_NAME' },
         _old_sample_id        => { is => 'NUMBER', len => 20, is_optional => 1, column_name=>'SAMPLE_ID' },
     ],
     has_optional =>[

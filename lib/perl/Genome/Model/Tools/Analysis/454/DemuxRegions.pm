@@ -236,7 +236,7 @@ sub process_region
 sub get_sample_name
 {
 	my $library_name = shift(@_);
-	my $cmd = "genome library list --filter=name='$library_name' --noheaders --show=sample_name | grep H_ | head -1";
+	my $cmd = "genome library list --filter=name='$library_name' --noheaders --show=sample_name | head -1";
 	my $sample_name = `$cmd`; 
 	chomp($sample_name);
 	return($sample_name);
