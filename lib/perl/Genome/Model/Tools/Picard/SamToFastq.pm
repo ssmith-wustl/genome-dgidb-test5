@@ -58,8 +58,8 @@ sub execute {
 
     my $input_file = $self->input;
     my $unlink_input_bam_on_end = 0;
-    
-    if ($self->read_group_id) {
+   
+    if (defined $self->read_group_id) {
         $unlink_input_bam_on_end = 1;
         my $samtools_path = Genome::Model::Tools::Sam->path_for_samtools_version;
         
