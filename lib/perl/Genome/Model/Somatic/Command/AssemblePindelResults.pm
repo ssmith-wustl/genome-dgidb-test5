@@ -95,7 +95,13 @@ sub pre_execute {
         my $default_filename = $default_filenames{$param};
         $self->$param( join('/', $self->output_directory, $default_filename) );
     }
-
+    # create directories
+    for my $directory ( $self->assemble_t1n_dir, $self->assemble_t1t_dir, $self->assemble_t2n_dir, $self->assemble_t2t_dir, $self->assemble_t3n_dir, $self->assemble_t3t_dir) {
+        unless ( Genome::Utility::FileSystem->create_directory($directory) ) {
+            $self->error_message("Failed to create directory $directory");
+            die;
+        }
+    }
     $self->tier1_output($self->indel_bed_output.".tier1");
     $self->tier2_output($self->indel_bed_output.".tier2");
     $self->tier3_output($self->indel_bed_output.".tier3");
@@ -225,7 +231,7 @@ __DATA__
   </operation>
 
   <operation name="Post-Assembly Tiering">
-    <operationtype commandClass="Genome::Model::Tools::Annotate::FastTier" typeClass="Workflow::OperationType::Command" />
+    <operationtype commandClass="Genome::Model::Tools::Annotate::FastTierPindel" typeClass="Workflow::OperationType::Command" />
   </operation>
 
   <operation name="Annotation">
