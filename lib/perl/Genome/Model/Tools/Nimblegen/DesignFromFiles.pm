@@ -88,7 +88,7 @@ sub execute {
       my $fh = IO::File->new( $filepath );
       while( my $line = $fh->getline )
       {
-        next if( $line =~ m/^(#|chromosome_name|Chr\t)/ ); #Skip headers
+        next if( $line =~ m/^(#|chromosome_name|Chr\t|readgroup)/ ); #Skip headers
         chomp( $line );
 
         #This section and the next can be expanded to support new annotation formats
@@ -170,7 +170,7 @@ sub execute {
     my $fh = IO::File->new( $filepath );
     while( my $line = $fh->getline )
     {
-      next if( $line =~ m/^(#|chromosome_name|Chr\t)/ ); #Skip headers
+      next if( $line =~ m/^(#|chromosome_name|Chr\t|readgroup)/ ); #Skip headers
       chomp( $line );
       if( $line =~ m/^\w+\.\w+\t\w+\t\d+\t\d+\t\w+\t\d+\t\d+\t(INV|INS|DEL|ITX|CTX)/ ) #BreakDancer output
       {
