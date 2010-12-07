@@ -26,7 +26,6 @@ my $callback = sub {
     # afterward, but we do need to wrap its configuration the first time to prevent conflicts
 
     warn "using internal LIMS modules...";
-    $DB::single = 1;
 
     if ($GSCApp::{BEGIN}) {
         # We've already done "use GSCApp" somewhere, and it was not
