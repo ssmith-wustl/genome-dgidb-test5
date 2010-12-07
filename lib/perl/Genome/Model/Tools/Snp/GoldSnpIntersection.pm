@@ -224,10 +224,10 @@ sub calculate_metrics {
     while(my $line = $snp_fh->getline) {
         chomp $line;
         my ($chr,$pos,$ref,$call,$quality,@metrics) = split /\t/, $line; 
-#        my $rd_depth = $snp_format eq 'SAM' ? $metrics[2] : $metrics[0];
+        my $rd_depth = $snp_format eq 'SAM' ? $metrics[2] : $metrics[0];
         
         # test to add min rd_depth
-#        if ($rd_depth > 20){
+        if ($rd_depth > 20){
         
         if($exclude_y) {
             next if($chr eq 'Y'); #female patient these are BS
@@ -243,7 +243,7 @@ sub calculate_metrics {
             my $comparison = $self->compare_gold_to_call($gold_het_hash_ref->{$chr}{$pos},$call);
             $het_breakdown{$comparison}{$snp_type}{n} += 1;
             #print STDERR $line, "\n" if($self->compare_gold_to_maq($gold_het_hash_ref->{$chr}{$pos},$call) eq 'mismatch' && $maq_type eq 'mono-allelic variant');
-#            $het_breakdown{$comparison}{$snp_type}{depth} += $rd_depth;
+            $het_breakdown{$comparison}{$snp_type}{depth} += $rd_depth;
             #if($maq_type eq 'homozygous variant') {
             #    print STDERR qq{"$comparison",},$metrics[0],"\n";
             #}
@@ -253,17 +253,17 @@ sub calculate_metrics {
             #Gold standard ref call
             my $comparison = $self->compare_gold_to_call($gold_ref_hash_ref->{$chr}{$pos},$call);
             $ref_breakdown{$comparison}{$snp_type}{n} += 1;
-#            $ref_breakdown{$comparison}{$snp_type}{depth} += $rd_depth;
+            $ref_breakdown{$comparison}{$snp_type}{depth} += $rd_depth;
             delete $gold_ref_hash_ref->{$chr}{$pos};
         }
         elsif(exists($gold_hom_hash_ref->{$chr}{$pos})) {
             #gold standard homozygous call at this site
             my $comparison = $self->compare_gold_to_call($gold_hom_hash_ref->{$chr}{$pos},$call);
             $hom_breakdown{$comparison}{$snp_type}{n} += 1;
-#            $hom_breakdown{$comparison}{$snp_type}{depth} += $rd_depth;
+            $hom_breakdown{$comparison}{$snp_type}{depth} += $rd_depth;
             delete $gold_hom_hash_ref->{$chr}{$pos};
         }
-#        }
+        }
     }
     my $gold_missed = { 'homozygous' => $gold_hom_hash_ref, 'heterozygous' => $gold_het_hash_ref, 'reference' => $gold_ref_hash_ref };
     return ($total_snp_positions, \%ref_breakdown,\%het_breakdown,\%hom_breakdown, $gold_missed);
