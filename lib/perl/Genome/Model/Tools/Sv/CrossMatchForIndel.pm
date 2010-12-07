@@ -158,7 +158,7 @@ sub execute {
 
                 if ($type eq 'D') {
 	                $type = 'DEL';
-	                my ($idx1,$idx2) = (0,0);
+	                my ($idx1, $idx2) = (0, 0);
 
             	    #Search for microhomology
 	                if ($strand eq '+') {
@@ -267,7 +267,6 @@ sub execute {
 	                    $var->{microhomology} = $P5_homology+$P3_homology;
 	                    $var->{bkpos2}        = $bkpos+$size+$var->{microhomology}-1;
                     }
-                    $var->{microhomology} = 0;
 	            }
                 ($var->{type},$var->{size},$var->{read},$var->{score}) = ($type,$size,$dc->{read},$dc->{score});
                 $var->{orientation} = '+-';
