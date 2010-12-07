@@ -202,7 +202,10 @@ sub process_file {
             }
             if($type eq 'I') {
                 $start = $start - 1;
-            }            
+            }else{
+                $stop = $stop - 1;
+            }
+            
             my @bed_line = $self->parse($call, $reference, $read);
             next unless scalar(@bed_line)>1;
             unless((@bed_line)&& scalar(@bed_line)==4){
@@ -238,7 +241,8 @@ sub process_file {
                     #    die "too many stop positions at ".$chrom." ".$pos."\n";
                     #}
                     my ($type,$size) = split /\//, $type_and_size;
-                    my $stop = ($type eq 'I') ? $pos+2 : $pos + $size;
+                    #my $stop = ($type eq 'I') ? $pos+2 : $pos + $size;
+                    my $stop = $pos;
                     my @results = `samtools view $tumor_bam $chrom:$pos-$stop | grep -v "XT:A:M"`;
                     my $read_support=0;
                     for my $result (@results){
