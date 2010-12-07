@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Xhong::BreakDancerCpp;
+package Genome::Model::Tools::Xhong::RunBdSd;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 use Command;
 use IO::File;
 
-class Genome::Model::Tools::Xhong::BreakDancerCpp {
+class Genome::Model::Tools::Xhong::RunBdSd {
     is => 'Command',
     has => [
     build_id => { 
@@ -183,9 +183,11 @@ sub execute {
     my $jobid=`bsub -N -u $user\@genome.wustl.edu -R 'select[type==LINUX64]' -J '$genome_name CTX' 'breakdancer_max -t -q 10 -d $ctx_file $cfg_name > $ctx_file'`;
     $jobid=~/<(\d+)>/;
     $jobid= $1;
+    print "$jobid\n";
     my $jobid2=`bsub -N -u $user\@genome.wustl.edu -R 'select[type==LINUX64 && mem>8000] rusage[mem=8000]' -M 8000000 -w 'ended($jobid)' -J '$genome_name SV6' '~kchen/MPrelease/BreakDancer/novoRealign.pl $cfg_name'`;
     $jobid2=~/<(\d+)>/;
     $jobid2= $1;
+    print "$jobid2\n";
     my $novo_ctx_file="$dir/$genome_name.novo.ctx";
     my $novo_cfg_file="$dir/$genome_name.novo.cfg";
     print `bsub -N -u $user\@genome.wustl.edu -R 'select[type==LINUX64 && mem>8000] rusage[mem=8000]' -M 8000000 -w 'ended($jobid2)' -J '$genome_name SV7' 'breakdancer_max -t $novo_cfg_file > $novo_ctx_file'`;
@@ -196,7 +198,12 @@ sub execute {
        print `bsub -N -u $user\@genome.wustl.edu -R 'select[type==LINUX64]' -J '$genome_name chr$chr' 'breakdancer_max -o $chr -q 10 -f $cfg_name > $genome_name.chr$chr.sv'`;
    } 
 
-
+    #submit squaredancer job
+    my $jobid3=`bsub -N -u $user\@genome.wustl.edu -J '$genome_name SD' -e SD.err -o SD.out -R 'select[type==LINUX64 && mem>8000] rusage [mem=8000]' -M 8000000 -q long 'perl /gscuser/xhong/git/genome/lib/perl/Genome/Model/Tools/Sv/SquareDancer.pl -l normal tumor.bam normal.bam'`;
+    $jobid3=~/<(\d+)>/;
+    $jobid3= $1;
+    print "$jobid3\n";
+    
     return 1;
 
 }
