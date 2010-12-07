@@ -27,6 +27,11 @@ class Genome::Model::Tools::Picard::SamToFastq {
             doc         => 'Output fastq file for bams which contain a mix of fragments & pairs -- required if paired',
             is_optional => 1,
         },
+        read_group_id => {
+            is          => 'String',
+            doc         => 'Limit to a single read group',
+            is_optional => 1,
+        }
     ],
 };
 
@@ -51,6 +56,37 @@ sub execute {
         return;
     }
 
+    my $input_file = $self->input;
+    my $unlink_input_bam_on_end = 0;
+    
+    if ($self->read_group_id) {
+        $unlink_input_bam_on_end = 1;
+        my $samtools_path = Genome::Model::Tools::Sam->path_for_samtools_version;
+        
+        my $temp = Genome::Utility::FileSystem->base_temp_directory;
+        my $temp_bam_file = $temp . "/temp_rg." . $$ . ".bam";
+        
+        my $samtools_strip_cmd = sprintf("%s view -h -r%s %s | samtools view -S -b -o %s -",
+                                          $samtools_path, $self->read_group_id, $input_file, $temp_bam_file);
+    
+        Genome::Utility::FileSystem->shellcmd(cmd=>$samtools_strip_cmd, 
+                                              output_files=>[$temp_bam_file],
+                                              skip_if_output_is_present=>0);
+
+
+        my $sorted_temp_bam_file = $temp . "/temp_rg.sorted." . $$ . ".bam";
+        
+        my $sort_cmd = Genome::Model::Tools::Sam::SortBam->create(file_name=>$temp_bam_file, name_sort=>1, output_file=>$sorted_temp_bam_file);
+
+        unless ($sort_cmd->execute) {
+            $self->error_message("Failed sorting reads into name order for iterating");
+            return;
+        }
+        
+        unlink($temp_bam_file);        
+        $input_file = $sorted_temp_bam_file;
+    }
+
     my $picard_dir = $self->picard_path;
     my $picard_jar_path = $picard_dir . "/sam-".$picard_version.".jar";
     my $sam_jar_path = $picard_dir . "/picard-".$picard_version.".jar";
@@ -64,7 +100,7 @@ sub execute {
 
     my $args = '';
 
-    $args .= ' INPUT=' . "'" . $self->input . "'";
+    $args .= ' INPUT=' . "'" . $input_file . "'";
     $args .= ' FASTQ=' . "'" . $self->fastq . "'";
     $args .= ' SECOND_END_FASTQ=' . "'" . $self->fastq2 . "'" if ($self->fastq2);
     $args .= ' FRAGMENT_FASTQ=' . "'" . $self->fragment_fastq. "'" if ($self->fragment_fastq);
@@ -79,10 +115,12 @@ sub execute {
 
     $self->run_java_vm(
         cmd          => $java_vm_cmd,
-        input_files  => [ $self->input ],
+        input_files  => [ $input_file ],
 #        output_files => \@output_files,
         skip_if_output_is_present => 0,
     );
+
+    unlink $input_file if ($unlink_input_bam_on_end && $self->input ne $input_file);
     return 1;
 }
 
