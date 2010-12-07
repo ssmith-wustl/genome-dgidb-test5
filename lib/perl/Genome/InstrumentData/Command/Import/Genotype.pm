@@ -85,7 +85,7 @@ class Genome::InstrumentData::Command::Import::Genotype {
 
 sub execute {
     my $self = shift;
-
+    my $allocation = $self->allocation if defined($self->allocation);
     unless(defined($self->sample_name) || defined($self->library_name)){
         $self->error_message("In order to import a genotype, a library-name or sample-name is required.");
         die $self->error_message;
@@ -126,9 +126,12 @@ sub execute {
             $self->error_message("Could not locate sample with the name ".$self->sample_name);
             die $self->error_message;
         }
-        ($library) = Genome::Library->get(sample_name => $sample->name);
+        ($library) = Genome::Library->get(sample=>$sample, name => $sample->name . "-microarraylib");
         unless(defined($library)){
-            $self->error_message("COuld not locate a library associated with the sample-name ".$sample->name);
+            $library = Genome::Library->create(sample=>$sample, name => $sample->name . "-microarraylib");
+        }
+        unless(defined($library)){
+            $self->error_message("Could not locate a library associated with the sample w/ library name ".$sample->name . "-microarraylib and couldn't create one either.");
             die $self->error_message;
         }
         $self->library_name($library->name);
@@ -153,14 +156,13 @@ sub execute {
         next if $property_name =~ /^allocation$/;
         next if $property_name =~ /^library_name$/;
         next if $property_name =~ /^define_model$/;
+        next if $property_name =~ /^sample_name$/;
         $params{$property_name} = $self->$property_name if $self->$property_name;
     }
 
     $params{sequencing_platform} = $self->sequencing_platform; 
     $params{import_format} = $self->import_format;
-    $params{sample_id} = $sample->id;
     $params{library_id} = $library->id;
-    $params{library_name} = $library->name;
     if(defined($self->allocation)){
         $params{disk_allocations} = $self->allocation;
     }
@@ -178,7 +180,7 @@ sub execute {
 
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
     unless ($import_instrument_data) {
-       $self->error_message('Failed to create imported instrument data for '.$self->original_data_path);
+       $self->error_message('Failed to create imported instrument data for '.$self->source_data_file);
        return;
     }
 

@@ -33,6 +33,11 @@ class Genome::ModelGroup {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+sub __display_name__ {
+    my $self = shift;
+    return $self->name.' ('.$self->id.')';
+}
+
 sub create {
     my $class = shift;
     my ($bx,%params) = $class->define_boolexpr(@_);
@@ -59,22 +64,36 @@ sub create {
 
 
 sub assign_models {
-
     my ($self, @models) = @_;
 
-    for my $m (@models) {
+    if ( not @models ) {
+        $self->error_message('No models given to assign to group');
+        return;
+    }
 
-        if(grep($_->id eq $m->id, $self->models)) {
-            die('Model ' . $m->id . ' already in ModelGroup ' . $self->id);
+    my %existing_models = map { $_->id => $_ } $self->models;
+
+    my $added = 0;
+    for my $m (@models) {
+        if ( exists $existing_models{ $m->id } ) {
+            $self->status_message('Skipping model '.$m->__display_name__.', it is already assigned...');
+            next;
         }
-        
         my $bridge = Genome::ModelGroupBridge->create(
             model_group_id => $self->id,
             model_id       => $m->genome_model_id,
         );
+        $existing_models{$m->id} = $m->id;
+        $added++;
     }
 
-    $self->schedule_convergence_rebuild;
+    my $attempted = scalar @models;
+    my $skipped = $attempted - $added;
+    $self->status_message("Added $added models to group: ".$self->__display_name__.". Skipped $skipped of $attempted models because they were already assigned.");
+
+    if ( $added ) {
+        $self->schedule_convergence_rebuild;
+    }
     
     return 1;
 }
@@ -171,6 +190,37 @@ sub builds {
     }
 
     return @builds;
+}
+
+sub delete {
+    my $self = shift;
+
+    # unassign existing models
+    my @models = $self->models;
+    if (@models) {
+        $self->status_message("Unassigning " . @models . " models from " . $self->__display_name__ . ".");
+        $self->status_message("Removed convergence model.");
+    }
+    else {
+        $self->unassign_models(@models);
+    }
+
+    # delete convergence model (and indirectly its builds)
+    my $convergence_model = $self->convergence_model;
+    if ($convergence_model) {
+        my $deleted_model = eval {
+            $convergence_model->delete;
+        };
+        if ($deleted_model) {
+            $self->status_message("Removed convergence model.");
+        }
+        else {
+            $self->error_message("Failed to remove convergence model (" . $convergence_model->__display_name__ . "), please investigate and remove manually.");
+        }
+    }
+
+    # delete self
+    return $self->SUPER::delete;
 }
 
 1;

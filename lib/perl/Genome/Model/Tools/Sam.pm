@@ -52,6 +52,7 @@ EOS
 
 
 my %SAMTOOLS_VERSIONS = (
+    r868    => '/gsc/pkg/bio/samtools/samtools-0.1.12a/samtools',
     r783    => '/gsc/pkg/bio/samtools/samtools-0.1.9/samtools',
     r613    => '/gsc/pkg/bio/samtools/samtools-0.1.8/samtools',
     r599    => '/gsc/pkg/bio/samtools/samtools-0.1.7ar599/samtools',

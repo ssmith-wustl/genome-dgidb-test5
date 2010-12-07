@@ -3,6 +3,10 @@ package Genome::Info::AnnotationPriorities;
 use strict;
 use warnings;
 
+
+# NOTE - Genome::Model::Tools::Annotate::TranscriptVariants no longer uses this module.
+# It has its own copy of these data structures so it can version control itself
+
 my %variant_priorities =
 (
     nonsense                        => 1,

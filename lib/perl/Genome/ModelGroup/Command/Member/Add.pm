@@ -6,56 +6,54 @@ use warnings;
 use Genome;
 
 class Genome::ModelGroup::Command::Member::Add {
-    is => ['Genome::ModelGroup::Command::Member'],
+    is => 'Genome::ModelGroup::Command::Member',
     has => [
-        model_ids   => { is => 'Text', doc => 'IDs of the models to add to the model-group (comma delimited)' },
+        models => {
+            is => 'Genome::Model',
+            is_many => 1,
+            shell_args_position => 2,
+            doc => 'Model(s) to add to the group. Resolved from command line via text string.',
+        },
     ],
     doc => 'add member models to a model-group',
 };
 
-sub help_synopsis {
-    return <<"EOS"
-genome model-group member add --model-group-id 21 --model-id 2813411994
-genome model-group member add --model-group-id 21 --model-ids 2813411994,2813326667
-EOS
+sub help_brief {
+    return "Add models to a group";
 }
 
-sub help_brief {
-    return "add one or more models to a model-group";
+sub help_synopsis {
+    return <<HELP;
+    genome model-group member add \$MODEL_GROUP \$MODELS
+
+    Add model id 2813411994 to group id 21 =>
+     genome model-group member add 21 2813411994
+    
+    Add model ids 2813411994 and 2813326667 to group named 'Models by Charris' =>
+     genome model-group member add 'Models by Charris' 2813411994,2813326667
+
+    Add models named starting w/ Charris to group named 'Models by Charris' =>
+     genome model-group member add 'Models by Charris' 'Charris%'
+HELP
 }
 
 sub help_detail {                           
-    return <<EOS 
-add one or more models to a model-group
-EOS
+    return;
 }
 
 sub execute {
     my $self = shift;
     
-    my $model_group = $self->model_group;
-    
-    my @model_ids = split(/,\s*/, $self->model_ids); 
-    
-    my @new_models = Genome::Model->get(id => \@model_ids);
-    my @existing_models = $self->model_group->models;
-    
-    for my $model_id (@model_ids) {
-        if( my ($model) = grep ($_->id eq $model_id, @new_models)) {
-            if( grep ($_->id eq $model_id, @existing_models)) {
-                $self->warning_message('Model ' . $model->name . ' (' . $model_id . ') is already a member.');
-                @new_models = grep($_->id ne $model_id, @new_models);
-            } else {
-                $self->status_message('Adding model ' . $model->name . ' (' . $model_id . ')...');
-            }
-        } else {
-            $self->error_message('Could not find model for ID #' . $model_id);
-        }
-    }
-    
-    $model_group->assign_models(@new_models);
-    
+    my $model_group = $self->model_group
+        or return;
+
+    my @models = $self->models
+        or return;
+
+    $model_group->assign_models(@models);
+
     return 1; #Things might not have gone perfectly, but nothing crazy happened
 }
 
 1;
+

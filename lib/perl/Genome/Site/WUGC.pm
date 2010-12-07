@@ -2,6 +2,8 @@ package Genome::Site::WUGC;
 use strict;
 use warnings;
 
+use Class::Autouse;
+
 # configuration for internal WUGC network software & LIMS 
 # this module is called by Genome::Config::edu::wustl::gsc right now on all *.gsc.wustl.edu hosts
 # print STDERR "using " . __PACKAGE__ . "\n";
@@ -38,7 +40,6 @@ my $callback = sub {
     # afterward, but we do need to wrap its configuration the first time to prevent conflicts
 
     warn "using internal LIMS modules...";
-    $DB::single = 1;
 
     if ($GSCApp::{BEGIN}) {
         # We've already done "use GSCApp" somewhere, and it was not

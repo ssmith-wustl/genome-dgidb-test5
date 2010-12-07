@@ -29,6 +29,12 @@ class Genome::ProcessingProfile::ReferenceAlignment {
             doc => 'the type of dna used in the reads for this model',
             valid_values => ['genomic dna', 'cdna']
         },
+        transcript_variant_annotator_version => {
+            doc => 'Version of the "annotate transcript-variants" tool to run during the annotation step',
+            is_optional => 1,
+            default_value => Genome::Model::Tools::Annotate::TranscriptVariants->default_annotator_version,
+            valid_values => [ 0,1,2],#Genome::Model::Tools::Annotate::TranscriptVariants->available_versions ],
+        },
         snv_detector_name => {
             doc => 'Name of the snv detector',
             is_optional => 1,
@@ -63,7 +69,8 @@ class Genome::ProcessingProfile::ReferenceAlignment {
         },
         picard_max_sequences_for_disk_read_ends_map => {
             doc => 'picard paremeter for MarkDuplicates',
-            is_optional => 1,
+            is_optional   => 1,
+            is_deprecated => 1,
         },
         samtools_version => {
             doc => 'samtools version for SamToBam, samtools merge, etc...',
@@ -71,15 +78,18 @@ class Genome::ProcessingProfile::ReferenceAlignment {
         },
         rmdup_name => {
             doc => 'rmdup tool used for this model ... deprecated',
-            is_optional => 1,
+            is_optional   => 1,
+            is_deprecated => 1,
         },
         rmdup_version => {
             doc => 'rmdup tool version used for this model ... deprecated',
-            is_optional => 1,
+            is_optional   => 1,
+            is_deprecated => 1,
         },
         merge_software => {
             doc => 'picard or samtools for merging ... deprecated',
-            is_optional => 1,
+            is_optional   => 1,
+            is_deprecated => 1,
         },
         merger_name => {
             doc => 'name of bam merger, picard, samtools',
@@ -162,14 +172,44 @@ class Genome::ProcessingProfile::ReferenceAlignment {
             is_optional => 1,
         },
         annotation_reference_transcripts => {
-            doc => 'The reference transcript set used for variant annotation',
+            doc => 'DEPRECATED (use annotation_reference_build model input instead). The reference transcript set used for variant annotation',
             is_optional => 1,
+            is_deprecated => 1,
         },
     ],
 };
 
 sub _resolve_type_name_for_class {
     return 'reference alignment';
+}
+
+sub _initialize_build {
+    my($self,$build) = @_;
+
+    # Check that the annotator version param is sane before doing the build
+    my $annotator_version;
+    my $worked = eval {
+        my $model = $build->model;
+        my $pp = $model->processing_profile;
+        $annotator_version = $pp->transcript_variant_annotator_version;
+        # When all processing profiles have a param for this, remove this unless block so
+        # they'll fail if it's missing
+        unless (defined $annotator_version) {
+            $annotator_version = Genome::Model::Tools::Annotate::TranscriptVariants->default_annotator_version;
+        }
+
+        my %available_versions = map { $_ => 1 } Genome::Model::Tools::Annotate::TranscriptVariants->available_versions;
+        unless ($available_versions{$annotator_version}) {
+            die "Requested annotator version ($annotator_version) is not in the list of available versions: "
+                . join(', ',keys(%available_versions));
+        }
+        1;
+    };
+    unless ($worked) {
+        $self->error_message("Could not determine which version of the Transcript Variants annotator to use: $@");
+        return;
+    }
+    return 1;
 }
 
 # get alignments (generic name)
@@ -235,7 +275,8 @@ sub params_for_alignment {
                     trimmer_params => $self->read_trimmer_params || undef,
                     picard_version => $self->picard_version || undef,
                     samtools_version => $self->samtools_version || undef,
-                    filter_name => $assignment->filter_desc || undef
+                    filter_name => $assignment->filter_desc || undef,
+                    test_name => undef,
                 );
 
     #print Data::Dumper::Dumper(\%params);
@@ -393,7 +434,7 @@ sub deduplication_job_classes {
         'Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries',
         'Genome::Model::Event::Build::ReferenceAlignment::PostDedupReallocate',
     );
-    if(defined $self->rmdup_name) {
+    if(defined $self->duplication_handler_name) {
         return @steps;
     }
     else {
@@ -403,15 +444,12 @@ sub deduplication_job_classes {
 
 sub transcript_annotation_job_classes{
     my $self = shift;
-    if (defined($self->annotation_reference_transcripts)){
-        my @steps = (
-            'Genome::Model::Event::Build::ReferenceAlignment::AnnotateAdaptor',
-            'Genome::Model::Event::Build::ReferenceAlignment::AnnotateTranscriptVariants',
-            #'Genome::Model::Event::Build::ReferenceAlignment::AnnotateTranscriptVariantsParallel',
-        );
-        return @steps;
-    }
-    return;
+    my @steps = (
+        'Genome::Model::Event::Build::ReferenceAlignment::AnnotateAdaptor',
+        'Genome::Model::Event::Build::ReferenceAlignment::AnnotateTranscriptVariants',
+        #'Genome::Model::Event::Build::ReferenceAlignment::AnnotateTranscriptVariantsParallel',
+    );
+    return @steps;
 }
 
 sub generate_reports_job_classes {
@@ -419,7 +457,7 @@ sub generate_reports_job_classes {
     my @steps = (
         'Genome::Model::Event::Build::ReferenceAlignment::RunReports'
     );
-    if((defined $self->snv_detector_name || defined $self->indel_detector_name) && defined $self->rmdup_name) {
+    if((defined $self->snv_detector_name || defined $self->indel_detector_name) && defined $self->duplication_handler_name) {
         return @steps;
     }
     else {
@@ -496,6 +534,7 @@ sub generate_reports_objects {
 sub transcript_annotation_objects {
     my $self = shift;
     my $model = shift;
+    return unless $model->annotation_reference_build;
     return 'all_sequences';
 }
 

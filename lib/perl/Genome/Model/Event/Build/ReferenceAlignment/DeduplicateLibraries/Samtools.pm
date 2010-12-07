@@ -27,9 +27,7 @@ sub execute {
     my $now = UR::Time->now;
   
     $self->status_message("Starting DeduplicateLibraries::Samtools");
-    
     my $alignments_dir = $self->resolve_accumulated_alignments_path;
-
     $self->status_message("Accumulated alignments directory: ".$alignments_dir);
    
     unless (-e $alignments_dir) { 
@@ -81,7 +79,8 @@ sub execute {
         if (scalar(@read_set_list)>0) {
             my %library_alignments_item = ( $library_key => \@read_set_list );  
             push @list_of_library_alignments, \%library_alignments_item;
-        } else {
+        } 
+        else {
             $self->status_message("Not including library: $library_key because it is empty.");
         } 
     }
@@ -92,10 +91,9 @@ sub execute {
         return; 
     }
 
-    my $merge_software = 'picard';
-    if ($self->model->merge_software) {
-        $merge_software = $self->model->merge_software;
-    }
+    my $merger_name    = $self->model->merger_name || 'picard';
+    my $merger_version = $self->model->merger_version;
+    my $merger_params  = $self->model->merger_params;
 
     #parallelization starts here
     require Workflow::Simple;
@@ -114,9 +112,12 @@ sub execute {
             $op,
             'accumulated_alignments_dir' => $alignments_dir, 
             'library_alignments' => \@list_of_library_alignments,
-            'rmdup_version' => $self->model->rmdup_version,
-            'merge_software' => $merge_software,
-   );
+            'dedup_version' => $self->model->duplication_handler_version,
+            'dedup_params'  => $self->model->duplication_handler_params,
+            'merger_name' => $merger_name,
+            'merger_version' => $merger_version,
+            'merger_params'  => $merger_params,
+    );
 
    #check workflow for errors 
    if (!defined $output) {
@@ -124,7 +125,8 @@ sub execute {
            $self->error_message($error->error);
        }
        return;
-   } else {
+   } 
+   else {
        my $results = $output->{result};
        my $result_libraries = $output->{library_name};
        for (my $i = 0; $i < scalar(@$results); $i++) {
@@ -134,13 +136,13 @@ sub execute {
                        die "Workflow had an error while rmdup'ing library: ". $result_libraries->[$i];
                 }
        }
-  }
+   }
    
    #remove original library input files
    my @original_to_remove_files = grep {$_ !~ m/rmdup/ }<$alignments_dir/*.bam>;
    for (@original_to_remove_files) {
-    $self->status_message("Removing intermediate library file $_");
-    unlink($_);
+        $self->status_message("Removing intermediate library file $_");
+        unlink($_);
    }
  
    #merge those Bam files...BAM!!!
@@ -167,7 +169,10 @@ sub execute {
        files_to_merge => \@bam_files,
        merged_file => $bam_merged_output_file,
        is_sorted => 1,
-       software => $merge_software,
+       #software => $merge_software,
+       merger_name => $merger_name,
+       merger_version => $merger_version,
+       merger_params => $merger_params
    ); 
 
    $now = UR::Time->now;
@@ -182,7 +187,8 @@ sub execute {
     for my $each_bam_file (@all_files) {
         if ( ($each_bam_file eq $bam_merged_output_file) || ($each_bam_file eq $bam_merged_output_file.".bai" ) ) {   
             $self->status_message("Keeping $each_bam_file");
-        } else {
+        } 
+        else {
             $self->status_message("Executing unlink command on $each_bam_file");
             my $rm_rv1 = unlink($each_bam_file);
             unless ($rm_rv1 == 1) {
@@ -198,25 +204,22 @@ sub execute {
         chmod 0444, $file;
     }
 
-   $now = UR::Time->now;
-   $self->status_message("<<< Completed removing intermediate files at $now");
-
-   $self->status_message("*** All processes completed. ***");
+    $now = UR::Time->now;
+    $self->status_message("<<< Completed removing intermediate files at $now");
+    $self->status_message("*** All processes completed. ***");
 
     return $self->verify_successful_completion();
 }
 
 
 sub verify_successful_completion {
-
     my $self = shift;
-
     my $return_value = 1;
     my $build = $self->build;
             
     unless (-e $build->whole_rmdup_bam_file) {
-	$self->error_message("Can't verify successful completeion of Deduplication step. ".$build->whole_rmdup_bam_file." does not exist!");	  	
-	return 0;
+	    $self->error_message("Can't verify successful completeion of Deduplication step. ".$build->whole_rmdup_bam_file." does not exist!");	  	
+	    return 0;
     } 
 
     return $return_value;
@@ -247,12 +250,9 @@ sub calculate_required_disk_allocation_kb {
     #take the total size plus a 10% safety margin
     # 3x total size; individual/deduped per-lib bams, full build deduped bam
     $total_size = sprintf("%.0f", ($total_size/1024)*1.1); 
-
     $total_size = ($total_size * 2);
 
     return $total_size;
-
-
 }
 
 

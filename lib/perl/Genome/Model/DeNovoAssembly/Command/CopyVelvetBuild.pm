@@ -32,8 +32,8 @@ sub help_brief {
 
 sub help_detail {
     return <<"EOS"
-genome model de-novo-assembly command copy-velvet-build --build-id 54958478 --to /gscmnt/111/assembly
-genome model de-novo-assembly command copy-velvet-build --build-directory /gscmnt/111/2857912274/build105415496 --to /gscmnt/111/assembly
+genome model de-novo-assembly copy-velvet-build --build-id 54958478 --to /gscmnt/111/assembly
+genome model de-novo-assembly copy-velvet-build --build-directory /gscmnt/111/2857912274/build105415496 --to /gscmnt/111/assembly
 EOS
 }
 

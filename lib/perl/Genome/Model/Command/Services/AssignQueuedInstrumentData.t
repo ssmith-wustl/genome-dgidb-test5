@@ -11,7 +11,7 @@ BEGIN {
 use above 'Genome';
 
 require Genome::InstrumentData::Solexa;
-use Test::More tests => 59;
+use Test::More tests => 62;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
 
@@ -31,6 +31,13 @@ my $sample = Genome::Sample->create(
     source_id => $individual->id,
 );
 
+my $library = Genome::Library->create(
+    id => '-2',
+    sample_id => $sample->id,
+);
+
+isa_ok($library, 'Genome::Library');
+
 #my $sample = Genome::Sample->get(name => 'TEST-patient1-sample1');
 isa_ok($sample, 'Genome::Sample');
 
@@ -41,8 +48,7 @@ no warnings;
 use warnings;
 my $instrument_data_1 = Genome::InstrumentData::Solexa->create(
     id => '-100',
-    sample_id => $sample->id,
-    sample_name => $sample->name,
+    library_id => $library->id,
     flow_cell_id => 'TM-021',
     lane => '1',
     run_type => 'Paired',
@@ -51,6 +57,7 @@ my $instrument_data_1 = Genome::InstrumentData::Solexa->create(
     fwd_clusters => 65535,
     rev_clusters => 65536,
 );
+ok($instrument_data_1, 'Created an instrument data');
 
 my $processing_profile = Genome::ProcessingProfile::ReferenceAlignment->create(
     dna_type => 'genomic dna',
@@ -58,7 +65,9 @@ my $processing_profile = Genome::ProcessingProfile::ReferenceAlignment->create(
     read_aligner_name => 'bwa',
     sequencing_platform => 'solexa',
     read_aligner_params => '#this is a test',
+    transcript_variant_annotator_version => 1,
 );
+ok($processing_profile, 'Created a processing_profile');
 
 my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get(name => 'NCBI-human-build36');
 isa_ok($ref_seq_build, 'Genome::Model::Build::ImportedReferenceSequence') or die;
@@ -80,8 +89,7 @@ $pse_1->add_reference_sequence_build_param_for_processing_profile( $processing_p
 
 my $instrument_data_2 = Genome::InstrumentData::Solexa->create(
     id => '-101',
-    sample_id => $sample->id,
-    sample_name => $sample->name,
+    library_id => $library->id,
     flow_cell_id => 'TM-021',
     lane => '2',
     run_type => 'Paired',
@@ -154,8 +162,7 @@ ok(grep($_ eq $new_model, @members), 'group contains the newly created model');
 
 my $instrument_data_3 = Genome::InstrumentData::Solexa->create(
     id => '-102',
-    sample_id => $sample->id,
-    sample_name => $sample->name,
+    library_id => $library->id,
     flow_cell_id => 'TM-021',
     lane => '3',
     run_type => 'Paired',
@@ -179,8 +186,7 @@ $pse_3->add_reference_sequence_build_param_for_processing_profile( $processing_p
 
 my $instrument_data_4 = Genome::InstrumentData::Solexa->create(
     id => '-103',
-    sample_id => $sample->id,
-    sample_name => $sample->name,
+    library_id => $library->id, 
     flow_cell_id => 'TM-021',
     lane => '3',
     run_type => 'Paired',
@@ -262,8 +268,7 @@ is(scalar(@members_2) - scalar(@members), 2, 'two subsequent models added to the
 
 my $instrument_data_5 = Genome::InstrumentData::Solexa->create(
     id => '-104',
-    sample_id => $sample->id,
-    sample_name => $sample->name,
+    library_id => $library->id,
     flow_cell_id => 'TM-021',
     lane => '5',
     run_type => 'Paired',
@@ -297,17 +302,21 @@ my $de_novo_individual = Genome::Individual->create(
 );
 
 my $de_novo_sample = Genome::Sample->create(
-    id => '-2',
+    id => '-22',
     name => 'AQID-test-sample-ze',
     common_name => 'normal',
     taxon_id => $de_novo_taxon->id,
     source_id => $de_novo_individual->id,
 );
 
+my $de_novo_library = Genome::Library->create(
+    id=>'-33',
+    sample_id=>$de_novo_sample->id
+);
+
 my $instrument_data_6 = Genome::InstrumentData::Solexa->create(
     id => '-105',
-    sample_id => $de_novo_sample->id,
-    sample_name => $de_novo_sample->name,
+    library_id => $de_novo_library->id,
     flow_cell_id => 'TM-021',
     lane => '6',
     run_type => 'Paired',

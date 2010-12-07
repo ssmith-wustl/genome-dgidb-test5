@@ -19,7 +19,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-genome-model tools snp ...
+gmt sv ...
 EOS
 }
 

@@ -81,12 +81,12 @@ sub execute {                               # replace with real execution logic.
 		my $numContents = @lineContents;
 		my $chrom = $lineContents[0];
 		
-		if($numContents < 17 || substr(uc($chrom), 0, 5) eq "CHROM" || substr(uc($chrom), 0, 3) eq "REF")
+		if($numContents < 10 || substr(uc($chrom), 0, 5) eq "CHROM" || substr(uc($chrom), 0, 3) eq "REF")
 		{
 			## Ignore header lines ##	
 			
 		}
-		elsif($numContents >= 17)
+		elsif($numContents >= 10) # 10 for germline, 17 for somatic 
 		{
 
 			my $chr_start = $lineContents[1];

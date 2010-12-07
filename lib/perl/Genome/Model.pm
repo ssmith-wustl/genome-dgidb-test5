@@ -135,7 +135,7 @@ class Genome::Model {
         
         # these go on refalign models
         last_complete_build_flagstat     => { calculate => q| return $self->lcb_flagstat(); | },
-        region_of_interest_set_value     => { via => 'inputs', to => 'value', where => [ name => 'region_of_interest_set_name'] },
+        region_of_interest_set_value     => { is => 'UR::Value', via => 'inputs', to => 'value', where => [ name => 'region_of_interest_set_name'] },
         region_of_interest_set_name      => { via => 'region_of_interest_set_value', to => 'id', },
     ],
     has_many_optional_deprecated => [
@@ -348,7 +348,8 @@ sub create {
     #</model name>
 
     unless ($self->user_name) {
-        $self->user_name($ENV{USER});
+        my $user = getpwuid($<);
+        $self->user_name($user);
     }
     unless ($self->creation_date) {
         $self->creation_date(UR::Time->now);
@@ -649,8 +650,7 @@ sub completed_builds {
         push @completed_builds, $build;
     }
 
-    my %build_ids = map { $_ => $_->id } @completed_builds;
-    return sort { $build_ids{$a} <=> $build_ids{$b} } @completed_builds;
+    return sort { $a->id <=> $b->id } @completed_builds;
 }
 
 sub latest_build {

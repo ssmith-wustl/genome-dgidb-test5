@@ -5,13 +5,16 @@
 use strict;
 use warnings;
 use Getopt::Std;
+use Math::FFT;
 use FindBin qw($Bin);
 use lib "$FindBin::Bin";
 
-my $version="SquareDancer-0.1r161";
-my %opts = (q=>35,r=>2,k=>25,n=>1,c=>1,m=>3);
+my $log2=log(2);
+my $floor=1e-3;
+my $version="SquareDancer-0.1r162";
+my %opts = (q=>35,r=>2,k=>25,n=>1,c=>1,m=>3,e=>0.5);
 my %opts1;
-getopts('o:q:r:k:n:c:l:m:ubdg:', \%opts1);
+getopts('o:q:r:k:n:c:l:m:ubdg:e:', \%opts1);
 die("
 Usage:   SquareDancer.pl <bams>
 Options:
@@ -19,6 +22,7 @@ Options:
          -q INT   minimal mapping quality cutoff [$opts{q}]
          -r INT   minimal number of supporting read pairs [$opts{r}]
          -c INT   minimal motif/kmer coverage for constructing the graph [$opts{c}]
+         -e FLOAT minimal motif complexity score [$opts{e}]
          -l STR   ignore breakpoints found in comma-separated library STRs
          -n INT   ignore breakpoints connected to more than [$opts{n}] other breakpoints
          -m INT   maximum number of mismatch allowed in aligned portion [$opts{m}]
@@ -136,16 +140,18 @@ foreach my $chr(@chrs){
 	if($sbase>=$opts{k}){
 	  $breakpoint{$bkpos}++;
 	  my $motif=uc substr $t->{seq},$readlen-$sbase,$opts{k};
-	  $bkmotives{$bkpos}{$motif}++;
-	  $motivebks{$motif}{$bkpos}{lib}{$lib}++;
-	  $motivebks{$motif}{$bkpos}{total}++;
-	  push @{$motivebks{$motif}{$bkpos}{reads}},$t;
-	  $motif=~tr/ACGT/TGCA/; $motif=reverse $motif;
-	  $bkmotives{$bkpos}{$motif}++;
-	  $motivebks{$motif}{$bkpos}{lib}{$lib}++;
-	  $motivebks{$motif}{$bkpos}{total}++;
-	  push @{$motivebks{$motif}{$bkpos}{reads}},$t;
-	  $bkmask{$bkpos}++ if(&Hit($lib));  #Register breakpoints specific to some libraries
+	  if(&FFTPSE($motif)>$opts{e}){
+	    $bkmotives{$bkpos}{$motif}++;
+	    $motivebks{$motif}{$bkpos}{lib}{$lib}++;
+	    $motivebks{$motif}{$bkpos}{total}++;
+	    push @{$motivebks{$motif}{$bkpos}{reads}},$t;
+	    $motif=~tr/ACGT/TGCA/; $motif=reverse $motif;
+	    $bkmotives{$bkpos}{$motif}++;
+	    $motivebks{$motif}{$bkpos}{lib}{$lib}++;
+	    $motivebks{$motif}{$bkpos}{total}++;
+	    push @{$motivebks{$motif}{$bkpos}{reads}},$t;
+	    $bkmask{$bkpos}++ if(&Hit($lib));  #Register breakpoints specific to some libraries
+	  }
 	}
 	#my $trimmed=substr $t->{seq},0,length($t->{seq})-$sbase;
 	my $trimmed=$t->{seq};
@@ -160,16 +166,18 @@ foreach my $chr(@chrs){
 	if($sbase>=$opts{k}){
 	  $breakpoint{$bkpos}--;
 	  my $motif=uc substr $t->{seq},0,$opts{k};
-	  $bkmotives{$bkpos}{$motif}++;
-	  $motivebks{$motif}{$bkpos}{lib}{$lib}++;
-	  $motivebks{$motif}{$bkpos}{total}++;
-	  push @{$motivebks{$motif}{$bkpos}{reads}},$t;
-	  $motif=~tr/ACGT/TGCA/; $motif=reverse $motif;
-	  $bkmotives{$bkpos}{$motif}++;
-	  $motivebks{$motif}{$bkpos}{lib}{$lib}++;
-	  $motivebks{$motif}{$bkpos}{total}++;
-	  push @{$motivebks{$motif}{$bkpos}{reads}},$t;
-	  $bkmask{$bkpos}++ if(&Hit($lib));  #Register breakpoints specific to some libraries
+	  if(&FFTPSE($motif)>$opts{e}){
+	    $bkmotives{$bkpos}{$motif}++;
+	    $motivebks{$motif}{$bkpos}{lib}{$lib}++;
+	    $motivebks{$motif}{$bkpos}{total}++;
+	    push @{$motivebks{$motif}{$bkpos}{reads}},$t;
+	    $motif=~tr/ACGT/TGCA/; $motif=reverse $motif;
+	    $bkmotives{$bkpos}{$motif}++;
+	    $motivebks{$motif}{$bkpos}{lib}{$lib}++;
+	    $motivebks{$motif}{$bkpos}{total}++;
+	    push @{$motivebks{$motif}{$bkpos}{reads}},$t;
+	    $bkmask{$bkpos}++ if(&Hit($lib));  #Register breakpoints specific to some libraries
+	  }
 	}
 	#my $trimmed=substr $t->{seq},$sbase;
 	my $trimmed=$t->{seq};
@@ -471,4 +479,41 @@ sub byChromosome{
     $chr2=23;
     return $chr1 <=> $chr2;
   }
+}
+
+sub FFTPSE{
+  #power spectrum entropy based on FFT
+  my ($seq)=@_;
+  my @entropies;
+  my $sum=0;
+  my $len5th=length($seq)/5;
+  foreach my $B('A','C','G','T'){
+    my @bs=();
+    my $zero=0;
+    foreach my $b(split //,$seq){
+      my $value=($b eq $B)?1:0;
+      push @bs,$value;
+      $zero+=$value;
+    }
+    my $i=0;
+    while($#bs+1<64){
+      push @bs,$bs[$i];
+      $zero+=$bs[$i];
+      $i++;
+    }
+    next if($zero<$len5th);
+    my $fft = Math::FFT->new(\@bs);
+    my $spectrum = $fft->spctrm();
+    my $total=0;
+    for(my $j=0;$j<=$#{$spectrum};$j++){
+      $total+=$$spectrum[$j]+$floor;
+    }
+    my $entropy=0;
+    for(my $j=0;$j<=$#{$spectrum};$j++){
+      my $p=($$spectrum[$j]+$floor)/$total;
+      $entropy-=$p*log($p)/$log2;
+    }
+    $sum+=$entropy;
+  }
+  return $sum/20.2;
 }

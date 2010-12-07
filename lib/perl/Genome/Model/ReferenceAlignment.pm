@@ -19,23 +19,31 @@ use File::Path;
 use File::Basename;
 use IO::File;
 use Sort::Naturally;
+use Data::Dumper;
 
 class Genome::Model::ReferenceAlignment {
     is => 'Genome::Model',
     has => [
         align_dist_threshold         => { via => 'processing_profile'},
         dna_type                     => { via => 'processing_profile'},
-        merge_software               => { via => 'processing_profile'},
-        rmdup_name                   => { via => 'processing_profile'},
-        rmdup_version                => { via => 'processing_profile'},
+        merge_software               => { via => 'processing_profile'}, #deprecated
+        rmdup_name                   => { via => 'processing_profile'}, #deprecated
+        rmdup_version                => { via => 'processing_profile'}, #deprecated
         picard_version               => { via => 'processing_profile'},
         samtools_version             => { via => 'processing_profile'},
+        merger_name                  => { via => 'processing_profile'},
+        merger_version               => { via => 'processing_profile'},
+        merger_params                => { via => 'processing_profile'},
+        duplication_handler_name     => { via => 'processing_profile'},
+        duplication_handler_version  => { via => 'processing_profile'},
+        duplication_handler_params   => { via => 'processing_profile'},
         snv_detector_name            => { via => 'processing_profile'},
         snv_detector_version         => { via => 'processing_profile'},
         snv_detector_params          => { via => 'processing_profile'},
         indel_detector_name          => { via => 'processing_profile'},
         indel_detector_version       => { via => 'processing_profile'},
         indel_detector_params        => { via => 'processing_profile'},
+        transcript_variant_annotator_version => { via => 'processing_profile' },
         multi_read_fragment_strategy => { via => 'processing_profile'},
         prior_ref_seq                => { via => 'processing_profile'},
         read_aligner_name => {
@@ -58,7 +66,7 @@ class Genome::Model::ReferenceAlignment {
         read_calibrator_params       => { via => 'processing_profile'},
         capture_set_name             => { via => 'processing_profile'},
         reference_sequence_build_id => {
-            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            is => 'Text',
             via => 'inputs',
             to => 'value_id',
             where => [ name => 'reference_sequence_build', value_class_name => 'Genome::Model::Build::ImportedReferenceSequence' ],
@@ -71,7 +79,36 @@ class Genome::Model::ReferenceAlignment {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             id_by => 'reference_sequence_build_id',
         },
+        annotation_reference_build_id => {
+            is => 'Text',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'annotation_reference_build', 'value_class_name' => 'Genome::Model::Build::ImportedAnnotation' ],
+            is_many => 0,
+            is_mutable => 1,
+            is_optional => 1,
+            doc => 'The reference build used for variant annotation',
+        },
+        annotation_reference_build => {
+            is => 'Genome::Model::Build::ImportedAnnotation',
+            calculate_from => ['annotation_reference_build_id', 'annotation_reference_transcripts'],
+            calculate => q|
+                if ($annotation_reference_build_id) {
+                    my $b = Genome::Model::Build::ImportedAnnotation->get($annotation_reference_build_id);
+                    Carp::confess("Failed to find imported annotation build id '$annotation_reference_build_id'") unless $b;
+                    return $b;
+                }
+                my $art = $annotation_reference_transcripts;
+                return unless $art;
+                my ($model_name, $ver) = split('/', $art);
+                Carp::confess("Unable to determine model and build version from annotation transcripts string '$art'") unless $model_name and $ver;
+                my $b = Genome::Model::Build::ImportedAnnotation->get(model_name => $model_name, version => $ver);
+                Carp::confess("Failed to find annotation build version='$ver' for model_name='$model_name'") unless $b;
+                return $b;
+            |,
+        },
         reference_sequence_name      => { via => 'reference_sequence_build', to => 'name' },
+        annotation_reference_name    => { via => 'annotation_reference_build', to => 'name' },
         coverage_stats_params        => { via => 'processing_profile'},
         annotation_reference_transcripts => { via => 'processing_profile'},
         assignment_events => {
@@ -143,7 +180,21 @@ class Genome::Model::ReferenceAlignment {
 sub create {
     my $class = shift;
 
-    my $self = $class->SUPER::create(@_)
+    # This is a temporary hack to allow annotation_reference_build (currently calculated) to be
+    # passed in as an object. Once the transition to using model inputs for this parameter vs
+    # processing profile params, annotation_reference_build can work like reference_sequence_build
+    # and this code can go away.
+    my @args = @_;
+    if (scalar(@_) % 2 == 0) {
+        my %args = @args;
+        if (defined $args{annotation_reference_build}) {
+            $args{annotation_reference_build_id} = (delete $args{annotation_reference_build})->id;
+            @args = %args;
+        }
+    }
+
+
+    my $self = $class->SUPER::create(@args)
         or return;
 
     unless ( $self->reference_sequence_build ) {
@@ -178,25 +229,16 @@ sub __errors__ {
 
     my @tags = $self->SUPER::__errors__(@_);
 
-    #Make sure reference sequence build and annotation build match up
-
-    my $reference_sequence_name = $self->reference_sequence_name;
-    my $reference_transcripts = $self->processing_profile->annotation_reference_transcripts;
-    return @tags unless $reference_transcripts; #exit if there's no annotation build to compare to
-    my $reference_sequence_build = $self->reference_sequence_build;
-    my ($ref_transcripts_organization_and_species, undef, $ref_transcripts_version) = split(/\.|\//, $reference_transcripts);
-    my (undef, $ref_transcripts_species) = split(/-/, $ref_transcripts_organization_and_species);
-    my (undef, $ref_transcripts_build) = split(/_/, $ref_transcripts_version);
-    $ref_transcripts_build =~ s/[a-zA-Z]//g; #remove the letter for $ref_transcripts_versions like "54_36p";
-
-    unless($ref_transcripts_build eq $reference_sequence_build->version and 
-           $ref_transcripts_species eq $reference_sequence_build->model->subject->species_name){        
+    my $arb = $self->annotation_reference_build;
+    my $rsb = $self->reference_sequence_build;
+    if ($arb and !$arb->is_compatible_with_reference_sequence_build($rsb)) {
         push @tags, UR::Object::Tag->create(
             type => 'invalid',
             properties => ['reference_sequence_name', 'annotation_reference_transcripts'],
-            desc => "reference sequence: $reference_sequence_name does not match annotation reference transcripts: $reference_transcripts",
+            desc => "reference sequence: " . $rsb->name . " is incompatible with annotation reference transcripts: " . $arb->name,
         );
     }
+
     return @tags;
 }
 
@@ -1693,17 +1735,15 @@ sub build_subclass_name {
     return 'reference alignment';
 }
 
-sub additional_params_for_copy {
-    my $self = shift;
-
-    return (reference_sequence_build=>$self->reference_sequence_build->id);
-}
-
 sub inputs_necessary_for_copy {
     my $self = shift;
 
-    my @inputs = grep {$_->name ne 'reference_sequence_build'} $self->SUPER::inputs_necessary_for_copy;
-
+    my %exclude = (
+        'reference_sequence_build' => 1,
+        'annotation_reference_build' => 1,
+    );
+    my @inputs = grep { !exists $exclude{$_->name} } $self->SUPER::inputs_necessary_for_copy;
+    return @inputs;
 }
 
 1;

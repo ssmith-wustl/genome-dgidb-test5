@@ -3,7 +3,6 @@ package Genome::Model::GenePrediction::Command::EukaryoticPredictionsToAce;
 use strict;
 use warnings;
 use Genome;
-use EGAP;
 use Carp 'confess';
 use Sort::Naturally qw/ ncmp nsort /;
 
@@ -41,6 +40,7 @@ sub help_detail {
 }
     
 sub execute {
+    $DB::single = 1;
     my $self = shift;
     my $model = $self->model;
     confess "Could not get model " . $self->model_id unless $model;
@@ -56,10 +56,10 @@ sub execute {
     $self->status_message("Using predictions from build " . $build->build_id);
 
     # Pre-fetching all genes now so only one file read is necessary
-    my @coding_genes = EGAP::CodingGene->get(
+    my @coding_genes = Genome::Prediction::CodingGene->get(
         directory => $build->prediction_directory,
     );
-    my @rna_genes = EGAP::RNAGene->get(
+    my @rna_genes = Genome::Prediction::RNAGene->get(
         directory => $build->prediction_directory,
     );
 
@@ -69,12 +69,12 @@ sub execute {
     # Get list of sequences
     my $sequences = $build->sequences;
     for my $sequence (nsort @$sequences) { 
-        my @seq_coding_genes = EGAP::CodingGene->get(
+        my @seq_coding_genes = Genome::Prediction::CodingGene->get(
             directory => $build->prediction_directory,
             sequence_name => $sequence,
         );
         my @seq_rna_genes;
-        @seq_rna_genes = EGAP::RNAGene->get(
+        @seq_rna_genes = Genome::Prediction::RNAGene->get(
             directory => $build->prediction_directory,
             sequence_name => $sequence,
         ) unless $self->protein_coding_only;
@@ -93,15 +93,25 @@ sub execute {
             my ($transcript) = $gene->transcript;
             my @exons = $transcript->exons;
             @exons = sort { $a->start <=> $b->start } @exons;
+            @exons = reverse @exons if $transcript->strand eq '-1';
 
             my $spliced_length = 0;
             for my $exon (@exons) {
-                $spliced_length += abs($exon->end - $exon->start + 1);
+                $spliced_length += abs($exon->end - $exon->start) + 1;
             }
 
             $ace_fh->print("Sequence : $gene_name\n");
             $ace_fh->print("Source $sequence\n");
-            $ace_fh->print("Method $source\n");
+
+            # FIXME Dirty dirty snap hack
+            my $method = $source;
+            if ($method =~ /snap/i) {
+                my @fields = split(/\./, $gene_name);
+                # For snap, the gene name template is contig_name.predictor.model_file_abbrev.gene_number
+                # We are interested in the predictor name (snap, in this case) and the model file
+                $method = join('.', $fields[1], $fields[2]);
+            }
+            $ace_fh->print("Method $method\n");
             $ace_fh->print("CDS\t1 $spliced_length\n");
             $ace_fh->print("CDS_predicted_by $source\n");
 
@@ -116,10 +126,6 @@ sub execute {
 
             my $transcript_start = $transcript->start;
             my $transcript_end = $transcript->end;
-
-            $DB::single = 1;
-            @exons = sort { $a->start <=> $b->start } @exons if $strand eq '+1';
-            @exons = sort { $b->start <=> $a->start } @exons if $strand eq '-1';
 
             for my $exon (@exons) {
                 my $exon_start = $exon->start;
@@ -166,36 +172,33 @@ sub execute {
             $ace_fh->print("Sequence : $gene_name\n");
             $ace_fh->print("Source $sequence\n");
 
-            my ($method, $remark, $score, $transcript, $locus);
+            my ($method, $remark, $transcript, $locus);
             if ($source =~ /trnascan/i) {
                 $method = 'tRNAscan';
-                $remark = "tRNA-$amino_acid Sc=$gene_score";
+                $remark = "\"tRNA-$amino_acid Sc=$gene_score\"";
                 $transcript = "tRNA $codon $amino_acid $amino_acid_code";
             }
             elsif ($source =~ /rfam/i) {
                 $method = 'Rfam';
-                $remark = "Predicted by Rfam ($accession), score $gene_score";
-                $score = "Rfam $gene_score";
+                $remark = "\"Predicted by Rfam ($accession), score $gene_score\"";
                 $locus = $gene->description;
             }
             elsif ($source =~ /rnammer/i) {
                 $method = 'RNAmmer';
-                $remark = "Predicted by RNAmmer, score $gene_score";
-                $score = "RNAMMER $gene_score";
+                $remark = "\"Predicted by RNAmmer, score $gene_score\"";
                 $locus = $gene->description;
             }
             else {
                 $method = $source;
-                $remark = "Predicted by $method, score $gene_score";
-                $score = "$method $gene_score";
+                $remark = "\"Predicted by $method, score $gene_score\$";
                 $locus = $gene->description;
             }
 
             $ace_fh->print("Method $method\n") if defined $method;
             $ace_fh->print("Remark $remark\n") if defined $remark;
             $ace_fh->print("Locus $locus\n") if defined $locus;
-            $ace_fh->print("Score $score\n") if defined $score;
             $ace_fh->print("Transcript $transcript\n") if defined $transcript;
+            $ace_fh->print("\n");
         }
     }
 

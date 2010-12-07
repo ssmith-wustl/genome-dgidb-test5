@@ -74,7 +74,7 @@ ok(!$first_2_bases_diff, '2.bases generated as expected')
     or diag("  diff\n" . $first_2_bases_diff);
 
 my @files = glob($first_data_directory . '/*');
-is(scalar(@files), 25, 'Produced 25 files/directories');
+is(scalar(@files), 26, 'Produced 26 files/directories');
 
 #Later tests on a smaller dataset will actually compare all the files
 my %expected_file_sizes = (
@@ -103,7 +103,7 @@ my %expected_file_sizes = (
     'all_sequences.bowtie.rev.2.ebwt' => 5242888,
 );
 
-my @files_to_test = grep(-f $_ && $_ !~ 'build.xml', @files);
+my @files_to_test = grep(-f $_ && $_ !~ 'build.xml' && $_ !~ 'manifest.tsv', @files);
 
 for my $file (@files_to_test) {
     my ($vol, $dir, $file_base) = File::Spec->splitpath($file);
@@ -111,8 +111,8 @@ for my $file (@files_to_test) {
 }
 
 #Second test--a tiny FASTA with 3 chromosomes
-#updated from 2.01 to 2.02 to create bases directory
-my $second_test_dir = $test_data_dir . '2.02/';
+#updated from 2.02 to 2.03 to create manifest.tsv
+my $second_test_dir = $test_data_dir . '2.03/';
 my $second_fasta = $second_test_dir . 'all_sequences.fa';
 
 ok(Genome::Utility::FileSystem->check_for_path_existence($second_fasta), 'Second test FASTA exists');
@@ -148,7 +148,8 @@ my @diff = <$diff_fh>;
 
 @diff = grep { $_ !~ 'build.xml' }
         grep { $_ !~ 'reports' }
-        grep { $_ !~ 'logs' } @diff;
+        grep { $_ !~ 'logs' } 
+        grep { $_ !~ 'manifest' } @diff;
 
 ok(!scalar(@diff), 'Build directory matches expected result')
     or diag( join("\n", '  diff: ', @diff) );

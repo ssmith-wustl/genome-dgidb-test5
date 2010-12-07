@@ -3,6 +3,7 @@ package Genome::Model::Command::Services::WebApp::Cache;
 use strict;
 use warnings;
 
+# don't cache static things.
 # every url gets matched against this, so it shouldn't be a long list
 # if it becomes long, consider a redesign.
 our @never_cache = (
@@ -172,6 +173,7 @@ sub {
     if (defined $ajax_refresh && $ajax_refresh == 1) {
         $gen->();
 
+        # don't send back the content because we don't care, just want to tell the caller it's ready to ask for
         return [
             200,
             [ 'Content-type' => 'text/html' ],
@@ -190,7 +192,8 @@ sub {
             if ($env->{'HTTP_USER_AGENT'} =~ /Opera/) {
                 $no_cache = '';
             }
-
+            
+            # this stuff is due to Opera's freakiness as well
             if (exists $env->{'HTTP_X_MAX_AGE'}) {
                 my $age = $env->{'HTTP_X_MAX_AGE'};
 
@@ -236,6 +239,9 @@ sub {
             $no_cache = '';
         }
 
+        # if we don't have a no-cache and it got pulled from memcache, thaw it and hand it back
+        # otherwise spit back a page with an ajax call back to test if we have content that's ready
+        # (i.e. call to /cachetrigger)
         if (defined $v && $no_cache ne 'no-cache') {
             my $s = thaw($v);
             return [@$s[0,1,2]];

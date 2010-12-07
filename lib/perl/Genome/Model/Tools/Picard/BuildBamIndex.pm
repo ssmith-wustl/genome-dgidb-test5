@@ -44,7 +44,7 @@ sub execute {
     }
     my $cmd = $jar_path .' net.sf.picard.sam.BuildBamIndex INPUT='. $self->input_file;
     if ($self->output_file) {
-        $cmd .= ' OUTPUT_FILE='. $self->output_file;
+        $cmd .= ' OUTPUT='. $self->output_file;
     }
 
     $self->run_java_vm(

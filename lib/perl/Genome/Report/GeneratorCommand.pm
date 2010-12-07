@@ -70,12 +70,9 @@ sub help_detail {
 STRING
 }
 
-#< Create 
-sub create {
-    my $class = shift;
-
-    my $self = $class->SUPER::create(@_)
-        or return;
+#< Generate Report >#
+sub _generate_report_and_execute_functions {
+    my ($self, %params) = @_;
 
     # Set separator stuff.  Default are ',' and 'csv'
     if ( $self->separator eq 'tab' ) {
@@ -85,14 +82,6 @@ sub create {
     elsif ( $self->separator ne ',' ) {
         $self->_sv_ext('txt');
     }
-
-    return $self;
-}
-# >
-
-#< Generate Report >#
-sub _generate_report_and_execute_functions {
-    my ($self, %params) = @_;
 
     # Generate report
     my $generator = Genome::Model::Report::Table->create(%params);

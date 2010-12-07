@@ -93,11 +93,11 @@
 
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Varscan ProcessSomatic SNP" toProperty="skip_if_output_present" />
   <link fromOperation="Format Varscan Snvs" fromProperty="output_file" toOperation="Varscan ProcessSomatic SNP" toProperty="status_file" />
-  <link fromOperation="input connector" fromProperty="varscan_snp_somatic" toOperation="Varscan ProcessSomatic SNP" toProperty="somatic_out" />  
+  <!--  <link fromOperation="input connector" fromProperty="varscan_snp_somatic" toOperation="Varscan ProcessSomatic SNP" toProperty="output_somatic" /> -->
 
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Varscan ProcessSomatic Indel" toProperty="skip_if_output_present" />
   <link fromOperation="Format Varscan Indels" fromProperty="output_file" toOperation="Varscan ProcessSomatic Indel" toProperty="status_file" />
-  <link fromOperation="input connector" fromProperty="varscan_indel_somatic" toOperation="Varscan ProcessSomatic Indel" toProperty="somatic_out" />
+  <!-- <link fromOperation="input connector" fromProperty="varscan_indel_somatic" toOperation="Varscan ProcessSomatic Indel" toProperty="output_somatic" />  -->
 
 
 <!-- RUN GATK SOMATIC INDEL -->
@@ -115,6 +115,7 @@
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Annotate Transcript Variants Gatk Indel" toProperty="skip_if_output_present" />
   <link fromOperation="input connector" fromProperty="annotate_no_headers" toOperation="Annotate Transcript Variants Gatk Indel" toProperty="no_headers" />
   <link fromOperation="input connector" fromProperty="transcript_annotation_filter" toOperation="Annotate Transcript Variants Gatk Indel" toProperty="annotation_filter" />
+  <link fromOperation="input connector" fromProperty="transcript_variant_annotator_version" toOperation="Annotate Transcript Variants Gatk Indel" toProperty="use_version" />
 
 <!-- ISOLATE TIER 1 GATK SOMATIC INDELS -->
 
@@ -129,7 +130,7 @@
 
 <!-- MERGE FILTERED SNIPER SNPS AND VARSCAN SNPS -->
 
-  <link fromOperation="Varscan ProcessSomatic SNP" fromProperty="somatic_out" toOperation="Merge SNPs" toProperty="varscan_file" />
+  <link fromOperation="Varscan ProcessSomatic SNP" fromProperty="output_somatic" toOperation="Merge SNPs" toProperty="varscan_file" />
   <link fromOperation="Filter Loh" fromProperty="output_file" toOperation="Merge SNPs" toProperty="glf_file" />
   <link fromOperation="input connector" fromProperty="merged_snp_output" toOperation="Merge SNPs" toProperty="output_file" />
 
@@ -140,7 +141,7 @@
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Strand Filter" toProperty="skip_if_output_present" />
   <link fromOperation="input connector" fromProperty="merged_snp_output_filter" toOperation="Strand Filter" toProperty="output_file" />
   <link fromOperation="input connector" fromProperty="merged_snp_output_filter_fail" toOperation="Strand Filter" toProperty="filtered_file" />
-  <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="Strand Filter" toProperty="tumor_bam_file" />
+  <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="Strand Filter" toProperty="bam_file" />
 
 <!-- DO NOT RUN CEU/YRI FILTER ON MERGED SOMATIC CALLS --> 
   
@@ -160,6 +161,7 @@
   <link fromOperation="input connector" fromProperty="annotate_output_snp" toOperation="Annotate Transcript Variants Snp" toProperty="output_file" />
   <link fromOperation="input connector" fromProperty="annotate_no_headers" toOperation="Annotate Transcript Variants Snp" toProperty="no_headers" />
   <link fromOperation="input connector" fromProperty="transcript_annotation_filter" toOperation="Annotate Transcript Variants Snp" toProperty="annotation_filter" />
+  <link fromOperation="input connector" fromProperty="transcript_variant_annotator_version" toOperation="Annotate Transcript Variants Snp" toProperty="use_version" />
 
 
 <!-- RUN UCSC ANNOTATION FOR SNPS --> 
@@ -184,7 +186,7 @@
 
 <!-- MERGE ADAPTED INDELS FROM SNIPER AND VARSCAN -->
 
-  <link fromOperation="Varscan ProcessSomatic Indel" fromProperty="somatic_out" toOperation="Merge Indels" toProperty="varscan_file" />
+  <link fromOperation="Varscan ProcessSomatic Indel" fromProperty="output_somatic" toOperation="Merge Indels" toProperty="varscan_file" />
   <link fromOperation="Filter Sniper Indel" fromProperty="output_file" toOperation="Merge Indels" toProperty="glf_file" />
   <link fromOperation="input connector" fromProperty="merged_indel_output" toOperation="Merge Indels" toProperty="output_file" />
 
@@ -201,6 +203,7 @@
   <link fromOperation="input connector" fromProperty="annotate_output_indel" toOperation="Annotate Transcript Variants Indel" toProperty="output_file" />
   <link fromOperation="input connector" fromProperty="annotate_no_headers" toOperation="Annotate Transcript Variants Indel" toProperty="no_headers" />
   <link fromOperation="input connector" fromProperty="transcript_annotation_filter" toOperation="Annotate Transcript Variants Indel" toProperty="annotation_filter" />
+  <link fromOperation="input connector" fromProperty="transcript_variant_annotator_version" toOperation="Annotate Transcript Variants Indel" toProperty="use_version" />
 
 <!-- DIVIDE INDELS BY TIER -->
 
@@ -214,14 +217,14 @@
 
 <link fromOperation="Tier Variants Snp" fromProperty="tier1_file" toOperation="Confidence Groups Snp Tier 1" toProperty="variant_file" />
 <link fromOperation="Filter Loh" fromProperty="output_file" toOperation="Confidence Groups Snp Tier 1" toProperty="glf_file" />
-<link fromOperation="Varscan ProcessSomatic SNP" fromProperty="somatic_out" toOperation="Confidence Groups Snp Tier 1" toProperty="varscan_file" />
+<link fromOperation="Varscan ProcessSomatic SNP" fromProperty="output_somatic" toOperation="Confidence Groups Snp Tier 1" toProperty="varscan_file" />
 <link fromOperation="input connector" fromProperty="tier_1_snp_file_high" toOperation="Confidence Groups Snp Tier 1" toProperty="output_high" />
 <link fromOperation="input connector" fromProperty="tier_1_snp_file_highest" toOperation="Confidence Groups Snp Tier 1" toProperty="output_highest" />
 
 <!-- GROUP TIERED INDEL CALLS INTO HIGH AND HIGHEST CONF -->
 <link fromOperation="Tier Variants Indel" fromProperty="tier1_file" toOperation="Confidence Groups Indel Tier 1" toProperty="variant_file" />
 <link fromOperation="Filter Sniper Indel" fromProperty="output_file"  toOperation="Confidence Groups Indel Tier 1" toProperty="glf_file" />
-<link fromOperation="Varscan ProcessSomatic Indel" fromProperty="somatic_out" toOperation="Confidence Groups Indel Tier 1" toProperty="varscan_file" />
+<link fromOperation="Varscan ProcessSomatic Indel" fromProperty="output_somatic" toOperation="Confidence Groups Indel Tier 1" toProperty="varscan_file" />
 <link fromOperation="input connector" fromProperty="tier_1_indel_file_high" toOperation="Confidence Groups Indel Tier 1" toProperty="output_high" />
 <link fromOperation="input connector" fromProperty="tier_1_indel_file_highest" toOperation="Confidence Groups Indel Tier 1" toProperty="output_highest" />
 
@@ -367,7 +370,7 @@
   </operation>  
 
   <operation name="Strand Filter">
-    <operationtype commandClass="Genome::Model::Tools::Somatic::StrandFilter" typeClass="Workflow::OperationType::Command" />
+    <operationtype commandClass="Genome::Model::Tools::Somatic::FilterFalsePositives" typeClass="Workflow::OperationType::Command" />
   </operation>
 
   
@@ -511,6 +514,7 @@
     <inputproperty isOptional="Y">annotate_output_snp</inputproperty>
     <inputproperty isOptional="Y">annotate_no_headers</inputproperty>
     <inputproperty isOptional="Y">transcript_annotation_filter</inputproperty>
+    <inputproperty isOptional="Y">transcript_variant_annotator_version</inputproperty>
     
     <inputproperty isOptional="Y">ucsc_output</inputproperty>
     <inputproperty isOptional="Y">ucsc_unannotated_output</inputproperty>

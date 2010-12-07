@@ -30,27 +30,15 @@
   <link fromOperation="input connector" fromProperty="bam_window_version" toOperation="Copy Number Alteration" toProperty="bam_window_version" />
   <link fromOperation="input connector" fromProperty="bam_window_params" toOperation="Copy Number Alteration" toProperty="bam_window_params" />
 
-  <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="Indelpe Runner Tumor" toProperty="bam_file" />
-  <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="Indelpe Runner Tumor" toProperty="ref_seq_file" />
-  <link fromOperation="input connector" fromProperty="tumor_indelpe_data_directory" toOperation="Indelpe Runner Tumor" toProperty="output_dir" />
-  <link fromOperation="input connector" fromProperty="tumor_snp_file" toOperation="Indelpe Runner Tumor" toProperty="filtered_snp_file" />
-  <link fromOperation="input connector" fromProperty="skip_tumor_indelpe" toOperation="Indelpe Runner Tumor" toProperty="skip" />
-
-  <link fromOperation="input connector" fromProperty="normal_bam_file" toOperation="Indelpe Runner Normal" toProperty="bam_file" />
-  <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="Indelpe Runner Normal" toProperty="ref_seq_file" />
-  <link fromOperation="input connector" fromProperty="normal_indelpe_data_directory" toOperation="Indelpe Runner Normal" toProperty="output_dir" />
-  <link fromOperation="input connector" fromProperty="normal_snp_file" toOperation="Indelpe Runner Normal" toProperty="filtered_snp_file" />
-  <link fromOperation="input connector" fromProperty="skip_normal_indelpe" toOperation="Indelpe Runner Normal" toProperty="skip" />
-
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Snp Filter" toProperty="skip_if_output_present" />
-  <link fromOperation="Indelpe Runner Tumor" fromProperty="filtered_snp_file" toOperation="Snp Filter" toProperty="tumor_snp_file" />
+  <link fromOperation="input connector" fromProperty="tumor_filtered_snp_file" toOperation="Snp Filter" toProperty="tumor_snp_file" />
   <link fromOperation="input connector" fromProperty="snp_filter_output" toOperation="Snp Filter" toProperty="output_file" />
   <link fromOperation="Somatic Sniper" fromProperty="snv_output" toOperation="Snp Filter" toProperty="sniper_snp_file" />
 
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Filter Loh" toProperty="skip_if_output_present" />
   <link fromOperation="input connector" fromProperty="loh_output_file" toOperation="Filter Loh" toProperty="output_file" />
   <link fromOperation="input connector" fromProperty="loh_fail_output_file" toOperation="Filter Loh" toProperty="loh_output_file" />
-  <link fromOperation="Indelpe Runner Normal" fromProperty="filtered_snp_file" toOperation="Filter Loh" toProperty="normal_snp_file" />
+  <link fromOperation="input connector" fromProperty="normal_filtered_snp_file" toOperation="Filter Loh" toProperty="normal_snp_file" />
   <link fromOperation="Snp Filter" fromProperty="output_file" toOperation="Filter Loh" toProperty="tumor_snp_file" />
 
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Filter CEU YRI" toProperty="skip_if_output_present" />
@@ -69,6 +57,7 @@
   <link fromOperation="input connector" fromProperty="require_dbsnp_allele_match" toOperation="Lookup Variants" toProperty="require_allele_match" />
   
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Annotate Transcript Variants Snp" toProperty="skip_if_output_present" />
+  <link fromOperation="input connector" fromProperty="transcript_variant_annotator_version" toOperation="Annotate Transcript Variants Snp" toProperty="use_version" />
   <link fromOperation="Lookup Variants" fromProperty="output_file" toOperation="Annotate Transcript Variants Snp" toProperty="variant_file" />
   <link fromOperation="input connector" fromProperty="annotate_output_snp" toOperation="Annotate Transcript Variants Snp" toProperty="output_file" />
   <link fromOperation="input connector" fromProperty="annotate_no_headers" toOperation="Annotate Transcript Variants Snp" toProperty="no_headers" />
@@ -165,6 +154,7 @@
   <link fromOperation="input connector" fromProperty="annotate_output_indel" toOperation="Annotate Transcript Variants Indel" toProperty="output_file" />
   <link fromOperation="input connector" fromProperty="annotate_no_headers" toOperation="Annotate Transcript Variants Indel" toProperty="no_headers" />
   <link fromOperation="input connector" fromProperty="transcript_annotation_filter" toOperation="Annotate Transcript Variants Indel" toProperty="annotation_filter" />
+  <link fromOperation="input connector" fromProperty="transcript_variant_annotator_version" toOperation="Annotate Transcript Variants Indel" toProperty="use_version" />
 
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Annotate UCSC Indel" toProperty="skip_if_output_present" />
   <link fromOperation="Sniper Adaptor Indel" fromProperty="output_file" toOperation="Annotate UCSC Indel" toProperty="input_file" />
@@ -225,14 +215,6 @@
 
   <operation name="Copy Number Alteration">
     <operationtype commandClass="Genome::Model::Tools::Somatic::BamToCna" typeClass="Workflow::OperationType::Command" />
-  </operation>
-
-  <operation name="Indelpe Runner Tumor">
-    <operationtype commandClass="Genome::Model::Tools::Somatic::IndelpeRunner" typeClass="Workflow::OperationType::Command" />
-  </operation>
-
-  <operation name="Indelpe Runner Normal">
-    <operationtype commandClass="Genome::Model::Tools::Somatic::IndelpeRunner" typeClass="Workflow::OperationType::Command" />
   </operation>
 
   <operation name="Snp Filter">
@@ -322,14 +304,12 @@
     <inputproperty>tumor_bam_file</inputproperty>
     <inputproperty>build_id</inputproperty>
     <inputproperty isOptional="Y">skip_if_output_present</inputproperty>
-    <inputproperty isOptional="Y">tumor_snp_file</inputproperty>
-    <inputproperty isOptional="Y">normal_snp_file</inputproperty>
+    <inputproperty isOptional="Y">tumor_filtered_snp_file</inputproperty>
+    <inputproperty isOptional="Y">normal_filtered_snp_file</inputproperty>
     <inputproperty isOptional="Y">reference_fasta</inputproperty>
     <inputproperty isOptional="Y">imported_bams</inputproperty>
     <inputproperty isOptional="Y">sv_params</inputproperty>
     <inputproperty isOptional="Y">breakdancer_version</inputproperty>
-    <inputproperty isOptional="Y">skip_tumor_indelpe</inputproperty>
-    <inputproperty isOptional="Y">skip_normal_indelpe</inputproperty>
     <inputproperty>sniper_version</inputproperty>
     <inputproperty>sniper_params</inputproperty>
     <inputproperty>bam_window_version</inputproperty>
@@ -351,9 +331,6 @@
     
     <inputproperty isOptional="Y">copy_number_output</inputproperty>
 
-    <inputproperty isOptional="Y">normal_indelpe_data_directory</inputproperty>
-    <inputproperty isOptional="Y">tumor_indelpe_data_directory</inputproperty>
-
     <inputproperty isOptional="Y">snp_filter_output</inputproperty>
     
     <inputproperty isOptional="Y">filter_ceu_yri_output</inputproperty>
@@ -371,6 +348,7 @@
     <inputproperty isOptional="Y">annotate_output_snp</inputproperty>
     <inputproperty isOptional="Y">annotate_no_headers</inputproperty>
     <inputproperty isOptional="Y">transcript_annotation_filter</inputproperty>
+    <inputproperty isOptional="Y">transcript_variant_annotator_version</inputproperty>
     
     <inputproperty isOptional="Y">ucsc_output_snp</inputproperty>
     <inputproperty isOptional="Y">ucsc_unannotated_output_snp</inputproperty>

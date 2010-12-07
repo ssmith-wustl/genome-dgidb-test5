@@ -253,7 +253,7 @@ sub execute {
         #fix broad chromosome name
         $chr =~ s/chr//;
         #Ignore Silent variant and those in Introns, RNA, UTRs, or Flanks
-        next if ( $mutation_class =~ m/RNA|Silent|3'Flank|3'UTR|5'Flank|5'UTR/ );
+        next if ( $mutation_class =~ m/RNA|Intron|Silent|3'Flank|3'UTR|5'Flank|5'UTR/ );
         #Skip this variant is it's not within the ROIs this job is processing
         next if ($self->count_bits($roi_bitmask->{$chr},$start,$stop) == 0);
 

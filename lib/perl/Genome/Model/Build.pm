@@ -9,7 +9,7 @@ use Carp;
 use Data::Dumper 'Dumper';
 use File::Path;
 use File::Find 'find';
-use File::Basename 'dirname';
+use File::Basename qw/ dirname fileparse /;
 use Regexp::Common;
 use Workflow;
 use YAML;
@@ -312,17 +312,37 @@ sub _validate_model_id {
     return 1;
 }
 
+sub _select_build_from_input_model {
+    my ($self, $model) = @_;
+    return $model->last_complete_build;
+}
+
 sub _copy_model_inputs {
     my $self = shift;
 
-    # Create gets called twice, calling this method twice, so
-    #  gotta check if we added the inputs already (and crashes). 
-    #  I tried to figure out how to stop create being called twice, but could not.
-    my @inputs = $self->inputs;
-    return 1 if @inputs;
-
     for my $input ( $self->model->inputs ) {
         my %params = map { $_ => $input->$_ } (qw/ name value_class_name value_id /);
+
+        # We need to turn model inputs into builds.
+        if($params{value_class_name}->isa('Genome::Model')) {
+            # Next if we already have a build defined (e.g., by create params).
+            my $input_name = $input->name;
+            next if defined $self->$input_name and $self->$input_name->isa('Genome::Model::Build');
+
+            my $input_model = $input->value;
+            my $input_build = $self->_select_build_from_input_model($input_model);
+
+            unless($input_build) {
+                $self->error_message('Failed to select a build to copy for input model ' . 
+                    $input->name . '=' . $input_model->__display_name__ . 
+                    '. Try specifying one.');
+                return;
+            }
+
+            $params{value_class_name} = $input_build->class;
+            $params{value_id} = $input_build->id;
+        }
+
         unless ( $self->add_input(%params) ) {
             $self->error_message("Can't copy model input to build: ".Data::Dumper::Dumper(\%params));
             return;
@@ -595,7 +615,8 @@ sub stop {
 
     $self->status_message('Attempting to stop build: '.$self->id);
 
-    if ($self->run_by ne $ENV{USER}) {
+    my $user = getpwuid($<);
+    if ($user ne 'apipe-builder' && $user ne $self->run_by) {
         $self->error_message("Can't stop a build originally started by: " . $self->run_by);
         return 0;
     }
@@ -694,7 +715,8 @@ sub restart {
         cluck $self->error_message('job_dispatch cannot be changed on restart');
     }
     
-    if ($self->run_by ne $ENV{USER}) {
+    my $user = getpwuid($<);
+    if ($self->run_by ne $user) {
         croak $self->error_message("Can't restart a build originally started by: " . $self->run_by);
     }
 
@@ -781,7 +803,8 @@ sub _launch {
         }
     }
     else {
-        $job_group_spec = ' -g /build/' . $ENV{USER};
+        my $user = getpwuid($<);
+        $job_group_spec = ' -g /build2/' . $user;
     }
 
     die "Bad params!  Expected server_dispatch and job_dispatch!" . Data::Dumper::Dumper(\%params) if %params;
@@ -819,12 +842,13 @@ sub _launch {
         $host_group = "-m '$host_group'";
 
         # bsub into the queue specified by the dispatch spec
+        my $user = getpwuid($<);
         my $lsf_command = sprintf(
             'bsub -N -H -q %s %s %s -u %s@genome.wustl.edu -o %s -e %s annotate-log genome model services build run%s --model-id %s --build-id %s',
             $server_dispatch, ## lsf queue
             $host_group,
             $job_group_spec,
-            $ENV{USER}, 
+            $user, 
             $build_event->output_log_file,
             $build_event->error_log_file,
             $add_args,
@@ -1112,6 +1136,10 @@ sub _verify_build_is_not_abandoned_and_set_status_to {
 
 sub abandon {
     my $self = shift;
+
+    if ($self->status eq 'Abandoned') {
+        return 1;
+    }
 
     # Abandon events
     $self->_abandon_events
@@ -1568,6 +1596,29 @@ sub regex_files_for_diff {
     return ();
 }
 
+sub metrics_ignored_by_diff {
+    return ();
+}
+
+# A list of file suffixes that require special treatment to diff. This should include those
+# files that have timestamps or other changing fields in them that an md5sum can't handle.
+# Each suffix should have a method called diff_<SUFFIX> that'll contain the logic.
+sub special_suffixes {
+    return qw(
+        gz
+    );
+}
+
+# Gzipped files contain the timestamp and name of the original file, so this prints
+# the uncompressed file to STDOUT and pipes it to md5sum.
+sub diff_gz {
+    my ($self, $first_file, $second_file) = @_;
+    my $first_md5 = `gzip -dc $first_file | md5sum`;
+    my $second_md5 = `gzip -dc $second_file | md5sum`;
+    return 1 if $first_md5 eq $second_md5;
+    return 0;
+}
+
 # This method takes another build id and compares that build against this one. It gets
 # a list of all the files in both builds and attempts to find pairs of corresponding
 # files. The files/dirs listed in the files_ignored_by_diff and dirs_ignored_by_diff
@@ -1640,11 +1691,23 @@ sub compare_output {
                 next FILE;
             }
         }
-       
-        my $file_md5 = Genome::Utility::FileSystem->md5sum($abs_path);
-        my $other_md5 = Genome::Utility::FileSystem->md5sum($other_abs_path);
+      
+        # Check if the files end with a suffix that requires special handling. If not,
+        # just do an md5sum on the files and compare
+        my $diff_result = 0;
+        my (undef, undef, $suffix) = fileparse($abs_path, $self->special_suffixes);
+        my (undef, undef, $other_suffix) = fileparse($other_abs_path, $self->special_suffixes);
+        if ($suffix ne '' and $other_suffix ne '' and $suffix eq $other_suffix) {
+            my $method = "diff_$suffix";
+            $diff_result = $self->$method($abs_path, $other_abs_path);
+        }
+        else {
+            my $file_md5 = Genome::Utility::FileSystem->md5sum($abs_path);
+            my $other_md5 = Genome::Utility::FileSystem->md5sum($other_abs_path);
+            $diff_result = ($file_md5 eq $other_md5);
+        }
 
-        unless ($file_md5 eq $other_md5) {
+        unless ($diff_result) {
             $diffs{$rel_path} = "files $abs_path and $other_abs_path are not the same!";
         }
     }
@@ -1657,6 +1720,40 @@ sub compare_output {
         next if grep { $dir =~ /$_/ } $self->dirs_ignored_by_diff;
         next if grep { $rel_path =~ /$_/ } $self->files_ignored_by_diff;
         $diffs{$rel_path} = "no file $rel_path from build $build_id";
+    }
+
+    # Now compare metrics of both builds
+    my %metrics;
+    map { $metrics{$_->name} = $_ } $self->metrics;
+    my %other_metrics;
+    map { $other_metrics{$_->name} = $_ } $other_build->metrics;
+
+    METRIC: for my $metric_name (sort keys %metrics) {
+        my $metric = $metrics{$metric_name};
+
+        if ( grep { $metric_name =~ /$_/ } $self->metrics_ignored_by_diff ) {
+            delete $other_metrics{$metric_name} if exists $other_metrics{$metric_name};
+            next METRIC;
+        }
+
+        my $other_metric = delete $other_metrics{$metric_name};
+        unless ($other_metric) {
+            $diffs{$metric_name} = "no build metric with name $metric_name found for build $other_build_id";
+            next METRIC;
+        }
+
+        my $metric_value = $metric->value;
+        my $other_metric_value = $other_metric->value;
+        unless ($metric_value eq $other_metric_value) {
+            $diffs{$metric_name} = "metric $metric_name has value $metric_value for build $build_id and value " .
+            "$other_metric_value for build $other_build_id";
+            next METRIC;
+        }
+    }
+
+    # Catch any extra metrics that the other build has
+    for my $other_metric_name (sort keys %other_metrics) {
+        $diffs{$other_metric_name} = "no build metric with name $other_metric_name found for build $build_id";
     }
 
     return %diffs;

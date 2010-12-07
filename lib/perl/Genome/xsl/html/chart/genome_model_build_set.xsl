@@ -68,14 +68,14 @@ function renderGraph(data,field) {
     var w = 400,
         h = 200,
         x = pv.Scale.linear(0, data.length - 1).range(0, w),
-        y = pv.Scale.linear(data, function(d) d.y).range(0, h);
+        y = pv.Scale.linear(0, pv.max(data, function(d) d.y)).range(0, h);
 
     /* The root panel. */
     var vis = new pv.Panel()
         .width(w)
         .height(h)
         .bottom(100)
-        .left(50)
+        .left(100)
         .right(10)
         .top(5);
 
@@ -152,7 +152,7 @@ $(document).ready(function () {
             // store our initial json data
             jsonData = data;
             // draw our default graph with default walltime metric
-            renderData(data,'walltime');
+            renderData(data,'sample.time');
             // create a hash of metric names for use in dropdown menu
             var fields = {};
             for ( var member in data['members'] ) {
@@ -170,12 +170,12 @@ $(document).ready(function () {
                 jsonFields.push(index)
               }
             )
-            dropDown(jsonFields);
+            dropDown(jsonFields.sort());
         }
     })
 
     $('select#metric').change(function() {
-      dropDown(jsonFields);
+      dropDown(jsonFields.sort());
     })
 })
         ]]>

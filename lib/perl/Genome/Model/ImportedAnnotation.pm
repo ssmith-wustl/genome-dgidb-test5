@@ -3,6 +3,7 @@ package Genome::Model::ImportedAnnotation;
 use strict;
 use warnings;
 
+use Data::Dumper;
 use Genome;
 
 class Genome::Model::ImportedAnnotation{
@@ -33,26 +34,32 @@ class Genome::Model::ImportedAnnotation{
             where => [ name => 'version', value_class_name => 'UR::Value'], 
             is_mutable => 1
         },
+        reference_sequence_id => {
+            is => 'Text',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'reference_sequence', value_class_name => 'Genome::Model::ImportedReferenceSequence' ],
+            is_many => 0,
+            is_optional => 1, # TODO: make this non-optional when all data is updated
+            is_mutable => 1,
+            doc => 'id of the reference sequence model associated with this annotation model',
+        },
+        reference_sequence => {
+            is => 'Genome::Model::ImportedReferenceSequence',
+            id_by => 'reference_sequence_id',
+        },
+
     ],
 };
-
 
 sub build_by_version {
     my $self = shift;
     my $version = shift;
 
-    # Due to recent change in data format for transcript and strucures, previous versions are invalid
-    if ($self->species_name eq 'human' and $version ne '54_36p_v2') {
-        die "Version $version for human is not currently supported.  The following versions are supported: 54_36p_v2";
-    }
-    elsif ($self->species_name eq 'mouse' and $version ne '54_37g_v2') {
-        die "Version $version for mouse is not currently supported.  The following versions are supported: 54_37g_v2";
-    }
-
     my @builds =  grep { $_->version eq $version } $self->completed_builds;
     if (@builds > 1) {
         my $versions_string = join("\n", map { "model_id ".$_->model_id." build_id ".$_->build_id." version ".$_->version } @builds);
-        $self->error_message("Multiple builds for version $version for model " . $self->genome_model_id.", ".$self->name."\n".$versions_string."\n");
+        $self->error_message("Multiple builds for version $version of model " . $self->genome_model_id.", ".$self->name."\n".$versions_string."\n");
         die;
     }
     return $builds[0];

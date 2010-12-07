@@ -6,20 +6,22 @@ use warnings;
 use Genome;
 
 class Genome::ModelGroup::Command::Create {
-    is => 'Command',
+    is => 'Genome::Command::Base',
     has => [
         name => {
             is => 'Text',
             len => 255, 
-            doc => 'A name for the model-group.', 
+            shell_args_position => 1,
+            doc => 'A name for the model group.', 
+        },
+        models => {
+            is => 'Genome::Model',
+            is_many => 1,
+            is_optional => 1,
+            shell_args_position => 2,
+            doc => 'Model(s) to add to group. Resolved from command line via text string.',
         },
     ],
-    has_optional => {
-        model_ids => {
-            is => 'Text',
-            doc => 'IDs of the models to add to the model-group (comma delimited)'
-        },
-    }
 };
 
 sub help_brief {
@@ -31,39 +33,34 @@ sub help_detail {
 }
 
 sub help_synopsis {
-    return 'genome model-group create --name "Example Group Name"';
+    return <<HELP;
+    genome model-group create --name "Example Group Name"
+HELP
 }
 
 sub execute {
     my $self = shift;
-    
-    unless($self->name) {
-        $self->error_message('No name specified.');
-        return;
-    }
-    
+
+    my @models = $self->models;
+
     my $model_group = Genome::ModelGroup->create(
-        name => $self->name
+        name => $self->name,
     );
     
-    unless($model_group) {
-        $self->error_message('Failed to create model group');
+    if ( not $model_group ) {
+        $self->error_message('Failed to create model group for name: '.$self->name);
         return;
     }
-    
     $self->status_message('Created model group:');
     $self->status_message('ID: ' . $model_group->id . ', NAME: ' . $model_group->name);
     
-    if($self->model_ids) {
-        my $add = Genome::ModelGroup::Command::Member::Add->create(
-            model_ids => $self->model_ids,
-            model_group_id => $model_group->id 
-        );
-        
-        return $add->execute;
+    if ( @models ) {
+        $self->status_message('Assigning '.scalar(@models).' to group...');
+        $model_group->assign_models(@models);
     }
     
     return 1;
 }
 
 1;
+

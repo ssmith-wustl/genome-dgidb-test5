@@ -63,6 +63,9 @@ sub execute {
                     my $front = $1;
                     my $back = $3;
                     chomp $front;
+		    if (defined $back) {
+			chomp $back;
+		    }
                     if ($back eq "") {
                         print $output_fh $front."\tRG:Z:$read_group_tag\tPG:Z:$read_group_tag\n";
                     } else {

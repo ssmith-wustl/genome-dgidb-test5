@@ -28,7 +28,7 @@ class Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries {
 };
 
 sub command_subclassing_model_property {
-    return 'rmdup_name';
+    return 'duplication_handler_name';
 }
 
 sub is_not_to_be_run_by_add_reads {

@@ -31,10 +31,15 @@ class Genome::ProcessingProfile::MetagenomicCompositionShotgun {
             default_value => 1, 
             doc => 'flag determining if dusting is performed on unaligned reads from contamination screen step',
         },
-        n_removal_cutoff => {
+        n_removal_threshold => {
             is => 'Integer',
             default_value => 0,
             doc => "Reads with this amount of n's will be removed from unaligned reads from contamination screen step before before optional dusting",
+        },
+        non_n_base_threshold => {
+            is => 'Int',
+            doc => 'reads with less than this amount of non-n bases will be removed in post-processing',
+            default => 0,
         },
         mismatch_cutoff => {
             is => 'Integer',
@@ -80,7 +85,7 @@ class Genome::ProcessingProfile::MetagenomicCompositionShotgun {
 sub _resource_requirements_for_execute_build {
     my ($self, $build) = @_;
     my @instrument_data = $build->instrument_data;
-    my $tmp = 30000 * (1 + scalar(@instrument_data));
+    my $tmp = 30000 + 5000 * (1 + scalar(@instrument_data));
     return "-R 'select[model!=Opteron250 && type==LINUX64] rusage[tmp=$tmp:mem=16000]' -M 16000000";
 }
 
@@ -735,248 +740,27 @@ sub need_to_build {
 sub _process_sra_instrument_data {
     my ($self, $instrument_data) = @_;
     my $lane = $instrument_data->lane;
-    my $instrument_data_id = $instrument_data->id;
 
-    my $tmp_dir = "$UNALIGNED_TEMPDIR/unaligned_reads";
-    unless ( -d $tmp_dir or mkdir $tmp_dir) {
-        die "Failed to create temp directory $tmp_dir : $!";
+    my %params;
+    $params{instrument_data} = $instrument_data;
+    $params{n_removal_threshold} = $self->n_removal_threshold if $self->n_removal_threshold;
+    $params{non_n_base_threshold} = $self->non_n_base_threshold if $self->non_n_base_threshold;
+    $params{dust} = $self->dust_unaligned_reads if $self->dust_unaligned_reads;
+
+    my $cmd = Genome::InstrumentData::Command::PostProcessAndImport->create(%params);
+    unless($cmd){
+        die $self->error_message("Couldn't create PostProcessAndImport command for instrument data ".$instrument_data->id);
     }
-
-    $tmp_dir .= "/$instrument_data_id";
-
-    if (-e $tmp_dir) {
-        die $self->error_message("Temp directory $tmp_dir already exists?!?!");
+    my $rv = $cmd->execute;
+    unless ($rv){
+        die $self->error_message("Couldn't execute PostProcessAndImport command for instrument data ".$instrument_data->id);
     }
+    
+    my @instrument_data = $cmd->post_processed_instrument_data();
 
-    unless (mkdir $tmp_dir) {
-        die "Failed to create temp directory $tmp_dir : $!";
+    unless (@instrument_data){
+        die $self->error_message("No post-processed instrument data returned as output from PostProcessAndImport command for instrument data ". $instrument_data->id);
     }
-
-    my @instrument_data = eval {
-
-        # TODO: dust, n-remove and set the sub-dir based on the formula
-        # and use a subdir name built from that formula
-        my $subdir = 'n-remove_'.$self->n_removal_cutoff;
-        unless (-d "$tmp_dir/$subdir" or mkdir "$tmp_dir/$subdir") {
-            die "Failed to create temp directory $subdir : $!";
-        }
-
-        if ($self->dust_unaligned_reads){
-            $subdir.='/dusted';
-        }
-
-        unless (-d "$tmp_dir/$subdir" or mkdir "$tmp_dir/$subdir") {
-            die "Failed to create temp directory $subdir : $!";
-        }
-
-        $self->status_message("Preparing imported instrument data for import path $tmp_dir/$subdir");
-
-        # proceed extracting and uploading unaligned reads into $tmp_dir/$subdir....
-
-        # resolve the paths at which we will place processed instrument data
-        # we're currently using these paths to find previous unaligned reads processed the same way
-
-        my $forward_basename = "s_${lane}_1_sequence.txt";
-        my $reverse_basename = "s_${lane}_2_sequence.txt";
-        my $n_removed_fragment_basename = "s_${lane}_sequence.txt";
-        my $fragment_basename = "s_${lane}_sequence.txt";
-
-        my $expected_path;
-        my $expected_path1; #for paired end fastq processing
-        my $expected_path2;
-        my $expected_path_fragment; #for paired end w/ n-removal, potentially
-
-        if ($instrument_data->is_paired_end){
-            $expected_path1 = "$tmp_dir/$subdir/$forward_basename";
-            $expected_path2 = "$tmp_dir/$subdir/$reverse_basename";
-            $expected_path_fragment = "$tmp_dir/$subdir/$n_removed_fragment_basename";
-            $expected_path = $expected_path1 . ',' . $expected_path2;
-        }else{
-            $expected_path = "$tmp_dir/$subdir/$fragment_basename";
-        }
-
-        my $upload_path;
-        my $import_lock;
-
-        # check for previous unaligned reads
-        $self->status_message("Checking for previously post-processed and reimported reads from: $expected_path");
-        my $post_processed_inst_data = Genome::InstrumentData::Imported->get(original_data_path => $expected_path);
-        if ($post_processed_inst_data) {
-            $self->status_message("post processed instrument data already found for path $expected_path, skipping");
-        }
-        else {
-            my $lock = basename($expected_path);
-            $lock = '/gsc/var/lock/' . $instrument_data_id . '/' . $lock;
-
-            $import_lock = Genome::Utility::FileSystem->lock_resource(
-                resource_lock => $lock,
-                max_try => 2,
-            );
-            unless ($import_lock) {
-                die $self->error_message("Failed to lock $expected_path.");
-            }
-            $upload_path = $expected_path;
-        }
-
-        unless ($upload_path) {
-            $self->status_message("skipping read processing since all data is already processed and uploaded");
-            my @return = ($post_processed_inst_data);
-            #check if we produced a fragment from pairwise n-removal to return shortcut
-            if ($expected_path_fragment and $self->n_removal_cutoff){
-                my $n_removed_fragment = Genome::InstrumentData::Imported->get(original_data_path => $expected_path_fragment);
-                push @return, $n_removed_fragment if $n_removed_fragment;
-            }
-            return @return;
-        }
-
-        # extract
-        $self->status_message("Preparing imported instrument data for import path $expected_path");
-
-        my $fastq_filenames = $instrument_data->resolve_fastq_filenames;
-        for (@$fastq_filenames){
-            unless (-s $_){
-                $self->error_message("expected fastq ($_) extracted from instrument data ".$instrument_data->display_name." doesn't have size!");
-                die $self->error_message;
-            }
-        }
-        if ($instrument_data->is_paired_end){
-            unless (@$fastq_filenames == 2){
-                $self->error_message("instrument_data ".$instrument_data->display_name." is paired end but doesn't have 2 fastq files!");
-                die $self->error_message;    
-            }
-            my ($forward) = grep {$_ =~ $forward_basename} @$fastq_filenames;
-            my ($reverse) = grep {$_ =~ $reverse_basename} @$fastq_filenames;
-            unless($forward and -s $forward and $reverse and -s $reverse){
-                $self->error_message("couldn't find expected fastq basenames in ".$instrument_data->display_name);
-                die $self->error_message;
-            }
-            my ($processed_fastq1,$processed_fastq2, $processed_fastq_fragment) = $self->_process_unaligned_fastq_pair($forward,$reverse,$expected_path1, $expected_path2, $expected_path_fragment );
-            my @missing = grep {! -s $_} ($expected_path1, $expected_path2);
-            if (@missing){
-                $self->error_message("Expected data paths do not exist after fastq processing: ".join(", ", @missing));
-                die($self->error_message);
-            }
-        }else{
-            unless (@$fastq_filenames == 1){
-                $self->error_message("instrument_data ".$instrument_data->display_name." is not paired end but doesn't have exactly 1 fastq file!"); 
-                die $self->error_message;
-            }
-            my ($fragment) = grep {$_ =~ $fragment_basename} @$fastq_filenames;
-            unless ($fragment and -e $fragment){
-                $self->error_message("couldn't find expected fastq basename in ".$instrument_data->display_name);
-                die $self->error_message;
-            }
-
-            my $processed_fastq = $self->_process_unaligned_fastq($fragment, $expected_path);
-            unless (-s $expected_path){
-                die $self->error_message("Expected data path does not exist after fastq processing: $expected_path");
-            }
-        }
-
-        # upload
-        $self->status_message("uploading new instrument data from the post-processed unaligned reads...");    
-        my @properties_from_prior = qw/
-        run_name 
-        subset_name 
-        sequencing_platform 
-        median_insert_size 
-        sd_above_insert_size
-        library_name
-        sample_name
-        /;
-        my @errors;
-        my %properties_from_prior;
-        for my $property_name (@properties_from_prior) {
-            my $value = $instrument_data->$property_name;
-            no warnings;
-            $self->status_message("Value for $property_name is $value");
-            $properties_from_prior{$property_name} = $value;
-        }
-
-        if ($upload_path =~ /,/){  #technically this can go in the @properties_prior_array above, but i'm trying to keep as much in common with processed_unaligned_reads as possible to simplify refactoring
-            $properties_from_prior{is_paired_end} = 1;
-        }else{
-            $properties_from_prior{is_paired_end} = 0;
-        }
-
-        my %params = (
-            %properties_from_prior,
-            source_data_files => $upload_path,
-            import_format => 'sanger fastq', #this is here because of sra data, happens to coincide with skip_contamination_screen, but don't think that will always be the case, probably should improve how this is derived
-        );
-        $self->status_message("importing fastq with the following params:" . Data::Dumper::Dumper(\%params));
-
-        my $command = Genome::InstrumentData::Command::Import::Fastq->create(%params);
-        unless ($command) {
-            $self->error_message( "Couldn't create command to import unaligned fastq instrument data!");
-        };
-        my $result = $command->execute();
-        unless ($result) {
-            die $self->error_message( "Error importing data from $upload_path! " . Genome::InstrumentData::Command::Import::Fastq->error_message() );
-        } 
-
-        #now create fragment instrument data for $expected_path_fragment, as a result of pairwise n-removal, if the file exists and has size
-
-        if (-s $expected_path_fragment){
-            $params{source_data_files} = $expected_path_fragment;
-            $params{is_paired_end} = 0;
-            $self->status_message("importing fastq with the following params:" . Data::Dumper::Dumper(\%params));
-
-            my $command = Genome::InstrumentData::Command::Import::Fastq->create(%params);
-            unless ($command) {
-                $self->error_message( "Couldn't create command to import unaligned fastq instrument data!");
-            };
-            my $result = $command->execute();
-            unless ($result) {
-                die $self->error_message( "Error importing data from $upload_path! " . Genome::InstrumentData::Command::Import::Fastq->error_message() );
-            } 
-        }
-
-        $self->status_message("committing newly created imported instrument data");
-        $DB::single = 1;
-        $self->status_message("UR_DBI_NO_COMMIT: ".$ENV{UR_DBI_NO_COMMIT});
-        UR::Context->commit(); # warning: most code should NEVER do this in a pipeline
-
-        my @return_inst_data;
-
-        my $new_instrument_data = Genome::InstrumentData::Imported->get(
-            original_data_path => $upload_path
-        );
-        unless ($new_instrument_data) {
-            die $self->error_message( "Failed to find new instrument data $upload_path!");
-        }
-        if ($new_instrument_data->__changes__) {
-            die "Unsaved changes present on instrument data $new_instrument_data->{id} from $upload_path!!!";
-        }
-        push @return_inst_data, $new_instrument_data;
-
-        if (-s $expected_path_fragment){
-            my $new_instrument_data = Genome::InstrumentData::Imported->get(
-                original_data_path => $expected_path_fragment,
-            );
-            unless ($new_instrument_data) {
-                die $self->error_message( "Failed to find new instrument data $upload_path!");
-            }
-            if ($new_instrument_data->__changes__) {
-                die "Unsaved changes present on instrument data $new_instrument_data->{id} from $upload_path!!!";
-            }
-            push @return_inst_data, $new_instrument_data;
-        }
-
-        if ($import_lock) {
-            unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $import_lock)) {
-                die $self->error_message("Failed to unlock $expected_path.");
-            }
-        }
-        return @return_inst_data;
-    };
-
-    # TODO: add directory removal to Genome::Utility::FileSystem
-    if ($@) {
-        system "/bin/rm -rf '$tmp_dir'";
-        die $self->error_message("Error processing unaligned reads! $@");
-    }
-    system "/bin/rm -rf '$tmp_dir'";
 
     return @instrument_data;
 }
@@ -1013,7 +797,7 @@ sub _process_unaligned_reads {
 
         # TODO: dust, n-remove and set the sub-dir based on the formula
         # and use a subdir name built from that formula
-        my $subdir = 'n-remove_'.$self->n_removal_cutoff;
+        my $subdir = 'n-remove_'.$self->n_removal_threshold;
         unless (-d "$tmp_dir/$subdir" or mkdir "$tmp_dir/$subdir") {
             die "Failed to create temp directory $subdir : $!";
         }
@@ -1276,7 +1060,7 @@ sub _process_unaligned_fastq_pair {
     }
 
     #run pairwise n-removal
-    if ($self->n_removal_cutoff){
+    if ($self->n_removal_threshold){
         $self->status_message("running remove-n-pairwise on $forward, $reverse");
         my $cmd = Genome::Model::Tools::Fastq::RemoveNPairwise->create(
             forward_fastq => $forward_dusted,
@@ -1284,7 +1068,7 @@ sub _process_unaligned_fastq_pair {
             forward_n_removed_file => $forward_out,
             reverse_n_removed_file => $reverse_out,
             singleton_n_removed_file => $fragment_out,
-            n_removal_threshold => $self->n_removal_cutoff,
+            n_removal_threshold => $self->n_removal_threshold,
         );
         unless ($cmd){
             die $self->error_message("couldn't create remove-n-pairwise command for $forward_dusted, $reverse_dusted!");
@@ -1350,12 +1134,12 @@ sub _process_unaligned_fastq {
         $dusted_fastq = $fastq_file;
     }
 
-    if ($self->n_removal_cutoff){
+    if ($self->n_removal_threshold){
         $self->status_message("Running n-removal on file $fastq_file");
         my $cmd = Genome::Model::Tools::Fastq::RemoveN->create(
             fastq_file => $dusted_fastq,
             n_removed_file => $output_path,
-            n_removal_threshold => $self->n_removal_cutoff,
+            n_removal_threshold => $self->n_removal_threshold,
         ); 
         unless ($cmd){
             die $self->error_message("couldn't create remove-n command for $dusted_fastq");

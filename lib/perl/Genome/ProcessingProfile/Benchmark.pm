@@ -3,6 +3,7 @@ package Genome::ProcessingProfile::Benchmark;
 use strict;
 use warnings;
 use Genome;
+use Genome::Utility::AsyncFileSystem;
 
 class Genome::ProcessingProfile::Benchmark {
     is => 'Genome::ProcessingProfile',
@@ -18,7 +19,7 @@ class Genome::ProcessingProfile::Benchmark {
             is_constant => 1,
             is_class_wide => 1,
             # This is a queue name, but 'inline' is reserved for run on local machine.
-            value => 'benchmark',
+            value => 'benchmarking',
             doc => 'lsf queue to submit jobs or \'inline\' to run them in the launcher'
         }
     ],
@@ -40,7 +41,7 @@ class Genome::ProcessingProfile::Benchmark {
         },
         snapshot_type => {
             is_optional => 1,
-            value => 'default'
+            value => 'usrbintime'
         }
     ],
     doc => "benchmark profile captures statistics after command execution"
@@ -98,23 +99,7 @@ sub _system_snapshot_package {
     return $package;
 }
 
-sub _system_snapshot {
-    # FIXME: Make these stubs and subclass when we get closer to finished
-    my $self = shift;
-    my $dir = shift;
-
-    # We create a cache file for this build
-    my $cache = "$dir/system_snapshot.cache";
-    return if (! defined $dir);
-
-    my $package = $self->_system_snapshot_package;
-
-    my $s = $package->new($cache);
-    return $s->run();
-}
-
 sub _set_metrics {
-    # Stub to be overridden in a Benchmark subclass
     my ($self,$build,$metrics) = @_;
     foreach my $key (keys %$metrics) {
         $build->set_metric($key,$metrics->{$key});
@@ -130,28 +115,22 @@ sub _execute_build {
     $DB::single=1;
 
     my $cmd = $self->command;
+    die "Command not present and executable: $cmd" if (! -x $cmd);
 
     my @inputs = $build->inputs(name => 'command_arguments');
     @inputs = map { $_->{value_id} } @inputs ;
     my $args = join(' ', @inputs);
 
-    my $dir = $build->data_directory;
-
-    $self->_system_snapshot($dir);
-
-    # Set the DATA_DIRECTORY for use by executed program.
     $ENV{DATA_DIRECTORY} = $build->data_directory;
 
-    my $exit_code = system "/usr/bin/time -v $cmd $args >$dir/output 2>$dir/errors";
-    $exit_code = $exit_code >> 8;
-    if ($exit_code != 0) {
-        $self->status_message("Failed to run $cmd with args $args!  Exit code: $exit_code.");
-        # FIXME: Not really sure what to do long term here.
-        # We have a case of gmt soap de-novo-assemble not properly returning exit codes.
-        # Don't return, fall through and finish getting metrics.
-    }
+    my $package = $self->_system_snapshot_package;
+    my $snapshotter = $package->new($build->id,$build->data_directory);
 
-    my $metrics = $self->_system_snapshot($dir);
+    $snapshotter->pre_run();
+    $snapshotter->run($cmd,$args);
+    $snapshotter->post_run();
+
+    my $metrics = $snapshotter->report();
     $self->_set_metrics($build,$metrics);
 
     return 1;

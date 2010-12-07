@@ -83,6 +83,7 @@ my ($phh,$total);
 if($#$pReads>=0){
   my $pkg=new kmergen(k=>$kmersize,c=>$opts{m},C=>$opts{M});
   ($phh,$total)=$pkg->doit($pReads,$refseq);
+  $pkg->printMer("MerP",$phh) if($opts{d});  
 }
 
 #Output assembled contigs
@@ -108,14 +109,15 @@ sub initial_iteration{
   #from de bruigin graph to proto-contig graph
   my $wn=new walknodes(k=>$kmersize);
   $wn->strictwalk($HH);
+&printnodes("Mynodes_", $HH);
   my $contigtips;
   my $protocontigs=$wn->dump_protocontigs();
-  if($opts{d}){&printnodes("Mynodes.strwlk",$HH);&outputcontigs("Mycontigs.strwlk",contig=>$protocontigs,tips=>$contigtips,format=>1);}
+  if($opts{d}){&printnodes("Mynodes.strwlk1",$HH);&outputcontigs("Mycontigs.strwlk1",contig=>$protocontigs,tips=>$contigtips,format=>1);}
 
   #compute tip value: max{nucleotide distances to leaves} for all proto-contigs and the anti-proto-contigs, start from the leaves
   my $pt=new processtips(k=>$kmersize);
   $contigtips=$pt->tipwrap(1000,$protocontigs,$HH);
-  if($opts{d}){&outputcontigs("Mycontigs.tiplabel",contig=>$protocontigs,tips=>$contigtips);}
+  if($opts{d}){&outputcontigs("Mycontigs.tiplabel1",contig=>$protocontigs,tips=>$contigtips);}
 
   #recover low frequency kmers in high quality reads that bridge separated non-tip proto-contig graphs
   my $ab=new addbridgekmer(k=>$kmersize);
@@ -132,13 +134,14 @@ sub initial_iteration{
 
   undef $contigtips;
   $wn->strictwalk($HH);
+printnodes("Mynodes_",$HH);  
   $protocontigs=$wn->dump_protocontigs();
-  if($opts{d}){&printnodes("Mynodes.strwlk",$HH);&outputcontigs("Mycontigs.strwlk",contig=>$protocontigs,tips=>$contigtips,format=>1);}
+  if($opts{d}){&printnodes("Mynodes.strwlk2",$HH);&outputcontigs("Mycontigs.strwlk2",contig=>$protocontigs,tips=>$contigtips,format=>1);}
   #updated the set of proto-contigs with the expanded hash
   undef $pt;
   $pt=new processtips(k=>$kmersize);
   $contigtips=$pt->tipwrap(1000,$protocontigs,$HH);
-  if($opts{d}){&outputcontigs("Mycontigs.tiplabel",contig=>$protocontigs,tips=>$contigtips);}
+  if($opts{d}){&outputcontigs("Mycontigs.tiplabel2",contig=>$protocontigs,tips=>$contigtips);}
 
   #extend proto-contigs to contigs by removing tips and collapse bubbles with heuristic cut-offs
   my $wc=new walkcontig(k=>$kmersize);
@@ -187,12 +190,12 @@ sub iteration{
   $wn->strictwalk($HH);
   my $contigtips;
   my $protocontigs=$wn->dump_protocontigs();
-  if($opts{d}){&printnodes("Mynodes.strwlk",$HH);&outputcontigs("Mycontigs.strwlk",contig=>$protocontigs,tips=>$contigtips,format=>1);}
+  if($opts{d}){&printnodes("Mynodes.strwlk1",$HH);&outputcontigs("Mycontigs.strwlk1",contig=>$protocontigs,tips=>$contigtips,format=>1);}
 
   #compute tip value: max{nucleotide distances to leaves} for all proto-contigs and the anti-proto-contigs, start from the leaves
   my $pt=new processtips(k=>$kmersize);
   $contigtips=$pt->tipwrap(1000,$protocontigs,$HH);
-  if($opts{d}){&outputcontigs("Mycontigs.tiplabel",contig=>$protocontigs,tips=>$contigtips);}
+  if($opts{d}){&outputcontigs("Mycontigs.tiplabel1",contig=>$protocontigs,tips=>$contigtips);}
 
   #recover low frequency kmers in high quality reads that bridge separated non-tip proto-contig graphs
   my $ab=new addbridgekmer(k=>$kmersize);
@@ -210,13 +213,13 @@ sub iteration{
   undef $contigtips;
   $wn->strictwalk($HH);
   $protocontigs=$wn->dump_protocontigs();
-  if($opts{d}){&printnodes("Mynodes.strwlk",$HH);&outputcontigs("Mycontigs.strwlk",contig=>$protocontigs,tips=>$contigtips,format=>1);
+  if($opts{d}){&printnodes("Mynodes.strwlk2",$HH);&outputcontigs("Mycontigs.strwlk2",contig=>$protocontigs,tips=>$contigtips,format=>1);
   }
   #updated the set of proto-contigs with the expanded hash
   undef $pt;
   $pt=new processtips(k=>$kmersize,Thin=>2);
   $contigtips=$pt->tipwrap(1000,$protocontigs,$HH);
-  if($opts{d}){&outputcontigs("Mycontigs.tiplabel",contig=>$protocontigs,tips=>$contigtips);
+  if($opts{d}){&outputcontigs("Mycontigs.tiplabel2",contig=>$protocontigs,tips=>$contigtips);
   }
 
   #extend proto-contigs to contigs by removing tips and collapse bubbles with heuristic cut-offs
@@ -280,7 +283,8 @@ sub getReads{
 sub printnodes {
   my ($filename,$HH)=@_;
   open(MYFILE,">$filename") || die "unable to write to $filename\n";
-  while (my $key= each %{$HH}) {
+  #while (my $key= each %{$HH}) {
+  foreach my $key ( sort keys %{$HH}){
     print MYFILE $key." ".$$HH{$key}{n}." ".$$HH{$key}{AI}." ".$$HH{$key}{TI}." ".$$HH{$key}{GI}." ".$$HH{$key}{CI}." ".$$HH{$key}{AO}." ".$$HH{$key}{TO}." ".$$HH{$key}{GO}." ".$$HH{$key}{CO}." ".$$HH{$key}{tag}." ".$$HH{$key}{tag2}."\n";
   }
   close(MYFILE);
@@ -359,7 +363,7 @@ sub KmerUtility{
   if(@uniqpos){
     my @bases=split //,$seq;
     foreach my $pos(@uniqpos){
-      for(my $i=$pos-$kmersize+1;$i<=$pos;$i++){
+      for(my $i=$pos-$kmersize;$i<$pos;$i++){
 	$bases[$i]=uc($bases[$i]);
       }
     }

@@ -139,12 +139,12 @@ sub execute {                               # replace with real execution logic.
 			
 			if($self->output_cosmic)
 			{
-				print OUTCOSMIC "COSMICgene\tCOSMICchrom\tCOSMICstart\tCOSMICstop\tCOSMICamino\tCOSMICnucleotide\tCOSMICstatus\t$line\n";
+				print OUTCOSMIC "$line\tCOSMICgene\tCOSMICchrom\tCOSMICstart\tCOSMICstop\tCOSMICamino\tCOSMICnucleotide\tCOSMICstatus\t\n";
 			}
 			
 			if($self->output_omim)
 			{
-				print OUTOMIM "OMIMgene\tOMIMentry\tOMIMresidue\tOMIMaa1\tOMIMaa2\tOMIMdisorders\t$line\n";
+				print OUTOMIM "$line\tOMIMgene\tOMIMentry\tOMIMresidue\tOMIMaa1\tOMIMaa2\tOMIMdisorders\t\n";
 			}
 			
 			## Parse the MAF header line to determine field locations ##	
@@ -340,7 +340,7 @@ sub execute {                               # replace with real execution logic.
 			
 			if($flag_matched_omim)
 			{
-				print OUTOMIM "$omim_match\t$line\n";
+				print OUTOMIM "$line\t$omim_match\n";
 				my @result = split(/\t/, $omim_match);
 				my $omim_gene = $result[0];
 				$omim_gene_counts{$omim_gene}++;
@@ -351,7 +351,7 @@ sub execute {                               # replace with real execution logic.
 			
 			if($flag_matched_cosmic)
 			{
-				print OUTCOSMIC "$cosmic_match\t$line\n";
+				print OUTCOSMIC "$line\t$cosmic_match\n";
 				my @result = split(/\t/, $cosmic_match);
 				my $cosmic_gene = $result[0];
 				$cosmic_gene_counts{$cosmic_gene}++;

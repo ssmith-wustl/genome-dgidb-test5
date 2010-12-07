@@ -119,18 +119,18 @@ sub execute {
 
         my $op = Workflow::Operation->create(
             name => 'RefCov Progression',
-            operation_type => Workflow::OperationType::Command->get('Genome::Model::Tools::RefCov::ProgressionInstance')
+            operation_type => Workflow::OperationType::Command->get('Genome::Model::Tools::OldRefCov::ProgressionInstance')
         );
 
         $op->parallel_by('bam_files');
         my $output;
-        if ($self->model->rmdup_name eq 'samtools') {
+        if ($self->model->duplication_handler_name eq 'samtools') {
             $output = Workflow::Simple::run_workflow_lsf(
                 $op,
                 'output_directory' => $ref_cov_dir,
                 'bam_files' => $progression_array_ref,
                 'target_query_file' => $self->build->transcript_bed_file,
-                'samtools_version' => $self->model->rmdup_version,
+                'samtools_version' => $self->model->duplication_handler_version,
             );
         } else {
             $output = Workflow::Simple::run_workflow_lsf(
@@ -195,7 +195,7 @@ sub execute {
 
     my @progression_instrument_data_ids = $self->sorted_instrument_data_ids;
     unless (-s $self->build->coverage_progression_file) {
-        unless (Genome::Model::Tools::RefCov::Progression->execute(
+        unless (Genome::Model::Tools::OldRefCov::Progression->execute(
             stats_files => \@progression_stats_files,
             instrument_data_ids => \@progression_instrument_data_ids,
             sample_name => $self->model->subject_name,

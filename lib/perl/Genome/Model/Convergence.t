@@ -34,8 +34,8 @@ ok(! $convergence_model->auto_build_alignments, 'Alignment auto-build disabled')
 my ($test_model, $test_model_two) = setup_test_models();
 
 my $add_command = Genome::ModelGroup::Command::Member::Add->create(
-    model_group_id => $model_group->id,
-    model_ids => join(',', $test_model->id, $test_model_two->id),
+    model_group=> $model_group,
+    models => [ $test_model, $test_model_two ],
 );
 
 ok($add_command, 'created member add command');

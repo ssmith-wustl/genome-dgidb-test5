@@ -32,22 +32,27 @@ class Genome::Model::Tools::Sam::Merge {
             default_value => 0,
             is_optional => 1
         },
-        software => {
+        merger_name => {
             is => 'Text',
             default_value => 'picard',
             valid_values => ['picard', 'samtools'],
             doc => 'the software tool to use for merging BAM files.  defualt_value=>picard',
+        },
+        merger_version => {
+            is => 'Text',
+            doc => 'the version of software tool to use for merging BAM files.',
+            is_optional => 1,
+        },
+        merger_params => {
+            is => 'Text',
+            doc => 'the parameters of software tool to use for merging BAM files.',
+            is_optional => 1,
         },
         bam_index => {
             is  => 'Boolean',
             doc => 'flag to create bam index or not',
             is_optional   => 1,
             default_value => 1,
-        },
-        use_picard_version => {
-            is => 'String',
-            doc => 'version of picard to use if "picard" was used for the --software option',
-            is_optional => 1,
         },
         max_jvm_heap_size => {
             is  => 'Integer',
@@ -78,20 +83,15 @@ sub merge_command {
     my $self = shift;
     my @input_files = @_;
 
-    my $merged_file = $self->merged_file;
+    my $merged_file   = $self->merged_file;
+    my $merger_params = $self->merger_params;
+
     my $bam_merge_cmd;
-    if ($self->software eq 'picard') {
-        $bam_merge_cmd = Genome::Model::Tools::Picard::MergeSamFiles->create(
+    if ($self->merger_name eq 'picard') {
+        my %params = (
             input_files => \@input_files, #file_type is determined automatically by picard
             output_file => $self->merged_file,
-            use_version => $self->use_picard_version,
-
-            #If $self->is_sorted is false, we sort before merging
-            assume_sorted => 1,
-
-            #Settings that have been hard-coded in this tool
-            merge_sequence_dictionary => 1,
-            sort_order => 'coordinate',
+            use_version => $self->merger_version,
             validation_stringency => 'SILENT',
             maximum_memory => $self->max_jvm_heap_size,
             maximum_permgen_memory => $self->max_permgen_size,
@@ -102,18 +102,42 @@ sub merge_command {
             _monitor_stdout_interval => 900, #seconds
         );
 
+        my %extra_params = (
+            #If $self->is_sorted is false, we sort before merging
+            assume_sorted => 1,
+            #Settings that have been hard-coded in this tool
+            merge_sequence_dictionary => 1,
+            sort_order => 'coordinate',
+        );
+
+        if ($merger_params) {
+            $merger_params =~ s/^\s*//;
+            my %given_params = split /\s+|\=/, $merger_params;
+            for my $param (keys %extra_params) {
+                for my $given_param (keys %given_params) {
+                    $extra_params{$param} = $given_params{$given_param} if lc($given_param) =~ /$param/;
+                }
+            }
+        }
+        %params = (%params, %extra_params);
+        $bam_merge_cmd = Genome::Model::Tools::Picard::MergeSamFiles->create(%params);
+   
         my $list_of_files = join(' ',@input_files);
         $self->status_message('Files to merge: '. $list_of_files);
-    } elsif ($self->software eq 'samtools') {
+    } 
+    elsif ($self->merger_name eq 'samtools') {
+        #$self->use_version($self->merger_version);
         my $sam_path = $self->samtools_path;
         my $bam_merge_tool = "$sam_path merge";
+        $bam_merge_tool .= " $merger_params" if $merger_params;
         my $list_of_files = join(' ',@input_files);
         $self->status_message("Files to merge: ". $list_of_files);
         $bam_merge_cmd = "$bam_merge_tool $merged_file $list_of_files";
-    } else {
-        die ('Failed to resolve merge command for software '. $self->software);
+    } 
+    else {
+        die ('Failed to resolve merge command for software '. $self->merger_name);
     }
-    return $bam_merge_cmd
+    return $bam_merge_cmd;
 }
 
 
@@ -220,7 +244,8 @@ sub fix_headers {
     $self->error_message("Failed to remove old SAM file ($tmp_sam_file).") unless(unlink($tmp_sam_file));
 
     # convert sam to bam
-    my $sam_to_bam_cmd = "samtools view -b -S $sam_file -o $unsorted_bam";
+    my $sam_path = $self->samtools_path;
+    my $sam_to_bam_cmd = "$sam_path view -b -S $sam_file -o $unsorted_bam";
     my $sam_to_bam = Genome::Utility::FileSystem->shellcmd(
         cmd => $sam_to_bam_cmd,
         input_files => [$sam_file],
@@ -232,8 +257,8 @@ sub fix_headers {
     $self->error_message("Failed to remove SAM file ($sam_file).") unless(unlink($sam_file));
 
     # validate only headers have changed, i.e. reads have not changed
-    my $original_bam_content_md5 = `samtools view $missing_headers_bam | md5sum`;
-    my $fixed_bam_content_md5 = `samtools view $unsorted_bam | md5sum`;
+    my $original_bam_content_md5 = `$sam_path view $missing_headers_bam | md5sum`;
+    my $fixed_bam_content_md5 = `$sam_path view $unsorted_bam | md5sum`;
     unless($original_bam_content_md5 eq $fixed_bam_content_md5) {
         die $self->error_message("$unsorted_bam reads appear to differ from $missing_headers_bam");
     }
@@ -286,6 +311,7 @@ sub execute {
     #merge those Bam files...BAM!!!
     my $now = UR::Time->now;
     $self->status_message(">>> Beginning Bam merge at $now.");
+    $self->use_version($self->merger_version) if $self->merger_name eq 'samtools'; #set samtools_path using the same version of samtools as merger_version
     my $sam_path = $self->samtools_path; 
     my $bam_index_tool = $sam_path.' index';
 
@@ -338,9 +364,10 @@ sub execute {
 
         my $bam_merge_rv;
 
-        if ($self->software eq 'picard') {
+        if ($self->merger_name eq 'picard') {
             $bam_merge_rv = $bam_merge_cmd->execute();
-        } else {
+        } 
+        else {
             $bam_merge_rv = Genome::Utility::FileSystem->shellcmd(
                 cmd=>$bam_merge_cmd,
                 input_files=>\@input_files,
@@ -358,7 +385,7 @@ sub execute {
         }
 
         # Samtools only preserves headers from first bam in merge so we need to fix
-        if ($self->software eq 'samtools') {
+        if ($self->merger_name eq 'samtools') {
             $self->status_message("Fixing headers on $result.");
             my $perl_rv = $self->fix_headers($result);
             if ($perl_rv) {

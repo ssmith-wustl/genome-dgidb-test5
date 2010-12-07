@@ -123,22 +123,23 @@ sub execute {
     }
 
     # Picard fails when merging BAMs aligned against the transcriptome
-    my $merge_software   = $self->model->merge_software;
-    my $rmdup_version    = $self->model->rmdup_version;
+    my $merger_name      = $self->model->merger_name;
+    my $merger_version   = $self->model->merger_version;
+    my $merger_params    = $self->model->merger_params;
+    my $dedup_name       = $self->model->duplication_handler_name;
+    my $dedup_version    = $self->model->duplication_handler_version;
+    my $dedup_params     = $self->model->duplication_handler_params;
     my $samtools_version = $self->model->samtools_version;
-    my $rmdup_name       = $self->model->rmdup_name;
-    
-    unless (defined $merge_software) {
-        $self->error_message("Merge software not defined for dedup module. Returning.");
+
+    unless (defined $merger_name) {
+        $self->error_message("Merger_name not defined for dedup module. Returning.");
         return;
     }
-    unless (defined $rmdup_version ) {
-        $self->error_message("Rmdup version not defined for dedup module. Returning.");
+    unless (defined $dedup_version ) {
+        $self->error_message("duplication_handler_version not defined for dedup module. Returning.");
         return;
     }
-    $self->status_message("Using merge software $merge_software");
-    $self->status_message("Using rmdup version $rmdup_version");
-    $self->status_message("Using rmdup version $rmdup_name");
+    $self->status_message("Using merger name $merger_name, merger version $merger_version, dedup name $dedup_name, dedup version $dedup_version");
     my $pp_name = $self->model->processing_profile_name;
     $self->status_message("Using pp: ".$pp_name);
 
@@ -152,9 +153,10 @@ sub execute {
         merged_file => $merged_file,
         is_sorted => 1,
         bam_index => 0,
-        software => $merge_software,
-        use_version => $samtools_version,
-        use_picard_version => $rmdup_version,
+        merger_name => $merger_name,
+        merger_version => $merger_version,
+        merger_params  => $merger_params,
+        use_version => $samtools_version, #if merger_name is samtools, use_version will be reset to $merger_verison to be consistent
         max_jvm_heap_size => $self->max_jvm_heap_size,
     ); 
 
@@ -164,8 +166,8 @@ sub execute {
     if ($merge_rv != 1)  {
         $self->error_message("Error merging: ".join("\n", @bam_files));
         $self->error_message("Output target: $merged_file");
-        $self->error_message("Using software: ".$merge_software);
-        $self->error_message("Version: ".$rmdup_version);
+        $self->error_message("Using software: ".$merger_name);
+        $self->error_message("Version: ".$dedup_version);
         $self->error_message("You may want to check permissions on the files you are trying to merge.");
         return;
     } 
@@ -215,20 +217,21 @@ sub execute {
         my $dedup_temp_file = $result_tmp_dir . '/dedup.bam';
         my %mark_duplicates_params = (
             file_to_mark => $merged_file,
-           marked_file => $dedup_temp_file,
-           metrics_file => $metrics_file,
-           remove_duplicates => 0,
-           tmp_dir => $tmp_dir->dirname,
-           log_file => $markdup_log_file, 
-           use_picard_version => $rmdup_version,
-           max_jvm_heap_size => $self->max_jvm_heap_size,
+            marked_file => $dedup_temp_file,
+            metrics_file => $metrics_file,
+            remove_duplicates => 0,
+            tmp_dir => $tmp_dir->dirname,
+            log_file => $markdup_log_file, 
+            dedup_version => $dedup_version,
+            dedup_params  => $dedup_params,
+            max_jvm_heap_size => $self->max_jvm_heap_size,
         );
         if (defined($processing_profile->picard_max_sequences_for_disk_read_ends_map)) {
             $mark_duplicates_params{max_sequences_for_disk_read_ends_map} = $processing_profile->picard_max_sequences_for_disk_read_ends_map;
         }
         my $mark_dup_cmd = Genome::Model::Tools::Sam::MarkDuplicates->create(%mark_duplicates_params);
-    
         my $mark_dup_rv = $mark_dup_cmd->execute;
+
         if ($mark_dup_rv != 1)  {
             $self->error_message("Error Marking Duplicates!");
             $self->error_message("Return value: ".$mark_dup_rv);
@@ -254,7 +257,8 @@ sub execute {
     
     $self->status_message("Indexing the final BAM file...");
     my $index_cmd = Genome::Model::Tools::Sam::IndexBam->create(
-        bam_file => $bam_merged_output_file
+        bam_file    => $bam_merged_output_file,
+        use_version => $self->_sam_use_version,
     );
     my $index_cmd_rv = $index_cmd->execute;
     
@@ -270,7 +274,6 @@ sub execute {
     }
 
     $self->status_message("*** All processes completed. ***");
-
     return $self->verify_successful_completion();
 }
 
@@ -281,6 +284,7 @@ sub _bam_flagstat_total {
     
     unless (-s $flag_file) {
         my $cmd = Genome::Model::Tools::Sam::Flagstat->create(
+            use_version    => $self->_sam_use_version,
             bam_file       => $bam_file,
             output_file    => $flag_file,
             include_stderr => 1,
@@ -291,7 +295,6 @@ sub _bam_flagstat_total {
             return;
         }
     }
-    
     my $flagstat_data = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($flag_file);
         
     unless($flagstat_data) {
@@ -306,11 +309,20 @@ sub _bam_flagstat_total {
             }
         }
     }
-    
     my $total = $flagstat_data->{total_reads};
     
     $self->status_message('flagstat for ' . $bam_file . ' reports ' . $total . ' in total');    
     return $total;
+}
+
+
+sub _sam_use_version {
+    my $self = shift;
+
+    if ($self->model->merger_name eq 'samtools') {
+        return $self->model->merger_version;
+    }
+    return $self->model->samtools_version;
 }
 
 
@@ -345,7 +357,7 @@ sub calculate_required_disk_allocation_kb {
         for my $alignment (@alignments) {
             my @aln_bams = $alignment->alignment_bam_file_paths;
             unless (@aln_bams) {
-                $self->status_message("alignment $alignment has no bams at " . $alignment->output);
+                $self->status_message("alignment $alignment has no bams at " . $alignment->output_dir);
             }
             push @build_bams, @aln_bams;
         }

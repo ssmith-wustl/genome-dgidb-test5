@@ -105,12 +105,27 @@ sub write_bed_line {
     my $self = shift;
     #start is zero-based index of first base in the event.
     #stop is zero-based index of first base *after* the event (e.g. for a SNV these will differ by one)
-    my ($chromosome, $start, $stop, $reference, $variant) = @_;
+   
+     #my ($chromosome, $start, $stop, $reference, $variant) = @_;
+    my @values = @_;
     
     my $output_fh = $self->_output_fh;
     
-    my $name = join('/', $reference, $variant);
-    print $output_fh join("\t", $chromosome, $start, $stop, $name), "\n";
+    #my $name = join('/', $reference, $variant);
+    my $name = join('/', $values[3], $values[4]);
+    my @columns;
+    for my $index (0..scalar(@values)){
+        if($index==3){
+            push @columns, $name;
+        } elsif ($index==4){
+        } else {
+            if(defined($values[$index])){
+                push @columns, $values[$index];
+            }
+        }
+    }
+    #print $output_fh join("\t", $chromosome, $start, $stop, $name), "\n";
+    print $output_fh join("\t", @columns), "\n";
     
     return 1;
 }
