@@ -124,13 +124,13 @@ is_deeply(
     \@stage_classes, 
     [ 
         'Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData',
-        'Genome::Model::Event::Build::DeNovoAssembly::Assemble::Velvet',
+        'Genome::Model::Event::Build::DeNovoAssembly::Assemble',
         'Genome::Model::Event::Build::DeNovoAssembly::PostAssemble',
         'Genome::Model::Event::Build::DeNovoAssembly::Report',
     ], 
     'Stage classes'
 );
-is($pp->class_for_assembler, 'Genome::Model::Tools::Velvet::OneButton', 'Assembler class');
+is($pp->class_for_assembler, 'Genome::Model::Tools::Velvet::Assemble', 'Assembler class');
 
 #< SOAP >#
 my %valid_soap_params = Genome::Model::DeNovoAssembly::Test->processing_profile_params_for_assembler_and_platform(
@@ -150,7 +150,7 @@ my @soap_stage_classes = $soap_pp->assemble_job_classes;
 is_deeply ( \@soap_stage_classes,
 	    [
 	     'Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData',
-	     'Genome::Model::Event::Build::DeNovoAssembly::Assemble::Soap',
+	     'Genome::Model::Event::Build::DeNovoAssembly::Assemble',
 	     'Genome::Model::Event::Build::DeNovoAssembly::PostAssemble',
 	     'Genome::Model::Event::Build::DeNovoAssembly::Report',
 	    ], 'Stage classes' );
