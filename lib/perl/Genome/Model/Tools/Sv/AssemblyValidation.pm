@@ -7,7 +7,6 @@ use warnings;
 use Genome;
 use Bio::SeqIO;
 use File::Temp;
-use File::Slurp;
 use File::Basename;
 
 =cut
@@ -408,7 +407,6 @@ sub _cross_match_validation {
     }
 
     my $cm_cmd_opt = '-bandwidth 20 -minmatch 20 -minscore 25 -penalty '.$self->cm_sub_penalty.' -discrep_lists -tags -gap_init '.$self->cm_gap_init_penalty.' -gap_ext -1';
-
 	my $cm_cmd = "cross_match $tigra_sv_fa $ref_fa $cm_cmd_opt > $cm_out 2>/dev/null";
 	           
     my $rv = Genome::Utility::FileSystem->shellcmd (
@@ -424,13 +422,6 @@ sub _cross_match_validation {
     }
     $self->status_message("Cross_match for $type contigs: $tigra_sv_name Done");
         
-    my $tmp = File::Temp->new(
-        DIR      => '/tmp',
-        TEMPLATE => "CM_$type"."_out.XXXXXX",
-        UNLINK   => 1,
-    );
-    my $tmp_out = $tmp->filename;
-
     my $makeup_size      = 0; # by default they are zero
     my $concatenated_pos = 0; # by default they are zero
 
@@ -441,7 +432,6 @@ sub _cross_match_validation {
 
     $self->status_message("GetCrossMatchIndel for $tigra_sv_name $type");
     my $cm_indel = Genome::Model::Tools::Sv::CrossMatchForIndel->create(
-        output_file          => $tmp_out,
         cross_match_file     => $cm_out,
         local_ref_seq_file   => $ref_fa,
         assembly_contig_file => $tigra_sv_fa,
@@ -450,9 +440,7 @@ sub _cross_match_validation {
         ref_cat_pos          => $concatenated_pos,
         variant_size         => $makeup_size,
     );
-            
-    $cm_indel->execute;
-    my $result  = read_file($tmp_out);
+    my $result = $cm_indel->execute;
 
     if ($result && $result =~ /\S+/) {
 	    $self->_UpdateSVs($result,$makeup_size,$regionsize,$tigra_sv_fa,$ctg_type, $cm_out);
