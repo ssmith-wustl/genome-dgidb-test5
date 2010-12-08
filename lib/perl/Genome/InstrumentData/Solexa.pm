@@ -219,8 +219,8 @@ EOS
                                         },
         project_name => { },
         project => {
-            is => "Genome::Project",
-            calculate => q|Genome::Project->get(name => $self->research_project_name)|
+            is => "Genome::Site::WUGC::Project",
+            calculate => q|Genome::Site::WUGC::Project->get(name => $self->research_project_name)|
         },
         _run_lane_solexa => {
             doc => 'Solexa Lane Summary from LIMS.',
