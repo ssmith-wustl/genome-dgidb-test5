@@ -80,7 +80,7 @@ class Genome::Model {
     ],
     has_optional_many => [
         # TODO: the new project will internally have generalized assignments of models and other things
-        projects                    => { is => 'Genome::Project', via => 'project_assignments', to => 'project' },
+        projects                    => { is => 'Genome::Site::WUGC::Project', via => 'project_assignments', to => 'project' },
         project_assignments         => { is => 'Genome::Model::ProjectAssignment', reverse_as => 'model' },
         project_names               => { is => 'Text', via => 'projects', to => 'name' },
         

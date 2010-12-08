@@ -28,7 +28,6 @@ class Genome::WorkOrderItem {
         },
         work_order => {
             is => 'Genome::WorkOrder',
-            is_many => 1,
             id_by => 'setup_wo_id',
             doc => 'The work order for this item.',
         },
@@ -45,6 +44,11 @@ class Genome::WorkOrderItem {
         sample => {
             is => 'Genome::Sample',
             id_by => 'dna_id',
+        },
+        models => {
+            is => 'Genome::Model',
+            calculate_from => ['dna_id'],
+            calculate => q|Genome::Model->get(subject_id => $dna_id)| 
         },
         parent_woi_id => {
             is => 'Integer',
