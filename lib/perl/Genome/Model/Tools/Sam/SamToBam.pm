@@ -88,8 +88,11 @@ sub execute {
     
     my $cmd;
 	$cmd .= sprintf('%s view -b -o %s', $samtools, $bam_file);
-	$cmd .= sprintf(' -t %s', $self->ref_list) if ($self->ref_list);
-	$cmd .= sprintf(' %s', $sam_file);
+    if ($self->ref_list) {
+        $cmd .= sprintf(' -t %s %s', $self->ref_list, $sam_file);
+    } else {
+        $cmd .= sprintf(' -S %s', $sam_file);
+    }
     $self->status_message("SamToBam conversion command: $cmd");
     
     my $rv  = Genome::Utility::FileSystem->shellcmd(
