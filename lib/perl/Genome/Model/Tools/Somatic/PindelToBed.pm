@@ -26,6 +26,12 @@ class Genome::Model::Tools::Somatic::PindelToBed {
             default => 0,
             doc => 'Include events which have some or all normal support alongside events with only tumor support',
         },
+        germline_only => {
+            type => 'Boolean',
+            is_optional => 1,
+            default => 0,
+            doc => 'Include only events which have some normal support.',
+        },
         include_bp_ranges => {
             type => 'Boolean',
             is_optional => 1,
@@ -91,11 +97,34 @@ sub execute {
     my $self = shift;
     $DB::single=1;
     # test architecture to make sure we can run (needed for samtools faidx)
+    if($self->include_normal && $self->germline_only){
+        $self->error_message("Cannot include normal AND germline only.");
+        die $self->error_message;
+    }
     unless (`uname -a` =~ /x86_64/) { 
        $self->error_message("Must run on a 64 bit machine");
        die;
     }
-    $self->_input_fh(Genome::Utility::FileSystem->open_file_for_reading($self->source));
+    if(-d $self->source){
+        $self->status_message("Using ".$self->source." as the pindel directory, proceeding to cat all chroms and run on that.");
+        my @grob = glob($self->source."/*");
+        my @dirs;
+        my $temp_file = Genome::Utility::FileSystem->create_temp_file_path;
+        for my $t (@grob){
+            if(-d $t){
+                if(-s $t."/indels_all_sequences"){
+                    my $cmd = "cat ".$t."/indels_all_sequences >> ".$temp_file;
+                    unless(Genome::Utility::FileSystem->shellcmd( cmd => $cmd)){
+                        $self->error_message("Failed to cat files. command looked like: ".$cmd);
+                        die $self->error_message;
+                    }
+                }
+            }
+        }
+        $self->_input_fh(Genome::Utility::FileSystem->open_file_for_reading($temp_file));
+    } else {
+        $self->_input_fh(Genome::Utility::FileSystem->open_file_for_reading($self->source));
+    }
     
     if($self->_big_output_fh) {
         return 1; #Already initialized
@@ -172,7 +201,7 @@ sub execute {
     for $chrom (sort {$a cmp $b} (keys(%events))){
         for $pos (sort{$a <=> $b} (keys( %{$events{$chrom}}))){
             for $type_and_size (sort(keys( %{$events{$chrom}{$pos}}))){
-                if(not (exists($events{$chrom}{$pos}{$type_and_size}{'normal'}))||$self->include_normal){
+                if((not (exists($events{$chrom}{$pos}{$type_and_size}{'normal'}))||$self->include_normal)&& not $self->germline_only){
                     my @bed = split ",", $events{$chrom}{$pos}{$type_and_size}{'bed'};
                     if($self->include_bp_ranges){
                         push @bed , $ranges{$chrom}{$pos}{$type_and_size}{'lower'};
@@ -180,6 +209,17 @@ sub execute {
                     }
                     my $bed = join(",",@bed);
                     $self->write_bed_line(split ",", $bed);
+                }
+                if($self->germline_only){
+                    if(exists($events{$chrom}{$pos}{$type_and_size}{'normal'})){
+                        my @bed = split ",", $events{$chrom}{$pos}{$type_and_size}{'bed'};
+                        if($self->include_bp_ranges){
+                            push @bed , $ranges{$chrom}{$pos}{$type_and_size}{'lower'};
+                            push @bed , $ranges{$chrom}{$pos}{$type_and_size}{'upper'};
+                        }
+                        my $bed = join(",",@bed);
+                        $self->write_bed_line(split ",", $bed);
+                    }
                 }
             }
         }
