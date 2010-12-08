@@ -53,6 +53,7 @@ sub execute {
 
     while(my $line = $fh->getline) {
         chomp $line;
+        next if $line =~ /^chr/i;   #attempt to skip header lines that sneak in
         my @fields = split /\t/, $line;
         my ($chr,$start,$end,$ref,$var,$type) = @fields[0..5];
         next if $type =~ /NP/; #skip DNP and SNP
