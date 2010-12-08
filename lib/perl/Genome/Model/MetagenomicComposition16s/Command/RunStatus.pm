@@ -63,7 +63,7 @@ sub execute {
     }
 
     my $report = $self->_generate_report_and_execute_functions(
-        name => 'Work Order Status',
+        name => 'Run Status',
         description => 'Run Status for '.$self->run_name.' '.$self->region_number,
         row_name => 'instrument-data',
         headers => \@headers,
