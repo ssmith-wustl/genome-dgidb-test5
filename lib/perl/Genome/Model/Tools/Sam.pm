@@ -167,18 +167,18 @@ sub read_count {
 	my $samtools = $self->samtools_path;
 
     my ($type) = ($filename =~ /\.([^\.\s]+)\s*$/i);
-    my $samtools_view;
+    my $count_cmd;
     if ($type =~ /SAM/i) {
-        $samtools_view = "$samtools view -S";
+        $count_cmd = "grep -cv '^\@' $filename";
     } elsif ($type =~ /BAM/i) {
-        $samtools_view = "$samtools view";
+        $count_cmd = "$samtools view $filename | wc -l";
     } else {
         $self->error_message("Unknown type ($type) from filename ($filename).");
         return;
     }
 	
-	chomp(my $wc_l = qx($samtools_view $filename | wc -l));
-	my ($read_count) = split(' ', $wc_l);
+	chomp(my $read_count = qx($count_cmd));
+	($read_count) = split(' ', $read_count);
 	return $read_count;
 }
 
