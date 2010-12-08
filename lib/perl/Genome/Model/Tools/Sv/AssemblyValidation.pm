@@ -286,7 +286,7 @@ sub execute {
                 my $coord = join(".",$maxSV->{chr1},$maxSV->{start1},$maxSV->{chr2},$maxSV->{start2},$maxSV->{type},$maxSV->{size},$maxSV->{ori});
                 my $contigsize = $maxSV->{contiglens};
                 my $seqobj = Bio::Seq->new( 
-                    -display_id => "ID:$prefix,Var:$coord,Ins:$maxSV->{bkstart}\-$maxSV->{bkend},Length:$contigsize,KmerCoverage:$maxSV->{contigcovs},Strand:$maxSV->{strand},Assembly_Score:$maxSV->{weightedsize},PercNonRefKmerUtil:$maxSV->{kmerutil},Id_num:$maxSV->{contigid},Ref_start:$maxSV->{refpos1},Ref_end:$maxSV->{refpos2},Contig_start:$maxSV->{rpos1},Contig_end:$maxSV->{rpos2},TIGRA",
+                    -display_id => "ID:$prefix,Var:$coord,Ins:$maxSV->{bkstart}\-$maxSV->{bkend},Length:$contigsize,KmerCoverage:$maxSV->{contigcovs},Strand:$maxSV->{strand},Assembly_Score:$maxSV->{weightedsize},PercNonRefKmerUtil:$maxSV->{kmerutil},Ref_start:$maxSV->{refpos1},Ref_end:$maxSV->{refpos2},Contig_start:$maxSV->{rpos1},Contig_end:$maxSV->{rpos2},TIGRA",
                     -seq => $maxSV->{contig}, 
                 );
                 $bp_io->write_seq($seqobj);
@@ -490,6 +490,12 @@ sub _UpdateSVs{
 	            $maxSV->{het}     = $type;
 	            $maxSV->{ori}     = $ori;
 	            $maxSV->{alnstrs} = $alnstrs;
+
+                    # add according to Ken's requirement
+                    if($maxSV->{strand} =~ /-/ && $maxSV->{type} =~ /DEL/i){
+                        $maxSV->{start2} -= 1;
+                        $maxSV->{bkend} -= 1;
+                    }
             }
         }
     }
