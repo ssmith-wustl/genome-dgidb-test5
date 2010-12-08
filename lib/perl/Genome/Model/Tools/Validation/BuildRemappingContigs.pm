@@ -254,30 +254,43 @@ sub resize_contig {
     my $indel_size = $contig->{'assem_size'};
     my $type_size_toggle_var = $contig->{'assem_type'} eq 'DEL' ? 0 : 1;
     my $left_flank_size = $contig->{'contig_location_of_variant'} - 1; #the number of bases of the contig preceeding the variant
-    my $right_flank_size = $contig_length - $contig->{'contig_location_of_variant'} - $indel_size * $type_size_toggle_var + 1; #the number of bases of the contig succeeding the variant
+    my $right_flank_size = $contig_length - $contig->{'microhomology_contig_endpoint'}; #the number of bases of the contig succeeding the variant
     
     my $chr = $contig->{'assem_chr1'};
     my $contig_start = $contig->{'contig_start'};
     my $contig_stop = $contig->{'contig_stop'};
 
-    my $desired_left_flank_size = ceil(($desired_size - $indel_size * $type_size_toggle_var) / 2);   #round up to preferentially add to the left flank
-    my $desired_right_flank_size = floor(($desired_size - $indel_size * $type_size_toggle_var) / 2); #round down to preferentially shorten at the right flank
+    my $desired_left_flank_size = ceil(($desired_size - ($contig->{'microhomology_contig_endpoint'} - $contig->{'contig_location_of_variant'} + 1)) / 2);   #round up to preferentially add to the left flank
+    my $desired_right_flank_size = floor(($desired_size - ($contig->{'microhomology_contig_endpoint'} - $contig->{'contig_location_of_variant'} + 1)) / 2); #round down to preferentially shorten at the right flank
 
-    if($contig_length < $desired_size) {
-        #pad up to the proper size using the reference sequence. We don't really know if this will work, but it should come close
-        my $bases_to_add_to_left_flank = $desired_left_flank_size - $left_flank_size;
-        my $bases_to_add_to_right_flank = $desired_right_flank_size - $right_flank_size;
+    my $change_needed_to_left_flank_size = $desired_left_flank_size - $left_flank_size;
+    my $change_needed_to_right_flank_size = $desired_right_flank_size - $right_flank_size;
 
-        my $lstart = $contig_start - $bases_to_add_to_left_flank;
+    if($change_needed_to_left_flank_size < 0) {
+        #trim the existing contig
+        substr($contig->{'sequence'},0,abs($change_needed_to_left_flank_size),"");
+        #TODO update coordinates to match new contig
+    }
+    elsif($change_needed_to_left_flank_size > 0) {
+        my $lstart = $contig_start - $change_needed_to_left_flank_size;
         my $lend = $contig_start - 1;
         my $additional_lseq = $self->fetch_flanking_sequence($chr,$lstart,$lend);
         unless(defined $additional_lseq) {
             $self->error_message("Unable to fetch additional sequence for padding the left flanking sequence");
             return;
         }
+        $contig->{'sequence'} = join("",$additional_lseq, $contig->{'sequence'});
+        #TODO update coordinates to match new contig
+    }
 
+    if($change_needed_to_right_flank_size < 0) {
+        #trim the existing contig
+        substr($contig->{'sequence'},$change_needed_to_right_flank_size, abs($change_needed_to_right_flank_size),"");
+        #TODO update coordinates to match new contig
+    }
+    elsif($change_needed_to_right_flank_size > 0) {
         my $rstart = $contig_stop + 1;
-        my $rend = $contig_stop + $bases_to_add_to_right_flank;
+        my $rend = $contig_stop + $change_needed_to_right_flank_size;
         my $additional_rseq = $self->fetch_flanking_sequence($chr,$rstart,$rend);
         unless(defined $additional_rseq) {
             $self->error_message("Unable to fetch additional sequence for padding the right flanking sequence");
@@ -285,17 +298,7 @@ sub resize_contig {
         }
 
         #otherwise, pad the contig
-        $contig->{'sequence'} = join("",$additional_lseq, $contig->{'sequence'}, $additional_rseq);
-
-        #TODO update coordinates to match new contig
-    }
-    elsif($contig_length > $desired_size) {
-        #need to trim the contig
-        my $bases_to_remove_from_left_flank = $left_flank_size - $desired_left_flank_size;
-        my $bases_to_remove_from_right_flank = $right_flank_size - $desired_right_flank_size;
-        #trim the existing contig
-        substr($contig->{'sequence'},0,$bases_to_remove_from_left_flank,"");
-        substr($contig->{'sequence'},-$bases_to_remove_from_right_flank, $bases_to_remove_from_right_flank,"");
+        $contig->{'sequence'} = join("", $contig->{'sequence'}, $additional_rseq);
         #TODO update coordinates to match new contig
     }
 }
