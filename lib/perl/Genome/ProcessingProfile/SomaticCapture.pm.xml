@@ -93,11 +93,11 @@
 
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Varscan ProcessSomatic SNP" toProperty="skip_if_output_present" />
   <link fromOperation="Format Varscan Snvs" fromProperty="output_file" toOperation="Varscan ProcessSomatic SNP" toProperty="status_file" />
-  <link fromOperation="input connector" fromProperty="varscan_snp_somatic" toOperation="Varscan ProcessSomatic SNP" toProperty="somatic_out" />  
+  <!--  <link fromOperation="input connector" fromProperty="varscan_snp_somatic" toOperation="Varscan ProcessSomatic SNP" toProperty="output_somatic" /> -->
 
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Varscan ProcessSomatic Indel" toProperty="skip_if_output_present" />
   <link fromOperation="Format Varscan Indels" fromProperty="output_file" toOperation="Varscan ProcessSomatic Indel" toProperty="status_file" />
-  <link fromOperation="input connector" fromProperty="varscan_indel_somatic" toOperation="Varscan ProcessSomatic Indel" toProperty="somatic_out" />
+  <!-- <link fromOperation="input connector" fromProperty="varscan_indel_somatic" toOperation="Varscan ProcessSomatic Indel" toProperty="output_somatic" />  -->
 
 
 <!-- RUN GATK SOMATIC INDEL -->
@@ -130,7 +130,7 @@
 
 <!-- MERGE FILTERED SNIPER SNPS AND VARSCAN SNPS -->
 
-  <link fromOperation="Varscan ProcessSomatic SNP" fromProperty="somatic_out" toOperation="Merge SNPs" toProperty="varscan_file" />
+  <link fromOperation="Varscan ProcessSomatic SNP" fromProperty="output_somatic" toOperation="Merge SNPs" toProperty="varscan_file" />
   <link fromOperation="Filter Loh" fromProperty="output_file" toOperation="Merge SNPs" toProperty="glf_file" />
   <link fromOperation="input connector" fromProperty="merged_snp_output" toOperation="Merge SNPs" toProperty="output_file" />
 
@@ -186,7 +186,7 @@
 
 <!-- MERGE ADAPTED INDELS FROM SNIPER AND VARSCAN -->
 
-  <link fromOperation="Varscan ProcessSomatic Indel" fromProperty="somatic_out" toOperation="Merge Indels" toProperty="varscan_file" />
+  <link fromOperation="Varscan ProcessSomatic Indel" fromProperty="output_somatic" toOperation="Merge Indels" toProperty="varscan_file" />
   <link fromOperation="Filter Sniper Indel" fromProperty="output_file" toOperation="Merge Indels" toProperty="glf_file" />
   <link fromOperation="input connector" fromProperty="merged_indel_output" toOperation="Merge Indels" toProperty="output_file" />
 
@@ -217,14 +217,14 @@
 
 <link fromOperation="Tier Variants Snp" fromProperty="tier1_file" toOperation="Confidence Groups Snp Tier 1" toProperty="variant_file" />
 <link fromOperation="Filter Loh" fromProperty="output_file" toOperation="Confidence Groups Snp Tier 1" toProperty="glf_file" />
-<link fromOperation="Varscan ProcessSomatic SNP" fromProperty="somatic_out" toOperation="Confidence Groups Snp Tier 1" toProperty="varscan_file" />
+<link fromOperation="Varscan ProcessSomatic SNP" fromProperty="output_somatic" toOperation="Confidence Groups Snp Tier 1" toProperty="varscan_file" />
 <link fromOperation="input connector" fromProperty="tier_1_snp_file_high" toOperation="Confidence Groups Snp Tier 1" toProperty="output_high" />
 <link fromOperation="input connector" fromProperty="tier_1_snp_file_highest" toOperation="Confidence Groups Snp Tier 1" toProperty="output_highest" />
 
 <!-- GROUP TIERED INDEL CALLS INTO HIGH AND HIGHEST CONF -->
 <link fromOperation="Tier Variants Indel" fromProperty="tier1_file" toOperation="Confidence Groups Indel Tier 1" toProperty="variant_file" />
 <link fromOperation="Filter Sniper Indel" fromProperty="output_file"  toOperation="Confidence Groups Indel Tier 1" toProperty="glf_file" />
-<link fromOperation="Varscan ProcessSomatic Indel" fromProperty="somatic_out" toOperation="Confidence Groups Indel Tier 1" toProperty="varscan_file" />
+<link fromOperation="Varscan ProcessSomatic Indel" fromProperty="output_somatic" toOperation="Confidence Groups Indel Tier 1" toProperty="varscan_file" />
 <link fromOperation="input connector" fromProperty="tier_1_indel_file_high" toOperation="Confidence Groups Indel Tier 1" toProperty="output_high" />
 <link fromOperation="input connector" fromProperty="tier_1_indel_file_highest" toOperation="Confidence Groups Indel Tier 1" toProperty="output_highest" />
 

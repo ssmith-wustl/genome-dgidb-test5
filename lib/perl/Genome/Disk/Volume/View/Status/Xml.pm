@@ -27,20 +27,5 @@ class Genome::Disk::Volume::View::Status::Xml {
     ]
 };
 
-
-
 1;
-
-
-
-#                {
-#                    name => 'project',
-#                    perspective => 'default',
-#                    toolkit => 'xml',
-#                    subject_class_name => 'Genome::Project',
-#                    aspects => ['name', 'status', 'description', 'project_type'],
-#                },
-
-
-
 

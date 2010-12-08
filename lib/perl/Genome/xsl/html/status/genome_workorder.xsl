@@ -25,9 +25,9 @@
                   <td class="label">Pipeline:</td>
                   <td class="value"><xsl:value-of select="//aspect[@name='pipeline']/value"/></td>
                   <td class="label">Project:</td>
-                  <td class="value"><xsl:value-of select="//aspect[@name='project']/object[@type='Genome::Project']/aspect[@name='name']"/></td>
+                  <td class="value"><xsl:value-of select="//aspect[@name='project']/object[@type='Genome::Site::WUGC::Project']/aspect[@name='name']"/></td>
                   <td class="label">Project ID:</td>
-                  <td class="value"><xsl:value-of select="//aspect[@name='project']/object[@type='Genome::Project']/display_name"/></td>
+                  <td class="value"><xsl:value-of select="//aspect[@name='project']/object[@type='Genome::Site::WUGC::Project']/display_name"/></td>
                 </tr>
               </table>
             </td>

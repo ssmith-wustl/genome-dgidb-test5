@@ -119,7 +119,7 @@ sub execute {
 
     $self->log_event("Pooled data to run NT blast X completed for $sample_name");
 
-    return;
+    return 1;
 }
 
 1;

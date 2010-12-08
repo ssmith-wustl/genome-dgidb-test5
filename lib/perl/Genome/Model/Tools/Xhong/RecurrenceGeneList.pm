@@ -11,15 +11,15 @@ class Genome::Model::Tools::Xhong::RecurrenceGeneList {
 	has => [
     	model_group => { type => 'String', is_optional => 0, doc => "name of the model group to process", },
         analysis_dir => { type => 'String', is_optional => 0, doc => "Directory where the recurrent gene output will be", },
-        all_tier1  => { type => 'String', is_optional => 0, doc => "The name of the file that contains all tier1 hc predictions",},
-        nonsilent_recurrent_gene  => { type => 'String', is_optional => 0, doc => "The name of the file that contains all nonsilent recurrent tier1 hc predictions",},
-        recurrent_list  => { type => 'String', is_optional => 0, doc => "The name of the file that contains all nonsilent recurrent tier1 hc predictions are in this file, sorted by gene, freq, sample",},
-        bamfile_list => { type => 'String', is_optional => 0, doc => "The file name that contains all wgs bam files"},
+        all_tier1  => { type => 'String', is_optional => 0, doc => "The name of the file that contains all tier1 hc predictions, analysis_dir will be added",},
+        nonsilent_recurrent_gene  => { type => 'String', is_optional => 0, doc => "The name of the file that contains all nonsilent recurrent tier1 hc predictions,analysis_dir will be added ",},
+        recurrent_list  => { type => 'String', is_optional => 0, doc => "The name of the file that contains all nonsilent recurrent tier1 hc predictions are in this file, sorted by gene, freq, sample. analysis_dir will be added",},
+        bamfile_list => { type => 'String', is_optional => 0, doc => "The file name that contains all wgs bam files. analysis_dir will be added"},
     	]
 };
 
 sub help_brief {
-    	"Generates tier1 hc SNV table for model-groups, and found recurrent events"
+    	"Generates tier1 hc SNV table for model-groups, and found nonsilent recurrent genes. "
 }
 
 sub help_detail {

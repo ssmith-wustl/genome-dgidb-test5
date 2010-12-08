@@ -41,6 +41,7 @@ sub execute {
         return;
     }
     
+    $self->error_message( "$dir" );
     #retrieve the build et al
     my $build_id = $self->build_id;
 
@@ -128,9 +129,12 @@ sub execute {
     }
     my $user = $ENV{USER}; 
     my $cfg_name = $dir . "/$genome_name.cfg";
+    chdir $dir;
     unless(-e $cfg_name) {
         #run bam2cfg
         $self->status_message("Running bam2cfg");
+        print `pwd`;
+        $self->status_message("$dir");
         print `bsub -N -u $user\@genome.wustl.edu -q short -J '$genome_name bam2cfg' -R 'select[type==LINUX64]' '~kchen/MPrelease/BreakDancer/bam2cfg.pl -g -h $tumor_bam_link_name $normal_bam_link_name > $cfg_name'`;
         sleep(300); #wait for this to finish since running is via system is not working
 
@@ -141,6 +145,7 @@ sub execute {
         $self->status_message("Found $cfg_name and proceeding with this file");
     }
 
+    system('pwd');
     #print stats from .cfg file regarding chimeric reads and std/mean ratio
     $self->status_message("Chimeric Read %\tstd/mean ratio");
     my $cfgfh = new IO::File $cfg_name,"r";
@@ -173,13 +178,24 @@ sub execute {
     my $ctx_file = "$dir/$genome_name.ctx";
 
     #launching blade jobs
-    print `bsub -N -u $user\@genome.wustl.edu -R 'select[type==LINUX64]' -J '$genome_name CTX' 'breakdancer_max -t -q 10 -d $ctx_file $cfg_name > $ctx_file'`;
-
+    
+    # CTX job
+    my $jobid=`bsub -N -u $user\@genome.wustl.edu -R 'select[type==LINUX64]' -J '$genome_name CTX' 'breakdancer_max -t -q 10 -d $ctx_file $cfg_name > $ctx_file'`;
+    $jobid=~/<(\d+)>/;
+    $jobid= $1;
+    my $jobid2=`bsub -N -u $user\@genome.wustl.edu -R 'select[type==LINUX64 && mem>8000] rusage[mem=8000]' -M 8000000 -w 'ended($jobid)' -J '$genome_name SV6' '~kchen/MPrelease/BreakDancer/novoRealign.pl $cfg_name'`;
+    $jobid2=~/<(\d+)>/;
+    $jobid2= $1;
+    my $novo_ctx_file="$dir/$genome_name.novo.ctx";
+    my $novo_cfg_file="$dir/$genome_name.novo.cfg";
+    print `bsub -N -u $user\@genome.wustl.edu -R 'select[type==LINUX64 && mem>8000] rusage[mem=8000]' -M 8000000 -w 'ended($jobid2)' -J '$genome_name SV7' 'breakdancer_max -t $novo_cfg_file > $novo_ctx_file'`;
+    
     #submit per chromosome bams
     
    for my $chr (1..22,"X","Y") { 
        print `bsub -N -u $user\@genome.wustl.edu -R 'select[type==LINUX64]' -J '$genome_name chr$chr' 'breakdancer_max -o $chr -q 10 -f $cfg_name > $genome_name.chr$chr.sv'`;
    } 
+
 
     return 1;
 
