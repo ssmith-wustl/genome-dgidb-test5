@@ -29,10 +29,6 @@ Options:
 class Genome::Model::Tools::Sv::CrossMatchForIndel {
     is  => 'Genome::Model::Tools::Sv',
     has => [
-        output_file => {
-            type => 'String',
-            doc  => 'output file path',
-        },
         cross_match_file => {
             type => 'String',
             doc  => 'The input cross match out file to parse',
@@ -100,6 +96,8 @@ class Genome::Model::Tools::Sv::CrossMatchForIndel {
 };
             
 
+#TODO get rid of out_fh(output_file) and directly return an output
+#scalar string
 
 sub execute {
     my $self = shift;
@@ -127,7 +125,6 @@ sub execute {
         @refbases = split //, $refseq;
     }
 
-    my $out_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file) or die;
     my $log_fh;
     if ($self->microhomology_log_file) {
         $log_fh = Genome::Utility::FileSystem->open_file_for_writing($self->microhomology_log_file) or return;
@@ -511,7 +508,7 @@ sub execute {
     #Find best answer (highest score)
     my $maxscore = 0;
     my $mindist  = 1e10;
-    my ($seq, $bestvar);
+    my ($seq, $bestvar, $out_str);
     
     for my $var (@vars) {
         next if $var->{type} eq 'INV' && $self->indel_only;
@@ -567,16 +564,16 @@ sub execute {
 	                $pos1 = $refpos1 + $bestvar->{refpos1} - 1;
 	                $pos2 = ($refpos2||$refpos1) + ($bestvar->{refpos2}||$bestvar->{refpos1}) - 1;
                 }
-                $out_fh->printf("%s\t%d\t%s\t%d\t%s\t%d\t%s\t%d\t%s\t%s\t%d\t%d\t%d\t%.2f\t%d\t%d\t%d\t%d\t%s\t%d\t%s",$bestvar->{chr1}||$chr1,$pos1,$bestvar->{chr2}||$chr1,$pos2,$bestvar->{orientation}||'+-',$bestvar->{bkpos1},$bestvar->{bkpos2}||$bestvar->{bkpos1},$bestvar->{size},$bestvar->{type},$bestvar->{read},$bestvar->{score},$bestvar->{scar}||0,$bestvar->{read_len},$bestvar->{fraction_aligned},$bestvar->{n_seg},$bestvar->{n_sub},$bestvar->{n_indel},$bestvar->{nbp_indel},$bestvar->{strand},$bestvar->{microhomology},$bestvar->{alnstrs});
+                $out_str = sprintf("%s\t%d\t%s\t%d\t%s\t%d\t%s\t%d\t%s\t%s\t%d\t%d\t%d\t%.2f\t%d\t%d\t%d\t%d\t%s\t%d\t%s",$bestvar->{chr1}||$chr1,$pos1,$bestvar->{chr2}||$chr1,$pos2,$bestvar->{orientation}||'+-',$bestvar->{bkpos1},$bestvar->{bkpos2}||$bestvar->{bkpos1},$bestvar->{size},$bestvar->{type},$bestvar->{read},$bestvar->{score},$bestvar->{scar}||0,$bestvar->{read_len},$bestvar->{fraction_aligned},$bestvar->{n_seg},$bestvar->{n_sub},$bestvar->{n_indel},$bestvar->{nbp_indel},$bestvar->{strand},$bestvar->{microhomology},$bestvar->{alnstrs});
             }
             else {
-                $out_fh->printf("%d\t%d\t%s\t%d\t%s\t%d\t%s\t%s\t%d\t%d\t%d\t%.2f\t%d\t%d\t%d\t%d\t%s\t%d",$bestvar->{refpos1},$bestvar->{refpos2},$bestvar->{orientation}||'+-',$bestvar->{bkpos1},$bestvar->{bkpos2}||$bestvar->{bkpos1},$bestvar->{size},$bestvar->{type},$bestvar->{read},$bestvar->{score},$bestvar->{scar} || 0,$bestvar->{read_len},$bestvar->{fraction_aligned},$bestvar->{n_seg},$bestvar->{n_sub},$bestvar->{n_indel},$bestvar->{nbp_indel},$bestvar->{strand},$bestvar->{microhomology});
+                $out_str = sprintf("%d\t%d\t%s\t%d\t%s\t%d\t%s\t%s\t%d\t%d\t%d\t%.2f\t%d\t%d\t%d\t%d\t%s\t%d",$bestvar->{refpos1},$bestvar->{refpos2},$bestvar->{orientation}||'+-',$bestvar->{bkpos1},$bestvar->{bkpos2}||$bestvar->{bkpos1},$bestvar->{size},$bestvar->{type},$bestvar->{read},$bestvar->{score},$bestvar->{scar} || 0,$bestvar->{read_len},$bestvar->{fraction_aligned},$bestvar->{n_seg},$bestvar->{n_sub},$bestvar->{n_indel},$bestvar->{nbp_indel},$bestvar->{strand},$bestvar->{microhomology});
             }
             if (defined $self->ref_start_pos){
-                $out_fh->printf("\t%s\n", $self->ref_start_pos);
+                $out_str .= sprintf("\t%s\n", $self->ref_start_pos);
             }
             else{
-                $out_fh->print("\n");
+                $out_str .= "\n";
             }
 
             my $altseq   = $self->_GetContig($bestvar->{read});
@@ -609,10 +606,9 @@ sub execute {
             }
         }
     }
-    $out_fh->close;
     $log_fh->close if $log_fh;
 
-    return 1;
+    return $out_str;
 }
 
 
