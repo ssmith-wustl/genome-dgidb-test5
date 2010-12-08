@@ -129,8 +129,11 @@ class Genome::Sample {
         _sub_type2                  => { via => 'attributes', where => [ name => 'subtype' ], to => 'value' },
         
         _nomenclature                => { column_name => 'NOMENCLATURE', default_value => "WUGC" }, 
+
+        models                      => { is => 'Genome::Model', reverse_as => 'subject', is_many => 1 },
+
         project_assignments          => { is => 'Genome::Sample::ProjectAssignment', reverse_id_by => 'sample', is_many => 1 },
-        projects                     => { is => 'Genome::Project', via => 'project_assignments', to => 'project', is_many => 1},
+        projects                     => { is => 'Genome::Site::WUGC::Project', via => 'project_assignments', to => 'project', is_many => 1},
     ],
     has_many => [
         attributes                  => { is => 'Genome::Sample::Attribute', reverse_as => 'sample', specify_by => 'name' },

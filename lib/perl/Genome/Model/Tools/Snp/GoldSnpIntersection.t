@@ -38,7 +38,14 @@ my $maq_cmd = Genome::Model::Tools::Snp::GoldSnpIntersection->create(
 );
 $maq_cmd->execute;
 ok($maq_cmd->_report_txt, 'MAQ gold-snp-intersection execute');
-is($maq_cmd->_report_txt, $exp_maq_report, 'MAQ gold-snp-intersection output matches the expected original one.');
+is($maq_cmd->_report_txt, $exp_maq_report, 'MAQ gold-snp-intersection output matches the expected original one.')
+    #or do {
+    #        IO::File->new(">t.new")->print($maq_cmd->_report_txt);
+    #        IO::File->new(">t.old")->print($exp_maq_report);
+    #        system "kdiff3 t.old t.new";
+    #    }
+    ;
+
 =cut
 
 my $sam_gsi = Genome::Model::Tools::Snp::GoldSnpIntersection->create(

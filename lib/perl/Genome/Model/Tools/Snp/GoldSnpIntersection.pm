@@ -226,9 +226,6 @@ sub calculate_metrics {
         my ($chr,$pos,$ref,$call,$quality,@metrics) = split /\t/, $line; 
         my $rd_depth = $snp_format eq 'SAM' ? $metrics[2] : $metrics[0];
         
-        # test to add min rd_depth
-        if ($rd_depth > 20){
-        
         if($exclude_y) {
             next if($chr eq 'Y'); #female patient these are BS
         }
@@ -262,7 +259,6 @@ sub calculate_metrics {
             $hom_breakdown{$comparison}{$snp_type}{n} += 1;
             $hom_breakdown{$comparison}{$snp_type}{depth} += $rd_depth;
             delete $gold_hom_hash_ref->{$chr}{$pos};
-        }
         }
     }
     my $gold_missed = { 'homozygous' => $gold_hom_hash_ref, 'heterozygous' => $gold_het_hash_ref, 'reference' => $gold_ref_hash_ref };
