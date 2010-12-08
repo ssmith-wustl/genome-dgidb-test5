@@ -94,34 +94,67 @@ sub execute {
         return;
     }
 
+    #resize the contigs
     for my $contig (@$tumor_contigs) {
-        if(exists($contigs{$contig->{pred_chr1}}{$contig->{pred_pos1}}{tumor})) {
-            $self->error_message(sprintf "Multiple tumor variants assembled at %s:%d. Duplicates are assumed to be the same and are overwritten regardless of content.",$contig->{pred_chr1},$contig->{pred_pos1});
-        }
         $self->resize_contig($contig); #this edits the contig in place to reach a desired size
         print STDERR "> resized contig\n",$contig->{'sequence'},"\n";
-        $contigs{$contig->{pred_chr1}}{$contig->{pred_pos1}}{tumor} = $contig;
-    }
-    undef $tumor_contigs;
-
-
-
-    my $normal_contigs = $self->read_in_breakpoints($normal_breakpoints);
-    unless($normal_contigs) {
-        $self->error_message("Unable to parse $normal_breakpoints");
-        return;
     }
 
-    for my $contig (@$normal_contigs) {
-        if(exists($contigs{$contig->{pred_chr1}}{$contig->{pred_pos1}}{normal})) {
-            $self->error_message(sprintf "Multiple normal contigs generated for variant predicted at %s:%d. Duplicates are assumed to be the same and are overwritten regardless of content.",$contig->{pred_chr1},$contig->{pred_pos1});
+    #for testing purposes now want to report if any of the contigs overlap at all
+    #what we would really want to do is sort all contigs tumor/normal and report overlap
+    #for now let's just sort by tumor only and check
+    my $last_chr = '';
+    my $last_start = 0;
+    my $last_stop = 0;
+    for my $contig (sort {_sort_contigs($a,$b)} @$tumor_contigs) {
+        
+        #these should be sorted by chromosome, start, stop now
+        if($last_chr eq $contig->{pred_chr1}) {
+            #could overlap this will be non-simple if the contigs are of different sizes
+            if($last_start <= $contig->{contig_start} && $last_stop >= $contig->{contig_start}) {
+                print "Overlap detected for ",join(".",$contig->{pred_chr1},$contig->{pred_pos1},$contig->{pred_pos2},$contig->{pred_type},$contig->{pred_size}),"\n";
+            }
         }
-        $contigs{$contig->{pred_chr1}}{$contig->{pred_pos1}}{normal} = $contig;
-    }
-    undef $normal_contigs;
+        $last_chr = $contig->{pred_chr1};
+        $last_start = $contig->{contig_start};
+        $last_stop = $contig->{contig_stop};
 
-    #now should have a single hash with all the contigs that were available. 
-    #next, pad out/trim each contig and reverse complement the sequence if necessary
+
+    }
+
+    #for my $contig (@$tumor_contigs) {
+    #    if(exists($contigs{$contig->{pred_chr1}}{$contig->{pred_pos1}}{tumor})) {
+    #        $self->error_message(sprintf "Multiple tumor variants assembled at %s:%d. Duplicates are assumed to be the same and are overwritten regardless of content.",$contig->{pred_chr1},$contig->{pred_pos1});
+    #    }
+    #    $self->resize_contig($contig); #this edits the contig in place to reach a desired size
+    #    print STDERR "> resized contig\n",$contig->{'sequence'},"\n";
+    #    $contigs{$contig->{pred_chr1}}{$contig->{pred_pos1}}{tumor} = $contig;
+    #}
+    #undef $tumor_contigs;
+
+
+
+    #my $normal_contigs = $self->read_in_breakpoints($normal_breakpoints);
+    #unless($normal_contigs) {
+    #    $self->error_message("Unable to parse $normal_breakpoints");
+    #    return;
+    #}
+
+    #for my $contig (@$normal_contigs) {
+    #    if(exists($contigs{$contig->{pred_chr1}}{$contig->{pred_pos1}}{normal})) {
+    #        $self->error_message(sprintf "Multiple normal contigs generated for variant predicted at %s:%d. Duplicates are assumed to be the same and are overwritten regardless of content.",$contig->{pred_chr1},$contig->{pred_pos1});
+    #    }
+    #    $self->resize_contig($contig); #this edits the contig in place to reach a desired size
+    #    $contigs{$contig->{pred_chr1}}{$contig->{pred_pos1}}{normal} = $contig;
+    #}
+    #undef $normal_contigs;
+
+    #now should have a single hash with all resized contigs that were available.
+    #
+
+
+
+
 
 
 
@@ -335,6 +368,22 @@ sub fetch_flanking_sequence {
     else {
         return join("",map { chomp; $_; } @seq); #this should change the sequence into a single string regardless of length
     }
+}
+
+sub _sort_contigs {
+    my ($a, $b) = @_;
+    
+    if($a->{pred_chr1} eq $b->{pred_chr1}) { 
+        if($a->{contig_start} == $b->{contig_start}) {
+            return $a->{contig_stop} <=> $b->{contig_stop};
+        }
+        else {
+            return $a->{contig_start} <=> $b->{contig_start};
+        }
+    } 
+    else { 
+        return $a->{pred_chr1} cmp $b->{pred_chr1}; 
+    } 
 }
 
 
