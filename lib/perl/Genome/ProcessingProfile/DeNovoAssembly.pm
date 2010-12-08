@@ -100,11 +100,11 @@ my %supported_assemblers = (
     },
     velvet => {
         platforms => [qw/ solexa /],
-        class => 'Genome::Model::Tools::Velvet::OneButton',
+        class => 'Genome::Model::Tools::Velvet::Assemble',
     },
     soap => {
 	platforms => [qw/ solexa /],
-	class => 'Genome::Model::Tools::Soap::DeNovoAssemble',
+	class => 'Genome::Model::Tools::Soap::Assemble',
     },
 );
 
@@ -148,10 +148,58 @@ sub class_for_assembler {
     return $class;
 }
 
-# FIXME need a validator for each assembler!
+#< validate, sanitize assembler params >#
+#generic
+sub sanitized_assembler_params {
+    my $self = shift;
+
+    my %params;
+
+    %params = $self->assembler_params_as_hash if $self->assembler_params_as_hash;
+
+    my $sanitize_method = 'sanitized_'.$self->assembler_name.'_assembler_params';
+
+    if ( $self->can( $sanitize_method ) ) {
+	%params = $self->$sanitize_method( %params );
+    }
+
+    return %params;
+}
+
+#soap
+sub sanitized_soap_assembler_params {
+    my ( $self, %params ) = @_;
+
+    #this is used in config file and not by assemble tool
+    #so needs to be removed before assembling
+    delete $params{insert_size} if exists $params{insert_size};
+
+    return %params;
+}
+
+#velvet
+sub sanitized_velvet_assembler_params {
+    my ( $self, %params ) = @_;
+
+    #is_many string to array ref
+    if ( defined $params{hash_sizes} ) { 
+        $params{hash_sizes} = [ split(/\s+/, $params{hash_sizes}) ],
+    }
+
+    #these params must be calculated not inputted
+    for my $calculated_param (qw/ genome_len ins_length /) { # only for velvet, may need a method
+        next unless exists $params{$calculated_param};
+        $self->error_message("Assembler param ($calculated_param) is a calculated parameter, and cannot be set on the processing profile.");
+        return;
+    }
+
+    return %params;
+}
+
 sub assembler_params_as_hash {
     my $self = shift;
 
+    #assembler params specified in pp
     my $params_string = $self->assembler_params;
     return unless $params_string; # ok 
 
@@ -160,10 +208,6 @@ sub assembler_params_as_hash {
         Carp::confess(
             $self->error_message("Malformed assembler params: $params_string")
         );
-    }
-
-    if ( defined $params{hash_sizes} ) { 
-        $params{hash_sizes} = [ split(/\s+/, $params{hash_sizes}) ],
     }
 
     return %params;
@@ -184,16 +228,18 @@ sub _validate_assembler_and_params {
     }
 
     my $assembler_class = $self->class_for_assembler;
-    my %assembler_params = $self->assembler_params_as_hash;
+#    my %assembler_params = $self->assembler_params_as_hash;
 
-    for my $calculated_param (qw/ genome_len ins_length /) { # only for velvet, may need a method
-        next unless exists $assembler_params{$calculated_param};
-        $self->error_message("Assembler param ($calculated_param) is a calculated parameter, and cannot be set on the processing profile.");
-        return;
-    }
+#    for my $calculated_param (qw/ genome_len ins_length /) { # only for velvet, may need a method
+#        next unless exists $assembler_params{$calculated_param};
+#        $self->error_message("Assembler param ($calculated_param) is a calculated parameter, and cannot be set on the processing profile.");
+#        return;
+#    }
 
-    %assembler_params = $self->_filter_non_assembler_params(%assembler_params);
-    
+    #%assembler_params = $self->_filter_non_assembler_params(%assembler_params);
+    my $get_param_method = 'sanitized_'. $self->assembler_name .'_assembler_params';
+    my %assembler_params = $self->$get_param_method;
+
     my $assembler;
     eval{
         $assembler = $assembler_class->create(
@@ -213,9 +259,11 @@ sub _validate_assembler_and_params {
     return 1;
 }
 
+#TODO - remove
 sub _filter_non_assembler_params {
     my ($self, %params)  = @_;
     
+    #this goes to config file no assemble tool
     if ($self->assembler_name eq 'soap' and exists $params{'insert_size'}) {
 	delete $params{'insert_size'};
     }
@@ -265,11 +313,12 @@ sub assemble_job_classes {
 
     my $assembler_subclass = Genome::Utility::Text::string_to_camel_case($self->assembler_name);
 
-    my @classes = 'Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData';
+    my @classes = ( 'Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData' ,
+		    'Genome::Model::Event::Build::DeNovoAssembly::Assemble' );
 
-    push @classes, map { $_.'::'.$assembler_subclass } (qw/
-        Genome::Model::Event::Build::DeNovoAssembly::Assemble
-        /);
+#    push @classes, map { $_.'::'.$assembler_subclass } (qw/
+#        Genome::Model::Event::Build::DeNovoAssembly::Assemble
+#        /);
 
     if ( $self->post_assemble ) {
 	push @classes, 'Genome::Model::Event::Build::DeNovoAssembly::PostAssemble';
@@ -401,6 +450,156 @@ sub post_assemble_parts {
     }
 
     return @post_assemble_parts;
+}
+
+#< additional params needed from pp >#
+#soap
+sub soap_pp_params_for_build {
+    my $self = shift;
+    return (
+#	param_name => 'pp value', 
+	version    => $self->assembler_version,
+	),
+}
+#velvet
+sub velvet_pp_params_for_build {
+    my $self = shift;
+    return (
+	version => $self->assembler_version,
+	);
+}
+
+
+#< additional params needed to be derived from build prior to assembling >#
+#soap
+sub soap_params_to_derive_from_build {
+    my ($self, $build) = @_;
+    my %params;
+
+    #cpus
+    my $cpus = $self->get_number_of_cpus;
+    $params{cpus} = $cpus;
+    
+    #create config file
+    my $config_file = $build->create_config_file;
+    $params{config_file} = $config_file;
+
+    #output dir and file prefix
+    my $output_dir_and_file_prefix = $build->soap_output_dir_and_file_prefix;
+    $params{output_dir_and_file_prefix} = $output_dir_and_file_prefix;
+
+    return %params;
+}
+#velvet
+sub velvet_params_to_derive_from_build {
+    my ($self, $build) = @_;
+
+    my %params;
+    #input collated fastq file
+    my $collated_fastq_file = $build->collated_fastq_file;
+    $params{file} = $collated_fastq_file;
+
+    #genome length
+    my $genome_len = $build->genome_size;
+    $params{genome_len} = $genome_len;
+
+    #insert size
+    my $ins_length = $build->calculate_average_insert_size;
+    $params{ins_length} = $ins_length if defined $ins_length;
+
+    #output directory
+    my $output_dir = $build->data_directory;
+    $params{output_dir} = $output_dir;
+
+    return %params;
+}
+
+#< methods to run after assembly as run >#
+
+sub velvet_after_assemble_methods_to_run {
+    my ($self, $build) = @_;
+
+    if ( not $self->remove_unnecessary_velvet_files( $build ) ) {
+	$self->error_message("Failed to remove unnecessary velvet files");
+	return;
+    }
+
+    return 1;
+}
+
+#< bsub usage >#
+sub soap_bsub_rusage {
+    my $mem = 30000;
+    return "-n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>$mem] rusage[mem=$mem]' -M $mem".'000';
+}
+
+sub velvet_bsub_rusage {
+    return "-R 'select[type==LINUX64 && mem>20000] rusage[mem=20000] span[hosts=1]' -M 20000000";
+}
+
+#< soap specific methods to run during build >#
+
+sub get_number_of_cpus {
+    my $self = shift;
+
+    return 1 if not defined $ENV{LSB_MCPU_HOSTS};
+
+    my @tokens = split(/\s/, $ENV{LSB_MCPU_HOSTS});
+    my $cpus = 0;
+    if ( not @tokens ) {
+        $self->error_message('Could not split LSB_MCPU_HOSTS: '.$ENV{LSB_MCPU_HOSTS});
+        return;
+    }
+
+    for ( my $i = 1; $i <= @tokens; $i += 2 ) {
+        if ( $tokens[$i] !~ /^$RE{num}{int}$/ ) {
+            $self->error_message('Error parsing LSB_MCPU_HOSTS ('.$ENV{LSB_MCPU_HOSTS}.'), number of cpus is not an int: '.$tokens[$i]);
+            return;
+        }
+        $cpus += $tokens[$i];
+    }
+
+    if ( $cpus == 0 ) {
+        $self->error_message('Could not get the number of cpus from LSB_MCPU_HOSTS: '.$ENV{LSB_MCPU_HOSTS});
+        return;
+    }
+
+    return $cpus;
+}
+
+#< velvet specific methods to run during build >#
+
+sub remove_unnecessary_velvet_files {
+    my ($self, $build) = @_;
+
+    # contigs fasta files
+    my @contigs_fastas_to_remove = glob($build->data_directory.'/*contigs.fa');
+    unless ( @contigs_fastas_to_remove ) { # error here??
+        $self->error_message("No contigs fasta files produced from running one button velvet.");
+        return;
+    }
+    my $final_contigs_fasta = $build->contigs_fasta_file;
+    for my $contigs_fasta_to_remove ( @contigs_fastas_to_remove ) {
+        next if $contigs_fasta_to_remove eq $final_contigs_fasta;
+        unless ( unlink $contigs_fasta_to_remove ) {
+            $self->error_message(
+                "Can't remove unnecessary contigs fasta ($contigs_fasta_to_remove): $!"
+            );
+            return;
+        }
+    }
+
+    # log and timing files
+    for my $glob (qw/ logfile timing /) {
+        for my $file ( glob($build->data_directory.'/*-'.$glob) ) {
+            unless ( unlink $file ) {
+                $self->error_message("Can't remove unnecessary file ($glob => $file): $!");
+                return;
+            }
+        }
+    }
+
+    return 1;
 }
 
 1;

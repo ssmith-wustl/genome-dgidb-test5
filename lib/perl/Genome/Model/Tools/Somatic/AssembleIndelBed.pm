@@ -226,7 +226,7 @@ sub thing {
     }
     elsif($type =~ m/INS/ ) {
         $start=$pos;
-        $stop=$pos+1;
+        $stop=$pos;#+1;
     }
     my ($ref, $var) = $self->generate_alleles($DONE, @fields);
     my $output_line = join("\t",$chr,$start,$stop,$ref,$var);

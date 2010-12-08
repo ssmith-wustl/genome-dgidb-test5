@@ -391,4 +391,28 @@ sub archive_path {
     return $alloc->absolute_path.'/'.$file_name;
 }
 
+sub get_segments {
+    my $self = shift;
+    
+    unless ($self->import_format eq "bam") {
+        return ();
+    }
+    
+    my $bam_file = $self->disk_allocations->absolute_path . "/all_sequences.bam";
+    
+    unless (-e $bam_file) {
+        $self->error_message("Bam file $bam_file doesn't exist, can't get segments for it.");
+        die $self->error_message;
+    }
+    my $cmd = Genome::Model::Tools::Sam::ListReadGroups->create(input=>$bam_file);
+    unless ($cmd->execute) {
+        $self->error_message("Failed to run list read groups command for $bam_file");
+        die $self->error_message;
+    }
+
+    my @read_groups = $cmd->read_groups;
+
+    return @read_groups;
+}
+
 1;

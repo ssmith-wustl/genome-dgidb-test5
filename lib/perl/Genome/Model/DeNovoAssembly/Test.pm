@@ -75,6 +75,21 @@ sub get_mock_processing_profile {
             status_message
 
             post_assemble_parts
+
+            soap_params_to_derive_from_build
+            velvet_params_to_derive_from_build
+
+            soap_pp_params_for_build
+            velvet_pp_params_for_build
+
+sanitized_assembler_params
+sanitized_soap_assembler_params
+sanitized_velvet_assembler_params
+
+            get_number_of_cpus
+
+            soap_bsub_rusage
+            velvet_bsub_rusage
             /),
     );
 
@@ -220,6 +235,11 @@ sub get_mock_build {
         existing_assembler_input_files
 
         center_name
+
+        get_config_for_libraries
+
+        create_config_file
+
     /);
     my %build_specific_methods_to_mock = (
         newbler => [qw//],
