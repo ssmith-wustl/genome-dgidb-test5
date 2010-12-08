@@ -14,7 +14,7 @@ unless (`uname -a` =~ /x86_64/){
     die 'Must run on a 64 bit machine';
 }
 
-use_ok('Genome::Model::Event::Build::DeNovoAssembly::Assemble::Velvet');
+use_ok('Genome::Model::Event::Build::DeNovoAssembly::Assemble');
 
 my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
     sequencing_platform => 'solexa',
@@ -40,7 +40,7 @@ for my $target ( @assembler_input_files ) {
     ok(-s $dest, "linked $target to $dest");
 }
 
-my $velvet = Genome::Model::Event::Build::DeNovoAssembly::Assemble::Velvet->create( build_id => $build->id);
+my $velvet = Genome::Model::Event::Build::DeNovoAssembly::Assemble->create( build_id => $build->id);
 
 ok($velvet, 'Created assemble velvet');
 ok($velvet->execute, 'Execute assemble velvet');
@@ -54,8 +54,8 @@ for my $file_name (qw/ contigs_fasta_file sequences_file assembly_afg_file /) {
 }
 
 #print $build->data_directory."\n";<STDIN>;
+
 done_testing();
+
 exit;
 
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Command/Build/DeNovoAssembly/PrepareInstrumentData.t $
-#$Id: PrepareInstrumentData.t 45247 2009-03-31 18:33:23Z ebelter $
