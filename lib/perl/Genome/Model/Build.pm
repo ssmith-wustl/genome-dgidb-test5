@@ -84,7 +84,7 @@ class Genome::Model::Build {
         group_ids        => { via => 'model', to => 'group_ids', is_many => 1, },
         group_names      => { via => 'model', to => 'group_names', is_many => 1, },
 
-        projects         => { is => 'Genome::Project', via => 'model' },
+        projects         => { is => 'Genome::Site::WUGC::Project', via => 'model' },
         work_orders      => { is => 'Genome::WorkOrder', via => 'projects' },
         work_order_names => { via => 'work_orders', to => 'name' },
         work_order_numbers => { via => 'work_orders', to => 'id' },

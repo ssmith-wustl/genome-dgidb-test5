@@ -18,16 +18,6 @@ use Test::MockObject;
 use File::Temp;
 use IO::String;
 
-# ideally these would be used explicitly by Genome modules as needed
-Class::Autouse->autouse(qr/Finishing.*/);
-Class::Autouse->autouse(qr/Finfo.*/);
-Class::Autouse->autouse(qr/Bio.*/);
-use Bio::Seq;
-use Bio::Seq::Quality;
-use Bio::SeqIO;
-use Bio::DB::Fasta;
-use FASTAParse;
-
 # account for a perl bug in pre-5.10 by applying a runtime patch to Carp::Heavy
 use Carp;
 use Carp::Heavy;
