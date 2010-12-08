@@ -79,6 +79,7 @@ sub execute {
 
     my $samtools = $self->samtools_path;
     my $sam_file = $self->sam_file;
+	my $sam_read_count = $self->read_count($sam_file);
     
     my ($root_name) = basename $sam_file =~ /^(\S+)\.sam/;
     
@@ -98,6 +99,12 @@ sub execute {
     );
         
     $self->error_message("Converting to Bam command: $cmd failed") and return unless $rv == 1;
+
+	my $bam_read_count = $self->read_count($bam_file);
+	unless ( $bam_read_count == $sam_read_count ) {
+		$self->error_message("Read counts differ after SAM to BAM conversion! (BAM: $bam_read_count vs. SAM: $sam_read_count)");
+		return;
+	}
      
     #watch out disk space, for now hard code maxMemory 2000000000
     if ($self->fix_mate) {
