@@ -165,8 +165,19 @@ sub read_count {
 	my $filename = shift;
 	
 	my $samtools = $self->samtools_path;
+
+    my ($type) = ($filename =~ /\.([^\.\s]+)\s*$/i);
+    my $samtools_view;
+    if ($type =~ /SAM/i) {
+        $samtools_view = "$samtools view -S";
+    } elsif ($type =~ /BAM/i) {
+        $samtools_view = "$samtools view";
+    } else {
+        $self->error_message("Unknown type ($type) from filename ($filename).");
+        return;
+    }
 	
-	chomp(my $wc_l = qx($samtools view $filename | wc -l));
+	chomp(my $wc_l = qx($samtools_view $filename | wc -l));
 	my ($read_count) = split(' ', $wc_l);
 	return $read_count;
 }
