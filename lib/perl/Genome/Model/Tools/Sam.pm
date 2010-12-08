@@ -159,4 +159,15 @@ sub open_bamsam_out {
     return $fh;
 }
 
+sub read_count {
+	my $self = shift;
+	my $filename = shift;
+	
+	my $samtools = $self->samtools_path;
+	
+	chomp(my $wc_l = qx($samtools view $filename | wc -l));
+	my ($read_count) = split(' ', $wc_l);
+	return $read_count;
+}
+
 1;
