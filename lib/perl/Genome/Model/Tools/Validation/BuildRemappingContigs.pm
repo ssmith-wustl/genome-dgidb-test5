@@ -226,12 +226,12 @@ sub parse_breakpoint_contig_header {
             #set the location of the variant in the contig
             $contig{'contig_location_of_variant'} = $start;
         }
-        elsif($tag =~ /ref_start_point/) {
+        elsif($tag =~ /Ref_start/) {
             #this is the position of the contig on the reference
             #note that this might not correspond to the first base of the contig. For now we're going to include mismatching bases as insertions/mismatches
             $contig{'contig_start'} = $entry;
         }
-        elsif($tag =~ /ref_end_point/) {
+        elsif($tag =~ /Ref_end/) {
             #this is the end position of the contig on the reference
             #note that this might not correspond to the last base of the contig. For now we're going to include mismatching bases as insertions/mismatches
             $contig{'contig_stop'} = $entry;
@@ -270,6 +270,8 @@ sub resize_contig {
         #trim the existing contig
         substr($contig->{'sequence'},0,abs($change_needed_to_left_flank_size),"");
         #TODO update coordinates to match new contig
+        #basically need to subtract the change from all contig relevant coordinates
+        #and set the leftmost ref coordinate to the trimmed coordinate
     }
     elsif($change_needed_to_left_flank_size > 0) {
         my $lstart = $contig_start - $change_needed_to_left_flank_size;
@@ -301,6 +303,21 @@ sub resize_contig {
         $contig->{'sequence'} = join("", $contig->{'sequence'}, $additional_rseq);
         #TODO update coordinates to match new contig
     }
+
+    #generally update all coordinates here
+    #on the left side
+    #basically need to alter all contig relevant coordinates
+    #and set the leftmost ref coordinate to the trimmed coordinate
+    $contig->{'contig_start'} -= $change_needed_to_left_flank_size;
+    $contig->{'contig_location_of_variant'} += $change_needed_to_left_flank_size;
+    $contig->{'microhomology_contig_endpoint'} += $change_needed_to_left_flank_size;
+
+    #on the right side, should only have to update the genomic coord
+    $contig->{'contig_start'} += $change_needed_to_right_flank_size;
+
+    #lastly set length to the correct number
+    $contig->{'length'} = length $contig->{'sequence'};
+    return 1;
 }
 
 sub fetch_flanking_sequence {
