@@ -15,15 +15,15 @@ class Genome::Model::Tools::Sam::SamToBam {
             is  => 'String',      
             doc => 'name of sam file',
         },
-        ref_list    => {
-            is  => 'String',
-            doc => 'path to a tab delimited file containing each contig name in the reference and its length',
-        },
     ],
     has_optional => [
         bam_file    => {
             is  => 'String',
             doc => 'Name of output bam file (default: use base name of input sam file -- e.g. foo.sam -> foo.bam)'
+        },
+        ref_list    => {
+            is  => 'String',
+            doc => 'path to a tab delimited file containing each contig name in the reference and its length',
         },
         index_bam   => {
             is  => 'Boolean',
@@ -66,7 +66,9 @@ sub create {
     my $self = $class->SUPER::create(@_);
 
     $self->error_message('Sam file('.$self->sam_file.') does not exist') and return unless -e $self->sam_file;
-    $self->error_message('Ref list('.$self->ref_list.') does not have size') and return unless -s $self->ref_list;
+	if ($self->ref_list) {
+	    $self->error_message('Ref list('.$self->ref_list.') does not have size') and return unless -s $self->ref_list;
+	}
 
     return $self;
 }
@@ -83,7 +85,10 @@ sub execute {
     my $sam_dir  = dirname $sam_file;
     my $bam_file = $self->bam_file || $sam_dir . "/$root_name.bam";
     
-    my $cmd = sprintf('%s view -bt %s -o %s %s', $samtools, $self->ref_list, $bam_file, $sam_file);
+    my $cmd;
+	$cmd .= sprintf('%s view -b -o %s', $samtools, $bam_file);
+	$cmd .= sprintf(' -t %s', $self->ref_list) if ($self->ref_list);
+	$cmd .= sprintf(' %s', $sam_file);
     $self->status_message("SamToBam conversion command: $cmd");
     
     my $rv  = Genome::Utility::FileSystem->shellcmd(
