@@ -17,7 +17,7 @@ class Genome::WorkOrder::View::Status::Xml {
                     name => 'project',
                     perspective => 'default',
                     toolkit => 'xml',
-                    subject_class_name => 'Genome::Project',
+                    subject_class_name => 'Genome::Site::WUGC::Project',
                     aspects => ['name', 'status', 'description', 'project_type'],
                 },
                 {

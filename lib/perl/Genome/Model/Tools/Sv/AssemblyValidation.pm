@@ -286,7 +286,7 @@ sub execute {
                 my $coord = join(".",$maxSV->{chr1},$maxSV->{start1},$maxSV->{chr2},$maxSV->{start2},$maxSV->{type},$maxSV->{size},$maxSV->{ori});
                 my $contigsize = $maxSV->{contiglens};
                 my $seqobj = Bio::Seq->new( 
-                    -display_id => "ID:$prefix,Var:$coord,Ins:$maxSV->{bkstart}\-$maxSV->{bkend},Length:$contigsize,KmerCoverage:$maxSV->{contigcovs},Strand:$maxSV->{strand},Assembly_Score:$maxSV->{weightedsize},PercNonRefKmerUtil:$maxSV->{kmerutil},TIGRA,id_num:$maxSV->{contigid},ref_start_point:$maxSV->{refpos1},ref_end_point:$maxSV->{refpos2},contig_start_point:$maxSV->{rpos1},contig_end_point:$maxSV->{rpos2}",
+                    -display_id => "ID:$prefix,Var:$coord,Ins:$maxSV->{bkstart}\-$maxSV->{bkend},Length:$contigsize,KmerCoverage:$maxSV->{contigcovs},Strand:$maxSV->{strand},Assembly_Score:$maxSV->{weightedsize},PercNonRefKmerUtil:$maxSV->{kmerutil},Ref_start:$maxSV->{refpos1},Ref_end:$maxSV->{refpos2},Contig_start:$maxSV->{rpos1},Contig_end:$maxSV->{rpos2},TIGRA",
                     -seq => $maxSV->{contig}, 
                 );
                 $bp_io->write_seq($seqobj);
@@ -490,6 +490,12 @@ sub _UpdateSVs{
 	            $maxSV->{het}     = $type;
 	            $maxSV->{ori}     = $ori;
 	            $maxSV->{alnstrs} = $alnstrs;
+
+                    # add according to Ken's requirement
+                    if($maxSV->{strand} =~ /-/ && $maxSV->{type} =~ /DEL/i){
+                        $maxSV->{start2} -= 1;
+                        $maxSV->{bkend} -= 1;
+                    }
             }
         }
     }
@@ -518,7 +524,7 @@ sub _GetRefPos{
                 ($r1, $r2, $r3, $str, $g1, $g2, $g3) = ($a[$#a - 6], $a[$#a - 5], $a[$#a - 4], $a[$#a - 3], $a[$#a - 2], $a[$#a - 1], $a[$#a]);
             }
 
-            print "HHHHHHHHHHHHHH: $r1, $r2, $r3\n";
+            #print "HHHHHHHHHHHHHH: $r1, $r2, $r3\n";
             ($chr, $ref_1, $ref_2) = ($str =~ /(\S+):(\d+)-(\d+)/);
                 
             #print "HHHHHHHHHHHHHHH: $g1\t$g2\t$g3\n";

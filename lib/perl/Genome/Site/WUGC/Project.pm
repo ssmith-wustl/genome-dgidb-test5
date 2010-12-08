@@ -1,12 +1,12 @@
-package Genome::Project; 
+package Genome::Site::WUGC::Project; 
 use strict;
 use warnings;
 use Genome;
 
-# NOTE: this is copied as Genome::Site::WUGC::Project.
-# Everything which uses this should redirect there, so this can be replaced with a new entity.
+# NOTE: this replaces the old Genome::Project
+# The new Genome::Project is built from this plus analyst-created projects
 
-class Genome::Project {
+class Genome::Site::WUGC::Project {
     id_properties => ['setup_project_id'],
     table_name =>   "(SELECT * FROM setup_project\@oltp p JOIN setup\@oltp s ON setup_id = setup_project_id WHERE project_type != 'setup project finishing' AND setup_status != 'abandoned') project ",
     has => [
@@ -31,11 +31,11 @@ class Genome::Project {
         samples             => { is => 'Genome::Sample', via => 'work_orders', to => 'samples' },
         models              => { is => 'Genome::Model', via => 'samples', to => 'models' },
 
-        external_contact        => { is => 'Genome::Project::Contact', id_by => 'ext_con_id' },
+        external_contact        => { is => 'Genome::Site::WUGC::ProjectContact', id_by => 'ext_con_id' },
         external_contact_name   => { is => 'Text', via => 'external_contact', to => 'name' }, 
         external_contact_email  => { is => 'Text', via => 'external_contact', to => 'email' }, 
        
-        internal_contact        => { is => 'Genome::Project::Contact', id_by => 'internal_con_id' },
+        internal_contact        => { is => 'Genome::Site::WUGC::ProjectContact', id_by => 'internal_con_id' },
         internal_contact_name   => { is => 'Text', via => 'internal_contact', to => 'name' }, 
         internal_contact_email  => { is => 'Text', via => 'internal_contact', to => 'email' }, 
     ],
