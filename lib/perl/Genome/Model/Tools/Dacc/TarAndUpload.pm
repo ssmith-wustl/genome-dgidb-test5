@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Dacc::TarAndLaunchUpload;
+package Genome::Model::Tools::Dacc::TarAndUpload;
 
 use strict;
 use warnings;
@@ -7,24 +7,34 @@ use Genome;
 
 use Data::Dumper 'Dumper';
 require File::Basename;
+require Genome::Model::Tools::Dacc::Upload;
 
-class Genome::Model::Tools::Dacc::TarAndLaunchUpload { 
+class Genome::Model::Tools::Dacc::TarAndUpload { 
     is => 'Genome::Model::Tools::Dacc',
     has => [
+        tar_file => {
+            is => 'Bolean',
+            shell_args_position => 3,
+            doc => 'Tar file.',
+        },
         files => {
             is => 'Text',
             is_many => 1,
             shell_args_position => 4,
             doc => 'Files to tar and zip.',
         },
-        tar_file => {
-            is => 'Bolean',
-            shell_args_position => 3,
-            doc => 'Tar file.',
-        },
-        #upload_log_file => { },
     ],
 };
+
+sub help_brief {
+    return 'Tar files and upload to the DACC';
+}
+
+sub help_detail {
+    return <<HELP;
+    Tar files and then upload to the DACC site. Give the DACC directory and files. Once the files are tarred, the upload command will be executed. The original files and tar file will not be deleted.
+HELP
+}
 
 sub execute {
     my $self = shift;
@@ -57,26 +67,23 @@ sub execute {
     }
     $self->status_message("Tar-ing...OK");
 
-    $self->status_message("Launch upload");
-    my $rusage = Genome::Model::Tools::Dacc->rusage_for_upload;
-    my $logging = '-u '.$ENV{USER}.'@genome.wustl.edu';
-    $cmd = 'bsub -q long '.$logging.' '.$rusage.' gmt dacc upload --sample-id '.$self->sample_id.' --format '.$self->format.' --files '.$tar_file;
-    $rv = eval { Genome::Utility::FileSystem->shellcmd(cmd => $cmd); };
-    if ( not $rv ) {
+    my $upload = Genome::Model::Tools::Dacc::Upload->create(
+        dacc_directory => $self->dacc_directory,
+        files => [ $tar_file ],
+        launch_to_lsf => 1,
+    );
+    if ( not $upload ) {
         $self->error_message("Failed to launch upload, but tar file exists: $tar_file");
+        return;
     }
-    else {
-        $self->status_message("Launch upload...OK");
+    $upload->dump_status_messages(1);
+    if ( not $upload->execute ) {
+        $self->error_message("Failed to launch upload, but tar file exists: $tar_file");
+        return;
     }
 
     return 1;
 }
-
-#my $dir="/gscmnt/gc2102/research/mmitreva/sabubuck/MBLASTX_KEGG_RESULTS/";
-#my $out=$dir."$options{sample_id}".".tar.gz";
-#`tar -cvzf $out $options{files}`;
-#my $cmd = 'setenv ASPERA_SCP_PASS password; ascp -Q -l100M $out sabubuck@aspera.hmpdacc.org:/WholeMetagenomic/04-Annotation/ReadAnnotationProteinDBS/KEGG/';
-#system ($cmd);
 
 1;
 

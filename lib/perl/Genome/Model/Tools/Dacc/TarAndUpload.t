@@ -7,7 +7,7 @@ use above 'Genome';
 
 use Test::More;
 
-use_ok('Genome::Model::Tools::Dacc::TarAndLaunchUpload') or die;
+use_ok('Genome::Model::Tools::Dacc::TarAndUpload') or die;
 
 my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Dacc';
 my @files = map { $dir.'/'.$_ } (qw/ a b /);
@@ -16,7 +16,7 @@ my $tar_file = $dir.'/dacc.tar.gz';
 my $cnt = 0;
 my @cmds = (
     "tar cvzf $tar_file ".join(' ', @files),
-    "bsub -q long -u $ENV{USER}\@genome.wustl.edu -R 'rusage[internet_upload_mbps=100,aspera_upload_mbps=100]' gmt dacc upload --sample-id SRS000000 --format kegg --files $tar_file"
+    "bsub -q long -u $ENV{USER}\@genome.wustl.edu -R 'rusage[internet_upload_mbps=100,aspera_upload_mbps=100]' gmt dacc upload /DACC_DIR/ $tar_file"
 );
 no warnings qw/ once redefine /;
 *Genome::Utility::FileSystem::shellcmd = sub{
@@ -28,9 +28,8 @@ no warnings qw/ once redefine /;
 };
 use warnings;
 
-my $tnl = Genome::Model::Tools::Dacc::TarAndLaunchUpload->create(
-    sample_id => 'SRS000000',
-    format => 'kegg',
+my $tnl = Genome::Model::Tools::Dacc::TarAndUpload->create(
+    dacc_directory => 'DACC_DIR',
     files => \@files,
     tar_file => $tar_file,
 );
