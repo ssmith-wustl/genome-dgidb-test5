@@ -162,6 +162,10 @@ class Genome::Model::Tools::Sv::AssemblyValidation {
             type => 'String',
             doc  => 'Ingore calls supported by libraries that contains (comma separated)',
         },
+        skip_call => {
+            type => 'Integer',
+            doc => 'Ignore tigra_sv for the calls before this number',
+        },
         _unc_pred_fh => {
             type => 'SCALAR',
         },
@@ -363,11 +367,13 @@ sub _get_tigra_options {
 #        avg_read_depth_limit  => 'p',
         min_breakdancer_score => 'Q',
         skip_libraries        => 'L',
+        skip_call            => 'z',
     );
 
     my $tigra_opts = '-d -r -I '. $self->_data_dir  . ' ';
     $tigra_opts .= '-b ' unless $self->custom_sv_format;
     $tigra_opts .= '-p 10000 ' if($self->asm_high_coverage);
+    $tigra_opts .= '-z ' . $self->skip_call if($self->skip_call);
     for my $opt (keys %tigra_sv_options) {
         if ($self->$opt) {
             $tigra_opts .= '-'.$tigra_sv_options{$opt}.' '.$self->$opt . ' ';
@@ -539,10 +545,14 @@ sub _GetRefPos{
     }
 
     if($num >= 2){
-        $refpos1 = $ref_start > $ref_start1 ? $ref_start1 : $ref_start;
-        $refpos2 = $ref_end > $ref_end1 ? $ref_end : $ref_end1;
-        $rpos1 = $refpos1 == $ref_start ? $r_start : $r_start1;
-        $rpos2 = $refpos2 == $ref_end ? $r_end : $r_end1;
+        #$refpos1 = $ref_start > $ref_start1 ? $ref_start1 : $ref_start;
+        #$refpos2 = $ref_end > $ref_end1 ? $ref_end : $ref_end1;
+        #$rpos1 = $refpos1 == $ref_start ? $r_start : $r_start1;
+        #$rpos2 = $refpos2 == $ref_end ? $r_end : $r_end1;
+        $rpos1 = $r_start > $r_start1 ? $r_start1 : $r_start;
+        $rpos2 = $r_end > $r_end1 ? $r_end : $r_end1;
+        $refpos1 = $rpos1 == $r_start ? $ref_start : $ref_start1;
+        $refpos2 = $rpos2 == $r_end ? $ref_end : $ref_end1;
     }
     else{
         $refpos1 = $ref_start;
