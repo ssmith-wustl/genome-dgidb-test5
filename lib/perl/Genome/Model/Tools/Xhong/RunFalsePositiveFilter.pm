@@ -99,7 +99,7 @@ sub execute {
 	       		$self->error_message("The $common_name: $snv_file doesn't exist, exit now!");
        			return;
        		}
-       		if ($tier eq "Tier1"){
+       		
        		my $cmd ="";
         	$cmd ="bsub -N -u $user\@genome.wustl.edu -J $common_name.$tier.FP -R \'select\[type==LINUX64\]\' \'gmt somatic filter-false-positives --bam-file=$tumor_bam --variant-file=$snv_file --output-file=$out_dir/$tier.csv\'";
         	my $jobid1 =`$cmd`;
@@ -113,7 +113,7 @@ sub execute {
        		$jobid2=~ /<(\d+)>/;
 		$jobid2=$1;
        		print "$cmd_anno\n$jobid2\n";
-       		}
+       		
        		
 	}
         return 1;
