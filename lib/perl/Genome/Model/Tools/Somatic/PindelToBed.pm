@@ -40,9 +40,8 @@ class Genome::Model::Tools::Somatic::PindelToBed {
         },
         output => {
             type => 'String',
-            is_optional => 1,
+            is_optional => 0,
             doc => 'The location of the output bed file.',
-            default => { calculate_from => ['source'], calculate => q| $source.".bed"|},
         },
         source => {
             type => 'String',
@@ -92,15 +91,13 @@ Transforms a file from pindel output format to bed format
 EOS
 }
 
-# FIXME need to check for 64 bit but this causes a loop between super and this
 sub execute {
     my $self = shift;
-    $DB::single=1;
-    # test architecture to make sure we can run (needed for samtools faidx)
     if($self->include_normal && $self->germline_only){
         $self->error_message("Cannot include normal AND germline only.");
         die $self->error_message;
     }
+    # test architecture to make sure we can run (needed for samtools faidx)
     unless (`uname -a` =~ /x86_64/) { 
        $self->error_message("Must run on a 64 bit machine");
        die;
