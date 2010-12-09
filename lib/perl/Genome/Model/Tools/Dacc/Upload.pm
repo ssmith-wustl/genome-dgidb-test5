@@ -37,8 +37,7 @@ HELP
 }
 
 sub rusage {
-    #return (qw/ internet_upload_mbps=100 aspera_upload_mbps=100 /);
-    return (qw/ internet_download_mbps=100 /);
+    return (qw/ internet_upload_mbps=100 aspera_upload_mbps=100 /);
 }
 
 sub execute {
