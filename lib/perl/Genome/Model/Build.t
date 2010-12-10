@@ -143,6 +143,19 @@ is(
 for my $e ( @events ) { $e->event_status('Running'); }
 ok($build->delete, 'Deleted build');
 
+#Test the Build Success Callback
+#(Ideally would test if commit() triggers the callback automatically, but does not fire when no_commit(1).)
+my $m1 = Genome::Model::Test->create_basic_mock_model(type_name => 'tester');
+my $m2 = Genome::Model::Test->create_basic_mock_model(type_name => 'tester');
+$m1->add_to_model(to_model => $m2);
+$m2->auto_build_alignments(1);
+my $b1 = Genome::Model::Build->create(model_id => $m1->id);
+$b1->_initialize_workflow('inline');
+$b1->success();  #TODO Check that callback is at least registered successfully
+
+ok($b1->model->processing_profile->_build_success_callback($b1), 'callback executed successfully');
+ok($m2->build_requested, 'callback triggered build_requested flag in to_model');
+
 done_testing();
 exit;
 

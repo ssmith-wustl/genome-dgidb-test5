@@ -84,7 +84,7 @@ class Genome::Model::Build {
         group_ids        => { via => 'model', to => 'group_ids', is_many => 1, },
         group_names      => { via => 'model', to => 'group_names', is_many => 1, },
 
-        projects         => { is => 'Genome::Project', via => 'model' },
+        projects         => { is => 'Genome::Site::WUGC::Project', via => 'model' },
         work_orders      => { is => 'Genome::WorkOrder', via => 'projects' },
         work_order_names => { via => 'work_orders', to => 'name' },
         work_order_numbers => { via => 'work_orders', to => 'id' },
@@ -1075,7 +1075,7 @@ sub success {
     
     # Launch new builds for any convergence models containing this model.
     # To prevent infinite loops, don't do this for convergence builds.
-    # FIXME subclass this!
+    # FIXME convert this to use the commit callback and model links with a custom notify that doesn't require succeeded builds
     if($self->type_name !~ /convergence/) {
         for my $model_group ($self->model->model_groups) {
             eval {
@@ -1086,6 +1086,32 @@ sub success {
             }
         }
     }
+
+    my $commit_callback;
+    $commit_callback = sub {
+        $self->the_master_event->cancel_change_subscription('commit', $commit_callback); #only fire once
+        $self->status_message('Firing build success commit callback.');
+        my $result = eval {
+            $self->processing_profile->_build_success_callback($self);
+        };
+        if($@) {
+            $self->error_message('Error executing success callback: ' . $@);
+            return;
+        }
+        unless($result) {
+            $self->error_message('Success callback failed.');
+            return;
+        }
+
+        return UR::Context->commit; #a separate commit is necessary for any changes in the callback
+    };
+
+    #The build itself has no __changes__ and UR::Context->commit() will not trigger the subscription if on that object, so
+    #use the master build event which has just been updated to 'Succeeded' with the current time.
+    $self->the_master_event->create_subscription(
+        method => 'commit',
+        callback => $commit_callback,
+    );
 
     # reallocate - always returns true (legacy behavior)
     $self->reallocate; 

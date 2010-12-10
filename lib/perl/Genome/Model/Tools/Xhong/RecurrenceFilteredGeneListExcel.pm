@@ -157,7 +157,7 @@ sub execute {
 		print L "Gene\tAppear_times\tNumber_sample\n";
 		$n=1;my $m=1;
 		my $row2="A$m";
-		my $row="A$n";
+		$row="A$n";
 		my @header=('Gene','Appear_times','Number_sample');
 		$recurrentlistsheet->write($row,\@header);
 	

@@ -7,7 +7,6 @@ use warnings;
 use Genome;
 use Bio::SeqIO;
 use File::Temp;
-use File::Slurp;
 use File::Basename;
 
 =cut
@@ -163,6 +162,10 @@ class Genome::Model::Tools::Sv::AssemblyValidation {
             type => 'String',
             doc  => 'Ingore calls supported by libraries that contains (comma separated)',
         },
+        skip_call => {
+            type => 'Integer',
+            doc => 'Ignore tigra_sv for the calls before this number',
+        },
         _unc_pred_fh => {
             type => 'SCALAR',
         },
@@ -286,7 +289,7 @@ sub execute {
                 my $coord = join(".",$maxSV->{chr1},$maxSV->{start1},$maxSV->{chr2},$maxSV->{start2},$maxSV->{type},$maxSV->{size},$maxSV->{ori});
                 my $contigsize = $maxSV->{contiglens};
                 my $seqobj = Bio::Seq->new( 
-                    -display_id => "ID:$prefix,Var:$coord,Ins:$maxSV->{bkstart}\-$maxSV->{bkend},Length:$contigsize,KmerCoverage:$maxSV->{contigcovs},Strand:$maxSV->{strand},Assembly_Score:$maxSV->{weightedsize},PercNonRefKmerUtil:$maxSV->{kmerutil},TIGRA,id_num:$maxSV->{contigid},ref_start_point:$maxSV->{refpos1},ref_end_point:$maxSV->{refpos2},contig_start_point:$maxSV->{rpos1},contig_end_point:$maxSV->{rpos2}",
+                    -display_id => "ID:$prefix,Var:$coord,Ins:$maxSV->{bkstart}\-$maxSV->{bkend},Length:$contigsize,KmerCoverage:$maxSV->{contigcovs},Strand:$maxSV->{strand},Assembly_Score:$maxSV->{weightedsize},PercNonRefKmerUtil:$maxSV->{kmerutil},Ref_start:$maxSV->{refpos1},Ref_end:$maxSV->{refpos2},Contig_start:$maxSV->{rpos1},Contig_end:$maxSV->{rpos2},TIGRA",
                     -seq => $maxSV->{contig}, 
                 );
                 $bp_io->write_seq($seqobj);
@@ -364,11 +367,13 @@ sub _get_tigra_options {
 #        avg_read_depth_limit  => 'p',
         min_breakdancer_score => 'Q',
         skip_libraries        => 'L',
+        skip_call            => 'z',
     );
 
     my $tigra_opts = '-d -r -I '. $self->_data_dir  . ' ';
     $tigra_opts .= '-b ' unless $self->custom_sv_format;
     $tigra_opts .= '-p 10000 ' if($self->asm_high_coverage);
+    $tigra_opts .= '-z ' . $self->skip_call if($self->skip_call);
     for my $opt (keys %tigra_sv_options) {
         if ($self->$opt) {
             $tigra_opts .= '-'.$tigra_sv_options{$opt}.' '.$self->$opt . ' ';
@@ -408,7 +413,6 @@ sub _cross_match_validation {
     }
 
     my $cm_cmd_opt = '-bandwidth 20 -minmatch 20 -minscore 25 -penalty '.$self->cm_sub_penalty.' -discrep_lists -tags -gap_init '.$self->cm_gap_init_penalty.' -gap_ext -1';
-
 	my $cm_cmd = "cross_match $tigra_sv_fa $ref_fa $cm_cmd_opt > $cm_out 2>/dev/null";
 	           
     my $rv = Genome::Utility::FileSystem->shellcmd (
@@ -424,13 +428,6 @@ sub _cross_match_validation {
     }
     $self->status_message("Cross_match for $type contigs: $tigra_sv_name Done");
         
-    my $tmp = File::Temp->new(
-        DIR      => '/tmp',
-        TEMPLATE => "CM_$type"."_out.XXXXXX",
-        UNLINK   => 1,
-    );
-    my $tmp_out = $tmp->filename;
-
     my $makeup_size      = 0; # by default they are zero
     my $concatenated_pos = 0; # by default they are zero
 
@@ -441,7 +438,6 @@ sub _cross_match_validation {
 
     $self->status_message("GetCrossMatchIndel for $tigra_sv_name $type");
     my $cm_indel = Genome::Model::Tools::Sv::CrossMatchForIndel->create(
-        output_file          => $tmp_out,
         cross_match_file     => $cm_out,
         local_ref_seq_file   => $ref_fa,
         assembly_contig_file => $tigra_sv_fa,
@@ -450,9 +446,7 @@ sub _cross_match_validation {
         ref_cat_pos          => $concatenated_pos,
         variant_size         => $makeup_size,
     );
-            
-    $cm_indel->execute;
-    my $result  = read_file($tmp_out);
+    my $result = $cm_indel->execute;
 
     if ($result && $result =~ /\S+/) {
 	    $self->_UpdateSVs($result,$makeup_size,$regionsize,$tigra_sv_fa,$ctg_type, $cm_out);
@@ -490,6 +484,12 @@ sub _UpdateSVs{
 	            $maxSV->{het}     = $type;
 	            $maxSV->{ori}     = $ori;
 	            $maxSV->{alnstrs} = $alnstrs;
+
+                    # add according to Ken's requirement
+                    if($maxSV->{strand} =~ /-/ && $maxSV->{type} =~ /DEL/i){
+                        $maxSV->{start2} -= 1;
+                        $maxSV->{bkend} -= 1;
+                    }
             }
         }
     }
@@ -518,7 +518,7 @@ sub _GetRefPos{
                 ($r1, $r2, $r3, $str, $g1, $g2, $g3) = ($a[$#a - 6], $a[$#a - 5], $a[$#a - 4], $a[$#a - 3], $a[$#a - 2], $a[$#a - 1], $a[$#a]);
             }
 
-            print "HHHHHHHHHHHHHH: $r1, $r2, $r3\n";
+            #print "HHHHHHHHHHHHHH: $r1, $r2, $r3\n";
             ($chr, $ref_1, $ref_2) = ($str =~ /(\S+):(\d+)-(\d+)/);
                 
             #print "HHHHHHHHHHHHHHH: $g1\t$g2\t$g3\n";
@@ -545,10 +545,14 @@ sub _GetRefPos{
     }
 
     if($num >= 2){
-        $refpos1 = $ref_start > $ref_start1 ? $ref_start1 : $ref_start;
-        $refpos2 = $ref_end > $ref_end1 ? $ref_end : $ref_end1;
-        $rpos1 = $refpos1 == $ref_start ? $r_start : $r_start1;
-        $rpos2 = $refpos2 == $ref_end ? $r_end : $r_end1;
+        #$refpos1 = $ref_start > $ref_start1 ? $ref_start1 : $ref_start;
+        #$refpos2 = $ref_end > $ref_end1 ? $ref_end : $ref_end1;
+        #$rpos1 = $refpos1 == $ref_start ? $r_start : $r_start1;
+        #$rpos2 = $refpos2 == $ref_end ? $r_end : $r_end1;
+        $rpos1 = $r_start > $r_start1 ? $r_start1 : $r_start;
+        $rpos2 = $r_end > $r_end1 ? $r_end : $r_end1;
+        $refpos1 = $rpos1 == $r_start ? $ref_start : $ref_start1;
+        $refpos2 = $rpos2 == $r_end ? $ref_end : $ref_end1;
     }
     else{
         $refpos1 = $ref_start;

@@ -1,8 +1,10 @@
 package Genome::Project; 
-
 use strict;
 use warnings;
 use Genome;
+
+# NOTE: this is copied as Genome::Site::WUGC::Project.
+# Everything which uses this should redirect there, so this can be replaced with a new entity.
 
 class Genome::Project {
     id_properties => ['setup_project_id'],
@@ -25,7 +27,10 @@ class Genome::Project {
         setup_project_id    => { is => 'Number', len => 10 },
     ],
     has_optional => [ 
-        work_orders => { is => 'Genome::WorkOrder', reverse_as => 'project', is_many => 1 },
+        work_orders         => { is => 'Genome::WorkOrder', reverse_as => 'project', is_many => 1 },
+        samples             => { is => 'Genome::Sample', via => 'work_orders', to => 'samples' },
+        models              => { is => 'Genome::Model', via => 'samples', to => 'models' },
+
         external_contact        => { is => 'Genome::Project::Contact', id_by => 'ext_con_id' },
         external_contact_name   => { is => 'Text', via => 'external_contact', to => 'name' }, 
         external_contact_email  => { is => 'Text', via => 'external_contact', to => 'email' }, 
@@ -33,14 +38,6 @@ class Genome::Project {
         internal_contact        => { is => 'Genome::Project::Contact', id_by => 'internal_con_id' },
         internal_contact_name   => { is => 'Text', via => 'internal_contact', to => 'name' }, 
         internal_contact_email  => { is => 'Text', via => 'internal_contact', to => 'email' }, 
-    ],
-    has_many_optional => [
-        model_assignments   => { is => 'Genome::Model::ProjectAssignment', reverse_id_by => 'project' },
-        models              => { is => 'Genome::Model', via => 'model_assignments', to => 'model' },
-        model_names         => { via => 'models', to => 'name' },
-        sample_assignments  => { is => 'Genome::Sample::ProjectAssignment', reverse_id_by => 'project' },
-        samples             => { is => 'Genome::Sample', via => 'sample_assignments', to => 'sample' },
-        sample_names        => { via => 'samples', to => 'name' },
     ],
     data_source => 'Genome::DataSource::GMSchema',
 };

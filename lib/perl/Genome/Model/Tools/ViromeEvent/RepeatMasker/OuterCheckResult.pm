@@ -65,31 +65,12 @@ sub execute
 	return;
     }
 
-    my @files_to_run;
-    foreach my $file (@fastas) {
-	my $out_file = $file.'.out';
-	my $mask_file = $file.'.masked';
-	if (! -s $out_file && ! -s $mask_file) {
-	    #RUN REPEAT MASKER
-	    push @files_to_run, $file;
-	}
-	elsif (! -s $mask_file) {
-	    #REPEAT MASKER RAN WITH NO REPEATS
-	    #COPY THE ORIGINAL FASTA TO .MASKED
-	    copy $file, $mask_file;
-	}
-	else {
-	    #REPEAT MASKER RAN
-	    next;
-	}
-    }
+    $self->files_to_run( \@fastas );
 
-    $self->files_to_run(\@files_to_run);
     $self->log_event("Completed check to run repeat masker for sample: $sample_name");
 
     return 1;
 }
 
-
-1
+1;
 

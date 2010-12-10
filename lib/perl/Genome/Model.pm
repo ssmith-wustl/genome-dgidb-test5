@@ -80,7 +80,7 @@ class Genome::Model {
     ],
     has_optional_many => [
         # TODO: the new project will internally have generalized assignments of models and other things
-        projects                    => { is => 'Genome::Project', via => 'project_assignments', to => 'project' },
+        projects                    => { is => 'Genome::Site::WUGC::Project', via => 'project_assignments', to => 'project' },
         project_assignments         => { is => 'Genome::Model::ProjectAssignment', reverse_as => 'model' },
         project_names               => { is => 'Text', via => 'projects', to => 'name' },
         
@@ -900,6 +900,23 @@ sub add_from_model{
     }
     $bridge = Genome::Model::Link->create(from_model_id => $from_id, to_model_id => $to_id, role => $role);
     return $bridge;
+}
+
+sub notify_input_build_success {
+    my $self = shift;
+    my $succeeded_build = shift;
+
+    if($self->auto_build_alignments) {
+        my @from_models = $self->from_models;
+        my @last_complete_builds = map($_->last_complete_build, @from_models);
+
+        #all input models have a succeeded build
+        if(scalar @from_models eq scalar @last_complete_builds) {
+            $self->build_requested(1);
+        }
+    }
+
+    return 1;
 }
 
 # this goes into refalign models only

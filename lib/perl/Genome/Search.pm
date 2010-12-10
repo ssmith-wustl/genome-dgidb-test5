@@ -77,7 +77,7 @@ sub searchable_classes {
          Genome::InstrumentData::FlowCell
          Genome::Capture::Set 
          Genome::WorkOrder
-         Genome::Project
+         Genome::Site::WUGC::Project
          Genome::Disk::Group 
          Genome::Disk::Volume 
          Genome::Sys::Email );
