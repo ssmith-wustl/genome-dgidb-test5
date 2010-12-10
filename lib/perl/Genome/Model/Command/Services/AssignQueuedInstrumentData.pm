@@ -602,7 +602,16 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     push @new_models, $model;
 
     if ( defined($capture_target) ) {
-        unless($self->assign_capture_inputs($model, $capture_target, $capture_target)) {
+        my $roi_list;
+        #FIXME This is a lame hack for this one capture set
+        if($reference_sequence_build and $reference_sequence_build->name eq 'g1k-human-build37'
+                and $capture_target eq 'agilent sureselect exome version 2 broad refseq cds only') {
+            $roi_list = 'agilent_sureselect_exome_version_2_broad_refseq_cds_only_hs37';
+        } else {
+            $roi_list = $capture_target;
+        }
+
+        unless($self->assign_capture_inputs($model, $capture_target, $roi_list)) {
             for (@new_models) {
                 $_->delete;
                 return;
@@ -627,7 +636,14 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
 
         push @new_models, $wuspace_model;
 
-        unless($self->assign_capture_inputs($wuspace_model, $capture_target, 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA')) {
+        my $wuspace_roi_list;
+        if($reference_sequence_build and $reference_sequence_build->name eq 'g1k-human-build37') {
+            $wuspace_roi_list = 'NCBI-human.combined-annotation-58_37c_cds_exon_and_rna_merged_by_gene';
+        } else {
+            $wuspace_roi_list = 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA';
+        }
+
+        unless($self->assign_capture_inputs($wuspace_model, $capture_target, $wuspace_roi_list)) {
             for (@new_models) {
                 $_->delete;
                 return;

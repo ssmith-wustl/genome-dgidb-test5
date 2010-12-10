@@ -81,10 +81,10 @@ class Genome::WorkOrder {
             is => 'Integer',
             len => 1,
         },
-        setup_ss_id => {
-            is => 'Integer',
-            len => 10,
-        },
+        #setup_ss_id => {
+        #    is => 'Integer',
+        #    len => 10,
+        #},
         barcode => {
             is => 'Text',
             len => 16,
