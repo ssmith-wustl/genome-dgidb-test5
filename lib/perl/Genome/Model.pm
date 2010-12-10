@@ -902,6 +902,23 @@ sub add_from_model{
     return $bridge;
 }
 
+sub notify_input_build_success {
+    my $self = shift;
+    my $succeeded_build = shift;
+
+    if($self->auto_build_alignments) {
+        my @from_models = $self->from_models;
+        my @last_complete_builds = map($_->last_complete_build, @from_models);
+
+        #all input models have a succeeded build
+        if(scalar @from_models eq scalar @last_complete_builds) {
+            $self->build_requested(1);
+        }
+    }
+
+    return 1;
+}
+
 # this goes into refalign models only
 sub lcb_flagstat {
     my $self = shift;
