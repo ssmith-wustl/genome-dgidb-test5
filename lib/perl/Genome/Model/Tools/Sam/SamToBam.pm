@@ -15,15 +15,15 @@ class Genome::Model::Tools::Sam::SamToBam {
             is  => 'String',      
             doc => 'name of sam file',
         },
-        ref_list    => {
-            is  => 'String',
-            doc => 'path to a tab delimited file containing each contig name in the reference and its length',
-        },
     ],
     has_optional => [
         bam_file    => {
             is  => 'String',
             doc => 'Name of output bam file (default: use base name of input sam file -- e.g. foo.sam -> foo.bam)'
+        },
+        ref_list    => {
+            is  => 'String',
+            doc => 'path to a tab delimited file containing each contig name in the reference and its length',
         },
         index_bam   => {
             is  => 'Boolean',
@@ -66,7 +66,9 @@ sub create {
     my $self = $class->SUPER::create(@_);
 
     $self->error_message('Sam file('.$self->sam_file.') does not exist') and return unless -e $self->sam_file;
-    $self->error_message('Ref list('.$self->ref_list.') does not have size') and return unless -s $self->ref_list;
+	if ($self->ref_list) {
+	    $self->error_message('Ref list('.$self->ref_list.') does not have size') and return unless -s $self->ref_list;
+	}
 
     return $self;
 }
@@ -77,13 +79,20 @@ sub execute {
 
     my $samtools = $self->samtools_path;
     my $sam_file = $self->sam_file;
+	my $sam_read_count = $self->read_count($sam_file);
     
     my ($root_name) = basename $sam_file =~ /^(\S+)\.sam/;
     
     my $sam_dir  = dirname $sam_file;
     my $bam_file = $self->bam_file || $sam_dir . "/$root_name.bam";
     
-    my $cmd = sprintf('%s view -bt %s -o %s %s', $samtools, $self->ref_list, $bam_file, $sam_file);
+    my $cmd;
+	$cmd .= sprintf('%s view -b -o %s', $samtools, $bam_file);
+    if ($self->ref_list) {
+        $cmd .= sprintf(' -t %s %s', $self->ref_list, $sam_file);
+    } else {
+        $cmd .= sprintf(' -S %s', $sam_file);
+    }
     $self->status_message("SamToBam conversion command: $cmd");
     
     my $rv  = Genome::Utility::FileSystem->shellcmd(
@@ -93,6 +102,12 @@ sub execute {
     );
         
     $self->error_message("Converting to Bam command: $cmd failed") and return unless $rv == 1;
+
+	my $bam_read_count = $self->read_count($bam_file);
+	unless ( $bam_read_count == $sam_read_count ) {
+		$self->error_message("Read counts differ after SAM to BAM conversion! (BAM: $bam_read_count vs. SAM: $sam_read_count)");
+		return;
+	}
      
     #watch out disk space, for now hard code maxMemory 2000000000
     if ($self->fix_mate) {

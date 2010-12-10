@@ -1,14 +1,17 @@
 #extract reads from a set of bams in breakdancer predicted regions
-package Genome::Model::Tools::Sv::AssemblyValidation;
+#package Genome::Model::Tools::Sv::AssemblyValidation;
 
 
 use strict;
 use warnings;
-use Genome;
+#use Genome;
 use Bio::SeqIO;
+use Getopt::Std;
+use IO::File;
 use File::Temp;
+#use File::Slurp;
 use File::Basename;
-
+use CrossMatchForIndel_;
 =cut
 my %opts = (l=>500,p=>1000,s=>0,q=>0,n=>0,m=>10,x=>3,P=>-10,G=>-10,S=>0.02,A=>500,Q=>0);
 getopts('l:d:c:p:r:s:Q:q:t:n:a:b:f:km:MRzv:hD:x:i:P:G:I:A:S:L:',\%opts);
@@ -49,7 +52,7 @@ Filtering:
 \n") unless ($#ARGV>=1);
 =cut
 
-
+=cut
 class Genome::Model::Tools::Sv::AssemblyValidation {
     is  => 'Genome::Model::Tools::Sv',
     has => [
@@ -75,11 +78,11 @@ class Genome::Model::Tools::Sv::AssemblyValidation {
             type => 'String',
             doc  => 'Read intermediate files from DIR instead of creating them',
         },
-        breakpoint_seq_file => {
+        breakpoint_seq_file => { # -f
             type => 'String',
             doc  => 'Save Breakpoint sequences in file',
         },
-        cm_aln_file => {
+        cm_aln_file => { # -r
             type => 'String',
             doc  => 'Save relevant cross_match alignment results to file',
         },
@@ -91,11 +94,11 @@ class Genome::Model::Tools::Sv::AssemblyValidation {
             type => 'Boolean',
             doc  => 'Assemble high coverage data (such as capture)',
         },
-        unconfirm_predict_file => {
+        unconfirm_predict_file => { # -v
             type => 'String',
             doc  => 'Save unconfirmed predictions in file',
         },
-        pad_local_ref => {
+        pad_local_ref => { # not exist: -w
             type => 'Integer',
             doc  => 'Pad local reference by additional bp on both ends',
             default_value => 200,
@@ -105,7 +108,7 @@ class Genome::Model::Tools::Sv::AssemblyValidation {
             doc  => 'Number of mismatches required to be tagged as poorly mapped',
             default_value => 5,
         },
-        flank_size => {
+        flank_size => { # -l
             type => 'Integer',
             doc  => 'Flanking size',
             default_value => 500,
@@ -120,16 +123,16 @@ class Genome::Model::Tools::Sv::AssemblyValidation {
             doc  => 'Only assemble reads with mapping quality >',
             default_value => 0,
         },
-        min_size_of_confirm_asm_sv => {
+        min_size_of_confirm_asm_sv => { # -m
             type => 'Integer',
             doc  => 'Minimal size (bp) for an assembled SV to be called confirmed',
-            default_value => 3,
+            default_value => 10,
         },
-        invalid_indel_range => {
+        invalid_indel_range => { # -i
             type => 'Integer',
             doc  => 'invalidate indels are -i bp bigger or smaller than the predicted size, usually 1 std insert size',
         },
-        max_polymorphism_rate => {
+        max_polymorphism_rate => { # -S
             type => 'Number',
             doc  => 'Maximally allowed polymorphism rate in the flanking region',
             default_value => 0.02,
@@ -162,11 +165,7 @@ class Genome::Model::Tools::Sv::AssemblyValidation {
             type => 'String',
             doc  => 'Ingore calls supported by libraries that contains (comma separated)',
         },
-        skip_call => {
-            type => 'Integer',
-            doc => 'Ignore tigra_sv for the calls before this number',
-        },
-        _unc_pred_fh => {
+        _unc_pred_fh => { 
             type => 'SCALAR',
         },
         _data_dir => {
@@ -174,53 +173,118 @@ class Genome::Model::Tools::Sv::AssemblyValidation {
         },
         _maxSV => {
             type => 'HASH',
-        },
-        _N50size => {
-            type => 'Number',
-        },
-        _WeightAvgSize => {
-            type => 'Number',
-        },
+        }
     ],
 };
-
+=cut
         
-sub execute {
-    my $self    = shift;
-    my $sv_file = $self->sv_file;
-    my $out_file= $self->output_file;
+#sub execute {
+#    my $self    = shift;
 
-    my $bp_file = $self->breakpoint_seq_file;
-    my ($bp_io, $cm_aln_fh);
+my %opts = (l=>500,p=>1000,s=>0,q=>0,n=>0,m=>10,x=>3,P=>-10,G=>-10,S=>0.02,A=>500,Q=>0,b=>1,N=>5,w=>200);
+getopts('l:d:c:p:r:s:Q:q:t:n:a:b:f:km:MRzv:hD:x:i:P:G:I:A:S:L:Z:B:O:H',\%opts);
+die("
+Usage:   AssemblyValidation.pl <SV file, default in BreakDancer format> <bam files ... >
+Options:
+         -I DIR     Data directory for intermediate or final files
+         -d FILE	tigra_sv binary file location with full path
+         -b         Indicate it is breakdancer input format; or else is PCR format
+         -f FILE    Save Breakpoint sequences in file
+         -r FILE    Save relevant cross_match alignment results to file
+         -z         Customized SV format, interpret column from header that must start with # and contain chr1, start, chr2, end, type, size
+         -v FILE    Save unconfirmed predictions in FILE
+         -h         Make homo variants het by adding same amount of randomly selected wiletype reads
+         -l INT     Flanking size [$opts{l}]
+         -A INT     Esimated maximal insert size [$opts{A}]
+         -q INT     Only assemble reads with mapping quality > [$opts{q}]
+         -m INT     Minimal size (bp) for an assembled SV to be called confirmed [$opts{m}]
+         -i INT     invalidate indels are -i bp bigger or smaller than the predicted size, usually 1 std insert size
+         -a INT     Get reads with start position bp into the left breakpoint, default [50,100,150]
+         -b INT     Get reads with start position bp into the right breakpoint, default [50,100,150]
+         -S FLOAT   Maximally allowed polymorphism rate in the flanking region [$opts{S}];
+         -P INT     Substitution penalty in cross_match alignment [$opts{P}]
+         -G INT     Gap Initialization penalty in cross_match alignment [$opts{G}]
+         -M         Prefix reference name with \'chr\' when fetching reads using samtools view
+         -R         Assemble Mouse calls, NCBI reference build 37
+         -H         Assemble high coverage data (such as capture)'
+         -Z STRING  SV file
+         -B FILE    Bam file separated by comma
+         -O STRING  output file
+         -N INT     Number of mismatches required to be tagged as poorly mapped
+         -w INT     Pad local reference by additional bp on both ends
 
-    if ($bp_file) {
-        if (-s $bp_file) {
-            $self->warning_message('breakpoint seq file: '.$bp_file. ' existing, Now remove it');
-            unlink $bp_file;
+Filtering:
+         -p INT     Ignore cases that have average read depth greater than [$opts{p}]
+         -c STRING  Specify a single chromosome
+         -s INT     Minimal size of the region to analysis [$opts{s}]
+         -Q INT     minimal BreakDancer score required for analysis [$opts{Q}]
+         -t STRING  type of SV
+         -n INT     minimal number of supporting reads [$opts{n}]
+         -L STRING  Ingore calls supported by libraries that contains (comma separated) STRING
+         -k         Attach assembly results as additional columns in the input file
+         -D DIR     A directory that contains a set of supplementary reads (when they are missing from the main data stream)
+         -x INT     Duplicate supplementary reads [$opts{x}] times
+\n") unless ($#ARGV>=-1);
+
+
+
+
+    my $sv_file = $opts{Z}; #$self->sv_file;
+    my $out_file= $opts{O}; #$self->output_file;
+    my $bam_files = $opts{B};
+    #my $bp_file = $ARGV[2]; #$self->breakpoint_seq_file;
+    my $bp_io;
+    my $cm_aln_fh = new IO::File;
+
+
+    #if ($bp_file) {
+    if(defined $opts{f}){
+        #if (-s $bp_file) {
+        if(-s $opts{f}){
+            #$self->warning_message('breakpoint seq file: '.$bp_file. ' existing, Now remove it');
+            print STDERR "breakpoint seq file: $opts{f} existing. It is being removed now.";
+            unlink $opts{f};
         }
         $bp_io = Bio::SeqIO->new(
-            -file   => ">>$bp_file",
+            -file   => ">>$opts{f}",
             -format => 'Fasta',
         );
     }
 
+
+=cut
     my $cm_aln_file = $self->cm_aln_file;
+
     if ($cm_aln_file) {
         $cm_aln_fh = Genome::Utility::FileSystem->open_file_for_writing($cm_aln_file) or return;
     }
-
+=cut
+	if(defined $opts{r}){
+            $cm_aln_fh->open(">$opts{r}");# or die("Cannot access cm_aln_fh: $opts{r}"));
+	}
+=cut        
     my $unc_pred_file = $self->unconfirm_predict_file;
     if ($unc_pred_file) {
         my $unc_pred_fh = Genome::Utility::FileSystem->open_file_for_writing($unc_pred_file) or return;
         $self->_unc_pred_fh($unc_pred_fh);
     }
+=cut
 
-    my $out_fh  = Genome::Utility::FileSystem->open_file_for_writing($out_file) or return;
+    my $unc_pred_fh = new IO::File;
+	if(defined $opts{v}){
+		$unc_pred_fh->open(">$opts{v}");
+	}
+	
+    #my $out_fh  = Genome::Utility::FileSystem->open_file_for_writing($out_file) or return;
+    #$out_fh->print("\#CHR1\tPOS1\tCHR2\tPOS2\tORI\tSIZE\tTYPE\tHET\twASMSCORE\tTRIMMED_CONTIG_SIZE\tALIGNED\%\tNUM_SEG\tNUM_FSUB\tNUM_FINDEL\tBP_FINDEL\tMicroHomology\tMicroInsertion\tPREFIX\tASMPARM\tCopyNumber\tGene\tKnown\n");
+    #open out_fh, ">", $out_file or die $!;
+    my $out_fh = new IO::File;
+    $out_fh->open(">$out_file" or die("Cannot access output file: $out_file"));
     $out_fh->print("\#CHR1\tPOS1\tCHR2\tPOS2\tORI\tSIZE\tTYPE\tHET\twASMSCORE\tTRIMMED_CONTIG_SIZE\tALIGNED\%\tNUM_SEG\tNUM_FSUB\tNUM_FINDEL\tBP_FINDEL\tMicroHomology\tMicroInsertion\tPREFIX\tASMPARM\tCopyNumber\tGene\tKnown\n");
+    #srand(time ^ $$);
 
-    srand(time ^ $$);
-
-    my $datadir = $self->intermediate_read_dir;
+    my $datadir = $opts{I};
+=cut
     my $sv_base = basename $self->sv_file;
     unless ($datadir) {
         if (defined $self->intermediate_save_dir) {
@@ -237,13 +301,15 @@ sub execute {
     }
     $self->status_message("Data directory: $datadir");
     $self->_data_dir($datadir);
+=cut
 
-#    my $tigra_sv_cmd = '/gscmnt/sata872/info/medseq/xfan/assembly_testdata/AML52/tigra_sv';
-    my $tigra_sv_cmd = '/gscuser/xfan/kdevelop/TIGRA_SV/src/tigra_sv';
-    my $tigra_sv_options = $self->_get_tigra_options;
-    my $bam_files = $self->_check_bam;
+    my $tigra_sv_cmd = $opts{d}; #'/gscmnt/sata872/info/medseq/xfan/assembly_testdata/AML52/tigra_sv';
+    my $tigra_sv_options = _get_tigra_options();
+    $bam_files = _check_bam();
     $tigra_sv_cmd .= ' '. $tigra_sv_options . $sv_file . $bam_files;
+    print STDERR "Tigra command: $tigra_sv_cmd";
 
+=cut
     my $rv = Genome::Utility::FileSystem->shellcmd(
         cmd           => $tigra_sv_cmd,
         input_files   => [$sv_file],
@@ -254,63 +320,79 @@ sub execute {
         $self->error_message("Running tigra_sv failed.\nCommand: $tigra_sv_cmd");
         return;
     }
-
-    my @tigra_sv_fas = glob("$datadir/*.fa.contigs.fa");#get tigra homo ctg list
-    @tigra_sv_fas = sort{(basename ($a)=~/^\S+?\.(\d+)\./)[0]<=> (basename ($b)=~/^\S+?\.(\d+)\./)[0]}@tigra_sv_fas; #sort ctg file by chr pos
+=cut
+	
+	system($tigra_sv_cmd);
+	
+    my @tigra_sv_fas = glob("$datadir/*.fa.contigs.fa");
+    
+    my $maxSV;
     
     for my $tigra_sv_fa (@tigra_sv_fas) {
         my ($tigra_sv_name) = basename $tigra_sv_fa =~ /^(\S+)\.fa\.contigs\.fa/;
         my ($chr1,$start,$chr2,$end,$type,$size,$ori,undef) = split /\./, $tigra_sv_name; # you get the $size from $prefix         
         my $prefix = join('.',$chr1,$start,$chr2,$end,$type,$size,$ori);
-
-        $self->_N50size(_ComputeTigraN50($tigra_sv_fa));
-        $self->_WeightAvgSize(_ComputeTigraWeightedAvgSize($tigra_sv_fa));
-
-        
         #test homo, het contigs
+        
+    my $N50size = _ComputeTigraN50($tigra_sv_fa);
+    my $DepthWeightedAvgSize = _ComputeTigraWeightedAvgSize($tigra_sv_fa);
         for my $ctg_type ('homo', 'het') {
-            $self->_cross_match_validation($ctg_type, $tigra_sv_name);
+            _cross_match_validation($ctg_type, $tigra_sv_name,$N50size,$DepthWeightedAvgSize); # $maxSV updated here
         }
         
-        my $maxSV = $self->_maxSV;
+        #my $maxSV = $self->_maxSV;
 
         if (defined $maxSV && ($type eq 'CTX' && $maxSV->{type} eq $type ||
 	        $type eq 'INV' && $maxSV->{type} eq $type ||
 		    (($type eq $maxSV->{type} && $type eq 'DEL') ||
 		    ($type eq 'ITX' && ($maxSV->{type} eq 'ITX' || $maxSV->{type} eq 'INS')) ||
 		    ($type eq 'INS' && ($maxSV->{type} eq 'ITX' || $maxSV->{type} eq 'INS'))) &&
-                # $maxSV->{size}
-                   $size >= $self->min_size_of_confirm_asm_sv && (!defined $self->invalid_indel_range || abs($maxSV->{size}-$size)<=$self->invalid_indel_range))) {
+                    #$maxSV->{size}
+                    $size >= $opts{m} && (!defined $opts{i} || abs($maxSV->{size} - $size) <= $opts{i}))) {
+		   # $maxSV->{size} >= $self->min_size_of_confirm_asm_sv && (!defined $self->invalid_indel_range || abs($maxSV->{size}-$size)<=$self->invalid_indel_range))) {
             my $scarstr = $maxSV->{scarsize}>0 ? substr($maxSV->{contig},$maxSV->{bkstart}-1,$maxSV->{bkend}-$maxSV->{bkstart}+1) : '-';
-
+#print STDERR "\n\nWeightedsize: $maxSV->{weightedsize}\n";
+			my $tmp1 = $maxSV->{start1} . "(" . $start . ")";
+			my $tmp2 = $maxSV->{start2} . "(" . $end . ")";
+			my $tmp3 = $maxSV->{size} . "(" . $size. ")";
+			my $tmp4 = $maxSV->{type} . "(" . $type . ")";
+                        #		my $tmp = join("\t", $maxSV->{chr1},$tmp1,$maxSV->{chr2},$tmp2,$maxSV->{ori},$tmp3,$tmp4,$maxSV->{het},$maxSV->{weightedsize},$maxSV->{read_len},$maxSV->{fraction_aligned}*100,$maxSV->{n_seg},$maxSV->{n_sub},$maxSV->{n_indel},$maxSV->{nbp_indel},$maxSV->{microhomology},$scarstr,$prefix,"a50.b100", 'NA', 'NA', 'NA');
             $out_fh->printf("%s\t%d(%d)\t%s\t%d(%d)\t%s\t%d(%d)\t%s(%s)\t%s\t%d\t%d\t%d\%\t%d\t%d\t%d\t%d\t%d\t%s\t%s\ta%d.b%d\t%s\t%s\t%s\n",$maxSV->{chr1},$maxSV->{start1},$start,$maxSV->{chr2},$maxSV->{start2},$end,$maxSV->{ori},$maxSV->{size},$size,$maxSV->{type},$type,$maxSV->{het},$maxSV->{weightedsize},$maxSV->{read_len},$maxSV->{fraction_aligned}*100,$maxSV->{n_seg},$maxSV->{n_sub},$maxSV->{n_indel},$maxSV->{nbp_indel},$maxSV->{microhomology},$scarstr,$prefix,50,100, 'NA', 'NA', 'NA');
+            #print out_fh, $tmp . "\n";
         
-            if ($bp_io) {  #save breakpoint sequence
+            #if ($bp_io) {  #save breakpoint sequence
+            if(defined $opts{f}){
                 my $coord = join(".",$maxSV->{chr1},$maxSV->{start1},$maxSV->{chr2},$maxSV->{start2},$maxSV->{type},$maxSV->{size},$maxSV->{ori});
                 my $contigsize = $maxSV->{contiglens};
                 my $seqobj = Bio::Seq->new( 
-                    -display_id => "ID:$prefix,Var:$coord,Ins:$maxSV->{bkstart}\-$maxSV->{bkend},Length:$contigsize,KmerCoverage:$maxSV->{contigcovs},Strand:$maxSV->{strand},Assembly_Score:$maxSV->{weightedsize},PercNonRefKmerUtil:$maxSV->{kmerutil},Ref_start:$maxSV->{refpos1},Ref_end:$maxSV->{refpos2},Contig_start:$maxSV->{rpos1},Contig_end:$maxSV->{rpos2},TIGRA",
+                    -display_id => "ID:$prefix,Var:$coord,Ins:$maxSV->{bkstart}\-$maxSV->{bkend},Length:$contigsize,KmerCoverage:$maxSV->{contigcovs},Strand:$maxSV->{strand},Assembly_Score:$maxSV->{weightedsize},PercNonRefKmerUtil:$maxSV->{kmerutil},TIGRA",
                     -seq => $maxSV->{contig}, 
                 );
                 $bp_io->write_seq($seqobj);
             }
 
-            if ($cm_aln_fh) {
+            #if ($cm_aln_fh) {
+            if(defined $opts{r}){
                 $cm_aln_fh->printf("%s\t%d(%d)\t%s\t%d(%d)\t%s\t%d(%d)\t%s(%s)\t%s\t%d\t%d\t%d\%\t%d\t%d\t%d\t%d\t%d\t%s\t%s\ta%d.b%d\n",$maxSV->{chr1},$maxSV->{start1},$start,$maxSV->{chr2},$maxSV->{start2},$end,$maxSV->{ori},$maxSV->{size},$size,$maxSV->{type},$type,$maxSV->{het},$maxSV->{weightedsize},$maxSV->{read_len},$maxSV->{fraction_aligned}*100,$maxSV->{n_seg},$maxSV->{n_sub},$maxSV->{n_indel},$maxSV->{nbp_indel},$maxSV->{microhomology},$scarstr,$prefix,'50','100');
+                #my $tmp1 = $maxSV->{start1} . "(" . $start;
+                #my $tmp2 = $maxSV->{start2} . ")" . $end;
+                #my $tmp = join("\t", $maxSV->{chr1},$tmp1,$maxSV->{chr2},$tmp2,$maxSV->{ori},$maxSV->{size},$size,$maxSV->{type},$type,$maxSV->{het},$maxSV->{weightedsize},$maxSV->{read_len},$maxSV->{fraction_aligned}*100,$maxSV->{n_seg},$maxSV->{n_sub},$maxSV->{n_indel},$maxSV->{nbp_indel},$maxSV->{microhomology},$scarstr,$prefix,'a50.b100');
+                #print cm_aln_fh, $tmp . "\n";
                 for my $aln (split /\,/, $maxSV->{alnstrs}) {
 	                $cm_aln_fh->printf("%s\n", join("\t", split /\|/, $aln));
+                        #print cm_aln_fh, join("\t", split /\|/, $aln) . "\n";
                 }
                 $cm_aln_fh->print("\n");
             }
         }
-        elsif ($self->_unc_pred_fh) {
-            $self->_unc_pred_fh->printf("%s\t%d\t%s\t%d\t%s\t%d\t%s\n",$chr1,$start,$chr2,$end,$type,$size,$ori);
+        elsif (defined $opts{v}) { #($self->_unc_pred_fh) {
+            #my $tmp = join("\t", $chr1, $start, $chr2, $end, $type, $size, $ori);
+            $unc_pred_fh->printf("%s\t%d\t%s\t%d\t%s\t%d\t%s\n",$chr1,$start,$chr2,$end,$type,$size,$ori);
+            #print unc_pred_fh, $tmp . "\n";
         }
-        $self->_maxSV(undef)         if $self->_maxSV; #reset for each SV
-        $self->_N50size(undef)       if $self->_N50size;
-        $self->_WeightAvgSize(undef) if $self->_WeightAvgSize;
     }
 
+=cut
     if (!defined $self->intermediate_read_dir and defined $self->intermediate_save_dir) {
         my $cmd = "mv -f $datadir " . $self->intermediate_save_dir;
         system $cmd;
@@ -318,36 +400,52 @@ sub execute {
     elsif (!defined $self->intermediate_read_dir){
         File::Temp::cleanup();
     }
+=cut
 
     $out_fh->close;
     $cm_aln_fh->close if $cm_aln_fh;
-    $self->_unc_pred_fh->close if $self->_unc_pred_fh;
-    $self->status_message('AssemblyValidation finished ok.');
+    $unc_pred_fh->close if $unc_pred_fh;
+    #close out_fh;
+    #close cm_aln_fh;
+    
+    #$self->_unc_pred_fh->close if $self->_unc_pred_fh;
+=cut
+    if(defined $opts{r}){
+		close cm_aln_file;
+	}
+	if(defined $opts{v}){
+		close unc_pred_file;
+	}
+=cut	
+	print "AssemblyValidation finished ok. ";
+    #$self->status_message('AssemblyValidation finished ok.');
 
-    return 1;
-}
+#    return 1;
+#}
 
 
 sub _check_bam {
     my $self = shift;
-    my $bam_files = $self->bam_files;
-    my (@bam_files, $valid_bam);
+    #my $bam_files = $self->bam_files;
+    my (@bam_files_, $valid_bam);
 
     if ($bam_files =~ /\,/) {
-        @bam_files = split /\,/, $bam_files; #TODO validation check each file
+        @bam_files_ = split /\,/, $bam_files; #TODO validation check each file
     }
     else {
-        @bam_files = ($bam_files);
+        @bam_files_ = ($bam_files);
     }
 
-    for my $bam (@bam_files) {
+    for my $bam (@bam_files_) {
         unless (-s $bam) {
-            $self->error_message("Bam file: $bam is not valid");
-            die $self->error_message;
+            #$self->error_message("Bam file: $bam is not valid");
+            die "Bam file: $bam is not valid";
+            #die $self->error_message;
         }
         unless (-s $bam.'.bai') {
-            $self->error_message("bam index file: $bam.bai is not valid");
-            die $self->error_message;
+            #$self->error_message("bam index file: $bam.bai is not valid");
+            die "bam index file: $bam.bai is not valid";
+            #die $self->error_message;
         }
         $valid_bam .= ' ' . $bam;
     }
@@ -356,27 +454,38 @@ sub _check_bam {
 
 
 sub _get_tigra_options {
-    my $self = shift;
-
+    #my $self = shift;
+=cut
     my %tigra_sv_options = (
         est_max_ins_size      => 'A',
         flank_size            => 'l',
         pad_local_ref         => 'w',
         map_qual_to_asm       => 'q',
         mismatch_limit        => 'N',
-#        avg_read_depth_limit  => 'p',
+        avg_read_depth_limit  => 'p',
         min_breakdancer_score => 'Q',
         skip_libraries        => 'L',
-        skip_call            => 'z',
     );
+=cut
 
-    my $tigra_opts = '-d -r -I '. $self->_data_dir  . ' ';
-    $tigra_opts .= '-b ' unless $self->custom_sv_format;
-    $tigra_opts .= '-p 10000 ' if($self->asm_high_coverage);
-    $tigra_opts .= '-z ' . $self->skip_call if($self->skip_call);
+	my %tigra_sv_options = (
+		A => $opts{A},
+		l => $opts{l},
+		w => $opts{w},
+		q => $opts{q},
+		N => $opts{N},
+                #p => $opts{p},
+		Q => $opts{Q},
+		L => $opts{L},
+	);
+	
+    my $tigra_opts = '-d -r ';
+    $tigra_opts .= '-I '. $opts{I}  . ' ' if($opts{I});
+    $tigra_opts .= '-b ' if($opts{b});
+    $tigra_opts .= '-p 10000 ' if($opts{H});
     for my $opt (keys %tigra_sv_options) {
-        if ($self->$opt) {
-            $tigra_opts .= '-'.$tigra_sv_options{$opt}.' '.$self->$opt . ' ';
+        if ($opts{$opt}) {
+            $tigra_opts .= '-'.$opt. ' ' .$tigra_sv_options{$opt}. ' ';
         }
     }
     return $tigra_opts;
@@ -384,13 +493,14 @@ sub _get_tigra_options {
 
 
 sub _cross_match_validation {
-    my ($self, $ctg_type, $tigra_sv_name) = @_;
+    my ($ctg_type, $tigra_sv_name, $N50size, $DepthWeightedAvgSize) = @_;
+    #print STDERR $tigra_sv_name;
     my ($chr1,$start,$chr2,$end,$type,$size,$ori,$regionsize,$pos1,$pos2) = split /\./, $tigra_sv_name;
 
     my $posstr = join '_', $chr1, $pos1, $chr2, $pos2, $type, $size, $ori;
     my $head   = join '.', $chr1, $start, $chr2, $end, $type, $size, $ori;
 
-    my $datadir = $self->_data_dir;
+    my $datadir = $opts{I}; #$self->_data_dir;
     my $ref_fa  = $datadir . "/$head.ref.fa"; 
     my ($tigra_sv_fa, $cm_out);
 
@@ -403,175 +513,124 @@ sub _cross_match_validation {
         $cm_out      = $datadir . "/$tigra_sv_name.het.stat";
     }
     else {
-        $self->error_message("Wrong type: $ctg_type");
-        die $self->error_message;
+        #$self->error_message("Wrong type: $ctg_type");
+        die "Wrong type: $ctg_type";
+        #die $self->error_message;
     }
     
     unless (-s $tigra_sv_fa) {
-        $self->warning_message("tigra sv fasta: $tigra_sv_fa is not valid. Skip this $ctg_type cross_match run");
+        #$self->warning_message("tigra sv fasta: $tigra_sv_fa is not valid. Skip this $ctg_type cross_match run");
+        print STDERR "tigra sv fasta: $tigra_sv_fa is not valid. Skip this $ctg_type cross_match run";
         return;
     }
 
-    my $cm_cmd_opt = '-bandwidth 20 -minmatch 20 -minscore 25 -penalty '.$self->cm_sub_penalty.' -discrep_lists -tags -gap_init '.$self->cm_gap_init_penalty.' -gap_ext -1';
+    #my $cm_cmd_opt = '-bandwidth 20 -minmatch 20 -minscore 25 -penalty '.$self->cm_sub_penalty.' -discrep_lists -tags -gap_init '.$self->cm_gap_init_penalty.' -gap_ext -1';
+    my $cm_cmd_opt = '-bandwidth 20 -minmatch 20 -minscore 25 -penalty '. $opts{P}.' -discrep_lists -tags -gap_init '.$opts{G}.' -gap_ext -1';
+
 	my $cm_cmd = "cross_match $tigra_sv_fa $ref_fa $cm_cmd_opt > $cm_out 2>/dev/null";
-	           
+
+=cut        
     my $rv = Genome::Utility::FileSystem->shellcmd (
         cmd           => $cm_cmd,
         input_files   => [$tigra_sv_fa, $ref_fa],
         #output_files => [$cm_out],
         #allow_zero_size_output_files => 1,
     );
-    
-    unless ($rv) {
-        $self->error_message("Running cross_match for $tigra_sv_name homo failed.\nCommand: $cm_cmd");
-        die $self->error_message;
-    }
-    $self->status_message("Cross_match for $type contigs: $tigra_sv_name Done");
+=cut
+
+print STDERR "CrossMatch: $cm_cmd\n";
+   system($cm_cmd);
+   #unless ($rv) {
+        #$self->error_message("Running cross_match for $tigra_sv_name homo failed.\nCommand: $cm_cmd");
+        # die "Running cross_match for $tigra_sv_name homo failed.\nCommand: $cm_cmd";
+        #die $self->error_message;
+        #}
+    #$self->status_message("Cross_match for $type contigs: $tigra_sv_name Done");
+    print STDERR "Cross_match for $type contigs: $tigra_sv_name Done\n"; 
         
+    my $tmp = File::Temp->new(
+        DIR      => '/tmp',
+        TEMPLATE => "CM_$type"."_out.XXXXXX",
+        UNLINK   => 1,
+    );
+    my $tmp_out = $tmp->filename;
+
     my $makeup_size      = 0; # by default they are zero
     my $concatenated_pos = 0; # by default they are zero
 
     if ($size > 99999) {
-        $makeup_size      = ($end - $self->flank_size) - ($start + $self->flank_size) - 1;
-        $concatenated_pos = 2 * $self->flank_size + $self->pad_local_ref;
+        #$makeup_size      = ($end - $self->flank_size) - ($start + $self->flank_size) - 1;
+        $makeup_size = ($end - $opts{l}) - ($start + $opts{l}) - 1;
+        #$concatenated_pos = 2 * $self->flank_size + $self->pad_local_ref;
+        $concatenated_pos = 2 * $opts{l} + $opts{w};
     }
 
-    $self->status_message("GetCrossMatchIndel for $tigra_sv_name $type");
+    #$self->status_message("GetCrossMatchIndel for $tigra_sv_name $type");
+    print STDERR "GetCrossMatchIndel for $tigra_sv_name $type";
+=cut
     my $cm_indel = Genome::Model::Tools::Sv::CrossMatchForIndel->create(
+        output_file          => $tmp_out,
         cross_match_file     => $cm_out,
         local_ref_seq_file   => $ref_fa,
         assembly_contig_file => $tigra_sv_fa,
-        per_sub_rate         => $self->max_polymorphism_rate,
+        per_sub_rate         => $opts{S}, #$self->max_polymorphism_rate,
         ref_start_pos        => $posstr,
         ref_cat_pos          => $concatenated_pos,
         variant_size         => $makeup_size,
     );
-    my $result = $cm_indel->execute;
+    $cm_indel->execute;
+=cut
+    
+    my $cm_indel = new CrossMatchForIndel_(cross_match_file=>$cm_out,local_ref_seq_file=>$ref_fa,assembly_contig_file=>$tigra_sv_fa,per_sub_rate=>$opts{S},ref_start_pos=>$posstr,ref_cat_pos=>$concatenated_pos,variant_size=>$makeup_size);
+    my $result = $cm_indel->execute();
+    #my $result  = read_file($tmp_out);
+#    my $N50size = _ComputeTigraN50($tigra_sv_fa);
+#    my $DepthWeightedAvgSize = _ComputeTigraWeightedAvgSize($tigra_sv_fa);
 
     if ($result && $result =~ /\S+/) {
-	    $self->_UpdateSVs($result,$makeup_size,$regionsize,$tigra_sv_fa,$ctg_type, $cm_out);
+        #$self->_UpdateSVs($result,$N50size,$DepthWeightedAvgSize,$makeup_size,$regionsize,$tigra_sv_fa,$type);
+	    _UpdateSVs($result,$N50size,$DepthWeightedAvgSize,$makeup_size,$regionsize,$tigra_sv_fa,$ctg_type);
     }
-    
+#    print STDERR "\n\nweightedsize: $maxSV->{weightedsize}\n";
     return 1;
 }
 
-
 sub _UpdateSVs{
-    my ($self,$result,$makeup_size,$regionsize,$tigra_sv_fa,$type, $cm_out) = @_;
-    my $datadir = $self->_data_dir;
-    my $maxSV   = $self->_maxSV;
-    my $N50size = $self->_N50size;
-    my $depthWeightedAvgSize = $self->_WeightAvgSize;
+    my ($result,$N50size,$depthWeightedAvgSize,$makeup_size,$regionsize,$tigra_sv_fa,$type) = @_;
+    #my $datadir = $self->_data_dir;
+    my $datadir = $opts{I};
+    #my $maxSV   = $self->_maxSV;
 
     if (defined $result) {
         my ($pre_chr1,$pre_start1,$pre_chr2,$pre_start2,$ori,$pre_bkstart,$pre_bkend,$pre_size,$pre_type,$pre_contigid,$alnscore,$scar_size,$read_len,$fraction_aligned,$n_seg,$n_sub,$n_indel,$nbp_indel,$strand,$microhomology,$alnstrs) = split /\s+/, $result;
         #$pre_size += $makeup_size if $n_seg >= 2;
         if (defined $pre_size && defined $pre_start1 && defined $pre_start2) {
             my ($contigseq,$contiglens,$contigcovs,$kmerutil) = _GetContig($tigra_sv_fa, $pre_contigid);
-            my ($refpos1, $refpos2, $rpos1, $rpos2) = _GetRefPos($cm_out, $pre_contigid);
             $alnscore = int($alnscore*100/$regionsize); 
             $alnscore = $alnscore>100 ? 100 : $alnscore;
             if (!defined $maxSV || $maxSV->{size}<$pre_size || $maxSV->{alnscore} < $alnscore) {
 	            my $N50score = int($N50size*100/$regionsize); 
                 $N50score = $N50score>100 ? 100 : $N50score;
-	            if ($self->assemble_mouse) {  #Mouse
+                #if ($self->assemble_mouse) {  #Mouse
+	            if ($opts{R}) {  #Mouse
 	                $pre_chr1 =~ s/.*\///; 
                     $pre_chr1 =~ s/\.fasta//;
 	                $pre_chr2 =~ s/.*\///; 
                     $pre_chr2 =~ s/\.fasta//;
                 }
-	            ($maxSV->{chr1},$maxSV->{start1},$maxSV->{chr2},$maxSV->{start2},$maxSV->{bkstart},$maxSV->{bkend},$maxSV->{size},$maxSV->{type},$maxSV->{contigid},$maxSV->{contig},$maxSV->{contiglens},$maxSV->{contigcovs},$maxSV->{kmerutil},$maxSV->{N50},$maxSV->{weightedsize},$maxSV->{alnscore},$maxSV->{scarsize},$maxSV->{a},$maxSV->{b},$maxSV->{read_len},$maxSV->{fraction_aligned},$maxSV->{n_seg},$maxSV->{n_sub},$maxSV->{n_indel},$maxSV->{nbp_indel},$maxSV->{strand},$maxSV->{microhomology},$maxSV->{refpos1},$maxSV->{refpos2},$maxSV->{rpos1},$maxSV->{rpos2}) = ($pre_chr1,$pre_start1,$pre_chr2,$pre_start2,$pre_bkstart,$pre_bkend,$pre_size,$pre_type,$pre_contigid,$contigseq,$contiglens,$contigcovs,$kmerutil,$N50score,$depthWeightedAvgSize,$alnscore,$scar_size,'50','100',$read_len,$fraction_aligned,$n_seg,$n_sub,$n_indel,$nbp_indel,$strand,$microhomology,$refpos1,$refpos2,$rpos1,$rpos2);
+                #print STDERR "\n\nweightedsize: $maxSV->{weightedsize}\n";
+	            ($maxSV->{chr1},$maxSV->{start1},$maxSV->{chr2},$maxSV->{start2},$maxSV->{bkstart},$maxSV->{bkend},$maxSV->{size},$maxSV->{type},$maxSV->{contigid},$maxSV->{contig},$maxSV->{contiglens},$maxSV->{contigcovs},$maxSV->{kmerutil},$maxSV->{N50},$maxSV->{weightedsize},$maxSV->{alnscore},$maxSV->{scarsize},$maxSV->{a},$maxSV->{b},$maxSV->{read_len},$maxSV->{fraction_aligned},$maxSV->{n_seg},$maxSV->{n_sub},$maxSV->{n_indel},$maxSV->{nbp_indel},$maxSV->{strand},$maxSV->{microhomology}) = ($pre_chr1,$pre_start1,$pre_chr2,$pre_start2,$pre_bkstart,$pre_bkend,$pre_size,$pre_type,$pre_contigid,$contigseq,$contiglens,$contigcovs,$kmerutil,$N50score,$depthWeightedAvgSize,$alnscore,$scar_size,'50','100',$read_len,$fraction_aligned,$n_seg,$n_sub,$n_indel,$nbp_indel,$strand,$microhomology);
+                    #print STDERR "\n\nweightedsize: $maxSV->{weightedsize}\n";
 	            $maxSV->{het}     = $type;
 	            $maxSV->{ori}     = $ori;
 	            $maxSV->{alnstrs} = $alnstrs;
-
-                    # add according to Ken's requirement
-                    if($maxSV->{strand} =~ /-/ && $maxSV->{type} =~ /DEL/i){
-                        $maxSV->{start2} -= 1;
-                        $maxSV->{bkend} -= 1;
-                    }
             }
         }
     }
-    $self->_maxSV($maxSV);
+    #$self->_maxSV($maxSV);
+    #_maxSV($maxSV);
     return 1;
 }
-
-# only good for small INDELs
-sub _GetRefPos{
-    my ($fin, $contigid) = @_;
-    my ($ref_start, $ref_end, $r_start, $r_end);
-    my ($ref_start1, $ref_end1, $r_start1, $r_end1);
-    my ($refpos1, $refpos2, $rpos1, $rpos2);
-    my ($chr, $ref_1, $ref_2);
-    my $num = 0;
-    open(CM,"<$fin") || die "unable to open $fin\n";
-    while(<CM>){
-        if($_ =~ /^ALIGNMENT/ && $_ =~ /$contigid/){
-            my @a = split(/\s+/, $_);
-            my ($r1, $r2, $r3, $type, $str, $g1, $g2, $g3);
-
-            if($#a == 13){
-                ($r1, $r2, $r3, $type, $str, $g1, $g2, $g3) = ($a[$#a - 7], $a[$#a - 6], $a[$#a - 5], $a[$#a - 4], $a[$#a - 3], $a[$#a - 2], $a[$#a - 1], $a[$#a]);
-            }
-            else{
-                ($r1, $r2, $r3, $str, $g1, $g2, $g3) = ($a[$#a - 6], $a[$#a - 5], $a[$#a - 4], $a[$#a - 3], $a[$#a - 2], $a[$#a - 1], $a[$#a]);
-            }
-
-            #print "HHHHHHHHHHHHHH: $r1, $r2, $r3\n";
-            ($chr, $ref_1, $ref_2) = ($str =~ /(\S+):(\d+)-(\d+)/);
-                
-            #print "HHHHHHHHHHHHHHH: $g1\t$g2\t$g3\n";
-            if($g1 =~ /\(/){
-                ($ref_start, $ref_end) = ($g2, $g3) if($num == 0);
-                ($ref_start1, $ref_end1) = ($g2, $g3) if($num == 1);
-            }
-            if($r1 =~ /\(/){
-                ($r_start, $r_end) = ($r2, $r3) if($num == 0);
-                ($r_start1, $r_end1) = ($r2, $r3) if($num == 1);
-            }
-            if($g3 =~ /\(/){
-                ($ref_start, $ref_end) = ($g1, $g2) if($num == 0);
-                ($ref_start1, $ref_end1) = ($g1, $g2) if($num == 1);
-            }
-            if($r3 =~ /\(/){
-                ($r_start, $r_end) = ($r1, $r2) if($num == 0);
-                ($r_start1, $r_end1) = ($r1, $r2) if($num == 1);
-            }
-
-
-            $num ++;
-        }
-    }
-
-    if($num >= 2){
-        #$refpos1 = $ref_start > $ref_start1 ? $ref_start1 : $ref_start;
-        #$refpos2 = $ref_end > $ref_end1 ? $ref_end : $ref_end1;
-        #$rpos1 = $refpos1 == $ref_start ? $r_start : $r_start1;
-        #$rpos2 = $refpos2 == $ref_end ? $r_end : $r_end1;
-        $rpos1 = $r_start > $r_start1 ? $r_start1 : $r_start;
-        $rpos2 = $r_end > $r_end1 ? $r_end : $r_end1;
-        $refpos1 = $rpos1 == $r_start ? $ref_start : $ref_start1;
-        $refpos2 = $rpos2 == $r_end ? $ref_end : $ref_end1;
-    }
-    else{
-        $refpos1 = $ref_start;
-        $refpos2 = $ref_end;
-        $rpos1 = $r_start;
-        $rpos2 = $r_end;
-    }
-
-    $refpos1 += $ref_1;
-    $refpos2 += $ref_1;
-
-
-#    print "$refpos1\t$refpos2\n";
-    return ($refpos1, $refpos2, $rpos1, $rpos2);
-}
-
-
-
-
 
 
 sub _GetContig{
@@ -595,7 +654,9 @@ sub _ComputeTigraN50{
     my @sizes;
     my $totalsize = 0;
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($contigfile) or return;
+    #my $fh = Genome::Utility::FileSystem->open_file_for_reading($contigfile) or return;
+    my $fh = new IO::File;
+    $fh->open("<$contigfile" or return);
     while (my $l = $fh->getline){
         chomp $l;
         next unless $l =~ /^\>/;
@@ -623,7 +684,9 @@ sub _ComputeTigraWeightedAvgSize{
     my $totalsize  = 0;
     my $totaldepth = 0;
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($contigfile) or return;
+    #my $fh = Genome::Utility::FileSystem->open_file_for_reading($contigfile) or return;
+    my $fh = new IO::File;
+    $fh->open("<$contigfile" or return);
     while (my $l = $fh->getline) {
         chomp $l;
         next unless $l =~ /^\>/;
@@ -642,4 +705,4 @@ sub _ComputeTigraWeightedAvgSize{
     return $totaldepth > 0 ? int($totalsize*100/$totaldepth)/100 : 0;
 }
 
-1;
+

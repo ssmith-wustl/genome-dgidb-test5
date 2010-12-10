@@ -13,44 +13,104 @@ class Genome::Model::Tools::Dacc::Upload {
         files => {
             is => 'Text',
             is_many => 1,
-            shell_args_position => 3,
+            shell_args_position => 2,
             doc => '',
+        },
+        launch_to_lsf => {
+            is => 'Boolean',
+            is_optional => 1,
+            doc => 'Download must be run through LSF. This will schedule an LSF job with the correct rusage.',
         },
     ],
 };
 
-sub create {
-    my $class = shift;
+sub help_brief {
+    return 'Upload files to the DACC';
+}
 
-    my $self = $class->SUPER::create(@_);
-    return if not $self;
+sub help_detail {
+    return <<HELP;
+    Upload files to the DACC site. Give the DACC directory and files. Once uploaded, it will be verified that they exist in the DACC directory, and the size is the same. 
+    
+    Because of the internet upload and aspera upload resource requirement, this command must run through the LSF queue. It cannot be run locally. Specify --launch-to-lsf.
+HELP
+}
 
-    return $self;
+sub rusage {
+    return (qw/ internet_upload_mbps=100 aspera_upload_mbps=100 /);
 }
 
 sub execute {
     my $self = shift;
 
-    if  ( not $self->is_host_a_blade ) {
-        $self->error_message('To upload from the DACC, this command must be run on a blade');
-        return;
-    }
+    $self->status_message('Upload');
 
-    for my $file ( $self->files ) {
+    my $dacc_remote_directory = $self->dacc_remote_directory;
+    $self->status_message("Dacc remote directory: $dacc_remote_directory");
+
+    my @files = $self->files;
+    for my $file ( @files ) {
         if ( not -e $file ) {
             $self->error_message("File to upload ($file) does not exist");
             return;
         }
     }
-    my $file_string = join(' ', $self->files);
-    $self->status_message("Files: $file_string");
+    my $files_string = join(' ', @files);
+    $self->status_message("Files: $files_string");
 
-    my $cmd = $self->base_command.' -d '.$file_string.' '.$self->dacc_remote_directory;
+    if ( $self->launch_to_lsf ) {
+        return $self->_launch_to_lsf(@files);
+    }
+
+    my $in_lsf = $self->validate_running_in_lsf_and_on_a_blade;
+    return if not $in_lsf;
+
+    my $cmd = $self->base_command.' -d '.$files_string.' '.$dacc_remote_directory;
     my $rv = eval{ Genome::Utility::FileSystem->shellcmd(cmd => $cmd); };
     if ( not $rv ) {
         $self->error_message("Aspera command failed: $cmd");
         return;
     }
+
+    my $upload_ok = $self->validate_files_were_uploaded;
+    return if not $upload_ok;
+
+    $self->status_message('Upload...OK');
+
+    return 1;
+}
+
+sub validate_files_were_uploaded {
+    my $self = shift;
+
+    $self->status_message('Validate files were uploaded');
+
+    my $dacc_directory = $self->dacc_directory;
+    my @files = $self->files;
+    my %available_files_and_sizes = $self->available_files_and_sizes;
+
+    my $error;
+    for my $file ( @files ) {
+        my $file_name = File::Basename::basename($file);
+        Carp::confess("Cannot get base name for file: $file") if not $file_name;
+        if ( not exists $available_files_and_sizes{$file_name} ) {
+            $error = 1;
+            $self->error_message("Attempted to upload file ($file), but it is not in the DACC directory: $dacc_directory");
+            next;
+        }
+        my $size = -s $file;
+        $self->status_message('File: '.$file);
+        $self->status_message('Size: '.$size);
+        $self->status_message('Size on DACC: '.$available_files_and_sizes{$file_name});
+        if ( $size != $available_files_and_sizes{$file_name} ) {
+            $error = 1;
+            $self->error_message("Attempted to upload file ($file), but file size in DACC directory ($dacc_directory) does not match: $size <=> $available_files_and_sizes{$file_name}");
+        }
+    }
+
+    return if $error;
+
+    $self->status_message('Validate files were uploaded...OK');
 
     return 1;
 }
@@ -58,30 +118,6 @@ sub execute {
 1;
 
 =pod
-
-=head1 Name
-
-ModuleTemplate
-
-=head1 Synopsis
-
-=head1 Usage
-
-=head1 Methods
-
-=head2 
-
-=over
-
-=item I<Synopsis>
-
-=item I<Arguments>
-
-=item I<Returns>
-
-=back
-
-=head1 See Also
 
 =head1 Disclaimer
 
