@@ -21,8 +21,7 @@ sub help_brief {
 sub help_synopsis{
     my $self = shift;
     return <<"EOS"
-gmt cmds pipeline sequencing-data --model-group-id 123 --data-directory /someplace/for/output
-gmt cmds pipeline sequencing-data --model-ids "123 456 789" --data-directory /someplace/for/output
+genome model somatic cmds --models "123 456 789" --data-directory /someplace/for/output
 EOS
 }
 
