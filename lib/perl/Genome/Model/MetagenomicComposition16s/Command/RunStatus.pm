@@ -55,9 +55,11 @@ sub execute {
         }
         push @row, $models[0]->name;
         my $build = $models[0]->last_succeeded_build;
-        if ( not $build ) {
+        if ( not $build ) { # get the last build
+            my @builds = $models[0]->builds;
+            next if not @builds;
+            $build = $builds[$#builds];
             #push @row, (qw/ NO_BUILD NO_STATUS NO_FASTAS /);
-            next;
         }
         push @row, map { $build->$_ } (qw/ id status oriented_fasta_files /);
     }
