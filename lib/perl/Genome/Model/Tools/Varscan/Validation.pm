@@ -31,7 +31,8 @@ class Genome::Model::Tools::Varscan::Validation {
         reference        => { is => 'Text', doc => "Reference FASTA file for BAMs" , is_optional => 1, is_input => 1, default_value => (Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa')},
         skip_if_output_present => { is => 'Text', doc => "If set to 1, skip execution if output files exist", is_optional => 1, is_input => 1 },
         varscan_params   => { is => 'Text', doc => "Parameters to pass to VarScan" , is_optional => 1, is_input => 1, default_value => '--min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.01 --validation 1 --min-coverage 8'},
-        samtools_version => { is => 'Text', doc => 'Version of samtools to use', default=>'r544' },
+        samtools_version => { is => 'Text', doc => 'Version of samtools to use', default=> 'r544' },
+        version  => { is => 'Text', doc => 'Version of VarScan to us', default => 'latest' },
     ],
 
     has_param => [
@@ -117,7 +118,9 @@ sub execute {                               # replace with real execution logic.
         my $normal_pileup = "$sam_pathname pileup -f $reference $normal_bam";
         my $tumor_pileup = "$sam_pathname pileup -f $reference $tumor_bam";
 
-        my $cmd = "bash -c \"java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) $temp_output --output-snp $temp_snp --output-indel $temp_indel $varscan_params\"";
+        my $varscan_path = Genome::Model::Tools::Varscan->path_for_version($self->version);
+
+        my $cmd = "bash -c \"java -jar $varscan_path somatic <\($normal_pileup\) <\($tumor_pileup\) $temp_output --output-snp $temp_snp --output-indel $temp_indel $varscan_params\"";
 
         Genome::Utility::FileSystem->shellcmd(
             cmd => $cmd,
