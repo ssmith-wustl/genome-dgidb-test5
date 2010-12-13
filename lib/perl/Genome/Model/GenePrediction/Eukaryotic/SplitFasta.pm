@@ -24,6 +24,12 @@ class Genome::Model::GenePrediction::Eukaryotic::SplitFasta {
         },
     ],
     has_optional => [
+        max_chunks => {
+            is => 'Number',
+            is_input => 1,
+            default => 100,
+            doc => 'Maximum number of chunks allowed, if this limit is reached then max bases per files is increased as needed',
+        },
         max_bases_per_file => {
             is => 'Number',
             is_input => 1,
@@ -69,28 +75,50 @@ sub execute {
         -format => 'Fasta',
     );
 
+    # The only way (I know of) to determine total sequence in the fasta file is to iterate through it. I hate
+    # to iterate through the same file twice...
+    my $total_bases = 0;
+    while (my $sequence = $fasta_file->next_seq()) {
+        $total_bases += $sequence->length;
+    }
+
+    # Now determine the chunk size... chunk size begins at the value provided by the user. If the total number of 
+    # chunks (using this chunk size) exceeds the total allowable chunks, then chunk size is increased.
+    my $chunk_size = $self->max_bases_per_file;
+    my $total_chunks = $total_bases / $chunk_size;
+    unless ($total_chunks <= $self->max_chunks) {
+        $chunk_size = int (($total_bases / $self->max_chunks) * 1.1);  # This is to allow some wiggle room, since each fasta won't
+                                                                       # have exactly the maximum number the bases
+        $self->status_message("Increasing fasta chunk size from " . $self->max_bases_per_file . " to $chunk_size. This prevents the " .
+            "total number of split fastas from exceeding " . $self->max_chunks . " (would have been $total_chunks).");
+    }
+
+    # Now split up the fasta file!
     my @filenames;
     my $current_fasta;
     my $counter = 0;
     my $current_chunk_size = 0;
-    my $total_bases = 0;
-    my $upper_limit = $self->max_bases_per_file;
     my $output_directory = $self->output_directory;
 
     $self->status_message("Creating smaller fasta files in $output_directory containing sequence " .
-        "from $fasta_file_path and each having no more than $upper_limit bases");
+        "from $fasta_file_path and each having no more than $chunk_size bases");
 
     unless (-d $output_directory) {
         my $rv = make_path($output_directory);
         confess "Could not make directory $output_directory!" unless defined $rv and $rv == 1;
     }
 
+    # Need to reset the iterator before going through the fasta file again...
+    $fasta_file = Bio::SeqIO->new(
+        -file => $fasta_file_path,
+        -format => 'Fasta',
+    );
+
+    # Now write sequence to each fasta chunk, making sure that the chunk size is never exceeded
     while (my $sequence = $fasta_file->next_seq()) {
         my $length = $sequence->length;
 
-        if (not defined $current_fasta or ($current_chunk_size + $length) > $upper_limit) {
-            $total_bases += $current_chunk_size;
-
+        if (not defined $current_fasta or ($current_chunk_size + $length) > $chunk_size) {
             my $filename = $output_directory . "/fasta_$counter";
             $current_fasta = Bio::SeqIO->new(
                 -file => ">$filename",
@@ -105,8 +133,6 @@ sub execute {
         $current_fasta->write_seq($sequence);
         $current_chunk_size += $length;
     }
-
-    $total_bases += $current_chunk_size;
 
     $self->fasta_files(\@filenames);
     $self->genome_size($total_bases);
