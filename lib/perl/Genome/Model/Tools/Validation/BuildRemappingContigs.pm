@@ -7,10 +7,20 @@ use Genome;
 use Command;
 use Genome::Utility::FileSystem;    #for file parsing etc
 use POSIX; #for rounding
+use Bio::PrimarySeq;    #necessary to do pairwise alignment with Bio::dpAlign
+use Bio::Tools::dpAlign;    #for pairwise alignment of the contigs
+use Bio::SimpleAlign;   #dpAlign returns alignments in this format
+use Bio::AlignIO;
+
 
 class Genome::Model::Tools::Validation::BuildRemappingContigs {
     is => 'Command',
     has => [
+        input_file => {
+            type => 'String',
+            is_optional => 0,
+            doc => 'The input file used for assembly. This is used to track which variants assembled',
+        },
         tumor_assembly_breakpoints_file => {
             type => 'String',
             is_optional => 0,
@@ -48,6 +58,15 @@ class Genome::Model::Tools::Validation::BuildRemappingContigs {
             type => 'String',
             is_optional => 1,
         },
+        _alignment_factory_object => {
+            type => 'Object',
+            is_optional => 1,
+        },
+        _generation_stats => {
+            type => 'Hashref',
+            is_optional => 1,
+            default => {},
+        },
     ]
 };
 
@@ -82,90 +101,132 @@ sub execute {
     #set the same executable path on the object
     $self->_samtools_exec(Genome::Model::Tools::Sam->path_for_samtools_version($self->samtools_version));
 
-    #check files
+    #parse the assembly input file
+    my $input_fh = Genome::Utility::FileSystem->open_file_for_reading($self->input_file); #this should die if it fails
+    my %expected_contigs;
+
+    while(my $line = $input_fh->getline) {
+        chomp $line;
+        my @fields = split /\t/, $line;
+        next if $fields[0] =~ /^#/; #skip header or comments
+        next if $fields[7] < 3; #skip small indels
+        my $id = join(".",@fields[0,1,3,4,6,7],"+-");
+        $expected_contigs{$id} = {};
+    }
+    
+
+    #read in files
     my $tumor_breakpoints = $self->tumor_assembly_breakpoints_file;
     my $normal_breakpoints = $self->normal_assembly_breakpoints_file;
 
-    my %contigs;
-
-    my $tumor_contigs = $self->read_in_breakpoints($tumor_breakpoints);
+    my $tumor_contigs = $self->read_in_breakpoints($tumor_breakpoints,'tumor');
     unless($tumor_contigs) {
         $self->error_message("Unable to parse $tumor_breakpoints");
         return;
     }
+    my $normal_contigs = $self->read_in_breakpoints($normal_breakpoints,'normal');
+    unless($normal_contigs) {
+        $self->error_message("Unable to parse $normal_breakpoints");
+        return;
+    }
+
+    #pool all the contigs
+    my @contigs = (@$tumor_contigs,@$normal_contigs);
+    my @resized_contigs = ();
 
     #resize the contigs
-    for my $contig (@$tumor_contigs) {
+    for my $contig (@contigs) {
         $self->resize_contig($contig); #this edits the contig in place to reach a desired size
-        print STDERR "> resized contig\n",$contig->{'sequence'},"\n";
+        #print STDERR "> resized contig\n",$contig->{'sequence'},"\n";
+
+        unless($contig->{'contig_start'} < $contig->{'contig_stop'}) {
+            #we will skip those until they are fixed
+            $self->error_message("Trimmed genomic coordinates make no sense for variant starting at " . $contig->{'pred_pos1'} . "\n");
+        }
+        else {
+            push @resized_contigs, $contig;
+        }
     }
 
     #for testing purposes now want to report if any of the contigs overlap at all
     #what we would really want to do is sort all contigs tumor/normal and report overlap
-    #for now let's just sort by tumor only and check
-    my $last_chr = '';
-    my $last_start = 0;
-    my $last_stop = 0;
-    for my $contig (sort {_sort_contigs($a,$b)} @$tumor_contigs) {
-        
+    my $stats_hash = $self->_generation_stats;
+    $stats_hash->{number_of_overlapping_contigs} = 0;
+    $stats_hash->{number_of_contigs_total} = 0;
+
+    my $current_chr = '';
+    my $current_start = 0;
+    my $current_stop = 0;
+    my @overlapping_contigs = ();
+    for my $contig (sort {_sort_contigs($a,$b)} @resized_contigs) {
+        if(exists($expected_contigs{$contig->{id}})) {
+            $expected_contigs{$contig->{id}}{$contig->{source}} = 1;
+        }
+        else {
+            $self->error_message("Unexpected contig id: " . $contig->{id});
+        }
+
+        $stats_hash->{number_of_contigs_total}++;
         #these should be sorted by chromosome, start, stop now
-        if($last_chr eq $contig->{pred_chr1}) {
-            #could overlap this will be non-simple if the contigs are of different sizes
-            if($last_start <= $contig->{contig_start} && $last_stop >= $contig->{contig_start}) {
-                print "Overlap detected for ",join(".",$contig->{pred_chr1},$contig->{pred_pos1},$contig->{pred_pos2},$contig->{pred_type},$contig->{pred_size}),"\n";
+        #check for overlap with the current region
+        if($current_chr eq $contig->{pred_chr1} && $current_start <= $contig->{contig_start} && $current_stop >= $contig->{contig_start}) {
+            print "Overlap detected for ",join(".",$contig->{pred_chr1},$contig->{pred_pos1},$contig->{pred_pos2},$contig->{pred_type},$contig->{pred_size}),"\n";
+            $stats_hash->{number_of_overlapping_contigs}++;
+            if($current_stop < $contig->{contig_stop}) {
+                #roll into region we are intersecting with
+                $current_stop = $contig->{contig_stop};
             }
         }
-        $last_chr = $contig->{pred_chr1};
-        $last_start = $contig->{contig_start};
-        $last_stop = $contig->{contig_stop};
-
-
+        else {
+            #no overlap, handle last region's set of contigs
+            if(@overlapping_contigs > 1) {
+                $self->handle_overlap(@overlapping_contigs);
+            }
+            else {
+                #do something with what's in the array, if anything
+                if(@overlapping_contigs) {
+                    #print or put into new array or something
+                }
+            }
+            @overlapping_contigs = ();
+            $current_chr = $contig->{pred_chr1};
+            $current_start = $contig->{contig_start};
+            $current_stop = $contig->{contig_stop};
+        }
+        push @overlapping_contigs, $contig;
     }
 
-    #for my $contig (@$tumor_contigs) {
-    #    if(exists($contigs{$contig->{pred_chr1}}{$contig->{pred_pos1}}{tumor})) {
-    #        $self->error_message(sprintf "Multiple tumor variants assembled at %s:%d. Duplicates are assumed to be the same and are overwritten regardless of content.",$contig->{pred_chr1},$contig->{pred_pos1});
-    #    }
-    #    $self->resize_contig($contig); #this edits the contig in place to reach a desired size
-    #    print STDERR "> resized contig\n",$contig->{'sequence'},"\n";
-    #    $contigs{$contig->{pred_chr1}}{$contig->{pred_pos1}}{tumor} = $contig;
-    #}
-    #undef $tumor_contigs;
+    #figure out how many indels have no contig at all
+    #and how many have a contig in normal and how many from normal
+    foreach my $id (keys %expected_contigs) {
+        $stats_hash->{number_attempted}++;
+        if(!exists($expected_contigs{$id}{tumor}) && !exists($expected_contigs{$id}{normal})) {
+            $stats_hash->{number_failed_assembly}++;
+        }
+        if(exists($expected_contigs{$id}{tumor}) && $expected_contigs{$id}{tumor} == 1) {
+            $stats_hash->{number_with_tumor}++;
+        }
+        if(exists($expected_contigs{$id}{normal}) && $expected_contigs{$id}{normal} == 1) {
+            $stats_hash->{number_with_normal}++;
+        }
+        if(exists($expected_contigs{$id}{tumor}) && exists($expected_contigs{$id}{normal}) && $expected_contigs{$id}{normal} == 1 && $expected_contigs{$id}{tumor} == 1) {
+            $stats_hash->{number_with_both}++;
+        }
+    }
 
+            
 
-
-    #my $normal_contigs = $self->read_in_breakpoints($normal_breakpoints);
-    #unless($normal_contigs) {
-    #    $self->error_message("Unable to parse $normal_breakpoints");
-    #    return;
-    #}
-
-    #for my $contig (@$normal_contigs) {
-    #    if(exists($contigs{$contig->{pred_chr1}}{$contig->{pred_pos1}}{normal})) {
-    #        $self->error_message(sprintf "Multiple normal contigs generated for variant predicted at %s:%d. Duplicates are assumed to be the same and are overwritten regardless of content.",$contig->{pred_chr1},$contig->{pred_pos1});
-    #    }
-    #    $self->resize_contig($contig); #this edits the contig in place to reach a desired size
-    #    $contigs{$contig->{pred_chr1}}{$contig->{pred_pos1}}{normal} = $contig;
-    #}
-    #undef $normal_contigs;
-
-    #now should have a single hash with all resized contigs that were available.
-    #
-
-
-
-
-
-
-
-
+    #print stats
+    foreach my $key (keys %$stats_hash) {
+        print "$key: ", $stats_hash->{$key},"\n";
+    }
         
     return 1;
 
 }
 
 sub read_in_breakpoints {
-    my ($self, $breakpoint_file) = @_;
+    my ($self, $breakpoint_file, $source) = @_;
     my $fh = Genome::Utility::FileSystem->open_file_for_reading($breakpoint_file);
     if($fh) {
         my @contigs;
@@ -177,9 +238,12 @@ sub read_in_breakpoints {
                 #resolve last contig
                 if(%$current_contig) {
                     $current_contig->{'sequence'} = $current_contig_sequence;
+                    if(defined $source) {
+                        $current_contig->{'source'} = $source;
+                    }
                     #adjust strand
                     if($current_contig->{'strand'} ne '+') {
-                        print STDERR "> original contig\n$current_contig_sequence\n";
+                        #print STDERR "> original contig\n$current_contig_sequence\n";
                         $current_contig->{'sequence'} =~ tr/ACGTacgt/TGCAtgca/;
                         $current_contig->{'sequence'} = reverse $current_contig->{'sequence'};
                         $current_contig->{'strand'} = '+';
@@ -193,10 +257,24 @@ sub read_in_breakpoints {
                         my $temp_var_location = $current_contig->{'contig_location_of_variant'};
                         $current_contig->{'contig_location_of_variant'} = $current_contig->{'length'} - $current_contig->{'microhomology_contig_endpoint'} + 1;
                         $current_contig->{'microhomology_contig_endpoint'} = $current_contig->{'length'} - $temp_var_location + 1;
-                        print STDERR "> reverse complemented contig\n",$current_contig->{'sequence'},"\n";
+                        #print STDERR "> reverse complemented contig\n",$current_contig->{'sequence'},"\n";
                     }
-                        
-                    push @contigs, $current_contig;
+
+                    #check to make sure we didn't get back something crazy
+                    if($current_contig->{'assem_type'} !~ /INS|DEL/i) {
+                        $self->error_message("Skipping contig that assembled as a type other than insertion or deletion with variant starting at " . $current_contig->{'pred_pos1'});
+                    }
+                    else {
+                        #check that coordinates make sense
+                        unless($current_contig->{'contig_start'} < $current_contig->{'contig_stop'}) {
+                            #we will skip those until they are fixed
+                            $self->error_message("Genomic coordinates make no sense for variant starting at " . $current_contig->{'pred_pos1'} . "\n");
+                        }
+                        else {
+                            push @contigs, $current_contig;
+                        }
+                    }
+
                 }
                 $current_contig = $self->parse_breakpoint_contig_header($line);
                 $current_contig_sequence = "";
@@ -226,6 +304,9 @@ sub parse_breakpoint_contig_header {
         if($tag =~ /^ID/) {
             #this contains info about the original call
             @contig{ qw( pred_chr1 pred_pos1 pred_chr2 pred_pos2 pred_type pred_size pred_orientation) } = split /\./, $entry;
+
+            #also store the id for identification later
+            $contig{'id'} = $entry;
         }
         elsif($tag =~ /^Var/) {
             #this contains info about what the crossmatch parsing thing thought was the variant
@@ -269,6 +350,16 @@ sub parse_breakpoint_contig_header {
             #note that this might not correspond to the last base of the contig. For now we're going to include mismatching bases as insertions/mismatches
             $contig{'contig_stop'} = $entry;
         }
+        elsif($tag =~ /Contig_start/) {
+            #this is the position of the first aligned base of the contig
+            #note that this might not correspond to the first base of the contig. For now we're going to include mismatching bases as insertions/mismatches
+            $contig{'align_start'} = $entry;
+        }
+        elsif($tag =~ /Contig_end/) {
+            #this is the position of the last aligned base of the contig
+            #note that this might not correspond to the last base of the contig. For now we're going to include mismatching bases as insertions/mismatches
+            $contig{'align_stop'} = $entry;
+        }
         else {
             #we'll ignore all other fields for now
         }    
@@ -302,9 +393,6 @@ sub resize_contig {
     if($change_needed_to_left_flank_size < 0) {
         #trim the existing contig
         substr($contig->{'sequence'},0,abs($change_needed_to_left_flank_size),"");
-        #TODO update coordinates to match new contig
-        #basically need to subtract the change from all contig relevant coordinates
-        #and set the leftmost ref coordinate to the trimmed coordinate
     }
     elsif($change_needed_to_left_flank_size > 0) {
         my $lstart = $contig_start - $change_needed_to_left_flank_size;
@@ -315,13 +403,11 @@ sub resize_contig {
             return;
         }
         $contig->{'sequence'} = join("",$additional_lseq, $contig->{'sequence'});
-        #TODO update coordinates to match new contig
     }
 
     if($change_needed_to_right_flank_size < 0) {
         #trim the existing contig
         substr($contig->{'sequence'},$change_needed_to_right_flank_size, abs($change_needed_to_right_flank_size),"");
-        #TODO update coordinates to match new contig
     }
     elsif($change_needed_to_right_flank_size > 0) {
         my $rstart = $contig_stop + 1;
@@ -334,7 +420,6 @@ sub resize_contig {
 
         #otherwise, pad the contig
         $contig->{'sequence'} = join("", $contig->{'sequence'}, $additional_rseq);
-        #TODO update coordinates to match new contig
     }
 
     #generally update all coordinates here
@@ -366,7 +451,7 @@ sub fetch_flanking_sequence {
         return;
     }
     else {
-        return join("",map { chomp; $_; } @seq); #this should change the sequence into a single string regardless of length
+        return join("",map { chomp; lc($_); } @seq); #this should change the sequence into a single string regardless of length
     }
 }
 
@@ -385,6 +470,69 @@ sub _sort_contigs {
         return $a->{pred_chr1} cmp $b->{pred_chr1}; 
     } 
 }
+
+sub handle_overlap {
+    my ($self, @contigs) = @_;
+
+    my $stats_hash = $self->_generation_stats;
+
+    #set up the pairwise alignment object if necessary
+    my $alignment_factory;
+    if($self->_alignment_factory_object) {
+        $alignment_factory = $self->_alignment_factory_object;
+    }
+    else {
+        #don't really know what appropriate parameters are so just use defaults
+        $alignment_factory = new Bio::Tools::dpAlign(-alg => Bio::Tools::dpAlign::DPALIGN_ENDSFREE_MILLER_MYERS); 
+        unless($alignment_factory) {
+            $self->error_message("Unable to create a Bio::Tools::dpAlign object for pairwise alignment");
+            die;
+        }
+
+        $self->_alignment_factory_object($alignment_factory);   #store on object so we only need one of these things
+    }
+    
+    #this should handle the case where we want to merge multiple contigs
+    my @contigs_considering = @contigs;
+    my $last_contig_number = 0;
+
+    while($last_contig_number != @contigs_considering) {
+        $last_contig_number = @contigs_considering;
+
+        my @contigs_considered = ();
+        while(my $contig1 = pop @contigs_considering) {
+
+            my $contig1_seq =  Bio::PrimarySeq->new( -seq => $contig1->{'sequence'}, -id  => join("-",$contig1->{id},$contig1->{source}),);
+            my @contigs_to_continue_examining = ();
+
+            while(my $contig2 = pop @contigs_considering) {
+                my $contig2_seq = Bio::PrimarySeq->new( -seq => $contig2->{'sequence'}, -id => join("-",$contig2->{id},$contig2->{source}),);
+
+                #do alignment
+                my $alignment = $alignment_factory->pairwise_alignment($contig1_seq, $contig2_seq);
+                my $alnout = new Bio::AlignIO(-format => 'pfam', -fh => \*STDERR);
+                if($alignment->percentage_identity >= 98 && $alignment->gap_line !~ /[-]/ && $alignment->length >= ($self->contig_size - 5)) {  
+                    #this is the simple case, the contigs are nearly 100% identical and we do nothing. This is essentially disappearing contig2
+                    $stats_hash->{near_perfect_merged_overlaps}++;
+                }
+                else {
+                    push @contigs_to_continue_examining, $contig2;
+                    #write the alignment to stderr for debugging
+                    print STDERR "> ",$contig1->{id},"\n",$contig1->{sequence},"\n";
+                    print STDERR "> ",$contig2->{id},"\n",$contig2->{sequence},"\n";
+
+                    $alnout->write_aln($alignment);
+                }
+
+            }
+            @contigs_considering = @contigs_to_continue_examining;
+            push @contigs_considered, $contig1; #this contig is representative of the set
+        }
+        @contigs_considering = @contigs_considered;
+    }
+    return @contigs_considering;
+}
+        
 
 
 
