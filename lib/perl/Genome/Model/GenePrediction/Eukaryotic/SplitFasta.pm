@@ -87,8 +87,8 @@ sub execute {
     my $chunk_size = $self->max_bases_per_file;
     my $total_chunks = $total_bases / $chunk_size;
     unless ($total_chunks <= $self->max_chunks) {
-        $chunk_size = ($total_bases / $self->max_chunks) * .1;  # This is to allow some wiggle room, since each fasta won't
-                                                                # have exactly the maximum number the bases
+        $chunk_size = int (($total_bases / $self->max_chunks) * 1.1);  # This is to allow some wiggle room, since each fasta won't
+                                                                       # have exactly the maximum number the bases
         $self->status_message("Increasing fasta chunk size from " . $self->max_bases_per_file . " to $chunk_size. This prevents the " .
             "total number of split fastas from exceeding " . $self->max_chunks . " (would have been $total_chunks).");
     }
@@ -108,6 +108,13 @@ sub execute {
         confess "Could not make directory $output_directory!" unless defined $rv and $rv == 1;
     }
 
+    # Need to reset the iterator before going through the fasta file again...
+    $fasta_file = Bio::SeqIO->new(
+        -file => $fasta_file_path,
+        -format => 'Fasta',
+    );
+
+    # Now write sequence to each fasta chunk, making sure that the chunk size is never exceeded
     while (my $sequence = $fasta_file->next_seq()) {
         my $length = $sequence->length;
 
