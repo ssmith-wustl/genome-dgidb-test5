@@ -464,6 +464,7 @@ sub _UpdateSVs{
     my $depthWeightedAvgSize = $self->_WeightAvgSize;
 
     if (defined $result) {
+        print STDERR "Result: $result\n";
         my ($pre_chr1,$pre_start1,$pre_chr2,$pre_start2,$ori,$pre_bkstart,$pre_bkend,$pre_size,$pre_type,$pre_contigid,$alnscore,$scar_size,$read_len,$fraction_aligned,$n_seg,$n_sub,$n_indel,$nbp_indel,$strand,$microhomology,$alnstrs) = split /\s+/, $result;
         #$pre_size += $makeup_size if $n_seg >= 2;
         if (defined $pre_size && defined $pre_start1 && defined $pre_start2) {
@@ -481,6 +482,7 @@ sub _UpdateSVs{
                     $pre_chr2 =~ s/\.fasta//;
                 }
 	            ($maxSV->{chr1},$maxSV->{start1},$maxSV->{chr2},$maxSV->{start2},$maxSV->{bkstart},$maxSV->{bkend},$maxSV->{size},$maxSV->{type},$maxSV->{contigid},$maxSV->{contig},$maxSV->{contiglens},$maxSV->{contigcovs},$maxSV->{kmerutil},$maxSV->{N50},$maxSV->{weightedsize},$maxSV->{alnscore},$maxSV->{scarsize},$maxSV->{a},$maxSV->{b},$maxSV->{read_len},$maxSV->{fraction_aligned},$maxSV->{n_seg},$maxSV->{n_sub},$maxSV->{n_indel},$maxSV->{nbp_indel},$maxSV->{strand},$maxSV->{microhomology},$maxSV->{refpos1},$maxSV->{refpos2},$maxSV->{rpos1},$maxSV->{rpos2}) = ($pre_chr1,$pre_start1,$pre_chr2,$pre_start2,$pre_bkstart,$pre_bkend,$pre_size,$pre_type,$pre_contigid,$contigseq,$contiglens,$contigcovs,$kmerutil,$N50score,$depthWeightedAvgSize,$alnscore,$scar_size,'50','100',$read_len,$fraction_aligned,$n_seg,$n_sub,$n_indel,$nbp_indel,$strand,$microhomology,$refpos1,$refpos2,$rpos1,$rpos2);
+                print STDERR "\n\nWeightedsize: $maxSV->{weightedsize}\n";
 	            $maxSV->{het}     = $type;
 	            $maxSV->{ori}     = $ori;
 	            $maxSV->{alnstrs} = $alnstrs;
@@ -509,6 +511,7 @@ sub _GetRefPos{
     while(<CM>){
         if($_ =~ /^ALIGNMENT/ && $_ =~ /$contigid/){
             my @a = split(/\s+/, $_);
+            next if($a[5] ne $contigid);
             my ($r1, $r2, $r3, $type, $str, $g1, $g2, $g3);
 
             if($#a == 13){
