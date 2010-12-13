@@ -69,8 +69,8 @@ sub help_detail {
         return $rhs_mismatch <=> $lhs_mismatch;
     }
     if($lhs_num_aln == 0) {
-        # Neither alignment pair has a mapped read; the alignment pairs are equally bad
-        return 0;
+        # Neither alignment pair has a mapped read; the alignment pairs are equally bad print random pair
+        return rand_select($rhs,$lhs);
     }
 
 =cut
@@ -113,6 +113,7 @@ sub execute {
 
     my $name_count = 0;
     my $read_count = 0;
+    my $finished_reading = 0;
     my $last_name = '';
     
     READ_NAME:
@@ -139,9 +140,9 @@ sub execute {
                 my $fh = $in_fh[$in_num];
                 my $line = <$fh>;
 
-                last READ_NAME if not defined $line;
+                $finished_reading++ and last READ_NAME if not defined $line; 
                 
-                # skip headers (pass through to output)
+                # skip headers (pass through to output) 
                 if(substr($line, 0, 1) eq '@') {
                     $out_fh->print($line);
                     redo;
@@ -175,7 +176,8 @@ sub execute {
                     if ($self->softclip_mismatch){
                         #if the softclip_mismatch arg is present, add the softclip(and hardclip) bases from the cigar string to the mismatch number
                         my $cigar = $s[$cigar_col];
-                        my ($start_clip, $stop_clip) = $cigar =~ /^(\d+)[hs].*(\d+)[hs]$/;
+                        my ($start_clip) = $cigar =~ /^(\d+)[hs]/i;
+                        my ($stop_clip) = $cigar =~/(\d+)[hs]$/i;
                         $start_clip ||=0;
                         $stop_clip ||=0;
                         $nm += $start_clip+$stop_clip;
@@ -224,9 +226,13 @@ sub execute {
 
         # this is entirely to provide progress message.
         $name_count++;
-        if ($name_count % 10_000 == 0) {
+        if ($name_count % 500_000 == 0) {
             print STDERR "fragments: $name_count, reads: $read_count\n";
         }        
+
+        if ($finished_reading){
+            print STDERR "Done reading! fragments: $name_count, reads: $read_count\n";
+        }
 
         # sanity check
         if (
@@ -258,7 +264,7 @@ sub execute {
             }
 
             if ($best_n_reads_mapped == 0) {
-                # no reads aligned, they are all equal, just dump the first pair
+                # no reads aligned, they are all equal, just dump the first pair 
                 @best = ($best[0]);
             }
 
@@ -274,18 +280,17 @@ sub execute {
                 }
             }
 
-            # next look for best edit distance (NM)
+            # next look for best edit distance (NM)  
             if (@best > 1) {
                 # more than one is a top candidate looking just at alignment count
                 # look at the edit distance
-                my $best_nm_sum = 0;
-                for (my $in_num=0; $in_num<$in_count; $in_num++) {
-                    my $candidate = $a[$in_num]; # examine a pair for one file
+                my $best_nm_sum = 10000000; #pick a sufficiently high "worst" mismatch value
+                for my $candidate (@best) {
 
                     my $nm_sum = 0;
                     $nm_sum += $candidate->[0][-1]    if                        not $candidate->[0][$flag_col] & 4;
                     $nm_sum += $candidate->[1][-1]    if $paired_end1_count and not $candidate->[1][$flag_col] & 4;                
-                    if ($nm_sum > $best_nm_sum) {
+                    if ($nm_sum < $best_nm_sum) {
                         @best = ($candidate);
                         $best_nm_sum = $nm_sum;
                     }

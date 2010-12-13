@@ -61,10 +61,6 @@ class Genome::Model::GenePrediction {
                 return substr($latin_name, 0, $second);
             ),
         },
-        locus_id => {
-            via => 'subject',
-            to => 'locus_tag',
-        },        
         ncbi_taxonomy_id => {
             via => 'subject',
             to => 'ncbi_taxon_id',
@@ -104,6 +100,13 @@ sub create {
     if (defined $assembly_contigs_file) {
         unless (-e $assembly_contigs_file and -s $assembly_contigs_file) {
             confess "No file or zero-sized file at $assembly_contigs_file, cannot create gene prediction model!";
+        }
+
+        # It's expected that this is a fasta file, make sure it is
+        my $format_guesser = Bio::Tools::GuessSeqFormat->new(-file => $assembly_contigs_file);
+        my $format = $format_guesser->guess;
+        unless ($format eq 'fasta') {
+            confess "Assembly contigs file is not in fasta format (format seems to be $format)! Currently only fasta format is supported!";
         }
 
         $self->add_input(
@@ -211,7 +214,6 @@ sub validate_taxon {
     # Gram stain doesn't apply to some (all?) eukaryotes
     push @missing_fields, "gram stain" if $self->domain =~ /Bacterial/ and not defined $taxon->gram_stain_category;
     push @missing_fields, "domain" unless defined $taxon->domain;
-    push @missing_fields, "locus id" unless defined $taxon->locus_tag;
 
     if (@missing_fields) {
         $self->error_message("These fields on taxon " . $taxon->id .

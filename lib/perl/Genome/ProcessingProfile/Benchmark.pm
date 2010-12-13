@@ -158,4 +158,8 @@ sub _validate_build {
     }
 }
 
+sub _resolve_disk_group_name_for_build {
+    return 'systems_benchmarking';
+}
+
 1;
