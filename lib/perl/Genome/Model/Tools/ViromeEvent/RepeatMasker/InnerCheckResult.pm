@@ -71,7 +71,8 @@ sub execute {
     $self->log_event("Running repeat masker on $file_name");
 
     #RUN REPEAT MASKER USING GZHAO'S LIBRARY
-    my $com = "/gsc/var/tmp/virome/scripts/scripts2/RepeatMasker ".$file;
+#    my $com = "/gsc/var/tmp/virome/scripts/scripts2/RepeatMasker ".$file;
+    my $com = "/gscmnt/sata835/info/medseq/virome/scripts_used_by_virome/RepeatMasker " . $file;
 
     if (system($com)) {
 	$self->log_event("Repeat masker failed for $file_name");

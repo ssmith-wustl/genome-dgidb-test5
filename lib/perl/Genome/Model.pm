@@ -558,9 +558,11 @@ sub compatible_instrument_data {
     my %params;
 
     my $subject_type_class;
-    if ($self->get_all_possible_sample_names)  {
+    if (my @sample_names = $self->get_all_possible_sample_names)  {
+        my @samples = Genome::Sample->get(name => \@sample_names);
+        my @sample_ids = map($_->id, @samples);
         %params = (
-                   sample_name => [ $self->get_all_possible_sample_names ],
+                   sample_id => \@sample_ids,
                );
         $params{sequencing_platform} = $self->sequencing_platform if $self->sequencing_platform;
     } else {

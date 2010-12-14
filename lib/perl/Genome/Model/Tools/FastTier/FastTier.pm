@@ -49,21 +49,26 @@ class Genome::Model::Tools::FastTier::FastTier {
             calculate => q{ "$variant_file.tier4"; },
             is_output => 1,
         },
+        tier_file_location => {
+            type => 'Text',
+            is_input => 1,
+            doc => 'Use this to point to a directory containing tier1.bed - tier4.bed in order to use different bed files for tiering',
+        },
         _tier1_bed => {
             type => 'Text',
-            default => "/gscmnt/ams1102/info/info/tier_bed_files/tier1.bed",
+            default => "/gscmnt/sata921/info/medseq/make_tier_bed_files/NCBI-human-build36/tier1.bed",
         },
         _tier2_bed => {
             type => 'Text',
-            default => "/gscmnt/ams1102/info/info/tier_bed_files/tier2.bed",
+            default => "/gscmnt/sata921/info/medseq/make_tier_bed_files/NCBI-human-build36/tier2.bed",
         },
         _tier3_bed => {
             type => 'Text',
-            default => "/gscmnt/ams1102/info/info/tier_bed_files/tier3.bed",
+            default => "/gscmnt/sata921/info/medseq/make_tier_bed_files/NCBI-human-build36/tier3.bed",
         },
         _tier4_bed => {
             type => 'Text',
-            default => "/gscmnt/ams1102/info/info/tier_bed_files/tier4.bed",
+            default => "/gscmnt/sata921/info/medseq/make_tier_bed_files/NCBI-human-build36/tier4.bed",
         }, 
     ]
 
@@ -90,10 +95,28 @@ sub execute {
     }
     my ($variant_filename, $directory, undef) = fileparse($self->variant_file); 
 
-    $self->_tier1_bed("/gscmnt/sata921/info/medseq/make_tier_bed_files/fix_gmt_again/tier1_gmt.bed");
-    $self->_tier2_bed("/gscmnt/sata921/info/medseq/make_tier_bed_files/fix_gmt_again/tier2_gmt.bed");
-    $self->_tier3_bed("/gscmnt/sata921/info/medseq/make_tier_bed_files/fix_gmt_again/tier3_gmt.bed");
-    $self->_tier4_bed("/gscmnt/sata921/info/medseq/make_tier_bed_files/fix_gmt_again/tier4_gmt.bed");
+    #if the user specified an alternate location for tier bed files, check and load them
+    if(defined($self->tier_file_location)){
+        unless(-d $self->tier_file_location){
+            $self->error_message("You must specify a directory containing the 4 tier files.");
+            die $self->error_message;
+        }
+        my @tiers = map { $self->tier_file_location."/tier".$_.".bed";} (1,2,3,4);
+        for my $t (@tiers){
+            unless(-s $t){
+                $self->error_message("Could not locate a bed file at ".$t."\n");
+                die $self->error_message;
+            }
+        }
+        $self->_tier1_bed($tiers[0]);
+        $self->_tier2_bed($tiers[1]);
+        $self->_tier3_bed($tiers[2]);
+        $self->_tier4_bed($tiers[3]);
+    }
+    $self->status_message("Using tier 1 bed file  at ".$self->_tier1_bed ."\n");
+    $self->status_message("Using tier 2 bed file  at ".$self->_tier2_bed ."\n");
+    $self->status_message("Using tier 3 bed file  at ".$self->_tier3_bed ."\n");
+    $self->status_message("Using tier 4 bed file  at ".$self->_tier4_bed ."\n");
     
     my $tier1_temp;
     my $tier2_temp;
