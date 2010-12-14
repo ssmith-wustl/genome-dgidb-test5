@@ -239,7 +239,7 @@ sub execute {
     $self->_data_dir($datadir);
 
 #    my $tigra_sv_cmd = '/gscmnt/sata872/info/medseq/xfan/assembly_testdata/AML52/tigra_sv';
-    my $tigra_sv_cmd = '/gscuser/xfan/kdevelop/TIGRA_SV/src/tigra_sv';
+    my $tigra_sv_cmd = '/gscuser/xfan/kdevelop/TIGRA_SV/src/tigra_sv_test';
     my $tigra_sv_options = $self->_get_tigra_options;
     my $bam_files = $self->_check_bam;
     $tigra_sv_cmd .= ' '. $tigra_sv_options . $sv_file . $bam_files;
@@ -392,6 +392,7 @@ sub _cross_match_validation {
 
     my $datadir = $self->_data_dir;
     my $ref_fa  = $datadir . "/$head.ref.fa"; 
+#    my $ref_fa = $datadir . "/$head.1.ref.fa";
     my ($tigra_sv_fa, $cm_out);
 
     if ($ctg_type eq 'homo') {
@@ -490,7 +491,7 @@ sub _UpdateSVs{
                     # add according to Ken's requirement
                     if($maxSV->{strand} =~ /-/ && $maxSV->{type} =~ /DEL/i){
                         $maxSV->{start2} -= 1;
-                        $maxSV->{bkend} -= 1;
+                        $maxSV->{bkend} -= 1 if($maxSV->{bkend} ne "-");
                     }
             }
         }
