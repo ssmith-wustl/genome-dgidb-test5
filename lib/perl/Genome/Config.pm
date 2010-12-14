@@ -92,7 +92,7 @@ sub current_user_id {
 }
 
 sub admin_notice_users {
-    qw/abrummet boberkfe eclark jeldred jlolofie ssmith apipe-run/;
+    qw/abrummet boberkfe jeldred jlolofie ssmith apipe-run/;
 }
 
 sub namespaces {

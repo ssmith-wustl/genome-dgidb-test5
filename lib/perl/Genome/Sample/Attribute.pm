@@ -8,7 +8,7 @@ class Genome::Sample::Attribute {
     table_name => 'GSC.SAMPLE_ATTRIBUTE',
     id_by => [
         sample_id        => { column_name => 'ORGANISM_SAMPLE_ID' },
-        nomenclature    => { default_value => 'wugc', doc => 'the since an attribute name can have different meanings in different contexts, this supplies context' },
+        nomenclature    => { default_value => 'WUGC', doc => 'the since an attribute name can have different meanings in different contexts, this supplies context' },
         name            => { column_name => 'ATTRIBUTE_LABEL' },
     ],
     has_optional => [

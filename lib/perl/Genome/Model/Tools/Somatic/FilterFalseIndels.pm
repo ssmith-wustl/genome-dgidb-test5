@@ -640,7 +640,6 @@ sub fails_homopolymer_check
     {
 	if($sequence =~ $homoA || $sequence =~ $homoC || $sequence =~ $homoG || $sequence =~ $homoT)
 	{
-	    print join("\t", $chrom, $chr_start, $chr_stop, $ref, $var, "Homopolymer: $sequence") . "\n";
 	    return($sequence);
 	}
     }

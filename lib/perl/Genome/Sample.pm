@@ -114,8 +114,25 @@ class Genome::Sample {
         patient_name                 => { via => 'patient', to => 'name', doc => 'the system name for a patient (subset of the sample name)' },
         
         patient_common_name          => { via => 'patient', to => 'common_name', doc => 'names like AML1, BRC50, etc' },
-
-
+        age => { 
+            is => 'Number',
+            via => 'attributes', 
+            where => [ name => 'age', nomenclature => 'WUGC', ], 
+            to => 'value',
+            is_optional => 1,
+            is_many => 0,
+            is_mutable => 1,
+            doc => 'Age of the patient at the time of sample taking.',
+        },
+        body_mass_index => {
+            via => 'attributes',
+            where => [ name => 'body_mass_index', nomenclature => 'WUGC', ] ,
+            to => 'value',
+            is_optional => 1,
+            is_many => 0,
+            is_mutable => 1,
+            doc => 'BMI of the patient at the time of sample taking.',
+        },
         tcga_name                   => { via => 'attributes', where => [ 'nomenclature like' => 'TCGA%', name => 'biospecimen_barcode_side'], to => 'value' },
 
         taxon                       => { is => 'Genome::Taxon', id_by => 'taxon_id', 
@@ -136,7 +153,7 @@ class Genome::Sample {
         projects                     => { is => 'Genome::Site::WUGC::Project', via => 'project_assignments', to => 'project', is_many => 1},
     ],
     has_many => [
-        attributes                  => { is => 'Genome::Sample::Attribute', reverse_as => 'sample', specify_by => 'name' },
+        attributes                  => { is => 'Genome::Sample::Attribute', reverse_as => 'sample', specify_by => 'name', is_optional => 1, is_many => 1, },
         libraries                   => { is => 'Genome::Library', reverse_id_by => 'sample' },
         solexa_lanes                => { is => 'Genome::InstrumentData::Solexa', reverse_id_by => 'sample' },
         solexa_lane_names           => { via => 'solexa_lanes', to => 'full_name' },
