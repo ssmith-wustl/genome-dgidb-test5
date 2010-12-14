@@ -210,6 +210,7 @@ sub _use_model_subclasses {
     return 1;
 }
 
+1;
 
 =pod
 
