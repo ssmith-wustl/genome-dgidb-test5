@@ -123,11 +123,11 @@ This is the base namespace module for the Genome software tree.
 
 That tree has several primary components:
 
- Genome::Model:         a data-modeling pipeline system for genomics
+ Genome::Model:         a data modeling pipeline management system for genomics 
 
- Genome::Model::Tools   a tree of tools and tool wrappers with >1000 components
+ Genome::Model::Tools   a tree of >1000 tools and tool wrappers for genomics
 
- Genome::*              a variety of patient and sample tracking classes with an RDBMS back-end
+ Genome::*              a variety of sample tracking classes with an RDBMS back-end
 
 Only the tools system is currently released.  
 
@@ -142,14 +142,15 @@ the National Human Genome Research Institute.
 
 =head1 LICENSE
 
-This software is copyright Washington University in St. Louis.  It is released under
-the Lesser GNU Public License (LGPL) version 3.  See the associated LICENSE file in
-this distribution.
+This software is copyright Washington University in St. Louis, 2007-2010.  
+
+It is released under the Lesser GNU Public License (LGPL) version 3.  See the 
+associated LICENSE file in this distribution.
 
 =head1 BUGS
 
 For defects with any software in the genome namespace,
-contact genome-dev@genome.wustl.edu.
+contact genome-dev ~at~ genome.wustl.edu.
 
 =cut
 
