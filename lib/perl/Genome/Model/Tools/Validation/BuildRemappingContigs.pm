@@ -170,7 +170,7 @@ sub execute {
         #these should be sorted by chromosome, start, stop now
         #check for overlap with the current region
         if($current_chr eq $contig->{pred_chr1} && $current_start <= $contig->{contig_start} && $current_stop >= $contig->{contig_start}) {
-            print "Overlap detected for ",join(".",$contig->{pred_chr1},$contig->{pred_pos1},$contig->{pred_pos2},$contig->{pred_type},$contig->{pred_size}),"\n";
+            print STDERR "Overlap detected for ",join(".",$contig->{pred_chr1},$contig->{pred_pos1},$contig->{pred_pos2},$contig->{pred_type},$contig->{pred_size}),"\n";
             $stats_hash->{number_of_overlapping_contigs}++;
             if($current_stop < $contig->{contig_stop}) {
                 #roll into region we are intersecting with
@@ -180,12 +180,23 @@ sub execute {
         else {
             #no overlap, handle last region's set of contigs
             if(@overlapping_contigs > 1) {
-                $self->handle_overlap(@overlapping_contigs);
+                @overlapping_contigs = $self->handle_overlap(@overlapping_contigs);
             }
-            else {
-                #do something with what's in the array, if anything
-                if(@overlapping_contigs) {
-                    #print or put into new array or something
+            if(@overlapping_contigs) {
+                #Here we will print out a contig
+                #make sure that the info to count the contig is present and make sure that lines are shortish
+                foreach my $unique_contig (@overlapping_contigs) {
+                    print STDOUT "> ",join("_",@$unique_contig{qw( pred_chr1 pred_pos1 pred_pos2 pred_type source) });
+
+                    #need to code in the range on the contig for the variant as well as the range on the reference to count. For non-overlapping contigs this is simple. Let's also code overlap status
+                    printf STDOUT " Overlap:%d",@overlapping_contigs - 1;   #this should code the number of other contigs overlapping the contig
+                    printf STDOUT " Ref:%s.%d.%d Con:%d.%d\n",@$unique_contig{qw( assem_chr1 assem_pos1 assem_pos2 contig_location_of_variant microhomology_contig_endpoint )};
+
+                    #print sequence with each line containing 80bp
+                    my $sequence = $unique_contig->{sequence};
+                    while($sequence) {
+                        print substr($sequence,0,80,""),"\n";
+                    }
                 }
             }
             @overlapping_contigs = ();
@@ -218,7 +229,7 @@ sub execute {
 
     #print stats
     foreach my $key (keys %$stats_hash) {
-        print "$key: ", $stats_hash->{$key},"\n";
+        print STDERR "$key: ", $stats_hash->{$key},"\n";
     }
         
     return 1;
