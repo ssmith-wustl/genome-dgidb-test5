@@ -3,6 +3,7 @@ use strict;
 use warnings;
 
 use Class::Autouse;
+#use Genome::Site::WUGC::Security;
 
 # configuration for internal WUGC network software & LIMS 
 # this module is called by Genome::Config::edu::wustl::gsc right now on all *.gsc.wustl.edu hosts
@@ -110,6 +111,11 @@ sub _sync_env {
         }
         UR::DBI->no_commit(1);
     }
+}
+
+
+unless ($0 =~ /gmt/ and `grep log_command $0`) {
+    require Genome::Site::WUGC::Security;
 }
 
 1;
