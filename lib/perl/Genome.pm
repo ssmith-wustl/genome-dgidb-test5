@@ -15,7 +15,7 @@ use Genome::Config;
 eval {
     local $SIG{__WARN__};
     local $SIG{__DIE__};
-    use Genome::Search;
+    require Genome::Search;
 };
 
 # modules we need to auto-load
