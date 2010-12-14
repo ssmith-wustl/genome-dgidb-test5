@@ -132,7 +132,7 @@ class Genome::Model::Tools::Somatic::StrandFilter {
 };
 
 sub help_brief {
-    return "This module uses strandedness and read position to further filter somatic variants";
+    return "This DEPRECATED module uses strandedness and read position to further filter somatic variants";
 }
 
 sub help_synopsis {
@@ -144,7 +144,8 @@ EOS
 
 sub help_detail {                           
     return <<EOS 
-This module uses strandedness and read position to further filter somatic variants
+This DEPRECATED module uses strandedness and read position to further filter somatic variants.
+It has now been replaced by 'gmt somatic filter-false-positives'. Please use that instead!
 EOS
 }
 
@@ -152,10 +153,10 @@ sub execute {
     my $self = shift;
     $DB::single=1;
 
-    if ($self->skip) {
-        $self->status_message("Skipping execution: Skip flag set");
+#    if ($self->skip) {
+        $self->status_message("This filter is now deprecated. Please use 'gmt somatic filter-false-positives' instead!");
         return 1;
-    }
+ #   }
     
     if (($self->skip_if_output_present)&&(-s $self->output_file)) {
         $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
