@@ -1,4 +1,4 @@
-package Genome::Sample::Command::ImportMetahit;
+package Genome::Sample::Command::ImportTcga;
 
 use strict;
 use warnings;
@@ -7,30 +7,14 @@ use Genome;
 
 use Data::Dumper 'Dumper';
 
-class Genome::Sample::Command::ImportMetahit { 
+class Genome::Sample::Command::ImportTcga { 
     is => 'Command',
     has => [
         name => {
             is => 'Text',
             doc => 'MetaHIT sample name.',
         },
-        gender => {
-            is => 'Text',
-            valid_values => [qw/ male female /],
-            doc => 'The gender of the individual.',
-        },
-        age => {
-            is => 'Number',
-            doc => 'The age of the individual at time of sample taking.',
-        },
-        bmi => {
-            is => 'Text',
-            doc => 'The body mass index of the individual at time of sample taking.',
-        },
-        _individual_name => {
-            calculate_from => [qw/ name /],
-            calculate => q| return 'METAHIT-'.$name; |,
-        },
+        _individual_name => { is_optional => 1, },
         _library => { is_optional => 1, },
     ],
 };
@@ -39,6 +23,9 @@ sub library { return $_[0]->_library; }
 
 sub execute {
     my $self = shift;
+
+    my $name_ok = $self->_validate_name;
+    return if not $name_ok;
 
     my $individual = $self->_get_or_create_individual;
     return if not $individual;
@@ -50,7 +37,27 @@ sub execute {
     return if not $library;
     $self->_library($library);
 
-    $self->status_message('Import MetaHIT '.$self->name.'...OK');
+    $self->status_message('Import TCGA '.$self->name.'...OK');
+
+    return 1;
+}
+
+sub _validate_name {
+    my $self = shift;
+
+    my $name = $self->name;
+    my @tokens = split('-', $name);
+    if ( not @tokens == 7 ) {
+        $self->error_message("Invalid TCGA name ($name). It must have 7 parts separated by dashes.");
+        return;
+    }
+
+    if ( not $tokens[0] eq 'TCGA' ) {
+        $self->error_message("Invalid TCGA name ($name). It must start with TCGA.");
+        return;
+    }
+
+    $self->_individual_name( join('-', @tokens[0..2]) );
 
     return 1;
 }
@@ -59,7 +66,6 @@ sub _get_or_create_individual {
     my $self = shift;
 
     my $name = $self->_individual_name;
-
     $self->status_message('Get or create individual');
     $self->status_message('Individual name: '.$name);
 
@@ -77,7 +83,6 @@ sub _get_or_create_individual {
         upn => $name,
         taxon_id => $taxon->id,
         _nomenclature => 'unknown',
-        gender => $self->gender,
     );
     if ( not $individual ) {
         $self->error_message('Cannot create individual to import MetaHIT '.$self->name);
@@ -98,7 +103,7 @@ sub _get_or_create_sample {
 
     Carp::confess('No individual given to create sample') if not $individual;
 
-    my $name = $individual->name.'-1'; # TODO allow for more than one sample
+    my $name = $self->name; 
     $self->status_message('Get or create sample');
     $self->status_message('Sample name: '.$name);
 
@@ -113,13 +118,9 @@ sub _get_or_create_sample {
         extraction_label => $name,
         source_id => $individual->id,
         source_type => $individual->subject_type,
-        tissue_desc => 'G_DNA_Stool',
-        tissue_label => 'G_DNA_Stool',
         extraction_type => 'genomic',
-        cell_type => 'unknown',
-        _nomenclature => 'unknown',
-        #age => $self->age,
-        #body_mass_index => $self->bmi,
+        cell_type => 'primary',
+        _nomenclature => 'TCGA',
     );
     if ( not $sample ) {
         $self->error_message("Cannot create sample to import MetaHIT $name");
@@ -127,13 +128,6 @@ sub _get_or_create_sample {
     }
     if ( not UR::Context->commit ) {
         $self->error_message('Cannot commit sample to DB.');
-        return;
-    }
-
-    $sample->age( $self->age );
-    $sample->body_mass_index( $self->bmi );
-    if ( not UR::Context->commit ) {
-        $self->error_message('Cannot commit age and bmi to sample in DB.');
         return;
     }
 
