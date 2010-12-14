@@ -316,7 +316,7 @@ sub _profiles_matching_subclass_and_params {
     delete $params{supersedes};
     
     # Get all existing pps
-    my @existing_pps = $subclass->get($type_name ? (type_name => $type_name) : ());
+    my @existing_pps = $subclass->get($type_name ? (type_name => $type_name) : (), '-hint' => ['params']);
     return unless @existing_pps; # none ok
 
     # Go through each one, aking sure that the params don't match. Some params may be undef
