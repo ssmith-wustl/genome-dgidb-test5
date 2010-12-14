@@ -32,7 +32,7 @@ class Genome::Model::Tools::Varscan::Validation {
         skip_if_output_present => { is => 'Text', doc => "If set to 1, skip execution if output files exist", is_optional => 1, },
         varscan_params   => { is => 'Text', doc => "Parameters to pass to VarScan" , is_optional => 1, default_value => '--min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.01 --validation 1 --min-coverage 8'},
         samtools_version => { is => 'Text', doc => 'Version of samtools to use', default=> 'r544' },
-        version  => { is => 'Text', doc => 'Version of VarScan to use', default => 'latest' },
+        version          => { is => 'Text', doc => 'Version of VarScan to use', default => 'latest' },
     ],
 
     has_param => [
