@@ -11,7 +11,12 @@ use UR::ObjectV001removed;
 
 # environmental configuration
 use Genome::Config;
-use Genome::Search;
+
+eval {
+    local $SIG{__WARN__};
+    local $SIG{__DIE__};
+    use Genome::Search;
+};
 
 # modules we need to auto-load
 use Test::MockObject;
@@ -57,7 +62,10 @@ if ($] < 5.01) {
 
 
 # this ensures that the search system is updated when certain classes are updated 
-Genome::Search->register_callbacks('UR::Object');
+# the search system is optional so it skips this if usage above fails
+if ($INC{"Genome/Search.pm"}) {
+    Genome::Search->register_callbacks('UR::Object');
+}
 
 # DB::single is set to this value in many places, creating a source-embedded break-point
 # set it to zero in the debugger to turn off the constant stopping...
