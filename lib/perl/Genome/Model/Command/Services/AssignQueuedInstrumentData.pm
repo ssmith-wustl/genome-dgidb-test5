@@ -37,6 +37,11 @@ class Genome::Model::Command::Services::AssignQueuedInstrumentData {
             default     => 0,
             doc         => 'Process newest PSEs first',
         },
+        pse_id => {
+            is          => 'Number',
+            is_optional => 1,
+            doc         => 'Ignore other parameters and only process this PSE.',
+        },
         _existing_models_with_existing_assignments => {
             is => 'HASH',
             doc => 'Existing models that already had the instrument data for a PSE assigned',
@@ -313,15 +318,24 @@ sub load_pses {
 
     my $ps = GSC::ProcessStep->get( process_to => 'queue instrument data for genome modeling' );
 
-    my @pses = GSC::PSE->get(
-        ps_id      => $ps->ps_id,
-        pse_status => 'inprogress',
-    );
-    return unless @pses;
+    my @pses;
+    if($self->pse_id) { #process a specific PSE
+        @pses = GSC::PSE->get(
+            ps_id => $ps->ps_id,
+            pse_status => 'inprogress',
+            id => $self->pse_id,
+        );
+    } else {
+        @pses = GSC::PSE->get(
+            ps_id      => $ps->ps_id,
+            pse_status => 'inprogress',
+        );
 
-    if($self->test) {
-        @pses = grep($_->pse_id < 0, @pses);
+        if($self->test) {
+            @pses = grep($_->pse_id < 0, @pses);
+        }
     }
+    return unless @pses;
 
     @pses = sort $pse_sorter @pses;
 
