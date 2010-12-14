@@ -76,9 +76,80 @@ class Genome::Model::Build::ReferenceSequence {
                 }
             ),
         },   
+
+        # optional to allow builds to indicate that they are derived from another build
+        derived_from_id => {
+            is => 'Genome::Model::Build::ReferenceSequence',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'derived_from', value_class_name => 'Genome::Model::Build::ReferenceSequence' ],
+            doc => 'Identifies the parent build from which this one is derived, if any.',
+            is_mutable => 1,
+            is_many => 0,
+            is_optional => 1,
+        },
+
+        derived_from => {
+            is => 'Genome::Model::Build::ReferenceSequence',
+            id_by => 'derived_from_id',
+        },
     ],
     doc => 'a specific version of a reference sequence, with cordinates suitable for annotation',
 };
+
+sub __errors__ {
+    my $self = shift;
+    my @tags = $self->SUPER::__errors__();
+
+    if (defined $self->derived_from and $self->derived_from->model->id != $self->model->id) {
+        push @tags, UR::Object::Tag->create(
+            type => 'error',
+            properties => ['derived_from'],
+            desc => "Reference sequence build " . $self->__display_name__ . " of model " . $self->model->__display_name__ .
+                " is 'derived_from' build " . $self->derived_from->__display_name__ . " which is a build of a different model, ".
+                $self->derived_from->model->__display_name__);
+    }
+
+    if (defined $self->derived_from and $self->derived_from->id == $self->id) {
+        push @tags, UR::Object::Tag->create(
+            type => 'error',
+            properties => ['derived_from'],
+            desc => "A build cannot be explicitly derived from itself!");
+    }
+    return @tags;
+}
+
+sub is_derived_from {
+    my ($self, $build, $seen) = @_;
+    $seen = {} if !defined $seen;
+    if (exists $seen->{$self->id}) {
+        die "Circular link found in derived_from chain. Current build: " . $self->__display_name__ . ", derived from: " .
+            $self->derived_from->__display_name__ . ", seen: " . join(',', keys %{$seen});
+    }
+
+    return 1 if $build->id == $self->id;
+    return 0 if !defined $self->derived_from;
+
+    # recurse
+    $seen->{$self->id} = 1;
+    return $self->derived_from->is_derived_from($build, $seen); 
+}
+
+sub coordinates_from {
+    my ($self) = @_;
+    my $from = $self;
+    my %seen = ($self->id => 1);
+    while (defined $from->derived_from) {
+        $from = $from->derived_from;
+        if (exists $seen{$from->id}) {
+            die "Circular link found in derived_from chain while calculating 'coordinates_from'.".
+                " Current build: " . $self->__display_name__ . ", derived from: " .
+                $from->derived_from->__display_name__ . ", seen: " . join(',', keys %seen);
+        }
+        $seen{$from->id} = 1;
+    }
+    return $from;
+}
 
 sub __display_name__ {
     my $self = shift;

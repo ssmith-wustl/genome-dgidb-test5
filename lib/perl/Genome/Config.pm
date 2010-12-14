@@ -1,10 +1,9 @@
-#boberkfe: code should actually use some paths here rather than hardcoding stuff everywhere!
-#eclark: Probably shouldn't contain complicated methods here either.  Just configuration (or configuration reading) logic.
-
 package Genome::Config;
 
 use strict;
 use warnings;
+
+our $VERSION = $Genome::VERSION;
 
 BEGIN {
     if (my $config = $ENV{GENOME_CONFIG}) {
@@ -32,6 +31,7 @@ BEGIN {
         }
     }
 }
+
 use UR;
 use Sys::Hostname;
 
@@ -211,6 +211,7 @@ sub _use_model_subclasses {
     return 1;
 }
 
+1;
 
 =pod
 
@@ -220,59 +221,24 @@ Genome::Config - environmental configuration for the genome modeling tools
 
 =head1 DESCRIPTION
 
-This module currently just contains global, hard-coded paths.
+The methods in this module are undergoing heavy refactoring and should be ignored until a later release.
 
-For portability, it should use an instance of Genome::Config loadable from an environment variable.
+=head1 AUTHORS
 
-=head1 METHODS
+This software is developed by the analysis and engineering teams at 
+The Genome Center at Washington Univiersity in St. Louis, with funding from 
+the National Human Genome Research Institute.
 
-=head2 root_directory 
+=head1 LICENSE
 
-This is the directory under which all other data is symlinked.
-It can be changed with the GENOME_MODEL_ROOT environment variable.
+This software is copyright Washington University in St. Louis.  It is released under
+the Lesser GNU Public License (LGPL) version 3.  See the associated LICENSE file in
+this distribution.
 
-This value is typically constant for one site.  It changes only for testing.
+=head1 BUGS
 
-=head2 data_directory 
-
-This is the directory under which new data is actually placed.
-It can be changed with the GENOME_MODEL_DATA environment variable.
-
-This value changes over time, as disk fills, and new space is made for
-new data.
-
-=head2 model_data_directory
-
-The default directory into which new models are placed.  Builds go into 
-sub-directories here unless otherwise specified.
-
-By default the $data_directory/model_data.
-
-=head2 alignment_links_directory
-
-All alignment linked under this directory.
-
-By default the $root_directory/alignment_links.
-
-=head2 alignment_data_directory
-
-New alignment data is stored or under this directory.
-
-By default the $data_directory/alignment_data.
-
-=head2 comparison_links_directory
-
-Cross-model comparisons are linked here.
-
-By default $current_links_directory/model_comparisons.
-
-=head2 comparison_data_directory
-
-New cross-model comparisons are stored here.
-
-By default $data_directory/model_comparisons.
+For defects with any software in the genome namespace,
+contact genome-dev@genome.wustl.edu.
 
 =cut
-
-1;
 

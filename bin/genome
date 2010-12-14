@@ -15,11 +15,7 @@ BEGIN {
     }
 };
 
-# do a smart "use lib" for developers
-# this only has an effect when your pwd is under Genome/
 use above "Genome";
-
-# wrap the base command smartly for the shell
 use Genome::Command;
 Genome::Command->execute_with_shell_params_and_exit();
 

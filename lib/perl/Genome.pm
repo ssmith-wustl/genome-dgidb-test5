@@ -3,6 +3,8 @@ package Genome;
 use warnings;
 use strict;
 
+our $VERSION = 0.01;
+
 # software infrastructure
 use UR;
 
@@ -12,6 +14,7 @@ use UR::ObjectV001removed;
 # environmental configuration
 use Genome::Config;
 
+# if the search engine is installed configure its hooks
 eval {
     local $SIG{__WARN__};
     local $SIG{__DIE__};
@@ -103,27 +106,51 @@ for my $e (keys %ENV) {
 
 =head1 NAME
 
-Genome - the namespace for genome analysis and modeling 
+Genome - pipelines, tools, and data managment for genomics
 
 =head1 SYNOPSIS
 
-use Genome;
+ use Genome;
 
-# modules in the genome namespace will now dynamically load
+ # modules in the Genome namespace will now dynamically load
 
- $m = Genome::Model->get(...);
+ @i = Genome::InstrumentData::Illumina->get(...);
+ $m = Genome::Model::SomaticVariation->create(...);
+
+=head1 DESCRIPTION
+
+This is the base namespace module for the Genome software tree.
+
+That tree has several primary components:
+
+ Genome::Model:         a data modeling pipeline management system for genomics 
+
+ Genome::Model::Tools   a tree of >1000 tools and tool wrappers for genomics
+
+ Genome::*              a variety of sample tracking classes with an RDBMS back-end
+
+Only the tools system is currently released.  
+
+See B<gmt> for a complete inventory of all tool packages, and for command-line access to
+those tools.
+
+=head1 AUTHORS
+
+This software is developed by the analysis and engineering teams at 
+The Genome Center at Washington Univiersity in St. Louis, with funding from 
+the National Human Genome Research Institute.
+
+=head1 LICENSE
+
+This software is copyright Washington University in St. Louis, 2007-2010.  
+
+It is released under the Lesser GNU Public License (LGPL) version 3.  See the 
+associated LICENSE file in this distribution.
 
 =head1 BUGS
 
 For defects with any software in the genome namespace,
-contact software@genome.wustl.edu.
-
-=head1 SEE ALSO
-
-B<Genome::Model>, B<Genome::Model::Tools>
-
-B<Genome::Taxon>, B<Genome::PopulationGroup>, B<Genome::Individual>,
-B<Genome::Sample>, B<Genome::Library>, B<Genome::InstrumentData>
+contact genome-dev ~at~ genome.wustl.edu.
 
 =cut
 
