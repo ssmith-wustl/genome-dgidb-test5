@@ -33,7 +33,6 @@ my $reference = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NC
 isa_ok($reference, 'Genome::Model::Build::ImportedReferenceSequence', 'loaded reference sequence');
 
 my $filter_command = Genome::Model::Tools::Somatic::FilterFalsePositives->create(
-    analysis_type => 'capture',
     bam_file => $bam_file,
     variant_file => $variant_file,
     output_file => $output_file,
@@ -71,7 +70,6 @@ SKIP: {
 }
 
 my $filter_command2 = Genome::Model::Tools::Somatic::FilterFalsePositives->create(
-    analysis_type => 'capture',
     bam_file => $bam_file,
     variant_file => $variant_file,
     output_file => $output_file . '.2',
