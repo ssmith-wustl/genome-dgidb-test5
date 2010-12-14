@@ -82,7 +82,7 @@ sub execute {
     my %genome;
     my $genome_size = 0;
     my $masked_genome_size = 0;
-    foreach my $ref_chr (@chromosomes) {
+    for my $ref_chr (@chromosomes) {
         unless(open(FAIDX,"samtools faidx $ref $ref_chr |")) {
             die "Couldn't pipe samtools faidx\n";
         }
@@ -166,7 +166,7 @@ sub execute {
                 my @exons = $transcript->cds_exons;
                 push @exons, $transcript->introns;
                 push @exons, grep { $_->structure_type eq 'rna' } $transcript->ordered_sub_structures;
-                foreach my $exon (@exons) {
+                for my $exon (@exons) {
                     my $type = $exon->structure_type;
                     if($type eq 'rna') {
                         $self->add_substructure_to_set($tier1_rna, $exon, $chromosome_name);
@@ -228,7 +228,7 @@ sub execute {
     my $repeatmasker_regions = $self->shadow_genome(\%genome);
 
     my @repeatmasker_files = glob("/gscmnt/sata194/info/sralign/UCSC/data/chr*_rmsk.txt");
-    foreach my $file (@repeatmasker_files) {
+    for my $file (@repeatmasker_files) {
         $fh = Genome::Utility::FileSystem->open_file_for_reading($file);
         while(my $line = $fh->getline) {
             chomp $line;
@@ -248,7 +248,7 @@ sub execute {
     my $regulatory_regions = $self->shadow_genome(\%genome);
     my @files = qw| targetScanS.txt oreganno.txt tfbsConsSites.txt vistaEnhancers.txt eponine.txt firstEF.txt wgEncodeUcsdNgTaf1ValidH3K4me.txt wgEncodeUcsdNgTaf1ValidH3ac.txt wgEncodeUcsdNgTaf1ValidRnap.txt wgEncodeUcsdNgTaf1ValidTaf.txt polyaDb.txt polyaPredict.txt switchDbTss.txt encodeUViennaRnaz.txt laminB1.txt |;
 
-    foreach my $file (@files) {
+    for my $file (@files) {
         $fh = Genome::Utility::FileSystem->open_file_for_reading("/gscmnt/sata194/info/sralign/UCSC/data/$file");
         while(my $line = $fh->getline) {
             chomp $line;
@@ -385,7 +385,7 @@ sub shadow_genome {
     my $self = shift;
     my $genome = shift;
     my %new;
-    foreach my $chr (keys %$genome) {
+    for my $chr (keys %$genome) {
         $new{$chr} = $genome->{$chr}->Shadow;
     }
     return \%new;
@@ -395,14 +395,14 @@ sub union_genomes {
     my $self = shift;
     my ($genome1, $genome2) = @_;
     my %union;
-    foreach my $chr (keys %$genome1) {
+    for my $chr (keys %$genome1) {
         next unless defined $genome1->{$chr};
         $union{$chr} = $genome1->{$chr}->Clone;
         if(exists($genome2->{$chr})) {
             $union{$chr}->Union($genome2->{$chr},$union{$chr});  
         }
     }
-    foreach my $chr (keys %$genome2) {
+    for my $chr (keys %$genome2) {
         next unless defined $genome2->{$chr};
         if(!exists($genome1->{$chr})) {
             $union{$chr} = $genome2->{$chr}->Clone;  
@@ -414,13 +414,13 @@ sub union_genomes {
 sub in_place_union_genomes {
     my $self = shift;
     my ($genome1, $genome2) = @_;
-    foreach my $chr (keys %$genome1) {
+    for my $chr (keys %$genome1) {
         next unless defined $genome1->{$chr};
         if(exists($genome2->{$chr})) {
             $genome1->{$chr}->Union($genome1->{$chr},$genome2->{$chr});  
         }
     }
-    foreach my $chr (keys %$genome2) {
+    for my $chr (keys %$genome2) {
         next unless defined $genome2->{$chr};
         if(!exists($genome1->{$chr})) {
             $genome1->{$chr} = $genome2->{$chr}->Clone;  
@@ -432,7 +432,7 @@ sub difference_genomes {
     my $self = shift;
     my ($genome1, $genome2) = @_;
     my %difference;
-    foreach my $chr (keys %$genome1) {
+    for my $chr (keys %$genome1) {
         next unless defined $genome1->{$chr};
         $difference{$chr} = $genome1->{$chr}->Clone;
         if(exists($genome2->{$chr})) {
@@ -444,7 +444,7 @@ sub difference_genomes {
 sub in_place_difference_genomes {
     my $self = shift;
     my ($genome1, $genome2) = @_;
-    foreach my $chr (keys %$genome1) {
+    for my $chr (keys %$genome1) {
         next unless defined $genome1->{$chr};
         if(exists($genome2->{$chr})) {
             $genome1->{$chr}->Difference($genome1->{$chr},$genome2->{$chr});  
@@ -455,7 +455,7 @@ sub complement_genome {
     my $self = shift;
     my ($genome) = @_;
     my %result;
-    foreach my $chr (keys %$genome) {
+    for my $chr (keys %$genome) {
         next unless defined $genome->{$chr};
         $result{$chr} = $genome->{$chr}->Clone;
         $result{$chr}->Complement($result{$chr});#in-place calc. Perhaps more mem efficient
@@ -465,7 +465,7 @@ sub complement_genome {
 sub in_place_complement_genome {
     my $self = shift;
     my ($genome) = @_;
-    foreach my $chr (keys %$genome) {
+    for my $chr (keys %$genome) {
         next unless defined $genome->{$chr};
         $genome->{$chr}->Complement($genome->{$chr});#in-place calc. Perhaps more mem efficient
     }
@@ -476,7 +476,7 @@ sub bases_covered {
     my $self = shift;
     my ($genome) = @_;
     my $total = 0;
-    foreach my $chr (keys %$genome) {
+    for my $chr (keys %$genome) {
         next unless defined $genome->{$chr};
         $total += $genome->{$chr}->Norm();
     }
