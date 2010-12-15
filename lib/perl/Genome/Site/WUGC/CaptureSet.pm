@@ -83,12 +83,6 @@ class Genome::Site::WUGC::CaptureSet {
             calculate => q{ $_capture_set->file_storage_id },
         },
     },
-    has_many_optional => {
-        set_oligos => {
-            is => 'Genome::Capture::SetOligo',
-            reverse_as => 'set',
-        }
-    },
     has_transient => [
         _format => {
             is => 'Text',
