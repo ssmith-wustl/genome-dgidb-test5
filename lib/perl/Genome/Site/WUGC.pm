@@ -114,7 +114,7 @@ sub _sync_env {
 }
 
 
-if ($0 =~ /gmt/) {
+if ($0 =~ /gmt/ and not `grep log_command $0`) {
     require Genome::Site::WUGC::Security;
 }
 
