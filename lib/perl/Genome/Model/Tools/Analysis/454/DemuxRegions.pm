@@ -24,7 +24,7 @@ class Genome::Model::Tools::Analysis::454::DemuxRegions {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
-		sff_list	=> { is => 'Text', doc => "List of SFF files" },
+		sff_list	=> { is => 'Text', doc => "A file listing full paths to the main (non-demuxed) 454 SFF data files" },
 		output_file	=> { is => 'Text', doc => "Output file of sample-library-primer-sff" },
 		skip_if_present => { is => 'Text', doc => "Skip if SFF/Fasta/Qual files are present", is_optional => 1},
 	],
@@ -38,7 +38,13 @@ sub help_brief {                            # keep this to just a few words <---
 
 sub help_synopsis {
     return <<EOS
-This command de-multiplexes regions by querying the database
+This command links de-multiplexed regions to sample names by querying the database.
+The file provided to --sff-list should contain paths to one SFF data file per run. This is
+usually provided in the e-mail from production and should NOT point to a file in the "demux"
+subdirectory. For example:
+/gscmnt/sata890/production/105953462/R_2010_12_08_14_36_53_FLX10060105_adminrig_105953462/D_2010_12_09_04_22_29_blade8-4-5_fullProcessing/sff/GSG1JRV01.sff
+It is only used to get the path to the SFF data directory, which is then searched for de-multiplexed
+files under the "demux" subdirectory. 
 EXAMPLE:	gmt analysis 454 demux-regions --sff-list data/run-regions.fof
 EOS
 }

@@ -40,6 +40,7 @@ my $varscan_command = Genome::Model::Tools::Varscan::Validation->create(
     reference => $ref_seq->fasta_file,
     samtools_version => 'r599',
     varscan_params => '--min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.01 --validation 1 --min-coverage 8',
+    version => '2.2.4',
 );
 
 isa_ok($varscan_command, 'Genome::Model::Tools::Varscan::Validation', 'created validation command');

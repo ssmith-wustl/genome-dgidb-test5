@@ -1,11 +1,11 @@
 package Genome::ProcessingProfile::ImportedReferenceSequence;
-
 use strict;
 use warnings;
+use Genome;
 
 use File::Spec;
 use File::Temp;
-use Genome;
+
 
 class Genome::ProcessingProfile::ImportedReferenceSequence {
     is => 'Genome::ProcessingProfile',
@@ -23,11 +23,6 @@ sub _resolve_disk_group_name_for_build {
 sub _execute_build {
     my ($self, $build) = @_;
     my $model = $build->model;
-
-    if(!$model) {
-        $self->error_message("Couldn't find model for build id " . $build->build_id . ".");
-        return;
-    }
 
     my $fasta_size = -s $build->fasta_file;
     unless(-e $build->fasta_file && $fasta_size > 0) {

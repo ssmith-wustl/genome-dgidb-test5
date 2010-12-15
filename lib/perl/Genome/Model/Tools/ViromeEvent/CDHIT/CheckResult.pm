@@ -62,7 +62,9 @@ sub execute {
     my $archos = `uname -a`;
     my $cd_hit_dir = ($archos =~ /64/) ? '/cd-hit-64/cd-hit-est' : '/cd-hit-32/cd-hit-est';    
 
-    my $com = '/gsc/var/tmp/virome/scripts'.$cd_hit_dir .
+    #my $com = '/gsc/var/tmp/virome/scripts'.$cd_hit_dir .
+    my $com = '/gscmnt/sata835/info/medseq/virome/scripts_used_by_virome' . $cd_hit_dir .
+
 	      ' -i ' . $faFile .
 	      ' -o ' . $faFile . '.cdhit_out' .
 	      ' -c 0.98 -n 8 -G 0 -aS 0.98 -g 1 -r 1 -M 4000 -d 0' .

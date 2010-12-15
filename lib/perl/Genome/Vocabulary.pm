@@ -2,14 +2,23 @@ package Genome::Vocabulary;
 
 use warnings;
 use strict;
+use Genome;
 
-use above "Genome";
-
-UR::Object::Type->define(
-    class_name => 'Genome::Vocabulary',
-    is => ['UR::Vocabulary'],
-    english_name => 'genome vocabulary',
-);
-
+class Genome::Vocabulary {
+    is => 'UR::Vocabulary',
+};
 
 1;
+
+=pod 
+
+=head1 NAME
+
+Genome::Vocabulary
+
+=head1 DESCRIPTION
+
+This module is used by the Genome namespace to identify domain-specific terminology in the software reflection system.
+
+=cut
+

@@ -68,14 +68,14 @@ sub execute {
     		print "$output\n$normal_snps\n$tumor_snps\n";
     		
     		# intersect tumor normal snps
-    		my $jobid=`bsub -J '$genome.inter' gmt snp intersect $tumor_snps $normal_snps -i $output`;
+    		my $jobid=`bsub -J '$genome_name.inter' gmt snp intersect $tumor_snps $normal_snps -i $output`;
     		print "bsub gmt snp intersect $tumor_snps $normal_snps -i $output\n";
     		$jobid=~/<(\d+)>/;
 		$jobid= $1;
     		print "sno intersect $jobid\n";
     		
     		# fast-tiering snps
-    		my $jobid2=`bsub -w 'ended($jobid)' -J '$genome.tier' gmt annotate fast-tier --variant-file=$output`;
+    		my $jobid2=`bsub -w 'ended($jobid)' -J '$genome_name.tier' gmt annotate fast-tier --variant-file=$output`;
     		print "bsub -w 'ended($jobid)' gmt annotate fast-tier --variant-file=$output\n";
 		$jobid2=~/<(\d+)>/;
 		$jobid2= $1;
@@ -85,7 +85,7 @@ sub execute {
 		my $before="$tier1.before";
 		my $anno="$tier1.anno";
 		#change file format of tier1
-		my $jobid3=`bsub -w 'ended($jobid2) && ended($jobid)'-J '$genome.parse' "awk \'\{OFS\=\\\"\\\\t\\\";print \\\$1,\\\$2,\\\$2,\\\$3,\\\$4\}\' $tier1 \> $before"`;
+		my $jobid3=`bsub -w 'ended($jobid2) && ended($jobid)'-J '$genome_name.parse' "awk \'\{OFS\=\\\"\\\\t\\\";print \\\$1,\\\$2,\\\$2,\\\$3,\\\$4\}\' $tier1 \> $before"`;
 		#my $jobid3=`bsub -w 'ended($jobid2) && ended($jobid)' 'perl /gscuser/xhong/git/genome/lib/perl/Genome/Model/Tools/Xhong/parsetab.pl $output $output.before'`;
 		#print "bsub -w 'ended($jobid2) && ended($jobid)' 'perl /gscuser/xhong/git/genome/lib/perl/Genome/Model/Tools/Xhong/parsetab.pl $output $output.before'\n";
     		$jobid3=~/<(\d+)>/;
@@ -93,7 +93,7 @@ sub execute {
 		print "awk $jobid3\n";
 		
 		#annotate tier1
-		my $jobid4=`bsub -w 'ended($jobid3) && ended($jobid2)' -J '$genome.anno' gmt annotate transcript-variants --variant-file $before --output-file $anno --annotation-filter top`;
+		my $jobid4=`bsub -w 'ended($jobid3) && ended($jobid2)' -J '$genome_name.anno' gmt annotate transcript-variants --variant-file $before --output-file $anno --annotation-filter top`;
 		print "bsub -w 'ended($jobid3)  && ended($jobid2)' gmt annotate transcript-variants --variant-file $before --output-file $anno --annotation-filter top\n";
     		$jobid4=~/<(\d+)>/;
 		$jobid4= $1;

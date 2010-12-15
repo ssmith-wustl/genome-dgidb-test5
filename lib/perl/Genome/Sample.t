@@ -38,6 +38,18 @@ print Data::Dumper::Dumper($sample);
 my $commit = eval{ UR::Context->commit; };
 ok($commit, 'commit');
 
+# Sample Attributes
+#  Must be added after the sample is commited b/c UR does not know that it needs to commit 
+#  the sample then the attributes
+$sample->age(99);
+$sample->body_mass_index(22.4);
+
+$commit = eval{ UR::Context->commit; };
+ok($commit, 'commit after adding sample attributes');
+
+is($sample->age, 99, 'age');
+is($sample->body_mass_index, 22.4, 'body_mass_index');
+
 $sample = Genome::Sample->get($id);
 ok($sample, 'got new sample');
 

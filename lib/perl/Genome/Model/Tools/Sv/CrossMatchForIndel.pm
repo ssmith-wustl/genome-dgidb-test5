@@ -209,6 +209,11 @@ sub execute {
 	                    $var->{bkpos1}        = $bkpos-$P5_homology+1;
 	                    $var->{bkpos2}        = ($P5_homology+$P3_homology==0) ? '-' : $bkpos+$P3_homology;
                         $var->{microhomology} = $P5_homology+$P3_homology;
+                        # change according to Ken's requirement:
+#                         print STDERR "original: $var->{bkpos2}\n";
+                        $var->{refpos2} -= 1;
+#                        $var->{bkpos2} -= 1;
+#                        print STDERR "Now: $var->{bkpos2}\n";
                     }
                 }
                 else {
