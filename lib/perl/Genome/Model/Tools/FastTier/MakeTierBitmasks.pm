@@ -156,6 +156,7 @@ sub execute {
     for my $chromosome_name(@chromosomes) {
         my $transcript_iterator = $build->transcript_iterator(chrom_name => $chromosome_name);
         print STDERR "Parsing $chromosome_name\n";
+        $self->status_message("Parsing $chromosome_name\n");
         unless($transcript_iterator) {
             warn "No iterator because ", Genome::Transcript->error_message, " Skipping to next\n";
             next;
@@ -219,6 +220,7 @@ sub execute {
     #undef($tier2_conserved_set); 
     my $tier2 = $tier2_conserved_set;
     print STDERR "Calculated Tier2 conserved set\n";
+    $self->status_message("Calculated Tier2 conserved set\n");
     #printf "Tier2 conserved set encompasses %u bases. %f%% of the genome\n", bases_covered($tier2), bases_covered($tier2)/$masked_genome_size * 100;
     undef($tier1_coding);
 
@@ -240,6 +242,7 @@ sub execute {
         $fh->close;
     }
     print STDERR "Calculated repeatmasker regions\n";
+    $self->status_message("Calculated repeatmasker regions\n");
 
     #now take union and calculate the coverage
 
@@ -259,6 +262,7 @@ sub execute {
         $fh->close;
     }
     print STDERR "Calculated Tier2 regulatory regions\n";
+    $self->status_message("Calculated Tier2 regulatory regions\n");
 
     #no bins in this file
     $fh = Genome::Utility::FileSystem->open_file_for_reading("/gscmnt/sata194/info/sralign/UCSC/data/cpgIslandExt.txt");
@@ -274,14 +278,18 @@ sub execute {
     $self->in_place_difference_genomes($regulatory_regions, $repeatmasker_regions); 
     #in_place_difference_genomes($regulatory_regions, $tier2);
     print STDERR "Calculated Tier2 regulatory regions / repeatmasker\n";
+    $self->status_message("Calculated Tier2 regulatory regions / repeatmasker\n");
     #printf "Tier2 regulatory set encompasses %u bases. %f%% of the genome\n", bases_covered($regulatory_regions), bases_covered($regulatory_regions)/$masked_genome_size * 100;
 
     $self->in_place_union_genomes($tier2, $regulatory_regions);
     print STDERR "Calculated Tier2 conserved U regulatory regions / repeatmasker\n";
+    $self->status_message("Calculated Tier2 conserved U regulatory regions / repeatmasker\n");
     $self->in_place_difference_genomes($tier2, $tier1); #exclude things hitting Tier1
     print STDERR "Calculated (Tier2 conserved U regulatory regions / repeatmasker) / Tier1\n";
+    $self->status_message("Calculated (Tier2 conserved U regulatory regions / repeatmasker) / Tier1\n");
     $self->in_place_difference_genomes($tier2, \%genome); #account for masking
     print STDERR "Calculated (Tier2 conserved U regulatory regions / repeatmasker) / Tier1 / masked genome\n";
+    $self->status_message("Calculated (Tier2 conserved U regulatory regions / repeatmasker) / Tier1 / masked genome\n");
     printf "Tier2 encompasses %u bases. %f%% of the genome\n", $self->bases_covered($tier2), $self->bases_covered($tier2)/$masked_genome_size * 100;
     $self->write_genome_bitmask($self->tier2_output, $tier2);
     #free up some mem?
