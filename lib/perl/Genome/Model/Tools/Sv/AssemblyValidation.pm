@@ -379,6 +379,7 @@ sub _get_tigra_options {
     $tigra_opts .= '-p 10000 ' if($self->asm_high_coverage);
     $tigra_opts .= '-z ' . $self->skip_call if($self->skip_call);
     $tigra_opts .= '-c ' . $self->specify_chr . ' ' if($self->specify_chr);
+    $tigra_opts .= '-M ' . $self->min_size_of_confirm_asm_sv . ' ' if($self->min_size_of_confirm_asm_sv);
     for my $opt (keys %tigra_sv_options) {
         if ($self->$opt) {
             $tigra_opts .= '-'.$tigra_sv_options{$opt}.' '.$self->$opt . ' ';
