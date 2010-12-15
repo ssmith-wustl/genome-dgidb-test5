@@ -18,6 +18,12 @@ class Genome::Model::Tools::Validation::AnnotationToAssemblyInput {
         is => 'String', 
         doc => 'output in BreakDancer-esque format for input into gmt assembly tool',
     },
+    minimum_size => {
+        is => 'Integer',
+        default => 3,
+        is_optional => 1,
+        doc => 'the minimum size of the indel to output to the file',
+    },
     ],
 };
 
@@ -58,6 +64,7 @@ sub execute {
         my ($chr,$start,$end,$ref,$var,$type) = @fields[0..5];
         next if $type =~ /NP/; #skip DNP and SNP
         my $size = $ref eq '0' ? length $var : length $ref;
+        next if($size < $self->minimum_size);
 
         print $ofh join("\t",$chr,$start,"+",$chr,$end,'+',$type,$size),"\n";
     }
