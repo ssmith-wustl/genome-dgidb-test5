@@ -50,6 +50,12 @@ class Genome::Model::Tools::Picard::CollectGcBiasMetrics {
             default_value => 500000,
             is_optional => 1,
         },
+        clean_sam => {
+            is => 'Boolean',
+            is_optional => 1,
+            default_value => 0,
+            doc => 'Flag to run Picard CleanSam to clip read that align beyond the end of chromosomes.(ie. BWA 0.5.5 and prior)',
+        },
     ],
 };
 
@@ -74,11 +80,28 @@ sub execute {
             return;
         }
     }
-
-    my $cmd = $self->picard_path .'/CollectGcBiasMetrics.jar net.sf.picard.analysis.CollectGcBiasMetrics';
-    $cmd   .= ' OUTPUT='. $self->output_file  .' INPUT='. $self->input_file .' REFERENCE_SEQUENCE='. $self->refseq_file;
-    
     my $out_dir = dirname $self->output_file;
+    my $input_file = $self->input_file;
+    if ($self->clean_sam) {
+        my $tmp_file = Genome::Utility::FileSystem->create_temp_file_path;
+        unless (Genome::Model::Tools::Picard::CleanSam->execute(
+            input_file => $self->input_file,
+            output_file => $tmp_file,
+            use_version => $self->use_version,
+            maximum_memory => $self->maximum_memory,
+            maximum_permgen_memory => $self->maximum_permgen_memory,
+            temp_directory => $self->temp_directory,
+            validation_stringency => $self->validation_stringency,
+            log_file => $self->log_file,
+            additional_jvm_options => $self->additional_jvm_options,
+        )) {
+            die('Failed to run Picard CleanSam on SAM/BAM file: '. $self->input_file);
+        }
+        $input_file = $tmp_file
+    }
+    
+    my $cmd = $self->picard_path .'/CollectGcBiasMetrics.jar net.sf.picard.analysis.CollectGcBiasMetrics';
+    $cmd   .= ' OUTPUT='. $self->output_file  .' INPUT='. $input_file .' REFERENCE_SEQUENCE='. $self->refseq_file;
 
     my $chart = $self->chart_output   || $out_dir . '/GC_bias_chart.pdf';
     my $sum   = $self->summary_output || $out_dir . '/GC_bias_summary.txt';
@@ -94,7 +117,7 @@ sub execute {
     
     $self->run_java_vm(
         cmd          => $cmd,
-        input_files  => [$self->input_file],
+        input_files  => [$input_file],
         #output_files => [$self->output_file, $chart],
         skip_if_output_is_present => 0,
     );
