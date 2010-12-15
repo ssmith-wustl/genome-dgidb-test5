@@ -276,6 +276,11 @@ sub read_in_breakpoints {
                         $self->error_message("Skipping contig that assembled as a type other than insertion or deletion with variant starting at " . $current_contig->{'pred_pos1'});
                     }
                     else {
+                        #check that Ins field makes sense
+                        unless($current_contig->{'contig_location_of_variant'} <= $current_contig->{'microhomology_contig_endpoint'}) {
+                            $self->error_message("Microhomology makes no sense for variant starting at " . $current_contig->{'pred_pos1'} . "\n");
+                        }
+
                         #check that coordinates make sense
                         unless($current_contig->{'contig_start'} < $current_contig->{'contig_stop'}) {
                             #we will skip those until they are fixed
