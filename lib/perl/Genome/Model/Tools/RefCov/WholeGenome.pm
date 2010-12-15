@@ -7,6 +7,18 @@ use Genome;
 
 class Genome::Model::Tools::RefCov::WholeGenome {
     is => ['Genome::Model::Tools::RefCov'],
+    has_input => [
+        merged_stats_file => {
+            is => 'Text',
+            doc => 'The final merged stats file',
+        },
+        merge_by => {
+            is => 'Text',
+            is_optional => 1,
+            default_value => 'transcript',
+            valid_values => ['exome','gene','transcript'],
+        },
+    ],
 };
 
 sub help_detail {
@@ -35,7 +47,7 @@ sub execute {
     # WholeGenome assumes we will be evaluating gene (exon) annotation ROI in
     # context of whole genome alignments (e.g., BWA produced BAMs). We will be
     # stitching the exons back together on a gene-by-gene basis.
-    $self->stitch_exons();
+    $self->merge_stats_by($self->merge_by,$self->merged_stats_file);
 
     return 1;
 }
