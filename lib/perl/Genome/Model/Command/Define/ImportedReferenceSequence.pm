@@ -1,8 +1,6 @@
 package Genome::Model::Command::Define::ImportedReferenceSequence;
-
 use strict;
 use warnings;
-
 use Genome;
 
 class Genome::Model::Command::Define::ImportedReferenceSequence {
@@ -15,38 +13,14 @@ class Genome::Model::Command::Define::ImportedReferenceSequence {
         }
     ],
     has_optional => [
-        model_name => {
-            is => 'Text',
-            len => 255,
-            doc => '$PREFIX-$SPECIES_NAME unless otherwise specified.'
-        },
         prefix => {
             is => 'Text',
             doc => 'The source of the sequence, such as "NCBI".  May not have spaces.'
-        },
-        processing_profile_name => {
-            is_constant => 1,
-            value => 'chromosome-fastas',
-            doc => 'The processing profile takes no parameters, so all imported reference sequence models share the same processing profile instance.'
         },
         species_name => {
             is => 'Text',
             len => 64,
             doc => 'The species name of the reference.  This value must correspond to a species name found in the gsc.organism_taxon table.'
-        },
-        subject_name => {
-            is_optional => 1,
-            doc => 'Copied from species_name.'
-        },
-        subject_type => {
-            is_constant => 1,
-            value => 'species_name',
-            doc => 'All imported reference sequence models use "species_name" for subject type.'
-        },
-        subject_class_name => {
-            is_constant => 1,
-            value => 'Genome::Taxon',
-            doc => 'All imported reference sequence model subjects are represented by the Genome::Taxon class.'
         },
         version => {
             is => 'Text',
@@ -54,17 +28,37 @@ class Genome::Model::Command::Define::ImportedReferenceSequence {
             doc => 'The version number and/or description of the reference.  May not have spaces.  This may be, for example '.
                    '"37" or "37_human_contamination".'
         },
+        model_name => {
+            is => 'Text',
+            len => 255,
+            doc => '$PREFIX-$SPECIES_NAME unless otherwise specified.'
+        },
+        processing_profile_name => {
+            is_constant => 1,
+            # valid_values => ['import fasta','expand','reduce','mask','hypothesize variations']
+            value => 'chromosome-fastas',
+            doc => 'The processing profile takes no parameters, so all imported reference sequence models share the same processing profile instance.'
+        },
+        subject_name => {
+            is_optional => 1,            
+            doc => 'Copied from species_name.'
+        },
+        subject_class_name => {
+            is_constant => 1,
+            value => 'Genome::Taxon',
+            doc => 'All imported reference sequence model subjects are represented by the Genome::Taxon class.'
+        },
         on_warning => {
             valid_values => ['prompt', 'exit', 'continue'],
             default_value => 'prompt',
             doc => 'The action to take when emitting a warning.'
         },
         job_dispatch => {
-            default_value => 'apipe',
+            default_value => 'inline',
             doc => 'dispatch specification: an LSF queue or "inline"'
         },
         server_dispatch => {
-            default_value => 'workflow',
+            default_value => 'inline',
             doc => 'dispatch specification: an LSF queue or "inline"'
         },
    ],

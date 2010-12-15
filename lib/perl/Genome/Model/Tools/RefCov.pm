@@ -14,6 +14,34 @@ my @GC_HEADERS = qw/
                        gc_uncovlen_percent
                    /;
 
+#Possibly replace with subroutine/CODEREF?
+my %MERGE_STATS_OPERATION = (
+    name => undef,
+    percent_ref_bases_covered => undef,
+    total_ref_bases => '+',
+    total_covered_bases => '+',
+    missing_bases => '+',
+    ave_cov_depth => '* total_covered_bases',
+    sdev_ave_cov_depth => 'weighted_mean',
+    med_cov_depth => 'weighted_mean',
+    gap_number => '+',
+    ave_gap_length => '* gap_number',
+    sdev_ave_gap_length => 'weighted_mean',
+    med_gap_length => 'weighted_mean',
+    min_depth_filter => 'min_depth_filter',
+    min_depth_discarded_bases => '+',
+    percent_min_depth_discarded => undef,
+    gc_reflen_bp => '+',
+    gc_reflen_percent => undef,
+    gc_covlen_bp => '+',
+    gc_covlen_percent => undef,
+    gc_uncovlen_bp => '+',
+    gc_uncovlen_percent => undef,
+    roi_normalized_depth => 'weighted_mean',
+    genome_normalized_depth => 'weighted_mean',
+    intervals => 'intervals',
+);
+
 class Genome::Model::Tools::RefCov {
     is => ['Command'],
     has_input => [
@@ -89,6 +117,12 @@ class Genome::Model::Tools::RefCov {
             doc => 'When run in parallel, this directory will contain all output and intermediate STATS files. Sub-directories will be made for wingspan and min_depth_filter params. Do not define if stats_file is defined.',
             is_optional => 1,
         },
+        print_headers => {
+            is => 'Boolean',
+            doc => 'Print a header describing the output including column headers.',
+            is_optional => 1,
+            default_value => 0,
+        },
     ],
     has_output => [
         stats_file => {
@@ -98,12 +132,6 @@ class Genome::Model::Tools::RefCov {
         final_directory => {
             doc => 'The directory where parallel output is written to when wingspan is defined in parallel fashion',
             is_optional => 1,
-        },
-        print_headers => {
-            is => 'Boolean',
-            doc => 'Print a header describing the output including column headers.',
-            is_optional => 1,
-            default_value => 0,
         },
     ],
     has_param => [
@@ -413,19 +441,126 @@ sub region_coverage_with_quality_filter {
 #    die('No class implemented for combination of parameters!');
 #}
 
-sub stitch_exons {
+sub merge_stats_by {
     my $self = shift;
+    my $merge_by = shift;
+    my $file = shift;
+
+    unless (defined($merge_by)) {
+        die('Must provide a merge_by option!');
+    }
 
     # **NOTE**
     # Operation should be performed post print_standard_roi_coverage()
     # execution.
-
-    my $myStatsFile = Genome::Utility::IO::SeparatedValueReader->new(
-                                                                     input   => $self->stats_file(),
-                                                                     headers => [
-                                                                                ],
-                                                                     seperator => '\t',
-                                                                    );
+    my @headers = $self->resolve_stats_file_headers;
+    my $stats_reader = Genome::Utility::IO::SeparatedValueReader->new(
+        input   => $self->stats_file,
+        separator => "\t",
+        headers => \@headers,
+    );
+    my %merge_by_stats;
+    while (my $data = $stats_reader->next) {
+        my $name = $data->{name};
+        unless ($name) {
+            die('Failed to find name for stats region: '. Data::Dumper::Dumper($data));
+        }
+        my ($gene,$transcript,$type,$ordinal,$strand) = split(':',$name);
+        unless ($gene && $transcript && $type) {
+            die('Failed to parse ROI name:  '. $name);
+        }
+        my $merge_key = $merge_by;
+        if ($merge_by eq 'gene') {
+            $merge_key = $gene;
+        } elsif ($merge_by eq 'transcript') {
+            $merge_key = $transcript;
+        } elsif ($merge_by eq 'exon') {
+            die('The ROI should be at the exon level.  Why would it not?');
+            $merge_key = $gene .':'. $transcript .':'. $type;
+            if (defined $ordinal) {
+                $merge_key .= ':' . $ordinal;
+            }
+        }
+        $merge_by_stats{$merge_key}{intervals}++;
+        for my $data_key (keys %{$data}) {
+            if ($data_key eq 'name') {
+                next;
+            }
+            my $data_value = $data->{$data_key};
+            my $operation = $MERGE_STATS_OPERATION{$data_key};
+            if (defined($operation)) {
+                if ($operation =~ /^\+$/) {
+                    $merge_by_stats{$merge_key}{$data_key} += $data_value;
+                } elsif ($operation =~ /^\*\s+(\S+)/) {
+                    my $multiplier_key = $1;
+                    my $multiplier_value = $data->{$multiplier_key};
+                    $merge_by_stats{$merge_key}{$data_key} += ($data_value * $multiplier_value);
+                } elsif ($operation eq 'weighted_mean') {
+                    $merge_by_stats{$merge_key}{$data_key} += ($data_value * $data->{total_ref_bases});
+                } elsif ($operation) {
+                    $merge_by_stats{$merge_key}{$data_key} = $data_value;
+                }
+            }
+        }
+    }
+    my $writer = Genome::Utility::IO::SeparatedValueWriter->new(
+        output => $file,
+        separator => "\t",
+        headers => \@headers,
+    );
+    for my $merge_key (keys %merge_by_stats) {
+        my %data;
+        my $length = $merge_by_stats{$merge_key}{total_ref_bases};
+        my $covered = $merge_by_stats{$merge_key}{total_covered_bases};
+        my $uncovered = $merge_by_stats{$merge_key}{missing_bases};
+        for my $header (@headers) {
+            if (defined $merge_by_stats{$merge_key}{$header}) {
+                my $data_value = $merge_by_stats{$merge_key}{$header};
+                my $operation = $MERGE_STATS_OPERATION{$header};
+                if ($operation =~ /^\+$/) {
+                    $data{$header} = $data_value;
+                } elsif ($operation =~ /^\*\s+(\S+)/) {
+                    my $multiplier_key = $1;
+                    my $multiplier_value = $merge_by_stats{$merge_key}{$multiplier_key};
+                    $data{$header} = $self->_round(($data_value / $multiplier_value));
+                } elsif ($operation eq 'weighted_mean') {
+                    $data{$header} = $self->_round(($data_value / $length));
+                } elsif ($operation) {
+                    $data{$header} = $data_value;
+                } else {
+                    die('Not sure what to do with '. $header);
+                }
+            } elsif ($header =~ /^gc_(\S+)_percent$/) {
+                my $type = $1;
+                my $method = 'gc_'. $type .'_bp';
+                if ($type eq 'reflen') {
+                    $data{$header} = $self->_round((($merge_by_stats{$merge_key}{$method} / $length )* 100));
+                } elsif ($type eq 'covlen') {
+                    if ($covered) {
+                        $data{$header} = $self->_round((($merge_by_stats{$merge_key}{$method} / $covered )* 100));
+                    } else {
+                        $data{$header} = 0;
+                    }
+                } elsif ($type eq 'uncovlen') {
+                    if ($uncovered) {
+                        $data{$header} = $self->_round((($merge_by_stats{$merge_key}{$method} / $uncovered )* 100));
+                    } else {
+                        $data{$header} = 0;
+                    }
+                }
+            } elsif ($header eq 'percent_min_depth_discarded') {
+                $data{$header} = $self->_round((($merge_by_stats{$merge_key}{'min_depth_discarded_bases'} / $merge_by_stats{$merge_key}{total_ref_bases}) * 100));
+            } elsif ($header eq 'percent_ref_bases_covered') {
+                $data{$header} = $self->_round( ( ($covered / $length) * 100 ) );
+            } elsif ($header eq 'name') {
+                $data{$header} = $merge_key;
+            } else {
+                die('Please implement condition to deal with header: '. $header);
+            }
+        }
+        $writer->write_one(\%data);
+    }
+    $writer->output->close;
 
     return 1;
 }
@@ -488,7 +623,7 @@ sub print_standard_roi_coverage {
                 if ($self->roi_normalized_coverage) {
                     my $roi_stats = $self->roi_stats;
                     my $roi_normalized_depth = _round( ($stat->ave_cov_depth / $roi_stats->mean_coverage) );
-                    $data->{'roi_normalized_depth'} = $roi_normalized_depth;
+                     $data->{'roi_normalized_depth'} = $roi_normalized_depth;
                 }
                 if ($self->genome_normalized_coverage) {
                     my $genome_stats = $self->genome_stats;
@@ -508,6 +643,7 @@ sub print_standard_roi_coverage {
 
 sub evaluate_region_gc_content {
     my $self = shift;
+    
     my $sequence = shift;
     my $coverage = shift;
 
@@ -527,6 +663,7 @@ sub gc_headers {
 }
 
 sub _round {
+    my $self = shift;
     my $value = shift;
     return sprintf( "%.2f", $value );
 }

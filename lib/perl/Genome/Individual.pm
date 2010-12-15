@@ -69,5 +69,9 @@ class Genome::Individual {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+sub __display_name__ {
+    return $_[0]->name.' ('.$_[0]->id.')';
+}
+
 1;
 

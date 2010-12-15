@@ -79,6 +79,10 @@ class Genome::Model::Tools::Sv::AssemblyValidation {
             type => 'String',
             doc  => 'Save Breakpoint sequences in file',
         },
+        specify_chr => {
+            type => 'String',
+            doc => 'Specify a single chromosome',
+        },
         cm_aln_file => {
             type => 'String',
             doc  => 'Save relevant cross_match alignment results to file',
@@ -374,6 +378,8 @@ sub _get_tigra_options {
     $tigra_opts .= '-b ' unless $self->custom_sv_format;
     $tigra_opts .= '-p 10000 ' if($self->asm_high_coverage);
     $tigra_opts .= '-z ' . $self->skip_call if($self->skip_call);
+    $tigra_opts .= '-c ' . $self->specify_chr . ' ' if($self->specify_chr);
+    $tigra_opts .= '-M ' . $self->min_size_of_confirm_asm_sv . ' ' if($self->min_size_of_confirm_asm_sv);
     for my $opt (keys %tigra_sv_options) {
         if ($self->$opt) {
             $tigra_opts .= '-'.$tigra_sv_options{$opt}.' '.$self->$opt . ' ';
@@ -392,6 +398,7 @@ sub _cross_match_validation {
 
     my $datadir = $self->_data_dir;
     my $ref_fa  = $datadir . "/$head.ref.fa"; 
+#    my $ref_fa = $datadir . "/$head.1.ref.fa";
     my ($tigra_sv_fa, $cm_out);
 
     if ($ctg_type eq 'homo') {
@@ -487,11 +494,11 @@ sub _UpdateSVs{
 	            $maxSV->{ori}     = $ori;
 	            $maxSV->{alnstrs} = $alnstrs;
 
-                    # add according to Ken's requirement
-                    if($maxSV->{strand} =~ /-/ && $maxSV->{type} =~ /DEL/i){
-                        $maxSV->{start2} -= 1;
-                        $maxSV->{bkend} -= 1;
-                    }
+                    # add according to Ken's requirement, now cut and add it in CrossMatchIndel.pm for only INDEL
+#                    if($maxSV->{strand} =~ /-/ && $maxSV->{type} =~ /DEL/i){
+#                        $maxSV->{start2} -= 1;
+#                        $maxSV->{bkend} -= 1;
+#                    }
             }
         }
     }
