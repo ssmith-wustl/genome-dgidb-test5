@@ -21,7 +21,7 @@ use FileHandle;
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
 class Genome::Model::Tools::Varscan::Germline {
-	is => 'Command',                       
+	is => 'Genome::Model::Tools::Varscan',
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		bam_file	=> { is => 'Text', doc => "Path to Normal BAM file", is_optional => 0, is_input => 1 },
@@ -93,8 +93,8 @@ sub execute {                               # replace with real execution logic.
 	my $varscan_params = "--min-var-freq 0.10 --p-value 0.10 --somatic-p-value 0.01 --strand-filter 1"; #--min-coverage 8 --verbose 1
 	$varscan_params = $self->varscan_params if($self->varscan_params);
 
-	my $path_to_varscan = "java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan";
-	$path_to_varscan = "java -Xms" . $self->heap_space . "m -Xmx" . $self->heap_space . "m -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan" if($self->heap_space);
+	my $path_to_varscan = "java -jar " . $self->path_for_version($self->version);
+	$path_to_varscan = "java -Xms" . $self->heap_space . "m -Xmx" . $self->heap_space . "m " . $self->path_for_version($self->version) if($self->heap_space);
 
 	if(-e $bam_file)
 	{
