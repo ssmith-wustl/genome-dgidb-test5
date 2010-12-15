@@ -27,6 +27,8 @@ $sample = Genome::Sample->create(
     extraction_desc  => 'This is a test',
     tissue_desc      => 'normal',
     taxon_id         => $taxon->taxon_id,
+    age => 99,
+    body_mass_index => 22.4,
 );
 ok($sample, "created a new genome sample");
 isa_ok($sample, 'Genome::Sample');
@@ -37,15 +39,6 @@ print Data::Dumper::Dumper($sample);
 
 my $commit = eval{ UR::Context->commit; };
 ok($commit, 'commit');
-
-# Sample Attributes
-#  Must be added after the sample is commited b/c UR does not know that it needs to commit 
-#  the sample then the attributes
-$sample->age(99);
-$sample->body_mass_index(22.4);
-
-$commit = eval{ UR::Context->commit; };
-ok($commit, 'commit after adding sample attributes');
 
 is($sample->age, 99, 'age');
 is($sample->body_mass_index, 22.4, 'body_mass_index');
