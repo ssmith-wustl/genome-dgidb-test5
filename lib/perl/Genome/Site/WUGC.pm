@@ -114,9 +114,9 @@ sub _sync_env {
 }
 
 
-unless ($0 =~ /gmt/ and `grep log_command $0`) {
-    require Genome::Site::WUGC::Security;
-}
+#unless ($0 =~ /gmt/ and `grep log_command $0`) {
+#    require Genome::Site::WUGC::Security;
+#}
 
 1;
 
