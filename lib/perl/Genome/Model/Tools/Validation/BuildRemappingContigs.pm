@@ -186,7 +186,7 @@ sub execute {
                 #Here we will print out a contig
                 #make sure that the info to count the contig is present and make sure that lines are shortish
                 foreach my $unique_contig (@overlapping_contigs) {
-                    print STDOUT "> ",join("_",@$unique_contig{qw( pred_chr1 pred_pos1 pred_pos2 pred_type source) });
+                    print STDOUT ">",join("_",@$unique_contig{qw( pred_chr1 pred_pos1 pred_pos2 pred_type source) });
 
                     #need to code in the range on the contig for the variant as well as the range on the reference to count. For non-overlapping contigs this is simple. Let's also code overlap status
                     printf STDOUT " Overlap:%d",@overlapping_contigs - 1;   #this should code the number of other contigs overlapping the contig
