@@ -47,9 +47,9 @@ sub sub_command_sort_position { 2 }
 
 sub help_synopsis {
     return <<"EOS"
- genome model copy --from 123456789 --to "copy_of_my_model" --model-overrides processing_profile_name="use this processing profile instead"
+ genome model copy --from 123456789 --to "copy_of_my_model" --model-overrides processing_profile_name="use this processing profile instead" --model-overrides auto_build_alignments=0
     
- genome model copy 123456789 copy_of_my_model processing_profile_name="use this processing profile instead"   
+ genome model copy 123456789 copy_of_my_model processing_profile_name="use this processing profile instead" auto_build_alignments=0
 EOS
 }
 
@@ -66,7 +66,7 @@ For example, use
    processing_profile_name="example profile"
 
 to have the resulting model be defined using <example profile> instead of the processing profile
-assigned to the source model.
+assigned to the source model.  If named (rather than positional) arguments are used, "--model-overrides" must precede each key-value pair.
 
 The copy command only copies the definitions.  It does not copy any underlying model data.
 
