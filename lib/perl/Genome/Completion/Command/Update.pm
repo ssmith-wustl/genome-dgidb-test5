@@ -23,7 +23,7 @@ sub execute {
 
     my @command_classes = ('Genome::Model::Tools', 'Genome::Command');
     for my $classname (@command_classes) {
-        my $genome_completion = UR::Namespace::Command::CreateCompletionSpecFile->create(
+        my $genome_completion = UR::Namespace::Command::Update::TabCompletionSpec->create(
             classname => $classname,
         );
         unless ($genome_completion->execute) {

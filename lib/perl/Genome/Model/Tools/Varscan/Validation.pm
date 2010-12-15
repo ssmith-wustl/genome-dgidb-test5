@@ -19,24 +19,24 @@ use warnings;
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
 class Genome::Model::Tools::Varscan::Validation {
-    is => 'Command',
+    is => 'Genome::Model::Tools::Varscan',
 
-    has => [                                # specify the command's single-value properties (parameters) <---
-        normal_bam       => { is => 'Text', doc => "Path to Normal BAM file", is_optional => 0, is_input => 1 },
-        tumor_bam        => { is => 'Text', doc => "Path to Tumor BAM file", is_optional => 0, is_input => 1 },
-        output           => { is => 'Text', doc => "Path to Tumor BAM file", is_optional => 1, is_input => 1, is_output => 1 },
-        output_snp       => { is => 'Text', doc => "Basename for SNP output, eg. varscan_out/varscan.status.snp" , is_optional => 1, is_input => 1, is_output => 1},
-        output_indel     => { is => 'Text', doc => "Basename for indel output, eg. varscan_out/varscan.status.indel" , is_optional => 1, is_input => 1, is_output => 1},
-        output_validation=> { is => 'Text', doc => 'Basename for validation output, eg. varscan_out/varscan.status.validation', is_optional => 1, is_output => 1, is_input => 1, },
-        reference        => { is => 'Text', doc => "Reference FASTA file for BAMs" , is_optional => 1, is_input => 1, default_value => (Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa')},
-        skip_if_output_present => { is => 'Text', doc => "If set to 1, skip execution if output files exist", is_optional => 1, is_input => 1 },
-        varscan_params   => { is => 'Text', doc => "Parameters to pass to VarScan" , is_optional => 1, is_input => 1, default_value => '--min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.01 --validation 1 --min-coverage 8'},
-        samtools_version => { is => 'Text', doc => 'Version of samtools to use', default=>'r544' },
+    has_input => [                                # specify the command's single-value properties (parameters) <---
+        normal_bam       => { is => 'Text', doc => "Path to Normal BAM file", is_optional => 0, },
+        tumor_bam        => { is => 'Text', doc => "Path to Tumor BAM file", is_optional => 0, },
+        output           => { is => 'Text', doc => "Path to Tumor BAM file", is_optional => 1, is_output => 1 },
+        output_snp       => { is => 'Text', doc => "Basename for SNP output, eg. varscan_out/varscan.status.snp" , is_optional => 1, is_output => 1},
+        output_indel     => { is => 'Text', doc => "Basename for indel output, eg. varscan_out/varscan.status.indel" , is_optional => 1, is_output => 1},
+        output_validation=> { is => 'Text', doc => 'Basename for validation output, eg. varscan_out/varscan.status.validation', is_optional => 1, is_output => 1, },
+        reference        => { is => 'Text', doc => "Reference FASTA file for BAMs" , is_optional => 1, default_value => (Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa')},
+        skip_if_output_present => { is => 'Text', doc => "If set to 1, skip execution if output files exist", is_optional => 1, },
+        varscan_params   => { is => 'Text', doc => "Parameters to pass to VarScan" , is_optional => 1, default_value => '--min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.01 --validation 1 --min-coverage 8'},
+        samtools_version => { is => 'Text', doc => 'Version of samtools to use', default=> 'r544' },
     ],
 
     has_param => [
         lsf_resource => { default_value => 'select[model!=Opteron250 && type==LINUX64 && tmp>1000] rusage[mem=4000,tmp=1000]'},
-       ],
+    ],
 };
 
 sub sub_command_sort_position { 12 }
@@ -117,7 +117,9 @@ sub execute {                               # replace with real execution logic.
         my $normal_pileup = "$sam_pathname pileup -f $reference $normal_bam";
         my $tumor_pileup = "$sam_pathname pileup -f $reference $tumor_bam";
 
-        my $cmd = "bash -c \"java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) $temp_output --output-snp $temp_snp --output-indel $temp_indel $varscan_params\"";
+        my $varscan_path = Genome::Model::Tools::Varscan->path_for_version($self->version);
+
+        my $cmd = $self->java_command_line("somatic <\($normal_pileup\) <\($tumor_pileup\) $temp_output --output-snp $temp_snp --output-indel $temp_indel $varscan_params");
 
         Genome::Utility::FileSystem->shellcmd(
             cmd => $cmd,
