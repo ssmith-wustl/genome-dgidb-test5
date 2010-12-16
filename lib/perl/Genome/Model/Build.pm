@@ -131,39 +131,6 @@ sub _resolve_subclass_name_by_sequencing_platform { # only temporary, subclass w
     return $class. '::'.Genome::Utility::Text::string_to_camel_case($sequencing_platform);
 }
 
-sub _resolve_subclass_name_by_assembler_name { # only temporary, subclass will soon be stored
-    my $class = shift;
-
-    Carp::confess("this is used by sub-classes which further subclassify by sequencing platform!")
-        if $class eq __PACKAGE__;
-
-    my $assembler_name;
-    if (ref($_[0]) and $_[0]->isa('Genome::Model::Build')) {
-        $assembler_name = $_[0]->model->assembler_name;
-    } 
-    else {
-        my %params;
-        if (ref($_[0]) and $_[0]->isa("UR::BoolExpr")) {
-            %params = $_[0]->params_list;
-        }
-        else {
-            %params = @_;
-        }
-        my $model_id = $params{model_id};
-        $class->_validate_model_id($params{model_id})
-            or return;
-        my $model = Genome::Model->get($params{model_id});
-        unless ( $model ) {
-            Carp::confess("Can't get model for id: .".$params{model_id});
-        }
-        $assembler_name = $model->assembler_name;
-    }
-
-    return unless $assembler_name;
-
-    return $class. '::'.Genome::Utility::Text::string_to_camel_case($assembler_name);
-}
-
 # auto generate sub-classes for any valid processing profile
 sub __extend_namespace__ {
     my ($self,$ext) = @_;

@@ -16,7 +16,7 @@ use_ok('Genome::Model::Event::Build::DeNovoAssembly::PostAssemble') or die;
 #model
 my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
     sequencing_platform => 'solexa',
-    assembler_name => 'soap',
+    assembler_name => 'soap de-novo-assemble',
 );
 ok($model, 'Got mock de novo assembly model') or die;
 

@@ -12,7 +12,7 @@ use_ok('Genome::Model::DeNovoAssembly::Report::Summary') or die;
 
 my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
     sequencing_platform => 'solexa',
-    assembler_name => 'velvet'
+    assembler_name => 'velvet one-button'
 );
 ok($model, 'Got mock model') or die;
 my $build = Genome::Model::DeNovoAssembly::Test->get_mock_build(
