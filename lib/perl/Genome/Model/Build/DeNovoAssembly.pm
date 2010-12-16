@@ -83,7 +83,9 @@ sub create {
     }
 
     my @ins_data = $self->instrument_data;
-    if (not @ins_data) {
+    #okay for soap import to not have an instrument data
+#   if (not @ins_data) {
+    if (not @ins_data and not $self->processing_profile->assembler_name =~ /import/) {
 	$self->error_message("Build does not have any instrument data");
 	$self->delete;
 	return;
