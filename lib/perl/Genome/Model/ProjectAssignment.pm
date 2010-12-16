@@ -9,7 +9,7 @@ class Genome::Model::ProjectAssignment {
     table_name => 'GENOME_MODEL_RESEARCH_PROJECT',
     id_by => [
         model   => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GMRP_GM_FK' },
-        project => { is => 'Genome::Project', id_by => 'rp_id' },
+        project => { is => 'Genome::Site::WUGC::Project', id_by => 'rp_id' },
     ],
     has_optional => [
         description => { is => 'VARCHAR2', len => 1000 },
