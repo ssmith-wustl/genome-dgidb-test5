@@ -31,6 +31,11 @@ class Genome::Model::Tools::Validation::BuildRemappingContigs {
             is_optional => 0,
             doc => 'The file of tumor breakpoints picked by assembly in fasta format',
         },
+        relapse_assembly_breakpoints_file => {
+            type => 'String',
+            is_optional => 1,
+            doc => 'The file of relapse breakpoints picked by assembly in fasta format',
+        },
         reference_sequence => {
             type => 'String',
             is_optional => 0,
@@ -130,9 +135,22 @@ sub execute {
         return;
     }
 
+
     #pool all the contigs
     my @contigs = (@$tumor_contigs,@$normal_contigs);
     my @resized_contigs = ();
+
+    #add in the relapse if provided
+
+    if($self->relapse_assembly_breakpoints_file) {
+        my $relapse_breakpoints = $self->relapse_assembly_breakpoints_file;
+        my $relapse_contigs = $self->read_in_breakpoints($relapse_breakpoints, 'relapse');
+        unless($relapse_contigs) {
+            $self->error_message("Unable to parse $relapse_breakpoints");
+            return;
+        }
+        push @contigs, @$relapse_contigs;
+    }
 
     #resize the contigs
     for my $contig (@contigs) {
@@ -211,8 +229,11 @@ sub execute {
     #and how many have a contig in normal and how many from normal
     foreach my $id (keys %expected_contigs) {
         $stats_hash->{number_attempted}++;
-        if(!exists($expected_contigs{$id}{tumor}) && !exists($expected_contigs{$id}{normal})) {
+        if(!keys %{$expected_contigs{$id}}) {
             $stats_hash->{number_failed_assembly}++;
+        }
+        else {
+            $stats_hash->{number_passed_assembly}++;
         }
         if(exists($expected_contigs{$id}{tumor}) && $expected_contigs{$id}{tumor} == 1) {
             $stats_hash->{number_with_tumor}++;
@@ -220,8 +241,14 @@ sub execute {
         if(exists($expected_contigs{$id}{normal}) && $expected_contigs{$id}{normal} == 1) {
             $stats_hash->{number_with_normal}++;
         }
+        if($self->relapse_assembly_breakpoints_file && exists($expected_contigs{$id}{relapse}) && $expected_contigs{$id}{relapse} == 1) {
+            $stats_hash->{number_with_relapse}++;
+        }
         if(exists($expected_contigs{$id}{tumor}) && exists($expected_contigs{$id}{normal}) && $expected_contigs{$id}{normal} == 1 && $expected_contigs{$id}{tumor} == 1) {
             $stats_hash->{number_with_both}++;
+        }
+        if(exists($expected_contigs{$id}{tumor}) || exists($expected_contigs{$id}{relapse})) {
+            $stats_hash->{number_with_contig_in_either_tumor_or_relapse}++;
         }
     }
 
@@ -534,8 +561,8 @@ sub handle_overlap {
                 else {
                     push @contigs_to_continue_examining, $contig2;
                     #write the alignment to stderr for debugging
-                    print STDERR "> ",$contig1->{id},"\n",$contig1->{sequence},"\n";
-                    print STDERR "> ",$contig2->{id},"\n",$contig2->{sequence},"\n";
+                    print STDERR ">",$contig1->{id},"\n",$contig1->{sequence},"\n";
+                    print STDERR ">",$contig2->{id},"\n",$contig2->{sequence},"\n";
 
                     $alnout->write_aln($alignment);
                 }
