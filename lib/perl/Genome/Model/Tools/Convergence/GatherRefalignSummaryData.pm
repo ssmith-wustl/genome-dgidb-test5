@@ -166,7 +166,7 @@ sub phrases {
     return [ #An array to preserve order
         'build_id'                      => 'build id: (\d+)',
         'lane_count'                    => 'lane count: (\d+)',
-        'haploid_coverage'              => 'haploid coverage: (\d+\.\d{1,3})',        
+        'haploid_coverage'              => 'haploid coverage: ((?:\\d+\\.\\d{1,3})|(?:Not Available))',
         'unfiltered_snp_calls'          => 'unfiltered SNP calls: ([\d,]+)',
         'filtered_snp_calls'            => 'filtered SNP calls: ([\d,]+)',
         'unfiltered_diploid_heterozygous_percentage' => 'unfiltered diploid heterozygous %: ((?:\d+\.\d{1,3})|Not Available)',
