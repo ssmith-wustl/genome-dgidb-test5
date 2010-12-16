@@ -96,8 +96,6 @@ sub pre_execute {
     unless($self->use_old_pindel){
         $self->use_old_pindel(1);
     }
-    $self->indels("1");
-    $self->exclusive_tiering("1");
 
     my %default_filenames = $self->default_filenames;
     for my $param (keys %default_filenames) {
@@ -144,8 +142,6 @@ __DATA__
   <link fromOperation="input connector" fromProperty="indel_bed_output" toOperation="Cat" toProperty="dest" />
 
   <link fromOperation="Cat" fromProperty="dest" toOperation="Pre-Assembly Tiering" toProperty="variant_file" />
-  <link fromOperation="input connector" fromProperty="indels" toOperation="Pre-Assembly Tiering" toProperty="indels" />
-  <link fromOperation="input connector" fromProperty="exclusive_tiering" toOperation="Pre-Assembly Tiering" toProperty="exclusive_tiering" />
 
   <link fromOperation="Pre-Assembly Tiering" fromProperty="tier1_output" toOperation="Annotation" toProperty="variant_bed_file" />
   <link fromOperation="input connector" fromProperty="annotation_output" toOperation="Annotation" toProperty="output_file" />
@@ -209,8 +205,6 @@ __DATA__
     <inputproperty isOptional="Y">indel_bed_output</inputproperty>
     <inputproperty isOptional="Y">tiered_bed_files</inputproperty>
     <inputproperty isOptional="Y">use_old_pindel</inputproperty>
-    <inputproperty isOptional="Y">indels</inputproperty>
-    <inputproperty isOptional="Y">exclusive_tiering</inputproperty>
     <outputproperty>output</outputproperty>
     <outputproperty>tier_1_read_support</outputproperty>
     <outputproperty>tier_2_read_support</outputproperty>
