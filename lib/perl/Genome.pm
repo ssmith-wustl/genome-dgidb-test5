@@ -33,7 +33,8 @@ use Carp::Heavy;
 if ($] < 5.01) {
     no warnings;
     *Carp::caller_info = sub {
-        package Carp;
+        package 
+            Carp;
         our $MaxArgNums;
         my $i = shift(@_) + 1;
         package DB;
@@ -136,83 +137,83 @@ those tools.
 
 =head1 AUTHORS
 
-This software is developed by the analysis and engineering teams at 
-The Genome Center at Washington Univiersity in St. Louis, with funding from 
-the National Human Genome Research Institute.
+ This software is developed by the analysis and engineering teams at 
+ The Genome Center at Washington Univiersity in St. Louis, with funding from 
+ the National Human Genome Research Institute.
 
-Scott Abbott
-Travis Abbott
-Edward Belter
-Paul Bender
-Anthony Brummett
-Todd C. Carter
-Matthew Callaway
-C.J. Carey
-Lynn Carmichael
-Ken Chen
-Eric Clark
-Kevin Crouse
-Indraniel Das
-Nathan Dees
-Eric deMello
-Brian Derickson
-Alice Diec
-David Dooling
-Feiyu Du
-Adam Dukes
-James Eldred
-Xian Fan
-Ian Ferguson
-Chris Harris
-Amy Hawkins
-Todd Hepler
-Xin Hong
-Shunfang Hou
-Jasreet Hundal
-Erik Hvatum
-Mark Johnson
-Krisha-Latha Kanchi
-Cyriac Kandoth
-Phil Kimmey
-Michael Kiwala
-Daniel Koboldt
-Karthik Kota
-Kim Kyung
-David Larson
-Sai Lek
-Shawn Leonard
-Shin Leong
-Ling Lin
-Justin Lolofie
-Robert Long
-Charles Lu
-John Martin
-Josh McMichael
-Rick Meyer
-Thomas Mooney
-William Nash
-Nathan Nutter
-Ben Oberkfell
-John Osborne
-Josh Peck
-Jerome Peirick
-Craig Pohl
-Ryan Richt
-Noorus Sahar Abubucker
-Gabriel Sanderson
-William Schierding
-Jon Schindler
-William Schroeder
-Christopher Schuster
-Xiaoqi Shi
-Scott Smith
-Sasi Suruliraj
-Kenneth Swanson
-Jason Walker
-John Wallis
-Jim Weible
-Mike Wendl
-Todd Wylie
+ Scott Abbott
+ Travis Abbott
+ Edward Belter
+ Paul Bender
+ Anthony Brummett
+ Todd C. Carter
+ Matthew Callaway
+ C.J. Carey
+ Lynn Carmichael
+ Ken Chen
+ Eric Clark
+ Kevin Crouse
+ Indraniel Das
+ Nathan Dees
+ Eric deMello
+ Brian Derickson
+ Alice Diec
+ David Dooling
+ Feiyu Du
+ Adam Dukes
+ James Eldred
+ Xian Fan
+ Ian Ferguson
+ Chris Harris
+ Amy Hawkins
+ Todd Hepler
+ Xin Hong
+ Shunfang Hou
+ Jasreet Hundal
+ Erik Hvatum
+ Mark Johnson
+ Krisha-Latha Kanchi
+ Cyriac Kandoth
+ Phil Kimmey
+ Michael Kiwala
+ Daniel Koboldt
+ Karthik Kota
+ Kim Kyung
+ David Larson
+ Sai Lek
+ Shawn Leonard
+ Shin Leong
+ Ling Lin
+ Justin Lolofie
+ Robert Long
+ Charles Lu
+ John Martin
+ Josh McMichael
+ Rick Meyer
+ Thomas Mooney
+ William Nash
+ Nathan Nutter
+ Ben Oberkfell
+ John Osborne
+ Josh Peck
+ Jerome Peirick
+ Craig Pohl
+ Ryan Richt
+ Noorus Sahar Abubucker
+ Gabriel Sanderson
+ William Schierding
+ Jon Schindler
+ William Schroeder
+ Christopher Schuster
+ Xiaoqi Shi
+ Scott Smith
+ Sasi Suruliraj
+ Kenneth Swanson
+ Jason Walker
+ John Wallis
+ Jim Weible
+ Mike Wendl
+ Todd Wylie
 
 =head1 LICENSE
 
