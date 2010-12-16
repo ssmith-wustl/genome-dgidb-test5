@@ -14,7 +14,7 @@ use_ok('Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData') or 
 
 my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
     sequencing_platform => 'solexa',
-    assembler_name => 'velvet',
+    assembler_name => 'velvet one-button',
 );
 ok($model, 'Got mock de novo assembly model') or die;
 my $build = Genome::Model::DeNovoAssembly::Test->get_mock_build(model => $model);

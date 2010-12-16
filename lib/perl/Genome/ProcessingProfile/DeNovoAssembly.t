@@ -21,7 +21,7 @@ use_ok('Genome::ProcessingProfile::DeNovoAssembly') or die;
 ok(
     !Genome::ProcessingProfile::DeNovoAssembly->create(
         name => 'DNA Test',
-        assembler_name => 'velvet',
+        assembler_name => 'velvet one-button',
         assembler_version => '7.0.57-64',
     ),
     'Failed as expected - create w/o seq platform',
@@ -31,7 +31,7 @@ ok(
     !Genome::ProcessingProfile::DeNovoAssembly->create(
         name => 'DNA Test',
         sequencing_platform => '3730',
-        assembler_name => 'velvet',
+        assembler_name => 'velvet one-button',
         assembler_version => '7.0.57-64',
     ),
     'Failed as expected - create w/ invalid seq platform',
@@ -60,7 +60,7 @@ ok(
     !Genome::ProcessingProfile::DeNovoAssembly->create(
         name => 'DNA Test',
         sequencing_platform => 'solexa',
-        assembler_name => 'velvet',
+        assembler_name => 'velvet one-button',
         assembler_version => '7.0.57-64',
         coverage => -1,
     ),
@@ -81,7 +81,7 @@ ok(
     !Genome::ProcessingProfile::DeNovoAssembly->create(
         name => 'DNA Test',
         sequencing_platform => 'solexa',
-        assembler_name => 'velvet',
+        assembler_name => 'velvet one-button',
     ),
     'Failed as expected - create w/o assembler version',
 );
@@ -90,7 +90,7 @@ ok(
     !Genome::ProcessingProfile::DeNovoAssembly->create(
         name => 'DNA Test',
         sequencing_platform => 'solexa',
-        assembler_name => 'velvet',
+        assembler_name => 'velvet one-button',
         assembler_version => '7.0.57-64',
         assembler_params => '-wrong params',
     ),
@@ -101,7 +101,7 @@ ok(
     !Genome::ProcessingProfile::DeNovoAssembly->create(
         name => 'DNA Test',
         sequencing_platform => 'solexa',
-        assembler_name => 'velvet',
+        assembler_name => 'velvet one-button',
         assembler_version => '7.0.57-64',
         assembler_params => '-ins_length 260',
     ),
@@ -110,15 +110,17 @@ ok(
 
 #< VELVET >#
 my %valid_velvet_params = Genome::Model::DeNovoAssembly::Test->processing_profile_params_for_assembler_and_platform(
-    assembler_name => 'velvet', 
+    assembler_name => 'velvet one-button', 
     sequencing_platform => 'solexa',
 );
 ok(%valid_velvet_params, 'Got valid velvet pp params');
 my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(%valid_velvet_params);
 
 ok($pp, 'Create DNA pp') or die;
+
 my @stages = $pp->stages;
 is_deeply(\@stages, [qw/ assemble /], 'Stages');
+
 my @stage_classes = $pp->assemble_job_classes;
 is_deeply(
     \@stage_classes, 
@@ -130,14 +132,16 @@ is_deeply(
     ], 
     'Stage classes'
 );
-is($pp->class_for_assembler, 'Genome::Model::Tools::Velvet::Assemble', 'Assembler class');
+is($pp->class_for_assembler, 'Genome::Model::Tools::Velvet::OneButton', 'Assembler class');
 
 #< SOAP >#
 my %valid_soap_params = Genome::Model::DeNovoAssembly::Test->processing_profile_params_for_assembler_and_platform(
-    assembler_name => 'soap',
+    assembler_name => 'soap de-novo-assemble',
     sequencing_platform => 'solexa',
 );
 ok(%valid_soap_params, "Got valid soap pp params");
+
+$valid_soap_params{assembler_name} = 'soap de-novo-assemble';
 
 my $soap_pp = Genome::ProcessingProfile::DeNovoAssembly->create(%valid_soap_params);
 ok($soap_pp, "Created DNA pp") or die;
