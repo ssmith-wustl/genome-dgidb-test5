@@ -7,7 +7,7 @@ use Genome;
 use Data::Dumper;
 use File::Temp;
 
-my $DEFAULT_VERSION = '1.1';
+our $VERSION = '0.01';
 
 class Genome::Model::Tools::Music {
     is => ['Command'],

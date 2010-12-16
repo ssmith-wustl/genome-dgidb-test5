@@ -3,9 +3,11 @@ package Genome::Model::Tools::Music::ClinicalCorrelation;
 use warnings;
 use strict;
 use Carp;
-use Genome;
+use Genome::Model::Tools::Music;
 use IO::File;
 use POSIX qw( WIFEXITED );
+
+our $VERSION = $Genome::Model::Tools::Music::VERSION;
 
 =head1 NAME
 
