@@ -85,25 +85,24 @@ sub get_mock_processing_profile {
             soap_de_novo_assemble_pp_params_for_build 
             velvet_one_button_pp_params_for_build
 
-sanitized_assembler_params
-sanitized_soap_de_novo_assemble_params
-sanitized_velvet_one_button_params
+            sanitized_assembler_params
+            sanitized_soap_de_novo_assemble_params
+            sanitized_velvet_one_button_params
 
-assembler_base_name
+            assembler_base_name
+            assemble_build
+            assembler_class
 
-assemble_build
-assembler_class
-
-assembler_accessor_name
-assembler_pp_params_for_build
-assembler_params_to_derive_from_build
+            assembler_accessor_name
+            assembler_pp_params_for_build
+            assembler_params_to_derive_from_build
 
             get_number_of_cpus
 
-            soap_bsub_rusage
-            velvet_bsub_rusage
+            soap_de_novo_assemble_bsub_rusage
+            velvet_one_button_bsub_rusage
             /),
-    );
+        );
 
     return $pp;
 }
@@ -113,11 +112,11 @@ sub get_mock_subject {
 
     my $sample_name = 'H_KT-185-1-0089515594';
 
-    # 2851686380
+# 2851686380
     my $taxon = Genome::Utility::TestBase->create_mock_object(
-        class => 'Genome::Taxon',
-        domain => 'Bacteria',
-        species_name => 'Escherichia coli 185-1',
+            class => 'Genome::Taxon',
+            domain => 'Bacteria',
+            species_name => 'Escherichia coli 185-1',
         current_default_org_prefix => undef,
         estimated_genome_size => 4500000,,
         current_genome_refseq_id => undef,
