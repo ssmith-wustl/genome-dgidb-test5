@@ -19,7 +19,7 @@ sub load_modules {
         use UR::Object::View::Default::Xsl qw/type_to_url url_to_type/;
     ";
     if ($@) {
-        die "failed to load required modules";
+        die "failed to load required modules: $@";
     }
 
     # search's callbacks are expensive, web server can't change anything anyway so don't waste the time

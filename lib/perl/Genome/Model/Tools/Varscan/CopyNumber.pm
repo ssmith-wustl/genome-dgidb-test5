@@ -21,7 +21,7 @@ use FileHandle;
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
 class Genome::Model::Tools::Varscan::CopyNumber {
-	is => 'Command',                       
+	is => 'Genome::Model::Tools::Varscan',
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		normal_bam	=> { is => 'Text', doc => "Path to Normal BAM file", is_optional => 0, is_input => 1 },
@@ -136,7 +136,7 @@ sub execute {                               # replace with real execution logic.
 			$tumor_pileup = "samtools view -b -u -q 10 $tumor_bam | samtools pileup -f $reference -";			
 		}
 		
-		my $cmd = "bash -c \"java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan copynumber <\($normal_pileup\) <\($tumor_pileup\) $output --data-ratio $normal_tumor_ratio $varscan_params\"";
+		my $cmd = $self->java_command_line("copynumber <\($normal_pileup\) <\($tumor_pileup\) $output --data-ratio $normal_tumor_ratio $varscan_params");
 
 		## Run VarScan ##
 		if($self->heap_space)

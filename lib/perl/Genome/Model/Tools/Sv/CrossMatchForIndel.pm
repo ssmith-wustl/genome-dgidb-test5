@@ -211,7 +211,7 @@ sub execute {
                         $var->{microhomology} = $P5_homology+$P3_homology;
                         # change according to Ken's requirement:
 #                         print STDERR "original: $var->{bkpos2}\n";
-                        $var->{refpos2} -= 1;
+#                        $var->{refpos2} -= 1;
 #                        $var->{bkpos2} -= 1;
 #                        print STDERR "Now: $var->{bkpos2}\n";
                     }

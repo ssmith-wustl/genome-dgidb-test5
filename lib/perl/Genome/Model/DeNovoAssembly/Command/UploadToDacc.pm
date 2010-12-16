@@ -74,8 +74,8 @@ sub _get_last_succeeeded_build_from_model {
         return;
     }
 
-    if ( $model->processing_profile->assembler_name ne 'soap' ) {
-        $self->error_message('Model ('.$model->id.') was not assembled with soap. It was assembled with '.$model->processing_profile->assembler_name.'. Cannot upload to the DACC.');
+    if ( $model->processing_profile->assembler_base_name ne 'soap' ) {
+        $self->error_message('Model ('.$model->id.') was not assembled with soap. It was assembled with '.$model->processing_profile->assembler_base_name.'. Cannot upload to the DACC.');
         return;
     }
 

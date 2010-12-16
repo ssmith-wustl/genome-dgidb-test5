@@ -43,6 +43,16 @@ class Genome::InstrumentData::Imported {
         library_id           => { is => 'NUMBER', len => 20, is_optional => 0 },
         _old_sample_name      => { is => 'VARCHAR2', len => 20, is_optional => 1, column_name=>'SAMPLE_NAME' },
         _old_sample_id        => { is => 'NUMBER', len => 20, is_optional => 1, column_name=>'SAMPLE_ID' },
+        library => { is => 'Genome::Library', id_by => 'library_id', },
+        library_name => { is => 'Text', via => 'library', to => 'name', },
+        sample => { is => 'Genome::Sample', via => 'library', to => 'sample', },
+        sample_id => { is=> 'Text', via => 'sample', to => 'id', },
+        sample_name => { is=> 'Text', via => 'sample', to => 'name', },
+        source => { is => 'Genome::Measurable', via => 'sample', to => 'source', },
+        source_id => { is=> 'Text', via => 'source', to => 'id', },
+        source_name => { is=> 'Text', via => 'source', to => 'name', },
+        taxon => { is => 'Genome::Taxon', via => 'source', to => 'taxon', },
+        species_name => { is => 'Text', via => 'taxon', to => 'species_name', },
     ],
     has_optional =>[
         reference_sequence_build_id => { 
@@ -290,15 +300,6 @@ sub short_run_name {
 sub flow_cell_id {
     my $self = shift;
     return $self->short_run_name;
-}
-
-sub library_name {
-    my $self = shift;
-    unless ($self->library_id) {
-        return $self->id;
-    }
-    
-    return Genome::Library->get($self->library_id)->name;
 }
 
 sub lane {

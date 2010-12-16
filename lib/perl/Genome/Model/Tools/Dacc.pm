@@ -117,7 +117,9 @@ sub ls_dacc_directory {
     $out = '';
     my $directory = $self->dacc_directory;
     $in = "ls -l $directory\n";
-    $harness->pump until $out;
+    $harness->pump until $out; 
+    $harness->finish;
+    $out =~ s/aspsh>\s+$//;
 
     return $out;
 }

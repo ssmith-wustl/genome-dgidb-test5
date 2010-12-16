@@ -17,7 +17,7 @@ use_ok('Genome::Model::Build::DeNovoAssembly') or die;
 
 my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
     sequencing_platform => 'solexa',
-    assembler_name => 'velvet',
+    assembler_name => 'velvet one-button',
 );
 ok($model, 'Got mock de novo assembly model') or die;
 my $build = Genome::Model::Build::DeNovoAssembly->create(
@@ -27,6 +27,7 @@ my $build = Genome::Model::Build::DeNovoAssembly->create(
 ok($build, 'Created de novo assembly build') or die;
 isa_ok($build, 'Genome::Model::Build::DeNovoAssembly');
 
+is($build->center_name, $build->model->center_name, 'center name');
 is($build->genome_size, 4500000, 'Genome size');
 
 # base limit

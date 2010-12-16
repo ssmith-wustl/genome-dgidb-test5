@@ -21,7 +21,7 @@ use FileHandle;
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
 class Genome::Model::Tools::Varscan::Consensus {
-	is => 'Command',                       
+	is => 'Genome::Model::Tools::Varscan',
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		bam_file	=> { is => 'Text', doc => "Path to BAM file", is_optional => 0 },
@@ -82,7 +82,7 @@ sub execute {                               # replace with real execution logic.
 		my $cmd = "samtools view -b -u -q 10 $bam_file | samtools pileup -f $reference - | java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan limit --positions-file $positions_file --output-file $output_file.pileup";
 		system($cmd);
 		print "Running VarScan pileup2cns...\n";
-		$cmd = "bash -c \"java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan pileup2cns $output_file.pileup --min-coverage $min_coverage --min-var-freq $min_var_freq --min-avg-qual $min_avg_qual >$output_file\"";
+		$cmd = $self->java_command_line("pileup2cns $output_file.pileup --min-coverage $min_coverage --min-var-freq $min_var_freq --min-avg-qual $min_avg_qual >$output_file");
 		system($cmd);
 	}
 	else

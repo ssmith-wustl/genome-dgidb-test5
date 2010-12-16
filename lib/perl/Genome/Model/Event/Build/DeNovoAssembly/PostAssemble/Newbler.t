@@ -17,7 +17,7 @@ exit;
 # FIXME !! Add newbler test data!!
 my $pp = Genome::Model::DeNovoAssembly::Test->get_mock_processing_profile(
     sequencing_platform => 'solexa',
-    assembler_name => 'velvet',
+    assembler_name => 'velvet one-button',
 );
 ok($pp, 'Got mock de novo assembly processing profile') or die;
 my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
