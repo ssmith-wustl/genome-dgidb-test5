@@ -1,15 +1,17 @@
-package Genome::Model::Tools::Music::MutationRelation;
+package Genome::Model::Tools::Music::ClinicalCorrelation;
 
 use warnings;
 use strict;
 use Carp;
-use Genome;
+use Genome::Model::Tools::Music;
 use IO::File;
 use POSIX qw( WIFEXITED );
 
+our $VERSION = $Genome::Model::Tools::Music::VERSION;
+
 =head1 NAME
 
-Genome::Music::MutationRelation - identification of significantly mutated genes
+Genome::Music::ClinicalCorrelation - identification of relevant clinical phenotypes
 
 =head1 VERSION
 
@@ -19,12 +21,12 @@ Version 1.01
 
 our $VERSION = '1.01';
 
-class Genome::Model::Tools::Music::MutationRelation {
+class Genome::Model::Tools::Music::ClinicalCorrelation {
     is => 'Command',                       
     has => [ 
     output_file => {
         is => 'Text',
-        doc => "Results of mutation-relation tool",
+        doc => "Results of clinical-correlation tool",
     },
     maf_file => { 
         is => 'Text',
@@ -33,14 +35,16 @@ class Genome::Model::Tools::Music::MutationRelation {
     },
     matrix_file => {
         is => 'Text',
-        doc => "Matrix of samples (y) vs. genes with mutations (x)",
+        doc => "Matrix of samples (y) vs. mutations (x)",
         is_optional => 1,
     },
-    permutations => {
-        is => 'Number',
-        doc => "Number of permutations used to determine P-values",
-        is_optional => 1,
-        default => 100,
+    clinical_data_file => {
+        is => 'Text',
+        doc => "Table of samples (y) vs. clinical data category (x)",
+    },
+    clinical_data_type => {
+        is => 'Text',
+        doc => "Data must be either \"numeric\" or \"class\" type data",
     },
     ],
 };
@@ -48,38 +52,39 @@ class Genome::Model::Tools::Music::MutationRelation {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {
-    "Identify relationships between mutated genes"                 
+    "Identify correlations between mutations in genes and particular phenotypic traits"
 }
 
 sub help_synopsis {
     return <<EOS
-This command identifies relationships between mutated genes
-EXAMPLE:	gmt music mutation-relation --maf-file myMAF.tsv --permutations 1000 --output-file mut.rel.csv
+This command identifies correlations between mutations in genes and particular phenotypic traits
+EXAMPLE:	gmt music clinical-correlation --maf-file myMAF.tsv --clinical-data-file myData.tsv --clinical-data-type 'numeric'
 EOS
 }
 
-sub help_detail { #FIXME
+sub help_detail {
     return <<EOS
-This tool accepts either a MAF file or a matrix of samples vs. gene, where the values in the matrix are a 1 if the gene has a mutations for a particular sample, and a 0 if there are no mutations in that gene for that sample. If the matrix is provided, the MAF file is not needed. If only the MAF file is provided, the matrix will be created by the tool and saved to a file whose name will be the name of the MAF file appended with ".mutation_relation_matrix". The matrix is fed to an R tool which 
+This tool accepts either a MAF file or a matrix of samples vs. genes, where the values in the matrix are the number of mutations in each sample per gene. If the matrix is provided, the MAF file is not needed. If only the MAF file is provided, the matrix will be created by the tool and saved to a file whose name will be the name of the MAF file appended with ".clinical_correlation_matrix". This matrix is fed into an R tool which calculates a P-value representing the probability that the correlation seen between the mutations in each gene and each phenotype trait are random. Lower P-values indicate lower randomness, or true correlations.
 EOS
 }
 
 
 =head1 SYNOPSIS
 
-Identifies significantly mutated genes
+Identifies significant phenotypic traits
 
 
 =head1 USAGE
 
-      music.pl mutation-relation OPTIONS
+      music.pl clinical-corellation OPTIONS
 
       OPTIONS:
 
-      --output-file		Output file to contain results
+      --output-file		Output file for writing results
       --maf-file		List of mutations in MAF format
-      --matrix-file		Discrete matrix of sample vs genes with mutations
-      --permutations		Number of permutations used to determine P-values
+      --matrix-file		Path to samples-vs-mutated-genes matrix
+      --clinical-data-file		Table of samples vs. clinical
+      --clinical-data-type		Either 'numeric' or 'class' type of data
 
 
 =head1 FUNCTIONS
@@ -101,9 +106,23 @@ sub execute {
     #parse input arguments
     my $self = shift;
     my $output_file = $self->output_file;
-    my $permutations = $self->permutations;
     my $matrix_file = $self->matrix_file;
     my $maf_file = $self->maf_file;
+    my $clinical_data_file = $self->clinical_data_file;
+    my $clinical_data_type = $self->clinical_data_type;
+
+    #check clinical_data_type parameter and choose test method accordingly
+    my $test_method;
+    if ($clinical_data_type =~ /^numeric$/i) {
+        $test_method = "cor";
+    }
+    elsif ($clinical_data_type =~ /^class$/i) {
+        $test_method = "chisq";
+    }
+    else {
+        $self->error_message("Please enter either \"numeric\" or \"class\" for the --clinical-data-type parameter.");
+        return;
+    }
 
     #create sample-gene matrix if necessary
     unless (defined $matrix_file) {
@@ -114,9 +133,7 @@ sub execute {
         $matrix_file = create_sample_gene_matrix($maf_file);
     }
 
-    #perform mutation-relation test using R
-    my $R_cmd = "R --slave --args < mutation_relation.R $matrix_file $permutations $output_file";
-    print "$R_cmd\n"; #FIXME
+    my $R_cmd = "R --slave --args < clinical_correlation.R $clinical_data_file $matrix_file $output_file $test_method";
     WIFEXITED(system $R_cmd) or croak "Couldn't run: $R_cmd ($?)";
 
     return(1);
@@ -174,7 +191,7 @@ sub create_sample_gene_matrix {
     @all_genes = sort keys %all_genes;
 
     #write the input matrix for R code to a file #FIXME HARD CODE FILE NAME, OR INPUT OPTION
-    my $matrix_file = $maf_file . ".mutation_relation_matrix";
+    my $matrix_file = $maf_file . ".clinical_correlation_matrix";
     my $matrix_fh = new IO::File $matrix_file,"w";
 
     #print input matrix file header
@@ -186,7 +203,7 @@ sub create_sample_gene_matrix {
         $matrix_fh->print($sample);
         for my $gene (@all_genes) {
             if (exists $mutations{$sample}{$gene}) {
-                $matrix_fh->print("\t1");
+                $matrix_fh->print("\t$mutations{$sample}{$gene}");
             }
             else {
                 $matrix_fh->print("\t0");
@@ -207,7 +224,7 @@ The Genome Center at Washington University, C<< <software at genome.wustl.edu> >
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Genome::Music::MutationRelation
+    perldoc Genome::Music::ClinicalCorrelation
 
 For more information, please visit http://genome.wustl.edu.
 
@@ -219,4 +236,4 @@ This program is free and open source under the GNU license.
 
 =cut
 
-1; # End of Genome::Music::MutationRelation
+1; # End of Genome::Music::ClinicalCorrelation
