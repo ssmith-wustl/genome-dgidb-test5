@@ -346,7 +346,7 @@ sub assembly_fasta_file {
 
 #< Misc >#
 sub center_name {
-    return 'WUGC';
+    return $_[0]->model->center_name || 'WUGC';
 }
 
 #< Metrics >#
