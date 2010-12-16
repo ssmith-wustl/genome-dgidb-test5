@@ -8,7 +8,7 @@ use above 'Genome';
 use Data::Dumper 'Dumper';
 use Test::More 'no_plan';
 
-use_ok('Genome::Utility::Text');
+use_ok('Genome::Utility::Text') or die;
 
 # camel case
 my $string                  = 'genome model reference alignment 454x titanium';
@@ -48,10 +48,12 @@ is(Genome::Utility::Text::sanitize_string_for_filesystem($fs_string), $san_strin
 ok(!Genome::Utility::Text::sanitize_string_for_filesystem(undef), 'failed as expected - sanitize string for filesystem w/o string');
 
 # capitalize words
-my $uncap_string = 'goOd Morning vietnam!';
+my $uncap_string1 = 'goOd Morning vietnam!';
+my $uncap_string2 = 'goOd Morning-vietnam!';
 my $cap_string   = 'GoOd Morning Vietnam!';
-is(Genome::Utility::Text::capitalize_words($uncap_string), $cap_string, 'capitalize words');
-ok(!Genome::Utility::Text::capitalize_words(undef), 'failed as expected - capitalize w/o string words');
+is(Genome::Utility::Text::capitalize_words($uncap_string1), $cap_string, 'capitalize words');
+is(Genome::Utility::Text::capitalize_words($uncap_string2, '-'), $cap_string, 'capitalize words');
+ok(!eval{Genome::Utility::Text::capitalize_words(undef)}, 'failed as expected - capitalize w/o string words');
 
 exit;
 

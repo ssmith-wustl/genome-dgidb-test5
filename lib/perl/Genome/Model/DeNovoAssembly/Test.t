@@ -48,7 +48,7 @@ ok(
 
 # valid velvet solexa
 my $velvet_model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
-    assembler_name => 'velvet',
+    assembler_name => 'velvet one-button',
     sequencing_platform => 'solexa',
 );
 ok($velvet_model, 'Got mock DNA model for velvet solexa') or die;

@@ -42,7 +42,7 @@ sub _execute_tool {
     #append required param assembly_directory to %params
     $params{assembly_directory} = $self->build->data_directory;
 
-    my $class = 'Genome::Model::Tools::'.ucfirst $self->processing_profile->assembler_name.'::'.$class_name;
+    my $class = 'Genome::Model::Tools::'.ucfirst $self->processing_profile->assembler_base_name.'::'.$class_name;
 
     my $tool = $class->create ( %params );
     unless ( $tool ) {

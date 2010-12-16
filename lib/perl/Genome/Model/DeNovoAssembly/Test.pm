@@ -24,18 +24,18 @@ sub processing_profile_params_for_assembler_and_platform {
 
     #TODO make params trim specific too? eg, soap_solexa_bwa_trim
     my %assembler_sequencing_platform_params = (
-        velvet_solexa =>  { 
+        'velvet one-button_solexa' => {
             coverage => 0.5,#25000,
             assembler_version => '0.7.57-64',
             assembler_params => '-hash_sizes 31 33 35',
             read_processor => 'trimmer by-length -trim-length 10 | rename illumina-to-pcap',
-	    post_assemble => 'standard-outputs',
+            post_assemble => 'standard-outputs',
         },
-        soap_solexa => {
+        'soap de-novo-assemble_solexa' => {
             assembler_version => '1.04',
             assembler_params => '-kmer_size 31 -resolve_repeats -kmer_frequency_cutoff 1',
             read_processor => 'trimmer bwa-style -trim-qual-level 10 | filter by-length --filter-length 35 | rename illumina-to-pcap',
-	    post_assemble => 'standard-outputs',
+            post_assemble => 'standard-outputs',
         },
         newbler_454 => {
         },
@@ -46,10 +46,10 @@ sub processing_profile_params_for_assembler_and_platform {
         Carp::confess "Invalid assembler ($assembler_name) and sequencing platform ($sequencing_platform) combination";
     }
 
-    $specific_params->{name} = 'De Novo Assembly ' . ucfirst $assembler_name . ' Test';
+    $specific_params->{name} = 'De Novo Assembly ' . Genome::Utility::Text::capitalize_words($assembler_name, '-') . ' Test';
     $specific_params->{sequencing_platform} = $sequencing_platform;
     $specific_params->{assembler_name} = $assembler_name;
-    
+
     return %$specific_params;
 }
 
@@ -57,12 +57,13 @@ sub get_mock_processing_profile {
     my $self = shift;
 
     my %params = $self->processing_profile_params_for_assembler_and_platform(@_) or Carp::confess;
+
     my $pp = Genome::Model::Test->get_mock_processing_profile(
         class => 'Genome::ProcessingProfile::DeNovoAssembly',
         type_name => 'de novo assembly',
         %params,
     ) or Carp::confess "Can't get mock de novo assembly processing profile";
-    
+
     Genome::Utility::TestBase->mock_methods(
         $pp,
         (qw/ 
@@ -76,15 +77,26 @@ sub get_mock_processing_profile {
 
             post_assemble_parts
 
-            soap_params_to_derive_from_build
-            velvet_params_to_derive_from_build
+            assembler_base_name
 
-            soap_pp_params_for_build
-            velvet_pp_params_for_build
+            soap_de_novo_assemble_params_to_derive_from_build
+            velvet_one_button_params_to_derive_from_build
+
+            soap_de_novo_assemble_pp_params_for_build 
+            velvet_one_button_pp_params_for_build
 
 sanitized_assembler_params
-sanitized_soap_assembler_params
-sanitized_velvet_assembler_params
+sanitized_soap_de_novo_assemble_params
+sanitized_velvet_one_button_params
+
+assembler_base_name
+
+assemble_build
+assembler_class
+
+assembler_accessor_name
+assembler_pp_params_for_build
+assembler_params_to_derive_from_build
 
             get_number_of_cpus
 
@@ -100,7 +112,7 @@ sub get_mock_subject {
     my $self = shift;
 
     my $sample_name = 'H_KT-185-1-0089515594';
-    
+
     # 2851686380
     my $taxon = Genome::Utility::TestBase->create_mock_object(
         class => 'Genome::Taxon',
@@ -195,7 +207,7 @@ sub get_mock_build {
     Carp::confess("Unknown params to get mock build:\n".Dumper(\%params)) if %params;
     
     my $build = Genome::Model::Test->get_mock_build(
-        class => 'Genome::Model::Build::DeNovoAssembly::'.Genome::Utility::Text::string_to_camel_case($model->assembler_name),
+        class => 'Genome::Model::Build::DeNovoAssembly::'.Genome::Utility::Text::string_to_camel_case($model->processing_profile->assembler_base_name),
         model => $model,
         data_directory => ( 
             $use_example_directory
@@ -243,7 +255,7 @@ sub get_mock_build {
     /);
     my %build_specific_methods_to_mock = (
         newbler => [qw//],
-        soap => [qw/
+        'soap de-novo-assemble' => [qw/
             file_prefix
             assembler_forward_input_file_for_library_id
             assembler_reverse_input_file_for_library_id
@@ -261,7 +273,7 @@ sub get_mock_build {
             pga_scaffolds_fasta_file
 
         /],
-        velvet => [qw/
+        'velvet one-button' => [qw/
             collated_fastq_file
             assembly_afg_file
             sequences_file
@@ -273,6 +285,7 @@ sub get_mock_build {
             ace_file
         /],
     );
+
     Genome::Utility::TestBase->mock_methods(
         $build,
         @build_methods_to_mock,
@@ -303,7 +316,7 @@ sub example_directory_for_model {
 
     Carp::confess "No model to get example directory" unless $model;
     
-    my $assembler_platform = $model->assembler_name.'_'.$model->sequencing_platform;
+    my $assembler_platform = $model->processing_profile->assembler_base_name.'_'.$model->sequencing_platform;
     my $dir = $self->base_directory.'/'.$assembler_platform.'_build_v'.$dirs_versions{$assembler_platform};
 
     Carp::confess("Example directory ($dir) for de novo assembly model does not exist.") unless -d $dir;
