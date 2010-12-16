@@ -135,7 +135,7 @@ class Genome::Model {
         
         # these go on refalign models
         last_complete_build_flagstat     => { calculate => q| return $self->lcb_flagstat(); | },
-        region_of_interest_set_value     => { is => 'UR::Value', via => 'inputs', to => 'value', where => [ name => 'region_of_interest_set_name'] },
+        region_of_interest_set_value     => { is_many => 1, is_mutable => 1, is => 'UR::Value', via => 'inputs', to => 'value', where => [ name => 'region_of_interest_set_name'] },
         region_of_interest_set_name      => { via => 'region_of_interest_set_value', to => 'id', },
     ],
     has_many_optional_deprecated => [

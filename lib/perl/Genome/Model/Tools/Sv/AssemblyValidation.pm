@@ -377,6 +377,7 @@ sub _get_tigra_options {
     my $tigra_opts = '-d -r -I '. $self->_data_dir  . ' ';
     $tigra_opts .= '-b ' unless $self->custom_sv_format;
     $tigra_opts .= '-p 10000 ' if($self->asm_high_coverage);
+    $tigra_opts .= '-h 300 ' if($self->asm_high_coverage);
     $tigra_opts .= '-z ' . $self->skip_call if($self->skip_call);
     $tigra_opts .= '-c ' . $self->specify_chr . ' ' if($self->specify_chr);
     $tigra_opts .= '-M ' . $self->min_size_of_confirm_asm_sv . ' ' if($self->min_size_of_confirm_asm_sv);
@@ -476,7 +477,7 @@ sub _UpdateSVs{
         #$pre_size += $makeup_size if $n_seg >= 2;
         if (defined $pre_size && defined $pre_start1 && defined $pre_start2) {
             my ($contigseq,$contiglens,$contigcovs,$kmerutil) = _GetContig($tigra_sv_fa, $pre_contigid);
-            my ($refpos1, $refpos2, $rpos1, $rpos2) = _GetRefPos($cm_out, $pre_contigid);
+            my ($refpos1, $refpos2, $rpos1, $rpos2) = _GetRefPos($cm_out, $pre_contigid,$pre_size,$pre_type);
             $alnscore = int($alnscore*100/$regionsize); 
             $alnscore = $alnscore>100 ? 100 : $alnscore;
             if (!defined $maxSV || $maxSV->{size}<$pre_size || $maxSV->{alnscore} < $alnscore) {
@@ -508,18 +509,39 @@ sub _UpdateSVs{
 
 # only good for small INDELs
 sub _GetRefPos{
-    my ($fin, $contigid) = @_;
+    my ($fin, $contigid, $pre_size, $pre_type) = @_;
     my ($ref_start, $ref_end, $r_start, $r_end);
     my ($ref_start1, $ref_end1, $r_start1, $r_end1);
     my ($refpos1, $refpos2, $rpos1, $rpos2);
     my ($chr, $ref_1, $ref_2);
     my $num = 0;
+    my ($r1, $r2, $r3, $type, $str, $g1, $g2, $g3);
+    my $check = 0;
+    my $check_results = 0;
     open(CM,"<$fin") || die "unable to open $fin\n";
     while(<CM>){
+        # go ahead to check DISCREPANCY contains I or D directly after find a matched ALIGNMENT
+        if($check == 1 && $_ =~ /^DISCREPANCY/){
+            if($pre_type =~ /DEL/){
+                if($_ =~ /D-$pre_size/){
+                    $check_results = 1;
+                    last;
+                }
+            }
+            elsif($pre_type =~ /INS/){
+                if($_ =~ /I-$pre_size/){
+                    $check_results = 1;
+                    last;
+                }
+            }
+        }
+        else{
+            $check = 0;
+        }
+
         if($_ =~ /^ALIGNMENT/ && $_ =~ /$contigid/){
             my @a = split(/\s+/, $_);
             next if($a[5] ne $contigid);
-            my ($r1, $r2, $r3, $type, $str, $g1, $g2, $g3);
 
             if($#a == 13){
                 ($r1, $r2, $r3, $type, $str, $g1, $g2, $g3) = ($a[$#a - 7], $a[$#a - 6], $a[$#a - 5], $a[$#a - 4], $a[$#a - 3], $a[$#a - 2], $a[$#a - 1], $a[$#a]);
@@ -527,10 +549,10 @@ sub _GetRefPos{
             else{
                 ($r1, $r2, $r3, $str, $g1, $g2, $g3) = ($a[$#a - 6], $a[$#a - 5], $a[$#a - 4], $a[$#a - 3], $a[$#a - 2], $a[$#a - 1], $a[$#a]);
             }
-
+            
             #print "HHHHHHHHHHHHHH: $r1, $r2, $r3\n";
             ($chr, $ref_1, $ref_2) = ($str =~ /(\S+):(\d+)-(\d+)/);
-                
+=cut                
             #print "HHHHHHHHHHHHHHH: $g1\t$g2\t$g3\n";
             if($g1 =~ /\(/){
                 ($ref_start, $ref_end) = ($g2, $g3) if($num == 0);
@@ -548,12 +570,22 @@ sub _GetRefPos{
                 ($r_start, $r_end) = ($r1, $r2) if($num == 0);
                 ($r_start1, $r_end1) = ($r1, $r2) if($num == 1);
             }
-
-
-            $num ++;
+=cut
+            $check = 1;
+#$num ++;
         }
     }
 
+    if($check_results == 1){
+        ($refpos1, $refpos2) = ($g2, $g3) if($g1 =~ /\(/);
+        ($refpos1, $refpos2) = ($g1, $g2) if($g3 =~ /\(/);
+        ($rpos1, $rpos2) = ($r1, $r2) if($r3 =~ /\(/);
+        ($rpos1, $rpos2) = ($r2, $r3) if($r1 =~ /\(/);
+    }
+    else{
+        print STDERR "Error, didn't find $contigid of $pre_type and $pre_size in $fin";
+    }
+=cut
     if($num >= 2){
         #$refpos1 = $ref_start > $ref_start1 ? $ref_start1 : $ref_start;
         #$refpos2 = $ref_end > $ref_end1 ? $ref_end : $ref_end1;
@@ -570,7 +602,7 @@ sub _GetRefPos{
         $rpos1 = $r_start;
         $rpos2 = $r_end;
     }
-
+=cut
     $refpos1 += $ref_1;
     $refpos2 += $ref_1;
 
