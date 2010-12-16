@@ -99,7 +99,8 @@ sub execute {
             query_string => $self->query,
             page => $self->page,
             subject_class_name => $subject_class,
-            subject_id => $subject_id
+            subject_id => $subject_id,
+            fq => $self->fq(),
         );
     }
 

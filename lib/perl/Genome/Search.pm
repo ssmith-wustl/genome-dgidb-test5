@@ -75,7 +75,6 @@ sub searchable_classes {
          Genome::Model 
          Genome::ProcessingProfile 
          Genome::InstrumentData::FlowCell
-         Genome::Capture::Set 
          Genome::WorkOrder
          Genome::Site::WUGC::Project
          Genome::Disk::Group 

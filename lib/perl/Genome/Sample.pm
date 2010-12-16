@@ -61,6 +61,8 @@ class Genome::Sample {
                                         column_name => 'FULL_NAME',
                                     },
         subject_type => { is => 'Text', is_constant => 1, value => 'organism sample', column_name => '', },
+        _nomenclature                => { column_name => 'NOMENCLATURE', default_value => "WUGC" }, 
+
     ],
     has_optional => [	
         common_name                 => { is => 'Text', 
@@ -145,8 +147,6 @@ class Genome::Sample {
         _sub_type1                  => { via => 'attributes', where => [ name => 'sub-type' ], to => 'value' },
         _sub_type2                  => { via => 'attributes', where => [ name => 'subtype' ], to => 'value' },
         
-        _nomenclature                => { column_name => 'NOMENCLATURE', default_value => "WUGC" }, 
-
         models                      => { is => 'Genome::Model', reverse_as => 'subject', is_many => 1 },
 
         project_assignments          => { is => 'Genome::Sample::ProjectAssignment', reverse_id_by => 'sample', is_many => 1 },
