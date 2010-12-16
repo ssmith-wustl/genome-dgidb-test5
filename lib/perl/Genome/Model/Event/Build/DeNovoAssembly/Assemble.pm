@@ -13,7 +13,7 @@ sub bsub_rusage {
     my $self = shift;
 
     # FIXME
-    my $method = $self->processing_profile->assembler_name.'_bsub_rusage';
+    my $method = $self->processing_profile->assembler_accessor_name.'_bsub_rusage';
     if ( $self->processing_profile->can( $method ) ) {
         my $usage = $self->processing_profile->$method;
         return $usage;
