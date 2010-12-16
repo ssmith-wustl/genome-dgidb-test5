@@ -27,6 +27,7 @@ my $build = Genome::Model::Build::DeNovoAssembly->create(
 ok($build, 'Created de novo assembly build') or die;
 isa_ok($build, 'Genome::Model::Build::DeNovoAssembly');
 
+is($build->center_name, $build->model->center_name, 'center name');
 is($build->genome_size, 4500000, 'Genome size');
 
 # base limit

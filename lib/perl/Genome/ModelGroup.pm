@@ -199,9 +199,6 @@ sub delete {
     my @models = $self->models;
     if (@models) {
         $self->status_message("Unassigning " . @models . " models from " . $self->__display_name__ . ".");
-        $self->status_message("Removed convergence model.");
-    }
-    else {
         $self->unassign_models(@models);
     }
 

@@ -16,6 +16,7 @@ my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
     assembler_name => 'soap de-novo-assemble',
 );
 ok($model, 'mock model');
+is($model->center_name, 'WUGC', 'center name');
 is($model->default_model_name, 'H_KT-185-1-0089515594 Posterior Fornix De Novo Assembly Soap De Novo Assemble Test', 'default model name');
 
 my %tissue_descs_and_name_parts = (

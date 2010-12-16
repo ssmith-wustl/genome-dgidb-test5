@@ -177,8 +177,9 @@ sub get_mock_model {
     # methods
     Genome::Utility::TestBase->mock_methods(
         $model,
-        (qw/ default_model_name _get_name_part_from_tissue_desc /),
+        (qw/ default_model_name center_name _get_name_part_from_tissue_desc /),
     ) or die;
+    $model->center_name('WUGC');
 
     # inst data
     my $sequencing_platform = $pp->sequencing_platform;
