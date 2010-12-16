@@ -1478,7 +1478,7 @@ sub delete {
         $idas->first_build_id($next_build_id);
     }
 
-    if ($self->data_directory && -e $self->data_directory && !$keep_build_directory and !$ENV{UR_DBI_NO_COMMIT}) {
+    if ($self->data_directory && -e $self->data_directory && !$keep_build_directory) {
         $self->status_message("\nRemoving build data directory at " . $self->data_directory);
         unless (rmtree($self->data_directory, { error => \my $remove_errors })) {
             if (@$remove_errors) {
@@ -1503,7 +1503,7 @@ sub delete {
     }
 
     my $disk_allocation = $self->disk_allocation;
-    if ($disk_allocation && !$keep_build_directory and !$ENV{UR_DBI_NO_COMMIT}) {
+    if ($disk_allocation && !$keep_build_directory) {
         $self->status_message("\nDeallocating build directory");
         unless ($disk_allocation->deallocate) {
              $self->warning_message('Failed to deallocate disk space.');
