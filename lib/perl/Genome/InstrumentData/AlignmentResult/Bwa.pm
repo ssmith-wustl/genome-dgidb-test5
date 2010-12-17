@@ -28,9 +28,17 @@ sub required_rusage {
         my $kb_usage = $instrument_data->calculate_alignment_estimated_kb_usage;
         $estimated_usage_mb = int(($kb_usage * 5) / 1024)+100;
     }
-        
+    
+    my $mem = 10000;
+    my ($maxmem, $mem_kb) = ($mem*2, $mem*1000);
+    my $tmp = $estimated_usage_mb;
+    my $maxtmp = $tmp*2; 
+    my $cpus = 4;
+    my $maxcpus = $cpus*2;
+    my $rusage = "rusage[mem=$mem, tmp=$tmp]";
     # select blades that can hold two of me
-    return "-R 'select[model!=Opteron250 && type==LINUX64 && ncpus>=8 maxtmp>=" . (2*$estimated_usage_mb) . " && mem>20000] span[hosts=1] rusage[mem=10000]' -M 10000000 -n 4 -q alignment -m alignment";
+    my $select = "select[model!=Opteron250 && type==LINUX64 && ncpus>=$maxcpus maxtmp>=$maxtmp && maxmem>$maxmem]";
+    return "-R '$select span[hosts=1] $rusage' -M $mem_kb -n $cpus -q alignment -m alignment";
 }
 
 
