@@ -83,7 +83,9 @@ sub create {
     }
 
     my @ins_data = $self->instrument_data;
-    if (not @ins_data) {
+    #okay for soap import to not have an instrument data
+#   if (not @ins_data) {
+    if (not @ins_data and not $self->processing_profile->assembler_name =~ /import/) {
 	$self->error_message("Build does not have any instrument data");
 	$self->delete;
 	return;
@@ -98,6 +100,11 @@ sub calculate_estimated_kb_usage {
     my $self = shift;
 
     my $kb_usage;
+
+    if ( $self->processing_profile->assembler_name =~ /import/ ) {
+	$self->status_message("Kb usage for imported assembly: 5GiB");
+	return 5_000_000;
+    }
 
     if (defined $self->model->processing_profile->coverage) {
 	#estimate usage by 0.025kb per base and 5GB for logs/error output
@@ -354,7 +361,7 @@ sub calculate_metrics {
     my  $self = shift;
 
     my $stats_file = $self->stats_file;
-    my $stats_fh = Genome::Utility::FileSystem->open_file_for_reading($stats_file);
+    my $stats_fh = eval{ Genome::Utility::FileSystem->open_file_for_reading($stats_file); };
     unless ( $stats_fh ) {
         $self->error_message("Can't set metrics because can't open stats file ($stats_file).");
         return;

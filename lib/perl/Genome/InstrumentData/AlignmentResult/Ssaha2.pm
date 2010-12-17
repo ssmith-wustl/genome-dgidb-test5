@@ -103,3 +103,8 @@ sub _derive_insert_size_bounds {
 
 sub fillmd_for_sam { return 1; } 
 
+sub _check_read_count {
+    $self->warning_message("SSAHA2 does not support outputting unaligned reads.  Cannot verify read count against original fasta.");
+    return 1;
+}
+
