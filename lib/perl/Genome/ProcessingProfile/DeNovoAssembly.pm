@@ -23,9 +23,7 @@ class Genome::ProcessingProfile::DeNovoAssembly{
 	# Assembler
 	assembler_name => {
 	    doc => 'Name of the assembler.',
-#	    valid_values => [qw/ velvet newbler soap /],
-	    #TODO - remove this .. have it check for the class existing directly ??
-	    valid_values => ['newbler', 'velvet', 'velvet one-button', 'soap de-novo-assemble', 'soap assemble', 'soap import'],
+	    valid_values => ['velvet one-button', 'soap de-novo-assemble', 'soap import'],
 	},
 	assembler_version => {
 	    doc => 'Version of assembler.',
@@ -109,6 +107,10 @@ my %supported_assemblers = (
 	platforms => [qw/ solexa /],
 	class => 'Genome::Model::Tools::Soap::DeNovoAssemble',
     },
+    'soap import' => {
+	platforms => [qw/ solexa /],
+	class => 'Genome::Model::Tools::Soap::Import',
+    }
 );
 
 sub assembler_accessor_name {
@@ -280,6 +282,8 @@ sub sanitized_soap_de_novo_assemble_params {
     #so needs to be removed before assembling
     delete $params{insert_size} if exists $params{insert_size};
 
+    #TODO - should die here
+
     return %params;
 }
 
@@ -294,6 +298,9 @@ sub sanitized_velvet_one_button_params {
 
     #these params must be calculated not inputted
     for my $calculated_param (qw/ genome_len ins_length /) { # only for velvet, may need a method
+
+	#TODO - should die here
+
         next unless exists $params{$calculated_param};
         $self->error_message("Assembler param ($calculated_param) is a calculated parameter, and cannot be set on the processing profile.");
         return;
@@ -364,8 +371,13 @@ sub stages {
 sub assemble_job_classes {
     my $self = shift;
 
-    my @classes = ( 'Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData',
-		    'Genome::Model::Event::Build::DeNovoAssembly::Assemble');
+    my @classes;
+
+    if ( $self->assembler_name !~ /import/ ) {
+	push @classes, 'Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData';
+    }
+
+    push @classes, 'Genome::Model::Event::Build::DeNovoAssembly::Assemble';
 
     if ( $self->post_assemble ) {
 	push @classes, 'Genome::Model::Event::Build::DeNovoAssembly::PostAssemble';
@@ -569,6 +581,23 @@ sub soap_de_novo_assemble_params_to_derive_from_build {
 
     return %params;
 }
+
+sub soap_import_params_to_derive_from_build {
+    my ($self, $build) = @_;
+
+    my %params;
+
+    my $output_dir_and_file_prefix = $build->soap_output_dir_and_file_prefix;
+    $params{output_dir_and_file_prefix} = $output_dir_and_file_prefix;
+
+    my $location = '/WholeMetagenomic/03-Assembly/PGA/'. $build->model->subject_name.'_'.$build->model->center_name;
+    $params{import_location} = $location;
+
+    $params{version} = $self->assembler_version;
+
+    return %params;
+}
+
 #velvet
 #sub velvet_params_to_derive_from_build {
 sub velvet_one_button_params_to_derive_from_build {
@@ -624,6 +653,10 @@ sub velvet_one_button_after_assemble_methods_to_run {
 sub soap_de_novo_assemble_bsub_rusage {
     my $mem = 30000;
     return "-n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>$mem] rusage[mem=$mem]' -M $mem".'000';
+}
+
+sub soap_import_bsub_rusage {
+    return "-R 'select[type==LINUX64] rusage[internet_download_mbps=100] span[hosts=1]'";
 }
 
 sub velvet_one_button_bsub_rusage {
@@ -730,7 +763,7 @@ sub assemble_build {
     $self->status_message("$assembler_name finished successfully");
     
     #methods to run after assembling .. not post assemble stage
-    $self->after_assemble_methods_to_run;
+    $self->after_assemble_methods_to_run( $build );
     
     return 1;
 }

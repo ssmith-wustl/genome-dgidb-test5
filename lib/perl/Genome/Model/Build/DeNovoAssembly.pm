@@ -101,6 +101,11 @@ sub calculate_estimated_kb_usage {
 
     my $kb_usage;
 
+    if ( $self->processing_profile->assembler_name =~ /import/ ) {
+	$self->status_message("Kb usage for imported assembly: 5GiB");
+	return 5_000_000;
+    }
+
     if (defined $self->model->processing_profile->coverage) {
 	#estimate usage by 0.025kb per base and 5GB for logs/error output
 	my $bases;
