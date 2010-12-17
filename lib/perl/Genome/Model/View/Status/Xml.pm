@@ -14,7 +14,14 @@ class Genome::Model::View::Status::Xml {
                 'genome_model_id',
                 'name',
                 'subject_id',
+                'subject_name',
                 'subject_class_name',
+                # {
+                #     name => 'subject',
+                #     aspects => [ '__display_name__' ],
+                #     perspective => 'default',
+                #     toolkit => 'xml'
+                # },
                 'is_default',
                 'data_directory',
                 'last_complete_build_flagstat',
@@ -47,7 +54,10 @@ class Genome::Model::View::Status::Xml {
                 {
                     name => 'inputs',
                     aspects => [
-                        'name', 'value_class_name', 'value_id',
+                        'value_id',
+                        'name',
+                        'value',
+                        'value_class_name',
                     ],
                     perspective => 'default',
                     toolkit => 'xml',

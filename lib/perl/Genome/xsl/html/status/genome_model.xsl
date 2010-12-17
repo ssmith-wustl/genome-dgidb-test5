@@ -306,13 +306,13 @@
             </tr>
             </xsl:if>
 
-            <tr>
+<!--            <tr>
               <td class="name">subject type:
               </td>
               <td class="value"><xsl:value-of select="normalize-space(aspect[@name='subject_class_name']/value)"/>
               </td>
             </tr>
-
+-->
             <tr>
               <td class="name">subject:
               </td>
@@ -324,7 +324,7 @@
                       <xsl:with-param name="type" select="normalize-space(aspect[@name='subject_class_name']/value)"/>
                       <xsl:with-param name="id" select="normalize-space(aspect[@name='subject_id']/value)"/>
                       <xsl:with-param name="linktext">
-                        <xsl:value-of select="normalize-space(aspect[@name='subject_id']/value)"/>
+                        <xsl:value-of select="normalize-space(aspect[@name='subject_name']/value)"/>
                       </xsl:with-param>
                     </xsl:call-template>
                   </xsl:when>
@@ -447,13 +447,12 @@
       </div>
       <div class="box_content rounded-bottom span-24 last">
         <table class="lister">
-          <thead>
+          <!-- <thead>
             <tr>
-              <th>id</th>
-              <th>type</th>
-              <th>object</th>
+              <th>name</th>
+              <th>value</th>
             </tr>
-          </thead>
+          </thead> -->
           <tbody>
             <xsl:for-each select="object[aspect[@name='name']/value!='instrument_data']">
               <xsl:sort select="aspect[@name='name']/value" data-type="text" order="ascending"/>
@@ -476,22 +475,25 @@
   <xsl:template name="genome_model_input_table_row">
     <xsl:comment>template: status/genome_model.xsl:genome_model_input_table_row</xsl:comment>
     <tr>
-      <td>
+
+      <td><xsl:value-of select="normalize-space(aspect[@name='name']/value)"/></td>
+
+      <td style="width: 100%">
         <xsl:call-template name="object_link_button">
           <xsl:with-param name="icon" select="'sm-icon-extlink'" />
           <xsl:with-param name="id">
             <xsl:value-of select="aspect[@name='value_id']/value"/>
           </xsl:with-param>
+
           <xsl:with-param name="type">
             <xsl:value-of select="aspect[@name='value_class_name']/value"/>
           </xsl:with-param>
+
           <xsl:with-param name="linktext">
-            <xsl:value-of select="aspect[@name='value_id']/value"/>
+            <xsl:value-of select="aspect[@name='value']/object/display_name"/>
           </xsl:with-param>
         </xsl:call-template>
       </td>
-      <td><xsl:value-of select="normalize-space(aspect[@name='name']/value)"/></td>
-      <td><xsl:value-of select="aspect[@name='value_class_name']/value"/></td>
 
     </tr>
   </xsl:template>
