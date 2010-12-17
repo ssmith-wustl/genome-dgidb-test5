@@ -99,7 +99,7 @@ HELP
 #and checks to see if they contain both potential DNP bases
 sub _count_across_range {
     my ($self, $alignment_file, $chr, $pos1, $pos2) = @_;
-    unless(open(SAMTOOLS, "samtools view $alignment_file $chr:$pos1-$pos2 |")) {
+    unless(open(SAMTOOLS, "samtools view -F 0x400 $alignment_file $chr:$pos1-$pos2 |")) { #this requires that they be unique
         $self->error_message("Unable to open pipe to samtools view");
         return;
     }
