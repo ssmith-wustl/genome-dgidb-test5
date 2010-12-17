@@ -29,7 +29,8 @@ sub required_rusage {
         $estimated_usage_mb = int(($kb_usage * 5) / 1024)+100;
     }
         
-    return "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>" . $estimated_usage_mb . " && mem>10000] span[hosts=1] rusage[mem=10000]' -M 10000000 -n 4 -q alignment -m alignment";
+    # select blades that can hold two of me
+    return "-R 'select[model!=Opteron250 && type==LINUX64 && ncpus>=8 maxtmp>=" . (2*$estimated_usage_mb) . " && mem>20000] span[hosts=1] rusage[mem=10000]' -M 10000000 -n 4 -q alignment -m alignment";
 }
 
 
