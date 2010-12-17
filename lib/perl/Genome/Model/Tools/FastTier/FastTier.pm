@@ -26,7 +26,7 @@ class Genome::Model::Tools::FastTier::FastTier {
         exclusive_tiering => {
             type => 'Boolean',
             is_input =>1,
-            default => 0,
+            default => 1,
             doc => 'This option tiers events in the highest tier possible, then removes it from the list of inputs to the next tier. If tiers overlap, this prevents events from showing up twice',
         },
         tier1_output => {
@@ -53,6 +53,12 @@ class Genome::Model::Tools::FastTier::FastTier {
             type => 'Text',
             is_input => 1,
             doc => 'Use this to point to a directory containing tier1.bed - tier4.bed in order to use different bed files for tiering',
+        },
+        intersect_bed_bin_location => {
+            type => 'Text',
+            is_input => 1,
+            default => '/gscmnt/sata921/info/medseq/intersectBed/intersectBed',  #'/gsc/pkg/bio/bedtools/installed-64/intersectBed',
+            doc => 'The path and filename of intersectBed',
         },
         _tier1_bed => {
             type => 'Text',
@@ -188,7 +194,7 @@ sub intersect_bed {
     my $output = shift;
     my $result;
     if(-s $a){
-        my $cmd = "/gsc/pkg/bio/bedtools/installed-64/intersectBed -wa -a " . $a . " -b " . $b . " > $output";  
+        my $cmd = $self->intersect_bed_bin_location." -wa -u -a " . $a . " -b " . $b . " > $output";  
         $result = Genome::Utility::FileSystem->shellcmd(
             cmd          => $cmd,
             input_files  => [ $a ],
@@ -206,7 +212,7 @@ sub intersect_bed_v {
     my $a = shift;
     my $b = shift;
     my $output = shift;
-    my $cmd = "/gsc/pkg/bio/bedtools/installed-64/intersectBed -wa -v -a " . $a . " -b " . $b . " > $output";  
+    my $cmd = $self->intersect_bed_bin_location." -wa -v -a " . $a . " -b " . $b . " > $output";  
     my $result = Genome::Utility::FileSystem->shellcmd(
         cmd          => $cmd,
         input_files  => [ $a ],
