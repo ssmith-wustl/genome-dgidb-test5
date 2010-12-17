@@ -11,19 +11,17 @@ use POSIX;
 class Genome::Model::Tools::Validation::CountContigs {
     is => 'Command',
     has => [
-    contig_fasta_file =>
-    {
+    contig_fasta_file => {
         type => 'String',
         is_optional => 0,
         doc => 'File of contigs from gmt validation build-remapping-contigs.',
         default => '',
     },
-    bam_file =>
-    {
+    bam_file => {
         type => 'String',
         is_optional => 0,
         doc => 'File from which to retrieve reads. Must be indexed.',
-    }
+    },
 
     ]
 };
@@ -50,7 +48,36 @@ sub execute {
         return;
     }
 
+    #scan through all the fasta headers and grab counts based on each predicted variant and denoted reference
+    while(my $line = $fh->getline) {
+        next unless $line =~ /^>/;
+        chomp $line;
+        my @fields = split /\s+/,$line; #this should break down the fields
+        $fields[0] =~ s/^>//;   #remove the leading bracket
+        my ($pchr, $pstart, $pstop, $ptype, $contig_source) = split("_",$fields[0]);
+        my ($has_overlap) = $fields[1] =~ /Overlap:(\d+)/;
+        my ($ref_count_chr, $ref_count_start, $ref_count_stop) = $fields[2] =~ /Ref:([^.]+)[.]([0-9]+)[.]([0-9]+)/;
+        if($ref_count_start > $ref_count_stop) {
+            $self->error_message("Reference coordinates to count make no sense. Swapping start and stop.");
+            print STDERR $line,"\n";
+            ($ref_count_start,$ref_count_stop) = ($ref_count_stop, $ref_count_start);
+        }
+        #print STDOUT "$ref_count_chr\t$ref_count_start\t$ref_count_stop\n";
 
+        my $contig_name = $fields[0];
+        my ($contig_count_start, $contig_count_stop) = $fields[3] =~ /Con:([0-9]+)[.]([0-9]+)/;
+
+        if($contig_count_start > $contig_count_stop) {
+            $self->error_message("Contig coordinates to count make no sense. Swapping start and stop.");
+            print STDERR $line, "\n";
+            ($contig_count_start,$contig_count_stop) = ($contig_count_stop, $contig_count_start);
+        }
+
+        my $ref_count = $self->_count_across_range($self->bam_file,$ref_count_chr, $ref_count_start, $ref_count_stop);
+        my $contig_count = $self->_count_across_range($self->bam_file,$contig_name, $contig_count_start, $contig_count_stop);
+
+        print join("\t",$fields[0],$has_overlap,@$ref_count{ qw( total_reads total_reads_above_q1 spanning_reads_q1 ) }, @$contig_count{ qw( total_reads total_reads_above_q1 spanning_reads_q1 ) }), "\n";
+    }
 
     return 1;
 }
@@ -77,6 +104,10 @@ sub _count_across_range {
         return;
     }
     my %stats;
+    $stats{total_reads_above_q1} = 0;
+    $stats{total_reads} = 0;
+    $stats{spanning_reads_q1} = 0;
+
     while( <SAMTOOLS> ) {
         chomp;
         my ($qname, $flag, $rname, $pos_read, $mapq, $cigar, $mrnm, $mpos, $isize, $seq, $qual, $RG, $MF, @rest_of_fields) = split /\t/;
