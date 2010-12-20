@@ -5,7 +5,6 @@ use warnings;
 
 use above "Genome";
 use File::Remove qw/ remove /;
-use File::Temp qw/tempdir/;
 use Cwd;
 
 use Test::More tests => 5;
@@ -16,7 +15,7 @@ BEGIN {
 }
 #my $testpath = '/tmp/disk/analysis/HGMI/B_catenulatum/Bifidobacterium_catenulatum_BIFCATDFT_1.0_newb/Version_1.0/BAP/Version_1.0';
 #my $tmpdir = tempdir("HGMI_XXXXXX", DIR => '/tmp/disk/analysis', CLEANUP => 1);
-my $tmpdir = tempdir("HGMI_XXXXXX",  CLEANUP => 1);
+my $tmpdir = Genome::Utility::FileSystem->create_temp_directory();
 
 my $d = Genome::Model::Tools::Hgmi::DirBuilder->create(
                     #'path' => "/tmp/disk/analysis/HGMI",
