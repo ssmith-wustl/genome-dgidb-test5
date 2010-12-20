@@ -25,8 +25,8 @@ sub _add_to_report_xml {
 
     my %metrics = $build->set_metrics;
     unless ( %metrics ) {
-        $self->error_message("Can't set metrics on ".$build->description);
-        return;
+        $self->status_message("No metrics to report. This may be OK as some assemblies don't produce stats.");
+        return 1;
     }
     
     $self->_add_dataset(

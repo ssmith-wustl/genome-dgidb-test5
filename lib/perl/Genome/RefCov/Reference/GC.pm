@@ -53,6 +53,9 @@ sub create {
     $self->coverage($coverage);
     $self->sequence($sequence);
     $self->_reflen(scalar(@{$coverage}));
+    if ($self->_reflen <= 0) {
+        die('Reference length must be greater than zero!');
+    }
     my %hash = ();
     for my $metric_category ($self->metric_categories) {
         for my $metric_type ($self->metric_types) {

@@ -137,7 +137,7 @@ sub _validate {
     return if not %confirmed_md5;
 
     for my $file ( keys %confirmed_md5 ) {
-        if ( not exists $dacc_md5{$file} ) {
+        if ( not defined $dacc_md5{$file} ) {
             $self->error_message("No MD5 from the DACC for file ($file)");
             return;
         }

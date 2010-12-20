@@ -16,13 +16,16 @@ sub create {
     my $self = $class->SUPER::create(@_)
 	or return;
 
-    my $paired_ins_data_count = grep { $_->is_paired_end } $self->instrument_data;
+    if ( $self->processing_profile->assembler_name !~ /import/ ) {
+	my $paired_ins_data_count = grep { $_->is_paired_end } $self->instrument_data;
 
-    if ( $paired_ins_data_count == 0 ) {
-	$self->error_message("No paired instrument data found");
-	$self->delete;
-	return;
+	if ( $paired_ins_data_count == 0 ) {
+	    $self->error_message("No paired instrument data found");
+	    $self->delete;
+	    return;
+	}
     }
+
     return $self;
 }
 

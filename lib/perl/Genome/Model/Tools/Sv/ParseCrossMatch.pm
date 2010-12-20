@@ -3,8 +3,10 @@ package Genome::Model::Tools::Sv::ParseCrossMatch;
 
 use strict;
 use warnings;
-use Genome;
+use Genome::Model::Tools::Sv;
 require Genome::Utility::FileSystem;
+
+our $VERSION = $Genome::Model::Tools::Sv::VERSION;
 
 class Genome::Model::Tools::Sv::ParseCrossMatch {
     is  => 'Genome::Model::Tools::Sv',

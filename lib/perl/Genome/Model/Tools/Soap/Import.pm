@@ -102,8 +102,8 @@ sub execute {
         $self->error_message("No files in dacc directory ($dacc_directory) matched the extensions that are suppossed to be downloaded: @exts");
         return;
     }
-    my @files_to_download = keys %files_to_download;
-    if ( keys %files_to_download != @exts ) {
+    my @files_to_download = values %files_to_download;
+    if ( @files_to_download != @exts ) {
         $self->error_message('Expected to find '.@exts.' files to download, but only found '.@files_to_download.": @files_to_download");
         return;
     }
@@ -117,6 +117,29 @@ sub execute {
     }
     $self->status_message("Executing downloader...OK");
 
+    for my $ext (  keys %files_to_download ) {
+	next if $files_to_download{$ext} !~ /PGA/;
+	my $from = $edit_dir.'/'.$files_to_download{$ext};
+	my $size = -s $from;
+	my $to_base_name = $files_to_download{$ext};
+	$to_base_name =~ s/PGA/$center_name/;
+	my $to = $edit_dir.'/'.$to_base_name;
+	$self->status_message("Move PGA named $ext $from to $to");
+	$self->status_message("Size: $size");
+	my $move = File::Copy::move($from, $to);
+	if ( not $move ) {
+	    $self->error_message('Move failed: '.$!);
+	    return;
+	}
+	my $new_size = -s $to;
+	if ( not defined $new_size or $new_size != $size ) {
+	    $self->error_message("Move succeeded, but file ($to) now has different size: $size <=> ".(defined $new_size ? $new_size : 'undef'));
+	    return;
+	}
+	$files_to_download{$ext} = $to_base_name;
+	$self->status_message("Move PGA named $ext file...OK");
+    }
+
     my $from = $edit_dir.'/'.$files_to_download{scafSeq};
     my $size = -s $from;
     my $to = $output_dir.'/'.$files_to_download{scafSeq};
@@ -127,7 +150,7 @@ sub execute {
         return;
     }
     if ( -s $to != $size ) {
-        $self->error_message("Move succeeded, but file ($files_to_download{scafSeq}) now has different size: $size <=> ".-s $to);
+        $self->error_message("Move succeeded, but file ($to) now has different size: $size <=> ".-s $to);
         return;
     }
     $self->status_message("Move agp file...OK");
@@ -138,4 +161,3 @@ sub execute {
 }
 
 1;
-

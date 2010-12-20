@@ -4,10 +4,12 @@ package Genome::Model::Tools::Sv::AssemblyValidation;
 
 use strict;
 use warnings;
-use Genome;
+use Genome::Model::Tools::Sv;
 use Bio::SeqIO;
 use File::Temp;
 use File::Basename;
+
+our $VERSION = $Genome::Model::Tools::Sv::VERSION;
 
 =cut
 my %opts = (l=>500,p=>1000,s=>0,q=>0,n=>0,m=>10,x=>3,P=>-10,G=>-10,S=>0.02,A=>500,Q=>0);
