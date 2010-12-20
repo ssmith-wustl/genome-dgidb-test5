@@ -403,7 +403,8 @@ sub pick_primer {
     my $p_pair_compl_any = $self->p_pair_compl_any;
     my $primer3_defaults = $self->primer3_defaults;
 
-    open(OUT, ">$primer_name.primer3.parameters");
+    my $tmp_dir = Genome::Utility::FileSystem->create_temp_directory();
+    open(OUT, ">$tmp_dir/$primer_name.primer3.parameters");
     print OUT qq(PRIMER SEQUENCE ID=$primer_name\n);
     print OUT qq(SEQUENCE=$seq\n);
     print OUT qq(TARGET=$boundary, $boundary_size\n); 
@@ -500,11 +501,11 @@ sub pick_primer {
 #Max 3\' Complementarity
 
     my $file = "$primer_name.primer3.result";
-    system ("cat $primer_name.primer3.parameters | primer3 > $file"); 
+    system ("cat $tmp_dir/$primer_name.primer3.parameters | primer3 > $file"); 
     my $result;
     ($result,$primer_quality,$targets) = &blastprimer3result($primer_name,$file,$self,$primer_quality,$targets);
 
-    system qq(rm $primer_name.primer3.parameters $file);
+    system qq(rm $tmp_dir/$primer_name.primer3.parameters $file);
 
     if ($result) {
 	return ($result,$primer_quality,$targets);
