@@ -88,7 +88,6 @@ sub execute {
         $self->status_message("Executing Snap command: $cmd");
         my $rv = system($cmd);
         confess "Trouble executing Snap!" unless defined $rv and $rv == 0;
-
         $self->status_message("Done running Snap using model file $model, now parsing output and creating prediction objects");
 
         my $snap_fh = IO::File->new($raw_output, "r");

@@ -75,16 +75,18 @@ EOS
 sub execute {
     my $self = shift;
     my $fasta_file = $self->fasta_file;
+    $self->status_message("Running rnammer on sequence in $fasta_file");
 
     unless (-d $self->raw_output_directory) {
         my $mk_rv = make_path($self->raw_output_directory);
         confess "Could not make raw ouput directory at " . $self->raw_output_directory unless defined $mk_rv and $mk_rv;
     }
+    $self->status_message("Raw output being placed in " . $self->raw_output_directory);
 
     # TODO Logic for this output format needs to be added
     if ($self->output_format ne 'gff') {
         $self->error_message("Only GFF output format is currently supported, sorry!");
-        confess;
+        confess $self->error_message;
     }
 
     my $rnammer_path = "/gsc/pkg/bio/rnammer/rnammer-" . $self->version . "/rnammer";
@@ -132,6 +134,7 @@ sub execute {
     $self->status_message("Executing rnammer: $cmd");
     my $rna_rv = system($cmd);
     confess "Trouble executing rnammer!" unless defined $rna_rv and $rna_rv == 0;
+    $self->status_message("rnammer successfully executed, now parsing output");
 
     # TODO Add parsing logic for fasta and xml
     if ($self->output_format eq 'gff') {
@@ -144,6 +147,7 @@ sub execute {
         my $feature_counter = 0;
         while (my $feature = $gff->next_feature()) {
             $feature_counter++;
+            $self->status_message("Parsing " . $feature->seq_id());
             my $gene_name = join(".", $feature->seq_id(), 'rnammer', $feature_counter);
             my ($description) = $feature->get_tag_values('group');
 
@@ -171,11 +175,12 @@ sub execute {
         }
     }
 
+    $self->status_message("Parsing done, getting lock and committing!");
     my @locks = $self->lock_files_for_predictions(qw/ Genome::Prediction::RNAGene /);
     UR::Context->commit;
     $self->release_prediction_locks(@locks);
 
-    $self->status_message("rnammer suceessfully completed!");
+    $self->status_message("Commit done, locks released, rnammer suceessfully completed!");
     return 1;
 }
 
