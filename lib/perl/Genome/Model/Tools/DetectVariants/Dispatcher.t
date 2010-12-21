@@ -5,7 +5,7 @@ use warnings;
 
 use File::Path;
 use File::Temp;
-use Test::More tests => 5;
+use Test::More tests => 7;
 #use Test::More skip_all => 'test in development';
 use above 'Genome';
 
@@ -52,3 +52,12 @@ ok($dispatcher->is_valid_detector($varscan_class), 'determined that var-scan is 
 
 my $nonexistent_class = $dispatcher->detector_class('non-existent');
 ok((not $dispatcher->is_valid_detector($nonexistent_class)), 'determined that non-existent is not a detector');
+
+my $somatic_detector_string = '(somatic sniper || somatic var-scan)';
+my $somatic_tree = $dispatcher->parse_detector_string($somatic_detector_string);
+ok($somatic_tree, 'able to parse detector_string');
+
+my $somatic_parsed_string = $dispatcher->walk_tree($somatic_tree, $branch_case, $leaf_case);
+
+my $expected_somatic_parsed_string = '(somatic sniper (call #0) union somatic var-scan (call #1))';
+is($somatic_parsed_string, $expected_somatic_parsed_string, 'tree-walker returns expected somatic result');

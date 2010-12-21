@@ -31,7 +31,7 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    my @dirs = glob("fasta_*_temp_predictions*");
+    my @dirs = glob($self->directory . "/*_temp_predictions_*");
     $self->status_message("Found " . scalar @dirs . " temp directories to remove:\n" . join("\n", @dirs));
 
     for my $dir (@dirs) {

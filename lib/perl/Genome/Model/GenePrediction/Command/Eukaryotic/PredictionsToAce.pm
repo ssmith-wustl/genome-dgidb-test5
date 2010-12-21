@@ -1,4 +1,4 @@
-package Genome::Model::GenePrediction::Command::EukaryoticPredictionsToAce;
+package Genome::Model::GenePrediction::Command::Eukaryotic::PredictionsToAce;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use Genome;
 use Carp 'confess';
 use Sort::Naturally qw/ ncmp nsort /;
 
-class Genome::Model::GenePrediction::Command::EukaryoticPredictionsToAce {
+class Genome::Model::GenePrediction::Command::Eukaryotic::PredictionsToAce {
     is => 'Genome::Command::Base',
     has => [
         model => { 

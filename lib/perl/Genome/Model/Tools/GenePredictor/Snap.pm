@@ -50,7 +50,7 @@ EOS
 # readable and to reduce redundancy between this module and the fgenesh module.
 sub execute {
     my $self = shift;
-    $self->status_message("Starting Snap prediction wrapper");
+    $self->status_message("Starting Snap prediction wrapper, reading sequences from " . $self->fasta_file);
 
     # Use full path to snap executable, with version, instead of the symlink.
     # This prevents the symlink being changed silently and affecting our output!
@@ -60,6 +60,7 @@ sub execute {
         my $mkdir_rv = make_path($self->raw_output_directory);
         confess "Could not make directory " . $self->raw_output_directory unless $mkdir_rv;
     }
+    $self->status_message("Raw output being placed in " . $self->raw_output_directory);
 
     my @models = split(",", $self->model_files);
     confess 'Received no Snap models, not running predictor!' unless @models;
@@ -87,7 +88,6 @@ sub execute {
         $self->status_message("Executing Snap command: $cmd");
         my $rv = system($cmd);
         confess "Trouble executing Snap!" unless defined $rv and $rv == 0;
-
         $self->status_message("Done running Snap using model file $model, now parsing output and creating prediction objects");
 
         my $snap_fh = IO::File->new($raw_output, "r");
@@ -105,7 +105,7 @@ sub execute {
         # that a new gene is starting and prediction objects need to be made.
         while (my $line = <$snap_fh>) {
             chomp $line;
-            if ($line =~ /^>(.+)$/) {
+            if ($line =~ /^>(\S+)/) {
                 if (@predicted_exons) {
                     $gene_count_by_seq{$current_seq_name}++;
                     $self->_create_prediction_objects(
@@ -355,7 +355,6 @@ sub _create_prediction_objects {
 
 # Looks up the abbreviation for the Snap model, uses the name of the model file if no abbreviation is found
 sub _model_file_abbreviation {
-    $DB::single = 1;
     my ($self, $model_file) = @_;
     my $file_name = basename($model_file);
     confess "Could not determine name of model file $model_file using File::Basename!" unless defined $file_name;
