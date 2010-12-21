@@ -163,6 +163,10 @@ sub _compute_alignment_metrics {
 	return 1;
 }
 
+sub prepare_scratch_sam_file {
+        return 1;
+}
+
 sub create_BAM_in_staging_directory {
 	return 1;
 }
