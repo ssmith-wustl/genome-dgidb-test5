@@ -23,10 +23,11 @@ class Genome::ProcessingProfile::DeNovoAssembly{
 	# Assembler
 	assembler_name => {
 	    doc => 'Name of the assembler.',
-	    valid_values => [qw/ velvet newbler soap /],
+	    valid_values => ['velvet one-button', 'soap de-novo-assemble', 'soap import'],
 	},
 	assembler_version => {
 	    doc => 'Version of assembler.',
+	    #dacc for soap import
 	},
 	assembler_params => {
 	    is_optional => 1,
@@ -98,20 +99,81 @@ my %supported_assemblers = (
     newbler => {
         platforms => [qw/ 454 /],
     },
-    velvet => {
-        platforms => [qw/ solexa /],
-        class => 'Genome::Model::Tools::Velvet::Assemble',
-    },
-    soap => {
+    'velvet one-button' => {
 	platforms => [qw/ solexa /],
-	class => 'Genome::Model::Tools::Soap::Assemble',
+	class => 'Genome::Model::Tools::Velvet::OneButton',
     },
+    'soap de-novo-assemble' => {
+	platforms => [qw/ solexa /],
+	class => 'Genome::Model::Tools::Soap::DeNovoAssemble',
+    },
+    'soap import' => {
+	platforms => [qw/ solexa /],
+	class => 'Genome::Model::Tools::Soap::Import',
+    }
 );
+
+sub assembler_accessor_name {
+    my $self = shift;
+
+    my $name = $self->assembler_name;
+    $name =~ s/ |-/_/g;
+
+    #returns soap_de_novo_assemble from 'soap de-novo-assemble'
+
+    return $name;
+}
+
+sub assembler_class {
+    my $self = shift;
+    
+    my $assembler_name = $self->assembler_name;
+    my ($base, $subclass) = split (/\s+/, $assembler_name);
+
+    $subclass =~ s/-/ /g;
+    $subclass = Genome::Utility::Text::string_to_camel_case( $subclass );
+    
+    my $name = 'Genome::Model::Tools::'. ucfirst $base .'::'. $subclass;
+
+    #TODO check makes sure it exists here??
+
+    return $name;
+}
+
+sub tools_base_class {
+    my $self = shift;
+    my $base_name = $self->assembler_base_name;
+    return 'Genome::Model::Tools::' . ucfirst $base_name;
+}
+
+sub assembler_base_name {
+    my $self = shift;
+    my @tmp = split(' ', $self->assembler_name);
+    return $tmp[0];
+}
+
+sub assembler_params_as_hash {
+    my $self = shift;
+
+    #assembler params specified in pp
+    my $params_string = $self->assembler_params;
+    return unless $params_string; # ok 
+
+    my %params = Genome::Utility::Text::param_string_to_hash($params_string);
+    unless ( %params ) { # not ok
+        Carp::confess(
+            $self->error_message("Malformed assembler params: $params_string")
+        );
+    }
+
+    return %params;
+}
 
 sub supported_sequencing_platforms_for_assembler {
     my $self = shift;
 
     my $assembler_name = $self->assembler_name;
+
     unless ( defined $assembler_name ) {
         Carp::confess(
             $self->error_message("Can't get supported sequencing platforms: No assembler name set.")
@@ -144,80 +206,17 @@ sub class_for_assembler {
             $self->error_message("Unsupported assembler ($assembler_name)")
         );
     }
-
+    
     return $class;
-}
-
-#< validate, sanitize assembler params >#
-#generic
-sub sanitized_assembler_params {
-    my $self = shift;
-
-    my %params;
-
-    %params = $self->assembler_params_as_hash if $self->assembler_params_as_hash;
-
-    my $sanitize_method = 'sanitized_'.$self->assembler_name.'_assembler_params';
-
-    if ( $self->can( $sanitize_method ) ) {
-	%params = $self->$sanitize_method( %params );
-    }
-
-    return %params;
-}
-
-#soap
-sub sanitized_soap_assembler_params {
-    my ( $self, %params ) = @_;
-
-    #this is used in config file and not by assemble tool
-    #so needs to be removed before assembling
-    delete $params{insert_size} if exists $params{insert_size};
-
-    return %params;
-}
-
-#velvet
-sub sanitized_velvet_assembler_params {
-    my ( $self, %params ) = @_;
-
-    #is_many string to array ref
-    if ( defined $params{hash_sizes} ) { 
-        $params{hash_sizes} = [ split(/\s+/, $params{hash_sizes}) ],
-    }
-
-    #these params must be calculated not inputted
-    for my $calculated_param (qw/ genome_len ins_length /) { # only for velvet, may need a method
-        next unless exists $params{$calculated_param};
-        $self->error_message("Assembler param ($calculated_param) is a calculated parameter, and cannot be set on the processing profile.");
-        return;
-    }
-
-    return %params;
-}
-
-sub assembler_params_as_hash {
-    my $self = shift;
-
-    #assembler params specified in pp
-    my $params_string = $self->assembler_params;
-    return unless $params_string; # ok 
-
-    my %params = Genome::Utility::Text::param_string_to_hash($params_string);
-    unless ( %params ) { # not ok
-        Carp::confess(
-            $self->error_message("Malformed assembler params: $params_string")
-        );
-    }
-
-    return %params;
 }
 
 sub _validate_assembler_and_params {
     my $self = shift;
 
     $self->status_message("Validating assembler and params...");
-    
+
+    my $assembler_accessor_name = $self->assembler_accessor_name;
+
     # Assembler and seq platform combo
     my $supported_sequencing_platforms_for_assembler = $self->supported_sequencing_platforms_for_assembler;
     unless ( grep { $self->sequencing_platform eq $_ } @$supported_sequencing_platforms_for_assembler ) {
@@ -227,18 +226,14 @@ sub _validate_assembler_and_params {
         return;
     }
 
-    my $assembler_class = $self->class_for_assembler;
-#    my %assembler_params = $self->assembler_params_as_hash;
+    my $assembler_class = $self->class_for_assembler; #returns g:m:t:soap:import, for eg,
 
-#    for my $calculated_param (qw/ genome_len ins_length /) { # only for velvet, may need a method
-#        next unless exists $assembler_params{$calculated_param};
-#        $self->error_message("Assembler param ($calculated_param) is a calculated parameter, and cannot be set on the processing profile.");
-#        return;
-#    }
+    my %assembler_params;
 
-    #%assembler_params = $self->_filter_non_assembler_params(%assembler_params);
-    my $get_param_method = 'sanitized_'. $self->assembler_name .'_assembler_params';
-    my %assembler_params = $self->$get_param_method;
+    #below params are needed for assembly but must be derived/calculated from instrument data
+    #at the time of build so fake values are plugged in here to get eval to work
+    my %fake_addl_params = $self->fake_params_for_eval;
+    %assembler_params = ( %assembler_params, %fake_addl_params );
 
     my $assembler;
     eval{
@@ -259,14 +254,79 @@ sub _validate_assembler_and_params {
     return 1;
 }
 
-#TODO - remove
-sub _filter_non_assembler_params {
-    my ($self, %params)  = @_;
-    
-    #this goes to config file no assemble tool
-    if ($self->assembler_name eq 'soap' and exists $params{'insert_size'}) {
-	delete $params{'insert_size'};
+#< validate, sanitize assembler params >#
+#generic
+sub sanitized_assembler_params {
+    my $self = shift;
+
+    my %params;
+
+    if ( $self->assembler_params_as_hash ) {
+	%params = $self->assembler_params_as_hash;
+	
+	my $method = 'sanitized_'.$self->assembler_accessor_name.'_params';
+
+	if ( $self->can( $method ) ) {
+	    %params = $self->$method( %params );
+	}
     }
+
+    return %params;
+}
+
+#soap
+sub sanitized_soap_de_novo_assemble_params {
+    my ( $self, %params ) = @_;
+
+    #this is used in config file and not by assemble tool
+    #so needs to be removed before assembling
+    delete $params{insert_size} if exists $params{insert_size};
+
+    #TODO - should die here
+
+    return %params;
+}
+
+#velvet
+sub sanitized_velvet_one_button_params {
+    my ( $self, %params ) = @_;
+
+    #is_many string to array ref
+    if ( defined $params{hash_sizes} ) { 
+        $params{hash_sizes} = [ split(/\s+/, $params{hash_sizes}) ],
+    }
+
+    #these params must be calculated not inputted
+    for my $calculated_param (qw/ genome_len ins_length /) { # only for velvet, may need a method
+
+	#TODO - should die here
+
+        next unless exists $params{$calculated_param};
+        $self->error_message("Assembler param ($calculated_param) is a calculated parameter, and cannot be set on the processing profile.");
+        return;
+    }
+
+    return %params;
+}
+
+#< params needed for successful create eval >#
+sub fake_params_for_eval {
+    my $self = shift;
+    my %params;
+
+    my $method = 'fake_'.$self->assembler_accessor_name.'_params_for_eval';
+
+    if ( $self->can( $method ) ) {
+	%params = $self->$method;
+    }
+    return %params;
+}
+
+sub fake_velvet_one_button_params_for_eval {
+    my $self = shift;
+    my %params = (
+	ins_length => '280',
+    );
     return %params;
 }
 
@@ -311,14 +371,13 @@ sub stages {
 sub assemble_job_classes {
     my $self = shift;
 
-    my $assembler_subclass = Genome::Utility::Text::string_to_camel_case($self->assembler_name);
+    my @classes;
 
-    my @classes = ( 'Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData' ,
-		    'Genome::Model::Event::Build::DeNovoAssembly::Assemble' );
+    if ( $self->assembler_name !~ /import/ ) {
+	push @classes, 'Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData';
+    }
 
-#    push @classes, map { $_.'::'.$assembler_subclass } (qw/
-#        Genome::Model::Event::Build::DeNovoAssembly::Assemble
-#        /);
+    push @classes, 'Genome::Model::Event::Build::DeNovoAssembly::Assemble';
 
     if ( $self->post_assemble ) {
 	push @classes, 'Genome::Model::Event::Build::DeNovoAssembly::PostAssemble';
@@ -347,10 +406,12 @@ sub _validate_post_assemble_steps {
 	my ($param_string) = $post_assemble_part =~ /\S+\s+(.*)/;
 
 	$tool_name =~ s/-/ /g;
+	
 	my $class_name = Genome::Utility::Text::string_to_camel_case( $tool_name );
+	my $base_class = $self->tools_base_class; #return G:M:T:Velvet, Soap, etc
 
-	my $class = 'Genome::Model::Tools::' . ucfirst $self->assembler_name . '::' . $class_name;
-
+	my $class = $base_class . '::' . $class_name;
+	
 	my $class_meta;
 	eval { $class_meta = $class->get_class_object; };
 	unless ( $class_meta ) {
@@ -453,26 +514,56 @@ sub post_assemble_parts {
 }
 
 #< additional params needed from pp >#
-#soap
-sub soap_pp_params_for_build {
+sub assembler_pp_params_for_build {
     my $self = shift;
-    return (
-#	param_name => 'pp value', 
-	version    => $self->assembler_version,
-	),
+
+    my %params;
+
+    my $method = $self->assembler_accessor_name.'_pp_params_for_build';
+    
+    if ($self->can( $method ) ) {
+	%params = $self->$method;
+    }
+
+    return %params;
 }
-#velvet
-sub velvet_pp_params_for_build {
+
+#soap
+#sub soap_pp_params_for_build {
+sub soap_de_novo_assemble_pp_params_for_build {
     my $self = shift;
     return (
 	version => $self->assembler_version,
-	);
+    ),
 }
 
+#velvet
+#sub velvet_pp_params_for_build {
+sub velvet_one_button_pp_params_for_build {
+    my $self = shift;
+    return (
+	version => $self->assembler_version,
+    );
+}
 
 #< additional params needed to be derived from build prior to assembling >#
+sub assembler_params_to_derive_from_build {
+    my ($self, $build) = @_;
+
+    my %params;
+
+    my $method = $self->assembler_accessor_name.'_params_to_derive_from_build';
+
+    if ( $self->can( $method ) ) {
+	%params = $self->$method( $build );
+    }
+
+    return %params;
+}
+
 #soap
-sub soap_params_to_derive_from_build {
+#sub soap_params_to_derive_from_build {
+sub soap_de_novo_assemble_params_to_derive_from_build {
     my ($self, $build) = @_;
     my %params;
 
@@ -490,8 +581,26 @@ sub soap_params_to_derive_from_build {
 
     return %params;
 }
+
+sub soap_import_params_to_derive_from_build {
+    my ($self, $build) = @_;
+
+    my %params;
+
+    my $output_dir_and_file_prefix = $build->soap_output_dir_and_file_prefix;
+    $params{output_dir_and_file_prefix} = $output_dir_and_file_prefix;
+
+    my $location = '/WholeMetagenomic/03-Assembly/PGA/'. $build->model->subject_name.'_'.$build->model->center_name;
+    $params{import_location} = $location;
+
+    $params{version} = $self->assembler_version;
+
+    return %params;
+}
+
 #velvet
-sub velvet_params_to_derive_from_build {
+#sub velvet_params_to_derive_from_build {
+sub velvet_one_button_params_to_derive_from_build {
     my ($self, $build) = @_;
 
     my %params;
@@ -516,7 +625,19 @@ sub velvet_params_to_derive_from_build {
 
 #< methods to run after assembly as run >#
 
-sub velvet_after_assemble_methods_to_run {
+sub after_assemble_methods_to_run {
+    my ($self, $build) = @_;
+
+    my $method = $self->assembler_accessor_name.'_after_assemble_methods_to_run';
+    if ( $self->can( $method ) ) {
+	$self->$method( $build );
+    }
+
+    return 1;
+}
+
+#sub velvet_after_assemble_methods_to_run {
+sub velvet_one_button_after_assemble_methods_to_run {
     my ($self, $build) = @_;
 
     if ( not $self->remove_unnecessary_velvet_files( $build ) ) {
@@ -528,12 +649,17 @@ sub velvet_after_assemble_methods_to_run {
 }
 
 #< bsub usage >#
-sub soap_bsub_rusage {
+
+sub soap_de_novo_assemble_bsub_rusage {
     my $mem = 30000;
     return "-n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>$mem] rusage[mem=$mem]' -M $mem".'000';
 }
 
-sub velvet_bsub_rusage {
+sub soap_import_bsub_rusage {
+    return "-R 'select[type==LINUX64] rusage[internet_download_mbps=100] span[hosts=1]'";
+}
+
+sub velvet_one_button_bsub_rusage {
     return "-R 'select[type==LINUX64 && mem>20000] rusage[mem=20000] span[hosts=1]' -M 20000000";
 }
 
@@ -602,7 +728,44 @@ sub remove_unnecessary_velvet_files {
     return 1;
 }
 
-1;
+#< ASSEMBLE >#
 
-#$HeadURL$
-#$Id$
+sub assemble_build {
+    my ($self, $build) = @_;
+
+    my $assembler_name = $self->assembler_name;
+
+    #pp specified assembler params - returns empty hash if no pp assembler param
+    my %assembler_params = $self->sanitized_assembler_params;
+
+    #additional params from processing profile
+    my %pp_params = $self->assembler_pp_params_for_build ( $build );
+    %assembler_params = ( %assembler_params, %pp_params );
+
+    #additional params needed to be derived at build time
+    my %pp_build_params = $self->assembler_params_to_derive_from_build ( $build );
+    %assembler_params = ( %assembler_params, %pp_build_params );
+    
+    #run assemble
+    $self->status_message("Running $assembler_name");
+    
+    my $assemble_tool = $self->assembler_class;
+    my $assemble = $assemble_tool->create( %assembler_params );
+
+    unless ($assemble) {
+        $self->error_message("Failed to create de-novo-assemble");
+        return;
+    }
+    unless ($assemble->execute) {
+        $self->error_message("Failed to execute de-novo-assemble execute");
+        return;
+    }
+    $self->status_message("$assembler_name finished successfully");
+    
+    #methods to run after assembling .. not post assemble stage
+    $self->after_assemble_methods_to_run( $build );
+    
+    return 1;
+}
+
+1;

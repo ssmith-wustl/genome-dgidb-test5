@@ -51,7 +51,6 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    $DB::single = 1;
     $self->status_message("Starting rna masking command, masking sequences in " . $self->fasta_file);
 
     unless (-e $self->fasta_file) {
@@ -122,7 +121,7 @@ sub execute {
     while (my $seq = $fasta->next_seq()) {
         $self->status_message("Working on sequence " . $seq->display_id());
         my $seq_id = $seq->display_id();
-        my $length = $seq->length();
+        my $seq_length = $seq->length();
         my $seq_string = $seq->seq();
         
         my @predictions = Genome::Prediction::RNAGene->get(
@@ -137,11 +136,11 @@ sub execute {
             # Make sure that start is less than end and within the bounds of the sequence
             ($start, $end) = ($end, $start) if $start > $end;
             $start = 1 if $start < 1;
-            $end = $length if $end > $length;
-            $length = ($end - $start) + 1;
+            $end = $seq_length if $end > $seq_length;
+            my $prediction_length = ($end - $start) + 1;
 
             # Any sequence within the rna prediction is replaced with an N
-            substr($seq_string, $start - 1, $length, 'N' x $length);
+            substr($seq_string, $start - 1, $prediction_length, 'N' x $prediction_length);
         }
 
         my $masked_seq = Bio::Seq->new(

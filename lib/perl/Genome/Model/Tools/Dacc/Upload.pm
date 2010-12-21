@@ -71,6 +71,7 @@ sub execute {
         $self->error_message("Aspera command failed: $cmd");
         return;
     }
+    $self->status_message('Aspera command OK');
 
     my $upload_ok = $self->validate_files_were_uploaded;
     return if not $upload_ok;
@@ -89,18 +90,24 @@ sub validate_files_were_uploaded {
     my @files = $self->files;
     my %available_files_and_sizes = $self->available_files_and_sizes;
 
+    if ( not %available_files_and_sizes ) {
+        $self->error_message("No files found on dacc directory($dacc_directory). Odd, since the aspera command successfully completed.");
+        return
+    }
+
     my $error;
     for my $file ( @files ) {
+        $self->status_message('File: '.$file);
+        my $size = -s $file;
+        $self->status_message('Size: '.$size);
         my $file_name = File::Basename::basename($file);
         Carp::confess("Cannot get base name for file: $file") if not $file_name;
+        $self->status_message('File name: '.$file_name);
         if ( not exists $available_files_and_sizes{$file_name} ) {
             $error = 1;
             $self->error_message("Attempted to upload file ($file), but it is not in the DACC directory: $dacc_directory");
             next;
         }
-        my $size = -s $file;
-        $self->status_message('File: '.$file);
-        $self->status_message('Size: '.$size);
         $self->status_message('Size on DACC: '.$available_files_and_sizes{$file_name});
         if ( $size != $available_files_and_sizes{$file_name} ) {
             $error = 1;

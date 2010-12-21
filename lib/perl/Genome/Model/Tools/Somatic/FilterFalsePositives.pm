@@ -10,13 +10,6 @@ class Genome::Model::Tools::Somatic::FilterFalsePositives {
     has => [
 
     ## INPUT/OUTPUT OPTIONS ##
-        'analysis_type' => {
-            type => 'String',
-            doc => 'Type of sequencing analysis for filter optimization',
-            is_input => 1,
-            default => "capture",
-            valid_values => ['capture', 'wgs'],
-        },
         'bam_file' => {
             type => 'String',
             doc => 'BAM file in which to examine reads (usually tumor BAM)',
@@ -180,7 +173,8 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-    gmt somatic strand-filter --variant-file somatic.snvs --tumor-bam tumor.bam --output-file somatic.snvs.pass-filter --filtered-file somatic.snvs.fail-filter
+    EXAMPLE:
+    gmt somatic filter-false-positives --variant-file somatic.snvs --bam-file tumor.bam --output-file somatic.snvs.fpfilter --filtered-file somatic.snvs.fpfilter.removed
 EOS
 }
 
@@ -188,6 +182,7 @@ sub help_detail {
     return <<EOS 
 This module uses detailed readcount information from bam-readcounts to filter likely false positives.
 It is HIGHLY recommended that you use the default settings, which have been comprehensively vetted.
+Both capture and WGS projects now use the same filter and parameters.
 For questions, e-mail Dan Koboldt (dkoboldt\@genome.wustl.edu) or Dave Larson (dlarson\@genome.wustl.edu)
 EOS
 }
@@ -224,16 +219,9 @@ sub execute {
     }
 
 
-    ## Run filter depending on type of analysis ##
+    ## Run the FP filter. Note that both WGS and capture use the same filter now ##
+    $self->run_filter();
 
-    if(lc($self->analysis_type) eq "capture") {
-        $self->capture_filter();
-    } elsif(lc($self->analysis_type) eq "wgs") {
-        $self->wgs_filter();
-    } else {
-        $self->error_message("Unknown analysis type " . $self->analysis_type . "\n");
-        die;
-    }
 }
 
 
@@ -242,7 +230,7 @@ sub execute {
 # Contact: Dan Koboldt (dkoboldt@genome.wustl.edu)
 ##########################################################################################
 
-sub capture_filter {
+sub run_filter {
     my $self = shift(@_);
 
     ## Determine the strandedness and read position thresholds ##

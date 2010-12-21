@@ -49,10 +49,13 @@ sub _metrics_file {
 sub execute {
     my $self = shift;
 
-    $self->status_message('Preparing instrument data for '.$self->processing_profile->assembler_name);
+    my $processing_profile = $self->processing_profile;
+    $self->status_message('Preparing instrument data for '.$processing_profile->assembler_base_name.' '.$processing_profile->sequencing_platform);
 
     $self->status_message('Verifying instrument data...');
+
     my @instrument_data = $self->build->instrument_data;
+
     unless ( @instrument_data ) {
         $self->error_message("No instrument data found for ".$self->build->description);
         return;
@@ -76,7 +79,7 @@ sub execute {
     }
 
     $self->status_message('Processing instrument data');
-    my $sequencing_platform = $self->processing_profile->sequencing_platform;
+    my $sequencing_platform = $processing_profile->sequencing_platform;
     my $file_method = '_fastq_files_from_'.$sequencing_platform;
     INST_DATA: for my $instrument_data ( @instrument_data ) {
         $self->_process_instrument_data($instrument_data)

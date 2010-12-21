@@ -31,21 +31,9 @@ my %properties = (
         default => 0,
         is_optional => 1,
     },
-    create_sample => {
-        is => 'Boolean',
-        doc => 'Set this switch to automatically create organism_sample, library, and individual, if they are not not found.',
-        default => 0,
-        is_optional => 1,
-    },
     import_source_name => {
         is => 'Text',
         doc => 'source name for imported file, like broad',
-        is_optional => 1,
-    },
-    species_name => {
-        is => 'Text',
-        doc => 'species name for imported file, like human, mouse',
-        default => 'human',
         is_optional => 1,
     },
     description  => {
@@ -72,7 +60,7 @@ my %properties = (
     
 
 class Genome::InstrumentData::Command::Import::TcgaBam {
-    is  => 'Command',
+    is  => 'Genome::InstrumentData::Command::Import',
     has => [%properties],
     doc => 'create an instrument data AND and alignment for a BAM',
     has_optional => [
@@ -250,6 +238,23 @@ sub _create_imported_instrument_data {
 
     $self->status_message('Create imported instrument data...');
 
+    my $tcga_name = $self->tcga_name;
+
+    # Get or create library
+    my $sample_importer = Genome::Sample::Command::ImportTcga->create(
+        name => $tcga_name,
+    );
+    if ( not $sample_importer ) {
+        $self->error_message('Could not create TCGA sample importer to get or create library');
+        return;
+    }
+    $sample_importer->dump_status_messages(1);
+    if ( not $sample_importer->execute ) {
+        $self->error_message('Could not execute TCGA sample importer to get or create library');
+        return;
+    }
+    my $library = $sample_importer->library;
+
     my $target_region;
     unless ($self->target_region eq 'whole genome') {
         if ($self->validate_target_region) {
@@ -260,39 +265,6 @@ sub _create_imported_instrument_data {
         }
     }
 
-    my $tcga_name = $self->tcga_name;
-    my $organism_sample = GSC::Organism::Sample->get(sample_name => $tcga_name);
-
-    my $sample;
-    unless($organism_sample){
-        $self->status_message("Did not find an organism_sample associated with this TCGA name.");
-        unless(defined($self->create_sample)&& $self->create_sample == 1){
-            $self->error_message("Since --create-sample was not set, this process is dead.\n");
-            die $self->error_message;
-        }
-        unless(defined($self->species_name)){
-            $self->error_message("If an organism_sample is to be created, a species_name is required.");
-            die $self->error_message;
-        }
-        my ($first, $second, $third) = split "-", $tcga_name;
-        my $individual_name = join "-", ($first,$second,$third);
-        unless( Genome::Sample::Command::Import->execute(sample_name => $tcga_name, individual_name => $individual_name, taxon_name => $self->species_name, library_name => $tcga_name.'-extlibs')){
-            $self->error_message("Sample Importation failed.");
-            die $self->error_message;
-        }
-    }
-    $sample = Genome::Sample->get(name=>$tcga_name);
-    unless($sample){
-        $self->error_message("Found an organism_sample for ".$tcga_name." but could not get a Genome::Sample.");
-        die $self->error_message;
-    }
-    $self->status_message("Found an organism_sample associate with this TCGA name.");
-    my $library = Genome::Library->get(sample_id => $sample->id);
-    unless($library){
-        $self->status_message("Not able to find a library associated with this sample. If create_sample was set, it failed to create an appropriate library.");
-        die "We don't currently allow for creating libraries.\n";
-    }
-
     my %params = (import_format => 'bam');
     for my $property_name (keys %properties) {
         unless ($properties{$property_name}->{is_optional}) {
@@ -301,10 +273,8 @@ sub _create_imported_instrument_data {
                 return;
             }
         }
-        next if $property_name =~ /^(species|reference)_name$/;
         next if $property_name =~ /^library$/;
         next if $property_name =~ /tcga/;
-        next if $property_name =~ /^create_sample$/;
         next if $property_name =~ /target_region/;
         next if $property_name =~ /sample/;
         $params{$property_name} = $self->$property_name if $self->$property_name;

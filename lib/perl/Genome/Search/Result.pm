@@ -24,7 +24,7 @@ class Genome::Search::Result {
     has => [
         query => {
             is => 'Genome::Search::Query',
-            id_by => ['query_string','page']
+            id_by => ['query_string','page','fq']
         }
     ]
 };

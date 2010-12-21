@@ -135,7 +135,7 @@ class Genome::Model {
         
         # these go on refalign models
         last_complete_build_flagstat     => { calculate => q| return $self->lcb_flagstat(); | },
-        region_of_interest_set_value     => { is => 'UR::Value', via => 'inputs', to => 'value', where => [ name => 'region_of_interest_set_name'] },
+        region_of_interest_set_value     => { is_many => 1, is_mutable => 1, is => 'UR::Value', via => 'inputs', to => 'value', where => [ name => 'region_of_interest_set_name'] },
         region_of_interest_set_name      => { via => 'region_of_interest_set_value', to => 'id', },
     ],
     has_many_optional_deprecated => [
@@ -534,22 +534,27 @@ sub _verify_subject {
     return $subject;
 }
 
-sub get_all_possible_sample_names {
+sub get_all_possible_samples {
     my $self = shift;
 
-    my @sample_names;
+    my @samples;
     if ( $self->subject_class_name eq 'Genome::Taxon' ) {
         my $taxon = Genome::Taxon->get(species_name => $self->subject_name);
-        @sample_names = map { $_->name } $taxon->samples;
+        @samples = $taxon->samples;
+
+        #data tracking is incomplete, so sometimes these need to be looked up via the sources
+        my @sources = ($taxon->individuals, $taxon->population_groups);
+        push @samples,
+            map($_->samples, @sources);
     } elsif ($self->subject_class_name eq 'Genome::Sample'){
-        @sample_names = ( $self->subject->name );
+        @samples = ( $self->subject );
     #} elsif () {
         #TODO Possibly fill in for Genome::Individual, Genome::PopulationGroup and possibly others
     } else {
-        @sample_names = ();
+        @samples = ();
     }
 
-    return @sample_names;
+    return @samples;
 }
 
 #< Instrument Data >#
@@ -558,9 +563,10 @@ sub compatible_instrument_data {
     my %params;
 
     my $subject_type_class;
-    if ($self->get_all_possible_sample_names)  {
+    if (my @samples = $self->get_all_possible_samples)  {
+        my @sample_ids = map($_->id, @samples);
         %params = (
-                   sample_name => [ $self->get_all_possible_sample_names ],
+                   sample_id => \@sample_ids,
                );
         $params{sequencing_platform} = $self->sequencing_platform if $self->sequencing_platform;
     } else {

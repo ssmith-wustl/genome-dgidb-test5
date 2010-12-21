@@ -2,8 +2,10 @@ package Genome::Model::Tools::Sv::CrossMatchForIndel;
 
 use strict;
 use warnings;
-use Genome;
+use Genome::Model::Tools::Sv;
 use Bio::SeqIO;
+
+our $VERSION = $Genome::Model::Tools::Sv::VERSION;
 
 =cut
 my %opts = (m=>0.02,s=>0,h=>100,u=>30,b=>0,z=>0);
@@ -209,6 +211,11 @@ sub execute {
 	                    $var->{bkpos1}        = $bkpos-$P5_homology+1;
 	                    $var->{bkpos2}        = ($P5_homology+$P3_homology==0) ? '-' : $bkpos+$P3_homology;
                         $var->{microhomology} = $P5_homology+$P3_homology;
+                        # change according to Ken's requirement:
+#                         print STDERR "original: $var->{bkpos2}\n";
+#                        $var->{refpos2} -= 1;
+#                        $var->{bkpos2} -= 1;
+#                        print STDERR "Now: $var->{bkpos2}\n";
                     }
                 }
                 else {

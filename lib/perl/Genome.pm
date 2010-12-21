@@ -3,6 +3,8 @@ package Genome;
 use warnings;
 use strict;
 
+our $VERSION = 0.02;
+
 # software infrastructure
 use UR;
 
@@ -11,7 +13,13 @@ use UR::ObjectV001removed;
 
 # environmental configuration
 use Genome::Config;
-use Genome::Search;
+
+# if the search engine is installed configure its hooks
+eval {
+    local $SIG{__WARN__};
+    local $SIG{__DIE__};
+    require Genome::Search;
+};
 
 # modules we need to auto-load
 use Test::MockObject;
@@ -25,7 +33,8 @@ use Carp::Heavy;
 if ($] < 5.01) {
     no warnings;
     *Carp::caller_info = sub {
-        package Carp;
+        package 
+            Carp;
         our $MaxArgNums;
         my $i = shift(@_) + 1;
         package DB;
@@ -57,7 +66,10 @@ if ($] < 5.01) {
 
 
 # this ensures that the search system is updated when certain classes are updated 
-Genome::Search->register_callbacks('UR::Object');
+# the search system is optional so it skips this if usage above fails
+if ($INC{"Genome/Search.pm"}) {
+    Genome::Search->register_callbacks('UR::Object');
+}
 
 # DB::single is set to this value in many places, creating a source-embedded break-point
 # set it to zero in the debugger to turn off the constant stopping...
@@ -95,27 +107,125 @@ for my $e (keys %ENV) {
 
 =head1 NAME
 
-Genome - the namespace for genome analysis and modeling 
+Genome - pipelines, tools, and data managment for genomics
 
 =head1 SYNOPSIS
 
-use Genome;
+ use Genome;
 
-# modules in the genome namespace will now dynamically load
+ # modules in the Genome namespace will now dynamically load
 
- $m = Genome::Model->get(...);
+ @i = Genome::InstrumentData::Illumina->get(...);
+ $m = Genome::Model::SomaticVariation->create(...);
+
+=head1 DESCRIPTION
+
+This is the base namespace module for the Genome software tree.
+
+That tree has several primary components:
+
+ Genome::Model:         a data modeling pipeline management system for genomics 
+
+ Genome::Model::Tools   a tree of >1000 tools and tool wrappers for genomics
+
+ Genome::*              a variety of sample tracking classes with an RDBMS back-end
+
+Only the tools system is currently released.  
+
+See B<gmt> for a complete inventory of all tool packages, and for command-line access to
+those tools.
+
+=head1 AUTHORS
+
+ This software is developed by the analysis and engineering teams at 
+ The Genome Center at Washington Univiersity in St. Louis, with funding from 
+ the National Human Genome Research Institute.
+
+ Scott Abbott
+ Travis Abbott
+ Edward Belter
+ Paul Bender
+ Anthony Brummett
+ Todd C. Carter
+ Matthew Callaway
+ C.J. Carey
+ Lynn Carmichael
+ Ken Chen
+ Eric Clark
+ Kevin Crouse
+ Indraniel Das
+ Nathan Dees
+ Eric deMello
+ Brian Derickson
+ Alice Diec
+ David Dooling
+ Feiyu Du
+ Adam Dukes
+ James Eldred
+ Xian Fan
+ Ian Ferguson
+ Chris Harris
+ Amy Hawkins
+ Todd Hepler
+ Xin Hong
+ Shunfang Hou
+ Jasreet Hundal
+ Erik Hvatum
+ Mark Johnson
+ Krisha-Latha Kanchi
+ Cyriac Kandoth
+ Phil Kimmey
+ Michael Kiwala
+ Daniel Koboldt
+ Karthik Kota
+ Kim Kyung
+ David Larson
+ Sai Lek
+ Shawn Leonard
+ Shin Leong
+ Ling Lin
+ Justin Lolofie
+ Robert Long
+ Charles Lu
+ John Martin
+ Josh McMichael
+ Rick Meyer
+ Thomas Mooney
+ William Nash
+ Nathan Nutter
+ Ben Oberkfell
+ John Osborne
+ Josh Peck
+ Jerome Peirick
+ Craig Pohl
+ Ryan Richt
+ Noorus Sahar Abubucker
+ Gabriel Sanderson
+ William Schierding
+ Jon Schindler
+ William Schroeder
+ Christopher Schuster
+ Xiaoqi Shi
+ Scott Smith
+ Sasi Suruliraj
+ Kenneth Swanson
+ Jason Walker
+ John Wallis
+ Jim Weible
+ Mike Wendl
+ Todd Wylie
+
+=head1 LICENSE
+
+This software is copyright Washington University in St. Louis, 2007-2010.  
+
+It is released under the Lesser GNU Public License (LGPL) version 3.  See the 
+associated LICENSE file in this distribution.
 
 =head1 BUGS
 
 For defects with any software in the genome namespace,
-contact software@genome.wustl.edu.
-
-=head1 SEE ALSO
-
-B<Genome::Model>, B<Genome::Model::Tools>
-
-B<Genome::Taxon>, B<Genome::PopulationGroup>, B<Genome::Individual>,
-B<Genome::Sample>, B<Genome::Library>, B<Genome::InstrumentData>
+contact genome-dev ~at~ genome.wustl.edu.
 
 =cut
 

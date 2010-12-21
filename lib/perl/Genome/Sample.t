@@ -27,6 +27,8 @@ $sample = Genome::Sample->create(
     extraction_desc  => 'This is a test',
     tissue_desc      => 'normal',
     taxon_id         => $taxon->taxon_id,
+    age => 99,
+    body_mass_index => 22.4,
 );
 ok($sample, "created a new genome sample");
 isa_ok($sample, 'Genome::Sample');
@@ -37,6 +39,9 @@ print Data::Dumper::Dumper($sample);
 
 my $commit = eval{ UR::Context->commit; };
 ok($commit, 'commit');
+
+is($sample->age, 99, 'age');
+is($sample->body_mass_index, 22.4, 'body_mass_index');
 
 $sample = Genome::Sample->get($id);
 ok($sample, 'got new sample');

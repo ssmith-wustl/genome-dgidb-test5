@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 use Carp 'confess';
 use File::Path 'make_path';
+use POSIX 'ceil';
 use Bio::SeqIO;
 
 class Genome::Model::GenePrediction::Eukaryotic::SplitFasta {
@@ -85,9 +86,9 @@ sub execute {
     # Now determine the chunk size... chunk size begins at the value provided by the user. If the total number of 
     # chunks (using this chunk size) exceeds the total allowable chunks, then chunk size is increased.
     my $chunk_size = $self->max_bases_per_file;
-    my $total_chunks = $total_bases / $chunk_size;
+    my $total_chunks = ceil($total_bases / $chunk_size);
     unless ($total_chunks <= $self->max_chunks) {
-        $chunk_size = int (($total_bases / $self->max_chunks) * 1.1);  # This is to allow some wiggle room, since each fasta won't
+        $chunk_size = ceil(($total_bases / $self->max_chunks) * 1.1);  # This is to allow some wiggle room, since each fasta won't
                                                                        # have exactly the maximum number the bases
         $self->status_message("Increasing fasta chunk size from " . $self->max_bases_per_file . " to $chunk_size. This prevents the " .
             "total number of split fastas from exceeding " . $self->max_chunks . " (would have been $total_chunks).");

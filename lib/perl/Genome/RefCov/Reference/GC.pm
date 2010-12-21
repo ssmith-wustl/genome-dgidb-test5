@@ -53,6 +53,9 @@ sub create {
     $self->coverage($coverage);
     $self->sequence($sequence);
     $self->_reflen(scalar(@{$coverage}));
+    if ($self->_reflen <= 0) {
+        die('Reference length must be greater than zero!');
+    }
     my %hash = ();
     for my $metric_category ($self->metric_categories) {
         for my $metric_type ($self->metric_types) {
@@ -96,7 +99,7 @@ sub _update_all_base_values {
     my $uncovlen = 0;
     for (my $i=0; $i < scalar(@{$coverage}); $i++) {
         my $depth = $coverage->[$i];
-        my $base = $sequence->[$i];
+        my $base = lc($sequence->[$i]);
         $hash_ref->{'reflen_bp'}->{$base}++;
         if ($depth > 0) {
             # Coverage.
@@ -132,17 +135,17 @@ sub _update_base_pair_values {
 sub _update_all_percent_values {
     my $self = shift;
     my $hash_ref = $self->metrics_hash_ref;
-    for my $category ($self->alphabet,$self->base_pairings) {
-        for my $metric_category ($self->metric_categories) {
-            my $bp_key = $metric_category .'_bp';
-            my $percent_key = $metric_category .'_percent';
+    for my $metric_category ($self->metric_categories) {
+        my $bp_key = $metric_category .'_bp';
+        my $percent_key = $metric_category .'_percent';
+        my $denominator = '_'. $metric_category;
+        for my $category ($self->alphabet,$self->base_pairings) {
             my $pct = 0;
-            my $denominator = '_'. $metric_category;
             if ($self->$denominator) {
                 my $value = $hash_ref->{$bp_key}->{$category} || 0;
-                $pct = _round( ($value / $self->$denominator ) * 100 );
+                $pct = $self->_round( ($value / $self->$denominator ) * 100 );
             }
-            $hash_ref->{$bp_key}->{$category} = $pct;
+            $hash_ref->{$percent_key}->{$category} = $pct;
         }
     }
     $self->metrics_hash_ref($hash_ref);
@@ -150,6 +153,7 @@ sub _update_all_percent_values {
 }
 
 sub _round {
+    my $self = shift;
     my $value = shift;
     return sprintf( "%.2f", $value );
 }

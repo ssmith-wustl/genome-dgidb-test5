@@ -11,7 +11,6 @@ use Carp;
 use IO::File;
 use File::Slurp;
 use Text::CSV_XS;
-use File::Temp qw/ tempfile /;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
@@ -83,7 +82,7 @@ sub execute
                     ),
     ];
 
-    my ( $fh, $tmpfile ) = tempfile( "heatmapXXXXX", SUFFIX => '.R' );
+    my ( $fh, $tmpfile ) = Genome::Utility::FileSystem->create_temp_file('gmt_graph_heatmap.R');
 
     write_file( $tmpfile, @$rcmd );
 

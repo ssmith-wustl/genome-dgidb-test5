@@ -1,0 +1,190 @@
+package Genome::Sample::Command::ImportTcga;
+
+use strict;
+use warnings;
+
+use Genome;
+
+use Data::Dumper 'Dumper';
+
+class Genome::Sample::Command::ImportTcga { 
+    is => 'Command',
+    has => [
+        name => {
+            is => 'Text',
+            doc => 'MetaHIT sample name.',
+        },
+        _individual_name => { is_optional => 1, },
+        _library => { is_optional => 1, },
+    ],
+};
+
+sub library { return $_[0]->_library; }
+
+sub execute {
+    my $self = shift;
+
+    my $name_ok = $self->_validate_name;
+    return if not $name_ok;
+
+    my $individual = $self->_get_or_create_individual;
+    return if not $individual;
+
+    my $sample = $self->_get_or_create_sample($individual);
+    return if not $sample;
+
+    my $library = $self->_get_or_create_library($sample);
+    return if not $library;
+    $self->_library($library);
+
+    $self->status_message('Import TCGA '.$self->name.'...OK');
+
+    return 1;
+}
+
+sub _validate_name {
+    my $self = shift;
+
+    my $name = $self->name;
+    my @tokens = split('-', $name);
+    if ( not @tokens == 7 ) {
+        $self->error_message("Invalid TCGA name ($name). It must have 7 parts separated by dashes.");
+        return;
+    }
+
+    if ( not $tokens[0] eq 'TCGA' ) {
+        $self->error_message("Invalid TCGA name ($name). It must start with TCGA.");
+        return;
+    }
+
+    $self->_individual_name( join('-', @tokens[0..2]) );
+
+    return 1;
+}
+
+sub _get_or_create_individual {
+    my $self = shift;
+
+    my $name = $self->_individual_name;
+    $self->status_message('Get or create individual');
+    $self->status_message('Individual name: '.$name);
+
+    my $individual = Genome::Individual->get(name => $name);
+    if ( $individual ) {
+        $self->status_message('Got individual: '.$individual->__display_name__);
+        return $individual;
+    }
+
+    my $taxon = Genome::Taxon->get(name => 'human');
+    Carp::confess('Cannot get human taxon') if not $taxon;
+
+    $individual = Genome::Individual->create(
+        name => $name,
+        upn => $name,
+        taxon_id => $taxon->id,
+        _nomenclature => 'unknown',
+    );
+    if ( not $individual ) {
+        $self->error_message('Cannot create individual to import MetaHIT '.$self->name);
+        return;
+    }
+    if ( not UR::Context->commit ) {
+        $self->error_message('Cannot commit individual to DB.');
+        return;
+    }
+
+    $self->status_message('Created individual: '.$individual->__display_name__);
+
+    return $individual;
+}
+
+sub _get_or_create_sample {
+    my ($self, $individual) = @_;
+
+    Carp::confess('No individual given to create sample') if not $individual;
+
+    my $name = $self->name; 
+    $self->status_message('Get or create sample');
+    $self->status_message('Sample name: '.$name);
+
+    my $sample = Genome::Sample->get(name => $name);
+    if ( $sample ) {
+        $self->status_message('Got sample: '.$sample->name.' ('.$sample->id.')');
+        return $sample;
+    }
+
+    $sample = Genome::Sample->create(
+        name => $name,
+        extraction_label => $name,
+        source_id => $individual->id,
+        source_type => $individual->subject_type,
+        extraction_type => 'genomic',
+        cell_type => 'primary',
+        _nomenclature => 'TCGA',
+    );
+    if ( not $sample ) {
+        $self->error_message("Cannot create sample to import MetaHIT $name");
+        return;
+    }
+    if ( not UR::Context->commit ) {
+        $self->error_message('Cannot commit sample to DB.');
+        return;
+    }
+
+    $self->status_message('Created sample: '.$sample->name.' ('.$sample->id.')');
+
+    return $sample;
+}
+
+sub _get_or_create_library {
+    my ($self, $sample) = @_;
+
+    Carp::confess('No sample given to create library') if not $sample;
+
+    my $name = $sample->name.'-extlibs';
+    $self->status_message('Get or create library');
+    $self->status_message('Library name: '.$name);
+
+    my $library = Genome::Library->get(name => $name);
+    if ( $library ) {
+        $self->status_message('Got library: '.$library->__display_name__);
+        return $library;
+    }
+
+    $library = Genome::Library->create(
+        name => $name,
+        sample_id => $sample->id,
+    );
+    if ( not $library ) {
+        $self->error_message("Cannot create library to import MetaHIT $name");
+        return;
+    }
+    if ( not UR::Context->commit ) {
+        $self->error_message('Cannot commit library to DB.');
+        return;
+    }
+
+    $self->status_message('Created library: '.$library->__display_name__);
+
+    return $library;
+}
+
+1;
+
+=pod
+
+=head1 Disclaimer
+
+Copyright (C) 2005 - 2010 Genome Center at Washington University in St. Louis
+
+This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+=head1 Author(s)
+
+B<Eddie Belter> I<ebelter@genome.wustl.edu>
+
+=cut
+
+#$HeadURL$
+#$Id$
+
