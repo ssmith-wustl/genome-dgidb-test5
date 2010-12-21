@@ -37,7 +37,7 @@ sub required_rusage {
     my $maxcpus = $cpus*2;
     my $rusage = "rusage[mem=$mem, tmp=$tmp]";
     # select blades that can hold two of me
-    my $select = "select[model!=Opteron250 && type==LINUX64 && ncpus>=$maxcpus maxtmp>=$maxtmp && maxmem>$maxmem]";
+    my $select = "select[model!=Opteron250 && type==LINUX64 && ncpus>=$maxcpus && maxtmp>=$maxtmp && maxmem>$maxmem]";
     return "-R '$select span[hosts=1] $rusage' -M $mem_kb -n $cpus -q alignment -m alignment";
 }
 
