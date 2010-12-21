@@ -11,7 +11,7 @@ my $DEFAULT_VERSION = '2.2.4';
 
 class Genome::Model::Tools::Varscan {
     is => ['Command'],
-    has_optional => [
+    has_optional_input => [
          version => {
              is    => 'String',
              doc   => 'version of Varscan application to use',

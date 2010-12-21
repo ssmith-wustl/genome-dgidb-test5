@@ -279,7 +279,12 @@ sub parser {
         
         single: parenthetical
                     { $item[1]; }
-        | /[\w\.-]+/ <defer: 'This defer is an ugly but convenient counter, since it returns the number of queued events.'; >
+        | "somatic" name
+                    { my @name = %{$item[2]}; $return = { ('somatic ' . $name[0]) => $name[1] }; }
+        | name
+                    { $item[1]; }
+        
+        name: /[\w\.-]+/ <defer: 'This defer is an ugly but convenient counter, since it returns the number of queued events.'; >
                     { $return = { $item[1] => ($item[2] - 1) }; }
     };
 

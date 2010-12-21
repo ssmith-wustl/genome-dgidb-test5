@@ -24,6 +24,7 @@ class Genome::Model::Tools::Bed::Convert::BedToAnnotation{
         output => {
             is => 'Path',
             is_input => 1,
+            is_output => 1,
             is_optional => 0,
             doc => 'File where the converted variants will be written',
         },
