@@ -78,7 +78,7 @@ sub create {
         return $self;
     }
 
-    # Adding as input cuz of mock inst data
+     # Adding as input cuz of mock inst data
     unless ( $self->model->add_input(
             name => 'instrument_data',
             value_class_name => $self->instrument_data->class,

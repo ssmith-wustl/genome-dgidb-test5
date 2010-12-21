@@ -13,10 +13,11 @@ use_ok('Genome::Model::MetagenomicComposition16s');
 
 my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
     sequencing_platform => 'solexa',
-    assembler_name => 'soap',
+    assembler_name => 'soap de-novo-assemble',
 );
 ok($model, 'mock model');
-is($model->default_model_name, 'H_KT-185-1-0089515594 Posterior Fornix De Novo Assembly Soap Test', 'default model name');
+is($model->center_name, 'WUGC', 'center name');
+is($model->default_model_name, 'H_KT-185-1-0089515594 Posterior Fornix De Novo Assembly Soap De Novo Assemble Test', 'default model name');
 
 my %tissue_descs_and_name_parts = (
     '20l_p' => undef,

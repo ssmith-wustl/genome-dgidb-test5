@@ -6,7 +6,8 @@
 use strict;
 use warnings;
 
-use Test::More tests => 12;
+#use Test::More tests => 12;
+use Test::More skip_all => 'trying to write in code dir';
 use Test::Output;
 use Test::Exception;
 

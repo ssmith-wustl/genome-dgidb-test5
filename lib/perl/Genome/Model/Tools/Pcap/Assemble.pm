@@ -518,11 +518,9 @@ sub get_read_prefixes_for_organism
 
     my $query = "select dr.dna_resource_prefix prefix, o.organism_name name ".
     "from dna_resource dr ".
-    "join entity_attribute_value eav on eav.entity_id = dr.dr_id ".
-    "join organism o on o.org_id = eav.value ".
+    "join organism o on o.org_id = dr.org_id ".
     "join dna_pse dpse on dpse.dna_id = dr.dr_id ".
-    "where eav.attribute_name = 'org id' ".
-    "and o.organism_name = '$db_org_name'";
+    "where o.organism_name = '$db_org_name'";
 
     #there's probably better ways to do this
     my @prefixes = `sqlrun "$query" --nocount --noheader`;

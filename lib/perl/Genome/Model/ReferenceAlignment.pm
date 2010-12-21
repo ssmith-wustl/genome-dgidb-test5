@@ -64,7 +64,6 @@ class Genome::Model::ReferenceAlignment {
         force_fragment               => { via => 'processing_profile'},
         read_calibrator_name         => { via => 'processing_profile'},
         read_calibrator_params       => { via => 'processing_profile'},
-        capture_set_name             => { via => 'processing_profile'},
         reference_sequence_build_id => {
             is => 'Text',
             via => 'inputs',
@@ -692,18 +691,6 @@ sub _get_sum_of_metric_values_from_events {
         }
     }
     return $sum;
-}
-
-sub region_of_interest_set_name {
-    my $self = shift;
-    if ($self->capture_set_name) {
-        $self->warning_message('Capture set name has been deprecated!  Model input region_of_interest_set_name should be used instead!');
-        return $self->capture_set_name;
-    }
-    my @inputs = Genome::Model::Input->get(model_id => $self->id, name => 'region_of_interest_set_name');
-    unless (@inputs) { return; }
-    if (@inputs > 1) { die('Only expecting one input for region_of_interest_set_name') }
-    return $inputs[0]->value_id;
 }
 
 sub region_of_interest_set {

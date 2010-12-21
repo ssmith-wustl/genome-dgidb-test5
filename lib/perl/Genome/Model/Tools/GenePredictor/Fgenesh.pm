@@ -44,8 +44,8 @@ EOS
 sub execute {
     my $self = shift;
 
-    $DB::single = 1;
-    $self->status_message("Running fgenesh gene predictor!");
+    $self->status_message("Running fgenesh gene predictor on sequence in " . $self->fasta_file .
+        " using model file " . $self->model_file . "!");
 
     my @features;
     my $output_directory = $self->raw_output_directory;
@@ -62,6 +62,7 @@ sub execute {
 
     my $output_file = $self->get_temp_file_in_directory($self->raw_output_directory, 'fgenesh_raw_output_XXXXXX');
     confess "Could not create temp file in " . $self->raw_output_directory unless defined $output_file;
+    $self->status_message("Raw output being written to $output_file");
 
     my %gene_count_by_seq;
     my $total_gene_count = 0;

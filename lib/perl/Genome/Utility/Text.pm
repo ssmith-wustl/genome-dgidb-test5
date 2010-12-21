@@ -121,13 +121,15 @@ sub sanitize_string_for_filesystem {
 #< Capitalize >#
 sub capitalize_words {
     my $string = shift;
-    
+
     unless ( $string ) {
-        Carp::cluck('No string to capitalize words.');
-        return;
+        Carp::confess('No string to capitalize words.');
     }
 
-    return join(' ', map { ucfirst } split(' ', $string));
+    my $seps = join('', ' ', @_); # allow other separators
+    my $regexp = qr/[$seps]+/;
+
+    return join(' ', map { ucfirst } split($regexp, $string));
 }
 
 1;

@@ -3,6 +3,7 @@ package Genome::Model::GenePrediction::Eukaryotic;
 use strict;
 use warnings;
 use Genome;
+use Carp 'confess';
 
 class Genome::Model::GenePrediction::Eukaryotic {
     is => 'Genome::Model::GenePrediction',
@@ -77,6 +78,19 @@ sub create {
             value_id => $params{$key},
             name => $key,
         );
+    }
+
+    # The snap models, fgenesh model, and repeat library all should point to existing files
+    if (defined $self->fgenesh_model) {
+        confess "No fgenesh model file found at " . $self->fgenesh_model unless -e $self->fgenesh_model;
+    }
+    if (defined $self->snap_models) {
+        for my $snap_model (split(",", $self->snap_models)) {
+            confess "No snap model found at $snap_model" unless -e $snap_model;
+        }
+    }
+    if (defined $self->repeat_library) {
+        confess "No repeat library found at " . $self->repeat_library unless -e $self->repeat_library;
     }
 
     return $self;

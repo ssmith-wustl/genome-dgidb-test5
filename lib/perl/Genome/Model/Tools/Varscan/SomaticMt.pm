@@ -21,7 +21,7 @@ use FileHandle;
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
 class Genome::Model::Tools::Varscan::SomaticMt {
-	is => 'Command',                       
+	is => 'Genome::Model::Tools::Varscan',
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		normal_bam	=> { is => 'Text', doc => "Path to Normal BAM file", is_optional => 0, is_input => 1 },
@@ -122,7 +122,7 @@ sub execute {                               # replace with real execution logic.
 		my $normal_pileup = "samtools view -b -u -q 10 $normal_bam MT:1 | samtools pileup -f $reference -";
 		my $tumor_pileup = "samtools view -b -u -q 10 $tumor_bam MT:1 | samtools pileup -f $reference -";
 		
-		my $cmd = "bash -c \"java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <\($normal_pileup\) <\($tumor_pileup\) --output-snp $output_snp --output-indel $output_indel $varscan_params\"";
+		my $cmd = $self->java_command_line("somatic <\($normal_pileup\) <\($tumor_pileup\) --output-snp $output_snp --output-indel $output_indel $varscan_params");
 
 		## Run VarScan ##
 		if($self->heap_space)
@@ -138,7 +138,7 @@ sub execute {                               # replace with real execution logic.
 		
 		if(-e $output_snp && -e $output_indel)
 		{
-			$cmd = "java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somaticFilter $output_snp --indel-file $output_indel --output-file $output_snp.filter";
+			$cmd = $self->java_command_line("somaticFilter $output_snp --indel-file $output_indel --output-file $output_snp.filter");
 			print "Running $cmd\n";
 			system($cmd);
 			

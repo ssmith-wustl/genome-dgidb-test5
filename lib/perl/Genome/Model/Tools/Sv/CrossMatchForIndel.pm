@@ -2,8 +2,10 @@ package Genome::Model::Tools::Sv::CrossMatchForIndel;
 
 use strict;
 use warnings;
-use Genome;
+use Genome::Model::Tools::Sv;
 use Bio::SeqIO;
+
+our $VERSION = $Genome::Model::Tools::Sv::VERSION;
 
 =cut
 my %opts = (m=>0.02,s=>0,h=>100,u=>30,b=>0,z=>0);

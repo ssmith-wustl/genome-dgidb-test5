@@ -13,7 +13,7 @@ use_ok ('Genome::Model::DeNovoAssembly::Command::CopyVelvetBuild');
 #get test model
 my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
     sequencing_platform => 'solexa',
-    assembler_name => 'velvet',
+    assembler_name => 'velvet one-button',
     );
 ok( $model, "Got mock de-novo-assembly model" );
 

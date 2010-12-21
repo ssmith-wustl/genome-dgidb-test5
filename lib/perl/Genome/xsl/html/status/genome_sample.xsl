@@ -50,8 +50,8 @@
                     </td>
                     <td class="value">
                       <xsl:choose>
-                        <xsl:when test="string(normalize-space(aspect[@name='common_name']/value))">
-                          <xsl:value-of select="normalize-space(aspect[@name='common_name']/value)"/>
+                        <xsl:when test="string(normalize-space(aspect[@name='patient_common_name']/value))">
+                          <xsl:value-of select="normalize-space(aspect[@name='patient_common_name']/value)"/>
                         </xsl:when>
                         <xsl:otherwise>
                           --

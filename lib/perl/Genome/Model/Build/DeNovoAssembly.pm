@@ -16,25 +16,27 @@ class Genome::Model::Build::DeNovoAssembly {
     subclassify_by => 'subclass_name',
     has => [
         subclass_name => { is => 'String', len => 255, is_mutable => 0, column_name => 'SUBCLASS_NAME',
-                           calculate_from => ['model_id'],
-                           calculate => sub {
-                                            my($model_id) = @_;
-                                            return unless $model_id;
-                                            my $model = Genome::Model->get($model_id);
-                                            Carp::croak("Can't find Genome::Model with ID $model_id while resolving subclass for Build") unless $model;
-                                            my $assembler_name = $model->assembler_name;
-                                            Carp::croak("Can't subclass Build: Genome::Model id $model_id has no assembler_name") unless $assembler_name;
-                                            return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($assembler_name);
-                                          },
+            calculate_from => ['model_id'],
+            calculate => sub {
+                my($model_id) = @_;
+                return unless $model_id;
+                my $model = Genome::Model->get($model_id);
+                Carp::croak("Cannot subclass build: no model ($model_id)") if not  $model;
+                my $processing_profile_id = $model->processing_profile_id;
+                my $processing_profile = $model->processing_profile;
+                Carp::croak("Cannot subclass build: processing profile ($processing_profile_id) does not exist for model ($model_id)") if not $processing_profile;
+                my $assembler_base_name = $processing_profile->assembler_base_name;
+                Carp::croak("Can't subclass build: processing profile ($processing_profile_id)  has no assembler base name") unless $assembler_base_name;
+                return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($assembler_base_name);
+            },
         },
-
-	#TODO - best place for this??
-	processed_reads_count => {
-	    is => 'Integer',
-	    is_optional => 1,
-	    is_mutable => 1,
-	    doc => 'Number of reads processed for assembling',
-	},
+        #TODO - best place for this??
+        processed_reads_count => {
+            is => 'Integer',
+            is_optional => 1,
+            is_mutable => 1,
+            doc => 'Number of reads processed for assembling',
+        },
         (
             map { 
                 join('_', split(m#\s#)) => {
@@ -81,7 +83,9 @@ sub create {
     }
 
     my @ins_data = $self->instrument_data;
-    if (not @ins_data) {
+    #okay for soap import to not have an instrument data
+#   if (not @ins_data) {
+    if (not @ins_data and not $self->processing_profile->assembler_name =~ /import/) {
 	$self->error_message("Build does not have any instrument data");
 	$self->delete;
 	return;
@@ -96,6 +100,11 @@ sub calculate_estimated_kb_usage {
     my $self = shift;
 
     my $kb_usage;
+
+    if ( $self->processing_profile->assembler_name =~ /import/ ) {
+	$self->status_message("Kb usage for imported assembly: 5GiB");
+	return 5_000_000;
+    }
 
     if (defined $self->model->processing_profile->coverage) {
 	#estimate usage by 0.025kb per base and 5GB for logs/error output
@@ -158,10 +167,6 @@ sub genome_size {
 	$self->genome_size_used( 4000000 );
         return 4000000;
     }
-#    elsif ( $self->processing_profile->assembler_name eq 'soap' ) {
-	#This only gets called for soap when setting metrics, ie, it's not needed for assembling
-#	return;
-#    }
 
     # TODO add more
     print Dumper($taxon);
@@ -252,7 +257,7 @@ sub calculate_average_insert_size {
 
     #check if insert size is set in processing-profile
     my %assembler_params = $self->processing_profile->assembler_params_as_hash;
-    if ( exists $assembler_params{'insert_size'} and $self->processing_profile->assembler_name eq 'soap') { #bad
+    if ( exists $assembler_params{'insert_size'} and $self->processing_profile->assembler_base_name eq 'soap') { #bad
 	$self->status_message("Using insert size set in assembler params");
 	my $insert_size = $assembler_params{'insert_size'};
 	$self->average_insert_size_used( $insert_size );
@@ -348,7 +353,7 @@ sub assembly_fasta_file {
 
 #< Misc >#
 sub center_name {
-    return 'WUGC';
+    return $_[0]->model->center_name || 'WUGC';
 }
 
 #< Metrics >#
@@ -356,7 +361,7 @@ sub calculate_metrics {
     my  $self = shift;
 
     my $stats_file = $self->stats_file;
-    my $stats_fh = Genome::Utility::FileSystem->open_file_for_reading($stats_file);
+    my $stats_fh = eval{ Genome::Utility::FileSystem->open_file_for_reading($stats_file); };
     unless ( $stats_fh ) {
         $self->error_message("Can't set metrics because can't open stats file ($stats_file).");
         return;
@@ -476,7 +481,6 @@ sub calculate_metrics {
 	$genome_size_used = 'NA';
     }
 
-    #$metrics{genome_size_used} = $self->genome_size if $self->processing_profile->assembler_name eq 'velvet'; #bad
     $metrics{genome_size_used} = $genome_size_used;
     $metrics{average_insert_size_used} = $self->calculate_average_insert_size;
     

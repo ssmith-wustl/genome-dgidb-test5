@@ -11,10 +11,11 @@ my $DEFAULT_VERSION = '2.2.4';
 
 class Genome::Model::Tools::Varscan {
     is => ['Command'],
-    has_optional => [
+    has_optional_input => [
          version => {
              is    => 'String',
              doc   => 'version of Varscan application to use',
+             default_value => 'latest',
          },
     ],
 };
@@ -32,6 +33,16 @@ EOS
 my %VARSCAN_VERSIONS = (
     '2.2.4' => '/gsc/scripts/lib/java/VarScan/VarScan.v2.2.4.jar',
 );
+
+sub java_command_line {
+    my $self = shift;
+    my $parameter_string = shift;
+
+    my $path = $self->path_for_version($self->version);
+    my $command_line = 'bash -c "java -jar ' . $path . ' ' . $parameter_string . ' "';
+
+    return $command_line;
+}
 
 sub path_for_version {
     my $class = shift;

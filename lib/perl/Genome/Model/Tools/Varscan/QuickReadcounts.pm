@@ -21,7 +21,7 @@ use FileHandle;
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
 class Genome::Model::Tools::Varscan::QuickReadcounts {
-	is => 'Command',                       
+	is => 'Genome::Model::Tools::Varscan',
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		bam_file	=> { is => 'Text', doc => "Path to BAM file", is_optional => 0 },
@@ -118,18 +118,18 @@ sub execute {                               # replace with real execution logic.
 			close($input);
 
 			## Run Pileup Command ##
-			my $cmd = "samtools view -b -u -q 1 $bam_file $query_string | samtools pileup -f $reference - >>$output_file.pileup";# - | java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan pileup2snp --min-coverage $min_coverage";
+			my $cmd = "samtools view -b -u -q 1 $bam_file $query_string | samtools pileup -f $reference - >>$output_file.pileup";# - | $self->java_command_line("pileup2snp --min-coverage $min_coverage");
 			print "RUN $cmd\n";
 			system("$cmd");
 
 			## Run Limit Command ##
-			$cmd = "java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan limit $output_file.pileup --positions-file $variants_file --output-file $output_file.pileup.roi";# - | java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan pileup2snp --min-coverage $min_coverage";
+			$cmd = $self->java_command_line("limit $output_file.pileup --positions-file $variants_file --output-file $output_file.pileup.roi");# - | pileup2snp --min-coverage $min_coverage";
 			print "RUN $cmd\n";
 			system("$cmd");
 
 			## Run VarScan
 			
-			$cmd = "java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan pileup2cns $output_file.pileup.roi --min-coverage $min_coverage >$output_file.pileup.roi.cns";
+			$cmd = $self->java_command_line("pileup2cns $output_file.pileup.roi --min-coverage $min_coverage >$output_file.pileup.roi.cns");
 			print "RUN $cmd\n";
 			system("$cmd");
 

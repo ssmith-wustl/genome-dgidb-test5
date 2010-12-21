@@ -82,7 +82,7 @@ sub execute {
     my %genome;
     my $genome_size = 0;
     my $masked_genome_size = 0;
-    foreach my $ref_chr (@chromosomes) {
+    for my $ref_chr (@chromosomes) {
         unless(open(FAIDX,"samtools faidx $ref $ref_chr |")) {
             die "Couldn't pipe samtools faidx\n";
         }
@@ -156,6 +156,7 @@ sub execute {
     for my $chromosome_name(@chromosomes) {
         my $transcript_iterator = $build->transcript_iterator(chrom_name => $chromosome_name);
         print STDERR "Parsing $chromosome_name\n";
+        $self->status_message("Parsing $chromosome_name\n");
         unless($transcript_iterator) {
             warn "No iterator because ", Genome::Transcript->error_message, " Skipping to next\n";
             next;
@@ -166,7 +167,7 @@ sub execute {
                 my @exons = $transcript->cds_exons;
                 push @exons, $transcript->introns;
                 push @exons, grep { $_->structure_type eq 'rna' } $transcript->ordered_sub_structures;
-                foreach my $exon (@exons) {
+                for my $exon (@exons) {
                     my $type = $exon->structure_type;
                     if($type eq 'rna') {
                         $self->add_substructure_to_set($tier1_rna, $exon, $chromosome_name);
@@ -219,6 +220,7 @@ sub execute {
     #undef($tier2_conserved_set); 
     my $tier2 = $tier2_conserved_set;
     print STDERR "Calculated Tier2 conserved set\n";
+    $self->status_message("Calculated Tier2 conserved set\n");
     #printf "Tier2 conserved set encompasses %u bases. %f%% of the genome\n", bases_covered($tier2), bases_covered($tier2)/$masked_genome_size * 100;
     undef($tier1_coding);
 
@@ -228,7 +230,7 @@ sub execute {
     my $repeatmasker_regions = $self->shadow_genome(\%genome);
 
     my @repeatmasker_files = glob("/gscmnt/sata194/info/sralign/UCSC/data/chr*_rmsk.txt");
-    foreach my $file (@repeatmasker_files) {
+    for my $file (@repeatmasker_files) {
         $fh = Genome::Utility::FileSystem->open_file_for_reading($file);
         while(my $line = $fh->getline) {
             chomp $line;
@@ -240,6 +242,7 @@ sub execute {
         $fh->close;
     }
     print STDERR "Calculated repeatmasker regions\n";
+    $self->status_message("Calculated repeatmasker regions\n");
 
     #now take union and calculate the coverage
 
@@ -248,7 +251,7 @@ sub execute {
     my $regulatory_regions = $self->shadow_genome(\%genome);
     my @files = qw| targetScanS.txt oreganno.txt tfbsConsSites.txt vistaEnhancers.txt eponine.txt firstEF.txt wgEncodeUcsdNgTaf1ValidH3K4me.txt wgEncodeUcsdNgTaf1ValidH3ac.txt wgEncodeUcsdNgTaf1ValidRnap.txt wgEncodeUcsdNgTaf1ValidTaf.txt polyaDb.txt polyaPredict.txt switchDbTss.txt encodeUViennaRnaz.txt laminB1.txt |;
 
-    foreach my $file (@files) {
+    for my $file (@files) {
         $fh = Genome::Utility::FileSystem->open_file_for_reading("/gscmnt/sata194/info/sralign/UCSC/data/$file");
         while(my $line = $fh->getline) {
             chomp $line;
@@ -259,6 +262,7 @@ sub execute {
         $fh->close;
     }
     print STDERR "Calculated Tier2 regulatory regions\n";
+    $self->status_message("Calculated Tier2 regulatory regions\n");
 
     #no bins in this file
     $fh = Genome::Utility::FileSystem->open_file_for_reading("/gscmnt/sata194/info/sralign/UCSC/data/cpgIslandExt.txt");
@@ -274,14 +278,18 @@ sub execute {
     $self->in_place_difference_genomes($regulatory_regions, $repeatmasker_regions); 
     #in_place_difference_genomes($regulatory_regions, $tier2);
     print STDERR "Calculated Tier2 regulatory regions / repeatmasker\n";
+    $self->status_message("Calculated Tier2 regulatory regions / repeatmasker\n");
     #printf "Tier2 regulatory set encompasses %u bases. %f%% of the genome\n", bases_covered($regulatory_regions), bases_covered($regulatory_regions)/$masked_genome_size * 100;
 
     $self->in_place_union_genomes($tier2, $regulatory_regions);
     print STDERR "Calculated Tier2 conserved U regulatory regions / repeatmasker\n";
+    $self->status_message("Calculated Tier2 conserved U regulatory regions / repeatmasker\n");
     $self->in_place_difference_genomes($tier2, $tier1); #exclude things hitting Tier1
     print STDERR "Calculated (Tier2 conserved U regulatory regions / repeatmasker) / Tier1\n";
+    $self->status_message("Calculated (Tier2 conserved U regulatory regions / repeatmasker) / Tier1\n");
     $self->in_place_difference_genomes($tier2, \%genome); #account for masking
     print STDERR "Calculated (Tier2 conserved U regulatory regions / repeatmasker) / Tier1 / masked genome\n";
+    $self->status_message("Calculated (Tier2 conserved U regulatory regions / repeatmasker) / Tier1 / masked genome\n");
     printf "Tier2 encompasses %u bases. %f%% of the genome\n", $self->bases_covered($tier2), $self->bases_covered($tier2)/$masked_genome_size * 100;
     $self->write_genome_bitmask($self->tier2_output, $tier2);
     #free up some mem?
@@ -385,7 +393,7 @@ sub shadow_genome {
     my $self = shift;
     my $genome = shift;
     my %new;
-    foreach my $chr (keys %$genome) {
+    for my $chr (keys %$genome) {
         $new{$chr} = $genome->{$chr}->Shadow;
     }
     return \%new;
@@ -395,14 +403,14 @@ sub union_genomes {
     my $self = shift;
     my ($genome1, $genome2) = @_;
     my %union;
-    foreach my $chr (keys %$genome1) {
+    for my $chr (keys %$genome1) {
         next unless defined $genome1->{$chr};
         $union{$chr} = $genome1->{$chr}->Clone;
         if(exists($genome2->{$chr})) {
             $union{$chr}->Union($genome2->{$chr},$union{$chr});  
         }
     }
-    foreach my $chr (keys %$genome2) {
+    for my $chr (keys %$genome2) {
         next unless defined $genome2->{$chr};
         if(!exists($genome1->{$chr})) {
             $union{$chr} = $genome2->{$chr}->Clone;  
@@ -414,13 +422,13 @@ sub union_genomes {
 sub in_place_union_genomes {
     my $self = shift;
     my ($genome1, $genome2) = @_;
-    foreach my $chr (keys %$genome1) {
+    for my $chr (keys %$genome1) {
         next unless defined $genome1->{$chr};
         if(exists($genome2->{$chr})) {
             $genome1->{$chr}->Union($genome1->{$chr},$genome2->{$chr});  
         }
     }
-    foreach my $chr (keys %$genome2) {
+    for my $chr (keys %$genome2) {
         next unless defined $genome2->{$chr};
         if(!exists($genome1->{$chr})) {
             $genome1->{$chr} = $genome2->{$chr}->Clone;  
@@ -432,7 +440,7 @@ sub difference_genomes {
     my $self = shift;
     my ($genome1, $genome2) = @_;
     my %difference;
-    foreach my $chr (keys %$genome1) {
+    for my $chr (keys %$genome1) {
         next unless defined $genome1->{$chr};
         $difference{$chr} = $genome1->{$chr}->Clone;
         if(exists($genome2->{$chr})) {
@@ -444,7 +452,7 @@ sub difference_genomes {
 sub in_place_difference_genomes {
     my $self = shift;
     my ($genome1, $genome2) = @_;
-    foreach my $chr (keys %$genome1) {
+    for my $chr (keys %$genome1) {
         next unless defined $genome1->{$chr};
         if(exists($genome2->{$chr})) {
             $genome1->{$chr}->Difference($genome1->{$chr},$genome2->{$chr});  
@@ -455,7 +463,7 @@ sub complement_genome {
     my $self = shift;
     my ($genome) = @_;
     my %result;
-    foreach my $chr (keys %$genome) {
+    for my $chr (keys %$genome) {
         next unless defined $genome->{$chr};
         $result{$chr} = $genome->{$chr}->Clone;
         $result{$chr}->Complement($result{$chr});#in-place calc. Perhaps more mem efficient
@@ -465,7 +473,7 @@ sub complement_genome {
 sub in_place_complement_genome {
     my $self = shift;
     my ($genome) = @_;
-    foreach my $chr (keys %$genome) {
+    for my $chr (keys %$genome) {
         next unless defined $genome->{$chr};
         $genome->{$chr}->Complement($genome->{$chr});#in-place calc. Perhaps more mem efficient
     }
@@ -476,7 +484,7 @@ sub bases_covered {
     my $self = shift;
     my ($genome) = @_;
     my $total = 0;
-    foreach my $chr (keys %$genome) {
+    for my $chr (keys %$genome) {
         next unless defined $genome->{$chr};
         $total += $genome->{$chr}->Norm();
     }
