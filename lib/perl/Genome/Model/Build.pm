@@ -352,6 +352,13 @@ sub instrument_data_assignments {
     return @idas;
 }
 
+sub get_alignment_bams {
+    my $self = shift;
+    my @alignments = map { $self->model->processing_profile->results_for_instrument_data_assignment($_) }
+        $self->instrument_data_assignments;
+    return map { $_->alignment_bam_file_paths } @alignments;
+}
+    
 sub instrument_data_count {
     my $self = shift;
 
