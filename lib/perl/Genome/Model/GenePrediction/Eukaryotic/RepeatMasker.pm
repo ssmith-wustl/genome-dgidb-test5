@@ -11,6 +11,7 @@ use File::Temp 'tempdir';
 use Carp 'confess';
 use Bio::SeqIO;
 use File::chdir;
+use File::Path 'rmtree';
 
 # TODO: Probably shouldn't be using this patched version of bioperl
 require '/gsc/scripts/opt/bacterial-bioperl/Bio/Tools/Run/RepeatMasker.pm';
@@ -179,8 +180,19 @@ sub execute {
         my $masked_seq = $masker->masked_seq();
         $masked_seq = $seq unless defined $masked_seq; # If no masked sequence found, write original seq to file
         $masked_fasta->write_seq($masked_seq);
+
+        # Repeat masker makes an ungodly number of files in the working directory, especially if checking a large
+        # number of sequences. To prevent this from getting unwieldy, remove these files after each sequence
+        # TODO Use glob or something here instead of a system command
+        my $rv = system("rm -rf " . $self->temp_working_directory . "/*");
+        unless (defined $rv and $rv == 0) {
+            $self->error_message("Could not remove files from repeat masker working directory " . $self->temp_working_directory)
+        }
     }   
 
+    # TODO Use LSF temp directory so there's automatic cleanup... for now, do it manually
+    my $rv = rmtree($self->temp_working_directory);
+    $self->error_message("Could not remove working directory at " . $self->temp_working_directory) unless defined $rv and $rv;
     return 1;
 }
 
