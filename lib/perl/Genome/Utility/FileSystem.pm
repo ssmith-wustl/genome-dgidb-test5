@@ -667,8 +667,10 @@ sub cat {
     my ($self,%params) = @_;
     my $input_files = delete $params{input_files};
     my $output_file = delete $params{output_file};
+    my $mode = ($params{append_mode} ? ">>" : ">");
+        
     return $self->shellcmd(
-                           cmd => "cat @$input_files > $output_file",
+                           cmd => "cat @$input_files $mode $output_file",
                            input_files => $input_files,
                            output_files => [$output_file],
                        );
