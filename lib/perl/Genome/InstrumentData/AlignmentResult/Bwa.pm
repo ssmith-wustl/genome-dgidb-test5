@@ -121,36 +121,10 @@ sub _run_aligner {
     
     }
     elsif (@input_pathnames == 2) {
-        my $bwa_sampe_params = (defined $aligner_params{'bwa_sampe_params'} ? $aligner_params{'bwa_sampe_params'} : "");
-        
-        # Ignore where we have a -a already specified
-        if ($bwa_sampe_params =~ m/\-a\s*(\d+)/) {
-            $self->status_message("Aligner params specify a -a parameter ($1) as upper bound on insert size.");
-        } else {
-            # come up with an upper bound on insert size.
-            my $instrument_data = $self->instrument_data;
-            my $sd_above = $instrument_data->sd_above_insert_size;
-            my $median_insert = $instrument_data->median_insert_size;
-            my $upper_bound_on_insert_size= ($sd_above * 5) + $median_insert;
-            if($upper_bound_on_insert_size > 0) {
-                $self->status_message("Calculated a valid insert size as $upper_bound_on_insert_size.  This will be used when BWA's internal algorithm can't determine an insert size");
-            } else {
-                $self->status_message("Unable to calculate a valid insert size to run BWA with. Using 600 (hax)");
-                $upper_bound_on_insert_size= 600;
-            }
-
-            $bwa_sampe_params .= " -a $upper_bound_on_insert_size";
-        }
-    
-        # paired run
-        #my $upper_bound_option     = '-a ' . $self->upper_bound;
-        #my $max_occurrences_option = '-o ' . $self->max_occurrences;
-        my $paired_options = ""; #$upper_bound_option $max_occurrences_option";
-    
+        my $bwa_sampe_params = $self->_derive_bwa_sampe_parameters;
         @input_files = (@sai_intermediate_files, @input_pathnames);
 
         # store the calculated sampe params
-        $self->_bwa_sam_cmd("bwa sampe " . $bwa_sampe_params);
         $sam_command_line = Genome::Model::Tools::Bwa->path_for_bwa_version($self->aligner_version)
             . sprintf(
             ' sampe %s %s %s %s',
@@ -215,15 +189,21 @@ sub _filter_samxe_output {
             $self->error_message("Error opening sam file for writing $!");
             return;
     }
-    $self->status_message("Opened $sam_file_name");
+    $self->status_message("Opened $sam_file_name.  Now streaming this through the read group addition.");
     
-    while (<$sam_run_output_fh>) {
-            #write out the aligned map, excluding the default header- all lines starting with @.
-            my $first_char = substr($_,0,1);
-                if ($first_char ne '@') {
-                $sam_map_output_fh->print($_);
-            }
+    my $add_rg_cmd = Genome::Model::Tools::Sam::AddReadGroupTag->create(
+            input_filehandle     => $sam_run_output_fh,
+            output_filehandle    => $sam_map_output_fh,
+            read_group_tag => $self->instrument_data->id,
+            pass_sam_headers => 0,
+        );
+
+    unless ($add_rg_cmd->execute) {
+        $self->error_message("Adding read group to sam file failed!");
+        die $self->error_message;
     }
+    
+    $sam_run_output_fh->close;
     $sam_map_output_fh->close;
     return 1;
 }
@@ -309,12 +289,48 @@ sub aligner_params_for_sam_header {
     
     my %params = $self->decomposed_aligner_params;
     my $aln_params = $params{bwa_aln_params} || "";
-    
+  
+    if ($self->instrument_data->is_paired_end) {
+        $self->_derive_bwa_sampe_parameters;
+    } 
     my $sam_cmd = $self->_bwa_sam_cmd || "";
 
     return "bwa aln $aln_params; $sam_cmd ";
 }
 
+sub _derive_bwa_sampe_parameters {
+    my $self = shift;
+    my %aligner_params = $self->decomposed_aligner_params;
+    my $bwa_sampe_params = (defined $aligner_params{'bwa_sampe_params'} ? $aligner_params{'bwa_sampe_params'} : "");
+    
+    # Ignore where we have a -a already specified
+    if ($bwa_sampe_params =~ m/\-a\s*(\d+)/) {
+        $self->status_message("Aligner params specify a -a parameter ($1) as upper bound on insert size.");
+    } else {
+        # come up with an upper bound on insert size.
+        my $instrument_data = $self->instrument_data;
+        my $sd_above = $instrument_data->sd_above_insert_size;
+        my $median_insert = $instrument_data->median_insert_size;
+        my $upper_bound_on_insert_size= ($sd_above * 5) + $median_insert;
+        if($upper_bound_on_insert_size > 0) {
+            $self->status_message("Calculated a valid insert size as $upper_bound_on_insert_size.  This will be used when BWA's internal algorithm can't determine an insert size");
+        } else {
+            $self->status_message("Unable to calculate a valid insert size to run BWA with. Using 600 (hax)");
+            $upper_bound_on_insert_size= 600;
+        }
+
+        $bwa_sampe_params .= " -a $upper_bound_on_insert_size";
+    }
+
+    # store the calculated sampe params
+    $self->_bwa_sam_cmd("bwa sampe " . $bwa_sampe_params);
+    return $bwa_sampe_params;
+}
+
 sub fillmd_for_sam {
+    return 0;
+}
+
+sub requires_read_group_addition {
     return 0;
 }

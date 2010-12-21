@@ -63,7 +63,6 @@ ok(!$import->execute, 'execute');
 
 note('success');
 delete $available_files{'SRS078176_Baylor.agp'};
-$available_files{'SRS078176_PGA.agp'} = 19619242;
 $import = Genome::Model::Tools::Soap::Import->create(
     version => 'dacc',
     import_location => '/WholeMetagenomic/03-Assembly/PGA/SRS078176_LANL/',
