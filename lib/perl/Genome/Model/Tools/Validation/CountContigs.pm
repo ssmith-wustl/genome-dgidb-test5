@@ -48,6 +48,8 @@ sub execute {
         return;
     }
 
+    #spit out a header, cause that's a good idea
+    print join("\t",qw( contig_id contigs_overlapping total_reads_crossing_ref_pos total_q1_reads_crossing_ref_pos total_q1_reads_spanning_ref_pos total_reads_crossing_contig_pos total_q1_reads_crossing_contig_pos total_q1_reads_spanning_contig_pos )), "\n"; 
     #scan through all the fasta headers and grab counts based on each predicted variant and denoted reference
     while(my $line = $fh->getline) {
         next unless $line =~ /^>/;
