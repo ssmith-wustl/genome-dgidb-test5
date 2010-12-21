@@ -299,12 +299,18 @@ sub run_filter {
         while(my $line = $input->getline) {
             chomp $line;
             my ($chr, $start, $stop) = split /\t/, $line;
+            next unless($start =~ /^\d+$/); #header line
+
             if ($self->prepend_chr) {
                 $chr = "chr$chr";
                 $chr =~ s/MT$/M/;
             };
 
-            print $tfh "$chr\t$start\t$stop\n";
+            if($stop =~ /^\d+$/) { #annotation format
+                print $tfh "$chr\t$start\t$stop\n";
+            } else { #varscan format
+                print $tfh "$chr\t$start\t$start\n";
+            }
         }
         $tfh->close;
         close($input);
@@ -357,6 +363,15 @@ sub run_filter {
 
 #        if($lineCounter <= 10) {
             (my $chrom, my $chr_start, my $chr_stop, my $ref, my $var) = split(/\t/, $line);
+            next unless($chr_start =~ /^\d+$/); #header line
+            unless($chr_stop =~ /^\d+$/) {
+                my @rest;
+                ($chrom, $chr_start, $ref, $var, @rest) = split(/\t/, $line); #varscan snp format doesn't list stop separately
+                $chr_stop = $chr_start;
+
+                #convert to annotation format
+                $line = join("\t", $chrom, $chr_start, $chr_stop, $ref, $var, @rest);
+            }
 
             $ref = uc($ref);
             $var = uc($var);

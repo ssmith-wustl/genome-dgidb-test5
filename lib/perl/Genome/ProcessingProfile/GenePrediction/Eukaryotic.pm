@@ -95,7 +95,8 @@ sub _map_workflow_inputs {
         split_fastas_output_directory => $build->split_fastas_output_directory,
         raw_output_directory => $build->raw_output_directory,
         prediction_directory => $build->prediction_directory,
-        skip_repeat_masker => $self->skip_repeat_masker;
+        skip_repeat_masker => $self->skip_repeat_masker,
+        repeat_masker_ace_file => $build->repeat_masker_ace_file,
 
     my $params;
     for (my $i = 0; $i < (scalar @inputs); $i += 2) {

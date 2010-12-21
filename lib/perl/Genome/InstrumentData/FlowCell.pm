@@ -37,6 +37,12 @@ class Genome::InstrumentData::FlowCell {
                        return $self->lane_info();
                     ),
                 },
+                instrument_data_ids => {
+                    is => 'Array',
+                    calculate => q(
+                        return map { $_->{id} } $self->lane_info;
+                    ),
+                },
                 illimina_index => {
                     is => 'Array',
                     calculate => q(
