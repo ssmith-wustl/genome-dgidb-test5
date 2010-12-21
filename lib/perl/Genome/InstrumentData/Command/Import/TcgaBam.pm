@@ -60,7 +60,7 @@ my %properties = (
     
 
 class Genome::InstrumentData::Command::Import::TcgaBam {
-    is  => 'Command',
+    is  => 'Genome::InstrumentData::Command::Import',
     has => [%properties],
     doc => 'create an instrument data AND and alignment for a BAM',
     has_optional => [
