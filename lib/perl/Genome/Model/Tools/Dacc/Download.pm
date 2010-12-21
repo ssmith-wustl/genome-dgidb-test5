@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 
 use Data::Dumper 'Dumper';
+require File::Basename;
 
 class Genome::Model::Tools::Dacc::Download { 
     is => 'Genome::Model::Tools::Dacc',
@@ -107,8 +108,6 @@ sub validate_files_exist_in_dacc_directory {
     my @files = $self->files;
     my $error;
     for my $file ( @files ) {
-        my $file_name = File::Basename::basename($file);
-        Carp::confess("Cannot get base name for file: $file") if not $file_name;
         if ( not exists $available_files_and_sizes{$file} ) {
             $error = 1;
             $self->error_message("File ($file) does not exist in the dacc directory: ". $self->dacc_directory);
