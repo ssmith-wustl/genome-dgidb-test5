@@ -8,8 +8,6 @@ use Genome;
 use Workflow;
 use IO::File;
 
-#gmt hmp-shotgun combine-alignments --sam-input-file=/gscuser/jpeck/sandbox/bams/filter/all_sorted.sam --taxonomy-file=/gscmnt/sata409/research/mmitreva/databases/Bact_Arch.taxonomy.txt --working-directory=/gscuser/jpeck/sandbox/bams/filter/run/ --genus-output-file=/gscuser/jpeck/sandbox/bams/filter/run/genus.txt --phyla-output-file=/gscuser/jpeck/sandbox/bams/filter/run/phyla.txt --read-count-output-file=/gscuser/jpeck/sandbox/bams/filter/run/read-count.txt --sam-combined-output-file=/gscuser/jpeck/sandbox/bams/filter/run/combined.sam 
-
 class Genome::Model::Tools::MetagenomicCompositionShotgun::CombineAlignments {
     is  => ['Command'],
     has => [

@@ -273,6 +273,7 @@ sub _create_imported_instrument_data {
                 return;
             }
         }
+        next if $property_name eq 'remove_original_bam';
         next if $property_name =~ /^library$/;
         next if $property_name =~ /tcga/;
         next if $property_name =~ /target_region/;

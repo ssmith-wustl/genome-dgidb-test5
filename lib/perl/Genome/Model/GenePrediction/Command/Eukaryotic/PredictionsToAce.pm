@@ -9,20 +9,36 @@ use Sort::Naturally qw/ ncmp nsort /;
 class Genome::Model::GenePrediction::Command::Eukaryotic::PredictionsToAce {
     is => 'Genome::Command::Base',
     has => [
-        model => { 
-            is => 'Genome::Model', 
-            id_by => 'model_id' 
-        },
         ace_file => {
-            is => 'Path',
+            is => 'FilePath',
+            is_input => 1,
+            is_output => 1,
             doc => 'Path for output ace file',
         },
     ],
     has_optional => [
         protein_coding_only => {
             is => 'Boolean',
+            is_input => 1,
             default => 0,
             doc => 'If set, only genes that produce proteins are placed in ace file',
+        },
+        build_id => {
+            is => 'Number',
+            is_input => 1,
+            doc => 'Build ID of build that contains predictions',
+        },
+        prediction_directory => {
+            is => 'DirectoryPath',
+            is_input => 1,
+            is_output => 1,
+            doc => 'Path to directory containing predictions',
+        },
+        sequence_file => {
+            is => 'FilePath',
+            is_input => 1,
+            is_output => 1,
+            doc => 'Path to fasta file containing sequence on which prediction was run',
         },
     ],
 };
@@ -40,42 +56,51 @@ sub help_detail {
 }
     
 sub execute {
-    $DB::single = 1;
     my $self = shift;
-    my $model = $self->model;
-    confess "Could not get model " . $self->model_id unless $model;
 
-    my $class = $self->model->class;
-    unless ($class =~ /GenePrediction::Eukaryotic/i) {
-        confess "Model is not eukaryotic gene prediction, type is $class";
+    # Either use provided directory or get a build and use it's data directory
+    my $prediction_directory = $self->prediction_directory;
+    my $sequence_file = $self->sequence_file;
+    unless (defined $prediction_directory and defined $sequence_file) {
+        if (defined $self->build_id) {
+            my $build = Genome::Model::Build::GenePrediction::Eukaryotic->get($self->build_id);
+            unless ($build) {
+                $self->error_message("Could not get eukaryotic gene prediction with build ID " . $self->build_id);
+                confess $self->error_message;
+            }
+            $prediction_directory = $build->data_directory;
+            $sequence_file = $build->model->assembly_contigs_file;
+        }
+        else {
+            $self->error_message("Must provide either a prediction directory or a build ID!");
+            confess $self->error_message;
+        }
     }
 
-    my $build = $self->model->last_succeeded_build;
-    confess "Could not get successful build for model " . $self->model_id unless $build;
-    
-    $self->status_message("Using predictions from build " . $build->build_id);
+    confess "No sequence file found at $sequence_file!" unless -e $sequence_file;
+    confess "No directory found at $prediction_directory!" unless -d $prediction_directory;
 
     # Pre-fetching all genes now so only one file read is necessary
     my @coding_genes = Genome::Prediction::CodingGene->get(
-        directory => $build->prediction_directory,
+        directory => $prediction_directory,
     );
     my @rna_genes = Genome::Prediction::RNAGene->get(
-        directory => $build->prediction_directory,
+        directory => $prediction_directory,
     );
 
     my $ace_fh = IO::File->new(">" . $self->ace_file);
     confess "Could not get handle for " . $self->ace_file unless $ace_fh;
         
     # Get list of sequences
-    my $sequences = $build->sequences;
-    for my $sequence (nsort @$sequences) { 
+    my @sequences = $self->_get_sequences_from_file($sequence_file);
+    for my $sequence (nsort @sequences) { 
         my @seq_coding_genes = Genome::Prediction::CodingGene->get(
-            directory => $build->prediction_directory,
+            directory => $prediction_directory,
             sequence_name => $sequence,
         );
         my @seq_rna_genes;
         @seq_rna_genes = Genome::Prediction::RNAGene->get(
-            directory => $build->prediction_directory,
+            directory => $prediction_directory,
             sequence_name => $sequence,
         ) unless $self->protein_coding_only;
 
@@ -206,6 +231,21 @@ sub execute {
     return 1;
 }
 
+sub _get_sequences_from_file {
+    my ($self, $file) = @_;
+    my $seq_obj = Bio::SeqIO->new(
+        -file => $file,
+        -format => 'Fasta',
+    );
+    confess "Could not create Bio::SeqIO object for $file" unless $seq_obj;
+
+    my @sequences;
+    while (my $seq = $seq_obj->next_seq) {
+        push @sequences, $seq->display_id;
+    }
+
+    return @sequences;
+}
 
 1;
 
