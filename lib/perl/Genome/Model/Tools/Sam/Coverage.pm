@@ -61,7 +61,6 @@ sub execute {
     } else { 
         #currently this only from r350wu1 while default is r320wu1, so give use_version => r350wu1 should work
         #when we set G::M::T::Sam default to r350wu1, use_version will not be necessary. See Coverage.t
-        #my $samtools_cmd = "/gscuser/dlarson/samtools/r350wu1/samtools"; 
         my $samtools_cmd = $self->samtools_path;
         $coverage_cmd = "$samtools_cmd mapcheck"; 
     }
@@ -73,7 +72,6 @@ sub execute {
         $output_file = Genome::Utility::FileSystem->create_temp_file_path('mapcheck_coverage_results');
     }
  
-    #my $cmd = "/gscuser/charris/c-src-BLECH/trunk/samtool2/samtools mapcheck /gscuser/jpeck/bam/map-TESTINGLIBRARY.bam -f /path/to/reference_sequences/NCBI-human-build36/all_sequences.fa";
     my $cmd = "$coverage_cmd $aligned_reads -f $reference > $output_file";
 
     $self->status_message("Mapcheck coverage command: ".$cmd);
