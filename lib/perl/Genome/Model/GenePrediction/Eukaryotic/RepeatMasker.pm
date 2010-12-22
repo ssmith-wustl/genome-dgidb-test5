@@ -199,6 +199,7 @@ sub execute {
     while (my $seq = $input_fasta->next_seq()) {
         local $CWD = $self->temp_working_directory; # More shenanigans to get repeat masker to not put temp dir in cwd,
                                                     # which could be a snapshot and cause problems
+        $self->status_message("Working on sequence " . $seq->display_id);
         $masker->run($seq);
         my $masked_seq = $masker->masked_seq();
         $masked_seq = $seq unless defined $masked_seq; # If no masked sequence found, write original seq to file
