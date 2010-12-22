@@ -30,15 +30,25 @@ sub required_rusage {
     }
     
     my $mem = 10000;
-    my ($maxmem, $mem_kb) = ($mem*2, $mem*1000);
+    my ($double_mem, $mem_kb) = ($mem*2, $mem*1000);
     my $tmp = $estimated_usage_mb;
-    my $maxtmp = $tmp*2; 
+    my $double_tmp = $tmp*2; 
     my $cpus = 4;
-    my $maxcpus = $cpus*2;
+    my $double_cpus = $cpus*2;
     my $rusage = "rusage[mem=$mem, tmp=$tmp]";
-    # select blades that can hold two of me
-    my $select = "select[model!=Opteron250 && type==LINUX64 && ncpus>=$maxcpus && maxtmp>=$maxtmp && maxmem>$maxmem]";
-    return "-R '$select span[hosts=1] $rusage' -M $mem_kb -n $cpus -q alignment -m alignment";
+
+    my $select_half_blades = "select[model!=Opteron250 && type==LINUX64 && ncpus>=$double_cpus && maxtmp>=$double_tmp && maxmem>$double_mem] span[hosts=1]";
+    my $select_whole_blades = "select[model!=Opteron250 && type==LINUX64 && ncpus>=$double_cpus && maxtmp>=$tmp && maxmem>$mem] span[hosts=1]";
+    my @selected_half_blades = `bhosts -R '$select_half_blades' alignment | grep ^blade`;
+    my @selected_whole_blades = `bhosts -R '$select_whole_blades' alignment | grep ^blade`;
+
+    if (@selected_half_blades) {
+        return "-R '$select_half_blades rusage[mem=$mem, tmp=$tmp]' -M $mem_kb -n $cpus -q alignment -m alignment";
+    } elsif (@selected_whole_blades) {
+        return "-R '$select_whole_blades rusage[mem=$mem, tmp=$tmp]' -M $mem_kb -n $double_cpus -q alignment -m alignment";
+    } else {
+        die $class->error_message("Failed to find hosts that meet resource requirements.");
+    }
 }
 
 
@@ -89,7 +99,7 @@ sub _run_aligner {
         unless ($self->_verify_bwa_aln_did_happen(sai_file => $tmp_sai_file,
                         log_file => $tmp_log_file)) {
             $self->error_message("bwa aln did not seem to successfully take place for " . $reference_fasta_path);
-            $self->die_and_clean_up($self->error_message);
+            $self->die($self->error_message);
         }
     }
 

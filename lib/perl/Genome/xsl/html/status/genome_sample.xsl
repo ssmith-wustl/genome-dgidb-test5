@@ -164,71 +164,79 @@
                     </tr>
                   </xsl:if>
                 </tbody>
-                </table>
-              </div>
+              </table>
             </div>
-
-            <xsl:for-each select="aspect[@name='libraries']/object">
-              <xsl:call-template name="genome_library_box"/>
-            </xsl:for-each>
-
-            <xsl:for-each select="aspect[@name='taxon']/object">
-              <xsl:call-template name="genome_taxon_box"/>
-            </xsl:for-each>
-
-<!--
-            <xsl:for-each select="aspect[@name='source']/object">
-              <xsl:call-template name="genome_source_box"/>
-            </xsl:for-each>
--->
-
-            <xsl:for-each select="aspect[@name='projects']/object">
-              <xsl:call-template name="genome_project_box"/>
-            </xsl:for-each>
-
-
-          </div> <!-- end .masonry -->
-          <xsl:for-each select="aspect[@name='models']/object[./types[./isa[@type='Genome::Model']]]">
-            <xsl:call-template name="genome_model_builds_list_table"/>
-          </xsl:for-each>
-        </div> <!-- end container -->
-      </div> <!-- end content -->
-
-      <xsl:call-template name="footer">
-        <xsl:with-param name="footer_text">
-          <br/>
-        </xsl:with-param>
-      </xsl:call-template>
-
-    </xsl:template>
-
-
-    <!-- box element for sample, intended for display in a jquery masonry layout -->
-    <xsl:template name="genome_sample_box">
-      <xsl:comment>template: /html/status/genome_sample.xsl; name="genome_sample_box"</xsl:comment>
-      <div class="span_8_box_masonry">
-        <div class="box_header span-8 last rounded-top">
-          <div class="box_title"><h3 class="genome_sample_16 span-7 last">Sample</h3></div>
-          <div class="box_button">
-            <xsl:call-template name="object_link_button_tiny">
-              <xsl:with-param name="icon" select="'sm-icon-extlink'"/>
-            </xsl:call-template>
           </div>
-        </div>
 
-        <div class="box_content rounded-bottom span-8 last">
-          <table class="name-value">
-            <tbody>
-              <tr>
-                <td class="name">Name:
-                </td>
-                <td class="value"><xsl:value-of select="aspect[@name='name']/value"/>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <xsl:for-each select="aspect[@name='libraries']/object">
+            <xsl:call-template name="genome_library_box"/>
+          </xsl:for-each>
+
+          <xsl:for-each select="aspect[@name='taxon']/object">
+            <xsl:call-template name="genome_taxon_box"/>
+          </xsl:for-each>
+
+          <!-- TODO: figure out how to get UR to load the templates for objects contained in the 'source' node so
+                     that the templates necessary to render the XSL below will be available. -->
+          <!-- <xsl:for-each select="aspect[@name='source']/object"> -->
+          <!--   <xsl:choose> -->
+          <!--     <xsl:when test="@type = 'Genome::Individual'"> -->
+          <!--       <xsl:call-template name="genome_individual_box"/> -->
+          <!--     </xsl:when> -->
+          <!--     <xsl:when test="@type = 'Genome::PopulationGroup'"> -->
+          <!--       <xsl:call-template name="genome_populationgroup_box"/> -->
+          <!--     </xsl:when> -->
+          <!--   </xsl:choose> -->
+          <!-- </xsl:for-each> -->
+
+
+          <xsl:for-each select="aspect[@name='projects']/object">
+            <xsl:call-template name="genome_project_box"/>
+          </xsl:for-each>
+
+
+        </div> <!-- end .masonry -->
+        <xsl:for-each select="aspect[@name='models']/object[./types[./isa[@type='Genome::Model']]]">
+          <xsl:call-template name="genome_model_builds_list_table"/>
+        </xsl:for-each>
+      </div> <!-- end container -->
+    </div> <!-- end content -->
+
+    <xsl:call-template name="footer">
+      <xsl:with-param name="footer_text">
+        <br/>
+      </xsl:with-param>
+    </xsl:call-template>
+
+  </xsl:template>
+
+
+  <!-- box element for sample, intended for display in a jquery masonry layout -->
+  <xsl:template name="genome_sample_box">
+    <xsl:comment>template: /html/status/genome_sample.xsl; name="genome_sample_box"</xsl:comment>
+    <div class="span_8_box_masonry">
+      <div class="box_header span-8 last rounded-top">
+        <div class="box_title"><h3 class="genome_sample_16 span-7 last">Sample</h3></div>
+        <div class="box_button">
+          <xsl:call-template name="object_link_button_tiny">
+            <xsl:with-param name="icon" select="'sm-icon-extlink'"/>
+          </xsl:call-template>
         </div>
       </div>
-    </xsl:template>
 
-  </xsl:stylesheet>
+      <div class="box_content rounded-bottom span-8 last">
+        <table class="name-value">
+          <tbody>
+            <tr>
+              <td class="name">Name:
+              </td>
+              <td class="value"><xsl:value-of select="aspect[@name='name']/value"/>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </xsl:template>
+
+</xsl:stylesheet>
