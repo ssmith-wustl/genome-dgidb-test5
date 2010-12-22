@@ -35,7 +35,6 @@ sub create {
 
 sub load_perl {
     my $self = shift;
-    printf("Autoloading fisher crossmatch version %s\n", $self->use_version);
     my $lib_dir = $VERSIONS{$self->use_version};
     if (!$lib_dir) {
         die "Could not find a lib dir for " . $self->use_version . " Valid dirs are " . Dumper(\%VERSIONS);
