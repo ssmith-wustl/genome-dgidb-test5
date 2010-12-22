@@ -110,7 +110,7 @@ sub execute {
 
 sub find_builds_for_revisions {
     my ($self, $model, $first_revision, $second_revision) = @_;
-    my @builds = sort { $b->build_id <=> $a->build_id } $model->builds;
+    my @builds = sort { $b->build_id <=> $a->build_id } grep { $_->status eq 'Succeeded' } $model->builds;
     my ($first_build, $second_build);
     for my $build (@builds) {
         last if $first_build and $second_build;
