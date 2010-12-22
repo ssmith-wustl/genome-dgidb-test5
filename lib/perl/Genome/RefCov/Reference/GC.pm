@@ -137,14 +137,17 @@ sub _update_all_percent_values {
     for my $metric_category ($self->metric_categories) {
         my $bp_key = $metric_category .'_bp';
         my $percent_key = $metric_category .'_percent';
-        my $denominator = '_'. $metric_category;
-        for my $category ($self->alphabet,$self->base_pairings) {
-            my $pct = 0;
-            if ($self->$denominator) {
+        my $denominator_method = '_'. $metric_category;
+        my @categories = ( $self->alphabet, $self->base_pairings );
+        if (my $denominator = $self->$denominator_method) {
+            for my $category ( @categories ) {
                 my $value = $hash_ref->{$bp_key}->{$category} || 0;
-                $pct = $self->_round( ($value / $self->$denominator ) * 100 );
+                $hash_ref->{$percent_key}->{$category} = $self->_round( ($value / $denominator ) * 100 );
             }
-            $hash_ref->{$percent_key}->{$category} = $pct;
+        } else {
+            foreach ( @categories ) {
+                $hash_ref->{$percent_key}->{$_} = 0;
+            }
         }
     }
     $self->metrics_hash_ref($hash_ref);
