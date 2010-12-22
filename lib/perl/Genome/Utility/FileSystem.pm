@@ -668,11 +668,17 @@ sub cat {
     my $input_files = delete $params{input_files};
     my $output_file = delete $params{output_file};
     my $mode = ($params{append_mode} ? ">>" : ">");
+    
+    my @addl_params;
+    if ($params{append_mode}) {
+        push @addl_params, (skip_if_output_is_present=>0);
+    }
         
     return $self->shellcmd(
                            cmd => "cat @$input_files $mode $output_file",
                            input_files => $input_files,
                            output_files => [$output_file],
+                           @addl_params
                        );
 }
 

@@ -11,7 +11,13 @@ my @cov    = qw[0 0 0 12 13 14 0 0 0 0 22 23 25 27 0 0 0];
 my @seq    = qw[A G T  T  T  C G G A C  C  T  G  C C C C];
 my $reflen = 17;
 
-my $myRef   = Genome::RefCov::Reference::GC->create(
+my $myRef   = Genome::RefCov::Reference::GC->create();
+$myRef->calculate_nucleotide_coverage(
+    coverage => \@cov,
+    sequence => \@seq,
+);
+print  Data::Dumper::Dumper($myRef);
+$myRef->calculate_nucleotide_coverage(
     coverage => \@cov,
     sequence => \@seq,
 );
