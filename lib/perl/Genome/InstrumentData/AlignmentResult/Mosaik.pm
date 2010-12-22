@@ -104,12 +104,12 @@ sub _run_aligner {
      
     unless (-e $ref_file) {
         $self->error_message("Index $ref_file does not exist. Please create Bfast indexes in the correct location, or implement Genome::InstrumentData::Alignment->resolve_reference_build() in this module.");
-        $self->die_and_clean_up($self->error_message);
+        $self->die($self->error_message);
     }
 
     unless (-e $jump_file) {
         $self->error_message("Index $jump_file does not exist. Please create Bfast indexes in the correct location, or implement Genome::InstrumentData::Alignment->resolve_reference_build() in this module.");
-        $self->die_and_clean_up($self->error_message);
+        $self->die($self->error_message);
     }
 
     my $mosaik_build_path = Genome::Model::Tools::Mosaik->path_for_mosaik_version($self->aligner_version)."Build";
@@ -136,7 +136,7 @@ sub _run_aligner {
 
         unless (-s $tmp_reads_file) {
             $self->error_message("Unable to convert reads at $input_pathnames[0] and $input_pathnames[1] into binary Mosaik file $tmp_reads_file");
-            $self->die_and_clean_up($self->error_message);
+            $self->die($self->error_message);
         }
 
     } elsif (scalar(@input_pathnames) == 1) {
@@ -152,12 +152,12 @@ sub _run_aligner {
         
         unless (-s $tmp_reads_file) {
             $self->error_message("Unable to convert reads at $input_pathnames[0] into binary Mosaik file $tmp_reads_file");
-            $self->die_and_clean_up($self->error_message);
+            $self->die($self->error_message);
         }
 
     } else {
         $self->error_message("number of input pathnames to Mosaik was not 1 or 2");
-        $self->die_and_clean_up($self->error_message);
+        $self->die($self->error_message);
     }
     
     #### STEP 2: Align
@@ -180,7 +180,7 @@ sub _run_aligner {
 
         unless (-s $tmp_align_file) {
             $self->error_message("Unable to align. Alignment file $tmp_align_file is zero length, so something went wrong.");
-            $self->die_and_clean_up($self->error_message);
+            $self->die($self->error_message);
         }
 
     }
@@ -201,7 +201,7 @@ sub _run_aligner {
 
         unless (-s $tmp_sort_file) {
             $self->error_message("Unable to sort. Sorted file $tmp_sort_file is zero length, so something went wrong.");
-            $self->die_and_clean_up($self->error_message);
+            $self->die($self->error_message);
         }
 
     }
@@ -221,7 +221,7 @@ sub _run_aligner {
 
         unless (-s $tmp_sam_file) {
             $self->error_message("Unable to convert back to sam. Sam file $tmp_sam_file is zero length, so something went wrong.");
-            $self->die_and_clean_up($self->error_message);
+            $self->die($self->error_message);
         }
 
         # put your output file here, append to this file!

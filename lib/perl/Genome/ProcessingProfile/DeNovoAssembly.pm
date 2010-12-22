@@ -230,18 +230,30 @@ sub _validate_assembler_and_params {
 
     my %assembler_params;
 
+    $assembler_params{version} = $self->assembler_version;
+
     #below params are needed for assembly but must be derived/calculated from instrument data
     #at the time of build so fake values are plugged in here to get eval to work
-    my %fake_addl_params = $self->fake_params_for_eval;
-    %assembler_params = ( %assembler_params, %fake_addl_params );
+
+    my $add_param_method = $assembler_accessor_name.'_fake_params_for_eval';
+
+    if ( $self->can( $add_param_method ) ) {
+        my %fake_addl_params = $self->$add_param_method;
+	#adds ins_length to 'velvet one-button' params
+        %assembler_params = ( %assembler_params, %fake_addl_params );
+    }
+
+    my $clean_up_param_method = $assembler_accessor_name.'_clean_up_params_for_eval';
+    if ( $self->can( $clean_up_param_method ) ) {
+	#removes insert_size params from 'soap de-novo-assemble' params
+	%assembler_params = $self->$clean_up_param_method( %assembler_params );
+    }
 
     my $assembler;
     eval{
-        $assembler = $assembler_class->create(
-            version => $self->assembler_version,
-            %assembler_params,
-        );
+        $assembler = $assembler_class->create( %assembler_params, );
     };
+
     unless ( $assembler ) { 
         $self->error_message("$@\n\nCould not validate assembler params: ".$self->assembler_params);
         return;
@@ -254,79 +266,122 @@ sub _validate_assembler_and_params {
     return 1;
 }
 
-#< validate, sanitize assembler params >#
-#generic
-sub sanitized_assembler_params {
-    my $self = shift;
+#< methods to derive assembler params >#
+#soap de-novo-assemble
+sub soap_de_novo_assemble_params {
+    my ($self, $build) = @_;
 
     my %params;
 
+    #pp specified assembler params
     if ( $self->assembler_params_as_hash ) {
 	%params = $self->assembler_params_as_hash;
-	
-	my $method = 'sanitized_'.$self->assembler_accessor_name.'_params';
-
-	if ( $self->can( $method ) ) {
-	    %params = $self->$method( %params );
-	}
     }
 
+    #additional params needed from pp
+    $params{version} = $self->assembler_version;
+
+    #note if using user defined insert size
+    if ( exists $params{insert_size} ) {
+	$self->status_message("Using user defined insert size, will ignore calculated insert size defined in instrument data");
+    }
+
+    #params needed to be derived from build
+    my $cpus = $self->get_number_of_cpus;
+    $params{cpus} = $cpus;
+
+    my $config_file = $build->create_config_file; #make it soap specific
+    $params{config_file} = $config_file;
+
+    #insert size param needed for config file creation only
+    delete $params{insert_size};
+
+    my $output_dir_and_file_prefix = $build->soap_output_dir_and_file_prefix;
+    $params{output_dir_and_file_prefix} = $output_dir_and_file_prefix;
+    
     return %params;
 }
 
-#soap
-sub sanitized_soap_de_novo_assemble_params {
-    my ( $self, %params ) = @_;
+#soap import params
+sub soap_import_params {
+    my ($self, $build) = @_;
 
-    #this is used in config file and not by assemble tool
-    #so needs to be removed before assembling
-    delete $params{insert_size} if exists $params{insert_size};
+    my %params;
 
-    #TODO - should die here
+    #pp specified assembler params
+    if ( $self->assembler_params_as_hash ) {
+	%params = $self->assembler_params_as_hash;
+    }
+
+    #additional params needed from pp
+    $params{version} = $self->assembler_version;
+
+    my $output_dir_and_file_prefix = $build->soap_output_dir_and_file_prefix;
+    $params{output_dir_and_file_prefix} = $output_dir_and_file_prefix;
+
+    my $location = '/WholeMetagenomic/03-Assembly/PGA/'. $build->model->subject_name.'_'.$build->model->center_name;
+    $params{import_location} = $location;
 
     return %params;
 }
 
-#velvet
-sub sanitized_velvet_one_button_params {
-    my ( $self, %params ) = @_;
+#velvet one-button params
+sub velvet_one_button_params {
+    my ($self, $build) = @_;
 
-    #is_many string to array ref
+    my %params;
+    
+    #pp specified assembler params
+    if ( $self->assembler_params_as_hash ) {
+	%params = $self->assembler_params_as_hash;
+    }
+    
+    #params that need to be cleaned up
     if ( defined $params{hash_sizes} ) { 
         $params{hash_sizes} = [ split(/\s+/, $params{hash_sizes}) ],
     }
 
-    #these params must be calculated not inputted
-    for my $calculated_param (qw/ genome_len ins_length /) { # only for velvet, may need a method
+    #additional params needed from pp
+    $params{version} = $self->assembler_version;
 
-	#TODO - should die here
-
-        next unless exists $params{$calculated_param};
-        $self->error_message("Assembler param ($calculated_param) is a calculated parameter, and cannot be set on the processing profile.");
-        return;
+    #die if these params are specified
+    for my $calculated_param (qw / genome_len ins_length /) {
+	if ( exists $params{$calculated_param} ) {
+	    Carp::confess (
+		$self->error_message("Can't specify $calculated_param as assembler_param .. it will be derived from input data")
+	    );
+	}
     }
+
+    #params that need to be derived
+    my $collated_fastq_file = $build->collated_fastq_file;
+    $params{file} = $collated_fastq_file;
+
+    my $genome_len = $build->genome_size;
+    $params{genome_len} = $genome_len;
+
+    my $ins_length = $build->calculate_average_insert_size;
+    $params{ins_length} = $ins_length if defined $ins_length;
+
+    my $output_dir = $build->data_directory;
+    $params{output_dir} = $output_dir;
 
     return %params;
 }
 
 #< params needed for successful create eval >#
-sub fake_params_for_eval {
-    my $self = shift;
-    my %params;
 
-    my $method = 'fake_'.$self->assembler_accessor_name.'_params_for_eval';
-
-    if ( $self->can( $method ) ) {
-	%params = $self->$method;
-    }
-    return %params;
-}
-
-sub fake_velvet_one_button_params_for_eval {
+sub velvet_one_button_fake_params_for_eval {
     my $self = shift;
     my %params = (
 	ins_length => '280',
     );
+    return %params;
+}
+
+sub soap_de_novo_assemble_clean_up_params_for_eval {
+    my ($self, %params) = @_;
+    delete $params{insert_size};
     return %params;
 }
 
@@ -513,118 +568,6 @@ sub post_assemble_parts {
     return @post_assemble_parts;
 }
 
-#< additional params needed from pp >#
-sub assembler_pp_params_for_build {
-    my $self = shift;
-
-    my %params;
-
-    my $method = $self->assembler_accessor_name.'_pp_params_for_build';
-    
-    if ($self->can( $method ) ) {
-	%params = $self->$method;
-    }
-
-    return %params;
-}
-
-#soap
-#sub soap_pp_params_for_build {
-sub soap_de_novo_assemble_pp_params_for_build {
-    my $self = shift;
-    return (
-	version => $self->assembler_version,
-    ),
-}
-
-#velvet
-#sub velvet_pp_params_for_build {
-sub velvet_one_button_pp_params_for_build {
-    my $self = shift;
-    return (
-	version => $self->assembler_version,
-    );
-}
-
-#< additional params needed to be derived from build prior to assembling >#
-sub assembler_params_to_derive_from_build {
-    my ($self, $build) = @_;
-
-    my %params;
-
-    my $method = $self->assembler_accessor_name.'_params_to_derive_from_build';
-
-    if ( $self->can( $method ) ) {
-	%params = $self->$method( $build );
-    }
-
-    return %params;
-}
-
-#soap
-#sub soap_params_to_derive_from_build {
-sub soap_de_novo_assemble_params_to_derive_from_build {
-    my ($self, $build) = @_;
-    my %params;
-
-    #cpus
-    my $cpus = $self->get_number_of_cpus;
-    $params{cpus} = $cpus;
-    
-    #create config file
-    my $config_file = $build->create_config_file;
-    $params{config_file} = $config_file;
-
-    #output dir and file prefix
-    my $output_dir_and_file_prefix = $build->soap_output_dir_and_file_prefix;
-    $params{output_dir_and_file_prefix} = $output_dir_and_file_prefix;
-
-    return %params;
-}
-
-sub soap_import_params_to_derive_from_build {
-    my ($self, $build) = @_;
-
-    my %params;
-
-    my $output_dir_and_file_prefix = $build->soap_output_dir_and_file_prefix;
-    $params{output_dir_and_file_prefix} = $output_dir_and_file_prefix;
-
-    my $location = '/WholeMetagenomic/03-Assembly/PGA/'. $build->model->subject_name.'_'.$build->model->center_name;
-    $params{import_location} = $location;
-
-    $params{version} = $self->assembler_version;
-
-    return %params;
-}
-
-#velvet
-#sub velvet_params_to_derive_from_build {
-sub velvet_one_button_params_to_derive_from_build {
-    my ($self, $build) = @_;
-
-    my %params;
-    #input collated fastq file
-    my $collated_fastq_file = $build->collated_fastq_file;
-    $params{file} = $collated_fastq_file;
-
-    #genome length
-    my $genome_len = $build->genome_size;
-    $params{genome_len} = $genome_len;
-
-    #insert size
-    my $ins_length = $build->calculate_average_insert_size;
-    $params{ins_length} = $ins_length if defined $ins_length;
-
-    #output directory
-    my $output_dir = $build->data_directory;
-    $params{output_dir} = $output_dir;
-
-    return %params;
-}
-
-#< methods to run after assembly as run >#
-
 sub after_assemble_methods_to_run {
     my ($self, $build) = @_;
 
@@ -734,18 +677,19 @@ sub assemble_build {
     my ($self, $build) = @_;
 
     my $assembler_name = $self->assembler_name;
-
-    #pp specified assembler params - returns empty hash if no pp assembler param
-    my %assembler_params = $self->sanitized_assembler_params;
-
-    #additional params from processing profile
-    my %pp_params = $self->assembler_pp_params_for_build ( $build );
-    %assembler_params = ( %assembler_params, %pp_params );
-
-    #additional params needed to be derived at build time
-    my %pp_build_params = $self->assembler_params_to_derive_from_build ( $build );
-    %assembler_params = ( %assembler_params, %pp_build_params );
+    my $assembler_accessor_name = $self->assembler_accessor_name;
     
+    my %assembler_params;
+    
+    my $param_method = $assembler_accessor_name.'_params';
+
+    if ( %assembler_params = $self->$param_method( $build ) ) {
+	$self->status_message("Got params for assembler: $assembler_name");
+    }
+    else { #no params needed?
+	$self->status_message("No params found for $assembler_name, that's okay if no params are needed");
+    }
+   
     #run assemble
     $self->status_message("Running $assembler_name");
     

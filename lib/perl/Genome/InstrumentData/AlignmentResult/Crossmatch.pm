@@ -108,7 +108,7 @@ sub _run_aligner {
                     $self->error_message(
                         "Problem parsing filename of input fq $input_file.\n".
                         "Possibly didn't end with .fq so couldn't extract name?");
-                    $self->die_and_clean_up($self->error_message);
+                    $self->die($self->error_message);
                 }
                 $self->status_message("Iteration $minor of splitting fq '$input_file' into '".$chunk{'qual_infile'}."' and '".$chunk{'fasta_infile'}."'.");
 
@@ -274,7 +274,7 @@ sub _run_aligner {
                 {
                     unless (-s $cv->{'sam_output'}) {
                         $self->error_message("Unable to filter alignments. Sam file ".$cv->{'sam_output'}." is zero length, so something went wrong.");
-                        $self->die_and_clean_up($self->error_message);
+                        $self->die($self->error_message);
                     }
 
                     # put your output file here, append to this file!

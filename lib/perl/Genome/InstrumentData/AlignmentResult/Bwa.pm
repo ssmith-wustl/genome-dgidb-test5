@@ -99,7 +99,7 @@ sub _run_aligner {
         unless ($self->_verify_bwa_aln_did_happen(sai_file => $tmp_sai_file,
                         log_file => $tmp_log_file)) {
             $self->error_message("bwa aln did not seem to successfully take place for " . $reference_fasta_path);
-            $self->die_and_clean_up($self->error_message);
+            $self->die($self->error_message);
         }
     }
 
