@@ -14,6 +14,11 @@ sub repeat_masker_ace_file {
     return $self->data_directory . "/repeat_masker.ace";
 }
 
+sub predictions_ace_file {
+    my $self = shift;
+    return $self->data_directory . "/predictions.ace";
+}
+
 sub log_directory {
     my $self = shift;
     return $self->data_directory . '/logs/';

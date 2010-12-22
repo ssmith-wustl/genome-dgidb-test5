@@ -27,10 +27,15 @@
     <link fromOperation="merge_repeat_masker_ace"  fromProperty="result"                         toOperation="wait_merging"             toProperty="repeat_masker_merge_result" />
     <link fromOperation="merge_predictions"        fromProperty="prediction_directory"           toOperation="wait_merging"             toProperty="prediction_directory" />
 
-    <link fromOperation="wait_merging"             fromProperty="prediction_directory"           toOperation="cleanup_temp_files"       toProperty="directory" />
+
+    <link fromOperation="input connector"          fromProperty="contig_fasta"                   toOperation="make_prediction_ace_file" toProperty="sequence_file" />
+    <link fromOperation="input connector"          fromProperty="predictions_ace_file"           toOperation="make_prediction_ace_file" toProperty="ace_file" />
+    <link fromOperation="wait_merging"             fromProperty="prediction_directory"           toOperation="make_prediction_ace_file" toProperty="prediction_directory" />
+  
+    <link fromOperation="make_prediction_ace_file" fromProperty="prediction_directory"           toOperation="cleanup_temp_files"       toProperty="directory" />
 
     <link fromOperation="cleanup_temp_files"       fromProperty="result"                         toOperation="output connector"         toProperty="result" />
-  
+
     <operation name="split_fasta">
         <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::SplitFasta" typeClass="Workflow::OperationType::Command" />
     </operation>
@@ -49,7 +54,9 @@
             <property>repeat_masker_merge_result</property>
         </operationtype>
     </operation>
-
+    <operation name="make_prediction_ace_file">
+        <operationtype commandClass="Genome::Model::GenePrediction::Command::Eukaryotic::PredictionsToAce" typeClass="Workflow::OperationType::Command" />
+    </operation>
 
     <operation name="contig_predict_genes" parallelBy="fasta_file">
         <link fromOperation="input connector"          fromProperty="fasta_file"                  toOperation="repeat_masker"            toProperty="fasta_file" />
@@ -161,6 +168,7 @@
     </operation>
 
     <operationtype typeClass="Workflow::OperationType::Model">
+        <inputproperty>predictions_ace_file</inputproperty>
         <inputproperty>repeat_masker_ace_file</inputproperty>
         <inputproperty>skip_repeat_masker</inputproperty>
         <inputproperty>rnammer_version</inputproperty>
