@@ -94,25 +94,6 @@ sub create {
     return $self;
 }
 
-#< Assembler >#
-my %supported_assemblers = (
-    newbler => {
-        platforms => [qw/ 454 /],
-    },
-    'velvet one-button' => {
-	platforms => [qw/ solexa /],
-	class => 'Genome::Model::Tools::Velvet::OneButton',
-    },
-    'soap de-novo-assemble' => {
-	platforms => [qw/ solexa /],
-	class => 'Genome::Model::Tools::Soap::DeNovoAssemble',
-    },
-    'soap import' => {
-	platforms => [qw/ solexa /],
-	class => 'Genome::Model::Tools::Soap::Import',
-    }
-);
-
 sub assembler_accessor_name {
     my $self = shift;
 
@@ -160,54 +141,13 @@ sub assembler_params_as_hash {
     return unless $params_string; # ok 
 
     my %params = Genome::Utility::Text::param_string_to_hash($params_string);
-    unless ( %params ) { # not ok
+    unless ( %params ) { # not 
         Carp::confess(
             $self->error_message("Malformed assembler params: $params_string")
         );
     }
 
     return %params;
-}
-
-sub supported_sequencing_platforms_for_assembler {
-    my $self = shift;
-
-    my $assembler_name = $self->assembler_name;
-
-    unless ( defined $assembler_name ) {
-        Carp::confess(
-            $self->error_message("Can't get supported sequencing platforms: No assembler name set.")
-        );
-    }
-
-    my $platforms = $supported_assemblers{$assembler_name}->{platforms};
-    unless ( $platforms ) {
-        Carp::confess(
-            $self->error_message("Can't get supported sequencing platforms: Unsupported assembler ($assembler_name).")
-        );
-    }
-
-    return $platforms;
-}
-
-sub class_for_assembler {
-    my $self = shift;
-    
-    my $assembler_name = $self->assembler_name;
-    unless ( defined $assembler_name ) {
-        Carp::confess(
-            $self->error_message("Can't get class for assembler: No assembler name set.")
-        );
-    }
-
-    my $class = $supported_assemblers{$assembler_name}->{class};
-    unless ( $class ) {
-        Carp::confess(
-            $self->error_message("Unsupported assembler ($assembler_name)")
-        );
-    }
-    
-    return $class;
 }
 
 sub _validate_assembler_and_params {
@@ -217,16 +157,15 @@ sub _validate_assembler_and_params {
 
     my $assembler_accessor_name = $self->assembler_accessor_name;
 
-    # Assembler and seq platform combo
-    my $supported_sequencing_platforms_for_assembler = $self->supported_sequencing_platforms_for_assembler;
-    unless ( grep { $self->sequencing_platform eq $_ } @$supported_sequencing_platforms_for_assembler ) {
-        $self->error_message(
-            "Invalid  name (".$self->assembler_name.") and (".$self->sequencing_platform.") combination."
-        );
-        return;
+    #validate instrument data platform - returns arryref of valid platforms
+    my $valid_platform_method = 'valid_'.$assembler_accessor_name.'_seq_platforms';
+    my $valid_platforms = $self->$valid_platform_method;
+    unless ( grep {$self->sequencing_platform eq $_ } @$valid_platforms ) {
+	$self->error_message("Sequencing platform: ".$self->sequencing_platform." is not supported for assembler: ".$self->assembler_name);
+	return;
     }
-
-    my $assembler_class = $self->class_for_assembler; #returns g:m:t:soap:import, for eg,
+    
+    my $assembler_class = $self->assembler_class;
 
     my %assembler_params;
 
@@ -264,6 +203,20 @@ sub _validate_assembler_and_params {
     $self->status_message("Assembler and params OK");
 
     return 1;
+}
+
+#< methods to determine supported instrument data for assembler >#
+
+sub valid_soap_de_novo_assemble_seq_platforms {
+    return ['solexa'];
+}
+
+sub valid_soap_import_seq_platforms {
+    return ['solexa'];
+}
+
+sub valid_velvet_one_button_seq_platforms {
+    return ['solexa'];
 }
 
 #< methods to derive assembler params >#
@@ -369,7 +322,7 @@ sub velvet_one_button_params {
     return %params;
 }
 
-#< params needed for successful create eval >#
+#< temp params updates needed for successful eval of assembler class >#
 
 sub velvet_one_button_fake_params_for_eval {
     my $self = shift;
@@ -386,6 +339,7 @@ sub soap_de_novo_assemble_clean_up_params_for_eval {
 }
 
 #< Read Processor >#
+
 sub _validate_read_processor {
     my $self = shift;
 
@@ -679,8 +633,17 @@ sub assemble_build {
     my $assembler_name = $self->assembler_name;
     my $assembler_accessor_name = $self->assembler_accessor_name;
     
+    #validate instrument data - returns arryref of ins data types
+    my $ins_data_method = 'valid_'.$assembler_accessor_name.'_seq_platforms';
+    my $ins_data = $self->$ins_data_method;
+    unless ( grep {$self->sequencing_platform eq $_ } @$ins_data ) {
+	$self->error_message("Sequencing platform: ".$self->sequencing_platform." is not supported for assembler: ".$self->assembler_name);
+	return;
+    }
+
     my %assembler_params;
-    
+
+    #TODO: there must be 'assembler_name'.'_params' for each assembler
     my $param_method = $assembler_accessor_name.'_params';
 
     if ( %assembler_params = $self->$param_method( $build ) ) {

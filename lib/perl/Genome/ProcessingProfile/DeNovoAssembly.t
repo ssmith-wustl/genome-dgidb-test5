@@ -132,8 +132,8 @@ is_deeply(
     ], 
     'Stage classes'
 );
-is($pp->class_for_assembler, 'Genome::Model::Tools::Velvet::OneButton', 'Assembler class');
-
+#is($pp->class_for_assembler, 'Genome::Model::Tools::Velvet::OneButton', 'Assembler class');
+is($pp->assembler_class, 'Genome::Model::Tools::Velvet::OneButton', 'Assembler class');
 #< SOAP >#
 my %valid_soap_params = Genome::Model::DeNovoAssembly::Test->processing_profile_params_for_assembler_and_platform(
     assembler_name => 'soap de-novo-assemble',
