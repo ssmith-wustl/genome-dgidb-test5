@@ -49,6 +49,7 @@ my %BWA_VERSIONS = (
     '0.5.7-6' => '/gsc/pkg/bio/bwa/bwa-0.5.7-6-64/bwa',
     '0.5.8a' => '/gsc/pkg/bio/bwa/bwa-0.5.8a-64/bwa',
     '0.5.8c' => '/gsc/pkg/bio/bwa/bwa-0.5.8c-64/bwa',
+    '0.5.9rc1' => '/gsc/pkg/bio/bwa/bwa-0.5.9rc1-64/bwa',
     'bwa'   => 'bwa',
 );
 
