@@ -28,6 +28,10 @@ sub extract_fastqs_and_run_aligner {
     return 1;
 }
 
+sub prepare_scratch_sam_file {
+    return 1;
+}
+
 #Overload the creation of BAM's in AlignmentResult
 
 sub create_BAM_in_staging_directory {

@@ -7,7 +7,7 @@
 
 hostname=`hostname -s`
 
-INC=/gsc/scripts/opt/genome-webapp/lib/perl
+INC=/gsc/scripts/opt/genome/current/web/lib/perl
 
 # TODO make this less dependent on the real hostname, check aims-dev cname?
 if [ $hostname == 'vm45' ]

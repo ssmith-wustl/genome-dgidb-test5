@@ -347,40 +347,46 @@ sub create {
         $self->error_message("Reference sequences are invalid.  We can't proceed:  " . $self->error_message);
         die $self->error_message();
     }
+    
+    # STEP 6: PREPARE THE ALIGNMENT FILE (groups file, sequence dictionary)
+    $self->status_message("Preparing the all_sequences.sam in scratch");
+    unless ($self->prepare_scratch_sam_file) {
+        $self->error_message("Failed to prepare the scratch sam file with groups and sequence dictionary");
+        die $self->error_message;
+    }
 
-    # STEP 6: RUN THE ALIGNER
+    # STEP 7: RUN THE ALIGNER
     $self->status_message("Running aligner...");
     unless ($self->extract_fastqs_and_run_aligner ) {
         $self->error_message("Failed to extract fastqs and/or run the aligner!");
-        die $self->error_message
-        
+        die $self->error_message;
     }
 
-    # STEP 7: CREATE BAM IN STAGING DIRECTORY
+    # STEP 8: CREATE BAM IN STAGING DIRECTORY
     $self->status_message("Constructing a BAM file (if necessary)...");
     unless( $self->create_BAM_in_staging_directory()) {
         $self->error_message("Call to create_BAM_in_staging_directory failed.\n");
         die $self->error_message;
     }
 
-    # STEP 8-9, validate BAM file (if necessary)
+    # STEP 9-10, validate BAM file (if necessary)
     $self->status_message("Postprocessing & Sanity Checking BAM file (if necessary)...");
     unless ($self->postprocess_bam_file()) {
         $self->error_message("Postprocess BAM file failed");
         die $self->error_message;
     }
 
-    # STEP 10: COMPUTE ALIGNMENT METRICS
+    # STEP 11: COMPUTE ALIGNMENT METRICS
     $self->status_message("Computing alignment metrics...");
     $self->_compute_alignment_metrics();
 
-    # STEP 11: PREPARE THE ALIGNMENT DIRECTORY ON NETWORK DISK
+    # STEP 12: PREPARE THE ALIGNMENT DIRECTORY ON NETWORK DISK
     $self->status_message("Preparing the output directory...");
     $self->status_message("Staging disk usage is " . $self->_staging_disk_usage . " KB");
     my $output_dir = $self->output_dir || $self->_prepare_alignment_directory;
     $self->status_message("Alignment output path is $output_dir");
 
-    # STEP 12: PROMOTE THE DATA INTO ALIGNMENT DIRECTORY
+    # STEP 13: PROMOTE THE DATA INTO ALIGNMENT DIRECTORY
     $self->status_message("Moving results to network disk...");
     my $product_path;
     unless($product_path= $self->_promote_validated_data) {
@@ -388,7 +394,7 @@ sub create {
         die $self->error_message;
     }
     
-    # STEP 13: RESIZE THE DISK
+    # STEP 14: RESIZE THE DISK
     # TODO: move this into the actual original allocation so we don't need to do this 
     $self->status_message("Resizing the disk allocation...");
     if ($self->_disk_allocation) {
@@ -399,6 +405,41 @@ sub create {
         
     $self->status_message("Alignment complete.");
     return $self;
+}
+
+sub prepare_scratch_sam_file {
+    my $self = shift;
+    
+    
+    my $scratch_sam_file = $self->temp_scratch_directory . "/all_sequences.sam";
+    
+    unless($self->construct_groups_file) {
+        $self->error_message("failed to create groups file");
+        die $self->error_message;
+    }
+
+    my $groups_input_file = $self->temp_scratch_directory . "/groups.sam";
+    
+    my $seq_dict = $self->get_or_create_sequence_dictionary();
+    unless (-s $seq_dict) {
+        $self->error_message("Failed to get sequence dictionary");
+        die $self->error_message;
+    }
+    
+    my @input_files = ($seq_dict, $groups_input_file);
+
+    $self->status_message("Cat-ing together: ".join("\n",@input_files). "\n to output file ".$scratch_sam_file);
+    my $cat_rv = Genome::Utility::FileSystem->cat(input_files=>\@input_files,output_file=>$scratch_sam_file);
+    if ($cat_rv ne 1) {
+        $self->error_message("Error during cat of alignment sam files! Return value $cat_rv");
+        die $self->error_message;
+    }
+    else {
+        $self->status_message("Cat of sam files successful.");
+    }
+    
+    
+    return 1;
 }
 
 sub extract_fastqs_and_run_aligner {
@@ -889,13 +930,7 @@ sub _process_sam_files {
     if (-e $self->temp_staging_directory . "/all_sequences.bam") {
         return 1;
     }
-
-    unless($self->construct_groups_file) {
-        $self->error_message("failed to create groups file");
-        die $self->error_message;
-    }
-
-    $groups_input_file = $self->temp_scratch_directory . "/groups.sam";
+    
     my $sam_input_file = $self->temp_scratch_directory . "/all_sequences.sam";
 
     unless (-e $sam_input_file) {
@@ -906,61 +941,40 @@ sub _process_sam_files {
     # things which don't produce sam natively must provide an unaligned reads file.
     my $unaligned_input_file = $self->temp_scratch_directory . "/all_sequences_unaligned.sam";
 
-    my $seq_dict = $self->get_or_create_sequence_dictionary();
-    unless (-s $seq_dict) {
-        $self->error_message("Failed to get sequence dictionary");
-        die $self->error_message;
+    if (-s $unaligned_input_file) {
+        $self->status_message("Looks like there are unaligned reads not in the main input file.  ");
+        my @input_files = ($sam_input_file, $unaligned_input_file);
+        $self->status_message("Cat-ing the unaligned list $unaligned_input_file to the sam file $sam_input_file");
+        my $cat_rv = Genome::Utility::FileSystem->cat(input_files=>[$unaligned_input_file],output_file=>$sam_input_file,append_mode=>1);
+        if ($cat_rv ne 1) {
+            $self->error_message("Error during cat of alignment sam files! Return value $cat_rv");
+            die $self->error_message;
+        } else {
+            $self->status_message("Cat of sam files successful.");
+        }      
+        
+        unlink($unaligned_input_file);
     }
 
-    my @sam_components = ();
-
-    my $per_lane_sam_file = $self->temp_scratch_directory . "/all_sequences_combined.sam";
-
-    for my $file ($groups_input_file, $sam_input_file, $unaligned_input_file) {
-        unless ($file) {
-            next;
-        }
-        if (!-s $file) {
-            $self->warning_message("$file is empty/nonexistent, will not be incorporated in final sam file");
-            next;
-        }
-        push @sam_components, $file;
-    }
-
-    # throw the seq dictionary header on first.
-    my @input_files = ($seq_dict, @sam_components);
-
-    $self->status_message("Cat-ing together: ".join("\n",@input_files). "\n to output file ".$per_lane_sam_file);
-    my $cat_rv = Genome::Utility::FileSystem->cat(input_files=>\@input_files,output_file=>$per_lane_sam_file);
-    if ($cat_rv ne 1) {
-        $self->error_message("Error during cat of alignment sam files! Return value $cat_rv");
-        die $self->error_message;
-    }
-    else {
-        $self->status_message("Cat of sam files successful.");
-    }
-
-    for (@sam_components) {
-        $self->status_message("Removing since it's no longer needed: $_\n");
-        unlink($_);
-    }
-
-    my $per_lane_sam_file_rg = $self->temp_scratch_directory . "/all_sequences_rg.sam";
+    my $per_lane_sam_file_rg = $sam_input_file;
    
-    my $add_rg_cmd = Genome::Model::Tools::Sam::AddReadGroupTag->create(
-            input_file     => $per_lane_sam_file,
+    if ($self->requires_read_group_addition) {
+        $per_lane_sam_file_rg = $self->temp_scratch_directory . "/all_sequences_rg.sam";
+        my $add_rg_cmd = Genome::Model::Tools::Sam::AddReadGroupTag->create(
+            input_file     => $sam_input_file,
             output_file    => $per_lane_sam_file_rg,
             read_group_tag => $self->instrument_data->id,
         );
 
-    unless ($add_rg_cmd->execute) {
-        $self->error_message("Adding read group to sam file failed!");
-        die $self->error_message;
-    }
-    $self->status_message("Read group add completed, new file is $per_lane_sam_file_rg");
+        unless ($add_rg_cmd->execute) {
+            $self->error_message("Adding read group to sam file failed!");
+            die $self->error_message;
+        }
+        $self->status_message("Read group add completed, new file is $per_lane_sam_file_rg");
 
-    $self->status_message("Removing non-read-group combined sam file: " . $per_lane_sam_file);
-    unlink($per_lane_sam_file);
+        $self->status_message("Removing non-read-group combined sam file: " . $sam_input_file);
+        unlink($sam_input_file);
+    } 
 
     #For the sake of new bam flagstat that need MD tags added. Some
     #aligner like maq doesn't output MD tag in sam file, now add it
@@ -1008,7 +1022,7 @@ sub _process_sam_files {
         use_version => $self->samtools_version,
     );
     unless($to_bam->execute) {
-        $self->error_message("There was an error converting the Sam file $per_lane_sam_file to $per_lane_bam_file.");
+        $self->error_message("There was an error converting the Sam file $final_sam_file to $per_lane_bam_file.");
         die $self->error_message;
     }
 
@@ -1694,6 +1708,9 @@ sub get_or_create_sequence_dictionary {
 sub construct_groups_file {
 
     my $self = shift;
+    my $output_file = shift || $self->temp_scratch_directory . "/groups.sam";
+    
+    
     my $aligner_command_line = $self->aligner_params_for_sam_header;
 
     my $insert_size_for_header;
@@ -1733,12 +1750,12 @@ sub construct_groups_file {
     $self->status_message("RG: $rg_tag");
     $self->status_message("PG: $pg_tag");
     
-    my $header_groups_fh = IO::File->new(">".$self->temp_scratch_directory."/groups.sam") || die "failed opening groups file for writing";
+    my $header_groups_fh = IO::File->new(">>".$output_file) || die "failed opening groups file for writing";
     print $header_groups_fh $rg_tag;
     print $header_groups_fh $pg_tag;
     $header_groups_fh->close;
 
-    unless (-s $self->temp_scratch_directory."/groups.sam") {
+    unless (-s $output_file) {
         $self->error_message("Failed to create groups file");
         die $self->error_message;
     }
@@ -1765,6 +1782,10 @@ sub alignment_bam_file_paths {
     my $self = shift;
 
     return glob($self->alignment_directory . "/*.bam");
+}
+
+sub requires_read_group_addition {
+    return 1;
 }
 
 =cut
