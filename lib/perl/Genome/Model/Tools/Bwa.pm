@@ -81,5 +81,15 @@ sub default_bwa_version {
         
 sub default_version { return default_bwa_version; }
 
+sub supports_bam_input {
+    my $class = shift;
+    my $version = shift;
+
+    my %ok_versions = {'0.5.9rc1' => 1};
+
+    return (exists $ok_versions{$version});
+
+}
+
 1;
 
