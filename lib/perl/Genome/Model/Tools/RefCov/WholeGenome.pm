@@ -15,7 +15,7 @@ class Genome::Model::Tools::RefCov::WholeGenome {
             is_optional => 1,
             default_value => 'transcript',
         },
-        evaluate_gc_coverage => {
+        evaluate_gc_content => {
             default_value => 1,
             is_optional => 1,
         },
