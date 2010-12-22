@@ -48,6 +48,8 @@ sub execute {
         return;
     }
 
+    #spit out a header, cause that's a good idea
+    print join("\t",qw( contig_id contigs_overlapping total_reads_crossing_ref_pos total_q1_reads_crossing_ref_pos total_q1_reads_spanning_ref_pos total_reads_crossing_contig_pos total_q1_reads_crossing_contig_pos total_q1_reads_spanning_contig_pos )), "\n"; 
     #scan through all the fasta headers and grab counts based on each predicted variant and denoted reference
     while(my $line = $fh->getline) {
         next unless $line =~ /^>/;
@@ -99,7 +101,8 @@ HELP
 #and checks to see if they contain both potential DNP bases
 sub _count_across_range {
     my ($self, $alignment_file, $chr, $pos1, $pos2) = @_;
-    unless(open(SAMTOOLS, "samtools view -F 0x400 $alignment_file $chr:$pos1-$pos2 |")) { #this requires that they be unique
+    #unless(open(SAMTOOLS, "samtools view -F 0x400 $alignment_file $chr:$pos1-$pos2 |")) { #this requires that they be unique
+    unless(open(SAMTOOLS, "/gscuser/dlarson/src/samtools/trunk/samtools/samtools view -F 0x404 $alignment_file $chr:$pos1-$pos2 |")) { #this requires that they be unique
         $self->error_message("Unable to open pipe to samtools view");
         return;
     }
@@ -118,7 +121,25 @@ sub _count_across_range {
 
         my $spans_range = $self->_spans_range($pos1, $pos2, $pos_read, $cigar);
 
-        if($spans_range) {
+        #check that mate maps to the same chromosome
+        #this will not work for NT chromosome names.
+        my ($mate_chr, $read_chr);
+
+        if($rname =~ /_/) {
+            ($read_chr) = $rname =~ /^(\S+?)_/;
+        }
+        else {
+            $read_chr = $rname;
+        }
+        if($mrnm =~ /_/) {
+            ($mate_chr) = $mrnm =~ /^(\S+?)_/;
+        }
+        else {
+            $mate_chr = $mrnm eq '=' ? $read_chr : $mrnm;
+        }
+
+
+        if($spans_range && $mate_chr eq $read_chr) {
             $stats{'spanning_reads_q1'}+=1;
         }
     }
