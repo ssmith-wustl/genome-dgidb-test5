@@ -90,12 +90,11 @@ sub create {
     my $class = shift;
     my %params = @_;
     my $coverage = delete($params{coverage});
-    unless ($coverage) {
-        die('A coverage array ref is required!');
-    }
     my $self = $class->SUPER::create(%params);
-    $self->coverage($coverage);
-    $self->_main_calculation_code;
+    if ($coverage) {
+        $self->coverage($coverage);
+        $self->_main_calculation_code;
+    }
     return $self;
 }
 
