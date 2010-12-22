@@ -83,10 +83,11 @@ sub execute {
     my $out_dir = dirname $self->output_file;
     my $input_file = $self->input_file;
     if ($self->clean_sam) {
-        my $tmp_file = Genome::Utility::FileSystem->create_temp_file_path;
+        my $basename = basename($self->output_file,qw/\.bam \.sam/);
+        my $clean_sam_file = Genome::Utility::FileSystem->create_temp_file_path($basename .'_clean_sam');
         unless (Genome::Model::Tools::Picard::CleanSam->execute(
             input_file => $self->input_file,
-            output_file => $tmp_file,
+            output_file => $clean_sam_file,
             use_version => $self->use_version,
             maximum_memory => $self->maximum_memory,
             maximum_permgen_memory => $self->maximum_permgen_memory,
@@ -97,7 +98,7 @@ sub execute {
         )) {
             die('Failed to run Picard CleanSam on SAM/BAM file: '. $self->input_file);
         }
-        $input_file = $tmp_file
+        $input_file = $clean_sam_file;
     }
     
     my $cmd = $self->picard_path .'/CollectGcBiasMetrics.jar net.sf.picard.analysis.CollectGcBiasMetrics';

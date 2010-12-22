@@ -14401,6 +14401,15 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'help!',
       undef
     ],
+    '>combine-counts',
+    [
+      'count-files=s',
+      'files',
+      'file-labels=s',
+      'files',
+      'help!',
+      undef
+    ],
     '>count-contigs',
     [
       'bam-file=s',

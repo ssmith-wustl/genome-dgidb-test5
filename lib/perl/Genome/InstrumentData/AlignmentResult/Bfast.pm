@@ -78,7 +78,7 @@ sub _run_aligner {
     foreach my $bif (@ref_files) {
         unless (-e $bif) {
             $self->error_message("Index $bif does not exist. Please create Bfast indexes in the correct location, or implement Genome::InstrumentData::Alignment->resolve_reference_build() in this module.");
-            $self->die_and_clean_up($self->error_message);
+            $self->die($self->error_message);
         }
     }
      
@@ -125,7 +125,7 @@ sub _run_aligner {
             chop($id2);
             if ($id1 ne $id2) {
                 $self->error_message("reads at position $read_count $id1 and $id2 have different ids");
-                $self->die_and_clean_up($self->error_message);
+                $self->die($self->error_message);
             }
 
             $fastq_obj1->id($id1);
@@ -137,14 +137,14 @@ sub _run_aligner {
 
         unless (-s $fq_file) {
             $self->error_message("Unable to merge $input_pathnames[0] and $input_pathnames[1] into $fq_file");
-            $self->die_and_clean_up($self->error_message);
+            $self->die($self->error_message);
         }
         # Bio::SeqIO handles should automatically be destroyed when we leave this scope
     } elsif (scalar(@input_pathnames) == 1) {
         $fq_file = $input_pathnames[0];
     } else {
         $self->error_message("number of input pathnames to Bfast was not 1 or 2 (this probably shouldn't happen)");
-        $self->die_and_clean_up($self->error_message);
+        $self->die($self->error_message);
     }
 
     #### STEP 2: Search the indexes
@@ -163,7 +163,7 @@ sub _run_aligner {
 
         unless (-s $tmp_matches_file) {
             $self->error_message("Unable to search the indexes. Match file $tmp_matches_file is zero length, so something went wrong.");
-            $self->die_and_clean_up($self->error_message);
+            $self->die($self->error_message);
         }
     }
     
@@ -182,7 +182,7 @@ sub _run_aligner {
 
         unless (-s $tmp_aligned_file) {
             $self->error_message("Unable to align. Aligned file $tmp_aligned_file is zero length, so something went wrong.");
-            $self->die_and_clean_up($self->error_message);
+            $self->die($self->error_message);
         }
     }
     
@@ -201,7 +201,7 @@ sub _run_aligner {
 
         unless (-s $tmp_reported_file) {
             $self->error_message("Unable to filter alignments. Sam file $tmp_reported_file is zero length, so something went wrong.");
-            $self->die_and_clean_up($self->error_message);
+            $self->die($self->error_message);
         }
 
         # put your output file here, append to this file!

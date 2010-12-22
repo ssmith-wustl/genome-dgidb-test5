@@ -90,11 +90,26 @@ sub create {
     my $class = shift;
     my %params = @_;
     my $coverage = delete($params{coverage});
+    my $self = $class->SUPER::create(%params);
+    if ($coverage) {
+        $self->coverage($coverage);
+        $self->_main_calculation_code;
+    }
+    return $self;
+}
+
+sub calculate_coverage_stats {
+    my $self = shift;
+    my %params = @_;
+    my $coverage = delete($params{coverage});
     unless ($coverage) {
         die('A coverage array ref is required!');
     }
-    my $self = $class->SUPER::create(%params);
+    my $min_depth = delete($params{min_depth});
+    my $name = delete($params{name});
     $self->coverage($coverage);
+    $self->min_depth($min_depth);
+    $self->name($name);
     $self->_main_calculation_code;
     return $self;
 }
@@ -126,12 +141,12 @@ sub _main_calculation_code {
     my $current_gap_length  = 0;
     my $discarded_bases     = 0;
     my $total_covered       = 0;
-
+    my $min_depth = $self->min_depth;
     my $p = -1;
     POSITION:
     foreach my $position (@{ $self->coverage() }) {
         $p++;
-        if ($position > 0 && $position < $self->min_depth()) {
+        if ($position > 0 && $position < $min_depth) {
             $self->_set_depth_to_zero( $p );
             $position = 0;
             $discarded_bases++;
@@ -245,7 +260,7 @@ sub _main_calculation_code {
     $self->med_gap_length( _round( $med_gap_size ) );
 
     # [11] Min. Depth Filter
-    $self->min_depth_filter( $self->min_depth() );
+    $self->min_depth_filter( $min_depth );
 
     # [12] Discarded Bases (Min. Depth Filter)
     $self->min_depth_discarded_bases( $discarded_bases );
