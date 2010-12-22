@@ -9,7 +9,7 @@ use above 'Genome';
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 27;
+        plan tests => 26;
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
