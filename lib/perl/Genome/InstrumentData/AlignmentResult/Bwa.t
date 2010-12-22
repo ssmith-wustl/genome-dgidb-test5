@@ -9,7 +9,7 @@ use above 'Genome';
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 27;
+        plan tests => 26;
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -67,18 +67,20 @@ ok($reference_build, "got reference build");
 # Uncomment this to create the dataset necessary for shorcutting to work
 #test_alignment(generate_shortcut_data => 1);
 
-
-test_shortcutting();
-test_alignment();
+my $instrument_data = generate_fake_instrument_data();
+test_shortcutting(instrument_data => $instrument_data);
+test_alignment(validate_against_shortcut => 1, instrument_data=>$instrument_data, test_name => 'validate_shortcut_data');
 # cleanup locks after testing alignment
-test_alignment(force_fragment => 1);
+$FAKE_INSTRUMENT_DATA_ID--;
+$instrument_data = generate_fake_instrument_data();
+test_alignment(force_fragment => 1, instrument_data=>$instrument_data);
 
 sub test_alignment {
     my %p = @_;
     
     my $generate_shortcut = delete $p{generate_shortcut_data};
-
-    my $instrument_data = generate_fake_instrument_data();
+    my $validate_against_shortcut = delete $p{validate_against_shortcut};
+    my $instrument_data = delete $p{instrument_data};
 
     my $alignment = Genome::InstrumentData::AlignmentResult->create(
                                                        instrument_data_id => $instrument_data->id,
@@ -109,6 +111,14 @@ sub test_alignment {
         system("rsync -a $dir/* $expected_shortcut_path");
     } 
 
+    if ($validate_against_shortcut) {
+        my $generated_bam_md5 = Genome::Utility::FileSystem->md5sum($dir . "/all_sequences.bam");
+        my $to_validate_bam_md5 = Genome::Utility::FileSystem->md5sum($expected_shortcut_path  . "/all_sequences.bam");
+       
+        print "Comparing " . $dir . "/all_sequences.bam with $expected_shortcut_path/all_sequences.bam\n\n\n"; 
+        is($generated_bam_md5, $to_validate_bam_md5, "generated md5 matches what we expect -- the bam file is the same!");
+    }
+
     # clear out the temp scratch/staging paths since these normally would be auto cleaned up at completion
     my $base_tempdir = Genome::Utility::FileSystem->base_temp_directory;
     for (glob($base_tempdir . "/*")) {
@@ -121,8 +131,8 @@ sub test_alignment {
 }
 
 sub test_shortcutting {
-
-    my $fake_instrument_data = generate_fake_instrument_data();
+    my %p = @_;
+    my $fake_instrument_data = delete $p{instrument_data};
 
     my $alignment_result = $alignment_result_class_name->__define__(
                  id => -8765432,
@@ -223,8 +233,6 @@ sub generate_fake_instrument_data {
     $instrument_data->set_always('run_start_date_formatted','Fri Jul 10 00:00:00 CDT 2009');
     $instrument_data->mock('status_message',sub {print "STATUS: " . $_[1], "\n"});
     $instrument_data->mock('error_message',sub {print STDERR "ERROR: " . $_[1], "\n"});
-
-    $FAKE_INSTRUMENT_DATA_ID--;
 
     return $instrument_data;
 

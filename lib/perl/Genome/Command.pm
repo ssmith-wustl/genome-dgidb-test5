@@ -25,7 +25,6 @@ my @SUB_COMMANDS = qw/
     tools
     disk
     report
-    capture
     feature-list
     completion
 /;

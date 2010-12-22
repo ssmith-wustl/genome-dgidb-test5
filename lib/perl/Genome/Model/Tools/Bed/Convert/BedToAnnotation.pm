@@ -56,6 +56,7 @@ sub execute{
         $self->error_message("Neither converted file exists, exiting") and die;
     }
 
+    Genome::Utility::FileSystem->shellcmd(cmd => "chmod 664 " .  $self->output) || ($self->error_message("chmod failed, exiting") and die); 
     return 1;
 }
 

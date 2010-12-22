@@ -20,6 +20,14 @@ class Genome::InstrumentData::FlowCell::View::Solr::Xml {
                     position => 'title',
                 },
                 {
+                    name => 'instrument_data_ids',
+                    position => 'content',
+                },
+                {
+                    name => 'flow_cell_id',
+                    position => 'content',
+                },
+                {
                     name => 'machine_name',
                     position => 'content',
                 },

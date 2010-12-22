@@ -38,8 +38,8 @@ class Genome::RefCov::Reference::GC {
     },
 };
 
-sub create {
-    my $class = shift;
+sub calculate_nucleotide_coverage {
+    my $self = shift;
     my %params = @_;
     my $coverage = delete($params{coverage});
     my $sequence = delete($params{sequence});
@@ -49,7 +49,6 @@ sub create {
     unless (scalar(@{$coverage}) == scalar(@{$sequence})) {
         die('The coverage('. scalar(@{$coverage}) .') and sequence('.  scalar(@{$sequence}) .') array ref length must match!');
     }
-    my $self = $class->SUPER::create(%params);
     $self->coverage($coverage);
     $self->sequence($sequence);
     $self->_reflen(scalar(@{$coverage}));
@@ -70,7 +69,7 @@ sub create {
     $self->_update_base_pair_values();
     $self->_update_all_percent_values();
 
-    return $self;
+    return 1;
 }
 
 sub alphabet {
