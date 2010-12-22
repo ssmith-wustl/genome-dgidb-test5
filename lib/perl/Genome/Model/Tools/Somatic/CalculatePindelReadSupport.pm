@@ -39,6 +39,13 @@ class Genome::Model::Tools::Somatic::CalculatePindelReadSupport {
             default => 0,
             doc => 'Run on pindel 0.2 or 0.1',
         },
+        germline_events => {
+            type => 'Boolean',
+            is_input => 1,
+            is_optional => 1,
+            default => 0,
+            doc => 'Use this to calculate support for germline events, not tumor events',
+        },
         _dbsnp_insertions => {
             type => 'String',
             is_optional => 1,
@@ -130,8 +137,9 @@ sub process_file {
     my $pindel_output = Genome::Utility::FileSystem->open_file_for_reading($filename); #IO::File->new($filename);
     my $pindel_config = $dir."/".$chr."/pindel.config";
     my $pconf = Genome::Utility::FileSystem->open_file_for_reading($pindel_config);  #IO::File->new($pindel_config);
-    $pconf->getline;
+    my $normal_bam = $pconf->getline;
     my $tumor_bam = $pconf->getline;
+    ($normal_bam) = split /\s/, $normal_bam;
     ($tumor_bam) = split /\s/, $tumor_bam;
     unless(-s $tumor_bam){
         die "couldnt find tumor bam reference in pindel.config at ".$tumor_bam."\n";
@@ -214,17 +222,16 @@ sub process_file {
             my $type_and_size = $type."/".$size;
             $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'neg'}=$neg_strand;
             $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'pos'}=$pos_strand;
+            $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'bed'}=join("\t",@bed_line);
             if($normal_support){
                 $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'normal'}=$normal_support;
-            }else{
-                $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'bed'}=join("\t",@bed_line);
             }
         }
     }
     for $chrom (sort {$a cmp $b} (keys(%events))){
         for $pos (sort{$a <=> $b} (keys( %{$events{$chrom}}))){
             for my $type_and_size (sort(keys( %{$events{$chrom}{$pos}}))){
-                unless(exists($events{$chrom}{$pos}{$type_and_size}{'normal'})){
+                unless(exists($events{$chrom}{$pos}{$type_and_size}{'normal'})&&(not $self->germline_events)){
                     my $pos_strand = $events{$chrom}{$pos}{$type_and_size}{'pos'};
                     my $neg_strand = $events{$chrom}{$pos}{$type_and_size}{'neg'};
                     my $pos_percent=0;
@@ -244,6 +251,9 @@ sub process_file {
                     #my $stop = ($type eq 'I') ? $pos+2 : $pos + $size;
                     my $stop = $pos;
                     my @results = `samtools view $tumor_bam $chrom:$pos-$stop | grep -v "XT:A:M"`;
+                    if($self->germline_events){
+                        push @results, `samtools view $tumor_bam $chrom:$pos-$stop | grep -v "XT:A:M"`;
+                    }
                     my $read_support=0;
                     for my $result (@results){
                         #print $result;
@@ -257,7 +267,6 @@ sub process_file {
                         unless($details[5] =~ m/[ID]/){
                             if(($details[3] > ($pos - 40))&&($details[3] < ($pos -10))){
                                 $read_support++;
-                                #print "cigar = ".$details[5]."\n";
                             }
                         }
                     }
