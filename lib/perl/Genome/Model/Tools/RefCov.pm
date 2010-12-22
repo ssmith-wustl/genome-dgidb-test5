@@ -152,6 +152,8 @@ class Genome::Model::Tools::RefCov {
         _fai => {},
         _roi_stats => {},
         _genome_stats => {},
+        _nuc_cov => {},
+        _roi_cov => {},
     ],
 };
 
@@ -216,7 +218,9 @@ sub _load_roi {
     my $self = shift;
     # TODO: Can the class Genome::RefCov::ROI or a new class Genome::RefCov::ROI::File resolve the appropriate adaptor based on the file type?
     my $format = $self->roi_file_format;
-    my $subclass = ucfirst($format);
+    #my $subclass = ucfirst($format);
+    #TODO: Fix hardcoded efficient parser/reader for now and create better interface
+    my $subclass = 'BedLite';
     my $class = 'Genome::RefCov::ROI::'. $subclass;
     my $regions = $class->create(
         file => $self->roi_file_path,
@@ -235,6 +239,24 @@ sub roi {
         $self->_load_roi;
     }
     return $self->_roi;
+}
+
+sub nucleotide_coverage {
+    my $self = shift;
+    unless ($self->_nuc_cov) {
+        my $gc = Genome::RefCov::Reference::GC->create();
+        $self->_nuc_cov($gc);
+    }
+    return $self->_nuc_cov;
+}
+
+sub region_coverage_stat {
+    my $self = shift;
+    unless ($self->_roi_cov) {
+        my $stat = Genome::RefCov::Stats->create();
+        $self->_roi_cov($stat);
+    }
+    return $self->_roi_cov;
 }
 
 sub _load_fai {
@@ -264,12 +286,14 @@ sub fai {
 sub _load_roi_stats {
     my $self = shift;
     my $alignments = $self->alignments;
+    $self->status_message('Loading ROI Reference Stats...');
     my $roi_stats = Genome::RefCov::Reference::Stats->create(
         bam => $alignments->bio_db_bam,
         bam_index => $alignments->bio_db_index,
         bed_file => $self->roi_file_path,
     );
     $self->_roi_stats($roi_stats);
+    $self->status_message('Finished loading ROI Reference Stats!');
     return $roi_stats;
 }
 
@@ -284,11 +308,13 @@ sub roi_stats {
 sub _load_genome_stats {
     my $self = shift;
     my $alignments = $self->alignments;
+    $self->status_message('Loading Genome Reference Stats...');
     my $genome_stats = Genome::RefCov::Reference::Stats->create(
         bam => $alignments->bio_db_bam,
         bam_index => $alignments->bio_db_index,
     );
     $self->_genome_stats($genome_stats);
+    $self->status_message('Finished loading Genome Reference Stats!');
     return $genome_stats;
 }
 
@@ -330,13 +356,13 @@ sub resolve_stats_file {
             die('Failed to define output_directory or stats_file!');
         }
         my $alignment_file_expected_suffix = '.'. $self->alignment_file_format;
-        my ($alignment_basename,$alignment_dirname,$alignment_suffix) = File::Basename::fileparse($self->alignment_file_path,[$alignment_file_expected_suffix]);
-        unless (defined($alignment_suffix)) {
+        my ($alignment_basename,$alignment_dirname,$alignment_suffix) = File::Basename::fileparse($self->alignment_file_path,($alignment_file_expected_suffix));
+        unless ($alignment_suffix) {
             die('Failed to recognize file '. $self->alignment_file_path .' without expected suffix '. $alignment_file_expected_suffix);
         }
         my $roi_file_expected_suffix = '.'. $self->roi_file_format;
-        my ($regions_basename,$roi_dirname,$roi_suffix) = File::Basename::fileparse($self->roi_file_path,[$roi_file_expected_suffix]);
-        unless (defined($roi_suffix)) {
+        my ($regions_basename,$roi_dirname,$roi_suffix) = File::Basename::fileparse($self->roi_file_path,($roi_file_expected_suffix));
+        unless ($roi_suffix) {
             die('Failed to recognize file '. $self->roi_file_path .' without bed suffix');
         }
         $self->stats_file($self->final_directory .'/'. $alignment_basename .'_'. $regions_basename .'_STATS.tsv');
@@ -349,10 +375,12 @@ sub region_sequence_array_ref {
     my $region = shift;
 
     my $fai = $self->fai;
-    my $dna_string = $fai->fetch($region->chrom .':'. $region->start .'-'. $region->end);
+    my $id = $region->{id};
+    #$self->status_message('Fetching sequence for region '. $id);
+    my $dna_string = $fai->fetch($id);
     my @dna = split('',$dna_string);
-    unless (scalar(@dna) == $region->length) {
-        die('Failed to fetch the proper length ('. $region->length .') dna.  Fetched '. scalar(@dna) .' bases!');
+    unless (scalar(@dna) == $region->{length}) {
+        die('Failed to fetch the proper length ('. $region->{length} .') dna.  Fetched '. scalar(@dna) .' bases!');
     }
     return \@dna;
 }
@@ -364,8 +392,8 @@ sub region_coverage_array_ref {
     my $alignments = $self->alignments;
     my $bam = $alignments->bio_db_bam;
     my $index = $alignments->bio_db_index;
-    my $tid = $alignments->tid_for_chr($region->chrom);
-
+    my $tid = $alignments->tid_for_chr($region->{chrom});
+    #$self->status_message('Fetching coverage for region '. $region->{id});
     my $coverage;
     if ($self->min_base_quality || $self->min_mapping_quality) {
         $coverage = $self->region_coverage_with_quality_filter($region);
@@ -374,11 +402,11 @@ sub region_coverage_array_ref {
         # all regions should be zero based, but for some reason the correct length is never returned
         # the API must be expecting BED like inputs where the start is zero based and the end is 1-based
         # you can see in the docs for the low-level Bio::DB::BAM::Alignment class that start 'pos' is 0-based,but calend really returns 1-based
-        $coverage = $index->coverage( $bam, $tid, ($region->start - 1), $region->end);
+        $coverage = $index->coverage( $bam, $tid, ($region->{start} - 1), $region->{end});
     }
-    unless (scalar( @{ $coverage } ) == $region->length) {
-        die('The length of region '. $region->name .' '. $region->chrom .':'. $region->start .'-'. $region->end
-                .'('. $region->length .') does not match the coverage array length '. scalar( @{ $coverage }));
+    unless (scalar( @{ $coverage } ) == $region->{length}) {
+        die('The length of region '. $region->{name} .' '. $region->{id}
+                .'('. $region->{length} .') does not match the coverage array length '. scalar( @{ $coverage }));
     }
     return $coverage;
 }
@@ -390,7 +418,7 @@ sub region_coverage_with_quality_filter {
     my $alignments = $self->alignments;
     my $bam = $alignments->bio_db_bam;
     my $index = $alignments->bio_db_index;
-    my $tid = $alignments->tid_for_chr($region->chrom);
+    my $tid = $alignments->tid_for_chr($region->{chrom});
 
     my $min_mapping_quality = $self->min_mapping_quality;
     my $min_base_quality = $self->min_base_quality;
@@ -416,10 +444,10 @@ sub region_coverage_with_quality_filter {
         }
     };
     #Start with an empty array of zeros
-    my @coverage = map { 0 } (1 .. $region->length);
+    my @coverage = map { 0 } (1 .. $region->{length});
     my $coverage = \@coverage;
     # the pileup callback will add each base gt or eq to the quality_filter to the index position in the array ref
-    $index->pileup($bam,$tid,($region->start - 1),$region->end,$quality_coverage_callback,[($region->start - 1),$region->end,$coverage]);
+    $index->pileup($bam,$tid,($region->{start} - 1),$region->{end},$quality_coverage_callback,[($region->{start} - 1),$region->{end},$coverage]);
     return $coverage;
 }
 
@@ -489,7 +517,7 @@ sub merge_stats_by {
             my $data_value = $data->{$data_key};
             my $operation = $MERGE_STATS_OPERATION{$data_key};
             if (defined($operation)) {
-                if ($operation =~ /^\+$/) {
+                if ($operation eq '+') {
                     $merge_by_stats{$merge_key}{$data_key} += $data_value;
                 } elsif ($operation =~ /^\*\s+(\S+)/) {
                     my $multiplier_key = $1;
@@ -522,7 +550,14 @@ sub merge_stats_by {
                 } elsif ($operation =~ /^\*\s+(\S+)/) {
                     my $multiplier_key = $1;
                     my $multiplier_value = $merge_by_stats{$merge_key}{$multiplier_key};
-                    $data{$header} = $self->_round(($data_value / $multiplier_value));
+                    if ($multiplier_value) {
+                        $data{$header} = $self->_round(($data_value / $multiplier_value));
+                    } elsif ($data_value) {
+                        $self->error_message('For header '. $header .' found value '. $data_value .' but no denominator '. $multiplier_value);
+                        die($self->error_message);
+                    } else {
+                        $data{$header} = 0;
+                    }
                 } elsif ($operation eq 'weighted_mean') {
                     $data{$header} = $self->_round(($data_value / $length));
                 } elsif ($operation) {
@@ -558,7 +593,9 @@ sub merge_stats_by {
                 die('Please implement condition to deal with header: '. $header);
             }
         }
-        $writer->write_one(\%data);
+        unless ($writer->write_one(\%data)) {
+            die($writer->error_message);
+        }
     }
     $writer->output->close;
 
@@ -596,41 +633,41 @@ sub print_standard_roi_coverage {
     unless ($writer) {
         die 'Failed to open stats file for writing '. $temp_stats_file;
     }
-
+    my $roi = $self->roi;
+    my $stat = $self->region_coverage_stat;
     my @min_depths = split(',',$self->min_depth_filter);
-    my @chromosomes = $regions->chromosomes;
-    for my $chrom (@chromosomes) {
-        my @regions = $regions->chromosome_regions($chrom);
-        for my $region (@regions) {
-            my $coverage_array_ref = $self->region_coverage_array_ref($region);
-            my $sequence_array_ref;
+    while (my $region = $roi->next_region) {
+        my $coverage_array_ref = $self->region_coverage_array_ref($region);
+        my $sequence_array_ref;
+        if ($self->evaluate_gc_content) {
+            $sequence_array_ref = $self->region_sequence_array_ref($region);
+        }
+        for my $min_depth (@min_depths) {
+            $stat->calculate_coverage_stats(
+                coverage => $coverage_array_ref,
+                min_depth => $min_depth,
+                name => $region->{name},
+            );
+            my $data = $stat->stats_hash_ref;
             if ($self->evaluate_gc_content) {
-                $sequence_array_ref = $self->region_sequence_array_ref($region);
+                #$self->status_message('Evaluating GC content of '. $data->{name} .' '. $region->{id});
+                my $gc_data = $self->evaluate_region_gc_content($sequence_array_ref,$coverage_array_ref);
+                for my $key (keys %{$gc_data}) {
+                    $data->{$key} = $gc_data->{$key};
+                }
             }
-            for my $min_depth (@min_depths) {
-                my $stat = Genome::RefCov::Stats->create(
-                    coverage => $coverage_array_ref,
-                    min_depth => $min_depth,
-                    name => $region->name,
-                );
-                my $data = $stat->stats_hash_ref;
-                if ($self->evaluate_gc_content) {
-                    my $gc_data = $self->evaluate_region_gc_content($sequence_array_ref,$coverage_array_ref);
-                    for my $key (keys %{$gc_data}) {
-                        $data->{$key} = $gc_data->{$key};
-                    }
-                }
-                if ($self->roi_normalized_coverage) {
-                    my $roi_stats = $self->roi_stats;
-                    my $roi_normalized_depth = _round( ($stat->ave_cov_depth / $roi_stats->mean_coverage) );
-                     $data->{'roi_normalized_depth'} = $roi_normalized_depth;
-                }
-                if ($self->genome_normalized_coverage) {
-                    my $genome_stats = $self->genome_stats;
-                    my $genome_normalized_depth = _round( ($stat->ave_cov_depth / $genome_stats->mean_coverage) );
-                    $data->{'genome_normalized_depth'} = $genome_normalized_depth;
-                }
-                $writer->write_one($data);
+            if ($self->roi_normalized_coverage) {
+                my $roi_stats = $self->roi_stats;
+                my $roi_normalized_depth = $self->_round( ($stat->ave_cov_depth / $roi_stats->mean_coverage) );
+                $data->{'roi_normalized_depth'} = $roi_normalized_depth;
+            }
+            if ($self->genome_normalized_coverage) {
+                my $genome_stats = $self->genome_stats;
+                my $genome_normalized_depth = $self->_round( ($stat->ave_cov_depth / $genome_stats->mean_coverage) );
+                $data->{'genome_normalized_depth'} = $genome_normalized_depth;
+            }
+            unless ($writer->write_one($data)) {
+                die($writer->error_message);
             }
         }
     }
@@ -643,17 +680,19 @@ sub print_standard_roi_coverage {
 
 sub evaluate_region_gc_content {
     my $self = shift;
-    
     my $sequence = shift;
     my $coverage = shift;
 
-    my $nucleotide_coverage = Genome::RefCov::Reference::GC->create(
+    #$self->status_message('Loading GC Reference Coverage...');
+    my $nucleotide_coverage = $self->nucleotide_coverage;
+    $nucleotide_coverage->calculate_nucleotide_coverage(
         sequence => $sequence,
         coverage => $coverage,
     );
     unless ($nucleotide_coverage) {
         die('Failed to create GC coverage!');
     }
+    #$self->status_message('Finished loading GC Reference Coverage...');
     my $gc_hash_ref = $nucleotide_coverage->gc_hash_ref;
     return $gc_hash_ref;
 }
