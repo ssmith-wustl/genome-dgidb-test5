@@ -29,18 +29,8 @@ class Genome::Model::Tools::RefCov::ExomeCapture {
 
 sub execute {
     my $self = shift;
-    unless ($] > 5.012) {
-        die "Bio::DB::Sam requires perl 5.12!";
-    }
-    require Bio::DB::Sam;
-    # This is only necessary when run in parallel
-    $self->resolve_final_directory;
-
-    # This is only necessary when run in parallel or only an output_directory is defined in params(ie. no stats_file)
-    $self->resolve_stats_file;
-
-    unless ($self->print_standard_roi_coverage) {
-        die('Failed to print stats to file '. $self->stats_file);
+    unless ($self->print_roi_coverage) {
+        die('Failed to print ROI coverage!');
     }
     return 1;
 }

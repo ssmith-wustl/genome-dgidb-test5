@@ -123,6 +123,17 @@ class Genome::Model::Tools::RefCov {
             is_optional => 1,
             default_value => 0,
         },
+        merged_stats_file => {
+            is => 'Text',
+            doc => 'The final merged stats file only created if merge_by parameter defined',
+            is_optional => 1,
+        },
+        merge_by => {
+            is => 'Text',
+            doc => 'The level of granularity to merge coverage statistics.  Requires ROI file uses interval names like $GENE:$TRANSCRIPT:$TYPE:$ORDINAL:$DIRECTION',
+            is_optional => 1,
+            valid_values => ['exome','gene','transcript'],
+        },
     ],
     has_output => [
         stats_file => {
@@ -158,7 +169,7 @@ class Genome::Model::Tools::RefCov {
 };
 
 sub help_brief {
-    "Tools to run the Ref-Cov tookit.",
+    "Tools to run the RefCov tookit.",
 }
 
 sub help_synopsis {
@@ -169,26 +180,66 @@ EOS
 }
 
 sub help_detail {
-    return <<EOS
-Please add help detail!
-EOS
+'
+Output file format(STANDARD):
+[1] Region Name (column 4 of BED file)
+[2] Percent of Reference Bases Covered
+[3] Total Number of Reference Bases
+[4] Total Number of Covered Bases
+[5] Number of Missing Bases
+[6] Average Coverage Depth
+[7] Standard Deviation Average Coverage Depth
+[8] Median Coverage Depth
+[9] Number of Gaps
+[10] Average Gap Length
+[11] Standard Deviation Average Gap Length
+[12] Median Gap Length
+[13] Min. Depth Filter
+[14] Discarded Bases (Min. Depth Filter)
+[15] Percent Discarded Bases (Min. Depth Filter)
+
+OPTIONAL GC FIELDS:
+[1] G+C Reference Base Pair
+[2] G+C Percent of Reference
+[3] G+C Covered Base Pair
+[4] G+C Percent of Reference Covered
+[5] G+C Uncovered Base Pair
+[6] G+C Percent of Reference Uncovered
+
+OPTIONAL ROI NORMALIZED COVERAGE FIELD:
+[1] ROI Normalized Depth
+
+OPTIONAL GENOME NORMALIZED COVERAGE FIELD:
+[1] Genome Normalized Depth
+';
 }
 
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
     unless ($self) { return; }
+
+    unless ($] > 5.012) {
+        die "Bio::DB::Sam requires perl 5.12!";
+    }
+    require Bio::DB::Sam;
+
     if ($self->evaluate_gc_content) {
         unless ($self->reference_fasta) {
             die('In order to evaluate_gc_content a FASTA file of the reference genome must be provided');
         }
-        unless ($] > 5.012) {
-            die('Bio::DB::Sam requires perl 5.12!');
-        }
-        require Bio::DB::Sam;
     }
+    if ($self->merge_by) {
+        unless ($self->merged_stats_file) {
+            die('Please define a merged_stats_file in order to merge by '. $self->merge_by);
+        }
+    }
+    # This is only necessary when run in parallel
+    $self->resolve_final_directory;
+    $self->resolve_stats_file;
     return $self;
 }
+
 
 # NOTE: I doubt we ever support anything but BAM.  If we do, some common adaptor/iterator will be necessary to do something like $alignments->next_alignment
 sub _load_alignments {
@@ -481,12 +532,19 @@ sub merge_stats_by {
     # **NOTE**
     # Operation should be performed post print_standard_roi_coverage()
     # execution.
-    my @headers = $self->resolve_stats_file_headers;
-    my $stats_reader = Genome::Utility::IO::SeparatedValueReader->new(
+    my %params = (
         input   => $self->stats_file,
         separator => "\t",
-        headers => \@headers,
     );
+    my @headers;
+    unless ($self->print_headers){
+        @headers = $self->resolve_stats_file_headers;
+        $params{headers} = \@headers;
+    }
+    my $stats_reader = Genome::Utility::IO::SeparatedValueReader->new(%params);
+    unless (@headers) {
+        @headers = @{$stats_reader->headers};
+    }
     my %merge_by_stats;
     while (my $data = $stats_reader->next) {
         my $name = $data->{name};
@@ -617,7 +675,7 @@ sub resolve_stats_file_headers {
     return @headers;
 }
 
-sub print_standard_roi_coverage {
+sub print_roi_coverage {
     my $self = shift;
 
     my $regions = $self->roi;
@@ -674,6 +732,9 @@ sub print_standard_roi_coverage {
     $writer->output->close;
 
     Genome::Utility::FileSystem->copy_file($temp_stats_file, $self->stats_file);
+    if ($self->merge_by && $self->merged_stats_file) {
+        $self->merge_stats_by($self->merge_by,$self->merged_stats_file);
+    }
     return 1;
 }
 
