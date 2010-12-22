@@ -945,7 +945,7 @@ sub _process_sam_files {
         $self->status_message("Looks like there are unaligned reads not in the main input file.  ");
         my @input_files = ($sam_input_file, $unaligned_input_file);
         $self->status_message("Cat-ing the unaligned list $unaligned_input_file to the sam file $sam_input_file");
-        my $cat_rv = Genome::Utility::FileSystem->cat(input_files=>$unaligned_input_file,output_file=>$sam_input_file);
+        my $cat_rv = Genome::Utility::FileSystem->cat(input_files=>[$unaligned_input_file],output_file=>$sam_input_file,append_mode=>1);
         if ($cat_rv ne 1) {
             $self->error_message("Error during cat of alignment sam files! Return value $cat_rv");
             die $self->error_message;
