@@ -1,4 +1,4 @@
-package Genome::InstrumentData::Command::Dacc::UpdateLibrary;
+package Genome::Sample::Command::ImportDacc;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use Genome;
 use Data::Dumper 'Dumper';
 require XML::LibXML;
 
-class Genome::InstrumentData::Command::Dacc::UpdateLibrary {
+class Genome::Sample::Command::ImportDacc {
     is  => 'Command',
     has => [
         sra_sample_id => {
