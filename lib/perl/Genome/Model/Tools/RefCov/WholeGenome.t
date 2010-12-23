@@ -6,7 +6,6 @@ use warnings;
 use Test::More;
 use File::Compare;
 
-use lib '/gscuser/jwalker/git/genome/lib/perl';
 use above 'Genome';
 
 if ($] < 5.012) {
@@ -17,11 +16,7 @@ plan tests => 5;
 use_ok('Genome::Model::Tools::RefCov::WholeGenome');
 
 my $tmp_dir = File::Temp::tempdir('BioSamtools-RefCov-'.$ENV{USER}.'-XXXX',DIR => '/gsc/var/cache/testsuite/running_testsuites',CLEANUP => 1);
-#my $tmp_dir = '.';
-
-#my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-BioSamtools/RefCov';
-my $data_dir = '/gscuser/jwalker/git/genome/lib/perl/Genome/Model/Tools/RefCov';
-
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-RefCov-WholeGenome';
 my $expected_data_dir = $data_dir;
 
 # INPUTS
