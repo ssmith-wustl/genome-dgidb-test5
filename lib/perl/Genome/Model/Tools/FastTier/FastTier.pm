@@ -10,7 +10,7 @@ use File::Copy;
 class Genome::Model::Tools::FastTier::FastTier {
     is => 'Command',
     has => [
-        variant_file => {
+        variant_bed_file => {
             type => 'Text',
             is_input => 1,
         },
@@ -30,23 +30,23 @@ class Genome::Model::Tools::FastTier::FastTier {
             doc => 'This option tiers events in the highest tier possible, then removes it from the list of inputs to the next tier. If tiers overlap, this prevents events from showing up twice',
         },
         tier1_output => {
-            calculate_from => ['variant_file'],
-            calculate => q{ "$variant_file.tier1"; },
+            calculate_from => ['variant_bed_file'],
+            calculate => q{ "$variant_bed_file.tier1"; },
             is_output => 1,
         },
         tier2_output => {
-            calculate_from => ['variant_file'],
-            calculate => q{ "$variant_file.tier2"; },
+            calculate_from => ['variant_bed_file'],
+            calculate => q{ "$variant_bed_file.tier2"; },
             is_output => 1,
         },
         tier3_output => {
-            calculate_from => ['variant_file'],
-            calculate => q{ "$variant_file.tier3"; },
+            calculate_from => ['variant_bed_file'],
+            calculate => q{ "$variant_bed_file.tier3"; },
             is_output => 1,
         },
         tier4_output => {
-            calculate_from => ['variant_file'],
-            calculate => q{ "$variant_file.tier4"; },
+            calculate_from => ['variant_bed_file'],
+            calculate => q{ "$variant_bed_file.tier4"; },
             is_output => 1,
         },
         tier_file_location => {
@@ -95,11 +95,11 @@ EOS
 
 sub execute {
     my $self=shift;
-    unless(-s $self->variant_file) {
-        $self->error_message("The variant file you supplied: " . $self->variant_file . " appears to be 0 size. You need computer more better.");
+    unless(-s $self->variant_bed_file) {
+        $self->error_message("The variant file you supplied: " . $self->variant_bed_file . " appears to be 0 size. You need computer more better.");
         return;
     }
-    my ($variant_filename, $directory, undef) = fileparse($self->variant_file); 
+    my ($variant_filename, $directory, undef) = fileparse($self->variant_bed_file); 
 
     #if the user specified an alternate location for tier bed files, check and load them
     if(defined($self->tier_file_location)){
@@ -134,7 +134,7 @@ sub execute {
 
     if($self->indels){
         $input_file_temp = Genome::Utility::FileSystem->create_temp_file_path;
-        $self->modify_insertions($self->variant_file, $input_file_temp, '-');
+        $self->modify_insertions($self->variant_bed_file, $input_file_temp, '-');
 
         ####pindel 0 size insertion hack####i
         $tier1_temp = Genome::Utility::FileSystem->create_temp_file_path;
@@ -142,7 +142,7 @@ sub execute {
         $tier3_temp = Genome::Utility::FileSystem->create_temp_file_path;
         $tier4_temp = Genome::Utility::FileSystem->create_temp_file_path;
     } else {
-        $input_file_temp = $self->variant_file; 
+        $input_file_temp = $self->variant_bed_file; 
         $tier1_temp = $self->tier1_output;
         $tier2_temp = $self->tier2_output;
         $tier3_temp = $self->tier3_output;

@@ -198,7 +198,6 @@ sub run_system {
 	print STDERR "rerunnning $cmd\n";
 	$exit_code = system($cmd);
     }
-    #gmt nimblegen design-from-sv --sv-file /gscuser/ndees/no_filters/LUC1.capture --output-file /gscuser/ndees/no_filters/LUC1.nimblegen --count-file /gscuser/ndees/no_filters/LUC.count2
   
 
 

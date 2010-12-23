@@ -449,8 +449,6 @@ sub generate_report_detail
       
     my $tt = Template->new({
          ABSOLUTE => 1,
-        #INCLUDE_PATH => '/gscuser/jpeck/svn/pm2/Genome/Model/ReferenceAlignment/Report',
-        #INTERPOLATE  => 1,
     }) || die "$Template::ERROR\n";
 
     $self->status_message("processing template $template");

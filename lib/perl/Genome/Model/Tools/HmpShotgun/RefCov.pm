@@ -116,11 +116,6 @@ sub execute {
     	unlink($combined_file);
     }
     
-    #$self->status_message("Now counting reads per contig.");    
-    #my $cmd_count = "/gscuser/jwalker/svn/TechD/bio_db_sam/count_read_per_contig.pl ".$self->aligned_bam_file." > ".$readcount_file;
-    #my $rv_count = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd_count);
-    #$self->status_message("Done counting reads per contig.");
-    
     $self->status_message("Now combining ref cov stats at ".UR::Time->now);
     
     my $refcov_headers_file = "/gscmnt/sata409/research/mmitreva/databases/Bacterial_assemblies.Dec2009.headers_for_refcov.txt";
