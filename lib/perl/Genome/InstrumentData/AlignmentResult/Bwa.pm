@@ -200,10 +200,12 @@ sub _filter_samxe_output {
             return;
     }
     $self->status_message("Opened $sam_file_name.  Now streaming this through the read group addition.");
-    
+   
+    my $sam_out_fh = $self->_bam_output_fh; 
+#    my $sam_out_fh = $Genome::InstrumentData::AlignmentResult::BAM_FH;
     my $add_rg_cmd = Genome::Model::Tools::Sam::AddReadGroupTag->create(
             input_filehandle     => $sam_run_output_fh,
-            output_filehandle    => $sam_map_output_fh,
+            output_filehandle    => $sam_out_fh,
             read_group_tag => $self->instrument_data->id,
             pass_sam_headers => 0,
         );
@@ -215,6 +217,7 @@ sub _filter_samxe_output {
     
     $sam_run_output_fh->close;
     $sam_map_output_fh->close;
+
     return 1;
 }
 
@@ -343,4 +346,8 @@ sub fillmd_for_sam {
 
 sub requires_read_group_addition {
     return 0;
+}
+
+sub supports_streaming_to_bam {
+    return 1;
 }
