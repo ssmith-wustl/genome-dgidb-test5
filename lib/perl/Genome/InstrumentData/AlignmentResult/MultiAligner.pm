@@ -35,6 +35,9 @@ sub _run_aligner {
 
     for my $aln (@aligners) {
         my $aligner = $self->get_alignment_module($aln,@_) or die "Failed to make '$aln' alignment module: $!";
+
+        *Genome::InstrumentData::AlignmentResult::Bwa::supports_streaming_to_bam = sub { 0};
+    
         print join("\n", ('-=' x 20, "Starting $aln alignment",'-=' x 20)),"\n";
         $aligner->_run_aligner(@_);
         $self->any_fillmd(1) if $aligner->fillmd_for_sam;
@@ -142,3 +145,6 @@ sub _check_read_count {
     return 1;
 }
 
+sub supports_streaming_to_bam {
+    0;
+}
