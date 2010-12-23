@@ -101,6 +101,15 @@ sub __errors__ {
     my $self = shift;
     my @tags = $self->SUPER::__errors__();
 
+    # this will die on circular links
+    eval { my $coords = $self->coordinates_from(); };
+    if ($@) {
+        push @tags, UR::Object::Tag->create(
+            type => 'error',
+            properties => ['derived_from'],
+            desc => $@);
+    }
+
     if (defined $self->derived_from and $self->derived_from->model->id != $self->model->id) {
         push @tags, UR::Object::Tag->create(
             type => 'error',
@@ -149,6 +158,12 @@ sub coordinates_from {
         $seen{$from->id} = 1;
     }
     return $from;
+}
+
+# check compatibility with another reference sequence build
+sub is_compatible_with {
+    my ($self, $rsb) = @_;
+    return 1 if $self->coordinates_from()->id == $rsb->coordinates_from()->id;
 }
 
 sub __display_name__ {
