@@ -352,13 +352,6 @@ sub instrument_data_assignments {
     return @idas;
 }
 
-sub get_alignment_bams {
-    my $self = shift;
-    my @alignments = map { $self->model->processing_profile->results_for_instrument_data_assignment($_) }
-        $self->instrument_data_assignments;
-    return map { $_->alignment_bam_file_paths } @alignments;
-}
-    
 sub instrument_data_count {
     my $self = shift;
 
@@ -1452,7 +1445,7 @@ sub delete {
     my $keep_build_directory = $params{keep_build_directory};
 
     # Abandon
-    $self->status_message("\nAbandoning events associated with build");
+    $self->status_message("Abandoning events associated with build");
     unless ( $self->_abandon_events ) {
         $self->error_message(
             "Unable to delete build (".$self->id.") because the events could not be abandoned"
@@ -1461,14 +1454,14 @@ sub delete {
     }
     
     # Delete all associated objects
-    $self->status_message("\nDeleting other objects associated with build");
+    $self->status_message("Deleting other objects associated with build");
     my @objects = $self->get_all_objects;
     for my $object (@objects) {
         $object->delete;
     }
 
     # Re-point instrument data assigned first on this build to the next build.
-    $self->status_message("\nPointing instrument data first assigned to this build to a subsequent build, if possible");
+    $self->status_message("Pointing instrument data first assigned to this build to a subsequent build, if possible");
     my ($next_build,@subsequent_builds) = Genome::Model::Build->get(
         model_id => $self->model_id,
         id => {
@@ -1486,7 +1479,7 @@ sub delete {
     }
 
     if ($self->data_directory && -e $self->data_directory && !$keep_build_directory) {
-        $self->status_message("\nRemoving build data directory at " . $self->data_directory);
+        $self->status_message("Removing build data directory at " . $self->data_directory);
         unless (rmtree($self->data_directory, { error => \my $remove_errors })) {
             if (@$remove_errors) {
                 my $error_summary;
@@ -1506,18 +1499,18 @@ sub delete {
         }
     }
     else {
-        $self->status_message("\nNot removing build data directory at " . $self->data_directory);
+        $self->status_message("Not removing build data directory at " . $self->data_directory);
     }
 
     my $disk_allocation = $self->disk_allocation;
     if ($disk_allocation && !$keep_build_directory) {
-        $self->status_message("\nDeallocating build directory");
+        $self->status_message("Deallocating build directory");
         unless ($disk_allocation->deallocate) {
              $self->warning_message('Failed to deallocate disk space.');
         }
     }
     else {
-        $self->status_message("\nNot deallocating build directory since it was not removed or no allocation was found");
+        $self->status_message("Not deallocating build directory since it was not removed or no allocation was found");
     }
     
     # FIXME Don't know if this should go here, but then we would have to call success and abandon through the model

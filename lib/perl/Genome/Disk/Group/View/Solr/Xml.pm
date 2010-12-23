@@ -20,10 +20,6 @@ class Genome::Disk::Group::View::Solr::Xml {
                     position => 'title',
                 },
                 {
-                    name => 'user_name',
-                    position => 'content',
-                },
-                {
                     name => 'group_name',
                     position => 'content',
                 }
@@ -31,5 +27,12 @@ class Genome::Disk::Group::View::Solr::Xml {
         }
     ]
 };
+
+# when included in class definition, this fairly regularly
+# results in a segfault:
+#                {
+#                    name => 'user_name',
+#                    position => 'content',
+#                },
 
 1;

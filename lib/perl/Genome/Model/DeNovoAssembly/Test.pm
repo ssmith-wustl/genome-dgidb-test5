@@ -67,7 +67,6 @@ sub get_mock_processing_profile {
     Genome::Utility::TestBase->mock_methods(
         $pp,
         (qw/ 
-            class_for_assembler
             assembler_params_as_hash
             _validate_assembler_and_params
 
@@ -79,28 +78,23 @@ sub get_mock_processing_profile {
 
             assembler_base_name
 
-            soap_de_novo_assemble_params_to_derive_from_build
-            velvet_one_button_params_to_derive_from_build
-
-            soap_de_novo_assemble_pp_params_for_build 
-            velvet_one_button_pp_params_for_build
-
-            sanitized_assembler_params
-            sanitized_soap_de_novo_assemble_params
-            sanitized_velvet_one_button_params
-
             assembler_base_name
             assemble_build
             assembler_class
 
             assembler_accessor_name
-            assembler_pp_params_for_build
-            assembler_params_to_derive_from_build
 
             get_number_of_cpus
 
+soap_de_novo_assemble_params
+velvet_one_button_params
+
             soap_de_novo_assemble_bsub_rusage
             velvet_one_button_bsub_rusage
+
+valid_soap_import_seq_platforms
+valid_soap_de_novo_assemble_seq_platforms
+valid_velvet_one_button_seq_platforms
             /),
         );
 

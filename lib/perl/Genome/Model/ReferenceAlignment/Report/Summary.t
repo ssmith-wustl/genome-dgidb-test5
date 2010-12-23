@@ -36,8 +36,6 @@ ok($build, "build found with id $build_id");
 
 my $r = Genome::Model::ReferenceAlignment::Report::Summary->create(
     build_id => $build_id,
-    #report_template => '/gscuser/jpeck/svn/pm2/Genome/Model/ReferenceAlignment/Report/build_report_template_html.tt2',
-    #report_template => '/gscuser/jpeck/svn/pm2/Genome/Model/ReferenceAlignment/Report/build_report_template_txt.tt2',
 );
 ok($r, "created a new report");
 

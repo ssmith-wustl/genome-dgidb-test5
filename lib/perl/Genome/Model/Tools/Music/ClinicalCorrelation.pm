@@ -19,8 +19,6 @@ Version 1.01
 
 =cut
 
-our $VERSION = '1.01';
-
 class Genome::Model::Tools::Music::ClinicalCorrelation {
     is => 'Command',                       
     has => [ 

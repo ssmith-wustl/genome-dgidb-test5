@@ -1063,9 +1063,6 @@ sub test01_generate_report : Test(2) {
     
     my $report = $self->generator->generate_report;
     ok($report, 'Generated report');
-    #print Dumper([map{$report->$_} (qw/ name description date generator /)]);
-    #print Dumper($report->xml_string);
-    #$report->save('/gscuser/ebelter/Desktop', 1);
 
     return 1;
 }

@@ -34,7 +34,10 @@ sub help_detail {
 
 sub help_synopsis {
     return <<HELP;
-    genome model-group create --name "Example Group Name"
+    genome model-group create "Example Group Name" [MODELS]
+
+  Example:
+    genome model-group create "TCGA-UCEC-build36-SSv2broad-ckandoth" 2868304369 2868304371 2868304372 ...
 HELP
 }
 

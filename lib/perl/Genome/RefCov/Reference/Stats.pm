@@ -98,45 +98,41 @@ sub _load_stats {
             }
         }
     } else {
-        my $regions = Genome::RefCov::ROI::Bed->create(
+        my $regions = Genome::RefCov::ROI::BedLite->create(
             file => $self->bed_file,
         );
         unless ($regions) {
             die('Failed to load BED region file '. $self->bed_file );
         }
-        my @chromosomes = $regions->chromosomes;
-        for my $chrom (@chromosomes) {
-            my @regions = $regions->chromosome_regions($chrom);
-            for my $region (@regions) {
-                my $id = $region->name;
-                my $target = $region->chrom;
-                my $start = $region->start;
-                my $end = $region->end;
-                my $length = $region->length;
+        while (my $region = $regions->next_region) {
+            my $id = $region->{name};
+            my $target = $region->{chrom};
+            my $start = $region->{start};
+            my $end = $region->{end};
+            my $length = $region->{length};
 
-                # Here we get the $tid from the region chromosome
-                my $tid = $target_name_index{$target};
-                unless (defined $tid) { die('Failed to get tid for target '. $target); }
-
-                # low-level API uses zero based coordinates
-                # all regions should be zero based, but for some reason the correct length is never returned
-                # the API must be expecting BED like inputs where the start is zero based and the end is 1-based
-                # you can see in the docs for the low-level Bio::DB::BAM::Alignment class that start 'pos' is 0-based,but calend really returns 1-based
-                my $coverage = $index->coverage( $bam, $tid, $start-1, $end);
-                if ($self->minimum_depth) {
-                    my @coverage = @{$coverage};
-                    my @sorted_coverage = sort {$a <=> $b} (@coverage);
-                    my $depth = shift(@sorted_coverage);
-                    while (defined($depth) && $depth < $self->minimum_depth) {
-                        $depth = shift(@sorted_coverage);
-                    }
-                    if ($depth) {
-                        unshift(@sorted_coverage,$depth);
-                    }
-                    $stats->add_data(@sorted_coverage);
-                } else {
-                    $stats->add_data($coverage);
+            # Here we get the $tid from the region chromosome
+            my $tid = $target_name_index{$target};
+            unless (defined $tid) { die('Failed to get tid for target '. $target); }
+            
+            # low-level API uses zero based coordinates
+            # all regions should be zero based, but for some reason the correct length is never returned
+            # the API must be expecting BED like inputs where the start is zero based and the end is 1-based
+            # you can see in the docs for the low-level Bio::DB::BAM::Alignment class that start 'pos' is 0-based,but calend really returns 1-based
+            my $coverage = $index->coverage( $bam, $tid, $start-1, $end);
+            if ($self->minimum_depth) {
+                my @coverage = @{$coverage};
+                my @sorted_coverage = sort {$a <=> $b} (@coverage);
+                my $depth = shift(@sorted_coverage);
+                while (defined($depth) && $depth < $self->minimum_depth) {
+                    $depth = shift(@sorted_coverage);
                 }
+                if ($depth) {
+                    unshift(@sorted_coverage,$depth);
+                }
+                $stats->add_data(@sorted_coverage);
+            } else {
+                $stats->add_data($coverage);
             }
         }
     }

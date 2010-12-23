@@ -5,6 +5,7 @@ use warnings;
 
 use Test::More tests => 3;
 use DBI;
+use above 'Genome'; #Otherwise we're testing the deployed code instead when running the test by hand
 
 our @dbi_classes = ();
 ## I want to trap any call to DBI->connect

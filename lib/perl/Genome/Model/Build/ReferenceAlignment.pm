@@ -57,6 +57,13 @@ sub create {
     return $self;
 }
 
+sub get_alignment_bams {
+    my $self = shift;
+    my @alignments = map { $self->model->processing_profile->results_for_instrument_data_assignment($_) }
+        $self->instrument_data_assignments;
+    return map { $_->alignment_bam_file_paths } @alignments;
+}
+
 sub calculate_estimated_kb_usage {
     my $self = shift;
     my $model = $self->model;
