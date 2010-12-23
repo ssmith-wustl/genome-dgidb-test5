@@ -7,7 +7,7 @@ BEGIN {
 
 use above "Genome";
 use Data::Dumper;
-use Test::More tests => 36;
+use Test::More tests => 37;
 use_ok('Genome::Model::Build::ReferenceSequence');
 
 # create a test annotation build and a few reference sequence builds to test compatibility with
@@ -27,6 +27,7 @@ my %rbuilds = create_reference_builds(\@species_names, \@versions);
 # 1 -> 2
 $rbuilds{'human'}[1]->derived_from($rbuilds{'human'}[0]);
 
+ok(!$rbuilds{'human'}[0]->is_compatible_with(), 'build is not compatible with null');
 ok($rbuilds{'human'}[0]->is_derived_from($rbuilds{'human'}[0]), 'build is derived from itself');
 ok($rbuilds{'human'}[0]->is_compatible_with($rbuilds{'human'}[0]), 'build is compatible with itself');
 ok($rbuilds{'human'}[0]->is_derived_from($rbuilds{'human'}[0]), 'build w/no parent gets coordinates_from itself');

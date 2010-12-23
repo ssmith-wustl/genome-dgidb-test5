@@ -163,6 +163,7 @@ sub coordinates_from {
 # check compatibility with another reference sequence build
 sub is_compatible_with {
     my ($self, $rsb) = @_;
+    return if !defined $rsb;
     return 1 if $self->coordinates_from()->id == $rsb->coordinates_from()->id;
 }
 
