@@ -105,11 +105,11 @@ sub _load_stats {
             die('Failed to load BED region file '. $self->bed_file );
         }
         while (my $region = $regions->next_region) {
-            my $id = $region->name;
-            my $target = $region->chrom;
-            my $start = $region->start;
-            my $end = $region->end;
-            my $length = $region->length;
+            my $id = $region->{name};
+            my $target = $region->{chrom};
+            my $start = $region->{start};
+            my $end = $region->{end};
+            my $length = $region->{length};
 
             # Here we get the $tid from the region chromosome
             my $tid = $target_name_index{$target};

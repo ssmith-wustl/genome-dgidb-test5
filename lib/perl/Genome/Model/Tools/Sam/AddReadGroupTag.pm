@@ -110,7 +110,10 @@ sub execute {
                 }    
             }
 
-    $output_fh->close;
+    # don't close the file if we didn't open it!
+    unless ($self->output_filehandle) {
+        $output_fh->close;
+    }
     $now = UR::Time->now;
     $self->status_message("<<< Completed add read tag at $now.  Processed $rg_added_records SAM records.");
  

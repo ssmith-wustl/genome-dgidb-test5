@@ -123,7 +123,7 @@ sub execute {                               # replace with real execution logic.
 		my $tumor_pileup = "samtools view -b -u -q 10 $tumor_bam | samtools pileup -f $reference -";
 
 		
-		my $cmd = $self->java_command_line(" <\($normal_pileup\) <\($tumor_pileup\) --output-snp $output_snp --output-indel $output_indel $varscan_params");
+		my $cmd = $self->java_command_line("somatic <\($normal_pileup\) <\($tumor_pileup\) --output-snp $output_snp --output-indel $output_indel $varscan_params");
 
 		## Run VarScan ##
 		if($self->heap_space)

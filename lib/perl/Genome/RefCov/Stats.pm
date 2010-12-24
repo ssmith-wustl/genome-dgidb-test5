@@ -86,6 +86,18 @@ class Genome::RefCov::Stats {
     },
 };
 
+sub create {
+    my $class = shift;
+    my %params = @_;
+    my $coverage = delete($params{coverage});
+    my $self = $class->SUPER::create(%params);
+    if ($coverage) {
+        $self->coverage($coverage);
+        $self->_main_calculation_code;
+    }
+    return $self;
+}
+
 sub calculate_coverage_stats {
     my $self = shift;
     my %params = @_;

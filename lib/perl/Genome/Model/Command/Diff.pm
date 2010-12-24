@@ -17,21 +17,19 @@ class Genome::Model::Command::Diff {
         },
         first_revision => {
             is => 'Text',
-            doc => 'Path to revision that one build was run on (eg, /gsc/scripts/opt/passed-model-tests/genome-###)',
+            doc => 'Path to revision that one build was run on (eg, /gsc/scripts/opt/genome/current/stable)',
         },
-    ],
-    has_optional => [
         second_revision => {
             is => 'Text',
-            doc => 'Path to revision that other build was run on, defaults to /gsc/scripts/opt/genome-stable',
+            doc => 'Path to revision that other build was run on'
         },
     ],
 };
 
 sub hudson_build_from_revision {
     my ($self, $revision) = @_;
-    if ($revision =~ /(genome-\d+(-fix\d+)?)/) {
-        return $1 . '/lib/perl';
+    if ($revision =~ /(genome-\d+)/) {
+        return $1;
     }
     return $revision;
 }
@@ -47,22 +45,15 @@ sub check_and_fix_revision {
 sub execute { 
     my $self = shift;
 
-    my $first_revision = $self->check_and_fix_revision($self->first_revision);
+    my $first_revision = $self->first_revision;
+    $first_revision = readlink $first_revision if -l $first_revision;
+    $first_revision = $self->check_and_fix_revision($first_revision);
     confess "Revision not found at $first_revision!" unless -d $first_revision;
 
-    # Determine what the current genome-stable symlink points at if no second revision is given
     my $second_revision = $self->second_revision;
-    unless (defined $second_revision) {
-        my $stable_target = readlink '/gsc/scripts/opt/genome-stable';
-        confess 'Could not readlink genome-stable symlink!' unless defined $stable_target;
-        $second_revision = '/gsc/scripts/opt/' . $stable_target . '/lib/perl';
-        confess "No revision found at $second_revision!" unless -d $second_revision;
-        $self->status_message("Not given second revision, using genome-stable at $second_revision");
-    }
-    else {
-        confess "No revision found at $second_revision!" unless -d $second_revision;
-    }
+    $second_revision = readlink $second_revision if -l $second_revision;
     $second_revision = $self->check_and_fix_revision($second_revision);
+    confess "No revision found at $second_revision!" unless -d $second_revision;
 
     if ($first_revision eq $second_revision) {
         confess "Comparing builds from $first_revision and $second_revision... these are the same, no point in comparing.";
@@ -89,8 +80,8 @@ sub execute {
         my ($first_build, $second_build) = $self->find_builds_for_revisions($model, $fixed_first_revision, $fixed_second_revision);
         unless ($first_build and $second_build) {
             my $msg = "BUILD NOT FOUND $type_string $model_id: Could not find build for model $model_id using revision:";
-            $msg .= ' ' . $first_revision unless $first_build;
-            $msg .= ' ' . $second_revision unless $second_build;
+            $msg .= ' ' . $fixed_first_revision unless $first_build;
+            $msg .= ' ' . $fixed_second_revision unless $second_build;
             $self->warning_message($msg);
             next;
         }
@@ -119,7 +110,7 @@ sub execute {
 
 sub find_builds_for_revisions {
     my ($self, $model, $first_revision, $second_revision) = @_;
-    my @builds = sort { $b->build_id <=> $a->build_id } $model->builds;
+    my @builds = sort { $b->build_id <=> $a->build_id } grep { $_->status eq 'Succeeded' } $model->builds;
     my ($first_build, $second_build);
     for my $build (@builds) {
         last if $first_build and $second_build;

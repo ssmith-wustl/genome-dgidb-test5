@@ -9,9 +9,13 @@ use File::Path;
 use YAML;
 use Time::HiRes;
 use POSIX qw(ceil);
+use File::Copy;
 
 use warnings;
 use strict;
+
+
+our $BAM_FH;
 
 class Genome::InstrumentData::AlignmentResult {
     is_abstract => 1,
@@ -247,6 +251,7 @@ class Genome::InstrumentData::AlignmentResult {
         _input_fastq_pathnames => { is => 'ARRAY', is_optional => 1 },
         _input_bfq_pathnames   => { is => 'ARRAY', is_optional => 1 },
         _fastq_read_count      => { is => 'Number',is_optional => 1 },
+        _bam_output_fh         => { is => 'IO::File',is_optional => 1 },
     ],
 };
 
@@ -363,10 +368,14 @@ sub create {
     }
 
     # STEP 8: CREATE BAM IN STAGING DIRECTORY
-    $self->status_message("Constructing a BAM file (if necessary)...");
-    unless( $self->create_BAM_in_staging_directory()) {
-        $self->error_message("Call to create_BAM_in_staging_directory failed.\n");
-        die $self->error_message;
+    if ($self->supports_streaming_to_bam) {
+        $self->close_out_streamed_bam_file;
+    } else {
+        $self->status_message("Constructing a BAM file (if necessary)...");
+        unless( $self->create_BAM_in_staging_directory()) {
+            $self->error_message("Call to create_BAM_in_staging_directory failed.\n");
+            die $self->error_message;
+        }
     }
 
     # STEP 9-10, validate BAM file (if necessary)
@@ -410,7 +419,6 @@ sub create {
 sub prepare_scratch_sam_file {
     my $self = shift;
     
-    
     my $scratch_sam_file = $self->temp_scratch_directory . "/all_sequences.sam";
     
     unless($self->construct_groups_file) {
@@ -436,6 +444,31 @@ sub prepare_scratch_sam_file {
     }
     else {
         $self->status_message("Cat of sam files successful.");
+    }
+    
+    if ($self->supports_streaming_to_bam) {
+        my $ref_list  = $self->reference_build->full_consensus_sam_index_path($self->samtools_version);
+        my $sam_cmd = sprintf("| %s view -S -b -o %s - ", Genome::Model::Tools::Sam->path_for_samtools_version($self->samtools_version), $self->temp_staging_directory . "/all_sequences.bam");
+        $self->status_message("Opening $sam_cmd");
+
+        $self->_bam_output_fh(IO::File->new($sam_cmd));
+        unless ($self->_bam_output_fh()) {
+            $self->error_message("We support streaming for this alignment module, but can't open a pipe to $sam_cmd");
+            die $self->error_message;
+        }
+
+        my $temp_fh = IO::File->new($scratch_sam_file);
+        unless ($temp_fh) {
+            $self->error_message("Can't open temp sam header for reading.");
+            die $self->error_message;
+        }
+
+        binmode $temp_fh;
+        while (my $line = <$temp_fh>) {
+            $self->_bam_output_fh->print($line);
+        }
+
+
     }
     
     
@@ -584,15 +617,49 @@ sub extract_fastqs_and_run_aligner {
     return 1;
 }
 
+
+
+
+sub close_out_streamed_bam_file {
+    my $self = shift;
+    $self->status_message("Closing bam file...");
+    $self->_bam_output_fh->flush;
+    $self->_bam_output_fh->close;
+    $self->_bam_output_fh(undef);
+
+    $self->status_message("Sorting by name to do fixmate...");
+    my $bam_file = $self->temp_staging_directory . "/all_sequences.bam";
+    my $samtools = Genome::Model::Tools::Sam->path_for_samtools_version($self->samtools_version);
+
+    my $tmp_file = $bam_file.'.sort';
+    #402653184 bytes = 3 Gb 
+    my $rv = system "$samtools sort -n -m 402653184 $bam_file $tmp_file";
+    $self->error_message("Sort by name failed") and return if $rv or !-s $tmp_file.'.bam';
+
+    $self->status_message("Now running fixmate");
+    $rv = system "$samtools fixmate $tmp_file.bam $tmp_file.fixmate";
+    $self->error_message("fixmate failed") and return if $rv or !-s $tmp_file.'.fixmate';
+    unlink "$tmp_file.bam";
+
+    $self->status_message("Now putting things back in chr/pos order");
+    $rv = system "$samtools sort -m 402653184 $tmp_file.fixmate $tmp_file.fix";
+    $self->error_message("Sort by position failed") and return if $rv or !-s $tmp_file.'.fix.bam';
+    
+    unlink "$tmp_file.fixmate";
+    unlink $bam_file;
+
+    move "$tmp_file.fix.bam", $bam_file;
+    return 1;
+}
+
 sub create_BAM_in_staging_directory {
     my $self = shift;
     # STEP 9: CONVERT THE ALL_SEQUENCES.SAM into ALL_SEQUENCES.BAM
-    $self->status_message("Building a combined BAM file...");
     unless($self->_process_sam_files) {
         $self->error_message("Failed to process sam files into bam files. " . $self->error_message);
         die $self->error_message;
     }
-    
+
     return 1;
 }
 
@@ -1806,6 +1873,10 @@ sub delete {
     $self->SUPER::delete(@_);
 }
 =cut
+
+sub supports_streaming_to_bam {
+    0;
+}
 
 1;
 
