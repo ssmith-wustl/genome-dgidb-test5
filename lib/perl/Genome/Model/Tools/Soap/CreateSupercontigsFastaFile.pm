@@ -47,7 +47,9 @@ sub execute {
         $self->error_message("Failed to find assembly directory: ".$self->assembly_directory);
         return;
     }
-    my $out_file = ($self->output_file) ? $self->output_file : $self->assembly_directory.'/edit_dir/supercontigs.fasta';
+
+    my $out_file = ( $self->output_file ) ? $self->output_file : $self->supercontigs_fasta_file;
+
     my $in = Bio::SeqIO->new(-format => 'fasta', -file => $self->scaffold_fasta_file);
     my $out = Bio::SeqIO->new(-format => 'fasta', -file => '>'.$out_file);
 

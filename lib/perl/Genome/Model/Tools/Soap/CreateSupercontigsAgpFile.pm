@@ -49,8 +49,9 @@ sub execute {
         return;
     }
 
-    my $out_file = ($self->output_file) ? $self->output_file : $self->assembly_directory.'/edit_dir/supercontigs.agp';
-    #unlink $self->assembly_directory.'/edit_dir/supercontigs.agp';
+    #my $out_file = ($self->output_file) ? $self->output_file : $self->assembly_directory.'/edit_dir/supercontigs.agp';
+    my $out_file = ($self->output_file) ? $self->output_file : $self->supercontigs_agp_file;
+
     unlink $out_file;
     my $fh = Genome::Utility::FileSystem->open_file_for_writing($out_file);
 
