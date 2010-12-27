@@ -8,7 +8,7 @@ use Genome;
 use Data::Dumper;
 
 class Genome::Model::Tools::Soap::Stats {
-    is => 'Command',
+    is => 'Genome::Model::Tools::Soap',
     has => [
 	assembly_directory => {
 	    is => 'Text',
@@ -30,20 +30,15 @@ class Genome::Model::Tools::Soap::Stats {
 	    default_value => 300,
 	    doc => 'Cutoff value for major contig length',
 	},
-	input_fastq_files => {
-	    is => 'Text',
-	    is_many => 1,
-	    doc => 'Input fastq files for the assembly',
-	},
-	contigs_bases_file => {
-	    is => 'Text',
-	    is_optional => 1,
-	    doc => 'Input contigs bases file for the assembly',
-	},
 	output_file => {
 	    is => 'Text',
 	    is_optional => 1,
 	    doc => 'Stats output file',
+	},
+	remove_output_files => {
+	    is => 'Boolean',
+	    is_optional => 1,
+	    doc => 'Option to remove files created to derive stats',
 	}
     ],
 };
@@ -67,6 +62,13 @@ EOS
 
 sub execute {
     my $self = shift;
+
+    #create edit_dir
+    unless ( $self->create_edit_dir ) {
+	$self->error_message("Failed to create edit_dir");
+	return;
+    }
+
     #get contig/supercontig contig lengths
     my $counts = $self->parse_contigs_bases_file;
 
@@ -82,7 +84,7 @@ sub execute {
 	$text .= $self->create_contiguity_stats ($counts, $q20_counts, $type, $t1, $t2);
     };
 
-    my $stats_file = ($self->output_file) ? $self->output_file : $self->assembly_directory.'/edit_dir/stats.txt';
+    my $stats_file = ($self->output_file) ? $self->output_file : $self->stats_file;
     unlink $stats_file if -e $stats_file;
     my $fh = Genome::Utility::FileSystem->open_file_for_writing($stats_file);
     $fh->print($text);
@@ -90,6 +92,11 @@ sub execute {
 
     print $text;
 
+    #remove files if this is run from report
+    if ( $self->remove_output_files ) {
+	unlink $self->contigs_bases_file;
+    }
+    
     return 1;
 }
 
@@ -124,12 +131,7 @@ sub _resolve_tier_values {
 	$t2 = $self->second_tier;
     }
     else {
-	my $contigs_bases_file = ($self->contigs_bases_file) ?
-	    $self->contigs_bases_file : $self->assembly_directory.'/edit_dir/contigs.bases';
-	unless (-s $contigs_bases_file) {
-	    $self->error_message("Failed to find file: $contigs_bases_file");
-	}
-	my $est_genome_size = -s $contigs_bases_file;
+	my $est_genome_size = -s $self->contigs_bases_file;
 
 	$t1 = int ($est_genome_size * 0.2);
 	$t2 = int ($est_genome_size * 0.2);
@@ -142,8 +144,19 @@ sub parse_contigs_bases_file {
 
     my $counts = {};
     my ($supercontig_number, $contig_number);
-    my $contigs_bases_file = ($self->contigs_bases_file) ?
-	$self->contigs_bases_file : $self->assembly_directory.'/edit_dir/contigs.bases';
+
+    my $contigs_bases_file = $self->contigs_bases_file;
+
+    unless ( -s $contigs_bases_file ) {#create it
+	my $create =  Genome::Model::Tools::Soap::CreateContigsBasesFile->create(
+	    assembly_directory => $self->assembly_directory,
+	    );
+	unless ( $create->execute ) {
+	    $self->error_message("Failed to create contigs.bases file");
+	    return;
+	}
+    }
+
     my $io = Bio::SeqIO->new(-format => 'fasta', -file => $contigs_bases_file);
     while (my $seq = $io->next_seq) {
 	$counts->{total_contig_number}++;
@@ -309,33 +322,17 @@ sub create_contiguity_stats {
     my $q20_ratio = 0;                  my $t1_q20_ratio = 0;
     my $t2_q20_ratio = 0;               my $t3_q20_ratio = 0;
     my $major_contig_q20_ratio = 0;
-    
-    #if ($self->assembler eq 'Velvet') {
-	$total_q20_bases = 'NA';
-	$q20_ratio = 'NA';
-	$major_contig_q20_bases = 'NA';
-	$major_contig_q20_ratio = 'NA';
-	$total_t1_q20_bases = 'NA';
-	$total_t2_q20_bases = 'NA';
-	$total_t3_q20_bases = 'NA';
-	$t1_q20_ratio = 'NA';
-	$t2_q20_ratio = 'NA';
-	$t3_q20_ratio = 'NA';
-    #}
-    #else {
-	#$q20_ratio = int ($total_q20_bases * 1000 / $cumulative_length) / 10;
-	#$major_contig_q20_ratio = int ($major_contig_q20_bases * 1000 / $major_contig_bases) / 10;
 
-	#$t1_q20_ratio = sprintf ("%0.1f", $total_t1_q20_bases * 100 / $total_t1_bases)
-	    #if $total_t1_bases > 0; #else 0
-
-	#$t2_q20_ratio = sprintf ("%0.1f", $total_t2_q20_bases * 100 / $total_t2_bases)
-	    #if $total_t2_bases > 0;
-
- 	#$t3_q20_ratio = sprintf ("%0.1f", $total_t3_q20_bases * 100 / $total_t3_bases)
-	    #if $total_t3_bases > 0;
-    #}
-
+    $total_q20_bases = 'NA';
+    $q20_ratio = 'NA';
+    $major_contig_q20_bases = 'NA';
+    $major_contig_q20_ratio = 'NA';
+    $total_t1_q20_bases = 'NA';
+    $total_t2_q20_bases = 'NA';
+    $total_t3_q20_bases = 'NA';
+    $t1_q20_ratio = 'NA';
+    $t2_q20_ratio = 'NA';
+    $t3_q20_ratio = 'NA';
 
     my $type_name = ucfirst $type;
     my $text = "\n*** Contiguity: $type_name ***\n".
@@ -402,13 +399,10 @@ sub _get_input_read_and_bases_counts {
     my $self = shift;
     my $read_count = 0;
     my $base_count = 0;
-    foreach my $fastq ($self->input_fastq_files) {
-	unless (-s $fastq) {
-	    $self->error_message("Failed to find fine: $fastq");
-	    return;
-	}
+
+    for my $fastq( @{$self->assembly_input_fastq_files} ) {
 	my $io = Genome::Model::Tools::FastQual::FastqReader->create(file => $fastq);
-	while (my $seq = $io->next) { #just getting seq
+	while (my $seq = $io->next) { #just getting number of reads
 	    $read_count++;
 	    $base_count += length $seq->{seq};
 	}
