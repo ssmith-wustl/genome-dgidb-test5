@@ -7,7 +7,7 @@ use Genome;
 use File::Basename;
 
 class  Genome::Model::Tools::Soap::FastaToAgp {
-    is => 'Command',
+    is => 'Genome::Model::Tools::Soap',
     has => [
         scaffold_size_cutoff => {
             is => 'Integer',
@@ -38,9 +38,7 @@ class  Genome::Model::Tools::Soap::FastaToAgp {
         },
     ],
     has_optional_transient => [
-	_output_dir          => { is => 'Text', },
-	_scaffold_fasta_file => { is => 'Text', },
-	_file_prefix         => { is => 'Text', },
+#	_file_prefix         => { is => 'Text', },
     ],
 };
 
@@ -56,29 +54,36 @@ EOS
 
 sub execute {
     my $self = shift;
-
-    #derive and set transient params
-    unless ( $self->_validate_and_set_params ) {
-	$self->error_message("Failed to set tools transient params");
-	return;
-    }
-
+    
     #get version of script
     my $script = $self->_full_path_to_version_script;
 
+    #input files
+    my $scaffold_fasta_file = ( $self->scaffold_fasta_file ) ? $self->scaffold_fasta_file : $self->assembly_scaffold_fasta_file;
+
+    #output directory
+    my $output_dir = ($self->output_dir) ? $self->output_dir : $self->assembly_directory;
+    Genome::Utility::FileSystem->create_directory( $output_dir ) unless -d $output_dir;
+
+    #output file prefix
+    my $file_prefix = ( $self->file_prefix ) ? $self->file_prefix : $self->assembly_file_prefix;
+
     #create script command string
-    my $command = 'perl '.$script.' -i '.$self->_scaffold_fasta_file.' -o '.$self->_output_dir;
+    my $command = 'perl '.$script.' -i '.$scaffold_fasta_file.' -o '.$output_dir;
     $command .= ' -size '.$self->scaffold_size_cutoff if $self->scaffold_size_cutoff;
-    $command .= ' -name '.$self->_file_prefix;# if $self->output_file_prefix;
+    $command .= ' -name '.$file_prefix;
 
     $self->status_message("Running fasta2agp with command: $command");
 
     system("$command"); #script has no return value
 
     #check for expected output files
-    unless ( $self->_check_output_files ) {
-	$self->error_message("Failed to create all expected output files");
-	return;
+    for my $file_ext ( qw/ contigs.fa agp scaffolds.fa / ) {
+	my $file = $output_dir.'/'.$file_prefix.'.'.$file_ext;
+	unless ( -e $file ) {
+	    $self->error_message("Failed to find output file: $file");
+	    return;
+	}
     }
 
     return 1;
@@ -103,91 +108,6 @@ sub _full_path_to_version_script {
 
 sub _script_name {
     return 'fasta2agp.pl';
-}
-
-sub _validate_and_set_params {
-    my $self = shift;
-
-    for my $param ( qw/ scaffold_fasta_file file_prefix output_dir / ) {
-	my $method = '_set_' . $param .'_param';
-	unless ( $self->$method ) {
-	    $self->error_message("Failed to set and validate tool param: $param");
-	    return;
-	}
-    }
-
-    return 1;
-}
-
-sub _set_scaffold_fasta_file_param {
-    my $self = shift;
-
-    my @files = glob( $self->assembly_directory."/*scafSeq" );
-    
-    unless ( @files ) {
-	$self->error_message("Did not find any *scafSeq files in assembly directory: ".$self->assembly_directory);
-	return;
-    }
-
-    unless ( scalar @files == 1 ) {
-	$self->error_message("Expected 1 *scafSeq file in assembly directory but found " . scalar @files .
-			     "\nUnable to set scaffold_fasta_file param for tool");
-	return;
-    }
-
-    $self->_scaffold_fasta_file( $files[0] );
-
-    return 1;
-}
-
-sub _set_file_prefix_param {
-    my $self = shift;
-
-    my @files = glob( $self->assembly_directory."/*scafSeq" );
-
-    unless ( @files ) {
-	$self->error_message("Did not find any *scafSeq files in assembly directory: ".$self->assembly_directory);
-	return;
-    }
-    
-    my ($file_prefix) = $files[0] =~ /^(\S+)\.scafSeq$/;
-    $file_prefix = basename ( $file_prefix );
-
-    unless ( $file_prefix ) {
-	$self->error_message("Failed to derive file prefix from scafSeq file, expected SRA1234 from name like SRA1234.scafSeq");
-	return;
-    }
-
-    $self->_file_prefix( $file_prefix );
-    
-    return 1;
-}
-
-sub _set_output_dir_param {
-    my $self = shift;
-
-    #output dir = input assembly dir unless directed else where by
-    my $output_dir = ( $self->output_dir ) ? $self->output_dir : $self->assembly_directory;
-
-    Genome::Utility::FileSystem->create_directory( $output_dir ) unless
-	-d $output_dir;
-
-    $self->_output_dir( $output_dir );
-
-    return 1;
-}
-
-sub _check_output_files {
-    my $self = shift;
-
-    for my $file_ext ( qw/ contigs.fa agp scaffolds.fa / ) {
-	my $file = $self->_output_dir.'/'.$self->_file_prefix.'.'.$file_ext;
-	unless ( -e $file ) {
-	    $self->error_message("Failed to find output file: $file");
-	    return;
-	}
-    }
-    return 1;
 }
 
 1;

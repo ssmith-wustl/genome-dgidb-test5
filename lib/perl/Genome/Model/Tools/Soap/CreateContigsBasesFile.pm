@@ -49,7 +49,7 @@ sub execute {
 	return;
     }
 
-    my $out_file = ($self->output_file) ? $self->output_file : $self->assembly_directory.'/edit_dir/contigs.bases';
+    my $out_file = ($self->output_file) ? $self->output_file : $self->contigs_bases_file;
 
     my $in = Bio::SeqIO->new(-format => 'fasta', -file => $self->scaffold_fasta_file);
     my $out = Bio::SeqIO->new(-format => 'fasta', -file => '>'.$out_file);
