@@ -5,6 +5,9 @@ use warnings;
 
 use Genome;
 
+use Text::Diff;
+use Digest::MD5 qw(md5 md5_hex md5_base64);
+
 class Genome::InstrumentData::FlowCell {
     type_name  => 'system flowcell',
         table_name => 'GSC.flow_cell_illumina',
@@ -90,12 +93,13 @@ sub lane_info {
             push (@lane_reports, $file->file_name);
         }
 
-        $lane_info{lane_reports} = [ @lane_reports ];
+        # as some lanes have multiple identical (except for timestamp) reports, here we remove duplicates
+        my %lane_reports_h = map { $_, 1 } @lane_reports;
+        my @lane_reports_unique = keys %lane_reports_h;
+
+        $lane_info{lane_reports} = [ @lane_reports_unique ];
 
         push(@lanes_info, \%lane_info);
-
-
-
 
     }
 
