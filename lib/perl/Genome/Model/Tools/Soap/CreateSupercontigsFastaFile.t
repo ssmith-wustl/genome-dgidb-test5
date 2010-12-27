@@ -16,11 +16,15 @@ ok(-s $data_dir.'/supercontigs.fasta', "Data dir supercontigs.fasta file exists"
 
 my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
 ok(-d $temp_dir, "Temp test dir created") or die;
-mkdir $temp_dir.'/edit_dir';
-ok(-d $temp_dir.'/edit_dir', "Created temp test dir edit_dir");
+
+symlink( $data_dir.'/TEST.scafSeq', $temp_dir.'/TEST.scafSeq' );
+ok( -s $temp_dir.'/TEST.scafSeq', "Linked TEST.scafSeq file");
+
+#mkdir $temp_dir.'/edit_dir';
+#ok(-d $temp_dir.'/edit_dir', "Created temp test dir edit_dir");
 
 my $create = Genome::Model::Tools::Soap::CreateSupercontigsFastaFile->create(
-    scaffold_fasta_file => $data_dir.'/TEST.scafSeq',
+#    scaffold_sequence_file => $data_dir.'/TEST.scafSeq',
     assembly_directory => $temp_dir,
     );
 ok($create, "Created gmt soap create-supercontigs-fasta-file") or die;

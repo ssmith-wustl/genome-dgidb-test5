@@ -59,6 +59,18 @@ sub path_for_soap_denovo_version {
     return '/gsc/pkg/bio/soap/SOAPdenovo-'.$self->version.'/SOAPdenovo';
 }
 
+#create edit_dir
+
+sub create_edit_dir {
+    my $self = shift;
+
+    unless ( -d $self->assembly_directory.'/edit_dir' ) {
+	Genome::Utility::FileSystem->create_directory( $self->assembly_directory.'/edit_dir' );
+    }
+
+    return 1;
+}
+
 #derive soap assembly file prefix
 
 sub soap_file_prefix {
@@ -84,7 +96,7 @@ sub soap_file_prefix {
 
 #methods to derive assembly generated files
 
-sub assembly_scaffold_fasta_file {
+sub assembly_scaffold_sequence_file {
     my $self = shift;
     
     my @files = glob( $self->assembly_directory."/*scafSeq" ); #glob .. don't know file prefix
@@ -109,6 +121,14 @@ sub assembly_input_fastq_files {
 	$self->error_message("Failed to find any *fastq files in ".$self->assembly_directory);
 	return;
     }
+    #there shouldn't be any that are zero size
+    for my $fastq ( @files ) {
+	unless ( -s $fastq ) {
+	    $self->error_message("Input fastq file is zero size: $fastq");
+	    return;
+	}
+    }
+
     return \@files;
 }
 
@@ -128,7 +148,7 @@ sub assembly_config_file {
 sub assembly_file_prefix {
     my $self = shift;
 
-    my $scaf_seq_file = $self->assembly_scaffold_fasta_file;
+    my $scaf_seq_file = $self->assembly_scaffold_sequence_file;
 
     unless ( $scaf_seq_file ) {
 	$self->error_message("Failed to get assembly scafSeq file name to derive assembly file prefix name");
@@ -164,6 +184,12 @@ sub supercontigs_agp_file {
     my $self = shift;
 
     return $self->assembly_directory.'/edit_dir/supercontigs.agp';
+}
+
+sub stats_file {
+    my $self = shift;
+
+    return $self->assembly_directory.'/edit_dir/stats.txt';
 }
 
 1;

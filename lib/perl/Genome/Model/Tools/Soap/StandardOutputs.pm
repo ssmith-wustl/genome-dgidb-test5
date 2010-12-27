@@ -29,14 +29,9 @@ EOS
 sub execute {
     my $self = shift;
 
-    #create edit_dir to place output files
-    Genome::Utility::FileSystem->create_directory($self->assembly_directory.'/edit_dir') unless
-	-d $self->assembly_directory.'/edit_dir';
-
-    #create contigs files
+    #create contigs.bases files
     $self->status_message("Creating contigs fasta file");
     my $contigs = Genome::Model::Tools::Soap::CreateContigsBasesFile->create(
-	scaffold_fasta_file => $self->assembly_scaffold_fasta_file,
         assembly_directory => $self->assembly_directory,
     );
     unless ($contigs->execute) {
@@ -46,10 +41,9 @@ sub execute {
     $self->status_message("Finished creating contigs fasta file");
     
 
-    #create scaffold fasta file
+    #create supercontigs fasta file
     $self->status_message("Creating supercontigs fasta file");
     my $supercontigs = Genome::Model::Tools::Soap::CreateSupercontigsFastaFile->create(
-	scaffold_fasta_file => $self->assembly_scaffold_fasta_file,
         assembly_directory => $self->assembly_directory,
     );
     unless ($supercontigs->execute) {
@@ -59,10 +53,9 @@ sub execute {
     $self->status_message("Finished creating scaffolds fasta file");
 
 
-    #create scaffold agp file
+    #create supercontigs agp file
     $self->status_message("Creating supercontigs agp file");
     my $agp = Genome::Model::Tools::Soap::CreateSupercontigsAgpFile->create(
-	scaffold_fasta_file => $self->assembly_scaffold_fasta_file,
         assembly_directory => $self->assembly_directory,
     );
     unless ($agp->execute) {
@@ -76,8 +69,6 @@ sub execute {
     $self->status_message("Creating stats.txt file");
     my $stats = Genome::Model::Tools::Soap::Stats->create(
         assembly_directory => $self->assembly_directory,
-	input_fastq_files => $self->assembly_input_fastq_files,
-	contigs_bases_file => $self->contigs_bases_file,
 	);
     unless ($stats->execute) {
         $self->error_message("Failed to run stats successfully");
