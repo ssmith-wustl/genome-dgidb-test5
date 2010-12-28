@@ -241,7 +241,7 @@ sub _create_imported_instrument_data {
     my $tcga_name = $self->tcga_name;
 
     # Get or create library
-    my $sample_importer = Genome::Sample::Command::ImportTcga->create(
+    my $sample_importer = Genome::Sample::Command::Import::Tcga->create(
         name => $tcga_name,
     );
     if ( not $sample_importer ) {
