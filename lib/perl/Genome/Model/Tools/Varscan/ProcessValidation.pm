@@ -203,20 +203,23 @@ sub execute {                               # replace with real execution logic.
 
         my $initialized = 0;
 
+        my $cmd = 'plot';
+        my $label = 'xlab="Normal", ylab="Tumor"';
+
         if(-s $germline_file) {
-            my $cmd = $initialized ? 'points' : 'plot';
-            print $r_script_fh qq{$cmd(germline\$V1, germline\$V2, col="blue", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), xlab="Normal", ylab="Tumor")\n};
-            $initialized = 1;
+            print $r_script_fh qq{$cmd(germline\$V1, germline\$V2, col="blue", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), $label)\n};
+            $cmd = 'points';
+            $label = '';
         }
         if(-s $somatic_file) {
-            my $cmd = $initialized ? 'points' : 'plot';
-            print $r_script_fh qq{$cmd(somatic\$V1, somatic\$V2, col="red", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100))\n};
-            $initialized = 1;
+            print $r_script_fh qq{$cmd(somatic\$V1, somatic\$V2, col="red", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), $label)\n};
+            $cmd = 'points';
+            $label = '';
         }
         if(-s $reference_file) {
-            my $cmd = $initialized ? 'points' : 'plot';
-            print $r_script_fh qq{$cmd(reference\$V1, reference\$V2, col="black", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100))\n};
-            $initialized = 1;
+            print $r_script_fh qq{$cmd(reference\$V1, reference\$V2, col="black", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), $label)\n};
+            $cmd = 'points';
+            $label = '';
         }
 
         print $r_script_fh qq{dev.off()\n};

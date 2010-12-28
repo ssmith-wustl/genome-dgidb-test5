@@ -28,7 +28,7 @@ class  Genome::Model::Tools::Soap::FastaToAgp {
             is => 'Text',
             doc => 'Directory to put output files',
         },
-	scaffold_fasta_file => {
+	scaffold_sequence_file => {
             is => 'Text',
             doc => 'Soap generated scaffold fasta file, if not specified, tool will derive it',
 	},
@@ -48,7 +48,7 @@ sub help_brief {
 
 sub help_detail {
     return <<"EOS"
-gmt soap fasta-to-agp --version 9.27.10 --scaffold_fasta_file /gscmnt/111/soap_assembly/SRA111_WUGC.scafSeq --scaffold-size-cutoff 100 --file-prefix SRA111_WUGC --output-dir  /gscmnt/111/soap_assembly/PGA
+gmt soap fasta-to-agp --version 9.27.10 --scaffold_sequence_file /gscmnt/111/soap_assembly/SRA111_WUGC.scafSeq --scaffold-size-cutoff 100 --file-prefix SRA111_WUGC --output-dir  /gscmnt/111/soap_assembly/PGA
 EOS
 }
 
@@ -59,7 +59,7 @@ sub execute {
     my $script = $self->_full_path_to_version_script;
 
     #input files
-    my $scaffold_fasta_file = ( $self->scaffold_fasta_file ) ? $self->scaffold_fasta_file : $self->assembly_scaffold_fasta_file;
+    my $scaf_seq_file = ( $self->scaffold_sequence_file ) ? $self->scaffold_sequence_file : $self->assembly_scaffold_sequence_file;
 
     #output directory
     my $output_dir = ($self->output_dir) ? $self->output_dir : $self->assembly_directory;
@@ -69,7 +69,7 @@ sub execute {
     my $file_prefix = ( $self->file_prefix ) ? $self->file_prefix : $self->assembly_file_prefix;
 
     #create script command string
-    my $command = 'perl '.$script.' -i '.$scaffold_fasta_file.' -o '.$output_dir;
+    my $command = 'perl '.$script.' -i '.$scaf_seq_file.' -o '.$output_dir;
     $command .= ' -size '.$self->scaffold_size_cutoff if $self->scaffold_size_cutoff;
     $command .= ' -name '.$file_prefix;
 
