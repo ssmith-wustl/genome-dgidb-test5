@@ -1,5 +1,5 @@
 
-package Genome::Model::Tools::Varscan::CopyNumberPlots;     # rename this when you give the module file a different name <--
+package Genome::Model::Tools::Varscan::CopyNumberSegments;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
 # RunVarscan - Run VarScan somatic on two BAM files.
@@ -25,7 +25,7 @@ my $min_loh_size = 10;
 my $min_loh_snps = 3;
 my $num_loh_regions = 0;
 
-class Genome::Model::Tools::Varscan::CopyNumberPlots {
+class Genome::Model::Tools::Varscan::CopyNumberSegments {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
@@ -106,6 +106,8 @@ sub execute {                               # replace with real execution logic.
 	
 	process_results($self, $current_chrom, $current_chrom_results);
 
+	open(SEGMENTS, ">$output_basename.segments.tsv") or die "Can't open outfile: $!\n";
+	print SEGMENTS join("\t", "ID", "sample", "chrom", "loc.start", "loc.end", "num.mark", "seg.mean", "bstat", "pval", "lcl", "ucl") . "\n";
 
 	open(INDEX, ">$output_basename.index.html") or die "Can't open outfile: $!\n";
 	print INDEX "<HTML><BODY><TABLE CELLSPACING=0 CELLPADDING=5 BORDER=0 WIDTH=\"100%\">\n";
@@ -117,8 +119,12 @@ sub execute {                               # replace with real execution logic.
 		$chrom_name = "X" if($chrom == 23);
 		$chrom_name = "Y" if($chrom == 24);
 
+		my $chrom_filename = $output_basename . ".$chrom.infile";
+		my $segments_filename = "$chrom_filename.segments.p_value";
 		my $image_filename = $image_basename . "." . $chrom_name . ".jpg";
 		print INDEX "<TD><A HREF=\"$image_filename\"><IMG SRC=\"$image_filename\" HEIGHT=240 WIDTH=320 BORDER=0></A></TD>\n";
+
+		print SEGMENTS parse_segments($segments_filename) if(-e $segments_filename);
 
 		$num_printed_in_column++;
 
@@ -133,9 +139,46 @@ sub execute {                               # replace with real execution logic.
 
 	print INDEX "</TR></TABLE></BODY></HTML>\n";
 	close(INDEX);
+
+	close(SEGMENTS);
+	
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
 
+
+
+
+################################################################################################
+# Execute - the main program logic
+#
+################################################################################################
+
+sub parse_segments
+{                               # replace with real execution logic.
+	my $segments_file = shift(@_);
+
+	my $result = "";
+
+	my $input = new FileHandle ($segments_file);
+	my $lineCounter = 0;
+	
+	while (<$input>)
+	{
+		chomp;
+		my $line = $_;
+		$lineCounter++;
+		
+		if($lineCounter > 1)
+		{
+			my @lineContents = split(/\s+/, $line);
+			$result .= join("\t", @lineContents) . "\n";
+		}
+	}
+	
+	close($input);
+	
+	return($result);
+}
 
 
 ################################################################################################
@@ -144,6 +187,79 @@ sub execute {                               # replace with real execution logic.
 ################################################################################################
 
 sub process_results
+{
+	my ($self, $chrom, $lines) = @_;
+
+	my $output_basename = $self->output_basename;
+
+	my $chrom_filename = $output_basename . ".$chrom.infile";
+	my $script_filename = $output_basename . ".R";
+	my $image_filename = $output_basename . "." . $chrom . ".jpg";
+
+	my @lines = split(/\n/, $lines);
+	my $num_lines = @lines;
+
+	if($num_lines >= $self->min_points_to_plot)
+	{
+		print "CHROMOSOME $chrom: $num_lines lines\n";
+
+		## Print all lines to file ##
+		open(OUTFILE, ">$chrom_filename") or die "Can't open outfile $chrom_filename: $!\n";
+	
+		my $num_columns = 0;
+		foreach my $line (@lines)
+		{		
+			if($line =~ 'Infinity')
+			{
+				## Don't try to plot sites with log2 infinity 	
+			}
+			else
+			{
+				my @lineContents = split(/\t/, $line);
+				$num_columns = @lineContents;
+				print OUTFILE "$line\n";			
+			}
+	
+		}
+	
+		close(OUTFILE);
+		
+
+		## Begin R Script ##
+	
+		open(SCRIPT, ">$script_filename") or die "Can't open script $script_filename: $!\n";
+	
+		print SCRIPT "library(DNAcopy)\n";
+
+		print SCRIPT "regions <- read.table(\"$chrom_filename\")\n";
+		print SCRIPT "png(\"$image_filename\", height=600, width=800)\n";
+
+		print SCRIPT qq{
+CNA.object <- CNA(regions\$V7, regions\$V1, regions\$V2, data.type="logratio", sampleid=c("Chromosome $chrom"))\n
+smoothed.CNA.object <- smooth.CNA(CNA.object)\n
+segment.smoothed.CNA.object <- segment(smoothed.CNA.object, verbose=1)
+p.segment.smoothed.CNA.object <- segments.p(segment.smoothed.CNA.object)
+plot(segment.smoothed.CNA.object, type="w", cex=0.5, cex.axis=1.5, cex.lab=1.5)
+write.table(p.segment.smoothed.CNA.object, file="$chrom_filename.segments.p_value")
+};
+		print SCRIPT "dev.off()\n";
+		close(SCRIPT);
+		
+		print "Running $script_filename\n";
+		system("R --no-save < $script_filename");		
+
+	}
+
+
+}
+
+
+################################################################################################
+# Process results - filter variants by type and into high/low confidence
+#
+################################################################################################
+
+sub old_process_results
 {
 	my ($self, $chrom, $lines) = @_;
 

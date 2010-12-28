@@ -1,11 +1,11 @@
-package Genome::Model::Tools::Music::Pathway;
+package Genome::Model::Tools::Music::PathScan;
 
 use warnings;
 use strict;
 
 =head1 NAME
 
-Genome::Music::Pathway - identification of significantly mutated genes
+Genome::Music::PathScan - identification of significantly mutated genes
 
 =head1 VERSION
 
@@ -15,7 +15,7 @@ Version 1.01
 
 our $VERSION = '1.01';
 
-class Genome::Model::Tools::Music::Pathway {
+class Genome::Model::Tools::Music::PathScan {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
@@ -105,7 +105,7 @@ The Genome Center at Washington University, C<< <software at genome.wustl.edu> >
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Genome::Music::Pathway
+    perldoc Genome::Music::PathScan
 
 For more information, please visit http://genome.wustl.edu.
 
@@ -117,4 +117,4 @@ This program is free and open source under the GNU license.
 
 =cut
 
-1; # End of Genome::Music::Pathway
+1; # End of Genome::Music::PathScan
