@@ -64,17 +64,10 @@ sub execute {
         extraction_type => 'genomic',
         cell_type => 'unknown',
         _nomenclature => 'unknown',
-        #age => $self->age,
-        #body_mass_index => $self->bmi,
+        age => $self->age,
+        body_mass_index => $self->bmi,
     );
     return if not $sample;
-
-    $sample->age( $self->age );
-    $sample->body_mass_index( $self->bmi );
-    if ( not UR::Context->commit ) {
-        $self->error_message('Cannot commit age and bmi to sample in DB.');
-        return;
-    }
 
     my $library = $self->_get_or_create_library_for_extension('extlibs');
     return if not $library;
