@@ -83,7 +83,7 @@ sub execute {
         = $self->calculate_metrics($snp_fh,$dbsnp_hash_ref,);
     close($snp_fh);
 
-        $self->print_report($total_snp_positions,$concordance_ref,);
+    $self->print_report($total_snp_positions,$concordance_ref,);
     return 1;
 }
 
@@ -133,11 +133,14 @@ sub print_report {
     my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file); 
     my $batch = $self->report_by_quality;
     foreach my $sample (sort keys %$concordance_ref) {
+        # make sure we consider all positions in concordance ref OR total_snps_ref
+        my $cref = $concordance_ref->{$sample};
+        my %quality_levels = map { $_ => 1 } (keys %$cref, keys %$total_snps_ref);
         my $total_concordant = 0;
         my $total_snps = 0;
-        foreach my $quality (sort {$b <=> $a} keys %{$concordance_ref->{$sample}}) {
-            $total_concordant += $concordance_ref->{$sample}{$quality};
-            $total_snps += $total_snps_ref->{$quality};
+        foreach my $quality (sort {$b <=> $a} keys %quality_levels) {
+            $total_concordant += $cref->{$quality} if exists $cref->{$quality};
+            $total_snps += $total_snps_ref->{$quality} if exists $total_snps_ref->{$quality};
             if($batch) {
                 print $output_fh "$quality\t$total_concordant\t$total_snps\n";
             }
