@@ -1,4 +1,4 @@
-package Genome::Sample::Command::ImportTcga;
+package Genome::Sample::Command::Import::Tcga;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 
 use Data::Dumper 'Dumper';
 
-class Genome::Sample::Command::ImportTcga { 
+class Genome::Sample::Command::Import::Tcga { 
     is => 'Command',
     has => [
         name => {

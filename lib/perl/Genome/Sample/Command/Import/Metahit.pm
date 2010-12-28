@@ -1,4 +1,4 @@
-package Genome::Sample::Command::ImportMetahit;
+package Genome::Sample::Command::Import::Metahit;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 
 use Data::Dumper 'Dumper';
 
-class Genome::Sample::Command::ImportMetahit { 
+class Genome::Sample::Command::Import::Metahit { 
     is => 'Command',
     has => [
         name => {
