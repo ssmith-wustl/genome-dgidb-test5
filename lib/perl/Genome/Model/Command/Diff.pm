@@ -31,6 +31,9 @@ sub hudson_build_from_revision {
     if ($revision =~ /(genome-\d+)/) {
         return $1;
     }
+    if ($revision =~ /(genome-\d+-fix\d+)/) {
+        return $1;
+    }
     return $revision;
 }
 
