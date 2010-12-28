@@ -21,6 +21,7 @@ use_ok('Genome::Sample::Command::Import::Metahit') or die;
 my $name = 'MH0000';
 my $import_metahit = Genome::Sample::Command::Import::Metahit->create(
     name => $name,
+    tissue_name => 'G_DNA_Stool',
     gender => 'male',
     age => 99,
     bmi => 22.4,
@@ -28,12 +29,13 @@ my $import_metahit = Genome::Sample::Command::Import::Metahit->create(
 ok($import_metahit, 'create');
 $import_metahit->dump_status_messages(1);
 ok($import_metahit->execute, 'execute');
+
 my $individual_name = 'METAHIT-'.$name;
-is($import_metahit->_individual_name, $individual_name, 'individual name');
+is($import_metahit->_individual->name, $individual_name, 'individual name');
 my $sample_name = $individual_name.'-1';
-is($import_metahit->library->sample->name, $sample_name, 'sample name');
+is($import_metahit->_sample->name, $sample_name, 'sample name');
 my $library_name = $sample_name.'-extlibs';
-is($import_metahit->library->name, $library_name, 'library name');
+is($import_metahit->_library->name, $library_name, 'library name');
 
 my $commit = eval{ UR::Context->commit; };
 ok($commit, 'commit');

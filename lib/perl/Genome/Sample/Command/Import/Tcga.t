@@ -25,9 +25,9 @@ my $import_tcga = Genome::Sample::Command::Import::Tcga->create(
 ok($import_tcga, 'create');
 $import_tcga->dump_status_messages(1);
 ok($import_tcga->execute, 'execute');
-is($import_tcga->_individual_name, 'TCGA-00-0000', 'individual name');
-is($import_tcga->library->sample->name, $name, 'sample name');
-is($import_tcga->library->name, $name.'-extlibs', 'library name');
+is($import_tcga->_individual->name, 'TCGA-00-0000', 'individual name');
+is($import_tcga->_sample->name, $name, 'sample name');
+is($import_tcga->_library->name, $name.'-extlibs', 'library name');
 
 my $commit = eval{ UR::Context->commit; };
 ok($commit, 'commit');

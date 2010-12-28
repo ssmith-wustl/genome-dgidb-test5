@@ -25,22 +25,34 @@ my $dir = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Command-Dacc/SRS0
 my @xml_files = glob($dir.'/*xml');
 is(@xml_files, 2, 'Got 2 xml files');
 note('xml file import');
+my $sample_name = 'SRS000000';
+my $library_name = $sample_name.'-extlibs';
 my $import = Genome::Sample::Command::Import::Dacc->create(
-    sra_sample_id => 'SRS000000',
+    sra_sample_id => $sample_name,
     xml_files => \@xml_files,
 );
 ok($import, 'create');
 $import->dump_status_messages(1);
 ok($import->execute, 'execute');
 
+my $individual_name = 'dbGaP-241763';
+is($import->_individual->name, $individual_name, 'individual name');
+is($import->_sample->name, $sample_name, 'sample name');
+is($import->_library->name, $library_name, 'library name');
+
 # basic import
 note('basic import');
 $import = Genome::Sample::Command::Import::Dacc->create(
-    sra_sample_id => 'SRS000000',
+    sra_sample_id => $sample_name,
 );
 ok($import, 'create');
 $import->dump_status_messages(1);
 ok($import->execute, 'execute');
+
+$individual_name = 'dbGaP-'.$sample_name;
+is($import->_individual->name, $individual_name, 'individual name');
+is($import->_sample->name, $sample_name, 'sample name');
+is($import->_library->name, $library_name, 'library name');
 
 done_testing();
 exit;

@@ -5,44 +5,54 @@ use warnings;
 
 use Genome;
 
+require Carp;
 use Data::Dumper 'Dumper';
 
 class Genome::Sample::Command::Import::Tcga { 
-    is => 'Command',
+    is => 'Genome::Sample::Command::Import',
     has => [
         name => {
             is => 'Text',
             doc => 'MetaHIT sample name.',
         },
         _individual_name => { is_optional => 1, },
-        _library => { is_optional => 1, },
     ],
 };
-
-sub library { return $_[0]->_library; }
 
 sub execute {
     my $self = shift;
 
-    my $name_ok = $self->_validate_name;
-    return if not $name_ok;
+    my $individual_name = $self->_validate_name_and_get_individual_name;
+    return if not $individual_name;
 
-    my $individual = $self->_get_or_create_individual;
+    my $taxon = $self->_get_taxon('human');
+    Carp::confess('Cannot get human taxon') if not $taxon;
+
+    my $individual = $self->_get_and_update_or_create_individual(
+        name => $individual_name,
+        upn => $individual_name,
+        _nomenclature => 'unknown',
+    );
     return if not $individual;
 
-    my $sample = $self->_get_or_create_sample($individual);
+    my $sample = $self->_get_and_update_or_create_sample(
+        name => $self->name,
+        extraction_label => $self->name,
+        extraction_type => 'genomic',
+        cell_type => 'primary',
+        _nomenclature => 'TCGA',
+    );
     return if not $sample;
 
-    my $library = $self->_get_or_create_library($sample);
+    my $library = $self->_get_or_create_library_for_extension('extlibs');
     return if not $library;
-    $self->_library($library);
 
-    $self->status_message('Import TCGA '.$self->name.'...OK');
+    $self->status_message('Import...OK');
 
     return 1;
 }
 
-sub _validate_name {
+sub _validate_name_and_get_individual_name {
     my $self = shift;
 
     my $name = $self->name;
@@ -57,116 +67,9 @@ sub _validate_name {
         return;
     }
 
-    $self->_individual_name( join('-', @tokens[0..2]) );
+    my $individual_name = join('-', @tokens[0..2]);
 
-    return 1;
-}
-
-sub _get_or_create_individual {
-    my $self = shift;
-
-    my $name = $self->_individual_name;
-    $self->status_message('Get or create individual');
-    $self->status_message('Individual name: '.$name);
-
-    my $individual = Genome::Individual->get(name => $name);
-    if ( $individual ) {
-        $self->status_message('Got individual: '.$individual->__display_name__);
-        return $individual;
-    }
-
-    my $taxon = Genome::Taxon->get(name => 'human');
-    Carp::confess('Cannot get human taxon') if not $taxon;
-
-    $individual = Genome::Individual->create(
-        name => $name,
-        upn => $name,
-        taxon_id => $taxon->id,
-        _nomenclature => 'unknown',
-    );
-    if ( not $individual ) {
-        $self->error_message('Cannot create individual to import MetaHIT '.$self->name);
-        return;
-    }
-    if ( not UR::Context->commit ) {
-        $self->error_message('Cannot commit individual to DB.');
-        return;
-    }
-
-    $self->status_message('Created individual: '.$individual->__display_name__);
-
-    return $individual;
-}
-
-sub _get_or_create_sample {
-    my ($self, $individual) = @_;
-
-    Carp::confess('No individual given to create sample') if not $individual;
-
-    my $name = $self->name; 
-    $self->status_message('Get or create sample');
-    $self->status_message('Sample name: '.$name);
-
-    my $sample = Genome::Sample->get(name => $name);
-    if ( $sample ) {
-        $self->status_message('Got sample: '.$sample->name.' ('.$sample->id.')');
-        return $sample;
-    }
-
-    $sample = Genome::Sample->create(
-        name => $name,
-        extraction_label => $name,
-        source_id => $individual->id,
-        source_type => $individual->subject_type,
-        extraction_type => 'genomic',
-        cell_type => 'primary',
-        _nomenclature => 'TCGA',
-    );
-    if ( not $sample ) {
-        $self->error_message("Cannot create sample to import MetaHIT $name");
-        return;
-    }
-    if ( not UR::Context->commit ) {
-        $self->error_message('Cannot commit sample to DB.');
-        return;
-    }
-
-    $self->status_message('Created sample: '.$sample->name.' ('.$sample->id.')');
-
-    return $sample;
-}
-
-sub _get_or_create_library {
-    my ($self, $sample) = @_;
-
-    Carp::confess('No sample given to create library') if not $sample;
-
-    my $name = $sample->name.'-extlibs';
-    $self->status_message('Get or create library');
-    $self->status_message('Library name: '.$name);
-
-    my $library = Genome::Library->get(name => $name);
-    if ( $library ) {
-        $self->status_message('Got library: '.$library->__display_name__);
-        return $library;
-    }
-
-    $library = Genome::Library->create(
-        name => $name,
-        sample_id => $sample->id,
-    );
-    if ( not $library ) {
-        $self->error_message("Cannot create library to import MetaHIT $name");
-        return;
-    }
-    if ( not UR::Context->commit ) {
-        $self->error_message('Cannot commit library to DB.');
-        return;
-    }
-
-    $self->status_message('Created library: '.$library->__display_name__);
-
-    return $library;
+    return $individual_name;
 }
 
 1;

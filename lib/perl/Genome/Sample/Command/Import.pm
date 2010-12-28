@@ -203,7 +203,7 @@ sub _create_sample {
     }
 
     if ( not UR::Context->commit ) {
-        $self->_bail('Cannot commit new sample');
+        $self->_bail('Cannot commit new sample to DB');
         return;
     }
 
@@ -247,20 +247,30 @@ sub _get_or_create_tissue {
     return $tissue;
 }
 
-sub _get_or_create_library {
-    my ($self, %params) = @_;
+sub _get_or_create_library_for_extension {
+    my ($self, $ext) = @_;
 
-    my $library = $self->_get_library($params{name});
+    my $library = $self->_get_library_for_extension($ext);
     return $library if $library;
 
-    return $self->_create_library(%params);
+    return $self->_create_library_for_extension($ext);
 }
 
-sub _get_library {
-    my ($self, $name) = @_;
+sub _get_library_name_for_extension {
+    my ($self, $ext) = @_;
 
-    Carp::confess('No name given to get library') if not $name;
+    Carp::confess('No sample set to get or create library') if not $self->_sample;
+    Carp::confess('No library extension') if not defined $ext;
+    my @valid_exts = (qw/ extlibs microarraylib /);
+    Carp::confess("Invalid library extension ($ext). Valid extentions: ".join(' ', @valid_exts)) if not grep { $ext eq $_ } @valid_exts;
 
+    return $self->_sample->name.'-'.$ext;
+}
+
+sub _get_library_for_extension {
+    my ($self, $ext) = @_;
+
+    my $name = $self->_get_library_name_for_extension($ext); # confess on error
     my $library = Genome::Library->get(name => $name);
     return if not $library;
 
@@ -270,22 +280,23 @@ sub _get_library {
 
 }
 
-sub _create_library {
-    my ($self, %params) = @_;
+sub _create_library_for_extension {
+    my ($self, $ext) = @_;
 
-    $self->status_message('Creating library: '.Dumper({ sample_id => $self->_sample->id }));
-
-    my $library = Genome::Library->create(
-        name => $self->_sample->name .  '-' . $self->library_type,
+    my %params = (
+        name => $self->_get_library_name_for_extension($ext), # confess on error
         sample_id => $self->_sample->id,
     );
+
+    $self->status_message('Creating library: '.Dumper(\%params));
+    my $library = Genome::Library->create(%params);
     if ( not $library ) {
-        $self->_bail('Could not create library to import sample');
+        $self->_bail('Cannot not create library to import sample');
         return;
     }
 
     unless ( UR::Context->commit ) {
-        $self->_bail('Cannot commit library to DB');
+        $self->_bail('Cannot commit new library to DB');
         return;
     }
 
@@ -295,7 +306,7 @@ sub _create_library {
 
     $self->status_message('Library: '.join(' ', map{ $library->$_ } (qw/ id name/)));
     
-    return 1;
+    return $self->_library($library);
 }
 
 sub _bail {

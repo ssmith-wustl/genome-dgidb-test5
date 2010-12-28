@@ -5,6 +5,7 @@ use warnings;
 
 use Genome;
 
+require Carp;
 use Data::Dumper 'Dumper';
 require XML::LibXML;
 
@@ -44,7 +45,7 @@ sub basic_import {
     $self->status_message('Import DACC Sample Basic...');
 
     my $taxon = $self->_get_taxon('Human Metagenome');
-    return if not $taxon;
+    Carp::confess('Cannot get human taxon') if not $taxon;
 
     my $individual = $self->_get_and_update_or_create_individual(
         name => 'dbGaP-'.$self->sra_sample_id,
@@ -64,7 +65,7 @@ sub basic_import {
     );
     return if not $sample;
 
-    my $library = $self->_get_or_create_library(name => $sample->name.'-extlibs');
+    my $library = $self->_get_or_create_library_for_extension('extlibs');
     return if not $library;
 
     $self->status_message('Import...OK');
@@ -110,7 +111,7 @@ sub xml_import {
     );
     return if not $sample;
 
-    my $library = $self->_get_or_create_library(name => $sample->name.'-extlibs');
+    my $library = $self->_get_or_create_library_for_extension('extlibs');
     return if not $library;
 
     $self->status_message('Import...OK');
