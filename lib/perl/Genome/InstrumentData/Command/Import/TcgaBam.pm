@@ -241,7 +241,7 @@ sub _create_imported_instrument_data {
     my $tcga_name = $self->tcga_name;
 
     # Get or create library
-    my $sample_importer = Genome::Sample::Command::ImportTcga->create(
+    my $sample_importer = Genome::Sample::Command::Import::Tcga->create(
         name => $tcga_name,
     );
     if ( not $sample_importer ) {
@@ -253,7 +253,7 @@ sub _create_imported_instrument_data {
         $self->error_message('Could not execute TCGA sample importer to get or create library');
         return;
     }
-    my $library = $sample_importer->library;
+    my $library = $sample_importer->_library;
 
     my $target_region;
     unless ($self->target_region eq 'whole genome') {

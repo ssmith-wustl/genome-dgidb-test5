@@ -1,15 +1,16 @@
-package Genome::InstrumentData::Command::Dacc::UpdateLibrary;
+package Genome::Sample::Command::Import::Dacc;
 
 use strict;
 use warnings;
 
 use Genome;
 
+require Carp;
 use Data::Dumper 'Dumper';
 require XML::LibXML;
 
-class Genome::InstrumentData::Command::Dacc::UpdateLibrary {
-    is  => 'Command',
+class Genome::Sample::Command::Import::Dacc {
+    is  => 'Genome::Sample::Command::Import',
     has => [
         sra_sample_id => {
             is => 'Text',
@@ -20,6 +21,7 @@ class Genome::InstrumentData::Command::Dacc::UpdateLibrary {
         xml_files => {
             is => 'Text',
             is_many => 1,
+            is_optional => 1,
             shell_args_position => 2,
             doc => 'XML files',
         },
@@ -29,71 +31,76 @@ class Genome::InstrumentData::Command::Dacc::UpdateLibrary {
 sub execute {
     my $self = shift;
 
-    $self->status_message('Update individual, sample and library...');
+    if ( $self->xml_files ) {
+        return $self->xml_import;
+    }
+    else {
+        return $self->basic_import;
+    }
+}
+
+sub basic_import {
+    my $self = shift;
+
+    $self->status_message('Import DACC Sample Basic...');
+
+    my $taxon = $self->_get_taxon('Human Metagenome');
+    Carp::confess('Cannot get human taxon') if not $taxon;
+
+    my $individual = $self->_get_and_update_or_create_individual(
+        name => 'dbGaP-'.$self->sra_sample_id,
+        upn => 'dbGaP-'.$self->sra_sample_id,
+        nomenclature => 'unknown',
+        description => 'dbGaP individual: unknown, used SRS sample id',
+    );
+    return if not $individual;
+
+    my $sample = $self->_get_and_update_or_create_sample(
+        name => $self->sra_sample_id,
+        taxon_id => $taxon->id,
+        extraction_label => $self->sra_sample_id,
+        extraction_type => 'genomic',
+        cell_type => 'unknown',
+        _nomenclature => 'unknown',
+    );
+    return if not $sample;
+
+    my $library = $self->_get_or_create_library_for_extension('extlibs');
+    return if not $library;
+
+    $self->status_message('Import...OK');
+
+    return 1;
+}
+
+sub xml_import {
+    my $self = shift;
+
+    $self->status_message('Import DACC Sample XML...');
+
     my $sample_info = $self->_sample_info_from_xmls;
     return if not $sample_info;
 
-    my $taxon = Genome::Taxon->get(name => $sample_info->{scientific_name});
-    if ( not defined $taxon ) {
-        $self->error_message('Cannot get taxon for name: '.$sample_info->{scientific_name});
-        return;
-    }
-    $self->status_message('Taxon: '.join(' ', map { $taxon->$_ } (qw/ id name /)));
+    my $taxon = $self->_get_taxon($sample_info->{scientific_name});
+    return if not $taxon;
 
-    $self->status_message('Update individual...');
     if ( not defined $sample_info->{gap_subject_id} ) {
         $self->error_message('No gap subject id for SRA id: '.$self->sra_sample_id);
         return;
     }
-    my $individual_name = 'GAP-'.$sample_info->{gap_subject_id};
-    my %individual_attrs = (
-        taxon_id => $taxon->id,
-        upn => $sample_info->{gap_subject_id},
+    my $individual = $self->_get_and_update_or_create_individual(
+        name => 'dbGaP-'.$sample_info->{gap_subject_id},
+        upn => 'dbGaP-'.$sample_info->{gap_subject_id},
         gender => $sample_info->{sex},
-        description => 'Imported from the DACC. Individual name format is GAP-$GAP_ACCESSION',
+        description => 'dbGaP individual: '.$sample_info->{gap_subject_id},
     );
-    my $individual = Genome::Individual->get(name => $individual_name);
-    if ( not defined $individual ) {
-        $individual = Genome::Individual->create(
-            name => $individual_name,
-            %individual_attrs,
-        );
-        if ( not defined $individual ) {
-            $self->error_message('Cannot create individual for name: '.$individual_name);
-            return;
-        }
-        unless ( UR::Context->commit ) {
-            $self->error_message('Cannot commit new individual to DB');
-            return;
-        }
-    }
-    else {
-        for my $attr ( keys %individual_attrs ) {
-            $individual->$attr( $individual_attrs{$attr} );
-        }
-    }
-    $self->status_message('Individual: '.join(' ', map { $individual->$_ } (qw/ id name /)));
-    
-    $self->status_message('Update sample...');
-    my $tissue = GSC::Tissue->get( $sample_info->{body_site} );
-    if ( not $tissue ) {
-        $tissue = GSC::Tissue->create( $sample_info->{body_site} );
-        if ( not defined $tissue ) {
-            $self->error_message('Cannot create tissue: '.$sample_info->{body_site});
-            return;
-        }
-        unless ( UR::Context->commit ) {
-            $self->error_message('Cannot commit tissue to DB');
-            return;
-        }
-    }
-    $self->status_message('Tissue: '.$tissue->tissue_name);
+    return if not $individual;
 
-    my $sample_name = $sample_info->{sra_sample_id};
-    my %sample_attrs = (
+    my $sample = $self->_get_and_update_or_create_sample(
+        name => $self->sra_sample_id,
         taxon_id => $taxon->id,
-        source_id => $individual->id,
-        source_type => $individual->subject_type,
+        #source_id => $individual->id,
+        #source_type => $individual->subject_type,
         tissue_label => $sample_info->{sample_type}, 
         tissue_desc => $sample_info->{body_site}, 
         extraction_label => $sample_info->{sra_sample_id},
@@ -102,56 +109,12 @@ sub execute {
         cell_type => 'unknown',
         _nomenclature => 'unknown',
     );
-    my $sample = Genome::Sample->get(name => $sample_name);
-    if ( not $sample ) {
-        $sample = Genome::Sample->create(
-            name => $sample_name,
-            %sample_attrs,
-        );
-        if ( not defined $sample ) {
-            $self->error_message('Cannot create sample ofr name: '.$sample_info->{sra_sample_id});
-            return;
-        }
-        unless ( UR::Context->commit ) {
-            $self->error_message('Cannot commit new sample');
-            return;
-        }
-    }
-    else {
-        for my $attr ( keys %sample_attrs ) {
-            $sample->$attr( $sample_attrs{$attr} );
-        }
-        if ( not UR::Context->commit ) {
-            $self->error_message('Cannot commit updates to sample');
-            return;
-        }
-    }
-    $self->status_message('Sample: '.join(' ', map { $sample->$_ } (qw/ id name /)));
+    return if not $sample;
 
-    my $library;
-    my @libraries = $sample->libraries;
-    if ( not @libraries ) {
-        Genome::Library->create(
-            sample_id => $sample->id,
-            name => $sample->name.'-extlibs'
-        );
-        my ($library) = $sample->libraries;
-        if ( not $library ) {
-            $self->error_message('Cannot create library for sample: '.$sample->name);
-            return;
-        }
-        if ( not UR::Context->commit ) {
-            $self->error_message('Cannot commit new library');
-            return;
-        }
-    }
-    else {
-        $library = $libraries[$#libraries];
-        $library->name( $sample->name.'-extlibs' );
-    }
-    $self->status_message('Library: '.join(' ', map { $library->$_ } (qw/ id name /)));
+    my $library = $self->_get_or_create_library_for_extension('extlibs');
+    return if not $library;
 
-    $self->status_message('Update individual, sample and library...');
+    $self->status_message('Import...OK');
 
     return 1;
 }
