@@ -31,6 +31,7 @@ class Genome::Model::Tools::Varscan::CopyNumberPlots {
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		regions_file		=> { is => 'Text', doc => "Path to copy number regions from Varscan copyCaller", is_optional => 0 },
 		output_basename 	=> { is => 'Text', doc => "Output file basename for cnv plots", is_optional => 0 },
+		min_points_to_plot 	=> { is => 'Text', doc => "Minimum number of points for a chromosome to plot it", is_optional => 0, default => 100 },
 	],
 };
 
@@ -180,19 +181,23 @@ sub process_results
 	
 	print "Chrom: $chrom lines $num_lines\n";
 
-	## Begin R Script ##
-
-	open(SCRIPT, ">$script_filename") or die "Can't open script $script_filename: $!\n";
-
-	print SCRIPT "regions <- read.table(\"$chrom_filename\")\n";
-	print SCRIPT "png(\"$image_filename\", height=600, width=800)\n";
-	print SCRIPT "plot(regions\$V2, regions\$V$num_columns, col=\"blue\", cex=0.5, cex.axis=1.5, cex.lab=1.5, pch=19, ylim=c(-4,4), main=\"Chromosome $chrom\", xlab=\"Position on chromosome $chrom\", ylab=\"Log2 Ratio (Tumor/Normal)\")\n";
-	print SCRIPT "points(regions\$V3, regions\$V$num_columns, col=\"blue\", cex=0.5, cex.axis=1.5, cex.lab=1.5, pch=19, ylim=c(-4,4))\n";
-	print SCRIPT "dev.off()\n";
-	close(SCRIPT);
+	if($num_lines >= $self->min_points_to_plot)
+	{
+		## Begin R Script ##
 	
-	print "Running $script_filename\n";
-	system("R --no-save < $script_filename");
+		open(SCRIPT, ">$script_filename") or die "Can't open script $script_filename: $!\n";
+	
+		print SCRIPT "regions <- read.table(\"$chrom_filename\")\n";
+		print SCRIPT "png(\"$image_filename\", height=600, width=800)\n";
+		print SCRIPT "plot(regions\$V2, regions\$V$num_columns, col=\"blue\", cex=0.5, cex.axis=1.5, cex.lab=1.5, pch=19, ylim=c(-4,4), main=\"Chromosome $chrom\", xlab=\"Position on chromosome $chrom\", ylab=\"Log2 Ratio (Tumor/Normal)\")\n";
+		print SCRIPT "points(regions\$V3, regions\$V$num_columns, col=\"blue\", cex=0.5, cex.axis=1.5, cex.lab=1.5, pch=19, ylim=c(-4,4))\n";
+		print SCRIPT "dev.off()\n";
+		close(SCRIPT);
+		
+		print "Running $script_filename\n";
+		system("R --no-save < $script_filename");		
+	}
+
 }
 
 
