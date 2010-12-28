@@ -115,7 +115,7 @@ sub _create_individual {
     my $created_objects = $self->_created_objects;
     push @$created_objects, $individual;
     $self->_created_objects($created_objects);
-    $self->status_message('Created individual: '.join(' ', map{ $individual->$_ } (qw/ id name/)));
+    $self->status_message('Individual: '.join(' ', map{ $individual->$_ } (qw/ id name/)));
 
     return $self->_individual($individual);
 }
