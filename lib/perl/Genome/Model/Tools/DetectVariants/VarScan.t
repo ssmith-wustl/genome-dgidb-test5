@@ -19,7 +19,9 @@ my $test_working_dir = File::Temp::tempdir('DetectVariants-VarScanXXXXX', DIR =>
 
 my $bam_input = $test_dir . '/alignments/102922275_merged_rmdup.bam';
 
-my $expected_dir = $test_dir . '/expected.v5/'; #Updated to .v5 due to additional column in VarScan
+# Updated to .v5 due to additional column in VarScan
+# Updated to .v6 due to the addition of quality and natural sort order to bed file output 
+my $expected_dir = $test_dir . '/expected.v6/';
 
 my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get(type_name => 'imported reference sequence', name => 'NCBI-human-build36');
 ok($ref_seq_build, 'Got a reference sequence build') or die('Test cannot continue without a reference sequence build');
