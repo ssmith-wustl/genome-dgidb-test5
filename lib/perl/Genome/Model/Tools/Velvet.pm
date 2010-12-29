@@ -138,48 +138,85 @@ sub get_contig_lengths {
     return \%contig_lengths;
 }
 
+sub create_edit_dir {
+    my $self = shift;
+
+    unless ( -d $self->assembly_directory.'/edit_dir' ) {
+	Genome::Utility::FileSystem->create_directory( $self->assembly_directory.'/edit_dir' );
+    }
+
+    return 1;
+}
+
+#post assemble standard output files
 sub contigs_bases_file {
-    return $_[0]->directory.'/edit_dir/contigs.bases';
+    return $_[0]->assembly_directory.'/edit_dir/contigs.bases';
 }
 
 sub contigs_quals_file {
-    return $_[0]->directory.'/edit_dir/contigs.quals';
+    return $_[0]->assembly_directory.'/edit_dir/contigs.quals';
 }
 
 sub gap_sizes_file {
-    return $_[0]->directory.'/edit_dir/gap.txt';
+    return $_[0]->assembly_directory.'/edit_dir/gap.txt';
 }
 
 sub read_info_file {
-    return $_[0]->directory.'/edit_dir/readinfo.txt';
+    return $_[0]->assembly_directory.'/edit_dir/readinfo.txt';
 }
 
 sub reads_placed_file {
-    return $_[0]->directory.'/edit_dir/reads.placed';
+    return $_[0]->assembly_directory.'/edit_dir/reads.placed';
 }
 
 sub reads_unplaced_file {
-    return $_[0]->directory.'/edit_dir/reads.unplaced';
+    return $_[0]->assembly_directory.'/edit_dir/reads.unplaced';
 }
 
 sub reads_unplaced_fasta_file {
-    return $_[0]->directory.'/edit_dir/reads.unplaced.fasta';
+    return $_[0]->assembly_directory.'/edit_dir/reads.unplaced.fasta';
 }
 
 sub stats_file {
-    return $_[0]->directory.'/edit_dir/stats.txt';
+    return $_[0]->assembly_directory.'/edit_dir/stats.txt';
 }
 
 sub supercontigs_agp_file {
-    return $_[0]->directory.'/edit_dir/supercontigs.agp';
+    return $_[0]->assembly_directory.'/edit_dir/supercontigs.agp';
 }
 
 sub supercontigs_fasta_file {
-    return $_[0]->directory.'/edit_dir/supercontigs.fasta';
+    return $_[0]->assembly_directory.'/edit_dir/supercontigs.fasta';
 }
 
+#other files
 sub read_names_sqlite {
-    return $_[0]->directory.'/velvet_reads.sqlite';
+    return $_[0]->assembly_directory.'/velvet_reads.sqlite';
+}
+
+sub input_collated_fastq_file {
+    my $self = shift;
+    my @files = glob( $self->assembly_directory."/*collated.fastq" );
+
+    unless ( @files == 1 ) {
+	$self->error_message("Expected 1 *collated.fastq file but got " . scalar @files);
+	return;
+    }
+
+    return $files[0];
+}
+
+#velvet generated files
+sub velvet_afg_file {
+    return $_[0]->assembly_directory.'/velvet_asm.afg';
+}
+
+sub velvet_contigs_fa_file {
+    return $_[0]->assembly_directory.'/contigs.fa';
+}
+
+sub velvet_sequences_file {
+    return $_[0]->assembly_directory.'/Sequences';
 }
 
 1;
