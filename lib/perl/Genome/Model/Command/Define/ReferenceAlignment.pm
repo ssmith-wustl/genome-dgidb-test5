@@ -26,6 +26,12 @@ class Genome::Model::Command::Define::ReferenceAlignment {
             is_optional => 1,
             is_input => 1,
         },
+        dbsnp_build => {
+            is => 'Genome::Model::Build::ImportedVariationList',
+            doc => 'ID or name of the dbSNP build to compare against',
+            is_optional => 1,
+            is_input => 1,
+        },
         target_region_set_names => {
             is => 'Text',
             is_optional => 1,
@@ -49,9 +55,11 @@ sub type_specific_parameters_for_create {
     my $self = shift;
     my $rsb = $self->_resolve_param('reference_sequence_build');
     my $arb = $self->_resolve_param('annotation_reference_build');
+    my $dbsnp = $self->_resolve_param('dbsnp_build');
     my @params;
     push(@params, reference_sequence_build => $rsb) if $rsb;
     push(@params, annotation_reference_build => $arb) if $arb;
+    push(@params, dbsnp_build => $dbsnp) if $dbsnp;
     return @params;
 }
 
