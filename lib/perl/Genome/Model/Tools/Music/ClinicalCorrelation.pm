@@ -19,6 +19,8 @@ Version 1.01
 
 =cut
 
+#our $VERSION = '1.01';
+
 class Genome::Model::Tools::Music::ClinicalCorrelation {
     is => 'Command',                       
     has => [ 
@@ -62,7 +64,7 @@ EOS
 
 sub help_detail {
     return <<EOS
-This tool accepts either a MAF file or a matrix of samples vs. genes, where the values in the matrix are the number of mutations in each sample per gene. If the matrix is provided, the MAF file is not needed. If only the MAF file is provided, the matrix will be created by the tool and saved to a file whose name will be the name of the MAF file appended with ".clinical_correlation_matrix". This matrix is fed into an R tool which calculates a P-value representing the probability that the correlation seen between the mutations in each gene and each phenotype trait are random. Lower P-values indicate lower randomness, or true correlations.
+This tool accepts either a MAF file or a matrix of samples vs. genes, where the values in the matrix are the number of mutations in each sample per gene. If the matrix is provided, the MAF file is not needed. If only the MAF file is provided, the matrix will be created by the tool and saved to a file whose name will be the name of the clinical data file appended with ".correlation_matrix". This matrix is fed into an R tool which calculates a P-value representing the probability that the correlation seen between the mutations in each gene and each phenotype trait are random. Lower P-values indicate lower randomness, or true correlations.
 EOS
 }
 
@@ -128,7 +130,19 @@ sub execute {
             $self->error_message("Please supply either a MAF file or a sample-gene-matrix file.");
             return;
         }
-        $matrix_file = create_sample_gene_matrix($maf_file);
+
+        #read through clinical data file to see which samples are represented
+        my %samples;
+        my $samples = \%samples;
+        my $clin_fh = new IO::File $clinical_data_file,"r";
+        my $header = $clin_fh->getline;
+        while (my $line = $clin_fh->getline) {
+            my ($sample) = split /\t/,$line;
+            $samples{$sample}++;
+        }
+
+        #create correlation matrix
+        $matrix_file = create_sample_gene_matrix($samples,$clinical_data_file,$maf_file);
     }
 
     my $R_cmd = "R --slave --args < clinical_correlation.R $clinical_data_file $matrix_file $output_file $test_method";
@@ -150,7 +164,7 @@ This subroutine takes a MAF and creates a matrix of samples vs. gene, where the 
 
 sub create_sample_gene_matrix {
 
-    my ($maf_file) = @_;
+    my ($samples,$clinical_data_file,$maf_file) = @_;
 
     #create hash of mutations from the MAF file
     my %mutations;
@@ -180,6 +194,7 @@ sub create_sample_gene_matrix {
         my @fields = split /\t/,$line;
         my $gene = $fields[$maf_columns{'Hugo_Symbol'}];
         my $sample = $fields[$maf_columns{'Tumor_Sample_Barcode'}];
+        next unless exists $samples->{$sample};
         $all_genes{$gene}++;
         $mutations{$sample}{$gene}++;
     }
@@ -189,7 +204,7 @@ sub create_sample_gene_matrix {
     @all_genes = sort keys %all_genes;
 
     #write the input matrix for R code to a file #FIXME HARD CODE FILE NAME, OR INPUT OPTION
-    my $matrix_file = $maf_file . ".clinical_correlation_matrix";
+    my $matrix_file = $clinical_data_file . ".correlation_matrix";
     my $matrix_fh = new IO::File $matrix_file,"w";
 
     #print input matrix file header
