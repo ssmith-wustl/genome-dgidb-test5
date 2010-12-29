@@ -2,7 +2,7 @@ package Genome::Model::Tools::Music::PathScan;
 
 use warnings;
 use strict;
-use MG::Statistics::PopulationPlusMinus;
+use Genome::Model::Tools::Music::PathScan::PopulationPlusMinus;
 use IO::File;
 
 =head1 NAME
@@ -256,7 +256,7 @@ sub execute
     }
     ########### MCW ADDED
 
-    my $pop_obj = MG::Statistics::PopulationPlusMinus->new( \@gene_sizes );
+    my $pop_obj = Genome::Model::Tools::Music::PathScan::PopulationPlusMinus->new( \@gene_sizes );
     if( scalar( @gene_sizes ) >= 3 )
     {
       ########### MCW ADDED
