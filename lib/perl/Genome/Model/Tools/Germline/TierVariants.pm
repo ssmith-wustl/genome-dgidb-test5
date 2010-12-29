@@ -10,6 +10,7 @@ package Genome::Model::Tools::Germline::TierVariants;
 
 use strict;
 use warnings;
+use Workflow;
 
 class Genome::Model::Tools::Germline::TierVariants {
     is => ['Workflow::Operation::Command'],

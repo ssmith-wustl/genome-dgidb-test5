@@ -3,6 +3,8 @@ package Genome::Model::Tools::Pindel::Pipeline;
 use strict;
 use warnings;
 
+use Workflow;
+
 class Genome::Model::Tools::Pindel::Pipeline {
     is => ['Workflow::Operation::Command'],
     workflow => sub { Workflow::Operation->create_from_xml(\*DATA); }
