@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 23;
+use Test::More tests => 39;
 use above "Genome";
 use Genome::Info::IUB;
 
@@ -41,6 +41,24 @@ is_deeply(\@bases, ['A','T'], "iub_to_bases: case insensitivity and valid result
 is(Genome::Info::IUB::iub_to_string(undef),undef, "iub_to_string: undefined inputs return undef");  #test to make sure it handles undefined values
 is(Genome::Info::IUB::iub_to_bases('Q'), undef, "iub_to_string: invalid input returns undef");
 is(Genome::Info::IUB::iub_to_string('d'), 'AGT', 'iub_to_string: case insensitivity and valid result');
+
+#Test reference_iub_to_base
+is(Genome::Info::IUB::reference_iub_to_base(undef), undef, "reference_iub_to_base: undefined inputs return undef");
+is(Genome::Info::IUB::reference_iub_to_base('A'), 'A', "reference_iub_to_base: A returns A");
+is(Genome::Info::IUB::reference_iub_to_base('G'), 'G', "reference_iub_to_base: G returns G");
+is(Genome::Info::IUB::reference_iub_to_base('C'), 'C', "reference_iub_to_base: C returns C");
+is(Genome::Info::IUB::reference_iub_to_base('T'), 'T', "reference_iub_to_base: T returns T");
+is(Genome::Info::IUB::reference_iub_to_base('R'), 'A', "reference_iub_to_base: R returns A");
+is(Genome::Info::IUB::reference_iub_to_base('Y'), 'C', "reference_iub_to_base: Y returns C");
+is(Genome::Info::IUB::reference_iub_to_base('M'), 'A', "reference_iub_to_base: M returns A");
+is(Genome::Info::IUB::reference_iub_to_base('K'), 'G', "reference_iub_to_base: K returns G");
+is(Genome::Info::IUB::reference_iub_to_base('S'), 'C', "reference_iub_to_base: S returns C");
+is(Genome::Info::IUB::reference_iub_to_base('W'), 'A', "reference_iub_to_base: W returns A");
+is(Genome::Info::IUB::reference_iub_to_base('B'), 'C', "reference_iub_to_base: B returns C");
+is(Genome::Info::IUB::reference_iub_to_base('D'), 'A', "reference_iub_to_base: D returns A");
+is(Genome::Info::IUB::reference_iub_to_base('H'), 'A', "reference_iub_to_base: H returns A");
+is(Genome::Info::IUB::reference_iub_to_base('V'), 'A', "reference_iub_to_base: V returns A");
+is(Genome::Info::IUB::reference_iub_to_base('N'), 'A', "reference_iub_to_base: N returns A");
 
 #$HeadURL$
 #$Id$

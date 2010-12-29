@@ -43,6 +43,20 @@ my %iub_as_string = (
     N => 'ACGT',
 );
 
+my %iub_to_single_base = (
+    R => 'A',
+    Y => 'C',
+    M => 'A',
+    K => 'G',
+    S => 'C',
+    W => 'A',
+    B => 'C',
+    D => 'A',
+    H => 'A',
+    V => 'A',
+    N => 'A',
+);
+
 sub variant_alleles_for_iub {
     my $class;
     if ((defined($_[0]))&&($_[0] eq __PACKAGE__)) {
@@ -126,6 +140,21 @@ sub iub_to_string {
     
     return $iub_as_string{$base} if $base and $iub_as_string{$base};
     return;
+}
+
+sub reference_iub_to_base {
+    my $iub = shift;
+    $iub = uc $iub if $iub;
+
+    return $iub unless $iub;
+    
+    my $base;
+    if($iub_to_single_base{$iub}){
+        $base = $iub_to_single_base{$iub};
+    }else{
+        $base = $iub;
+    }
+    return $base;
 }
 
 1;
