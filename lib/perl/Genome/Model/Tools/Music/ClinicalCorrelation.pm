@@ -176,6 +176,9 @@ sub create_sample_gene_matrix {
 
     #parse MAF header
     my $maf_header = $maf_fh->getline;
+    while ($maf_header =~ /^#/) {
+        $maf_header = $maf_fh->getline;
+    }
     my %maf_columns;
     if ($maf_header =~ /Chromosome/) {
         #header exists. determine columns containing gene name and sample name.
