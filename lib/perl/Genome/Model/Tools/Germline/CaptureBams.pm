@@ -9,6 +9,8 @@ package Genome::Model::Tools::Germline::CaptureBams;
 use strict;
 use warnings;
 
+use Workflow;
+
 class Genome::Model::Tools::Germline::CaptureBams {
     is => ['Workflow::Operation::Command'],
     workflow => sub { Workflow::Operation->create_from_xml(\*DATA); }
