@@ -4,6 +4,8 @@ use strict;
 use warnings;
 
 use Genome;
+use Carp qw/croak/;
+use File::Basename;
 
 class Genome::Model::Tools::Bed::Convert {
     is => ['Command'],
@@ -19,6 +21,16 @@ class Genome::Model::Tools::Bed::Convert {
             doc => 'Where to write the output BED file',
         },
     ],
+    has => {
+        sorted_filename => {
+            is => 'File',
+            calculate_from => 'output',
+            calculate => q|
+                $output =~ s/\.bed$//;
+                return "$output.v1.bed";
+            |
+        },
+    },
     has_transient_optional => [
         _input_fh => {
             is => 'IO::File',
@@ -44,7 +56,7 @@ EOS
 
 sub help_detail {                           
     return <<EOS
-    This is a collection of small tools to take variant calls in various formats and convert them to a common BED format (using the first four columns).
+    This is a collection of small tools to take variant calls in various formats and convert them to a common BED format (using the first four or five columns).
 EOS
 }
 
@@ -58,8 +70,22 @@ sub execute {
     my $retval = $self->process_source;
     
     $self->close_filehandles;
-    
-    return $retval;
+
+    return unless $retval;
+
+    my $sort_cmd = Genome::Model::Tools::Bed::Sort->create(
+        input => $self->output,
+        output => $self->sorted_filename
+    );
+
+    if ($sort_cmd->execute()) {
+        unlink($self->output);
+        symlink(basename($self->sorted_filename), $self->output);
+        return 1;
+    } else {
+        $self->error_message("Failed to sort bed file " . $self->output);
+        return;
+    }
 }
 
 sub initialize_filehandles {
@@ -101,31 +127,22 @@ sub close_filehandles {
     return 1;
 }
 
+sub format_line {
+    my ($self, @values) = @_;
+    if (@values < 5) {
+        croak "Not enough fields to write bed file in input: ".join("\t", @values);
+    }
+    splice(@values,3,2, join('/', @values[3,4]));
+    # if no quality field is present, push -
+    push(@values, '-') if @values < 5;
+    return join("\t", @values);
+}
+
 sub write_bed_line {
     my $self = shift;
-    #start is zero-based index of first base in the event.
-    #stop is zero-based index of first base *after* the event (e.g. for a SNV these will differ by one)
-   
-     #my ($chromosome, $start, $stop, $reference, $variant) = @_;
-    my @values = @_;
-    
+
     my $output_fh = $self->_output_fh;
-    
-    #my $name = join('/', $reference, $variant);
-    my $name = join('/', $values[3], $values[4]);
-    my @columns;
-    for my $index (0..scalar(@values)){
-        if($index==3){
-            push @columns, $name;
-        } elsif ($index==4){
-        } else {
-            if(defined($values[$index])){
-                push @columns, $values[$index];
-            }
-        }
-    }
-    #print $output_fh join("\t", $chromosome, $start, $stop, $name), "\n";
-    print $output_fh join("\t", @columns), "\n";
+    print $output_fh $self->format_line(@_)."\n";
     
     return 1;
 }

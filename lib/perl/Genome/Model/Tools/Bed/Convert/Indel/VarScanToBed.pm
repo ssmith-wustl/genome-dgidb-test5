@@ -33,6 +33,7 @@ sub process_source {
     
     while(my $line = <$input_fh>) {
         my ($chromosome, $position, $_reference, $consensus, @extra) = split("\t", $line);
+        my $quality = $extra[5];
         
         no warnings qw(numeric);
         next unless $position eq int($position); #Skip header line(s)
@@ -70,7 +71,7 @@ sub process_source {
                 next;
             }
         
-            $self->write_bed_line($chromosome, $start, $stop, $reference, $variant);
+            $self->write_bed_line($chromosome, $start, $stop, $reference, $variant, $quality);
         }
     }
     
