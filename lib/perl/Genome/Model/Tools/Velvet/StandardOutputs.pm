@@ -111,19 +111,6 @@ sub execute {
     }
     $self->status_message("Completed creating supercontigs.fasta and agp files");
 
-
-    #create stats;
-    $self->status_message("Creating stats");
-    my $stats = Genome::Model::Tools::Velvet::Stats->create (
-	assembly_directory => $self->assembly_directory,
-        no_print_to_screen => 1,
-        );
-    unless ($stats->execute) {
-        $self->error_message("Failed to create stats");
-        return;
-    }
-    $self->status_message("Completed creating stats");
-
     return 1;
 }
 
