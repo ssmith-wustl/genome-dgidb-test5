@@ -143,18 +143,26 @@ sub iub_to_string {
 }
 
 sub reference_iub_to_base {
-    my $iub = shift;
-    $iub = uc $iub if $iub;
-
-    return $iub unless $iub;
-    
-    my $base;
-    if($iub_to_single_base{$iub}){
-        $base = $iub_to_single_base{$iub};
-    }else{
-        $base = $iub;
+    my $class;
+    if ((defined($_[0]))&&($_[0] eq __PACKAGE__)) {
+        $class = shift;
     }
-    return $base;
+
+    my($reference_with_iub) = @_;
+    $reference_with_iub = uc $reference_with_iub if $reference_with_iub;
+
+    return $reference_with_iub unless $reference_with_iub;
+    
+    my $reference_without_iubs; 
+    
+    for my $base(split(//, $reference_with_iub)){
+        if($iub_to_single_base{$base}){
+            $reference_without_iubs .= $iub_to_single_base{$base};
+        }else{
+            $reference_without_iubs .= $base;
+        }
+    }
+    return $reference_without_iubs;
 }
 
 1;

@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 39;
+use Test::More tests => 40;
 use above "Genome";
 use Genome::Info::IUB;
 
@@ -59,6 +59,7 @@ is(Genome::Info::IUB::reference_iub_to_base('D'), 'A', "reference_iub_to_base: D
 is(Genome::Info::IUB::reference_iub_to_base('H'), 'A', "reference_iub_to_base: H returns A");
 is(Genome::Info::IUB::reference_iub_to_base('V'), 'A', "reference_iub_to_base: V returns A");
 is(Genome::Info::IUB::reference_iub_to_base('N'), 'A', "reference_iub_to_base: N returns A");
+is(Genome::Info::IUB::reference_iub_to_base('ACTGRYMKSWBDHVN'), 'ACTGACAGCACAAAA', "reference_iub_to_base: ACTGRYMKSWBDHVN returns ACTGACAGCACAAAA");
 
 #$HeadURL$
 #$Id$
