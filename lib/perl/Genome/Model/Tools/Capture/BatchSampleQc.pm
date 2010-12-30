@@ -22,6 +22,7 @@ class Genome::Model::Tools::Capture::BatchSampleQc {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
+		bam_files	=> { is => 'Text', doc => "Tab-delimited list of samples and paths to BAM files", is_optional => 1, is_input => 1 },
 		snp_files	=> { is => 'Text', doc => "Tab-delimited list of samples and paths to SNP calls from sequencing", is_optional => 0, is_input => 1 },
 		genotype_files	=> { is => 'Text', doc => "Tab-delimited list of samples and paths to array genotype data", is_optional => 0, is_input => 1 },		
 		output_file     => { is => 'Text', doc => "Output file to receive QC results", is_optional => 0, is_input => 1, is_output => 1 },
@@ -64,7 +65,8 @@ sub execute {                               # replace with real execution logic.
 	my %stats = ();
 
 	## Load the sample snp files ##
-	
+
+	my %sample_bam_files = parse_sample_file_list($self->bam_files) if($self->sample_bam_files);	
 	my %sample_snp_files = parse_sample_file_list($snp_files);
 	my %sample_genotype_files = parse_sample_file_list($genotype_files);
 	
@@ -84,8 +86,9 @@ sub execute {                               # replace with real execution logic.
 			$stats{'have_snp_and_genotype'}++;
 			
 			## Run the sample QC ##
-			
-			run_genotype_qc($sample_name, $sample_genotype_files{$sample_name}, $sample_snp_files{$sample_name});
+			my $label = "";
+			$label = $sample_bam_files{$sample_name} if($sample_bam_files{$sample_name});
+			run_genotype_qc($sample_name, $sample_genotype_files{$sample_name}, $sample_snp_files{$sample_name}, $label);
 		}
 		else
 		{
@@ -138,7 +141,7 @@ sub execute {                               # replace with real execution logic.
 
 sub run_genotype_qc
 {
-	my ($sample_name, $genotype_file, $snp_file) = @_;
+	my ($sample_name, $genotype_file, $snp_file, $label) = @_;
 
 	print "Running Genotype QC for $sample_name...\n";	
 	my $qc_result = `gmt analysis lane-qc compare-snps --genotype $genotype_file --variant $snp_file`;
@@ -153,7 +156,8 @@ sub run_genotype_qc
 	my $numContents = @valueContents;
 	my $overall_conc = $valueContents[$numContents - 1];
 	
-	print OUTFILE join("\t", $sample_name, $genotype_file, $snp_file, $qc_values) . "\n";
+	$label = $snp_file if(!$label);
+	print OUTFILE join("\t", $sample_name, $genotype_file, $label, $qc_values) . "\n";
 	print "$sample_name\t$overall_conc\n";
 }
 
