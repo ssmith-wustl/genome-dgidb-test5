@@ -2,6 +2,7 @@ package Genome::Model::Somatic::Command::AssemblePindelResults;
 
 use strict;
 use warnings;
+use Workflow;
 use IO::File;
 
 class Genome::Model::Somatic::Command::AssemblePindelResults {
