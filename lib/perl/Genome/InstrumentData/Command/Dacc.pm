@@ -382,7 +382,7 @@ sub _update_library {
         return 1;
     }
 
-    my $update_library = Genome::InstrumentData::Command::Dacc::UpdateLibrary->create(
+    my $update_library = Genome::Sample::Command::Import::Dacc->create(
         sra_sample_id => $self->sra_sample_id,
         xml_files => \@xml_files,
     );

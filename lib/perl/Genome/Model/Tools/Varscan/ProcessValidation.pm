@@ -201,14 +201,25 @@ sub execute {                               # replace with real execution logic.
 
         print $r_script_fh qq{png("$temp_plot_file_path", height=600, width=600)\n};
 
+        my $initialized = 0;
+
+        my $cmd = 'plot';
+        my $label = 'xlab="Normal", ylab="Tumor"';
+
         if(-s $germline_file) {
-            print $r_script_fh qq{plot(germline\$V1, germline\$V2, col="blue", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), xlab="Normal", ylab="Tumor")\n};
+            print $r_script_fh qq{$cmd(germline\$V1, germline\$V2, col="blue", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), $label)\n};
+            $cmd = 'points';
+            $label = '';
         }
         if(-s $somatic_file) {
-            print $r_script_fh qq{points(somatic\$V1, somatic\$V2, col="red", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100))\n};
+            print $r_script_fh qq{$cmd(somatic\$V1, somatic\$V2, col="red", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), $label)\n};
+            $cmd = 'points';
+            $label = '';
         }
         if(-s $reference_file) {
-            print $r_script_fh qq{points(reference\$V1, reference\$V2, col="black", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100))\n};
+            print $r_script_fh qq{$cmd(reference\$V1, reference\$V2, col="black", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), $label)\n};
+            $cmd = 'points';
+            $label = '';
         }
 
         print $r_script_fh qq{dev.off()\n};
@@ -226,7 +237,7 @@ dev.off()
         close($r_script_fh);
 
         Genome::Utility::FileSystem->shellcmd(
-            cmd => "R --no-save <$r_script_file 2>/dev/null",
+            cmd => "R --no-save <$r_script_file",
             input_files => [$r_script_file],
             output_files => [$temp_plot_file_path]
         );

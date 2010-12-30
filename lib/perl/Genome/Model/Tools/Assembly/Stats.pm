@@ -98,11 +98,10 @@ sub get_simple_read_stats {
 	      "  (reads in scaffolds: $scaf_reads)\n";
 
     #OPTIONAL UNIQUE READS STATS FOR VELVET AND NEWBLER
-    #if ($self->assembler eq 'Velvet' or $self->assembler eq 'Newbler') {
-	$stats .= "  (unique reads: $uniq_scaf_reads)\n".
-	          "  (duplicate reads: $duplicate_reads)\n".
-		  "Unplaced reads: $unplaced_reads\n";
-    #}
+    $stats .= "  (unique reads: $uniq_scaf_reads)\n".
+	      "  (duplicate reads: $duplicate_reads)\n".
+	      "Unplaced reads: $unplaced_reads\n";
+
 
     #GENOME CONTENTS STATS FROM CONTIGS.BASES (CB) FILES
     my $cb_counts = $self->get_contigs_bases_counts();
@@ -167,8 +166,15 @@ sub get_input_counts {
 }
 
 sub assembler {
-    my ($self) = @_;
-    my ($assembler) = ref($self) =~ /(\w+)$/;
+    my $self = shift;
+
+    my $class = $self->class;
+    #if called from stats class: 'Genome::Model::Tools::Assembly::Stats::Soap'
+    my ($assembler) = $class =~ /::(\w+)$/;
+    #if called from assembler class: 'Genome::Model::Tools::Velvet::Stats'
+    if ( $assembler eq 'Stats' ) {
+	($assembler) = $class =~ /Tools::(\w+)::Stats/;
+    }
     return $assembler;
 }
 
@@ -236,9 +242,6 @@ sub get_reads_placed_counts {
     while (my $line = $fh->getline) {
 	$counts->{reads_in_scaffolds}++;
 	my ($read_name) = $line =~ /^\*\s+(\S+)\s+/;
-	#if ($read_name =~ /_t/) { #no more prefin reads??
-	#    $counts->{prefin_reads_in_scaffolds}++
-	#}
 	if ($self->assembler =~ /Velvet/i) {
 	    $read_name =~ s/\-\d+$//;
 	    $uniq_reads->{$read_name}++;

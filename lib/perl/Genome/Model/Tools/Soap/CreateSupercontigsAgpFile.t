@@ -12,18 +12,20 @@ use_ok ('Genome::Model::Tools::Soap::CreateSupercontigsAgpFile') or die;
 #check test data files
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Soap/CreateSupercontigsAgpFile';
 ok(-d $data_dir, "Data dir exists") or die;
+
 ok(-s $data_dir."/TEST.scafSeq", "Data dir test file exists") or die;
+
 ok(-s $data_dir."/supercontigs.agp", "Data dir supercontigs.agp file exists") or die;
 
 #create tmp test data dir
 my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
 ok(-d $temp_dir, "Temp test dir created") or die;
-mkdir $temp_dir.'/edit_dir';
-ok(-d $temp_dir.'/edit_dir', "Created temp test dir edit_dir");
+
+symlink( $data_dir.'/TEST.scafSeq', $temp_dir.'/TEST.scafSeq' );
+ok( -s $temp_dir.'/TEST.scafSeq', "Linked TEST.scafSeq file" );
 
 #create, execute command
 my $create = Genome::Model::Tools::Soap::CreateSupercontigsAgpFile->create(
-    scaffold_fasta_file => $data_dir.'/TEST.scafSeq',
     assembly_directory => $temp_dir,
     );
 ok($create, "Created gmt soap create-supercontigs-agp-file") or die;

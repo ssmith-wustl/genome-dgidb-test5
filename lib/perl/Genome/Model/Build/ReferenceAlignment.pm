@@ -186,6 +186,29 @@ sub unfiltered_snp_file {
     return shift->snp_related_metric_directory . '/snps_all_sequences';
 }
 
+sub get_variant_bed_file {
+    my ($self, $base, $ver) = @_;
+    my $filename = $self->snp_related_metric_directory . "/$base";
+    $filename .= ".$ver" if defined $ver;
+    $filename .= ".bed";
+    if (! -e $filename) {
+        $ver = "unspecified" if !defined $ver;
+        $self->error_message("Failed to find bed file (version $ver) at $filename.");
+        return;
+    }
+    return $filename;
+}
+
+sub snvs_bed {
+    my ($self, $ver) = @_;
+    return $self->get_variant_bed_file("snps_all_sequences", "v1");
+}
+
+sub filtered_snvs_bed {
+    my ($self, $ver) = @_;
+    return $self->get_variant_bed_file("snps_all_sequences.filtered", "v1");
+}
+
 sub filtered_indel_file {
     my $self = shift;
 

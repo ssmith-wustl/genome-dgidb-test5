@@ -12,13 +12,15 @@ class Genome::Model::Tools::Velvet::CreateUnplacedReadsFiles {
     has => [
 	sequences_file => {
 	    is => 'Text',
+	    is_optional => 1,
 	    doc => 'Velvet create Sequences file',
 	},
 	afg_file => {
 	    is => 'Text',
+	    is_optional => 1,
 	    doc => 'Velvet created velvet_asm.afg file',
 	},
-	directory => {
+	assembly_directory => {
 	    is => 'Text',
 	    doc => 'Assembly directory',
 	},
@@ -42,19 +44,22 @@ EOS
 sub execute {
     my $self = shift;
 
-    unless (-d $self->directory) {
-	$self->error_message("Can't find or invalid directory: ".$self->directory);
+    #make edit_dir
+    unless ( $self->create_edit_dir ) {
+	$self->error_message("Failed to create edit_dir");
+	return;
+    }
+
+    unless (-d $self->assembly_directory) {
+	$self->error_message("Can't find or invalid directory: ".$self->assembly_directory);
 	return;
     }
 
     #validate sequences file
-    unless (-s $self->sequences_file) {
-	$self->error_message("Failed to find Sequences file: ".$self->sequences_file);
-	return;
-    }
+    my $sequences_file = ( $self->sequences_file ) ? $self->sequences_file : $self->velvet_sequences_file;
 
     #TODO - move this to velvet base class - used multiple times
-    my $read_names_and_pos = $self->load_read_names_and_seek_pos( $self->sequences_file );
+    my $read_names_and_pos = $self->load_read_names_and_seek_pos( $sequences_file );
     unless ($read_names_and_pos) { #arrayref
 	$self->error_message("Failed to get read names and seek_pos from Sequences file");
 	return;
@@ -67,7 +72,7 @@ sub execute {
 	return;
     }
 
-    unless ($self->_print_unplaced_reads($unplaced_reads)) {
+    unless ($self->_print_unplaced_reads($unplaced_reads, $sequences_file)) {
 	$self->error_message("Failed to print unplaced reads");
 	return;
     }
@@ -76,7 +81,7 @@ sub execute {
 }
 
 sub _print_unplaced_reads {
-    my ($self, $unplaced_reads) = @_;
+    my ($self, $unplaced_reads, $sequences_file) = @_;
 
     unlink $self->reads_unplaced_file;
     my $unplaced_fh = Genome::Utility::FileSystem->open_file_for_writing($self->reads_unplaced_file) ||
@@ -97,11 +102,10 @@ sub _print_unplaced_reads {
 	    return;
 	}
 	#This doesn't seek to work properly if fh is held open constantly
-	my $seq_fh = Genome::Utility::FileSystem->open_file_for_reading($self->sequences_file) || 
+	my $seq_fh = Genome::Utility::FileSystem->open_file_for_reading( $sequences_file ) || 
 	    return;
 	$seq_fh->seek($seek_pos, 0);
 	my $io = Bio::SeqIO->new(-fh => $seq_fh, -format => 'fasta');
-	#$fasta_out->write_seq($io->next_seq);
 	my $seq = $io->next_seq;
 	my $seq_obj = Bio::Seq->new(-display_id => $seq->primary_id, -seq => $seq->seq);
 	$fasta_out->write_seq($seq_obj);
@@ -115,11 +119,9 @@ sub _print_unplaced_reads {
 sub _remove_placed_reads {
     my ($self, $input_reads) = @_;
 
-    unless (-s $self->afg_file) {
-	$self->error_message("Failed to find afg file: ".$self->afg_file);
-	return;
-    }
-    my $afg_fh = Genome::Utility::FileSystem->open_file_for_reading($self->afg_file) ||
+    my $afg_file = ($self->afg_file) ? $self->afg_file : $self->velvet_afg_file;
+
+    my $afg_fh = Genome::Utility::FileSystem->open_file_for_reading($afg_file) ||
 	return;
     while (my $record = getRecord($afg_fh)) {
 	my ($rec, $fields, $recs) = parseRecord($record);

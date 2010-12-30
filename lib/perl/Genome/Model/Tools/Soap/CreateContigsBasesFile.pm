@@ -10,13 +10,14 @@ use Data::Dumper;
 class Genome::Model::Tools::Soap::CreateContigsBasesFile {
     is => 'Genome::Model::Tools::Soap',
     has => [
-	scaffold_fasta_file => {
-	    is => 'Text',
-	    doc => 'Soap created scaffolds fasta file',
-	},
 	assembly_directory => {
 	    is => 'Text',
 	    doc => 'Soap assembly directory',
+	},
+	scaffold_sequence_file => {
+	    is => 'Text',
+	    is_optional => 1,
+	    doc => 'Soap created scaffolds fasta file',
 	},
 	output_file => {
 	    is => 'Text',
@@ -32,26 +33,28 @@ sub help_brief {
 
 sub help_detail {
     return <<"EOS"
-gmt soap create-contigs-bases-file --scaffold-fasta-file /gscmnt/111/soap_asm/61EFS.cafSeq --assembly-directory /gscmnt/111/soap_asm
+gmt soap create-contigs-bases-file --scaffold-sequence-file /gscmnt/111/soap_asm/61EFS.cafSeq --assembly-directory /gscmnt/111/soap_asm
 EOS
 }
 
 sub execute {
     my $self = shift;
 
-    unless (-s $self->scaffold_fasta_file) {
-	$self->error_message("Failed to find scaffold file: ".$self->scaffold_fasta_file);
-	return;
-    }
-
     unless (-d $self->assembly_directory) {
 	$self->error_message("Failed to find assembly directory: ".$self->assembly_directory);
 	return;
     }
 
-    my $out_file = ($self->output_file) ? $self->output_file : $self->assembly_directory.'/edit_dir/contigs.bases';
+    unless ( $self->create_edit_dir ) {
+	$self->error_message("Failed to create edit_dir");
+	return;
+    }
 
-    my $in = Bio::SeqIO->new(-format => 'fasta', -file => $self->scaffold_fasta_file);
+    my $scaf_seq_file = ($self->scaffold_sequence_file) ? $self->scaffold_sequence_file : $self->assembly_scaffold_sequence_file;
+
+    my $out_file = ($self->output_file) ? $self->output_file : $self->contigs_bases_file;
+
+    my $in = Bio::SeqIO->new(-format => 'fasta', -file => $scaf_seq_file);
     my $out = Bio::SeqIO->new(-format => 'fasta', -file => '>'.$out_file);
 
     my $supercontig_number = 0;

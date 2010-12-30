@@ -3,11 +3,11 @@
 use strict;
 use warnings;
 
+require File::Compare;
 use above "Genome";
 use Test::More;
 
-use Genome::Model::Tools::Velvet::CreateContigsFiles;
-require File::Compare;
+use_ok( 'Genome::Model::Tools::Velvet::CreateContigsFiles' );
 
 #TODO - move to correct test suite module dir when all tests are configured
 my $module = 'Genome-Model-Tools-Assembly-CreateOutputFiles2';
@@ -33,8 +33,14 @@ ok(-s $data_dir.'/edit_dir/gap.txt', "Data dir gap.txt file exists");
 symlink($data_dir.'/edit_dir/gap.txt', $temp_dir.'/edit_dir/gap.txt');
 ok(-s $temp_dir.'/edit_dir/gap.txt', "Tmp edit_dir gap.txt file exists");
 
-my $ec = system("chdir $temp_dir; gmt velvet create-reads-files --sequences-file $temp_dir/Sequences --afg-file $temp_dir/velvet_asm.afg --directory $temp_dir");
-ok($ec == 0, "Command ran successfully");
+#my $ec = system("chdir $temp_dir; gmt velvet create-reads-files --sequences-file $temp_dir/Sequences --afg-file $temp_dir/velvet_asm.afg --directory $temp_dir");
+#ok($ec == 0, "Command ran successfully");
+
+my $create = Genome::Model::Tools::Velvet::CreateReadsFiles->create(
+    assembly_directory => $temp_dir,
+    );
+ok( $create, "Created tool");
+ok( $create->execute, "Successfully executed tool" );
 
 foreach ('readinfo.txt', 'reads.placed') {
     ok(-s $data_dir."/edit_dir/$_", "Data dir $_ file exists");

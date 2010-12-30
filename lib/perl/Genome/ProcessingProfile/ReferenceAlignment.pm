@@ -67,29 +67,9 @@ class Genome::ProcessingProfile::ReferenceAlignment {
             doc => 'picard version for MarkDuplicates, MergeSamfiles, CreateSequenceDictionary...',
             is_optional => 1,
         },
-        picard_max_sequences_for_disk_read_ends_map => {
-            doc => 'picard paremeter for MarkDuplicates',
-            is_optional   => 1,
-            is_deprecated => 1,
-        },
         samtools_version => {
             doc => 'samtools version for SamToBam, samtools merge, etc...',
             is_optional => 1,
-        },
-        rmdup_name => {
-            doc => 'rmdup tool used for this model ... deprecated',
-            is_optional   => 1,
-            is_deprecated => 1,
-        },
-        rmdup_version => {
-            doc => 'rmdup tool version used for this model ... deprecated',
-            is_optional   => 1,
-            is_deprecated => 1,
-        },
-        merge_software => {
-            doc => 'picard or samtools for merging ... deprecated',
-            is_optional   => 1,
-            is_deprecated => 1,
         },
         merger_name => {
             doc => 'name of bam merger, picard, samtools',

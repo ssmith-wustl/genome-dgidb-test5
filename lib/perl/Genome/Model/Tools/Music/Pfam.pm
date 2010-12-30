@@ -94,6 +94,10 @@ sub execute {
 
     #parse MAF header
     my $maf_header = $maf_fh->getline;
+    while ($maf_header =~ /^#/) { 
+        $out_fh->print($maf_header);
+        $maf_header = $maf_fh->getline;
+    }
     my %maf_columns;
     if ($maf_header =~ /Chromosome/) {
         chomp $maf_header;

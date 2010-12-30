@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Workflow;
 
 use lib '/gsc/var/tmp/Bio-SamTools/lib';
 use Bio::DB::Sam::RefCov::Bed;

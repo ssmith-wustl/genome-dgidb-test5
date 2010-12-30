@@ -34,6 +34,21 @@ sub _decomposed_aligner_params {
 	return ( 'mblastx_aligner_params' => $aligner_params );
 }
 
+sub aligner_params_for_sam_header{
+    my $self = shift;
+    
+    my %params = $self->_decomposed_aligner_params;
+    my $aln_params = $params{mblastx_aligner_params};
+    my $mblastx = $self->_mblastx_path;
+    
+    return "$mblastx $aln_params";
+}
+
+sub _mblastx_path{
+    my $self = shift;
+    return "/gscmnt/sata895/research/mmitreva/SOFTWARE/MCW_09242010/mblastx";
+}
+
 sub _run_aligner {
 	my $self            = shift;
 	my @input_pathnames = @_;
@@ -127,8 +142,7 @@ sub _run_aligner {
 		#STEP 2 - run mblastx aligner
 		my %aligner_params = $self->_decomposed_aligner_params;
 
-		my $mblastx =
-		  "/gscmnt/sata895/research/mmitreva/SOFTWARE/MCW_09242010/mblastx";
+		my $mblastx = $self->_mblastx_path;
 		my $mblastx_aligner_params = (
 			defined $aligner_params{'mblastx_aligner_params'}
 			? $aligner_params{'mblastx_aligner_params'}

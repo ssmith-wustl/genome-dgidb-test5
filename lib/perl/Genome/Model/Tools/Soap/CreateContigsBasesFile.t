@@ -18,11 +18,12 @@ ok(-s $test_file, "Test scaffold file exists");
 
 my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
 ok(-d $temp_dir, "Temp test dir created");
-mkdir $temp_dir.'/edit_dir';
-ok(-d $temp_dir, "Temp test edit_dir created");
+
+#link test.scafSeq file
+symlink( $data_dir.'/TEST.scafSeq', $temp_dir.'/TEST.scafSeq' );
+ok( -s $temp_dir.'/TEST.scafSeq', "Linked Test.scafSeq file");
 
 my $create = Genome::Model::Tools::Soap::CreateContigsBasesFile->create(
-    scaffold_fasta_file => $test_file,
     assembly_directory => $temp_dir,
     );
 ok($create, "Created gmt soap create-contigs-fasta-file");

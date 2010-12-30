@@ -6,8 +6,9 @@ use warnings;
 use above "Genome";
 use Test::More;
 
-use Genome::Model::Tools::Velvet::CreateContigsFiles;
 require File::Compare;
+
+use_ok( 'Genome::Model::Tools::Velvet::CreateContigsFiles' );
 
 #TODO - move to correct test suite module dir when all tests are configured
 my $module = 'Genome-Model-Tools-Assembly-CreateOutputFiles2';
@@ -17,17 +18,16 @@ ok(-d $data_dir, "Found data directory: $data_dir");
 
 my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
 
-#make edit_dir
-mkdir $temp_dir.'/edit_dir';
-ok(-d $temp_dir.'/edit_dir', "Made edit_dir in temp dir");
-
 #link afg file in tmp dir
 ok(-s $data_dir.'/velvet_asm.afg', "Data dir velvet_asm.afg file exists");
 symlink($data_dir.'/velvet_asm.afg', $temp_dir.'/velvet_asm.afg');
 ok (-s $temp_dir.'/velvet_asm.afg', "Linked afg file in tmp dir");
 
-my $ec = system("chdir $temp_dir; gmt velvet create-contigs-files --afg-file $temp_dir/velvet_asm.afg --directory $temp_dir");
-ok($ec == 0, "Command ran successfully");
+my $create = Genome::Model::Tools::Velvet::CreateContigsFiles->create(
+    assembly_directory => $temp_dir,
+    );
+ok( $create, "Created tool");
+ok( $create->execute, "Successfully executed tool");
 
 foreach ('contigs.bases', 'contigs.quals') {
     my $test_file = $data_dir."/edit_dir/$_";

@@ -32,10 +32,9 @@ ok (-s $temp_dir.'/TEST.scafSeq', "Temp test dir TEST.scafSeq file exists") or d
 #create/execute
 my $c = Genome::Model::Tools::Soap::FastaToAgp->create (
     assembly_directory => $temp_dir,
-    scaffold_fasta_file => $temp_dir.'/TEST.scafSeq',
     scaffold_size_cutoff => 100,
     output_dir => $temp_dir,
-    file_prefix => 'SRS012663_PGA', #TODO - rename this SRS012663_PGA
+    file_prefix => 'SRS012663_PGA',
     version => '9.27.10',
     );
 ok ($c, "Created fasta-to-agp tool") or die;

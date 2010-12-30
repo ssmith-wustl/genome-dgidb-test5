@@ -3,193 +3,111 @@ package Genome::Sample::Command::Import;
 use strict;
 use warnings;
 
+require Carp;
 use Data::Dumper 'Dumper';
 
 class Genome::Sample::Command::Import {
     is => 'Command',
+    is_abstract => 1,
     doc => 'Import a sample',
     has => [
-        # taxon
-        _taxon => {
-            is_optional => 1,
-        },
-        taxon_name => { 
-            is => 'Text',
-            doc => 'Taxon name to use or create',
-        },
-        # sample
-        _sample => {
-            is_optional => 1,
-        },
-        sample_name => { 
-            is => 'Text',
-            doc => 'Sample name to use or create',
-        },
-        library_name => { 
-            is => 'Text',
-            doc => 'Library name to use or create',
-            is_optional => 1,
-        },
-        library_type => { 
-            is => 'Text',
-            doc => 'Library type to use if letting the command autogenerate a library (e.g. microarraylib, extlibs, etc)',
-            is_optional => 1,
-        },
-        sample_attrs => {
-            is => 'Text',
-            is_optional => 1,
-            doc => 'Attributes (cell_type, nomenclature, tissue_desc, extraction_label, extraction_type, organ_name...) for creating a sample. Syntax: ATTR1=VAL1,ATTR2=VAL2',
-        },
-        # individual
-        _individual => {
-            is_optional => 1,
-        },
-        individual_name => {
-            is => 'Text',
-            doc => 'Individual name to use or create',
-        },
-        individual_attrs => {
-            is => 'Text',
-            is_optional => 1,
-            doc => 'Attributes (common_name, gender, race, ethnicity) for creating an individual. Syntax: ATTR1=VAL1,ATTR2=VAL2',
-        },
-        # misc
-        _created_objects => {
-            is => 'ARRAY',
-            is_optional => 1,
-        },
+        _taxon => { is => 'Genome::Taxon', is_optional => 1, },
+        _individual => { is => 'Genome::Individual', is_optional => 1, },
+        _sample => { is => 'Genome::Sample', is_optional => 1, },
+        _library => { is => 'Genome::Library', is_optional => 1, },
+        _created_objects => { is => 'ARRAY', is_optional => 1, },
     ],
 };
 
 sub help_brief {
-    return 'Import a sample into the system';
+    return 'Import a sample';
 }
 
 sub help_detail {
-    return <<HELP;
-HELP
+    return help_brief();
 }
 
-sub execute {
-    my $self = shift;
+sub _update_object {
+    my ($self, $obj, %params) = @_;
 
-    # Taxon
-    $self->_get_taxon 
-    #or $self->_create_taxon
-        or return;
+    $self->status_message('Update '.$obj->name.' ('.$obj->id.')');
+    $self->status_message( Dumper(\%params) );
 
-    # Individual
-    $self->_get_individual
-        or $self->_create_individual
-        or return;
+    for my $attr ( keys %params ) {
+        $obj->$attr( $params{$attr} );
+    }
 
-    # Sample
-    $self->_get_sample
-        or $self->_create_sample
-        or return;
+    if ( not UR::Context->commit ) {
+        $self->_bail('Cannot commit updates');
+        return;
+    }
 
-    # Library
-    $self->_get_or_create_library
-        or return;
+    $self->status_message('Update...OK');
 
     return 1;
 }
 
-sub _attrs_for {
-    my ($self, $type) = @_;
-
-    my $attrs_method = $type.'_attrs';
-    my $attrs_string = $self->$attrs_method;
-
-    return if not defined $attrs_string;
-
-    my @attr_tokens = split(',', $attrs_string);
-    if ( not @attr_tokens ) {
-        $self->error_message("Could not get $type attributes from '$attrs_string'");
-        return;
-    }
-
-    my %attrs;
-    for my $token ( @attr_tokens ) {
-        my ($key, $val) = split('=', $token);
-        if ( not defined $val ) {
-            $self->error_message("Could not get attribute key/value pair from '$token'");
-        }
-        $attrs{$key} = $val;
-    }
-
-    return %attrs;
-}
-
 sub _get_taxon {
-    my $self = shift;
+    my ($self, $name) = @_;
 
-    my $taxon = Genome::Taxon->get(name => $self->taxon_name);
+    Carp::confess('No name given to get taxon') if not $name;
 
-    return if not defined $taxon;
+    my $taxon = Genome::Taxon->get(name => $name);
+    return if not $taxon;
 
-    $self->status_message('Got taxon: '.join(' ', map{ $taxon->$_ } (qw/ id name/)));
-    #print Dumper($taxon);
+    $self->status_message('Taxon: '.join(' ', map{ $taxon->$_ } (qw/ id name/)));
+
     return $self->_taxon($taxon);
 }
 
-sub _create_taxon {
-    my $self = shift;
+sub _get_and_update_or_create_individual {
+    my ($self, %params) = @_;
 
-    my %taxon_attrs = $self->_attrs_for('taxon');
-    $taxon_attrs{name} = $self->taxon_name;
-    $taxon_attrs{species_name} = $self->taxon_name;
-    #$taxon_attrs{_legacy_org_id} = 43; # unknow in OLTP
-
-    $self->status_message('Creating taxon: '.Dumper(\%taxon_attrs));
-    my $taxon = Genome::Taxon->create(%taxon_attrs);
-    if ( not defined $taxon ) {
-        $self->_bail('Could not create taxon');
-        return;
+    my $individual = $self->_get_individual($params{name});
+    if ( $individual ) {
+        my $update = $self->_update_object($individual, %params);
+        return if not $update;
     }
-
-    unless ( UR::Context->commit ) {
-        $self->_bail('Cannot commit new taxon to DB');
-        return;
+    else {
+        $individual = $self->_create_individual(%params);
+        return if not $individual;
     }
-
-    my $created_objects = $self->_created_objects;
-    push @$created_objects, $taxon;
-    $self->_created_objects($created_objects);
-
-    $self->status_message('Created taxon: '.join(' ', map{ $taxon->$_ } (qw/ id name/)));
-    #print Dumper($taxon);
-    return $self->_taxon($taxon);
+   
+    return $individual;
 }
 
 sub _get_individual {
-    my $self = shift;
+    my ($self, $name) = @_;
 
-    my $individual = Genome::Individual->get(name => $self->individual_name);
+    Carp::confess('No name given to get individual') if not $name;
 
+    my $individual = Genome::Individual->get(name => $name);
     return if not defined $individual;
 
-    $self->status_message('Got individual: '.join(' ', map{ $individual->$_ } (qw/ id name/)));
-    #print Dumper($individual);
+    $self->status_message('Individual: '.join(' ', map{ $individual->$_ } (qw/ id name/)));
+
     return $self->_individual($individual);
 }
 
 sub _create_individual {
-    my $self = shift;
+    my ($self, %params) = @_;
 
-    my %individual_attrs = $self->_attrs_for('individual');
-    $individual_attrs{name} = $self->individual_name;
-    $individual_attrs{upn} = $self->individual_name if not defined $individual_attrs{upn};
-    $individual_attrs{taxon_id} = $self->_taxon->id;
+    Carp::confess('No individual name given to create individual') if not $params{name};
+    Carp::confess('No taxon set to create individual') if not $self->_taxon;
 
-    $self->status_message('Creating individual: '.Dumper(\%individual_attrs));
-    my $individual = Genome::Individual->create(%individual_attrs);
+    $params{upn} = $params{name} if not $params{upn};
+    $params{taxon_id} = $self->_taxon->id;
+    $params{gender} = 'unspecified' if not $params{gender};
+    $params{nomenclature} = 'WUGC' if not $params{nomenclature};
+
+    $self->status_message('Create individual: '.Dumper(\%params));
+    my $individual = Genome::Individual->create(%params);
     if ( not defined $individual ) {
         $self->_bail('Could not create individual');
         return;
     }
 
-    unless ( UR::Context->commit ) {
+    if ( not UR::Context->commit ) {
         $self->_bail('Cannot commit new individual to DB');
         return;
     }
@@ -197,71 +115,95 @@ sub _create_individual {
     my $created_objects = $self->_created_objects;
     push @$created_objects, $individual;
     $self->_created_objects($created_objects);
+    $self->status_message('Individual: '.join(' ', map{ $individual->$_ } (qw/ id name/)));
 
-    $self->status_message('Created individual: '.join(' ', map{ $individual->$_ } (qw/ id name/)));
-    #print Dumper($individual);
     return $self->_individual($individual);
 }
 
+sub _get_and_update_or_create_sample {
+    my ($self, %params) = @_;
+
+    if ( $self->_individual ) {
+        $params{source_id} = $self->_individual->id;
+        $params{source_type} = $self->_individual->subject_type;
+    }
+
+    my $sample = $self->_get_sample($params{name});
+    if ( $sample ) {
+        my $update = $self->_update_object($sample, %params);
+        return if not $update;
+    }
+    else {
+        $sample = $self->_create_sample(%params);
+        return if not $sample;
+    }
+   
+    return $sample;
+}
+
+sub _validate_or_set_sample_params {
+    my ($self, $params) = @_;
+
+    Carp::confess('No sample params given to validate or set') if not $params;
+    Carp::confess('Need sample params as hash ref to validate or set') if ref $params ne 'HASH';
+
+    if ( $self->_individual ) {
+        $params->{source_id} = $self->_individual->id;
+        $params->{source_type} = $self->_individual->subject_type;
+    }
+
+    if ( $params->{nomenclature} ) {
+        my $nomenclature = GSC::Nomenclature->get($params->{nomenclature});
+        return if not $nomenclature;
+        $params->{_nomenclature} = delete $params->{nomenclature};
+    }
+    elsif ( not defined $params->{_nomenclature} ) {
+        $params->{_nomenclature} = 'WUGC';
+    }
+
+    if ( defined $params->{organ_name} ) {
+        my $organ = GSC::Organ->get($params->{organ_name});
+        return if not $organ;
+    }
+
+    if ( defined $params->{tissue_desc} ) {
+        my $tissue = $self->_get_or_create_tissue($params->{tissue_desc});
+        return if not $tissue;
+    }
+
+    return 1;
+}
 
 sub _get_sample {
-    my $self = shift;
+    my ($self, $name) = @_;
 
-    my $sample = Genome::Sample->get(
-       name => $self->sample_name,
-    );
+    Carp::confess('No name given to get sample') if not $name;
 
+    my $sample = Genome::Sample->get(name => $name);
     return if not defined $sample;
 
-    $self->status_message('Got sample: '.join(' ', map{ $sample->$_ } (qw/ id name/)));
-    #print Dumper($sample);
+    $self->status_message('Sample: '.join(' ', map{ $sample->$_ } (qw/ id name/)));
+
     return $self->_sample($sample);
 }
 
 sub _create_sample {
-    my $self  = shift;
+    my ($self, %params) = @_;
 
-    my %sample_attrs = $self->_attrs_for('sample');
-    print Dumper(\%sample_attrs);
-    $sample_attrs{name} = $self->sample_name;
-    $sample_attrs{extraction_label} = $self->sample_name if not defined $sample_attrs{extraction_label};
-    $sample_attrs{taxon_id} = $self->_taxon->id;
-    $sample_attrs{source_id} = $self->_individual->id;
-    $sample_attrs{source_type} = 'organism individual';
-    $sample_attrs{cell_type} = 'unknown' if not defined $sample_attrs{cell_type};
+    Carp::confess('No name given to create sample') if not $params{name};
 
-    # organ
-    if ( defined $sample_attrs{organ_name} ) {
-        $self->_get_organ($sample_attrs{organ_name})
-            or return;
-    }
- 
-    # tissue
-    if ( defined $sample_attrs{tissue_desc} ) {
-        $self->_get_or_create_tissue($sample_attrs{tissue_desc})
-            or return;
-    }
-    
-    # nomenclature
-    if ( defined $sample_attrs{nomenclature} ) {
-        $sample_attrs{_nomenclature} = delete $sample_attrs{nomenclature};
-        $self->_get_or_create_nomenclature($sample_attrs{_nomenclature})
-            or return;
-    }
-    else {
-        $sample_attrs{_nomenclature} = 'unknown';
-    }
+    my $validate_or_set = $self->_validate_or_set_sample_params(\%params);
+    return if not $validate_or_set;
 
-    # create
-    $self->status_message('Creating sample: '.Dumper(\%sample_attrs));
-    my $sample = Genome::Sample->create(%sample_attrs);
+    $self->status_message('Create sample: '.Dumper(\%params));
+    my $sample = Genome::Sample->create(%params);
     if ( not defined $sample ) {
-        $self->error_message('Could not create sample');
+        $self->_bail('Cannot create sample');
         return;
     }
 
-    unless ( UR::Context->commit ) {
-        $self->error_message('Cannot commit sample to DB');
+    if ( not UR::Context->commit ) {
+        $self->_bail('Cannot commit new sample to DB');
         return;
     }
 
@@ -269,24 +211,9 @@ sub _create_sample {
     push @$created_objects, $sample;
     $self->_created_objects($created_objects);
 
-    $self->status_message('Created sample: '.join(' ', map{ $sample->$_ } (qw/ id name/)));
-    #print Dumper($sample);
+    $self->status_message('Sample: '.join(' ', map { $sample->$_ } (qw/ id name /)));
+
     return $self->_sample($sample);
-}
-
-sub _get_organ {
-    my ($self, $organ_name) = @_;
-
-    my $organ = GSC::Organ->get($organ_name);
-
-    if ( not defined $organ ) {
-        $self->status_message("Organ ($organ_name) does not exist. Please create it or use an existing one");
-        return;
-    }
-
-    $self->status_message('Got organ: '.$organ->organ_name);
-
-    return 1;
 }
 
 sub _get_or_create_tissue {
@@ -295,19 +222,19 @@ sub _get_or_create_tissue {
     my $tissue = GSC::Tissue->get($tissue_name);
 
     if ( defined $tissue ) {
-        $self->status_message('Got tissue: '.$tissue->tissue_name);
+        $self->status_message('Tissue: '.$tissue->tissue_name);
         return 1;
     }
 
     $self->status_message('Creating tissue: '.Dumper({ tissue_name => $tissue_name }));
     $tissue = GSC::Tissue->create(tissue_name => $tissue_name);
     if ( not defined $tissue ) {
-        $self->error_message('Cannot create tissue: '.$tissue_name);
+        $self->_bail('Cannot create tissue: '.$tissue_name);
         return;
     }
 
     unless ( UR::Context->commit ) {
-        $self->error_message('Cannot commit tissue to DB');
+        $self->_bail('Cannot commit tissue to DB');
         return;
     }
 
@@ -315,65 +242,61 @@ sub _get_or_create_tissue {
     push @$created_objects, $tissue;
     $self->_created_objects($created_objects);
 
-    $self->status_message('Created tissue: '.$tissue->tissue_name);
-    return 1;
+    $self->status_message('Tissue: '.$tissue->tissue_name);
+
+    return $tissue;
 }
 
-sub _get_or_create_nomenclature {
-    my ($self, $nom) = @_;
+sub _get_or_create_library_for_extension {
+    my ($self, $ext) = @_;
 
-    my $nomenclature = GSC::Nomenclature->get($nom);
+    my $library = $self->_get_library_for_extension($ext);
+    return $library if $library;
 
-    if ( defined $nomenclature ) {
-        $self->status_message('Got nomenclature: '.$nomenclature->nomenclature);
-        return 1;
-    }
+    return $self->_create_library_for_extension($ext);
+}
 
-    $self->status_message('Creating nomenclature: '.Dumper({ nomenclature => $nom }));
-    $nomenclature = GSC::Tissue->create(nomenclature => $nom);
-    if ( not defined $nomenclature ) {
-        $self->error_message('Cannot create nomenclature: '.$nom);
+sub _get_library_name_for_extension {
+    my ($self, $ext) = @_;
+
+    Carp::confess('No sample set to get or create library') if not $self->_sample;
+    Carp::confess('No library extension') if not defined $ext;
+    my @valid_exts = (qw/ extlibs microarraylib /);
+    Carp::confess("Invalid library extension ($ext). Valid extentions: ".join(' ', @valid_exts)) if not grep { $ext eq $_ } @valid_exts;
+
+    return $self->_sample->name.'-'.$ext;
+}
+
+sub _get_library_for_extension {
+    my ($self, $ext) = @_;
+
+    my $name = $self->_get_library_name_for_extension($ext); # confess on error
+    my $library = Genome::Library->get(name => $name);
+    return if not $library;
+
+    $self->status_message('Library: '.join(' ', map{ $library->$_ } (qw/ id name/)));
+
+    return $self->_library($library);
+
+}
+
+sub _create_library_for_extension {
+    my ($self, $ext) = @_;
+
+    my %params = (
+        name => $self->_get_library_name_for_extension($ext), # confess on error
+        sample_id => $self->_sample->id,
+    );
+
+    $self->status_message('Creating library: '.Dumper(\%params));
+    my $library = Genome::Library->create(%params);
+    if ( not $library ) {
+        $self->_bail('Cannot not create library to import sample');
         return;
     }
 
     unless ( UR::Context->commit ) {
-        $self->error_message('Cannot commit nomenclature to DB');
-        return;
-    }
-
-    my $created_objects = $self->_created_objects;
-    push @$created_objects, $nomenclature;
-    $self->_created_objects($created_objects);
-
-    $self->status_message('Created nomenclature: '.$nomenclature->nomenclature);
-    return 1;
-}
-
-sub _get_or_create_library {
-    my $self = shift;
-
-    $self->status_message('Creating library: '.Dumper({ sample_id => $self->_sample->id }));
-
-    my $library;
-    if ($self->library_name) {
-        $library = Genome::Library->get(name=>$self->library_name);
-    } else {
-        if (!$self->library_type) {
-            $self->_bail('You must have a library type (microarraylib, extlibs, etc) defined if letting me autogenerate a library');
-            return;
-        }
-        $library = Genome::Library->create(
-             name => $self->_sample->name .  '-' . $self->library_type,
-             sample_id => $self->_sample->id,
-        );
-    }
-    if ( not defined $library ) {
-        $self->_bail('Could not create library to import sample');
-        return;
-    }
-
-    unless ( UR::Context->commit ) {
-        $self->_bail('Cannot commit library to DB');
+        $self->_bail('Cannot commit new library to DB');
         return;
     }
 
@@ -381,9 +304,9 @@ sub _get_or_create_library {
     push @$created_objects, $library;
     $self->_created_objects($created_objects);
 
-    $self->status_message('Created library: '.join(' ', map{ $library->$_ } (qw/ id name/)));
-    #print Dumper($library);
-    return 1;
+    $self->status_message('Library: '.join(' ', map{ $library->$_ } (qw/ id name/)));
+    
+    return $self->_library($library);
 }
 
 sub _bail {

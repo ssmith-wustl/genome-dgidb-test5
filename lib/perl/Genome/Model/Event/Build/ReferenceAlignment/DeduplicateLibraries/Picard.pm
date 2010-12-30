@@ -226,11 +226,9 @@ sub execute {
             dedup_params  => $dedup_params,
             max_jvm_heap_size => $self->max_jvm_heap_size,
         );
-        if (defined($processing_profile->picard_max_sequences_for_disk_read_ends_map)) {
-            $mark_duplicates_params{max_sequences_for_disk_read_ends_map} = $processing_profile->picard_max_sequences_for_disk_read_ends_map;
-        }
+        
         my $mark_dup_cmd = Genome::Model::Tools::Sam::MarkDuplicates->create(%mark_duplicates_params);
-        my $mark_dup_rv = $mark_dup_cmd->execute;
+        my $mark_dup_rv  = $mark_dup_cmd->execute;
 
         if ($mark_dup_rv != 1)  {
             $self->error_message("Error Marking Duplicates!");

@@ -17,27 +17,67 @@ class Genome::Model::Build::ImportedVariationList {
             where => [ name => 'version', value_class_name => 'UR::Value'], 
             is_mutable => 1 
         },
+        reference => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            via => 'model',
+            to => 'reference',
+        },
+    ],
+    has_many => {
         feature_list => {
             is => 'Genome::FeatureList',
-            id_by => 'feature_list_id',
+            id_by => 'indel_feature_list_id',
         },
-        feature_list_id => {
+        indel_feature_list_id => {
             via => 'inputs',
             is => 'Text',
             to => 'value_id',
             where => [
-                name => 'feature_list_id',
+                name => 'indel_feature_list_id',
                 value_class_name => 'Genome::FeatureList'
             ], 
             is_mutable => 1,
             doc => 'The feature list containing the imported variations',
         },
-        reference => {
-            is => 'Genome::Model::Build::ImportedReferenceSequence',
-            via => 'feature_list',
-            to => 'reference',
+
+    },
+    has_optional => {
+        indel_feature_list => {
+            is => 'Genome::FeatureList',
+            id_by => 'indel_feature_list_id',
         },
-    ],
+        indel_feature_list_id => {
+            via => 'inputs',
+            is => 'Text',
+            to => 'value_id',
+            where => [
+                name => 'indel_feature_list_id',
+                value_class_name => 'Genome::FeatureList'
+            ], 
+            is_mutable => 1,
+            doc => 'The feature list containing the imported variations',
+        },
+        snv_feature_list => {
+            is => 'Genome::FeatureList',
+            id_by => 'snv_feature_list_id',
+        },
+        snv_feature_list_id => {
+            via => 'inputs',
+            is => 'Text',
+            to => 'value_id',
+            where => [
+                name => 'snv_feature_list_id',
+                value_class_name => 'Genome::FeatureList'
+            ], 
+            is_mutable => 1,
+            doc => 'The feature list containing the imported variations',
+        },
+    },
 };
+
+sub snvs_bed {
+    my $self = shift;
+    return $self->snv_feature_list->file_path if $self->snv_feature_list;
+}
 
 1;
