@@ -66,7 +66,7 @@ sub execute {                               # replace with real execution logic.
 
 	## Load the sample snp files ##
 
-	my %sample_bam_files = parse_sample_file_list($self->bam_files) if($self->sample_bam_files);	
+	my %sample_bam_files = parse_sample_file_list($self->bam_files) if($self->bam_files);	
 	my %sample_snp_files = parse_sample_file_list($snp_files);
 	my %sample_genotype_files = parse_sample_file_list($genotype_files);
 	
@@ -143,8 +143,8 @@ sub run_genotype_qc
 {
 	my ($sample_name, $genotype_file, $snp_file, $label) = @_;
 
-	print "Running Genotype QC for $sample_name...\n";	
-	my $qc_result = `gmt analysis lane-qc compare-snps --genotype $genotype_file --variant $snp_file`;
+#	print "Running Genotype QC for $sample_name...\n";	
+	my $qc_result = `gmt analysis lane-qc compare-snps --genotype $genotype_file --variant $snp_file 2>/dev/null`;
 	chomp($qc_result);
 	
 	my ($qc_header, $qc_values) = split(/\n/, $qc_result);
