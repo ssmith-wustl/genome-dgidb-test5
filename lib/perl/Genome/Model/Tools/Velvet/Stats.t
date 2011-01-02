@@ -7,7 +7,6 @@ use Cwd;
 use above "Genome";
 use Test::More;
 
-use_ok( 'Genome::Model::Tools::Assembly::Stats' ) or die;
 use_ok( 'Genome::Model::Tools::Velvet::Stats' ) or die;
 
 my $data_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly-Stats/Velvet_v3";

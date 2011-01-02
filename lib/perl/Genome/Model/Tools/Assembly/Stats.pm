@@ -202,6 +202,10 @@ sub get_input_qual_files {
 
 sub get_edit_dir_file_names {
     my $self = shift;
+    unless ( -d $self->assembly_directory.'/edit_dir' ) {
+	$self->error_message("Failed to find edit_dir in assembly directory: ".$self->assembly_directory);
+	return;
+    }
     my @files = glob($self->assembly_directory."/edit_dir/*");
     my @input_dir_files;
     #get input files possibly in input dir
@@ -937,6 +941,16 @@ sub validate_velvet_assembly_files {
     unless (-s $self->velvet_sequences_file) {
 	$self->error_message("Failed to find file: ".$self->velvet_sequences_file);
 	return;
+    }
+
+    return 1;
+}
+
+sub create_edit_dir {
+    my $self = shift;
+
+    unless ( -d $self->assembly_directory.'/edit_dir' ) {
+	Genome::Utility::FileSystem->create_directory( $self->assembly_directory.'/edit_dir' );
     }
 
     return 1;

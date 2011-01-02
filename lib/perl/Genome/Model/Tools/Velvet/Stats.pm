@@ -74,6 +74,11 @@ sub execute {
 
     my $stats; #holds streams of incoming stats text
 
+    unless ( $self->create_edit_dir ) {
+	$self->error_message("Failed to create edit_dir in assembly directory");
+	return;
+    }
+
     unless ( $self->check_existing_post_asm_files ) {
 	$self->error_message("Failed to create necessary files to run stats");
 	return;
