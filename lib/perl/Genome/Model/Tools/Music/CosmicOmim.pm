@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Annotate::CompareMutationsMusic;
+package Genome::Model::Tools::Music::CosmicOmim;
 
 #__STANDARD PERL PACKAGES
    use warnings;
@@ -7,7 +7,7 @@ package Genome::Model::Tools::Annotate::CompareMutationsMusic;
    use FileHandle;
    use Text::CSV_XS;
 
-class Genome::Model::Tools::Annotate::CompareMutationsMusic{
+class Genome::Model::Tools::Music::CosmicOmim{
     is => 'Command',
     has => [
        mutation => {
