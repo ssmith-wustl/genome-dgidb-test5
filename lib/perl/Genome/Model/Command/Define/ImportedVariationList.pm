@@ -168,7 +168,7 @@ sub _check_existing_builds {
         return;
     }
 
-    my @builds = Genome::Model::Build::ImportedVariationList->get(model_id => $model->id, verision => $self->version);
+    my @builds = Genome::Model::Build::ImportedVariationList->get(model_id => $model->id, version => $self->version);
     if (scalar(@builds) > 0) {
         my $plural = scalar(@builds) > 1 ? 's' : ''; 
         $self->error_message("Existing build$plural of this model found: " . join(', ', map{$_->__display_name__} @builds));
