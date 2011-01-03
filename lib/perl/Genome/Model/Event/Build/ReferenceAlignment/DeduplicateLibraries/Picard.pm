@@ -53,55 +53,31 @@ sub execute {
         return;
     }
 
-    for my $ida (@idas) {
-        my @alignments;
+    my @alignments = $self->_get_alignment_objects;
 
-        my @alignment_events = grep {$_->instrument_data_id == $ida->instrument_data_id} grep {$_->isa('Genome::Model::Event::Build::ReferenceAlignment::AlignReads')} $self->build->events;
-    
-        # if this is not a chunked alignment
-        if (@alignment_events == 1) {
-            @alignments = $processing_profile->results_for_instrument_data_assignment($ida);
-        } else {
-            my @chunk_ids = map {$_->instrument_data_segment_id} @alignment_events;
-            my @chunk_types = map {$_->instrument_data_segment_type} @alignment_events;
-            
-            unless (scalar @chunk_ids == scalar @chunk_types) {
-                $self->error_message("List of chunk ids is not same length as chunk types.  Bailing out");
+    for my $alignment (@alignments) {
+        my @bams = $alignment->alignment_bam_file_paths;
+        unless(scalar @bams) {
+            # TODO: change this to not have a special retval.
+            if($alignment->aligner_name eq 'maq' and $alignment->verify_aligner_successful_completion eq 2) {
+                $self->status_message("No bam for alignment of instrument data #" . $alignment->instrument_data_id . " due to 'no reasonable reads'");
+            } else {
+                $self->error_message("Couldn't find bam for alignment of instrument data #" . $alignment->instrument_data_id);
                 return;
             }
-        
-            for my $i (0...$#chunk_ids) {
-                push @alignments, $processing_profile->results_for_instrument_data_assignment($ida, instrument_data_segment_id=>$chunk_ids[$i], instrument_data_segment_type=>$chunk_types[$i]);
-            }
         }
-
-        $self->status_message("Got " . scalar(@alignment_events) . " alignment events for this build");
-
-        $self->status_message("Found " . scalar(@alignments) . " alignment sets for instrument data " . $ida->__display_name__);
-        for my $alignment (@alignments) {
-            my @bams = $alignment->alignment_bam_file_paths;
-            unless(scalar @bams) {
-                # TODO: change this to not have a special retval.
-                if($alignment->aligner_name eq 'maq' and $alignment->verify_aligner_successful_completion eq 2) {
-                    $self->status_message("No bam for alignment of instrument data #" . $ida->instrument_data_id . " due to 'no reasonable reads'");
-                } else {
-                    $self->error_message("Couldn't find bam for alignment of instrument data #" . $ida->instrument_data_id);
-                    return;
-                }
-            }
-            if(scalar @bams > 1) {
-                $self->warning_message("Found multiple bam files for alignment of instrument data #" . $ida->instrument_data_id);
-            }
-            $self->status_message("bam file paths: ". join ":", @bams);
-            push @bam_files, @bams;
+        if(scalar @bams > 1) {
+            $self->warning_message("Found multiple bam files for alignment of instrument data #" . $alignment->instrument_data_id);
         }
-    } 
+        $self->status_message("bam file paths: ". join ":", @bams);
+        push @bam_files, @bams;
+    }
     $self->status_message("Collected files for merge and dedup: ".join("\n",@bam_files));
     if (@bam_files == 0) {
         $self->error_message("NO BAM FILES???  Quitting");
         return;
     }
-
+    
     $self->status_message('Checking bams...');
     my $individual_flagstat_total = 0;
     for my $bam_file (@bam_files) {
@@ -359,6 +335,43 @@ sub verify_successful_completion {
     return 1;
 }
 
+sub _get_alignment_objects {
+    my $self = shift;
+
+    my @idas = $self->build->instrument_data_assignments;
+    $self->status_message("Found " . scalar(@idas) . " assigned instrument data");
+    unless (@idas) {
+        $self->error_message("No instrument data assigned to this build!!!???");
+        return;
+    }
+
+
+    my @alignments;
+    for my $ida (@idas) {
+
+        my @alignment_events = grep {$_->instrument_data_id == $ida->instrument_data_id} grep {$_->isa('Genome::Model::Event::Build::ReferenceAlignment::AlignReads')} $self->build->events;
+    
+        # if this is not a chunked alignment
+        if (@alignment_events == 1) {
+            push @alignments, $self->model->processing_profile->results_for_instrument_data_assignment($ida);
+        } else {
+            my @chunk_ids = map {$_->instrument_data_segment_id} @alignment_events;
+            my @chunk_types = map {$_->instrument_data_segment_type} @alignment_events;
+            
+            unless (scalar @chunk_ids == scalar @chunk_types) {
+                $self->error_message("List of chunk ids is not same length as chunk types.  Bailing out");
+                return;
+            }
+        
+            for my $i (0...$#chunk_ids) {
+                push @alignments, $self->model->processing_profile->results_for_instrument_data_assignment($ida, instrument_data_segment_id=>$chunk_ids[$i], instrument_data_segment_type=>$chunk_types[$i]);
+            }
+        }
+    }
+
+    return @alignments;
+}
+
 sub calculate_required_disk_allocation_kb {
     my $self = shift;
 
@@ -370,17 +383,16 @@ sub calculate_required_disk_allocation_kb {
     my @idas = $build->instrument_data_assignments;
     $self->status_message("Found " . scalar(@idas) . " assigned instrument data");
 
+    my @alignments = $self->_get_alignment_objects;
+
     my @build_bams;
-    for my $ida (@idas) {
-        my @alignments = $processing_profile->results_for_instrument_data_assignment($ida);
-        $self->status_message($ida->__display_name__ . " has @alignments\n");
-        for my $alignment (@alignments) {
-            my @aln_bams = $alignment->alignment_bam_file_paths;
-            unless (@aln_bams) {
-                $self->status_message("alignment $alignment has no bams at " . $alignment->output_dir);
-            }
-            push @build_bams, @aln_bams;
+    for my $alignment (@alignments) {
+        my @aln_bams = $alignment->alignment_bam_file_paths;
+        unless (@aln_bams) {
+            $self->status_message("alignment $alignment has no bams at " . $alignment->output_dir);
         }
+        $self->status_message("Counting bams: " . join ",", @aln_bams);
+        push @build_bams, @aln_bams;
     }
     my $total_size;
     
