@@ -10,7 +10,8 @@ use Genome;
 use Bio::SeqIO;
 use Bio::Tools::Run::Fgenesh;
 use Carp 'confess';
-use File::Path 'make_path';
+use File::Basename 'dirname';
+use File::Path qw/ make_path remove_tree /;
 
 class Genome::Model::Tools::GenePredictor::Fgenesh {
     is => 'Genome::Model::Tools::GenePredictor',
@@ -77,6 +78,7 @@ sub execute {
         my $parser = $factory->run($seq);
         my $current_seq_name = $seq->id();
 
+        $DB::single = 1;
         # Since fgenesh only runs on a single sequence at a time and generates a new output file for each
         # run and I don't want a bazillion output files to look at, I'll just append each file generated
         # by fgenesh into the raw output file I've created above
@@ -237,6 +239,17 @@ sub execute {
                 sequence_name => $current_seq_name,
                 sequence_string => $protein_seq->seq(),
             );
+
+        }
+
+        # Unux operating systems (and probably Windows/OSX/etc as well) have a limit on how many subdirectories
+        # a given directory can have. For Unix it's 32k. Fgenesh creates a temp directory in /tmp for every sequence
+        # it parses which are cleaned up after all parsing is done. This can exceed 32k for some fasta files. To prevent
+        # any problems, these directories are manually cleaned up here since they aren't needed anymore.
+        my $temp_dir = dirname($parser->{_file});
+        if (-d $temp_dir) {
+            my $rv = remove_tree($temp_dir);
+            confess "Could not remove temporary fgenesh directory at $temp_dir" unless $rv;
         }
     }
 
