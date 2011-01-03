@@ -26,6 +26,20 @@ s=tst$stat;
 p=tst$p.value;
 }
 
+if(method=="fisher")
+{
+tst=fisher.test(tx,ty)
+s=tst$p.value
+p=tst$p.value
+}
+
+if(method=="anova")
+{
+tst=summary(aov(ty~tx,as.data.frame(cbind(tx,ty))))
+s=tst[[1]]$F[1]
+p=tst[[1]]$Pr[1]
+}
+
 tt=c(p,s);
 tt;
 }
