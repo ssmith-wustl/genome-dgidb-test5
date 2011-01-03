@@ -225,14 +225,22 @@ sub dump_sanger_fastq_files {
 
 sub dump_fastqs_from_bam {
     my $self = shift;
+    my %p = @_;
     my $temp_dir = Genome::Utility::FileSystem->create_temp_directory('unpacked_bam');
 
     my $subset = (defined $self->subset_name ? $self->subset_name : 0);
 
+    my %read_group_params;
+
+    if (defined $p{read_group_id}) {
+        $read_group_params{read_group_id} = delete $p{read_group_id};
+        $self->status_message("Using read group id " . $read_group_params{read_group_id});
+    } 
+
     my $fwd_file = sprintf("%s/s_%s_1_sequence.txt", $temp_dir, $subset);
     my $rev_file = sprintf("%s/s_%s_2_sequence.txt", $temp_dir, $subset);
     my $fragment_file = sprintf("%s/s_%s_sequence.txt", $temp_dir, $subset);
-    my $cmd = Genome::Model::Tools::Picard::SamToFastq->create(input=>$self->data_directory . "/all_sequences.bam", fastq=>$fwd_file, fastq2=>$rev_file, fragment_fastq=>$fragment_file);
+    my $cmd = Genome::Model::Tools::Picard::SamToFastq->create(input=>$self->data_directory . "/all_sequences.bam", fastq=>$fwd_file, fastq2=>$rev_file, fragment_fastq=>$fragment_file, %read_group_params);
     unless ($cmd->execute()) {
         die $cmd->error_message;
     }
@@ -413,7 +421,7 @@ sub get_segments {
 
     my @read_groups = $cmd->read_groups;
 
-    return @read_groups;
+    return map {{segment_type=>'read_group', segment_id=>$_}} @read_groups;
 }
 
 1;

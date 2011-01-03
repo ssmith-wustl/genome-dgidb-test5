@@ -55,6 +55,16 @@ class Genome::InstrumentData::AlignmentResult {
                                     is => 'Number',
                                     doc => 'the local database id of the instrument data (reads) to align',
                                 },
+        instrument_data_segment_type => {
+                                    is => 'String',
+                                    doc => 'Type of instrument data segment to limit within the instrument data being aligned (e.g. "read_group")',
+                                    is_optional => 1,
+        },
+        instrument_data_segment_id => {
+                                    is => 'String',
+                                    doc => 'Identifier for instrument data segment to limit within the instrument data being aligned (e.g. read group ID)',
+                                    is_optional => 1,
+        },
         reference_build_id      => {
                                     is => 'Number',
                                     doc => 'the reference to use by id',
@@ -1236,6 +1246,29 @@ sub _extract_input_fastq_filenames {
     my $self = shift;
 
     my $instrument_data = $self->instrument_data;
+    
+    my %segment_params;
+    
+    if (defined $self->instrument_data_segment_type) {
+        # sanity check this can be segmented
+        if (! $self->instrument_data->can('get_segments') && $self->instrument_data->get_segments > 0) {
+            $self->error_message("requested to align a given segment, but this instrument data either can't be segmented or has no segments.");
+            die $self->error_message;
+        }
+        
+        # only read groups for now
+        if ($self->instrument_data_segment_type ne 'read_group') {
+            $self->error_message("specified a segment type we don't support, " . $self->instrument_data_segment_type . ". we only support read group at present.");
+            die $self->error_message;
+        }
+        
+        if (defined $self->filter_name) {
+            $self->error_message("filtering reads is currently not supported with segmented inputs, FIXME.");
+            die $self->error_message;
+        }
+        
+        $segment_params{read_group_id} = $self->instrument_data_segment_id;
+    }
 
     my @input_fastq_pathnames;
     if ($self->_input_fastq_pathnames) {
@@ -1268,7 +1301,7 @@ sub _extract_input_fastq_filenames {
         }
     
         $DB::single = 1;
-        my @illumina_fastq_pathnames = $instrument_data->dump_sanger_fastq_files(%params);
+        my @illumina_fastq_pathnames = $instrument_data->dump_sanger_fastq_files(%params, %segment_params);
         my $counter = 0;
         for my $input_fastq_pathname (@illumina_fastq_pathnames) {
             if ($self->trimmer_name) {

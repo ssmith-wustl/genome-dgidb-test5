@@ -194,25 +194,31 @@ sub _initialize_build {
 
 # get alignments (generic name)
 sub results_for_instrument_data_assignment {
-    my ($self, $assignment) = @_;
+    my $self = shift;
+    my $assignment = shift;
+    my %segment_info = @_;
+
     #return if $build and $build->id < $assignment->first_build_id;
-    return $self->_fetch_alignment_sets($assignment,'get');
+    return $self->_fetch_alignment_sets($assignment,\%segment_info,'get');
 }
 
 # create alignments (called by Genome::Model::Event::Build::ReferenceAlignment::AlignReads for now...
 sub generate_results_for_instrument_data_assignment {
-    my ($self, $assignment) = @_;
+    my $self = shift;
+    my $assignment = shift;
+    my %segment_info = @_;
     #return if $build and $build->id < $assignment->first_build_id;
-    return $self->_fetch_alignment_sets($assignment,'get_or_create');
+    return $self->_fetch_alignment_sets($assignment,\%segment_info, 'get_or_create');
 }
 
 sub _fetch_alignment_sets {
     my $self = shift;
     my $assignment = shift;
+    my $segment_info = shift;
     my $mode = shift;
 
     my $model = $assignment->model;
-
+    
     my @param_sets = $self->params_for_alignment($assignment);
     unless (@param_sets) {
         $self->error_message('Could not get alignment parameters for this instrument data assignment');
@@ -220,7 +226,14 @@ sub _fetch_alignment_sets {
     }
     my @alignments;    
     for (@param_sets)  {
-        my $alignment = Genome::InstrumentData::AlignmentResult->$mode(%$_);
+        my %params = %$_;
+      
+        # override segments if requested 
+        if (exists $segment_info->{instrument_data_segment_id}) {
+            delete $params{instrument_data_segment_id};
+            delete $params{instrument_data_segment_type};
+        }
+        my $alignment = Genome::InstrumentData::AlignmentResult->$mode(%$_, %$segment_info);
         unless ($alignment) {
              #$self->error_message("Failed to $mode an alignment object");
              return;
@@ -257,6 +270,8 @@ sub params_for_alignment {
                     samtools_version => $self->samtools_version || undef,
                     filter_name => $assignment->filter_desc || undef,
                     test_name => undef,
+                    instrument_data_segment_type => undef,
+                    instrument_data_segment_id => undef,
                 );
 
     #print Data::Dumper::Dumper(\%params);
@@ -452,7 +467,8 @@ sub alignment_objects {
     my @assignments = $model->instrument_data_assignments();
 
     $DB::single = 1;
-
+    
+    
     my @instrument_data_ids = map { $_->instrument_data_id() } @assignments;
     my @solexa_instrument_data = Genome::InstrumentData->get( \@instrument_data_ids );
 
@@ -476,7 +492,22 @@ sub alignment_objects {
         }
     }
     
-    return @solexa_instrument_data;
+    # grab what can be segmented
+    my @instrument_data_output = grep {! $_->can('get_segments')} @solexa_instrument_data;
+    my @segmentable_data = grep {$_->can('get_segments')} @solexa_instrument_data;
+    
+    for my $instr (@segmentable_data) {
+        my @segments = $instr->get_segments();
+        if (@segments > 1) {
+            for my $seg (@segments) {
+                push @instrument_data_output, {object=>$instr, segment=>$seg};
+            }
+        } else {
+            push @instrument_data_output, $instr;
+        }
+    }
+    
+    return @instrument_data_output;
 }
 
 sub reference_coverage_objects {
