@@ -311,8 +311,14 @@ sub _profiles_matching_subclass_and_params {
     my @params_for_class = $subclass->params_for_class;
     return unless @params_for_class;
 
-    # Remove these params.
-    my $type_name = delete $params{type_name};
+    for my $param (@params_for_class) {
+        unless (exists $params{$param}) {
+            $params{$param} = undef;
+        }
+    }
+
+    # Ignore these params.
+    delete $params{type_name};
     delete $params{name};
     delete $params{supersedes};
     
