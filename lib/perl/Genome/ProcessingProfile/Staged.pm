@@ -4,11 +4,18 @@ package Genome::ProcessingProfile::Staged;
 use strict;
 use warnings;
 use Genome;
+use Data::Dumper;
 
 class Genome::ProcessingProfile::Staged {
     is => 'Genome::ProcessingProfile',
     is_abstract => 1,
-    doc => 'processing profile subclass for workflows defined by events grouped into stages'
+    doc => 'processing profile subclass for workflows defined by events grouped into stages',
+    has_param => [
+        append_event_steps => {
+            doc => 'Event classes to append to event_stage_job_classes, e.g. "alignment => Genome::Model::Event::Build::ReferenceAlignment::QC::CopyNumber".',
+            is_optional => 1,
+        },
+    ],
 };
 
 sub stages {
@@ -22,10 +29,9 @@ sub classes_for_stage {
     my $stage_name = shift;
     my $model = shift;
     my $classes_method_name = $stage_name .'_job_classes';
-    #unless (defined $self->can('$classes_method_name')) {
-    #    die('Please implement '. $classes_method_name .' in class '. $self->class);
-    #}
-    return $self->$classes_method_name($model);
+    my @classes = $self->$classes_method_name($model);
+    push @classes, $self->_steps_to_append_from_processing_profile_for_stage($stage_name);
+    return @classes;
 }
 
 sub objects_for_stage {
@@ -33,10 +39,72 @@ sub objects_for_stage {
     my $stage_name = shift;
     my $model = shift;
     my $objects_method_name = $stage_name .'_objects';
-    #unless (defined $self->can('$objects_method_name')) {
-    #    die('Please implement '. $objects_method_name .' in class '. $self->class);
-    #}
     return $self->$objects_method_name($model);
+}
+
+sub _steps_to_append_from_processing_profile_for_stage {
+    my $self = shift;
+    my $stage = shift;
+    
+    unless ($self->append_event_steps) {
+        return;
+    }
+    
+    my @stages = $self->stages;
+    
+    my $append_event_steps_value = $self->append_event_steps;
+    my %append_event_steps;
+    {
+        no strict;
+        %append_event_steps = eval("($append_event_steps_value)");
+    };
+    if (not %append_event_steps or $@) {
+        my $err_msg = "Failed to interpret append_event_steps (" . $self->append_event_steps . ") as hash.";
+        $err_msg .= "\nError: $@" if ($@);
+        $err_msg .= "\n" . Dumper(\%append_event_steps);
+        die $self->error_message($err_msg);
+    }
+    
+    for my $key (keys %append_event_steps) {
+        unless (grep { $_ =~ /$key/ } @stages) {
+            die $self->error_message("Failed to find $key in stages (" . join(", ", @stages) . ").");
+        }
+    }
+
+    if (exists $append_event_steps{$stage}) {
+        my $steps = $append_event_steps{$stage};
+        my @steps;
+        if (ref $steps eq 'ARRAY') {
+            @steps = @$steps;
+        } elsif (my $ref = ref $steps) {
+            die $self->error_message("Got REF ($ref), expects scalar string or ARRAY.");
+        } else {
+            @steps = ($steps);
+        }
+        
+        my $pp_type = (split('::', $self->subclass_name))[2];
+        for my $step (@steps) {
+            unless ($step =~ /Genome\:\:Model\:\:Event\:\:Build\:\:$pp_type/) {
+                die $self->error_message("Step ($step) does not appear to be appropriate for this processing profile type ($pp_type).");
+            }
+
+            my $class;
+            {
+                no strict;
+                eval($class = $step->class);
+            }
+            unless($class) {
+                die $self->error_message("Failed to load/find module '$step'.");
+            }
+            if($@) {
+                die $self->error_message("Error ($@) while executing $step->class.");
+            }
+        }
+        
+        return @steps;
+    } else {
+        return;
+    }   
 }
 
 sub _resolve_workflow_for_build {
