@@ -1,12 +1,12 @@
 package Genome::Model::Tools::Varscan::PullOneTwoBpIndels;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# GermlinePipelineFinisher - Generate MAF File, Get dbsnp output, and strandfilter -- for GERMLINE events
+# PullOneTwoBpIndels - Generate list of 1-2 bp indels, run GATK recalibration, and then sort and index bams
 #					
 #	AUTHOR:		Will Schierding (wschierd@genome.wustl.edu)
 #
-#	CREATED:	09/29/2010 by W.S.
-#	MODIFIED:	09/29/2010 by W.S.
+#	CREATED:	11/29/2010 by W.S.
+#	MODIFIED:	11/29/2010 by W.S.
 #
 #	NOTES:	
 #			
@@ -78,6 +78,10 @@ sub execute {                               # replace with real execution logic.
 		die "Indel File Must end in .bed";
 	}
 
+	my $small_indel_list_nobed = $small_indel_list;
+	$small_indel_list_nobed =~ s/\.bed//;
+	$small_indel_list_nobed = "$small_indel_list_nobed.txt";
+
 	my $realigned_normal_bam_file = $normal_bam;
 	$realigned_normal_bam_file =~ s/\.bam//;
 	$realigned_normal_bam_file = "$realigned_normal_bam_file.realigned.bam";
@@ -93,8 +97,11 @@ sub execute {                               # replace with real execution logic.
 	$sorted_tumor_bam_file = "$sorted_tumor_bam_file.sorted";
 
 	## Open the outfiles ##
-	my $indel_outfile = $small_indel_list;
-	open(INDELS_OUT, ">$indel_outfile") or die "Can't open output file: $!\n";
+	my $bed_indel_outfile = $small_indel_list;
+	my $nobed_indel_outfile = $small_indel_list_nobed;
+	open(INDELS_OUT, ">$bed_indel_outfile") or die "Can't open output file: $!\n";
+	open(NOBED_INDELS_OUT, ">$nobed_indel_outfile") or die "Can't open output file: $!\n";
+
 
 	my $file_input = new FileHandle ($file_list_file);
 	while (my $file = <$file_input>) {
@@ -103,10 +110,22 @@ sub execute {                               # replace with real execution logic.
 		while (my $line = <$indel_input>) {
 			chomp($line);
 			my ($chr, $start, $stop, $ref, $var, @everything_else) = split(/\t/, $line);
-			my $size = ($stop - $start);
+			my $size;
+			if ($ref eq '-' || $ref == 0) { #ins
+				#count number of bases inserted
+				$size = length($var) - 1;
+			}
+			elsif ($var eq '-' || $var == 0 ) { #del
+				$size = ($stop - $start);
+			}
+			else {
+				print "Line $line in file $file has wrong insertion or deletion nomenclature. Either ref or var should be 0";
+				$size = 0;
+			}
 			if ($size <= 1) {
 				my $bedstart = ($start - 1);
 				print INDELS_OUT "$chr\t$bedstart\t$stop\t$ref\t$var\n";
+				print NOBED_INDELS_OUT "$chr\t$start\t$stop\t$ref\t$var\n";
 			}
 		}
 		close($indel_input);
@@ -157,7 +176,7 @@ sub execute {                               # replace with real execution logic.
 		   $jobid7= $1;
 		   print "$jobid7\n";
 
-		my $jobid8 = `$bsub -J varscan_process_validation -w \'ended($jobid7)\' \'gmt varscan process-validation-indels --validation-indel-file $output_indel --validation-snp-file $output_snp --variants-file $small_indel_list --output-file $final_output_file\'`;
+		my $jobid8 = `$bsub -J varscan_process_validation -w \'ended($jobid7)\' \'gmt varscan process-validation-indels --validation-indel-file $output_indel --validation-snp-file $output_snp --variants-file $small_indel_list_nobed --output-file $final_output_file\'`;
 		   $jobid8=~/<(\d+)>/;
 		   $jobid8= $1;
 		   print "$jobid8\n";
