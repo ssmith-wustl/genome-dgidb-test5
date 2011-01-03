@@ -99,8 +99,8 @@ sub create {
         }
         for my $param (@params) {
             my $name = $param->name;
-            my $specified_value = $self->$name;
             if ($self->can($name)) {
+                my $specified_value = $self->$name;
                 if (not defined $specified_value or not length $specified_value) {
                     $self->$name($param->value);
                 }
