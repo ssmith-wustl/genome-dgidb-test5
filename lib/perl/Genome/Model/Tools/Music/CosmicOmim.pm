@@ -108,8 +108,6 @@ $stats{'COSMIC'}{'nomatch'} = 0;
 #__PARSE MUTATION DATA
 my $fh = new FileHandle;
 unless ($fh->open (qq{$mut_file})) { die "Could not open mutation project file '$mut_file' for reading"; }
-my $header = <$fh>;   # place a single line into $line
-seek($fh, -length($header), 1); # place the same line back onto the filehandle
 
 if ($verbose) {print "Parsing mutation file...\n";}
 $DB::single = 1;
@@ -765,7 +763,11 @@ sub ParseMutationFile {
 	my $line_num = 1;
 	my $record = {};
 	my $csv = Text::CSV_XS->new({'sep_char' => $separator});
+	#parse MAF header
 	my $header = <$fh>;
+	while ($header =~ /^#/) {
+	    $header = <$fh>;
+	}
 	$line_num++;
 	$csv->parse($header);
 	my @header_fields = $csv->fields();
