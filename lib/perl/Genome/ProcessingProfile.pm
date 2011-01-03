@@ -288,14 +288,16 @@ sub _validate_name_and_uniqueness {
 
 sub _validate_no_existing_processing_profiles_with_idential_params {
     my ($subclass, %params) = @_;
-    my $existing_pp = _profiles_matching_subclass_and_params($subclass,%params);
+    my @existing_pp = _profiles_matching_subclass_and_params($subclass,%params);
 
-    if ($existing_pp) {
+    if (@existing_pp) {
         # If we get here we have one that is identical, describe and return undef
         Genome::ProcessingProfile::Command::Describe->execute(
-            processing_profile_id => $existing_pp->id,
+            processing_profile_id => $existing_pp[0]->id,
         ) or confess "Can't execute describe command to show existing processing profile";
-        $subclass->error_message("Found a processing profile with the same params as the one requested to create, but with a different name.  Please use this profile, or change a param.");
+        my $qty = scalar @existing_pp;
+        my $plural = $qty > 1 ? "s" : "";
+        $subclass->error_message("Found $qty processing profile$plural with the same params as the one requested to create, but with a different name.  Please use an existing profile, or change a param.");
         return;
     }
 
