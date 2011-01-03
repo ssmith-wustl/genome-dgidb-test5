@@ -100,11 +100,15 @@ sub create {
         for my $param (@params) {
             my $name = $param->name;
             my $specified_value = $self->$name;
-            if (not defined $specified_value or not length $specified_value) {
-                $self->$name($param->value);
-            }
-            elsif ( $specified_value eq 'UNDEF' ) { # allow the undef-ing of params, cannot be done from the command line
-                $self->$name(undef);
+            if ($self->can($name)) {
+                if (not defined $specified_value or not length $specified_value) {
+                    $self->$name($param->value);
+                }
+                elsif ( $specified_value eq 'UNDEF' ) { # allow the undef-ing of params, cannot be done from the command line
+                    $self->$name(undef);
+                }
+            } else {
+                $self->warning_message("Skipping parameter '$name'; It does not exist on " . $self->class . " perhaps '$name' was deprecated or replaced.");
             }
         }
     }
