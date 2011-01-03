@@ -7,6 +7,8 @@ use Test::More tests => 6;
 
 use above 'Genome';
 
+map { print STDERR $_ . " => " . $ENV{$_} . "\n" } keys %ENV;
+
 use_ok('Genome::Model::Tools::BioSamtools::CoverageStats');
 
 my $tmp_dir = File::Temp::tempdir('BioSamtools-CoverageStats-'.$ENV{USER}.'-XXXX',DIR => '/gsc/var/cache/testsuite/running_testsuites',CLEANUP => 1);
