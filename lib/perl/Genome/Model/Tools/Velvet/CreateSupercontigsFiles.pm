@@ -11,9 +11,10 @@ class Genome::Model::Tools::Velvet::CreateSupercontigsFiles {
     has => [
         contigs_fasta_file => {
             is => 'Text',
+	    is_optional => 1,
             doc => 'Velvet contigs.fa file',
         },
-        directory => {
+        assembly_directory => {
             is => 'Text',
             doc => 'Assembly directory',
         },
@@ -31,18 +32,21 @@ EOS
 
 sub help_detail {
     return <<EOS
-gmt velvet create-supercontigs-files --contigs-fasta-file /gscmnt/111/velvet_asm/contigs.fa --directory /gscmnt/111/velvet_asm
+gmt velvet create-supercontigs-files --contigs-fasta-file /gscmnt/111/velvet_asm/contigs.fa --assembly-directory /gscmnt/111/velvet_asm
 EOS
 }
 
 sub execute {
     my $self = shift;
 
-    #validate input contigs.fa file
-    unless (-s $self->contigs_fasta_file) {
-	$self->error_message("Can't find contigs.fa file: ".$self->contigs_fasta_file);
+    #create edit_dir
+    unless ( $self->create_edit_dir ) {
+	$self->error_message("Failed to create edit_dir");
 	return;
     }
+
+    #need contigs.fa file
+    my $contigs_fa_file = ($self->contigs_fasta_file) ? $self->contigs_fasta_file : $self->velvet_contigs_fa_file;
 
     #filehandle to print supercontigs.agp file
     unlink $self->supercontigs_agp_file;
@@ -53,7 +57,7 @@ sub execute {
     my $fa_out = Bio::SeqIO->new(-format => 'fasta', -file => ">".$self->supercontigs_fasta_file);
 
     #read in input contigs.fa file
-    my $io = Bio::SeqIO->new(-format => 'fasta', -file => $self->contigs_fasta_file);
+    my $io = Bio::SeqIO->new(-format => 'fasta', -file => $contigs_fa_file);
     while (my $seq = $io->next_seq) {
 
 	#write seq to supercontigs.fasta
@@ -97,13 +101,6 @@ sub _write_fasta {
 
 sub _write_agp {
     my ($self, $seq, $fh) = @_;
-
-    #convert seq->id to pcap name
-    #my $pcap_sctg = $self->_convert_to_pcap_name($seq->id);
-    #unless ($pcap_sctg) {
-	#$self->error_message("Failed to convert newbler supercontig to pcap name");
-	#return;
-    #}
 
     #writing fasta in prev step already changed seq->id to pcap name
     my $pcap_sctg = $seq->id;

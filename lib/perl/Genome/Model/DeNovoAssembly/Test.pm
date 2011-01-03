@@ -86,15 +86,17 @@ sub get_mock_processing_profile {
 
             get_number_of_cpus
 
-soap_de_novo_assemble_params
-velvet_one_button_params
+            soap_de_novo_assemble_params
+            velvet_one_button_params
 
             soap_de_novo_assemble_bsub_rusage
             velvet_one_button_bsub_rusage
 
-valid_soap_import_seq_platforms
-valid_soap_de_novo_assemble_seq_platforms
-valid_velvet_one_button_seq_platforms
+            valid_soap_import_seq_platforms
+            valid_soap_de_novo_assemble_seq_platforms
+            valid_velvet_one_button_seq_platforms
+
+            generate_stats
             /),
         );
 

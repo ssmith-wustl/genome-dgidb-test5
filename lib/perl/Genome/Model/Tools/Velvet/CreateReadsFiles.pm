@@ -12,13 +12,15 @@ class Genome::Model::Tools::Velvet::CreateReadsFiles {
     has => [
 	sequences_file => {
 	    is => 'Text',
+	    is_optional => 1,
 	    doc => 'Velvet created sequences file: Sequences',
 	},
 	afg_file => {
 	    is => 'Text',
+	    is_optional => 1,
 	    doc => 'Velvet created afg file: velvet_asm.afg',
 	},
-	directory => {
+	assembly_directory => {
 	    is => 'Text',
 	    doc => 'Assembly directory',
 	},
@@ -36,7 +38,7 @@ EOS
 
 sub help_detail {
     return <<EOS
-gmt velvet create-reads-files --sequences-file /gscmnt/111/velvet_assembly/Sequences --contigs-fasta-file /gscmnt/111/velvet_assembly/contigs.fa --directory /gscmnt/111/velvet_assembly
+gmt velvet create-reads-files --sequences-file /gscmnt/111/velvet_assembly/Sequences --contigs-fasta-file /gscmnt/111/velvet_assembly/contigs.fa --assembly_directory /gscmnt/111/velvet_assembly
 EOS
 }
 
@@ -44,12 +46,17 @@ sub execute {
     my $self = shift;
 
     #validate assembly directory
-    unless(-d $self->directory) {
-	$self->error_message("Can't find or invalid assembly directory: ".$self->directory);
+    unless(-d $self->assembly_directory) {
+	$self->error_message("Can't find or invalid assembly directory: ".$self->assembly_directory);
 	return;
     }
 
-    #TODO - need to make sure edit_dir is there
+    #make edit_dir
+    unless ( $self->create_edit_dir ) {
+	$self->error_message("Failed to creat edit_dir");
+	return;
+    }
+
     #readinfo.txt
     unlink $self->read_info_file;
     my $ri_fh = Genome::Utility::FileSystem->open_file_for_writing($self->read_info_file) ||
@@ -60,11 +67,15 @@ sub execute {
     my $rp_fh = Genome::Utility::FileSystem->open_file_for_writing($self->reads_placed_file) ||
 	return;
 
-    #handle sequences file
-    unless (-s $self->sequences_file) {
-	$self->error_message("Can't find velvet sequences file: ".$self->sequences_file);
-	return;
-    }
+    #velvet output Sequences file
+    my $sequences_file = ( $self->sequences_file ) ? $self->sequences_file : $self->velvet_sequences_file;
+
+    #velvet output afg file
+    my $afg_file = ($self->afg_file ) ? $self->afg_file : $self->velvet_afg_file;
+
+    #velvet output afg file handle
+    my $afg_fh = Genome::Utility::FileSystem->open_file_for_reading($afg_file)
+        or return;
 
     #load gap sizes
     my $gap_sizes = $self->get_gap_sizes;
@@ -74,26 +85,18 @@ sub execute {
     }
 
     #load contigs lengths
-    my $contig_lengths = $self->get_contig_lengths($self->afg_file);
+    my $contig_lengths = $self->get_contig_lengths($afg_file);
     unless ($contig_lengths) {
 	$self->error_message("Failed to get contigs lengths");
 	return;
     }
 
     #stores read names and seek pos in hash or array indexed by read index
-    my $names_and_positions = $self->load_read_names_and_seek_pos( $self->sequences_file );
+    my $names_and_positions = $self->load_read_names_and_seek_pos( $sequences_file );
     unless ($names_and_positions) {
 	$self->error_message("Failed to load read names and seek pos from Sequences file");
 	return;
     }
-
-    #parse afg file to get read info
-    unless (-s $self->afg_file) {
-	$self->error_message("Can't find velvet afg file: ".$self->afg_file);
-	return;
-    }
-    my $afg_fh = Genome::Utility::FileSystem->open_file_for_reading($self->afg_file)
-        or return;
 
     while (my $record = getRecord($afg_fh)) {
 	my ($rec, $fields, $recs) = parseRecord($record);
@@ -152,7 +155,7 @@ sub execute {
 		    }
 
 		    #TODO - look into storing read length too so this can be avoided
-		    my $read_length = $self->_read_length_from_sequences_file($seek_pos);
+		    my $read_length = $self->_read_length_from_sequences_file($seek_pos, $sequences_file);
 
 		    #print to readinfo.txt file
 		    $ri_fh->print("$read_name $contig_name $c_or_u $ctg_start $read_length\n");
@@ -273,9 +276,9 @@ sub _get_supercontig_position {
 }
 
 sub _read_length_from_sequences_file {
-    my ($self, $seek_pos) = @_;
+    my ($self, $seek_pos, $file) = @_;
 
-    my $seq_fh = Genome::Utility::FileSystem->open_file_for_reading($self->sequences_file) or return;
+    my $seq_fh = Genome::Utility::FileSystem->open_file_for_reading( $file ) or return;
     $seq_fh->seek($seek_pos, 0);
     my $io = Bio::SeqIO->new(-fh => $seq_fh, -format => 'fasta');
 

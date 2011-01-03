@@ -14,7 +14,7 @@ class Genome::Model::Tools::Velvet::CreateContigsFiles {
             doc => 'Velvet afg file to get fasta and qual info from',
             is_optional => 1,
         },
-        directory => {
+        assembly_directory => {
             is => 'Text',
             doc => 'Main assembly directory .. above edit_dir',
         },
@@ -33,14 +33,19 @@ EOS
 
 sub help_detail {
     return <<EOS
-gmt velvet create-contigs-files --afg-file /gscmnt/111/velvet_assembly/velvet_asm.afg --directory /gscmnt/111/velvet_assembly
+gmt velvet create-contigs-files --afg-file /gscmnt/111/velvet_assembly/velvet_asm.afg --assembly_directory /gscmnt/111/velvet_assembly
 EOS
 }
 
 sub execute {
     my $self = shift;
 
-    my $afg_file = ($self->afg_file) ? $self->afg_file : $self->directory.'/velvet_asm.afg';
+    unless ( $self->create_edit_dir ) {
+	$self->error_message("Failed to create edit_dir");
+	return;
+    }
+
+    my $afg_file = ($self->afg_file) ? $self->afg_file : $self->velvet_afg_file;
 
     unless (-s $afg_file) {
 	$self->error_message("Can't find velvet afg file: ".$afg_file);
@@ -52,8 +57,8 @@ sub execute {
 	or return;
 
     #make edit_dir
-    unless (-d $self->directory.'/edit_dir') {
-	Genome::Utility::FileSystem->create_directory($self->directory.'/edit_dir');
+    unless (-d $self->assembly_directory.'/edit_dir') {
+	Genome::Utility::FileSystem->create_directory($self->assembly_directory.'/edit_dir');
     }
 
     #write out contigs.bases file

@@ -10,44 +10,50 @@ my $pp_name = "imported-variation-list";
 
 class Genome::Model::Command::Define::ImportedVariationList {
     is => ['Genome::Model::Command::Define', 'Genome::Command::Base'],
-    has => [
-        feature_list => {
-            is => 'Genome::FeatureList',
-            doc => 'The FeatureList containing the imported variation list file',
-        },
+    has_input => [
         version => {
             is => 'Text',
             doc => 'The version of the build to create or update',
         },
-    ],
-    has_optional => [
-        reference => {
-            is => 'Genome::Model::ImportedReferenceSequence',
-            doc => 'The reference sequence the imported variations apply to. Must be supplied if feature_list does not specify the reference property.',
-        }, 
+        snv_feature_list => {
+            is_optional => 1,
+            is => 'Genome::FeatureList',
+            doc => 'The FeatureList containing imported SNVs',
+        },
+        indel_feature_list => {
+            is_optional => 1,
+            is => 'Genome::FeatureList',
+            doc => 'The FeatureList containing imported indels',
+        },
         prefix => {
+            is_optional => 1,
             is => 'Text',
             doc => 'The prefix for the name of the model to create or update (no spaces)',
         },
         model_name => {
+            is_optional => 1,
             is => 'Text',
             doc => 'Override the default model name ({prefix}-{reference sequence model} by default)',
         },
-
         subject_name => {
+            is_optional => 1,
             is_optional => 1,
             doc => 'Copied from reference.'
         },
-
+    ],
+    has_optional => [
         job_dispatch => {
-            default_value => 'apipe',
-            doc => 'dispatch specification: an LSF queue or "inline"'
+            default_value => 'inline',
+            doc => 'dispatch specification: an LSF queue or "inline"',
         },
         server_dispatch => {
-            default_value => 'workflow',
-            doc => 'dispatch specification: an LSF queue or "inline"'
+            default_value => 'inline',
+            doc => 'dispatch specification: an LSF queue or "inline"',
         },
-   ],
+        _reference => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+        }
+    ],
 };
 
 sub resolve_class_and_params_for_argv {
@@ -68,33 +74,58 @@ sub help_detail {
     return "Creates an imported variation list build (defining a new model if needed).";
 }
 
-sub execute {
+# if the function returns true, then we got satisfactory input for snv/indel feature list(s)
+# and $self->_reference is set to the proper reference sequence
+sub _validate_feature_lists_and_reference {
     my $self = shift;
 
-    if (ref($self->feature_list) ne 'Genome::FeatureList') {
-        $self->error_message("Supplied feature list '".$self->feature_list."' is not a valid FeatureList object.");
+    my @flists;
+    my %refs_hash;
+    for my $type ("snv", "indel") {
+        my $var = "${type}_feature_list";
+        next if (!defined $self->$var);
+        if (ref($self->$var) ne 'Genome::FeatureList') {
+            $self->error_message("$var='".$self->$var."' is not a valid FeatureList object.");
+            return;
+        }
+
+        my $dname = $self->$var->__display_name__;
+        if (!defined $self->$var->reference) {
+            $self->error_message("$var='".$dname."' does not specify a reference sequence, which is required for ImportedVariationList");
+            return;
+        }
+
+        push @flists, $self->$var;
+        $refs_hash{$self->$var->reference} = 1;
+    }
+
+    if (@flists == 0) {
+        $self->error_message("Please specify at least one of --snv-feature-list, --indel-feature-list");
         return;
     }
 
-    my $fl_ref = $self->feature_list->reference;
-    my $ref = $self->reference;
-    unless (defined($fl_ref) || defined($ref)) {
-        $self->error_message("Feature list '".$self->feature_list->name."' does not specify a reference, and none explicitly provided.");
+    if (keys %refs_hash != 1) {
+        $self->error_message("The feature lists specified contain different reference sequences: " . join(",", keys %refs_hash));
         return;
     }
 
-    if (defined($fl_ref) and $ref and $fl_ref ne $ref) {
-        $self->error_message("Supplied reference sequence '$ref' does not match feature list reference '$fl_ref'");
-        return;
-    }
+    $self->_reference($flists[0]->reference);
+    return 1;
+}
 
-    $self->reference($self->reference || $self->feature_list->reference);
-    my $refmodel = $self->reference->model;
+# copy subject_{name,id,class_name,type} from $self->_reference
+sub _copy_subject_properties_from_refmodel {
+    my $self = shift;
+    my $refmodel = $self->_reference->model;
     for my $subj_prop ('name', 'id', 'class_name', 'type') {
         my $p = "subject_$subj_prop";
         $self->$p($refmodel->$p);
         $self->status_message("Copied $p '" . $self->$p . "' from reference");
     }
+}
+
+sub execute {
+    my $self = shift;
 
     unless(defined($self->prefix) || defined($self->model_name)) {
         $self->error_message("Please specify one of 'prefix' or 'model_name'");
@@ -106,9 +137,14 @@ sub execute {
         return;
     }
 
-    $DB::single = 1;
+    # make sure we got at least one of --snv-feature-list, --indel-feature-list and 
+    # verify that reference sequences are defined and match
+    return unless $self->_validate_feature_lists_and_reference;
+
+    # set subject_* properties 
+    $self->_copy_subject_properties_from_refmodel();
+
     my $model = $self->_get_or_create_model();
-    $DB::single = 1;
     unless ($model) {
         $self->error_message("Failed to get or create model.");
         return;
@@ -119,23 +155,20 @@ sub execute {
 }
 
 sub _check_existing_builds {
-    my $self = shift;
-    my $model = shift;
+    my ($self, $model) = @_;
 
     if($model->type_name ne 'imported variation list') {
-        $self->error_message("A model with the name '" . $self->model_name . "' already exists, but it is not an imported reference sequence.");
+        $self->error_message("A model with the name '" . $self->model_name . "' already exists, but it is not an imported variation list.");
         return;
     }
 
-    if ($model->reference->id != $self->reference->id) {
+    if ($model->reference->id != $self->_reference->id) {
         $self->error_message("Existing model '" . $model->__display_name__ . "' has reference sequence " . $model->reference->__display_name__ .
-            " which conflicts with specified value of " . $self->reference->__display_name);
+            " which conflicts with specified value of " . $self->_reference->__display_name);
         return;
     }
 
-    print "gettinate builds.\n";
     my @builds = Genome::Model::Build::ImportedVariationList->get(model_id => $model->id, verision => $self->version);
-    print "got builds.\n";
     if (scalar(@builds) > 0) {
         my $plural = scalar(@builds) > 1 ? 's' : ''; 
         $self->error_message("Existing build$plural of this model found: " . join(', ', map{$_->__display_name__} @builds));
@@ -149,11 +182,10 @@ sub _check_existing_builds {
 
 sub _get_or_create_model {
     my $self = shift;
-    my $taxon = shift;
 
     # * Generate a model name if one was not provided
     unless(defined($self->model_name)) {
-        $self->model_name($self->prefix . "-" . $self->reference->name);
+        $self->model_name($self->prefix . "-" . $self->_reference->name);
         $self->status_message('Generated model name "' . $self->model_name . '".');
     }
 
@@ -168,7 +200,7 @@ sub _get_or_create_model {
     } elsif(scalar(@models) == 1) {
         # * We're going to want a new build for an existing model, but first we should see if there are already any builds
         #   of the same version for the existing model.  If so, we ask the user to confirm that they really want to make another.
-        $model = $self->_check_existing_builds($models[0], $taxon);
+        $model = $self->_check_existing_builds($models[0]);
     } else {
         # * We need a new model
         
@@ -178,14 +210,16 @@ sub _get_or_create_model {
             die $self->error_message;
         }
 
-        $model = Genome::Model::ImportedVariationList->create(
+        my %create_params = (
             name => $self->model_name,
-            reference => $self->reference,
+            reference => $self->_reference,
             subject_name => $self->subject_name,
             subject_class_name => $self->subject_class_name,
             subject_id => $self->subject_id,
             processing_profile_id => $ivl_pp->id,
         );
+
+        $model = Genome::Model::ImportedVariationList->create(%create_params);
 
         if($model) {
             if(my @problems = $model->__errors__){
@@ -211,8 +245,9 @@ sub _create_build {
         model_id => $model->id,
         version => $self->version,
         data_directory => $self->data_directory,
-        feature_list => $self->feature_list,
     );
+    $build_parameters{snv_feature_list} = $self->snv_feature_list if $self->snv_feature_list;
+    $build_parameters{indel_feature_list} = $self->indel_feature_list if $self->indel_feature_list;
 
     my $build = Genome::Model::Build::ImportedVariationList->create(%build_parameters);
     if($build) {
