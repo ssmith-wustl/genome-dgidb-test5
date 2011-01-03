@@ -361,6 +361,10 @@ sub get_processing_profile_node {
 
                 my $object_node;
 
+                if (ref($object) eq "HASH" && exists $object->{segment}) {
+                    $object = $object->{object};
+                }
+
                 #if we have a full blown object (REF), get the object data
                 if ( ref(\$object) eq "REF" ) {
                     if ($object->isa('Genome::InstrumentData')) {
@@ -638,7 +642,12 @@ sub get_event_node {
         for my $ida (@idas) {
             if ((defined $ida->instrument_data_id && $event->instrument_data_id) && $ida->instrument_data_id == $event->instrument_data_id) {
                 my $alignment;
-                eval{ ($alignment) = $processing_profile->results_for_instrument_data_assignment($ida)};
+                my %segment_info;
+                if (defined $event->instrument_data_segment_id) {
+                    $segment_info{instrument_data_segment_id} = $event->instrument_data_segment_id; 
+                    $segment_info{instrument_data_segment_type} = $event->instrument_data_segment_type; 
+                }
+                eval{ ($alignment) = $processing_profile->results_for_instrument_data_assignment($ida, %segment_info)};
 
                 if ($@) {
                     chomp($@);

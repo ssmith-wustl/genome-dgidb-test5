@@ -54,7 +54,29 @@ sub execute {
     }
 
     for my $ida (@idas) {
-        my @alignments = $processing_profile->results_for_instrument_data_assignment($ida);
+        my @alignments;
+
+        my @alignment_events = grep {$_->instrument_data_id == $ida->instrument_data_id} grep {$_->isa('Genome::Model::Event::Build::ReferenceAlignment::AlignReads')} $self->build->events;
+    
+        # if this is not a chunked alignment
+        if (@alignment_events == 1) {
+            @alignments = $processing_profile->results_for_instrument_data_assignment($ida);
+        } else {
+            my @chunk_ids = map {$_->instrument_data_segment_id} @alignment_events;
+            my @chunk_types = map {$_->instrument_data_segment_type} @alignment_events;
+            
+            unless (scalar @chunk_ids == scalar @chunk_types) {
+                $self->error_message("List of chunk ids is not same length as chunk types.  Bailing out");
+                return;
+            }
+        
+            for my $i (0...$#chunk_ids) {
+                push @alignments, $processing_profile->results_for_instrument_data_assignment($ida, instrument_data_segment_id=>$chunk_ids[$i], instrument_data_segment_type=>$chunk_types[$i]);
+            }
+        }
+
+        $self->status_message("Got " . scalar(@alignment_events) . " alignment events for this build");
+
         $self->status_message("Found " . scalar(@alignments) . " alignment sets for instrument data " . $ida->__display_name__);
         for my $alignment (@alignments) {
             my @bams = $alignment->alignment_bam_file_paths;
@@ -70,7 +92,7 @@ sub execute {
             if(scalar @bams > 1) {
                 $self->warning_message("Found multiple bam files for alignment of instrument data #" . $ida->instrument_data_id);
             }
-            $self->status_message("bam file paths: ". @bams);
+            $self->status_message("bam file paths: ". join ":", @bams);
             push @bam_files, @bams;
         }
     } 
@@ -79,7 +101,7 @@ sub execute {
         $self->error_message("NO BAM FILES???  Quitting");
         return;
     }
-    
+
     $self->status_message('Checking bams...');
     my $individual_flagstat_total = 0;
     for my $bam_file (@bam_files) {

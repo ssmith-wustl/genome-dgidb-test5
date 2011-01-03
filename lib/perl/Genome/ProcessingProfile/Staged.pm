@@ -106,8 +106,15 @@ sub _generate_events_for_build_stage {
     my @events;
     foreach my $object (@objects) {
         my $object_class;
-        my $object_id; 
+        my $object_id;
+        my $segment_identifier;
+        $DB::single = 1;
         if (ref($object)) {
+            #if we get a segment passed in instead, extract the object & segment id
+            if (ref($object) eq 'HASH' && exists $object->{segment}) {
+                $segment_identifier = $object->{segment};
+                $object = $object->{object};
+            }
             $object_class = ref($object);
             $object_id = $object->id;
         } elsif ($object eq '1') {
@@ -133,7 +140,7 @@ sub _generate_events_for_build_stage {
             $build->status_message('Scheduling for '. $object_class .' with id '. $object_id);
         }
         my @command_classes = $self->classes_for_stage($stage_name, $build->model);
-        push @events, $self->_generate_events_for_object($build,$object,\@command_classes);
+        push @events, $self->_generate_events_for_object($build,$object,\@command_classes,$segment_identifier);
     }
 
     return @events;
@@ -144,6 +151,7 @@ sub _generate_events_for_object {
     my $build = shift;
     my $object = shift;
     my $command_classes = shift;
+    my $segment_identifier = shift;
     my $prior_event_id = shift;
 
     my @scheduled_commands;
@@ -180,6 +188,7 @@ sub _generate_events_for_object {
                     );
                 }
             } elsif ($command_class =~ /ReferenceAlignment::AlignReads|TrimReadSet|AssignReadSetToModel|AddReadSetToProject|FilterReadSet|RnaSeq::PrepareReads/) {
+                $DB::single = 1;
                 if ($object->isa('Genome::InstrumentData')) {
                     my $ida = Genome::Model::InstrumentDataAssignment->get(
                         model_id => $build->model_id,
@@ -201,6 +210,14 @@ sub _generate_events_for_object {
                         instrument_data_id => $object->id,
                         model_id => $build->model_id,
                     );
+                    
+                    if ($segment_identifier) {
+                        $command->add_input(name=>'instrument_data_segment_type',
+                                            value=>$segment_identifier->{segment_type});
+                        $command->add_input(name=>'instrument_data_segment_id',
+                                            value=>$segment_identifier->{segment_id})
+                    }
+                     
                 } else {
                     my $error_message = 'Expecting Genome::InstrumentData object but got '. ref($object);
                     $build->error_message($error_message);
