@@ -38,6 +38,10 @@ class Genome::ProcessingProfile::Command::Create::Tester {
             is_optional => 1,
             doc => 'This param may be undefined.',
         },
+        append_event_steps => {
+            is => 'Text',
+            is_optional => 1,
+        },
     ],
 };
 # Create a pp

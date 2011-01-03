@@ -18,7 +18,7 @@ ok($processing_profile, 'Created mock processing profile');
 my %attrs_and_values = (
     type_name => [qw/ tester /],
     sequencing_platform => [qw/ solexa /],
-    params_for_class => [qw/ sequencing_platform dna_source roi /],
+    params_for_class => [qw/ sequencing_platform append_event_steps dna_source roi /],
     stages => [qw/ prepare assemble /],
     prepare_objects => [qw/ 1 /],
     prepare_job_classes => [qw/ 
