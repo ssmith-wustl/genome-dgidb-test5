@@ -100,8 +100,7 @@ sub _gen_concordance {
 sub execute {
     my $self = shift;
 
-
-   eval {
+    eval {
         $self->_verify_build_and_set_paths($self->build);
 
         Genome::Utility::FileSystem->create_directory($self->output_dir)
