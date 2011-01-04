@@ -96,6 +96,9 @@ sub get_mock_processing_profile {
             valid_soap_de_novo_assemble_seq_platforms
             valid_velvet_one_button_seq_platforms
 
+            after_assemble_methods_to_run
+            bsub_usage
+
             generate_stats
             /),
         );
