@@ -613,24 +613,6 @@ sub unassigned_instrument_data {
 
 #<>#
 
-# TODO: remove these since they're not supposed to vary on a per-model basis.
-sub base_parent_directory {
-    return Genome::Config->root_directory;
-}
-
-sub alignment_links_directory {
-    return Genome::Config->alignment_links_directory;;
-}
-
-sub base_model_comparison_directory {
-    return Genome::Config->model_comparison_link_directory;
-}
-
-sub model_data_directory {
-    return Genome::Config->model_data_directory;
-}
-
-
 # These vary based on the current configuration, which could vary over
 # time.  This value is set when the model is created if not specified by the creator.
 sub resolve_data_directory {
@@ -770,20 +752,7 @@ sub resolve_reports_directory {
 sub available_reports {
     my $self=shift;
     #if we don't have a completed build, we don't have reports
-    $self->last_complete_build and return $self->last_complete_build->available_reports or
-    return {};
-    $DB::single = 1;
-    my $report_dir = $self->resolve_reports_directory;
-    my %report_file_hash;
-    my @report_subdirs = glob("$report_dir/*");
-    my @reports;
-    for my $subdir (@report_subdirs) {
-        #we may be able to do away with touching generating class and just try to find reports that match this subdir name? not sure
-        my ($report_name) = ($subdir =~ /\/+reports\/+(.*)\/*/);
-        print ($report_name . "<br>");
-        push @reports, Genome::Model::Report->create(model_id => $self->id, name => $report_name);
-    }
-    return \@reports;
+    return $self->last_complete_build ? $self->last_complete_build->available_reports : {};
 }
 
 # This is called by both of the above.
@@ -1008,7 +977,7 @@ sub _build_model_filesystem_paths {
     my $self = shift;
 
     # This is actual data directory on the filesystem
-    # Currently the disk is hard coded in $model->base_parent_directory
+    # Currently the disk is hard coded in Genome::Config->root_directory
     my $model_data_dir = $self->data_directory;
     unless (Genome::Utility::FileSystem->create_directory($model_data_dir)) {
         $self->warning_message("Can't create dir: $model_data_dir");

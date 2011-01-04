@@ -144,8 +144,6 @@ sub test01_directories_and_links : Tests(4) {
     my $model = $self->_model;
     is($model->data_directory, $self->tmp_dir, "Model data directory");
     ok($model->resolve_data_directory, "Resolve data directory");
-    ok(-d $model->alignment_links_directory, "Alignment links directory");
-    ok(-d $model->base_model_comparison_directory, "Model comparison directory");
 
     return 1;
 }
