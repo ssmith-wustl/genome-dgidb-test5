@@ -48,6 +48,11 @@ class Genome::Model::Tools::FastTier::MakeTierBitmasks {
             calculate => q{ "$output_directory/tier4.bitmask"; },
             is_output => 1,
         },
+        ucsc_files_location => {
+            type => 'Text',
+            is_input => 1,
+            doc => 'The location of phastcons17,28, regulatory regions, etc',
+        },
     ],
 };
 
