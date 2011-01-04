@@ -48,7 +48,7 @@ class Genome::Model::Tools::FastTier::MakeTierBitmasks {
             calculate => q{ "$output_directory/tier4.bitmask"; },
             is_output => 1,
         },
-        ucsc_files_location => {
+        ucsc_directory => {
             type => 'Text',
             is_input => 1,
             doc => 'The location of phastcons17,28, regulatory regions, etc',
@@ -194,49 +194,41 @@ sub execute {
     undef($tier1_rna); #no longer needed
     $self->write_genome_bitmask($self->tier1_output, $tier1);
     printf "Tier1 encompasses %u bases. %f%% of the genome\n", $self->bases_covered($tier1), $self->bases_covered($tier1)/$masked_genome_size * 100;
+    undef($tier1_coding);
 
     #Tier2
     #Tier2 contains all coding bases (silent mutations), as well as conserved bases via phastConsElements and non-repeat regulatory
     #Scan through phastConsElements
-    my $phastCons17way = "/gscmnt/sata194/info/sralign/UCSC/data//phastConsElements17way.txt";
-    my $phastCons28way = "/gscmnt/sata194/info/sralign/UCSC/data//phastConsElements28way.txt";
-
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($phastCons17way);
-
     my $tier2_conserved_set = $self->shadow_genome(\%genome);
+    my @conserved_regions = glob($self->ucsc_directory."/conserved_regions/*");
 
-    while(my $line = $fh->getline) {
-        chomp $line;
-        my ($bin, $chr, $start, $end, $lod, $score) = split /\t/, $line;
-        $chr =~ s/chr//g;
-        $self->add_range_to_set($tier2_conserved_set, $chr, $start, $end) if $score >= 500;
-    }
-    $fh->close;
+    for my $conserved_region (@conserved_regions){
+        my $fh = Genome::Utility::FileSystem->open_file_for_reading($conserved_region);
 
-    $fh = Genome::Utility::FileSystem->open_file_for_reading($phastCons28way);
-    while(my $line = $fh->getline) {
-        chomp $line;
-        my ($bin, $chr, $start, $end, $lod, $score) = split /\t/, $line;
-        $chr =~ s/chr//g;
-        $self->add_range_to_set($tier2_conserved_set, $chr, $start, $end) if $score >= 500;
+        while(my $line = $fh->getline) {
+            chomp $line;
+            my ($bin, $chr, $start, $end, $lod, $score) = split /\t/, $line;
+            $chr =~ s/chr//g;
+            $self->add_range_to_set($tier2_conserved_set, $chr, $start, $end) if $score >= 500;
+        }
+        $fh->close;
     }
-    $fh->close;
+
     #my $tier2 = union_genomes($tier1_coding, $tier2_conserved_set); 
     #undef($tier2_conserved_set); 
     my $tier2 = $tier2_conserved_set;
     print STDERR "Calculated Tier2 conserved set\n";
     $self->status_message("Calculated Tier2 conserved set\n");
     #printf "Tier2 conserved set encompasses %u bases. %f%% of the genome\n", bases_covered($tier2), bases_covered($tier2)/$masked_genome_size * 100;
-    undef($tier1_coding);
 
     #now do regulatory regions
     #
     #First determine repeats
     my $repeatmasker_regions = $self->shadow_genome(\%genome);
 
-    my @repeatmasker_files = glob("/gscmnt/sata194/info/sralign/UCSC/data/chr*_rmsk.txt");
+    my @repeatmasker_files = glob($self->ucsc_directory."/rmsk/*");
     for my $file (@repeatmasker_files) {
-        $fh = Genome::Utility::FileSystem->open_file_for_reading($file);
+        my $fh = Genome::Utility::FileSystem->open_file_for_reading($file);
         while(my $line = $fh->getline) {
             chomp $line;
             my @fields = split /\s+/, $line;
@@ -254,10 +246,11 @@ sub execute {
 
     #next build up the regulatory annotated regions
     my $regulatory_regions = $self->shadow_genome(\%genome);
-    my @files = qw| targetScanS.txt oreganno.txt tfbsConsSites.txt vistaEnhancers.txt eponine.txt firstEF.txt wgEncodeUcsdNgTaf1ValidH3K4me.txt wgEncodeUcsdNgTaf1ValidH3ac.txt wgEncodeUcsdNgTaf1ValidRnap.txt wgEncodeUcsdNgTaf1ValidTaf.txt polyaDb.txt polyaPredict.txt switchDbTss.txt encodeUViennaRnaz.txt laminB1.txt |;
+    #my @files = qw| targetScanS.txt oreganno.txt tfbsConsSites.txt vistaEnhancers.txt eponine.txt firstEF.txt wgEncodeUcsdNgTaf1ValidH3K4me.txt wgEncodeUcsdNgTaf1ValidH3ac.txt wgEncodeUcsdNgTaf1ValidRnap.txt wgEncodeUcsdNgTaf1ValidTaf.txt polyaDb.txt polyaPredict.txt switchDbTss.txt encodeUViennaRnaz.txt laminB1.txt |;
+    my @regulatory_regions = glob($self->ucsc_directory."/regulatory_regions/*");
 
-    for my $file (@files) {
-        $fh = Genome::Utility::FileSystem->open_file_for_reading("/gscmnt/sata194/info/sralign/UCSC/data/$file");
+    for my $file (@regulatory_regions) {
+        my $fh = Genome::Utility::FileSystem->open_file_for_reading($file);
         while(my $line = $fh->getline) {
             chomp $line;
             my ($bin, $chr, $start, $end, ) = split /\t/, $line; #ignoring scores on these tables (may be bad)
@@ -270,15 +263,17 @@ sub execute {
     $self->status_message("Calculated Tier2 regulatory regions\n");
 
     #no bins in this file
-    $fh = Genome::Utility::FileSystem->open_file_for_reading("/gscmnt/sata194/info/sralign/UCSC/data/cpgIslandExt.txt");
-    while(my $line = $fh->getline) {
-        chomp $line;
-        my ($chr, $start, $end, ) = split /\t/, $line; #ignoring scores on these tables (may be bad)
-        $chr =~ s/chr//g;
-        $self->add_range_to_set($regulatory_regions,$chr, $start, $end); 
+    my @cpg_islands = glob($self->ucsc_directory."/cpg_islands/*");
+    for my $cpg_islands (@cpg_islands){
+        my $fh = Genome::Utility::FileSystem->open_file_for_reading($cpg_islands);
+        while(my $line = $fh->getline) {
+            chomp $line;
+            my ($chr, $start, $end, ) = split /\t/, $line; #ignoring scores on these tables (may be bad)
+            $chr =~ s/chr//g;
+            $self->add_range_to_set($regulatory_regions,$chr, $start, $end); 
+        }
+        $fh->close;
     }
-    $fh->close;
-
 
     $self->in_place_difference_genomes($regulatory_regions, $repeatmasker_regions); 
     #in_place_difference_genomes($regulatory_regions, $tier2);
