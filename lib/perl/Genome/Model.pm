@@ -5,12 +5,7 @@ use Genome;
 
 use Regexp::Common;
 use File::Path;
-use Cwd;
-use File::Basename;
-use IO::File;
-use Sort::Naturally;
 use YAML;
-use Archive::Tar;
 
 class Genome::Model {
     is_abstract     => 1,
