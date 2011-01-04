@@ -22,7 +22,7 @@ EOS
 
 sub help_detail {                           
     return <<EOS
-    This is a small tool to take SNV calls in sniper format and convert them to a common BED format (using the first four columns).
+    This is a small tool to take SNV calls in sniper format and convert them to a common BED format (using the first five columns).
 EOS
 }
 
@@ -32,11 +32,11 @@ sub process_source {
     my $input_fh = $self->_input_fh;
     
     while(my $line = <$input_fh>) {
-        my ($chromosome, $position, $reference, $genotype, @extra) = split("\t", $line);
+        my ($chromosome, $position, $reference, $genotype, $score, @extra) = split("\t", $line);
         
         #position => 1-based position of the SNV
         #BED uses 0-based position of and after the event
-        $self->write_bed_line($chromosome, $position - 1, $position, $reference, $genotype);
+        $self->write_bed_line($chromosome, $position - 1, $position, $reference, $genotype, $score);
     }
     
     return 1;

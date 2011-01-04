@@ -41,6 +41,7 @@ class Genome::Model::ReferenceAlignment {
         indel_detector_version       => { via => 'processing_profile'},
         indel_detector_params        => { via => 'processing_profile'},
         transcript_variant_annotator_version => { via => 'processing_profile' },
+        transcript_variant_annotator_filter => { via => 'processing_profile' },
         multi_read_fragment_strategy => { via => 'processing_profile'},
         prior_ref_seq                => { via => 'processing_profile'},
         read_aligner_name => {
@@ -74,6 +75,20 @@ class Genome::Model::ReferenceAlignment {
         reference_sequence_build => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             id_by => 'reference_sequence_build_id',
+        },
+        dbsnp_build_id => {
+            is => 'Text',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'dbsnp_build', value_class_name => 'Genome::Model::Build::ImportedVariationList' ],
+            is_many => 0,
+            is_mutable => 1,
+            is_optional => 1,
+            doc => 'dbsnp build to compare against'
+        },
+        dbsnp_build => {
+            is => 'Genome::Model::Build::ImportedVariationList',
+            id_by => 'dbsnp_build_id',
         },
         annotation_reference_build_id => {
             is => 'Text',
@@ -233,6 +248,24 @@ sub __errors__ {
             properties => ['reference_sequence_name', 'annotation_reference_transcripts'],
             desc => "reference sequence: " . $rsb->name . " is incompatible with annotation reference transcripts: " . $arb->name,
         );
+    }
+
+    my $dbsnp = $self->dbsnp_build;
+    if (defined $dbsnp) {
+        if (!defined $dbsnp->reference) {
+            push @tags, UR::Object::Tag->create(
+                type => 'invalid',
+                properties => 'dbsnp_build',
+                desc => "Supplied dbsnp build " . $dbsnp->__display_name__ . " does not specify a reference sequence");
+        }
+
+        if (!$rsb->is_compatible_with($dbsnp->reference)) {
+            push @tags, UR::Object::Tag->create(
+                type => 'invalid',
+                properties => 'dbsnp_build',
+                desc => "Supplied dbsnp build " . $dbsnp->__display_name__ . " specifies incompatible reference sequence " .
+                $dbsnp->reference->__display_name__);
+        }
     }
 
     return @tags;

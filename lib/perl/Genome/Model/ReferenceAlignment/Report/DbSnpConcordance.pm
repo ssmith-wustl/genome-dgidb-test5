@@ -188,7 +188,7 @@ sub generate_report_detail
         my $db_snp_path;
         
         if (defined $self->override_db_snp_file) {
-            $db_snp_file = $self->override_model_db_snp_file;
+            $db_snp_file = $self->override_db_snp_file;
             #print("\nUsing provided db snp file: $db_snp_file\n");
             $db_snp_path = $db_snp_file;
         }
@@ -226,6 +226,7 @@ sub generate_report_detail
             }
         }
         
+        print "CHECKING for './concordance-$list'\n";
         if ($self->test and -e "./concordance-$list") {
             $concordance_report = `cat ./concordance-$list`;
         }
@@ -497,9 +498,10 @@ sub build_coordinate_string {
     
     my $formatted_return="[ ";
     
-    for my $x_point (@{$x_axis_ref}) {
-        my $v1 = $data_set_ref->[$x_point] || 0;
-        $formatted_return .= "[ $x_point, " . $v1 . "], ";
+    for (my $i = 0; $i < @$x_axis_ref; $i++) {
+        my $x_point = $x_axis_ref->[$i];
+        my $v1 = $data_set_ref->[$i] || 0;
+        $formatted_return .= "[ $x_point, $v1 ], ";
     }
     
     $formatted_return .= "] ";
@@ -513,9 +515,10 @@ sub build_concordance_string {
     
     my $formatted_return="[ ";
     
-    for my $x_point (@{$x_axis_ref}) {
-        my $v1 =  $data_set_ref1->[$x_point];
-        my $v2 = $data_set_ref2->[$x_point];
+    for (my $i = 0; $i < @$x_axis_ref; $i++) {
+        my $x_point = $x_axis_ref->[$i];
+        my $v1 = $data_set_ref1->[$i];
+        my $v2 = $data_set_ref2->[$i];
         my $v3;
     
         if (!$v2) {

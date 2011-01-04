@@ -74,10 +74,11 @@ sub post_run {
   eval {
     $self->{cv}->recv;
   };
-  #if (defined $@ && $@ !~ /^COMMAND KILLED\. Signal 15/) {
-  if ($@) {
+  if ($@ && $@ !~ /^COMMAND KILLED\. Signal 15/) {
     # unexpected death message from shellcmd.
-    die $@;
+    # Don't die here, we don't want shutting down the profiler to interrupt
+    # the job being profiled.  Just warn.
+    warn "unexpected death of profiler: $@";
   }
   # FIXME: use a tempfile, but know that collectl clobbers some number of letters like "l"
   move "/tmp/L", $self->{metrics} or die "Failed to move metrics file /tmp/L to $self->{metrics}: $!";

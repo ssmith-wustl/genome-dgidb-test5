@@ -63,18 +63,6 @@ sub execute {
         return;
     }
     $self->status_message("Finished creating agp file");
-
-
-    #create stats
-    $self->status_message("Creating stats.txt file");
-    my $stats = Genome::Model::Tools::Soap::Stats->create(
-        assembly_directory => $self->assembly_directory,
-	);
-    unless ($stats->execute) {
-        $self->error_message("Failed to run stats successfully");
-        return;
-    }
-    $self->status_message("Finished creating stats.txt file");
     
     return 1;
 }

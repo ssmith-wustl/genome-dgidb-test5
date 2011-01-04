@@ -22,7 +22,7 @@ EOS
 
 sub help_detail {                           
     return <<EOS
-    This is a small tool to take SNV calls in var-scan format and convert them to a common BED format (using the first four columns).
+    This is a small tool to take SNV calls in var-scan format and convert them to a common BED format (using the first four columns + quality).
 EOS
 }
 
@@ -33,6 +33,7 @@ sub process_source {
     
     while(my $line = <$input_fh>) {
         my ($chromosome, $position, $reference, $consensus, @extra) = split("\t", $line);
+        my $qual = $extra[5];
         
         no warnings qw(numeric);
         next unless $position eq int($position); #Skip header line(s)
@@ -40,7 +41,7 @@ sub process_source {
         
         #position => 1-based position of the SNV
         #BED uses 0-based position of and after the event
-        $self->write_bed_line($chromosome, $position - 1, $position, $reference, $consensus);
+        $self->write_bed_line($chromosome, $position - 1, $position, $reference, $consensus, $qual);
     }
     
     return 1;

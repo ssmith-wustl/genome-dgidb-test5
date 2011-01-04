@@ -141,6 +141,13 @@ class Genome::Model::Tools::Annotate::TranscriptVariants {
             default => 0,
             doc => 'enable this flag to shortcut through annotation if the output_file is already present. Useful for pipelines.',
         },
+        accept_reference_IUB_codes => {
+            is => 'Boolean',
+            is_optional => 1,
+            is_input => 1,
+            default => 0,
+            doc => 'enable this flag to allow the annotator to accept variants that have IUB codes in the reference position.  The IUB code will be translated to a single base represented by the code.  A will be used whenever possible, followed by C, G, T in that order.  This option is only usable for annotator versions 2 or higher',
+        },
         # Performance options
         cache_annotation_data_directory => {
             is => 'Boolean',
@@ -545,6 +552,17 @@ sub execute {
             $annotation_start = Benchmark->new;
             if ($self->benchmark) {
                 $self->status_message("Annotation start for chromosome $chromosome_name");
+            }
+        }
+
+        $DB::single = 1; #TODO: delete me
+        if($self->accept_reference_IUB_codes){
+            #This will transform any IUB codes into a single base as detailed in the doc for the accept_reference_IUB_codes flag
+            if($self->use_version >= 2){
+                $variant->{reference} = Genome::Info::IUB->reference_iub_to_base($variant->{reference});
+            }
+            else{
+                $self->warning_message("accept-reference-IUB-codes is only available in version 2 or better");
             }
         }
 

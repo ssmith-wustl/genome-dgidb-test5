@@ -57,19 +57,6 @@ my $soap = Genome::Model::Event::Build::DeNovoAssembly::PostAssemble->create(bui
 ok($soap, "Created soap post assemble") or die;
 ok($soap->execute, "Executed soap post assemble") or die;
 
-#compare output files           #these file names differ currently thought contents remain same all ok if stats match
-my @gc_files = qw/ stats_file /;#contigs_fasta_file supercontigs_fasta_file supercontigs_agp_file stats_file /;
-
-my @output_files = (@gc_files);
-
-foreach my $file_name (@output_files) {
-    my $example_file = $example_build->$file_name;
-    ok(-s $example_file, "Test data dir $example_file");
-    my $file = $build->$file_name;
-    ok(-s $file, "Build data dir $file");
-    is(File::Compare::compare($example_file, $file), 0, "$file_name files match");
-}
-
 done_testing();
 
 exit;

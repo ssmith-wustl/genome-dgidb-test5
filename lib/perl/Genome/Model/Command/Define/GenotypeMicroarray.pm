@@ -10,11 +10,21 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command::Define::GenotypeMicroarray {
-    is => 'Genome::Model::Command::Define',
+    is => [
+        'Genome::Model::Command::Define',
+        'Genome::Command::Base',
+        ],
+
     has => [
         file => {
             is => 'Path',
+            is_input => 1,
             doc => 'path to the file or directory of microarray data',
+        },
+        reference => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            is_input => 1,
+            doc => 'reference sequence build for this model',
         },
         no_build => {
             is => 'Boolean',
@@ -24,11 +34,22 @@ class Genome::Model::Command::Define::GenotypeMicroarray {
     ],
 };
 
+sub resolve_class_and_params_for_argv {
+    my $self = shift;
+    return $self->Genome::Command::Base::resolve_class_and_params_for_argv(@_);
+}
+
+sub _shell_args_property_meta {
+    my $self = shift;
+    return $self->Genome::Command::Base::_shell_args_property_meta(@_);
+}
+
 sub help_synopsis {
     return <<"EOS"
 genome model define genotype-microarray 
   --subject-name MY_SAMPLE
   --processing-profile-name illumina/wugc
+  --reference g1k-human-build37
   --file /my/snps
 EOS
 }
@@ -37,6 +58,11 @@ sub help_detail {
     return <<"EOS"
 Define a new genome model with genotype information based on microarray data.
 EOS
+}
+
+sub type_specific_parameters_for_create {
+    my $self = shift;
+    return (reference_sequence_build => $self->reference);
 }
 
 sub execute {

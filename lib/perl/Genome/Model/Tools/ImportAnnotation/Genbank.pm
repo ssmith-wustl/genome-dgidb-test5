@@ -10,6 +10,7 @@ use Storable;
 use File::Slurp qw/ write_file /;
 use File::Basename qw/ fileparse /;
 use Storable qw/ dclone /;
+use Devel::StackTrace;
 
 class Genome::Model::Tools::ImportAnnotation::Genbank {
     is  => 'Genome::Model::Tools::ImportAnnotation',
@@ -34,6 +35,22 @@ class Genome::Model::Tools::ImportAnnotation::Genbank {
             is_input => 1,
             doc => "path to storable hash of transcript statuses",
             is_optional => 1,
+        },
+    ],
+    has_optional => [
+        idx => {
+            is => 'Bio::ASN1::EntrezGene::Indexer',
+            is_input => 0,
+            doc => 'We are stashing this objectified idx file to speed this up...',
+        },
+        reference_id => { 
+            is => 'NUMBER', 
+            is_input => 1, 
+            doc => 'Reference sequence build to use for sequence lookups' 
+        },
+        reference_build => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence', 
+            id_by => 'reference_id' 
         },
     ],
 };
@@ -71,6 +88,10 @@ sub execute {
         $self->generate_idx_file;
     }
 
+    # UR::Context->create_subscription(
+        # method => 'commit',
+        # callback => sub { print Devel::StackTrace->new(no_refs => 1)->as_string });
+
     my $transcript_status;
     if($self->status_file)
     {
@@ -84,7 +105,7 @@ sub execute {
     my $lines;
     foreach my $ts (sort keys %$transcript_status)
     {
-        push(@$lines,[$transcript_status->{$ts}->{entrezid}, $transcript_status->{$ts}->{hugo_gene_name}]);  
+        push(@$lines,[$transcript_status->{$ts}->{entrezid}, $transcript_status->{$ts}->{hugo_gene_name}, $transcript_status->{$ts}->{transcript_version}]);  
     }
     
     #dedup hash based on locus_id
@@ -119,10 +140,17 @@ sub execute {
     my @proteins;
     my @genes;
 
+    $self->set_reference_build unless $self->reference_build; #use this crappy logic if we don't have a ref seq. specified
+    Genome::DataSource::GMSchema->disconnect_default_dbh if Genome::DataSource::GMSchema->has_default_dbh;  
+    my $idx = $self->get_idx_file;
+    $self->idx($idx); 
+    
+
     RECORD: foreach my $record (@unique_lines)
     {
         my $locus_id = $record->[0];
         my $hugo     = $record->[1]; 
+        my $transcript_version = $record->[2];
 
         # sometimes we get an odd error here, and this hangs, because
         # the bioperl interface way deep in GSC::ImportExport::GenBank::Gene
@@ -131,8 +159,14 @@ sub execute {
         # happen again.
         my $genbank_gene = $self->retrieve_gene($locus_id); 
         unless ($genbank_gene) {
-            $self->error_message("Could not retrieve gene with ID $locus_id, exiting!");
-            croak;
+            if($hugo =~ '^LOC'){ #Genes with this prefix are predicted and probably don't exist.  Mike's having us omit them for the time being
+                $self->status_message("Could not retrieve predicted gene with ID $locus_id.  Skipping to next gene");
+                next RECORD;
+            }
+            else{
+                $self->error_message("Could not retrieve gene with ID $locus_id, exiting!");
+                croak;
+            }
         }
 
         my $is_pseudogene = $self->is_pseudogene($genbank_gene);
@@ -203,7 +237,7 @@ sub execute {
             $count++;
             my $transcript_start = undef;
             my $transcript_stop  = undef;
-            my $transcript_name  = $genbank_transcript->{accession};
+            my $transcript_name  = $genbank_transcript->{accession}; 
             my $status           = 'unknown';  #this gets filled out later from the status hash
 
             ($transcript_start, $transcript_stop)
@@ -228,7 +262,7 @@ sub execute {
                 gene_name => $gene->name,
                 transcript_start => $transcript_start, 
                 transcript_stop => $transcript_stop,
-                transcript_name => $transcript_name,
+                transcript_name => join('.', $transcript_name, $transcript_version), #We are now going to store transcript names as transcript_name.version.  Make it so
                 transcript_status => $status,
                 strand => $strand,
                 chrom_name => $chromosome,
@@ -387,9 +421,11 @@ sub execute {
 
             $self->dump_sub_structures(0); #arg added for pre/post commit notation
 
+            $self->status_message("I have a DBH pre-commit, I probably shouldn't") if Genome::DataSource::GMSchema->has_default_dbh;
             $self->status_message( "committing...($count)");
             UR::Context->commit;
             $self->status_message("finished commit!");
+            $self->status_message("I have a DBH, I probably shouldn't") if Genome::DataSource::GMSchema->has_default_dbh;
             
             $self->dump_sub_structures(1);
             
@@ -405,6 +441,7 @@ sub execute {
     $self->status_message("committing...($count)");
     UR::Context->commit;
     $self->status_message("finished commit!");
+    $self->status_message("Import complete");
 
     return 1;
 }
@@ -417,7 +454,7 @@ sub execute {
 # before or after?)
 sub retrieve_gene {
     my ($self, $locus_id) = @_;
-    my $idx = $self->get_idx_file;
+    my $idx = $self->idx;
     my $gene = $idx->fetch_hash($locus_id);
     unless ($gene) {
         $self->error_message("Failed to fetch gene with locus ID $locus_id");
@@ -433,7 +470,7 @@ sub get_idx_file {
     my $idx;
     if (-e $idx_file) {
         my $rv = eval { $idx = Bio::ASN1::EntrezGene::Indexer->new(-filename => $idx_file) };
-        if ($rv != 1 or $@) {
+        if (!$rv or $@) {
             unlink($idx_file);
             return $self->generate_idx_file;
         }
@@ -752,6 +789,10 @@ sub cache_transcript_status
 
                 my @values = $feature->get_tag_values('db_xref');
                 my ($hugo) = $feature->get_tag_values('gene');
+                #This is a hack.  We need the version number so that we can append it in the format join(".", $transcript_name, $version_number);
+                #We do this because Genbank does not do organized releases.  The version transcripts using a scheme similar to this, which leads to confusion.  
+                #We do this here because this is the only place that we parse this file.  It is crappy and hacky, but so it this entire process.
+                my ($transcript_version) = $feature->{_gsf_seq}->{_version}; 
                 foreach my $val (@values)
                 {
                     if ( $val =~ /GeneID/x )
@@ -762,6 +803,7 @@ sub cache_transcript_status
                         $val =~ s/GeneID:(\d+)/$1/x;
                         $ts_status_hash{ $seq->display_id }->{entrezid} = $val;
                         $ts_status_hash{ $seq->display_id }->{hugo_gene_name} = $hugo;
+                        $ts_status_hash{ $seq->display_id }->{transcript_version} = $transcript_version;
                     }
                 }
 
@@ -886,28 +928,29 @@ sub get_seq_slice
 {
     my ( $self, $chrom, $start, $stop ) = @_;
     my $slice = undef;
-    my $reference_build = $self->reference_build();
+    my $reference_build = $self->reference_build;
     $slice = $reference_build->sequence($chrom, $start, $stop);
     return $slice;
 }
 
 # TODO This needs to be cleaned up... badly
-sub reference_build
+sub set_reference_build
 {
     my $self = shift;
-    unless ($self->{reference_build}){
+    unless ($self->reference_build){
         my $species = $self->species;
         # Currently only supports versions in familiar formats(54_36p, 54_37g) 
         # Possible these will get more complicated later
+        #TODO: This needs some sort of fix to use the correct version or the ref (or more likely ask what the correct ref seq is)
         my ($reference_build_version) = $self->version =~ /^\d+_(\d+)[a-z]$/; 
         my $model = Genome::Model::ImportedReferenceSequence->get(name => "NCBI-$species");
         confess "Couldn't get imported reference sequence for $species!" unless $model;
 
         my $build = $model->build_by_version($reference_build_version);
         confess "Couldn't get build version $reference_build_version for $species!" unless $build;
-        $self->{reference_build} = $build;
+        $self->reference_build($build);
     }
-    return $self->{reference_build};
+    return $self->reference_build;
 }
 
 1;

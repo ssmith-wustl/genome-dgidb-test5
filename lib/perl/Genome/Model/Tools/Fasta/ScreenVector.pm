@@ -44,7 +44,9 @@ sub execute {
         VarAttr => 'name',
     );
 
-    my $conf = $xs->XMLin('/gsc/scripts/lib/perl/Genome/Model/Tools/Fasta/screen_vector.conf.xml');
+    my $xml_file = $INC{'Genome/Model/Tools/Fasta.pm'};
+    $xml_file =~ s/\.pm$/\/screen_vector.conf.xml/;
+    my $conf = $xs->XMLin($xml_file);
 
     $self->chdir_fasta_directory 
         or return;

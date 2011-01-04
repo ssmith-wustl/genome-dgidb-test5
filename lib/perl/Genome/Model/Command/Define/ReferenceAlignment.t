@@ -21,12 +21,23 @@ use_ok($model_class);
 my $individual = Genome::Individual->create(name => 'test-patient', common_name => 'testpatient');
 my $sample = Genome::Sample->create(name => 'test-patient', species_name => 'human', common_name => 'normal', source => $individual);
 my ($rbuild, $abuild) = create_reference_builds(); # (reference_build, annotation_build)
+
+my $dbsnp_pp = Genome::ProcessingProfile->get(name => "imported-variation-list");
+my $dbsnp_model = Genome::Model::ImportedVariationList->create(
+    reference => $rbuild,
+    processing_profile => $dbsnp_pp,
+    subject_name => $sample->name,
+    );
+ok($dbsnp_model, "created dbsnp model");
+my $dbsnp_build = Genome::Model::Build::ImportedVariationList->create(model => $dbsnp_model);
+ok($dbsnp_build, "created dbsnp build");
+
 my $pp = Genome::ProcessingProfile::ReferenceAlignment->create(
     name => 'test_profile',
     sequencing_platform => 'solexa',
     dna_type => 'cdna',
-    read_aligner_name => 'bwa',
-    snv_detector_name => 'samtools',
+    read_aligner_name => 'refalign_define_test',
+    snv_detector_name => 'refalign_define_test',
     );
 ok($pp, 'created ReferenceAlignment processing profile');
 
@@ -120,6 +131,35 @@ for my $model (create_direct_and_cmdline(%params)) {
     is($model->annotation_reference_build->id, $abuild->id, 'annotation build id correct');
     ok($model->delete, 'deleted model');
 }
+
+# specify dbsnp build by id
+%params = (
+    subject_name => $sample->name,
+    processing_profile_id => $pp->id,
+    reference_sequence_build => $rbuild->name,
+    dbsnp_build => $dbsnp_build->id,
+);
+for my $model (create_direct_and_cmdline(%params)) {
+    ok($model->dbsnp_build, 'dbsnp build is defined');
+    is($model->dbsnp_build->id, $dbsnp_build->id, 'dbsnp build id correct');
+    ok($model->delete, 'deleted model');
+}
+
+# specify dbsnp build by object
+%params = (
+    subject_name => $sample->name,
+    processing_profile_id => $pp->id,
+    reference_sequence_build => $rbuild->name,
+    dbsnp_build => $dbsnp_build,
+);
+for my $model (create_direct_and_cmdline(%params)) {
+    ok($model->dbsnp_build, 'dbsnp build is defined');
+    is($model->dbsnp_build->id, $dbsnp_build->id, 'dbsnp build id correct');
+    ok($model->delete, 'deleted model');
+}
+
+
+
 
 # now test the legacy processing profile parameter annotation_reference_transcripts. once migration to the
 # model input is complete, this can go away.

@@ -3,6 +3,8 @@ package Genome::Model::Somatic::Command::Cmds;
 use strict;
 use warnings;
 
+use Workflow;
+
 class Genome::Model::Somatic::Command::Cmds {
     is => ['Genome::Command::Base', 'Workflow::Operation::Command'],
     has_many => [

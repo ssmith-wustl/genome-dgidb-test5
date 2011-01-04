@@ -220,8 +220,9 @@ sub execute {
 	    return;
 	}
 	#create velvet std output files
-	my $ec = Genome::Model::Tools::Velvet::CreateStdoutFiles->execute(
-	    input_fastq_file => $self->file_name,
+#	my $ec = Genome::Model::Tools::Velvet::CreateStdoutFiles->execute(
+	my $ec = Genome::Model::Tools::Velvet::StandardOutputs->execute(
+#	    input_fastq_file => $self->file_name,
 	    directory => $self->directory,
 	    );
 	unless ($ec) {
