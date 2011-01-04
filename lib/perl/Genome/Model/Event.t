@@ -157,10 +157,10 @@ ok(scalar( grep { $_->class =~ /^Genome::Model::Event::Metric$/ } @objects),'Fou
 
 ok($event->revert,'revert event');
 
-is(scalar( grep { $_ =~ /^deleting .* with id .*/ } $event->warning_messages ), 3, 'found 3 error messages about deleting objects');
+is(scalar( grep { $_ =~ /^deleting .* with id .*/ } $event->warning_messages ), 2, 'found 2 error messages about deleting objects');
 
 @objects = $event->get_all_objects;
-ok(!scalar(@objects),'no objects found after revert');
+ok((scalar(@objects) == 1 && grep {ref($_) eq 'Genome::Model::Event::Input'} @objects),'only object found after revert is our input');
 
 my $yaml_string = $event->yaml_string;
 my $yaml_header = '--- \!\!perl/hash:'. $event->class;

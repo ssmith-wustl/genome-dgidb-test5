@@ -419,7 +419,6 @@ sub _process_and_link_alignments_to_build {
     $self->status_message(
         "Build directory: " . $self->build_directory
     );
-    $self->revert;
 
     my $instrument_data_assignment = $self->instrument_data_assignment;
    
@@ -430,15 +429,21 @@ sub _process_and_link_alignments_to_build {
     $self->status_message("Finding or generating alignments for " . $instrument_data_assignment->__display_name__);
     my @alignments;
     my @errors;
+
+    my %segment_info;
+    if (defined $self->instrument_data_segment_id) {
+        $segment_info{instrument_data_segment_id} = $self->instrument_data_segment_id;
+        $segment_info{instrument_data_segment_type} = $self->instrument_data_segment_type;
+    }
     
     if ($mode eq 'get_or_create') {
-        @alignments = $processing_profile->generate_results_for_instrument_data_assignment($instrument_data_assignment); 
+        @alignments = $processing_profile->generate_results_for_instrument_data_assignment($instrument_data_assignment, %segment_info); 
         unless (@alignments) {
             $self->error_message("Error finding or generating alignments!:\n" .  join("\n",$instrument_data_assignment->error_message));
             push @errors, $self->error_message;
         }
     } elsif ($mode eq 'get') {
-        @alignments = $processing_profile->results_for_instrument_data_assignment($instrument_data_assignment); 
+        @alignments = $processing_profile->results_for_instrument_data_assignment($instrument_data_assignment, %segment_info); 
         unless (@alignments) {
             return undef; 
         }
@@ -489,7 +494,12 @@ sub verify_successful_completion {
     }
 
     my $instrument_data_assignment = $self->instrument_data_assignment;
-    my @alignments = $self->model->processing_profile->results_for_instrument_data_assignment($instrument_data_assignment);
+    my %segment_info;
+    if (defined $self->instrument_data_segment_id) {
+        $segment_info{instrument_data_segment_id} = $self->instrument_data_segment_id;
+        $segment_info{instrument_data_segment_type} = $self->instrument_data_segment_type;
+    }
+    my @alignments = $self->model->processing_profile->results_for_instrument_data_assignment($instrument_data_assignment,%segment_info);
     
     my @errors;
     for my $alignment (@alignments) {

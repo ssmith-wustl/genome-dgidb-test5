@@ -63,6 +63,10 @@ class Genome::Model::Event {
         outputs        => { is => 'Genome::Model::Event::Output', reverse_id_by => 'event' },
         metrics        => { is => 'Genome::Model::Event::Metric', reverse_id_by => 'event' },
         metric_names   => { via => 'metrics', to => 'name' },
+        instrument_data_segment_id_param => { is => 'Genome::Model::Event::Input', reverse_id_by => 'event', where => [ name => 'instrument_data_segment_id']},
+        instrument_data_segment_type_param => { is => 'Genome::Model::Event::Input', reverse_id_by => 'event', where => [ name => 'instrument_data_segment_type']},
+        instrument_data_segment_id => { via => 'instrument_data_segment_id_param', to=>'value'},
+        instrument_data_segment_type => { via => 'instrument_data_segment_type_param', to=>'value'},
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
@@ -119,7 +123,8 @@ sub create {
 
 sub revert {
     my $self = shift;
-    for my $obj ($self->get_all_objects) {
+    # don't roll back inputs.
+    for my $obj (grep {! $_->isa('Genome::Model::Event::Input') } $self->get_all_objects) {
         if ($obj->isa('Genome::Model::Event')) {
             if ($obj->parent_event_id eq $self->id) {
                 # Remove foreign keys
@@ -157,6 +162,11 @@ sub delete {
     # get rid of associated metrics
     my @metrics = Genome::Model::Event::Metric->get(event_id=>$self->id);
     for (@metrics) {
+        $_->delete;
+    }
+
+    my @inputs = Genome::Model::Event::Input->get(event_id=>$self->id);
+    for (@inputs) {
         $_->delete;
     }
 
