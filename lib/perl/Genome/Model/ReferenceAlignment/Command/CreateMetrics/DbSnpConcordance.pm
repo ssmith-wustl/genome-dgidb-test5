@@ -6,8 +6,6 @@ use warnings;
 use File::Basename;
 use Genome;
 
-my $DEFAULT_OUTPUT_SUBDIR = 'reports';
-
 class Genome::Model::ReferenceAlignment::Command::CreateMetrics::DbSnpConcordance {
     is => 'Genome::Command::Base',
     has => [
