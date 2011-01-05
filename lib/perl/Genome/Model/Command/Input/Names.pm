@@ -5,7 +5,6 @@ use warnings;
 
 use Genome;
       
-use Regexp::Common;
 require Term::ANSIColor;
 
 class Genome::Model::Command::Input::Names {
@@ -19,8 +18,6 @@ class Genome::Model::Command::Input::Names {
     },
     ],
 };
-
-############################################
 
 sub execute {
     my $self = shift;
@@ -51,7 +48,7 @@ sub execute {
     for my $property ( @properties ) {
         printf(
             " %s (use %s to modify)\n",
-            Term::ANSIColor::colored($property->singular_name, 'blue'),
+            Term::ANSIColor::colored($property->singular_name, 'red'),
             ( $property->is_many ? 'add/remove commands ' : 'update command' ),
         );
     }
@@ -61,5 +58,3 @@ sub execute {
 
 1;
 
-#$HeadURL$
-#$Id$
