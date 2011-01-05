@@ -86,6 +86,8 @@ sub execute {
                 if(($pos - $last_pos) == 1) {
                     #potential DNP
                     $DB::single=1;
+                    $self->status_message("Potential DNP found at $chr:$pos-$last_pos\n");
+
                     if($self->is_dnp($chr,$last_pos,$last_var,$pos,$variants[0])) {
                         print "$chr\t$last_pos\t$pos\t$last_ref$ref\t$last_var$variants[0]\tDNP\t",join("\t",@rest),"\n";
                         @lines = ();    #erase the DNP line
