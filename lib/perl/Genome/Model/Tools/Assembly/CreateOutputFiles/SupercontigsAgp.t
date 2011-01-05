@@ -1,41 +1,35 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
 
 use above "Genome";
 use Test::More;
+require File::Compare;
 
-my $module = 'Genome-Model-Tools-Assembly-CreateOutputFiles';
-my $data_dir = "/gsc/var/cache/testsuite/data/$module";
+use_ok( 'Genome::Model::Tools::Assembly::CreateOutputFiles::SupercontigsAgp' ) or die;
 
-ok(-d $data_dir, "Found data directory: $data_dir");
+my $data_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly-CreateOutputFiles";
+ok(-d $data_dir, "Found data directory: $data_dir") or die;
 
+#make test dir
 my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+Genome::Utility::FileSystem->create_directory( $temp_dir.'/edit_dir' );
 
-#make edit_dir in temp dir
-mkdir $temp_dir.'/edit_dir';
-ok(-d $temp_dir.'/edit_dir', "Made edit_dir in temp test_dir");
-
-foreach my $file_name ('gap.txt', 'contigs.bases') {
-    my $old = $data_dir.'/edit_dir/'.$file_name;
-    my $new = $temp_dir.'/edit_dir/'.$file_name;
-    ok (-e $old, "Test $file_name file exists"); #gap.txt can be blank
-    ok(File::Copy::copy($old, $temp_dir.'/edit_dir'),"Copied $file_name to temp dir");
-    ok (-e $new, "New $file_name exists");
+#copy files
+for my $file ('gap.txt', 'contigs.bases') {
+    ok( -e $data_dir.'/edit_dir/'.$file, "Test $file exists" );
+    ok( File::Copy::copy($data_dir."/edit_dir/$file", $temp_dir."/edit_dir/$file"), "Copied $file to temp dir" );
 }
 
+#run
 my $ec = system("chdir $temp_dir; gmt assembly create-output-files supercontigs-agp --directory $temp_dir");
-ok($ec == 0, "Command ran successfully");
+ok($ec == 0, "Command ran successfully") or die;
 
-my $new_file = $temp_dir.'/edit_dir/supercontigs.agp';
-ok (-s $new_file, "New supercontigs.agp created");
-
-my $old_file = $data_dir.'/edit_dir/supercontigs.agp';
-ok (-s $old_file, "Test supercontigs.agp file exists");
-
-my @diffs = `sdiff -s $new_file $old_file`;
-is(scalar (@diffs), 0, "New file matches existing test file");
+#compare files
+ok( -s $data_dir.'/edit_dir/supercontigs.agp', "Data dir supercontigs.agp file exists" );
+ok( -s $temp_dir.'/edit_dir/supercontigs.agp', "Supercontigs.agp file created" );
+ok( File::Compare::compare( $temp_dir.'/edit_dir/supercontigs.agp', $data_dir.'/edit_dir/supercontigs.agp' ) == 0, "Files match" );
 
 done_testing();
 

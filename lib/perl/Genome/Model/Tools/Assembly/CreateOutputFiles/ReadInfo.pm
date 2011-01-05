@@ -16,7 +16,6 @@ class Genome::Model::Tools::Assembly::CreateOutputFiles::ReadInfo {
 	acefile => {
 	    is => 'Text',
 	    doc => 'Assembly ace file',
-	    is_optional => 1,
 	    is_mutable => 1,
 	},
 	output_file => {
@@ -29,18 +28,11 @@ class Genome::Model::Tools::Assembly::CreateOutputFiles::ReadInfo {
 };
 
 sub help_brief {
-    'Tool to create assembly readinfo.txt file'
-}
-
-sub help_synopsis {
-    my $self = shift;
-    return <<EOS	
-EOS
+    'Tool to create assembly readinfo.txt file from ace file'
 }
 
 sub help_detail {
-    return <<EOS
-EOS
+    "Tool to create assembly readinfo.txt file from ace file";
 }
 
 sub execute {
@@ -52,26 +44,20 @@ sub execute {
 	return;
     }
     #validate ace file
-    unless (-s $self->acefile) {
-	if (-s $self->directory.'/edit_dir/'.$self->acefile) {
-	    $self->acefile($self->directory.'/edit_dir/'.$self->acefile);
-	}
-	else {
-	    $self->error_message("Failed to find ace file: ".$self->acefile.' nor '.
-				 $self->directory.'/edit_dir/'.$self->acefile);
-	    return;
-	}
+    unless( -s $self->acefile ) {
+	$self->acefile ( $self->directory.'/edit_dir/'.$self->acefile ) if
+	    -s $self->directory.'/edit_dir/'.$self->acefile;
+	$self->error_message("Failed to fine ace file as ".$self->acefile.' nor as '.$self->directory.'/edit_dir/'.$self->acefile) and
+	    return unless -s $self->acefile
     }
     #validate output file
     unless ($self->output_file) {
-	$self->output_file($self->directory.'/edit_dir/readinfo.txt');
+	$self->output_file( $self->read_info_file );
     }
     #parse through ace file line by line
-    my $ace_fh = Genome::Utility::FileSystem->open_file_for_reading($self->acefile) ||
-	return;
+    my $ace_fh = Genome::Utility::FileSystem->open_file_for_reading($self->acefile);
     unlink $self->output_file;
-    my $out_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file) ||
-	return;
+    my $out_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
     my $info = {};   my $contig_name;
     my %readinfo;
     while (my $line = $ace_fh->getline) {
@@ -95,9 +81,6 @@ sub execute {
 	    my $u_or_c = ${$readinfo{$read_name}}[0];
 	    my $start = ${$readinfo{$read_name}}[1];
 	    $out_fh->print("$read_name $contig_name $u_or_c $start $read_length\n");
-	    #$out_fh->print($tmp[1].' '.$info->{$tmp[1]}->{contig_name}.' '.$info->{$tmp[1]}->{u_or_c}.' '.
-		#	$info->{$tmp[1]}->{start_pos}.' '.$tmp[2]."\n");
-	    #delete $info->{$tmp[1]};
 	    delete $readinfo{$read_name};
 	}
 	else {

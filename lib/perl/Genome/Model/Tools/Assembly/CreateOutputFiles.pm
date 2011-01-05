@@ -13,19 +13,11 @@ class Genome::Model::Tools::Assembly::CreateOutputFiles {
 };
 
 sub help_brief {
-    'Tools for create assembly output files'
-}
-
-sub help_synopsis {
-    my $self = shift;
-    return <<"EOS"
-genome-model tools assembly create-output-files ...
-EOS
+    'Tools for creating assembly output files'
 }
 
 sub help_detail {
-    return <<EOS
-EOS
+    "Tools for creating assembly output files";
 }
 
 sub seek_pos_from_contigs_file {
@@ -58,7 +50,6 @@ sub seek_pos_from_contigs_file {
 	$seek_pos = ( $seek_pos == 0 ) ? $seek_pos : $seek_pos - 1;
 
 	push @{$contig_infos{$contig_number}}, $seek_pos;
-	#push @{$contig_infos{$contig_number}}, $seq->primary_id;
         $seek_pos = $fh->tell;
     }
     $fh->close;
@@ -152,15 +143,15 @@ sub read_info_file {
     return $_[0]->directory.'/edit_dir/readinfo.txt';
 }
 
-sub reads_placed {
+sub reads_placed_file {
     return $_[0]->directory.'/edit_dir/reads.placed';
 }
 
-sub reads_unplaced {
+sub reads_unplaced_file {
     return $_[0]->directory.'/edit_dir/reads.unplaced';
 }
 
-sub reads_unplaced_fasta {
+sub reads_unplaced_fasta_file {
     return $_[0]->directory.'/edit_dir/reads.unplaced.fasta';
 }
 
