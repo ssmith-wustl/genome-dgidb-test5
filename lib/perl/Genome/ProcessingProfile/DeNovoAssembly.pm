@@ -94,13 +94,11 @@ sub create {
     return $self;
 }
 
-sub assembler_accessor_name {
+sub assembler_accessor_name { #returns soap_de_novo_assemble from 'soap de-novo-assemble'
     my $self = shift;
 
     my $name = $self->assembler_name;
     $name =~ s/ |-/_/g;
-
-    #returns soap_de_novo_assemble from 'soap de-novo-assemble'
 
     return $name;
 }
@@ -546,6 +544,17 @@ sub velvet_one_button_after_assemble_methods_to_run {
 }
 
 #< bsub usage >#
+
+sub bsub_usage {
+    my $self = shift;
+    my $method = $self->assembler_accessor_name.'_bsub_rusage';
+    if ( $self->can( $method ) ) {
+        my $usage = $self->$method;
+        return $usage;
+    }
+    $self->status_message( "bsub rusage not set for ".$self->assembler_name );
+    return;
+}
 
 sub soap_de_novo_assemble_bsub_rusage {
     my $mem = 30000;

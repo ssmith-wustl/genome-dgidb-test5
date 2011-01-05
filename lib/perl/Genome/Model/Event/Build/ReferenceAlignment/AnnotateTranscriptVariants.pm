@@ -43,18 +43,20 @@ sub execute {
 
     # This has been vetted by the processing profile's _initialize_build method already
     my $annotator_version;
+    my $annotator_filter;
     {
         my $build = $self->build;
         my $model = $build->model;
         my $pp = $model->processing_profile;
         $annotator_version = $pp->transcript_variant_annotator_version;
+        $annotator_filter = $pp->transcript_variant_annotator_filter;
     }
     
 
     my %params = (
         variant_file => $self->pre_annotation_filtered_snp_file,
         output_file => $self->post_annotation_filtered_snp_file,
-        annotation_filter => 'top',
+        annotation_filter => $annotator_filter,
         no_headers => 1,
         #reference_transcripts => $self->model->annotation_reference_transcripts, 
         use_version => $annotator_version,

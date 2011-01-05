@@ -54,10 +54,16 @@ my %properties = (
         doc => 'The number of reads in the genotype file',
         is_optional => 1,
     },
-    reference_build_id  => {
+    reference_sequence_build => {
+        is => 'Genome::Model::Build::ImportedReferenceSequence',
+        id_by => 'reference_sequence_build_id',
+        doc => 'Build of the reference against which the genotype file was produced.',
+        is_optional => 0,
+    },
+    reference_sequence_build_id  => {
         is => 'Number',
         doc => 'Build-id of the reference against which the genotype file was produced.',
-        is_optional => 1,
+        is_optional => 0,
     },
     allocation => {
         is => 'Genome::Disk::Allocation',
@@ -78,7 +84,7 @@ my %properties = (
     
 
 class Genome::InstrumentData::Command::Import::Genotype {
-    is  => 'Command',
+    is  => 'Genome::Command::Base',
     has => [%properties],
 };
 
@@ -92,6 +98,11 @@ sub execute {
     }
     my $sample;
     my $library;
+
+    if (!defined $self->reference_sequence_build or ref $self->reference_sequence_build ne 'Genome::Model::Build::ImportedReferenceSequence') {
+        $self->error_message("Invalid reference_sequence_build property. reference_sequence_build_id='" . ($self->reference_sequence_build_id || "") . "'");
+        return;
+    }
 
     if(defined($self->sample_name) && defined($self->library_name)){
         $sample = Genome::Sample->get(name => $self->sample_name);
@@ -178,7 +189,7 @@ sub execute {
         $params{read_count} = $read_count;
     }
 
-    my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
+    my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);
     unless ($import_instrument_data) {
        $self->error_message('Failed to create imported instrument data for '.$self->source_data_file);
        return;
@@ -278,8 +289,13 @@ sub define_genotype_model {
     my $self = shift;
     my $model;
     my $processing_profile = "unknown/wugc";
-    if($model = Genome::Model::GenotypeMicroarray->get(sample_name=>$self->sample_name)){
-        $self->error_message("Warning: a GenotypeMicroarry model (id ".$model->genome_model_id.") has already been defined for this sample ( name = ".$self->sample_name.".");
+    my %get_params = (
+        sample_name => $self->sample_name,
+        reference_sequence_build => $self->reference_sequence_build
+    );
+    if($model = Genome::Model::GenotypeMicroarray->get(%get_params)){
+        $self->error_message("Warning: a GenotypeMicroarry model (id ".$model->genome_model_id.  ") ".
+            "has already been defined for this sample (name = ".$self->sample_name.", reference = ".$self->reference_sequence_build->name .").");
         die $self->error_message;
     }
     my $genotype_path_and_file = $self->allocation->absolute_path . "/" . $self->sample_name . ".genotype";
@@ -303,11 +319,12 @@ sub define_genotype_model {
         $no_build = 0;
     }
     unless($model = Genome::Model::Command::Define::GenotypeMicroarray->execute(     
-        file =>  $snp_array,
-        processing_profile_name =>  $processing_profile,
-        subject_name =>  $self->sample_name,
-        no_build =>  $no_build,
-                                                            )) {
+        processing_profile_name => $processing_profile,
+        file                    => $snp_array,
+        subject_name            => $self->sample_name,
+        no_build                => $no_build,
+        reference               => $self->reference_sequence_build,
+        )) {
         $self->error_message("GenotpeMicroarray Model Define failed.");
         die $self->error_message;
     }
