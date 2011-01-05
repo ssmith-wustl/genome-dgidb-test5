@@ -28,15 +28,8 @@ sub help_brief {
     'Tool to create input fasta and qual from fastq file for stats',
 }
 
-sub help_synopsis {
-    my $self = shift;
-    return <<EOS
-EOS
-}
-
 sub help_detail {
-    return <<EOS
-EOS
+    "Tool to create fasta and quality files from velvet input fastq file";
 }
 
 sub execute {
@@ -50,9 +43,6 @@ sub execute {
 
     #if this re-runs in automated pipline, previously created zipped files
     #must be removed for newly created files to zip
-
-    unlink $fasta_file.'.gz';
-    unlink $qual_file.'.gz';
 
     my $f_out = Bio::SeqIO->new(-format => 'fasta', file => ">$fasta_file");
     my $q_out = Bio::SeqIO->new(-format => 'qual', file => ">$qual_file");
@@ -71,6 +61,9 @@ sub execute {
 	my $qual_obj = Bio::Seq::Quality->new(-display_id => $seq->{id}, -seq => $seq->{seq}, -qual => \@sanger_qual);
 	$q_out->write_seq($qual_obj);
     }
+
+    unlink $fasta_file.'.gz';
+    unlink $qual_file.'.gz';
 
     if (system("gzip $fasta_file $qual_file")) {
 	$self->error_message("Failed to zip files: $fasta_file $qual_file");
