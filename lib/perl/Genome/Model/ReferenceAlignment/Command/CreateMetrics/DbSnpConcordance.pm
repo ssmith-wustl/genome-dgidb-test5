@@ -98,9 +98,6 @@ sub execute {
     eval {
         $self->_verify_build_and_set_paths($self->build);
 
-        Genome::Utility::FileSystem->create_directory($self->output_dir)
-            or die "Failed to create output directory " . $self->output_dir;
-
         my $out_filt = $self->build->dbsnp_file_filtered;
         my $out_unfilt = $self->build->dbsnp_file_unfiltered;
         if ($self->output_dir) {
