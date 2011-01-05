@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -21,10 +21,6 @@ ok (-s $data_dir.'/sff/GABJJ9O01.sff', "Test sff file exists");
 #create temp test dir
 my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
 my $temp_sff_dir = Genome::Utility::FileSystem->create_directory($temp_dir.'/sff');
-ok (-d $temp_dir, "Created temp test dir");
-ok (-d $temp_dir.'/sff', "Created temp test sff dir");
-
-#print $temp_dir."\n";
 
 #copy data over
 ok (File::Copy::copy($data_dir.'/sff/GABJJ9O01.sff', $temp_dir.'/sff'), "Copied data file to temp dir");
@@ -37,16 +33,12 @@ ok ($create, "Created input-from-sff tool");
 ok ($create->execute, "Executed input-from-sff tool");
 
 #compare output files
-foreach ('GABJJ9O01.fasta.gz', 'GABJJ9O01.fasta.gz') {
-    my $data_file = $data_dir."/edit_dir/$_";
-    my $temp_file = $temp_dir."/edit_dir/$_";
-    ok (-s $data_file, "Data dir $_ file exists");
-    ok (-s $temp_file, "Temp dir $_ file exists");
-    my @diff = `zdiff $data_file $temp_file`;
+for ('GABJJ9O01.fasta.gz', 'GABJJ9O01.fasta.gz') {
+    ok( -s $data_dir."/edit_dir/$_", "Data dir $_ file exists" );
+    ok( -s $temp_dir."/edit_dir/$_", "New $_ file created" );
+    my @diff = `zdiff $data_dir/edit_dir/$_ $temp_dir/edit_dir/$_`;
     is (scalar @diff, 0, "Data and temp $_ files match");
 }
-
-#<STDIN>;
 
 done_testing();
 

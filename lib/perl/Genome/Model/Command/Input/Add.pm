@@ -5,35 +5,30 @@ use warnings;
 
 use Genome;
       
-use Regexp::Common;
-
 class Genome::Model::Command::Input::Add {
     is => 'Genome::Model::Command::Input',
     english_name => 'genome model input command add',
     doc => 'Add inputs to a model.',
     has => [
-    name => {
-        is => 'Text',
-        doc => 'The name of the input to add. Use the plural property name - friends to add a friend',
-    },
-    ids => {
-        is => 'Text',
-        doc => 'The id(s) for the input. Separate multiple ids by commas.'
-    },
+        name => {
+            is => 'Text',
+            shell_args_position => 2,
+            doc => 'The name of the input to add. Use the plural property name - friends to add a friend',
+        },
+        'values' => {
+            is => 'Text',
+            is_many => 1,
+            shell_args_position => 3,
+            doc => 'The ids of the values of the inputs.'
+        },
     ],
 };
 
-############################################
-
 sub help_detail {
     return <<EOS;
-    This command will add inputs from a model. The input must be an 'is_many' property, meaning there must be more than one input allowed (eg: instrument_data). If the property is singular, use the 'update' command.
-    
-    Use the plural name of the property. To add multiple ids, separate them by a comma.
+    This command will add inputs from a model. The input must be an 'is_many' property, meaning there must be more than one input allowed (eg: instrument_data). If the property is singular, use the 'update' command.  Use the plural name of the property.
 EOS
 }
-
-############################################
 
 sub execute {
     my $self = shift;
@@ -46,32 +41,27 @@ sub execute {
     my $property = $self->_get_is_many_input_property_for_name( $self->name )
         or return;
 
-    unless ( defined $self->ids ) {
-        $self->error_message('No input ids given to add to model.');
+    my @values = $self->values;
+    unless ( @values ) {
+        $self->error_message('No input value ids given to add to model.');
         $self->delete;
         return;
     }
 
-    my @ids = split(',', $self->ids);
-    unless ( @ids ) {
-        $self->error_message("No ids found in split of ".$self->ids);
-        return;
-    }
-    
     my $sub = $self->_get_add_sub_for_property($property)
         or return;
 
-    for my $value ( @ids ) {
-        unless ( $sub->($value) ) {
-            $self->error_message("Can't add input '".$self->name." ($value) to model.");
+    for my $value_id ( @values ) {
+        unless ( $sub->($value_id) ) {
+            $self->error_message("Can't add input ".$self->name." ($value_id) to model.");
             return;
         }
     }
 
     printf(
         "Added %s (%s) to model.\n",
-        ( @ids > 1 ? $property->property_name : $property->singular_name ),
-        join(', ', @ids),
+        ( @values > 1 ? $property->property_name : $property->singular_name ),
+        join(', ', @values),
     );
 
     return 1; 
@@ -95,13 +85,13 @@ sub _get_add_sub_for_property {
         return sub{
             my $value = shift;
             
-            my ($existing_input) = grep { $value eq $_ } $self->_model->$property_name;
+            my ($existing_input) = grep { $value eq $_ } $self->model->$property_name;
             if ( $existing_input ) {
                 $self->error_message("Value ($value) already exists for model property ($property_name).");
                 return;
             }
 
-            return $self->_model->$method($value);
+            return $self->model->$method($value);
         };
     }
 
@@ -114,7 +104,7 @@ sub _get_add_sub_for_property {
             return;
         }
 
-        return $self->_model->$method($obj);
+        return $self->model->$method($obj);
     };
 }
 

@@ -13,38 +13,27 @@ class Genome::Model::Tools::Assembly::CreateOutputFiles::ContigsFromAce {
 	acefile => {
 	    is => 'Text',
 	    doc => 'Ace file to get fasta and qual from',
-	    #is_optional => 1,
-	},
-	fasta_out => {
-	    is => 'Text',
-	    doc => 'Output fasta file name',
-	    is_optional => 1,
-	    is_mutable => 1,
-	},
-	qual_out => {
-	    is => 'Text',
-	    doc => 'Output qual file name',
-	    is_optional => 1,
-	    is_mutable => 1,
 	},
 	directory => {
 	    is => 'Text',
 	    doc => 'Assembly build directory, not edit_dir',
 	},
-	_int_fasta_out => {
+    ],
+    has_optional => [
+	fasta_out => {
 	    is => 'Text',
-	    doc => 'Intermediate fasta out file',
-	    is_optional => 1,
+	    doc => 'Output fasta file name',
 	    is_mutable => 1,
-	    is_transient => 1,
 	},
-	_int_qual_out => {
+	qual_out => {
 	    is => 'Text',
-	    doc => 'Intermediate qual out file',
-	    is_optional => 1,
+	    doc => 'Output qual file name',
 	    is_mutable => 1,
-	    is_transient => 1,
 	},
+    ],
+    has_optional_transient => [
+	_int_fasta_out => { is => 'Text', doc => 'Intermediate fasta out file' },
+	_int_qual_out => { is => 'Text', doc => 'Intermediate qual out file' },
     ],
 };
 
@@ -52,15 +41,8 @@ sub help_brief {
     'Tool to create contigs.bases and contigs.qual files from ace file';
 }
 
-sub help_synopsis {
-    my $self = shift;
-    return <<EOS
-EOS
-}
-
 sub help_detail {
-    return <<EOS
-EOS
+    "Tool to to create a file containing fasta of contigs in ace files";
 }
 
 sub execute {
@@ -90,7 +72,6 @@ sub execute {
 }
 
 sub _sort_contigs_files {
-    #my ($self, $complemented_contigs) = @_;
     my $self = shift;
 
     #get fasta and qual file seek positioon
@@ -98,12 +79,12 @@ sub _sort_contigs_files {
     my $qpos = $self->seek_pos_from_contigs_file($self->_int_qual_out, 'qual');
 
     unless ($self->fasta_out) {
-	$self->fasta_out($self->directory."/edit_dir/contigs.bases");
+	$self->fasta_out( $self->contigs_bases_file );
     }
     my $f_io = Bio::SeqIO->new(-format => 'fasta', -file => '>'.$self->fasta_out);
 
     unless ($self->qual_out) {
-	$self->qual_out($self->directory."/edit_dir/contigs.quals");
+	$self->qual_out( $self->contigs_quals_file );
     }
     my $q_io = Bio::SeqIO->new(-format => 'qual', -file => '>'.$self->qual_out);
 
@@ -139,8 +120,7 @@ sub _sort_contigs_files {
 sub _get_bio_obj {
     my ($self, $file, $format, $seek_pos) = @_;
     #this doesn't seek to work if fh is held open, ie, passed in
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($file) ||
-	return;
+    my $fh = Genome::Utility::FileSystem->open_file_for_reading($file);
     $fh->seek($seek_pos, 0);
     my $io = Bio::SeqIO->new(-fh => $fh, -format => $format);
     my $seq = $io->next_seq;
@@ -154,21 +134,17 @@ sub _get_fasta_qual_from_ace {
     #existing ace parser are not used because it can't load really big ace files
     #need to clean this up a bit ..
 
-    my $ace_fh = Genome::Utility::FileSystem->open_file_for_reading($self->acefile) ||
-	return;
-    #TODO - consider using Bio::SeqIO to write temp files
+    my $ace_fh = Genome::Utility::FileSystem->open_file_for_reading($self->acefile);
 
     #handle for intermediate fasta
     $self->_int_fasta_out($self->directory."/edit_dir/int.contigs.bases");
     unlink $self->_int_fasta_out;
-    my $fasta_fh = Genome::Utility::FileSystem->open_file_for_writing($self->_int_fasta_out) ||
-	return;
+    my $fasta_fh = Genome::Utility::FileSystem->open_file_for_writing($self->_int_fasta_out);
 
     #handle for intermediate qual
     $self->_int_qual_out($self->directory."/edit_dir/int.contigs.quals");
     unlink $self->_int_qual_out;
-    my $qual_fh = Genome::Utility::FileSystem->open_file_for_writing($self->_int_qual_out) ||
-	return;
+    my $qual_fh = Genome::Utility::FileSystem->open_file_for_writing($self->_int_qual_out);
 
     my $is_fasta = 0;
     my $is_qual = 0;
