@@ -41,15 +41,8 @@ sub help_brief {
     'Tool to create assembly reads.placed file'
 }
 
-sub help_synopsis {
-    my $self = shift;
-    return <<EOS
-EOS
-}
-
 sub help_detail {
-    return <<EOS
-EOS
+    "Tool to create assembly reads.placed file";
 }
 
 sub execute {
@@ -72,11 +65,10 @@ sub execute {
 	$self->error_message("Failed to get contig lengths");
 	return;
     }
-    my $in = Genome::Utility::FileSystem->open_file_for_reading($self->read_info_file) ||
-	return;
+
+    my $in = Genome::Utility::FileSystem->open_file_for_reading($self->read_info_file);
     unlink $self->output_file;
-    my $out = Genome::Utility::FileSystem->open_file_for_writing($self->output_file) ||
-	return;
+    my $out = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
 
     while (my $line = $in->getline) {
 	chomp $line;
@@ -155,55 +147,24 @@ sub _get_gap_sizes {
 sub _validate_input_files {
     my $self = shift;
 
-    #probably better way to do this
-    if ($self->read_info_file) {
-	unless (-s $self->read_info_file) {
-	    $self->error_message("Failed to find file: ".$self->read_info_file);
-	    return;
-	}
-    } else {
-	if (-s $self->directory.'/edit_dir/readinfo.txt') {
-	    $self->read_info_file($self->directory.'/edit_dir/readinfo.txt');
-	}
-	else {
-	    $self->error_message("Failed to file file: ".$self->directory.'/edit_dir/readinfo.txt');
-	    return;
-	}
-    }
+    #readinfo file #read_info_file in base class, readinfo_file in this class
+    $self->read_info_file( $self->directory.'/edit_dir/readinfo.txt' ) unless $self->read_info_file;
+    $self->error_message("Failed to find or file is zero size: ".$self->read_info_file) and return
+	unless -s $self->read_info_file;
+
     #gap file
-    if ($self->gap_file) {
-	unless (-e $self->gap_file) {
-	    $self->error_message("Failed to find file: ".$self->gap_file);
-	    return;
-	}
-    } else {
-	if (-e $self->directory.'/edit_dir/gap.txt') {
-	    $self->gap_file($self->directory.'/edit_dir/gap.txt');
-	}
-	else {
-	    $self->error_message("Failed to file file: ".$self->directory.'/edit_dir/gap.txt');
-	    return;
-	}
-    }
+    $self->gap_file( $self->gap_sizes_file ) unless $self->gap_file;
+    $self->error_message("Failed to find file or file is zero size: ".$self->gap_file) and return
+	unless -s $self->gap_file;
+
     #contigs.bases file
-    if ($self->contigs_bases_file) {
-	unless (-s $self->contigs_bases_file) {
-	    $self->error_message("Failed to find file: ".$self->contigs_bases_file);
-	    return;
-	}
-    } else {
-	if (-s $self->directory.'/edit_dir/contigs.bases') {
-	    $self->contigs_bases_file($self->directory.'/edit_dir/contigs.bases');
-	}
-	else {
-	    $self->error_message("Failed to file file: ".$self->directory.'/edit_dir/contigs.bases');
-	    return;
-	}
-    }
+    $self->contigs_bases_file( $self->directory.'/edit_dir/contigs.bases' ) unless
+	$self->contigs_bases_file;
+    $self->error_message("Failed to find file or file is zero size: ".$self->contigs_bases_file) and return
+	unless -s $self->contigs_bases_file;
+
     #output file
-    unless ($self->output_file) {
-	$self->output_file($self->directory.'/edit_dir/reads.placed');
-    }
+    $self->output_file( $self->reads_placed_file ) unless $self->output_file;
 
     return 1;
 }

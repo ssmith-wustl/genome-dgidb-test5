@@ -21,13 +21,11 @@ class Genome::Model::Tools::Assembly::CreateOutputFiles::InputFromSff {
 };
 
 sub help_brief {
-    'Tool to create fasta and qual files from sff files for newbler assemblies';
+    'Tool to create fasta and qual files from sff files';
 }
 
-sub help_synopsis {
-    return <<EOS
-gmt assembly create-output-files input-from-sff --directory /gscmnt/111/newbler_assembly/consed
-EOS
+sub help_detail {
+    "Tool to create fasta and qual files from sff files";
 }
 
 sub execute {
@@ -55,7 +53,6 @@ sub execute {
     }
 
     #figure out what version of sffinfo to use
-    #my $bin_path = ($self->bin_path) ? $self->bin_path : '/gsc/pkg/bio/454/installed-64';
     my $bin_path = ($self->bin_path) ? $self->bin_path : '/gsc/pkg/bio/454/DataProcessing-2.6';
     my $sff_info = $bin_path.'/bin/sffinfo';
     unless (-s $sff_info) {

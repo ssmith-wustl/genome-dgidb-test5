@@ -20,7 +20,6 @@ class Genome::Model::Tools::Assembly::CreateOutputFiles::Msi {
 	    is => 'Text',
 	    doc => 'Assembler used to create the assembly',
 	    valid_values => ['pcap', 'newbler', 'Velvet'],
-	    #is_optional => 1, #for now
 	},
     ],
     has_optional_transient => [
@@ -39,21 +38,11 @@ sub help_brief {
     'Tool to create assembly output files for msi assemblies';
 }
 
-sub help_synopsis {
-    return <<EOS
-gmt assembly create-output-file msi --assembler newbler --acefile /gscmnt/111/newbler_assembly/edit_dir/ace.msi --assembly-directory /gscmnt/111/newbler_assembly
-gmt assembly create-output-file msi --assembler pcap --acefile /gscmnt/111/pcap_assembly/edit_dir/ace.msi --assembly-directory /gscmnt/111/pcap_assembly
-EOS
-
-}
-
 sub help_detail {
-    return <<EOS
-Tool to create assembly output files from modified newbler, pcap or
+"Tool to create assembly output files from modified newbler, pcap or
 velvet assemblies.  It will need msi.gap.txt file to get gap info
 for scaffold contigs.  If get size is not provided, it will use 100 bp
-which is default value for unknown gap sizes
-EOS
+which is default value for unknown gap sizes for submission to ncbi"
 }
 
 sub execute {
@@ -146,8 +135,6 @@ sub execute {
     $self->status_message("Creating msi.stats.txt file");
     my $class = 'Genome::Model::Tools::Assembly::Stats::'. ucfirst $self->assembler;
     my $stats = $class->create (
-    #my $stats = Genome::Model::Tools::Assembly::Stats::MsiNewbler->create (
-	#acefile => $self->acefile,
 	assembly_directory => $self->assembly_directory,
 	out_file => $self->_stats_file,
 	msi_assembly => 1,

@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -6,40 +6,30 @@ use warnings;
 use above "Genome";
 use Test::More;
 
-use Genome::Model::Tools::Assembly::CreateOutputFiles::Gap;
+use_ok( 'Genome::Model::Tools::Assembly::CreateOutputFiles::Gap' ) or die;
               
-my $module = 'Genome-Model-Tools-Assembly-CreateOutputFiles';
-my $data_dir = "/gsc/var/cache/testsuite/data/$module";
-
-ok(-d $data_dir, "Found data directory: $data_dir");
+my $data_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly-CreateOutputFiles";
+ok(-d $data_dir, "Found data directory: $data_dir") or die;
 
 #test gap.txt file
-#ok(-s $data_dir.'/edit_dir/gap.txt', "Found test gap.txt file");
-
 my $test_contigs_file = $data_dir.'/contigs.fa';
 ok(-s $test_contigs_file, "Found test contigs.fa file");
 
+#create temp test dir
 my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+Genome::Utility::FileSystem->create_directory( $temp_dir.'/edit_dir' );
+
 #copy input file
 ok(File::Copy::copy($test_contigs_file, $temp_dir),"Copied input contigs file");
 
-#make edit_dir in temp_dir
-mkdir $temp_dir.'/edit_dir';
-ok(-d $temp_dir.'/edit_dir', "made edit_dir in temp test_dir");
-
+#run
 my $ec = system("chdir $temp_dir; gmt assembly create-output-files gap --directory $temp_dir");
 ok($ec == 0, "Command ran successfully");
 
-#test gap.txt file .. this file can be blank
-my $test_gap_file = $data_dir.'/edit_dir/gap.txt';
-ok(-e $test_gap_file, "Test gap.txt file exists");
-
-#new gap.txt file
-my $new_gap_file = $temp_dir.'/edit_dir/gap.txt';
-ok(-e $new_gap_file, "Tew gap.txt file exits");
-
-#diff
-my @diffs = `sdiff -s $test_gap_file $new_gap_file`;
+#check, compare output files
+ok( -e $data_dir.'/edit_dir/gap.txt', "Test gap.txt file exists" );
+ok( -e $temp_dir.'/edit_dir/gap.txt', "New gap.txt file created" ); #can be zero size
+my @diffs = `sdiff -s $data_dir/edit_dir/gap.txt $temp_dir/edit_dir/gap.txt`;
 is(scalar (@diffs), 0, "New gap file matches test gap file");
 
 done_testing();
