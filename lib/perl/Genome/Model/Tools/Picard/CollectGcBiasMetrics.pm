@@ -84,7 +84,7 @@ sub execute {
     my $input_file = $self->input_file;
     if ($self->clean_sam) {
         my $basename = basename($self->output_file,qw/\.bam \.sam/);
-        my $clean_sam_file = Genome::Utility::FileSystem->create_temp_file_path($basename .'_clean_sam');
+        my $clean_sam_file = Genome::Utility::FileSystem->create_temp_file_path($basename .'_clean_sam.bam');
         unless (Genome::Model::Tools::Picard::CleanSam->execute(
             input_file => $self->input_file,
             output_file => $clean_sam_file,

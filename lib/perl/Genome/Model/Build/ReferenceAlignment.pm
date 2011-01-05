@@ -57,6 +57,16 @@ sub create {
     return $self;
 }
 
+sub dbsnp_file_filtered {
+    my $self = shift;
+    return $self->data_directory . "/reports/dbsnp_concordance.filtered.txt"
+}
+
+sub dbsnp_file_unfiltered {
+    my $self = shift;
+    return $self->data_directory . "/reports/dbsnp_concordance.txt"
+}
+
 sub get_alignment_bams {
     my $self = shift;
     my @alignments = map { $self->model->processing_profile->results_for_instrument_data_assignment($_) }

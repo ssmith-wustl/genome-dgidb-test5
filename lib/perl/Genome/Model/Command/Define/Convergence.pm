@@ -102,7 +102,7 @@ sub execute {
     }
     
     my $set_group_cmd = Genome::Model::Command::Input::Update->create(
-        model_identifier => $model->id,
+        model => $model,
         name => 'group_id',
         value => $self->_model_group->id,
     );

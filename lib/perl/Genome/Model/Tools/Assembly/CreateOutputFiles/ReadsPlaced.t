@@ -1,41 +1,35 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
 
 use above "Genome";
 use Test::More;
+require File::Compare;
 
-my $module = 'Genome-Model-Tools-Assembly-CreateOutputFiles';
-my $data_dir = "/gsc/var/cache/testsuite/data/$module";
+use_ok( 'Genome::Model::Tools::Assembly::CreateOutputFiles::ReadsPlaced' ) or die;
 
-ok(-d $data_dir, "Found data directory: $data_dir");
+my $data_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly-CreateOutputFiles";
+ok(-d $data_dir, "Found data directory: $data_dir") or die;
 
+#make test dir
 my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
-
-#make edit_dir in temp dir
-mkdir $temp_dir.'/edit_dir';
-ok(-d $temp_dir.'/edit_dir', "Made edit_dir in temp test_dir");
+Genome::Utility::FileSystem->create_directory( $temp_dir.'/edit_dir' );
 
 #copy test input files to temp dir
-foreach my $file_name ('gap.txt', 'contigs.bases', 'readinfo.txt') {
-    my $old = $data_dir.'/edit_dir/'.$file_name;
-    my $new = $temp_dir.'/edit_dir/'.$file_name;
-    ok (-e $old, "Test $file_name file exists"); #gap.txt can be blank
-    ok(File::Copy::copy($old, $temp_dir.'/edit_dir'),"Copied $file_name to temp dir");
-    ok (-e $new, "New $file_name exists");
+for my $file ('gap.txt', 'contigs.bases', 'readinfo.txt') {
+    ok( -e $data_dir.'/edit_dir/'.$file, "Test dir $file exists" );
+    ok( File::Copy::copy( $data_dir.'/edit_dir/'.$file, $temp_dir.'/edit_dir/'.$file ) == 1, "Copied $file to temp_dir")
 }
 
+#run tool
 my $ec = system("chdir $temp_dir; gmt assembly create-output-files reads-placed --directory $temp_dir");
 ok($ec == 0, "Command ran successfully");
 
-my $new_reads_placed_file = $temp_dir.'/edit_dir/reads.placed';
-ok(-s $new_reads_placed_file, "New reads.placed file exists");
-
-my $old_reads_placed_file = $data_dir.'/edit_dir/reads.placed';
-
-my @diffs = `sdiff -s $new_reads_placed_file $old_reads_placed_file`;
-is(scalar (@diffs), 0, "New file matches existing test file");
+#checkout files
+ok( -s $data_dir.'/edit_dir/reads.placed', "Data dir reads.placed file exists" );
+ok( -s $temp_dir.'/edit_dir/reads.placed', "New reads.placed file created" );
+ok( File::Compare::compare( $data_dir.'/edit_dir/reads.placed', $temp_dir.'/edit_dir/reads.placed' ) == 0, "Files match" );
 
 done_testing();
 
