@@ -30,4 +30,9 @@ class Genome::Model::GenotypeMicroarray{
     ],
 };
 
+sub default_model_name {
+    my $self = shift;
+    return $self->SUPER::default_model_name . " " . $self->reference_sequence_build->name;
+}
+
 1;
