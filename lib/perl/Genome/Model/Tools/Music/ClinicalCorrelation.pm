@@ -122,7 +122,8 @@ sub execute {
         $test_method = "cor";
     }
     elsif ($clinical_data_type =~ /^class$/i) {
-        $test_method = "chisq";
+        #$test_method = "chisq";
+        $test_method = "fisher";
     }
     else {
         $self->error_message("Please enter either \"numeric\" or \"class\" for the --clinical-data-type parameter.");

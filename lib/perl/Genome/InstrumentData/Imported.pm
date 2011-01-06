@@ -55,6 +55,10 @@ class Genome::InstrumentData::Imported {
         species_name => { is => 'Text', via => 'taxon', to => 'species_name', },
     ],
     has_optional =>[
+        reference_sequence_build => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            id_by => 'reference_sequence_build_id',
+        },
         reference_sequence_build_id => { 
             via => 'attributes', 
             to => 'value', 

@@ -152,7 +152,6 @@ sub create_mock_object {
             context_return
             __meta__
             __changes__
-            _delete_object
             message_object
             error_message error_text
             warning_message

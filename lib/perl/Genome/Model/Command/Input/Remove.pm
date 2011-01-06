@@ -5,51 +5,43 @@ use warnings;
 
 use Genome;
       
-use Regexp::Common;
-
 class Genome::Model::Command::Input::Remove {
     is => 'Genome::Model::Command::Input',
     english_name => 'genome model input command remove',
     doc => 'Remove inputs to a model.',
     has => [
-    name => {
-        is => 'Text',
-        doc => 'The name of the input to remove. Use the plural property name - friends to remove a friend',
-    },
-    'ids' => {
-        is => 'Text',
-        doc => 'The id(s) of the input. Separate multiple ids by commas.'
-    },
+        name => {
+            is => 'Text',
+            shell_args_position => 2,
+            doc => 'The name of the input to remove. Use the plural property name - friends to remove a friend',
+        },
+        'values' => {
+            is => 'Text',
+            is_many => 1,
+            shell_args_position => 3,
+            doc => 'The ids of the values of the inputs.'
+        },
     ],
     has_optional => [
-    abandon_builds => {
-        is => 'Boolean',
-        default_value => 0,
-        doc => 'Abandon (not remove) builds that have these inputs.',
-    },
+        abandon_builds => {
+            is => 'Boolean',
+            default_value => 0,
+            doc => 'Abandon (not remove) builds that have these inputs.',
+        },
     ],
 };
 
-############################################
-
 sub help_detail {
     return <<EOS;
-    This command will remove inputs from a model. The input must be an 'is_many' property, meaning there must be more than one input allowed (eg: instrument_data). If the property is singular, use the 'update' command.
+    This command will remove inputs from a model. The input must be an 'is_many' property, meaning there must be more than one input allowed (eg: instrument_data). If the property is singular, use the 'update' command.  Use the plural name of the property.
     
-    Use the plural name of the property.
-    
-    To remove multiple inputs with the same name, separate the ids by a comma.
-
     Optionally, builds associated with these inputs may be abandoned.  Note that the builds are not removed, only abandoned.
 EOS
 }
 
-############################################
-
 sub execute {
     my $self = shift;
 
-    # Validate name
     unless ( $self->name ) {
         $self->error_message('No input name given to remove from model.');
         return;
@@ -58,41 +50,31 @@ sub execute {
     my $property = $self->_get_is_many_input_property_for_name( $self->name )
         or return;
 
-    # Validate ids
-    unless ( defined $self->ids ) {
+    my @values = $self->values;
+    if ( not @values ) {
         $self->error_message('No input ids given to remove  from model.');
-        $self->delete;
         return;
     }
 
-    my @ids = split(',', $self->ids);
-    unless ( @ids ) {
-        $self->error_message("No ids found in split of ".$self->ids);
-        return;
-    }
-    
-    # Get build ids via build inputs to abandon
     my $builds = $self->_get_builds
         or return;
     
-    # Get the anon sub to do the removing
     my $sub = $self->_get_remove_sub_for_property($property)
         or return;
-    for my $value ( @ids ) {
-        unless ( $sub->($value) ) {
-            $self->error_message("Can't remove input '".$self->name." ($value) from model.");
+    for my $value_id ( @values ) {
+        unless ( $sub->($value_id) ) {
+            $self->error_message("Can't remove input '".$self->name." ($value_id) from model.");
             return;
         }
     }
 
-    # Abandon the builds
     $self->_abandon_builds($builds)
         or return;
 
     printf(
         "Removed %s (%s) from model.\n",
-        ( @ids > 1 ? $property->property_name : $property->singular_name ),
-        join(', ', @ids),
+        ( @values > 1 ? $property->property_name : $property->singular_name ),
+        join(', ', @values),
     );
 
     return 1; 
@@ -116,26 +98,26 @@ sub _get_remove_sub_for_property {
         return sub{
             my $value = shift;
             
-            my ($existing_value) = grep { $value eq $_ } $self->_model->$property_name;
+            my ($existing_value) = grep { $value eq $_ } $self->model->$property_name;
             unless ( $existing_value ) {
                 $self->error_message("Can't find existing value ($value) for model property ($property_name).");
                 return;
             }
 
-            return $self->_model->$method($value);
+            return $self->model->$method($value);
         };
     }
 
     return sub{
         my $value = shift;
 
-        my ($existing_obj) = grep { $value eq $_->id } $self->_model->$property_name;
+        my ($existing_obj) = grep { $value eq $_->id } $self->model->$property_name;
         unless ( $existing_obj ) {
             $self->error_message("Can't find existing $property_name ($data_type) for id ($value) to remove from model.");
             return;
         }
 
-        return $self->_model->$method($existing_obj);
+        return $self->model->$method($existing_obj);
     };
 }
 
@@ -155,7 +137,7 @@ sub _get_builds { # return \@builds for ok, undef for not
     my @build_inputs = Genome::Model::Build::Input->get( # go thru inputs to find builds
         #name => $self->name,
         name => $name,
-        value_id => [ split(',', $self->ids) ],
+        value_id => [ $self->values ],
     );
 
     return \@builds unless @build_inputs; # ok
@@ -207,5 +189,3 @@ sub _abandon_builds {
 
 1;
 
-#$HeadURL$
-#$Id$

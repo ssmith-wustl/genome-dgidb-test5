@@ -21,15 +21,8 @@ sub help_brief {
     'Tool to create gap.txt file from velvet created contigs.fa file';
 }
 
-sub help_synopsis {
-    my $self = shift;
-    return <<EOS
-EOS
-}
-
 sub help_detail {
-    return <<EOS
-EOS
+    "Tool to create a file containing estimated gap sizes between neighboring contigs";
 }
 
 sub execute {
@@ -40,9 +33,9 @@ sub execute {
 	return;
     }
 
-    my $gap_fh = IO::File->new(">" . $self->directory.'/edit_dir/gap.txt') ||
-	die "Can not create file handle for gap.txt file\n";
-    
+    unlink $self->gap_sizes_file;
+    my $gap_fh = Genome::Utility::FileSystem->open_file_for_writing( $self->gap_sizes_file );
+
     my $io = Bio::SeqIO->new(-format => 'fasta', -file => $self->directory.'/contigs.fa');
 
     while (my $seq = $io->next_seq) {

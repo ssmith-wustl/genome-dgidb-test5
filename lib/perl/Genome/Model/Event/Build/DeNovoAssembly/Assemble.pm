@@ -12,14 +12,8 @@ class Genome::Model::Event::Build::DeNovoAssembly::Assemble {
 sub bsub_rusage {
     my $self = shift;
 
-    # FIXME
-    my $method = $self->processing_profile->assembler_accessor_name.'_bsub_rusage';
-    if ( $self->processing_profile->can( $method ) ) {
-        my $usage = $self->processing_profile->$method;
-        return $usage;
-    }
-    $self->status_message( "bsub rusage not set for ".$self->processing_profile->assembler_name );
-    return;
+    return $self->processing_profile->bsub_usage;
+
 }
 
 sub execute {

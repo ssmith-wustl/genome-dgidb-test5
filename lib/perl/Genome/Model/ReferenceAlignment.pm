@@ -41,6 +41,7 @@ class Genome::Model::ReferenceAlignment {
         indel_detector_version       => { via => 'processing_profile'},
         indel_detector_params        => { via => 'processing_profile'},
         transcript_variant_annotator_version => { via => 'processing_profile' },
+        transcript_variant_annotator_filter => { via => 'processing_profile' },
         multi_read_fragment_strategy => { via => 'processing_profile'},
         prior_ref_seq                => { via => 'processing_profile'},
         read_aligner_name => {
@@ -1004,7 +1005,11 @@ sub gold_snp_path {
         my $subject = $self->subject;
         $subject_name = $self->sample_name;
     }
-    my @genotype_models = Genome::Model::GenotypeMicroarray->get(subject_name => $subject_name);
+    my @genotype_models = Genome::Model::GenotypeMicroarray->get(
+        subject_name => $subject_name,
+        reference_sequence_build_id => $self->reference_sequence_build_id
+        );
+
     my $gold_model = pop(@genotype_models);
     if(!defined($gold_model))
     {

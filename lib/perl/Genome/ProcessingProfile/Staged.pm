@@ -4,11 +4,18 @@ package Genome::ProcessingProfile::Staged;
 use strict;
 use warnings;
 use Genome;
+use Data::Dumper;
 
 class Genome::ProcessingProfile::Staged {
     is => 'Genome::ProcessingProfile',
     is_abstract => 1,
-    doc => 'processing profile subclass for workflows defined by events grouped into stages'
+    doc => 'processing profile subclass for workflows defined by events grouped into stages',
+    has_param => [
+        append_event_steps => {
+            doc => 'Event classes to append to event_stage_job_classes, e.g. "alignment => Genome::Model::Event::Build::ReferenceAlignment::QC::CopyNumber".',
+            is_optional => 1,
+        },
+    ],
 };
 
 sub stages {
@@ -22,10 +29,9 @@ sub classes_for_stage {
     my $stage_name = shift;
     my $model = shift;
     my $classes_method_name = $stage_name .'_job_classes';
-    #unless (defined $self->can('$classes_method_name')) {
-    #    die('Please implement '. $classes_method_name .' in class '. $self->class);
-    #}
-    return $self->$classes_method_name($model);
+    my @classes = $self->$classes_method_name($model);
+    push @classes, $self->_steps_to_append_from_processing_profile_for_stage($stage_name);
+    return @classes;
 }
 
 sub objects_for_stage {
@@ -33,10 +39,72 @@ sub objects_for_stage {
     my $stage_name = shift;
     my $model = shift;
     my $objects_method_name = $stage_name .'_objects';
-    #unless (defined $self->can('$objects_method_name')) {
-    #    die('Please implement '. $objects_method_name .' in class '. $self->class);
-    #}
     return $self->$objects_method_name($model);
+}
+
+sub _steps_to_append_from_processing_profile_for_stage {
+    my $self = shift;
+    my $stage = shift;
+    
+    unless ($self->append_event_steps) {
+        return;
+    }
+    
+    my @stages = $self->stages;
+    
+    my $append_event_steps_value = $self->append_event_steps;
+    my %append_event_steps;
+    {
+        no strict;
+        %append_event_steps = eval("($append_event_steps_value)");
+    };
+    if (not %append_event_steps or $@) {
+        my $err_msg = "Failed to interpret append_event_steps (" . $self->append_event_steps . ") as hash.";
+        $err_msg .= "\nError: $@" if ($@);
+        $err_msg .= "\n" . Dumper(\%append_event_steps);
+        die $self->error_message($err_msg);
+    }
+    
+    for my $key (keys %append_event_steps) {
+        unless (grep { $_ =~ /$key/ } @stages) {
+            die $self->error_message("Failed to find $key in stages (" . join(", ", @stages) . ").");
+        }
+    }
+
+    if (exists $append_event_steps{$stage}) {
+        my $steps = $append_event_steps{$stage};
+        my @steps;
+        if (ref $steps eq 'ARRAY') {
+            @steps = @$steps;
+        } elsif (my $ref = ref $steps) {
+            die $self->error_message("Got REF ($ref), expects scalar string or ARRAY.");
+        } else {
+            @steps = ($steps);
+        }
+        
+        my $pp_type = (split('::', $self->subclass_name))[2];
+        for my $step (@steps) {
+            unless ($step =~ /Genome\:\:Model\:\:Event\:\:Build\:\:$pp_type/) {
+                die $self->error_message("Step ($step) does not appear to be appropriate for this processing profile type ($pp_type).");
+            }
+
+            my $class;
+            {
+                no strict;
+                eval($class = $step->class);
+            }
+            unless($class) {
+                die $self->error_message("Failed to load/find module '$step'.");
+            }
+            if($@) {
+                die $self->error_message("Error ($@) while executing $step->class.");
+            }
+        }
+        
+        return @steps;
+    } else {
+        return;
+    }   
 }
 
 sub _resolve_workflow_for_build {
@@ -46,16 +114,20 @@ sub _resolve_workflow_for_build {
     my $self = shift;
     my $build = shift;
     my $lsf_queue = shift; # TODO: the workflow shouldn't need this yet
+    my $lsf_project = shift;
 
     if (!defined $lsf_queue || $lsf_queue eq '' || $lsf_queue eq 'inline') {
         $lsf_queue = 'apipe';
+    }
+    if (!defined $lsf_project || $lsf_project eq '') {
+        $lsf_project = 'build' . $build->id;
     }
 
     my $events_by_stage = $self->_generate_events_for_build($build);
 
     my @workflow_stages;
     foreach my $stage_events ( @$events_by_stage ) {
-        my $workflow_stage = $self->_workflow_for_stage( $build, $stage_events, $lsf_queue )
+        my $workflow_stage = $self->_workflow_for_stage( $build, $stage_events, $lsf_queue, $lsf_project )
             or next; # this is ok
         push @workflow_stages, $workflow_stage;
     }
@@ -262,6 +334,7 @@ sub _workflow_for_stage {
         $build,
         $stage_from_build,
         $lsf_queue,          # TODO: this is passed from the build, but shouldn't be needed yet
+        $lsf_project,
     ) = @_;
 
     my $stage_name = $stage_from_build->{name};
@@ -295,6 +368,7 @@ sub _workflow_for_stage {
 
         $first_operation->operation_type->lsf_resource($first_event->bsub_rusage . $first_event_log_resource);
         $first_operation->operation_type->lsf_queue($lsf_queue);
+        $first_operation->operation_type->lsf_project($lsf_project);
 
         $stage->add_link(
             left_operation => $input_connector,
@@ -319,6 +393,7 @@ sub _workflow_for_stage {
                     my $n_event_log_resource = $self->_resolve_log_resource($n_event);
                     $n_operation->operation_type->lsf_resource($n_event->bsub_rusage . $n_event_log_resource);
                     $n_operation->operation_type->lsf_queue($lsf_queue);
+                    $n_operation->operation_type->lsf_project($lsf_project);
 
                     $stage->add_link(
                         left_operation => $prior_op,

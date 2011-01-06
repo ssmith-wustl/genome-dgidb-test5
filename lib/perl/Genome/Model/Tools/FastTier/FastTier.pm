@@ -194,7 +194,7 @@ sub intersect_bed {
     my $output = shift;
     my $result;
     if(-s $a){
-        my $cmd = $self->intersect_bed_bin_location." -wa -u -a " . $a . " -b " . $b . " > $output";  
+        my $cmd = $self->intersect_bed_bin_location." -wa -u -a " . $a . " -b " . $b . " > " . $output;
         $result = Genome::Utility::FileSystem->shellcmd(
             cmd          => $cmd,
             input_files  => [ $a ],
@@ -212,7 +212,7 @@ sub intersect_bed_v {
     my $a = shift;
     my $b = shift;
     my $output = shift;
-    my $cmd = $self->intersect_bed_bin_location." -wa -v -a " . $a . " -b " . $b . " > $output";  
+    my $cmd = $self->intersect_bed_bin_location." -wa -v -a " . $a . " -b " . $b . " > " . $output;
     my $result = Genome::Utility::FileSystem->shellcmd(
         cmd          => $cmd,
         input_files  => [ $a ],

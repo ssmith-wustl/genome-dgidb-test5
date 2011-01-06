@@ -233,7 +233,7 @@ sub test03_methods : Tests(4) {
 
     my $pp = $self->{_object};
     is($pp->type_name, 'tester', 'Checking type_name (tester)');
-    is_deeply([ $pp->params_for_class ], [qw/ sequencing_platform dna_source roi /], 'params_for_class');
+    is_deeply([ $pp->params_for_class ], [qw/ sequencing_platform append_event_steps dna_source roi /], 'params_for_class');
     is($pp->sequencing_platform, 'solexa', 'sequencing_platform (solexa)');
     is($pp->dna_source, 'genomic', 'dna_source (genomic)');
 
@@ -271,6 +271,7 @@ sub create_mock_processing_profile {
             params_for_class
             stages objects_for_stage classes_for_stage
             delete
+            append_event_steps
             /),
     );
 
@@ -309,6 +310,7 @@ my %TYPE_NAME_PARAMS = (
         sequencing_platform => 'solexa',
         dna_source => 'genomic',
         roi => 'mouse',
+        append_event_steps => undef,
     }, 
     'amplicon assembly' => {
         class => 'Genome::ProcessingProfile::AmpliconAssembly',
