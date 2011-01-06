@@ -181,7 +181,7 @@ __DATA__
   <link fromOperation="Collect Tumor Beds" fromProperty="output" toOperation="Intersect Indels" toProperty="tumor_bed_file" />
   <link fromOperation="input connector" fromProperty="intersect_output" toOperation="Intersect Indels" toProperty="somatic_file" />
 
-  <link fromOperation="Intersect Indels" fromProperty="somatic_file" toOperation="Post-Assembly Tiering" toProperty="variant_file" />
+  <link fromOperation="Intersect Indels" fromProperty="somatic_file" toOperation="Post-Assembly Tiering" toProperty="variant_bed_file" />
 
   <link fromOperation="Post-Assembly Tiering" fromProperty="tier1_output" toOperation="Annotation" toProperty="variant_bed_file" />
   <link fromOperation="input connector" fromProperty="annotation_output" toOperation="Annotation" toProperty="output_file" />
@@ -232,7 +232,7 @@ __DATA__
   </operation>
 
   <operation name="Post-Assembly Tiering">
-    <operationtype commandClass="Genome::Model::Tools::Annotate::FastTierPindel" typeClass="Workflow::OperationType::Command" />
+    <operationtype commandClass="Genome::Model::Tools::FastTier::FastTier" typeClass="Workflow::OperationType::Command" />
   </operation>
 
   <operation name="Annotation">
