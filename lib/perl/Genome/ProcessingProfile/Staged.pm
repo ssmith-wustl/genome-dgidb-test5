@@ -114,16 +114,20 @@ sub _resolve_workflow_for_build {
     my $self = shift;
     my $build = shift;
     my $lsf_queue = shift; # TODO: the workflow shouldn't need this yet
+    my $lsf_project = shift;
 
     if (!defined $lsf_queue || $lsf_queue eq '' || $lsf_queue eq 'inline') {
         $lsf_queue = 'apipe';
+    }
+    if (!defined $lsf_project || $lsf_project eq '') {
+        $lsf_project = 'build' . $build->id;
     }
 
     my $events_by_stage = $self->_generate_events_for_build($build);
 
     my @workflow_stages;
     foreach my $stage_events ( @$events_by_stage ) {
-        my $workflow_stage = $self->_workflow_for_stage( $build, $stage_events, $lsf_queue )
+        my $workflow_stage = $self->_workflow_for_stage( $build, $stage_events, $lsf_queue, $lsf_project )
             or next; # this is ok
         push @workflow_stages, $workflow_stage;
     }
@@ -330,6 +334,7 @@ sub _workflow_for_stage {
         $build,
         $stage_from_build,
         $lsf_queue,          # TODO: this is passed from the build, but shouldn't be needed yet
+        $lsf_project,
     ) = @_;
 
     my $stage_name = $stage_from_build->{name};
@@ -363,6 +368,7 @@ sub _workflow_for_stage {
 
         $first_operation->operation_type->lsf_resource($first_event->bsub_rusage . $first_event_log_resource);
         $first_operation->operation_type->lsf_queue($lsf_queue);
+        $first_operation->operation_type->lsf_project($lsf_project);
 
         $stage->add_link(
             left_operation => $input_connector,
@@ -387,6 +393,7 @@ sub _workflow_for_stage {
                     my $n_event_log_resource = $self->_resolve_log_resource($n_event);
                     $n_operation->operation_type->lsf_resource($n_event->bsub_rusage . $n_event_log_resource);
                     $n_operation->operation_type->lsf_queue($lsf_queue);
+                    $n_operation->operation_type->lsf_project($lsf_project);
 
                     $stage->add_link(
                         left_operation => $prior_op,
