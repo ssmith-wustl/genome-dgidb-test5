@@ -18,7 +18,7 @@
   <link fromOperation="get sequence fasta files" fromProperty="fasta_files" toOperation="wait db upload" toProperty="fasta_files" />
   <link fromOperation="wait db upload" fromProperty="fasta_files" toOperation="cat files" toProperty="fasta files" />
   <link fromOperation="wait db upload" fromProperty="db upload result" toOperation="wait delete" toProperty="db upload result" />
-  <link fromOperation="cat files" fromProperty="all files" toOperation="delete files" toProperty="files" />
+  <link fromOperation="cat files" fromProperty="all files" toOperation="delete files" toProperty="fasta_files" />
   <link fromOperation="delete files" fromProperty="result" toOperation="wait delete" toProperty="delete result" />
   <link fromOperation="wait delete" fromProperty="seq_set_id" toOperation="mail" toProperty="seq_set_id" />
   <link fromOperation="mail" fromProperty="result" toOperation="output connector" toProperty="result" />
