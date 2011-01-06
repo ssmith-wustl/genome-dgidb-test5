@@ -1,41 +1,36 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
 
 use above "Genome";
 use Test::More;
-
-use Genome::Model::Tools::Assembly::CreateOutputFiles::FastaAndQualFromVelvetAfg;
 require File::Compare;
 
-my $module = 'Genome-Model-Tools-Assembly-CreateOutputFiles2'; #TODO - data to Genome-Model-Tools-Assembly-CreateOutputFiles when done
-my $data_dir = "/gsc/var/cache/testsuite/data/$module";
+use_ok( 'Genome::Model::Tools::Assembly::CreateOutputFiles::FastaAndQualFromVelvetAfg' ) or die;
 
-ok(-d $data_dir, "Found data directory: $data_dir");
+my $data_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly-CreateOutputFiles2";
+ok(-d $data_dir, "Found data directory: $data_dir") or die;
 
+#test afg file
 my $afg_file = $data_dir.'/velvet_asm.afg';
-ok(-s $afg_file, "Test afg file exists");
+ok(-s $afg_file, "Test afg file exists") or die;
 
+#make temp dir
 my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
-
-#make edit_dir
-mkdir $temp_dir.'/edit_dir';
-ok(-d $temp_dir.'/edit_dir', "Made edit_dir in temp dir");
+Genome::Utility::FileSystem->create_directory( $temp_dir.'/edit_dir' );
 
 #link afg file in tmp dir
-symlink($data_dir.'/velvet_asm.afg', $temp_dir.'/velvet_asm.afg');
-ok (-s $temp_dir.'/velvet_asm.afg', "Linked afg file in tmp dir");
+symlink($data_dir.'/velvet_asm.afg', $temp_dir.'/velvet_asm.afg') or die; 
+ok (-s $temp_dir.'/velvet_asm.afg', "Linked afg file in tmp dir") or die;
 
 my $ec = system("chdir $temp_dir; gmt assembly create-output-files fasta-and-qual-from-velvet-afg --directory $temp_dir");
-ok($ec == 0, "Command ran successfully");
+ok($ec == 0, "Command ran successfully") or die;
 
-foreach ('contigs.bases', 'contigs.quals') {
-    my $test_file = $data_dir."/edit_dir/$_";
-    ok(-s $test_file, "Test $_ file exists");
-    my $temp_file = $temp_dir."/edit_dir/$_";
-    ok(-s $temp_file, "Temp $_ file exists");
-    ok(File::Compare::compare($test_file, $temp_file) == 0, "$_ files match");
+for my $file ('contigs.bases', 'contigs.quals') {
+    ok( -s $data_dir."/edit_dir/$file", "Test $file file exists" );
+    ok( -s $temp_dir."/edit_dir/$file", "Created new $file $file" );
+    ok( File::Compare::compare( $data_dir."/edit_dir/$file", $temp_dir."/edit_dir/$file" ) == 0, "$file files match" );
 }
 
 done_testing();

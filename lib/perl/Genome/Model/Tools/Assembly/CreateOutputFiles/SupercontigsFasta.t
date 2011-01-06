@@ -1,41 +1,34 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
 
 use above "Genome";
 use Test::More;
+require File::Compare;
 
-my $module = 'Genome-Model-Tools-Assembly-CreateOutputFiles';
-my $data_dir = "/gsc/var/cache/testsuite/data/$module";
+use_ok( 'Genome::Model::Tools::Assembly::CreateOutputFiles' ) or die;
+my $data_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly-CreateOutputFiles";
+ok(-d $data_dir, "Found data directory: $data_dir") or die;
 
-ok(-d $data_dir, "Found data directory: $data_dir");
-
+#create test dir
 my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+Genome::Utility::FileSystem->create_directory( $temp_dir.'/edit_dir' );
 
-#make edit_dir in temp dir
-mkdir $temp_dir.'/edit_dir';
-ok(-d $temp_dir.'/edit_dir', "Made edit_dir in temp test_dir");
-
-foreach my $file_name ('contigs.bases', 'gap.txt') {
-    my $old = $data_dir.'/edit_dir/'.$file_name;
-    my $new = $temp_dir.'/edit_dir/'.$file_name;
-    ok (-s $old, "Test $file_name exists");
-    ok(File::Copy::copy($old, $temp_dir.'/edit_dir'),"Copied $file_name to temp dir");
-    ok (-s $new, "New $file_name exists in temp dir");
+#copy files
+for my $file ('contigs.bases', 'gap.txt') {
+    ok (-s $data_dir.'/edit_dir/'.$file, "Test $file exists");
+    ok(File::Copy::copy($data_dir."/edit_dir/$file", $temp_dir.'/edit_dir'),"Copied $file to temp dir");
 }
 
+#run
 my $ec = system("chdir $temp_dir; gmt assembly create-output-files supercontigs-fasta --directory $temp_dir");
 ok($ec == 0, "Command ran successfully");
 
-my $test_file = $data_dir.'/edit_dir/supercontigs.fasta';
-ok(-s $test_file, "Test supercontigs.fasta file exists");
-
-my $temp_file = $temp_dir.'/edit_dir/supercontigs.fasta';
-ok(-s $temp_file, "New temp supercontigs.fasta file created");
-
-my @diffs = `sdiff -s $test_file $temp_file`;
-is(scalar (@diffs), 0, "New file matches existing test file");
+#compare output files
+ok( -s $data_dir.'/edit_dir/supercontigs.fasta', "Test supercontigs.fasta file exists" );
+ok( -s $temp_dir.'/edit_dir/supercontigs.fasta', "New supercontigs.fasta file created" );
+ok( File::Compare::compare($data_dir.'/edit_dir/supercontigs.fasta', $temp_dir.'/edit_dir/supercontigs.fasta') == 0, "Output files match" );
 
 done_testing();
 

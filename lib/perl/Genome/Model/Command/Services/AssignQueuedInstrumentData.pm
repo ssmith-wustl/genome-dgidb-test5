@@ -617,10 +617,16 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
 
     if ( defined($capture_target) ) {
         my $roi_list;
-        #FIXME This is a lame hack for this one capture set
+        #FIXME This is a lame hack for these capture sets
+        my %build36_to_37_rois = (
+            'agilent sureselect exome version 2 broad refseq cds only' => 'agilent_sureselect_exome_version_2_broad_refseq_cds_only_hs37',
+            'agilent sureselect exome version 2 broad' => 'agilent sureselect exome version 2 broad hg19 liftover',
+            'hg18 nimblegen exome version 2' => 'hg19 nimblegen exome version 2',
+            );
+
         if($reference_sequence_build and $reference_sequence_build->name eq 'g1k-human-build37'
-                and $capture_target eq 'agilent sureselect exome version 2 broad refseq cds only') {
-            $roi_list = 'agilent_sureselect_exome_version_2_broad_refseq_cds_only_hs37';
+                and exists $build36_to_37_rois{$capture_target}) {
+            $roi_list = $build36_to_37_rois{$capture_target};
         } else {
             $roi_list = $capture_target;
         }

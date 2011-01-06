@@ -4,9 +4,10 @@ use strict;
 use warnings;
 
 #use Test::More tests => 6 
-use Test::More skip_all => "temporary skip due to hudson specific difficulties";
+use Test::More skip_all => 'Disabling due to Perl environtment issues';
 
 use above 'Genome';
+
 
 map { print STDERR $_ . " => " . $ENV{$_} . "\n" } keys %ENV;
 
