@@ -1,6 +1,0 @@
-$MGAP::Command::DeleteFiles::OPTS_SPEC = [
-          'files=s',
-          undef,
-          'help!',
-          undef
-        ];

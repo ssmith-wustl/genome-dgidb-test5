@@ -1,25 +1,31 @@
-package MGAP::Command::GenePredictor::Genemark;
+package Genome::Model::Tools::GenePredictor::Genemark;
 
 use strict;
 use warnings;
 
+use Genome;
 use Bio::SeqIO;
-use BAP::Job::Genemark;
-
 use IO::Dir;
 
-class MGAP::Command::GenePredictor::Genemark {
-    is => ['MGAP::Command::GenePredictor'],
+# TODO Remove this dependency
+use BAP::Job::Genemark;
+
+class Genome::Model::Tools::GenePredictor::Genemark {
+    is => ['Genome::Model::Tools::GenePredictor'],
     has => [
-            gc_percent => { is => 'Float', doc => 'GC content',
-                            is_input => 1, },
-            model_file => { is => 'SCALAR', is_optional => 1, doc => 'Genemark model file',
-                             },
+        gc_percent => { 
+            is => 'Number', 
+            doc => 'GC content',
+            is_input => 1, 
+        },
+    ],
+    has_optional => [
+        model_file => { 
+            is => 'FilePath',
+            doc => 'Genemark model file',
+        },
     ],
 };
-
-
-sub sub_command_sort_position { 10 }
 
 sub help_brief {
     "Write a set of fasta files for an assembly";
@@ -49,8 +55,9 @@ sub execute {
 
     $self->model_file($gc_model);
     
-    ##FIXME: The last arg is the job_id, which is hardcoded here in 
-    ##       a rather lame fashion.
+    ##FIXME: The last arg is the job_id, which is hardcoded here in a rather lame fashion.
+    # TODO Remove this rather lame job, just execute the command here without using this extra
+    # layer of indirection
     my $legacy_job = BAP::Job::Genemark->new(
                                              $seq,
                                              $gc_model,
@@ -61,7 +68,7 @@ sub execute {
 
     my @features = $legacy_job->seq()->get_SeqFeatures();
     
-    $self->bio_seq_feature(\@features);
+    $self->{bio_seq_feature} = \@features;
            
     return 1;
     
