@@ -3,8 +3,7 @@
 use strict;
 use warnings;
 
-#use Test::More tests => 6 
-use Test::More skip_all => "temporary skip due to hudson specific difficulties";
+use Test::More tests => 6;
 
 use above 'Genome';
 
