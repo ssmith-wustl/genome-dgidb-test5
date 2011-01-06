@@ -555,7 +555,6 @@ sub execute {
             }
         }
 
-        $DB::single = 1; #TODO: delete me
         if($self->accept_reference_IUB_codes){
             #This will transform any IUB codes into a single base as detailed in the doc for the accept_reference_IUB_codes flag
             if($self->use_version >= 2){
