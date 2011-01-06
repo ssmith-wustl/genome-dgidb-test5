@@ -1,3 +1,0 @@
-[% subject %]
-
-Finished running on: [% seq_set_id %]
