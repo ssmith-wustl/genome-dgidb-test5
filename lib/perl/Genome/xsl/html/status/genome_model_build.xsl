@@ -260,7 +260,7 @@
                             <td><xsl:value-of select="date_completed"/></td>
                             <td class="last"><xsl:value-of select="elapsed_time"/></td>
                             <td class="buttons">
-                              <a class="mini btn popup-ajax">
+                              <a class="mini btn event-popup-ajax">
 	                            <!-- <xsl:attribute name="onclick">
 	                              <xsl:text>javascript:status_popup('</xsl:text><xsl:value-of select="@id"/><xsl:text>','</xsl:text><xsl:value-of select="$currentLink"/><xsl:text>','</xsl:text><xsl:value-of select="@id"/><xsl:text>');</xsl:text>
 	                            </xsl:attribute> -->
