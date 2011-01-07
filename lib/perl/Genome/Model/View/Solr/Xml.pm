@@ -12,6 +12,14 @@ class Genome::Model::View::Solr::Xml {
             is => 'Text',
             default => 'model'
         },
+        display_type => {
+            is  => 'Text',
+            default => 'Model',
+        },
+        display_icon_url => {
+            is  => 'Text',
+            default => 'genome_model_32.png',
+        }
         default_aspects => {
             is => 'ARRAY',
             default => [
@@ -37,6 +45,10 @@ class Genome::Model::View::Solr::Xml {
                     name => 'data_directory',
                     position => 'content',
                 },
+                {
+                    name => 'display_name',
+                    position => 'display_title',
+                }
 # Loading instrument data is *so* slow
 #                {
 #                    name => 'instrument_data',
@@ -53,4 +65,19 @@ class Genome::Model::View::Solr::Xml {
     ]
 };
 
-1;
+#x display_title
+#x display_type
+#display_icon_url
+#                
+#display_content
+#                
+#display_label1 
+#display_url1
+#                
+#display_label2
+#display_url2
+#                
+#display_label3
+#display_url3
+
+

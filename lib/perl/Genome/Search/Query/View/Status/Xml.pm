@@ -4,6 +4,8 @@ use strict;
 use warnings;
 use Genome;
 
+use XML::Simple;
+
 class Genome::Search::Query::View::Status::Xml {
     is           => 'UR::Object::View::Default::Xml',
     has_constant => [ perspective => { value => 'status', }, ],
@@ -118,17 +120,24 @@ sub _generate_content {
 #    my @ordered_docs = sort_solr_docs( $response->docs );
     my @ordered_docs = $response->docs();
 
-    my @result_nodes =
-      Genome::Search->generate_result_xml( \@ordered_docs, $doc, $format );
+#    my @result_nodes =
+#      Genome::Search->generate_result_xml( \@ordered_docs, $doc, $format );
+    my @docs = @ordered_docs;
 
-    for my $result_node (@result_nodes) {
-        $results_node->addChild($result_node);
+#            my $raw_xml = XMLout($doc, 'root_name' => 'result');
+#            $result_node = XML::LibXML->load_xml(string => $raw_xml);
+
+    for my $doc (@docs) {
+        my $raw_xml = $doc->to_xml();
+        my $result_node = XML::LibXML->load_xml(string => $raw_xml);
+        $results_node->addChild($result_node->documentElement->cloneNode(1));
     }
 
     $doc->setDocumentElement($results_node);
 
     $doc->toString(1);
 }
+
 
 sub icon_prefix {
 
