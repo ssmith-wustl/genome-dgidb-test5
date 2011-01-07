@@ -3,8 +3,8 @@
 use strict;
 use warnings;
 
-#use Test::More tests => 5;
-use Test::More skip_all => 'Disabling due to Perl environtment issues';
+use Test::More tests => 5;
+#use Test::More skip_all => 'Disabling due to Perl environtment issues';
 
 use File::Compare;
 use above 'Genome';
