@@ -145,8 +145,6 @@ sub create_temp_directory {
     return $path;
 }
 
-
-
 #< Files >#
 
 sub read_file {
@@ -205,11 +203,8 @@ sub diff_file_vs_file {
 
 sub _open_file {
     my ($self, $file, $rw) = @_;
-
     my $fh = IO::File->new($file, $rw);
-
     return $fh if $fh;
-
     Carp::croak("Can't open file ($file) with access '$rw': $!");
 }
 
@@ -350,9 +345,7 @@ sub bunzip {
         return $result_file;
 
     } else {
-        #$self->error_message("Input file does not have .bz2 extension. Not unzipping.");
         Carp::croak("Input file ($file) does not have .bz2 extension.  Not unzipping.");
-        #return;
     } 
 
 }
@@ -894,19 +887,6 @@ sub check_for_path_existence {
         return 1 if -e $path;
         sleep(1);
     }
-    #my $try = 0;
-    #my $found = 0;
-    ## FIXME - why not while (!$found and $attempts-- > 0)
-    #while (!$found && $try < $attempts) {
-    #    $found = -e $path;
-    #    # FIXME - if $found is true, shouldn't it return immediately? - move the sleep to the bottom of the loop
-    #    sleep(1);
-    #    $try++;
-    #    if ($found) {
-    #        #$self->status_message("existence check passed: $path");
-    #        return $found;
-    #    }
-    #}
     return;
 }
 
@@ -938,7 +918,6 @@ sub INT_cleanup {
 }
 
 sub exit_cleanup {
-#    print "EXIT CLEANUP ON PID $$\n";
     for my $sym_to_remove (keys %SYMLINKS_TO_REMOVE) {
         if (-l $sym_to_remove) {
             warn("Removing remaining resource lock: '$sym_to_remove'");
@@ -966,13 +945,11 @@ sub get_classes_in_subdirectory {
 
     unless ( $subdirectory ) {
         Carp::croak("No subdirectory given to get_classes_in_subdirectory"); 
-        #return;
     }
 
     my $inc_directory = get_inc_directory_for_class(__PACKAGE__);
     unless ( $inc_directory ) {
         Carp::croak('Could not get inc directory for '.__PACKAGE__."\n"); 
-        #return;
     }
 
     my $directory = $inc_directory.'/'.$subdirectory;
@@ -981,7 +958,6 @@ sub get_classes_in_subdirectory {
     my @classes;
     for my $module ( glob("$directory/*pm") ) {
         $module =~ s#$inc_directory/##;
-        #print "$module\n";
         push @classes, Genome::Utility::Text::module_to_class($module);
     }
 
@@ -993,12 +969,10 @@ sub get_classes_in_subdirectory_that_isa {
 
     unless ( $isa ) {
         Carp::confess("No isa given to get classes in directory that isa\n"); 
-        #return;
     }
 
     my @classes;
     for my $class ( get_classes_in_subdirectory($subdirectory) ) {
-        #print "$class\n";
         next unless $class->isa($isa);
         push @classes, $class;
     }
@@ -1024,7 +998,7 @@ sub md5sum {
 }
 
 sub directory_size_recursive {
-    my ($self,$directory) = @_;#shift;
+    my ($self,$directory) = @_;
     my $size;
     unless (-e $directory) {
         Carp::croak("directory $directory does not exist");
@@ -1131,7 +1105,36 @@ sub are_files_ok {
 	return;
 }
 
+sub remove_directory_tree {
+    $DB::single = 1;
+    my ($self, $directory) = @_;
+    unless (-d $directory) {
+        $self->warning_message("No directory found at $directory, cannot remove");
+        return;
+    }
 
+    File::Path::remove_tree($directory, { error => \my $remove_errors });
+    # remove_errors will be an empty array if no errors are encountered (not undef), so
+    # we've succeeded if the array has no elements
+    unless (@$remove_errors) {
+        my $error_summary;
+        for my $error (@$remove_errors) {
+            my ($file, $message) = %$error;
+            if ($file eq '') {
+                $error_summary .= "General error encountered, message: $message\n";
+            }
+            else {
+                $error_summary .= "File $file, message: $message\n";
+            }
+        }
+
+        if ($error_summary) {
+            $self->error_message("Problems encountered removing $directory\n$error_summary");
+            return;
+        }
+    }
+    return 1;
+}
 
 1;
 
