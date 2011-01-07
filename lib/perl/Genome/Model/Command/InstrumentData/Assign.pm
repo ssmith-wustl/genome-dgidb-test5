@@ -1,6 +1,3 @@
-# FIXME ebelter
-#  Long: Remove or update to use inputs as appropriate.
-#
 package Genome::Model::Command::InstrumentData::Assign;
 
 use strict;
@@ -64,8 +61,6 @@ class Genome::Model::Command::InstrumentData::Assign {
     ],
 };
 
-#########################################################
-
 sub help_brief {
     return "Assign instrument data to a model";
 }
@@ -74,13 +69,9 @@ sub help_detail {
     return help_brief();
 }
 
-#########################################################
-
-sub create { 
-    my ($class, %params) = @_;
-
-    my $self = $class->SUPER::create(%params)
-        or return;
+#TODO:put this logic in Genome::Model::assign_instrument_data() and turn this command into a thin wrapper
+sub execute {
+    my $self = shift;
 
     my @requested_actions = grep { 
         $self->$_ 
@@ -88,20 +79,12 @@ sub create {
 
     if ( @requested_actions > 1 ) {
         $self->error_message('Multiple actions requested: '.join(', ', @requested_actions));
-        $self->delete;
         return;
     }
 
     $self->_verify_model
         or  return;
 
-    return $self;
-
-}
-
-#TODO:put this logic in Genome::Model::assign_instrument_data() and turn this command into a thin wrapper
-sub execute {
-    my $self = shift;
     if ( $self->instrument_data_id ) { # assign this
         return $self->_assign_by_instrument_data_id;
     }

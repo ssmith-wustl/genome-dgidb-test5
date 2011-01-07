@@ -3,8 +3,8 @@
 use strict;
 use warnings;
 
-#use Test::More tests => 6 
-use Test::More skip_all => 'Disabling due to Perl environtment issues';
+use Test::More tests => 6;
+#use Test::More skip_all => 'Disabling due to Perl environtment issues';
 
 use above 'Genome';
 
