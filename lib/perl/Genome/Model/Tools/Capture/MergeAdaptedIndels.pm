@@ -26,6 +26,7 @@ class Genome::Model::Tools::Capture::MergeAdaptedIndels {
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		glf_file	=> { is => 'Text', doc => "Somatic Sniper Adapted Indel Input File", is_optional => 0, is_input => 1 },
 		varscan_file	=> { is => 'Text', doc => "VarScan Adapted Indel Input File", is_optional => 0, is_input => 1 },
+		gatk_file	=> { is => 'Text', doc => "GATK Adapted Indel Input File", is_optional => 1, is_input => 1 },
 		output_file	=> { is => 'Text', doc => "Merged Indel Output File" , is_optional => 0, is_input => 1, is_output => 1},
 	],
 };
@@ -62,6 +63,10 @@ sub execute {                               # replace with real execution logic.
 	## Get required parameters ##
 	my $glf_file = $self->glf_file;
 	my $varscan_file = $self->varscan_file;
+	my $gatk_file;
+	if ($self->gatk_file) {
+		$gatk_file = $self->gatk_file;
+	}
 	my $output_file = $self->output_file;
 
 	my %stats = ();
@@ -70,6 +75,10 @@ sub execute {                               # replace with real execution logic.
 	
 	my %glf_indels = load_indels($glf_file);
 	my %varscan_indels = load_indels($varscan_file);
+	my %gatk_indels;
+	if ($self->gatk_file) {
+		%gatk_indels = load_indels($gatk_file);
+	}
 
 	## Build a list of all unique indel keys ##
 
@@ -84,11 +93,35 @@ sub execute {                               # replace with real execution logic.
 	{
 		if($indel_keys{$key})
 		{
-			$indel_keys{$key} = "shared";
+			$indel_keys{$key} = "sniper-varscan-shared";
 		}
 		else
 		{
 			$indel_keys{$key} = "varscan-only";
+		}
+	}
+	if ($self->gatk_file) {
+		foreach my $key (keys %gatk_indels)
+		{
+			if($indel_keys{$key})
+			{
+				if($indel_keys{$key} eq "sniper-varscan-shared")
+				{
+					$indel_keys{$key} = "tri-shared";
+				}
+				elsif($indel_keys{$key} eq "varscan-only")
+				{
+					$indel_keys{$key} = "varscan-gatk-shared";
+				}
+				elsif($indel_keys{$key} eq "sniper-only")
+				{
+					$indel_keys{$key} = "sniper-gatk-shared";
+				}
+			}
+			else
+			{
+				$indel_keys{$key} = "gatk-only";
+			}
 		}
 	}
 
@@ -98,6 +131,9 @@ sub execute {                               # replace with real execution logic.
 	open(SHARED, ">$output_file.shared") or die "Can't open outfile: $!\n";
 	open(SNIPER, ">$output_file.sniper-only") or die "Can't open outfile: $!\n";
 	open(VARSCAN, ">$output_file.varscan-only") or die "Can't open outfile: $!\n";
+	if ($self->gatk_file) {
+		open(GATK, ">$output_file.gatk-only") or die "Can't open outfile: $!\n";
+	}
 
 
 	## Go thru all unique keys and handle them ##
@@ -106,11 +142,29 @@ sub execute {                               # replace with real execution logic.
 	{
 		$stats{'total'}++;
 		
-		if($indel_keys{$indel_key} eq "shared")
+		if($indel_keys{$indel_key} eq "tri-shared")
 		{
-			$stats{'shared'}++;
+			$stats{'tri-shared'}++;
+			print SHARED $indel_key . "\t" . $varscan_indels{$indel_key} . "\t" . $glf_indels{$indel_key} . "\t" . $gatk_indels{$indel_key} . "\n";
+			print OUTFILE $indel_key . "\t" . $varscan_indels{$indel_key} . "\t" . $glf_indels{$indel_key} . "\t" . $gatk_indels{$indel_key} . "\n";
+		}
+		if($indel_keys{$indel_key} eq "sniper-varscan-shared")
+		{
+			$stats{'sniper-varscan-shared'}++;
 			print SHARED $indel_key . "\t" . $varscan_indels{$indel_key} . "\t" . $glf_indels{$indel_key} . "\n";
 			print OUTFILE $indel_key . "\t" . $varscan_indels{$indel_key} . "\t" . $glf_indels{$indel_key} . "\n";
+		}
+		if($indel_keys{$indel_key} eq "sniper-gatk-shared")
+		{
+			$stats{'sniper-gatk-shared'}++;
+			print SHARED $indel_key . "\t" . $gatk_indels{$indel_key} . "\t" . $glf_indels{$indel_key} . "\n";
+			print OUTFILE $indel_key . "\t" . $gatk_indels{$indel_key} . "\t" . $glf_indels{$indel_key} . "\n";
+		}
+		if($indel_keys{$indel_key} eq "varscan-gatk-shared")
+		{
+			$stats{'varscan-gatk-shared'}++;
+			print SHARED $indel_key . "\t" . $varscan_indels{$indel_key} . "\t" . $gatk_indels{$indel_key} . "\n";
+			print OUTFILE $indel_key . "\t" . $varscan_indels{$indel_key} . "\t" . $gatk_indels{$indel_key} . "\n";
 		}
 		elsif($indel_keys{$indel_key} eq "varscan-only")
 		{
@@ -124,6 +178,12 @@ sub execute {                               # replace with real execution logic.
 			print SNIPER $indel_key . "\t" . $glf_indels{$indel_key} . "\n";
 			print OUTFILE $indel_key . "\t" . $glf_indels{$indel_key} . "\n";
 		}
+		elsif($indel_keys{$indel_key} eq "gatk-only")
+		{
+			$stats{'gatk-only'}++;
+			print GATK $indel_key . "\t" . $gatk_indels{$indel_key} . "\n";
+			print OUTFILE $indel_key . "\t" . $gatk_indels{$indel_key} . "\n";
+		}
 		else
 		{
 			## Where did this come from !? ##
@@ -134,15 +194,26 @@ sub execute {                               # replace with real execution logic.
 	close(SHARED);
 	close(SNIPER);
 	close(VARSCAN);
+	close(GATK);
 
 	print $stats{'total'} . " unique indels\n";
+	if ($self->gatk_file) {
+		print $stats{'tri-shared'} . "shared in gatk, sniper, and varscan\n";
+		print $stats{'sniper-varscan-shared'} . "shared in sniper and varscan\n";
+		print $stats{'sniper-gatk-shared'} . "shared in gatk and sniper\n";
+		print $stats{'varscan-gatk-shared'} . "shared in gatk and varscan\n";
+	}
+	else {
+		print $stats{'shared'} . " shared\n";		
+	}
 	print $stats{'varscan-only'} . " VarScan-only\n";
 	print $stats{'sniper-only'} . " Sniper-only\n";
-	print $stats{'shared'} . " shared\n";
+	if ($self->gatk_file) {
+		print $stats{'gatk-only'} . "gatk-only\n";
+	}
 
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
-
 
 
 
