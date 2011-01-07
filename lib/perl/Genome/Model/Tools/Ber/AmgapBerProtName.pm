@@ -36,7 +36,7 @@ UR::Object::Type->define(
                                   is => 'String',
                                   doc => "base directory to use for BER; use this to specify different releases of BER",
                                   is_optional => 1,
-                                  default => "/gscmnt/temp110/info/annotation/ktmp/BER_TEST/hmp/autoannotate",
+                                  default => "/gscmnt/ams1102/info/annotation/BER/autoannotate_v2.5",
                     },
 					'internalhash'    => {
 							      is => 'HashRef',
@@ -99,7 +99,7 @@ sub execute
     #Prepare BER
     ################################################
     my $cwd        = getcwd();
-    my $berbasedir = qq{/gscmnt/temp110/info/annotation/ktmp/BER_TEST/hmp/autoannotate};
+    my $berbasedir = qq{/gscmnt/ams1102/info/annotation/BER/autoannotate_v2.5};
     $berbasedir = $self->ber_directory; # let us change the ber directory at will.
     my $configdir  = qq{$berbasedir/data/db/CSV};
 
