@@ -7,7 +7,7 @@ use Bio::Seq;
 use Bio::SeqIO;
 use File::Temp 'tempdir';
 use File::Basename;
-use Test::More;
+use Test::More tests => 8;
 
 BEGIN {
     use_ok('Genome::Model::GenePrediction::Eukaryotic::RepeatMasker');
@@ -47,17 +47,9 @@ my $command = Genome::Model::GenePrediction::Eukaryotic::RepeatMasker->create(
     make_ace => 1,
     ace_file_location => $ace_file->filename,
 );
+
 isa_ok($command, 'Genome::Model::GenePrediction::Eukaryotic::RepeatMasker');
-
 ok($command->execute(), 'execute');
+ok(-s $command->masked_fasta, 'data written to masked fasta');
+ok(-s $command->ace_file_location, 'data written to ace file');
 
-my $seqio = Bio::SeqIO->new(
-    -file => $command->masked_fasta(), 
-    -format => 'Fasta'
-);
-
-while (my $seq = $seqio->next_seq()) {
-    isa_ok($seq, 'Bio::SeqI');
-}
-
-done_testing();

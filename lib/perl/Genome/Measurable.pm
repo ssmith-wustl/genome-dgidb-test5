@@ -32,6 +32,10 @@ class Genome::Measurable {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+sub __display_name__ {
+    return $_[0]->name.' ('.$_[0]->id.')';
+}
+
 sub _subclass_by_subject_type {
     my ($measurable) = @_;
 

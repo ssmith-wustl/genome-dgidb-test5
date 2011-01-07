@@ -11,7 +11,7 @@ class Genome::Library::Command::Note {
     doc => 'notes for libraries',
 };
 
-sub sub_command_sort_position { 3 }
+sub sub_command_sort_position { 5 }
 
 1;
 

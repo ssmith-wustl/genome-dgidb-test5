@@ -62,7 +62,7 @@ class Genome::Model::Tools::DetectVariants::Somatic::Sniper {
             default_value => 'long'
         }, 
         lsf_resource => {
-            default_value => 'rusage[mem=4000] select[type==LINUX64] span[hosts=1]',
+            default_value => 'rusage[mem=4000] select[type==LINUX64 && maxtmp>100000] span[hosts=1]',
         },
     ],
     # These are params from the superclass' standard API that we do not require for this class (dont show in the help)

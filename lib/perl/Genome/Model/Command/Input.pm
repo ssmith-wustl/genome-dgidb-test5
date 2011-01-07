@@ -5,35 +5,18 @@ use warnings;
 
 use Genome;
       
+use Genome::Utility::Text;
 use Carp 'confess';
-use Regexp::Common;
 
 class Genome::Model::Command::Input {
-    is => 'Command',
+    is => 'Genome::Command::Base',
     is_abstract => 1,
     english_name => 'genome model input command',
     has => [
-        _model => { 
+        model => { 
             is => 'Genome::Model',
-            doc => 'model_id',
-        },
-        model_identifier => { 
-            is => 'Text',
-            doc => 'Model identifier.  Use model id or name.',
-        },
-        model_id => { 
-            via => 'model',
-            to => 'id',
-        },
-        model_name => { 
-            via => 'model',
-            to => 'name,'
-        },
-    ],
-    has_optional => [
-        filter => {
-            is => 'Text',
-            doc => 'Filter description.',
+            shell_args_position => 1,
+            doc => 'Model to modify inputs. Resolved from command line via text string.',
         },
     ],
     doc => 'work with model inputs.',
@@ -66,50 +49,6 @@ sub command_name_brief {
 
 ############################################
 
-sub create {
-    my $class = shift;
-
-    my $self = $class->SUPER::create(@_)
-        or return;
-
-    unless ( $self->_resolve_model ) {
-        $self->delete;
-        return;
-    }
-
-    return $self; 
-}
-
-sub _resolve_model {
-    my $self = shift;
-
-    # Make sure we got an identifier
-    my $model_identifier = $self->model_identifier;
-    unless ( $model_identifier ) {
-        $self->error_message("No model identifier given to get model.");
-        return;
-    }
-    
-    my $model;
-    # By id if it's an integer
-     if ( $self->model_identifier =~ /^$RE{num}{int}$/ ) {
-        $model = Genome::Model->get($model_identifier);
-    }
-
-    # Try by name if id wasn't an integer or didn't work
-    unless ( $model ) { 
-        $model = Genome::Model->get(name => $model_identifier);
-    }
-    
-    # Neither worked
-    unless ( $model ) {
-        $self->error_message("Can't get model for identifier ($model_identifier).  Tried getting as id and name.");
-        return;
-    }
-
-    return $self->_model($model);
-}
-
 #< Input Properties >#
 sub input_properties_for_model_type {
     my ($self, $type_name) = @_;
@@ -119,13 +58,13 @@ sub input_properties_for_model_type {
     my $model_class = 'Genome::Model::'.Genome::Utility::Text::string_to_camel_case($type_name);
     my $model_class_meta = $model_class->__meta__;
     
-    return grep { $_->via eq 'inputs' } $model_class_meta->direct_property_metas;
+    return grep { $_->via and $_->via eq 'inputs' } $model_class_meta->direct_property_metas;
 }
 
 sub _get_input_property_for_name {
     my ($self, $name) = @_;
 
-    my $model_class_meta = $self->_model->__meta__;
+    my $model_class_meta = $self->model->__meta__;
     
     my $property = $model_class_meta->property_meta_for_name($name);
     unless ( $property ) {
@@ -190,7 +129,7 @@ sub _determine_and_validate_add_or_remove_method_name {
     
     # Validate that the model can add this property
     my $method = $add_or_remove.'_'.$property->singular_name;
-    unless ( $self->_model->can($method) ) {
+    unless ( $self->model->can($method) ) {
         $self->error_message(
             sprintf(
                 "Found model input property (%s), but model can't %s it using '%s'",
@@ -245,5 +184,3 @@ sub _validate_where_and_resolve_value_class_name_or_data_type_for_property {
 
 1;
 
-#$HeadURL$
-#$Id$

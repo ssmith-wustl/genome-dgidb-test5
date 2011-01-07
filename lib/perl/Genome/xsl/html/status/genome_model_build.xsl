@@ -219,8 +219,8 @@
                       <tbody>
                         <xsl:for-each select="descendant::*/event">
                           <tr>
+                            <xsl:variable name="command_class" select="@command_class"/>
                             <td>
-                              <xsl:variable name="command_class" select="@command_class"/>
                               <xsl:variable name="containing_command_class" select="../../@value"/>
                               <xsl:choose>
                                 <!-- if command_class contains 'AlignReads' there should be instrument data associated -->
@@ -260,87 +260,19 @@
                             <td><xsl:value-of select="date_completed"/></td>
                             <td class="last"><xsl:value-of select="elapsed_time"/></td>
                             <td class="buttons">
-                              <script type="text/javascript">
-
-                                window.obj<xsl:value-of select="@id"/> = {
-                                event_id: <xsl:value-of select="@id"/>,
-                                <xsl:for-each select="child::*">
-                                  <xsl:choose>
-                                    <!-- handle output and error log file nodes -->
-                                    <xsl:when test="contains(local-name(),'_file')">
-                                      <xsl:value-of select="local-name()"/><xsl:text disable-output-escaping="yes">:"</xsl:text>
-                                      <xsl:text disable-output-escaping="yes">&lt;a href=\"http://gscweb</xsl:text><xsl:value-of select="current()"/><xsl:text disable-output-escaping="yes">\"&gt;</xsl:text>
-                                      <xsl:call-template name="substring-after-last">
-                                        <xsl:with-param name="input" select="current()"/>
-                                        <xsl:with-param name="substr" select="'/'"/>
-                                      </xsl:call-template>
-
-
-                                      <xsl:text disable-output-escaping="yes">&lt;/a&gt;</xsl:text>
-                                      <xsl:text disable-output-escaping="yes">",</xsl:text>
-                                    </xsl:when>
-
-                                    <!-- handle alignment_directory node(s) -->
-                                    <xsl:when test="contains(local-name(),'alignment_directory')">
-                                      <xsl:choose>
-                                        <xsl:when test="starts-with(current(), '/')">
-                                          <!-- starts with a /, so most likely is a directory string -->
-                                          <xsl:value-of select="local-name()"/><xsl:text disable-output-escaping="yes">:"</xsl:text>
-                                          <xsl:text disable-output-escaping="yes">&lt;a href=\"http://gscweb</xsl:text><xsl:value-of select="current()"/><xsl:text disable-output-escaping="yes">\"&gt;</xsl:text>
-                                          <xsl:call-template name="substring-after-last">
-                                            <xsl:with-param name="input" select="current()"/>
-                                            <xsl:with-param name="substr" select="'/'"/>
-                                          </xsl:call-template>
-
-
-                                          <xsl:text disable-output-escaping="yes">&lt;/a&gt;</xsl:text>
-                                          <xsl:text disable-output-escaping="yes">",</xsl:text>
-                                        </xsl:when>
-                                        <xsl:otherwise>
-                                          <!-- doesn't start with a /, so probably is a message of some kind -->
-                                          <xsl:value-of select="local-name()"/><xsl:text disable-output-escaping="yes">:"</xsl:text>
-                                          <xsl:value-of select="normalize-space(current())"/><xsl:text disable-output-escaping="yes">",</xsl:text>
-                                        </xsl:otherwise>
-                                      </xsl:choose>
-                                    </xsl:when>
-
-                                    <xsl:otherwise>
-                                      <xsl:value-of select="local-name()"/><xsl:text disable-output-escaping="yes">:"</xsl:text><xsl:value-of select="current()"/><xsl:text disable-output-escaping="yes">",</xsl:text>
-                                    </xsl:otherwise>
-                                  </xsl:choose>
-                                </xsl:for-each>
-                                <!-- see if we have any instrument data and append that to the event object if we do -->
-                                <xsl:if test="instrument_data_id!=''">
-                                  <xsl:variable name="inst_data_id" select="instrument_data_id" />
-                                  <xsl:for-each select="//instrument_data[@id=$inst_data_id]/*" >
-                                    <xsl:choose>
-                                      <xsl:when test="local-name() != 'gerald_directory' and local-name() != 'lane'">
-                                        <xsl:value-of select="local-name()"/><xsl:text disable-output-escaping="yes">:"</xsl:text><xsl:value-of select="current()"/><xsl:text disable-output-escaping="yes">",</xsl:text>
-                                      </xsl:when>
-                                    </xsl:choose>
-                                  </xsl:for-each>
-                                </xsl:if>
-
-                                <!-- assemble popup title -->
-                                <xsl:variable name="evt_command_class" select="@command_class" />
-
-                                <xsl:text disable-output-escaping="yes">popup_title:"</xsl:text><xsl:value-of select="substring-after($evt_command_class,'Genome::Model::Build::Command::')"/><xsl:value-of select="substring-after($evt_command_class,'Genome::Model::Event::Build::')"/><xsl:text disable-output-escaping="yes"> #</xsl:text><xsl:value-of select="@id"/><xsl:text disable-output-escaping="yes">"</xsl:text>
-                                };
-                                <!--   event_status: "", -->
-                                <!--   lsf_job_id: "7872441", -->
-                                <!--   lsf_job_status: "UNAVAILABLE", -->
-                                <!--   date_scheduled: "2009-12-17 09:10:13", -->
-                                <!--   date_completed: "2010-01-21 14:09:18", -->
-                                <!--   elapsed_time: "35:04:59:05", -->
-                                <!--   instrument_data_id: "", -->
-                                <!--   output_log_file: "<a href=\"http://gscweb/gscmnt/sata400/info/dlarson/BRC10/somatic_pipeline/BRC10-somatic-v1/build100513550/logs//100513583.out\">100513583.out</a>", -->
-                                <!--   error_log_file: "<a href=\"http://gscweb/gscmnt/sata400/info/dlarson/BRC10/somatic_pipeline/BRC10-somatic-v1/build100513550/logs//100513583.err\">100513583.err</a>", -->
-                                <!--   popup_title: "Somatic::RunWorkflow #100513583" -->
-                                <!-- }; -->
-
-
-                              </script>
-                              <a class="mini btn popup">
+                              <a class="mini btn event-popup-ajax">
+	                            <!-- <xsl:attribute name="onclick">
+	                              <xsl:text>javascript:status_popup('</xsl:text><xsl:value-of select="@id"/><xsl:text>','</xsl:text><xsl:value-of select="$currentLink"/><xsl:text>','</xsl:text><xsl:value-of select="@id"/><xsl:text>');</xsl:text>
+	                            </xsl:attribute> -->
+	                            <xsl:attribute name="href">
+						          <xsl:call-template name="object_link_href">
+						            <xsl:with-param name="type" select="$command_class"/>
+						            <xsl:with-param name="key" select="'id'"/>
+						            <xsl:with-param name="id" select="@id"/>
+						            <xsl:with-param name="perspective" select="'statuspopup'"/>
+						            <xsl:with-param name="toolkit" select="'html'"/>
+						        </xsl:call-template>
+	                            </xsl:attribute>
                                 <xsl:attribute name="title">
                                   <xsl:value-of select="@id"/>
                                 </xsl:attribute>

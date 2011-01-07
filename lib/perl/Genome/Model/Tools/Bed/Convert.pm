@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 use Carp qw/croak/;
 use File::Basename;
+use Sort::Naturally;
 
 class Genome::Model::Tools::Bed::Convert {
     is => ['Command'],
@@ -40,6 +41,15 @@ class Genome::Model::Tools::Bed::Convert {
             is => 'IO::File',
             doc => 'Filehandle for the output BED file',
         },
+        _last_chrom => {
+            is => 'Text',
+            doc => 'Instance variable, last chromosome seen',
+        },
+        _need_chrom_sort => {
+            is => 'Boolean',
+            default_value => 0,
+            doc => 'Instance variable, true if chromosomes were written out of order',
+        },
     ]
 };
 
@@ -73,19 +83,24 @@ sub execute {
 
     return unless $retval;
 
-    my $sort_cmd = Genome::Model::Tools::Bed::Sort->create(
-        input => $self->output,
-        output => $self->sorted_filename
-    );
+    if ($self->_need_chrom_sort) {
+        my $sort_cmd = Genome::Model::Tools::Bed::ChromSort->create(
+            input => $self->output,
+            output => $self->sorted_filename
+        );
 
-    if ($sort_cmd->execute()) {
-        unlink($self->output);
-        symlink(basename($self->sorted_filename), $self->output);
-        return 1;
+        if ($sort_cmd->execute()) {
+            unlink($self->output);
+        } else {
+            $self->error_message("Failed to sort bed file " . $self->output);
+            return;
+        }
     } else {
-        $self->error_message("Failed to sort bed file " . $self->output);
-        return;
+        rename($self->output, $self->sorted_filename);
     }
+    symlink(basename($self->sorted_filename), $self->output);
+
+    return 1;
 }
 
 sub initialize_filehandles {
@@ -140,6 +155,12 @@ sub format_line {
 
 sub write_bed_line {
     my $self = shift;
+
+    # If the current chromosome ($_[0]) is less than the previous one, we'll need to sort
+    if ($self->_last_chrom and ncmp($self->_last_chrom, $_[0]) > 0) {
+        $self->_need_chrom_sort(1);
+    }
+    $self->_last_chrom($_[0]);
 
     my $output_fh = $self->_output_fh;
     print $output_fh $self->format_line(@_)."\n";
