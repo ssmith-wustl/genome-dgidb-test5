@@ -6,7 +6,7 @@ BEGIN {
 }
 
 use above "Genome";
-use Test::More tests => 5;
+use Test::More tests => 6;
 use_ok('Genome::Model::Build::ReferenceSequence');
 
 # create a test annotation build and a few reference sequence builds to test compatibility with
@@ -32,5 +32,8 @@ my $build = Genome::Model::Build::ReferenceSequence->create(
     );
 ok($build, "created build");
 is($build->name, "test_ref_sequence-build123", "build name is correct");
+
+$build = Genome::Model::Build::ReferenceSequence->get(name => $build->name);
+ok($build, "looked up build by name");
 
 done_testing();

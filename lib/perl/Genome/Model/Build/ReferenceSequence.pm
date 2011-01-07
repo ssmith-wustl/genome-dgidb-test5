@@ -60,7 +60,7 @@ class Genome::Model::Build::ReferenceSequence {
             is => 'UR::Value',
             via => 'inputs',
             to => 'value_id',
-            where => [ name => 'name', value_class_name => 'UR::Value' ],
+            where => [ name => 'build_name', value_class_name => 'UR::Value' ],
             doc => "human meaningful name of this build",
             is_mutable => 1,
             is_many => 0,
