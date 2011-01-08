@@ -35,15 +35,6 @@ class Genome::Model::Build::ImportedAnnotation {
             is_mutable => 1,
         },
         name => {
-            is => 'UR::Value',
-            via => 'inputs',
-            to => 'value_id',
-            where => [ name => 'build_name', value_class_name => 'UR::Value' ],
-            doc => "human meaningful name of this build",
-            is_mutable => 1,
-            is_many => 0,
-        },
-        calculated_name => {
             calculate_from => ['model_name','version'],
             calculate => q{ return "$model_name/$version"; },
         },
@@ -91,15 +82,6 @@ sub __errors__ {
     return @tags;
 }
 
-sub create {
-    my $self = shift;
-    my $build = $self->SUPER::create(@_);
-
-    # Let's store the name as an input instead of relying on calculated properties
-    $build->name($build->calculated_name) if $build;
-
-    return $build;
-}
 
 # Checks to see if this build is compatible with the given imported reference sequence build (species and version match)
 sub is_compatible_with_reference_sequence_build {
