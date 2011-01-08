@@ -56,18 +56,9 @@ class Genome::Model::Build::ReferenceSequence {
             is_mutable => 1,
             is_many => 0,
         },
-        name => {
-            is => 'UR::Value',
-            via => 'inputs',
-            to => 'value_id',
-            where => [ name => 'name', value_class_name => 'UR::Value' ],
-            doc => "human meaningful name of this build",
-            is_mutable => 1,
-            is_many => 0,
-        },
 
         # calculated from other properties
-        calculated_name => {
+        name => {
             calculate_from => ['model_name','version'],
             calculate => q{
                 my $name = "$model_name-build";
@@ -135,16 +126,6 @@ sub __errors__ {
             desc => "A build cannot be explicitly derived from itself!");
     }
     return @tags;
-}
-
-sub create {
-    my $self = shift;
-    my $build = $self->SUPER::create(@_);
-
-    # Let's store the name as an input instead of relying on calculated properties
-    $build->name($build->calculated_name) if $build;
-
-    return $build;
 }
 
 sub is_derived_from {
