@@ -8,6 +8,7 @@ my @c = (
     'git fetch origin',
     'git pull origin master',
     'git checkout shipit',
+    'git pull origin shipit',
     'git merge master',
     ['git status -s | grep ^DD', 'git rm'],
     ['git status -s | grep ^AU', 'git rm'],
