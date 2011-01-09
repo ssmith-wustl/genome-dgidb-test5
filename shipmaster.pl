@@ -13,14 +13,18 @@ my @c = (
     ['git status -s | grep ^DD', 'git rm'],
     ['git status -s | grep ^\ U', 'git add'],
     ['git status -s | grep ^AA', 'git rm'],
-    ['find lib',  
-        qr|lib/perl/Genome/Model/Tools/Music|, 'genome-music/lib/Genome/Model/Tools/Music',
-        qr|lib/perl/Genome/Model/Tools|,       'gmt-unsorted/lib/Genome/Model/Tools/',
-        qr|lib/perl/Genome/Model/|,            'lib-genome-model/lib/Genome/Model/',
-        qr|lib/perl/Genome/Config/|,           'lib-genome-site-wugc-perl',
-        qr|lib/perl/Genome/DataSource/|,       'lib-genome-db/lib/Genome/DataSource/', 
-        qr|lib/perl/Genome/xsl|,               'lib-genome-model/lib/Genome/xsl'],
-    'git add lib',
+    [
+        'find lib',  
+        qr|lib/perl/Genome/Model/Tools/Music/|, 'genome-music/lib/Genome/Model/Tools/Music/',
+        qr|lib/perl/Genome/Model/Tools/|,       'gmt-unsorted/lib/Genome/Model/Tools/',
+        qr|lib/perl/Genome/Model/|,             'lib-genome-model/lib/Genome/Model/',
+        qr|lib/perl/Genome/Config/|,            'lib-genome-site-wugc-perl/',
+        qr|lib/perl/Genome/DataSource/|,        'lib-genome-db/lib/Genome/DataSource/', 
+        qr|lib/perl/Genome/xsl/|,               'lib-genome-model/lib/Genome/xsl/',
+        qr|lib/perl/Genome/Env/|,               'lib-genome/lib/Genome/Env/'
+    ],
+    ['echo "COMMIT UNPLACED?"; find lib -type f', 'git add'],
+    ['echo "CLEANUP DIRS?";find lib -type d', 'rmdir'],
     'git commit -m "merged master"',
     'git push origin shipit',
     'git checkout master',
@@ -62,7 +66,10 @@ sub run_on_files {
 }
 
 sub rename_files {
-    my ($cmd_to_get_files, $find, $replace) = @_;
+    my $cmd_to_get_files = shift;
+    my $find = shift;
+    my $replace = shift;
+
     print "FILES: $cmd_to_get_files\n";
     my @f = `$cmd_to_get_files`;
     print @f;
@@ -71,37 +78,38 @@ sub rename_files {
         print "(none)\n";
         return;
     }
+    my @patterns;
+    my %moved;
     while ($find and $replace) {
         print "  RENAME: $find TO: $replace\n";
+        push @patterns, $find;
         for my $o (@f) {
+            next if $moved{$o};
             my $n = $o;
             $n =~ s|$find|$replace|;
-            if ($o eq $_) { 
-
+            if ($n ne $o) { 
                 if (-d $o) {
-                    print qq|echo ignoring directory: $_\n|;
-                }
-                else {
-                    print qq|echo "UNKNOWN: $_"\n| 
-                }
-            } 
-            else { 
-                if (-d $o) {
-                    if (-d $_) {
-                        print qq|echo directory exists: $_\n|;
+                    if (-d $n) {
+                        print "  # directory exists: $n\n";
                     }
                     else {
-                        print "mkdir $_\n";
+                        print "  # creating directory $n\n";
+                        mkdir $n;
                     }
                 } 
                 else { 
-                    print qq|git mv "$o" "$_"\n| 
+                    $moved{$o} = $n;
+                    run(qq|git mv "$o" "$n"\n|); 
                 }
             }
         }
         # get the next set of expressions
         $find = shift @_;
         $replace = shift @_;
+    }
+    my @f2 = `$cmd_to_get_files`;
+    if (@f2) {
+        print "UNMOVED FILES: @f2\n";
     }
 }
 
@@ -123,5 +131,4 @@ sub run {
         exit 1;
     }
 }
-
 
