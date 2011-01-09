@@ -11,9 +11,6 @@ class Genome::Model::Tools {
     doc => 'bioinformatics tools for genomics'
 };
 
-sub command_name { 'gmt' }
-
-
 1;
 
 =pod
