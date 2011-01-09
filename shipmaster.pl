@@ -21,10 +21,11 @@ my @c = (
         qr|lib/perl/Genome/Config/|,            'lib-genome-site-wugc-perl/',
         qr|lib/perl/Genome/DataSource/|,        'lib-genome-db/lib/Genome/DataSource/', 
         qr|lib/perl/Genome/xsl/|,               'lib-genome-model/lib/Genome/xsl/',
-        qr|lib/perl/Genome/Env/|,               'lib-genome/lib/Genome/Env/'
+        qr|lib/perl/Genome/Env/|,               'lib-genome/lib/Genome/Env/',
+        qr|lib/perl/Genome.pm|,                  'lib-genome/lib/Genome.pm',
     ],
-    ['echo "COMMIT UNPLACED?"; find lib -type f', 'git add'],
-    ['echo "CLEANUP DIRS?";find lib -type d', 'rmdir'],
+    ['echo "COMMIT UNPLACED?" 1>&2; find lib -type f', 'git add'],
+    ['echo "CLEANUP DIRS?" 1>&2; find lib -type d', 'rmdir'],
     'git commit -m "merged master"',
     'git push origin shipit',
     'git checkout master',
@@ -115,7 +116,7 @@ sub rename_files {
 
 sub run {
     my $c = shift;
-    print "RUN: $c [Y(es)|n(o)|s(kip)|a(bort)]\n";
+    print "RUN: $c [Y(es)|s(kip)|a(bort)]\n";
     my $a = <>;
     chomp $a;
     if ($a eq 's') {
