@@ -107,7 +107,7 @@ sub rename_files {
 
 sub run {
     my $c = shift;
-    print "RUN: $c\n";
+    print "RUN: $c [Y(es)|n(o)|s(kip)|a(bort)]\n";
     my $a = <>;
     chomp $a;
     if ($a eq 's') {
