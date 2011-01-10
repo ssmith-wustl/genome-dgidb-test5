@@ -13,9 +13,9 @@ if ($#ARGV <3){
 # my $type ="SNV";
 # my $RT="RT55210";
 # my $varscan="";
-my $ROIlist=$sample."_ROIlist.txt";
+my $ROIlist=$sample.$RT."_ROIlist.txt";
 
-my $cmd="sqlrun \"select distinct roi_set_name from amplification_roi_set where roi_set_type = \'roi_set\'\" | grep $sample > $ROIlist";
+my $cmd="sqlrun \"select distinct roi_set_name from amplification_roi_set where roi_set_type = \'roi_set\'\" | grep $sample | grep $RT > $ROIlist";
 
 print `$cmd`;
 
@@ -32,10 +32,10 @@ for my $line (@lines){
 	$cmd="sqlrun \"select roi_set_name, region_of_interest_name, amplicon_stag_id from amplification_roi ar join amplification_roi_set ars on ars.amplification_roi_id=ar.amplification_roi_id join amplification_target at on at.amplification_roi_id = ar.amplification_roi_id left outer join amplification_target_amplicon ata on ata.amplification_target_id = at.amplification_target_id join setup s on s.setup_id = ar.htmp_project_id join sequence_tag\@dw st on st.stag_id = at.target_stag_id join sequence_correspondence\@dw scr on scr.scrr_id = st.stag_id join sequence_item\@dw chr on chr.seq_id = scr.seq2_id where roi_set_name like \'$line'\" > $file1";
 	print `$cmd`;
 	$file2= $sample."_".$type."_".$RT."_".$number."_sites.csv";
-	if ($type eq "SVN" || $type eq "Indel"){
+	if ($type eq "SNV" || $type eq "Indel"){
+	    $file2= $sample."_".$type."_".$RT."_".$number."_sites.csv";
 	    $cmd= "perl /gscuser/xhong/svn/perl_modules/Genome/Model/Tools/Xhong/sql_snp.pl $file1 $file2";
 	    print `$cmd`;
-	    $file2= $sample."_".$type."_".$RT."_".$number."_sites.csv";
 	    $file3= $sample."_".$type."_".$RT."_".$number."_sites_validation.csv";
 	    $file3f= $sample."_".$type."_".$RT."_".$number."_sites_validation.fail.csv";
 	    $file3s= $sample."_".$type."_".$RT."_".$number."_sites_validation_somatic.csv";
@@ -48,12 +48,13 @@ for my $line (@lines){
 	    $cmd="awk '{OFS=\"\\t\"} {print \$1,\$2,\$2,\$3,\$4}' $file3 > $file4";
 	    print `$cmd`;
 	    $file5= $sample."_".$type."_".$RT."_".$number."_sites_validation_after_annotation.csv";
-	    $cmd="gmt annotate transcript-variants --variant-file $file4 --output-file $file5 --annotation-filter top";
+	    $cmd="bsub -J $sample gmt annotate transcript-variants --variant-file $file4 --output-file $file5 --annotation-filter top";
 	    print `$cmd`;
 	    print "\n";
 	}else{
 	    print "Cannot work with SV or other type yet! exit now\n";
-	    exit;
+	    next;
+	    #exit;
 	}
     }else{
 	next;

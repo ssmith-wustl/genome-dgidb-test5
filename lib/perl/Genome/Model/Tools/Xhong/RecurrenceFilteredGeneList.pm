@@ -11,7 +11,7 @@ class Genome::Model::Tools::Xhong::RecurrenceFilteredGeneList {
 	has => [
     	sample_name => { type => 'String', is_optional => 1, doc => "the common name of the sample to process", },
         analysis_dir => { type => 'String', is_optional => 0, doc => "Directory where the recurrent gene output will be", },
-        ks_filtered_file_list => {type => 'String', is_optional => 0, doc => "filtered SNVs file list,"},
+        ks_filtered_file_list => {type => 'String', is_optional => 0, doc => "filtered SNVs file list, or any snv lists"},
         all_sample_hf1_list  => { type => 'String', is_optional => 0, doc => "The name of the file that contains all tiers high confidence filterd (hf) predictions, analysis_dir will be added",},
         nonsilent_recurrent_gene  => { type => 'String', is_optional => 0, doc => "The name of the file that contains all nonsilent recurrent tier1 hf predictions,analysis_dir will be added ",},
         recurrent_list  => { type => 'String', is_optional => 0, doc => "The name of the file that contains all nonsilent recurrent tier1 hf predictions are in this file, sorted by gene, freq, sample. analysis_dir will be added",},

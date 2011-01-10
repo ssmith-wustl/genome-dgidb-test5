@@ -25,7 +25,7 @@ sub help_brief {
 
 sub help_detail {
     	<<'HELP';
-This script is to find the recurrent ks-filtered SNVs.
+This script is to find the nonsilent recurrent ks-filtered SNVs.Run example: gmt xhong recurrence-filtered-gene-list-excel --analysis-dir /gscmnt/sata166/info/medseq/SJCBF_Analysis/SNVs/hf_table/ --ks-filtered-file /gscmnt/sata166/info/medseq/SJCBF_Analysis/SNVs/hf_table/PCGP_hf1_file_list.txt --sample-name SJCBF,SJTALL,SJMB,SJRB,SJRHB,SJINF" 
 HELP
 }
 
