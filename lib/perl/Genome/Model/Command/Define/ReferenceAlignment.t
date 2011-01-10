@@ -20,10 +20,11 @@ use_ok($model_class);
 # set up required test data
 my $individual = Genome::Individual->create(name => 'test-patient', common_name => 'testpatient');
 my $sample = Genome::Sample->create(name => 'test-patient', species_name => 'human', common_name => 'normal', source => $individual);
-my ($rbuild, $abuild) = create_reference_builds(); # (reference_build, annotation_build)
+my ($rbuild, $rbuild2, $abuild) = create_reference_builds(); # (reference_build, annotation_build)
 
 my $dbsnp_pp = Genome::ProcessingProfile->get(name => "imported-variation-list");
 my $dbsnp_model = Genome::Model::ImportedVariationList->create(
+    name => 'dbSNP' . $rbuild->name,
     reference => $rbuild,
     processing_profile => $dbsnp_pp,
     subject_name => $sample->name,
@@ -31,6 +32,32 @@ my $dbsnp_model = Genome::Model::ImportedVariationList->create(
 ok($dbsnp_model, "created dbsnp model");
 my $dbsnp_build = Genome::Model::Build::ImportedVariationList->create(model => $dbsnp_model);
 ok($dbsnp_build, "created dbsnp build");
+my $dbsnp_build_event = Genome::Model::Event::Build->create(
+    model_id => $dbsnp_model->id,
+    build_id => $dbsnp_build->id,
+    event_type => 'genome model build',
+);
+ok($dbsnp_build_event, 'created dbsnp build event');
+$dbsnp_build->_verify_build_is_not_abandoned_and_set_status_to('Succeeded', 1);
+
+my $dbsnp_model2 = Genome::Model::ImportedVariationList->create(
+    name => 'dbSNP' . $rbuild2->name,
+    reference => $rbuild2,
+    processing_profile => $dbsnp_pp,
+    subject_name => $sample->name,
+    );
+ok($dbsnp_model2, "created dbsnp model");
+my $dbsnp_build2 = Genome::Model::Build::ImportedVariationList->create(model => $dbsnp_model2);
+ok($dbsnp_build2, "created dbsnp build");
+my $dbsnp_build_event2 = Genome::Model::Event::Build->create(
+    model_id => $dbsnp_model2->id,
+    build_id => $dbsnp_build2->id,
+    event_type => 'genome model build',
+);
+ok($dbsnp_build_event2, 'created dbsnp build event');
+$dbsnp_build2->_verify_build_is_not_abandoned_and_set_status_to('Succeeded', 1);
+
+
 
 my $pp = Genome::ProcessingProfile::ReferenceAlignment->create(
     name => 'test_profile',
@@ -158,7 +185,31 @@ for my $model (create_direct_and_cmdline(%params)) {
     ok($model->delete, 'deleted model');
 }
 
+# specify dbsnp build by model name, expect last_complete_build
+%params = (
+    subject_name => $sample->name,
+    processing_profile_id => $pp->id,
+    reference_sequence_build => $rbuild->name,
+    dbsnp_model => $dbsnp_model->name,
+);
+for my $model (create_direct_and_cmdline(%params)) {
+    ok($model->dbsnp_build, 'dbsnp build is defined');
+    is($model->dbsnp_build->id, $dbsnp_build->id, 'dbsnp build id correct');
+    ok($model->delete, 'deleted model');
+}
 
+# specify dbsnp build with mismatched reference and verify that an error happens
+%params = (
+    subject_name => $sample->name,
+    processing_profile_id => $pp->id,
+    reference_sequence_build => $rbuild->name,
+    dbsnp_model => $dbsnp_model2->name,
+);
+$cmd = Genome::Model::Command::Define::ReferenceAlignment->create(%params);
+ok($cmd, "created command with bad dbsnp model name");
+eval { $cmd->execute; };
+print "$@\n";
+ok($@, "command failed to execute with bad dbsnp data");
 
 
 # now test the legacy processing profile parameter annotation_reference_transcripts. once migration to the
@@ -215,7 +266,6 @@ sub create_direct_and_cmdline {
 }
 
 sub create_reference_builds {
-    my $reference_version  =    '34';
     my $annotation_version = '12_34x';
     my $data_dir = File::Temp::tempdir('DefineReferenceAlignmentTest-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 
@@ -231,9 +281,20 @@ sub create_reference_builds {
         model           => $ref_model,
         fasta_file      => 'nofile', 
         data_directory  => $data_dir,
-        version         => $reference_version,
+        version         => "34",
     );
     ok($rbuild, 'created reference sequence build');
+
+    my $rbuild2 = Genome::Model::Build::ImportedReferenceSequence->create(
+        name            => 'test_ref_sequence_build',
+        model           => $ref_model,
+        fasta_file      => 'nofile', 
+        data_directory  => $data_dir,
+        version         => "35",
+    );
+    ok($rbuild2, 'created another reference sequence build');
+
+
 
     my $ann_pp = Genome::ProcessingProfile::ImportedAnnotation->create(name => 'test_ann_pp', annotation_source => 'test_source');
     my $ann_model = Genome::Model::ImportedAnnotation->create(
@@ -259,7 +320,7 @@ sub create_reference_builds {
         date_completed => UR::Time->now,
     );
 
-    return ($rbuild, $abuild);
+    return ($rbuild, $rbuild2, $abuild);
 }
 
 
