@@ -80,6 +80,16 @@ sub execute {
     confess "No sequence file found at $sequence_file!" unless -e $sequence_file;
     confess "No directory found at $prediction_directory!" unless -d $prediction_directory;
 
+    $self->status_message("Generating predictions ace file at " . $self->ace_file . " using predictions in " . 
+        $prediction_directory . " and sequence in $sequence_file");
+
+    if (-e $self->ace_file) {
+        $self->warning_message("Removing existing output ace file at " . $self->ace_file);
+        unlink $self->ace_file;
+    }
+    my $ace_fh = IO::File->new(">" . $self->ace_file);
+    confess "Could not get handle for " . $self->ace_file unless $ace_fh;
+     
     # Pre-fetching all genes now so only one file read is necessary
     my @coding_genes = Genome::Prediction::CodingGene->get(
         directory => $prediction_directory,
@@ -88,9 +98,6 @@ sub execute {
         directory => $prediction_directory,
     );
 
-    my $ace_fh = IO::File->new(">" . $self->ace_file);
-    confess "Could not get handle for " . $self->ace_file unless $ace_fh;
-        
     # Get list of sequences
     my @sequences = $self->_get_sequences_from_file($sequence_file);
     for my $sequence (nsort @sequences) { 
@@ -131,7 +138,14 @@ sub execute {
             # FIXME Dirty dirty snap hack
             my $method = $source;
             if ($method =~ /snap/i) {
-                my @fields = split(/\./, $gene_name);
+                # This is a dirty hack that removes the . from the gene name so the dirty
+                # hack below doesn't fail. I know, this is the epitome of elegance.
+                my $modified_sequence = $sequence;
+                $modified_sequence =~ s/\./_/g;
+                my $modified_gene_name = $gene_name;
+                $modified_gene_name =~ s/$sequence/$modified_sequence/g;
+
+                my @fields = split(/\./, $modified_gene_name);
                 # For snap, the gene name template is contig_name.predictor.model_file_abbrev.gene_number
                 # We are interested in the predictor name (snap, in this case) and the model file
                 $method = join('.', $fields[1], $fields[2]);
@@ -228,6 +242,7 @@ sub execute {
     }
 
     $ace_fh->close;
+    $self->status_message("Done, ace file is at " . $self->ace_file);
     return 1;
 }
 
