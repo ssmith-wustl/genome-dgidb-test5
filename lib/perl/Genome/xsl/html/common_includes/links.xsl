@@ -76,7 +76,7 @@
     <xsl:param name="linktext" select="./aspect[@name='name']/value"/>
     <xsl:param name="icon"/>
 
-    <xsl:comment>template: search/ur_object.xsl; name: object_link_button</xsl:comment>
+    <xsl:comment>template: common_includes/links.xsl; name: object_link_button</xsl:comment>
 
     <a class="mini btn">
       <xsl:attribute name="href">
