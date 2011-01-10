@@ -306,7 +306,7 @@ sub base_directory {
 
 my %dirs_versions = (
     soap_solexa => '8',
-    velvet_solexa => '0.2',
+    velvet_solexa => '0.3',
     newbler_454 => '0.1',
 );
 

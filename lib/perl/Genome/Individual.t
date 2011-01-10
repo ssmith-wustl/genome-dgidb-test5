@@ -33,6 +33,7 @@ ok($individual, 'created individual');
 isa_ok($individual, 'Genome::Individual');
 isa_ok($individual, 'Genome::Measurable');
 is($individual->id, $id, "id");
+is($individual->__display_name__, "George Bush ($id)", "display name");
 is($individual->subject_type, 'organism individual', 'subject type is organism individual');
 print Data::Dumper::Dumper($individual);
 

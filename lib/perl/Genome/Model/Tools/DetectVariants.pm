@@ -317,6 +317,7 @@ sub _generate_standard_files {
         
         for my $variant_file ($self->_snv_staging_output, $self->_filtered_snv_staging_output) {
             if(Genome::Utility::FileSystem->check_for_path_existence($variant_file)) {
+                $self->status_message("executing $snv_module on file $variant_file");
                 $retval &&= $self->_run_converter($snv_module, $variant_file);
             }  
         }
@@ -327,6 +328,7 @@ sub _generate_standard_files {
         
         for my $variant_file ($self->_indel_staging_output, $self->_filtered_indel_staging_output) {
             if(Genome::Utility::FileSystem->check_for_path_existence($variant_file)) {
+                $self->status_message("executing $snv_module on file $variant_file");
                 $retval &&= $self->_run_converter($snv_module, $variant_file);
             }  
         }

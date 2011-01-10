@@ -6,8 +6,6 @@ use warnings;
 use File::Basename;
 use Genome;
 
-my $DEFAULT_OUTPUT_SUBDIR = 'reports';
-
 class Genome::Model::ReferenceAlignment::Command::CreateMetrics::DbSnpConcordance {
     is => 'Genome::Command::Base',
     has => [
@@ -24,7 +22,7 @@ class Genome::Model::ReferenceAlignment::Command::CreateMetrics::DbSnpConcordanc
     ],
     has_optional => [
         output_dir => {
-            doc => "The directory to write output to (default: <build_data_dir>/$DEFAULT_OUTPUT_SUBDIR)",
+            doc => "Override the default output directory",
             is => 'File',
             is_input => 1,
         },
@@ -46,9 +44,6 @@ class Genome::Model::ReferenceAlignment::Command::CreateMetrics::DbSnpConcordanc
 
 sub _verify_build_and_set_paths {
     my ($self, $build) = @_;
-
-    $self->output_dir($build->data_directory . "/reports") if !$self->output_dir;
-    $self->status_message("Results will be written to " . $self->output_dir);
 
     my $bname = $build->__display_name__;
     my $dbsnp_build = $build->model->dbsnp_build;
@@ -103,13 +98,14 @@ sub execute {
     eval {
         $self->_verify_build_and_set_paths($self->build);
 
-        Genome::Utility::FileSystem->create_directory($self->output_dir)
-            or die "Failed to create output directory " . $self->output_dir;
-
-        my $output_unfiltered = $self->output_dir . "/dbsnp_concordance.txt";
-        my $output_filtered = $self->output_dir . "/dbsnp_concordance.filtered.txt";
-        $self->_gen_concordance($self->_snvs_bed, $self->_dbsnp_file, $output_unfiltered);
-        $self->_gen_concordance($self->_filtered_snvs_bed, $self->_dbsnp_file, $output_filtered);
+        my $out_filt = $self->build->dbsnp_file_filtered;
+        my $out_unfilt = $self->build->dbsnp_file_unfiltered;
+        if ($self->output_dir) {
+            $out_filt = join('/', $self->output_dir, basename($out_filt));
+            $out_unfilt = join('/', $self->output_dir, basename($out_unfilt));
+        }
+        $self->_gen_concordance($self->_snvs_bed, $self->_dbsnp_file, $out_unfilt);
+        $self->_gen_concordance($self->_filtered_snvs_bed, $self->_dbsnp_file, $out_filt);
     };
     if ($@) {
         $self->error_message($@);

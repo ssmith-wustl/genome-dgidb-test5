@@ -4,9 +4,11 @@ use strict;
 use warnings;
 
 use Test::More tests => 5;
-use File::Compare;
+#use Test::More skip_all => 'Disabling due to Perl environtment issues';
 
+use File::Compare;
 use above 'Genome';
+
 
 use_ok('Genome::Model::Tools::BioSamtools');
 use_ok('Genome::Model::Tools::BioSamtools::StatsSummary');

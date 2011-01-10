@@ -119,10 +119,13 @@ sub create {
     # hang-offs to delete the entry instead of setting it to null.  Otherwise
     # we get SOFTWARE_RESULT_PARAM entries with a NULL, and unsavable PARAM_VALUE.
     # also remove empty strings because that's equivalent to a NULL to the database
-    my @remove = grep { not (defined $is_param{$_}) || $is_param{$_} eq "" } keys %is_param;
+
+    # Do the same for inputs (e.g. alignment results have nullable segment values for instrument data, which are treated as inputs)
+    my @param_remove = grep { not (defined $is_param{$_}) || $is_param{$_} eq "" } keys %is_param;
+    my @input_remove = grep { not (defined $is_input{$_}) || $is_input{$_} eq "" } keys %is_input;
     my $bx = $class->define_boolexpr(@_);
-    for my $param (@remove) {
-        $bx = $bx->remove_filter($param);
+    for my $i (@param_remove, @input_remove) {
+        $bx = $bx->remove_filter($i);
     }
 
     my $self = $class->SUPER::create($bx);

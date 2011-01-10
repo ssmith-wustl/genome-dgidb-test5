@@ -15,40 +15,32 @@ class Genome::Model::Tools::Assembly::CreateOutputFiles::SupercontigsAgp {
 	    is => 'Text',
 	    doc => 'Assembly main build directory',
 	},
+    ],
+    has_optional => [
 	contigs_bases_file => {
 	    is => 'Text',
 	    doc => 'Assembly contigs.bases file',
-	    is_optional => 1,
 	    is_mutable => 1,
 	},
 	gap_file => {
 	    is => 'Text',
 	    doc => 'Assembly gap.txt file',
-	    is_optional => 1,
 	    is_mutable => 1,
 	},
 	output_file => {
 	    is => 'Text',
 	    doc => 'Assembly supercontigs.agp file',
-	    is_optional => 1,
 	    is_mutable => 1,
 	},
     ],
 };
 
 sub help_brief {
-    'Tool to create supercontig agp file';
-}
-
-sub help_synopsis {
-    my $self = shift;
-    return <<EOS
-EOS
+    'Tool to create supercontig.agp file for assemblies';
 }
 
 sub help_detail {
-    return <<EOS
-EOS
+    "Tool to create supercontigs.agp file for assemblies";
 }
 
 sub execute {
@@ -72,10 +64,8 @@ sub execute {
     }
 
     unlink $self->output_file;
-    my $out_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file) ||
-	return;
+    my $out_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
 
-    #TODO - rename this method ??
     my $seek_positions = $self->seek_pos_from_contigs_file($self->contigs_bases_file, 'fasta');
     #returns contig number, 1.3 (from name like Contig1.3) and fh seek position .. hash of array
 
@@ -86,14 +76,13 @@ sub execute {
     foreach my $contig_number (sort {$a<=>$b} keys %$seek_positions) {
 	my ($sctg_num, $ctg_num) = $contig_number =~ /(\d+)\.(\d+)/;
 	my $seq = $self->_get_seq_obj(@{$seek_positions->{$contig_number}}[0]);	
-	#print Dumper $seq_obj;
 
 	my ($sctg_name) = $seq->primary_id =~ /(\S+)\.\d+/;
 	my $start = (defined $scaffold_data[$sctg_num][1]) ? $scaffold_data[$sctg_num][1] : 0;
 	$start++;
 	my $stop = $start + length $seq->seq;
 	$stop--;
-	#my $order = (defined $scaffold_data[$sctg_num][0]) ? $scaffold_data[$sctg_num][0] : 1;
+
 	$scaffold_data[$sctg_num][0]++ unless defined $scaffold_data[$sctg_num][0];
 	my $order = $scaffold_data[$sctg_num][0];
 	
@@ -114,13 +103,11 @@ sub execute {
 	if (exists $seek_positions->{$next_contig} and  ! exists $gap_sizes->{$seq->primary_id}) {
 	    $self->warning_message("Next contig in scaffold Contig$next_contig exists but ". $seq->primary_id ." gap size does not".
 				   "\n\tSetting gap size to default value of 100 bp");
-	    #return;
 	}
 
 	#check .. if next contig does not exist gap size must not exist
 	if (! exists $seek_positions->{$next_contig} and  exists $gap_sizes->{$seq->primary_id}) {
 	    $self->warning_message($seq->primary_id ." is last contig in scaffold so gap size should not exist but does");
-	    #return;
 	}
 
 	next unless exists $gap_sizes->{$seq->primary_id};
@@ -151,8 +138,7 @@ sub execute {
 
 sub _get_seq_obj {
     my ($self, $seek_pos) = @_;
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->contigs_bases_file) ||
-	return;
+    my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->contigs_bases_file);
     $fh->seek($seek_pos, 0);
     my $io = Bio::SeqIO->new(-format => 'fasta', -fh => $fh);
     my $seq = $io->next_seq;
@@ -179,8 +165,7 @@ sub _load_gap_sizes {
     my $self = shift;
 
     my %gap_sizes;
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->gap_file) ||
-	return;
+    my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->gap_file);
     while (my $line = $fh->getline) {
 	next if $line =~ /^\s+$/;
 	my ($name, $size) = $line =~ /(Contig\S+)\s+(\d+)/;
@@ -208,30 +193,22 @@ sub _get_contig_names {
 sub _validate_files {
     my $self = shift;
 
-    unless (-d $self->directory) {
-	$self->error_message("Failed to find or invalid directory: ".$self->directory);
-	return;
-    }
+    $self->error_message("Failed to find or invalid directory: ".$self->directory) and return
+	unless -d $self->directory;
 
-    unless ($self->contigs_bases_file) {
-	$self->contigs_bases_file($self->directory.'/edit_dir/contigs.bases');
-    }
-    unless (-s $self->contigs_bases_file) {
-	$self->error_message("Failed to find needed input file: ".$self->contigs_bases_file);
-	return;
-    }
+    #contigs.bases file
+    $self->contigs_bases_file($self->directory.'/edit_dir/contigs.bases') unless
+	$self->contigs_bases_file;
+    $self->error_message("Failed to find file or file is zero size: ".$self->contigs_bases_file) and return
+	unless -s $self->contigs_bases_file;
 
-    unless ($self->gap_file) {
-	$self->gap_file($self->directory.'/edit_dir/gap.txt');
-    }
-    unless (-e $self->gap_file) {
-	$self->error_message("Failed to find needed input file: ".$self->gap_file);
-	return;
-    }
+    #gap.txt file
+    $self->gap_file($self->gap_sizes_file) unless
+	$self->gap_file;
+    $self->error_message("Failed to find needed input file: ".$self->gap_file) and return
+	unless -e $self->gap_file; #file can be zero size
 
-    unless ($self->output_file) {
-	$self->output_file($self->directory.'/edit_dir/supercontigs.agp');
-    }
+    $self->output_file( $self->supercontigs_agp_file ) unless $self->output_file;
 
     return 1;
 }

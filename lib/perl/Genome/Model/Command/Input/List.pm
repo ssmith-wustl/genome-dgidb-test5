@@ -5,8 +5,6 @@ use warnings;
 
 use Genome;
       
-use Regexp::Common;
-
 class Genome::Model::Command::Input::List {
     is => 'UR::Object::Command::List',
     doc => 'List inputs to a model.',
@@ -21,9 +19,5 @@ class Genome::Model::Command::Input::List {
     ],
 };
 
-############################################
-
 1;
 
-#$HeadURL$
-#$Id$

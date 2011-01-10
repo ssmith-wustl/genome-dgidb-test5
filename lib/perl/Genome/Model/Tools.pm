@@ -11,8 +11,14 @@ class Genome::Model::Tools {
     doc => 'bioinformatics tools for genomics'
 };
 
-sub command_name { 'gmt' }
-
+sub help_sub_commands {
+    my $self = shift;
+    my $txt = $self->SUPER::help_sub_commands(@_);
+    unless ($txt) {
+        $txt = "ERROR: *** no genome modeling tools installed yet! ***";
+    }
+    return $txt;
+}
 
 1;
 

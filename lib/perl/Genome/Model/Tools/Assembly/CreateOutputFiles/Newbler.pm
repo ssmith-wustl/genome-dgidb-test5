@@ -11,7 +11,6 @@ class Genome::Model::Tools::Assembly::CreateOutputFiles::Newbler {
         acefile => {
             is => 'Text',
             doc => 'Ace file to get fasta and qual from',
-            #is_optional => 1,
         },
         assembly_directory => {
             is => 'Text',
@@ -29,32 +28,14 @@ class Genome::Model::Tools::Assembly::CreateOutputFiles::Newbler {
             is_optional => 1,
 	},
     ],
-    has_optional_transient => [
-	_contigs_bases_file      => { is => 'Text', doc => 'Assembly contigs.bases file'},
-	_contigs_quals_file      => { is => 'Text', doc => 'Assembly contigs.quals file'},
-	_gap_file                => { is => 'Text', doc => 'Assembly gap.txt file'},
-	_reads_placed_file       => { is => 'Text', doc => 'Assembly reads.placed file'},
-	_read_info_file          => { is => 'Text', doc => 'Assembly readinfo.txt file'},
-	_supercontigs_agp_file   => { is => 'Text', doc => 'Assembly supercontigs.agp file'},
-	_supercontigs_fasta_file => { is => 'Text', doc => 'Assembly supercontigs.fasta file'},
-	_stats_file              => { is => 'Text', doc => 'Assembly stats.txt file'},
-    ],
 };
 
 sub help_brief {
     'Tool to create assembly output files for newbler assemblies';
 }
 
-sub help_synopsis {
-    return <<EOS
-gmt assembly create-output-file newbler --acefile /gscmnt/111/newbler_assembly/contigs.ace --assembly-directory /gscmnt/111/newbler_assembly	
-EOS
-}
-
 sub help_detail {
-    return <<EOS
-
-EOS
+    "Tool to create assembly output files for newbler assemblies";
 }
 
 sub execute {
@@ -77,12 +58,6 @@ sub execute {
 	}
     }
 
-    #set in/out put file names values
-    unless ($self->_set_transients()) {
-	$self->error_message("Failed to define and set assembly files");
-	return;
-    }
-
     #create input fasta and qual files from sff files
     $self->status_message("Creating input fasta and qual files from sff files");
     my $inputs = Genome::Model::Tools::Assembly::CreateOutputFiles::InputFromSff->create (
@@ -97,8 +72,8 @@ sub execute {
     $self->status_message("Creating contigs.bases and contigs.quals files");
     my $contigs = Genome::Model::Tools::Assembly::CreateOutputFiles::ContigsFromAce->create (
 	acefile => $acefile,
-	fasta_out => $self->_contigs_bases_file,
-	qual_out => $self->_contigs_quals_file,
+	fasta_out => $self->contigs_bases_file,
+	qual_out => $self->contigs_quals_file,
 	directory => $self->assembly_directory,
 	);
     unless ($contigs->execute) {
@@ -111,7 +86,7 @@ sub execute {
     $self->status_message("Creating readinfo.txt file");
     my $readinfo = Genome::Model::Tools::Assembly::CreateOutputFiles::ReadInfo->create (
 	acefile => $acefile,
-	output_file => $self->_read_info_file,
+	output_file => $self->read_info_file,
 	directory => $self->assembly_directory,
 	);
     unless ($readinfo->execute) {
@@ -122,10 +97,10 @@ sub execute {
     #create msi.reads.placed file
     $self->status_message("Creating reads.placed file");
     my $reads_placed = Genome::Model::Tools::Assembly::CreateOutputFiles::ReadsPlaced->create (
-	read_info_file => $self->_read_info_file,
-	gap_file => $self->_gap_file,
-	contigs_bases_file => $self->_contigs_bases_file,
-	output_file => $self->_reads_placed_file,
+	read_info_file => $self->read_info_file,
+	gap_file => $self->gap_sizes_file,
+	contigs_bases_file => $self->contigs_bases_file,
+	output_file => $self->reads_placed_file,
 	directory => $self->assembly_directory,
 	);
     unless ($reads_placed->execute) {
@@ -153,9 +128,9 @@ sub execute {
     #create supercontigs.agp file
     $self->status_message("Creating supercontigs.agp file");
     my $agp = Genome::Model::Tools::Assembly::CreateOutputFiles::SupercontigsAgp->create (
-	contigs_bases_file => $self->_contigs_bases_file,
-	gap_file => $self->_gap_file,
-	output_file => $self->_supercontigs_agp_file,
+	contigs_bases_file => $self->contigs_bases_file,
+	gap_file => $self->gap_sizes_file,
+	output_file => $self->supercontigs_agp_file,
 	directory => $self->assembly_directory,
 	);
     unless ($agp->execute) {
@@ -166,9 +141,9 @@ sub execute {
     #create supercontigs.fasta
     $self->status_message("Creating supercontigs.fasta file");
     my $s_fa = Genome::Model::Tools::Assembly::CreateOutputFiles::SupercontigsFasta->create (
-	contigs_bases_file => $self->_contigs_bases_file,
-	gap_file => $self->_gap_file,
-	output_file => $self->_supercontigs_fasta_file,
+	contigs_bases_file => $self->contigs_bases_file,
+	gap_file => $self->gap_sizes_file,
+	output_file => $self->supercontigs_fasta_file,
 	directory => $self->assembly_directory,
 	);
     unless ($s_fa->execute) {
@@ -181,7 +156,7 @@ sub execute {
         my $gene_option = ($self->core_gene_option) ? $self->core_gene_option : 'bact';
         my $survey = Genome::Model::Tools::Assembly::CreateOutputFiles::CoreGeneSurvey->create (
             core_gene_option => $gene_option,
-            subject_file => $self->_contigs_bases_file,
+            subject_file => $self->contigs_bases_file,
             );
         unless ($survey->execute) {
             $self->error_message("Failed to execute core gene survey");
@@ -194,29 +169,12 @@ sub execute {
     my $stats = Genome::Model::Tools::Assembly::Stats::Newbler->create (
 	#acefile => $self->acefile,
 	assembly_directory => $self->assembly_directory,
-	out_file => $self->_stats_file,
+	out_file => $self->stats_file
 	);
     unless ($stats->execute) {
 	$self->error_message("Failed to create stats.txt file");
 	return;
     }
-    return 1;
-}
-
-sub _set_transients {
-    my $self = shift;
-    
-    my $edit_dir = $self->assembly_directory.'/edit_dir';
-
-    $self->_contigs_bases_file("$edit_dir/contigs.bases");
-    $self->_contigs_quals_file("$edit_dir/contigs.quals");
-    $self->_gap_file("$edit_dir/gap.txt");
-    $self->_reads_placed_file("$edit_dir/reads.placed");
-    $self->_read_info_file("$edit_dir/readinfo.txt");
-    $self->_supercontigs_agp_file("$edit_dir/supercontigs.agp");
-    $self->_supercontigs_fasta_file("$edit_dir/supercontigs.fasta");
-    $self->_stats_file("$edit_dir/stats.txt");
-    
     return 1;
 }
 

@@ -3,8 +3,7 @@
 use strict;
 use warnings;
 
-
-use Test::More tests => 4;
+use Test::More tests => 5;
 
 use above 'Genome';
 
@@ -20,6 +19,7 @@ my $command = Genome::Model::Tools::Bed::Convert::Indel::SamtoolsToBed->create( 
 ok($command, 'Command created');
 my $rv = $command->execute;
 ok($rv, 'Command completed successfully');
+ok($command->_need_chrom_sort, 'unordered chromosomes in input detected');
 
 my $diff = Genome::Utility::FileSystem->diff_file_vs_file($output_file, $expected_file);
 ok(!$diff, 'output matched expected result')

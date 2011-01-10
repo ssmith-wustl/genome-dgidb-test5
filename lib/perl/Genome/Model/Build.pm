@@ -808,10 +808,13 @@ sub _launch {
         $host_group =~ s/\s+$//g;
         $host_group = "-m '$host_group'";
 
+        my $lsf_project = "build" . $self->id;
+
         # bsub into the queue specified by the dispatch spec
         my $user = getpwuid($<);
         my $lsf_command = sprintf(
-            'bsub -N -H -q %s %s %s -u %s@genome.wustl.edu -o %s -e %s annotate-log genome model services build run%s --model-id %s --build-id %s',
+            'bsub -P %s -N -H -q %s %s %s -u %s@genome.wustl.edu -o %s -e %s annotate-log genome model services build run%s --model-id %s --build-id %s',
+            $lsf_project,
             $server_dispatch, ## lsf queue
             $host_group,
             $job_group_spec,

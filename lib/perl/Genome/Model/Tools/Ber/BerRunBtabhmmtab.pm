@@ -87,8 +87,10 @@ sub execute
 
 	#print qq{\n\n$i\n\n};
 	#IPC::Run::run(@$runs) || croak "\n\nCan't run BerRunBtabhmmtab.pm from BerRunBtabhmmtab.pm: $CHILD_ERROR : $OS_ERROR\n\n" . join(' ', @$runs). "\n$i";
-	my $retval = IPC::Run::run(@$runs) ;
-    unless($retval)
+	my $cmd = join(" ", @{$runs->[0]});
+	my $retval = system($cmd);
+#my $retval = IPC::Run::run(@$runs) ;
+    unless($retval == 0)
     {
         carp "\n\nCan't run BerRunBtabhmmtab.pm from BerRunBtabhmmtab.pm: $CHILD_ERROR : $OS_ERROR\n\n" . join(' ', @$runs). "\n$i running again...";
         sleep(1);
@@ -137,7 +139,8 @@ sub execute
 	      my $htab     = qq{.htab};
 	      if ($hmmname =~ /$htab$/) {
 		      my $hmmnamecheck = qq{$hmmdirpath/$hmmname};
-		      if (( -e $hmmnamecheck) && ( ! -z $hmmnamecheck )){
+			  #if (( -e $hmmnamecheck) && ( ! -z $hmmnamecheck )){
+		      if ( -e $hmmnamecheck) {
 		          push (@storagehmm, $hmmname);
 		      }
 	      }
@@ -159,63 +162,63 @@ sub execute
       
 	  ## btab/htab run is complete
 	  ## We will tar/bz2 the files in fasta directories
-	  my $cwd = getcwd();
-      unless ($cwd eq $fastadirpath) {
-	  	chdir($fastadirpath) or die "Failed to change to '$fastadirpath'...  from BerRunBtabhmmtab.pm: $OS_ERROR\n\n";
-  	  }
-  	  
-  	  my $tar = Archive::Tar->new;
-	  $tar->setcwd(cwd());
-	  
-  	  opendir (my $fastadir, $fastadirpath) || confess "Unable to open $fastadirpath: $!\n";
-  	  my @fasta_files;
-  	  @fasta_files = grep {!/^\.|fof/} readdir ($fastadir);
-  	  close $fastadir;
-  	 
-  	  $tar->create_archive( "$locus_tag.tar.gz", COMPRESS_BZIP, @fasta_files );
-  	  $tar->clear();
-  	  
-  	  foreach my $file (@fasta_files ){
-  	  	unlink $file or confess "Could not unlink $file: $!";
-  	  }
-  	  
-  	  ## tar hmmpfam/htab files in hmm directory
-  	  unless ($cwd eq $hmmdirpath) {
-	  	chdir($hmmdirpath) or die "Failed to change to '$hmmdirpath'...  from BerRunBtabhmmtab.pm: $OS_ERROR\n\n";
-  	  }
-  	  
-	  $tar->setcwd(cwd());
-	  
-  	  opendir (my $hmmdir, $hmmdirpath) || confess "Unable to open $hmmdirpath: $!\n";
-  	  my @hmm_files;
-  	  @hmm_files = grep {/hmmpfam$|htab$/} readdir ($hmmdir);
-  	  close $hmmdir;
-  	 
-  	  $tar->create_archive( "$locus_tag.tar.gz", COMPRESS_BZIP, @hmm_files);
-  	  $tar->clear();
-  	  
-  	  foreach my $file (@hmm_files ){
-  	  	unlink $file or confess "Could not unlink $file: $!";
-  	  }
-  	  
-  	  ## tar nr/btab files in hmm directory
-  	  unless ($cwd eq $berdirpath) {
-	  	chdir($berdirpath) or die "Failed to change to '$berdirpath'...  from BerRunBtabhmmtab.pm: $OS_ERROR\n\n";
-  	  }
-  	  
-	  $tar->setcwd(cwd());
-	  
-  	  opendir (my $berdir, $berdirpath) || confess "Unable to open $berdirpath: $!\n";
-  	  my @ber_files;
-  	  @ber_files = grep {/nr$|btab$/} readdir ($berdir);
-  	  close $berdir;
-  	 
-  	  $tar->create_archive( "$locus_tag.tar.gz", COMPRESS_BZIP, @ber_files);
-  	  $tar->clear();
-  	  
-  	  foreach my $file (@ber_files ){
-  	  	unlink $file or confess "Could not unlink $file: $!";
-  	  }
+#	  my $cwd = getcwd();
+#      unless ($cwd eq $fastadirpath) {
+#	  	chdir($fastadirpath) or die "Failed to change to '$fastadirpath'...  from BerRunBtabhmmtab.pm: $OS_ERROR\n\n";
+#  	  }
+#  	  
+#  	  my $tar = Archive::Tar->new;
+#	  $tar->setcwd(cwd());
+#	  
+#  	  opendir (my $fastadir, $fastadirpath) || confess "Unable to open $fastadirpath: $!\n";
+#  	  my @fasta_files;
+#  	  @fasta_files = grep {!/^\.|fof/} readdir ($fastadir);
+#  	  close $fastadir;
+#  	 
+#  	  $tar->create_archive( "$locus_tag.tar.gz", COMPRESS_BZIP, @fasta_files );
+#  	  $tar->clear();
+#  	  
+#  	  foreach my $file (@fasta_files ){
+#  	  	unlink $file or confess "Could not unlink $file: $!";
+#  	  }
+#  	  
+#  	  ## tar hmmpfam/htab files in hmm directory
+#  	  unless ($cwd eq $hmmdirpath) {
+#	  	chdir($hmmdirpath) or die "Failed to change to '$hmmdirpath'...  from BerRunBtabhmmtab.pm: $OS_ERROR\n\n";
+#  	  }
+#  	  
+#	  $tar->setcwd(cwd());
+#	  
+#  	  opendir (my $hmmdir, $hmmdirpath) || confess "Unable to open $hmmdirpath: $!\n";
+#  	  my @hmm_files;
+#  	  @hmm_files = grep {/hmmpfam$|htab$/} readdir ($hmmdir);
+#  	  close $hmmdir;
+#  	 
+#  	  $tar->create_archive( "$locus_tag.tar.gz", COMPRESS_BZIP, @hmm_files);
+#  	  $tar->clear();
+#  	  
+#  	  foreach my $file (@hmm_files ){
+#  	  	unlink $file or confess "Could not unlink $file: $!";
+#  	  }
+#  	  
+#  	  ## tar nr/btab files in hmm directory
+#  	  unless ($cwd eq $berdirpath) {
+#	  	chdir($berdirpath) or die "Failed to change to '$berdirpath'...  from BerRunBtabhmmtab.pm: $OS_ERROR\n\n";
+#  	  }
+#  	  
+#	  $tar->setcwd(cwd());
+#	  
+#  	  opendir (my $berdir, $berdirpath) || confess "Unable to open $berdirpath: $!\n";
+#  	  my @ber_files;
+#  	  @ber_files = grep {/nr$|btab$/} readdir ($berdir);
+#  	  close $berdir;
+#  	 
+#  	  $tar->create_archive( "$locus_tag.tar.gz", COMPRESS_BZIP, @ber_files);
+#  	  $tar->clear();
+#  	  
+#  	  foreach my $file (@ber_files ){
+#  	  	unlink $file or confess "Could not unlink $file: $!";
+#  	  }
   	  
 	return 1;
   }
@@ -272,13 +275,14 @@ sub gather_details
       foreach my $bername (@berfile) {
 
 	  next if $bername =~ m/^\.\.?$/;
-	  my $nr     = qq{.nr};
+	  my $nr     = qq{.blastp};
 
 	  if ( $bername =~ /$nr$/ ) {
 
 	      my $bernamecheck = qq{$berdirpath/$bername};
 
-	      if ( (-e $bernamecheck) && (! -z $bernamecheck)) {
+		  #if ( (-e $bernamecheck) && (! -z $bernamecheck)) {
+	      if ( -e $bernamecheck) {
 
 		  push (@ber_store, $bername);
 	      }
@@ -301,7 +305,8 @@ sub gather_details
 	  if ( ($hmmname =~ /$hmm$/) ) {
 
 	      my $hmmnamecheck = qq{$hmmdirpath/$hmmname};
-	      if (( -e $hmmnamecheck) && ( ! -z $hmmnamecheck )){
+		  #if (( -e $hmmnamecheck) && ( ! -z $hmmnamecheck )){
+	      if ( -e $hmmnamecheck) {
 
 		  push (@hmm_store, $hmmname);
 
@@ -364,8 +369,9 @@ sub gather_details
 
       #btab send to lsf
       foreach my $btabfile (@ber_store) {
-
-	  my $btabout     = qq{$berdirpath/$btabfile.btab};
+	  my $nrbtabfile = $btabfile;
+	  $nrbtabfile =~ s/\.blastp$/\.nr/;
+	  my $btabout     = qq{$berdirpath/$nrbtabfile.btab};
 	  my $btabin      = qq{$berdirpath/$btabfile};
 	  my $btablog     = qq{$srcdirpath/$locus_tag.btab.$datecode.log};
 	  my $btab        = qq{$srcdirpath/wu-blast2btab.pl};
@@ -417,10 +423,11 @@ sub gather_details
 	  push(@allipc, \@btabipc);
       }
       #htab send to lsf
-      my $htabinfo    = qq{$srcdirpath/hmm_info.txt};
-      unless (-e $htabinfo ) {
-	  die qq{PROBLEMS with hmm_info.txt at '$srcdirpath'...  from BerRunBtabhmmtab.pm : $OS_ERROR\n\n};
-      }
+# my $htabinfo    = qq{$srcdirpath/hmm_info.txt};
+#      unless (-e $htabinfo ) {
+#	  die qq{PROBLEMS with hmm_info.txt at '$srcdirpath'...  from BerRunBtabhmmtab.pm : $OS_ERROR\n\n};
+#      }
+
       foreach my $htabfile (@hmm_store) {
 
 	  my $htabout     = qq{$hmmdirpath/$htabfile.htab};
@@ -433,11 +440,12 @@ sub gather_details
 	  my $bsubhtabout = qq{$bsubfiledirpath/bsub.out.htab.$htabfile.htab};
 
 	  my @htabcmd = (
-	                 $htab,
-			 '-H',
-			 $htabinfo,
-			 '-f',
+			 'perl',
+	         $htab,
+			 '<',
 			 $htabin,
+			 '>',
+			 $htabout,
 	                );
 
 	  #my $bsubcmdhb = qq{$bsubhb $ohb $ehb $qhb $nhb $Rhb $htabcmd};

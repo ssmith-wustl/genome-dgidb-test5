@@ -20,6 +20,7 @@ my $build = Genome::Model::Build::DeNovoAssembly->create(
     model_id => $model->id,
     data_directory => Genome::Model::DeNovoAssembly::Test->example_directory_for_model($model),
 );
+
 ok($build, 'Created de novo assembly build') or die;
 isa_ok($build, 'Genome::Model::Build::DeNovoAssembly::Velvet');
 

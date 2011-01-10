@@ -5,11 +5,10 @@ use warnings;
 
 use above "Genome";
 
-use Genome::Model::Command::Input::Test;
+use Test::More;
 
-Genome::Model::Command::Input::List::Test->runtests;
+use_ok('Genome::Model::Command::Input::List') or die;
 
+done_testing();
 exit;
 
-#$HeadURL$
-#$Id$

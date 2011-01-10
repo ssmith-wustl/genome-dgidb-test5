@@ -12,11 +12,11 @@ class Genome::Model::Tools::Music::CosmicOmim{
     has => [
        mutation_file => {
            is => 'Path',
-           doc => 'list of annotated mutations in MAF format (or with MAF headers)',
+           doc => 'list of annotated mutations in MAF format (or any file with MAF+annotation headers)',
        },
        output_file => {
            is => 'Path',
-           doc => 'name of the output file containing omim and cosmic mutation comparisons',
+           doc => 'Output file contains the input file with two columns appended to the end, corresponding to cosmic and omim mutation comparisons, respectively',
        }
     ],
     has_optional=> [
@@ -241,22 +241,28 @@ if ($verbose) {print "Done Parsing Mutation File! Yippee!\n";}
 	   if ($verbose) {print "Finished Loading COSMIC Database! Hooray!\n";}
    }
 
+my %cosmic_results;
+my %omim_results;
+
+my $summary_file = $basename;
+unless (open(SUMMARY,">$summary_file")) {
+die "Could not open output file '$summary_file' for writing";
+}
+
 unless ($fh->open (qq{$mut_file})) { die "Could not open mutation project file '$mut_file' for reading"; }
 my %fileline;
 my $i = 1;
 while (my $filehandleline = <$fh>) {
 	chomp $filehandleline;
+	while ($filehandleline =~ /^#/) {
+	    print SUMMARY "$filehandleline\n";
+	    $filehandleline = <$fh>;
+	    chomp $filehandleline;
+	}
 	$fileline{$i} = $filehandleline;
 	$i++;
 }
 $fh->close;
-
-my %cosmic_results;
-my %omim_results;
-my $summary_file = $basename;
-unless (open(SUMMARY,">$summary_file")) {
-die "Could not open output file '$summary_file' for writing";
-}
 
 print SUMMARY "Line_Number\t$fileline{'1'}\tCosmic_Results\tOMIM_Results\n";
 if ($verbose) {print "Starting COSMIC/OMIM to Mutation File Comparisons\n";}
@@ -587,21 +593,21 @@ sub score_results {
 		$matchtype = 'posmatch';
 		my ($transcript) = keys %{$results->{NT}{POSITION}{$database}};
 		my ($transcript2) = keys %{$results->{AA}{POSITION}{$database}};
-		my $ret_value = "NT and AA Near Match (Position)".$results->{AA}{POSITION}->{$database}{$transcript2}." and ".$results->{NT}{POSITION}->{$database}{$transcript};
+		my $ret_value = "NT and AA Position Match".$results->{AA}{POSITION}->{$database}{$transcript2}." and ".$results->{NT}{POSITION}->{$database}{$transcript};
 		return ($ret_value, $matchtype);
 	}
 	elsif(exists($results->{NT}{POSITION}->{$database})) {
 #best hit was a position match
 		$matchtype = 'ntposmatch';
 		my ($transcript) = keys %{$results->{NT}{POSITION}{$database}};
-		my $ret_value = "Near Match (Position)".$results->{NT}{POSITION}->{$database}{$transcript};
+		my $ret_value = "Position Match".$results->{NT}{POSITION}->{$database}{$transcript};
 		return ($ret_value, $matchtype);
 	}
 	elsif(exists($results->{AA}{POSITION}->{$database})) {
 #best hit was a position match
 		$matchtype = 'aaposmatch';
 		my ($transcript) = keys %{$results->{AA}{POSITION}{$database}};
-		my $ret_value = "Near Match (Position)".$results->{AA}{POSITION}->{$database}{$transcript};
+		my $ret_value = "Position Match".$results->{AA}{POSITION}->{$database}{$transcript};
 		return ($ret_value, $matchtype);
 	}
 	elsif(exists($results->{NT}{ALMOST}->{$database}) && exists($results->{AA}{ALMOST}->{$database})) {

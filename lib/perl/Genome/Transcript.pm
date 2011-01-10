@@ -5,12 +5,10 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::Info::AnnotationPriorities;
 use Carp;
 use Bio::Tools::CodonTable;
 
 class Genome::Transcript {
-    type_name => 'genome transcript',
     table_name => 'TRANSCRIPT',
     id_by => [
         chrom_name => { 
