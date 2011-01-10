@@ -13,6 +13,8 @@ use DateTime;
 use Sys::Hostname;
 use Cwd;
 use File::Basename;
+use Genome::Info::IUB;
+use Genome::Info::UCSCConservation;
 
 # keep this updated to be the latest blessed, non-experimental version
 sub default_annotator_version { 1 };
