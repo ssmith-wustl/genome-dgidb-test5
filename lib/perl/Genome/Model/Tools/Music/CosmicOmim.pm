@@ -12,11 +12,11 @@ class Genome::Model::Tools::Music::CosmicOmim{
     has => [
        mutation_file => {
            is => 'Path',
-           doc => 'list of annotated mutations in MAF format (or with MAF headers)',
+           doc => 'list of annotated mutations in MAF format (or any file with MAF+annotation headers)',
        },
        output_file => {
            is => 'Path',
-           doc => 'name of the output file containing omim and cosmic mutation comparisons',
+           doc => 'Output file contains the input file with two columns appended to the end, corresponding to cosmic and omim mutation comparisons, respectively',
        }
     ],
     has_optional=> [
