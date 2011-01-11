@@ -64,6 +64,7 @@ sub create {
         $self->delete;
         return;
     }
+
     return $self;
 }
 
@@ -88,6 +89,11 @@ sub execute {
         $self->error_message('Failed to confirm pse '. $self->reallocator_id);
         return;
     }
+
+    # update apipe schema
+    my $apipe_allocation = Genome::Disk::AllocationNew->get($self->allocator_id);
+    $apipe_allocation->kilobytes_requested($self->disk_allocation->kilobytes_requested);
+
     return 1;
 }
 

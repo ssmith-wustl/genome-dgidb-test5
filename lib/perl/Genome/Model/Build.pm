@@ -1139,8 +1139,13 @@ sub _verify_build_is_not_abandoned_and_set_status_to {
 sub abandon {
     my $self = shift;
 
-    if ($self->status eq 'Abandoned') {
+    my $status = $self->status;
+    if ($status && $status eq 'Abandoned') {
         return 1;
+    }
+
+    if ($status && ($status eq 'Running' || $status eq 'Scheduled')) {
+        $self->stop;
     }
 
     # Abandon events

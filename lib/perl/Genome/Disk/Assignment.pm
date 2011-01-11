@@ -52,7 +52,7 @@ class Genome::Disk::Assignment {
 				calculate_from => ['absolute_path'],
 				calculate => q|
 					my @pct_full = `df -h $absolute_path`;
-					my @split_pct_full = split(/%/,$pct_full[1]);
+					my @split_pct_full = split(/%/,$pct_full[-1]);
 					@split_pct_full = split (/ /,$split_pct_full[0]);
 					return $split_pct_full[-1];
 				|,
