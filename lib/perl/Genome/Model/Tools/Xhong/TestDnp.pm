@@ -85,11 +85,9 @@ print "$cmd\n";
 #	print `$cmd`;
 
 # testB: for bed file and fast-tiering, this is new and on going"
-#	my $pwd=`pwd`;
-#	system("cd $analysis_dir/fast-tier");
 
-	$cmd=print `bsub -J $common_name.fast-tier -w \'ended($jobid1)\' 'perl -I /gscuser/xhong/git/genome/lib/perl \`which gmt\` fast-tier fast-tier --variant-bed-file $dnp_bed_file --exclusive-tiering'`;
-	my$jobid2 = ($cmd =~ m/<(\d+)>/);
+	$cmd=`bsub -J $common_name.fast-tier -w \'ended($jobid1)\' 'perl -I /gscuser/xhong/git/genome/lib/perl \`which gmt\` fast-tier fast-tier --variant-bed-file $dnp_bed_file --exclusive-tiering'`;
+	my ($jobid2) = ($cmd =~ m/<(\d+)>/);	
 	$cmd=print `bsub -J $common_name.anno.T1 -w \'ended($jobid1) && ended($jobid2)\' 'perl -I /gscuser/xhong/git/genome/lib/perl/ \`which gmt\` annotate transcript-variants --variant-bed-file $dnp_bed_file.tier1 --output-file $dnp_bed_file.tier1.anno --annotation-filter top'`;
 	$cmd=print `bsub -J $common_name.anno.T2 -w \'ended($jobid1) && ended($jobid2)\' 'perl -I /gscuser/xhong/git/genome/lib/perl/ \`which gmt\` annotate transcript-variants --variant-bed-file $dnp_bed_file.tier2 --output-file $dnp_bed_file.tier2.anno --annotation-filter top'`;
 	$cmd=print `bsub -J $common_name.anno.T3 -w \'ended($jobid1) && ended($jobid2)\' 'perl -I /gscuser/xhong/git/genome/lib/perl/ \`which gmt\` annotate transcript-variants --variant-bed-file $dnp_bed_file.tier3 --output-file $dnp_bed_file.tier3.anno --annotation-filter top'`;
