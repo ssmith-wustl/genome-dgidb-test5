@@ -220,6 +220,27 @@ sub delete {
     return $self->SUPER::delete;
 }
 
+sub tags_for_model {
+
+    my ($self, $model_id) = @_;
+
+    die 'Error: cant get tags- no model_id provided' if !$model_id;
+
+    my $bridge = Genome::ModelGroupBridge->get(
+            model_group_id => $self->id,
+            model_id => $model_id
+    );    
+
+    my @attrs = Genome::MiscAttribute->get(
+            entity_class_name => 'Genome::ModelGroupBridge',
+            entity_id => $bridge->id
+    );
+
+    my %tags = map { $_->property_name() => $_->value() } @attrs;
+
+    return \%tags;
+}
+
 1;
 
 
