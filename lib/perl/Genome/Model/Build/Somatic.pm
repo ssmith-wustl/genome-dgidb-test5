@@ -139,7 +139,7 @@ sub somatic_workflow_inputs {
         my $dbh = $ds->get_default_dbh;
         $dbh->{LongReadLen} = 1024*1024;
 
-        my $new_workflow_instance_name = $self->resolve_workflow_name;
+        my $new_workflow_instance_name = $self->workflow_name;
         my $old_workflow_instance_name = "Somatic Pipeline Build " . $self->build_id;
         my $results = $dbh->selectrow_arrayref("SELECT input_stored FROM workflow_instance WHERE name IN (?,?)", {}, $new_workflow_instance_name, $old_workflow_instance_name);
         unless ($results) {
