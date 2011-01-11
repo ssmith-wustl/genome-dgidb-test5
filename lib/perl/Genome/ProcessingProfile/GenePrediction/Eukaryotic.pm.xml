@@ -24,15 +24,14 @@
     <link fromOperation="input connector"          fromProperty="repeat_masker_ace_file"         toOperation="merge_repeat_masker_ace"  toProperty="merged_ace_file" />
     <link fromOperation="contig_predict_genes"     fromProperty="repeat_masker_ace_file_chunk"   toOperation="merge_repeat_masker_ace"  toProperty="ace_files" />
 
+    <link fromOperation="input connector"          fromProperty="predictions_ace_file"           toOperation="merge_prediction_ace"     toProperty="ace_file" />
+    <link fromOperation="contig_predict_genes"     fromProperty="predictions_ace_file_chunk"     toOperation="merge_prediction_ace"     toProperty="ace_file_chunks" />
+
+    <link fromOperation="merge_prediction_ace"     fromProperty="result"                         toOperation="wait_merging"             toProperty="prediction_ace_merge_result" />
     <link fromOperation="merge_repeat_masker_ace"  fromProperty="result"                         toOperation="wait_merging"             toProperty="repeat_masker_merge_result" />
     <link fromOperation="merge_predictions"        fromProperty="prediction_directory"           toOperation="wait_merging"             toProperty="prediction_directory" />
 
-
-    <link fromOperation="input connector"          fromProperty="contig_fasta"                   toOperation="make_prediction_ace_file" toProperty="sequence_file" />
-    <link fromOperation="input connector"          fromProperty="predictions_ace_file"           toOperation="make_prediction_ace_file" toProperty="ace_file" />
-    <link fromOperation="wait_merging"             fromProperty="prediction_directory"           toOperation="make_prediction_ace_file" toProperty="prediction_directory" />
-  
-    <link fromOperation="make_prediction_ace_file" fromProperty="prediction_directory"           toOperation="cleanup_temp_files"       toProperty="directory" />
+    <link fromOperation="wait_merging"             fromProperty="prediction_directory"           toOperation="cleanup_temp_files"       toProperty="directory" />
 
     <link fromOperation="cleanup_temp_files"       fromProperty="result"                         toOperation="output connector"         toProperty="result" />
 
@@ -45,17 +44,18 @@
     <operation name="merge_repeat_masker_ace">
         <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::MergeRepeatMaskerAceFiles" typeClass="Workflow::OperationType::Command" />
     </operation>
-    <operation name="cleanup_temp_files">
-        <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::CleanupTempFiles" typeClass="Workflow::OperationType::Command" />
+    <operation name="merge_prediction_ace">
+        <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::MergePredictionAceFiles" typeClass="Workflow::OperationType::Command" />
     </operation>
     <operation name="wait_merging">
         <operationtype typeClass="Workflow::OperationType::Block">
             <property>prediction_directory</property>
             <property>repeat_masker_merge_result</property>
+            <property>prediction_ace_merge_result</property>
         </operationtype>
     </operation>
-    <operation name="make_prediction_ace_file">
-        <operationtype commandClass="Genome::Model::GenePrediction::Command::Eukaryotic::PredictionsToAce" typeClass="Workflow::OperationType::Command" />
+    <operation name="cleanup_temp_files">
+        <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::CleanupTempFiles" typeClass="Workflow::OperationType::Command" />
     </operation>
 
     <operation name="contig_predict_genes" parallelBy="fasta_file">
@@ -105,6 +105,10 @@
         <link fromOperation="snap"                     fromProperty="prediction_directory"        toOperation="wait_gene_prediction"     toProperty="snap_prediction_dir" />
         <link fromOperation="fgenesh"                  fromProperty="prediction_directory"        toOperation="wait_gene_prediction"     toProperty="fgenesh_prediction_dir" />
 
+        <link fromOperation="mask_rna_sequence"        fromProperty="masked_fasta_file"           toOperation="make_prediction_ace_file" toProperty="sequence_file" />
+        <link fromOperation="wait_gene_prediction"     fromProperty="snap_prediction_dir"         toOperation="make_prediction_ace_file" toProperty="prediction_directory" />
+
+        <link fromOperation="make_prediction_ace_file" fromProperty="ace_file"                    toOperation="output connector"         toProperty="predictions_ace_file_chunk" />
         <link fromOperation="wait_gene_prediction"     fromProperty="snap_prediction_dir"         toOperation="output connector"         toProperty="temp_prediction_directory" />
         <link fromOperation="mask_rna_sequence"        fromProperty="masked_fasta_file"           toOperation="output connector"         toProperty="masked_fasta_file" />
         <link fromOperation="repeat_masker"            fromProperty="ace_file_location"           toOperation="output connector"         toProperty="repeat_masker_ace_file_chunk" />
@@ -146,6 +150,9 @@
                 <property>fgenesh_prediction_dir</property>
             </operationtype>
         </operation>
+        <operation name="make_prediction_ace_file">
+            <operationtype commandClass="Genome::Model::GenePrediction::Command::Eukaryotic::PredictionsToAce" typeClass="Workflow::OperationType::Command" />
+        </operation>
 
         <operationtype typeClass="Workflow::OperationType::Model">
             <inputproperty>skip_repeat_masker</inputproperty>
@@ -164,6 +171,7 @@
             <outputproperty>temp_prediction_directory</outputproperty>
             <outputproperty>masked_fasta_file</outputproperty>
             <outputproperty>repeat_masker_ace_file_chunk</outputproperty>
+            <outputproperty>predictions_ace_file_chunk</outputproperty>
         </operationtype>
     </operation>
 

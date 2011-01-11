@@ -60,7 +60,7 @@ sub execute {
         if ( not @build_inputs ) {
             next;
         }
-        my ($build) = sort { $a->id <=> $b->id } map { $_->build } @build_inputs;
+        my ($build) = sort { $b->id <=> $a->id } map { $_->build } @build_inputs;
         push @row, map { $build->$_ } (qw/ model_id id status oriented_fasta_files /);
     }
 
