@@ -12,25 +12,25 @@ use Sort::Naturally;
 class Genome::Model::Tools::Somatic::IdentifyDnpAdv {
     is => 'Command',
     has => [
-    annotation_input_file =>
+    input_file =>
     {
         type => 'String',
         is_optional => 0,
-        doc => 'List of sites in annotation input format to look for DNPs. This must be sorted by chromosome and coordinate.',
+        doc => 'List of sites in input file 1_based file format to look for DNPs. This must be sorted by chromosome and coordinate.',
         default => '',
     },
     anno_file =>
     {
         type => 'String',
         is_optional => 0,
-        doc => 'List of sites after looking for DNPs and ready for annotator. This must be sorted by chromosome and coordinate.',
+        doc => 'List of sites after looking for DNPs and ready for annotator, in 1_based file format. This must be sorted by chromosome and coordinate.',
         default => '',
     },
     bed_file =>
     {
         type => 'String',
         is_optional => 0,
-        doc => 'List of sites after looking for DNPs and ready for fast-tiering in bed format. This must be sorted by chromosome and coordinate.',
+        doc => 'List of sites after looking for DNPs and ready for fast-tiering, in bed format. This must be sorted by chromosome and coordinate.',
         default => '',
     },
     proportion => 
@@ -58,7 +58,7 @@ class Genome::Model::Tools::Somatic::IdentifyDnpAdv {
 sub execute {
     my $self=shift;
     $DB::single = 1;
-    my $snp_file = $self->annotation_input_file;
+    my $snp_file = $self->input_file;
 
     #TODO Add checks on the files and architecture
     unless (POSIX::uname =~ /64/) {
@@ -169,7 +169,6 @@ sub execute {
                  push @result, "$chr\t$pos\t$stop\t$ref\t$var1\tSNP\n";
                 }
             }
-#            print "$candidate\n";
         }elsif ($type==2){
             @dnp=undef;
             my $ref1=substr($ref,0,1); 
@@ -250,7 +249,7 @@ sub execute {
                            }else{
                                push @dnp,$dnp1;
                                push @dnp,$dnp2;
-                           }                           }
+                           }
                        }
                    }
             }elsif (@dnp1 || @dnp2){
@@ -286,16 +285,30 @@ sub execute {
             }
             if (@tnp){
                 for $new (@tnp){
-                    print @result, $new;
+                    push @result, $new;
                 }
             }
-        }elsif ($type > 3){
-            $self->error_message("Unable to process more than TNP\n$candidate\n");
-            push @result,"$candidate\n";
+        }elsif ($type > 3){ 
+            # FIXME CANNOT handle SNPs >3, make it back to SNPs
+            $self->error_message("Unable to process more than TNP\n$candidate\, make it back to SNPsn");
+            my ($CHR,$START,$STOP,$REF,$VAR,$TYPE)=split/\t/,$candidate;
+            my $current=$START; my $n=0;
+            while ( ($current+$n) < $STOP){
+                my $start =$current+$n;
+                my $cns=substr($VAR,$n,1);
+                my $ref=substr($VAR,$n,1);
+                my @var1=Genome::Info::IUB::variant_alleles_for_iub($ref,$cns);
+                for my $var1(@var1){
+                    if ($var1 ne $ref) {
+                        push @result, "$chr\t$pos\t$stop\t$ref\t$var1\tSNP\n";
+                    }
+                }
+                $n++;
+            }
+#            push @result,"$candidate\n";
 #            if ($self->is_dnp($chr, $last_pos,$last_cns,$pos,$cns)){
 #            }
         }
-
     }
 
     # print output file
@@ -332,7 +345,7 @@ sub help_brief {
 
 sub help_detail {
     <<'HELP';
-This is a simple script which operated by identifying adjacent sites in a SORTED annotation file (really, just chr, start, stop, ref, cns, and type are need in that order) and then tries to determine if the alleles are linked in the same reads. If they are then the original lines are not printed and a new line, wrapping them into a single DNP event, is printed. This line is NOT reannotated, and will need to be annotated separately after running. Non-DNP sites are simply printed as is. Currently, only DNPs are examined and tri-nucleotide polymorphisms on up will not be properly identified. The input file was intended to be the pre-annotation "adapted file" of SNVs from the somatic pipeline file and, therefore, should NOT contain indels.The output is bed_format, that can be put into fast-tiering  
+This is a simple script which operated by identifying adjacent sites in a SORTED annotation file (really, just chr, start, stop, ref, cns, and type are need in that order). And then it breadk the IUB code and check all the possible recombination and determine if the alleles are linked in the same reads. If so, wrapping them into a single DNP and TNP event. The other sites are simply printed as is. Currently, only DNPs and TNPs are examined. Any continus SNPs sites > 3 will still be handled as SNPs. The input file was intended to be the pre-annotation "adapted file" of SNVs from the somatic pipeline file and, therefore, should NOT contain indels.The output is bed_format, that can be put into fast-tiering  
 HELP
 }
 
