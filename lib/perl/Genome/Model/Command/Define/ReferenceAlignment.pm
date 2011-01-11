@@ -63,10 +63,7 @@ sub resolve_dbsnp {
 
     my $dbsnp_model = $self->dbsnp_model;
     if (!$dbsnp_model) {
-        # try to find a dbSNP model named dbSNP-<ref seq name>
-        my $name = "dbSNP-" . $rsb->name;
-        $self->status_message("no dbsnp_build or dbsnp_model specified, attempting to find one for " . $rsb->name);
-        $dbsnp_model = Genome::Model::ImportedVariationList->get(name => "$name"); 
+        $dbsnp_model = Genome::Model::ImportedVariationList->dbsnp_model_for_reference($rsb);
         if (!$dbsnp_model) {
             $self->status_message("no dbsnp_model found.");
             return;
