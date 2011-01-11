@@ -4,19 +4,18 @@ use strict;
 use warnings;
 use Genome;
 use Carp 'confess';
+use File::Temp; 
 use Sort::Naturally qw/ ncmp nsort /;
 
 class Genome::Model::GenePrediction::Command::Eukaryotic::PredictionsToAce {
     is => 'Genome::Command::Base',
-    has => [
+    has_optional => [
         ace_file => {
             is => 'FilePath',
             is_input => 1,
             is_output => 1,
             doc => 'Path for output ace file',
         },
-    ],
-    has_optional => [
         protein_coding_only => {
             is => 'Boolean',
             is_input => 1,
@@ -80,16 +79,31 @@ sub execute {
     confess "No sequence file found at $sequence_file!" unless -e $sequence_file;
     confess "No directory found at $prediction_directory!" unless -d $prediction_directory;
 
+    # Now either use the supplied ace file or create a temp one in the predictions directory
+    my $ace_fh;
+    if (defined $self->ace_file) {
+        if (-e $self->ace_file) {
+            $self->warning_message("Removing existing output ace file at " . $self->ace_file);
+            unlink $self->ace_file;
+        }
+        $ace_fh = IO::File->new(">" . $self->ace_file);
+        confess "Could not get handle for " . $self->ace_file unless $ace_fh;
+    }
+    else {
+        $ace_fh = File::Temp->new(
+            TEMPLATE => 'predictions_XXXXXX',
+            SUFFIX => 'ace',
+            UNLINK => 0,
+            CLEANUP => 0,
+            DIR => $prediction_directory,
+        );
+        confess "Could not get handle for temp ace file in $prediction_directory" unless $ace_fh;
+        $self->ace_file($ace_fh->filename);
+    }
+     
     $self->status_message("Generating predictions ace file at " . $self->ace_file . " using predictions in " . 
         $prediction_directory . " and sequence in $sequence_file");
 
-    if (-e $self->ace_file) {
-        $self->warning_message("Removing existing output ace file at " . $self->ace_file);
-        unlink $self->ace_file;
-    }
-    my $ace_fh = IO::File->new(">" . $self->ace_file);
-    confess "Could not get handle for " . $self->ace_file unless $ace_fh;
-     
     # Pre-fetching all genes now so only one file read is necessary
     my @coding_genes = Genome::Prediction::CodingGene->get(
         directory => $prediction_directory,
@@ -140,6 +154,10 @@ sub execute {
             if ($method =~ /snap/i) {
                 # This is a dirty hack that removes the . from the gene name so the dirty
                 # hack below doesn't fail. I know, this is the epitome of elegance.
+                # TODO Talked to Kym about this. There is some sort of sequence length limit during
+                # assembly, so for a particular case they split up contigs into Congig.a, Contig.b, etc,
+                # which is what caused some problems. If some other character than . can be used, this
+                # dirty hack can be removed.
                 my $modified_sequence = $sequence;
                 $modified_sequence =~ s/\./_/g;
                 my $modified_gene_name = $gene_name;
