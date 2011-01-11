@@ -20,6 +20,7 @@ my $build = Genome::Model::Build::DeNovoAssembly->create(
     model_id => $model->id,
     data_directory => Genome::Model::DeNovoAssembly::Test->example_directory_for_model($model),
 );
+
 ok($build, 'Created de novo assembly build') or die;
 isa_ok($build, 'Genome::Model::Build::DeNovoAssembly::Velvet');
 
@@ -68,11 +69,11 @@ my $expected_metrics = {
     'reads_attempted' => '35000',
     'n50_contig_length' => '141',
     #these values are zero bec there are no contigs or supercontigs > 500 bp this test set
-    'major_contig_length' => '100',
-    'n50_contig_length_gt_100' => '0',
-    'average_contig_length_gt_100' => '0',
-    'n50_supercontig_length_gt_100' => '0',
-    'average_supercontig_length_gt_100' => '0',
+    'major_contig_length' => '500',
+    'n50_contig_length_gt_500' => '0',
+    'average_contig_length_gt_500' => '0',
+    'n50_supercontig_length_gt_500' => '0',
+    'average_supercontig_length_gt_500' => '0',
     'read_depths_ge_5x' => '1.1',
     'average_insert_size_used' => '260',
     'genome_size_used' => '4500000',
