@@ -20,4 +20,3 @@ class Genome::Disk::Assignment::Command::List {
 sub sub_command_sort_position { 4 }
 
 1;
-
