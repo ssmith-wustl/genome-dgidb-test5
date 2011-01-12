@@ -18,6 +18,16 @@ class Genome::RefCov::RelativeCoverage {
     ],
 };
 
+sub create {
+    my $class = shift;
+    my %params = @_;
+    my $coverage = delete($params{coverage});
+    my $self = $class->SUPER::create(%params);
+    unless ($self) { return; }
+    $self->coverage($coverage);
+    return $self;
+}
+
 sub _set_depth_to_zero {
     my ($self, $position) = @_;
     $self->{_coverage}->[$position] = 0;  # revise string
