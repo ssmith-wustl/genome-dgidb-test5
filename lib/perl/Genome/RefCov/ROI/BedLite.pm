@@ -19,6 +19,7 @@ class Genome::RefCov::ROI::BedLite {
             doc => 'An integer distance to add to each end of a region.',
         },
         _fh => { },
+        _chromosomes => { },
     }
 };
 
@@ -29,7 +30,16 @@ sub create {
     $self->_fh($fh);
     return $self;
 }
-
+sub chromosomes {
+    my $self = shift;
+    unless ($self->_chromosomes) {
+        my $cmd = 'cut -f 1 '. $self->file .' | sort -u';
+        my $output = `$cmd`;
+        my @chromosomes = split("\n",$output);
+        $self->_chromosomes(\@chromosomes);
+    }
+    return $self->_chromosomes;
+}
 sub next_region {
     my $self = shift;
     my $line = $self->_fh->getline;
