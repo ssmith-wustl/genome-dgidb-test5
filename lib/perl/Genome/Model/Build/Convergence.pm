@@ -112,18 +112,9 @@ sub calculate_estimated_kb_usage {
     return 1024;
 }
 
-sub resolve_workflow_name {
+sub workflow_name {
     my $self = shift;
-    
     return $self->build_id . ' Convergence';
-}
-
-sub workflow_instances {
-    my $self = shift;
-    my @instances = Workflow::Operation::Instance->get(
-        name => $self->resolve_workflow_name,
-    );
-    return @instances;
 }
 
 1;

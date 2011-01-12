@@ -12,7 +12,7 @@ class Genome::Disk::Assignment::Command::List {
                 is_constant => 1,
                 value => 'Genome::Disk::Assignment',
             },
-            show => { default_value => 'assignment_date,disk_group_name,absolute_path,total_kb,unallocated_kb,percent_allocated,percent_full' },
+            show => { default_value => 'assignment_date,disk_group_name,absolute_path,total_kb,unallocated_kb,percent_allocated' },
             #filter => { default_value => 'user_name=apipe' },
     ],
 };
@@ -20,4 +20,3 @@ class Genome::Disk::Assignment::Command::List {
 sub sub_command_sort_position { 4 }
 
 1;
-

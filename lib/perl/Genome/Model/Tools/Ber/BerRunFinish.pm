@@ -123,7 +123,7 @@ sub execute
     my $program = "/gsc/scripts/bin/tace";
     my $cwd     = getcwd();
     my $outdir
-		= qq{/gscmnt/temp110/info/annotation/ktmp/BER_TEST/hmp/autoannotate/out};
+		= qq{/gscmnt/ams1102/info/annotation/BER/autoannotate_v2.5/out};
     unless ( $cwd eq $outdir )
     {
         chdir($outdir)
@@ -305,20 +305,23 @@ sub execute
     #				   -filltag => 'Visible',
     #			          );
 
-    foreach my $ace_stuff (@ace_objects)
-    {
-        my $aceseq_obj = $db->fetch( 'Sequence' => $ace_stuff );
-        my $BER_product = $aceseq_obj->BER_product();
-        if ( defined($BER_product) )
-        {
-            my $result_code = $aceseq_obj->kill();
-        }
-        else
-        {
-            next;
-        }
-    }
-    print qq{\n Done checking/removing previous data from ACeDB\n\n};
+	if ( defined(@ace_objects) )
+	{
+		foreach my $ace_stuff (@ace_objects)
+		{
+			my $aceseq_obj = $db->fetch( 'Sequence' => $ace_stuff );
+			my $BER_product = $aceseq_obj->BER_product();
+			if ( defined($BER_product) )
+			{
+				my $result_code = $aceseq_obj->kill();
+			}
+			else
+			{
+				next;
+			}
+		}
+	}
+		print qq{\n Done checking/removing previous data from ACeDB\n\n};
 
     ########################################################
     # write new parse script and parse into acedb via tace
@@ -609,9 +612,10 @@ sub execute
     print $rtfile_fh qq{Glimmer3 count =\t $glimmer3_counter}, "\n\n";
     print $rtfile_fh
         qq{Protein analysis by the following programs has been run via PAP workflow:\n\n};
-    print $rtfile_fh qq{Interpro v4.5 (database v22.0)\n};
-    print $rtfile_fh qq{Keggscan v52\n};
-    print $rtfile_fh qq{psortB v3.0\n};
+    print $rtfile_fh qq{Interpro v4.7 (database v29.0)\n};
+    print $rtfile_fh qq{Keggscan v56\n};
+    print $rtfile_fh qq{psortB v3.0.3\n};
+    print $rtfile_fh qq{BER v2.5\n};
     print $rtfile_fh qq{Blastp\n\n};
     print $rtfile_fh
         qq{Location of AMGAP ace files can be located, here:\n\n};

@@ -13,6 +13,9 @@ if ($] < 5.012) {
 }
 plan tests => 5;
 
+use File::Compare;
+use above 'Genome';
+
 use_ok('Genome::Model::Tools::BioSamtools');
 use_ok('Genome::Model::Tools::BioSamtools::AlignmentSummary');
 

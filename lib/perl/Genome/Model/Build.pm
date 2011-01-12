@@ -397,10 +397,16 @@ sub build_event {
     return $build_events[0];
 }
 
+# Override in subclasses to use a custom name
+sub workflow_name {
+    my $self = shift;
+    return $self->build_id . 'all stages';
+}
+
 sub workflow_instances {
     my $self = shift;
     my @instances = Workflow::Operation::Instance->get(
-        name => $self->build_id . ' all stages'
+        name => $self->workflow_name,
     );
     return @instances;
 }
@@ -808,10 +814,13 @@ sub _launch {
         $host_group =~ s/\s+$//g;
         $host_group = "-m '$host_group'";
 
+        my $lsf_project = "build" . $self->id;
+
         # bsub into the queue specified by the dispatch spec
         my $user = getpwuid($<);
         my $lsf_command = sprintf(
-            'bsub -N -H -q %s %s %s -u %s@genome.wustl.edu -o %s -e %s annotate-log genome model services build run%s --model-id %s --build-id %s',
+            'bsub -P %s -N -H -q %s %s %s -u %s@genome.wustl.edu -o %s -e %s annotate-log genome model services build run%s --model-id %s --build-id %s',
+            $lsf_project,
             $server_dispatch, ## lsf queue
             $host_group,
             $job_group_spec,
@@ -1130,8 +1139,13 @@ sub _verify_build_is_not_abandoned_and_set_status_to {
 sub abandon {
     my $self = shift;
 
-    if ($self->status eq 'Abandoned') {
+    my $status = $self->status;
+    if ($status && $status eq 'Abandoned') {
         return 1;
+    }
+
+    if ($status && ($status eq 'Running' || $status eq 'Scheduled')) {
+        $self->stop;
     }
 
     # Abandon events

@@ -2,7 +2,7 @@
 package Genome::Model::Tools::Gatk::GermlineIndel;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# GermlineIndel - Call the GATK somatic indel detection pipeline
+# GermlineIndel - Call the GATK germline indel detection pipeline
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
 #
@@ -35,13 +35,13 @@ class Genome::Model::Tools::Gatk::GermlineIndel {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Runs the GATK somatic indel detection pipeline"                 
+    "Runs the GATK germline indel detection pipeline"                 
 }
 
 sub help_synopsis {
     return <<EOS
 This command runs the GATK indel detection pipeline
-EXAMPLE:	gmt gatk somatic-indel --normal-bam Normal.bam --tumor-bam Tumor.bam --output-file GATK.indel --bed-output GATK.indel.bed
+EXAMPLE:	gmt gatk germline-indel bam-file file.bam --output-file GATK.indel --bed-output-file GATK.indel.bed
 EOS
 }
 

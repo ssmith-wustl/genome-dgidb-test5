@@ -23,4 +23,4 @@ ok($view_obj, "created a view") or die "test cannot continue...";
 isa_ok($view_obj, 'Genome::Model::Build::Set::View::Status::Html');
 
 my $html = $view_obj->_generate_content();
-ok($html, "view returns HTML") or die "test cannot continue...";
+ok($html, "view returns HTML"); 

@@ -24,5 +24,12 @@ class Genome::Model::ImportedVariationList {
     ],
 };
 
+sub dbsnp_model_for_reference {
+    my ($class, $reference) = @_;
+    my @models = $class->get(name => "dbSNP-" . $reference->name);
+    return if @models != 1;
+    return $models[0];
+}
+
 1;
 
