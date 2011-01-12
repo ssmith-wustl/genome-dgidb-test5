@@ -1449,11 +1449,11 @@ sub delete {
 
     # Abandon events
     $self->status_message("Abandoning events associated with build");
-    unless ( $self->_abandon_events ) {
+    unless ($self->_abandon_events) {
         $self->error_message(
             "Unable to delete build (".$self->id.") because the events could not be abandoned"
         );
-        return;
+        confess $self->error_message;
     }
     
     # Delete all associated objects
@@ -1481,18 +1481,18 @@ sub delete {
         $idas->first_build_id($next_build_id);
     }
 
-    # Remove the build's data directory if told to
+    # Remove build directory unless told not to
+    # TODO If no-commit is on, the build directory should not be removed
     if ($self->data_directory && -e $self->data_directory && !$keep_build_directory) {
-        my $remove_rv = Genome::Utility::FileSystem->remove_directory_tree($self->data_directory);
-        unless (defined $remove_rv and $remove_rv) {
-            $self->warning_message("Could not remove build directory at " . $self->data_directory);
-        }
+        $self->status_message("Removing build data directory at " . $self->data_directory);
+        my $rv = Genome::Utility::FileSystem->remove_directory_tree($self->data_directory);
+        confess "Failed to remove build directory at " . $self->data_directory unless defined $rv and $rv;
     }
     else {
         $self->status_message("Not removing build data directory at " . $self->data_directory);
     }
 
-    # Delete the allocation if one is found and the build directory is gone
+    # Deallocate build directory if it was removed and an allocation is found
     my $disk_allocation = $self->disk_allocation;
     if ($disk_allocation && !$keep_build_directory) {
         $self->status_message("Deallocating build directory");
