@@ -12,6 +12,37 @@ class Genome::Taxon::View::Solr::Xml {
             is => 'Text',
             default => 'taxon'
         },
+        display_type => {
+            is  => 'Text',
+            default => 'Taxon',
+        },
+        display_icon => {
+            is  => 'Text',
+            default => 'genome_taxon_32.png',
+        },
+        display_url0 => {
+            is => 'Text',
+            calculate_from => ['subject'],
+            calculate => sub { return join ('?', '/view/genome/taxon/status.html',$_[0]->id()); },
+        },
+        display_label1 => {
+            is  => 'Text',
+        },
+        display_url1 => {
+            is  => 'Text',
+        },
+        display_label2 => {
+            is  => 'Text',
+        },
+        display_url2 => {
+            is  => 'Text',
+        },
+        display_label3 => {
+            is  => 'Text',
+        },
+        display_url3 => {
+            is  => 'Text',
+        },
         default_aspects => {
             is => 'ARRAY',
             default => [
@@ -34,6 +65,10 @@ class Genome::Taxon::View::Solr::Xml {
                 {
                     name => 'ncbi_taxon_id',
                     position => 'content',
+                },
+                {
+                    name => '__display_name__',
+                    position => 'display_title',
                 },
             ],
         }

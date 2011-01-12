@@ -12,6 +12,37 @@ class Genome::PopulationGroup::View::Solr::Xml {
             is => 'Text',
             default => 'population_group'
         },
+        display_type => {
+            is  => 'Text',
+            default => 'Population',
+        },
+        display_icon => {
+            is  => 'Text',
+            default => 'genome_population_32.png',
+        },
+        display_url0 => {
+            is => 'Text',
+            calculate_from => ['subject'],
+            calculate => sub { return join ('?', '/view/genome/population/status.html',$_[0]->id()); },
+        },
+        display_label1 => {
+            is  => 'Text',
+        },
+        display_url1 => {
+            is  => 'Text',
+        },
+        display_label2 => {
+            is  => 'Text',
+        },
+        display_url2 => {
+            is  => 'Text',
+        },
+        display_label3 => {
+            is  => 'Text',
+        },
+        display_url3 => {
+            is  => 'Text',
+        },
         default_aspects => {
             is => 'ARRAY',
             default => [
@@ -25,7 +56,11 @@ class Genome::PopulationGroup::View::Solr::Xml {
                     perspective => 'default',
                     toolkit => 'text',
                     aspects => [ 'name' ]
-                }
+                },
+                {
+                    name => '__display_name__',
+                    position => 'display_title',
+                },
             ],
         }
     ]

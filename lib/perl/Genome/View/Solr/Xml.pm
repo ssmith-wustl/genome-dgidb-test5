@@ -104,7 +104,7 @@ sub _generate_content {
 
     # required to display result
     push @fields, WebService::Solr::Field->new( display_title => $self->_generate_display_title_field_data() );
-    push @fields, WebService::Solr::Field->new( display_name  => $self->display_type() );
+    push @fields, WebService::Solr::Field->new( display_type  => $self->display_type() );
     push @fields, WebService::Solr::Field->new( display_icon  => $self->display_icon() );
 
     # optional to display result
