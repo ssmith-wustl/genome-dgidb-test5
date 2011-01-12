@@ -222,7 +222,7 @@ sub test1_file : Tests {
     return 1;
 }
 
-sub test2_directory : Test(22) {
+sub test2_directory : Test(26) {
     my $self = shift;
 
     # Real dir
@@ -288,6 +288,13 @@ sub test2_directory : Test(22) {
     ok(!$worked,'failed to create_directory '. $fifo);
     like($@, qr/create_directory for path .* failed/, 'exception message is correct');
 
+    # tree removal
+    my $dir_tree_root = $self->_new_dir;
+    ok(Genome::Utility::FileSystem->create_directory($dir_tree_root), "Created new dir for tree removal test: $dir_tree_root");
+    my $dir_tree_node = $dir_tree_root . '/node';
+    ok(Genome::Utility::FileSystem->create_directory($dir_tree_node), "Created new node dir for tree removal test: $dir_tree_node");
+    ok(Genome::Utility::FileSystem->remove_directory_tree($dir_tree_root), "removed directory tree at $dir_tree_root successfully");
+    ok(!-d $dir_tree_root, "root directory $dir_tree_root is indeed gone");
     return 1;
 }
 
