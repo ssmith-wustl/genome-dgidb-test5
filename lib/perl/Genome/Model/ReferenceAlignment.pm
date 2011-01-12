@@ -468,6 +468,7 @@ sub inputs_necessary_for_copy {
     my %exclude = (
         'reference_sequence_build' => 1,
         'annotation_reference_build' => 1,
+        'dbsnp_build' => 1,
     );
     my @inputs = grep { !exists $exclude{$_->name} } $self->SUPER::inputs_necessary_for_copy;
     return @inputs;
