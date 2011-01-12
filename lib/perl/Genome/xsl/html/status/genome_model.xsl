@@ -490,7 +490,17 @@
           </xsl:with-param>
 
           <xsl:with-param name="linktext">
-            <xsl:value-of select="aspect[@name='value']/object/display_name"/>
+            <xsl:choose>
+              <xsl:when test="aspect[@name='value']/object/display_name">
+                <xsl:value-of select="aspect[@name='value']/object/display_name"/>
+              </xsl:when>
+              <xsl:when test="display_name">
+                <xsl:value-of select="display_name"/>
+              </xsl:when>
+              <xsl:otherwise>
+                could not resolve display_name
+              </xsl:otherwise>
+            </xsl:choose>
           </xsl:with-param>
         </xsl:call-template>
       </td>

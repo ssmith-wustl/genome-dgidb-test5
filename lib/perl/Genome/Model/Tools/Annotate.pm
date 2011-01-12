@@ -6,27 +6,17 @@ use warnings;
 use Genome;     
 use Data::Dumper;
 
-my $low=20000;
-my $high=200000;
+my $low  =  20_000;
+my $high = 200_000;
 UR::Context->object_cache_size_highwater($high);
 UR::Context->object_cache_size_lowwater($low);
 
 class Genome::Model::Tools::Annotate {
     is => 'Command',
+    doc => "annotation tools",
 };
 
 sub sub_command_sort_position { 15 }
-
-sub help_brief {
-    "annotation tools"
-}
-
-sub help_synopsis {
-    my $self = shift;
-    return <<"EOS"
-gmt annotation ...    
-EOS
-}
 
 # attributes
 sub variant_attributes {

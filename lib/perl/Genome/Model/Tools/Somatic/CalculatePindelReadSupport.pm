@@ -208,12 +208,6 @@ sub process_file {
             unless(exists $indels_by_chrom->{$start}){
                 next;
             }
-            if($type eq 'I') {
-                $start = $start - 1;
-            }else{
-                $stop = $stop - 1;
-            }
-            
             my @bed_line = $self->parse($call, $reference, $read);
             next unless scalar(@bed_line)>1;
             unless((@bed_line)&& scalar(@bed_line)==4){

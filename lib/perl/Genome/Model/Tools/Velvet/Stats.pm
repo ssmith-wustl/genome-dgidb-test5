@@ -28,6 +28,7 @@ class Genome::Model::Tools::Velvet::Stats {
 	major_contig_length => {
 	    type => 'int non_neg',
 	    is_optional => 1,
+	    default_value => 500,
 	    doc => "Major contig length cutoff",
 	},
 	out_file => { #TODO - rename this output_file

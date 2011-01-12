@@ -194,8 +194,8 @@ sub interesting_metric_names {
         'contigs', 'n50 contig length', 'average contig length',
 	'average contig length gt 300', 'n50_contig_length_gt_300', #soap
 	'average contig length gt 500', 'n50_contig_length_gt_500', #velvet
+	'average supercontig length gt 500', 'n50_supercontig_length_gt_500',
 	'average supercontig length gt 300', 'n50_supercontig_length_gt_300',
-        'average supercontig length gt 500', 'n50_supercontig_length_gt_500',
 	'supercontigs', 'n50 supercontig length', 'average supercontig length',
         'average read length',
         'reads attempted', 

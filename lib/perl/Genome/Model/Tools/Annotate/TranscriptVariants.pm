@@ -8,22 +8,19 @@ use Genome;
 use Command;
 use Data::Dumper;
 use IO::File;
-use Genome::Info::IUB;
 use Benchmark;
-use Genome::Info::UCSCConservation;
 use DateTime;
 use Sys::Hostname;
 use Cwd;
 use File::Basename;
-
-use MIME::Lite;
-use Sys::Hostname;
+use Genome::Info::IUB;
+use Genome::Info::UCSCConservation;
 
 # keep this updated to be the latest blessed, non-experimental version
 sub default_annotator_version { 1 };
 
 class Genome::Model::Tools::Annotate::TranscriptVariants {
-    is => 'Genome::Model::Tools',
+    is => 'Command',
     has => [ 
         variant_file => {
             is => 'FilePath',   
@@ -330,6 +327,14 @@ sub _create_old_annotator {
     return $annotator;
 }
 
+# debugging help
+my $we_are_done_flag;
+my $last_variant_annotated;
+END {
+    if (defined $we_are_done_flag and ! $we_are_done_flag) {
+        print STDERR "\n\nThe last variant we worked on is\n",Data::Dumper::Dumper($last_variant_annotated),"\n\n";
+    }
+};
 
 sub execute { 
     my $self = shift;
@@ -363,10 +368,7 @@ sub execute {
     }
 
     # Useful information for debugging...
-    my $dt = DateTime->now;
-    $dt->set_time_zone('America/Chicago');
-    my $date = $dt->ymd;
-    my $time = $dt->hms;
+    my ($date, $time) = split(' ',UR::Time->now);
     my $host = hostname;
     $self->status_message("Executing on host $host on $date at $time");
 
@@ -522,17 +524,13 @@ sub execute {
 
     Genome::DataSource::GMSchema->disconnect_default_handle if Genome::DataSource::GMSchema->has_default_handle;
 
-    my $we_are_done_flag;
 
     my $processed_variants = 0;
     while ( my $variant = $variant_svr->next ) {
 
+        # these are tracked by an END{} block for debugging
         $we_are_done_flag = 0;
-        END {
-            if (defined $we_are_done_flag and ! $we_are_done_flag) {
-                print STDERR "\n\nThe last variant we worked on is\n",Data::Dumper::Dumper($variant),"\n\n";
-            }
-        };
+        $last_variant_annotated = $variant;
 
         $variant->{type} = $self->infer_variant_type($variant);
         #make sure both the reference and the variant are in upper case
@@ -730,7 +728,7 @@ Your pal,
 Genome::Model::Tools::Annotate::TranscriptVariants
 
 END_CONTENT
-
+    require MIME::Lite;
     my $msg = MIME::Lite->new(From    => sprintf('"Genome::Utility::Filesystem" <%s@genome.wustl.edu>', $ENV{'USER'}),
             To      => 'jweible@genome.wustl.edu',
             Subject => 'Attempt to cache annotation data directory',
