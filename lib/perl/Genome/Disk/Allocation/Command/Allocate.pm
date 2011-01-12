@@ -193,6 +193,15 @@ sub execute {
             die $self->error_message("Failed to create directory $path! $!");
         }
     }
+
+    $DB::single = 1;
+    $self->status_message('Creating allocation in apipe schema');
+    my $new_allocation = Genome::Disk::AllocationNew->create(%params);
+    unless ($new_allocation) {
+        $self->error_message('Failed to create disk allocation in apipe schema');
+        return;
+    }
+
     return 1;
 }
 

@@ -9,6 +9,11 @@ class Genome::Model::Build::GenePrediction::Eukaryotic {
     is => 'Genome::Model::Build::GenePrediction',
 };
 
+sub workflow_name {
+    my $self = shift;
+    return 'eukaryotic gene prediction ' . $self->build_id;
+}
+
 sub repeat_masker_ace_file {
     my $self = shift;
     return $self->data_directory . "/repeat_masker.ace";
@@ -22,11 +27,6 @@ sub predictions_ace_file {
 sub log_directory {
     my $self = shift;
     return $self->data_directory . '/logs/';
-}
-
-sub resolve_workflow_name {
-    my $self = shift;
-    return 'eukaryotic gene prediction ' . $self->build_id;
 }
 
 sub split_fastas_output_directory {

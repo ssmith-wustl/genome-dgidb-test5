@@ -68,7 +68,7 @@ sub _resolve_workflow_for_build {
     confess "Could not create workflow object from $xml!" unless $workflow;
 
     $workflow->log_dir($build->log_directory);
-    $workflow->name($build->resolve_workflow_name);
+    $workflow->name($build->workflow_name);
 
     return $workflow;
 }
