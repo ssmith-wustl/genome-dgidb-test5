@@ -73,24 +73,27 @@ sub all_regions {
     for my $chrom (@chromosomes) {
         push @regions, $self->chromosome_regions($chrom);
     }
-    return @regions;
+    return \@regions;
 }
 
 sub _add_region {
     my $self = shift;
     my $region = shift;
-    unless ($region && ref($region) eq 'Genome::RefCov::ROI::Region') {
-        die ('Must supply a Genome::RefCov::ROI::Region to method _add_region');
+    unless ($region && ref($region) eq 'HASH') {
+        die ('Must supply a HASH reference to method _add_region');
     }
-    my $start = $region->start;
-    my $stop = $region->end;
+    unless (defined($region->{start}) && defined($region->{end}) && defined($region->{chrom})) {
+        die('HASH ref must contain start, end, and chrom attributes!');
+    }
+    my $start = $region->{start};
+    my $stop = $region->{end};
     my $start_substr = substr($start, 0, $self->region_index_substring) || 0;
     my $stop_substr = substr($stop, 0, $self->region_index_substring) || 0;
     for (my $position_key = $start_substr; $position_key <= $stop_substr; $position_key++) {
-        my $region_key = $region->chrom . ':' . $position_key;
+        my $region_key = $region->{chrom} . ':' . $position_key;
         $self->{indexed_regions}->{$region_key} .=  $start."\t". $stop ."\n";
     }
-    push @{$self->{chrom_regions}->{$region->chrom}}, $region;
+    push @{$self->{chrom_regions}->{$region->{chrom}}}, $region;
     return 1;
 }
 
