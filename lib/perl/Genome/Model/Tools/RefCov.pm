@@ -675,10 +675,25 @@ sub resolve_stats_file_headers {
     return @headers;
 }
 
+sub validate_chromosomes {
+    my $self = shift;
+    my $roi = $self->roi;
+    my $refcov_bam = $self->alignments;
+    for my $chr (@{$roi->chromosomes}) {
+        eval {
+            my $tid = $refcov_bam->tid_for_chr($chr);
+        };
+        if ($@) {
+            die('Failed to validate chromsomes in ROI '. $self->roi_file_format .' file '. $self->roi_file_path .' with alignment '. $self->alignment_file_format .' file '. $self->alignment_file_path .' with error:' ."\n". $@);
+        }
+    }
+    return 1;
+}
+
 sub print_roi_coverage {
     my $self = shift;
 
-    my $regions = $self->roi;
+    $self->validate_chromosomes;
 
     my $temp_stats_file = Genome::Utility::FileSystem->create_temp_file_path;
     my @headers = $self->resolve_stats_file_headers;
