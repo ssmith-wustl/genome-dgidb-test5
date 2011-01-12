@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Xhong::RunSamtoolIndelBuild;
+package Genome::Model::Somatic::Command::RunSamtoolIndelBuild;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use IO::File;
 
-class Genome::Model::Tools::Xhong::RunSamtoolIndelBuild {
+class Genome::Model::Somatic::Command::RunSamtoolIndelBuild {
 	is => 'Command',
 	has => [
     	somatic_build_id => { type => 'String', is_optional => 0, doc => "somatic build id to process", },
@@ -15,12 +15,12 @@ class Genome::Model::Tools::Xhong::RunSamtoolIndelBuild {
 };
 
 sub help_brief {
-    	"Generates tier1 hc SNV table for model-groups, and found recurrent events"
+    	"Generates somtools predicted somatic indels (without assembly)"
 }
 
 sub help_detail {
     	<<'HELP';
-Hopefully this script will run the ucsc annotator on indels and then tier them for an already completed somatic model. Since this is done in the data directory, the model is then reallocated.
+Hopefully this script will run the run tiered samtools predicted somatic indels.
 HELP
 }
 
