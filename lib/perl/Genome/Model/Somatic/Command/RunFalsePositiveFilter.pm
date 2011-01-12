@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Xhong::RunFalsePositiveFilter;
+package Genome::Model::Somatic::Command::RunFalsePositiveFilter;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 use IO::File;
 
 
-class Genome::Model::Tools::Xhong::RunFalsePositiveFilter {
+class Genome::Model::Somatic::Command::RunFalsePositiveFilter {
 	is => 'Command',
 	has => [
 	somatic_build_id => { type => 'String', is_optional => 0, doc => "the somatic build_id to process.", },

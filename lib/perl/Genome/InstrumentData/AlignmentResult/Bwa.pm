@@ -87,7 +87,10 @@ sub _run_aligner {
         push @aln_log_files, $tmp_log_file;
         
         # disconnect the db handle before this long-running event
-        Genome::DataSource::GMSchema->disconnect_default_dbh; 
+        if (Genome::DataSource::GMSchema->has_default_handle) {
+            $self->status_message("Disconnecting GMSchema default handle.");
+            Genome::DataSource::GMSchema->disconnect_default_dbh();
+        }
         
         Genome::Utility::FileSystem->shellcmd(
             cmd          => $cmdline,
