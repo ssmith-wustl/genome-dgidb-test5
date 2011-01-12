@@ -39,7 +39,7 @@ sub execute {
         event_type => 'genome model build',
         event_status => "Failed",
         user_name => $user,
-        -hint => ["build"]
+        -hints => ["build"]
     );
     my $beta = Benchmark->new();
     #print  "got builds ".timestr(timediff($beta, $alpha))."\n";
