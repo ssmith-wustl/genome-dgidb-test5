@@ -13,6 +13,12 @@ use Test::More tests => 9;
 my $m = Genome::Model->get(2771359026);
 ok($m, "got a model");
 
+my $ref_seq_name = $m->reference_sequence_name;
+is($ref_seq_name, 'NCBI-human-build36', 'The ref_seq of the model matches the expected');
+
+my $merger_name  = $m->merger_name;
+is($merger_name, 'samtools', 'The merger used in the model matches the expected');
+
 # we may build and build again, but just test this build...
 # TODO: mock
 #my $build_id = 96402993; This build does not exist anymore.
@@ -39,18 +45,6 @@ ok(all_exist(@var),"the snp files exist") or diag('example path: ' .$var[0]);
 @var = $m->_variant_detail_files();
 ok(scalar @var, "identified " . scalar @var . " pileup files of $refseq");
 ok(all_exist(@var),"the pileup files exist") or diag('example path: ' . $var[0]);
-
-#@var = $m->_variation_metrics_files();
-#ok(scalar @var, "identified " . scalar @var . " variation metrics files of $refseq");
-
-SKIP: {
-    skip 'We do not generate other_snp_related_metrics subdir right now', 1;
-    ok(all_exist(@var),"the variation files exist");
-}
-
-$DB::single=1;
-my $v = $m->variant_count();
-is($v, 6631155, 'Got expected variant count');
 
 my $data_directory = $m->complete_build_directory;
 #my $expected = '/gscmnt/sata821/info/model_data/2771359026/build96402993';
