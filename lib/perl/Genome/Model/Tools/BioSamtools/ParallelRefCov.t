@@ -8,11 +8,10 @@ use File::Compare;
 
 use above 'Genome';
 
-if (`uname -a` =~ /x86_64/){
-    plan tests => 6;
-} else{
-    plan skip_all => 'Must run on a 64 bit machine';
+if ($] < 5.012) {
+    plan skip_all => "this test is only runnable on perl 5.12+"
 }
+plan tests => 6;
 
 use_ok('Genome::Model::Tools::BioSamtools');
 use_ok('Genome::Model::Tools::BioSamtools::RefCov');
