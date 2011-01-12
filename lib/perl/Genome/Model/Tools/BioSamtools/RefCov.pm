@@ -119,9 +119,12 @@ sub execute {
 
     my $temp_stats_file = Genome::Utility::FileSystem->create_temp_file_path;
 
-    my $cmd = $self->execute_path .'/one_pass_refcov-64.pl '. $self->bam_file .' '. $self->bed_file .' '. $temp_stats_file .' '. $self->min_depth_filter .' '. $wingspan;
-    if ($self->min_base_quality || $self->min_mapping_quality) {
-        $cmd .= ' '. $self->min_base_quality .' '. $self->min_mapping_quality;
+    my $cmd = 'gmt5.12.1 ref-cov standard --alignment-file-path='. $self->bam_file .' --min-depth-filter='. $self->min_depth_filter .' --roi-file-path='. $self->bed_file .' --wingspan='. $wingspan .' --stats-file='. $temp_stats_file;
+    if ($self->min_base_quality) {
+        $cmd .= ' --min-base-quality='. $self->min_base_quality;
+    }
+    if ($self->min_mapping_quality) {
+        $cmd .= ' --min-mapping-quality='. $self->min_mapping_quality;
     }
     Genome::Utility::FileSystem->shellcmd(
         cmd => $cmd,
