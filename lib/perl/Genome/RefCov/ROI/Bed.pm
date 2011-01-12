@@ -7,6 +7,9 @@ use Genome;
 
 class Genome::RefCov::ROI::Bed {
     is => ['Genome::RefCov::ROI::FileI'],
+    has => [
+        _all_regions => { },
+    ],
 };
 
 sub _read_file {
@@ -25,20 +28,28 @@ sub _read_file {
             $start -= $wingspan;
             $end += $wingspan;
         }
-        my %region_params = (
+        my %region = (
             name => $name,
             chrom => $chr,
             start => $start,
             end => $end,
         );
         if (defined($strand)) {
-            $region_params{strand} = $strand;
+            $region{strand} = $strand;
         }
-        my $region = Genome::RefCov::ROI::Region->create(%region_params);
-        $self->_add_region($region);
+        $self->_add_region(\%region);
     }
     $fh->close;
     return 1;
+}
+
+sub next_region {
+    my $self = shift;
+    unless ($self->_all_regions) {
+        my $regions = $self->all_regions;
+        $self->_all_regions($regions);
+    }
+    return shift(@{$self->_all_regions});
 }
 
 1;
