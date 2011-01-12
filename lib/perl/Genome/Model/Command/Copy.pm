@@ -95,22 +95,24 @@ sub execute {
     #-- ignore data directory for now.  we'll let it default to creating its own
     #   unless the user specifies an override, which we'll take care of later
     
-    my @all_command_props = grep {$_ ne "data_directory" && $_ ne "model_name"}
+    my @filtered_cmd_props =
+    grep {$_ ne "data_directory" && $_ ne "model_name"}
     map {$_->property_name}
     grep {$_->{is_input}}
           map {$cmd_class_object->property_meta_for_name($_)} @cmd_props;
 
-    my @model_props =
-    grep {$model_class->can($_)} @all_command_props;
+    my %usable_props = map {$_, 1} grep {$src_model->can($_)} @filtered_cmd_props;
+        
+    # these are things the command specifies and we might say on the command line
+    # to pas to the model create command, but we can't ask the model for.
+    my %un_usable_props = map {$_, 1} grep {!$src_model->can($_)} @filtered_cmd_props;
     
     my %cmd_params;
-    for my $property (@model_props) {
+    for my $property (keys %usable_props) {
         if (defined $src_model->$property) {
             $cmd_params{$property} = $src_model->$property;
         } 
     }
-
-    my %cprops = map {$_, 1} @all_command_props;
     
     # grab overridden properties and overlay them on top of the
     # parameters from the original model
@@ -129,12 +131,12 @@ sub execute {
     for my $key (%property_overrides) {
         # allow overriding data directory on the copy and pass that in
         unless ($key eq "data_directory") {
-            next if (!exists ($cprops{$key}));
+            next if (!exists ($cmd_params{$key}) && !exists $un_usable_props{$key});
         }
         
         $cmd_params{$key} = $property_overrides{$key};
     }
-
+    
     $cmd_params{'model_name'} = $self->to;
    
     # kick off the command to build it
@@ -153,9 +155,11 @@ sub execute {
     
     # assign all the instrument data from the original model to the new one
     
+
     unless ($self->skip_instrument_data_assignments ) {
         my @idas = $src_model->instrument_data_assignments;
         my @instrument_data = Genome::InstrumentData->get(id=>[map {$_->instrument_data_id} @idas]);
+
         for (@instrument_data) {
                my $assign_cmd = Genome::Model::Command::InstrumentData::Assign->create(model_id=>$new_model->id,
                                                                                  instrument_data_id=>$_->id);
