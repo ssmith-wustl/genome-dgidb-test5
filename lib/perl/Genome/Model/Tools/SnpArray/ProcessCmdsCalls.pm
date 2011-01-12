@@ -94,6 +94,8 @@ sub execute {                               # replace with real execution logic.
 
 	## Parse the CMDS values file ##
 
+	my %position_printed = ();
+
 	## Load the map file ##
 	print "Parsing CMDS file...\n";
 
@@ -114,11 +116,17 @@ sub execute {                               # replace with real execution logic.
 			{
 				my $log2 = $line;
 				my ($snp, $chrom, $position) = split(/\t/, $map_lines[$lineCounter]);
-				if($file_handles{$chrom})
+
+				if(!$position_printed{"$chrom\t$position"})
 				{
-					my $outfile = $file_handles{$chrom};
-					print $outfile "$chrom\t$position\t$log2\n";					
+					if($file_handles{$chrom})
+					{
+						my $outfile = $file_handles{$chrom};
+						print $outfile "$chrom\t$position\t$log2\n";					
+					}
+					$position_printed{"$chrom\t$position"} = 1;
 				}
+
 
 			}
 			else
@@ -137,6 +145,29 @@ sub execute {                               # replace with real execution logic.
 	foreach my $chrom (sort keys %file_handles)
 	{
 		close($file_handles{$chrom}) if($file_handles{$chrom});
+		my $chrom_filename = "$output_basename.$chrom.tsv";
+		my $script_filename = $chrom_filename . ".R";
+		my $image_filename = "$chrom_filename.cbs.plot.jpg";
+		open(SCRIPT, ">$script_filename") or die "Can't open script $script_filename: $!\n";
+	
+		print SCRIPT "library(DNAcopy)\n";
+
+		print SCRIPT "regions <- read.table(\"$chrom_filename\")\n";
+		print SCRIPT "png(\"$image_filename\", height=600, width=800)\n";
+
+		print SCRIPT qq{
+CNA.object <- CNA(regions\$V3, regions\$V1, regions\$V2, data.type="logratio", sampleid=c("Chromosome $chrom"))\n
+smoothed.CNA.object <- smooth.CNA(CNA.object)\n
+segment.smoothed.CNA.object <- segment(smoothed.CNA.object, undo.splits="sdundo", undo.SD=3, verbose=1)
+p.segment.smoothed.CNA.object <- segments.p(segment.smoothed.CNA.object)
+plot(segment.smoothed.CNA.object, type="w", cex=0.5, cex.axis=1.5, cex.lab=1.5)
+write.table(p.segment.smoothed.CNA.object, file="$chrom_filename.cbs.segments.p_value")
+};
+		print SCRIPT "dev.off()\n";
+		close(SCRIPT);
+		
+		print "Running $script_filename\n";
+		system("R --no-save < $script_filename");	
 	}
 
 

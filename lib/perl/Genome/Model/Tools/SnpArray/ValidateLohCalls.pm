@@ -1,5 +1,5 @@
 
-package Genome::Model::Tools::SnpArray::LohRegions;     # rename this when you give the module file a different name <--
+package Genome::Model::Tools::SnpArray::ValidateLohCalls;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
 # SearchRuns - Search the database for runs
@@ -20,28 +20,31 @@ use FileHandle;
 
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
-my %stats = ();
-
-class Genome::Model::Tools::SnpArray::LohRegions {
+class Genome::Model::Tools::SnpArray::ValidateLohCalls {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		tumor_genotype_file	=> { is => 'Text', doc => "Three-column file of genotype calls chrom, pos, genotype", is_optional => 0, is_input => 1 },
 		normal_genotype_file	=> { is => 'Text', doc => "Three-column file of genotype calls chrom, pos, genotype", is_optional => 0, is_input => 1 },
-		output_file	=> { is => 'Text', doc => "Output file for QC result", is_optional => 1, is_input => 1},		
+		variant_file	=> { is => 'Text', doc => "VarScan LOH Calls in annotation format", is_optional => 0, is_input => 1 },
+		sample_name	=> { is => 'Text', doc => "Name of the sample for output file", is_optional => 1, is_input => 1 },
+		min_depth	=> { is => 'Text', doc => "Minimum depth to compare a het call [8]", is_optional => 1, is_input => 1, default => 8},		
+		verbose	=> { is => 'Text', doc => "Turns on verbose output [0]", is_optional => 1, is_input => 1},
+		flip_alleles 	=> { is => 'Text', doc => "If set to 1, try to avoid strand issues by flipping alleles to match", is_optional => 1, is_input => 1},
+		output_file	=> { is => 'Text', doc => "Output file for QC result", is_optional => 1, is_input => 1}
 	],
 };
 
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Makes LOH calls from SNP array genotypes from tumor-normal pairs"                 
+    "Validates VarScan LOH calls using SNP array data"                 
 }
 
 sub help_synopsis {
     return <<EOS
-This command compares SAMtools variant calls to array genotypes
-EXAMPLE:	gmt snp-array loh-calls --tumor-genotype-file tumor.affy --normal-genotype-file normal.affy --output-file tumor-normal.loh
+This command validates VarScan LOH calls using SNP array data
+EXAMPLE:	gmt snp-array validate-germline-calls --genotype-file affy.genotypes --variant-file lane1.var
 EOS
 }
 
@@ -61,12 +64,15 @@ sub execute {                               # replace with real execution logic.
 	my $self = shift;
 
 	## Get required parameters ##
+	my $variant_file = $self->variant_file;
 	my $tumor_genotype_file = $self->tumor_genotype_file;
 	my $normal_genotype_file = $self->normal_genotype_file;
+	my $min_depth = $self->min_depth;
 	my $output_file = $self->output_file;
 
-	open(OUTFILE, ">$output_file") or die "Can't open outfile $output_file: $!\n";
-	print OUTFILE "chrom\tchr_start\tchr_stop\tregion_size\tnum_LOH\tnum_Hom\n";
+	my %stats = ();
+	$stats{'num_loh_calls'} = $stats{'had_array_data'} = $stats{'met_min_depth'} = $stats{'array_was_germline'} = $stats{'array_was_LOH'} = $stats{'array_was_GOH'} = $stats{'array_was_mismatch'} = 0;
+
 
 	print "Loading tumor genotypes...\n";
 	my %tumor_genotypes = load_genotypes($tumor_genotype_file);
@@ -74,145 +80,101 @@ sub execute {                               # replace with real execution logic.
 	print "Loading normal genotypes...\n";
 	my %normal_genotypes = load_genotypes($normal_genotype_file);
 
-	my $region_chrom = my $region_start = my $region_stop = my $region_num_loh = my $region_num_hom = 0;
 
+	print "Parsing variant calls in $variant_file...\n" if($self->verbose);
 
-	## Go through all normal genotypes ##
-	
-	foreach my $snp_key (sort byChrPos keys %normal_genotypes)
+	my $input = new FileHandle ($variant_file);
+	my $lineCounter = 0;
+
+	my $verbose_output = "";
+
+	while (<$input>)
 	{
-		$stats{'num_normal_genotypes'}++;
-
-		## Get matching tumor genotype ##
+		chomp;
+		my $line = $_;
+		$lineCounter++;
 		
-		if($tumor_genotypes{$snp_key})
+		my @lineContents = split(/\t/, $line);
+		my $chrom = $lineContents[0];
+		my $position = $lineContents[1];
+		my $ref_base = $lineContents[3];
+		my $normal_reads1 = $lineContents[5];
+		my $normal_reads2 = $lineContents[6];
+		my $normal_call = $lineContents[8];
+
+		my $tumor_reads1 = $lineContents[9];
+		my $tumor_reads2 = $lineContents[10];
+		my $tumor_call = $lineContents[12];
+
+		my $normal_coverage = $normal_reads1 + $normal_reads2;
+		my $tumor_coverage = $tumor_reads1 + $tumor_reads2;
+		
+		my $snp_key = $chrom . "\t" . $position;
+
+		$stats{'num_loh_calls'}++;
+
+		if($normal_genotypes{$snp_key} && $tumor_genotypes{$snp_key})
 		{
-			$stats{'num_compared'}++;
-
-			(my $chrom, my $position) = split(/\t/, $snp_key);
-
-
-			## If the chromosome changed and we had an LOH region, process it ##
+			$stats{'had_array_data'}++;
 			
-			if($region_chrom && $region_chrom ne $chrom)
+			if($normal_coverage >= $min_depth && $tumor_coverage >= $min_depth)
 			{
-				process_region($region_chrom, $region_start, $region_stop, $region_num_loh, $region_num_hom);
-				$region_chrom = $region_start = $region_stop = $region_num_loh = $region_num_hom = 0;
-			}
-			
-			
-			## Get the normal and tumor genotypes; reset comparison result ##
-			
-			my $normal_gt = $normal_genotypes{$snp_key};
-			my $tumor_gt = $tumor_genotypes{$snp_key};		
-			my $variant_result = "";
-			
-			if($normal_gt eq $tumor_gt)
-			{
-				if(is_heterozygous($normal_gt))
+				$stats{'met_min_depth'}++;
+				my $normal_gt = $normal_genotypes{$snp_key};
+				my $tumor_gt = $tumor_genotypes{$snp_key};
+				
+				if($normal_gt eq $tumor_gt)
 				{
-					$variant_result = "Het";
-					## Process LOH Region if it exists ##
-					if($region_chrom)
-					{
-						process_region($region_chrom, $region_start, $region_stop, $region_num_loh, $region_num_hom);
-						$region_chrom = $region_start = $region_stop = $region_num_loh = $region_num_hom = 0;
-					}
+					$stats{'array_was_germline'}++;
+				}
+				elsif(is_heterozygous($normal_gt) && is_homozygous($tumor_gt))
+				{
+					$stats{'array_was_LOH'}++;
+				}
+				elsif(is_homozygous($normal_gt) && is_heterozygous($tumor_gt))
+				{
+					$stats{'array_was_GOH'}++;
 				}
 				else
 				{
-					## Homozygous site, so count it if we have an LOH region ##
-					$variant_result = "Hom";
-					if($region_chrom)
-					{
-						$region_num_hom++;
-						$region_stop = $position;
-					}
-				}
-			}
-			## LOH CALL ##
-			elsif(is_heterozygous($normal_gt) && is_homozygous($tumor_gt))
-			{
-				$variant_result = "LOH";
-				$region_chrom = $chrom;
-				$region_start = $position if(!$region_start);
-				$region_stop = $position;
-				$region_num_loh++;
-			}
-			## GOH CALL - Ignore for now ##
-			elsif(is_homozygous($normal_gt) && is_heterozygous($tumor_gt))
-			{
-				$variant_result = "GOH";
-			}
-			## OTHER MISMATCH - Ignore ##
-			else
-			{
-				$variant_result = "Mismatch";
+					$stats{'array_was_mismatch'}++;
+				}							
 			}
 
-			## Count the variant result ##
-			
-			$stats{$variant_result}++;
 		}
+
+		
 	}
 	
-	print $stats{'num_normal_genotypes'} . " normal genotypes\n";
-	print $stats{'num_compared'} . " had genotype call in tumor\n";
-	print $stats{'Het'} . " were heterozygous in both samples\n";
-	print $stats{'Hom'} . " were homozygous in both samples\n";
-	print $stats{'LOH'} . " showed LOH in tumor\n";
-	print $stats{'GOH'} . " showed GOH in tumor\n";
-	print $stats{'Mismatch'} . " were another kind of mismatch\n";
+	close($input);
+
+
+	## Calculate the LOH concordance ##
 	
-	print $stats{'num_loh_regions'} . " LOH regions called\n";
-	
-	close(OUTFILE);
-}
+	my $loh_concordance = $stats{'array_was_LOH'} / $stats{'met_min_depth'} * 100;
+	$loh_concordance = sprintf("%.2f", $loh_concordance) . '%';
 
 
+	print $stats{'num_loh_calls'} . " VarScan LOH calls\n";
+	print $stats{'had_array_data'} . " had SNP array data\n";
+	print $stats{'met_min_depth'} . " met min depth\n";
+	print $stats{'array_was_germline'} . " array was Germline\n";
+	print $stats{'array_was_LOH'} . " array was LOH\n";
+	print $stats{'array_was_GOH'} . " array was GOH\n";
+	print $stats{'array_was_mismatch'} . " array was mismatch\n";
+	print "$loh_concordance LOH concordance\n";
 
-
-################################################################################################
-# Load Genotypes
-#
-################################################################################################
-
-sub byChrPos
-{
-	my ($chrom_a, $pos_a) = split(/\t/, $a);
-	my ($chrom_b, $pos_b) = split(/\t/, $b);
-	
-	$chrom_a = "23" if($chrom_a =~ 'X');
-	$chrom_a = "24" if($chrom_a =~ 'Y');
-	$chrom_a = "25" if($chrom_a =~ 'M');
-
-	$chrom_b = "23" if($chrom_b =~ 'X');
-	$chrom_b = "24" if($chrom_b =~ 'Y');
-	$chrom_b = "25" if($chrom_b =~ 'M');
-
-	$chrom_a <=> $chrom_b
-	or
-	$pos_a <=> $pos_b;
-}
-
-################################################################################################
-# Load Genotypes
-#
-################################################################################################
-
-sub process_region
-{
-	my ($region_chrom, $region_start, $region_stop, $region_num_loh, $region_num_hom) = @_;
-	
-	my $region_size = $region_stop - $region_start + 1;
-	
-	if($region_num_loh >= 3)
-	{	
-		print OUTFILE join("\t", $region_chrom, $region_start, $region_stop, $region_size, $region_num_loh, $region_num_hom) . "\n";
-		$stats{'num_loh_regions'}++;		
+	if($self->output_file)
+	{
+		open(OUTFILE, ">" . $self->output_file) or die "Can't open outfile: $!\n";
+		print OUTFILE "Sample\tLOHcalls\tWithArrayData\tMetMinDepth\tArrayGermline\tArrayGOH\tArrayMismatch\tArrayLOH\tConcordance\n";
+		print OUTFILE join("\t", $variant_file, $stats{'num_loh_calls'}, $stats{'had_array_data'}, $stats{'met_min_depth'}, $stats{'array_was_germline'}, $stats{'array_was_GOH'}, $stats{'array_was_mismatch'}, $stats{'array_was_LOH'}, $loh_concordance) . "\n";
+		close(OUTFILE);
 	}
 
+	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
+
 
 ################################################################################################
 # Load Genotypes
@@ -256,7 +218,6 @@ sub load_genotypes
 	
 	return(%genotypes);                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
-
 
 ################################################################################################
 # Sorting
