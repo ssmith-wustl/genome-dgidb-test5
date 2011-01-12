@@ -92,7 +92,9 @@ sub execute {
 
     # update apipe schema
     my $apipe_allocation = Genome::Disk::AllocationNew->get($self->allocator_id);
-    $apipe_allocation->kilobytes_requested($self->disk_allocation->kilobytes_requested);
+    if ($apipe_allocation) {
+        $apipe_allocation->kilobytes_requested($self->disk_allocation->kilobytes_requested);
+    }
 
     return 1;
 }
