@@ -404,10 +404,15 @@ sub build_event {
     return $build_events[0];
 }
 
+sub workflow_name {
+    my $self = shift;
+    return $self->build_id . ' all stages';
+}
+
 sub workflow_instances {
     my $self = shift;
     my @instances = Workflow::Operation::Instance->get(
-        name => $self->build_id . ' all stages'
+        name => $self->workflow_name,
     );
     return @instances;
 }
