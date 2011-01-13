@@ -42,6 +42,7 @@ class Genome::Model::ReferenceAlignment {
         indel_detector_params        => { via => 'processing_profile'},
         transcript_variant_annotator_version => { via => 'processing_profile' },
         transcript_variant_annotator_filter => { via => 'processing_profile' },
+        transcript_variant_annotator_accept_reference_IUB_codes => {via => 'processing_profile'},
         multi_read_fragment_strategy => { via => 'processing_profile'},
         prior_ref_seq                => { via => 'processing_profile'},
         read_aligner_name => {
