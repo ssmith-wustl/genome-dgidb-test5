@@ -33,7 +33,7 @@ sub process_source {
     
     while(my $line = <$input_fh>) {
         my ($chromosome, $position, $star,
-            $_calls, $_consensus_quality, $_ref_quality, $_mapping_quality, $_read_depth,
+            $_calls, $consensus_quality, $_ref_quality, $_mapping_quality, $_read_depth,
             $indel_call_1, $indel_call_2, @extra) = split("\t", $line);
         
         next unless $star eq '*'; #samtools indel format includes reference lines as well
@@ -59,7 +59,7 @@ sub process_source {
                 next;
             }
         
-            $self->write_bed_line($chromosome, $start, $stop, $reference, $variant);
+            $self->write_bed_line($chromosome, $start, $stop, $reference, $variant, $consensus_quality);
         }
     }
     

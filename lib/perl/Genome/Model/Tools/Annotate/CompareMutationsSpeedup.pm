@@ -86,6 +86,8 @@ sub execute{
 
 #__HAVE EVERYTHING PROCESSED INTO A SINGLE STRUCTURE (AND NOT PROCESSED)
 		   'no_process' => 1,
+#process genome tools parser
+		   'version' => 'from_genome_tools',
 		   );
 
 #Set Stats hash that counts everything
@@ -129,7 +131,7 @@ my $fh = new FileHandle;
 unless ($fh->open (qq{$mut_file})) { die "Could not open mutation project file '$mut_file' for reading"; }
 my $header = <$fh>;   # place a single line into $line
 seek($fh, -length($header), 1); # place the same line back onto the filehandle
-$parse_args{'version'} = 'from_genome_tools';
+
 if ($verbose) {print "Parsing mutation file...\n";}
 $DB::single = 1;
 my $mutation = $parser->Parse ($fh, $mut_file, %parse_args);

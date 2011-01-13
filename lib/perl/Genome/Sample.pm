@@ -164,7 +164,7 @@ class Genome::Sample {
 
 sub __display_name__ {
     my $self = $_[0];
-    return $self->name . ($self->extraction_label and $self->extraction_label ne $self->name ? ' (' . $self->extraction_label . ')' : '');
+    return $self->name . ($self->patient_common_name ? ' (' . $self->patient_common_name . ' ' . $self->common_name . ')' : '');
 }
 
 sub create {

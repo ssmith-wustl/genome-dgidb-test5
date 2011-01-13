@@ -111,7 +111,7 @@ sub execute
 	my @storageber = ( );
 	foreach my $bername (@berfile) {
 	    next if $bername =~ m/^\.\.?$/;
-	    my $nr           = qq{.nr};
+	    my $nr           = qq{.blastp};
 
 	    if ( $bername =~ /$nr$/ ) {
 		my $bernamecheck = qq{$berdirpath/$bername};
@@ -211,8 +211,9 @@ sub gather_details
 
       #blastp send to lsf
 
-      my $blpout        = qq{$berdirpath/$line.nr};
+	  $line =~ s/\.fasta$//;
       my $blperr        = qq{$bsubfiledirpath/bsub.err.blp.$line};
+      my $blpout        = qq{$berdirpath/$line.blastp};
      
       my @blastpcmd = (
 		       'blastp',

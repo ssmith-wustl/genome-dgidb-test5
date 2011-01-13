@@ -3,7 +3,7 @@ package Genome;
 use warnings;
 use strict;
 
-our $VERSION = 0.02;
+our $VERSION = 0.04;
 
 # software infrastructure
 use UR;
@@ -228,4 +228,3 @@ For defects with any software in the genome namespace,
 contact genome-dev ~at~ genome.wustl.edu.
 
 =cut
-

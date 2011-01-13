@@ -1,4 +1,3 @@
-
 use strict;
 use warnings;
 
@@ -6,7 +5,7 @@ use above "Genome";
 use Genome::Model::Command::Define::GenotypeMicroarray;
 use File::Slurp;
 use File::Temp;
-use Test::More tests => 6;
+use Test::More tests => 8;
 
 # make a model like we do on the cmdline, but with Perl
 # $cmd = Genome::Model::C->
@@ -29,6 +28,26 @@ my $temp_wugc = $tempdir."/genotype-microarray-test.wugc";
 #                                              DIR => '/tmp',
 #                                              SUFFIX => '.wugc',);
 
+# create reference sequence build
+my $individual = Genome::Individual->create(name => 'testpat', common_name => 'testpat');
+$individual->id(-12345);
+my $sample = Genome::Sample->create(name => 'test-patient', species_name => 'human', common_name => 'normal', source => $individual);
+my $ref_pp = Genome::ProcessingProfile::ImportedReferenceSequence->create(name => 'test_ref_pp');
+my $ref_model = Genome::Model::ImportedReferenceSequence->create(
+    name                => 'test_ref_sequence',
+    processing_profile  => $ref_pp,
+    subject_class_name  => ref($sample),
+    subject_id          => $sample,
+);
+my $rbuild = Genome::Model::Build::ImportedReferenceSequence->create(
+    name            => 'test_ref_sequence_build',
+    model           => $ref_model,
+    fasta_file      => 'nofile', 
+    data_directory  => $tempdir,
+    version         => "123",
+);
+ok($rbuild, 'created reference sequence build');
+
 my $test_model_name = "genotype-ma-test-".$ENV{USER}."-".$$;
 $test_model_name ='H_KA-123172-S.3576';
 my $ppid = 2166945;
@@ -37,11 +56,23 @@ my $ppname = 'illumina/wugc';
 #write_file($temp_wugc,'1\t72017\tAA\n1\t311622\tAA\n1\t314893\t--\n');
 write_file($temp_wugc,"1\t72017\t72017\tA\tA\tref\tref\tref\tref\n1\t311622\t311622\tG\tA\tref\tSNP\tref\tSNP\n1\t314893\t--\n");
 
+# attempt to define command w/o reference is an error
 my $gm = Genome::Model::Command::Define::GenotypeMicroarray->create(
     processing_profile_name => $ppname ,
     subject_name            => $test_model_name, 
     model_name              => $test_model_name .".test",
     data_directory          => $tempdir,
+    file                    => $temp_wugc ,
+);
+ok(!$gm->execute(), 'attempt to define command w/o reference is an error');
+$gm->delete;
+
+$gm = Genome::Model::Command::Define::GenotypeMicroarray->create(
+    processing_profile_name => $ppname ,
+    subject_name            => $test_model_name, 
+    model_name              => $test_model_name .".test",
+    data_directory          => $tempdir,
+    reference               => $rbuild,
     file                    => $temp_wugc ,
 );
 ok($gm->execute(),'define model');

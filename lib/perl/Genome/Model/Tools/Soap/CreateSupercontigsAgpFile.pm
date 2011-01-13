@@ -10,10 +10,6 @@ use Data::Dumper;
 class Genome::Model::Tools::Soap::CreateSupercontigsAgpFile {
     is => 'Genome::Model::Tools::Soap',
     has => [
-        scaffold_fasta_file => {
-            is => 'Text',
-            doc => 'Soap created scaffolds fasta file',
-        },
         assembly_directory => {
             is => 'Text',
             doc => 'Soap assembly directory',
@@ -23,6 +19,11 @@ class Genome::Model::Tools::Soap::CreateSupercontigsAgpFile {
 	    doc => 'User supplied output file name',
 	    is_optional => 1,
 	},
+        scaffold_sequence_file => {
+            is => 'Text',
+	    is_optional => 1,
+            doc => 'Soap created scaffolds fasta file',
+        },	
     ],
 };
 
@@ -32,16 +33,16 @@ sub help_brief {
 
 sub help_detail {
     return <<"EOS"
-gmt soap create-supercontigs-agp-file --scaffold-fasta-file /gscmnt/111/soap_assembly/61EFS.cafSeq --assembly-directory /gscmnt/111/soap_assembly
+gmt soap create-supercontigs-agp-file --scaffold-sequence-file /gscmnt/111/soap_assembly/61EFS.cafSeq --assembly-directory /gscmnt/111/soap_assembly
 EOS
 }
 
 sub execute {
     my $self = shift;
 
-    unless (-s $self->scaffold_fasta_file) {
-        $self->error_message("Failed to find scaffold file: ".$self->scaffold_fasta_file);
-        return;
+    unless ( $self->create_edit_dir ) {
+	$self->error_message("Failed to create edit_dir");
+	return;
     }
 
     unless (-d $self->assembly_directory) {
@@ -49,12 +50,14 @@ sub execute {
         return;
     }
 
-    my $out_file = ($self->output_file) ? $self->output_file : $self->assembly_directory.'/edit_dir/supercontigs.agp';
-    #unlink $self->assembly_directory.'/edit_dir/supercontigs.agp';
+    my $scaf_seq_file = ( $self->scaffold_sequence_file ) ? $self->scaffold_sequence_file : $self->assembly_scaffold_sequence_file;
+
+    my $out_file = ($self->output_file) ? $self->output_file : $self->supercontigs_agp_file;
+
     unlink $out_file;
     my $fh = Genome::Utility::FileSystem->open_file_for_writing($out_file);
 
-    my $io = Bio::SeqIO->new(-format => 'fasta', -file => $self->scaffold_fasta_file);
+    my $io = Bio::SeqIO->new(-format => 'fasta', -file => $scaf_seq_file);
 
     my $scaffold_number = 0;
 

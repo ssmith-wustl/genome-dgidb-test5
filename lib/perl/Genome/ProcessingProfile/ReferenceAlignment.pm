@@ -35,6 +35,12 @@ class Genome::ProcessingProfile::ReferenceAlignment {
             default_value => Genome::Model::Tools::Annotate::TranscriptVariants->default_annotator_version,
             valid_values => [ 0,1,2],#Genome::Model::Tools::Annotate::TranscriptVariants->available_versions ],
         },
+        transcript_variant_annotator_filter => {
+            doc => 'annotation-filter option to be used by the "annotate transcript-variants" tool run during the annotation step',
+            is_optional => 1,
+            default_value => 'top',
+            valid_values => ['top', 'none', 'gene'],
+        },
         snv_detector_name => {
             doc => 'Name of the snv detector',
             is_optional => 1,
@@ -67,29 +73,9 @@ class Genome::ProcessingProfile::ReferenceAlignment {
             doc => 'picard version for MarkDuplicates, MergeSamfiles, CreateSequenceDictionary...',
             is_optional => 1,
         },
-        picard_max_sequences_for_disk_read_ends_map => {
-            doc => 'picard paremeter for MarkDuplicates',
-            is_optional   => 1,
-            is_deprecated => 1,
-        },
         samtools_version => {
             doc => 'samtools version for SamToBam, samtools merge, etc...',
             is_optional => 1,
-        },
-        rmdup_name => {
-            doc => 'rmdup tool used for this model ... deprecated',
-            is_optional   => 1,
-            is_deprecated => 1,
-        },
-        rmdup_version => {
-            doc => 'rmdup tool version used for this model ... deprecated',
-            is_optional   => 1,
-            is_deprecated => 1,
-        },
-        merge_software => {
-            doc => 'picard or samtools for merging ... deprecated',
-            is_optional   => 1,
-            is_deprecated => 1,
         },
         merger_name => {
             doc => 'name of bam merger, picard, samtools',
@@ -214,25 +200,31 @@ sub _initialize_build {
 
 # get alignments (generic name)
 sub results_for_instrument_data_assignment {
-    my ($self, $assignment) = @_;
+    my $self = shift;
+    my $assignment = shift;
+    my %segment_info = @_;
+
     #return if $build and $build->id < $assignment->first_build_id;
-    return $self->_fetch_alignment_sets($assignment,'get');
+    return $self->_fetch_alignment_sets($assignment,\%segment_info,'get');
 }
 
 # create alignments (called by Genome::Model::Event::Build::ReferenceAlignment::AlignReads for now...
 sub generate_results_for_instrument_data_assignment {
-    my ($self, $assignment) = @_;
+    my $self = shift;
+    my $assignment = shift;
+    my %segment_info = @_;
     #return if $build and $build->id < $assignment->first_build_id;
-    return $self->_fetch_alignment_sets($assignment,'get_or_create');
+    return $self->_fetch_alignment_sets($assignment,\%segment_info, 'get_or_create');
 }
 
 sub _fetch_alignment_sets {
     my $self = shift;
     my $assignment = shift;
+    my $segment_info = shift;
     my $mode = shift;
 
     my $model = $assignment->model;
-
+    
     my @param_sets = $self->params_for_alignment($assignment);
     unless (@param_sets) {
         $self->error_message('Could not get alignment parameters for this instrument data assignment');
@@ -240,7 +232,14 @@ sub _fetch_alignment_sets {
     }
     my @alignments;    
     for (@param_sets)  {
-        my $alignment = Genome::InstrumentData::AlignmentResult->$mode(%$_);
+        my %params = %$_;
+      
+        # override segments if requested 
+        if (exists $segment_info->{instrument_data_segment_id}) {
+            delete $params{instrument_data_segment_id};
+            delete $params{instrument_data_segment_type};
+        }
+        my $alignment = Genome::InstrumentData::AlignmentResult->$mode(%$_, %$segment_info);
         unless ($alignment) {
              #$self->error_message("Failed to $mode an alignment object");
              return;
@@ -277,6 +276,8 @@ sub params_for_alignment {
                     samtools_version => $self->samtools_version || undef,
                     filter_name => $assignment->filter_desc || undef,
                     test_name => undef,
+                    instrument_data_segment_type => undef,
+                    instrument_data_segment_id => undef,
                 );
 
     #print Data::Dumper::Dumper(\%params);
@@ -472,7 +473,8 @@ sub alignment_objects {
     my @assignments = $model->instrument_data_assignments();
 
     $DB::single = 1;
-
+    
+    
     my @instrument_data_ids = map { $_->instrument_data_id() } @assignments;
     my @solexa_instrument_data = Genome::InstrumentData->get( \@instrument_data_ids );
 
@@ -496,7 +498,22 @@ sub alignment_objects {
         }
     }
     
-    return @solexa_instrument_data;
+    # grab what can be segmented
+    my @instrument_data_output = grep {! $_->can('get_segments')} @solexa_instrument_data;
+    my @segmentable_data = grep {$_->can('get_segments')} @solexa_instrument_data;
+    
+    for my $instr (@segmentable_data) {
+        my @segments = $instr->get_segments();
+        if (@segments > 1) {
+            for my $seg (@segments) {
+                push @instrument_data_output, {object=>$instr, segment=>$seg};
+            }
+        } else {
+            push @instrument_data_output, $instr;
+        }
+    }
+    
+    return @instrument_data_output;
 }
 
 sub reference_coverage_objects {

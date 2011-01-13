@@ -1,8 +1,0 @@
-$MGAP::Command::GenePredictor::RfamScan::OPTS_SPEC = [
-          'bio-seq-feature=s',
-          undef,
-          'fasta-file=s',
-          undef,
-          'help!',
-          undef
-        ];

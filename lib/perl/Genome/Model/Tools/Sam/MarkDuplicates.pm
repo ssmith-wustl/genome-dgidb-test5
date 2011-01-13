@@ -64,11 +64,6 @@ class Genome::Model::Tools::Sam::MarkDuplicates {
             doc => 'The temporary working directory.  Provide this if you are marking duplicates on a whole genome bam file.',
 	        is_optional => 1
         },
-        max_sequences_for_disk_read_ends_map => {
-            is => 'Integer',
-            doc => 'The maximum number of sequences allowed in SAM file.  If this value is exceeded, the program will not spill to disk (used to avoid situation where there are not enough file handles',
-            is_optional => 1,
-        },
         dedup_version => {
             is => 'String',
             doc => 'The version of picard to use for deduplication',
@@ -123,35 +118,47 @@ sub execute {
         maximum_permgen_memory => $self->max_permgen_size,
         log_file               => $self->log_file,
         temp_directory         => $self->tmp_dir,
-        use_version            => $self->dedup_version,
-
     );
 
-    my %preset_params = (
+    $params{use_version} = $self->dedup_version if $self->dedup_version;
+
+    my %markdup_params = (
         remove_duplicates => $self->remove_duplicates,
         assume_sorted     => $self->assume_sorted,
-        max_sequences_for_disk_read_ends_map => $self->max_sequences_for_disk_read_ends_map,
     );
+
+    my @valid_markdup_params = qw(max_sequences_for_disk_read_ends_map); #list here each time adding new parameters
 
     my $dedup_params = $self->dedup_params;
     if ($dedup_params) {
         $dedup_params =~ s/^\s*//;
         my %given_params = split /\s+|\=/, $dedup_params;
         for my $given_param (keys %given_params) {
-            for my $preset_param (keys %preset_params) {
-                if (lc($given_param) =~ /$preset_param/) {
-                    $self->warning_message("$given_param is already preset as ".$preset_params{$preset_param}); 
-                    delete $given_params{$given_param};
+            my $preset_param = lc($given_param);
+            if ($self->can($preset_param)) {
+                if ($self->$preset_param) {
+                    $self->warning_message("Overwrite $given_param to ". $given_params{$given_param}); 
+                    $markdup_params{$preset_param} = $given_params{$given_param};
+                }
+                else {
+                    $self->error_message("No preset value for picard markdup parameter $given_param");
+                    return;
                 }
             }
-        }
-        if (%given_params) {
-            my $params = join ",", keys %given_params;
-            $self->error_message("Need implement following parameters to Genome::Model::Tools::Picard::MarkDuplicates: $params");
-            return;
+            else {
+                unless (grep{lc($given_param) eq $_}@valid_markdup_params) {
+                    $self->error_message("parameter $given_param is not a valid picard markdup parameter or implement it into Genome::Model::Tools::Picard::MarkDuplicates");
+                    return;
+                }
+                unless ($given_params{$given_param}) {
+                    $self->error_message("No value provided for picard markdup parameter $given_param");
+                    return;
+                }
+                $markdup_params{lc($given_param)} = $given_params{$given_param};
+            }
         }
     }
-    %params = (%params, %preset_params);
+    %params = (%params, %markdup_params);
 
     my $picard_cmd = Genome::Model::Tools::Picard::MarkDuplicates->create(%params);
     my $md_rv = $picard_cmd->execute();
@@ -159,7 +166,8 @@ sub execute {
     $self->status_message("Mark duplicates return value: $md_rv");
     if ($md_rv != 1) {
         $self->error_message("Mark duplicates error!  Return value: $md_rv");
-    } else {
+    } 
+    else {
         $self->status_message("Success.  Duplicates marked in file: $result");
     }
 

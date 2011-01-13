@@ -26,15 +26,8 @@ sub help_brief {
     'Tool to create contigs.bases and contigs.qual files from velvet afg file';
 }
 
-sub help_synopsis {
-    my $self = shift;
-    return <<EOS
-EOS
-}
-
 sub help_detail {
-    return <<EOS
-EOS
+    "Tool to create a separate files of fastas and qualities of contigs from velvet afg file";
 }
 
 sub execute {

@@ -17,7 +17,7 @@ use_ok( 'Genome::Model::Tools::Library::CheckLibs');
 my $test_input_dir  = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Library-CheckLibs/'; #Expected output
 
 #This build should be replaced with some new test model with a subset of the lanes to get a quicker test
-my $test_build_id = 98190374;
+my $test_build_id = 106410700;
 
 my $expected_output_file = $test_input_dir . "build$test_build_id.expected";
 

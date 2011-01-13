@@ -48,8 +48,8 @@ sub execute {
 
     my $placed_reads = $self->_get_placed_reads; #hashref of placed reads
 
-    my $unplaced_out = ($self->reads_unplaced_out) ? $self->reads_unplaced : $self->reads_unplaced;
-    my $unplaced_fasta_out = ($self->reads_unplaced_fasta_out) ? $self->reads_unplaced_fasta_out : $self->reads_unplaced_fasta;
+    my $unplaced_out = ($self->reads_unplaced_out) ? $self->reads_unplaced : $self->reads_unplaced_file;
+    my $unplaced_fasta_out = ($self->reads_unplaced_fasta_out) ? $self->reads_unplaced_fasta_out : $self->reads_unplaced_fasta_file;
 
     my $out = Bio::SeqIO->new(-format => 'fasta', -file => '>'.$unplaced_fasta_out);
     unlink $unplaced_out;
@@ -71,7 +71,7 @@ sub execute {
 
 sub _get_placed_reads {
     my $self = shift;
-    my $reads_placed_file = ($self->reads_placed_file) ? $self->reads_placed_file : $self->reads_placed;
+    my $reads_placed_file = ($self->reads_placed_file) ? $self->reads_placed_file : $self->directory.'/edit_dir/reads.placed';
     unless (-s $reads_placed_file) {
 	$self->error_message("Failed to find reads.placed file in assembly edit_dir");
 	return;

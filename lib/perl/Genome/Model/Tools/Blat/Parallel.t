@@ -12,7 +12,8 @@ use File::Compare;
 use File::Temp;
 
 BEGIN {
-        use_ok ('Genome::Model::Tools::Blat::Parallel');
+    $ENV{NO_LSF} = 1;
+    use_ok ('Genome::Model::Tools::Blat::Parallel');
 }
 
 my $tmp_dir = File::Temp::tempdir('Genome-Model-Tools-Blat-Parallel-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);

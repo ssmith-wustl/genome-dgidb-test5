@@ -32,11 +32,11 @@ sub process_source {
     my $input_fh = $self->_input_fh;
     
     while(my $line = <$input_fh>) {
-        my ($chromosome, $position, $star, $_score, $indel_call_1, $indel_call_2, $indel_length_1, $indel_length_2, @extra) = split("\t", $line);
+        my ($chromosome, $position, $star, $score, $indel_call_1, $indel_call_2, $indel_length_1, $indel_length_2, @extra) = split("\t", $line);
 
-        $self->_process_indel($chromosome, $position, $indel_call_1, $indel_length_1)
+        $self->_process_indel($chromosome, $position, $indel_call_1, $indel_length_1, $score)
             or return;
-        $self->_process_indel($chromosome, $position, $indel_call_2, $indel_length_2)
+        $self->_process_indel($chromosome, $position, $indel_call_2, $indel_length_2, $score)
             or return;
     }
     
@@ -45,7 +45,7 @@ sub process_source {
 
 sub _process_indel {
     my $self = shift;
-    my ($chromosome, $position, $indel, $length) = @_;
+    my ($chromosome, $position, $indel, $length, $score) = @_;
     
     return 1 if $indel eq '*'; #Indicates only one indel call...and this isn't it!
     
@@ -70,7 +70,7 @@ sub _process_indel {
         return;
     }
 
-    $self->write_bed_line($chromosome, $start, $stop, $reference, $variant);
+    $self->write_bed_line($chromosome, $start, $stop, $reference, $variant, $score);
     
     return 1;
 }

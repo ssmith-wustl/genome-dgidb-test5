@@ -129,7 +129,7 @@ GENE:      foreach my $f (@feat) {
             ($display_name =~ /^(\w+\d+\.\d+)\.(\w+)\.(\d+)\.InterPro\.\d+$/)
            ) {
 	  my ($seq_id, $source, $number) = ($1, $2, $3);
-	  $new_display_name = join('.', $seq_id, $source, 'p5_hybrid', $number);
+	  $new_display_name = join('.', $seq_id, $source, 'p5_hybrid', $number, 'fasta');
         }
         else {
 	  die "failed to parse '$display_name':\n - does not match expected format (seqid.predictor.sequence)";

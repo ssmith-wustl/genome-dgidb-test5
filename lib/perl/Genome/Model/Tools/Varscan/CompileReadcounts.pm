@@ -96,10 +96,13 @@ sub execute
 			my ($chrom, $position, $ref, $depth, $quality_depth) = split(/\t/, $line);			
 
 			my $position_key = "$chrom\t$position";
+
+			my @lineContents = split(/\t/, $line);
+			my $numContents = @lineContents;				
 			
 			## Proceed if targeted variant ##
 			
-			if($target_variants{$position_key})
+			if($target_variants{$position_key} && $numContents > 4)
 			{
 				my $reads1 = my $reads2 = 0;
 				my $var_freq = "0.00%";
@@ -107,8 +110,6 @@ sub execute
 				my @targetContents = split(/\t/, $target_variants{$position_key});
 				my $variant_allele = $targetContents[4];
 				
-				my @lineContents = split(/\t/, $line);
-				my $numContents = @lineContents;				
 
 				my $ref_counts = $lineContents[5];
 				my @refCounts = split(/\:/, $ref_counts);

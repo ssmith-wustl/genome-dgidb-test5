@@ -57,6 +57,23 @@ sub create {
     return $self;
 }
 
+sub dbsnp_file_filtered {
+    my $self = shift;
+    return $self->data_directory . "/reports/dbsnp_concordance.filtered.txt"
+}
+
+sub dbsnp_file_unfiltered {
+    my $self = shift;
+    return $self->data_directory . "/reports/dbsnp_concordance.txt"
+}
+
+sub get_alignment_bams {
+    my $self = shift;
+    my @alignments = map { $self->model->processing_profile->results_for_instrument_data_assignment($_) }
+        $self->instrument_data_assignments;
+    return map { $_->alignment_bam_file_paths } @alignments;
+}
+
 sub calculate_estimated_kb_usage {
     my $self = shift;
     my $model = $self->model;
@@ -177,6 +194,29 @@ sub filtered_snp_file {
 
 sub unfiltered_snp_file {
     return shift->snp_related_metric_directory . '/snps_all_sequences';
+}
+
+sub get_variant_bed_file {
+    my ($self, $base, $ver) = @_;
+    my $filename = $self->snp_related_metric_directory . "/$base";
+    $filename .= ".$ver" if defined $ver;
+    $filename .= ".bed";
+    if (! -e $filename) {
+        $ver = "unspecified" if !defined $ver;
+        $self->error_message("Failed to find bed file (version $ver) at $filename.");
+        return;
+    }
+    return $filename;
+}
+
+sub snvs_bed {
+    my ($self, $ver) = @_;
+    return $self->get_variant_bed_file("snps_all_sequences", "v1");
+}
+
+sub filtered_snvs_bed {
+    my ($self, $ver) = @_;
+    return $self->get_variant_bed_file("snps_all_sequences.filtered", "v1");
 }
 
 sub filtered_indel_file {

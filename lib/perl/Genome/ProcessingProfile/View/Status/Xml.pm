@@ -36,35 +36,6 @@ class Genome::ProcessingProfile::View::Status::Xml {
                         'data_directory',
                         'creation_date',
                         'user_name',
-                        {
-                            name => 'builds',
-                            aspects => [
-                                'id', 'data_directory', 'status', 'date_scheduled', 'date_completed',
-                            ],
-                            perspective => 'default',
-                            toolkit => 'xml',
-                            subject_class_name => 'Genome::Model::Build',
-                        },
-                        {
-                            name => 'last_complete_build',
-                            aspects => [
-                                'id', 'data_directory', 'status', 'date_scheduled', 'date_completed',
-                            ],
-                            perspective => 'default',
-                            toolkit => 'xml',
-                            subject_class_name => 'Genome::Model::Build',
-                        }
-
-#This is pretty slow. Bring it back if it turns out to be wanted.
-#                        {
-#                            name => 'last_succeeded_build',
-#                            aspects => [
-#                                'id', 'data_directory', 'status',
-#                            ],
-#                            perspective => 'default',
-#                            toolkit => 'xml',
-#                            subject_class_name => 'Genome::Model::Build',
-#                        }
                     ],
                 },
             ]

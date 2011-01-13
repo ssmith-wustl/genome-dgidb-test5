@@ -2,14 +2,9 @@ package Genome::Model::Msi::Command::DetectMerges;
 
 use strict;
 use warnings;
-use FindBin;
-use Carp::Assert;
-use Carp;
-use Cwd;
-use Utility;
-use Genome::Model::Tools::Pcap::Ace;
-use Genome::Model::Tools::Pcap::PhdDB;
-use Genome::Model::Tools::Pcap::ContigTools;
+
+use Genome;
+
 require Workflow::Simple;
 
 

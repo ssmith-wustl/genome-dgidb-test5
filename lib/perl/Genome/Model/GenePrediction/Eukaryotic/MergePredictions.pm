@@ -5,10 +5,10 @@ use warnings;
 use Genome;
 use Carp 'confess';
 
-#my $low = 20000;
-#my $high = 100000;
-#UR::Context->object_cache_size_lowwater($low);
-#UR::Context->object_cache_size_highwater($high);
+my $low = 20_000;
+my $high = 100_000;
+UR::Context->object_cache_size_lowwater($low);
+UR::Context->object_cache_size_highwater($high);
 
 class Genome::Model::GenePrediction::Eukaryotic::MergePredictions {
     is => 'Command',
@@ -52,17 +52,22 @@ sub prediction_types {
 
 sub execute {
     my $self = shift;
+    $self->status_message("Merging predictions into files in " . $self->prediction_directory);
 
     # Get meta object for each prediction type, grab attributes of the object (except for directory)
     TYPE: for my $type (@{$self->prediction_types}) {
-        $self->status_message("Working on $type");
+        $self->status_message("*** Working on $type ***");
         my $meta = $type->__meta__;
-        my @attributes = map { $_->property_name} $meta->properties;
+        my @attributes = map { $_->property_name } $meta->properties;
         @attributes = grep { $_ ne 'directory' } @attributes;
 
-        # Get all the objects of the current type from the temp dir
-        TEMP_DIR: for my $temp_dir ($self->temp_prediction_directories) {
-            $self->status_message("Getting objects of type $type from directory $temp_dir");
+        TEMP_DIR: for my $temp_dir (@{$self->temp_prediction_directories}) {
+            unless (-d $temp_dir) {
+                $self->warning_message("No directory found at $temp_dir, this is most distressing!");
+                next TEMP_DIR;
+            }
+
+            $self->status_message("Looking at predictions in $temp_dir");
             my @temp_objects = $type->get(
                 directory => $temp_dir,
             );
@@ -82,10 +87,11 @@ sub execute {
                 }
             }
 
+            # Commit now so cache can be pruned later
+            my $rv = UR::Context->commit;
+            confess "Could not commit changes for $type!" unless defined $rv and $rv;
         }
 
-        my $rv = UR::Context->commit;
-        confess "Could not commit changes for $type!" unless defined $rv and $rv;
         $self->status_message("Done with $type!");
     }
 

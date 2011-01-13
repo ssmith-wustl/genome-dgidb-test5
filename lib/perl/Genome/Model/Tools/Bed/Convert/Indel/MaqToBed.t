@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 
-use Test::More tests => 4;
+use Test::More tests => 5;
 
 use above 'Genome';
 
@@ -20,6 +20,7 @@ my $command = Genome::Model::Tools::Bed::Convert::Indel::MaqToBed->create( sourc
 ok($command, 'Command created');
 my $rv = $command->execute;
 ok($rv, 'Command completed successfully');
+ok(!$command->_need_chrom_sort, 'ordered chromosomes in input, no sort required');
 
 my $diff = Genome::Utility::FileSystem->diff_file_vs_file($output_file, $expected_file);
 ok(!$diff, 'output matched expected result')

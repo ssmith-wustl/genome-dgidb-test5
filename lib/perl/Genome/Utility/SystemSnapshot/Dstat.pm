@@ -23,7 +23,7 @@ sub _sleep {
 
 sub pre_run {
   my $self = shift;
-  my $cmd = "/usr/bin/dstat";
+  my $cmd = "/gsc/var/gsc/systems/blades/dstat/dstat";
   if (! -x $cmd) {
     warn "comand not found: $cmd: NOT profiling";
     return;
@@ -70,10 +70,11 @@ sub post_run {
   eval {
     $self->{cv}->recv;
   };
-  #if (defined $@ && $@ !~ /^COMMAND KILLED\. Signal 15/) {
-  if ($@) {
+  if ($@ && $@ !~ /^COMMAND KILLED\. Signal 15/) {
     # unexpected death message from shellcmd.
-    die $@;
+    # Don't die here, we don't want shutting down the profiler to interrupt
+    # the job being profiled.  Just warn.
+    warn "unexpected death of profiler: $@";
   }
 }
 

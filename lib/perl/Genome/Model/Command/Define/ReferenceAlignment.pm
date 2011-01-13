@@ -26,6 +26,18 @@ class Genome::Model::Command::Define::ReferenceAlignment {
             is_optional => 1,
             is_input => 1,
         },
+        dbsnp_model => {
+            is => 'Genome::Model::ImportedVariationList',
+            doc => 'ID or name of the dbSNP model to compare against (the latest build will be selected)',
+            is_optional => 1,
+            is_input => 1,
+        },
+        dbsnp_build => {
+            is => 'Genome::Model::Build::ImportedVariationList',
+            doc => 'ID or name of the dbSNP build to compare against',
+            is_optional => 1,
+            is_input => 1,
+        },
         target_region_set_names => {
             is => 'Text',
             is_optional => 1,
@@ -45,13 +57,45 @@ sub _shell_args_property_meta {
     return $self->Genome::Command::Base::_shell_args_property_meta(@_);
 }
 
+sub resolve_dbsnp {
+    my ($self, $rsb) = @_;
+    return $self->_resolve_param('dbsnp_build') if $self->dbsnp_build;
+
+    my $dbsnp_model = $self->dbsnp_model;
+    if (!$dbsnp_model) {
+        $dbsnp_model = Genome::Model::ImportedVariationList->dbsnp_model_for_reference($rsb);
+        if (!$dbsnp_model) {
+            $self->status_message("no dbsnp_model found.");
+            return;
+        }
+    } else {
+        $dbsnp_model = $self->_resolve_param('dbsnp_model');
+        if (!defined $dbsnp_model) {
+            die $self->error_message("Failed to resolve dbsnp_model identified by " . $self->dbsnp_model);
+        }
+    }
+    my $b = $dbsnp_model->last_complete_build;
+    if (!defined $b) {
+        die $self->error_message("Failed to find a complete build for dbsnp model " . $dbsnp_model->__display_name__);
+    }
+
+    return $b;
+}
+
 sub type_specific_parameters_for_create {
     my $self = shift;
     my $rsb = $self->_resolve_param('reference_sequence_build');
     my $arb = $self->_resolve_param('annotation_reference_build');
+    my $dbsnp = $self->resolve_dbsnp($rsb);
+    if ($dbsnp && $dbsnp->model->reference != $rsb) {
+        die $self->error_message("dbSNP build " . $dbsnp->__display_name__ . " has reference " . $dbsnp->reference->__display_name__ .
+            " which does not match the specified reference " . $rsb->__display_name__);
+    }
+    
     my @params;
     push(@params, reference_sequence_build => $rsb) if $rsb;
     push(@params, annotation_reference_build => $arb) if $arb;
+    push(@params, dbsnp_build => $dbsnp) if $dbsnp;
     return @params;
 }
 
@@ -61,6 +105,11 @@ sub listed_params {
 
 sub execute {
     my $self = shift;
+
+    if ($self->dbsnp_build and $self->dbsnp_model) {
+        $self->error_message("Specify one of --dbsnp-build or --dbsnp-model, not both");
+        return;
+    }
     
     my $result = $self->SUPER::_execute_body(@_);
     return unless $result;
@@ -109,6 +158,7 @@ sub execute {
 
 sub _resolve_param {
     my ($self, $param) = @_;
+
     my $param_meta = $self->__meta__->property($param);
     Carp::confess("Request to resolve unknown property '$param'.") if (!$param_meta);
     my $param_class = $param_meta->data_type;

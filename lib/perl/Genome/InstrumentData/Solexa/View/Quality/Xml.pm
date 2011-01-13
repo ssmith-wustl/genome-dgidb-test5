@@ -39,8 +39,6 @@ sub _generate_content {
 
     my $rnode = $report_nodes[0];
 
-    $DB::single = 1;
-
     $rnode->addChild( $doc->createAttribute("flow_cell_id", $subject->flow_cell_id) );
     $rnode->addChild( $doc->createAttribute("lane", $subject->lane) );
     $rnode->addChild( $doc->createAttribute("run_name", $subject->run_name) );
@@ -65,11 +63,11 @@ sub get_report {
     my ($report_name, $instrument_data) = @_;
 
     my @fs_ids = GSC::Sequence::ItemFile->get( seq_id => $instrument_data->seq_id );
-    my $file = GSC::FileStorage->get( file_storage_id => \@fs_ids, file_name => $report_name  );
+    my @file = GSC::FileStorage->get( file_storage_id => \@fs_ids, file_name => $report_name  );
 
-    $DB::single = 1;
+    my ($last_file) = sort { $b->file_storage_id <=> $a->file_storage_id } @file;
 
-    return $file;
+    return $last_file;
 
 }
 

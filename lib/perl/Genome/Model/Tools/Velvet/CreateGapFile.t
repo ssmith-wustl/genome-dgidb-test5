@@ -6,7 +6,7 @@ use warnings;
 use above "Genome";
 use Test::More;
 
-use Genome::Model::Tools::Velvet::CreateGapFile;
+use_ok( 'Genome::Model::Tools::Velvet::CreateGapFile' );
               
 my $module = 'Genome-Model-Tools-Assembly-CreateOutputFiles2';
 my $data_dir = "/gsc/var/cache/testsuite/data/$module";
@@ -20,15 +20,16 @@ my $test_contigs_file = $data_dir.'/contigs.fa';
 ok(-s $test_contigs_file, "Found test contigs.fa file");
 
 my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+
 #copy input file
 ok(File::Copy::copy($test_contigs_file, $temp_dir),"Copied input contigs file");
 
-#make edit_dir in temp_dir
-mkdir $temp_dir.'/edit_dir';
-ok(-d $temp_dir.'/edit_dir', "made edit_dir in temp test_dir");
-
-my $ec = system("chdir $temp_dir; gmt velvet create-gap-file --contigs-fasta-file $test_contigs_file --directory $temp_dir");
-ok($ec == 0, "Command ran successfully");
+#create, execute tool
+my $create = Genome::Model::Tools::Velvet::CreateGapFile->create (
+    assembly_directory => $temp_dir,
+    );
+ok( $create, "Created tool");
+ok( $create->execute, "Successfully executed tool");
 
 #test gap.txt file .. this file can be blank
 my $test_gap_file = $data_dir.'/edit_dir/gap.txt';

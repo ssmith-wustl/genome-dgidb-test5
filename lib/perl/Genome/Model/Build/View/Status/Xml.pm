@@ -293,46 +293,6 @@ sub get_workflow_node {
     return $workflownode;
 }
 
-#Note:  Since the Web server cannot execute bjob commands, use the cron'd results from the tmp file
-sub X_load_lsf_job_status {
-    my $self = shift;
-
-    my %job_to_status;
-    my $lsf_file = '/gsc/var/cache/testsuite/lsf-tmp/bjob_query_result.txt';
-    my @bjobs_lines = IO::File->new($lsf_file)->getlines;
-    shift(@bjobs_lines);
-    for my $bjob_line (@bjobs_lines) {
-        my @job = split(/\s+/,$bjob_line);
-        $job_to_status{$job[0]} = $job[2];
-    }
-    return \%job_to_status;
-}
-
-our $JOB_TO_STATUS;
-sub load_lsf_job_status {
-    my $self = shift;
-
-    # NOTE: This caches the lsf job data for as long as the process stays alive.
-    # For now, this thing is run from a regular CGI script, so the process dies pretty
-    # quickly.  But if things change so that the process lives for a while, then
-    # a different cache aging mechanism should be set up
-    unless ($JOB_TO_STATUS) {
-        $JOB_TO_STATUS = {};
-
-        my $lsf_file = '/gsc/var/cache/testsuite/lsf-tmp/bjob_query_result.txt';
-        my $fh = IO::File->new($lsf_file);
-        my $lsf_file_data = do { local( $/ ) ; <$fh> } ;
-        $fh->close;
-        while ($lsf_file_data =~ m/^(\S+)\s+(\S+)\s+(\S+).*?\n/gm) {
-            $JOB_TO_STATUS->{$1} = $3;
-        }
-        delete $JOB_TO_STATUS->{'JOBID'};
-    }
-    return $JOB_TO_STATUS;
-}
-
-
-
 sub get_processing_profile_node {
 
     my $self = shift;
@@ -360,6 +320,10 @@ sub get_processing_profile_node {
             foreach my $object (@objects) {
 
                 my $object_node;
+
+                if (ref($object) eq "HASH" && exists $object->{segment}) {
+                    $object = $object->{object};
+                }
 
                 #if we have a full blown object (REF), get the object data
                 if ( ref(\$object) eq "REF" ) {
@@ -517,47 +481,6 @@ sub get_links_node {
     return $links_node;
 }
 
-sub get_lsf_job_status {
-    my $self = shift;
-    my $lsf_job_id = shift;
-
-    my $result;
-
-    if ( defined($lsf_job_id) ) {
-
-        #check the user specified flag to determine how to retrieve lsf status
-        if ($self->use_lsf_file) {
-            #get the data from the preloaded hash of lsf info (from file)
-            #my %job_to_status = %{$self->_job_to_status};
-            #$result = $job_to_status {$lsf_job_id};
-            $result = $self->{'_job_to_status'}->{$lsf_job_id};
-            if (!defined($result) ) {
-                $result = "UNAVAILABLE";
-            }
-        } else {
-            #get the data directly from lsf via bjobs command
-            my @lines = `bjobs $lsf_job_id 2>/dev/null`;
-            #parse the bjobs output.  get the 3rd field of the 2nd line.
-            if ( (scalar(@lines)) > 1) {
-                my $line = $lines[1];
-                my @fields = split(" ",$line);
-                $result = $fields[2];
-            } else {
-                #if there are no results from bjobs, lsf forgot about the job already.
-                $result = "UNAVAILABLE";
-            }
-        }
-
-    } else {
-        #if the input LSF ID is not defined, mark it as unscheduled.
-        $result = "UNSCHEDULED";
-    }
-    return $result;
-
-    #NOTES:  UNSCHEDULED means that an LSF ID exists, but LSF did not have any status on it.  Probably because it was executed a while ago.
-    #        UNAVAILABLE means that an LSF ID does NOT exist.
-}
-
 sub get_event_node {
 
     my $self = shift;
@@ -567,106 +490,11 @@ sub get_event_node {
     my $event_node = $self->anode("event","id",$event->id);
     $event_node->addChild( $doc->createAttribute("command_class",$event->class));
     $event_node->addChild( $self->tnode("event_status",$event->event_status));
-
-    my $lsf_job_id = $event->lsf_job_id;
-
-=pod
-    my $root_instance = $self->instance;
-    if ($root_instance) {
-        my $event_instance;
-        foreach my $stage_instance (Workflow::Operation::Instance->get(parent_instance_id => $root_instance->id)) { #$root_instance->child_instances) {
-            next unless $stage_instance->can('child_instances');
-            #            my @found = $stage_instance->child_instances(
-            my @found = Workflow::Operation::Instance->get(
-                parent_instance_id => $stage_instance->id,
-                name => $event->command_name_brief . ' ' . $event->id
-            );
-            if (@found) {
-                $event_instance = $found[0];
-            }
-        }
-
-        if ($event_instance) {
-            $event_node->addChild( $self->tnode("instance_id", $event_instance->id));
-            #            $event_node->addChild( $self->tnode("instance_status", $event_instance->status));
-
-            my @e = Workflow::Operation::InstanceExecution->get(
-                instance_id => $event_instance->id
-            );
-
-            $event_node->addChild( $self->tnode("execution_count", scalar @e));
-
-            foreach my $current (@e) {
-                if ($current->id == $event_instance->current_execution_id) {
-                    $event_node->addChild( $self->tnode("instance_status", $current->status));
-
-                    if (!$lsf_job_id) {
-                        $lsf_job_id = $current->dispatch_identifier;
-                    }
-
-                    last;
-                }
-            }
-        }
-    }
-=cut
-
-    my $lsf_job_status = $self->get_lsf_job_status($lsf_job_id);
-
-    $event_node->addChild( $self->tnode("lsf_job_id",$lsf_job_id));
-    $event_node->addChild( $self->tnode("lsf_job_status",$lsf_job_status));
     $event_node->addChild( $self->tnode("date_scheduled",$event->date_scheduled));
     $event_node->addChild( $self->tnode("date_completed",$event->date_completed));
     $event_node->addChild( $self->tnode("elapsed_time", $self->calculate_elapsed_time($event->date_scheduled,$event->date_completed) ));
     $event_node->addChild( $self->tnode("instrument_data_id",$event->instrument_data_id));
-    my $err_log_file = $event->resolve_log_directory ."/".$event->id.".err";
-    my $out_log_file = $event->resolve_log_directory ."/".$event->id.".out";
-    $event_node->addChild( $self->tnode("output_log_file",$out_log_file));
-    $event_node->addChild( $self->tnode("error_log_file",$err_log_file));
 
-    #
-    # get alignment director[y|ies] and filter description
-    #
-    # get list of instrument data assignments
-    my @idas = $event->model->instrument_data_assignments;
-
-    if (scalar @idas > 0) {
-        # find the events with matching instrument_data_ids
-        my @adirs;
-
-        my $processing_profile = $event->model->processing_profile;
-        for my $ida (@idas) {
-            if ((defined $ida->instrument_data_id && $event->instrument_data_id) && $ida->instrument_data_id == $event->instrument_data_id) {
-                my $alignment;
-                eval{ ($alignment) = $processing_profile->results_for_instrument_data_assignment($ida)};
-
-                if ($@) {
-                    chomp($@);
-                    push(@adirs, $@);
-                }
-
-                if (defined($alignment)) {
-                    push(@adirs, $alignment->alignment_directory);
-
-                    # look for a filter description
-                    if ($ida->filter_desc) {
-                        $event_node->addChild( $self->tnode("filter_desc", $ida->filter_desc));
-                    }
-                }
-            }
-        }
-        # handle multiple alignment directories
-        if (scalar @adirs > 1) {
-            my $i = 1;
-            for my $adir (@adirs) {
-                $event_node->addChild( $self->tnode("alignment_directory_" . $i, $adir));
-                $i++;
-            }
-        } else {
-            $event_node->addChild( $self->tnode("alignment_directory", $adirs[0]));
-        }
-
-    }
     return $event_node;
 }
 

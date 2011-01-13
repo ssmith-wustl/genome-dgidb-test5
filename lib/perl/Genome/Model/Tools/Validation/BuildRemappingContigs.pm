@@ -208,7 +208,26 @@ sub execute {
 
                     #need to code in the range on the contig for the variant as well as the range on the reference to count. For non-overlapping contigs this is simple. Let's also code overlap status
                     printf STDOUT " Overlap:%d",@overlapping_contigs - 1;   #this should code the number of other contigs overlapping the contig
-                    printf STDOUT " Ref:%s.%d.%d Con:%d.%d\n",@$unique_contig{qw( assem_chr1 assem_pos1 assem_pos2 contig_location_of_variant microhomology_contig_endpoint )};
+                    printf STDOUT " Ref:%s.%d.%d Con:%d.%d",@$unique_contig{qw( assem_chr1 assem_pos1 assem_pos2 contig_location_of_variant microhomology_contig_endpoint )};
+
+                    #Here we print out annotation information
+
+                    my ($annotation_start,$annotation_end,$ref,$var);
+                    if($unique_contig->{assem_type} eq 'INS') {
+                        $annotation_start = $unique_contig->{assem_pos1} - 1; #base before the event
+                        $annotation_end = $annotation_start + 1;
+                        $ref = 0;
+                        $var = uc(substr($unique_contig->{sequence},$unique_contig->{contig_location_of_variant} + 1, $unique_contig->{assem_size}));
+                    }
+                    else {
+                        $annotation_start = $unique_contig->{assem_pos1};
+                        $annotation_end = $annotation_start + $unique_contig->{assem_size} - 1;
+                        $ref = uc($self->fetch_flanking_sequence($unique_contig->{assem_chr1},$annotation_start,$annotation_end));
+                        $var = 0;
+                    }
+                    
+                    printf STDOUT " Anno:%s.%d.%d.%s.%s.%s", $unique_contig->{assem_chr1},$annotation_start,$annotation_end,$ref,$var,$unique_contig->{assem_type};
+                    printf STDOUT "\n";
 
                     #print sequence with each line containing 80bp
                     my $sequence = $unique_contig->{sequence};

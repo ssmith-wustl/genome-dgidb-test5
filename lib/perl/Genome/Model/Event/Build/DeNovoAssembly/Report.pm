@@ -13,6 +13,12 @@ class Genome::Model::Event::Build::DeNovoAssembly::Report {
 sub execute {
     my $self = shift;
 
+    #run stats
+    unless( $self->processing_profile->generate_stats( $self->build ) ) {
+	$self->error_message("Failed to generate stats for report");
+	return;
+    }
+
     # generate
     my $generator = Genome::Model::DeNovoAssembly::Report::Summary->create(
         build_id => $self->build_id,

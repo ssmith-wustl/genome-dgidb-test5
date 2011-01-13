@@ -56,6 +56,11 @@ class Genome::Individual {
             len => 64,
             doc => 'the "race" of the individual, African American/Caucasian/...'
         },
+        nomenclature => {
+            is => 'Text',
+            len => 64,
+            default_value => 'WUGC',
+        },
         samples => { 
             is => 'Genome::Sample', 
             is_many => 1,

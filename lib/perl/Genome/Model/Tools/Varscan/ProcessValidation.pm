@@ -27,6 +27,8 @@ class Genome::Model::Tools::Varscan::ProcessValidation {
         variants_file               => { is => 'Text', doc => "File of variants to report on", is_optional => 0 },
         output_file                 => { is => 'Text', doc => "Output file for validation results", is_optional => 0, is_output => 1 },
         output_plot                 => { is => 'Boolean', doc => "Optional plot of variant allele frequencies", is_optional => 1, },
+    ],
+    has => [
         output_plot_file            => { is => 'Text', calculate_from => ['output_file'], calculate => q{ $output_file . '.FreqPlot.png'}, is_output => 1,},
         output_somatic_plot_file    => { is => 'Text', calculate_from => ['output_file'], calculate => q{ $output_file . '.FreqPlot.Somatic.png'}, is_output => 1,},
     ],
@@ -79,16 +81,14 @@ sub execute {                               # replace with real execution logic.
     my ($germline_fh, $germline_file) = Genome::Utility::FileSystem->create_temp_file;
     my ($reference_fh, $reference_file) = Genome::Utility::FileSystem->create_temp_file;
 
-    my %validation_results = my %filtered_results = ();
-
     ## Reset statistics ##
     my %stats = ();
 
     ## Load the validation results ##
-    %validation_results = $self->load_validation_results($validation_file);
+    my $validation_results = $self->load_validation_results($validation_file);
 
     ## Load the filtered results ##
-    %filtered_results = $self->load_validation_results($filtered_validation_file) if($filtered_validation_file);
+    my $filtered_results = $self->load_validation_results($filtered_validation_file) if($filtered_validation_file);
 
 
     ## Parse the variant file ##
@@ -111,24 +111,24 @@ sub execute {                               # replace with real execution logic.
         my $varscan_freqs = "";
         my $normal_coverage = my $tumor_coverage = 0;
 
-        if($filtered_results{$key}) {
+        if($filtered_results->{$key}) {
             $stats{'with_filtered_results'}++;
             $call_status = "Yes";
             $filter_status = "Pass";
-            my @results = split(/\t/, $filtered_results{$key});
+            my @results = split(/\t/, $filtered_results->{$key});
             $validation_status = $results[13];
             $varscan_results = join("\t", $results[3], $results[4], $results[5], $results[6], $results[7], $results[8], $results[9], $results[10], $results[11], $results[12], $results[13], $results[14], $results[15]);
             $varscan_freqs = join("\t", $results[7], $results[11]);
             $varscan_freqs =~ s/\%//g;
             $normal_coverage = $results[5] + $results[6];
             $tumor_coverage = $results[9] + $results[10];
-        } elsif($validation_results{$key}) {
+        } elsif($validation_results->{$key}) {
             $stats{'with_unfiltered_results'}++;
             $stats{'with_filtered_results'}++;
             $call_status = "Yes";
             $filter_status = "Fail";
             $filter_status = "N/A" if(!$self->filtered_validation_file);
-            my @results = split(/\t/, $validation_results{$key});
+            my @results = split(/\t/, $validation_results->{$key});
 
             if($results[12] && ($results[12] =~ 'Germline' || $results[12] =~ 'Somatic' || $results[12] =~ 'Reference' || $results[12] =~ 'LOH' || $results[12] =~ 'IndelFilter' || $results[12] =~ 'Unknown')) {
                 ## STANDARD VARSCAN FORMAT
@@ -201,14 +201,25 @@ sub execute {                               # replace with real execution logic.
 
         print $r_script_fh qq{png("$temp_plot_file_path", height=600, width=600)\n};
 
+        my $initialized = 0;
+
+        my $cmd = 'plot';
+        my $label = 'xlab="Normal", ylab="Tumor"';
+
         if(-s $germline_file) {
-            print $r_script_fh qq{plot(germline\$V1, germline\$V2, col="blue", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), xlab="Normal", ylab="Tumor")\n};
+            print $r_script_fh qq{$cmd(germline\$V1, germline\$V2, col="blue", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), $label)\n};
+            $cmd = 'points';
+            $label = '';
         }
         if(-s $somatic_file) {
-            print $r_script_fh qq{points(somatic\$V1, somatic\$V2, col="red", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100))\n};
+            print $r_script_fh qq{$cmd(somatic\$V1, somatic\$V2, col="red", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), $label)\n};
+            $cmd = 'points';
+            $label = '';
         }
         if(-s $reference_file) {
-            print $r_script_fh qq{points(reference\$V1, reference\$V2, col="black", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100))\n};
+            print $r_script_fh qq{$cmd(reference\$V1, reference\$V2, col="black", cex=0.75, cex.axis=1.5, cex.lab=1.5, pch=19, xlim=c(0,100), ylim=c(0,100), $label)\n};
+            $cmd = 'points';
+            $label = '';
         }
 
         print $r_script_fh qq{dev.off()\n};
@@ -226,7 +237,7 @@ dev.off()
         close($r_script_fh);
 
         Genome::Utility::FileSystem->shellcmd(
-            cmd => "R --no-save <$r_script_file 2>/dev/null",
+            cmd => "R --no-save <$r_script_file",
             input_files => [$r_script_file],
             output_files => [$temp_plot_file_path]
         );
@@ -295,7 +306,7 @@ sub load_validation_results {
 
     close($input);    
 
-    return(%results);
+    return \%results;
 }
 
 1;

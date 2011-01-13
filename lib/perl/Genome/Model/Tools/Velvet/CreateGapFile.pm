@@ -12,9 +12,10 @@ class Genome::Model::Tools::Velvet::CreateGapFile {
     has => [
 	contigs_fasta_file => {
 	    is => 'Text',
+	    is_optional => 1,
 	    doc => 'Velvet created contigs.fa file',
 	},
-        directory => {
+        assembly_directory => {
             is => 'Text',
             doc => 'Assembly build directory',
         },
@@ -27,7 +28,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<EOS
-gmt velvet create-gap-file --contigs-fasta-file /gscmnt/111/velvet_assembly/contigs.fa --directory /gscmnt/111/velvet_assembly
+gmt velvet create-gap-file --contigs-fasta-file /gscmnt/111/velvet_assembly/contigs.fa --assembly-directory /gscmnt/111/velvet_assembly
 EOS
 }
 
@@ -39,8 +40,15 @@ EOS
 sub execute {
     my $self = shift;
 
-    unless (-s $self->contigs_fasta_file) {
-	$self->error_message("Failed to find file: ".$self->contigs_fasta_file);
+    unless ( $self->create_edit_dir ) {
+	$self->error_message("Failed to create edit_dir");
+	return;
+    }
+
+    my $contigs_fa_file = ( $self->contigs_fasta_file ) ? $self->contigs_fasta_file : $self->velvet_contigs_fa_file;
+
+    unless ( -s $contigs_fa_file ) {
+	$self->error_message("Failed to find file: $contigs_fa_file");
 	return;
     }
 
@@ -48,7 +56,7 @@ sub execute {
     my $fh = Genome::Utility::FileSystem->open_file_for_writing($self->gap_sizes_file) ||
 	return;
 
-    my $io = Bio::SeqIO->new(-format => 'fasta', -file => $self->contigs_fasta_file);
+    my $io = Bio::SeqIO->new(-format => 'fasta', -file => $contigs_fa_file);
 
     while (my $seq = $io->next_seq) {
 	my @bases = split (/N+/i, $seq->seq);
