@@ -63,7 +63,7 @@ sub execute {
     #}
     Genome::Utility::FileSystem->shellcmd(
         cmd => $cmd,
-        input_files => [$self->bed_file,$self->bam_file],
+        input_files => [$bed_file,$bam_file],
     );
     my $as_ref = $self->build->alignment_summary_hash_ref;
     unless ($as_ref) {
