@@ -16,7 +16,7 @@ class Genome::ProcessingProfile::View::Solr::Xml {
             is  => 'Text',
             default => 'Processing Profile',
         },
-        display_icon => {
+        display_icon_url => {
             is  => 'Text',
             default => 'genome_processingprofile_32.png',
         },

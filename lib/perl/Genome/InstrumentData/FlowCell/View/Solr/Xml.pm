@@ -16,7 +16,7 @@ class Genome::InstrumentData::FlowCell::View::Solr::Xml {
             is  => 'Text',
             default => 'Model',
         },
-        display_icon => {
+        display_icon_url => {
             is  => 'Text',
             default => 'genome_model_32.png',
         },
@@ -34,7 +34,7 @@ class Genome::InstrumentData::FlowCell::View::Solr::Xml {
             calculate_from => ['subject'],
             calculate => sub {
                 my $flow_cell_id = $_[0]->flow_cell_id();
-                return if !$flow_cell_id;
+                return 'none' if !$flow_cell_id;
                 return join ('=', '/solexa/equipment/flowcell?flow_cell_id',$flow_cell_id);
             },
         },

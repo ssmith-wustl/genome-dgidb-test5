@@ -105,7 +105,7 @@ sub _generate_content {
     # required to display result
     push @fields, WebService::Solr::Field->new( display_title => $self->_generate_display_title_field_data() );
     push @fields, WebService::Solr::Field->new( display_type  => $self->display_type() );
-    push @fields, WebService::Solr::Field->new( display_icon  => $self->display_icon() );
+    push @fields, WebService::Solr::Field->new( display_icon_url  => $self->display_icon_url() );
 
     # optional to display result
     # notice there is no display_content? plan is to generate "display_content" with highlighted area that matched

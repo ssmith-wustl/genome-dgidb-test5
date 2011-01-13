@@ -16,7 +16,7 @@ class Genome::PopulationGroup::View::Solr::Xml {
             is  => 'Text',
             default => 'Population',
         },
-        display_icon => {
+        display_icon_url => {
             is  => 'Text',
             default => 'genome_population_32.png',
         },

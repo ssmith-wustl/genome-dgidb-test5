@@ -16,7 +16,7 @@ class Genome::Model::View::Solr::Xml {
             is  => 'Text',
             default => 'Model',
         },
-        display_icon => {
+        display_icon_url => {
             is  => 'Text',
             default => 'genome_model_32.png',
         },
@@ -34,7 +34,7 @@ class Genome::Model::View::Solr::Xml {
             calculate_from => ['subject'],
             calculate => sub { 
                 my $build = $_[0]->last_succeeded_build();
-                return if !$build;
+                return 'none' if !$build;
                 return join ('?', '/view/genome/model/build/status.html',$build->id()); 
             },
         },
@@ -46,7 +46,7 @@ class Genome::Model::View::Solr::Xml {
             calculate_from => ['subject'],
             calculate => sub { 
                 my $build = $_[0]->last_succeeded_build();
-                return if !$build;
+                return 'none' if !$build;
                 return join ('/','https://gscweb.gsc.wustl.edu', $build->data_directory());
             },
         },
@@ -58,7 +58,7 @@ class Genome::Model::View::Solr::Xml {
             is  => 'Text',
             calculate_from => ['subject'],
             calculate => sub {
-                my $build = $_[0]->last_succeeded_build() || return;
+                my $build = $_[0]->last_succeeded_build() || return 'none';
                 my $data_dir = join ('?', '/view/genome/model/convergence/build/status.html',$build->id());
                 return join('/', 'https://gscweb.gsc.wustl.edu', $data_dir, 'reports', 'Summary', 'report.html');
             },

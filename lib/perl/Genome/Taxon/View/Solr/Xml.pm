@@ -16,7 +16,7 @@ class Genome::Taxon::View::Solr::Xml {
             is  => 'Text',
             default => 'Taxon',
         },
-        display_icon => {
+        display_icon_url => {
             is  => 'Text',
             default => 'genome_taxon_32.png',
         },
