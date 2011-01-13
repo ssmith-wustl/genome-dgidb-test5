@@ -39,7 +39,7 @@ class Genome::Model::Tools::Sam::LimitVariants {
 sub execute {
     my $self = shift;
 
-    my $regions = Genome::RefCov::ROI::Bed->new(
+    my $regions = Genome::RefCov::ROI::Bed->create(
         file => $self->bed_file,
         region_index_substring => 5,
         wingspan => $self->wingspan,
