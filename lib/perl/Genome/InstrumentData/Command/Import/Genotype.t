@@ -31,7 +31,7 @@ my $tmp_allocation = Genome::Disk::Allocation->__define__(
                                                            group_subdirectory => 'test',
                                                            mount_path => '/tmp/mount_path',
                                                            allocation_path => 'genotype_data/imported/-830001',
-                                                           allocator_id => '-123459',
+                                                           id => '-123459',
                                                            kilobytes_requested => 100000,
                                                            kilobytes_used => 0,
                                                            owner_id => $dummy_id-100,
@@ -95,7 +95,7 @@ $i = Genome::InstrumentData::Imported->get(
 ok($i, "found Imported instrument data")
     or die "Did not find Imported Instrument Data using sample_name = $sample_name";
 
-my $disk = Genome::Disk::Allocation->get(owner_class_name => $i->class, owner_id => $i->id, allocator_id => -123459);
+my $disk = Genome::Disk::Allocation->get(owner_class_name => $i->class, owner_id => $i->id, id => -123459);
 
 ok($disk, "found an allocation owned by the new instrument data");
 
@@ -124,7 +124,7 @@ my $tmp_allocation2 = Genome::Disk::Allocation->__define__(
                                                            group_subdirectory => 'test',
                                                            mount_path => '/tmp/mount_path',
                                                            allocation_path => 'genotype_data/imported/-830002',
-                                                           allocator_id => '-123460',
+                                                           id => '-123460',
                                                            kilobytes_requested => 100000,
                                                            kilobytes_used => 0,
                                                            owner_id => $dummy_id-101,
@@ -155,7 +155,7 @@ $i = Genome::InstrumentData::Imported->get(
 ok($i, "found Imported instrument data")
     or die "Did not find Imported Instrument Data using library_name = $sample_name-microarraylib";
 
-$disk = Genome::Disk::Allocation->get(owner_class_name => $i->class, owner_id => $i->id, allocator_id => -123460);
+$disk = Genome::Disk::Allocation->get(owner_class_name => $i->class, owner_id => $i->id, id => -123460);
 
 ok($disk, "found an allocation owned by the new instrument data");
 
