@@ -9,6 +9,12 @@ class Genome::Model::Build::GenePrediction::Eukaryotic {
     is => 'Genome::Model::Build::GenePrediction',
 };
 
+# Overriding this method from Build.pm, used to get workflows for this build by name
+sub workflow_name {
+    my $self = shift;
+    return 'eukaryotic gene prediction ' . $self->build_id;
+}
+
 sub repeat_masker_ace_file {
     my $self = shift;
     return $self->data_directory . "/repeat_masker.ace";
