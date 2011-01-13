@@ -805,6 +805,12 @@ sub eviscerate {
 
     $self->status_message("Removing tree $alignment_path");
     if (-d $alignment_path) {
+        my @in_use = glob($alignment_path . '/*.in_use');
+        if(scalar @in_use) {
+            $self->error_message('alignment appears to be in use by other builds. cannot remove');
+            return;
+        }
+
         rmtree($alignment_path);
         if (-d $alignment_path) {
             $self->error_message("alignment path $alignment_path still exists after evisceration attempt, something went wrong.");
@@ -880,7 +886,7 @@ sub alignment_summary_file {
 }
 
 sub alignment_summary_hash_ref {
-    my ($self,$wingspan) = @_;
+    my $self = shift;
 
     unless ($self->{_alignment_summary_hash_ref}) {
         my $wingspan_array_ref = $self->wingspan_values_array_ref;

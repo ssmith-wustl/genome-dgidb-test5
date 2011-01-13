@@ -7,7 +7,7 @@ BEGIN {
 }
 
 use above "Genome";
-use Test::More tests => 25;
+use Test::More tests => 27;
 use Data::Dumper;
 use_ok('Genome::Model::Build::ImportedAnnotation');
 
@@ -49,6 +49,9 @@ $abuild = Genome::Model::Build::ImportedAnnotation->create(
     reference_sequence  => $rbuilds{'human'}->[0]
 );
 ok($abuild, "created annotation build");
+is($abuild->name, "test_annotation/$versions[0]", 'build name is correct');
+$abuild = Genome::Model::Build::ImportedAnnotation->get(name => $abuild->name);
+ok($abuild, 'got build by name');
 
 my $abuild_event = Genome::Model::Event::Build->create(
     model_id => $abuild->model->id,

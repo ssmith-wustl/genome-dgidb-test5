@@ -1457,13 +1457,13 @@ sub delete {
     my %params = @_;
     my $keep_build_directory = $params{keep_build_directory};
 
-    # Abandon
+    # Abandon events
     $self->status_message("Abandoning events associated with build");
-    unless ( $self->_abandon_events ) {
+    unless ($self->_abandon_events) {
         $self->error_message(
             "Unable to delete build (".$self->id.") because the events could not be abandoned"
         );
-        return;
+        confess $self->error_message;
     }
     
     # Delete all associated objects
@@ -1491,30 +1491,18 @@ sub delete {
         $idas->first_build_id($next_build_id);
     }
 
+    # Remove build directory unless told not to
+    # TODO If no-commit is on, the build directory should not be removed
     if ($self->data_directory && -e $self->data_directory && !$keep_build_directory) {
         $self->status_message("Removing build data directory at " . $self->data_directory);
-        unless (rmtree($self->data_directory, { error => \my $remove_errors })) {
-            if (@$remove_errors) {
-                my $error_summary;
-                for my $error (@$remove_errors) {
-                    my ($file, $error_message) = %$error;
-                    if ($file eq '') {
-                        $error_summary .= "General error removing build directory: $error_message\n";
-                    }
-                    else {
-                        $error_summary .= "Error removing file $file : $error_message\n";
-                    }
-                }
-                $self->error_message($error_summary);
-            }
-
-            confess "Failed to remove build directory tree at " . $self->data_directory . ", cannot remove build!";
-        }
+        my $rv = Genome::Utility::FileSystem->remove_directory_tree($self->data_directory);
+        confess "Failed to remove build directory at " . $self->data_directory unless defined $rv and $rv;
     }
     else {
         $self->status_message("Not removing build data directory at " . $self->data_directory);
     }
 
+    # Deallocate build directory if it was removed and an allocation is found
     my $disk_allocation = $self->disk_allocation;
     if ($disk_allocation && !$keep_build_directory) {
         $self->status_message("Deallocating build directory");
@@ -1777,11 +1765,4 @@ sub compare_output {
     return %diffs;
 }
 
-# why hide this here? -ss
-package Genome::Model::Build::AbstractBaseTest;
-
-class Genome::Model::Build::AbstractBaseTest {
-    is => 'Genome::Model::Build',
-};
-
-1;;
+1;

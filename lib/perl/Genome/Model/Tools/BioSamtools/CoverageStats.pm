@@ -61,6 +61,17 @@ class Genome::Model::Tools::BioSamtools::CoverageStats {
     ]
 };
 
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    unless ($self) { return; }
+
+    unless ($] > 5.012) {
+        die 'Subcommands run by '. __PACKAGE__ .' require perl 5.12! Consider using gmt5.12.1 instead of gmt.';
+    }
+    return $self;
+}
+
 sub execute {
     my $self = shift;
     unless (-d $self->output_directory) {

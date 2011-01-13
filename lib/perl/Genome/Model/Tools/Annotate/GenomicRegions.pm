@@ -6,9 +6,6 @@ use warnings;
 use Genome;
 use Workflow;
 
-use lib '/gsc/var/tmp/Bio-SamTools/lib';
-use Bio::DB::Sam::RefCov::Bed;
-
 class Genome::Model::Tools::Annotate::GenomicRegions {
     is => ['Workflow::Operation::Command'],
     workflow => sub {
@@ -23,7 +20,9 @@ class Genome::Model::Tools::Annotate::GenomicRegions {
 
 sub pre_execute {
     my $self = shift;
-    my $bed = Bio::DB::Sam::RefCov::Bed->new(file => $self->bed_file);
+    my $bed = Genome::RefCov::ROI::Bed->create(
+        file => $self->bed_file
+    );
     my @chromosomes = $bed->chromosomes;
     $self->chromosome(\@chromosomes);
 }

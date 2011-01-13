@@ -122,8 +122,19 @@ sub execute {                               # replace with real execution logic.
 
 						if(!($self->report_only))
 						{
-							system("bsub -q long -oo $output_file.log -R\"select[model != Opteron250 && mem>4000] rusage[mem=4000]\" \"$cmd\"");
-	#						system($cmd);							
+							if($self->use_bsub)
+							{
+								system("bsub -q long -oo $output_file.log -R\"select[model != Opteron250 && mem>4000] rusage[mem=4000]\" \"$cmd\"");								
+							}
+							else
+							{
+								system($cmd);															
+							}
+
+						}
+						else
+						{
+							print "$cmd\n";
 						}
 
 						$stats{'num_converted'}++;

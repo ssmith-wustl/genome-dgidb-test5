@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Xhong::RunBdSd;
+package Genome::Model::Somatic::Command::RunBdSd;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 use Command;
 use IO::File;
 
-class Genome::Model::Tools::Xhong::RunBdSd {
+class Genome::Model::Somatic::Command::RunBdSd {
     is => 'Command',
     has => [
     build_id => { 
@@ -199,7 +199,7 @@ sub execute {
    } 
 
     #submit squaredancer job
-    my $jobid3=`bsub -N -u $user\@genome.wustl.edu -J '$genome_name SD' -e SD.err -o SD.out -R 'select[type==LINUX64 && mem>8000] rusage [mem=8000]' -M 8000000 -q long 'perl /gscuser/xhong/git/genome/lib/perl/Genome/Model/Tools/Sv/SquareDancer.pl -l normal tumor.bam normal.bam'`;
+    my $jobid3=`bsub -N -u $user\@genome.wustl.edu -J '$genome_name SD' -e SD.err -o SD.out -R 'select[type==LINUX64 && mem>8000] rusage [mem=8000]' -M 8000000 -q long '/gsc/scripts/opt/genome/current/pipeline/lib/perl/Genome/Model/Tools/Sv/SquareDancer.pl -l normal tumor.bam normal.bam'`;
     $jobid3=~/<(\d+)>/;
     $jobid3= $1;
     print "$jobid3\n";
@@ -212,11 +212,11 @@ sub execute {
 1;
 
 sub help_brief {
-    "Helps run BreakDancer by making symlinks and starting jobs"
+    "Helps run BreakDancer and SquareDancerby making symlinks and starting jobs"
 }
 
 sub help_detail {
     <<'HELP';
-This script helps runs BreakDancer CPP version. It uses a somatic model to locate the tumor and normal bam files and then launches the appropriate downstream BreakDancer commands. It does not run novoalign and does not assist in checking for chimeric lanes, which need to manually done.
+This script runs lastest vertion of BreakDancer (CPP) and Squaredancer (perl). It uses a somatic model to locate the tumor and normal bam files and then launches the appropriate downstream BreakDancer commands. It does not run novoalign and does not assist in checking for chimeric lanes, which need to manually done.
 HELP
 }

@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Xhong::RunFalsePositiveFilter;
+package Genome::Model::Somatic::Command::RunFalsePositiveFilter;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 use IO::File;
 
 
-class Genome::Model::Tools::Xhong::RunFalsePositiveFilter {
+class Genome::Model::Somatic::Command::RunFalsePositiveFilter {
 	is => 'Command',
 	has => [
 	somatic_build_id => { type => 'String', is_optional => 0, doc => "the somatic build_id to process.", },
@@ -16,7 +16,7 @@ class Genome::Model::Tools::Xhong::RunFalsePositiveFilter {
 };
 
 sub help_brief {
-    	"Generates false positive filtered SNVs and its annotation for the last succeed builds for a somatic model"
+    	"Generates false positive filtered SNVs and its annotation for the last succeed builds of a somatic model"
 }
 
 sub help_detail {
@@ -102,16 +102,11 @@ sub execute {
        		
        		my $cmd ="";
         	$cmd ="bsub -N -u $user\@genome.wustl.edu -J $common_name.$tier.FP -R \'select\[type==LINUX64\]\' \'gmt somatic filter-false-positives --bam-file=$tumor_bam --variant-file=$snv_file --output-file=$out_dir/$tier.csv\'";
-        	my $jobid1 =`$cmd`;
-        	$jobid1=~ /<(\d+)>/;
-		$jobid1=$1;
+        	my ($jobid1) =($cmd=~ m/<(\d+)>/);
 		print "$cmd\n$jobid1\n";
 		my $cmd_anno="";
-	        #$cmd_anno ="bsub -N -u $user\@genome.wustl.edu -J $common_name.$tier.anno \'perl -I /gscuser/xhong/git/genome/lib/perl \`which gmt\` annotate transcript-variants --use-version 2 --variant-file $out_dir/$tier.csv --output-file $out_dir/$tier.anno --annotation-filter top\'";
-	        $cmd_anno ="bsub -N -u $user\@genome.wustl.edu -J $common_name.$tier.anno -w \'ended\($jobid1\)\'  \'perl -I /gscuser/xhong/git/genome/lib/perl \`which gmt\` annotate transcript-variants --use-version 2 --variant-file $out_dir/$tier.csv --output-file $out_dir/$tier.anno --annotation-filter top\'";
-       		my $jobid2 =`$cmd_anno`; 
-       		$jobid2=~ /<(\d+)>/;
-		$jobid2=$1;
+                $cmd_anno ="bsub -N -u $user\@genome.wustl.edu -J $common_name.$tier.anno -w \'ended\($jobid1\)\'  \'perl -I /gsc/scripts/opt/genome/current/pipeline/lib/perl/ \`which gmt\` annotate transcript-variants --use-version 2 --variant-file $out_dir/$tier.csv --output-file $out_dir/$tier.anno --annotation-filter top\'";
+       		my ($jobid2) = ($cmd_anno=~ m/<(\d+)>/);
        		print "$cmd_anno\n$jobid2\n";
        		
        		

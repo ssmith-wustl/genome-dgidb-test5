@@ -23,12 +23,6 @@ class Genome::Model::Tools::FastTier::FastTier {
             doc => "Set this to true if you have any items in the bed file which have start_pos == stop_pos. It creates a temp file and dumps your input
                     into it in order to get around bedtools silently failing when start==stop",
         },
-        exclusive_tiering => {
-            type => 'Boolean',
-            is_input =>1,
-            default => 1,
-            doc => 'This option tiers events in the highest tier possible, then removes it from the list of inputs to the next tier. If tiers overlap, this prevents events from showing up twice',
-        },
         tier1_output => {
             calculate_from => ['variant_bed_file'],
             calculate => q{ "$variant_bed_file.tier1"; },
@@ -57,7 +51,7 @@ class Genome::Model::Tools::FastTier::FastTier {
         intersect_bed_bin_location => {
             type => 'Text',
             is_input => 1,
-            default => '/gscmnt/sata921/info/medseq/intersectBed/intersectBed',  #'/gsc/pkg/bio/bedtools/installed-64/intersectBed',
+            default => '/gscmnt/sata921/info/medseq/intersectBed/intersectBed-vf',  #'/gsc/pkg/bio/bedtools/installed-64/intersectBed',
             doc => 'The path and filename of intersectBed',
         },
         _tier1_bed => {
@@ -167,21 +161,15 @@ sub execute {
 sub tier {
     my $self = shift;
     my ($input,$tier_bed,$tier_output,$t) = @_;
-    my $exclusive_list = Genome::Utility::FileSystem->create_temp_file_path if $self->exclusive_tiering;
-    unless(($t==4)&&($self->exclusive_tiering)){
-        unless($self->intersect_bed($input,$tier_bed,$tier_output)){
+    my $exclusive_list = Genome::Utility::FileSystem->create_temp_file_path;
+    unless($t==4){
+        unless($self->intersect_bed($input,$tier_bed,$tier_output,$exclusive_list)){
             $self->error_message("Couldn't complete intersectBed call for tier $t");
             die $self->error_message;
         }
-        if($self->exclusive_tiering){
-            unless($self->intersect_bed_v($input,$tier_bed,$exclusive_list)){
-                $self->error_message("Couldn't complete intersectBed -v call for tier $t");
-                die $self->error_message;
-            }
-            $input = $exclusive_list;
-        }
+        $input = $exclusive_list;
     }
-    if($t==4 && (not $self->indels && $self->exclusive_tiering)){
+    if($t==4 && not $self->indels){
         copy($input,$self->tier4_output);
     }
     return $input;
@@ -192,9 +180,10 @@ sub intersect_bed {
     my $a = shift;
     my $b = shift;
     my $output = shift;
+    my $exclusive_list = shift;
     my $result;
     if(-s $a){
-        my $cmd = $self->intersect_bed_bin_location." -wa -u -a " . $a . " -b " . $b . " > " . $output;
+        my $cmd = $self->intersect_bed_bin_location." -wa -vf ".$exclusive_list." -u -a " . $a . " -b " . $b . " > " . $output;
         $result = Genome::Utility::FileSystem->shellcmd(
             cmd          => $cmd,
             input_files  => [ $a ],
@@ -204,21 +193,6 @@ sub intersect_bed {
     } else {
         $result = $self->touch($output);
     }
-    return $result;
-}
-
-sub intersect_bed_v {
-    my $self = shift;
-    my $a = shift;
-    my $b = shift;
-    my $output = shift;
-    my $cmd = $self->intersect_bed_bin_location." -wa -v -a " . $a . " -b " . $b . " > " . $output;
-    my $result = Genome::Utility::FileSystem->shellcmd(
-        cmd          => $cmd,
-        input_files  => [ $a ],
-        output_files => [ ],
-        skip_if_output_is_present => 0
-    );
     return $result;
 }
 
