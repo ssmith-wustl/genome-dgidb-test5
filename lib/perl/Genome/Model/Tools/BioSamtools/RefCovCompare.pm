@@ -57,7 +57,9 @@ Output file format:
 sub execute {
     my $self = shift;
 
-    my $regions = Genome::RefCov::Bed->new(file => $self->bed_file);
+    my $regions = Genome::RefCov::ROI::Bed->create(
+        file => $self->bed_file
+    );
     unless ($regions) {
         die('Failed to load region file '. $self->bed_file .'.  Accepted formats are: bed');
     }
@@ -116,49 +118,45 @@ sub execute {
     
     #Outdated header
     #print "ID\tUNCOVERED\tUNIQUE:$bam_file_a\tSHARED\tUNIQUE:$bam_file_b\n";
-    my @chromosomes = $regions->chromosomes;
-    for my $chrom (@chromosomes) {
-        my @regions = $regions->chromosome_regions($chrom);
-        for my $region (@regions) {
-            my $id = $region->{name};
-            my $target = $region->{chrom};
-            $target =~ s/chr//;
-            my $start = $region->{start};
-            my $stop = $region->{end};
-            my $length = ($stop - $start) + 1;
-            # Here we get the $tid from the $gene_name or $seq_id
-            my $tid = $target_name_index{$target};
-            unless (defined $tid) { die('Failed to get tid for target '. $target); }
+    while ( my $region = $regions->next_region) {
+        my $id = $region->{name};
+        my $target = $region->{chrom};
+        $target =~ s/chr//;
+        my $start = $region->{start};
+        my $stop = $region->{end};
+        my $length = ($stop - $start) + 1;
+        # Here we get the $tid from the $gene_name or $seq_id
+        my $tid = $target_name_index{$target};
+        unless (defined $tid) { die('Failed to get tid for target '. $target); }
 
-            #low-level API uses zero based coordinates
-            #Not sure if this method needs $stop - 1  instead of $stop
-            #Needs further testing but thought there was a reason for using just $stop
-            my $coverage_a = $index_a->coverage( $bam_a, $tid, $start - 1, $stop );
-            unless (scalar( @{ $coverage_a } ) == $length) {
-                die('The length of the locus '. $length .' does not match the coverage length '. scalar( @{ $coverage_a }));
-            }
-            my $coverage_b = $index_b->coverage( $bam_b, $tid, $start - 1, $stop );
-            unless (scalar( @{ $coverage_b } ) == $length) {
-                die('The length of the locus '. $length .' does not match the coverage length '. scalar( @{ $coverage_b }));
-            }
-            my $refcov_stats_a = Genome::RefCov::Stats->new( coverage => $coverage_a , min_depth => $min_depth);
-            my $refcov_stats_b = Genome::RefCov::Stats->new( coverage => $coverage_b , min_depth => $min_depth);
-            #my ($uncovered, $a_unique, $shared, $b_unique) = &compare_coverage_arrays($coverage_a, $coverage_b);
-            my $overlap_results = &overlap_results($coverage_a,$coverage_b);
-            #unless ($overlap_results->{no_set_coverage} eq $uncovered) {
-            #    die;
-            #}
-            #print $id ."\t". $uncovered ."\t". $a_unique ."\t". $shared ."\t". $b_unique ."\n";
-            #print Data::Dumper::Dumper($overlap_results);
-            print $out_fh $id ."\t". $overlap_results->{array_length} ."\t".
-                $overlap_results->{no_set_coverage} ."\t". $overlap_results->{no_set_coverage_percent} ."\t".
-                    $overlap_results->{AB_total_coverage} ."\t". $overlap_results->{AB_total_coverage_percent} ."\t".
-                        $overlap_results->{AB_unique_coverage} ."\t". $overlap_results->{AB_unique_coverage_percent} ."\t".
-                            $overlap_results->{A_total_coverage} ."\t". $overlap_results->{A_total_coverage_percent} ."\t".
-                                $overlap_results->{A_unique_coverage} ."\t". $overlap_results->{A_unique_coverage_percent} ."\t".
-                                    $overlap_results->{B_total_coverage} ."\t". $overlap_results->{B_total_coverage_percent} ."\t".
-                                        $overlap_results->{B_unique_coverage} ."\t". $overlap_results->{B_unique_coverage_percent} ."\n";
+        #low-level API uses zero based coordinates
+        #Not sure if this method needs $stop - 1  instead of $stop
+        #Needs further testing but thought there was a reason for using just $stop
+        my $coverage_a = $index_a->coverage( $bam_a, $tid, $start - 1, $stop );
+        unless (scalar( @{ $coverage_a } ) == $length) {
+            die('The length of the locus '. $length .' does not match the coverage length '. scalar( @{ $coverage_a }));
         }
+        my $coverage_b = $index_b->coverage( $bam_b, $tid, $start - 1, $stop );
+        unless (scalar( @{ $coverage_b } ) == $length) {
+            die('The length of the locus '. $length .' does not match the coverage length '. scalar( @{ $coverage_b }));
+        }
+        my $refcov_stats_a = Genome::RefCov::Stats->new( coverage => $coverage_a , min_depth => $min_depth);
+        my $refcov_stats_b = Genome::RefCov::Stats->new( coverage => $coverage_b , min_depth => $min_depth);
+        #my ($uncovered, $a_unique, $shared, $b_unique) = &compare_coverage_arrays($coverage_a, $coverage_b);
+        my $overlap_results = &overlap_results($coverage_a,$coverage_b);
+        #unless ($overlap_results->{no_set_coverage} eq $uncovered) {
+        #    die;
+        #}
+        #print $id ."\t". $uncovered ."\t". $a_unique ."\t". $shared ."\t". $b_unique ."\n";
+        #print Data::Dumper::Dumper($overlap_results);
+        print $out_fh $id ."\t". $overlap_results->{array_length} ."\t".
+            $overlap_results->{no_set_coverage} ."\t". $overlap_results->{no_set_coverage_percent} ."\t".
+                $overlap_results->{AB_total_coverage} ."\t". $overlap_results->{AB_total_coverage_percent} ."\t".
+                    $overlap_results->{AB_unique_coverage} ."\t". $overlap_results->{AB_unique_coverage_percent} ."\t".
+                        $overlap_results->{A_total_coverage} ."\t". $overlap_results->{A_total_coverage_percent} ."\t".
+                            $overlap_results->{A_unique_coverage} ."\t". $overlap_results->{A_unique_coverage_percent} ."\t".
+                                $overlap_results->{B_total_coverage} ."\t". $overlap_results->{B_total_coverage_percent} ."\t".
+                                    $overlap_results->{B_unique_coverage} ."\t". $overlap_results->{B_unique_coverage_percent} ."\n";
     }
     $out_fh->close;
     return 1;

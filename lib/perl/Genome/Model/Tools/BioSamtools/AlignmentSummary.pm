@@ -102,7 +102,7 @@ sub execute {
             die ('Failed to recognize bed_file '. $bed_file .' without bed suffix');
         }
         $resolved_output_file .= '-'. $bed_basename;
-        if ($self->wingspan) {
+        if (defined($self->wingspan)) {
             $resolved_output_file .= '-wingspan_'. $self->wingspan;
         }
         $regions = Genome::RefCov::ROI::Bed->create(

@@ -11,7 +11,7 @@ use above 'Genome';
 if ($] < 5.012) {
   plan skip_all => "this test is only runnable on perl 5.12+"
 }
-plan tests => 5;
+plan tests => 11;
 
 use File::Compare;
 use above 'Genome';
@@ -39,5 +39,31 @@ ok($as->execute,'execute AlignmentSummary command '. $as->command_name);
 
 ok(!compare($expected_output_file,$as->output_file),'expected output file '. $expected_output_file .' is identical to '. $as->output_file);
 
+my $wingspan_bam_file = $data_dir .'/wingspan.bam';
+my $wingspan_bed_file = $data_dir .'/wingspan.bed';
+
+my $w_0_file = Genome::Utility::FileSystem->create_temp_file_path('alignment_summary_w_0.tsv');
+my $expected_w_0_file = $data_dir .'/alignment_summary_w_0.tsv';
+my $w_0_as = Genome::Model::Tools::BioSamtools::AlignmentSummary->create(
+    output_file => $w_0_file,
+    bam_file => $wingspan_bam_file,
+    bed_file => $wingspan_bed_file,
+    wingspan => 0,      
+);  
+isa_ok($w_0_as,'Genome::Model::Tools::BioSamtools::AlignmentSummary');
+ok($w_0_as->execute,'execute AlignmentSummary command '. $w_0_as->command_name);
+ok(!compare($expected_w_0_file,$w_0_as->output_file),'expected output file '. $expected_w_0_file .' is identical to '. $w_0_as->output_file);
+
+my $w_500_file = Genome::Utility::FileSystem->create_temp_file_path('alignment_summary_w_500.tsv');
+my $expected_w_500_file = $data_dir .'/alignment_summary_w_500.tsv';
+my $w_500_as = Genome::Model::Tools::BioSamtools::AlignmentSummary->create(
+    output_file => $w_500_file,
+    bam_file => $wingspan_bam_file,
+    bed_file => $wingspan_bed_file,
+    wingspan => 500,
+);
+isa_ok($w_500_as,'Genome::Model::Tools::BioSamtools::AlignmentSummary');
+ok($w_500_as->execute,'execute AlignmentSummary command '. $w_500_as->command_name);
+ok(!compare($expected_w_500_file,$w_500_as->output_file),'expected output file '. $expected_w_500_file .' is identical to '. $w_500_as->output_file);
 
 exit;

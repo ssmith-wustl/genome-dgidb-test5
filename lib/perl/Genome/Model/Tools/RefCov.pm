@@ -269,9 +269,7 @@ sub _load_roi {
     my $self = shift;
     # TODO: Can the class Genome::RefCov::ROI or a new class Genome::RefCov::ROI::File resolve the appropriate adaptor based on the file type?
     my $format = $self->roi_file_format;
-    #my $subclass = ucfirst($format);
-    #TODO: Fix hardcoded efficient parser/reader for now and create better interface
-    my $subclass = 'BedLite';
+    my $subclass = ucfirst($format);
     my $class = 'Genome::RefCov::ROI::'. $subclass;
     my $regions = $class->create(
         file => $self->roi_file_path,
@@ -679,7 +677,7 @@ sub validate_chromosomes {
     my $self = shift;
     my $roi = $self->roi;
     my $refcov_bam = $self->alignments;
-    for my $chr (@{$roi->chromosomes}) {
+    for my $chr ($roi->chromosomes) {
         eval {
             my $tid = $refcov_bam->tid_for_chr($chr);
         };

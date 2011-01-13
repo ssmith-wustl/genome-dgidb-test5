@@ -54,9 +54,8 @@ sub execute {
     unless (Genome::Config->arch_os =~ /64/) {
         die('Failed to run on 64-bit architecture');
     }
-    my $regions = Bio::DB::Sam::RefCov::Bed->new(
+    my $regions = Genome::RefCov::ROI::Bed->create(
         file => $self->bed_file,
-        region_index_substring => 0
     );
     unless ($regions) {
         die('Failed to load region file '. $self->bed_file .'.  Accepted formats are: bed');
@@ -91,47 +90,43 @@ sub execute {
     }
     my $index = $refcov_bam->bio_db_index;
 
-    my @chromosomes = $regions->chromosomes;
     my %size_to_relative_depth;
-    for my $chrom (@chromosomes) {
-        my @regions = $regions->chromosome_regions($chrom);
-        for my $region (@regions) {
-            my $id = $region->{name};
-            my $target = $region->{chrom};
-            my $start = $region->{start};
-            my $stop = $region->{end};
-            my $length = ($stop - $start) + 1;
+    while (my $region = $regions->next_region) {
+        my $id = $region->{name};
+        my $target = $region->{chrom};
+        my $start = $region->{start};
+        my $stop = $region->{end};
+        my $length = ($stop - $start) + 1;
 
-            # Here we get the $tid from the $gene_name or $seq_id
-            my $tid = $target_name_index{$target};
-            unless (defined $tid) { die('Failed to get tid for target '. $target); }
+        # Here we get the $tid from the $gene_name or $seq_id
+        my $tid = $target_name_index{$target};
+        unless (defined $tid) { die('Failed to get tid for target '. $target); }
 
-            #low-level API uses zero based coordinates
-            #Not sure if this method needs $stop - 1  instead of $stop
-            #Needs further testing but thought there was a reason for using just $stop
-            my $coverage = $index->coverage( $bam, $tid, $start - 1, $stop );
-            unless (scalar( @{ $coverage } ) == $length) {
-                die('The length of the ref '. $length .' does not match the depth span '. scalar( @{ $coverage }));
+        #low-level API uses zero based coordinates
+        #Not sure if this method needs $stop - 1  instead of $stop
+        #Needs further testing but thought there was a reason for using just $stop
+        my $coverage = $index->coverage( $bam, $tid, $start - 1, $stop );
+        unless (scalar( @{ $coverage } ) == $length) {
+            die('The length of the ref '. $length .' does not match the depth span '. scalar( @{ $coverage }));
+        }
+        my $myCoverageStat = Genome::RefCov::Stats->new( coverage => $coverage);
+        print $stats_fh join ("\t", $id, @{ $myCoverageStat->stats() }) . "\n";
+        if ($self->bias_file) {
+            my $size_bin = undef;
+            if (($length >= 100) && ($length <= 2_999)) {
+                $size_bin = 'SMALL';
             }
-            my $myCoverageStat = Genome::RefCov::Stats->new( coverage => $coverage);
-            print $stats_fh join ("\t", $id, @{ $myCoverageStat->stats() }) . "\n";
-            if ($self->bias_file) {
-                my $size_bin = undef;
-                if (($length >= 100) && ($length <= 2_999)) {
-                    $size_bin = 'SMALL';
-                }
-                elsif (($length >= 3_000) && ($length <= 6_999)) {
-                    $size_bin = 'MEDIUM';
-                }
-                elsif (($length >= 7_000)) {
-                    $size_bin = 'LARGE';
-                }
-                my $relative_coverage = Genome::RefCov::RelativeCoverage->new( coverage => $coverage );
-                if (defined($size_bin)) {
-                    my $hash_ref = $relative_coverage->relative_coverage;
-                    for my $relative_position (keys %{$hash_ref}) {
-                        $size_to_relative_depth{$size_bin}{$relative_position} += $hash_ref->{$relative_position};
-                    }
+            elsif (($length >= 3_000) && ($length <= 6_999)) {
+                $size_bin = 'MEDIUM';
+            }
+            elsif (($length >= 7_000)) {
+                $size_bin = 'LARGE';
+            }
+            my $relative_coverage = Genome::RefCov::RelativeCoverage->new( coverage => $coverage );
+            if (defined($size_bin)) {
+                my $hash_ref = $relative_coverage->relative_coverage;
+                for my $relative_position (keys %{$hash_ref}) {
+                    $size_to_relative_depth{$size_bin}{$relative_position} += $hash_ref->{$relative_position};
                 }
             }
         }

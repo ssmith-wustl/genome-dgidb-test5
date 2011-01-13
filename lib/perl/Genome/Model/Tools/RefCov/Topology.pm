@@ -42,7 +42,7 @@ sub execute {
     unless ($alignments) {
         die('Failed to load alignment file '. $self->bam_file);
     }
-    my $regions = Genome::RefCov::ROI::BedLite->create(
+    my $regions = Genome::RefCov::ROI::Bed->create(
         file => $self->bed_file,
         wingspan => $self->wingspan,
     );
