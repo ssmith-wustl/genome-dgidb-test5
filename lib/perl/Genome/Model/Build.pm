@@ -445,6 +445,7 @@ sub resolve_data_directory {
     my $model = $self->model;
     my $build_data_directory;
     my $model_data_directory = $model->data_directory;
+    # TODO This check is site specific... what does it matter if the model path doesn't follow this pattern?
     my $model_path_is_abnormal = defined($model_data_directory) && $model_data_directory !~ /\/gscmnt\/.*\/info\/(?:medseq\/)?.*/;
 
     if($model->genome_model_id < 0 && $model_path_is_abnormal)
@@ -477,13 +478,20 @@ sub resolve_data_directory {
             die $self->error_message('Failed to resolve a disk group for a new build!');
         }
     
-        my $disk_allocation = Genome::Disk::Allocation->allocate(disk_group_name => $disk_group_name,
-                                                                 allocation_path => $allocation_path,
-                                                                 kilobytes_requested => $kb_requested,
-                                                                 owner_class_name => $self->class,
-                                                                 owner_id => $self->id);
+        # This is run as a shell command to ensure that a commit is executed after the allocation is created,
+        # which triggers the release of disk volume locks and the creation of the allocation path.
+        my $class = $self->class;
+        my $id = $self->id;
+        my $rv = system("genome disk allocation create --disk-group-name $disk_group_name " .
+            "--allocation-path $allocation_path --kilobytes-requested $kb_requested " .
+            "--owner_class_name $class --owner_id $id");
+        unless (defined $rv and $rv == 0) {
+            Carp::confess $self->error_message('Failed to create allocation for build');
+        }
+
+        my $disk_allocation = $self->disk_allocation;
         unless ($disk_allocation) {
-            die $self->error_message('Failed to get disk allocation');
+            Carp::confess $self->error_message('Failed to retrieve disk allocation for build');
         }
     
         $build_data_directory = $disk_allocation->absolute_path;
