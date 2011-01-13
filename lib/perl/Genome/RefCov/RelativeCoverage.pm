@@ -46,7 +46,7 @@ sub _revise_relative_coverage {
     my $positions = scalar(@{ $self->coverage() });
     my %relative_coverage;
     for (my $i = 0; $i < $positions; $i++) {
-        my $depth = $self->{_coverage}->[$i];
+        my $depth = $self->coverage->[$i];
         unless ($depth) { next; }
         if ($self->min_depth && $depth < $self->min_depth) {
             $self->_set_depth_to_zero( $i )

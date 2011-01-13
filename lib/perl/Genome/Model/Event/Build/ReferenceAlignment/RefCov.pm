@@ -119,7 +119,7 @@ sub execute {
 
         my $op = Workflow::Operation->create(
             name => 'RefCov Progression',
-            operation_type => Workflow::OperationType::Command->get('Genome::Model::Tools::OldRefCov::ProgressionInstance')
+            operation_type => Workflow::OperationType::Command->get('Genome::Model::Tools::BioSamtools::ProgressionInstance')
         );
 
         $op->parallel_by('bam_files');
@@ -195,7 +195,7 @@ sub execute {
 
     my @progression_instrument_data_ids = $self->sorted_instrument_data_ids;
     unless (-s $self->build->coverage_progression_file) {
-        unless (Genome::Model::Tools::OldRefCov::Progression->execute(
+        unless (Genome::Model::Tools::BioSamtools::Progression->execute(
             stats_files => \@progression_stats_files,
             instrument_data_ids => \@progression_instrument_data_ids,
             sample_name => $self->model->subject_name,
