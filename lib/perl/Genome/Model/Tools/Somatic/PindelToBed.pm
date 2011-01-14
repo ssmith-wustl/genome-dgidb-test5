@@ -46,7 +46,7 @@ class Genome::Model::Tools::Somatic::PindelToBed {
         source => {
             type => 'String',
             is_optional => 0,
-            doc => 'The pindel indels_all_sequences file to be converted to bed.'
+            doc => 'The pindel indels_all_sequences file or directory containing the run-pindel pipeline output, to be converted to bed.'
         },
     ],
     has_transient_optional => [
