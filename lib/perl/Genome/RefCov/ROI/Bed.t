@@ -7,14 +7,14 @@ use above 'Genome';
 
 use Test::More tests => 6;
 
-BEGIN {	
+BEGIN {
     use_ok('Genome::RefCov::ROI::RegionI');
     use_ok('Genome::RefCov::ROI::Region');
     use_ok('Genome::RefCov::ROI::FileI');
     use_ok('Genome::RefCov::ROI::Bed');
 }
-# TODO: find much more suitable BED file for test case
-my $file = '/gscmnt/sata141/techd/twylie/CAPTURE_ROUND_ROBIN/SANGER.bed';
+# TODO: Subset bed file into one or two entries per chr
+my $file = '/gsc/var/cache/testsuite/data/Genome-RefCov-ROI-Bed/SANGER.bed';
 my $region_set = Genome::RefCov::ROI::Bed->create(
     file => $file,
 );
