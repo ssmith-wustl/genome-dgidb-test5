@@ -22,24 +22,30 @@
         </h3>
 
         <xsl:if test="field[@name='display_url1']">
+            <xsl:if test="field[@name='display_url1'] != 'none'">
             <a class="mini btn">
                 <xsl:attribute name="href"><xsl:value-of select="field[@name='display_url1']"/></xsl:attribute>
                 <xsl:value-of select="field[@name='display_label1']"/>
             </a>
+            </xsl:if>
         </xsl:if>
 
         <xsl:if test="field[@name='display_url2']">
+            <xsl:if test="field[@name='display_url2'] != 'none'">
             <a class="mini btn">
                 <xsl:attribute name="href"><xsl:value-of select="field[@name='display_url2']"/></xsl:attribute>
                 <xsl:value-of select="field[@name='display_label2']"/>
             </a>
+            </xsl:if>
         </xsl:if>
 
         <xsl:if test="field[@name='display_url3']">
+            <xsl:if test="field[@name='display_url3'] != 'none'">
             <a class="mini btn">
                 <xsl:attribute name="href"><xsl:value-of select="field[@name='display_url3']"/></xsl:attribute>
                 <xsl:value-of select="field[@name='display_label3']"/>
             </a>
+            </xsl:if>
         </xsl:if>
 
         <p class="resource_buttons">
