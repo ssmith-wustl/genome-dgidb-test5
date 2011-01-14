@@ -14,7 +14,7 @@ BEGIN {
     use_ok('Genome::RefCov::ROI::Bed');
 }
 # TODO: Subset bed file into one or two entries per chr
-my $file = '/gsc/var/cache/testsuite/data/Genome-RefCof-ROI-Bed/SANGER.bed';
+my $file = '/gsc/var/cache/testsuite/data/Genome-RefCov-ROI-Bed/SANGER.bed';
 my $region_set = Genome::RefCov::ROI::Bed->create(
     file => $file,
 );
