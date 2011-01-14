@@ -18,7 +18,7 @@ class Genome::ProcessingProfile::View::Solr::Xml {
         },
         display_icon_url => {
             is  => 'Text',
-            default => 'genome_processingprofile_32.png',
+            default => 'genome_processingprofile_32',
         },
         display_url0 => {
             is => 'Text',

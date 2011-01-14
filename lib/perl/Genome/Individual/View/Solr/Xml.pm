@@ -18,7 +18,7 @@ class Genome::Individual::View::Solr::Xml {
         },
         display_icon_url => {
             is  => 'Text',
-            default => 'genome_individual_32.png',
+            default => 'genome_individual_32',
         },
         display_url0 => {
             is => 'Text',

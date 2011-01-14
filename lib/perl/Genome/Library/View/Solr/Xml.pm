@@ -18,7 +18,7 @@ class Genome::Library::View::Solr::Xml {
         },
         display_icon_url => {
             is  => 'Text',
-            default => 'genome_library_32.png',
+            default => 'genome_library_32',
         },
         display_url0 => {
             is => 'Text',

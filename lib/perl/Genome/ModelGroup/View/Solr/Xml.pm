@@ -18,7 +18,7 @@ class Genome::ModelGroup::View::Solr::Xml {
         },
         display_icon_url => {
             is  => 'Text',
-            default => 'genome_model_32.png',
+            default => 'genome_modelgroup_32',
         },
         display_url0 => {
             is => 'Text',

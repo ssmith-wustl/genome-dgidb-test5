@@ -40,6 +40,9 @@ sub _generate_content {
         $results_node->addChild( $doc->createAttribute( "facet-name", $facet_name ));
     }
 
+    $params->{'hl'} = 'true';
+#    $params->{'hl.fl'} = 'title,content';
+
     $params->{'qs'} = 1;
 
     my $solrQuery = $query;
@@ -61,6 +64,33 @@ sub _generate_content {
     $results_node->addChild( $doc->createAttribute( "query",        $query ) );
     $results_node->addChild( $doc->createAttribute( "params",        $param_str) );
     $results_node->addChild( $doc->createAttribute( "num-found", $response->content->{'response'}->{'numFound'} ));
+
+
+#   HIGHLIGHTING XML
+
+    my $highlights_node = $doc->createElement('highlights');
+
+    $DB::single = 1;
+
+    my $highlights_raw = $response->content->{'highlighting'};
+    for my $found_id (keys %$highlights_raw) {
+        my $h = $highlights_raw->{$found_id};
+        my $field_str;
+        for my $field (keys %$h) {
+            my @field_highlights = @{ $h->{$field} };
+            $field_str = "$field: " . join(',', @field_highlights) . '</br>';
+        }
+        my $highlight_item = $doc->createElement('highlight_item');
+        $highlight_item->addChild($doc->createAttribute('id',$found_id));
+        $highlight_item->addChild($doc->createAttribute('description',$field_str));
+        $highlights_node->addChild($highlight_item);
+    }
+
+    $results_node->addChild($highlights_node);
+
+
+#   END OF HIGHLIGHTING XML
+
 
 #   FACET XML
 #    facet_dates

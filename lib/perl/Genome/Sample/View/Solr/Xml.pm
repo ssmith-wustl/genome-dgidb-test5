@@ -18,7 +18,7 @@ class Genome::Sample::View::Solr::Xml {
         },
         display_icon_url => {
             is  => 'Text',
-            default => 'genome_sample_32.png',
+            default => 'genome_sample_32',
         },
         display_url0 => {
             is => 'Text',
