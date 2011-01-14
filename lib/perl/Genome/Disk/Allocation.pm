@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Carp 'confess';
 
 class Genome::Disk::Allocation {
     id_by => [
@@ -59,17 +60,20 @@ class Genome::Disk::Allocation {
         volume => { 
             is => 'Genome::Disk::Volume',
             calculate_from => 'mount_path',
-            calculate => q{
-                return Genome::Disk::Volume->get(mount_path => $mount_path);
-            },
-        }
+            calculate => q| return Genome::Disk::Volume->get(mount_path => $mount_path); |
+        },
+        group => {
+            is => 'Genome::Disk::Group',
+            calculate_from => 'disk_group_name',
+            calculate => q| return Genome::Disk::Group->get(disk_group_name => $disk_group_name); |,
+        },
     ],
     table_name => 'GENOME_DISK_ALLOCATION',
     data_source => 'Genome::DataSource::GMSchema',
 };
 
 our $MINIMUM_ALLOCATION_SIZE = 0;
-our $MAX_ATTEMPTS_TO_LOCK_VOLUME = 3;
+our $MAX_ATTEMPTS_TO_LOCK_VOLUME = 30;
 our @REQUIRED_PARAMETERS = qw/
     disk_group_name
     allocation_path
@@ -91,8 +95,7 @@ sub Genome::Disk::Allocation::Type::autogenerate_new_object_id {
 
 # Class method for determining if the given path has a parent allocation
 sub verify_no_parent_allocation {
-    my $class = shift;
-    my $path = shift;
+    my ($class, $path) = @_;
     my ($allocation) = Genome::Disk::Allocation->get(allocation_path => $path);
     return 0 if $allocation;
 
@@ -107,6 +110,7 @@ sub create {
     my $class = shift;
     my %params = @_;
 
+    print STDERR "Beginning allocation process...\n";
     # Make sure that required parameters are provided
     my @missing_params;
     for my $param (@REQUIRED_PARAMETERS) {
@@ -115,110 +119,126 @@ sub create {
         }
     }
     if (@missing_params) {
-        Carp::confess "Missing required params for allocation:\n" . join("\n", @missing_params);
+        confess "Missing required params for allocation:\n" . join("\n", @missing_params);
     }
         
     # Verify the owner
     unless ($params{owner_class_name}->__meta__) {
-        Carp::confess "Could not find meta information for owner class " . $params{owner_class_name} .
+        confess "Could not find meta information for owner class " . $params{owner_class_name} .
             ", make sure this class exists!";
     }
 
     # Verify that kilobytes requested isn't something wonky
     my $kilobytes_requested = $params{kilobytes_requested};
     if ($params{kilobytes_requested} < $MINIMUM_ALLOCATION_SIZE) {
-        Carp::confess "Allocation size of $kilobytes_requested kb is less than minimum of $MINIMUM_ALLOCATION_SIZE" ;
+        confess "Allocation size of $kilobytes_requested kb is less than minimum of $MINIMUM_ALLOCATION_SIZE" ;
+    }
+
+    # Make sure that there isn't a parent allocation (ie, that none of the allocation path's 
+    # parent directories have themselves been allocated)
+    unless (Genome::Disk::Allocation->verify_no_parent_allocation($params{allocation_path})) {
+        confess "Parent allocation found for " . $params{allocation_path};
     }
 
     # Verify the supplied group name is valid
     my $disk_group_name = $params{disk_group_name};
     unless (grep { $disk_group_name eq $_ } @APIPE_DISK_GROUPS) {
-        Carp::confess "Can only allocate disk in apipe disk groups, not $disk_group_name. Apipe groups are\n:" . join("\n", @APIPE_DISK_GROUPS);
+        confess "Can only allocate disk in apipe disk groups, not $disk_group_name. Apipe groups are\n:" . join("\n", @APIPE_DISK_GROUPS);
     }
+
+    # Get the group
     my $group = Genome::Disk::Group->get(disk_group_name => $disk_group_name);
-    unless ($group) {
-        Carp::confess "Could not find a group with name $disk_group_name";
-    }
+    confess "Could not find a group with name $disk_group_name" unless $group;
     $params{group_subdirectory} = $group->subdirectory;
 
-    # Make sure that there isn't a parent allocation (ie, that none of the allocation path's 
-    # parent directories have themselves been allocated).
-    unless (Genome::Disk::Allocation->verify_no_parent_allocation($params{allocation_path})) {
-        Carp::confess "Parent allocation found for " . $params{allocation_path};
+    my @candidate_volumes; 
+    my $mount_path = $params{mount_path};
+    # If given a mount path, need to ensure it's valid by trying to get a disk volume with it. Also need to
+    # make sure that the retrieved volume actually belongs to the supplied disk group and that it can
+    # be allocated to
+    if (defined $mount_path) {
+        $mount_path =~ s/\/$//; # mount paths in database don't have trailing /
+        my $volume = Genome::Disk::Volume->get(mount_path => $mount_path);
+        confess "Could not get volume with mount path $mount_path" unless $volume;
+
+        unless (grep { $_ eq $disk_group_name } $volume->disk_group_names) {
+            confess "Volume with mount path $mount_path is not in supplied group $disk_group_name!";
+        }
+
+        # Make sure the volume is allocatable
+        my @reasons;
+        push @reasons, 'disk is not active' if $volume->disk_status != 'active';
+        push @reasons, 'allocation turned off for this disk' if $volume->can_allocate != 0;
+        push @reasons, 'not enough space on disk' if $volume->unallocated_kb < $kilobytes_requested;
+        if (@reasons) {
+            confess "Requested volume with mount path $mount_path cannot be allocated to:\n" . join("\n", @reasons);
+        }
+
+        push @candidate_volumes, $volume;
+    }
+    # If not given a mount path, get all the volumes that belong to the supplied group that have enough space and pick one
+    else {
+        my @volumes = Genome::Disk::Volume->get(
+            disk_group_names => $disk_group_name,
+            'unallocated_kb >=' => $kilobytes_requested,
+            can_allocate => 1,
+            disk_status => 'active',
+        );
+        unless (@volumes) {
+            confess "Did not get any allocatable and active volumes belonging to group $disk_group_name with " .
+                "$kilobytes_requested kb of unallocated space!";
+        }
+
+        push @candidate_volumes, @volumes;
     }
 
-    # Make several attempts to lock a volume, then give up and die
-    my $attempts = 0;
+    # Now pick a volume and try to lock it
     my $volume;
-    while ($attempts < $MAX_ATTEMPTS_TO_LOCK_VOLUME) {
-         
-
-        my $mount_path = $params{mount_path};
-        # If given a mount path, need to ensure it's valid by trying to get a disk volume with it. Also need to
-        # make sure that the retrieved volume actually belongs to the supplied disk group
-        if (defined $mount_path) {
-            $mount_path =~ s/\/$//;
-            $volume = Genome::Disk::Volume->get(mount_path => $mount_path);
-            if ($volume and !(grep { $_ eq $disk_group_name } $volume->disk_group_names)) {
-                Carp::confess "Volume with mount path $mount_path is not in supplied group $disk_group_name!";
-            }
-            elsif (!$volume) {
-                Carp::confess "Could not get volume with mount path $mount_path!";
-            }
+    my $volume_lock;
+    my $attempts = 0;
+    while (1) {
+        if ($attempts > $MAX_ATTEMPTS_TO_LOCK_VOLUME) {
+            confess "Could not lock a volume after $MAX_ATTEMPTS_TO_LOCK_VOLUME attempts, giving up";
         }
-        # If not given a mount path, get all the volumes that belong to the supplied group that have enough space and pick one
-        else {
-            my @volumes = Genome::Disk::Volume->get(
-                disk_group_names => $disk_group_name,
-                'unallocated_kb >=' => $kilobytes_requested,
-                can_allocate => 1,
-                disk_status => 'active',
-            );
-            unless (@volumes) {
-                Carp::confess "Did not get any allocatable and active volumes belonging to group $disk_group_name with " .
-                    "$kilobytes_requested kb of unallocated space!";
-            }
+        $attempts++;
 
-            # Sort volumes by most recent allocation, we are interested in the least recently allocated volume
-            @volumes = sort { $a->id <=> $b->id } map { $_->most_recent_allocation } @volumes;
-            $volume = $volumes[0];
-        }
+        # Pick a random volume from the list of candidates
+        my $index = int(rand(@candidate_volumes));
+        my $candidate_volume = $candidate_volumes[$index];
 
-        # Lock row in Disk::Volume using filesystem lock
-        my $lock_id = '/gsc/var/lock/allocation/volume_' . $volume->id;
+        my $modified_mount = $candidate_volume->mount_path;
+        $modified_mount =~ s/\//_/g;
         my $lock = Genome::Utility::FileSystem->lock_resource(
-            resource_lock => $lock_id,
-            max_try => 3,
-            block_sleep => 3,
+            resource_lock => '/gsc/var/lock/allocation/volume_' . $modified_mount,
+            max_try => 1,
+            block_sleep => 0,
         );
-        $attempts++ and next unless defined $lock;
-        
+        next unless defined $lock;
+
         # Reload volume, if anything has changed restart (there's a small window between looking at the volume
         # and locking it in which someone could modify it)
-        my ($can_allocate, $disk_status) = ($volume->can_allocate, $volume->disk_status);
-        $volume = Genome::Disk::Volume->load($volume->id);
-        unless($volume->unallocated_kb < $kilobytes_requested and $volume->can_allocate eq $can_allocate
-                and $volume->disk_status eq $disk_status) {
+        my ($can_allocate, $disk_status) = ($candidate_volume->can_allocate, $candidate_volume->disk_status);
+        $candidate_volume = Genome::Disk::Volume->load($candidate_volume->id);
+        unless($candidate_volume->unallocated_kb < $kilobytes_requested and $candidate_volume->can_allocate eq $can_allocate
+                and $candidate_volume->disk_status eq $disk_status and grep { $_ eq $disk_group_name } $volume->disk_group_names) {
             Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock);
-            $attempts++;
             next;
         }
-    
-        # Add a commit hook so this lock is released upon successful commit
-        $volume->add_observer(
-            aspect => 'commit',
-            callback => sub {
-                Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock);
-            },
-        );
 
-        # We've got our volume locked, let's continue
+        print STDERR "Locked volume " . $candidate_volume->mount_path . "\n";
+        $volume = $candidate_volume;
+        $volume_lock = $lock;
         last;
     }
 
-    if ($attempts >= $MAX_ATTEMPTS_TO_LOCK_VOLUME) {
-        Carp::confess "Tried and failed $attempts times to lock a volume for allocation, giving up";
-    }
+    # Add a commit hook so this lock is released upon successful commit
+    $volume->add_observer(
+        aspect => 'commit',
+        callback => sub {
+            print STDERR "Releasing volume lock\n";
+            Genome::Utility::FileSystem->unlock_resource(resource_lock => $volume_lock);
+        }
+    );
 
     # Can now safely update this parameter since we have the volume
     $params{mount_path} = $volume->mount_path;
@@ -229,7 +249,7 @@ sub create {
     # Now finalize creation of the allocation object
     my $self = $class->SUPER::create(%params);
     unless ($self) {
-        Carp::confess "Could not create allocation with params: " . Data::Dumper::Dumper(\%params);
+        confess "Could not create allocation with params: " . Data::Dumper::Dumper(\%params);
     }
 
     # Add a commit hook to create allocation path unless no commit is on
