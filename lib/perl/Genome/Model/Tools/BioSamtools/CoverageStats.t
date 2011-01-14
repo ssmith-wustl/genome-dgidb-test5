@@ -1,13 +1,16 @@
-#!/gsc/bin/perl
+#!/gsc/bin/perl5.12.1
 
 use strict;
 use warnings;
 
-use Test::More tests => 6;
-#use Test::More skip_all => 'Disabling due to Perl environtment issues';
+use Test::More;
 
 use above 'Genome';
 
+if ($] < 5.012) {
+    plan skip_all => "this test is only runnable on perl 5.12+"
+}
+plan tests => 6;
 
 map { print STDERR $_ . " => " . $ENV{$_} . "\n" } keys %ENV;
 

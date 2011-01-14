@@ -51,6 +51,11 @@ sub execute {
     unless (defined $kilobytes_requested) {
         $self->status_message("New allocation size not supplied, setting to size of data in allocated directory");
         $kilobytes_requested = Genome::Utility::FileSystem->disk_usage_for_path($allocation->absolute_path);
+
+    # update apipe schema
+    my $apipe_allocation = Genome::Disk::AllocationNew->get($self->allocator_id);
+    if ($apipe_allocation) {
+        $apipe_allocation->kilobytes_requested($self->disk_allocation->kilobytes_requested);
     }
 
     $self->status_message("Setting allocation " . $self->allocation_id . " kilobytes requested to $kilobytes_requested");

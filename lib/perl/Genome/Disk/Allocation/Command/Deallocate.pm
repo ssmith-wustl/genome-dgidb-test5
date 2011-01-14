@@ -45,9 +45,15 @@ sub execute {
         }
     );
 
-    $self->status_message('Removing allocation with ID ' . $self->allocation_id);
-    my $delete_rv = $allocation->delete;
-    Carp::confess 'Could not remove allocation!' unless defined $delete_rv and $delete_rv;
+    unless ($rv) {
+        $self->error_message('Failed to confirm pse '. $self->deallocator_id);
+        return;
+    }
+   
+    my $apipe_allocation = Genome::Disk::AllocationNew->get($self->allocator_id);
+    if ($apipe_allocation) {
+        $apipe_allocation->delete;
+    }
 
     return 1;
 }

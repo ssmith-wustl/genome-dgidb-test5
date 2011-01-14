@@ -3,12 +3,15 @@
 use strict;
 use warnings;
 
-use Test::More tests => 5;
-#use Test::More skip_all => 'Disabling due to Perl environtment issues';
-
+use Test::More;
 use File::Compare;
+
 use above 'Genome';
 
+if ($] < 5.012) {
+    plan skip_all => "this test is only runnable on perl 5.12+"
+}
+plan tests => 5;
 
 use_ok('Genome::Model::Tools::BioSamtools');
 use_ok('Genome::Model::Tools::BioSamtools::StatsSummary');

@@ -5,8 +5,7 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More skip_all => 'The test BED file is way too big';
-    #tests => 4;
+use Test::More tests => 6;
 
 BEGIN {	
     use_ok('Genome::RefCov::ROI::RegionI');
@@ -16,11 +15,14 @@ BEGIN {
 }
 # TODO: find much more suitable BED file for test case
 my $file = '/gscmnt/sata141/techd/twylie/CAPTURE_ROUND_ROBIN/SANGER.bed';
-my $region_set = Genome::RefCov::ROI::Bed->create(file => $file);
+my $region_set = Genome::RefCov::ROI::Bed->create(
+    file => $file,
+);
 my @chromosomes = $region_set->chromosomes;
 is(scalar(@chromosomes),25,'got 25 chromosomes');
-for my $chrom (@chromosomes) {
-    my @regions = $region_set->chromosome_regions($chrom);
-    is(scalar(@regions),1000);
+while (my $region = $region_set->next_region) {
+    isa_ok($region,'HASH','got region as hash');
+    last;
 }
+
 exit;

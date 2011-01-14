@@ -33,9 +33,11 @@ sub execute {
     my $user = $ENV{USER};
     confess "Could not get user name from environment" unless defined $user;
 
-    my @builds = Genome::Model::Build->get(
-        status => 'Abandoned',
-        run_by => $user,
+    my @builds = map {$_->build} Genome::Model::Event->get(
+        event_type => 'genome model build',
+        event_status => 'Abandoned',
+        user_name => $user,
+        -hints => ["build"],
     );
     unless (@builds) {
         $self->status_message("No builds owned by $user are abandoned, so no removal necessary!");
