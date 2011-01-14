@@ -1106,7 +1106,6 @@ sub are_files_ok {
 }
 
 sub remove_directory_tree {
-    $DB::single = 1;
     my ($self, $directory) = @_;
     unless (-d $directory) {
         $self->warning_message("No directory found at $directory, cannot remove");

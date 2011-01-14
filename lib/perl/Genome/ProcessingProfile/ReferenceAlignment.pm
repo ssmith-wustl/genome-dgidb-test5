@@ -41,6 +41,12 @@ class Genome::ProcessingProfile::ReferenceAlignment {
             default_value => 'top',
             valid_values => ['top', 'none', 'gene'],
         },
+        transcript_variant_annotator_accept_reference_IUB_codes => {
+            doc => 'annotation accept-reference-IUB-codes option to be used by the "annotate transcript-variants" to run during the annotation step',
+            is_optional => 1,
+            default_value => '0',
+            valid_values => [0, 1],
+        },
         snv_detector_name => {
             doc => 'Name of the snv detector',
             is_optional => 1,

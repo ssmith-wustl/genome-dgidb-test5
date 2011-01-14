@@ -6,6 +6,8 @@ use warnings;
 use Genome;
 
 my $DEFAULT_REGION_INDEX_SUBSTRING = 0;
+my $DEFAULT_MAKE_OBJECTS = 0;
+my $DEFAULT_LOAD_ALL = 0;
 
 class Genome::RefCov::ROI::FileI {
     has => [
@@ -15,26 +17,71 @@ class Genome::RefCov::ROI::FileI {
         },
     ],
     has_optional => {
+        make_objects => {
+            is => 'Boolean',
+            default_value => $DEFAULT_MAKE_OBJECTS,
+        },
+        load_all => {
+            is => 'Boolean',
+            default_value => $DEFAULT_LOAD_ALL,
+        },
         region_index_substring => {
+            is => 'Integer',
             default_value => $DEFAULT_REGION_INDEX_SUBSTRING,
         },
         wingspan => {
             is => 'Integer',
             doc => 'An integer distance to add to each end of a region.',
         },
+        _fh => { },
+        _chromosomes => { },
+        _all_regions => { },
     }
 };
 
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
-    $self->_read_file;
+    unless ($self) { return; }
+    my $fh = IO::File->new($self->file,'r');
+    unless ($fh) { die('Failed to load file: '. $self->file); }
+    $self->_fh($fh);
+    if ($self->load_all || $self->region_index_substring) {
+        $self->_read_file;
+    }
     return $self;
+}
+
+sub next_region {
+    my $self = shift;
+    if ($self->load_all) {
+        unless ($self->_all_regions) {
+            my $regions = $self->all_regions;
+            $self->_all_regions($regions);
+        }
+        return shift(@{$self->_all_regions});
+    } else {
+        my $line = $self->_fh->getline;
+        unless ($line) { $self->_fh->close; return; }
+        my $region = $self->_parse_line($line);
+        unless ($region) { next; }
+        if ($self->make_objects) {
+            $region = Genome::RefCov::ROI::Region->create(%{$region});
+            return $region;
+        } else {
+            $region->{length} = (($region->{end} - $region->{start}) + 1);
+            $region->{id} = $region->{chrom} .':'. $region->{start} .'-'. $region->{end};
+            return $region;
+        }
+    }
 }
 
 sub chromosomes {
     my $self = shift;
-    return keys %{$self->{chrom_regions}};
+    unless ($self->_chromosomes) {
+        $self->_load_chromosomes;
+    }
+    return @{$self->_chromosomes};
 }
 
 sub overlaps_regions {
@@ -73,30 +120,52 @@ sub all_regions {
     for my $chrom (@chromosomes) {
         push @regions, $self->chromosome_regions($chrom);
     }
-    return @regions;
+    return \@regions;
 }
 
 sub _add_region {
     my $self = shift;
     my $region = shift;
-    unless ($region && ref($region) eq 'Genome::RefCov::ROI::Region') {
-        die ('Must supply a Genome::RefCov::ROI::Region to method _add_region');
+    unless ($region && ref($region) eq 'HASH') {
+        die ('Must supply a HASH reference to method _add_region');
     }
-    my $start = $region->start;
-    my $stop = $region->end;
+    unless (defined($region->{start}) && defined($region->{end}) && defined($region->{chrom})) {
+        die('HASH ref must contain start, end, and chrom attributes!');
+    }
+    my $chrom = $region->{chrom};
+    my $start = $region->{start};
+    my $stop = $region->{end};
     my $start_substr = substr($start, 0, $self->region_index_substring) || 0;
     my $stop_substr = substr($stop, 0, $self->region_index_substring) || 0;
     for (my $position_key = $start_substr; $position_key <= $stop_substr; $position_key++) {
-        my $region_key = $region->chrom . ':' . $position_key;
+        my $region_key = $chrom . ':' . $position_key;
         $self->{indexed_regions}->{$region_key} .=  $start."\t". $stop ."\n";
     }
-    push @{$self->{chrom_regions}->{$region->chrom}}, $region;
+    if ($self->make_objects) {
+        # This is only necessary to perform arithmetic operations
+        $region = Genome::RefCov::ROI::Region(%{$region});
+    }
+    push @{$self->{chrom_regions}->{$chrom}}, $region;
     return 1;
 }
 
 sub _read_file {
-    die ('_read_file is an abstract method.  Please implement in '. __PACKAGE__);
+    my $self = shift;
+    my $fh = $self->_fh;
+    while (my $line = $fh->getline) {
+        my $region = $self->_parse_line($line);
+        unless ($region) { next; }
+        $self->_add_region($region);
+    }
+    $fh->close;
+    return 1;
 }
 
+sub _parse_line {
+    die ('_parse_line is an abstract method.  Please implement in '. __PACKAGE__);
+}
+sub _load_chromosomes {
+die ('_load_chromosomes is an abstract method.  Please implement in '. __PACKAGE__);
+}
 
 1;

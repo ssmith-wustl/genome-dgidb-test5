@@ -98,7 +98,7 @@ sub _load_stats {
             }
         }
     } else {
-        my $regions = Genome::RefCov::ROI::BedLite->create(
+        my $regions = Genome::RefCov::ROI::Bed->create(
             file => $self->bed_file,
         );
         unless ($regions) {

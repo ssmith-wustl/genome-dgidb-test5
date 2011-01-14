@@ -886,7 +886,7 @@ sub alignment_summary_file {
 }
 
 sub alignment_summary_hash_ref {
-    my ($self,$wingspan) = @_;
+    my $self = shift;
 
     unless ($self->{_alignment_summary_hash_ref}) {
         my $wingspan_array_ref = $self->wingspan_values_array_ref;

@@ -19,6 +19,11 @@ class Genome::Model::Tools::Fastq::ToPhdballScf::Chunk {
             is  => 'Integer',
             doc => 'number of each chunk fastq',
         },
+	fast_mode => {
+	    is => 'Boolean',
+	    doc => 'avoid Bio perl slowness',
+	    default_value => 1,
+	},
     ],
 };
 
@@ -33,7 +38,6 @@ sub help_detail {
 
 EOS
 }
-
 
 sub execute {
     my $self = shift;
@@ -61,7 +65,7 @@ sub execute {
         fastq_file => $self->fastq_file,
         chunk_size => $self->chunk_size,
         chunk_dir  => $ball_dir,
-        fast_mode  => 1,
+	fast_mode  => $self->fast_mode,
     );
     my $fq_chunk_files = $chunk->execute;
 

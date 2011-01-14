@@ -12,7 +12,7 @@ class Genome::Model::Tools::Picard::CollectGcBiasMetrics {
     has_input => [
         input_file   => {
             is  => 'String',
-            doc => 'The SAM/BAM files to run on.  File type is determined by suffix.',
+            doc => 'The BAM file to run on.',
         },
         output_file  => {
             is  => 'String',
@@ -50,17 +50,22 @@ class Genome::Model::Tools::Picard::CollectGcBiasMetrics {
             default_value => 500000,
             is_optional => 1,
         },
-        clean_sam => {
+        clean_bam => {
             is => 'Boolean',
             is_optional => 1,
             default_value => 0,
-            doc => 'Flag to run Picard CleanSam to clip read that align beyond the end of chromosomes.(ie. BWA 0.5.5 and prior)',
+            doc => 'Flag to run G:M:T:BioSamtools::CleanBam to remove reads that align beyond the end of chromosomes.(ie. BWA 0.5.5 and prior)',
+        },
+        clean_bam_summary => {
+            is => 'Text',
+            is_optional => 1,
+            doc => 'A file path to store CleanBam metrics.',
         },
     ],
 };
 
 sub help_brief {
-    'Tool to collect GC bias metrics from a SAM/BAM file.';
+    'Tool to collect GC bias metrics from a BAM file.';
 }
 
 sub help_detail {
@@ -82,25 +87,18 @@ sub execute {
     }
     my $out_dir = dirname $self->output_file;
     my $input_file = $self->input_file;
-    if ($self->clean_sam) {
-        my $basename = basename($self->output_file,qw/\.bam \.sam/);
-        my $clean_sam_file = Genome::Utility::FileSystem->create_temp_file_path($basename .'_clean_sam.bam');
-        unless (Genome::Model::Tools::Picard::CleanSam->execute(
-            input_file => $self->input_file,
-            output_file => $clean_sam_file,
-            use_version => $self->use_version,
-            maximum_memory => $self->maximum_memory,
-            maximum_permgen_memory => $self->maximum_permgen_memory,
-            temp_directory => $self->temp_directory,
-            validation_stringency => $self->validation_stringency,
-            log_file => $self->log_file,
-            additional_jvm_options => $self->additional_jvm_options,
+    if ($self->clean_bam) {
+        my $basename = basename($self->output_file,qw/\.bam/);
+        my $clean_bam_file = Genome::Utility::FileSystem->create_temp_file_path($basename .'_clean_bam.bam');
+        unless (Genome::Model::Tools::BioSamtools::CleanBam->execute(
+            input_bam_file => $self->input_file,
+            output_bam_file => $clean_bam_file,
+            summary_output_file => $self->clean_bam_summary,
         )) {
-            die('Failed to run Picard CleanSam on SAM/BAM file: '. $self->input_file);
+            die('Failed to run G:M:T:BioSamtools::CleanSam on BAM file: '. $self->input_file);
         }
-        $input_file = $clean_sam_file;
+        $input_file = $clean_bam_file;
     }
-    
     my $cmd = $self->picard_path .'/CollectGcBiasMetrics.jar net.sf.picard.analysis.CollectGcBiasMetrics';
     $cmd   .= ' OUTPUT='. $self->output_file  .' INPUT='. $input_file .' REFERENCE_SEQUENCE='. $self->refseq_file;
 
@@ -108,14 +106,14 @@ sub execute {
     my $sum   = $self->summary_output || $out_dir . '/GC_bias_summary.txt';
 
     $cmd .= ' CHART_OUTPUT='.$chart .' SUMMARY_OUTPUT='.$sum;
-    
+
     if ($self->window_size) {
         $cmd .= ' WINDOW_SIZE=' . $self->window_size;
     }
     if ($self->min_genome_fraction) {
         $cmd .= ' MINIMUM_GENOME_FRACTION='. $self->min_genome_fraction;
     }
-    
+
     $self->run_java_vm(
         cmd          => $cmd,
         input_files  => [$input_file],
