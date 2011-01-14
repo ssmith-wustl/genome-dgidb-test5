@@ -1,4 +1,4 @@
-package Genome::Model::Tools::FastTier::FastTier;
+package Genome::Model::Tools::FastTier::FastTierPipes;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 use File::Basename;
 use File::Copy;
 
-class Genome::Model::Tools::FastTier::FastTier {
+class Genome::Model::Tools::FastTier::FastTierPipes {
     is => 'Command',
     has => [
         variant_bed_file => {
