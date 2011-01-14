@@ -18,7 +18,7 @@ class Genome::PopulationGroup::View::Solr::Xml {
         },
         display_icon_url => {
             is  => 'Text',
-            default => 'genome_population_32',
+            default => 'genome_populationgroup_32',
         },
         display_url0 => {
             is => 'Text',
