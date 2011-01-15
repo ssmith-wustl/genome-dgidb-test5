@@ -146,6 +146,8 @@ sub create {
         confess "Can only allocate disk in apipe disk groups, not $disk_group_name. Apipe groups are\n:" . join("\n", @APIPE_DISK_GROUPS);
     }
 
+    # TODO Need to put old LIMS style locking here temporarily
+    
     # Get the group
     my $group = Genome::Disk::Group->get(disk_group_name => $disk_group_name);
     confess "Could not find a group with name $disk_group_name" unless $group;
@@ -262,6 +264,71 @@ sub create {
     ) unless $ENV{UR_DBI_NO_COMMIT} == 1;
 
     return $self;
+}
+
+# TODO double check this
+sub delete {
+    my $self = shift;
+    my %params = @_;
+    my $remove_allocation_directory = $params{remove_allocation_directory} || 1;
+
+    $self->status_message('Starting deallocation process');
+
+    # Lock and retrieve allocation
+    my $allocation_lock = Genome::Utility::FileSystem->lock_resource(
+        resource_lock => '/gsc/var/lock/allocation/allocation_' . $self->id,
+        max_try => 5,
+        block_sleep => 1,
+    );
+    confess 'Could not get lock for allocation ' . $self->id unless defined $allocation_lock;
+
+    # Reload self to make sure there aren't any updates
+    my $id = $self->id;
+    $self = Genome::Disk::Allocation->load($id);
+    unless ($self) {
+        confess "Could not reload allocation $id from database";
+    }
+
+    $self->status_message('Locked and retrieved allocation' . $self->id);
+
+    # Remove allocation directory
+    my $path = $self->absolute_path;
+    if ($remove_allocation_directory and -d $path) {
+        $self->status_message("Removing allocation directory $path");
+        my $rv = Genome::Utility::FileSystem->remove_directory_tree($self->absolute_path);
+        confess "Could not remove allocation directory $path!" unless defined $rv and $rv == 1;
+    }
+    else {
+        $self->status_message("Not removing allocation directory");
+    }
+
+    # Lock volume and update
+    my $modified_mount = $self->mount_path;
+    $modified_mount =~ s/\//_/g;
+    my $volume_lock = Genome::Utility::FileSystem->lock_resource(
+        resource_lock => '/gsc/var/lock/allocation/volume_' . $modified_mount,
+        max_try => 5,
+        block_sleep => 1,
+    );
+    confess 'Could not get lock for volume ' . $self->mount_path;
+
+    my $volume = Genome::Disk::Volume->get(mount_path => $self->mount_path);
+    confess 'Found no disk volume with mount path ' . $self->mount_path;
+
+    $self->status_message('Locked and retrieved volume ' . $self->mount_path . ', removing allocation and updating volume');
+    $volume->unallocated_kb($volume->unallocated_kb + $self->kilobytes_requested);
+    $self->SUPER::delete;
+
+    $volume->add_observer(
+        aspect => 'commit',
+        callback => sub {
+            Genome::Utility::FileSystem->unlock_resource(resource_lock => $volume_lock);
+            Genome::Utility::FileSystem->unlock_resource(resource_lock => $allocation_lock);
+            $self->status_message('Allocation locks released, process complete');
+        }
+    );
+
+    return 1;
 }
 
 1;
