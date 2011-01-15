@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 use Class::Autouse;
-#use Genome::Site::WUGC::Security;
+use Test::MockObject;
 
 # configuration for internal WUGC network software & LIMS 
 # this module is called by Genome::Config::edu::wustl::gsc right now on all *.gsc.wustl.edu hosts

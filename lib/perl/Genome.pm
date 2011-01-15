@@ -22,7 +22,6 @@ eval {
 };
 
 # modules we need to auto-load
-use Test::MockObject;
 use File::Temp;
 use IO::String;
 
