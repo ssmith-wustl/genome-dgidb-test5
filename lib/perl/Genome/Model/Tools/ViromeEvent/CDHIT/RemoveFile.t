@@ -1,17 +1,22 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
 
 use above 'Genome';
-use Test::More tests => 2;
+use Test::More;
 
+use_ok( 'Genome::Model::Tools::ViromeEvent::CDHIT::RemoveFile' );
 
-BEGIN {use_ok('Genome::Model::Tools::ViromeEvent::CDHIT::RemoveFile');}
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-ViromeScreening/Titanium17/Titanium17_undecodable';
+ok( -d $data_dir, "Test suite data dir exists" );
 
-#create
 my $rf = Genome::Model::Tools::ViromeEvent::CDHIT::RemoveFile->create(
-                                                                dir => '/gscmnt/sata835/info/medseq/virome/test17/S0_Mouse_Tissue_0_Control',
-                                                            );
-isa_ok($rf, 'Genome::Model::Tools::ViromeEvent::CDHIT::RemoveFile');
-#$rf->execute();
+    dir => $data_dir,
+    );
+
+ok( $rf, "Created virome screeing cd-hit remove files event" );
+
+done_testing();
+
+exit;

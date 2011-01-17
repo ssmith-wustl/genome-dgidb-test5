@@ -1,4 +1,3 @@
-
 package Genome::Model::Tools::ViromeEvent::RepeatMasker::RemoveFile;
 
 use strict;
@@ -8,35 +7,17 @@ use Genome;
 use Workflow;
 use IO::File;
 use File::Basename;
+
 class Genome::Model::Tools::ViromeEvent::RepeatMasker::RemoveFile{
     is => 'Genome::Model::Tools::ViromeEvent',
 };
 
 sub help_brief {
-    return "gzhao's Repeat Masker remove files";
-}
-
-sub help_synopsis {
-    return <<"EOS"
-This script will check the result of RepeatMasker which
-should generate .masked file in the given directory.
-
-perl script <dir>
-<dir> = full path to the directory of a sample library
-               without last "/"
-EOS
+    "gzhao's Repeat Masker remove files";
 }
 
 sub help_detail {
-    return <<"EOS"
-EOS
-}
-
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    return $self;
-
+    "This script will check the result of RepeatMasker which should generate .masked file in the given directory.";
 }
 
 sub execute {

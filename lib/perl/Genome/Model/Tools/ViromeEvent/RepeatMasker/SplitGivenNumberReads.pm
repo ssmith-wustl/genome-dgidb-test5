@@ -1,4 +1,3 @@
-
 package Genome::Model::Tools::ViromeEvent::RepeatMasker::SplitGivenNumberReads;
 
 use strict;
@@ -18,12 +17,6 @@ sub help_brief {
     return "gzhao's Repeat Masker split given # of reads";
 }
 
-sub help_synopsis {
-    return <<"EOS"
-    Following cdhit, performs splitting on all fasta files in the directory given
-EOS
-}
-
 sub help_detail {
     return <<"EOS"
 Given a fasta file, this script will split it to a number of files. Each 
@@ -31,17 +24,7 @@ file will contain given number of sequences. Generated files have the
 same name as the given file with numbered suffix .file0.fa .file1.fa ... 
 etc All the generated files are placed in on subdirectory with the 
 same name as the given file with "_RepeatMasker" suffix. 
-
-perl script <dir>
-<dir> = full path of the folder holding files for a sample library
-        without last "/"
 EOS
-}
-
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    return $self;
 }
 
 sub execute
