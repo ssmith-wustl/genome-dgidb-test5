@@ -79,7 +79,7 @@ sub _find_compatible_build_in_model {
     my @build_alignments = map { $build->model->processing_profile->results_for_instrument_data_assignment($_) } $build->instrument_data_assignments;
 
     my @candidate_builds = $candidate_model->completed_builds;
-    BUILD: for my $candidate_build (@candidate_builds) {
+    BUILD: for my $candidate_build (reverse sort {$a->id <=> $b->id} @candidate_builds) {
         next if $candidate_build eq $build; #We can't use ourself to shortcut. (This shouldn't happen anyway, since we're not completed.)
 
         my @candidate_idas = $candidate_build->instrument_data_assignments;

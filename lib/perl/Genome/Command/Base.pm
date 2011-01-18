@@ -565,6 +565,8 @@ sub __errors__ {
 sub _can_resolve_type {
     my ($self, $type) = @_;
 
+    return 0 unless($type);
+
     my $non_classes = 0;
     if (ref($type) ne 'ARRAY') {
         $non_classes = $type !~ m/::/;
@@ -591,7 +593,7 @@ sub _params_to_resolve {
             }
 
             my $param_type = $pmeta->data_type;
-            next if !$self->_can_resolve_type($param_type);
+            next unless($self->_can_resolve_type($param_type));
 
             my $param_arg = $params->{$param_name};
             if (my $arg_type = ref($param_arg)) {

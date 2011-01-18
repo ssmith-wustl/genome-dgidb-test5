@@ -2,10 +2,8 @@ package Genome::Model::Tools::Sv::CrossMatchForIndel;
 
 use strict;
 use warnings;
-use Genome::Model::Tools::Sv;
+use Genome;
 use Bio::SeqIO;
-
-our $VERSION = $Genome::Model::Tools::Sv::VERSION;
 
 =cut
 my %opts = (m=>0.02,s=>0,h=>100,u=>30,b=>0,z=>0);
@@ -103,7 +101,7 @@ class Genome::Model::Tools::Sv::CrossMatchForIndel {
 
 sub execute {
     my $self = shift;
-
+    $DB::single = 1;
     my $cm = Genome::Model::Tools::Sv::ParseCrossMatch->create(
         input_file => $self->cross_match_file
     );
@@ -437,8 +435,9 @@ sub execute {
                 else {  #Inter-chromosomal
 	                $size = 1;
 	                $type = 'CTX';
-                    my ($chrom1) = $aln1->{refseq} =~ /\.([\w\d]+)\.fa*/;
-
+                        #my ($chrom1) = $aln1->{refseq} =~ /\.([\w\d]+)\.fa*/;
+                        #my ($chrom1)=($aln1->{refseq}=~/[\.\/]([\w\d]+)\.fa*/); # to handle mouse reference as well
+                        my ($chrom1) = ($aln1->{refseq} =~ /(\S+):\d+-\d+/);
                     #if (&GLess($aln1->{refseq}, $aln2->{refseq})) { #keep the repeat in the lower chromosome
                     if (!defined $chr1 || $chrom1 eq $chr1) {    
 	                    if ($aln1->{orientation} eq 'U'){
