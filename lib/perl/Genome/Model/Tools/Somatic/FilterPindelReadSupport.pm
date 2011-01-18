@@ -23,6 +23,13 @@ class Genome::Model::Tools::Somatic::FilterPindelReadSupport{
             is_optional => 0,
             doc => "Variants that have successfully passed the Pindel Read Support filter"
         },
+        min_variant_support => {
+            is => 'String',
+            is_optional => 1,
+            is_input => 1,
+            default => '0',
+            doc => 'Required number of variant-supporting reads. Note: Pindel doesn\'t actually report the indel if var-support < 3.',
+        },
         filter_dbsnp => {
             is => 'Boolean',
             is_optional => 1,
@@ -68,6 +75,7 @@ EOS
 
 sub execute {
     my $self = shift;
+    #my $min_variant_support = $self->min_variant_support;
 
     unless(-e $self->read_support_file) {
         $self->error_message($self->read_support_file . " is not found or is empty.");
@@ -85,7 +93,7 @@ sub execute {
         my ($chr,$start,$stop,$refvar,$is,$rs,$ps,$dbsnp) = split "\t", $line;
         if(($self->filter_dbsnp)&&($dbsnp eq '-')){
 
-            if(($rs==0)||($is/$rs) > $self->var_to_ref_read_ratio){
+            if(($rs==0)||($is/($is+$rs) > $self->var_to_ref_read_ratio){
                 my $display=undef;
                 if($self->remove_single_stranded){
                     if(($ps != 1)&&($ps !=0)){
