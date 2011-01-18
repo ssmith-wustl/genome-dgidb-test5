@@ -1,17 +1,21 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
 
 use above 'Genome';
-use Test::More tests => 2;
+use Test::More;
 
+use_ok('Genome::Model::Tools::ViromeEvent::Assignment::Report');
 
-BEGIN {use_ok('Genome::Model::Tools::ViromeEvent::Assignment::Report');}
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-ViromeScreening/Titanium17/Titanium17_undecodable';
+ok( -d $data_dir, "Test suite data dir exists" );
 
-#create
-my $r = Genome::Model::Tools::ViromeEvent::Assignment::Report->create(
-                                                                dir => '/gscmnt/sata835/info/medseq/virome/test17/S0_Mouse_Tissue_0_Control',
-                                                            );
-isa_ok($r, 'Genome::Model::Tools::ViromeEvent::Assignment::Report');
-#$r->execute();
+my $c = Genome::Model::Tools::ViromeEvent::Assignment::Report->create(
+    dir => $data_dir,
+    );
+ok($c, "Created assignment report event");
+
+done_testing();
+
+exit;

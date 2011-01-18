@@ -1,17 +1,24 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
 
 use above 'Genome';
-use Test::More tests => 2;
+use Test::More;
 
+use_ok('Genome::Model::Tools::ViromeEvent::CDHIT::CheckResult');
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-ViromeScreening/Titanium17/Titanium17_undecodable';
 
-BEGIN {use_ok('Genome::Model::Tools::ViromeEvent::CDHIT::CheckResult');}
+#check cd-hit directoryies
+ok( -x '/gscmnt/sata835/info/medseq/virome/scripts_used_by_virome/cd-hit-64/cd-hit-est', "64 bit cd-hit exists and is executable" );
+ok( -x '/gscmnt/sata835/info/medseq/virome/scripts_used_by_virome/cd-hit-32/cd-hit-est', "64 bit cd-hit exists and is executable" );
 
-#create
 my $cr = Genome::Model::Tools::ViromeEvent::CDHIT::CheckResult->create(
-                                                                dir => '/gscmnt/sata835/info/medseq/virome/test17/S0_Mouse_Tissue_0_Control',
-                                                            );
-isa_ok($cr, 'Genome::Model::Tools::ViromeEvent::CDHIT::CheckResult');
-#$cr->execute();
+    dir => $data_dir,
+    );
+
+ok( $cr, "Created virome check-result event" );
+
+done_testing();
+
+exit;

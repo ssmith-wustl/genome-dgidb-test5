@@ -1,4 +1,3 @@
-
 package Genome::Model::Tools::ViromeEvent::CDHIT::RemoveFile;
 
 use strict;
@@ -14,33 +13,13 @@ class Genome::Model::Tools::ViromeEvent::CDHIT::RemoveFile{
 };
 
 sub help_brief {
-    "skeleton for gzhao's virome script"
-}
-
-sub help_synopsis {
-    return <<"EOS"
-
-wrapper for script sequence to be utilized by workflow
-EOS
+    "Tool to remove selected files from cd-hit run directory";
 }
 
 sub help_detail {
-    return <<"EOS"
-
-wrapper for script sequence to be utilized by workflow
-
-EOS
+    'Tool to remove selected files from cd-hit run directory';
 }
 
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    return $self;
-
-}
-
-#THIS COULD BE DONE IN CHECKRESULT MODULE
-#SUBMIT THIS TO SHORT QUEUE
 sub execute {
     my $self = shift;
     my $dir = $self->dir;
@@ -54,5 +33,3 @@ sub execute {
 }
 
 1;
-
-sub sub_command_sort_position { 7 }

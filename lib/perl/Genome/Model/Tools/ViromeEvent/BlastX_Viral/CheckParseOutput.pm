@@ -1,4 +1,3 @@
-
 package Genome::Model::Tools::ViromeEvent::BlastX_Viral::CheckParseOutput;
 
 use strict;
@@ -24,27 +23,12 @@ sub help_brief {
     return "gzhao's Blast X Viral check parse output";
 }
 
-sub help_synopsis {
+sub help_detail {
     return <<"EOS"
 This script will check all .tblastx_ViralGenome.parsed file in the 
 BNfiltered_TBLASTX_ViralGenome subdirectory of the given directory to make sure 
 parsing tblastx output file is finished for each file.
-
-perl script <sample dir>
-<sample dir> = full path to the folder holding files for a sample library 
-	without last "/";
 EOS
-}
-
-sub help_detail {
-    return <<"EOS"
-EOS
-}
-
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    return $self;
 }
 
 sub execute {
@@ -78,7 +62,6 @@ sub execute {
     }
 
     foreach my $fa_file (@fa_files) {
-#	next if $fa_file =~ //; #SHOULD BE NO FILTERED FILES HERE
 	my $root_name = $fa_file;
 	$root_name =~ s/\.fa$//;
 	
@@ -281,7 +264,6 @@ sub run_parse {
     return 1;
 }
 		
-############################################
 sub PhyloType {
     my ($self,$lineage_ref, $hit_ref, $best_e, $dbh_sqlite, $dbh_taxonomy, $assignment_ref) = @_;
     my $description = "";
@@ -405,4 +387,3 @@ sub PhyloType {
 }
 
 1;
-

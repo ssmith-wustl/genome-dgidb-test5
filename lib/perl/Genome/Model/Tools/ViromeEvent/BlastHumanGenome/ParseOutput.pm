@@ -1,4 +1,3 @@
-
 package Genome::Model::Tools::ViromeEvent::BlastHumanGenome::ParseOutput;
 
 use strict;
@@ -10,19 +9,13 @@ use IO::File;
 use File::Basename;
 use Bio::SeqIO;
 use Bio::SearchIO;
-use Data::Dumper;
 
 class Genome::Model::Tools::ViromeEvent::BlastHumanGenome::ParseOutput{
     is => 'Genome::Model::Tools::ViromeEvent',
 };
 
 sub help_brief {
-    return "gzhao's Blast Human Genome parse output";
-}
-
-sub help_synopsis {
-    return <<"EOS"
-EOS
+    "gzhao's Blast Human Genome parse output";
 }
 
 sub help_detail {
@@ -30,18 +23,7 @@ sub help_detail {
 This script will check all .HGblast.parsed file in the 
 given directory to make sure parsing blastn output file is finished 
 for the given file.
-
-perl script <sample dir>
-<sample dir> = full path to the folder holding files for a sample library 
-	without last "/"
 EOS
-}
-
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    return $self;
-
 }
 
 sub execute {
@@ -139,7 +121,6 @@ sub parse_blast_file {
     while (my $result = $report->next_result) {
 	$read_count++;
 	while (my $hit = $result->next_hit) {
-#	    print Dumper $hit;
 	    if ($hit->significance <= $e_cutoff) {
 		$parse_out_fh->print ( $result->query_name."\t".
 				       $result->query_length."\tHomo\tHomo\t".
