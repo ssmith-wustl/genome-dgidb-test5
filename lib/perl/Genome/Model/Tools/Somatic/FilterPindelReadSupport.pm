@@ -72,7 +72,6 @@ gmt somatic filter-pindel-read-support --read-support-file /my/read/support.bed.
 EOS
 }
 
-
 sub execute {
     my $self = shift;
     #my $min_variant_support = $self->min_variant_support;
@@ -90,28 +89,27 @@ sub execute {
     $input->getline;  # throw out header line
     while( my $line = $input->getline){
         chomp $line;
-        my ($chr,$start,$stop,$refvar,$is,$rs,$ps,$dbsnp) = split "\t", $line;
-        if(($self->filter_dbsnp)&&($dbsnp eq '-')){
-
-            if(($rs==0)||($is/($is+$rs) > $self->var_to_ref_read_ratio){
-                my $display=undef;
-                if($self->remove_single_stranded){
-                    if(($ps != 1)&&($ps !=0)){
+        my ($chr,$start,$stop,$refvar,$vs,$rs,$ps,$dbsnp) = split "\t", $line;
+        unless(($self->filter_dbsnp)&&($dbsnp ne '-')){
+            unless($vs < $self->min_variant_support){
+                if($vs/($vs+$rs) > $self->var_to_ref_read_ratio){
+                    my $display=undef;
+                    if($self->remove_single_stranded){
+                        if(($ps != 1)&&($ps !=0)){
+                            $display=1;
+                        }
+                    }
+                    else {
                         $display=1;
                     }
-                }
-                else {
-                    $display=1;
-                }
-                if($display){
-                    print $output join("\t", ($chr,$start,$stop,$refvar,$is,$rs,$ps))."\n";
+                    if($display){
+                        print $output join("\t", ($chr,$start,$stop,$refvar,$vs,$rs,$ps))."\n";
+                    }
                 }
             }
         }
     }
-
     $input->close;
-
     return 1;
 }
 
