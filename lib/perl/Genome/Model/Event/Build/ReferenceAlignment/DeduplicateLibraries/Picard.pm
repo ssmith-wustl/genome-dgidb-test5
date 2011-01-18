@@ -382,6 +382,8 @@ sub execute {
         
         rename($dedup_temp_file, $bam_merged_output_file);
         rename($dedup_temp_file . '.flagstat', $bam_merged_output_file . '.flagstat');
+        unlink("$merged_file");
+        unlink("$merged_file.flagstat");
     
         $now = UR::Time->now;
         $self->status_message("<<< Completing MarkDuplicates at $now.");

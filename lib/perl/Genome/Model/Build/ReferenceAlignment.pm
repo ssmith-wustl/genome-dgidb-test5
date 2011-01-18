@@ -1171,7 +1171,7 @@ sub minimum_mapping_quality {
 sub files_ignored_by_diff {
     return qw(
         build.xml
-        alignments/*_merged_rmdup_bam.md5
+        alignments/\d+_merged_rmdup.bam.md5
         reports/Build_Initialized/report.xml
         reports/Build_Succeeded/report.xml
         reports/Input_Base_Counts/report.html
@@ -1194,10 +1194,9 @@ sub dirs_ignored_by_diff {
 
 sub regex_files_for_diff {
     return qw( 
-        alignments/*_merged_rmdup.bam$
-        alignments/*_merged_rmdup.bam.bai$
-        alignments/*_merged_rmdup.bam.flagstat$
-        alignments/*.bam.flagstat$
+        alignments/\d+_merged_rmdup.bam$
+        alignments/\d+_merged_rmdup.bam.bai$
+        alignments/\d+_merged_rmdup.bam.flagstat$
     );
 }
 1;
