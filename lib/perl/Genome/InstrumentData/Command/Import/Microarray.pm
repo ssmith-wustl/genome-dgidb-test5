@@ -64,6 +64,17 @@ my %properties = (
         doc => 'this is only needed if the sample being used is not already in the database.',
         is_optional => 1,
     },
+    reference_sequence_build => {
+        is => 'Genome::Model::Build::ImportedReferenceSequence',
+        id_by => 'reference_sequence_build_id',
+        doc => 'Build of the reference against which the genotype file was produced.',
+        is_optional => 0,
+    },
+    reference_sequence_build_id  => {
+        is => 'Number',
+        doc => 'Build-id of the reference against which the genotype file was produced.',
+        is_optional => 0,
+    },
     _library => {
         is=> 'Genome::Library',
         is_transient => 1,
@@ -72,7 +83,7 @@ my %properties = (
 );
     
 class Genome::InstrumentData::Command::Import::Microarray {
-    is => 'Command',
+    is => 'Genome::Command::Base',
     is_abstract => 1,
     has => [%properties],
     doc => 'import external microarray instrument data',
