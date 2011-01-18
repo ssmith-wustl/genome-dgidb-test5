@@ -7,7 +7,11 @@ use strict;
 use warnings;
 
 use above 'Genome';
-
+package ARRAY;
+package HASH;
+package SCALAR;
+package CODE;
+package main;
 use Test::More;
 
 # TODO: May need to turn this on if we introduce a dependency on Bio::DB::Sam

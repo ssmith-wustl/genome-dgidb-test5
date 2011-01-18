@@ -1,4 +1,3 @@
-
 package Genome::Model::Tools::ViromeEvent::SplitBasedOnBarCode;
 
 use strict;
@@ -29,15 +28,7 @@ class Genome::Model::Tools::ViromeEvent::SplitBasedOnBarCode{
 };
 
 sub help_brief {
-    return <<"EOS"
-Creates a list of directories and fasta files based on querying barcode file against fasta file
-EOS
-}
-
-sub help_synopsis {
-    return <<"EOS"
-genome-model toold virome-event split-based-on-bar-code
-EOS
+    'Creates a list of directories and fasta files based on querying barcode file against fasta file';
 }
 
 sub help_detail {
@@ -57,19 +48,7 @@ In this version, calculate percentage of sequences in each length category
 
 In this version, both barcodes from 5 prime and 3 prime are used for 
 decoding.
-
-<barcode file> = full path to the file
-<fasta file> = 454 .fa sequence file with full path 
-                   This script will create directories in the dir that the
-                   input file resides. 
-<logfile>   = output file for logging events
 EOS
-}
-
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    return $self;
 }
 
 sub execute {
