@@ -106,7 +106,7 @@ sub listed_params {
 sub execute {
     my $self = shift;
 
-    if ($self->dbsnp_build and $self->dbsnp_model) {
+    if ($self->dbsnp_build and $self->dbsnp_model and $self->dbsnp_build->model->id != $self->dbsnp_model->id) {
         $self->error_message("Specify one of --dbsnp-build or --dbsnp-model, not both");
         return;
     }
