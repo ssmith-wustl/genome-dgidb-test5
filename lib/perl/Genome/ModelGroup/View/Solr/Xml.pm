@@ -23,7 +23,7 @@ class Genome::ModelGroup::View::Solr::Xml {
         display_url0 => {
             is => 'Text',
             calculate_from => ['subject'],
-            calculate => sub { return join ('?', '/view/genome/model-group/status.html',$_[0]->id()); },
+            calculate => sub { return join ('?id=', '/view/genome/model-group/status.html',$_[0]->id()); },
         },
         display_label1 => {
             is  => 'Text',
@@ -35,7 +35,7 @@ class Genome::ModelGroup::View::Solr::Xml {
             calculate => sub {
                 my $cmodel = $_[0]->convergence_model();
                 return if !$cmodel;
-                return join ('?', '/view/genome/model/convergence/status.html',$cmodel->id());
+                return join ('?id=', '/view/genome/model/convergence/status.html',$cmodel->id());
             },
         },
         display_label2 => {
@@ -48,7 +48,7 @@ class Genome::ModelGroup::View::Solr::Xml {
             calculate => sub {
                 my $cmodel = $_[0]->convergence_model() || return 'none';
                 my $build  = $cmodel->last_succeeded_build() || return 'none';
-                return join ('?', '/view/genome/model/convergence/build/status.html',$build->id());
+                return join ('?id=', '/view/genome/model/convergence/build/status.html',$build->id());
             },
         },
         display_label3 => {
@@ -61,7 +61,7 @@ class Genome::ModelGroup::View::Solr::Xml {
             calculate => sub {
                 my $cmodel = $_[0]->convergence_model() || return 'none';
                 my $build  = $cmodel->last_succeeded_build() || return 'none';
-                my $data_dir = join ('?', '/view/genome/model/convergence/build/status.html',$build->id());
+                my $data_dir = join ('?id=', '/view/genome/model/convergence/build/status.html',$build->id());
                 return join('/', 'https://gscweb.gsc.wustl.edu', $data_dir, 'reports', 'Summary', 'report.html');
             },
         },

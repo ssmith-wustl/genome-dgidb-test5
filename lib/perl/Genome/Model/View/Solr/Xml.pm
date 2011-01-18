@@ -23,7 +23,7 @@ class Genome::Model::View::Solr::Xml {
         display_url0 => {
             is => 'Text',
             calculate_from => ['subject'],
-            calculate => sub { return join ('?', '/view/genome/model/status.html',$subject->id()); },
+            calculate => sub { return join ('?id=', '/view/genome/model/status.html', $_[0]->genome_model_id()); },
         },
         display_label1 => {
             is  => 'Text',
@@ -35,7 +35,7 @@ class Genome::Model::View::Solr::Xml {
             calculate => sub { 
                 my $build = $_[0]->last_succeeded_build();
                 return 'none' if !$build;
-                return join ('?', '/view/genome/model/build/status.html',$build->id()); 
+                return join ('?id=', '/view/genome/model/build/status.html',$build->id()); 
             },
         },
         display_label2 => {
@@ -59,7 +59,7 @@ class Genome::Model::View::Solr::Xml {
             calculate_from => ['subject'],
             calculate => sub {
                 my $build = $_[0]->last_succeeded_build() || return 'none';
-                my $data_dir = join ('?', '/view/genome/model/convergence/build/status.html',$build->id());
+                my $data_dir = join ('?id=', '/view/genome/model/convergence/build/status.html',$build->id());
                 return join('/', 'https://gscweb.gsc.wustl.edu', $data_dir, 'reports', 'Summary', 'report.html');
             },
         },
