@@ -27,7 +27,7 @@ class Genome::Model::SomaticVariation {
             to => 'value_id',
             where => [ name => 'tumor_model', value_class_name => 'Genome::Model::ReferenceAlignment' ],
             is_many => 0,
-            is_mutable => 0,
+            is_mutable => 1,
             is_optional => 0,
             doc => 'tumor model for somatic analysis'
         },
@@ -41,7 +41,7 @@ class Genome::Model::SomaticVariation {
             to => 'value_id',
             where => [ name => 'normal_model', value_class_name => 'Genome::Model::ReferenceAlignment' ],
             is_many => 0,
-            is_mutable => 0,
+            is_mutable => 1,
             is_optional => 0,
             doc => 'normal model for somatic analysis'
         },
@@ -55,7 +55,7 @@ class Genome::Model::SomaticVariation {
             to => 'value_id',
             where => [ name => 'annotation_build', value_class_name => 'Genome::Model::Build::ImportedAnnotation' ],
             is_many => 0,
-            is_mutable => 0,
+            is_mutable => 1,
             is_optional => 0,
             doc => 'annotation build for fast tiering'
         },
@@ -63,19 +63,19 @@ class Genome::Model::SomaticVariation {
             is => 'Genome::Model::Build::ImportedAnnotation',
             id_by => 'annotation_build_id',
         },
-        previous_variants_build_id => {
+        previously_discovered_variations_build_id => {
             is => 'Text',
             via => 'inputs',
             to => 'value_id',
-            where => [ name => 'previous_variants', value_class_name => "Genome::Model::Build::ImportedVariationList"],
+            where => [ name => 'previously_discovered_variations', value_class_name => "Genome::Model::Build::ImportedVariationList"],
             is_many => 0,
-            is_mutable => 0,
+            is_mutable => 1,
             is_optional => 0,
             doc => 'previous variants genome feature set to screen somatic mutations against',
         },
-        previous_variants_build => {
+        previously_discovered_variations_build => {
             is => 'Genome::Model::Build::ImportedVariationList',
-            id_by => 'previous_variants_build_id',
+            id_by => 'previously_discovered_variations_build_id',
         },
     ],
 };
@@ -84,10 +84,12 @@ sub create {
     my $class = shift;
     my %params = @_;
 
-    my $tumor_model = delete $params{tumor_model};
-    my $normal_model = delete $params{normal_model};
-    my $annotation_build = delete $params{annotation_build};
-    my $previous_variants_build = delete $params{previous_variants_build};
+    $DB::single = 1;
+
+    my $tumor_model = $params{tumor_model};
+    my $normal_model =  $params{normal_model};
+    my $annotation_build = $params{annotation_build};
+    my $previously_discovered_variations_build = $params{previously_discovered_variations_build};
 
     unless($tumor_model) {
         $class->error_message('No tumor model provided.' );
@@ -104,7 +106,7 @@ sub create {
         return;
     }
 
-    unless($previous_variants_build) {
+    unless($previously_discovered_variations_build) {
         $class->error_message('No previous variants build provided.');
         return;
     }
@@ -129,25 +131,32 @@ sub create {
         return;
     }
 
+    $DB::single = 1;
     my $self = $class->SUPER::create(%params);
+    $DB::single = 1;
+
+    unless ($self){
+        $class->error_message('Error in model creation');
+        return;
+    }
 
     unless($self->tumor_model) {
-        $class->error_message('No tumor model on model!' );
+        $self->error_message('No tumor model on model!' );
         return;
     }
 
     unless($self->normal_model) {
-        $class->error_message('No normal model on model!');
+        $self->error_message('No normal model on model!');
         return;
     }
 
     unless($self->annotation_build) {
-        $class->error_message('No annotation build on model!' );
+        $self->error_message('No annotation build on model!' );
         return;
     }
 
-    unless($self->previous_variants_build) {
-        $class->error_message('No previous variants build on model!');
+    unless($self->previously_discovered_variations_build) {
+        $self->error_message('No previous variants build on model!');
         return;
     }
 

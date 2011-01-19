@@ -20,7 +20,7 @@ class Genome::Model::Build::SomaticVariation {
             is => 'Genome::Model::Build::ImportedAnnotation',
             via => 'model',
         },
-        previous_variants_build => {
+        previously_discovered_variations_build => {
             is => 'Genome::Model::Build::ImportedVariationList',
             via => 'model',
         },
