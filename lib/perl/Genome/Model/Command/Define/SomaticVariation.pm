@@ -23,8 +23,8 @@ class Genome::Model::Command::Define::SomaticVariation {
             is_input => 1,
             doc => 'Name or id of normal model being analyzed',
         },
-        previous_variants_build => {
-            is => 'Genome::Model::Build::ImportedVariantList',
+        previously_discovered_variations_build => {
+            is => 'Genome::Model::Build::ImportedVariationList',
             is_input => 1, 
             doc => 'Id of imported variants build to screen somatic variants against',
         },
@@ -33,15 +33,18 @@ class Genome::Model::Command::Define::SomaticVariation {
             is_input => 1, 
             doc => 'Id of annotation build to use for fast tiering of variants',
         },
+        subject_name => {
+            is => 'Text',
+            is_input => 1,
+            is_optional => 1,
+            doc => 'Subject name is derived from normal and tumor models and is not necessary as input to somatic models',
+        },
     ],
 };
 
 sub help_synopsis {
     return <<"EOS"
-genome model define 
-  --tumor-id 12345
-  --normal-id 54321
-  --data-directory /gscmnt/somedisk/somedir/model_dir
+genome model define somatic-variation --tumor-model aml3-tumor1-v2 --normal-model aml3-normal1-v2  --annotation-build 102550711 --previous-variants-build 106227442 --processing-profile-id 2573882 --name adukes_test_somatic_model 
 EOS
 }
 
@@ -51,13 +54,29 @@ This defines a new genome model representing the somatic analysis between a norm
 EOS
 }
 
-sub create {
-    my $class = shift;
+sub _shell_args_property_meta {
+    my $self = shift;
+    return $self->Genome::Command::Base::_shell_args_property_meta(@_);
+}
 
-    my $self = $class->SUPER::create(@_)
-        or return;
+sub _resolve_param {
+    my ($self, $param) = @_;
 
-    return $self;
+    my $param_meta = $self->__meta__->property($param);
+    Carp::confess("Request to resolve unknown property '$param'.") if (!$param_meta);
+    my $param_class = $param_meta->data_type;
+
+    my $value = $self->$param;
+    return unless $value; # not specified
+    return $value if ref($value); # already an object
+
+    my @objs = $self->resolve_param_value_from_text($value, $param_class);
+    if (@objs != 1) {
+        Carp::confess("Unable to find unique $param_class identified by '$value'. Results were:\n" .
+            join('\n', map { $_->__display_name__ . '"' } @objs ));
+    }
+    $self->$param($objs[0]);
+    return $self->$param;
 }
 
 sub type_specific_parameters_for_create {
@@ -69,7 +88,7 @@ sub type_specific_parameters_for_create {
         tumor_model => $self->tumor_model,
         normal_model => $self->normal_model,
         annotation_build => $self->annotation_build,
-        previous_variants_build => $self->previous_variants_build
+        previously_discovered_variations_build => $self->previously_discovered_variations_build
     );
 
 
@@ -78,21 +97,26 @@ sub type_specific_parameters_for_create {
 
 sub execute {
     my $self = shift;
+    $DB::single = 1;
 
+    $self->normal_model($self->_resolve_param('normal_model'));
     unless(defined $self->normal_model) {
         $self->error_message("Could not get a model for normal model id: " . $self->normal_model_id);
         return;
     }
+    $self->tumor_model($self->_resolve_param('tumor_model'));
     unless(defined $self->tumor_model) {
         $self->error_message("Could not get a model for tumor model id: " . $self->tumor_model_id);
         return;
     }
+    $self->annotation_build($self->_resolve_param('annotation_build'));
     unless(defined $self->annotation_build) {
         $self->error_message("Could not get a build for annotation build id: " . $self->annotation_build_id);
         return;
     }
-    unless(defined $self->previous_variants_build) {
-        $self->error_message("Could not get a build for previous variants build id: " . $self->previous_variants_build_id);
+    $self->previously_discovered_variations_build($self->_resolve_param('previously_discovered_variations_build'));
+    unless(defined $self->previously_discovered_variations_build) {
+        $self->error_message("Could not get a build for previous variants build id: " . $self->previously_discovered_variations_build_id);
         return;
     }
 
@@ -109,7 +133,7 @@ sub execute {
         }
         $self->subject_id($tumor_subject->id);
         $self->subject_class_name($tumor_subject->class);
-        $self->subject_name($tumor_subject->common_name || $tumor_subject->name);
+        $self->subject_name($tumor_subject->name);
     
     } else {
         $self->error_message('Unexpected subject for tumor or normal model!');
