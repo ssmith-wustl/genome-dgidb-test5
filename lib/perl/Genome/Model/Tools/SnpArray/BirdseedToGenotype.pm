@@ -175,11 +175,11 @@ sub load_snp_info
 		$lineCounter++;		
 
 		my @lineContents = split(/\t/, $line);
-		my $chrom = $lineContents[1];
-		my $position = $lineContents[3];
-		my $snp_id = $lineContents[4];
-		my $strand = $lineContents[6];
-		my $alleles = $lineContents[7];
+		my $chrom = $lineContents[0];
+		my $position = $lineContents[2];
+		my $snp_id = $lineContents[3];
+		my $strand = $lineContents[5];
+		my $alleles = $lineContents[6];
 		(my $allele1, my $allele2) = split(/\//, $alleles);
 
 		$chrom =~ s/chr//;
