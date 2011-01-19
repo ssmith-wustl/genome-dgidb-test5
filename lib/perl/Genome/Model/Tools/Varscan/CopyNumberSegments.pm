@@ -217,7 +217,7 @@ sub process_results
 	my $output_basename = $self->output_basename;
 
 	my $chrom_filename = $output_basename . ".$chrom.infile";
-	my $script_filename = $output_basename . ".R";
+	my $script_filename = $output_basename . ".$chrom.R";
 	my $image_filename = $output_basename . "." . $chrom . ".jpg";
 
 	my @lines = split(/\n/, $lines);
@@ -261,7 +261,7 @@ sub process_results
 		print SCRIPT qq{
 CNA.object <- CNA(regions\$V$num_columns, regions\$V1, regions\$V2, data.type="logratio", sampleid=c("Chromosome $chrom"))\n
 smoothed.CNA.object <- smooth.CNA(CNA.object)\n
-segment.smoothed.CNA.object <- segment(smoothed.CNA.object, undo.splits="sdundo", undo.SD=3, verbose=1)
+segment.smoothed.CNA.object <- segment(smoothed.CNA.object, undo.splits="sdundo", undo.SD=2, verbose=1)
 p.segment.smoothed.CNA.object <- segments.p(segment.smoothed.CNA.object)
 plot(segment.smoothed.CNA.object, type="w", cex=0.5, cex.axis=1.5, cex.lab=1.5)
 write.table(p.segment.smoothed.CNA.object, file="$chrom_filename.segments.p_value")

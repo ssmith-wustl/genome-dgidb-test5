@@ -44,20 +44,14 @@ EOS
 }
 
 #Replace the default lister iterator with our own that just pulls the models for a group
-sub _fetch { 
+sub _resolve_boolexpr { 
     my $self = shift;
     
     my @models = $self->model_group->models;
 
     my @model_ids = map($_->id, @models);
     
-    my $iterator = $self->subject_class_name->create_iterator(id => \@model_ids);
-    
-    unless($iterator){
-        $self->error_message($self->subject_class_name->error_message);
-    }
-    
-    return $iterator;
+    return Genome::Model->define_boolexpr(id => \@model_ids);
 }
 
 1;
