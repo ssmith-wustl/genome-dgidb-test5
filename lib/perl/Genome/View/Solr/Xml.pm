@@ -111,17 +111,17 @@ sub _generate_content {
     # notice there is no display_content? plan is to generate "display_content" with highlighted area that matched
     push @fields, WebService::Solr::Field->new( display_url0  => $self->display_url0() );
 
-    if ($self->display_label1) {
+    if ($self->display_label1 && $self->display_url1) {
         push @fields, WebService::Solr::Field->new( display_label1 => $self->display_label1() );
         push @fields, WebService::Solr::Field->new( display_url1   => $self->display_url1() );
     }
 
-    if ($self->display_label2) {
+    if ($self->display_label2 && $self->display_url2) {
         push @fields, WebService::Solr::Field->new( display_label2 => $self->display_label2() );
         push @fields, WebService::Solr::Field->new( display_url2   => $self->display_url2() );
     }
 
-    if ($self->display_label3) {
+    if ($self->display_label3 && $self->display_url3) {
         push @fields, WebService::Solr::Field->new( display_label3 => $self->display_label3() );
         push @fields, WebService::Solr::Field->new( display_url3   => $self->display_url3() );
     }

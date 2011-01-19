@@ -59,8 +59,10 @@ class Genome::Model::View::Solr::Xml {
             calculate_from => ['subject'],
             calculate => sub {
                 my $build = $_[0]->last_succeeded_build() || return 'none';
-                my $data_dir = join ('?id=', '/view/genome/model/convergence/build/status.html',$build->id());
-                return join('/', 'https://gscweb.gsc.wustl.edu', $data_dir, 'reports', 'Summary', 'report.html');
+                my $data_dir = $build->data_directory() || return 'none';
+
+                my $summary = join('/', 'https://gscweb.gsc.wustl.edu', $data_dir, 'reports', 'Summary', 'report.html');
+                if (! -e $summary) { return 'none'; }
             },
         },
         default_aspects => {

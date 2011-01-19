@@ -23,7 +23,9 @@ class Genome::ModelGroup::View::Solr::Xml {
         display_url0 => {
             is => 'Text',
             calculate_from => ['subject'],
-            calculate => sub { return join ('?id=', '/view/genome/model-group/status.html',$_[0]->id()); },
+            calculate => sub { 
+                stuff(@_);
+            },
         },
         display_label1 => {
             is  => 'Text',
@@ -87,5 +89,13 @@ class Genome::ModelGroup::View::Solr::Xml {
         }
     ]
 };
+
+sub stuff {
+
+$DB::single = 1;
+return join ('?id=', '/view/genome/model-group/status.html',$_[0]->id()); 
+
+}
+
 
 1;
