@@ -50,16 +50,23 @@ class Genome::Model::Tools::Picard::CollectGcBiasMetrics {
             default_value => 500000,
             is_optional => 1,
         },
-        clean_bam => {
+        sort_bam => {
             is => 'Boolean',
             is_optional => 1,
             default_value => 0,
-            doc => 'Flag to run G:M:T:BioSamtools::CleanBam to remove reads that align beyond the end of chromosomes.(ie. BWA 0.5.5 and prior)',
+            doc => 'Sort the BAM file before cleaning or collectin GC metrics.',
+        },
+        clean_bam => {
+            is => 'Text',
+            is_optional => 1,
+            valid_values => ['trim','remove'],
+            default_value => 'trim',
+            doc => 'Flag to trim overhanging alignments with picard or remove reads that align beyond the end of chromosomes with bio-samtools',
         },
         clean_bam_summary => {
             is => 'Text',
             is_optional => 1,
-            doc => 'A file path to store CleanBam metrics.',
+            doc => 'A file path to store cleaning output.',
         },
     ],
 };
@@ -87,15 +94,43 @@ sub execute {
     }
     my $out_dir = dirname $self->output_file;
     my $input_file = $self->input_file;
-    if ($self->clean_bam) {
-        my $basename = basename($self->output_file,qw/\.bam/);
+    my $basename = basename($self->output_file,qw/\.bam/);
+    if ($self->sort_bam) {
+        my $sorted_bam_file = Genome::Utility::FileSystem->create_temp_file_path($basename .'_sorted_bam.bam');
+        unless (Genome::Model::Tools::Picard::SortSam->execute(
+            input_file => $self->input_file,
+            output_file => $sorted_bam_file,
+            max_records_in_ram => $self->max_records_in_ram,
+            maximum_memory => $self->maximum_memory,
+            maximum_permgen_memory => $self->maximum_permgen_memory,
+            use_version => $self->use_version,
+        )) {
+            die('Failed to run G:M:T:Picard::SortSam on BAM file: '. $input_file);
+        }
+        $input_file = $sorted_bam_file;
+    }
+    if ($self->clean_bam eq 'remove') {
         my $clean_bam_file = Genome::Utility::FileSystem->create_temp_file_path($basename .'_clean_bam.bam');
         unless (Genome::Model::Tools::BioSamtools::CleanBam->execute(
             input_bam_file => $self->input_file,
             output_bam_file => $clean_bam_file,
             summary_output_file => $self->clean_bam_summary,
         )) {
-            die('Failed to run G:M:T:BioSamtools::CleanSam on BAM file: '. $self->input_file);
+            die('Failed to run G:M:T:BioSamtools::CleanBam on BAM file: '. $input_file);
+        }
+        $input_file = $clean_bam_file;
+    } elsif ($self->clean_bam eq 'trim') {
+        my $basename = basename($self->output_file,qw/\.bam/);
+        my $clean_bam_file = Genome::Utility::FileSystem->create_temp_file_path($basename .'_clean_bam.bam');
+        unless (Genome::Model::Tools::Picard::CleanSam->execute(
+            input_file => $self->input_file,
+            output_file => $clean_bam_file,
+            log_file => $self->clean_bam_summary,
+            use_version => $self->use_version,
+            maximum_memory => $self->maximum_memory,
+            maximum_permgen_memory => $self->maximum_permgen_memory,
+        )) {
+            die('Failed to run G:M:T:Picard::CleanSam on BAM file: '. $input_file);
         }
         $input_file = $clean_bam_file;
     }
