@@ -410,9 +410,11 @@ sub execute {
     else {
         my ($output_file_basename) = File::Basename::fileparse($output_file);
         ($output_fh, $temp_output_file) = File::Temp::tempfile(
-                                              "$output_file_basename-XXXXXX",
-                                              DIR => Cwd::abs_path(dirname($self->output_file)),
-                                              UNLINK => 1);
+            "$output_file_basename-XXXXXX",
+            DIR => '/tmp/',
+            UNLINK => 1,
+            CLEANUP => 1,
+        );
         chmod(0664, $temp_output_file);
     }
     $self->_transcript_report_fh($output_fh);
