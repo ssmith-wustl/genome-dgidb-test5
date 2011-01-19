@@ -6,7 +6,7 @@ use warnings;
 
 use Genome;
 
-class Genome::Model::Somatic {
+class Genome::Model::SomaticVariation {
     is  => 'Genome::Model',
     has => [
         snv_detection_strategy => {
@@ -83,56 +83,73 @@ class Genome::Model::Somatic {
 sub create {
     my $class = shift;
     my %params = @_;
-    
-    my $tumor_model_id = delete $params{tumor_model_id};
+
     my $tumor_model = delete $params{tumor_model};
-    my $normal_model_id = delete $params{normal_model_id};
     my $normal_model = delete $params{normal_model};
-    
+    my $annotation_build = delete $params{annotation_build};
+    my $previous_variants_build = delete $params{previous_variants_build};
+
     unless($tumor_model) {
-        $tumor_model = Genome::Model->get($tumor_model_id);
-        
-        unless($tumor_model) {
-            $class->error_message('Could not find tumor model.' );
-            return;
-        }
+        $class->error_message('No tumor model provided.' );
+        return;
     }
-    
+
     unless($normal_model) {
-        $normal_model = Genome::Model->get($normal_model_id);
-        
-        unless($normal_model) {
-            $class->error_message('Could not find normal model.');
-            return;
-        }
+        $class->error_message('No normal model provided.');
+        return;
+    }
+
+    unless($annotation_build) {
+        $class->error_message('No annotation build provided.' );
+        return;
+    }
+
+    unless($previous_variants_build) {
+        $class->error_message('No previous variants build provided.');
+        return;
     }
 
     my $tumor_subject = $tumor_model->subject;
     my $normal_subject = $normal_model->subject;
 
     if($tumor_subject->can('source') and $normal_subject->can('source')) {
+
         my $tumor_source = $tumor_subject->source;
         my $normal_source = $normal_subject->source;
-        
-        if($tumor_source eq $normal_source) {
-            my $subject = $tumor_source;
-            
-            #Set up other parameters for call to parent execute()
-            $params{subject_id} = $subject->id;
-            $params{subject_class_name} = $subject->class;
-        } else {
-            $class->error_message('Tumor and normal samples are not from same source!');
-            return;
+
+        unless ($tumor_source eq $normal_source) {
+            $class->error_message("Tumor model and normal model samples do not come from the same individual.  Tumor ". $tumor_source->common_name .", Normal ". $normal_source->subject_name);
         }
+        $params{subject_id} = $tumor_subject->id;
+        $params{subject_class_name} = $tumor_subject->class;
+        $params{subject_name} = $tumor_subject->common_name || $tumor_subject->name;
+
     } else {
         $class->error_message('Unexpected subject for tumor or normal model!');
         return;
     }
-    
+
     my $self = $class->SUPER::create(%params);
-    
-    $self->add_from_model(from_model => $normal_model, role => 'normal');
-    $self->add_from_model(from_model => $tumor_model, role => 'tumor');
+
+    unless($self->tumor_model) {
+        $class->error_message('No tumor model on model!' );
+        return;
+    }
+
+    unless($self->normal_model) {
+        $class->error_message('No normal model on model!');
+        return;
+    }
+
+    unless($self->annotation_build) {
+        $class->error_message('No annotation build on model!' );
+        return;
+    }
+
+    unless($self->previous_variants_build) {
+        $class->error_message('No previous variants build on model!');
+        return;
+    }
 
     return $self;
 }
