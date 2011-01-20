@@ -3,9 +3,11 @@ package Genome::Model::Tools::DetectVariants::Dispatcher::Version2;
 use strict;
 use warnings;
 
+use Clone qw/clone/;
+use Data::Compare;
 use Data::Dumper;
-use JSON;
 use Genome;
+use JSON;
 use Parse::RecDescent;
 
 # grammar for parsing strategy rules
@@ -38,15 +40,13 @@ my $grammar = q{
     
     single: parenthetical
                 { $item[1]; }
-    | "somatic " strategy
-                { $item[2]->{name} = "somatic $item[2]->{name}"; $item[2]; }
     | strategy
                 { $item[1]; }
     
     strategy: program_spec "filtered by" filter_list
                 { $return = { detector => {%{$item[1]}, filters => $item[3]} }; }
     | program_spec 
-                { $return = { detector => {%{$item[1]}, filters => undef} }; }
+                { $return = { detector => {%{$item[1]}, filters => []} }; }
     | <error>
 
     filter_list: program_spec "," filter_list
@@ -55,7 +55,13 @@ my $grammar = q{
                 { $return = [$item[1]]; }
 
     word: /([\w\.-]|\\\\)+/ { $return = $item[1]; }
-    name: word { $return = $item[1]; }
+
+    name: "somatic" word
+                { $return = "somatic $item[2]"; }
+    | word
+                { $return = $item[1]; }
+    | <error>
+
     version: word { $return = $item[1]; }
     | <error>
 
@@ -67,7 +73,6 @@ my $grammar = q{
                 }
             } 
     | <error>
-
 
     program_spec: name version params
                 { $return = {
@@ -126,7 +131,7 @@ EOS
 
 sub help_detail {
     return <<EOS 
-A variant detector(s) specified under snv-detector, indel-detector, or sv-detector must have a corresponding module under `gmt detect-variants`.
+A variant detector(s) specified under snv-detector-strategy, indel-detector-strategy, or sv-detector-strategy must have a corresponding module under `gmt detect-variants`.
 EOS
 }
 
@@ -161,14 +166,14 @@ sub strategy {
         }
     } 
 
-    return ($detector_trees);
+    return ($detector_trees, $detectors_to_run);
 }
 
 sub _detect_variants {
     my $self = shift;
 
-    my $strategy = $self->strategy;
-    die "Not implemented yet, awaiting workflow code. The strategy looks like: " .  Dumper($strategy);
+    my ($strategy, $detectors) = $self->strategy;
+    die "Not implemented yet, awaiting workflow code. The strategy looks like: " . Dumper($strategy) . "The condensed job map looks like: " . Dumper($detectors);
 }
 
 sub _verify_inputs {
@@ -206,8 +211,8 @@ sub parse_detector_strategy {
 }
 
 sub is_valid_detector {
-    my $self = shift;
-    my $detector_class = shift;
+    # TODO: check version, possibly params
+    my ($self, $detector_class, $detector_version) = @_;
     
     return if $detector_class eq $self->class; #Don't nest the dispatcher!
     
@@ -219,7 +224,10 @@ sub detector_class {
     my $self = shift;
     my $detector = shift;
     
-    $detector = join ("", map { ucfirst(lc($_)) } split(/-/,$detector) ); #Convert things like "foo-bar" to "FooBar"
+    # Convert things like "hi foo-bar" to "Hi::FooBar"
+    $detector = join("::", 
+        map { join('', map { ucfirst(lc($_)) } split(/-/, $_))
+            } split(' ', $detector));
     
     my $detector_class_base = 'Genome::Model::Tools::DetectVariants';
     my $detector_class = join('::', ($detector_class_base, $detector));
@@ -234,6 +242,12 @@ sub parser {
         or die('Failed to construct parser from grammar.');
         
     return $parser;
+}
+
+sub merge_filters {
+    my ($a, $b) = @_;
+    my %filters = map { to_json($_) => $_ } (@$a, @$b);
+    return [values %filters];
 }
 
 # return value is a hash like:
@@ -262,13 +276,25 @@ sub build_detector_list {
         my $name = $detector->{name};
         my $version = $detector->{version};
         my $params = $detector->{params};
-        my $params_str = to_json($params);
+
+        my $d = clone($detector);
+        $d->{class} = $self->detector_class($detector->{name});
         
         #Do not push duplicate entries
-        unless(exists($detector_list->{$name}{$version}{$detector_type}) and
-               grep(to_json($_) eq $params_str, @{ $detector_list->{$name}{$version}{$detector_type} })) {
-        
-            push @{ $detector_list->{$name}{$version}{$detector_type} }, $params;
+        if (exists($detector_list->{$name}{$version}{$detector_type})) {
+            my @matching_params = grep {Compare($_->{params}, $params)} @{$detector_list->{$name}{$version}{$detector_type}};
+            if (!@matching_params) {
+                push @{ $detector_list->{$name}{$version}{$detector_type} }, $d;
+            } else {
+                my $m = shift @matching_params;
+                my $existing_filters = $m->{filters};
+                my $merged_filters = merge_filters($m->{filters}, $d->{filters});
+                if (scalar @$merged_filters != scalar @$existing_filters) {
+                    $m->{filters} = $merged_filters;
+                }
+            }
+        } else {
+            $detector_list->{$name}{$version}{$detector_type} = [$d];
         }
         
         return $detector_list;
@@ -292,7 +318,7 @@ sub walk_tree {
     #There should always be exactly one outer rule (or detector)
     unless(scalar @keys eq 1) {
         $self->error_message('Unexpected data structure encountered!  There were ' . scalar(@keys) . ' keys');
-        die($self->error_message);
+        die($self->error_message . "\nTree: " . Dumper($detector_tree));
     }
     
     my $key = $keys[0];
