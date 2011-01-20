@@ -24,7 +24,7 @@ class Genome::ModelGroup::View::Solr::Xml {
             is => 'Text',
             calculate_from => ['subject'],
             calculate => sub { 
-                stuff(@_);
+                return join ('?id=', '/view/genome/model-group/status.html',$_[0]->id()); 
             },
         },
         display_label1 => {
@@ -50,7 +50,7 @@ class Genome::ModelGroup::View::Solr::Xml {
             calculate => sub {
                 my $cmodel = $_[0]->convergence_model() || return 'none';
                 my $build  = $cmodel->last_succeeded_build() || return 'none';
-                return join ('?id=', '/view/genome/model/convergence/build/status.html',$build->id());
+                return join ('?id=', '/view/genome/model/build/convergence/status.html',$build->id());
             },
         },
         display_label3 => {
@@ -89,13 +89,6 @@ class Genome::ModelGroup::View::Solr::Xml {
         }
     ]
 };
-
-sub stuff {
-
-$DB::single = 1;
-return join ('?id=', '/view/genome/model-group/status.html',$_[0]->id()); 
-
-}
 
 
 1;
