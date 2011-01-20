@@ -5,20 +5,21 @@ use warnings;
 
 use Parse::RecDescent qw/RD_ERRORS RD_WARN RD_TRACE/;
 use Data::Dumper;
-use Test::More tests => 17;
+use Test::More tests => 25;
 #use Test::More skip_all => 'test in development';
 use above 'Genome';
 
 #Parsing tests
-my $det_class_base = 'Genome::Model::Tools::DetectVariants';
-my $dispatcher = "${det_class_base}::Dispatcher::Version2";
-use_ok($dispatcher);
+my $det_class_base = 'Genome::Model::Tools::DetectVariants2';
+my $strategy_class = "${det_class_base}::Strategy";
+use_ok($strategy_class);
 
 # hash of strings => expected output hash
 my %expected = (
     "samtools v1 {}" => {
         detector => {
             name => "samtools",
+            class => 'Genome::Model::Tools::DetectVariants2::Samtools',
             version => "v1",
             params => {},
             filters => [],
@@ -30,6 +31,7 @@ my %expected = (
             {
                 detector => {
                     name => "var-scan",
+                    class => 'Genome::Model::Tools::DetectVariants2::VarScan',
                     version => "v2",
                     params => { foo => 'bar'},
                     filters => [],
@@ -38,6 +40,7 @@ my %expected = (
             {
                 detector => {
                     name => "samtools",
+                    class => 'Genome::Model::Tools::DetectVariants2::Samtools',
                     version => "v1",
                     params => { p => 1},
                     filters => [{name => 'thing', version => 'v1', params => {}}],
@@ -51,6 +54,7 @@ my %expected = (
             {
                 detector => {
                     name => "a",
+                    class => 'Genome::Model::Tools::DetectVariants2::A',
                     version => "v1",
                     params => { b => 1},
                     filters => [
@@ -64,6 +68,7 @@ my %expected = (
                     {
                         detector => {
                             name => "a",
+                            class => 'Genome::Model::Tools::DetectVariants2::A',
                             version => "v1",
                             params => {},
                             filters => [],
@@ -72,6 +77,7 @@ my %expected = (
                     {
                         detector => {
                             name => "b",
+                            class => 'Genome::Model::Tools::DetectVariants2::B',
                             version => "v2",
                             params => {},
                             filters => [],
@@ -94,11 +100,12 @@ my @expected_failures = (
     "badness v1 {} filtered by foo v1 {})", # extra )
 );
     
-is("${det_class_base}::Samtools", $dispatcher->detector_class("samtools"), "names without subpackages parsed correctly");
-is("${det_class_base}::Somatic::VarScan", $dispatcher->detector_class("somatic var-scan"), "names with subpackages parsed correctly");
+is("${det_class_base}::Samtools", $strategy_class->detector_class("samtools"), "names without subpackages parsed correctly");
+is("${det_class_base}::Somatic::VarScan", $strategy_class->detector_class("somatic var-scan"), "names with subpackages parsed correctly");
 
 for my $str (keys %expected) {
-    my $tree = $dispatcher->parse_detector_strategy($str);
+    my $obj = $strategy_class->get($str);
+    my $tree = $obj->tree;
     ok($tree, 'able to parse detector string')
         or die "failed to parse $str";
     is_deeply($tree, $expected{$str}, 'tree looks as expected') 
@@ -111,11 +118,13 @@ $::RD_WARN = undef;
 $::RD_TRACE = undef;
 for my $str (@expected_failures) {
     my $tree = undef;
-    print " -- $str\n";
+    my $obj = $strategy_class->get($str);
     eval {
-        $tree = $dispatcher->parse_detector_strategy($str);
+        my $tree = $obj->tree;
     };
     ok(!$tree, 'bad input fails to parse as expected')
         or die "did not fail to parse bad string: $str";
+    my @errs = $obj->__errors__;
+    ok($obj->__errors__, 'object has errors as expected');
 }
 
