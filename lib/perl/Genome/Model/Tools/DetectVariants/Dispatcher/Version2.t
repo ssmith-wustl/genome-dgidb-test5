@@ -5,7 +5,7 @@ use warnings;
 
 use Parse::RecDescent qw/RD_ERRORS RD_WARN RD_TRACE/;
 use Data::Dumper;
-use Test::More tests => 15;
+use Test::More tests => 17;
 #use Test::More skip_all => 'test in development';
 use above 'Genome';
 
@@ -94,6 +94,8 @@ my @expected_failures = (
     "badness v1 {} filtered by foo v1 {})", # extra )
 );
     
+is("${det_class_base}::Samtools", $dispatcher->detector_class("samtools"), "names without subpackages parsed correctly");
+is("${det_class_base}::Somatic::VarScan", $dispatcher->detector_class("somatic var-scan"), "names with subpackages parsed correctly");
 
 for my $str (keys %expected) {
     my $tree = $dispatcher->parse_detector_strategy($str);
@@ -116,3 +118,4 @@ for my $str (@expected_failures) {
     ok(!$tree, 'bad input fails to parse as expected')
         or die "did not fail to parse bad string: $str";
 }
+

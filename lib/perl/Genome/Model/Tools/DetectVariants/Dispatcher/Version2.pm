@@ -56,8 +56,11 @@ my $grammar = q{
 
     word: /([\w\.-]|\\\\)+/ { $return = $item[1]; }
 
-    name: "somatic" word
-                { $return = "somatic $item[2]"; }
+    valid_subpackage: "somatic"
+                { $return = $item[1]; }
+
+    name: valid_subpackage word
+                { $return = "$item[1] $item[2]"; }
     | word
                 { $return = $item[1]; }
     | <error>
