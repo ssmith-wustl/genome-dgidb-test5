@@ -65,14 +65,6 @@ class Genome::WorkOrder {
             to => 'external_contact_name',
             is_many => 0
         },
-        file_storage_id => {
-            is => 'Integer',
-            len => 20,
-        },
-        estimate_file_storage_id => {
-            is => 'Integer',
-            len => 20,
-        },
         estimate_id => {
             is => 'Text',
             len => 32,
