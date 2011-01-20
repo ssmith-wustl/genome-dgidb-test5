@@ -13,20 +13,6 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
     doc => 'This tool is used to handle delegating variant detection to one or more specified tools and filtering and/or combining the results',
 };
 
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-
-    for my $variant_type (@{ $self->variant_types }) {
-        my $name_property = $variant_type . '_detection_strategy';
-        my $strategy = $self->$name_property;
-        if($strategy and !ref $strategy) {
-            $self->$name_property(Genome::Model::Tools::DetectVariants2::Strategy->get($strategy));
-        }
-    }
-    return $self;
-}
-
 sub help_brief {
     "A dispatcher for variant detectors.",
 }
