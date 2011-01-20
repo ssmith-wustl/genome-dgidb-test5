@@ -9,33 +9,8 @@ use Data::Dumper;
 use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Dispatcher {
-#    is => ['Genome::Model::Tools::DetectVariants2'],
-    is => ['Genome::Command::Base'],
-    has_optional => [
-        snv_detection_strategy => {
-            is => "Genome::Model::DetectVariants2::Strategy",
-            doc => 'The variant detector strategy to use for finding SNVs',
-        },
-        indel_detection_strategy => {
-            is => "Genome::Model::DetectVariants2::Strategy",
-            doc => 'The variant detector strategy to use for finding indels',
-        },
-        sv_detection_strategy => {
-            is => "Genome::Model::DetectVariants2::Strategy",
-            doc => 'The variant detector strategy to use for finding SVs',
-        },
-    ],
-    has_constant => [
-        variant_types => {
-            is => 'ARRAY',
-            value => [('snv', 'indel', 'sv')],
-        },
-        #These can't be turned off--just pass no detector name to skip
-        detect_snvs => { value => 1 },
-        detect_indels => { value => 1 },
-        detect_svs => { value => 1 },
-    ],
-    doc => 'This tool is used to handle delegating variant detection to one or more specified tools and combining the results',
+    is => ['Genome::Model::Tools::DetectVariants2::Base'],
+    doc => 'This tool is used to handle delegating variant detection to one or more specified tools and filtering and/or combining the results',
 };
 
 sub create {
@@ -59,7 +34,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gmt detect-variants dispatcher ...
+gmt detect-variants2 dispatcher ...
 EOS
 } #TODO Fill in this synopsis with a few examples
 
@@ -67,19 +42,6 @@ sub help_detail {
     return <<EOS 
 A variant detector(s) specified under snv-detection-strategy, indel-detection-strategy, or sv-detection-strategy must have a corresponding module under `gmt detect-variants`.
 EOS
-}
-
-sub _should_skip_execution {
-    my $self = shift;
-    
-    for my $variant_type (@{ $self->variant_types }) {
-        my $name_property = $variant_type . '_detection_strategy';
-        
-        return if defined $self->$name_property;
-    }
-    
-    $self->status_message('No variant detectors specified.');
-    return $self->SUPER::_should_skip_execution;
 }
 
 sub plan {
