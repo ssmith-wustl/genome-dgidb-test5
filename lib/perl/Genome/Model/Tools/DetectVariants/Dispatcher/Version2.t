@@ -5,20 +5,14 @@ use warnings;
 
 use Parse::RecDescent qw/RD_ERRORS RD_WARN RD_TRACE/;
 use Data::Dumper;
-use Test::More tests => 14;
+use Test::More tests => 15;
 #use Test::More skip_all => 'test in development';
 use above 'Genome';
 
-#Use this check if tests are added to actually run detectors
-#my $archos = `uname -a`;
-#if ($archos !~ /64/) {
-#    plan skip_all => "Must run from 64-bit machine";
-#} else {
-#    plan tests => 5;
-#}
-
 #Parsing tests
-my $dispatcher = 'Genome::Model::Tools::DetectVariants::Dispatcher::Version2';
+my $det_class_base = 'Genome::Model::Tools::DetectVariants';
+my $dispatcher = "${det_class_base}::Dispatcher::Version2";
+use_ok($dispatcher);
 
 # hash of strings => expected output hash
 my %expected = (
@@ -27,7 +21,7 @@ my %expected = (
             name => "samtools",
             version => "v1",
             params => {},
-            filters => undef,
+            filters => [],
         }
     },
 
@@ -38,7 +32,7 @@ my %expected = (
                     name => "var-scan",
                     version => "v2",
                     params => { foo => 'bar'},
-                    filters => undef,
+                    filters => [],
                 },
             },
             {
@@ -72,7 +66,7 @@ my %expected = (
                             name => "a",
                             version => "v1",
                             params => {},
-                            filters => undef,
+                            filters => [],
                         },
                     },
                     {
@@ -80,7 +74,7 @@ my %expected = (
                             name => "b",
                             version => "v2",
                             params => {},
-                            filters => undef,
+                            filters => [],
                         },
                     },
                 ],
