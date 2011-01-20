@@ -39,7 +39,7 @@ sub execute {
     my ($genome_opts) = grep { $_ =~ /Command\.pm\.opts/ } @files;
     $genome_opts =~ s/^\s*M\s*//;
     if ($gmt_opts || $genome_opts) {
-        system("git commit -m \"updated tab completion files via 'genome completion update'\" $gmt_opts $genome_opts");
+        system("git add $gmt_opts $genome_opts");
         $self->status_message("Remember to push the committed .opts file(s)!");
     }
 
