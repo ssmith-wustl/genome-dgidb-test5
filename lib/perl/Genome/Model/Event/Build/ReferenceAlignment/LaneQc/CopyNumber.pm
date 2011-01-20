@@ -33,6 +33,7 @@ sub execute {
     my $cmd = Genome::Model::Tools::Analysis::LaneQc::CopyNumber->create(
         build_id => $self->build->id,
         output_file_prefix => "$output_dir/copy_number_",
+        lsf => 0,
     );
     unless ($cmd) {
         die $self->error_message("Failed to create Genome::Model::Tools::Analysis::LaneQc::CopyNumber command.");
