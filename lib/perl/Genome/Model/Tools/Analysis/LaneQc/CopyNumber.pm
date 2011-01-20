@@ -10,23 +10,28 @@ use IO::File;
 class Genome::Model::Tools::Analysis::LaneQc::CopyNumber {
     is => 'Command',
     has => [
-    build_id => { 
-        type => 'String',
-        is_optional => 0,
-        doc => "build id of the build to do per-lane copy-number QC on",
-    },
-    bam2cn_window => { 
-        type => 'Number',
-        is_optional => 1,
-        default => 50000,
-        doc => "Window (in bp) for looking at read-depth window-based copy number. See ~kchen/SNPHMM/SolexaCNV/scripts/BAM2CN.pl for more information.",
-    },
-    output_file_prefix => {
-        type => 'String',
-        is_optional => 0,
-        doc => "Prefix for filename to write per-lane copy-number QC data to. The name of the lane plus \".cnqc\" will be added as a suffix for all outputs if you give a filename, or the name of the lane will be the beginning of the filename if you just give a path, and also \".png\" will be further added for a graphical output as well. Use full path!!",
-    },
-    ]
+        build_id => { 
+            type => 'String',
+            is_optional => 0,
+            doc => "build id of the build to do per-lane copy-number QC on",
+        },
+        bam2cn_window => { 
+            type => 'Number',
+            is_optional => 1,
+            default => 50000,
+            doc => "Window (in bp) for looking at read-depth window-based copy number. See ~kchen/SNPHMM/SolexaCNV/scripts/BAM2CN.pl for more information.",
+        },
+        output_file_prefix => {
+            type => 'String',
+            is_optional => 0,
+            doc => "Prefix for filename to write per-lane copy-number QC data to. The name of the lane plus \".cnqc\" will be added as a suffix for all outputs if you give a filename, or the name of the lane will be the beginning of the filename if you just give a path, and also \".png\" will be further added for a graphical output as well. Use full path!!",
+        },
+        lsf => {
+            is => 'Boolean',
+            default => 1,
+            doc => "Send internal tasks to LSF, e.g. R's plot generation and BAM2CN.pl."
+        },
+    ],
 };
 
 
@@ -110,8 +115,13 @@ sub execute {
             my $cmd1 = "perl /gscuser/kchen/SNPHMM/SolexaCNV/scripts/BAM2CN.pl -w $window $alignment_file > $lane_outfile";
             my $cmd2 = "R --no-save < /gscuser/kchen/bin/plot_wholegenome_cn.R $lane_outfile";
 
-            print `bsub -N -u $user\@genome.wustl.edu -J $job1_name -R 'select[type==LINUX64]' "$cmd1"`;
-            print `bsub -N -u $user\@genome.wustl.edu -J $job2_name -w "$dependency" "$cmd2"`;
+            if ($self->lsf) {
+                system("bsub -N -u $user\@genome.wustl.edu -J $job1_name -R 'select[type==LINUX64]' \"$cmd1\"");
+                system("bsub -N -u $user\@genome.wustl.edu -J $job2_name -w \"$dependency\" \"$cmd2\"");
+            } else {
+                system($cmd1);
+                system($cmd2);
+            }
 
         }
     }
