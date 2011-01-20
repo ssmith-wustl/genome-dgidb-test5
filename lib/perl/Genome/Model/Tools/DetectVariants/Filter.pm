@@ -55,7 +55,7 @@ class Genome::Model::Tools::DetectVariants::Filter {
             default_value => 'long',
         },
     ]
-};,
+};
 
 sub help_brief {
     "A selection of variant detectors.",
