@@ -23,7 +23,7 @@ class Genome::Sample::View::Solr::Xml {
         display_url0 => {
             is => 'Text',
             calculate_from => ['subject'],
-            calculate => sub { return join ('?', '/view/genome/sample/status.html',$_[0]->id()); },
+            calculate => sub { return join ('?id=', '/view/genome/sample/status.html',$_[0]->id()); },
         },
         display_label1 => {
             is  => 'Text',

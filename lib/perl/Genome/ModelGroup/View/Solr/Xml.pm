@@ -63,8 +63,11 @@ class Genome::ModelGroup::View::Solr::Xml {
             calculate => sub {
                 my $cmodel = $_[0]->convergence_model() || return 'none';
                 my $build  = $cmodel->last_succeeded_build() || return 'none';
-                my $data_dir = join ('?id=', '/view/genome/model/convergence/build/status.html',$build->id());
-                return join('/', 'https://gscweb.gsc.wustl.edu', $data_dir, 'reports', 'Summary', 'report.html');
+                my $data_dir = $build->data_directory() || return 'none';
+                my $url = join( '/',
+                    'https://gscweb.gsc.wustl.edu',
+                    $data_dir, 'reports', 'Summary', 'report.html' );
+                return $url;
             },
         },
         default_aspects => {
