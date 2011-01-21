@@ -149,9 +149,18 @@ sub _add_class_info {
     my @keys = keys %$tree;
     for my $key (@keys) {
         if ($key eq 'detector') {
+            $DB::single=1;
             my $name = $tree->{$key}->{name};
             my $class = $self->detector_class($name);
-            $tree->{$key}->{class} = $self->detector_class($name);
+            $tree->{$key}->{class} = $class;
+            # FIXME combine this code with the below
+            my $number_of_filters = scalar @{$tree->{$key}->{filters}};
+            next unless $number_of_filters > 0;
+            for my $index (0..$number_of_filters - 1) {
+                my $name = @{$tree->{$key}->{filters}}[$index]->{name};
+                my $class = $self->filter_class($name);
+                @{$tree->{$key}->{filters}}[$index]->{class} = $class;
+            }
         } elsif (ref $tree->{$key} eq 'ARRAY') {
             ($self->_add_class_info($_)) for (@{$tree->{$key}});
         }
@@ -171,6 +180,38 @@ sub detector_class {
     my $detector_class = join('::', ($detector_class_base, $detector));
     
     return $detector_class;
+}
+
+# TODO merge this with the above method, probably.
+sub filter_class {
+    my $self = shift;
+    my $filter = shift;
+    
+    # Convert things like "hi foo-bar" to "Hi::FooBar"
+    $filter = join("::", 
+        map { join('', map { ucfirst(lc($_)) } split(/-/, $_))
+            } split(' ', $filter));
+    
+    my $filter_class_base = 'Genome::Model::Tools::DetectVariants2::Filter';
+    my $filter_class = join('::', ($filter_class_base, $filter));
+    
+    return $filter_class;
+}
+
+# TODO finish this
+sub validate {
+    my $self = shift;
+    my $tree = $self->tree;
+
+    my @keys = keys %$tree;
+    for my $key (@keys) {
+        if ($key eq 'detector') {
+            # Check detector class and params
+            # Check filters that belong to this detector
+        } elsif (ref $tree->{$key} eq 'ARRAY') {
+            ($self->_add_class_info($_)) for (@{$tree->{$key}});
+        }
+    }
 }
 
 1;
