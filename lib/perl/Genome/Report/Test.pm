@@ -542,7 +542,6 @@ sub test_01_generate_report : Test(1) {
 
     my $report = $self->generator->generate_report;
     ok($report, 'Generated report');
-    #print Dumper($report); $report->save('/gscuser/ebelter/Desktop/reports', 1);
 
     return 1;
 }

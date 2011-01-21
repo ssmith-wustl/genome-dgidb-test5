@@ -1,4 +1,4 @@
-package Genome::Model::Tools::DetectVariants::Dispatcher::Version2;
+package Genome::Model::Tools::DetectVariants2::Dispatcher;
 
 use strict;
 use warnings;
@@ -7,118 +7,10 @@ use Clone qw/clone/;
 use Data::Compare;
 use Data::Dumper;
 use Genome;
-use JSON;
-use Parse::RecDescent;
 
-# grammar for parsing strategy rules
-# sample valid input:
-# samtools v1 <-q -a "foo"> filtered by myfilter v1 <-q>, myotherfilter v2 <> || var-scan v1 <>
-
-my $grammar = q{
-    startrule: combination end
-        { $item[1]; }
-    | <error>
-
-    end: /^\Z/
-
-    combination: intersection
-                { $item[1]; }
-    | union
-                { $item[1]; }
-    | single
-                { $item[1]; }
-    | <error>
-    
-    parenthetical: "(" combination ")"
-                { $item[2]; }
-                
-    intersection: single "&&" combination
-                { $return = { intersect => [$item[1], $item[3] ] }; }
-    
-    union: single "||" combination
-                { $return = { union => [ $item[1], $item[3] ] }; }
-    
-    single: parenthetical
-                { $item[1]; }
-    | strategy
-                { $item[1]; }
-    
-    strategy: program_spec "filtered by" filter_list
-                { $return = { detector => {%{$item[1]}, filters => $item[3]} }; }
-    | program_spec 
-                { $return = { detector => {%{$item[1]}, filters => []} }; }
-    | <error>
-
-    filter_list: program_spec "," filter_list
-                { $return = [$item[1], @{$item[3]}]; }
-    | program_spec
-                { $return = [$item[1]]; }
-
-    word: /([\w\.-]|\\\\)+/ { $return = $item[1]; }
-
-    valid_subpackage: "somatic"
-                { $return = $item[1]; }
-
-    name: valid_subpackage word
-                { $return = "$item[1] $item[2]"; }
-    | word
-                { $return = $item[1]; }
-    | <error>
-
-    version: word { $return = $item[1]; }
-    | <error>
-
-    params: {
-                my $txt = extract_codeblock($text, '{}');
-                $return = eval $txt;
-                if ($@ or ref $return ne "HASH") {
-                    die("Failed to turn string '$txt' into perl hashref: $@.");
-                }
-            } 
-    | <error>
-
-    program_spec: name version params
-                { $return = {
-                    name => $item[1],
-                    version => $item[2],
-                    params => $item[3],
-                    };
-                }
-};
-
-class Genome::Model::Tools::DetectVariants::Dispatcher::Version2 {
-    is => ['Genome::Model::Tools::DetectVariants::Somatic'],
-    has_optional => [
-        snv_detector_strategy => {
-            is => "String",
-            doc => 'The variant detector strategy to use for finding SNPs',
-        },
-        indel_detector_strategy => {
-            is => "String",
-            doc => 'The variant detector strategy to use for finding indels',
-        },
-        sv_detector_strategy => {
-            is => "String",
-            doc => 'The variant detector strategy to use for finding SVs',
-        },
-        control_aligned_reads_input => {
-            doc => 'Location of the control aligned reads file to which the input aligned reads file should be compared (if using a detector that needs one)'
-        },
-    ],
-    has_constant_optional => [
-        version => {}, #We need separate versions for the dispatcher
-    ],
-    has_constant => [
-        variant_types => {
-            is => 'ARRAY',
-            value => [('snv', 'indel', 'sv')],
-        },
-        #These can't be turned off--just pass no detector name to skip
-        detect_snvs => { value => 1 },
-        detect_indels => { value => 1 },
-        detect_svs => { value => 1 },
-    ],
-    doc => 'This tool is used to handle delegating variant detection to one or more specified tools and combining the results',
+class Genome::Model::Tools::DetectVariants2::Dispatcher {
+    is => ['Genome::Model::Tools::DetectVariants2::Base'],
+    doc => 'This tool is used to handle delegating variant detection to one or more specified tools and filtering and/or combining the results',
 };
 
 sub help_brief {
@@ -128,55 +20,41 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gmt detect-variants dispatcher ...
+gmt detect-variants2 dispatcher ...
 EOS
 } #TODO Fill in this synopsis with a few examples
 
 sub help_detail {
     return <<EOS 
-A variant detector(s) specified under snv-detector-strategy, indel-detector-strategy, or sv-detector-strategy must have a corresponding module under `gmt detect-variants`.
+A variant detector(s) specified under snv-detection-strategy, indel-detection-strategy, or sv-detection-strategy must have a corresponding module under `gmt detect-variants`.
 EOS
 }
 
-sub _should_skip_execution {
-    my $self = shift;
-    
-    for my $variant_type (@{ $self->variant_types }) {
-        my $name_property = $variant_type . '_detector_strategy';
-        
-        return if defined $self->$name_property;
-    }
-    
-    $self->status_message('No variant detectors specified.');
-    return $self->SUPER::_should_skip_execution;
-}
-
-sub strategy {
+sub plan {
     my $self = shift;
 
-    my $detector_trees = {};
-    my $detectors_to_run = {};
-    
-    # Build up detection request
+    my $trees = {};
+    my $plan = {};
+
     for my $variant_type (@{ $self->variant_types }) {
-        my $name_property = $variant_type . '_detector_strategy';
-        
-        if($self->$name_property) {
-            my $detector_tree = $self->parse_detector_strategy($self->$name_property);
-            
-            $detector_trees->{$variant_type} = $detector_tree;
-            $self->build_detector_list($detector_tree, $detectors_to_run, $variant_type);
+        my $name_property = $variant_type . '_detection_strategy';
+        my $strategy = $self->$name_property;
+        if($strategy) {
+            my $tree = $strategy->tree;
+            die "Failed to get detector tree for $name_property" if !defined $tree;
+            $trees->{$variant_type} = $tree;
+            $self->build_detector_list($trees->{$variant_type}, $plan, $variant_type);
         }
     } 
 
-    return ($detector_trees, $detectors_to_run);
+    return ($trees, $plan);
 }
 
 sub _detect_variants {
     my $self = shift;
 
-    my ($strategy, $detectors) = $self->strategy;
-    die "Not implemented yet, awaiting workflow code. The strategy looks like: " . Dumper($strategy) . "The condensed job map looks like: " . Dumper($detectors);
+    my ($trees, $plan) = $self->plan;
+    die "Not implemented yet, awaiting workflow code. The strategy looks like: " . Dumper($trees) . "The condensed job map looks like: " . Dumper($plan);
 }
 
 sub _verify_inputs {
@@ -195,7 +73,7 @@ sub calculate_detector_output_directory {
     return $self->output_directory . '/' . Genome::Utility::Text::sanitize_string_for_filesystem($subdirectory);
 }
 
-sub parse_detector_strategy {
+sub parse_detection_strategy {
     my $self = shift;
     my $string = shift;
     
@@ -221,30 +99,6 @@ sub is_valid_detector {
     
     my $detector_class_base = 'Genome::Model::Tools::DetectVariants';
     return $detector_class->isa($detector_class_base);
-}
-
-sub detector_class {
-    my $self = shift;
-    my $detector = shift;
-    
-    # Convert things like "hi foo-bar" to "Hi::FooBar"
-    $detector = join("::", 
-        map { join('', map { ucfirst(lc($_)) } split(/-/, $_))
-            } split(' ', $detector));
-    
-    my $detector_class_base = 'Genome::Model::Tools::DetectVariants';
-    my $detector_class = join('::', ($detector_class_base, $detector));
-    
-    return $detector_class;
-}
-
-sub parser {
-    my $self = shift;
-    
-    my $parser = Parse::RecDescent->new($grammar)
-        or die('Failed to construct parser from grammar.');
-        
-    return $parser;
 }
 
 sub merge_filters {
@@ -279,9 +133,7 @@ sub build_detector_list {
         my $name = $detector->{name};
         my $version = $detector->{version};
         my $params = $detector->{params};
-
         my $d = clone($detector);
-        $d->{class} = $self->detector_class($detector->{name});
         
         #Do not push duplicate entries
         if (exists($detector_list->{$name}{$version}{$detector_type})) {
@@ -346,7 +198,6 @@ sub walk_tree {
         return $leaf_case->($self, $value, $branch_case, $leaf_case, @params);
     } else {
         $self->error_message("Unknown key in detector hash: $key");
-        die($self->error_message);
     }
     #Case Two: Otherwise the key should be the a detector specification hash, 
 }
