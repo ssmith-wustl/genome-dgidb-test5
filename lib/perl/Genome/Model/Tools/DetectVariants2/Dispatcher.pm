@@ -57,13 +57,6 @@ sub _detect_variants {
     die "Not implemented yet, awaiting workflow code. The strategy looks like: " . Dumper($trees) . "The condensed job map looks like: " . Dumper($plan);
 }
 
-sub _verify_inputs {
-    my $self = shift;
-    
-    #Skip the somatic checks since we might not be running a somatic detector.  (If we are the checks will be performed then.)
-    return $self->Genome::Model::Tools::DetectVariants::_verify_inputs;
-}
-
 sub calculate_detector_output_directory {
     my $self = shift;
     my ($detector, $version, $param_list) = @_;
@@ -76,7 +69,7 @@ sub calculate_detector_output_directory {
 sub parse_detection_strategy {
     my $self = shift;
     my $string = shift;
-    
+
     return unless $string;
     
     my $parser = $self->parser;
