@@ -400,7 +400,7 @@ sub build_event {
 # Override in subclasses to use a custom name
 sub workflow_name {
     my $self = shift;
-    return $self->build_id . 'all stages';
+    return $self->build_id . ' all stages';
 }
 
 sub workflow_instances {
