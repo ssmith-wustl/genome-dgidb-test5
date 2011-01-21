@@ -60,9 +60,9 @@ class Genome::Model::View::Solr::Xml {
             calculate => sub {
                 my $build = $_[0]->last_succeeded_build() || return 'none';
                 my $data_dir = $build->data_directory() || return 'none';
-
-                my $summary = join('/', 'https://gscweb.gsc.wustl.edu', $data_dir, 'reports', 'Summary', 'report.html');
-                if (! -e $summary) { return 'none'; }
+                my $report_pathname = join('/', $data_dir, 'reports', 'Summary', 'report.html');
+                if (! -e $report_pathname) { return 'none'; }
+                my $summary = join('', 'https://gscweb.gsc.wustl.edu', $report_pathname);
             },
         },
         default_aspects => {
