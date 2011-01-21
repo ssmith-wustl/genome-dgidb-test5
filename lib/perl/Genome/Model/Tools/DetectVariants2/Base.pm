@@ -10,7 +10,27 @@ use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Base {
     is => ['Genome::Command::Base'],
+    has => [
+        reference_sequence_input => {
+            is => 'Text',
+            doc => 'Location of the reference sequence file',
+            is_input => 1,
+        },
+        aligned_reads_input => {
+            is => 'Text',
+            doc => 'Location of the aligned reads input file',
+            shell_args_position => '1',
+            is_input => 1,
+        },
+    ],
     has_optional => [
+        control_aligned_reads_input => {
+            is => 'Text',
+            doc => 'Location of the control aligned reads file to which the input aligned reads file should be compared (for detectors which can utilize a control)',
+            shell_args_position => '2',
+            is_input => 1,
+            is_output => 1,
+        },
         snv_detection_strategy => {
             is => "Genome::Model::Tools::DetectVariants2::Strategy",
             doc => 'The variant detector strategy to use for finding SNVs',
