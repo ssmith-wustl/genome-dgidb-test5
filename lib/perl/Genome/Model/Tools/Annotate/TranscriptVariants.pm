@@ -506,7 +506,7 @@ sub execute {
             my ($version) = $full_version =~ /^\d+_(\d+)[a-z]/;
             my %ucsc_versions = Genome::Info::UCSCConservation->ucsc_conservation_directories;
 
-            my @directories = $self->build->determine_data_directory($self->cache_annotation_data_directory);
+            my @directories = $self->build->determine_merged_data_directory($self->cache_annotation_data_directory);
             $annotator = $annotator_version_subclass->create(
                 data_directory => \@directories,
                 check_variants => $self->check_variants,

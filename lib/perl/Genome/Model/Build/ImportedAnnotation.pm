@@ -167,6 +167,18 @@ sub determine_data_directory {
     return @directories;
 }
 
+sub determine_merged_data_directory{
+    my $self = shift;
+    if (-d $self->_annotation_data_directory) { 
+        return $self->_annotation_data_directory;
+    }
+    else {
+        $self->error_message("Could not find annotation data in " .
+                $self->_annotation_data_directory);
+        return;
+    }
+}
+
 # Returns transcript iterator object using default location
 sub transcript_iterator{
     my $self = shift;
