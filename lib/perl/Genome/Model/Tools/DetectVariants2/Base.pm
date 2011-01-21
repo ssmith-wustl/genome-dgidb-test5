@@ -60,6 +60,16 @@ class Genome::Model::Tools::DetectVariants2::Base {
         detect_indels => { value => 1 },
         detect_svs => { value => 1 },
     ],
+    has_transient_optional => [
+        _temp_staging_directory  => {
+            is => 'Text',
+            doc => 'A directory to use for staging the data before putting it in the output_directory--all data here will be copied in _promote_staged_data().',
+        },
+        _temp_scratch_directory  => {
+            is=>'Text',
+            doc=>'Temp scratch directory',
+        },
+    ],
     doc => 'This is the base class for all detect variants classes and the variant detector dispatcher',
 };
 
