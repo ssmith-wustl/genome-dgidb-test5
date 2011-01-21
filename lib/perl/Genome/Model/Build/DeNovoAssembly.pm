@@ -275,9 +275,19 @@ sub calculate_average_insert_size {
     my @insert_sizes;
     for my $inst_data ( @instrument_data ) { 
         if ( $inst_data->sequencing_platform eq 'solexa' ) {
-            my $median_insert_size = $inst_data->median_insert_size;
-            next unless defined $median_insert_size;
-            push @insert_sizes, $median_insert_size;
+	    my $insert_size = ( $inst_data->median_insert_size ) ? $inst_data->median_insert_size : $inst_data->library->fragment_size_range;
+	    unless ( defined $insert_size ) {
+		Carp::confess(
+		    $self->error_message("Failed to get median insert size from inst data nor frag size range from library for inst data")
+		);
+	    }
+	    unless ( $insert_size =~ /^\d+$/ or $insert_size =~ /^\d+\s+\d+$/ ) {
+		Carp::confess(
+		    $self->status_message("Expected a number or two numbers separated by blank space but got: $insert_size")
+		);
+	    }
+	    my @sizes = split( /\s+/, $insert_size );
+	    @insert_sizes = ( @insert_sizes, @sizes );
         }
         else {
             Carp::confess( 

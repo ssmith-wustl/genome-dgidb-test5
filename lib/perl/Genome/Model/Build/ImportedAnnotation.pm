@@ -62,6 +62,33 @@ class Genome::Model::Build::ImportedAnnotation {
             id_by => 'reference_sequence_id',
         },
     ],
+    has_optional => [
+       tier_file_directory => {
+            is => 'Path',
+            calculate_from => ['data_directory'],
+            calculate => q{return "$data_directory/annotation_data/tiering_bed_files";},
+       },
+       tier1_bed => {
+            is => 'Path',
+            calculate_from => ['tier_file_directory'],
+            calculate => q{return "$tier_file_directory/tier1.bed";},
+       },
+       tier2_bed => {
+            is => 'Path',
+            calculate_from => ['tier_file_directory'],
+            calculate => q{return "$tier_file_directory/tier2.bed";},
+       },
+       tier3_bed => {
+            is => 'Path',
+            calculate_from => ['tier_file_directory'],
+            calculate => q{return "$tier_file_directory/tier3.bed";},
+       },
+       tier4_bed => {
+            is => 'Path',
+            calculate_from => ['tier_file_directory'],
+            calculate => q{return "$tier_file_directory/tier4.bed";},
+       },
+    ],
 };
 
 sub _select_build_from_model_input { undef; }

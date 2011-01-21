@@ -211,7 +211,6 @@ sub _filter_samxe_output {
     } else {
         $sam_out_fh = IO::File->new(">>" . $self->temp_scratch_directory . "/all_sequences.sam");
     }
-#    my $sam_out_fh = $Genome::InstrumentData::AlignmentResult::BAM_FH;
     my $add_rg_cmd = Genome::Model::Tools::Sam::AddReadGroupTag->create(
             input_filehandle     => $sam_run_output_fh,
             output_filehandle    => $sam_out_fh,
