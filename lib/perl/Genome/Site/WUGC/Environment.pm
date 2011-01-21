@@ -7,5 +7,5 @@
 # $db_path ||= "/usr/local/share/genome/music/dbfiles/";
 #
 
-$ENV{GC_GMT_MUSIC_DBFILES} = "/gscmnt/sata893/info/medseq/ndees/pfam/dbfiles/";
+$ENV{GC_GMT_MUSIC_DBFILES} = "/gscuser/pkimmey/usr_local_share/genome/music/dbfiles/";
 # /usr/local/share/genome/music/dbfiles/
