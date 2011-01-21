@@ -88,6 +88,12 @@ class Genome::Model::Tools::Somatic::BamToCna {
         doc => "whether or not to run R plot command at end to create .png image of data. Use --noplot to skip plot. Default is to make a plot.",
         default => 1,
     },
+    plot_only=> {
+	type => 'Boolean',
+        is_optional => 1,
+        doc => 'Will ONLY run R plot on the --output-file if it exists.'
+    },
+
     skip_if_output_present => {
         is => 'Boolean',
         is_optional => 1,
@@ -139,10 +145,27 @@ EOS
 sub execute {
     my $self = shift;
 
+    $DB::Single=1;
     my %maps = (tumor => $self->tumor_bam_file, normal => $self->normal_bam_file);
     my @samples = ("tumor","normal");
     my %downratios = (tumor => $self->tumor_downsample_percentage, normal => $self->normal_downsample_percentage);
     my $outfile = $self->output_file;
+
+    my $plot_only = $self->plot_only;
+    if($plot_only) {
+	if(-s $outfile) {
+	    #my $graph_output = "${outfile}.png";
+	    my @chrs = (1 .. 22,'X');
+	    print "plotting $outfile...\n";
+	    $self->plot_output($outfile,\@chrs);
+	    return 1;
+	}else {
+	    print "$outfile NOT found!  Aborting...\n";
+	    return 2;
+	}
+    }
+
+
 
     if (($self->skip_if_output_present)&&(-s $self->output_file)) {
         $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");

@@ -31,7 +31,7 @@ EOS
 }
 
 sub execute {
-    my $self = shift;,
+    my $self = shift;
 
     my $c_variant_file = $self->control_variant_file || '/gscmnt/834/info/medseq/imported_variants_data/CEU_YRI_all.snps.snpfilter.s';
     
