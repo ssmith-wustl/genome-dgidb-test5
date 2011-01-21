@@ -22,6 +22,12 @@ class Genome::Model::Tools::DetectVariants2::Base {
             shell_args_position => '1',
             is_input => 1,
         },
+        output_directory => {
+            is => 'Text',
+            doc => 'Location to save to the detector-specific files generated in the course of running',
+            is_input => 1,
+            is_output => 1,
+        },
     ],
     has_optional => [
         control_aligned_reads_input => {
