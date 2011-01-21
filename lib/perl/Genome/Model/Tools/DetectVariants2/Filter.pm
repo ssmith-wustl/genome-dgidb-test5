@@ -1,11 +1,11 @@
-package Genome::Model::Tools::DetectVariants::Filter;
+package Genome::Model::Tools::DetectVariants2::Filter;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Tools::DetectVariants::Filter {
+class Genome::Model::Tools::DetectVariants2::Filter {
     is  => 'Command',
     has => [
         variant_file => {
