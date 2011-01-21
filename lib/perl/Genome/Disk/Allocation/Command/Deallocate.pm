@@ -36,7 +36,9 @@ sub help_detail {
 
 sub execute { 
     my $self = shift;
-    $self->delete(remove_allocation_directory => $self->remove_allocation_directory);
+    my $allocation = Genome::Disk::Allocation->get($self->allocation_id);
+    confess 'Could not find allocation with id ' . $self->allocation_id unless $allocation;
+    $allocation->delete(remove_allocation_directory => $self->remove_allocation_directory);
     return 1;
 }
 
