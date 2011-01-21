@@ -85,7 +85,7 @@ sub execute {
         my $stats = $library_metrics{$lib}{all_stats};
         print $output_fh "#\t". $lib ."\t". $stats->mean ."\t". $stats->standard_deviation ."\n";
         for my $bin ( sort { $a <=> $b } keys %{$library_metrics{$lib}{histogram}}) {
-            print $output_fh$bin ."\t". $library_metrics{$lib}{histogram}{$bin} ."\n";
+            print "$output_fh$bin\t". $library_metrics{$lib}{histogram}{$bin} ."\n";
         }
     }
     $output_fh->close;
