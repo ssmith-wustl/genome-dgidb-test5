@@ -1,4 +1,4 @@
-package Genome::Model::Tools::DetectVariants::Filter::Loh;
+package Genome::Model::Tools::DetectVariants2::Filter::Loh;
 
 use warnings;
 use strict;
@@ -8,8 +8,8 @@ use Carp;
 use IO::File;
 use Genome::Info::IUB;
 
-class Genome::Model::Tools::DetectVariants::Filter::Loh{
-    is => 'Genome::Model::Tools::DetectVariants::Filter',
+class Genome::Model::Tools::DetectVariants2::Filter::Loh{
+    is => 'Genome::Model::Tools::DetectVariants2::Filter',
 };
 
 #extra_output_file is loh_output_file: Variants that have failed the LOH filter (are LOH events). (optional) If this is not provided, no output will be given for variants failing the filter.

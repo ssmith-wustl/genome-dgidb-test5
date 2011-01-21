@@ -1,4 +1,4 @@
-package Genome::Model::Tools::DetectVariants::Filter::SnvIntersect;
+package Genome::Model::Tools::DetectVariants2::Filter::SnvIntersect;
 
 use warnings;
 use strict;
@@ -10,8 +10,8 @@ use FileHandle;
 use Data::Dumper;
 use List::Util qw( max );
 
-class Genome::Model::Tools::DetectVariants::Filter::SnvIntersect {
-    is  => ['Genome::Model::Tools::DetectVariants::Filter'],
+class Genome::Model::Tools::DetectVariants2::Filter::SnvIntersect {
+    is  => ['Genome::Model::Tools::DetectVariants2::Filter'],
 };
 
 #sniper_snp_file is variant_file, while tumor_snp_file is
