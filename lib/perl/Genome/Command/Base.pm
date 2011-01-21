@@ -274,7 +274,15 @@ sub _resolve_param_value_from_text_by_bool_expr {
 sub _resolve_param_value_from_text_by_name_or_id {
     my ($self, $param_class, $str) = @_;
     my (@results);
-    if ($str =~ /^-?\d+$/) { # try to get by ID
+
+    my $class_meta = $param_class->__meta__;
+    my @id_property_names = $class_meta->id_property_names;
+    if (@id_property_names == 0) {
+        die "Failed to determine id property names for class $param_class.";
+    }
+
+    my $first_type = $class_meta->property_meta_for_name($id_property_names[0])->data_type;
+    if (@id_property_names > 1 or $first_type eq 'Text' or $str =~ /^-?\d+$/) { # try to get by ID
         @results = $param_class->get($str);
     }
     if (!@results && $param_class->can('name')) {

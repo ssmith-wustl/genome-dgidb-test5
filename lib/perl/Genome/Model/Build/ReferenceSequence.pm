@@ -98,10 +98,26 @@ class Genome::Model::Build::ReferenceSequence {
             is_many => 0,
             is_optional => 1,
         },
-
         derived_from => {
             is => 'Genome::Model::Build::ReferenceSequence',
             id_by => 'derived_from_id',
+        },
+
+        # optional to allow builds to indicate that are on the same coordinate system as another build, but
+        # is not a direct derivation of it. derived from implies coordinates_from, so you don't need to use both.
+        coordinates_from_id => {
+            is => 'Genome::Model::Build::ReferenceSequence',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'coordinates_from', value_class_name => 'Genome::Model::Build::ReferenceSequence' ],
+            doc => 'Used to indicate that this build is on the same coordinate system as another.',
+            is_mutable => 1,
+            is_many => 0,
+            is_optional => 1,
+        },
+        coordinates_from => {
+            is => 'Genome::Model::Build::ReferenceSequence',
+            id_by => 'coordinates_from_id',
         },
     ],
     doc => 'a specific version of a reference sequence, with cordinates suitable for annotation',
@@ -122,7 +138,7 @@ sub __errors__ {
     my @tags = $self->SUPER::__errors__();
 
     # this will die on circular links
-    eval { my $coords = $self->coordinates_from(); };
+    eval { my $coords = $self->get_coordinates_from(); };
     if ($@) {
         push @tags, UR::Object::Tag->create(
             type => 'error',
@@ -164,7 +180,15 @@ sub is_derived_from {
     return $self->derived_from->is_derived_from($build, $seen); 
 }
 
-sub coordinates_from {
+sub get_coordinates_from {
+    my $self = shift;
+    my $result = $self->coordinates_from;
+    return $result if $result;
+
+    return $self->derived_from_root;
+}
+
+sub derived_from_root {
     my ($self) = @_;
     my $from = $self;
     my %seen = ($self->id => 1);
@@ -184,7 +208,7 @@ sub coordinates_from {
 sub is_compatible_with {
     my ($self, $rsb) = @_;
     return if !defined $rsb;
-    return 1 if $self->coordinates_from()->id == $rsb->coordinates_from()->id;
+    return 1 if $self->get_coordinates_from()->id == $rsb->get_coordinates_from()->id;
 }
 
 sub __display_name__ {

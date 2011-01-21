@@ -44,7 +44,7 @@ class Genome::Model::Command::Define::SomaticVariation {
 
 sub help_synopsis {
     return <<"EOS"
-genome model define somatic-variation --tumor-model aml3-tumor1-v2 --normal-model aml3-normal1-v2  --annotation-build 102550711 --previous-variants-build 106227442 --processing-profile-id 2573882 --name adukes_test_somatic_model 
+genome model define somatic-variation --tumor-model aml3-tumor1-v2 --normal-model aml3-normal1-v2  --annotation-build 102550711 --previously-discovered-variations-build 106227442 --processing-profile-id 2573882 --model-name adukes_test_somatic_model 
 EOS
 }
 

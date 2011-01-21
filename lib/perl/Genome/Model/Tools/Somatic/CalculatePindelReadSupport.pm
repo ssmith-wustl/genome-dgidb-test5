@@ -36,7 +36,7 @@ class Genome::Model::Tools::Somatic::CalculatePindelReadSupport {
             type => 'Boolean',
             is_input => 1,
             is_optional => 1,
-            default => 0,
+            default => 1,
             doc => 'Run on pindel 0.2 or 0.1',
         },
         germline_events => {
@@ -343,7 +343,7 @@ sub parse {
         $ref = $allele_string;
     }
     elsif($type =~ m/I/) {
-        $start = $start - 1;
+        $stop = $stop - 1;
         $ref=0;
         my ($letters_until_space) =   ($reference =~ m/^([ACGTN]+) /);
         my $offset_into_first_read = length($letters_until_space);
