@@ -20,6 +20,20 @@ class Genome::ProcessingProfile::SomaticVariation{
     ],
 };
 
+sub create {
+    my $self = shift;
+    my @errors;
+    my $snv_strat = Genome::Model::Tools::DetectVariants2::Strategy->get($self->snv_detection_strategy) if defined($self->snv_detection_strategy);
+    push @errors, $snv_strat->__errors__;
+    my $sv_strat = Genome::Model::Tools::DetectVariants2::Strategy->get($self->sv_detection_strategy) if defined($self->sv_detection_strategy);
+    push @errors, $sv_strat->__errors__;
+    my $indel_strat = Genome::Model::Tools::DetectVariants2::Strategy->get($self->indel_detection_strategy) if defined($self->indel_detection_strategy);
+    push @errors, $indel_strat->__errors__;
+    if (scalar(@errors)) { 
+        die @errors;
+    }
+    return $self->SUPER::create(@_);
+}
 sub _initialize_build {
     my($self,$build) = @_;
     die "This is not yet implemented.";
