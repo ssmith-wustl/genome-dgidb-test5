@@ -25,6 +25,7 @@ use Bio::SeqIO;
 use Bio::DB::Fasta;
 use FASTAParse;
 
+use Genome::Site::WUGC::Environment;
 # this callback will load the GSCApp module, and initialize the app to work with GSC modules
 my $initialized = ''; 
 our $checks = 0;

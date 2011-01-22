@@ -103,6 +103,8 @@ sub __errors__ {
             );
     }
 
+    $self->validate($tree);
+
     return @tags;
 }
 
@@ -151,7 +153,15 @@ sub _add_class_info {
         if ($key eq 'detector') {
             my $name = $tree->{$key}->{name};
             my $class = $self->detector_class($name);
-            $tree->{$key}->{class} = $self->detector_class($name);
+            $tree->{$key}->{class} = $class;
+            # FIXME combine this code with the below
+            my $number_of_filters = scalar @{$tree->{$key}->{filters}};
+            next unless $number_of_filters > 0;
+            for my $index (0..$number_of_filters - 1) {
+                my $name = @{$tree->{$key}->{filters}}[$index]->{name};
+                my $class = $self->filter_class($name);
+                @{$tree->{$key}->{filters}}[$index]->{class} = $class;
+            }
         } elsif (ref $tree->{$key} eq 'ARRAY') {
             ($self->_add_class_info($_)) for (@{$tree->{$key}});
         }
@@ -171,6 +181,62 @@ sub detector_class {
     my $detector_class = join('::', ($detector_class_base, $detector));
     
     return $detector_class;
+}
+
+# TODO merge this with the above method, probably. The only difference is the ::Filter part.
+sub filter_class {
+    my $self = shift;
+    my $filter = shift;
+    
+    # Convert things like "hi foo-bar" to "Hi::FooBar"
+    $filter = join("::", 
+        map { join('', map { ucfirst(lc($_)) } split(/-/, $_))
+            } split(' ', $filter));
+    
+    my $filter_class_base = 'Genome::Model::Tools::DetectVariants2::Filter';
+    my $filter_class = join('::', ($filter_class_base, $filter));
+    
+    return $filter_class;
+}
+
+sub validate {
+    my ($self, $tree) = @_;
+    $DB::single=1;
+
+    my @keys = keys %$tree;
+    for my $key (@keys) {
+        if ($key eq 'detector') {
+            $DB::single=1;
+            # Check detector class and params
+            my $class = $tree->{$key}->{class};
+            my $version = $tree->{$key}->{version};
+            my %params = %{$tree->{$key}->{params}};
+            $params{version} = $version;
+            my $detector_object = $class->create(%params);
+            if ($detector_object->__errors__) {
+                die "errors"; # FIXME make this add tags for $self->__errors_
+            }
+
+            # Check filters that belong to this detector
+            for my $filter (@{$tree->{$key}->{filters}}) {
+                $DB::single=1;
+                my $filter_class = $filter->{class};
+                my $filter_version = $filter->{version};
+                my %filter_params = %{$filter->{params}};
+                $filter_params{version} = $filter_version;
+                my $detector_object = $class->create(%filter_params);
+                if ($detector_object->__errors__) {
+                    die "errors"; # FIXME make this add tags for $self->__errors_
+                }   
+            }
+
+        } elsif (ref $tree->{$key} eq 'ARRAY') {
+            for my $subtree ( @{$tree->{$key}} ) {
+                $DB::single=1;
+                $self->validate($subtree);
+            }
+        }
+    }
 }
 
 1;

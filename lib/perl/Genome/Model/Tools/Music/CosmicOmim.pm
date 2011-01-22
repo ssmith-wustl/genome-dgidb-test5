@@ -23,12 +23,12 @@ class Genome::Model::Tools::Music::CosmicOmim{
        omimaa_dir => {
            is => 'Path',
            doc => 'omim amino acid mutation database folder',
-           default => '/gscmnt/200/medseq/analysis/software/resources/OMIM/OMIM_Will/',
+           default => ''.($ENV{GC_GMT_MUSIC_DBFILES} || '/usr/local/share/genome/music/dbfiles/').'OMIM/',
        },
        cosmic_dir => {
            is => 'Path',
            doc => 'cosmic amino acid mutation database folder',
-           default => '/gscmnt/sata180/info/medseq/biodb/shared/cosmic/cosmic_will/',
+           default => ''.($ENV{GC_GMT_MUSIC_DBFILES} || '/usr/local/share/genome/music/dbfiles/').'cosmic/',
        },
        verbose => {
            is => 'Path',
