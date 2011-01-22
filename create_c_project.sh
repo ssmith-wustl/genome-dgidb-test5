@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 GIT_SRV=git
 GIT_PATH=/srv/git
