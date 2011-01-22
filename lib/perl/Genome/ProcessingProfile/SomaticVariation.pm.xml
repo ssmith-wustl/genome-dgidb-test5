@@ -1,0 +1,30 @@
+<?xml version='1.0' standalone='yes'?>
+
+<workflow name="Somatic Variation Pipeline" logDir="/gsc/var/log/genome/somatic_variation_pipeline">
+
+  <link fromOperation="input connector" fromProperty="build_id" toOperation="Detect Variants" toProperty="build_id" />
+
+  <link fromOperation="Detect Variants" fromProperty="build_id" toOperation="Identify Previously Discovered Variations" toProperty="build_id" />
+
+  <link fromOperation="Identify Previously Discovered Variations" fromProperty="build_id" toOperation="Tier Variants" toProperty="build_id" />
+ 
+  <link fromOperation="Tier Variants" fromProperty="build_id" toOperation="output connector" toProperty="build_id" />
+
+  <operation name="Detect Variants">
+    <operationtype commandClass="Genome::Model::Build::SomaticVariation::DetectVariants" typeClass="Workflow::OperationType::Command" />
+  </operation>
+
+  <operation name="Identify Previously Discovered Variations">
+    <operationtype commandClass="Genome::Model::Build::SomaticVariation::IdentifyPreviouslyDiscoveredVariations" typeClass="Workflow::OperationType::Command" />
+  </operation>
+
+  <operation name="Tier Variants">
+    <operationtype commandClass="Genome::Model::Build::SomaticVariation::TierVariants" typeClass="Workflow::OperationType::Command" />
+  </operation>
+
+  <operationtype typeClass="Workflow::OperationType::Model">
+    <inputproperty>build_id</inputproperty>
+    <outputproperty>build_id</outputproperty>
+  </operationtype>
+
+</workflow>
