@@ -220,11 +220,11 @@ sub validate {
             # Check filters that belong to this detector
             for my $filter (@{$tree->{$key}->{filters}}) {
                 $DB::single=1;
-                my $class = $filter->{class};
-                my $version = $filter->{version};
-                my %params = %{$tree->{$key}->{params}};
-                $params{version} = $version;
-                my $detector_object = $class->create(%params);
+                my $filter_class = $filter->{class};
+                my $filter_version = $filter->{version};
+                my %filter_params = %{$filter->{params}};
+                $filter_params{version} = $filter_version;
+                my $detector_object = $class->create(%filter_params);
                 if ($detector_object->__errors__) {
                     die "errors"; # FIXME make this add tags for $self->__errors_
                 }   
