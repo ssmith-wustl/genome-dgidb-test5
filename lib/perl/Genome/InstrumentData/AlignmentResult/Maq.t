@@ -62,12 +62,13 @@ my %ins_data_params = (
     gerald_directory    => $gerald_directory,
     flow_cell_id        => '33G',
     lane                => '4',
+    bam_path => '/gsc/var/cache/testsuite/data/Genome-InstrumentData-AlignmentResult-Bwa/input.bam'
 );
 
 my $instrument_data = Genome::InstrumentData::Solexa->create_mock(%ins_data_params);
 
 my @fastq_files = glob($instrument_data->gerald_directory.'/*.txt');
-$instrument_data->set_list('dump_sanger_fastq_files', @fastq_files);                                         
+$instrument_data->mock('dump_fastqs_from_bam', sub {return Genome::InstrumentData::dump_fastqs_from_bam($instrument_data)});
 isa_ok($instrument_data,'Genome::InstrumentData::Solexa');
 $instrument_data->set_always('sample_type','dna');
 $instrument_data->set_always('resolve_quality_converter','sol2sanger');
@@ -165,7 +166,7 @@ isa_ok($tmp_allocation,'Genome::Disk::Allocation');
 
 @fastq_files = glob($instrument_data2->gerald_directory.'/*.txt');
 
-$instrument_data2->set_list('dump_sanger_fastq_files', @fastq_files);
+$instrument_data2->mock('dump_fastqs_from_bam', sub {return Genome::InstrumentData::dump_fastqs_from_bam($instrument_data2)});
 $instrument_data2->set_always('calculate_alignment_estimated_kb_usage',10000);
 $instrument_data2->set_always('resolve_quality_converter','sol2sanger');
 
@@ -196,7 +197,7 @@ for (@base_temp_files) {
 
 $tmp_allocation->allocation_path('alignment_data/maq0_7_1/refseq-for-test/test_run_name/fragment/4_-123458/' . $staging_base);
 mkpath($tmp_allocation->absolute_path);
-$instrument_data2->set_list('dump_sanger_fastq_files', $fastq_files[0]);
+$instrument_data2->mock('dump_fastqs_from_bam', sub {my @f = Genome::InstrumentData::dump_fastqs_from_bam($instrument_data2); return $f[0];});
 
 $align_param{instrument_data_id} = $instrument_data2->id;
 $align_param{force_fragment} = 1;

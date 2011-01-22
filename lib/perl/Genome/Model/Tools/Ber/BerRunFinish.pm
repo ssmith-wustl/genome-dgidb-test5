@@ -305,8 +305,6 @@ sub execute
     #				   -filltag => 'Visible',
     #			          );
 
-	if ( defined(@ace_objects) )
-	{
 		foreach my $ace_stuff (@ace_objects)
 		{
 			my $aceseq_obj = $db->fetch( 'Sequence' => $ace_stuff );
@@ -320,7 +318,6 @@ sub execute
 				next;
 			}
 		}
-	}
 		print qq{\n Done checking/removing previous data from ACeDB\n\n};
 
     ########################################################

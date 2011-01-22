@@ -400,7 +400,7 @@ sub build_event {
 # Override in subclasses to use a custom name
 sub workflow_name {
     my $self = shift;
-    return $self->build_id . 'all stages';
+    return $self->build_id . ' all stages';
 }
 
 sub workflow_instances {
@@ -1560,11 +1560,12 @@ sub get_metric {
 sub files_in_data_directory { 
     my $self = shift;
     my @files;
-    find(
-        sub {
+    find({
+        wanted => sub {
             my $file = $File::Find::name;
-            push @files, $file if -f $file;
+            push @files, $file;
         },
+        follow => 1, },
         $self->data_directory,
     );
     return \@files;
@@ -1603,6 +1604,8 @@ sub regex_files_for_diff {
     return ();
 }
 
+# A list of metrics that the differ should ignore. Some model/build types store information
+# as metrics that need to be diffed. Override this in subclasses.
 sub metrics_ignored_by_diff {
     return ();
 }
@@ -1648,11 +1651,12 @@ sub compare_output {
     # Create hashes for each build, keys are paths relative to build directory and 
     # values are full file paths
     my (%file_paths, %other_file_paths);
+    require Cwd;
     for my $file (@{$self->files_in_data_directory}) {
-        $file_paths{$self->full_path_to_relative($file)} = $file;
+        $file_paths{$self->full_path_to_relative($file)} = Cwd::abs_path($file);
     }
     for my $other_file (@{$other_build->files_in_data_directory}) {
-        $other_file_paths{$other_build->full_path_to_relative($other_file)} = $other_file;
+        $other_file_paths{$other_build->full_path_to_relative($other_file)} = Cwd::abs_path($other_file);
     }
 
     # Now cycle through files in this build's data directory and compare with 

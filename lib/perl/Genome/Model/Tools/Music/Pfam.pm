@@ -120,9 +120,12 @@ sub execute {
         my $start = $fields[$maf_columns{'Start_position'}];
         my $stop = $fields[$maf_columns{'End_position'}];
         #my $ref = $fields[$maf_columns{'Reference_Allele'}];
-        my $tabix_cmd = "./tabix /gscmnt/sata893/info/medseq/ndees/pfam/dbfiles/pfam.annotation.gz $chr:$start-$stop - |";
+        # use environment variable but fall back to reasonable default
+        my $db_path = $ENV{GC_GMT_MUSIC_DBFILES};
+        $db_path ||= '/usr/local/share/genome/music/dbfiles/';
+        my $tabix_cmd = "tabix ".$db_path."pfam/pfam.annotation.gz $chr:$start-$stop - |";
         my %domains;
-        open(TABIX,$tabix_cmd) or die "Cannot open() the tabix command: $!";
+        open(TABIX,$tabix_cmd) or die "Cannot open() the tabix command. Please check it is in your PATH. It can be installed from the samtools project. $!";
         while (my $tabline = <TABIX>) {
             chomp $tabline;
             my (undef,undef,undef,$csv_domains) = split /\t/,$tabline;

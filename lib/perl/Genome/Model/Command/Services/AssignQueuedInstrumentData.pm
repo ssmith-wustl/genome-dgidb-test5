@@ -622,6 +622,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             'agilent sureselect exome version 2 broad refseq cds only' => 'agilent_sureselect_exome_version_2_broad_refseq_cds_only_hs37',
             'agilent sureselect exome version 2 broad' => 'agilent sureselect exome version 2 broad hg19 liftover',
             'hg18 nimblegen exome version 2' => 'hg19 nimblegen exome version 2',
+            'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA' => 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA_build36-build37_liftOver',
             );
 
         if($reference_sequence_build and $reference_sequence_build->name eq 'g1k-human-build37'

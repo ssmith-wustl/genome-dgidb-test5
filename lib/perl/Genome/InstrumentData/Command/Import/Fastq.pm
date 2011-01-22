@@ -233,7 +233,7 @@ sub execute {
         $self->read_count($read_count);
         $params{read_count} = $read_count;
     }
-    unless(defined($params{subset_name})){
+    if(not defined($params{subset_name})){
         my $subset_name = $self->get_subset_name;
         unless($subset_name =~ /[1-8]/){
             $self->error_message("Subset_name must be between 1-8. Found subset_name of \"".$subset_name."\"");
@@ -241,6 +241,15 @@ sub execute {
         }
         $self->subset_name($subset_name);
         $params{subset_name} = $subset_name;
+    }
+    else {
+        my $subset_name = $self->get_subset_name;
+        unless($subset_name eq $params{subset_name}){
+            $self->error_message("Subset name is incorrectly specified. The specified name must match the first digit after s_ in the filenames. 
+                                    You specified ".$params{subset_name}." and the files indicate that the subset name should be ".$subset_name);
+            die $self->error_message;
+        }
+        $self->status_message("Subset name verified to jibe with file names.");
     }
 
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
