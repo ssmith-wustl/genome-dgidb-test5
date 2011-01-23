@@ -3,6 +3,7 @@ package Genome::Sys;
 use strict;
 use warnings;
 use Genome;
+use Cwd;
 
 class Genome::Sys { 
     is => 'UR::Singleton', 
@@ -25,7 +26,7 @@ sub _find_in_path {
     my ($class, $base_dirs, $subdir) = @_;
     my @base_dirs = split(':',$base_dirs);
     my @dirs =
-        map { -l $_ ? readlink($_) : ($_) }
+        map { -l $_ ? Cwd::abs_path($_) : ($_) }
         map {
             my $path = join("/",$_,$subdir);
             (-e $path ? ($path) : ())
