@@ -934,9 +934,10 @@ sub get_classes_in_subdirectory {
         Carp::croak("No subdirectory given to get_classes_in_subdirectory"); 
     }
 
-    my $inc_directory = get_inc_directory_for_class(__PACKAGE__);
+    my $genome_dir = Genome->get_base_directory_name();
+    my $inc_directory = substr($genome_dir, 0, -7);
     unless ( $inc_directory ) {
-        Carp::croak('Could not get inc directory for '.__PACKAGE__."\n"); 
+        Carp::croak("Could not get inc directory for Genome.\n"); 
     }
 
     my $directory = $inc_directory.'/'.$subdirectory;
