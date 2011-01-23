@@ -59,7 +59,7 @@ sub execute {
     
     my $pid = getppid();
     my $log_path = "$working_dir/logs/merge_per_lane_$seq_id"."_$pid.txt";
-    my $log_fh = Genome::Utility::FileSystem->open_file_for_writing($log_path);
+    my $log_fh = Genome::Sys->open_file_for_writing($log_path);
     unless($log_fh) {
        $self->error_message("Failed to open output filehandle for: " .  $log_path );
        die "Could not open file ".$log_path." for writing.";
@@ -93,7 +93,7 @@ sub execute {
     if (!-s $per_lane_sam_file) {
         push(@files_to_merge, $seqdict, $rg_file, $pg_file, $aligned_file, $unaligned_file); 
         print $log_fh "\nCat-ing together: ".join("\n",@files_to_merge);
-        my $cat_rv = Genome::Utility::FileSystem->cat(input_files=>\@files_to_merge,output_file=>$per_lane_sam_file);
+        my $cat_rv = Genome::Sys->cat(input_files=>\@files_to_merge,output_file=>$per_lane_sam_file);
         if ($cat_rv ne 1) {
             print $log_fh "\nFor $seq_id, error during cat! Return value $cat_rv";
             die "For $seq_id, error cat-ing all files together.  Return value: $cat_rv";

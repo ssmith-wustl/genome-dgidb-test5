@@ -142,7 +142,7 @@ sub create {
     # Report dir
     if ( $self->report_directory ) { # savin sumpin
         # validate
-        unless ( Genome::Utility::FileSystem->validate_existing_directory($self->report_directory) ) {
+        unless ( Genome::Sys->validate_existing_directory($self->report_directory) ) {
             $self->error_message("No report was indicated to generate");
             $self->delete;
             return;
@@ -303,7 +303,7 @@ sub _save_datasets {
             or return;
         my $file = $directory."/$name.csv";
         unlink $file if -e $file;
-        my $fh = Genome::Utility::FileSystem->open_file_for_writing($file)
+        my $fh = Genome::Sys->open_file_for_writing($file)
             or return;
         $fh->print($csv);
         $fh->close;

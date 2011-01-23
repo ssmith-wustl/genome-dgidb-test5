@@ -11,7 +11,7 @@ use warnings;
 use Genome;
 use Statistics::Descriptive;
 use Statistics::R;
-require Genome::Utility::FileSystem;
+require Genome::Sys;
 
 my $DEFAULT_VERSION = '0.1';
 my $BAMWINDOW_COMMAND = 'bam-window';
@@ -352,10 +352,10 @@ sub plot_output {
 
     $datafile = abs_path($datafile);
     my $Routfile = $datafile.".png";
-    my $tempdir = Genome::Utility::FileSystem->create_temp_directory();
+    my $tempdir = Genome::Sys->create_temp_directory();
     my $chr_list = join(',', map("'$_'", @$chr_array));
 
-    #R automatically sets the working directory to its tmp_dir, which prevents Genome::Utility::FileSystem from cleaning it up...
+    #R automatically sets the working directory to its tmp_dir, which prevents Genome::Sys from cleaning it up...
     #So save the original beforehand and restore it after we're done
     my $cwd = cwd();
 

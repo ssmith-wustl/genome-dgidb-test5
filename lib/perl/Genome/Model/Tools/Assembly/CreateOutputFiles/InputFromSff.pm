@@ -45,7 +45,7 @@ sub execute {
 	return;
     }
     if (! -d $self->directory.'/edit_dir') {
-	my $edit_dir = Genome::Utility::FileSystem->create_directory($self->directory.'/edit_dir');
+	my $edit_dir = Genome::Sys->create_directory($self->directory.'/edit_dir');
 	unless (-d $edit_dir) {
 	    $self->error_message("Failed to create assembly edit_dir");
 	    return;

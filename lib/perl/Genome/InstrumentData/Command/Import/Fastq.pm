@@ -354,7 +354,7 @@ sub execute {
         }
     }
     $self->status_message("About to execute tar command, this could take a long time, depending upon the location (across the network?) and size (MB or GB?) of your fastq's.");
-    unless(Genome::Utility::FileSystem->shellcmd(cmd=>$tar_cmd)){
+    unless(Genome::Sys->shellcmd(cmd=>$tar_cmd)){
         $self->error_message("Tar command failed to complete successfully. The command looked like :   ".$tar_cmd);
         die $self->error_message;
     }
@@ -396,7 +396,7 @@ sub execute {
     
     my $real_filename = sprintf("%s/archive.tgz", $disk_alloc->absolute_path);
     $self->status_message("About to calculate the md5sum of the tar'd fastq's. This may take a long time.");
-    my $md5 = Genome::Utility::FileSystem->md5sum($tmp_tar_filename);
+    my $md5 = Genome::Sys->md5sum($tmp_tar_filename);
     $self->status_message("Copying tar'd fastq's into the allocation, this will take some time.");
     unless(copy($tmp_tar_filename, $real_filename)) {
         $self->error_message("Failed to copy to allocated space (copy returned bad value).  Unlinking and deallocating.");
@@ -406,7 +406,7 @@ sub execute {
     }
     $self->status_message("About to calculate the md5sum of the tar'd fastq's in their new habitat on the allocation. This may take a long time.");
     my $copy_md5;
-    unless($copy_md5 = Genome::Utility::FileSystem->md5sum($real_filename)){
+    unless($copy_md5 = Genome::Sys->md5sum($real_filename)){
         $self->error_message("Failed to calculate md5sum.");
         die $self->error_message;
     }

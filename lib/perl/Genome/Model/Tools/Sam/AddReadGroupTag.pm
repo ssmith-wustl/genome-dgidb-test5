@@ -56,7 +56,7 @@ sub execute {
 
     my $input_fh;
     if ($self->input_file && -s $self->input_file) {
-        $input_fh = Genome::Utility::FileSystem->open_file_for_reading($self->input_file);
+        $input_fh = Genome::Sys->open_file_for_reading($self->input_file);
     } elsif ($self->input_filehandle) {
         $input_fh = $self->input_filehandle;
     } else {
@@ -71,7 +71,7 @@ sub execute {
            return;
         }
     
-        $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+        $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
     } elsif ($self->output_filehandle) {
         $output_fh = $self->output_filehandle;
     } else {

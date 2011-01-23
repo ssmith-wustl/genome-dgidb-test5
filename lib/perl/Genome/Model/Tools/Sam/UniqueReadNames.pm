@@ -69,7 +69,7 @@ sub execute {
     #Convert to SAM
     my $name_sorted_sam_file = $tmp_dir .'/'. $input_basename .'_name_sorted.sam';
     my $cmd = $self->samtools_path .' view -o '. $name_sorted_sam_file .' '. $name_sorted_bam_file;
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$name_sorted_bam_file],
         output_files => [$name_sorted_sam_file],

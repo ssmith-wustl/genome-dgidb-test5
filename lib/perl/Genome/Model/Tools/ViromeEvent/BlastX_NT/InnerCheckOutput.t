@@ -16,7 +16,7 @@ ok( -s $file_to_run, "Input file for blast exists" ) or die;
 my $done_file = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-ViromeScreening/Titanium17/Titanium17_undecodable/Titanium17_undecodable.BNFiltered_TBLASTX_nt/Titanium17_undecodable.BNFiltered.fa_file0.tblastx.out';
 ok( -s $done_file, "Blast output file exists" ) or die; #otherwise will kick off blast which could take a long time
 
-my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+my $temp_dir = Genome::Sys->create_temp_directory();
 
 my $c = Genome::Model::Tools::ViromeEvent::BlastX_NT::InnerCheckOutput->create(
     file_to_run => $file_to_run,

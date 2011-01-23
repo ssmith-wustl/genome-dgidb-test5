@@ -15,7 +15,7 @@ BEGIN
 
 my $fasta_file = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fasta-FilterById/short.fna';
 my $filter_list = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fasta-FilterById/454_crossmatch.filter';
-my $output_file = Genome::Utility::FileSystem->create_temp_file_path('clean.fna');
+my $output_file = Genome::Sys->create_temp_file_path('clean.fna');
 
 my $filter_by_id = Genome::Model::Tools::Fasta::FilterById->create(fasta_file=>$fasta_file,filter_list=>$filter_list,output_file=>$output_file);
 

@@ -91,7 +91,7 @@ sub _resolve_to_directory {
 
     unless ( -d $self->to ) {
 	$self->status_message("Did not find directory: ".$self->to." will create it");
-	Genome::Utility::FileSystem->create_directory( $self->to );
+	Genome::Sys->create_directory( $self->to );
     }
 
     unless ( -d $self->to ) {
@@ -116,7 +116,7 @@ sub _copy_build {
 	    return; #too strict, this files are really not needed??
 	}
 	#link file
-	Genome::Utility::FileSystem->create_symlink( $from . "/$file", $to . "/$file" );
+	Genome::Sys->create_symlink( $from . "/$file", $to . "/$file" );
 	#check that file has been linked
 	unless ( -l $to . "/$file" ) {
 	    $self->error_message("Failed to link file, $file to to-directory");
@@ -129,7 +129,7 @@ sub _copy_build {
 	return;
     }
 
-    Genome::Utility::FileSystem->copy_directory( $from . '/edit_dir', $to );
+    Genome::Sys->copy_directory( $from . '/edit_dir', $to );
 
     unless ( -d $to . '/edit_dir' ) {
 	$self->error_message("Failed to copy build edit_dir to to-directory");

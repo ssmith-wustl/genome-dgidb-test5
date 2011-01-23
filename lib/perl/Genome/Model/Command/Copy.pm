@@ -5,7 +5,7 @@ use warnings;
 
 use Genome;
 
-require Genome::Utility::FileSystem;
+require Genome::Sys;
 
 
 class Genome::Model::Command::Copy {

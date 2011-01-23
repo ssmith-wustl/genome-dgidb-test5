@@ -12,7 +12,7 @@ use File::stat;
 use File::Path;
 
 class Genome::InstrumentData::Imported {
-    is => [ 'Genome::InstrumentData','Genome::Utility::FileSystem' ],
+    is => [ 'Genome::InstrumentData','Genome::Sys' ],
     type_name => 'imported instrument data',
     table_name => 'IMPORTED_INSTRUMENT_DATA',
     subclassify_by => 'subclass_name',
@@ -129,7 +129,7 @@ sub calculate_alignment_estimated_kb_usage {
     my $answer;
     if($self->original_data_path !~ /\,/ ) {
         if (-d $self->original_data_path) {
-            my $source_size = Genome::Utility::FileSystem->directory_size_recursive($self->original_data_path);
+            my $source_size = Genome::Sys->directory_size_recursive($self->original_data_path);
             $answer = ($source_size/1000)+ 100;
         } else {
             unless ( -e $self->original_data_path) {

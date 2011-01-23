@@ -55,7 +55,7 @@ sub execute {
     my $out_file = ($self->output_file) ? $self->output_file : $self->supercontigs_agp_file;
 
     unlink $out_file;
-    my $fh = Genome::Utility::FileSystem->open_file_for_writing($out_file);
+    my $fh = Genome::Sys->open_file_for_writing($out_file);
 
     my $io = Bio::SeqIO->new(-format => 'fasta', -file => $scaf_seq_file);
 

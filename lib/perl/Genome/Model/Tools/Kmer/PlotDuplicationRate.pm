@@ -21,7 +21,7 @@ class Genome::Model::Tools::Kmer::PlotDuplicationRate {
 sub execute {
     my $self = shift;
 
-    my $occratio_fh = Genome::Utility::FileSystem->open_file_for_reading($self->occratio_file);
+    my $occratio_fh = Genome::Sys->open_file_for_reading($self->occratio_file);
     my @x;
     my @y;
     while (my $line = $occratio_fh->getline){

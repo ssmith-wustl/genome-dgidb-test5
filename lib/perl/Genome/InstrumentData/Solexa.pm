@@ -21,7 +21,7 @@ use Genome;
 use File::Basename;
 
 class Genome::InstrumentData::Solexa {
-    is => ['Genome::InstrumentData', 'Genome::Utility::FileSystem'],
+    is => ['Genome::InstrumentData', 'Genome::Sys'],
     table_name => <<EOS
         (
             select
@@ -425,7 +425,7 @@ sub dump_sanger_fastq_files {
 
     my %params = @_;
 
-    my $requested_directory = delete $params{directory} || Genome::Utility::FileSystem->base_temp_directory;
+    my $requested_directory = delete $params{directory} || Genome::Sys->base_temp_directory;
 
     my @converted_pathnames;
     my $counter = 0;

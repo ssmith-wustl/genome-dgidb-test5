@@ -13,7 +13,7 @@ my $datadir = $Bin . '/Solexa.t.d';
 
 BEGIN {use_ok('Genome::Model::Tools::ContaminationScreen::Solexa');}
 
-my $temp_dir = Genome::Utility::FileSystem->base_temp_directory();
+my $temp_dir = Genome::Sys->base_temp_directory();
 
 # crossmatch leaves a bunch of files lingering around in the same directory as the 
 # input reads file, so copy this out to temp to let it do its thing.

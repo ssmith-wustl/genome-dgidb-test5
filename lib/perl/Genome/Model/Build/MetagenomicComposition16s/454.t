@@ -126,10 +126,10 @@ exit;
 sub _link_dir_contents {
     my ($source_dir, $dest_dir) = @_;
 
-    Genome::Utility::FileSystem->validate_existing_directory($dest_dir)
+    Genome::Sys->validate_existing_directory($dest_dir)
         or die;
 
-    my $dh = Genome::Utility::FileSystem->open_directory($source_dir)
+    my $dh = Genome::Sys->open_directory($source_dir)
         or die;
 
     $dh->read; $dh->read; # . and .. dirs

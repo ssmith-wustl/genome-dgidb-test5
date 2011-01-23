@@ -345,7 +345,7 @@ sub execute {
     }
 
     if($self->variant_bed_file){
-        my $converted_bed_file = Genome::Utility::FileSystem->create_temp_file_path();
+        my $converted_bed_file = Genome::Sys->create_temp_file_path();
         my $bed_converter_class = $self->_version_subclass_name. "::BedToAnnotation";
         $bed_converter_class->execute( snv_file => $self->variant_bed_file, output => $converted_bed_file) || ($self->error_message("Could not convert BED file to annotator format") and return);
         $self->variant_file($converted_bed_file);
@@ -635,7 +635,7 @@ sub execute {
 
     $output_fh->close unless $output_fh eq 'STDOUT';
     if ($temp_output_file){
-        my $mv_return_value = Genome::Utility::FileSystem->shellcmd(cmd => "mv $temp_output_file $output_file");
+        my $mv_return_value = Genome::Sys->shellcmd(cmd => "mv $temp_output_file $output_file");
         unless($mv_return_value){
             $self->error_message("Failed to mv results at $temp_output_file to final location at $output_file: $!");
             return 0;

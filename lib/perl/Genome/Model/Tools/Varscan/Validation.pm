@@ -103,7 +103,7 @@ sub execute {                               # replace with real execution logic.
         }
     }
 
-    my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+    my $temp_dir = Genome::Sys->create_temp_directory();
     my $temp_snp = join('/', $temp_dir, 'output.snp');
     my $temp_indel = join('/', $temp_dir, 'output.indel');
     my $temp_output = join('/', $temp_dir, 'output');
@@ -121,16 +121,16 @@ sub execute {                               # replace with real execution logic.
 
         my $cmd = $self->java_command_line("somatic <\($normal_pileup\) <\($tumor_pileup\) $temp_output --output-snp $temp_snp --output-indel $temp_indel $varscan_params");
 
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
             cmd => $cmd,
             input_files => [$normal_bam, $tumor_bam, $reference],
             output_files => [$temp_snp, $temp_indel],
             allow_zero_size_output_files => 1,
         );
 
-        Genome::Utility::FileSystem->copy_file($temp_snp, $output_snp);
-        Genome::Utility::FileSystem->copy_file($temp_indel, $output_indel);
-        Genome::Utility::FileSystem->copy_file($temp_validation, $output_validation) if Genome::Utility::FileSystem->check_for_path_existence($temp_validation); #optional file
+        Genome::Sys->copy_file($temp_snp, $output_snp);
+        Genome::Sys->copy_file($temp_indel, $output_indel);
+        Genome::Sys->copy_file($temp_validation, $output_validation) if Genome::Sys->check_for_path_existence($temp_validation); #optional file
     } else {
         die "Error: One of your BAM files doesn't exist!\n";
     }

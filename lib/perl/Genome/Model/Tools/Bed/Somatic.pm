@@ -37,8 +37,8 @@ sub execute {
     my @tumor_files = $self->tumor_bed_file;
     my @normal_files= $self->normal_bed_file;
 
-    my $tumor_temp = Genome::Utility::FileSystem->create_temp_file_path;
-    my $normal_temp = Genome::Utility::FileSystem->create_temp_file_path;
+    my $tumor_temp = Genome::Sys->create_temp_file_path;
+    my $normal_temp = Genome::Sys->create_temp_file_path;
     my $tumor_out;
     my $normal_out;
     if(scalar(@tumor_files)>1){

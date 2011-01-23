@@ -123,7 +123,7 @@ sub _run_aspera {
 
     my $cmd = "ascp -QTd -l100M -i $key_file $exclude $user\@aspera.hmpdacc.org:$dacc_location/$sra_sample_id ".$absolute_path;
     $self->status_message($cmd);
-    my $rv = eval { Genome::Utility::FileSystem->shellcmd(cmd => $cmd); };
+    my $rv = eval { Genome::Sys->shellcmd(cmd => $cmd); };
     if ( not $rv ) {
         $self->error_message("Aspera command failed: $cmd");
         return;
@@ -155,7 +155,7 @@ sub _launch_import {
         $cmd .= ' --novalidate-md5';
     }
     $self->status_message('Launch import: '.$cmd);
-    my $rv = eval { Genome::Utility::FileSystem->shellcmd(cmd => $cmd); };
+    my $rv = eval { Genome::Sys->shellcmd(cmd => $cmd); };
     if ( not $rv ) {
         $self->error_message('Failed to launch import: '.$@);
     }

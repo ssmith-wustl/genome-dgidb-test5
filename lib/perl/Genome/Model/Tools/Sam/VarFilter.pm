@@ -120,7 +120,7 @@ sub execute {
     
     my $view_cmd = "$sam_path view -b -q 1 $bam_file -o $tmp_bam";
 
-    my $rv = Genome::Utility::FileSystem->shellcmd(
+    my $rv = Genome::Sys->shellcmd(
         cmd => $view_cmd,
         output_files => [$tmp_bam],
         skip_if_output_is_present => 0,
@@ -152,7 +152,7 @@ sub execute {
 
     my $cmd = $pileup_cmd . ' | '. $filter_cmd;
     
-    $rv = Genome::Utility::FileSystem->shellcmd(
+    $rv = Genome::Sys->shellcmd(
         cmd => $cmd,
         output_files => [$tmp_out],
         skip_if_output_is_present => 0,
@@ -163,8 +163,8 @@ sub execute {
         return;
     }
 
-    my $snp_out_fh   = Genome::Utility::FileSystem->open_file_for_writing($self->filtered_snp_out_file) or return;
-    my $indel_out_fh = Genome::Utility::FileSystem->open_file_for_writing($self->filtered_indel_out_file) or return;
+    my $snp_out_fh   = Genome::Sys->open_file_for_writing($self->filtered_snp_out_file) or return;
+    my $indel_out_fh = Genome::Sys->open_file_for_writing($self->filtered_indel_out_file) or return;
 
     while (my $line = $tmp_fh->getline) {
         my ($id) = $line =~ /^\S+\s+\S+\s+(\S+)\s+/;

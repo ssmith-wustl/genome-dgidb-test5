@@ -133,7 +133,7 @@ sub allocate {
                 die 'cannot find disk group: ' . $params{disk_group_name};
             }
 
-            my $tmpdir = Genome::Utility::FileSystem->base_temp_directory();
+            my $tmpdir = Genome::Sys->base_temp_directory();
 
             my $id = $class->__meta__->autogenerate_new_object_id;
             $allocation = $class->__define__(
@@ -151,7 +151,7 @@ sub allocate {
             );
             my $path = $allocation->absolute_path;
             unless (-e $path) {
-                Genome::Utility::FileSystem->create_directory($path);
+                Genome::Sys->create_directory($path);
                 unless (-e $path) {
                     die $class->error_message("Failed to create directory $path! $!");
                 }

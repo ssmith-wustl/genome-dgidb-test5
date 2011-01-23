@@ -112,7 +112,7 @@ sub execute {
     my $report_directory = $self->working_directory."/reports/";
     
     unless (-e $report_directory) {
-    	Genome::Utility::FileSystem->create_directory($report_directory);
+    	Genome::Sys->create_directory($report_directory);
     }
 
     my $other_hits_file = $report_directory."/other_hits.txt";
@@ -127,7 +127,7 @@ sub execute {
     
     my @expected_output_files = ($read_count_file,$genus_file,$phyla_file,$filtered_alignment_file_bam);
     
-    my $rv_check = Genome::Utility::FileSystem->are_files_ok(input_files=>\@expected_output_files);
+    my $rv_check = Genome::Sys->are_files_ok(input_files=>\@expected_output_files);
     if ($rv_check) {
         $self->filtered_alignment_file($filtered_alignment_file_bam);
         $self->read_count_file($read_count_file);
@@ -148,7 +148,7 @@ sub execute {
     $self->status_message("FilterResults cmd: $cmd");
 
     $self->status_message("Running filter at ".UR::Time->now);
-    my $rv_filter = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd);
+    my $rv_filter = Genome::Sys->shellcmd(cmd=>$cmd);
   
     if ( $rv_filter != 1) {
         $self->error_message("<<<Failed FilterResults on filter script.  Return value: $rv_filter");
@@ -156,7 +156,7 @@ sub execute {
     $self->status_message("Completed filter at ".UR::Time->now);
     
     my @input_files = ( $self->sam_header, $filtered_alignment_file_no_header );
-    my $rv_cat = Genome::Utility::FileSystem->cat(input_files=>\@input_files,output_file=>$filtered_alignment_file); 
+    my $rv_cat = Genome::Sys->cat(input_files=>\@input_files,output_file=>$filtered_alignment_file); 
  
     if ( $rv_cat != 1) {
         $self->error_message("<<<Failed FilterResults on header cat.  Return value: $rv_cat");
@@ -167,7 +167,7 @@ sub execute {
     my $picard_path = "/gsc/scripts/lib/java/samtools/picard-tools-1.07/";
     my $cmd_convert = "java -Xmx2g -cp $picard_path/SamFormatConverter.jar net.sf.picard.sam.SamFormatConverter VALIDATION_STRINGENCY=SILENT I=$filtered_alignment_file O=$filtered_alignment_file_unsorted_bam";  
     #my $cmd_convert = "samtools view -bS $ > $merged_alignment_files_per_refseq_sam";
-    my $rv_convert = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd_convert);											 
+    my $rv_convert = Genome::Sys->shellcmd(cmd=>$cmd_convert);											 
             
     if ($rv_convert != 1) {
         $self->error_message("<<<Failed FilterResults on sam to bam conversion.  Return value: $rv_convert");
@@ -187,7 +187,7 @@ sub execute {
     $self->read_count_file($read_count_file);
     $self->other_hits_file("boo");
     
-    Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_output_files);
+    Genome::Sys->mark_files_ok(input_files=>\@expected_output_files);
     
     
     #clean up

@@ -182,7 +182,7 @@ sub _write_read_ids_to_file {
     $self->output_dir(cwd()) unless $self->output_dir;
 
     unlink $self->output_dir.'/'.$clone_name.'.re_ids';
-    my $fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_dir.'/'.$clone_name.'.re_ids') ||
+    my $fh = Genome::Sys->open_file_for_writing($self->output_dir.'/'.$clone_name.'.re_ids') ||
 	return;
    
     foreach (@seq_reads) {
@@ -227,7 +227,7 @@ sub _get_clones {
     my @clones;
 
     if ($self->list_of_clones) {
-	my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->list_of_clones) ||
+	my $fh = Genome::Sys->open_file_for_reading($self->list_of_clones) ||
 	    return;
 	while (my $line = $fh->getline) {
 	    next if $line =~ /^\s+$/;
@@ -252,7 +252,7 @@ sub _dump_reads_individually {
     my $qual_out = Bio::SeqIO->new(-format => 'qual', -file => '>'.$self->output_dir.'/'.$clone_name.'.fasta.qual');
 
     my $re_ids_file = $self->output_dir.'/'.$clone_name.'.re_ids';
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($re_ids_file) ||
+    my $fh = Genome::Sys->open_file_for_reading($re_ids_file) ||
 	return;
     while (my $re_id = $fh->getline) {
 	chomp $re_id;

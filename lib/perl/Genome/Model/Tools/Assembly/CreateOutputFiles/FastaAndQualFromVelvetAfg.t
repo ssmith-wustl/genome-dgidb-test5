@@ -17,8 +17,8 @@ my $afg_file = $data_dir.'/velvet_asm.afg';
 ok(-s $afg_file, "Test afg file exists") or die;
 
 #make temp dir
-my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
-Genome::Utility::FileSystem->create_directory( $temp_dir.'/edit_dir' );
+my $temp_dir = Genome::Sys->create_temp_directory();
+Genome::Sys->create_directory( $temp_dir.'/edit_dir' );
 
 #link afg file in tmp dir
 symlink($data_dir.'/velvet_asm.afg', $temp_dir.'/velvet_asm.afg') or die; 

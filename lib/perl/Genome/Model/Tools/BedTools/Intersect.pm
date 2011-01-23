@@ -99,7 +99,7 @@ sub execute {
         }
     }
     my $cmd = $self->bedtools_path .'/bin/intersectBed '. $options .' '. $a_flag .' '. $self->input_file_a .' -b '. $self->input_file_b .' > '. $self->output_file;
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$self->input_file_a,$self->input_file_b],
         output_files => [$self->output_file],

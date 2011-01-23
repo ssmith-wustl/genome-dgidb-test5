@@ -12,7 +12,7 @@ use File::Temp;
 use DBI;
 use lib "/gscuser/jwallis/svn/perl_modules/test_project/jwallis";
 use Genome::Utility::HugoGene::HugoGeneMethods;
-require Genome::Utility::FileSystem;
+require Genome::Sys;
 
 class Genome::Model::Tools::CopyNumber::UTest {
     is => 'Command',

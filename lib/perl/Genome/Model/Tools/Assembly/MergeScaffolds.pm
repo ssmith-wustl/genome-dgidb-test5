@@ -50,7 +50,7 @@ EOS
 sub get_contig_names
 {
     my ($self, $ace_file_name) = @_;
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($ace_file_name);
+    my $fh = Genome::Sys->open_file_for_reading($ace_file_name);
     $self->error_message("There was an error opening ace file $ace_file_name for reading.") and die unless defined $fh;
     my @contig_names;
     while(my $line = <$fh>)

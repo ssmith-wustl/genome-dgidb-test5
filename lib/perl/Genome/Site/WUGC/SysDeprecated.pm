@@ -1,4 +1,4 @@
-package Genome::Utility::FileSystem;
+package Genome::Sys;
 
 # Short Term: shellcmd() should probably be rewritten, it does not correctly use $! after the system call.  Would also be nice if
 # it could support IO wrapping of command being executed.  shellcmd() might be better off in its own module, since its not strictly
@@ -27,7 +27,7 @@ require MIME::Lite;
 
 my %SYMLINKS_TO_REMOVE;
 
-class Genome::Utility::FileSystem { };
+class Genome::Sys { };
 
 # disk usage management
 
@@ -771,7 +771,7 @@ sub lock_resource {
                      $self->warning_message("Invalid lock for resource $resource_lock\n"
                                             ." lock info was:\n". $info_content ."\n"
                                             ."Removing old resource lock $resource_lock\n");
-                     unless ($Genome::Utility::FileSystem::IS_TESTING) {
+                     unless ($Genome::Sys::IS_TESTING) {
                         my $message_content = <<END_CONTENT;
 Hey Apipe,
 
@@ -1141,7 +1141,7 @@ sub remove_directory_tree {
 
 =head1 Name
 
-Genome::Utility::FileSystem;
+Genome::Sys;
 
 =head1 Synopsis
 
@@ -1149,16 +1149,16 @@ Houses some generic file and directory methods
 
 =head1 Usage
 
- require Genome::Utility::FileSystem;
+ require Genome::Sys;
 
  # Call methods directly:
- Genome::Utility::FileSystem->create_directory($new_directory);
+ Genome::Sys->create_directory($new_directory);
 
 =head1 Methods for Files
 
 =head2 validate_file_for_reading
 
- Genome::Utility::FileSystem->validate_file_for_reading('/tmp/users.txt')
+ Genome::Sys->validate_file_for_reading('/tmp/users.txt')
     or ...;
  
 =over
@@ -1173,7 +1173,7 @@ Houses some generic file and directory methods
 
 =head2 open_file_for_reading
 
- Genome::Utility::FileSystem->open_file_for_reading('/tmp/users.txt')
+ Genome::Sys->open_file_for_reading('/tmp/users.txt')
     or die;
  
 =over
@@ -1188,7 +1188,7 @@ Houses some generic file and directory methods
 
 =head2 validate_file_for_writing
 
- Genome::Utility::FileSystem->validate_file_for_writing('/tmp/users.txt')
+ Genome::Sys->validate_file_for_writing('/tmp/users.txt')
     or die;
  
 =over
@@ -1203,7 +1203,7 @@ Houses some generic file and directory methods
 
 =head2 open_file_for_writing
 
- Genome::Utility::FileSystem->open_file_for_writing('/tmp/users.txt')
+ Genome::Sys->open_file_for_writing('/tmp/users.txt')
     or die;
  
 =over
@@ -1218,7 +1218,7 @@ Houses some generic file and directory methods
 
 =head2 copy_file
 
- Genome::Utility::FileSystem->copy_file($FROM, $TO)
+ Genome::Sys->copy_file($FROM, $TO)
     or ...;
  
 =over
@@ -1235,7 +1235,7 @@ Houses some generic file and directory methods
 
 =head2 validate_existing_directory
 
- Genome::Utility::FileSystem->validate_existing_directory('/tmp/users')
+ Genome::Sys->validate_existing_directory('/tmp/users')
     or die;
  
 =over
@@ -1250,7 +1250,7 @@ Houses some generic file and directory methods
 
 =head2 open_directory
 
- Genome::Utility::FileSystem->open_directory('/tmp/users')
+ Genome::Sys->open_directory('/tmp/users')
     or die;
  
 =over
@@ -1265,7 +1265,7 @@ Houses some generic file and directory methods
 
 =head2 create_directory
 
- Genome::Utility::FileSystem->create_directory('/tmp/users')
+ Genome::Sys->create_directory('/tmp/users')
     or die;
  
 =over

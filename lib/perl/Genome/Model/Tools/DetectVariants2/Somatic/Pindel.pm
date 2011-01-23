@@ -178,7 +178,7 @@ sub _generate_config_file {
     my $self = shift;
 
     my $config_path = $self->_config_file;
-    my $config_fh = Genome::Utility::FileSystem->open_file_for_writing($config_path);
+    my $config_fh = Genome::Sys->open_file_for_writing($config_path);
     unless ($config_fh) {
         $self->error_message("Could not open $config_path for writing");
         die;
@@ -297,7 +297,7 @@ sub _run_pindel_for_chromosome {
     }
     my $output_basename = $self->_output_basename_for_chrom($chromosome);
     my $cmd = $self->pindel_path . " -f $reference_sequence_for_chrom" . " -i " . $self->_config_file . " -o $output_basename" . " -c $chromosome" . " -b /dev/null";
-    my $result = Genome::Utility::FileSystem->shellcmd( cmd=>$cmd, input_files=>[$self->aligned_reads_input,$self->control_aligned_reads_input]);
+    my $result = Genome::Sys->shellcmd( cmd=>$cmd, input_files=>[$self->aligned_reads_input,$self->control_aligned_reads_input]);
 
     unless($result) {
         $self->error_message("Running pindel failed with command $cmd");

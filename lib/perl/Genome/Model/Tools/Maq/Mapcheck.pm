@@ -44,17 +44,17 @@ sub create {
     my $self = $class->SUPER::create(@_);
 
     unless (-p $self->map_file) {
-        unless (Genome::Utility::FileSystem->validate_file_for_reading($self->map_file)) {
+        unless (Genome::Sys->validate_file_for_reading($self->map_file)) {
             $self->error_message('Failed to validate map file for reading: '. $self->map_file);
             die($self->error_message);
         }
     }
-    unless (Genome::Utility::FileSystem->validate_file_for_reading($self->bfa_file)) {
+    unless (Genome::Sys->validate_file_for_reading($self->bfa_file)) {
         $self->error_message('Failed to validate bfa file for reading: '. $self->bfa_file);
         die($self->error_message);
     }
     if ($self->output_file) {
-        unless (Genome::Utility::FileSystem->validate_file_for_writing($self->output_file)) {
+        unless (Genome::Sys->validate_file_for_writing($self->output_file)) {
             $self->error_message('Failed to validate output file '. $self->output_file);
             die($self->error_message);
         }
@@ -74,7 +74,7 @@ sub execute {
     }
     $params{cmd} = $cmd;
     $params{input_files} = [$self->map_file, $self->bfa_file];
-    Genome::Utility::FileSystem->shellcmd(%params);
+    Genome::Sys->shellcmd(%params);
     return 1;
 }
 

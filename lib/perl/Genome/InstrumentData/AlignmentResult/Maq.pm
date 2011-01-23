@@ -247,7 +247,7 @@ sub _run_aligner {
     my @input_files  = ($ref_seq_file, @input_pathnames, $adaptor_file);
     my @output_files = ($map_file, $unaligned_list, $align_out_file);
     
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd          => $cmdline,
         input_files  => \@input_files,
         output_files => \@output_files,
@@ -274,8 +274,8 @@ sub _run_aligner {
 
     # TODO: Move this logic into a diff utility that performs the "sanitization"
     # make a sanitized version of the aligner output for comparisons
-    my $output = Genome::Utility::FileSystem->open_file_for_reading($align_out_file);
-    my $clean  = Genome::Utility::FileSystem->open_file_for_writing($align_out_file . '.sanitized');
+    my $output = Genome::Sys->open_file_for_reading($align_out_file);
+    my $clean  = Genome::Sys->open_file_for_writing($align_out_file . '.sanitized');
     while (my $row = $output->getline) {
         $row =~ s/\% processed in [\d\.]+/\% processed in N/;
         $row =~ s/CPU time: ([\d\.]+)/CPU time: N/;
@@ -314,7 +314,7 @@ sub create_aligned_sam_file {
     my $sam_file = $self->temp_scratch_directory . '/all_sequences.sam';
     
     my $cmd = sprintf('%s %s >> %s', $tosam_path, $map_file, $sam_file); #use append to allow multiple maq runs
-    my $rv  = Genome::Utility::FileSystem->shellcmd(
+    my $rv  = Genome::Sys->shellcmd(
         cmd                          => $cmd, 
         output_files                 => [$sam_file],
         skip_if_output_is_present    => 0,
@@ -344,7 +344,7 @@ sub create_unaligned_sam_file {
     
     my $unaligned_sam_file = $self->temp_scratch_directory . '/all_sequences_unaligned.sam';
  
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($unaligned_file);
+    my $fh = Genome::Sys->open_file_for_reading($unaligned_file);
     my $ua_fh = IO::File->new(">>$unaligned_sam_file");
     unless ($ua_fh) {
         $self->error_message("Error opening unaligned sam file: $unaligned_sam_file for appending $!");

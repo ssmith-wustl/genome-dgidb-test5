@@ -305,7 +305,7 @@ sub full_consensus_sam_index_path {
         my $sam_path = Genome::Model::Tools::Sam->path_for_samtools_version($sam_version);
         my $cmd      = $sam_path.' faidx '.$fa_file;
         
-        my $lock = Genome::Utility::FileSystem->lock_resource(
+        my $lock = Genome::Sys->lock_resource(
             resource_lock => $data_dir.'/lock_for_faidx',
             max_try       => 2,
         );
@@ -314,13 +314,13 @@ sub full_consensus_sam_index_path {
             return;
         }
 
-        my $rv = Genome::Utility::FileSystem->shellcmd(
+        my $rv = Genome::Sys->shellcmd(
             cmd => $cmd,
             input_files  => [$fa_file],
             output_files => [$idx_file],
         );
         
-        unless (Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock)) {
+        unless (Genome::Sys->unlock_resource(resource_lock => $lock)) {
             $self->error_message("Failed to unlock resource: $lock");
             return;
         }
@@ -368,7 +368,7 @@ sub get_sequence_dictionary {
     } else {
 
         #lock seqdict dir here
-        my $lock = Genome::Utility::FileSystem->lock_resource(
+        my $lock = Genome::Sys->lock_resource(
             resource_lock => $seqdict_dir_path."/lock_for_seqdict-$file_type",
             max_try       => 2,
         );
@@ -376,7 +376,7 @@ sub get_sequence_dictionary {
         # if it couldn't get the lock after 2 tries, pop a message and keep trying as much as it takes
         unless ($lock) {
             $self->status_message("Couldn't get a lock after 2 tries, waiting some more...");
-            $lock = Genome::Utility::FileSystem->lock_resource(resource_lock => $seqdict_dir_path."/lock_for_seqdict-$file_type");
+            $lock = Genome::Sys->lock_resource(resource_lock => $seqdict_dir_path."/lock_for_seqdict-$file_type");
             unless($lock) {
                 $self->error_message("Failed to lock resource: $seqdict_dir_path");
                 return;
@@ -385,7 +385,7 @@ sub get_sequence_dictionary {
 
         $self->status_message("Failed to find sequence dictionary file at $path.  Generating one now...");
         my $seqdict_dir = $self->data_directory."/seqdict/";
-        my $cd_rv =  Genome::Utility::FileSystem->create_directory($seqdict_dir);
+        my $cd_rv =  Genome::Sys->create_directory($seqdict_dir);
         if ($cd_rv ne $seqdict_dir) {
             $self->error_message("Failed to to create sequence dictionary directory for $path. Quiting");
             return;
@@ -397,9 +397,9 @@ sub get_sequence_dictionary {
         
         my $create_seq_dict_cmd = "java -Xmx4g -XX:MaxPermSize=256m -cp $picard_path/CreateSequenceDictionary.jar net.sf.picard.sam.CreateSequenceDictionary R='$ref_seq' O='$path' URI='$uri' species='$species' genome_assembly='$name' TRUNCATE_NAMES_AT_WHITESPACE=true";        
 
-        my $csd_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$create_seq_dict_cmd);
+        my $csd_rv = Genome::Sys->shellcmd(cmd=>$create_seq_dict_cmd);
 
-        unless (Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock)) {
+        unless (Genome::Sys->unlock_resource(resource_lock => $lock)) {
             $self->error_message("Failed to unlock resource: $lock");
             return;
         }

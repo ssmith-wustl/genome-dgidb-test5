@@ -93,7 +93,7 @@ sub _data {
 sub _set_headers_and_data {
     my $self = shift;
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading( $self->_albums_csv )
+    my $fh = Genome::Sys->open_file_for_reading( $self->_albums_csv )
         or die;
     my $header_line = $fh->getline;
     chomp $header_line;

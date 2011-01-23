@@ -80,7 +80,7 @@ sub execute {
         $options .= ' -s';
     }
     my $cmd = $self->bedtools_path .'/bin/mergeBed '. $options .' -i '. $self->input_file .' > '. $self->output_file;
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$self->input_file],
         output_files => [$self->output_file],

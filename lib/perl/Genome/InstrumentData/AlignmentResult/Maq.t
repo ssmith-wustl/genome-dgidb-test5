@@ -142,7 +142,7 @@ $instrument_data2->set_always('sample_id','2791246676');
 $instrument_data2->set_always('is_paired_end',1);
 ok($instrument_data2->is_paired_end,'instrument data is paired end');
 
-my $tmp_dir = File::Temp::tempdir('Align-Maq-XXXXX', DIR => Genome::Utility::FileSystem->base_temp_directory, CLEANUP => 1);
+my $tmp_dir = File::Temp::tempdir('Align-Maq-XXXXX', DIR => Genome::Sys->base_temp_directory, CLEANUP => 1);
 my $staging_base = sprintf("alignment-%s-%s-%s", hostname(), $ENV{USER}, $$);
 
 my $tmp_allocation = Genome::Disk::Allocation->__define__(
@@ -182,7 +182,7 @@ ok(-s $dir . "/all_sequences.bam", "result has a bam file");
 
 # clear out the fastqs so we re-unpack them again
 
-my $base_tempdir = Genome::Utility::FileSystem->base_temp_directory;
+my $base_tempdir = Genome::Sys->base_temp_directory;
 note "Remove all content under $base_tempdir\n";
 my @base_temp_files = glob($base_tempdir . "/*");
 for (@base_temp_files) {

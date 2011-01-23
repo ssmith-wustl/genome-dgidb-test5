@@ -156,7 +156,7 @@ sub run_config {
     my $config_path = $self->breakdancer_config_command;
     my $cmd = "$config_path " . $self->aligned_reads_input . " " . $self->control_aligned_reads_input . " " . $self->_bam2cfg_params . " > "  . $self->_config_staging_output;
     $self->status_message("EXECUTING CONFIG STEP: $cmd");
-    my $return = Genome::Utility::FileSystem->shellcmd(
+    my $return = Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$self->aligned_reads_input, $self->control_aligned_reads_input],
         output_files => [$self->_config_staging_output],
@@ -182,7 +182,7 @@ sub run_breakdancer {
     my $breakdancer_path = $self->breakdancer_max_command;
     my $cmd = "$breakdancer_path " . $self->_config_staging_output . " " . $self->_breakdancer_params . " > "  . $self->_sv_staging_output;
     $self->status_message("EXECUTING BREAKDANCER STEP: $cmd");
-    my $return = Genome::Utility::FileSystem->shellcmd(
+    my $return = Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$self->_config_staging_output],
         output_files => [$self->_sv_staging_output],
