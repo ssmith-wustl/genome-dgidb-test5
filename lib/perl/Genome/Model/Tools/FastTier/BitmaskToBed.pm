@@ -40,7 +40,7 @@ sub execute {
 
     my $output = $self->output_file;
     my $bitmask = $self->bitmask;
-    my $out_fh = Genome::Utility::FileSystem->open_file_for_writing($output);
+    my $out_fh = Genome::Sys->open_file_for_writing($output);
 
 
 

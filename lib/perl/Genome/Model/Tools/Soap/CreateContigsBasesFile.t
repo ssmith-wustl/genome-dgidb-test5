@@ -16,7 +16,7 @@ ok(-d $data_dir, "Data dir exists");
 my $test_file = $data_dir.'/TEST.scafSeq';
 ok(-s $test_file, "Test scaffold file exists");
 
-my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+my $temp_dir = Genome::Sys->create_temp_directory();
 ok(-d $temp_dir, "Temp test dir created");
 
 #link test.scafSeq file

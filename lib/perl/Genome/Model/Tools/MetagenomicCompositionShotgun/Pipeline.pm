@@ -36,12 +36,12 @@ sub pre_execute {
 
     my $working_dir = $self->working_directory;
     my $log_dir = $working_dir."/logs";
-    Genome::Utility::FileSystem->create_directory("$working_dir");
-    Genome::Utility::FileSystem->create_directory("$working_dir/alignments_filtered");
-    Genome::Utility::FileSystem->create_directory("$working_dir/alignments_top_hit");
-    Genome::Utility::FileSystem->create_directory($log_dir);
-    Genome::Utility::FileSystem->create_directory("$working_dir/tmp");
-    Genome::Utility::FileSystem->create_directory("$working_dir/reports");
+    Genome::Sys->create_directory("$working_dir");
+    Genome::Sys->create_directory("$working_dir/alignments_filtered");
+    Genome::Sys->create_directory("$working_dir/alignments_top_hit");
+    Genome::Sys->create_directory($log_dir);
+    Genome::Sys->create_directory("$working_dir/tmp");
+    Genome::Sys->create_directory("$working_dir/reports");
     $self->_operation->log_dir($log_dir);
   
     $self->status_message("Using working directory:".$working_dir);

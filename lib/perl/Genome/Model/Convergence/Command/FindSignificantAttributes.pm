@@ -77,7 +77,7 @@ EOS
 sub execute {
     my $self = shift;
 
-    if(Genome::Utility::FileSystem->check_for_path_existence($self->output_file)) {
+    if(Genome::Sys->check_for_path_existence($self->output_file)) {
         $self->error_message('Output file already exists. Will not continue.');
         return;
     }
@@ -111,7 +111,7 @@ sub execute {
     }
 
     my $arff_file = $self->data_file;
-    if(Genome::Utility::FileSystem->check_for_path_existence($arff_file)) {
+    if(Genome::Sys->check_for_path_existence($arff_file)) {
         #TODO How do we know this data file has anything to do with the build in question?
         $self->status_message('Found data file ' . $arff_file . ' for use in analysis.');
     } else {
@@ -132,7 +132,7 @@ sub analyze_data {
     my $cmd = 'java -Xmx2048m -cp /gsc/scripts/lib/java/weka.jar ' . 'weka.classifiers.trees.J48 -x 10 -B -C 0.25 -M 2 -t ' . $arff_file . ' > ' . $output_file;
     #my $cmd = 'java -Xmx2048m -cp /gsc/scripts/lib/java/weka.jar ' . 'weka.classifiers.rules.DecisionTable -x 10 -X 1 -S "weka.attributeSelection.BestFirst -D 2 -N 30 -S 2" -t ' . $arff_file . ' -R > ' . $output_file;
 
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$arff_file],
         output_files => [$output_file],
@@ -145,7 +145,7 @@ sub generate_data_file {
     my $self = shift;
     my @builds = @_;
 
-    my $data_fh = Genome::Utility::FileSystem->open_file_for_writing($self->data_file);
+    my $data_fh = Genome::Sys->open_file_for_writing($self->data_file);
 
     $self->_generate_header($data_fh) or return;
     $self->_generate_data_section($data_fh, @builds) or return;
@@ -210,7 +210,7 @@ sub _generate_data_section {
             next BUILD;
         }
 
-        my $annotation_fh = Genome::Utility::FileSystem->open_file_for_reading($annotation_path);
+        my $annotation_fh = Genome::Sys->open_file_for_reading($annotation_path);
 
         #TODO Super-ugly hash... transcript names may not be "in order" in the annotated file due to overlappingness, etc.
         my %transcript_names_present;
@@ -254,7 +254,7 @@ sub _resolve_annotation_file {
     for my $filename ('filtered.indelpe.snps.post_annotation', 'filtered.variants.post_annotation') {
         my $potential_annotation_path = join('/', $variant_directory, $filename);
 
-        if(Genome::Utility::FileSystem->check_for_path_existence($potential_annotation_path)) {
+        if(Genome::Sys->check_for_path_existence($potential_annotation_path)) {
             return $potential_annotation_path;
         }
     }

@@ -50,7 +50,7 @@ sub execute {
     my $self = shift;
     my $output_directory = $self->output_directory;
     unless (-d $output_directory) {
-        unless (Genome::Utility::FileSystem->create_directory($output_directory)) {
+        unless (Genome::Sys->create_directory($output_directory)) {
             die('Failed to create output_directory: '. $output_directory);
         }
     }

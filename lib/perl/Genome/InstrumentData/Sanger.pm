@@ -134,7 +134,7 @@ sub dump_to_file_system {
     }
 
     my $data_dir = $disk_allocation->absolute_path;
-    unless ( Genome::Utility::FileSystem->validate_existing_directory($data_dir) ) {
+    unless ( Genome::Sys->validate_existing_directory($data_dir) ) {
         die $self->error_message('Absolute path from disk allocation does not exist for sanger instrument data '.$self->id);
     }
 

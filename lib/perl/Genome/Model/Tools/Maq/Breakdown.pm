@@ -10,7 +10,7 @@ my @TAGS = qw/TRANSCRIPT RIBOSOME CHEMISTRY/;
 my $annotation = {};
 
 class Genome::Model::Tools::Maq::Breakdown {
-    is => ['Genome::Model::Tools::Maq','Genome::Utility::FileSystem'],
+    is => ['Genome::Model::Tools::Maq','Genome::Sys'],
     has => [
             map_file => { is => 'Text',},
             tags => { is => 'List', default_value => \@TAGS },

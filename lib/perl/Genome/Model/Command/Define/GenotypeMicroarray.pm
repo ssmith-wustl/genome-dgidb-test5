@@ -122,7 +122,7 @@ sub execute {
         }
 
         $self->status_message("Copying genotype data to " . $build->formatted_genotype_file_path . "...");
-        Genome::Utility::FileSystem->copy_file(
+        Genome::Sys->copy_file(
             $file,
             $build->formatted_genotype_file_path
         );

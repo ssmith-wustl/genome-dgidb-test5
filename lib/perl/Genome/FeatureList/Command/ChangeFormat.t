@@ -17,7 +17,7 @@ use_ok('Genome::FeatureList');
 my $test_bed_file = __FILE__ . '.bed';
 ok(-e $test_bed_file, 'test file ' . $test_bed_file . ' exists');
 
-my $test_bed_file_md5 = Genome::Utility::FileSystem->md5sum($test_bed_file);
+my $test_bed_file_md5 = Genome::Sys->md5sum($test_bed_file);
 
 my $feature_list = Genome::FeatureList->create(
     name                => 'GFL test feature-list',

@@ -11,7 +11,7 @@ use_ok ('Genome::Model::Tools::Assembly::ReScaffoldMsiAce');
 my $data_dir = '/gscmnt/sata420/info/testsuite_data/Genome-Model-Tools-Assembly/ReScaffoldMsiAce_v1';
 ok(-d $data_dir, "Found data dir");
 
-my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+my $temp_dir = Genome::Sys->create_temp_directory();
 ok(-d $temp_dir, "Made temp test dir");
 
 mkdir $temp_dir.'/edit_dir';

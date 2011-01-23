@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 use File::Basename;
 
 class Genome::Model::Tools::Fastx::Clipper {
@@ -34,7 +34,7 @@ class Genome::Model::Tools::Fastx::Clipper {
 
 sub execute {
     my $self = shift;
-    unless (Genome::Utility::FileSystem->validate_file_for_reading($self->input_file)) {
+    unless (Genome::Sys->validate_file_for_reading($self->input_file)) {
         $self->error_message('Failed to validate fastq file for read access '. $self->input_file .":  $!");
         die($self->error_message);
     }
@@ -47,17 +47,17 @@ sub execute {
     unless ($self->log_file) {
         $self->log_file($dirname .'/'. $basename .'_clipped.log');
     }
-    unless (Genome::Utility::FileSystem->validate_file_for_writing($self->output_file)) {
+    unless (Genome::Sys->validate_file_for_writing($self->output_file)) {
         $self->error_message('Failed to validate output file for write access '. $self->output_file .":  $!");
         die($self->error_message);
     }
-    unless (Genome::Utility::FileSystem->validate_file_for_writing($self->log_file)) {
+    unless (Genome::Sys->validate_file_for_writing($self->log_file)) {
         $self->error_message('Failed to validate output file for write access '. $self->log_file .":  $!");
         die($self->error_message);
     } 
     my $params = $self->params . ' -v ';
     my $cmd = $self->fastx_tool_path .' '. $params .' -i '. $self->input_file .' -o '. $self->output_file .' > '. $self->log_file;
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$self->input_file],
         output_files => [$self->output_file,$self->log_file],

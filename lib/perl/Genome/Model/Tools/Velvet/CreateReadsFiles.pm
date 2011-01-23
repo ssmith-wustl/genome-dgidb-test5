@@ -59,12 +59,12 @@ sub execute {
 
     #readinfo.txt
     unlink $self->read_info_file;
-    my $ri_fh = Genome::Utility::FileSystem->open_file_for_writing($self->read_info_file) ||
+    my $ri_fh = Genome::Sys->open_file_for_writing($self->read_info_file) ||
 	return;
 
     #reads.placed file
     unlink $self->reads_placed_file;
-    my $rp_fh = Genome::Utility::FileSystem->open_file_for_writing($self->reads_placed_file) ||
+    my $rp_fh = Genome::Sys->open_file_for_writing($self->reads_placed_file) ||
 	return;
 
     #velvet output Sequences file
@@ -74,7 +74,7 @@ sub execute {
     my $afg_file = ($self->afg_file ) ? $self->afg_file : $self->velvet_afg_file;
 
     #velvet output afg file handle
-    my $afg_fh = Genome::Utility::FileSystem->open_file_for_reading($afg_file)
+    my $afg_fh = Genome::Sys->open_file_for_reading($afg_file)
         or return;
 
     #load gap sizes
@@ -278,7 +278,7 @@ sub _get_supercontig_position {
 sub _read_length_from_sequences_file {
     my ($self, $seek_pos, $file) = @_;
 
-    my $seq_fh = Genome::Utility::FileSystem->open_file_for_reading( $file ) or return;
+    my $seq_fh = Genome::Sys->open_file_for_reading( $file ) or return;
     $seq_fh->seek($seek_pos, 0);
     my $io = Bio::SeqIO->new(-fh => $seq_fh, -format => 'fasta');
 

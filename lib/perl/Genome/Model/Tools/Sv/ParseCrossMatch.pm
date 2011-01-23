@@ -4,7 +4,7 @@ package Genome::Model::Tools::Sv::ParseCrossMatch;
 use strict;
 use warnings;
 use Genome::Model::Tools::Sv;
-require Genome::Utility::FileSystem;
+require Genome::Sys;
 
 our $VERSION = $Genome::Model::Tools::Sv::VERSION;
 
@@ -61,7 +61,7 @@ sub Read {
 
     my ($aln, $paln_readname, $tmpstr, $score, $perc_sub, $perc_del, $perc_ins, $readname, $r1, $r2, $r3, $comp, $refseq, $g1, $g2, $g3);
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->input_file) or return;
+    my $fh = Genome::Sys->open_file_for_reading($self->input_file) or return;
 
     while (my $line = $fh->getline) {
         chomp $line;
@@ -296,7 +296,7 @@ sub GetAlleleInfo{
     }
 
     #Get Quality from file
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($f_qual) or return;
+    my $fh = Genome::Sys->open_file_for_reading($f_qual) or return;
     my $line;
     
     do{$line = $fh->getline;} until $line =~ /^>(\S+)\s/ || $fh->eof;

@@ -10,7 +10,7 @@ use Digest::MD5 qw(md5_hex);
 #plan "skip_all";
 
 my $file = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Graph/heatmap-test-matrix.csv";
-my $tmp_dir = Genome::Utility::FileSystem->create_temp_directory('Genome-Model-Tools-Graph');
+my $tmp_dir = Genome::Sys->create_temp_directory('Genome-Model-Tools-Graph');
 my $outfile = "$tmp_dir/heatmap-test-image.png";
 my $columns = 3;
 my $checksum = "007d3bb4cfa3bb2aacf152dcfa02aafa";

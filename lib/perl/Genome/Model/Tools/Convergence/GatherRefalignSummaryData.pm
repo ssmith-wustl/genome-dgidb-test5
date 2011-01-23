@@ -95,10 +95,10 @@ sub parse_file {
     my $self = shift;
     my $file = shift;
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($file);
+    my $fh = Genome::Sys->open_file_for_reading($file);
     
     unless($fh) {
-        $self->error_message('Could not open file: ' . Genome::Utility::FileSystem->error_message);
+        $self->error_message('Could not open file: ' . Genome::Sys->error_message);
         return;
     }
 

@@ -6,7 +6,7 @@ use strict;
 use Genome;
 use Carp;
 use IO::File;
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 use File::Basename;
 
 class Genome::Model::Tools::Somatic::VariantReport{
@@ -80,7 +80,7 @@ sub execute {
     my $transform = Genome::Report::XSLT->transform_report(report => $report, xslt_file => $xslt_file);
     my $html = $transform->{content};
     
-    my $fh = Genome::Utility::FileSystem->open_file_for_writing($self->report_output)
+    my $fh = Genome::Sys->open_file_for_writing($self->report_output)
         or confess;
     $fh->print( $html );
     $fh->close;

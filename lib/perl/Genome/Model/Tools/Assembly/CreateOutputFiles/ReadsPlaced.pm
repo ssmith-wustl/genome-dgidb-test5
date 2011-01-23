@@ -66,9 +66,9 @@ sub execute {
 	return;
     }
 
-    my $in = Genome::Utility::FileSystem->open_file_for_reading($self->read_info_file);
+    my $in = Genome::Sys->open_file_for_reading($self->read_info_file);
     unlink $self->output_file;
-    my $out = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+    my $out = Genome::Sys->open_file_for_writing($self->output_file);
 
     while (my $line = $in->getline) {
 	chomp $line;
@@ -128,7 +128,7 @@ sub _get_gap_sizes {
     my $self = shift;
     
     my $gaps = {};
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->gap_file) ||
+    my $fh = Genome::Sys->open_file_for_reading($self->gap_file) ||
 	return;
     while (my $line = $fh->getline) {
 	chomp $line;

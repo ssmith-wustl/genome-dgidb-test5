@@ -11,7 +11,7 @@ use Data::Dumper;
 use File::Basename;
 use Finishing::Assembly::Factory;
 use Finishing::Assembly::Ace::Output;
-use Genome::Utility::FileSystem; 
+use Genome::Sys; 
 
 my @FORMATS = (qw/ fasta qual contig_names read_names /);
 #fasta_for_tags => [qw/ get_bioseqs_for_tags fasta /],
@@ -105,7 +105,7 @@ sub _validate_params {
     my $self = shift;
 
     # Acefile
-    Genome::Utility::FileSystem->validate_file_for_reading( $self->acefile )
+    Genome::Sys->validate_file_for_reading( $self->acefile )
         or return;
 
     # Format
@@ -117,7 +117,7 @@ sub _validate_params {
     $self->{_print_method} = '_print_' . $format;
 
     # Output
-    $self->{_fh} = Genome::Utility::FileSystem->open_file_for_writing( $self->output_file )
+    $self->{_fh} = Genome::Sys->open_file_for_writing( $self->output_file )
         or return;
     $self->{_io} =  ( grep { $self->format eq $_ } @BIOSEQ_FORMATS ) 
     ? Bio::SeqIO->new('-format' => $format, '-fh' => $self->{_fh})
@@ -150,7 +150,7 @@ sub _validate_params {
     # Ctgs
     elsif ( my $ctgs = $self->ctgs ) {
         if ( -s $ctgs ) {
-            my $fh = Genome::Utility::FileSystem->open_file_For_reading($ctgs)
+            my $fh = Genome::Sys->open_file_For_reading($ctgs)
                 or return;
             $ctgs = join(' ', grep { /[\w\d]/ } grep { s/\s+//g } $fh->getlines);
             $fh->close;

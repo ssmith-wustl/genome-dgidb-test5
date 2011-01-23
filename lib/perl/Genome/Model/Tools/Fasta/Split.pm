@@ -43,7 +43,7 @@ sub execute {
 
     my $file_counter = 1;
     my ($fasta_basename,$fasta_dirname) = File::Basename::fileparse($self->fasta_file);
-    unless (Genome::Utility::FileSystem->validate_directory_for_read_write_access($fasta_dirname)) {
+    unless (Genome::Sys->validate_directory_for_read_write_access($fasta_dirname)) {
         $self->error_message('Failed to validate directory '. $fasta_dirname ." for read/write access:  $!");
         die($self->error_message);
     }
@@ -52,13 +52,13 @@ sub execute {
     }
     my $output_file = $self->output_directory .'/'. $fasta_basename .'_'. $file_counter;
 
-    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($output_file);
+    my $output_fh = Genome::Sys->open_file_for_writing($output_file);
     unless ($output_fh) {
         $self->error_message('Failed to open output file '. $output_file);
         die($self->error_message);
     }
     push @fasta_files, $output_file;
-    my $fasta_reader = Genome::Utility::FileSystem->open_file_for_reading($self->fasta_file);
+    my $fasta_reader = Genome::Sys->open_file_for_reading($self->fasta_file);
     unless ($fasta_reader) {
         $self->error_message('Failed to open fasta file '. $self->fasta_file);
         die($self->error_message);
@@ -91,7 +91,7 @@ sub execute {
                 $file_counter++;
                 $output_fh->close;
                 $output_file = $self->output_directory .'/'. $fasta_basename .'_'. $file_counter;
-                $output_fh = Genome::Utility::FileSystem->open_file_for_writing($output_file);
+                $output_fh = Genome::Sys->open_file_for_writing($output_file);
                 unless ($output_fh) {
                     $self->error_message('Failed to open fasta output file '. $output_file);
                     return;

@@ -6,7 +6,7 @@ use warnings;
 require Bio::Taxon;
 use Data::Dumper 'Dumper';
 use Genome::InlineConfig;
-require Genome::Utility::FileSystem;
+require Genome::Sys;
 require Genome::Utility::MetagenomicClassifier;
 require Genome::Utility::MetagenomicClassifier::SequenceClassification;
 

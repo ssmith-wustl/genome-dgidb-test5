@@ -2,14 +2,15 @@ package Genome::Site::WUGC;
 use strict;
 use warnings;
 
-use Class::Autouse;
-use Test::MockObject;
+use Genome::Site::WUGC::SysDeprecated;  # extensions to Genome::Sys
+use Test::MockObject;                   # TODO: get things which use this to do so explicitly
 
 # configuration for internal WUGC network software & LIMS 
 # this module is called by Genome::Config::edu::wustl::gsc right now on all *.gsc.wustl.edu hosts
 # print STDERR "using " . __PACKAGE__ . "\n";
 
 # ensure we can get to legacy modules 
+use Class::Autouse;
 Class::Autouse->autouse(qr/Finishing.*/);
 Class::Autouse->autouse(qr/Finfo.*/);
 Class::Autouse->autouse(qr/Bio.*/);

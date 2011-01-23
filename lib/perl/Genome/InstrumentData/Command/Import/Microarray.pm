@@ -222,8 +222,8 @@ sub process_imported_files {
             return;
         }
 
-        my $ssize = Genome::Utility::FileSystem->directory_size_recursive($self->original_data_path);             
-        my $dsize = Genome::Utility::FileSystem->directory_size_recursive($target_path);             
+        my $ssize = Genome::Sys->directory_size_recursive($self->original_data_path);             
+        my $dsize = Genome::Sys->directory_size_recursive($target_path);             
         unless ($ssize==$dsize) {
             unless($import_instrument_data->id < 0) {
                 $self->error_message("source and distination do not match( source $ssize bytes vs destination $dsize). Copy failed.");
@@ -244,7 +244,7 @@ sub process_imported_files {
                 $self->error_message("A copy of the file at ".$target." already exists.");
                 die $self->error_message;
             }
-            my $status = Genome::Utility::FileSystem->copy_file($file, $target);
+            my $status = Genome::Sys->copy_file($file, $target);
         }
     }
     $self->status_message("Finished copying data into the allocated disk");

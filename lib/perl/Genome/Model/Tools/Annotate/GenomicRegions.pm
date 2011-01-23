@@ -37,7 +37,7 @@ sub post_execute {
     }
     my ($basename,$dirname,$suffix) = File::Basename::fileparse($self->bed_file,qw/.bed/);
     my $final_file = $self->output_directory .'/'. $basename .'_'. $self->anno_db .'_'. $self->version .'.bed';
-    Genome::Utility::FileSystem->cat(
+    Genome::Sys->cat(
         input_files => $self->anno_file,
         output_file => $final_file,
         skip_if_output_is_present => 0,

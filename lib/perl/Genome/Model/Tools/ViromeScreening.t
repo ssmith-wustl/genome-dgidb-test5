@@ -13,7 +13,7 @@ ok( -d $data_dir, "Testsuite data dir exists" ) or die;
 
 ok( -s '/gsc/var/cache/testsuite/data/Genome-Model-Tools-ViromeScreening/virome-screening2.xml', "Work xml file exsits" ) or die;
 
-my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+my $temp_dir = Genome::Sys->create_temp_directory();
 
 #create
 my $vs = Genome::Model::Tools::ViromeScreening->create(

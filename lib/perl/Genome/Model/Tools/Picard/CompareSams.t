@@ -15,7 +15,7 @@ my $file1 = $data_dir . 'normal.tiny.bam';
 my $file2 = $data_dir . 'tumor.tiny.bam';
 
 #Test default version
-my $output_1 = Genome::Utility::FileSystem->create_temp_file_path();
+my $output_1 = Genome::Sys->create_temp_file_path();
 
 my $command_1 = Genome::Model::Tools::Picard::CompareSams->create(
     input_file_1 => $file1,
@@ -28,7 +28,7 @@ ok($command_1->execute(), 'executed command');
 ok(-s $output_1, 'produced some output');
 
 #Test an old version
-my $output_2 = Genome::Utility::FileSystem->create_temp_file_path();
+my $output_2 = Genome::Sys->create_temp_file_path();
 
 my $command_2 = Genome::Model::Tools::Picard::CompareSams->create(
     input_file_1 => $file1,
@@ -41,7 +41,7 @@ ok($command_2, 'created command for picard version r116');
 ok(! $command_2->execute(), 'could not execute command for unsupported version');
 
 #Test a newer version
-my $output_3 = Genome::Utility::FileSystem->create_temp_file_path();
+my $output_3 = Genome::Sys->create_temp_file_path();
 
 my $command_3 = Genome::Model::Tools::Picard::CompareSams->create(
     input_file_1 => $file1,

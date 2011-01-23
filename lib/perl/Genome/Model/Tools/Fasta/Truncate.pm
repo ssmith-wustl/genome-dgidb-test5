@@ -19,12 +19,12 @@ class Genome::Model::Tools::Fasta::Truncate {
 sub execute {
     my $self = shift;
 
-    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_fasta_file);
+    my $output_fh = Genome::Sys->open_file_for_writing($self->output_fasta_file);
     unless ($output_fh) {
         $self->error_message('Failed to open output file '. $self->output_fasta_file);
         die($self->error_message);
     }
-    my $fasta_reader = Genome::Utility::FileSystem->open_file_for_reading($self->input_fasta_file);
+    my $fasta_reader = Genome::Sys->open_file_for_reading($self->input_fasta_file);
     unless ($fasta_reader) {
         $self->error_message('Failed to open fasta file '. $self->input_fasta_file);
         die($self->error_message);

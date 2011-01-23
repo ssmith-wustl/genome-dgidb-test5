@@ -75,7 +75,7 @@ sub create {
 sub execute {
     my $self = shift;
     unless (-d $self->output_directory) {
-        unless (Genome::Utility::FileSystem->create_directory($self->output_directory)) {
+        unless (Genome::Sys->create_directory($self->output_directory)) {
             die('Failed to create output_directory: '. $self->output_directory);
         }
     }
@@ -88,7 +88,7 @@ sub execute {
 
     if($self->log_directory) {
         unless (-d $self->log_directory) {
-            unless (Genome::Utility::FileSystem->create_directory($self->log_directory)) {
+            unless (Genome::Sys->create_directory($self->log_directory)) {
                 die('Failed to create output_directory: '. $self->log_directory);
             }
         }

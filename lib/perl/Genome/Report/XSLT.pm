@@ -24,7 +24,7 @@ sub transform_report {
     }
                
     my $xslt_file = delete $params{xslt_file};
-    my $validate = eval { Genome::Utility::FileSystem->validate_file_for_reading($xslt_file) };
+    my $validate = eval { Genome::Sys->validate_file_for_reading($xslt_file) };
     if (!$validate or $@) {
         $class->error_message("validate_file_for_reading on $xslt_file failed: $@");
         return;

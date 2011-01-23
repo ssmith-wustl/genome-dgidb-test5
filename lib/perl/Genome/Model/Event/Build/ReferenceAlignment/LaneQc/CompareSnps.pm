@@ -87,14 +87,14 @@ sub get_or_create_genotype_file {
     my $gold_snp_file = $build->gold_snp_path;
     my $genotype_file = "$gold_snp_file.gold2geno";
 
-    my $gold_snp_reader = Genome::Utility::FileSystem->open_file_for_reading($gold_snp_file);
+    my $gold_snp_reader = Genome::Sys->open_file_for_reading($gold_snp_file);
 
     if ( -s $genotype_file ) {
         $self->status_message("Genotype file ($genotype_file) already exists, skipping generation.");
         return $genotype_file;
     }
 
-    my $genotype_writer = Genome::Utility::FileSystem->open_file_for_writing($genotype_file);
+    my $genotype_writer = Genome::Sys->open_file_for_writing($genotype_file);
     while (my $line = $gold_snp_reader->getline) {
         my @field = split("\t", $line);
         if ($field[1] ne $field[2]) {

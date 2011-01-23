@@ -56,7 +56,7 @@ sub _run_aligner {
 
         my $cmdline = "$path_to_bowtie $aligner_params --sam-nohead --un $temp_unaligned_fq_file $reference_bowtie_index_path $input_pathnames[0] --sam $temp_aligned_sequences_file >> $log_file && cat $temp_aligned_sequences_file >> $output_file";
 
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
             cmd                         => $cmdline,
             input_files                 => [$reference_bowtie_index_path, $input_pathnames[0]],
             output_files                => [$output_file],
@@ -77,7 +77,7 @@ sub _run_aligner {
         my $cmdline = "$path_to_bowtie $aligner_params --sam-nohead --un $temp_unaligned_fq_file $reference_bowtie_index_path -1 $input_pathnames[0] -2 $input_pathnames[1] --sam $temp_aligned_sequences_file >>$log_file && cat $temp_aligned_sequences_file >> $output_file";
         # $temp_unaligned_sequences_file still uses original file format.
         
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
             cmd                         => $cmdline,
             input_files                 => [$reference_bowtie_index_path, $input_pathnames[0], $input_pathnames[1]],
             output_files                => [$output_file],
@@ -95,7 +95,7 @@ sub _run_aligner {
 		$temp_fq_2 =~ s/temp_unaligned_sequences/temp_unaligned_sequences_2/g;
 
 		my $cat_one_to_unaligned_cmd = "cat $temp_fq_1 >> $temp_unaligned_fq_file";
-		Genome::Utility::FileSystem->shellcmd(
+		Genome::Sys->shellcmd(
 			cmd                         => $cat_one_to_unaligned_cmd,
 			input_files                 => [$temp_fq_1],
 			output_files                => [$temp_unaligned_fq_file],
@@ -103,7 +103,7 @@ sub _run_aligner {
 		);
 
 		my $cat_two_to_unaligned_cmd = "cat $temp_fq_2 >> $temp_unaligned_fq_file";
-		Genome::Utility::FileSystem->shellcmd(
+		Genome::Sys->shellcmd(
 			cmd                         => $cat_two_to_unaligned_cmd,
 			input_files                 => [$temp_fq_2],
 			output_files                => [$temp_unaligned_fq_file],
@@ -125,7 +125,7 @@ sub _run_aligner {
 
 
     my $cat_unaligned_to_output_cmd = "cat $temp_unaligned_sam_file >> $output_file";
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
             cmd                        => $cat_unaligned_to_output_cmd,
             input_files                => [$temp_unaligned_sam_file],
             output_files               => [$output_file],

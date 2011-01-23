@@ -53,7 +53,7 @@ sub execute {
 
     # lock
     my $lock_resource = '/gsc/var/lock/genome_model_command_services_build-queued-models/loader';
-    my $lock = Genome::Utility::FileSystem->lock_resource(
+    my $lock = Genome::Sys->lock_resource(
         resource_lock => $lock_resource,
         max_try => 1
     ); 
@@ -85,7 +85,7 @@ sub execute {
         my $model_id = $model->id;
         eval {
             my $cmd = qq{genome model build start --force --model $model_id};
-            Genome::Utility::FileSystem->shellcmd(cmd => $cmd);
+            Genome::Sys->shellcmd(cmd => $cmd);
         };
 
         if ($@) {
@@ -96,7 +96,7 @@ sub execute {
         }
     }
 
-    Genome::Utility::FileSystem->unlock_resource(resource_lock=>$lock);
+    Genome::Sys->unlock_resource(resource_lock=>$lock);
 
     return 1;
 }

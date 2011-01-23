@@ -85,7 +85,7 @@ sub execute {
     unless($self->test) {
         my $lock_resource = '/gsc/var/lock/genome_model_command_services_assign-queued-instrument-data/loader';
 
-        $lock = Genome::Utility::FileSystem->lock_resource(resource_lock=>$lock_resource, max_try=>1);
+        $lock = Genome::Sys->lock_resource(resource_lock=>$lock_resource, max_try=>1);
         unless ($lock) {
             $self->error_message("could not lock, another instance must be running.");
             return;
@@ -275,7 +275,7 @@ sub execute {
     }
 
     unless($self->test) {
-        Genome::Utility::FileSystem->unlock_resource(resource_lock=>$lock);
+        Genome::Sys->unlock_resource(resource_lock=>$lock);
     }
 
     return 1;    

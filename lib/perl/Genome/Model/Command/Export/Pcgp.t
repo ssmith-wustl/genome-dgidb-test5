@@ -24,7 +24,7 @@ ok($pp, "create processing profile") or diag Genome::ProcessingProfile::TestPcgp
 my $m = Genome::Model->create(name => "test pcgp export model", processing_profile => $pp, subject_class_name => ref($s), subject_id => $s->id);
 ok($m, "created model");
 
-my $tmp = Genome::Utility::FileSystem->create_temp_directory();
+my $tmp = Genome::Sys->create_temp_directory();
 
 my $build_id = $$;
 my $data_directory = "$tmp/build$build_id";
@@ -35,11 +35,11 @@ ok($b, "created a build");
 is($b->data_directory, $data_directory, "data directory is correct");
 mkdir $data_directory;
 ok((-d $data_directory), "data dir present");
-Genome::Utility::FileSystem->create_directory("$data_directory/alignments/");
-Genome::Utility::FileSystem->write_file("$data_directory/alignments/${build_id}_merged_rmdup.bam", "$$");
+Genome::Sys->create_directory("$data_directory/alignments/");
+Genome::Sys->write_file("$data_directory/alignments/${build_id}_merged_rmdup.bam", "$$");
 
 sub e {
-    Genome::Utility::FileSystem->shellcmd(cmd => "/bin/rm -rf pcgp-upload") if -e 'pcgp-upload';
+    Genome::Sys->shellcmd(cmd => "/bin/rm -rf pcgp-upload") if -e 'pcgp-upload';
     Genome::Model::Command::Export::Pcgp->execute(paths => [@_])->result;
 }
 

@@ -115,12 +115,12 @@ sub _detect_variants {
     $self->status_message("beginning execute");
 
     # Validate files
-    unless ( Genome::Utility::FileSystem->validate_file_for_reading($self->aligned_reads_input) ) {
+    unless ( Genome::Sys->validate_file_for_reading($self->aligned_reads_input) ) {
         $self->error_message("Could not validate tumor file:  ".$self->aligned_reads_input );
         die;
     } 
 
-    unless ( Genome::Utility::FileSystem->validate_file_for_reading($self->control_aligned_reads_input) ) {
+    unless ( Genome::Sys->validate_file_for_reading($self->control_aligned_reads_input) ) {
         $self->error_message("Could not validate normal file:  ".$self->control_aligned_reads_input );
         die;
     } 
@@ -136,7 +136,7 @@ sub _detect_variants {
         if ($self->detect_snvs && $self->detect_indels) {
             $self->status_message("Snp and indel params are different. Executing sniper twice: once each for snps and indels with their respective parameters");
         }
-        my ($temp_fh, $temp_name) = Genome::Utility::FileSystem->create_temp_file();
+        my ($temp_fh, $temp_name) = Genome::Sys->create_temp_file();
 
         if ($self->detect_snvs) {
             $result = $self->_run_sniper($snv_params, $self->_snv_staging_output, $temp_name);
@@ -156,9 +156,9 @@ sub _detect_variants {
     #Varied the warning text slightly so this message can be disambiguated from shellcmd() output in future debugging
     unless(-s $self->_indel_staging_output) {
         #Touch the file to make sure it exists
-        my $fh = Genome::Utility::FileSystem->open_file_for_writing($self->_indel_staging_output);
+        my $fh = Genome::Sys->open_file_for_writing($self->_indel_staging_output);
         unless ($fh) {
-            $self->error_message("failed to touch " . $self->_indel_staging_output . "!: " . Genome::Utility::FileSystem->error_message);
+            $self->error_message("failed to touch " . $self->_indel_staging_output . "!: " . Genome::Sys->error_message);
             die;
         }
         $fh->close;
@@ -174,7 +174,7 @@ sub _run_sniper {
     my ($self, $params, $snp_output, $indel_output) = @_;
     
     my $cmd = $self->sniper_path . " " . $params . " -f ".$self->reference_sequence_input." ".$self->aligned_reads_input." ".$self->control_aligned_reads_input ." " . $snp_output . " " . $indel_output; 
-    my $result = Genome::Utility::FileSystem->shellcmd( cmd=>$cmd, input_files=>[$self->aligned_reads_input,$self->control_aligned_reads_input], output_files=>[$snp_output], skip_if_output_is_present=>0, allow_zero_size_output_files => 1, );
+    my $result = Genome::Sys->shellcmd( cmd=>$cmd, input_files=>[$self->aligned_reads_input,$self->control_aligned_reads_input], output_files=>[$snp_output], skip_if_output_is_present=>0, allow_zero_size_output_files => 1, );
 
     return $result;
 }

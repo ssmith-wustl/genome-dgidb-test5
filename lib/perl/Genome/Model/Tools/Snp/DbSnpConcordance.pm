@@ -130,7 +130,7 @@ sub calculate_metrics {
 
 sub print_report {
     my ($self, $total_snps_ref, $concordance_ref) = @_; 
-    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file); 
+    my $output_fh = Genome::Sys->open_file_for_writing($self->output_file); 
     my $batch = $self->report_by_quality;
     foreach my $sample (sort keys %$concordance_ref) {
         # make sure we consider all positions in concordance ref OR total_snps_ref

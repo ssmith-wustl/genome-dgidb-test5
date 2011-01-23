@@ -96,8 +96,8 @@ ok(-e $i->data_directory, "output directory is present");
 #my $ssize = 0;             
 #my $dsize = 0;             
 
-my $ssize = Genome::Utility::FileSystem->directory_size_recursive($source_dir);
-my $dsize = Genome::Utility::FileSystem->directory_size_recursive($i->data_directory);
+my $ssize = Genome::Sys->directory_size_recursive($source_dir);
+my $dsize = Genome::Sys->directory_size_recursive($i->data_directory);
 
 
 #find(sub { $ssize += -s if -f $_ }, $source_dir);   #find sum of source file sizes

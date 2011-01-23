@@ -62,7 +62,7 @@ sub execute {
     $sort_params .= ' -m '. $self->maximum_memory;
 
     my $sam_sort_cmd = sprintf("%s sort %s %s %s", $self->samtools_path, $sort_params, $self->file_name,  $real_output_file);
-    my $sam_sort_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$sam_sort_cmd, input_files=>[$self->file_name], output_files=>[$real_output_file.".bam"], skip_if_output_is_present=>0);
+    my $sam_sort_rv = Genome::Sys->shellcmd(cmd=>$sam_sort_cmd, input_files=>[$self->file_name], output_files=>[$real_output_file.".bam"], skip_if_output_is_present=>0);
     if ($sam_sort_rv != 1) {
         $self->error_message("Bam sort error.  Return value $sam_sort_rv");
         return;

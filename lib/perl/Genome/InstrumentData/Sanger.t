@@ -63,7 +63,7 @@ is($path, $disk_allocation->absolute_path, 'full path from allocation') or die;
 
 # touch scf to see if it gets replaced
 my $scf = $path.'/'.$trace_name.'.gz';
-my $scf_fh = Genome::Utility::FileSystem->open_file_for_writing($scf);
+my $scf_fh = Genome::Sys->open_file_for_writing($scf);
 ok($scf_fh, "opened $trace_name fh") or die;
 $scf_fh->print("STUFF\n");
 $scf_fh->close;

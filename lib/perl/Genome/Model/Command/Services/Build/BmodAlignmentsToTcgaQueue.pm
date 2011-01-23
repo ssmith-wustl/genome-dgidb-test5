@@ -81,7 +81,7 @@ sub _bmod_align_reads_instances_for_build {
         my $lsf_job_id = $align_reads_instance->current->dispatch_identifier;
         my $cmd = "bmod -q tcga -m blade64 $lsf_job_id";
         #print "$cmd\n"; next;
-        my $rv = eval{ Genome::Utility::FileSystem->shellcmd(cmd => $cmd); };
+        my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
     }
 
     return 1;

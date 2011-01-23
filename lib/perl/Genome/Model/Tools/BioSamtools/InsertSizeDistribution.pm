@@ -21,7 +21,7 @@ class Genome::Model::Tools::BioSamtools::InsertSizeDistribution {
 
 sub execute {
     my $self = shift;
-    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+    my $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
     my $refcov_bam  = Genome::RefCov::Bam->new(bam_file => $self->bam_file );
     unless ($refcov_bam) {
         die('Failed to load bam file '. $self->bam_file);

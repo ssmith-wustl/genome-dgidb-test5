@@ -64,7 +64,7 @@ sub execute {
     }
 
     unlink $self->output_file;
-    my $out_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+    my $out_fh = Genome::Sys->open_file_for_writing($self->output_file);
 
     my $seek_positions = $self->seek_pos_from_contigs_file($self->contigs_bases_file, 'fasta');
     #returns contig number, 1.3 (from name like Contig1.3) and fh seek position .. hash of array
@@ -138,7 +138,7 @@ sub execute {
 
 sub _get_seq_obj {
     my ($self, $seek_pos) = @_;
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->contigs_bases_file);
+    my $fh = Genome::Sys->open_file_for_reading($self->contigs_bases_file);
     $fh->seek($seek_pos, 0);
     my $io = Bio::SeqIO->new(-format => 'fasta', -fh => $fh);
     my $seq = $io->next_seq;
@@ -165,7 +165,7 @@ sub _load_gap_sizes {
     my $self = shift;
 
     my %gap_sizes;
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->gap_file);
+    my $fh = Genome::Sys->open_file_for_reading($self->gap_file);
     while (my $line = $fh->getline) {
 	next if $line =~ /^\s+$/;
 	my ($name, $size) = $line =~ /(Contig\S+)\s+(\d+)/;

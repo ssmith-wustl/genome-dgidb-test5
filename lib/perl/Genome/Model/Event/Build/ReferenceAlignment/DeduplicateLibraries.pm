@@ -89,7 +89,7 @@ sub create_bam_md5 {
 
     $self->status_message("Creating md5 file for the whole rmdup BAM file...");
 
-    my $md5_rv  = Genome::Utility::FileSystem->shellcmd(
+    my $md5_rv  = Genome::Sys->shellcmd(
         cmd                        => $cmd, 
         input_files                => [$bam_merged_output_file],
         #output_files               => [$md5_file],

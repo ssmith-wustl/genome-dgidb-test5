@@ -81,7 +81,7 @@ sub execute {
             die('Failed to provide either output_file or output_directory!');
         }
         unless (-d $output_directory) {
-            unless (Genome::Utility::FileSystem->create_directory($output_directory)) {
+            unless (Genome::Sys->create_directory($output_directory)) {
                 die('Failed to create output directory: '. $output_directory);
             }
         }
@@ -119,7 +119,7 @@ sub execute {
     unless ($self->output_file) {
         $self->output_file($resolved_output_file);
     }
-    my $out_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+    my $out_fh = Genome::Sys->open_file_for_writing($self->output_file);
 
     my $refcov_bam  = Genome::RefCov::Bam->create(bam_file => $bam_file );
     unless ($refcov_bam) {

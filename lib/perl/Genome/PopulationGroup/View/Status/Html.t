@@ -30,7 +30,7 @@ SKIP: {
     my @diff =
         grep { $_ !~ /generated-at/ }
         grep { /\w/ }
-        Genome::Utility::FileSystem->diff_file_vs_text(__FILE__ . '.expected',$html);
+        Genome::Sys->diff_file_vs_text(__FILE__ . '.expected',$html);
     
     is("@diff","","HTML has no differences from expected value");
 }

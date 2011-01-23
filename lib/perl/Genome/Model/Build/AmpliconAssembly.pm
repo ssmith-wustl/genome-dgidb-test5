@@ -97,7 +97,7 @@ sub link_instrument_data {
 
     my $chromat_dir = $self->chromat_dir;
     my $instrument_data_dir = $instrument_data->resolve_full_path;
-    my $dh = Genome::Utility::FileSystem->open_directory($instrument_data_dir)
+    my $dh = Genome::Sys->open_directory($instrument_data_dir)
         or return;
 
     my $cnt = 0;
@@ -108,7 +108,7 @@ sub link_instrument_data {
         my $link = sprintf('%s/%s', $chromat_dir, $trace);
         next if -e $link; # link points to a target that exists
         unlink $link if -l $link; # remove - link exists, but points to something that does not exist
-        Genome::Utility::FileSystem->create_symlink($target, $link)
+        Genome::Sys->create_symlink($target, $link)
             or return;
     }
 
