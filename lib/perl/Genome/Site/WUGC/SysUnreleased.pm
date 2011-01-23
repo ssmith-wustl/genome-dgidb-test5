@@ -927,19 +927,6 @@ sub exit_cleanup {
 }
 
 
-#< Inc Dir, Modules, Classes, etc >#
-sub get_inc_directory_for_class {
-    my $class = shift;
-
-    Carp::confess('No class given to get INC directory') unless $class;
-    
-    my $module = Genome::Utility::Text::class_to_module($class);
-    my $directory = $INC{$module};
-    $directory =~ s/$module//;
-
-    return $directory;
-}
-
 sub get_classes_in_subdirectory {
     my ($subdirectory) = @_;
 
