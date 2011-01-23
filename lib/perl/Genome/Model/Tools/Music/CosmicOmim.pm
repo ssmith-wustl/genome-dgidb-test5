@@ -22,15 +22,17 @@ class Genome::Model::Tools::Music::CosmicOmim{
     has_optional=> [
        omimaa_dir => {
            is => 'Path',
+           default => Genome::Sys->dbpath('cosmic','lastest'), 
            doc => 'omim amino acid mutation database folder',
-           default => ''.($ENV{GC_GMT_MUSIC_DBFILES} || '/usr/local/share/genome/music/dbfiles/').'OMIM/',
        },
        cosmic_dir => {
            is => 'Path',
+           default => Genome::Sys->dbpath('omim','lastest'), 
            doc => 'cosmic amino acid mutation database folder',
-           default => ''.($ENV{GC_GMT_MUSIC_DBFILES} || '/usr/local/share/genome/music/dbfiles/').'cosmic/',
        },
        verbose => {
+           # TODO: you probably want Boolean.  The cmdline standard is --no-verbose to turn it off (for free with Boolean)
+           # is => 'Boolean',
            is => 'Path',
            doc => 'turn on to display larger working output, default on',
            default => '1',
