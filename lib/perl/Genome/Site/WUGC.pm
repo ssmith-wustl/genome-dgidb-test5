@@ -2,7 +2,7 @@ package Genome::Site::WUGC;
 use strict;
 use warnings;
 
-use Genome::Site::WUGC::SysDeprecated;  # extensions to Genome::Sys
+use Genome::Site::WUGC::SysUnreleased;  # extensions to Genome::Sys
 use Test::MockObject;                   # TODO: get things which use this to do so explicitly
 
 # configuration for internal WUGC network software & LIMS 
