@@ -276,7 +276,8 @@ sub _get_xsl_file_for_type {
         "Can't get xsl file for base Genome::Report::Genertor class.  Get from subclass."
     ) if $module eq __PACKAGE__; 
     
-    my $inc_dir = Genome::Sys::get_inc_directory_for_class($module);
+    my $genome_dir = Genome->get_base_directory_name();
+    my $inc_dir = substr($genome_dir, 0, -7);
     $module =~ s#::#/#g;
 
     return sprintf(
