@@ -5,8 +5,8 @@ use warnings;
 
 use Parse::RecDescent qw/RD_ERRORS RD_WARN RD_TRACE/;
 use Data::Dumper;
-use Test::More tests => 25;
-#use Test::More skip_all => 'test in development';
+#use Test::More tests => 25;
+use Test::More skip_all => 'test in development';
 use above 'Genome';
 
 #Parsing tests

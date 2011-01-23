@@ -2,7 +2,11 @@ package Genome::Site::WUGC;
 use strict;
 use warnings;
 
-use Genome::Site::WUGC::SysDeprecated;  # extensions to Genome::Sys
+use Genome::Sys;
+use Genome::Site::WUGC::SysUnreleased;  # extensions to Genome::Sys
+
+$ENV{GENOME_DB} ||= '/gsc/scripts/opt/genome/db';
+
 use Test::MockObject;                   # TODO: get things which use this to do so explicitly
 
 # configuration for internal WUGC network software & LIMS 
@@ -26,7 +30,6 @@ use Bio::SeqIO;
 use Bio::DB::Fasta;
 use FASTAParse;
 
-use Genome::Site::WUGC::Environment;
 # this callback will load the GSCApp module, and initialize the app to work with GSC modules
 my $initialized = ''; 
 our $checks = 0;
