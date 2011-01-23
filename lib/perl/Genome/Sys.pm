@@ -24,12 +24,13 @@ sub swpath {
 sub _find_in_path {
     my ($class, $base_dirs, $subdir) = @_;
     my @base_dirs = split(':',$base_dirs);
-    my @dirs = map {
+    my @dirs =
+        map { -l $_ ? readlink($_) : ($_) }
+        map {
             my $path = join("/",$_,$subdir);
             (-e $path ? ($path) : ())
         }
         @base_dirs;
-    return unless @dirs;
     return $dirs[0];
 }
 
