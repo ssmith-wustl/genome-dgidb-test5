@@ -34,6 +34,8 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
+
+    $DB::single=1;
     my $command = $self->command;
     my $r_library = __FILE__ . "." . $self->library;
     
