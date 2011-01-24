@@ -4,9 +4,7 @@ use warnings;
 use above 'Genome';
 use Test::More tests => 14;
 
-warn "stop using Genome::Site::WUGC::SysUnreleased";
 use Genome::Sys;
-use Genome::Site::WUGC::SysUnreleased;
 
 sub mdir($) {
     system "mkdir -p $_[0]";
