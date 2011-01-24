@@ -528,7 +528,7 @@ sub alignment_objects {
     
     for my $instr (@segmentable_data) {
         my @segments = $instr->get_segments();
-        if (@segments > 1 && $self->read_aligner_name != ('imported')) {
+        if (@segments > 1 && $self->read_aligner_name ne 'imported') {
             for my $seg (@segments) {
                 push @instrument_data_output, {object=>$instr, segment=>$seg};
             }
