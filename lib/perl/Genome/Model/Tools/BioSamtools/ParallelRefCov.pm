@@ -48,7 +48,7 @@ sub pre_execute {
     chdir $self->output_directory;
     my $sub_bed_basename = $bed_basename .'_SUB_REGIONS';
 
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
                                           cmd => "split -a 4 -d -l $regions $bed_file $sub_bed_basename",
                                           input_files => [$bed_file],
                                       );
@@ -67,7 +67,7 @@ sub post_execute {
         die($self->error_message);
     }
 
-    Genome::Utility::FileSystem->cat(
+    Genome::Sys->cat(
         input_files => $self->stats_file,
         output_file => $self->_stats_file,
     );

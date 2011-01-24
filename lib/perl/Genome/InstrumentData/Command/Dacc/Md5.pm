@@ -226,7 +226,7 @@ sub _load_confirmed_md5 {
 sub _load_md5 {
     my ($self, $md5_file) = @_;
 
-    my $md5_fh = eval{ Genome::Utility::FileSystem->open_file_for_reading($md5_file); };
+    my $md5_fh = eval{ Genome::Sys->open_file_for_reading($md5_file); };
     if ( not defined $md5_fh ) {
         $self->error_message("Cannot open md5 file ($md5_file): $@");
         return;
@@ -262,7 +262,7 @@ sub _generate {
         my $file_name = File::Basename::basename($file);
         my $cmd = "md5sum $file_name >> $md5_file";
         $self->status_message("MD5 command: $cmd");
-        my $rv = eval{ Genome::Utility::FileSystem->shellcmd(cmd => $cmd); };
+        my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
         if ( not $rv ) {
             $self->error_message("Failed to run md5sum on $file: $@");
             return;

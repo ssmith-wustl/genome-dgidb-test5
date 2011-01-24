@@ -39,12 +39,12 @@ sub create {
     my $self = $class->SUPER::create(@_);
     return unless $self;
 
-    unless (Genome::Utility::FileSystem->validate_file_for_reading($self->solexa_fastq_file)) {
+    unless (Genome::Sys->validate_file_for_reading($self->solexa_fastq_file)) {
         $self->error_message('Failed to validate solexa fastq file for reading:  '. $self->solexa_fastq_file);
         return;
     }
 
-    unless (Genome::Utility::FileSystem->validate_file_for_writing($self->sanger_fastq_file)) {
+    unless (Genome::Sys->validate_file_for_writing($self->sanger_fastq_file)) {
         $self->error_message('Failed to validate sanger fastq file for writing:  '. $self->sanger_fastq_file);
         return;
     }
@@ -57,7 +57,7 @@ sub execute {
     my $self = shift;
 
     my $cmd = $self->maq_path .' sol2sanger '. $self->solexa_fastq_file .' '. $self->sanger_fastq_file;
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
                                           cmd => $cmd,
                                           input_files => [$self->solexa_fastq_file],
                                           output_files => [$self->sanger_fastq_file],

@@ -5,46 +5,8 @@ use warnings;
 
 our $VERSION = $Genome::VERSION;
 
-BEGIN {
-    if (my $config = $ENV{GENOME_CONFIG}) {
-        # call the specified configuration module;
-        eval "use Genome::Config::$config";
-        die $@ if $@;
-    }
-    else {
-        # look for a config module matching all or part of the hostname 
-        use Sys::Hostname;
-        my $hostname = Sys::Hostname::hostname();
-        my @hwords = reverse split('\.',$hostname);
-        while (@hwords) {
-            my $pkg = 'Genome::Config::' . join("::",@hwords);
-            local $SIG{__DIE__};
-            local $SIG{__WARN__};
-            eval "use $pkg";
-            if ($@) {
-                pop @hwords;
-                next;
-            }
-            else {
-                last;
-            }
-        }
-    }
-}
-
 use UR;
 use Sys::Hostname;
-
-# This module potentially conflicts to the perl-supplied Config.pm if you've
-# set up your @INC or -I options incorrectly.  For example, you used -I /path/to/modules/Genome/
-# instead of -I /path/to/modules/.  Many modules use the real Config.pm to get info and
-# you'll get wierd failures if it loads this module instead of the right one.
-{
-    my @caller_info = caller(0);
-    if ($caller_info[3] eq '(eval)' and $caller_info[6] eq 'Config.pm') {
-        die "package Genome::Config was loaded from a 'use Config' statement, and is not want you wanted.  Are your \@INC and -I options correct?";
-    }
-}
 
 my $arch_os;
 sub arch_os {

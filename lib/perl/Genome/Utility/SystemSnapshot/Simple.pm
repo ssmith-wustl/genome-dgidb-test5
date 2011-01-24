@@ -34,7 +34,7 @@ sub read_net {
   # Read network data for each interface and add it to our
   # data structure.
   my $netfh = eval {
-    Genome::Utility::FileSystem->open_file_for_reading($self->{net});
+    Genome::Sys->open_file_for_reading($self->{net});
   };
   unless($netfh){
     $self->status_message("Could not open file $self->{net} for reading.");
@@ -83,7 +83,7 @@ sub read_cpu {
 
   # Read cpu data and add it to our data structure.
   # FIXME: should not be fatal to build
-  my $cpufh = Genome::Utility::FileSystem->open_file_for_reading($self->{cpu});
+  my $cpufh = Genome::Sys->open_file_for_reading($self->{cpu});
   unless($cpufh){
     $self->status_message("Could not open file $self->{cpu} for reading.");
     return;

@@ -144,7 +144,7 @@ sub _load_gap_sizes {
     my $self = shift;
 
     my %gap_sizes;
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->gap_file);
+    my $fh = Genome::Sys->open_file_for_reading($self->gap_file);
     while (my $line = $fh->getline) {
 	next if $line =~ /^\s+$/;
 	my ($name, $size) = $line =~ /(Contig\S+)\s+(\d+)/;
@@ -171,7 +171,7 @@ sub _get_contig_names {
 
 sub _get_seq_obj {
     my ($self, $seek_pos) = @_;
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->contigs_bases_file);
+    my $fh = Genome::Sys->open_file_for_reading($self->contigs_bases_file);
     $fh->seek($seek_pos, 0);
     my $io = Bio::SeqIO->new(-format => 'fasta', -fh => $fh);
     my $seq = $io->next_seq;

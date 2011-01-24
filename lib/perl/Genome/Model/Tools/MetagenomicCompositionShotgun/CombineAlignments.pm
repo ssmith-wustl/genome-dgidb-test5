@@ -213,7 +213,7 @@ sub execute {
     my $working_directory= $self->working_directory."/alignments_filtered/";
     my $report_directory= $self->working_directory."/reports/";
     unless (-e $report_directory) {
-    	Genome::Utility::FileSystem->create_directory($report_directory);
+    	Genome::Sys->create_directory($report_directory);
     }
 
     $self->read_count_output_file("$report_directory/reads_per_contig.txt") if (!defined($self->read_count_output_file));
@@ -233,7 +233,7 @@ sub execute {
 
     my @expected_output_files = ($warn_file,$self->read_count_output_file,$self->genus_output_file,$self->phyla_output_file,$bam_combined_output_file, $self->viral_family_output_file, $self->viral_subfamily_output_file, $self->viral_genus_output_file, $self->viral_species_output_file, $self->sam_low_priority_output_file, $self->sam_unaligned_output_file);
     
-    my $rv_check = Genome::Utility::FileSystem->are_files_ok(input_files=>\@expected_output_files);
+    my $rv_check = Genome::Sys->are_files_ok(input_files=>\@expected_output_files);
     if ($rv_check) {
         $self->bam_combined_output_file($bam_combined_output_file);
     	$self->status_message("Expected output files exist.  Skipping processing.");
@@ -241,10 +241,10 @@ sub execute {
     	return 1;
     }
 
-    my $sam_i=Genome::Utility::FileSystem->open_file_for_reading($self->sam_input_file);
-    my $tax=Genome::Utility::FileSystem->open_file_for_reading($self->taxonomy_file);
-    my $v_tax = Genome::Utility::FileSystem->open_file_for_reading($self->viral_taxonomy_file);
-    my $sam_header_i = Genome::Utility::FileSystem->open_file_for_reading($self->sam_header_file);
+    my $sam_i=Genome::Sys->open_file_for_reading($self->sam_input_file);
+    my $tax=Genome::Sys->open_file_for_reading($self->taxonomy_file);
+    my $v_tax = Genome::Sys->open_file_for_reading($self->viral_taxonomy_file);
+    my $sam_header_i = Genome::Sys->open_file_for_reading($self->sam_header_file);
 
     if ( !defined($sam_i) || !defined($tax) || !defined($v_tax) ) {
         $self->error_message("Failed to open a required file for reading.");
@@ -252,18 +252,18 @@ sub execute {
     }
 
     #Output files
-    my $sam_o=Genome::Utility::FileSystem->open_file_for_writing($self->sam_combined_output_file);
-    my $sam_lp_o = Genome::Utility::FileSystem->open_file_for_writing($self->sam_low_priority_output_file);
-    my $sam_u_o = Genome::Utility::FileSystem->open_file_for_writing($self->sam_unaligned_output_file);
-    my $sam_warn=Genome::Utility::FileSystem->open_file_for_writing($warn_file);
-    my $read_cnt_o=Genome::Utility::FileSystem->open_file_for_writing($self->read_count_output_file);
-    my $species_o=Genome::Utility::FileSystem->open_file_for_writing($self->species_output_file);
-    my $phyla_o=Genome::Utility::FileSystem->open_file_for_writing($self->phyla_output_file);
-    my $genus_o=Genome::Utility::FileSystem->open_file_for_writing($self->genus_output_file);
-    my $viral_family_o=Genome::Utility::FileSystem->open_file_for_writing($self->viral_family_output_file);
-    my $viral_subfamily_o=Genome::Utility::FileSystem->open_file_for_writing($self->viral_subfamily_output_file);
-    my $viral_genus_o=Genome::Utility::FileSystem->open_file_for_writing($self->viral_genus_output_file);
-    my $viral_species_o=Genome::Utility::FileSystem->open_file_for_writing($self->viral_species_output_file);
+    my $sam_o=Genome::Sys->open_file_for_writing($self->sam_combined_output_file);
+    my $sam_lp_o = Genome::Sys->open_file_for_writing($self->sam_low_priority_output_file);
+    my $sam_u_o = Genome::Sys->open_file_for_writing($self->sam_unaligned_output_file);
+    my $sam_warn=Genome::Sys->open_file_for_writing($warn_file);
+    my $read_cnt_o=Genome::Sys->open_file_for_writing($self->read_count_output_file);
+    my $species_o=Genome::Sys->open_file_for_writing($self->species_output_file);
+    my $phyla_o=Genome::Sys->open_file_for_writing($self->phyla_output_file);
+    my $genus_o=Genome::Sys->open_file_for_writing($self->genus_output_file);
+    my $viral_family_o=Genome::Sys->open_file_for_writing($self->viral_family_output_file);
+    my $viral_subfamily_o=Genome::Sys->open_file_for_writing($self->viral_subfamily_output_file);
+    my $viral_genus_o=Genome::Sys->open_file_for_writing($self->viral_genus_output_file);
+    my $viral_species_o=Genome::Sys->open_file_for_writing($self->viral_species_output_file);
     if (!defined($sam_o) || !defined($read_cnt_o) || !defined($phyla_o) || !defined($genus_o) || !defined($species_o) || !defined($viral_family_o) || !defined($viral_subfamily_o) || !defined($viral_genus_o) || !defined($viral_species_o) ){
         $self->error_message("Failed to open a taxonomy report file for writing");
     }
@@ -463,7 +463,7 @@ sub execute {
     $self->status_message("Converting from sam to bam file: ".$self->sam_combined_output_file." to $bam_combined_output_file_unsorted");
     my $picard_path = "/gsc/scripts/lib/java/samtools/picard-tools-1.07/";
     my $cmd_convert = "java -XX:MaxPermSize=512m -Xmx4g -cp $picard_path/SamFormatConverter.jar net.sf.picard.sam.SamFormatConverter VALIDATION_STRINGENCY=SILENT I=".$self->sam_combined_output_file." O=$bam_combined_output_file_unsorted";  
-    my $rv_convert = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd_convert);											 
+    my $rv_convert = Genome::Sys->shellcmd(cmd=>$cmd_convert);											 
 
     if ($rv_convert != 1) {
         $self->error_message("<<<Failed CombineAlignments on sam to bam conversion.  Return value: $rv_convert");
@@ -578,7 +578,7 @@ sub execute {
     }
     $viral_subfamily_o->close;
 
-    Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_output_files);
+    Genome::Sys->mark_files_ok(input_files=>\@expected_output_files);
 
     $now = UR::Time->now;
     $self->status_message("<<<Ending CombineAlignments execute() at ".UR::Time->now); 

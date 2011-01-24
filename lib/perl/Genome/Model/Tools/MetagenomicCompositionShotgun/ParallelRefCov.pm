@@ -44,7 +44,7 @@ sub pre_execute {
  
     #create a temp dir in the working directory
     my $tmp_dir = File::Temp::tempdir( DIR => $self->working_directory, CLEANUP => 1 );
-    Genome::Utility::FileSystem->create_directory($self->working_directory."/reports");
+    Genome::Sys->create_directory($self->working_directory."/reports");
   
     my $number_of_lines;
     my $split_val;
@@ -80,7 +80,7 @@ sub pre_execute {
     my $prefix = "refcov-";
     my $cmd_split = "split -l ".$number_of_lines." ".$self->regions_file." $prefix"; 
     
-    my $rv_split = Genome::Utility::FileSystem->shellcmd(
+    my $rv_split = Genome::Sys->shellcmd(
         cmd => $cmd_split,
         input_files => [$self->regions_file],
     );
@@ -105,7 +105,7 @@ sub post_execute {
     my $merged_refcov_file = $self->_final_file;
     $self->report_file($merged_refcov_file);
 
-    my $rv_cat = Genome::Utility::FileSystem->cat(input_files=>\@ref_cov_results,output_file=>$merged_refcov_file);
+    my $rv_cat = Genome::Sys->cat(input_files=>\@ref_cov_results,output_file=>$merged_refcov_file);
                 if ($rv_cat != 1) {
                     $self->error_message("<<<Failed to merge ref cov files on cat.  Return value: $rv_cat");
                 }

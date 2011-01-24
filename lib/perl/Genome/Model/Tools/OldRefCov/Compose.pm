@@ -48,7 +48,7 @@ sub compose_two_to_one {
     my $second_directory = shift;
     my $composed_directory = shift;
 
-    unless (Genome::Utility::FileSystem->create_directory($composed_directory)) {
+    unless (Genome::Sys->create_directory($composed_directory)) {
         $self->error_message('Failed to create directory '. $composed_directory);
         die($self->error_message);
     }
@@ -61,7 +61,7 @@ sub compose_two_to_one {
     my $second_frozen = $second_directory .'/FROZEN';
     my $composed_frozen = $composed_directory .'/FROZEN';
 
-    unless (Genome::Utility::FileSystem->create_directory($composed_frozen)) {
+    unless (Genome::Sys->create_directory($composed_frozen)) {
         $self->error_message('Failed to create composed frozen directory '. $composed_frozen .":  $!");
         die($self->error_message);
     }
@@ -72,7 +72,7 @@ sub compose_two_to_one {
             $transcripts{$fields{0}} = 1;
         }
     }
-    my $composed_stats_fh = Genome::Utility::FileSystem->open_file_for_writing($composed_stats);
+    my $composed_stats_fh = Genome::Sys->open_file_for_writing($composed_stats);
     for my $transcript (keys %transcripts) {
         my $first_transcript = $first_frozen .'/__'. $transcript .'.rc';
         my $second_transcript = $second_frozen .'/__'. $transcript .'.rc';

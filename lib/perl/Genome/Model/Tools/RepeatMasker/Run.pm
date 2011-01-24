@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Tools::RepeatMasker::Run {
-    is => ['Genome::Model::Tools::RepeatMasker','Genome::Utility::FileSystem'],
+    is => ['Genome::Model::Tools::RepeatMasker','Genome::Sys'],
 };
 
 sub execute {
@@ -21,7 +21,7 @@ sub execute {
     }
     $options .= ' -dir '. $self->output_directory;
     my $cmd = 'RepeatMasker '. $options .' '. $self->fasta_file;
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => $cmd,
     );
     return 1;

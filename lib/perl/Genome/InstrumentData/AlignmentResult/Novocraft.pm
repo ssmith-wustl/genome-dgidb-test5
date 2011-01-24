@@ -62,7 +62,7 @@ sub _run_aligner {
     $DB::single = 1;
     
     # Execute alignment command
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd                         => $cmdline,
         input_files                 => [@input_pathnames],
         output_files                => [$novocraft_output],

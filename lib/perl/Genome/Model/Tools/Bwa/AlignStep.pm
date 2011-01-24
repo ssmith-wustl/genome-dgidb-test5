@@ -69,7 +69,7 @@ sub execute {
     my $hostname = hostname;
     my $log_dir = $self->alignments_dir.'/logs/';
     unless (-e $log_dir ) {
-	unless( Genome::Utility::FileSystem->create_directory($log_dir) ) {
+	unless( Genome::Sys->create_directory($log_dir) ) {
             $self->error_message("Failed to create log directory for align process: $log_dir");
             return;
 	}
@@ -80,7 +80,7 @@ sub execute {
    
    
   my $log_file = $log_dir.'/parallel_bwa_aln_'.$pid.'.log';
-    my $log_fh = Genome::Utility::FileSystem->open_file_for_writing($log_file);
+    my $log_fh = Genome::Sys->open_file_for_writing($log_file);
     unless($log_fh) {
        $self->error_message("Failed to open output filehandle for: " .  $log_file );
        die "Could not open file ".$log_file." for writing.";
@@ -101,7 +101,7 @@ sub execute {
 		
         # run the aligner
     print $log_fh "bwa aln cmd line is $cmdline.\n";
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
          cmd          => $cmdline,
         input_files  => [ $self->reference_fasta_path, $self->query_input ],
         output_files => [ $sai_file, $output_file ],

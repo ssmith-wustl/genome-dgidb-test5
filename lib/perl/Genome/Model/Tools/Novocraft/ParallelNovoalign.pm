@@ -151,14 +151,14 @@ sub post_execute {
     #The input fastq files better have been uniquely named... otherwise this could stomp on existing files
     $self->output_file($self->_base_output_directory .'/'. $self->_output_basename .'.'. lc($self->output_format));
     if ($self->output_format eq 'SAM') {
-        my $output_file_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+        my $output_file_fh = Genome::Sys->open_file_for_writing($self->output_file);
         unless ($output_file_fh) {
             die('Failed to open file for writing '. $self->output_file);
         }
 
         my $header = 0;
         for my $sub_output_file (@output_files) {
-            my $sub_output_file_fh = Genome::Utility::FileSystem->open_file_for_reading($sub_output_file);
+            my $sub_output_file_fh = Genome::Sys->open_file_for_reading($sub_output_file);
             unless ($sub_output_file_fh) {
                 die('Failed to open sub output file for reading '. $sub_output_file_fh);
             }
@@ -176,7 +176,7 @@ sub post_execute {
     #LOG
     my @log_files = @{$self->log_file};
     $self->log_file($self->_base_output_directory .'/'. $self->_output_basename .'.aligner_output');
-    Genome::Utility::FileSystem->cat(
+    Genome::Sys->cat(
         input_files => \@log_files,
         output_file => $self->log_file,
     );

@@ -196,7 +196,7 @@ sub _save {
     my ($self, $report) = @_;
 
     my $dir = $self->save;
-    unless ( Genome::Utility::FileSystem->validate_existing_directory($dir) ) {
+    unless ( Genome::Sys->validate_existing_directory($dir) ) {
         $self->error_message("Can't save report because of problem with directory ($dir). See above error.");
         return;
     }
@@ -226,7 +226,7 @@ sub _save_datasets {
     my %datasets_files;
     for my $name ( keys %$datasets_svs ) {
         my $file = sprintf('%s/%s.%s', $dir, $name, $self->_sv_ext);
-        my $fh = Genome::Utility::FileSystem->open_file_for_writing($file)
+        my $fh = Genome::Sys->open_file_for_writing($file)
             or return;
         $fh->print($datasets_svs->{$name});
         $fh->close;

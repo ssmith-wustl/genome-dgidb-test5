@@ -52,7 +52,7 @@ sub execute {
                       $self->alignment_file,
                       $self->aligner_output_file);
 
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd          => $cmd,
         input_files  => [ $self->fasta_file, @ref_fasta_files ],
         output_files => [ $self->alignment_file, $self->aligner_output_file ],

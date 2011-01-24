@@ -86,8 +86,8 @@ sub _detect_variants {
         if ($self->detect_snvs && $self->detect_indels) {
             $self->status_message("Snp and indel params are different. Executing VarScan twice: once each for snps and indels with their respective parameters");
         }
-        my ($temp_fh, $temp_name) = Genome::Utility::FileSystem->create_temp_file();
-        my ($filtered_temp_fh, $filtered_temp_name) = Genome::Utility::FileSystem->create_filtered_temp_file();
+        my ($temp_fh, $temp_name) = Genome::Sys->create_temp_file();
+        my ($filtered_temp_fh, $filtered_temp_name) = Genome::Sys->create_filtered_temp_file();
 
         if ($self->detect_snvs) {
             $result = $self->_run_varscan($output_snp, $output_snp_filtered, $temp_name, $filtered_temp_name, $snv_params);
@@ -138,7 +138,7 @@ sub generate_metrics {
         my $snp_count      = 0;
         
         my $snv_output = $self->_snv_staging_output;
-        my $snv_fh = Genome::Utility::FileSystem->open_file_for_reading($snv_output);
+        my $snv_fh = Genome::Sys->open_file_for_reading($snv_output);
         while (my $row = $snv_fh->getline) {
             $snp_count++;
         }
@@ -149,7 +149,7 @@ sub generate_metrics {
         my $indel_count    = 0;
         
         my $indel_output = $self->_indel_staging_output;
-        my $indel_fh = Genome::Utility::FileSystem->open_file_for_reading($indel_output);
+        my $indel_fh = Genome::Sys->open_file_for_reading($indel_output);
         while (my $row = $indel_fh->getline) {
             $indel_count++;
         }

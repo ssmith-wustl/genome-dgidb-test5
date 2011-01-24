@@ -69,7 +69,7 @@ sub execute {
         $self->status_message ("Updating $clone_name ..");
 
 	unless (-d "$seqmgr_link/edit_dir" ) {
-	    Genome::Utility::FileSystem->create_directory("$seqmgr_link/edit_dir");
+	    Genome::Sys->create_directory("$seqmgr_link/edit_dir");
 	}
         foreach my $ace_file (glob('edit_dir/*'))
         {
@@ -77,7 +77,7 @@ sub execute {
         }
 
 	unless (-d "$seqmgr_link/phd_dir" ) {
-	    Genome::Utility::FileSystem->create_directory("$seqmgr_link/phd_dir");
+	    Genome::Sys->create_directory("$seqmgr_link/phd_dir");
 	}
         foreach my $phd_file (glob('phd_dir/*'))
         {        
@@ -85,7 +85,7 @@ sub execute {
         }
 
 	unless ( -d "$seqmgr_link/chromat_dir" ) {
-	    Genome::Utility::FileSystem->create_directory("$seqmgr_link/chromat_dir");
+	    Genome::Sys->create_directory("$seqmgr_link/chromat_dir");
 	}
         foreach my $chromat_file (glob('chromat_dir/*'))
         {
@@ -93,7 +93,7 @@ sub execute {
         }
 
 	unless ( -d "$seqmgr_link/phdball_dir" ) {
-	    Genome::Utility::FileSystem->create_directory("$seqmgr_link/phdball_dir");
+	    Genome::Sys->create_directory("$seqmgr_link/phdball_dir");
 	}
         foreach my $phdball_file (glob('phdball_dir/*'))
         {
@@ -101,7 +101,7 @@ sub execute {
         }
 
 	unless ( -d "$seqmgr_link/sff_dir" ) {
-	    Genome::Utility::FileSystem->create_directory("$seqmgr_link/sff_dir");
+	    Genome::Sys->create_directory("$seqmgr_link/sff_dir");
 	}
         foreach my $sff_file (glob('sff_dir/*'))
         {

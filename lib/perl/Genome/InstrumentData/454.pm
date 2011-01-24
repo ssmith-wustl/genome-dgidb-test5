@@ -118,7 +118,7 @@ sub dump_sanger_fastq_files {
         die $self->error_message;
     }
     
-    my $dump_directory = delete $params{'directory'} || Genome::Utility::FileSystem->base_temp_directory();
+    my $dump_directory = delete $params{'directory'} || Genome::Sys->base_temp_directory();
     
     my $output_file = sprintf("%s/%s-output.fastq", $dump_directory, $self->id);
     
@@ -183,7 +183,7 @@ sub _run_sffinfo {
 
     # File
     my $directory = delete $params{'directory'} 
-        || Genome::Utility::FileSystem->base_temp_directory();
+        || Genome::Sys->base_temp_directory();
     my $file = sprintf("%s/%s.%s", $directory, $self->id, $type);
     unlink $file if -e $file;
     
@@ -256,7 +256,7 @@ sub sff_file {
     # Gotta dump...lock, creat allocation (if needed), dump, unlock
     # lock
     my $lock_id = '/gsc/var/lock/inst_data_454/'.$self->id;
-    my $lock = Genome::Utility::FileSystem->lock_resource(
+    my $lock = Genome::Sys->lock_resource(
         resource_lock => $lock_id, 
         max_try => 1,
     );
@@ -295,7 +295,7 @@ sub sff_file {
     }
 
     # unlock
-    my $unlock = Genome::Utility::FileSystem->unlock_resource(
+    my $unlock = Genome::Sys->unlock_resource(
         resource_lock => $lock_id,
     );
     unless ( $unlock ) {

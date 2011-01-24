@@ -105,7 +105,7 @@ sub test_alignment {
     } 
 
     # clear out the temp scratch/staging paths since these normally would be auto cleaned up at completion
-    my $base_tempdir = Genome::Utility::FileSystem->base_temp_directory;
+    my $base_tempdir = Genome::Sys->base_temp_directory;
     for (glob($base_tempdir . "/*")) {
         File::Path::rmtree($_);
     }

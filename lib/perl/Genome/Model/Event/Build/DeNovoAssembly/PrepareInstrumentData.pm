@@ -34,7 +34,7 @@ sub _tempdir {
 
     unless ( $self->{_tempdir} ) {
         $self->{_tempdir} = File::Temp::tempdir(CLEANUP => 1 );
-        Genome::Utility::FileSystem->validate_existing_directory( $self->{_tempdir} )
+        Genome::Sys->validate_existing_directory( $self->{_tempdir} )
             or die;
     }
     
@@ -148,7 +148,7 @@ sub _update_metrics {
     }
 
     my  $fh = eval {
-        Genome::Utility::FileSystem->open_file_for_reading($metrics_file);
+        Genome::Sys->open_file_for_reading($metrics_file);
     };
     if ( not $fh ) {
         $self->error_message("Cannot open coverage metrics file ($metrics_file): $@");
@@ -277,13 +277,13 @@ sub _fastq_files_from_solexa {
     my $tempdir = $self->_tempdir;
     my $inst_data_tempdir = $tempdir.'/'.$inst_data->id;
     $self->status_message("Creating temp dir: $inst_data_tempdir");
-    Genome::Utility::FileSystem->create_directory($inst_data_tempdir)
+    Genome::Sys->create_directory($inst_data_tempdir)
         or die;
     $self->status_message("Temp dir OK");
 
     my $tar_cmd = "tar zxf $archive_path -C $inst_data_tempdir";
     $self->status_message("Running tar: $tar_cmd");
-    unless ( Genome::Utility::FileSystem->shellcmd(cmd => $tar_cmd) ) {
+    unless ( Genome::Sys->shellcmd(cmd => $tar_cmd) ) {
         $self->error_message("Can't extract archive file $archive_path with command '$tar_cmd'");
         return;
     }

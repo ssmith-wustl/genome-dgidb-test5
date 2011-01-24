@@ -30,7 +30,7 @@ sub pre_execute {
     require Cwd;
     my $cwd = Cwd::cwd();
     chdir $self->output_directory;
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
                                           cmd => "split -l $genes $genes_file GENES",
                                           input_files => [$genes_file],
                                       );

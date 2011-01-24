@@ -74,8 +74,8 @@ sub _detect_variants {
         if ($self->detect_snvs && $self->detect_indels) {
             $self->status_message("Snv and indel params are different. Executing Samtools twice: once each for snvs and indels with their respective parameters");
         }
-        my ($temp_fh, $temp_name) = Genome::Utility::FileSystem->create_temp_file();
-        my ($filtered_temp_fh, $filtered_temp_name) = Genome::Utility::FileSystem->create_temp_file();
+        my ($temp_fh, $temp_name) = Genome::Sys->create_temp_file();
+        my ($filtered_temp_fh, $filtered_temp_name) = Genome::Sys->create_temp_file();
 
         if ($self->detect_snvs) {
             $result = $self->_run_samtools($self->_snv_staging_output, $self->_filtered_snv_staging_output, $temp_name, $filtered_temp_name, $snv_params);
@@ -114,7 +114,7 @@ sub _run_samtools {
     
     my $snv_cmd = sprintf($samtools_cmd, '-v', $snv_output_file);
     
-    my $rv = Genome::Utility::FileSystem->shellcmd(
+    my $rv = Genome::Sys->shellcmd(
         cmd => $snv_cmd,
         input_files => [$bam_file, $ref_seq_file],
         output_files => [$snv_output_file],
@@ -138,7 +138,7 @@ sub _run_samtools {
     }
 
     my $indel_cmd = sprintf($samtools_cmd, '-i', $indel_output_file);
-    $rv = Genome::Utility::FileSystem->shellcmd(
+    $rv = Genome::Sys->shellcmd(
         cmd => $indel_cmd,
         input_files => [$bam_file, $ref_seq_file],
         output_files => [$indel_output_file],
@@ -196,7 +196,7 @@ sub _run_samtools {
         }
     }
     else {
-        Genome::Utility::FileSystem->write_file($filtered_indel_file);
+        Genome::Sys->write_file($filtered_indel_file);
     }
 
     if (-s $snv_output_file) {
@@ -211,7 +211,7 @@ sub _run_samtools {
         }
     }
     else {
-        Genome::Utility::FileSystem->write_file($filtered_snv_output_file);
+        Genome::Sys->write_file($filtered_snv_output_file);
     }
 
     $rv = $self->generate_genotype_detail_file($snv_output_file);
@@ -271,7 +271,7 @@ sub generate_metrics {
         my $snp_count_good = 0;
         
         my $snv_output = $self->_snv_staging_output;
-        my $snv_fh = Genome::Utility::FileSystem->open_file_for_reading($snv_output);
+        my $snv_fh = Genome::Sys->open_file_for_reading($snv_output);
         while (my $row = $snv_fh->getline) {
             $snp_count++;
             my @columns = split /\s+/, $row;
@@ -285,7 +285,7 @@ sub generate_metrics {
         my $indel_count    = 0;
         
         my $indel_output = $self->_indel_staging_output;
-        my $indel_fh = Genome::Utility::FileSystem->open_file_for_reading($indel_output);
+        my $indel_fh = Genome::Sys->open_file_for_reading($indel_output);
         while (my $row = $indel_fh->getline) {
             $indel_count++;
         }

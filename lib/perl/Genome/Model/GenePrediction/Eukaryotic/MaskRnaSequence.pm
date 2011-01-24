@@ -8,7 +8,7 @@ use Carp 'confess';
 use File::Temp;
 use File::Basename;
 use File::Spec;
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 
 class Genome::Model::GenePrediction::Eukaryotic::MaskRnaSequence {
     is => 'Command',
@@ -85,7 +85,7 @@ sub execute {
                 " and skip_if_no_rna_file flag is set to true. Assuming that no rna predictions were" .
                 " made and setting input fasta " . $self->fasta_file . " as masked output fasta!");
 
-            my $cp_rv = Genome::Utility::FileSystem->copy_file($self->fasta_file, $self->masked_fasta_file);
+            my $cp_rv = Genome::Sys->copy_file($self->fasta_file, $self->masked_fasta_file);
             unless (defined $cp_rv and $cp_rv) {
                 confess 'Could not copy input fasta ' . $self->fasta_file . ' to ' . $self->masked_fasta_file . "!";
             }

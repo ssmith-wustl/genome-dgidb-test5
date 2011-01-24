@@ -356,7 +356,7 @@ sub _add_result_observer { # to write metrics file
             unlink $metrics_file if -e $metrics_file;
             my $fh;
             eval{
-                $fh= Genome::Utility::FileSystem->open_file_for_writing($metrics_file);
+                $fh= Genome::Sys->open_file_for_writing($metrics_file);
             };
             unless ( $fh ) {
                 Carp::confess("Cannot open metrics file ($metrics_file) for writing: $@");

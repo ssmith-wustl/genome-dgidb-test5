@@ -14,7 +14,7 @@ BEGIN
 }
 
 my $fasta_file = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fasta-Deduplicator/rand60k_short.fna';
-my $deduplicated_file = Genome::Utility::FileSystem->create_temp_file_path("dedup.fna");
+my $deduplicated_file = Genome::Sys->create_temp_file_path("dedup.fna");
 my $deduplicator = Genome::Model::Tools::Fasta::Deduplicator->create(fasta_file => $fasta_file,
                                                                      deduplicated_file => $deduplicated_file);
 

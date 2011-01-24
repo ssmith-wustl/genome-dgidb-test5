@@ -17,8 +17,8 @@ BEGIN {
 my $test_input_dir  = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Somatic-UploadVariantValidation/';
 my $valid_variant_file    = $test_input_dir . 'valid_variants.in';
 my $invalid_variant_file    = $test_input_dir . 'invalid_variants.in';
-my $output_file = Genome::Utility::FileSystem->create_temp_file_path;
-my $invalid_output_file = Genome::Utility::FileSystem->create_temp_file_path;
+my $output_file = Genome::Sys->create_temp_file_path;
+my $invalid_output_file = Genome::Sys->create_temp_file_path;
 my $valid_validation_type = "Illumina";
 my $invalid_validation_type = "TACOS";
 my $apipe_somatic_test_model = 2853834494; # Bad to hardcode this, but we need a valid model somehow.

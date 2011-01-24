@@ -17,8 +17,8 @@ for my $file (qw/ GABJJ9O01.fasta.gz GABJJ9O01.fasta.qual.gz GABJJ9O02.fasta.gz 
 }
 
 #create temp directory
-my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
-Genome::Utility::FileSystem->create_directory( $temp_dir.'/edit_dir' );
+my $temp_dir = Genome::Sys->create_temp_directory();
+Genome::Sys->create_directory( $temp_dir.'/edit_dir' );
 
 #copy data files;
 for my $file (qw/ GABJJ9O01.fasta.gz GABJJ9O01.fasta.qual.gz GABJJ9O02.fasta.gz reads.placed /) {

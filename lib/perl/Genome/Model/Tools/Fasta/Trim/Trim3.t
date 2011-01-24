@@ -38,7 +38,7 @@ ok(
 );
 
 # Copy fasta
-Genome::Utility::FileSystem->copy_file($example_fasta, $fasta);
+Genome::Sys->copy_file($example_fasta, $fasta);
 ok(-s $fasta, 'Copied fasta');
 
 # Fails - no qual
@@ -52,7 +52,7 @@ ok(
 );
 
 # Copy qual
-Genome::Utility::FileSystem->copy_file($example_qual, $qual);
+Genome::Sys->copy_file($example_qual, $qual);
 ok(-s $qual, 'Copied qual');
 
 # Fail invalid params

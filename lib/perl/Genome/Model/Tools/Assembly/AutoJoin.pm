@@ -116,7 +116,7 @@ sub _gather_phd_data { #and _remove_duplicates
     if (-d $phdball_dir) {
 	my @files = glob("$phdball_dir/*");
 	#my $out_fh = IO::File->new("> $phdball_dir/autoJoinPhdBall") || die
-	my $out_fh = Genome::Utility::FileSystem->open_file_for_writing( $phdball_dir.'/autoJoinPhdBall' );
+	my $out_fh = Genome::Sys->open_file_for_writing( $phdball_dir.'/autoJoinPhdBall' );
 	my $reads = {};
 	foreach my $ball (@files) {
 	    my $fh = IO::File->new("< $ball") || die "Can not open file: $ball\n";

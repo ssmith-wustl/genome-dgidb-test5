@@ -28,7 +28,7 @@ sub execute {
             die($self->error_message);
         }
     }
-    unless (Genome::Utility::FileSystem->create_directory($coverage_dir)) {
+    unless (Genome::Sys->create_directory($coverage_dir)) {
         $self->error_message('Failed to create coverage directory '. $coverage_dir .":  $!");
         return;
     }
@@ -61,7 +61,7 @@ sub execute {
     #    $self->error_message('Failed to generate coverage stats with params: '.  Data::Dumper::Dumper(%coverage_stats_params));
     #    die($self->error_message);
     #}
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$bed_file,$bam_file],
     );

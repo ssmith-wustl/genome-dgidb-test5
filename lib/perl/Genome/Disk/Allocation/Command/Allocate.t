@@ -119,7 +119,7 @@ ok($allocation->wait_for_pse_to_confirm(
 my $disk_allocation = $allocation->disk_allocation;
 
 my $allocated_directory = $disk_allocation->absolute_path;
-ok(Genome::Utility::FileSystem->create_directory($allocated_directory),'create directory '. $allocated_directory);
+ok(Genome::Sys->create_directory($allocated_directory),'create directory '. $allocated_directory);
 
 unless (copy($known_file,$allocated_directory .'/'. $known_base_filename)) {
     die $!;

@@ -15,8 +15,8 @@ ok(-d $data_dir, "Found data directory: $data_dir") or die;
 my $test_ace = $data_dir.'/edit_dir/velvet_asm.ace';
 ok(-s $test_ace, "Test ace file exists") or die;
 
-my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
-Genome::Utility::FileSystem->create_directory( $temp_dir.'/edit_dir' );
+my $temp_dir = Genome::Sys->create_temp_directory();
+Genome::Sys->create_directory( $temp_dir.'/edit_dir' );
 
 ok(File::Copy::copy($test_ace, $temp_dir.'/edit_dir'),"Copied input ace file to temp dir") or die;
 

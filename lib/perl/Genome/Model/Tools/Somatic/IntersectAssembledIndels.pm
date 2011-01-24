@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 use IO::File;
 use Cwd qw( abs_path );
 my $SAM_DEFAULT = Genome::Model::Tools::Sam->default_samtools_version;

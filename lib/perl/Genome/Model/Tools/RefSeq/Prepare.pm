@@ -64,7 +64,7 @@ sub execute {
     my $new_fasta_path = sprintf("%s/all_sequences.fa", $path); 
     print "Copying to $new_fasta_path\n";
 
-    Genome::Utility::FileSystem->copy_file($self->fasta_file, $new_fasta_path);
+    Genome::Sys->copy_file($self->fasta_file, $new_fasta_path);
     unless (-e $new_fasta_path) {
         $self->error_message("The file did not successfully copy!");
         return;

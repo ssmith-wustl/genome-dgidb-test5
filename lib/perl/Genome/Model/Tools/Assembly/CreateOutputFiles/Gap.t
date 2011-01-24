@@ -16,8 +16,8 @@ my $test_contigs_file = $data_dir.'/contigs.fa';
 ok(-s $test_contigs_file, "Found test contigs.fa file");
 
 #create temp test dir
-my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
-Genome::Utility::FileSystem->create_directory( $temp_dir.'/edit_dir' );
+my $temp_dir = Genome::Sys->create_temp_directory();
+Genome::Sys->create_directory( $temp_dir.'/edit_dir' );
 
 #copy input file
 ok(File::Copy::copy($test_contigs_file, $temp_dir),"Copied input contigs file");

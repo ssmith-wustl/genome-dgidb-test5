@@ -36,7 +36,7 @@ sub execute {
 
     my ($basename,$dirname,$suffix) = File::Basename::fileparse($self->bed_file,qw/.bed/);
 
-    Genome::Utility::FileSystem->create_directory($self->output_directory);
+    Genome::Sys->create_directory($self->output_directory);
     my $bed = Genome::RefCov::ROI::Bed->create(
         file => $self->bed_file,
         make_objects => 1,

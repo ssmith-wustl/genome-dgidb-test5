@@ -25,7 +25,7 @@ my $build = Genome::Model::DeNovoAssembly::Test->get_mock_build(
 ok ( $build, "Got mock de-novo-assembly build" );
 
 #create tool
-my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+my $temp_dir = Genome::Sys->create_temp_directory();
 ok ( -d $temp_dir, "Created temp test directory");
 
 my $tool = Genome::Model::DeNovoAssembly::Command::CopyVelvetBuild->create (

@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use GSC::IO::Assembly::Ace::Reader;
 use IO::File;
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 
 class Genome::Model::Tools::PooledBac::RunBlast {
     is => 'Command',
@@ -72,7 +72,7 @@ sub execute {
     my $ref_seq_file = $self->ref_seq_file;
     my $pooled_bac_dir = $self->pooled_bac_dir;
     my $project_dir = $self->project_dir;
-    $self->error_message("Error creating directory $project_dir") and die unless Genome::Utility::FileSystem->create_directory($project_dir);
+    $self->error_message("Error creating directory $project_dir") and die unless Genome::Sys->create_directory($project_dir);
     
     my $ace_file = ''; 
     my $fasta_file = '';

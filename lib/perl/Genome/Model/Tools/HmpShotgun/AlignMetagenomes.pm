@@ -65,7 +65,7 @@ sub execute {
     
 #    my $working_directory = $self->working_directory."/alignments/".$align_basename."/";
 #    unless (-e $working_directory) {
-#    	Genome::Utility::FileSystem->create_directory("$working_directory");
+#    	Genome::Sys->create_directory("$working_directory");
 #    }
     
     $self->status_message("Working directory: ".$self->working_directory);
@@ -85,7 +85,7 @@ sub execute {
 #    
 #    #check to see if those files exist
 #    my @expected_output_files = ( $aligner_output_file, $unaligned_reads_file, $alignment_file );
-#    my $rv_check = Genome::Utility::FileSystem->are_files_ok(input_files=>\@expected_output_files);
+#    my $rv_check = Genome::Sys->are_files_ok(input_files=>\@expected_output_files);
 #    
 #    if (defined($rv_check)) {
 #	    if ($rv_check == 1) {
@@ -157,13 +157,13 @@ sub execute {
 #   	}
 #   	
 #   	my $mv_cmd = "mv $sorted_file $alignment_file";
-#   	my $rv_mv = Genome::Utility::FileSystem->shellcmd(cmd=>$mv_cmd);
+#   	my $rv_mv = Genome::Sys->shellcmd(cmd=>$mv_cmd);
 #   	if ($rv_mv != 1) {
 #   		$self->error_message("Move of sorted file failed.  Return value: $rv_sort");
 #    	return;	
 #   	}
 #    	
-#    Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_output_files);
+#    Genome::Sys->mark_files_ok(input_files=>\@expected_output_files);
 #    
     $self->status_message("<<<Completed alignment at ".UR::Time->now);
     

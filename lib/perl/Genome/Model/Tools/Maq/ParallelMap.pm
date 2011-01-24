@@ -122,7 +122,7 @@ sub post_execute {
     #OUTPUT
     my @output_files = @{$self->output_file};
     $self->output_file($self->output_directory .'/'. $self->_output_basename .'.aligner_output');
-    unless (Genome::Utility::FileSystem->cat(
+    unless (Genome::Sys->cat(
         input_files => \@output_files,
         output_file => $self->output_file,
     )) {
@@ -133,7 +133,7 @@ sub post_execute {
     #UNALIGNED
     my @unaligned_files = grep { -s } @{$self->unaligned_file};
     $self->unaligned_file($self->output_directory .'/'. $self->_output_basename .'.unaligned');
-    unless (Genome::Utility::FileSystem->cat(
+    unless (Genome::Sys->cat(
         input_files => \@unaligned_files,
         output_file => $self->unaligned_file,
     ) ) {

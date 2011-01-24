@@ -13,8 +13,8 @@ my $data_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly-Create
 ok(-d $data_dir, "Found data directory: $data_dir") or die;
 
 #make test dir
-my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
-Genome::Utility::FileSystem->create_directory( $temp_dir.'/edit_dir' );
+my $temp_dir = Genome::Sys->create_temp_directory();
+Genome::Sys->create_directory( $temp_dir.'/edit_dir' );
 
 #copy test input files to temp dir
 for my $file ('gap.txt', 'contigs.bases', 'readinfo.txt') {
