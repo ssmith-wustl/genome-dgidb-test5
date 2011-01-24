@@ -193,14 +193,14 @@ sub frame {
 sub start_with_strand {
     my $self = shift;
     my $start = $self->structure_start;
-    $start = $self->structure_stop if $self->transcript->strand eq '-1';
+    $start = $self->structure_stop if $self->transcript_strand eq '-1';
     return $start;
 }
 
 sub stop_with_strand {
     my $self = shift;
     my $stop = $self->structure_stop;
-    $stop = $self->structure_start if $self->transcript->strand eq '-1';
+    $stop = $self->structure_start if $self->transcript_strand eq '-1';
     return $stop;
 }
 
