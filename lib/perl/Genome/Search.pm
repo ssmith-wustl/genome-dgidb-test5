@@ -8,7 +8,6 @@ use MRO::Compat;
 
 #Don't "use Genome;" here or we introduce a circular dependency.
 use UR;
-use Genome::Config;
 use Genome::Memcache;
 
 # old server: default_value => 'http://solr',

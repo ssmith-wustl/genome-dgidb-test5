@@ -2,12 +2,26 @@ package Genome::Site::WUGC;
 use strict;
 use warnings;
 
+# this keeps available parts of the UR pre-0.01 API we still use
+use UR::ObjectV001removed;
+
+# ensure nothing loads the old Genome::Config module
+BEGIN { $INC{"Genome/Config.pm"} = 'no' };
+
+# bring in the regular Genome::Sys, then extend
 use Genome::Sys;
-use Genome::Site::WUGC::SysUnreleased;  # extensions to Genome::Sys
+use Genome::Site::WUGC::SysUnreleased;      # extensions to Genome::Sys
 
+# the old Genome::Config is all deprecated
+# the core stuff about looking up your host config is now in Genome::Site
+use Genome::Site::WUGC::LegacyConfig;   
+
+# set our internal paths for data and software
 $ENV{GENOME_DB} ||= '/gsc/scripts/opt/genome/db';
+$ENV{GENOME_SW} ||= '/gsc/pkg/bio';
 
-use Test::MockObject;                   # TODO: get things which use this to do so explicitly
+# TODO: get things which use this to do so explicitly
+use Test::MockObject; 
 
 # configuration for internal WUGC network software & LIMS 
 # this module is called by Genome::Config::edu::wustl::gsc right now on all *.gsc.wustl.edu hosts
