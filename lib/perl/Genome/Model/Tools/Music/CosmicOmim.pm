@@ -7,7 +7,7 @@ package Genome::Model::Tools::Music::CosmicOmim;
    use FileHandle;
    use Text::CSV_XS;
 
-class Genome::Model::Tools::Music::CosmicOmim{
+class Genome::Model::Tools::Music::CosmicOmim {
     is => 'Command',
     has => [
        mutation_file => {
@@ -19,16 +19,16 @@ class Genome::Model::Tools::Music::CosmicOmim{
            doc => 'Output file contains the input file with two columns appended to the end, corresponding to cosmic and omim mutation comparisons, respectively',
        }
     ],
-    has_optional=> [
+    has_optional => [
        omimaa_dir => {
            is => 'Path',
            doc => 'omim amino acid mutation database folder',
-           default => ''.($ENV{GC_GMT_MUSIC_DBFILES} || '/usr/local/share/genome/music/dbfiles/').'OMIM/',
+           default => Genome::Sys->dbpath('omim','latest'),
        },
        cosmic_dir => {
            is => 'Path',
            doc => 'cosmic amino acid mutation database folder',
-           default => ''.($ENV{GC_GMT_MUSIC_DBFILES} || '/usr/local/share/genome/music/dbfiles/').'cosmic/',
+           default => Genome::Sys->dbpath('cosmic','latest'),
        },
        verbose => {
            is => 'Path',
@@ -36,6 +36,7 @@ class Genome::Model::Tools::Music::CosmicOmim{
            default => '1',
        },
     ],
+    doc => 'add columns for cosmic and OMIM database results'
 };
 
 sub execute{
