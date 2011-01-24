@@ -50,7 +50,7 @@ sub _run_aligner {
         my $cur_input_fa = $cur_input.".fa";
 # TODO this doesn't work right:
 #        $self->status_message("Converting $cur_input (FastQ) to $cur_input_fa (FastA).");
-#        Genome::Utility::FileSystem->shellcmd(
+#        Genome::Sys->shellcmd(
 #            cmd             => "fastq_to_fasta <$cur_input >$cur_input_fa",
 #            input_files     => [ $cur_input ],
 #            output_files    => [ $cur_input_fa ],
@@ -74,7 +74,7 @@ sub _run_aligner {
         my $align_cmd = $blat_path . sprintf(' %s %s %s %s',
             $ref_path, $cur_input_fa, $aligner_params, $tmp_blastn_file);
 $DB::single=1;
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
             cmd             => $align_cmd,
             input_files     => [ $ref_path, $cur_input_fa ],
             output_files    => [ $tmp_blastn_file ],
@@ -85,7 +85,7 @@ $DB::single=1;
         my $convert_cmd = "blast2sam.pl" . sprintf(' %s > %s',
             $tmp_blastn_file, $tmp_sam_file);
 
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
             cmd             => $convert_cmd,
             input_files     => [ $tmp_blastn_file ],
             output_files    => [ $tmp_sam_file ],

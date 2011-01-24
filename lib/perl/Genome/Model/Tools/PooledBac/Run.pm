@@ -149,7 +149,7 @@ $DB::single =1;
     $self->error_message("The pipeline needs for the pooled_bac_dir to be specified in either the params file or on the command line in order to run.\n") and return if(!defined $pooled_bac_dir);
     $self->error_message("The pipeline needs for the ref_seq_file to be specified in either the params file or on the command line in order to run.\n") and return if(!defined $ref_seq_file);
         
-    $self->error_message("Error creating directory $project_dir") and die unless Genome::Utility::FileSystem->create_directory($project_dir);
+    $self->error_message("Error creating directory $project_dir") and die unless Genome::Sys->create_directory($project_dir);
     my $dt = DateTime->now(time_zone => "America/Chicago");
     if($self->params_file && -e $self->params_file)
     {

@@ -29,7 +29,7 @@ X\t2\t3\tA/T\t45
 EOF
 ;
 
-my $tmpdir = Genome::Utility::FileSystem->create_temp_directory();
+my $tmpdir = Genome::Sys->create_temp_directory();
 
 my $build = setup_test_builds();
 ok($build, 'created refalign build');

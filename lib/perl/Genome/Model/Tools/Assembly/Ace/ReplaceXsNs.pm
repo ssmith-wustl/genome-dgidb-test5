@@ -27,7 +27,7 @@ sub execute {
 
     # Open assembly
     my $acefile = $self->acefile;
-    eval{ Genome::Utility::FileSystem->validate_file_for_reading($acefile); };
+    eval{ Genome::Sys->validate_file_for_reading($acefile); };
     if ( $@ ) {
         $self->error_message("Can;t validate acefile: $@");
         return;

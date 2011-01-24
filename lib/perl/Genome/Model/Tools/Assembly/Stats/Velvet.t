@@ -12,7 +12,7 @@ my $data_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly-Stats/
 ok(-d $data_dir, "Found data directory: $data_dir");
 
 #create temp test dir
-my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+my $temp_dir = Genome::Sys->create_temp_directory();
 
 #make edit_dir in temp_dir
 mkdir $temp_dir.'/edit_dir';

@@ -203,7 +203,7 @@ sub execute {
 
     my $bam_destination = $disk_alloc->absolute_path . "/all_sequences.bam";
     $self->status_message("Now calculating the MD5sum of the bam file to be imported, this will take a long time (many minutes) for larger (many GB) files.");
-    my $md5 = Genome::Utility::FileSystem->md5sum($bam_path);
+    my $md5 = Genome::Sys->md5sum($bam_path);
     unless($md5){
         $self->error_message("Failed to calculate md5 sum, exiting import command.");
         die $self->error_message;
@@ -250,7 +250,7 @@ sub execute {
     
     #calculate and compare md5 sums
 
-    unless(Genome::Utility::FileSystem->md5sum($bam_destination) eq $md5) {
+    unless(Genome::Sys->md5sum($bam_destination) eq $md5) {
         $self->error_message("Failed to copy to allocated space (md5 mismatch).  Unlinking and deallocating.");
         unlink($bam_destination);
         $disk_alloc->deallocate;

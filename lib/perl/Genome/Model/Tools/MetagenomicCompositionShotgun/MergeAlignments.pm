@@ -80,15 +80,15 @@ sub execute {
     my $unaligned_combined = $working_directory."/unaligned_merged.sam";
     my $merged_alignment_unsorted = $working_directory."/aligned_merged_unsorted.sam";
     my @expected_output_files = ( $unaligned_combined, $merged_alignment_unsorted );
-    my $rv_check = Genome::Utility::FileSystem->are_files_ok(input_files=>\@expected_output_files);
-    #my $rv_unaligned_check = Genome::Utility::FileSystem->is_file_ok($unaligned_combined);
+    my $rv_check = Genome::Sys->are_files_ok(input_files=>\@expected_output_files);
+    #my $rv_unaligned_check = Genome::Sys->is_file_ok($unaligned_combined);
     if ($rv_check) {
     	$self->status_message("Output files exists.  Skipping the generation of the unaligned reads files and aligned merged unsorted file.  If you would like to regenerate these files, remove them and rerun.");  	
     } else {
         
-    	my $rv_cat = Genome::Utility::FileSystem->cat(input_files=>\@unaligned_files,output_file=>"$unaligned_combined.cat");
+    	my $rv_cat = Genome::Sys->cat(input_files=>\@unaligned_files,output_file=>"$unaligned_combined.cat");
     	if ($rv_cat) {
-    		Genome::Utility::FileSystem->mark_file_ok("$unaligned_combined.cat");
+    		Genome::Sys->mark_file_ok("$unaligned_combined.cat");
     	} else {
     		$self->error_message("There was a problem generating the combined unaligned file: $unaligned_combined.cat");
             return;
@@ -99,7 +99,7 @@ sub execute {
         my $unaligned_2 = $unaligned_files[1];
         my $unaligned_2_sorted = $unaligned_2.".sorted";
         
-        my $sort_1_rv = Genome::Utility::FileSystem->shellcmd(
+        my $sort_1_rv = Genome::Sys->shellcmd(
             cmd => "sort $unaligned_1 > $unaligned_1_sorted",
             input_files => [$unaligned_1],
             output_files => [$unaligned_1_sorted],
@@ -110,7 +110,7 @@ sub execute {
             return;
         }
         
-        my $sort_2_rv = Genome::Utility::FileSystem->shellcmd(
+        my $sort_2_rv = Genome::Sys->shellcmd(
             cmd => "sort $unaligned_2 > $unaligned_2_sorted",
             input_files => [$unaligned_2],
             output_files => [$unaligned_2_sorted],
@@ -122,13 +122,13 @@ sub execute {
         }
 
         my $unaligned_ofh;
-        if (Genome::Utility::FileSystem->validate_file_for_writing($unaligned_combined)){
+        if (Genome::Sys->validate_file_for_writing($unaligned_combined)){
             $unaligned_ofh = IO::File->new(">$unaligned_combined");
         }else{
             print "ERROR\n";   
         }
-        my $unaligned_fh_1 = Genome::Utility::FileSystem->open_file_for_reading($unaligned_1_sorted);
-        my $unaligned_fh_2 = Genome::Utility::FileSystem->open_file_for_reading($unaligned_2_sorted);
+        my $unaligned_fh_1 = Genome::Sys->open_file_for_reading($unaligned_1_sorted);
+        my $unaligned_fh_2 = Genome::Sys->open_file_for_reading($unaligned_2_sorted);
         my @last_set;
         my $last_read_name;
         @last_set = ($unaligned_fh_2->getline, $unaligned_fh_2->getline);
@@ -157,19 +157,19 @@ sub execute {
         }
     
         $unaligned_ofh->close;
-        Genome::Utility::FileSystem->mark_file_ok($unaligned_combined);
+        Genome::Sys->mark_file_ok($unaligned_combined);
         
         if (scalar(@alignment_files) < 2) {
             $self->error_message("*** Invalid number of files to merge: ".scalar(@alignment_files).". Must have 2 or more.  Quitting.");
             return;
         } else {
-            my $rv_merge = Genome::Utility::FileSystem->cat(input_files=>\@alignment_files,output_file=>$merged_alignment_unsorted);
+            my $rv_merge = Genome::Sys->cat(input_files=>\@alignment_files,output_file=>$merged_alignment_unsorted);
             if ($rv_merge != 1) {
                 $self->error_message("<<<Failed MergeAlignments on cat merge.  Return value: $rv_merge");
                 return;
             }
             $self->status_message("Merge complete.");
-            Genome::Utility::FileSystem->mark_file_ok($merged_alignment_unsorted);
+            Genome::Sys->mark_file_ok($merged_alignment_unsorted);
         }
 
     }
@@ -181,7 +181,7 @@ sub execute {
 
     my @expected_sorted_output_files = ( $merged_alignment_sorted );
     $self->status_message("Starting sort step.  Checking on existence of $merged_alignment_sorted.");
-    my $rv_sort_check = Genome::Utility::FileSystem->are_files_ok(input_files=>\@expected_sorted_output_files);
+    my $rv_sort_check = Genome::Sys->are_files_ok(input_files=>\@expected_sorted_output_files);
 
     if ($rv_sort_check == 1) {
         #shortcut this step, all the required files exist.  Quit.
@@ -195,7 +195,7 @@ sub execute {
         #sort
         #the 7G = 7Gigs of memory before writing to disk
         my $cmd_sorter = "sort -k 1 -T $tmp_dir -S 7G -o $merged_alignment_sorted $merged_alignment_unsorted";
-        my $rv_sort = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd_sorter);											 
+        my $rv_sort = Genome::Sys->shellcmd(cmd=>$cmd_sorter);											 
         if ($rv_sort != 1) {
             $self->error_message("Sort failed.  Return value: $rv_sort");
             return;
@@ -204,7 +204,7 @@ sub execute {
             unless (unlink $merged_alignment_unsorted){
                 $self->warning_message("Failed to remove unsorted merged alignment file ". $merged_alignment_unsorted);
             }
-            Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_sorted_output_files);
+            Genome::Sys->mark_files_ok(input_files=>\@expected_sorted_output_files);
             $self->merged_aligned_file($merged_alignment_sorted);
             $self->status_message("<<<Completed MergeAlignments for testing at at ".UR::Time->now);
             return 1;

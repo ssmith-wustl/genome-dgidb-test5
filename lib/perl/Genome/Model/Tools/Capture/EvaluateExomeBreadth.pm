@@ -83,7 +83,7 @@ sub execute {
     unless ($annotation_basename && $annotation_suffix) {
         die('Failed to parse BED file path:  '. $self->annotation_bed_file);
     }
-    my $sorted_bam_file = Genome::Utility::FileSystem->create_temp_file_path($exome_basename .'_sorted.bam');
+    my $sorted_bam_file = Genome::Sys->create_temp_file_path($exome_basename .'_sorted.bam');
     my $BedToSortedBam = Genome::Model::Tools::BedTools::BedToSortedBam->execute(
         input_file => $self->exome_bed_file,
         output_file => $sorted_bam_file,
@@ -93,7 +93,7 @@ sub execute {
     unless ($BedToSortedBam) {
         die('Failed to convert BED file to sorted BAM file!');
     }
-    my $limited_bed_file = Genome::Utility::FileSystem->create_temp_file_path($annotation_basename .'_limited_to_list.bed');
+    my $limited_bed_file = Genome::Sys->create_temp_file_path($annotation_basename .'_limited_to_list.bed');
     unless (Genome::Model::Tools::Bed::Limit->execute(
         gene_list => $self->include_list,
         input_bed_file => $self->annotation_bed_file,
@@ -102,7 +102,7 @@ sub execute {
     )) {
         die('Failed to limit BED file '. $self->annotation_bed_file .' to the genes in '. $self->include_list);
     }
-    my $merged_bed_file = Genome::Utility::FileSystem->create_temp_file_path($annotation_basename .'_merged_by_'. $self->report_by .'.bed');
+    my $merged_bed_file = Genome::Sys->create_temp_file_path($annotation_basename .'_merged_by_'. $self->report_by .'.bed');
     unless ($self->report_by eq 'exon') {
         my $MergeBy = Genome::Model::Tools::BedTools::MergeBy->create(
             merge_by => $self->report_by,
@@ -117,7 +117,7 @@ sub execute {
     } else {
         $merged_bed_file = $limited_bed_file;
     }
-    my $stats_file = Genome::Utility::FileSystem->create_temp_file_path($annotation_basename .'_merged_by_'. $self->report_by .'_STATS.tsv');;
+    my $stats_file = Genome::Sys->create_temp_file_path($annotation_basename .'_merged_by_'. $self->report_by .'_STATS.tsv');;
     my $RefCov = Genome::Model::Tools::BioSamtools::RefCov->execute(
         bed_file => $merged_bed_file,
         bam_file => $sorted_bam_file,

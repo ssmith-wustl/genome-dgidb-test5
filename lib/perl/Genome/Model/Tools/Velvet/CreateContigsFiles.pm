@@ -53,12 +53,12 @@ sub execute {
     }
 
     #read in afg file
-    my $afg_fh = Genome::Utility::FileSystem->open_file_for_reading($afg_file)
+    my $afg_fh = Genome::Sys->open_file_for_reading($afg_file)
 	or return;
 
     #make edit_dir
     unless (-d $self->assembly_directory.'/edit_dir') {
-	Genome::Utility::FileSystem->create_directory($self->assembly_directory.'/edit_dir');
+	Genome::Sys->create_directory($self->assembly_directory.'/edit_dir');
     }
 
     #write out contigs.bases file

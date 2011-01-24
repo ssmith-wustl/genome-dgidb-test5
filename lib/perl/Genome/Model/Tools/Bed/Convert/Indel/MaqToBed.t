@@ -22,6 +22,6 @@ my $rv = $command->execute;
 ok($rv, 'Command completed successfully');
 ok(!$command->_need_chrom_sort, 'ordered chromosomes in input, no sort required');
 
-my $diff = Genome::Utility::FileSystem->diff_file_vs_file($output_file, $expected_file);
+my $diff = Genome::Sys->diff_file_vs_file($output_file, $expected_file);
 ok(!$diff, 'output matched expected result')
     or diag("diff results:\n" . $diff) && diag('Note that if you need to update the expected file you may also need to replace the expected directory for the long test of `gmt detect-variants maq`');

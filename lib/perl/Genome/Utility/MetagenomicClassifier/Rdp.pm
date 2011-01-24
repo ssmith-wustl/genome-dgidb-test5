@@ -7,7 +7,7 @@ require Bio::Taxon;
 require Carp;
 use Data::Dumper 'Dumper';
 use Genome::InlineConfig;
-require Genome::Utility::FileSystem;
+require Genome::Sys;
 require Genome::Utility::MetagenomicClassifier;
 require Genome::Utility::MetagenomicClassifier::SequenceClassification;
 
@@ -44,7 +44,7 @@ sub new {
 
     $classifier_properties_path .= 'rRNAClassifier.properties';
 
-    Genome::Utility::FileSystem->validate_file_for_reading($classifier_properties_path)
+    Genome::Sys->validate_file_for_reading($classifier_properties_path)
         or return;
 
     my $factory = new FactoryInstance($classifier_properties_path);

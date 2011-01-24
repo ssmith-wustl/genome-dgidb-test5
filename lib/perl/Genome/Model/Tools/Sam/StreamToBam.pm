@@ -97,7 +97,7 @@ sub execute {
         $self->status_message("Fix-mate running.  First sorting by name to gather up mates");
         my $tmp_file = $bam_file.'.sort';
         #402653184 bytes = 3 Gb 
-        Genome::Utility::FileSystem->shellcmd(cmd=>"samtools sort -n -m 402653184 $bam_file $tmp_file",
+        Genome::Sys->shellcmd(cmd=>"samtools sort -n -m 402653184 $bam_file $tmp_file",
                                               skip_if_output_is_present=>0,
                                               output_files=>["$tmp_file.bam"]);
     
@@ -107,14 +107,14 @@ sub execute {
 
         
         $self->status_message("Running fixmate on the sorted file");
-        Genome::Utility::FileSystem->shellcmd(cmd=>"$samtools fixmate $tmp_file.bam $tmp_file.fixmate",
+        Genome::Sys->shellcmd(cmd=>"$samtools fixmate $tmp_file.bam $tmp_file.fixmate",
                                               skip_if_output_is_present=>0,
                                               output_files=>["$tmp_file.fixmate"]);
         $self->status_message("Removing the name-sorted, but not fixmated bam file $tmp_file.bam");
         unlink "$tmp_file.bam";
 
         $self->status_message("Now restoring the original sort order");
-        Genome::Utility::FileSystem->shellcmd(cmd=>"$samtools sort -m 402653184 $tmp_file.fixmate $tmp_file.fix",
+        Genome::Sys->shellcmd(cmd=>"$samtools sort -m 402653184 $tmp_file.fixmate $tmp_file.fix",
                                               skip_if_output_is_present=>0,
                                               output_files=>["$tmp_file.fix.bam"]);
         $self->error_message("Sort by position failed") and return if $rv or !-s $tmp_file.'.fix.bam';
@@ -127,7 +127,7 @@ sub execute {
 
     if ($self->index_bam) {
         #This may not work for large genome BAM files
-        my $tmp_bam = Genome::Utility::FileSystem->create_temp_file_path();
+        my $tmp_bam = Genome::Sys->create_temp_file_path();
         unless (Genome::Model::Tools::Sam::SortBam->execute(
             file_name => $bam_file,
             output_file => $tmp_bam,

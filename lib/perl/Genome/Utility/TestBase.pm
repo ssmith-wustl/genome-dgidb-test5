@@ -267,7 +267,7 @@ sub store_file  {
 
     die "Invalid ref to store\n" unless $ref and ref $ref;
 
-    Genome::Utility::FileSystem->validate_file_for_writing($file)
+    Genome::Sys->validate_file_for_writing($file)
         or die;
     
     return store($ref, $file);
@@ -276,7 +276,7 @@ sub store_file  {
 sub retrieve_file {
     my ($self, $file) = @_;
 
-    Genome::Utility::FileSystem->validate_file_for_reading($file)
+    Genome::Sys->validate_file_for_reading($file)
         or die;
     
     return retrieve($file);

@@ -531,7 +531,7 @@ sub upload_instrument_data_and_unlock {
         }
         for my $lock (@locks) {
             if ($lock) {
-                unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock)) {
+                unless(Genome::Sys->unlock_resource(resource_lock => $lock)) {
                     die $self->error_message("Failed to unlock " . $lock->resource_lock . ".");
                 }
             }
@@ -543,7 +543,7 @@ sub upload_instrument_data_and_unlock {
 
 sub lock_or_die {
     my ($self, $lock_path) = @_;
-    my $lock = Genome::Utility::FileSystem->lock_resource(
+    my $lock = Genome::Sys->lock_resource(
         resource_lock => $lock_path,
         max_try => 2,
     );
@@ -582,7 +582,7 @@ sub symlink {
         die $self->error_message("$target already exists but points to " . readlink($target));
     }
     elsif(! -l $target) {
-        Genome::Utility::FileSystem->create_symlink($source, $target);
+        Genome::Sys->create_symlink($source, $target);
     }
 }
 
@@ -863,7 +863,7 @@ sub _process_unaligned_reads {
             $lock = '/gsc/var/lock/' . $instrument_data_id . '/' . $lock;
 
             $self->status_message("Creating lock on $lock...");
-            $se_lock = Genome::Utility::FileSystem->lock_resource(
+            $se_lock = Genome::Sys->lock_resource(
                 resource_lock => $lock,
                 max_try => 2,
             );
@@ -882,7 +882,7 @@ sub _process_unaligned_reads {
             $lock = '/gsc/var/lock/' . $instrument_data_id . '/' . $lock;
 
             $self->status_message("Creating lock on $lock...");
-            $pe_lock = Genome::Utility::FileSystem->lock_resource(
+            $pe_lock = Genome::Sys->lock_resource(
                 resource_lock => "$lock",
                 max_try => 2,
             );
@@ -1012,14 +1012,14 @@ sub _process_unaligned_reads {
             }
             if (!$instrument_data->is_paired_end && $se_lock) {
                 $self->status_message("Attempting to remove lock on $se_lock...");
-                unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $se_lock)) {
+                unless(Genome::Sys->unlock_resource(resource_lock => $se_lock)) {
                     die $self->error_message("Failed to unlock $se_lock.");
                 }
                 undef($se_lock);
             }
             if ($instrument_data->is_paired_end && $pe_lock) {
                 $self->status_message("Attempting to remove lock on $pe_lock...");
-                unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $pe_lock)) {
+                unless(Genome::Sys->unlock_resource(resource_lock => $pe_lock)) {
                     die $self->error_message("Failed to unlock $pe_lock.");
                 }
                 undef($pe_lock);
@@ -1029,7 +1029,7 @@ sub _process_unaligned_reads {
         return @instrument_data;
     };
 
-    # TODO: add directory removal to Genome::Utility::FileSystem
+    # TODO: add directory removal to Genome::Sys
     if ($@) {
         system "/bin/rm -rf '$tmp_dir'";
         die $self->error_message("Error processing unaligned reads! $@");
@@ -1091,8 +1091,8 @@ sub _process_unaligned_fastq_pair {
         return ($forward_out, $reverse_out, $fragment_out);
     }else{
         $self->status_message("skipping n-removal");
-        Genome::Utility::FileSystem::copy_file($forward_dusted, $forward_out);
-        Genome::Utility::FileSystem::copy_file($reverse_dusted, $reverse_out);
+        Genome::Sys::copy_file($forward_dusted, $forward_out);
+        Genome::Sys::copy_file($reverse_dusted, $reverse_out);
         if ($self->dust_unaligned_reads){
             #only need to do this if we actually dusted
             unlink $forward_dusted;
@@ -1150,7 +1150,7 @@ sub _process_unaligned_fastq {
         }
     } else {
         $self->status_message("No n-removal cutoff specified, skipping");
-        Genome::Utility::FileSystem->copy_file($dusted_fastq, $output_path);
+        Genome::Sys->copy_file($dusted_fastq, $output_path);
     }
     if ($self->dust_unaligned_reads){
         unlink $dusted_fastq;

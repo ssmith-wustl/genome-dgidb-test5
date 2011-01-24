@@ -114,8 +114,8 @@ sub initialize_filehandles {
     my $output = $self->output;
     
     eval {
-        my $input_fh = Genome::Utility::FileSystem->open_file_for_reading($input);
-        my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($output);
+        my $input_fh = Genome::Sys->open_file_for_reading($input);
+        my $output_fh = Genome::Sys->open_file_for_writing($output);
         
         $self->_input_fh($input_fh);
         $self->_output_fh($output_fh);

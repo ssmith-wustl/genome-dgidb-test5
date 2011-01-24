@@ -96,7 +96,7 @@ sub execute {
     my $input_file = $self->input_file;
     my $basename = basename($self->output_file,qw/\.bam/);
     if ($self->sort_bam) {
-        my $sorted_bam_file = Genome::Utility::FileSystem->create_temp_file_path($basename .'_sorted_bam.bam');
+        my $sorted_bam_file = Genome::Sys->create_temp_file_path($basename .'_sorted_bam.bam');
         unless (Genome::Model::Tools::Picard::SortSam->execute(
             input_file => $self->input_file,
             output_file => $sorted_bam_file,
@@ -110,7 +110,7 @@ sub execute {
         $input_file = $sorted_bam_file;
     }
     if ($self->clean_bam eq 'remove') {
-        my $clean_bam_file = Genome::Utility::FileSystem->create_temp_file_path($basename .'_clean_bam.bam');
+        my $clean_bam_file = Genome::Sys->create_temp_file_path($basename .'_clean_bam.bam');
         unless (Genome::Model::Tools::BioSamtools::CleanBam->execute(
             input_bam_file => $self->input_file,
             output_bam_file => $clean_bam_file,
@@ -121,7 +121,7 @@ sub execute {
         $input_file = $clean_bam_file;
     } elsif ($self->clean_bam eq 'trim') {
         my $basename = basename($self->output_file,qw/\.bam/);
-        my $clean_bam_file = Genome::Utility::FileSystem->create_temp_file_path($basename .'_clean_bam.bam');
+        my $clean_bam_file = Genome::Sys->create_temp_file_path($basename .'_clean_bam.bam');
         unless (Genome::Model::Tools::Picard::CleanSam->execute(
             input_file => $self->input_file,
             output_file => $clean_bam_file,

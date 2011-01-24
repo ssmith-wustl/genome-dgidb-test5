@@ -32,11 +32,11 @@ sub create {
     my $self = $class->SUPER::create(@_);
     unless ($self) { return; }
 
-    unless (Genome::Utility::FileSystem->validate_file_for_reading($self->fasta_file)) {
+    unless (Genome::Sys->validate_file_for_reading($self->fasta_file)) {
         $self->error_message('Failed to validate file '. $self->fasta_file .' for reading.');
         return;
     }
-    unless (Genome::Utility::FileSystem->validate_file_for_writing($self->output_file)) {
+    unless (Genome::Sys->validate_file_for_writing($self->output_file)) {
         $self->error_message('Failed to validate file '. $self->output_file .' for writing.');
         return;
     }
@@ -46,13 +46,13 @@ sub create {
 sub execute {
     my $self = shift;
 
-    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+    my $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
     unless ($output_fh) {
         $self->error_message('Failed to open output file '. $self->output_file);
         return;
     }
 
-    my $fasta_reader = Genome::Utility::FileSystem->open_file_for_reading($self->fasta_file);
+    my $fasta_reader = Genome::Sys->open_file_for_reading($self->fasta_file);
     unless ($fasta_reader) {
         $self->error_message('Failed to open fasta file '. $self->fasta_file);
         return;

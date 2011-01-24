@@ -36,7 +36,7 @@ my $validation_command = Genome::Model::Tools::Varscan::ProcessValidation->creat
 isa_ok($validation_command, 'Genome::Model::Tools::Varscan::ProcessValidation', 'created validation command');
 ok($validation_command->execute(), 'executed validation command');
 
-my $output_diff = Genome::Utility::FileSystem->diff_file_vs_file($expected_output_file, $output_file);
+my $output_diff = Genome::Sys->diff_file_vs_file($expected_output_file, $output_file);
 ok(!$output_diff, 'output file matches expected result')
     or diag("diff:\n" . $output_diff);
 

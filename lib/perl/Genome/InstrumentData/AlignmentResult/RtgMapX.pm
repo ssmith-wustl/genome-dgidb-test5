@@ -106,7 +106,7 @@ sub _run_aligner {
                 $input_sdf,
                 $input_pathname);  
 
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
                 cmd                 => $cmd, 
                 input_files         => [$input_pathname],
                 output_directories  => [$input_sdf],
@@ -126,7 +126,7 @@ sub _run_aligner {
 
         $self->status_message("Chunking....");
         my $chunk_cmd = sprintf("%s -c %s -o %s %s", Genome::Model::Tools::Rtg->path_for_rtg_sdfsplit($self->aligner_version), $chunk_size, $chunk_path, $input_sdf);
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
                 cmd                 => $chunk_cmd, 
                 output_directories  => [$chunk_path],
                 skip_if_output_is_present => 0,
@@ -141,7 +141,7 @@ sub _run_aligner {
         my $log_output = $self->temp_staging_directory . "sdfsplit.log";
         $cmd = sprintf('cat %s >> %s', $log_input, $log_output);   
 
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
                 cmd          => $cmd,
                 input_files  => [ $log_input ],
                 output_files => [ $log_output ],
@@ -174,7 +174,7 @@ sub _run_aligner {
                 $output_dir,
                 $rtg_aligner_params);
 
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
                 cmd          => $cmd,
                 input_files  => [ $reference_sdf_path, $input_sdf ],
                 output_files => [values (%output_files), "$output_dir/done"],
@@ -186,7 +186,7 @@ sub _run_aligner {
         my $log_output = $self->temp_staging_directory . "/rtg_mapx.log";
         $cmd = sprintf('cat %s >> %s', $log_input, $log_output);   
 
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
                 cmd          => $cmd,
                 input_files  => [ $log_input ],
                 output_files => [ $log_output ],
@@ -198,7 +198,7 @@ sub _run_aligner {
 
             my $output_file = $self->temp_staging_directory . "/" . basename($_);
 
-            Genome::Utility::FileSystem->shellcmd(
+            Genome::Sys->shellcmd(
                 cmd=>sprintf('cat %s >> %s', $_, $output_file),
                 input_files => [$_],
                 output_files => [$output_file],

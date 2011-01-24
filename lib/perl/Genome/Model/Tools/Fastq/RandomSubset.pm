@@ -59,10 +59,10 @@ sub _create_index {
     my @index;
     for (my $file_id = 0; $file_id < scalar(@read_1_fastq_files); $file_id++) {
         my $read_1_fastq_file = $read_1_fastq_files[$file_id];
-        my $read_1_fh = Genome::Utility::FileSystem->open_file_for_reading($read_1_fastq_file);
+        my $read_1_fh = Genome::Sys->open_file_for_reading($read_1_fastq_file);
         if (@read_2_fastq_files) {
             my $read_2_fastq_file = $read_2_fastq_files[$file_id];
-            my $read_2_fh = Genome::Utility::FileSystem->open_file_for_reading($read_2_fastq_file);
+            my $read_2_fh = Genome::Sys->open_file_for_reading($read_2_fastq_file);
             push @read_2_fhs, $read_2_fh;
         }
         while (my $header = $read_1_fh->getline) {
@@ -142,7 +142,7 @@ sub _generate_fastq_for_read_end {
     
     my $out_file_method = 'output_read_'. $end.'_fastq_file';
     my $out_file = $self->$out_file_method;
-    my $out = Genome::Utility::FileSystem->open_file_for_writing($out_file);
+    my $out = Genome::Sys->open_file_for_writing($out_file);
     unless ($out) {
         die;
     }

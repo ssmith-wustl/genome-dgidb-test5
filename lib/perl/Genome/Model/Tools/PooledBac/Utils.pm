@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Genome;
 use Data::Dumper;
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 use List::Util qw(max min);
 
 class Genome::Model::Tools::PooledBac::Utils {
@@ -44,24 +44,24 @@ sub create_project_from_contig_names
     
     my $current_dir = `pwd`;
     print ("creating directory for $current_dir");
-    #Genome::Utility::FileSystem->create_directory("project_dir");
+    #Genome::Sys->create_directory("project_dir");
     #chdir("project_dir");
-    Genome::Utility::FileSystem->create_directory("edit_dir");
-    Genome::Utility::FileSystem->create_directory("phd_dir");
-    Genome::Utility::FileSystem->create_directory("phdball_dir");
-    Genome::Utility::FileSystem->create_directory("sff_dir");
-    Genome::Utility::FileSystem->create_directory("chromat_dir");
+    Genome::Sys->create_directory("edit_dir");
+    Genome::Sys->create_directory("phd_dir");
+    Genome::Sys->create_directory("phdball_dir");
+    Genome::Sys->create_directory("sff_dir");
+    Genome::Sys->create_directory("chromat_dir");
     #copy links from input project
     foreach my $sff_file (glob($input_project_dir.'/consed/sff_dir/*'))
     {
         `/bin/ln -s $sff_file sff_dir/.`;
-#        Genome::Utility::FileSystem->copy_file($sff_file, 'sff_dir/.');
+#        Genome::Sys->copy_file($sff_file, 'sff_dir/.');
     }
     foreach my $phd_file (glob($input_project_dir.'/consed/phdball_dir/*'))
     {
        # next if -d $phd_file;
         `/bin/ln -s $phd_file phdball_dir/.`;
-#        Genome::Utility::FileSystem->copy_file($phd_file, 'phdball_dir/.');
+#        Genome::Sys->copy_file($phd_file, 'phdball_dir/.');
     }
     #$ace_fn = "project_dir/edit_dir/$ace_fn";
     create_ace_from_contig_names(@_);
@@ -169,7 +169,7 @@ sub open_contig_map
 {
     my ($self,$file_name) = @_;
     $self->error_message("$file_name does not exist.\n") and die unless -e $file_name;
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($file_name);
+    my $fh = Genome::Sys->open_file_for_reading($file_name);
     $self->error_message("Could not open contig map $file_name for reading.\n") and die unless defined $fh;
     my %contig_map;
     while(my $line = <$fh>)
@@ -186,7 +186,7 @@ sub write_contig_map
 {
     my ($self, $contig_map, $file_name) = @_;
     unlink $file_name if -e $file_name;
-    my $fh = Genome::Utility::FileSystem->open_file_for_writing($file_name);
+    my $fh = Genome::Sys->open_file_for_writing($file_name);
     $self->error_message("Could not open contig map $file_name for writing.\n") and die unless defined $fh;
     foreach my $contig_name (sort keys %{$contig_map})
     {
@@ -217,7 +217,7 @@ sub create_match_and_orphan_lists
 sub get_contig_names
 {
     my ($self, $ace_file_name) = @_;
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($ace_file_name);
+    my $fh = Genome::Sys->open_file_for_reading($ace_file_name);
     $self->error_message("There was an error opening ace file $ace_file_name for reading.") and die unless defined $fh;
     my @contig_names;
     while(my $line = <$fh>)

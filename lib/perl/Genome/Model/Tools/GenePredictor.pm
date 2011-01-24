@@ -104,7 +104,7 @@ sub lock_files_for_predictions {
         my $file = $file_resolver->($self->prediction_directory);
 
         my $resource_lock = "/gsc/var/lock/gene_prediction/eukaryotic/$file";
-        my $lock = Genome::Utility::FileSystem->lock_resource(
+        my $lock = Genome::Sys->lock_resource(
             resource_lock => $resource_lock,
             block_sleep => 60,
             max_try => 10,
@@ -119,7 +119,7 @@ sub lock_files_for_predictions {
 sub release_prediction_locks {
     my ($self, @locks) = @_;
     for my $lock (@locks) {
-        Genome::Utility::FileSystem->unlock_resource(
+        Genome::Sys->unlock_resource(
             resource_lock => $lock,
         );
     }

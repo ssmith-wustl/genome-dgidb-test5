@@ -9,7 +9,7 @@ my $SAM_DEFAULT = Genome::Model::Tools::Sam->default_samtools_version;
 
 class Genome::Model::Tools::Somatic::IndelpeRunner {
 
-    is  => ['Command', 'Genome::Utility::FileSystem'],
+    is  => ['Command', 'Genome::Sys'],
     has => [
        bam_file => {
             is       => 'String',
@@ -107,7 +107,7 @@ sub execute {
         die;
     }
     
-    if ( ! Genome::Utility::FileSystem->validate_file_for_reading($bam_file) ) {
+    if ( ! Genome::Sys->validate_file_for_reading($bam_file) ) {
         $self->error_message('cant read from: ' . $bam_file);
         die;
     }

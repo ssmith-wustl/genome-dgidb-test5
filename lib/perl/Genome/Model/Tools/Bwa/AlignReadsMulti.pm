@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 
 class Genome::Model::Tools::Bwa::AlignReadsMulti {
 	is  => 'Genome::Model::Tools::Bwa',
@@ -250,10 +250,10 @@ sub concise_to_sam {
 	my $file_out      = shift;
 	my $unaligned_out = shift;
 
-	my $fh_in  = Genome::Utility::FileSystem->open_file_for_reading($file_in);
-	my $fh_out = Genome::Utility::FileSystem->open_file_for_writing($file_out);
+	my $fh_in  = Genome::Sys->open_file_for_reading($file_in);
+	my $fh_out = Genome::Sys->open_file_for_writing($file_out);
 	my $fh_unaligned_out =
-	  Genome::Utility::FileSystem->open_file_for_writing($unaligned_out);
+	  Genome::Sys->open_file_for_writing($unaligned_out);
 	my $done = 0;
 	my $line = $fh_in->getline;
 	my $read_name;
@@ -338,7 +338,7 @@ sub execute {
 	my $tmp_dir;
 
 	if ( defined( $self->temp_directory ) ) {
-		$tmp_dir = Genome::Utility::FileSystem->create_directory(
+		$tmp_dir = Genome::Sys->create_directory(
 			$self->temp_directory );
 	}
 	else {
@@ -353,7 +353,7 @@ sub execute {
 		$self->status_message("Combining reads files.");
 		my $combined_file = "$tmp_dir/combined_read_files.txt";
 		$self->status_message( "Combined file: " . $combined_file );
-		my $rv_cat = Genome::Utility::FileSystem->cat(
+		my $rv_cat = Genome::Sys->cat(
 			input_files => \@input_file_list,
 			output_file => $combined_file
 		);
@@ -388,7 +388,7 @@ sub execute {
 		push @sai_intermediate_files, $tmpfile;
 
 		# run the aligner
-		Genome::Utility::FileSystem->shellcmd(
+		Genome::Sys->shellcmd(
 			cmd         => $cmdline,
 			input_files => [ $self->ref_seq_file, $input ],
 
@@ -423,7 +423,7 @@ sub execute {
 	$self->status_message("Running samXe to get the output alignments");
 	$self->status_message("samXe command: $sam_command_line");
 
-	my $rv_samse =  Genome::Utility::FileSystem->shellcmd( cmd => $sam_command_line );
+	my $rv_samse =  Genome::Sys->shellcmd( cmd => $sam_command_line );
 
 	#my $multi_hit_sam_file = $tmp_dir."/multi.txt";
 	#my $multi_hit_sam_file = $self->alignment_file;

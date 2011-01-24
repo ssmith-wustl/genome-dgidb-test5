@@ -22,7 +22,7 @@ foreach (@out_files) {
 }
 
 #create tmp test dir
-my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+my $temp_dir = Genome::Sys->create_temp_directory();
 ok (-d $temp_dir, "Temp test dir created") or die;
 
 #copy input files over to temp dir

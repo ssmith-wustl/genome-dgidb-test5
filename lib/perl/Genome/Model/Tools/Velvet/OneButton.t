@@ -64,7 +64,7 @@ foreach my $param (@params) {
     my $input_file = "$data_dir/input.fastq";
     ok(-e $input_file, "found input file $input_file");
 
-    my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+    my $temp_dir = Genome::Sys->create_temp_directory();
     # SWITCH TO THIS WHEN WE WANT TO GENERATE INTENTIONALLY NEW TEST DATA
     #my $temp_dir = "$ENV{PWD}/velvet$data_sub_dir"; 
     #`mkdir -p $temp_dir`;

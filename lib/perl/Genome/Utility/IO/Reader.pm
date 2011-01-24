@@ -55,7 +55,7 @@ sub create {
         $self->input($input);
     }
     else {
-        my $fh = eval { Genome::Utility::FileSystem->open_file_for_reading($input) };
+        my $fh = eval { Genome::Sys->open_file_for_reading($input) };
         if (!$fh or $@) {
             $self->error_message("Can't open file $input for reading: $@");
             return;

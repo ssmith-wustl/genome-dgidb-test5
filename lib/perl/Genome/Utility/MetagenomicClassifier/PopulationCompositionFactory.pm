@@ -8,7 +8,7 @@ use base 'Class::Singleton';
 require Bio::SeqIO;
 use Carp 'confess';
 use Data::Dumper 'Dumper';
-require Genome::Utility::FileSystem;
+require Genome::Sys;
 require Genome::Utility::MetagenomicClassifier::PopulationComposition;
 
 sub get_composition {
@@ -20,7 +20,7 @@ sub get_composition {
         _fatal_message("Required parameter ($req) not found.") unless $params{$req};
     }
 
-    Genome::Utility::FileSystem->validate_file_for_reading($params{fasta_file})
+    Genome::Sys->validate_file_for_reading($params{fasta_file})
         or _fatal_message( sprintf("Can't validate fasta file (%s)", $params{fasta_file}) );
 
     my $bioseq_io = Bio::SeqIO->new(

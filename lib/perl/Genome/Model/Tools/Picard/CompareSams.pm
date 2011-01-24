@@ -71,7 +71,7 @@ sub execute {
     );
     
     if($existing_log_file) {
-        Genome::Utility::FileSystem->copy_file($existing_log_file, $self->output_file);
+        Genome::Sys->copy_file($existing_log_file, $self->output_file);
     }
     
     return 1;

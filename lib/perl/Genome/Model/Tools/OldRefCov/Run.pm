@@ -8,7 +8,7 @@ use Genome;
 use RefCov;
 
 class Genome::Model::Tools::OldRefCov::Run {
-    is => ['Genome::Model::Tools::OldRefCov','Genome::Utility::FileSystem'],
+    is => ['Genome::Model::Tools::OldRefCov','Genome::Sys'],
 
 };
 

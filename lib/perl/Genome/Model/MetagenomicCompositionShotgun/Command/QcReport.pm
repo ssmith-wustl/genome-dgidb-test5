@@ -86,7 +86,7 @@ sub execute {
     if (-f $other_stats_output_path) {
         unlink($other_stats_output_path);
     }
-    my $other_stats_output = Genome::Utility::FileSystem->open_file_for_writing($other_stats_output_path);
+    my $other_stats_output = Genome::Sys->open_file_for_writing($other_stats_output_path);
     for my $hcs_data (@hcs_data) {
         $self->other_stats(\%mcs_metrics, $other_stats_output, $hcs_data);
     }
@@ -109,7 +109,7 @@ sub post_trimming_stats {
     my $stats_output_path = $self->report_dir . '/post_trim_stats_report.tsv';
     $self->status_message("Generating post trimming stats...");
     unlink($stats_output_path) if (-f $stats_output_path);
-    my $stats_output = Genome::Utility::FileSystem->open_file_for_writing($stats_output_path);
+    my $stats_output = Genome::Sys->open_file_for_writing($stats_output_path);
 
     $self->status_message("\tParsing $contamination_bam...");
     my %stats = $self->bam_stats_per_lane($contamination_bam);
@@ -143,7 +143,7 @@ sub per_lane_qc {
     my ($self, $hcs_data, $mcs_metrics_hash) = @_;
     my %mcs_metrics = %$mcs_metrics_hash;
     my $imported_data = $hcs_data; # replace later
-    my $temp_dir = Genome::Utility::FileSystem->base_temp_directory;
+    my $temp_dir = Genome::Sys->base_temp_directory;
 
     my %fastq_files;
     my @imported_fastq;
@@ -205,9 +205,9 @@ sub per_lane_qc {
         my $imported_path = (@{$fastq_files{$hcs_data_id}{imported}})[0];
         my $original_fwd_path = @{$fastq_files{$hcs_data_id}{original}}[0];
         my $original_rev_path = @{$fastq_files{$hcs_data_id}{original}}[1];
-        my $imported_file = Genome::Utility::FileSystem->open_file_for_reading($imported_path);
-        my $humanfree_fwd_file = Genome::Utility::FileSystem->open_file_for_writing($humanfree_fwd_path);
-        my $humanfree_rev_file = Genome::Utility::FileSystem->open_file_for_writing($humanfree_rev_path);
+        my $imported_file = Genome::Sys->open_file_for_reading($imported_path);
+        my $humanfree_fwd_file = Genome::Sys->open_file_for_writing($humanfree_fwd_path);
+        my $humanfree_rev_file = Genome::Sys->open_file_for_writing($humanfree_rev_path);
 
         $self->status_message("\t\tReading in up to 8M read names...");
         my $reads_left = 1;
@@ -228,8 +228,8 @@ sub per_lane_qc {
                 $read_names{$imported_readname} = 1;
             }
 
-            my $original_fwd_file = Genome::Utility::FileSystem->open_file_for_reading($original_fwd_path);
-            my $original_rev_file = Genome::Utility::FileSystem->open_file_for_reading($original_rev_path);
+            my $original_fwd_file = Genome::Sys->open_file_for_reading($original_fwd_path);
+            my $original_rev_file = Genome::Sys->open_file_for_reading($original_rev_path);
 
             $self->status_message("\t\tParsing original forward read file with those hashed reads...");
             while (my $fwd_read = read_and_join_lines($original_fwd_file)) {
@@ -264,8 +264,8 @@ sub per_lane_qc {
 
         $self->status_message("\tVerifying fwd/rev pairs are correct, will swap if not...");
 
-        my $humanfree_fwd_file = Genome::Utility::FileSystem->open_file_for_reading($humanfree_fwd_path);
-        my $humanfree_rev_file = Genome::Utility::FileSystem->open_file_for_reading($humanfree_rev_path);
+        my $humanfree_fwd_file = Genome::Sys->open_file_for_reading($humanfree_fwd_path);
+        my $humanfree_rev_file = Genome::Sys->open_file_for_reading($humanfree_rev_path);
         # If humanfree_untrimmed files are reversed then file contents are probably switched so switch files.
         my $humanfree_fwd_line = $humanfree_fwd_file->getline;
         if ($humanfree_fwd_line =~ /\/2$/) {
@@ -302,7 +302,7 @@ sub per_lane_qc {
         # If original files are reversed then they probably just have rev in [0] and fwd in [1] so switch "pointer".
         my $original_fwd_path = @{$fastq_files{$hcs_data_id}{original}}[0];
         my $original_rev_path = @{$fastq_files{$hcs_data_id}{original}}[1];
-        my $original_fwd_file = Genome::Utility::FileSystem->open_file_for_reading($original_fwd_path);
+        my $original_fwd_file = Genome::Sys->open_file_for_reading($original_fwd_path);
         my $original_fwd_line = $original_fwd_file->getline;
         if ($original_fwd_line =~ /\/2$/) {
             $self->status_message("\t\t" . (split("/", $original_fwd_path))[-1] . " looks like a reverse file. Swapping...");
@@ -422,7 +422,7 @@ sub other_stats {
     my $lane = $orig_data->flow_cell_id . "_" . $orig_data->lane;
 
     my $humanfree_report_path = $self->report_dir . '/' . $hcs_data_id . '_humanfree_untrimmed_estimate_library_complexity_report.txt';
-    my $humanfree_report_fh = Genome::Utility::FileSystem->open_file_for_reading($humanfree_report_path);
+    my $humanfree_report_fh = Genome::Sys->open_file_for_reading($humanfree_report_path);
     while (my $line = $humanfree_report_fh->getline) {
         if ($line =~ /^##\ METRICS/) {
             my $keys = $humanfree_report_fh->getline();
@@ -450,7 +450,7 @@ sub other_stats {
     }
 
     my $original_report_path = $self->report_dir . '/' . $hcs_data_id . '_original_untrimmed_estimate_library_complexity_report.txt';
-    my $original_report_fh = Genome::Utility::FileSystem->open_file_for_reading($original_report_path);
+    my $original_report_fh = Genome::Sys->open_file_for_reading($original_report_path);
     while (my $line = $original_report_fh->getline) {
         if ($line =~ /^##\ METRICS/) {
             my $keys = $original_report_fh->getline();

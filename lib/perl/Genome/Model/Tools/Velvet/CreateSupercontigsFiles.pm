@@ -50,7 +50,7 @@ sub execute {
 
     #filehandle to print supercontigs.agp file
     unlink $self->supercontigs_agp_file;
-    my $agp_fh = Genome::Utility::FileSystem->open_file_for_writing($self->supercontigs_agp_file) ||
+    my $agp_fh = Genome::Sys->open_file_for_writing($self->supercontigs_agp_file) ||
 	return;
 
     #IO to output supercontigs.fasta

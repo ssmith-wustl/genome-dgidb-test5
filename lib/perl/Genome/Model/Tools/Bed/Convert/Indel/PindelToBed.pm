@@ -91,7 +91,7 @@ sub initialize_filehandles {
     my $big_output = $self->output . ".big_deletions";
     
     eval {
-        my $big_output_fh = Genome::Utility::FileSystem->open_file_for_writing($big_output);
+        my $big_output_fh = Genome::Sys->open_file_for_writing($big_output);
         $self->_big_output_fh($big_output_fh);
     };
     

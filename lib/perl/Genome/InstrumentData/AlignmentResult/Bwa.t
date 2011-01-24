@@ -112,15 +112,15 @@ sub test_alignment {
     } 
 
     if ($validate_against_shortcut) {
-        my $generated_bam_md5 = Genome::Utility::FileSystem->md5sum($dir . "/all_sequences.bam");
-        my $to_validate_bam_md5 = Genome::Utility::FileSystem->md5sum($expected_shortcut_path  . "/all_sequences.bam");
+        my $generated_bam_md5 = Genome::Sys->md5sum($dir . "/all_sequences.bam");
+        my $to_validate_bam_md5 = Genome::Sys->md5sum($expected_shortcut_path  . "/all_sequences.bam");
        
         print "Comparing " . $dir . "/all_sequences.bam with $expected_shortcut_path/all_sequences.bam\n\n\n"; 
         is($generated_bam_md5, $to_validate_bam_md5, "generated md5 matches what we expect -- the bam file is the same!");
     }
 
     # clear out the temp scratch/staging paths since these normally would be auto cleaned up at completion
-    my $base_tempdir = Genome::Utility::FileSystem->base_temp_directory;
+    my $base_tempdir = Genome::Sys->base_temp_directory;
     for (glob($base_tempdir . "/*")) {
         File::Path::rmtree($_);
     }

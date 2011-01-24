@@ -1,4 +1,4 @@
-package Genome::Config::edu::wustl::gsc;
+package Genome::Site::edu::wustl::gsc;
 use Genome::Site::WUGC;
 1;
 

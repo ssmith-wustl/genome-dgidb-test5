@@ -178,12 +178,12 @@ sub filtered_snp_file {
     
     my $expected_name = $self->unfiltered_snp_file . '.filtered';
     
-    if(Genome::Utility::FileSystem->check_for_path_existence($expected_name)) {
+    if(Genome::Sys->check_for_path_existence($expected_name)) {
         return $expected_name;
     }
     
     my $old_name = join('/', $self->snp_related_metric_directory(), 'filtered.indelpe.snps');
-    if(Genome::Utility::FileSystem->check_for_path_existence($old_name)) {
+    if(Genome::Sys->check_for_path_existence($old_name)) {
         return $old_name;
     }
     
@@ -226,7 +226,7 @@ sub filtered_indel_file {
     my $expected_location = $self->snp_related_metric_directory . '/indels_all_sequences.filtered';
 
     #Current standard location
-    return $expected_location if Genome::Utility::FileSystem->check_for_path_existence($expected_location);
+    return $expected_location if Genome::Sys->check_for_path_existence($expected_location);
     
     #Old standard varied by detector type
     my $old_location;
@@ -241,7 +241,7 @@ sub filtered_indel_file {
         $old_location = $self->snp_related_metric_directory . '/varscan.status.indel';
     }
 
-    return $old_location if $old_location and Genome::Utility::FileSystem->check_for_path_existence($old_location);
+    return $old_location if $old_location and Genome::Sys->check_for_path_existence($old_location);
     
     #If we didn't find it anywhere, it might not have been generated yet--which makes it a new build and should use current standard
     return $expected_location;
@@ -251,7 +251,7 @@ sub unfiltered_indel_file {
     my $self =shift;
     
     my $expected_location = $self->snp_related_metric_directory . '/indels_all_sequences';
-    return $expected_location if Genome::Utility::FileSystem->check_for_path_existence($expected_location);
+    return $expected_location if Genome::Sys->check_for_path_existence($expected_location);
     
     #Old standard varied by detector type
     my $old_location;
@@ -266,7 +266,7 @@ sub unfiltered_indel_file {
         $old_location = $self->snp_related_metric_directory . '/varscan.status.indel';
     }
 
-    return $old_location if $old_location and Genome::Utility::FileSystem->check_for_path_existence($old_location);
+    return $old_location if $old_location and Genome::Sys->check_for_path_existence($old_location);
     
     #If we didn't find it anywhere, it might not have been generated yet--which makes it a new build and should use current standard
     return $expected_location;
@@ -316,12 +316,12 @@ sub snp_related_metric_directory {
     
     my $expected_directory = $self->data_directory . '/snp_related_metrics';
     
-    return $expected_directory if Genome::Utility::FileSystem->check_for_path_existence($expected_directory);
+    return $expected_directory if Genome::Sys->check_for_path_existence($expected_directory);
     
     #if it doesn't exist, try falling back to the "old" way of doing it
     my $old_directory = $self->data_directory . '/' . $self->_snp_caller_type . '_snp_related_metrics';
     
-    return $old_directory if Genome::Utility::FileSystem->check_for_path_existence($old_directory);
+    return $old_directory if Genome::Sys->check_for_path_existence($old_directory);
     
     #if neither exist, then assume we're a new build where it hasn't been created yet
     return $expected_directory;
@@ -376,7 +376,7 @@ sub mark_duplicates_library_metrics_hash_ref {
     my $self = shift;
     my $subject = $self->model->subject_name;
     my $mark_duplicates_metrics = $self->rmdup_metrics_file;
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($mark_duplicates_metrics);
+    my $fh = Genome::Sys->open_file_for_reading($mark_duplicates_metrics);
     unless ($fh) {
         die('Failed to open mark duplicates metrics file '. $mark_duplicates_metrics);
     }
@@ -715,7 +715,7 @@ sub resolve_accumulated_alignments_filename {
     } 
     else {
         my @files = glob("$alignments_dir/mixed_library_submaps/*.map");
-        my $tmp_map_file = Genome::Utility::FileSystem->create_temp_file_path('ACCUMULATED_ALIGNMENTS-'. $self->model_id .'.map');
+        my $tmp_map_file = Genome::Sys->create_temp_file_path('ACCUMULATED_ALIGNMENTS-'. $self->model_id .'.map');
         if (-e $tmp_map_file) {
             unless (unlink $tmp_map_file) {
                 $self->error_message('Could not unlink existing temp file '. $tmp_map_file .": $!");
@@ -728,7 +728,7 @@ sub resolve_accumulated_alignments_filename {
             die($self->error_message);
         }
         my $cmd = "$aligner_path mapmerge $tmp_map_file " . join(" ", @files) . " &";
-        my $rv = Genome::Utility::FileSystem->shellcmd(
+        my $rv = Genome::Sys->shellcmd(
                                                        cmd => $cmd,
                                                        input_files => \@files,
                                                        output_files => [$tmp_map_file],

@@ -191,7 +191,7 @@ sub delete {
 #      or call class method directly like below
 sub shellcmd {
     my $self = shift;
-    return Genome::Utility::FileSystem->shellcmd(@_);
+    return Genome::Sys->shellcmd(@_);
 }
 
 #< Logging >#
@@ -214,7 +214,7 @@ sub create_log_directory {
     my $self = shift;
 
     my $log_dir = $self->log_directory;
-    Genome::Utility::FileSystem->create_directory($log_dir)
+    Genome::Sys->create_directory($log_dir)
         or die "Can't create log directory ($log_dir) for event: ".$self->id;
 
     return 1

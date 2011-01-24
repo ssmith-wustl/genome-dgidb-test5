@@ -50,7 +50,7 @@ isa_ok($varscan_command, 'Genome::Model::Tools::Varscan::ProcessSomatic', 'creat
 ok($varscan_command->execute(), 'executed varscan command');
 
 for my $file (keys %expected_files) {
-    my $diff = Genome::Utility::FileSystem->diff_file_vs_file($varscan_command->$file, $expected_files{$file});
+    my $diff = Genome::Sys->diff_file_vs_file($varscan_command->$file, $expected_files{$file});
 
     ok(!$diff, $file . ' matches expected result')
         or diag("diff:\n" . $diff);

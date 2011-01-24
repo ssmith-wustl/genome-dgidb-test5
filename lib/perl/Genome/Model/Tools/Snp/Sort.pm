@@ -38,12 +38,12 @@ sub create {
     my $self = $class->SUPER::create(@_);
     return unless $self;
 
-    unless (Genome::Utility::FileSystem->validate_file_for_reading($self->snp_file)) {
+    unless (Genome::Sys->validate_file_for_reading($self->snp_file)) {
         $self->error_message('Failed to validate snp file '. $self->snp_file .'  for reading.');
         return;
     }
     if ($self->output_file) {
-        unless (Genome::Utility::FileSystem->validate_file_for_writing($self->output_file)) {
+        unless (Genome::Sys->validate_file_for_writing($self->output_file)) {
             $self->error_message('Failed to validate output file '. $self->output_file .' for writing.');
             return;
         }
@@ -54,10 +54,10 @@ sub create {
 sub execute {
     my $self=shift;
 
-    my $snp_fh = Genome::Utility::FileSystem->open_file_for_reading($self->snp_file);
+    my $snp_fh = Genome::Sys->open_file_for_reading($self->snp_file);
     my $output_fh;
     if ($self->output_file) {
-        $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+        $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
     } else {
         $output_fh = IO::Handle->new;
         $output_fh->fdopen(fileno(STDOUT),'w');

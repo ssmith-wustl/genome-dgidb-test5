@@ -44,11 +44,11 @@ sub execute{
 
     if (defined $snv_file and defined $indel_file){
         #Merge the two
-        Genome::Utility::FileSystem->shellcmd(cmd => "sort -k 1,1 -k 2,2n -k 3,3n  -o " . $self->output . " " . $indel_file->filename . " " . $snv_file->filename);
+        Genome::Sys->shellcmd(cmd => "sort -k 1,1 -k 2,2n -k 3,3n  -o " . $self->output . " " . $indel_file->filename . " " . $snv_file->filename);
     }elsif (defined $snv_file){
-        Genome::Utility::FileSystem->shellcmd(cmd => "cp " . $snv_file->filename . "  " . $self->output) || ($self->error_message("Copy failed, exiting") and die); 
+        Genome::Sys->shellcmd(cmd => "cp " . $snv_file->filename . "  " . $self->output) || ($self->error_message("Copy failed, exiting") and die); 
     }elsif (defined $indel_file){
-        Genome::Utility::FileSystem->shellcmd(cmd => "cp " . $indel_file->filename . "  " . $self->output) || ($self->error_message("Copy failed, exiting") and die); 
+        Genome::Sys->shellcmd(cmd => "cp " . $indel_file->filename . "  " . $self->output) || ($self->error_message("Copy failed, exiting") and die); 
     }else{
         #This should never happen, die if it does
         $self->error_message("Neither converted file exists, exiting") and die;

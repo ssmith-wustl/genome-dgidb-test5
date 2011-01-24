@@ -89,7 +89,7 @@ sub post_execute {
     }
     my $masked_file = $self->output_directory .'/'. $output_basename .'.masked';
     @masked_files = grep { -f } @masked_files;
-    Genome::Utility::FileSystem->cat(
+    Genome::Sys->cat(
         input_files => \@masked_files,
         output_file => $masked_file,
     );

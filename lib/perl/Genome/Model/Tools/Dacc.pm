@@ -199,7 +199,7 @@ sub _launch_to_lsf {
         join(' ', @params),
     );
 
-    my $rv = eval { Genome::Utility::FileSystem->shellcmd(cmd => $cmd); };
+    my $rv = eval { Genome::Sys->shellcmd(cmd => $cmd); };
     if ( not $rv ) {
         $self->error_message("Failed to launch to LSF: $@");
         return;

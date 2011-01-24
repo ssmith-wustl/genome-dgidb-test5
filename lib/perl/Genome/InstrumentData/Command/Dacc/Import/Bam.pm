@@ -89,7 +89,7 @@ sub _load_bam_metric_file {
         return;
     }
 
-    my $fh = eval{ Genome::Utility::FileSystem->open_file_for_reading($metric_file); };
+    my $fh = eval{ Genome::Sys->open_file_for_reading($metric_file); };
     if ( not $fh ) {
         $self->error_message("Cannot open metric file ($metric_file): $@");
         return;
