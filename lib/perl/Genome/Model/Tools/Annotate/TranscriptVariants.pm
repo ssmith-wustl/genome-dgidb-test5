@@ -17,7 +17,7 @@ use Genome::Info::IUB;
 use Genome::Info::UCSCConservation;
 
 # keep this updated to be the latest blessed, non-experimental version
-sub default_annotator_version { 1 };
+sub default_annotator_version { 2 };
 
 class Genome::Model::Tools::Annotate::TranscriptVariants {
     is => 'Command',
