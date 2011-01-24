@@ -9,37 +9,43 @@ class Genome::ProcessingProfile::SomaticVariation{
     is => 'Genome::ProcessingProfile',
     has_param => [
         snv_detection_strategy => {
+            is => "String",
+            is_many => 0,
             doc => "Snv detector strategy string",
         },
         indel_detection_strategy => {
+            is => "String",
+            is_many => 0,
             doc => "Indel detector strategy string",
         },
         sv_detection_strategy => {
+            is => "String",
+            is_many => 0,
             doc => "SV detector strategy string",
         },
     ],
 };
 
 sub create {
-    my $self = shift;
+    my $class = shift;
+    my $bx = $class->define_boolexpr(@_);
     my @errors;
-    my $snv_strat = Genome::Model::Tools::DetectVariants2::Strategy->get($self->snv_detection_strategy) if defined($self->snv_detection_strategy);
-    $self->status_message("Validating snv_detection_strategy");
+    my $snv_strat = Genome::Model::Tools::DetectVariants2::Strategy->get($bx->value_for('snv_detection_strategy'));
     push @errors, $snv_strat->__errors__;
     $snv_strat->delete;
-    my $sv_strat = Genome::Model::Tools::DetectVariants2::Strategy->get($self->sv_detection_strategy) if defined($self->sv_detection_strategy);
-    $self->status_message("Validating snv_detection_strategy");
+    my $sv_strat = Genome::Model::Tools::DetectVariants2::Strategy->get($bx->value_for('sv_detection_strategy'));
     push @errors, $sv_strat->__errors__;
     $sv_strat->delete;
-    my $indel_strat = Genome::Model::Tools::DetectVariants2::Strategy->get($self->indel_detection_strategy) if defined($self->indel_detection_strategy);
-    $self->status_message("Validating snv_detection_strategy");
+    my $indel_strat = Genome::Model::Tools::DetectVariants2::Strategy->get($bx->value_for('indel_detection_strategy'));
     push @errors, $indel_strat->__errors__;
     $indel_strat->delete;
     if (scalar(@errors)) { 
         die @errors;
     }
-    return $self->SUPER::create(@_);
+
+    return $class->SUPER::create($bx);
 }
+
 sub _initialize_build {
     my($self,$build) = @_;
     $DB::single=1;
