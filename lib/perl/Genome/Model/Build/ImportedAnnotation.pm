@@ -88,6 +88,11 @@ class Genome::Model::Build::ImportedAnnotation {
             calculate_from => ['tier_file_directory'],
             calculate => q{return "$tier_file_directory/tier4.bed";},
        },
+       ucsc_conservation_directory => {
+            is => 'Path',
+            calculate_from => ['data_directory'],
+            calculate => q{return "$data_directory/annotation_data/ucsc_conservation";},
+       }
     ],
 };
 

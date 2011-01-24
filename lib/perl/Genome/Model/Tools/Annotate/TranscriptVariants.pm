@@ -501,17 +501,11 @@ sub execute {
         if ($self->use_version == 0) {
             $annotator = $self->_create_old_annotator($annotator_version_subclass);
         } else {
-            # The new annotator doesn't use the ucsc_conservation_directory param, so these lines can go away...
-            my $full_version = $self->build->version;
-            my ($version) = $full_version =~ /^\d+_(\d+)[a-z]/;
-            my %ucsc_versions = Genome::Info::UCSCConservation->ucsc_conservation_directories;
-
             my @directories = $self->build->determine_merged_data_directory($self->cache_annotation_data_directory);
             $annotator = $annotator_version_subclass->create(
                 data_directory => \@directories,
                 check_variants => $self->check_variants,
                 get_frame_shift_sequence => $self->get_frame_shift_sequence,
-                ucsc_conservation_directory => $ucsc_versions{$version},
             );
         }
     };
