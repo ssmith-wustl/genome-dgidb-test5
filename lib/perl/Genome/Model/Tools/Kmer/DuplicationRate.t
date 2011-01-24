@@ -10,7 +10,7 @@ use above 'Genome';
 
 use_ok('Genome::Model::Tools::Kmer::DuplicationRate');
 
-my $tmp_dir = Genome::Utility::FileSystem->create_temp_directory('Genome-Model-Tools-Kmer-DuplicationRate-'. $ENV{USER});
+my $tmp_dir = Genome::Sys->create_temp_directory('Genome-Model-Tools-Kmer-DuplicationRate-'. $ENV{USER});
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Kmer-DuplicationRate';
 my $read_1_fastq = $data_dir .'/s_7_1_sequence.txt';
 my $read_2_fastq = $data_dir .'/s_7_2_sequence.txt';

@@ -26,7 +26,7 @@ class Genome::Model::Tools::BioSamtools::CleanBam {
 
 sub execute {
     my $self = shift;
-    my $summary_fh = Genome::Utility::FileSystem->open_file_for_writing($self->summary_output_file);
+    my $summary_fh = Genome::Sys->open_file_for_writing($self->summary_output_file);
     my $in_bam = Bio::DB::Bam->open($self->input_bam_file);
     my $out_bam = Bio::DB::Bam->open($self->output_bam_file,'w');
     my $header = $in_bam->header();

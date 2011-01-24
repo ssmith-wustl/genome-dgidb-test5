@@ -41,7 +41,7 @@ ok(@models, 'created mock models');
 # overload models get, locking and shellcmd during tests
 no warnings;
 *Genome::Model::get = sub{ return grep { $_->build_requested } @models; };
-*Genome::Utility::FileSystem::shellcmd = sub{
+*Genome::Sys::shellcmd = sub{
     my $class = shift;
     my %params = @_;
     my $line = $params{cmd};
@@ -58,14 +58,14 @@ no warnings;
         die 'Could not find id in line: ' . $line;
     }
 };
-*Genome::Utility::FileSystem::lock_resource = sub{ return 1; };
-*Genome::Utility::FileSystem::unlock_resource= sub{ return 1; };
+*Genome::Sys::lock_resource = sub{ return 1; };
+*Genome::Sys::unlock_resource= sub{ return 1; };
 use warnings;
 
 is_deeply([ Genome::Model->get ], [ $models[0], $models[2] ], 'models get overloaded') or die;
-ok(Genome::Utility::FileSystem->lock_resource, 'lock_resource overloaded') or die;
-ok(Genome::Utility::FileSystem->unlock_resource, 'unlock_resource overloaded') or die;
-ok(Genome::Utility::FileSystem->shellcmd, 'shellcmd overloaded') or die;
+ok(Genome::Sys->lock_resource, 'lock_resource overloaded') or die;
+ok(Genome::Sys->unlock_resource, 'unlock_resource overloaded') or die;
+ok(Genome::Sys->shellcmd, 'shellcmd overloaded') or die;
 
 my $command_1 = Genome::Model::Command::Services::BuildQueuedModels->create();
 isa_ok($command_1, 'Genome::Model::Command::Services::BuildQueuedModels');

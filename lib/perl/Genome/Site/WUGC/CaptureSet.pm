@@ -158,8 +158,8 @@ sub _resolve_file_path {
         die($self->error_message);
     }
 
-    my $temp_bed_file = Genome::Utility::FileSystem->create_temp_file_path;
-    Genome::Utility::FileSystem->write_file($temp_bed_file, $bed_file_content);
+    my $temp_bed_file = Genome::Sys->create_temp_file_path;
+    Genome::Sys->write_file($temp_bed_file, $bed_file_content);
 
     return $temp_bed_file;
 }

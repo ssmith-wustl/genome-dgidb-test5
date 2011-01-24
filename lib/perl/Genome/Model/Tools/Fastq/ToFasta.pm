@@ -34,8 +34,8 @@ sub execute {
 sub fastQ2A {
     my $self = shift;
 
-    my $in_fh = Genome::Utility::FileSystem->open_file_for_reading($self->fastq_file);
-    my $out_fh = Genome::Utility::FileSystem->open_file_for_writing($self->fasta_file);
+    my $in_fh = Genome::Sys->open_file_for_reading($self->fastq_file);
+    my $out_fh = Genome::Sys->open_file_for_writing($self->fasta_file);
     while (my $desc_line = $in_fh->getline) {
         # @HWI-EAS75:1:2:0:345#0/1
         # NCCGCGAGATCGGAAGAGCGGTTCAGCAGGAATGC

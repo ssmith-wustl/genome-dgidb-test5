@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Tools::Blat::PslToLayers {
-    is => ['Genome::Model::Tools::Blat','Genome::Utility::FileSystem'],
+    is => ['Genome::Model::Tools::Blat','Genome::Sys'],
     has => [
             psl_file => {
                          is => 'Text',

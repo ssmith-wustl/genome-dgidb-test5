@@ -38,7 +38,7 @@ sub _create_bioseq_io {
 sub create_bioseq_writer {
     my ($self, $file, $format) = @_;
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_writing($file);
+    my $fh = Genome::Sys->open_file_for_writing($file);
     unless ( $fh ) {
         confess "Can't open file for writing to create bioseq writer.  See above error.";
     }
@@ -51,7 +51,7 @@ sub create_bioseq_writer {
 sub create_bioseq_reader {
     my ($self, $file, $format) = @_;
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($file);
+    my $fh = Genome::Sys->open_file_for_reading($file);
     unless ( $fh ) {
         confess "Can't open file for reading to create bioseq reader.  See above error.";
     }

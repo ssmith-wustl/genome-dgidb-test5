@@ -20,21 +20,109 @@ class Genome::ProcessingProfile::SomaticVariation{
     ],
 };
 
+sub create {
+    my $self = shift;
+    my @errors;
+    my $snv_strat = Genome::Model::Tools::DetectVariants2::Strategy->get($self->snv_detection_strategy) if defined($self->snv_detection_strategy);
+    $self->status_message("Validating snv_detection_strategy");
+    push @errors, $snv_strat->__errors__;
+    $snv_strat->delete;
+    my $sv_strat = Genome::Model::Tools::DetectVariants2::Strategy->get($self->sv_detection_strategy) if defined($self->sv_detection_strategy);
+    $self->status_message("Validating snv_detection_strategy");
+    push @errors, $sv_strat->__errors__;
+    $sv_strat->delete;
+    my $indel_strat = Genome::Model::Tools::DetectVariants2::Strategy->get($self->indel_detection_strategy) if defined($self->indel_detection_strategy);
+    $self->status_message("Validating snv_detection_strategy");
+    push @errors, $indel_strat->__errors__;
+    $indel_strat->delete;
+    if (scalar(@errors)) { 
+        die @errors;
+    }
+    return $self->SUPER::create(@_);
+}
 sub _initialize_build {
     my($self,$build) = @_;
-    die "This is not yet implemented.";
+    $DB::single=1;
+    return 1;
 }
 
 sub _resolve_workflow_for_build {
     my $self = shift;
+    $DB::single = 1;
     my $build = shift;
-    die "This is not yet implemented.";
+
+    my $operation = Workflow::Operation->create_from_xml(__FILE__ . '.xml');
+    
+    my $log_directory = $build->log_directory;
+    $operation->log_dir($log_directory);
+    
+    #I think this ideally should be handled 
+    $operation->name($build->workflow_name);
+
+    return $operation;
 }
 
 sub _map_workflow_inputs {
     my $self = shift;
+    $DB::single = 1;
     my $build = shift;
-    die "This is not yet implemented.";
+
+    my @inputs = ();
+
+    # Verify the somatic model
+    my $model = $build->model;
+    
+    unless ($model) {
+        $self->error_message("Failed to get a model for this build!");
+        die $self->error_message;
+    }
+    
+    my $tumor_build = $build->tumor_build;
+    my $normal_build = $build->normal_build;
+
+    unless ($tumor_build) {
+        $self->error_message("Failed to get a tumor_build associated with this somatic capture build!");
+        die $self->error_message;
+    }
+
+    unless ($normal_build) {
+        $self->error_message("Failed to get a normal_build associated with this somatic capture build!");
+        die $self->error_message;
+    }
+
+    my $data_directory = $build->data_directory;
+    unless ($data_directory) {
+        $self->error_message("Failed to get a data_directory for this build!");
+        die $self->error_message;
+    }
+
+    my $tumor_bam = $tumor_build->whole_rmdup_bam_file;
+    unless (-e $tumor_bam) {
+        $self->error_message("Tumor bam file $tumor_bam does not exist!");
+        die $self->error_message;
+    }
+
+    my $normal_bam = $normal_build->whole_rmdup_bam_file;
+    unless (-e $normal_bam) {
+        $self->error_message("Normal bam file $normal_bam does not exist!");
+        die $self->error_message;
+    }
+
+    # Get the snp file from the tumor and normal models
+    my $tumor_snp_file = $tumor_build->filtered_snp_file;
+    unless (-e $tumor_snp_file) {
+        $self->error_message("Tumor snp file $tumor_snp_file does not exist!");
+        die $self->error_message;
+    }
+    my $normal_snp_file = $normal_build->filtered_snp_file;
+    unless (-e $normal_snp_file) {
+        $self->error_message("Normal snp file $normal_snp_file does not exist!");
+        die $self->error_message;
+    }
+
+    push @inputs, build_id => $build->id;
+
+    return @inputs;
 }
 
 1;

@@ -63,7 +63,7 @@ sub create {
 
 sub execute {
    my $self = shift;
-   Genome::Utility::FileSystem->shellcmd(cmd=>$self->_java_cmd);
+   Genome::Sys->shellcmd(cmd=>$self->_java_cmd);
 }
 
 sub open_stream {

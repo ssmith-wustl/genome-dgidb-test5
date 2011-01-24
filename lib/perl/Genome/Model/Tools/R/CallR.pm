@@ -5,7 +5,7 @@ use strict;
 use Genome;
 use Cwd;
 use Statistics::R;
-require Genome::Utility::FileSystem;
+require Genome::Sys;
 
 class Genome::Model::Tools::R::CallR {
     is => 'Command',
@@ -39,7 +39,7 @@ sub execute {
     my $command = $self->command;
     my $r_library = __FILE__ . "." . $self->library;
     
-    my $tempdir = Genome::Utility::FileSystem->create_temp_directory();
+    my $tempdir = Genome::Sys->create_temp_directory();
     my $cwd = cwd();
     my $R = Statistics::R->new(tmp_dir => $tempdir);
     $R->startR();

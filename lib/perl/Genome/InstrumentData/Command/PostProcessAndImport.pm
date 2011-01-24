@@ -135,7 +135,7 @@ sub execute {
         my $lock = basename($expected_path);
         $lock = '/gsc/var/lock/' . $instrument_data_id . '/' . $lock;
 
-        $import_lock = Genome::Utility::FileSystem->lock_resource(
+        $import_lock = Genome::Sys->lock_resource(
             resource_lock => $lock,
             max_try => 2,
         );
@@ -280,14 +280,14 @@ sub execute {
         }
 
         if ($import_lock) {
-            unless(Genome::Utility::FileSystem->unlock_resource(resource_lock => $import_lock)) {
+            unless(Genome::Sys->unlock_resource(resource_lock => $import_lock)) {
                 die $self->error_message("Failed to unlock $expected_path.");
             }
         }
         return @return_inst_data;
     };
 
-    # TODO: add directory removal to Genome::Utility::FileSystem
+    # TODO: add directory removal to Genome::Sys
     if ($@) {
         system "/bin/rm -rf '$tmp_dir'";
         die $self->error_message("Error processing unaligned reads! $@");
@@ -362,8 +362,8 @@ sub _process_unaligned_fastq_pair {
         return ($forward_out, $reverse_out, $fragment_out);
     }else{
         $self->status_message("skipping n-removal");
-        Genome::Utility::FileSystem::copy_file($forward_dusted, $forward_out);
-        Genome::Utility::FileSystem::copy_file($reverse_dusted, $reverse_out);
+        Genome::Sys::copy_file($forward_dusted, $forward_out);
+        Genome::Sys::copy_file($reverse_dusted, $reverse_out);
         if ($self->dust){
             #only need to do this if we actually dusted
             unlink $forward_dusted;
@@ -406,7 +406,7 @@ sub _process_unaligned_fastq {
         }
     } else {
         $self->status_message("No n-removal params specified, skipping");
-        Genome::Utility::FileSystem->copy_file($dusted_fastq, $output_path);
+        Genome::Sys->copy_file($dusted_fastq, $output_path);
     }
     if ($self->dust){
         unlink $dusted_fastq;

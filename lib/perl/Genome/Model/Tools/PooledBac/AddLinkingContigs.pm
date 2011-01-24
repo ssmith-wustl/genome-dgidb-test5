@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use Genome::Model::Tools::Pcap::Ace;
 use Genome::Model::Tools::Pcap::Phd;
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 use Genome::Model::Tools::PooledBac::Utils;
 
 class Genome::Model::Tools::PooledBac::AddLinkingContigs {
@@ -56,7 +56,7 @@ sub execute {
     my $contig_map = $ut->open_contig_map($contig_map_file);
     my $match_list;
     my $orphan_list;
-    Genome::Utility::FileSystem->create_directory('reports');
+    Genome::Sys->create_directory('reports');
     my $fh = IO::File->new(">reports/contigs_that_link_to_matching_contigs");
     $self->error_message("Failed to open reports/contigs_that_link_to_matching_contigs for writing.\n") and die unless (-e 'reports/contigs_that_link_to_matching_contigs');
     ($match_list, $orphan_list) = $ut->create_match_and_orphan_lists($contig_map);

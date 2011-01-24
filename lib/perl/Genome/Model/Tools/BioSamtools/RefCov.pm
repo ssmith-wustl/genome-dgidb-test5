@@ -96,7 +96,7 @@ sub execute {
             $output_directory .= '/wingspan_'. $wingspan;
         }
         unless (-d $output_directory){
-            unless (Genome::Utility::FileSystem->create_directory($output_directory)) {
+            unless (Genome::Sys->create_directory($output_directory)) {
                 die('Failed to create output directory '. $output_directory);
             }
         }
@@ -117,7 +117,7 @@ sub execute {
         $self->stats_file($self->final_directory .'/'. $bam_basename .'_'. $regions_basename .'_STATS.tsv');
     }
 
-    my $temp_stats_file = Genome::Utility::FileSystem->create_temp_file_path;
+    my $temp_stats_file = Genome::Sys->create_temp_file_path;
 
     my $cmd = 'gmt5.12.1 ref-cov standard --alignment-file-path='. $self->bam_file .' --min-depth-filter='. $self->min_depth_filter .' --roi-file-path='. $self->bed_file .' --wingspan='. $wingspan .' --stats-file='. $temp_stats_file;
     if ($self->min_base_quality) {
@@ -126,13 +126,13 @@ sub execute {
     if ($self->min_mapping_quality) {
         $cmd .= ' --min-mapping-quality='. $self->min_mapping_quality;
     }
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$self->bam_file,$self->bed_file],
         output_files => [$temp_stats_file],
     );
 
-    Genome::Utility::FileSystem->copy_file($temp_stats_file, $self->stats_file);
+    Genome::Sys->copy_file($temp_stats_file, $self->stats_file);
 
     return 1;
 }

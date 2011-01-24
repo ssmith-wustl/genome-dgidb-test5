@@ -27,7 +27,7 @@ sub execute {
 
    #DIRECTORY TO PUT SPLIT FILES INTO
     my $output_dir = $dir.'/'.$sample_name.'.fa.cdhit_out.masked.goodSeq_HGblast';
-    Genome::Utility::FileSystem->create_directory( $output_dir ) unless -d $output_dir;
+    Genome::Sys->create_directory( $output_dir ) unless -d $output_dir;
 
     #FILE TO SPLIT
     my $good_seq_file = $dir.'/'.$sample_name.'.fa.cdhit_out.masked.goodSeq';

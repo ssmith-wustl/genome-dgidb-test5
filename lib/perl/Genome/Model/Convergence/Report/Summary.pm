@@ -63,7 +63,7 @@ sub _add_to_report_xml {
         $build_node->addChild( $doc->createAttribute('filtered-diploid-heterozygous-percentage', $data->{filtered_diploid_heterozygous_percentage} || '-'));
         
         my $bam_flag_file  = $subbuild->whole_rmdup_bam_flagstat_file;
-        if(Genome::Utility::FileSystem->check_for_path_existence($bam_flag_file)) {
+        if(Genome::Sys->check_for_path_existence($bam_flag_file)) {
             my $flagstat_stats = Genome::Info::BamFlagstat->get_data($bam_flag_file);
 
             for my $key (keys %$flagstat_stats) {

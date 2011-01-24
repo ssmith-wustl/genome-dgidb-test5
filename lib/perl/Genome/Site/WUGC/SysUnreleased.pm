@@ -1,4 +1,4 @@
-package Genome::Utility::FileSystem;
+package Genome::Sys;
 
 # Short Term: shellcmd() should probably be rewritten, it does not correctly use $! after the system call.  Would also be nice if
 # it could support IO wrapping of command being executed.  shellcmd() might be better off in its own module, since its not strictly
@@ -27,8 +27,6 @@ require MIME::Lite;
 
 my %SYMLINKS_TO_REMOVE;
 
-class Genome::Utility::FileSystem { };
-
 # disk usage management
 
 sub disk_usage_for_path { 
@@ -46,104 +44,6 @@ sub disk_usage_for_path {
     return $kb_used;
 }
 
-# temp file management
-
-sub _temp_directory_prefix {
-    my $self = shift;
-    my $base = join("_", map { lc($_) } split('::',$self->class));
-    return $base;
-}
-
-our $base_temp_directory;
-sub base_temp_directory {
-    my $self = shift;
-    my $class = ref($self) || $self;
-    my $template = shift;
-
-    my $id;
-    if (ref($self)) {
-        return $self->{base_temp_directory} if $self->{base_temp_directory};
-        $id = $self->id;
-    }
-    else {
-        # work as a class method
-        return $base_temp_directory if $base_temp_directory;
-        $id = '';
-    }
-
-    unless ($template) {
-        my $prefix = $self->_temp_directory_prefix();
-        $prefix ||= $class;
-        my $time = UR::Time->now;
-
-        $time =~ s/[\s\: ]/_/g;
-        $template = "/gm-$prefix-$time-$id-XXXX";
-        $template =~ s/ /-/g;
-    }
-
-    # See if we're running under LSF and LSF gave us a directory that will be
-    # auto-cleaned up when the job terminates
-    my $tmp_location = $ENV{'TMPDIR'} || "/tmp";
-    if ($ENV{'LSB_JOBID'}) {
-        my $lsf_possible_tempdir = sprintf("%s/%s.tmpdir", $ENV{'TMPDIR'}, $ENV{'LSB_JOBID'});
-        $tmp_location = $lsf_possible_tempdir if (-d $lsf_possible_tempdir);
-    }
-    # tempdir() thows its own exception if there's a problem
-    my $dir = File::Temp::tempdir($template, DIR=>$tmp_location, CLEANUP => 1);
-    $self->create_directory($dir);
-
-    if (ref($self)) {
-        return $self->{base_temp_directory} = $dir;
-    }
-    else {
-        # work as a class method
-        return $base_temp_directory = $dir;
-    }
-
-    unless ($dir) {
-        Carp::croak("Unable to determine base_temp_directory");
-    }
-
-    return $dir;
-}
-
-my $anonymous_temp_file_count = 0;
-sub create_temp_file_path {
-    my $self = shift;
-    my $name = shift;
-    unless ($name) {
-        $name = 'anonymous' . $anonymous_temp_file_count++;
-    }
-    my $dir = $self->base_temp_directory;
-    my $path = $dir .'/'. $name;
-    if (-e $path) {
-        Carp::croak "temp path '$path' already exists!";
-    }
-
-    if (!$path or $path eq '/') {
-        Carp::croak("create_temp_file_path() failed");
-    }
-
-    return $path;
-}
-
-sub create_temp_file {
-    my $self = shift;
-    my $path = $self->create_temp_file_path(@_);
-    my $fh = IO::File->new($path, '>');
-    unless ($fh) {
-        Carp::croak "Failed to create temp file $path: $!";
-    }
-    return ($fh,$path) if wantarray;
-    return $fh;
-}
-
-sub create_temp_directory {
-    my $self = shift;
-    my $path = $self->create_temp_file_path(@_);
-    $self->create_directory($path);
-    return $path;
-}
 
 #< Files >#
 
@@ -485,66 +385,6 @@ sub open_directory {
     return $dh;
 }
 
-sub create_directory {
-    my ($self, $directory) = @_;
-
-    unless ( defined $directory ) {
-        Carp::croak("Can't create_directory: No path given");
-    }
-
-    # FIXME do we want to throw an exception here?  What if the user expected
-    # the directory to be created, not that it already existed
-    return $directory if -d $directory;
-
-    my $errors;
-    # make_path may throw its own exceptions...
-    File::Path::make_path($directory, { mode => 02775, error => \$errors });
-    
-    if ($errors and @$errors) {
-        my $message = "create_directory for path $directory failed:\n";
-        foreach my $err ( @$errors ) {
-            my($path, $err_str) = %$err;
-            $message .= "Pathname " . $path ."\n".'General error' . ": $err_str\n";
-        }
-        Carp::croak($message);
-    }
-    
-    unless (-d $directory) {
-        Carp::croak("No error from 'File::Path::make_path', but failed to create directory ($directory)");
-    }
-
-    return $directory;
-}
-
-sub create_symlink {
-    my ($self, $target, $link) = @_;
-
-    unless ( defined $target ) {
-        Carp::croak("Can't create_symlink: no target given");
-    }
-
-    unless ( defined $link ) {
-        Carp::croak("Can't create_symlink: no 'link' given");
-    }
-
-    unless ( -e $target ) {
-        Carp::croak("Cannot create link ($link) to target ($target): target does not exist");
-    }
-    
-    if ( -e $link ) { # the link exists and points to spmething
-        Carp::croak("Link ($link) for target ($target) already exists.");
-    }
-    
-    if ( -l $link ) { # the link exists, but does not point to something
-        Carp::croak("Link ($link) for target ($target) is already a link.");
-    }
-
-    unless ( symlink($target, $link) ) {
-        Carp::croak("Can't create link ($link) to $target\: $!");
-    }
-    
-    return 1;
-}
 
 # FIXME there are several places where it excludes named pipes explicitly...
 # These may not always be appropriate in the general sense, but may be
@@ -771,7 +611,7 @@ sub lock_resource {
                      $self->warning_message("Invalid lock for resource $resource_lock\n"
                                             ." lock info was:\n". $info_content ."\n"
                                             ."Removing old resource lock $resource_lock\n");
-                     unless ($Genome::Utility::FileSystem::IS_TESTING) {
+                     unless ($Genome::Sys::IS_TESTING) {
                         my $message_content = <<END_CONTENT;
 Hey Apipe,
 
@@ -927,19 +767,6 @@ sub exit_cleanup {
 }
 
 
-#< Inc Dir, Modules, Classes, etc >#
-sub get_inc_directory_for_class {
-    my $class = shift;
-
-    Carp::confess('No class given to get INC directory') unless $class;
-    
-    my $module = Genome::Utility::Text::class_to_module($class);
-    my $directory = $INC{$module};
-    $directory =~ s/$module//;
-
-    return $directory;
-}
-
 sub get_classes_in_subdirectory {
     my ($subdirectory) = @_;
 
@@ -947,9 +774,10 @@ sub get_classes_in_subdirectory {
         Carp::croak("No subdirectory given to get_classes_in_subdirectory"); 
     }
 
-    my $inc_directory = get_inc_directory_for_class(__PACKAGE__);
+    my $genome_dir = Genome->get_base_directory_name();
+    my $inc_directory = substr($genome_dir, 0, -7);
     unless ( $inc_directory ) {
-        Carp::croak('Could not get inc directory for '.__PACKAGE__."\n"); 
+        Carp::croak("Could not get inc directory for Genome.\n"); 
     }
 
     my $directory = $inc_directory.'/'.$subdirectory;
@@ -1141,7 +969,7 @@ sub remove_directory_tree {
 
 =head1 Name
 
-Genome::Utility::FileSystem;
+Genome::Sys;
 
 =head1 Synopsis
 
@@ -1149,16 +977,16 @@ Houses some generic file and directory methods
 
 =head1 Usage
 
- require Genome::Utility::FileSystem;
+ require Genome::Sys;
 
  # Call methods directly:
- Genome::Utility::FileSystem->create_directory($new_directory);
+ Genome::Sys->create_directory($new_directory);
 
 =head1 Methods for Files
 
 =head2 validate_file_for_reading
 
- Genome::Utility::FileSystem->validate_file_for_reading('/tmp/users.txt')
+ Genome::Sys->validate_file_for_reading('/tmp/users.txt')
     or ...;
  
 =over
@@ -1173,7 +1001,7 @@ Houses some generic file and directory methods
 
 =head2 open_file_for_reading
 
- Genome::Utility::FileSystem->open_file_for_reading('/tmp/users.txt')
+ Genome::Sys->open_file_for_reading('/tmp/users.txt')
     or die;
  
 =over
@@ -1188,7 +1016,7 @@ Houses some generic file and directory methods
 
 =head2 validate_file_for_writing
 
- Genome::Utility::FileSystem->validate_file_for_writing('/tmp/users.txt')
+ Genome::Sys->validate_file_for_writing('/tmp/users.txt')
     or die;
  
 =over
@@ -1203,7 +1031,7 @@ Houses some generic file and directory methods
 
 =head2 open_file_for_writing
 
- Genome::Utility::FileSystem->open_file_for_writing('/tmp/users.txt')
+ Genome::Sys->open_file_for_writing('/tmp/users.txt')
     or die;
  
 =over
@@ -1218,7 +1046,7 @@ Houses some generic file and directory methods
 
 =head2 copy_file
 
- Genome::Utility::FileSystem->copy_file($FROM, $TO)
+ Genome::Sys->copy_file($FROM, $TO)
     or ...;
  
 =over
@@ -1235,7 +1063,7 @@ Houses some generic file and directory methods
 
 =head2 validate_existing_directory
 
- Genome::Utility::FileSystem->validate_existing_directory('/tmp/users')
+ Genome::Sys->validate_existing_directory('/tmp/users')
     or die;
  
 =over
@@ -1250,7 +1078,7 @@ Houses some generic file and directory methods
 
 =head2 open_directory
 
- Genome::Utility::FileSystem->open_directory('/tmp/users')
+ Genome::Sys->open_directory('/tmp/users')
     or die;
  
 =over
@@ -1265,7 +1093,7 @@ Houses some generic file and directory methods
 
 =head2 create_directory
 
- Genome::Utility::FileSystem->create_directory('/tmp/users')
+ Genome::Sys->create_directory('/tmp/users')
     or die;
  
 =over

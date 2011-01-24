@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 
 class Genome::Model::Tools::Maq::AlignReads {
     is => 'Genome::Model::Tools::Maq',
@@ -231,7 +231,7 @@ sub create {
      if ( $ascii_count > 0 ) {
         my $tmp_dir;
         if ( defined($self->temp_directory) ) {
-     		$tmp_dir =  Genome::Utility::FileSystem->create_directory($self->temp_directory);
+     		$tmp_dir =  Genome::Sys->create_directory($self->temp_directory);
         } else {
 	        $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
         }
@@ -268,7 +268,7 @@ sub create {
                         }
 			$self->status_message('quality converter cmd:'. $quality_converter_cmd);
 
-     	        	Genome::Utility::FileSystem->shellcmd(
+     	        	Genome::Sys->shellcmd(
                    		cmd => $quality_converter_cmd,
                   		input_files => [$solexa_output_path],
                  		output_files => [$fastq_pathname],
@@ -282,7 +282,7 @@ sub create {
         	my $bfq_cmd = $self->maq_path ." fastq2bfq  $fastq_pathname $bfq_pathname";
 		$self->status_message('fastq2bfq cmd:'.$bfq_cmd);
 
-     	        Genome::Utility::FileSystem->shellcmd(
+     	        Genome::Sys->shellcmd(
                    cmd => $bfq_cmd,
                    input_files => [$fastq_pathname],
                    output_files => [$bfq_pathname],
@@ -390,7 +390,7 @@ sub execute {
     $self -> status_message($cmdline);
 
    # run the aligner
-   Genome::Utility::FileSystem->shellcmd(
+   Genome::Sys->shellcmd(
        cmd                         => $cmdline,
        input_files                 => [$self->ref_seq_file, @tmp_list],
        output_files                => [$self->alignment_file, $self->unaligned_reads_file, $self->aligner_output_file],

@@ -92,7 +92,7 @@ sub _run_aligner {
             Genome::DataSource::GMSchema->disconnect_default_dbh();
         }
         
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
             cmd          => $cmdline,
             input_files  => [ $reference_fasta_path, $input ],
             output_files => [ $tmp_sai_file, $tmp_log_file ],
@@ -168,7 +168,7 @@ sub _run_aligner {
     my $log_output_file   = $self->temp_staging_directory . "/aligner.log";
     my $concat_log_cmd = sprintf('cat %s >> %s', $log_input_fileset, $log_output_file);
 
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd          => $concat_log_cmd,
         input_files  => [ @aln_log_files, $samxe_logfile ],
         output_files => [ $log_output_file ],
@@ -184,7 +184,7 @@ sub _filter_samxe_output {
 #    my $cmd = "$sam_cmd | grep -v ^@ >> $sam_file_name";
 #    print $cmd,"\n\n";
 #    $DB::single = 1;
-#    Genome::Utility::FileSystem->shellcmd(cmd => $cmd);
+#    Genome::Sys->shellcmd(cmd => $cmd);
 #    return 1;
 
     $DB::single = 1;

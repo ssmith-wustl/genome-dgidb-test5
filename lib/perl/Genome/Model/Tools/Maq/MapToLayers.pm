@@ -7,7 +7,7 @@ use Genome;
 use Genome::Model::Tools::Maq::Map::Reader;
 
 class Genome::Model::Tools::Maq::MapToLayers {
-    is => ['Genome::Model::Tools::Maq','Genome::Utility::FileSystem'],
+    is => ['Genome::Model::Tools::Maq','Genome::Sys'],
     has => [
             map_file => { is => 'Text'},
             layers_file => { is => 'Text'},

@@ -115,7 +115,7 @@ sub _run_aligner {
 		#		my $log_output = $self->temp_staging_directory . "sdfsplit.log";
 		#		$cmd = sprintf( 'cat %s >> %s', $log_input, $log_output );
 		#
-		#		Genome::Utility::FileSystem->shellcmd(
+		#		Genome::Sys->shellcmd(
 		#			cmd                       => $cmd,
 		#			input_files               => [$log_input],
 		#			output_files              => [$log_output],
@@ -154,7 +154,7 @@ sub _run_aligner {
 		$self->status_message("mblastx data dir variable set to $ENV{MBLASTX_DATADIR}");
 		local $ENV{MBLASTX_DATADIR} = $reference_mblastx_path;
 		
-		Genome::Utility::FileSystem->shellcmd(
+		Genome::Sys->shellcmd(
 			cmd                       => $cmd,
 			input_files               => [$input_fasta],
 			output_files              => [ $output_file ],
@@ -226,7 +226,7 @@ sub _prepare_reference_sequences {
 
 	#todo figure out how to copy the BLOSUM matrix
 
-	Genome::Utility::FileSystem->shellcmd(
+	Genome::Sys->shellcmd(
 		cmd                       => $cmd,
 		input_files               => [$reference_fasta_path],
 		skip_if_output_is_present => 0,

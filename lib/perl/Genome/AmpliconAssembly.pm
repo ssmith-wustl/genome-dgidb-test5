@@ -85,7 +85,7 @@ sub get {
     }
     
     # Validate directory
-    unless ( Genome::Utility::FileSystem->validate_existing_directory($directory) ) {
+    unless ( Genome::Sys->validate_existing_directory($directory) ) {
         $class->error_message("Can't validate amplicon assembly directory. See above error.");
         return;
     }
@@ -102,7 +102,7 @@ sub create {
     my ($class, %params) = @_;
 
     $params{directory} = Cwd::abs_path($params{directory});
-    unless ( Genome::Utility::FileSystem->validate_existing_directory($params{directory}) ) {
+    unless ( Genome::Sys->validate_existing_directory($params{directory}) ) {
         $class->error_message("Can't validate amplicon assembly directory. See above error.");
         return;
     }
@@ -458,7 +458,7 @@ sub _get_amplicons_and_read_names_for_broad_sanger {
 sub _get_read_name_iterator {
     my $self = shift;
 
-    my $dh = Genome::Utility::FileSystem->open_directory( $self->chromat_dir );
+    my $dh = Genome::Sys->open_directory( $self->chromat_dir );
     unless ( $dh ) {
         $self->error_message("Can't open chromat dir to get reads. See above error.");
         return;
@@ -628,12 +628,12 @@ sub create_contamination_dir_structure {
 
     my $contamination_dir = $self->contamination_dir;
     unless ( -d $contamination_dir ) {
-        return unless Genome::Utility::FileSystem->create_directory($contamination_dir);
+        return unless Genome::Sys->create_directory($contamination_dir);
     }
 
     my $reads_dir = $self->contamination_reads_dir;
     unless ( -d $reads_dir ) {
-        return unless Genome::Utility::FileSystem->create_directory($reads_dir);
+        return unless Genome::Sys->create_directory($reads_dir);
     }
 
     return 1;
@@ -671,7 +671,7 @@ sub remove_contaminated_amplicons_by_reads_in_file {
     $self->create_contamination_dir_structure
         or return;
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($file)
+    my $fh = Genome::Sys->open_file_for_reading($file)
         or return;
 
     my %amplicons_seen;

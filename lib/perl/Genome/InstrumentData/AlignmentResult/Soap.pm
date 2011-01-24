@@ -44,7 +44,7 @@ sub _run_aligner {
 
     my $cmd = "$soap_path $aligner_params -a $inputs[0] $insert -D $ref_index -o $output_aligned.soap -u $output_unaligned >>$log_file 2>&1";
 
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd          => $cmd,
         input_files  => [ $ref_index, @inputs ],
         output_files => [ "$output_aligned.soap",$output_unaligned, $log_file ],

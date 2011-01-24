@@ -52,7 +52,7 @@ sub _run_aligner {
 
     my $cmd = "$ssaha_path $aligner_params $static_params -outfile $output_file.tmp -save $ref_index $input_pathnames >>$log_file && cat $output_file.tmp >>$output_file";
 
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd          => $cmd,
         input_files  => \@_,
         output_files => [ $output_file, $log_file ],

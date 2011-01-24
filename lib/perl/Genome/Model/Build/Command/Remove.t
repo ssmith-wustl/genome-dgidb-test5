@@ -63,7 +63,7 @@ ok(!-d $b1_dir, "build directory is present: $b1_dir");
 
 # THIS TESTS THE MODEL'S LAST_SUCCEEDED_BUILD METHOD, BUT DOES NOT WORK YET
 
-my $bdir = Genome::Utility::FileSystem->create_temp_directory();
+my $bdir = Genome::Sys->create_temp_directory();
 ok(-d $bdir, "temp directory is $bdir on $ENV{HOSTNAME}");
 
 my $b1 = $m->add_build(id => -2, data_directory => "$bdir/b1");

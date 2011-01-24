@@ -76,10 +76,10 @@ EOS
 
 sub execute {
     my $self = shift;
-    my $tmp_dir = Genome::Utility::FileSystem->create_temp_directory();
+    my $tmp_dir = Genome::Sys->create_temp_directory();
 
-    my $input_fh = Genome::Utility::FileSystem->open_file_for_reading($self->input_file);
-    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+    my $input_fh = Genome::Sys->open_file_for_reading($self->input_file);
+    my $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
     my %exclude_types;
     if ($self->exclude_types) {
         my @exclude_types = split(',',$self->exclude_types);
@@ -119,9 +119,9 @@ sub execute {
     # Genome::Model::Tools::BedTools::Merge::dump_status_messages(0);
     for my $key (keys %bed_lines) {
         my $key_dir = $tmp_dir .'/'. $key;
-        Genome::Utility::FileSystem->create_directory($key_dir);
+        Genome::Sys->create_directory($key_dir);
         my $unmerged_bed_file = $key_dir .'/unmerged.bed';
-        my $unmerged_fh = Genome::Utility::FileSystem->open_file_for_writing($unmerged_bed_file);
+        my $unmerged_fh = Genome::Sys->open_file_for_writing($unmerged_bed_file);
         my @lines = @{$bed_lines{$key}};
         for my $line (@lines) {
             print $unmerged_fh $line ."\n";
@@ -133,7 +133,7 @@ sub execute {
         unless (Genome::Model::Tools::BedTools::Merge->execute(%merge_params)) {
             die('Failed to run mergeBed with params:  '. Data::Dumper::Dumper(%merge_params));
         }
-        my $merged_bed_fh = Genome::Utility::FileSystem->open_file_for_reading($merged_bed_file);
+        my $merged_bed_fh = Genome::Sys->open_file_for_reading($merged_bed_file);
         while (my $line = $merged_bed_fh->getline) {
             print $output_fh $line;
         }

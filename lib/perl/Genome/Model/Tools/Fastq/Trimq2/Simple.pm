@@ -108,21 +108,21 @@ sub execute {
 
     $self->out_file($out_file);
     
-    my $input_fh  = Genome::Utility::FileSystem->open_file_for_reading($fastq_file);
+    my $input_fh  = Genome::Sys->open_file_for_reading($fastq_file);
     unless ($input_fh) {
         $self->error_message('Failed to open fastq file ' . $fastq_file . ": $!");
         return;
     }
     binmode $input_fh, ":utf8";
 
-    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($out_file);
+    my $output_fh = Genome::Sys->open_file_for_writing($out_file);
     unless ($output_fh) {
         $self->error_message('Failed to open output file ' . $out_file . ": $!");
         return;
     }
     binmode $output_fh, ":utf8";
 
-    my $report_fh = Genome::Utility::FileSystem->open_file_for_writing($report);
+    my $report_fh = Genome::Sys->open_file_for_writing($report);
     unless ($report_fh) {
         $self->error_message("Failed to open report file " . $report . ": $!");
         return;
@@ -133,7 +133,7 @@ sub execute {
     my $primer_report_fh;
     if ($primer_sequence)
     {
-        $primer_report_fh = Genome::Utility::FileSystem->open_file_for_writing($primer_report);
+        $primer_report_fh = Genome::Sys->open_file_for_writing($primer_report);
         unless ($primer_report_fh) {
         $self->error_message("Failed to open report file " . $primer_report . ": $!");
         return;

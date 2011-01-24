@@ -7,7 +7,7 @@ use Genome;
 use Genome::Model::Tools::Pcap::Ace;
 use Genome::Model::Tools::Pcap::Phd;
 use Genome::Model::Tools::PooledBac::Utils;
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 use List::Util qw(max min);
 
 class Genome::Model::Tools::PooledBac::GeneratePostAssemblyReports {
@@ -217,7 +217,7 @@ sub execute {
     my $project_dir = $self->project_dir;
     chdir($project_dir);
     my $reports_dir = $project_dir."/reports/";
-    $self->error_message("Failed to create directory $reports_dir")  and die unless Genome::Utility::FileSystem->create_directory($reports_dir);
+    $self->error_message("Failed to create directory $reports_dir")  and die unless Genome::Sys->create_directory($reports_dir);
     
     my $ut = Genome::Model::Tools::PooledBac::Utils->create;
     $self->error_message("Genome::Model::Tools::PooledBac::Utils->create failed.\n") unless defined $ut;

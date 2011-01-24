@@ -32,7 +32,7 @@ sub seek_pos_from_contigs_file {
 	return;
     }
     my %contig_infos;
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($file) ||
+    my $fh = Genome::Sys->open_file_for_reading($file) ||
         return;
     my $seek_pos = $fh->tell;
     my $io = Bio::SeqIO->new(-format => $type, -fh => $fh);
@@ -89,7 +89,7 @@ sub get_gap_sizes {
 sub get_contig_lengths {
     my ($self, $afg_file) = @_;
     my %contig_lengths;
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($afg_file)
+    my $fh = Genome::Sys->open_file_for_reading($afg_file)
 	or return;
     while (my $record = getRecord($fh)) {
 	my ($rec, $fields, $recs) = parseRecord($record);

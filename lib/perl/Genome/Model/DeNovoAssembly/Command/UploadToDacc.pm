@@ -198,7 +198,7 @@ sub _run_aspera {
     my $cmd = "ascp -QTd -l100M -i $key_file $files jmartin\@aspera.hmpdacc.org:$dest_dir";
     $self->status_message("Aspera: $cmd");
     #my $rv = 1;
-    my $rv = eval{ Genome::Utility::FileSystem->shellcmd(cmd => $cmd); };
+    my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
     if ( not $rv ) {
         $self->error_message("Aspera command failed: $cmd");
         return;

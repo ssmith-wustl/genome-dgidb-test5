@@ -25,9 +25,9 @@ ok($build, 'Got mock de novo assembly build') or die;
 $build->assembly_length(100000);
 
 no warnings;
-*Genome::Utility::FileSystem::shellcmd = sub{ return 1; };
+*Genome::Sys::shellcmd = sub{ return 1; };
 use warnings;
-ok(Genome::Utility::FileSystem->shellcmd(), 'shellcmd overloaded');
+ok(Genome::Sys->shellcmd(), 'shellcmd overloaded');
 
 my $uploader = Genome::Model::DeNovoAssembly::Command::UploadToDacc->create(
     model => $model,

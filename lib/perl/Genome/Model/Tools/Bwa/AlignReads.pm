@@ -5,7 +5,7 @@ use warnings;
 
 use Genome;
 use Workflow;
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 
 class Genome::Model::Tools::Bwa::AlignReads {
     is  => 'Genome::Model::Tools::Bwa',
@@ -313,7 +313,7 @@ sub execute {
 
     if ( defined( $self->temp_directory ) ) {
         $tmp_dir =
-          Genome::Utility::FileSystem->create_directory(
+          Genome::Sys->create_directory(
             $self->temp_directory );
     }
     else {
@@ -362,7 +362,7 @@ sub execute {
         push @sai_intermediate_files, $tmpfile;
 
         # run the aligner
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
             cmd          => $cmdline,
             input_files  => [ $self->ref_seq_file, $input ],
             output_files => [ $tmpfile->filename ],
@@ -481,7 +481,7 @@ sub execute {
  
             $self->status_message("Leaving alignment file in sam format. Moving from temp file to final file.");
             my $cmd_move = "mv ".$from_file." ".$self->alignment_file;
-            my $rv_move = Genome::Utility::FileSystem->shellcmd( cmd => $cmd_move ); 
+            my $rv_move = Genome::Sys->shellcmd( cmd => $cmd_move ); 
             unless ($rv_move) {
             $self->status_error("Failed to execute $cmd_move");
             return;  
@@ -510,7 +510,7 @@ sub execute {
 
             $self->status_message( "Merging with cmd: " . $samtools_import_command_line );
             
-            Genome::Utility::FileSystem->shellcmd(
+            Genome::Sys->shellcmd(
                 cmd         => $samtools_import_command_line,
                 #input_files => [ $self->_ref_seq_index_file, $sam_map_output_fh->filename ],
                 input_files => \@conversion_input_files,

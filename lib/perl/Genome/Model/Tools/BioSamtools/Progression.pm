@@ -67,7 +67,7 @@ sub execute {
     my @stats_files = @{$self->stats_files};
     for (my $i = 0; $i < scalar(@stats_files); $i++) {
         my $stats_file = $stats_files[$i];
-        my $stats_fh = Genome::Utility::FileSystem->open_file_for_reading($stats_file);
+        my $stats_fh = Genome::Sys->open_file_for_reading($stats_file);
         unless ($stats_fh) {
             $self->error_message("Failed to open stats file '$stats_file' for reading:  $!");
             die ($self->error_message);
@@ -110,7 +110,7 @@ sub execute {
         }
         $current_interval += $self->interval;
     }
-    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+    my $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
     unless ($output_fh) {
         $self->error_message('Failed to open output file '. $self->output_file .' for writing!');
         return;

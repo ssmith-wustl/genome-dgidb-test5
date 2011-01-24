@@ -72,7 +72,7 @@ sub execute {
     my $self = shift;
 
     my $ref = $self->reference_sequence;
-    my $ref_list_fh = Genome::Utility::FileSystem->open_file_for_reading("$ref.fai");
+    my $ref_list_fh = Genome::Sys->open_file_for_reading("$ref.fai");
     my @chromosomes;
 
     while(my $line = $ref_list_fh->getline) {
@@ -203,7 +203,7 @@ sub execute {
     my @conserved_regions = glob($self->ucsc_directory."/conserved_regions/*");
 
     for my $conserved_region (@conserved_regions){
-        my $fh = Genome::Utility::FileSystem->open_file_for_reading($conserved_region);
+        my $fh = Genome::Sys->open_file_for_reading($conserved_region);
 
         while(my $line = $fh->getline) {
             chomp $line;
@@ -228,7 +228,7 @@ sub execute {
 
     my @repeatmasker_files = glob($self->ucsc_directory."/rmsk/*");
     for my $file (@repeatmasker_files) {
-        my $fh = Genome::Utility::FileSystem->open_file_for_reading($file);
+        my $fh = Genome::Sys->open_file_for_reading($file);
         while(my $line = $fh->getline) {
             chomp $line;
             my @fields = split /\s+/, $line;
@@ -250,7 +250,7 @@ sub execute {
     my @regulatory_regions = glob($self->ucsc_directory."/regulatory_regions/*");
 
     for my $file (@regulatory_regions) {
-        my $fh = Genome::Utility::FileSystem->open_file_for_reading($file);
+        my $fh = Genome::Sys->open_file_for_reading($file);
         while(my $line = $fh->getline) {
             chomp $line;
             my ($bin, $chr, $start, $end, ) = split /\t/, $line; #ignoring scores on these tables (may be bad)
@@ -265,7 +265,7 @@ sub execute {
     #no bins in this file
     my @cpg_islands = glob($self->ucsc_directory."/cpg_islands/*");
     for my $cpg_islands (@cpg_islands){
-        my $fh = Genome::Utility::FileSystem->open_file_for_reading($cpg_islands);
+        my $fh = Genome::Sys->open_file_for_reading($cpg_islands);
         while(my $line = $fh->getline) {
             chomp $line;
             my ($chr, $start, $end, ) = split /\t/, $line; #ignoring scores on these tables (may be bad)

@@ -17,7 +17,7 @@ use_ok('Genome::FeatureList::Command::DumpMergedList');
 
 my $test_bed_file = __FILE__ . '.bed';
 ok(-e $test_bed_file, 'test file ' . $test_bed_file . ' exists');
-my $test_bed_file_md5 = Genome::Utility::FileSystem->md5sum($test_bed_file);
+my $test_bed_file_md5 = Genome::Sys->md5sum($test_bed_file);
 
 my $feature_list = Genome::FeatureList->create(
     name                => 'GFL test feature-list for dump-merged-list',
@@ -28,7 +28,7 @@ my $feature_list = Genome::FeatureList->create(
 );
 ok($feature_list, 'got a feature list');
 
-my $test_output_path = Genome::Utility::FileSystem->create_temp_file_path;
+my $test_output_path = Genome::Sys->create_temp_file_path;
 
 my $command = Genome::FeatureList::Command::DumpMergedList->create(
     feature_list => $feature_list,

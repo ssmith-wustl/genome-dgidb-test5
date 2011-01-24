@@ -78,7 +78,7 @@ sub create {
 
     my $self = $class->SUPER::create(%params, id => $id);
 
-    if($file and Genome::Utility::FileSystem->check_for_path_existence($file)) {
+    if($file and Genome::Sys->check_for_path_existence($file)) {
         my $allocation = Genome::Disk::Allocation->allocate(
             disk_group_name => 'info_apipe_ref',
             allocation_path => 'feature_list/' . $self->id,
@@ -97,7 +97,7 @@ sub create {
         $self->create_subscription(method=>'rollback', callback=>$upon_delete_callback);
 
         my $retval = eval {
-            Genome::Utility::FileSystem->copy_file($file, $self->file_path);
+            Genome::Sys->copy_file($file, $self->file_path);
         };
         if($@ or not $retval) {
             $self->error_message('Copy failed: ' . ($@ || 'returned' . $retval) );
@@ -164,7 +164,7 @@ sub verify_file_md5 {
 
     my $bed_file = $self->file_path;
 
-    my $md5_sum = Genome::Utility::FileSystem->md5sum($bed_file);
+    my $md5_sum = Genome::Sys->md5sum($bed_file);
     if($md5_sum eq $self->file_content_hash) {
         return $md5_sum;
     } else {
@@ -188,7 +188,7 @@ sub processed_bed_file_content {
         die $self->error_message;
     }
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($file);
+    my $fh = Genome::Sys->open_file_for_reading($file);
 
     my $print = 1;
     my $bed_file_content;
@@ -241,8 +241,8 @@ sub processed_bed_file {
 
     unless($self->_processed_bed_file_path) {
         my $content = $self->processed_bed_file_content;
-        my $temp_file = Genome::Utility::FileSystem->create_temp_file_path( $self->id . '.processed.bed' );
-        Genome::Utility::FileSystem->write_file($temp_file, $content);
+        my $temp_file = Genome::Sys->create_temp_file_path( $self->id . '.processed.bed' );
+        Genome::Sys->write_file($temp_file, $content);
         $self->_processed_bed_file_path($temp_file);
     }
 
@@ -259,7 +259,7 @@ sub merged_bed_file {
 
     unless($self->_merged_bed_file_path) {
         my $processed_bed_file = $self->processed_bed_file;
-        my $temp_file = Genome::Utility::FileSystem->create_temp_file_path( $self->id . '.merged.bed' );
+        my $temp_file = Genome::Sys->create_temp_file_path( $self->id . '.merged.bed' );
 
         my %merge_params = (
             input_file => $processed_bed_file,

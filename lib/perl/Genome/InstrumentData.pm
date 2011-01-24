@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 use Data::Dumper;
-require Genome::Utility::FileSystem;
+require Genome::Sys;
 
 class Genome::InstrumentData {
     id_by => ['id'],
@@ -166,12 +166,12 @@ sub create_data_directory_and_link {
     my $self = shift;
 
     my $data_path = $self->resolve_full_path;
-    Genome::Utility::FileSystem->create_directory($data_path)
+    Genome::Sys->create_directory($data_path)
         or return;
     
     my $link = $self->data_link;
     unlink $link if -l $link;
-    Genome::Utility::FileSystem->create_symlink($data_path, $link)
+    Genome::Sys->create_symlink($data_path, $link)
         or return;
 
     return $data_path;
@@ -276,7 +276,7 @@ sub dump_fastqs_from_bam {
 	die $self->error_message;
     }
     
-    my $temp_dir = Genome::Utility::FileSystem->create_temp_directory('unpacked_bam');
+    my $temp_dir = Genome::Sys->create_temp_directory('unpacked_bam');
 
     my $subset = (defined $self->subset_name ? $self->subset_name : 0);
 

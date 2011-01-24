@@ -39,7 +39,7 @@ sub execute {
     } else {
         $self->bam_index_file($self->bam_file.'.bai');
     }
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => $bam_index_cmd,
         input_files => [$self->bam_file],
         output_files => [$self->bam_index_file],

@@ -5,7 +5,7 @@ use warnings;
 
 use Data::Dumper;
 require Bio::Taxon;
-require Genome::Utility::FileSystem;
+require Genome::Sys;
 require IO::File;
 
 sub create {

@@ -20,7 +20,7 @@ my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Blat-Subjects';
 my $query_file = $data_dir .'/test.fa';
 my $expected_psl = $data_dir .'/test.psl';
 # Must use a network dis
-#my $tmp_dir = Genome::Utility::FileSystem->create_temp_directory('Genome-Model-Tools-Blat-Subjects-'. $ENV{USER});
+#my $tmp_dir = Genome::Sys->create_temp_directory('Genome-Model-Tools-Blat-Subjects-'. $ENV{USER});
 my $tmp_dir = File::Temp::tempdir('Genome-Model-Tools-Blat-Subjects-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 
 my $tmp_query_file = $tmp_dir . '/test.fa';

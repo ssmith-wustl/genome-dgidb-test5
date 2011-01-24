@@ -93,8 +93,8 @@ is($disk->owner_id, $i->id, "allocation owner ID matches imported instrument dat
 
 ok(-e $i->data_directory, "output directory is present");
 
-my $ssize = Genome::Utility::FileSystem->directory_size_recursive($source_dir);
-my $dsize = Genome::Utility::FileSystem->directory_size_recursive($i->data_directory);
+my $ssize = Genome::Sys->directory_size_recursive($source_dir);
+my $dsize = Genome::Sys->directory_size_recursive($i->data_directory);
 
 
 ok($ssize<=$dsize, "source and destination sizes match")

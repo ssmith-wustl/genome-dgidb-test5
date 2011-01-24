@@ -65,7 +65,7 @@ sub execute {
     my $transform = Genome::Report::XSLT->transform_report(report => $report, xslt_file => $xslt_file);
     my $html = $transform->{content};
     
-    my $fh = Genome::Utility::FileSystem->open_file_for_writing($self->_summary_report);
+    my $fh = Genome::Sys->open_file_for_writing($self->_summary_report);
     unless($fh){
         $self->error_message('Failed to open report file <'. $self->_summary_report . '> for writing.');
         return;

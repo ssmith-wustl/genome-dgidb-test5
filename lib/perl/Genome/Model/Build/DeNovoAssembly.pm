@@ -371,7 +371,7 @@ sub calculate_metrics {
     my  $self = shift;
 
     my $stats_file = $self->stats_file;
-    my $stats_fh = eval{ Genome::Utility::FileSystem->open_file_for_reading($stats_file); };
+    my $stats_fh = eval{ Genome::Sys->open_file_for_reading($stats_file); };
     unless ( $stats_fh ) {
         $self->error_message("Can't set metrics because can't open stats file ($stats_file).");
         return;
@@ -525,7 +525,7 @@ sub create_config_file {
 
     my $fh;
     eval {
-	$fh = Genome::Utility::FileSystem->open_file_for_writing( $config_file );
+	$fh = Genome::Sys->open_file_for_writing( $config_file );
     };
     if ( not defined $fh ) {
 	$self->error_message("Can not open soap config file ($config_file) for writing $@");
