@@ -4,15 +4,26 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command::Define::ImportedReferenceSequence {
-    is => 'Genome::Model::Command::Define',
-    has => [
+    is => [
+        'Genome::Model::Command::Define',
+        'Genome::Command::Base',
+        ],
+    has_input => [
         fasta_file => {
             is => 'Text',
             len => 1000,
             doc => "The full path and filename of the reference sequence fasta file to import."
         }
     ],
-    has_optional => [
+    has_optional_input => [
+        derived_from => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            doc => 'The reference sequence build from which this one is derived (if any).',
+        },
+        coordinates_from => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            doc => 'The reference sequence build from which this one gets its coordinates (if any). This is a weaker concept than derived_from, and it is not neccessary to use both.',
+        },
         prefix => {
             is => 'Text',
             doc => 'The source of the sequence, such as "NCBI".  May not have spaces.'
@@ -64,6 +75,14 @@ class Genome::Model::Command::Define::ImportedReferenceSequence {
    ],
 };
 
+sub _shell_args_property_meta {
+    return shift->Genome::Command::Base::_shell_args_property_meta(@_);
+}
+
+sub resolve_class_and_params_for_argv {
+    return shift->Genome::Command::Base::resolve_class_and_params_for_argv(@_);
+}
+
 sub help_synopsis {
     return "genome model define imported-reference-sequence --species-name=human --prefix=NCBI --fasta-file=/gscuser/person/fastafile.fasta\n"
 }
@@ -97,6 +116,11 @@ sub _prompt_to_continue {
 
 sub execute {
     my $self = shift;
+
+    if (defined $self->derived_from and defined $self->coordinates_from) {
+        $self->error_message('Please specify one of --derived-from or --cordinates-from, not both (--derived-from implies --coordinates-from).');
+        return;
+    }
 
     unless (-s $self->fasta_file) {
         $self->error_message('Input fasta file: '.$self->fasta_file.' is not valid.');
@@ -267,6 +291,14 @@ sub _create_build {
         data_directory => $self->data_directory,
         fasta_file => $self->fasta_file,
     );
+
+    if ($self->derived_from) {
+        push(@build_parameters, derived_from => $self->derived_from);
+    }
+
+    if ($self->coordinates_from) {
+        push(@build_parameters, coordinates_from => $self->coordinates_from);
+    }
 
     if($self->version) {
         push @build_parameters,

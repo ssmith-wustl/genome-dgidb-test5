@@ -381,7 +381,7 @@ sub get_segments {
         $self->error_message("Bam file $bam_file doesn't exist, can't get segments for it.");
         die $self->error_message;
     }
-    my $cmd = Genome::Model::Tools::Sam::ListReadGroups->create(input=>$bam_file);
+    my $cmd = Genome::Model::Tools::Sam::ListReadGroups->create(input=>$bam_file, silence_output=>1);
     unless ($cmd->execute) {
         $self->error_message("Failed to run list read groups command for $bam_file");
         die $self->error_message;

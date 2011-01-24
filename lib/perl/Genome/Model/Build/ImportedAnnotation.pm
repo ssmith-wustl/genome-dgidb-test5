@@ -88,6 +88,11 @@ class Genome::Model::Build::ImportedAnnotation {
             calculate_from => ['tier_file_directory'],
             calculate => q{return "$tier_file_directory/tier4.bed";},
        },
+       ucsc_conservation_directory => {
+            is => 'Path',
+            calculate_from => ['data_directory'],
+            calculate => q{return "$data_directory/annotation_data/ucsc_conservation";},
+       }
     ],
 };
 
@@ -165,6 +170,18 @@ sub determine_data_directory {
         }
     }
     return @directories;
+}
+
+sub determine_merged_data_directory{
+    my $self = shift;
+    if (-d $self->_annotation_data_directory) { 
+        return $self->_annotation_data_directory;
+    }
+    else {
+        $self->error_message("Could not find annotation data in " .
+                $self->_annotation_data_directory);
+        return;
+    }
 }
 
 # Returns transcript iterator object using default location

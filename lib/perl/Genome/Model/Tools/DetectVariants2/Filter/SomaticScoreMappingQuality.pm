@@ -1,4 +1,4 @@
-package Genome::Model::Tools::DetectVariants2::Filter::HighConfidence;
+package Genome::Model::Tools::DetectVariants2::Filter::SomaticScoreMappingQuality;
 
 use strict;
 use warnings;
@@ -12,7 +12,7 @@ use Genome::Info::IUB;
 my $DEFAULT_VERSION = '0.2';
 my $READCOUNT_COMMAND = 'bam-readcount';
 
-class Genome::Model::Tools::DetectVariants2::Filter::HighConfidence {
+class Genome::Model::Tools::DetectVariants2::Filter::SomaticScoreMappingQuality{
     is => 'Genome::Model::Tools::DetectVariants2::Filter',
     has => [
         bam_readcount_version => {
