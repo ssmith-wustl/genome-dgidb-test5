@@ -63,7 +63,7 @@ sub execute {
 
     my @bam_files = @{$self->bam_files};
     my $instance = scalar(@bam_files);
-    my $merged_bam = Genome::Utility::FileSystem->create_temp_file_path('merged_'. $instance .'.bam');
+    my $merged_bam = Genome::Sys->create_temp_file_path('merged_'. $instance .'.bam');
     my %params = (
         software => 'samtools',
         is_sorted => 1,
@@ -76,7 +76,7 @@ sub execute {
         $self->error_message('Failed to execute bam file merge tool with params '. Data::Dumper::Dumper(%params));
         die($self->error_message);
     }
-    Genome::Utility::FileSystem->create_directory($self->output_directory);
+    Genome::Sys->create_directory($self->output_directory);
     $self->instance(scalar(@bam_files));
     $self->stats_file($self->output_directory .'/STATS_'. $self->instance .'.tsv');
     $self->bias_basename($self->output_directory .'/bias_'.$self->instance);

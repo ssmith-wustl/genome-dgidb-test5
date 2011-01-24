@@ -26,7 +26,7 @@ sub execute {
     unless ($refcov_bam) {
         die('Failed to load bam file '. $self->bam_file);
     }
-    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+    my $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
     my $bam  = $refcov_bam->bio_db_bam;
     my $index = $refcov_bam->bio_db_index;
     my $header = $bam->header();

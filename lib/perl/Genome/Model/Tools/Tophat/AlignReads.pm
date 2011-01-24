@@ -6,7 +6,7 @@ use warnings;
 use version;
 
 use Genome;
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 use File::Path;
 
 class Genome::Model::Tools::Tophat::AlignReads {
@@ -202,7 +202,7 @@ sub execute {
     if (version->parse($self->use_version) < version->parse('1.1.0')) {
         $aligner_output_files = [$self->sam_file];
     }
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
                                           cmd                         => $cmdline,
                                           input_files                 => \@input_files,
                                           output_files                => $aligner_output_files,
@@ -249,7 +249,7 @@ sub verify_aligner_successful_completion {
             return;
         }
     }
-    my $aligner_output_fh = Genome::Utility::FileSystem->open_file_for_reading($self->aligner_output_file);
+    my $aligner_output_fh = Genome::Sys->open_file_for_reading($self->aligner_output_file);
     unless ($aligner_output_fh) {
         $self->error_message('Failed to open aligner output file '. $self->aligner_output_file .":  $!");
         return;

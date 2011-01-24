@@ -47,7 +47,7 @@ sub create {
         return;
     }
 
-    unless ( Genome::Utility::FileSystem->validate_existing_directory( $self->directory ) ) {
+    unless ( Genome::Sys->validate_existing_directory( $self->directory ) ) {
         $self->delete;
         return;
     }
@@ -155,7 +155,7 @@ sub create_scfs_file {
 
     my $scfs_file = $self->scfs_file;
     unlink $scfs_file if -e $scfs_file;
-    my $scfs_fh = Genome::Utility::FileSystem->open_file_for_writing($scfs_file)
+    my $scfs_fh = Genome::Sys->open_file_for_writing($scfs_file)
         or return;
     for my $scf ( @{$self->get_reads} ) { 
         $scfs_fh->print("$scf\n");

@@ -124,7 +124,7 @@ sub execute {
 
     my $cmd = $tier1_cmd . " | " . $tier2_cmd . " | " . $tier3_cmd . " > " . $tier4_cmd;
 
-    my $result = Genome::Utility::FileSystem->shellcmd( cmd => $cmd );
+    my $result = Genome::Sys->shellcmd( cmd => $cmd );
 
     return 1;
 }

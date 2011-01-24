@@ -18,7 +18,7 @@ sub execute {
     my $self = shift;
     my $stderr_redirector = $self->include_stderr ? ' 2>&1 ' : '';
     my $cmd = $self->samtools_path .' flagstat '. $self->bam_file .' > '. $self->output_file . $stderr_redirector;
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$self->bam_file],
         output_files => [$self->output_file],
@@ -34,7 +34,7 @@ sub parse_file_into_hashref {
         return;
     }
 
-    my $flag_fh = Genome::Utility::FileSystem->open_file_for_reading($flag_file);
+    my $flag_fh = Genome::Sys->open_file_for_reading($flag_file);
     unless($flag_fh) {
         warn 'Fail to open ' . $flag_file . ' for reading';
         return;

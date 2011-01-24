@@ -9,7 +9,7 @@ use Data::Dumper 'Dumper';
 
 class Genome::Model::Report {
     #:adukes remove double inheritance, G:U:FileSystem is a pox, jpeck concurs
-    is => ['Genome::Report::Generator','Genome::Utility::FileSystem'],
+    is => ['Genome::Report::Generator','Genome::Sys'],
     has => [
         build => {
             is => 'Genome::Model::Build',
@@ -55,7 +55,7 @@ sub create {
 
 #< Report Classes >#
 sub get_generic_report_classes {
-    return Genome::Utility::FileSystem::get_classes_in_subdirectory_that_isa(
+    return Genome::Sys::get_classes_in_subdirectory_that_isa(
         'Genome/Model/Report',
         'Genome::Report::Generator',
     );
@@ -68,7 +68,7 @@ sub get_report_classes_for_type_name {
         Carp::confess("No model sub type given\n"); 
     }
 
-    return Genome::Utility::FileSystem::get_classes_in_subdirectory_that_isa(
+    return Genome::Sys::get_classes_in_subdirectory_that_isa(
         'Genome/Model/'.Genome::Utility::Text::string_to_camel_case($type_name).'/Report', 
         'Genome::Report::Generator',
     );

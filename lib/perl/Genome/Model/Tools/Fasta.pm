@@ -40,7 +40,7 @@ sub create {
         return;
     }
 
-    my $validate = eval { Genome::Utility::FileSystem->validate_file_for_reading( $self->fasta_file ); };
+    my $validate = eval { Genome::Sys->validate_file_for_reading( $self->fasta_file ); };
     if (!$validate or $@) {
         $self->error_message("validate_file_for_reading failed: $@");
         return;
@@ -219,19 +219,19 @@ sub get_qual_reader {
 }
 
 sub _get_bioseq_reader {
-    Genome::Utility::FileSystem->validate_file_for_reading($_[1]) 
+    Genome::Sys->validate_file_for_reading($_[1]) 
         or return;
     return _get_bioseq(@_, '<');
 }
 
 sub get_fasta_writer {
-    Genome::Utility::FileSystem->validate_file_for_writing($_[1]) 
+    Genome::Sys->validate_file_for_writing($_[1]) 
         or return;
     return _get_bioseq_writer(@_, 'fasta');
 }
 
 sub get_qual_writer {
-    Genome::Utility::FileSystem->validate_file_for_writing($_[1]) 
+    Genome::Sys->validate_file_for_writing($_[1]) 
         or return;
     return _get_bioseq_writer(@_, 'qual');
 }

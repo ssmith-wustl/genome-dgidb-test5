@@ -19,13 +19,13 @@ my $prev_blast_dir = $sample_name.'.HGfiltered_BLASTN';
 my $curr_blast_dir = $sample_name.'.BNFiltered_TBLASTX_nt';
 
 #copy/link files
-my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+my $temp_dir = Genome::Sys->create_temp_directory();
 ok( -d $temp_dir, "Created temp test dir" ) or die;
 
-Genome::Utility::FileSystem->create_directory( $temp_dir."/$run" );
+Genome::Sys->create_directory( $temp_dir."/$run" );
 ok( -d $temp_dir."/$run", "Created temp run dir" );
 
-Genome::Utility::FileSystem->create_directory( $temp_dir."/$run/$sample_name" );
+Genome::Sys->create_directory( $temp_dir."/$run/$sample_name" );
 ok( -d $temp_dir."/$run/$sample_name", "Created temp sample dir" );
 
 symlink( $data_dir."/$sample_name/$input_file", $temp_dir."/$run/$sample_name/$input_file" );

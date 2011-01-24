@@ -54,21 +54,21 @@ sub execute {
 
     $self->out_file($out_file);
     
-    my $input_fh  = Genome::Utility::FileSystem->open_file_for_reading($fastq_file);
+    my $input_fh  = Genome::Sys->open_file_for_reading($fastq_file);
     unless ($input_fh) {
         $self->error_message('Failed to open fastq file ' . $fastq_file . ": $!");
         return;
     }
     binmode $input_fh, ":utf8";
 
-    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($out_file);
+    my $output_fh = Genome::Sys->open_file_for_writing($out_file);
     unless ($output_fh) {
         $self->error_message('Failed to open output file ' . $out_file . ": $!");
         return;
     }
     binmode $output_fh, ":utf8";
 
-    my $filter_fh = Genome::Utility::FileSystem->open_file_for_writing($filter_file);
+    my $filter_fh = Genome::Sys->open_file_for_writing($filter_file);
     unless ($filter_fh) {
         $self->error_message('Failed to open filtered file '. $filter_file . ": $!");
         return;
@@ -76,7 +76,7 @@ sub execute {
     binmode $filter_fh, ":utf8";
 
     my $report = $self->report_file || $out_dir . "/trimq2.report";
-    my $report_fh = Genome::Utility::FileSystem->open_file_for_writing($report);
+    my $report_fh = Genome::Sys->open_file_for_writing($report);
     unless ($report_fh) {
         $self->error_message("Failed to open report file " . $report . ": $!");
         return;

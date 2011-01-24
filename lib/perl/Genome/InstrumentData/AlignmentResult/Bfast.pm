@@ -154,7 +154,7 @@ sub _run_aligner {
         my $cmdline = $bfast_path . sprintf(' match %s -T %s -f %s -r %s > %s',
             $aligner_params{match_params}, "$tmp_dir/", $ref_file, $fq_file, $tmp_matches_file);
 
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
             cmd             => $cmdline,
             input_files     => [ @ref_files, $fq_file ],
             output_files    => [ $tmp_matches_file ],
@@ -173,7 +173,7 @@ sub _run_aligner {
         my $cmdline = $bfast_path. sprintf(' localalign %s -f %s -m %s > %s',
             $aligner_params{localalign_params}, $ref_file, $tmp_matches_file, $tmp_aligned_file);
 
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
             cmd             => $cmdline,
             input_files     => [ @ref_files, $tmp_matches_file ],
             output_files    => [ $tmp_aligned_file ],
@@ -192,7 +192,7 @@ sub _run_aligner {
         my $cmdline = $bfast_path . sprintf(' postprocess %s -f %s -i %s > %s',
             $aligner_params{postprocess_params}, $ref_file, $tmp_aligned_file, $tmp_reported_file);
 
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
             cmd             => $cmdline,
             input_files     => [ @ref_files, $tmp_aligned_file ],
             output_files    => [ $tmp_reported_file ],

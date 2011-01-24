@@ -8,7 +8,7 @@ use Test::More tests => 3;
 use above 'Genome';
 
 use_ok('Genome::Model::Tools::Fastqc::GenerateReports');
-my $tmp_dir = Genome::Utility::FileSystem->create_temp_directory;
+my $tmp_dir = Genome::Sys->create_temp_directory;
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fastqc-GenerateReports';
 
 my @fastq_files = ($data_dir .'/s_2_1_sequence.txt',  $data_dir .'/s_2_2_sequence.txt');

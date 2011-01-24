@@ -74,12 +74,12 @@ sub execute {                               # replace with real execution logic.
     my $output_file = $self->output_file;
     my $output_plot = $self->output_plot;
 
-    my ($output_fh, $output_temp_file) = Genome::Utility::FileSystem->create_temp_file;
+    my ($output_fh, $output_temp_file) = Genome::Sys->create_temp_file;
     print $output_fh "chrom\tchr_start\tchr_stop\tref\tvar\tcalled\tfilter\tstatus\tv_ref\tv_var\tnorm_reads1\tnorm_reads2\tnorm_freq\tnorm_call\ttum_reads1\ttum_reads2\ttum_freq\ttum_call\tsomatic_status\tgermline_p\tsomatic_p\n";
 
-    my ($somatic_fh, $somatic_file) = Genome::Utility::FileSystem->create_temp_file;
-    my ($germline_fh, $germline_file) = Genome::Utility::FileSystem->create_temp_file;
-    my ($reference_fh, $reference_file) = Genome::Utility::FileSystem->create_temp_file;
+    my ($somatic_fh, $somatic_file) = Genome::Sys->create_temp_file;
+    my ($germline_fh, $germline_file) = Genome::Sys->create_temp_file;
+    my ($reference_fh, $reference_file) = Genome::Sys->create_temp_file;
 
     ## Reset statistics ##
     my %stats = ();
@@ -92,7 +92,7 @@ sub execute {                               # replace with real execution logic.
 
 
     ## Parse the variant file ##
-    my $input = Genome::Utility::FileSystem->open_file_for_reading($variants_file);
+    my $input = Genome::Sys->open_file_for_reading($variants_file);
     my $lineCounter = 0;
 
     while (<$input>) {
@@ -181,13 +181,13 @@ sub execute {                               # replace with real execution logic.
     close($output_fh);
 
     #done producing the file, now copy it to the final location
-    Genome::Utility::FileSystem->copy_file($output_temp_file, $output_file);
+    Genome::Sys->copy_file($output_temp_file, $output_file);
 
     if($self->output_plot) {
-        my ($r_script_fh, $r_script_file) = Genome::Utility::FileSystem->create_temp_file;
+        my ($r_script_fh, $r_script_file) = Genome::Sys->create_temp_file;
 
-        my $temp_plot_file_path = Genome::Utility::FileSystem->create_temp_file_path;
-        my $temp_somatic_plot_file_path = Genome::Utility::FileSystem->create_temp_file_path;
+        my $temp_plot_file_path = Genome::Sys->create_temp_file_path;
+        my $temp_somatic_plot_file_path = Genome::Sys->create_temp_file_path;
 
         if(-s $somatic_file) {
             print $r_script_fh qq{somatic <- read.table("$somatic_file")\n};
@@ -236,15 +236,15 @@ dev.off()
 
         close($r_script_fh);
 
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
             cmd => "R --no-save <$r_script_file",
             input_files => [$r_script_file],
             output_files => [$temp_plot_file_path]
         );
 
-        Genome::Utility::FileSystem->copy_file($temp_plot_file_path, $self->output_plot_file);
-        Genome::Utility::FileSystem->copy_file($temp_somatic_plot_file_path, $self->output_somatic_plot_file)
-            if Genome::Utility::FileSystem->check_for_path_existence($temp_somatic_plot_file_path);
+        Genome::Sys->copy_file($temp_plot_file_path, $self->output_plot_file);
+        Genome::Sys->copy_file($temp_somatic_plot_file_path, $self->output_somatic_plot_file)
+            if Genome::Sys->check_for_path_existence($temp_somatic_plot_file_path);
     }
 
     print $stats{'num_variants'} . " variants in $variants_file\n";
@@ -274,7 +274,7 @@ sub load_validation_results {
 
     my %results = ();
 
-    my $input = Genome::Utility::FileSystem->open_file_for_reading($filename);
+    my $input = Genome::Sys->open_file_for_reading($filename);
     my $lineCounter = 0;
 
     while (<$input>) {

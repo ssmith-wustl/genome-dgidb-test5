@@ -63,7 +63,7 @@ sub pre_execute {
     for my $dir ($self->data_directory, $self->compile_cna_output_dir, $self->merge_output_dir, $self->region_output_dir) {
         unless (-d $dir) {
             $self->status_message("$dir does not exist... creating it.");
-            Genome::Utility::FileSystem->create_directory($dir);
+            Genome::Sys->create_directory($dir);
         }
     }
 

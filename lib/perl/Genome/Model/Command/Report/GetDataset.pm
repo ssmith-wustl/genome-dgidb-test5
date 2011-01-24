@@ -79,7 +79,7 @@ sub create {
     }
 
     if ( $self->output_file ) { 
-        my $fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+        my $fh = Genome::Sys->open_file_for_writing($self->output_file);
         unless ( $fh ) {
             $self->delete;
             return;

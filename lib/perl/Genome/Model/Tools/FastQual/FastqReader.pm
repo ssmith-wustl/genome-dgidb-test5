@@ -9,14 +9,14 @@ __PACKAGE__->mk_accessors(qw/ file _io /);
 
 require Carp;
 use Data::Dumper 'Dumper';
-require Genome::Utility::FileSystem;
+require Genome::Sys;
 
 sub create {
     my ($class, %params) = @_;
 
     my $self = bless \%params, $class;
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading( $self->file );
+    my $fh = Genome::Sys->open_file_for_reading( $self->file );
     unless ( $fh ) {
         Carp::Confess("Can't open fastq file.");
     }

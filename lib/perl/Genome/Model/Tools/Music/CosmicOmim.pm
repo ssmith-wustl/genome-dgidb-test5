@@ -7,7 +7,7 @@ package Genome::Model::Tools::Music::CosmicOmim;
    use FileHandle;
    use Text::CSV_XS;
 
-class Genome::Model::Tools::Music::CosmicOmim{
+class Genome::Model::Tools::Music::CosmicOmim {
     is => 'Command',
     has => [
        mutation_file => {
@@ -19,23 +19,26 @@ class Genome::Model::Tools::Music::CosmicOmim{
            doc => 'Output file contains the input file with two columns appended to the end, corresponding to cosmic and omim mutation comparisons, respectively',
        }
     ],
-    has_optional=> [
+    has_optional => [
        omimaa_dir => {
            is => 'Path',
            doc => 'omim amino acid mutation database folder',
-           default => '/gscmnt/200/medseq/analysis/software/resources/OMIM/OMIM_Will/',
+           default => Genome::Sys->dbpath('omim','latest'),
        },
        cosmic_dir => {
            is => 'Path',
            doc => 'cosmic amino acid mutation database folder',
-           default => '/gscmnt/sata180/info/medseq/biodb/shared/cosmic/cosmic_will/',
+           default => Genome::Sys->dbpath('cosmic','latest'),
        },
        verbose => {
+           # TODO: you probably want Boolean.  The cmdline standard is --no-verbose to turn it off (for free with Boolean)
+           # is => 'Boolean',
            is => 'Path',
            doc => 'turn on to display larger working output, default on',
            default => '1',
        },
     ],
+    doc => 'add columns for cosmic and OMIM database results'
 };
 
 sub execute{

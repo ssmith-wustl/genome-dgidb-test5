@@ -173,7 +173,7 @@ sub create {
 sub create_report_from_directory {
     my ($class, $directory) = @_;
 
-    Genome::Utility::FileSystem->validate_directory_for_read_access($directory)
+    Genome::Sys->validate_directory_for_read_access($directory)
         or return;
 
     $class->_convert_properties_file_to_xml($directory);
@@ -190,7 +190,7 @@ sub create_report_from_directory {
 sub create_reports_from_parent_directory {
     my ($class, $parent_directory) = @_;
 
-    Genome::Utility::FileSystem->validate_directory_for_read_access($parent_directory)
+    Genome::Sys->validate_directory_for_read_access($parent_directory)
         or return;
 
     my @reports;
@@ -218,7 +218,7 @@ sub directory {
         return;
     }
     my $validate = eval {
-        Genome::Utility::FileSystem->validate_directory_for_write_access( 
+        Genome::Sys->validate_directory_for_write_access( 
             $parent_directory
         ); 
     };
@@ -229,7 +229,7 @@ sub directory {
 
     # Get dir, create
     my $directory = $parent_directory.'/'.join('_', split(' ', $self->name));
-    Genome::Utility::FileSystem->create_directory($directory)
+    Genome::Sys->create_directory($directory)
         or return;
 
     return $directory;
@@ -274,7 +274,7 @@ sub save {
     if ( $overwrite ) {
         unlink $file if -e $file;
     }
-    my $validate = eval { Genome::Utility::FileSystem->validate_file_for_writing($file)};
+    my $validate = eval { Genome::Sys->validate_file_for_writing($file)};
     if (!$validate or $@) {
         $self->error_message("validate_file_for_writing on $file failed: $@");
         return;
@@ -293,7 +293,7 @@ sub save {
             next unless exists $data->{$type};
             my $file = $directory.'/report.'.$type;
             unlink $file if -e $file;
-            my $fh = Genome::Utility::FileSystem->open_file_for_writing($file)
+            my $fh = Genome::Sys->open_file_for_writing($file)
                 or confess;
             $fh->print( $data->{$type} );
             $fh->close;
@@ -307,7 +307,7 @@ sub _retrieve_xml {
     my ($class, $directory) = @_;
 
     my $file = $class->_xml_file($directory);
-    Genome::Utility::FileSystem->validate_file_for_reading($file)
+    Genome::Sys->validate_file_for_reading($file)
         or return;
 
     my $libxml = XML::LibXML->new();

@@ -17,7 +17,7 @@ ok( -s $file_to_run, "Test fasta file exists" ) or die;
 my $done_file = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-ViromeScreening/Titanium17/Titanium17_undecodable/Titanium17_undecodable.HGfiltered_BLASTN/Titanium17_undecodable.HGfiltered.fa_file0.blastn.out';
 ok( -s $done_file, "Blast out file exists" ) or die; #otherwise will kick off blast which could take a long time
 
-my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+my $temp_dir = Genome::Sys->create_temp_directory();
 
 my $c = Genome::Model::Tools::ViromeEvent::BlastN::InnerCheckOutput->create(
     file_to_run => $file_to_run,

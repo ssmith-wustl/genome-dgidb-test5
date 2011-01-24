@@ -40,7 +40,7 @@ sub link_instrument_data {
 
     my $chromat_dir = $self->chromat_dir;
     my $instrument_data_dir = $instrument_data->resolve_full_path;
-    my $dh = Genome::Utility::FileSystem->open_directory($instrument_data_dir)
+    my $dh = Genome::Sys->open_directory($instrument_data_dir)
         or return;
 
     for (1..2) {  # . and ..
@@ -54,7 +54,7 @@ sub link_instrument_data {
         my $link = sprintf('%s/%s', $chromat_dir, $trace);
         next if -e $link; # link points to a target that exists
         unlink $link if -l $link; # remove - link exists, but points to something that does not exist
-        Genome::Utility::FileSystem->create_symlink($target, $link)
+        Genome::Sys->create_symlink($target, $link)
             or return;
     }
 
@@ -116,7 +116,7 @@ sub _amplicon_iterator_for_name {
     my $self = shift;
 
     # open chromt_dir
-    my $dh = Genome::Utility::FileSystem->open_directory( $self->chromat_dir );
+    my $dh = Genome::Sys->open_directory( $self->chromat_dir );
     unless ( $dh ) {
         $self->error_message("Can't open chromat dir to get reads. See above error.");
         return;
@@ -342,7 +342,7 @@ sub create_scfs_file_for_amplicon {
 
     my $scfs_file = $self->scfs_file_for_amplicon($amplicon);
     unlink $scfs_file if -e $scfs_file;
-    my $scfs_fh = Genome::Utility::FileSystem->open_file_for_writing($scfs_file)
+    my $scfs_fh = Genome::Sys->open_file_for_writing($scfs_file)
         or return;
     for my $scf ( @{$amplicon->reads} ) { 
         $scfs_fh->print("$scf\n");

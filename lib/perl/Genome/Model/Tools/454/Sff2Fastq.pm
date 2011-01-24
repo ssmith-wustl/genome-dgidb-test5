@@ -40,7 +40,7 @@ sub execute {
 
     my $cmd = sprintf("sff2fastq %s -o %s %s", ($self->force_untrimmed?'-n' : ''), $self->fastq_file, $self->sff_file);
 
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
                                          cmd => $cmd,
                                          input_files => [$self->sff_file],
                                          output_files => [$self->fastq_file],

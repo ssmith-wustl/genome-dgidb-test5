@@ -1,4 +1,4 @@
-package Genome::Model::Tools::DetectVariants::Filter::HighConfidence;
+package Genome::Model::Tools::DetectVariants2::Filter::SomaticScoreMappingQuality;
 
 use strict;
 use warnings;
@@ -12,8 +12,8 @@ use Genome::Info::IUB;
 my $DEFAULT_VERSION = '0.2';
 my $READCOUNT_COMMAND = 'bam-readcount';
 
-class Genome::Model::Tools::DetectVariants::Filter::HighConfidence {
-    is => 'Genome::Model::Tools::DetectVariants::Filter',
+class Genome::Model::Tools::DetectVariants2::Filter::SomaticScoreMappingQuality{
+    is => 'Genome::Model::Tools::DetectVariants2::Filter',
     has => [
         bam_readcount_version => {
             is => 'Version',
@@ -130,7 +130,7 @@ sub execute {
         die;
     }
 
-    my ($tfh,$temp_path) = Genome::Utility::FileSystem->create_temp_file;
+    my ($tfh,$temp_path) = Genome::Sys->create_temp_file;
     unless($tfh) {
         $self->error_message("Unable to create temporary file $!");
         die;

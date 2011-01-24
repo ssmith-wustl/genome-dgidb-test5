@@ -19,8 +19,8 @@ ok (-d $data_dir, "Data dir exists");
 ok (-s $data_dir.'/sff/GABJJ9O01.sff', "Test sff file exists");
 
 #create temp test dir
-my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
-my $temp_sff_dir = Genome::Utility::FileSystem->create_directory($temp_dir.'/sff');
+my $temp_dir = Genome::Sys->create_temp_directory();
+my $temp_sff_dir = Genome::Sys->create_directory($temp_dir.'/sff');
 
 #copy data over
 ok (File::Copy::copy($data_dir.'/sff/GABJJ9O01.sff', $temp_dir.'/sff'), "Copied data file to temp dir");

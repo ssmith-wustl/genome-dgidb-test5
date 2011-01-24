@@ -63,7 +63,7 @@ sub execute {
 
     #output directory
     my $output_dir = ($self->output_dir) ? $self->output_dir : $self->assembly_directory;
-    Genome::Utility::FileSystem->create_directory( $output_dir ) unless -d $output_dir;
+    Genome::Sys->create_directory( $output_dir ) unless -d $output_dir;
 
     #output file prefix
     my $file_prefix = ( $self->file_prefix ) ? $self->file_prefix : $self->assembly_file_prefix;
@@ -95,12 +95,13 @@ sub _full_path_to_version_script {
     my $module_path = $self->class;
     $module_path =~ s/::/\//g;
 
-    my $inc_dir = Genome::Utility::FileSystem->get_inc_directory_for_class($self->class);
-    my $script = $inc_dir.$module_path.'/'.$self->version.'/'.$self->_script_name;
+    my $genome_dir = Genome->get_base_directory_name();
+    my $inc_dir = substr($genome_dir, 0, -7);
+    my $script = $inc_dir.'/'.$module_path.'/'.$self->version.'/'.$self->_script_name;
 
     unless ( -x $script ) {
-	$self->error_message("Failed to find script: $script");
-	return;
+        $self->error_message("Failed to find script: $script");
+        return;
     }
 
     return $script;

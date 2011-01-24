@@ -12,7 +12,7 @@ use File::stat;
 use File::Path;
 
 class Genome::InstrumentData::Imported {
-    is => [ 'Genome::InstrumentData','Genome::Utility::FileSystem' ],
+    is => [ 'Genome::InstrumentData','Genome::Sys' ],
     type_name => 'imported instrument data',
     table_name => 'IMPORTED_INSTRUMENT_DATA',
     subclassify_by => 'subclass_name',
@@ -129,7 +129,7 @@ sub calculate_alignment_estimated_kb_usage {
     my $answer;
     if($self->original_data_path !~ /\,/ ) {
         if (-d $self->original_data_path) {
-            my $source_size = Genome::Utility::FileSystem->directory_size_recursive($self->original_data_path);
+            my $source_size = Genome::Sys->directory_size_recursive($self->original_data_path);
             $answer = ($source_size/1000)+ 100;
         } else {
             unless ( -e $self->original_data_path) {
@@ -381,7 +381,7 @@ sub get_segments {
         $self->error_message("Bam file $bam_file doesn't exist, can't get segments for it.");
         die $self->error_message;
     }
-    my $cmd = Genome::Model::Tools::Sam::ListReadGroups->create(input=>$bam_file);
+    my $cmd = Genome::Model::Tools::Sam::ListReadGroups->create(input=>$bam_file, silence_output=>1);
     unless ($cmd->execute) {
         $self->error_message("Failed to run list read groups command for $bam_file");
         die $self->error_message;

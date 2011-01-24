@@ -21,6 +21,6 @@ my $rv = $command->execute;
 ok($rv, 'Command completed successfully');
 ok($command->_need_chrom_sort, 'unordered chromosomes in input detected');
 
-my $diff = Genome::Utility::FileSystem->diff_file_vs_file($output_file, $expected_file);
+my $diff = Genome::Sys->diff_file_vs_file($output_file, $expected_file);
 ok(!$diff, 'output matched expected result')
     or diag("diff results:\n" . $diff);

@@ -127,7 +127,7 @@ sub execute {
     #Clean up big consensus file
     my $consensus_file = $build->bam_pileup_file_path;
     if (-s $consensus_file) {
-        if (Genome::Utility::FileSystem->bzip($consensus_file) ) {
+        if (Genome::Sys->bzip($consensus_file) ) {
             $self->status_message("Converted consesnsus file to bzip format.");
         } else {
             $self->error_message("Could NOT convert consensus file to bzip format.  Continuing anyway.");

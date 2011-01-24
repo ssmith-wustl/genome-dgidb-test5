@@ -75,7 +75,7 @@ sub execute {
     if ($self->output_file && $self->output_file ne '/dev/null') {
         $params{output_files} = [$self->output_file];
     }
-    Genome::Utility::FileSystem->shellcmd(%params);
+    Genome::Sys->shellcmd(%params);
     return 1;
 }
 

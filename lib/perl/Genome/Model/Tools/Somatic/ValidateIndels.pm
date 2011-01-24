@@ -88,7 +88,7 @@ sub load_bed_file {
     my $file = shift;
     my %data;
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($file);
+    my $fh = Genome::Sys->open_file_for_reading($file);
     $DB::single=1;
     while(my $line = $fh->getline){
         chomp $line;
@@ -116,7 +116,7 @@ sub load_annotation_file {
     my $file = shift;
     my %data;
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($file);
+    my $fh = Genome::Sys->open_file_for_reading($file);
     while(my $line = $fh->getline){
         chomp $line;
         my ($chr,$start,$stop,$ref,$var,$lower_range,$upper_range) = split "\t",$line;
@@ -257,7 +257,7 @@ sub dump_to_file {
     my $self = shift;
     my $hash = shift;
     my $file = shift;
-    my $fh = Genome::Utility::FileSystem->open_file_for_writing($file);
+    my $fh = Genome::Sys->open_file_for_writing($file);
     for my $chr (sort(keys(%{$hash}))){
         for my $start (sort {$a <=> $b} keys(%{$hash->{$chr}})){
             for my $stop (keys(%{$hash->{$chr}{$start}})){

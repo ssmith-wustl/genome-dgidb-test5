@@ -55,17 +55,17 @@ $filter_command->dump_status_messages(1);
 isa_ok($filter_command, 'Genome::Model::Tools::Somatic::FilterFalsePositives', 'created filter command');
 ok($filter_command->execute(), 'executed filter command');
 
-my $output_diff = Genome::Utility::FileSystem->diff_file_vs_file($expected_output_file, $output_file);
+my $output_diff = Genome::Sys->diff_file_vs_file($expected_output_file, $output_file);
 ok(!$output_diff, 'output file matches expected result')
     or diag("diff:\n" . $output_diff);
 
-my $filtered_diff = Genome::Utility::FileSystem->diff_file_vs_file($expected_filtered_file, $filtered_file);
+my $filtered_diff = Genome::Sys->diff_file_vs_file($expected_filtered_file, $filtered_file);
 ok(!$filtered_diff, 'filtered file matches expected result')
     or diag("diff:\n" . $filtered_diff);
 
 SKIP: {
     skip "There are sometimes meaningless differences in the output (nan vs. -nan).", 1;
-    my $readcount_diff = Genome::Utility::FileSystem->diff_file_vs_file($expected_readcount_file, $readcount_file);
+    my $readcount_diff = Genome::Sys->diff_file_vs_file($expected_readcount_file, $readcount_file);
     ok(!$readcount_diff, 'readcount file matches expected result')
         or diag("diff:\n" . $readcount_diff);
 }
@@ -94,11 +94,11 @@ $filter_command->dump_status_messages(1);
 isa_ok($filter_command2, 'Genome::Model::Tools::Somatic::FilterFalsePositives', 'created second filter command');
 ok($filter_command2->execute(), 'executed second filter command');
 
-my $output_diff2 = Genome::Utility::FileSystem->diff_file_vs_file($expected_output_file, $output_file. '.2');
+my $output_diff2 = Genome::Sys->diff_file_vs_file($expected_output_file, $output_file. '.2');
 ok(!$output_diff2, 'output file matches expected result')
     or diag("diff:\n" . $output_diff2);
 
-my $filtered_diff2 = Genome::Utility::FileSystem->diff_file_vs_file($expected_filtered_file, $filtered_file . '.2');
+my $filtered_diff2 = Genome::Sys->diff_file_vs_file($expected_filtered_file, $filtered_file . '.2');
 ok(!$filtered_diff2, 'filtered file matches expected result')
     or diag("diff:\n" . $filtered_diff2);
 
@@ -126,17 +126,17 @@ $filter_command->dump_status_messages(1);
 isa_ok($filter_command3, 'Genome::Model::Tools::Somatic::FilterFalsePositives', 'created second filter command');
 ok($filter_command3->execute(), 'executed second filter command');
 
-my $output_diff3 = Genome::Utility::FileSystem->diff_file_vs_file($expected_output_file, $output_file. '.3');
+my $output_diff3 = Genome::Sys->diff_file_vs_file($expected_output_file, $output_file. '.3');
 ok(!$output_diff3, 'output file matches expected result')
     or diag("diff:\n" . $output_diff3);
 
-my $filtered_diff3 = Genome::Utility::FileSystem->diff_file_vs_file($expected_filtered_file, $filtered_file . '.3');
+my $filtered_diff3 = Genome::Sys->diff_file_vs_file($expected_filtered_file, $filtered_file . '.3');
 ok(!$filtered_diff3, 'filtered file matches expected result')
     or diag("diff:\n" . $filtered_diff3);
 
 SKIP: {
     skip "There are sometimes meaningless differences in the output (nan vs. -nan).", 1;
-    my $readcount_diff3 = Genome::Utility::FileSystem->diff_file_vs_file($expected_readcount_file, $output_file . '.3.readcounts');
+    my $readcount_diff3 = Genome::Sys->diff_file_vs_file($expected_readcount_file, $output_file . '.3.readcounts');
     ok(!$readcount_diff3, 'readcount file matches expected result')
         or diag("diff:\n" . $readcount_diff3);
 }

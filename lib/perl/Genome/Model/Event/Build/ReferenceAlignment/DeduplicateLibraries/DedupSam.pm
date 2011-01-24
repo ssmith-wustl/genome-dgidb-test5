@@ -68,14 +68,14 @@ sub execute {
     #Use Path::Class::Dir to correctly handle relative path when accumulated_alignments_dir is a symlink
     my $log_dir = Path::Class::Dir->new($self->accumulated_alignments_dir)->parent->subdir('logs')->stringify;;
     unless (-e $log_dir ) {
-	    unless( Genome::Utility::FileSystem->create_directory($log_dir) ) {
+	    unless( Genome::Sys->create_directory($log_dir) ) {
             $self->error_message("Failed to create log directory for dedup process: $log_dir");
             return;
         }
     }
  
     my $log_file = $log_dir.'/parallel_sam_rmdup_'.$pid.'.log';
-    my $log_fh = Genome::Utility::FileSystem->open_file_for_writing($log_file);
+    my $log_fh = Genome::Sys->open_file_for_writing($log_file);
     unless($log_fh) {
        $self->error_message("Failed to open output filehandle for: " .  $log_file );
        die "Could not open file ".$log_file." for writing.";
@@ -160,7 +160,7 @@ sub execute {
             my $report_file = $log_dir."/".$pid."_".$library."_rmdup.out";
             my $rmdup_cmd = $rmdup_tool . " " . $merged_file . " " . $rmdup_file . " > $report_file 2>&1";
             print $log_fh "Rmduping with cmd: $rmdup_cmd";
-            my $rmdup_rv = Genome::Utility::FileSystem->shellcmd( cmd=>$rmdup_cmd );
+            my $rmdup_rv = Genome::Sys->shellcmd( cmd=>$rmdup_cmd );
 
             unless ($rmdup_rv) {
                 print $log_fh "There was a problem rmduping!  Command return value: $rmdup_rv";

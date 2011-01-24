@@ -57,7 +57,7 @@ EOS
 
 sub execute {
     my ($self) = @_;
-    my ($readcount_regions_fh, $readcount_regions_file)  =Genome::Utility::FileSystem->create_temp_file();
+    my ($readcount_regions_fh, $readcount_regions_file)  =Genome::Sys->create_temp_file();
     my $anno_fh = IO::File->new($self->sites_file);
     my $output_fh = IO::File->new($self->output_file, ">");
     unless($output_fh) {

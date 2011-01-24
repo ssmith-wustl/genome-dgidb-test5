@@ -41,7 +41,7 @@ sub execute {
     my $params = $self->params || '';
     $params .= ' -o '. $out_sff_file;
     my $cmd = $self->bin_path .'/sfffile '. $params .' '. join(' ',@in_sff_files);
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
                                          cmd => $cmd,
                                          input_files => \@in_sff_files,
                                          output_files => [$out_sff_file],

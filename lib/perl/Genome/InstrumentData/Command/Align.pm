@@ -1,6 +1,6 @@
 #REVIEW fdu
 #Short: 
-#1. remove Genome::Utility::FileSystem from base class list
+#1. remove Genome::Sys from base class list
 #2. alignment_params should be better set to handle unprovided (empty) parameters
 #by if block testing
 #Long:
@@ -20,7 +20,7 @@ use warnings;
 use Genome;
 
 class Genome::InstrumentData::Command::Align {
-    is => ['Command','Genome::Utility::FileSystem'],
+    is => ['Command','Genome::Sys'],
     has_abstract_constant => [
         aligner_name                    => { is => 'Text' },
     ],

@@ -66,13 +66,13 @@ sub make_real_rmdupped_map_file {
         print $log_fh "Rmdup'd file exists: ".$final_file."\n";
     } 
     else {
-        my $tmp_file = Genome::Utility::FileSystem->create_temp_file_path($library.".map" );
+        my $tmp_file = Genome::Sys->create_temp_file_path($library.".map" );
         print $log_fh "Rmdup'd file DOES NOT exist: ".$final_file."\n";
         my $aligner_version = $self->aligner_version;
         my $maq_cmd = "gmt maq vmerge --version=$aligner_version --maplist $maplist --pipe $tmp_file &";
         print $log_fh "Executing:  $maq_cmd"."\n";
         #system "$maq_cmd";
-        Genome::Utility::FileSystem->shellcmd( cmd=>$maq_cmd );
+        Genome::Sys->shellcmd( cmd=>$maq_cmd );
         my $start_time = time;
         until (-p "$tmp_file" or ( (time - $start_time) > 100) )  {
             sleep(5);
@@ -93,7 +93,7 @@ sub make_real_rmdupped_map_file {
         my $cmd = $maq_tool. " " . $working_file . " " . $tmp_file;
         print $log_fh "Running $cmd"."\n";
         #my $rv = system($cmd);
-        my $rv = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd);
+        my $rv = Genome::Sys->shellcmd(cmd=>$cmd);
         if($rv != 1) {
             print $log_fh "Problem with maq rmdup: $!"."\n";
             $log_fh->close;
@@ -112,17 +112,17 @@ sub execute {
     #Use Path::Class::Dir to correctly handle relative path when accumulated_alignments_dir is a symlink
     my $log_dir = Path::Class::Dir->new($self->accumulated_alignments_dir)->parent->subdir('logs')->stringify;
     unless (-e $log_dir ) {
-	    unless( Genome::Utility::FileSystem->create_directory($log_dir) ) {
+	    unless( Genome::Sys->create_directory($log_dir) ) {
             $self->error_message("Failed to create log directory for dedup process: $log_dir");
             return;
 	    }
     }
  
     my $log_file = $log_dir.'/parallel_dedup_'.$pid.'.log';
-    my $log_fh = Genome::Utility::FileSystem->open_file_for_writing($log_file);
+    my $log_fh = Genome::Sys->open_file_for_writing($log_file);
     unless($log_fh) {
        $self->error_message("Failed to open output filehandle for: " .  $log_file );
-       die "Could not open file ".$log_file." for writing: " .  Genome::Utility::FileSystem->error_message;
+       die "Could not open file ".$log_file." for writing: " .  Genome::Sys->error_message;
     } 
 
     my $now = UR::Time->now;
@@ -158,9 +158,9 @@ sub execute {
             print $log_fh "Library Maplist File:" .$final_library_maplist."\n";
             #my $fh = IO::File->new($library_maplist,'w');
             
-            my $maplist_fh = Genome::Utility::FileSystem->open_file_for_writing($working_library_maplist);
+            my $maplist_fh = Genome::Sys->open_file_for_writing($working_library_maplist);
             unless ($maplist_fh) {
-                print $log_fh "Failed to create filehandle for '$working_library_maplist': " . Genome::Utility::FileSystem->error_message . "\n";
+                print $log_fh "Failed to create filehandle for '$working_library_maplist': " . Genome::Sys->error_message . "\n";
                 $log_fh->close; 
                 return;
             }

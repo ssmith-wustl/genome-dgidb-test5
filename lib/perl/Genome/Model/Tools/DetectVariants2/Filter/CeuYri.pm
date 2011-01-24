@@ -1,14 +1,14 @@
 #review/notes
 #This file currently needs to exist because workflow can't pass bare_args.  Long-term solution is to refactor `gmt snp intersect` to not take bare_args.
-package Genome::Model::Tools::DetectVariants::Filter::CeuYri;
+package Genome::Model::Tools::DetectVariants2::Filter::CeuYri;
 
 use warnings;
 use strict;
 
 use Genome;
 
-class Genome::Model::Tools::DetectVariants::Filter::CeuYri {
-    is => 'Genome::Model::Tools::DetectVariants::Filter',
+class Genome::Model::Tools::DetectVariants2::Filter::CeuYri {
+    is => 'Genome::Model::Tools::DetectVariants2::Filter',
 };
 
 # datasource_file is control_variant_file. Original doc: File of source variation to filter out... this defaults to the current CEU and YRI file (combined)

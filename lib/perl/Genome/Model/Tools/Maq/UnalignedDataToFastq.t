@@ -1,12 +1,12 @@
 #!/usr/bin/env perl
 use above "Genome";
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 use Test::More tests => 6;
 use FindBin q($Bin);
 
 use_ok("Genome::Model::Tools::Maq::UnalignedDataToFastq");
 
-my $tmp = Genome::Utility::FileSystem->create_temp_directory(CLEANUP => 1);
+my $tmp = Genome::Sys->create_temp_directory(CLEANUP => 1);
 #$tmp = '.';
 
 my $expected_base = $Bin . '/UnalignedDataToFastq.t';

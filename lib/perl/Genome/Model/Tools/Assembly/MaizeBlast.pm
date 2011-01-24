@@ -47,7 +47,7 @@ sub execute {
 
     #create target file
     unlink 'blast_sequence.fasta';
-    my $fh = Genome::Utility::FileSystem->open_file_for_writing('blast_sequence.fasta') ||
+    my $fh = Genome::Sys->open_file_for_writing('blast_sequence.fasta') ||
 	return;
     $fh->print(">fasta\n".$self->string."\n");
     $fh->close;
@@ -57,7 +57,7 @@ sub execute {
     my $ec = system("blastn $db blast_sequence.fasta -V 100 -sort_by_highscore > $out");
 
     #just printing contents of blast output file
-    my $fh2 = Genome::Utility::FileSystem->open_file_for_reading($out) ||
+    my $fh2 = Genome::Sys->open_file_for_reading($out) ||
 	return;
     my @contents = $fh2->getlines;
     $fh2->close;

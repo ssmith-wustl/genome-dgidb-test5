@@ -88,14 +88,14 @@ sub execute {
     # copy qual file
     my $output_qual_file = $self->output_qual_file;
     unlink $output_qual_file if $output_qual_file;
-    Genome::Utility::FileSystem->copy_file($self->qual_file, $output_qual_file)
+    Genome::Sys->copy_file($self->qual_file, $output_qual_file)
         or return;
     
     # positions file
     if ( $self->keep_lucy_file ) {
         my $lucy_file = $self->lucy_file;
         unlink $lucy_file if -e $lucy_file;
-        Genome::Utility::FileSystem->copy_file($self->_tmp_lucy_file, $lucy_file)
+        Genome::Sys->copy_file($self->_tmp_lucy_file, $lucy_file)
             or return;
     }
 

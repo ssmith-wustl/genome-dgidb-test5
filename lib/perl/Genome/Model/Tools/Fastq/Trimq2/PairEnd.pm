@@ -72,14 +72,14 @@ sub execute {
         unless $p1_base_dir eq $p2_base_dir;
     $out_dir ||= $p1_base_dir;
 
-    my $p1_in_fh = Genome::Utility::FileSystem->open_file_for_reading($p1_fastq_file);
+    my $p1_in_fh = Genome::Sys->open_file_for_reading($p1_fastq_file);
     unless ($p1_in_fh) {
         $self->error_message('Failed to open fastq file ' . $p1_fastq_file . ": $!");
         return;
     }
     binmode $p1_in_fh, ":utf8";
 
-    my $p2_in_fh = Genome::Utility::FileSystem->open_file_for_reading($p2_fastq_file);
+    my $p2_in_fh = Genome::Sys->open_file_for_reading($p2_fastq_file);
     unless ($p2_in_fh) {
         $self->error_message('Failed to open fastq file ' . $p2_fastq_file . ": $!");
         return;
@@ -97,28 +97,28 @@ sub execute {
     $self->pair1_out_file($p1_out_file);
     $self->pair2_out_file($p2_out_file);
 
-    my $p1_out_fh = Genome::Utility::FileSystem->open_file_for_writing($p1_out_file);
+    my $p1_out_fh = Genome::Sys->open_file_for_writing($p1_out_file);
     unless ($p1_out_fh) {
         $self->error_message('Failed to open output file ' . $p1_out_file . ": $!");
         return;
     }
     binmode $p1_out_fh, ":utf8";
 
-    my $p2_out_fh = Genome::Utility::FileSystem->open_file_for_writing($p2_out_file);
+    my $p2_out_fh = Genome::Sys->open_file_for_writing($p2_out_file);
     unless ($p2_out_fh) {
         $self->error_message('Failed to open output file ' . $p2_out_file . ": $!");
         return;
     }
     binmode $p2_out_fh, ":utf8";
 
-    my $pair_filter_fh = Genome::Utility::FileSystem->open_file_for_writing($pair_filter_file);
+    my $pair_filter_fh = Genome::Sys->open_file_for_writing($pair_filter_file);
     unless ($pair_filter_fh) {
         $self->error_message('Failed to open filtered file '. $pair_filter_file . ": $!");
         return;
     }
     binmode $pair_filter_fh, ":utf8";
 
-    my $frag_filter_fh = Genome::Utility::FileSystem->open_file_for_writing($frag_filter_file);
+    my $frag_filter_fh = Genome::Sys->open_file_for_writing($frag_filter_file);
     unless ($frag_filter_fh) {
         $self->error_message('Failed to open filtered file '. $frag_filter_file . ": $!");
         return;
@@ -131,7 +131,7 @@ sub execute {
         unlink $report;
     }
     
-    my $report_fh = Genome::Utility::FileSystem->open_file_for_writing($report);
+    my $report_fh = Genome::Sys->open_file_for_writing($report);
     unless ($report_fh) {
         $self->error_message("Failed to open report file " . $report . ": $!");
         return;
@@ -145,7 +145,7 @@ sub execute {
         $self->warning_message("$frag_fastq already exist. Now remove it");
         unlink $frag_fastq;
     }
-    my $frag_fh = Genome::Utility::FileSystem->open_file_for_writing($frag_fastq);
+    my $frag_fh = Genome::Sys->open_file_for_writing($frag_fastq);
     unless ($frag_fh) {
         $self->error_message('Failed to open ' . $frag_fastq . ": $!");
         return;

@@ -216,18 +216,18 @@ sub execute {
 
     my $cm_aln_file = $self->cm_aln_file;
     if ($cm_aln_file) {
-        #$cm_aln_fh = Genome::Utility::FileSystem->open_file_for_writing($cm_aln_file) or return;
+        #$cm_aln_fh = Genome::Sys->open_file_for_writing($cm_aln_file) or return;
         $cm_aln_fh->open(">$cm_aln_file");
     }
 
     my $unc_pred_file = $self->unconfirm_predict_file;
     if ($unc_pred_file) {
-        #my $unc_pred_fh = Genome::Utility::FileSystem->open_file_for_writing($unc_pred_file) or return;
+        #my $unc_pred_fh = Genome::Sys->open_file_for_writing($unc_pred_file) or return;
         $unc_pred_fh->open(">$unc_pred_fh");
         $self->_unc_pred_fh($unc_pred_fh);
     }
 
-    #my $out_fh  = Genome::Utility::FileSystem->open_file_for_writing($out_file) or return;
+    #my $out_fh  = Genome::Sys->open_file_for_writing($out_file) or return;
     #$out_fh->print("\#CHR1\tPOS1\tCHR2\tPOS2\tORI\tSIZE\tTYPE\tHET\twASMSCORE\tTRIMMED_CONTIG_SIZE\tALIGNED\%\tNUM_SEG\tNUM_FSUB\tNUM_FINDEL\tBP_FINDEL\tMicroHomology\tMicroInsertion\tPREFIX\tASMPARM\tCopyNumber\tGene\tKnown\n");
 
     srand(time ^ $$);
@@ -256,7 +256,7 @@ sub execute {
     my $bam_files = $self->_check_bam;
     $tigra_sv_cmd .= ' '. $tigra_sv_options . $sv_file . $bam_files . " > " . $out_file;
 
-    my $rv = Genome::Utility::FileSystem->shellcmd(
+    my $rv = Genome::Sys->shellcmd(
         cmd           => $tigra_sv_cmd,
         input_files   => [$sv_file],
         #output_files => [$snv_output_file],
@@ -440,7 +440,7 @@ sub _cross_match_validation {
     my $cm_cmd_opt = '-bandwidth 20 -minmatch 20 -minscore 25 -penalty '.$self->cm_sub_penalty.' -discrep_lists -tags -gap_init '.$self->cm_gap_init_penalty.' -gap_ext -1';
 	my $cm_cmd = "cross_match $tigra_sv_fa $ref_fa $cm_cmd_opt > $cm_out 2>/dev/null";
 	           
-    my $rv = Genome::Utility::FileSystem->shellcmd (
+    my $rv = Genome::Sys->shellcmd (
         cmd           => $cm_cmd,
         input_files   => [$tigra_sv_fa, $ref_fa],
         #output_files => [$cm_out],
@@ -654,7 +654,7 @@ sub _ComputeTigraN50{
     my @sizes;
     my $totalsize = 0;
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($contigfile) or return;
+    my $fh = Genome::Sys->open_file_for_reading($contigfile) or return;
     while (my $l = $fh->getline){
         chomp $l;
         next unless $l =~ /^\>/;
@@ -682,7 +682,7 @@ sub _ComputeTigraWeightedAvgSize{
     my $totalsize  = 0;
     my $totaldepth = 0;
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($contigfile) or return;
+    my $fh = Genome::Sys->open_file_for_reading($contigfile) or return;
     while (my $l = $fh->getline) {
         chomp $l;
         next unless $l =~ /^\>/;

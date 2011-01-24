@@ -21,7 +21,7 @@ class Genome::Model::Tools::BioSamtools::InsertSizeDistribution {
 
 sub execute {
     my $self = shift;
-    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+    my $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
     my $refcov_bam  = Genome::RefCov::Bam->new(bam_file => $self->bam_file );
     unless ($refcov_bam) {
         die('Failed to load bam file '. $self->bam_file);
@@ -85,7 +85,7 @@ sub execute {
         my $stats = $library_metrics{$lib}{all_stats};
         print $output_fh "#\t". $lib ."\t". $stats->mean ."\t". $stats->standard_deviation ."\n";
         for my $bin ( sort { $a <=> $b } keys %{$library_metrics{$lib}{histogram}}) {
-            print $output_fh$bin ."\t". $library_metrics{$lib}{histogram}{$bin} ."\n";
+            print "$output_fh$bin\t". $library_metrics{$lib}{histogram}{$bin} ."\n";
         }
     }
     $output_fh->close;

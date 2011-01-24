@@ -70,11 +70,11 @@ sub initialize_filehandles {
     my $self = shift;
 
     if (!defined $self->_input_fh) {
-        $self->_input_fh(Genome::Utility::FileSystem->open_file_for_reading($self->input));
+        $self->_input_fh(Genome::Sys->open_file_for_reading($self->input));
     }
 
     if (!defined $self->_output_fh) {
-        $self->_output_fh(Genome::Utility::FileSystem->open_file_for_writing($self->output));
+        $self->_output_fh(Genome::Sys->open_file_for_writing($self->output));
     }
 
     return 1;
@@ -121,7 +121,7 @@ sub sort  {
 sub _get_filehandle_for_chrom {
     my ($self, $chrom) = @_;
     if (!exists $self->{tmpfiles}->{$chrom}) {
-        my $path = Genome::Utility::FileSystem->create_temp_file_path;
+        my $path = Genome::Sys->create_temp_file_path;
         my $fh = new IO::File("+>$path") or confess "Failed to open temp file $path for chromosome $chrom";
         $self->{tmpfiles}->{$chrom} = {
             path => $path,

@@ -92,7 +92,7 @@ sub pool_and_split_sequence {
 
     #create a blast dir
     my $blast_dir = $dir.'/'.$sample_name.'.'.$file_extensions{$stage}{blast_dir_ext};
-    Genome::Utility::FileSystem->create_directory( $blast_dir ) unless -d $blast_dir;
+    Genome::Sys->create_directory( $blast_dir ) unless -d $blast_dir;
   
     #define a file to pool blast filtered files from previous stage
     my $pooled_file = $dir.'/'.$sample_name.'.'.$file_extensions{$stage}{pooled_out_file_ext};

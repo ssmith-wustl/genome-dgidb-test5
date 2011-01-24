@@ -84,14 +84,14 @@ sub pre_execute {
     $self->fragment_reads_and_references(\@reads_and_references_frags);
 	
     $self->status_message("Creating required directories.");
-    Genome::Utility::FileSystem->create_directory("$working_dir");
-    Genome::Utility::FileSystem->create_directory("$working_dir/alignments_filtered");
-    Genome::Utility::FileSystem->create_directory("$working_dir/alignments_top_hit");
-    Genome::Utility::FileSystem->create_directory("$working_dir/alignments_multiple_hits");
-    Genome::Utility::FileSystem->create_directory("$working_dir/logs");
-    Genome::Utility::FileSystem->create_directory("$working_dir/workflow_logs");
-    Genome::Utility::FileSystem->create_directory("$working_dir/tmp");
-    Genome::Utility::FileSystem->create_directory("$working_dir/reports");
+    Genome::Sys->create_directory("$working_dir");
+    Genome::Sys->create_directory("$working_dir/alignments_filtered");
+    Genome::Sys->create_directory("$working_dir/alignments_top_hit");
+    Genome::Sys->create_directory("$working_dir/alignments_multiple_hits");
+    Genome::Sys->create_directory("$working_dir/logs");
+    Genome::Sys->create_directory("$working_dir/workflow_logs");
+    Genome::Sys->create_directory("$working_dir/tmp");
+    Genome::Sys->create_directory("$working_dir/reports");
 
     $self->status_message("Pre-execute of Pipeline complete.");
 

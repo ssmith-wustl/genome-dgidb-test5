@@ -24,11 +24,11 @@ sub execute {
     }
     my $build_fastq_directory = $self->build->accumulated_fastq_directory;
     unless (-d $build_fastq_directory) {
-        Genome::Utility::FileSystem->create_directory($build_fastq_directory);
+        Genome::Sys->create_directory($build_fastq_directory);
     }
     my $fastq_directory = $self->fastq_directory;
     unless (-d $fastq_directory) {
-        Genome::Utility::FileSystem->create_directory($fastq_directory);
+        Genome::Sys->create_directory($fastq_directory);
     }
     my $instrument_data = Genome::InstrumentData->get($self->instrument_data_id);
 

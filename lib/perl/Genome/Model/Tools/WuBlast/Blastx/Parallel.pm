@@ -97,7 +97,7 @@ sub post_execute {
     }
 
     my $output_file = $self->_output_file || $self->output_directory .'/'. $output_basename .'.blast';
-    Genome::Utility::FileSystem->cat(
+    Genome::Sys->cat(
         input_files => \@blast_files,
         output_file => $output_file,
     );

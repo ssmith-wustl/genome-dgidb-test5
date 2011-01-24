@@ -1,4 +1,4 @@
-package Genome::Model::Tools::DetectVariants::Filter::SnvIntersect;
+package Genome::Model::Tools::DetectVariants2::Filter::SnvIntersect;
 
 use warnings;
 use strict;
@@ -10,8 +10,8 @@ use FileHandle;
 use Data::Dumper;
 use List::Util qw( max );
 
-class Genome::Model::Tools::DetectVariants::Filter::SnvIntersect {
-    is  => ['Genome::Model::Tools::DetectVariants::Filter'],
+class Genome::Model::Tools::DetectVariants2::Filter::SnvIntersect {
+    is  => ['Genome::Model::Tools::DetectVariants2::Filter'],
 };
 
 #sniper_snp_file is variant_file, while tumor_snp_file is
@@ -45,19 +45,19 @@ sub execute {
     }
 
     my $tumor_snp_file = $self->control_variant_file;
-    if ( ! Genome::Utility::FileSystem->validate_file_for_reading($tumor_snp_file) ) {
+    if ( ! Genome::Sys->validate_file_for_reading($tumor_snp_file) ) {
         die 'cant read from: ' . $tumor_snp_file;
     }
 
     my $sniper_snp_file = $self->variant_file();
-    my $sniper_snp_file_sorted = Genome::Utility::FileSystem->create_temp_file_path("snipers.sorted");
-    if ( ! Genome::Utility::FileSystem->validate_file_for_reading($sniper_snp_file) ) {
+    my $sniper_snp_file_sorted = Genome::Sys->create_temp_file_path("snipers.sorted");
+    if ( ! Genome::Sys->validate_file_for_reading($sniper_snp_file) ) {
         die 'cant read from: ' . $sniper_snp_file;
     }
     
     # Should use command object->execute(), but would clutter with the grep required for imported bams.
     my $sort_cmd = "gmt snp sort $sniper_snp_file | grep -v \"^chr.*_random\" > $sniper_snp_file_sorted";
-    my $result = Genome::Utility::FileSystem->shellcmd(
+    my $result = Genome::Sys->shellcmd(
         cmd          => $sort_cmd,
         input_files  => [ $sniper_snp_file ],
         output_files => [ $sniper_snp_file_sorted ],
@@ -65,10 +65,10 @@ sub execute {
     );
 
     # Should use command object->execute(), but would clutter with the grep required for imported bams.
-    my $tumor_snp_file_sorted = Genome::Utility::FileSystem->create_temp_file_path("tumors.sorted");
+    my $tumor_snp_file_sorted = Genome::Sys->create_temp_file_path("tumors.sorted");
     $sort_cmd = "gmt snp sort $tumor_snp_file | grep -v \"^chr.*_random\" > $tumor_snp_file_sorted";
     
-    $result = Genome::Utility::FileSystem->shellcmd(
+    $result = Genome::Sys->shellcmd(
         cmd          => $sort_cmd,
         input_files  => [ $tumor_snp_file ],
         output_files => [ $tumor_snp_file_sorted ],
@@ -76,7 +76,7 @@ sub execute {
     );
 
     my $output_file = $self->output_file;
-    if ( ! Genome::Utility::FileSystem->validate_file_for_writing_overwrite($output_file) ) {
+    if ( ! Genome::Sys->validate_file_for_writing_overwrite($output_file) ) {
         die 'cant write to: ' . $output_file;
     }
 

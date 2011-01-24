@@ -709,7 +709,7 @@ sub _build_subclass_specifics_for_metagenomic_composition_16s {
 
     # create dirs
     for my $dir ( $build->sub_dirs ) {
-        Genome::Utility::FileSystem->create_directory( $build->data_directory."/$dir" )
+        Genome::Sys->create_directory( $build->data_directory."/$dir" )
             or return;
     }
 
@@ -783,10 +783,10 @@ sub _build_subclass_specifics_for_reference_alignment {
 sub copy_test_dir {
     my ($self, $source_dir, $dest) = @_;
 
-    Genome::Utility::FileSystem->validate_existing_directory($dest)
+    Genome::Sys->validate_existing_directory($dest)
         or confess;
 
-    my $dh = Genome::Utility::FileSystem->open_directory($source_dir)
+    my $dh = Genome::Sys->open_directory($source_dir)
         or confess;
 
     while ( my $file = $dh->read ) {

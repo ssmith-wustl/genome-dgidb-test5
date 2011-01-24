@@ -16,7 +16,7 @@ BEGIN {
 }
 
 #< Test if it really works >#
-my $tmp_dir = Genome::Utility::FileSystem->create_temp_directory('Genome-Model-Tools-Fasta-Orient');
+my $tmp_dir = Genome::Sys->create_temp_directory('Genome-Model-Tools-Fasta-Orient');
 my $orig_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fasta-Orient';
 my %file_path = (
     fasta => '/assembled.fasta',
@@ -27,7 +27,7 @@ my %file_path = (
 for my $key (keys %file_path) {
     my $orig_path = $orig_dir . $file_path{$key};
     my $tmp_path = $tmp_dir . $file_path{$key};
-    Genome::Utility::FileSystem->create_symlink($orig_path, $tmp_path);
+    Genome::Sys->create_symlink($orig_path, $tmp_path);
     $file_path{$key} = $tmp_path;
 }
 

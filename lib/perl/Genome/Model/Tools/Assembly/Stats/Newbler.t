@@ -10,7 +10,7 @@ require File::Compare;
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly-Stats/Newbler';
 ok(-d $data_dir, "Data dir exists");
 
-my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+my $temp_dir = Genome::Sys->create_temp_directory();
 ok(-d $temp_dir, "Temp test dir exists");
 
 my $edit_dir = $temp_dir.'/edit_dir';

@@ -97,7 +97,7 @@ sub create_capture_set_for_feature_list {
 
     eval {
         my $cmd = '/gsc/scripts/bin/execute_create_capture_container --bed-file='. $feature_list->file_path .' --setup-name=\''. $feature_list->name .'\'';
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
             cmd => $cmd,
         );
     };
