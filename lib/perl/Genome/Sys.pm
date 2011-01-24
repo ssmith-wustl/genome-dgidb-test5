@@ -6,7 +6,8 @@ use Genome;
 use Cwd;
 
 class Genome::Sys { 
-    is => 'UR::Singleton', 
+    # TODO: remove all cases of inheritance 
+    #is => 'UR::Singleton', 
 };
 
 sub dbpath {
