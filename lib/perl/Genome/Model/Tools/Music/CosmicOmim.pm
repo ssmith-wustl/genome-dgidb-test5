@@ -31,6 +31,8 @@ class Genome::Model::Tools::Music::CosmicOmim {
            default => Genome::Sys->dbpath('cosmic','latest'),
        },
        verbose => {
+           # TODO: you probably want Boolean.  The cmdline standard is --no-verbose to turn it off (for free with Boolean)
+           # is => 'Boolean',
            is => 'Path',
            doc => 'turn on to display larger working output, default on',
            default => '1',

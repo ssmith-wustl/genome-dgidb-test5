@@ -927,19 +927,6 @@ sub exit_cleanup {
 }
 
 
-#< Inc Dir, Modules, Classes, etc >#
-sub get_inc_directory_for_class {
-    my $class = shift;
-
-    Carp::confess('No class given to get INC directory') unless $class;
-    
-    my $module = Genome::Utility::Text::class_to_module($class);
-    my $directory = $INC{$module};
-    $directory =~ s/$module//;
-
-    return $directory;
-}
-
 sub get_classes_in_subdirectory {
     my ($subdirectory) = @_;
 
@@ -947,9 +934,10 @@ sub get_classes_in_subdirectory {
         Carp::croak("No subdirectory given to get_classes_in_subdirectory"); 
     }
 
-    my $inc_directory = get_inc_directory_for_class(__PACKAGE__);
+    my $genome_dir = Genome->get_base_directory_name();
+    my $inc_directory = substr($genome_dir, 0, -7);
     unless ( $inc_directory ) {
-        Carp::croak('Could not get inc directory for '.__PACKAGE__."\n"); 
+        Carp::croak("Could not get inc directory for Genome.\n"); 
     }
 
     my $directory = $inc_directory.'/'.$subdirectory;
