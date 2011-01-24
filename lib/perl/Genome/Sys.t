@@ -14,7 +14,6 @@ sub mdir($) {
 }
 
 my $tmp = Genome::Sys->create_temp_directory("foo");
-$tmp = '/Users/ssmith/xdb';
 ok($tmp, "made temp directory $tmp");
 
 my $tmp1 = $tmp . '/set1';
