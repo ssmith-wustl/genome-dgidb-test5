@@ -192,7 +192,7 @@ sub derived_from_root {
     my ($self) = @_;
     my $from = $self;
     my %seen = ($self->id => 1);
-    while (defined $from->derived_from) {
+    while (!defined $from->coordinates_from and defined $from->derived_from) {
         $from = $from->derived_from;
         if (exists $seen{$from->id}) {
             die "Circular link found in derived_from chain while calculating 'coordinates_from'.".
@@ -201,6 +201,7 @@ sub derived_from_root {
         }
         $seen{$from->id} = 1;
     }
+    return $from->coordinates_from if defined $from->coordinates_from;
     return $from;
 }
 
