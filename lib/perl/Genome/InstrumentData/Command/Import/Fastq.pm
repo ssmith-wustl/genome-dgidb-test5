@@ -225,13 +225,20 @@ sub execute {
     $self->check_fastq_integritude;
 
     unless(defined($params{read_count})){
-        my $read_count = $self->get_read_count;
+        my ($read_count,$fragment_count) = $self->get_read_count_and_fragment_count;
         unless(defined($read_count)){
             $self->error_message("No read count was specified and none could be calculated from the fastqs");
             die $self->error_message;
         }
+        unless(defined($self->fragment_count)){
+            $self->fragment_count($fragment_count);
+            $params{fragment_count} = $fragment_count;
+        }
         $self->read_count($read_count);
         $params{read_count} = $read_count;
+    }
+    unless(defined($params{fragment_count})){
+        $params{fragment_count} = $params{read_count} * 2;
     }
     if(not defined($params{subset_name})){
         my $subset_name = $self->get_subset_name;
@@ -510,9 +517,9 @@ sub check_last_read {
     return ($read_name,$read_length);
 }
 
-sub get_read_count {
+sub get_read_count_and_fragment_count {
     my $self = shift;
-    my ($line_count,$read_count);
+    my ($line_count,$read_count,$fragment_count);
     my @files = split ",", $self->source_data_files;
     $self->status_message("Now attempting to determine read_count by calling wc on the imported fastq(s). This may take a while if the fastqs are large.");
     for my $file (@files){
@@ -529,7 +536,14 @@ sub get_read_count {
         return;
     }
     $read_count = $line_count / 4;
-    return $read_count
+    if(scalar(@files)==2){
+        $read_count = $read_count / 2;
+        $fragment_count = $read_count * 2;
+    }
+    else {
+        $fragment_count = $read_count;
+    }
+    return $read_count,$fragment_count;
 }
 
 sub get_subset_name {
