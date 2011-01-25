@@ -52,12 +52,12 @@ sub execute {
     my $self = shift;
 
     my $attribute_file = $self->file;
-    unless(Genome::Utility::FileSystem->check_for_path_existence($attribute_file)) {
+    unless(Genome::Sys->check_for_path_existence($attribute_file)) {
         $self->error_message('File ' . $attribute_file . ' could not be found.');
         return;
     }
 
-    my $attribute_fh = Genome::Utility::FileSystem->open_file_for_reading($attribute_file);
+    my $attribute_fh = Genome::Sys->open_file_for_reading($attribute_file);
     unless($attribute_fh) {
         $self->error_message('Failed to open attribute file ' . $attribute_file . ' for reading.');
         return;

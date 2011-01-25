@@ -97,7 +97,7 @@ sub execute {
         push @output_basenames, $basename;
         #Convert Quality Values
         if ($self->quality_converter) {
-            my $tmp_fastq = Genome::Utility::FileSystem->create_temp_file_path($basename.'.fastq');
+            my $tmp_fastq = Genome::Sys->create_temp_file_path($basename.'.fastq');
             if ($self->quality_converter eq 'sol2sanger') {
                 my $sol2sanger = Genome::Model::Tools::Maq::Sol2sanger->create(
                     solexa_fastq_file => $fastq_file,
@@ -128,7 +128,7 @@ sub execute {
             push @files_to_unlink, $tmp_fastq;
         }
         #Convert To Binary
-        my $tmp_bfq = Genome::Utility::FileSystem->create_temp_file_path($basename .'.bfq');
+        my $tmp_bfq = Genome::Sys->create_temp_file_path($basename .'.bfq');
         my $fastq2bfq = Genome::Model::Tools::Maq::Fastq2bfq->create(
             use_version => $self->use_version,
             fastq_file => $fastq_file,
@@ -181,7 +181,7 @@ sub execute {
                   join(' ', @bfq_files))
         . $self->output_file
         . ' 2>&1';
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd                         => $cmdline,
         input_files                 => [$self->bfa_file, @bfq_files],
         # $self->unaligned_file is really optional, what if all reads aligned

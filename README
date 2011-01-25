@@ -1,0 +1,45 @@
+WHERE TO PUT CODE:
+
+
+Perl, Java, Ruby:
+
+ The modules go under lib/$LANG.
+
+ In the shipit branch, the code is divided up like the C/C++ standard below.
+ We will move to the new structure as soon as it's easy to develop and test there.
+ 
+
+R:
+
+ R libraries live next-to the Perl module which provides an interface to them
+ for the rest of the system.
+ 
+
+XML/XSL:
+ 
+ These currently live under Genome/, but will relocated when we break out the web app.
+
+
+C/C++:
+
+ These are in a new structure where each gets its own top-level directory.
+ These are "sub modules", meaning each gets its own subordinate git repo.
+ 
+ These directories start out empty, but you can get their code by doing:
+
+    git submodule update --init $DIRNAME
+
+  Updates to sub-modules must be committed and pushed independently.
+
+    Example:
+
+    git submodule update --init cmpbed
+    cd cmpbed
+    # change things
+    git commit 
+    git push origin master
+
+  To make a new one, run:
+
+    create-c-project $DIRNAME
+

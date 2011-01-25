@@ -7,7 +7,7 @@ use Genome;
 use Genome::Model::Tools::Pcap::Ace;
 use Genome::Model::Tools::Pcap::Phd;
 use Genome::Model::Tools::PooledBac::Utils;
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 use List::Util qw(max min);
 
 class Genome::Model::Tools::PooledBac::GenerateReports {
@@ -154,9 +154,9 @@ sub combined_used_and_orphan_lists {
 
     unlink $out_file;
 
-    my $fh_out = Genome::Utility::FileSystem->open_file_for_writing( $out_file );
-    my $fh_used_in = Genome::Utility::FileSystem->open_file_for_reading( $report_dir.'/complete_contig_list' );
-    my $fh_orph_in = Genome::Utility::FileSystem->open_file_for_reading( $report_dir.'/orphan_contigs' );
+    my $fh_out = Genome::Sys->open_file_for_writing( $out_file );
+    my $fh_used_in = Genome::Sys->open_file_for_reading( $report_dir.'/complete_contig_list' );
+    my $fh_orph_in = Genome::Sys->open_file_for_reading( $report_dir.'/orphan_contigs' );
 
     while ( my $line = $fh_used_in->getline ) {
 	$fh_out->print( $line );
@@ -180,7 +180,7 @@ sub execute {
     my $project_dir = $self->project_dir;
     my $blastfile = $project_dir."/bac_region_db.blast";
     my $reports_dir = $project_dir."/reports/";
-    $self->error_message("Failed to create directory $reports_dir")  and die unless Genome::Utility::FileSystem->create_directory($reports_dir);
+    $self->error_message("Failed to create directory $reports_dir")  and die unless Genome::Sys->create_directory($reports_dir);
     #`mkdir -p $reports_dir`;
     my $out = Genome::Model::Tools::WuBlast::Parse->execute(blast_outfile => $blastfile, parse_outfile => $reports_dir."blast_report");
     $self->error_message("Failed to parse $blastfile")  and die unless defined $out; 

@@ -120,7 +120,7 @@ sub _sort_contigs_files {
 sub _get_bio_obj {
     my ($self, $file, $format, $seek_pos) = @_;
     #this doesn't seek to work if fh is held open, ie, passed in
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($file);
+    my $fh = Genome::Sys->open_file_for_reading($file);
     $fh->seek($seek_pos, 0);
     my $io = Bio::SeqIO->new(-fh => $fh, -format => $format);
     my $seq = $io->next_seq;
@@ -134,17 +134,17 @@ sub _get_fasta_qual_from_ace {
     #existing ace parser are not used because it can't load really big ace files
     #need to clean this up a bit ..
 
-    my $ace_fh = Genome::Utility::FileSystem->open_file_for_reading($self->acefile);
+    my $ace_fh = Genome::Sys->open_file_for_reading($self->acefile);
 
     #handle for intermediate fasta
     $self->_int_fasta_out($self->directory."/edit_dir/int.contigs.bases");
     unlink $self->_int_fasta_out;
-    my $fasta_fh = Genome::Utility::FileSystem->open_file_for_writing($self->_int_fasta_out);
+    my $fasta_fh = Genome::Sys->open_file_for_writing($self->_int_fasta_out);
 
     #handle for intermediate qual
     $self->_int_qual_out($self->directory."/edit_dir/int.contigs.quals");
     unlink $self->_int_qual_out;
-    my $qual_fh = Genome::Utility::FileSystem->open_file_for_writing($self->_int_qual_out);
+    my $qual_fh = Genome::Sys->open_file_for_writing($self->_int_qual_out);
 
     my $is_fasta = 0;
     my $is_qual = 0;

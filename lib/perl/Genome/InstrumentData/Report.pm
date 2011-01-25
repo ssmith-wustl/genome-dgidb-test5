@@ -1,7 +1,7 @@
 package Genome::InstrumentData::Report;
 
 #REVIEW fdu 11/20/2009
-#Remove Genome::Utility::FileSystem from base class list
+#Remove Genome::Sys from base class list
 
 use strict;
 use warnings;
@@ -11,7 +11,7 @@ use Genome;
 use Data::Dumper 'Dumper';
 
 class Genome::InstrumentData::Report {
-    is => ['Genome::Report::Generator','Genome::Utility::FileSystem'],
+    is => ['Genome::Report::Generator','Genome::Sys'],
     has => [
         instrument_data => {
             is => 'Genome::InstrumentData',
@@ -52,7 +52,7 @@ sub get_generic_report_classes {
         return;
     }
 
-    return Genome::Utility::FileSystem::get_classes_in_subdirectory_that_isa(
+    return Genome::Sys::get_classes_in_subdirectory_that_isa(
         'Genome/InstrumentData/Report',
         'Genome::Report::Generator',
     );
@@ -66,7 +66,7 @@ sub get_report_classes_for_type_name {
         Carp::confess("No instrument data sub type given\n"); 
     }
 
-    return Genome::Utility::FileSystem::get_classes_in_subdirectory_that_isa(
+    return Genome::Sys::get_classes_in_subdirectory_that_isa(
         'Genome/InstrumentData/'.Genome::Utility::Text::string_to_camel_case($type_name).'/Report', 
         'Genome::Report::Generator',
     );

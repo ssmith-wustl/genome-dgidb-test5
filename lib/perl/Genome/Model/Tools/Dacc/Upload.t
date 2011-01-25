@@ -19,7 +19,7 @@ no warnings qw/ once redefine /;
 *Genome::Model::Tools::Dacc::available_files_and_sizes = sub{ return %files; };
 *Genome::Model::Tools::Dacc::is_running_in_lsf = sub{ return $is_running_in_lsf; };
 *Genome::Model::Tools::Dacc::is_host_a_blade = sub{ return 1; };
-*Genome::Utility::FileSystem::shellcmd = sub{
+*Genome::Sys::shellcmd = sub{
     my ($class, %params) = @_;
     diag($params{cmd});
     is(

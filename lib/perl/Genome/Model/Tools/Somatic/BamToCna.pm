@@ -11,7 +11,7 @@ use warnings;
 use Genome;
 use Statistics::Descriptive;
 use Statistics::R;
-require Genome::Utility::FileSystem;
+require Genome::Sys;
 
 my $DEFAULT_VERSION = '0.1';
 my $BAMWINDOW_COMMAND = 'bam-window';
@@ -88,6 +88,12 @@ class Genome::Model::Tools::Somatic::BamToCna {
         doc => "whether or not to run R plot command at end to create .png image of data. Use --noplot to skip plot. Default is to make a plot.",
         default => 1,
     },
+    plot_only=> {
+	type => 'Boolean',
+        is_optional => 1,
+        doc => 'Will ONLY run R plot on the --output-file if it exists.'
+    },
+
     skip_if_output_present => {
         is => 'Boolean',
         is_optional => 1,
@@ -139,10 +145,27 @@ EOS
 sub execute {
     my $self = shift;
 
+    $DB::Single=1;
     my %maps = (tumor => $self->tumor_bam_file, normal => $self->normal_bam_file);
     my @samples = ("tumor","normal");
     my %downratios = (tumor => $self->tumor_downsample_percentage, normal => $self->normal_downsample_percentage);
     my $outfile = $self->output_file;
+
+    my $plot_only = $self->plot_only;
+    if($plot_only) {
+	if(-s $outfile) {
+	    #my $graph_output = "${outfile}.png";
+	    my @chrs = (1 .. 22,'X');
+	    print "plotting $outfile...\n";
+	    $self->plot_output($outfile,\@chrs);
+	    return 1;
+	}else {
+	    print "$outfile NOT found!  Aborting...\n";
+	    return 2;
+	}
+    }
+
+
 
     if (($self->skip_if_output_present)&&(-s $self->output_file)) {
         $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
@@ -329,10 +352,10 @@ sub plot_output {
 
     $datafile = abs_path($datafile);
     my $Routfile = $datafile.".png";
-    my $tempdir = Genome::Utility::FileSystem->create_temp_directory();
+    my $tempdir = Genome::Sys->create_temp_directory();
     my $chr_list = join(',', map("'$_'", @$chr_array));
 
-    #R automatically sets the working directory to its tmp_dir, which prevents Genome::Utility::FileSystem from cleaning it up...
+    #R automatically sets the working directory to its tmp_dir, which prevents Genome::Sys from cleaning it up...
     #So save the original beforehand and restore it after we're done
     my $cwd = cwd();
 

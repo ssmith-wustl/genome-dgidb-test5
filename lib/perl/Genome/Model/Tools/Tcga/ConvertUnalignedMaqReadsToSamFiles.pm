@@ -79,7 +79,7 @@ sub execute {
     my $combined_pg = "$working_dir/combined.pg";
 
     my $unaligned_log_file = "$working_dir/logs/UNALIGNED_EXCLUDED.txt";
-    my $ua_log = Genome::Utility::FileSystem->open_file_for_writing($unaligned_log_file);
+    my $ua_log = Genome::Sys->open_file_for_writing($unaligned_log_file);
     print $ua_log "This file contains the instrument data assignments which were expected to have unaligned read files, but for some reason could NOT be found.\n";
     print $ua_log "If this file is empty, then all the unaligned reads files associated with the expected instrument data were found.\n\n";
     print $ua_log "ALIGNMENT SEQ ID\tFLOW CELL\tLANE\n";
@@ -127,7 +127,7 @@ sub execute {
         } 
         next if (-s $unaligned_sam_file);
  
-        my $ua_fh = Genome::Utility::FileSystem->open_file_for_writing($unaligned_sam_file);
+        my $ua_fh = Genome::Sys->open_file_for_writing($unaligned_sam_file);
 
         #calculate all the parameters and header info
         my $insert_size_for_header;
@@ -206,19 +206,19 @@ sub execute {
         my $pg_file = "$header_dir/$idid.pg";
 
         if (!-s $rg_file) {
-            my $rg_fh = Genome::Utility::FileSystem->open_file_for_writing($rg_file);
+            my $rg_fh = Genome::Sys->open_file_for_writing($rg_file);
             print $rg_fh $rg_string; 
             $rg_fh->close;
         }
     
         if (!-s $pg_file) { 
-            my $pg_fh = Genome::Utility::FileSystem->open_file_for_writing($pg_file);
+            my $pg_fh = Genome::Sys->open_file_for_writing($pg_file);
             print $pg_fh $pg_string; 
             $pg_fh->close;
         }
 
 
-        my $fh = Genome::Utility::FileSystem->open_file_for_reading("$unaligned_file");
+        my $fh = Genome::Sys->open_file_for_reading("$unaligned_file");
         if ($ida->instrument_data->is_paired_end) {
             while (my $line1 = $fh->getline) {
                 my $line2 = $fh->getline; 

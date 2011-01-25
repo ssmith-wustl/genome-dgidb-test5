@@ -98,7 +98,7 @@ sub execute {
 
     my $cmd = _merge_command($type, \@in_files, $in_format, $out_file, $out_format);
 
-    return Genome::Utility::FileSystem->shellcmd(cmd => $cmd, input_files => \@in_files, output_files => [$out_file], skip_if_output_is_present => 0);
+    return Genome::Sys->shellcmd(cmd => $cmd, input_files => \@in_files, output_files => [$out_file], skip_if_output_is_present => 0);
 }
 
 1;

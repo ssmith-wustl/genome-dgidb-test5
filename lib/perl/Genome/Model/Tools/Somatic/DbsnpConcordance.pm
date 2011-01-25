@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 use IO::File;
 
 my %insertions;
@@ -60,7 +60,7 @@ sub execute {
         $self->error_message("You must specify either indel_bed_file or indel_annotation_file, but not both.");
         die $self->error_message;
     }
-    my $ifh = Genome::Utility::FileSystem->open_file_for_reading($self->_dbsnp_insertions);
+    my $ifh = Genome::Sys->open_file_for_reading($self->_dbsnp_insertions);
     while (my $line = $ifh->getline) {
         chomp $line;
         my ($chr, $start, $stop, $id, $allele, undef) = split /\t/, $line;
@@ -70,7 +70,7 @@ sub execute {
         $insertions{$chr}{$start}{$stop}{'id'}=$id;
     }
     $ifh->close;
-    my $dfh = Genome::Utility::FileSystem->open_file_for_reading($self->_dbsnp_deletions);
+    my $dfh = Genome::Sys->open_file_for_reading($self->_dbsnp_deletions);
     while (my $line = $dfh->getline) {
         chomp $line;
         my ($chr, $start, $stop, $id, $allele, undef) = split /\t/, $line;
@@ -84,11 +84,11 @@ sub execute {
     my $fh;
     if(defined($self->indel_annotation_file)){
         $anno = 1;
-        $fh = Genome::Utility::FileSystem->open_file_for_reading($self->indel_annotation_file);
+        $fh = Genome::Sys->open_file_for_reading($self->indel_annotation_file);
     } else {
-        $fh = Genome::Utility::FileSystem->open_file_for_reading($self->indel_bed_file);
+        $fh = Genome::Sys->open_file_for_reading($self->indel_bed_file);
     }
-    my $output = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+    my $output = Genome::Sys->open_file_for_writing($self->output_file);
     while (my $line = $fh->getline){
         chomp $line;
         my ($chr,$start,$stop,$ref,$var) = split /\t/, $line;

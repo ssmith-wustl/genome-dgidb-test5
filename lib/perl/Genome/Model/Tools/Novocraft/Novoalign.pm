@@ -134,7 +134,7 @@ sub execute {
         die('Invalid number of fastq files '. $fastq_count);
     }
     unless (-d $self->output_directory) {
-        Genome::Utility::FileSystem->create_directory($self->output_directory);
+        Genome::Sys->create_directory($self->output_directory);
     }
     $self->output_file($self->output_directory .'/'. $output_basename .'.'. lc($self->output_format));
     $self->log_file($self->output_directory .'/'. $output_basename .'.aligner_out');
@@ -150,7 +150,7 @@ sub execute {
               );
     # db disconnect prior to alignment
     Genome::DataSource::GMSchema->disconnect_default_dbh;
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd                         => $cmdline,
         input_files                 => [$self->novoindex_file, @fastq_files],
         output_files                => [$self->output_file, $self->log_file],
@@ -162,7 +162,7 @@ sub execute {
 sub _verify_output_files {
     my $self = shift;
 
-    my $log_fh = Genome::Utility::FileSystem->open_file_for_reading($self->log_file);
+    my $log_fh = Genome::Sys->open_file_for_reading($self->log_file);
     unless ($log_fh) {
         $self->error_message('Failed to open log file '. $self->log_file .": $!");
         die($self->error_message);
@@ -200,7 +200,7 @@ sub _verify_output_files {
     unless ( $complete ) {
         die('Incomplete log file '. $self->log_file);
     }
-    my $output_fh = Genome::Utility::FileSystem->open_file_for_reading($self->output_file);
+    my $output_fh = Genome::Sys->open_file_for_reading($self->output_file);
     unless ($output_fh) {
         $self->error_message('Failed to open output file '. $self->output_file .": $!");
         die($self->error_message);

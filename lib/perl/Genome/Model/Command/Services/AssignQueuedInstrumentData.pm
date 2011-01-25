@@ -85,7 +85,7 @@ sub execute {
     unless($self->test) {
         my $lock_resource = '/gsc/var/lock/genome_model_command_services_assign-queued-instrument-data/loader';
 
-        $lock = Genome::Utility::FileSystem->lock_resource(resource_lock=>$lock_resource, max_try=>1);
+        $lock = Genome::Sys->lock_resource(resource_lock=>$lock_resource, max_try=>1);
         unless ($lock) {
             $self->error_message("could not lock, another instance must be running.");
             return;
@@ -159,6 +159,11 @@ sub execute {
                         push @process_errors, $self->error_message;
                         next PP;
                     }
+                }
+
+                my $per_lane_qc = $self->create_default_per_lane_qc_model($genome_instrument_data, $subject, $reference_sequence_build, $pse);
+                unless($per_lane_qc) {
+                    push @process_errors, $self->error_message;
                 }
 
                 my @models = Genome::Model->get(
@@ -275,7 +280,7 @@ sub execute {
     }
 
     unless($self->test) {
-        Genome::Utility::FileSystem->unlock_resource(resource_lock=>$lock);
+        Genome::Sys->unlock_resource(resource_lock=>$lock);
     }
 
     return 1;    
@@ -568,6 +573,66 @@ sub assign_instrument_data_to_models {
     return @models;
 }
 
+sub create_default_per_lane_qc_model {
+    my $self = shift;
+    my $genome_instrument_data = shift;
+    my $subject = shift;
+    my $reference_sequence_build = shift;
+    my $pse = shift;
+
+    my $subset_name = $genome_instrument_data->subset_name || 'Unknown';
+    my $run_name = $genome_instrument_data->run_name || 'Unknown';
+
+    my ($processing_profile, $model_name);
+    if ($reference_sequence_build && $reference_sequence_build->name =~ /human/i) {
+        $processing_profile = Genome::ProcessingProfile->get(2574062);
+        $model_name = join('_', $subset_name, $run_name, $processing_profile->name);
+    } else {
+        $self->status_message('Per lane QC only configured for human reference alignments');
+        return 1;
+    }
+
+    my %model_params = (
+        name                    => $model_name,
+        subject_id              => $subject->id,
+        subject_class_name      => $subject->class,
+        processing_profile_id   => $processing_profile->id,
+        reference_sequence_build => $reference_sequence_build,
+        auto_assign_inst_data   => 0,
+    );
+
+    my @models = Genome::Model->get(name => $model_name);
+    if (@models) {
+        $self->status_message("Model already exists, not creating new per lane QC model.");
+        return 1;
+    }
+
+    my $model = Genome::Model->create(%model_params);
+    unless ( defined($model) ) {
+        $self->error_message("Failed to create model '$model_name'");
+        return;
+    }
+
+    my $assign_instrument_data = Genome::Model::Command::InstrumentData::Assign->create(
+        model_id => $model->id,
+        instrument_data_id => $genome_instrument_data->id,
+    );
+
+    unless ( $assign_instrument_data->execute ) {
+        $self->error_message('Failed to execute instrument-data assign for model ' . $model->__display_name__ . '.');
+        $model->delete;
+        return;
+    }
+
+    my $new_models = $self->_newly_created_models;
+    $new_models->{$model->id} = $model;
+
+    #singular value, don't want to override the "real" model
+    #$pse->add_param('genome_model_id', $model->id);
+
+    return 1;
+}
+
 sub create_default_models_and_assign_all_applicable_instrument_data {
     my $self = shift;
     my $genome_instrument_data = shift;
@@ -622,6 +687,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             'agilent sureselect exome version 2 broad refseq cds only' => 'agilent_sureselect_exome_version_2_broad_refseq_cds_only_hs37',
             'agilent sureselect exome version 2 broad' => 'agilent sureselect exome version 2 broad hg19 liftover',
             'hg18 nimblegen exome version 2' => 'hg19 nimblegen exome version 2',
+            'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA' => 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA_build36-build37_liftOver',
             );
 
         if($reference_sequence_build and $reference_sequence_build->name eq 'g1k-human-build37'

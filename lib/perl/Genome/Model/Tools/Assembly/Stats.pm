@@ -241,7 +241,7 @@ sub get_reads_placed_counts {
     my ($self) = @_;
     my $counts = {};
     my $uniq_reads = {};
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->reads_placed_file) ||
+    my $fh = Genome::Sys->open_file_for_reading($self->reads_placed_file) ||
 	return;
     while (my $line = $fh->getline) {
 	$counts->{reads_in_scaffolds}++;
@@ -644,7 +644,7 @@ sub get_read_depth_stats_from_afg { #for velvet assemblies
 	return;
     }
 
-    my $afg_fh = Genome::Utility::FileSystem->open_file_for_reading($self->velvet_afg_file)
+    my $afg_fh = Genome::Sys->open_file_for_reading($self->velvet_afg_file)
 	or return;
 
     my ($one_x_cov, $two_x_cov, $three_x_cov, $four_x_cov, $five_x_cov, $total_covered_pos) = 0;
@@ -717,7 +717,7 @@ sub get_read_depth_stats_from_readinfo {
     while (my $seq = $io->next_seq) {
 	$contig_lengths{$seq->primary_id} = length $seq->seq;
     }
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->read_info_file) ||
+    my $fh = Genome::Sys->open_file_for_reading($self->read_info_file) ||
 	return;
     my %contig_coverages;
     while (my $line = $fh->getline) {
@@ -950,7 +950,7 @@ sub create_edit_dir {
     my $self = shift;
 
     unless ( -d $self->assembly_directory.'/edit_dir' ) {
-	Genome::Utility::FileSystem->create_directory( $self->assembly_directory.'/edit_dir' );
+	Genome::Sys->create_directory( $self->assembly_directory.'/edit_dir' );
     }
 
     return 1;

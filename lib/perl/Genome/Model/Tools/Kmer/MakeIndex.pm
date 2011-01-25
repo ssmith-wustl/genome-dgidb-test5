@@ -38,7 +38,7 @@ sub execute {
         $options .= ' -maxocc '. $self->max_occ;
     }
     my $cmd = $gt_path .' tallymer mkindex '. $options .' -esa '. $self->index_name;
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => $cmd,
     );
     return 1;

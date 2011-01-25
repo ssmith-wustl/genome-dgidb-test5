@@ -30,14 +30,14 @@ class Genome::Model::Tools::OldRefCov::Topology {
 
 sub execute {
     my $self = shift;
-    unless(Genome::Utility::FileSystem->validate_file_for_reading($self->frozen_file)) {
+    unless(Genome::Sys->validate_file_for_reading($self->frozen_file)) {
         $self->error_message('Failed to validate frozen file '. $self->frozen_file .' for reading!');
         return;
     }
     my $oldout;
     if ($self->output_file) {
         open $oldout, ">&STDOUT"     or die "Can't dup STDOUT: $!";
-        my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+        my $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
         unless ($output_fh) {
             $self->error_message('Failed to open output file '. $self->output_file .' for writing!');
             return;

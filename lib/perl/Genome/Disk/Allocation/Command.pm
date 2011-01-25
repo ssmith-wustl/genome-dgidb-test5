@@ -125,7 +125,7 @@ sub resource_id {
 
 sub Xunlock {
     my $self = shift;
-    unless (Genome::Utility::FileSystem->unlock_resource(
+    unless (Genome::Sys->unlock_resource(
                                                          lock_directory => $self->lock_directory,
                                                          resource_id => $self->resource_id,
                                                      ) ) {
@@ -138,7 +138,7 @@ sub Xunlock {
 
 sub Xlock {
     my $self = shift;
-    unless (Genome::Utility::FileSystem->lock_resource(
+    unless (Genome::Sys->lock_resource(
                                                        lock_directory => $self->lock_directory,
                                                        resource_id => $self->resource_id,
                                                        block_sleep => 3,

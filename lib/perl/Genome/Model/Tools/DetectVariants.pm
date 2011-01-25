@@ -253,13 +253,13 @@ sub _verify_inputs {
     my $self = shift;
     
     my $ref_seq_file = $self->reference_sequence_input;
-    unless(Genome::Utility::FileSystem->check_for_path_existence($ref_seq_file)) {
+    unless(Genome::Sys->check_for_path_existence($ref_seq_file)) {
         $self->error_message("reference sequence input $ref_seq_file does not exist");
         return;
     }
 
     my $aligned_reads_file = $self->aligned_reads_input;
-    unless(Genome::Utility::FileSystem->check_for_path_existence($aligned_reads_file)) {
+    unless(Genome::Sys->check_for_path_existence($aligned_reads_file)) {
         $self->error_message("aligned reads input $aligned_reads_file was not found.");
         return;
     }
@@ -273,7 +273,7 @@ sub _create_directories {
     my $output_directory = $self->output_directory;
     unless (-d $output_directory) {
         eval {
-            Genome::Utility::FileSystem->create_directory($output_directory);
+            Genome::Sys->create_directory($output_directory);
         };
         
         if($@) {
@@ -285,8 +285,8 @@ sub _create_directories {
         chmod 02775, $output_directory;
     }
     
-    $self->_temp_staging_directory(Genome::Utility::FileSystem->create_temp_directory);
-    $self->_temp_scratch_directory(Genome::Utility::FileSystem->create_temp_directory);
+    $self->_temp_staging_directory(Genome::Sys->create_temp_directory);
+    $self->_temp_scratch_directory(Genome::Sys->create_temp_directory);
     
     return 1;
 }
@@ -316,7 +316,7 @@ sub _generate_standard_files {
         my $snv_module = join('::', $module_base, 'Snv', $detector . 'ToBed'); 
         
         for my $variant_file ($self->_snv_staging_output, $self->_filtered_snv_staging_output) {
-            if(Genome::Utility::FileSystem->check_for_path_existence($variant_file)) {
+            if(Genome::Sys->check_for_path_existence($variant_file)) {
                 $self->status_message("executing $snv_module on file $variant_file");
                 $retval &&= $self->_run_converter($snv_module, $variant_file);
             }  
@@ -327,7 +327,7 @@ sub _generate_standard_files {
         my $snv_module = join('::', $module_base, 'Indel', $detector . 'ToBed'); 
         
         for my $variant_file ($self->_indel_staging_output, $self->_filtered_indel_staging_output) {
-            if(Genome::Utility::FileSystem->check_for_path_existence($variant_file)) {
+            if(Genome::Sys->check_for_path_existence($variant_file)) {
                 $self->status_message("executing $snv_module on file $variant_file");
                 $retval &&= $self->_run_converter($snv_module, $variant_file);
             }  

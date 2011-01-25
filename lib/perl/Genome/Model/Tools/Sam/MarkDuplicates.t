@@ -12,11 +12,11 @@ my $input = '/gsc/var/cache/testsuite/data/Genome-Tools-Sam-MarkDuplicates/sampl
 
 # step 1: test 1 
 
-my $tmp_dir = Genome::Utility::FileSystem->create_temp_directory();
+my $tmp_dir = Genome::Sys->create_temp_directory();
 
-my $output_file = Genome::Utility::FileSystem->create_temp_file_path("out.bam");
-my $metrics_file = Genome::Utility::FileSystem->create_temp_file_path("out.metrics");
-my $log_file = Genome::Utility::FileSystem->create_temp_file_path("out.log");
+my $output_file = Genome::Sys->create_temp_file_path("out.bam");
+my $metrics_file = Genome::Sys->create_temp_file_path("out.metrics");
+my $log_file = Genome::Sys->create_temp_file_path("out.log");
 
 #uncomment to inspect output 
 #$log_file->unlink_on_destroy(0);

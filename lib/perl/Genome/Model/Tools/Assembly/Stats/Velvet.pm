@@ -126,7 +126,7 @@ sub execute {
 	my $out_file = $self->out_file;
 	#my $fh = IO::File->new(">$out_file") || die;
 	unlink $self->out_file;
-	my $fh = Genome::Utility::FileSystem->open_file_for_writing($self->out_file) ||
+	my $fh = Genome::Sys->open_file_for_writing($self->out_file) ||
 	    return;
 	$fh->print($stats);
 	$fh->close;

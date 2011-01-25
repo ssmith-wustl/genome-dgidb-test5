@@ -40,7 +40,7 @@ sub execute {
     if ($self->log_file) {
         $cmd .= ' > '. $self->log_file;
     };
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => \@fasta_files,
     );

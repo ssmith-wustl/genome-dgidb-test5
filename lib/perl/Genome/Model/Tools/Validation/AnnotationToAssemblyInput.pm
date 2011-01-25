@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 
 class Genome::Model::Tools::Validation::AnnotationToAssemblyInput {
     is => 'Command',
@@ -41,7 +41,7 @@ EOS
 sub execute {
     $DB::single = 1;
     my $self = shift;
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->annotation_file);
+    my $fh = Genome::Sys->open_file_for_reading($self->annotation_file);
     unless($fh) {
         $self->error_message("Unable to open annotation file");
         return;

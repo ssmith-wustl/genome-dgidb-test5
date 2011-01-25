@@ -17,7 +17,7 @@ use_ok('Genome::Model::Tools::BioSamtools::ProgressionInstance');
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-RefCov/Progression';
 my @bam_files = glob($data_dir .'/*.bam');
 my $target_query_file = $data_dir .'/BACKBONE.tsv';
-my $output_directory = Genome::Utility::FileSystem->create_temp_directory();
+my $output_directory = Genome::Sys->create_temp_directory();
 
 my $progression_instance = Genome::Model::Tools::BioSamtools::ProgressionInstance->create(
     bam_files =>\@bam_files,

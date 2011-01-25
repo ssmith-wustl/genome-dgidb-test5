@@ -41,7 +41,7 @@ sub execute {
             next;
         }
         $self->_open_chromat_dir($chromat_dir);
-        my $dh = Genome::Utility::FileSystem->open_directory($chromat_dir);
+        my $dh = Genome::Sys->open_directory($chromat_dir);
         unless ( $dh ) {
             $self->error_message("Can't open chomrat_dir ($chromat_dir) for build ".$build->id);
             next;
@@ -81,7 +81,7 @@ sub _open_chromat_dir{
 
     $self->_close_chromat_dh;
     $self->{_dh} = undef;
-    $self->{_dh} = Genome::Utility::FileSystem->open_directory($chromat_dir);
+    $self->{_dh} = Genome::Sys->open_directory($chromat_dir);
     $self->{_dh}->read; $self->{_dh}->read; # . ..
 
     return $self->{_dh};

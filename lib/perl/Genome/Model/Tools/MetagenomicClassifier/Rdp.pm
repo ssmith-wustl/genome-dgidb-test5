@@ -62,7 +62,7 @@ sub create {
     my $self = $class->SUPER::create(@_)
         or return;
 
-    unless ( Genome::Utility::FileSystem->validate_file_for_reading( $self->input_file ) ) {
+    unless ( Genome::Sys->validate_file_for_reading( $self->input_file ) ) {
         $self->delete;
         return;
     }

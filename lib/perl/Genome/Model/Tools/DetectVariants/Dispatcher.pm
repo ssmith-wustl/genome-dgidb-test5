@@ -156,7 +156,7 @@ sub _detect_variants {
             #TODO We should really use a temporary directory and copy the results to the working subdirectory after they're completed
             #TODO When we enable the boolean expressions, the directory name will need to take into account parameters as well
             my $command_output_directory = $self->calculate_detector_output_directory($detector, $version, '');
-            Genome::Utility::FileSystem->create_directory($command_output_directory);
+            Genome::Sys->create_directory($command_output_directory);
             $run_parameters{output_directory} = $command_output_directory;
             
             
@@ -193,8 +193,8 @@ sub _detect_variants {
             my $output_file_property = '_' . $variant_type . '_staging_output';
             my $filtered_output_file_property = '_filtered' . $output_file_property;
             
-            Genome::Utility::FileSystem->copy_file($final_files->[0], $self->$output_file_property);
-            Genome::Utility::FileSystem->copy_file($final_files->[1], $self->$filtered_output_file_property);
+            Genome::Sys->copy_file($final_files->[0], $self->$output_file_property);
+            Genome::Sys->copy_file($final_files->[1], $self->$filtered_output_file_property);
         }
     }
     

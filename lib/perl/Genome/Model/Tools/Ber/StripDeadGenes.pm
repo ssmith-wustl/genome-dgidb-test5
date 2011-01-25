@@ -12,7 +12,7 @@ use English;
 use BAP::DB::Sequence;
 use BAP::DB::SequenceSet;
 use BAP::DB::CodingGene;
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 
 use Data::Dumper;
 use IPC::Run qw/ run timeout /;
@@ -107,7 +107,7 @@ GENE:    foreach my $line (@lines) {
     # write out new .dat file.
     unless($self->keep_original) {
         # copy original .dat file to "file".orig
-        Genome::Utility::FileSystem->copy_file($self->sqlitedatafile,
+        Genome::Sys->copy_file($self->sqlitedatafile,
                                     $self->sqlitedatafile.".orig");
         $self->status_message("writing out new .dat file");
         write_file($self->sqlitedatafile,@non_dead_genes);

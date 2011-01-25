@@ -8,7 +8,7 @@ use Getopt::Long;
 use Statistics::R;
 use File::Temp;
 use DBI;
-require Genome::Utility::FileSystem;
+require Genome::Sys;
 
 class Genome::Model::Tools::CopyNumber::Graph {
     is => 'Command',

@@ -1,0 +1,139 @@
+package Genome::Model::Build::SomaticVariation;
+
+use strict;
+use warnings;
+
+use Genome;
+
+class Genome::Model::Build::SomaticVariation {
+    is => 'Genome::Model::Build',
+    has => [
+        tumor_model => {
+            is => 'Genome::Model::ReferenceAlignment',
+            via => 'model',
+        },
+        tumor_build_id => {
+            is => 'Text',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'tumor_build', value_class_name => 'Genome::Model::Build::ReferenceAlignment' ],
+            is_mutable => 1,
+        },
+        tumor_build => {
+            is => 'Genome::Model::Build::ReferenceAlignment',
+            id_by => 'tumor_build_id',
+        },
+        normal_model => {
+            is => 'Genome::Model::ReferenceAlignment',
+            via => 'model',
+        },
+        normal_build_id => {
+            is => 'Text',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'normal_build', value_class_name => 'Genome::Model::Build::ReferenceAlignment' ],
+            is_mutable => 1,
+        },
+        normal_build => {
+            is => 'Genome::Model::Build::ReferenceAlignment',
+            id_by => 'normal_build_id',
+        },
+        annotation_build => {
+            is => 'Genome::Model::Build::ImportedAnnotation',
+            via => 'model',
+        },
+        previously_discovered_variations_build => {
+            is => 'Genome::Model::Build::ImportedVariationList',
+            via => 'model',
+        },
+    ],
+};
+
+
+sub create {
+    my $class = shift;
+
+    my $bx = $class->define_boolexpr(@_);
+    $DB::single = 1; #TODO:delete me
+    my $model_id = $bx->value_for('model_id');
+    my $model = Genome::Model->get($model_id);
+    $model->update_tumor_and_normal_build_inputs;
+
+    my $self = $class->SUPER::create(@_);
+
+    unless ($self) {
+        return;
+    }
+    
+    $model = $self->model;
+    unless ($model) {
+        $self->error_message("Failed to get a model for this build!");
+        return;
+    }
+
+    my $tumor_model = $model->tumor_model;
+    unless ($tumor_model) {
+        $self->error_message("Failed to get a tumor_model!");
+        return;
+    }
+    
+    my $normal_model = $model->normal_model;
+    unless ($normal_model) {
+        $self->error_message("Failed to get a normal_model!");
+        return;
+    }
+    
+    my $tumor_build = $self->tumor_build;
+    unless ($tumor_build) {
+        $self->error_message("Failed to get a tumor build!");
+        return;
+    }
+
+    my $normal_build = $self->normal_build;
+    unless ($normal_build) {
+        $self->error_message("Failed to get a normal build!");
+        return;
+    }
+
+    return $self;
+}
+
+
+
+sub calculate_estimated_kb_usage {
+    my $self = shift;
+
+    # 15 gig... overestimating by 50% or so...
+    return 15728640;
+}
+
+sub files_ignored_by_diff {
+    return qw(
+    );
+}
+
+sub dirs_ignored_by_diff {
+    return qw(
+    );
+}
+
+sub workflow_instances {
+    my $self = shift;
+    my @instances = Workflow::Operation::Instance->get(
+        name => $self->workflow_name
+    );
+
+    #older builds used a wrapper workflow
+    unless(scalar @instances) {
+        return $self->SUPER::workflow_instances;
+    }
+
+    return @instances;
+}
+
+sub workflow_name {
+    my $self = shift;
+    return $self->build_id . ' Somatic Variation Pipeline';
+}
+
+1;

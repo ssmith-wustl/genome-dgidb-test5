@@ -43,7 +43,7 @@ sub pre_execute {
     my $cwd = Cwd::cwd();
     my $tempdir = File::Temp::tempdir( DIR => $self->output_directory, CLEANUP => 1 );
     chdir $tempdir;
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => "split -l $lines $input_file $basename",
         input_files => [$input_file],
     );
@@ -74,12 +74,12 @@ sub post_execute {
     }
 
     my $output_file = $self->output_directory .'/'. $self->_basename .'_clipped'. $self->_suffix;
-    Genome::Utility::FileSystem->cat(
+    Genome::Sys->cat(
         input_files => $self->output_file,
         output_file => $output_file,
     );
     my $log_file = $self->output_directory .'/'. $self->_basename .'_clipped.log';
-    Genome::Utility::FileSystem->cat(
+    Genome::Sys->cat(
         input_files => $self->log_file,
         output_file => $log_file,
     );

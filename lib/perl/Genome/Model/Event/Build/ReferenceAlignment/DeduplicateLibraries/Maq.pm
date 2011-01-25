@@ -172,7 +172,7 @@ sub execute {
             $self->status_message("Bam merge command: $bam_merge_cmd");
 
             #my $bam_merge_rv = system($bam_merge_cmd);
-            my $bam_merge_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$bam_merge_cmd,
+            my $bam_merge_rv = Genome::Sys->shellcmd(cmd=>$bam_merge_cmd,
                                                                      input_files=>\@bam_files,
                                                                      output_files=>[$bam_merged_output_file],
                                                                     );
@@ -191,7 +191,7 @@ sub execute {
             $self->status_message("Indexing bam file: $bam_final");
             my $bam_index_cmd = $bam_index_tool ." ". $bam_final;
             #$bam_index_rv = system($bam_index_cmd);
-            $bam_index_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$bam_index_cmd,
+            $bam_index_rv = Genome::Sys->shellcmd(cmd=>$bam_index_cmd,
                                                                   input_files=>[$bam_final],
                                                                   output_files=>[$bam_final.".bai"],
                                                                  );
@@ -257,7 +257,7 @@ sub execute {
 
    $self->status_message("Executing $cmd at $now.");
    #my $rv = system($cmd);
-   my $rv = Genome::Utility::FileSystem->shellcmd(  cmd=>$cmd,
+   my $rv = Genome::Sys->shellcmd(  cmd=>$cmd,
                                                     output_files=>[$self->build->whole_rmdup_map_file],
                                                     input_files=>\@maps_to_merge,
                                                   );

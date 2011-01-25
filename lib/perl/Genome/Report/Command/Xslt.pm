@@ -73,7 +73,7 @@ sub execute {
         );
     }
     unlink $self->output_file if $self->force and -e $self->output_file;
-    my $fh = Genome::Utility::FileSystem->open_file_for_writing( $self->output_file );
+    my $fh = Genome::Sys->open_file_for_writing( $self->output_file );
     unless ( $fh ) {
         $self->error_message("Can't open output file for writing.  See above error.  Maybe use --force option?");
         return;

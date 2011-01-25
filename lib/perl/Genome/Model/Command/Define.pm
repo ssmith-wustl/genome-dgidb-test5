@@ -10,7 +10,7 @@ use Genome;
 use Carp 'confess';
 use File::Path;
 use Data::Dumper;
-require Genome::Utility::FileSystem;
+require Genome::Sys;
 
 my @subject_types = ();
 {

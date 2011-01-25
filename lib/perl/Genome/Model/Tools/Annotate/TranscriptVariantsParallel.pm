@@ -83,7 +83,7 @@ sub pre_execute {
     # Make log directory and have workflow put child process output there
     if (defined $self->log_directory) {
         unless (-d $self->log_directory) {
-            my $log_dir = Genome::Utility::FileSystem->create_directory($self->log_directory);
+            my $log_dir = Genome::Sys->create_directory($self->log_directory);
             unless (defined $log_dir) {
                 $self->error_message("Error creating log directory at " . $self->log_directory);
                 return;
@@ -208,7 +208,7 @@ sub post_execute {
     unless(@output_files){
         $self->error_message("No non-zero sized output files, exiting") and die;
     }
-    Genome::Utility::FileSystem->cat(
+    Genome::Sys->cat(
         input_files => \@output_files, 
         output_file => $self->_output_file,
     );

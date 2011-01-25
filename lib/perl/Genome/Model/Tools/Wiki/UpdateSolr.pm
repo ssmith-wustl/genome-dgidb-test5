@@ -36,7 +36,7 @@ sub execute {
         $resource_lock .= '_dev';
     }
 
-    my $lock = Genome::Utility::FileSystem->lock_resource(resource_lock => $resource_lock, max_try => 1);
+    my $lock = Genome::Sys->lock_resource(resource_lock => $resource_lock, max_try => 1);
     die 'someone else has the wiki_loader lock' if !$lock;
 
     my $cache = Genome::Memcache->server() || die 'cant get memcache server';
@@ -75,7 +75,7 @@ sub execute {
         }
     }
 
-    Genome::Utility::FileSystem->unlock_resource(resource_lock=>$lock);
+    Genome::Sys->unlock_resource(resource_lock=>$lock);
 }
 
 

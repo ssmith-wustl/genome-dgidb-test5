@@ -72,7 +72,7 @@ sub execute {
     
     #resolve this
     #my $report_file = $self->working_directory."\reports\final.xml";
-    #my $report = Genome::Utility::FileSystem->open_file_for_writing($report_file); 
+    #my $report = Genome::Sys->open_file_for_writing($report_file); 
     
     #print $report $doc_string;
     #$report->close;

@@ -19,9 +19,9 @@ use_ok('Genome::Model::Tools::BioSamtools::CleanBam');
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-BioSamtools-CleanBam';
 
 my $input_bam_file = $data_dir .'/dirty.bam';
-my $output_bam_file = Genome::Utility::FileSystem->create_temp_file_path('clean.bam');  
+my $output_bam_file = Genome::Sys->create_temp_file_path('clean.bam');  
 my $expected_bam_file = $data_dir .'/clean.bam';
-my $summary_output_file = Genome::Utility::FileSystem->create_temp_file_path('summary.txt');    
+my $summary_output_file = Genome::Sys->create_temp_file_path('summary.txt');    
 my $expected_summary_output_file = $data_dir .'/summary.txt';
 my $cb = Genome::Model::Tools::BioSamtools::CleanBam->create(
    input_bam_file => $input_bam_file,   
