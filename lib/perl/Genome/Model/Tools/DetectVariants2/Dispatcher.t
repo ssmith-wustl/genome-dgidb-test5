@@ -5,8 +5,8 @@ use warnings;
 
 use Parse::RecDescent qw/RD_ERRORS RD_WARN RD_TRACE/;
 use Data::Dumper;
-#use Test::More tests => 2;
-use Test::More skip_all => 'test in development';
+use Test::More tests => 2;
+#use Test::More skip_all => 'test in development';
 use above 'Genome';
 
 #Parsing tests
@@ -17,9 +17,9 @@ use_ok($dispatcher_class);
 # hash of strings => expected output hash
 
 my $obj = $dispatcher_class->create(
-    snv_detection_strategy => 'samtools v1 {p => 1} && samtools v2 {p => 2}',
-    indel_detection_strategy => 'samtools v1 {p => 1}',
-    sv_detection_strategy => 'breakdancer v1 {p => 3}',
+    snv_detection_strategy => 'samtools v1 [-p 1] && samtools v2 [-p 2]',
+    indel_detection_strategy => 'samtools v1 [-p 1]',
+    sv_detection_strategy => 'breakdancer v1 [-p 3]',
     );
 
 my $expected_plan = {
@@ -27,7 +27,7 @@ my $expected_plan = {
         'v1' => {
             'sv' => [
                 {
-                    'params' => { 'p' => 3 },
+                    'params' => '-p 3',
                     'version' => 'v1',
                     'name' => 'breakdancer',
                     'filters' => [],
@@ -40,7 +40,7 @@ my $expected_plan = {
         'v1' => {
             'indel' => [
                 {
-                    'params' => { 'p' => 1 },
+                    'params' => '-p 3',
                     'version' => 'v1',
                     'name' => 'samtools',
                     'filters' => [],
@@ -49,7 +49,7 @@ my $expected_plan = {
             ],
             'snv' => [
                 {
-                    'params' => { 'p' => 1 },
+                    'params' => '-p 1',
                     'version' => 'v1',
                     'name' => 'samtools',
                     'filters' => [],
@@ -60,11 +60,11 @@ my $expected_plan = {
         'v2' => {
             'snv' => [
                 {
-                    'params' => { 'p' => 2 },
+                    'params' => '-p 2',
                     'version' => 'v2',
                     'name' => 'samtools',
                     'filters' => [],
-                    'class' => 'Genome::Model::Tools::DetectVariants2::Samtools'
+                    'class' => 'Genome::Model::Tools::DetectVariants2::Samtools',
                 }
             ]
         }

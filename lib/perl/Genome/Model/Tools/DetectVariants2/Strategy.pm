@@ -25,10 +25,10 @@ my $grammar = q{
     parenthetical: "(" combination ")"
                 { $item[2]; }
                 
-    intersection: single "&&" combination
+    intersection: single "and" combination
                 { $return = { intersect => [$item[1], $item[3] ] }; }
     
-    union: single "||" combination
+    union: single "or" combination
                 { $return = { union => [ $item[1], $item[3] ] }; }
     
     single: parenthetical
@@ -62,19 +62,24 @@ my $grammar = q{
     | <error>
 
     params: {
-                my $txt = extract_codeblock($text, '{}');
-                $return = eval $txt;
-                if ($@ or ref $return ne "HASH") {
-                    die("Failed to turn string '$txt' into perl hashref: $@.");
-                }
+                my $txt = extract_bracketed($text, '[]');
+                $txt =~ s/^\[(.*)\]$/$1/;
+                $txt=~ s/\\\\([\[\]])/$1/g;
+                $return = $txt;
             } 
-    | <error>
 
     program_spec: name version params
                 { $return = {
                     name => $item[1],
                     version => $item[2],
                     params => $item[3],
+                    };
+                }
+    | name version
+                { $return = {
+                    name => $item[1],
+                    version => $item[2],
+                    params => '',
                     };
                 }
 };
@@ -201,42 +206,43 @@ sub filter_class {
 
 sub validate {
     my ($self, $tree) = @_;
-    $DB::single=1;
+    return;
+    #$DB::single=1;
 
-    my @keys = keys %$tree;
-    for my $key (@keys) {
-        if ($key eq 'detector') {
-            $DB::single=1;
-            # Check detector class and params
-            my $class = $tree->{$key}->{class};
-            my $version = $tree->{$key}->{version};
-            my %params = %{$tree->{$key}->{params}};
-            $params{version} = $version;
-            my $detector_object = $class->create(%params);
-            if ($detector_object->__errors__) {
-                die "errors"; # FIXME make this add tags for $self->__errors_
-            }
+    #my @keys = keys %$tree;
+    #for my $key (@keys) {
+        #if ($key eq 'detector') {
+            #$DB::single=1;
+            ## Check detector class and params
+            #my $class = $tree->{$key}->{class};
+            #my $version = $tree->{$key}->{version};
+            #my $params = %{$tree->{$key}->{params}};
+            #$params{version} = $version;
+            #my $detector_object = $class->create(%params);
+            #if ($detector_object->__errors__) {
+                #die "errors"; # FIXME make this add tags for $self->__errors_
+            #}
 
-            # Check filters that belong to this detector
-            for my $filter (@{$tree->{$key}->{filters}}) {
-                $DB::single=1;
-                my $filter_class = $filter->{class};
-                my $filter_version = $filter->{version};
-                my %filter_params = %{$filter->{params}};
-                $filter_params{version} = $filter_version;
-                my $detector_object = $class->create(%filter_params);
-                if ($detector_object->__errors__) {
-                    die "errors"; # FIXME make this add tags for $self->__errors_
-                }   
-            }
+            ## Check filters that belong to this detector
+            #for my $filter (@{$tree->{$key}->{filters}}) {
+                #$DB::single=1;
+                #my $filter_class = $filter->{class};
+                #my $filter_version = $filter->{version};
+                #my %filter_params = %{$filter->{params}};
+                #$filter_params{version} = $filter_version;
+                #my $detector_object = $class->create(%filter_params);
+                #if ($detector_object->__errors__) {
+                    #die "errors"; # FIXME make this add tags for $self->__errors_
+                #}   
+            #}
 
-        } elsif (ref $tree->{$key} eq 'ARRAY') {
-            for my $subtree ( @{$tree->{$key}} ) {
-                $DB::single=1;
-                $self->validate($subtree);
-            }
-        }
-    }
+        #} elsif (ref $tree->{$key} eq 'ARRAY') {
+            #for my $subtree ( @{$tree->{$key}} ) {
+                #$DB::single=1;
+                #$self->validate($subtree);
+            #}
+        #}
+    #}
 }
 
 1;
