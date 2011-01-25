@@ -1,4 +1,4 @@
-package Genome::Model::Tools::DetectVariants2::Somatic::Pindel;
+package Genome::Model::Tools::DetectVariants2::Pindel;
 
 use warnings;
 use strict;
@@ -9,8 +9,8 @@ use Workflow;
 my $DEFAULT_VERSION = '0.1';
 my $PINDEL_COMMAND = 'pindel_64';
 
-class Genome::Model::Tools::DetectVariants2::Somatic::Pindel {
-    is => ['Genome::Model::Tools::DetectVariants::Somatic', 'Genome::Model::Tools::DetectVariants2::Somatic'],
+class Genome::Model::Tools::DetectVariants2::Pindel {
+    is => ['Genome::Model::Tools::DetectVariants::Somatic', 'Genome::Model::Tools::DetectVariants2::Base'],
     has => [
         version => {
             is => 'Version',

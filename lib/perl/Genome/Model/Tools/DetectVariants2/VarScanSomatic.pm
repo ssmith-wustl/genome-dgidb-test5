@@ -1,13 +1,12 @@
-
-package Genome::Model::Tools::DetectVariants2::Somatic::VarScan;
+package Genome::Model::Tools::DetectVariants2::VarScan;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Tools::DetectVariants2::Somatic::VarScan {
-    is => ['Genome::Model::Tools::DetectVariants::Somatic', 'Genome::Model::Tools::DetectVariants2::Somatic'],
+class Genome::Model::Tools::DetectVariants2::VarScan {
+    is => ['Genome::Model::Tools::DetectVariants::Somatic', 'Genome::Model::Tools::DetectVariants2::Base'],
     has => [
         reference_sequence_input => {
             default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa",
