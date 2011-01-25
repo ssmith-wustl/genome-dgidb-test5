@@ -171,6 +171,13 @@ sub _verify_inputs {
         return;
     }
     
+    if(defined($self->control_aligned_reads_file)){
+        my $control_aligned_reads_file = $self->control_aligned_reads_input;
+        unless(Genome::Sys->check_for_path_existence($control_aligned_reads_file)) {
+            $self->error_message("control aligned reads input $control_aligned_reads_file was not found.");
+            return;
+        }
+    }
     return 1;
 }
 
