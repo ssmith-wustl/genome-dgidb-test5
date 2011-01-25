@@ -133,26 +133,26 @@ sub pre_execute {
         #TODO: Do we worry about the remainder if the total reads is not divisible by the number of snapshots
         my $reads_per_snapshot = int($reads / $self->snapshots);
 
-        my $lock = Genome::Utility::FileSystem->lock_resource(resource_lock => $self->output_directory .'/lock_resource_layers');
+        my $lock = Genome::Sys->lock_resource(resource_lock => $self->output_directory .'/lock_resource_layers');
         my @files = glob($self->output_directory .'/LAYERS*');
         unless (@files) {
             eval {
                 require Cwd;
                 my $cwd = Cwd::cwd();
                 chdir $self->output_directory;
-                Genome::Utility::FileSystem->shellcmd(
+                Genome::Sys->shellcmd(
                                                       cmd => "split -d -l $reads_per_snapshot $layers_file LAYERS",
                                                       input_files => [$layers_file],
                                                   );
                 chdir $cwd;
             };
             if ($@) {
-                Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock);
+                Genome::Sys->unlock_resource(resource_lock => $lock);
                 die($@);
             }
             @files = glob($self->output_directory .'/LAYERS*');
         }
-        Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock);
+        Genome::Sys->unlock_resource(resource_lock => $lock);
         unless (@files) {
             $self->error_message('Failed to create the layers file paths!');
             die($self->error_message);
@@ -163,26 +163,26 @@ sub pre_execute {
     if ($self->genes > 0) {
         my $genes_file = $self->genes_file_path;
         my $genes = $self->genes;
-        my $lock = Genome::Utility::FileSystem->lock_resource(resource_lock => $self->output_directory .'/lock_resource_genes');
+        my $lock = Genome::Sys->lock_resource(resource_lock => $self->output_directory .'/lock_resource_genes');
         my @files = glob($self->output_directory .'/GENES*');
         unless (@files) {
             eval {
                 require Cwd;
                 my $cwd = Cwd::cwd();
                 chdir $self->output_directory;
-                Genome::Utility::FileSystem->shellcmd(
+                Genome::Sys->shellcmd(
                                                       cmd => "split -d -l $genes $genes_file GENES",
                                                       input_files => [$genes_file],
                                                   );
                 chdir $cwd;
             };
             if ($@) {
-                Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock);
+                Genome::Sys->unlock_resource(resource_lock => $lock);
                 die($@);
             }
             @files = glob($self->output_directory .'/GENES*');
         }
-        Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock);
+        Genome::Sys->unlock_resource(resource_lock => $lock);
         unless (@files) {
             $self->error_message('Failed to create the genes file paths!');
             die($self->error_message);

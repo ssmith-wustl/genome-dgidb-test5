@@ -26,7 +26,7 @@ my $example_build = Genome::Model::DeNovoAssembly::Test->get_mock_build(
 );
 ok($example_build, 'got example build') or die;
 
-Genome::Utility::FileSystem->create_directory($build->edit_dir);
+Genome::Sys->create_directory($build->edit_dir);
 ok(-d $build->edit_dir, "Made build edit_dir");
 
 #link build dir files

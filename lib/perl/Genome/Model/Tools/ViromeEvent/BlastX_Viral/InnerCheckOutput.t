@@ -1,18 +1,30 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
 
 use above 'Genome';
-use Test::More tests => 2;
-use File::Basename;
+use Test::More;
 
+use_ok('Genome::Model::Tools::ViromeEvent::BlastX_Viral::InnerCheckOutput') or die;
+#check blast dir .. testing on already completed, no-run, blast data so tool won't know if blast db is missing
+ok( -s '/gscmnt/sata835/info/medseq/virome/blast_db/viral/viral.genomic.fna', "Blast db exists" );
 
-BEGIN {use_ok('Genome::Model::Tools::ViromeEvent::BlastX_Viral::InnerCheckOutput');}
+my $file_for_blast = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-ViromeScreening/Titanium17/Titanium17_undecodable/Titanium17_undecodable.TBXNTFiltered_TBLASTX_ViralGenome/Titanium17_undecodable.TBXNTFiltered.fa_file0.fa';
+ok( -s $file_for_blast, "File for blast exists" ) or die;
+my $done_file = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-ViromeScreening/Titanium17/Titanium17_undecodable/Titanium17_undecodable.TBXNTFiltered_TBLASTX_ViralGenome/Titanium17_undecodable.TBXNTFiltered.fa_file0.tblastx_ViralGenome.out';
+ok( -s $done_file, "Blast output file exists" ) or die; #otherwise will kick off blast which could take a long time
 
-#create
-my $ocr = Genome::Model::Tools::ViromeEvent::BlastX_Viral::InnerCheckOutput->create(
-                                                                file_to_run => '/gscmnt/sata835/info/medseq/virome/test17/S0_Mouse_Tissue_0_Control/S0_Mouse_Tissue_0_Control.fa.cdhit_out_RepeatMasker/S0_Mouse_Tissue_0_Control.fa.cdhit_out_file3.fa',
-                                                                logfile => '/gscmnt/sata835/info/medseq/virome/workflow/logfile.txt',
-                                                            );
-isa_ok($ocr, 'Genome::Model::Tools::ViromeEvent::BlastX_Viral::InnerCheckOutput');
+my $temp_dir = Genome::Sys->create_temp_directory();
+
+my $c = Genome::Model::Tools::ViromeEvent::BlastX_Viral::InnerCheckOutput->create(
+    file_to_run => $file_for_blast,
+    logfile => $temp_dir.'/log.txt',
+    );
+ok( $c, "Created blastx viral inner check output event" ) or die;
+
+ok( $c->execute, "Successfully executed event" );
+
+done_testing();;
+
+exit;

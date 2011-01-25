@@ -37,7 +37,7 @@ EOS
 sub execute {
     my $self = shift;
     
-    my $output_file = Genome::Utility::FileSystem->create_temp_file_path();
+    my $output_file = Genome::Sys->create_temp_file_path();
     
     my $compare_cmd = Genome::Model::Tools::Picard::CompareSams->create(
         input_file_1 => $self->file1,
@@ -55,7 +55,7 @@ sub execute {
     my $ret = 0;
     my $response;
 
-    my $output_fh = Genome::Utility::FileSystem->open_file_for_reading($output_file);
+    my $output_fh = Genome::Sys->open_file_for_reading($output_file);
     while (<$output_fh>) {
         $ret = 1 if (m/Differ\s*0$/); 
         $response .= $_;

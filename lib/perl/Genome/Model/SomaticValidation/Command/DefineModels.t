@@ -53,7 +53,7 @@ sub setup_test_data {
 
     my $simple_bed_text = "1\t3\t50\tmy_region_of_interest\n";
     my $bed_file_path = join('/', $tmpdir, 'roi.bed');
-    Genome::Utility::FileSystem->write_file($bed_file_path, $simple_bed_text);
+    Genome::Sys->write_file($bed_file_path, $simple_bed_text);
 
     my $reference_sequence = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
 
@@ -62,7 +62,7 @@ sub setup_test_data {
         format => 'true-BED',
         reference => $reference_sequence,
         file_path => $bed_file_path,
-        file_content_hash => Genome::Utility::FileSystem->md5sum($bed_file_path),
+        file_content_hash => Genome::Sys->md5sum($bed_file_path),
     );
 
     my $taxon = Genome::Taxon->get(species_name => 'human');

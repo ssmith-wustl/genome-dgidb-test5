@@ -14,7 +14,7 @@ my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/velvet
 ok (-d $data_dir, "Test suite data dir exists") or die;
 
 #temp test dir
-my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+my $temp_dir = Genome::Sys->create_temp_directory();
 ok (-d $temp_dir, "Test temp dir created") or die;
 
 #check assembly output files exists and copy to temp dir

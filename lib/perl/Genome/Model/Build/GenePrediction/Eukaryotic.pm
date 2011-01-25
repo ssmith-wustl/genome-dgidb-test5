@@ -9,7 +9,12 @@ class Genome::Model::Build::GenePrediction::Eukaryotic {
     is => 'Genome::Model::Build::GenePrediction',
 };
 
-# Overriding this method from Build.pm, used to get workflows for this build by name
+# >75% of this comes from split fasta directories, which get cleaned
+# up when the build successfully completes
+sub calculate_estimated_kb_usage {
+    return 2_048_000;
+}
+
 sub workflow_name {
     my $self = shift;
     return 'eukaryotic gene prediction ' . $self->build_id;

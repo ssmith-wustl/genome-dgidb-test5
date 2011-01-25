@@ -49,7 +49,7 @@ sub execute {
     }
 
     unless (-d $self->output_directory) {
-        unless (Genome::Utility::FileSystem->create_directory($self->output_directory)) {
+        unless (Genome::Sys->create_directory($self->output_directory)) {
             $self->error_message('Failed to create output directory '. $self->output_directory .":  $!");
             die($self->error_message);
         }
@@ -71,14 +71,14 @@ sub execute {
     }
 
     # This should be a named pipe
-    my $whole_tmp_sam = Genome::Utility::FileSystem->create_temp_file_path($basename .'.sam');
+    my $whole_tmp_sam = Genome::Sys->create_temp_file_path($basename .'.sam');
     mkfifo($whole_tmp_sam,02700) || die('Failed to make named pipe '. $whole_tmp_sam);
     while (!-e $whole_tmp_sam) {
         sleep 1;
     }
 
     my $sam_view_cmd = $self->samtools_path .' view -o '. $whole_tmp_sam .' '. $name_sorted_bam .' &' ;
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => $sam_view_cmd,
     );
 
@@ -86,7 +86,7 @@ sub execute {
     my $file_counter = 1;
     my @bam_files;
     while ($whole_sam_fh->opened) {
-        my ($tmp_sam_fh,$tmp_sam_file) = Genome::Utility::FileSystem->create_temp_file($basename .'_'. $file_counter .'.sam');
+        my ($tmp_sam_fh,$tmp_sam_file) = Genome::Sys->create_temp_file($basename .'_'. $file_counter .'.sam');
         for (my $i = 0; $i < $self->size; $i++) {
             if (my $sam = $whole_sam_fh->getline) {
                 $tmp_sam_fh->print($sam);

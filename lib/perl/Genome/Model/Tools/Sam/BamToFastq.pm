@@ -59,7 +59,7 @@ sub execute {
         $params .= ' -F '. $self->exclude_flag;
     }
     my $cmd = $self->samtools_path .' view '. $params .' '. $self->bam_file .' | awk \'{print "@"$1"\n"$10"\n+\n"$11}\' > '. $self->fastq_file;
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$self->bam_file],
         output_files => [$self->fastq_file],

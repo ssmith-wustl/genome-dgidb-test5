@@ -1,18 +1,25 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
 
 use above 'Genome';
-use Test::More tests => 2;
+use Test::More;
 
+use_ok('Genome::Model::Tools::ViromeEvent::RepeatMasker::OuterCheckResult');
 
-BEGIN {use_ok('Genome::Model::Tools::ViromeEvent::RepeatMasker::OuterCheckResult');}
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-ViromeScreening/Titanium17/Titanium17_undecodable';
+ok( -d $data_dir, "Test suite data dir exists" );
+
+my $temp_dir = Genome::Sys->create_temp_directory();
 
 #create
-my $ocr = Genome::Model::Tools::ViromeEvent::RepeatMasker::OuterCheckResult->create(
-                                                                dir     => '/gscmnt/sata835/info/medseq/virome/test17/S0_Mouse_Tissue_0_Control',
-                                                                logfile => '/gscmnt/sata835/info/medseq/virome/workflow/logfile.txt',
-                                                            );
-isa_ok($ocr, 'Genome::Model::Tools::ViromeEvent::RepeatMasker::OuterCheckResult');
-$ocr->execute();
+my $c = Genome::Model::Tools::ViromeEvent::RepeatMasker::OuterCheckResult->create(
+    dir     => $data_dir,
+    logfile => $temp_dir.'/log.txt',
+    );
+ok($c, "Created repeat masker outer check result event");
+
+done_testing();
+
+exit;

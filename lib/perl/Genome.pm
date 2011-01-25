@@ -3,26 +3,26 @@ package Genome;
 use warnings;
 use strict;
 
-our $VERSION = 0.04;
+our $VERSION = '0.05'; # Genome $VERSION
 
 # software infrastructure
 use UR;
 
-# this keeps available parts of the UR pre-0.01 API we still use
-use UR::ObjectV001removed;
+# local configuration
+use Genome::Site;
 
 # environmental configuration
-use Genome::Config;
+$ENV{GENOME_DB} ||= '/var/lib/genome/db';
+$ENV{GENOME_SW} ||= '/var/lib/genome/sw';
 
-# if the search engine is installed configure its hooks
+# if the search engine is installed, configure its hooks
 eval {
     local $SIG{__WARN__};
     local $SIG{__DIE__};
     require Genome::Search;
 };
 
-# modules we need to auto-load
-use Test::MockObject;
+# modules 
 use File::Temp;
 use IO::String;
 

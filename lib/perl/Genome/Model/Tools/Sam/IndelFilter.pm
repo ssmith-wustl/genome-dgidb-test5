@@ -71,8 +71,8 @@ sub execute {
     my @last = ();
 
     my $out_file = $self->out_file || $self->indel_file . '.filtered';
-    my $out_fh   = Genome::Utility::FileSystem->open_file_for_writing($out_file)   or return;
-    my $indel_fh = Genome::Utility::FileSystem->open_file_for_reading($indel_file) or return;
+    my $out_fh   = Genome::Sys->open_file_for_writing($out_file)   or return;
+    my $indel_fh = Genome::Sys->open_file_for_reading($indel_file) or return;
     
     while (my $indel = $indel_fh->getline) {
         my @items = split /\s+/, $indel;

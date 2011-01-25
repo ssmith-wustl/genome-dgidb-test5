@@ -1,4 +1,3 @@
-
 package Genome::Model::Tools::ViromeEvent::BlastN::CheckParseOutput;
 
 use strict;
@@ -20,11 +19,6 @@ sub help_brief {
     return "gzhao's Blast N check parse output";
 }
 
-sub help_synopsis {
-    return <<"EOS"
-EOS
-}
-
 sub help_detail {
     return <<"EOS"
 This script will check all .tblastx.parsed file in the .BNfiltered_TBLASTX
@@ -35,13 +29,6 @@ perl script <sample dir>
 <sample dir> = full path to the folder holding files for a sample library 
 	without last "/"
 EOS
-}
-
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    return $self;
-
 }
 
 sub execute {
@@ -135,7 +122,7 @@ sub check_completed_parse {
     while (my $line = $fh->getline) {
 	$line_count++;
 	$undef_taxon++ if $line =~ /undefined\s+taxon/;
-	#if ($line =~ /#\s+Summary:\s+(\d+)\s+out\s+of\s+(\d+)/) {
+
 	if ($line =~ /\s+Summary:/) {
 	    #SKIP THE CHECKS BELOW .. COULD GO INTO INFINITE LOOP
 	    return 1;

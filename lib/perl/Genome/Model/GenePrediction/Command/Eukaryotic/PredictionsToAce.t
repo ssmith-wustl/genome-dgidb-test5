@@ -51,5 +51,5 @@ isa_ok($obj, 'Genome::Model::GenePrediction::Command::Eukaryotic::PredictionsToA
 ok($obj->execute, 'executed command object');
 ok(-s $temp_ace_file, "output written to temp ace file $temp_ace_file");
 
-my $diff_output = Genome::Utility::FileSystem->diff_file_vs_file($temp_ace_file, $expected_ace_output);
+my $diff_output = Genome::Sys->diff_file_vs_file($temp_ace_file, $expected_ace_output);
 ok(!$diff_output, "generated output $temp_ace_file matches expected output $expected_ace_output");

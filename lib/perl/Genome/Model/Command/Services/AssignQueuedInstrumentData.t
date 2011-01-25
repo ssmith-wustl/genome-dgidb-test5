@@ -2,6 +2,7 @@
 
 use strict;
 use warnings;
+use Data::Dumper;
 
 BEGIN {
     $ENV{UR_DBI_NO_COMMIT} = 1;
@@ -120,7 +121,7 @@ isa_ok($command_1, 'Genome::Model::Command::Services::AssignQueuedInstrumentData
 ok($command_1->execute(), 'assign-queued-instrument-data executed successfully.');
 
 my $new_models = $command_1->_newly_created_models;
-is(scalar(keys %$new_models), 1, 'the cron created one model');
+is(scalar(keys %$new_models), 2, 'the cron created two model');
 
 my $models_changed = $command_1->_existing_models_assigned_to;
 is(scalar(keys %$models_changed), 0, 'the cron did no work for the second PSE, since the first assigns all on creation');
@@ -128,9 +129,10 @@ is(scalar(keys %$models_changed), 0, 'the cron did no work for the second PSE, s
 my $old_models = $command_1->_existing_models_with_existing_assignments;
 is(scalar(keys %$old_models), 1, 'the cron found a model with data [for the second PSE] already assigned');
 
-my ($new_model) = values(%$new_models);
-my ($old_model) = values(%$old_models);
-is($new_model, $old_model, 'the model created is the one reused');
+my ($old_model_id) = keys(%$old_models);
+my $new_model = $new_models->{$old_model_id};
+my $old_model = $old_models->{$old_model_id};
+is_deeply($new_model, $old_model, 'the model created is the one reused');
 
 ok($new_model->build_requested, 'the cron set the new model to be built');
 
@@ -138,7 +140,7 @@ my @models_for_sample = Genome::Model->get(
     subject_class_name => 'Genome::Sample',
     subject_id => $sample->id,
 );
-is(scalar(@models_for_sample), 1, 'found a model created for the subject');
+is(scalar(@models_for_sample), 2, 'found two models created for the subject');
 is($models_for_sample[0], $new_model, 'that model is the same one the cron claims it created');
 
 my @instrument_data = $new_model->instrument_data;
@@ -246,7 +248,7 @@ for my $m (@new_models_2) {
     subject_class_name => 'Genome::Sample',
     subject_id => $sample->id,
 );
-is(scalar(@models_for_sample), 3, 'found 3 models created for the subject');
+is(scalar(@models_for_sample), 4, 'found 4 models created for the subject');
 
 @instrument_data = $new_model->instrument_data;
 is(scalar(@instrument_data), 3, 'the new model has three instrument data assigned');

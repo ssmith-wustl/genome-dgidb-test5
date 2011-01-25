@@ -20,5 +20,5 @@ my $cmd = Genome::Model::Tools::Bed::ChromSort->create(
 ok($cmd, 'Created command');
 ok($cmd->execute(), 'Executed command');
 
-my $diff = Genome::Utility::FileSystem->diff_file_vs_file($output_file, $expected_file);
+my $diff = Genome::Sys->diff_file_vs_file($output_file, $expected_file);
 ok(!$diff, 'output matched expected result') or diag("diff results:\n" . $diff);

@@ -1,18 +1,30 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
 
 use above 'Genome';
-use Test::More tests => 2;
+use Test::More;
 
+use_ok('Genome::Model::Tools::ViromeEvent::BlastHumanGenome::OuterCheckOutput') or die;
 
-BEGIN {use_ok('Genome::Model::Tools::ViromeEvent::BlastHumanGenome::OuterCheckOutput');}
+my $data_dir = '/gscmnt/sata420/info/testsuite_data/Genome-Model-Tools-ViromeScreening/Titanium17/Titanium17_undecodable';
+ok( -d $data_dir, "Test suite dir exists" ) or die;
 
-#create
-my $co = Genome::Model::Tools::ViromeEvent::BlastHumanGenome::OuterCheckOutput->create(
-                                                                dir => '/gscmnt/sata835/info/medseq/virome/test17/S0_Mouse_Tissue_0_Control',
-                                                                logfile => 'foo.txt',
-                                                            );
-isa_ok($co, 'Genome::Model::Tools::ViromeEvent::BlastHumanGenome::OuterCheckOutput');
-#$co->execute();
+my $temp_dir = Genome::Sys->create_temp_directory(); #just need some place for log file
+
+my $c = Genome::Model::Tools::ViromeEvent::BlastHumanGenome::OuterCheckOutput->create(
+    dir     => $data_dir,
+    logfile => $temp_dir.'/log.txt',
+    );
+ok( $c, "Created blast human genome outer check event" );
+
+ok( $c->execute, "Successfully executed event" );
+
+my $files_for_blast = $c->files_for_blast;
+is_deeply( $files_for_blast, [
+'/gscmnt/sata420/info/testsuite_data/Genome-Model-Tools-ViromeScreening/Titanium17/Titanium17_undecodable/Titanium17_undecodable.fa.cdhit_out.masked.goodSeq_HGblast/Titanium17_undecodable.fa.cdhit_out.masked.goodSeq_file0.fa', ], "Got files for blasting" );
+
+done_testing;
+
+exit;

@@ -69,7 +69,7 @@ sub execute {
                 #my $merge_tool = "java -Xmx3g -cp $picard_path/MergeSamFiles.jar net.sf.picard.sam.MergeSamFiles MSD=true SO=coordinate AS=true tmp_dir=$working_directory VALIDATION_STRINGENCY=SILENT O=$merged_file ";
                 #my $list_of_files = join(' I=',@alignment_files);
                 #my $cmd_merge = $merge_tool." I=".$list_of_files;		
-                #my $rv_merge = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd_merge);											 
+                #my $rv_merge = Genome::Sys->shellcmd(cmd=>$cmd_merge);											 
            
                 my $cmd_merge = Genome::Model::Tools::Sam::Merge->create(
                     files_to_merge => \@alignment_files,
@@ -88,7 +88,7 @@ sub execute {
                 
     }
     
-    #Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_output_files);
+    #Genome::Sys->mark_files_ok(input_files=>\@expected_output_files);
     $self->status_message("<<<Completed MergeAlignments at ".UR::Time->now);
     return 1;
  

@@ -124,7 +124,7 @@ sub execute{
                                          TEMPLATE => 'import-interpro_iprscan-results-converted_XXXXXX');
     my $converter_output = $converter_temp->filename;
     #the perl -I is used to ensure that the iprscan lib is included in the path.  This may no longer be necessary, as we are using the version on /gsc/scripts
-    Genome::Utility::FileSystem->shellcmd(cmd => "perl -I " . $iprscan_dir.$converter_lib . " " . $iprscan_dir.$converter_cmd . " --input " . $iprscan_merged_path . " --output " . $converter_output . " --format gff3",) or die "gff conversion failed: $!";
+    Genome::Sys->shellcmd(cmd => "perl -I " . $iprscan_dir.$converter_lib . " " . $iprscan_dir.$converter_cmd . " --input " . $iprscan_merged_path . " --output " . $converter_output . " --format gff3",) or die "gff conversion failed: $!";
     my $post_gff_conversion = Benchmark->new;
     my $gff_conversion_time = timediff($post_gff_conversion, $pre_gff_conversion);
     $self->status_message('gff_conversion: ' . timestr($gff_conversion_time, 'noc')) if $self->benchmark;
@@ -149,7 +149,7 @@ sub execute{
     unless($genbank_base_dir eq $self->tmp_dir){
         #copy genbank dir over genbank's interpro results folder
         if (-d $genbank_results_data_dir->dirname . "/interpro_results"){
-            Genome::Utility::FileSystem->shellcmd(cmd => "mv -f " . $genbank_results_data_dir->dirname . "/interpro_results " . $genbank_base_dir) or die "Failed to mv Genbank results: $!";
+            Genome::Sys->shellcmd(cmd => "mv -f " . $genbank_results_data_dir->dirname . "/interpro_results " . $genbank_base_dir) or die "Failed to mv Genbank results: $!";
         }
         else{
             print "No results for Genbank, skipping...";
@@ -158,7 +158,7 @@ sub execute{
     unless($ensembl_base_dir eq $self->tmp_dir){
         #copy ensembl dir over ensembl's interpro results folder
         if (-d $ensembl_results_data_dir->dirname . "/interpro_results"){
-            Genome::Utility::FileSystem->shellcmd(cmd => "mv -f " . $ensembl_results_data_dir->dirname . "/interpro_results " . $ensembl_base_dir) or die "Failed to mv Ensembl results: $!";
+            Genome::Sys->shellcmd(cmd => "mv -f " . $ensembl_results_data_dir->dirname . "/interpro_results " . $ensembl_base_dir) or die "Failed to mv Ensembl results: $!";
         }else{
             print "No results for Ensembl, skipping...";
         }

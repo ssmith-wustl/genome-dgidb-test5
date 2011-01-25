@@ -188,7 +188,7 @@ sub execute {
     }
     my $path = $disk_allocation->absolute_path;
     unless (-e $path) {
-        Genome::Utility::FileSystem->create_directory($path);        
+        Genome::Sys->create_directory($path);        
         unless (-e $path) {
             die $self->error_message("Failed to create directory $path! $!");
         }

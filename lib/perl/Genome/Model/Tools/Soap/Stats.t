@@ -18,7 +18,7 @@ ok(-s $data_dir.'/2_fastq', "Data dir 2_fastq file exists") or die;
 ok(-s $data_dir.'/stats.txt', "Data dir example stats file exists") or die;
 
 #create temp test dir
-my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+my $temp_dir = Genome::Sys->create_temp_directory();
 ok(-d $temp_dir, "Created temp test dir");
 mkdir $temp_dir.'/edit_dir';
 ok(-d $temp_dir.'/edit_dir', "Created temp dir edit_dir");

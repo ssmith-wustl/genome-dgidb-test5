@@ -19,7 +19,7 @@ my @cmds = (
     "bsub -q long -u $ENV{USER}\@genome.wustl.edu -R 'rusage[internet_upload_mbps=100,aspera_upload_mbps=100]' gmt dacc upload /DACC_DIR/ $tar_file"
 );
 no warnings qw/ once redefine /;
-*Genome::Utility::FileSystem::shellcmd = sub{
+*Genome::Sys::shellcmd = sub{
     my ($class, %params) = @_;
     diag($params{cmd});
     is($params{cmd}, $cmds[$cnt], 'Command matches');

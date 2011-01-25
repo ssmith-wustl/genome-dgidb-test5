@@ -51,7 +51,7 @@ sub execute {
     my $unaligned_bam_file = $self->unaligned_bam_file;
     my $aligned_bam_file = $self->aligned_bam_file;
     my $merged_bam_file = $self->merged_bam_file;
-    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->alignment_stats_file);
+    my $output_fh = Genome::Sys->open_file_for_writing($self->alignment_stats_file);
     
     unless ($unaligned_bam_file && $aligned_bam_file && $merged_bam_file) {
         die('Usage:  tophat_alignment_summary.pl <FASTQ_BAM> <TOPHAT_BAM> <MERGED_BAM>');

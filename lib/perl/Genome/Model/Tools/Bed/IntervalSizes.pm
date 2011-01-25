@@ -23,7 +23,7 @@ class Genome::Model::Tools::Bed::IntervalSizes {
 sub execute {
     my $self = shift;
 
-    my $bed_fh = Genome::Utility::FileSystem->open_file_for_reading($self->bed_file);
+    my $bed_fh = Genome::Sys->open_file_for_reading($self->bed_file);
     my $offset = 0;
     unless ($self->one_based_start) {
         $offset = 1;

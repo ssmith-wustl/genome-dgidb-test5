@@ -38,12 +38,12 @@ sub execute {
     my $self = shift;
     my $output_directory = $self->output_directory;
     unless (-d $output_directory) {
-        unless (Genome::Utility::FileSystem->create_directory($output_directory)) {
+        unless (Genome::Sys->create_directory($output_directory)) {
             die('Failed to create output_directory: '. $output_directory);
         }
     }
     my $output_file = $output_directory .'/peak_detection.out';
-    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($output_file);
+    my $output_fh = Genome::Sys->open_file_for_writing($output_file);
     my @factors = split(',',$self->normalization_factors);
     
     # create low level bam object

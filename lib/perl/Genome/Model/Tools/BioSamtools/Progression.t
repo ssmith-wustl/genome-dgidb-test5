@@ -8,10 +8,14 @@ use File::Compare;
 
 use above 'Genome';
 
-if ($] < 5.012) {
-    plan skip_all => "this test is only runnable on perl 5.12+"
+BEGIN {
+    # In a begin block so we can skip the use_ok below if necessary
+    if ($] < 5.012) {
+        plan skip_all => "this test is only runnable on perl 5.12+"
+    } else {
+       plan tests => 5;
+    }
 }
-plan tests => 5;
 
 BEGIN {
         use_ok('Genome::Model::Tools::BioSamtools::Progression');

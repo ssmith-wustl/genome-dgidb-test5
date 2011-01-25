@@ -12,7 +12,7 @@ my $input = "$datadir/input.fastq";
 die "no $input" unless -e $input;
 my $expected_output = "$datadir/dusted.fastq";
 
-my $temp_dir = Genome::Utility::FileSystem->create_temp_directory;
+my $temp_dir = Genome::Sys->create_temp_directory;
 my $output = "$temp_dir/dusted.fastq";
 
 my $cmd = Genome::Model::Tools::Fastq::Dust->create(
@@ -23,6 +23,6 @@ my $cmd = Genome::Model::Tools::Fastq::Dust->create(
 
 ok($cmd, "successfully created dust fastq command");
 ok($cmd->execute, "successfully executed dust fastq command");
-is(Genome::Utility::FileSystem->md5sum($output),
-   Genome::Utility::FileSystem->md5sum($expected_output),
+is(Genome::Sys->md5sum($output),
+   Genome::Sys->md5sum($expected_output),
    'output matches what was expected');

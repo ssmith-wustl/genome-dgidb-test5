@@ -48,8 +48,8 @@ sub help_synopsis {
 sub execute {
     my $self = shift;
 
-    my $in_fh = Genome::Utility::FileSystem->open_file_for_reading($self->input_fastq_file);
-    my $out_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_fastq_file);
+    my $in_fh = Genome::Sys->open_file_for_reading($self->input_fastq_file);
+    my $out_fh = Genome::Sys->open_file_for_writing($self->output_fastq_file);
     my $qual_chr;
     if ($self->input_quality_format eq 'illumina') {
         $qual_chr = chr(64 + $self->phred_quality_value);
@@ -83,7 +83,7 @@ sub execute {
     }
     $in_fh->close;
     $out_fh->close;
-    my $summary_fh = Genome::Utility::FileSystem->open_file_for_writing($self->summary_file);
+    my $summary_fh = Genome::Sys->open_file_for_writing($self->summary_file);
     for my $length (sort {$a <=> $b} keys %histogram) {
         print $summary_fh $length ."\t". $histogram{$length} ."\n";
     }

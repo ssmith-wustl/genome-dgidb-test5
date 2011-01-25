@@ -53,7 +53,7 @@ sub execute {
 
     my $out = Bio::SeqIO->new(-format => 'fasta', -file => '>'.$unplaced_fasta_out);
     unlink $unplaced_out;
-    my $fh_out = Genome::Utility::FileSystem->open_file_for_writing($unplaced_out);
+    my $fh_out = Genome::Sys->open_file_for_writing($unplaced_out);
     foreach ( $self->input_fasta_files ) {
 	my $fh = IO::File->new("zcat $_ |") || die;
 	my $io = Bio::SeqIO->new(-format => 'fasta', -fh => $fh);
@@ -76,7 +76,7 @@ sub _get_placed_reads {
 	$self->error_message("Failed to find reads.placed file in assembly edit_dir");
 	return;
     }
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($reads_placed_file);
+    my $fh = Genome::Sys->open_file_for_reading($reads_placed_file);
     my %placed_reads;
     while (my $line = $fh->getline) {
 	my ($read_name) = $line =~ /^\*\s+(\S+)\s+/;

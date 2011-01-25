@@ -1,4 +1,3 @@
-
 package Genome::Model::Tools::ViromeEvent::Assignment::Report;
 
 use strict;
@@ -20,11 +19,6 @@ sub help_brief {
     "gzhao's reporting for virome"
 }
 
-sub help_synopsis {
-    return <<"EOS"
-EOS
-}
-
 sub help_detail {
     return <<"EOS"
 This script will read corresponding files in the given director and 
@@ -34,17 +28,7 @@ assigned by BLASTN, how many were assigned by TBLASTX, the range of
 percent identity. It will also generate four fasta format files which 
 contain viral reads from blastn, tblastx, all viral reads and reads
 that can not be assigned to any category.
-
-perl script <sample dir>
-<sample dir> = full path to the directory holding files for the given 
-               library
 EOS
-}
-
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    return $self;
 }
 
 sub execute {
@@ -62,7 +46,6 @@ sub execute {
     #BN_HG  = BlastN HumanGenomic    #BN     = BlastN NT
     #TBX_nt = BlastX NT              #TBX_VG = BlastX Viral
     foreach my $blast_type (qw/ BN_HG BN TBX_nt TBX_VG /) {
-	#$self->log_event("Checking ".$blasts->{$blast_type}->{'name'}." blast parse files");
 	my $blast_dir = $self->dir.'/'.$lib_name . $blasts->{$blast_type}->{'dir_ext'};
 	unless (-d $blast_dir) {
 	    $self->log_event("Failed to find blast dir: ".basename($blast_dir));
@@ -75,7 +58,7 @@ sub execute {
 	}
 	foreach my $file (@parse_files) {
 	    my $hits = $self->get_organisms_hit($file);
-	    #print Dumper $hits;
+
 	    foreach my $hit (keys %$hits) {
 		next if $hit eq 'virus_lineage';
 		next if $hit eq 'unassigned_reads';
@@ -97,9 +80,7 @@ sub execute {
 	    }
 	}
     }
-    #print Dumper $all_orgs_hit;
-    #print Dumper $viral_lineage_hits;
-    #print Dumper \@all_virus_lineages;
+
     my $report_file = $self->dir.'/'.$lib_name.'.AssignmentReport';
     my $report_fh = IO::File->new("> $report_file") ||
 	die "Can not create file handle for ".basename($report_file);
@@ -132,7 +113,6 @@ sub execute {
 	    unless (@bl_out_files) {
 		$self->log_event("NO blast out files available in ".basename($blast_dir));
 		next;
-#		return;
 	    }
 	    #RE-ARRANGE DATA .. MAKE SURE READ SET CORRISPONDS WITH BLAST OUT FILES
 	    my $reads = {};
@@ -302,4 +282,3 @@ sub _detailed_virus_info {
 }
 
 1;
-

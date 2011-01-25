@@ -66,7 +66,7 @@ sub execute {
     unless ($basename && $suffix) {
         die('Failed to parse BED file path:  '. $self->input_file);
     }
-    my $unsorted_bam = Genome::Utility::FileSystem->create_temp_file_path($basename .'_unsorted.bam');
+    my $unsorted_bam = Genome::Sys->create_temp_file_path($basename .'_unsorted.bam');
     unless ($self->output_file) {
         $self->output_file($dirname .'/'. $basename .'.bam');
     }

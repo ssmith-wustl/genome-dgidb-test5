@@ -51,7 +51,7 @@ class Genome::Model::Tools::FastTier::FastTier {
         intersect_bed_bin_location => {
             type => 'Text',
             is_input => 1,
-            default => '/gscmnt/sata921/info/medseq/intersectBed/intersectBed-vf',  #'/gsc/pkg/bio/bedtools/installed-64/intersectBed',
+            default => '/gscmnt/sata921/info/medseq/intersectBed/intersectBed-pipes',  #'/gsc/pkg/bio/bedtools/installed-64/intersectBed',
             doc => 'The path and filename of intersectBed',
         },
         _tier1_bed => {
@@ -77,13 +77,13 @@ class Genome::Model::Tools::FastTier::FastTier {
 sub sub_command_sort_position { 15 }
 
 sub help_brief {
-    "tools used for adapting various file formats into a format the annotation tool can accept"
+    "This tool uses the GC customized version of intersectBed in order to stream a bedfile end to end, dropping the appropriate items in the appropriate tier files."
 }
 
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-genome-model tools annotate adaptor ...    
+gmt fast-tier fast-tier-pipes
 EOS
 }
 
@@ -93,7 +93,6 @@ sub execute {
         $self->error_message("The variant file you supplied: " . $self->variant_bed_file . " appears to be 0 size. You need computer more better.");
         return;
     }
-    my ($variant_filename, $directory, undef) = fileparse($self->variant_bed_file); 
 
     #if the user specified an alternate location for tier bed files, check and load them
     if(defined($self->tier_file_location)){
@@ -118,114 +117,14 @@ sub execute {
     $self->status_message("Using tier 3 bed file  at ".$self->_tier3_bed ."\n");
     $self->status_message("Using tier 4 bed file  at ".$self->_tier4_bed ."\n");
     
-    my $tier1_temp;
-    my $tier2_temp;
-    my $tier3_temp;
-    my $tier4_temp;
+    my $tier1_cmd = $self->intersect_bed_bin_location." -wa -vf stdout -of ".$self->tier1_output." -u -a ".$self->variant_bed_file." -b ".$self->_tier1_bed;
+    my $tier2_cmd = $self->intersect_bed_bin_location." -wa -vf stdout -of ".$self->tier2_output." -u -a stdin -b ".$self->_tier2_bed;
+    my $tier3_cmd = $self->intersect_bed_bin_location." -wa -vf stdout -of ".$self->tier3_output." -u -a stdin -b ".$self->_tier3_bed;
+    my $tier4_cmd = $self->tier4_output;
 
-    # This temp file is created in order to work around the issue with bedtools where 
-    my $input_file_temp;
+    my $cmd = $tier1_cmd . " | " . $tier2_cmd . " | " . $tier3_cmd . " > " . $tier4_cmd;
 
-    if($self->indels){
-        $input_file_temp = Genome::Utility::FileSystem->create_temp_file_path;
-        $self->modify_insertions($self->variant_bed_file, $input_file_temp, '-');
+    my $result = Genome::Sys->shellcmd( cmd => $cmd );
 
-        ####pindel 0 size insertion hack####i
-        $tier1_temp = Genome::Utility::FileSystem->create_temp_file_path;
-        $tier2_temp = Genome::Utility::FileSystem->create_temp_file_path;
-        $tier3_temp = Genome::Utility::FileSystem->create_temp_file_path;
-        $tier4_temp = Genome::Utility::FileSystem->create_temp_file_path;
-    } else {
-        $input_file_temp = $self->variant_bed_file; 
-        $tier1_temp = $self->tier1_output;
-        $tier2_temp = $self->tier2_output;
-        $tier3_temp = $self->tier3_output;
-        $tier4_temp = $self->tier4_output;
-    }
-
-    $input_file_temp = $self->tier($input_file_temp, $self->_tier1_bed,$tier1_temp,1);
-    $input_file_temp = $self->tier($input_file_temp, $self->_tier2_bed,$tier2_temp,2);
-    $input_file_temp = $self->tier($input_file_temp, $self->_tier3_bed,$tier3_temp,3);
-    $input_file_temp = $self->tier($input_file_temp, $self->_tier4_bed,$tier4_temp,4);
-
-    if($self->indels){
-        $tier4_temp = $input_file_temp;
-        $self->modify_insertions($tier1_temp, $self->tier1_output, "+"); 
-        $self->modify_insertions($tier2_temp, $self->tier2_output, "+");
-        $self->modify_insertions($tier3_temp, $self->tier3_output, "+");
-        $self->modify_insertions($tier4_temp, $self->tier4_output, "+");
-    }
     return 1;
-}
-
-sub tier {
-    my $self = shift;
-    my ($input,$tier_bed,$tier_output,$t) = @_;
-    my $exclusive_list = Genome::Utility::FileSystem->create_temp_file_path;
-    unless($t==4){
-        unless($self->intersect_bed($input,$tier_bed,$tier_output,$exclusive_list)){
-            $self->error_message("Couldn't complete intersectBed call for tier $t");
-            die $self->error_message;
-        }
-        $input = $exclusive_list;
-    }
-    if($t==4 && not $self->indels){
-        copy($input,$self->tier4_output);
-    }
-    return $input;
-}
-
-sub intersect_bed {
-    my $self = shift;
-    my $a = shift;
-    my $b = shift;
-    my $output = shift;
-    my $exclusive_list = shift;
-    my $result;
-    if(-s $a){
-        my $cmd = $self->intersect_bed_bin_location." -wa -vf ".$exclusive_list." -u -a " . $a . " -b " . $b . " > " . $output;
-        $result = Genome::Utility::FileSystem->shellcmd(
-            cmd          => $cmd,
-            input_files  => [ $a ],
-            output_files => [ ],
-            skip_if_output_is_present => 0
-        );
-    } else {
-        $result = $self->touch($output);
-    }
-    return $result;
-}
-
-sub modify_insertions {
-    my $self=shift;
-    my $input_file=shift;
-    my $output_file=shift;
-    my $mode = shift;
-    my $ifh = Genome::Utility::FileSystem->open_file_for_reading($input_file);
-    my $ofh = Genome::Utility::FileSystem->open_file_for_writing($output_file);
-    while(my $line = $ifh->getline) {
-        my($chr,$start,$stop,$alleles)=split /\t/, $line;
-        if($alleles =~ m/[ACGT]$/) { #insertion  ex: 0/C  letters come last
-            if($mode eq '-') {
-                $start--;
-            }
-            elsif($mode eq '+') {
-                $start++;
-            }
-        }
-        $ofh->print("$chr\t$start\t$stop\t$alleles");
-    }
-    $ifh->close;
-    $ofh->close;
-}
-
-sub touch {
-    my $self = shift;
-    my $file = shift;
-
-    my $cmd = "touch $file";
-
-    my $result = Genome::Utility::FileSystem->shellcmd( cmd => $cmd);
-
-    return $result;
 }

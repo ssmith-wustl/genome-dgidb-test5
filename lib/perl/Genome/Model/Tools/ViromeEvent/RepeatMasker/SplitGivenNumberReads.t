@@ -1,17 +1,21 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
 
 use above 'Genome';
-use Test::More tests => 2;
+use Test::More;
 
+use_ok('Genome::Model::Tools::ViromeEvent::RepeatMasker::SplitGivenNumberReads');
 
-BEGIN {use_ok('Genome::Model::Tools::ViromeEvent::RepeatMasker::SplitGivenNumberReads');}
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-ViromeScreening/Titanium17/Titanium17_undecodable';
+ok( -d $data_dir, "Test suite data dir exists" );
 
-#create
-my $spnr = Genome::Model::Tools::ViromeEvent::RepeatMasker::SplitGivenNumberReads->create(
-                                                                dir => '/gscmnt/sata835/info/medseq/virome/test17/S0_Mouse_Tissue_0_Control',
-                                                            );
-isa_ok($spnr, 'Genome::Model::Tools::ViromeEvent::RepeatMasker::SplitGivenNumberReads');
-#$spnr->execute();
+my $c = Genome::Model::Tools::ViromeEvent::RepeatMasker::SplitGivenNumberReads->create(
+    dir => $data_dir,
+    );
+ok($c, "Created repeat masker split given number of reads event");
+
+done_testing();
+
+exit;

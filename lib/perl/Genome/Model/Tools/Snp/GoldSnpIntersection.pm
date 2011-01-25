@@ -99,7 +99,7 @@ sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
     if ($self->report_file) {
-        $self->_report_fh(Genome::Utility::FileSystem->open_file_for_writing($self->report_file));
+        $self->_report_fh(Genome::Sys->open_file_for_writing($self->report_file));
     } else {
         open( my $fh,'>&STDOUT');
         unless ($fh) {
@@ -157,7 +157,7 @@ sub execute {
     $self->store_report_xml($ref_breakdown_ref,$self->total_gold_homozygous_ref_positions,$het_breakdown_ref, $self->total_gold_heterozygote_snps, $hom_breakdown_ref, $self->total_gold_homozygous_snps);
 
     if ($self->missed_snp_file) {
-        my $miss_fh = Genome::Utility::FileSystem->open_file_for_writing($self->missed_snp_file);
+        my $miss_fh = Genome::Sys->open_file_for_writing($self->missed_snp_file);
         unless ($miss_fh) {
             $self->error_message('Failed to open missed_snp_file for writing: '.$self->missed_snp_file);
             return;

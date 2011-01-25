@@ -23,7 +23,7 @@ class Genome::InstrumentData::Command::Dump {
 sub execute {
     my $self = shift;
 
-    unless (Genome::Utility::FileSystem->validate_directory_for_write_access($self->directory)) {
+    unless (Genome::Sys->validate_directory_for_write_access($self->directory)) {
         $self->error_message('Failed to validate directory '. $self->directory .' for write access!');
         die($self->error_message);
     }

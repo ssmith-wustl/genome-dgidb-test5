@@ -5,7 +5,7 @@ use strict;
 use Genome;
 use Cwd;
 use Statistics::R;
-require Genome::Utility::FileSystem;
+require Genome::Sys;
 
 class Genome::Model::Tools::Cmds::IndividualRegionCalls {
     is => 'Command',

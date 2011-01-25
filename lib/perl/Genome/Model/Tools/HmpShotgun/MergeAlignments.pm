@@ -87,13 +87,13 @@ sub execute {
     
     #first cat the unaligned reads
     my $unaligned_combined = $working_directory."/unaligned_combined.sam";
-    my $rv_unaligned_check = Genome::Utility::FileSystem->is_file_ok($unaligned_combined);
+    my $rv_unaligned_check = Genome::Sys->is_file_ok($unaligned_combined);
     if ($rv_unaligned_check) {
     	$self->status_message("Output file exists.  Skipping the generation of the unaligned reads files.  If you would like to regenerate these files, remove them and rerun.");  	
     } else {
-    	my $rv_cat = Genome::Utility::FileSystem->cat(input_files=>\@unaligned_files,output_file=>$unaligned_combined);
+    	my $rv_cat = Genome::Sys->cat(input_files=>\@unaligned_files,output_file=>$unaligned_combined);
     	if ($rv_cat) {
-    		Genome::Utility::FileSystem->mark_file_ok($unaligned_combined);
+    		Genome::Sys->mark_file_ok($unaligned_combined);
     	} else {
     		$self->status_message("There was a problem generating the combined unaligned file: $unaligned_combined");
     		#may want to return here.
@@ -122,7 +122,7 @@ sub execute {
     #my $refseq2_name_sorted_sam = $working_directory."/".$refseq2."_name_sorted.sam"; 
     
     my @expected_output_files = ( $refseq1_name_sorted_bam, $refseq1_name_sorted_sam, $refseq2_name_sorted_bam, $refseq2_name_sorted_sam);
-    my $rv_check = Genome::Utility::FileSystem->are_files_ok(input_files=>\@expected_output_files);
+    my $rv_check = Genome::Sys->are_files_ok(input_files=>\@expected_output_files);
     
     if (defined($rv_check)) {
 	    if ($rv_check == 1) {
@@ -155,7 +155,7 @@ sub execute {
                 my $merge_tool = "java -Xmx2g -cp $picard_path/MergeSamFiles.jar net.sf.picard.sam.MergeSamFiles MSD=true SO=coordinate AS=true tmp_dir=$working_directory VALIDATION_STRINGENCY=SILENT O=$merged_alignment_files_per_refseq ";
                 my $list_of_files = join(' I=',@alignment_files_per_refseq);                              
                 my $cmd_merge = $merge_tool." I=".$list_of_files;		                   
-                my $rv_merge = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd_merge);											 
+                my $rv_merge = Genome::Sys->shellcmd(cmd=>$cmd_merge);											 
             
                 if ($rv_merge != 1) {
                         $self->error_message("<<<Failed MergeAlignments on picard merge.  Return value: $rv_merge");
@@ -178,7 +178,7 @@ sub execute {
                 $self->status_message("Converting from bam to sam file: $merged_alignment_files_per_refseq_name_sorted to $merged_alignment_files_per_refseq_sam");
                 #my $cmd_convert = "java -Xmx2g -cp $picard_path/SamFormatConverter.jar net.sf.picard.sam.SamFormatConverter VALIDATION_STRINGENCY=SILENT I=$merged_alignment_files_per_refseq O=$merged_alignment_files_per_refseq_sam";  
                 my $cmd_convert = "samtools view $merged_alignment_files_per_refseq_name_sorted > $merged_alignment_files_per_refseq_sam";
-                my $rv_convert = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd_convert);											 
+                my $rv_convert = Genome::Sys->shellcmd(cmd=>$cmd_convert);											 
             
                 if ($rv_convert != 1) {
                         $self->error_message("<<<Failed MergeAlignments on bam to sam conversion.  Return value: $rv_merge");
@@ -191,7 +191,7 @@ sub execute {
     
 	}
     
-    Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_output_files);
+    Genome::Sys->mark_files_ok(input_files=>\@expected_output_files);
     $self->reference1_aligned_file($refseq1_name_sorted_sam);
     $self->reference2_aligned_file($refseq2_name_sorted_sam);
     $self->status_message("<<<Completed MergeAlignments for testing at at ".UR::Time->now);

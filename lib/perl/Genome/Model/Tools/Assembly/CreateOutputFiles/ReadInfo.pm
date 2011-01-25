@@ -55,9 +55,9 @@ sub execute {
 	$self->output_file( $self->read_info_file );
     }
     #parse through ace file line by line
-    my $ace_fh = Genome::Utility::FileSystem->open_file_for_reading($self->acefile);
+    my $ace_fh = Genome::Sys->open_file_for_reading($self->acefile);
     unlink $self->output_file;
-    my $out_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+    my $out_fh = Genome::Sys->open_file_for_writing($self->output_file);
     my $info = {};   my $contig_name;
     my %readinfo;
     while (my $line = $ace_fh->getline) {

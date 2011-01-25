@@ -118,11 +118,11 @@ sub create {
     }
 
     # Create directory structure
-    Genome::Utility::FileSystem->create_directory($self->data_directory )
+    Genome::Sys->create_directory($self->data_directory )
         or return;
 
     for my $dir ( $self->sub_dirs ) {
-        Genome::Utility::FileSystem->create_directory( $self->data_directory."/$dir" )
+        Genome::Sys->create_directory( $self->data_directory."/$dir" )
             or return;
     }
 

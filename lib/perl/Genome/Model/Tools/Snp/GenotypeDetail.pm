@@ -58,7 +58,7 @@ sub execute {
         if ($snp_format eq 'MAQ') {
             $self->error_message("Maq pileup file: $maq_pileup is invalid") and return 
                 unless $maq_pileup and -s $maq_pileup;
-            $maq_pileup_fh = Genome::Utility::FileSystem->open_file_for_reading($maq_pileup);
+            $maq_pileup_fh = Genome::Sys->open_file_for_reading($maq_pileup);
             $self->error_message("Fail to open maq pileup: $maq_pileup for writing") and return
                 unless $maq_pileup_fh;
         }
@@ -73,13 +73,13 @@ sub execute {
         return;
     }
     
-    my $snp_fh = Genome::Utility::FileSystem->open_file_for_reading($snp_file);
+    my $snp_fh = Genome::Sys->open_file_for_reading($snp_file);
     unless ($snp_fh) {
         $self->error_message("Failed to open snp out file $snp_file");
         return;
     }
 
-    my $out_fh = Genome::Utility::FileSystem->open_file_for_writing($out_file);
+    my $out_fh = Genome::Sys->open_file_for_writing($out_file);
     unless ($out_fh) {
         $self->error_message("Failed to open genotype detail out file $out_file for writing");
         return;

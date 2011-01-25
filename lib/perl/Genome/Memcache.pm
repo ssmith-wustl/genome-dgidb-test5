@@ -5,12 +5,11 @@ use warnings;
 
 use Cache::Memcached;
 
-#Don't "use Genome;" here or we introduce a circular dependency.
 use UR;
-use Genome::Config;
+use Genome;
 
 class Genome::Memcache {
-     is => 'UR::Singleton',
+    is => 'UR::Singleton',
     doc => 'methods for accessing memcache',
     has => {
         memcache_server_location => {
@@ -38,16 +37,11 @@ class Genome::Memcache {
     }
 };
 
-
-
-
 sub server {
-
     my ($class) = @_;
-
     my $server = $class->_singleton_object->memcache_server();
     return $server;
 }
 
-
 1;
+

@@ -56,7 +56,7 @@ sub execute {
     }
 
     my $cmd = "tar cvzf $tar_file $file_string";
-    my $rv = eval { Genome::Utility::FileSystem->shellcmd(cmd => $cmd); };
+    my $rv = eval { Genome::Sys->shellcmd(cmd => $cmd); };
     if ( not $rv ) {
         $self->error_message("Tar command failed: $cmd");
         return;

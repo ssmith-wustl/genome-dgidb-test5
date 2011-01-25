@@ -387,7 +387,7 @@ sub resolve_final_directory {
             $output_directory .= '/wingspan_'. $wingspan;
         }
         unless (-d $output_directory){
-            unless (Genome::Utility::FileSystem->create_directory($output_directory)) {
+            unless (Genome::Sys->create_directory($output_directory)) {
                 die('Failed to create output directory '. $output_directory);
             }
         }
@@ -693,7 +693,7 @@ sub print_roi_coverage {
 
     $self->validate_chromosomes;
 
-    my $temp_stats_file = Genome::Utility::FileSystem->create_temp_file_path;
+    my $temp_stats_file = Genome::Sys->create_temp_file_path;
     my @headers = $self->resolve_stats_file_headers;
     my $writer = Genome::Utility::IO::SeparatedValueWriter->create(
         separator => "\t",
@@ -744,7 +744,7 @@ sub print_roi_coverage {
     }
     $writer->output->close;
 
-    Genome::Utility::FileSystem->copy_file($temp_stats_file, $self->stats_file);
+    Genome::Sys->copy_file($temp_stats_file, $self->stats_file);
     if ($self->merge_by && $self->merged_stats_file) {
         $self->merge_stats_by($self->merge_by,$self->merged_stats_file);
     }

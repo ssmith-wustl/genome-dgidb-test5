@@ -231,12 +231,11 @@ sub tags_for_model {
             model_id => $model_id
     );    
 
-    my @attrs = Genome::MiscAttribute->get(
-            entity_class_name => 'Genome::ModelGroupBridge',
-            entity_id => $bridge->id
+    my @notes = Genome::MiscNote->get(
+            subject_id  => $bridge->id()
     );
 
-    my %tags = map { $_->property_name() => $_->value() } @attrs;
+    my %tags = map { $_->header_text() => $_->body_text() } @notes;
 
     return \%tags;
 }

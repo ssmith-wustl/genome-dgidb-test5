@@ -69,8 +69,8 @@ sub execute {
         $out_file = $path.$name.'.sanitize';
     }
     
-    my $out_fh = Genome::Utility::FileSystem->open_file_for_writing($out_file) or return;
-    my $snp_fh = Genome::Utility::FileSystem->open_file_for_reading($snp_file) or return;
+    my $out_fh = Genome::Sys->open_file_for_writing($out_file) or return;
+    my $snp_fh = Genome::Sys->open_file_for_reading($snp_file) or return;
     
     while (my $snp = $snp_fh->getline) {
         my ($ref_base, $con_base) = $snp =~ /^\S+\s+\S+\s+(\S+)\s+(\S+)\s+/;

@@ -97,13 +97,12 @@ sub execute {
         die "ERROR: group $group_id doesnt contain model: $model_id";
     }
 
-    
     if ($tag_name) {
-        my $attr = Genome::MiscAttribute->create(
-            entity_class_name => 'Genome::ModelGroupBridge',
-            entity_id         => $bridge->id(),
-            property_name     => $tag_name,
-            value             => $tag_value
+        my $attr = Genome::MiscNote->create(
+            subject     => $bridge,
+            subject_id  => $bridge->id(),
+            header_text => $tag_name,
+            body_text   => $tag_value
         ) || die 'Error: couldnt create tag';
 
         print "Tag was set successfully:\ngroup: $group_id\nmodel: $model_id\n name: $tag_name\nvalue: $tag_value\n";
