@@ -132,7 +132,7 @@ sub select_group_for_update {
     return 1;
 }
 
-# FIXME Same as above method
+# FIXME Same as above method, but locks the volume instead of the group
 sub select_volume_for_update {
     my ($class, $volume_id) = @_;
     return 1 if $ENV{UR_DBI_NO_COMMIT};
@@ -183,6 +183,7 @@ sub get_allocation_lock {
     return $allocation_lock;
 }
 
+sub allocate { return $_[0]->create(@_) }
 sub create {
     my $class = shift;
     my %params = @_;
@@ -354,6 +355,7 @@ sub create {
     return $self;
 }
 
+sub deallocate { return $_[0]->delete(@_) }
 sub delete {
     my $self = shift;
     my %params = @_;
