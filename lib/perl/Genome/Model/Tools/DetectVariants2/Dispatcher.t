@@ -17,7 +17,7 @@ use_ok($dispatcher_class);
 # hash of strings => expected output hash
 
 my $obj = $dispatcher_class->create(
-    snv_detection_strategy => 'samtools v1 [-p 1] && samtools v2 [-p 2]',
+    snv_detection_strategy => 'samtools v1 [-p 1] intersect samtools v2 [-p 2]',
     indel_detection_strategy => 'samtools v1 [-p 1]',
     sv_detection_strategy => 'breakdancer v1 [-p 3]',
     );
@@ -40,7 +40,7 @@ my $expected_plan = {
         'v1' => {
             'indel' => [
                 {
-                    'params' => '-p 3',
+                    'params' => '-p 1',
                     'version' => 'v1',
                     'name' => 'samtools',
                     'filters' => [],

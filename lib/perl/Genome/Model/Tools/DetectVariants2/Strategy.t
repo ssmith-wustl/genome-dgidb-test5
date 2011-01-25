@@ -26,7 +26,7 @@ my %expected = (
         }
     },
 
-    "var-scan v2 [--foo] and samtools v1 [-p1] filtered by thing v1" => {
+    "var-scan v2 [--foo] intersect samtools v1 [-p1] filtered by thing v1" => {
         intersect => [
             {
                 detector => {
@@ -49,7 +49,7 @@ my %expected = (
         ]
     },
 
-    "a v1 [-b 1] filtered by c v2, d v3 [-f] or (a v1 and b v2)" => {
+    "a v1 [-b 1] filtered by c v2, d v3 [-f] union (a v1 intersect b v2)" => {
         union => [
             {
                 detector => {
@@ -94,7 +94,7 @@ my @expected_failures = (
     "badness v1 filtered by", # missing filter
     "badness v1 filtered by foo", # missing filter version
     "badness v1 filtered by foo v1", # missing filter params
-    "badness v1 filtered by foo v1 [] and" # missing detector after 'and'
+    "badness v1 filtered by foo v1 [] intersect" # missing detector after 'intersect'
     "(badness v1 filtered by foo v1 []", # missing )
     "badness v1 filtered by foo v1)", # extra )
 );

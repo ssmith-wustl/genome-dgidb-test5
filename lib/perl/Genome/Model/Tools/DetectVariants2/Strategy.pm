@@ -25,10 +25,10 @@ my $grammar = q{
     parenthetical: "(" combination ")"
                 { $item[2]; }
                 
-    intersection: single "and" combination
+    intersection: single "intersect" combination
                 { $return = { intersect => [$item[1], $item[3] ] }; }
     
-    union: single "or" combination
+    union: single "union" combination
                 { $return = { union => [ $item[1], $item[3] ] }; }
     
     single: parenthetical
