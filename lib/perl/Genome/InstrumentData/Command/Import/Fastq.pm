@@ -238,7 +238,12 @@ sub execute {
         $params{read_count} = $read_count;
     }
     unless(defined($params{fragment_count})){
-        $params{fragment_count} = $params{read_count} * 2;
+        if($self->is_paired_end){
+            $params{fragment_count} = $params{read_count} * 2;
+        }
+        else {
+            $params{fragment_count} = $params{read_count};
+        }
     }
     if(not defined($params{subset_name})){
         my $subset_name = $self->get_subset_name;
