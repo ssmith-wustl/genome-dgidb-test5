@@ -223,8 +223,8 @@ sub validate {
             for my $filter (@{$tree->{$key}->{filters}}) {
                 my $filter_class = $filter->{class};
                 my $filter_version = $filter->{version};
-                unless($self->is_class_valid($class)){
-                    die "could not find class ".$class."\n";
+                unless($self->is_class_valid($filter_class)){
+                    die "could not find class ".$filter_class."\n";
                 }
             }
 
