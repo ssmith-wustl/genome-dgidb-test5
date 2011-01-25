@@ -5,6 +5,7 @@ use warnings;
 
 use Clone qw/clone/;
 use Data::Dumper;
+use JSON;
 use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Dispatcher {
