@@ -206,43 +206,47 @@ sub filter_class {
 
 sub validate {
     my ($self, $tree) = @_;
-    return;
+    #return;
     #$DB::single=1;
 
-    #my @keys = keys %$tree;
-    #for my $key (@keys) {
-        #if ($key eq 'detector') {
-            #$DB::single=1;
+    my @keys = keys %$tree;
+    for my $key (@keys) {
+        if ($key eq 'detector') {
             ## Check detector class and params
-            #my $class = $tree->{$key}->{class};
-            #my $version = $tree->{$key}->{version};
-            #my $params = %{$tree->{$key}->{params}};
-            #$params{version} = $version;
-            #my $detector_object = $class->create(%params);
-            #if ($detector_object->__errors__) {
-                #die "errors"; # FIXME make this add tags for $self->__errors_
-            #}
+            my $class = $tree->{$key}->{class};
+            my $version = $tree->{$key}->{version};
+            unless($self->is_class_valid($class)){
+                die "could not find class ".$class."\n";
+            }
 
             ## Check filters that belong to this detector
-            #for my $filter (@{$tree->{$key}->{filters}}) {
-                #$DB::single=1;
-                #my $filter_class = $filter->{class};
-                #my $filter_version = $filter->{version};
-                #my %filter_params = %{$filter->{params}};
-                #$filter_params{version} = $filter_version;
-                #my $detector_object = $class->create(%filter_params);
-                #if ($detector_object->__errors__) {
-                    #die "errors"; # FIXME make this add tags for $self->__errors_
-                #}   
-            #}
+            for my $filter (@{$tree->{$key}->{filters}}) {
+                my $filter_class = $filter->{class};
+                my $filter_version = $filter->{version};
+                unless($self->is_class_valid($class)){
+                    die "could not find class ".$class."\n";
+                }
+            }
 
-        #} elsif (ref $tree->{$key} eq 'ARRAY') {
-            #for my $subtree ( @{$tree->{$key}} ) {
-                #$DB::single=1;
-                #$self->validate($subtree);
-            #}
-        #}
-    #}
+        } elsif (ref $tree->{$key} eq 'ARRAY') {
+            for my $subtree ( @{$tree->{$key}} ) {
+                $self->validate($subtree);
+            }
+        }
+    }
+}
+
+sub is_class_valid {
+    my $self = shift;
+    my $class = shift;
+    my $result;
+    eval {
+        $result = $class->__meta__;
+    };
+    if($@){
+        return 0;
+    }
+    return 1;
 }
 
 1;
