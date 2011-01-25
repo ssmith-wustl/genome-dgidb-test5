@@ -16,7 +16,9 @@ sub dbpath {
         die "Genome::Sys dbpath must be called with a database name and a version.  Use 'latest' for the latest installed version.";
     }
     my $base_dirs = $ENV{"GENOME_DB"} ||= '/var/lib/genome/db';
-    return $class->_find_in_path($base_dirs, "$name/$version");
+    my $path = $class->_find_in_path($base_dirs, "$name/$version");
+    die "File not found: $base_dirs/$name/$version" if (! defined $path);
+    return $path;
 }
 
 sub swpath {
