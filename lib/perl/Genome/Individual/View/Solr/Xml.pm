@@ -22,8 +22,10 @@ class Genome::Individual::View::Solr::Xml {
         },
         display_url0 => {
             is => 'Text',
-            calculate_from => ['subject'],
-            calculate => sub { return join ('?id=', '/view/genome/individual/status.html',$_[0]->id()); },
+            calculate => q { 
+                    my $subject = $self->subject;
+                    return join ('?id=', '/view/genome/individual/status.html',$subject->individual_id()); 
+            },
         },
         display_label1 => {
             is  => 'Text',

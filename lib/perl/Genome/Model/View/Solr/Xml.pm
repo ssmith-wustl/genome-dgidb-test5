@@ -40,6 +40,7 @@ class Genome::Model::View::Solr::Xml {
         },
         display_label2 => {
             is  => 'Text',
+            default => 'data directory',
         },
         display_url2 => {
             is  => 'Text',

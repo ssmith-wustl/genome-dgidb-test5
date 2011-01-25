@@ -102,6 +102,13 @@ sub _generate_content {
     push @fields, WebService::Solr::Field->new( type => $type );
 
 
+    
+    # WARNING! There exists code in Genome::Search that is trying to reuse objects;
+    # when it does so, calling $self->property() doesnt work out so well since $self is
+    # the old object that is being reused and property() gets you the OLD property
+    # ...turning the recycling off for now
+
+
     # required to display result
     push @fields, WebService::Solr::Field->new( display_title => $self->_generate_display_title_field_data() );
     push @fields, WebService::Solr::Field->new( display_type  => $self->display_type() );
