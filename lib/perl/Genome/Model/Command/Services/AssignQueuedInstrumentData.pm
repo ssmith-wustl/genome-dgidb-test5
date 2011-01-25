@@ -584,9 +584,11 @@ sub create_default_per_lane_qc_model {
     my $run_name = $genome_instrument_data->run_name || 'Unknown';
 
     my ($processing_profile, $model_name);
+    my $dbsnp_build;
     if ($reference_sequence_build && $reference_sequence_build->name =~ /human/i) {
         $processing_profile = Genome::ProcessingProfile->get(2574062);
         $model_name = join('_', $subset_name, $run_name, $processing_profile->name);
+        $dbsnp_build = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($reference_sequence_build); 
     } else {
         $self->status_message('Per lane QC only configured for human reference alignments');
         return 1;
@@ -600,6 +602,7 @@ sub create_default_per_lane_qc_model {
         reference_sequence_build => $reference_sequence_build,
         auto_assign_inst_data   => 0,
     );
+    $model_params{dbsnp_build} = $dbsnp_build if $dbsnp_build;
 
     my @models = Genome::Model->get(name => $model_name);
     if (@models) {
@@ -668,9 +671,13 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         auto_assign_inst_data   => 1,
     );
 
+    my $dbsnp_build;
     if($reference_sequence_build) {
         $model_params{reference_sequence_build} = $reference_sequence_build;
+        $dbsnp_build = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($reference_sequence_build); 
     }
+
+    $model_params{dbsnp_build} = $dbsnp_build if $dbsnp_build;
 
     my $model = Genome::Model->create(%model_params);
     unless ( defined($model) ) {
