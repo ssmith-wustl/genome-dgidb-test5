@@ -32,6 +32,7 @@ class Genome::Model::Tools::Analysis::LaneQc::CompareSnps {
 		min_depth_hom	=> { is => 'Text', doc => "Minimum depth to compare a hom call [8]", is_optional => 1, is_input => 1},
 		verbose	=> { is => 'Text', doc => "Turns on verbose output [0]", is_optional => 1, is_input => 1},
 		flip_alleles 	=> { is => 'Text', doc => "If set to 1, try to avoid strand issues by flipping alleles to match", is_optional => 1, is_input => 1},
+		fast 	=> { is => 'Text', doc => "If set to 1, run a quick check on just chromosome 1", is_optional => 1, is_input => 1},
 		output_file	=> { is => 'Text', doc => "Output file for QC result", is_optional => 1, is_input => 1}
 	],
 };
@@ -86,7 +87,7 @@ sub execute {                               # replace with real execution logic.
 
 
 	print "Loading genotypes from $genotype_file...\n" if($self->verbose);
-	my %genotypes = load_genotypes($genotype_file);
+	my %genotypes = load_genotypes($genotype_file, $self);
 
 	
 	if($self->bam_file)
@@ -179,6 +180,11 @@ sub execute {                               # replace with real execution logic.
 		my $position = $lineContents[1];
 		my $ref_base = $lineContents[2];
 		my $cns_call = $lineContents[3];
+		
+		if($self->fast && $chrom && $chrom ne "1")
+		{
+			close($input);
+		}
 		
 		my $depth = 0;
 		
@@ -317,7 +323,7 @@ sub execute {                               # replace with real execution logic.
 							}
 							else
 							{
-								warn "Uncounted comparison: Chip=$chip_gt but Seq=$cons_gt\n";
+								warn "Uncounted comparison: Chip=$chip_gt but Seq=$cons_gt\n" if($self->verbose);
 							}
 							
 
@@ -457,6 +463,7 @@ sub execute {                               # replace with real execution logic.
 sub load_genotypes
 {                               # replace with real execution logic.
 	my $genotype_file = shift(@_);
+	my $self = shift(@_);
 	my %genotypes = ();
 	
 	my $input = new FileHandle ($genotype_file);
@@ -475,8 +482,11 @@ sub load_genotypes
 		
 		if($genotype && $genotype ne "--")
 		{
-			$genotypes{$key} = $genotype;
-			$gtCounter++;
+			if(!$self->fast || $chrom eq "1")
+			{
+				$genotypes{$key} = $genotype;
+				$gtCounter++;				
+			}
 		}
 	}
 	close($input);
