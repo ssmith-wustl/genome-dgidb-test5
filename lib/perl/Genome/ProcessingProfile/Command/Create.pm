@@ -50,27 +50,47 @@ sub _build_sub_command {
     my $self = shift;
     my ($suggested_class_name,$delegator_class_name,$target_class_name) = @_;
     
+    my $profile_string = $target_class_name;
+    $profile_string =~ s/Genome::ProcessingProfile:://;
+    $profile_string = Genome::Utility::Text::camel_case_to_string($profile_string);
+    $profile_string =~ s/:://;
+
     class {$suggested_class_name} { 
         is => $delegator_class_name, 
         subclassify_by => 'class',
         has => [
             __PACKAGE__->_properties_for_class($target_class_name),
         ],
+        doc => "Create a new profile for $profile_string"
     };
 
     return ($suggested_class_name);
 }
 
-sub help_brief {
-    my $profile_name = _get_subclass(@_) or return;
-    my $profile_string = Genome::Utility::Text::camel_case_to_string($profile_name);
-    $profile_string =~ s/:://;
-
-    return "Create a new pp for $profile_string";
+sub help_synopsis {
+    my $self = $_[0];
+    my $profile_class_name = _get_subclass(@_) or return;
+    $profile_class_name = 'Genome::ProcessingProfile::' . $profile_class_name; 
+    if ($profile_class_name->can("help_synopsis_for_create")) {
+        my $help = $profile_class_name->help_synopsis_for_create();
+        return $help;
+    }
+    else {
+        return;
+    }
 }
 
 sub help_detail {
-    return $_[0]->help_brief();
+    my $self = $_[0];
+    my $profile_class_name = _get_subclass(@_) or return;
+    $profile_class_name = 'Genome::ProcessingProfile::' . $profile_class_name; 
+    if ($profile_class_name->can("help_detail_for_create")) {
+        my $help = $profile_class_name->help_detail_for_create();
+        return $help;
+    }
+    else {
+        return $self->help_brief;
+    }
 }
 
 sub create {

@@ -1,41 +1,31 @@
-package Genome::Model::Tools::DetectVariants2::Filter;
+package Genome::Model::Tools::DetectVariants2::Combine;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Tools::DetectVariants2::Filter {
+class Genome::Model::Tools::DetectVariants2::Combine {
     is  => 'Command',
+    is_abstract => 1,
     has => [
-        variant_file => {
-           type => 'String',
-           is_input => 1,
-           doc => 'input variant file, means tumor usually',
+        variant_file_a => {
+            type => 'String',
+            is_input => 1,
+            is_optional => 0,
+            doc => 'input variant file a, to be combined with file b',
+        },
+        variant_file_b => {
+            type => 'String',
+            is_input => 1,
+            is_optional => 0,
+            doc => 'input variant file b, to be combined with file a',
         },
         output_file => {
             type => 'String',
             is_input => 1,
             is_output => 1,
-            doc => 'File name in which to write output',
-        },
-        control_variant_file => {
-            type => 'String',
-            is_input => 1,
-            is_optional => 1,
-            doc => 'control input variant file, means normal usually',
-        },
-        version => {
-            is_input => 1,
-            is => 'Version',
-            is_optional => 1,
-            doc => 'The version of the variant filter to use.',
-        },
-        extra_output_file => {
-            type => 'String',
-            is_input => 1,
-            is_optional => 1,
-            doc => 'extra output file ceated by the tools',
+            doc => 'File in which to write output',
         },
         skip_if_output_present => {
             is => 'Boolean',
@@ -64,7 +54,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gmt filter-variants ...
+gmt detect-variants2 combine ...
 EOS
 }
 
@@ -75,48 +65,42 @@ EOS
 }
 
 
-sub create {
+sub execute {
     my $self = shift;
-       
     unless($self->_validate_file) {
         die $self->error_message('Failed to validate file.');
     }
-    
+
+    unless($self->_combine_variants){
+        die $self->error_message('Failted to combine variants');
+    }
     return 1;
 }
 
+sub _combine_variants {
+    die "overload this function to do work";
+}
 
 sub _validate_file {
     my $self = shift;
 
-    my $input_file = $self->variant_file;
+    my $input_file = $self->variant_file_a;
     unless (Genome::Sys->check_for_path_existence($input_file)) {
-        $self->error_message("variant file input $input_file does not exist");
+        $self->error_message("variant_file_a input $input_file does not exist");
         return;
     }
-
+    $input_file = $self->variant_file_b;
+    unless (Genome::Sys->check_for_path_existence($input_file)) {
+        $self->error_message("variant_file_b input $input_file does not exist");
+        return;
+    }
     my $output_file = $self->output_file;
     unless(Genome::Sys->validate_file_for_writing($output_file)) {
         $self->error_message("output file $output_file is not writable.");
         return;
     }
     
-    my $c_input_file = $self->control_variant_file;
-    if ($c_input_file) {
-        unless (Genome::Sys->check_for_path_existence($c_input_file)) {
-            $self->error_message("control variant file input $c_input_file does not exist");
-            return;
-        }
-    }
-
-    my $extra_out_file = $self->extra_output_file;
-    if ($extra_out_file) {
-        unless (Genome::Sys->validate_file_for_writing($extra_out_file)) {
-            $self->error_message("extra output file $extra_out_file is not writable.");
-            return;
-        }
-    }
-
+    
     return 1;
 }
 

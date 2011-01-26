@@ -204,5 +204,16 @@ sub default_sniper_version {
     return $DEFAULT_VERSION;
 }
 
+sub has_version {
+    my $self = shift;
+    my $version = shift;
+    unless(defined($version)){
+        $version = $self->version;
+    }
+    if(exists($SNIPER_VERSIONS{$version})){
+        return 1;
+    }
+    return 0;
+}
 
 1;

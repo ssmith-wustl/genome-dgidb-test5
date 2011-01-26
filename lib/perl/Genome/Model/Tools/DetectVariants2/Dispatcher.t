@@ -17,18 +17,18 @@ use_ok($dispatcher_class);
 # hash of strings => expected output hash
 
 my $obj = $dispatcher_class->create(
-    snv_detection_strategy => 'samtools v1 [-p 1] intersect samtools v2 [-p 2]',
-    indel_detection_strategy => 'samtools v1 [-p 1]',
-    sv_detection_strategy => 'breakdancer v1 [-p 3]',
+    snv_detection_strategy => 'samtools r599 [-p 1] intersect samtools r613 [-p 2]',
+    indel_detection_strategy => 'samtools r599 [-p 1]',
+    sv_detection_strategy => 'breakdancer 2010_06_24 [-p 3]',
     );
 
 my $expected_plan = {
     'breakdancer' => {
-        'v1' => {
+        '2010_06_24' => {
             'sv' => [
                 {
                     'params' => '-p 3',
-                    'version' => 'v1',
+                    'version' => '2010_06_24',
                     'name' => 'breakdancer',
                     'filters' => [],
                     'class' => 'Genome::Model::Tools::DetectVariants2::Breakdancer'
@@ -37,11 +37,11 @@ my $expected_plan = {
         }
     },
     'samtools' => {
-        'v1' => {
+        'r599' => {
             'indel' => [
                 {
                     'params' => '-p 1',
-                    'version' => 'v1',
+                    'version' => 'r599',
                     'name' => 'samtools',
                     'filters' => [],
                     'class' => 'Genome::Model::Tools::DetectVariants2::Samtools'
@@ -50,18 +50,18 @@ my $expected_plan = {
             'snv' => [
                 {
                     'params' => '-p 1',
-                    'version' => 'v1',
+                    'version' => 'r599',
                     'name' => 'samtools',
                     'filters' => [],
                     'class' => 'Genome::Model::Tools::DetectVariants2::Samtools'
                 }
             ]
         },
-        'v2' => {
+        'r613' => {
             'snv' => [
                 {
                     'params' => '-p 2',
-                    'version' => 'v2',
+                    'version' => 'r613',
                     'name' => 'samtools',
                     'filters' => [],
                     'class' => 'Genome::Model::Tools::DetectVariants2::Samtools',
