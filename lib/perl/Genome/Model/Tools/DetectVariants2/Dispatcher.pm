@@ -284,7 +284,15 @@ sub generate_workflow_operation {
                 push @{$inputs}, @input_connector_properties;
                 $input_connector->operation_type->output_properties($inputs);
 
-                # TODO connect those properties from the input connector to this operation
+                # connect those properties from the input connector to this operation
+                for my $property (keys %$properties_for_detector) {
+                    $workflow_model->add_link(
+                        left_operation => $workflow_model->get_input_connector,
+                        left_property => $properties_for_detector->{$property},
+                        right_operation => $operation,
+                        right_property => $property,
+                    );
+                }
             }
         }
     }
