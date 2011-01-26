@@ -7,6 +7,7 @@ use Clone qw/clone/;
 use Data::Dumper;
 use JSON;
 use Genome;
+use Workflow;
 
 class Genome::Model::Tools::DetectVariants2::Dispatcher {
     is => ['Genome::Model::Tools::DetectVariants2::Base'],
@@ -54,7 +55,9 @@ sub _detect_variants {
     my $self = shift;
 
     my ($trees, $plan) = $self->plan;
-    die "Not implemented yet, awaiting workflow code. The strategy looks like: " . Dumper($trees) . "The condensed job map looks like: " . Dumper($plan);
+
+    my $workflow = $self->generate_workflow($trees, $plan);
+    die "Not implemented yet, awaiting workflow code. The strategy looks like: " . Dumper($trees) . "The condensed job map looks like: " . Dumper($plan) . "The workflow looks like: " . Dumper ($workflow);
 }
 
 sub calculate_detector_output_directory {
@@ -193,6 +196,52 @@ sub walk_tree {
         $self->error_message("Unknown key in detector hash: $key");
     }
     #Case Two: Otherwise the key should be the a detector specification hash, 
+}
+
+sub generate_workflow {
+    my $self = shift;
+    my ($trees, $plan) = @_;
+
+    my $workflow_model = Workflow::Model->create(
+        name => 'Somatic Variation Pipeline',
+        input_properties => [
+            'reference_sequence_input',
+            'aligned_reads_input',
+            'control_aligned_reads_input',
+            'output_directory',
+        ],
+        output_properties => [
+            'result',
+        ],
+    );
+
+    # TODO do I need to iterate through the original tree instead of the condensed map?
+    # Make an operation for each detector
+    for my $detector (keys %$plan) {
+        # Get the hashref that contains all versions to be run for a detector
+        my $detector_hash = $plan->{$detector};
+        $self->generate_workflow_operation($detector_hash);
+    }
+
+
+    # TODO filter each detector if any are defined
+
+    # TODO union and intersect each post-filtering detector output if necessary
+
+    $workflow_model->as_png("/gscuser/gsanders/test.png");
+
+    return $workflow_model;
+}
+
+sub generate_workflow_operation { 
+    my $self = shift;
+    my $detector_hash = shift;
+
+    for my $version (keys %$detector_hash) {
+        # Get the hashref that contains all the variant types to be run for a given detector version
+        my $version_hash = $detector_hash->{$version};
+        print "I need to run version $version for these variant types: \n" . Dumper ($version_hash);
+    }
 }
 
 1;
