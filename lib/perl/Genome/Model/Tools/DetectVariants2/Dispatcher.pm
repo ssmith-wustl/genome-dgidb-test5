@@ -220,7 +220,7 @@ sub generate_workflow {
     for my $detector (keys %$plan) {
         # Get the hashref that contains all versions to be run for a detector
         my $detector_hash = $plan->{$detector};
-        $self->generate_workflow_operation($detector_hash);
+        $workflow_model = $self->generate_workflow_operation($detector_hash, $workflow_model);
     }
 
 
@@ -233,15 +233,52 @@ sub generate_workflow {
     return $workflow_model;
 }
 
+# TODO rename this, or make it return the operations to be added instead of adding them itself
 sub generate_workflow_operation { 
     my $self = shift;
     my $detector_hash = shift;
+    my $workflow_model = shift;
 
     for my $version (keys %$detector_hash) {
         # Get the hashref that contains all the variant types to be run for a given detector version
         my $version_hash = $detector_hash->{$version};
         print "I need to run version $version for these variant types: \n" . Dumper ($version_hash);
+
+        my %param_hash;
+        my ($class,$name, $version);
+        for my $variant_type (keys %$version_hash) {
+            my @instances_for_variant_type = @{$version_hash->{$variant_type}};
+            for my $instance (@instances_for_variant_type) {
+                my $params = $instance->{params};
+                $param_hash{$variant_type."_params"} = $params;
+                $class = $instance->{class};
+                $name = $instance->{name};
+                $version = $instance->{version};
+                my $output_directory = $self->calculate_detector_output_directory($name, $version, $params);
+
+                # Make the operation
+                my $operation = $workflow_model->add_operation(
+                    name => $name,
+                    operation_type => Workflow::OperationType::Command->get($class),
+                );
+                print "Operation: " . Dumper $operation;
+
+                # Add the required links
+                # TODO Unhardcode this list of properties
+                # TODO change the output directory to a subdirectory calculated above instead of the workflow's primary output
+                for my $property ( 'reference_sequence_input', 'aligned_reads_input', 'control_aligned_reads_input', 'output_directory') {
+                    $workflow_model->add_link(
+                        left_operation => $workflow_model->get_input_connector,
+                        left_property => $property,
+                        right_operation => $operation,
+                        right_property => $property,
+                    );
+                }
+            }
+        }
     }
+
+    return $workflow_model;
 }
 
 1;
