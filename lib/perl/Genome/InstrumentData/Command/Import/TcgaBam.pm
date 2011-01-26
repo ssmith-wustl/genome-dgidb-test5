@@ -68,6 +68,11 @@ class Genome::InstrumentData::Command::Import::TcgaBam {
             is  => 'Number',
             doc => 'output instrument data id after import',
         },
+        sample_extraction_type => {
+            is => 'Text',
+            default => 'genomic dna',
+            doc => 'Extraction type used when defining new sample, examples include genomic dna and rna',
+        },
         _inst_data => { is_optional => 1, },
         _allocation => { via => '_inst_data', to => 'disk_allocations' },
         _absolute_path => { via => '_allocation', to => 'absolute_path' },
@@ -243,6 +248,7 @@ sub _create_imported_instrument_data {
     # Get or create library
     my $sample_importer = Genome::Sample::Command::Import::Tcga->create(
         name => $tcga_name,
+        extraction_type => $self->sample_extraction_type,
     );
     if ( not $sample_importer ) {
         $self->error_message('Could not create TCGA sample importer to get or create library');
