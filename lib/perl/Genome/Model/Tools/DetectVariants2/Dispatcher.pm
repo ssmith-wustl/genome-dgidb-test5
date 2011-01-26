@@ -4,8 +4,8 @@ use strict;
 use warnings;
 
 use Clone qw/clone/;
-use Data::Compare;
 use Data::Dumper;
+use JSON;
 use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Dispatcher {
@@ -130,7 +130,7 @@ sub build_detector_list {
         
         #Do not push duplicate entries
         if (exists($detector_list->{$name}{$version}{$detector_type})) {
-            my @matching_params = grep {Compare($_->{params}, $params)} @{$detector_list->{$name}{$version}{$detector_type}};
+            my @matching_params = grep {$_->{params} eq $params} @{$detector_list->{$name}{$version}{$detector_type}};
             if (!@matching_params) {
                 push @{ $detector_list->{$name}{$version}{$detector_type} }, $d;
             } else {

@@ -84,10 +84,12 @@ sub check_for_svn_repo {
 }
 
 # Spawn child process for logging and repo checking
-unless(fork()) {
-    log_command();
-    #check_for_svn_repo();
-    exit;
+unless ($ENV{PERLDB_PIDS}) {
+    unless(fork()) {
+        log_command();
+        #check_for_svn_repo();
+        exit;
+    }
 }
 
 1;

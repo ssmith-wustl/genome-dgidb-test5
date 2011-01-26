@@ -12,7 +12,7 @@ class Genome::Prediction::RNAGene {
     data_source => 'Genome::DataSource::Predictions::RNAGenes',
     id_by => [
         gene_name => { is => 'Text' },
-        directory => { is => 'Path' },
+        directory => { is => 'DirectoryPath' },
     ],
     has => [
         description => { is => 'Text' },
