@@ -295,4 +295,19 @@ sub generate_metrics {
     return $metrics;
 }
 
+sub has_version {
+    my $self = shift;
+    my $version = shift;
+    unless(defined($version)){
+        $version = $self->version;
+    }
+    my @versions = Genome::Model::Tools::Sam->available_samtools_versions;
+    for my $v (@versions){
+        if($v eq $version){
+            return 1;
+        }
+    }
+    return 0;
+}
+
 1;
