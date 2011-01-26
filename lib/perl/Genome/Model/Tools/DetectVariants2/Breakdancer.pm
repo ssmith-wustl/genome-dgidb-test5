@@ -257,5 +257,14 @@ sub default_breakdancer_version {
     die "default breakdancer version: $DEFAULT_VERSION is not valid" unless $BREAKDANCER_BASE_DIRS{$DEFAULT_VERSION};
     return $DEFAULT_VERSION;
 }
- 
+
+sub has_version {
+    my $self = shift;
+    my $version = shift;
+    if(exists($BREAKDANCER_BASE_DIRS{$version})){
+        return 1;
+    }
+    return 0;
+}
+
 1;

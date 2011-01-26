@@ -116,6 +116,20 @@ sub _run_varscan {
     return 1;
 }
 
+sub has_version {
+    my $self = shift;
+    my $version = shift;
+    unless(defined($version)){
+        $version = $self->version;
+    }
+    my @versions = Genome::Model::Tools::Varscan->available_varscan_versions;
+    for my $v (@versions){
+        if($v eq $version){
+            return 1;
+        }
+    }
+    return 0;  
+}   
 
 1;
 

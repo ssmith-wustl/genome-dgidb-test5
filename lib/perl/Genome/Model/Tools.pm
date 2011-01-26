@@ -26,12 +26,12 @@ sub help_sub_commands {
 
 =head1 NAME
 
-Genome::Model::Tools - the base namespace for B<gmt> tool modules
+Genome::Model::Tools - base namespace for command modules 
 
 =head1 DESCRIPTION
 
 Modules with names starting with Genome::Model::Tools are directly invokable by
-the "gmt" command, installed with the core Genome package.
+the "genome" command, installed with the core Genome package.
 
 These modules all inherit from Command and use UR for their class definitions.
 
@@ -71,7 +71,7 @@ contact genome-dev@genome.wustl.edu.
 
 =head1 SEE ALSO
 
-B<gmt>, B<Genome>
+B<genome>, B<Genome>
 
 =cut
 

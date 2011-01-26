@@ -33,7 +33,7 @@ ok(Genome::Sys->check_for_path_existence($ref_seq_input), 'Got a reference FASTA
 my $version = ''; #Currently only one version of var-scan
 my $snv_parameters = my $indel_parameters = '';
 
-my $command = Genome::Model::Tools::DetectVariants::VarScan->create(
+my $command = Genome::Model::Tools::DetectVariants2::VarScan->create(
     reference_sequence_input => $ref_seq_input,
     aligned_reads_input => $bam_input,
     version => $version,

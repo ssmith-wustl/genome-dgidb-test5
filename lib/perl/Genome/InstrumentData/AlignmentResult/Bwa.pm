@@ -42,10 +42,18 @@ sub required_rusage {
     my @selected_half_blades = `bhosts -R '$select_half_blades' alignment | grep ^blade`;
     my @selected_whole_blades = `bhosts -R '$select_whole_blades' alignment | grep ^blade`;
 
+    my $queue;
+    my $user = getpwuid($<);
+    if ($user eq 'apipe-builder') {
+        $queue = 'alignment-pd';
+    } else {
+        $queue = 'alignment';
+    }
+
     if (@selected_half_blades) {
-        return "-R '$select_half_blades rusage[mem=$mem, tmp=$tmp]' -M $mem_kb -n $cpus -q alignment -m alignment";
+        return "-R '$select_half_blades rusage[mem=$mem, tmp=$tmp]' -M $mem_kb -n $cpus -q $queue -m alignment";
     } elsif (@selected_whole_blades) {
-        return "-R '$select_whole_blades rusage[mem=$mem, tmp=$tmp]' -M $mem_kb -n $double_cpus -q alignment -m alignment";
+        return "-R '$select_whole_blades rusage[mem=$mem, tmp=$tmp]' -M $mem_kb -n $double_cpus -q $queue -m alignment";
     } else {
         die $class->error_message("Failed to find hosts that meet resource requirements.");
     }
