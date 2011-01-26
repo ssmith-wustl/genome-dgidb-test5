@@ -1,5 +1,5 @@
 
-package Genome::Model::Tools::DetectVariants2::Varscan;
+package Genome::Model::Tools::DetectVariants2::VarScan;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use FileHandle;
 
 use Genome;
 
-class Genome::Model::Tools::DetectVariants2::Varscan {
+class Genome::Model::Tools::DetectVariants2::VarScan {
     is => ['Genome::Model::Tools::DetectVariants', 'Genome::Model::Tools::DetectVariants2::Base'],
     has => [
         reference_sequence_input => {
@@ -50,7 +50,7 @@ class Genome::Model::Tools::DetectVariants2::Varscan {
 };
 
 sub help_brief {
-    "Use Varscan for variant detection.",
+    "Use VarScan for variant detection.",
 }
 
 sub help_synopsis {
@@ -62,7 +62,7 @@ EOS
 
 sub help_detail {
     return <<EOS 
-This tool runs Varscan for detection of SNPs and/or indels.
+This tool runs VarScan for detection of SNPs and/or indels.
 EOS
 }
 
@@ -75,7 +75,7 @@ sub _detect_variants {
     my $output_indel = $self->_indel_staging_output;
     my $output_indel_filtered = $self->_filtered_indel_staging_output;
 
-    ## Get Varscan parameters ##
+    ## Get VarScan parameters ##
     my $snv_params = $self->snv_params || "";
     my $indel_params = $self->indel_params || "";
     my $result;
@@ -84,7 +84,7 @@ sub _detect_variants {
     } else {
         # Run twice, since we have different parameters. Detect snps and throw away indels, then detect indels and throw away snps
         if ($self->detect_snvs && $self->detect_indels) {
-            $self->status_message("Snp and indel params are different. Executing Varscan twice: once each for snps and indels with their respective parameters");
+            $self->status_message("Snp and indel params are different. Executing VarScan twice: once each for snps and indels with their respective parameters");
         }
         my ($temp_fh, $temp_name) = Genome::Sys->create_temp_file();
         my ($filtered_temp_fh, $filtered_temp_name) = Genome::Sys->create_filtered_temp_file();
@@ -94,7 +94,7 @@ sub _detect_variants {
         }
         if ($self->detect_indels) {
             if($self->detect_snvs and not $result) {
-                $self->status_message('Varscan did not report success for snv detection. Skipping indel detection.')
+                $self->status_message('VarScan did not report success for snv detection. Skipping indel detection.')
             } else {
                 $result = $self->_run_varscan($temp_name, $filtered_temp_name, $output_indel, $output_indel_filtered, $indel_params);
             }
@@ -122,7 +122,7 @@ sub _run_varscan {
     );
 
     unless($varscan->execute()) {
-        $self->error_message('Failed to execute Varscan: ' . $varscan->error_message);
+        $self->error_message('Failed to execute VarScan: ' . $varscan->error_message);
         return;
     }
 
