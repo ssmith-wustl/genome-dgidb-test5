@@ -74,20 +74,37 @@ sub valid_prediction_types {
 }
 
 # Searches the fasta file for the named sequence and returns a Bio::Seq object representing it.
-# TODO This method can be optimized so it isn't necessary to reread the entire fasta file when
-# accessing sequences sequentially, which is usually the case when dealing with predictor output.
 sub get_sequence_by_name {
-    my ($self, $seq_name) = @_;
-    my $seq_obj = Bio::SeqIO->new(
-        -file => $self->fasta_file,
-        -format => 'Fasta',
-    );
+    my ($self, $seq_name, $restart) = @_;
+    $restart = 0 unless defined $restart;
 
-    while (my $seq = $seq_obj->next_seq()) {
-        return $seq if $seq->display_id() eq $seq_name;
+    if (defined $self->{_current_seq} and $self->{_current_seq}->display_id() eq $seq_name) {
+        return $self->{_current_seq};
     }
 
-    return;
+    my $seq_obj = $self->{_current_seqio};
+    unless ($seq_obj) {
+        $seq_obj = Bio::SeqIO->new(
+            -file => $self->fasta_file,
+            -format => 'Fasta',
+        );
+        $self->{_current_seqio} = $seq_obj;
+    }
+
+    while (my $seq = $seq_obj->next_seq()) {
+        if ($seq->display_id() eq $seq_name) {
+            $self->{_current_seq} = $seq;
+            return $seq;
+        }
+    }
+
+    # This method is geared toward making sequential access faster. But to ensure that a sequence
+    # can be found (albeit not efficiently), search the entire file if the sequence wasn't found
+    # when starting halfway through the file
+    # TODO This could be made more efficient by stopping at where we started looking during the
+    # first pass
+    delete $self->{_current_seqio};
+    return $self->get_sequence_by_name($seq_name, 1);
 }
 
 # For the given type, determine if its valid, resolve the file that needs to be locked, and lock it.
