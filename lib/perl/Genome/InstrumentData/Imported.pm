@@ -291,7 +291,7 @@ sub lane {
 }
 
 sub run_start_date_formatted {
-    UR::Time->now();
+    return Genome::Model::Tools::Sam->time();
 }
 
 sub seq_id {

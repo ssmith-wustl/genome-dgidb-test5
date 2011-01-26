@@ -1,4 +1,3 @@
-
 package Genome::Model::Tools::DetectVariants2::Varscan;
 
 use strict;
@@ -56,7 +55,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gmt detect-variants2 var-scan --aligned_reads_input input.bam --reference_sequence_input reference.fa --output-directory ~/example/
+gmt detect-variants2 varscan --aligned_reads_input input.bam --reference_sequence_input reference.fa --output-directory ~/example/
 EOS
 }
 

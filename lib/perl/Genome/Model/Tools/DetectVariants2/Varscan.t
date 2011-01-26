@@ -14,8 +14,8 @@ if ($archos !~ /64/) {
     plan tests => 6;
 }
 
-my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants-Varscan/';
-my $test_working_dir = File::Temp::tempdir('DetectVariants-VarscanXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
+my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Varscan/';
+my $test_working_dir = File::Temp::tempdir('DetectVariants2-VarscanXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
 
 my $bam_input = $test_dir . '/alignments/102922275_merged_rmdup.bam';
 
@@ -30,7 +30,7 @@ is($ref_seq_build->name, 'NCBI-human-build36', 'Got expected reference for test 
 my $ref_seq_input = $ref_seq_build->full_consensus_path('fa');
 ok(Genome::Sys->check_for_path_existence($ref_seq_input), 'Got a reference FASTA') or die('Test cannot continue without a reference FASTA');
 
-my $version = ''; #Currently only one version of var-scan
+my $version = ''; #Currently only one version of varscan
 my $snv_parameters = my $indel_parameters = '';
 
 my $command = Genome::Model::Tools::DetectVariants2::Varscan->create(
@@ -43,10 +43,10 @@ my $command = Genome::Model::Tools::DetectVariants2::Varscan->create(
     detect_indels => 1,
     output_directory => $test_working_dir,
 );
-ok($command, 'Created `gmt detect-variants var-scan` command');
-ok($command->execute, 'Executed `gmt detect-variants var-scan` command');
+ok($command, 'Created `gmt detect-variants varscan` command');
+ok($command->execute, 'Executed `gmt detect-variants varscan` command');
 
 my $diff_cmd = sprintf('diff -r -q %s %s', $test_working_dir, $expected_dir);
 
 my $diff = `$diff_cmd`;
-is($diff, '', 'No differences in output from expected result from running var-scan for this version and parameters');
+is($diff, '', 'No differences in output from expected result from running varscan for this version and parameters');
