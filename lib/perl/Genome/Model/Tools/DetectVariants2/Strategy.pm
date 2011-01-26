@@ -49,7 +49,7 @@ my $grammar = q{
 
     word: /([\w\.-]|\\\\)+/ { $return = $item[1]; }
 
-    valid_subpackage: "somatic"
+    valid_subpackage: "somatic "
                 { $return = $item[1]; }
 
     name: valid_subpackage word

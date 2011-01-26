@@ -54,7 +54,7 @@ genome processing-profile create somatic-variation --snv-detection-strategy 'sni
 #               Intersect those results with those from running samtools version r599.
 # Detect indels using sniper version 0.7.3 with parameters and filter the results with the library-support filter version v1
 # Detect structural variations using breakdancer version 2010_06_24 and filter the results by applying the tigra-assembly filter version v1
-genome processing-profile create somatic-variation --snv-detection-strategy 'sniper 0.7.3 [ -q 1 -Q 15 ] filtered by loh v1 , somatic-score-mapping-quality v1 [ min_somatic_quality => 40, min_mapping_quality => 40]' intersect samtools r599  --indel-detection-strategy 'sniper 0.7.3 [ -q 1 -Q 15 ] filtered by library-support v1 ' --sv-detection-strategy 'breakdancer 2010_06_24  filtered by tigra-assembly v1 '
+genome processing-profile create somatic-variation --snv-detection-strategy 'sniper 0.7.3 [ -q 1 -Q 15 ] filtered by loh v1 , somatic-score-mapping-quality v1 [-min_somatic_quality 40:-min_mapping_quality 40] intersect samtools r599'  --indel-detection-strategy 'sniper 0.7.3 [ -q 1 -Q 15 ] filtered by library-support v1 ' --sv-detection-strategy 'breakdancer 2010_06_24  filtered by tigra-assembly v1 '
 EOS
 }
 
