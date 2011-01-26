@@ -57,9 +57,17 @@ sub _detect_variants {
     my ($trees, $plan) = $self->plan;
 
     my $workflow = $self->generate_workflow($trees, $plan);
+
+    my @errors = $workflow->validate;
+
+    if (@errors) {
+        $self->error_message(@errors);
+        die "Errors validating workflow\n";
+    }
+
     die "Not implemented yet, awaiting workflow code. The strategy looks like: " . Dumper($trees) . "The condensed job map looks like: " . Dumper($plan);
 
-    # TODO run workflow
+    $workflow->execute;
 }
 
 sub calculate_detector_output_directory {
@@ -213,7 +221,7 @@ sub generate_workflow {
             'output_directory',
         ],
         output_properties => [
-            'result',
+            'result', #TODO should anything go here? For now just have an output per detector, below
         ],
     );
 
@@ -230,7 +238,7 @@ sub generate_workflow {
 
     # TODO union and intersect each post-filtering detector output if necessary
 
-    $workflow_model->as_png("/gscuser/gsanders/test.png");
+    $workflow_model->as_png("/gscuser/gsanders/test.png"); # TODO remove this, or put a copy of the as_xml in the output dir maybe
 
     return $workflow_model;
 }
@@ -244,7 +252,6 @@ sub generate_workflow_operation {
     for my $version (keys %$detector_hash) {
         # Get the hashref that contains all the variant types to be run for a given detector version
         my $version_hash = $detector_hash->{$version};
-        print "I need to run version $version for these variant types: \n" . Dumper ($version_hash);
 
         my %param_hash;
         my ($class,$name, $version);
@@ -263,7 +270,6 @@ sub generate_workflow_operation {
                     name => $name,
                     operation_type => Workflow::OperationType::Command->get($class),
                 );
-                print "Operation: " . Dumper $operation;
 
                 # TODO Unhardcode this list of properties
                 # Add the required links that are the same for every variant detector
@@ -279,7 +285,7 @@ sub generate_workflow_operation {
                 # add the properties this variant detector needs (version, params,output dir) to the input connector
                 my $properties_for_detector = $self->properties_for_detector($name, $version, $params);
                 my @input_connector_properties = map { $properties_for_detector->{$_} } (keys %$properties_for_detector);
-                my ($input_connector) = grep { $_->name eq 'input connector' } $workflow_model->operations;
+                my $input_connector = $workflow_model->get_input_connector;
                 my $inputs = $input_connector->operation_type->output_properties;
                 push @{$inputs}, @input_connector_properties;
                 $input_connector->operation_type->output_properties($inputs);
@@ -293,6 +299,10 @@ sub generate_workflow_operation {
                         right_property => $property,
                     );
                 }
+
+                #TODO Generate an output property per detector
+
+                #TODO Connect each detector's output to the output connector
             }
         }
     }
