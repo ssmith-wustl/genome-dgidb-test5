@@ -1000,5 +1000,10 @@ sub additional_params_for_copy {
     return();
 }
 
+sub dependent_properties {
+    my ($self, $property_name) = @_;
+    return;
+}
+
 1;
 
