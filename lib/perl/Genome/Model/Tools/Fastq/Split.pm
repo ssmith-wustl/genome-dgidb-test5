@@ -44,16 +44,16 @@ sub execute {
     unless ($fastq_basename && $fastq_dirname && $fastq_suffix) {
         die('Failed to parse fastq file name '. $self->fastq_file);
     }
-    unless (Genome::Utility::FileSystem->validate_directory_for_read_write_access($fastq_dirname)) {
+    unless (Genome::Sys->validate_directory_for_read_write_access($fastq_dirname)) {
         $self->error_message('Failed to validate directory '. $fastq_dirname ." for read/write access:  $!");
         die($self->error_message);
     }
 
     my $cwd = getcwd;
-    my $tmp_dir = $self->output_directory or Genome::Utility::FileSystem->base_temp_directory;
+    my $tmp_dir = $self->output_directory or Genome::Sys->base_temp_directory;
     chdir($tmp_dir);
     my $cmd = 'split -l '. $self->sequences * 4 .' -a 5 -d '. $self->fastq_file .' '. $fastq_basename.'-';
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$self->fastq_file],
     );

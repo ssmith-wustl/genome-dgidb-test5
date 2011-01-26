@@ -44,15 +44,15 @@ sub pre_execute {
     $self->status_message("Delete intermediate files on completion: ".$self->cleanup);
     $self->status_message("Creating required directories.");
 
-    Genome::Utility::FileSystem->create_directory("$working_dir");
-    Genome::Utility::FileSystem->create_directory("$working_dir/header");
-    Genome::Utility::FileSystem->create_directory("$working_dir/aligned");
-    Genome::Utility::FileSystem->create_directory("$working_dir/unaligned");
-    Genome::Utility::FileSystem->create_directory("$working_dir/maps");
-    Genome::Utility::FileSystem->create_directory("$working_dir/logs");
-    Genome::Utility::FileSystem->create_directory("$working_dir/tmp");
-    Genome::Utility::FileSystem->create_directory("$working_dir/sams");
-    Genome::Utility::FileSystem->create_directory("$working_dir/bams");
+    Genome::Sys->create_directory("$working_dir");
+    Genome::Sys->create_directory("$working_dir/header");
+    Genome::Sys->create_directory("$working_dir/aligned");
+    Genome::Sys->create_directory("$working_dir/unaligned");
+    Genome::Sys->create_directory("$working_dir/maps");
+    Genome::Sys->create_directory("$working_dir/logs");
+    Genome::Sys->create_directory("$working_dir/tmp");
+    Genome::Sys->create_directory("$working_dir/sams");
+    Genome::Sys->create_directory("$working_dir/bams");
 
     $self->status_message("Pre-execute of GenerateMaqBasedFile complete.");
 

@@ -1,22 +1,20 @@
-#!/gsc/bin/perl
+#!/gsc/bin/perl5.12.1
 
 use strict;
 use warnings;
 
 use Test::More;
-#plan skip_all => 'Disabling due to Perl environtment issues';
-if (`uname -a` =~ /x86_64/){
-    plan tests => 11;
-} else{
-    plan skip_all => 'Must run on a 64 bit machine';
-}
-
 use File::Compare;
+
 use above 'Genome';
+
+if ($] < 5.012) {
+    plan skip_all => "this test is only runnable on perl 5.12+"
+}
+plan tests => 11;
 
 use_ok('Genome::Model::Tools::BioSamtools');
 use_ok('Genome::Model::Tools::BioSamtools::RefCov');
-
 
 my $tmp_dir = File::Temp::tempdir('BioSamtools-RefCov-'.$ENV{USER}.'-XXXX',DIR => '/gsc/var/cache/testsuite/running_testsuites',CLEANUP => 1);
 

@@ -275,9 +275,19 @@ sub calculate_average_insert_size {
     my @insert_sizes;
     for my $inst_data ( @instrument_data ) { 
         if ( $inst_data->sequencing_platform eq 'solexa' ) {
-            my $median_insert_size = $inst_data->median_insert_size;
-            next unless defined $median_insert_size;
-            push @insert_sizes, $median_insert_size;
+	    my $insert_size = ( $inst_data->median_insert_size ) ? $inst_data->median_insert_size : $inst_data->library->fragment_size_range;
+	    unless ( defined $insert_size ) {
+		Carp::confess(
+		    $self->error_message("Failed to get median insert size from inst data nor frag size range from library for inst data")
+		);
+	    }
+	    unless ( $insert_size =~ /^\d+$/ or $insert_size =~ /^\d+\s+\d+$/ ) {
+		Carp::confess(
+		    $self->status_message("Expected a number or two numbers separated by blank space but got: $insert_size")
+		);
+	    }
+	    my @sizes = split( /\s+/, $insert_size );
+	    @insert_sizes = ( @insert_sizes, @sizes );
         }
         else {
             Carp::confess( 
@@ -361,7 +371,7 @@ sub calculate_metrics {
     my  $self = shift;
 
     my $stats_file = $self->stats_file;
-    my $stats_fh = eval{ Genome::Utility::FileSystem->open_file_for_reading($stats_file); };
+    my $stats_fh = eval{ Genome::Sys->open_file_for_reading($stats_file); };
     unless ( $stats_fh ) {
         $self->error_message("Can't set metrics because can't open stats file ($stats_file).");
         return;
@@ -515,7 +525,7 @@ sub create_config_file {
 
     my $fh;
     eval {
-	$fh = Genome::Utility::FileSystem->open_file_for_writing( $config_file );
+	$fh = Genome::Sys->open_file_for_writing( $config_file );
     };
     if ( not defined $fh ) {
 	$self->error_message("Can not open soap config file ($config_file) for writing $@");

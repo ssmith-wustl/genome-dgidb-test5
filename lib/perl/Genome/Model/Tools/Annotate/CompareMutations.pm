@@ -320,7 +320,7 @@ my ($entrez_gene_id, $line, $aa_change,$transcript,
    }
    if ($mstatus){
 #Annotate the allele's effect on all known (ie transcript without the 'unknown' status) transcripts
-#                my ($temp_input, $filename) = Genome::Utility::FileSystem->create_temp_file;
+#                my ($temp_input, $filename) = Genome::Sys->create_temp_file;
 ##Alleles are listed in alphabetical order, find the one that actually is different               
 	   my $proper_allele = $Tumor_Seq_Allele1;
 # MCW NOTE: '0' IS AN INDEL AND THIS IS VALID

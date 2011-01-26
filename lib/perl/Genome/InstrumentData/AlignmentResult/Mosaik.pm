@@ -51,10 +51,10 @@ sub required_rusage {
 #        die($self->error_message);
 #    }
 #
-#    my $lock = Genome::Utility::FileSystem->lock_resource(resource_lock => $resource_lock_name, max_try => 2);
+#    my $lock = Genome::Sys->lock_resource(resource_lock => $resource_lock_name, max_try => 2);
 #    unless ($lock) {
 #        $self->status_message("This data set is still being processed by its creator.  Waiting for existing data lock...");
-#        $lock = Genome::Utility::FileSystem->lock_resource(resource_lock => $resource_lock_name);
+#        $lock = Genome::Sys->lock_resource(resource_lock => $resource_lock_name);
 #        unless ($lock) {
 #            $self->error_message("Failed to get existing data lock!");
 #            die($self->error_message);
@@ -71,7 +71,7 @@ sub required_rusage {
     #     creates a jump database from the binary reference using a specific hash size (only need once per reference/hash-size pair)
 
 
-#    unless (Genome::Utility::FileSystem->unlock_resource(resource_lock=>$resource_lock_name)) {
+#    unless (Genome::Sys->unlock_resource(resource_lock=>$resource_lock_name)) {
 #        $self->error_message("Couldn't unlock $resource_lock_name.  error message was " . $self->error_message);
 #        die $self->error_message;
 #    }
@@ -127,7 +127,7 @@ sub _run_aligner {
         my $cmdline = $mosaik_build_path . sprintf(' -q %s -q2 %s -out %s %s',
             $input_pathnames[0], $input_pathnames[1], $tmp_reads_file, $aligner_params{mosaik_build_params});
 
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
             cmd             => $cmdline,
             input_files     => [ $input_pathnames[0], $input_pathnames[1] ],
             output_files    => [ $tmp_reads_file ],
@@ -143,7 +143,7 @@ sub _run_aligner {
         my $cmdline = $mosaik_build_path . sprintf(' -q %s -out %s %s',
             $input_pathnames[0], $tmp_reads_file, $aligner_params{mosaik_build_params});
         
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
             cmd             => $cmdline,
             input_files     => [ $input_pathnames[0] ],
             output_files    => [ $tmp_reads_file ],
@@ -166,7 +166,7 @@ sub _run_aligner {
         $align_cmdline = $mosaik_align_path . sprintf(' -in %s -out %s -ia %s -rur %s %s -j %s',
             $tmp_reads_file, $tmp_align_file, $ref_file, $tmp_unalign_fq_file, $aligner_params{mosaik_align_params}, $jump_file);
         
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
             cmd             => $align_cmdline,
             input_files     => [ $tmp_reads_file, $ref_file, $jump_file."_keys.jmp", $jump_file."_meta.jmp", $jump_file."_positions.jmp" ],
             output_files    => [ $tmp_align_file, $tmp_unalign_fq_file ],
@@ -192,7 +192,7 @@ sub _run_aligner {
         $sort_cmdline = $mosaik_sort_path . sprintf(' -in %s -out %s %s',
             $tmp_align_file, $tmp_sort_file, $aligner_params{mosaik_sort_params});
 
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
             cmd             => $sort_cmdline,
             input_files     => [ $tmp_align_file ],
             output_files    => [ $tmp_sort_file ],
@@ -212,7 +212,7 @@ sub _run_aligner {
         my $cmdline = $mosaik_text_path . sprintf(' -in %s -sam %s %s',
             $tmp_sort_file, $tmp_sam_file, $aligner_params{mosaik_text_params});
 
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
             cmd             => $cmdline." && gunzip -d ".$tmp_sam_file.".gz",
             input_files     => [ $tmp_sort_file ],
             output_files    => [ $tmp_sam_file ],

@@ -15,13 +15,13 @@ class Genome::Model::Tools::RepeatMasker::MergeOutput {
 
 sub execute {
     my $self = shift;
-    my $writer = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+    my $writer = Genome::Sys->open_file_for_writing($self->output_file);
     unless ($writer) {
         $self->error_message('Failed to open output file '. $self->output_file);
             return;
     }
     for my $input_file (@{$self->input_files}) {
-        my $reader = Genome::Utility::FileSystem->open_file_for_reading($input_file);
+        my $reader = Genome::Sys->open_file_for_reading($input_file);
         unless ($reader) {
             $self->error_message('Failed to read input file '. $input_file);
             return;

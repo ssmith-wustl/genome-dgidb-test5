@@ -26,9 +26,20 @@ class Genome::Model::Tools::Analysis::454::SomaticPipeline {
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		patients_file	=> { is => 'Text', doc => "Tab-delimited file of normal and tumor" },
 		output_dir	=> { is => 'Text', doc => "Output directory for 454 data. Will create somatic_pipeline in each tumor sample dir" },
+		varscan_dir	=> { is => 'Text', doc => "Output directory for VarScan in the sample dir", default => "varscan_somatic"},
+		varscan_params	=> { is => 'Text', doc => "Default params for varscan somatic", default => "--min-coverage 8 --min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.05 --strand-filter 1"},
 		aligner		=> { is => 'Text', doc => "Aligner to use" },
 		reference		=> { is => 'Text', doc => "Reference sequence [default=Hs36 ssaha2]", is_optional => 1 },
 		skip_if_output_present	=> { is => 'Text', doc => "Skip if output present", is_optional => 1 },		
+		# Make workflow choose 64 bit blades
+		lsf_resource => {
+		    is_param => 1,
+		    default_value => 'rusage[mem=6000,tmp=10000] select[type==LINUX64 && model != Opteron250 && mem>6000 && tmp>10000] span[hosts=1]',
+		},
+		lsf_queue => {
+		    is_param => 1,
+		    default_value => 'long',
+		},
 	],
 };
 
@@ -63,6 +74,7 @@ sub execute {                               # replace with real execution logic.
 	## Get required parameters ##
 	my $patients_file = $self->patients_file;
 	my $output_dir = $self->output_dir;
+	my $varscan_dir = $self->varscan_dir;
 	my $aligner = $self->aligner;
 
 	if(!(-e $patients_file))
@@ -92,42 +104,129 @@ sub execute {                               # replace with real execution logic.
 		{
 			print "$tumor_sample_name\t$normal_bam_file\t$tumor_bam_file\n";
 			
-			my $varscan_output_dir = $tumor_sample_output_dir . "/varscan_somatic";
+			my $varscan_output_dir = $tumor_sample_output_dir . "/$varscan_dir";
 			mkdir($varscan_output_dir) if(!(-d $varscan_output_dir));
 
 			open(SCRIPT, ">$varscan_output_dir/script_pipeline.sh") or die "Can't open outfile: $!\n";
 			print SCRIPT "#!/gsc/bin/sh\n";
+			my $cmd = "";
 			
-			my $cmd = "gmt varscan somatic --normal-bam $normal_bam_file --tumor-bam $tumor_bam_file --output $varscan_output_dir/varScan.output";
-#			print SCRIPT "$cmd\n";
+			if(!($self->skip_if_output_present && -e "$varscan_output_dir/varScan.output.snp"))
+			{
+				print SCRIPT "echo \"\nRunning VarScan somatic...\"\n";
+				$cmd = "gmt varscan somatic --normal-bam $normal_bam_file --tumor-bam $tumor_bam_file --output $varscan_output_dir/varScan.output --varscan-params=\"" . $self->varscan_params . "\"";
+				print SCRIPT "$cmd\n";				
+			}
 
-			$cmd = "gmt capture format-snvs --variant $varscan_output_dir/varScan.output.snp --output $varscan_output_dir/varScan.output.snp.formatted";
-			print SCRIPT "$cmd\n";
+			if(!($self->skip_if_output_present && -e "$varscan_output_dir/varScan.output.snp.formatted"))
+			{
+				print SCRIPT "echo \"\nFormatting SNVs...\"\n";
+				$cmd = "gmt capture format-snvs --variant $varscan_output_dir/varScan.output.snp --output $varscan_output_dir/varScan.output.snp.formatted";
+				print SCRIPT "$cmd\n";
+				
+			}
 
-			$cmd = "gmt capture format-indels --variant $varscan_output_dir/varScan.output.indel --output $varscan_output_dir/varScan.output.indel.formatted";
-			print SCRIPT "$cmd\n";
-
-			$cmd = "gmt somatic monorun-filter --tumor-bam $tumor_bam_file --variant-file $varscan_output_dir/varScan.output.indel.formatted --output-file $varscan_output_dir/varScan.output.indel.formatted.filter";
-			print SCRIPT "$cmd\n";
-
-			$cmd = "gmt somatic filter-false-positives --analysis-type capture --bam-file $tumor_bam_file --variant-file $varscan_output_dir/varScan.output.snp.formatted --output-file $varscan_output_dir/varScan.output.snp.formatted.filter --filtered-file $varscan_output_dir/varScan.output.snp.formatted.filter.removed";
-			print SCRIPT "$cmd\n";
-
-			## Identify novel ##
+			# Format indels
+			if(!($self->skip_if_output_present && -e "$varscan_output_dir/varScan.output.indel.formatted"))
+			{
+				print SCRIPT "echo \"\nFormatting Indels...\"\n";
+				$cmd = "gmt capture format-indels --variant $varscan_output_dir/varScan.output.indel --output $varscan_output_dir/varScan.output.indel.formatted";
+				print SCRIPT "$cmd\n";				
+			}
 			
-			$cmd = "gmt annotate lookup-variants --variant $varscan_output_dir/varScan.output.indel.formatted.filter --output $varscan_output_dir/varScan.output.indel.formatted.filter.novel --filter-out-submitters=\"SNP500CANCER,OMIMSNP,CANCER-GENOME,CGAP-GAI,LCEISEN,ICRCG\"";
-			print SCRIPT "$cmd\n";
+			## Process SNVs ##
+			if(!($self->skip_if_output_present && -e "$varscan_output_dir/varScan.output.snp.formatted.Somatic"))
+			{
+				print SCRIPT "echo \"\nProcessing SNVs...\"\n";
+				$cmd = "gmt varscan process-somatic --status-file $varscan_output_dir/varScan.output.snp.formatted";
+				print SCRIPT "$cmd\n";	
+			}
+			
+			## Process Indels ##
+			if(!($self->skip_if_output_present && -e "$varscan_output_dir/varScan.output.indel.formatted.Somatic"))
+			{
+				print SCRIPT "echo \"\nProcessing Indels...\"\n";
+				$cmd = "gmt varscan process-somatic --status-file $varscan_output_dir/varScan.output.indel.formatted";
+				print SCRIPT "$cmd\n";	
+			}
 
-			$cmd = "gmt annotate lookup-variants --variant $varscan_output_dir/varScan.output.snp.formatted.filter --output $varscan_output_dir/varScan.output.snp.formatted.filter.novel --filter-out-submitters=\"SNP500CANCER,OMIMSNP,CANCER-GENOME,CGAP-GAI,LCEISEN,ICRCG\"";
-			print SCRIPT "$cmd\n";
+
+			## Filter homopolymer-associated indels ##
+			if(!($self->skip_if_output_present && -e "$varscan_output_dir/varScan.output.indel.formatted.Somatic.filter"))
+			{
+				print SCRIPT "echo \"\nFiltering indels for homopolymers...\"\n";
+				$cmd = "gmt somatic monorun-filter --tumor-bam $tumor_bam_file --variant-file $varscan_output_dir/varScan.output.indel.formatted.Somatic --output-file $varscan_output_dir/varScan.output.indel.formatted.Somatic.filter";
+				print SCRIPT "$cmd\n";				
+			}
+
+			## Filter false positive SNVs ##
+			if(!($self->skip_if_output_present && -e "$varscan_output_dir/varScan.output.snp.formatted.Somatic.hc.filter"))
+			{
+				print SCRIPT "echo \"\nFiltering SNVs for false positives...\"\n";
+				$cmd = "gmt somatic filter-false-positives --analysis-type capture --bam-file $tumor_bam_file --variant-file $varscan_output_dir/varScan.output.snp.formatted.Somatic.hc --output-file $varscan_output_dir/varScan.output.snp.formatted.Somatic.hc.filter --filtered-file $varscan_output_dir/varScan.output.snp.formatted.Somatic.hc.filter.removed";
+				print SCRIPT "$cmd\n";	
+			}
+
+			## Identify novel SNVs ##			
+			if(!($self->skip_if_output_present && -e "$varscan_output_dir/varScan.output.snp.formatted.Somatic.hc.filter.novel"))
+			{
+				print SCRIPT "echo \"\nIsolating novel SNVs...\"\n";
+				$cmd = "gmt annotate lookup-variants --variant $varscan_output_dir/varScan.output.snp.formatted.Somatic.hc.filter --output $varscan_output_dir/varScan.output.snp.formatted.Somatic.hc.filter.novel --filter-out-submitters=\"SNP500CANCER,OMIMSNP,CANCER-GENOME,CGAP-GAI,LCEISEN,ICRCG\"";
+				print SCRIPT "$cmd\n";				
+			}			
+
+			## Identify novel Indels ##
+			if(!($self->skip_if_output_present && -e "$varscan_output_dir/varScan.output.indel.formatted.Somatic.filter.novel"))
+			{
+				print SCRIPT "echo \"\nIsolating novel indels...\"\n";
+				$cmd = "gmt annotate lookup-variants --variant $varscan_output_dir/varScan.output.indel.formatted.Somatic.filter --output $varscan_output_dir/varScan.output.indel.formatted.Somatic.filter.novel --filter-out-submitters=\"SNP500CANCER,OMIMSNP,CANCER-GENOME,CGAP-GAI,LCEISEN,ICRCG\"";
+				print SCRIPT "$cmd\n";				
+			}
+
+			## Annotate novel SNVs ##			
+			if(!($self->skip_if_output_present && -e "$varscan_output_dir/varScan.output.snp.formatted.Somatic.hc.filter.novel.transcript-annotation"))
+			{
+				print SCRIPT "echo \"\nAnnotating novel SNVs...\"\n";
+				$cmd = "gmt annotate transcript-variants --annotation-filter top --variant-file $varscan_output_dir/varScan.output.snp.formatted.Somatic.hc.filter.novel --output-file $varscan_output_dir/varScan.output.snp.formatted.Somatic.hc.filter.novel.transcript-annotation";
+				print SCRIPT "$cmd\n";				
+
+				print SCRIPT "echo \"\nUCSC-annotating novel SNVs...\"\n";
+				$cmd = "gmt somatic ucsc-annotator --input-file $varscan_output_dir/varScan.output.snp.formatted.Somatic.hc.filter.novel --output-file $varscan_output_dir/varScan.output.snp.formatted.Somatic.hc.filter.novel.ucsc-annotation";
+				print SCRIPT "$cmd\n";				
+			}			
+
+			## Annotate novel Indels ##
+			if(!($self->skip_if_output_present && -e "$varscan_output_dir/varScan.output.indel.formatted.Somatic.filter.novel.transcript-annotation"))
+			{
+				print SCRIPT "echo \"\nAnnotating novel indels...\"\n";
+				$cmd = "gmt annotate transcript-variants --annotation-filter top --variant-file $varscan_output_dir/varScan.output.indel.formatted.Somatic.filter.novel --output-file $varscan_output_dir/varScan.output.indel.formatted.Somatic.filter.novel.transcript-annotation";
+				print SCRIPT "$cmd\n";				
+
+				print SCRIPT "echo \"\nUCSC-annotating novel Indels...\"\n";
+				$cmd = "gmt somatic ucsc-annotator --input-file $varscan_output_dir/varScan.output.indel.formatted.Somatic.filter.novel --output-file $varscan_output_dir/varScan.output.indel.formatted.Somatic.filter.novel.ucsc-annotation";
+				print SCRIPT "$cmd\n";				
+			}
+
+			## Tier the SNVs ##
+			if(!($self->skip_if_output_present && -e "$varscan_output_dir/varScan.output.snp.formatted.Somatic.hc.filter.novel.tier1"))
+			{
+				print SCRIPT "echo \"\nTiering novel SNVs...\"\n";
+				$cmd = "gmt somatic tier-variants --variant-file $varscan_output_dir/varScan.output.snp.formatted.Somatic.hc.filter.novel --tier1-file $varscan_output_dir/varScan.output.snp.formatted.Somatic.hc.filter.novel.tier1 --tier2-file $varscan_output_dir/varScan.output.snp.formatted.Somatic.hc.filter.novel.tier2 --tier3-file $varscan_output_dir/varScan.output.snp.formatted.Somatic.hc.filter.novel.tier3 --tier4-file $varscan_output_dir/varScan.output.snp.formatted.Somatic.hc.filter.novel.tier4 --transcript-annotation-file $varscan_output_dir/varScan.output.snp.formatted.Somatic.hc.filter.novel.transcript-annotation --ucsc-file $varscan_output_dir/varScan.output.snp.formatted.Somatic.hc.filter.novel.ucsc-annotation";
+				print SCRIPT "$cmd\n";				
+			}			
+
+			## Tier the Indels ##
+			if(!($self->skip_if_output_present && -e "$varscan_output_dir/varScan.output.indel.formatted.Somatic.filter.novel.tier1"))
+			{
+				print SCRIPT "echo \"\nTiering novel indels...\"\n";
+				$cmd = "gmt somatic tier-variants --variant-file $varscan_output_dir/varScan.output.indel.formatted.Somatic.filter.novel --tier1-file $varscan_output_dir/varScan.output.indel.formatted.Somatic.filter.novel.tier1 --tier2-file $varscan_output_dir/varScan.output.indel.formatted.Somatic.filter.novel.tier2 --tier3-file $varscan_output_dir/varScan.output.indel.formatted.Somatic.filter.novel.tier3 --tier4-file $varscan_output_dir/varScan.output.indel.formatted.Somatic.filter.novel.tier4 --transcript-annotation-file $varscan_output_dir/varScan.output.indel.formatted.Somatic.filter.novel.transcript-annotation --ucsc-file $varscan_output_dir/varScan.output.indel.formatted.Somatic.filter.novel.ucsc-annotation";
+				print SCRIPT "$cmd\n";				
+			}	
+
 
 			close(SCRIPT);
 
-			system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>2000 && tmp>20000] rusage[mem=2000]\" -oo $varscan_output_dir/script_pipeline.sh.out sh $varscan_output_dir/script_pipeline.sh");
-
-			## Process the results ##
-			
-			
+			system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>6000 && tmp>20000] rusage[mem=6000]\" -M 6000000 -u \'" . $ENV{USER} . "\' -oo $varscan_output_dir/script_pipeline.sh.out sh $varscan_output_dir/script_pipeline.sh");		
 		}
 	}
 	

@@ -96,7 +96,40 @@ sub execute {
     my $profile_namer = _wrap_perl_expr($self->profile_namer);
     my $model_namer = _wrap_perl_expr($self->model_namer);
 
+    ### Preload a whole bunch of stuff to speed this up, so it doesn't need to make
+    ### a whole bunch of one-off queries.  First grab all the models.
+    Genome::Model->get(id=>[map {$_->model_id} $from->model_bridges]);
+
     my @from_models = $from->models;
+
+    # Now grab all the instrument data.
+    $self->status_message("Preloading instrument data.  This might take a few moments.");
+    my @idas = Genome::Model::InstrumentDataAssignment->get(model_id=>[map {$_->id} $from->models]);
+    my @ids = Genome::InstrumentData->get(id=>[map {$_->instrument_data_id} @idas]);
+  
+    # Now preload all the subjects. 
+    my %subjects;
+    for (@from_models) {
+        push @{$subjects{$_->subject_class_name}}, $_->subject_id;
+    }
+
+    for my $i (keys %subjects) {
+        $self->status_message("Preloading subjects of type $i.");
+        my @records = $i->get(id=>$subjects{$i});
+    
+        # samples get fetched by name, too, so preload them that way
+        if ($i eq "Genome::Sample") {
+            $self->status_message("Preloading all the samples by name.");
+            Genome::Sample->get(name=>[map {$_->name} @records])
+        }
+    }
+
+    # preload all the model inputs and PP params.
+    my @inputs = Genome::Model::Input->get(model_id=>[map {$_->id} @from_models]);
+    Genome::ProcessingProfile::Param->get(processing_profile_id=>[map {$_->processing_profile_id} @from_models]);
+
+    # End preloading.  From here the only queries hitting the DB should be to get sequences,
+    # and to check the DB for models that already exist with our generated names from this copy.
 
     my %pp_mapping;
     if (@changes) {

@@ -7,7 +7,7 @@ use Genome;
 use Data::Dumper;
 
 class Genome::Model::Tools::454::SffTrimWithSeqcleanReport {
-    is => ['Genome::Model::Tools::454','Genome::Utility::FileSystem'],
+    is => ['Genome::Model::Tools::454','Genome::Sys'],
     has => [
             seqclean_report => {
                                 is => 'string',

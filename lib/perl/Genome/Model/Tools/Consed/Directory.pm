@@ -28,7 +28,7 @@ sub create {
         or return;
     
     eval {
-        Genome::Utility::FileSystem->validate_existing_directory($self->directory)
+        Genome::Sys->validate_existing_directory($self->directory)
     };
     if($@) {
         $self->warning_message('Directory does not exist: "' . $self->directory . '".');
@@ -105,7 +105,7 @@ sub create_directory {
 
     my $dir = $self->concat_directory($sub_dir);
     
-    Genome::Utility::FileSystem->create_directory($dir)
+    Genome::Sys->create_directory($dir)
         or confess "Can't make directory ($dir)\n";
     
     return 1;

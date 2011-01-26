@@ -96,7 +96,7 @@ $DB::single=1;
 
 
 #___Run alignment
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
 	cmd             => $align_cmd,
 	####input_files     => [ $ref_path, @input_pathnames ],
 	input_files     => [ $repaired_db_name, @input_pathnames ],
@@ -108,7 +108,7 @@ $DB::single=1;
 #___Convert cas alignment output into sam file
     my $convert_cmd = $castosam_path . sprintf(' -a %s -o %s -f 33',$tmp_cas_file,$tmp_sam_file);
 
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
 	cmd             => $convert_cmd,
 	input_files     => [ $tmp_cas_file ],
 	output_files    => [ $tmp_sam_file ],

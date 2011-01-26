@@ -16,8 +16,8 @@ BEGIN {
 
 my $input_file = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Somatic-UcscAnnotator/input_test_file.txt";
 my $expected_output = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Somatic-UcscAnnotator/expected_output_file.txt";
-my $output_file = Genome::Utility::FileSystem->create_temp_file_path;
-my $unannotated_file = Genome::Utility::FileSystem->create_temp_file_path;
+my $output_file = Genome::Sys->create_temp_file_path;
+my $unannotated_file = Genome::Sys->create_temp_file_path;
 
 my $ucsc_annotator = Genome::Model::Tools::Somatic::UcscAnnotator->create(input_file=>$input_file, output_file=>$output_file, unannotated_file=>$unannotated_file);
 ok ($ucsc_annotator, "created ucsc_annotator");

@@ -78,7 +78,7 @@ sub execute {
         $params .= ' -bed12 ';
     }
     my $cmd = $executable .' '. $params .' -i '. $self->input_file  .' -g '. $self->genome .' > '. $self->output_file;
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$self->input_file, $self->genome],
         output_files => [$self->output_file],

@@ -101,7 +101,7 @@ sub execute {
     {
         my $bac_dir = $project_dir."/$bac_name/";
         my @contig_names = @{$bac_contigs{$bac_name}};
-        $self->error_message("Error creating directory $bac_dir") and die unless Genome::Utility::FileSystem->create_directory($bac_dir);
+        $self->error_message("Error creating directory $bac_dir") and die unless Genome::Sys->create_directory($bac_dir);
         my $old_dir = `pwd`;
         chdir($bac_dir);
         $ut->create_project_from_contig_names($ao,$bac_dir."/edit_dir/$bac_name.ace", \@contig_names, $pooled_bac_dir);    

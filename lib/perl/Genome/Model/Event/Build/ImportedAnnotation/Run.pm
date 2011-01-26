@@ -126,6 +126,8 @@ sub execute {
         unless(scalar @test_from_builds eq @from_builds_by_version){
             confess "Didn't successfully add latest from builds to this one!";
         }
+
+        #TODO: grab and merge annotation data from the component builds
     }
 
     return 1;

@@ -18,6 +18,7 @@ use File::Find;
 my $sample_name = 'multiple'; 
 my $source_dir = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Command-Import-Microarray/test_files/multi/iScan';
 my $source_dir2 = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Command-Import-Microarray/test_files/multi/comma'; 
+my $reference = Genome::Model::Build::ImportedReferenceSequence->get(name => 'NCBI-human-build36');
 #my $source_dir = '/gscmnt/sata422/info/medseq/brc_wgs/snp_array/Data_Infinium1MOmni_BRC-samples-only_20100412';
 ok (-d $source_dir, "our example directory exists");
 
@@ -47,6 +48,7 @@ use warnings;
 
 my $cmd = Genome::InstrumentData::Command::Import::Microarray::IlluminaGenotypeArrayMulti->create(
     original_data_path => $source_dir,
+    reference_sequence_build => $reference,
 );
 
 ok($cmd, "constructed an import command");
@@ -94,6 +96,7 @@ use warnings;
 
 my $cmd2 = Genome::InstrumentData::Command::Import::Microarray::IlluminaGenotypeArrayMulti->create(
     original_data_path => $source_dir2,
+    reference_sequence_build => $reference,
 );
 
 ok($cmd2, "constructed an import command");

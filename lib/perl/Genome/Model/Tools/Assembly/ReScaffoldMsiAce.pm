@@ -142,7 +142,7 @@ sub _run_auto_report {
 sub _parse_report_file {
     my ($self, $file) = @_;
     my @scaffolds;
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($file) ||
+    my $fh = Genome::Sys->open_file_for_reading($file) ||
 	return;
 
     foreach my $line ($fh->getlines) {

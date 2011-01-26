@@ -4,10 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
-
-use lib '/gsc/var/tmp/Bio-SamTools/lib';
-use Bio::DB::Sam::RefCov::Bed;
-
+use Genome::RefCov::ROI::Bed;
 
 class Genome::Model::Tools::Sam::LimitVariants {
     is => ['Command'],
@@ -42,22 +39,23 @@ class Genome::Model::Tools::Sam::LimitVariants {
 sub execute {
     my $self = shift;
 
-    my $regions = Bio::DB::Sam::RefCov::Bed->new(
+    my $regions = Genome::RefCov::ROI::Bed->create(
         file => $self->bed_file,
         region_index_substring => 5,
         wingspan => $self->wingspan,
+        load_all => 1,
     );
     unless ($regions) {
         $self->error_message('Failed to create regions from BED file '. $self->bed_file);
         die($self->error_message);
     }
 
-    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+    my $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
     unless ($output_fh) {
         $self->error_message('Failed to open output file for writing '. $self->output_file);
         die($self->error_message);
     }
-    my $var_fh = Genome::Utility::FileSystem->open_file_for_reading($self->variants_file);
+    my $var_fh = Genome::Sys->open_file_for_reading($self->variants_file);
     unless ($var_fh) {
         $self->error_message('Failed to open variants file for reading '. $self->variants_file);
         die($self->error_message);

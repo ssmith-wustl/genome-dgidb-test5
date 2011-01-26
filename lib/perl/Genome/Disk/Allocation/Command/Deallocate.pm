@@ -89,7 +89,9 @@ sub execute {
     }
    
     my $apipe_allocation = Genome::Disk::AllocationNew->get($self->allocator_id);
-    $apipe_allocation->delete;
+    if ($apipe_allocation) {
+        $apipe_allocation->delete;
+    }
 
     return 1;
 }

@@ -7,7 +7,6 @@ use strict;
 use warnings;
 
 use above 'Genome';
-
 use Test::More;
 
 # TODO: May need to turn this on if we introduce a dependency on Bio::DB::Sam
@@ -26,7 +25,7 @@ my $stats = Genome::RefCov::Stats->create(
    coverage => \@coverage,
 );
 isa_ok($stats,'Genome::RefCov::Stats');
-isa_ok(ref($stats->coverage),'ARRAY');
+isa_ok($stats->coverage, 'ARRAY');
 is($stats->ref_length,$expected_length,'ref_length is '.$expected_length);
 is($stats->percent_ref_bases_covered,66.67,'percent_ref_bases_covered matches expected');
 is($stats->total_ref_bases,$expected_length,'total_ref_bases matches expected');
@@ -40,7 +39,7 @@ is($stats->min_depth_filter,0,'min_depth_filter matches expected');
 is($stats->min_depth_discarded_bases,0,'min_depth_discarded_bases matches expected');
 is($stats->percent_min_depth_discarded,'0.00','percent_min_depth_discarded matches expected');
 my $stats_ref = $stats->stats;
-isa_ok(ref($stats_ref),'ARRAY');
+isa_ok($stats_ref, 'ARRAY');
 is(scalar(@{$stats_ref}),15,'Found expected elements in stats array ref');
 
 # TODO: Find appropriate tmp location to write test file

@@ -228,7 +228,14 @@ sub process_region
 		}
 	}
 
-	print "$demux_result\n";	
+	print "$demux_result\n";
+	
+	if(!$demux_result)
+	{
+		warn "WARNING: No demux possible for $run_name\t$region\n";
+		warn "454info command resulted in: $index_info\n";
+	}
+	
 	return($demux_result);
 }
 

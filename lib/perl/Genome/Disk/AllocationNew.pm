@@ -7,7 +7,7 @@ use Genome;
 
 class Genome::Disk::AllocationNew {
     id_by => [
-        allocator_id => {
+        id => {
             is => 'Number',
             doc => 'The id for the allocator event',
         },

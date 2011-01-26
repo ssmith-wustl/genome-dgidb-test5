@@ -147,7 +147,7 @@ sub combine_headers {
 
     my $time = time;
 
-    my $tmp_dir = Genome::Utility::FileSystem->base_temp_directory;
+    my $tmp_dir = Genome::Sys->base_temp_directory;
     my $combined_headers_path = "$tmp_dir/$time\_combined_headers.sam";
     my $combined_headers_hd_fh = IO::File->new("> $combined_headers_path.hd") || die;
     my $combined_headers_sq_fh = IO::File->new("> $combined_headers_path.sq") || die;
@@ -189,7 +189,7 @@ sub combine_headers {
     }
 
     $self->status_message("\nCombining header segments into $combined_headers_path...\n");
-    my $perl_rv = Genome::Utility::FileSystem->cat(
+    my $perl_rv = Genome::Sys->cat(
         input_files => \@combined_header_files,
         output_file => $combined_headers_path,
     );
@@ -215,7 +215,7 @@ sub fix_headers {
     my $headers_file = $self->combine_headers();
 
     # backup original bam
-    Genome::Utility::FileSystem->copy_file($bam_file, $missing_headers_bam);
+    Genome::Sys->copy_file($bam_file, $missing_headers_bam);
 
     # convert bam to sam
     my $bam_to_sam = Genome::Model::Tools::Sam::BamToSam->create(bam_file => $bam_file, sam_file => $tmp_sam_file);
@@ -226,7 +226,7 @@ sub fix_headers {
 
     # strip off headers
     my $strip_headers_cmd = "sed -i -e '/^\@/d' $tmp_sam_file";
-    my $strip_headers = Genome::Utility::FileSystem->shellcmd(
+    my $strip_headers = Genome::Sys->shellcmd(
         cmd => $strip_headers_cmd,
         input_files => [$tmp_sam_file],
         output_files => [$tmp_sam_file],
@@ -237,7 +237,7 @@ sub fix_headers {
     }
 
     # inject new headers
-    my $inject_headers = Genome::Utility::FileSystem->cat(input_files => [$headers_file, $tmp_sam_file], output_file => $sam_file);
+    my $inject_headers = Genome::Sys->cat(input_files => [$headers_file, $tmp_sam_file], output_file => $sam_file);
     unless($inject_headers) {
         die $self->error_message("Failed to inject headers into SAM file ($tmp_sam_file)");
     }
@@ -246,7 +246,7 @@ sub fix_headers {
     # convert sam to bam
     my $sam_path = $self->samtools_path;
     my $sam_to_bam_cmd = "$sam_path view -b -S $sam_file -o $unsorted_bam";
-    my $sam_to_bam = Genome::Utility::FileSystem->shellcmd(
+    my $sam_to_bam = Genome::Sys->shellcmd(
         cmd => $sam_to_bam_cmd,
         input_files => [$sam_file],
         output_files => [$unsorted_bam],
@@ -319,7 +319,7 @@ sub execute {
         $self->status_message("Only one input file has been provided.  Simply sorting the input file (if necessary) and dropping it at the requested target location.");
         if ($self->is_sorted) {
             my $cp_cmd = sprintf("cp %s %s", $files[0], $result);
-            my $cp_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$cp_cmd, input_files=>\@files, output_files=>[$result], skip_if_output_is_present=>0);
+            my $cp_rv = Genome::Sys->shellcmd(cmd=>$cp_cmd, input_files=>\@files, output_files=>[$result], skip_if_output_is_present=>0);
             if ($cp_rv != 1) {
                 $self->error_message("Bam copy error.  Return value: $cp_rv");
                 return;
@@ -329,7 +329,7 @@ sub execute {
             # samtools sort adds a ".bam" to the end so snap that off for the output file location passed into merge.
             my ($tgt_file) = $result =~ m/(.*?)\.bam$/;
             my $sam_sort_cmd = sprintf("%s sort %s %s", $self->samtools_path, $files[0],  $tgt_file);
-            my $sam_sort_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$sam_sort_cmd, input_files=>\@files, output_files=>[$result], skip_if_output_is_present=>0);
+            my $sam_sort_rv = Genome::Sys->shellcmd(cmd=>$sam_sort_cmd, input_files=>\@files, output_files=>[$result], skip_if_output_is_present=>0);
             if ($sam_sort_rv != 1) {
                 $self->error_message("Bam sort error.  Return value $sam_sort_rv");
                 return;
@@ -346,7 +346,7 @@ sub execute {
                 my $tmpfile = File::Temp->new(DIR=>$dirname, SUFFIX => ".sort_tmp.bam" );
                 my ($tgt_file) = $tmpfile->filename =~ m/(.*?)\.bam$/;
                 my $sam_sort_cmd = sprintf("%s sort %s %s", $self->samtools_path, $input_file,  $tgt_file);
-                my $sam_sort_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$sam_sort_cmd, input_files=>[$input_file], output_files=>[$tmpfile->filename], skip_if_output_is_present=>0);
+                my $sam_sort_rv = Genome::Sys->shellcmd(cmd=>$sam_sort_cmd, input_files=>[$input_file], output_files=>[$tmpfile->filename], skip_if_output_is_present=>0);
                 if ($sam_sort_rv != 1) {
                     $self->error_message("Bam sort error.  Return value $sam_sort_rv");
                     return;
@@ -368,7 +368,7 @@ sub execute {
             $bam_merge_rv = $bam_merge_cmd->execute();
         } 
         else {
-            $bam_merge_rv = Genome::Utility::FileSystem->shellcmd(
+            $bam_merge_rv = Genome::Sys->shellcmd(
                 cmd=>$bam_merge_cmd,
                 input_files=>\@input_files,
                 output_files=>[$result],
@@ -403,7 +403,7 @@ sub execute {
             $self->status_message("Indexing file: $result");
             my $bam_index_cmd = $bam_index_tool ." ". $result;
             #$bam_index_rv = system($bam_index_cmd);
-            $bam_index_rv = Genome::Utility::FileSystem->shellcmd(
+            $bam_index_rv = Genome::Sys->shellcmd(
                 cmd          => $bam_index_cmd,
                 input_files  => [$result],
                 output_files => [$result.".bai"],

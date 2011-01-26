@@ -57,8 +57,8 @@ sub execute
     my $sam_file = $self->sam_file;
     my $deduplicated_file = ($self->deduplicated_file ? $self->deduplicated_file : $sam_file . "dedup");
     unlink ($deduplicated_file) if (-e $deduplicated_file);
-    my $sam_fh = Genome::Utility::FileSystem->open_file_for_reading($sam_file) or return;
-    my $dd_fh = Genome::Utility::FileSystem->open_file_for_writing($deduplicated_file) or return;
+    my $sam_fh = Genome::Sys->open_file_for_reading($sam_file) or return;
+    my $dd_fh = Genome::Sys->open_file_for_writing($deduplicated_file) or return;
     my $dedup_count = 0;
 
 

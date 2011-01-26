@@ -181,7 +181,7 @@ sub _validate_md5 {
     }
 
     $self->status_message("Getting BAM MD5 from file: $md5_file");
-    my $md5_fh = eval{ Genome::Utility::FileSystem->open_file_for_reading($md5_file); };
+    my $md5_fh = eval{ Genome::Sys->open_file_for_reading($md5_file); };
     if ( not $md5_fh ) {
         print Data::Dumper::Dumper($md5_fh);
         $self->error_message("Cannot open BAM MD5 file ($md5_file): $@");
@@ -342,7 +342,7 @@ sub _copy_and_generate_md5 {
     my $new_md5 = $self->_new_md5;
     my $cmd = "tee $new_bam < $bam | md5sum > $new_md5";
     $self->status_message('Cmd: '.$cmd);
-    my $eval = eval{ Genome::Utility::FileSystem->shellcmd(cmd => $cmd); };
+    my $eval = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
     if ( not $eval ) {
         $self->status_message('Copy BAM and generate MD5 FAILED: '.$@);
         return;
@@ -407,7 +407,7 @@ sub _get_md5_from_file {
 
     $self->status_message("Get MD5 from file: $file");
 
-    my $fh = eval{ Genome::Utility::FileSystem->open_file_for_reading($file); };
+    my $fh = eval{ Genome::Sys->open_file_for_reading($file); };
     if ( not $fh ) {
         $self->error_message("Cannot open file ($file): $@");
         return;
@@ -434,7 +434,7 @@ sub XX_rsync_bam {
 
     my $cmd = "rsync -acv $bam $new_bam";
     $self->status_message('Rsync cmd: '.$cmd);
-    my $rsync = eval{ Genome::Utility::FileSystem->shellcmd(cmd => $cmd); };
+    my $rsync = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
     if ( not $rsync ) {
         $self->error_message('Rsync cmd failed: '.$@);
         $self->status_message('Removing disk allocation: '.$self->_allocation->id);

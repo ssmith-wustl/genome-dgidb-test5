@@ -87,9 +87,12 @@ sub _run_aligner {
         push @aln_log_files, $tmp_log_file;
         
         # disconnect the db handle before this long-running event
-        Genome::DataSource::GMSchema->disconnect_default_dbh; 
+        if (Genome::DataSource::GMSchema->has_default_handle) {
+            $self->status_message("Disconnecting GMSchema default handle.");
+            Genome::DataSource::GMSchema->disconnect_default_dbh();
+        }
         
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
             cmd          => $cmdline,
             input_files  => [ $reference_fasta_path, $input ],
             output_files => [ $tmp_sai_file, $tmp_log_file ],
@@ -165,7 +168,7 @@ sub _run_aligner {
     my $log_output_file   = $self->temp_staging_directory . "/aligner.log";
     my $concat_log_cmd = sprintf('cat %s >> %s', $log_input_fileset, $log_output_file);
 
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd          => $concat_log_cmd,
         input_files  => [ @aln_log_files, $samxe_logfile ],
         output_files => [ $log_output_file ],
@@ -181,7 +184,7 @@ sub _filter_samxe_output {
 #    my $cmd = "$sam_cmd | grep -v ^@ >> $sam_file_name";
 #    print $cmd,"\n\n";
 #    $DB::single = 1;
-#    Genome::Utility::FileSystem->shellcmd(cmd => $cmd);
+#    Genome::Sys->shellcmd(cmd => $cmd);
 #    return 1;
 
     $DB::single = 1;
@@ -208,7 +211,6 @@ sub _filter_samxe_output {
     } else {
         $sam_out_fh = IO::File->new(">>" . $self->temp_scratch_directory . "/all_sequences.sam");
     }
-#    my $sam_out_fh = $Genome::InstrumentData::AlignmentResult::BAM_FH;
     my $add_rg_cmd = Genome::Model::Tools::Sam::AddReadGroupTag->create(
             input_filehandle     => $sam_run_output_fh,
             output_filehandle    => $sam_out_fh,

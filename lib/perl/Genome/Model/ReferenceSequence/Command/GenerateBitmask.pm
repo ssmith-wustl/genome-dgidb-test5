@@ -85,7 +85,7 @@ sub execute {
     }
 
     #Perform work in temp directory
-    my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+    my $temp_dir = Genome::Sys->create_temp_directory();
     my $temp_path_filename = $temp_dir . '/' . $filename;
 
     #set up hash to record bitmasks
@@ -142,7 +142,7 @@ sub execute {
     $self->write_genome_bitmask($temp_path_filename,\%genome);
 
     #Copy the results to real disk after completion and reallocate
-    Genome::Utility::FileSystem->copy_file($temp_path_filename,$full_path_filename);
+    Genome::Sys->copy_file($temp_path_filename,$full_path_filename);
     $self->status_message("Resizing the build disk allocation...");
     $refseq->reallocate();
 

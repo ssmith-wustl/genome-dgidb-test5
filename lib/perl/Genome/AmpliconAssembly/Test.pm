@@ -639,7 +639,7 @@ sub _pre_execute {
     for my $subdir ( (qw/ chromat_dir edit_dir /) ){
         my $source = $self->dir."/$subdir";
         my $dest = $self->tmp_dir."/$subdir";
-        my $dh = Genome::Utility::FileSystem->open_directory($source)
+        my $dh = Genome::Sys->open_directory($source)
             or die;
         while ( my $file = $dh->read ) {
             next if $file =~ m#^\.#;

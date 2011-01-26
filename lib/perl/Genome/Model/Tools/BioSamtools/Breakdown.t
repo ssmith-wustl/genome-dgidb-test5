@@ -1,14 +1,19 @@
-#!/gsc/bin/perl
+#!/gsc/bin/perl5.12.1
 
 use strict;
 use warnings;
 
-use Test::More tests => 5;
-#use Test::More skip_all => 'Disabling due to Perl environtment issues';
-
 use above 'Genome';
+
+use Test::More;
+
 use File::Temp qw/ tempdir /;
 use File::Compare;
+
+if ($] < 5.012) {
+    plan skip_all => "this test is only runnable on perl 5.12+"
+}
+plan tests => 5;
 
 my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-BioSamtools/Breakdown';
 my $bam_file = $test_data_dir .'/breakdown.bam';

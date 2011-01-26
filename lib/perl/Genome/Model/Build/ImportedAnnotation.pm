@@ -35,6 +35,15 @@ class Genome::Model::Build::ImportedAnnotation {
             is_mutable => 1,
         },
         name => {
+            is => 'Text',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'build_name', value_class_name => 'UR::Value' ],
+            doc => "human meaningful name of this build",
+            is_mutable => 1,
+            is_many => 0,
+        },
+        calculated_name => {
             calculate_from => ['model_name','version'],
             calculate => q{ return "$model_name/$version"; },
         },
@@ -52,6 +61,38 @@ class Genome::Model::Build::ImportedAnnotation {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             id_by => 'reference_sequence_id',
         },
+    ],
+    has_optional => [
+       tier_file_directory => {
+            is => 'Path',
+            calculate_from => ['data_directory'],
+            calculate => q{return "$data_directory/annotation_data/tiering_bed_files";},
+       },
+       tier1_bed => {
+            is => 'Path',
+            calculate_from => ['tier_file_directory'],
+            calculate => q{return "$tier_file_directory/tier1.bed";},
+       },
+       tier2_bed => {
+            is => 'Path',
+            calculate_from => ['tier_file_directory'],
+            calculate => q{return "$tier_file_directory/tier2.bed";},
+       },
+       tier3_bed => {
+            is => 'Path',
+            calculate_from => ['tier_file_directory'],
+            calculate => q{return "$tier_file_directory/tier3.bed";},
+       },
+       tier4_bed => {
+            is => 'Path',
+            calculate_from => ['tier_file_directory'],
+            calculate => q{return "$tier_file_directory/tier4.bed";},
+       },
+       ucsc_conservation_directory => {
+            is => 'Path',
+            calculate_from => ['data_directory'],
+            calculate => q{return "$data_directory/annotation_data/ucsc_conservation";},
+       }
     ],
 };
 
@@ -82,6 +123,15 @@ sub __errors__ {
     return @tags;
 }
 
+sub create {
+    my $self = shift;
+    my $build = $self->SUPER::create(@_);
+
+    # Let's store the name as an input instead of relying on calculated properties
+    $build->name($build->calculated_name) if $build;
+
+    return $build;
+}
 
 # Checks to see if this build is compatible with the given imported reference sequence build (species and version match)
 sub is_compatible_with_reference_sequence_build {
@@ -120,6 +170,18 @@ sub determine_data_directory {
         }
     }
     return @directories;
+}
+
+sub determine_merged_data_directory{
+    my $self = shift;
+    if (-d $self->_annotation_data_directory) { 
+        return $self->_annotation_data_directory;
+    }
+    else {
+        $self->error_message("Could not find annotation data in " .
+                $self->_annotation_data_directory);
+        return;
+    }
 }
 
 # Returns transcript iterator object using default location

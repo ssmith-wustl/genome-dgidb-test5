@@ -63,7 +63,7 @@ sub create {
     }
     else { # Assume it is a file
         $output = Cwd::abs_path($output);
-        my $fh = eval { Genome::Utility::FileSystem->open_file_for_writing($output) };
+        my $fh = eval { Genome::Sys->open_file_for_writing($output) };
         if (!$fh or $@) {
             $self->error_message("Can't open file $output for writing: $@");
             return;

@@ -28,6 +28,7 @@ class Genome::Model::Tools::SnpArray::ProcessCmdsCalls {
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		map_file	=> { is => 'Text', doc => "Three-column file of genotype calls chrom, pos, genotype", is_optional => 0, is_input => 1 },
 		cmds_file	=> { is => 'Text', doc => "Three-column file of genotype calls chrom, pos, genotype", is_optional => 0, is_input => 1 },
+		num_sd	=> { is => 'Text', doc => "Minimum number of SD to call a change-point", is_optional => 1, is_input => 1, default => 1},
 		output_basename	=> { is => 'Text', doc => "Output file for QC result", is_optional => 1, is_input => 1},
 	],
 };
@@ -64,6 +65,7 @@ sub execute {                               # replace with real execution logic.
 	my $map_file = $self->map_file;
 	my $cmds_file = $self->cmds_file;
 	my $output_basename = $self->output_basename;
+	my $num_sd = $self->num_sd;
 
 	## Load the map file ##
 	print "Loading map file and opening outfiles...\n";
@@ -79,9 +81,12 @@ sub execute {                               # replace with real execution logic.
 		my $line = $_;
 		my ($snp, $chrom, $position) = split(/\t/, $line);
 		
+		$chrom = "X" if($chrom eq "23");
+		$chrom = "Y" if($chrom eq "24");
+		
 		if($chrom ne "CHR" && !$file_handles{$chrom})
 		{
-			open($file_handles{$chrom}, ">$output_basename.$chrom.tsv") or die "Can't open outfile: $!\n";
+			open($file_handles{$chrom}, ">$output_basename.$chrom.infile") or die "Can't open outfile: $!\n";
 		}
 		
 		$lineCounter++;
@@ -93,6 +98,8 @@ sub execute {                               # replace with real execution logic.
 
 
 	## Parse the CMDS values file ##
+
+	my %position_printed = ();
 
 	## Load the map file ##
 	print "Parsing CMDS file...\n";
@@ -114,11 +121,24 @@ sub execute {                               # replace with real execution logic.
 			{
 				my $log2 = $line;
 				my ($snp, $chrom, $position) = split(/\t/, $map_lines[$lineCounter]);
-				if($file_handles{$chrom})
+
+				$chrom = "X" if($chrom eq "23");
+				$chrom = "Y" if($chrom eq "24");
+
+				if(!$position_printed{"$chrom\t$position"})
 				{
-					my $outfile = $file_handles{$chrom};
-					print $outfile "$chrom\t$position\t$log2\n";					
+					if($file_handles{$chrom})
+					{
+						my $outfile = $file_handles{$chrom};
+						print $outfile "$chrom\t$position\t$log2\n";					
+					}
+					else
+					{
+						warn "NO Filehandles for $chrom\n";
+					}
+					$position_printed{"$chrom\t$position"} = 1;
 				}
+
 
 			}
 			else
@@ -137,10 +157,111 @@ sub execute {                               # replace with real execution logic.
 	foreach my $chrom (sort keys %file_handles)
 	{
 		close($file_handles{$chrom}) if($file_handles{$chrom});
+		my $chrom_filename = "$output_basename.$chrom.infile";
+		my $script_filename = $chrom_filename . ".R";
+		my $image_filename = "$output_basename.$chrom.jpg";
+		open(SCRIPT, ">$script_filename") or die "Can't open script $script_filename: $!\n";
+	
+		print SCRIPT "library(DNAcopy)\n";
+
+		print SCRIPT "regions <- read.table(\"$chrom_filename\")\n";
+		print SCRIPT "png(\"$image_filename\", height=600, width=800)\n";
+
+		print SCRIPT qq{
+CNA.object <- CNA(regions\$V3, regions\$V1, regions\$V2, data.type="logratio", sampleid=c("Chromosome $chrom"))\n
+smoothed.CNA.object <- smooth.CNA(CNA.object)\n
+segment.smoothed.CNA.object <- segment(smoothed.CNA.object, undo.splits="sdundo", undo.SD=$num_sd, verbose=1)
+p.segment.smoothed.CNA.object <- segments.p(segment.smoothed.CNA.object)
+plot(segment.smoothed.CNA.object, type="w", cex=0.5, cex.axis=1.5, cex.lab=1.5)
+write.table(p.segment.smoothed.CNA.object, file="$chrom_filename.segments.p_value")
+};
+		print SCRIPT "dev.off()\n";
+		close(SCRIPT);
+		
+		print "Running $script_filename\n";
+		system("R --no-save < $script_filename");# if($chrom eq "X" || $chrom eq "Y");	
 	}
 
+	## Parse out segments and build an index HTML file ##
+
+	open(SEGMENTS, ">$output_basename.segments.tsv") or die "Can't open outfile: $!\n";
+	print SEGMENTS join("\t", "ID", "sample", "chrom", "loc.start", "loc.end", "num.mark", "seg.mean", "bstat", "pval", "lcl", "ucl") . "\n";
+
+	open(INDEX, ">$output_basename.index.html") or die "Can't open outfile: $!\n";
+	print INDEX "<HTML><BODY><TABLE CELLSPACING=0 CELLPADDING=5 BORDER=0 WIDTH=\"100%\">\n";
+	print INDEX "<TR>\n";
+
+	## Figure out the relative path to image files ##
+	my @tempArray = split(/\//, $output_basename);
+	my $numElements = @tempArray;
+	my $image_basename = $tempArray[$numElements - 1];
+	my $num_printed_in_column = 0;
+	
+	for(my $chrom = 1; $chrom <= 24; $chrom++)
+	{
+		my $chrom_name = $chrom;
+		$chrom_name = "X" if($chrom == 23);
+		$chrom_name = "Y" if($chrom == 24);
+
+		my $chrom_filename = $output_basename . ".$chrom.infile";
+		my $segments_filename = "$chrom_filename.segments.p_value";
+		my $image_filename = $image_basename . "." . $chrom_name . ".jpg";
+		print INDEX "<TD><A HREF=\"$image_filename\"><IMG SRC=\"$image_filename\" HEIGHT=240 WIDTH=320 BORDER=0></A></TD>\n";
+
+		print SEGMENTS parse_segments($segments_filename) if(-e $segments_filename);
+
+		$num_printed_in_column++;
+
+		if($num_printed_in_column >= 4)
+		{
+			print INDEX "</TR><TR>\n";
+			$num_printed_in_column = 0;
+		}
+
+
+	}
+
+	print INDEX "</TR></TABLE></BODY></HTML>\n";
+	close(INDEX);
+
+	close(SEGMENTS);
 
 }
+
+
+
+################################################################################################
+# Execute - the main program logic
+#
+################################################################################################
+
+sub parse_segments
+{                               # replace with real execution logic.
+	my $segments_file = shift(@_);
+
+	my $result = "";
+
+	my $input = new FileHandle ($segments_file);
+	my $lineCounter = 0;
+	
+	while (<$input>)
+	{
+		chomp;
+		my $line = $_;
+		$lineCounter++;
+		
+		if($lineCounter > 1)
+		{
+			my @lineContents = split(/\s+/, $line);
+			$result .= join("\t", @lineContents) . "\n";
+		}
+	}
+	
+	close($input);
+	
+	return($result);
+}
+
 
 ###############################################################################
 # commify - add appropriate commas to long integers

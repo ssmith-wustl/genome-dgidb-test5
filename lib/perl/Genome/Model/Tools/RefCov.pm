@@ -269,9 +269,7 @@ sub _load_roi {
     my $self = shift;
     # TODO: Can the class Genome::RefCov::ROI or a new class Genome::RefCov::ROI::File resolve the appropriate adaptor based on the file type?
     my $format = $self->roi_file_format;
-    #my $subclass = ucfirst($format);
-    #TODO: Fix hardcoded efficient parser/reader for now and create better interface
-    my $subclass = 'BedLite';
+    my $subclass = ucfirst($format);
     my $class = 'Genome::RefCov::ROI::'. $subclass;
     my $regions = $class->create(
         file => $self->roi_file_path,
@@ -389,7 +387,7 @@ sub resolve_final_directory {
             $output_directory .= '/wingspan_'. $wingspan;
         }
         unless (-d $output_directory){
-            unless (Genome::Utility::FileSystem->create_directory($output_directory)) {
+            unless (Genome::Sys->create_directory($output_directory)) {
                 die('Failed to create output directory '. $output_directory);
             }
         }
@@ -675,12 +673,27 @@ sub resolve_stats_file_headers {
     return @headers;
 }
 
+sub validate_chromosomes {
+    my $self = shift;
+    my $roi = $self->roi;
+    my $refcov_bam = $self->alignments;
+    for my $chr ($roi->chromosomes) {
+        eval {
+            my $tid = $refcov_bam->tid_for_chr($chr);
+        };
+        if ($@) {
+            die('Failed to validate chromsomes in ROI '. $self->roi_file_format .' file '. $self->roi_file_path .' with alignment '. $self->alignment_file_format .' file '. $self->alignment_file_path .' with error:' ."\n". $@);
+        }
+    }
+    return 1;
+}
+
 sub print_roi_coverage {
     my $self = shift;
 
-    my $regions = $self->roi;
+    $self->validate_chromosomes;
 
-    my $temp_stats_file = Genome::Utility::FileSystem->create_temp_file_path;
+    my $temp_stats_file = Genome::Sys->create_temp_file_path;
     my @headers = $self->resolve_stats_file_headers;
     my $writer = Genome::Utility::IO::SeparatedValueWriter->create(
         separator => "\t",
@@ -731,7 +744,7 @@ sub print_roi_coverage {
     }
     $writer->output->close;
 
-    Genome::Utility::FileSystem->copy_file($temp_stats_file, $self->stats_file);
+    Genome::Sys->copy_file($temp_stats_file, $self->stats_file);
     if ($self->merge_by && $self->merged_stats_file) {
         $self->merge_stats_by($self->merge_by,$self->merged_stats_file);
     }

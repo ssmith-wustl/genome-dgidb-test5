@@ -46,9 +46,9 @@ sub execute {
     my $buf = '';
     my $n = 0;
 
-    my $out = Genome::Utility::FileSystem->open_file_for_writing($self->dest);
+    my $out = Genome::Sys->open_file_for_writing($self->dest);
     for my $file ($self->source) {
-        my $in = Genome::Utility::FileSystem->open_file_for_reading($file);
+        my $in = Genome::Sys->open_file_for_reading($file);
 
         do {
             $n = $in->read($buf,4096,0);

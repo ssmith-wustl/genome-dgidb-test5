@@ -31,7 +31,7 @@ sub execute{
     }
 
     my $fastq_basename = basename $fastq_file;
-    my $temp_dir = Genome::Utility::FileSystem->create_temp_directory;
+    my $temp_dir = Genome::Sys->create_temp_directory;
     my $temp_base = "$temp_dir/$fastq_basename";
 
     my $fasta_file = $temp_base.".FASTA";
@@ -42,21 +42,21 @@ sub execute{
 
     $self->status_message("Running dust on $fastq_file");
 
-    my $fastq_fh  = Genome::Utility::FileSystem->open_file_for_reading($fastq_file);
+    my $fastq_fh  = Genome::Sys->open_file_for_reading($fastq_file);
     unless ($fastq_fh) {
         $self->error_message('Failed to open fastq file ' . $fastq_file . ": $!");
         return;
     }
     binmode $fastq_fh, ":utf8";
 
-    my $fasta_output_fh = Genome::Utility::FileSystem->open_file_for_writing($fasta_file);
+    my $fasta_output_fh = Genome::Sys->open_file_for_writing($fasta_file);
     unless ($fasta_output_fh) {
         $self->error_message('Failed to open output file ' . $fasta_file . ": $!");
         return;
     }
     binmode $fasta_output_fh, ":utf8";
 
-    my $qual_output_fh = Genome::Utility::FileSystem->open_file_for_writing($qual_file);
+    my $qual_output_fh = Genome::Sys->open_file_for_writing($qual_file);
     unless ($qual_output_fh) {
         $self->error_message('Failed to open output file ' . $qual_file . ": $!");
         return;
@@ -90,7 +90,7 @@ sub execute{
 
     #2. run dust command
     my $cmd = "dust $fasta_file > $dusted_file";
-    my $rv = Genome::Utility::FileSystem->shellcmd(
+    my $rv = Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$fasta_file],
         output_files => [$dusted_file],
@@ -102,21 +102,21 @@ sub execute{
 
     #3. re-produce fastq 
 
-    my $dusted_fh  = Genome::Utility::FileSystem->open_file_for_reading($dusted_file);
+    my $dusted_fh  = Genome::Sys->open_file_for_reading($dusted_file);
     unless ($dusted_fh) {
         $self->error_message('Failed to open fastq file ' . $dusted_file . ": $!");
         return;
     }
     binmode $dusted_fh, ":utf8";
 
-    my $qual_input_fh = Genome::Utility::FileSystem->open_file_for_reading($qual_file);
+    my $qual_input_fh = Genome::Sys->open_file_for_reading($qual_file);
     unless ($qual_input_fh) {
         $self->error_message('Failed to open input file ' . $qual_file . ": $!");
         return;
     }
     binmode $qual_input_fh, ":utf8";
 
-    my $out_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+    my $out_fh = Genome::Sys->open_file_for_writing($self->output_file);
     unless ($out_fh) {
         $self->error_message('Failed to open output file ' . $self->output_file . ": $!");
         return;

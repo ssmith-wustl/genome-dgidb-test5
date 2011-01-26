@@ -82,7 +82,7 @@ sub execute
                     ),
     ];
 
-    my ( $fh, $tmpfile ) = Genome::Utility::FileSystem->create_temp_file('gmt_graph_heatmap.R');
+    my ( $fh, $tmpfile ) = Genome::Sys->create_temp_file('gmt_graph_heatmap.R');
 
     write_file( $tmpfile, @$rcmd );
 

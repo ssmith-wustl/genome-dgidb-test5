@@ -188,14 +188,16 @@ sub execute {
     }
     my $path = $disk_allocation->absolute_path;
     unless (-e $path) {
-        Genome::Utility::FileSystem->create_directory($path);        
+        Genome::Sys->create_directory($path);        
         unless (-e $path) {
             die $self->error_message("Failed to create directory $path! $!");
         }
     }
 
-    $DB::single = 1;
     $self->status_message('Creating allocation in apipe schema');
+    my $id = $params{allocator_id};
+    delete $params{allocator_id};
+    $params{id} = $id;
     my $new_allocation = Genome::Disk::AllocationNew->create(%params);
     unless ($new_allocation) {
         $self->error_message('Failed to create disk allocation in apipe schema');

@@ -639,8 +639,8 @@ sub completed_builds {
 sub latest_build {
     # this is the latest build with no filtering on status, etc.
     my ($self) = @_;
-    my @sorted_builds = sort { $b->id <=> $a->id } $self->builds();
-    return $sorted_builds[0] if @sorted_builds;
+    my @builds = $self->builds();
+    return $builds[-1] if @builds;
     return;
 }
 
@@ -974,7 +974,7 @@ sub _build_model_filesystem_paths {
     # This is actual data directory on the filesystem
     # Currently the disk is hard coded in Genome::Config->root_directory
     my $model_data_dir = $self->data_directory;
-    unless (Genome::Utility::FileSystem->create_directory($model_data_dir)) {
+    unless (Genome::Sys->create_directory($model_data_dir)) {
         $self->warning_message("Can't create dir: $model_data_dir");
         return;
     }

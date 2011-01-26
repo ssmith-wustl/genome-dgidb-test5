@@ -52,7 +52,7 @@ sub execute {
         $create_params{$property} = $value if $value; 
     }
 
-    my $content_hash = Genome::Utility::FileSystem->md5sum($self->file_path);
+    my $content_hash = Genome::Sys->md5sum($self->file_path);
     $create_params{file_path} = $self->file_path;
     $create_params{file_content_hash} = $content_hash;
 

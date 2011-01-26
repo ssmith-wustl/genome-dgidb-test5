@@ -147,6 +147,7 @@ sub process_imported_files {
     unless(Genome::Model::Command::Define::GenotypeMicroarray->execute(     file                        =>  $genotype_path_and_SNP,
                                                                             processing_profile_name     =>  $processing_profile,
                                                                             subject_name                =>  $genome_sample->name,
+                                                                            reference                   =>  $self->reference_sequence_build,
             )) {
         $self->error_message("GenotpeMicroarray Model Define failed.");
         die $self->error_message;

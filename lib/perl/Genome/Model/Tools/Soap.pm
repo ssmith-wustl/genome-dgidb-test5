@@ -65,7 +65,7 @@ sub create_edit_dir {
     my $self = shift;
 
     unless ( -d $self->assembly_directory.'/edit_dir' ) {
-	Genome::Utility::FileSystem->create_directory( $self->assembly_directory.'/edit_dir' );
+	Genome::Sys->create_directory( $self->assembly_directory.'/edit_dir' );
     }
 
     return 1;

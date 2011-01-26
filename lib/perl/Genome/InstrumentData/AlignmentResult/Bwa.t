@@ -112,15 +112,15 @@ sub test_alignment {
     } 
 
     if ($validate_against_shortcut) {
-        my $generated_bam_md5 = Genome::Utility::FileSystem->md5sum($dir . "/all_sequences.bam");
-        my $to_validate_bam_md5 = Genome::Utility::FileSystem->md5sum($expected_shortcut_path  . "/all_sequences.bam");
+        my $generated_bam_md5 = Genome::Sys->md5sum($dir . "/all_sequences.bam");
+        my $to_validate_bam_md5 = Genome::Sys->md5sum($expected_shortcut_path  . "/all_sequences.bam");
        
         print "Comparing " . $dir . "/all_sequences.bam with $expected_shortcut_path/all_sequences.bam\n\n\n"; 
         is($generated_bam_md5, $to_validate_bam_md5, "generated md5 matches what we expect -- the bam file is the same!");
     }
 
     # clear out the temp scratch/staging paths since these normally would be auto cleaned up at completion
-    my $base_tempdir = Genome::Utility::FileSystem->base_temp_directory;
+    my $base_tempdir = Genome::Sys->base_temp_directory;
     for (glob($base_tempdir . "/*")) {
         File::Path::rmtree($_);
     }
@@ -215,12 +215,15 @@ sub generate_fake_instrument_data {
                                                                       subset_name => 4,
                                                                       run_type => 'Paired End Read 2',
                                                                       gerald_directory => $fastq_directory,
+                                                                      bam_path => '/gsc/var/cache/testsuite/data/Genome-InstrumentData-AlignmentResult-Bwa/input.bam'
                                                                   );
 
 
     # confirm there are fastq files here, and fake the fastq_filenames method to return them
     my @in_fastq_files = glob($instrument_data->gerald_directory.'/*.txt');
-    $instrument_data->set_list('dump_sanger_fastq_files',@in_fastq_files);
+    #$instrument_data->set_list('dump_sanger_fastq_files',@in_fastq_files);
+
+    $instrument_data->mock('dump_fastqs_from_bam', sub {return Genome::InstrumentData::dump_fastqs_from_bam($instrument_data)});
 
     # fake out some properties on the instrument data
     isa_ok($instrument_data,'Genome::InstrumentData::Solexa');

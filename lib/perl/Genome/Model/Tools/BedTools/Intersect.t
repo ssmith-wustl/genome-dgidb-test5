@@ -37,7 +37,7 @@ for my $test_number (0..2) {
     isa_ok($intersect,'Genome::Model::Tools::BedTools::Intersect');
     ok($intersect->execute,'execute intersectBed command '. $intersect->command_name);
 
-    my $diff = Genome::Utility::FileSystem->diff_file_vs_file($expected_file, $intersect->output_file);
+    my $diff = Genome::Sys->diff_file_vs_file($expected_file, $intersect->output_file);
     ok(!$diff, 'expected BED file '. $expected_file .' is identical to '. $intersect->output_file)
         or diag("  diff results:\n" . $diff);
 }

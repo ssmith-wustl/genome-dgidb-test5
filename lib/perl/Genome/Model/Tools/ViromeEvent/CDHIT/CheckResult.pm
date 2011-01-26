@@ -1,4 +1,3 @@
-
 package Genome::Model::Tools::ViromeEvent::CDHIT::CheckResult;
 
 use strict;
@@ -7,43 +6,23 @@ use warnings;
 use Genome;
 use Workflow;
 use IO::File;
-use File::Basename;
 
 class Genome::Model::Tools::ViromeEvent::CDHIT::CheckResult{
     is => 'Genome::Model::Tools::ViromeEvent',
 };
 
 sub help_brief {
-    "gzhao's cdhit check_result script for virome"
-}
-
-sub help_synopsis {
-    return <<"EOS"
- check the result of cdhit to make sure it finished
-EOS
+    "Tool to run cd-hit for virome screening pipeline"
 }
 
 sub help_detail {
-    return <<"EOS"
-
- check the result of cdhit to make sure it finished
-
-EOS
-}
-
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    return $self;
-
+    'Tool to run cd-hit for virome screening pipline';
 }
 
 sub execute {
     my $self = shift;
     my $dir = $self->dir;
-    my $sample_name = basename ($dir);
-
-    #$self->log_event("cdhit checkresult entered for $sample_name");
+    my $sample_name = File::Basename::basename ($dir);
 
     my $faFile = $dir.'/'.$sample_name.'.fa';
     my $cdhitReport = $faFile.'.cdhitReport';
@@ -56,15 +35,10 @@ sub execute {
         }
     }
 
-    #RUN CD-HIT
-    #DETERMINE WHETHER TO RUN 32 OR 64 BIT VERSIONS OF CD-HIT
-
     my $archos = `uname -a`;
     my $cd_hit_dir = ($archos =~ /64/) ? '/cd-hit-64/cd-hit-est' : '/cd-hit-32/cd-hit-est';    
 
-    #my $com = '/gsc/var/tmp/virome/scripts'.$cd_hit_dir .
     my $com = '/gscmnt/sata835/info/medseq/virome/scripts_used_by_virome' . $cd_hit_dir .
-
 	      ' -i ' . $faFile .
 	      ' -o ' . $faFile . '.cdhit_out' .
 	      ' -c 0.98 -n 8 -G 0 -aS 0.98 -g 1 -r 1 -M 4000 -d 0' .
@@ -72,16 +46,16 @@ sub execute {
 
     $self->log_event("Executing for sample: $sample_name");
 
-    if (system($com)) { #RETURNS 0 WHEN SUCCESSFUL
-        $self->log_event("Failed for sample: $sample_name");
-        return;
+    if (system($com)) { #returns 0 when successful
+        $self->log_event("Failed to successfully cd-hitfor sample: $sample_name");
+        return; #need to make sure this exits
     }
-    else {
-        $self->log_event("Ran successfully for sample: $sample_name");
-        return 1;
-    }
+
+    $self->log_event("Cd-hit ran successfully for sample: $sample_name");
+
+    #remove files
+
+    return 1;
 }
 
 1;
-
-sub sub_command_sort_position { 7 }

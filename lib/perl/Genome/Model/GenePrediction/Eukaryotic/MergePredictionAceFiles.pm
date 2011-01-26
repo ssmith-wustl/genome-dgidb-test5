@@ -44,8 +44,8 @@ sub execute {
 
     $self->status_message("Concatenating " . scalar @chunks_with_output . " ace file chunks into $ace_file");
 
-    my $rv = Genome::Utility::FileSystem->cat(
-        input_files => \@chunks_with_output,
+    my $rv = Genome::Sys->cat(
+        input_files => @ace_file_chunks,
         output_file => $ace_file,
     );
     confess "Could not concatenate ace files!" unless defined $rv and $rv;

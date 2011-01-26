@@ -206,7 +206,7 @@ sub process_region
 	
 	my $region_size = $region_stop - $region_start + 1;
 	
-	if($region_num_loh > 1)
+	if($region_num_loh >= 3)
 	{	
 		print OUTFILE join("\t", $region_chrom, $region_start, $region_stop, $region_size, $region_num_loh, $region_num_hom) . "\n";
 		$stats{'num_loh_regions'}++;		

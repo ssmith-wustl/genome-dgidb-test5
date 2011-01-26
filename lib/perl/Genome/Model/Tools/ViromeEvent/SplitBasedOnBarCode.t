@@ -4,17 +4,24 @@ use strict;
 use warnings;
 
 use above 'Genome';
-use Test::More tests => 2;
+use Test::More;
 
+use_ok('Genome::Model::Tools::ViromeEvent::SplitBasedOnBarCode');
 
-BEGIN {use_ok('Genome::Model::Tools::ViromeEvent::SplitBasedOnBarCode');}
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-ViromeScreening/Titanium17';
+ok( -d $data_dir, "Test suite data dir exists" );
 
-#create
+my $temp_dir = Genome::Sys->create_temp_directory();
+
 my $sbob = Genome::Model::Tools::ViromeEvent::SplitBasedOnBarCode->create(
-                                                                dir         => '/gscmnt/sata835/info/medseq/virome/test17',
-                                                                fasta_file  => '/gscmnt/sata835/info/medseq/virome/test17/Titanium17_2009_05_05_set0.fna',
-                                                                barcode_file=> '/gscmnt/sata835/info/medseq/virome/test17/454_Sequencing_log_Titanium_17.txt',
-                                                                logfile     => '/gscmnt/sata835/info/medseq/virome/workflow/logfile.txt',
-                                                            );
-isa_ok($sbob, 'Genome::Model::Tools::ViromeEvent::SplitBasedOnBarCode');
-#$sbob->execute();
+    dir         => $data_dir,
+    fasta_file  => $data_dir.'/Titanium17_2009_05_05_set0.fna',
+    barcode_file=> $data_dir.'/454_Sequencing_log_Titanium_test.txt',
+    logfile     => $temp_dir.'/log.txt',
+);
+
+ok( $sbob, "Created split-based-on-barcode event" );
+
+done_testing();
+
+exit;

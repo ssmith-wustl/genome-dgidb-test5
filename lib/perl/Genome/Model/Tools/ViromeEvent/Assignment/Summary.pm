@@ -1,4 +1,3 @@
-
 package Genome::Model::Tools::ViromeEvent::Assignment::Summary;
 
 use strict;
@@ -11,16 +10,15 @@ use IO::File;
 use File::Basename;
 use Data::Dumper;
 
-
 class Genome::Model::Tools::ViromeEvent::Assignment::Summary{
     is => 'Genome::Model::Tools::ViromeEvent',
 };
 
 sub help_brief {
-    "gzhao's summary for virome"
+    "Tool to generate summary report for virome screening";
 }
 
-sub help_synopsis {
+sub help_detail {
     return <<"EOS"
 This script will read the assignment report files in the given 
 directory and generate a summary report for a given library. It will report 
@@ -32,22 +30,7 @@ It will also filter the virus lineage, leave out virus that are phage.
 It will rank the virus lineage by range of percent ID from low to high. 
 
 It will also generate a .InterestingReads report about the details of each lineage.
-
-perl script <sample folder>
-<sample folder> = full path to the folder holding files for a given sample 
-                   e.g. /home/gzhao/data/454_2007_12_03/Wang_KM_Samples_MRCE/KM_A/S21_Rota_other
 EOS
-}
-
-sub help_detail {
-    return <<"EOS"
-EOS
-}
-
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    return $self;
 }
 
 sub execute {
@@ -224,7 +207,7 @@ sub _get_read_counts_from_fastas {
     my @read_counts;
     #LIST OF FASTA FILE EXTENSIONS
     my @file_extensions = qw/ fa fa.cdhit_out fa.cdhit_out.masked.badSeq fa.cdhit_out.masked.goodSeq
-                              HGfiltered.fa BNFiltered.fa TBXNTFiltered.fa unassigned.fa /;
+                              HGfiltered.fa BNfiltered.fa TBXNTFiltered.fa unassigned.fa /;
     foreach my $ext (@file_extensions) {
 	my $fasta_file = $self->dir.'/'.$lib_name.'.'.$ext;
 	my $read_count = 0;
@@ -247,4 +230,3 @@ sub _get_read_counts_from_fastas {
 }
 
 1;
-

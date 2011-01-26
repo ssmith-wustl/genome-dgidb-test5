@@ -75,7 +75,7 @@ sub _detect_variants {
         if ($self->detect_snvs && $self->detect_indels) {
             $self->status_message("Snp and indel params are different. Executing VarScan twice: once each for snps and indels with their respective parameters");
         }
-        my ($temp_fh, $temp_name) = Genome::Utility::FileSystem->create_temp_file();
+        my ($temp_fh, $temp_name) = Genome::Sys->create_temp_file();
 
         if ($self->detect_snvs) {
             $result = $self->_run_varscan($output_snp, $temp_name, $snv_params);

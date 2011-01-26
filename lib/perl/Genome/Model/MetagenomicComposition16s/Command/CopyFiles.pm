@@ -70,7 +70,7 @@ sub execute {
     }
     else {
         # copy
-        Genome::Utility::FileSystem->validate_existing_directory( $self->destination )
+        Genome::Sys->validate_existing_directory( $self->destination )
             or return;
         $method = '_copy';
     }

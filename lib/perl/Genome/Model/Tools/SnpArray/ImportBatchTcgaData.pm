@@ -31,6 +31,9 @@ class Genome::Model::Tools::SnpArray::ImportBatchTcgaData {
 		level_2_folders	=> { is => 'Text', doc => "Relative path(s) to extracted Level 2 data archives (should contain birdseed files)", is_optional => 0, is_input => 1 },
 		mage_tab_files	=> { is => 'Text', doc => "Relative path(s) to the .sdrf file in the mage-tab archive", is_optional => 0, is_input => 1 },
 		use_bsub	=> { is => 'Text', doc => "IF set to 1, will bsub the actual import step", is_optional => 1, is_input => 1 },
+		import_format	=> { is => 'Text', doc => "Input format of the data. Currently only 'unknown' is allowed", is_optional => 0, is_input => 1, default => "unknown" },
+		description	=> { is => 'Text', doc => "Short description of the import data", is_optional => 1, is_input => 1 },
+		source_name	=> { is => 'Text', doc => "Source name for the data, e.g. \"Broad Institute\"", is_optional => 1, is_input => 1 },
 	],
 };
 
@@ -69,6 +72,7 @@ sub execute {                               # replace with real execution logic.
 	my @mage_tab_files = split(/\,/, $mage_tab_files);
 	my @level_2_folders = split(/\,/, $level_2_folders);
 
+	my $import_format = $self->import_format;
 
 	## Get list of samples that already have SNP Array data imported ##
 	
@@ -132,16 +136,32 @@ sub execute {                               # replace with real execution logic.
 							print join("\t", $key, $sample_name, $washu_sample_name) . "\n";						
 							## Run the import ##
 							
+							my $cmd = "";
+							
 							if($self->use_bsub)
 							{
-								system("bsub -q short genome instrument-data import microarray affymetrix-genotype-array --original-data-file=$path_to_file --sample-name=\"$washu_sample_name\"");								
+								$cmd = "bsub -q short genome instrument-data import microarray affymetrix-genotype-array --original-data-file=$path_to_file --sample-name=\"$washu_sample_name\" --import-format=\"$import_format\"";
 							}
 							else
 							{
-								system("genome instrument-data import microarray affymetrix-genotype-array --original-data-file=$path_to_file --sample-name=\"$washu_sample_name\"");								
+								$cmd = "genome instrument-data import microarray affymetrix-genotype-array --original-data-file=$path_to_file --sample-name=\"$washu_sample_name\" --import-format=\"$import_format\"";
 							}
 
+							## Append optional fields ##
+							
+							if($self->description)
+							{
+								$cmd .= " --description=\"" . $self->description . "\"";
+							}
 
+							if($self->source_name)
+							{
+								$cmd .= " --import-source-name=\"" . $self->source_name . "\"";
+							}
+
+							## Run the import ##
+
+							system($cmd);
 						}						
 					}
 

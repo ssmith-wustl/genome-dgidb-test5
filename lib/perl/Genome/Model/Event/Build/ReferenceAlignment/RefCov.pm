@@ -104,7 +104,7 @@ sub execute {
     my $self = shift;
 
     my $ref_cov_dir = $self->build->reference_coverage_directory;
-    unless (Genome::Utility::FileSystem->create_directory($ref_cov_dir)) {
+    unless (Genome::Sys->create_directory($ref_cov_dir)) {
         $self->error_message('Failed to create ref_cov directory '. $ref_cov_dir .":  $!");
         return;
     }
@@ -119,7 +119,7 @@ sub execute {
 
         my $op = Workflow::Operation->create(
             name => 'RefCov Progression',
-            operation_type => Workflow::OperationType::Command->get('Genome::Model::Tools::OldRefCov::ProgressionInstance')
+            operation_type => Workflow::OperationType::Command->get('Genome::Model::Tools::BioSamtools::ProgressionInstance')
         );
 
         $op->parallel_by('bam_files');
@@ -165,7 +165,7 @@ sub execute {
 
     my @progression_stats_files = $self->progression_stats_files;
     my $final_stats_file = $progression_stats_files[-1];
-    unless (Genome::Utility::FileSystem->validate_file_for_reading($final_stats_file)) {
+    unless (Genome::Sys->validate_file_for_reading($final_stats_file)) {
         $self->error_message("Failed to validate stats file '$final_stats_file' for reading:  $!");
         die($self->error_message);
     }
@@ -195,7 +195,7 @@ sub execute {
 
     my @progression_instrument_data_ids = $self->sorted_instrument_data_ids;
     unless (-s $self->build->coverage_progression_file) {
-        unless (Genome::Model::Tools::OldRefCov::Progression->execute(
+        unless (Genome::Model::Tools::BioSamtools::Progression->execute(
             stats_files => \@progression_stats_files,
             instrument_data_ids => \@progression_instrument_data_ids,
             sample_name => $self->model->subject_name,
@@ -245,7 +245,7 @@ sub execute {
     }
     my $report_subdirectory = $self->build->reports_directory .'/'. $report->name_to_subdirectory($report->name);
     my $report_file = $report_subdirectory .'/report.'. ($xslt->{output_type} || 'html');
-    my $fh = Genome::Utility::FileSystem->open_file_for_writing( $report_file );
+    my $fh = Genome::Sys->open_file_for_writing( $report_file );
     $fh->print( $xslt->{content} );
     $fh->close;
     my $mail_dest = 'jwalker@genome.wustl.edu,twylie@genome.wustl.edu';

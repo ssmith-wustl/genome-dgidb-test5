@@ -1,4 +1,3 @@
-
 package Genome::Model::Tools::ViromeEvent::RepeatMasker::OuterCheckResult;
 
 use strict;
@@ -21,27 +20,11 @@ sub help_brief {
     return "gzhao's Repeat Masker check result";
 }
 
-sub help_synopsis {
-    return <<"EOS"
-EOS
-}
-
 sub help_detail {
     return <<"EOS"
 This script will check the result of RepeatMasker which
 should generate .masked file in the given directory.
-
-perl script <dir>
-<dir> = full path to the directory of a sample library
-               without last "/"
 EOS
-}
-
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    return $self;
-
 }
 
 sub execute

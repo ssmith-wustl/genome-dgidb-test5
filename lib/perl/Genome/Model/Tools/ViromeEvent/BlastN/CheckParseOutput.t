@@ -1,17 +1,23 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
 
 use above 'Genome';
-use Test::More tests => 2;
+use Test::More;
 
+use_ok('Genome::Model::Tools::ViromeEvent::BlastN::CheckParseOutput');
 
-BEGIN {use_ok('Genome::Model::Tools::ViromeEvent::BlastN::CheckParseOutput');}
+ok( -s '/gscmnt/sata835/info/medseq/virome/taxonomy_db', "Taxonomy blast db exists" );
 
-#create
-my $cpo = Genome::Model::Tools::ViromeEvent::BlastN::CheckParseOutput->create(
-                                                                dir => '/gscmnt/sata835/info/medseq/virome/test17/S0_Mouse_Tissue_0_Control',
-                                                            );
-isa_ok($cpo, 'Genome::Model::Tools::ViromeEvent::BlastN::CheckParseOutput');
-#$cpo->execute();
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-ViromeScreening/Titanium17/Titanium17_undecodable/';
+ok ( -d $data_dir, "Test suite data dir exists" );
+
+my $c = Genome::Model::Tools::ViromeEvent::BlastN::CheckParseOutput->create(
+    dir => $data_dir,
+    );
+ok($c, "Created virome event blast-n check-parse-output event");
+
+done_testing();
+
+exit;

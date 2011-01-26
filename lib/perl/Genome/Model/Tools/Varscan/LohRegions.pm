@@ -104,7 +104,12 @@ sub execute {                               # replace with real execution logic.
 			my $somatic_status = $lineContents[12];
 			my $germline_p_value = $lineContents[13];
 			my $somatic_p_value= $lineContents[14];
-			
+			if($lineContents[13] eq "Somatic" || $lineContents[13] eq "LOH" || $lineContents[13] eq "Germline")
+			{
+				$somatic_status = $lineContents[13];
+				$germline_p_value = $lineContents[14];
+				$somatic_p_value= $lineContents[15];
+			}	
 			if($chrom ne $loh_chrom)
 			{
 				report_loh_region($loh_chrom, $loh_start, $loh_stop, $loh_snps);

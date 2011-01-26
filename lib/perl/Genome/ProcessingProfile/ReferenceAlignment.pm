@@ -41,6 +41,12 @@ class Genome::ProcessingProfile::ReferenceAlignment {
             default_value => 'top',
             valid_values => ['top', 'none', 'gene'],
         },
+        transcript_variant_annotator_accept_reference_IUB_codes => {
+            doc => 'annotation accept-reference-IUB-codes option to be used by the "annotate transcript-variants" to run during the annotation step',
+            is_optional => 1,
+            default_value => '0',
+            valid_values => [0, 1],
+        },
         snv_detector_name => {
             doc => 'Name of the snv detector',
             is_optional => 1,
@@ -247,6 +253,24 @@ sub _fetch_alignment_sets {
         push @alignments, $alignment;
     }
     return @alignments;
+}
+
+sub processing_profile_params_for_alignment {
+    my $self = shift;
+
+    my %params = (
+                read_aligner_name => $self->read_aligner_name,
+                read_aligner_version => $self->read_aligner_version,
+                read_aligner_params => $self->read_aligner_params,
+                force_fragment => $self->force_fragment,
+                read_trimmer_name => $self->read_trimmer_name,
+                read_trimmer_version => $self->read_trimmer_version,
+                read_trimmer_params => $self->read_trimmer_params,
+                picard_version => $self->picard_version,
+                samtools_version => $self->samtools_version,
+            );
+
+    return \%params;
 }
 
 sub params_for_alignment {
@@ -504,7 +528,7 @@ sub alignment_objects {
     
     for my $instr (@segmentable_data) {
         my @segments = $instr->get_segments();
-        if (@segments > 1) {
+        if (@segments > 1 && $self->read_aligner_name ne 'imported') {
             for my $seg (@segments) {
                 push @instrument_data_output, {object=>$instr, segment=>$seg};
             }

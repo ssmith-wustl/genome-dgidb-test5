@@ -25,12 +25,6 @@ UR::Object::Type->define(
             is_constant => 1,
             calculate => q( Bio::Tools::CodonTable->new( -id => 2) ),
         },
-        ucsc_conservation_directory => {
-            is => 'Path',
-            is_optional => 1,
-            is_deprecated => 1,
-#            default => '/gscmnt/sata835/info/medseq/model_data/2741951221/v36-build93636924/ucsc_conservation/',
-         },
         check_variants => {
             is => 'Boolean',
             is_optional => 1,
@@ -961,6 +955,7 @@ sub _ucsc_conservation_score {
                   coordinates => $range,
                   species => $substruct->transcript_species,
                   version => $substruct->transcript_version,
+                  #reference_transcripts => "NCBI-human.combined-annotation/54_36p_v2", #TODO: Test code, delete me immediately
         );
     };
     return '-' unless $ref;

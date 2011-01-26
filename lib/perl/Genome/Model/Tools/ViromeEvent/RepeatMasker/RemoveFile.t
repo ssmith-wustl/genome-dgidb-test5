@@ -1,17 +1,21 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
 
 use above 'Genome';
-use Test::More tests => 2;
+use Test::More;
 
+use_ok('Genome::Model::Tools::ViromeEvent::RepeatMasker::RemoveFile');
 
-BEGIN {use_ok('Genome::Model::Tools::ViromeEvent::RepeatMasker::RemoveFile');}
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-ViromeScreening/Titanium17/Titanium17_undecodable';
+ok( -d $data_dir, "Test suite data dir exits" );
 
-#create
-my $rf = Genome::Model::Tools::ViromeEvent::RepeatMasker::RemoveFile->create(
-                                                                dir => '/gscmnt/sata835/info/medseq/virome/test17/S0_Mouse_Tissue_0_Control',
-                                                            );
-isa_ok($rf, 'Genome::Model::Tools::ViromeEvent::RepeatMasker::RemoveFile');
-#$rf->execute();
+my $c = Genome::Model::Tools::ViromeEvent::RepeatMasker::RemoveFile->create(
+    dir => $data_dir,
+    );
+ok($c, "Created repeat maser remove file event");
+
+done_testing();
+
+exit;
