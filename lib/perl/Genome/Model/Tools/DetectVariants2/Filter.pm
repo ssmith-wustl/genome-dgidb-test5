@@ -120,4 +120,8 @@ sub _validate_file {
     return 1;
 }
 
+sub has_version {
+    return 1;
+}
+
 1;

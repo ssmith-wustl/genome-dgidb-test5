@@ -216,7 +216,12 @@ sub validate {
             my $class = $tree->{$key}->{class};
             my $version = $tree->{$key}->{version};
             unless($self->is_class_valid($class)){
-                die "could not find class ".$class."\n";
+                $self->error_message("could not find class ".$class);
+                die $self->error_message;
+            }
+            unless($self->has_version($class,$version)){
+                $self->error_message("could not find version ".$version." for class ".$class);
+                die $self->error_message;
             }
 
             ## Check filters that belong to this detector
@@ -224,7 +229,12 @@ sub validate {
                 my $filter_class = $filter->{class};
                 my $filter_version = $filter->{version};
                 unless($self->is_class_valid($filter_class)){
-                    die "could not find class ".$filter_class."\n";
+                    $self->error_message("could not find class ".$filter_class);
+                    die $self->error_message;
+                }
+                unless($self->has_version($filter_class,$filter_version)){
+                    $self->error_message("could not find version ".$filter_version." for class ".$filter_class);
+                    die $self->error_message;
                 }
             }
 
@@ -247,6 +257,20 @@ sub is_class_valid {
         return 0;
     }
     return 1;
+}
+
+sub has_version {
+    my $self = shift;
+    my ($class,$version) = @_;
+    my $answer = 0;
+    eval {
+        $answer = $class->has_version($version);
+    };
+    if($@){
+        $self->error_message("Could not call has_version on the class ".$class);
+        die $self->error_message;
+    }
+    return $answer;
 }
 
 1;
