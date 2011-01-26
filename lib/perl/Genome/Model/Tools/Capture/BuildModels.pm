@@ -46,6 +46,8 @@ class Genome::Model::Tools::Capture::BuildModels {
 		restart_scheduled	=> { is => 'Text', doc => "Forces restart of scheduled builds" , is_optional => 1},
 		use_imported_data	=> { is => 'Text', doc => "If set to 1, use imported data over instrument data" , is_optional => 1},
 		verbose	=> { is => 'Text', doc => "If set to 1, verbose output of models and instrument data" , is_optional => 1},
+        groups => { is => 'Text', doc => "Comma separated list of model group names or ids to assign models to", is_optional => 1},
+        unbuilt_only => { is => 'Boolean', doc => "Only launch a new build if a model has unbuilt instrument data", is_optional => 1, default => 0 },
 	],
 };
 
@@ -140,7 +142,7 @@ sub execute {                               # replace with real execution logic.
 				}
 				else
 				{
-					$model_id = define_model($model_name, $sample_name, $subject_type, $processing_profile, $self->reference_sequence_build, $self->annotation_reference_build, $self->dbsnp_build, $self->region_of_interest_set_name, $self->target_region_set_name);
+					$model_id = define_model($model_name, $sample_name, $subject_type, $processing_profile, $self->reference_sequence_build, $self->annotation_reference_build, $self->dbsnp_build, $self->region_of_interest_set_name, $self->target_region_set_name, $self->groups);
 				}
 			}
 		}
@@ -217,9 +219,29 @@ sub execute {                               # replace with real execution logic.
 				## Build the model ##
 				if(!$self->assign_only)
 				{
-					my $cmd = "genome model build start $model_id";
-					print "RUN: $cmd\n";
-					system($cmd);
+					my $cmd = "genome model build start $model_id"; #this is the command to run regardless
+
+                    if($self->unbuilt_only) {
+                        my $model = Genome::Model->get($model_id);
+                        unless($model) {
+                            $self->error_message("Unable to retrieve a model for model id $model_id to query if there is unbuilt data");
+                            return;
+                        }
+                        if($model->unbuilt_instrument_data) {
+                            #the above returns an array, if it has elements then we want to build
+                            $self->status_message("RUN: $cmd");
+                            system($cmd);
+                        }
+                        else {
+                            if($self->verbose) {
+                                $self->status_message("Skipped building model id $model_id because it had no unbuilt instrument data");
+                            }
+                        }
+                    }
+                    else {        
+                        print "RUN: $cmd\n";
+                        system($cmd);
+                    }
 				}
 	
 			}
@@ -246,7 +268,7 @@ sub execute {                               # replace with real execution logic.
 
 sub define_model
 {
-	(my $model_name, my $sample_name, my $subject_type, my $processing_profile, my $reference_build, my $annotation_reference_build, my $dbsnp_build, my $region_of_interest_set_name, my $target_region_set_name) = @_;
+	(my $model_name, my $sample_name, my $subject_type, my $processing_profile, my $reference_build, my $annotation_reference_build, my $dbsnp_build, my $region_of_interest_set_name, my $target_region_set_name, my $groups) = @_;
 	my $model_id = 0;
 
 	my $cmd = "";
@@ -272,6 +294,7 @@ sub define_model
 
 	$cmd .= " --reference-sequence-build $reference_build" if($reference_build);
 	$cmd .= " --dbsnp-build $dbsnp_build" if($dbsnp_build);
+    $cmd .= " --groups $groups" if($groups);
 	
 	print "RUN: $cmd\n";
 	

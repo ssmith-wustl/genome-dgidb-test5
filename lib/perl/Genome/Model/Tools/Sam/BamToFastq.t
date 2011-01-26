@@ -16,7 +16,7 @@ if (`uname -a` =~ /x86_64/){
 
 use_ok('Genome::Model::Tools::Sam::BamToFastq');
 
-my $tmp_dir = Genome::Utility::FileSystem->create_temp_directory('Genome-Model-Tools-Sam-BamToFastq-'. $ENV{USER});
+my $tmp_dir = Genome::Sys->create_temp_directory('Genome-Model-Tools-Sam-BamToFastq-'. $ENV{USER});
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sam-BamToFastq';
 my $bam_file = $data_dir .'/test.bam';
 

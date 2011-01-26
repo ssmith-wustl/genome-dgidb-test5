@@ -134,7 +134,7 @@ sub get_maq_content {
     my $model = $self->model;
     my $build = $self->build;
 
-    my $mapcheck_output = Genome::Utility::FileSystem->create_temp_file_path('mapcheck');
+    my $mapcheck_output = Genome::Sys->create_temp_file_path('mapcheck');
     #my $accumulated_alignments_file = $build->accumulate_maps;
     my $accumulated_alignments_file = $build->whole_rmdup_map_file;
     unless (Genome::Model::Tools::Maq::Mapcheck->execute(
@@ -149,7 +149,7 @@ sub get_maq_content {
     #my $rm_cmd = "rm $accumulated_alignments_file";
     #$self->shellcmd(cmd => $rm_cmd);
 
-    my $mapcheck_output_fh = Genome::Utility::FileSystem->open_file_for_reading($mapcheck_output);
+    my $mapcheck_output_fh = Genome::Sys->open_file_for_reading($mapcheck_output);
     my @maq = $mapcheck_output_fh->getlines;
 
     my $rpt = join('',@maq);

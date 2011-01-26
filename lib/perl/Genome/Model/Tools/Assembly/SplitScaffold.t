@@ -16,7 +16,7 @@ foreach (qw/ merge.ace split_out.ace /) {
 }
 
 #create temp dir
-my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+my $temp_dir = Genome::Sys->create_temp_directory();
 ok (-d $temp_dir, "Test test directory created") or die;
 
 #create/run tool

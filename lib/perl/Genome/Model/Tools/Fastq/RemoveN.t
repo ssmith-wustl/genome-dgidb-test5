@@ -15,7 +15,7 @@ BEGIN
 my $path = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fastq-RemoveN/";
 my $fastq_file      = "$path/in.fastq";
 my $n_static        = "$path/expected-out.fastq";
-#my $n_removed_file  = Genome::Utility::FileSystem->create_temp_file_path('actual-out.fastq');
+#my $n_removed_file  = Genome::Sys->create_temp_file_path('actual-out.fastq');
 my $n_removed_file  = '/gscuser/boberkfe/actual-out.fastq';
 
 my $cmd = Genome::Model::Tools::Fastq::RemoveN->create(

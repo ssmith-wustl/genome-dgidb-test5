@@ -87,7 +87,7 @@ sub type_specific_parameters_for_create {
     my $rsb = $self->_resolve_param('reference_sequence_build');
     my $arb = $self->_resolve_param('annotation_reference_build');
     my $dbsnp = $self->resolve_dbsnp($rsb);
-    if ($dbsnp && $dbsnp->model->reference != $rsb) {
+    if ($dbsnp && !$rsb->is_compatible_with($dbsnp->model->reference)) {
         die $self->error_message("dbSNP build " . $dbsnp->__display_name__ . " has reference " . $dbsnp->reference->__display_name__ .
             " which does not match the specified reference " . $rsb->__display_name__);
     }
@@ -106,7 +106,7 @@ sub listed_params {
 sub execute {
     my $self = shift;
 
-    if ($self->dbsnp_build and $self->dbsnp_model) {
+    if ($self->dbsnp_build and $self->dbsnp_model and $self->dbsnp_build->model->id != $self->dbsnp_model->id) {
         $self->error_message("Specify one of --dbsnp-build or --dbsnp-model, not both");
         return;
     }

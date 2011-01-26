@@ -91,6 +91,10 @@ class Genome::Model::ReferenceAlignment {
             is => 'Genome::Model::Build::ImportedVariationList',
             id_by => 'dbsnp_build_id',
         },
+        dbsnp_model => {
+            via => 'dbsnp_build',
+            to => 'model',
+        },
         annotation_reference_build_id => {
             is => 'Text',
             via => 'inputs',

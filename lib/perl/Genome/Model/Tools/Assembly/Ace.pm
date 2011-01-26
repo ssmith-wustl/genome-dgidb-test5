@@ -245,11 +245,11 @@ sub rewrite_ace_file {
 
     $self->status_message("Writing final ace file: $ace_out");
 
-    my $fh_in = Genome::Utility::FileSystem->open_file_for_reading($ace_in) ||
+    my $fh_in = Genome::Sys->open_file_for_reading($ace_in) ||
 	return;
 
     unlink $ace_out;
-    my $fh_out = Genome::Utility::FileSystem->open_file_for_writing($ace_out) ||
+    my $fh_out = Genome::Sys->open_file_for_writing($ace_out) ||
 	return;
 
     $fh_out->print("AS $contig_count $read_count\n\n");

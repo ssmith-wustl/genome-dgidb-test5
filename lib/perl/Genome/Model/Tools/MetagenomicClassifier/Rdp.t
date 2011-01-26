@@ -29,7 +29,7 @@ ok($rdp, 'Created rdp classifier');
 ok($rdp->execute, 'Execute rdp classifier');
 
 # compare output
-my $fh = Genome::Utility::FileSystem->open_file_for_reading($tmp_rdp_file)
+my $fh = Genome::Sys->open_file_for_reading($tmp_rdp_file)
     or die;
 while ( my $line = $fh->getline ) {
     chomp $line;

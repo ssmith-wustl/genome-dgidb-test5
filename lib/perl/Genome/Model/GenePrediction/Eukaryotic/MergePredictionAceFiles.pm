@@ -39,7 +39,7 @@ sub execute {
 
     $self->status_message("Merging below files into $ace_file:\n" . join("\n", @ace_file_chunks));
 
-    my $rv = Genome::Utility::FileSystem->cat(
+    my $rv = Genome::Sys->cat(
         input_files => @ace_file_chunks,
         output_file => $ace_file,
     );

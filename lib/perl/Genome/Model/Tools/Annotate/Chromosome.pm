@@ -45,9 +45,9 @@ class Genome::Model::Tools::Annotate::Chromosome {
 sub execute {
     my $self = shift;
 
-    Genome::Utility::FileSystem->create_directory($self->output_directory);
+    Genome::Sys->create_directory($self->output_directory);
     $self->anno_file($self->output_directory .'/'. $self->anno_db .'_'. $self->version .'_'. $self->chromosome .'.'. $self->output_format);
-    my $fh = Genome::Utility::FileSystem->open_file_for_writing($self->anno_file);
+    my $fh = Genome::Sys->open_file_for_writing($self->anno_file);
     unless ($fh) {
         die('Failed to open '. $self->output_format .' file: '. $self->anno_file);
     }

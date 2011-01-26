@@ -26,6 +26,7 @@ my @SUB_COMMANDS = qw/
     disk
     report
     feature-list
+    sys
     completion
 /;
 

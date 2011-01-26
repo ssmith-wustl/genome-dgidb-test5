@@ -38,11 +38,11 @@ sub create {
 	my $self = $class->SUPER::create(@_);
 	return undef unless $self;
 
-	unless (Genome::Utility::FileSystem->validate_file_for_reading($self->snp_file)) {
+	unless (Genome::Sys->validate_file_for_reading($self->snp_file)) {
 		$self->error_message('Failed to validate snp file '. $self->snp_file .' for reading');
 		return;
 	}	
-	unless (Genome::Utility::FileSystem->validate_file_for_writing($self->output_file)) {
+	unless (Genome::Sys->validate_file_for_writing($self->output_file)) {
 		$self->error_message('Failed to validate output file '. $self->output_file .' for writing');
 		return;
 	}
@@ -55,13 +55,13 @@ sub execute {
     # local $| = 1;
     my $release = $self->release;
 
-    my $snp_fh = Genome::Utility::FileSystem->open_file_for_reading($self->snp_file);
+    my $snp_fh = Genome::Sys->open_file_for_reading($self->snp_file);
     unless($snp_fh) {
         $self->error_message("Failed to open input filehandle for: " .  $self->snp_file );
         return;
     }
 
-    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+    my $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
     unless($output_fh) {
         $self->error_message("Failed to open output filehandle for: " .  $self->output_file );
         return;

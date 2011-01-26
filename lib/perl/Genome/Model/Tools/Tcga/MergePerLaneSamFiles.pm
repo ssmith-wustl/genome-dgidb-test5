@@ -136,7 +136,7 @@ sub execute {
         my $merge_cmd = "java -Xmx2g -cp /gsc/scripts/lib/java/samtools/picard-tools-1.04/MergeSamFiles.jar net.sf.picard.sam.MergeSamFiles MSD=true SO=coordinate AS=true VALIDATION_STRINGENCY=SILENT O=$fixmated_file I=$bam_file_list";
     
         $self->status_message("Merging per lane bams into a single, large fixmated file with: $merge_cmd");
-        my $merge_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$merge_cmd,input_files=>\@bam_files,output_files=>[$fixmated_file]);
+        my $merge_rv = Genome::Sys->shellcmd(cmd=>$merge_cmd,input_files=>\@bam_files,output_files=>[$fixmated_file]);
         if ($merge_rv != 1) {
             die "Merge with command: $merge_cmd failed with rv $merge_rv";
         } else {

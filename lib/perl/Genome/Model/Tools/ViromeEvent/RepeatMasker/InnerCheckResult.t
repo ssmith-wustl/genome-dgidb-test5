@@ -1,19 +1,24 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
 
 use above 'Genome';
-use Test::More tests => 2;
-use File::Basename;
+use Test::More;
 
+use_ok('Genome::Model::Tools::ViromeEvent::RepeatMasker::InnerCheckResult') or die;
 
-BEGIN {use_ok('Genome::Model::Tools::ViromeEvent::RepeatMasker::InnerCheckResult');}
+my $file_to_run = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-ViromeScreening/Titanium17/Titanium17_undecodable/Titanium17_undecodable.fa.cdhit_out_RepeatMasker/Titanium17_undecodable.fa.cdhit_out.masked.goodSeq_file0.fa';
+ok( -s $file_to_run, "Test data file exists" ) or die;
 
-#create
-my $ocr = Genome::Model::Tools::ViromeEvent::RepeatMasker::InnerCheckResult->create(
-                                                                file_to_run => '/gscmnt/sata835/info/medseq/virome/test17/S0_Mouse_Tissue_0_Control/S0_Mouse_Tissue_0_Control.fa.cdhit_out_RepeatMasker/S0_Mouse_Tissue_0_Control.fa.cdhit_out_file3.fa',
-                                                                logfile => '/gscmnt/sata835/info/medseq/virome/workflow/logfile.txt',
-                                                            );
-isa_ok($ocr, 'Genome::Model::Tools::ViromeEvent::RepeatMasker::InnerCheckResult');
-#$ocr->execute();
+my $temp_dir = Genome::Sys->create_temp_directory();
+
+my $c = Genome::Model::Tools::ViromeEvent::RepeatMasker::InnerCheckResult->create(
+    file_to_run => $file_to_run,
+    logfile => $temp_dir.'/log.txt',
+    );
+ok($c, "Successfully created repeat masker inner check result event");
+
+done_testing();
+
+exit;

@@ -174,7 +174,7 @@ sub run_java_vm {
     if($self->_monitor_command) {
         $self->monitor_shellcmd(\%params);
     } else {
-        my $result = Genome::Utility::FileSystem->shellcmd(%params);
+        my $result = Genome::Sys->shellcmd(%params);
     }
     
     return 1;
@@ -184,9 +184,9 @@ sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
     unless ($self->temp_directory) {
-        my $base_temp_directory = Genome::Utility::FileSystem->base_temp_directory;
+        my $base_temp_directory = Genome::Sys->base_temp_directory;
         my $temp_dir = File::Temp::tempdir($base_temp_directory .'/Picard-XXXX', CLEANUP => 1);
-        Genome::Utility::FileSystem->create_directory($temp_dir);
+        Genome::Sys->create_directory($temp_dir);
         $self->temp_directory($temp_dir);
     }
     return $self;

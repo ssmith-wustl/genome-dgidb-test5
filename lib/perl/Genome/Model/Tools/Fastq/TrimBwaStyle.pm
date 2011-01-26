@@ -97,7 +97,7 @@ sub execute {
         $self->warning_message("Reprot file: $report existing. Overwrite it");
         unlink $report;
     }
-    my $report_fh = Genome::Utility::FileSystem->open_file_for_writing($report);
+    my $report_fh = Genome::Sys->open_file_for_writing($report);
     unless ($report_fh) {
         $self->error_message("Failed to open report file " . $report . ": $!");
         return;

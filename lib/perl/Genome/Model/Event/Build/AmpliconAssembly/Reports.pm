@@ -94,7 +94,7 @@ sub _generate_and_save_report {
             $dataset_name,
         );
         unlink $file if -e $file;
-        my $fh = Genome::Utility::FileSystem->open_file_for_writing($file)
+        my $fh = Genome::Sys->open_file_for_writing($file)
             or return; # not ok
         my ($svs) = $dataset->to_separated_value_string(separator => "\t");
         unless ( $svs ) { # not ok

@@ -91,47 +91,58 @@ sub lookup_conservation_score {
         return 0;
     }
     
-    my ($model_name, $build_version);
+    my ($model_name, $reference_version, $combined_annotation_build_version);
     if($reference_transcripts and $species and $version){
         Carp::croak("species and version OR reference_transcripts must be specified");
         return 0;
     } elsif($reference_transcripts){
-        ($model_name, $build_version) = split("/", $reference_transcripts); 
-        $build_version =~ m/[\d]+_([\d]+)[a-zA-Z]/ or die "Malformed reference_transcripts: $model_name/$build_version";
+        ($model_name, $combined_annotation_build_version) = split("/", $reference_transcripts); 
+        $reference_version = $combined_annotation_build_version;
+        $reference_version =~ m/[\d]+_([\d]+)[a-zA-Z]/ or die "Malformed reference_transcripts: $model_name/$reference_version";
         $version = $1;
     } elsif($species and $version){
         $model_name = "NCBI-" . $species . ".combined-annotation";
         if($version =~ m/[\d]+_([\d]+)[a-zA-Z]/){
             $version = $1; 
-            $build_version = $version;
+            $reference_version = $version;
         }else{
             Carp::croak("Malformed version: " . $version);
+            return 0;
         }
-
     }else{
         Carp::croak("species and version OR reference_transcripts must be specified");
         return 0;
     }
+    
+    my $location;  
+    
+    if($combined_annotation_build_version){
+        #check if the combined annotation build has UCSC conservation data.  use it if it exists
+        my $combined_annotation_model = Genome::Model->get(name => $model_name);
+        my $combined_annotation_build = $combined_annotation_model->build_by_version($combined_annotation_build_version);
+        $location = $combined_annotation_build->ucsc_conservation_directory if (-d $combined_annotation_build->ucsc_conservation_directory);
+    }
 
-    #TODO: Remove these restrictions as soon as possible
-    unless($model_name eq 'NCBI-human.combined-annotation'){
-        Carp::croak("Cannot look up conservation scores for model: $model_name.  This module currently supports the following models: NCBI-human.combined-annotation"); 
+    unless($location){
+        #combined annotation build doesn't have a UCSC conservation dir.  Try the old logic
+        #TODO: Remove these restrictions as soon as possible
+        unless($model_name eq 'NCBI-human.combined-annotation'){
+            Carp::croak("Cannot look up conservation scores for model: $model_name.  This module currently supports the following models: NCBI-human.combined-annotation"); 
+            return 0;
+        }
+        unless($version == 36 or $version == 37){
+            Carp::croak("Cannot look up conservation scores for model $model_name version $version.  This module currently supports the following versions for $model_name: 36, 37"); 
+            return 0;
+        }
+
+        my %location_index = Genome::Info::UCSCConservation->ucsc_conservation_directories;
+        $location = $location_index{$version};
+    }
+
+    unless ($location){
+        Carp::croak("Cannot find a UCSC conservation directory for model_name $model_name version $version"); 
         return 0;
     }
-    unless($version == 36 or $version == 37){
-        Carp::croak("Cannot look up conservation scores for model $model_name version $version.  This module currently supports the following versions for $model_name: 36, 37"); 
-        return 0;
-    }
-
-    #my $model = Genome::Model->get(name => $model_name); 
-    #die "Could not get model $model_name: $!" unless $model;
-    #my $build = $model->build_by_version($build_version);
-    #die "Could not get $model_name build for version $build_version: $!" unless $build;
-
-    #TODO: This will need to change to support conservation dirs that have
-    #been sym linked to the build dirs
-    my %location_index = Genome::Info::UCSCConservation->ucsc_conservation_directories;
-    my $location = $location_index{$version};
 
     #TODO: we're copying directly from MG/ConsScore.pm from this point on.  It probably sucks and
     #needs to be refactored

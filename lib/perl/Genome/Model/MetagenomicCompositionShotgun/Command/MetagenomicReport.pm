@@ -215,7 +215,7 @@ sub _generate_taxonomy_report {
     # Count And Record Taxonomy Hits
     my $read_count_output_file = $self->report_dir . '/read_count_output';
     unlink $read_count_output_file if -e $read_count_output_file;
-    my $read_cnt_o = Genome::Utility::FileSystem->open_file_for_writing($read_count_output_file);
+    my $read_cnt_o = Genome::Sys->open_file_for_writing($read_count_output_file);
 
     my %species_counts_hash;
     my %phyla_counts_hash;
@@ -387,7 +387,7 @@ sub _generate_taxonomy_report {
 
 sub _load_taxonomy {
     my ($self, $filename, $header_ignore_str, $taxon_map_ref) = @_;
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($filename);
+    my $fh = Genome::Sys->open_file_for_reading($filename);
     my $taxonomy = {};
     my $header = <$fh>;
     unless ($header =~ /^$header_ignore_str/) {
@@ -415,7 +415,7 @@ sub _load_taxonomy {
 sub _write_count_and_close {
     my($self, $filename, $title, $counts_ref) = @_;
     unlink $filename if -e $filename;
-    my $file_o=Genome::Utility::FileSystem->open_file_for_writing($filename);
+    my $file_o=Genome::Sys->open_file_for_writing($filename);
     print $file_o "$title Name\t#Reads with hits\n";
     for my $name (keys %$counts_ref){
         next if (($name eq "") or ($name =~ /^\s+$/));

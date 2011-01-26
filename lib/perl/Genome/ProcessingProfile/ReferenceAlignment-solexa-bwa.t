@@ -128,7 +128,7 @@ is(scalar(@bad),0, "count of significant differences with the expected directory
     or do {
         diag(join("\n",@bad)); 
         diag("leaving a copy of the test alignment dir in the pwd.  compare to $comparison_dir");
-        my $rv = Genome::Utility::FileSystem->copy_directory($tmp_dir, $0 . '.last_failure');
+        my $rv = Genome::Sys->copy_directory($tmp_dir, $0 . '.last_failure');
     };
 
 exit;

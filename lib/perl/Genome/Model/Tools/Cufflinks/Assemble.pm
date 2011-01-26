@@ -55,7 +55,7 @@ sub execute {
         $params .= ' -q ';
     }
     my $cmd = $self->cufflinks_path .' '. $params .' '. $self->sam_file .' > '. $self->assembler_output_file .' 2>&1';
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$self->sam_file],
         output_files => [$self->transcripts_file,$self->transcript_expression_file,$self->gene_expression_file,$self->assembler_output_file],

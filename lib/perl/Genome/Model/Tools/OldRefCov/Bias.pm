@@ -36,11 +36,11 @@ class Genome::Model::Tools::OldRefCov::Bias {
 
 sub execute {
     my $self = shift;
-    unless(Genome::Utility::FileSystem->validate_directory_for_read_access($self->frozen_directory)) {
+    unless(Genome::Sys->validate_directory_for_read_access($self->frozen_directory)) {
         $self->error_message('Failed to validate frozen directory '. $self->frozen_directory .' for read access!');
         return;
     }
-    my $dh = Genome::Utility::FileSystem->open_directory($self->frozen_directory);
+    my $dh = Genome::Sys->open_directory($self->frozen_directory);
     unless ($dh) {
         $self->error_message('Failed to acquire directory handle for frozen directory '. $self->frozen_directory .":  $!");
         return;
@@ -90,7 +90,7 @@ sub execute {
         }
         $ref_counter++;
     }
-    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+    my $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
     unless ($output_fh) {
         $self->error_message('Failed to open output file '. $self->output_file .' for writing!');
         return;

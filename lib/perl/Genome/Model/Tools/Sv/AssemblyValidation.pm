@@ -4,12 +4,10 @@ package Genome::Model::Tools::Sv::AssemblyValidation;
 
 use strict;
 use warnings;
-use Genome::Model::Tools::Sv;
+use Genome;
 use Bio::SeqIO;
 use File::Temp;
 use File::Basename;
-
-our $VERSION = $Genome::Model::Tools::Sv::VERSION;
 
 =cut
 my %opts = (l=>500,p=>1000,s=>0,q=>0,n=>0,m=>10,x=>3,P=>-10,G=>-10,S=>0.02,A=>500,Q=>0);
@@ -172,6 +170,10 @@ class Genome::Model::Tools::Sv::AssemblyValidation {
             type => 'Integer',
             doc => 'Ignore tigra_sv for the calls before this number',
         },
+        reference_file => {
+            type => 'String',
+            doc => 'Specify reference in particular',
+        },
         _unc_pred_fh => {
             type => 'SCALAR',
         },
@@ -197,7 +199,9 @@ sub execute {
     my $out_file= $self->output_file;
 
     my $bp_file = $self->breakpoint_seq_file;
-    my ($bp_io, $cm_aln_fh);
+    my $bp_io;
+    my $cm_aln_fh = new IO::File;
+    my $unc_pred_fh;
 
     if ($bp_file) {
         if (-s $bp_file) {
@@ -212,17 +216,19 @@ sub execute {
 
     my $cm_aln_file = $self->cm_aln_file;
     if ($cm_aln_file) {
-        $cm_aln_fh = Genome::Utility::FileSystem->open_file_for_writing($cm_aln_file) or return;
+        #$cm_aln_fh = Genome::Sys->open_file_for_writing($cm_aln_file) or return;
+        $cm_aln_fh->open(">$cm_aln_file");
     }
 
     my $unc_pred_file = $self->unconfirm_predict_file;
     if ($unc_pred_file) {
-        my $unc_pred_fh = Genome::Utility::FileSystem->open_file_for_writing($unc_pred_file) or return;
+        #my $unc_pred_fh = Genome::Sys->open_file_for_writing($unc_pred_file) or return;
+        $unc_pred_fh->open(">$unc_pred_fh");
         $self->_unc_pred_fh($unc_pred_fh);
     }
 
-    my $out_fh  = Genome::Utility::FileSystem->open_file_for_writing($out_file) or return;
-    $out_fh->print("\#CHR1\tPOS1\tCHR2\tPOS2\tORI\tSIZE\tTYPE\tHET\twASMSCORE\tTRIMMED_CONTIG_SIZE\tALIGNED\%\tNUM_SEG\tNUM_FSUB\tNUM_FINDEL\tBP_FINDEL\tMicroHomology\tMicroInsertion\tPREFIX\tASMPARM\tCopyNumber\tGene\tKnown\n");
+    #my $out_fh  = Genome::Sys->open_file_for_writing($out_file) or return;
+    #$out_fh->print("\#CHR1\tPOS1\tCHR2\tPOS2\tORI\tSIZE\tTYPE\tHET\twASMSCORE\tTRIMMED_CONTIG_SIZE\tALIGNED\%\tNUM_SEG\tNUM_FSUB\tNUM_FINDEL\tBP_FINDEL\tMicroHomology\tMicroInsertion\tPREFIX\tASMPARM\tCopyNumber\tGene\tKnown\n");
 
     srand(time ^ $$);
 
@@ -248,9 +254,9 @@ sub execute {
     my $tigra_sv_cmd = '/gscuser/xfan/kdevelop/TIGRA_SV/src/tigra_sv';
     my $tigra_sv_options = $self->_get_tigra_options;
     my $bam_files = $self->_check_bam;
-    $tigra_sv_cmd .= ' '. $tigra_sv_options . $sv_file . $bam_files;
+    $tigra_sv_cmd .= ' '. $tigra_sv_options . $sv_file . $bam_files . " > " . $out_file;
 
-    my $rv = Genome::Utility::FileSystem->shellcmd(
+    my $rv = Genome::Sys->shellcmd(
         cmd           => $tigra_sv_cmd,
         input_files   => [$sv_file],
         #output_files => [$snv_output_file],
@@ -264,9 +270,16 @@ sub execute {
     my @tigra_sv_fas = glob("$datadir/*.fa.contigs.fa");#get tigra homo ctg list
     @tigra_sv_fas = sort{(basename ($a)=~/^\S+?\.(\d+)\./)[0]<=> (basename ($b)=~/^\S+?\.(\d+)\./)[0]}@tigra_sv_fas; #sort ctg file by chr pos
     
+    
+    # open output file for the following resume
+    my $out_fh = new IO::File;
+    $out_fh->open(">>$out_file");
+
+
     for my $tigra_sv_fa (@tigra_sv_fas) {
         my ($tigra_sv_name) = basename $tigra_sv_fa =~ /^(\S+)\.fa\.contigs\.fa/;
-        my ($chr1,$start,$chr2,$end,$type,$size,$ori,undef) = split /\./, $tigra_sv_name; # you get the $size from $prefix         
+        my ($chr1,$start,$chr2,$end,$type,$size,$ori,undef) = split /\./, $tigra_sv_name; # you get the $size from $prefix        
+        next if($chr2 ne $self->specify_chr && defined $self->specify_chr); 
         my $prefix = join('.',$chr1,$start,$chr2,$end,$type,$size,$ori);
 
         $self->_N50size(_ComputeTigraN50($tigra_sv_fa));
@@ -289,6 +302,7 @@ sub execute {
                    $size >= $self->min_size_of_confirm_asm_sv && (!defined $self->invalid_indel_range || abs($maxSV->{size}-$size)<=$self->invalid_indel_range))) {
             my $scarstr = $maxSV->{scarsize}>0 ? substr($maxSV->{contig},$maxSV->{bkstart}-1,$maxSV->{bkend}-$maxSV->{bkstart}+1) : '-';
 
+            #        printf STDOUT ("%s\t%d(%d)\t%s\t%d(%d)\t%s\t%d(%d)\t%s(%s)\t%s\t%d\t%d\t%d\%\t%d\t%d\t%d\t%d\t%d\t%s\t%s\ta%d.b%d\t%s\t%s\t%s\n",$maxSV->{chr1},$maxSV->{start1},$start,$maxSV->{chr2},$maxSV->{start2},$end,$maxSV->{ori},$maxSV->{size},$size,$maxSV->{type},$type,$maxSV->{het},$maxSV->{weightedsize},$maxSV->{read_len},$maxSV->{fraction_aligned}*100,$maxSV->{n_seg},$maxSV->{n_sub},$maxSV->{n_indel},$maxSV->{nbp_indel},$maxSV->{microhomology},$scarstr,$prefix,50,100, 'NA', 'NA', 'NA');
             $out_fh->printf("%s\t%d(%d)\t%s\t%d(%d)\t%s\t%d(%d)\t%s(%s)\t%s\t%d\t%d\t%d\%\t%d\t%d\t%d\t%d\t%d\t%s\t%s\ta%d.b%d\t%s\t%s\t%s\n",$maxSV->{chr1},$maxSV->{start1},$start,$maxSV->{chr2},$maxSV->{start2},$end,$maxSV->{ori},$maxSV->{size},$size,$maxSV->{type},$type,$maxSV->{het},$maxSV->{weightedsize},$maxSV->{read_len},$maxSV->{fraction_aligned}*100,$maxSV->{n_seg},$maxSV->{n_sub},$maxSV->{n_indel},$maxSV->{nbp_indel},$maxSV->{microhomology},$scarstr,$prefix,50,100, 'NA', 'NA', 'NA');
         
             if ($bp_io) {  #save breakpoint sequence
@@ -383,6 +397,7 @@ sub _get_tigra_options {
     $tigra_opts .= '-z ' . $self->skip_call if($self->skip_call);
     $tigra_opts .= '-c ' . $self->specify_chr . ' ' if($self->specify_chr);
     $tigra_opts .= '-M ' . $self->min_size_of_confirm_asm_sv . ' ' if($self->min_size_of_confirm_asm_sv);
+    $tigra_opts .= '-R ' . $self->reference_file . ' ' if($self->reference_file);
     for my $opt (keys %tigra_sv_options) {
         if ($self->$opt) {
             $tigra_opts .= '-'.$tigra_sv_options{$opt}.' '.$self->$opt . ' ';
@@ -425,7 +440,7 @@ sub _cross_match_validation {
     my $cm_cmd_opt = '-bandwidth 20 -minmatch 20 -minscore 25 -penalty '.$self->cm_sub_penalty.' -discrep_lists -tags -gap_init '.$self->cm_gap_init_penalty.' -gap_ext -1';
 	my $cm_cmd = "cross_match $tigra_sv_fa $ref_fa $cm_cmd_opt > $cm_out 2>/dev/null";
 	           
-    my $rv = Genome::Utility::FileSystem->shellcmd (
+    my $rv = Genome::Sys->shellcmd (
         cmd           => $cm_cmd,
         input_files   => [$tigra_sv_fa, $ref_fa],
         #output_files => [$cm_out],
@@ -639,7 +654,7 @@ sub _ComputeTigraN50{
     my @sizes;
     my $totalsize = 0;
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($contigfile) or return;
+    my $fh = Genome::Sys->open_file_for_reading($contigfile) or return;
     while (my $l = $fh->getline){
         chomp $l;
         next unless $l =~ /^\>/;
@@ -667,7 +682,7 @@ sub _ComputeTigraWeightedAvgSize{
     my $totalsize  = 0;
     my $totaldepth = 0;
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($contigfile) or return;
+    my $fh = Genome::Sys->open_file_for_reading($contigfile) or return;
     while (my $l = $fh->getline) {
         chomp $l;
         next unless $l =~ /^\>/;

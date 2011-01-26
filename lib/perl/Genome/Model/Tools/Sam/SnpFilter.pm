@@ -99,7 +99,7 @@ sub execute {
     my %indel_filter;
 
     if ($self->indel_file) {
-        my $indel_fh = Genome::Utility::FileSystem->open_file_for_reading($self->indel_file) or return;
+        my $indel_fh = Genome::Sys->open_file_for_reading($self->indel_file) or return;
 
         while (my $indel = $indel_fh->getline) {
             my ($chr, $pos, $id, $indel_seq, $indel_score) = $indel =~ /^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+\S+\s+(\S+)\s+/;
@@ -114,8 +114,8 @@ sub execute {
     my $last_chr = '';
     
     my $out_file = $self->out_file || $self->snp_file . '.sam_SNPfilter';
-    my $out_fh = Genome::Utility::FileSystem->open_file_for_writing($out_file) or return;
-    my $snp_fh = Genome::Utility::FileSystem->open_file_for_reading($snp_file) or return;
+    my $out_fh = Genome::Sys->open_file_for_writing($out_file) or return;
+    my $snp_fh = Genome::Sys->open_file_for_reading($snp_file) or return;
     
     while (my $snp = $snp_fh->getline) {
         my ($chr, $pos, $cns_qual, $snp_qual, $map_qual, $rd_depth) = $snp =~ /^(\S+)\s+(\S+)\s+\S+\s+\S+\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+/;

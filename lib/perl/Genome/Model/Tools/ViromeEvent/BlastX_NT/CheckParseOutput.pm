@@ -1,4 +1,3 @@
-
 package Genome::Model::Tools::ViromeEvent::BlastX_NT::CheckParseOutput;
 
 use strict;
@@ -8,10 +7,10 @@ use Genome;
 use Workflow;
 use IO::File;
 use File::Temp;
-use File::Basename;
 use Bio::SeqIO;
 use Bio::SearchIO;
 use Data::Dumper;
+use File::Basename;
 
 class Genome::Model::Tools::ViromeEvent::BlastX_NT::CheckParseOutput{
     is => 'Genome::Model::Tools::ViromeEvent',
@@ -21,28 +20,12 @@ sub help_brief {
     return "gzhao's BlastX NT check parse output";
 }
 
-sub help_synopsis {
-    return <<"EOS"
-EOS
-}
-
 sub help_detail {
     return <<"EOS"
 This script will check all .tblastx.parsed file in the .BNfiltered_TBLASTX
 subdirectory of the given directory to make sure parsing blastn output 
 file is finished for each file.
-
-perl script <sample dir>
-<sample dir> = full path to the folder holding files for a sample library 
-	without last "/"
 EOS
-}
-
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    return $self;
-
 }
 
 sub execute {
@@ -62,11 +45,11 @@ sub execute {
 
     my @fa_files = glob("$blast_dir/*fa"); #JUST TO GET ROOT FILE NAME TO DERIVE OTHER FILE NAMES
     unless (scalar @fa_files > 0) {
-	if (-s $dir.'/'.$sample_name.'.BNFiltered.fa' > 0) {
+	if (-s $dir.'/'.$sample_name.'.BNfiltered.fa' > 0) {
 	    $self->log_event("Failed to find any NT BlastX out files for $sample_name");
 	    return;
 	}
-	elsif (-e $dir.'/'.$sample_name.'.BNFiltered.fa') {
+	elsif (-e $dir.'/'.$sample_name.'.BNfiltered.fa') {
 	    $self->log_event("No NT BlastX out files available for parsing for $sample_name");
 	    return 1;
 	}
@@ -203,7 +186,6 @@ sub run_parser {
 	my $assigned = 0;
 
 	# only take the best hits
-	#my $best_e = 100;
 	my $hit_count = 0;
 	my $determined = 0;
 
@@ -224,16 +206,13 @@ sub run_parser {
 	    $haveHit = 1;
 	    $hit_count++;
 	    if ($hit_count == 1) {
-#		$best_e = $hit->significance;
 		$best_bit_value = $highest_bit_value;
 	    }
    
 	    # check whether the hit should be kept for further analysis
 	    if ($hit->significance <= $E_cutoff){ # similar to known, need Phylotyped
-#	    if ($highest_bit_value >= $bits_cutoff) { 
 
 		my $have_significant_hit = 1;
-#		if ($hit->significance == $best_e) {      <--------------------------- OLD
 		if ($highest_bit_value == $best_bit_value) {
 
 		    # from gi get taxonomy lineage
@@ -358,9 +337,7 @@ sub run_parser {
     return 1;
 }
 		
-############################################
 sub PhyloType {
-    #my ($self, $lineage_ref, $hit_ref, $best_e, $dbh_sqlite, $dbh_taxonomy, $assignment_ref) = @_;
     my ($self, $lineage_ref, $hit_ref, $dbh_sqlite, $dbh_taxonomy, $assignment_ref) = @_;
     my $description = "";
     my $node_id; 
@@ -383,7 +360,6 @@ sub PhyloType {
 	$name = $obj->scientific_name;
 
 	#looks like if assigned 'Homo' don't do rest of classification??
-
 	if ($name eq "Metazoa") {
 	    # make assignment
 	    if (not exists $assignment_ref->{'Homo'}) {
@@ -491,4 +467,3 @@ sub PhyloType {
 }
 
 1;
-

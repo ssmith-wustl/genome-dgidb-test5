@@ -149,7 +149,7 @@ sub create_observer_for_unlock {
     my $observer;
     my $callback = sub {
         for my $lock (@locks) {
-            Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock);
+            Genome::Sys->unlock_resource(resource_lock => $lock);
         }
         print STDERR "Releasing locks, allocation process complete\n";
         $observer->delete;
@@ -165,7 +165,7 @@ sub get_volume_lock {
     my ($class, $mount_path) = @_;
     my $modified_mount = $mount_path;
     $modified_mount =~ s/\//_/g;
-    my $volume_lock = Genome::Utility::FileSystem->lock_resource(
+    my $volume_lock = Genome::Sys->lock_resource(
         resource_lock => '/gsc/var/lock/allocation/volume' . $modified_mount,
         max_try => 10,
         block_sleep => 2,
@@ -175,7 +175,7 @@ sub get_volume_lock {
 
 sub get_allocation_lock {
     my ($class, $id) = @_;
-    my $allocation_lock = Genome::Utility::FileSystem->lock_resource(
+    my $allocation_lock = Genome::Sys->lock_resource(
         resource_lock => '/gsc/var/lock/allocation/allocation_' . join('_', split(' ', $id)),
         max_try => 5,
         block_sleep => 2,
@@ -308,7 +308,7 @@ sub create {
                 and $candidate_volume->can_allocate eq $can_allocate
                 and $candidate_volume->disk_status eq $disk_status
                 and grep { $_ eq $disk_group_name } $candidate_volume->disk_group_names) {
-            Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock);
+            Genome::Sys->unlock_resource(resource_lock => $lock);
             next;
         }
 
@@ -327,14 +327,14 @@ sub create {
     # Now finalize creation of the allocation object
     my $self = $class->SUPER::create(%params);
     unless ($self) {
-        Genome::Utility::FileSystem->unlock_resource(resource_lock => $volume_lock);
+        Genome::Sys->unlock_resource(resource_lock => $volume_lock);
         confess "Could not create allocation with params: " . Data::Dumper::Dumper(\%params);
     }
 
     # Add a commit hook to create allocation path. If UR_DBI_NO_COMMIT is set, then this won't fire.
     my $dir_observer;
     my $dir_callback = sub {
-        my $dir = Genome::Utility::FileSystem->create_directory($self->absolute_path);
+        my $dir = Genome::Sys->create_directory($self->absolute_path);
         unless (defined $dir and -d $dir) {
             $self->error_message("Could not create allocation directory tree " . $self->absolute_path);
         }
@@ -372,7 +372,7 @@ sub delete {
     my $id = $self->id;
     $self = Genome::Disk::Allocation->load($id);
     unless ($self) {
-        Genome::Utility::FileSystem->unlock_resource(resource_lock => $allocation_lock);
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess "Could not reload allocation $id from database" unless $self;
     }
 
@@ -382,9 +382,9 @@ sub delete {
     my $path = $self->absolute_path;
     if ($remove_allocation_directory and -d $path) {
         $self->status_message("Removing allocation directory $path");
-        my $rv = Genome::Utility::FileSystem->remove_directory_tree($self->absolute_path);
+        my $rv = Genome::Sys->remove_directory_tree($self->absolute_path);
         unless (defined $rv and $rv == 1) {
-            Genome::Utility::FileSystem->unlock_resource(resource_lock => $allocation_lock);
+            Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
             confess "Could not remove allocation directory $path!";
         }
     }
@@ -395,13 +395,13 @@ sub delete {
     # Lock volume and update
     my $volume_lock = $self->get_volume_lock($self->mount_path);
     unless ($volume_lock) {
-        Genome::Utility::FileSystem->unlock_resource(resource_lock => $allocation_lock);
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Could not get lock on volume ' . $self->mount_path;
     }
     my $volume = Genome::Disk::Volume->get(mount_path => $self->mount_path);
     unless ($volume) {
-        Genome::Utility::FileSystem->unlock_resource(resource_lock => $volume_lock);
-        Genome::Utility::FileSystem->unlock_resource(resource_lock => $allocation_lock);
+        Genome::Sys->unlock_resource(resource_lock => $volume_lock);
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Found no disk volume with mount path ' . $self->mount_path;
     }
 
@@ -428,7 +428,7 @@ sub reallocate {
     my $id = $self->id;
     $self = Genome::Disk::Allocation->get($id);
     unless ($self) {
-        Genome::Utility::FileSystem->unlock_resource(resource_lock => $allocation_lock);
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess "Could not reload allocation $id after acquiring lock!";
     }
 
@@ -437,15 +437,15 @@ sub reallocate {
     # Either check the new size (if given) or get the current size of the allocation directory
     if (defined $kilobytes_requested) {
         unless ($self->check_kb_requested($kilobytes_requested)) {
-            Genome::Utility::FileSystem->unlock_resource(resource_lock => $allocation_lock);
+            Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
             confess 'Kilobytes requested not valid!';
         }
     }
     else {
         $self->status_message('New allocation size not supplied, setting to size of data in allocated directory');
-        $kilobytes_requested = Genome::Utility::FileSystem->disk_usage_for_path($self->absolute_path);
+        $kilobytes_requested = Genome::Sys->disk_usage_for_path($self->absolute_path);
         unless (defined $kilobytes_requested) {
-            Genome::Utility::FileSystem->unlock_resource(resource_lock => $allocation_lock);
+            Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
             confess 'Could not determine size of allocation directory ' . $self->absolute_path;
         }
     }
@@ -455,14 +455,14 @@ sub reallocate {
     # Lock and retrieve volume
     my $volume_lock = $self->get_volume_lock($self->mount_path);
     unless (defined $volume_lock) {
-        Genome::Utility::FileSystem->unlock_resource(resource_lock => $allocation_lock);
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Could not get lock on volume ' . $self->mount_path;
     }
 
     my $volume = Genome::Disk::Volume->get(mount_path => $self->mount_path);
     unless ($volume) {
-        Genome::Utility::FileSystem->unlock_resource(resource_lock => $volume_lock);
-        Genome::Utility::FileSystem->unlock_resource(resource_lock => $allocation_lock);
+        Genome::Sys->unlock_resource(resource_lock => $volume_lock);
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Could not get volume with mount path ' . $self->mount_path;
     }
 
@@ -473,8 +473,8 @@ sub reallocate {
 
     # Make sure there's room for the allocation... only applies if the new allocation is bigger than the old
     unless ($volume->unallocated_kb >= $diff) {
-        Genome::Utility::FileSystem->unlock_resource(resource_lock => $volume_lock);
-        Genome::Utility::FileSystem->unlock_resource(resource_lock => $allocation_lock);
+        Genome::Sys->unlock_resource(resource_lock => $volume_lock);
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Not enough unallocated space on volume ' . $volume->mount_path . " to increase allocation size by $diff kb";
     }
 

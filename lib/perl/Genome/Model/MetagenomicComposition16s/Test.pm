@@ -251,7 +251,7 @@ sub get_mock_build {
 
     # create dirs
     for my $dir ( $build->sub_dirs ) {
-        Genome::Utility::FileSystem->create_directory( $build->data_directory."/$dir" )
+        Genome::Sys->create_directory( $build->data_directory."/$dir" )
             or return;
     }
 
@@ -414,12 +414,12 @@ sub _link_contents_of_dir {
     my ($self, $dir_to_link) = @_;
 
     my $dest_dir = $self->_build->$dir_to_link;
-    Genome::Utility::FileSystem->validate_existing_directory($dest_dir)
+    Genome::Sys->validate_existing_directory($dest_dir)
         or confess;
 
     my $dir_base_name = File::Basename::basename($dest_dir);
     my $source_dir = '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16s'.ucfirst($self->_sequencing_platform).'/build/'.$dir_base_name;
-    my $dh = Genome::Utility::FileSystem->open_directory($source_dir)
+    my $dh = Genome::Sys->open_directory($source_dir)
         or confess;
 
     $dh->read; $dh->read; # . and .. dirs

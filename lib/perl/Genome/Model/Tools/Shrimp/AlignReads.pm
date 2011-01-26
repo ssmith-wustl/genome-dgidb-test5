@@ -91,11 +91,11 @@ sub post_execute {
     }
 
     my $output_file = $self->output_directory .'/'. $output_basename .'.shrimp';
-    Genome::Utility::FileSystem->cat(
+    Genome::Sys->cat(
         input_files => \@alignment_files,
         output_file => $output_file,
     );
-    Genome::Utility::FileSystem->cat(
+    Genome::Sys->cat(
         input_files => \@aligner_output_files,
         output_file => $self->output_directory .'/'. $output_basename .'.aligner_output',
     );

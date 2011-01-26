@@ -25,12 +25,12 @@ ok($cmd, "successfully created pairwise n remove cmd");
 ok($cmd->execute, "successfully executed pairwise n remove cmd");
 is($cmd->pairs_passed, 1, "correct number of pairs passed");
 is($cmd->pairs_passed, 1, "correct number of singletons passed");
-is(Genome::Utility::FileSystem->md5sum($dir . "/nf.txt"),
-   Genome::Utility::FileSystem->md5sum($datadir . "/expected_fwd.txt"),
+is(Genome::Sys->md5sum($dir . "/nf.txt"),
+   Genome::Sys->md5sum($datadir . "/expected_fwd.txt"),
    'fwd output matches what was expected');
-is(Genome::Utility::FileSystem->md5sum($dir . "/nr.txt"),
-   Genome::Utility::FileSystem->md5sum($datadir . "/expected_rev.txt"),
+is(Genome::Sys->md5sum($dir . "/nr.txt"),
+   Genome::Sys->md5sum($datadir . "/expected_rev.txt"),
    'rev output matches what was expected');
-is(Genome::Utility::FileSystem->md5sum($dir . "/ns.txt"),
-   Genome::Utility::FileSystem->md5sum($datadir . "/expected_singleton.txt"),
+is(Genome::Sys->md5sum($dir . "/ns.txt"),
+   Genome::Sys->md5sum($datadir . "/expected_singleton.txt"),
    'singleton output matches what was expected');

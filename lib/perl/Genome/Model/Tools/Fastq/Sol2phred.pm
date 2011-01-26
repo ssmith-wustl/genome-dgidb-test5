@@ -43,9 +43,9 @@ sub create {
 
 sub execute {
     my $self = shift;
-    my $reader = Genome::Utility::FileSystem->open_file_for_reading($self->fastq_file);
+    my $reader = Genome::Sys->open_file_for_reading($self->fastq_file);
     binmode $reader, ":utf8";
-    my $writer = Genome::Utility::FileSystem->open_file_for_writing($self->phred_fastq_file);
+    my $writer = Genome::Sys->open_file_for_writing($self->phred_fastq_file);
     binmode $writer, ":utf8";
     while (my $line = $reader->getline) {
         chomp($line);

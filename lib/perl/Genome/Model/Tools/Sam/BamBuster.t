@@ -11,7 +11,7 @@ use File::Basename;
 my $datadir = $Bin . '/BamBuster.t.d';
 
 
-my $tmp_dir = Genome::Utility::FileSystem->base_temp_directory;
+my $tmp_dir = Genome::Sys->base_temp_directory;
 my $test_dir = $tmp_dir . "/test";
 mkpath($test_dir);
 
@@ -34,14 +34,14 @@ for my $rg_id ('-123456','-123457','-123458') {
     my $generated_file_sam = "$tmp_dir/$rg_id.generated";
     my $expected_file_sam = "$tmp_dir/$rg_id.expected";
 
-    Genome::Utility::FileSystem->shellcmd(cmd=>sprintf("samtools view -h -- %s > %s", $generated_file, $generated_file_sam));
-    Genome::Utility::FileSystem->shellcmd(cmd=>sprintf("samtools view -h -r %s -- %s > %s",
+    Genome::Sys->shellcmd(cmd=>sprintf("samtools view -h -- %s > %s", $generated_file, $generated_file_sam));
+    Genome::Sys->shellcmd(cmd=>sprintf("samtools view -h -r %s -- %s > %s",
                                                         $rg_id, 
                                                         "$datadir/testrg.bam",
                                                         $expected_file_sam));
 
-    is(Genome::Utility::FileSystem->md5sum($generated_file_sam),
-    Genome::Utility::FileSystem->md5sum($expected_file_sam), "sam content matches what is expected")
+    is(Genome::Sys->md5sum($generated_file_sam),
+    Genome::Sys->md5sum($expected_file_sam), "sam content matches what is expected")
                                     
 }
 

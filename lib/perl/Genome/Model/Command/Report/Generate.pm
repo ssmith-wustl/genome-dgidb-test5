@@ -47,7 +47,7 @@ sub create {
         or return;
 
     if ( $self->directory ) {
-        unless ( Genome::Utility::FileSystem->validate_directory_for_write_access($self->directory) ) {
+        unless ( Genome::Sys->validate_directory_for_write_access($self->directory) ) {
             $self->error_message('Requested to save to directroy XSLT file is required to create');
             return;
         }

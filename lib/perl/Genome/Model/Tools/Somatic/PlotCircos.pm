@@ -9,7 +9,7 @@ use strict;
 use Genome;
 use Carp;
 use IO::File;
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 use Cwd qw( abs_path getcwd );
 use File::Basename;
 
@@ -196,7 +196,7 @@ sub execute {
     }
 
     #copynumber information
-    my ($cna_circos_fh, $cna_temp_file) = Genome::Utility::FileSystem->create_temp_file();
+    my ($cna_circos_fh, $cna_temp_file) = Genome::Sys->create_temp_file();
     $self->_cna_circos_file($cna_temp_file);
     #First convert everything to Circos format.
 
@@ -214,7 +214,7 @@ sub execute {
             return;
         }
     }
-    my ($hc_circos_fh, $hc_temp_file) = Genome::Utility::FileSystem->create_temp_file();
+    my ($hc_circos_fh, $hc_temp_file) = Genome::Sys->create_temp_file();
     $self->_tier1_hc_circos_file($hc_temp_file);
     
     $self->convert_sniper_file($hc_fh, $hc_circos_fh);
@@ -229,7 +229,7 @@ sub execute {
             return;
         }
     }
-    my ($hclabel_circos_fh, $hclabel_temp_file) = Genome::Utility::FileSystem->create_temp_file();
+    my ($hclabel_circos_fh, $hclabel_temp_file) = Genome::Sys->create_temp_file();
     $self->_tier1_hclabel_circos_file($hclabel_temp_file);
     
     $self->convert_anno_file($hclabel_fh, $hclabel_circos_fh);
@@ -245,7 +245,7 @@ sub execute {
             return;
         }
     }
-    my ($rchclabel_circos_fh, $rchclabel_temp_file) = Genome::Utility::FileSystem->create_temp_file();
+    my ($rchclabel_circos_fh, $rchclabel_temp_file) = Genome::Sys->create_temp_file();
     $self->_tier1_rchclabel_circos_file($rchclabel_temp_file);
     
     $self->convert_anno_file($rchclabel_fh, $rchclabel_circos_fh);
@@ -260,7 +260,7 @@ sub execute {
             return;
         }
     }
-    my ($lc_circos_fh, $lc_temp_file) = Genome::Utility::FileSystem->create_temp_file();
+    my ($lc_circos_fh, $lc_temp_file) = Genome::Sys->create_temp_file();
     $self->_tier1_lc_circos_file($lc_temp_file);
     
     $self->convert_sniper_file($lc_fh, $lc_circos_fh);
@@ -276,7 +276,7 @@ sub execute {
             return;
         }
     }
-    my ($ctx_circos_fh, $ctx_temp_file) = Genome::Utility::FileSystem->create_temp_file();
+    my ($ctx_circos_fh, $ctx_temp_file) = Genome::Sys->create_temp_file();
     $self->_ctx_circos_file($ctx_temp_file);
     
     $self->convert_breakdancer_file($ctx_fh, $ctx_circos_fh, "dgreen");
@@ -290,7 +290,7 @@ sub execute {
             return;
         }
     }
-    my ($itx_circos_fh, $itx_temp_file) = Genome::Utility::FileSystem->create_temp_file();
+    my ($itx_circos_fh, $itx_temp_file) = Genome::Sys->create_temp_file();
     $self->_itx_circos_file($itx_temp_file);
     
     $self->convert_breakdancer_file($itx_fh, $itx_circos_fh, "lgreen");
@@ -305,7 +305,7 @@ sub execute {
             return;
         }
     }
-    my ($ins_circos_fh, $ins_temp_file) = Genome::Utility::FileSystem->create_temp_file();
+    my ($ins_circos_fh, $ins_temp_file) = Genome::Sys->create_temp_file();
     $self->_ins_circos_file($ins_temp_file);
     
     $self->convert_breakdancer_file($ins_fh, $ins_circos_fh, "orange");
@@ -320,7 +320,7 @@ sub execute {
             return;
         }
     }
-    my ($inv_circos_fh, $inv_temp_file) = Genome::Utility::FileSystem->create_temp_file();
+    my ($inv_circos_fh, $inv_temp_file) = Genome::Sys->create_temp_file();
     $self->_inv_circos_file($inv_temp_file);
     
     $self->convert_breakdancer_file($inv_fh, $inv_circos_fh, "purple");
@@ -335,7 +335,7 @@ sub execute {
             return;
         }
     }
-    my ($del_circos_fh, $del_temp_file) = Genome::Utility::FileSystem->create_temp_file();
+    my ($del_circos_fh, $del_temp_file) = Genome::Sys->create_temp_file();
     $self->_del_circos_file($del_temp_file);
     
     $self->convert_breakdancer_file($del_fh, $del_circos_fh, 'dblue');
@@ -345,17 +345,17 @@ sub execute {
     ####ADDED FOR BRC1 ONLY####
     
     #write out config files etc 
-    my ($ideogram_fh, $ideogram_path) = Genome::Utility::FileSystem->create_temp_file($self->ideogram_file_name);
+    my ($ideogram_fh, $ideogram_path) = Genome::Sys->create_temp_file($self->ideogram_file_name);
     print $ideogram_fh $self->ideogram_file_contents;
     $ideogram_fh->close;
     $self->_ideogram_file($ideogram_path);
 
-    my ($color_fh, $color_path) = Genome::Utility::FileSystem->create_temp_file($self->color_file_name);
+    my ($color_fh, $color_path) = Genome::Sys->create_temp_file($self->color_file_name);
     print $color_fh $self->color_file_contents;
     $color_fh->close;
     $self->_colors_file($color_path);
 
-    my ($config_fh, $config_path) = Genome::Utility::FileSystem->create_temp_file($self->config_file_name);
+    my ($config_fh, $config_path) = Genome::Sys->create_temp_file($self->config_file_name);
     print $config_fh $self->config_file_contents;
     $config_fh->close;
 

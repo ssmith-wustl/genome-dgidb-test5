@@ -45,7 +45,7 @@ class Genome::Model::Build {
         processing_profile_name => { via => 'model' },
         the_events              => { is => 'Genome::Model::Event', reverse_as => 'build', is_many => 1 },
         the_events_statuses     => { via => 'the_events', to => 'event_status' },
-        the_master_event        => { is => 'Genome::Model::Event', via => 'the_events', to => '-filter', reverse_as => 'build', where => [ event_type => 'genome model build' ] },
+        the_master_event        => { is => 'Genome::Model::Event', reverse_as => 'build', where => [ event_type => 'genome model build' ], is_many => 1, is_constant => 1},
         run_by                  => { via => 'the_master_event', to => 'user_name' },
         status                  => { via => 'the_master_event', to => 'event_status', is_mutable => 1 },
         date_scheduled          => { via => 'the_master_event', to => 'date_scheduled', },
@@ -453,7 +453,7 @@ sub resolve_data_directory {
         # Rather than relying on this if statement, tests should specify a build directory.
         $build_data_directory = $model_data_directory . '/build' . $self->id;
         warn "Please update this test to set build data_directory. (generated data_directory: \"$build_data_directory\")";
-        unless (Genome::Utility::FileSystem->create_directory($build_data_directory)) {
+        unless (Genome::Sys->create_directory($build_data_directory)) {
             $self->error_message("Failed to create directory '$build_data_directory'");
             die $self->error_message;
         }
@@ -494,12 +494,12 @@ sub resolve_data_directory {
         }
     
         $build_data_directory = $disk_allocation->absolute_path;
-        Genome::Utility::FileSystem->validate_existing_directory($build_data_directory);
+        Genome::Sys->validate_existing_directory($build_data_directory);
     
         # TODO: we should stop having model directories and making build symlinks!!!
         my $build_symlink = $model_data_directory . '/build' . $self->build_id;
         unlink $build_symlink if -e $build_symlink;
-        unless (Genome::Utility::FileSystem->create_symlink($build_data_directory,$build_symlink)) {
+        unless (Genome::Sys->create_symlink($build_data_directory,$build_symlink)) {
             $self->error_message("Failed to make symlink \"$build_symlink\" with target \"$build_data_directory\"");
             die $self->error_message;
         }
@@ -555,7 +555,7 @@ sub add_report {
     }
     else {
         $self->status_message("creating directory $directory...");
-        unless (Genome::Utility::FileSystem->create_directory($directory)) {
+        unless (Genome::Sys->create_directory($directory)) {
             die "failed to make directory $directory!: $!";
         }
     }
@@ -630,7 +630,7 @@ sub stop {
 sub _kill_job {
     my ($self, $job) = @_;
 
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => 'bkill '.$job->{Job},
     );
 
@@ -845,7 +845,7 @@ sub _launch {
         # lock model
         my $model_id = $self->model->id;
         my $lock_id = '/gsc/var/lock/build_start/'.$model_id;
-        my $lock = Genome::Utility::FileSystem->lock_resource(
+        my $lock = Genome::Sys->lock_resource(
             resource_lock => $lock_id, 
             block_sleep => 3,
             max_try => 3,
@@ -860,7 +860,7 @@ sub _launch {
 
         my $job_id = $self->_execute_bsub_command($lsf_command);
         unless ($job_id) {
-            Genome::Utility::FileSystem->lock_resource(resource_lock => $lock) if ($lock);
+            Genome::Sys->lock_resource(resource_lock => $lock) if ($lock);
             return;
         }
         
@@ -873,7 +873,7 @@ sub _launch {
                 unless ( $bresume_output =~ /^Job <$job_id> is being resumed$/ ) {
                     $self->status_message($bresume_output);
                 }
-                Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock_id);
+                Genome::Sys->unlock_resource(resource_lock => $lock_id);
             }
         );
         if ($commit_observer) {
@@ -894,10 +894,10 @@ sub _initialize_workflow {
     my $self = shift;
     my $lsf_queue_eliminate_me = shift || 'apipe';
 
-    Genome::Utility::FileSystem->create_directory( $self->data_directory )
+    Genome::Sys->create_directory( $self->data_directory )
         or return;
 
-    Genome::Utility::FileSystem->create_directory( $self->log_directory )
+    Genome::Sys->create_directory( $self->log_directory )
         or return;
 
     if ( my $existing_build_event = $self->build_event ) {
@@ -1503,7 +1503,7 @@ sub delete {
     # TODO If no-commit is on, the build directory should not be removed
     if ($self->data_directory && -e $self->data_directory && !$keep_build_directory) {
         $self->status_message("Removing build data directory at " . $self->data_directory);
-        my $rv = Genome::Utility::FileSystem->remove_directory_tree($self->data_directory);
+        my $rv = Genome::Sys->remove_directory_tree($self->data_directory);
         confess "Failed to remove build directory at " . $self->data_directory unless defined $rv and $rv;
     }
     else {
@@ -1567,11 +1567,12 @@ sub get_metric {
 sub files_in_data_directory { 
     my $self = shift;
     my @files;
-    find(
-        sub {
+    find({
+        wanted => sub {
             my $file = $File::Find::name;
-            push @files, $file if -f $file;
+            push @files, $file;
         },
+        follow => 1, },
         $self->data_directory,
     );
     return \@files;
@@ -1610,6 +1611,8 @@ sub regex_files_for_diff {
     return ();
 }
 
+# A list of metrics that the differ should ignore. Some model/build types store information
+# as metrics that need to be diffed. Override this in subclasses.
 sub metrics_ignored_by_diff {
     return ();
 }
@@ -1655,11 +1658,12 @@ sub compare_output {
     # Create hashes for each build, keys are paths relative to build directory and 
     # values are full file paths
     my (%file_paths, %other_file_paths);
+    require Cwd;
     for my $file (@{$self->files_in_data_directory}) {
-        $file_paths{$self->full_path_to_relative($file)} = $file;
+        $file_paths{$self->full_path_to_relative($file)} = Cwd::abs_path($file);
     }
     for my $other_file (@{$other_build->files_in_data_directory}) {
-        $other_file_paths{$other_build->full_path_to_relative($other_file)} = $other_file;
+        $other_file_paths{$other_build->full_path_to_relative($other_file)} = Cwd::abs_path($other_file);
     }
 
     # Now cycle through files in this build's data directory and compare with 
@@ -1716,8 +1720,8 @@ sub compare_output {
             $diff_result = $self->$method($abs_path, $other_abs_path);
         }
         else {
-            my $file_md5 = Genome::Utility::FileSystem->md5sum($abs_path);
-            my $other_md5 = Genome::Utility::FileSystem->md5sum($other_abs_path);
+            my $file_md5 = Genome::Sys->md5sum($abs_path);
+            my $other_md5 = Genome::Sys->md5sum($other_abs_path);
             $diff_result = ($file_md5 eq $other_md5);
         }
 

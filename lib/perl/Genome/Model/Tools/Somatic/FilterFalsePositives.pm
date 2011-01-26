@@ -258,8 +258,8 @@ sub run_filter {
 
     ## Open the output file ##
 
-    my $temp_output_file = Genome::Utility::FileSystem->create_temp_file_path;
-    my $ofh = Genome::Utility::FileSystem->open_file_for_writing($temp_output_file);
+    my $temp_output_file = Genome::Sys->create_temp_file_path;
+    my $ofh = Genome::Sys->open_file_for_writing($temp_output_file);
     unless($ofh) {
         $self->error_message("Unable to open " . $self->output_file . " for writing.");
         die;
@@ -269,7 +269,7 @@ sub run_filter {
     my $readcount_file;
     if($self->use_readcounts) {
         $readcount_file = $self->use_readcounts;
-        unless(Genome::Utility::FileSystem->check_for_path_existence($readcount_file)) {
+        unless(Genome::Sys->check_for_path_existence($readcount_file)) {
             $self->error_message('Supplied readcount file ' . $readcount_file . ' does not exist!');
             die;
         }
@@ -279,7 +279,7 @@ sub run_filter {
         $self->status_message('Running BAM Readcounts...');
 
         #First, need to create a variant list file to use for generating the readcounts.
-        my $input = Genome::Utility::FileSystem->open_file_for_reading($self->variant_file);
+        my $input = Genome::Sys->open_file_for_reading($self->variant_file);
 
         unless($input) {
             $self->error_message("Unable to open " . $self->variant_file . ".");
@@ -287,7 +287,7 @@ sub run_filter {
         }
 
         ## Build temp file for positions where readcounts are needed ##
-        my ($tfh,$temp_path) = Genome::Utility::FileSystem->create_temp_file;
+        my ($tfh,$temp_path) = Genome::Sys->create_temp_file;
         unless($tfh) {
             $self->error_message("Unable to create temporary file.");
             die;
@@ -315,17 +315,17 @@ sub run_filter {
         $tfh->close;
         close($input);
 
-        $readcount_file = Genome::Utility::FileSystem->create_temp_file_path;
+        $readcount_file = Genome::Sys->create_temp_file_path;
 
         my $cmd = $self->readcount_program() . " -b 15 " . $self->bam_file . " -l $temp_path";
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
             cmd => "$cmd > $readcount_file 2> /dev/null",
             input_files => [$self->bam_file],
             output_files => [$readcount_file],
         );
     }
 
-    my $readcounts = Genome::Utility::FileSystem->read_file($readcount_file);
+    my $readcounts = Genome::Sys->read_file($readcount_file);
     chomp($readcounts) if($readcounts);
 
     ## Load the results of the readcounts ##
@@ -333,7 +333,7 @@ sub run_filter {
     my %readcounts_by_position = ();
 
     ## Open the readcounts file ##
-    Genome::Utility::FileSystem->copy_file($readcount_file, $self->output_file . ".readcounts");
+    Genome::Sys->copy_file($readcount_file, $self->output_file . ".readcounts");
 
     my @readcounts = split(/\n/, $readcounts);
     foreach my $rc_line (@readcounts) {
@@ -345,11 +345,11 @@ sub run_filter {
 
 
     ## Open the filtered output file ##
-    my $temp_filtered_file = Genome::Utility::FileSystem->create_temp_file_path();
-    my $ffh = Genome::Utility::FileSystem->open_file_for_writing($temp_filtered_file);
+    my $temp_filtered_file = Genome::Sys->create_temp_file_path();
+    my $ffh = Genome::Sys->open_file_for_writing($temp_filtered_file);
 
     ## Reopen file for parsing ##
-    my $input = Genome::Utility::FileSystem->open_file_for_reading($self->variant_file);
+    my $input = Genome::Sys->open_file_for_reading($self->variant_file);
 
     ## Parse the variants file ##
     my $lineCounter = 0;
@@ -563,8 +563,8 @@ sub run_filter {
     my $filtered_file = $self->output_file . ".removed";
     $filtered_file = $self->filtered_file if($self->filtered_file);
 
-    Genome::Utility::FileSystem->copy_file($temp_output_file, $self->output_file);
-    Genome::Utility::FileSystem->copy_file($temp_filtered_file, $filtered_file);
+    Genome::Sys->copy_file($temp_output_file, $self->output_file);
+    Genome::Sys->copy_file($temp_filtered_file, $filtered_file);
 
     print $stats{'num_variants'} . " variants\n";
     print $stats{'num_MT_sites_autopassed'} . " MT sites were auto-passed\n";

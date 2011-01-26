@@ -297,7 +297,7 @@ sub _eviscerate_old_builds_for_this_model {
     for my $doomed_build (@builds_to_eviscerate) {
         next if (!$doomed_build->can('eviscerate'));
         my $resource_lock_name = $doomed_build->accumulated_alignments_directory . '.eviscerate';
-        my $lock = Genome::Utility::FileSystem->lock_resource(resource_lock => $resource_lock_name, max_try => 2);
+        my $lock = Genome::Sys->lock_resource(resource_lock => $resource_lock_name, max_try => 2);
         print Dumper($lock);
         unless ($lock) {
             $self->status_message("This build is locked by another eviscerate process");
@@ -310,7 +310,7 @@ sub _eviscerate_old_builds_for_this_model {
 
         $doomed_build->eviscerate;
 
-        Genome::Utility::FileSystem->unlock_resource(resource_lock=>$lock);
+        Genome::Sys->unlock_resource(resource_lock=>$lock);
     }
 }
 

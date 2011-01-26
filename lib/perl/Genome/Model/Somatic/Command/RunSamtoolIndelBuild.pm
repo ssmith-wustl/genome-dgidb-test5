@@ -80,30 +80,27 @@ sub execute {
        		}
        		
        		# Normal data
-       		my $jobid1 =`bsub -N -u $user\@genome.wustl.edu -J $common_name.$tier.N -R 'select[type==LINUX64]' 'gmt somatic assemble-indel --assembly-indel-list=$sample_dir/$tier.normal --bam-file=$normal_wgs_bam --data-directory=$normal_dir --indel-file=$indel_file'`;
-       		$jobid1=~ /<(\d+)>/;
-		$jobid1=$1;
-		print "$jobid1\n";
+       		my $jobid1 ="bsub -N -u $user\@genome.wustl.edu -J $common_name.$tier.N -R 'select[type==LINUX64]' 'gmt somatic assemble-indel --assembly-indel-list=$sample_dir/$tier.normal --bam-file=$normal_wgs_bam --data-directory=$normal_dir --indel-file=$indel_file'";
+		print "$jobid1\n"; $jobid1=`$jobid1`;
+       		$jobid1=($jobid1=~ /<(\d+)>/);
        		
-       		my $jobid2 =`bsub -N -u $user\@genome.wustl.edu -J $common_name.$tier.NT -w 'ended($jobid1)' 'grep -v \"NT\" $sample_dir/$tier.normal > $sample_dir/$tier.normal.noNT'`;
-       		$jobid2=~ /<(\d+)>/;
-		$jobid2=$1;
-		print "$jobid2\n";
+       		my $jobid2 ="bsub -N -u $user\@genome.wustl.edu -J $common_name.$tier.NT -w 'ended($jobid1)' 'grep -v \"NT\" $sample_dir/$tier.normal > $sample_dir/$tier.normal.noNT'";
+		print "$jobid2\n"; $jobid2=`$jobid2`;
+       		$jobid2=($jobid2=~ /<(\d+)>/);
 		
 		#Tumor data
-           	my $jobid3 =`bsub -N -u $user\@genome.wustl.edu -J $common_name.$tier.T -R 'select[type==LINUX64]' 'gmt somatic assemble-indel --assembly-indel-list=$sample_dir/$tier.tumor --bam-file=$tumor_wgs_bam --data-directory=$tumor_dir --indel-file=$indel_file'`;
-       		$jobid3=~ /<(\d+)>/;
-		$jobid3=$1;
-       		print "$jobid3\n";
-       		
-       		my $jobid4 =`bsub -N -u $user\@genome.wustl.edu -J $common_name.$tier.NT -w 'ended($jobid3)' 'grep -v \"NT\" $sample_dir/$tier.tumor > $sample_dir/$tier.tumor.noNT'`;
-       		$jobid4=~ /<(\d+)>/;
-		$jobid4=$1;
-            	print "$jobid4\n";	
+           	my $jobid3 ="bsub -N -u $user\@genome.wustl.edu -J $common_name.$tier.T -R 'select[type==LINUX64]' 'gmt somatic assemble-indel --assembly-indel-list=$sample_dir/$tier.tumor --bam-file=$tumor_wgs_bam --data-directory=$tumor_dir --indel-file=$indel_file'";
+		print "$jobid3\n"; $jobid3=`$jobid3`;
+       		$jobid3=($jobid3=~ /<(\d+)>/);
+		       		
+       		my $jobid4 ="bsub -N -u $user\@genome.wustl.edu -J $common_name.$tier.NT -w 'ended($jobid3)' 'grep -v \"NT\" $sample_dir/$tier.tumor > $sample_dir/$tier.tumor.noNT'";
+		print "$jobid4\n"; $jobid4=`$jobid4`;
+       		$jobid4=($jobid4=~ /<(\d+)>/);
+		
             	# intersect
-            	my $jobid5=`bsub -N -u $user\@genome.wustl.edu -J $common_name.$tier.N.somatic -R 'select\[type==LINUX64\]' -w 'ended($jobid2) && ended($jobid4)' 'gmt somatic intersect-assembled-indels --normal-indel-file=$sample_dir/$tier.normal.noNT --tumor-indel-file=$sample_dir/$tier.tumor.noNT --tumor-assembly-data-directory=$tumor_dir --germline-output-list=$sample_dir/$tier.noNT.germline  --somatic-output-list=$sample_dir/$tier.noNT.somatic\'`;
-            	$jobid5=~ /<(\d+)>/;
-		$jobid5=$1;
+            	my $jobid5="bsub -N -u $user\@genome.wustl.edu -J $common_name.$tier.N.somatic -R 'select\[type==LINUX64\]' -w 'ended($jobid2) && ended($jobid4)' 'gmt somatic intersect-assembled-indels --normal-indel-file=$sample_dir/$tier.normal.noNT --tumor-indel-file=$sample_dir/$tier.tumor.noNT --tumor-assembly-data-directory=$tumor_dir --germline-output-list=$sample_dir/$tier.noNT.germline  --somatic-output-list=$sample_dir/$tier.noNT.somatic\'";
+		print "$jobid5\n";
+            	$jobid5=($jobid5=~ /<(\d+)>/);
        		print "intersect tumor/normal $tier in job $jobid5\n";
        	}
 
