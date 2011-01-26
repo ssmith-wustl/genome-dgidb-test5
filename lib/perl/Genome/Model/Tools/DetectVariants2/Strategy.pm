@@ -25,10 +25,10 @@ my $grammar = q{
     parenthetical: "(" combination ")"
                 { $item[2]; }
                 
-    intersection: single "&&" combination
+    intersection: single "intersect" combination
                 { $return = { intersect => [$item[1], $item[3] ] }; }
     
-    union: single "||" combination
+    union: single "union" combination
                 { $return = { union => [ $item[1], $item[3] ] }; }
     
     single: parenthetical
@@ -49,7 +49,7 @@ my $grammar = q{
 
     word: /([\w\.-]|\\\\)+/ { $return = $item[1]; }
 
-    valid_subpackage: "somatic"
+    valid_subpackage: "somatic "
                 { $return = $item[1]; }
 
     name: valid_subpackage word
@@ -62,19 +62,24 @@ my $grammar = q{
     | <error>
 
     params: {
-                my $txt = extract_codeblock($text, '{}');
-                $return = eval $txt;
-                if ($@ or ref $return ne "HASH") {
-                    die("Failed to turn string '$txt' into perl hashref: $@.");
-                }
+                my $txt = extract_bracketed($text, '[]');
+                $txt =~ s/^\[(.*)\]$/$1/;
+                $txt=~ s/\\\\([\[\]])/$1/g;
+                $return = $txt;
             } 
-    | <error>
 
     program_spec: name version params
                 { $return = {
                     name => $item[1],
                     version => $item[2],
                     params => $item[3],
+                    };
+                }
+    | name version
+                { $return = {
+                    name => $item[1],
+                    version => $item[2],
+                    params => '',
                     };
                 }
 };
@@ -201,42 +206,47 @@ sub filter_class {
 
 sub validate {
     my ($self, $tree) = @_;
-    $DB::single=1;
+    #return;
+    #$DB::single=1;
 
     my @keys = keys %$tree;
     for my $key (@keys) {
         if ($key eq 'detector') {
-            $DB::single=1;
-            # Check detector class and params
+            ## Check detector class and params
             my $class = $tree->{$key}->{class};
             my $version = $tree->{$key}->{version};
-            my %params = %{$tree->{$key}->{params}};
-            $params{version} = $version;
-            my $detector_object = $class->create(%params);
-            if ($detector_object->__errors__) {
-                die "errors"; # FIXME make this add tags for $self->__errors_
+            unless($self->is_class_valid($class)){
+                die "could not find class ".$class."\n";
             }
 
-            # Check filters that belong to this detector
+            ## Check filters that belong to this detector
             for my $filter (@{$tree->{$key}->{filters}}) {
-                $DB::single=1;
                 my $filter_class = $filter->{class};
                 my $filter_version = $filter->{version};
-                my %filter_params = %{$filter->{params}};
-                $filter_params{version} = $filter_version;
-                my $detector_object = $class->create(%filter_params);
-                if ($detector_object->__errors__) {
-                    die "errors"; # FIXME make this add tags for $self->__errors_
-                }   
+                unless($self->is_class_valid($filter_class)){
+                    die "could not find class ".$filter_class."\n";
+                }
             }
 
         } elsif (ref $tree->{$key} eq 'ARRAY') {
             for my $subtree ( @{$tree->{$key}} ) {
-                $DB::single=1;
                 $self->validate($subtree);
             }
         }
     }
+}
+
+sub is_class_valid {
+    my $self = shift;
+    my $class = shift;
+    my $result;
+    eval {
+        $result = $class->__meta__;
+    };
+    if($@){
+        return 0;
+    }
+    return 1;
 }
 
 1;

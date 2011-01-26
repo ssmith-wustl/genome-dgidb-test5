@@ -82,5 +82,9 @@ sub default_version {
     return $DEFAULT_VERSION;
 }
 
+sub available_varscan_versions {
+    return keys(%VARSCAN_VERSIONS);
+}
+
 1;
 
