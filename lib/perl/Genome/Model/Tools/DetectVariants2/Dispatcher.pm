@@ -31,6 +31,12 @@ A variant detector(s) specified under snv-detection-strategy, indel-detection-st
 EOS
 }
 
+# FIXME this is a hack to get things to run until I decide how to implement this in the dispatcher
+# In the first version of the dispatcher... this was not implemented if there were unions or intersections... and if there were none of those it just grabbed the inputs from the only variant detector run and made it its own
+sub _generate_standard_files {
+    return 1;
+}
+
 sub plan {
     my $self = shift;
 
@@ -65,9 +71,9 @@ sub _detect_variants {
         die "Errors validating workflow\n";
     }
 
-    die "Not implemented yet, awaiting workflow code. The strategy looks like: " . Dumper($trees) . "The condensed job map looks like: " . Dumper($plan);
-
     $workflow->execute;
+
+    return 1;
 }
 
 sub calculate_detector_output_directory {
@@ -97,6 +103,7 @@ sub parse_detection_strategy {
     return $result;
 }
 
+# TODO this may not need to be here, if we validate inside strategy
 sub is_valid_detector {
     # TODO: check version, possibly params
     my ($self, $detector_class, $detector_version) = @_;
@@ -221,7 +228,6 @@ sub generate_workflow {
             'output_directory',
         ],
         output_properties => [
-            'result', #TODO should anything go here? For now just have an output per detector, below
         ],
     );
 
@@ -284,11 +290,11 @@ sub generate_workflow_operation {
 
                 # add the properties this variant detector needs (version, params,output dir) to the input connector
                 my $properties_for_detector = $self->properties_for_detector($name, $version, $params);
-                my @input_connector_properties = map { $properties_for_detector->{$_} } (keys %$properties_for_detector);
+                my @new_input_connector_properties = map { $properties_for_detector->{$_} } (keys %$properties_for_detector);
                 my $input_connector = $workflow_model->get_input_connector;
-                my $inputs = $input_connector->operation_type->output_properties;
-                push @{$inputs}, @input_connector_properties;
-                $input_connector->operation_type->output_properties($inputs);
+                my $input_connector_properties = $input_connector->operation_type->output_properties;
+                push @{$input_connector_properties}, @new_input_connector_properties;
+                $input_connector->operation_type->output_properties($input_connector_properties);
 
                 # connect those properties from the input connector to this operation
                 for my $property (keys %$properties_for_detector) {
@@ -300,9 +306,22 @@ sub generate_workflow_operation {
                     );
                 }
 
-                #TODO Generate an output property per detector
+                # Generate an output property for the detector
+                my $output_connector = $workflow_model->get_output_connector;
+                my $output_connector_properties = $output_connector->operation_type->input_properties;
+                my $new_output_connector_property = "$name-$version-$params" . "_output";
+                push @{$output_connector_properties}, $new_output_connector_property;
+                $output_connector->operation_type->input_properties($output_connector_properties);
 
-                #TODO Connect each detector's output to the output connector
+                #Connect each detector's output to the output connector
+                $workflow_model->add_link(
+                    left_operation => $operation,
+                    left_property => "output_directory",
+                    right_operation => $workflow_model->get_output_connector,
+                    right_property => $new_output_connector_property
+                );
+
+                # FIXME the above is likely to change drastically ... but do it like this for simplicity so things run right now and refactor soon
             }
         }
     }
