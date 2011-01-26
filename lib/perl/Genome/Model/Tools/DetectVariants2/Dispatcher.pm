@@ -57,7 +57,9 @@ sub _detect_variants {
     my ($trees, $plan) = $self->plan;
 
     my $workflow = $self->generate_workflow($trees, $plan);
-    die "Not implemented yet, awaiting workflow code. The strategy looks like: " . Dumper($trees) . "The condensed job map looks like: " . Dumper($plan) . "The workflow looks like: " . Dumper ($workflow);
+    die "Not implemented yet, awaiting workflow code. The strategy looks like: " . Dumper($trees) . "The condensed job map looks like: " . Dumper($plan);
+
+    # TODO run workflow
 }
 
 sub calculate_detector_output_directory {
@@ -263,10 +265,9 @@ sub generate_workflow_operation {
                 );
                 print "Operation: " . Dumper $operation;
 
-                # Add the required links
                 # TODO Unhardcode this list of properties
-                # TODO change the output directory to a subdirectory calculated above instead of the workflow's primary output
-                for my $property ( 'reference_sequence_input', 'aligned_reads_input', 'control_aligned_reads_input', 'output_directory') {
+                # Add the required links that are the same for every variant detector
+                for my $property ( 'reference_sequence_input', 'aligned_reads_input', 'control_aligned_reads_input') {
                     $workflow_model->add_link(
                         left_operation => $workflow_model->get_input_connector,
                         left_property => $property,
@@ -274,11 +275,35 @@ sub generate_workflow_operation {
                         right_property => $property,
                     );
                 }
+
+                # add the properties this variant detector needs (version, params,output dir) to the input connector
+                my $properties_for_detector = $self->properties_for_detector($name, $version, $params);
+                my @input_connector_properties = map { $properties_for_detector->{$_} } (keys %$properties_for_detector);
+                my ($input_connector) = grep { $_->name eq 'input connector' } $workflow_model->operations;
+                my $inputs = $input_connector->operation_type->output_properties;
+                push @{$inputs}, @input_connector_properties;
+                $input_connector->operation_type->output_properties($inputs);
+
+                # TODO connect those properties from the input connector to this operation
             }
         }
     }
 
     return $workflow_model;
+}
+
+sub properties_for_detector {
+    my $self = shift;
+    my ($name, $version, $params) = @_;
+    $params ||= "";
+
+    # This hashref will contain property_name_for_detector => unique_name_for_input_connector
+    my $property_map;
+    for my $property ("version", "snv_params", "indel_params", "sv_params", "output_directory") {
+        $property_map->{$property} = "$name-$version-$params" . "_$property";
+    }
+
+    return $property_map;
 }
 
 1;
