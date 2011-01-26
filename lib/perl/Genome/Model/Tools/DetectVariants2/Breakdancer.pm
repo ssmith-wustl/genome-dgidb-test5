@@ -1,4 +1,4 @@
-package Genome::Model::Tools::DetectVariants2::Somatic::Breakdancer;
+package Genome::Model::Tools::DetectVariants2::Breakdancer;
 
 use warnings;
 use strict;
@@ -7,8 +7,8 @@ use Genome;
 
 my $DEFAULT_VERSION = '2010_06_24';
 
-class Genome::Model::Tools::DetectVariants2::Somatic::Breakdancer{
-    is => ['Genome::Model::Tools::DetectVariants::Somatic', 'Genome::Model::Tools::DetectVariants2::Somatic'],
+class Genome::Model::Tools::DetectVariants2::Breakdancer{
+    is => ['Genome::Model::Tools::DetectVariants::Somatic', 'Genome::Model::Tools::DetectVariants2::Base'],
     has => [
         _config_base_name => {
             is => 'Text',

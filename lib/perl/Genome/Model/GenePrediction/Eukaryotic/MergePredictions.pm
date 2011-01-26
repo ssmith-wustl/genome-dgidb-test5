@@ -55,13 +55,12 @@ sub execute {
     $self->status_message("Merging predictions into files in " . $self->prediction_directory);
 
     # Get meta object for each prediction type, grab attributes of the object (except for directory)
-    TYPE: for my $type ($self->prediction_types) {
+    TYPE: for my $type (@{$self->prediction_types}) {
         $self->status_message("*** Working on $type ***");
         my $meta = $type->__meta__;
         my @attributes = map { $_->property_name } $meta->properties;
         @attributes = grep { $_ ne 'directory' } @attributes;
 
-        # Get all the objects of the current type from the temp dir
         TEMP_DIR: for my $temp_dir (@{$self->temp_prediction_directories}) {
             unless (-d $temp_dir) {
                 $self->warning_message("No directory found at $temp_dir, this is most distressing!");
