@@ -1,11 +1,11 @@
-package Genome::Model::Tools::DetectVariants2::VarScan;
+package Genome::Model::Tools::DetectVariants2::VarScanSomatic;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Tools::DetectVariants2::VarScan {
+class Genome::Model::Tools::DetectVariants2::VarScanSomatic {
     is => ['Genome::Model::Tools::DetectVariants::Somatic', 'Genome::Model::Tools::DetectVariants2::Base'],
     has => [
         reference_sequence_input => {

@@ -66,6 +66,11 @@ my %SAMTOOLS_VERSIONS = (
     r350wu1 => '/gscuser/dlarson/samtools/r350wu1/samtools',
 );
 
+sub available_samtools_versions {
+    my $self = shift;
+    return keys(%SAMTOOLS_VERSIONS);
+}
+
 sub path_for_samtools_version {
     my ($class, $version) = @_;
     $version ||= $DEFAULT;
