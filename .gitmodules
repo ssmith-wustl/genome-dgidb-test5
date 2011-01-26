@@ -1,6 +1,3 @@
 [submodule "somatic-sniper"]
 	path = somatic-sniper
 	url = ssh://git/srv/git/somatic-sniper.git
-[submodule "cmpbed"]
-	path = cmpbed
-	url = ssh://git/srv/git/cmpbed.git
