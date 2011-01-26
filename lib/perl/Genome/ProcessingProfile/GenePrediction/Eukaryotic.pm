@@ -97,7 +97,7 @@ sub _map_workflow_inputs {
         prediction_directory => $build->prediction_directory,
         skip_repeat_masker => $self->skip_repeat_masker,
         repeat_masker_ace_file => $build->repeat_masker_ace_file,
-        predictions_ace_file => $build->predictions_ace_file,
+        predictions_ace_file => $build->predictions_ace_file;
 
     my $params;
     for (my $i = 0; $i < (scalar @inputs); $i += 2) {

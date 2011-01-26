@@ -45,7 +45,7 @@ class Genome::Model::Build {
         processing_profile_name => { via => 'model' },
         the_events              => { is => 'Genome::Model::Event', reverse_as => 'build', is_many => 1 },
         the_events_statuses     => { via => 'the_events', to => 'event_status' },
-        the_master_event        => { is => 'Genome::Model::Event', via => 'the_events', to => '-filter', reverse_as => 'build', where => [ event_type => 'genome model build' ] },
+        the_master_event        => { is => 'Genome::Model::Event', reverse_as => 'build', where => [ event_type => 'genome model build' ], is_many => 1, is_constant => 1},
         run_by                  => { via => 'the_master_event', to => 'user_name' },
         status                  => { via => 'the_master_event', to => 'event_status', is_mutable => 1 },
         date_scheduled          => { via => 'the_master_event', to => 'date_scheduled', },
@@ -397,7 +397,6 @@ sub build_event {
     return $build_events[0];
 }
 
-# Override in subclasses to use a custom name
 sub workflow_name {
     my $self = shift;
     return $self->build_id . ' all stages';
