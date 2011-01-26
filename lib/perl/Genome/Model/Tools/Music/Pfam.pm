@@ -5,7 +5,7 @@ use strict;
 
 use IO::File;
 use Genome;
-use IPC::Run;
+use IPC::Cmd qw/can_run/;
 
 =head1 NAME
 
