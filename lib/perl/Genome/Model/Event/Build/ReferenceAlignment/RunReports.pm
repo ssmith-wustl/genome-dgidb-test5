@@ -37,13 +37,10 @@ sub execute {
         delete $REPORT_TYPES{InputBaseCounts};
     }
 
-    #for RT#53895, 54440 only run dbSNP report for human genomic DNA build for now
-    unless ($model->subject_name =~ /^H_/ and $model->dna_type eq 'genomic dna') {
-        $self->status_message("Skip dbSNP_concordance report because it is for human genomic DNA now");
+    unless (defined $model->dbsnp_build) {
+        $self->status_message("No dbsnp_build defined for model, skipping dbsnp concordance report.");
         delete $REPORT_TYPES{DbSnpConcordance};
-    } elsif (!defined $model->dbsnp_build) {
-        die $self->error_message("No dbsnp_build defined for model " . $model->__display_name__);
-    }
+    } 
 
     unless ($self->validate_gold_snp_path) {
         $self->status_message("No valid gold_snp_path for the build, skip GoldSnpConcordance report");

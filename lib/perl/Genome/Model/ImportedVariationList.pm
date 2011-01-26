@@ -31,5 +31,10 @@ sub dbsnp_model_for_reference {
     return $models[0];
 }
 
+sub dbsnp_build_for_reference {
+    my ($class, $reference) = @_;
+    my $model = $class->dbsnp_model_for_reference($reference);
+    return $model->last_complete_build if defined $model;
+}
 1;
 

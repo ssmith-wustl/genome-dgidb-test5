@@ -1,4 +1,4 @@
-package Genome::Model::Tools::DetectVariants2::Somatic::Sniper;
+package Genome::Model::Tools::DetectVariants2::Sniper;
 
 use warnings;
 use strict;
@@ -9,8 +9,8 @@ use Workflow;
 my $DEFAULT_VERSION = '0.7.3';
 my $SNIPER_COMMAND = 'bam-somaticsniper';
 
-class Genome::Model::Tools::DetectVariants2::Somatic::Sniper {
-    is => ['Genome::Model::Tools::DetectVariants::Somatic', 'Genome::Model::Tools::DetectVariants2::Somatic'],
+class Genome::Model::Tools::DetectVariants2::Sniper {
+    is => ['Genome::Model::Tools::DetectVariants::Somatic', 'Genome::Model::Tools::DetectVariants2::Base'],
     has => [
         version => {
             is => 'Version',

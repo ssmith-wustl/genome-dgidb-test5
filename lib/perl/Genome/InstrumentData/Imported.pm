@@ -206,6 +206,7 @@ sub delete {
 ##################################################
 BEGIN: {
 Genome::InstrumentData::Solexa->class;
+no warnings 'once';
 *solexa_dump_sanger_fastq_files= \&Genome::InstrumentData::Solexa::dump_sanger_fastq_files;
 *dump_illumina_fastq_files= \&Genome::InstrumentData::Solexa::dump_illumina_fastq_files;
 *dump_solexa_fastq_files= \&Genome::InstrumentData::Solexa::dump_solexa_fastq_files;
@@ -381,7 +382,7 @@ sub get_segments {
         $self->error_message("Bam file $bam_file doesn't exist, can't get segments for it.");
         die $self->error_message;
     }
-    my $cmd = Genome::Model::Tools::Sam::ListReadGroups->create(input=>$bam_file);
+    my $cmd = Genome::Model::Tools::Sam::ListReadGroups->create(input=>$bam_file, silence_output=>1);
     unless ($cmd->execute) {
         $self->error_message("Failed to run list read groups command for $bam_file");
         die $self->error_message;
@@ -392,4 +393,32 @@ sub get_segments {
     return map {{segment_type=>'read_group', segment_id=>$_}} @read_groups;
 }
 
+# Microarry stuff eventually need to subclass
+sub genotype_microarry_file_for_reference_name {
+    my ($self, $reference_name) = @_;
+
+    Carp::confess('No reference name given to get genotype microarry file') if not $reference_name;
+
+    my $disk_allocation = $self->disk_allocations;
+    return if not $disk_allocation;
+
+    my $absolute_path = $disk_allocation->absolute_path;
+    Carp::confess('No absolute path for instrument data ('.$self->id.') disk allocation: '.$disk_allocation->id) if not $absolute_path;
+    my $sample_name = $self->sample_name;
+    Carp::confess('No sample name for instrument data: '.$self->id) if not $sample_name;
+
+    return $absolute_path.'/'.$sample_name.'.'.$reference_name.'.genotype';
+}
+
+sub genotype_microarray_file_for_human_build_37 {
+    my $self = shift;
+    return $self->genotype_microarry_file_for_reference_name('human-build37');
+}
+
+sub genotype_microarray_file_for_human_build_36 {
+    my $self = shift;
+    return $self->genotype_microarry_file_for_reference_name('human-build36');
+}
+
 1;
+

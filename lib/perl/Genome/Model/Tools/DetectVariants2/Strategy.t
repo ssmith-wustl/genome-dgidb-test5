@@ -16,24 +16,24 @@ use_ok($strategy_class);
 
 # hash of strings => expected output hash
 my %expected = (
-    "samtools v1 {}" => {
+    "samtools v1" => {
         detector => {
             name => "samtools",
             class => 'Genome::Model::Tools::DetectVariants2::Samtools',
             version => "v1",
-            params => {},
+            params => '',
             filters => [],
         }
     },
 
-    "var-scan v2 {foo => 'bar'} && samtools v1 {p => 1} filtered by thing v1 {}" => {
+    "var-scan v2 [--foo] intersect samtools v1 [-p1] filtered by thing v1" => {
         intersect => [
             {
                 detector => {
                     name => "var-scan",
                     class => 'Genome::Model::Tools::DetectVariants2::VarScan',
                     version => "v2",
-                    params => { foo => 'bar'},
+                    params => '--foo',
                     filters => [],
                 },
             },
@@ -42,24 +42,24 @@ my %expected = (
                     name => "samtools",
                     class => 'Genome::Model::Tools::DetectVariants2::Samtools',
                     version => "v1",
-                    params => { p => 1},
-                    filters => [{name => 'thing', version => 'v1', params => {}}],
+                    params => '-p1',
+                    filters => [{name => 'thing', version => 'v1', params => ''}],
                 }
             },
         ]
     },
 
-    "a v1 {b => 1} filtered by c v2 {}, d v3 { f=> 1 } || (a v1 {} && b v2 {})" => {
+    "a v1 [-b 1] filtered by c v2, d v3 [-f] union (a v1 intersect b v2)" => {
         union => [
             {
                 detector => {
                     name => "a",
                     class => 'Genome::Model::Tools::DetectVariants2::A',
                     version => "v1",
-                    params => { b => 1},
+                    params => '-b 1',
                     filters => [
-                        {name => 'c', version => 'v2', params => {}},
-                        {name => 'd', version => 'v3', params => { f => 1}},
+                        {name => 'c', version => 'v2', params => ''},
+                        {name => 'd', version => 'v3', params => '-f'},
                      ],
                 },
             },
@@ -70,7 +70,7 @@ my %expected = (
                             name => "a",
                             class => 'Genome::Model::Tools::DetectVariants2::A',
                             version => "v1",
-                            params => {},
+                            params => '',
                             filters => [],
                         },
                     },
@@ -79,7 +79,7 @@ my %expected = (
                             name => "b",
                             class => 'Genome::Model::Tools::DetectVariants2::B',
                             version => "v2",
-                            params => {},
+                            params => '',
                             filters => [],
                         },
                     },
@@ -91,13 +91,12 @@ my %expected = (
 
 my @expected_failures = (
     "badness", # missing version, params
-    "badness v1", # missing params
-    "badness v1 {} filtered by", # missing filter
-    "badness v1 {} filtered by foo", # missing filter version
-    "badness v1 {} filtered by foo v1", # missing filter params
-    "badness v1 {} filtered by foo v1 {} &&", # missing detector after &&
-    "(badness v1 {} filtered by foo v1 {}", # missing )
-    "badness v1 {} filtered by foo v1 {})", # extra )
+    "badness v1 filtered by", # missing filter
+    "badness v1 filtered by foo", # missing filter version
+    "badness v1 filtered by foo v1", # missing filter params
+    "badness v1 filtered by foo v1 [] intersect" # missing detector after 'intersect'
+    "(badness v1 filtered by foo v1 []", # missing )
+    "badness v1 filtered by foo v1)", # extra )
 );
     
 is("${det_class_base}::Samtools", $strategy_class->detector_class("samtools"), "names without subpackages parsed correctly");
