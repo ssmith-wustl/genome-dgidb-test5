@@ -59,14 +59,14 @@ for my $example (@examples) {
     };
 
     ok(!$@, " example $n ran without crashing") or diag $@;
-    is($exit_code, 0, " example $n ran returned a zero (good) exit code");
+    is($exit_code, 0, " example $n ran returned a zero (good) exit code") or next;
 
     # compare results
     for my $expect_file (@$expect) {
         my $expect_full_path = $expected_output_dir . '/'. $expect_file;
         my $actual_full_path = $actual_output_dir . '/' . $expect_file;
         
-        ok(-e $actual_full_path, " example $n has expected output file $expect_file");
+        ok(-e $actual_full_path, " example $n has expected output file $expect_file") or next;
         
         my @diff = `diff $expect_full_path $actual_full_path`;
         is(scalar(@diff), 0, " example $n matches expectations for file $expect_file")
