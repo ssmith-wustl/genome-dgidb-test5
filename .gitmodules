@@ -1,3 +1,6 @@
 [submodule "somatic-sniper"]
 	path = somatic-sniper
 	url = ssh://git/srv/git/somatic-sniper.git
+[submodule "joinx"]
+	path = joinx
+	url = ssh://git/srv/git/joinx.git
