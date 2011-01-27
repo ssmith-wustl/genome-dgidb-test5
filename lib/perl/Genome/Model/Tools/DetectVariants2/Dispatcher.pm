@@ -12,6 +12,11 @@ use Workflow;
 class Genome::Model::Tools::DetectVariants2::Dispatcher {
     is => ['Genome::Model::Tools::DetectVariants2::Base'],
     doc => 'This tool is used to handle delegating variant detection to one or more specified tools and filtering and/or combining the results',
+    has_optional => [
+        _workflow_inputs => {
+            doc => "Inputs to pass into the workflow when executing",
+        },
+    ],
 };
 
 sub help_brief {
@@ -71,7 +76,16 @@ sub _detect_variants {
         die "Errors validating workflow\n";
     }
 
-    $workflow->execute;
+    my @stored_properties = @{$self->_workflow_inputs};
+    $DB::single=1;
+
+    $workflow->execute(
+        aligned_reads_input => $self->aligned_reads_input,
+        control_aligned_reads_input => $self->control_aligned_reads_input,
+        reference_sequence_input => $self->reference_sequence_input,
+        output_directory => $self->output_directory,
+        @stored_properties,
+    );
 
     return 1;
 }
@@ -259,17 +273,14 @@ sub generate_workflow_operation {
         # Get the hashref that contains all the variant types to be run for a given detector version
         my $version_hash = $detector_hash->{$version};
 
-        my %param_hash;
         my ($class,$name, $version);
         for my $variant_type (keys %$version_hash) {
             my @instances_for_variant_type = @{$version_hash->{$variant_type}};
             for my $instance (@instances_for_variant_type) {
                 my $params = $instance->{params};
-                $param_hash{$variant_type."_params"} = $params;
                 $class = $instance->{class};
                 $name = $instance->{name};
                 $version = $instance->{version};
-                my $output_directory = $self->calculate_detector_output_directory($name, $version, $params);
 
                 # Make the operation
                 my $operation = $workflow_model->add_operation(
@@ -289,7 +300,7 @@ sub generate_workflow_operation {
                 }
 
                 # add the properties this variant detector needs (version, params,output dir) to the input connector
-                my $properties_for_detector = $self->properties_for_detector($name, $version, $params);
+                my $properties_for_detector = $self->properties_for_detector($variant_type, $name, $version, $params);
                 my @new_input_connector_properties = map { $properties_for_detector->{$_} } (keys %$properties_for_detector);
                 my $input_connector = $workflow_model->get_input_connector;
                 my $input_connector_properties = $input_connector->operation_type->output_properties;
@@ -298,9 +309,10 @@ sub generate_workflow_operation {
 
                 # connect those properties from the input connector to this operation
                 for my $property (keys %$properties_for_detector) {
+                    my $input_connector_property_name = $properties_for_detector->{$property};
                     $workflow_model->add_link(
                         left_operation => $workflow_model->get_input_connector,
-                        left_property => $properties_for_detector->{$property},
+                        left_property => $input_connector_property_name,
                         right_operation => $operation,
                         right_property => $property,
                     );
@@ -331,14 +343,33 @@ sub generate_workflow_operation {
 
 sub properties_for_detector {
     my $self = shift;
-    my ($name, $version, $params) = @_;
+    my ($variant_type, $name, $version, $params) = @_;
     $params ||= "";
 
     # This hashref will contain property_name_for_detector => unique_name_for_input_connector
+    my $appropriate_params = "$variant_type" . "_params";
     my $property_map;
-    for my $property ("version", "snv_params", "indel_params", "sv_params", "output_directory") {
+    for my $property ("version", $appropriate_params, "output_directory") {
         $property_map->{$property} = "$name-$version-$params" . "_$property";
     }
+
+    my $output_directory = $self->calculate_detector_output_directory($name, $version, $params);
+
+    # Store these params for passing to the workflow when we execute it
+    # We will only have one variant type of params, ignore the old API
+    my %inputs_to_store;
+    $DB::single=1;
+    $inputs_to_store{$property_map->{version}} = $version;
+    $inputs_to_store{$property_map->{params}} = $params if $params;
+    $inputs_to_store{$property_map->{output_directory}} = $output_directory;
+
+    # Try to account for previous detect variants properties
+    my @stored_properties;
+    if ($self->_workflow_inputs) {
+        @stored_properties = $self->_workflow_inputs;
+    }
+    push @stored_properties, %inputs_to_store;
+    $self->_workflow_inputs(\@stored_properties);
 
     return $property_map;
 }
