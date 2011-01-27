@@ -4,8 +4,7 @@ use strict;
 use warnings;
 
 class Genome::Disk::Volume {
-    # TODO This is kinda site-specific and should go elsewhere
-    table_name => "(select * from disk_volume\@oltp) disk_volume",
+    table_name => 'GENOME_DISK_VOLUME',
     id_by => [
         dv_id => {is => 'Number'},
     ],
@@ -38,6 +37,7 @@ class Genome::Disk::Volume {
             calculate => q| return Genome::Disk::Allocation->get(mount_path => $mount_path); |,
         },
     ],
+    schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
     doc => 'Represents a particular disk volume (eg, sata483)',
 };
