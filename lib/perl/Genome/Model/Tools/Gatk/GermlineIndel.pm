@@ -26,8 +26,8 @@ class Genome::Model::Tools::Gatk::GermlineIndel {
 		output_file     => { is => 'Text', doc => "Output file to receive formatted lines", is_optional => 0, is_input => 1, is_output => 1 },
 		bed_output_file => { is => 'Text', doc => "Optional abbreviated output in BED format", is_optional => 1, is_input => 1, is_output => 1 },
 		formatted_file => { is => 'Text', doc => "Optional output file of indels in annotation format", is_optional => 1, is_input => 1, is_output => 1 },
-		gatk_params => { is => 'Text', doc => "Parameters for GATK", is_optional => 1, is_input => 1, is_output => 1, default => "-R /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa -T IndelGenotyperV2 --verbose --window_size 300" },
-		path_to_gatk => { is => 'Text', doc => "Path to GATK command", is_optional => 1, is_input => 1, is_output => 1, default => "java -jar /gscuser/dshen/scripts/gatk/dist/GenomeAnalysisTK.jar" },
+		gatk_params => { is => 'Text', doc => "Parameters for GATK", is_optional => 1, is_input => 1, is_output => 1, default => "-R /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa -T IndelGenotyperV2 --window_size 300" },
+		path_to_gatk => { is => 'Text', doc => "Path to GATK command", is_optional => 1, is_input => 1, is_output => 1, default => "java -jar /gsc/scripts/lib/java/GenomeAnalysisTK.jar" },
 		skip_if_output_present => { is => 'Text', doc => "Skip if output is present", is_optional => 1, is_input => 1},
 	],
 };
@@ -68,7 +68,7 @@ sub execute {                               # replace with real execution logic.
 	#-O gatk_testing/indels.GATK.H_GP-13-0890-01A-01-1.tsv -o gatk_testing/indels.GATK.H_GP-13-0890-01A-01-1.out 
 	
 	my $output_file = $self->output_file;
-	my $cmd = join(" ", $path_to_gatk, $gatk_params, "-I", $self->bam_file, "-o", $output_file);
+	my $cmd = join(" ", $path_to_gatk, $gatk_params, "-I", $self->bam_file, "-verbose", $output_file, "-o", $output_file.".vcf");
 
 	my $bed_output_file = $self->output_file . ".bed";
 
@@ -78,7 +78,11 @@ sub execute {                               # replace with real execution logic.
 
 	}
 
-	$cmd .= " -O $bed_output_file";
+	$cmd .= " -bed $bed_output_file";
+
+
+
+
 
 	## Run GATK Command ##
 
@@ -119,7 +123,8 @@ sub execute {                               # replace with real execution logic.
 
 
 	}
-	
+
+	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 
 }
 
