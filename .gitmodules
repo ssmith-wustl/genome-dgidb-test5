@@ -4,3 +4,6 @@
 [submodule "joinx"]
 	path = joinx
 	url = ssh://git/srv/git/joinx.git
+[submodule "vendor/Net-HTTPServer"]
+	path = vendor/Net-HTTPServer
+	url = ssh://git/srv/git/vendor/Net-HTTPServer.git
