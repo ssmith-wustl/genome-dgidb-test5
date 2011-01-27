@@ -36,13 +36,13 @@ sub help_synopsis_for_create {
   Complete Examples:
 
     genome processing-profile create somatic-variation \
-      --name 'unfiltered sniper with breakdancer', \
+      --name 'unfiltered sniper with breakdancer' \
       --snv-detection-strategy 'sniper 0.7.3 [ -q 1 -Q 15 ] intersect samtools r599' \
-      --indel-detection-strategy   '(sniper 0.7.3 [-q 1 -Q 15] filtered by library-support v1) union (samtools r599  intersect pindel v1)' \
+      --indel-detection-strategy   '(sniper 0.7.3 [-q 1 -Q 15] filtered by library-support v1) union (samtools r599  intersect pindel 0.1)' \
       --sv-detection-strategy 'breakdancer 2010_06_24  filtered by tigra-assembly v1'
 
     genome processing-profile create somatic-variation \
-      --name 'filtered sniper with breakdancer', \
+      --name 'filtered sniper with breakdancer' \
       --snv-detection-strategy '(sniper 0.7.3 [-q 1 -Q 15] filtered by loh v1, somatic-score-mapping-quality v1 [-min_somatic_quality 40 -min_mapping_quality 40]) intersect samtools r599'  \
       --indel-detection-strategy 'sniper 0.7.3 [-q 1 -Q 15] filtered by library-support v1' \
       --sv-detection-strategy 'breakdancer 2010_06_24 filtered by tigra-assembly v1'
