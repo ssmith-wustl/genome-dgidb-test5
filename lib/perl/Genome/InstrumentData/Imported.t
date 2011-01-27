@@ -96,7 +96,7 @@ my $i4 = Genome::InstrumentData::Imported->create(
     original_data_path      => '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Command-Import-Fastq/s_5_1_sequence.txt,/gsc/var/cache/testsuite/data/Genome-InstrumentData-Command-Import-Fastq/s_5_2_sequence.txt',
     import_format           => 'illumina genotype array',
     sequencing_platform     => 'iscan',
-    description             => 'Imported iscan genotype micrarry file from TCGA',
+    description             => 'Imported iscan genotype micrarray file from TCGA',
 );
 ok($i4, "created a new imported instrument data");
 isa_ok($i4,"Genome::InstrumentData::Imported");
@@ -114,10 +114,10 @@ my $alloc = Genome::Disk::Allocation->__define__(
 );
 ok($alloc, 'created disk alloc');
 is_deeply($i4->disk_allocations, $alloc, 'got disk alloc');
-my $build36_file = $i4->genotype_microarray_file_for_human_build_36;
-is($build36_file, $alloc->absolute_path.'/'.$l->sample_name.'.human-build36.genotype', 'build 36 genotype microarray file');
-my $build37_file = $i4->genotype_microarray_file_for_human_build_37;
-is($build37_file, $alloc->absolute_path.'/'.$l->sample_name.'.human-build37.genotype', 'build 37 genotype microarray file');
+my $build36_file = $i4->genotype_microarray_file_for_human_version_36;
+is($build36_file, $alloc->absolute_path.'/'.$l->sample_name.'.human-36.genotype', 'human 36 genotype microarray file');
+my $build37_file = $i4->genotype_microarray_file_for_human_version_37;
+is($build37_file, $alloc->absolute_path.'/'.$l->sample_name.'.human-37.genotype', 'human 37 genotype microarray file');
 
 my $ok;
 eval { $ok = UR::Context->_sync_databases(); };
