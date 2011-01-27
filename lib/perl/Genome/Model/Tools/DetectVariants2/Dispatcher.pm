@@ -77,14 +77,15 @@ sub _detect_variants {
     }
 
     my @stored_properties = @{$self->_workflow_inputs};
-    $DB::single=1;
 
     $workflow->execute(
-        aligned_reads_input => $self->aligned_reads_input,
-        control_aligned_reads_input => $self->control_aligned_reads_input,
-        reference_sequence_input => $self->reference_sequence_input,
-        output_directory => $self->output_directory,
-        @stored_properties,
+        input => {
+            aligned_reads_input => $self->aligned_reads_input,
+            control_aligned_reads_input => $self->control_aligned_reads_input,
+            reference_sequence_input => $self->reference_sequence_input,
+            output_directory => $self->output_directory,
+            @stored_properties, # TODO test for multiple detectors
+        }   
     );
 
     return 1;
@@ -258,8 +259,6 @@ sub generate_workflow {
 
     # TODO union and intersect each post-filtering detector output if necessary
 
-    $workflow_model->as_png("/gscuser/gsanders/test.png"); # TODO remove this, or put a copy of the as_xml in the output dir maybe
-
     return $workflow_model;
 }
 
@@ -291,7 +290,7 @@ sub generate_workflow_operation {
                 # TODO Unhardcode this list of properties
                 # Add the required links that are the same for every variant detector
                 for my $property ( 'reference_sequence_input', 'aligned_reads_input', 'control_aligned_reads_input') {
-                    $workflow_model->add_link(
+                     $workflow_model->add_link(
                         left_operation => $workflow_model->get_input_connector,
                         left_property => $property,
                         right_operation => $operation,
@@ -321,7 +320,7 @@ sub generate_workflow_operation {
                 # Generate an output property for the detector
                 my $output_connector = $workflow_model->get_output_connector;
                 my $output_connector_properties = $output_connector->operation_type->input_properties;
-                my $new_output_connector_property = "$name-$version-$params" . "_output";
+                my $new_output_connector_property = $name . "_" . $version . "_" . $params . "_output";
                 push @{$output_connector_properties}, $new_output_connector_property;
                 $output_connector->operation_type->input_properties($output_connector_properties);
 
@@ -332,8 +331,6 @@ sub generate_workflow_operation {
                     right_operation => $workflow_model->get_output_connector,
                     right_property => $new_output_connector_property
                 );
-
-                # FIXME the above is likely to change drastically ... but do it like this for simplicity so things run right now and refactor soon
             }
         }
     }
@@ -341,6 +338,11 @@ sub generate_workflow_operation {
     return $workflow_model;
 }
 
+# TODO rename or break up this sub
+# Currently this:
+# 1) Calculates the (unique, hopefully) names of the 3 properties the input connector needs in order to pass to the detect variants module
+# 2) Adds a hash of input_connector_property => value to the class so it can be stuffed into execute when run
+# 3) Returns a mapping for properties from detect_variants_param => input_connector_param_name
 sub properties_for_detector {
     my $self = shift;
     my ($variant_type, $name, $version, $params) = @_;
@@ -350,7 +352,7 @@ sub properties_for_detector {
     my $appropriate_params = "$variant_type" . "_params";
     my $property_map;
     for my $property ("version", $appropriate_params, "output_directory") {
-        $property_map->{$property} = "$name-$version-$params" . "_$property";
+        $property_map->{$property} = $name . "_" . $version . "_" . $params . "_" . $property;
     }
 
     my $output_directory = $self->calculate_detector_output_directory($name, $version, $params);
@@ -358,9 +360,8 @@ sub properties_for_detector {
     # Store these params for passing to the workflow when we execute it
     # We will only have one variant type of params, ignore the old API
     my %inputs_to_store;
-    $DB::single=1;
     $inputs_to_store{$property_map->{version}} = $version;
-    $inputs_to_store{$property_map->{params}} = $params if $params;
+    $inputs_to_store{$property_map->{$appropriate_params}} = $params;
     $inputs_to_store{$property_map->{output_directory}} = $output_directory;
 
     # Try to account for previous detect variants properties
