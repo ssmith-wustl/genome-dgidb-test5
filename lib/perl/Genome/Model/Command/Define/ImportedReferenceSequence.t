@@ -9,7 +9,7 @@ BEGIN {
 }
 
 use above 'Genome';
-use Test::More tests => 22;
+use Test::More tests => 24;
 
 my $cmd_class = 'Genome::Model::Command::Define::ImportedReferenceSequence';
 use_ok($cmd_class);
@@ -42,9 +42,9 @@ my $build = $model->last_complete_build;
 ok($build, 'Found a completed build');
 is($build->version, 42, 'Build has correct version');
 
-# specify coordinates_from
+# specify derived_from
 @params = (
-    "--coordinates-from=".$build->name,
+    "--derived-from=".$build->name,
     "--fasta-file=$fasta_file",
     "--model-name=test-ref-seq-2",
     "--processing-profile-id=".$pp->id,
@@ -56,16 +56,17 @@ $rv = $cmd_class->_execute_with_shell_params_and_return_exit_code(@params);
 is($rv, 0, 'executed command');
 my $coords_model = Genome::Model::ImportedReferenceSequence->get(name => 'test-ref-seq-2');
 ok($coords_model, 'Found newly created model');
-my $coords_build = $coords_model->last_complete_build;
-ok($coords_build, 'Found a completed build');
-is($coords_build->version, 26, 'Build has correct version');
-is($coords_build->coordinates_from->id, $build->id, 'coordinates_from property is correct');
-ok($coords_build->is_compatible_with($build), 'coordinates_from build is_compatible_with parent build');
-ok($build->is_compatible_with($coords_build), 'parent build is_compatible_with coordinates_from build');
+my $d1_build = $coords_model->last_complete_build;
+ok($d1_build, 'Found a completed build');
+is($d1_build->version, 26, 'Build has correct version');
+is($d1_build->derived_from->id, $build->id, 'derived_from property is correct');
+is($d1_build->coordinates_from->id, $build->id, 'coordinates_from property is correct');
+ok($d1_build->is_compatible_with($build), 'coordinates_from build is_compatible_with parent build');
+ok($build->is_compatible_with($d1_build), 'parent build is_compatible_with coordinates_from build');
 
-# specify a build derived_from another build which has coordinates_from yet another build
+# derive from d1_build
 @params = (
-    "--derived-from=".$coords_build->id,
+    "--derived-from=".$d1_build->id,
     "--fasta-file=$fasta_file",
     "--model-name=test-ref-seq-3",
     "--processing-profile-id=".$pp->id,
@@ -77,11 +78,12 @@ $rv = $cmd_class->_execute_with_shell_params_and_return_exit_code(@params);
 is($rv, 0, 'executed command');
 my $derived_model = Genome::Model::ImportedReferenceSequence->get(name => 'test-ref-seq-3');
 ok($derived_model, 'Found newly created model');
-my $derived_build = $derived_model->last_complete_build;
-ok($derived_build, 'Found a completed build');
-is($derived_build->version, 96, 'Build has correct version');
-is($derived_build->derived_from->id, $coords_build->id, 'derived_from property is correct');
-ok($derived_build->is_compatible_with($coords_build), 'derived build is_compatible_with parent build');
-ok($coords_build->is_compatible_with($derived_build), 'derived build is_compatible_with parent build');
-ok($derived_build->is_compatible_with($build), 'derived build is_compatible_with parent build');
-ok($build->is_compatible_with($derived_build), 'parent build is_compatible_with derived build');
+my $d2_build = $derived_model->last_complete_build;
+ok($d2_build, 'Found a completed build');
+is($d2_build->version, 96, 'Build has correct version');
+is($d2_build->derived_from->id, $d1_build->id, 'derived_from property is correct');
+is($d2_build->coordinates_from->id, $build->id, 'coordinates_from property is correct');
+ok($d2_build->is_compatible_with($d1_build), 'derived build is_compatible_with parent build');
+ok($d1_build->is_compatible_with($d2_build), 'derived build is_compatible_with parent build');
+ok($d2_build->is_compatible_with($build), 'derived build is_compatible_with parent build');
+ok($build->is_compatible_with($d2_build), 'parent build is_compatible_with derived build');
