@@ -7,3 +7,6 @@
 [submodule "vendor/Net-HTTPServer"]
 	path = vendor/Net-HTTPServer
 	url = ssh://git/srv/git/vendor/Net-HTTPServer.git
+[submodule "vendor/File-Grep"]
+	path = vendor/File-Grep
+	url = ssh://git/srv/git/vendor/File-Grep.git
