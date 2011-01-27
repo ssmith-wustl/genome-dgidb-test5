@@ -31,7 +31,7 @@ This filters out SNVs that are likely to be the result of Loss of Heterozygosity
 EOS
 }
 
-sub execute {
+sub _filter_variants {
     my $self = shift;
     $DB::single=1;
 

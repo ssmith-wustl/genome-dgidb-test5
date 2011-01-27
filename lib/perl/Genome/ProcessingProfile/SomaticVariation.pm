@@ -33,18 +33,19 @@ class Genome::ProcessingProfile::SomaticVariation{
 sub help_synopsis_for_create {
     my $self = shift;
     return <<"EOS"
-  
-  genome processing-profile create somatic-variation \
-    --name 'unfiltered sniper with breakdancer', \
-    --snv-detection-strategy 'sniper 0.7.3 [ -q 1 -Q 15 ] intersect samtools r599' \
-    --indel-detection-strategy 'sniper 0.7.3 [ -q 1 -Q 15 ] filtered by library-support v1' \
-    --sv-detection-strategy 'breakdancer 2010_06_24  filtered by tigra-assembly v1'
+  Complete Examples:
 
-  genome processing-profile create somatic-variation \
-    --name 'filtered sniper with breakdancer', \
-    --snv-detection-strategy 'sniper 0.7.3 [ -q 1 -Q 15 ] filtered by loh v1 , somatic-score-mapping-quality v1 [-min_somatic_quality 40:-min_mapping_quality 40] intersect samtools r599'  \
-    --indel-detection-strategy 'sniper 0.7.3 [ -q 1 -Q 15 ] filtered by library-support v1' \
-    --sv-detection-strategy 'breakdancer 2010_06_24  filtered by tigra-assembly v1'
+    genome processing-profile create somatic-variation \
+      --name 'unfiltered sniper with breakdancer' \
+      --snv-detection-strategy 'sniper 0.7.3 [ -q 1 -Q 15 ] intersect samtools r599' \
+      --indel-detection-strategy   '(sniper 0.7.3 [-q 1 -Q 15] filtered by library-support v1) union (samtools r599  intersect pindel 0.1)' \
+      --sv-detection-strategy 'breakdancer 2010_06_24  filtered by tigra-assembly v1'
+
+    genome processing-profile create somatic-variation \
+      --name 'filtered sniper with breakdancer' \
+      --snv-detection-strategy '(sniper 0.7.3 [-q 1 -Q 15] filtered by loh v1, somatic-score-mapping-quality v1 [-min_somatic_quality 40 -min_mapping_quality 40]) intersect samtools r599'  \
+      --indel-detection-strategy 'sniper 0.7.3 [-q 1 -Q 15] filtered by library-support v1' \
+      --sv-detection-strategy 'breakdancer 2010_06_24 filtered by tigra-assembly v1'
   
   Example Strategies usable for SNVs, indels, SVs, or combinations:
   
@@ -52,18 +53,18 @@ sub help_synopsis_for_create {
     # Detect with sniper version 0.7.3 with the parameters "-q 1 -Q 15".
     # works for SNVs, indels   
 
-    'sniper 0.7.3 [ -q 1 -Q 15 ] filtered by loh v1 '
+    'sniper 0.7.3 [-q 1 -Q 15] filtered by loh v1 '
     # Detect snvs or indels with sniper version 0.7.3 with the listed parameters and filter the results by running the "loh" filter version "v1".
 
-    'sniper 0.7.3 [ -q 1 -Q 15 ] filtered by loh v1 , somatic-score-mapping-quality v1 [-min_somatic_quality 40:-min_mapping_quality 40] intersect samtools r599'  
+    'sniper 0.7.3 [-q 1 -Q 15] filtered by loh v1, somatic-score-mapping-quality v1 [-min_somatic_quality 40:-min_mapping_quality 40] intersect samtools r599'  
     # Detect snvs and/or indels with the above as follows:
     # 1) Run sniper version 0.7.3 with parameters
-    # 2) Filter the results by running the loh filter version v1, i
-    # 3) Further filter results and then the somatic-score-mapping-quality filter version v1 with parameters.
+    # 2) Filter the results by running the loh filter version v1
+    # 3) Further filter results by running the somatic-score-mapping-quality filter version v1 with parameters.
     # 4) Run samtools version r599 (or steal previous results) 
     # 5) Intersect 3 & 4 
     
-    'sniper 0.7.3 [ -q 1 -Q 15 ] union (samtools r599  intersect pindel v1 )'
+    'sniper 0.7.3 [-q 1 -Q 15] union (samtools r599  intersect pindel v1)'
     # Detect indels with: 
     # 1) Run sniper version 0.7.3 with the listed parameters. 
     # 2) Run samtools version r599 
