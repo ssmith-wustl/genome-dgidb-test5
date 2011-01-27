@@ -113,19 +113,6 @@ $pse_2->add_param('subject_id', $sample->id);
 $pse_2->add_param('processing_profile_id', $processing_profile->id);
 $pse_2->add_reference_sequence_build_param_for_processing_profile( $processing_profile, $ref_seq_build);
 
-my $pse_2 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
-    pse_status => 'inprogress',
-    pse_id => '-12346',
-    ps_id => $ps->ps_id,
-);
-
-$pse_2->add_param('instrument_data_type', 'solexa');
-$pse_2->add_param('instrument_data_id', $instrument_data_2->id);
-$pse_2->add_param('subject_class_name', 'Genome::Sample');
-$pse_2->add_param('subject_id', $sample->id);
-$pse_2->add_param('processing_profile_id', $processing_profile->id);
-$pse_2->add_reference_sequence_build_param_for_processing_profile( $processing_profile, $ref_seq_build);
-
 my $command_1 = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
     test => 1,
 );
