@@ -41,42 +41,32 @@ ok(@models, 'created mock models');
 # overload models get, locking and shellcmd during tests
 no warnings;
 *Genome::Model::get = sub{ return grep { $_->build_requested } @models; };
-*Genome::Sys::shellcmd = sub{
-    my $class = shift;
-    my %params = @_;
-    my $line = $params{cmd};
-
-    unless($line) {
-        return -1;
-    }
-
-    my $id = (split(/\s+/, $line))[-1];
-    if($id) {
-        my ($model) = grep( $_->id eq $id, @models);
-        $model->build_requested(0); #Simulate starting the build
-    } else {
-        die 'Could not find id in line: ' . $line;
-    }
-};
 *Genome::Sys::lock_resource = sub{ return 1; };
 *Genome::Sys::unlock_resource= sub{ return 1; };
+*Genome::Model::Build::Command::Start::create = sub {
+    my $class = shift;
+    my $obj = bless ({}, $class);
+    return $obj;
+};
+*Genome::Model::Build::Command::Start::execute = sub {
+    my $self = shift;
+    my @models = Genome::Model->get();
+    for (@models){
+        $_->build_requested(0);
+    }
+    return 1;
+};
+
 use warnings;
 
 is_deeply([ Genome::Model->get ], [ $models[0], $models[2] ], 'models get overloaded') or die;
 ok(Genome::Sys->lock_resource, 'lock_resource overloaded') or die;
 ok(Genome::Sys->unlock_resource, 'unlock_resource overloaded') or die;
-ok(Genome::Sys->shellcmd, 'shellcmd overloaded') or die;
 
 my $command_1 = Genome::Model::Command::Services::BuildQueuedModels->create();
 isa_ok($command_1, 'Genome::Model::Command::Services::BuildQueuedModels');
 ok($command_1->execute(), 'executed build command');
-is($command_1->_builds_started, 2, 'started builds for the two applicable models');
 is_deeply([ map { $_->build_requested } @models ], [qw/ 0 0 0 /], 'builds no longer requested for models');
-
-my $command_2 = Genome::Model::Command::Services::BuildQueuedModels->create();
-isa_ok($command_2, 'Genome::Model::Command::Services::BuildQueuedModels');
-ok($command_2->execute(), 'executed build command');
-is($command_2->_builds_started, 0, 'started no builds since no applicable models');
 
 done_testing();
 exit;

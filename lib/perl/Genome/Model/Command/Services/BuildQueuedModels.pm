@@ -74,26 +74,22 @@ sub execute {
         build_requested => 1,
     );
 
-    my $max_builds_to_launch = $self->max_builds;
-    if (@models > $max_builds_to_launch) {
-        @models = splice(@models, 0, $max_builds_to_launch);
+    $DB::single = 1;
+    my $builds_to_start = $self->max_builds;
+    $builds_to_start = @models if @models < $builds_to_start;
+    my $command = Genome::Model::Build::Command::Start->create(
+        max_builds => $self->max_builds,
+        models => \@models,
+    );
+    my $rv = $command->execute;
+    my $err = $@;
+
+    my @builds = $command->builds;
+    unless (@builds == $builds_to_start){
+        die $self->error_message("Failed to start expected number of builds. $builds_to_start expected, ".scalar @builds." built.\nErr:$@");
     }
-
-    for my $model (@models) {
-        $self->status_message("Building model " . $model->__display_name__);
-        
-        my $model_id = $model->id;
-        eval {
-            my $cmd = qq{genome model build start --force --model $model_id};
-            Genome::Sys->shellcmd(cmd => $cmd);
-        };
-
-        if ($@) {
-            $self->error_message($@);
-            $self->status_message("Failed to start build for model '$model_id'");
-        } else {
-            $self->_builds_started($self->_builds_started + 1);
-        }
+    unless ($rv){
+        $self->error_message("Built expected number of builds, but had some failures:\nErr:$@");
     }
 
     Genome::Sys->unlock_resource(resource_lock=>$lock);
