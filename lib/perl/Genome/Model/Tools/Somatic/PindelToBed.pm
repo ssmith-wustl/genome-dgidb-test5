@@ -183,7 +183,6 @@ sub execute {
                 next;
             }
             $type_and_size = $type."/".$size;
-            $self->status_message( $type_and_size . "\t" . join(" ",@bed_line) . "\n");
             $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'bed'}=join(",",@bed_line);
             if($self->include_bp_ranges){
                 $ranges{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'lower'}=$lower_range;
