@@ -201,6 +201,151 @@ sub create_symlink {
     return 1;
 }
 
+sub _open_file {
+    my ($self, $file, $rw) = @_;
+    my $fh = IO::File->new($file, $rw);
+    return $fh if $fh;
+    Carp::croak("Can't open file ($file) with access '$rw': $!");
+}
+
+sub validate_file_for_reading {
+    my ($self, $file) = @_;
+
+    unless ( defined $file ) {
+        Carp::croak("Can't validate_file_for_reading: No file given");
+    }
+
+    unless (-e $file ) {
+        Carp::croak("File ($file) does not exist");
+    } 
+
+    unless (-f $file) {
+        Carp::croak("File ($file) exists but is not a plain file");
+    }
+
+    unless ( -r $file ) { 
+        Carp::croak("Do not have READ access to file ($file)");
+    }
+
+    return 1;
+}
+
+sub open_file_for_reading {
+    my ($self, $file) = @_;
+
+    $self->validate_file_for_reading($file)
+        or return;
+
+    # _open_file throws its own exception if it doesn't work
+    return $self->_open_file($file, 'r');
+}
+
+sub shellcmd {
+    # execute a shell command in a standard way instead of using system()\
+    # verifies inputs and ouputs, and does detailed logging...
+
+    # TODO: add IPC::Run's w/ timeout but w/o the io redirection...
+
+    my ($self,%params) = @_;
+    my $cmd                         = delete $params{cmd};
+    my $output_files                = delete $params{output_files} ;
+    my $input_files                  = delete $params{input_files};
+    my $output_directories          = delete $params{output_directories} ;
+    my $input_directories           = delete $params{input_directories};
+    my $allow_failed_exit_code      = delete $params{allow_failed_exit_code};
+    my $allow_zero_size_output_files = delete $params{allow_zero_size_output_files};
+    my $skip_if_output_is_present   = delete $params{skip_if_output_is_present};
+    $skip_if_output_is_present = 1 if not defined $skip_if_output_is_present;
+    if (%params) {
+        my @crap = %params;
+        Carp::confess("Unknown params passed to shellcmd: @crap");
+    }
+
+    if ($output_files and @$output_files) {
+        my @found_outputs = grep { -e $_ } grep { not -p $_ } @$output_files;
+        if ($skip_if_output_is_present
+            and @$output_files == @found_outputs
+        ) {
+            $self->status_message(
+                "SKIP RUN (output is present):     $cmd\n\t"
+                . join("\n\t",@found_outputs)
+            );
+            return 1;
+        }
+    }
+
+    if ($input_files and @$input_files) {
+        my @missing_inputs = grep { not -s $_ } grep { not -p $_ } @$input_files;
+        if (@missing_inputs) {
+            Carp::croak("CANNOT RUN (missing input files):     $cmd\n\t"
+                         . join("\n\t", map { -e $_ ? "(empty) $_" : $_ } @missing_inputs));
+        }
+    }
+
+    if ($input_directories and @$input_directories) {
+        my @missing_inputs = grep { not -d $_ } @$input_directories;
+        if (@missing_inputs) {
+            Carp::croak("CANNOT RUN (missing input directories):     $cmd\n\t"
+                        . join("\n\t", @missing_inputs));
+        }
+    }
+
+    $self->status_message("RUN: $cmd");
+    my $exit_code = system($cmd);
+    if ( $exit_code == -1 ) {
+        Carp::croak("ERROR RUNNING COMMAND. Failed to execute: $cmd");
+    } elsif ( $exit_code & 127 ) {
+        my $signal = $exit_code & 127;
+        my $withcore = ( $exit_code & 128 ) ? 'with' : 'without';
+
+        Carp::croak("COMMAND KILLED. Signal $signal, $withcore coredump: $cmd");
+    } elsif ($exit_code >> 8 != 0) {
+        $exit_code = $exit_code >> 8;
+        $DB::single = $DB::stopper;
+        if ($allow_failed_exit_code) {
+            Carp::carp("TOLERATING Exit code $exit_code, msg $! from: $cmd");
+        } else {
+            Carp::croak("ERROR RUNNING COMMAND.  Exit code $exit_code, msg $! from: $cmd");
+        }
+    }
+
+    my @missing_output_files;
+    if ($output_files and @$output_files) {
+        @missing_output_files = grep { not -s $_ }  grep { not -p $_ } @$output_files;
+    }
+    if (@missing_output_files) {
+        if ($allow_zero_size_output_files
+            and @$output_files == @missing_output_files
+        ) {
+            for my $output_file (@$output_files) {
+                Carp::carp("ALLOWING zero size output file '$output_file' for command: $cmd");
+                my $fh = $self->open_file_for_writing($output_file);
+                unless ($fh) {
+                    Carp::croak("failed to open $output_file for writing to replace missing output file: $!");
+                }
+                $fh->close;
+            }
+            @missing_output_files = ();
+        }
+    }
+    
+    my @missing_output_directories;
+    if ($output_directories and @$output_directories) {
+        @missing_output_directories = grep { not -s $_ }  grep { not -p $_ } @$output_directories;
+    }
+
+
+    if (@missing_output_files or @missing_output_directories) {
+        for (@$output_files) { unlink $_ or Carp::croak("Can't unlink $_: $!"); }
+        Carp::croak("MISSING OUTPUTS! "
+                    . join(', ', @missing_output_files)
+                    . " "
+                    . join(', ', @missing_output_directories));
+    } 
+
+    return 1;    
+
+}
 1;
 
 __END__

@@ -55,7 +55,7 @@ sub execute {
     $self->status_message("Merging predictions into files in " . $self->prediction_directory);
 
     # Get meta object for each prediction type, grab attributes of the object (except for directory)
-    TYPE: for my $type (@{$self->prediction_types}) {
+    TYPE: for my $type ($self->prediction_types) {
         $self->status_message("*** Working on $type ***");
         my $meta = $type->__meta__;
         my @attributes = map { $_->property_name } $meta->properties;

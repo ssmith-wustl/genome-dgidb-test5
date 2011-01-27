@@ -291,7 +291,7 @@ sub lane {
 }
 
 sub run_start_date_formatted {
-    UR::Time->now();
+    return Genome::Model::Tools::Sam->time();
 }
 
 sub seq_id {
@@ -393,11 +393,9 @@ sub get_segments {
     return map {{segment_type=>'read_group', segment_id=>$_}} @read_groups;
 }
 
-# Microarry stuff eventually need to subclass
-sub genotype_microarry_file_for_reference_name {
-    my ($self, $reference_name) = @_;
-
-    Carp::confess('No reference name given to get genotype microarry file') if not $reference_name;
+# Microarray stuff eventually need to subclass
+sub genotype_microarray_raw_file {
+    my $self = shift;
 
     my $disk_allocation = $self->disk_allocations;
     return if not $disk_allocation;
@@ -407,17 +405,34 @@ sub genotype_microarry_file_for_reference_name {
     my $sample_name = $self->sample_name;
     Carp::confess('No sample name for instrument data: '.$self->id) if not $sample_name;
 
-    return $absolute_path.'/'.$sample_name.'.'.$reference_name.'.genotype';
+    return $absolute_path.'/'.$sample_name.'.raw.genotype';
 }
 
-sub genotype_microarray_file_for_human_build_37 {
-    my $self = shift;
-    return $self->genotype_microarry_file_for_reference_name('human-build37');
+sub genotype_microarray_file_for_subject_and_version {
+    my ($self, $subject_name, $version) = @_;
+
+    Carp::confess('No reference name given to get genotype microarray file') if not $subject_name;
+    Carp::confess('No version given to get genotype microarray file') if not defined $version;
+
+    my $disk_allocation = $self->disk_allocations;
+    return if not $disk_allocation;
+
+    my $absolute_path = $disk_allocation->absolute_path;
+    Carp::confess('No absolute path for instrument data ('.$self->id.') disk allocation: '.$disk_allocation->id) if not $absolute_path;
+    my $sample_name = $self->sample_name;
+    Carp::confess('No sample name for instrument data: '.$self->id) if not $sample_name;
+
+    return $absolute_path.'/'.$sample_name.'.'.$subject_name.'-'.$version.'.genotype';
 }
 
-sub genotype_microarray_file_for_human_build_36 {
+sub genotype_microarray_file_for_human_version_37 {
     my $self = shift;
-    return $self->genotype_microarry_file_for_reference_name('human-build36');
+    return $self->genotype_microarray_file_for_subject_and_version('human', '37');
+}
+
+sub genotype_microarray_file_for_human_version_36 {
+    my $self = shift;
+    return $self->genotype_microarray_file_for_subject_and_version('human', '36');
 }
 
 1;
