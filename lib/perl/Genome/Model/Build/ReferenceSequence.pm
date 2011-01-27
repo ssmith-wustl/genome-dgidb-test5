@@ -129,6 +129,9 @@ sub create {
 
     # Let's store the name as an input instead of relying on calculated properties
     $build->name($build->calculated_name) if $build;
+    if ($build->derived_from) {
+        $build->coordinates_from($build->derived_from_root);
+    }
 
     return $build;
 }
@@ -138,7 +141,7 @@ sub __errors__ {
     my @tags = $self->SUPER::__errors__();
 
     # this will die on circular links
-    eval { my $coords = $self->get_coordinates_from(); };
+    eval { my $coords = $self->derived_from_root(); };
     if ($@) {
         push @tags, UR::Object::Tag->create(
             type => 'error',
@@ -180,28 +183,19 @@ sub is_derived_from {
     return $self->derived_from->is_derived_from($build, $seen); 
 }
 
-sub get_coordinates_from {
-    my $self = shift;
-    my $result = $self->coordinates_from;
-    return $result if $result;
-
-    return $self->derived_from_root;
-}
-
 sub derived_from_root {
     my ($self) = @_;
     my $from = $self;
     my %seen = ($self->id => 1);
-    while (!defined $from->coordinates_from and defined $from->derived_from) {
+    while (defined $from->derived_from) {
         $from = $from->derived_from;
         if (exists $seen{$from->id}) {
-            die "Circular link found in derived_from chain while calculating 'coordinates_from'.".
+            die "Circular link found in derived_from chain while calculating 'derived_from_root'.".
                 " Current build: " . $self->__display_name__ . ", derived from: " .
                 $from->derived_from->__display_name__ . ", seen: " . join(',', keys %seen);
         }
         $seen{$from->id} = 1;
     }
-    return $from->coordinates_from if defined $from->coordinates_from;
     return $from;
 }
 
@@ -209,7 +203,10 @@ sub derived_from_root {
 sub is_compatible_with {
     my ($self, $rsb) = @_;
     return if !defined $rsb;
-    return 1 if $self->get_coordinates_from()->id == $rsb->get_coordinates_from()->id;
+    my $coords_from = $self->coordinates_from || $self;
+    my $other_coords_from = $rsb->coordinates_from || $rsb;
+    
+    return $coords_from->id == $other_coords_from->id;
 }
 
 sub __display_name__ {

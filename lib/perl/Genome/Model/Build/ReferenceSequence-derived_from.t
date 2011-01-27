@@ -7,7 +7,7 @@ BEGIN {
 
 use above "Genome";
 use Data::Dumper;
-use Test::More tests => 41;
+use Test::More tests => 37;
 use_ok('Genome::Model::Build::ReferenceSequence');
 
 # create a test annotation build and a few reference sequence builds to test compatibility with
@@ -26,33 +26,39 @@ my %rbuilds = create_reference_builds(\@species_names, \@versions);
 
 # 1 -> 2
 $rbuilds{'human'}[1]->derived_from($rbuilds{'human'}[0]);
+$rbuilds{'human'}[1]->coordinates_from($rbuilds{'human'}[1]->derived_from_root);
 ok(!$rbuilds{'human'}[0]->is_compatible_with(), 'build is not compatible with null');
 ok($rbuilds{'human'}[0]->is_derived_from($rbuilds{'human'}[0]), 'build is derived from itself');
 ok($rbuilds{'human'}[0]->is_compatible_with($rbuilds{'human'}[0]), 'build is compatible with itself');
 ok($rbuilds{'human'}[0]->is_derived_from($rbuilds{'human'}[0]), 'build w/no parent gets coordinates_from itself');
 ok($rbuilds{'human'}[1]->is_derived_from($rbuilds{'human'}[0]), 'build is derived from its parent');
 ok($rbuilds{'human'}[1]->is_derived_from($rbuilds{'human'}[0]), 'build is compatible with its parent');
-is($rbuilds{'human'}[1]->get_coordinates_from(), $rbuilds{'human'}[0], 'build w/1 lvl of parent gets coordinates_from parent');
+is($rbuilds{'human'}[1]->derived_from_root(), $rbuilds{'human'}[0], 'build w/1 lvl of parent gets coordinates_from parent');
 ok(!$rbuilds{'human'}[0]->is_derived_from($rbuilds{'human'}[1]), 'build is not derived from its descendant');
 ok($rbuilds{'human'}[0]->is_compatible_with($rbuilds{'human'}[1]), 'build is compatible with its child');
 
 # 1 -> 2 -> 3
 $rbuilds{'human'}[2]->derived_from($rbuilds{'human'}[1]);
+$rbuilds{'human'}[2]->coordinates_from($rbuilds{'human'}[2]->derived_from_root);
 ok($rbuilds{'human'}[2]->is_derived_from($rbuilds{'human'}[0]), 'build is derived from grandparent');
 ok($rbuilds{'human'}[2]->is_compatible_with($rbuilds{'human'}[0]), 'build is compatible with its grandparent');
 ok($rbuilds{'human'}[0]->is_compatible_with($rbuilds{'human'}[2]), 'build is compatible with its grandchild');
-is($rbuilds{'human'}[2]->get_coordinates_from(), $rbuilds{'human'}[0], 'build w/2 lvl of parent gets coordinates_from grandparent');
+is($rbuilds{'human'}[2]->derived_from_root(), $rbuilds{'human'}[0], 'build w/2 lvl of parent gets coordinates_from grandparent');
 
 # attempt to derive from another model's build
-ok(!$rbuilds{'human'}[0]->__errors__, "no errors so far...");
+my @errs =$rbuilds{'human'}[0]->__errors__ ;
+ok(!@errs, "no errors so far...")
+    or die "Unexpected errors:\n\t" . join("\n\t", map{$_->__display_name__} @errs);
 $rbuilds{'human'}[0]->derived_from($rbuilds{'mouse'}[0]);
-my @errs = $rbuilds{'human'}[0]->__errors__;
+@errs = $rbuilds{'human'}[0]->__errors__;
 ok(@errs, "deriving from another model's build is an error");
 ok($errs[0]->type, 'error type is correct');
 is($errs[0]->{properties}->[0], 'derived_from', 'error references derived_from property');
 
 # attempt to derive from self
-ok(!$rbuilds{'human'}[1]->__errors__, "no errors so far...");
+@errs = $rbuilds{'human'}[1]->__errors__;
+ok(!@errs, "no errors so far...")
+    or die "Unexpected errors:\n\t" . join("\n\t", map{$_->__display_name__} @errs);
 $rbuilds{'human'}[1]->derived_from($rbuilds{'human'}[1]);
 @errs = $rbuilds{'human'}[1]->__errors__;
 ok(@errs, "deriving from self is an error");
@@ -68,15 +74,8 @@ is($errs[0]->{properties}->[0], 'derived_from', 'error references derived_from p
 like($errs[0]->{desc}, '/Circular/', 'error mentions "circular"');
 eval { $rbuilds{'human'}[1]->is_derived_from($rbuilds{'human'}[3]); };
 ok($@, 'circular links are detected in is_derived_from');
-eval { $rbuilds{'human'}[1]->get_coordinates_from(); };
+eval { $rbuilds{'human'}[1]->derived_from_root(); };
 ok($@, 'circular links are detected in coordinates from');
-
-map { $_->derived_from(undef) } @{$rbuilds{'human'}}; #reset
-$rbuilds{'human'}[1]->coordinates_from($rbuilds{'human'}[0]);
-is($rbuilds{'human'}[0], $rbuilds{'human'}[0]->get_coordinates_from($rbuilds{'human'}[0]), 'get_coordinates_from works');
-is($rbuilds{'human'}[0], $rbuilds{'human'}[1]->get_coordinates_from($rbuilds{'human'}[0]), 'get_coordinates_from works');
-ok($rbuilds{'human'}[1]->is_compatible_with($rbuilds{'human'}[0]), 'build is_compatible with build->coordinates_from');
-ok($rbuilds{'human'}[0]->is_compatible_with($rbuilds{'human'}[1]), 'build is_compatible with things that list it as coordinates_from');
 
 done_testing();
 

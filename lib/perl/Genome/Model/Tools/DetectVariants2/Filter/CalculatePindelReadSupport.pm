@@ -25,7 +25,7 @@ sub help_detail {
 EOS
 }
 
-sub execute {
+sub _filter_variants {
     my $self = shift;
     #TODO Clean this up a bit. Add an option to gmt somatic calc-pindel-blah to not include dbsnp filtering
     my $result = Genome::Model::Tools::Somatic::CalculatePindelReadSupport(

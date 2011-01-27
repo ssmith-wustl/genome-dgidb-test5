@@ -87,7 +87,7 @@ This module takes in somatic sniper output and filters it to high confidence var
 EOS
 }
 
-sub execute {
+sub _filter_variants {
     my $self = shift;
     $DB::single=1;
 

@@ -23,8 +23,9 @@ Not yet implemented. Placeholder module.
 EOS
 }
 
-sub execute {
-    die "Not yet implemented\n";
+sub _filter_variants {
+    print "Not yet implemented\n";
+    return 1;
 }
 
 1;
