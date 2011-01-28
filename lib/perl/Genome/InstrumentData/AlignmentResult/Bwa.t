@@ -32,6 +32,11 @@ my $aligner_name = "bwa";
 # everything below here ought to be generic.
 #
 
+# Override lock name because if people cancel tests locks don't get cleaned up.
+*Genome::SoftwareResult::_resolve_lock_name = sub {
+    return "/tmp/lock/Genome--InstrumentData--AlignmentResult--Bwa/" . time();
+};
+
 #
 # Gather up versions for the tools used herein
 #
