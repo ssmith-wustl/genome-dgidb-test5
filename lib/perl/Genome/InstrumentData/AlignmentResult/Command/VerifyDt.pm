@@ -136,7 +136,7 @@ sub repair_dt {
         rename($in_bam, "$in_bam.orig") || die;
         rename($out_bam, $in_bam) || die;
         unlink("$in_bam.md5") || die;
-        system("md5sum $in_bam > $in_bam.md5") || die;
+        !system("md5sum $in_bam > $in_bam.md5") || die;
         chmod(0444, "$in_bam.md5") || die;
         unlink("$in_bam.orig") || die;
         unlink($out_sam_h) || die;
