@@ -48,7 +48,7 @@ sub execute {
    
     my $second_revision = $self->second_revision;
     unless (defined $second_revision) {
-        my $stable = readlink "/gsc/scripts/opt/genome-stable";
+        my $stable = readlink "/gsc/scripts/opt/genome/current/pipeline";
         $second_revision = "/gsc/scripts/opt/$stable";
     }
     confess "No revision found at $second_revision" unless -d $second_revision;
