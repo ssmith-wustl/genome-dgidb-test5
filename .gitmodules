@@ -10,3 +10,6 @@
 [submodule "vendor/File-Grep"]
 	path = vendor/File-Grep
 	url = ssh://git/srv/git/vendor/File-Grep.git
+[submodule "tigra"]
+	path = tigra
+	url = ssh://git//srv/git/tigra.git
