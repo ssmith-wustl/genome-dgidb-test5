@@ -94,7 +94,7 @@ sub execute {
     # target_region_set_name column set to undef. Otherwise, we need to make sure the target region
     # name corresponds to only one Genome::FeatureList.
     my $target_region;
-    unless ($self->target_region eq 'whole genome') {
+    unless ($self->target_region eq 'none') {
         if ($self->validate_target_region) {
             $target_region = $self->target_region;
         } else {
