@@ -63,10 +63,12 @@ for (1..5) {
     my $assignment = Genome::Disk::Assignment->create(
         dv_id => $volume->id,
         dg_id => $group->id,
-        assignment_date => '2010-01-01',
     );
     ok($assignment, 'made disk assignment') or die;
 }
+
+# Make sure dummy objects can be committed
+ok(UR::Context->commit, 'commit of dummy objects to db successful') or die;
 
 # Create a dummy allocation
 # This gets made in temp, but I'm only interested in the dirname
@@ -145,6 +147,7 @@ UR::Context->commit;
 # make sure that nothing gets stuck in a deadlock
 print "*** Starting race condition test\n";
 Genome::DataSource::GMSchema->disconnect_default_dbh; # Prevents craziness when the child processes try to close the dbh
+Genome::DataSource::Oltp->disconnect_default_dbh;
 map { $_->can_allocate(1) } @volumes; # Turn on the volumes
 
 my @pids;
