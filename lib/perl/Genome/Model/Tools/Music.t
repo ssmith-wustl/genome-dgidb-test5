@@ -47,10 +47,10 @@ my @examples = (
             . " --clinical-data-file $input_dir/clinical_data/tcga_OV_clinical_clean.csv.maf_samples.numeric.withNA.csv"
             . " --clinical-data-type numeric"
             . " --maf-file $input_dir/maf/tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent"
-            . " --output-file $actual_output_dir/tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent.cat_cor"
+            . " --output-file $actual_output_dir/tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent.cat_cor.FIXME"
             . "  --genetic-data-type gene",
         expect => [
-            'tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent.cat_cor' 
+            'tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent.cat_cor.FIXME' 
         ]
     },
 );
