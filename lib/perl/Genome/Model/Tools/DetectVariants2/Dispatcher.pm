@@ -88,6 +88,8 @@ sub _detect_variants {
         }   
     );
 
+    $workflow->wait;
+
     return 1;
 }
 
@@ -258,6 +260,9 @@ sub generate_workflow {
     # TODO filter each detector if any are defined
 
     # TODO union and intersect each post-filtering detector output if necessary
+
+    # TODO remove this, or put a copy of the as_xml in the output dir maybe
+    #my $xml = $workflow_model->save_to_xml;
 
     return $workflow_model;
 }
