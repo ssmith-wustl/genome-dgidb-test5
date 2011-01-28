@@ -246,6 +246,23 @@ sub execute {                               # replace with real execution logic.
                                 run_filter($self, $variant_file, $bam_file);
 
 
+                                ## FILTER INDELS ##
+
+                                # Somatic #                                
+                                $variant_file = "$output_indel.formatted.Somatic.hc";
+                                $bam_file = $tumor_bam;
+                                run_indel_filter($self, $variant_file, $bam_file);
+                                # Germline #
+                                $variant_file = "$output_indel.formatted.Germline.hc";
+                                $bam_file = $tumor_bam;
+                                run_indel_filter($self, $variant_file, $bam_file);
+                                # LOH using normal bam ##
+                                $variant_file = "$output_indel.formatted.LOH.hc";
+                                $bam_file = $normal_bam;
+                                run_indel_filter($self, $variant_file, $bam_file);
+
+
+
 			}
 
 		}
@@ -283,6 +300,30 @@ sub run_filter
                 else
                 {
                         my $cmd = "gmt somatic filter-false-positives --variant-file $variant_file --bam-file $bam_file --output-file $variant_file.fpfilter --filtered-file $variant_file.fpfilter.removed";
+                        system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>2000 && tmp>2000] rusage[mem=2000]\" $cmd");
+                }
+        }        
+}
+
+
+################################################################################################
+# Run Filter - Launches the LSF job to filter the variants 
+#
+################################################################################################
+
+sub run_indel_filter
+{                               # replace with real execution logic.
+	my ($self, $variant_file, $bam_file) = @_;
+        
+        if(-e $variant_file)
+        {
+                if($self->skip_if_output_present && -e "$variant_file.fpfilter")
+                {
+                        ## Skip because output present ##
+                }
+                else
+                {
+                        my $cmd = "gmt somatic filter-false-indels --variant-file $variant_file --bam-file $bam_file --output-file $variant_file.fpfilter --filtered-file $variant_file.fpfilter.removed";
                         system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>2000 && tmp>2000] rusage[mem=2000]\" $cmd");
                 }
         }        
