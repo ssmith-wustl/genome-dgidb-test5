@@ -2,15 +2,14 @@
 use strict;
 use warnings;
 use above 'Genome';
+use Genome::Model::Tools::Music;
 use Test::More;
 
 # figure out where the test inputs are and expected outputs
-my $test_data_dir = Genome::Sys->dbpath('genome-music-test','0.01');
+# the package with this data is a dependency so this should work
+my $test_data_dir = Genome::Sys->dbpath('genome-music-test',$Genome::Model::Tools::Music::VERSION);
 unless ($test_data_dir) {
     die "failed to find test data for genome-music-test version 0.01!";
-}
-unless (-d $test_data_dir) {
-    die "no test data directory: $test_data_dir!";
 }
 
 #my $input_dir = '/gscuser/ndees/893/music_testdata/';
@@ -23,11 +22,11 @@ my $actual_output_dir;
 if (@ARGV) {
     # override output dir
     if ($ARGV[0] eq '--regenerate') {
-        # regenerate expectations
+        # regenerate all output files as the new "correct" answer
         $actual_output_dir = $expected_output_dir;
     }
     else {
-        # use the dir the user specifies
+        # use the dir the user specifies (for dev testing)
         $actual_output_dir = shift @ARGV;
         mkdir $actual_output_dir unless -d $actual_output_dir;
         unless (-d $actual_output_dir) {
@@ -41,7 +40,7 @@ else {
 };
 
 # use cases and expected outputs
-my @examples = (
+my @cases = (
     {
         run => "music clinical-correlation "
             . " --clinical-data-file $input_dir/clinical_data/tcga_OV_clinical_clean.csv.maf_samples.numeric.withNA.csv"
@@ -56,11 +55,11 @@ my @examples = (
 );
 
 # pre-determine how many tests will run so the test harness knows if we exit early
-my $tests = scalar(@examples) * 2;
-for my $example (@examples) {
-    my $expect = $example->{expect};
+my $tests = scalar(@cases) * 2;
+for my $case (@cases) {
+    my $expect = $case->{expect};
     unless ($expect) {
-        warn "no files expected for test $example->{run}???";
+        warn "no files expected for test $case->{run}???";
         next;
     }
     $tests += (scalar(@$expect) * 2);
@@ -68,39 +67,34 @@ for my $example (@examples) {
 
 # since these tests don't run yet, and we don't want to stop deploy over it,
 # require that an environment variable be set to actually run
-if ($ENV{GENOME_TEST_DEV}) {
-    plan tests => $tests;
-}
-else {
-    plan skip_all => "in development, set GENOME_TEST_DEV=1 to run this test"
-};  
+plan tests => $tests;
 
-# run each example
+# run each case
 my $n = 0;
-for my $example (@examples) {
-    my $cmd = $example->{run};
-    my $expect = $example->{expect};
+for my $case (@cases) {
+    my $cmd = $case->{run};
+    my $expect = $case->{expect};
 
     # execute
     my $n++;
-    note("running test example $n: $cmd");
+    note("running test case $n: $cmd");
     my @args = split(' ',$cmd);
     my $exit_code = eval {
         Genome::Model::Tools->_execute_with_shell_params_and_return_exit_code(@args);
     };
 
-    ok(!$@, " example $n ran without crashing") or diag $@;
-    is($exit_code, 0, " example $n ran returned a zero (good) exit code") or next;
+    ok(!$@, " case $n ran without crashing") or diag $@;
+    is($exit_code, 0, " case $n ran returned a zero (good) exit code") or next;
 
     # compare results
     for my $expect_file (@$expect) {
         my $expect_full_path = $expected_output_dir . '/'. $expect_file;
         my $actual_full_path = $actual_output_dir . '/' . $expect_file;
         
-        ok(-e $actual_full_path, " example $n has expected output file $expect_file") or next;
+        ok(-e $actual_full_path, " case $n has expected output file $expect_file") or next;
         
         my @diff = `diff $expect_full_path $actual_full_path`;
-        is(scalar(@diff), 0, " example $n matches expectations for file $expect_file")
+        is(scalar(@diff), 0, " case $n matches expectations for file $expect_file")
             or diag("diff $expect_full_path and $actual_full_path; # << run this to debug"); 
     }
 }
