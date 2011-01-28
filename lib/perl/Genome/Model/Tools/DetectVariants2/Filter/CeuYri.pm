@@ -30,7 +30,7 @@ Filter out CEU and YRI from the variant file... really this is just a wrapper of
 EOS
 }
 
-sub execute {
+sub _filter_variants {
     my $self = shift;
 
     my $c_variant_file = $self->control_variant_file || '/gscmnt/834/info/medseq/imported_variants_data/CEU_YRI_all.snps.snpfilter.s';

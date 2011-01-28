@@ -427,5 +427,20 @@ sub update_genotype_verify_successful_completion {
     return 1;
 }
 
+sub has_version {
+    my $self = shift;
+    my $version = shift;
+    unless(defined($version)){
+        $version = $self->version;
+    }
+    my @versions = Genome::Model::Tools::Maq->available_maq_versions;
+    for my $v (@versions){
+        if( $v eq $version){
+            return 1;
+        }
+    }
+    return 0;
+}
+
 1;
 

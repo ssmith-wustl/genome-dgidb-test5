@@ -7,13 +7,20 @@ use Genome;
 use IO::File;
 
 class Genome::Model::Tools::DetectVariants2::Samtools {
-    is => ['Genome::Model::Tools::DetectVariants', 'Genome::Model::Tools::DetectVariants2::Base'],
+    is => ['Genome::Model::Tools::DetectVariants'],
     has_optional => [
         detect_snvs => {
             default => 1,
         },
         detect_indels => {
             default => 1,
+        },
+        control_aligned_reads_input => {
+            is => 'Text',
+            doc => 'Location of the control aligned reads file to which the input aligned reads file should be compared',
+            shell_args_position => '2',
+            is_input => 1,
+            is_output => 1,
         },
     ],
 
@@ -293,6 +300,21 @@ sub generate_metrics {
     }
 
     return $metrics;
+}
+
+sub has_version {
+    my $self = shift;
+    my $version = shift;
+    unless(defined($version)){
+        $version = $self->version;
+    }
+    my @versions = Genome::Model::Tools::Sam->available_samtools_versions;
+    for my $v (@versions){
+        if($v eq $version){
+            return 1;
+        }
+    }
+    return 0;
 }
 
 1;

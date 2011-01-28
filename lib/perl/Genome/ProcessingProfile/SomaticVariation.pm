@@ -10,19 +10,19 @@ class Genome::ProcessingProfile::SomaticVariation{
     doc => "Comprehensive novel somatic variation detection, filtering, novelty determination, and tiering.",
     has_param => [
         snv_detection_strategy => {
-            is => "String",
+            is => "Text",
             is_many => 0,
             is_optional =>1,
             doc => "Strategy to be used to detect snvs.",
         },
         indel_detection_strategy => {
-            is => "String",
+            is => "Text",
             is_many => 0,
             is_optional =>1,
             doc => "Strategy to be used to detect indels.",
         },
         sv_detection_strategy => {
-            is => "String",
+            is => "Text",
             is_many => 0,
             is_optional =>1,
             doc => "Strategy to be used to detect svs.",
@@ -30,66 +30,142 @@ class Genome::ProcessingProfile::SomaticVariation{
     ],
 };
 
-sub help_synopsis {
+sub help_synopsis_for_create {
     my $self = shift;
     return <<"EOS"
-# Detect snvs with sniper version 0.7.3 with the parameters "-q 1 -Q 15".
-genome processing-profile create somatic-variation --snv-detection-strategy 'sniper 0.7.3 [-q 1 -Q 15]'
+  Complete Examples:
 
-# Detect snvs with sniper version 0.7.3 with the listed parameters and filter the results by running the "loh" filter version "v1".
-genome processing-profile create somatic-variation --snv-detection-strategy 'sniper 0.7.3 [ -q 1 -Q 15 ] filtered by loh v1 '
+    genome processing-profile create somatic-variation \
+      --name 'unfiltered sniper with breakdancer' \
+      --snv-detection-strategy 'sniper 0.7.3 [ -q 1 -Q 15 ] intersect samtools r599' \
+      --indel-detection-strategy   '(sniper 0.7.3 [-q 1 -Q 15] filtered by library-support v1) union (samtools r599  intersect pindel 0.1)' \
+      --sv-detection-strategy 'breakdancer 2010_06_24  filtered by tigra-assembly v1'
 
-# Detect snvs with: 1) Run sniper version 0.7.3 with the listed parameters. 2) Run samtools version r599 and intersect it with the results of pindel version v1. Union the results of 1 and 2.
-genome processing-profile create somatic-variation --snv-detection-strategy 'sniper 0.7.3 [ -q 1 -Q 15 ] union (samtools r599  intersect pindel v1 )'
+    genome processing-profile create somatic-variation \
+      --name 'filtered sniper with breakdancer' \
+      --snv-detection-strategy '(sniper 0.7.3 [-q 1 -Q 15] filtered by loh v1, somatic-score-mapping-quality v1 [-min_somatic_quality 40 -min_mapping_quality 40]) intersect samtools r599'  \
+      --indel-detection-strategy 'sniper 0.7.3 [-q 1 -Q 15] filtered by library-support v1' \
+      --sv-detection-strategy 'breakdancer 2010_06_24 filtered by tigra-assembly v1'
+  
+  Example Strategies usable for SNVs, indels, SVs, or combinations:
+  
+    'sniper 0.7.3 [-q 1 -Q 15]'
+    # Detect with sniper version 0.7.3 with the parameters "-q 1 -Q 15".
+    # works for SNVs, indels   
 
-# Detect snvs with sniper version 0.7.3 with the listed parameters. Detect indels with the same version and parameters of sniper. Detect structural variation with breakdancer version 2010_06_24.
-genome processing-profile create somatic-variation --snv-detection-strategy 'sniper 0.7.3 [ -q 1 -Q 15 ]' --indel-detection-strategy 'sniper 0.7.3 [ -q 1 -Q 15 ]' --sv-detection-strategy 'breakdancer 2010_06_24 ' 
+    'sniper 0.7.3 [-q 1 -Q 15] filtered by loh v1 '
+    # Detect snvs or indels with sniper version 0.7.3 with the listed parameters and filter the results by running the "loh" filter version "v1".
 
-# Detect snvs: Intersect the results of sniper version 0.7.3 with parameters and samtools version r599.
-# Detect indels using sniper version 0.7.3 with parameters and filter the results with the library-support filter version v1
-# Detect structural variations using breakdancer version 2010_06_24 and filter the results by applying the tigra-assembly filter version v1
-genome processing-profile create somatic-variation --snv-detection-strategy 'sniper 0.7.3 [ -q 1 -Q 15 ] intersect samtools r599 ' --indel-detection-strategy 'sniper 0.7.3 [ -q 1 -Q 15 ] filtered by library-support v1 ' --sv-detection-strategy 'breakdancer 2010_06_24  filtered by tigra-assembly v1 '
-
-# Detect snvs: Run sniper version 0.7.3 with parameters and samtools version r599. Filter the results by running the loh filter version v1, and then the somatic-score-mapping-quality filter version v1 with parameters.
-#               Intersect those results with those from running samtools version r599.
-# Detect indels using sniper version 0.7.3 with parameters and filter the results with the library-support filter version v1
-# Detect structural variations using breakdancer version 2010_06_24 and filter the results by applying the tigra-assembly filter version v1
-genome processing-profile create somatic-variation --snv-detection-strategy 'sniper 0.7.3 [ -q 1 -Q 15 ] filtered by loh v1 , somatic-score-mapping-quality v1 [-min_somatic_quality 40:-min_mapping_quality 40] intersect samtools r599'  --indel-detection-strategy 'sniper 0.7.3 [ -q 1 -Q 15 ] filtered by library-support v1 ' --sv-detection-strategy 'breakdancer 2010_06_24  filtered by tigra-assembly v1 '
+    'sniper 0.7.3 [-q 1 -Q 15] filtered by loh v1, somatic-score-mapping-quality v1 [-min_somatic_quality 40:-min_mapping_quality 40] intersect samtools r599'  
+    # Detect snvs and/or indels with the above as follows:
+    # 1) Run sniper version 0.7.3 with parameters
+    # 2) Filter the results by running the loh filter version v1
+    # 3) Further filter results by running the somatic-score-mapping-quality filter version v1 with parameters.
+    # 4) Run samtools version r599 (or steal previous results) 
+    # 5) Intersect 3 & 4 
+    
+    'sniper 0.7.3 [-q 1 -Q 15] union (samtools r599  intersect pindel v1)'
+    # Detect indels with: 
+    # 1) Run sniper version 0.7.3 with the listed parameters. 
+    # 2) Run samtools version r599 
+    # 3) Run pindel version v1
+    # 4) Intersect 2 and 3
+    # 5) Union 1 and 4.
 EOS
 }
 
-sub help_detail {
-    return <<EOS 
-A strategy consists of the following:
-detector-name version [ params ] filtered by filter-name version [ params ],filter-name version [ params ] ...
+sub help_detail_for_create {
+    return <<EOS
+  For a detailed explanation of how to writing a variant detection strategy, see: 
+    perldoc Genome::Model::Tools::DetectVariants2::Strategy;
+EOS
+}
 
-* Detector-name is the name of the variant detector as it follows "gmt detect-variants2". For example, "sniper" would reference the tool located at "gmt detect-variants2 sniper".
+sub help_manual_for_create {
+    return <<EOS
+  
+  EXAMPLES
+    
+    Strategies usable for SNVs, indels, SVs, or combinations:
+  
+    'sniper 0.7.3 [-q 1 -Q 15]'
+    # Detect with sniper version 0.7.3 with the parameters "-q 1 -Q 15".
+    # works for SNVs, indels   
 
-* In the same way, filter-name is the name of the filter as it follows "gmt detect-variants2 filter". For example, "loh" would reference the tool located at gmt detect-variants2 filter loh".
+    'sniper 0.7.3 [ -q 1 -Q 15 ] filtered by loh v1 '
+    # Detect snvs or indels with sniper version 0.7.3 with the listed parameters and filter the results by running the "loh" filter version "v1".
 
-* Version is a version number that pertains to that detector or filter specifically. For sniper this might be "0.7.3". For samtools this might be "r599".
-    Many filters are not currently versioned, but may be in the future. In these cases "v1" should be used to denote version 1.
+    'sniper 0.7.3 [ -q 1 -Q 15 ] filtered by loh v1 , somatic-score-mapping-quality v1 [-min_somatic_quality 40:-min_mapping_quality 40] intersect samtools r599'  
+    # Detect snvs and/or indels with the above as follows:
+    # 1) Run sniper version 0.7.3 with parameters
+    # 2) Filter the results by running the loh filter version v1, i
+    # 3) Further filter results and then the somatic-score-mapping-quality filter version v1 with parameters.
+    # 4) Run samtools version r599 (or steal previous results) 
+    # 5) Intersect 3 & 4 
+    
+    'sniper 0.7.3 [ -q 1 -Q 15 ] union (samtools r599  intersect pindel v1 )'
+    # Detect indels with: 
+    # 1) Run sniper version 0.7.3 with the listed parameters. 
+    # 2) Run samtools version r599 
+    # 3) Run pindel version v1
+    # 4) Intersect 2 and 3
+    # 5) Union 1 and 4.
 
-* The parameter list is a list of all parameters to be passed to the detector or filter and will be specific to that tool. It is passed as a single string and is optional.
+    'sniper 0.7.3 [ -q 1 -Q 15 ]' 
+    # Detect snvs or indels or both with sniper version 0.7.3 with the listed parameters. 
+    # This expression can be set as an snv detection strategy or an indel detection strategy, 
+    # and if both are set to the same value sniper will run just once to do both.
+    
+    'breakdancer 2010_06_24 ' 
+    # Detect structural variation with breakdancer version 2010_06_24.
 
-* Filtered by may contain any number of complete filter specifications (separated by commas), including 0. Each filter must be a complete list of name, version, and an optional param list.
+    'sniper 0.7.3 [ -q 1 -Q 15 ] intersect samtools r599 '
+    # Detect snvs: Intersect the results of sniper version 0.7.3 with parameters and samtools version r599.
+    
+    'sniper 0.7.3 [ -q 1 -Q 15 ] filtered by library-support v1 ' 
+    # Detect indels using sniper version 0.7.3 with parameters and filter the results with the library-support filter version v1
+    
+    'breakdancer 2010_06_24  filtered by tigra-assembly v1 '
+    # Detect structural variations using breakdancer version 2010_06_24 and filter the results by applying the tigra-assembly filter version v1
 
---- Unions and intersections ---
+    'sniper 0.7.3 [ -q 1 -Q 15 ] filtered by library-support v1 ' 
+    # Detect indels using sniper version 0.7.3 with parameters and filter the results with the library-support filter version v1
+    
+    'breakdancer 2010_06_24  filtered by tigra-assembly v1 '
+    # Detect structural variations using breakdancer version 2010_06_24 and filter the results by applying the tigra-assembly filter version v1
 
-* Variant detectors can be intersected or unioned with each other to create variant lists which utilize more than one variant detector. In either case, all variant detectors will be run individually and then processed together.
-* An intersection will run both detectors and then produce a final list of variants that represents where both detectors agree on both the position and the call.
-* A union will run both detectors and then produce a final list of variants that represents every call that both the detectors made, regardless of agreement.
-* Parenthesis may also be utilized around pairs of detectors to specify logical order of operation.
+  EXPLANATION
 
---- Examples of union and intersection --- 
---snv-detection-strategy 'sniper 0.7.3 [-q 1 -Q 15] intersect samtools r599
-This represents the desire to run version 0.7.3 of sniper with the above parameter list and version r599 of samtools with no parameters and intersect the results. 
-Both detectors will be run and the final variant list will represent all variants which were called by both detectors.
+    A strategy consists of the following:
+    detector-name version [ params ] filtered by filter-name version [ params ],filter-name version [ params ] ...
 
---snv-detection-strategy 'sniper 0.7.3 [-q 1 -Q 15] union (samtools r599 intersect pindel v1)
-This represents the desire to run version 0.7.3 of sniper with the above parameters, version r599 of samtools with no parameters, and version v1 of pindel with no parameters.
-Due to the parenthesis, the results of pindel and samtools will first be intersected and then that result will be unioned with the variant calls from sniper.
-In plain language, the resulting set will be any variants that either a) sniper called or b) pindel and samtools both called and agreed on.
+    * Detector-name is the name of the variant detector as it follows "gmt detect-variants2". For example, "sniper" would reference the tool located at "gmt detect-variants2 sniper".
+
+    * In the same way, filter-name is the name of the filter as it follows "gmt detect-variants2 filter". For example, "loh" would reference the tool located at gmt detect-variants2 filter loh".
+
+    * Version is a version number that pertains to that detector or filter specifically. For sniper this might be "0.7.3". For samtools this might be "r599".
+        Many filters are not currently versioned, but may be in the future. In these cases "v1" should be used to denote version 1.
+
+    * The parameter list is a list of all parameters to be passed to the detector or filter and will be specific to that tool. It is passed as a single string and is optional.
+
+    * Filtered by may contain any number of complete filter specifications (separated by commas), including 0. Each filter must be a complete list of name, version, and an optional param list.
+
+    --- Unions and intersections ---
+
+    * Variant detectors can be intersected or unioned with each other to create variant lists which utilize more than one variant detector. In either case, all variant detectors will be run individually and then processed together.
+    * An intersection will run both detectors and then produce a final list of variants that represents where both detectors agree on both the position and the call.
+    * A union will run both detectors and then produce a final list of variants that represents every call that both the detectors made, regardless of agreement.
+    * Parenthesis may also be utilized around pairs of detectors to specify logical order of operation.
+
+    --- Examples of union and intersection --- 
+    --snv-detection-strategy 'sniper 0.7.3 [-q 1 -Q 15] intersect samtools r599
+    This represents the desire to run version 0.7.3 of sniper with the above parameter list and version r599 of samtools with no parameters and intersect the results. 
+    Both detectors will be run and the final variant list will represent all variants which were called by both detectors.
+
+    --snv-detection-strategy 'sniper 0.7.3 [-q 1 -Q 15] union (samtools r599 intersect pindel v1)
+    This represents the desire to run version 0.7.3 of sniper with the above parameters, version r599 of samtools with no parameters, and version v1 of pindel with no parameters.
+    Due to the parenthesis, the results of pindel and samtools will first be intersected and then that result will be unioned with the variant calls from sniper.
+    In plain language, the resulting set will be any variants that either a) sniper called or b) pindel and samtools both called and agreed on.
 
 EOS
 }

@@ -35,7 +35,7 @@ sub help_detail {
 EOS
 }
 
-sub execute {
+sub _filter_variants {
     my ($self) = @_;
     $DB::single=1;
 

@@ -115,7 +115,7 @@ sub execute {
     }
 
     #perform mutation-relation test using R
-    my $R_cmd = "R --slave --args < mutation_relation.R $matrix_file $permutations $output_file";
+    my $R_cmd = "R --slave --args < " . __FILE__ . ".R $matrix_file $permutations $output_file";
     print "$R_cmd\n"; #FIXME
     WIFEXITED(system $R_cmd) or croak "Couldn't run: $R_cmd ($?)";
 

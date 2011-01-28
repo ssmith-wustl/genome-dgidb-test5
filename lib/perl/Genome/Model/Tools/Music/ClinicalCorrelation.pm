@@ -161,7 +161,7 @@ sub execute {
 
     }
 
-    my $R_cmd = "R --slave --args < clinical_correlation.R $clinical_data_file $matrix_file $output_file $test_method";
+    my $R_cmd = "R --slave --args < " . __FILE__ . ".R $clinical_data_file $matrix_file $output_file $test_method";
     WIFEXITED(system $R_cmd) or croak "Couldn't run: $R_cmd ($?)";
 
     return(1);

@@ -332,5 +332,16 @@ sub default_pindel_version {
     return $DEFAULT_VERSION;
 }
 
+sub has_version {
+    my $self = shift;
+    my $version = shift;
+    unless(defined($version)){
+        $version = $self->version;
+    }
+    if(exists($PINDEL_VERSIONS{$version})){
+        return 1;
+    }
+    return 0;
+}
 
 1;

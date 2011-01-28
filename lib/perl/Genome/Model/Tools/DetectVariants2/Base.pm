@@ -300,3 +300,6 @@ sub _promote_staged_data {
     return $output_dir;
 }
 
+sub has_version {
+    die "This should be overloaded by the detector/filter";
+}
