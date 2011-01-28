@@ -70,6 +70,8 @@ sub execute {                               # replace with real execution logic.
 	my $output_file = $self->output_file;
 	my $cmd = join(" ", $path_to_gatk, $gatk_params, "-I", $self->bam_file, "-verbose", $output_file, "-o", $output_file.".vcf");
 
+	## Optionally append BED output file ##
+
 	my $bed_output_file = $self->output_file . ".bed";
 
 	if($self->bed_output_file)
@@ -78,7 +80,7 @@ sub execute {                               # replace with real execution logic.
 
 	}
 
-	$cmd .= " -bed $bed_output_file";
+	$cmd .= " --bedOutput $bed_output_file";
 
 
 
