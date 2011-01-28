@@ -2,7 +2,7 @@
 package Genome::Model::Tools::Varscan::SomaticParallel;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# Varscan::Somatic	Runs VarScan somatic pipeline on Normal/Tumor BAM files
+# Varscan::Somatic	Runs Varscan somatic pipeline on Normal/Tumor BAM files
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@genome.wustl.edu)
 #
@@ -32,7 +32,7 @@ class Genome::Model::Tools::Varscan::SomaticParallel {
 		reference	=> { is => 'Text', doc => "Reference FASTA file for BAMs (default= genome model)" , is_optional => 1, is_input => 1},
 		heap_space	=> { is => 'Text', doc => "Megabytes to reserve for java heap [1000]" , is_optional => 1, is_input => 1},
 		skip_if_output_present	=> { is => 'Text', doc => "If set to 1, skip execution if output files exist", is_optional => 1, is_input => 1 },
-		varscan_params	=> { is => 'Text', doc => "Parameters to pass to VarScan [--min-coverage 3 --min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.05 --strand-filter 1]" , is_optional => 1, is_input => 1},
+		varscan_params	=> { is => 'Text', doc => "Parameters to pass to Varscan [--min-coverage 3 --min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.05 --strand-filter 1]" , is_optional => 1, is_input => 1},
 	],	
 
 	has_param => [
@@ -43,12 +43,12 @@ class Genome::Model::Tools::Varscan::SomaticParallel {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Run the VarScan somatic variant detection"                 
+    "Run the Varscan somatic variant detection"                 
 }
 
 sub help_synopsis {
     return <<EOS
-Runs VarScan from BAM files
+Runs Varscan from BAM files
 EXAMPLE:	gmt varscan somatic-parallel --normal-bam [Normal.bam] --tumor-bam [Tumor.bam] --output varscan_out/Patient.status ...
 EOS
 }
@@ -95,7 +95,7 @@ sub execute {                               # replace with real execution logic.
 		die "Index file for reference ($index_file) not found!\n";
 	}
 
-	## Get VarScan parameters ##
+	## Get Varscan parameters ##
 
 	my $varscan_params = "--min-coverage 3 --min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.05 --strand-filter 1"; #--min-coverage 8 --verbose 1
 	$varscan_params = $self->varscan_params if($self->varscan_params);

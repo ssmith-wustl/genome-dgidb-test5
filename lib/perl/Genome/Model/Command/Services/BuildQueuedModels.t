@@ -19,6 +19,7 @@ use_ok('Genome::Model::Command::Services::BuildQueuedModels') or die;
 
 # mock dem models
 my @models;
+my $builds = 0;
 for my $id (1..3) {
     my $model = Test::MockObject->new();
     $model->set_always('id', $id);
@@ -48,11 +49,13 @@ no warnings;
     my $obj = bless ({}, $class);
     return $obj;
 };
+*Genome::Model::Build::Command::Start::builds = sub { my @builds; for (1..$builds){ push @builds, 'build'} return @builds};
 *Genome::Model::Build::Command::Start::execute = sub {
     my $self = shift;
     my @models = Genome::Model->get();
     for (@models){
         $_->build_requested(0);
+        $builds++;
     }
     return 1;
 };

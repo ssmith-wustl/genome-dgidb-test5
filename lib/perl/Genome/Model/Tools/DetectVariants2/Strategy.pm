@@ -42,7 +42,7 @@ my $grammar = q{
                 { $return = { detector => {%{$item[1]}, filters => []} }; }
     | <error>
 
-    filter_list: program_spec "," filter_list
+    filter_list: program_spec "then" filter_list
                 { $return = [$item[1], @{$item[3]}]; }
     | program_spec
                 { $return = [$item[1]]; }

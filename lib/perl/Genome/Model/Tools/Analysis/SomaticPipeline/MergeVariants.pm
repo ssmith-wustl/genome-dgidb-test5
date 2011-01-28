@@ -2,7 +2,7 @@
 package Genome::Model::Tools::Analysis::SomaticPipeline::MergeVariants;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# MergeVariants - Merge glfSomatic/VarScan somatic calls in a file that can be converted to MAF format
+# MergeVariants - Merge glfSomatic/Varscan somatic calls in a file that can be converted to MAF format
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
 #
@@ -45,7 +45,7 @@ sub help_brief {                            # keep this to just a few words <---
 
 sub help_synopsis {
     return <<EOS
-This command merges somatic variant calls between glfSomatic and VarScan/Sammy
+This command merges somatic variant calls between glfSomatic and Varscan/Sammy
 EXAMPLE:	gmt analysis sammy merge-variants --glf-snvs [file] --sammy-snvs [file] --regions-file [file] --dbsnp-file [file] --output-file [file]
 EOS
 }
@@ -360,11 +360,11 @@ sub compile_variants
 		my $method = "";
 		if($sammy_variants{$key} && $glf_variants{$key})
 		{
-			$method = "glfSomatic,VarScan";
+			$method = "glfSomatic,Varscan";
 		}
 		elsif($sammy_variants{$key})
 		{
-			$method = "VarScan";
+			$method = "Varscan";
 		}
 		elsif($glf_variants{$key})
 		{

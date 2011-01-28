@@ -2,7 +2,7 @@
 package Genome::Model::Tools::Varscan::Consensus;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# Varscan::Somatic	Runs VarScan somatic pipeline on Normal/Tumor BAM files
+# Varscan::Somatic	Runs Varscan somatic pipeline on Normal/Tumor BAM files
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@genome.wustl.edu)
 #
@@ -36,12 +36,12 @@ class Genome::Model::Tools::Varscan::Consensus {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Run the VarScan pileup2cns tool"                 
+    "Run the Varscan pileup2cns tool"                 
 }
 
 sub help_synopsis {
     return <<EOS
-Runs VarScan readcounts from BAM files
+Runs Varscan readcounts from BAM files
 EXAMPLE:	gmt varscan consensus --bam-file [sample.bam] --variants-file [variants.tsv] --output-file readcounts.txt ...
 EOS
 }
@@ -79,9 +79,9 @@ sub execute {                               # replace with real execution logic.
 	{
 		## Prepare pileup commands ##
 		print "Building ROI pileup file...\n";
-		my $cmd = "samtools view -b -u -q 10 $bam_file | samtools pileup -f $reference - | java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan limit --positions-file $positions_file --output-file $output_file.pileup";
+		my $cmd = "samtools view -b -u -q 10 $bam_file | samtools pileup -f $reference - | java -classpath ~dkoboldt/Software/Varscan net.sf.varscan.Varscan limit --positions-file $positions_file --output-file $output_file.pileup";
 		system($cmd);
-		print "Running VarScan pileup2cns...\n";
+		print "Running Varscan pileup2cns...\n";
 		$cmd = $self->java_command_line("pileup2cns $output_file.pileup --min-coverage $min_coverage --min-var-freq $min_var_freq --min-avg-qual $min_avg_qual >$output_file");
 		system($cmd);
 	}
