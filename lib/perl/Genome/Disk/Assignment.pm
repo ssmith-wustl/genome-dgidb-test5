@@ -5,16 +5,7 @@ use warnings;
 
 class Genome::Disk::Assignment {
     # TODO This is really really site specific and needs to be changed
-    table_name => "( 
-        select dvg.*, 
-        (
-            select min(date_scheduled) 
-            from disk_volume_pse\@oltp dvp 
-            join process_step_executions\@oltp p on p.pse_id = dvp.pse_id
-            where dvp.dv_id = dvg.dv_id
-        ) assignment_date
-        from disk_volume_group\@oltp dvg 
-        ) assignment",
+    table_name => 'DISK_VOLUME_GROUP',
     id_by => [
         dg_id => {
             is => 'Number',
@@ -26,7 +17,6 @@ class Genome::Disk::Assignment {
         },
     ],
     has => [
-        assignment_date => {},
         group => {
             is => 'Genome::Disk::Group',
             id_by => 'dg_id',
@@ -42,14 +32,6 @@ class Genome::Disk::Assignment {
         mount_path => { via => 'volume' },
         total_kb   => { via => 'volume' },
         unallocated_kb => { via => 'volume' },
-        allocated_kb => {
-            calculate_from => ['total_kb','unallocated_kb'],
-            calculate => q| return ($total_kb - $unallocated_kb); |,
-        },
-        percent_allocated => {
-            calculate_from => ['total_kb','allocated_kb'],
-            calculate => q| return sprintf("%.2f", ( $allocated_kb / $total_kb ) * 100); |,
-        },
 	    percent_full => {
 		    calculate_from => ['absolute_path'],
 			calculate => q|
@@ -63,7 +45,7 @@ class Genome::Disk::Assignment {
             calculate => q| return $mount_path .'/'. $subdirectory; |,
         },
     ],
-    data_source => 'Genome::DataSource::GMSchema',
+    data_source => 'Genome::DataSource::Oltp',
 };
 
 1;

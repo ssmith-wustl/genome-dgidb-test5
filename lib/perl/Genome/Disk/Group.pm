@@ -4,8 +4,7 @@ use strict;
 use warnings;
 
 class Genome::Disk::Group {
-    # TODO This is kinda site-specific and should go elsewhere
-    table_name => "(select * from disk_group\@oltp) disk_group",
+    table_name => 'DISK_GROUP',
     id_by => [
         dg_id => { is => 'Number' },
     ],
@@ -46,7 +45,7 @@ class Genome::Disk::Group {
             reverse_id_by => 'group',
         },
     ],
-    data_source => 'Genome::DataSource::GMSchema',
+    data_source => 'Genome::DataSource::Oltp',
     doc => 'Represents a disk group (eg, info_apipe), which contains any number of disk volumes',
 };
 

@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 class Genome::Disk::Volume {
-    table_name => 'GENOME_DISK_VOLUME',
+    table_name => 'DISK_VOLUME',
     id_by => [
         dv_id => {is => 'Number'},
     ],
@@ -16,6 +16,14 @@ class Genome::Disk::Volume {
         unallocated_kb => { is => 'Number' },
         disk_status => { is => 'Text' },
         can_allocate => { is => 'Number' },
+        allocated_kb => { 
+            calculate_from => ['total_kb','unallocated_kb'],
+            calculate => q{ return ($total_kb - $unallocated_kb); },
+        },
+        percent_allocated => {
+            calculate_from => ['total_kb', 'allocated_kb'],
+            calculate => q{ return  sprintf("%.2f", ( $allocated_kb / $total_kb ) * 100); },
+        },
     ],
     has_many_optional => [
         disk_group_names => {
@@ -37,8 +45,8 @@ class Genome::Disk::Volume {
             calculate => q| return Genome::Disk::Allocation->get(mount_path => $mount_path); |,
         },
     ],
-    schema_name => 'GMSchema',
-    data_source => 'Genome::DataSource::GMSchema',
+    schema_name => 'Oltp',
+    data_source => 'Genome::DataSource::Oltp',
     doc => 'Represents a particular disk volume (eg, sata483)',
 };
 
