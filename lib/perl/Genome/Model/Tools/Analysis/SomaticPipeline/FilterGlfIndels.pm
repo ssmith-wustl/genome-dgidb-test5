@@ -2,7 +2,7 @@
 package Genome::Model::Tools::Analysis::SomaticPipeline::FilterGlfIndels;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# FilterGlfIndels - Merge glfSomatic/VarScan somatic calls in a file that can be converted to MAF format
+# FilterGlfIndels - Merge glfSomatic/Varscan somatic calls in a file that can be converted to MAF format
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
 #

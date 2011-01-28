@@ -26,7 +26,7 @@ class Genome::Model::Tools::SnpArray::ValidateLohCalls {
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		tumor_genotype_file	=> { is => 'Text', doc => "Three-column file of genotype calls chrom, pos, genotype", is_optional => 0, is_input => 1 },
 		normal_genotype_file	=> { is => 'Text', doc => "Three-column file of genotype calls chrom, pos, genotype", is_optional => 0, is_input => 1 },
-		variant_file	=> { is => 'Text', doc => "VarScan LOH Calls in annotation format", is_optional => 0, is_input => 1 },
+		variant_file	=> { is => 'Text', doc => "Varscan LOH Calls in annotation format", is_optional => 0, is_input => 1 },
 		sample_name	=> { is => 'Text', doc => "Name of the sample for output file", is_optional => 1, is_input => 1 },
 		min_depth	=> { is => 'Text', doc => "Minimum depth to compare a het call [8]", is_optional => 1, is_input => 1, default => 8},		
 		verbose	=> { is => 'Text', doc => "Turns on verbose output [0]", is_optional => 1, is_input => 1},
@@ -38,12 +38,12 @@ class Genome::Model::Tools::SnpArray::ValidateLohCalls {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Validates VarScan LOH calls using SNP array data"                 
+    "Validates Varscan LOH calls using SNP array data"                 
 }
 
 sub help_synopsis {
     return <<EOS
-This command validates VarScan LOH calls using SNP array data
+This command validates Varscan LOH calls using SNP array data
 EXAMPLE:	gmt snp-array validate-germline-calls --genotype-file affy.genotypes --variant-file lane1.var
 EOS
 }
@@ -155,7 +155,7 @@ sub execute {                               # replace with real execution logic.
 	$loh_concordance = sprintf("%.2f", $loh_concordance) . '%';
 
 
-	print $stats{'num_loh_calls'} . " VarScan LOH calls\n";
+	print $stats{'num_loh_calls'} . " Varscan LOH calls\n";
 	print $stats{'had_array_data'} . " had SNP array data\n";
 	print $stats{'met_min_depth'} . " met min depth\n";
 	print $stats{'array_was_germline'} . " array was Germline\n";

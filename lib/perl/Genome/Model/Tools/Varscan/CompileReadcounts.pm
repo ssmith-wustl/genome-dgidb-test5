@@ -2,7 +2,7 @@
 package Genome::Model::Tools::Varscan::CompileReadcounts;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# Varscan::Somatic	Runs VarScan somatic pipeline on Normal/Tumor BAM files
+# Varscan::Somatic	Runs Varscan somatic pipeline on Normal/Tumor BAM files
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@genome.wustl.edu)
 #
@@ -24,7 +24,7 @@ class Genome::Model::Tools::Varscan::CompileReadcounts {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
-		readcounts	=> { is => 'Text', doc => "A VarScan readcounts file or csv-separated list of one", is_optional => 0 },
+		readcounts	=> { is => 'Text', doc => "A Varscan readcounts file or csv-separated list of one", is_optional => 0 },
 		variants_file	=> { is => 'Text', doc => "Variants in annotation format", is_optional => 0 },
 		output_file	=> { is => 'Text', doc => "Path to output file" , is_optional => 0},
 		other_alleles	=> { is => 'Text', doc => "If set to 1, output non-expected alleles" , is_optional => 1},
@@ -39,7 +39,7 @@ sub help_brief {                            # keep this to just a few words <---
 
 sub help_synopsis {
     return <<EOS
-Runs VarScan readcounts from BAM files
+Runs Varscan readcounts from BAM files
 EXAMPLE:	gmt varscan compile-readcounts --variants myVariants --readcounts [fof]
 EOS
 }

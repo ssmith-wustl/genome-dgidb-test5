@@ -26,8 +26,8 @@ class Genome::Model::Tools::Varscan::ProcessValidationIndels {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
-		validation_snp_file		=> { is => 'Text', doc => "VarScan output file for validation data", is_optional => 0 },
-		validation_indel_file		=> { is => 'Text', doc => "VarScan calls passing strand-filter in validation BAM (recommended)", is_optional => 0 },
+		validation_snp_file		=> { is => 'Text', doc => "Varscan output file for validation data", is_optional => 0 },
+		validation_indel_file		=> { is => 'Text', doc => "Varscan calls passing strand-filter in validation BAM (recommended)", is_optional => 0 },
 		variants_file 	=> { is => 'Text', doc => "File of variants to report on", is_optional => 0 },
 		output_file 	=> { is => 'Text', doc => "Output file for validation results", is_optional => 0 },
 	],

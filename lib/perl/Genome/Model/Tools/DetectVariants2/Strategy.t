@@ -31,7 +31,7 @@ my %expected = (
             {
                 detector => {
                     name => "var-scan",
-                    class => 'Genome::Model::Tools::DetectVariants2::VarScan',
+                    class => 'Genome::Model::Tools::DetectVariants2::Varscan',
                     version => "v2",
                     params => '--foo',
                     filters => [],
@@ -100,7 +100,7 @@ my @expected_failures = (
 );
     
 is("${det_class_base}::Samtools", $strategy_class->detector_class("samtools"), "names without subpackages parsed correctly");
-is("${det_class_base}::Somatic::VarScan", $strategy_class->detector_class("somatic var-scan"), "names with subpackages parsed correctly");
+is("${det_class_base}::Somatic::Varscan", $strategy_class->detector_class("somatic var-scan"), "names with subpackages parsed correctly");
 
 for my $str (keys %expected) {
     my $obj = $strategy_class->get($str);

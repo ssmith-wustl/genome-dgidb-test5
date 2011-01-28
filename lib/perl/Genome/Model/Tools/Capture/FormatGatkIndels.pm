@@ -2,7 +2,7 @@
 package Genome::Model::Tools::Capture::FormatGatkIndels;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# FormatGatkIndelsForAnnotation - Merge glfSomatic/VarScan somatic calls in a file that can be converted to MAF format
+# FormatGatkIndelsForAnnotation - Merge glfSomatic/Varscan somatic calls in a file that can be converted to MAF format
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
 #

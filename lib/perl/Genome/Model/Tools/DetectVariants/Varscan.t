@@ -14,12 +14,12 @@ if ($archos !~ /64/) {
     plan tests => 6;
 }
 
-my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants-VarScan/';
-my $test_working_dir = File::Temp::tempdir('DetectVariants-VarScanXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
+my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants-Varscan/';
+my $test_working_dir = File::Temp::tempdir('DetectVariants-VarscanXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
 
 my $bam_input = $test_dir . '/alignments/102922275_merged_rmdup.bam';
 
-# Updated to .v5 due to additional column in VarScan
+# Updated to .v5 due to additional column in Varscan
 # Updated to .v6 due to the addition of quality and natural sort order to bed file output 
 my $expected_dir = $test_dir . '/expected.v6/';
 
@@ -33,7 +33,7 @@ ok(Genome::Sys->check_for_path_existence($ref_seq_input), 'Got a reference FASTA
 my $version = ''; #Currently only one version of var-scan
 my $snv_parameters = my $indel_parameters = '';
 
-my $command = Genome::Model::Tools::DetectVariants::VarScan->create(
+my $command = Genome::Model::Tools::DetectVariants::Varscan->create(
     reference_sequence_input => $ref_seq_input,
     aligned_reads_input => $bam_input,
     version => $version,

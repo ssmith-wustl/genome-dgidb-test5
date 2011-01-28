@@ -2,7 +2,7 @@
 package Genome::Model::Tools::Capture::BatchSampleQc;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# BatchSampleQcForAnnotation - Merge glfSomatic/VarScan somatic calls in a file that can be converted to MAF format
+# BatchSampleQcForAnnotation - Merge glfSomatic/Varscan somatic calls in a file that can be converted to MAF format
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
 #

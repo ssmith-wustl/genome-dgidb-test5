@@ -2,7 +2,7 @@
 package Genome::Model::Tools::Analysis::454::SomaticPipeline;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# SomaticPipeline - Runs the VarScan somatic pipeline on matched tumor-normal data
+# SomaticPipeline - Runs the Varscan somatic pipeline on matched tumor-normal data
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
 #
@@ -26,7 +26,7 @@ class Genome::Model::Tools::Analysis::454::SomaticPipeline {
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		patients_file	=> { is => 'Text', doc => "Tab-delimited file of normal and tumor" },
 		output_dir	=> { is => 'Text', doc => "Output directory for 454 data. Will create somatic_pipeline in each tumor sample dir" },
-		varscan_dir	=> { is => 'Text', doc => "Output directory for VarScan in the sample dir", default => "varscan_somatic"},
+		varscan_dir	=> { is => 'Text', doc => "Output directory for Varscan in the sample dir", default => "varscan_somatic"},
 		varscan_params	=> { is => 'Text', doc => "Default params for varscan somatic", default => "--min-coverage 8 --min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.05 --strand-filter 1"},
 		aligner		=> { is => 'Text', doc => "Aligner to use" },
 		reference		=> { is => 'Text', doc => "Reference sequence [default=Hs36 ssaha2]", is_optional => 1 },
@@ -46,12 +46,12 @@ class Genome::Model::Tools::Analysis::454::SomaticPipeline {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Runs the VarScan somatic pipeline on matched normal-tumor samples"                 
+    "Runs the Varscan somatic pipeline on matched normal-tumor samples"                 
 }
 
 sub help_synopsis {
     return <<EOS
-This command runs the VarScan somatic pipeline on matched normal-tumor samples
+This command runs the Varscan somatic pipeline on matched normal-tumor samples
 EXAMPLE:	gmt analysis 454 somatic-pipeline --patients-file data/paired-normal-tumor.tsv --output-dir data --aligner ssaha2
 EOS
 }
@@ -113,7 +113,7 @@ sub execute {                               # replace with real execution logic.
 			
 			if(!($self->skip_if_output_present && -e "$varscan_output_dir/varScan.output.snp"))
 			{
-				print SCRIPT "echo \"\nRunning VarScan somatic...\"\n";
+				print SCRIPT "echo \"\nRunning Varscan somatic...\"\n";
 				$cmd = "gmt varscan somatic --normal-bam $normal_bam_file --tumor-bam $tumor_bam_file --output $varscan_output_dir/varScan.output --varscan-params=\"" . $self->varscan_params . "\"";
 				print SCRIPT "$cmd\n";				
 			}
