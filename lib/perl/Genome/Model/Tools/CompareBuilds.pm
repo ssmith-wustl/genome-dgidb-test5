@@ -23,7 +23,7 @@ class Genome::Model::Tools::CompareBuilds {
     has_optional => [
         second_revision => {
             is => 'DirectoryPath',
-            doc => 'Software revision that the other build should be run on, defaults to genome-stable',
+            doc => 'Software revision that the other build should be run on, defaults to current/pipeline',
         },
     ],
 };
