@@ -288,7 +288,7 @@ sub generate_workflow_operation {
 
                 # Make the operation
                 my $operation = $workflow_model->add_operation(
-                    name => $name,
+                    name => "$variant_type $name $version $params",
                     operation_type => Workflow::OperationType::Command->get($class),
                 );
 

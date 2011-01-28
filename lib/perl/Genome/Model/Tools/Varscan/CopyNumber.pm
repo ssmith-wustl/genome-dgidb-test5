@@ -2,7 +2,7 @@
 package Genome::Model::Tools::Varscan::CopyNumber;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# Varscan::Somatic	Runs VarScan somatic pipeline on Normal/Tumor BAM files
+# Varscan::Somatic	Runs Varscan somatic pipeline on Normal/Tumor BAM files
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@genome.wustl.edu)
 #
@@ -32,7 +32,7 @@ class Genome::Model::Tools::Varscan::CopyNumber {
 		heap_space	=> { is => 'Text', doc => "Megabytes to reserve for java heap [1000]" , is_optional => 1, is_input => 1},
 		mapping_quality	=> { is => 'Text', doc => "Default minimum mapping quality" , is_optional => 1, is_input => 1, default => 10},
 		skip_if_output_present	=> { is => 'Text', doc => "If set to 1, skip execution if output files exist", is_optional => 1, is_input => 1 },
-		varscan_params	=> { is => 'Text', doc => "Parameters to pass to VarScan" , is_optional => 1, is_input => 1, default => "--min-coverage 20 --min-segment-size 100"},
+		varscan_params	=> { is => 'Text', doc => "Parameters to pass to Varscan" , is_optional => 1, is_input => 1, default => "--min-coverage 20 --min-segment-size 100"},
 	],	
 
 	has_param => [
@@ -43,12 +43,12 @@ class Genome::Model::Tools::Varscan::CopyNumber {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Run the VarScan somatic variant detection"                 
+    "Run the Varscan somatic variant detection"                 
 }
 
 sub help_synopsis {
     return <<EOS
-Runs VarScan from BAM files
+Runs Varscan from BAM files
 EXAMPLE:	gmt varscan copy-number --normal-bam [Normal.bam] --tumor-bam [Tumor.bam] --output varscan_out/Patient.status ...
 EOS
 }
@@ -138,10 +138,10 @@ sub execute {                               # replace with real execution logic.
 		
 		my $cmd = $self->java_command_line("copynumber <\($normal_pileup\) <\($tumor_pileup\) $output --data-ratio $normal_tumor_ratio $varscan_params");
 
-		## Run VarScan ##
+		## Run Varscan ##
 		if($self->heap_space)
 		{
-#			system("java -Xms" . $self->heap_space . "m -Xmx" . $self->heap_space . "m -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <($normal_pileup) <($tumor_pileup) $output $varscan_params");						
+#			system("java -Xms" . $self->heap_space . "m -Xmx" . $self->heap_space . "m -classpath ~dkoboldt/Software/Varscan net.sf.varscan.Varscan somatic <($normal_pileup) <($tumor_pileup) $output $varscan_params");						
 		}
 
 		print "Running $cmd\n";

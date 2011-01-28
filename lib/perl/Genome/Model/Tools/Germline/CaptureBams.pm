@@ -91,19 +91,19 @@ sub default_filenames{
         adaptor_output_indel                => 'samtools.output.indel.formatted',
         samtools_snp_output_adaptor         => 'samtools.output.snp.adaptor',
 
-        ## VarScan Output Files ##
+        ## Varscan Output Files ##
         varscan_snp_output                  => 'varScan.output.snp',
         varscan_indel_output                => 'varScan.output.indel',
 
-        ## VarScan Adapted Output Files ##
+        ## Varscan Adapted Output Files ##
         varscan_adaptor_snp                 => 'varScan.output.snp.formatted',
         varscan_adaptor_indel               => 'varScan.output.indel.formatted',
 
-        ## Combined samtools+VarScan Output files ##
+        ## Combined samtools+Varscan Output files ##
         merged_snp_output                   => 'merged.germline.snp',            ## Generated from merge-variants of samtools and varScan
         merged_indel_output                 => 'merged.germline.indel',          ## Generated from merge-variants of samtools and varScan ##
 
-        ## Limit to ROI, Combined samtools+VarScan Output files ##
+        ## Limit to ROI, Combined samtools+Varscan Output files ##
         merged_snp_output_ROI               => 'merged.germline.snp.ROI',          ## Generated from merge-variants of samtools and varScan ##
         merged_indel_output_ROI             => 'merged.germline.indel.ROI',          ## Generated from merge-variants of samtools and varScan ##
 

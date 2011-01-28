@@ -2,7 +2,7 @@
 package Genome::Model::Tools::Varscan::SomaticMt;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# Varscan::SomaticMt	Runs VarScan somatic pipeline on Normal/Tumor BAM files
+# Varscan::SomaticMt	Runs Varscan somatic pipeline on Normal/Tumor BAM files
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@genome.wustl.edu)
 #
@@ -32,7 +32,7 @@ class Genome::Model::Tools::Varscan::SomaticMt {
 		reference	=> { is => 'Text', doc => "Reference FASTA file for BAMs (default= genome model)" , is_optional => 1, is_input => 1},
 		heap_space	=> { is => 'Text', doc => "Megabytes to reserve for java heap [1000]" , is_optional => 1, is_input => 1},
 		skip_if_output_present	=> { is => 'Text', doc => "If set to 1, skip execution if output files exist", is_optional => 1, is_input => 1 },
-		varscan_params	=> { is => 'Text', doc => "Parameters to pass to VarScan [--min-coverage 6 --min-var-freq 0.10 --p-value 0.10 --somatic-p-value 1.0e-02]" , is_optional => 1, is_input => 1},
+		varscan_params	=> { is => 'Text', doc => "Parameters to pass to Varscan [--min-coverage 6 --min-var-freq 0.10 --p-value 0.10 --somatic-p-value 1.0e-02]" , is_optional => 1, is_input => 1},
 	],	
 
 	has_param => [
@@ -43,12 +43,12 @@ class Genome::Model::Tools::Varscan::SomaticMt {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Run the VarScan somatic variant detection"                 
+    "Run the Varscan somatic variant detection"                 
 }
 
 sub help_synopsis {
     return <<EOS
-Runs VarScan from BAM files
+Runs Varscan from BAM files
 EXAMPLE:	gmt varscan somatic --normal-bam [Normal.bam] --tumor-bam [Tumor.bam] --output varscan_out/Patient.status ...
 EOS
 }
@@ -124,10 +124,10 @@ sub execute {                               # replace with real execution logic.
 		
 		my $cmd = $self->java_command_line("somatic <\($normal_pileup\) <\($tumor_pileup\) --output-snp $output_snp --output-indel $output_indel $varscan_params");
 
-		## Run VarScan ##
+		## Run Varscan ##
 		if($self->heap_space)
 		{
-#			system("java -Xms" . $self->heap_space . "m -Xmx" . $self->heap_space . "m -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan somatic <($normal_pileup) <($tumor_pileup) $output $varscan_params");						
+#			system("java -Xms" . $self->heap_space . "m -Xmx" . $self->heap_space . "m -classpath ~dkoboldt/Software/Varscan net.sf.varscan.Varscan somatic <($normal_pileup) <($tumor_pileup) $output $varscan_params");						
 		}
 
 		print "Running $cmd\n";

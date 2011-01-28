@@ -8,7 +8,7 @@ use Command;
 use IO::File;
 use Spreadsheet::WriteExcel;
 use Sort::Naturally qw( nsort );
-require("/gscuser/dkoboldt/src/perl_modules/trunk/VarScan/VarScan/lib/VarScan/FisherTest.pm");   #requiring this for now. should be replaced with a genome model version at some point if this becomes useful
+require("/gscuser/dkoboldt/src/perl_modules/trunk/Varscan/Varscan/lib/Varscan/FisherTest.pm");   #requiring this for now. should be replaced with a genome model version at some point if this becomes useful
 
 class Genome::Model::Tools::Gatk::FetIndelTest {
     is => 'Command',
@@ -52,7 +52,7 @@ sub execute {
         my ($tumor_var,$tumor_total) = $tumor_counts_field =~ /:(\d+)\/\d+\/(\d+)/;
         my $tumor_ref = $tumor_total - $tumor_var;   #this would not count other indel alleles 
 
-        my $p_value = VarScan::FisherTest::calculate_p_value($normal_ref, $normal_var, $tumor_ref, $tumor_var);
+        my $p_value = Varscan::FisherTest::calculate_p_value($normal_ref, $normal_var, $tumor_ref, $tumor_var);
         print $line,"\t",$p_value,"\n" if($self->p_value_cutoff >= $p_value);
     }        
 

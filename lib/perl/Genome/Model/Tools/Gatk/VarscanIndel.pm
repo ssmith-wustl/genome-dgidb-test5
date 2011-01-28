@@ -31,12 +31,12 @@ class Genome::Model::Tools::Gatk::VarscanIndel {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Runs VarScan-like somatic mutation calling on GATK indels"                 
+    "Runs Varscan-like somatic mutation calling on GATK indels"                 
 }
 
 sub help_synopsis {
     return <<EOS
-This command runs VarScan-like somatic mutation calling on GATK indels
+This command runs Varscan-like somatic mutation calling on GATK indels
 EXAMPLE:	gmt gatk varscan-indel gatk-indel gatk.indel.formatted --output-file gatk.indel.formatted.varscan
 EOS
 }
@@ -65,7 +65,7 @@ sub execute {                               # replace with real execution logic.
 
 	my %stats = ();
 
-	require("/gscuser/dkoboldt/src/perl_modules/trunk/VarScan/VarScan/lib/VarScan/FisherTest.pm");
+	require("/gscuser/dkoboldt/src/perl_modules/trunk/Varscan/Varscan/lib/Varscan/FisherTest.pm");
 
 	open(OUTFILE, ">$output_file") or die "Can't open outfile: $!\n";
 	
@@ -161,7 +161,7 @@ sub execute {                               # replace with real execution logic.
 		## Calculate P-value ##
 		my $normal_coverage = $normal_reads1 + $normal_reads2;
 		my $tumor_coverage = $tumor_reads1 + $tumor_reads2;
-		my $variant_p_value = VarScan::FisherTest::calculate_p_value(($normal_coverage + $tumor_coverage), 0, ($normal_reads1 + $tumor_reads1), ($tumor_reads1 + $tumor_reads2));
+		my $variant_p_value = Varscan::FisherTest::calculate_p_value(($normal_coverage + $tumor_coverage), 0, ($normal_reads1 + $tumor_reads1), ($tumor_reads1 + $tumor_reads2));
 		if($variant_p_value < 0.001)
 		{
 			$variant_p_value = sprintf("%.3e", $variant_p_value);			
@@ -171,7 +171,7 @@ sub execute {                               # replace with real execution logic.
 			$variant_p_value = sprintf("%.5f", $variant_p_value);			
 		}
 
-		my $somatic_p_value = VarScan::FisherTest::calculate_p_value($normal_reads1, $normal_reads2, $tumor_reads1, $tumor_reads2);
+		my $somatic_p_value = Varscan::FisherTest::calculate_p_value($normal_reads1, $normal_reads2, $tumor_reads1, $tumor_reads2);
 		if($somatic_p_value < 0.001)
 		{
 			$somatic_p_value = sprintf("%.3e", $somatic_p_value);			

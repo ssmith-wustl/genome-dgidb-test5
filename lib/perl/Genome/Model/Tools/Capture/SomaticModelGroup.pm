@@ -365,7 +365,7 @@ sub output_snvs_for_review
 					$include_flag = 1;
 				}
 				
-				## VarScan File ##
+				## Varscan File ##
 				
 				elsif($line =~ 'Somatic')
 				{
@@ -502,7 +502,7 @@ sub output_indels_for_review
 				$include_flag = 1;
 			}
 			
-			## VarScan File ##
+			## Varscan File ##
 			
 			elsif($line =~ 'Somatic')
 			{

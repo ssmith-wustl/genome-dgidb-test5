@@ -29,7 +29,7 @@ class Genome::Model::Tools::Capture::ConfidenceGroups {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
-		varscan_file	=> { is => 'Text', doc => "File of variants in VarScan format", is_optional => 0, is_input => 1 },
+		varscan_file	=> { is => 'Text', doc => "File of variants in Varscan format", is_optional => 0, is_input => 1 },
 		glf_file	=> { is => 'Text', doc => "File of variants in glfSomatic format", is_optional => 0, is_input => 1 },
 		variant_file	=> { is => 'Text', doc => "File of Tiered variants to classify", is_optional => 0, is_input => 1 },
 		output_high	=> { is => 'Text', doc => "Output file for high confidence" , is_optional => 0, is_input => 1, is_output => 1},
