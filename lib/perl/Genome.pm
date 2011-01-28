@@ -151,6 +151,7 @@ those tools.
  C.J. Carey
  Lynn Carmichael
  Ken Chen
+ Lei Chen
  Eric Clark
  Kevin Crouse
  Indraniel Das
