@@ -50,12 +50,12 @@ sub execute {
         die($self->error_message);
     }
 
-    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+    my $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
     unless ($output_fh) {
         $self->error_message('Failed to open output file for writing '. $self->output_file);
         die($self->error_message);
     }
-    my $var_fh = Genome::Utility::FileSystem->open_file_for_reading($self->variants_file);
+    my $var_fh = Genome::Sys->open_file_for_reading($self->variants_file);
     unless ($var_fh) {
         $self->error_message('Failed to open variants file for reading '. $self->variants_file);
         die($self->error_message);

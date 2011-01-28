@@ -7,7 +7,7 @@ use Genome;
 use Command;
 use IO::File;
 use Sort::Naturally qw( nsort );
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 
 class Genome::Model::Tools::Nimblegen::DesignFromSv {
     is => 'Command',

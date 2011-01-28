@@ -21,7 +21,7 @@ sub execute {
     my $self = shift;
     my $expression_directory = $self->build->accumulated_expression_directory;
     unless (-d $expression_directory) {
-        Genome::Utility::FileSystem->create_directory($expression_directory);
+        Genome::Sys->create_directory($expression_directory);
     }
     my $align_reads = Genome::Model::Event::Build::RnaSeq::AlignReads->get(
         model_id => $self->model_id,
@@ -33,7 +33,7 @@ sub execute {
         if (version->parse($self->model->expression_version) >= version->parse('0.9.0')) {
             $sam_file = $aligner->bam_file;
         } else {
-            $sam_file = Genome::Utility::FileSystem->create_temp_file_path($self->build->id .'.sam');
+            $sam_file = Genome::Sys->create_temp_file_path($self->build->id .'.sam');
             unless (Genome::Model::Tools::Sam::BamToSam->execute(
                 bam_file => $aligner->bam_file,
                 sam_file => $sam_file,

@@ -6,6 +6,7 @@ use warnings;
 use Genome; 
 use File::Basename;
 use POSIX;
+use DateTime;
 
 my $DEFAULT = 'r544';
 #3Gb
@@ -65,6 +66,11 @@ my %SAMTOOLS_VERSIONS = (
     r320wu2 => '/gscuser/dlarson/samtools/r320wu2/samtools',
     r350wu1 => '/gscuser/dlarson/samtools/r350wu1/samtools',
 );
+
+sub available_samtools_versions {
+    my $self = shift;
+    return keys(%SAMTOOLS_VERSIONS);
+}
 
 sub path_for_samtools_version {
     my ($class, $version) = @_;
@@ -180,6 +186,18 @@ sub read_count {
 	chomp(my $read_count = qx($count_cmd));
 	($read_count) = split(' ', $read_count);
 	return $read_count;
+}
+
+sub date {
+    my $today = DateTime->today();
+    $today =~ s/T.*//;
+    return $today;
+}
+
+sub time {
+    # Timestamps in SAM are to follow ISO8601, e.g. YYYY-MM-DD and YYYY-MM-DDThh:mmTZD
+    # TZD = Z or +hh:mm or -hh:mm
+    return DateTime->now() . "Z";
 }
 
 1;

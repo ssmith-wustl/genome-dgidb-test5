@@ -17,6 +17,13 @@ class Genome::Sample::Command::Import::Tcga {
         },
         _individual_name => { is_optional => 1, },
     ],
+    has_optional => [
+        extraction_type => {
+            is => 'Text',
+            default => 'genomic dna',
+            doc => 'Extraction type of sample, examples included genomic dna and rna',
+        },
+    ],
 };
 
 sub execute {
@@ -31,14 +38,14 @@ sub execute {
     my $individual = $self->_get_and_update_or_create_individual(
         name => $individual_name,
         upn => $individual_name,
-        _nomenclature => 'unknown',
+        nomenclature => 'unknown',
     );
     return if not $individual;
 
     my $sample = $self->_get_and_update_or_create_sample(
         name => $self->name,
         extraction_label => $self->name,
-        extraction_type => 'genomic',
+        extraction_type => $self->extraction_type,
         cell_type => 'primary',
         _nomenclature => 'TCGA',
     );

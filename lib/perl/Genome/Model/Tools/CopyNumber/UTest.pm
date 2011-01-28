@@ -11,8 +11,8 @@ use Statistics::R;
 use File::Temp;
 use DBI;
 use lib "/gscuser/jwallis/svn/perl_modules/test_project/jwallis";
-use HugoGeneMethods;
-require Genome::Utility::FileSystem;
+use Genome::Utility::HugoGene::HugoGeneMethods;
+require Genome::Sys;
 
 class Genome::Model::Tools::CopyNumber::UTest {
     is => 'Command',

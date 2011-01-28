@@ -101,7 +101,7 @@ sub execute {
     if ( defined($self->lib_tag) ) {
         my $sam_file_tmp = $sam_file.".tmp.sam";
         my $cmd = sprintf('%s %s > %s', $tosam_path, $map_file, $sam_file_tmp);
-        my $rv  = Genome::Utility::FileSystem->shellcmd(
+        my $rv  = Genome::Sys->shellcmd(
             cmd => $cmd, 
             output_files => [$sam_file_tmp],
             skip_if_output_is_present => 0,
@@ -119,7 +119,7 @@ sub execute {
         $self->error_message("Unlink of $sam_file_tmp failed") unless $unlink_rv == 1;
     } else {
         my $cmd = sprintf('%s %s > %s', $tosam_path, $map_file, $sam_file);
-        my $rv  = Genome::Utility::FileSystem->shellcmd(
+        my $rv  = Genome::Sys->shellcmd(
             cmd => $cmd, 
             output_files => [$sam_file],
             skip_if_output_is_present => 0,

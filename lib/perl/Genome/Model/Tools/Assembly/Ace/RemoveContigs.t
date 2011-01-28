@@ -12,7 +12,7 @@ my $data_dir = "/gsc/var/cache/testsuite/data/$module";
 
 ok(-d $data_dir, "Found test data dir");
 #create test temp dir
-my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+my $temp_dir = Genome::Sys->create_temp_directory();
 ok(-d $temp_dir, "Made temp directory at $temp_dir");
 
 #copy/link input files

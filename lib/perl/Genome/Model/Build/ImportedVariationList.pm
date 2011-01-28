@@ -23,24 +23,6 @@ class Genome::Model::Build::ImportedVariationList {
             to => 'reference',
         },
     ],
-    has_many => {
-        feature_list => {
-            is => 'Genome::FeatureList',
-            id_by => 'indel_feature_list_id',
-        },
-        indel_feature_list_id => {
-            via => 'inputs',
-            is => 'Text',
-            to => 'value_id',
-            where => [
-                name => 'indel_feature_list_id',
-                value_class_name => 'Genome::FeatureList'
-            ], 
-            is_mutable => 1,
-            doc => 'The feature list containing the imported variations',
-        },
-
-    },
     has_optional => {
         indel_feature_list => {
             is => 'Genome::FeatureList',

@@ -6,9 +6,9 @@ use warnings;
 use above 'Genome';
 use Test::More tests => 7;
 
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 
-my $tmp = Genome::Utility::FileSystem->create_temp_directory();
+my $tmp = Genome::Sys->create_temp_directory();
 if (-e $tmp .'/Quality/report.xml') {
     unlink $tmp .'/Quality/report.xml';
 }

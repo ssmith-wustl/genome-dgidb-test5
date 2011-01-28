@@ -44,11 +44,11 @@ sub create {
         $self->error_message('Invalid object');
         return;
     }
-    unless (Genome::Utility::FileSystem->validate_file_for_reading($self->fasta_file)) {
+    unless (Genome::Sys->validate_file_for_reading($self->fasta_file)) {
         $self->error_message('Failed to validate fasta file '. $self->fasta_file .' for reading.');
         die($self->error_message);
     }
-    unless (Genome::Utility::FileSystem->validate_file_for_writing($self->bfa_file)) {
+    unless (Genome::Sys->validate_file_for_writing($self->bfa_file)) {
         $self->error_message('Failed to validate output bfa file '. $self->bfa_file .' for writing.');
         die($self->error_message);
     }
@@ -60,7 +60,7 @@ sub execute {
 
     my $cmd = $self->maq_path .' fasta2bfa '. $self->fasta_file .' '. $self->bfa_file;
 
-    unless (Genome::Utility::FileSystem->shellcmd(
+    unless (Genome::Sys->shellcmd(
                                                   cmd => $cmd,
                                                   input_files => [$self->fasta_file],
                                                   output_files => [$self->bfa_file],

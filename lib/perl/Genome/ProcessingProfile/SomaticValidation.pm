@@ -60,10 +60,10 @@ class Genome::ProcessingProfile::SomaticValidation {
             is => 'Boolean', doc => 'prepend the string "chr" to chromosome names. This is primarily used for external/imported bam files.',
         },
         varscan_params => {
-            is => 'String', doc => 'Options to pass to VarScan (e.g. "--min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.01 --validation 1 --min-coverage 8")',
+            is => 'String', doc => 'Options to pass to Varscan (e.g. "--min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.01 --validation 1 --min-coverage 8")',
         },
         varscan_version => {
-            is => 'String', doc => 'Version of VarScan to use',
+            is => 'String', doc => 'Version of Varscan to use',
         }
     ],
 };
@@ -138,7 +138,7 @@ sub _map_workflow_inputs {
         die $self->error_message;
     }
     my $reference_fasta = $reference_sequence_build->sequence_path('fa');
-    unless(Genome::Utility::FileSystem->check_for_path_existence($reference_fasta)) {
+    unless(Genome::Sys->check_for_path_existence($reference_fasta)) {
         $self->error_message('Could not find reference FASTA for specified reference sequence.');
         die $self->error_message;
     }

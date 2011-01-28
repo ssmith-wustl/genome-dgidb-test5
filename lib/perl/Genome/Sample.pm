@@ -98,7 +98,7 @@ class Genome::Sample {
         source => { 
             is => 'Genome::Measurable',
             id_by => 'source_id',
-            where => [ subject_type => [qw/ organism_individual population_group /, 'organism individual', 'population group', ]],
+            where => [ 'subject_type in' => [qw/ organism_individual population_group /, 'organism individual', 'population group', ]],
             doc => 'The patient/individual organism from which the sample was taken, or the population for pooled samples.',
         },
         source_type                 => { is => 'Text',

@@ -25,8 +25,8 @@ class Genome::Model::Tools::Analysis::Illumina::ModelReadcountErrors {
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		variants_file	=> { is => 'Text', doc => "List of variants to count for" },
-		sample_readcounts	=> { is => 'Text', doc => "VarScan readcounts file(s) for sample of interest (comma-delim)" },
-		control_readcounts	=> { is => 'Text', doc => "VarScan readcounts file(s) for control sample(s) (comma-delim)" },
+		sample_readcounts	=> { is => 'Text', doc => "Varscan readcounts file(s) for sample of interest (comma-delim)" },
+		control_readcounts	=> { is => 'Text', doc => "Varscan readcounts file(s) for control sample(s) (comma-delim)" },
 		output_file		=> { is => 'Text', doc => "Output file for adjusted readcounts" },
 	],
 };

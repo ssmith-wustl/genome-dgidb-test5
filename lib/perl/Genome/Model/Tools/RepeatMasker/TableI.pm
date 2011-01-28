@@ -57,7 +57,7 @@ sub print_table_from_hash_ref {
         $string .= "\n";
     }
 
-    my $table_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_table);
+    my $table_fh = Genome::Sys->open_file_for_writing($self->output_table);
     unless ($table_fh) {
         die('Failed to open table file for output: '. $self->output_table);
     }
@@ -124,7 +124,7 @@ sub print_samples_summary_from_hash_ref {
     }
 
 
-    my $table_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_table);
+    my $table_fh = Genome::Sys->open_file_for_writing($self->output_table);
     unless ($table_fh) {
         die('Failed to open table file for output: '. $self->output_table);
     }

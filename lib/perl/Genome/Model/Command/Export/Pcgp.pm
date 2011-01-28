@@ -124,7 +124,7 @@ sub execute {
         $self->status_message("found pcgp-upload directory");
     }
     else {
-        Genome::Utility::FileSystem->create_directory("pcgp-upload");
+        Genome::Sys->create_directory("pcgp-upload");
         $self->status_message("created directory pcgp-upload");
     }
 
@@ -149,7 +149,7 @@ sub execute {
     for my $link_params (@links) {
         my ($path,$link) = @$link_params;
         $self->status_message("symlink: $link $path");
-        Genome::Utility::FileSystem->create_symlink($path, $link);
+        Genome::Sys->create_symlink($path, $link);
     }
 
     return 1;

@@ -22,7 +22,7 @@ sub send_report {
         return;
     }
     for my $xsl_file ( @{$params{xsl_files}} ) {
-        unless ( Genome::Utility::FileSystem->validate_file_for_reading($xsl_file) ) {
+        unless ( Genome::Sys->validate_file_for_reading($xsl_file) ) {
             $class->error_message("Error with xsl file.  See above");
             return;
         }

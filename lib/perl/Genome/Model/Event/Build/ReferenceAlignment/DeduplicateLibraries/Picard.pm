@@ -129,7 +129,7 @@ sub _link_result_from_build {
 
     my $accumulated_alignments_directory = $self->build->accumulated_alignments_directory;
     unless(-d $accumulated_alignments_directory || -l $accumulated_alignments_directory) {
-        Genome::Utility::FileSystem->create_directory($accumulated_alignments_directory);
+        Genome::Sys->create_directory($accumulated_alignments_directory);
     }
 
     $self->status_message('Going to link ' . $target_bam);
@@ -144,13 +144,13 @@ sub _link_result_from_build {
 
     my $whole_rmdup_bam_file = $self->build->whole_rmdup_bam_file;
     for my $ext (@ext) {
-        Genome::Utility::FileSystem->create_symlink($target_bam . $ext, $whole_rmdup_bam_file . $ext)
+        Genome::Sys->create_symlink($target_bam . $ext, $whole_rmdup_bam_file . $ext)
             unless -e ($whole_rmdup_bam_file . $ext);
     }
 
     #make a note in the other build that its BAM is used externally
     my $in_use_file = $target_bam . '.in_use';
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => 'echo ' . $self->build->id . ' >> ' . $in_use_file,
         output_files => [$in_use_file],
         skip_if_output_present => 0,
@@ -249,7 +249,7 @@ sub execute {
     if (scalar @bam_files == 1 and $self->model->read_aligner_name =~ /^Imported$/i) {
         $self->status_message('Get 1 imported bam '.$bam_files[0]);
         
-        unless (Genome::Utility::FileSystem->create_symlink($bam_files[0], $bam_merged_output_file)) {
+        unless (Genome::Sys->create_symlink($bam_files[0], $bam_merged_output_file)) {
             $self->error_message("Failed to symlink $bam_files[0] to $bam_merged_output_file");
             return;
         }

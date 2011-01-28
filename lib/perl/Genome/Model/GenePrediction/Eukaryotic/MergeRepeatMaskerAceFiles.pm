@@ -23,7 +23,7 @@ class Genome::Model::GenePrediction::Eukaryotic::MergeRepeatMaskerAceFiles {
 sub execute {
     my $self = shift;
     $self->status_message("Concatenating ace files into " . $self->merged_ace_file . "\n" . join("\n", $self->ace_files));
-    Genome::Utility::FileSystem->cat(
+    Genome::Sys->cat(
         input_files => $self->ace_files,
         output_file => $self->merged_ace_file,
     );

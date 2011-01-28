@@ -2,7 +2,7 @@
 package Genome::Model::Tools::Capture::BatchSampleQc;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# BatchSampleQcForAnnotation - Merge glfSomatic/VarScan somatic calls in a file that can be converted to MAF format
+# BatchSampleQcForAnnotation - Merge glfSomatic/Varscan somatic calls in a file that can be converted to MAF format
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
 #
@@ -25,7 +25,8 @@ class Genome::Model::Tools::Capture::BatchSampleQc {
 		bam_files	=> { is => 'Text', doc => "Tab-delimited list of samples and paths to BAM files", is_optional => 1, is_input => 1 },
 		snp_files	=> { is => 'Text', doc => "Tab-delimited list of samples and paths to SNP calls from sequencing", is_optional => 0, is_input => 1 },
 		genotype_files	=> { is => 'Text', doc => "Tab-delimited list of samples and paths to array genotype data", is_optional => 0, is_input => 1 },		
-		output_file     => { is => 'Text', doc => "Output file to receive QC results", is_optional => 0, is_input => 1, is_output => 1 },
+		output_dir     => { is => 'Text', doc => "Output directory to store QC files", is_optional => 1, is_input => 1, is_output => 1 },
+		output_file     => { is => 'Text', doc => "Output file to receive QC results", is_optional => 1, is_input => 1, is_output => 1 },
 	],
 };
 
@@ -38,7 +39,7 @@ sub help_brief {                            # keep this to just a few words <---
 sub help_synopsis {
     return <<EOS
 This command runs sample genotype QC on a batch of samples
-EXAMPLE:	gmt capture batch-sample-qc --snp-files Sample-SNP-Files.tsv --genotype-files Sample-Genotype-Files.tsv --output-file Sample-QC-Results.tsv
+EXAMPLE:	gmt capture batch-sample-qc --snp-files Sample-SNP-Files.tsv --genotype-files Sample-Genotype-Files.tsv --output-dir sample_qc_files --output-file Sample-QC-Results.tsv
 EOS
 }
 
@@ -61,8 +62,11 @@ sub execute {                               # replace with real execution logic.
 	my $snp_files = $self->snp_files;
 	my $genotype_files = $self->genotype_files;
 	my $output_file = $self->output_file;
+	my $output_dir = $self->output_dir;
 
 	my %stats = ();
+
+	my $samples_without_genotypes = "";
 
 	## Load the sample snp files ##
 
@@ -81,19 +85,55 @@ sub execute {                               # replace with real execution logic.
 	
 	foreach my $sample_name (keys %sample_snp_files)
 	{
+		my $sample_qc_result = "NoGenotypes";
+
 		if($sample_genotype_files{$sample_name})
 		{
 			$stats{'have_snp_and_genotype'}++;
 			
-			## Run the sample QC ##
-			my $label = "";
-			$label = $sample_bam_files{$sample_name} if($sample_bam_files{$sample_name});
-			run_genotype_qc($sample_name, $sample_genotype_files{$sample_name}, $sample_snp_files{$sample_name}, $label);
+			## Determine output file path ##
+			
+			my $sample_output_file = $output_dir . "/" . $sample_name . ".qc.tsv";
+			
+			if(-e $sample_output_file)
+			{
+				## Skip processing and just parse results ##
+				$sample_qc_result = parse_qc_results($sample_output_file);
+				my ($num_sites, $var_conc, $rare_hom_conc, $overall_conc) = split(/\t/, $sample_qc_result);
+				$overall_conc =~ s/\%//;
+				$sample_qc_result .= "\tFLAG" if($overall_conc && $overall_conc ne "-" && $overall_conc < 95);
+			}
+
+			if($sample_qc_result && $sample_qc_result ne "-\t-\t-\t-" && $sample_qc_result ne "NoGenotypes")
+			{
+				## Do nothing; we're done ##
+				$stats{'qc_is_complete'}++;
+			}
+			else
+			{
+				$sample_qc_result = "InProgress";
+				$stats{'qc_is_running'}++;
+				## Run the sample QC ##
+				my $label = "";
+				$label = $sample_bam_files{$sample_name} if($sample_bam_files{$sample_name});
+				run_genotype_qc($sample_name, $sample_genotype_files{$sample_name}, $sample_snp_files{$sample_name}, $sample_output_file);				
+			}
+
+			## Print a sample with both SNP and QC files ##
+			print OUTFILE join("\t", $sample_name, $sample_genotype_files{$sample_name}, $sample_snp_files{$sample_name}, $sample_qc_result) . "\n";
+			print join("\t", $sample_name, $sample_qc_result) . "\n";
 		}
 		else
 		{
 			$stats{'have_snp_only'}++;
+
+			$samples_without_genotypes .= "\n" if($samples_without_genotypes);
+			$samples_without_genotypes .= "\t" . $sample_name;
+
+			## Print a sample without genotype file ##
+			print OUTFILE join("\t", $sample_name, "-", $sample_snp_files{$sample_name}, $sample_qc_result) . "\n";
 		}
+	
 	
 		if(!$sample_counted{$sample_name})
 		{
@@ -125,9 +165,16 @@ sub execute {                               # replace with real execution logic.
 	## Print a summary of the statistics ##
 	
 	print $stats{'num_samples'} . " samples\n";
-	print $stats{'have_snp_and_genotype'} . " have sequence and genotype data\n";
-	print $stats{'have_snp_only'} . " have sequence data but no array genotypes\n";
+
 	print $stats{'have_genotype_only'} . " have array genotypes but no sequence data\n";
+
+	print $stats{'have_snp_only'} . " have sequence data but no array genotypes\n";
+	print "$samples_without_genotypes\n";
+
+	print $stats{'have_snp_and_genotype'} . " have sequence and genotype data\n";
+	print "\t" . $stats{'qc_is_complete'} . " have completed QC\n";
+	print "\t" . $stats{'qc_is_running'} . " are running QC\n";
+
 	
 }
 
@@ -140,6 +187,22 @@ sub execute {                               # replace with real execution logic.
 ################################################################################################
 
 sub run_genotype_qc
+{
+	my ($sample_name, $genotype_file, $snp_file, $output_file) = @_;
+
+	my $cmd = "gmt analysis lane-qc compare-snps --genotype $genotype_file --variant $snp_file --output-file $output_file";
+#	print "RUN: $cmd\n";
+	
+	system("bsub -q tcga -R\"select[model != Opteron250 && mem>1000] rusage[mem=1000]\" \"$cmd\"");
+}
+
+
+################################################################################################
+# Execute - the main program logic
+#
+################################################################################################
+
+sub old_run_genotype_qc
 {
 	my ($sample_name, $genotype_file, $snp_file, $label) = @_;
 
@@ -160,7 +223,6 @@ sub run_genotype_qc
 	print OUTFILE join("\t", $sample_name, $genotype_file, $label, $qc_values) . "\n";
 	print "$sample_name\t$overall_conc\n";
 }
-
 
 
 ################################################################################################
@@ -195,6 +257,44 @@ sub parse_sample_file_list
 	close($input);
 	
 	return(%files_by_sample);
+}
+
+
+################################################################################################
+# Execute - the main program logic
+#
+################################################################################################
+
+sub parse_qc_results
+{
+	my $qc_file = shift(@_);
+	my $result = "-\t-\t-\t-";
+
+	if(-e $qc_file)
+	{	
+		my $input = new FileHandle ($qc_file);
+		my $lineCounter = 0;
+	
+		while (<$input>)
+		{
+			chomp;
+			my $line = $_;
+			$lineCounter++;		
+			
+			my @lineContents = split(/\t/, $line);
+			my $numContents = @lineContents; 
+			if($numContents > 10 && !($line =~ 'SNPsCalled'))
+			{
+				my ($SNPfile, $SNPsCalled, $WithGenotype, $MetMinDepth, $Reference, $RefMatch, $RefWasHet, $RefWasHom, $Variant, $VarMatch, $HomWasHet, $HetWasHom, $VarMismatch, $VarConcord, $RareHomConcord, $OverallConcord) = split(/\t/, $line);			
+				$result = join("\t", $MetMinDepth, $VarConcord, $RareHomConcord, $OverallConcord);
+			}
+	
+		}
+	
+		close($input);		
+	}
+	
+	return($result);
 }
 
 

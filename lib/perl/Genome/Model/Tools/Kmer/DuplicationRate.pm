@@ -26,7 +26,7 @@ sub execute {
     my @fasta_files;
     my @fastq_basenames;
     my $max_read_length;
-    my $tmp_dir = Genome::Utility::FileSystem->create_temp_directory();
+    my $tmp_dir = Genome::Sys->create_temp_directory();
     for my $fastq_file (@fastq_files) {
         my ($fastq_basename,$fastq_dirname,$fastq_suffix) = File::Basename::fileparse($fastq_file,qw/\.fastq \.fq \.txt/);
         unless ($fastq_basename) {
@@ -42,7 +42,7 @@ sub execute {
                 die('Failed to convert fastq_file '. $fastq_file .' to fasta file '. $fasta_file);
             }
         }
-        my $fasta_fh = Genome::Utility::FileSystem->open_file_for_reading($fasta_file);
+        my $fasta_fh = Genome::Sys->open_file_for_reading($fasta_file);
         while (my $line = $fasta_fh->getline){
             chomp($line);
             if ($line =~ /^>/) { next; }

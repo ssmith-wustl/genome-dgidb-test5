@@ -24,7 +24,7 @@ SKIP: {
     my @diff =
         grep { $_ !~ /generated-at/ }
         grep { /\w/ }
-        Genome::Utility::FileSystem->diff_file_vs_text(__FILE__ . '.expected',$xml);
+        Genome::Sys->diff_file_vs_text(__FILE__ . '.expected',$xml);
     
     is("@diff","","XML has no differences from expected value");
 }

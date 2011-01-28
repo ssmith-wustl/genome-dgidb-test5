@@ -108,7 +108,7 @@ sub pre_execute {
 
     # create directories
     #for my $directory ( $self->assemble_t1n_dir, $self->assemble_t1t_dir, $self->assemble_t2n_dir, $self->assemble_t2t_dir, $self->assemble_t3n_dir, $self->assemble_t3t_dir) {
-    #    unless ( Genome::Utility::FileSystem->create_directory($directory) ) {
+    #    unless ( Genome::Sys->create_directory($directory) ) {
     #        $self->error_message("Failed to create directory $directory");
     #        die;
     #    }

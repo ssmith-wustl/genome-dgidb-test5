@@ -38,14 +38,14 @@ for(1..NUM_SAMPLES) {
 my $delimiter = Genome::Sample::Command::Attribute::Import->__meta__->property('delimiter')->default_value;
 my $line_separator = "\n";
 
-my $data_file_1 = Genome::Utility::FileSystem->create_temp_file_path;
+my $data_file_1 = Genome::Sys->create_temp_file_path;
 
 my $data_string_1 = join($delimiter, 'sample_id', 'test_attribute_1a', 'test_attribute_1b') . $line_separator;
 for my $sample (@test_samples) {
     $data_string_1 .= join($delimiter, $sample->id, 'test_value_1', 'test_value_' . $sample->id) . $line_separator;
 }
 
-Genome::Utility::FileSystem->write_file($data_file_1, $data_string_1);
+Genome::Sys->write_file($data_file_1, $data_string_1);
 
 my $import_command_1 = Genome::Sample::Command::Attribute::Import->create(
     file => $data_file_1,
@@ -60,12 +60,12 @@ for my $sample (@test_samples) {
 }
 
 #second test--update all samples for an individual by-id
-my $data_file_2 = Genome::Utility::FileSystem->create_temp_file_path;
+my $data_file_2 = Genome::Sys->create_temp_file_path;
 
 my $data_string_2 = join($delimiter, 'individual_id', 'test_attribute_2a') . $line_separator;
 $data_string_2 .= join($delimiter, $test_individual->id, 'test_value_2') . $line_separator;
 
-Genome::Utility::FileSystem->write_file($data_file_2, $data_string_2);
+Genome::Sys->write_file($data_file_2, $data_string_2);
 
 my $import_command_2 = Genome::Sample::Command::Attribute::Import->create(
     file => $data_file_2,
@@ -82,12 +82,12 @@ for my $sample (@test_samples) {
 #third and fourth tests removed since names are no longer unique
 
 #fifth test--wrong number of columns in data row
-my $data_file_5 = Genome::Utility::FileSystem->create_temp_file_path;
+my $data_file_5 = Genome::Sys->create_temp_file_path;
 
 my $data_string_5 = join($delimiter, 'individual_id', 'test_attribute_5a', 'test_attribute_5b') . $line_separator;
 $data_string_5 .= join($delimiter, $test_individual->id, 'test_value_5a') . $line_separator;
 
-Genome::Utility::FileSystem->write_file($data_file_5, $data_string_5);
+Genome::Sys->write_file($data_file_5, $data_string_5);
 
 my $import_command_5 = Genome::Sample::Command::Attribute::Import->create(
     file => $data_file_5,
@@ -98,12 +98,12 @@ my $ok = eval { $import_command_5->execute(); };
 ok(($@ || !$ok), 'failed executing import command 5 as expected (column count mismatch)');
 
 #sixth test--unknown id
-my $data_file_6 = Genome::Utility::FileSystem->create_temp_file_path;
+my $data_file_6 = Genome::Sys->create_temp_file_path;
 
 my $data_string_6 = join($delimiter, 'unknown_id', 'test_attribute_6a') . $line_separator;
 $data_string_6 .= join($delimiter, 'unknown_id!', 'test_value_6a') . $line_separator;
 
-Genome::Utility::FileSystem->write_file($data_file_6, $data_string_6);
+Genome::Sys->write_file($data_file_6, $data_string_6);
 
 my $import_command_6 = Genome::Sample::Command::Attribute::Import->create(
     file => $data_file_6,

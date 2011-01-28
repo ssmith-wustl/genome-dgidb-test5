@@ -5,6 +5,7 @@ use strict;
 
 use IO::File;
 use Genome;
+use IPC::Cmd qw/can_run/;
 
 =head1 NAME
 
@@ -120,9 +121,12 @@ sub execute {
         my $start = $fields[$maf_columns{'Start_position'}];
         my $stop = $fields[$maf_columns{'End_position'}];
         #my $ref = $fields[$maf_columns{'Reference_Allele'}];
-        my $tabix_cmd = "./tabix /gscmnt/sata893/info/medseq/ndees/pfam/dbfiles/pfam.annotation.gz $chr:$start-$stop - |";
+        # use environment variable but fall back to reasonable default
+        my $db_path = Genome::Sys->dbpath('pfam', 'latest') or die "Cannot find the pfam db path.";
+        my $tabix = can_run('tabix') or die "Cannot find the tabix command. It can be obtained from http://sourceforge.net/projects/samtools/files/tabix";
+        my $tabix_cmd = "$tabix $db_path/pfam.annotation.gz $chr:$start-$stop - |";
         my %domains;
-        open(TABIX,$tabix_cmd) or die "Cannot open() the tabix command: $!";
+        open(TABIX,$tabix_cmd) or die "Cannot open() the tabix command. Please check it is in your PATH. It can be installed from the samtools project. $!";
         while (my $tabline = <TABIX>) {
             chomp $tabline;
             my (undef,undef,undef,$csv_domains) = split /\t/,$tabline;

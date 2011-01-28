@@ -61,7 +61,6 @@ sub execute {
         my @attributes = map { $_->property_name } $meta->properties;
         @attributes = grep { $_ ne 'directory' } @attributes;
 
-        # Get all the objects of the current type from the temp dir
         TEMP_DIR: for my $temp_dir (@{$self->temp_prediction_directories}) {
             unless (-d $temp_dir) {
                 $self->warning_message("No directory found at $temp_dir, this is most distressing!");

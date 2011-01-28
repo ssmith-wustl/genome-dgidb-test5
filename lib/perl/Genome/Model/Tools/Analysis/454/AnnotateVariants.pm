@@ -24,7 +24,7 @@ class Genome::Model::Tools::Analysis::454::AnnotateVariants {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
-		variants_file	=> { is => 'Text', doc => "Variants file in VarScan format" },
+		variants_file	=> { is => 'Text', doc => "Variants file in Varscan format" },
 		output_file	=> { is => 'Text', doc => "Output file" },
 	],
 };
@@ -32,12 +32,12 @@ class Genome::Model::Tools::Analysis::454::AnnotateVariants {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Run annotation pipeline on VarScan variants"                 
+    "Run annotation pipeline on Varscan variants"                 
 }
 
 sub help_synopsis {
     return <<EOS
-This command reformats VarScan variants and runs annotation on them
+This command reformats Varscan variants and runs annotation on them
 	
 EXAMPLE: gmt analysis 454 annotate-variants --variants-file snps.tsv --output-file snps.annotated.tsv
 EOS

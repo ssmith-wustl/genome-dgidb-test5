@@ -33,11 +33,11 @@ sub execute {
     unless ($build) {
         die('Failed to find ImportedReferenceSequence build for id: '. $self->reference_sequence_build_id);
     }
-    my $bed_fh = Genome::Utility::FileSystem->open_file_for_reading($self->bed_file);
+    my $bed_fh = Genome::Sys->open_file_for_reading($self->bed_file);
     unless ($bed_fh) {
         die;
     }
-    my $fasta_fh = Genome::Utility::FileSystem->open_file_for_writing($self->fasta_file);
+    my $fasta_fh = Genome::Sys->open_file_for_writing($self->fasta_file);
     unless ($fasta_fh) {
         die;
     }

@@ -2,7 +2,7 @@
 package Genome::Model::Tools::Varscan::Readcounts;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# Varscan::Somatic	Runs VarScan somatic pipeline on Normal/Tumor BAM files
+# Varscan::Somatic	Runs Varscan somatic pipeline on Normal/Tumor BAM files
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@genome.wustl.edu)
 #
@@ -35,12 +35,12 @@ class Genome::Model::Tools::Varscan::Readcounts {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Run the VarScan readcounts tool"                 
+    "Run the Varscan readcounts tool"                 
 }
 
 sub help_synopsis {
     return <<EOS
-Runs VarScan readcounts from BAM files
+Runs Varscan readcounts from BAM files
 EXAMPLE:	gmt varscan readcounts --bam-file [sample.bam] --variants-file [variants.tsv] --output-file readcounts.txt ...
 EOS
 }
@@ -73,6 +73,7 @@ sub execute {                               # replace with real execution logic.
 		
 		my $pileup = "samtools view -b -u -q 10 $bam_file | samtools pileup -f $reference -";
 		my $cmd = $self->java_command_line("readcounts <\($pileup\) --variants-file $variants_file --output-file $output_file");
+		print "RUN: $cmd\n";
 		system($cmd);
 	}
 	else

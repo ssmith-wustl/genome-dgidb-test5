@@ -156,7 +156,7 @@ sub execute {
         die;
     }
 
-    my ($tfh,$temp_path) = Genome::Utility::FileSystem->create_temp_file;
+    my ($tfh,$temp_path) = Genome::Sys->create_temp_file;
     unless($tfh) {
         $self->error_message("Unable to create temporary file $!");
         die;

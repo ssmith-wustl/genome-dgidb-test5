@@ -53,7 +53,7 @@ sub execute {
     }
     my $cmd = $gt_path .' tallymer occratio '. $options .' -esa '. $self->index_name .' > '. $self->output_file;
     my @output_files = ($self->output_file);
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => $cmd,
         output_files => \@output_files,
     );

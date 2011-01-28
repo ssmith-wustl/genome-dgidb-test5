@@ -73,9 +73,9 @@ sub create {
         return;
     }
     unless ($self->temp_directory) {
-        my $base_temp_directory = Genome::Utility::FileSystem->base_temp_directory;
+        my $base_temp_directory = Genome::Sys->base_temp_directory;
         my $temp_dir = File::Temp::tempdir($base_temp_directory .'/Bowtie-XXXX', CLEANUP => 1);
-        Genome::Utility::FileSystem->create_directory($temp_dir);
+        Genome::Sys->create_directory($temp_dir);
         $self->_tmp_dir($temp_dir);
     }
     return $self;

@@ -27,7 +27,7 @@ sub create {
     my ($class, %params) = @_;
 
     my $properties_file = delete $params{properties_file};
-    unless ( Genome::Utility::FileSystem->validate_file_for_reading($properties_file) ) {
+    unless ( Genome::Sys->validate_file_for_reading($properties_file) ) {
         $class->error_message("Properties file not given or does not exist");
         return;
     }

@@ -127,7 +127,7 @@ sub execute {
 
     my $log_fh;
     if ($self->microhomology_log_file) {
-        $log_fh = Genome::Utility::FileSystem->open_file_for_writing($self->microhomology_log_file) or return;
+        $log_fh = Genome::Sys->open_file_for_writing($self->microhomology_log_file) or return;
     }
 
     my $len_refseq = length($refseq);

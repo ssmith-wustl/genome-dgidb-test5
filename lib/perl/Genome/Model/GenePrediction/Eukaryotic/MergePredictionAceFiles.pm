@@ -25,7 +25,7 @@ class Genome::Model::GenePrediction::Eukaryotic::MergePredictionAceFiles {
 sub execute {
     my $self = shift;
 
-    my @ace_file_chunks = $self->ace_file_chunks;
+    my @ace_file_chunks = @{$self->ace_file_chunks};
     unless (@ace_file_chunks) {
         $self->warning_message("No ace file chunks given, exiting");
         return 1;
@@ -37,9 +37,14 @@ sub execute {
         unlink $ace_file;
     }
 
-    $self->status_message("Merging below files into $ace_file:\n" . join("\n", @ace_file_chunks));
+    my @chunks_with_output;
+    for my $chunk (@ace_file_chunks) {
+        push @chunks_with_output, $chunk if -s $chunk;
+    }
 
-    my $rv = Genome::Utility::FileSystem->cat(
+    $self->status_message("Concatenating " . scalar @chunks_with_output . " ace file chunks into $ace_file");
+
+    my $rv = Genome::Sys->cat(
         input_files => @ace_file_chunks,
         output_file => $ace_file,
     );

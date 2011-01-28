@@ -42,10 +42,18 @@ sub required_rusage {
     my @selected_half_blades = `bhosts -R '$select_half_blades' alignment | grep ^blade`;
     my @selected_whole_blades = `bhosts -R '$select_whole_blades' alignment | grep ^blade`;
 
+    my $queue;
+    my $user = getpwuid($<);
+    if ($user eq 'apipe-builder') {
+        $queue = 'alignment-pd';
+    } else {
+        $queue = 'alignment';
+    }
+
     if (@selected_half_blades) {
-        return "-R '$select_half_blades rusage[mem=$mem, tmp=$tmp]' -M $mem_kb -n $cpus -q alignment -m alignment";
+        return "-R '$select_half_blades rusage[mem=$mem, tmp=$tmp]' -M $mem_kb -n $cpus -q $queue -m alignment";
     } elsif (@selected_whole_blades) {
-        return "-R '$select_whole_blades rusage[mem=$mem, tmp=$tmp]' -M $mem_kb -n $double_cpus -q alignment -m alignment";
+        return "-R '$select_whole_blades rusage[mem=$mem, tmp=$tmp]' -M $mem_kb -n $double_cpus -q $queue -m alignment";
     } else {
         die $class->error_message("Failed to find hosts that meet resource requirements.");
     }
@@ -92,7 +100,7 @@ sub _run_aligner {
             Genome::DataSource::GMSchema->disconnect_default_dbh();
         }
         
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
             cmd          => $cmdline,
             input_files  => [ $reference_fasta_path, $input ],
             output_files => [ $tmp_sai_file, $tmp_log_file ],
@@ -168,7 +176,7 @@ sub _run_aligner {
     my $log_output_file   = $self->temp_staging_directory . "/aligner.log";
     my $concat_log_cmd = sprintf('cat %s >> %s', $log_input_fileset, $log_output_file);
 
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd          => $concat_log_cmd,
         input_files  => [ @aln_log_files, $samxe_logfile ],
         output_files => [ $log_output_file ],
@@ -184,7 +192,7 @@ sub _filter_samxe_output {
 #    my $cmd = "$sam_cmd | grep -v ^@ >> $sam_file_name";
 #    print $cmd,"\n\n";
 #    $DB::single = 1;
-#    Genome::Utility::FileSystem->shellcmd(cmd => $cmd);
+#    Genome::Sys->shellcmd(cmd => $cmd);
 #    return 1;
 
     $DB::single = 1;
@@ -211,7 +219,6 @@ sub _filter_samxe_output {
     } else {
         $sam_out_fh = IO::File->new(">>" . $self->temp_scratch_directory . "/all_sequences.sam");
     }
-#    my $sam_out_fh = $Genome::InstrumentData::AlignmentResult::BAM_FH;
     my $add_rg_cmd = Genome::Model::Tools::Sam::AddReadGroupTag->create(
             input_filehandle     => $sam_run_output_fh,
             output_filehandle    => $sam_out_fh,

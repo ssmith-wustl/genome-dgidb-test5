@@ -95,7 +95,7 @@ sub _unzip_fastqs {
     for my $zipped_fastq ( @zipped_fastqs ) {
         my $cmd = "bunzip2 -f $zipped_fastq";
         $self->status_message($cmd);
-        my $rv = eval{ Genome::Utility::FileSystem->shellcmd(cmd => $cmd); };
+        my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
         if ( not $rv ) {
             $self->error_message("Cannot unzip fastq: $zipped_fastq");
             return;
@@ -246,7 +246,7 @@ sub _create_archive {
     $self->status_message("Tar-ing files to $temp_tar_file");
     my $tar_cmd = "tar cvzf $temp_tar_file -C $dl_directory ".join(' ', @files);
     $self->status_message($tar_cmd);
-    my $rv = eval { Genome::Utility::FileSystem->shellcmd(cmd => $tar_cmd); };
+    my $rv = eval { Genome::Sys->shellcmd(cmd => $tar_cmd); };
     if ( not $rv ) {
         $self->error_message("Tar command failed: $tar_cmd");
         return;

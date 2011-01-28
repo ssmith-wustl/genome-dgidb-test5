@@ -1,0 +1,226 @@
+#!/gsc/bin/perl
+
+use above "Genome";
+
+
+use warnings;
+use strict;
+
+use Getopt::Long;
+
+my ($rebuild, $help, $add_all, $add, $lock_name);
+
+GetOptions(
+    "rebuild" => \$rebuild,
+    "help" => \$help,
+    "add-all" => \$add_all,
+    "add=s" => \$add,
+    "lock=s" => \$lock_name
+);
+
+my @types = qw(
+processing_profile 
+work_order 
+model 
+model_group 
+individual 
+flowcell 
+sample 
+population_group 
+taxon 
+libary 
+disk_group 
+disk_volume 
+);
+
+my @types_to_add;
+
+if ($help) {
+    my $type_str = join("\n",@types);
+    print "\nUSAGE: gcsearch_load_from_db --add [type1,type2, ...]\n\ntypes:\n$type_str\n\n";
+    exit;
+}
+
+if (!$add) {
+    if ($add_all) {
+        @types_to_add = @types;
+        print "trying to add all types of objects to search index\n\n";
+    } else {
+        print "\nError: must specify --add [type1,type2, ...] or --add-all\n\n";
+        exit;
+    }
+} else {
+    @types_to_add = split(/,/, $add);
+   
+    for my $t (@types_to_add) {
+        if (! grep /$t/, @types) {
+            my $type_str = join("\n",@types);
+            print "\nError: \'$t\' is not a valid type:\n$type_str\n\n";
+            exit;
+        }
+    } 
+}
+
+#Just clear the cache for each entry instead of building all the search result views for now
+Genome::Search->get()->refresh_cache_on_add(0);
+
+my $time;
+
+my $lock_resource = '/gsc/var/lock/gcsearch/db_loader';
+
+if (Genome::Config->dev_mode()) {
+    $lock_resource .= '_dev';
+}
+
+if ($lock_name) {
+    $lock_resource .= "_$lock_name";
+}
+
+my $lock = Genome::Sys->lock_resource(resource_lock=>$lock_resource, max_try=>0);
+unless ($lock) {
+    die "could not lock, another instance must be running.";
+}
+
+if($rebuild) {
+    Genome::Search->clear;
+}
+
+my $f = get_functions();
+
+for my $t (@types_to_add) {
+
+    if (!defined($f->{$t})) {
+        die "oh noes no function for $t\n";
+    }
+    $f->{$t}->();
+}
+
+Genome::Sys->unlock_resource(resource_lock=>$lock);
+
+exit;
+
+
+
+
+
+sub status($) {
+    my $msg = shift;    
+    print STDERR $msg;
+}
+
+sub loading($) {
+    my $type = shift;
+    status 'Loading ' . $type . '...';
+    
+    $time = time;
+}
+
+sub done() {
+    my $diff = time - $time;
+    status "done. ($diff seconds)\n";
+}
+
+sub get_functions {
+
+    my $f = {};
+
+    Genome::InstrumentData::Solexa->get(); #preload
+
+    $f->{'processing_profile'} = sub {
+        loading "processing profiles";
+        my @processing_profiles = Genome::ProcessingProfile->get(-hint => ['params']); #models would've done this later, but we need "them all" so do it in advance
+        Genome::Search->add(@processing_profiles);
+        done;
+    };
+
+    $f->{'work_order'} = sub {
+        loading "work orders";
+        my @wo = Genome::WorkOrder->get();
+        Genome::Search->add(@wo);
+        done;
+    };
+
+    $f->{'model'} = sub {
+        loading "models";
+        my @models;
+        eval { 
+            @models = Genome::Model->get();
+        };
+        if($@) {
+            #Somebody currently has a model in the DB without having deployed the module.  Fall back on a safe set of model types
+            @models = Genome::Model->get(type_name => {operator => 'IN', value => ['reference alignment', 'somatic', 'assembly', 'amplicon assembly', 'de novo assembly', 'genotype microarray', 'virome screen', 'convergence'] });    
+        }
+        Genome::Model::Build->get(-hint => ['events', 'status']); #Load these all at once rather than letting each model query for its own in turn (but do this after the models are loaded)
+        Genome::Search->add(@models);
+        done;
+    };
+
+    $f->{'model_group'} = sub {
+        loading "model groups";
+        my @model_groups = Genome::ModelGroup->get();
+        Genome::Search->add(@model_groups);
+        done;
+    };
+
+    $f->{'individual'} = sub {
+        loading "individuals";
+        my @individuals = Genome::Individual->get( common_name => {operator => 'ne', value => undef } );
+        Genome::Search->add(@individuals);
+        done;
+    };
+
+    $f->{'flowcell'} = sub {
+        loading "flow cells";
+        my @flow_cells = Genome::InstrumentData::FlowCell->get();
+        Genome::Search->add(@flow_cells);
+        done;
+    };
+
+    $f->{'sample'} = sub {
+        loading "samples";
+        my @samples = Genome::Sample->get( name => {operator => 'ne', value => undef } );
+        Genome::Search->add(@samples);
+        done;
+    };
+
+    $f->{'population_group'} = sub {
+        loading "population groups";
+        my @population_groups = Genome::PopulationGroup->get();
+        Genome::Search->add(@population_groups);
+        done;
+    };
+
+    $f->{'taxon'} = sub {
+        loading "taxons";
+        my @taxons = Genome::Taxon->get();
+        Genome::Search->add(@taxons);
+        done;
+    };
+
+    $f->{'libary'} = sub {
+        loading "libraries";
+        my @libraries = Genome::Library->get(); #Would hint samples and taxons, but were already loaded above
+        Genome::Search->add(@libraries);
+        done;
+    };
+
+    $f->{'disk_group'} = sub {
+        loading "disk groups";
+        my @disk_groups = Genome::Disk::Group->get();
+        Genome::Search->add(@disk_groups);
+        done;
+    };
+
+    $f->{'disk_volume'} = sub {
+        loading "disk volumes";
+        my @disk_volumes = Genome::Disk::Volume->get( -hint => ['assignments']);
+        Genome::Search->add(@disk_volumes);
+        done;
+    };
+
+    return $f;
+}
+
+
+
+

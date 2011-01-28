@@ -86,7 +86,7 @@ sub execute {
     my $r_dir = "$wd/reports";
     my $final_report = "$r_dir/metrics_summary.txt";
     unlink $final_report if -e $final_report;
-    my $fr_ofh = Genome::Utility::FileSystem->open_file_for_writing($final_report);
+    my $fr_ofh = Genome::Sys->open_file_for_writing($final_report);
     $fr_ofh->print("Initial Merged Alignment:\n$aligned_read_pairs aligned read pairs($aligned_reads reads)\n$unaligned_merged_count unaligned_reads\n");
     $fr_ofh->print("Aligned Reads soft clip filtering:\n$low_priority_count reads removed as low priority\n$unaligned_sam_count reads removed as unaligned\n");
 

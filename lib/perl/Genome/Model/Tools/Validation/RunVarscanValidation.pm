@@ -35,12 +35,12 @@ class Genome::Model::Tools::Validation::RunVarscanValidation {
         type => 'Float',
         is_optional => 1,
         default => 0.08,
-        doc => 'The minimum variant frequency that VarScan uses to determine if a variant exists. 0.08 by default. If you have an impure normal smaple, then you will want to increase this value (eg for 30% contamination of the normal use 0.2',
+        doc => 'The minimum variant frequency that Varscan uses to determine if a variant exists. 0.08 by default. If you have an impure normal smaple, then you will want to increase this value (eg for 30% contamination of the normal use 0.2',
     },
     snp_target_file => {
         type => 'String',
         is_optional => 0,
-        doc => 'A tab-separated file containing, minimally, chromosome then position for filtering the VarScan snp output to targeted positions',
+        doc => 'A tab-separated file containing, minimally, chromosome then position for filtering the Varscan snp output to targeted positions',
     },
     ]
 };

@@ -4,8 +4,6 @@ use warnings;
 use strict;
 
 use Genome;
-use Carp;
-use IO::File;
 
 class Genome::Model::Tools::Somatic::FilterPindelReadSupport{
     is => 'Command',
@@ -84,8 +82,8 @@ sub execute {
         $self->status_message("Found output file at ".$self->output_file." shortcutting past filer.");
         return 1;
     }
-    my $input = Genome::Utility::FileSystem->open_file_for_reading( $self->read_support_file );
-    my $output = Genome::Utility::FileSystem->open_file_for_writing( $self->output_file );
+    my $input = Genome::Sys->open_file_for_reading( $self->read_support_file );
+    my $output = Genome::Sys->open_file_for_writing( $self->output_file );
     $input->getline;  # throw out header line
     while( my $line = $input->getline){
         chomp $line;

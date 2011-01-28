@@ -21,6 +21,14 @@ use IO::File;
 use Sort::Naturally;
 use Data::Dumper;
 
+my %DEPENDENT_PROPERTIES = (
+    # dbsnp_build and annotation depend on reference_sequence_build
+    'reference_sequence_build' => [
+        'dbsnp_build',
+        'annotation_reference_transcripts',
+    ],
+);
+
 class Genome::Model::ReferenceAlignment {
     is => 'Genome::Model',
     has => [
@@ -478,5 +486,12 @@ sub inputs_necessary_for_copy {
     my @inputs = grep { !exists $exclude{$_->name} } $self->SUPER::inputs_necessary_for_copy;
     return @inputs;
 }
+
+sub dependent_properties {
+    my ($self, $property_name) = @_;
+    return @{$DEPENDENT_PROPERTIES{$property_name}} if exists $DEPENDENT_PROPERTIES{$property_name};
+    return;
+}
+
 
 1;

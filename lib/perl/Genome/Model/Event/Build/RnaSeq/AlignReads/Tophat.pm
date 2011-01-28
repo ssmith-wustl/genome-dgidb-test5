@@ -23,7 +23,7 @@ sub execute {
     my $self = shift;
     my $alignment_directory = $self->build->accumulated_alignments_directory;
     unless (-d $alignment_directory) {
-        Genome::Utility::FileSystem->create_directory($alignment_directory);
+        Genome::Sys->create_directory($alignment_directory);
     }
     my $aligner = $self->create_aligner_tool;
     unless ($aligner) {
@@ -46,7 +46,7 @@ sub execute {
         $picard_version = Genome::Model::Tools::Picard->default_picard_version;
         $self->warning_message('Picard version not defined in processing profile.  Using default picard version: '. $picard_version);
     }
-    my $tmp_unaligned_bam_file = Genome::Utility::FileSystem->create_temp_file_path('all_fastq_reads.bam');
+    my $tmp_unaligned_bam_file = Genome::Sys->create_temp_file_path('all_fastq_reads.bam');
     unless (Genome::Model::Tools::Picard::MergeSamFiles->execute(
         input_files => $self->_unaligned_bam_files,
         output_file => $tmp_unaligned_bam_file,
@@ -59,7 +59,7 @@ sub execute {
     }
 
     # queryname sort the aligned BAM file
-    my $tmp_aligned_bam_file = Genome::Utility::FileSystem->create_temp_file_path('accepted_hits_queryname_sort.bam');
+    my $tmp_aligned_bam_file = Genome::Sys->create_temp_file_path('accepted_hits_queryname_sort.bam');
     unless (Genome::Model::Tools::Picard::SortSam->execute(
         sort_order => 'queryname',
         input_file => $alignment_directory .'/accepted_hits.bam',
@@ -67,22 +67,21 @@ sub execute {
         max_records_in_ram => 3000000,
         maximum_memory => 12,
         maximum_permgen_memory => 256,
-        temp_directory => Genome::Utility::FileSystem->base_temp_directory,
+        temp_directory => Genome::Sys->base_temp_directory,
         use_version => $picard_version,
     )) {
         die('Failed to queryname sort the aligned BAM file!');
     }
 
     # Find unaligned reads and merge with aligned while calculating basic alignment metrics
-    my $tmp_merged_bam_file = Genome::Utility::FileSystem->create_temp_file_path('accepted_hits_all_unsorted.bam');
-    unless (Genome::Model::Tools::BioSamtools::TophatAlignmentStats->execute(
-        aligned_bam_file => $tmp_aligned_bam_file,
-        unaligned_bam_file => $tmp_unaligned_bam_file,
-        merged_bam_file => $tmp_merged_bam_file,
-        alignment_stats_file => $self->build->alignment_stats_file,
-    )) {
-        die('Failed to merge aligned/unaligned and calculate alignment metrics!');
-    }
+    my $tmp_merged_bam_file = Genome::Sys->create_temp_file_path('accepted_hits_all_unsorted.bam');
+    my $alignment_stats_file = $self->build->alignment_stats_file;
+    my $cmd = "gmt5.12.1 bio-samtools tophat-alignment-stats --aligned-bam-file=$tmp_aligned_bam_file --unaligned-bam-file=$tmp_unaligned_bam_file --merged-bam-file=$tmp_merged_bam_file --alignment-stats-file=$alignment_stats_file";
+    Genome::Sys->shellcmd(
+        cmd => $cmd,
+        input_files => [$tmp_aligned_bam_file,$tmp_unaligned_bam_file],
+        output_files => [$tmp_merged_bam_file,$alignment_stats_file],
+    );
     unlink($tmp_unaligned_bam_file);
     unlink($tmp_aligned_bam_file);
 
@@ -94,7 +93,7 @@ sub execute {
         max_records_in_ram => 3000000,
         maximum_memory => 12,
         maximum_permgen_memory => 256,
-        temp_directory => Genome::Utility::FileSystem->base_temp_directory,
+        temp_directory => Genome::Sys->base_temp_directory,
         use_version => $picard_version,
     )) {
         die('Failed to coordinate sort the merged BAM file!');
@@ -107,7 +106,7 @@ sub execute {
             output_file => $self->build->merged_bam_file .'.bai',
             maximum_memory => 12,
             maximum_permgen_memory => 256,
-            temp_directory => Genome::Utility::FileSystem->base_temp_directory,
+            temp_directory => Genome::Sys->base_temp_directory,
             use_version => $picard_version,
         )) {
             die('Failed to index the merged BAM file!');

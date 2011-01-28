@@ -49,12 +49,12 @@ class Genome::Model::Tools::Varscan::ProcessSomatic {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Process output from VarScan somatic"                 
+    "Process output from Varscan somatic"                 
 }
 
 sub help_synopsis {
     return <<EOS
-    This command processes output from VarScan somatic (.snp or.indel), classifying variants by somatic status
+    This command processes output from Varscan somatic (.snp or.indel), classifying variants by somatic status
     (Germline/Somatic/LOH) and by confidence (high/low).
     EXAMPLE:    gmt varscan process-somatic ...
 EOS
@@ -116,7 +116,7 @@ sub process_results {
 
     ## Parse the variant file ##
 
-    my $input = Genome::Utility::FileSystem->open_file_for_reading($variants_file);
+    my $input = Genome::Sys->open_file_for_reading($variants_file);
     my $lineCounter = 0;
 
     while (<$input>) {
@@ -162,9 +162,9 @@ sub process_results {
                 my $hc_file_accessor = $status_file_accessor . '_hc';
                 my $lc_file_accessor = $status_file_accessor . '_lc';
 
-                ($status_fh, $status_temp) = Genome::Utility::FileSystem->create_temp_file();
-                ($high_confidence_fh, $high_confidence_temp) = Genome::Utility::FileSystem->create_temp_file();;
-                ($low_confidence_fh, $low_confidence_temp) = Genome::Utility::FileSystem->create_temp_file();;
+                ($status_fh, $status_temp) = Genome::Sys->create_temp_file();
+                ($high_confidence_fh, $high_confidence_temp) = Genome::Sys->create_temp_file();;
+                ($low_confidence_fh, $low_confidence_temp) = Genome::Sys->create_temp_file();;
 
                 if($file_header) {
                     for my $fh ($status_fh, $high_confidence_fh, $low_confidence_fh) {
@@ -247,12 +247,12 @@ sub process_results {
                 my $hc_file_accessor = $status_file_accessor . '_hc';
                 my $lc_file_accessor = $status_file_accessor . '_lc';
 
-                Genome::Utility::FileSystem->copy_file($status_temp, $self->$status_file_accessor)
-                    if Genome::Utility::FileSystem->check_for_path_existence($status_temp);
-                Genome::Utility::FileSystem->copy_file($high_confidence_temp, $self->$hc_file_accessor)
-                    if Genome::Utility::FileSystem->check_for_path_existence($high_confidence_temp);
-                Genome::Utility::FileSystem->copy_file($low_confidence_temp, $self->$lc_file_accessor)
-                    if Genome::Utility::FileSystem->check_for_path_existence($low_confidence_temp);
+                Genome::Sys->copy_file($status_temp, $self->$status_file_accessor)
+                    if Genome::Sys->check_for_path_existence($status_temp);
+                Genome::Sys->copy_file($high_confidence_temp, $self->$hc_file_accessor)
+                    if Genome::Sys->check_for_path_existence($high_confidence_temp);
+                Genome::Sys->copy_file($low_confidence_temp, $self->$lc_file_accessor)
+                    if Genome::Sys->check_for_path_existence($low_confidence_temp);
             }
 
             print "\t$numHiConf high confidence\n";

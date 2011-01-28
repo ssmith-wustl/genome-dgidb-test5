@@ -104,7 +104,7 @@ sub create_db {
     die $dbh->errstr unless $sth_get_read_name_and_position; #??
 
     #load from sequences file
-    my $seq_fh  = Genome::Utility::FileSystem->open_file_for_reading($self->sequences_file) or return;
+    my $seq_fh  = Genome::Sys->open_file_for_reading($self->sequences_file) or return;
     my $seek_pos = $seq_fh->tell;
     my $io = Bio::SeqIO->new(-format => 'fasta', -fh => $seq_fh);
 

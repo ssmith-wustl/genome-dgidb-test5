@@ -95,7 +95,7 @@ sub merge {
     
     my @expected_output_files = ($combined_file);
     
-    my $rv_check = Genome::Utility::FileSystem->are_files_ok(input_files=>\@expected_output_files);
+    my $rv_check = Genome::Sys->are_files_ok(input_files=>\@expected_output_files);
     
     if (defined($rv_check)) {
 	    if ($rv_check == 1) {
@@ -111,7 +111,7 @@ sub merge {
     } elsif ( scalar(@concise_files) == 1) {
 		$self->status_message("Only one alignment file is present.  Not merging, only copying.");
 		my $cp_cmd = "cp ".$concise_files[0]." ".$combined_file;
-		my $rv_cp = Genome::Utility::FileSystem->shellcmd(cmd=>$cp_cmd);
+		my $rv_cp = Genome::Sys->shellcmd(cmd=>$cp_cmd);
 		if ($rv_cp != 1) {
 			$self->error_message("<<<Failed MergeAligments. Copy failed.  Return value: $rv_cp");
 			return;
@@ -121,7 +121,7 @@ sub merge {
 	    $self->status_message("Merging files: ".join("\n",@concise_files) );
 	    $self->status_message("Destination file: ".$combined_file);    
         
-            my $rv_cat = Genome::Utility::FileSystem->cat(input_files=>\@concise_files,output_file=>$combined_file);        
+            my $rv_cat = Genome::Sys->cat(input_files=>\@concise_files,output_file=>$combined_file);        
 		if ($rv_cat != 1) {
 	    	$self->error_message("<<<Failed MergeAlignments on cat.  Return value: $rv_cat");
 	    	return;
@@ -129,7 +129,7 @@ sub merge {
     
 	}
     
-    Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_output_files);
+    Genome::Sys->mark_files_ok(input_files=>\@expected_output_files);
     return 1;   
 }
  

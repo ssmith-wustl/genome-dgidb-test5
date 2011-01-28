@@ -73,7 +73,7 @@ sub execute {
     my $cmd = join(" ", $self->trnascan_install_path, @params);
     $self->status_message("Preparing to run Trnascan-SE: $cmd");
     
-    # FIXME Replace with Genome::Utility::FileSystem->shellcmd
+    # FIXME Replace with Genome::Sys->shellcmd
     my $rv = system($cmd);
     confess 'Trouble executing tRNAscan!' unless defined $rv and $rv == 0;
     $self->status_message("Done executing tRNAscan, now parsing output");
@@ -103,7 +103,7 @@ sub execute {
             strand => $strand,
             source => 'trnascan',
             score => $score,
-            sequence_name => $seq_string,
+            sequence_name => $seq_name,
             sequence_string => $seq_string,
             codon => $codon,
             amino_acid => $type,

@@ -96,7 +96,7 @@ sub execute {
     #if (-e $fail_file) {
     #	die "Found a FAIL file.  Quitting.";
     #} else {
-    #	Genome::Utility::FileSystem->shellcmd(cmd=>"touch $fail_file" );
+    #	Genome::Sys->shellcmd(cmd=>"touch $fail_file" );
     #}
     
     #my $database="/gscmnt/temp206/info/seqana/species_independant/sabubuck/KEGG/KEGG-52/genesV52.KO.faa";
@@ -114,7 +114,7 @@ sub execute {
     my $output_file = $output_directory."/".$query_file_name.".blast";
     
     my  @expected_output_files = ($output_file);
-    my $rv_check = Genome::Utility::FileSystem->are_files_ok(input_files=>\@expected_output_files);
+    my $rv_check = Genome::Sys->are_files_ok(input_files=>\@expected_output_files);
     if (defined($rv_check)) {
 	    if ($rv_check == 1) {
 	    	#shortcut this step, all the required files exist.  Quit.
@@ -136,7 +136,7 @@ sub execute {
     	die "SpeciesBlastx could not complete.";
     } 							
     					  
-    Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_output_files);
+    Genome::Sys->mark_files_ok(input_files=>\@expected_output_files);
     
     $self->final_file("species_blastx_final_file_path");
     $self->status_message("<<<Completed species_blastx execute() at ".UR::Time->now); 

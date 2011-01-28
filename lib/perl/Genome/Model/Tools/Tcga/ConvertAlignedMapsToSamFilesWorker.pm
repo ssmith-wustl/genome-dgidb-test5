@@ -58,7 +58,7 @@ sub execute {
 
     my $pid = getppid();
     my $log_path = "$working_dir/logs/convert_aligned_maps_$idid"."_".$pid.".txt";
-    my $log_fh = Genome::Utility::FileSystem->open_file_for_writing($log_path);
+    my $log_fh = Genome::Sys->open_file_for_writing($log_path);
     unless($log_fh) {
        $self->error_message("For $idid, failed to open output filehandle for: " .  $log_path );
        die "For $idid, could not open file ".$log_path." for writing.";
@@ -86,7 +86,7 @@ sub execute {
             print $log_fh "\nFound $single_map. Not merging, just copying to $mapmerge_output_file";
             if ($single_map =~ m/.+all_sequences.map$/) {
                 #in this case, the all_sequences.map exist, just copy it to the proper location for merging
-                my $copy_rv = Genome::Utility::FileSystem->copy_file($single_map,$mapmerge_output_file);
+                my $copy_rv = Genome::Sys->copy_file($single_map,$mapmerge_output_file);
                 if ($copy_rv ne 1)  {
                     print $log_fh "\nFor $idid, error copying $single_map to $mapmerge_output_file";
                     die "For $idid, error copying $single_map to $mapmerge_output_file";
@@ -131,7 +131,7 @@ sub execute {
         print $log_fh "\ninput file: $mapmerge_output_file";
         print $log_fh "\nlib tag: $idid";
 
-        #my $rv = Genome::Utility::FileSystem->shellcmd( cmd=>$convert_cmd, input_files=>[$mapmerge_output_file], output_files=>[$conversion_output_file] );
+        #my $rv = Genome::Sys->shellcmd( cmd=>$convert_cmd, input_files=>[$mapmerge_output_file], output_files=>[$conversion_output_file] );
         print $log_fh "\nResult from map2sam conversion: $map_to_bam";
         if ( $map_to_bam ne 1 ) {
             print $log_fh "\nError from map2sam conversion.";
@@ -144,7 +144,7 @@ sub execute {
         #mv the file to the correct place
         my $mv_cmd = "mv $mapmerge_output_file $conversion_output_file"; 
         print $log_fh "\nRunning mv command: $mv_cmd";
-        my $mv_rv = Genome::Utility::FileSystem->shellcmd( cmd=>$mv_cmd, input_files=>[$mapmerge_output_file], output_files=>[$conversion_output_file] );
+        my $mv_rv = Genome::Sys->shellcmd( cmd=>$mv_cmd, input_files=>[$mapmerge_output_file], output_files=>[$conversion_output_file] );
 
         if ( $mv_rv ne 1 ) {
             print $log_fh "\nError while moving $mapmerge_output_file to $conversion_output_file"; 

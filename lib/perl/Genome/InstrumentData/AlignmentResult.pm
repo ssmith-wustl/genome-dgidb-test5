@@ -447,7 +447,7 @@ sub prepare_scratch_sam_file {
     my @input_files = ($seq_dict, $groups_input_file);
 
     $self->status_message("Cat-ing together: ".join("\n",@input_files). "\n to output file ".$scratch_sam_file);
-    my $cat_rv = Genome::Utility::FileSystem->cat(input_files=>\@input_files,output_file=>$scratch_sam_file);
+    my $cat_rv = Genome::Sys->cat(input_files=>\@input_files,output_file=>$scratch_sam_file);
     if ($cat_rv ne 1) {
         $self->error_message("Error during cat of alignment sam files! Return value $cat_rv");
         die $self->error_message;
@@ -741,7 +741,7 @@ sub _run_aligner_chunked {
         for my $i (0..$#read_fhs) {
             my $lines_read = 0;
             my $in_fh = $read_fhs[$i];
-            my $chunk_path = Genome::Utility::FileSystem->base_temp_directory . "/chunked-read-" . $i . ".fastq";
+            my $chunk_path = Genome::Sys->base_temp_directory . "/chunked-read-" . $i . ".fastq";
             $self->status_message("Prepping chunk: $chunk_path");
             my $chunk_fh = IO::File->new(">" . $chunk_path);
             unless($chunk_fh) {
@@ -952,7 +952,7 @@ sub _create_bam_md5 {
     my $md5_file = $bam_file . '.md5';
     my $cmd      = "md5sum $bam_file > $md5_file";
 
-    my $rv  = Genome::Utility::FileSystem->shellcmd(
+    my $rv  = Genome::Sys->shellcmd(
         cmd                        => $cmd, 
         input_files                => [$bam_file],
         output_files               => [$md5_file],
@@ -1022,7 +1022,7 @@ sub _process_sam_files {
         $self->status_message("Looks like there are unaligned reads not in the main input file.  ");
         my @input_files = ($sam_input_file, $unaligned_input_file);
         $self->status_message("Cat-ing the unaligned list $unaligned_input_file to the sam file $sam_input_file");
-        my $cat_rv = Genome::Utility::FileSystem->cat(input_files=>[$unaligned_input_file],output_file=>$sam_input_file,append_mode=>1);
+        my $cat_rv = Genome::Sys->cat(input_files=>[$unaligned_input_file],output_file=>$sam_input_file,append_mode=>1);
         if ($cat_rv ne 1) {
             $self->error_message("Error during cat of alignment sam files! Return value $cat_rv");
             die $self->error_message;
@@ -1064,7 +1064,7 @@ sub _process_sam_files {
        
         my $cmd = "$sam_path fillmd -S $per_lane_sam_file_rg $ref_seq 1> $final_sam_file 2>/dev/null";
 
-        my $rv  = Genome::Utility::FileSystem->shellcmd(
+        my $rv  = Genome::Sys->shellcmd(
             cmd                          => $cmd, 
             input_files                  => [$per_lane_sam_file_rg, $ref_seq],
             output_files                 => [$final_sam_file],
@@ -1154,19 +1154,19 @@ sub _prepare_working_directories {
 
     return $self->temp_staging_directory if ($self->temp_staging_directory);
 
-    my $base_temp_dir = Genome::Utility::FileSystem->base_temp_directory();
+    my $base_temp_dir = Genome::Sys->base_temp_directory();
 
     my $hostname = hostname;
     my $user = $ENV{'USER'};
     my $basedir = sprintf("alignment-%s-%s-%s-%s", $hostname, $user, $$, $self->id);
-    my $tempdir = Genome::Utility::FileSystem->create_temp_directory($basedir);
+    my $tempdir = Genome::Sys->create_temp_directory($basedir);
     unless($tempdir) {
         die "failed to create a temp staging directory for completed files";
     }
     $self->temp_staging_directory($tempdir);
 
     my $scratch_basedir = sprintf("scratch-%s-%s-%s", $hostname, $user, $$);
-    my $scratch_tempdir =  Genome::Utility::FileSystem->create_temp_directory($scratch_basedir);
+    my $scratch_tempdir =  Genome::Sys->create_temp_directory($scratch_basedir);
     $self->temp_scratch_directory($scratch_tempdir);
     unless($scratch_tempdir) {
         die "failed to create a temp scrach directory for working files";
@@ -1180,8 +1180,8 @@ sub _staging_disk_usage {
 
     my $self = shift;
     my $usage;
-    unless ($usage = Genome::Utility::FileSystem->disk_usage_for_path($self->temp_staging_directory)) {
-        $self->error_message("Failed to get disk usage for staging: " . Genome::Utility::FileSystem->error_message);
+    unless ($usage = Genome::Sys->disk_usage_for_path($self->temp_staging_directory)) {
+        $self->error_message("Failed to get disk usage for staging: " . Genome::Sys->error_message);
         die $self->error_message;
     }
 
@@ -1306,7 +1306,7 @@ sub _extract_input_fastq_filenames {
         for my $input_fastq_pathname (@illumina_fastq_pathnames) {
             if ($self->trimmer_name) {
                 unless ($self->trimmer_name eq 'trimq2_shortfilter') {
-                    my $trimmed_input_fastq_pathname = Genome::Utility::FileSystem->create_temp_file_path('trimmed-sanger-fastq-'. $counter);
+                    my $trimmed_input_fastq_pathname = Genome::Sys->create_temp_file_path('trimmed-sanger-fastq-'. $counter);
                     my $trimmer;
                     if ($self->trimmer_name eq 'fastx_clipper') {
                         #THIS DOES NOT EXIST YET
@@ -1377,7 +1377,7 @@ sub _extract_input_fastq_filenames {
                         unless ($trim) {
                             die('Failed to trim reads using test_trim_and_random_subset');
                         }
-                        my $random_input_fastq_pathname = Genome::Utility::FileSystem->create_temp_file_path('random-sanger-fastq-'. $counter);
+                        my $random_input_fastq_pathname = Genome::Sys->create_temp_file_path('random-sanger-fastq-'. $counter);
                         $trimmer = Genome::Model::Tools::Fastq::RandomSubset->create(
                             input_read_1_fastq_files => [$trimmed_input_fastq_pathname],
                             output_read_1_fastq_file => $random_input_fastq_pathname,
@@ -1467,7 +1467,7 @@ sub input_bfq_filenames {
     else {
         my $counter = 0;
         for my $input_fastq_pathname (@input_fastq_pathnames) {
-            my $input_bfq_pathname = Genome::Utility::FileSystem->create_temp_file_path('sanger-bfq-'. $counter++);
+            my $input_bfq_pathname = Genome::Sys->create_temp_file_path('sanger-bfq-'. $counter++);
             #Do we need remove sanger fastq here ?
             unless (Genome::Model::Tools::Maq::Fastq2bfq->execute(
                 fastq_file => $input_fastq_pathname,
@@ -1695,7 +1695,7 @@ sub trimq2_filtered_to_unaligned_sam {
             next;
         }
         
-        my $fh = Genome::Utility::FileSystem->open_file_for_reading($file);
+        my $fh = Genome::Sys->open_file_for_reading($file);
 
         if ($file =~ /\.pair_end\./) { #filtered output from G::M::T::F::Trimq2::PairEnd
             while (my $head1 = $fh->getline) {

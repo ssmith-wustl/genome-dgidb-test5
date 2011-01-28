@@ -102,10 +102,12 @@ sub execute {
        		
        		my $cmd ="";
         	$cmd ="bsub -N -u $user\@genome.wustl.edu -J $common_name.$tier.FP -R \'select\[type==LINUX64\]\' \'gmt somatic filter-false-positives --bam-file=$tumor_bam --variant-file=$snv_file --output-file=$out_dir/$tier.csv\'";
-        	my ($jobid1) =($cmd=~ m/<(\d+)>/);
+        	$cmd=`$cmd`;
+		my ($jobid1) =($cmd=~ m/<(\d+)>/);
 		print "$cmd\n$jobid1\n";
 		my $cmd_anno="";
                 $cmd_anno ="bsub -N -u $user\@genome.wustl.edu -J $common_name.$tier.anno -w \'ended\($jobid1\)\'  \'perl -I /gsc/scripts/opt/genome/current/pipeline/lib/perl/ \`which gmt\` annotate transcript-variants --use-version 2 --variant-file $out_dir/$tier.csv --output-file $out_dir/$tier.anno --annotation-filter top\'";
+		$cmd_anno=`$cmd_anno`;
        		my ($jobid2) = ($cmd_anno=~ m/<(\d+)>/);
        		print "$cmd_anno\n$jobid2\n";
        		

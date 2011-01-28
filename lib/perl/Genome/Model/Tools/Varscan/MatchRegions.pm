@@ -2,7 +2,7 @@
 package Genome::Model::Tools::Varscan::MatchRegions;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# RunVarscan - Run VarScan somatic on two BAM files.
+# RunVarscan - Run Varscan somatic on two BAM files.
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@genome.wustl.edu)
 #

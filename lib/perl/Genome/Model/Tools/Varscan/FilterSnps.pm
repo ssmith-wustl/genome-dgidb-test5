@@ -38,12 +38,12 @@ class Genome::Model::Tools::Varscan::FilterSnps {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Filter VarScan SNPs by indels and by clusters"                 
+    "Filter Varscan SNPs by indels and by clusters"                 
 }
 
 sub help_synopsis {
     return <<EOS
-Filters VarScan SNP calls near indels and clusters of SNPs
+Filters Varscan SNP calls near indels and clusters of SNPs
 EXAMPLE:	gmt varscan filter-snps ...
 EOS
 }

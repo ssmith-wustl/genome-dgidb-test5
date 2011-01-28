@@ -98,10 +98,26 @@ class Genome::Model::Build::ReferenceSequence {
             is_many => 0,
             is_optional => 1,
         },
-
         derived_from => {
             is => 'Genome::Model::Build::ReferenceSequence',
             id_by => 'derived_from_id',
+        },
+
+        # optional to allow builds to indicate that are on the same coordinate system as another build, but
+        # is not a direct derivation of it. derived from implies coordinates_from, so you don't need to use both.
+        coordinates_from_id => {
+            is => 'Genome::Model::Build::ReferenceSequence',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'coordinates_from', value_class_name => 'Genome::Model::Build::ReferenceSequence' ],
+            doc => 'Used to indicate that this build is on the same coordinate system as another.',
+            is_mutable => 1,
+            is_many => 0,
+            is_optional => 1,
+        },
+        coordinates_from => {
+            is => 'Genome::Model::Build::ReferenceSequence',
+            id_by => 'coordinates_from_id',
         },
     ],
     doc => 'a specific version of a reference sequence, with cordinates suitable for annotation',
@@ -113,6 +129,9 @@ sub create {
 
     # Let's store the name as an input instead of relying on calculated properties
     $build->name($build->calculated_name) if $build;
+    if ($build->derived_from) {
+        $build->coordinates_from($build->derived_from_root);
+    }
 
     return $build;
 }
@@ -122,7 +141,7 @@ sub __errors__ {
     my @tags = $self->SUPER::__errors__();
 
     # this will die on circular links
-    eval { my $coords = $self->coordinates_from(); };
+    eval { my $coords = $self->derived_from_root(); };
     if ($@) {
         push @tags, UR::Object::Tag->create(
             type => 'error',
@@ -164,14 +183,14 @@ sub is_derived_from {
     return $self->derived_from->is_derived_from($build, $seen); 
 }
 
-sub coordinates_from {
+sub derived_from_root {
     my ($self) = @_;
     my $from = $self;
     my %seen = ($self->id => 1);
     while (defined $from->derived_from) {
         $from = $from->derived_from;
         if (exists $seen{$from->id}) {
-            die "Circular link found in derived_from chain while calculating 'coordinates_from'.".
+            die "Circular link found in derived_from chain while calculating 'derived_from_root'.".
                 " Current build: " . $self->__display_name__ . ", derived from: " .
                 $from->derived_from->__display_name__ . ", seen: " . join(',', keys %seen);
         }
@@ -184,7 +203,10 @@ sub coordinates_from {
 sub is_compatible_with {
     my ($self, $rsb) = @_;
     return if !defined $rsb;
-    return 1 if $self->coordinates_from()->id == $rsb->coordinates_from()->id;
+    my $coords_from = $self->coordinates_from || $self;
+    my $other_coords_from = $rsb->coordinates_from || $rsb;
+    
+    return $coords_from->id == $other_coords_from->id;
 }
 
 sub __display_name__ {
@@ -281,7 +303,7 @@ sub full_consensus_sam_index_path {
         my $sam_path = Genome::Model::Tools::Sam->path_for_samtools_version($sam_version);
         my $cmd      = $sam_path.' faidx '.$fa_file;
         
-        my $lock = Genome::Utility::FileSystem->lock_resource(
+        my $lock = Genome::Sys->lock_resource(
             resource_lock => $data_dir.'/lock_for_faidx',
             max_try       => 2,
         );
@@ -290,13 +312,13 @@ sub full_consensus_sam_index_path {
             return;
         }
 
-        my $rv = Genome::Utility::FileSystem->shellcmd(
+        my $rv = Genome::Sys->shellcmd(
             cmd => $cmd,
             input_files  => [$fa_file],
             output_files => [$idx_file],
         );
         
-        unless (Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock)) {
+        unless (Genome::Sys->unlock_resource(resource_lock => $lock)) {
             $self->error_message("Failed to unlock resource: $lock");
             return;
         }
@@ -344,7 +366,7 @@ sub get_sequence_dictionary {
     } else {
 
         #lock seqdict dir here
-        my $lock = Genome::Utility::FileSystem->lock_resource(
+        my $lock = Genome::Sys->lock_resource(
             resource_lock => $seqdict_dir_path."/lock_for_seqdict-$file_type",
             max_try       => 2,
         );
@@ -352,7 +374,7 @@ sub get_sequence_dictionary {
         # if it couldn't get the lock after 2 tries, pop a message and keep trying as much as it takes
         unless ($lock) {
             $self->status_message("Couldn't get a lock after 2 tries, waiting some more...");
-            $lock = Genome::Utility::FileSystem->lock_resource(resource_lock => $seqdict_dir_path."/lock_for_seqdict-$file_type");
+            $lock = Genome::Sys->lock_resource(resource_lock => $seqdict_dir_path."/lock_for_seqdict-$file_type");
             unless($lock) {
                 $self->error_message("Failed to lock resource: $seqdict_dir_path");
                 return;
@@ -361,7 +383,7 @@ sub get_sequence_dictionary {
 
         $self->status_message("Failed to find sequence dictionary file at $path.  Generating one now...");
         my $seqdict_dir = $self->data_directory."/seqdict/";
-        my $cd_rv =  Genome::Utility::FileSystem->create_directory($seqdict_dir);
+        my $cd_rv =  Genome::Sys->create_directory($seqdict_dir);
         if ($cd_rv ne $seqdict_dir) {
             $self->error_message("Failed to to create sequence dictionary directory for $path. Quiting");
             return;
@@ -373,9 +395,9 @@ sub get_sequence_dictionary {
         
         my $create_seq_dict_cmd = "java -Xmx4g -XX:MaxPermSize=256m -cp $picard_path/CreateSequenceDictionary.jar net.sf.picard.sam.CreateSequenceDictionary R='$ref_seq' O='$path' URI='$uri' species='$species' genome_assembly='$name' TRUNCATE_NAMES_AT_WHITESPACE=true";        
 
-        my $csd_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$create_seq_dict_cmd);
+        my $csd_rv = Genome::Sys->shellcmd(cmd=>$create_seq_dict_cmd);
 
-        unless (Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock)) {
+        unless (Genome::Sys->unlock_resource(resource_lock => $lock)) {
             $self->error_message("Failed to unlock resource: $lock");
             return;
         }

@@ -37,7 +37,7 @@ class Genome::Model::Tools::Tcga::ConvertMfToVcf {
 sub execute {
 	my $self = shift;
 	my $mf_file = $self->mf_file;
-	my $mf_fh = Genome::Utility::FileSystem->open_file_for_reading($mf_file) or return;
+	my $mf_fh = Genome::Sys->open_file_for_reading($mf_file) or return;
 	my $datetime_string = ctime(stat($mf_file)->mtime); # read the file time
 	$self->_mf_fh($mf_fh);
 	my @VCF;
@@ -66,7 +66,7 @@ sub execute {
 
 	my $out_file = $self->output_file;
         `rm -f $out_file` if(! $self->_not_overwrite);
-	my $out_fh = Genome::Utility::FileSystem->open_file_for_writing($out_file) or return;
+	my $out_fh = Genome::Sys->open_file_for_writing($out_file) or return;
 	$self->_out_fh($out_fh);
 
 	$out_fh->print("##fileformat=VCFv4.0\n");

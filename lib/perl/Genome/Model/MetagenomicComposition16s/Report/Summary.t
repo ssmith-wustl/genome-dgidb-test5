@@ -37,7 +37,7 @@ my $xslt = Genome::Report::XSLT->transform_report(
 );
 #my $html_file = '/gscuser/ebelter/report.html';
 unlink $html_file;
-my $fh = Genome::Utility::FileSystem->open_file_for_writing($html_file);
+my $fh = Genome::Sys->open_file_for_writing($html_file);
 unless ( $fh ) {
     die "can't open $html_file";
 }

@@ -95,7 +95,7 @@ sub execute {
     }
     $self->status_message("SamToBam conversion command: $cmd");
     
-    my $rv  = Genome::Utility::FileSystem->shellcmd(
+    my $rv  = Genome::Sys->shellcmd(
         cmd => $cmd, 
         output_files => [$bam_file],
         skip_if_output_is_present => 0,
@@ -132,7 +132,7 @@ sub execute {
     if ($self->index_bam) {
         unless ($self->is_sorted) {
             #This may not work for large genome BAM files
-            my $tmp_bam = Genome::Utility::FileSystem->create_temp_file_path();
+            my $tmp_bam = Genome::Sys->create_temp_file_path();
             unless (Genome::Model::Tools::Sam::SortBam->execute(
                 file_name => $bam_file,
                 output_file => $tmp_bam,

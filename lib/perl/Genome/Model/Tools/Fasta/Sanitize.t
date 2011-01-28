@@ -25,7 +25,7 @@ ok(-d $DIR, "Test dir ($DIR) exists");
 my $DIRTY_FASTA = $DIR.'/dirty.fasta';
 ok(-f $DIRTY_FASTA, "Dirty fasta ($DIRTY_FASTA) exists");
 #my $TMPDIR = tempdir(DIR => $DIR, CLEANUP => 1);
-my $TMPDIR = Genome::Utility::FileSystem->create_temp_directory;
+my $TMPDIR = Genome::Sys->create_temp_directory;
 ok(-d $TMPDIR, "Temp dir ($TMPDIR) exists");
 
 my $san = Genome::Model::Tools::Fasta::Sanitize->create(

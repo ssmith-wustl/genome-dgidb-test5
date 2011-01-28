@@ -23,11 +23,11 @@ sub execute {
     my $self = shift;
 
     unless (-d $self->output_directory) {
-        unless (Genome::Utility::FileSystem->create_directory($self->output_directory)) {
+        unless (Genome::Sys->create_directory($self->output_directory)) {
             die('Failed to create output directory '. $self->output_directory);
         }
     }
-    my $refcov_bam = Genome::RefCov::Bam->new(bam_file => $self->bam_file );
+    my $refcov_bam = Genome::RefCov::Bam->create(bam_file => $self->bam_file );
 
     # create low level bam object
     my $bam  = $refcov_bam->bio_db_bam;
@@ -69,11 +69,11 @@ sub execute {
             my $lane = $2;
             my $run_type = $3;
             my $instrument_data_directory = $self->output_directory .'/'. $instrument_data_id;
-            unless (Genome::Utility::FileSystem->create_directory($instrument_data_directory)) {
+            unless (Genome::Sys->create_directory($instrument_data_directory)) {
                 die('Failed to create instrument data directory '. $instrument_data_directory);
             }
             my $fragment_file = $instrument_data_directory .'/s_'. $lane .'_sequence.txt';
-            my $fragment_fh = Genome::Utility::FileSystem->open_file_for_writing($fragment_file);
+            my $fragment_fh = Genome::Sys->open_file_for_writing($fragment_file);
             unless ($fragment_fh) {
                 die('Failed to create fragment filehandle '. $fragment_file);
             }
@@ -81,7 +81,7 @@ sub execute {
             if ($run_type eq 'paired end') {
                 for my $end (1 .. 2) {
                     my $end_file = $instrument_data_directory .'/s_'. $lane .'_'.$end .'_sequence.txt';
-                    my $end_fh = Genome::Utility::FileSystem->open_file_for_writing($end_file);
+                    my $end_fh = Genome::Sys->open_file_for_writing($end_file);
                     unless ($end_fh) {
                         die('Failed to create read end '. $end .' filehandle '. $end_file);
                     }

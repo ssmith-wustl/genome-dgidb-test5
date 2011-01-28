@@ -57,7 +57,7 @@ sub execute {
     }
 
     my $workflow_log_directory = $self->build->workflow_log_directory_path;
-    Genome::Utility::FileSystem->create_directory($workflow_log_directory);
+    Genome::Sys->create_directory($workflow_log_directory);
     $self->status_message("Created workflow log directory.");
     
     my $merged_file = $self->build->merged_alignment_file;

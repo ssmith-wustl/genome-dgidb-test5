@@ -5,7 +5,6 @@ use warnings;
 use Test::More;
 use Storable 'retrieve';
 use above "Genome";
-use Genome::Info::UCSCConservation;
 
 our $THIS_VERSION_ANNOTATOR_SUBCLASS = 'Genome::Model::Tools::Annotate::TranscriptVariants::Version1';
 
@@ -81,9 +80,6 @@ sub create_annotator {
     my $annotation_model = Genome::Model->get(name => 'NCBI-human.combined-annotation');
     my $annotation_build = $annotation_model->build_by_version('54_36p_v2');
 
-    my %conservation_dirs = Genome::Info::UCSCConservation->ucsc_conservation_directories;
-    my $ucsc_conservation_directory = $conservation_dirs{'36'};
-
     my @data_directories = $annotation_build->determine_data_directory();
     my $data_directory;
     if (@data_directories < 2) {
@@ -94,7 +90,6 @@ sub create_annotator {
 
     my $annotator = $THIS_VERSION_ANNOTATOR_SUBCLASS->create(
         data_directory => $data_directory,
-        ucsc_conservation_directory => $ucsc_conservation_directory, 
     );
     return $annotator;
 }

@@ -80,7 +80,7 @@ sub execute {
 
     my $remote_files_string = join(' ', map { $dacc_remote_directory.$_ } @files);
     my $cmd = $self->base_command.' '.$remote_files_string.' '.$destination;
-    my $rv = eval{ Genome::Utility::FileSystem->shellcmd(cmd => $cmd); };
+    my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
     if ( not $rv ) {
         $self->error_message("Aspera command failed: $cmd");
         return;
