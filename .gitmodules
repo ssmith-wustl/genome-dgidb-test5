@@ -13,3 +13,6 @@
 [submodule "tigra"]
 	path = tigra
 	url = ssh://git//srv/git/tigra.git
+[submodule "genome-music-testdata"]
+	path = genome-music-testdata
+	url = ssh://git//srv/git/genome-music-testdata.git

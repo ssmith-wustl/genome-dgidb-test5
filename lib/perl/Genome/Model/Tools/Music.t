@@ -4,16 +4,47 @@ use warnings;
 use above 'Genome';
 use Test::More;
 
-# TODO: replace with relative paths when we move the test data
-my $input_dir = '/gscuser/ndees/893/music_testdata/';
-my $expected_output_dir = '/gscuser/ndees/893/music_test_output/categ_clin/';
-my $actual_output_dir = Genome::Sys->create_temp_directory("music");
+# figure out where the test inputs are and expected outputs
+my $test_data_dir = Genome::Sys->dbpath('genome-music-test','0.01');
+unless ($test_data_dir) {
+    die "failed to find test data for genome-music-test version 0.01!";
+}
+unless (-d $test_data_dir) {
+    die "no test data directory: $test_data_dir!";
+}
 
-# list examples and expected outputs
+#my $input_dir = '/gscuser/ndees/893/music_testdata/';
+#my $expected_output_dir = '/gscuser/ndees/893/music_test_output/categ_clin/';
+my $input_dir = $test_data_dir . '/inputs';
+my $expected_output_dir = $test_data_dir . '/expected_outputs/categ_clin';
+
+# decide where output goes
+my $actual_output_dir;
+if (@ARGV) {
+    # override output dir
+    if ($ARGV[0] eq '--regenerate') {
+        # regenerate expectations
+        $actual_output_dir = $expected_output_dir;
+    }
+    else {
+        # use the dir the user specifies
+        $actual_output_dir = shift @ARGV;
+        mkdir $actual_output_dir unless -d $actual_output_dir;
+        unless (-d $actual_output_dir) {
+            die "failed to create directory $actual_output_dir: $!";
+        }
+    }
+}
+else {
+    # by default use a temp dir
+    $actual_output_dir= Genome::Sys->create_temp_directory("music");
+};
+
+# use cases and expected outputs
 my @examples = (
     {
         run => "music clinical-correlation "
-            . " --clinical-data-file $input_dir/clinical/tcga_OV_clinical_clean.csv.maf_samples.numeric.withNA.csv"
+            . " --clinical-data-file $input_dir/clinical_data/tcga_OV_clinical_clean.csv.maf_samples.numeric.withNA.csv"
             . " --clinical-data-type numeric"
             . " --maf-file $input_dir/maf/tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent"
             . " --output-file $actual_output_dir/tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent.cat_cor"
