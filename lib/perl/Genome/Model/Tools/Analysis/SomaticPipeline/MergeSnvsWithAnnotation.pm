@@ -2,7 +2,7 @@
 package Genome::Model::Tools::Analysis::SomaticPipeline::MergeSnvsWithAnnotation;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# MergeSnvsWithAnnotation - Merge glfSomatic/VarScan somatic calls in a file that can be converted to MAF format
+# MergeSnvsWithAnnotation - Merge glfSomatic/Varscan somatic calls in a file that can be converted to MAF format
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
 #

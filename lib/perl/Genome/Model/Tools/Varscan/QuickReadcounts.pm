@@ -2,7 +2,7 @@
 package Genome::Model::Tools::Varscan::QuickReadcounts;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# Varscan::Somatic	Runs VarScan somatic pipeline on Normal/Tumor BAM files
+# Varscan::Somatic	Runs Varscan somatic pipeline on Normal/Tumor BAM files
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@genome.wustl.edu)
 #
@@ -40,7 +40,7 @@ sub help_brief {                            # keep this to just a few words <---
 
 sub help_synopsis {
     return <<EOS
-Runs VarScan readcounts from indexed BAM output
+Runs Varscan readcounts from indexed BAM output
 EXAMPLE:	gmt varscan readcounts --bam-file [sample.bam] --variants-file [variants.tsv] --output-file readcounts.txt ...
 EOS
 }
@@ -108,7 +108,7 @@ sub execute {                               # replace with real execution logic.
 					$query_string .= " " if($query_string);
 					$query_string .= $chromosome . ":" . $position . "-" . $position;
 					## Run Command ##
-				#	my $cmd = "samtools view -b -u -q 1 $bam_file $chromosome:$position-$position | samtools pileup -f $reference - >>$output_file.pileup";# - | java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan pileup2snp --min-coverage $min_coverage";
+				#	my $cmd = "samtools view -b -u -q 1 $bam_file $chromosome:$position-$position | samtools pileup -f $reference - >>$output_file.pileup";# - | java -classpath ~dkoboldt/Software/Varscan net.sf.varscan.Varscan pileup2snp --min-coverage $min_coverage";
 				#	print "RUN $cmd\n";
 				#	system("$cmd");
 					
@@ -127,7 +127,7 @@ sub execute {                               # replace with real execution logic.
 			print "RUN $cmd\n";
 			system("$cmd");
 
-			## Run VarScan
+			## Run Varscan
 			
 			$cmd = $self->java_command_line("pileup2cns $output_file.pileup.roi --min-coverage $min_coverage >$output_file.pileup.roi.cns");
 			print "RUN $cmd\n";
@@ -179,7 +179,7 @@ sub execute {                               # replace with real execution logic.
 		## Prepare pileup commands ##
 		
 #		my $pileup = "samtools pileup -f $reference $bam_file";
-#		my $cmd = "bash -c \"java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan readcounts <\($pileup\) --variants-file $variants_file --output-file $output_file\"";
+#		my $cmd = "bash -c \"java -classpath ~dkoboldt/Software/Varscan net.sf.varscan.Varscan readcounts <\($pileup\) --variants-file $variants_file --output-file $output_file\"";
 #		system($cmd);
 	}
 	else

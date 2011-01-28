@@ -9,8 +9,7 @@ use Data::Dumper;
 use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Base {
-#    is => ['Genome::Command::Base'], FIXME this must be removed for now because when we separate params on the command line with a comma, command base effs everything up
-    is => ['Command'],
+    is => ['Genome::Command::Base'],
     has => [
         reference_sequence_input => {
             is => 'Text',
@@ -39,18 +38,15 @@ class Genome::Model::Tools::DetectVariants2::Base {
             is_output => 1,
         },
         snv_detection_strategy => {
-            #is => "Genome::Model::Tools::DetectVariants2::Strategy", FIXME this must be removed for now because when we separate params on the command line with a comma, command base effs everything up
-            is => "Text",
+            is => "Genome::Model::Tools::DetectVariants2::Strategy",
             doc => 'The variant detector strategy to use for finding SNVs',
         },
         indel_detection_strategy => {
-            #is => "Genome::Model::Tools::DetectVariants2::Strategy",
-            is => "Text",
+            is => "Genome::Model::Tools::DetectVariants2::Strategy",
             doc => 'The variant detector strategy to use for finding indels',
         },
         sv_detection_strategy => {
-            #is => "Genome::Model::Tools::DetectVariants2::Strategy",
-            is => "Text",
+            is => "Genome::Model::Tools::DetectVariants2::Strategy",
             doc => 'The variant detector strategy to use for finding SVs',
         },
     ],

@@ -2,7 +2,7 @@
 package Genome::Model::Tools::Varscan::Germline;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# Varscan::Germline	Runs VarScan to call and filter SNPs/indels
+# Varscan::Germline	Runs Varscan to call and filter SNPs/indels
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@genome.wustl.edu)
 #
@@ -33,7 +33,7 @@ class Genome::Model::Tools::Varscan::Germline {
 		#output_indel_filtered   => { is => 'Text', doc => "Name for filtered indel output" , calculate_from => ['output_indel'], calculate => q{ $output_indel . '.filter' }, is_input => 1, is_output => 1, is_mutable => 0,}, 
 		reference	=> { is => 'Text', doc => "Reference FASTA file for BAMs (default= genome model)" , is_optional => 1, is_input => 1},
 		heap_space	=> { is => 'Text', doc => "Megabytes to reserve for java heap [1000]" , is_optional => 1, is_input => 1},
-		varscan_params	=> { is => 'Text', doc => "Parameters to pass to VarScan [--min-coverage 8 --min-var-freq 0.10 --p-value 0.05]" , is_optional => 1, is_input => 1},
+		varscan_params	=> { is => 'Text', doc => "Parameters to pass to Varscan [--min-coverage 8 --min-var-freq 0.10 --p-value 0.05]" , is_optional => 1, is_input => 1},
 	],	
 
 	has_param => [
@@ -44,12 +44,12 @@ class Genome::Model::Tools::Varscan::Germline {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Run the VarScan germline variant detection (SNPs and indels)"                 
+    "Run the Varscan germline variant detection (SNPs and indels)"                 
 }
 
 sub help_synopsis {
     return <<EOS
-Runs VarScan from BAM files
+Runs Varscan from BAM files
 EXAMPLE:	gmt varscan germline --normal-bam [Normal.bam]  ...
 EOS
 }
@@ -79,7 +79,7 @@ sub execute {                               # replace with real execution logic.
 	my $reference = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa';
 	$reference = $self->reference if($self->reference);
 
-	## Get VarScan parameters ##
+	## Get Varscan parameters ##
 
      #TODO Remove this and replace with the calculated immutable properties above (when these UR changes are out).
      unless($self->output_snp_filtered) {
@@ -102,7 +102,7 @@ sub execute {                               # replace with real execution logic.
 		
 		my $normal_pileup = "samtools view -b -u -q 10 $bam_file | samtools pileup -f $reference -";
 		
-		## Run VarScan ##
+		## Run Varscan ##
 
 		my $cmd = "";
 

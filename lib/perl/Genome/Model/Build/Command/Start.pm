@@ -37,6 +37,9 @@ class Genome::Model::Build::Command::Start {
             is_many => 1,
             is_output => 1,
         },
+        max_builds => {
+            is => 'Integer',
+        },
     ],
 
 };
@@ -80,7 +83,12 @@ sub execute {
 
     my @models = $self->models;
     my @errors;
+    my $builds_started = 0;
     for my $model (@models) {
+        if ($self->max_builds && $builds_started >= $self->max_builds){
+            $self->status_message("Already started max builds $builds_started, quitting");
+            last; 
+        }
         $self->status_message("Trying to start " . $model->__display_name__ . "...");
         my $transaction = UR::Context::Transaction->begin();
         my $build = eval {
@@ -94,12 +102,6 @@ sub execute {
                 die $self->error_message("Failed to create build for model (".$model->name.", ID: ".$model->id.").");
             }
 
-            # Record newly created build so other tools can access them.
-            # TODO: should possibly be part of the object class
-            my @builds = $self->builds;
-            push @builds, $build;
-            $self->builds(\@builds);
-
             my $build_started = $build->start(%start_params);
             unless ($build_started) {
                 die $self->error_message("Failed to start build (" . $build->__display_name__ . "): $@.");
@@ -109,6 +111,13 @@ sub execute {
         if ($build) {
             $self->status_message("Successfully started build (" . $build->__display_name__ . ").");
             $transaction->commit;
+            $builds_started++;
+            
+            # Record newly created build so other tools can access them.
+            # TODO: should possibly be part of the object class
+            my @builds = $self->builds;
+            push @builds, $build;
+            $self->builds(\@builds);
         }
         else {
             push @errors, $model->__display_name__ . ": " . $@;

@@ -4,8 +4,6 @@ use warnings;
 use strict;
 
 use Genome;
-use Carp;
-use IO::File;
 
 class Genome::Model::Tools::Somatic::FilterPindelReadSupport{
     is => 'Command',

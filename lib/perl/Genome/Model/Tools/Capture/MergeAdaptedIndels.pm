@@ -2,7 +2,7 @@
 package Genome::Model::Tools::Capture::MergeAdaptedIndels;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# MergeAdaptedIndels - Merge Indel Calls from VarScan and Somatic Sniper
+# MergeAdaptedIndels - Merge Indel Calls from Varscan and Somatic Sniper
 #					
 #	AUTHOR:		Will Schierding (wschierd@genome.wustl.edu)
 #
@@ -25,7 +25,7 @@ class Genome::Model::Tools::Capture::MergeAdaptedIndels {
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		glf_file	=> { is => 'Text', doc => "Somatic Sniper Adapted Indel Input File", is_optional => 0, is_input => 1 },
-		varscan_file	=> { is => 'Text', doc => "VarScan Adapted Indel Input File", is_optional => 0, is_input => 1 },
+		varscan_file	=> { is => 'Text', doc => "Varscan Adapted Indel Input File", is_optional => 0, is_input => 1 },
 		gatk_file	=> { is => 'Text', doc => "GATK Adapted Indel Input File", is_optional => 1, is_input => 1 },
 		output_file	=> { is => 'Text', doc => "Merged Indel Output File" , is_optional => 0, is_input => 1, is_output => 1},
 	],
@@ -34,12 +34,12 @@ class Genome::Model::Tools::Capture::MergeAdaptedIndels {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Merge Indel Calls from VarScan and Somatic Sniper"                 
+    "Merge Indel Calls from Varscan and Somatic Sniper"                 
 }
 
 sub help_synopsis {
     return <<EOS
-This file was created to merge Indel Calls from VarScan and Somatic Sniper.
+This file was created to merge Indel Calls from Varscan and Somatic Sniper.
 This requires inputs of ADAPTED files with chr pos pos ref var as first 5 columns.
 EXAMPLE:	gmt capture merge-adapted-indels ...
 EOS
@@ -206,7 +206,7 @@ sub execute {                               # replace with real execution logic.
 	else {
 		print $stats{'shared'} . " shared\n";		
 	}
-	print $stats{'varscan-only'} . " VarScan-only\n";
+	print $stats{'varscan-only'} . " Varscan-only\n";
 	print $stats{'sniper-only'} . " Sniper-only\n";
 	if ($self->gatk_file) {
 		print $stats{'gatk-only'} . "gatk-only\n";

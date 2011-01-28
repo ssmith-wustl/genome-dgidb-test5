@@ -28,7 +28,7 @@ class Genome::Model::Tools::Capture::MergeVariantCalls {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
-		varscan_file	=> { is => 'Text', doc => "File of variants in VarScan format", is_optional => 0, is_input => 1 },
+		varscan_file	=> { is => 'Text', doc => "File of variants in Varscan format", is_optional => 0, is_input => 1 },
 		glf_file	=> { is => 'Text', doc => "File of variants in glfSomatic format", is_optional => 0, is_input => 1 },
 		output_file	=> { is => 'Text', doc => "Output file to contain merged results" , is_optional => 0, is_input => 1, is_output => 1},
 	],
@@ -41,12 +41,12 @@ class Genome::Model::Tools::Capture::MergeVariantCalls {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Merges VarScan and glfSomatic variant calls"                 
+    "Merges Varscan and glfSomatic variant calls"                 
 }
 
 sub help_synopsis {
     return <<EOS
-Merges VarScan and glfSomatic variant calls
+Merges Varscan and glfSomatic variant calls
 EXAMPLE:	gmt capture merge-variant-calls ...
 EOS
 }
@@ -75,9 +75,9 @@ sub execute {                               # replace with real execution logic.
 		die "One or more files didn't exist!\n";
 	}
 
-	## Run the merge using VarScan ##
+	## Run the merge using Varscan ##
 	
-	my $cmd = "java -Xms3000m -Xmx3000m -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan compare $varscan_file $glf_file merge $output_file.unsorted";
+	my $cmd = "java -Xms3000m -Xmx3000m -classpath ~dkoboldt/Software/Varscan net.sf.varscan.Varscan compare $varscan_file $glf_file merge $output_file.unsorted";
 	system($cmd);
 	
 	$cmd = "gmt capture sort-by-chr-pos --input-file $output_file.unsorted --output-file $output_file";
@@ -85,16 +85,16 @@ sub execute {                               # replace with real execution logic.
 	
 	system("rm -rf $output_file.unsorted") if(-e "$output_file");
 
-#	$cmd = "java -Xms3000m -Xmx3000m -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan compare $varscan_file $glf_file intersect $output_file.greatest-confidence";
+#	$cmd = "java -Xms3000m -Xmx3000m -classpath ~dkoboldt/Software/Varscan net.sf.varscan.Varscan compare $varscan_file $glf_file intersect $output_file.greatest-confidence";
 #	system($cmd);	
 
-#	$cmd = "java -Xms3000m -Xmx3000m -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan compare $varscan_file $glf_file unique1 $output_file.varscan-only";
+#	$cmd = "java -Xms3000m -Xmx3000m -classpath ~dkoboldt/Software/Varscan net.sf.varscan.Varscan compare $varscan_file $glf_file unique1 $output_file.varscan-only";
 #	system($cmd);
 	
-#	$cmd = "java -Xms3000m -Xmx3000m -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan compare $varscan_file $glf_file unique2 $output_file.sniper-only";
+#	$cmd = "java -Xms3000m -Xmx3000m -classpath ~dkoboldt/Software/Varscan net.sf.varscan.Varscan compare $varscan_file $glf_file unique2 $output_file.sniper-only";
 #	system($cmd);		
 
-#	$cmd = "java -Xms3000m -Xmx3000m -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan compare $output_file.varscan-only $output_file.sniper-only merge $output_file.high-confidence";
+#	$cmd = "java -Xms3000m -Xmx3000m -classpath ~dkoboldt/Software/Varscan net.sf.varscan.Varscan compare $output_file.varscan-only $output_file.sniper-only merge $output_file.high-confidence";
 #	system($cmd);	
 	
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
