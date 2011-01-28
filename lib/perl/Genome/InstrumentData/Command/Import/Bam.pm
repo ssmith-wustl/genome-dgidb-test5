@@ -22,7 +22,7 @@ my %properties = (
     },
     target_region => {
         is => 'Text',
-        doc => 'Provide \'whole genome\' or target region set name',
+        doc => 'Provide target region set name (capture) or "none" (whole genome or RNA/cDNA)',
     },
     library => {
         is => 'String',

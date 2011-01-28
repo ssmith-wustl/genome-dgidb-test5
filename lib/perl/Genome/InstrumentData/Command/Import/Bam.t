@@ -11,7 +11,7 @@ use Test::More tests => 7;
 my $s = Genome::Sample->get(2824113569);
 
 my $i = Genome::InstrumentData::Command::Import::Bam->create(
-    target_region       => 'whole genome',
+    target_region       => 'none',
     sample              => $s->name,  
     library             => 'TEST-patient1-sample1-lib1',
     import_source_name  => 'Broad',
