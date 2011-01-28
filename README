@@ -1,26 +1,14 @@
 WHERE TO PUT CODE:
 
+Perl:
 
-Perl, Java, Ruby:
-
- The modules go under lib/$LANG.
+ The modules go under lib/perl.
 
  In the shipit branch, the code is divided up like the C/C++ standard below.
  We will move to the new structure as soon as it's easy to develop and test there.
  
 
-R:
-
- R libraries live next-to the Perl module which provides an interface to them
- for the rest of the system.
- 
-
-XML/XSL:
- 
- These currently live under Genome/, but will relocated when we break out the web app.
-
-
-C/C++:
+C/C++/Java:
 
  These are in a new structure where each gets its own top-level directory.
  These are "sub modules", meaning each gets its own subordinate git repo.
@@ -43,3 +31,15 @@ C/C++:
 
     create-c-project $DIRNAME
 
+XML/XSL:
+ 
+ All of the web server infrastructure is under genome-webserver in both branches.
+
+ For the specific entity views, they live under Genome/xsl in the master branch,
+ and under various package dirs in the shipit branch, depending on what they view.
+
+R:
+
+ R libraries live next-to the Perl module which provides an interface to them
+ for the rest of the system.
+ 
