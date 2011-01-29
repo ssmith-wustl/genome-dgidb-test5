@@ -226,7 +226,7 @@ sub create_sample_gene_matrix_gene {
 
     #write the input matrix for R code to a file #FIXME HARD CODE FILE NAME, OR INPUT OPTION
     #my $matrix_file = $clinical_data_file . ".correlation_matrix";
-    my $matrix_file = Genome::Sys->create_temp_file_path('correlation_matrix');
+    my $matrix_file = Genome::Sys->create_temp_file_path();
     my $matrix_fh = new IO::File $matrix_file,"w";
     unless ($matrix_fh) {
         die "Failed to create matrix file $matrix_file!: $!";
