@@ -85,18 +85,7 @@ sub execute {                               # replace with real execution logic.
 	
 	system("rm -rf $output_file.unsorted") if(-e "$output_file");
 
-#	$cmd = "java -Xms3000m -Xmx3000m -classpath ~dkoboldt/Software/Varscan net.sf.varscan.Varscan compare $varscan_file $glf_file intersect $output_file.greatest-confidence";
-#	system($cmd);	
 
-#	$cmd = "java -Xms3000m -Xmx3000m -classpath ~dkoboldt/Software/Varscan net.sf.varscan.Varscan compare $varscan_file $glf_file unique1 $output_file.varscan-only";
-#	system($cmd);
-	
-#	$cmd = "java -Xms3000m -Xmx3000m -classpath ~dkoboldt/Software/Varscan net.sf.varscan.Varscan compare $varscan_file $glf_file unique2 $output_file.sniper-only";
-#	system($cmd);		
-
-#	$cmd = "java -Xms3000m -Xmx3000m -classpath ~dkoboldt/Software/Varscan net.sf.varscan.Varscan compare $output_file.varscan-only $output_file.sniper-only merge $output_file.high-confidence";
-#	system($cmd);	
-	
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
 

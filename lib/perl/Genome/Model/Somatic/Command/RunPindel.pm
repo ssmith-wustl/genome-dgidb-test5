@@ -67,15 +67,17 @@ sub pre_execute {
         #stuff the bam paths back into self so they are accessible to the workflow input connector.
         $self->tumor_bam($tumor_bam);
         $self->normal_bam($normal_bam);
-    } elsif ($self->tumor_bam && $self->normal_bam) {
-        $normal_bam = $self->normal_bam;
+    } elsif ($self->tumor_bam || $self->normal_bam) {
+        if(defined($self->normal_bam)){
+            $normal_bam = $self->normal_bam;
+        }
         $tumor_bam = $self->tumor_bam;
     } else {
         $self->error_message("Usage error. Please specify either model_id OR tumor_bam and normal_bam");
         die;
     }
     
-    unless (-s $normal_bam) {
+    unless (-s $normal_bam || not defined($normal_bam)) {
         $self->error_message("Normal bam $normal_bam does not exist or has 0 size");
         die;
     }

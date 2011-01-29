@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use File::Basename;
 
-my $DEFAULT = '0.5.8c';
+my $DEFAULT = '0.5.9';
 
 class Genome::Model::Tools::Bwa {
     is => 'Command',
