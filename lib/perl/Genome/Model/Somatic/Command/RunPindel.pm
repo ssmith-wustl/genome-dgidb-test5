@@ -153,19 +153,22 @@ __DATA__
   <link fromOperation="input connector" fromProperty="transcript_annotation_filter" toOperation="Annotation" toProperty="annotation_filter" />
   
 
-  <link fromOperation="Pre-Assembly Tiering" fromProperty="tier1_output" toOperation="Pindel Read Support Tier1" toProperty="indels_all_sequences_bed_file" />
-  <link fromOperation="input connector" fromProperty="output_directory" toOperation="Pindel Read Support Tier1" toProperty="pindel_output_directory" />
-  <link fromOperation="input connector" fromProperty="use_old_pindel" toOperation="Pindel Read Support Tier1" toProperty="use_old_pindel" />
-  <link fromOperation="Pre-Assembly Tiering" fromProperty="tier2_output" toOperation="Pindel Read Support Tier2" toProperty="indels_all_sequences_bed_file" />
-  <link fromOperation="input connector" fromProperty="output_directory" toOperation="Pindel Read Support Tier2" toProperty="pindel_output_directory" />
-  <link fromOperation="input connector" fromProperty="use_old_pindel" toOperation="Pindel Read Support Tier2" toProperty="use_old_pindel" />
-  <link fromOperation="Pre-Assembly Tiering" fromProperty="tier3_output" toOperation="Pindel Read Support Tier3" toProperty="indels_all_sequences_bed_file" />
-  <link fromOperation="input connector" fromProperty="output_directory" toOperation="Pindel Read Support Tier3" toProperty="pindel_output_directory" />
-  <link fromOperation="input connector" fromProperty="use_old_pindel" toOperation="Pindel Read Support Tier3" toProperty="use_old_pindel" />
+  <link fromOperation="Pre-Assembly Tiering" fromProperty="tier1_output" toOperation="Calculate Read Support Tier1" toProperty="indels_all_sequences_bed_file" />
+  <link fromOperation="input connector" fromProperty="output_directory" toOperation="Calculate Read Support Tier1" toProperty="pindel_output_directory" />
+  <link fromOperation="input connector" fromProperty="use_old_pindel" toOperation="Calculate Read Support Tier1" toProperty="use_old_pindel" />
+  <link fromOperation="Pre-Assembly Tiering" fromProperty="tier2_output" toOperation="Calculate Read Support Tier2" toProperty="indels_all_sequences_bed_file" />
+  <link fromOperation="input connector" fromProperty="output_directory" toOperation="Calculate Read Support Tier2" toProperty="pindel_output_directory" />
+  <link fromOperation="input connector" fromProperty="use_old_pindel" toOperation="Calculate Read Support Tier2" toProperty="use_old_pindel" />
+  <link fromOperation="Pre-Assembly Tiering" fromProperty="tier3_output" toOperation="Calculate Read Support Tier3" toProperty="indels_all_sequences_bed_file" />
+  <link fromOperation="input connector" fromProperty="output_directory" toOperation="Calculate Read Support Tier3" toProperty="pindel_output_directory" />
+  <link fromOperation="input connector" fromProperty="use_old_pindel" toOperation="Calculate Read Support Tier3" toProperty="use_old_pindel" />
 
-  <link fromOperation="Pindel Read Support Tier1" fromProperty="_output_filename" toOperation="output connector" toProperty="tier_1_read_support" />
-  <link fromOperation="Pindel Read Support Tier2" fromProperty="_output_filename" toOperation="output connector" toProperty="tier_2_read_support" />
-  <link fromOperation="Pindel Read Support Tier3" fromProperty="_output_filename" toOperation="output connector" toProperty="tier_3_read_support" />
+  <link fromOperation="Calculate Read Support Tier1" fromProperty="_output_filename" toOperation="Filter Read Support Tier1" toProperty="read_support_file" />
+  <link fromOperation="Filter Read Support Tier1" fromProperty="output_file" toOperation="output connector" toProperty="tier_1_filtered_read_support" />
+  <link fromOperation="Calculate Read Support Tier2" fromProperty="_output_filename" toOperation="Filter Read Support Tier2" toProperty="read_support_file" />
+  <link fromOperation="Filter Read Support Tier2" fromProperty="output_file" toOperation="output connector" toProperty="tier_2_filtered_read_support" />
+  <link fromOperation="Calculate Read Support Tier3" fromProperty="_output_filename" toOperation="Filter Read Support Tier2" toProperty="read_support_file" />
+  <link fromOperation="Filter Read Support Tier3" fromProperty="output_file" toOperation="output connector" toProperty="tier_3_filtered_read_support" />
 
   <link fromOperation="Annotation" fromProperty="output_file" toOperation="output connector" toProperty="output" />
   
@@ -181,14 +184,23 @@ __DATA__
     <operationtype commandClass="Genome::Model::Tools::FastTier::FastTier" typeClass="Workflow::OperationType::Command" />
   </operation>
 
-  <operation name="Pindel Read Support Tier1">
+  <operation name="Calculate Read Support Tier1">
     <operationtype commandClass="Genome::Model::Tools::Somatic::CalculatePindelReadSupport" typeClass="Workflow::OperationType::Command" />
   </operation>
-  <operation name="Pindel Read Support Tier2">
+  <operation name="Calculate Read Support Tier2">
     <operationtype commandClass="Genome::Model::Tools::Somatic::CalculatePindelReadSupport" typeClass="Workflow::OperationType::Command" />
   </operation>
-  <operation name="Pindel Read Support Tier3">
+  <operation name="Calculate Read Support Tier3">
     <operationtype commandClass="Genome::Model::Tools::Somatic::CalculatePindelReadSupport" typeClass="Workflow::OperationType::Command" />
+  </operation>
+  <operation name="Filter Read Support Tier1">
+    <operationtype commandClass="Genome::Model::Tools::Somatic::FilterPindelReadSupport" typeClass="Workflow::OperationType::Command" />
+  </operation>
+  <operation name="Filter Read Support Tier2">
+    <operationtype commandClass="Genome::Model::Tools::Somatic::FilterPindelReadSupport" typeClass="Workflow::OperationType::Command" />
+  </operation>
+  <operation name="Filter Read Support Tier3">
+    <operationtype commandClass="Genome::Model::Tools::Somatic::FilterPindelReadSupport" typeClass="Workflow::OperationType::Command" />
   </operation>
 
   <operation name="Annotation">
@@ -210,9 +222,9 @@ __DATA__
     <inputproperty isOptional="Y">tiered_bed_files</inputproperty>
     <inputproperty isOptional="Y">use_old_pindel</inputproperty>
     <outputproperty>output</outputproperty>
-    <outputproperty>tier_1_read_support</outputproperty>
-    <outputproperty>tier_2_read_support</outputproperty>
-    <outputproperty>tier_3_read_support</outputproperty>
+    <outputproperty>tier_1_filtered_read_support</outputproperty>
+    <outputproperty>tier_2_filtered_read_support</outputproperty>
+    <outputproperty>tier_3_filtered_read_support</outputproperty>
     
   </operationtype>
 
