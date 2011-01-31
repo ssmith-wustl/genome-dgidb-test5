@@ -37,24 +37,16 @@ sub required_rusage {
     my $double_cpus = $cpus*2;
 
     my $select_half_blades  = "select[ncpus>=$double_cpus && maxmem>$double_mem && maxtmp>=$double_tmp] span[hosts=1]";
-    my $select_whole_blades = "select[ncpus>=$double_cpus && maxmem>$double_mem && maxtmp>=$tmp] span[hosts=1]";
     my @selected_half_blades = `bhosts -R '$select_half_blades' alignment | grep ^blade`;
-    my @selected_whole_blades = `bhosts -R '$select_whole_blades' alignment | grep ^blade`;
 
-    my $queue;
     my $user = getpwuid($<);
-    if ($user eq 'apipe-builder') {
-        $queue = 'alignment-pd';
-    } else {
-        $queue = 'alignment';
-    }
+    my $queue = ($user eq 'apipe-builder' ? 'alignment-pd' : 'alignment');
 
+    my $required_usage = "-R '$select_half_blades rusage[mem=$mem]' -M $mem_kb -n $cpus -q $queue -m alignment";
     if (@selected_half_blades) {
-        return "-R '$select_half_blades rusage[mem=$mem]' -M $mem_kb -n $cpus -q $queue -m alignment";
-    } elsif (@selected_whole_blades) {
-        return "-R '$select_whole_blades rusage[mem=$double_mem]' -M $double_mem_kb -n $double_cpus -q $queue -m alignment";
+        return $required_usage;
     } else {
-        die $class->error_message("Failed to find hosts that meet resource requirements.");
+        die $class->error_message("Failed to find hosts that meet resource requirements ($required_usage).");
     }
 }
 
