@@ -6,7 +6,7 @@ use Carp;
 use Statistics::Distributions;
 
 #__CONSTANT OF PI -- NEEDED IN RAMANUJAN APPROX FOR POISSON PROBABILITY MASSES
-#  (SEE "PLUS-MINUS TEST" NOTES PP 29-31)
+#  (SEE "PATHSCAN TEST" NOTES PP 29-31)
 #  use constant PI => 4*atan2 1, 1;
 #  use constant LOG_PI_OVER_2 => log (PI) / 2;
 
@@ -18,14 +18,14 @@ use Statistics::Distributions;
 
 =head1 NAME
 
-MG::Statistics::CombinePvals - combining probabilities from independent tests of
+CombinePvals - combining probabilities from independent tests of
 significance into a single aggregate figure
 
 =head1 SYNOPSIS
 
-	use MG::Statistics::CombinePvals;
+	use CombinePvals;
 
-	my $obj = MG::Statistics::CombinePvals->new ($reference_to_list_of_pvals);
+	my $obj = CombinePvals->new ($reference_to_list_of_pvals);
 
 	my $pval = $obj->method_name;
 
@@ -216,7 +216,7 @@ weighting.
 
 =head1 CONSTRUCTOR METHODS
 
-These methods return an object in the MG::Statistics::CombinePvals
+These methods return an object in the CombinePvals
 class.
 
 =cut
@@ -226,8 +226,8 @@ class.
 ################################
 
 #  ===
-#  NEW   create a new plus-minus object
-#  ===   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#  NEW   create a new object
+#  ===   ~~~~~~~~~~~~~~~~~~~
 
 =head2 new
 
@@ -236,7 +236,7 @@ but otherwise un-ordered (reference to a) list of the p-values
 obtained by a set of independent
 tests.
 
-	my $obj = MG::Statistics::CombinePvals->new ([0.103, 0.078, 0.03, 0.2,...]);
+	my $obj = CombinePvals->new ([0.103, 0.078, 0.03, 0.2,...]);
 
 The method checks to make sure that all elements are actual
 p-values, i.e. they are real numbers and they have values bounded by 0 and

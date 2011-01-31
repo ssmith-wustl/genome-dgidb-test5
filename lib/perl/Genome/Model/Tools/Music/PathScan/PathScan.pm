@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Music::PathScan::PlusMinus;
+package Genome::Model::Tools::Music::PathScan::PathScan;
 
 # DEBUG
 # print "USING LOCAL MCW VERSION OF REGULAR +/-\n";
@@ -9,7 +9,7 @@ use strict;
 use Carp;
 
 #__CONSTANT OF PI -- NEEDED IN RAMANUJAN APPROX FOR POISSON PROBABILITY MASSES
-#  (SEE "PLUS-MINUS TEST" NOTES PP 29-31)
+#  (SEE "PATH-SCAN TEST" NOTES PP 29-31)
 use constant PI => 4*atan2 1, 1;
 use constant LOG_PI_OVER_2 => log (PI) / 2;
 
@@ -21,19 +21,19 @@ use constant LOG_PI_OVER_2 => log (PI) / 2;
 
 =head1 NAME
 
-MG::Statistics::PlusMinus - the Plus-Minus significance test for mutations in
+PathScan - the Path-Scan significance test for mutations in
 groups of putative cancer genes
 
 =head1 SYNOPSIS
 
-	use MG::Statistics::PlusMinus;
+	use PathScan;
 
-	my $pmobj = MG::Statistics::PlusMinus->new ($list_of_gene_lengths);
-	my $pval = $pmobj->plus_minus ($actual_hits, $background_mutation_rate);
+	my $pmobj = PathScan->new ($list_of_gene_lengths);
+	my $pval = $pmobj->path_scan ($actual_hits, $background_mutation_rate);
 
 =head1 DESCRIPTION
 
-This package calculates the so-called plus-minus statistic
+This package calculates the so-called path-scan statistic
 P-value for sets of putative cancer genes under the null
 hypothesis that somatic mutations found in data are the result
 of a random process characterized by the background mutation
@@ -47,14 +47,14 @@ In other words, the result suggests that the mutation configuration
 in this pathway is probably not the result of a strictly random
 process.
 
-=head2 Nature of the Plus-Minus Test
+=head2 Nature of the Path-Scan Test
 
 This statistic considers individual genes in a "binary" fashion,
 i.e. a gene is either mutated (has one or more mutations) or it is not
 mutated.
 I<The number of mutations in a mutated gene is not
 considered.>
-This is the "plus-minus" aspect of the
+This is the "path-scan" aspect of the
 test.
 
 Why is such information
@@ -81,7 +81,7 @@ association and it reflects this fact via a large number of
 mutations.
 Other single-gene tests should presumably flag such
 cases.
-The plus-minus test should, therefore, be thought
+The path-scan test should, therefore, be thought
 of as just one tool within a larger statistical
 "toolbox".
 
@@ -233,7 +233,7 @@ The available methods are as follows.
 ################################################################################
 
 #  ===
-#  NEW   create a new plus-minus object
+#  NEW   create a new path-scan object
 #  ===   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 =head2 new
@@ -245,13 +245,13 @@ If you want to use the exact probability solution or the
 asymptotic approximate solution, pass all lengths in a single list
 reference
 
-	my $pmobj = MG::Statistics::PlusMinus->new ([3434, 54565, 6445, ...]);
+	my $pmobj = PathScan->new ([3434, 54565, 6445, ...]);
 
 but if you want to use the convolution approximation method, divide the list of
 gene sizes into the desired number of bins and pass each of these as a
 reference
 
-	my $pmobj = MG::Statistics::PlusMinus->new ([3434, 54565], [6445, ...]);
+	my $pmobj = PathScan->new ([3434, 54565], [6445, ...]);
 
 In other words, the way you pass these arguments at partially determines
 the context in which you will obtain your P-value for this set of
@@ -284,30 +284,30 @@ sub new {
 }
 
 #  ==========
-#  PLUS MINUS   plus-minus (tail) probability value
+#  PATH SCAN   path-scan (tail) probability value
 #  ==========   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-=head2 plus_minus
+=head2 path_scan
 
-This function calculates the plus-minus statistic in one of the
+This function calculates the path-scan statistic in one of the
 appropriate contexts (exact or convolution approximation, as described
 above).
 It takes the actual number of "hits" you've observed in
 the data, i.e. the number of genes that have a mutated
 status.
 
-	my $pval = $pmobj->plus_minus (7);
+	my $pval = $pmobj->path_scan (7);
 
 If you have not yet done the pre-processing with respect to the
 background mutation rate (see below), then pre-processing can be
 executed implicitly by passing the rate as the second
 argument.
 
-	my $pval = $pmobj->plus_minus (7, 0.000001);
+	my $pval = $pmobj->path_scan (7, 0.000001);
 
 =cut
 
-sub plus_minus {
+sub path_scan {
    my $obj = shift;
    my ($actual_hits, $mutation_prob) = @_;
 
@@ -331,7 +331,7 @@ sub plus_minus {
 
 #__CALCULATE P-VAL WITH THE MINIMUM OF EFFORT
    my $half_of_num_genes = $obj->{'num_genes'} / 2;
-   my $plus_minus_pval = 0;
+   my $path_scan_pval = 0;
 
 #__COMPUTE ACTUAL TAIL IF NUM HITS IS IN THIS RANGE
    if ($actual_hits > $half_of_num_genes) {
@@ -344,11 +344,11 @@ sub plus_minus {
          } else {
             $pval = $obj->p_value_exact ($k);
          }
-         $plus_minus_pval += $pval;
+         $path_scan_pval += $pval;
       }
 
    #__RETURN RESULT
-      return $plus_minus_pval;
+      return $path_scan_pval;
 
 #__COMPUTE 1 - COMPLIMENTARY TAIL NUM HITS IS IN THIS RANGE
    } else {
@@ -361,11 +361,11 @@ sub plus_minus {
          } else {
             $pval = $obj->p_value_exact ($k);
          }
-         $plus_minus_pval += $pval;
+         $path_scan_pval += $pval;
       }
 
    #__RETURN 1 - THIS VAL AS THE RESULT
-      return 1 - $plus_minus_pval;
+      return 1 - $path_scan_pval;
    }
 }
 
@@ -450,16 +450,16 @@ sub cdf_truncated {
 #  }
 
 #__CDF INITIALIZED WITH UNITY --- MORE EXTREME VALS WILL BE UNSHIFTED IN FRONT
-   my $plus_minus_pval = 1;
-   my $cdf = [$plus_minus_pval];
+   my $path_scan_pval = 1;
+   my $cdf = [$path_scan_pval];
 
 #__COMPUTE CDF VALS PROGRESSIVELY MORE EXTREME PUSHING EACH TO FRONT OF LIST
    for (my $k = 1; $k <= $obj->{'num_genes'}; $k++) {
 
    #__COMPUTE ACTUAL TAILED P-VALUE IF WE'RE WITHIN TRUNCATION RANGE
       if ($k <= $hits) {
-         $plus_minus_pval -= $obj->p_value_binomial_approx ($k-1);
-         unshift @{$cdf}, $plus_minus_pval;
+         $path_scan_pval -= $obj->p_value_binomial_approx ($k-1);
+         unshift @{$cdf}, $path_scan_pval;
 
    #__OTHERWISE JUST INSERT A FLAG TO FUNCTION AS A PLACEHOLDER FOR OTHER
    #  METHODS THAT EXPECT THE *FORM* OF THE LIST TO BE A FULL CDF
@@ -514,7 +514,7 @@ sub cdf {
    }
 
 #__CALCULATE P-VAL WITH THE MINIMUM OF EFFORT
-   my $plus_minus_pval = 0;
+   my $path_scan_pval = 0;
 
 #__COMPUTE CDF STARTING WITH MOST THE EXTREME STATE WORKING TOWARD LEAST EXTREME
    for (my $k = $obj->{'num_genes'}; $k >= 0; $k--) {
@@ -524,8 +524,8 @@ sub cdf {
       } else {
          $pval = $obj->p_value_exact ($k);
       }
-      $plus_minus_pval += $pval;
-      push @{$cdf}, $plus_minus_pval;
+      $path_scan_pval += $pval;
+      push @{$cdf}, $path_scan_pval;
    }
    return $cdf;
 }
@@ -566,8 +566,8 @@ sub cdf_asymptot {
    my ($mutation_prob) = @_;
 
 #__CDF INITIALIZED WITH UNITY --- MORE EXTREME VALS WILL BE UNSHIFTED IN FRONT
-   my $plus_minus_pval = 1;
-   my $cdf = [$plus_minus_pval];
+   my $path_scan_pval = 1;
+   my $cdf = [$path_scan_pval];
 
 #__PREPROCESS IF NECESSARY
    if ($mutation_prob) {
@@ -578,32 +578,32 @@ sub cdf_asymptot {
 #  SEE PROGRAMMING NOTES OF CDF_TRUNCATED METHOD THAT EXPLAIN INDEXING OF THE
 #  PROBABILITY CALL
    for (my $k = 1; $k <= $obj->{'num_genes'}; $k++) {
-      $plus_minus_pval -= $obj->p_value_asymptot_approx ($k-1);
-      unshift @{$cdf}, $plus_minus_pval;
+      $path_scan_pval -= $obj->p_value_asymptot_approx ($k-1);
+      unshift @{$cdf}, $path_scan_pval;
    }
    return $cdf;
 }
 
 #  ===================
-#  PLUS MINUS ASYMPTOT  asymptotic plus-minus probability value (CDF)
+#  PATH SCAN ASYMPTOT  asymptotic path-scan probability value (CDF)
 #  ===================  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-=head2 plus_minus_asymptot
+=head2 path_scan_asymptot
 
-This function calculates the plus-minus statistic in the asymptotic (Poisson)
+This function calculates the path-scan statistic in the asymptotic (Poisson)
 context.
 It takes the actual number of "hits" you've observed in
 the data, i.e. the number of genes that have a mutated
 status.
 
-	my $pval = $pmobj->plus_minus_asymptot (7);
+	my $pval = $pmobj->path_scan_asymptot (7);
 
 If you have not yet done the pre-processing with respect to the
 background mutation rate (see below), then pre-processing can be
 executed implicitly by passing the rate as the second
 argument.
 
-	my $pval = $pmobj->plus_minus_asymptot (7, 0.000001);
+	my $pval = $pmobj->path_scan_asymptot (7, 0.000001);
 
 You must set up the object, somewhat paradoxically,
 I<as if you will be doing the calculation in the exact
@@ -618,7 +618,7 @@ object.)
 #  we get the same (rigorous) result by simply computing the complement and
 #  subtracting that from one.
 
-sub plus_minus_asymptot {
+sub path_scan_asymptot {
    my $obj = shift;
    my ($actual_hits, $mutation_prob) = @_;
 
@@ -636,13 +636,13 @@ sub plus_minus_asymptot {
    }
 
 #__POISSON HAS INFINITE SUPPORT SO COMPUTE COMPLIMENTARY (LOWER) TAIL AS PVAL
-   my $plus_minus_pval = 0;
+   my $path_scan_pval = 0;
    for (my $k = 0; $k < $actual_hits; $k++) {
-      $plus_minus_pval += $obj->p_value_asymptot_approx ($k);
+      $path_scan_pval += $obj->p_value_asymptot_approx ($k);
    }
 
 #__RETURN 1 - THIS VAL AS THE RESULT
-   return 1 - $plus_minus_pval;
+   return 1 - $path_scan_pval;
 }
 
 ################################################################################
@@ -709,7 +709,7 @@ sub p_value_exact {
 #  =======================   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #  NOTE: we have not implemented the approximate method for the case of just
-#  a single bin, although a simple solution exists (plus-minus test notes pp 16)
+#  a single bin, although a simple solution exists (path-scan test notes pp 16)
 #  because the assumption is that, if the user just passes a single list, they
 #  want the exact solution. In other words, we assume that the approximate
 #  solution is only desired when there are at least 2 lists.
@@ -1269,7 +1269,7 @@ In each case, assume we have first executed some required preliminary
 code.
 
 	#__USE THE PACKAGE
-	   use MG::Statistics::PlusMinus;
+	   use PathScan;
 
 	#__SOME DATA FOR AN "EXACT CONTEXT" CALCULATION
 	   my $genes_exact = [
@@ -1285,7 +1285,7 @@ code.
 	      [35000, 35000, 35000, 35000, 35000]
 	   );
 
-=head2 simple plus-minus test
+=head2 simple path-scan test
 
 Here, we compare the values returned by both the exact
 and approximate algorithms over the whole domain of
@@ -1296,17 +1296,17 @@ identical.
 	   my $rho = 0.00002;
 
 	#__CONFIGURE OBJECTS IN "EXACT" AND "APPROXIMATE" CONTEXTS
-	   my $pmobj_exact = MG::Statistics::PlusMinus->new ($genes_exact);
+	   my $pmobj_exact = PathScan->new ($genes_exact);
 	   $pmobj_exact->preprocess ($rho);
 
-	   my $pmobj_binom = MG::Statistics::PlusMinus->new (@genes_binned);
+	   my $pmobj_binom = PathScan->new (@genes_binned);
 	   $pmobj_binom->preprocess ($rho);
 
 	#__CALCULATE AND TALLY THE MAXIMUM DIFFERENCE
 	   my $maxdiff = 0;
 	   for (my $i = 0; $i <= scalar @{$genes_exact}; $i++) {
-	      my $pm_pval_exact = $pmobj_exact->plus_minus($i);
-	      my $pm_pval_binom = $pmobj_binom->plus_minus($i);
+	      my $pm_pval_exact = $pmobj_exact->path_scan($i);
+	      my $pm_pval_binom = $pmobj_binom->path_scan($i);
 	      my $diff = abs ($pm_pval_exact - $pm_pval_binom);
 	      $maxdiff = $diff if $diff > $maxdiff;
 	      print "$i hits: $pm_pval_exact   $pm_pval_binom   $diff\n";
@@ -1319,16 +1319,16 @@ This example shows how to run the test for a fixed number of hits, say 7 in this
 case, for various different background mutation rates.
 
 	#__CONFIGURE OBJECT
-	   my $pmobj_binom = MG::Statistics::PlusMinus->new (@genes_binned);
+	   my $pmobj_binom = PathScan->new (@genes_binned);
 
 	#__CALCULATE
 	   for (my $rho = 0.00001; $rho <= 0.0001; $rho += 0.00001) {
-	      my $pm_pval_binom = $pmobj_binom->plus_minus(7, $rho);
+	      my $pm_pval_binom = $pmobj_binom->path_scan(7, $rho);
 	      print "7 hits at background $rho : P = $pm_pval_binom\n";
 	   }
 
 Note that we did not run C<preprocess> explicitly,
-but rather let the C<plus_minus> method call it implicitly
+but rather let the C<path_scan> method call it implicitly
 for each new value of the background mutation
 rate.
 
@@ -1341,11 +1341,11 @@ compute.
 	   my $rho = 0.00002;
 
 	#__CONFIGURE OBJECT
-	   my $pmobj_poisson = MG::Statistics::PlusMinus->new ($genes_exact);
+	   my $pmobj_poisson = PathScan->new ($genes_exact);
 	   $pmobj_poisson->preprocess ($rho);
 
 	#__P-VALUE FOR 7 OBSERVED MUTATED GENES
-	   my $pm_pval_poisson = $pmobj_exact->plus_minus_asymptot (7);
+	   my $pm_pval_poisson = $pmobj_exact->path_scan_asymptot (7);
 
 =head2 accessing individual probability masses
 
@@ -1357,7 +1357,7 @@ calculated.
 	   my $rho = 0.00002;
 
 	#__CONFIGURE OBJECT
-	   my $pmobj_exact = MG::Statistics::PlusMinus->new ($genes_exact);
+	   my $pmobj_exact = PathScan->new ($genes_exact);
 	   $pmobj_exact->preprocess ($rho);
 
 	#__CALCULATE MASSES

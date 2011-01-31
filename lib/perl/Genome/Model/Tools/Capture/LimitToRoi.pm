@@ -65,13 +65,16 @@ sub execute {                               # replace with real execution logic.
 
 	if(-e $input_file && -e $regions_file)
 	{
-		my $cmd = "java -classpath ~dkoboldt/Software/Varscan net.sf.varscan.Varscan limit $input_file --regions-file $regions_file --output-file $output_file";
+		my $cmd = "java -Xms3000m -Xmx3000m -jar /gsc/scripts/lib/java/VarScan/VarScan.jar limit $input_file --regions-file $regions_file --output-file $output_file";
 		system($cmd);
 	}
 	else
 	{
 		die "ERROR: Input file $input_file or regions file $regions_file not found!\n";
 	}
+
+	return 1;
+
 }
 
 

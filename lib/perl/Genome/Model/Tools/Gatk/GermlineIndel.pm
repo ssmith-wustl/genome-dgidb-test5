@@ -27,7 +27,7 @@ class Genome::Model::Tools::Gatk::GermlineIndel {
 		bed_output_file => { is => 'Text', doc => "Optional abbreviated output in BED format", is_optional => 1, is_input => 1, is_output => 1 },
 		formatted_file => { is => 'Text', doc => "Optional output file of indels in annotation format", is_optional => 1, is_input => 1, is_output => 1 },
 		gatk_params => { is => 'Text', doc => "Parameters for GATK", is_optional => 1, is_input => 1, is_output => 1, default => "-R /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa -T IndelGenotyperV2 --window_size 300" },
-		path_to_gatk => { is => 'Text', doc => "Path to GATK command", is_optional => 1, is_input => 1, is_output => 1, default => "java -jar /gsc/scripts/lib/java/GenomeAnalysisTK.jar" },
+		path_to_gatk => { is => 'Text', doc => "Path to GATK command", is_optional => 1, is_input => 1, is_output => 1, default => "java  -Xms3000m -Xmx3000m -jar /gsc/scripts/lib/java/GenomeAnalysisTK.jar" },
 		skip_if_output_present => { is => 'Text', doc => "Skip if output is present", is_optional => 1, is_input => 1},
 	],
 };
@@ -70,6 +70,8 @@ sub execute {                               # replace with real execution logic.
 	my $output_file = $self->output_file;
 	my $cmd = join(" ", $path_to_gatk, $gatk_params, "-I", $self->bam_file, "-verbose", $output_file, "-o", $output_file.".vcf");
 
+	## Optionally append BED output file ##
+
 	my $bed_output_file = $self->output_file . ".bed";
 
 	if($self->bed_output_file)
@@ -78,7 +80,7 @@ sub execute {                               # replace with real execution logic.
 
 	}
 
-	$cmd .= " -bed $bed_output_file";
+	$cmd .= " --bedOutput $bed_output_file";
 
 
 
@@ -92,10 +94,12 @@ sub execute {                               # replace with real execution logic.
 	}
 	else
 	{
+		system("touch $output_file"); # This will create an empty output file to help prevent GATK from crashing 
+		system("touch $bed_output_file"); # This will create an empty output file to help prevent GATK from crashing 
+		system("touch $output_file.vcf"); # This will create an empty output file to help prevent GATK from crashing 
 		print "RUN: $cmd\n";
 		system($cmd);
 	}
-
 
 	if($self->formatted_file)
 	{

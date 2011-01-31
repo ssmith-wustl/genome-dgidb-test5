@@ -131,6 +131,10 @@ sub validate_file_for_writing {
         Carp::croak("Can't validate_file_for_writing: No file given");
     }
 
+    if ($file eq '-') {
+        return 1;
+    }
+
     if ( -s $file ) {
         Carp::croak("Can't validate_file_for_writing: File ($file) has non-zero size, refusing to write to it");
     }

@@ -203,13 +203,19 @@ sub load_events
 
 		if($lineCounter > 1)
 		{
-			my ($id, $sample, $chrom, $chr_start, $chr_stop, $num_mark, $seg_mean, $bstat, $p_value, $lcl, $ucl, $event_size, $event_type) = split(/\t/, $line);
+#			my ($id, $sample, $chrom, $chr_start, $chr_stop, $num_mark, $seg_mean, $bstat, $p_value, $lcl, $ucl, $event_size, $event_type) = split(/\t/, $line);
+#chrom\tchr_start\tchr_stop\tseg_mean\tnum_segments\tnum_markers\tp_value\tevent_type\tevent_size\tsize_class\tchrom_arm\tarm_fraction\tchrom_fraction
+			my ($chrom, $chr_start, $chr_stop, $seg_mean, $num_segments, $num_markers, $p_value, $event_type, $event_size_bp, $event_size, $chrom_arm) = split(/\t/, $line);
 			
-			if(!$self->event_size || $event_size eq $self->event_size)
+			if($event_type ne "neutral")
 			{
-				$events{$chrom} .= "\n" if($events{$chrom});
-				$events{$chrom} .= join("\t", $chrom, $chr_start, $chr_stop, $num_mark, $seg_mean, $p_value, $event_size, $event_type);				
+				if(!$self->event_size || $event_size eq $self->event_size)
+				{
+					$events{$chrom} .= "\n" if($events{$chrom});
+					$events{$chrom} .= join("\t", $chrom, $chr_start, $chr_stop, $num_markers, $seg_mean, $p_value, $event_size, $event_type);
+				}				
 			}
+
 
 			$type_counts{"$event_size $event_type"}++;
 		}
