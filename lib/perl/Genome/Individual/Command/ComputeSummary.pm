@@ -41,6 +41,7 @@ sub execute {
 
     my @row_names = (
         'Individual',
+        '---',
         'Tumor Gbases', 
         'Normal Gbases',
         'Tumor RefAlign GB', 
@@ -49,7 +50,10 @@ sub execute {
         'Normal RefAlign (slot * hr)',
         'Somatic (GB)', 
         'Somatic (slot*hr)',
+        '---',
     );
+    my %expected_row_names;
+    @expected_row_names{@row_names} = @row_names;
    
     my @columns; 
     for my $patient (@patients) {
@@ -136,11 +140,17 @@ sub execute {
             $max_length = $length if $max_length < $length;
         }
         $f{max_length} = $max_length;
-    
+
+        # non-essential columns may be added as well
+        for my $key (keys %f) {
+            unless ($expected_row_names{$key}) {
+                $expected_row_names{$key} = 1;
+                push @row_names, $key;
+            }
+        }
     }
 
     my $outfh = Genome::Sys->open_file_for_writing($self->output_file);
-
     if ($self->format eq 'table') {
         no warnings;
         my $max_row_name_length = 0;
