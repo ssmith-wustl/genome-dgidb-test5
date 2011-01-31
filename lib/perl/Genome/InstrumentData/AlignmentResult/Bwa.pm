@@ -30,12 +30,11 @@ sub required_rusage {
     }
     
     my $mem = 10000;
-    my ($double_mem, $mem_kb) = ($mem*2, $mem*1000);
+    my ($double_mem, $mem_kb, $double_mem_kb) = ($mem*2, $mem*1000, $mem*2*1000);
     my $tmp = $estimated_usage_mb;
     my $double_tmp = $tmp*2; 
     my $cpus = 4;
     my $double_cpus = $cpus*2;
-    my $rusage = "rusage[mem=$mem, tmp=$tmp]";
 
     my $select_half_blades  = "select[ncpus>=$double_cpus && maxmem>$double_mem && maxtmp>=$double_tmp] span[hosts=1]";
     my $select_whole_blades = "select[ncpus>=$double_cpus && maxmem>$double_mem && maxtmp>=$tmp] span[hosts=1]";
@@ -51,9 +50,9 @@ sub required_rusage {
     }
 
     if (@selected_half_blades) {
-        return "-R '$select_half_blades rusage[mem=$mem, tmp=$tmp]' -M $mem_kb -n $cpus -q $queue -m alignment";
+        return "-R '$select_half_blades rusage[mem=$mem]' -M $mem_kb -n $cpus -q $queue -m alignment";
     } elsif (@selected_whole_blades) {
-        return "-R '$select_whole_blades rusage[mem=$mem, tmp=$tmp]' -M $mem_kb -n $double_cpus -q $queue -m alignment";
+        return "-R '$select_whole_blades rusage[mem=$double_mem]' -M $double_mem_kb -n $double_cpus -q $queue -m alignment";
     } else {
         die $class->error_message("Failed to find hosts that meet resource requirements.");
     }
