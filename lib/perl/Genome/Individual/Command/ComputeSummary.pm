@@ -25,6 +25,13 @@ class Genome::Individual::Command::ComputeSummary {
                         default_value => 'table',
                         doc => 'set to raw for a raw dump of the data'
                     },
+        builds      => {
+                        is => 'Genome::Model::Build',
+                        is_optional => 1,
+                        is_many => 1,
+                        require_user_verify => 0,
+                        doc => 'limit report to these somatic builds'
+                    }
     ],
     doc => 'summarize resources used for a particular patient'
 };
@@ -38,6 +45,11 @@ sub execute {
     my @patient_ids = map { $_->id } @patients; 
     my @somatic_models = Genome::Model::Somatic->get(subject_id => \@patient_ids, );
     my @somatic_builds = Genome::Model::Build->get(model_id => [ map { $_->id } @somatic_models ]);
+
+    my @force_build_ids;
+    if (my @builds = $self->builds) {
+        @force_build_ids = map { $_->id } @builds;
+    }
 
     my @row_names = (
         'Individual',
@@ -74,7 +86,9 @@ sub execute {
 
         my $best_build;
         for my $model (reverse @somatic_models) {
-            my @builds = $model->builds(status => 'Succeeded', id => [106556886,105174782,102230554]);
+            my @builds = $model->builds(
+                (@force_build_ids ? (id => \@force_build_ids) : (status => 'Succeeded')) 
+            );
             unless (@builds) {
                 #$self->warning_message("no successful builds for model " . $model->__display_name__);
                 next;
