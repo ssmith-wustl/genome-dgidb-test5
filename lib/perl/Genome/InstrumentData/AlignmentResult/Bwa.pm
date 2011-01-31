@@ -24,7 +24,7 @@ sub required_rusage {
     my $instrument_data = delete $p{instrument_data};
 
     my $estimated_usage_mb = 90000;
-    if (defined $instrument_data && $instrument_data->can("calculate_aligned_estimated_kb_usage")) {
+    if (defined $instrument_data && $instrument_data->can("calculate_alignment_estimated_kb_usage")) {
         my $kb_usage = $instrument_data->calculate_alignment_estimated_kb_usage;
         $estimated_usage_mb = int(($kb_usage * 5) / 1024)+100;
     }
