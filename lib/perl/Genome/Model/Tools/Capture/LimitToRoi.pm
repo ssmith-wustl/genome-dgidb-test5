@@ -72,6 +72,9 @@ sub execute {                               # replace with real execution logic.
 	{
 		die "ERROR: Input file $input_file or regions file $regions_file not found!\n";
 	}
+
+	return 1;
+
 }
 
 
