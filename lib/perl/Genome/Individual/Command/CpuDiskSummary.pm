@@ -67,7 +67,7 @@ sub execute {
     @expected_row_names{@row_names} = @row_names;
    
     my @columns; 
-    for my $patient (@patients) {
+    for my $patient (sort { $a->common_name cmp $b->common_name } @patients) {
         my %f;
         push @columns, \%f;
 
@@ -105,35 +105,35 @@ sub execute {
         #);
         
 
-        $f{somatic_build} = $somatic_build->__display_name__;
-
-        my $tumor_model = $somatic_build->model->tumor_model;
-        my $normal_model = $somatic_build->model->normal_model;
-        
-        my $tumor_build = $tumor_model->last_complete_build;
-        my $normal_build = $normal_model->last_complete_build;
-        
-        $f{tumor_build} = $tumor_build->__display_name__;
-        $f{normal_build} = $normal_build->__display_name__;
-
-        #my $tumor_wfie = $tumor_build->workflow_instance->current;
-        #my $normal_wfie = $normal_build->workflow_instance->current;
-        #my $somatic_wfie = $somatic_build->workflow_instance->current;
-        
-        $f{"Somatic (slot*hr)"} = $somatic_build->cpu_slot_hours;
-        $f{"Tumor RefAlign (slot*hr)"} = $tumor_build->cpu_slot_hours("event_type not like" => '%align-reads%');
-        $f{"Normal RefAlign (slot*hr)"} = $normal_build->cpu_slot_hours("event_type not like" => '%align-reads%');
-
-        my $tumor_alloc1 = $tumor_build->disk_allocation;
-        my $normal_alloc1 = $normal_build->disk_allocation;
         my $somatic_alloc1 = $somatic_build->disk_allocation;
 
+        $f{"somatic_build"} = $somatic_build->__display_name__;
+        $f{"Somatic (slot*hr)"} = eval { $somatic_build->cpu_slot_hours } || $@;
         $f{"Somatic (GB)"} = $somatic_alloc1->kilobytes_requested / (1024**2);
-        $f{"Tumor RefAlign GB regular"} = $tumor_alloc1->kilobytes_requested / (1024**2);
-        $f{"Normal RefAlign GB regular"} = $normal_alloc1->kilobytes_requested / (1024**2);
+
+        my $tumor_model = $somatic_build->model->tumor_model;
+        my $tumor_build = $tumor_model->last_complete_build;
        
-        my $tumor_bam_dir = $tumor_build->accumulated_alignments_directory;
-        my $normal_bam_dir = $normal_build->accumulated_alignments_directory;
+        my $tumor_bam_dir;
+        if ($tumor_build) {
+            $f{tumor_build} = $tumor_build->__display_name__;
+            $f{"Tumor RefAlign (slot*hr)"} = eval { $tumor_build->cpu_slot_hours("event_type not like" => '%align-reads%') } || $@;
+            my $tumor_alloc1 = $tumor_build->disk_allocation;
+            $f{"Tumor RefAlign GB regular"} = $tumor_alloc1->kilobytes_requested / (1024**2);
+            $tumor_bam_dir = $tumor_build->accumulated_alignments_directory;
+        }
+
+        my $normal_model = $somatic_build->model->normal_model;
+        my $normal_build = $normal_model->last_complete_build;
+        
+        my $normal_bam_dir;
+        if ($normal_build) {
+            $f{normal_build} = $normal_build->__display_name__;
+            $f{"Normal RefAlign (slot*hr)"} = eval { $normal_build->cpu_slot_hours("event_type not like" => '%align-reads%') } || $@;;
+            my $normal_alloc1 = $normal_build->disk_allocation;
+            $f{"Normal RefAlign GB regular"} = $normal_alloc1->kilobytes_requested / (1024**2);
+            $normal_bam_dir = $normal_build->accumulated_alignments_directory;
+        }
 
         for my $dir ($tumor_bam_dir, $normal_bam_dir) {
             while (-l $dir) {
@@ -145,7 +145,10 @@ sub execute {
         my ($tumor_bam_size, $normal_bam_size) = 
             map {
                 my $alloc = Genome::Disk::Allocation->get(allocation_path => $_);
-                $alloc->kilobytes_requested / (1024**2); 
+                ($alloc 
+                    ? ($alloc->kilobytes_requested / (1024**2))
+                    : 0
+                ); 
             }
             ($tumor_bam_dir, $normal_bam_dir);
         
@@ -158,8 +161,8 @@ sub execute {
         #$tumor_metric  = $tumor_build->metric(name => 'instrument_data_total kb');
         #$normal_metric = $normal_build->metric(name => 'instrument_data_total kb');
         
-        $f{"Tumor Gbases"}  = $tumor_build->metric(name => 'instrument data total kb')->value/1_000_000;
-        $f{"Normal Gbases"} = $normal_build->metric(name => 'instrument data total kb')->value/1_000_000;
+        $f{"Tumor Gbases"}  = eval { $tumor_build->metric(name => 'instrument data total kb')->value/1_000_000 } || $@;
+        $f{"Normal Gbases"} = eval { $normal_build->metric(name => 'instrument data total kb')->value/1_000_000 } || $@;
     
         my $max_length = 0;
         for (values %f) {
