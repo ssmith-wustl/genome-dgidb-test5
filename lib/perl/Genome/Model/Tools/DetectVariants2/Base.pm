@@ -6,6 +6,7 @@ use warnings;
 use Clone qw/clone/;
 use Data::Compare;
 use Data::Dumper;
+use File::Path;
 use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Base {
@@ -132,9 +133,9 @@ sub execute {
         die $self->error_message('Failed to generate standard files from detector-specific files');
     }
     
-    unless($self->_promote_staged_data) {
-        die $self->error_message('Failed to promote staged data.');
-    }
+    #unless($self->_promote_staged_data) {
+    #    die $self->error_message('Failed to promote staged data.');
+    #}
     
     return 1;
 }
