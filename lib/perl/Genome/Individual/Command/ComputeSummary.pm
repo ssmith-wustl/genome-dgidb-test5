@@ -20,6 +20,11 @@ class Genome::Individual::Command::ComputeSummary {
                         default_value => '-',
                         doc => 'write to this file instead of STDOUT',
                     },
+        format      => { is => 'Text',
+                        valid_values => ['table','raw'],
+                        default_value => 'table',
+                        doc => 'set to raw for a raw dump of the data'
+                    },
     ],
     doc => 'summarize resources used for a particular patient'
 };
@@ -135,7 +140,8 @@ sub execute {
     }
 
     my $outfh = Genome::Sys->open_file_for_writing($self->output_file);
-    do {
+
+    if ($self->format eq 'table') {
         no warnings;
         my $max_row_name_length = 0;
         for (@row_names) {
@@ -158,9 +164,13 @@ sub execute {
             }
             $outfh->print("\n");
         }
-    }; 
-
-        print STDERR Data::Dumper::Dumper(\@columns);
+    }
+    elsif($self->format eq 'raw') {
+        $outfh->print(Data::Dumper::Dumper(\@columns));
+    }
+    else {
+        die "unknown output format " . $self->format . "???";
+    }
 
     return 1;
 }
