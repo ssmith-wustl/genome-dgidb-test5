@@ -8,6 +8,7 @@ use Data::Dumper;
 use JSON;
 use Genome;
 use Workflow;
+use Workflow::Simple;
 
 class Genome::Model::Tools::DetectVariants2::Dispatcher {
     is => ['Genome::Model::Tools::DetectVariants2::Base'],
@@ -68,6 +69,7 @@ sub _detect_variants {
     my ($trees, $plan) = $self->plan;
 
     my $workflow = $self->generate_workflow($trees, $plan);
+    $workflow->log_dir('/gscuser/rlong/dispatcher_testing');
 
     my @errors = $workflow->validate;
 
@@ -78,19 +80,36 @@ sub _detect_variants {
 
     my @stored_properties = @{$self->_workflow_inputs};
 
-    $workflow->execute(
-        input => {
-            aligned_reads_input => $self->aligned_reads_input,
-            control_aligned_reads_input => $self->control_aligned_reads_input,
-            reference_sequence_input => $self->reference_sequence_input,
-            output_directory => $self->output_directory,
-            @stored_properties, # TODO test for multiple detectors
-        }   
-    );
+    my %input;
+    $input{aligned_reads_input}= $self->aligned_reads_input;
+    $input{control_aligned_reads_input} = $self->control_aligned_reads_input;
+    $input{reference_sequence_input} = $self->reference_sequence_input;
+    $input{output_directory} = $self->output_directory;
 
-    $workflow->wait;
+    ## This loop places the stored_properties into the inputs hash to pass into the workflow
+    for my $index (0..((scalar(@stored_properties)-1)/2)){
+        my $i = $index*2;
+        $input{$stored_properties[$i]}=$stored_properties[$i+1];
+    }
+    
+    $self->_dump_workflow($workflow);
+    my $result = Workflow::Simple::run_workflow_lsf( $workflow, %input);
+    unless($result){
+        die $self->error_message("Workflow did not return correctly");
+    }
 
     return 1;
+}
+
+sub _dump_workflow {
+    my $self = shift;
+    my $workflow = shift;
+    my $xml = $workflow->save_to_xml;
+    my $xml_location = $self->output_directory."/workflow.xml";
+    my $xml_file = Genome::Sys->open_file_for_writing($xml_location);
+    print $xml_file $xml;
+    $xml_file->close;
+    $workflow->as_png($self->output_directory."/workflow.png");
 }
 
 sub calculate_detector_output_directory {
