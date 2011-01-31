@@ -37,8 +37,8 @@ sub required_rusage {
     my $double_cpus = $cpus*2;
     my $rusage = "rusage[mem=$mem, tmp=$tmp]";
 
-    my $select_half_blades = "select[model!=Opteron250 && type==LINUX64 && ncpus>=$double_cpus && maxtmp>=$double_tmp && maxmem>$double_mem] span[hosts=1]";
-    my $select_whole_blades = "select[model!=Opteron250 && type==LINUX64 && ncpus>=$double_cpus && maxtmp>=$tmp && maxmem>$mem] span[hosts=1]";
+    my $select_half_blades  = "select[ncpus>=$double_cpus && maxmem>$double_mem && maxtmp>=$double_tmp] span[hosts=1]";
+    my $select_whole_blades = "select[ncpus>=$double_cpus && maxmem>$double_mem && maxtmp>=$tmp] span[hosts=1]";
     my @selected_half_blades = `bhosts -R '$select_half_blades' alignment | grep ^blade`;
     my @selected_whole_blades = `bhosts -R '$select_whole_blades' alignment | grep ^blade`;
 
