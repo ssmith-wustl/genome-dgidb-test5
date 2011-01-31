@@ -1,12 +1,12 @@
-package Genome::Model::Tools::Music::PathScan::PopulationPlusMinus;
+package Genome::Model::Tools::Music::PathScan::PopulationPathScan;
 
 #__STANDARD PERL PACKAGES
 use strict;
 use Carp;
 use Genome::Model::Tools::Music::PathScan::CombinePvals;
-use Genome::Model::Tools::Music::PathScan::PlusMinus;
+use Genome::Model::Tools::Music::PathScan::PathScan;
 # DEBUG
-# print "USING LOCAL MCW VERSION OF POPULATION +/-\n";
+# print "USING LOCAL MCW VERSION OF POPULATION PATHSCAN\n";
 # DEBUG
 
 # DEBUG -- PLEASE REMOVE
@@ -21,14 +21,14 @@ use Genome::Model::Tools::Music::PathScan::PlusMinus;
 
 =head1 NAME
 
-MG::Statistics::PopulationPlusMinus - apply Plus/Minus test to populations rather
+PopulationPathScan - apply PathScan test to populations rather
 than just single individuals
 
 =head1 SYNOPSIS
 
-	use MG::Statistics::PopulationPlusMinus;
+	use PopulationPathScan;
 
-	my $obj = MG::Statistics::PopulationPlusMinus->new ($ref_to_list_of_gene_lengths);
+	my $obj = PopulationPathScan->new ($ref_to_list_of_gene_lengths);
 
 	$obj->assign ($number_of_compartments);
 
@@ -39,7 +39,7 @@ than just single individuals
 
 =head1 DESCRIPTION
 
-The C<MG::Statistics::PlusMinus> package is implemented strictly
+The C<PathScan> package is implemented strictly
 as a test of a set of genes, e.g. a pathway, for a I<single>
 individual.
 Specifically, knowing the gene lengths in the pathway, the number
@@ -61,9 +61,9 @@ significance.
 Properly combining such numbers is a necessary, but not entirely trivial
 task.
 This package basically serves as a high-level interface to first
-perform individual tests using the methods of C<MG::Statistics::PlusMinus>,
+perform individual tests using the methods of C<PathScan>,
 and then to properly combine the resulting p-values using the methods of
-C<MG::Statistics::CombinePvals>.
+C<CombinePvals>.
 
 =head1 AUTHOR
 
@@ -104,16 +104,16 @@ below.
 #
 #  $obj = {
 #
-#  #__GENE LENGTHS IN THE POPULATION PLUS-MINUS TEST
+#  #__GENE LENGTHS IN THE POPULATION PATHSCAN TEST
 #     gene_lengths => [474, 1038, 285, ...],
 #
 #  #__THE ACTUAL NUMBER OF GENES IN TEST (SAVED FOR CONVENIENCE)
 #     num_genes = 15,
 #
-#  #__ARGUMENT LIST FOR PLUS-MINUS COMPUTATION (MG::Statistics::PlusMinus) STRUCTURE
+#  #__ARGUMENT LIST FOR PATHSCAN COMPUTATION (PathScan) STRUCTURE
 #     IS DETERMINED BY THE WAY THE "assign" METHOD IS CALLED
-#     plus_minus_arg_list = [],
-#     plus_minus_arg_list = [ [], [], [] ],
+#     path_scan_arg_list = [],
+#     path_scan_arg_list = [ [], [], [] ],
 #
 #  #__ASSIGN LEVEL (ESSENTIALLY THE ARGUMENT OF THE 'ASSIGN' METHOD)
 #     assign_level = 1,
@@ -139,17 +139,17 @@ below.
 ################################################################################
 
 #  ===
-#  NEW   create a new population plus-minus object
+#  NEW   create a new population path-scan object
 #  ===   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 =head2 new
 
 The object constructor takes a mandatory, but otherwise un-ordered reference
 to a list of gene lengths comprising the biological group (e.g. a pathway)
-whose mutation significance is to be analyzed using the Plus-Minus
+whose mutation significance is to be analyzed using the PathScan
 paradigm.
 
-	my $obj = MG::Statistics::PopulationPlusMinus->new ([474, 1038, 285, ...]);
+	my $obj = PopulationPathScan->new ([474, 1038, 285, ...]);
 
 The method checks to make sure that all elements
 are legitimate lengths, i.e. integers exceeding
@@ -201,10 +201,10 @@ sub new {
 =head2 assign
 
 This method assigns the manner in which genes will be internally
-organized for passing to the Plus-Minus calculation
+organized for passing to the PathScan calculation
 component.
 The main consideration here is how the list may be compartmentalized for greater
-computational efficiency, though at some loss of accuracy, for the Plus-Minus
+computational efficiency, though at some loss of accuracy, for the PathScan
 calculation.
 If the gene list is long, exact calculation is generally
 infeasible.
@@ -248,7 +248,7 @@ sub assign {
 
    #__QUICK-PROCESSING IF THERE'S NO COMPARTMENTALIZATION
       if ($assign_level == 1) {
-         $obj->{'plus_minus_arg_list'} = $obj->{'gene_lengths'};
+         $obj->{'path_scan_arg_list'} = $obj->{'gene_lengths'};
          return;
       }
 
@@ -265,7 +265,7 @@ sub assign {
          $gene_number++;
          if ($gene_number > $list_length) {
             $list_number++;
-            push @{$obj->{'plus_minus_arg_list'}}, $compartment;
+            push @{$obj->{'path_scan_arg_list'}}, $compartment;
             ($gene_number, $compartment) = (1, []);
             $list_length += $remain if $list_number == $assign_level;
          }
@@ -278,13 +278,13 @@ sub assign {
 }
 
 #  ==========
-#  PREPROCESS   set-up plus-minus calculation and compute CDF
+#  PREPROCESS   set-up PathScan calculation and compute CDF
 #  ==========   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 =head2 preprocess
 
 This method pre-processes the population-level calculation, specifically,
-it sets up and executes the plus-minus module to obtain the CDF associated
+it sets up and executes the PathScan module to obtain the CDF associated
 with the given gene set and background mutation
 rate.
 It takes the latter as an
@@ -321,14 +321,14 @@ sub preprocess {
    croak "background mutation '$mutation_prob' rate must be a p-val"
       unless &is_a_pval ($mutation_prob);
 
-#__INVOKE NEW PLUS-MINUS OBJECT USING PRE-COMPUTED ARGUMENT LIST FOR EXACT SOLN
+#__INVOKE NEW PATHSCAN OBJECT USING PRE-COMPUTED ARGUMENT LIST FOR EXACT SOLN
    my $pm_obj;
    if ($obj->{'assign_level'} == 1) {
-      $pm_obj = Genome::Model::Tools::Music::PathScan::PlusMinus->new ($obj->{'plus_minus_arg_list'});
+      $pm_obj = Genome::Model::Tools::Music::PathScan::PathScan->new ($obj->{'path_scan_arg_list'});
 
 #__OR FOR APPROXIMATE SOLUTION
    } elsif ($obj->{'assign_level'} > 1) {
-      $pm_obj = Genome::Model::Tools::Music::PathScan::PlusMinus->new (@{$obj->{'plus_minus_arg_list'}});
+      $pm_obj = Genome::Model::Tools::Music::PathScan::PathScan->new (@{$obj->{'path_scan_arg_list'}});
 
    #__ALSO FIND THE MAX NUMBER OF MUTATED GENES AMONG ALL SAMPLES IF GIVEN HITS
       if (defined $list_of_hits && $list_of_hits) {
@@ -360,7 +360,7 @@ sub preprocess {
       croak "I dont understand the 'assign' level you used previously";
    }
 
-#__STANDARD PREPROCESSING FOR PLUS-MINUS OBJECT
+#__STANDARD PREPROCESSING FOR PathScan OBJECT
    $pm_obj->preprocess ($mutation_prob);
 
 #__COMPUTE AND STORE CDF -- EITHER FULL OR TRUNCATED
@@ -379,7 +379,7 @@ sub preprocess {
 #  regexp, or the <= 1 condition. Here is an actual croak:
 #
 #  VAL '1' IS NOT REAL
-#  '1' in distribution 1 is not a p-val at Statistics/PopulationPlusMinus.pm line 395
+#  '1' in distribution 1 is not a p-val at Statistics/PopulationPathScan.pm line 395
 #
 #  Please track down this problem when you have a chance, but this practical
 #  fix seems to work acceptably for the moment.
@@ -393,7 +393,7 @@ sub preprocess {
 
 #  PROGRAMMING NOTES:
 #
-#  1. remember that the cdf list returned from MG::Statistics::PlusMinus->cdf
+#  1. remember that the cdf list returned from PathScan->cdf
 #     is ordered from most etreme (lowest p-value, highest number of hits) to
 #     least extreme (highest p-value = 1, lowest number of hits = 0). Therefore,
 #     the correct p-value corresponding to the actual number of hits cannot
@@ -409,7 +409,7 @@ sub preprocess {
 #
 #        $obj->{'num_genes'} - $hits
 #
-#  2. MG::Statistics::CombinePvals does not yet have a method that exploits
+#  2. CombinePvals does not yet have a method that exploits
 #     scenarios, such as this one, where each individual p-val comes from the
 #     _same_ distribution. Currently, we must call "exact_enum_arbitrary",
 #     which does a full enumeration. Change methods here if the CombinePvals
@@ -466,7 +466,7 @@ sub population_pval_exact {
       #__TAIL PVAL FOR THIS HIT NUMBER (SEE PROGRAMMING NOTE ABOVE)
          my $pval_x = $obj->{'cdf'}->[$obj->{'num_genes'} - $hits];
 
-      #__STORE IN DEFAULT MG::Statistics::CombinePvals ARG LIST
+      #__STORE IN DEFAULT CombinePvals ARG LIST
          push @{$default_arg_list}, $pval_x;
 
       #__CDFS GO IN SPECIAL ARG LIST FOR EXACT ENUMERATION
@@ -478,9 +478,9 @@ sub population_pval_exact {
 
    #__COMPUTE OVERALL "GROUP" P-VALUE BASED ON EXACT ENUMERATION
 ###### DEBUG
-#    print "from PopulationPlusMinus --- args for new\n";
+#    print "from PopulationPathScan --- args for new\n";
 #    &PostData ($default_arg_list);
-#    print "from PopulationPlusMinus --- args for exact_enum_arbitrary\n";
+#    print "from PopulationPathScan --- args for exact_enum_arbitrary\n";
 #    &PostData ($cdf_list);
 ###### DEBUG
       my $pval = $combine_obj->exact_enum_arbitrary (@{$cdf_list});
@@ -498,7 +498,7 @@ sub population_pval_exact {
 
 #  PROGRAMMING NOTE:
 #
-#  remember that the cdf list returned from MG::Statistics::PlusMinus->cdf
+#  remember that the cdf list returned from PathScan->cdf
 #  is ordered from most etreme (lowest p-value, highest number of hits) to
 #  least extreme (highest p-value = 1, lowest number of hits = 0). Therefore,
 #  the correct p-value corresponding to the actual number of hits cannot
@@ -601,7 +601,7 @@ sub population_pval_approx {
 # print "     pval_x_m_1 = $pval_x_m_1\n";
 # DEBUG
 
-      #__STORE IN DEFAULT MG::Statistics::CombinePvals ARG LIST
+      #__STORE IN DEFAULT CombinePvals ARG LIST
       #  (THIS IS ACUTALLY JUST A FORMALITY IF USING LANCASTERS METHOD)
          push @{$default_arg_list}, $pval_x;
 
