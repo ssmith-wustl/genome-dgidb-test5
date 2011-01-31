@@ -137,31 +137,27 @@ sub execute {
                     next PP;
                 }
 
-                my $reference_sequence_build;
-                if($processing_profile->isa('Genome::ProcessingProfile::ReferenceAlignment')) {
+                my @reference_sequence_builds = ( undef ); # this allows to use a loop to assign
+                # These pps require imported reference seq build
+                if( $processing_profile->isa('Genome::ProcessingProfile::ReferenceAlignment')
+                        or $processing_profile->isa('Genome::ProcessingProfile::GenotypeMicroarray') ) {
                     my @reference_sequence_build_ids = $pse->reference_sequence_build_param_for_processing_profile($processing_profile);
-                    unless ( scalar @reference_sequence_build_ids ) {
-                        $self->error_message('No imported reference sequence build id found on pse ('.$pse->id.') to create a reference alignment model');
+                    if ( not @reference_sequence_build_ids ) {
+                        $self->error_message('No imported reference sequence build id found on pse ('.$pse->id.') to create '.$processing_profile->type_name.' model');
                         push @process_errors, $self->error_message;
                         next PP;
                     }
 
-                    if( scalar @reference_sequence_build_ids > 1) {
-                        $self->error_message('This script is not currently set up to handle multiple reference sequences per processing profile!');
+                    @reference_sequence_builds = Genome::Model::Build::ImportedReferenceSequence->get(\@reference_sequence_build_ids);
+                    if ( not @reference_sequence_builds or @reference_sequence_builds ne @reference_sequence_build_ids ) {
+                        $self->error_message("Failed to get imported reference sequence builds for ids: @reference_sequence_build_ids");
                         push @process_errors, $self->error_message;
                         next PP;
                     }
 
-                    my $reference_sequence_build_id = $reference_sequence_build_ids[0];
-                    $reference_sequence_build = Genome::Model::Build::ImportedReferenceSequence->get($reference_sequence_build_id);
-                    if ( not defined $reference_sequence_build ) {
-                        $self->error_message("Cannot get imported reference sequence build for id $reference_sequence_build_id");
-                        push @process_errors, $self->error_message;
-                        next PP;
-                    }
                 }
 
-                my $per_lane_qc = $self->create_default_per_lane_qc_model($genome_instrument_data, $subject, $reference_sequence_build, $pse);
+                my $per_lane_qc = $self->create_default_per_lane_qc_model($genome_instrument_data, $subject, $reference_sequence_builds[0], $pse); # should only be one imp ref seq build for this pp 
                 unless($per_lane_qc) {
                     push @process_errors, $self->error_message;
                 }
@@ -173,29 +169,29 @@ sub execute {
                     auto_assign_inst_data => 1,
                 );
 
+                for my $reference_sequence_build ( @reference_sequence_builds ) {
+                    my @assigned = $self->assign_instrument_data_to_models($genome_instrument_data, $reference_sequence_build, @models);
 
-                my @assigned = $self->assign_instrument_data_to_models($genome_instrument_data, $reference_sequence_build, @models);
-
-                #returns an explicit undef on error
-                if(scalar(@assigned) eq 1 and not defined $assigned[0]) {
-                    push @process_errors, $self->error_message;
-                    next PP;
-                }
-
-                if(scalar(@assigned > 0)) {
-                    for my $m (@assigned) {
-                        $pse->add_param('genome_model_id', $m->id);
-                    }
-                } else {
-                    # no model found for this PP, make one (or more) and assign all applicable data
-                    my $ok = $self->create_default_models_and_assign_all_applicable_instrument_data($genome_instrument_data, $subject, $processing_profile, $reference_sequence_build, $pse);
-                    unless($ok) {
+                    #returns an explicit undef on error
+                    if(scalar(@assigned) eq 1 and not defined $assigned[0]) {
                         push @process_errors, $self->error_message;
                         next PP;
                     }
+
+                    if(scalar(@assigned > 0)) {
+                        for my $m (@assigned) {
+                            $pse->add_param('genome_model_id', $m->id);
+                        }
+                    } else {
+                        # no model found for this PP, make one (or more) and assign all applicable data
+                        my $ok = $self->create_default_models_and_assign_all_applicable_instrument_data($genome_instrument_data, $subject, $processing_profile, $reference_sequence_build, $pse);
+                        unless($ok) {
+                            push @process_errors, $self->error_message;
+                            next PP;
+                        }
+                    }
                 }
             } # looping through processing profiles for this instdata, finding or creating the default model
-
         } else {
             #record that the above code was skipped so we could reattempt it if more information gained later
             $pse->add_param('no_model_generation_attempted',1);
@@ -413,22 +409,17 @@ sub check_pse {
 
     $self->status_message('Check PSE for #' . $pse_id);
 
-    my @pse_params = GSC::PSEParam->get(pse_id => $pse_id);
-    if(grep{ $_->param_value =~ /genotyper/ } @pse_params) {
-        $self->status_message("Skipping PSE with genotyper data");
-        return;
-    }
-
-    my ($instrument_data_type) = $pse->added_param('instrument_data_type');
     my ($instrument_data_id)   = $pse->added_param('instrument_data_id');
+    my ($instrument_data_type) = $pse->added_param('instrument_data_type');
+    $instrument_data_type = lc $instrument_data_type;
 
-    my @expected_types = ('sanger', 'solexa', '454');
-    unless ( grep($instrument_data_type =~ /$_/i, @expected_types)) {
+    my @expected_types = ('sanger', 'solexa', '454', 'genotyper results');
+    unless ( grep { $instrument_data_type eq $_ } @expected_types) {
         $self->error_message('encountered unkown instrument data type: ' . $instrument_data_type);
         return;
     }
 
-    if ( $instrument_data_type =~ /sanger/i ) {
+    if ( $instrument_data_type eq 'sanger' ) {
         my $analyze_traces_pse = GSC::PSE::AnalyzeTraces->get($instrument_data_id);
 
         unless ( defined($analyze_traces_pse) ) {
@@ -451,16 +442,16 @@ sub check_pse {
         $instrument_data_id = $run_name;
     }
 
-    my $genome_instrument_data = Genome::InstrumentData->get( id => $instrument_data_id );
+    my $genome_instrument_data = Genome::InstrumentData->get(id => $instrument_data_id);
 
-    unless ( defined($genome_instrument_data) ) {            
+    unless ( $genome_instrument_data ) {            
         $self->error_message(
             "Failed to get a Genome::InstrumentData ($instrument_data_type) via"
             . " id '$instrument_data_id'.  PSE_ID is '$pse_id'");
         return;
     }
 
-    if ( $instrument_data_type =~ /solexa/i ) {
+    if ( $instrument_data_type eq 'solexa' ) {
         # solexa inst data nee to have the copy sequence file pse successful
         my $index_illumina = $genome_instrument_data->index_illumina;
         if ( not $index_illumina ) {

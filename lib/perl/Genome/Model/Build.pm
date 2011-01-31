@@ -365,20 +365,24 @@ sub instrument_data_count {
     return scalar( $self->instrument_data_assignments );
 }
 
+# why is this not a defined relationship above? -ss
 sub events {
     my $self = shift;
     my @events = Genome::Model::Event->get(
         model_id => $self->model_id,
         build_id => $self->build_id,
+        @_,
     );
     return @events;
 }
 
+# why is this not a defined relationship above? -ss
 sub build_events {
     my $self = shift;
     my @build_events = Genome::Model::Event::Build->get(
         model_id => $self->model_id,
         build_id => $self->build_id,
+        @_
     );
     return @build_events;
 }
@@ -420,6 +424,39 @@ sub newest_workflow_instance {
     } else {
         return;
     }
+}
+
+sub cpu_slot_hours {
+    my $self = shift;
+    # TODO: get with Matt and replace with workflow interrogation
+    my @events = $self->events(@_);
+    my $s = 0;
+    for my $event (@events) {
+        # the master event has an elapsed time for the whole process: don't double count
+        next if (ref($event) eq 'Genome::Model::Event::Build');
+
+        # this would be a method on event, but we won't keep it that long
+        # it's just good enough to do the calc for the grant 2011-01-30 -ss
+        my $cores;
+        if (ref($event) =~ /deduplicate/i) {
+            $cores = 4;
+        }
+        elsif (ref($event) =~ /AlignReads/) {
+            $cores = 4;
+        }
+        else {
+            $cores = 1;
+        }
+        my $e = UR::Time->datetime_to_time($event->date_completed)
+                - 
+                UR::Time->datetime_to_time($event->date_scheduled);
+        if ($e < 0) {
+            warn "event " . $event->__display_name__ . " has negative elapsed time!";
+            next;
+        }
+        $s += ($e * $cores);
+    }
+    return $s/(60*60);
 }
 
 sub calculate_estimated_kb_usage {
@@ -497,11 +534,15 @@ sub resolve_data_directory {
         Genome::Sys->validate_existing_directory($build_data_directory);
     
         # TODO: we should stop having model directories and making build symlinks!!!
-        my $build_symlink = $model_data_directory . '/build' . $self->build_id;
-        unlink $build_symlink if -e $build_symlink;
-        unless (Genome::Sys->create_symlink($build_data_directory,$build_symlink)) {
-            $self->error_message("Failed to make symlink \"$build_symlink\" with target \"$build_data_directory\"");
-            die $self->error_message;
+        if ( -w $model_data_directory ) {
+            my $build_symlink = $model_data_directory . '/build' . $self->build_id;
+            unlink $build_symlink if -e $build_symlink;
+            unless (Genome::Sys->create_symlink($build_data_directory,$build_symlink)) {
+                $self->error_message("Failed to make symlink \"$build_symlink\" with target \"$build_data_directory\"");
+                die $self->error_message;
+            }
+        } else {
+            $self->warning_message("Not creating symlink to build data directory in model data directory; model data directory is not writable.");
         }
     }
 

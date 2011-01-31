@@ -137,9 +137,13 @@ sub process_file {
     my $pindel_output = Genome::Sys->open_file_for_reading($filename); #IO::File->new($filename);
     my $pindel_config = $dir."/".$chr."/pindel.config";
     my $pconf = Genome::Sys->open_file_for_reading($pindel_config);  #IO::File->new($pindel_config);
-    my $normal_bam = $pconf->getline;
     my $tumor_bam = $pconf->getline;
-    ($normal_bam) = split /\s/, $normal_bam;
+    if($tumor_bam =~ m/normal/){
+        $tumor_bam = $pconf->getline;
+        unless($tumor_bam =~ m/tumor/){
+            die $self->error_message("Could not locate a tumor bam in the pindel config file at ".$pindel_config);
+        }
+    }
     ($tumor_bam) = split /\s/, $tumor_bam;
     unless(-s $tumor_bam){
         die "couldnt find tumor bam reference in pindel.config at ".$tumor_bam."\n";

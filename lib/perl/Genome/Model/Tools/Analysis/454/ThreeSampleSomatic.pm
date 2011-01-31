@@ -2,7 +2,7 @@
 package Genome::Model::Tools::Analysis::454::ThreeSampleSomatic;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# ThreeSampleSomatic - Runs the VarScan somatic pipeline on matched tumor-normal data
+# ThreeSampleSomatic - Runs the Varscan somatic pipeline on matched tumor-normal data
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
 #
@@ -42,7 +42,7 @@ sub help_brief {                            # keep this to just a few words <---
 
 sub help_synopsis {
     return <<EOS
-This command runs the VarScan somatic pipeline on matched normal-tumor samples
+This command runs the Varscan somatic pipeline on matched normal-tumor samples
 EXAMPLE:	gmt analysis 454 three-sample-somatic --sample-info-file Sample-Info-From-DB.tsv --output-dir data --variant-file all-tier1-rna-snvs.tsv --readcounts-file varscan_somatic/varScan.output.snp.formatted.filter.novel.annotation
 EOS
 }

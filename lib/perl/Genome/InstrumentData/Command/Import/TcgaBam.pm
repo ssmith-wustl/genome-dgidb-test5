@@ -18,7 +18,7 @@ my %properties = (
     },
     target_region => {
         is => 'Text',
-        doc => 'Provide \'whole genome\' or target region set name',
+        doc => 'Provide the target region set name (capture) or \'none\' (whole genome or RNA/cDNA)',
     },
     remove_original_bam => {
         is => 'Boolean',
@@ -67,6 +67,11 @@ class Genome::InstrumentData::Command::Import::TcgaBam {
         import_instrument_data_id => {
             is  => 'Number',
             doc => 'output instrument data id after import',
+        },
+        sample_extraction_type => {
+            is => 'Text',
+            default => 'genomic dna',
+            doc => 'Extraction type used when defining new sample, examples include "genomic dna" and "rna"',
         },
         _inst_data => { is_optional => 1, },
         _allocation => { via => '_inst_data', to => 'disk_allocations' },
@@ -243,6 +248,7 @@ sub _create_imported_instrument_data {
     # Get or create library
     my $sample_importer = Genome::Sample::Command::Import::Tcga->create(
         name => $tcga_name,
+        extraction_type => $self->sample_extraction_type,
     );
     if ( not $sample_importer ) {
         $self->error_message('Could not create TCGA sample importer to get or create library');
@@ -256,7 +262,7 @@ sub _create_imported_instrument_data {
     my $library = $sample_importer->_library;
 
     my $target_region;
-    unless ($self->target_region eq 'whole genome') {
+    unless ($self->target_region eq 'none') {
         if ($self->validate_target_region) {
             $target_region = $self->target_region;
         } else {

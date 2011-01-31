@@ -21,8 +21,8 @@ use Genome;                                 # using the namespace authorizes Cla
 class Genome::Model::Tools::Varscan::ProcessValidation {
     is => 'Command',                       
     has_input => [                                # specify the command's single-value properties (parameters) <---
-        validation_file             => { is => 'Text', doc => "VarScan output file for validation data", is_optional => 0 },
-        filtered_validation_file    => { is => 'Text', doc => "VarScan calls passing strand-filter in validation BAM (recommended)", is_optional => 0 },
+        validation_file             => { is => 'Text', doc => "Varscan output file for validation data", is_optional => 0 },
+        filtered_validation_file    => { is => 'Text', doc => "Varscan calls passing strand-filter in validation BAM (recommended)", is_optional => 0 },
         min_coverage                => { is => 'Text', doc => "Minimum coverage to call a site", is_optional => 1 },
         variants_file               => { is => 'Text', doc => "File of variants to report on", is_optional => 0 },
         output_file                 => { is => 'Text', doc => "Output file for validation results", is_optional => 0, is_output => 1 },

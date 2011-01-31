@@ -1,7 +1,7 @@
 package Genome::Model::Tools::Capture::ParsingScript;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# ParsingScript - Take glfSomatic and VarScan outputs and merge with Annotator Output
+# ParsingScript - Take glfSomatic and Varscan outputs and merge with Annotator Output
 #					
 #	AUTHOR:		Will Schierding
 #
@@ -28,11 +28,11 @@ class Genome::Model::Tools::Capture::ParsingScript {
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		annotation_file	=> { is => 'Text', doc => "Annotation Output File", is_optional => 0 },
-		merged_snv	=> { is => 'Text', doc => "Overlapping Calls from glfSomatic and VarScan", is_optional => 0 },
-		varscan_unique_snv	=> { is => 'Text', doc => "Unique Calls from VarScan", is_optional => 0 },
+		merged_snv	=> { is => 'Text', doc => "Overlapping Calls from glfSomatic and Varscan", is_optional => 0 },
+		varscan_unique_snv	=> { is => 'Text', doc => "Unique Calls from Varscan", is_optional => 0 },
 		glf_unique_snv	=> { is => 'Text', doc => "Unique Calls from glfSomatic", is_optional => 0 },
-		merged_indel	=> { is => 'Text', doc => "Overlapping Calls from glfSomatic and VarScan", is_optional => 0 },
-		varscan_unique_indel	=> { is => 'Text', doc => "Unique Calls from VarScan", is_optional => 0 },
+		merged_indel	=> { is => 'Text', doc => "Overlapping Calls from glfSomatic and Varscan", is_optional => 0 },
+		varscan_unique_indel	=> { is => 'Text', doc => "Unique Calls from Varscan", is_optional => 0 },
 		glf_unique_indel	=> { is => 'Text', doc => "Unique Calls from glfSomatic", is_optional => 0 },
 		out_file	=> { is => 'Text', doc => "Output file with Merged Calls and Software Status" , is_optional => 0},
 	],
@@ -41,12 +41,12 @@ class Genome::Model::Tools::Capture::ParsingScript {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Take glfSomatic and VarScan outputs and merge with Annotator Output"                 
+    "Take glfSomatic and Varscan outputs and merge with Annotator Output"                 
 }
 
 sub help_synopsis {
     return <<EOS
-Take glfSomatic and VarScan outputs and merge with Annotator Output
+Take glfSomatic and Varscan outputs and merge with Annotator Output
 EXAMPLE:	gmt capture build-models ...
 EOS
 }
@@ -248,7 +248,7 @@ foreach my $hugo (keys %{$annotation}) {
 	my $merger = "$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1";
 
 	if ($columns_merged_snv{$merger}) {
-	    my $software = "VarScan,glfSomatic";
+	    my $software = "Varscan,glfSomatic";
 	    $fh2->print("$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$transcript\t$mstatus\t$c_position\t$ucsc_cons\t$domain\t$software\t$columns_merged_snv{$merger}\n");
 	}
 	elsif ($columns_glf_snv{$merger}) {
@@ -256,11 +256,11 @@ foreach my $hugo (keys %{$annotation}) {
 	    $fh2->print("$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$transcript\t$mstatus\t$c_position\t$ucsc_cons\t$domain\t$software\t$columns_glf_snv{$merger}\n");
 	}
 	elsif ($columns_varscan_snv{$merger}) {
-	    my $software = "VarScan";
+	    my $software = "Varscan";
 	    $fh2->print("$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$transcript\t$mstatus\t$c_position\t$ucsc_cons\t$domain\t$software\t$columns_varscan_snv{$merger}\n");
 	}
 	elsif ($columns_merged_indel{$merger}) {
-	    my $software = "VarScan,glfSomatic";
+	    my $software = "Varscan,glfSomatic";
 	    $fh2->print("$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$transcript\t$mstatus\t$c_position\t$ucsc_cons\t$domain\t$software\t$columns_merged_indel{$merger}\n");
 	}
 	elsif ($columns_glf_indel{$merger}) {
@@ -268,7 +268,7 @@ foreach my $hugo (keys %{$annotation}) {
 	    $fh2->print("$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$transcript\t$mstatus\t$c_position\t$ucsc_cons\t$domain\t$software\t$columns_glf_indel{$merger}\n");
 	}
 	elsif ($columns_varscan_indel{$merger}) {
-	    my $software = "VarScan";
+	    my $software = "Varscan";
 	    $fh2->print("$Chromosome\t$Start_position\t$End_position\t$Reference_Allele\t$Tumor_Seq_Allele1\t$aa_change\t$transcript\t$mstatus\t$c_position\t$ucsc_cons\t$domain\t$software\t$columns_varscan_indel{$merger}\n");
 	}
     }

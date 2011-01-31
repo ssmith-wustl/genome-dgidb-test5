@@ -6,11 +6,11 @@ use warnings;
 use Clone qw/clone/;
 use Data::Compare;
 use Data::Dumper;
+use File::Path;
 use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Base {
-#    is => ['Genome::Command::Base'], FIXME this must be removed for now because when we separate params on the command line with a comma, command base effs everything up
-    is => ['Command'],
+    is => ['Genome::Command::Base'],
     has => [
         reference_sequence_input => {
             is => 'Text',
@@ -39,18 +39,15 @@ class Genome::Model::Tools::DetectVariants2::Base {
             is_output => 1,
         },
         snv_detection_strategy => {
-            #is => "Genome::Model::Tools::DetectVariants2::Strategy", FIXME this must be removed for now because when we separate params on the command line with a comma, command base effs everything up
-            is => "Text",
+            is => "Genome::Model::Tools::DetectVariants2::Strategy",
             doc => 'The variant detector strategy to use for finding SNVs',
         },
         indel_detection_strategy => {
-            #is => "Genome::Model::Tools::DetectVariants2::Strategy",
-            is => "Text",
+            is => "Genome::Model::Tools::DetectVariants2::Strategy",
             doc => 'The variant detector strategy to use for finding indels',
         },
         sv_detection_strategy => {
-            #is => "Genome::Model::Tools::DetectVariants2::Strategy",
-            is => "Text",
+            is => "Genome::Model::Tools::DetectVariants2::Strategy",
             doc => 'The variant detector strategy to use for finding SVs',
         },
     ],
@@ -136,9 +133,9 @@ sub execute {
         die $self->error_message('Failed to generate standard files from detector-specific files');
     }
     
-    unless($self->_promote_staged_data) {
-        die $self->error_message('Failed to promote staged data.');
-    }
+    #unless($self->_promote_staged_data) {
+    #    die $self->error_message('Failed to promote staged data.');
+    #}
     
     return 1;
 }
@@ -300,3 +297,6 @@ sub _promote_staged_data {
     return $output_dir;
 }
 
+sub has_version {
+    die "This should be overloaded by the detector/filter";
+}

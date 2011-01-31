@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use File::Basename;
 
-my $DEFAULT = '0.5.8c';
+my $DEFAULT = '0.5.9';
 
 class Genome::Model::Tools::Bwa {
     is => 'Command',
@@ -50,6 +50,7 @@ my %BWA_VERSIONS = (
     '0.5.8a' => '/gsc/pkg/bio/bwa/bwa-0.5.8a-64/bwa',
     '0.5.8c' => '/gsc/pkg/bio/bwa/bwa-0.5.8c-64/bwa',
     '0.5.9rc1' => '/gsc/pkg/bio/bwa/bwa-0.5.9rc1-64/bwa',
+    '0.5.9' => '/gsc/pkg/bio/bwa/bwa-0.5.9-64/bwa',
     'bwa'   => 'bwa',
 );
 
@@ -85,7 +86,8 @@ sub supports_bam_input {
     my $class = shift;
     my $version = shift;
 
-    my %ok_versions = {'0.5.9rc1' => 1};
+    my %ok_versions = {'0.5.9rc1' => 1,
+                       '0.5.9'  => 1};
 
     return (exists $ok_versions{$version});
 

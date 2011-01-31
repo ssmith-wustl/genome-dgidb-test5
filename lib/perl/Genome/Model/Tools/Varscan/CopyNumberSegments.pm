@@ -2,7 +2,7 @@
 package Genome::Model::Tools::Varscan::CopyNumberSegments;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# RunVarscan - Run VarScan somatic on two BAM files.
+# RunVarscan - Run Varscan somatic on two BAM files.
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@genome.wustl.edu)
 #
@@ -39,12 +39,12 @@ class Genome::Model::Tools::Varscan::CopyNumberSegments {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Generate plots of exome copy number from VarScan copyCaller calls"                 
+    "Generate plots of exome copy number from Varscan copyCaller calls"                 
 }
 
 sub help_synopsis {
     return <<EOS
-Generate plots of exome copy number from VarScan copyCaller calls
+Generate plots of exome copy number from Varscan copyCaller calls
 EXAMPLE:	gmt capture copy-number-plots ...
 EOS
 }
@@ -126,7 +126,7 @@ sub execute {                               # replace with real execution logic.
 	
 	process_results($self, $current_chrom, $current_chrom_results);
 	
-	print "$lineCounter lines parsed from VarScan output\n";
+	print "$lineCounter lines parsed from Varscan output\n";
 	print "$metMinDepth met minimum depth of $min_depth\n";
 
 

@@ -32,6 +32,11 @@ my $aligner_name = "bwa";
 # everything below here ought to be generic.
 #
 
+# Override lock name because if people cancel tests locks don't get cleaned up.
+*Genome::SoftwareResult::_resolve_lock_name = sub {
+    return "/tmp/lock/Genome--InstrumentData--AlignmentResult--Bwa/" . time();
+};
+
 #
 # Gather up versions for the tools used herein
 #
@@ -64,10 +69,10 @@ ok($reference_model, "got reference model");
 my $reference_build = $reference_model->build_by_version('1');
 ok($reference_build, "got reference build");
 
-# Uncomment this to create the dataset necessary for shorcutting to work
-#test_alignment(generate_shortcut_data => 1);
-
 my $instrument_data = generate_fake_instrument_data();
+# Uncomment this to create the dataset necessary for shorcutting to work
+#test_alignment(generate_shortcut_data => 1, instrument_data => $instrument_data);
+
 test_shortcutting(instrument_data => $instrument_data);
 test_alignment(validate_against_shortcut => 1, instrument_data=>$instrument_data, test_name => 'validate_shortcut_data');
 # cleanup locks after testing alignment
@@ -117,6 +122,7 @@ sub test_alignment {
        
         print "Comparing " . $dir . "/all_sequences.bam with $expected_shortcut_path/all_sequences.bam\n\n\n"; 
         is($generated_bam_md5, $to_validate_bam_md5, "generated md5 matches what we expect -- the bam file is the same!");
+        
     }
 
     # clear out the temp scratch/staging paths since these normally would be auto cleaned up at completion
@@ -221,7 +227,6 @@ sub generate_fake_instrument_data {
 
     # confirm there are fastq files here, and fake the fastq_filenames method to return them
     my @in_fastq_files = glob($instrument_data->gerald_directory.'/*.txt');
-    #$instrument_data->set_list('dump_sanger_fastq_files',@in_fastq_files);
 
     $instrument_data->mock('dump_fastqs_from_bam', sub {return Genome::InstrumentData::dump_fastqs_from_bam($instrument_data)});
 

@@ -91,21 +91,28 @@ sub default_filenames{
         adaptor_output_indel                => 'samtools.output.indel.formatted',
         samtools_snp_output_adaptor         => 'samtools.output.snp.adaptor',
 
-        ## VarScan Output Files ##
+        ## Varscan Output Files ##
         varscan_snp_output                  => 'varScan.output.snp',
         varscan_indel_output                => 'varScan.output.indel',
 
-        ## VarScan Adapted Output Files ##
+        ## Varscan Adapted Output Files ##
         varscan_adaptor_snp                 => 'varScan.output.snp.formatted',
         varscan_adaptor_indel               => 'varScan.output.indel.formatted',
 
-        ## Combined samtools+VarScan Output files ##
-        merged_snp_output                   => 'merged.germline.snp',            ## Generated from merge-variants of samtools and varScan
-        merged_indel_output                 => 'merged.germline.indel',          ## Generated from merge-variants of samtools and varScan ##
+        ## GATK Output Files
+        GATK_indel_output                   => 'GATK.output.indel',
+	GATK_indel_formatted_output         => 'GATK.output.indel.formatted',
 
-        ## Limit to ROI, Combined samtools+VarScan Output files ##
+        ## GATK Adapted Output Files
+        GATK_adaptor_indel                  => 'GATK.output.indel.formatted.test',
+
+        ## Combined samtools+Varscan Output files ##
+        merged_snp_output                   => 'merged.germline.snp',            ## Generated from merge-variants of samtools and varScan
+        merged_indel_output                 => 'merged.germline.indel',          ## Generated from merge-variants of samtools and varScan and gatk ##
+
+        ## Limit to ROI, Combined samtools+Varscan Output files ##
         merged_snp_output_ROI               => 'merged.germline.snp.ROI',          ## Generated from merge-variants of samtools and varScan ##
-        merged_indel_output_ROI             => 'merged.germline.indel.ROI',          ## Generated from merge-variants of samtools and varScan ##
+        merged_indel_output_ROI             => 'merged.germline.indel.ROI',          ## Generated from merge-variants of samtools and varScan and gatk ##
 
         ## Annotation output files ##
         annotate_output_snp                 => 'annotation.germline.snp.transcript',
@@ -144,14 +151,11 @@ __DATA__
   <link fromOperation="input connector" fromProperty="varscan_snp_output" toOperation="Varscan Germline" toProperty="output_snp" />
   <link fromOperation="input connector" fromProperty="varscan_indel_output" toOperation="Varscan Germline" toProperty="output_indel" />
 
-<!-- FORMAT VARSCAN SNPS/INDELS -->
+<!-- FORMAT VARSCAN SNPS -->
 
   <link fromOperation="Varscan Germline" fromProperty="output_snp" toOperation="Format Varscan Snvs" toProperty="variants_file" />
   <link fromOperation="input connector" fromProperty="varscan_adaptor_snp" toOperation="Format Varscan Snvs" toProperty="output_file" />
 
-  <link fromOperation="Varscan Germline" fromProperty="output_indel" toOperation="Format Varscan Indels" toProperty="variants_file" />
-  <link fromOperation="input connector" fromProperty="varscan_adaptor_indel" toOperation="Format Varscan Indels" toProperty="output_file" />
-  
 <!-- FORMAT FILTERED SAMTOOLS SNPS -->
 
   <link fromOperation="input connector" fromProperty="filtered_indelpe_snps" toOperation="Format Samtools Snvs" toProperty="variants_file" />
@@ -197,15 +201,32 @@ __DATA__
   <link fromOperation="Merge SNPs" fromProperty="output_file" toOperation="Tier Variants Snp" toProperty="variant_file" />
   <link fromOperation="Annotate Transcript Variants Snp" fromProperty="output_file" toOperation="Tier Variants Snp" toProperty="transcript_annotation_file" />
 
+<!-- GATK GERMLINE -->
+
+  <link fromOperation="input connector" fromProperty="germline_bam_file" toOperation="GATK Germline" toProperty="bam_file" /> 
+  <link fromOperation="input connector" fromProperty="GATK_indel_output" toOperation="GATK Germline" toProperty="output_file" />
+  <link fromOperation="input connector" fromProperty="GATK_indel_formatted_output" toOperation="GATK Germline" toProperty="formatted_file" />  
+
+<!-- FORMAT GATK INDELS -->
+
+  <link fromOperation="GATK Germline" fromProperty="formatted_file" toOperation="Format GATK Indels" toProperty="variants_file" /> 
+  <link fromOperation="input connector" fromProperty="GATK_adaptor_indel" toOperation="Format GATK Indels" toProperty="output_file" /> 
+
 <!-- FORMAT SAMTOOLS INDELS -->
 
   <link fromOperation="input connector" fromProperty="indels_all_sequences_filtered" toOperation="Format Samtools Indels" toProperty="variants_file" />
   <link fromOperation="input connector" fromProperty="adaptor_output_indel" toOperation="Format Samtools Indels" toProperty="output_file" />
 
-<!-- MERGE ADAPTED INDELS FROM SAMTOOLS AND VARSCAN -->
+<!-- FORMAT VARSCAN INDELS -->
+
+  <link fromOperation="Varscan Germline" fromProperty="output_indel" toOperation="Format Varscan Indels" toProperty="variants_file" />
+  <link fromOperation="input connector" fromProperty="varscan_adaptor_indel" toOperation="Format Varscan Indels" toProperty="output_file" />
+
+<!-- MERGE ADAPTED INDELS FROM SAMTOOLS AND VARSCAN AND GATK-->
 
   <link fromOperation="Format Varscan Indels" fromProperty="output_file" toOperation="Merge Indels" toProperty="varscan_file" />
   <link fromOperation="Format Samtools Indels" fromProperty="output_file" toOperation="Merge Indels" toProperty="glf_file" />
+  <link fromOperation="Format GATK Indels" fromProperty="output_file" toOperation="Merge Indels" toProperty="gatk_file" />
   <link fromOperation="input connector" fromProperty="merged_indel_output" toOperation="Merge Indels" toProperty="output_file" />
 
 <!-- Limit Indels ROI -->
@@ -267,11 +288,18 @@ __DATA__
     <operationtype commandClass="Genome::Model::Tools::Capture::MergeVariantCalls" typeClass="Workflow::OperationType::Command" />
   </operation>  
 
+  <operation name="GATK Germline">
+    <operationtype commandClass="Genome::Model::Tools::Gatk::GermlineIndel" typeClass="Workflow::OperationType::Command" />
+  </operation>
+
   <operation name="Format Varscan Indels">
     <operationtype commandClass="Genome::Model::Tools::Capture::FormatIndels" typeClass="Workflow::OperationType::Command" />
   </operation>
   <operation name="Format Samtools Indels">
     <operationtype commandClass="Genome::Model::Tools::Capture::FormatIndels" typeClass="Workflow::OperationType::Command" />
+  </operation>
+  <operation name="Format GATK Indels">
+    <operationtype commandClass="Genome::Model::Tools::Capture::FormatGatkIndels" typeClass="Workflow::OperationType::Command" />
   </operation>
   <operation name="Merge Indels">
     <operationtype commandClass="Genome::Model::Tools::Capture::MergeAdaptedIndels" typeClass="Workflow::OperationType::Command" />
@@ -349,6 +377,10 @@ __DATA__
     <inputproperty isOptional="Y">varscan_indel_germline</inputproperty>
     <inputproperty isOptional="Y">varscan_adaptor_snp</inputproperty>
     <inputproperty isOptional="Y">varscan_adaptor_indel</inputproperty>
+
+    <inputproperty isOptional="Y">GATK_indel_output</inputproperty>
+    <inputproperty isOptional="Y">GATK_adaptor_indel</inputproperty>
+    <inputproperty isOptional="Y">GATK_indel_formatted_output</inputproperty>
 
     <inputproperty isOptional="Y">merged_snp_output</inputproperty>
     <inputproperty isOptional="Y">merged_indel_output</inputproperty>

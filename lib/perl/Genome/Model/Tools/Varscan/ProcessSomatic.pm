@@ -49,12 +49,12 @@ class Genome::Model::Tools::Varscan::ProcessSomatic {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Process output from VarScan somatic"                 
+    "Process output from Varscan somatic"                 
 }
 
 sub help_synopsis {
     return <<EOS
-    This command processes output from VarScan somatic (.snp or.indel), classifying variants by somatic status
+    This command processes output from Varscan somatic (.snp or.indel), classifying variants by somatic status
     (Germline/Somatic/LOH) and by confidence (high/low).
     EXAMPLE:    gmt varscan process-somatic ...
 EOS

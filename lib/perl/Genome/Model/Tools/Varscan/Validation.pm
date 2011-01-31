@@ -2,7 +2,7 @@
 package Genome::Model::Tools::Varscan::Validation;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# Varscan::Somatic    Runs VarScan somatic pipeline on Normal/Tumor BAM files
+# Varscan::Somatic    Runs Varscan somatic pipeline on Normal/Tumor BAM files
 #
 #    AUTHOR:     Dan Koboldt (dkoboldt@genome.wustl.edu)
 #
@@ -30,7 +30,7 @@ class Genome::Model::Tools::Varscan::Validation {
         output_validation=> { is => 'Text', doc => 'Basename for validation output, eg. varscan_out/varscan.status.validation', is_optional => 1, is_output => 1, },
         reference        => { is => 'Text', doc => "Reference FASTA file for BAMs" , is_optional => 1, default_value => (Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa')},
         skip_if_output_present => { is => 'Text', doc => "If set to 1, skip execution if output files exist", is_optional => 1, },
-        varscan_params   => { is => 'Text', doc => "Parameters to pass to VarScan" , is_optional => 1, default_value => '--min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.01 --validation 1 --min-coverage 8'},
+        varscan_params   => { is => 'Text', doc => "Parameters to pass to Varscan" , is_optional => 1, default_value => '--min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.01 --validation 1 --min-coverage 8'},
         samtools_version => { is => 'Text', doc => 'Version of samtools to use', default=> 'r544' },
     ],
 
@@ -42,12 +42,12 @@ class Genome::Model::Tools::Varscan::Validation {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Run the VarScan somatic variant detection"                 
+    "Run the Varscan somatic variant detection"                 
 }
 
 sub help_synopsis {
     return <<EOS
-Runs VarScan from BAM files
+Runs Varscan from BAM files
 EXAMPLE:    gmt varscan somatic --normal-bam [Normal.bam] --tumor-bam [Tumor.bam] --output varscan_out/Patient.status ...
 EOS
 }

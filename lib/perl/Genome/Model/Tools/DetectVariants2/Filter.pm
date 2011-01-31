@@ -75,16 +75,22 @@ EOS
 }
 
 
-sub create {
+sub execute {
     my $self = shift;
        
     unless($self->_validate_file) {
         die $self->error_message('Failed to validate file.');
     }
+    unless($self->_filter_variants){
+        die $self->error_message("Failed to run _filter_variants");
+    }
     
     return 1;
 }
 
+sub _filter_variants {
+    die "This function should be overloaded by the filter when implemented."
+}
 
 sub _validate_file {
     my $self = shift;
@@ -116,6 +122,15 @@ sub _validate_file {
             return;
         }
     }
+
+    return 1;
+}
+
+sub has_version {
+   
+    ## No Filter version checking is currently done.
+    ## Overloading this in an individual filter module
+    ## will enable version checking for that module.
 
     return 1;
 }

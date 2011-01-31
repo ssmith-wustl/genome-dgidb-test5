@@ -40,7 +40,7 @@ sub help_synopsis {
 This command processes alignments for 454 datasets
 	1.) Compiles individual per-chromosome BLAT alignments into single alignment file
 	2.) Parses out the best alignments and their alignment blocks
-	3.) Runs VarScan to detect SNPs and indels
+	3.) Runs Varscan to detect SNPs and indels
 	
 EXAMPLE: gmt analysis 454 process-alignments --samples-file samples.tsv --output-dir data
 EOS
