@@ -28,7 +28,7 @@ class Genome::Model::Tools::Analysis::Maf::CosmicOmim {
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		maf_file	=> { is => 'Text', doc => "Original MAF file" },
-		annotation_file	=> { is => 'Text', doc => "Full annotation for variants in MAF file" },
+		annotation_file	=> { is => 'Text', doc => "Full annotation for variants in MAF file", is_optional => 1 },
 		aa_distance	=> { is => 'Text', doc => "Maximum aa distance between mutations [1]", is_optional => 1, default => 1},
 		output_cosmic	=> { is => 'Text', doc => "Output file for COSMIC hits", is_optional => 1},
 		output_omim	=> { is => 'Text', doc => "Output file for OMIM hits", is_optional => 1},
@@ -89,7 +89,7 @@ sub execute {                               # replace with real execution logic.
 	my %omim = load_omim($path_to_omim);
 
 	warn "Loading variant annotations...\n";
-	my %annotation = load_annotation($annotation_file);
+	my %annotation = load_annotation($annotation_file) if($annotation_file);
 
 	## save some stats ##
 	

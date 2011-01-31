@@ -18,7 +18,7 @@ class Genome::Model::Tools::Somatic::FilterPindelReadSupport{
             is => 'Text',
             is_input => 1,
             is_output => 1,
-            is_optional => 0,
+            is_optional => 1,
             doc => "Variants that have successfully passed the Pindel Read Support filter"
         },
         min_variant_support => {
@@ -72,7 +72,10 @@ EOS
 
 sub execute {
     my $self = shift;
-    #my $min_variant_support = $self->min_variant_support;
+
+    unless(defined($self->output_file)){
+        $self->output_file($self->read_support_file.".filtered");
+    }
 
     unless(-e $self->read_support_file) {
         $self->error_message($self->read_support_file . " is not found or is empty.");
@@ -108,6 +111,7 @@ sub execute {
         }
     }
     $input->close;
+    $output->close;
     return 1;
 }
 

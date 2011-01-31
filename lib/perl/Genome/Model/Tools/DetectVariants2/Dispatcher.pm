@@ -352,7 +352,6 @@ sub properties_for_detector {
     my $self = shift;
     my ($variant_type, $name, $version, $params) = @_;
     $params ||= "";
-
     # This hashref will contain property_name_for_detector => unique_name_for_input_connector
     my $appropriate_params = "$variant_type" . "_params";
     my $property_map;
@@ -372,7 +371,7 @@ sub properties_for_detector {
     # Try to account for previous detect variants properties
     my @stored_properties;
     if ($self->_workflow_inputs) {
-        @stored_properties = $self->_workflow_inputs;
+        @stored_properties = @{$self->_workflow_inputs};
     }
     push @stored_properties, %inputs_to_store;
     $self->_workflow_inputs(\@stored_properties);

@@ -34,6 +34,7 @@ class Genome::Model::Tools::SnpArray::ImportBatchTcgaData {
 		import_format	=> { is => 'Text', doc => "Input format of the data. Currently only 'unknown' is allowed", is_optional => 0, is_input => 1, default => "unknown" },
 		description	=> { is => 'Text', doc => "Short description of the import data", is_optional => 1, is_input => 1 },
 		source_name	=> { is => 'Text', doc => "Source name for the data, e.g. \"Broad Institute\"", is_optional => 1, is_input => 1 },
+		reference_sequence_build	=> { is => 'Text', doc => "Reference sequence build [b36=101947881 b37=102671028]", is_optional => 0, is_input => 1 },
 	],
 };
 
@@ -73,6 +74,7 @@ sub execute {                               # replace with real execution logic.
 	my @level_2_folders = split(/\,/, $level_2_folders);
 
 	my $import_format = $self->import_format;
+	my $reference_sequence_build = $self->reference_sequence_build;
 
 	## Get list of samples that already have SNP Array data imported ##
 	
@@ -140,11 +142,11 @@ sub execute {                               # replace with real execution logic.
 							
 							if($self->use_bsub)
 							{
-								$cmd = "bsub -q short genome instrument-data import microarray affymetrix-genotype-array --original-data-file=$path_to_file --sample-name=\"$washu_sample_name\" --import-format=\"$import_format\"";
+								$cmd = "bsub -q short genome instrument-data import microarray affymetrix-genotype-array --reference-sequence-build $reference_sequence_build --original-data-file=$path_to_file --sample-name=\"$washu_sample_name\" --import-format=\"$import_format\"";
 							}
 							else
 							{
-								$cmd = "genome instrument-data import microarray affymetrix-genotype-array --original-data-file=$path_to_file --sample-name=\"$washu_sample_name\" --import-format=\"$import_format\"";
+								$cmd = "genome instrument-data import microarray affymetrix-genotype-array --reference-sequence-build $reference_sequence_build --original-data-file=$path_to_file --sample-name=\"$washu_sample_name\" --import-format=\"$import_format\"";
 							}
 
 							## Append optional fields ##

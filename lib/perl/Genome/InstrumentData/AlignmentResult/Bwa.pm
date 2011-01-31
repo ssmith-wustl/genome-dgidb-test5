@@ -73,21 +73,38 @@ sub _run_aligner {
     # decompose aligner params for each stage of bwa alignment
     my %aligner_params = $self->decomposed_aligner_params;
 
+    my @input_path_params;
+
+    for my $i (0..$#input_pathnames) {
+        my $path = $input_pathnames[$i];
+        my ($input_pass) = $path =~ m/\.bam:(\d)$/;
+        
+        if ($input_pass) {
+            $path =~ s/\.bam:\d$/\.bam/;
+            $input_pathnames[$i] = $path;
+            
+            $input_path_params[$i] = "-b". $input_pass;
+        } else {
+            $input_path_params[$i] = "";
+        }
+    }
    
     #### STEP 1: Use "bwa aln" to align each fastq independently to the reference sequence 
 
     my $bwa_aln_params = (defined $aligner_params{'bwa_aln_params'} ? $aligner_params{'bwa_aln_params'} : "");
     my @sai_intermediate_files;
     my @aln_log_files; 
-    foreach my $input (@input_pathnames) {
-   
+    foreach my $i (0..$#input_pathnames) {
+    
+        my $input = $input_pathnames[$i];
+        my $input_params = $input_path_params[$i];
         my ($tmp_base) = fileparse($input); 
-        my $tmp_sai_file = $tmp_dir . "/" . $tmp_base . ".sai";
+        my $tmp_sai_file = $tmp_dir . "/" . $tmp_base . "." . $i . ".sai";
         my $tmp_log_file = $tmp_dir . "/" . $tmp_base . ".bwa.aln.log"; 
         
         my $cmdline = Genome::Model::Tools::Bwa->path_for_bwa_version($self->aligner_version)
-            . sprintf( ' aln %s %s %s 1> ',
-                $bwa_aln_params, $reference_fasta_path, $input )
+            . sprintf( ' aln %s %s %s %s 1> ',
+                $bwa_aln_params, $input_params, $reference_fasta_path, $input )
             . $tmp_sai_file . ' 2>>'
             . $tmp_log_file;
         
@@ -365,5 +382,9 @@ sub requires_read_group_addition {
 }
 
 sub supports_streaming_to_bam {
+    return 1;
+}
+
+sub accepts_bam_input {
     return 1;
 }

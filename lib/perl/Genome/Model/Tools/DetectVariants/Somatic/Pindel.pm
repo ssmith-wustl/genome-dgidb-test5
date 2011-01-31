@@ -37,6 +37,15 @@ class Genome::Model::Tools::DetectVariants::Somatic::Pindel {
             is_optional=>1, 
             doc => 'Run pindel with this chromosome. If not set, pindel will run in serial for all chromosomes.',
         },
+        control_aligned_reads_input => {
+            is => 'Text',
+            doc => 'Location of the control aligned reads file to which the input aligned reads file should be compared',
+            is_optional => 1,
+            shell_args_position => '2',
+            is_input => 1,
+            is_output => 1,
+        },
+
         # Temporary output files
         _temp_long_insertion_output => {
             calculate_from => ['_temp_staging_directory'],
@@ -183,9 +192,10 @@ sub _generate_config_file {
         $self->error_message("Could not open $config_path for writing");
         die;
     }
-
-    my $normal_line = join("\t", ($self->control_aligned_reads_input, $self->_calculate_average_insert_size, "normal") );
-    $config_fh->print("$normal_line\n");
+    if($self->control_aligned_reads_input){
+        my $normal_line = join("\t", ($self->control_aligned_reads_input, $self->_calculate_average_insert_size, "normal") );
+        $config_fh->print("$normal_line\n");
+    }
 
     my $tumor_line = join("\t", ($self->aligned_reads_input, $self->_calculate_average_insert_size, "tumor") );
     $config_fh->print("$tumor_line\n");
@@ -297,7 +307,7 @@ sub _run_pindel_for_chromosome {
     }
     my $output_basename = $self->_output_basename_for_chrom($chromosome);
     my $cmd = $self->pindel_path . " -f $reference_sequence_for_chrom" . " -i " . $self->_config_file . " -o $output_basename" . " -c $chromosome" . " -b /dev/null";
-    my $result = Genome::Sys->shellcmd( cmd=>$cmd, input_files=>[$self->aligned_reads_input,$self->control_aligned_reads_input]);
+    my $result = Genome::Sys->shellcmd( cmd=>$cmd, input_files=>[$self->aligned_reads_input]);
 
     unless($result) {
         $self->error_message("Running pindel failed with command $cmd");
@@ -332,5 +342,22 @@ sub default_pindel_version {
     return $DEFAULT_VERSION;
 }
 
+sub _verify_inputs {
+    my $self = shift;
+    
+    my $ref_seq_file = $self->reference_sequence_input;
+    unless(Genome::Sys->check_for_path_existence($ref_seq_file)) {
+        $self->error_message("reference sequence input $ref_seq_file does not exist");
+        return;
+    }
+
+    my $aligned_reads_file = $self->aligned_reads_input;
+    unless(Genome::Sys->check_for_path_existence($aligned_reads_file)) {
+        $self->error_message("aligned reads input $aligned_reads_file was not found.");
+        return;
+    }
+    
+    return 1;
+}
 
 1;
