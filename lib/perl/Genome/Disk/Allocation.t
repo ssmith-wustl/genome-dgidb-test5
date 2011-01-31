@@ -90,21 +90,10 @@ my %params = (
 my $allocation = Genome::Disk::Allocation->create(%params);
 ok($allocation, 'successfully created test allocation');
 
-# Make sure locks are still there (released when committed)
-my $modified_mount_path = $allocation->mount_path;
-$modified_mount_path =~ s/\//_/g;
-my $allocation_lock = '/gsc/var/lock/allocation/volume' . $modified_mount_path;
-ok(-e $allocation_lock, 'volume lock still exists');
-
-# Make sure locks get cleaned up
-UR::Context->commit;
-ok(!-e $allocation_lock, 'volume lock cleaned up after commit');
-
 # Try to make another allocation that's a subdir of the first, which should fail
 $params{allocation_path} .= '/subdir';
 my $subdir_allocation = eval { Genome::Disk::Allocation->create(%params) };
 ok(!$subdir_allocation, 'allocation creation failed as expected');
-ok(!-e $allocation_lock, 'volume lock not sticking around after failed allocation');
 
 # Now try to make an allocation that's too big for the volume
 $params{allocation_path} =~ s/allocation_test_1/allocation_test_2/;
@@ -112,7 +101,6 @@ $params{allocation_path} =~ s/subdir//;
 $params{kilobytes_requested} = 10000;
 my $big_allocation = eval { Genome::Disk::Allocation->create(%params) };
 ok(!$big_allocation, 'allocation fails when request is too big, as expected');
-ok(!-e $allocation_lock, 'volume lock not sticking around after failed allocation');
 
 # Turn off all volumes in the group, make sure allocation fails
 map { $_->can_allocate(0) } @volumes;
@@ -126,22 +114,18 @@ $params{kilobytes_requested} = 100;
 my $other_allocation = Genome::Disk::Allocation->create(%params);
 ok($other_allocation, 'created another allocation without problem');
 ok($other_allocation->mount_path eq $volumes[-1]->mount_path, 'allocation landed on only allocatable mount path');
-UR::Context->commit;
 
 # Try to delete
-$other_allocation->delete;
+Genome::Disk::Allocation->delete(allocation_id => $other_allocation->id);
 isa_ok($other_allocation, 'UR::DeletedRef', 'successfully removed allocation');
-UR::Context->commit;
 
 # Try to reallocate existing allocation
-my $reallo_rv = $allocation->reallocate(kilobytes_requested => 5);
-UR::Context->commit;
+my $reallo_rv = Genome::Disk::Allocation->reallocate(allocation_id => $allocation->id, kilobytes_requested => 5);
 ok($allocation->kilobytes_requested == 5, 'allocation has been resized');
 
 # Now delete the allocation
-$allocation->delete;
+Genome::Disk::Allocation->delete(allocation_id => $allocation->id);
 isa_ok($allocation, 'UR::DeletedRef', 'other allocation removed successfully');
-UR::Context->commit;
 
 # Now do a big race condition test. Make a bunch of child processes, perform operations on some allocations, and
 # make sure that nothing gets stuck in a deadlock
@@ -233,7 +217,7 @@ sub do_race_lock {
 
     print "*** Child $child_id reallocating\n";
 
-    my $reallo_rv = Genome::Disk::Allocation::Command::Reallocate->execute(
+    my $reallo_rv = Genome::Disk::Allocation->reallocate(
         allocation_id => $allocation->id,
         kilobytes_requested => 5,
     );
@@ -250,7 +234,7 @@ sub do_race_lock {
 
     print "*** Child $child_id deallocating!\n";
 
-    my $deallo_rv = Genome::Disk::Allocation::Command::Deallocate->execute(
+    my $deallo_rv = Genome::Disk::Allocation->delete(
         allocation_id => $allocation->id,
     );
     UR::Context->commit; # to hold back the undead hordes

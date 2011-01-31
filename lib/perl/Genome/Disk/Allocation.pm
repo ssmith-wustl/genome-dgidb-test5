@@ -76,6 +76,8 @@ class Genome::Disk::Allocation {
 };
 
 our $MAX_VOLUMES = 5;
+our $UNUSABLE_VOLUME_PERCENT = .05;
+our $MAX_UNUSABLE_KB = 1_073_741_824;  # 1 TB
 our $MINIMUM_ALLOCATION_SIZE = 0;
 our $MAX_ATTEMPTS_TO_LOCK_VOLUME = 30;
 our @REQUIRED_PARAMETERS = qw/
@@ -97,98 +99,80 @@ sub Genome::Disk::Allocation::Type::autogenerate_new_object_id {
     return $UR::Object::Type::autogenerate_id_base . ' ' . (++$UR::Object::Type::autogenerate_id_iter);
 }
 
-# Class method for determining if the given path has a parent allocation
-sub verify_no_parent_allocation {
-    my ($class, $path) = @_;
-    my ($allocation) = Genome::Disk::Allocation->get(allocation_path => $path);
-    return 0 if $allocation;
-
-    my $dir = File::Basename::dirname($path);
-    if ($dir ne '.' and $dir ne '/') {
-        return Genome::Disk::Allocation->verify_no_parent_allocation($dir);
-    }
-    return 1;
-}
-
-# Makes sure the supplied kb amount is valid
-sub check_kb_requested {
-    my ($class, $kb) = @_;
-    return unless defined $kb;
-    return if $kb < $MINIMUM_ALLOCATION_SIZE;
-    return 1;
-}
-
-# FIXME This emulates the old style locking for allocations, which uses select for update. This can
-# be phased out as soon as I'm sure that the new style is being used everywhere
-sub select_group_for_update {
-    my ($class, $group_id) = @_;
-    return 1 if $ENV{UR_DBI_NO_COMMIT};
-    GSC::DiskVolume->load(sql => qq{
-        select dv.* from disk_volume dv
-        join disk_volume_group dvg on dv.dv_id = dvg.dv_id
-        and dvg.dg_id = $group_id
-        for update
-    });
-    return 1;
-}
-
-# FIXME Same as above method, but locks the volume instead of the group
-sub select_volume_for_update {
-    my ($class, $volume_id) = @_;
-    return 1 if $ENV{UR_DBI_NO_COMMIT};
-    GSC::DiskVolume->load(sql => qq{
-        select * from disk_volume
-        where dv_id = $volume_id
-        for update
-    });
-    return 1;
-}
-
-sub create_observer_for_unlock {
-    my ($class, @locks) = @_;
-    my $observer;
-    my $callback = sub {
-        for my $lock (@locks) {
-            Genome::Sys->unlock_resource(resource_lock => $lock);
-        }
-        print STDERR "Releasing locks, allocation process complete\n";
-        $observer->delete;
-    };
-    $observer = UR::Context->add_observer(
-        aspect => 'commit',
-        callback => $callback,
-    );
-    return 1;
-}
-
-sub get_volume_lock {
-    my ($class, $mount_path) = @_;
-    my $modified_mount = $mount_path;
-    $modified_mount =~ s/\//_/g;
-    my $volume_lock = Genome::Sys->lock_resource(
-        resource_lock => '/gsc/var/lock/allocation/volume' . $modified_mount,
-        max_try => 10,
-        block_sleep => 2,
-    );
-    return $volume_lock;
-}
-
-sub get_allocation_lock {
-    my ($class, $id) = @_;
-    my $allocation_lock = Genome::Sys->lock_resource(
-        resource_lock => '/gsc/var/lock/allocation/allocation_' . join('_', split(' ', $id)),
-        max_try => 5,
-        block_sleep => 2,
-    );
-    return $allocation_lock;
-}
-
-sub allocate { return $_[0]->create(@_) }
+# The allocation process should be done in a separate process to ensure it completes and commits quickly, since
+# locks on allocations and volumes persist until commit completes. To make this invisible to everyone, the
+# create/delete/reallocate methods perform the system calls that execute _create/_delete/_reallocate methods.
+sub allocate { return shift->create(@_); }
 sub create {
+    my ($class, %params) = @_;
+    unless (exists $params{id}) {
+        $params{id} = Genome::Disk::Allocation::Type::autogenerate_new_object_id;
+    }
+
+    # If no commit is on, the created object won't be retrievable via a get (since it will only live in the
+    # child process' UR object cache). Just call the _create method directly and return
+    if ($ENV{UR_DBI_NO_COMMIT}) {
+        my $rv = Genome::Disk::Allocation->_create(%params);
+        UR::Context->commit; # to release locks
+        return $rv;
+    }
+
+    my $param_string = Genome::Utility::Text::hash_to_string(\%params);
+    my $rv = system("perl -e \"use above Genome; $class->_create($param_string); UR::Context->commit;\"");
+    confess "Could not create allocation" unless $rv == 0;
+
+    my $allocation = Genome::Disk::Allocation->get(id => $params{id});
+    confess "Could not retrieve created allocation with id " . $params{id} unless $allocation;
+    return $allocation;
+}
+
+sub deallocate { return shift->delete(@_); }
+sub delete {
+    my ($class, %params) = @_;
+    if (ref($class)) {
+        $params{allocation_id} = $class->id;
+        $class = ref($class);
+    }
+    confess "Require allocation ID" unless exists $params{allocation_id};
+
+    # Same as above... if no commit is on, just call the _delete method directly so changes will be in UR cache
+    if ($ENV{UR_DBI_NO_COMMIT}) {
+        my $rv = Genome::Disk::Allocation->_delete(%params);
+        UR::Context->commit; # to release locks
+        return $rv;
+    }
+
+    my $param_string = Genome::Utility::Text::hash_to_string(\%params);
+    my $rv = system("perl -e \"use above Genome; $class->_delete($param_string); UR::Context->commit;\"");
+    confess "Could not deallocate" unless $rv == 0;
+    return 1;
+}
+
+sub reallocate {
+    my ($class, %params) = @_;
+    if (ref($class)) {
+        $params{allocation_id} = $class->id;
+        $class = ref($class);
+    }
+    confess "Require allocation ID!" unless exists $params{allocation_id};
+
+    # Again, call _reallocate directly if no commit is on so changes occur in UR cache
+    if ($ENV{UR_DBI_NO_COMMIT}) {
+        my $rv = Genome::Disk::Allocation->_reallocate(%params);
+        UR::Context->commit; # to release locks
+        return $rv;
+    }
+
+    my $param_string = Genome::Utility::Text::hash_to_string(\%params);
+    my $rv = system("perl -e \"use above Genome; $class->_reallocate($param_string); UR::Context->commit;\"");
+    confess "Could not reallocate!" unless $rv == 0;
+    return 1;
+}
+
+sub _create {
     my $class = shift;
     my %params = @_;
 
-    print STDERR "Beginning allocation process\n";
     # Make sure that required parameters are provided
     my @missing_params;
     for my $param (@REQUIRED_PARAMETERS) {
@@ -275,6 +259,15 @@ sub create {
             confess "Did not get any allocatable and active volumes belonging to group $disk_group_name with " .
                 "$kilobytes_requested kb of unallocated space!";
         }
+
+        # Make sure that the allocation doesn't infringe on the empty buffer required for each volume
+        # This buffer is either UNUSABLE_VOLUME_PERCENT or 1TB, whichever is smallest
+        @volumes = grep {
+            my $buffer = int($_->total_kb * $UNUSABLE_VOLUME_PERCENT);
+            $buffer = $MAX_UNUSABLE_KB if $buffer > $MAX_UNUSABLE_KB;
+            ($_->unallocated_kb - $kilobytes_requested) >= $buffer;
+        } @volumes;
+
         # Only allocate to the first MAX_VOLUMES retrieved
         my $max = @volumes > $MAX_VOLUMES ? $MAX_VOLUMES : @volumes;
         @volumes = @volumes[0,$max - 1];
@@ -312,7 +305,6 @@ sub create {
             next;
         }
 
-        print STDERR "Locked volume " . $candidate_volume->mount_path . "\n";
         $volume = $candidate_volume;
         $volume_lock = $lock;
         last;
@@ -321,15 +313,15 @@ sub create {
     # Can now safely update this parameter since we have the volume
     $params{mount_path} = $volume->mount_path;
 
-    # Decrement the available space on the volume
+    # Decrement the available space on the volume and create allocation object
     $volume->unallocated_kb($volume->unallocated_kb - $kilobytes_requested);
-
-    # Now finalize creation of the allocation object
     my $self = $class->SUPER::create(%params);
     unless ($self) {
         Genome::Sys->unlock_resource(resource_lock => $volume_lock);
         confess "Could not create allocation with params: " . Data::Dumper::Dumper(\%params);
     }
+
+    $self->status_message("Allocation " . $self->id . " created at " . $self->absolute_path);
 
     # Add a commit hook to create allocation path. If UR_DBI_NO_COMMIT is set, then this won't fire.
     my $dir_observer;
@@ -348,48 +340,36 @@ sub create {
         callback => $dir_callback,
     );
 
-    # Add a commit hook so this lock is released upon successful commit. This is added to the context and not
-    # the object so it fires even if UR_DBI_NO_COMMIT is set
+    # Add a commit hook so this lock is released upon successful commit.
     $self->create_observer_for_unlock($volume_lock);
-
     return $self;
 }
 
-sub deallocate { return $_[0]->delete(@_) }
-sub delete {
-    my $self = shift;
-    my %params = @_;
-    my $remove_allocation_directory = $params{remove_allocation_directory} || 1;
-    $remove_allocation_directory = 0 if $ENV{UR_DBI_NO_COMMIT};
-
-    $self->status_message('Starting deallocation process');
+sub _delete {
+    my ($class, %params) = @_;
+    confess "Require allocation ID" unless exists $params{allocation_id} and defined $params{allocation_id};
 
     # Lock and retrieve allocation
-    my $allocation_lock = $self->get_allocation_lock($self->id);
-    confess 'Could not get lock for allocation ' . $self->id unless defined $allocation_lock;
+    my $allocation_lock = Genome::Disk::Allocation->get_allocation_lock($params{allocation_id});
+    confess 'Could not get lock for allocation ' . $params{allocation_id} unless defined $allocation_lock;
 
-    # Reload self to make sure there aren't any updates
-    my $id = $self->id;
-    $self = Genome::Disk::Allocation->load($id);
+    my $self = Genome::Disk::Allocation->get($params{allocation_id});
     unless ($self) {
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
-        confess "Could not reload allocation $id from database" unless $self;
+        confess "Could not find allocation with id " . $params{allocation_id} unless $self;
     }
 
-    $self->status_message('Locked and retrieved allocation ' . $self->id);
+    $self->status_message("Beginning deallocation process for allocation " . $self->id);
 
     # Remove allocation directory
     my $path = $self->absolute_path;
-    if ($remove_allocation_directory and -d $path) {
+    if (-d $path and not $ENV{UR_DBI_NO_COMMIT}) {
         $self->status_message("Removing allocation directory $path");
         my $rv = Genome::Sys->remove_directory_tree($self->absolute_path);
         unless (defined $rv and $rv == 1) {
             Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
             confess "Could not remove allocation directory $path!";
         }
-    }
-    else {
-        $self->status_message("Not removing allocation directory");
     }
 
     # Lock volume and update
@@ -408,7 +388,6 @@ sub delete {
     # FIXME Lock volume using old LIMS style, this is temporary
     $self->select_volume_for_update($volume->id);
 
-    $self->status_message('Locked and retrieved volume ' . $self->mount_path . ', removing allocation and updating volume');
     $volume->unallocated_kb($volume->unallocated_kb + $self->kilobytes_requested);
     $self->SUPER::delete;
 
@@ -417,22 +396,22 @@ sub delete {
 }
 
 # Changes the size of the allocation and updates the volume appropriately
-sub reallocate {
-    my ($self, %params) = @_;
+sub _reallocate {
+    my ($class, %params) = @_;
+    confess "Require allocation ID!" unless exists $params{allocation_id};
     my $kilobytes_requested = $params{kilobytes_requested};
 
-    my $allocation_lock = $self->get_allocation_lock($self->id);
-    confess 'Could not get lock on allocation ' . $self->id unless defined $allocation_lock;
+    # Lock and retrieve allocation
+    my $allocation_lock = Genome::Disk::Allocation->get_allocation_lock($params{allocation_id});
+    confess 'Could not get lock on allocation ' . $params{allocation_id} unless defined $allocation_lock;
 
-    # Reload self, make sure there aren't any updates (mostly worried about deallocation)
-    my $id = $self->id;
-    $self = Genome::Disk::Allocation->get($id);
+    my $self = Genome::Disk::Allocation->get($params{allocation_id});
     unless ($self) {
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
-        confess "Could not reload allocation $id after acquiring lock!";
+        confess "Could not find allocation " . $params{allocation_id};
     }
 
-    $self->status_message('Locked and retrieved allocation ' . $self->id);
+    $self->status_message("Beginning reallocation process for allocation " . $self->id);
 
     # Either check the new size (if given) or get the current size of the allocation directory
     if (defined $kilobytes_requested) {
@@ -469,8 +448,6 @@ sub reallocate {
     # FIXME Get LIMS style lock, this is temporary
     $self->select_volume_for_update($volume->id);
 
-    $self->status_message('Acquired volume lock and retrieved volume');
-
     # Make sure there's room for the allocation... only applies if the new allocation is bigger than the old
     unless ($volume->unallocated_kb >= $diff) {
         Genome::Sys->unlock_resource(resource_lock => $volume_lock);
@@ -484,6 +461,92 @@ sub reallocate {
 
     $self->create_observer_for_unlock($volume_lock, $allocation_lock);
     return 1;
+}
+
+# Class method for determining if the given path has a parent allocation
+sub verify_no_parent_allocation {
+    my ($class, $path) = @_;
+    my ($allocation) = Genome::Disk::Allocation->get(allocation_path => $path);
+    return 0 if $allocation;
+
+    my $dir = File::Basename::dirname($path);
+    if ($dir ne '.' and $dir ne '/') {
+        return Genome::Disk::Allocation->verify_no_parent_allocation($dir);
+    }
+    return 1;
+}
+
+# Makes sure the supplied kb amount is valid
+sub check_kb_requested {
+    my ($class, $kb) = @_;
+    return unless defined $kb;
+    return if $kb < $MINIMUM_ALLOCATION_SIZE;
+    return 1;
+}
+
+# FIXME This emulates the old style locking for allocations, which uses select for update. This can
+# be phased out as soon as I'm sure that the new style is being used everywhere
+sub select_group_for_update {
+    my ($class, $group_id) = @_;
+    return 1 if $ENV{UR_DBI_NO_COMMIT};
+    GSC::DiskVolume->load(sql => qq{
+        select dv.* from disk_volume dv
+        join disk_volume_group dvg on dv.dv_id = dvg.dv_id
+        and dvg.dg_id = $group_id
+        for update
+    });
+    return 1;
+}
+
+# FIXME Same as above method, but locks the volume instead of the group
+sub select_volume_for_update {
+    my ($class, $volume_id) = @_;
+    return 1 if $ENV{UR_DBI_NO_COMMIT};
+    GSC::DiskVolume->load(sql => qq{
+        select * from disk_volume
+        where dv_id = $volume_id
+        for update
+    });
+    return 1;
+}
+
+sub create_observer_for_unlock {
+    my ($class, @locks) = @_;
+    my $observer;
+    my $callback = sub {
+        for my $lock (@locks) {
+            Genome::Sys->unlock_resource(resource_lock => $lock);
+        }
+        print STDERR "Allocation locks released\n";
+        $observer->delete;
+    };
+    $observer = UR::Context->add_observer(
+        aspect => 'commit',
+        callback => $callback,
+    );
+    return 1;
+}
+
+sub get_volume_lock {
+    my ($class, $mount_path) = @_;
+    my $modified_mount = $mount_path;
+    $modified_mount =~ s/\//_/g;
+    my $volume_lock = Genome::Sys->lock_resource(
+        resource_lock => '/gsc/var/lock/allocation/volume' . $modified_mount,
+        max_try => 10,
+        block_sleep => 2,
+    );
+    return $volume_lock;
+}
+
+sub get_allocation_lock {
+    my ($class, $id) = @_;
+    my $allocation_lock = Genome::Sys->lock_resource(
+        resource_lock => '/gsc/var/lock/allocation/allocation_' . join('_', split(' ', $id)),
+        max_try => 5,
+        block_sleep => 2,
+    );
+    return $allocation_lock;
 }
 
 1;
