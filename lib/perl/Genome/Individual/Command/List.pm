@@ -16,7 +16,7 @@ class Genome::Individual::Command::List {
     ],
 };
 
-sub sub_command_sort_position { 3 }
+sub sub_command_sort_position { 1 }
 
 1;
 

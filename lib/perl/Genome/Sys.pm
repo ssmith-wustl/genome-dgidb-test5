@@ -203,6 +203,17 @@ sub create_symlink {
 
 sub _open_file {
     my ($self, $file, $rw) = @_;
+    if ($file eq '-') {
+        if ($rw eq 'r') {
+            return 'STDIN';
+        }
+        elsif ($rw eq 'w') {
+            return 'STDOUT';
+        }
+        else {
+            die "cannot open '-' with access '$rw': r = STDIN, w = STDOUT!!!";
+        }
+    }
     my $fh = IO::File->new($file, $rw);
     return $fh if $fh;
     Carp::croak("Can't open file ($file) with access '$rw': $!");
@@ -213,6 +224,10 @@ sub validate_file_for_reading {
 
     unless ( defined $file ) {
         Carp::croak("Can't validate_file_for_reading: No file given");
+    }
+
+    if ($file eq '-') {
+        return 1;
     }
 
     unless (-e $file ) {
