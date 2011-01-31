@@ -86,7 +86,7 @@ sub execute {
 
     my @builds = $command->builds;
     unless (@builds == $builds_to_start){
-        die $self->error_message("Failed to start expected number of builds. $builds_to_start expected, ".scalar @builds." built.\nErr:$@");
+        $self->error_message("Failed to start expected number of builds. $builds_to_start expected, ".scalar @builds." built.\nErr:$@");
     }
     unless ($rv){
         $self->error_message("Built expected number of builds, but had some failures:\nErr:$@");

@@ -14,6 +14,11 @@ class Genome::InstrumentData::AlignmentResult::Command::VerifyDt {
             doc => 'The instrument data to locate alignment results (and merged BAMs).',
             shell_args_position => 1,
         },
+        max => {
+            is => 'Integer',
+            is_optional => 1,
+            doc => 'Maximum number of instrument data to verify.',
+        },
         repair => {
             is => 'Boolean',
             default => 0,
@@ -41,6 +46,16 @@ EOS
 sub execute {
     my $self = shift;
     my @instrument_data_ids = map { $_->id } $self->instrument_data;
+
+    if ($self->max) {
+        my $max;
+        if ($self->max < @instrument_data_ids) {
+            $max = $#instrument_data_ids 
+        } else {
+            $max = $self->max - 1;
+        }
+        @instrument_data_ids = @instrument_data_ids[0..$max];
+    }
 
     my @bams;
     for my $instrument_data_id (@instrument_data_ids) {
@@ -138,6 +153,7 @@ sub repair_dt {
         unlink("$in_bam.md5") || die;
         !system("md5sum $in_bam > $in_bam.md5") || die;
         chmod(0444, "$in_bam.md5") || die;
+        chmod(0444, "$in_bam") || die;
         unlink("$in_bam.orig") || die;
         unlink($out_sam_h) || die;
         unlink($in_sam_h) || die;

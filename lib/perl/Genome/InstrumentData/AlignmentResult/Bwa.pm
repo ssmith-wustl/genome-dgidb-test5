@@ -24,21 +24,20 @@ sub required_rusage {
     my $instrument_data = delete $p{instrument_data};
 
     my $estimated_usage_mb = 90000;
-    if (defined $instrument_data && $instrument_data->can("calculate_aligned_estimated_kb_usage")) {
+    if (defined $instrument_data && $instrument_data->can("calculate_alignment_estimated_kb_usage")) {
         my $kb_usage = $instrument_data->calculate_alignment_estimated_kb_usage;
         $estimated_usage_mb = int(($kb_usage * 5) / 1024)+100;
     }
     
     my $mem = 10000;
-    my ($double_mem, $mem_kb) = ($mem*2, $mem*1000);
+    my ($double_mem, $mem_kb, $double_mem_kb) = ($mem*2, $mem*1000, $mem*2*1000);
     my $tmp = $estimated_usage_mb;
     my $double_tmp = $tmp*2; 
     my $cpus = 4;
     my $double_cpus = $cpus*2;
-    my $rusage = "rusage[mem=$mem, tmp=$tmp]";
 
-    my $select_half_blades = "select[model!=Opteron250 && type==LINUX64 && ncpus>=$double_cpus && maxtmp>=$double_tmp && maxmem>$double_mem] span[hosts=1]";
-    my $select_whole_blades = "select[model!=Opteron250 && type==LINUX64 && ncpus>=$double_cpus && maxtmp>=$tmp && maxmem>$mem] span[hosts=1]";
+    my $select_half_blades  = "select[ncpus>=$double_cpus && maxmem>$double_mem && maxtmp>=$double_tmp] span[hosts=1]";
+    my $select_whole_blades = "select[ncpus>=$double_cpus && maxmem>$double_mem && maxtmp>=$tmp] span[hosts=1]";
     my @selected_half_blades = `bhosts -R '$select_half_blades' alignment | grep ^blade`;
     my @selected_whole_blades = `bhosts -R '$select_whole_blades' alignment | grep ^blade`;
 
@@ -51,9 +50,9 @@ sub required_rusage {
     }
 
     if (@selected_half_blades) {
-        return "-R '$select_half_blades rusage[mem=$mem, tmp=$tmp]' -M $mem_kb -n $cpus -q $queue -m alignment";
+        return "-R '$select_half_blades rusage[mem=$mem]' -M $mem_kb -n $cpus -q $queue -m alignment";
     } elsif (@selected_whole_blades) {
-        return "-R '$select_whole_blades rusage[mem=$mem, tmp=$tmp]' -M $mem_kb -n $double_cpus -q $queue -m alignment";
+        return "-R '$select_whole_blades rusage[mem=$double_mem]' -M $double_mem_kb -n $double_cpus -q $queue -m alignment";
     } else {
         die $class->error_message("Failed to find hosts that meet resource requirements.");
     }
