@@ -62,7 +62,11 @@ sub execute {
 
         $f{"Individual"} = $patient->common_name;
 
-        my @somatic_models = Genome::Model::Somatic->get(subject_id => $patient->id);
+        my @somatic_models = Genome::Model->get(
+            type_name => ['somatic','somatic variation'],           # old/new
+            subject_id => [$patient->id, map { $_->id } $patient->samples],     # old/new
+        );
+
         unless (@somatic_models) {
             $self->error_message("no somatic models for " . $patient->__display_name__ . "\n");
             next;
