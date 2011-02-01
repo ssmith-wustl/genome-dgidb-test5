@@ -69,6 +69,12 @@ sub execute {                               # replace with real execution logic.
 
 	my $group_id = $self->group_id;
 
+
+	## Reset Statistics 
+	$stats{'review_snvs_possible'} = $stats{'review_snvs_already'} = $stats{'review_snvs_already_wildtype'} = $stats{'review_snvs_already_germline'} = $stats{'review_snvs_filtered'} = $stats{'review_snvs_included'} = 0;
+	$stats{'review_indels_possible'} = $stats{'review_indels_already'} = $stats{'review_indels_already_wildtype'} = $stats{'review_indels_already_germline'} = $stats{'review_indels_filtered'} = $stats{'review_indels_included'} = 0;
+
+
 	if($self->review_database_snvs)
 	{
 		load_review_database($self->review_database_snvs);
@@ -78,6 +84,7 @@ sub execute {                               # replace with real execution logic.
 	{
 		load_review_database($self->review_database_indels);
 	}
+
 
 	
 	## Save model ids by subject name ##
@@ -103,6 +110,7 @@ sub execute {                               # replace with real execution logic.
 		
 		my $model_id = $model->genome_model_id;
 		my $subject_name = $model->subject_name;
+		$subject_name = "Model" . $model_id if(!$subject_name);
 		
 		my $last_build_dir = "";
 		my $model_status = "New";
@@ -153,12 +161,12 @@ sub execute {                               # replace with real execution logic.
 				if($self->output_review)
 				{
 					my $tier1_snvs = $last_build_dir . "/merged.somatic.snp.filter.novel.tier1";
-					my $output_tier1_snvs = $self->output_review . "/" . $subject_name . ".SNVs.tsv";
+					my $output_tier1_snvs = $self->output_review . "/" . $subject_name . ".$model_id.SNVs.tsv";
 					output_snvs_for_review($model_id, $tier1_snvs, $output_tier1_snvs);
 
 					my $tier1_gatk = $last_build_dir . "/gatk.output.indel.formatted.Somatic.tier1";
 					my $tier1_indels = $last_build_dir . "/merged.somatic.indel.filter.tier1";
-					my $output_tier1_indels = $self->output_review . "/" . $subject_name . ".Indels.tsv";
+					my $output_tier1_indels = $self->output_review . "/" . $subject_name . ".$model_id.Indels.tsv";
 					output_indels_for_review($model_id, $tier1_indels, $tier1_gatk, $output_tier1_indels);
 				}
 
@@ -365,7 +373,7 @@ sub output_snvs_for_review
 					$include_flag = 1;
 				}
 				
-				## VarScan File ##
+				## Varscan File ##
 				
 				elsif($line =~ 'Somatic')
 				{
@@ -502,7 +510,7 @@ sub output_indels_for_review
 				$include_flag = 1;
 			}
 			
-			## VarScan File ##
+			## Varscan File ##
 			
 			elsif($line =~ 'Somatic')
 			{

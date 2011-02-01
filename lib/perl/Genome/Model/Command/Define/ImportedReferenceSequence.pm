@@ -20,10 +20,6 @@ class Genome::Model::Command::Define::ImportedReferenceSequence {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             doc => 'The reference sequence build from which this one is derived (if any).',
         },
-        coordinates_from => {
-            is => 'Genome::Model::Build::ImportedReferenceSequence',
-            doc => 'The reference sequence build from which this one gets its coordinates (if any). This is a weaker concept than derived_from, and it is not neccessary to use both.',
-        },
         prefix => {
             is => 'Text',
             doc => 'The source of the sequence, such as "NCBI".  May not have spaces.'
@@ -116,11 +112,6 @@ sub _prompt_to_continue {
 
 sub execute {
     my $self = shift;
-
-    if (defined $self->derived_from and defined $self->coordinates_from) {
-        $self->error_message('Please specify one of --derived-from or --cordinates-from, not both (--derived-from implies --coordinates-from).');
-        return;
-    }
 
     unless (-s $self->fasta_file) {
         $self->error_message('Input fasta file: '.$self->fasta_file.' is not valid.');
@@ -294,10 +285,6 @@ sub _create_build {
 
     if ($self->derived_from) {
         push(@build_parameters, derived_from => $self->derived_from);
-    }
-
-    if ($self->coordinates_from) {
-        push(@build_parameters, coordinates_from => $self->coordinates_from);
     }
 
     if($self->version) {

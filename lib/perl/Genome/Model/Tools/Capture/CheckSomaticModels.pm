@@ -152,7 +152,7 @@ sub execute {                               # replace with real execution logic.
 				my $sniper_file = "$build_dir/somaticSniper.output.snp.filter";
 
 
-				## Determine VarScan status ##
+				## Determine Varscan status ##
 
 				my $varscan_status = "Unknown";
 				$varscan_status = "Done" if(-e $varscan_somatic_file);
@@ -270,7 +270,7 @@ sub execute {                               # replace with real execution logic.
 				}
 				else
 				{
-					## No merged file exists; so check for VarScan/Sniper files ##
+					## No merged file exists; so check for Varscan/Sniper files ##
 
 				}
 				

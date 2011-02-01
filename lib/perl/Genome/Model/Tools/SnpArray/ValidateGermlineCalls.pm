@@ -38,12 +38,12 @@ class Genome::Model::Tools::SnpArray::ValidateGermlineCalls {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Validates VarScan germline calls using SNP array data"                 
+    "Validates Varscan germline calls using SNP array data"                 
 }
 
 sub help_synopsis {
     return <<EOS
-This command validates VarScan germline calls using SNP array data
+This command validates Varscan germline calls using SNP array data
 EXAMPLE:	gmt snp-array validate-germline-calls --genotype-file affy.genotypes --variant-file lane1.var
 EOS
 }

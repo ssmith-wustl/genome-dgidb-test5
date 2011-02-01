@@ -41,7 +41,7 @@ sub help_synopsis {
 This command processes alignments for 454 datasets
 	1.) Compiles individual per-chromosome BLAT alignments into single alignment file
 	2.) Parses out the best alignments and their alignment blocks
-	3.) Runs VarScan to detect SNPs and indels
+	3.) Runs Varscan to detect SNPs and indels
 	
 EXAMPLE: gmt analysis 454 process-alignments --samples-file samples.tsv --output-dir data
 EOS
@@ -163,7 +163,7 @@ sub execute {                               # replace with real execution logic.
 				$cmd = "gmt blat parse-alignments --output-blocks 1 --alignments-file $blat_dir/$sample_name.psl";
 				print SAMPLESCRIPT "$cmd\n";
 	
-				print SAMPLESCRIPT qq{echo "Running VarScan..."\n};
+				print SAMPLESCRIPT qq{echo "Running Varscan..."\n};
 				$cmd = "varscan easyrun $blat_dir/$sample_name.psl --fasta-file $fasta_dir/$sample_name.fasta --quality-file $fasta_dir/$sample_name.fasta.qual --output-dir $varscan_dir --sample $sample_name --ref-dir /gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/ --min-align-score 50 --min-identity 90 --primer-trim 10 --min-coverage 10 --min-reads2 2 --min-var-freq 0.25";
 				print SAMPLESCRIPT "$cmd\n";					
 			}

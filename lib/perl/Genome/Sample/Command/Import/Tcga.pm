@@ -38,7 +38,7 @@ sub execute {
     my $individual = $self->_get_and_update_or_create_individual(
         name => $individual_name,
         upn => $individual_name,
-        _nomenclature => 'unknown',
+        nomenclature => 'unknown',
     );
     return if not $individual;
 

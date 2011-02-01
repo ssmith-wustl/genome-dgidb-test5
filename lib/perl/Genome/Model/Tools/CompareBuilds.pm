@@ -23,7 +23,7 @@ class Genome::Model::Tools::CompareBuilds {
     has_optional => [
         second_revision => {
             is => 'DirectoryPath',
-            doc => 'Software revision that the other build should be run on, defaults to genome-stable',
+            doc => 'Software revision that the other build should be run on, defaults to current/pipeline',
         },
     ],
 };
@@ -48,7 +48,7 @@ sub execute {
    
     my $second_revision = $self->second_revision;
     unless (defined $second_revision) {
-        my $stable = readlink "/gsc/scripts/opt/genome-stable";
+        my $stable = readlink "/gsc/scripts/opt/genome/current/pipeline";
         $second_revision = "/gsc/scripts/opt/$stable";
     }
     confess "No revision found at $second_revision" unless -d $second_revision;

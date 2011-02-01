@@ -120,7 +120,7 @@ sub execute {                               # replace with real execution logic.
 		if($search_string && $key_count < 100)
 		{
 			print "Extracting genotypes for $key_count positions...\n";		
-			$cmd = "samtools view -b $bam_file $search_string | samtools pileup -f /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa - | java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan pileup2cns >$temp_path";			
+			$cmd = "samtools view -b $bam_file $search_string | samtools pileup -f /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa - | java -classpath ~dkoboldt/Software/Varscan net.sf.varscan.Varscan pileup2cns >$temp_path";			
 			print "$cmd\n";
 		}
 		else
@@ -210,13 +210,13 @@ sub execute {                               # replace with real execution logic.
 	
 				if($file_type eq "varscan" && $cns_call ne "A" && $cns_call ne "C" && $cns_call ne "G" && $cns_call ne "T")
 				{
-					## VarScan CNS format ##
+					## Varscan CNS format ##
 					$depth = $lineContents[4] + $lineContents[5];
 					$cons_gt = code_to_genotype($cns_call);			
 				}
 				elsif($file_type eq "varscan")
 				{
-					## VarScan SNP format ##
+					## Varscan SNP format ##
 					$depth = $lineContents[4] + $lineContents[5];
 					my $var_freq = $lineContents[6];
 					my $allele1 = $lineContents[2];

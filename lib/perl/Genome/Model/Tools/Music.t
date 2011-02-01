@@ -2,74 +2,131 @@
 use strict;
 use warnings;
 use above 'Genome';
+use Genome::Model::Tools::Music;
 use Test::More;
 
-# TODO: replace with relative paths when we move the test data
-my $input_dir = '/gscuser/ndees/893/music_testdata/';
-my $expected_output_dir = '/gscuser/ndees/893/music_test_output/categ_clin/';
-my $actual_output_dir = Genome::Sys->create_temp_directory("music");
+# figure out where the test inputs are and expected outputs
+# the package with this data is a dependency so this should work when deployed externally
+my $test_data_dir = Genome::Sys->dbpath('genome-music-test',$Genome::Model::Tools::Music::VERSION);
+unless ($test_data_dir) {
+    die "failed to find test data for genome-music-test version 0.01!";
+}
 
-# list examples and expected outputs
-my @examples = (
+#my $input_dir = '/gscuser/ndees/893/music_testdata/';
+#my $expected_output_dir = '/gscuser/ndees/893/music_test_output/';
+my $input_dir = $test_data_dir . '/inputs';
+my $expected_output_dir = $test_data_dir . '/expected_outputs/';
+
+# decide where output goes...
+my $actual_output_dir;
+if (@ARGV) {
+    # override output dir
+    if ($ARGV[0] eq '--regenerate') {
+        # regenerate all output files as the new "correct" answer
+        $actual_output_dir = $expected_output_dir;
+    }
+    else {
+        # use the dir the user specifies (for testing since tempdirs get destroyed)
+        $actual_output_dir = shift @ARGV;
+        mkdir $actual_output_dir unless -d $actual_output_dir;
+        unless (-d $actual_output_dir) {
+            die "failed to create directory $actual_output_dir: $!";
+        }
+    }
+}
+else {
+    # by default use a temp dir
+    $actual_output_dir= Genome::Sys->create_temp_directory("music");
+};
+
+# use cases and expected outputs
+my @cases = (
     {
-        run => "music clinical-correlation "
-            . " --clinical-data-file $input_dir/clinical/tcga_OV_clinical_clean.csv.maf_samples.numeric.withNA.csv"
-            . " --clinical-data-type numeric"
-            . " --maf-file $input_dir/maf/tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent"
-            . " --output-file $actual_output_dir/tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent.cat_cor"
-            . "  --genetic-data-type gene",
+        run => "music clinical-correlation \n"
+            . " --clinical-data-file $input_dir/clinical_data/tcga_OV_clinical_clean.csv.maf_samples.numeric.withNA.csv \n"
+            . " --clinical-data-type numeric \n"
+            . " --maf-file $input_dir/maf/tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent \n"
+            . " --output-file $actual_output_dir/num_clin/tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent.num_cor \n"
+            . " --genetic-data-type gene",
         expect => [
-            'tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent.cat_cor' 
-        ]
+            'num_clin/tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent.num_cor' 
+        ],
     },
+    {
+        run => "music clinical-correlation\n"
+            . " --clinical-data-file $input_dir/clinical_data/tcga_OV_clinical_clean.csv.maf_samples.categorical.withNA.csv \n"
+            . " --clinical-data-type class \n"
+            . " --maf-file $input_dir/maf/tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent \n"
+            . " --output-file $actual_output_dir/categ_clin/tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent.cat_cor \n"
+            . " --genetic-data-type gene",
+        expect => [
+            'categ_clin/tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent.cat_cor'
+        ],
+    },
+    {
+        run => "music cosmic-omim \n"
+            . " --mutation-file $input_dir/short.maf\n"
+            . " --output-file $actual_output_dir/short_maf.cosmic_omim \n"
+            . " --verbose 0",
+        expect => [
+            'short_maf.cosmic_omim'
+        ],
+    }, 
 );
 
 # pre-determine how many tests will run so the test harness knows if we exit early
-my $tests = scalar(@examples) * 2;
-for my $example (@examples) {
-    my $expect = $example->{expect};
+my $tests = 0; 
+for my $case (@cases) {
+    next if $case->{skip};
+    my $expect = $case->{expect};
     unless ($expect) {
-        warn "no files expected for test $example->{run}???";
+        warn "no files expected for test $case->{run}???";
         next;
     }
-    $tests += (scalar(@$expect) * 2);
+    $tests += 2 + (scalar(@$expect) * 2);
 }
+plan tests => $tests;
 
-# since these tests don't run yet, and we don't want to stop deploy over it,
-# require that an environment variable be set to actually run
-if ($ENV{GENOME_TEST_DEV}) {
-    plan tests => $tests;
-}
-else {
-    plan skip_all => "in development, set GENOME_TEST_DEV=1 to run this test"
-};  
-
-# run each example
+# run each case
 my $n = 0;
-for my $example (@examples) {
-    my $cmd = $example->{run};
-    my $expect = $example->{expect};
+for my $case (@cases) {
+    my $cmd = $case->{run};
+    my $expect = $case->{expect};
+    
+    $n++;
+    note("use case $n: $cmd");
+    if (my $msg = $case->{skip}) {
+        note "SKIPPING: $case->{skip}\n";
+        next;
+    }
+
+    # make subdirs for the output if needed
+    for my $expect_file (@$expect) {
+        my $actual_full_path = $actual_output_dir . '/' . $expect_file;
+        my $dir = $actual_full_path;
+        use File::Basename;
+        $dir = File::Basename::dirname($dir);
+        Genome::Sys->create_directory($dir);
+    }
 
     # execute
-    my $n++;
-    note("running test example $n: $cmd");
     my @args = split(' ',$cmd);
     my $exit_code = eval {
         Genome::Model::Tools->_execute_with_shell_params_and_return_exit_code(@args);
     };
 
-    ok(!$@, " example $n ran without crashing") or diag $@;
-    is($exit_code, 0, " example $n ran returned a zero (good) exit code") or next;
+    ok(!$@, " case $n ran without crashing") or diag $@;
+    is($exit_code, 0, " case $n ran returned a zero (good) exit code") or next;
 
     # compare results
     for my $expect_file (@$expect) {
         my $expect_full_path = $expected_output_dir . '/'. $expect_file;
         my $actual_full_path = $actual_output_dir . '/' . $expect_file;
         
-        ok(-e $actual_full_path, " example $n has expected output file $expect_file") or next;
+        ok(-e $actual_full_path, " case $n has expected output file $expect_file") or next;
         
         my @diff = `diff $expect_full_path $actual_full_path`;
-        is(scalar(@diff), 0, " example $n matches expectations for file $expect_file")
+        is(scalar(@diff), 0, " case $n matches expectations for file $expect_file")
             or diag("diff $expect_full_path and $actual_full_path; # << run this to debug"); 
     }
 }

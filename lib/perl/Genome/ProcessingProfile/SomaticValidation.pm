@@ -60,10 +60,10 @@ class Genome::ProcessingProfile::SomaticValidation {
             is => 'Boolean', doc => 'prepend the string "chr" to chromosome names. This is primarily used for external/imported bam files.',
         },
         varscan_params => {
-            is => 'String', doc => 'Options to pass to VarScan (e.g. "--min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.01 --validation 1 --min-coverage 8")',
+            is => 'String', doc => 'Options to pass to Varscan (e.g. "--min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.01 --validation 1 --min-coverage 8")',
         },
         varscan_version => {
-            is => 'String', doc => 'Version of VarScan to use',
+            is => 'String', doc => 'Version of Varscan to use',
         }
     ],
 };

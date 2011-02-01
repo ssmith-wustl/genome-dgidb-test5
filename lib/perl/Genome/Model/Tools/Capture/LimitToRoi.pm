@@ -61,17 +61,20 @@ sub execute {                               # replace with real execution logic.
 	my $regions_file = $self->regions_file;
 	my $output_file = $self->output_file;
 	
-	## Call VarScan Limit ##
+	## Call Varscan Limit ##
 
 	if(-e $input_file && -e $regions_file)
 	{
-		my $cmd = "java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan limit $input_file --regions-file $regions_file --output-file $output_file";
+		my $cmd = "java -Xms3000m -Xmx3000m -jar /gsc/scripts/lib/java/VarScan/VarScan.jar limit $input_file --regions-file $regions_file --output-file $output_file";
 		system($cmd);
 	}
 	else
 	{
 		die "ERROR: Input file $input_file or regions file $regions_file not found!\n";
 	}
+
+	return 1;
+
 }
 
 

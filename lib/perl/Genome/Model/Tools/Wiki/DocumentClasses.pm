@@ -31,7 +31,7 @@ sub help_detail {
         'the svn-revision option is specified.  If classes are specified on the',
         'command line they will be used.  Otherwise the entire namespace will be',
         'documented.  This tool must be run from within a directory of the ',
-        'namespace to document. (e.g. /gsc/scripts/opt/genome-stable/lib/perl/Genome/)');
+        'namespace to document. (e.g. /gsc/scripts/opt/genome/current/pipeline/lib/perl/Genome/)');
 }
 
 #See also UR::Object::ModuleWriter->resolve_class_description_perl
