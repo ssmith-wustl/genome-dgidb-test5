@@ -92,7 +92,7 @@ sub iub_for_alleles {
     }
    my @alleles = @_;
    if(@alleles != 2) {
-       warn "Conversion of more than 2 alleles to IUB code is currently unsupported";
+       warn "Conversion of more than 2 alleles to IUB code is currently unsupported (".scalar @alleles." passed)";
        return; 
    }
 
