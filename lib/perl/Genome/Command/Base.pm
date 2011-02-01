@@ -238,7 +238,7 @@ sub _resolve_param_value_via_related_class_method {
                     $ALTERNATE_FROM_CLASS{$via_class}{$from_class} = [$method];
                 }
                 elsif (!$response) {
-                    $self->status_messag("Exiting...");
+                    $self->status_message("Exiting...");
                 }
             }
             else {
