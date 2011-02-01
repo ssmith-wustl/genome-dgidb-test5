@@ -327,6 +327,7 @@ sub _create {
     my $dir_observer;
     my $dir_callback = sub {
         my $dir = Genome::Sys->create_directory($self->absolute_path);
+        chmod(0755, $dir);
         unless (defined $dir and -d $dir) {
             $self->error_message("Could not create allocation directory tree " . $self->absolute_path);
         }
