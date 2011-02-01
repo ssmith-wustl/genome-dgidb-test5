@@ -8,7 +8,7 @@ BEGIN {
 use above "Genome";
 use Data::Dumper;
 use Test::More tests => 37;
-use_ok('Genome::Model::Build::ReferenceSequence');
+use_ok('Genome::Model::Build::ImportedReferenceSequence');
 
 # create a test annotation build and a few reference sequence builds to test compatibility with
 my @species_names = ('human', 'mouse');
@@ -86,7 +86,7 @@ sub create_reference_builds {
     for my $sn (@$species_names) {
         $rbuilds{$sn} = [];
 
-        my $ref_model = Genome::Model::ReferenceSequence->create(
+        my $ref_model = Genome::Model::ImportedReferenceSequence->create(
             name                => "test_ref_sequence_$sn",
             processing_profile  => $ref_pp,
             subject_class_name  => ref($samples{$sn}),
@@ -95,7 +95,7 @@ sub create_reference_builds {
         ok($ref_model, "created reference sequence model ($sn)");
 
         for my $v (@$versions) {
-            my $rs = Genome::Model::Build::ReferenceSequence->create(
+            my $rs = Genome::Model::Build::ImportedReferenceSequence->create(
                 name            => "ref_sequence_${sn}_$v",
                 model           => $ref_model,
                 fasta_file      => 'nofile',

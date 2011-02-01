@@ -89,7 +89,7 @@ class Genome::Model::Build::ReferenceSequence {
 
         # optional to allow builds to indicate that they are derived from another build
         derived_from_id => {
-            is => 'Genome::Model::Build::ReferenceSequence',
+            is => 'Text',
             via => 'inputs',
             to => 'value_id',
             where => [ name => 'derived_from', value_class_name => 'Genome::Model::Build::ReferenceSequence' ],
@@ -99,14 +99,14 @@ class Genome::Model::Build::ReferenceSequence {
             is_optional => 1,
         },
         derived_from => {
-            is => 'Genome::Model::Build::ReferenceSequence',
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
             id_by => 'derived_from_id',
         },
 
         # optional to allow builds to indicate that are on the same coordinate system as another build, but
         # is not a direct derivation of it. derived from implies coordinates_from, so you don't need to use both.
         coordinates_from_id => {
-            is => 'Genome::Model::Build::ReferenceSequence',
+            is => 'Text',
             via => 'inputs',
             to => 'value_id',
             where => [ name => 'coordinates_from', value_class_name => 'Genome::Model::Build::ReferenceSequence' ],
@@ -116,7 +116,7 @@ class Genome::Model::Build::ReferenceSequence {
             is_optional => 1,
         },
         coordinates_from => {
-            is => 'Genome::Model::Build::ReferenceSequence',
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
             id_by => 'coordinates_from_id',
         },
     ],
