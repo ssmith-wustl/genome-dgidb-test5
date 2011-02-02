@@ -3,6 +3,7 @@ package Genome::Model::Tools::BioSamtools::ReadLengthDistribution;
 use strict;
 use warnings;
 
+use Statistics::Descriptive;
 use Genome;
 
 class Genome::Model::Tools::BioSamtools::ReadLengthDistribution {
@@ -16,6 +17,9 @@ class Genome::Model::Tools::BioSamtools::ReadLengthDistribution {
             is => 'Text',
             doc => 'The output directory to generate peak files',
         },
+        sizes_file => {
+
+        }
     ],
     has_optional => [
         _output_fh => {},
@@ -24,9 +28,10 @@ class Genome::Model::Tools::BioSamtools::ReadLengthDistribution {
 
 sub execute {
     my $self = shift;
-    my $output_fh = Genome::Utiltity::FileSystem->open_file_for_writing($self->output_file);
+    my $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
+    my $sizes_fh = Genome::Sys->open_file_for_writing($self->sizes_file);
     $self->_output_fh($output_fh);
-    my $refcov_bam  = Genome::RefCov::Bam->new(bam_file => $self->bam_file );
+    my $refcov_bam  = Genome::RefCov::Bam->create(bam_file => $self->bam_file );
     unless ($refcov_bam) {
         die('Failed to load bam file '. $self->bam_file);
     }
@@ -39,6 +44,7 @@ sub execute {
     while (my $align = $bam->read1()) {
         my $flag = $align->flag;
         my $read_length = $align->l_qseq;
+        print $sizes_fh $read_length ."\n";
         $read_stats->add_data($read_length);
         $read_stats{$read_length}++;
         unless ($flag & 4) {
@@ -47,6 +53,7 @@ sub execute {
             $alignment_stats->add_data($align_length);
         }
     }
+    $sizes_fh->close;
     print $output_fh 'READ SUMMARY:' ."\n";
     $self->print_stats($read_stats,\%read_stats);
     print $output_fh 'ALIGNED SUMMARY:' ."\n";

@@ -7,9 +7,9 @@ use Test::More;
 
 # figure out where the test inputs are and expected outputs
 # the package with this data is a dependency so this should work when deployed externally
-my $test_data_dir = Genome::Sys->dbpath('genome-music-test',$Genome::Model::Tools::Music::VERSION);
+my $test_data_dir = Genome::Sys->dbpath('genome-music-testdata',$Genome::Model::Tools::Music::VERSION);
 unless ($test_data_dir) {
-    die "failed to find test data for genome-music-test version 0.01!";
+    die "failed to find test data for genome-music-testdata version 0.01!";
 }
 
 #my $input_dir = '/gscuser/ndees/893/music_testdata/';

@@ -45,16 +45,22 @@ EOS
 
 sub execute {
     my $self = shift;
-    my @instrument_data_ids = map { $_->id } $self->instrument_data;
 
+    my @instrument_data = $self->instrument_data;
     if ($self->max) {
         my $max;
-        if ($self->max < @instrument_data_ids) {
-            $max = $#instrument_data_ids 
+        if ($self->max < @instrument_data) {
+            $max = $#instrument_data 
         } else {
             $max = $self->max - 1;
         }
-        @instrument_data_ids = @instrument_data_ids[0..$max];
+        @instrument_data = @instrument_data[0..$max];
+    }
+
+    my @instrument_data_ids = map { $_->id } $self->instrument_data;
+
+    if ($self->max) {
+        $self->status_message("Reduced number of instrument data to " . @instrument_data_ids . ": " . join(", ", @instrument_data_ids) . ".");
     }
 
     my @bams;
@@ -62,6 +68,9 @@ sub execute {
         my @alignment_results = Genome::InstrumentData::AlignmentResult->get(
             instrument_data_id => $instrument_data_id
         );
+        unless (@alignment_results) {
+            $self->status_message("No alignment results found for instrument data (ID: $instrument_data_id).");
+        }
         for my $alignment_result (@alignment_results) {
             push @bams, $alignment_result->output_dir . "/all_sequences.bam";
             my @builds = map { Genome::Model::Build->get($_->user_id) } $alignment_result->users;
@@ -83,7 +92,7 @@ sub execute {
             system("ls $in_bam");
         }
     }
-
+    return 1;
 }
 
 sub valid_dt_tag {
@@ -147,13 +156,13 @@ sub repair_dt {
     print "Validating new bam...\n";
     my $in_bam_md5 = qx(samtools view $in_bam | md5sum);
     my $out_bam_md5 = qx(samtools view $out_bam | md5sum);
-    if ($in_bam_md5 eq $out_bam_md5) {
+    if ($in_bam_md5 eq $out_bam_md5 && length $in_bam_md5 > 33) {
         rename($in_bam, "$in_bam.orig") || die;
         rename($out_bam, $in_bam) || die;
-        unlink("$in_bam.md5") || die;
+        if (-e "$in_bam.md5") {
+            unlink("$in_bam.md5") || die;
+        }
         !system("md5sum $in_bam > $in_bam.md5") || die;
-        chmod(0444, "$in_bam.md5") || die;
-        chmod(0444, "$in_bam") || die;
         unlink("$in_bam.orig") || die;
         unlink($out_sam_h) || die;
         unlink($in_sam_h) || die;
