@@ -27,7 +27,13 @@ sub help_brief {
 }
 
 sub help_detail {
-    return 'HELP IN PROGRESS';
+    my $class = shift;
+    my $name_for_objects = $class->_name_for_objects;
+    my $help = "This command updates $name_for_objects resolved via a command line string. Many $name_for_objects can be indicated at one time, as well as many properties to update.\n\n";
+    if ( @{$class->_only_if_null} ) {
+        $help .= 'These properties can only be updated if NULL: '.join(', ', @{$class->_only_if_null}).'.';
+    }
+    return $help;
 }
 
 sub execute {
