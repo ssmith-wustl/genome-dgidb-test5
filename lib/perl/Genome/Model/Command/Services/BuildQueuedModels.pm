@@ -80,6 +80,7 @@ sub execute {
     my $command = Genome::Model::Build::Command::Start->create(
         max_builds => $self->max_builds,
         models => \@models,
+        force => 1,
     );
     my $rv = $command->execute;
     my $err = $@;
