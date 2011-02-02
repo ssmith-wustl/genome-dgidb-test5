@@ -154,21 +154,25 @@ sub repair_dt {
     system("samtools reheader $out_sam_h $in_bam > $out_bam") && die;
 
     print "Validating new bam...\n";
+    my $in_bam_h_md5 = qx(samtools view -H $in_bam | grep -v DT: | md5sum);
+    my $out_bam_h_md5 = qx(samtools view -H $out_bam | grep -v DT: | md5sum);
+    unless ($in_bam_h_md5 eq $out_bam_h_md5 && length $in_bam_h_md5 > 33) {
+        die "ERROR: BAM headers (without DT lines) do not match between $in_bam and $out_bam.\n";
+    }
     my $in_bam_md5 = qx(samtools view $in_bam | md5sum);
     my $out_bam_md5 = qx(samtools view $out_bam | md5sum);
-    if ($in_bam_md5 eq $out_bam_md5 && length $in_bam_md5 > 33) {
-        rename($in_bam, "$in_bam.orig") || die;
-        rename($out_bam, $in_bam) || die;
-        if (-e "$in_bam.md5") {
-            unlink("$in_bam.md5") || die;
-        }
-        !system("md5sum $in_bam > $in_bam.md5") || die;
-        unlink("$in_bam.orig") || die;
-        unlink($out_sam_h) || die;
-        unlink($in_sam_h) || die;
-    } else {
-        print "\tERROR: BAM contents mismatch between $in_bam and $out_bam.\n";
+    unless ($in_bam_md5 eq $out_bam_md5 && length $in_bam_md5 > 33) {
+        die "\tERROR: BAM contents do not match between $in_bam and $out_bam.\n";
     }
+    rename($in_bam, "$in_bam.orig") || die;
+    rename($out_bam, $in_bam) || die;
+    if (-e "$in_bam.md5") {
+        unlink("$in_bam.md5") || die;
+    }
+    !system("md5sum $in_bam > $in_bam.md5") || die;
+    unlink("$in_bam.orig") || die;
+    unlink($out_sam_h) || die;
+    unlink($in_sam_h) || die;
     print "\n";
 }
 
