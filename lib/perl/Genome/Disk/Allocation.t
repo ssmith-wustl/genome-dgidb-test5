@@ -204,7 +204,6 @@ sub do_race_lock {
         owner_id => $ENV{USER},
         group_subdirectory => $group->subdirectory,
     );
-    UR::Context->commit; # to release locks
 
     unless ($allocation) {
         $fh->print("ALLOCATION_CREATE_FAIL\n");
@@ -215,13 +214,13 @@ sub do_race_lock {
         $fh->print("ALLOCATION_CREATE_SUCCESS\n");
     }
 
+    sleep 1;
     print "*** Child $child_id reallocating\n";
 
     my $reallo_rv = Genome::Disk::Allocation->reallocate(
         allocation_id => $allocation->id,
         kilobytes_requested => 5,
     );
-    UR::Context->commit; # again, to release locks
 
     unless (defined $reallo_rv and $reallo_rv) {
         $fh->print("REALLOCATION_FAIL\n");
@@ -232,12 +231,12 @@ sub do_race_lock {
         $fh->print("REALLOCATION_SUCCESS\n");
     }
 
+    sleep 1;
     print "*** Child $child_id deallocating!\n";
 
     my $deallo_rv = Genome::Disk::Allocation->delete(
         allocation_id => $allocation->id,
     );
-    UR::Context->commit; # to hold back the undead hordes
 
     unless (defined $deallo_rv and $deallo_rv) {
         $fh->print("DEALLOCATION_FAIL\n");
