@@ -112,9 +112,7 @@ sub create {
     # If no commit is on, the created object won't be retrievable via a get (since it will only live in the
     # child process' UR object cache). Just call the _create method directly and return
     if ($ENV{UR_DBI_NO_COMMIT}) {
-        my $rv = Genome::Disk::Allocation->_create(%params);
-        UR::Context->commit; # to release locks
-        return $rv;
+        return Genome::Disk::Allocation->_create(%params);
     }
 
     my $param_string = Genome::Utility::Text::hash_to_string(\%params);
@@ -137,9 +135,7 @@ sub delete {
 
     # Same as above... if no commit is on, just call the _delete method directly so changes will be in UR cache
     if ($ENV{UR_DBI_NO_COMMIT}) {
-        my $rv = Genome::Disk::Allocation->_delete(%params);
-        UR::Context->commit; # to release locks
-        return $rv;
+        return Genome::Disk::Allocation->_delete(%params);
     }
 
     my $param_string = Genome::Utility::Text::hash_to_string(\%params);
@@ -158,9 +154,7 @@ sub reallocate {
 
     # Again, call _reallocate directly if no commit is on so changes occur in UR cache
     if ($ENV{UR_DBI_NO_COMMIT}) {
-        my $rv = Genome::Disk::Allocation->_reallocate(%params);
-        UR::Context->commit; # to release locks
-        return $rv;
+        return Genome::Disk::Allocation->_reallocate(%params);
     }
 
     my $param_string = Genome::Utility::Text::hash_to_string(\%params);
@@ -323,23 +317,8 @@ sub _create {
 
     $self->status_message("Allocation " . $self->id . " created at " . $self->absolute_path);
 
-    # Add a commit hook to create allocation path. If UR_DBI_NO_COMMIT is set, then this won't fire.
-    my $dir_observer;
-    my $dir_callback = sub {
-        my $dir = Genome::Sys->create_directory($self->absolute_path);
-        chmod(0755, $dir);
-        unless (defined $dir and -d $dir) {
-            $self->error_message("Could not create allocation directory tree " . $self->absolute_path);
-        }
-        else {
-            $self->status_message("Allocation directory created at " . $self->absolute_path);
-        }
-        $dir_observer->delete; # To prevent multiple executions of the observer
-    };
-    $dir_observer = $self->add_observer(
-        aspect => 'commit',
-        callback => $dir_callback,
-    );
+    # Add a commit hook to create allocation path.
+    $self->create_observer_for_directory_creation;
 
     # Add a commit hook so this lock is released upon successful commit.
     $self->create_observer_for_unlock($volume_lock);
@@ -431,6 +410,7 @@ sub _reallocate {
     }
 
     my $diff = $kilobytes_requested - $self->kilobytes_requested;
+    $self->status_message("Resizing from " . $self->kilobytes_requested . " kb to $kilobytes_requested kb (changed by $diff)"); 
 
     # Lock and retrieve volume
     my $volume_lock = $self->get_volume_lock($self->mount_path);
@@ -439,6 +419,8 @@ sub _reallocate {
         confess 'Could not get lock on volume ' . $self->mount_path;
     }
 
+    print "Got volume lock\n";
+
     my $volume = Genome::Disk::Volume->get(mount_path => $self->mount_path);
     unless ($volume) {
         Genome::Sys->unlock_resource(resource_lock => $volume_lock);
@@ -446,8 +428,12 @@ sub _reallocate {
         confess 'Could not get volume with mount path ' . $self->mount_path;
     }
 
+    print "Got volume\n";
+
     # FIXME Get LIMS style lock, this is temporary
     $self->select_volume_for_update($volume->id);
+
+    print "Got LIMS volume lock\n";
 
     # Make sure there's room for the allocation... only applies if the new allocation is bigger than the old
     unless ($volume->unallocated_kb >= $diff) {
@@ -460,7 +446,12 @@ sub _reallocate {
     $self->kilobytes_requested($kilobytes_requested);
     $volume->unallocated_kb($volume->unallocated_kb - $diff);
 
+    print "Updates done!\n";
+
     $self->create_observer_for_unlock($volume_lock, $allocation_lock);
+    
+    print "Done!\n";
+
     return 1;
 }
 
@@ -485,6 +476,7 @@ sub check_kb_requested {
     return 1;
 }
 
+# FIXME I need to have Tony look at this... I bet I have to use the UR dbh to get this lock...
 # FIXME This emulates the old style locking for allocations, which uses select for update. This can
 # be phased out as soon as I'm sure that the new style is being used everywhere
 sub select_group_for_update {
@@ -519,12 +511,51 @@ sub create_observer_for_unlock {
             Genome::Sys->unlock_resource(resource_lock => $lock);
         }
         print STDERR "Allocation locks released\n";
-        $observer->delete;
+        $observer->delete if $observer;
     };
+
+    # If no commit is on, then locks can be released immediately since this process
+    # won't be making any updates to the volume or allocation.
+    if ($ENV{UR_DBI_NO_COMMIT}) {
+        &$callback;
+        return 1;
+    }
+
     $observer = UR::Context->add_observer(
         aspect => 'commit',
         callback => $callback,
     );
+    return 1;
+}
+
+sub create_observer_for_directory_creation {
+    my $self = shift;
+    my $path = $self->absolute_path;
+
+    my $observer;
+    my $callback = sub {
+        # This method currently returns the path if it already exists instead of failing
+        my $dir = Genome::Sys->create_directory($path);
+        unless (defined $dir and -d $dir) {
+            print STDERR "Could not create allocation directcory at $path!\n";
+        }
+        chmod(0755, $dir);
+        $observer->delete if $observer; # To prevent multiple executions of the observer
+    };
+
+    # Just make the directory and return if no commit is on, no need to wait for database
+    # commit to succeed first. This mimics old behavior, so it is the responsibility of the
+    # programmer to clean up any directories that get created during testing.
+    if ($ENV{UR_DBI_NO_COMMIT}) {
+        &$callback;
+        return 1;
+    }
+
+    $observer = UR::Context->add_observer(
+        aspect => 'commit',
+        callback => $callback,
+    );
+
     return 1;
 }
 
@@ -534,8 +565,8 @@ sub get_volume_lock {
     $modified_mount =~ s/\//_/g;
     my $volume_lock = Genome::Sys->lock_resource(
         resource_lock => '/gsc/var/lock/allocation/volume' . $modified_mount,
-        max_try => 10,
-        block_sleep => 2,
+        max_try => 100,
+        block_sleep => 1,
     );
     return $volume_lock;
 }
@@ -544,8 +575,8 @@ sub get_allocation_lock {
     my ($class, $id) = @_;
     my $allocation_lock = Genome::Sys->lock_resource(
         resource_lock => '/gsc/var/lock/allocation/allocation_' . join('_', split(' ', $id)),
-        max_try => 5,
-        block_sleep => 2,
+        max_try => 20,
+        block_sleep => 1,
     );
     return $allocation_lock;
 }
