@@ -38,6 +38,11 @@ class Genome::Model::Tools::DetectVariants2::Base {
             is_input => 1,
             is_output => 1,
         },
+        output_file => {
+            is => 'String',
+            is_output => 1,
+            doc => 'For passing on the path/name of the output file',
+        },
         snv_detection_strategy => {
             is => "Genome::Model::Tools::DetectVariants2::Strategy",
             doc => 'The variant detector strategy to use for finding SNVs',
@@ -49,6 +54,12 @@ class Genome::Model::Tools::DetectVariants2::Base {
         sv_detection_strategy => {
             is => "Genome::Model::Tools::DetectVariants2::Strategy",
             doc => 'The variant detector strategy to use for finding SVs',
+        },
+        params => {
+            is => 'Text',
+            is_input => 1,
+            is_output => 1,
+            doc => 'The full parameter list coming in from the dispatcher. It is one string before being parsed.',
         },
     ],
     has_constant => [
