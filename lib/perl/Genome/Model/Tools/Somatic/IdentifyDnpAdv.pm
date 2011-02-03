@@ -1,6 +1,6 @@
 package Genome::Model::Tools::Somatic::IdentifyDnpAdv;
 
-#use strict;
+use strict;
 use warnings;
 
 use Genome;
@@ -9,7 +9,7 @@ use Genome::Info::IUB;
 use IO::File;
 use POSIX;
 use Sort::Naturally;
-use List::Util;
+use List::Util qw(max);
 
 my $DEFAULT_VERSION = '0.2';
 my $READCOUNT_COMMAND = 'bam-readcount';
@@ -140,15 +140,6 @@ sub execute {
 
     my ($last_chr,$last_stop,$last_pos, $last_ref, $last_cns, $last_type,$last_score); 
     my ($chr,$stop, $pos, $ref, $cns, $type,$score);
-=cut
-    my $chr=undef;
-    my $last_stop = undef; my $stop=undef;
-    my $last_pos = undef; my $pos=undef;
-    my $last_ref = undef; my $ref=undef;
-    my $last_cns = undef; my $cns=undef;
-    my $last_type = undef; my $type=undef;
-    my $last_score= undef; my $score=undef;
-=cut
     my @rest=();
 #    my @lines = (); #line buffer to store last few lines
     my %SNP={};  
@@ -221,13 +212,15 @@ sub execute {
               }
          }
     }
-    print "\nNNP candidate number: $n\n";
-    print "Begin find_dnp_from_candidate:\t";
-    system ("date +%s");
-    
+    $self->status_message("nNNP candidate number: $n");
+    my ($t_begin, $t_end);
+    $t_begin=time();
+    $self->status_message("Begin find_dnp_from_candidate: $t_begin");
+  
     my @result=$self->find_dnp_from_candidate(\@candidate);
-    print "Finish find_dnp_from_candidate\t";
-    system ("date +%s");
+
+    $t_end=time();
+    $self->status_message(""Finish find_dnp_from_candidate: $t_end");
 
     # open FILEHANDLE for output bed format and anno format
     my $bedfile_hc = IO::File->new($self->bed_hc_file, "w");
@@ -252,10 +245,9 @@ sub execute {
     }   
 
     # Do bam-readcount to check the mapping quality of each bases
-    print "Begin make tmp readcount file\t";
-    system ("date +%s");
-
-   
+    $t_end=time();
+    $self->status_message("Begin make tmp readcount file: $t_end");
+     
     my ($tfh,$temp_path) = Genome::Sys->create_temp_file;
     unless($tfh) {
         $self->error_message("Unable to create temporary file $!");
@@ -280,18 +272,17 @@ sub execute {
         print $tfh "$line\n";
     }
     $tfh->close;
-    print "Begin run readcount\t";
-    system ("date +%s");
-
+    $t_end=time();
+    $self->status_message("Begin run readcount: $t_end");
     my %count_line;
     my $readcount_command=sprintf("%s %s -l %s %s|",$self->readcount_path, $self->bam_readcount_params, $temp_path,$self->bam_file);
     $self->status_message("Running: $readcount_command");
     my $readcounts = IO::File->new("$readcount_command") or die "can't open the file $readcount_command due to $!";
     my @readcounts= $readcounts->getlines;
-    print "End read readcount\t";
-    system ("date +%s");
+    $t_end=time();
+    $self->status_message("End read readcount: $t_end");
 
-       my $total_readcount=scalar(@readcounts);
+    my $total_readcount=scalar(@readcounts);
     print "$total_readcount\n";
     for my $count_line (@readcounts){
         chomp $count_line;
@@ -302,12 +293,11 @@ sub execute {
         $self->error_message("Error running /gsc/pkg/bio/samtools/readcount/readcount-v0.2/bam-readcount");
         die;
     }
-    print "The number of total sites for readcount: $total_readcount\n";
-    print "Begin parsing readcount and print outfile\t";
-    system ("date +%s");
-
+    $self->status_message("The number of total sites for readcount: $total_readcount");
+    $t_end=time();
+    $self->status_message("Begin parsing readcount and print outfile: $t_end");
     my $total_result= scalar(@result);
-    print "The number of total sites before readcount: $total_result\n";
+    $self->status_message("The number of total sites before readcount: $total_result");
 
     # separate high and low confidence sites
     # For BWA, if (somatic_score >=40 && mapping_quality>=40) is fullfilled in any base of DNP/TNP, the DNP/TNP is high confidence
@@ -342,7 +332,7 @@ sub execute {
                         }
                         next EACH;
                     }else{
-                        $self->status_message("cannot find $line in READCOUNT");
+                        $self->status_message("cannot find $result in READCOUNT");
                     }
                 }else{
                     my @somatic_scores=split/\,/, $somatic_score;
@@ -363,7 +353,7 @@ sub execute {
                              }
                         }
                     }else{
-                        $self->status_message("cannot find $line in READCOUNT");
+                        $self->status_message("cannot find $result in READCOUNT");
                     }
                 }
             }
@@ -373,12 +363,15 @@ sub execute {
         }
     }
     $bedfile_hc->close; $annofile_hc->close; $bedfile_lc->close; $annofile_lc->close;
-    print "End parsing readcount and print outfile\t";
-    system ("date +%s");
-
+    $t_end=time();
+    $self->status_message("End parsing readcount and print outfile: $t_end");
+    if (($t_end-$t_begin) > 0) {
+        my $avg = $total_result/($t_end-$t_begin);
+        $self->status_message("Average speed is $avg sites per second");
+    }
 }
 
-return 1;
+return 0;
 
 
 #In the find_dnp_from_candidate, the somatic score for SNP remains the same
@@ -402,6 +395,7 @@ sub find_dnp_from_candidate{
             }
         }elsif ($type==2){
             $n++;
+            print "$candidate\n";
             my $ref1=substr($ref,0,1); 
             my $ref2=substr($ref,1,1);
             my $cns1=substr($cns,0,1);
@@ -645,15 +639,6 @@ sub _calculate_offset {
     }
     #position didn't cross the read
     return; 
-}
-  
-sub max{
-   my ($a,$b)=@_;
-   if ($a>$b) {
-       return $a;
-   }else{
-       return $b;
-   }
 }
 
 sub readcount_path {
