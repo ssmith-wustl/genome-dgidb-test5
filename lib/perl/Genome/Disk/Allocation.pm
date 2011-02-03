@@ -76,8 +76,6 @@ class Genome::Disk::Allocation {
 };
 
 our $MAX_VOLUMES = 5;
-our $UNUSABLE_VOLUME_PERCENT = .05;
-our $MAX_UNUSABLE_KB = 1_073_741_824;  # 1 TB
 our $MINIMUM_ALLOCATION_SIZE = 0;
 our $MAX_ATTEMPTS_TO_LOCK_VOLUME = 30;
 our @REQUIRED_PARAMETERS = qw/
@@ -228,7 +226,7 @@ sub _create {
         my @reasons;
         push @reasons, 'disk is not active' if $volume->disk_status ne 'active';
         push @reasons, 'allocation turned off for this disk' if $volume->can_allocate != 1;
-        push @reasons, 'not enough space on disk' if $volume->unallocated_kb < $kilobytes_requested;
+        push @reasons, 'not enough space on disk' if ($volume->unallocated_kb - $volume->reserve_size) < $kilobytes_requested;
         if (@reasons) {
             confess "Requested volume with mount path $mount_path cannot be allocated to:\n" . join("\n", @reasons);
         }
@@ -255,12 +253,7 @@ sub _create {
         }
 
         # Make sure that the allocation doesn't infringe on the empty buffer required for each volume
-        # This buffer is either UNUSABLE_VOLUME_PERCENT or 1TB, whichever is smallest
-        @volumes = grep {
-            my $buffer = int($_->total_kb * $UNUSABLE_VOLUME_PERCENT);
-            $buffer = $MAX_UNUSABLE_KB if $buffer > $MAX_UNUSABLE_KB;
-            ($_->unallocated_kb - $kilobytes_requested) >= $buffer;
-        } @volumes;
+        @volumes = grep { ($_->unallocated_kb - $_->reserve_size) > $kilobytes_requested } @volumes;
 
         # Only allocate to the first MAX_VOLUMES retrieved
         my $max = @volumes > $MAX_VOLUMES ? $MAX_VOLUMES : @volumes;
@@ -282,8 +275,8 @@ sub _create {
         my $index = int(rand(@candidate_volumes));
         my $candidate_volume = $candidate_volumes[$index];
 
-        # Lock using mount path, necessary so other allocation command don't have to first load the volume
-        # to get other information, lock it, and then reload. Here, this is unavoidable.
+        # Lock using mount path, necessary so other allocation commands don't have to first load the volume
+        # to get other information, lock it, and then reload.
         my $lock = Genome::Disk::Allocation->get_volume_lock($candidate_volume->mount_path);
         next unless defined $lock;
 
@@ -419,8 +412,6 @@ sub _reallocate {
         confess 'Could not get lock on volume ' . $self->mount_path;
     }
 
-    print "Got volume lock\n";
-
     my $volume = Genome::Disk::Volume->get(mount_path => $self->mount_path);
     unless ($volume) {
         Genome::Sys->unlock_resource(resource_lock => $volume_lock);
@@ -428,12 +419,8 @@ sub _reallocate {
         confess 'Could not get volume with mount path ' . $self->mount_path;
     }
 
-    print "Got volume\n";
-
     # FIXME Get LIMS style lock, this is temporary
     $self->select_volume_for_update($volume->id);
-
-    print "Got LIMS volume lock\n";
 
     # Make sure there's room for the allocation... only applies if the new allocation is bigger than the old
     unless ($volume->unallocated_kb >= $diff) {
@@ -442,16 +429,10 @@ sub _reallocate {
         confess 'Not enough unallocated space on volume ' . $volume->mount_path . " to increase allocation size by $diff kb";
     }
 
-    # Update allocation and volume
+    # Update allocation and volume, create unlock observer, and return
     $self->kilobytes_requested($kilobytes_requested);
     $volume->unallocated_kb($volume->unallocated_kb - $diff);
-
-    print "Updates done!\n";
-
     $self->create_observer_for_unlock($volume_lock, $allocation_lock);
-    
-    print "Done!\n";
-
     return 1;
 }
 
@@ -476,18 +457,17 @@ sub check_kb_requested {
     return 1;
 }
 
-# FIXME I need to have Tony look at this... I bet I have to use the UR dbh to get this lock...
 # FIXME This emulates the old style locking for allocations, which uses select for update. This can
 # be phased out as soon as I'm sure that the new style is being used everywhere
 sub select_group_for_update {
     my ($class, $group_id) = @_;
     return 1 if $ENV{UR_DBI_NO_COMMIT};
-    GSC::DiskVolume->load(sql => qq{
-        select dv.* from disk_volume dv
-        join disk_volume_group dvg on dv.dv_id = dvg.dv_id
-        and dvg.dg_id = $group_id
-        for update
-    });
+    Genome::DataSource::Oltp->get_default_dbh->do(
+        "select dv.* from disk_volume dv " .
+        "join disk_volume_group dvg on dv.dv_id = dvg.dv_id " .
+        "and dvg.dg_id = $group_id " .
+        "for update"
+    );
     return 1;
 }
 
@@ -495,11 +475,7 @@ sub select_group_for_update {
 sub select_volume_for_update {
     my ($class, $volume_id) = @_;
     return 1 if $ENV{UR_DBI_NO_COMMIT};
-    GSC::DiskVolume->load(sql => qq{
-        select * from disk_volume
-        where dv_id = $volume_id
-        for update
-    });
+    Genome::DataSource::Oltp->get_default_dbh->do("select * from disk_volume where dv_id = $volume_id for update");
     return 1;
 }
 
