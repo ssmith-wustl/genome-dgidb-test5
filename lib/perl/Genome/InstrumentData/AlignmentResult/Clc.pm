@@ -32,8 +32,8 @@ sub required_rusage {
     my $mem_thousand = 14000;
     my $mem_million = 15000000;
     if (defined $instrument_data && $instrument_data->is_paired_end){
-        $mem_thousand = 30000;
-        $mem_million = 31000000;
+        $mem_thousand = 45000;
+        $mem_million = 47000000;
     }
         
     return "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>" . $estimated_usage_mb . " && mem>$mem_thousand] span[hosts=1] rusage[mem=$mem_thousand]' -M $mem_million -n 4 -q hmp -m hmp";
