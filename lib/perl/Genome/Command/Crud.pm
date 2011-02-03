@@ -66,11 +66,6 @@ sub init_sub_commands {
             Carp::confess('Cannot dynamically create class for sub command name: '.$sub_command);
         }
         push @sub_classes, $sub_class;
-
-        # overload some methods
-        no strict;
-        *{ $sub_class.'::_name_for_objects' } = sub{ return $config{name_for_objects}; };
-        *{ $sub_class.'::_name_for_objects_ub' } = sub{ return $config{name_for_objects_ub}; };
     }
 
     # Note inited
@@ -106,7 +101,9 @@ sub _build_create_sub_class {
     );
 
     no strict;
+    *{ $sub_class.'::_name_for_objects' } = sub{ return $config{name_for_objects}; };
     *{ $sub_class.'::_target_class' } = sub{ return $config{target_class}; };
+    use strict;
 
     return $sub_class;
 }
@@ -131,9 +128,6 @@ sub _build_list_sub_class {
         has => \@has,
     );
 
-    no strict;
-    *{ $sub_class.'::sub_command_sort_position' } = sub { 2 };
-
     return $sub_class;
 }
    
@@ -150,7 +144,7 @@ sub _build_update_sub_class {
                 is => $config{target_class},
                 is_many => 1,
                 shell_args_position => 1,
-                doc => $config{name_for_objects}.' to update, resolved via text string.',
+                doc => ucfirst($config{name_for_objects}).' to update, resolved via text string.',
             },
             ( map { $_->{property_name} => $_ } @properties ),
         ],
@@ -162,11 +156,18 @@ sub _build_update_sub_class {
         $only_if_null = [];
     }
     elsif ( $only_if_null eq 1 ) { # use all props
-        $only_if_null = [ map { $_->{property_name} => $_ } @properties ];
+        $only_if_null = [ map { $_->{property_name} } @properties ];
+    }
+    else {
+        my $ref = ref $only_if_null;
+        Carp::confess("Unknown data type ($ref) for config param 'only_if_null'") if $ref ne 'ARRAY';
     }
 
     no strict;
+    *{ $sub_class.'::_name_for_objects' } = sub{ return $config{name_for_objects}; };
+    *{ $sub_class.'::_name_for_objects_ub' } = sub{ return $config{name_for_objects_ub}; };
     *{ $sub_class.'::_only_if_null' } = sub{ return $only_if_null; };
+    use strict;
 
     return $sub_class;
 }
@@ -189,6 +190,11 @@ sub _build_delete_sub_class {
         ],
         doc => 'delete '.$config{name_for_objects},
     );
+
+    no strict;
+    *{ $sub_class.'::_name_for_objects' } = sub{ return $config{name_for_objects}; };
+    *{ $sub_class.'::_name_for_objects_ub' } = sub{ return $config{name_for_objects_ub}; };
+    use strict;
 
     return $sub_class;
 }
@@ -229,7 +235,7 @@ sub _command_properties_for_target_class {
                 push @seen_properties, $property_name;
                 $property{property_name} = $property_name;
                 $property{data_type} = $object_meta->data_type;
-                $property{doc} = $object_meta->doc;
+                $property{doc} = $object_meta->doc if $object_meta->doc;
             }
         }
     }

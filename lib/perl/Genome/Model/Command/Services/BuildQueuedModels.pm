@@ -89,7 +89,7 @@ sub execute {
     unless (@builds == $builds_to_start){
         $self->error_message("Failed to start expected number of builds. $builds_to_start expected, ".scalar @builds." built.\nErr:$@");
     }
-    unless ($rv){
+    elsif (!$rv){
         $self->error_message("Built expected number of builds, but had some failures:\nErr:$@");
     }
 

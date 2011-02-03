@@ -57,6 +57,33 @@ class Genome::Model::Build::ReferenceSequence {
             is_many => 0,
         },
 
+        sequence_uri => {
+            is => 'UR::Value',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'sequence_uri', value_class_name => 'UR::Value' ],
+            doc => "publicly available URI to the sequence file for the fasta",
+            is_mutable => 1,
+            is_many => 0,
+            is_optional => 1,
+        },
+        generate_sequence_uri => {
+            is => 'Boolean',
+            is_transient => 1,
+            is_optional => 1,
+            default_value => 0,
+        },
+
+        header_version => {
+            is => 'UR::Value',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'header_version', value_class_name => 'UR::Value' ],
+            doc => "header revision for the reference build (in case headers changed)",
+            is_mutable => 1,
+            is_many => 0,
+        },
+
         name => {
             is => 'Text',
             via => 'inputs',
@@ -127,11 +154,20 @@ sub create {
     my $self = shift;
     my $build = $self->SUPER::create(@_);
 
-    # Let's store the name as an input instead of relying on calculated properties
-    $build->name($build->calculated_name) if $build;
+    if ($build->generate_sequence_uri) {
+        $build->sequence_uri($build->external_url);
+    }
+
     if ($build->derived_from) {
         $build->coordinates_from($build->derived_from_root);
     }
+
+    # Let's store the name as an input instead of relying on calculated properties
+    # Only set a name if one wasn't passed into create (the define command might pass
+    # in a pre-destined assembly name)
+    $build->name($build->calculated_name) if ($build && !defined $build->name);
+
+    $self->status_message("Created reference sequence build with assembly name " . $build->name);
 
     return $build;
 }
@@ -346,6 +382,7 @@ sub description {
 sub external_url {
     my $self = shift;
     my $url = 'https://genome.wustl.edu/view/genome/model/build/reference-sequence/consensus.fasta?id=' . $self->id;
+    $url .= "/".$self->name."/all_sequences.bam";
     return $url;
 }
 
@@ -389,7 +426,11 @@ sub get_sequence_dictionary {
             return;
         }
         #my $picard_path = "/gsc/scripts/lib/java/samtools/picard-tools-1.04/";
-        my $uri = $self->external_url."/".$self->name."/all_sequences.bam";
+        my $uri = $self->sequence_uri;
+        if (!$uri) {
+            $self->warning_message("No sequence URI defined on this model!  Using generated default: " . $self->external_url);
+            $uri = $self->external_url;
+        }
         my $ref_seq = $self->full_consensus_path('fa'); 
         my $name = $self->name;
         

@@ -86,8 +86,8 @@ sub supports_bam_input {
     my $class = shift;
     my $version = shift;
 
-    my %ok_versions = {'0.5.9rc1' => 1,
-                       '0.5.9'  => 1};
+    my %ok_versions = ('0.5.9rc1' => 1,
+                       '0.5.9'  => 1);
 
     return (exists $ok_versions{$version});
 
