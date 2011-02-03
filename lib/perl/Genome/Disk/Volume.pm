@@ -24,6 +24,14 @@ class Genome::Disk::Volume {
             calculate_from => ['total_kb', 'allocated_kb'],
             calculate => q{ return  sprintf("%.2f", ( $allocated_kb / $total_kb ) * 100); },
         },
+        reserve_size => {
+            calculate_from => ['total_kb', 'unusable_volume_percent', 'maximum_reserve_size'],
+            calculate => q{
+                my $buffer = int($total_kb * $unusable_volume_percent);
+                $buffer = $maximum_reserve_size if $buffer > $maximum_reserve_size;
+                return $buffer;
+            }
+        },
     ],
     has_many_optional => [
         disk_group_names => {
@@ -49,6 +57,9 @@ class Genome::Disk::Volume {
     data_source => 'Genome::DataSource::Oltp',
     doc => 'Represents a particular disk volume (eg, sata483)',
 };
+
+sub unusable_volume_percent { return .05 }
+sub maximum_reserve_size { return 1_073_741_824 } # 1 TB
 
 sub most_recent_allocation {
     my $self = shift;
