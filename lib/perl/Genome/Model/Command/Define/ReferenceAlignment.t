@@ -277,7 +277,7 @@ sub create_reference_builds {
         subject_id          => $sample,
     );
     my $rbuild = Genome::Model::Build::ImportedReferenceSequence->create(
-        name            => 'test_ref_sequence_build',
+        name            => 'test_ref_sequence_build1',
         model           => $ref_model,
         fasta_file      => 'nofile', 
         data_directory  => $data_dir,
@@ -286,7 +286,7 @@ sub create_reference_builds {
     ok($rbuild, 'created reference sequence build');
 
     my $rbuild2 = Genome::Model::Build::ImportedReferenceSequence->create(
-        name            => 'test_ref_sequence_build',
+        name            => 'test_ref_sequence_build2',
         model           => $ref_model,
         fasta_file      => 'nofile', 
         data_directory  => $data_dir,
