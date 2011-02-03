@@ -338,16 +338,15 @@ sub _instrument_data_dir {
 sub _get_mock_solexa_instrument_data {
     my $self = shift;
 
-    my $id = 2854709902;
     my $inst_data = Genome::Utility::TestBase->create_mock_object(
         class => 'Genome::InstrumentData::Solexa',
-        id => $id,
-        seq_id => $id,
+        id => -4321,
+        seq_id => -4321,
         sequencing_platform => 'solexa',
         flow_cell_id => '61H93',
         lane => 8,
         read_length => 100,
-        archive_path => $self->_instrument_data_dir.'/'.$id.'/sequence_61H93_8_CGATGT.tar.gz',
+        archive_path => $self->_instrument_data_dir.'/2854709902/sequence_61H93_8_CGATGT.tar.gz',
         index_sequence => 'CGATGT',
         subset_name => '8-CGATGT',
         is_external => 0,

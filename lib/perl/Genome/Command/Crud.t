@@ -124,13 +124,12 @@ my %config = (
 ok(Genome::Command::Crud->init_sub_commands(%config), 'init crud commands') or die;
 
 # CREATE
-# class meta and properties
+# meta 
 my $create_meta = Person::Command::Create->__meta__;
-ok($create_meta, 'create meta');
-#my @property_metas = grep { $_->{class_name} eq 'Person::Command::Create' } $create_meta->property_metas;
-#ok(@property_metas, 'create property metas');
-#print Dumper([map { $_->property_name } @property_metas]);
+ok($create_meta, 'CREATE meta');
 print Person::Command::Create->help_usage_complete_text;
+is(Person::Command::Create->_name_for_objects, 'persons', 'CREATE: _name_for_objects');
+is(Person::Command::Create->_target_class, 'Person', 'CREATE: _target_class');
 
 # fail - w/o params
 my $create_fail = Person::Command::Create->create();
@@ -199,12 +198,16 @@ is_deeply($george->best_friend, $ronnie, 'George is best friends w/ Ronnie');
 
 # LIST - this is in UR::Object::Command...
 my $list_meta = Person::Command::List->__meta__;
-ok($list_meta, 'list meta');
+ok($list_meta, 'LIST meta');
 
 # UPDATE
+# meta
 my $update_meta = Person::Command::Update->__meta__;
 ok($update_meta, 'update meta');
 print Person::Command::Update->help_usage_complete_text;
+is(Person::Command::Update->_name_for_objects, 'persons', 'UPDATE: _name_for_objects');
+is(Person::Command::Update->_name_for_objects_ub, 'persons', 'UPDATE: _name_for_objects_ub');
+is_deeply(Person::Command::Update->_only_if_null, [qw/ job title mom /], 'UPDATE: _only_if_null');
 
 # fail w/o objects
 my $update_fail = Person::Command::Update->create();
@@ -305,6 +308,12 @@ ok(($update_success->execute && $update_success->result), "UPDATE execute");
 is($george->mom, $mom, 'Geroge now has a mom');
 
 # DELETE
+# meta
+my $delete_meta = Person::Command::Delete->__meta__;
+ok($delete_meta, 'DELETE meta');
+is(Person::Command::Delete->_name_for_objects, 'persons', 'DELETE: _name_for_objects');
+is(Person::Command::Delete->_name_for_objects_ub, 'persons', 'DELETE: _name_for_objects_ub');
+
 # fail w/o objects
 my $delete_fail = Person::Command::Delete->create();
 ok($delete_fail, 'DELETE create: No objects');

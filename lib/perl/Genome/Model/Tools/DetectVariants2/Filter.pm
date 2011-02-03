@@ -25,6 +25,22 @@ class Genome::Model::Tools::DetectVariants2::Filter {
             is_optional => 1,
             doc => 'control input variant file, means normal usually',
         },
+        reference_sequence_input => {
+            is => 'Text',
+            doc => 'Location of the reference sequence file',
+            is_input => 1,
+        },
+        aligned_reads_input => {
+            is => 'Text',
+            doc => 'Location of the aligned reads input file',
+            is_input => 1,
+        },
+        output_directory => {
+            is => 'Text',
+            doc => 'Location to save to the detector-specific files generated in the course of running',
+            is_input => 1,
+            is_output => 1,
+        },
         version => {
             is_input => 1,
             is => 'Version',

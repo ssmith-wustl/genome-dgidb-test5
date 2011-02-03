@@ -377,5 +377,6 @@ sub supports_streaming_to_bam {
 }
 
 sub accepts_bam_input {
-    return 1;
+    my $self = shift;
+    return Genome::Model::Tools::Bwa->supports_bam_input($self->aligner_version);
 }
