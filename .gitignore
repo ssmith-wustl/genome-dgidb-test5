@@ -1,2 +1,4 @@
-Meta.sqlite3
 *.kpf
+*.komodoproject
+Meta.sqlite3-bak
+Meta.sqlite3
