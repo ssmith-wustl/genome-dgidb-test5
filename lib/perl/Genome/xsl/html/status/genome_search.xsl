@@ -5,6 +5,8 @@
 
   <xsl:template name="genome_search" match="object[./types[./isa[@type='Genome::Search']]]">
 
+    <script type="text/javascript" src="/res/js/app/genome_search.js"></script>
+
     <xsl:call-template name="control_bar_app"/>
 
     <div class="content rounded shadow" style="padding-top: 0;">
@@ -16,16 +18,16 @@
       <div class="container">
         <div class="span-12">
           <div class="main_search">
-            <form method="get" action="/view/genome/search/query/status.html">
+            <form id="searchForm" method="get" action="/view/genome/search/query/status.html">
               <h4>Please enter your search, then press Return:</h4>
 
               <table cellpadding="0" cellspacing="0" border="0" class="search_elements">
                 <tr>
                   <td>
-                    <input class="query_box rounded" type="text" name="query"/>
+                    <input class="query_box rounded" type="text" id="searchBox" name="query"/>
                   </td>
                   <td>
-                    <input type="submit" class="button" value="Search"/>
+                    <input id="searchButton" type="submit" class="button" value="Search"/>
                   </td>
                 </tr>
               </table>

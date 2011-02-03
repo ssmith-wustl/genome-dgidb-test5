@@ -7,18 +7,18 @@ use Genome;
 
 class Genome::InstrumentData::FlowCell::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
-    has_constant => [
+    has => [
         type => {
             is => 'Text',
             default => 'illumina_run'
         },
         display_type => {
             is  => 'Text',
-            default => 'Model',
+            default => 'Flow Cell',
         },
         display_icon_url => {
             is  => 'Text',
-            default => 'genome_model_32',
+            default => 'genome_instrumentdata_flowcell_32',
         },
         display_url0 => {
             is => 'Text',

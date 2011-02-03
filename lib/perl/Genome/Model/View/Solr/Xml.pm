@@ -7,7 +7,7 @@ use Genome;
 
 class Genome::Model::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
-    has_constant => [
+    has => [
         type => {
             is => 'Text',
             default => 'model'
@@ -23,7 +23,9 @@ class Genome::Model::View::Solr::Xml {
         display_url0 => {
             is => 'Text',
             calculate_from => ['subject'],
-            calculate => sub { return join ('?id=', '/view/genome/model/status.html', $_[0]->genome_model_id()); },
+            calculate => sub { 
+                return join ('?id=', '/view/genome/model/status.html', $_[0]->genome_model_id()); 
+            },
         },
         display_label1 => {
             is  => 'Text',
