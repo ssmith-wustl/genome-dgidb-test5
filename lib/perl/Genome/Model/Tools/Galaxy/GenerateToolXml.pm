@@ -59,123 +59,17 @@ sub execute {
     my $input_params = '';
     my $output_data = '';
 
-=pod    
-    my @property_meta = $class_meta->all_property_metas();
-
-    my %categories = bin_properties(
-        \@property_meta,
-        required_input => sub {
-            !$_[0]->is_optional
-            && (defined $_[0]->{'is_input'}
-                && $_[0]->{'is_input'})
-            && !(defined $_[0]->{'is_output'}
-                && $_[0]->{'is_output'});
-        },
-        optional_input => sub {
-            $_[0]->is_optional
-            && (defined $_[0]->{'is_input'}
-                && $_[0]->{'is_input'})
-            && !(defined $_[0]->{'is_output'}
-                && $_[0]->{'is_output'});
-        },
-        required_both => sub {
-            !$_[0]->is_optional
-            && (defined $_[0]->{'is_input'}
-                && $_[0]->{'is_input'})
-            && (defined $_[0]->{'is_output'}
-                && $_[0]->{'is_output'});
-        },
-        optional_both => sub {
-            $_[0]->is_optional
-            && (defined $_[0]->{'is_input'}
-                && $_[0]->{'is_input'})
-            && (defined $_[0]->{'is_output'}
-                && $_[0]->{'is_output'});
-        },
-        output => sub {
-            !(defined $_[0]->{'is_input'}
-                && $_[0]->{'is_input'})
-            && (defined $_[0]->{'is_output'}
-                && $_[0]->{'is_output'});
-        }
-    );
-
-    my @args = ();
-
-    foreach my $p (@{ $categories{required_input} }) {
-#        print Data::Dumper->new([$p])->Dump;
-
-        my $line = '<param';
-
-        $line .= ' name="' . $p->property_name . '"';
-
-        if ($p->data_type eq 'file_path') {
-            $line .= ' type="data"';
-            $line .= ' format="' . $p->{'file_format'} . '"';
-        } else {
-            $line .= ' type="' . $p->data_type . '"';
-
-            if ($p->data_length) {
-                $line .= ' size="' . $p->data_length . '"';
-            }
-            if ($p->default_value) {
-                $line .= ' value="' . $p->default_value . '"';
-            }
-        }        
-
-
-        $line .= '/>';
-        
-        $input_params .= "\n    $line";
-
-        push @args, $p->property_name;
-    }
-    
-    foreach my $p (@{ $categories{required_both} }) {
-        if ($p->data_type eq 'file_path') {
-            my $line = '<data';
-        
-            $line .= ' name="' . $p->property_name . '"';
-            if ($p->{'same_as'}) {
-                $line .= ' format="input"';
-                $line .= ' metadata_source="' . $p->{'same_as'} . '"';
-            } else {
-                $line .= ' format="' . $p->{'file_format'} . '"';
-            }
-        
-            $line .= '/>';
-        
-            $output_data .= "\n    $line";
-
-            push @args, $p->property_name;
-        }
-    }
-
-    foreach my $pn (@args) {
-        my $option = $pn;
-        $option =~ s/_/-/g;
-
-        $command_line .= ' --' . $option . '=$' . $pn;
-    }
-=cut
-
     $input_params = <<"    XML";
     <param name="command_line" type="text"/> 
     <param name="in_file" type="text" value="/dev/null"/>
     XML
 
     $output_data = <<"    XML";
-    <data name="out_file" format="txt" label="$tool_name Stdout"/>
-    <data name="err_file" format="txt" label="$tool_name Stderr"/>
+    <data name="out_file" format="txt" label="$tool_name"/>
     XML
 
-    $command_line .= ' 
-      $command_line 
-      &lt;$in_file 
-      1&gt;$out_file 
-      2&gt;$err_file'; 
-
-    $help_detail =~ s/^/> /mg;
+    # galaxy will bold headers surrounded by * like **THIS**
+    $help_detail =~ s/^([A-Z]+[A-Z ]+:?)/**$1**\n/mg;
 
     my $xml = <<"    XML";
 <tool id="$tool_id" name="$tool_name">
@@ -188,8 +82,6 @@ $input_params</inputs>
   <outputs>
 $output_data</outputs>
   <help>
-::
-
 $help_detail
   </help>
 </tool>
