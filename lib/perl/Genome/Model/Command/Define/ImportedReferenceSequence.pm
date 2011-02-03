@@ -133,12 +133,6 @@ sub execute {
         return;
     }
 
-
-    if (defined $self->derived_from and defined $self->coordinates_from) {
-        $self->error_message('Please specify one of --derived-from or --cordinates-from, not both (--derived-from implies --coordinates-from).');
-        return;
-    }
-
     unless (-s $self->fasta_file) {
         $self->error_message('Input fasta file: '.$self->fasta_file.' is not valid.');
         return;

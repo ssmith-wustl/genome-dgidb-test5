@@ -41,6 +41,7 @@ my $first_define_command = Genome::Model::Command::Define::ImportedReferenceSequ
     job_dispatch => 'inline', #can't spawn off LSF jobs with UR_DBI_NO_COMMIT enabled
     server_dispatch => 'inline',
     version => '42mb',
+    sequence_uri => 'http://foo.bar.com',
     data_directory => Genome::Sys->create_temp_directory,
 );
 
@@ -125,6 +126,7 @@ my $second_define_command = Genome::Model::Command::Define::ImportedReferenceSeq
     job_dispatch => 'inline', #can't spawn off LSF jobs with UR_DBI_NO_COMMIT enabled
     server_dispatch => 'inline',
     version => 't1',
+    sequence_uri => 'http://foo.bar.com',
     data_directory => Genome::Sys->create_temp_directory,
 );
 
@@ -163,6 +165,7 @@ my $third_define_command = Genome::Model::Command::Define::ImportedReferenceSequ
     job_dispatch => 'inline', #can't spawn off LSF jobs with UR_DBI_NO_COMMIT enabled
     server_dispatch => 'inline',
     version => 't1',
+    sequence_uri => 'http://foo.bar.com',
     data_directory => Genome::Sys->create_temp_directory,
 );
 ok($third_define_command, 'created define command');
@@ -177,6 +180,7 @@ my $fourth_define_command = Genome::Model::Command::Define::ImportedReferenceSeq
     job_dispatch => 'inline', #can't spawn off LSF jobs with UR_DBI_NO_COMMIT enabled
     server_dispatch => 'inline',
     version => 't4',
+    sequence_uri => 'http://foo.bar.com',
     data_directory => Genome::Sys->create_temp_directory,
 );
 ok($fourth_define_command, 'created define command');
@@ -192,6 +196,7 @@ my $fifth_define_command = Genome::Model::Command::Define::ImportedReferenceSequ
     job_dispatch => 'inline', #can't spawn off LSF jobs with UR_DBI_NO_COMMIT enabled
     server_dispatch => 'inline',
     model_name => 'apipe-test-01-somatic',
+    sequence_uri => 'http://foo.bar.com',
     data_directory => Genome::Sys->create_temp_directory,
 );
 ok($fifth_define_command, 'created define command');
