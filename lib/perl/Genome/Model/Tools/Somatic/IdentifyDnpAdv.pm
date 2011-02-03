@@ -34,6 +34,7 @@ class Genome::Model::Tools::Somatic::IdentifyDnpAdv {
     snp_input_file => {
         type => 'String',
         is_optional => 0,
+        is_input=>1,
         doc => 'List of sites in input file 1_based file format to look for DNPs. This must be sorted by chromosome and coordinate.',
         default => '',
     },
@@ -46,6 +47,7 @@ class Genome::Model::Tools::Somatic::IdentifyDnpAdv {
     bam_file => {
         type => 'String',
         is_optional => 0,
+        is_input => 1,
         doc => 'File from which to retrieve reads. Must be indexed.',
     },
     'min_mapping_quality' => {
@@ -65,24 +67,28 @@ class Genome::Model::Tools::Somatic::IdentifyDnpAdv {
      anno_lc_file =>{
         type => 'String',
         is_optional => 0,
+        is_output=>1,
         doc => '1_based format low confidence sites. This must be sorted by chromosome and coordinate.',
         default => '',
     },
     bed_lc_file => {
         type => 'String',
         is_optional => 0,
+        is_output=>1,
         doc => '0_based format low confidence sites. This must be sorted by chromosome and coordinate.',
         default => '',
     },
     anno_hc_file => {
         type => 'String',
         is_optional => 0,
+        is_output=>1,
         doc => '1_based high confidence sites. This must be sorted by chromosome and coordinate.',
         default => '',
     },
     bed_hc_file => {
         type => 'String',
         is_optional => 0,
+        is_output=>1,
         doc => '0_based high confidence sites. This must be sorted by chromosome and coordinate.',
         default => '',
     },
@@ -141,8 +147,7 @@ sub execute {
     my ($last_chr,$last_stop,$last_pos, $last_ref, $last_cns, $last_type,$last_score); 
     my ($chr,$stop, $pos, $ref, $cns, $type,$score);
     my @rest=();
-#    my @lines = (); #line buffer to store last few lines
-    my %SNP={};  
+    my %SNP;  
     
     #the following logic assumes that you have a single position per line
     # looking for candidate NNP sites 
@@ -156,8 +161,7 @@ sub execute {
                   $last_ref=$last_ref.$ref;
                   $last_cns=$last_cns.$cns;
                   $last_score=$last_score.",".$score;
-                  $last_type++;
-                  # print "$chr:$last_stop,$last_type\t";    
+                  $last_type++;  
               }else{              
                   $SNP{$last_chr}{$last_pos}{$last_stop}{$last_ref}{$last_cns}{$last_type}=$last_score;
                   $last_chr = $chr;
@@ -220,7 +224,7 @@ sub execute {
     my @result=$self->find_dnp_from_candidate(\@candidate);
 
     $t_end=time();
-    $self->status_message(""Finish find_dnp_from_candidate: $t_end");
+    $self->status_message("Finish find_dnp_from_candidate: $t_end");
 
     # open FILEHANDLE for output bed format and anno format
     my $bedfile_hc = IO::File->new($self->bed_hc_file, "w");
@@ -283,7 +287,6 @@ sub execute {
     $self->status_message("End read readcount: $t_end");
 
     my $total_readcount=scalar(@readcounts);
-    print "$total_readcount\n";
     for my $count_line (@readcounts){
         chomp $count_line;
         my ($chr, $pos, $ref, $depth, @base_stats) = split /\t/, $count_line;
@@ -369,9 +372,8 @@ sub execute {
         my $avg = $total_result/($t_end-$t_begin);
         $self->status_message("Average speed is $avg sites per second");
     }
+    return 1;
 }
-
-return 0;
 
 
 #In the find_dnp_from_candidate, the somatic score for SNP remains the same
@@ -395,7 +397,7 @@ sub find_dnp_from_candidate{
             }
         }elsif ($type==2){
             $n++;
-            print "$candidate\n";
+#            print "$candidate\n";
             my $ref1=substr($ref,0,1); 
             my $ref2=substr($ref,1,1);
             my $cns1=substr($cns,0,1);
@@ -560,7 +562,6 @@ sub _determine_dnp_from_bam_reads {
         
         if(uc(substr($seq,$offset1,1)) eq uc($base1) && uc(substr($seq,$offset2,1)) eq uc($base2)) {
             $reads_supporting_dnp++;
-            # $avg_mapq=$avg_mapq+$mapq;
         } 
     }
     unless(close(SAMTOOLS)) {
@@ -575,19 +576,6 @@ sub _determine_dnp_from_bam_reads {
 }
 
 #this calculates the offset of a position into a seqeunce string based on the CIGAR string specifying the alignment
-#these are some tests used to test if I got this right.
-
-#use Test::Simple tests => 2;
-#my $fake_read_seq = "ACTATCG";
-#my $fake_read_pos = 228;
-#my $fake_cigar = "3M1D4M";
-##
-#my $offset = calculate_offset(231,$fake_read_pos, $fake_cigar);
-#ok(!defined($offset));
-#$offset = calculate_offset(232,$fake_read_pos, $fake_cigar);
-#ok(substr($fake_read_seq,$offset,1) eq "A");
-#exit;
-#
 sub _calculate_offset { 
     my $self = shift;
     my $pos = shift;
