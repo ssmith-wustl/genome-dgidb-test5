@@ -9,10 +9,10 @@ class Genome::FeatureList {
     is => 'UR::Object',
     table_name => 'FEATURE_LIST',
     has => [
-        id => { is => 'VARCHAR2', len => 64 },
-        name => { is => 'VARCHAR2', len => 200 },
-        format => { is => 'VARCHAR2', len => 64, doc => 'Indicates whether the file follows the BED spec.', valid_values => ['1-based', 'true-BED', 'multi-tracked', 'multi-tracked 1-based', 'unknown'], },
-        file_content_hash => { is => 'VARCHAR2', len => 32, doc => 'MD5 of the BED file (to ensure integrity' },
+        id => { is => 'Text', len => 64 },
+        name => { is => 'Text', len => 200 },
+        format => { is => 'Text', len => 64, doc => 'Indicates whether the file follows the BED spec.', valid_values => ['1-based', 'true-BED', 'multi-tracked', 'multi-tracked 1-based', 'unknown'], },
+        file_content_hash => { is => 'Text', len => 32, doc => 'MD5 of the BED file (to ensure integrity' },
         is_multitracked => {
             is => 'Boolean', calculate_from => ['format'],
             calculate => q{ return scalar ($format =~ /multi-tracked/); },
@@ -23,7 +23,7 @@ class Genome::FeatureList {
         }
     ],
     has_optional => [
-        source => { is => 'VARCHAR2', len => 64, doc => 'Provenance of this feature list. (e.g. Agilent)', },
+        source => { is => 'Text', len => 64, doc => 'Provenance of this feature list. (e.g. Agilent)', },
         reference_id => { is => 'NUMBER', len => 10, doc => 'ID of the reference sequence build for which the features apply' },
         reference => { is => 'Genome::Model::Build::ImportedReferenceSequence', id_by => 'reference_id' },
         subject_id => { is => 'NUMBER', len => 10, doc => 'ID of the subject to which the features are relevant' },
@@ -283,6 +283,24 @@ sub merged_bed_file {
     }
 
     return $self->_merged_bed_file_path;
+}
+
+sub _resolve_param_value_from_text_by_name_or_id {
+    my $class = shift;
+    my $param_arg = shift;
+
+    #First try default behaviour of looking up by name or id
+    my @results = Genome::Command::Base->_resolve_param_value_from_text_by_name_or_id($class, $param_arg);
+
+    #If that didn't work, and the argument is a filename, see if we have a feature list matching the provided file.
+    if(!@results and -f $param_arg) {
+        my $md5 = Genome::Sys->md5sum($param_arg);
+        @results = Genome::FeatureList->get(file_content_hash => $md5);
+
+        @results = grep( !Genome::Sys->diff_file_vs_file($param_arg, $_->file_path), @results);
+    }
+
+    return @results;
 }
 
 1;

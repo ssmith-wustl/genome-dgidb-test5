@@ -80,6 +80,7 @@ sub execute {
     my $command = Genome::Model::Build::Command::Start->create(
         max_builds => $self->max_builds,
         models => \@models,
+        force => 1,
     );
     my $rv = $command->execute;
     my $err = $@;
@@ -88,7 +89,7 @@ sub execute {
     unless (@builds == $builds_to_start){
         $self->error_message("Failed to start expected number of builds. $builds_to_start expected, ".scalar @builds." built.\nErr:$@");
     }
-    unless ($rv){
+    elsif (!$rv){
         $self->error_message("Built expected number of builds, but had some failures:\nErr:$@");
     }
 
