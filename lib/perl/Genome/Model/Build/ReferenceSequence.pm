@@ -448,7 +448,7 @@ sub get_sequence_dictionary {
     
         # fall back to the build name if the assembly name came up short.
         if (!$assembly_name) {
-            $assembly_name = $build->name;
+            $assembly_name = $self->name;
         }
         
         my $create_seq_dict_cmd = "java -Xmx4g -XX:MaxPermSize=256m -cp $picard_path/CreateSequenceDictionary.jar net.sf.picard.sam.CreateSequenceDictionary R='$ref_seq' O='$path' URI='$uri' species='$species' genome_assembly='$assembly_name' TRUNCATE_NAMES_AT_WHITESPACE=true";        
