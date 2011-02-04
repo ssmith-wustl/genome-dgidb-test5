@@ -56,21 +56,23 @@ sub execute {
     foreach my $attr (@has_attrs) 
     {
         my $sub_hsh = $cls_has->{$attr};
-        my $file_type = $sub_hsh->{file_type};
-        if (($sub_hsh->{is_input} || $sub_hsh->{is_output}) and !defined($file_type)) {
-            # lets warn them about not defining a file_type on an input or output file
-            $self->warning_message("Input or output file_type is not defined on attribute $attr. Falling back to 'text'");
-            $file_type = 'text';
+        my $file_format = $sub_hsh->{file_format};
+        if (($sub_hsh->{is_input} || $sub_hsh->{is_output}) and !defined($file_format)) {
+            # lets warn them about not defining a file_format on an input or output file
+            $self->warning_message("Input or output file_format is not defined on attribute $attr. Falling back to 'text'");
+            $file_format = 'text';
         }
         if ($sub_hsh->{is_input})
         {
-            $inputs .= '<param name="'.$attr.'" format="'.$file_type.'" type="data" help="" />' . "\n";
+            $inputs .= '<param name="'.$attr.'" format="'.$file_format.'" type="data" help="" />' . "\n";
         } 
         elsif ($sub_hsh->{is_output})
         {
-            $outputs .= '<data name="'.$attr.'" format="'.$file_type.'" label="" help="" />' . "\n";
+            $outputs .= '<data name="'.$attr.'" format="'.$file_format.'" label="" help="" />' . "\n";
         }
-        $command .= " --$attr=\$$attr";
+        my $dash_attr = $attr;
+        $dash_attr =~ s/_/-/g;
+        $command .= " --$dash_attr=\$$attr";
     }
 
     my $help_brief  = $class_name->help_brief;
@@ -84,7 +86,7 @@ sub execute {
     $tool_id =~ s/ /_/g;
 
     # galaxy will bold headers surrounded by * like **THIS**
-    $help_detail =~ s/^([A-Z]+[A-Z ]+:?)/**$1**\n/mg;
+    $help_detail =~ s/^([A-Z]+[A-Z ]+:?)/\n**$1**\n/mg;
 
     my $xml = <<"    XML";
 <tool id="$tool_id" name="$tool_id">
