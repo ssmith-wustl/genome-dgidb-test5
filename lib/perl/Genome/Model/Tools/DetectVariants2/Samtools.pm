@@ -107,7 +107,8 @@ sub _detect_variants {
             }
         }
     }
-    $self->output_file($self->output_directory."/snps_all_sequences.filtered.bed");
+    my @dirs = split "/", $self->output_directory;
+    $self->output_file($dirs[-1]."/snps_all_sequences.filtered.bed");
     return $result;
 }
 
