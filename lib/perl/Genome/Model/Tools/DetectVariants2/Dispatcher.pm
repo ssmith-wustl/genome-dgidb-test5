@@ -19,14 +19,17 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
         },
         snv_hq_output_file => {
             is => 'String',
+            is_output => 1,
             doc => 'High Quality SNV output file',
         },
         indel_hq_output_file => {
             is => 'String',
+            is_output => 1,
             doc => 'High Quality indel output file',
         },
         sv_hq_output_file => {
             is => 'String',
+            is_output => 1,
             doc => 'High Quality SV output file',
         },
     ],
@@ -467,11 +470,10 @@ sub generate_workflow_operation {
 
 sub _create_temp_directories {
     my $self = shift;
-    my $sys = Genome::Sys->create(); 
-    $sys->{base_temp_directory} = $self->output_directory;
-    $self->_temp_staging_directory($sys->create_temp_directory);
-    $self->_temp_scratch_directory($sys->create_temp_directory);
-    return 1;
+
+    $ENV{TMPDIR} = $self->output_directory;
+
+    return $self->SUPER::_create_temp_directories(@_);
 }
 
 sub _promote_staged_data {
