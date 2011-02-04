@@ -63,7 +63,7 @@ sub execute {
 
 
     my $abandon_failed = Genome::Model::Build::Command::Abandon->create(
-        builds => \@builds,
+        builds => \@eligible_to_abandon,
     );
 
     return $abandon_failed->execute();

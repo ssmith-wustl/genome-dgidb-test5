@@ -38,6 +38,11 @@ class Genome::Model::Tools::DetectVariants2::Base {
             is_input => 1,
             is_output => 1,
         },
+        output_file => {
+            is => 'String',
+            is_output => 1,
+            doc => 'For passing on the path/name of the output file',
+        },
         snv_detection_strategy => {
             is => "Genome::Model::Tools::DetectVariants2::Strategy",
             doc => 'The variant detector strategy to use for finding SNVs',
@@ -49,6 +54,12 @@ class Genome::Model::Tools::DetectVariants2::Base {
         sv_detection_strategy => {
             is => "Genome::Model::Tools::DetectVariants2::Strategy",
             doc => 'The variant detector strategy to use for finding SVs',
+        },
+        params => {
+            is => 'Text',
+            is_input => 1,
+            is_output => 1,
+            doc => 'The full parameter list coming in from the dispatcher. It is one string before being parsed.',
         },
     ],
     has_constant => [
@@ -133,9 +144,9 @@ sub execute {
         die $self->error_message('Failed to generate standard files from detector-specific files');
     }
     
-    #unless($self->_promote_staged_data) {
-    #    die $self->error_message('Failed to promote staged data.');
-    #}
+    unless($self->_promote_staged_data) {
+        die $self->error_message('Failed to promote staged data.');
+    }
     
     return 1;
 }
@@ -270,7 +281,6 @@ sub _run_converter {
 
 sub _promote_staged_data {
     my $self = shift;
-
     my $staging_dir = $self->_temp_staging_directory;
     my $output_dir  = $self->output_directory;
 

@@ -22,6 +22,18 @@ class Genome::Model::Tools::DetectVariants2::Samtools {
             is_input => 1,
             is_output => 1,
         },
+        params => {
+            is => 'Text',
+            is_input => 1,
+            is_output => 1,
+            doc => 'The full parameter list coming in from the dispatcher. It is one string before being parsed.',
+        },
+        output_file => {
+            is => 'Text',
+            is_input => 1,
+            is_output => 1,
+            doc => 'The output file going into the next step.', # TODO refactor this into a base, along with params
+        },
     ],
 
     has_param => [
@@ -95,7 +107,7 @@ sub _detect_variants {
             }
         }
     }
-
+    $self->output_file($self->output_directory."/snps_all_sequences.filtered.bed");
     return $result;
 }
 
