@@ -46,5 +46,9 @@ sub formatted_genotype_file_path {
     shift->data_directory . '/formatted_genotype_file_path.genotype';
 }
 
+sub snvs_bed {
+    shift->data_directory . '/gold_snp.v2.bed';
+}
+
 1;
 
