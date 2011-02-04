@@ -107,7 +107,7 @@ sub _detect_variants {
             }
         }
     }
-
+    $self->output_file($self->output_directory."/snps_all_sequences.filtered.bed");
     return $result;
 }
 
