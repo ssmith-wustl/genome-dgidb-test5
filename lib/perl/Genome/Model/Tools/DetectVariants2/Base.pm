@@ -144,9 +144,9 @@ sub execute {
         die $self->error_message('Failed to generate standard files from detector-specific files');
     }
     
-    #unless($self->_promote_staged_data) {
-    #    die $self->error_message('Failed to promote staged data.');
-    #}
+    unless($self->_promote_staged_data) {
+        die $self->error_message('Failed to promote staged data.');
+    }
     
     return 1;
 }
@@ -281,7 +281,6 @@ sub _run_converter {
 
 sub _promote_staged_data {
     my $self = shift;
-
     my $staging_dir = $self->_temp_staging_directory;
     my $output_dir  = $self->output_directory;
 

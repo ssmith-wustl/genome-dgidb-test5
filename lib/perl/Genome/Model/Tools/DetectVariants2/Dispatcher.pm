@@ -84,14 +84,14 @@ sub _detect_variants {
     $input->{aligned_reads_input}= $self->aligned_reads_input;
     $input->{control_aligned_reads_input} = $self->control_aligned_reads_input;
     $input->{reference_sequence_input} = $self->reference_sequence_input;
-    $input->{output_directory} = $self->output_directory;
+    $input->{output_directory} = $self->_temp_staging_directory;#$self->output_directory;
    
     $self->_dump_workflow($workflow);
 
     $self->status_message("Now launching the dispatcher workflow.");
     my $result = Workflow::Simple::run_workflow_lsf( $workflow, %{$input});
     unless($result){
-        die $self->error_message("Workflow did not return correctly");
+        die $self->error_message("Workflow did not return correctly.");
     }
 
     return 1;
@@ -105,7 +105,7 @@ sub _dump_workflow {
     my $xml_file = Genome::Sys->open_file_for_writing($xml_location);
     print $xml_file $xml;
     $xml_file->close;
-    $workflow->as_png($self->output_directory."/workflow.png");
+    #$workflow->as_png($self->output_directory."/workflow.png");
 }
 
 sub calculate_detector_output_directory {
@@ -114,7 +114,7 @@ sub calculate_detector_output_directory {
     
     my $subdirectory = join('-', $detector, $version, $param_list);
     
-    return $self->output_directory . '/' . Genome::Utility::Text::sanitize_string_for_filesystem($subdirectory);
+    return $self->_temp_staging_directory . '/' . Genome::Utility::Text::sanitize_string_for_filesystem($subdirectory);
 }
 
 sub parse_detection_strategy {
