@@ -20,11 +20,11 @@ class Genome::PopulationGroup {
         individual_id => { is => 'Number', len => 10, column_name => 'PG_ID' },
     ],
     has => [
-        name => { is => 'Text', len => 64, },
-        subject_type => { is => 'Text', is_constant => 1, value => 'population group', column_name => '', },
-        taxon => { is => 'Genome::Taxon', id_by => 'taxon_id', },
+        name => { is => 'Text', len => 64, doc => 'Name of the Population Group.', },
+        taxon => { is => 'Genome::Taxon', id_by => 'taxon_id', doc => 'The taxon to which this individual belongs', },
         species_name => { via => 'taxon' },
-        description => { is => 'Text', is_optional => 1, },
+        description => { is => 'Text', is_optional => 1, len => 500, doc => 'Description', },
+        subject_type => { is => 'Text', is_constant => 1, value => 'population group', column_name => '', },
     ],
     has_many => [
         member_links        => { is => 'Genome::PopulationGroup::Member', reverse_id_by => 'population_group' },
@@ -42,6 +42,10 @@ class Genome::PopulationGroup {
     doc => 'an defined, possibly arbitrary, group of individual organisms',
     data_source => 'Genome::DataSource::GMSchema',
 };
+
+sub common_name { # not in the table, but exepected by views
+    return $_[0]->name;
+}
 
 1;
 
