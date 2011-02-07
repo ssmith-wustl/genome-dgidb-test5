@@ -36,24 +36,29 @@ sub execute {
     my $self = shift;
     $self->{bases_files} = {};
 
-    # unfortunately, some of these files seem to be unsorted
-    # since we have to look at the reference sequence, we'll sort first so we
-    # can access it sequentially
+    # Unfortunately, some of these genotype files seem to be unsorted.
+    # It would be better sort first, so the reference sequence can be
+    # accessed sequentially. However, joinx sort can't deal with -- in the
+    # stop field of the input, which seems to happen sometimes, so we let 
+    # _convert_file filter those out then sort after.
+
     my $tmpfile = Genome::Sys->create_temp_file_path;
+    my $infile = $self->input_file;
+    my $ifh = new IO::File("<$infile") || die "Failed to open input file $infile";
+    my $ofh = new IO::File(">$tmpfile") || die "Failed to open output file $tmpfile";
+    my $rv = $self->_convert_file($self->reference, $ifh, $ofh);
+    $ifh->close();
+    $ofh->close();
+
     my $sort_cmd = Genome::Model::Tools::Joinx::Sort->create(
-        input_files => [$self->input_file],
-        output_file => $tmpfile,
+        input_files => [$tmpfile],
+        output_file => $self->output_file,
     );
     if (!$sort_cmd->execute) {
         $self->error_message("Failed to sort input genotype file " . $self->input_file);
         return;
     }
 
-    my $ifh = new IO::File("<$tmpfile") || die "Failed to open input file $tmpfile";
-    my $ofh = new IO::File(">" . $self->output_file) || die "Failed to open output file " . $self->output_file;
-    my $rv = $self->_convert_file($self->reference, $ifh, $ofh);
-    $ifh->close();
-    $ofh->close();
     return $rv;
 }
 
