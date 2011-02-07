@@ -33,10 +33,12 @@ sub process_source {
     
     while(my $line = <$input_fh>) {
         my ($chromosome, $position, $star, $score, $indel_call_1, $indel_call_2, $indel_length_1, $indel_length_2, @extra) = split("\t", $line);
+        # tumor read depth is the 13th field in the file
+        my $depth = $extra[4];
 
-        $self->_process_indel($chromosome, $position, $indel_call_1, $indel_length_1, $score)
+        $self->_process_indel($chromosome, $position, $indel_call_1, $indel_length_1, $score, $depth)
             or return;
-        $self->_process_indel($chromosome, $position, $indel_call_2, $indel_length_2, $score)
+        $self->_process_indel($chromosome, $position, $indel_call_2, $indel_length_2, $score, $depth)
             or return;
     }
     
@@ -45,7 +47,7 @@ sub process_source {
 
 sub _process_indel {
     my $self = shift;
-    my ($chromosome, $position, $indel, $length, $score) = @_;
+    my ($chromosome, $position, $indel, $length, $score, $depth) = @_;
     
     return 1 if $indel eq '*'; #Indicates only one indel call...and this isn't it!
     
@@ -70,7 +72,7 @@ sub _process_indel {
         return;
     }
 
-    $self->write_bed_line($chromosome, $start, $stop, $reference, $variant, $score);
+    $self->write_bed_line($chromosome, $start, $stop, $reference, $variant, $score, $depth);
     
     return 1;
 }

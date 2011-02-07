@@ -72,7 +72,11 @@ sub process_source {
                 next;
             }
         
-            $self->write_bed_line($chromosome, $start, $stop, $reference, $variant, $quality);
+            # we take depth to mean total depth. varscan reports this in 2 fields, depth of reads
+            # supporting the reference, and depth of reads supporting the called variant, so
+            # we output the sum.
+            my $depth = $extra[0] + $extra[1];
+            $self->write_bed_line($chromosome, $start, $stop, $reference, $variant, $quality, $depth);
         }
     }
     
