@@ -17,6 +17,21 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
         _workflow_inputs => {
             doc => "Inputs to pass into the workflow when executing",
         },
+        snv_hq_output_file => {
+            is => 'String',
+            is_output => 1,
+            doc => 'High Quality SNV output file',
+        },
+        indel_hq_output_file => {
+            is => 'String',
+            is_output => 1,
+            doc => 'High Quality indel output file',
+        },
+        sv_hq_output_file => {
+            is => 'String',
+            is_output => 1,
+            doc => 'High Quality SV output file',
+        },
     ],
 };
 
@@ -67,9 +82,8 @@ sub _detect_variants {
     my $self = shift;
 
     my ($trees, $plan) = $self->plan;
-
+    $DB::single=1;
     my $workflow = $self->generate_workflow($trees, $plan);
-    $workflow->log_dir('/gscuser/rlong/dispatcher_testing');
 
     my @errors = $workflow->validate;
 
@@ -78,17 +92,46 @@ sub _detect_variants {
         die "Errors validating workflow\n";
     }
 
-    my $input = $self->_workflow_inputs;
+    my $input;  
+    my $workflow_inputs = $self->_workflow_inputs;
+    map { $input->{$_} = $workflow_inputs->{$_}->{value}} keys(%{$workflow_inputs});
     $input->{aligned_reads_input}= $self->aligned_reads_input;
     $input->{control_aligned_reads_input} = $self->control_aligned_reads_input;
     $input->{reference_sequence_input} = $self->reference_sequence_input;
-    $input->{output_directory} = $self->output_directory;
+    $input->{output_directory} = $self->_temp_staging_directory;#$self->output_directory;
    
     $self->_dump_workflow($workflow);
 
+    $self->status_message("Now launching the dispatcher workflow.");
     my $result = Workflow::Simple::run_workflow_lsf( $workflow, %{$input});
+
     unless($result){
-        die $self->error_message("Workflow did not return correctly");
+        die $self->error_message("Workflow did not return correctly.");
+    }
+    
+    if(defined( $self->snv_detection_strategy)){
+        my $snv_hq = $result->{snv_hq_output_file};
+        unless($snv_hq){
+            $self->error_message("No SNV hq output file was returned from the workflow. Workflow DID return: ".Data::Dumper::Dumper($result));
+            die $self->error_message;
+        }
+        $self->snv_hq_output_file($snv_hq);
+    }
+    if(defined( $self->sv_detection_strategy)){
+        my $sv_hq = $result->{sv_hq_output_file};
+        unless($sv_hq){
+            $self->error_message("No SV hq output file was returned from the workflow. Workflow DID return: ".Data::Dumper::Dumper($result));
+            die $self->error_message;
+        }
+        $self->sv_hq_output_file($sv_hq);
+    }
+    if(defined( $self->indel_detection_strategy)){
+        my $indel_hq = $result->{indel_hq_output_file};
+        unless($indel_hq){
+            $self->error_message("No indel hq output file was returned from the workflow. Workflow DID return: ".Data::Dumper::Dumper($result));
+            die $self->error_message;
+        }
+        $self->indel_hq_output_file($indel_hq);
     }
 
     return 1;
@@ -102,16 +145,17 @@ sub _dump_workflow {
     my $xml_file = Genome::Sys->open_file_for_writing($xml_location);
     print $xml_file $xml;
     $xml_file->close;
-    $workflow->as_png($self->output_directory."/workflow.png");
+    #$workflow->as_png($self->output_directory."/workflow.png");
 }
 
 sub calculate_detector_output_directory {
     my $self = shift;
-    my ($detector, $version, $param_list) = @_;
+    $DB::single =1;
+    my ($variant_type, $detector, $version, $param_list) = @_;
     
-    my $subdirectory = join('-', $detector, $version, $param_list);
+    my $subdirectory = join('-', $variant_type, $detector, $version, $param_list);
     
-    return $self->output_directory . '/' . Genome::Utility::Text::sanitize_string_for_filesystem($subdirectory);
+    return $self->_temp_staging_directory . '/' . Genome::Utility::Text::sanitize_string_for_filesystem($subdirectory);
 }
 
 sub parse_detection_strategy {
@@ -130,17 +174,6 @@ sub parse_detection_strategy {
     }
     
     return $result;
-}
-
-# TODO this may not need to be here, if we validate inside strategy
-sub is_valid_detector {
-    # TODO: check version, possibly params
-    my ($self, $detector_class, $detector_version) = @_;
-    
-    return if $detector_class eq $self->class; #Don't nest the dispatcher!
-    
-    my $detector_class_base = 'Genome::Model::Tools::DetectVariants';
-    return $detector_class->isa($detector_class_base);
 }
 
 sub merge_filters {
@@ -247,6 +280,11 @@ sub walk_tree {
 sub generate_workflow {
     my $self = shift;
     my ($trees, $plan) = @_;
+    my @output_properties;
+
+    push @output_properties, 'snv_hq_output_file' if defined ($self->snv_detection_strategy);
+    push @output_properties, 'sv_hq_output_file' if defined ($self->sv_detection_strategy);
+    push @output_properties, 'indel_hq_output_file' if defined ($self->indel_detection_strategy);
 
     my $workflow_model = Workflow::Model->create(
         name => 'Somatic Variation Pipeline',
@@ -257,24 +295,19 @@ sub generate_workflow {
             'output_directory',
         ],
         output_properties => [
+            @output_properties
         ],
     );
 
-    # TODO do I need to iterate through the original tree instead of the condensed map?
-    # Make an operation for each detector
+    $workflow_model->log_dir($self->output_directory);
+
     for my $detector (keys %$plan) {
         # Get the hashref that contains all versions to be run for a detector
         my $detector_hash = $plan->{$detector};
         $workflow_model = $self->generate_workflow_operation($detector_hash, $workflow_model);
     }
 
-
-    # TODO filter each detector if any are defined
-
     # TODO union and intersect each post-filtering detector output if necessary
-
-    # TODO remove this, or put a copy of the as_xml in the output dir maybe
-    #my $xml = $workflow_model->save_to_xml;
 
     return $workflow_model;
 }
@@ -284,7 +317,6 @@ sub generate_workflow_operation {
     my $self = shift;
     my $detector_hash = shift;
     my $workflow_model = shift;
-    $DB::single=1;
 
     for my $version (keys %$detector_hash) {
         # Get the hashref that contains all the variant types to be run for a given detector version
@@ -298,20 +330,19 @@ sub generate_workflow_operation {
                 $class = $instance->{class};
                 $name = $instance->{name};
                 $version = $instance->{version};
-                #my @filters = @{$instance->{filters}};
-                #print Data::Dumper::Dumper(\@filters);
+                my @filters = @{$instance->{filters}};
+                print Data::Dumper::Dumper(\@filters);
+
                 # Make the operation
-                my $operation = $workflow_model->add_operation(
+                my $detector_operation = $workflow_model->add_operation(
                     name => "$variant_type $name $version $params",
                     operation_type => Workflow::OperationType::Command->get($class),
                 );
-                unless($operation){
+                unless($detector_operation){
                     die $self->error_message("Failed to generate a workflow operation object for ".$class);
                 }
-=cut
-                # Add in Filter Objects
-                my @operations;
-                #push @operations, $operation;
+
+                # create filter operations
                 for my $filter (@filters){
                     my $foperation = $workflow_model->add_operation(
                         name => $filter->{name}." ".$filter->{version}." ".$filter->{params},
@@ -320,80 +351,115 @@ sub generate_workflow_operation {
                     unless($foperation){
                         die $self->error_message("Failed to generate a workflow operation object for ".$filter->{class});
                     }
-                    push @operations, $foperation;
+                    $filter->{operation} = $foperation;
                 }
-=cut
-                # TODO Unhardcode this list of properties
-                # Add the required links that are the same for every variant detector
-                #for my $op ($operation, @operations){
+
+                # add links for properties which every operation has from input_connector to each operation
+                for my $op ($detector_operation, map{$_->{operation} } @filters){
                     for my $property ( 'reference_sequence_input', 'aligned_reads_input', 'control_aligned_reads_input') {
                          $workflow_model->add_link(
                             left_operation => $workflow_model->get_input_connector,
                             left_property => $property,
-                            right_operation => $operation,
+                            right_operation => $op,
                             right_property => $property,
                         );
                     }
-                #}
+                }
+                
+                # compose a hash containing input_connector outputs and the operations to which they connect, then connect them
 
-                # add the properties this variant detector needs (version, params,output dir) to the input connector
-                my $properties_for_detector = $self->properties_for_detector($variant_type, $name, $version, $params);
-                my @new_input_connector_properties = map { $properties_for_detector->{$_} } (keys %$properties_for_detector);
+                # first add links from input_connector to detector
+                my $unique_detector_base_name = join("_", ($variant_type, $name, $version, $params) );
+                my $output_directory = $self->calculate_detector_output_directory($variant_type, $name, $version, $params);
+
+                my $inputs_to_store;
+                $inputs_to_store->{$unique_detector_base_name."_version"}->{value} = $version;
+                $inputs_to_store->{$unique_detector_base_name."_version"}->{right_property_name} = 'version';
+                $inputs_to_store->{$unique_detector_base_name."_version"}->{right_operation} = $detector_operation;
+
+                $inputs_to_store->{$unique_detector_base_name."_params"}->{value} = $params;
+                $inputs_to_store->{$unique_detector_base_name."_params"}->{right_property_name} = 'params';
+                $inputs_to_store->{$unique_detector_base_name."_params"}->{right_operation} = $detector_operation;
+
+                $inputs_to_store->{$unique_detector_base_name."_output_directory"}->{value} = $output_directory;
+                $inputs_to_store->{$unique_detector_base_name."_output_directory"}->{right_property_name} = 'output_directory';
+                $inputs_to_store->{$unique_detector_base_name."_output_directory"}->{right_operation} = $detector_operation;
+                
+                # adding in links from input_connector to filters to the hash
+                for my $index (0..(scalar(@filters)-1)){
+                    my $filter = $filters[$index];
+                    my $fname = $filter->{name};
+                    my $fversion = $filter->{version};
+                    my $fparams = $filter->{params};
+                    my $unique_filter_name = join( "_",($unique_detector_base_name,$fname,$fversion,$fparams));
+
+                    $inputs_to_store->{$unique_filter_name."_params"}->{value} = $filter->{params};
+                    $inputs_to_store->{$unique_filter_name."_params"}->{right_property_name} = 'params';
+                    $inputs_to_store->{$unique_filter_name."_params"}->{right_operation} = $filter->{operation};
+                }
+                
+                # use the hash keys, which are input_connector property names, to add the links to the workflow
+                for my $property (keys %$inputs_to_store) {
+                    $workflow_model->add_link(
+                        left_operation => $workflow_model->get_input_connector,
+                        left_property => $property,
+                        right_operation => $inputs_to_store->{$property}->{right_operation},
+                        right_property => $inputs_to_store->{$property}->{right_property_name},
+                    );
+                }
+
+                # add the properties this variant detector and filters need (version, params,output dir) to the input connector
+                my @new_input_connector_properties = (keys %$inputs_to_store);
                 my $input_connector = $workflow_model->get_input_connector;
                 my $input_connector_properties = $input_connector->operation_type->output_properties;
                 push @{$input_connector_properties}, @new_input_connector_properties;
                 $input_connector->operation_type->output_properties($input_connector_properties);
 
-                # connect those properties from the input connector to this operation
-                for my $property (keys %$properties_for_detector) {
-                    my $input_connector_property_name = $properties_for_detector->{$property};
-                    $workflow_model->add_link(
-                        left_operation => $workflow_model->get_input_connector,
-                        left_property => $input_connector_property_name,
-                        right_operation => $operation,
-                        right_property => $property,
-                    );
+                # merge the current detector's inputs to those generated for previous detectors, if any
+                my %workflow_inputs;
+                if(defined($self->_workflow_inputs)){
+                    %workflow_inputs = ( %{$self->_workflow_inputs}, %{$inputs_to_store});
                 }
+                else {
+                    %workflow_inputs = %{$inputs_to_store};
+                }
+                $self->_workflow_inputs(\%workflow_inputs); 
 
-
-=cut
-                
-                for my $filer_op (@operations){
-                    my $properties_for_filter = $self->properties_for_filter #($variant_type, $name, $version, $params);
-                    my @new_input_connector_properties = map { $properties_for_detector->{$_} } (keys %$properties_for_detector);
-                    my $input_connector = $workflow_model->get_input_connector;
-                    my $input_connector_properties = $input_connector->operation_type->output_properties;
-                    push @{$input_connector_properties}, @new_input_connector_properties;
-                    $input_connector->operation_type->output_properties($previous_output_properties);
-
-                    # connect those properties from the input connector to this operation
-                    for my $property (keys %$properties_for_detector) {
-                        my $input_connector_property_name = $properties_for_detector->{$property};
-                        $workflow_model->add_link(
-                            left_operation => $workflow_model->get_input_connector,
-                            left_property => $input_connector_property_name,
-                            right_operation => $operation,
-                            right_property => $property,
-                        );
+                print Data::Dumper::Dumper($self->_workflow_inputs);
+            
+                # connect the output to the input between all operations in this detector's branch
+                for my $index (0..(scalar(@filters)-1)){
+                    my ($right_op,$left_op);
+                    if($index == 0){
+                        $left_op = $detector_operation;
                     }
-
+                    else {
+                        $left_op = $filters[$index-1]->{operation};
+                    }
+                    $right_op = $filters[$index]->{operation};
+                    $workflow_model->add_link(
+                        left_operation => $left_op,
+                        left_property => 'output_file',
+                        right_operation => $right_op,
+                        right_property => 'variant_file',
+                    );
+                    
                 }
-=cut                    
 
-                # Generate an output property for the detectoro 
-                my $op = $operation; #s[-1] || $operation;
-                my $output_connector = $workflow_model->get_output_connector;
-                my $output_connector_properties = $output_connector->operation_type->input_properties;
-                my $new_output_connector_property = $name . "_" . $version . "_" . $params . "_output";
-                push @{$output_connector_properties}, $new_output_connector_property;
-                $output_connector->operation_type->input_properties($output_connector_properties);
+                # Find which is the last operation and connect it to the output connector
+                my $last_operation;
+                if(scalar(@filters)>0){
+                    $last_operation = $filters[-1]->{operation};
+                }
+                else {
+                    $last_operation = $detector_operation;
+                }
 
-                #Connect each detector's output to the output connector
                 $workflow_model->add_link(
-                    left_operation => $op,
-                    left_property => "output_directory",
+                    left_operation => $last_operation,
+                    left_property => "output_file",
                     right_operation => $workflow_model->get_output_connector,
-                    right_property => $new_output_connector_property
+                    right_property => $variant_type."_hq_output_file",
                 );
             }
         }
@@ -402,67 +468,42 @@ sub generate_workflow_operation {
     return $workflow_model;
 }
 
-# TODO rename or break up this sub
-# Currently this:
-# 1) Calculates the (unique, hopefully) names of the 3 properties the input connector needs in order to pass to the detect variants module
-# 2) Adds a hash of input_connector_property => value to the class so it can be stuffed into execute when run
-# 3) Returns a mapping for properties from detect_variants_param => input_connector_param_name
-sub properties_for_detector {
+sub _create_temp_directories {
     my $self = shift;
-    my ($variant_type, $name, $version, $params) = @_;
-    $params ||= "";
-    # This hashref will contain property_name_for_detector => unique_name_for_input_connector
-    my $appropriate_params = "$variant_type" . "_params";
-    my $property_map;
-    for my $property ("version", $appropriate_params, "output_directory") {
-        $property_map->{$property} = $name . "_" . $version . "_" . $params . "_" . $property;
-    }
 
-    my $output_directory = $self->calculate_detector_output_directory($name, $version, $params);
+    $ENV{TMPDIR} = $self->output_directory;
 
-    # Store these params for passing to the workflow when we execute it
-    # We will only have one variant type of params, ignore the old API
-    my $inputs_to_store = $self->_workflow_inputs;
-    $inputs_to_store->{$property_map->{version}} = $version;
-    $inputs_to_store->{$property_map->{$appropriate_params}} = $params;
-    $inputs_to_store->{$property_map->{output_directory}} = $output_directory;
-
-    # Try to account for previous detect variants properties
-   
-    $self->_workflow_inputs($inputs_to_store);
-
-    return $property_map;
+    return $self->SUPER::_create_temp_directories(@_);
 }
-=cut
-sub properties_for_filter {
+
+sub _promote_staged_data {
     my $self = shift;
-    my ($variant_type,$detector_name,$detector $name, $version, $params) = @_;
-    $params ||= "";
-    # This hashref will contain property_name_for_detector => unique_name_for_input_connector
-    my $appropriate_params = "$variant_type" . "_params";
-    my $property_map;
-    for my $property ("version", $appropriate_params, "output_directory") {
-        $property_map->{$property} = $name . "_" . $version . "_" . $params . "_" . $property;
+    my $staging_dir = $self->_temp_staging_directory;
+    my $output_dir  = $self->output_directory;
+    unless($self->SUPER::_promote_staged_data(@_)){
+        $self->error_message("_promote_staged_data failed in Dispatcher");
+        die $self->error_message;
+    }
+    if(defined($self->snv_hq_output_file)){
+        my $file = $self->output_directory."/".$self->snv_hq_output_file;
+        my $output = $self->output_directory."/snv_hq_output.bed";
+        Genome::Sys->create_symlink($file,$output);
+        $self->snv_hq_output_file($output);
+    }
+    if(defined($self->sv_hq_output_file)){
+        my $file = $self->output_directory."/".$self->sv_hq_output_file;
+        my $output = $self->output_directory."/sv_hq_output.bed";
+        Genome::Sys->create_symlink($file,$output);
+        $self->sv_hq_output_file($output);
+    }
+    if(defined($self->indel_hq_output_file)){
+        my $file = $self->output_directory."/".$self->indel_hq_output_file;
+        my $output = $self->output_directory."/indel_hq_output.bed";
+        Genome::Sys->create_symlink($file,$output);
+        $self->indel_hq_output_file($output);
     }
 
-    my $output_directory = $self->calculate_detector_output_directory($name, $version, $params);
-
-    # Store these params for passing to the workflow when we execute it
-    # We will only have one variant type of params, ignore the old API
-    my %inputs_to_store;
-    $inputs_to_store{$property_map->{version}} = $version;
-    $inputs_to_store{$property_map->{$appropriate_params}} = $params;
-    $inputs_to_store{$property_map->{output_directory}} = $output_directory;
-
-    # Try to account for previous detect variants properties
-    my @stored_properties;
-    if ($self->_workflow_inputs) {
-        @stored_properties = @{$self->_workflow_inputs};
-    }
-    push @stored_properties, %inputs_to_store;
-    $self->_workflow_inputs(\@stored_properties);
-
-    return $property_map;
+    return 1;
 }
-=cut
+
 1;

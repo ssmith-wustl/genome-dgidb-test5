@@ -8,15 +8,18 @@ package Genome::Model::Tools::Music::CosmicOmim;
    use Text::CSV_XS;
 
 class Genome::Model::Tools::Music::CosmicOmim {
-    is => 'Command',
+    is => 'Genome::Command::Base',
     has => [
        mutation_file => {
            is => 'Path',
            doc => 'list of annotated mutations in MAF format (or any file with MAF+annotation headers)',
+           is_input => 1,
+           file_format => 'maf',
        },
        output_file => {
            is => 'Path',
            doc => 'Output file contains the input file with two columns appended to the end, corresponding to cosmic and omim mutation comparisons, respectively',
+           is_output => 1,
        }
     ],
     has_optional => [

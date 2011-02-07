@@ -43,6 +43,37 @@ sub execute {
         $self->error_message("Invalid command class: $class_name");
         return 0;
     }
+    
+    my $inputs = '';
+    my $outputs = '';
+    my $command = $class_name->command_name;
+    # get command class 'has' attributes
+    my $cls_has = $class_meta->{has};
+    # get has' attrs
+    my @has_attrs = keys %{$cls_has};
+    # iterate through and check for input/output files
+    # we build the galaxy <inputs> and <outputs> sections as we go
+    foreach my $attr (@has_attrs) 
+    {
+        my $sub_hsh = $cls_has->{$attr};
+        my $file_format = $sub_hsh->{file_format};
+        if (($sub_hsh->{is_input} || $sub_hsh->{is_output}) and !defined($file_format)) {
+            # lets warn them about not defining a file_format on an input or output file
+            $self->warning_message("Input or output file_format is not defined on attribute $attr. Falling back to 'text'");
+            $file_format = 'text';
+        }
+        if ($sub_hsh->{is_input})
+        {
+            $inputs .= '<param name="'.$attr.'" format="'.$file_format.'" type="data" help="" />' . "\n";
+        } 
+        elsif ($sub_hsh->{is_output})
+        {
+            $outputs .= '<data name="'.$attr.'" format="'.$file_format.'" label="" help="" />' . "\n";
+        }
+        my $dash_attr = $attr;
+        $dash_attr =~ s/_/-/g;
+        $command .= " --$dash_attr=\$$attr";
+    }
 
     my $help_brief  = $class_name->help_brief;
     my $help_detail;
@@ -54,35 +85,25 @@ sub execute {
     my $tool_id = $class_name->command_name;
     $tool_id =~ s/ /_/g;
 
-    my $tool_name = $class_name->command_name;
-    my $command_line = $tool_name;
-    my $input_params = '';
-    my $output_data = '';
-
-    $input_params = <<"    XML";
-    <param name="command_line" type="text"/> 
-    <param name="in_file" type="text" value="/dev/null"/>
-    XML
-
-    $output_data = <<"    XML";
-    <data name="out_file" format="txt" label="$tool_name"/>
-    XML
-
     # galaxy will bold headers surrounded by * like **THIS**
-    $help_detail =~ s/^([A-Z]+[A-Z ]+:?)/**$1**\n/mg;
+    $help_detail =~ s/^([A-Z]+[A-Z ]+:?)/\n**$1**\n/mg;
 
     my $xml = <<"    XML";
-<tool id="$tool_id" name="$tool_name">
-  <description>$help_brief</description>
+<tool id="$tool_id" name="$tool_id">
+  <description>
+    $help_brief
+  </description>
   <command>
-    $command_line
+    $command
   </command>
   <inputs>
-$input_params</inputs>
+    $inputs
+  </inputs>
   <outputs>
-$output_data</outputs>
+    $outputs
+  </outputs>
   <help>
-$help_detail
+    $help_detail
   </help>
 </tool>
     XML

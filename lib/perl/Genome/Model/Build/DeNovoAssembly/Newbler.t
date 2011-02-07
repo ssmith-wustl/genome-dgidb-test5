@@ -6,7 +6,7 @@ use warnings;
 use above 'Genome';
 
 use Genome::Model::DeNovoAssembly::Test;
-use Test::More;
+use Test::More skip_all => 'Newbler is currently does not run in de-novo pipeline';
 
 use_ok('Genome::Model::Build::DeNovoAssembly::Newbler');
 

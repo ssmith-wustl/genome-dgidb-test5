@@ -157,9 +157,11 @@ sub execute {
 
                 }
 
-                my $per_lane_qc = $self->create_default_per_lane_qc_model($genome_instrument_data, $subject, $reference_sequence_builds[0], $pse); # should only be one imp ref seq build for this pp 
-                unless($per_lane_qc) {
-                    push @process_errors, $self->error_message;
+                if ( $instrument_data_type ne 'genotyper results' ) {
+                    my $per_lane_qc = $self->create_default_per_lane_qc_model($genome_instrument_data, $subject, $reference_sequence_builds[0], $pse); # should only be one imp ref seq build for this pp 
+                    unless($per_lane_qc) {
+                        push @process_errors, $self->error_message;
+                    }
                 }
 
                 my @models = Genome::Model->get(
@@ -652,6 +654,10 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         }
     }
 
+    if ( $processing_profile->isa('Genome::ProcessingProfile::GenotypeMicroarray') ) {
+	$model_name .= ' '.$reference_sequence_build->name;
+    }
+
     #make sure the name we'd like isn't already in use
     $model_name = $self->find_unused_model_name($model_name);
 
@@ -736,21 +742,37 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         }
     }
 
+    $DB::single = 1;
     for my $m (@new_models) {
-        my $assign_all =
+        my $assign =
             Genome::Model::Command::InstrumentData::Assign->create(
                 model_id => $m->id,
-                all      => 1,
+		instrument_data_id => $genome_instrument_data->id,
+		include_imported => 1,
+		force => 1,
+            );
+
+        unless ( $assign->execute ) {
+            $self->error_message(
+                'Failed to execute instrument-data assign for model '
+                . $m->id . ' instrument data '.$genome_instrument_data->id );
+
+	    $m->delete;
+	    next;
+        }
+	
+	my $assign_all =
+            Genome::Model::Command::InstrumentData::Assign->create(
+                model_id => $m->id,
+		all => 1,
             );
 
         unless ( $assign_all->execute ) {
             $self->error_message(
                 'Failed to execute instrument-data assign --all for model '
                 . $m->id );
-            for (@new_models) {
-                $_->delete;
-            }
-            return;
+	    $m->delete;
+	    next;
         }
 
         my @existing_instrument_data =
@@ -763,10 +785,8 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             $self->error_message(
                 'instrument data ' . $genome_instrument_data->id . ' not assigned to model ????? (' . $m->id . ')'
             );
-            for (@new_models) {
-                $_->delete;
-            }
-            return;
+	    $m->delete;
+	    next;
         }
 
         my @project_names = $self->_resolve_project_names($pse);
@@ -778,7 +798,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         $pse->add_param('genome_model_id', $m->id);
     }
 
-    return scalar @new_models;
+    return 1;
 }
 
 

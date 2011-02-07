@@ -27,7 +27,7 @@ class Genome::Measurable {
         },
         # These are here, and should be overidden in the subclass
         name => { column_name => '', },
-        common_name => { default_value => '', column_name => '', },
+        common_name => { calculate => q| return $_[0]->name; |, },
     ],
     data_source => 'Genome::DataSource::GMSchema',
 };

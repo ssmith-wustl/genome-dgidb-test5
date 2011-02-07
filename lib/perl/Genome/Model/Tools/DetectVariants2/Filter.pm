@@ -19,6 +19,12 @@ class Genome::Model::Tools::DetectVariants2::Filter {
             is_output => 1,
             doc => 'File name in which to write output',
         },
+        params => {
+            type => 'String',
+            is_input => 1,
+            is_optional => 1,
+            doc => 'The param string as passed in from the strategy',
+        },
         control_variant_file => {
             type => 'String',
             is_input => 1,
@@ -31,6 +37,11 @@ class Genome::Model::Tools::DetectVariants2::Filter {
             is_input => 1,
         },
         aligned_reads_input => {
+            is => 'Text',
+            doc => 'Location of the aligned reads input file',
+            is_input => 1,
+        },
+        control_aligned_reads_input => {
             is => 'Text',
             doc => 'Location of the aligned reads input file',
             is_input => 1,
