@@ -29,7 +29,7 @@ sub build_detail_html {
         my $id= $b->id;
         my $type = $b->type_name;
         my $model_id = $b->model->id;
-        my $model_name = $b->model->__display_name__;
+        my $model_name = $b->model->name;
         $model_name = substr($model_name, 0, 50)."..." if length($model_name) > 50;
         $html .= "<tr><td>$id</td><td>$type</td><td>$model_id</td><td>$model_name</td></tr>\n";
     }
