@@ -107,8 +107,10 @@ sub _detect_variants {
             }
         }
     }
+
+    #FIXME This is hacktastic. It should be harder, smarter, faster, and possibly  better.
     my @dirs = split "/", $self->output_directory;
-    $self->output_file($dirs[-1]."/snps_all_sequences.filtered.bed");
+    $self->output_file($dirs[-1]."/snps_all_sequences.filtered.v1.bed");
     return $result;
 }
 
