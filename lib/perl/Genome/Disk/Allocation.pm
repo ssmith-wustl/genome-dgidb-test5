@@ -75,17 +75,19 @@ class Genome::Disk::Allocation {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
-our $MAX_VOLUMES = 5;
-our $MINIMUM_ALLOCATION_SIZE = 0;
-our $MAX_ATTEMPTS_TO_LOCK_VOLUME = 30;
-our @REQUIRED_PARAMETERS = qw/
+my $MAX_VOLUMES = 5;
+my $MINIMUM_ALLOCATION_SIZE = 0;
+my $MAX_ATTEMPTS_TO_LOCK_VOLUME = 30;
+my @REQUIRED_PARAMETERS = qw/
     disk_group_name
     allocation_path
     kilobytes_requested
     owner_class_name
     owner_id
 /;
-our @APIPE_DISK_GROUPS = qw/
+
+# TODO This needs to be removed, site-specific
+my @APIPE_DISK_GROUPS = qw/
     info_apipe
     info_apipe_ref
     info_alignments
@@ -113,13 +115,23 @@ sub create {
         return Genome::Disk::Allocation->_create(%params);
     }
 
+    # Serialize hash and create allocation via system call to ensure commit occurs
     my $param_string = Genome::Utility::Text::hash_to_string(\%params);
     my $rv = system("perl -e \"use above Genome; $class->_create($param_string); UR::Context->commit;\"");
     confess "Could not create allocation" unless $rv == 0;
 
     my $allocation = Genome::Disk::Allocation->get(id => $params{id});
     confess "Could not retrieve created allocation with id " . $params{id} unless $allocation;
-    return $allocation;
+    
+    # If the owner gets rolled back, then delete the allocation
+    my $allocation_change = UR::Context::Transaction->log_change(
+        $allocation->owner, 'UR::Value', $allocation->id, 'external_change', $allocation->delete
+    );
+    unless ($allocation_change) { 
+        confess 'Failed to record allocation creation!';
+    }
+
+    return $allocation;    
 }
 
 sub deallocate { return shift->delete(@_); }
@@ -178,8 +190,7 @@ sub _create {
         
     # Verify the owner
     unless ($params{owner_class_name}->__meta__) {
-        confess "Could not find meta information for owner class " . $params{owner_class_name} .
-            ", make sure this class exists!";
+        confess "Could not find meta information for owner class " . $params{owner_class_name} . ", make sure this class exists!";
     }
 
     # Verify that kilobytes requested isn't something wonky
@@ -195,6 +206,7 @@ sub _create {
     }
 
     # Verify the supplied group name is valid
+    # TODO This should be removed, no one outside of the GC will find this useful
     my $disk_group_name = $params{disk_group_name};
     unless (grep { $disk_group_name eq $_ } @APIPE_DISK_GROUPS) {
         confess "Can only allocate disk in apipe disk groups, not $disk_group_name. Apipe groups are: " . join(", ", @APIPE_DISK_GROUPS);
@@ -452,8 +464,8 @@ sub verify_no_parent_allocation {
 # Makes sure the supplied kb amount is valid
 sub check_kb_requested {
     my ($class, $kb) = @_;
-    return unless defined $kb;
-    return if $kb < $MINIMUM_ALLOCATION_SIZE;
+    return 0 unless defined $kb;
+    return 0 if $kb < $MINIMUM_ALLOCATION_SIZE;
     return 1;
 }
 

@@ -42,18 +42,13 @@ EOS
 
 sub execute {
     my $self = shift;
-    $self->status_message('Starting reallocation process');
-
-    my $allocation = Genome::Disk::Allocation->get($self->allocation_id);
-    confess 'Found no allocation with id ' . $self->allocation_id unless $allocation;
-
     my %params;
+    $params{allocation_id} = $self->allocation_id;
     $params{kilobytes_requested} = $self->kilobytes_requested if defined $self->kilobytes_requested;
-    my $rv = $allocation->reallocate(%params);
+    my $rv = Genome::Disk::Allocation->reallocate(%params);
     unless (defined $rv and $rv == 1) {
         confess 'Could not reallocate allocation ' . $self->allocation_id;
     }
-    
     return 1;
 }
 

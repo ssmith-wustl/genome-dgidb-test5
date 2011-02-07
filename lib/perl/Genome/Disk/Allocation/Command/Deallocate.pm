@@ -13,11 +13,6 @@ class Genome::Disk::Allocation::Command::Deallocate {
             is => 'Number',
             doc => 'The id for the allocator event',
         },
-        remove_allocation_directory => {
-            is => 'Boolean',
-            default => 1,
-            doc => 'If set, the directory reserved by the allocation',
-        },
     ],
     doc => 'Removes target allocation and deletes its directories',
 };
@@ -36,9 +31,8 @@ sub help_detail {
 
 sub execute { 
     my $self = shift;
-    my $allocation = Genome::Disk::Allocation->get($self->allocation_id);
-    confess 'Could not find allocation with id ' . $self->allocation_id unless $allocation;
-    $allocation->delete(remove_allocation_directory => $self->remove_allocation_directory);
+    my $rv = Genome::Disk::Allocation->delete(allocation_id => $self->allocation_id);
+    confess 'Could not deallocate allocation ' . $self->allocation_id unless defined $rv and $rv == 1;
     return 1;
 }
 
