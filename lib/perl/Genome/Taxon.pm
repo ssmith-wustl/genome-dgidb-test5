@@ -11,8 +11,14 @@ class Genome::Taxon {
     ],
     has => [
         taxon_id                        => { calculate => q|$self->id| }, 
-        name                            => { is => "Text", len => 99, column_name => 'SPECIES_NAME' },
-        domain                          => { is => "Text",   len => 9, valid_values => [qw/ Archea Bacteria Eukaryota Virus Unknown /], },
+        name => { 
+            is => "Text", 
+            len => 99,
+            column_name => 
+            'SPECIES_NAME', 
+            doc => 'Name (species name) of the taxon', 
+        },
+        domain => { is => "Text",   len => 9, valid_values => [qw/ Archea Bacteria Eukaryota Virus Unknown /], doc => 'Domain of the taxon.', },
         species_name                    => { is => "Text",   len => 64, 
                                                 calculate => q|$name|, 
                                                 calculate_from => ['name'],
@@ -28,7 +34,7 @@ class Genome::Taxon {
         locus_tag                       => { is => "Text",   len => 200 },
         gram_stain_category             => { is => "Text",   len => 32, column_name => 'GRAM_STAIN_CATEGORY', valid_values => [qw/ positive negative indeterminate /], },
         estimated_genome_size           => { is => "Number", len => 12, column_name => 'ESTIMATED_ORGANISM_GENOME_SIZE' },
-        current_default_org_prefix      => { is => "Text",   len => 2 },
+        current_default_org_prefix      => { is => "Text",   len => 2, is_mutable => 0 },
         current_genome_refseq_id        => { is => "Number", len => 15 },
         
         model_member                    => { is => 'Genome::Individual', id_by => 'model_member_id',
