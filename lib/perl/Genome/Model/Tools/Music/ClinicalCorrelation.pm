@@ -22,15 +22,19 @@ Version 1.01
 #our $VERSION = '1.01';
 
 class Genome::Model::Tools::Music::ClinicalCorrelation {
-    is => 'Command',                       
+    is => 'Genome::Command::Base',                       
     has => [ 
     output_file => {
         is => 'Text',
+        is_output => 1,
+        file_format => 'text',
         doc => "Results of clinical-correlation tool",
     },
     maf_file => { 
         is => 'Text',
         doc => "List of mutations in MAF format",
+        is_input => 1,
+        file_format => 'maf',
         is_optional => 1,
     },
     matrix_file => {

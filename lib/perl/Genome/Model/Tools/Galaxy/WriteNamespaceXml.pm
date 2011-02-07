@@ -1,11 +1,11 @@
 
-package Genome::Model::Tools::Galaxy::WriteXml;
+package Genome::Model::Tools::Galaxy::WriteNamespaceXml;
 
 use strict;
 use warnings;
 use Genome;
 
-class Genome::Model::Tools::Galaxy::WriteXml {
+class Genome::Model::Tools::Galaxy::WriteNamespaceXml {
     is  => 'Command',
     has => [
         namespace => {
