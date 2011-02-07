@@ -140,7 +140,14 @@ tt=tt[order(tt[,"p"]),];
 }
 
 
-if (!is.null(outf)) {write.table(tt,file=outf,quote=FALSE,row.names=FALSE,sep=",");}
+if (!is.null(outf))
+{
+colnames(tt)=c("x","y","method","n","s","p","fdr","bon");
+tt[,"s"] = sapply(tt[,"s"], sprintf, fmt="%.6f");
+tt[,"p"] = sapply(tt[,"p"], sprintf, fmt="%.6f");
+tt[,"fdr"] = sapply(tt[,"fdr"], sprintf, fmt="%.6f");
+tt[,"bon"] = sapply(tt[,"bon"], sprintf, fmt="%.6f");
+write.table(tt,file=outf,quote=FALSE,row.names=FALSE,sep=",");}
 invisible(tt);
 }
 #END cor2test
