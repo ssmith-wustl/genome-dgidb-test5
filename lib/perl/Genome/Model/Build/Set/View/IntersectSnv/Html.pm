@@ -37,6 +37,36 @@ sub build_detail_html {
     return $html;
 }
 
+sub get_reference {
+    my $build = shift;
+    my @props = qw/reference_sequence_build reference/;
+    for my $p (@props) {
+        if ($build->model->can($p)) {
+            my $ref = $build->model->$p;
+            print "*** " . $build->__display_name__ . " $p => " . ($ref?$ref->name : "NONE") . "\n";
+            return $ref if $ref;
+        }
+    }
+    return;
+}
+
+sub check_build {
+    my $build = shift;
+    my $name = $build->__display_name__;
+    if (!$build->can("snvs_bed") or !defined $build->snvs_bed("v2")) {
+        die "Failed to get snvs for build $name (snvs_bed missing or returned null)\n";
+    }
+
+    if (!$build->can("filtered_snvs_bed") or !defined $build->filtered_snvs_bed("v2")) {
+        die "Failed to get filtered snvs for build $name (filtered_snvs_bed missing or returned null)\n";
+    }
+
+    if (!get_reference($build)) {
+        die "Unable to determine reference sequence for build $name\n";
+    }
+}
+
+
 sub _generate_content {
     my $self = shift;
 
@@ -47,6 +77,21 @@ sub _generate_content {
     }
 
     my @builds = map {Genome::Model::Build->get($_)} @$ids;
+    for my $b (@builds) {
+        eval { check_build($b); };
+        if ($@) {
+            return $self->_format_error($@);
+        }
+    }
+
+    if (!get_reference($builds[0])->is_compatible_with(get_reference($builds[1]))) {
+        my $b1name = $builds[0]->__display_name__;
+        my $b2name = $builds[1]->__display_name__;
+        my $r1name = get_reference($builds[0])->name;
+        my $r2name = get_reference($builds[1])->name;
+        return $self->_format_error("Incompatible reference sequences for builds:\n '$b1name' uses $r1name\n'$b2name' uses $r2name");
+    }
+
     my %filter_methods = (
         filtered => "filtered_snvs_bed",
         unfiltered => "snvs_bed"
@@ -65,6 +110,7 @@ sub _generate_content {
             input_file_a => $files[0],
             input_file_b => $files[1],
             output_file => $tmpfile,
+            depth => 1,
         );
         eval { $cmd->execute; };
         if ($@) { return $self->_format_error($@); }
@@ -97,7 +143,7 @@ sub format_results_html {
         $html .= "<th>&nbsp;</td>\n";
         $html .= "<th>SNVs</td>\n";
         $html .= "<th>%</td>\n";
-        $html .= "<th>Avg Qual</td>\n";
+        $html .= "<th>Avg Depth</td>\n";
         $html .= "</tr>\n";
         for my $match_type (keys %{$results->{$a_type}{hits}}) {
             my $uc_match_type = join(" ", map { ucfirst($_) } split(" ", $match_type));
@@ -122,7 +168,7 @@ sub format_results_html {
 
 sub _format_error {
     my ($self, $message) = @_;
-    $message = "<div class=\"error\">$message</div>";
+    $message = "<div class=\"error\"><pre>$message</pre></div>";
     return $self->_render_view("Error", $message);
 }
 
