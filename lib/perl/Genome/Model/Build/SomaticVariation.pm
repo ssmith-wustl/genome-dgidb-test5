@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use File::Basename;
 
 class Genome::Model::Build::SomaticVariation {
     is => 'Genome::Model::Build',
@@ -46,6 +47,18 @@ class Genome::Model::Build::SomaticVariation {
             is => 'Genome::Model::Build::ImportedVariationList',
             via => 'model',
         },
+        snv_detection_strategy => {
+            is => 'Text',
+            via => 'model',
+        },
+        sv_detection_strategy => {
+            is => 'Text',
+            via => 'model',
+        },
+        indel_detection_strategy => {
+            is => 'Text',
+            via => 'model',
+        },
     ],
 };
 
@@ -53,6 +66,7 @@ class Genome::Model::Build::SomaticVariation {
 sub create {
     my $class = shift;
 
+    #This updates the model's tumor and normal build inputs so they are the latest complete build for copying to build inputs
     my $bx = $class->define_boolexpr(@_);
     $DB::single = 1; #TODO:delete me
     my $model_id = $bx->value_for('model_id');
@@ -95,10 +109,55 @@ sub create {
         return;
     }
 
+    my @result_subfolders;
+    for ('variants', 'novel', 'effects'){
+        push @result_subfolders, $self->data_directory."/$_";
+    }
+
+    for (@result_subfolders){
+        mkdir $_ unless -d $_;
+    }
+
     return $self;
 }
 
+sub tumor_bam {
+    my $self = shift;
+    $DB::single = 1;
+    my $tumor_build = $self->tumor_build;
+    my $tumor_bam = $tumor_build->whole_rmdup_bam_file;
+    unless ($tumor_bam){
+        die $self->error_message("No whole_rmdup_bam file found for tumor build!");
+    }
+    return $tumor_bam;
+}
 
+sub normal_bam {
+    my $self = shift;
+    my $normal_build = $self->normal_build;
+    my $normal_bam = $normal_build->whole_rmdup_bam_file;
+    unless ($normal_bam){
+        die $self->error_message("No whole_rmdup_bam file found for normal build!");
+    }
+    return $normal_bam;
+}
+
+sub reference_sequence_build {
+    my $self = shift;
+    my $normal_build = $self->normal_build;
+    my $normal_model = $normal_build->model;
+    my $reference_sequence_build = $normal_model->reference_sequence_build;
+    return $reference_sequence_build;
+}
+
+sub data_set_path {
+    my ($self, $dataset, $version, $file_format) = @_;
+    my $path;
+    if ($version and $file_format){
+        $path = $self->data_directory."/$dataset.$version.$file_format";
+    }
+    return $path;
+}
 
 sub calculate_estimated_kb_usage {
     my $self = shift;
