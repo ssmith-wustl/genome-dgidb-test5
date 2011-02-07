@@ -8,30 +8,14 @@ use Genome;
 class Genome::Model::SomaticValidation::Command::DefineModels {
     is => 'Genome::Command::Base',
     has_input => [
-        variant_list => {
-            is => 'Genome::FeatureList',
-            doc => 'The list of variants to process.',
-        },
-        tumor_subject => {
-            is => 'Genome::Sample',
-            doc => 'The sample for validation data for the tumor'
-        },
-        normal_subject => {
-            is => 'Genome::Sample',
-            doc => 'The sample for validation data for the normal',
+        somatic_build => {
+            is => 'Genome::Model::Build::Somatic',
+            doc => 'The original Somatic build for which validation is being done',
         },
         target_region_set => {
             is => 'Genome::FeatureList',
             doc => 'The target-region-set for the reference alignment models for the samples',
         },
-        reference_alignment_processing_profile => {
-            is => 'Genome::ProcessingProfile::ReferenceAlignment',
-            doc => 'The processing profile to use for the reference alignment models',
-        },
-        somatic_validation_processing_profile => {
-            is => 'Genome::ProcessingProfile::SomaticValidation',
-            doc => 'The processing profile to use for the somatic validation model.'
-        }
     ],
     has_optional_input => [
         assign_existing_instrument_data => {
@@ -53,6 +37,16 @@ class Genome::Model::SomaticValidation::Command::DefineModels {
             is => 'Genome::FeatureList',
             doc => 'The region-of-interest for the reference alignment models for the samples (defaults to target_region_set)',
         },
+        reference_alignment_processing_profile => {
+            is => 'Genome::ProcessingProfile::ReferenceAlignment',
+            doc => 'The processing profile to use for the reference alignment models',
+            default_value => '', #FIXME fill this in
+        },
+        somatic_validation_processing_profile => {
+            is => 'Genome::ProcessingProfile::SomaticValidation',
+            doc => 'The processing profile to use for the somatic validation model.',
+            default_value => '', #FIXME fill this in
+        }
     ],
 };
 
@@ -80,13 +74,16 @@ sub execute {
         $self->region_of_interest_set($self->target_region_set);
     }
 
-    return unless $self->_check_inputs;
+    my $variant_list = $self->_check_inputs;
+    return unless $variant_list;
 
-    my $tumor_model_id = $self->_create_reference_alignment_model($self->tumor_subject);
+    my $somatic_build = $self->somatic_build;
+
+    my $tumor_model_id = $self->_create_reference_alignment_model($somatic_build->tumor_build->model->subject);
     my $tumor_model = Genome::Model->get($tumor_model_id);
     return unless $tumor_model;
 
-    my $normal_model_id = $self->_create_reference_alignment_model($self->normal_subject);
+    my $normal_model_id = $self->_create_reference_alignment_model($somatic_build->normal_build->model->subject);
     my $normal_model = Genome::Model->get($normal_model_id);
     unless($normal_model) {
         $tumor_model->delete;
@@ -96,7 +93,7 @@ sub execute {
     my $processing_profile = $self->somatic_validation_processing_profile;
 
     my $define_cmd = Genome::Model::Command::Define::SomaticValidation->create(
-        variant_list => $self->variant_list,
+        variant_list => $variant_list,
         tumor_model => $tumor_model,
         normal_model => $normal_model,
         auto_build_alignments => $self->auto_build,
@@ -160,7 +157,21 @@ sub _check_inputs {
 
     #Reference sequences of ROI and variant list need to match
     my $region_of_interest_set = $self->region_of_interest_set;
-    my $variant_list = $self->variant_list;
+    my $somatic_build = $self->somatic_build;
+
+    my @variant_list = Genome::FeatureList->get(subject => $somatic_build);
+    unless(scalar @variant_list) {
+        $self->error_message('No variant list has been entered into the system for this somatic build.');
+        return;
+    }
+
+    if(scalar @variant_list > 1) {
+        while (scalar @variant_list > 1) {
+            $self->status_message('Found multiple variant lists for the specified Somatic model.');
+            @variant_list = $self->_get_user_verification_for_param_value('variant-list', @variant_list);
+        }
+    }
+    my $variant_list = $variant_list[0];
 
     unless($region_of_interest_set->reference) {
         $self->error_message('No reference sequence associated with the specified region of interest set: ' . $region_of_interest_set->name);
@@ -180,29 +191,7 @@ sub _check_inputs {
         return;
     }
 
-    #Tumor and normal subjects must come from the same source
-    my $tumor_subject = $self->tumor_subject;
-    my $normal_subject = $self->normal_subject;
-
-    unless($tumor_subject->source) {
-        $self->error_message('No source associated with tumor subject: ' . $tumor_subject->name);
-        return;
-    }
-
-    unless($normal_subject->source) {
-        $self->error_message('No source associated with normal subject: ' . $normal_subject->name);
-        return;
-    }
-
-    unless($tumor_subject->source eq $normal_subject->source) {
-        $self->error_message(
-            'Source of tumor subject, ' . $tumor_subject->source->__display_name__ .
-            ', does not match that of the normal subject,' . $normal_subject->source->__display_name__ . '.'
-        );
-        return;
-    }
-
-    return 1;
+    return $variant_list;
 }
 
 1;
