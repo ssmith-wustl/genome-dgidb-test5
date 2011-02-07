@@ -223,6 +223,7 @@ sub _command_properties_for_target_class {
             data_type => $target_property->data_type,
             is_many => $target_property->is_many,
             is_optional => $target_property->is_optional,
+            is_mutable => $target_property->is_mutable,
             valid_values => $target_property->valid_values,
             default_value => $target_property->default_value,
             doc => $target_property->doc,
@@ -257,6 +258,8 @@ sub _update_command_properties_for_target_class {
     for my $property ( @properties ) {
         $property->{is_optional} = 1;
         delete $property->{default_value};
+        my $is_mutable = delete $property->{is_mutable};
+        next if not $is_mutable;
 
         if ( not $property->{is_many} ) {
             push @update_properties, $property;

@@ -131,7 +131,7 @@ sub Xexecute {
     my $bam_ok = $self->_validate_bam;
     return if not $bam_ok;
 
-    # Validate MD5
+    # Validate MD5../Site/WUGC/Synchronize/
     if ( not $self->no_md5 ) {
         my $md5_ok = $self->_validate_md5;
         return if not $md5_ok;
@@ -284,6 +284,7 @@ sub _create_imported_instrument_data {
         next if $property_name =~ /tcga/;
         next if $property_name =~ /target_region/;
         next if $property_name =~ /sample/;
+        next if $property_name =~ /no_md5/;
         $params{$property_name} = $self->$property_name if $self->$property_name;
     }
     $params{sequencing_platform} = "solexa";
