@@ -50,5 +50,9 @@ sub snvs_bed {
     shift->data_directory . '/gold_snp.v2.bed';
 }
 
+sub filtered_snvs_bed {
+    shift->data_directory . '/gold_snp.v2.bed';
+}
+
 1;
 
