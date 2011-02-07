@@ -11,21 +11,22 @@ class Genome::Model::Tools::Joinx::SnvConcordance {
     has_input => [
         input_file_a => {
             is => 'Text',
-            is_input => 1,
             doc => 'A sorted bed file containing snvs',
             shell_args_position => 1,
         },
         input_file_b => {
             is => 'Text',
-            is_input => 1,
             doc => 'A sorted bed file used to compute concordance (% of input_file_a in input_file_b)',
             shell_args_position => 2,
         },
     ],
-    has_optional => [
+    has_optional_input => [
+        depth => {
+            is => 'Boolean',
+            doc => 'Use read depth instead of quality in report',
+        },
         output_file => {
             is => 'Text',
-            is_input => 1,
             doc => 'The output file (defaults to stdout)',
         },
     ],
@@ -42,12 +43,22 @@ sub help_synopsis {
 EOS
 }
 
+sub flags {
+    my $self = shift;
+    my @flags;
+    push(@flags, "--depth") if $self->depth;
+    return @flags;
+}
+
+
+
 sub execute {
     my $self = shift;
     my $output = "-";
     $output = $self->output_file if (defined $self->output_file);
-    my $cmd = $self->joinx_path . ' snv-concordance ' . 
-        $self->input_file_a . ' ' . 
+    my $flags = join(" ", $self->flags);
+    my $cmd = $self->joinx_path . " snv-concordance $flags " .
+        $self->input_file_a . ' ' .
         $self->input_file_b;
     if ($output ne "-") {
         $cmd .= " > $output";
@@ -87,7 +98,7 @@ sub parse_results_file {
         }
     }
     $fh->close;
-    return $results; 
+    return $results;
 }
 
 1;
