@@ -127,6 +127,13 @@ sub get_disk_allocation {
 sub calculate_alignment_estimated_kb_usage {
     my $self = shift;
     my $answer;
+
+    # Check for an existing allocation for this instrument data, which would've been created by the importer
+    my $allocation = Genome::Disk::Allocation->get(owner_class_name => $self->class, owner_id => $self->id);
+    if ($allocation) {
+        return int(($allocation->kilobytes_requested/1000) + 100);
+    }
+
     if($self->original_data_path !~ /\,/ ) {
         if (-d $self->original_data_path) {
             my $source_size = Genome::Sys->directory_size_recursive($self->original_data_path);
