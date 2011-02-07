@@ -126,7 +126,7 @@ for my $case (@cases) {
         
         ok(-e $actual_full_path, " case $n has expected output file $expect_file") or next;
         
-        my @diff = `diff $expect_full_path $actual_full_path`;
+        my @diff = `diff -u $expect_full_path $actual_full_path`;
         my $diff_output;
         if (@diff > 20) {
             $diff_output = join("\n", @diff[0..19]) . "\ndiff output truncated.";
