@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Data::Dumper;
 
 class Genome::Model::Tools::Joinx::SnvConcordance {
     is => 'Genome::Model::Tools::Joinx',
@@ -47,19 +48,16 @@ sub execute {
     $output = $self->output_file if (defined $self->output_file);
     my $cmd = $self->joinx_path . ' snv-concordance ' . 
         $self->input_file_a . ' ' . 
-        $self->input_file_b .
-        " -o $output";
+        $self->input_file_b;
+    if ($output ne "-") {
+        $cmd .= " > $output";
+    }
 
     my %params = (
         cmd => $cmd,
         input_files => [$self->input_file_a, $self->input_file_b],
     );
-    $params{output_files} = [$output] if $output ne "-";
     Genome::Sys->shellcmd(%params);
-
-    if ($output ne "-") {
-        my $results = parse_results_file($output);
-    }
 
     return 1;
 }
