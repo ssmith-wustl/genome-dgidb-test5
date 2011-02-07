@@ -23,11 +23,7 @@ sub required_rusage {
     my %p = @_;
     my $instrument_data = delete $p{instrument_data};
 
-    my $estimated_usage_mb = 90000;
-    if (defined $instrument_data && $instrument_data->can("calculate_alignment_estimated_kb_usage")) {
-        my $kb_usage = $instrument_data->calculate_alignment_estimated_kb_usage;
-        $estimated_usage_mb = int(($kb_usage * 5) / 1024)+100;
-    }
+    my $estimated_usage_mb = $class->tmp_megabytes_estimated($instrument_data);
     
     my $mem = 10000;
     my ($double_mem, $mem_kb, $double_mem_kb) = ($mem*2, $mem*1000, $mem*2*1000);
@@ -48,6 +44,46 @@ sub required_rusage {
     } else {
         die $class->error_message("Failed to find hosts that meet resource requirements ($required_usage).");
     }
+}
+
+sub tmp_megabytes_estimated {
+    my $class = shift || die;
+    my $instrument_data = shift;
+
+    my $default_megabytes = 90000;
+
+
+    if (not defined $instrument_data) {
+        return $default_megabytes;
+    }
+    elsif ($instrument_data->bam_path) {
+        my $bam_path = $instrument_data->bam_path;
+
+        my $scale_factor = 3.25; # assumption: up to 3x during sort/fixmate/sort and also during fastq extraction (2x) + bam = 3
+
+        my $bam_bytes = -s $bam_path;
+        unless ($bam_bytes) {
+            die $class->error_message("Instrument Data has BAM ($bam_path) but has no size!");
+        }
+
+        if ($instrument_data->can('get_segments')) {
+            my $bam_segments = scalar $instrument_data->get_segments;
+            if ($bam_segments > 1) {
+                $scale_factor = $scale_factor / $bam_segments;
+            }
+        }
+
+        return int(($bam_bytes * $scale_factor) / 1024**2);
+    }
+    elsif ($instrument_data->can("calculate_alignment_estimated_kb_usage")) {
+        my $kb_usage = $instrument_data->calculate_alignment_estimated_kb_usage;
+        return int(($kb_usage * 3) / 1024) + 100; # assumption: 2x for the quality conversion, one gets rm'di after; aligner generates 0.5 (1.5 total now); rm orig; sort and merge maybe 2-2.5
+    }
+    else {
+        return $default_megabytes;
+    }
+
+    return;
 }
 
 
