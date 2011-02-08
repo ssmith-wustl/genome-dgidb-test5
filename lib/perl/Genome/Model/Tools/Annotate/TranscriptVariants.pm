@@ -327,6 +327,18 @@ sub _create_old_annotator {
     return $annotator;
 }
 
+sub _convert_bed_file {
+    my $self = shift; 
+    my $converted_bed_file = Genome::Sys->create_temp_file_path();
+    my $bed_converter_class = $self->_version_subclass_name. "::BedToAnnotation";
+    my %bed_converter_params = (snv_file => $self->variant_bed_file, output => $converted_bed_file);
+    if ($self->extra_columns and $self->use_version >= 3){
+        $bed_converter_params{'extra_columns'} = $self->extra_columns;
+    }
+    $bed_converter_class->execute(%bed_converter_params) || ($self->error_message("Could not convert BED file to annotator format") and return);
+    $self->variant_file($converted_bed_file);
+}
+
 # debugging help
 my $we_are_done_flag;
 my $last_variant_annotated;
@@ -344,12 +356,7 @@ sub execute {
         return;
     }
 
-    if($self->variant_bed_file){
-        my $converted_bed_file = Genome::Sys->create_temp_file_path();
-        my $bed_converter_class = $self->_version_subclass_name. "::BedToAnnotation";
-        $bed_converter_class->execute( snv_file => $self->variant_bed_file, output => $converted_bed_file) || ($self->error_message("Could not convert BED file to annotator format") and return);
-        $self->variant_file($converted_bed_file);
-    }
+    $self->_convert_bed_file if $self->variant_bed_file;
 
     my $variant_file = $self->variant_file;
 
