@@ -45,6 +45,7 @@ class Genome::Model::Tools::DetectVariants2::Filter {
             is => 'Text',
             doc => 'Location of the aligned reads input file',
             is_input => 1,
+            is_optional => 1,
         },
         output_directory => {
             is => 'Text',
