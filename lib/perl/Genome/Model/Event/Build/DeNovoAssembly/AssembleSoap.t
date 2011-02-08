@@ -15,19 +15,14 @@ like($machine_hardware, qr/x86_64/, 'on 64 bit machine') or die;
 
 use_ok('Genome::Model::Event::Build::DeNovoAssembly::Assemble') or die;
 
-my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
-    sequencing_platform => 'solexa',
-    assembler_name => 'soap de-novo-assemble',
-    );
-ok($model, "Got mock test model") or die;
-my $build = Genome::Model::DeNovoAssembly::Test->get_mock_build(model => $model);
-ok($build, "Got mock test buid") or die;
-
-# example build
-my $example_build = Genome::Model::DeNovoAssembly::Test->get_mock_build(
+my $model = Genome::Model::DeNovoAssembly::Test->model_for_soap;
+ok($model, "Got de novo assembly model") or die;
+my $build = Genome::Model::Build->create(
     model => $model,
-    use_example_directory => 1,
+    data_directory => $model->data_directory,
 );
+ok($build, "Got de novo assembly build") or die;
+my $example_build = Genome::Model::DeNovoAssembly::Test->example_build_for_model($model);
 ok($example_build, 'got example build') or die;
 
 # link input fastq files
@@ -78,8 +73,11 @@ foreach my $ext ( @file_exts ) {
     my $file = $build->soap_output_file_for_ext($ext);
     ok(-s $file, "$ext file exists");
     is(File::Compare::compare($example_file, $file), 0, "$ext files match");
+    #print 'ex: '.$example_file."\n";
+    #print 'file: '.$file."\n\n";
 }
 
 #print $build->data_directory."\n"; <STDIN>;
 done_testing();
 exit;
+

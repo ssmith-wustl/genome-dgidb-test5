@@ -17,6 +17,21 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
         _workflow_inputs => {
             doc => "Inputs to pass into the workflow when executing",
         },
+        snv_hq_output_file => {
+            is => 'String',
+            is_output => 1,
+            doc => 'High Quality SNV output file',
+        },
+        indel_hq_output_file => {
+            is => 'String',
+            is_output => 1,
+            doc => 'High Quality indel output file',
+        },
+        sv_hq_output_file => {
+            is => 'String',
+            is_output => 1,
+            doc => 'High Quality SV output file',
+        },
     ],
 };
 
@@ -67,9 +82,8 @@ sub _detect_variants {
     my $self = shift;
 
     my ($trees, $plan) = $self->plan;
-
+    $DB::single=1;
     my $workflow = $self->generate_workflow($trees, $plan);
-    $workflow->log_dir('/gscuser/rlong/dispatcher_testing');
 
     my @errors = $workflow->validate;
 
@@ -90,8 +104,34 @@ sub _detect_variants {
 
     $self->status_message("Now launching the dispatcher workflow.");
     my $result = Workflow::Simple::run_workflow_lsf( $workflow, %{$input});
+
     unless($result){
         die $self->error_message("Workflow did not return correctly.");
+    }
+    
+    if(defined( $self->snv_detection_strategy)){
+        my $snv_hq = $result->{snv_hq_output_file};
+        unless($snv_hq){
+            $self->error_message("No SNV hq output file was returned from the workflow. Workflow DID return: ".Data::Dumper::Dumper($result));
+            die $self->error_message;
+        }
+        $self->snv_hq_output_file($snv_hq);
+    }
+    if(defined( $self->sv_detection_strategy)){
+        my $sv_hq = $result->{sv_hq_output_file};
+        unless($sv_hq){
+            $self->error_message("No SV hq output file was returned from the workflow. Workflow DID return: ".Data::Dumper::Dumper($result));
+            die $self->error_message;
+        }
+        $self->sv_hq_output_file($sv_hq);
+    }
+    if(defined( $self->indel_detection_strategy)){
+        my $indel_hq = $result->{indel_hq_output_file};
+        unless($indel_hq){
+            $self->error_message("No indel hq output file was returned from the workflow. Workflow DID return: ".Data::Dumper::Dumper($result));
+            die $self->error_message;
+        }
+        $self->indel_hq_output_file($indel_hq);
     }
 
     return 1;
@@ -110,9 +150,10 @@ sub _dump_workflow {
 
 sub calculate_detector_output_directory {
     my $self = shift;
-    my ($detector, $version, $param_list) = @_;
+    $DB::single =1;
+    my ($variant_type, $detector, $version, $param_list) = @_;
     
-    my $subdirectory = join('-', $detector, $version, $param_list);
+    my $subdirectory = join('-', $variant_type, $detector, $version, $param_list);
     
     return $self->_temp_staging_directory . '/' . Genome::Utility::Text::sanitize_string_for_filesystem($subdirectory);
 }
@@ -239,6 +280,11 @@ sub walk_tree {
 sub generate_workflow {
     my $self = shift;
     my ($trees, $plan) = @_;
+    my @output_properties;
+
+    push @output_properties, 'snv_hq_output_file' if defined ($self->snv_detection_strategy);
+    push @output_properties, 'sv_hq_output_file' if defined ($self->sv_detection_strategy);
+    push @output_properties, 'indel_hq_output_file' if defined ($self->indel_detection_strategy);
 
     my $workflow_model = Workflow::Model->create(
         name => 'Somatic Variation Pipeline',
@@ -249,9 +295,11 @@ sub generate_workflow {
             'output_directory',
         ],
         output_properties => [
-            'output_file',
+            @output_properties
         ],
     );
+
+    $workflow_model->log_dir($self->output_directory);
 
     for my $detector (keys %$plan) {
         # Get the hashref that contains all versions to be run for a detector
@@ -321,8 +369,8 @@ sub generate_workflow_operation {
                 # compose a hash containing input_connector outputs and the operations to which they connect, then connect them
 
                 # first add links from input_connector to detector
-                my $unique_detector_base_name = join("_", ($name, $version, $params) );
-                my $output_directory = $self->calculate_detector_output_directory($name, $version, $params);
+                my $unique_detector_base_name = join("_", ($variant_type, $name, $version, $params) );
+                my $output_directory = $self->calculate_detector_output_directory($variant_type, $name, $version, $params);
 
                 my $inputs_to_store;
                 $inputs_to_store->{$unique_detector_base_name."_version"}->{value} = $version;
@@ -411,13 +459,51 @@ sub generate_workflow_operation {
                     left_operation => $last_operation,
                     left_property => "output_file",
                     right_operation => $workflow_model->get_output_connector,
-                    right_property => "output_file",
+                    right_property => $variant_type."_hq_output_file",
                 );
             }
         }
     }
 
     return $workflow_model;
+}
+
+sub _create_temp_directories {
+    my $self = shift;
+
+    $ENV{TMPDIR} = $self->output_directory;
+
+    return $self->SUPER::_create_temp_directories(@_);
+}
+
+sub _promote_staged_data {
+    my $self = shift;
+    my $staging_dir = $self->_temp_staging_directory;
+    my $output_dir  = $self->output_directory;
+    unless($self->SUPER::_promote_staged_data(@_)){
+        $self->error_message("_promote_staged_data failed in Dispatcher");
+        die $self->error_message;
+    }
+    if(defined($self->snv_hq_output_file)){
+        my $file = $self->output_directory."/".$self->snv_hq_output_file;
+        my $output = $self->output_directory."/snv_hq_output.bed";
+        Genome::Sys->create_symlink($file,$output);
+        $self->snv_hq_output_file($output);
+    }
+    if(defined($self->sv_hq_output_file)){
+        my $file = $self->output_directory."/".$self->sv_hq_output_file;
+        my $output = $self->output_directory."/sv_hq_output.bed";
+        Genome::Sys->create_symlink($file,$output);
+        $self->sv_hq_output_file($output);
+    }
+    if(defined($self->indel_hq_output_file)){
+        my $file = $self->output_directory."/".$self->indel_hq_output_file;
+        my $output = $self->output_directory."/indel_hq_output.bed";
+        Genome::Sys->create_symlink($file,$output);
+        $self->indel_hq_output_file($output);
+    }
+
+    return 1;
 }
 
 1;

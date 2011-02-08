@@ -206,7 +206,15 @@ sub _create_directories {
         $self->status_message("Created directory: $output_directory");
         chmod 02775, $output_directory;
     }
-    
+
+    $self->_create_temp_directories;
+
+    return 1;
+}
+
+sub _create_temp_directories {
+    my $self = shift;
+
     $self->_temp_staging_directory(Genome::Sys->create_temp_directory);
     $self->_temp_scratch_directory(Genome::Sys->create_temp_directory);
     

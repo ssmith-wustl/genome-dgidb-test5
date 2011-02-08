@@ -56,7 +56,16 @@ class Genome::Model::Build::ReferenceSequence {
             is_mutable => 1,
             is_many => 0,
         },
-
+        assembly_name => {
+            is => 'UR::Value',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'assembly_name', value_class_name => 'UR::Value' ],
+            doc => "publicly available URI to the sequence file for the fasta",
+            is_mutable => 1,
+            is_many => 0,
+            is_optional => 1,
+        },
         sequence_uri => {
             is => 'UR::Value',
             via => 'inputs',
@@ -163,9 +172,12 @@ sub create {
     }
 
     # Let's store the name as an input instead of relying on calculated properties
-    # Only set a name if one wasn't passed into create (the define command might pass
-    # in a pre-destined assembly name)
-    $build->name($build->calculated_name) if ($build && !defined $build->name);
+    $build->name($build->calculated_name);
+
+    # set this for the assembly name as well if there is not one already.
+    if (!$build->assembly_name) {
+        $build->assembly_name($build->calculated_name);
+    }
 
     $self->status_message("Created reference sequence build with assembly name " . $build->name);
 
@@ -432,9 +444,14 @@ sub get_sequence_dictionary {
             $uri = $self->external_url;
         }
         my $ref_seq = $self->full_consensus_path('fa'); 
-        my $name = $self->name;
+        my $assembly_name = $self->assembly_name;
+    
+        # fall back to the build name if the assembly name came up short.
+        if (!$assembly_name) {
+            $assembly_name = $self->name;
+        }
         
-        my $create_seq_dict_cmd = "java -Xmx4g -XX:MaxPermSize=256m -cp $picard_path/CreateSequenceDictionary.jar net.sf.picard.sam.CreateSequenceDictionary R='$ref_seq' O='$path' URI='$uri' species='$species' genome_assembly='$name' TRUNCATE_NAMES_AT_WHITESPACE=true";        
+        my $create_seq_dict_cmd = "java -Xmx4g -XX:MaxPermSize=256m -cp $picard_path/CreateSequenceDictionary.jar net.sf.picard.sam.CreateSequenceDictionary R='$ref_seq' O='$path' URI='$uri' species='$species' genome_assembly='$assembly_name' TRUNCATE_NAMES_AT_WHITESPACE=true";        
 
         my $csd_rv = Genome::Sys->shellcmd(cmd=>$create_seq_dict_cmd);
 

@@ -12,13 +12,15 @@ use Test::More;
 
 use_ok('Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData') or die;
 
-my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
-    sequencing_platform => 'solexa',
-    assembler_name => 'velvet one-button',
+my $model = Genome::Model::DeNovoAssembly::Test->model_for_velvet;
+ok($model, 'Got de novo assembly model') or die;
+my $build = Genome::Model::Build->create(
+    model => $model,
+    data_directory => $model->data_directory,
 );
-ok($model, 'Got mock de novo assembly model') or die;
-my $build = Genome::Model::DeNovoAssembly::Test->get_mock_build(model => $model);
-ok($build, 'Got mock de novo assembly build') or die;
+ok($build, 'Got de novo assembly build') or die;
+my $example_build = Genome::Model::DeNovoAssembly::Test->example_build_for_model($model);
+ok($example_build, 'got example build') or die;
 
 my @assembler_input_files = $build->existing_assembler_input_files;
 ok(!@assembler_input_files, 'assembler input files do not exist');
@@ -35,12 +37,8 @@ ok($velvet->execute, 'Execute prepare inst data velvet');
 ok(-s $build->collated_fastq_file, 'Created collated fastq file');
 
 # check collated fastq
-my $example_build = Genome::Model::DeNovoAssembly::Test->get_mock_build(
-    model => $model,
-    use_example_directory => 1,
-);
-ok($example_build, 'got example build') or die;
 my $example_fastq_file = $example_build->collated_fastq_file;
+ok(-s $example_fastq_file, 'example fastq exists');
 is( 
     compare($build->collated_fastq_file, $example_fastq_file), 
     0,
@@ -51,5 +49,3 @@ is(
 done_testing();
 exit;
 
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Command/Build/DeNovoAssembly/PrepareInstrumentData.t $
-#$Id: PrepareInstrumentData.t 45247 2009-03-31 18:33:23Z ebelter $

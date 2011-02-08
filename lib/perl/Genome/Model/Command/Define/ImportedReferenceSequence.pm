@@ -312,7 +312,7 @@ sub _create_build {
     }
     
     if ($self->assembly_name) {
-        push(@build_parameters, name => $self->assembly_name);
+        push(@build_parameters, assembly_name => $self->assembly_name);
     }
 
     if ($self->derived_from) {
