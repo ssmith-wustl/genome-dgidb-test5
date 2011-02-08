@@ -255,6 +255,15 @@ sub bsub_rusage {
     '' 
 }
 
+sub create_temp_directory {
+    my $self = shift;
+    my $basename = shift;
+    my $path = Genome::Sys->create_temp_directory($basename, @_)
+        or die;
+    $self->status_message("Created directory: $path");
+    return $path;
+}
+
 sub create_directory {
     my ($self, $path) = @_;
 
