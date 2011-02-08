@@ -13,7 +13,8 @@ class Genome::Model::Tools::Music::Bmr::CalcCovg {
     ref_seq => { is => 'Text', doc => "Path to reference sequence in FASTA format" },
     bam_list => { is => 'Text', doc => "Tab delimited list of BAM files [sample_name normal_bam tumor_bam]" },
     output_dir => { is => 'Text', doc => "Directory where output files will be written" },
-    list_cmds_only => { is => 'Text', doc => "A file to write calcRoiCovg commands to (See Description)", is_optional => 1 },
+    cmd_list => { is => 'Text', doc => "A file to write calcRoiCovg commands to (See Description)", is_optional => 1 },
+    cmd_prefix => { is => 'Text', doc => "A command that submits a job to your cluster (See Description)", is_optional => 1 },
     normal_min_depth => { is => 'Integer', doc => "The minimum read depth to consider a Normal BAM base as covered", is_optional => 1, default => 6 },
     tumor_min_depth => { is => 'Integer', doc => "The minimum read depth to consider a Tumor BAM base as covered", is_optional => 1, default => 8 },
     min_mapq => { is => 'Integer', doc => "The minimum mapping quality of reads to consider towards read depth counts", is_optional => 1, default => 20 },
@@ -38,26 +39,32 @@ of the same gene. BEDtools' mergeBed can help if used per gene.
 This script also counts the total number of covered bases across all ROIs for each sample. For
 this total, covered bases that lie within overlapping ROIs are not counted more than once.
 
---roi_file
+--roi-file
   ROIs from the same chromosome must be listed adjacent to each other in this file. This allows
   the underlying C-based code to run much more efficiently and avoid re-counting bases that occur
   in overlapping ROIs.
 
---ref_seq
+--ref-seq
   If the reference sequence index is not found (fa.fai file), it will be created.
 
---output_dir
-  The following outputs are written in the specified directory
-  roi_covgs: Subdirectory that will contain coverage per ROI for each sample.
-  gene_covgs: Subdirectory that will contain coverage per gene for each sample.
+--output-dir
+  Specify a directory where the following outputs will be created/written...
+  roi_covgs: Subdirectory containing coverage per ROI for each sample.
+  gene_covgs: Subdirectory containing coverage per gene for each sample.
   total_covgs: File will contain the overall non-overlapping coverages per sample.
 
---list-cmds-only
-  By default, this script runs calcRoiCovg for each sample one after another, taking ~30 mins per
-  sample. If a compute cluster is available, define list-cmds-only for a list of calcRoiCovg jobs
-  that can be scheduled in parallel, and will each store outputs as sample_name.covg within the
-  directory output_dir/roi_covgs. When this script is run again (without defining list-cmds-only),
-  it skips running calcRoiCovg for a sample if the output file already exists.
+--cmd-list
+  If a compute cluster is available, specify a file into which a list of calcRoiCovg jobs will be
+  written to. These can be scheduled in parallel, and will write per-ROI coverages into the output
+  directory roi_covgs. If a cmd-prefix is defined, this makes batch submission easier. Just run
+  the cmd-list file as a shell script to submit calcRoiCovg jobs in parallel. If cmd-list is left
+  unspecified, this script runs calcRoiCovg for each sample one after another, taking ~30 mins
+  per sample, unless the per-ROI coverage already exists in the output directory roi_covgs.
+
+--cmd-prefix
+  Specify a job submission command that will be prefixed to each command written in cmd-list.
+  This would be "bsub" if your cluster uses the LSF job scheduler, or "qsub" in Torque. Add
+  arguments as necessary. For example, "bsub -M 4GB" sets a soft memory limit of 4GB.
 HELP
 }
 
@@ -102,8 +109,8 @@ sub execute {
   my $gene_covg_dir = "$output_dir/gene_covgs"; # Stores per-gene coverages per sample
   mkdir $gene_covg_dir unless( -e $gene_covg_dir );
 
-  my $cmdFh = IO::File->new( $self->list_cmds_only, ">" ) if( defined $self->list_cmds_only );
-  my $totCovgFh = IO::File->new( "$output_dir/total_covgs", ">" ) unless( defined $self->list_cmds_only );
+  my $cmdFh = IO::File->new( $self->cmd_list, ">" ) if( defined $self->cmd_list );
+  my $totCovgFh = IO::File->new( "$output_dir/total_covgs", ">" ) unless( defined $self->cmd_list );
   $totCovgFh->print( "#Sample\tCovered_Bases\tAT_Bases_Covered\tCG_Bases_Covered\tCpG_Bases_Covered\n" );
 
   # Parse through each pair of BAM files provided and run calcRoiCovg as necessary
@@ -121,8 +128,9 @@ sub execute {
                           "$sample.covg $normal_min_depth $tumor_min_depth $min_mapq";
 
     # If user only wants the calcRoiCovg commands, write them to file and skip running calcRoiCovg
-    if( defined $self->list_cmds_only )
+    if( defined $self->cmd_list )
     {
+      $calcRoiCovg_cmd = $self->cmd_prefix . " $calcRoiCovg_cmd" if( defined $self->cmd_prefix );
       $cmdFh->print( "$calcRoiCovg_cmd\n" );
       next;
     }
@@ -180,8 +188,8 @@ sub execute {
     $totCovgFh->print( "$sample\t$tot_covd\t$tot_at_covd\t$tot_cg_covg\t$tot_cpg_covd\n" );
   }
   $bamFh->close;
-  $cmdFh->close if( defined $self->list_cmds_only );
-  $totCovgFh->close unless( defined $self->list_cmds_only );
+  $cmdFh->close if( defined $self->cmd_list );
+  $totCovgFh->close unless( defined $self->cmd_list );
 
   return 1;
 }
