@@ -12,19 +12,14 @@ require File::Compare;
 
 use_ok('Genome::Model::Event::Build::DeNovoAssembly::PostAssemble') or die;
 
-my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
-    sequencing_platform => 'solexa',
-    assembler_name => 'velvet one-button',
-);
-
-ok($model, 'Got mock de novo assembly model') or die;
-my $build = Genome::Model::DeNovoAssembly::Test->get_mock_build(model => $model);
-ok($build, 'Got mock de novo assembly build') or die;
-
-my $example_build = Genome::Model::DeNovoAssembly::Test->get_mock_build(
+my $model = Genome::Model::DeNovoAssembly::Test->model_for_velvet;
+ok($model, 'Got de novo assembly model') or die;
+my $build = Genome::Model::Build->create(
     model => $model,
-    use_example_directory => 1,
+    data_directory => $model->data_directory,
 );
+ok($build, 'Got de novo assembly build') or die;
+my $example_build = Genome::Model::DeNovoAssembly::Test->example_build_for_model($model);
 ok($example_build, 'got example build') or die;
 
 my $example_fastq = $example_build->existing_assembler_input_files;
@@ -51,11 +46,12 @@ ok($velvet->execute, 'Execute post assemble velvet');
 #TODO - use test suite velvet-solexa-build dir files (not have separate post asm files for test)
 my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/velvet_solexa_build_post_assemble_v3/edit_dir';
 
-my @file_names_to_test = qw/ reads.placed readinfo.txt
-                        gap.txt contigs.quals contigs.bases
-                        reads.unplaced reads.unplaced.fasta
-                        supercontigs.fasta supercontigs.agp
-                         /;
+my @file_names_to_test = (qw/ 
+    reads.placed readinfo.txt
+    gap.txt contigs.quals contigs.bases
+    reads.unplaced reads.unplaced.fasta
+    supercontigs.fasta supercontigs.agp
+    /);
 
 foreach my $file (@file_names_to_test) {
     my $data_directory = $build->data_directory;
@@ -78,5 +74,5 @@ foreach ('collated.fasta.gz', 'collated.fasta.qual.gz') {
 }
 
 done_testing();
-
 exit;
+
