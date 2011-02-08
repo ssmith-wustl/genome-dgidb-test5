@@ -70,6 +70,7 @@ my $expected_metrics = {
     'read_depths_ge_5x' => '1.1',
     'average_insert_size_used' => '260',
     'genome_size_used' => '4500000',
+    'assembler_kmer_used' => 35,
 };
 is_deeply(\%metrics, $expected_metrics, 'metrics match');
 for my $name ( keys %metrics ) {
@@ -106,24 +107,3 @@ sub _test_files_and_values {
     return 1;
 }
 
-=pod
-
-=head1 Tests
-
-=head1 Disclaimer
-
- Copyright (C) 2010 Washington University Genome Sequencing Center
-
- This script is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
- License for more details.
-
-=head1 Author(s)
-
- Eddie Belter <ebelter@genome.wustl.edu>
-
-=cut
-
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Build/DeNovoAssembly/Velvet.t $
-#$Id: Velvet.t 60453 2010-06-28 22:19:48Z ebelter $
