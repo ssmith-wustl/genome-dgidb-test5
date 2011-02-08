@@ -38,39 +38,6 @@ class Genome::Model::Tools::DetectVariants2::Base {
             is_input => 1,
             is_output => 1,
         },
-        output_file => {
-            is => 'String',
-            is_output => 1,
-            doc => 'For passing on the path/name of the output file',
-        },
-        snv_detection_strategy => {
-            is => "Genome::Model::Tools::DetectVariants2::Strategy",
-            doc => 'The variant detector strategy to use for finding SNVs',
-        },
-        indel_detection_strategy => {
-            is => "Genome::Model::Tools::DetectVariants2::Strategy",
-            doc => 'The variant detector strategy to use for finding indels',
-        },
-        sv_detection_strategy => {
-            is => "Genome::Model::Tools::DetectVariants2::Strategy",
-            doc => 'The variant detector strategy to use for finding SVs',
-        },
-        params => {
-            is => 'Text',
-            is_input => 1,
-            is_output => 1,
-            doc => 'The full parameter list coming in from the dispatcher. It is one string before being parsed.',
-        },
-    ],
-    has_constant => [
-        variant_types => {
-            is => 'ARRAY',
-            value => [('snv', 'indel', 'sv')],
-        },
-        #These can't be turned off--just pass no detector name to skip
-        detect_snvs => { value => 1 },
-        detect_indels => { value => 1 },
-        detect_svs => { value => 1 },
     ],
     has_transient_optional => [
         _temp_staging_directory  => {
@@ -102,32 +69,9 @@ This is just an abstract base class for variant detector modules.
 EOS
 }
 
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-
-    for my $variant_type (@{ $self->variant_types }) {
-        my $name_property = $variant_type . '_detection_strategy';
-        my $strategy = $self->$name_property;
-        if($strategy and !ref $strategy) {
-            $self->$name_property(Genome::Model::Tools::DetectVariants2::Strategy->get($strategy));
-        }
-        if ($strategy) {
-            die if $self->$name_property->__errors__; # TODO make this a more descriptive error
-        }
-    }
-
-    return $self;
-}
-
 sub execute {
     
     my $self = shift;
-    if($self->_should_skip_execution) {
-        $self->status_message('All processes skipped.');
-        return 1;
-    }
-    
     unless($self->_verify_inputs) {
         die $self->error_message('Failed to verify inputs.');
     }
@@ -148,19 +92,6 @@ sub execute {
         die $self->error_message('Failed to promote staged data.');
     }
     
-    return 1;
-}
-
-sub _should_skip_execution {
-    my $self = shift;
-    
-    for my $variant_type (@{ $self->variant_types }) {
-        my $name_property = $variant_type . '_detection_strategy';
-        
-        return if defined $self->$name_property;
-    }
-    
-    $self->status_message('No variant detectors specified.');
     return 1;
 }
 

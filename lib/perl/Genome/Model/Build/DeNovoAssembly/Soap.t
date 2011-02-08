@@ -56,5 +56,8 @@ is_deeply(
 # edit dir files
 my %files_to;
 
+my %metrics = $build->set_metrics;
+ok(%metrics, 'set metrics');
+
 done_testing();
 exit;
