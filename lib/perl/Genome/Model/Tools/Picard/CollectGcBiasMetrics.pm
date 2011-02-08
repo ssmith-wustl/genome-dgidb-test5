@@ -94,9 +94,11 @@ sub execute {
     }
     my $out_dir = dirname $self->output_file;
     my $input_file = $self->input_file;
-    my $basename = basename($self->output_file,qw/\.bam/);
+    my $basename = basename( $input_file, qw/.bam/ );
+    my $tmpdir = $self->temp_directory or die 'no temp_directory';
     if ($self->sort_bam) {
-        my $sorted_bam_file = Genome::Sys->create_temp_file_path($basename .'_sorted_bam.bam');
+        my $sorted_bam_file = $tmpdir . '/' . $basename . '.sorted.bam';
+        ( !-e $sorted_bam_file ) or die "already exists: $sorted_bam_file";
         unless (Genome::Model::Tools::Picard::SortSam->execute(
             input_file => $self->input_file,
             output_file => $sorted_bam_file,
@@ -104,13 +106,16 @@ sub execute {
             maximum_memory => $self->maximum_memory,
             maximum_permgen_memory => $self->maximum_permgen_memory,
             use_version => $self->use_version,
+            temp_directory => $tmpdir,
         )) {
             die('Failed to run G:M:T:Picard::SortSam on BAM file: '. $input_file);
         }
         $input_file = $sorted_bam_file;
     }
+    $basename = basename( $input_file, qw/.bam/ );
+    my $clean_bam_file = $tmpdir . '/' . $basename . '.cleaned.bam';
+    ( !-e $clean_bam_file ) or die "already exists: $clean_bam_file";
     if ($self->clean_bam eq 'remove') {
-        my $clean_bam_file = Genome::Sys->create_temp_file_path($basename .'_clean_bam.bam');
         unless (Genome::Model::Tools::BioSamtools::CleanBam->execute(
             input_bam_file => $self->input_file,
             output_bam_file => $clean_bam_file,
@@ -120,8 +125,6 @@ sub execute {
         }
         $input_file = $clean_bam_file;
     } elsif ($self->clean_bam eq 'trim') {
-        my $basename = basename($self->output_file,qw/\.bam/);
-        my $clean_bam_file = Genome::Sys->create_temp_file_path($basename .'_clean_bam.bam');
         unless (Genome::Model::Tools::Picard::CleanSam->execute(
             input_file => $self->input_file,
             output_file => $clean_bam_file,
@@ -129,11 +132,15 @@ sub execute {
             use_version => $self->use_version,
             maximum_memory => $self->maximum_memory,
             maximum_permgen_memory => $self->maximum_permgen_memory,
+            temp_directory => $tmpdir,
         )) {
             die('Failed to run G:M:T:Picard::CleanSam on BAM file: '. $input_file);
         }
         $input_file = $clean_bam_file;
     }
+
+    # TODO: remove sorted if it was made above? (to save disk)
+
     my $cmd = $self->picard_path .'/CollectGcBiasMetrics.jar net.sf.picard.analysis.CollectGcBiasMetrics';
     $cmd   .= ' OUTPUT='. $self->output_file  .' INPUT='. $input_file .' REFERENCE_SEQUENCE='. $self->refseq_file;
 
