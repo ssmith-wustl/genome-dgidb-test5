@@ -78,21 +78,20 @@ sub create {
                 $self->model->type_name,
             )
         );
-        $self->delete;
+        #$self->delete;
         return;
     }
 
     my @ins_data = $self->instrument_data;
     #okay for soap import to not have an instrument data
-#   if (not @ins_data) {
     if (not @ins_data and not $self->processing_profile->assembler_name =~ /import/) {
-	$self->error_message("Build does not have any instrument data");
-	$self->delete;
-	return;
+        $self->error_message("Build does not have any instrument data");
+        #$self->delete;
+        return;
     }
 
     mkdir $self->data_directory unless -d $self->data_directory;
-    
+
     return $self;
 }
 
@@ -102,30 +101,30 @@ sub calculate_estimated_kb_usage {
     my $kb_usage;
 
     if ( $self->processing_profile->assembler_name =~ /import/ ) {
-	$self->status_message("Kb usage for imported assembly: 5GiB");
-	return 5_000_000;
+        $self->status_message("Kb usage for imported assembly: 5GiB");
+        return 5_000_000;
     }
 
     if (defined $self->model->processing_profile->coverage) {
-	#estimate usage by 0.025kb per base and 5GB for logs/error output
-	my $bases;
-	unless ($bases = $self->calculate_base_limit_from_coverage()) {
-	    $self->error_message("Failed to get calculated base limit from coverage");
-	    return;
-	}
+        #estimate usage by 0.025kb per base and 5GB for logs/error output
+        my $bases;
+        unless ($bases = $self->calculate_base_limit_from_coverage()) {
+            $self->error_message("Failed to get calculated base limit from coverage");
+            return;
+        }
 
-	$kb_usage = int (0.025 * $bases + 5_000_000);
+        $kb_usage = int (0.025 * $bases + 5_000_000);
     }
     else {
-	#estimate usage = reads attempted * 2KB
-	my $reads_attempted;
+        #estimate usage = reads attempted * 2KB
+        my $reads_attempted;
 
-	unless ($reads_attempted = $self->calculate_reads_attempted()) {
-	    $self->error_message("Failed to get reads attempted");
-	    return;
-	}
+        unless ($reads_attempted = $self->calculate_reads_attempted()) {
+            $self->error_message("Failed to get reads attempted");
+            return;
+        }
 
-	$kb_usage = int ($reads_attempted * 2 + 5_000_000);
+        $kb_usage = int ($reads_attempted * 2 + 5_000_000);
     } 
 
     #limit disk reserve to 50G .. 

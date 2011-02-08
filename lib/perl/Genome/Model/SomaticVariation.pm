@@ -159,9 +159,7 @@ sub create {
         return;
     }
 
-    $DB::single = 1;
     my $self = $class->SUPER::create(%params);
-    $DB::single = 1;
 
     unless ($self){
         $class->error_message('Error in model creation');

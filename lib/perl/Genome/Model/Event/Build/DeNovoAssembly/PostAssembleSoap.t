@@ -13,28 +13,20 @@ require File::Compare;
 
 use_ok('Genome::Model::Event::Build::DeNovoAssembly::PostAssemble') or die;
 
-#model
-my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
-    sequencing_platform => 'solexa',
-    assembler_name => 'soap de-novo-assemble',
-);
-ok($model, 'Got mock de novo assembly model') or die;
-
-#build
-my $build = Genome::Model::DeNovoAssembly::Test->get_mock_build(model => $model);
-ok($build, 'Got mock de novo assembly build') or die;
-
-# example build
-my $example_build = Genome::Model::DeNovoAssembly::Test->get_mock_build(
+my $model = Genome::Model::DeNovoAssembly::Test->model_for_soap;
+ok($model, 'Got de novo assembly model') or die;
+my $build = Genome::Model::Build->create(
     model => $model,
-    use_example_directory => 1,
+    data_directory => $model->data_directory,
 );
+ok($build, 'Got de novo assembly build') or die;
+my $example_build = Genome::Model::DeNovoAssembly::Test->example_build_for_model($model);
 ok($example_build, 'got example build') or die;
 
 #link assembly.scafSeq file
 my $example_scaf_seq_file = $example_build->soap_scaffold_sequence_file;
-
-ok(-s $example_scaf_seq_file, "Example scaffold sequence file exists");
+print $example_scaf_seq_file."\n";
+ok(-s $example_scaf_seq_file, "Example scaffold sequence file exists") or die;
 symlink($example_scaf_seq_file, $build->soap_scaffold_sequence_file) or die;
 ok(-s $build->soap_scaffold_sequence_file, "Linked scaffold sequence file");
 
@@ -52,11 +44,11 @@ mkdir $build->data_directory.'/edit_dir';
 ok(-d $build->data_directory.'/edit_dir', "Create build data dir edit_dir");
 
 #create, execute
-
 my $soap = Genome::Model::Event::Build::DeNovoAssembly::PostAssemble->create(build_id =>$build->id);
 ok($soap, "Created soap post assemble") or die;
 ok($soap->execute, "Executed soap post assemble") or die;
 
+#print $build->data_directory."\n"; <STDIN>;
 done_testing();
-
 exit;
+

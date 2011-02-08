@@ -10,15 +10,9 @@ use Test::More;
 
 use_ok('Genome::Model::DeNovoAssembly::Report::Summary') or die;
 
-my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
-    sequencing_platform => 'solexa',
-    assembler_name => 'velvet one-button'
-);
+my $model = Genome::Model::DeNovoAssembly::Test->model_for_velvet;
 ok($model, 'Got mock model') or die;
-my $build = Genome::Model::DeNovoAssembly::Test->get_mock_build(
-    model => $model,
-    use_example_directory => 1,
-);
+my $build = Genome::Model::DeNovoAssembly::Test->example_build_for_model($model);
 ok($build, 'Got mock build') or die;
 
 my $generator = Genome::Model::DeNovoAssembly::Report::Summary->create(

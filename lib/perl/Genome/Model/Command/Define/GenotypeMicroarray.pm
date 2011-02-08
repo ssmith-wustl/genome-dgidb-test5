@@ -159,6 +159,18 @@ sub _copy_snp_array_file_to_build {
 
     $self->status_message('Copy...OK');
 
+    my $gold_snp_bed = $build->snvs_bed;
+    my $cmd = Genome::Model::GenotypeMicroarray::Command::CreateGoldSnpBed->create(
+        input_file => $file,
+        output_file => $gold_snp_bed,
+        reference => $self->reference,
+    );
+    my @errs = $cmd->__errors__;
+    if (!$cmd->execute) {
+        $self->error_message("Failed to create Gold SNP bed file at $gold_snp_bed");
+        return;
+    }
+
     return 1;
 }
 
