@@ -185,6 +185,13 @@ sub create {
 
 sub delete {
     my $self = shift;
+
+    my @alignment_results = Genome::InstrumentData::AlignmentResult->get(instrument_data_id => $self->id);
+    if (@alignment_results) {
+        $self->error_message("Cannot remove instrument data (" . $self->id . ") because it has " . scalar @alignment_results . " alignment result(s).");
+        return;
+    }
+
     my @allocations = Genome::Disk::Allocation->get(owner => $self);
     if (@allocations) {
         UR::Context->create_subscription(
