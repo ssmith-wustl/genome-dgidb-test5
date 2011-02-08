@@ -218,7 +218,7 @@ sub set_metrics {
         $self->$name( $metrics{$name} );
     }
 
-    $self->_additional_metrics(\%metrics);
+    eval{ $self->_additional_metrics(\%metrics); };
 
     return %metrics;
 }
