@@ -21,6 +21,13 @@ class Genome::Model::Tools::DetectVariants2::Filter {
             is_output => 1,
             doc => 'The directory containing the results of filtering',
         },
+        detector_directory => {
+            is => 'String',
+            is_input => 1,
+            is_output => 1,
+            is_optional => 1,
+            doc => 'The directory containing the results of filtering',
+        },
         params => {
             is => 'String',
             is_input => 1,

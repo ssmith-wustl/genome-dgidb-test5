@@ -8,7 +8,7 @@ use warnings;
 use above 'Genome';
 use Carp::Always;
 use Data::Dumper 'Dumper';
-use Test::More 'no_plan';
+use Test::More;
 
 use_ok('Genome::Model::Test');
 
@@ -43,31 +43,10 @@ is_deeply($last_complete_build, $builds[0], 'last_complete_build');
 is($last_complete_build->status, 'Succeeded', 'Build is succeeded');
 is_deeply($model->last_succeeded_build, $last_complete_build, 'Last succeeded build');
 
-# Ints Data
-my @instrument_data_assignments = $model->instrument_data_assignments;
-ok(@instrument_data_assignments, 'instrument_data_assignments');
+# Inst Data
 my @instrument_data = $model->instrument_data;
-is_deeply(
-    \@instrument_data,
-    [map { $_->instrument_data } $model->instrument_data_assignments],
-    'instrument_data',
-);
+is(@instrument_data, 2, 'model inst data');
 
+done_testing();
 exit;
 
-=pod
-
-=head1 Disclaimer
-
-Copyright (C) 2009 Washington University Genome Sequencing Center
-
-This script is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-
-=head1 Author(s)
-
-B<Eddie Belter> <ebelter@watson.wustl.edu>
-
-=cut
-
-#$HeadURL$
-#$Id$

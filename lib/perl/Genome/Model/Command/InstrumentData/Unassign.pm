@@ -1,6 +1,3 @@
-# FIXME ebelter
-#  Long: Remove or update to use inputs as appropriate.
-#
 package Genome::Model::Command::InstrumentData::Unassign;
 
 use strict;
@@ -44,11 +41,6 @@ class Genome::Model::Command::InstrumentData::Unassign {
     ],
     doc => "unassign instrument data to a model",
 };
-
-#########################################################
-
-
-#########################################################
 
 sub create {
     my ($class, %params) = @_;
