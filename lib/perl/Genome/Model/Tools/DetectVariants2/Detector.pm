@@ -8,14 +8,6 @@ use Genome;
 class Genome::Model::Tools::DetectVariants2::Detector {
     is => ['Genome::Model::Tools::DetectVariants2::Base'],
     is_abstract => 1,
-    has => [
-        output_file => {
-            is => 'String',
-            is_output => 1,
-            is_optional => 1,
-            doc => 'For passing on the path/name of the output file',
-        },
-    ],
     has_optional => [
         params => {
             is => 'Text',

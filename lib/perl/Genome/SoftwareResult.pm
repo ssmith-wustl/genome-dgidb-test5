@@ -236,12 +236,7 @@ sub delete {
         print $self->status_message;
         my $allocation = Genome::Disk::Allocation->get(owner_id=>$self->id, owner_class_name=>ref($self));
         if ($allocation) {
-            my $path = $allocation->absolute_path;
-            unless (rmtree($path)) {
-                $self->error_message("could not rmtree $path");
-                return;
-           }
-           $allocation->deallocate; 
+            $allocation->deallocate; 
         }
     };
 

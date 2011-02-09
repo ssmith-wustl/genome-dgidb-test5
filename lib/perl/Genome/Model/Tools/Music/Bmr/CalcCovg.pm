@@ -30,7 +30,7 @@ sub help_detail {
 This script counts the number of bases in genes with sufficient coverage in each tumor-normal pair
 of BAM files provided by the user. The counts are also classified by the types - AT, CG (non-CpG),
 CpG. The regions of interest (ROIs) of each gene are typically the regions targeted for sequencing
-or are merged exons from multiple transcripts of the gene with 2-bp flanks (for splice junctions).
+or are merged exons from multiple transcripts of the gene with 2-bp flanks (splice junctions).
 
 NOTE: If ROIs of the same gene overlap, they will not be merged by this script. An overlapping
 base will be counted each time it appears in an ROI. To avoid this, be sure to merge together ROIs
@@ -45,7 +45,7 @@ this total, covered bases that lie within overlapping ROIs are not counted more 
   in overlapping ROIs.
 
 --ref-seq
-  If the reference sequence index is not found (fa.fai file), it will be created.
+  If a reference sequence index is not found (fa.fai file), it will be created.
 
 --output-dir
   Specify a directory where the following outputs will be created/written...
@@ -103,6 +103,9 @@ sub execute {
     return 1;
   }
 
+  # Check if the reference FASTA file has been indexed, and index if necessary
+  `samtools faidx $ref_seq` unless( -s "$ref_seq.fai" );
+
   $output_dir =~ s/(\/)+$//; # Remove trailing forward slashes if any
   my $roi_covg_dir = "$output_dir/roi_covgs"; # Stores output from calcRoiCovg per sample
   mkdir $roi_covg_dir unless( -e $roi_covg_dir );
@@ -111,7 +114,7 @@ sub execute {
 
   my $cmdFh = IO::File->new( $self->cmd_list, ">" ) if( defined $self->cmd_list );
   my $totCovgFh = IO::File->new( "$output_dir/total_covgs", ">" ) unless( defined $self->cmd_list );
-  $totCovgFh->print( "#Sample\tCovered_Bases\tAT_Bases_Covered\tCG_Bases_Covered\tCpG_Bases_Covered\n" );
+  $totCovgFh->print( "#Sample\tCovered_Bases\tAT_Bases_Covered\tCG_Bases_Covered\tCpG_Bases_Covered\n" ) unless( defined $self->cmd_list );
 
   # Parse through each pair of BAM files provided and run calcRoiCovg as necessary
   my $bamFh = IO::File->new( $bam_list );

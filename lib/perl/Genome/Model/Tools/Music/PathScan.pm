@@ -36,11 +36,11 @@ Col 16: Tumor_Sample_Barcode (Must match the name in sample-list, or contain it 
 --sample-list
 The first column in this file is expected to match (exactly or as a substring of) the tumor sample
 names in the MAF file (16th column, Tumor_Sample_Barcode). Any additional columns like BAM file
-locations or clinical data will be ignored.
+locations or clinical data are ignored.
 
 --genes-to-ignore
 Any genes in this comma-delimited list will be ignored from the MAF file. This is useful when you
-have a persistently mutated gene like TP53 that masks the significance of other genes.
+have recurrently mutated genes like TP53 that mask the significance of other genes.
 HELP
 }
 
@@ -100,7 +100,7 @@ sub execute
 
     my @cols = split( /\t/, $line );
     my ( $gene, $entrez_id, $var_class, $tumor_sample ) = ( $cols[0], $cols[1], $cols[8], $cols[15] );
-    next if( $var_class =~ /Silent|RNA|3'Flank|3'UTR|5'Flank|5'UTR|Intron/i ); # Ignore non-somatic variants
+    next if( $var_class =~ /Silent|Intron|RNA|3'Flank|3'UTR|5'Flank|5'UTR|IGR/i ); # Ignore non-somatic variants
     next if( defined $ignored_genes{$gene} ); # Ignore variants in genes that need to be ignored
 
     #Find the sample name as listed in the sample_list file and push it into the hash

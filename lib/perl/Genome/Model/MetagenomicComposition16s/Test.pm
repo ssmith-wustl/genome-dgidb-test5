@@ -156,6 +156,7 @@ sub get_mock_model {
         instrument_data_id => $inst_data->id,
         first_build_id => undef,
     ) or Carp::confess("Can't assign instrument data to mc16s model");
+    $model->set_list('instrument_data', ( $inst_data ) );
 
     return $model;
 }

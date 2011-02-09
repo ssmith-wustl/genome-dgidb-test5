@@ -2,12 +2,12 @@
 package Genome::Model::Tools::Analysis::LaneQc::CompareSamples;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# SearchRuns - Search the database for runs
+# CompareSamples - Compare filtered SNP calls between two samples to ensure that they come from the same individual
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
 #
-#	CREATED:	04/01/2009 by D.K.
-#	MODIFIED:	04/01/2009 by D.K.
+#	CREATED:	11/01/2010 by D.K.
+#	MODIFIED:	02/09/2011 by D.K.
 #
 #	NOTES:	
 #			
@@ -26,26 +26,26 @@ class Genome::Model::Tools::Analysis::LaneQc::CompareSamples {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
-		variant_file1	=> { is => 'Text', doc => "Three-column file of genotype calls chrom, pos, genotype", is_optional => 0, is_input => 1 },
-		variant_file2	=> { is => 'Text', doc => "Variant calls in SAMtools pileup-consensus format", is_optional => 0, is_input => 1 },
-		sample_name	=> { is => 'Text', doc => "Variant calls in SAMtools pileup-consensus format", is_optional => 1, is_input => 1 },
+		variant_file1	=> { is => 'Text', doc => "Filtered SNP calls for sample 1", is_optional => 0, is_input => 1 },
+		variant_file2	=> { is => 'Text', doc => "Filtered SNP calls for sample 2", is_optional => 0, is_input => 1 },
+		sample_name	=> { is => 'Text', doc => "Name for the sample to use in first output column", is_optional => 1, is_input => 1 },
 		min_depth_het	=> { is => 'Text', doc => "Minimum depth to compare a het call [8]", is_optional => 1, is_input => 1},
 		min_depth_hom	=> { is => 'Text', doc => "Minimum depth to compare a hom call [4]", is_optional => 1, is_input => 1},
 		verbose	=> { is => 'Text', doc => "Turns on verbose output [0]", is_optional => 1, is_input => 1},
-		output_file	=> { is => 'Text', doc => "Output file for QC result", is_optional => 1, is_input => 1}
+		output_file	=> { is => 'Text', doc => "Output file for QC result", is_optional => 1, is_input => 1, is_output => 1}
 	],
 };
 
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Compares SAMtools variant calls to between two samples"                 
+    "Compares filtered SNP calls to between two samples"                 
 }
 
 sub help_synopsis {
     return <<EOS
-This command compares SAMtools variant calls between two samples
-EXAMPLE:	gmt analysis lane-qc compare-samples --variant-file1 --variant-file2
+This command compares filtered SNP calls between two samples and returns their concordance
+EXAMPLE:	gmt analysis lane-qc compare-samples --variant-file1 sample1.filtered.snp --variant-file2 sample2.filtered.snp
 EOS
 }
 
@@ -198,13 +198,6 @@ sub execute {                               # replace with real execution logic.
 	if($self->verbose)
 	{
 		print $stats{'num_snps'} . " SNPs parsed from variants file\n";
-		print $stats{'num_with_genotype'} . " had genotype calls from the SNP array\n";
-		print $stats{'num_min_depth'} . " met minimum depth of >= $min_depth_hom/$min_depth_het\n";
-		print $stats{'num_chip_was_reference'} . " were called Reference on chip\n";
-		print $stats{'num_ref_was_ref'} . " reference were called reference\n";
-		print $stats{'num_ref_was_het'} . " reference were called heterozygous\n";
-		print $stats{'num_ref_was_hom'} . " reference were called homozygous\n";
-		print $stats{'num_with_variant'} . " had informative genotype calls\n";
 		print $stats{'num_variant_match'} . " had matching calls from sequencing\n";
 		print $stats{'hom_was_het'} . " homozygotes from array were called heterozygous\n";
 		print $stats{'het_was_hom'} . " heterozygotes from array were called homozygous\n";
@@ -215,47 +208,34 @@ sub execute {                               # replace with real execution logic.
 	}
 	else
 	{
-		print "Sample\tSNPsCalled\tWithGenotype\tMetMinDepth\tReference\tRefMatch\tRefWasHet\tRefWasHom\tVariant\tVarMatch\tHomWasHet\tHetWasHom\tVarMismatch\tVarConcord\tRareHomConcord\tOverallConcord\n";
+		print "Sample\tCompared\tMatched\tConcord\n";
 		print "$sample_name\t";
 		print $stats{'num_snps'} . "\t";
-		print $stats{'num_with_genotype'} . "\t";
-		print $stats{'num_min_depth'} . "\t";
-		print $stats{'num_chip_was_reference'} . "\t";
-		print $stats{'num_ref_was_ref'} . "\t";
-		print $stats{'num_ref_was_het'} . "\t";
-		print $stats{'num_ref_was_hom'} . "\t";
-		print $stats{'num_with_variant'} . "\t";
 		print $stats{'num_variant_match'} . "\t";
-		print $stats{'hom_was_het'} . "\t";
-		print $stats{'het_was_hom'} . "\t";
-		print $stats{'het_was_diff_het'} . "\t";
-		print $stats{'pct_variant_match'} . "%\t";
-		print $stats{'pct_hom_match'} . "%\t";		
+#		print $stats{'hom_was_het'} . "\t";
+#		print $stats{'het_was_hom'} . "\t";
+#		print $stats{'het_was_diff_het'} . "\t";
+#		print $stats{'pct_variant_match'} . "%\t";
+#		print $stats{'pct_hom_match'} . "%\t";		
 		print $stats{'pct_overall_match'} . "%\n";
 	}
 
 	if($self->output_file)
 	{
-		print OUTFILE "Sample\tSNPsCalled\tWithGenotype\tMetMinDepth\tReference\tRefMatch\tRefWasHet\tRefWasHom\tVariant\tVarMatch\tHomWasHet\tHetWasHom\tVarMismatch\tVarConcord\tRareHomConcord\tOverallConcord\n";
+		print OUTFILE "Sample\tCompared\tMatched\tConcord\n";
 		print OUTFILE "$sample_name\t";
 		print OUTFILE $stats{'num_snps'} . "\t";
-		print OUTFILE $stats{'num_with_genotype'} . "\t";
-		print OUTFILE $stats{'num_min_depth'} . "\t";
-		print OUTFILE $stats{'num_chip_was_reference'} . "\t";
-		print OUTFILE $stats{'num_ref_was_ref'} . "\t";
-		print OUTFILE $stats{'num_ref_was_het'} . "\t";
-		print OUTFILE $stats{'num_ref_was_hom'} . "\t";
-		print OUTFILE $stats{'num_with_variant'} . "\t";
 		print OUTFILE $stats{'num_variant_match'} . "\t";
-		print OUTFILE $stats{'hom_was_het'} . "\t";
-		print OUTFILE $stats{'het_was_hom'} . "\t";
-		print OUTFILE $stats{'het_was_diff_het'} . "\t";
-		print OUTFILE $stats{'pct_variant_match'} . "%\t";
-		print OUTFILE $stats{'pct_hom_match'} . "%\t";		
+#		print OUTFILE $stats{'hom_was_het'} . "\t";
+#		print OUTFILE $stats{'het_was_hom'} . "\t";
+#		print OUTFILE $stats{'het_was_diff_het'} . "\t";
+#		print OUTFILE $stats{'pct_variant_match'} . "%\t";
+#		print OUTFILE $stats{'pct_hom_match'} . "%\t";		
 		print OUTFILE $stats{'pct_overall_match'} . "%\n";		
 	}
 
-	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
+	## return with the genotype concordance between 0 and 100 ##
+	return $stats{'pct_overall_match'};                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
 
 
