@@ -6,53 +6,37 @@ use warnings;
 use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Filter {
-    is  => 'Command',
+    is  => ['Genome::Model::Tools::DetectVariants2::Base'],
+    is_abstract => 1,
     has => [
         variant_file => {
            type => 'String',
            is_input => 1,
            doc => 'input variant file, means tumor usually',
         },
-        output_file => {
+        pass_output => {
             type => 'String',
             is_input => 1,
             is_output => 1,
-            doc => 'File name in which to write output',
+            doc => 'File name in which to write passing output',
         },
-        control_variant_file => {
+        fail_output => {
+            type => 'String',
+            is_input => 1,
+            is_output => 1,
+            doc => 'File name in which to write failing output',
+        },
+        params => {
             type => 'String',
             is_input => 1,
             is_optional => 1,
-            doc => 'control input variant file, means normal usually',
+            doc => 'The param string as passed in from the strategy',
         },
         version => {
             is_input => 1,
             is => 'Version',
             is_optional => 1,
             doc => 'The version of the variant filter to use.',
-        },
-        extra_output_file => {
-            type => 'String',
-            is_input => 1,
-            is_optional => 1,
-            doc => 'extra output file ceated by the tools',
-        },
-        skip_if_output_present => {
-            is => 'Boolean',
-            is_optional => 1,
-            is_input => 1,
-            default => 0,
-            doc => 'enable this flag to shortcut through if the output_file is already present. Useful for pipelines.',
-        },
-        lsf_resource => {
-            is_param => 1,
-            is_optional => 1,
-            default_value => 'rusage[mem=4000] select[type==LINUX64] span[hosts=1]',
-        },
-        lsf_queue => {
-            is_param => 1,
-            is_optional => 1,
-            default_value => 'long',
         },
     ]
 };

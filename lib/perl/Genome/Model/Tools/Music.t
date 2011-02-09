@@ -7,9 +7,9 @@ use Test::More;
 
 # figure out where the test inputs are and expected outputs
 # the package with this data is a dependency so this should work when deployed externally
-my $test_data_dir = Genome::Sys->dbpath('genome-music-test',$Genome::Model::Tools::Music::VERSION);
+my $test_data_dir = Genome::Sys->dbpath('genome-music-testdata',$Genome::Model::Tools::Music::VERSION);
 unless ($test_data_dir) {
-    die "failed to find test data for genome-music-test version 0.01!";
+    die "failed to find test data for genome-music-testdata version $Genome::Model::Tools::Music::VERSION!";
 }
 
 #my $input_dir = '/gscuser/ndees/893/music_testdata/';
@@ -54,13 +54,14 @@ my @cases = (
     },
     {
         run => "music clinical-correlation\n"
-            . " --clinical-data-file $input_dir/clinical_data/tcga_OV_clinical_clean.csv.maf_samples.categorical.withNA.csv \n"
+          # . " --clinical-data-file $input_dir/clinical_data/tcga_OV_clinical_clean.csv.maf_samples.categorical.withNA.csv \n"
+            . " --clinical-data-file $input_dir/clinical_data/tcga.categ.clin.data.vital.status \n"
             . " --clinical-data-type class \n"
-            . " --maf-file $input_dir/maf/tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent \n"
-            . " --output-file $actual_output_dir/categ_clin/tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent.cat_cor \n"
+            . " --maf-file $input_dir/maf/tcga.categ.clin.data.vital.status.maf \n"
+            . " --output-file $actual_output_dir/categ_clin/tcga.categ.clin.data.vital.status.class_correlation \n"
             . " --genetic-data-type gene",
         expect => [
-            'categ_clin/tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent.cat_cor'
+            'categ_clin/tcga.categ.clin.data.vital.status.class_correlation'
         ],
     },
     {
@@ -125,9 +126,16 @@ for my $case (@cases) {
         
         ok(-e $actual_full_path, " case $n has expected output file $expect_file") or next;
         
-        my @diff = `diff $expect_full_path $actual_full_path`;
+        my @diff = `diff -u $expect_full_path $actual_full_path`;
+        my $diff_output;
+        if (@diff > 20) {
+            $diff_output = join("\n", @diff[0..19]) . "\ndiff output truncated.";
+        }
+        else {
+            $diff_output = join("\n", @diff);
+        }
         is(scalar(@diff), 0, " case $n matches expectations for file $expect_file")
-            or diag("diff $expect_full_path and $actual_full_path; # << run this to debug"); 
+            or diag("\$ diff $expect_full_path $actual_full_path\n" . $diff_output . "\n");
     }
 }
 

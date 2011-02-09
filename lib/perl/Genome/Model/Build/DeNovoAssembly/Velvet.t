@@ -11,17 +11,10 @@ use Test::More;
 
 use_ok('Genome::Model::Build::DeNovoAssembly::Velvet') or die;
 
-my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
-    sequencing_platform => 'solexa',
-    assembler_name => 'velvet one-button',
-);
-ok($model, 'Got mock de novo assembly model') or die;
-my $build = Genome::Model::Build::DeNovoAssembly->create(
-    model_id => $model->id,
-    data_directory => Genome::Model::DeNovoAssembly::Test->example_directory_for_model($model),
-);
-
-ok($build, 'Created de novo assembly build') or die;
+my $model = Genome::Model::DeNovoAssembly::Test->model_for_velvet;
+ok($model, 'Got de novo assembly model') or die;
+my $build = Genome::Model::DeNovoAssembly::Test->example_build_for_model($model);
+ok($build, 'Got example de novo assembly build') or die;
 isa_ok($build, 'Genome::Model::Build::DeNovoAssembly::Velvet');
 
 # file in main dir
@@ -54,7 +47,7 @@ _test_files_and_values(
 my %metrics = $build->set_metrics;
 #print Dumper(\%metrics);
 my $expected_metrics = {
-    'reads_processed_success' => '0.714',
+    'reads_processed_success' => '0.833',
     'reads_not_assembled_pct' => '0.702',
     'supercontigs' => '2424',
     'average_supercontig_length' => '146',
@@ -66,7 +59,7 @@ my $expected_metrics = {
     'n50_supercontig_length' => '141',
     'reads_processed' => '25000',
     'assembly_length' => '354779',
-    'reads_attempted' => '35000',
+    'reads_attempted' => '30000',
     'n50_contig_length' => '141',
     #these values are zero bec there are no contigs or supercontigs > 500 bp this test set
     'major_contig_length' => '500',
@@ -77,6 +70,7 @@ my $expected_metrics = {
     'read_depths_ge_5x' => '1.1',
     'average_insert_size_used' => '260',
     'genome_size_used' => '4500000',
+    'assembler_kmer_used' => 35,
 };
 is_deeply(\%metrics, $expected_metrics, 'metrics match');
 for my $name ( keys %metrics ) {
@@ -113,24 +107,3 @@ sub _test_files_and_values {
     return 1;
 }
 
-=pod
-
-=head1 Tests
-
-=head1 Disclaimer
-
- Copyright (C) 2010 Washington University Genome Sequencing Center
-
- This script is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
- License for more details.
-
-=head1 Author(s)
-
- Eddie Belter <ebelter@genome.wustl.edu>
-
-=cut
-
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Build/DeNovoAssembly/Velvet.t $
-#$Id: Velvet.t 60453 2010-06-28 22:19:48Z ebelter $

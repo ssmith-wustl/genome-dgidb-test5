@@ -212,12 +212,18 @@ sub execute {
 
                     #Here we print out annotation information
 
+                    #swap the coords if they are reversed gah!
+                    if($unique_contig->{assem_pos1} > $unique_contig->{assem_pos2}) {
+                        $self->error_message("Genomic coordinates of indel make no sense for variant starting at " . $unique_contig->{'pred_pos1'} . "\n");
+                        ($unique_contig->{assem_pos1},$unique_contig->{assem_pos2}) = ($unique_contig->{assem_pos2},$unique_contig->{assem_pos1});
+                    }
+
                     my ($annotation_start,$annotation_end,$ref,$var);
                     if($unique_contig->{assem_type} eq 'INS') {
                         $annotation_start = $unique_contig->{assem_pos1} - 1; #base before the event
                         $annotation_end = $annotation_start + 1;
                         $ref = 0;
-                        $var = uc(substr($unique_contig->{sequence},$unique_contig->{contig_location_of_variant} + 1, $unique_contig->{assem_size}));
+                        $var = uc(substr($unique_contig->{sequence},$unique_contig->{contig_location_of_variant} - 1, $unique_contig->{assem_size})); #subtracting one in order to change to index as contig_location is the first base of the variant
                     }
                     else {
                         $annotation_start = $unique_contig->{assem_pos1};

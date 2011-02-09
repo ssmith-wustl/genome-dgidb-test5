@@ -7,23 +7,7 @@ use Genome;
 use IO::File;
 
 class Genome::Model::Tools::DetectVariants2::Samtools {
-    is => ['Genome::Model::Tools::DetectVariants'],
-    has_optional => [
-        detect_snvs => {
-            default => 1,
-        },
-        detect_indels => {
-            default => 1,
-        },
-        control_aligned_reads_input => {
-            is => 'Text',
-            doc => 'Location of the control aligned reads file to which the input aligned reads file should be compared',
-            shell_args_position => '2',
-            is_input => 1,
-            is_output => 1,
-        },
-    ],
-
+    is => ['Genome::Model::Tools::DetectVariants2::Detector'],
     has_param => [
         lsf_resource => {
             default => "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>1000 && mem>16000] span[hosts=1] rusage[tmp=1000:mem=16000]' -M 1610612736",
@@ -70,7 +54,6 @@ EOS
 
 sub _detect_variants {
     my $self = shift;
-
     my $snv_params = $self->snv_params || "";
     my $indel_params = $self->indel_params || "";
     my $result;
@@ -96,6 +79,9 @@ sub _detect_variants {
         }
     }
 
+    #FIXME This is hacktastic. It should be harder, smarter, faster, and possibly  better.
+    my @dirs = split "/", $self->output_directory;
+    $self->output_file($dirs[-1]."/snps_all_sequences.filtered.v1.bed");
     return $result;
 }
 

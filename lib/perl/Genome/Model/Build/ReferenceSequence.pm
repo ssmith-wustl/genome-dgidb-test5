@@ -56,6 +56,42 @@ class Genome::Model::Build::ReferenceSequence {
             is_mutable => 1,
             is_many => 0,
         },
+        assembly_name => {
+            is => 'UR::Value',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'assembly_name', value_class_name => 'UR::Value' ],
+            doc => "publicly available URI to the sequence file for the fasta",
+            is_mutable => 1,
+            is_many => 0,
+            is_optional => 1,
+        },
+        sequence_uri => {
+            is => 'UR::Value',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'sequence_uri', value_class_name => 'UR::Value' ],
+            doc => "publicly available URI to the sequence file for the fasta",
+            is_mutable => 1,
+            is_many => 0,
+            is_optional => 1,
+        },
+        generate_sequence_uri => {
+            is => 'Boolean',
+            is_transient => 1,
+            is_optional => 1,
+            default_value => 0,
+        },
+
+        header_version => {
+            is => 'UR::Value',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'header_version', value_class_name => 'UR::Value' ],
+            doc => "header revision for the reference build (in case headers changed)",
+            is_mutable => 1,
+            is_many => 0,
+        },
 
         name => {
             is => 'Text',
@@ -89,7 +125,7 @@ class Genome::Model::Build::ReferenceSequence {
 
         # optional to allow builds to indicate that they are derived from another build
         derived_from_id => {
-            is => 'Genome::Model::Build::ReferenceSequence',
+            is => 'Text',
             via => 'inputs',
             to => 'value_id',
             where => [ name => 'derived_from', value_class_name => 'Genome::Model::Build::ReferenceSequence' ],
@@ -99,14 +135,14 @@ class Genome::Model::Build::ReferenceSequence {
             is_optional => 1,
         },
         derived_from => {
-            is => 'Genome::Model::Build::ReferenceSequence',
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
             id_by => 'derived_from_id',
         },
 
         # optional to allow builds to indicate that are on the same coordinate system as another build, but
         # is not a direct derivation of it. derived from implies coordinates_from, so you don't need to use both.
         coordinates_from_id => {
-            is => 'Genome::Model::Build::ReferenceSequence',
+            is => 'Text',
             via => 'inputs',
             to => 'value_id',
             where => [ name => 'coordinates_from', value_class_name => 'Genome::Model::Build::ReferenceSequence' ],
@@ -116,7 +152,7 @@ class Genome::Model::Build::ReferenceSequence {
             is_optional => 1,
         },
         coordinates_from => {
-            is => 'Genome::Model::Build::ReferenceSequence',
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
             id_by => 'coordinates_from_id',
         },
     ],
@@ -127,11 +163,23 @@ sub create {
     my $self = shift;
     my $build = $self->SUPER::create(@_);
 
-    # Let's store the name as an input instead of relying on calculated properties
-    $build->name($build->calculated_name) if $build;
+    if ($build->generate_sequence_uri) {
+        $build->sequence_uri($build->external_url);
+    }
+
     if ($build->derived_from) {
         $build->coordinates_from($build->derived_from_root);
     }
+
+    # Let's store the name as an input instead of relying on calculated properties
+    $build->name($build->calculated_name);
+
+    # set this for the assembly name as well if there is not one already.
+    if (!$build->assembly_name) {
+        $build->assembly_name($build->calculated_name);
+    }
+
+    $self->status_message("Created reference sequence build with assembly name " . $build->name);
 
     return $build;
 }
@@ -346,6 +394,7 @@ sub description {
 sub external_url {
     my $self = shift;
     my $url = 'https://genome.wustl.edu/view/genome/model/build/reference-sequence/consensus.fasta?id=' . $self->id;
+    $url .= "/".$self->name."/all_sequences.bam";
     return $url;
 }
 
@@ -389,11 +438,20 @@ sub get_sequence_dictionary {
             return;
         }
         #my $picard_path = "/gsc/scripts/lib/java/samtools/picard-tools-1.04/";
-        my $uri = $self->external_url."/".$self->name."/all_sequences.bam";
+        my $uri = $self->sequence_uri;
+        if (!$uri) {
+            $self->warning_message("No sequence URI defined on this model!  Using generated default: " . $self->external_url);
+            $uri = $self->external_url;
+        }
         my $ref_seq = $self->full_consensus_path('fa'); 
-        my $name = $self->name;
+        my $assembly_name = $self->assembly_name;
+    
+        # fall back to the build name if the assembly name came up short.
+        if (!$assembly_name) {
+            $assembly_name = $self->name;
+        }
         
-        my $create_seq_dict_cmd = "java -Xmx4g -XX:MaxPermSize=256m -cp $picard_path/CreateSequenceDictionary.jar net.sf.picard.sam.CreateSequenceDictionary R='$ref_seq' O='$path' URI='$uri' species='$species' genome_assembly='$name' TRUNCATE_NAMES_AT_WHITESPACE=true";        
+        my $create_seq_dict_cmd = "java -Xmx4g -XX:MaxPermSize=256m -cp $picard_path/CreateSequenceDictionary.jar net.sf.picard.sam.CreateSequenceDictionary R='$ref_seq' O='$path' URI='$uri' species='$species' genome_assembly='$assembly_name' TRUNCATE_NAMES_AT_WHITESPACE=true";        
 
         my $csd_rv = Genome::Sys->shellcmd(cmd=>$create_seq_dict_cmd);
 

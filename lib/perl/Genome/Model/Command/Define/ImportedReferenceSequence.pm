@@ -16,6 +16,20 @@ class Genome::Model::Command::Define::ImportedReferenceSequence {
         }
     ],
     has_optional_input => [
+        sequence_uri => {
+            is => 'Text',
+            doc => 'URI to the sequence gzip file to write into BAM headers for alignments against this reference.'
+        },
+        use_default_sequence_uri => {
+            is => 'Boolean',
+            doc => 'Use a default generated URI for the BAM header.',
+            default_value => 0,
+        },
+        assembly_name => {
+            is => 'Text',
+            doc => 'Assembly name to store in the SAM header.  Autoderived if not specified.',
+            is_optional => 1, 
+        },
         derived_from => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             doc => 'The reference sequence build from which this one is derived (if any).',
@@ -112,6 +126,12 @@ sub _prompt_to_continue {
 
 sub execute {
     my $self = shift;
+
+    if ((!defined $self->sequence_uri && !$self->use_default_sequence_uri) || 
+        (defined $self->sequence_uri && $self->use_default_sequence_uri)) {
+        $self->error_message('Please specify one (and only one) of --sequence-uri or --use-default-sequence-uri.');
+        return;
+    }
 
     unless (-s $self->fasta_file) {
         $self->error_message('Input fasta file: '.$self->fasta_file.' is not valid.');
@@ -282,6 +302,18 @@ sub _create_build {
         data_directory => $self->data_directory,
         fasta_file => $self->fasta_file,
     );
+
+    if ($self->use_default_sequence_uri) {
+        push(@build_parameters, generate_sequence_uri => 1);
+    }
+
+    if ($self->sequence_uri) {
+        push(@build_parameters, sequence_uri => $self->sequence_uri);
+    }
+    
+    if ($self->assembly_name) {
+        push(@build_parameters, assembly_name => $self->assembly_name);
+    }
 
     if ($self->derived_from) {
         push(@build_parameters, derived_from => $self->derived_from);

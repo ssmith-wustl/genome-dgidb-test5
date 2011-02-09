@@ -9,7 +9,7 @@ BEGIN {
 }
 
 use above 'Genome';
-use Test::More tests => 24;
+use Test::More tests => 27;
 
 my $cmd_class = 'Genome::Model::Command::Define::ImportedReferenceSequence';
 use_ok($cmd_class);
@@ -19,6 +19,8 @@ my $pp = Genome::ProcessingProfile::ImportedReferenceSequence->create(name => 't
 my $patient = Genome::Individual->create(name => "test-patient", common_name => 'testpat');
 my $sample = Genome::Sample->create(name => "test-patient", species_name => 'human', common_name => 'tumor', source => $patient);
 ok($sample, 'created sample');
+
+my $sequence_uri = "http://genome.wustl.edu/foo/bar/test.fa.gz";
 
 my $fasta_file = "$data_dir/data.fa";
 my $fasta_fh = new IO::File(">$fasta_file");
@@ -32,6 +34,7 @@ my @params = (
     "--species-name=human",
     "--subject-id=".$sample->id,
     "--version=42",
+    "--sequence-uri=".$sequence_uri,
     );
 
 my $rv = $cmd_class->_execute_with_shell_params_and_return_exit_code(@params);
@@ -41,6 +44,7 @@ ok($model, 'Found newly created model');
 my $build = $model->last_complete_build;
 ok($build, 'Found a completed build');
 is($build->version, 42, 'Build has correct version');
+is($build->sequence_uri, $sequence_uri, "sequence uri matches");
 
 # specify derived_from
 @params = (
@@ -51,6 +55,7 @@ is($build->version, 42, 'Build has correct version');
     "--species-name=human",
     "--subject-id=".$sample->id,
     "--version=26",
+    "--sequence-uri=".$sequence_uri,
     );
 $rv = $cmd_class->_execute_with_shell_params_and_return_exit_code(@params);
 is($rv, 0, 'executed command');
@@ -62,6 +67,7 @@ is($d1_build->version, 26, 'Build has correct version');
 is($d1_build->derived_from->id, $build->id, 'derived_from property is correct');
 is($d1_build->coordinates_from->id, $build->id, 'coordinates_from property is correct');
 ok($d1_build->is_compatible_with($build), 'coordinates_from build is_compatible_with parent build');
+is($d1_build->sequence_uri, $sequence_uri, "sequence uri matches");
 ok($build->is_compatible_with($d1_build), 'parent build is_compatible_with coordinates_from build');
 
 # derive from d1_build
@@ -73,6 +79,7 @@ ok($build->is_compatible_with($d1_build), 'parent build is_compatible_with coord
     "--species-name=human",
     "--subject-id=".$sample->id,
     "--version=96",
+    "--sequence-uri=".$sequence_uri,
     );
 $rv = $cmd_class->_execute_with_shell_params_and_return_exit_code(@params);
 is($rv, 0, 'executed command');
@@ -86,4 +93,5 @@ is($d2_build->coordinates_from->id, $build->id, 'coordinates_from property is co
 ok($d2_build->is_compatible_with($d1_build), 'derived build is_compatible_with parent build');
 ok($d1_build->is_compatible_with($d2_build), 'derived build is_compatible_with parent build');
 ok($d2_build->is_compatible_with($build), 'derived build is_compatible_with parent build');
+is($d2_build->sequence_uri, $sequence_uri, "sequence uri matches");
 ok($build->is_compatible_with($d2_build), 'parent build is_compatible_with derived build');

@@ -21,6 +21,11 @@ class Genome::Model::Tools::Analysis::DumpIgvXml {
         is_optional=>0,
         doc => "Bam file for the normal data",
     },
+    relapse_bam => {
+        type => 'String',
+        is_optional => 1,
+        doc => "Bam file for any relapse data",
+    },
     review_bed_file => {
         type => 'String',
         is_optional => 0,
@@ -57,7 +62,12 @@ sub execute {
         return;
     }
 
-    print $ofh $self->generate_xml("$tumor_common_name Tumor",abs_path($self->tumor_bam), "$tumor_common_name Normal", abs_path($self->normal_bam), abs_path($self->review_bed_file), $self->review_description);
+    if($self->relapse_bam) {
+        print $ofh $self->generate_xml("$tumor_common_name Tumor",abs_path($self->tumor_bam), "$tumor_common_name Normal", abs_path($self->normal_bam), abs_path($self->review_bed_file), $self->review_description, "$tumor_common_name Relapse", abs_path($self->relapse_bam));
+    }
+    else {
+        print $ofh $self->generate_xml("$tumor_common_name Tumor",abs_path($self->tumor_bam), "$tumor_common_name Normal", abs_path($self->normal_bam), abs_path($self->review_bed_file), $self->review_description);
+    }
     $ofh->close;
     return 1;
 
@@ -77,16 +87,34 @@ HELP
 }
 
 sub generate_xml {
-    my ($self, $tumor_name, $tumor_bam, $normal_name, $normal_bam, $review_bed_file, $review_bed_name) = @_;
+    my ($self, $tumor_name, $tumor_bam, $normal_name, $normal_bam, $review_bed_file, $review_bed_name,$relapse_name, $relapse_bam) = @_;
+    my $relapse_resource = "";
+    if($relapse_bam) {
+        $relapse_resource = qq{\n        <Resource path="$relapse_bam" relativePath="false"/>};
+    }
+
+    my $relapse_panel = "";
+    if($relapse_bam) {
+        $relapse_panel = <<"RELAPSE_PANEL";
+    <Panel height="2040" name="Panel128767388888" width="1901">
+        <Track color="200,200,200" expand="false" fontSize="9" height="40" id="${relapse_bam}_coverage" name="$relapse_name Coverage" showDataRange="true" visible="true">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
+        </Track>
+        <Track expand="true" fontSize="9" height="2000" id="$relapse_bam" name="$relapse_name" showDataRange="true" visible="true">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
+        </Track>
+    </Panel>
+RELAPSE_PANEL
+    }   
     my $xml = <<"XML";
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <Session genome="reference" locus="1:1-100" version="3">
     <Resources>
         <Resource path="$tumor_bam" relativePath="false"/>
         <Resource path="$review_bed_file" relativePath="false"/>
-        <Resource path="$normal_bam" relativePath="false"/>
+        <Resource path="$normal_bam" relativePath="false"/>$relapse_resource
     </Resources>
-    <Panel height="2040" name="Panel1287673856180" width="1901">
+$relapse_panel   <Panel height="2040" name="Panel1287673856180" width="1901">
         <Track color="200,200,200" expand="false" fontSize="9" height="40" id="${tumor_bam}_coverage" name="$tumor_name Coverage" showDataRange="true" visible="true">
             <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
         </Track>

@@ -43,6 +43,37 @@ sub execute {
         $self->error_message("Invalid command class: $class_name");
         return 0;
     }
+    
+    my $inputs = '';
+    my $outputs = '';
+    my $command = $class_name->command_name;
+    # get command class 'has' attributes
+    my $cls_has = $class_meta->{has};
+    # get has' attrs
+    my @has_attrs = keys %{$cls_has};
+    # iterate through and check for input/output files
+    # we build the galaxy <inputs> and <outputs> sections as we go
+    foreach my $attr (@has_attrs) 
+    {
+        my $sub_hsh = $cls_has->{$attr};
+        my $file_format = $sub_hsh->{file_format};
+        if (($sub_hsh->{is_input} || $sub_hsh->{is_output}) and !defined($file_format)) {
+            # lets warn them about not defining a file_format on an input or output file
+            $self->warning_message("Input or output file_format is not defined on attribute $attr. Falling back to 'text'");
+            $file_format = 'text';
+        }
+        if ($sub_hsh->{is_input})
+        {
+            $inputs .= '<param name="'.$attr.'" format="'.$file_format.'" type="data" help="" />' . "\n";
+        } 
+        elsif ($sub_hsh->{is_output})
+        {
+            $outputs .= '<data name="'.$attr.'" format="'.$file_format.'" label="" help="" />' . "\n";
+        }
+        my $dash_attr = $attr;
+        $dash_attr =~ s/_/-/g;
+        $command .= " --$dash_attr=\$$attr";
+    }
 
     my $help_brief  = $class_name->help_brief;
     my $help_detail;
@@ -54,143 +85,25 @@ sub execute {
     my $tool_id = $class_name->command_name;
     $tool_id =~ s/ /_/g;
 
-    my $tool_name = $class_name->command_name;
-    my $command_line = $tool_name;
-    my $input_params = '';
-    my $output_data = '';
-
-=pod    
-    my @property_meta = $class_meta->all_property_metas();
-
-    my %categories = bin_properties(
-        \@property_meta,
-        required_input => sub {
-            !$_[0]->is_optional
-            && (defined $_[0]->{'is_input'}
-                && $_[0]->{'is_input'})
-            && !(defined $_[0]->{'is_output'}
-                && $_[0]->{'is_output'});
-        },
-        optional_input => sub {
-            $_[0]->is_optional
-            && (defined $_[0]->{'is_input'}
-                && $_[0]->{'is_input'})
-            && !(defined $_[0]->{'is_output'}
-                && $_[0]->{'is_output'});
-        },
-        required_both => sub {
-            !$_[0]->is_optional
-            && (defined $_[0]->{'is_input'}
-                && $_[0]->{'is_input'})
-            && (defined $_[0]->{'is_output'}
-                && $_[0]->{'is_output'});
-        },
-        optional_both => sub {
-            $_[0]->is_optional
-            && (defined $_[0]->{'is_input'}
-                && $_[0]->{'is_input'})
-            && (defined $_[0]->{'is_output'}
-                && $_[0]->{'is_output'});
-        },
-        output => sub {
-            !(defined $_[0]->{'is_input'}
-                && $_[0]->{'is_input'})
-            && (defined $_[0]->{'is_output'}
-                && $_[0]->{'is_output'});
-        }
-    );
-
-    my @args = ();
-
-    foreach my $p (@{ $categories{required_input} }) {
-#        print Data::Dumper->new([$p])->Dump;
-
-        my $line = '<param';
-
-        $line .= ' name="' . $p->property_name . '"';
-
-        if ($p->data_type eq 'file_path') {
-            $line .= ' type="data"';
-            $line .= ' format="' . $p->{'file_format'} . '"';
-        } else {
-            $line .= ' type="' . $p->data_type . '"';
-
-            if ($p->data_length) {
-                $line .= ' size="' . $p->data_length . '"';
-            }
-            if ($p->default_value) {
-                $line .= ' value="' . $p->default_value . '"';
-            }
-        }        
-
-
-        $line .= '/>';
-        
-        $input_params .= "\n    $line";
-
-        push @args, $p->property_name;
-    }
-    
-    foreach my $p (@{ $categories{required_both} }) {
-        if ($p->data_type eq 'file_path') {
-            my $line = '<data';
-        
-            $line .= ' name="' . $p->property_name . '"';
-            if ($p->{'same_as'}) {
-                $line .= ' format="input"';
-                $line .= ' metadata_source="' . $p->{'same_as'} . '"';
-            } else {
-                $line .= ' format="' . $p->{'file_format'} . '"';
-            }
-        
-            $line .= '/>';
-        
-            $output_data .= "\n    $line";
-
-            push @args, $p->property_name;
-        }
-    }
-
-    foreach my $pn (@args) {
-        my $option = $pn;
-        $option =~ s/_/-/g;
-
-        $command_line .= ' --' . $option . '=$' . $pn;
-    }
-=cut
-
-    $input_params = <<"    XML";
-    <param name="command_line" type="text"/> 
-    <param name="in_file" type="text" value="/dev/null"/>
-    XML
-
-    $output_data = <<"    XML";
-    <data name="out_file" format="txt" label="$tool_name Stdout"/>
-    <data name="err_file" format="txt" label="$tool_name Stderr"/>
-    XML
-
-    $command_line .= ' 
-      $command_line 
-      &lt;$in_file 
-      1&gt;$out_file 
-      2&gt;$err_file'; 
-
-    $help_detail =~ s/^/> /mg;
+    # galaxy will bold headers surrounded by * like **THIS**
+    $help_detail =~ s/^([A-Z]+[A-Z ]+:?)/\n**$1**\n/mg;
 
     my $xml = <<"    XML";
-<tool id="$tool_id" name="$tool_name">
-  <description>$help_brief</description>
+<tool id="$tool_id" name="$tool_id">
+  <description>
+    $help_brief
+  </description>
   <command>
-    $command_line
+    $command
   </command>
   <inputs>
-$input_params</inputs>
+    $inputs
+  </inputs>
   <outputs>
-$output_data</outputs>
+    $outputs
+  </outputs>
   <help>
-::
-
-$help_detail
+    $help_detail
   </help>
 </tool>
     XML

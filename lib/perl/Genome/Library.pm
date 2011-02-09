@@ -11,8 +11,8 @@ class Genome::Library {
         library_id          => { is => 'Number', len => 20, column_name => 'LIBRARY_ID', },
     ],
     has => [
-        name                => { is => 'Text', len => 64, column_name => 'FULL_NAME' },
-        sample              => { is => 'Genome::Sample', id_by => 'sample_id' },
+        name                => { is => 'Text', len => 64, column_name => 'FULL_NAME', doc => 'Name of the library. Usually has the sample name and an extension.', },
+        sample              => { is => 'Genome::Sample', id_by => 'sample_id', doc => 'Sample that this library came from.', },
         sample_name         => { is => 'Text', via => 'sample', to => 'name' },
     ],
     has_optional => [

@@ -11,18 +11,10 @@ use Genome::Model::DeNovoAssembly::Test;
 use_ok ('Genome::Model::DeNovoAssembly::Command::CopyVelvetBuild');
 
 #get test model
-my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
-    sequencing_platform => 'solexa',
-    assembler_name => 'velvet one-button',
-    );
-ok( $model, "Got mock de-novo-assembly model" );
-
-#test build
-my $build = Genome::Model::DeNovoAssembly::Test->get_mock_build(
-    model => $model,
-    use_example_directory => 1,
-    );
-ok ( $build, "Got mock de-novo-assembly build" );
+my $model = Genome::Model::DeNovoAssembly::Test->model_for_velvet;
+ok( $model, "Got de-novo-assembly model" );
+my $build = Genome::Model::DeNovoAssembly::Test->example_build_for_model($model);
+ok ( $build, "Got example de-novo-assembly build" );
 
 #create tool
 my $temp_dir = Genome::Sys->create_temp_directory();
@@ -31,7 +23,7 @@ ok ( -d $temp_dir, "Created temp test directory");
 my $tool = Genome::Model::DeNovoAssembly::Command::CopyVelvetBuild->create (
     build_id => $build->id,
     to => $temp_dir,
-    );
+);
 
 #check that all velvet output files exist
 for my $file ( $tool->_velvet_files_to_link ) {
@@ -53,5 +45,5 @@ for my $file ( glob( $build->data_directory."/edit_dir/*" ) ) {
 }
 
 done_testing();
-
 exit;
+
