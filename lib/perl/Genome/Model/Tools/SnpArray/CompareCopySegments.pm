@@ -212,7 +212,7 @@ sub load_events
 				if(!$self->event_size || $event_size eq $self->event_size)
 				{
 					$events{$chrom} .= "\n" if($events{$chrom});
-					$events{$chrom} .= join("\t", $chrom, $chr_start, $chr_stop, $num_markers, $seg_mean, $p_value, $event_size, $event_type);
+					$events{$chrom} .= join("\t", $chrom, $chr_start, $chr_stop, $num_markers, $seg_mean, $p_value, $event_size, $event_type, $num_segments);
 				}				
 			}
 
@@ -256,7 +256,7 @@ sub compare_events
 	
 	foreach my $sequence_event (@sequence_events)
 	{
-		my ($chrom, $chr_start, $chr_stop, $num_mark, $seg_mean, $p_value, $event_size, $event_type) = split(/\t/, $sequence_event);
+		my ($chrom, $chr_start, $chr_stop, $num_mark, $seg_mean, $p_value, $event_size, $event_type, $num_segments) = split(/\t/, $sequence_event);
 		
 		$chrom_stats{'num_events'}++;
 

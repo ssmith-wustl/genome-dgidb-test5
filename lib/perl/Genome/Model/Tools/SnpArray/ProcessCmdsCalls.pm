@@ -179,7 +179,7 @@ write.table(p.segment.smoothed.CNA.object, file="$chrom_filename.segments.p_valu
 		close(SCRIPT);
 		
 		print "Running $script_filename\n";
-		system("R --no-save < $script_filename");# if($chrom eq "X" || $chrom eq "Y");	
+#		system("R --no-save < $script_filename");# if($chrom eq "X" || $chrom eq "Y");	
 	}
 
 	## Parse out segments and build an index HTML file ##
@@ -203,7 +203,7 @@ write.table(p.segment.smoothed.CNA.object, file="$chrom_filename.segments.p_valu
 		$chrom_name = "X" if($chrom == 23);
 		$chrom_name = "Y" if($chrom == 24);
 
-		my $chrom_filename = $output_basename . ".$chrom.infile";
+		my $chrom_filename = $output_basename . ".$chrom_name.infile";
 		my $segments_filename = "$chrom_filename.segments.p_value";
 		my $image_filename = $image_basename . "." . $chrom_name . ".jpg";
 		print INDEX "<TD><A HREF=\"$image_filename\"><IMG SRC=\"$image_filename\" HEIGHT=240 WIDTH=320 BORDER=0></A></TD>\n";

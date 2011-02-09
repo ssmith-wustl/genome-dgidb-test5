@@ -114,6 +114,7 @@ sub execute
 		{
 			$chrom = "X" if($chrom eq "23");
 			$chrom = "Y" if($chrom eq "24");
+			$chrom =~ s/\"//g;		
 			
 			## Determine event type ##
 			my $event_type = "neutral";		
