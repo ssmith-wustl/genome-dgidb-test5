@@ -2,12 +2,12 @@
 package Genome::Model::Tools::Analysis::LaneQc::CompareSamples;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# SearchRuns - Search the database for runs
+# CompareSamples - Compare filtered SNP calls between two samples to ensure that they come from the same individual
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
 #
-#	CREATED:	04/01/2009 by D.K.
-#	MODIFIED:	04/01/2009 by D.K.
+#	CREATED:	11/01/2010 by D.K.
+#	MODIFIED:	02/09/2011 by D.K.
 #
 #	NOTES:	
 #			
@@ -26,26 +26,26 @@ class Genome::Model::Tools::Analysis::LaneQc::CompareSamples {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
-		variant_file1	=> { is => 'Text', doc => "Three-column file of genotype calls chrom, pos, genotype", is_optional => 0, is_input => 1 },
-		variant_file2	=> { is => 'Text', doc => "Variant calls in SAMtools pileup-consensus format", is_optional => 0, is_input => 1 },
-		sample_name	=> { is => 'Text', doc => "Variant calls in SAMtools pileup-consensus format", is_optional => 1, is_input => 1 },
+		variant_file1	=> { is => 'Text', doc => "Filtered SNP calls for sample 1", is_optional => 0, is_input => 1 },
+		variant_file2	=> { is => 'Text', doc => "Filtered SNP calls for sample 2", is_optional => 0, is_input => 1 },
+		sample_name	=> { is => 'Text', doc => "Name for the sample to use in first output column", is_optional => 1, is_input => 1 },
 		min_depth_het	=> { is => 'Text', doc => "Minimum depth to compare a het call [8]", is_optional => 1, is_input => 1},
 		min_depth_hom	=> { is => 'Text', doc => "Minimum depth to compare a hom call [4]", is_optional => 1, is_input => 1},
 		verbose	=> { is => 'Text', doc => "Turns on verbose output [0]", is_optional => 1, is_input => 1},
-		output_file	=> { is => 'Text', doc => "Output file for QC result", is_optional => 1, is_input => 1}
+		output_file	=> { is => 'Text', doc => "Output file for QC result", is_optional => 1, is_input => 1, is_output => 1}
 	],
 };
 
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Compares SAMtools variant calls to between two samples"                 
+    "Compares filtered SNP calls to between two samples"                 
 }
 
 sub help_synopsis {
     return <<EOS
-This command compares SAMtools variant calls between two samples
-EXAMPLE:	gmt analysis lane-qc compare-samples --variant-file1 --variant-file2
+This command compares filtered SNP calls between two samples and returns their concordance
+EXAMPLE:	gmt analysis lane-qc compare-samples --variant-file1 sample1.filtered.snp --variant-file2 sample2.filtered.snp
 EOS
 }
 
