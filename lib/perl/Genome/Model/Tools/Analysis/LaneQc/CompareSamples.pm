@@ -198,13 +198,6 @@ sub execute {                               # replace with real execution logic.
 	if($self->verbose)
 	{
 		print $stats{'num_snps'} . " SNPs parsed from variants file\n";
-		print $stats{'num_with_genotype'} . " had genotype calls from the SNP array\n";
-		print $stats{'num_min_depth'} . " met minimum depth of >= $min_depth_hom/$min_depth_het\n";
-		print $stats{'num_chip_was_reference'} . " were called Reference on chip\n";
-		print $stats{'num_ref_was_ref'} . " reference were called reference\n";
-		print $stats{'num_ref_was_het'} . " reference were called heterozygous\n";
-		print $stats{'num_ref_was_hom'} . " reference were called homozygous\n";
-		print $stats{'num_with_variant'} . " had informative genotype calls\n";
 		print $stats{'num_variant_match'} . " had matching calls from sequencing\n";
 		print $stats{'hom_was_het'} . " homozygotes from array were called heterozygous\n";
 		print $stats{'het_was_hom'} . " heterozygotes from array were called homozygous\n";
@@ -215,47 +208,34 @@ sub execute {                               # replace with real execution logic.
 	}
 	else
 	{
-		print "Sample\tSNPsCalled\tWithGenotype\tMetMinDepth\tReference\tRefMatch\tRefWasHet\tRefWasHom\tVariant\tVarMatch\tHomWasHet\tHetWasHom\tVarMismatch\tVarConcord\tRareHomConcord\tOverallConcord\n";
+		print "Sample\tCompared\tMatched\tConcord\n";
 		print "$sample_name\t";
 		print $stats{'num_snps'} . "\t";
-		print $stats{'num_with_genotype'} . "\t";
-		print $stats{'num_min_depth'} . "\t";
-		print $stats{'num_chip_was_reference'} . "\t";
-		print $stats{'num_ref_was_ref'} . "\t";
-		print $stats{'num_ref_was_het'} . "\t";
-		print $stats{'num_ref_was_hom'} . "\t";
-		print $stats{'num_with_variant'} . "\t";
 		print $stats{'num_variant_match'} . "\t";
-		print $stats{'hom_was_het'} . "\t";
-		print $stats{'het_was_hom'} . "\t";
-		print $stats{'het_was_diff_het'} . "\t";
-		print $stats{'pct_variant_match'} . "%\t";
-		print $stats{'pct_hom_match'} . "%\t";		
+#		print $stats{'hom_was_het'} . "\t";
+#		print $stats{'het_was_hom'} . "\t";
+#		print $stats{'het_was_diff_het'} . "\t";
+#		print $stats{'pct_variant_match'} . "%\t";
+#		print $stats{'pct_hom_match'} . "%\t";		
 		print $stats{'pct_overall_match'} . "%\n";
 	}
 
 	if($self->output_file)
 	{
-		print OUTFILE "Sample\tSNPsCalled\tWithGenotype\tMetMinDepth\tReference\tRefMatch\tRefWasHet\tRefWasHom\tVariant\tVarMatch\tHomWasHet\tHetWasHom\tVarMismatch\tVarConcord\tRareHomConcord\tOverallConcord\n";
+		print OUTFILE "Sample\tCompared\tMatched\tConcord\n";
 		print OUTFILE "$sample_name\t";
 		print OUTFILE $stats{'num_snps'} . "\t";
-		print OUTFILE $stats{'num_with_genotype'} . "\t";
-		print OUTFILE $stats{'num_min_depth'} . "\t";
-		print OUTFILE $stats{'num_chip_was_reference'} . "\t";
-		print OUTFILE $stats{'num_ref_was_ref'} . "\t";
-		print OUTFILE $stats{'num_ref_was_het'} . "\t";
-		print OUTFILE $stats{'num_ref_was_hom'} . "\t";
-		print OUTFILE $stats{'num_with_variant'} . "\t";
 		print OUTFILE $stats{'num_variant_match'} . "\t";
-		print OUTFILE $stats{'hom_was_het'} . "\t";
-		print OUTFILE $stats{'het_was_hom'} . "\t";
-		print OUTFILE $stats{'het_was_diff_het'} . "\t";
-		print OUTFILE $stats{'pct_variant_match'} . "%\t";
-		print OUTFILE $stats{'pct_hom_match'} . "%\t";		
+#		print OUTFILE $stats{'hom_was_het'} . "\t";
+#		print OUTFILE $stats{'het_was_hom'} . "\t";
+#		print OUTFILE $stats{'het_was_diff_het'} . "\t";
+#		print OUTFILE $stats{'pct_variant_match'} . "%\t";
+#		print OUTFILE $stats{'pct_hom_match'} . "%\t";		
 		print OUTFILE $stats{'pct_overall_match'} . "%\n";		
 	}
 
-	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
+	## return with the genotype concordance between 0 and 100 ##
+	return $stats{'pct_overall_match'};                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
 
 
