@@ -54,7 +54,7 @@ sub _filter_variants {
 
     my $convert = Genome::Model::Tools::Bed::Convert::Snv::SamtoolsToBed->create( 
                 source => $filtered_snv_output_file, 
-                output => $self->_temp_staging_directory . "/snvs.hq");
+                output => $self->_temp_staging_directory . "/snvs.hq.bed");
 
     unless($convert->execute){
         $self->error_message("Failed to convert filter output to bed.");
