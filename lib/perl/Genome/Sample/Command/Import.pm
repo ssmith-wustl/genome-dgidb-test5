@@ -9,7 +9,7 @@ use Data::Dumper 'Dumper';
 class Genome::Sample::Command::Import {
     is => 'Command',
     is_abstract => 1,
-    doc => 'Import a sample',
+    doc => 'Import samples from known sources',
     has => [
         _taxon => { is => 'Genome::Taxon', is_optional => 1, },
         _individual => { is => 'Genome::Individual', is_optional => 1, },
@@ -20,7 +20,14 @@ class Genome::Sample::Command::Import {
 };
 
 sub help_brief {
-    return 'Import a sample';
+    my $class = shift;
+    my $name = $class->command_name_brief;
+    if ( $name  eq 'import' ) { # base
+        return 'import samples from known sources';
+    }
+    else {
+        return "import $name samples";
+    }
 }
 
 sub help_detail {

@@ -152,18 +152,11 @@ is_deeply(
 );
 
 # ASSIGN INST DATA
-my @idas;
 for my $instrument_data ( @instrument_data ) {
-    push @idas, Genome::Model::InstrumentDataAssignment->create(
-        model => $model,
-        instrument_data => $instrument_data,
-    );
+    $model->add_instrument_data($instrument_data);
 }
-is(@idas, 2, 'create ida');
 my @model_instrument_data = $model->instrument_data; # check vai ida
 is_deeply(\@model_instrument_data, \@instrument_data, 'model instrument data via ida');
-my @model_inst_data = $model->inst_data; # check via inputs
-is_deeply(\@model_inst_data, \@instrument_data, 'model instrument data via inputs');
 
 # BUILDS
 # create these in reverse order because of negative ids

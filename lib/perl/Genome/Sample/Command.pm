@@ -4,50 +4,22 @@ use strict;
 use warnings;
 
 use Genome;
-      
+
 class Genome::Sample::Command {
     is => 'Command',
     is_abstract => 1,
-    has => [
-        sample_name => {
-            is => 'Genome::Sample',
-            id_by => 'sample_id',
-        },
-    ],
     doc => 'work with samples',
 };
 
-############################################
-
-sub command_name {
-    my $class = ref($_[0]) || $_[0];
-    return $class->SUPER::command_name unless $class eq __PACKAGE__;
-    return 'genome sample';
-}
-
-sub command_name_brief {
-    my $class = ref($_[0]) || $_[0];
-    return $class->SUPER::command_name_brief unless $class eq __PACKAGE__;
-    return 'sample';
-}
-
-############################################
-
-sub create {
-    my $class = shift;
-
-    my $self = $class->SUPER::create(@_)
-        or return;
-    
-    unless ( $self->sample_name) {
-        $self->error_message("A sample must be specified by name for this command");
-        return;
-    }
-
-    return $self;
-}
+use Genome::Command::Crud;
+Genome::Command::Crud->init_sub_commands(
+    target_class => 'Genome::Sample',
+    target_name => 'sample',
+    create => { do_not_init => 1, }, # use importers
+    list => { show => 'id,name,species_name,patient_common_name,common_name,tissue_label,tissue_desc,extraction_type,extraction_label,extraction_desc' },
+    update => { only_if_null => 1, },
+    delete => { do_not_init => 1, },
+);
 
 1;
 
-#$HeadURL: /gscpan/perl_modules/trunk/Genome/ProcessingProfile/Command.pm $
-#$Id: /gscpan/perl_modules/trunk/Genome/ProcessingProfile/Command.pm 41270 2008-11-20T22:57:15.665824Z ebelter  $
