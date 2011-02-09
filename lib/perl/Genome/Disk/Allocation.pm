@@ -115,9 +115,11 @@ sub create {
         return $class->_create(%params);
     }
 
+    $DB::single = 1;
     # Serialize hash and create allocation via system call to ensure commit occurs
     my $param_string = Genome::Utility::Text::hash_to_string(\%params);
-    my $rv = system("perl -e \"use above Genome; $class->_create($param_string); UR::Context->commit;\"");
+    my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
+    my $rv = system("perl $includes -e \"use above Genome; $class->_create($param_string); UR::Context->commit;\"");
     confess "Could not create allocation" unless $rv == 0;
 
     my $allocation = $class->get(id => $params{id});
@@ -150,7 +152,8 @@ sub delete {
     }
 
     my $param_string = Genome::Utility::Text::hash_to_string(\%params);
-    my $rv = system("perl -e \"use above Genome; $class->_delete($param_string); UR::Context->commit;\"");
+    my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
+    my $rv = system("perl $includes -e \"use above Genome; $class->_delete($param_string); UR::Context->commit;\"");
     confess "Could not deallocate" unless $rv == 0;
     return 1;
 }
@@ -169,7 +172,8 @@ sub reallocate {
     }
 
     my $param_string = Genome::Utility::Text::hash_to_string(\%params);
-    my $rv = system("perl -e \"use above Genome; $class->_reallocate($param_string); UR::Context->commit;\"");
+    my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
+    my $rv = system("perl $includes -e \"use above Genome; $class->_reallocate($param_string); UR::Context->commit;\"");
     confess "Could not reallocate!" unless $rv == 0;
     return 1;
 }
