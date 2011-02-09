@@ -216,6 +216,9 @@ sub _create {
     unless ($class->verify_no_parent_allocation($allocation_path)) {
         confess "Parent allocation found for $allocation_path";
     }
+    unless ($class->verify_no_child_allocations($allocation_path)) {
+        confess "Child allocation found for $allocation_path!";
+    }
     unless (grep { $disk_group_name eq $_ } @APIPE_DISK_GROUPS) {
         confess "Can only allocate disk in apipe disk groups, not $disk_group_name. Apipe groups are: " . join(", ", @APIPE_DISK_GROUPS);
     }
@@ -547,6 +550,14 @@ sub verify_no_parent_allocation {
     if ($dir ne '.' and $dir ne '/') {
         return $class->verify_no_parent_allocation($dir);
     }
+    return 1;
+}
+
+# Checks for allocations beneath this one, which is also invalid
+sub verify_no_child_allocations {
+    my ($class, $path) = @_;
+    my ($allocation) = $class->get('allocation_path like' => $path . '%');
+    return 0 if $allocation;
     return 1;
 }
 
