@@ -135,7 +135,7 @@ Genome::DataSource::Oltp->disconnect_default_dbh;
 map { $_->can_allocate(1) } @volumes; # Turn on the volumes
 
 my @pids;
-my $children = 5;
+my $children = 10;
 for my $child (1..$children) {
     my $pid;
     if ($pid = fork()) {
