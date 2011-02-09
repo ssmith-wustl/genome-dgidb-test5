@@ -105,7 +105,7 @@ sub execute {                               # replace with real execution logic.
 			if($current_chrom && $chrom ne $current_chrom)
 			{
 				print "Chromosome $chrom...\n";
-				process_results($self, $current_chrom, $current_chrom_results);
+#				process_results($self, $current_chrom, $current_chrom_results);
 				$current_chrom_results = "";	
 			}
 	
@@ -143,7 +143,7 @@ sub execute {                               # replace with real execution logic.
 		$chrom_name = "X" if($chrom == 23);
 		$chrom_name = "Y" if($chrom == 24);
 
-		my $chrom_filename = $output_basename . ".$chrom.infile";
+		my $chrom_filename = $output_basename . ".$chrom_name.infile";
 		my $segments_filename = "$chrom_filename.segments.p_value";
 		my $image_filename = $image_basename . "." . $chrom_name . ".jpg";
 		print INDEX "<TD><A HREF=\"$image_filename\"><IMG SRC=\"$image_filename\" HEIGHT=240 WIDTH=320 BORDER=0></A></TD>\n";
@@ -195,6 +195,8 @@ sub parse_segments
 		if($lineCounter > 1)
 		{
 			my @lineContents = split(/\s+/, $line);
+			$line =~ s/\"X\"/X/;
+			$line =~ s/\"Y\"/Y/;
 			$result .= join("\t", @lineContents) . "\n";
 		}
 	}

@@ -106,6 +106,16 @@ sub param_string_to_hash {
     return %params;
 }
 
+sub hash_to_string {
+    my ($hash) = @_;
+    my @params;
+    for my $key (sort keys %$hash) {
+        next unless defined $hash->{$key};
+        push @params, "$key => '" . $hash->{$key} . "'";
+    }
+    return join(",", @params);
+}
+
 #< Sanitize for File System >#
 sub sanitize_string_for_filesystem {
     my $string = shift;

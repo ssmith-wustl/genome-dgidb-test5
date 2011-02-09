@@ -137,10 +137,7 @@ sub setup_test_data {
         reference_sequence_build => $reference_sequence,
         name => 'intitial_normal_test_for_somatic-validation',
     );
-    Genome::Model::InstrumentDataAssignment->create(
-        model_id => $tumor_refalign_model->id,
-        instrument_data_id => $test_data->id,
-    );
+    $tumor_refalign_model->add_instrument_data($test_data);
 
     my $tumor_build = Genome::Model::Build::ReferenceAlignment->create(
         model_id => $tumor_refalign_model->id
@@ -156,10 +153,7 @@ sub setup_test_data {
         reference_sequence_build => $reference_sequence,
         name => 'intitial_tumor_test_for_somatic-validation',
     );
-    Genome::Model::InstrumentDataAssignment->create(
-        model_id => $normal_refalign_model->id,
-        instrument_data_id => $test_data->id,
-    );
+    $normal_refalign_model->add_instrument_data($test_data);
 
     my $normal_build = Genome::Model::Build::ReferenceAlignment->create(
         model_id => $normal_refalign_model->id

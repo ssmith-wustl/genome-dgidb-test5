@@ -167,12 +167,9 @@ sub _model_for_assembler {
         Carp::confess('Cannot get solexa instrument data');
     }
 
-    my $ida = Genome::Model::InstrumentDataAssignment->create(
-        model => $model,
-        instrument_data => $instrument_data, 
-    );
-    if ( not $ida ) {
-        Carp::confess('Cannot assign solexa instrument data to model');
+    my $add_ok = $model->add_instrument_data($instrument_data);
+    if ( not $add_ok ) {
+        Carp::confess('Cannot add instrument data to model');
     }
 
     my @instrument_data = $model->instrument_data;
@@ -225,8 +222,11 @@ sub example_build_for_model {
 #<>#
 
 #< Instruement Data >#
+our $solexa_instrument_data;
 sub solexa_instrument_data {
     my $class = shift;
+
+    return $solexa_instrument_data if $solexa_instrument_data;
 
     my $library = $class->library or die; # confesses
 
@@ -235,7 +235,7 @@ sub solexa_instrument_data {
         Carp::confess('No archive path in example directory');
     }
 
-    my $instrument_data = Genome::InstrumentData::Imported->create(
+    $solexa_instrument_data = Genome::InstrumentData::Imported->create(
         id => -7777,
         sequencing_platform => 'solexa',
         import_format => 'fastq',
@@ -249,28 +249,28 @@ sub solexa_instrument_data {
         sra_sample_id => 'SRS000000',
     );
 
-    if ( not $instrument_data ) {
+    if ( not $solexa_instrument_data ) {
         Carp::confess('Cannot create solexa instrument data');
     }
 
     my $alloc = Genome::Disk::Allocation->__define__(
-        owner_id => $instrument_data->id,
-        owner_class_name => $instrument_data->class,
+        owner_id => $solexa_instrument_data->id,
+        owner_class_name => $solexa_instrument_data->class,
         disk_group_name => 'info_alignments',
         mount_path => '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly',
         group_subdirectory => 'inst_data',
-        allocation_path => $instrument_data->id,
+        allocation_path => $solexa_instrument_data->id,
         absolute_path => '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/inst_data/2854709902',
     );
     if (not $alloc ) {
         Carp::confess('Could not create disk allocation for instrument data');
     }
 
-    if ( not -s $instrument_data->archive_path ) {
+    if ( not -s $solexa_instrument_data->archive_path ) {
         Carp::confess('Cannot get archive path from instrument data');
     }
 
-    return $instrument_data;
+    return $solexa_instrument_data;
 }
 #<>#
 
