@@ -1976,25 +1976,6 @@ sub requires_read_group_addition {
     return 1;
 }
 
-=cut
-sub delete {
-    my $self = shift;
-
-    my $allocation = Genome::Disk::Allocation->get(owner_id=>$self->id, owner_class_name=>ref($self));
-    if ($allocation) {
-        my $path = $allocation->absolute_path;
-        unless (rmtree($path)) {
-            $self->error_message("could not rmtree $path");
-            return;
-       }
-
-       $allocation->deallocate; 
-    }
-
-    $self->SUPER::delete(@_);
-}
-=cut
-
 sub supports_streaming_to_bam {
     0;
 }

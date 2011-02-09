@@ -92,10 +92,6 @@ sub create {
             return;
         }
 
-        #If we rollback the create, need to get rid of the allocation.
-        my $upon_delete_callback = $self->_cleanup_allocation_sub;
-        $self->create_subscription(method=>'rollback', callback=>$upon_delete_callback);
-
         my $retval = eval {
             Genome::Sys->copy_file($file, $self->file_path);
         };
@@ -149,12 +145,7 @@ sub _cleanup_allocation_sub {
         print $self->status_message;
         my $allocation = $self->disk_allocation;
         if ($allocation) {
-            my $path = $allocation->absolute_path;
-            unless (rmtree($path)) {
-                $self->error_message("could not rmtree $path");
-                return;
-           }
-           $allocation->deallocate; 
+            $allocation->deallocate; 
         }
     };
 }

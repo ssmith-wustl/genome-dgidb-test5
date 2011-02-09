@@ -185,11 +185,6 @@ sub delete {
                 for my $allocation (@allocations) {
                     my $id = $allocation->id;
                     print 'Now deleting allocation with owner_id = ' . $id . "\n";
-                    my $path = $allocation->absolute_path;
-                    unless (rmtree($path)) {
-                        print STDERR "ERROR: could not rmtree $path\n";
-                        return;
-                    }
                     $allocation->deallocate; 
                     print "Deletion complete.\n";
                 }
