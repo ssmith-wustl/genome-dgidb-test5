@@ -22,6 +22,8 @@ class Genome::Model::SomaticVariation::Command::DetectVariants{
 
 sub execute{
     my $self = shift;
+
+    $self->status_message("Executing detect variants step");
     my $build = $self->build;
     unless ($build){
         die $self->error_message("no build provided!");
@@ -53,7 +55,8 @@ sub execute{
 
     my $output_dir = $build->data_directory."/variants";
     $params{output_directory} = $output_dir;
-
+    
+    $DB::single=1;
     my $command = Genome::Model::Tools::DetectVariants2::Dispatcher->create(%params);
     unless ($command){
         die $self->error_message("Couldn't create detect variants dispatcher from params:\n".Data::Dumper::Dumper \%params);
@@ -63,6 +66,35 @@ sub execute{
     unless ($rv){
         die $self->error_message("Failed to execute detect variants dispatcher(err:$@) with params:\n".Data::Dumper::Dumper \%params);
     }
+
+    $self->status_message("detect variants command completed successfully");
+
+    my $version = 2;
+    #my $version = GMT:BED:CONVERT::version();  TODO, something like this instead of hardcoding
+
+    if ($build->snv_detection_strategy){
+        my $result = $build->data_set_path("variants/snv_hq_output",$version,'bed'); 
+        unless (-e $result){
+            die $self->error_message("Expected hq detected snvs file $result, but it does not exist!");
+        }
+    }
+            
+    if ($build->indel_detection_strategy){
+        my $result = $build->data_set_path("variants/indel_hq_output",$version,'bed'); 
+        unless (-e $result){
+            die $self->error_message("Expected hq detected indels file $result, but it does not exist!");
+        }
+    }
+
+    if ($build->sv_detection_strategy){
+        my $result = $build->data_set_path("variants/sv_hq_output",$version,'bed'); 
+        unless (-e $result){
+            die $self->error_message("Expected hq detected sv file $result, but it does not exist!");
+        }
+    }
+
+    $self->status_message("detect variants step completed");
+
     return 1;
 }
 

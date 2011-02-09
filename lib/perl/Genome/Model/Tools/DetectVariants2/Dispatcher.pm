@@ -14,9 +14,6 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
     is => ['Genome::Model::Tools::DetectVariants2::Base'],
     doc => 'This tool is used to handle delegating variant detection to one or more specified tools and filtering and/or combining the results',
     has_optional => [
-        _workflow_inputs => {
-            doc => "Inputs to pass into the workflow when executing",
-        },
         snv_hq_output_file => {
             is => 'String',
             is_output => 1,
@@ -55,6 +52,9 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
     has_transient_optional => [
         _workflow_result => {
             doc => 'hand the workflow result down to the _promote_staged_data dir',
+        },
+        _workflow_inputs => {
+            doc => "Inputs to pass into the workflow when executing",
         },
     ],
 };

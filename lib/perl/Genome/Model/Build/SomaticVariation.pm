@@ -153,8 +153,9 @@ sub reference_sequence_build {
 sub data_set_path {
     my ($self, $dataset, $version, $file_format) = @_;
     my $path;
+    $version =~ s/^v//;
     if ($version and $file_format){
-        $path = $self->data_directory."/$dataset.$version.$file_format";
+        $path = $self->data_directory."/$dataset.v$version.$file_format";
     }
     return $path;
 }
