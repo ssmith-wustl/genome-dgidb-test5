@@ -13,7 +13,7 @@ class Genome::Sample::Command::Import::Tcga {
     has => [
         name => {
             is => 'Text',
-            doc => 'MetaHIT sample name.',
+            doc => 'TCGA sample name. It must start with TCGA and have 7 parts separated by dashes. Ex: TCGA-00-0000-000-000-0000-00',
         },
         _individual_name => { is_optional => 1, },
     ],
