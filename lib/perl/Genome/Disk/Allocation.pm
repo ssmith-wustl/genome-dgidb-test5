@@ -529,9 +529,11 @@ sub remove_directory_closure {
 # which makes it possible to figure out which directories should have been deleted but failed.
 sub mark_for_deletion_closure {
     my ($class, $path) = @_;
-    return sub { 
-        print STDERR "Marking directory at $path as deallocated\n";
-        system("touch $path/ALLOCATION_DELETED"); 
+    return sub {
+        if (-d $path) {
+            print STDERR "Marking directory at $path as deallocated\n";
+            system("touch $path/ALLOCATION_DELETED"); 
+        }
     };
 }
 
