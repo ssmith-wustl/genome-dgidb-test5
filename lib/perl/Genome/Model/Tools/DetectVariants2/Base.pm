@@ -52,10 +52,6 @@ class Genome::Model::Tools::DetectVariants2::Base {
     doc => 'This is the base class for all detect variants classes and the variant detector dispatcher',
 };
 
-sub help_brief {
-    "The base class for variant detectors.",
-}
-
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"

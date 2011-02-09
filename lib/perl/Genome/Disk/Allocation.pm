@@ -56,7 +56,7 @@ class Genome::Disk::Allocation {
         volume => { 
             is => 'Genome::Disk::Volume',
             calculate_from => 'mount_path',
-            calculate => q| return Genome::Disk::Volume->get(mount_path => $mount_path); |
+            calculate => q| return Genome::Disk::Volume->get(mount_path => $mount_path, disk_status => 'active'); |
         },
         group => {
             is => 'Genome::Disk::Group',
@@ -235,7 +235,7 @@ sub _create {
     my @candidate_volumes; 
     if (defined $mount_path) {
         $mount_path =~ s/\/$//; # mount paths in database don't have trailing /
-        my $volume = Genome::Disk::Volume->get(mount_path => $mount_path);
+        my $volume = Genome::Disk::Volume->get(mount_path => $mount_path, disk_status => 'active');
         confess "Could not get volume with mount path $mount_path" unless $volume;
 
         # FIXME Temporarily use LIMS style locking, uses a select for update
@@ -368,7 +368,7 @@ sub _delete {
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Could not get lock on volume ' . $self->mount_path;
     }
-    my $volume = Genome::Disk::Volume->get(mount_path => $self->mount_path);
+    my $volume = Genome::Disk::Volume->get(mount_path => $self->mount_path, disk_status => 'active');
     unless ($volume) {
         Genome::Sys->unlock_resource(resource_lock => $volume_lock);
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
@@ -439,7 +439,7 @@ sub _reallocate {
         confess 'Could not get lock on volume ' . $self->mount_path;
     }
 
-    my $volume = Genome::Disk::Volume->get(mount_path => $self->mount_path);
+    my $volume = Genome::Disk::Volume->get(mount_path => $self->mount_path, disk_status => 'active');
     unless ($volume) {
         Genome::Sys->unlock_resource(resource_lock => $volume_lock);
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
