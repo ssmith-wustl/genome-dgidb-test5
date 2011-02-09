@@ -35,7 +35,7 @@ class Genome::Model::Input {
             len => 100,
             is_optional => 1, 
             valid_values => [ 'forward-only', 'reverse-only', undef ],
-            doc => 'Filter to apply on the inpout value.' 
+            doc => 'Filter to apply on the input value.'
         },
     ],
     schema_name => 'GMSchema',
