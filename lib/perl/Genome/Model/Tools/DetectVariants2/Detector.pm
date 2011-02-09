@@ -42,7 +42,7 @@ class Genome::Model::Tools::DetectVariants2::Detector {
         },
         _snv_base_name => {
             is => 'Text',
-            default_value => 'snps_all_sequences',
+            default_value => 'snvs.hq',
             is_input => 1,
         },
         snv_output => {
@@ -64,7 +64,7 @@ class Genome::Model::Tools::DetectVariants2::Detector {
         },
         _indel_base_name => {
             is => 'Text',
-            default_value => 'indels_all_sequences',
+            default_value => 'indels.hq',
             is_input => 1,
         },
         indel_output => {
@@ -83,7 +83,7 @@ class Genome::Model::Tools::DetectVariants2::Detector {
         },
         _sv_base_name => {
             is => 'Text',
-            default_value => 'svs_all_sequences',
+            default_value => 'svs.hq',
             is_input => 1,
         },
         sv_output => {

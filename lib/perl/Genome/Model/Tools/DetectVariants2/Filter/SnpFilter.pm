@@ -27,8 +27,8 @@ EOS
 sub _filter_variants {
     my $self = shift;
 
-    my $snv_input_file = $self->input_directory . "/snps_all_sequences";
-    my $filtered_snv_output_file = $self->_temp_staging_directory . "/snps_all_sequences.filtered";
+    my $snv_input_file = $self->input_directory . "/snvs.hq";
+    my $filtered_snv_output_file = $self->_temp_staging_directory . "/snvs.hq";
 
     # This is where samtools would have put an indel file if one was generated
     my $filtered_indel_file = $self->_get_detector_output_directory . "/indels_all_sequences.filtered";
