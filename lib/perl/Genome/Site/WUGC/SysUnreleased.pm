@@ -441,7 +441,7 @@ sub lock_resource {
         # Is this the same as the very next case?
          if ($! == ENOENT) {
             sleep $block_sleep;
-            redo;
+            next;
          }
 
          if (!$target and $! == EINVAL and -d $resource_lock) {
