@@ -166,10 +166,19 @@ sub repair_dt {
     }
     rename($in_bam, "$in_bam.orig") || die;
     rename($out_bam, $in_bam) || die;
+
     if (-e "$in_bam.md5") {
         unlink("$in_bam.md5") || die;
     }
+    print "Regenerating the MD5...\n";
     !system("md5sum $in_bam > $in_bam.md5") || die;
+
+    if (-e "$in_bam.bai") {
+        unlink("$in_bam.bai") || die;
+    }
+    print "Regenerating the BAM index ...\n";
+    !system("samtools index $in_bam") || die;
+
     unlink("$in_bam.orig") || die;
     unlink($out_sam_h) || die;
     unlink($in_sam_h) || die;

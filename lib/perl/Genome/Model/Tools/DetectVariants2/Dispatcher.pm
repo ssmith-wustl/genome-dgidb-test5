@@ -19,15 +19,37 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
         },
         snv_hq_output_file => {
             is => 'String',
+            is_output => 1,
             doc => 'High Quality SNV output file',
         },
         indel_hq_output_file => {
             is => 'String',
+            is_output => 1,
             doc => 'High Quality indel output file',
         },
         sv_hq_output_file => {
             is => 'String',
+            is_output => 1,
             doc => 'High Quality SV output file',
+        },
+        snv_detection_strategy => {
+            is => "Genome::Model::Tools::DetectVariants2::Strategy",
+            doc => 'The variant detector strategy to use for finding SNVs',
+        },
+        indel_detection_strategy => {
+            is => "Genome::Model::Tools::DetectVariants2::Strategy",
+            doc => 'The variant detector strategy to use for finding indels',
+        },
+        sv_detection_strategy => {
+            is => "Genome::Model::Tools::DetectVariants2::Strategy",
+            doc => 'The variant detector strategy to use for finding SVs',
+        },
+
+    ],
+    has_constant => [
+        variant_types => {
+            is => 'ARRAY',
+            value => [('snv', 'indel', 'sv')],
         },
     ],
 };
@@ -48,6 +70,26 @@ sub help_detail {
 A variant detector(s) specified under snv-detection-strategy, indel-detection-strategy, or sv-detection-strategy must have a corresponding module under `gmt detect-variants`.
 EOS
 }
+
+
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+
+    for my $variant_type (@{ $self->variant_types }) {
+        my $name_property = $variant_type . '_detection_strategy';
+        my $strategy = $self->$name_property;
+        if($strategy and !ref $strategy) {
+            $self->$name_property(Genome::Model::Tools::DetectVariants2::Strategy->get($strategy));
+        }
+        if ($strategy) {
+            die if $self->$name_property->__errors__; # TODO make this a more descriptive error
+        }
+    }
+
+    return $self;
+}
+
 
 # FIXME this is a hack to get things to run until I decide how to implement this in the dispatcher
 # In the first version of the dispatcher... this was not implemented if there were unions or intersections... and if there were none of those it just grabbed the inputs from the only variant detector run and made it its own
@@ -467,11 +509,10 @@ sub generate_workflow_operation {
 
 sub _create_temp_directories {
     my $self = shift;
-    my $sys = Genome::Sys->create(); 
-    $sys->{base_temp_directory} = $self->output_directory;
-    $self->_temp_staging_directory($sys->create_temp_directory);
-    $self->_temp_scratch_directory($sys->create_temp_directory);
-    return 1;
+
+    $ENV{TMPDIR} = $self->output_directory;
+
+    return $self->SUPER::_create_temp_directories(@_);
 }
 
 sub _promote_staged_data {

@@ -109,13 +109,7 @@ ok(
 );
 
 #< VELVET >#
-my %valid_velvet_params = Genome::Model::DeNovoAssembly::Test->processing_profile_params_for_assembler_and_platform(
-    assembler_name => 'velvet one-button', 
-    sequencing_platform => 'solexa',
-);
-ok(%valid_velvet_params, 'Got valid velvet pp params');
-my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(%valid_velvet_params);
-
+my $pp = Genome::Model::DeNovoAssembly::Test->processing_profile_for_velvet;
 ok($pp, 'Create DNA pp') or die;
 
 my @stages = $pp->stages;
@@ -135,15 +129,7 @@ is_deeply(
 #is($pp->class_for_assembler, 'Genome::Model::Tools::Velvet::OneButton', 'Assembler class');
 is($pp->assembler_class, 'Genome::Model::Tools::Velvet::OneButton', 'Assembler class');
 #< SOAP >#
-my %valid_soap_params = Genome::Model::DeNovoAssembly::Test->processing_profile_params_for_assembler_and_platform(
-    assembler_name => 'soap de-novo-assemble',
-    sequencing_platform => 'solexa',
-);
-ok(%valid_soap_params, "Got valid soap pp params");
-
-$valid_soap_params{assembler_name} = 'soap de-novo-assemble';
-
-my $soap_pp = Genome::ProcessingProfile::DeNovoAssembly->create(%valid_soap_params);
+my $soap_pp = Genome::Model::DeNovoAssembly::Test->processing_profile_for_soap;
 ok($soap_pp, "Created DNA pp") or die;
 my @soap_stages = $soap_pp->stages;
 
@@ -162,5 +148,3 @@ is_deeply ( \@soap_stage_classes,
 done_testing();
 exit;
 
-#$HeadURL$
-#$Id$

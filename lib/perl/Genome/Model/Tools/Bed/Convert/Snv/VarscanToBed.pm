@@ -42,7 +42,8 @@ sub process_source {
         
         #position => 1-based position of the SNV
         #BED uses 0-based position of and after the event
-        $self->write_bed_line($chromosome, $position - 1, $position, $reference, $consensus, $qual);
+        my $depth = $extra[0]+$extra[1];
+        $self->write_bed_line($chromosome, $position - 1, $position, $reference, $consensus, $qual, $depth);
     }
     
     return 1;

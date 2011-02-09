@@ -15,23 +15,17 @@ use Test::More;
 
 use_ok('Genome::Model::Build::DeNovoAssembly') or die;
 
-my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
-    sequencing_platform => 'solexa',
-    assembler_name => 'velvet one-button',
-);
-ok($model, 'Got mock de novo assembly model') or die;
-my $build = Genome::Model::Build::DeNovoAssembly->create(
-    model_id => $model->id,
-    data_directory => Genome::Model::DeNovoAssembly::Test->example_directory_for_model($model),
-);
-ok($build, 'Created de novo assembly build') or die;
+my $model = Genome::Model::DeNovoAssembly::Test->model_for_velvet;
+ok($model, 'Got de novo assembly model') or die;
+my $build = Genome::Model::DeNovoAssembly::Test->example_build_for_model($model);
+ok($build, 'Got example de novo assembly build') or die;
 isa_ok($build, 'Genome::Model::Build::DeNovoAssembly');
 
 is($build->center_name, $build->model->center_name, 'center name');
 is($build->genome_size, 4500000, 'Genome size');
 
 # base limit
-is($build->calculate_base_limit_from_coverage, 2250000, 'Calculated base limit');
+is($build->calculate_base_limit_from_coverage, 2_250_000, 'Calculated base limit');
 
 #test disk reserve based on coverage
 is($build->calculate_estimated_kb_usage, (5_056_250), 'Kb usage based on coverage');
@@ -40,7 +34,7 @@ is($build->calculate_estimated_kb_usage, (5_056_250), 'Kb usage based on coverag
 my $coverage = $model->processing_profile->coverage;
 $model->processing_profile->coverage(undef); #undef this to allow calc by proc reads coverage
 $build->processed_reads_count(1_250_000);
-is($build->calculate_estimated_kb_usage, (5_070_000), 'Kb usage based on processed read count');
+is($build->calculate_estimated_kb_usage, (5_060_000), 'Kb usage based on processed read count');
 
 #reset coverage values .. necessary ?? test passes w/o it
 $model->processing_profile->coverage($coverage);
