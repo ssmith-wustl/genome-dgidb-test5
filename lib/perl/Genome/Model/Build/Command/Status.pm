@@ -19,7 +19,7 @@ class Genome::Model::Build::Command::Status {
         show_event_info => {
             is => 'Boolean',
             default => 0,
-            doc => 'Show parent and oldest event info.',
+            doc => 'BETA MAY NOT STAY - Show parent and oldest event info.',
         },
     ],
 };
@@ -50,7 +50,15 @@ sub execute {
                 @running_events = sort { $a->date_scheduled cmp $b->date_scheduled } @running_events;
                 my ($parent_event) = grep { not defined $_->parent_event_id } @running_events;
                 @running_events = grep { $_->id != $parent_event->id } @running_events;
-                $info .= "\t\t" . $parent_event->id . "\t" . $parent_event->date_scheduled . "\t" . $running_events[0]->id . "\t" . $running_events[0]->date_scheduled;
+                if ($parent_event) {
+                    $info .= "\t\t" . $parent_event->id . "\t" . $parent_event->date_scheduled;
+                }
+                else {
+                    $info .= "\t\t\t";
+                }
+                if (@running_events) {
+                    $info .= "\t" . $running_events[0]->id . "\t" . $running_events[0]->date_scheduled;
+                }
             }
 
             $self->print_message($info);

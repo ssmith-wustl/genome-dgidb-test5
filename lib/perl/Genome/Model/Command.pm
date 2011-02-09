@@ -2,7 +2,6 @@ package Genome::Model::Command;
 
 #:eclark 11/17/2009 Code review.
 
-# Should not inherit from Genome::Sys.
 # get_model_class* methods at the bottom should be in Genome::Model, not here.
 # create_directory and bsub_rusage probably don't even belong in this class
 
@@ -13,11 +12,10 @@ use Genome;
 
 require Carp;
 use Data::Dumper 'Dumper';
-require Genome::Sys;
 use Regexp::Common;
 
 class Genome::Model::Command {
-    is => ['Command','Genome::Sys'],
+    is => ['Command'],
     has => [
         model           => { is => 'Genome::Model', id_by => 'model_id' },
         model_id        => { is => 'Integer', doc => 'identifies the genome model by id' },
@@ -255,6 +253,15 @@ sub sub_command_delegator {
 sub bsub_rusage { 
     # override for tasks which require LSF resource requirements
     '' 
+}
+
+sub create_temp_directory {
+    my $self = shift;
+    my $basename = shift;
+    my $path = Genome::Sys->create_temp_directory($basename, @_)
+        or die;
+    $self->status_message("Created directory: $path");
+    return $path;
 }
 
 sub create_directory {
