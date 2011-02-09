@@ -9,15 +9,15 @@
 #  in my checkout; need to ask around if its what people want
 #
 
-package Genome::Disk::Allocation::Command::Allocate;
+package Genome::Site::WUGC::Disk::Allocation::Command::Allocate;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Disk::Allocation::Command::Allocate {
-    is => 'Genome::Disk::Allocation::Command',
+class Genome::Site::WUGC::Disk::Allocation::Command::Allocate {
+    is => 'Command',
     has => [
             allocation_path => {
                                 is => 'Text',
@@ -176,7 +176,7 @@ sub execute {
     for my $property ($gsc_disk_allocation_class_object->all_property_names) {
         $params{$property} = $gsc_disk_allocation->$property;
     }
-    my $defined_allocation = Genome::Disk::Allocation->__define__(%params);
+    my $defined_allocation = Genome::Site::WUGC::Disk::Allocation->__define__(%params);
     unless ($defined_allocation) {
         $self->error_message('Failed to define a Genome::Disk::Allocation for: '. Data::Dumper::Dumper(%params));
         return;
@@ -194,16 +194,6 @@ sub execute {
         }
     }
 
-    $self->status_message('Creating allocation in apipe schema');
-    my $id = $params{allocator_id};
-    delete $params{allocator_id};
-    $params{id} = $id;
-    my $new_allocation = Genome::Disk::AllocationNew->create(%params);
-    unless ($new_allocation) {
-        $self->error_message('Failed to create disk allocation in apipe schema');
-        return;
-    }
-
     return 1;
 }
 
@@ -211,7 +201,7 @@ sub verify_no_parent_allocation {
     my $self = shift;
     my $path = shift;
 
-    my ($allocation) = Genome::Disk::Allocation->get(allocation_path => $path);
+    my ($allocation) = Genome::Site::WUGC::Disk::Allocation->get(allocation_path => $path);
     if ($allocation) {
         return;
     }
