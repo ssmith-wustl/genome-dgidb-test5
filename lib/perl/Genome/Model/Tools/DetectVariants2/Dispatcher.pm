@@ -149,28 +149,31 @@ sub _detect_variants {
     }
     
     if(defined( $self->snv_detection_strategy)){
-        my $snv_hq = $result->{snv_hq_output_file};
-        unless($snv_hq){
-            $self->error_message("No SNV hq output file was returned from the workflow. Workflow DID return: ".Data::Dumper::Dumper($result));
+        my $snv_output_directory = $result->{snv_output_directory};
+        unless($snv_output_directory){
+            $self->error_message("No SNV output directory was returned from the workflow. Workflow DID return: ".Data::Dumper::Dumper($result));
             die $self->error_message;
         }
-        $self->snv_hq_output_file($snv_hq);
+        my $snv_hq_output_file = "$snv_output_directory/snvs.hq.v1.bed"; #FIXME complications arise here when we have just a single column file... or other stuff. May just need to drop the version, too?
+        $self->snv_hq_output_file($snv_hq_output_file);
     }
     if(defined( $self->sv_detection_strategy)){
-        my $sv_hq = $result->{sv_hq_output_file};
-        unless($sv_hq){
+        my $sv_output_directory = $result->{sv_output_directory};
+        unless($sv_output_directory){
             $self->error_message("No SV hq output file was returned from the workflow. Workflow DID return: ".Data::Dumper::Dumper($result));
             die $self->error_message;
         }
-        $self->sv_hq_output_file($sv_hq);
+        my $sv_hq_output_file = "$sv_output_directory/svs.hq.v1.bed"; #FIXME complications arise here when we have just a single column file... or other stuff. May just need to drop the version, too?
+        $self->sv_hq_output_file($sv_hq_output_file);
     }
     if(defined( $self->indel_detection_strategy)){
-        my $indel_hq = $result->{indel_hq_output_file};
-        unless($indel_hq){
+        my $indel_output_directory = $result->{indel_output_directory};
+        unless($indel_output_directory){
             $self->error_message("No indel hq output file was returned from the workflow. Workflow DID return: ".Data::Dumper::Dumper($result));
             die $self->error_message;
         }
-        $self->indel_hq_output_file($indel_hq);
+        my $indel_hq_output_file = "$indel_output_directory/indels.hq.v1.bed"; #FIXME complications arise here when we have just a single column file... or other stuff. May just need to drop the version, too?
+        $self->indel_hq_output_file($indel_hq_output_file);
     }
 
     return 1;
@@ -187,15 +190,16 @@ sub _dump_workflow {
     #$workflow->as_png($self->output_directory."/workflow.png");
 }
 
-sub calculate_detector_output_directory {
+sub calculate_operation_output_directory {
     my $self = shift;
     $DB::single =1;
-    my ($variant_type, $detector, $version, $param_list) = @_;
+    my ($base_directory, $variant_type, $name, $version, $param_list) = @_;
+    my $subdirectory = join('-', $variant_type, $name, $version, $param_list);
     
-    my $subdirectory = join('-', $variant_type, $detector, $version, $param_list);
-    
-    return $self->_temp_staging_directory . '/' . Genome::Utility::Text::sanitize_string_for_filesystem($subdirectory);
+    return $base_directory . '/' . Genome::Utility::Text::sanitize_string_for_filesystem($subdirectory);
 }
+
+
 
 sub parse_detection_strategy {
     my $self = shift;
@@ -321,9 +325,9 @@ sub generate_workflow {
     my ($trees, $plan) = @_;
     my @output_properties;
 
-    push @output_properties, 'snv_hq_output_file' if defined ($self->snv_detection_strategy);
-    push @output_properties, 'sv_hq_output_file' if defined ($self->sv_detection_strategy);
-    push @output_properties, 'indel_hq_output_file' if defined ($self->indel_detection_strategy);
+    push @output_properties, 'snv_output_directory' if defined ($self->snv_detection_strategy);
+    push @output_properties, 'sv_output_directory' if defined ($self->sv_detection_strategy);
+    push @output_properties, 'indel_output_directory' if defined ($self->indel_detection_strategy);
 
     my $workflow_model = Workflow::Model->create(
         name => 'Somatic Variation Pipeline',
@@ -409,8 +413,8 @@ sub generate_workflow_operation {
 
                 # first add links from input_connector to detector
                 my $unique_detector_base_name = join("_", ($variant_type, $name, $version, $params) );
-                my $output_directory = $self->calculate_detector_output_directory($variant_type, $name, $version, $params);
-
+                my $detector_output_directory = $self->calculate_operation_output_directory($self->_temp_staging_directory, $variant_type, $name, $version, $params);
+                
                 my $inputs_to_store;
                 $inputs_to_store->{$unique_detector_base_name."_version"}->{value} = $version;
                 $inputs_to_store->{$unique_detector_base_name."_version"}->{right_property_name} = 'version';
@@ -420,7 +424,7 @@ sub generate_workflow_operation {
                 $inputs_to_store->{$unique_detector_base_name."_params"}->{right_property_name} = 'params';
                 $inputs_to_store->{$unique_detector_base_name."_params"}->{right_operation} = $detector_operation;
 
-                $inputs_to_store->{$unique_detector_base_name."_output_directory"}->{value} = $output_directory;
+                $inputs_to_store->{$unique_detector_base_name."_output_directory"}->{value} = $detector_output_directory;
                 $inputs_to_store->{$unique_detector_base_name."_output_directory"}->{right_property_name} = 'output_directory';
                 $inputs_to_store->{$unique_detector_base_name."_output_directory"}->{right_operation} = $detector_operation;
                 
@@ -431,10 +435,15 @@ sub generate_workflow_operation {
                     my $fversion = $filter->{version};
                     my $fparams = $filter->{params};
                     my $unique_filter_name = join( "_",($unique_detector_base_name,$fname,$fversion,$fparams));
+                    my $filter_output_directory = $self->calculate_operation_output_directory($detector_output_directory, $variant_type, $fname, $fversion, $fparams);
 
                     $inputs_to_store->{$unique_filter_name."_params"}->{value} = $filter->{params};
                     $inputs_to_store->{$unique_filter_name."_params"}->{right_property_name} = 'params';
                     $inputs_to_store->{$unique_filter_name."_params"}->{right_operation} = $filter->{operation};
+
+                    $inputs_to_store->{$unique_filter_name."_output_directory"}->{value} = $filter_output_directory;
+                    $inputs_to_store->{$unique_filter_name."_output_directory"}->{right_property_name} = 'output_directory';
+                    $inputs_to_store->{$unique_filter_name."_output_directory"}->{right_operation} = $filter->{operation};
                 }
                 
                 # use the hash keys, which are input_connector property names, to add the links to the workflow
@@ -478,9 +487,9 @@ sub generate_workflow_operation {
                     $right_op = $filters[$index]->{operation};
                     $workflow_model->add_link(
                         left_operation => $left_op,
-                        left_property => 'output_file',
+                        left_property => 'output_directory',
                         right_operation => $right_op,
-                        right_property => 'variant_file',
+                        right_property => 'input_directory',
                     );
                     
                 }
@@ -496,9 +505,9 @@ sub generate_workflow_operation {
 
                 $workflow_model->add_link(
                     left_operation => $last_operation,
-                    left_property => "output_file",
+                    left_property => "output_directory",
                     right_operation => $workflow_model->get_output_connector,
-                    right_property => $variant_type."_hq_output_file",
+                    right_property => $variant_type."_output_directory",
                 );
             }
         }
@@ -519,29 +528,28 @@ sub _promote_staged_data {
     my $self = shift;
     my $staging_dir = $self->_temp_staging_directory;
     my $output_dir  = $self->output_directory;
-    unless($self->SUPER::_promote_staged_data(@_)){
-        $self->error_message("_promote_staged_data failed in Dispatcher");
-        die $self->error_message;
-    }
     if(defined($self->snv_hq_output_file)){
-        my $file = $self->output_directory."/".$self->snv_hq_output_file;
-        my $output = $self->output_directory."/snv_hq_output.bed";
+        my $file = $self->snv_hq_output_file;
+        my $output = $staging_dir."/snvs.hq.v1.bed";
         Genome::Sys->create_symlink($file,$output);
         $self->snv_hq_output_file($output);
     }
     if(defined($self->sv_hq_output_file)){
-        my $file = $self->output_directory."/".$self->sv_hq_output_file;
-        my $output = $self->output_directory."/sv_hq_output.bed";
+        my $file = $self->sv_hq_output_file;
+        my $output = $staging_dir."/svs.hq.v1.bed";
         Genome::Sys->create_symlink($file,$output);
         $self->sv_hq_output_file($output);
     }
     if(defined($self->indel_hq_output_file)){
-        my $file = $self->output_directory."/".$self->indel_hq_output_file;
-        my $output = $self->output_directory."/indel_hq_output.bed";
+        my $file = $self->indel_hq_output_file;
+        my $output = $staging_dir."/indels.hq.v1.bed";
         Genome::Sys->create_symlink($file,$output);
         $self->indel_hq_output_file($output);
     }
-
+    unless($self->SUPER::_promote_staged_data(@_)){
+        $self->error_message("_promote_staged_data failed in Dispatcher");
+        die $self->error_message;
+    }
     return 1;
 }
 
