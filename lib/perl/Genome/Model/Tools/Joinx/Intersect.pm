@@ -56,14 +56,12 @@ class Genome::Model::Tools::Joinx::Intersect {
 };
 
 sub help_brief {
-    "Returns concordance information for 2 snv lists."
+    "Compute intersection (and optionally difference) of 2 bed files."
 }
 
 sub help_synopsis {
     my $self = shift;
-    return <<"EOS"
-  gmt joinx snv-concordance --input-file-a a.bed --input-file-b b.bed --output-file report.txt
-EOS
+    "gmt joinx intersect a.bed b.bed [--output-file=n.bed]"
 }
 
 sub flags {

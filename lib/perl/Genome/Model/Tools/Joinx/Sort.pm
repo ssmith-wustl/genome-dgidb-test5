@@ -36,7 +36,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-  gmt joinx snv-concordance --input-file-a a.bed --input-file-b b.bed --output-file report.txt
+  gmt joinx sort a.bed [b.bed ...] --output-file sorted.bed
 EOS
 }
 

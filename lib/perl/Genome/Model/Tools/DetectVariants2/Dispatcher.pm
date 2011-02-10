@@ -14,9 +14,6 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
     is => ['Genome::Model::Tools::DetectVariants2::Base'],
     doc => 'This tool is used to handle delegating variant detection to one or more specified tools and filtering and/or combining the results',
     has_optional => [
-        _workflow_inputs => {
-            doc => "Inputs to pass into the workflow when executing",
-        },
         snv_hq_output_file => {
             is => 'String',
             is_output => 1,
@@ -50,6 +47,14 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
         variant_types => {
             is => 'ARRAY',
             value => [('snv', 'indel', 'sv')],
+        },
+    ],
+    has_transient_optional => [
+        _workflow_result => {
+            doc => 'hand the workflow result down to the _promote_staged_data dir',
+        },
+        _workflow_inputs => {
+            doc => "Inputs to pass into the workflow when executing",
         },
     ],
 };
@@ -146,35 +151,49 @@ sub _detect_variants {
     unless($result){
         die $self->error_message("Workflow did not return correctly.");
     }
+    $self->_workflow_result($result);
+
+    return 1;
+}
+
+sub set_output_files {
+    my $self = shift;
+    my $result = shift;
+
     if(defined( $self->snv_detection_strategy)){
         my $snv_output_directory = $self->get_relative_path_to_output_directory($result->{snv_output_directory});
         unless($snv_output_directory){
             $self->error_message("No SNV output directory: ".$snv_output_directory."  was returned from the workflow. Workflow DID return: ".Data::Dumper::Dumper($result));
             die $self->error_message;
         }
-        my $snv_hq_output_file = $self->output_directory."/".$snv_output_directory."/snvs.hq.v1.bed"; #FIXME complications arise here when we have just a single column file... or other stuff. May just need to drop the version, too?
+        my $snv_hq_output_dir = $self->output_directory."/".$snv_output_directory; #FIXME complications arise here when we have just a single column file... or other stuff. May just need to drop the version, too?
+        my $snv_file = readlink($snv_hq_output_dir."/snvs.hq.bed");
+        my $snv_hq_output_file = $snv_hq_output_dir . "/". $snv_file;
         $self->snv_hq_output_file($snv_hq_output_file);
-    }   
+    }
     if(defined( $self->indel_detection_strategy)){
         my $indel_output_directory = $self->get_relative_path_to_output_directory($result->{indel_output_directory});
         unless($indel_output_directory){
             $self->error_message("No SNV output directory: ".$indel_output_directory."  was returned from the workflow. Workflow DID return: ".Data::Dumper::Dumper($result));
             die $self->error_message;
         }
-        my $indel_hq_output_file = $self->output_directory."/".$indel_output_directory."/indels.hq.v1.bed"; #FIXME complications arise here when we have just a single column file... or other stuff. May just need to drop the version, too?
+        my $indel_hq_output_dir = $self->output_directory."/".$indel_output_directory; #FIXME complications arise here when we have just a single column file... or other stuff. May just need to drop the version, too?
+        my $indel_file = readlink($indel_hq_output_dir."/indels.hq.bed");
+        my $indel_hq_output_file = $indel_hq_output_dir . "/". $indel_file;
         $self->indel_hq_output_file($indel_hq_output_file);
-    }
+    }   
+
     if(defined( $self->sv_detection_strategy)){
         my $sv_output_directory = $self->get_relative_path_to_output_directory($result->{sv_output_directory});
         unless($sv_output_directory){
             $self->error_message("No SNV output directory: ".$sv_output_directory."  was returned from the workflow. Workflow DID return: ".Data::Dumper::Dumper($result));
             die $self->error_message;
         }
-        my $sv_hq_output_file = $self->output_directory."/".$sv_output_directory."/svs.hq.v1.bed"; #FIXME complications arise here when we have just a single column file... or other stuff. May just need to drop the version, too?
+        my $sv_hq_output_dir = $self->output_directory."/".$sv_output_directory; #FIXME complications arise here when we have just a single column file... or other stuff. May just need to drop the version, too?
+        my $sv_file = readlink($sv_hq_output_dir."/svs.hq.bed");
+        my $sv_hq_output_file = $sv_hq_output_dir . "/". $sv_file;
         $self->sv_hq_output_file($sv_hq_output_file);
-    }
-
-
+    }   
 
     return 1;
 }
@@ -540,21 +559,28 @@ sub _promote_staged_data {
         $self->error_message("_promote_staged_data failed in Dispatcher");
         die $self->error_message;
     }
+    $self->set_output_files($self->_workflow_result);
     if(defined($self->snv_hq_output_file)){
         my $file = $self->snv_hq_output_file;
-        my $output = $output_dir."/snvs.hq.v1.bed";
+        my @subdirs = split( "/", $file );
+        my $output_file = $subdirs[-1];
+        my $output = "$output_dir/$output_file";
         Genome::Sys->create_symlink($file,$output);
         $self->snv_hq_output_file($output);
     }
     if(defined($self->sv_hq_output_file)){
         my $file = $self->sv_hq_output_file;
-        my $output = $output_dir."/svs.hq.v1.bed";
+        my @subdirs = split( "/", $file );
+        my $output_file = $subdirs[-1];
+        my $output = "$output_dir/$output_file";
         Genome::Sys->create_symlink($file,$output);
         $self->sv_hq_output_file($output);
     }
     if(defined($self->indel_hq_output_file)){
         my $file = $self->indel_hq_output_file;
-        my $output = $output_dir."/indels.hq.v1.bed";
+        my @subdirs = split( "/", $file );
+        my $output_file = $subdirs[-1];
+        my $output = "$output_dir/$output_file";
         Genome::Sys->create_symlink($file,$output);
         $self->indel_hq_output_file($output);
     }

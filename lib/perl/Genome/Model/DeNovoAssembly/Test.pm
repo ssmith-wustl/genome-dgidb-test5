@@ -65,7 +65,7 @@ sub _create_taxon_sample_and_library {
     $sample = Genome::Sample->create(
         id => -1234,
         name => 'TEST-000',
-        taxon_id => 1653198737, # human
+        taxon_id => $taxon->id,
     );
     if ( not $sample ) {
         Carp::confess('Cannot create sample');
@@ -136,7 +136,7 @@ sub processing_profile_for_velvet {
     );
 
     if ( not $pp ) {
-        Carp::confess('Cannot create de novo assembly processing profile for soap');
+        Carp::confess('Cannot create de novo assembly processing profile for velvet');
     }
 
     return $pp;
@@ -159,7 +159,7 @@ sub _model_for_assembler {
         data_directory => $tmpdir,
     );
     if ( not $model ) {
-        Carp::confess('Cannot create de novo assembly model for soap');
+        Carp::confess('Cannot create de novo assembly model for '.$assembler);
     }
 
     my $instrument_data = $class->solexa_instrument_data;
@@ -199,7 +199,7 @@ sub example_build_for_model {
         data_directory => $dir,
     );
     if ( not $build ) {
-        Carp::confess('Cannot create de novo assembly build for soap');
+        Carp::confess('Cannot create de novo assembly build');
     }
 
     my $event = Genome::Model::Event->create(

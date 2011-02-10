@@ -88,17 +88,17 @@ sub delete {
 
     $self->status_message("Delete input $name ".$self->value_id.' for model '.$model->__display_name__);
 
-    if ( $self->name eq 'instrument_data' ) {
-        my $ida = Genome::Model::InstrumentDataAssignment->get(
-            model => $model,
-            instrument_data => $obj,
-        );
-        if ( $ida ) { # ignore if not found
-            my $delete = $ida->delete;
-            if ( not $delete ) {
-                $self->error_message('Could not delete instrument data assignment');
-                return;
-            }
+    return $self->SUPER::delete if $self->name ne 'instrument_data';
+
+    my $ida = Genome::Model::InstrumentDataAssignment->get(
+        model => $model,
+        instrument_data => $obj,
+    );
+    if ( $ida ) { # ignore if not found
+        my $delete = $ida->delete;
+        if ( not $delete ) {
+            $self->error_message('Could not delete instrument data assignment');
+            return;
         }
     }
 

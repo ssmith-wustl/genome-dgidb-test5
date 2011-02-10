@@ -89,8 +89,6 @@ EOS
         sample              =>  { is => 'Genome::Sample', id_by => 'sample_id' },
         sample_name         =>  { via => 'sample', to => 'name' },
 	
-	bam_path	    => { is => 'String', is_transient=>1},
-
         # TODO: see if this stuff is used and if not delete it -ss
         events => { is => 'Genome::Model::Event', is_many => 1, reverse_id_by => "instrument_data" },
         # TODO: see if this stuff is used and if not delete it -ss
@@ -270,6 +268,8 @@ sub run_identifier  {
 sub dump_fastqs_from_bam {
     my $self = shift;
     my %p = @_;
+
+    die "cannot call bam path" if (!$self->can('bam_path'));
     
     unless (-e $self->bam_path) {
 	$self->error_message("Attempted to dump a bam but the path does not exist:" . $self->bam_path);

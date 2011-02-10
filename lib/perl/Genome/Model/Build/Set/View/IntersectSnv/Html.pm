@@ -43,7 +43,6 @@ sub get_reference {
     for my $p (@props) {
         if ($build->model->can($p)) {
             my $ref = $build->model->$p;
-            print "*** " . $build->__display_name__ . " $p => " . ($ref?$ref->name : "NONE") . "\n";
             return $ref if $ref;
         }
     }
