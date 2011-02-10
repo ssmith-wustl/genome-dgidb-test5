@@ -433,11 +433,9 @@ sub is_eliminate_all_duplicates {
     }
 }
 
-# moved from base model
-sub gold_snp_path {
+sub gold_snp_build {
     my $self = shift;
-    # should only be one of these...
-    # pop the last one just in case there are multiple.
+
     my $subject_name = $self->subject_name;
     if ($self->subject_type eq 'library_name') {
         my $subject = $self->subject;
@@ -466,6 +464,15 @@ sub gold_snp_path {
         return;
     }
     my $build = shift @builds;
+    return $build;
+}
+
+# moved from base model
+sub gold_snp_path {
+    my $self = shift;
+    my $build = $self->gold_snp_build;
+    return unless $build;
+
     return $build->formatted_genotype_file_path;
 }
 
