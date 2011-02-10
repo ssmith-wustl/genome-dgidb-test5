@@ -580,7 +580,7 @@ sub create_default_per_lane_qc_model {
     my $dbsnp_build;
     my $ncbi_human_build36 = Genome::Model::Build->get(101947881);
     if ($reference_sequence_build && $reference_sequence_build->is_compatible_with($ncbi_human_build36)) {
-        $processing_profile = Genome::ProcessingProfile->get(2574062);
+        $processing_profile = Genome::ProcessingProfile->get(2581081);
         $model_name = join('_', $subset_name, $run_name, $processing_profile->name);
         $dbsnp_build = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($reference_sequence_build); 
     } else {
