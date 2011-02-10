@@ -450,7 +450,7 @@ sub _reallocate {
     $self->_select_volume_for_update($volume->id);
 
     # Make sure there's room for the allocation... only applies if the new allocation is bigger than the old
-    unless ($volume->unallocated_kb >= $diff) {
+    if ($diff > 0 and $volume->unallocated_kb < $diff) {
         Genome::Sys->unlock_resource(resource_lock => $volume_lock);
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Not enough unallocated space on volume ' . $volume->mount_path . " to increase allocation size by $diff kb";
