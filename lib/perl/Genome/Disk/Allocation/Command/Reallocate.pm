@@ -4,98 +4,51 @@ use strict;
 use warnings;
 
 use Genome;
+use Carp 'confess';
 
 class Genome::Disk::Allocation::Command::Reallocate {
     is => 'Genome::Disk::Allocation::Command',
     has => [
-            allocator_id => {
-                             is => 'Number',
-                             doc => 'The id for the allocator event',
-                         },
-        ],
-    has_optional => [
-                     kilobytes_requested => {
-                                             is => 'Number',
-                                             doc => 'The disk space allocated in kilobytes',
-                                         },
-                     reallocator_id => {
-                                        is => 'Number',
-                                        doc => 'The id for the reallocator pse',
-                                  },
-                     reallocator => {
-                                     calculate_from => 'reallocator_id',
-                                     calculate => q|
-                                         return GSC::PSE::ReallocateDiskSpace->get($reallocator_id);
-                                     |,
-                                 },
+        allocation_id => {
+            is => 'Number',
+            doc => 'ID for allocation to be resized',
+        },
     ],
-    doc => 'A reallocate command to update the allocated disk space',
+    has_optional => [
+        kilobytes_requested => {
+            is => 'Number',
+            doc => 'Number of kilobytes that target allocation should reserve, if not ' .
+                'provided then the current size of the allocation is used',
+        },
+    ],
+    doc => 'This command changes the requested kilobytes for a target allocation',
 };
 
+sub help_brief {
+    return 'Changes the requested kilobytes field on the target allocation';
+}
 
-sub create {
-    my $class = shift;
+sub help_synopsis { 
+    return 'Changes the requested kilobytes field on the target allocation';
+}
 
-    my $self = $class->SUPER::create(@_);
-    unless ($self) {
-        return;
-    }
-    unless ($self->allocator_id) {
-        $self->error_message('Allocator id required!  See --help.');
-        $self->delete;
-        return;
-    }
-    unless ($self->allocator) {
-        $self->error_message('GSC::PSE::AllocateDiskSpace not found for id '. $self->allocator_id);
-        $self->delete;
-        return;
-    }
-    unless ($self->reallocator_id) {
-        my $reallocate_pse = $self->allocator->reallocate($self->kilobytes_requested);
-        unless ($reallocate_pse) {
-            $self->error_message('Failed to reallocate disk space');
-            $self->delete;
-            return;
-        }
-        $self->reallocator_id($reallocate_pse->pse_id);
-    }
-    unless ($self->reallocator) {
-        $self->error_message('Reallocator not found for reallocator id: '. $self->reallocator_id);
-        $self->delete;
-        return;
-    }
-
-    return $self;
+sub help_detail {
+    return <<EOS
+Changes the requested kilobytes field on the target allocation. If no value
+is supplied to this command, the field is set to the current size of the
+allocation.
+EOS
 }
 
 sub execute {
     my $self = shift;
-    my $reallocator = $self->reallocator;
-    $self->status_message('Reallocate PSE id: '. $self->reallocator_id);
-    my $rv;
-    if ($self->local_confirm) {
-        $rv = $self->confirm_scheduled_pse($reallocator);
-    } else {
-        $rv = $self->wait_for_pse_to_confirm(pse => $reallocator);
+    my %params;
+    $params{allocation_id} = $self->allocation_id;
+    $params{kilobytes_requested} = $self->kilobytes_requested if defined $self->kilobytes_requested;
+    my $rv = Genome::Disk::Allocation->reallocate(%params);
+    unless (defined $rv and $rv == 1) {
+        confess 'Could not reallocate allocation ' . $self->allocation_id;
     }
-    
-    # Commit here to free up a DB lock we'll be holding if we executed the 
-    # reallocation PSE via confirm_scheduled_pse().
-    UR::Context->commit();
-    
-    $self->status_message('Committed and released lock');
-    
-    unless ($rv) {
-        $self->error_message('Failed to confirm pse '. $self->reallocator_id);
-        return;
-    }
-
-    # update apipe schema
-    my $apipe_allocation = Genome::Disk::AllocationNew->get($self->allocator_id);
-    if ($apipe_allocation) {
-        $apipe_allocation->kilobytes_requested($self->disk_allocation->kilobytes_requested);
-    }
-
     return 1;
 }
 

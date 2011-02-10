@@ -27,11 +27,18 @@ class Genome::Model::Tools::Annotate::TranscriptVariants::Version3::BedToAnnotat
             is_optional => 0,
             doc => 'File where the converted variants will be written',
         },
+        extra_columns => {
+            is => 'Text',
+            is_input => 1,
+            is_optional => 1,
+            doc => "A comma delimited list of any extra columns that exist after the expected 5 in the input. Use this option if it is desired to preserve additional columns from the input file, which will then appear in output.Preserved columns must be contiguous and in order as they appear in the infile after the mandatory input columns. Any desired naming or number of columns can be specified so long as it does not exceed the actual number of columns in the file.",
+        },
     ],
 };
 
 sub execute{
     my $self = shift;
+    $DB::single = 1; #TODO:Delete me
     
     unless(defined $self->snv_file or defined $self->indel_file){
         $self->error_message("snv-file and/or indel-file must be defined") and die; 
@@ -65,7 +72,7 @@ sub _convert_input_file{
         $self->error_message("Could not open temp file, exiting") and die; 
     }
 
-    my @columns = qw/ chromosome start stop reference variant /;
+    my @columns = (($self->_variant_attributes), $self->get_extra_columns);
     my $svr = Genome::Utility::IO::SeparatedValueReader->create(
         input => $input_file,
         headers => \@columns,
@@ -87,6 +94,10 @@ sub _convert_input_file{
             $final = join("\t", $line->{'chromosome'}, $line->{'start'}, $line->{'stop'} + 1, $line->{'reference'}, $line->{'variant'});
         }else{
             $final = join("\t", $line->{'chromosome'}, $line->{'start'} + 1, $line->{'stop'}, $line->{'reference'}, $line->{'variant'});
+        }
+
+        if($self->extra_columns){
+            $final = join("\t", $final, map($line->{$_}, $self->get_extra_columns));
         }
 
         print $output $final . "\n";
@@ -147,6 +158,22 @@ sub chr_cmp {
     else{
         return 0;
     }
+}
+
+sub _variant_attributes {
+    return (qw/ chromosome start stop reference variant /);
+}
+
+sub get_extra_columns {
+    my $self = shift;
+
+    my $unparsed_columns = $self->extra_columns;
+    return unless $unparsed_columns;
+
+    my @columns = split(",", $unparsed_columns);
+    chomp @columns;
+
+    return @columns;
 }
 
 1;

@@ -30,7 +30,7 @@ my $tmp_allocation = Genome::Disk::Allocation->__define__(
                                                            group_subdirectory => 'test',
                                                            mount_path => '/tmp/mount_path',
                                                            allocation_path => 'microarray_data/imported/-830001',
-                                                           allocator_id => '-123459',
+                                                           id => '-123459',
                                                            kilobytes_requested => 100000,
                                                            kilobytes_used => 0,
                                                            owner_id => $dummy_id,#-830002,#$dummy_idi,
@@ -80,7 +80,7 @@ my $i = Genome::InstrumentData::Imported->get(
 is($i->original_data_path,$source_dir,"found imported data and source_data_path is properly set");
 ok($i->library_name =~ m/-microarraylib$/, "library is a '-microarraylib' ... library is " . $i->library_name);
 
-my $disk = Genome::Disk::Allocation->get(allocator_id => -123459, owner_id => $dummy_id);#owner_class_name => $owner_class_name, owner_id => $dummy_id);
+my $disk = Genome::Disk::Allocation->get(id => -123459, owner_id => $dummy_id);#owner_class_name => $owner_class_name, owner_id => $dummy_id);
 
 
 ok($disk, "found an allocation owned by the new instrument data");

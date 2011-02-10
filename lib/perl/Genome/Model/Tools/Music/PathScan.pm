@@ -11,13 +11,13 @@ our $VERSION = '1.01';
 class Genome::Model::Tools::Music::PathScan {
   is => 'Command',
   has => [
-    maf_file => { is => 'Text', doc => "List of mutations in Mutation Annotation Format (MAF) format" },
-    gene_covg_dir => { is => 'Text', doc => "Directory containing per-gene coverage files for each sample" },
-    sample_list => { is => 'Text', doc => "List of all samples that were analyzed for mutations" },
-    pathway_file => { is => 'Text', doc => "Tab-delimited file of pathways, their member genes, and any additional info" },
+    gene_covg_dir => { is => 'Text', doc => "Directory containing per-gene coverage files (Created using music bmr calc-covg)" },
+    bam_list => { is => 'Text', doc => "Tab delimited list of BAM files [sample_name normal_bam tumor_bam] (See Description)" },
+    pathway_file => { is => 'Text', doc => "Tab-delimited file of pathway information (See Description)" },
+    maf_file => { is => 'Text', doc => "List of mutations using TCGA MAF specifications v2.2" },
     output_file => { is => 'Text', doc => "Output file that will list the significant pathways and their p-values" },
-    genes_to_ignore => { is => 'Text', doc => "Comma-delimited list of genes in the MAF to be ignored", is_optional => 1 },
-    bmr => { is => 'Number', doc => "Background mutation rate in the targeted regions", is_optional => 1, default => 1.7E-6,  },
+    bmr => { is => 'Number', doc => "Background mutation rate in the targeted regions", is_optional => 1, default => 1.7E-6 },
+    genes_to_ignore => { is => 'Text', doc => "Comma-delimited list of genes whose mutations should be ignored", is_optional => 1 },
   ],
 };
 
@@ -27,20 +27,35 @@ sub help_brief {
 
 sub help_detail {
   return <<HELP
-Only the following four columns in the MAF are used. All other columns may as well be empty.
-Col 1: Hugo_Symbol (Need not be HUGO, but must match gene names used in the PathWay file)
-Col 2: Entrez_Gene_Id (Matching Entrez ID trump gene name mathches between PathWay file and MAF)
+Only the following four columns in the MAF are used. All other columns may as well be blank.
+Col 1: Hugo_Symbol (Need not be HUGO, but must match gene names used in the pathway file)
+Col 2: Entrez_Gene_Id (Matching Entrez ID trump gene name matches between pathway file and MAF)
 Col 9: Variant_Classification (PathScan ignores Silent|RNA|3'Flank|3'UTR|5'Flank|5'UTR|Intron)
 Col 16: Tumor_Sample_Barcode (Must match the name in sample-list, or contain it as a substring)
 
---sample-list
-The first column in this file is expected to match (exactly or as a substring of) the tumor sample
-names in the MAF file (16th column, Tumor_Sample_Barcode). Any additional columns like BAM file
-locations or clinical data will be ignored.
+The Entrez_Gene_Id can also be left blank, but it is highly recommended in case genes are named
+differently in the pathway file and the MAF file.
+
+ARGUMENTS:
+--pathway-file
+  ::TODO::
+
+--gene-covg-dir
+  This is usually the gene_covgs subdirectory created when you run "music bmr calc-covg". It
+  should contain files for each sample that report per-gene covered base counts.
+
+--bam-list
+  Provide a file containing sample names and normal/tumor BAM locations for each. Use the tab-
+  delimited format [sample_name normal_bam tumor_bam] per line. Additional columns like clinical
+  data are allowed, but ignored. The sample_name must be the same as the tumor sample names used
+  in the MAF file (16th column, with the header Tumor_Sample_Barcode).
+
+--bmr
+  The overall background mutation rate that can be calculated using "music bmr calc-bmr".
 
 --genes-to-ignore
-Any genes in this comma-delimited list will be ignored from the MAF file. This is useful when you
-have a persistently mutated gene like TP53 that masks the significance of other genes.
+  A comma-delimited list of genes to ignore from the MAF file. This is useful when there are
+  recurrently mutated genes like TP53 which might mask the significance of other genes.
 HELP
 }
 
@@ -48,21 +63,29 @@ sub execute
 {
   my $self = shift;
   $DB::single = 1;
-  my $maf_file = $self->maf_file;
   my $covg_dir = $self->gene_covg_dir;
-  my $sample_list = $self->sample_list;
+  my $bam_list = $self->bam_list;
   my $pathway_file = $self->pathway_file;
+  my $maf_file = $self->maf_file;
   my $output_file = $self->output_file;
+  my $bgd_mut_rate = $self->bmr;
   my $genes_to_ignore = $self->genes_to_ignore;
-  my $bgd_mut = $self->bmr;
 
   # Check on all the input data before starting work
   print STDERR "MAF file not found or is empty: $maf_file\n" unless( -s $maf_file );
   print STDERR "Directory with gene coverages not found: $covg_dir\n" unless( -e $covg_dir );
-  print STDERR "List of samples not found or is empty: $sample_list\n" unless( -s $sample_list );
+  print STDERR "List of samples not found or is empty: $bam_list\n" unless( -s $bam_list );
   print STDERR "Pathway info file not found or is empty: $pathway_file\n" unless( -s $pathway_file );
-  exit 1 unless( -s $maf_file && -e $covg_dir && -s $sample_list && -s $pathway_file );
+  exit 1 unless( -s $maf_file && -e $covg_dir && -s $bam_list && -s $pathway_file );
 
+  # Build a hash to quickly lookup the genes whose mutations should be ignored
+  my %ignored_genes = ();
+  if( defined $genes_to_ignore )
+  {
+    %ignored_genes = map { $_ => 1 } split( /,/, $genes_to_ignore );
+  }
+
+  # PathScan uses a helluva lot of hashes - all your RAM are belong to it
   my %sample_gene_hash; # sample => array of genes (based on maf)
   my %gene_path_hash; # gene => array of pathways (based on path_file)
   my %path_hash; # pathway => all the information about the pathways in the database
@@ -71,15 +94,21 @@ sub execute
   my %gene_sample_cov_hash; # gene => sample => coverage
   my @all_sample_names; # names of all the samples, no matter if it's mutated or not
   my %id_gene_hash; # entrez id => gene (based on first two columns in MAF)
-  my %ignored_genes = ();
-  if( defined $genes_to_ignore )
+
+  # Parse out the names of the samples which should match the names of the coverage files needed
+  my $sampleFh = IO::File->new( $bam_list ) or die "Couldn't open $bam_list. $!\n";
+  while( my $line = $sampleFh->getline )
   {
-    %ignored_genes = map { $_ => 1 } split( /,/, $genes_to_ignore );
+    next if ( $line =~ m/^#/ );
+    chomp( $line );
+    my ( $sample ) = split( /\t/, $line );
+    push( @all_sample_names, $sample );
   }
+  $sampleFh->close;
 
   # Read coverage data calculated by the Music::Bmr::CalcCovg
   $covg_dir =~ s/(\/)+$//; # Remove trailing forward slashes if any
-  read_CoverageFiles( $sample_list, $covg_dir, \@all_sample_names, \%gene_sample_cov_hash );
+  read_CoverageFiles( $covg_dir, \@all_sample_names, \%gene_sample_cov_hash );
 
   #build gene => average_coverage hash for population test
   my %gene_cov_hash;
@@ -95,31 +124,32 @@ sub execute
   my $maf_fh = IO::File->new( $maf_file );
   while( my $line = $maf_fh->getline )
   {
+    next if( $line =~ m/^(#|Hugo_Symbol)/ );
     chomp( $line );
-    next if( $line =~ /^(#|Hugo)/ ); #Skip headers
-
     my @cols = split( /\t/, $line );
-    my ( $gene, $entrez_id, $var_class, $tumor_sample ) = ( $cols[0], $cols[1], $cols[8], $cols[15] );
-    next if( $var_class =~ /Silent|RNA|3'Flank|3'UTR|5'Flank|5'UTR|Intron/i ); # Ignore non-somatic variants
-    next if( defined $ignored_genes{$gene} ); # Ignore variants in genes that need to be ignored
+    my ( $gene, $entrez_id, $mutation_class, $tumor_sample ) = ( $cols[0], $cols[1], $cols[8], $cols[15] );
 
-    #Find the sample name as listed in the sample_list file and push it into the hash
-    my $sample = "";
-    foreach( @all_sample_names )
+    # Skip Silent mutations and those in Introns, RNA, UTRs, Flanks, IGRs, or the ubiquitous Targeted_Region
+    next if( $mutation_class =~ m/^(Silent|Intron|RNA|3'Flank|3'UTR|5'Flank|5'UTR|IGR|Targeted_Region)$/ );
+
+    # If the mutation classification is odd, quit with error
+    if( $mutation_class !~ m/^(Missense_Mutation|Nonsense_Mutation|Nonstop_Mutation|Splice_Site|Translation_Start_Site|Frame_Shift_Del|Frame_Shift_Ins|In_Frame_Del|In_Frame_Ins)$/ )
     {
-      if( $tumor_sample =~ m/$_/ )
-      {
-        $sample = $_;
-        last;
-      }
+      print STDERR "Unrecognized Variant_Classification $mutation_class in MAF file.\n";
+      print STDERR "Please use TCGA MAF Specification v2.2.\n";
+      return 1;
     }
-    if( $sample eq "" )
+
+    # Check that the user followed instructions and named each sample correctly
+    unless( grep( /^$tumor_sample$/, @all_sample_names ))
     {
-      print STDERR "Sample $tumor_sample in MAF file does not match any provided in sample-list\n";
-      exit 1;
+      print STDERR "Sample $tumor_sample in MAF file does not match any in $bam_list\n";
+      return 1;
     }
-    $id_gene_hash{$entrez_id} = $gene unless( $entrez_id eq '' or $entrez_id == 0 );
-    push( @{$sample_gene_hash{$sample}}, $gene ) unless( grep /^$gene$/, @{$sample_gene_hash{$sample}} );
+
+    next if( defined $ignored_genes{$gene} ); # Ignore variants in genes that user wants ignored
+    $id_gene_hash{$entrez_id} = $gene unless( $entrez_id eq '' or $entrez_id == 0 or $entrez_id !~ m/^\d+$/ );
+    push( @{$sample_gene_hash{$tumor_sample}}, $gene ) unless( grep /^$gene$/, @{$sample_gene_hash{$tumor_sample}} );
   }
   $maf_fh->close;
 
@@ -143,7 +173,7 @@ sub execute
     foreach my $gene ( @genes )
     {
       my ( $entrez_id, $gene_symbol ) = split( /:/, $gene );
-      unless( $entrez_id eq '' or $entrez_id == 0 )
+      unless( $entrez_id eq '' or $entrez_id == 0 or $entrez_id !~ m/^\d+$/ )
       {
         # Use the gene name from the MAF file if the entrez ID matches
         $gene_symbol = $id_gene_hash{$entrez_id} if( defined $id_gene_hash{$entrez_id} );
@@ -267,7 +297,7 @@ sub execute
       $pop_obj->assign( 1 );
     }
 
-    $pop_obj->preprocess( $bgd_mut, $hits_ref );  #mwendl's new fix
+    $pop_obj->preprocess( $bgd_mut_rate, $hits_ref );  #mwendl's new fix
 
     my $pval = $pop_obj->population_pval_approx($hits_ref);
     $data{$pval}{$path}{samples} = \@mutated_samples;
@@ -311,13 +341,7 @@ sub execute
 # bases with sufficient coverage in a gene.
 sub read_CoverageFiles
 {
-  my ( $sample_list, $covg_dir ) = ( $_[0], $_[1] );
-  my ( $all_samples_ref, $gene_sample_cov_hash_ref ) = ( $_[2], $_[3] );
-
-  # Parse out the names of the samples which should match the names of the coverage files
-  my $inFh = IO::File->new( $sample_list );
-  @{$all_samples_ref} = map { chomp; s/\t.*$//; $_ } $inFh->getlines;
-  $inFh->close;
+  my ( $covg_dir, $all_samples_ref, $gene_sample_cov_hash_ref ) = ( $_[0], $_[1], $_[2] );
 
   # Read per-gene covered base counts for each sample
   foreach my $sample ( @{$all_samples_ref} )
@@ -325,7 +349,7 @@ sub read_CoverageFiles
     # If the file doesn't exist, quit with error. The Music::Bmr::CalcCovg step is incomplete
     unless( -s "$covg_dir/$sample.covg" )
     {
-      print STDERR "Couldn't find $sample.covg in $covg_dir. Use \"bmr calc-covg\"\n";
+      print STDERR "Couldn't find $sample.covg in $covg_dir. Please run \"bmr calc-covg\"\n";
       exit 1;
     }
 

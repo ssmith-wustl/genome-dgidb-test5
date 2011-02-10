@@ -99,7 +99,7 @@ $assign = Genome::Model::Command::InstrumentData::Assign->create(
 ok($assign, 'create to assign by flow cell id');
 ok($assign->execute, 'execute');
 @assigned_inst_data = $model->instrument_data;
-is_deeply(\@assigned_inst_data, [ $solexa_id, @sanger_id ], 'confirmed assigned inst data');
+is_deeply(\@assigned_inst_data, [ @sanger_id, $solexa_id ], 'confirmed assigned inst data');
 
 done_testing();
 exit;

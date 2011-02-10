@@ -185,6 +185,13 @@ sub create {
 
 sub delete {
     my $self = shift;
+
+    my @alignment_results = Genome::InstrumentData::AlignmentResult->get(instrument_data_id => $self->id);
+    if (@alignment_results) {
+        $self->error_message("Cannot remove instrument data (" . $self->id . ") because it has " . scalar @alignment_results . " alignment result(s).");
+        return;
+    }
+
     my @allocations = Genome::Disk::Allocation->get(owner => $self);
     if (@allocations) {
         UR::Context->create_subscription(
@@ -193,11 +200,6 @@ sub delete {
                 for my $allocation (@allocations) {
                     my $id = $allocation->id;
                     print 'Now deleting allocation with owner_id = ' . $id . "\n";
-                    my $path = $allocation->absolute_path;
-                    unless (rmtree($path)) {
-                        print STDERR "ERROR: could not rmtree $path\n";
-                        return;
-                    }
                     $allocation->deallocate; 
                     print "Deletion complete.\n";
                 }

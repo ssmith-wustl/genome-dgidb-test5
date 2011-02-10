@@ -166,11 +166,11 @@ my $yaml_string = $event->yaml_string;
 my $yaml_header = '--- \!\!perl/hash:'. $event->class;
 like($yaml_string,qr/$yaml_header/,'found expected yaml string');
 
-my $event_tmp_dir = $event->base_temp_directory;
+my $event_tmp_dir = Genome::Sys->base_temp_directory;
 ok($event_tmp_dir, 'got a base temp directory '. $event_tmp_dir);
 ok(-d $event_tmp_dir, $event_tmp_dir .' is a directory');
 
-my $tmp_file_path = $event->create_temp_file_path;
+my $tmp_file_path = Genome::Sys->create_temp_file_path;
 ok($tmp_file_path, 'got a tmp file path '. $tmp_file_path);
 ok(!-e $tmp_file_path, $tmp_file_path .' does not exist yet');
 
@@ -183,10 +183,10 @@ ok(scalar(grep { $_ =~ /Created directory\: $tmp_file_path/ } $event->status_mes
 
 my $return_value;
 eval{
-    $return_value = $event->create_temp_file_path($basename);
+    $return_value = Genome::Sys->create_temp_file_path($basename);
 };
 ok(!defined($return_value),'failed to create existing tmp file path');
-isa_ok($event->create_temp_file,'GLOB');
+isa_ok(Genome::Sys->create_temp_file,'GLOB');
 
 ok($event->check_for_existence($tmp_file_path),'temp file exists');
 ok(scalar(grep { $_ =~ /existence check passed: $tmp_file_path/ } $event->status_messages),'status message found for existence');

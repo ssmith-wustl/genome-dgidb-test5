@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Combine {
-    is  => 'Command',
+    is  => ['Genome::Model::Tools::DetectVariants2::Base'],
     is_abstract => 1,
     has => [
         variant_file_a => {
@@ -26,23 +26,6 @@ class Genome::Model::Tools::DetectVariants2::Combine {
             is_input => 1,
             is_output => 1,
             doc => 'File in which to write output',
-        },
-        skip_if_output_present => {
-            is => 'Boolean',
-            is_optional => 1,
-            is_input => 1,
-            default => 0,
-            doc => 'enable this flag to shortcut through if the output_file is already present. Useful for pipelines.',
-        },
-        lsf_resource => {
-            is_param => 1,
-            is_optional => 1,
-            default_value => 'rusage[mem=4000] select[type==LINUX64] span[hosts=1]',
-        },
-        lsf_queue => {
-            is_param => 1,
-            is_optional => 1,
-            default_value => 'long',
         },
     ]
 };
