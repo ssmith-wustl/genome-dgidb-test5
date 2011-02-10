@@ -12,15 +12,13 @@ use Test::More;
 # use
 use_ok('Genome::Model::Build::MetagenomicComposition16s::Sanger') or die;
 
-# mock model
-my $model = Genome::Model::MetagenomicComposition16s::Test->get_mock_model(
-    sequencing_platform => 'sanger',
-) or die "Can't create metagenomic composition 16s sanger model";
-ok($model, 'MC16s sanger model');
+# model
+my $model = Genome::Model::MetagenomicComposition16s::Test->model_for_sanger;
+ok($model, 'MC16s sanger model') or die;
 
 # create w/o subclass
 my $build = Genome::Model::Build::MetagenomicComposition16s->create(
-    model_id => $model->id,
+    model => $model,
     data_directory => $model->data_directory.'/build',
 );
 isa_ok($build, 'Genome::Model::Build::MetagenomicComposition16s::Sanger');

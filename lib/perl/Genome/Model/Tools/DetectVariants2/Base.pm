@@ -52,10 +52,6 @@ class Genome::Model::Tools::DetectVariants2::Base {
     doc => 'This is the base class for all detect variants classes and the variant detector dispatcher',
 };
 
-sub help_brief {
-    "The base class for variant detectors.",
-}
-
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
@@ -176,7 +172,7 @@ sub _generate_standard_files {
     if($self->detect_snvs) {
         my $snv_module = join('::', $module_base, 'Snv', $detector . 'ToBed'); 
         
-        for my $variant_file ($self->_snv_staging_output, $self->_filtered_snv_staging_output) {
+        for my $variant_file ($self->_snv_staging_output) {
             if(Genome::Sys->check_for_path_existence($variant_file)) {
                 $self->status_message("executing $snv_module on file $variant_file");
                 $retval &&= $self->_run_converter($snv_module, $variant_file);
@@ -187,7 +183,7 @@ sub _generate_standard_files {
     if($self->detect_indels) {
         my $snv_module = join('::', $module_base, 'Indel', $detector . 'ToBed'); 
         
-        for my $variant_file ($self->_indel_staging_output, $self->_filtered_indel_staging_output) {
+        for my $variant_file ($self->_indel_staging_output) {
             if(Genome::Sys->check_for_path_existence($variant_file)) {
                 $self->status_message("executing $snv_module on file $variant_file");
                 $retval &&= $self->_run_converter($snv_module, $variant_file);

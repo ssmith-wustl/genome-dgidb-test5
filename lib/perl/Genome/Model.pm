@@ -1,8 +1,11 @@
 package Genome::Model;
+
 use strict;
 use warnings;
+
 use Genome;
 
+use Data::Dumper 'Dumper';
 use Regexp::Common;
 use File::Path;
 use YAML;
@@ -114,17 +117,21 @@ class Genome::Model {
         
         # refactor to use the inputs entirely
         instrument_data_assignments => { is => 'Genome::Model::InstrumentDataAssignment', reverse_as => 'model' },
-        instrument_data             => { is => 'Genome::InstrumentData', via => 'instrument_data_assignments' },
-        inst_data                   => { is => 'Genome::InstrumentData', via => 'inputs', to => 'value', is_mutable => 1, 
-                                        where => [ name => 'instrument_data' ],
-                                        doc => 'Instrument data currently assigned to the model.' },
-    ],    
-    has_optional_deprecated => [
+            instrument_data             => {
+                is => 'Genome::InstrumentData',
+                via => 'inputs',
+                to => 'value', 
+                is_mutable => 1, 
+                where => [ name => 'instrument_data' ],
+                doc => 'Instrument data currently assigned to the model.' 
+            },
+        ],    
+        has_optional_deprecated => [
         # this is all junk but things really use them right now 
         data_directory          => { is => 'Text', len => 1000, is_optional => 1 },
         ref_seqs                => { is => 'Genome::Model::RefSeq', reverse_as => 'model', is_many => 1, is_optional => 1 },
         events                  => { is => 'Genome::Model::Event', reverse_as => 'model', is_many => 1,
-                                    doc => 'all events which have occurred for this model' },
+            doc => 'all events which have occurred for this model' },
         reports                 => { via => 'last_succeeded_build' },
         reports_directory       => { via => 'last_succeeded_build' },
         
@@ -233,12 +240,6 @@ class Genome::Model {
     doc => 'a versioned data model describing one the sequence and features of a genome' 
 };
 
-=pod
-
-
-=cut
-
-
 sub __display_name__ {
     my $self = shift;
     return $self->name . ' (' . $self->id . ')';
@@ -273,7 +274,6 @@ sub __extend_namespace__ {
 sub create {
     my $class = shift;
 
-    $DB::single = $DB::stopper;
     if ($class eq __PACKAGE__ or $class->__meta__->is_abstract) {
         # this class is abstract, and the super-class re-calls the constructor from the correct subclass
         return $class->SUPER::create(@_);
@@ -605,7 +605,6 @@ sub unassigned_instrument_data {
 
     return grep { not $assigned_instrument_data_ids{$_->id} } @compatible_instrument_data;
 }
-
 #<>#
 
 # These vary based on the current configuration, which could vary over
@@ -784,7 +783,7 @@ sub get_all_objects {
         }
     };
 
-    return map { $sorter->( $self->$_ ) } (qw{ inputs instrument_data_assignments builds project_assignments to_model_links from_model_links putative_variant_validations});
+    return map { $sorter->( $self->$_ ) } (qw{ inputs builds project_assignments to_model_links from_model_links putative_variant_validations});
 }
 
 sub yaml_string {

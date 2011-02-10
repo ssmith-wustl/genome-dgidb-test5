@@ -297,7 +297,6 @@ sub slurp_srr_data {
 
     unless ($rv == 0) {
         $self->error_message("Did not get a valid return from rsync, rv was $rv for call $call.  Cleaning up and bailing out");
-        rmtree($disk_alloc->absolute_path);
         $disk_alloc->deallocate;
         return;
     }

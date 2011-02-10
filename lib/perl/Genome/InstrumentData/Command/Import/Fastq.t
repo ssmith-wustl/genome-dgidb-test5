@@ -31,7 +31,7 @@ my $tmp_allocation = Genome::Disk::Allocation->__define__(
                                                            group_subdirectory => 'test',
                                                            mount_path => '/tmp/mount_path',
                                                            allocation_path => 'fastq_data/imported/-830001',
-                                                           allocator_id => '-123459',
+                                                           id => '-123459',
                                                            kilobytes_requested => 100000,
                                                            kilobytes_used => 0,
                                                            owner_id => $dummy_id-100,
@@ -77,7 +77,7 @@ ok($i->library_name =~ m/extlibs$/, "library name was generated w/ extlibs exten
 ok($i, "found Imported instrument data")
     or die "Did not find Imported Instrument Data using sample_name = $sample_name";
 
-my $disk = Genome::Disk::Allocation->get(owner_class_name => $i->class, owner_id => $i->id, allocator_id => -123459);
+my $disk = Genome::Disk::Allocation->get(owner_class_name => $i->class, owner_id => $i->id, id => -123459);
 
 ok($disk, "found an allocation owned by the new instrument data");
 
