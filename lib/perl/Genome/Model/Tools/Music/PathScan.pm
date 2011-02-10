@@ -4,7 +4,6 @@ use warnings;
 use strict;
 use Genome::Model::Tools::Music::PathScan::PopulationPathScan;
 use IO::File;
-use IO::Dir;
 
 our $VERSION = '1.01';
 
@@ -76,7 +75,7 @@ sub execute
   print STDERR "Directory with gene coverages not found: $covg_dir\n" unless( -e $covg_dir );
   print STDERR "List of samples not found or is empty: $bam_list\n" unless( -s $bam_list );
   print STDERR "Pathway info file not found or is empty: $pathway_file\n" unless( -s $pathway_file );
-  exit 1 unless( -s $maf_file && -e $covg_dir && -s $bam_list && -s $pathway_file );
+  return 1 unless( -s $maf_file && -e $covg_dir && -s $bam_list && -s $pathway_file );
 
   # Build a hash to quickly lookup the genes whose mutations should be ignored
   my %ignored_genes = ();
@@ -349,7 +348,7 @@ sub read_CoverageFiles
     # If the file doesn't exist, quit with error. The Music::Bmr::CalcCovg step is incomplete
     unless( -s "$covg_dir/$sample.covg" )
     {
-      print STDERR "Couldn't find $sample.covg in $covg_dir. Please run \"bmr calc-covg\"\n";
+      print STDERR "Couldn't find $sample.covg in $covg_dir. (music bmr calc-covg possibly incomplete)\n";
       exit 1;
     }
 
