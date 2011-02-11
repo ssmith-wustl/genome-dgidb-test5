@@ -670,12 +670,15 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     );
 
     my $dbsnp_build;
+    my $annotation_build;
     if($reference_sequence_build) {
         $model_params{reference_sequence_build} = $reference_sequence_build;
         $dbsnp_build = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($reference_sequence_build); 
+        $annotation_build = Genome::Model::ImportedAnnotation->annotation_build_for_reference($reference_sequence_build);
     }
 
     $model_params{dbsnp_build} = $dbsnp_build if $dbsnp_build;
+    $model_params{annotation_reference_build} = $annotation_build if $annotation_build;
 
     my $model = Genome::Model->create(%model_params);
     unless ( defined($model) ) {
