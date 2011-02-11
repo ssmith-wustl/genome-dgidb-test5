@@ -138,10 +138,12 @@ foreach my $chr(keys %chrs){
       shift @txEnds;
     }
     next unless(@txEnds>0);
-    foreach my $start(keys %{$$annot{$chr}{$txEnds[0]}}){
-      if($pos>$start-$opts{l}){
-	foreach my $transcript(@{$$annot{$chr}{$txEnds[0]}{$start}}){
-	  push @{$ABKs{$chr}{$pos}},$transcript;
+    foreach my $txEnd(@txEnds){
+      foreach my $start(keys %{$$annot{$chr}{$txEnd}}){
+	if($pos>$start-$opts{l}){
+	  foreach my $transcript(@{$$annot{$chr}{$txEnd}{$start}}){
+	    push @{$ABKs{$chr}{$pos}},$transcript;
+	  }
 	}
       }
     }

@@ -1,4 +1,4 @@
-package Genome::Model::Command::Services::Build::BmodAlignmentsToTcgaQueue;
+package Genome::Model::Command::Services::Build::BmodAlignmentsToQueue;
 
 use strict;
 use warnings;
@@ -8,14 +8,24 @@ use Genome;
 require Carp;
 use Data::Dumper 'Dumper';
 
-class Genome::Model::Command::Services::Build::BmodAlignmentsToTcgaQueue { 
+class Genome::Model::Command::Services::Build::BmodAlignmentsToQueue { 
     is => 'Genome::Command::Base',
     has => [
+        queue => {
+            is => 'Text',
+            shell_args_position => 1,
+            doc => 'Queue to move alignment jobs to.',
+        },
         builds => {
             is => 'Genome::Model::Build',
-            shell_args_position => 1,
+            shell_args_position => 2,
             is_many => 1,
             doc => 'Builds to modify the queue of PEND alignment jobs.',
+        },
+        host_group => {
+            is => 'Text',
+            is_optional => 1,
+            doc => 'Host group to bmod alignment jobs to. Will be determined from queue if not specified',
         },
     ],
 };
@@ -27,6 +37,17 @@ sub execute {
     if ( not @builds ) {
         $self->error_message('No builds to modify');
     }
+
+    unless($self->host_group) {
+        my $bqueus_cmd_output = qx(bqueues -l grant | grep ^HOSTS:);
+        my ($host_group) = $bqueus_cmd_output =~ /^HOSTS:\s+(\w+)\//;
+
+        unless ($host_group) {
+            die "Unable to determine host group for queue (" . $self->queue . ") from '$bqueus_cmd_output'.\n";
+        }
+        $self->host_group($host_group);
+    }
+
 
     for my $build ( @builds ) {
         my $status = $build->status;
@@ -79,7 +100,7 @@ sub _bmod_align_reads_instances_for_build {
     for my $align_reads_instance ( @align_reads_instances ) {
         next if not $align_reads_instance->is_running;
         my $lsf_job_id = $align_reads_instance->current->dispatch_identifier;
-        my $cmd = "bmod -q tcga -m blade64 $lsf_job_id";
+        my $cmd = "bmod -q " . $self->queue . " -m " . $self->host_group . " $lsf_job_id";
         #print "$cmd\n"; next;
         my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
     }
