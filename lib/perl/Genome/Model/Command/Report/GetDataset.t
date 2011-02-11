@@ -5,31 +5,24 @@ use warnings;
 
 use above 'Genome';
 
-use Genome::Model::Command::Report::Test;
+use Test::More;
 
-Genome::Model::Command::Report::GetDatasetTest->runtests;
+use_ok('Genome::Model::Command::Report::GetDataset') or die;
 
+my $build = Genome::Model::Build->get(107664200); # build for apipe-test-03-MC16s
+ok($build, 'Got MC16s build') or die;
+
+print $build->reports_directory."\n";
+my $get_ds = Genome::Model::Command::Report::GetDataset->create(
+    build => $build,
+    report_name => 'Summary',
+    dataset_name => 'stats',
+    output_type => 'csv',
+);
+ok($get_ds, 'create');
+$get_ds->dump_status_messages(1);
+ok($get_ds->execute, 'execute');
+
+done_testing();
 exit;
-
-=pod
-
-=head1 Tests
-
-=head1 Disclaimer
-
- Copyright (C) 2006 Washington University Genome Sequencing Center
-
- This script is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
- License for more details.
-
-=head1 Author(s)
-
- Eddie Belter <ebelter@watson.wustl.edu>
-
-=cut
-
-#$HeadURL$
-#$Id$
 
