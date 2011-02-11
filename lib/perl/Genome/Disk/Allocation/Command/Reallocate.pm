@@ -9,9 +9,11 @@ use Carp 'confess';
 class Genome::Disk::Allocation::Command::Reallocate {
     is => 'Genome::Disk::Allocation::Command',
     has => [
-        allocation_id => {
-            is => 'Number',
-            doc => 'ID for allocation to be resized',
+        allocations => {
+            is => 'Genome::Disk::Allocation',
+            shell_args_position => 1,
+            doc => 'allocation(s) to reallocate, resolved by Genome::Command::Base',
+            is_many => 1,
         },
     ],
     has_optional => [
@@ -42,14 +44,31 @@ EOS
 
 sub execute {
     my $self = shift;
-    my %params;
-    $params{allocation_id} = $self->allocation_id;
-    $params{kilobytes_requested} = $self->kilobytes_requested if defined $self->kilobytes_requested;
-    my $rv = Genome::Disk::Allocation->reallocate(%params);
-    unless (defined $rv and $rv == 1) {
-        confess 'Could not reallocate allocation ' . $self->allocation_id;
+
+    my @allocations = $self->allocations;
+    
+    my @errors;
+    for my $allocation (@allocations) {
+        my %params;
+        $params{allocation_id} = $allocation->id;
+        $params{kilobytes_requested} = $self->kilobytes_requested if defined $self->kilobytes_requested;
+
+        my $transaction = UR::Context::Transaction->begin();
+        my $successful = Genome::Disk::Allocation->reallocate(%params);
+        
+        if ($successful) {
+            $self->status_message("Successfully reallocated (" . $allocation->__display_name__ . ").");
+            $transaction->commit();
+        }
+        else {
+            push @errors, "Failed to reallocate (" . $allocation->__display_name__ . "): $@.";
+            $transaction->rollback();
+        }
     }
-    return 1;
+
+    $self->display_summary_report(scalar(@allocations), @errors);
+
+    return !scalar(@errors);
 }
 
 1;

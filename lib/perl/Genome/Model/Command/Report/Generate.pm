@@ -6,6 +6,7 @@ use warnings;
 
 use Genome;
 
+require Genome::Model::Report;
 use Data::Dumper 'Dumper';
 use IO::Handle;
 
@@ -98,5 +99,3 @@ sub _save_report {
 
 1;
 
-#$HeadURL$
-#$Id$

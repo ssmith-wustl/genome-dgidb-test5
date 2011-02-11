@@ -115,6 +115,25 @@ sub valid_dt_tag {
     return $valid;
 }
 
+sub reheader {
+    my $header_file = shift || die;
+    my $original_bam = shift || die;
+    my $fixed_bam = shift || die;
+
+    my $input_header = IO::File->new($header_file);
+    my $input_reads  = IO::File->new("samtools view $original_bam |");
+    my $output_bam   = IO::File->new("| samtools view -o $fixed_bam -bS -");
+
+    while (my $line = $input_header->getline) {
+        $output_bam->print($line);
+    }
+    while (my $line = $input_reads->getline) {
+        $output_bam->print($line);
+    }
+
+    return 1;
+}
+
 sub repair_dt {
     my $in_bam = shift;
     (my $in_sam_h = $in_bam) =~ s/\.bam$/.sam.h/;
@@ -151,7 +170,8 @@ sub repair_dt {
         system("cat $in_sam_h | sed 's/$dt_tag/$new_dt_tag/' > $out_sam_h") && die;
     }
     print "Repairing bam...\n";
-    system("samtools reheader $out_sam_h $in_bam > $out_bam") && die;
+    #system("samtools reheader $out_sam_h $in_bam > $out_bam") && die;
+    reheader($out_sam_h, $in_bam, $out_bam) || die;
 
     print "Validating new bam...\n";
     my $in_bam_h_md5 = qx(samtools view -H $in_bam | grep -v DT: | md5sum);

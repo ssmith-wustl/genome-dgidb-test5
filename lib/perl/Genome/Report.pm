@@ -10,6 +10,7 @@ use Carp 'confess';
 use Data::Dumper 'Dumper';
 require File::Basename;
 use Storable;
+require XML::LibXML;
 
 class Genome::Report {
     is => 'UR::Object',
