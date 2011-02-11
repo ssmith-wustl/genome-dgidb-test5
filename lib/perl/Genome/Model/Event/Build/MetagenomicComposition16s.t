@@ -5,31 +5,11 @@ use warnings;
 
 use above 'Genome';
 
-use Genome::Model::MetagenomicComposition16s::Test;
+use Test::More;
 
-Genome::Model::Event::Build::MetagenomicComposition16s::Test->runtests;
+use_ok('Genome::Model::Event::Build::MetagenomicComposition16s') or die;
+is(Genome::Model::Event::Build::MetagenomicComposition16s->bsub_rusage, "-R 'span[hosts=1]'", 'Busb rusage');
 
+done_testing();
 exit;
-
-=pod
-
-=head1 Tests
-
-=head1 Disclaimer
-
- Copyright (C) 2010 Washington University Genome Sequencing Center
-
- This script is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
- License for more details.
-
-=head1 Author(s)
-
- Eddie Belter <ebelter@genome.wustl.edu>
-
-=cut
-
-#$HeadURL$
-#$Id$
 
