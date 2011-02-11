@@ -293,6 +293,9 @@ sub _create {
 
         # Make sure that the allocation doesn't infringe on the empty buffer required for each volume
         @volumes = grep { ($_->unallocated_kb - $_->reserve_size) > $kilobytes_requested } @volumes;
+        unless (@volumes) {
+            confess "No volumes of group $disk_group_name have enough space after excluding reserves to store $kilobytes_requested KB.";
+        }
 
         # Only allocate to the first MAX_VOLUMES retrieved
         my $max = @volumes > $MAX_VOLUMES ? $MAX_VOLUMES : @volumes;
