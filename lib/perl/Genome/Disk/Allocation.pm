@@ -94,9 +94,26 @@ our @APIPE_DISK_GROUPS = qw/
     info_genome_models
 /;
 
+# Dummy allocations (don't commit to db) still create files on the filesystem, and the tests/scripts/whatever
+# that make these allocations may not deallocate and clean up. Do so here.
+my @paths_to_remove;
+END {
+    remove_test_paths();
+}
+sub remove_test_paths {
+    for my $path (@paths_to_remove) {
+        Genome::Sys->remove_directory_tree($path) if -d $path;
+    }
+}
+
 # This generates a unique text ID for the object. The format is <hostname> <PID> <time in seconds> <some number>
 sub Genome::Disk::Allocation::Type::autogenerate_new_object_id {
     return $UR::Object::Type::autogenerate_id_base . ' ' . (++$UR::Object::Type::autogenerate_id_iter);
+}
+
+sub __display_name__ {
+    my $self = shift;
+    return $self->absolute_path;
 }
 
 # The allocation process should be done in a separate process to ensure it completes and commits quickly, since
@@ -112,10 +129,11 @@ sub create {
     # If no commit is on, the created object won't be retrievable via a get (since it will only live in the
     # child process' UR object cache). Just call the _create method directly and return
     if ($ENV{UR_DBI_NO_COMMIT}) {
-        return $class->_create(%params);
+        my $allocation = $class->_create(%params);
+        #push @paths_to_remove, $allocation->absolute_path;
+        return $allocation;
     }
 
-    $DB::single = 1;
     # Serialize hash and create allocation via system call to ensure commit occurs
     my $param_string = Genome::Utility::Text::hash_to_string(\%params);
     my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
@@ -368,7 +386,7 @@ sub _delete {
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Could not get lock on volume ' . $self->mount_path;
     }
-    my $volume = Genome::Disk::Volume->get(mount_path => $self->mount_path, disk_status => 'active');
+    my $volume = Genome::Disk::Volume->load(mount_path => $self->mount_path, disk_status => 'active');
     unless ($volume) {
         Genome::Sys->unlock_resource(resource_lock => $volume_lock);
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
@@ -439,7 +457,7 @@ sub _reallocate {
         confess 'Could not get lock on volume ' . $self->mount_path;
     }
 
-    my $volume = Genome::Disk::Volume->get(mount_path => $self->mount_path, disk_status => 'active');
+    my $volume = Genome::Disk::Volume->load(mount_path => $self->mount_path, disk_status => 'active');
     unless ($volume) {
         Genome::Sys->unlock_resource(resource_lock => $volume_lock);
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);

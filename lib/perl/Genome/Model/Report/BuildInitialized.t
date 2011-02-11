@@ -5,31 +5,16 @@ use warnings;
 
 use above 'Genome';
 
-use Genome::Model::Report::Test;
+use Test::More;
 
-Genome::Model::Report::BuildInitialized::Test->runtests;
+my $build = Genome::Model::Build->get(107664200); # build for apipe-test-03-MC16s
+ok($build, 'Got MC16s build') or die;
 
+my $generator = Genome::Model::Report::BuildInitialized->create(build_id => $build->id);
+ok($generator, 'create');
+my $report = $generator->generate_report;
+ok($report, 'generate report');
+
+done_testing();
 exit;
-
-=pod
-
-=head1 Tests
-
-=head1 Disclaimer
-
- Copyright (C) 2006 Washington University Genome Sequencing Center
-
- This script is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
- License for more details.
-
-=head1 Author(s)
-
- Eddie Belter <ebelter@watson.wustl.edu>
-
-=cut
-
-#$HeadURL$
-#$Id$
 
