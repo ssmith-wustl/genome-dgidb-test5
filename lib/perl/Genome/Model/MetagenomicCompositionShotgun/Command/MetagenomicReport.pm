@@ -122,6 +122,21 @@ sub execute {
     if (-e $refcov_output and -e "$refcov_output.ok"){
         $self->status_message("Refcov already complete, shortcutting");
     }else{
+#        my $command = "gmt5.12.1 ref-cov standard";
+#        $command .= " --alignment-file-path ".$sorted_bam;
+#        $command .= " --roi-file-path ".$self->regions_file;
+#        $command .= " --stats-file ".$refcov_output;
+#
+#        my $rv = system($command);
+#        if ($rv){
+#            die $self->error_message("refcov command died with error code $rv");
+#        }
+#        unless ( -e $refcov_output ){
+#            die $self->error_message("expected refcov output file $refcov_output does not exist");
+#        }
+#        
+#        $self->status_message("refcov completed successfully, stats file: $refcov_output");
+
         my $refcov = Genome::Model::Tools::MetagenomicCompositionShotgun::RefCovTool->create(
             working_directory => $self->report_dir,
             aligned_bam_file => $sorted_bam,
