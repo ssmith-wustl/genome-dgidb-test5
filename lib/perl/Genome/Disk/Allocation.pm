@@ -94,6 +94,18 @@ our @APIPE_DISK_GROUPS = qw/
     info_genome_models
 /;
 
+# Dummy allocations (don't commit to db) still create files on the filesystem, and the tests/scripts/whatever
+# that make these allocations may not deallocate and clean up. Do so here.
+my @paths_to_remove;
+END {
+    remove_test_paths();
+}
+sub remove_test_paths {
+    for my $path (@paths_to_remove) {
+        Genome::Sys->remove_directory_tree($path) if -d $path;
+    }
+}
+
 # This generates a unique text ID for the object. The format is <hostname> <PID> <time in seconds> <some number>
 sub Genome::Disk::Allocation::Type::autogenerate_new_object_id {
     return $UR::Object::Type::autogenerate_id_base . ' ' . (++$UR::Object::Type::autogenerate_id_iter);
@@ -112,10 +124,11 @@ sub create {
     # If no commit is on, the created object won't be retrievable via a get (since it will only live in the
     # child process' UR object cache). Just call the _create method directly and return
     if ($ENV{UR_DBI_NO_COMMIT}) {
-        return $class->_create(%params);
+        my $allocation = $class->_create(%params);
+        #push @paths_to_remove, $allocation->absolute_path;
+        return $allocation;
     }
 
-    $DB::single = 1;
     # Serialize hash and create allocation via system call to ensure commit occurs
     my $param_string = Genome::Utility::Text::hash_to_string(\%params);
     my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
@@ -210,13 +223,13 @@ sub _create {
     unless ($owner_class_name->__meta__) {
         confess "Could not find meta information for owner class $owner_class_name, make sure this class exists!";
     }
-    unless ($class->check_kb_requested($kilobytes_requested)) {
+    unless ($class->_check_kb_requested($kilobytes_requested)) {
         confess 'Kilobytes requested is not valid!';
     }
-    unless ($class->verify_no_parent_allocation($allocation_path)) {
+    unless ($class->_verify_no_parent_allocation($allocation_path)) {
         confess "Parent allocation found for $allocation_path";
     }
-    unless ($class->verify_no_child_allocations($allocation_path)) {
+    unless ($class->_verify_no_child_allocations($allocation_path)) {
         confess "Child allocation found for $allocation_path!";
     }
     unless (grep { $disk_group_name eq $_ } @APIPE_DISK_GROUPS) {
@@ -239,7 +252,7 @@ sub _create {
         confess "Could not get volume with mount path $mount_path" unless $volume;
 
         # FIXME Temporarily use LIMS style locking, uses a select for update
-        $class->select_volume_for_update($volume->id);
+        $class->_select_volume_for_update($volume->id);
 
         unless (grep { $_ eq $disk_group_name } $volume->disk_group_names) {
             confess "Volume with mount path $mount_path is not in supplied group $disk_group_name!";
@@ -260,7 +273,7 @@ sub _create {
     # at a time instead of all of them.
     else {
         # FIXME Temporarily using LIMS style locking, uses a select for update
-        $class->select_group_for_update($group->id);
+        $class->_select_group_for_update($group->id);
 
         my @volumes = Genome::Disk::Volume->get(
             disk_group_names => $disk_group_name,
@@ -295,7 +308,7 @@ sub _create {
         # Pick a random volume from the list of candidates and try to lock it
         my $index = int(rand(@candidate_volumes));
         my $candidate_volume = $candidate_volumes[$index];
-        my $lock = $class->get_volume_lock($candidate_volume->mount_path);
+        my $lock = $class->_get_volume_lock($candidate_volume->mount_path);
         next unless defined $lock;
 
         # Reload volume, if anything has changed restart (there's a small window between looking at the volume
@@ -334,9 +347,9 @@ sub _create {
     $self->status_message("Allocation " . $self->id . " created at " . $self->absolute_path);
 
     # Add commit hooks to unlock and create directory (in that order)
-    $class->create_observer(
-        $class->unlock_closure($volume_lock), 
-        $class->create_directory_closure($self->absolute_path),
+    $class->_create_observer(
+        $class->_unlock_closure($volume_lock), 
+        $class->_create_directory_closure($self->absolute_path),
     );
     return $self;
 }
@@ -350,7 +363,7 @@ sub _delete {
     }
 
     # Lock and retrieve allocation
-    my $allocation_lock = $class->get_allocation_lock($id);
+    my $allocation_lock = $class->_get_allocation_lock($id);
     confess 'Could not get lock for allocation ' . $id unless defined $allocation_lock;
 
     my $self = $class->get($id);
@@ -363,12 +376,12 @@ sub _delete {
     $self->status_message("Beginning deallocation process for allocation " . $self->id);
 
     # Lock and retrieve volume
-    my $volume_lock = $self->get_volume_lock($self->mount_path);
+    my $volume_lock = $self->_get_volume_lock($self->mount_path);
     unless ($volume_lock) {
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Could not get lock on volume ' . $self->mount_path;
     }
-    my $volume = Genome::Disk::Volume->get(mount_path => $self->mount_path, disk_status => 'active');
+    my $volume = Genome::Disk::Volume->load(mount_path => $self->mount_path, disk_status => 'active');
     unless ($volume) {
         Genome::Sys->unlock_resource(resource_lock => $volume_lock);
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
@@ -376,17 +389,17 @@ sub _delete {
     }
 
     # FIXME Lock volume using old LIMS style, this is temporary
-    $self->select_volume_for_update($volume->id);
+    $self->_select_volume_for_update($volume->id);
 
     # Update
     $volume->unallocated_kb($volume->unallocated_kb + $self->kilobytes_requested);
     $self->SUPER::delete;
 
     # Add commit hooks to remove locks, mark for deletion, and deletion
-    $class->create_observer(
-        $class->unlock_closure($volume_lock, $allocation_lock),
-        $class->mark_for_deletion_closure($absolute_path),
-        $class->remove_directory_closure($absolute_path),
+    $class->_create_observer(
+        $class->_unlock_closure($volume_lock, $allocation_lock),
+        $class->_mark_for_deletion_closure($absolute_path),
+        $class->_remove_directory_closure($absolute_path),
     );
     return 1;
 }
@@ -402,7 +415,7 @@ sub _reallocate {
     }
 
     # Lock and retrieve allocation
-    my $allocation_lock = $class->get_allocation_lock($id);
+    my $allocation_lock = $class->_get_allocation_lock($id);
     confess "Could not get lock on allocation $id" unless defined $allocation_lock;
 
     my $self = $class->get($id);
@@ -415,7 +428,7 @@ sub _reallocate {
 
     # Either check the new size (if given) or get the current size of the allocation directory
     if (defined $kilobytes_requested) {
-        unless ($self->check_kb_requested($kilobytes_requested)) {
+        unless ($self->_check_kb_requested($kilobytes_requested)) {
             Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
             confess 'Kilobytes requested not valid!';
         }
@@ -433,13 +446,13 @@ sub _reallocate {
     $self->status_message("Resizing from " . $self->kilobytes_requested . " kb to $kilobytes_requested kb (changed by $diff)"); 
 
     # Lock and retrieve volume
-    my $volume_lock = $self->get_volume_lock($self->mount_path);
+    my $volume_lock = $self->_get_volume_lock($self->mount_path);
     unless (defined $volume_lock) {
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Could not get lock on volume ' . $self->mount_path;
     }
 
-    my $volume = Genome::Disk::Volume->get(mount_path => $self->mount_path, disk_status => 'active');
+    my $volume = Genome::Disk::Volume->load(mount_path => $self->mount_path, disk_status => 'active');
     unless ($volume) {
         Genome::Sys->unlock_resource(resource_lock => $volume_lock);
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
@@ -447,10 +460,10 @@ sub _reallocate {
     }
 
     # FIXME Get LIMS style lock, this is temporary
-    $self->select_volume_for_update($volume->id);
+    $self->_select_volume_for_update($volume->id);
 
     # Make sure there's room for the allocation... only applies if the new allocation is bigger than the old
-    unless ($volume->unallocated_kb >= $diff) {
+    if ($diff > 0 and $volume->unallocated_kb < $diff) {
         Genome::Sys->unlock_resource(resource_lock => $volume_lock);
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Not enough unallocated space on volume ' . $volume->mount_path . " to increase allocation size by $diff kb";
@@ -460,12 +473,12 @@ sub _reallocate {
     $self->kilobytes_requested($kilobytes_requested);
     $volume->unallocated_kb($volume->unallocated_kb - $diff);
 
-    $class->create_observer($class->unlock_closure($volume_lock, $allocation_lock));
+    $class->_create_observer($class->_unlock_closure($volume_lock, $allocation_lock));
     return 1;
 }
 
 # Creates an observer that executes the supplied closures
-sub create_observer {
+sub _create_observer {
     my ($class, @closures) = @_;
     my $observer;
     my $callback = sub {
@@ -488,7 +501,7 @@ sub create_observer {
 }
 
 # Returns a closure that removes the given locks 
-sub unlock_closure {
+sub _unlock_closure {
     my ($class, @locks) = @_;
     return sub {
         for my $lock (@locks) {
@@ -499,7 +512,7 @@ sub unlock_closure {
 }
 
 # Returns a closure that creates a directory at the given path
-sub create_directory_closure {
+sub _create_directory_closure {
     my ($class, $path) = @_;
     return sub {
         # This method currently returns the path if it already exists instead of failing
@@ -515,7 +528,7 @@ sub create_directory_closure {
 }
 
 # Returns a closure that removes the given directory
-sub remove_directory_closure {
+sub _remove_directory_closure {
     my ($class, $path) = @_;
     return sub {
         if (-d $path and not $ENV{UR_DBI_NO_COMMIT}) {
@@ -530,7 +543,7 @@ sub remove_directory_closure {
 
 # Make a file at the root of the allocation directory indicating that the allocation is gone,
 # which makes it possible to figure out which directories should have been deleted but failed.
-sub mark_for_deletion_closure {
+sub _mark_for_deletion_closure {
     my ($class, $path) = @_;
     return sub {
         if (-d $path) {
@@ -541,20 +554,20 @@ sub mark_for_deletion_closure {
 }
 
 # Class method for determining if the given path has a parent allocation
-sub verify_no_parent_allocation {
+sub _verify_no_parent_allocation {
     my ($class, $path) = @_;
     my ($allocation) = $class->get(allocation_path => $path);
     return 0 if $allocation;
 
     my $dir = File::Basename::dirname($path);
     if ($dir ne '.' and $dir ne '/') {
-        return $class->verify_no_parent_allocation($dir);
+        return $class->_verify_no_parent_allocation($dir);
     }
     return 1;
 }
 
 # Checks for allocations beneath this one, which is also invalid
-sub verify_no_child_allocations {
+sub _verify_no_child_allocations {
     my ($class, $path) = @_;
     my ($allocation) = $class->get('allocation_path like' => $path . '%');
     return 0 if $allocation;
@@ -562,7 +575,7 @@ sub verify_no_child_allocations {
 }
 
 # Makes sure the supplied kb amount is valid
-sub check_kb_requested {
+sub _check_kb_requested {
     my ($class, $kb) = @_;
     return 0 unless defined $kb;
     return 0 if $kb < $MINIMUM_ALLOCATION_SIZE;
@@ -571,7 +584,7 @@ sub check_kb_requested {
 
 # FIXME This emulates the old style locking for allocations, which uses select for update. This can
 # be phased out as soon as I'm sure that the new style is being used everywhere
-sub select_group_for_update {
+sub _select_group_for_update {
     my ($class, $group_id) = @_;
     return 1 if $ENV{UR_DBI_NO_COMMIT};
     Genome::DataSource::Oltp->get_default_dbh->do(
@@ -584,14 +597,14 @@ sub select_group_for_update {
 }
 
 # FIXME Same as above method, but locks the volume instead of the group
-sub select_volume_for_update {
+sub _select_volume_for_update {
     my ($class, $volume_id) = @_;
     return 1 if $ENV{UR_DBI_NO_COMMIT};
     Genome::DataSource::Oltp->get_default_dbh->do("select * from disk_volume where dv_id = $volume_id for update");
     return 1;
 }
 
-sub get_volume_lock {
+sub _get_volume_lock {
     my ($class, $mount_path) = @_;
     my $modified_mount = $mount_path;
     $modified_mount =~ s/\//_/g;
@@ -603,7 +616,7 @@ sub get_volume_lock {
     return $volume_lock;
 }
 
-sub get_allocation_lock {
+sub _get_allocation_lock {
     my ($class, $id) = @_;
     my $allocation_lock = Genome::Sys->lock_resource(
         resource_lock => '/gsc/var/lock/allocation/allocation_' . join('_', split(' ', $id)),
@@ -611,6 +624,11 @@ sub get_allocation_lock {
         block_sleep => 1,
     );
     return $allocation_lock;
+}
+
+sub get_actual_disk_usage {
+    my $self = shift;
+    return Genome::Sys->disk_usage_for_path($self->absolute_path);
 }
 
 1;

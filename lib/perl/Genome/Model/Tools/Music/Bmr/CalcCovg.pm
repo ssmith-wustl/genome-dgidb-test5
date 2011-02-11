@@ -13,7 +13,7 @@ class Genome::Model::Tools::Music::Bmr::CalcCovg {
     ref_seq => { is => 'Text', doc => "Path to reference sequence in FASTA format" },
     bam_list => { is => 'Text', doc => "Tab delimited list of BAM files [sample_name normal_bam tumor_bam] (See Description)" },
     output_dir => { is => 'Text', doc => "Directory where output files will be written" },
-    cmd_list => { is => 'Text', doc => "A file to write calcRoiCovg commands to (See Description)", is_optional => 1 },
+    cmd_list_file => { is => 'Text', doc => "A file to write calcRoiCovg commands to (See Description)", is_optional => 1 },
     cmd_prefix => { is => 'Text', doc => "A command that submits a job to your cluster (See Description)", is_optional => 1 },
     normal_min_depth => { is => 'Integer', doc => "The minimum read depth to consider a Normal BAM base as covered", is_optional => 1, default => 6 },
     tumor_min_depth => { is => 'Integer', doc => "The minimum read depth to consider a Tumor BAM base as covered", is_optional => 1, default => 8 },
@@ -28,21 +28,22 @@ sub help_brief {
 sub help_detail {
   return <<HELP;
 This script counts bases with sufficient coverage in the ROIs of each gene in the given pairs of
-tumor-normal BAM files and categorizes them into - AT, CG (non-CpG), and CpG counts. It also
-counts the categorized totals across all ROIs for each sample, where covered bases that lie within
-overlapping ROIs are not counted more than once.
+tumor-normal BAM files and categorizes them into - AT, CG (non-CpG), and CpG counts. It also adds
+up these base-counts across all ROIs of each gene for each sample, but covered bases that lie
+within overlapping ROIs are not counted more than once towards these total counts.
 
-By default, this script runs calcRoiCovg for each sample one after another, taking ~30 mins per
-sample to generate per-ROI covered base counts. If the per-ROI covered base count for a sample
-already exists in the output subdirectory roi_covgs, re-calculation is skipped. This allows you to
-run your own calcRoiCovg jobs in parallel on a cluster or on multiple machines. Keep reading.
+By default, this script runs a C-based tool named calcRoiCovg for each sample one after another,
+taking ~30 mins per sample to generate per-ROI covered base counts. If the results of calcRoiCovg
+for a sample already exists in the output subdirectory roi_covgs, re-calculation is skipped. This
+allows you to run your own calcRoiCovg jobs in parallel or on multiple machines (Keep reading).
 
-Running on a cluster:
+Speed things up by running calcRoiCovg jobs in parallel:
 If a compute cluster or multiple machines are available, run this script twice as follows:
-- Define cmd-list (and optionally cmd-prefix) to generate a file with commands that you can submit
-  to a cluster. These jobs will generate per-ROI base counts in a subdirectory roi_covgs.
+- Define a cmd-list-file and cmd-prefix to generate a file with commands that can be submit to a
+  cluster or run manually. These jobs will write per-ROI base counts in a subdirectory roi_covgs.
 - After all the parallelized calcRoiCovg jobs are completed, run this script again to add them up
-  and generate the final per-gene base counts in a subdirectory gene_covgs.
+  and generate the final per-gene base counts in a subdirectory gene_covgs. Remember to remove the
+  cmd-list-file and cmd-prefix arguments or you will just be re-creating a list of commands.
 
 ARGUMENTS:
 --roi-file
@@ -70,16 +71,16 @@ ARGUMENTS:
   gene_covgs: Subdirectory containing per-gene covered base counts for each sample.
   total_covgs: File containing the overall non-overlapping coverages per sample.
 
---cmd-list
+--cmd-list-file
   If a compute cluster is available, specify a file into which a list of calcRoiCovg jobs will be
   written to. These can be scheduled in parallel, and will write per-ROI coverages into the output
-  directory roi_covgs. If cmd-list is left unspecified, this script runs calcRoiCovg for each
+  directory roi_covgs. If cmd-list-file is left unspecified, this script runs calcRoiCovg for each
   sample one after another, taking ~30 mins per sample, unless the per-ROI coverage already exists
   in the output directory roi_covgs.
 
 --cmd-prefix
-  Specify a job submission command that will be prefixed to each job command in cmd-list. This
-  makes batch submission easier - Just run the cmd-list file as a shell script to submit jobs.
+  Specify a job submission command that will be prefixed to each job command in cmd-list-file. This
+  makes batch submission easier - Just run the cmd-list-file file as a shell script to submit jobs.
   cmd-prefix is "bsub" if your cluster uses the LSF job scheduler, or "qsub" in Torque. Add
   arguments as necessary. For example, "bsub -M 4GB" sets a soft memory limit of 4GB.
 HELP
@@ -92,7 +93,7 @@ sub execute {
   my $ref_seq = $self->ref_seq;
   my $bam_list = $self->bam_list;
   my $output_dir = $self->output_dir;
-  my $cmd_list = $self->cmd_list;
+  my $cmd_list = $self->cmd_list_file;
   my $cmd_prefix = $self->cmd_prefix;
   my $normal_min_depth = $self->normal_min_depth;
   my $tumor_min_depth = $self->tumor_min_depth;

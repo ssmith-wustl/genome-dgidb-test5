@@ -22,7 +22,8 @@ my $bam_input = $test_dir . '/alignments/102922275_merged_rmdup.bam';
 # Updated to .v5 due to additional column in Varscan
 # Updated to .v6 due to the addition of quality and natural sort order to bed file output 
 # Updated to .v7 due to the addition of read depth
-my $expected_dir = $test_dir . '/expected.v7/';
+# Updated to .v8 due to directory structure changes
+my $expected_dir = $test_dir . '/expected.v8/';
 ok(-d $expected_dir, "expected results directory exists");
 
 my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get(type_name => 'imported reference sequence', name => 'NCBI-human-build36');

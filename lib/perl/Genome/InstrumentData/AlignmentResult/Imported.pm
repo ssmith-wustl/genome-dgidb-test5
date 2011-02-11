@@ -24,7 +24,7 @@ sub required_rusage {
 
 # No need to extract fastqs & run aligner
 
-sub extract_fastqs_and_run_aligner {
+sub collect_inputs_and_run_aligner {
     return 1;
 }
 

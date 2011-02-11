@@ -68,7 +68,7 @@ sub help_synopsis {
     return <<"EOS"
 gmt detect-variants2 dispatcher ...
 EOS
-} #TODO Fill in this synopsis with a few examples
+} #TODO Fill in this synopsis with a few examples. Possible examples are shown in the processing profile create help
 
 sub help_detail {
     return <<EOS 
@@ -76,7 +76,7 @@ A variant detector(s) specified under snv-detection-strategy, indel-detection-st
 EOS
 }
 
-
+# Validate all strategies specified upon object creation
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
@@ -102,6 +102,7 @@ sub _generate_standard_files {
     return 1;
 }
 
+# Takes all of the strategies specified and uses G::M::T::DV2::Strategy to turn them into a traversable hash containing the complete action plan to detect variants
 sub plan {
     my $self = shift;
 
@@ -122,6 +123,7 @@ sub plan {
     return ($trees, $plan);
 }
 
+# Detect variants using all input detection strategies. Generates a workflow to do all of the work and executes it, storing the result in $self->_workflow_result
 sub _detect_variants {
     my $self = shift;
 
@@ -141,11 +143,14 @@ sub _detect_variants {
     $input->{aligned_reads_input}= $self->aligned_reads_input;
     $input->{control_aligned_reads_input} = $self->control_aligned_reads_input;
     $input->{reference_sequence_input} = $self->reference_sequence_input;
-    $input->{output_directory} = $self->_temp_staging_directory;#$self->output_directory;
+    $input->{output_directory} = $self->_temp_staging_directory;
    
     $self->_dump_workflow($workflow);
 
     $self->status_message("Now launching the dispatcher workflow.");
+
+    ## Worklow launches here
+
     my $result = Workflow::Simple::run_workflow_lsf( $workflow, %{$input});
 
     unless($result){
@@ -156,48 +161,7 @@ sub _detect_variants {
     return 1;
 }
 
-sub set_output_files {
-    my $self = shift;
-    my $result = shift;
-
-    if(defined( $self->snv_detection_strategy)){
-        my $snv_output_directory = $self->get_relative_path_to_output_directory($result->{snv_output_directory});
-        unless($snv_output_directory){
-            $self->error_message("No SNV output directory: ".$snv_output_directory."  was returned from the workflow. Workflow DID return: ".Data::Dumper::Dumper($result));
-            die $self->error_message;
-        }
-        my $snv_hq_output_dir = $self->output_directory."/".$snv_output_directory; #FIXME complications arise here when we have just a single column file... or other stuff. May just need to drop the version, too?
-        my $snv_file = readlink($snv_hq_output_dir."/snvs.hq.bed");
-        my $snv_hq_output_file = $snv_hq_output_dir . "/". $snv_file;
-        $self->snv_hq_output_file($snv_hq_output_file);
-    }
-    if(defined( $self->indel_detection_strategy)){
-        my $indel_output_directory = $self->get_relative_path_to_output_directory($result->{indel_output_directory});
-        unless($indel_output_directory){
-            $self->error_message("No SNV output directory: ".$indel_output_directory."  was returned from the workflow. Workflow DID return: ".Data::Dumper::Dumper($result));
-            die $self->error_message;
-        }
-        my $indel_hq_output_dir = $self->output_directory."/".$indel_output_directory; #FIXME complications arise here when we have just a single column file... or other stuff. May just need to drop the version, too?
-        my $indel_file = readlink($indel_hq_output_dir."/indels.hq.bed");
-        my $indel_hq_output_file = $indel_hq_output_dir . "/". $indel_file;
-        $self->indel_hq_output_file($indel_hq_output_file);
-    }   
-
-    if(defined( $self->sv_detection_strategy)){
-        my $sv_output_directory = $self->get_relative_path_to_output_directory($result->{sv_output_directory});
-        unless($sv_output_directory){
-            $self->error_message("No SNV output directory: ".$sv_output_directory."  was returned from the workflow. Workflow DID return: ".Data::Dumper::Dumper($result));
-            die $self->error_message;
-        }
-        my $sv_hq_output_dir = $self->output_directory."/".$sv_output_directory; #FIXME complications arise here when we have just a single column file... or other stuff. May just need to drop the version, too?
-        my $sv_file = readlink($sv_hq_output_dir."/svs.hq.bed");
-        my $sv_hq_output_file = $sv_hq_output_dir . "/". $sv_file;
-        $self->sv_hq_output_file($sv_hq_output_file);
-    }   
-
-    return 1;
-}
-
+# Dump the workflow generated to xml in the output directory
 sub _dump_workflow {
     my $self = shift;
     my $workflow = shift;
@@ -206,7 +170,7 @@ sub _dump_workflow {
     my $xml_file = Genome::Sys->open_file_for_writing($xml_location);
     print $xml_file $xml;
     $xml_file->close;
-    #$workflow->as_png($self->output_directory."/workflow.png");
+    #$workflow->as_png($self->output_directory."/workflow.png"); currently commented out because blades do not all have the "dot" library to use graphviz
 }
 
 sub get_relative_path_to_output_directory {
@@ -225,8 +189,6 @@ sub calculate_operation_output_directory {
     
     return $base_directory . '/' . Genome::Utility::Text::sanitize_string_for_filesystem($subdirectory);
 }
-
-
 
 sub parse_detection_strategy {
     my $self = shift;
@@ -347,6 +309,7 @@ sub walk_tree {
     #Case Two: Otherwise the key should be the a detector specification hash, 
 }
 
+# Create the outer workflow and then call methods to generate the individual operations
 sub generate_workflow {
     my $self = shift;
     my ($trees, $plan) = @_;
@@ -382,7 +345,7 @@ sub generate_workflow {
     return $workflow_model;
 }
 
-# TODO rename this, or make it return the operations to be added instead of adding them itself
+# FIXME rename this, or make it return the operations to be added instead of adding them itself
 sub generate_workflow_operation { 
     my $self = shift;
     my $detector_hash = shift;
@@ -426,7 +389,8 @@ sub generate_workflow_operation {
 
                 # add links for properties which every operation has from input_connector to each operation
                 for my $op ($detector_operation, map{$_->{operation} } @filters){
-                    for my $property ( 'reference_sequence_input', 'aligned_reads_input', 'control_aligned_reads_input') {
+                    my @properties_to_each_operation =  ( 'reference_sequence_input', 'aligned_reads_input', 'control_aligned_reads_input');
+                    for my $property ( @properties_to_each_operation) {
                          $workflow_model->add_link(
                             left_operation => $workflow_model->get_input_connector,
                             left_property => $property,
@@ -456,8 +420,7 @@ sub generate_workflow_operation {
                 $inputs_to_store->{$unique_detector_base_name."_output_directory"}->{right_operation} = $detector_operation;
                 
                 # adding in links from input_connector to filters to the hash
-                for my $index (0..(scalar(@filters)-1)){
-                    my $filter = $filters[$index];
+                for my $filter (@filters){
                     my $fname = $filter->{name};
                     my $fversion = $filter->{version};
                     my $fparams = $filter->{params};
@@ -471,6 +434,10 @@ sub generate_workflow_operation {
                     $inputs_to_store->{$unique_filter_name."_output_directory"}->{value} = $filter_output_directory;
                     $inputs_to_store->{$unique_filter_name."_output_directory"}->{right_property_name} = 'output_directory';
                     $inputs_to_store->{$unique_filter_name."_output_directory"}->{right_operation} = $filter->{operation};
+
+                    $inputs_to_store->{$unique_filter_name."_detector_directory"}->{value} = $detector_output_directory;
+                    $inputs_to_store->{$unique_filter_name."_detector_directory"}->{right_property_name} = 'detector_directory';
+                    $inputs_to_store->{$unique_filter_name."_detector_directory"}->{right_operation} = $filter->{operation};
                 }
                 
                 # use the hash keys, which are input_connector property names, to add the links to the workflow
@@ -543,6 +510,8 @@ sub generate_workflow_operation {
     return $workflow_model;
 }
 
+# Set the tempdir environment variable to the dispatchers output directory. This is done so that all detectors and filters run by the dispatcher will base their temp directories in the dispatchers directory
+# We do this in order that our temp dirs are on network accessible disk, in order that detectors and filters may write their results into it
 sub _create_temp_directories {
     my $self = shift;
 
@@ -551,6 +520,7 @@ sub _create_temp_directories {
     return $self->SUPER::_create_temp_directories(@_);
 }
 
+# After promoting staged data as per normal, create a symlink from the final output files to the top level of the dispatcher output directory
 sub _promote_staged_data {
     my $self = shift;
     my $staging_dir = $self->_temp_staging_directory;
@@ -559,30 +529,46 @@ sub _promote_staged_data {
         $self->error_message("_promote_staged_data failed in Dispatcher");
         die $self->error_message;
     }
+
+    # This sifts the workflow results for relative paths to output files, and places them in the appropriate params
     $self->set_output_files($self->_workflow_result);
-    if(defined($self->snv_hq_output_file)){
-        my $file = $self->snv_hq_output_file;
-        my @subdirs = split( "/", $file );
-        my $output_file = $subdirs[-1];
-        my $output = "$output_dir/$output_file";
-        Genome::Sys->create_symlink($file,$output);
-        $self->snv_hq_output_file($output);
+
+    # Symlink the most recent version bed files of the final hq calls into the base of the output directory
+    for my $variant_type (@{$self->variant_types}){
+        my $output_accessor = $variant_type."_hq_output_file";
+        if(defined($self->$output_accessor)){
+            my $file = $self->$output_accessor;
+            my @subdirs = split( "/", $file );
+            my $output_file = $subdirs[-1];
+            my $output = "$output_dir/$output_file";
+            Genome::Sys->create_symlink($file,$output);
+            $self->$output_accessor($output);
+        }
     }
-    if(defined($self->sv_hq_output_file)){
-        my $file = $self->sv_hq_output_file;
-        my @subdirs = split( "/", $file );
-        my $output_file = $subdirs[-1];
-        my $output = "$output_dir/$output_file";
-        Genome::Sys->create_symlink($file,$output);
-        $self->sv_hq_output_file($output);
-    }
-    if(defined($self->indel_hq_output_file)){
-        my $file = $self->indel_hq_output_file;
-        my @subdirs = split( "/", $file );
-        my $output_file = $subdirs[-1];
-        my $output = "$output_dir/$output_file";
-        Genome::Sys->create_symlink($file,$output);
-        $self->indel_hq_output_file($output);
+
+    return 1;
+}
+
+# for each strategy input we look in the workflow result for output_directories which we then turn into relative paths, and then into final full paths
+sub set_output_files {
+    my $self = shift;
+    my $result = shift;
+
+    for my $variant_type (@{$self->variant_types}){
+        my $file_accessor = $variant_type."_hq_output_file";
+        my $strategy = $variant_type."_detection_strategy";
+        my $out_dir = $variant_type."_output_directory";
+        if(defined( $self->$strategy)){
+            my $relative_path = $self->get_relative_path_to_output_directory($result->{$out_dir});
+            unless($relative_path){
+                $self->error_message("No ".$variant_type." output directory. Workflow returned: ".Data::Dumper::Dumper($result));
+                die $self->error_message;
+            }
+            my $hq_output_dir = $self->output_directory."/".$relative_path; #FIXME complications arise here when we have just a single column file... or other stuff. May just need to drop the version, too?
+            my $file = readlink($hq_output_dir."/".$variant_type."s.hq.bed"); # Should look like "dir/snvs_hq.bed" 
+            my $hq_output_file = $hq_output_dir . "/". $file;
+            $self->$file_accessor($hq_output_file);
+        }
     }
     return 1;
 }
