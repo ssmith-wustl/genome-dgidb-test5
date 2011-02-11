@@ -640,7 +640,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
 
     my @new_models;
 
-    my $model_name = $subject->name . '.' . $processing_profile->name;
+    my $model_name = $subject->name . '.prod';
 
     my $capture_target;
 
