@@ -111,6 +111,11 @@ sub Genome::Disk::Allocation::Type::autogenerate_new_object_id {
     return $UR::Object::Type::autogenerate_id_base . ' ' . (++$UR::Object::Type::autogenerate_id_iter);
 }
 
+sub __display_name__ {
+    my $self = shift;
+    return $self->absolute_path;
+}
+
 # The allocation process should be done in a separate process to ensure it completes and commits quickly, since
 # locks on allocations and volumes persist until commit completes. To make this invisible to everyone, the
 # create/delete/reallocate methods perform the system calls that execute _create/_delete/_reallocate methods.
