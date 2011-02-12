@@ -19,3 +19,6 @@
 [submodule "varscan"]
 	path = varscan
 	url = ssh://git//srv/git/varscan.git
+[submodule "tigra-sv"]
+	path = tigra-sv
+	url = ssh://git//srv/git/tigra-sv.git
