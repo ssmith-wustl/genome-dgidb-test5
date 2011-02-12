@@ -176,7 +176,7 @@ sub _dump_workflow {
     my $xml_file = Genome::Sys->open_file_for_writing($xml_location);
     print $xml_file $xml;
     $xml_file->close;
-    $workflow->as_png($self->output_directory."/workflow.png"); #currently commented out because blades do not all have the "dot" library to use graphviz
+    #$workflow->as_png($self->output_directory."/workflow.png"); #currently commented out because blades do not all have the "dot" library to use graphviz
 }
 
 sub get_relative_path_to_output_directory {
@@ -432,7 +432,16 @@ sub create_combine_operation {
     my $combine_operation = $workflow_model->add_operation(
         name => join(" ",($variant_type,$operation_type, $links->[0], $links->[1])),
         operation_type => Workflow::OperationType::Command->get($class),
-    );
+        );
+    my @properties_to_each_operation =  ( 'reference_sequence_input', 'aligned_reads_input', 'control_aligned_reads_input');
+    for my $property ( @properties_to_each_operation) {
+        $workflow_model->add_link(
+                left_operation => $workflow_model->get_input_connector,
+                left_property => $property,
+                right_operation => $combine_operation,
+                right_property => $property,
+                );
+    }
     my $left_operation = $workflow_links->{$input_a_last_op_name."_output_directory"}->{right_operation};
     $workflow_model->add_link(
         left_operation => $left_operation,
@@ -452,6 +461,21 @@ sub create_combine_operation {
     $workflow_links->{$unique_combine_name."_output_directory"}->{right_property_name} = 'output_directory';
     $workflow_links->{$unique_combine_name."_output_directory"}->{right_operation} = $combine_operation;
     $workflow_links->{$unique_combine_name."_output_directory"}->{last_operation} = $unique_combine_name;
+
+    my @new_input_connector_properties = ($unique_combine_name."_output_directory");
+    my $input_connector = $workflow_model->get_input_connector;
+    my $input_connector_properties = $input_connector->operation_type->output_properties;
+    push @{$input_connector_properties}, @new_input_connector_properties;
+    $input_connector->operation_type->output_properties($input_connector_properties);
+
+    #if(defined($self->_workflow_inputs)){
+    #    %workflow_inputs = ( %{$self->_workflow_inputs}, %{$workflow_links});
+    #}
+    #else {
+    #    %workflow_inputs = %{$workflow_links};
+    #}
+
+    $self->_workflow_inputs($workflow_links); 
 
     $self->_workflow_links($workflow_links);
     $self->_workflow_model($workflow_model);
