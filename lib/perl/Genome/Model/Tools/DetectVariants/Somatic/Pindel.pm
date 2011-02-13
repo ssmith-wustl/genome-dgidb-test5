@@ -112,7 +112,7 @@ class Genome::Model::Tools::DetectVariants::Somatic::Pindel {
     # Make workflow choose 64 bit blades
     has_param => [
         lsf_queue => {
-            default_value => 'tcga'
+            default_value => 'long'
         }, 
         lsf_resource => {
             default_value => "-M 16000000 -R 'select[type==LINUX64 && mem>16000] rusage[mem=16000]'",

@@ -21,9 +21,7 @@ sub Genome::Model::MetagenomicComposition16s::Command::Tester::execute {
 }
 
 # model
-my $model = Genome::Model::MetagenomicComposition16s::Test->get_mock_model(
-    sequencing_platform => 'sanger',
-);
+my $model = Genome::Model::MetagenomicComposition16s::Test->model_for_sanger;
 ok($model, 'Got mock MC16s sanger model');
 my $cmd;
 
@@ -63,7 +61,10 @@ ok(
 #<>#
 
 # build
-my $build = Genome::Model::MetagenomicComposition16s::Test->get_mock_build(model => $model);
+my $build = Genome::Model::Build::MetagenomicComposition16s->create(
+    model => $model,
+    data_directory => $model->data_directory,
+);
 ok($build, 'Added build to model');
 
 #< OK >#

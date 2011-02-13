@@ -74,6 +74,12 @@ sub schedule_rebuild {
         }
     }
 
+    my @builds_to_kill = grep{$_->status eq 'Scheduled' or $_->status eq 'Running'} $self->builds;
+    if (scalar(@builds_to_kill)){
+        my $rv = Genome::Model::Build::Command::Stop->execute(builds => [@builds_to_kill]);
+        $self->warning_message("Failed to remove pending convergence models: " . join(",", map($_->id, @builds_to_kill))) unless $rv; 
+    }
+
     $self->build_requested(1);
     $self->status_message('Convergence rebuild requested.');
 
