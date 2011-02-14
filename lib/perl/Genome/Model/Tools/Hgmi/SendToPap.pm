@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use PAP;
 use Command;
 use Carp;
 
