@@ -30,6 +30,7 @@ sub log_command {
 
     unless (-e $log_dir and -d $log_dir) {
         mkdir $log_dir;
+        chmod 0777 $log_dir;
     }
 
     my $log_path = $log_dir . $log_file;
