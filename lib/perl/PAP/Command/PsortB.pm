@@ -43,7 +43,7 @@ class PAP::Command::PsortB {
             default_value => 'short', 
         },
         lsf_resource => { 
-            default_value => "-R 'select[type==LINUX86] rusage[tmp=100]'", 
+            default_value => "-R 'select[type==LINUX64] rusage[tmp=100]'", 
         },
     ],
 };
