@@ -44,7 +44,7 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
-    my $stats_fh = Genome::Utility::FileSystem->open_file_for_reading($self->stats_file);
+    my $stats_fh = Genome::Sys->open_file_for_reading($self->stats_file);
     unless ($stats_fh) {
         die('Failed to read file stats file: '. $self->stats_file);
     }
@@ -82,7 +82,7 @@ sub execute {
     }
     $stats_fh->close;
     my @headers = qw/NAME LENGTH COVERED MEAN_BREADTH MINIMUM_BREADTH INTERVALS COVERED_INTERVALS MISSING_INTERVALS/;
-    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+    my $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
     print $output_fh join("\t",@headers) ."\n";
     for my $min_breadth (@minimum_breadths) {
         for my $key (keys %coverage) {

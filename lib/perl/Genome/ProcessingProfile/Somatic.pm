@@ -69,7 +69,7 @@ class Genome::ProcessingProfile::Somatic{
             doc => 'Version of the "annotate transcript-variants" tool to run during the annotation step',
             is_optional => 1,
             default_value => Genome::Model::Tools::Annotate::TranscriptVariants->default_annotator_version,
-            valid_values => [ 0,1],#Genome::Model::Tools::Annotate::TranscriptVariants->available_versions ],
+            valid_values => [ 0,1,2],#Genome::Model::Tools::Annotate::TranscriptVariants->available_versions ],
         },
     ],
 };
@@ -113,7 +113,7 @@ sub _resolve_workflow_for_build {
 
     my $log_directory = $build->log_directory;
     $operation->log_dir($log_directory);
-    $operation->name($build->resolve_workflow_name);
+    $operation->name($build->workflow_name);
 
     return $operation;
 }

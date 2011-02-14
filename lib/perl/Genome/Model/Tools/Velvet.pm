@@ -95,7 +95,7 @@ sub load_read_names_and_seek_pos {
     my ($self, $seq_file) = @_;
 
     my @seek_positions;
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading( $seq_file ) ||
+    my $fh = Genome::Sys->open_file_for_reading( $seq_file ) ||
 	return;
     my $seek_pos = $fh->tell;
     my $io = Bio::SeqIO->new(-format => 'fasta', -fh => $fh);
@@ -120,7 +120,7 @@ sub load_read_names_and_seek_pos {
 sub get_contig_lengths {
     my ($self, $afg_file) = @_;
     my %contig_lengths;
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($afg_file)
+    my $fh = Genome::Sys->open_file_for_reading($afg_file)
         or return;
     while (my $record = getRecord($fh)) {
         my ($rec, $fields, $recs) = parseRecord($record);
@@ -142,7 +142,7 @@ sub create_edit_dir {
     my $self = shift;
 
     unless ( -d $self->assembly_directory.'/edit_dir' ) {
-	Genome::Utility::FileSystem->create_directory( $self->assembly_directory.'/edit_dir' );
+	Genome::Sys->create_directory( $self->assembly_directory.'/edit_dir' );
     }
 
     return 1;

@@ -1,4 +1,3 @@
-
 package Genome::Model::Tools::ViromeEvent::Assignment::Generate;
 
 use strict;
@@ -6,12 +5,10 @@ use warnings;
 
 use Genome;
 use Workflow;
-use IO::File;
 use Switch;
 use IO::File;
 use File::Basename;
 use Bio::SearchIO;
-use Data::Dumper;
 
 class Genome::Model::Tools::ViromeEvent::Assignment::Generate{
     is => 'Genome::Model::Tools::ViromeEvent',
@@ -20,22 +17,8 @@ class Genome::Model::Tools::ViromeEvent::Assignment::Generate{
 sub help_brief {
     "gzhao's reporting for virome"
 }
-
-sub help_synopsis {
-    return <<"EOS"
-EOS
-}
-
 sub help_detail {
-    return <<"EOS"
-EOS
-}
-
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    return $self;
-
+    "Tool to assign virome screen hits to organism catagories";
 }
 
 sub execute {
@@ -207,12 +190,12 @@ sub _generate_sequence_report {
 
     }
     $fh->printf("\nEnd of Sequence Report\n\n");
-    #print Dumper $counts;
+
     return 1;
 }
 
 sub _fasta_file_exts {
-    return qw/ fa fa.cdhit_out fa.cdhit_out.masked.badSeq fa.cdhit_out.masked.goodSeq BNFiltered.fa /;
+    return qw/ fa fa.cdhit_out fa.cdhit_out.masked.badSeq fa.cdhit_out.masked.goodSeq BNfiltered.fa /;
 }
 
 sub _convert_to_table_name {
@@ -221,7 +204,7 @@ sub _convert_to_table_name {
 	'fa.cdhit_out'                => 'cd_hit',
 	'fa.cdhit_out.masked.badSeq'  => 'cd_hit_bad',
 	'fa.cdhit_out.masked.goodSeq' => 'cd_hit_good',
-	'BNFiltered.fa'               => 'blastn',
+	'BNfiltered.fa'               => 'blastn',
     };
 }
 
@@ -320,4 +303,3 @@ sub _print_intro {
 }
 
 1;
-

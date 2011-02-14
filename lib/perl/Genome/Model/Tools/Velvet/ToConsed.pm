@@ -31,9 +31,18 @@ class Genome::Model::Tools::Velvet::ToConsed {
             doc     => 'number of fastq sequences each chunk',
             default => 10000,
         },
+	fast_mode   => {
+	    is      => 'Boolean',
+	    doc     => 'Allow by-passing of bio perl usage for speed for fastq files with less than 1,000,000 reads',
+	    default => 0,
+	},
+	no_scf      => {
+	    is      => 'Boolean',
+	    doc     => 'Do not make chromat files',
+	    default => 0,
+	},
     ],
 };
-        
 
 sub help_brief {
     'This tool converts velvet assembly to acefile, then convert input read fastq file into phdball and scf files',
@@ -45,38 +54,43 @@ sub help_detail {
 EOS
 }
 
-
 sub execute {
     my $self = shift;
     my $time = localtime;
-    
+
     my $acefile  = $self->out_acefile;
     my $edit_dir = dirname(abs_path($acefile));
 
     unless ($edit_dir =~ /edit_dir/) {
-        $self->error_message("Ace file $acefile has to be in edit_dir");
-        return;
+	$self->error_message("Ace file $acefile has to be in edit_dir");
+	return;
     }
     my $base_dir = dirname $edit_dir;
     
     my @steps = qw(Velvet_to_Ace Fastq_to_phdball_scf);
 
     my $to_ace  = Genome::Model::Tools::Velvet::ToAce->create(
-        afg_file    => $self->afg_file,
-        out_acefile => $acefile,
-        time        => $time,
+	afg_file    => $self->afg_file,
+	out_acefile => $acefile,
+	time        => $time,
     );
     my $rv = $to_ace->execute;
     return unless $self->_check_rv($steps[0], $rv);
-    
-    my $to_phdscf = Genome::Model::Tools::Fastq::ToPhdballScf::Chunk->create(
-        fastq_file => $self->fastq_file,
-        scf_dir    => $base_dir.'/chromat_dir',
+
+    my %to_phdscf_params = (
+	fastq_file => $self->fastq_file,
         ball_file  => $edit_dir.'/phd.ball',
         base_fix   => 1,
         time       => $time,
         chunk_size => $self->chunk_size,
-    );
+	fast_mode  => $self->fast_mode,
+	);
+
+    unless ( $self->no_scf ) {
+	$to_phdscf_params{scf_dir} = $base_dir.'/chromat_dir';
+    }
+
+    my $to_phdscf = Genome::Model::Tools::Fastq::ToPhdballScf::Chunk->create( %to_phdscf_params );
     $rv = $to_phdscf->execute;
     return unless $self->_check_rv($steps[1], $rv);
 

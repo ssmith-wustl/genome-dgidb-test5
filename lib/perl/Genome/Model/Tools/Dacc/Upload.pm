@@ -66,7 +66,7 @@ sub execute {
     return if not $in_lsf;
 
     my $cmd = $self->base_command.' -d '.$files_string.' '.$dacc_remote_directory;
-    my $rv = eval{ Genome::Utility::FileSystem->shellcmd(cmd => $cmd); };
+    my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
     if ( not $rv ) {
         $self->error_message("Aspera command failed: $cmd");
         return;

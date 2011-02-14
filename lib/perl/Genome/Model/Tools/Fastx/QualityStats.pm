@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 use File::Basename;
 
 class Genome::Model::Tools::Fastx::QualityStats {
@@ -29,7 +29,7 @@ class Genome::Model::Tools::Fastx::QualityStats {
 
 sub execute {
     my $self = shift;
-    unless (Genome::Utility::FileSystem->validate_file_for_reading($self->fastq_file)) {
+    unless (Genome::Sys->validate_file_for_reading($self->fastq_file)) {
         $self->error_message('Failed to validate fastq file for read access '. $self->fastq_file .":  $!");
         die($self->error_message);
     }
@@ -39,13 +39,13 @@ sub execute {
     unless ($self->stats_file) {
         $self->stats_file($dirname .'/'. $basename .'.stats');
     }
-    unless (Genome::Utility::FileSystem->validate_file_for_writing($self->stats_file)) {
+    unless (Genome::Sys->validate_file_for_writing($self->stats_file)) {
         $self->error_message('Failed to validate stats file for write access '. $self->stats_file .":  $!");
         die($self->error_message);
     }
     #fastx_quality_stats (as of 0.0.7) won't process from tmp with -i and -o
     my $cmd = $self->fastx_tool_path .' < '. $self->fastq_file .' > '. $self->stats_file;
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$self->fastq_file],
         output_files => [$self->stats_file],

@@ -26,6 +26,15 @@ class Genome::RefCov::Topology {
     ],
 };
 
+sub create {
+    my $class = shift;
+    my %params = @_;
+    my $coverage = delete($params{coverage});
+    my $self = $class->SUPER::create(%params);
+    $self->coverage($coverage);
+    return $self;
+};
+
 sub _set_depth_to_zero {
     my ($self, $position) = @_;
     $self->coverage->[$position] = 0;  # revise string

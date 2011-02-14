@@ -94,7 +94,6 @@ EOS
 sub execute {
     my $self = shift;
 
-    $DB::single = 1;
     unless (-e $self->fasta_file and -s $self->fasta_file) {
         confess "File does not exist or has no size at " . $self->fasta_file;
     }
@@ -106,8 +105,10 @@ sub execute {
         $self->warning_message("Both repeat library and species are specified, choosing repeat library!");
     }
 
+    # Make sure the fasta file isn't tarred, and untar it if necessary
+    # TODO Is this necessary?
     if ($self->fasta_file =~ /\.bz2$/) {
-        my $unzipped_file = Genome::Utility::FileSystem->bunzip($self->fasta_file);
+        my $unzipped_file = Genome::Sys->bunzip($self->fasta_file);
         confess "Could not unzip fasta file at " . $self->fasta_file unless defined $unzipped_file;
         $self->fasta_file($unzipped_file);
     }
@@ -120,9 +121,17 @@ sub execute {
         $self->status_message("Ace files being generated and location not given, default to $default_ace_file");
     }
     if (not defined $self->masked_fasta) {
-        my $default_masked_location =  "$fasta_path.repeat_masker";
-        $self->masked_fasta($default_masked_location);
-        $self->status_message("Masked fasta file path not given, defaulting to $default_masked_location");
+        my ($fasta_name, $fasta_dir) = fileparse($self->fasta_file);
+        my $masked_fh = File::Temp->new(
+            TEMPLATE => "$fasta_name.repeat_masker_XXXXXX",
+            DIR => $fasta_dir,
+            CLEANUP => 0,
+            UNLINK => 0,
+        );
+        chmod(0666, $masked_fh->filename);
+        $self->masked_fasta($masked_fh->filename);
+        $masked_fh->close;
+        $self->status_message("Masked fasta file path not given, defaulting to " . $self->masked_fasta);
     }
 
     # Removing existing masked fasta output file
@@ -134,7 +143,7 @@ sub execute {
     # Even if this is being skipped, some sort of output is necessary... 
     if ($self->skip_masking) {
         $self->status_message("skip_masking flag is set, copying input fasta to masked fasta location");
-        my $rv = Genome::Utility::FileSystem->copy_file($self->fasta_file, $self->masked_fasta);
+        my $rv = Genome::Sys->copy_file($self->fasta_file, $self->masked_fasta);
         confess "Trouble executing copy of " . $self->fasta_file . " to " . $self->masked_fasta unless defined $rv and $rv;
         $self->status_message("Copy of input fasta at " . $self->fasta_file . " to masked fasta path at " .
             $self->masked_fasta . " successful, exiting!");

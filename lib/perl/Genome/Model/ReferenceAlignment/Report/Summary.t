@@ -6,9 +6,9 @@ use warnings;
 use above "Genome";
 use Test::More tests => 8;
 use FindBin qw/$Bin/;
-use Genome::Utility::FileSystem;
+use Genome::Sys;
  
-my $tmp = Genome::Utility::FileSystem->create_temp_directory();
+my $tmp = Genome::Sys->create_temp_directory();
 
 sub rmtree {
     system "/bin/rm -r $tmp";

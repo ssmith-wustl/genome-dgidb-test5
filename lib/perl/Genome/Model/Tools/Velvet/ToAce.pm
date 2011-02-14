@@ -128,7 +128,7 @@ sub execute {
     my $nContigs = 0;
 
     #velvet 7.44 uses the actual read name as the fasta header in Sequences file
-    my $seq_fh  = Genome::Utility::FileSystem->open_file_for_reading($self->seq_file) or return;
+    my $seq_fh  = Genome::Sys->open_file_for_reading($self->seq_file) or return;
     my $seekpos = $seq_fh->tell;
 
     my $io = Bio::SeqIO->new(-format => 'fasta', -fh => $seq_fh);
@@ -161,20 +161,20 @@ sub execute {
     $seq_fh->close;
 
     my $afg_file = $self->afg_file;
-    my $afg_fh   = Genome::Utility::FileSystem->open_file_for_reading($afg_file) or return;
+    my $afg_fh   = Genome::Sys->open_file_for_reading($afg_file) or return;
     my $out_ace  = $self->out_acefile;
-    my $out      = Genome::Utility::FileSystem->open_file_for_writing($out_ace) or return;
+    my $out      = Genome::Sys->open_file_for_writing($out_ace) or return;
     my $writer   = GSC::IO::Assembly::Ace::Writer->new($out);
 
     # Tmp writer for reads and read positions
     my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
     my $reads_file = $tmpdir.'/reads';
-    my $reads_fh = Genome::Utility::FileSystem->open_file_for_writing($reads_file)
+    my $reads_fh = Genome::Sys->open_file_for_writing($reads_file)
         or return;
     my $read_writer = GSC::IO::Assembly::Ace::Writer->new($reads_fh)
         or return;
     my $read_pos_file = $tmpdir.'/read_positions';
-    my $read_pos_fh = Genome::Utility::FileSystem->open_file_for_writing($read_pos_file)
+    my $read_pos_fh = Genome::Sys->open_file_for_writing($read_pos_file)
         or return;
     my $read_pos_writer = GSC::IO::Assembly::Ace::Writer->new($read_pos_fh)
         or return;
@@ -342,7 +342,7 @@ sub execute {
 
             # Read positions - use tmp read positions file to write to ace fh
             $read_pos_fh->close;
-            my $read_pos_rfh = Genome::Utility::FileSystem->open_file_for_reading(
+            my $read_pos_rfh = Genome::Sys->open_file_for_reading(
                 $read_pos_file
             ) or return;
             while ( my $line  = $read_pos_rfh->getline ) {
@@ -350,7 +350,7 @@ sub execute {
             }
             $read_pos_rfh->close;
             unlink $read_pos_file;
-            $read_pos_fh = Genome::Utility::FileSystem->open_file_for_writing(
+            $read_pos_fh = Genome::Sys->open_file_for_writing(
                 $read_pos_file
             ) or return;
             $read_pos_writer = GSC::IO::Assembly::Ace::Writer->new($read_pos_fh)
@@ -363,7 +363,7 @@ sub execute {
 
             # Reads - use tmp reads file to write to ace fh
             $reads_fh->close;
-            my $reads_rfh = Genome::Utility::FileSystem->open_file_for_reading(
+            my $reads_rfh = Genome::Sys->open_file_for_reading(
                 $reads_file
             ) or return;
             while ( my $line = $reads_rfh->getline ) {
@@ -371,7 +371,7 @@ sub execute {
             }
             $reads_rfh->close;
             unlink $reads_file;
-            $reads_fh = Genome::Utility::FileSystem->open_file_for_writing(
+            $reads_fh = Genome::Sys->open_file_for_writing(
                 $reads_file
             ) or return;
             $read_writer = GSC::IO::Assembly::Ace::Writer->new($reads_fh)
@@ -395,7 +395,7 @@ sub execute {
 
     my $tmp_ace = $out_ace . '.tmp';
 
-    my $rv = Genome::Utility::FileSystem->shellcmd(
+    my $rv = Genome::Sys->shellcmd(
         cmd => "mv $out_ace $tmp_ace",
         output_files => [$tmp_ace],
         skip_if_output_is_present => 0,
@@ -406,11 +406,11 @@ sub execute {
         return;
     }
 
-    my $out_fh = Genome::Utility::FileSystem->open_file_for_writing($out_ace) or return;
+    my $out_fh = Genome::Sys->open_file_for_writing($out_ace) or return;
     $out_fh->print("AS $nContigs $nReads\n");
     $out_fh->close;
 
-    $rv = Genome::Utility::FileSystem->shellcmd(
+    $rv = Genome::Sys->shellcmd(
         cmd => "cat $tmp_ace >> $out_ace",
         output_files => [$out_ace],
         skip_if_output_is_present => 0,
@@ -449,7 +449,7 @@ sub get_seq {
     #TODO - temp patch .. Bio::seqio seek pos seems to be off by 1
     $seekpos = ( $seekpos == 0 ) ? $seekpos : $seekpos - 1;
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->seq_file) or return;
+    my $fh = Genome::Sys->open_file_for_reading($self->seq_file) or return;
     $fh->seek($seekpos, 0);
 
     my $fa_bio = Bio::SeqIO->new(-fh => $fh, -format => 'fasta');

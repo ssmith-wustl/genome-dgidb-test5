@@ -55,7 +55,7 @@ sub execute {
         #chomp $line;
         my ($snp_id,$index,$chr,$pos) = split /\t/, $line;
 
-        $chr = "X" if ($chr eq "XY");  #for illumina, XY is considered as Y
+        next if $chr eq "XY";
         $pos_hash{$snp_id}{chr} = $chr;
         $pos_hash{$snp_id}{pos} = $pos;
     }

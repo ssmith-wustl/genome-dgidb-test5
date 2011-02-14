@@ -19,7 +19,7 @@ if(Genome::Config->arch_os() =~ '64') {
     plan skip_all => 'Must be run on a 64-bit machine',
 }
 
-$ENV{GENOME_MODEL_TESTDIR} = Genome::Utility::FileSystem->create_temp_directory;
+$ENV{GENOME_MODEL_TESTDIR} = Genome::Sys->create_temp_directory;
 
 use_ok('Genome::Model::Command::Define::ImportedReferenceSequence');
 
@@ -31,7 +31,7 @@ my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Command-Define-I
 my $first_test_dir = $test_data_dir . '1/';
 my $first_fasta = $first_test_dir . 'all_sequences.fa';
 
-ok(Genome::Utility::FileSystem->check_for_path_existence($first_fasta), 'First test FASTA exists');
+ok(Genome::Sys->check_for_path_existence($first_fasta), 'First test FASTA exists');
 
 my $first_define_command = Genome::Model::Command::Define::ImportedReferenceSequence->create(
     fasta_file => $first_fasta,
@@ -41,7 +41,8 @@ my $first_define_command = Genome::Model::Command::Define::ImportedReferenceSequ
     job_dispatch => 'inline', #can't spawn off LSF jobs with UR_DBI_NO_COMMIT enabled
     server_dispatch => 'inline',
     version => '42mb',
-    data_directory => Genome::Utility::FileSystem->create_temp_directory,
+    sequence_uri => 'http://foo.bar.com',
+    data_directory => Genome::Sys->create_temp_directory,
 );
 
 ok($first_define_command, 'created define command');
@@ -57,19 +58,19 @@ is(scalar(@first_builds), 1, 'Created a model with one build');
 my $first_data_directory = $first_builds[0]->data_directory;
 my $first_build_fasta = $first_data_directory . '/all_sequences.fa';
 
-my $first_fasta_diff = Genome::Utility::FileSystem->diff_file_vs_file($first_fasta, $first_build_fasta);
+my $first_fasta_diff = Genome::Sys->diff_file_vs_file($first_fasta, $first_build_fasta);
 ok(!$first_fasta_diff, 'FASTA copied to build')
     or diag("  diff:\n" . $first_fasta_diff);
 
 my $first_build_1_bases = $first_data_directory . '/1.bases';
 my $first_1_bases = $first_test_dir . '/1.bases';
-my $first_1_bases_diff = Genome::Utility::FileSystem->diff_file_vs_file($first_1_bases, $first_build_1_bases);
+my $first_1_bases_diff = Genome::Sys->diff_file_vs_file($first_1_bases, $first_build_1_bases);
 ok(!$first_1_bases_diff, '1.bases generated as expected')
     or diag("  diff\n" . $first_1_bases_diff);
 
 my $first_build_2_bases = $first_data_directory . '/2.bases';
 my $first_2_bases = $first_test_dir . '/2.bases';
-my $first_2_bases_diff = Genome::Utility::FileSystem->diff_file_vs_file($first_2_bases, $first_build_2_bases);
+my $first_2_bases_diff = Genome::Sys->diff_file_vs_file($first_2_bases, $first_build_2_bases);
 ok(!$first_2_bases_diff, '2.bases generated as expected')
     or diag("  diff\n" . $first_2_bases_diff);
 
@@ -115,7 +116,7 @@ for my $file (@files_to_test) {
 my $second_test_dir = $test_data_dir . '2.03/';
 my $second_fasta = $second_test_dir . 'all_sequences.fa';
 
-ok(Genome::Utility::FileSystem->check_for_path_existence($second_fasta), 'Second test FASTA exists');
+ok(Genome::Sys->check_for_path_existence($second_fasta), 'Second test FASTA exists');
 
 my $second_define_command = Genome::Model::Command::Define::ImportedReferenceSequence->create(
     fasta_file => $second_fasta,
@@ -125,7 +126,8 @@ my $second_define_command = Genome::Model::Command::Define::ImportedReferenceSeq
     job_dispatch => 'inline', #can't spawn off LSF jobs with UR_DBI_NO_COMMIT enabled
     server_dispatch => 'inline',
     version => 't1',
-    data_directory => Genome::Utility::FileSystem->create_temp_directory,
+    sequence_uri => 'http://foo.bar.com',
+    data_directory => Genome::Sys->create_temp_directory,
 );
 
 ok($second_define_command, 'created define command');
@@ -163,7 +165,8 @@ my $third_define_command = Genome::Model::Command::Define::ImportedReferenceSequ
     job_dispatch => 'inline', #can't spawn off LSF jobs with UR_DBI_NO_COMMIT enabled
     server_dispatch => 'inline',
     version => 't1',
-    data_directory => Genome::Utility::FileSystem->create_temp_directory,
+    sequence_uri => 'http://foo.bar.com',
+    data_directory => Genome::Sys->create_temp_directory,
 );
 ok($third_define_command, 'created define command');
 ok(!$third_define_command->execute, 'execute prevented duplicate build creation');
@@ -177,7 +180,8 @@ my $fourth_define_command = Genome::Model::Command::Define::ImportedReferenceSeq
     job_dispatch => 'inline', #can't spawn off LSF jobs with UR_DBI_NO_COMMIT enabled
     server_dispatch => 'inline',
     version => 't4',
-    data_directory => Genome::Utility::FileSystem->create_temp_directory,
+    sequence_uri => 'http://foo.bar.com',
+    data_directory => Genome::Sys->create_temp_directory,
 );
 ok($fourth_define_command, 'created define command');
 ok(!$fourth_define_command->execute, 'execute prevented using invalid taxon');
@@ -192,7 +196,8 @@ my $fifth_define_command = Genome::Model::Command::Define::ImportedReferenceSequ
     job_dispatch => 'inline', #can't spawn off LSF jobs with UR_DBI_NO_COMMIT enabled
     server_dispatch => 'inline',
     model_name => 'apipe-test-01-somatic',
-    data_directory => Genome::Utility::FileSystem->create_temp_directory,
+    sequence_uri => 'http://foo.bar.com',
+    data_directory => Genome::Sys->create_temp_directory,
 );
 ok($fifth_define_command, 'created define command');
 ok(!$fifth_define_command->execute, 'execute prevented creating a model due to existing non-reference model');

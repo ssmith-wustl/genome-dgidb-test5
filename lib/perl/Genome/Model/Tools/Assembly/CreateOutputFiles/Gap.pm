@@ -34,7 +34,7 @@ sub execute {
     }
 
     unlink $self->gap_sizes_file;
-    my $gap_fh = Genome::Utility::FileSystem->open_file_for_writing( $self->gap_sizes_file );
+    my $gap_fh = Genome::Sys->open_file_for_writing( $self->gap_sizes_file );
 
     my $io = Bio::SeqIO->new(-format => 'fasta', -file => $self->directory.'/contigs.fa');
 

@@ -22,7 +22,7 @@ my %properties = (
     },
     target_region => {
         is => 'Text',
-        doc => 'Provide \'whole genome\' or target region set name',
+        doc => 'Provide target region set name (capture) or "none" (whole genome or RNA/cDNA)',
     },
     library => {
         is => 'String',
@@ -75,7 +75,7 @@ my %properties = (
     
 
 class Genome::InstrumentData::Command::Import::Bam {
-    is  => 'Command',
+    is  => 'Genome::InstrumentData::Command::Import',
     has => [%properties],
     doc => 'create an instrument data AND and alignment for a BAM',
     has_optional => [
@@ -94,7 +94,7 @@ sub execute {
     # target_region_set_name column set to undef. Otherwise, we need to make sure the target region
     # name corresponds to only one Genome::FeatureList.
     my $target_region;
-    unless ($self->target_region eq 'whole genome') {
+    unless ($self->target_region eq 'none') {
         if ($self->validate_target_region) {
             $target_region = $self->target_region;
         } else {
@@ -203,7 +203,7 @@ sub execute {
 
     my $bam_destination = $disk_alloc->absolute_path . "/all_sequences.bam";
     $self->status_message("Now calculating the MD5sum of the bam file to be imported, this will take a long time (many minutes) for larger (many GB) files.");
-    my $md5 = Genome::Utility::FileSystem->md5sum($bam_path);
+    my $md5 = Genome::Sys->md5sum($bam_path);
     unless($md5){
         $self->error_message("Failed to calculate md5 sum, exiting import command.");
         die $self->error_message;
@@ -250,7 +250,7 @@ sub execute {
     
     #calculate and compare md5 sums
 
-    unless(Genome::Utility::FileSystem->md5sum($bam_destination) eq $md5) {
+    unless(Genome::Sys->md5sum($bam_destination) eq $md5) {
         $self->error_message("Failed to copy to allocated space (md5 mismatch).  Unlinking and deallocating.");
         unlink($bam_destination);
         $disk_alloc->deallocate;

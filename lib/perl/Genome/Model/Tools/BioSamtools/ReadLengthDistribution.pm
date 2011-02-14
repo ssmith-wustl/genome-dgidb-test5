@@ -3,6 +3,7 @@ package Genome::Model::Tools::BioSamtools::ReadLengthDistribution;
 use strict;
 use warnings;
 
+use Statistics::Descriptive;
 use Genome;
 
 class Genome::Model::Tools::BioSamtools::ReadLengthDistribution {
@@ -16,19 +17,66 @@ class Genome::Model::Tools::BioSamtools::ReadLengthDistribution {
             is => 'Text',
             doc => 'The output directory to generate peak files',
         },
+        sizes_file => {
+
+        }
+    ],
+    has_optional => [
+        _output_fh => {},
     ],
 };
 
 sub execute {
     my $self = shift;
-    my $cmd = $self->execute_path .'/read_length_distribution-64.pl '. $self->bam_file .' > '. $self->output_file;
-    Genome::Utility::FileSystem->shellcmd(
-        cmd => $cmd,
-        input_files => [$self->bam_file],
-        output_files => [$self->output_file],
-        skip_if_output_is_present => 0,
-    );
+    my $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
+    my $sizes_fh = Genome::Sys->open_file_for_writing($self->sizes_file);
+    $self->_output_fh($output_fh);
+    my $refcov_bam  = Genome::RefCov::Bam->create(bam_file => $self->bam_file );
+    unless ($refcov_bam) {
+        die('Failed to load bam file '. $self->bam_file);
+    }
+    my $bam  = $refcov_bam->bio_db_bam;
+    my $header = $bam->header();
+    my %read_stats;
+    my $read_stats = Statistics::Descriptive::Sparse->new();
+    my %alignment_stats;
+    my $alignment_stats = Statistics::Descriptive::Sparse->new();
+    while (my $align = $bam->read1()) {
+        my $flag = $align->flag;
+        my $read_length = $align->l_qseq;
+        print $sizes_fh $read_length ."\n";
+        $read_stats->add_data($read_length);
+        $read_stats{$read_length}++;
+        unless ($flag & 4) {
+            my $align_length = $align->calend - $align->pos;
+            $alignment_stats{$align_length}++;
+            $alignment_stats->add_data($align_length);
+        }
+    }
+    $sizes_fh->close;
+    print $output_fh 'READ SUMMARY:' ."\n";
+    $self->print_stats($read_stats,\%read_stats);
+    print $output_fh 'ALIGNED SUMMARY:' ."\n";
+    $self->print_stats($alignment_stats,\%alignment_stats);
+    $self->_output_fh->close;
     return 1;
 }
+
+sub print_stats {
+    my $self = shift;
+    my $stats = shift;
+    my $histogram = shift;
+    my $output_fh = $self->_output_fh;
+    print $output_fh "\tCount:\t". $stats->count ."\n";
+    print $output_fh "\tMinimum:\t". $stats->min ."\n";
+    print $output_fh "\tMaximum:\t". $stats->max ."\n";
+    my $partitions = $stats->max - $stats->min + 1;
+    print $output_fh "\tMean:\t". $stats->mean ."\n";
+    print $output_fh "\tStdDev:\t". $stats->standard_deviation ."\n";
+    for my $key (sort {$a <=> $b} keys %{$histogram}) {
+        print $output_fh "\t$key:\t". $$histogram{$key} ."\n";
+    }
+}
+
 
 1;

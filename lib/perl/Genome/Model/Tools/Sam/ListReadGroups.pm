@@ -14,6 +14,11 @@ class Genome::Model::Tools::Sam::ListReadGroups {
             is  => 'String',
             doc => 'Input SAM/BAM file to list read groups from.',
         },
+        silence_output=> {
+            is => 'Boolean',
+            doc => 'Don\'t print the output to stdout',
+            default_value => 0,
+        }
     ],
     has_output => [
         read_groups => {
@@ -59,7 +64,9 @@ sub execute {
 
     my @rg_ids = map {$_->{id}} @read_groups;
 
-    print "Read Groups detected from BAM file: \n" . join "\n", @rg_ids;
+    unless ($self->silence_output) {
+        print "Read Groups detected from BAM file: \n" . join "\n", @rg_ids;
+    }
     $self->read_groups(\@rg_ids);
 
     return 1;

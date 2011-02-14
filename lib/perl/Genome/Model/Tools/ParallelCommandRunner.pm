@@ -7,7 +7,7 @@ use Genome;
 use Command;
 use File::Basename;
 use IO::File;
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 
 class Genome::Model::Tools::ParallelCommandRunner {
     is => ['Command'],
@@ -46,7 +46,7 @@ sub execute {
         #print("Running commands: ".join(",",@commands)."\n");
         #print('There are '.scalar(@commands).' to run.');
     
-        Genome::Utility::FileSystem->create_directory($self->log_path);
+        Genome::Sys->create_directory($self->log_path);
         unless (-d $self->log_path) {
 	   #print("Can't create directory for logging: ".$self->log_path);
 	   $self->error_message("Can't create directory for logging: ".$self->log_path);

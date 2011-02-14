@@ -10,7 +10,7 @@ use File::Temp;
 my $tumor_bam = '/gsc/var/cache/testsuite/data/Genome-Model-Somatic-Command-RunPindel/flank_tumor_sorted.bam';
 my $normal_bam = '/gsc/var/cache/testsuite/data/Genome-Model-Somatic-Command-RunPindel/flank_normal_sorted.bam';
 
-my $output_dir = Genome::Utility::FileSystem->base_temp_directory();
+my $output_dir = Genome::Sys->base_temp_directory();
 
 ok(-d $output_dir, 'Found temp dir for test output.');
 

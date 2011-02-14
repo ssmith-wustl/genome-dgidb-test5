@@ -13,25 +13,10 @@ use Test::More;
 use_ok('Genome::Model::MetagenomicComposition16s::Command::CopyFiles') or die;
 
 # model/build
-my $model = Genome::Model::MetagenomicComposition16s::Test->get_mock_model(
-    sequencing_platform => 'sanger',
-);
+my $model = Genome::Model::MetagenomicComposition16s::Test->model_for_sanger;
 ok($model, 'Got mock mc16s sanger model');
-ok(
-    Genome::Model::MetagenomicComposition16s::Test->get_mock_build(
-        model => $model,
-        use_example_directory => 1,
-
-    ),
-    'Got mock mc16s build',
-);
-# aa model for backward compatibility
-my $aa_model = Genome::Model::Test->create_mock_model(
-    type_name => 'amplicon assembly',
-    use_mock_dir => 1,
-);
-ok($aa_model, 'Created mock amplicon assembly model');
-ok($aa_model->last_complete_build, 'Created mock amplicon assembly build');
+my $build = Genome::Model::MetagenomicComposition16s::Test->example_build_for_model($model);
+ok($build, 'Got mock mc16s build');
 
 my $copy_cmd;
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
@@ -50,7 +35,7 @@ ok(
 # ok - copy
 #  tests multiple build retrieving methods: model id and build id
 $copy_cmd = Genome::Model::MetagenomicComposition16s::Command::CopyFiles->execute(
-    build_identifiers => $model->id.','.$aa_model->last_complete_build->id,
+    build_identifiers => $model->id,
     file_type => 'processed_fasta',
     destination => $tmpdir,
 );
@@ -59,7 +44,7 @@ ok(
     'Execute copy ok',
 );
 my @files = glob("$tmpdir/*");
-is(scalar @files, 2, 'Copied files');
+is(scalar @files, 1, 'Copied files');
 
 # fail - copy to existing
 $copy_cmd = Genome::Model::MetagenomicComposition16s::Command::CopyFiles->execute(
@@ -104,24 +89,3 @@ ok(
 done_testing();
 exit;
 
-=pod
-
-=head1 Tests
-
-=head1 Disclaimer
-
- Copyright (C) 2010 Washington University Genome Sequencing Center
-
- This script is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
- License for more details.
-
-=head1 Author(s)
-
- Eddie Belter <ebelter@genome.wustl.edu>
-
-=cut
-
-#$HeadURL$
-#$Id$

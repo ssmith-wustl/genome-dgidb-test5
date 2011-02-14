@@ -2,7 +2,7 @@
 package Genome::Model::Tools::Varscan::CopyNumberSegments;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# RunVarscan - Run VarScan somatic on two BAM files.
+# RunVarscan - Run Varscan somatic on two BAM files.
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@genome.wustl.edu)
 #
@@ -31,6 +31,7 @@ class Genome::Model::Tools::Varscan::CopyNumberSegments {
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		regions_file		=> { is => 'Text', doc => "Path to copy number regions from Varscan copyCaller", is_optional => 0 },
 		output_basename 	=> { is => 'Text', doc => "Output file basename for cnv plots", is_optional => 0 },
+		min_depth 	=> { is => 'Text', doc => "Minimum depth for a region (in one sample) to include it", is_optional => 0, default => 8 },
 		min_points_to_plot 	=> { is => 'Text', doc => "Minimum number of points for a chromosome to plot it", is_optional => 0, default => 100 },
 	],
 };
@@ -38,12 +39,12 @@ class Genome::Model::Tools::Varscan::CopyNumberSegments {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Generate plots of exome copy number from VarScan copyCaller calls"                 
+    "Generate plots of exome copy number from Varscan copyCaller calls"                 
 }
 
 sub help_synopsis {
     return <<EOS
-Generate plots of exome copy number from VarScan copyCaller calls
+Generate plots of exome copy number from Varscan copyCaller calls
 EXAMPLE:	gmt capture copy-number-plots ...
 EOS
 }
@@ -66,6 +67,7 @@ sub execute {                               # replace with real execution logic.
 	## Get required parameters ##
 	my $regions_file = $self->regions_file;
 	my $output_basename = $self->output_basename;
+	my $min_depth = $self->min_depth;
 
 	## Open the index HTML file ##
 	my @tempArray = split(/\//, $output_basename);
@@ -82,6 +84,7 @@ sub execute {                               # replace with real execution logic.
 	
 	my $current_chrom = "";
 	my $current_chrom_results = "";
+	my $metMinDepth = 0;
 	
 	while (<$input>)
 	{
@@ -89,22 +92,43 @@ sub execute {                               # replace with real execution logic.
 		my $line = $_;
 		$lineCounter++;
 		
-		(my $chrom) = split(/\t/, $line);
+		my @lineContents = split(/\t/, $line);
+		my $numContents = @lineContents;
 		
-		if($current_chrom && $chrom ne $current_chrom)
+		my ($chrom, $chr_start, $chr_stop, $normal, $tumor, $log_value) = split(/\t/, $line);
+		## Parse newer output ##
+		($chrom, $chr_start, $chr_stop, my $num_positions, $normal, $tumor, $log_value) = split(/\t/, $line) if($numContents > 6);
+		
+		if($lineCounter > 1 || $chrom ne "chrom")
 		{
-			process_results($self, $current_chrom, $current_chrom_results);
-			$current_chrom_results = "";	
-		}
+			## Process the previous chromosome ##
+			if($current_chrom && $chrom ne $current_chrom)
+			{
+				print "Chromosome $chrom...\n";
+#				process_results($self, $current_chrom, $current_chrom_results);
+				$current_chrom_results = "";	
+			}
+	
+			if($normal >= $min_depth || $tumor >= $min_depth)
+			{
+				$metMinDepth++;
+				$current_chrom = $chrom;		
+				$current_chrom_results .= "\n" if($current_chrom_results);
+				$current_chrom_results .= $line;							
+			}
 
-		$current_chrom = $chrom;		
-		$current_chrom_results .= "\n" if($current_chrom_results);
-		$current_chrom_results .= $line;
+		}
+		
+
 	}
 	
 	close($input);
 	
 	process_results($self, $current_chrom, $current_chrom_results);
+	
+	print "$lineCounter lines parsed from Varscan output\n";
+	print "$metMinDepth met minimum depth of $min_depth\n";
+
 
 	open(SEGMENTS, ">$output_basename.segments.tsv") or die "Can't open outfile: $!\n";
 	print SEGMENTS join("\t", "ID", "sample", "chrom", "loc.start", "loc.end", "num.mark", "seg.mean", "bstat", "pval", "lcl", "ucl") . "\n";
@@ -119,7 +143,7 @@ sub execute {                               # replace with real execution logic.
 		$chrom_name = "X" if($chrom == 23);
 		$chrom_name = "Y" if($chrom == 24);
 
-		my $chrom_filename = $output_basename . ".$chrom.infile";
+		my $chrom_filename = $output_basename . ".$chrom_name.infile";
 		my $segments_filename = "$chrom_filename.segments.p_value";
 		my $image_filename = $image_basename . "." . $chrom_name . ".jpg";
 		print INDEX "<TD><A HREF=\"$image_filename\"><IMG SRC=\"$image_filename\" HEIGHT=240 WIDTH=320 BORDER=0></A></TD>\n";
@@ -171,6 +195,8 @@ sub parse_segments
 		if($lineCounter > 1)
 		{
 			my @lineContents = split(/\s+/, $line);
+			$line =~ s/\"X\"/X/;
+			$line =~ s/\"Y\"/Y/;
 			$result .= join("\t", @lineContents) . "\n";
 		}
 	}
@@ -193,7 +219,7 @@ sub process_results
 	my $output_basename = $self->output_basename;
 
 	my $chrom_filename = $output_basename . ".$chrom.infile";
-	my $script_filename = $output_basename . ".R";
+	my $script_filename = $output_basename . ".$chrom.R";
 	my $image_filename = $output_basename . "." . $chrom . ".jpg";
 
 	my @lines = split(/\n/, $lines);
@@ -209,7 +235,7 @@ sub process_results
 		my $num_columns = 0;
 		foreach my $line (@lines)
 		{		
-			if($line =~ 'Infinity')
+			if($line =~ 'Infinity' || $line =~ '∞')
 			{
 				## Don't try to plot sites with log2 infinity 	
 			}
@@ -235,9 +261,9 @@ sub process_results
 		print SCRIPT "png(\"$image_filename\", height=600, width=800)\n";
 
 		print SCRIPT qq{
-CNA.object <- CNA(regions\$V7, regions\$V1, regions\$V2, data.type="logratio", sampleid=c("Chromosome $chrom"))\n
+CNA.object <- CNA(regions\$V$num_columns, regions\$V1, regions\$V2, data.type="logratio", sampleid=c("Chromosome $chrom"))\n
 smoothed.CNA.object <- smooth.CNA(CNA.object)\n
-segment.smoothed.CNA.object <- segment(smoothed.CNA.object, verbose=1)
+segment.smoothed.CNA.object <- segment(smoothed.CNA.object, undo.splits="sdundo", undo.SD=2, verbose=1)
 p.segment.smoothed.CNA.object <- segments.p(segment.smoothed.CNA.object)
 plot(segment.smoothed.CNA.object, type="w", cex=0.5, cex.axis=1.5, cex.lab=1.5)
 write.table(p.segment.smoothed.CNA.object, file="$chrom_filename.segments.p_value")

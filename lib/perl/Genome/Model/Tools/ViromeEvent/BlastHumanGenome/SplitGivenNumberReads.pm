@@ -1,62 +1,33 @@
-
 package Genome::Model::Tools::ViromeEvent::BlastHumanGenome::SplitGivenNumberReads;
 
 use strict;
 use warnings;
 
 use Genome;
-use Workflow;
 use IO::File;
-use File::Basename;
 
 class Genome::Model::Tools::ViromeEvent::BlastHumanGenome::SplitGivenNumberReads{
     is => 'Genome::Model::Tools::ViromeEvent',
 };
 
 sub help_brief {
-    return "gzhao's Blast Human Genome split Given Number Reads";
-}
-
-sub help_synopsis {
-    return <<"EOS"
-EOS
+    "Tool to pool blast filtered files from previous stage and create a new set of files for blast";
 }
 
 sub help_detail {
-    return <<"EOS"
-Given a fasta file, this script will split it to a number of files. Each 
-file will contain given number of sequences. Generated files have the 
-same name as the given file with numbered suffix .file0.fa .file1.fa ... 
-etc All the generated files are placed in on subdirectory with the 
-same name as the given file with "_HumanGenomeBlast" suffix. 
-
-perl script <dir>
-<dir> = full path of the folder holding files for a sample library
-        without last "/"
-EOS
+    "Tool to pool blast filtered files from previous stage and create a new set of files for blast";
 }
 
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    return $self;
-}
-
-sub execute
-{
+sub execute {
     my $self = shift;
     my $dir = $self->dir;
-    my $sample_name = basename ($dir);
+    my $sample_name = File::Basename::basename ($dir);
 
     $self->log_event("Split reads executing for $sample_name");
 
    #DIRECTORY TO PUT SPLIT FILES INTO
     my $output_dir = $dir.'/'.$sample_name.'.fa.cdhit_out.masked.goodSeq_HGblast';
-    system ("mkdir $output_dir");
-    unless (-d $output_dir) {
-	$self->log_event("Failed to create human blast dir for $sample_name");
-	return;
-    }
+    Genome::Sys->create_directory( $output_dir ) unless -d $output_dir;
 
     #FILE TO SPLIT
     my $good_seq_file = $dir.'/'.$sample_name.'.fa.cdhit_out.masked.goodSeq';
@@ -108,4 +79,3 @@ sub execute
 }
 
 1;
-

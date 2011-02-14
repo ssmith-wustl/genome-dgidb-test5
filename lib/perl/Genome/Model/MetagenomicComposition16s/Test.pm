@@ -13,1031 +13,300 @@ BEGIN {
     $ENV{UR_DBI_NO_COMMIT} = 1;
 }
 
-#< Processing Profile >#
-sub processing_profile_params_for_platform {
-    my ($self, %params) = @_;
-
-    my $sequencing_platform = delete $params{sequencing_platform};
-    Carp::confess "No sequencing platform given to create mock processing profile" unless $sequencing_platform;
-    Carp::confess("Unknown params to get mock processing profile\n".Dumper(\%params)) if %params;
-
-    my %sequencing_platform_params = (
-        sanger => {
-            amplicon_size => 1150,
-            sequencing_center => 'gsc',
-            assembler => 'phred_phrap',
-            assembler_params => '-vector_bound 0 -trim_qual 0',
-            trimmer => 'finishing',
-            classifier => 'rdp2-1',
-            classifier_params => '-training_set broad',
-        }, 
-        454 => {
-            amplicon_size => 200,
-            sequencing_center => 'gsc',
-            classifier => 'rdp2-1',
-            classifier_params => '-training_set broad',
-        }, 
-    );
-
-    my $specific_params = $sequencing_platform_params{$sequencing_platform};
-    unless ( $specific_params ) {
-        Carp::confess "Invalid sequencing platform ($sequencing_platform)";
-    }
-
-    $specific_params->{name} = 'MC16s '.ucfirst($sequencing_platform).' Tester';
-    $specific_params->{sequencing_platform} = $sequencing_platform;
-    
-    return %$specific_params;
+#< Dirs >#
+sub _base_directory {
+    my ($class, $sequencing_platform) = @_;
+    Carp::confess('No sequencing platform given to get base directory') if not $sequencing_platform;
+    my $dir = '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16s';
+    $dir .= ucfirst $sequencing_platform;
+    Carp::confess("Base directory ($dir) for sequencing platform ($sequencing_platform) does not exist.") unless -d $dir;
+    return $dir;
 }
 
-sub get_mock_processing_profile {
-    my $self = shift;
+sub _example_directory_for_model {
+    my ($class, $model) = @_;
+    Carp::confess('No model to get example dir') if not $model;
+    my $dir = $class->_base_directory($model->processing_profile->sequencing_platform);
+    $dir .= '/build';
+    Carp::confess("Example directory ($dir) for mc16s model does not exist.") unless -d $dir;
+    return $dir;
+}
 
-    my %params = $self->processing_profile_params_for_platform(@_) or Carp::confess;
-    my $pp = Genome::Model::Test->get_mock_processing_profile(
-        class => 'Genome::ProcessingProfile::MetagenomicComposition16s',
-        type_name => 'metagenomic composition 16s',
-        %params,
-    ) or Carp::confess "Can't get mock mc16s processing profile";
-    
-    Genome::Utility::TestBase->mock_methods(
-        $pp,
-        (qw/ 
-            _operation_params_as_hash 
-            assembler_params_as_hash 
-            classifier_params_as_hash 
-            trimmer_params_as_hash 
-            /),
-    );
-
-    return $pp;
+sub _instrument_data_dir_for_sequencing_platform {
+    my ($class, $sequencing_platform) = @_;
+    my $dir = '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16s'.
+    ucfirst($sequencing_platform).'/inst_data';
+    Carp::confess("Instrument data directory ($dir) for mc16s model does not exist.") unless -d $dir;
+    return $dir;
 }
 #<>#
 
-#< Model, Build, Subject >#
-sub get_mock_subject { # for 454, can't find subject for sanger
+#< Library Sample Taxon >#
+our($taxon, $sample, $library);
+sub _taxon_sample_and_library {
     my $self = shift; 
 
-    # 1653198763
-    my $taxon = Genome::Utility::TestBase->create_mock_object(
-        class => 'Genome::Taxon',
-        id => 1653198763,
-        domain => 'Eukaryota',
-        species_name => 'human',
-        species_name => 'Homo sapiens',
-        current_default_prefix => 'H_',
-        legacy_org_id => 17,
-        estimated_genome_size => 4500000,#3200000000,
-        current_genome_refseq_id => 2817463805,
-        ncbi_taxon_id => 9606,
-    ) or Carp::confess("Can't create mock taxon");
+    $taxon = Genome::Taxon->create(
+        name => 'Human Metagenome TEST',
+        domain => 'Unknown',
+        current_default_org_prefix => undef,
+        estimated_genome_size => undef,
+        current_genome_refseq_id => undef,
+        ncbi_taxon_id => undef,
+        ncbi_taxon_species_name => undef,
+        species_latin_name => 'Human Metagenome',
+        strain_name => 'TEST',
+    );
+    if ( not $taxon ) {
+        Carp::confess('Cannot create taxon');
+    }
 
-    my $sample_name = 'H_GV-933124G-S.MOCK';#'H_MA-.0036.01-89503877';
-    
-    # 2847038554
-    my $source = Genome::Utility::TestBase->create_mock_object(
-        class => 'Genome::Individual',
-        id => 2847038554,
+    $sample = Genome::Sample->create(
+        id => -1234,
+        #name => 'HUMET-TEST-000',
+        name => 'H_GV-933124G-S.MOCK',
         taxon_id => $taxon->id,
-        name => $sample_name,
-    ) or Carp::confess("Can't create mock Individual");
+    );
+    if ( not $sample ) {
+        Carp::confess('Cannot create sample');
+    }
 
-    # 2847037746
-    my $subject = Genome::Utility::TestBase->create_mock_object(
-        class => 'Genome::Sample',
-        id => 2847037746,
-        name => $sample_name,
-        source_id => $source->id,
-        source_type => 'organism_individual',
-        taxon_id => $taxon->id,
-        common_name => undef,
-        species_name => 'unkown',
-        extraction_label => '0089503877',
-        extraction_type => 'genomic dna',
-        extraction_desc => undef,
-        cell_type => 'primary',
-        tissue_desc => 'skin, nos',
-        tissue_label => '31412',
-        organ_name => undef,
-    ) or Carp::Confess("Can't create mock sample");
+    $library = Genome::Library->create(
+        id => -12345,
+        name => $sample->name.'-testlibs',
+        sample_id => $sample->id,
+    );
+    if ( not $library ) { 
+        Carp::confess('Cannot create library');
+    }
 
-
-    return $subject;
+    return 1;
 }
 
-sub get_mock_model {
+sub taxon {
+    my $class = shift;
+    if ( not $taxon ) {
+        $class->_taxon_sample_and_library;
+    }
+    return $taxon;
+}
+
+sub sample {
+    my $class = shift;
+    if ( not $sample ) {
+        $class->_taxon_sample_and_library;
+    }
+    return $sample;
+}
+
+sub library {
+    my $class = shift;
+    if ( not $library ) {
+        $class->_taxon_sample_and_library;
+    }
+    return $library;
+}
+#<>#
+
+#< PP Models and Builds >#
+sub processing_profile_for_454 {
     my $self = shift;
 
-    # pp
-    my $pp = $self->get_mock_processing_profile(@_)
-        or Carp::confess("Can't get mock mc16s processing profile");
+    my $pp = Genome::ProcessingProfile->get(2278045); # exists and cannot recreate w/ same params
+    if ( not $pp ) {
+        Carp::confess('Cannot create mc16s processing profile for 454');
+    }
 
-    # subject
-    my $subject = $self->get_mock_subject
-        or Carp::confess("Can't get mock subject for mc16s model");
+    return $pp;
+}
 
-    # model
-    my $model = Genome::Model::Test->get_mock_model(
-        class => 'Genome::Model::MetagenomicComposition16s',
+sub processing_profile_for_sanger {
+    my $self = shift;
+
+    my $pp = Genome::ProcessingProfile->create(
+        type_name => 'metagenomic composition 16s',
+        name => 'MC16s Sanger TEST',
+        sequencing_platform => 'sanger',
+        amplicon_size => 1150,
+        sequencing_center => 'gsc',
+        assembler => 'phred_phrap',
+        assembler_params => '-vector_bound 0 -trim_qual 0',
+        trimmer => 'finishing',
+        classifier => 'rdp2-1',
+        classifier_params => '-training_set broad',
+    );
+
+    if ( not $pp ) {
+        Carp::confess('Cannot create mc16s processing profile for sanger');
+    }
+
+    return $pp;
+}
+
+sub _model_for_sequencing_platform {
+    my ($class, $sequencing_platform) = @_;
+
+    Carp::confess('No sequencing platform given to get model') if not $sequencing_platform;
+
+    my $sample = $class->sample or die; # confesses
+    my $pp_method = 'processing_profile_for_'.$sequencing_platform;
+    my $pp = $class->$pp_method or die; # confesses
+    my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
+    my $model = Genome::Model->create(
         processing_profile => $pp,
-        subject => $subject,
-    ) or Carp::confess "Can't get mock mc16s model";
+        subject_name => $sample->name,
+        subject_type => 'sample_name',
+        data_directory => $tmpdir,
+    );
+    if ( not $model ) {
+        Carp::confess('Cannot create mc16s model for '.$sequencing_platform);
+    }
 
-    # inst data
-    my $sequencing_platform = $pp->sequencing_platform;
-    my $method = '_get_mock_'.$sequencing_platform.'_instrument_data';
-    my $inst_data = $self->$method
-        or Carp::confess "Can't get mock instrument data for mc16s model";
-    my $instrument_data_assignment = Genome::Utility::TestBase->create_mock_object(
-        class => 'Genome::Model::InstrumentDataAssignment',
-        model => $model,
-        model_id => $model->id,
-        instrument_data => $inst_data,
-        instrument_data_id => $inst_data->id,
-        first_build_id => undef,
-    ) or Carp::confess("Can't assign instrument data to mc16s model");
+    my $instrument_data_method = '_instrument_data_'.$sequencing_platform;
+    my $instrument_data = $class->$instrument_data_method;
+    if ( not $instrument_data ) {
+        Carp::confess('Cannot get solexa instrument data');
+    }
+
+    my $add_ok = $model->add_instrument_data($instrument_data);
+    if ( not $add_ok ) {
+        Carp::confess('Cannot add instrument data to model');
+    }
+
+    my @instrument_data = $model->instrument_data;
+    if ( not @instrument_data ) {
+        Carp::confess('Cannot get instrument data from model');
+    }
 
     return $model;
 }
 
-sub get_mock_build {
-    my ($self, %params) = @_;
+sub model_for_454 {
+    return $_[0]->_model_for_sequencing_platform('454');
+}
 
-    my $model = delete $params{model};
-    Carp::confess "No mc16s model given to create mock build" unless $model;
-    my $use_example_directory = delete $params{use_example_directory};
-    Carp::confess("Unknown params to get mock build:\n".Dumper(\%params)) if %params;
-    
-    my $build = Genome::Model::Test->get_mock_build(
-        class => 'Genome::Model::Build::MetagenomicComposition16s::'.ucfirst($model->sequencing_platform),
-        model => $model,
-        data_directory => ( 
-            $use_example_directory
-            ? $self->example_directory_for_model($model)
-            : undef 
-        ),
-    )
-        or Carp::confess("Can't add mock build to model");
+sub model_for_sanger {
+    return $_[0]->_model_for_sequencing_platform('sanger');
+}
 
-    # inst data - really should copy as inputs but...
-    $build->mock('instrument_data', sub{ return $model->instrument_data; });
+sub example_build_for_model {
+    my ($class, $model) = @_;
 
-    # base
-    Genome::Utility::TestBase->mock_methods(
-        $build,
-        (qw/ 
-            description length_of_16s_region
-            amplicon_sets amplicon_set_names amplicon_set_for_name _amplicon_iterator_for_name
-            sub_dirs _sub_dirs fasta_dir classification_dir amplicon_classifications_dir
-            file_base_name
-            clean_up
+    Carp::confess('No mc16s model to create example build') if not $model;
 
-            _fasta_file_for_type_and_set_name
-            fasta_and_qual_reader_for_type_and_set_name
-            _qual_file_for_type_and_set_name
-            fasta_and_qual_writer_for_type_and_set_name
-
-            processed_fasta_file processed_qual_file
-            processed_fasta_file_for_set_name processed_qual_file_for_set_name
-
-            classify_amplicons
-            classification_file_for_set_name
-            classification_file_for_amplicon_name
-
-            orient_amplicons
-            oriented_fasta_file oriented_qual_file 
-            oriented_fasta_file_for_set_name oriented_qual_file_for_set_name
-
-            amplicons_attempted 
-            amplicons_processed amplicons_processed_success 
-            amplicons_classified amplicons_classified_success
-            amplicons_classification_error
-
-            /)
+    my $dir = $class->_example_directory_for_model($model) or die;
+    my $build = Genome::Model::Build->create(
+        model=> $model,
+        data_directory => $dir,
     );
-
-    # sanger
-    if ( $build->model->sequencing_platform eq 'sanger' ) {
-        Genome::Utility::TestBase->mock_methods(
-            $build,
-            (qw/
-
-                link_instrument_data
-
-                chromat_dir phd_dir edit_dir
-                consed_directory 
-
-                raw_reads_fasta_file raw_reads_qual_file
-                processed_reads_fasta_file processed_reads_qual_file
-
-                scfs_file_for_amplicon create_scfs_file_for_amplicon
-                phds_file_for_amplicon ace_file_for_amplicon
-                reads_fasta_file_for_amplicon reads_qual_file_for_amplicon
-
-                load_bioseq_for_amplicon
-
-                _get_amplicon_name_for_gsc_read_name
-                _get_amplicon_name_for_broad_read_name
-                /)
-        );
-    }
-    # 454
-    else {
-        Genome::Utility::TestBase->mock_methods(
-            $build,
-            (qw/ amplicon_set_names_and_primers /)
-        );
+    if ( not $build ) {
+        Carp::confess('Cannot create mc16s build');
     }
 
-    # create dirs
-    for my $dir ( $build->sub_dirs ) {
-        Genome::Utility::FileSystem->create_directory( $build->data_directory."/$dir" )
-            or return;
+    my $event = Genome::Model::Event->create(
+        model => $model,
+        build => $build,
+        event_type => 'genome model build',
+        event_status => 'Succeeded',
+        date_completed => UR::Time->now,
+    );
+    if ( not $event ) {
+        Carp::confess('Cannot create master event for example build');
     }
-
-    # metrics
-    $build->amplicons_attempted(5);
-    $build->amplicons_processed(4);
-    $build->amplicons_processed_success( $build->amplicons_processed / $build->amplicons_attempted );
-    $build->amplicons_classified(4);
-    $build->amplicons_classified_success( $build->amplicons_classified / $build->amplicons_processed );
-    $build->amplicons_classification_error(0);
+    my $master_event = $build->the_master_event;
+    if ( not $master_event ) {
+        Carp::confess('Cannot get the mster event for the example mc16s build');
+    }
 
     return $build;
 }
 #<>#
 
-#< Instrument Data and Subject >#
-sub _instrument_data_dir {
-    return '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16s'.
-    ucfirst($_[1]).'/inst_data';
-}
-
-sub _get_mock_sanger_instrument_data {
+#< Instrument Data >#
+our $instrument_data_454;
+sub _instrument_data_454 {
     my $self = shift;
 
-    my $run_name = '01jan00.101amaa'; # 16may08.912pmba1
-    my $full_path = $self->_instrument_data_dir('sanger').'/'.$run_name;
-    Carp::confess "Mock instrument data directory ($full_path) does not exist" unless -d $full_path;
-    my $inst_data = Genome::Model::Test->create_mock_object(
-        class => 'Genome::InstrumentData::Sanger',
-        id => $run_name,
-        run_name => $run_name,
-        sequencing_platform => 'sanger',
-        seq_id => $run_name,
-        sample_name => 'unknown',
-        subset_name => 1,
-        library_name => 'unknown',
-        full_path => $full_path,
-    ) or die "Can't create mock sanger instrument data";
-    $inst_data->mock('resolve_full_path', sub{ return $full_path; });
-    $inst_data->mock('dump_to_file_system', sub{ return 1; });
+    return $instrument_data_454 if $instrument_data_454;
 
-    return $inst_data;
-}
-
-sub _get_mock_454_instrument_data {
-    my $self = shift;
-
-    my $id = 2848985861; # 2852582708
-    my $full_path = $self->_instrument_data_dir('454').'/'.$id;
-    Carp::confess "Mock instrument data directory ($full_path) does not exist" unless -d $full_path;
-    my $inst_data = Genome::Model::Test->create_mock_object (
-        class => 'Genome::InstrumentData::454',
-        id => $id,
-        seq_id => $id,
-        region_id => $id,
-        analysis_name => 'D_2010_01_10_04_22_16_blade9-2-5_fullProcessing',
+    my $dir = $self->_instrument_data_dir_for_sequencing_platform(454) or die; # confesses if not exist
+    my $library = $self->library or die; # confesses on error
+    $instrument_data_454 = Genome::InstrumentData::454->create(
+        id => -7777,
         region_number => 2,
         total_reads => 20,
-        total_raw_wells => 1176187,
-        total_key_pass => 1169840,
-        incoming_dna_name => 'Pooled_Library-2009-12-31_1-1',
-        copies_per_bead => 2.5,
         run_name => 'R_2010_01_09_11_08_12_FLX08080418_Administrator_100737113',
-        key_pass_wells => 1170328,
-        predicted_recovery_beads => 371174080,
-        fc_id => undef,
-        sample_set => 'Tarr NEC 16S Metagenomic Sequencing master set',
-        research_project => 'Tarr NEC 16S Metagenomic Sequencing',
-        paired_end => 0,
-        sample_name => 'H_MA-.0036.01-89503877',
-        library_name => 'Pooled_Library-2009-12-31_1',
-        beads_loaded => 1999596,
-        ss_id => undef,
-        supernatant_beads => 254520,
-        sample_id => 2847037746,
-        library_id => 2848636935,
-        #library_name => 'Pooled_DNA-2009-03-09_23-lib1',
+        library => $library,
         sequencing_platform => '454',
-        full_path => $full_path,
-    ) or Carp::confess "Unable to create mock 454 id #";
-    $inst_data->mock('dump_fasta_file', sub {
-            return $full_path.'/zymo4_pool7_DNA_extract.fasta';
-        }
     );
-    $inst_data->mock('dump_to_file_system', sub{ return 1; });
+    if ( not $instrument_data_454 ) {
+        Carp::confess('Cannot create 454 instrument data');
+    }
 
-    return $inst_data;
+    # Must overload this to return the fasta file. The real code goes through LIMS
+    #  objects, which don't exist for this inst data.
+    my $fasta_file = $dir.'/-7777.fasta';
+    no warnings qw/ once redefine /;
+    *Genome::InstrumentData::454::dump_fasta_file = sub{ return $fasta_file; };
+    use warnings;
+
+    my $fasta_file_from_inst_data = $instrument_data_454->dump_fasta_file;
+    if ( $fasta_file_from_inst_data ne $fasta_file ) {
+        Carp::confess('Could not set fasta file on 454 inst data');
+    }
+
+    return $instrument_data_454;
 }
 
-#< Example Dirs and Files >#
-sub example_base_directory {
-    return '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16s';
+our $instrument_data_sanger;
+sub _instrument_data_sanger {
+    my $self = shift;
+
+    return $instrument_data_sanger if $instrument_data_sanger;
+
+    my $run_name = '01jan00.101amaa'; # 16may08.912pmba1
+    my $library = $self->library or die; # confesses on error
+    $instrument_data_sanger = Genome::InstrumentData::Sanger->create(
+        id => $run_name,
+        id => -8888,
+        library => $library,
+        sequencing_platform => 'sanger',
+        subset_name => 1,
+    );
+    if ( not $instrument_data_sanger ) {
+        Carp::confess('Cannot create sanger instrument data');
+    }
+
+    # Must overload this to not dump. The real code goes through LIMS
+    #  objects, which don't exist for this inst data. Plus it's dumped already :)
+    no warnings qw/ once redefine /;
+    *Genome::InstrumentData::Sanger::dump_to_file_system = sub{ return 1; };
+    use warnings;
+
+    my $base_dir = $self->_base_directory('sanger');
+    my $absolute_path = $base_dir.'/inst_data/'.$run_name;
+    Carp::confess('No sanger instrument data directory: '.$absolute_path) if not -d $absolute_path;
+    my $alloc = Genome::Disk::Allocation->__define__(
+        owner_id => $instrument_data_sanger->id,
+        owner_class_name => $instrument_data_sanger->class,
+        disk_group_name => 'info_alignments',
+        mount_path => $base_dir,
+        group_subdirectory => 'inst_data',
+        allocation_path => $run_name,
+        absolute_path => $absolute_path,
+    );
+    if (not $alloc ) {
+        Carp::confess('Could not create disk allocation for instrument data');
+    }
+
+    my $full_path_from_instrument_data = $instrument_data_sanger->full_path;
+    if ( $full_path_from_instrument_data ne $alloc->absolute_path ) {
+        Carp::confess('Could not set full path on sanger instrument data');
+    }
+
+    return $instrument_data_sanger;
 }
-
-sub example_directory_for_model {
-    my ($self, $model) = @_;
-
-    Carp::confess "No model to get example directory" unless $model;
-    
-    my $dir = $self->example_base_directory.ucfirst($model->sequencing_platform).'/build';
-    Carp::confess("Example directory ($dir) for de novo assembly model does not exist.") unless -d $dir;
-    
-    return $dir;
-}
-
 #<>#
 
-####################################
-# Test Base for Events and Reports #
-####################################
-
-package Genome::Model::MetagenomicComposition16s::TestCommandBase;
-
-use strict;
-use warnings;
-
-use base 'Genome::Utility::TestCommandBase';
-
-use Carp 'confess';
-use Data::Dumper 'Dumper';
-use File::Basename 'basename';
-use Test::More;
-
-#< Startup ># 
-sub startup : Tests(startup => no_plan) {
-    my $self = shift; 
-
-    $self->_ur_no_commit_and_dummy_ids
-        or return;
-    
-    my %classes_and_methods_to_overload = $self->_classes_and_methods_to_overload;
-    for my $class ( keys %classes_and_methods_to_overload ) {
-        for my $method ( @{$classes_and_methods_to_overload{$class}} ) {
-            no strict 'refs';
-            no warnings;
-            *{$class.'::'.$method} = sub{ return 1; };
-        }
-    }
-
-    if ( $self->_dirs_to_link and $self->_use_mock_dir ) {
-        die "Can't link dirs and use a existing mock build";
-    }
-    
-    for my $dir ( $self->_dirs_to_link ) {
-        $self->_link_contents_of_dir($dir);
-    }
-
-    return 1;
-}
-
-sub _classes_and_methods_to_overload { 
-    return; # none ok
-}
-
-sub _dirs_to_link {
-    return;
-}
-
-sub _link_contents_of_dir {
-    my ($self, $dir_to_link) = @_;
-
-    my $dest_dir = $self->_build->$dir_to_link;
-    Genome::Utility::FileSystem->validate_existing_directory($dest_dir)
-        or confess;
-
-    my $dir_base_name = File::Basename::basename($dest_dir);
-    my $source_dir = '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16s'.ucfirst($self->_sequencing_platform).'/build/'.$dir_base_name;
-    my $dh = Genome::Utility::FileSystem->open_directory($source_dir)
-        or confess;
-
-    $dh->read; $dh->read; # . and .. dirs
-    while ( my $file = $dh->read ) {
-        my $target = "$source_dir/$file";
-        next if -d $target;
-        my $link =  $dest_dir.'/'.$file;
-        unless ( symlink($target, $link) ) {
-            confess "Can't symlink ($target) to ($link): $!.";
-        }
-    }
-
-    return 1;
-}
-
-#< Params >#
-sub valid_param_sets {
-    return {
-        before_execute => 'before_execute',
-        after_execute => 'after_execute',
-        build_id => $_[0]->_build->id,
-    } 
-}
-sub before_execute { return 1; }
-sub after_execute { return 1; }
-
-sub required_property_names {
-    return (qw/ build_id /);
-}
-
-#< Model/Build >#
-sub _sequencing_platform {
-    return 'sanger';
-}
-
-sub _use_mock_dir {
-    return 0;
-}
-
-sub _model {
-    my $self = shift;
-
-    unless ( $self->{_model} ) {
-        $self->{_model} = Genome::Model::MetagenomicComposition16s::Test->get_mock_model(
-            sequencing_platform => $self->_sequencing_platform,
-        );
-    }
-
-    return $self->{_model};
-}
-
-sub _build {
-    my $self = shift;
-
-    unless ( $self->{_build} ) {
-        $self->{_build} = Genome::Model::MetagenomicComposition16s::Test->get_mock_build(
-            model => $self->_model,
-            use_example_directory => $self->_use_mock_dir,
-        );
-    }
-
-    return $self->{_build};
-}
-
-sub _amplicons {
-    my $self = shift;
-
-    unless ( $self->{_amplicons} ) {
-        $self->{_amplicons} = [];
-        my ($amplicon_set) = $self->_build->amplicon_sets
-            or die "No amplicons found";
-        while ( my $amplicon = $amplicon_set->next_amplicon ) {
-            push @{$self->{_amplicons}}, $amplicon;
-        }
-    }
-
-    return $self->{_amplicons};
-}
-
-##############
-# Base Event #
-##############
-
-package Genome::Model::Event::Build::MetagenomicComposition16s::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::MetagenomicComposition16s::TestCommandBase';
-
-use Genome;
-
-use Test::More;
-
-# Since the test class is abstract, make a class to inherit from it, and use that for testing
-class Genome::Model::Event::Build::MetagenomicComposition16s::Tester {
-    is => 'Genome::Model::Event::Build::MetagenomicComposition16s',
-};
-
-sub test_class {
-    return 'Genome::Model::Event::Build::MetagenomicComposition16s::Tester';
-}
-
-sub test01 : Tests() {
-    my $self = shift;
-
-    is($self->test_class->bsub_rusage, "-R 'span[hosts=1]'", 'Busb rusage');
-
-    return 1;
-}
-
-#########################
-# PrepareInstrumentData #
-#########################
-
-package Genome::Model::Event::Build::MetagenomicComposition16s::PrepareInstrumentData::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::MetagenomicComposition16s::TestCommandBase';
-
-use Genome;
-
-# Since the test class is abstract, make a class to inherit from it, and use that for testing
-class Genome::Model::Event::Build::MetagenomicComposition16s::PrepareInstrumentData::Tester {
-    is => 'Genome::Model::Event::Build::MetagenomicComposition16s::PrepareInstrumentData',
-};
-
-sub test_class {
-    return 'Genome::Model::Event::Build::MetagenomicComposition16s::PrepareInstrumentData::Tester';
-}
-
-######
-
-package Genome::Model::Event::Build::MetagenomicComposition16s::PrepareInstrumentData::Sanger::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::MetagenomicComposition16s::TestCommandBase';
-
-use File::Compare 'compare';
-use Test::More;
-
-sub test_class {
-    return 'Genome::Model::Event::Build::MetagenomicComposition16s::PrepareInstrumentData::Sanger';
-}
-
-sub after_execute {
-    my $self = shift;
-
-    my $build = $self->_build;
-    my $amplicons = $self->_amplicons;
-    for my $amplicon ( @$amplicons ){
-        ok(-s $build->scfs_file_for_amplicon($amplicon), 'scfs file');
-        ok(-s $build->phds_file_for_amplicon($amplicon), 'phds file');
-        ok(-s $build->reads_fasta_file_for_amplicon($amplicon), 'fasta file');
-        ok(-s $build->reads_qual_file_for_amplicon($amplicon), 'qual file');
-    }
-    ok(-s $build->raw_reads_fasta_file, 'Created the raw reads fasta file');
-    ok(-s $build->raw_reads_qual_file, 'Created the raw reads qual file');
-    #print $build->data_directory."\n";<STDIN>;
-    
-    return 1;
-}
-
-######
-
-package Genome::Model::Event::Build::MetagenomicComposition16s::PrepareInstrumentData::454::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::MetagenomicComposition16s::TestCommandBase';
-
-use Test::More;
-
-sub test_class {
-    return 'Genome::Model::Event::Build::MetagenomicComposition16s::PrepareInstrumentData::454';
-}
-
-sub _sequencing_platform {
-    return '454';
-}
-
-sub before_execute {
-    my $self = shift;
-
-    my $build = $self->_build;
-    for my $set_name ( $build->amplicon_set_names, 'none' ) {
-        my $fasta_file = $build->processed_fasta_file_for_set_name($set_name);
-        ok($fasta_file, "fasta file for $set_name");
-        ok(!-e $fasta_file, "fasta file for $set_name does not exist");
-    }
-    #print $build->data_directory."\n";<STDIN>;
-    
-    return 1;
-}
-
-sub after_execute {
-    my $self = shift;
-
-    my $build = $self->_build;
-    for my $set_name ( $build->amplicon_set_names, 'none' ) {
-        my $fasta_file = $build->processed_fasta_file_for_set_name($set_name);
-        ok($fasta_file, "fasta file for $set_name");
-        ok(-s $fasta_file, "fasta file for $set_name was created");
-    }
-    is($build->amplicons_attempted, 20, 'attemplted 20 amplicons');
-    #print $build->data_directory."\n";<STDIN>;
-    
-    return 1;
-}
-
-########
-# Trim #
-########
-
-package Genome::Model::Event::Build::MetagenomicComposition16s::Trim::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::MetagenomicComposition16s::TestCommandBase';
-
-use Genome;
-
-# Since the test class is abstract, make a class to inherit from it, and use that for testing
-class Genome::Model::Event::Build::MetagenomicComposition16s::Trim::Tester {
-    is => 'Genome::Model::Event::Build::MetagenomicComposition16s::Trim',
-};
-
-sub test_class {
-    return 'Genome::Model::Event::Build::MetagenomicComposition16s::Trim::Tester';
-}
-
-######
-
-package Genome::Model::Event::Build::MetagenomicComposition16s::Trim::Finishing::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::MetagenomicComposition16s::TestCommandBase';
-
-use Genome;
-
-use File::Compare 'compare';
-
-sub test_class {
-    return 'Genome::Model::Event::Build::MetagenomicComposition16s::Trim::Finishing';
-}
-
-sub _dirs_to_link { return (qw/ chromat_dir edit_dir /); }
-
-sub after_execute {
-    my $self = shift;
-
-    my $build = $self->_build;
-    ok(-s $build->processed_reads_fasta_file, 'Created the processed reads fasta file');
-    ok(-s $build->processed_reads_qual_file, 'Created the processed reads qual file');
-    #print $build->data_directory."\n";<STDIN>;
-
-    return 1;
-}
-
-############
-# Assemble #
-############
-
-package Genome::Model::Event::Build::MetagenomicComposition16s::Assemble::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::MetagenomicComposition16s::TestCommandBase';
-
-use Genome;
-
-# Since the test class is abstract, make a class to inherit from it, and use that for testing
-class Genome::Model::Event::Build::MetagenomicComposition16s::Assemble::Tester {
-    is => 'Genome::Model::Event::Build::MetagenomicComposition16s::Assemble',
-};
-
-sub test_class {
-    return 'Genome::Model::Event::Build::MetagenomicComposition16s::Assemble::Tester';
-}
-
-######
-
-package Genome::Model::Event::Build::MetagenomicComposition16s::Assemble::PhredPhrap::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::MetagenomicComposition16s::TestCommandBase';
-
-use Genome;
-use Test::More;
-
-sub test_class {
-    return 'Genome::Model::Event::Build::MetagenomicComposition16s::Assemble::PhredPhrap';
-}
-
-sub _dirs_to_link { return (qw/ chromat_dir edit_dir /); }
-
-sub before_execute {
-    my $self = shift;
-
-    my $build = $self->_build;
-    my $amplicons = $self->_amplicons
-        or return;
-    for my $amplicon ( @$amplicons ) {
-        my $ace_file = $build->ace_file_for_amplicon($amplicon);
-        unlink $ace_file;
-        for my $ext (qw/ log memlog phrap.out problems problems.qual singlets contigs contigs.qual view /) {
-            my $file = $build->edit_dir.'/'.$amplicon->name.'.fasta.'.$ext;
-            unlink $file;
-        }
-    }
-
-    return 1;
-}
-
-sub after_execute {
-    my $self = shift;
-
-    my $build = $self->_build;
-    my ($amplicon_set) = $build->amplicon_sets;
-    ok($amplicon_set, 'amplicon set');
-    ok(-s $amplicon_set->processed_fasta_file, 'Created the processed fasta file');
-    ok(-s $amplicon_set->processed_qual_file, 'Created the processed qual file');
-    while ( my $amplicon = $amplicon_set->next_amplicon ) {
-        ok(-s $build->ace_file_for_amplicon($amplicon), 'ace file');
-    }
-    #print $build->data_directory."\n";<STDIN>;
-    
-    return 1;
-}
-
-############
-# Classify #
-############
-
-package Genome::Model::Event::Build::MetagenomicComposition16s::Classify::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::MetagenomicComposition16s::TestCommandBase';
-
-use Genome;
-
-require File::Copy;
-use Test::More;
-
-sub test_class {
-    return 'Genome::Model::Event::Build::MetagenomicComposition16s::Classify';
-}
-
-sub _dirs_to_link { return (qw/ chromat_dir edit_dir /); }
-
-sub before_execute {
-    my $self = shift;
-
-    my $build = $self->_build;
-    $build->amplicons_processed(0);
-    is($build->amplicons_processed, 0, 'amplicons processed reset');
-    $build->amplicons_processed_success(0);
-    is($build->amplicons_processed_success, 0, 'amplicons processed success reset');
-    
-    $build->amplicons_classified(0);
-    is($build->amplicons_classified, 0, 'amplicons classified reset');
-    $build->amplicons_classified_success(0);
-    is($build->amplicons_classified_success, 0, 'amplicons classified success reset');
-
-    return 1;
-}
-
-sub after_execute {
-    my $self = shift;
-
-    my $build = $self->_build;
-    my $amplicons  = $self->_amplicons;
-    my $cnt = grep { -s $build->classification_file_for_amplicon_name($_->name) } @$amplicons;
-    is($cnt, 4, 'Verified - Created classification for 4 of 5 amplicons');
-
-    is($build->amplicons_processed, 4, 'amplicons processed recorded');
-    is($build->amplicons_classified, 4, 'amplicons classified recorded');
-    
-    ok(-s $build->classification_file_for_set_name(''), 'build classification file');
-    
-    #print $build->data_directory."\n";<STDIN>;
-    
-    return 1;
-}
-
-###########
-# Reports #
-###########
-
-package Genome::Model::Event::Build::MetagenomicComposition16s::Reports::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::MetagenomicComposition16s::TestCommandBase';
-
-use Genome;
-use Test::More;
-
-sub test_class {
-    return 'Genome::Model::Event::Build::MetagenomicComposition16s::Reports';
-}
-
-sub _dirs_to_link { return (qw/ chromat_dir edit_dir classification_dir /); }
-
-sub after_execute {
-    my $self = shift;
-
-    my @reports = glob($self->_build->reports_directory.'/*');
-    is(@reports, 2, "Created 2 reports");
-    ok(-s $self->_build->reports_directory.'/Summary/report.xml', 'Created summary report');
-    ok(-s $self->_build->reports_directory.'/Summary/report.html', 'Created summary report html');
-    ok(-s $self->_build->reports_directory.'/Composition/report.xml', 'Created composition report');
-    #print $self->_build->data_directory."\n";<STDIN>;
-
-    return 1;
-}
-
-##########
-# Orient #
-##########
-
-package Genome::Model::Event::Build::MetagenomicComposition16s::Orient::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::MetagenomicComposition16s::TestCommandBase';
-
-use Genome;
-use Test::More;
-
-sub test_class {
-    return 'Genome::Model::Event::Build::MetagenomicComposition16s::Orient';
-}
-
-sub _dirs_to_link { return (qw/ chromat_dir edit_dir amplicon_classifications_dir /); }
-
-sub before_execute {
-    my $self = shift;
-
-    my $build = $self->_build;
-    ok(!-e $build->oriented_fasta_file_for_set_name(''), 'oriented fasta does not exist');
-    ok(!-e $build->oriented_qual_file_for_set_name(''), 'oriented qual does not exist');
-    #print $build->data_directory."\n";<STDIN>;
-
-    return 1;
-}
-
-sub after_execute {
-    my $self = shift;
-
-    my $build = $self->_build;
-    ok(-s $build->oriented_fasta_file_for_set_name(''), 'oriented fasta file was created');
-    ok(-s $build->oriented_qual_file_for_set_name(''), 'oriented qual file was created');
-    #print $build->data_directory."\n";<STDIN>;
-
-    return 1;
-}
-
-############
-# Clean Up #
-############
-
-package Genome::Model::Event::Build::MetagenomicComposition16s::CleanUp::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::MetagenomicComposition16s::TestCommandBase';
-
-use Genome;
-use Test::More;
-
-sub test_class {
-    return 'Genome::Model::Event::Build::MetagenomicComposition16s::CleanUp';
-}
-
-sub _dirs_to_link { return (qw/ chromat_dir edit_dir /); }
-
-sub before_execute {
-    my $self = shift;
-
-    my @files_remaining = glob($self->_build->edit_dir.'/*');
-    is(@files_remaining, 80, "Start w/ correct number of files");
-
-    return 1;
-}
-
-sub after_execute {
-    my $self = shift;
-
-    my @files_remaining = glob($self->_build->edit_dir.'/*');
-    is(@files_remaining, 80, "Removed correct number of files");
-    #is(@files_remaining, 15, "Removed correct number of files");
-    #print $self->_build->data_directory."\n";<STDIN>;
-
-    return 1;
-}
-
-###########
-# Reports #
-###########
-
-package Genome::Model::MetagenomicComposition16s::Report::TestBase;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::MetagenomicComposition16s::TestCommandBase';
-
-use Data::Dumper 'Dumper';
-require Genome::Model::Test;
-use Test::More;
-
-sub method_for_execution {
-    return 'generate_report';
-};
-
-sub _use_mock_dir { # use a real build to generate and compare report
-    return 1;
-}
-
-sub after_execute {
-    my ($self, $summary, $params, $report) = @_;
-
-    #$report->save($self->_build->reports_directory, 1);
-    print $report->xml_string."\n";
-    my $existing_report = Genome::Report->create_report_from_directory(
-        $self->_build->reports_directory.'/'.$report->name_to_subdirectory($report->name)
-    );
-    ok($existing_report, 'existing report');
-
-    my @datasets = $report->get_datasets;
-    my @existing_datasets = $existing_report->get_datasets;
-    for ( my $i = 0; $i < @datasets; $i++ ) {
-        #is($datasets[$i]->to_xml_string, $existing_datasets[$i]->to_xml_string, $datasets[$i]->name);
-    }
-
-    return $self->_verify($summary, $params, $report);
-}
-
-sub _verify {
-    return 1;
-}
-
-######
-
-package Genome::Model::MetagenomicComposition16s::Report::Summary::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::MetagenomicComposition16s::Report::TestBase';
-
-use Data::Dumper 'Dumper';
-require File::Temp;
-require File::Compare;
-use Test::More;
-
-sub test_class {
-    'Genome::Model::MetagenomicComposition16s::Report::Summary';
-}
-
-######
-
-package Genome::Model::MetagenomicComposition16s::Report::Composition::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::MetagenomicComposition16s::Report::TestBase';
-
-use Data::Dumper 'Dumper';
-use Test::More;
-
-sub test_class {
-    'Genome::Model::MetagenomicComposition16s::Report::Composition';
-}
-
-######
-######
-######
-
 1;
-
-=pod
-
-=head1 Tests
-
-=head1 Disclaimer
-
- Copyright (C) 2010 Washington University Genome Sequencing Center
-
- This script is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
- License for more details.
-
-=head1 Author(s)
-
- Eddie Belter <ebelter@genome.wustl.edu>
-
-=cut
-
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/MetagenomicComposition16s/Test.pm $
-#$Id: Test.pm 54265 2010-01-05 16:50:07Z ebelter $
 

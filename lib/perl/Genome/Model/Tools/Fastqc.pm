@@ -80,7 +80,7 @@ sub run_java_vm {
     }
     my $java_vm_cmd = 'java -Xmx'. $self->maximum_memory .'g -cp '. $cmd;
     $params{'cmd'} = $java_vm_cmd;
-    Genome::Utility::FileSystem->shellcmd(%params);
+    Genome::Sys->shellcmd(%params);
     return 1;
 }
 

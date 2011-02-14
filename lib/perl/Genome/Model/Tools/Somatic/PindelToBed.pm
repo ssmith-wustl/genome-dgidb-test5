@@ -46,7 +46,7 @@ class Genome::Model::Tools::Somatic::PindelToBed {
         source => {
             type => 'String',
             is_optional => 0,
-            doc => 'The pindel indels_all_sequences file to be converted to bed.'
+            doc => 'The pindel indels_all_sequences file or directory containing the run-pindel pipeline output, to be converted to bed.'
         },
     ],
     has_transient_optional => [
@@ -106,32 +106,32 @@ sub execute {
         $self->status_message("Using ".$self->source." as the pindel directory, proceeding to cat all chroms and run on that.");
         my @grob = glob($self->source."/*");
         my @dirs;
-        my $temp_file = Genome::Utility::FileSystem->create_temp_file_path;
+        my $temp_file = Genome::Sys->create_temp_file_path;
         for my $t (@grob){
             if(-d $t){
                 if(-s $t."/indels_all_sequences"){
                     my $cmd = "cat ".$t."/indels_all_sequences >> ".$temp_file;
-                    unless(Genome::Utility::FileSystem->shellcmd( cmd => $cmd)){
+                    unless(Genome::Sys->shellcmd( cmd => $cmd)){
                         $self->error_message("Failed to cat files. command looked like: ".$cmd);
                         die $self->error_message;
                     }
                 }
             }
         }
-        $self->_input_fh(Genome::Utility::FileSystem->open_file_for_reading($temp_file));
+        $self->_input_fh(Genome::Sys->open_file_for_reading($temp_file));
     } else {
-        $self->_input_fh(Genome::Utility::FileSystem->open_file_for_reading($self->source));
+        $self->_input_fh(Genome::Sys->open_file_for_reading($self->source));
     }
     
     if($self->_big_output_fh) {
         return 1; #Already initialized
     }
-    $self->_output_fh(Genome::Utility::FileSystem->open_file_for_writing($self->output));
+    $self->_output_fh(Genome::Sys->open_file_for_writing($self->output));
     
     my $big_output = $self->output . ".big_deletions";
     my $big_output_fh;
     eval {
-        $big_output_fh = Genome::Utility::FileSystem->open_file_for_writing($big_output);
+        $big_output_fh = Genome::Sys->open_file_for_writing($big_output);
         $self->_big_output_fh($big_output_fh);
     };
     
@@ -183,7 +183,6 @@ sub execute {
                 next;
             }
             $type_and_size = $type."/".$size;
-            $self->status_message( $type_and_size . "\t" . join(" ",@bed_line) . "\n");
             $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'bed'}=join(",",@bed_line);
             if($self->include_bp_ranges){
                 $ranges{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'lower'}=$lower_range;

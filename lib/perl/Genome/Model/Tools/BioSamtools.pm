@@ -14,21 +14,31 @@ sub help_detail {
     "These commands are setup to run perl5.10.0 scripts that use Bio-Samtools and require bioperl v1.6.0.  Most require 64-bit architecture except those that simply work with output files from other Bio-Samtools commands.";
 }
 
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    unless ($self) { return; }
+    unless ($] > 5.012) {
+        die 'Bio::DB::Sam requires perl 5.12! Consider using gmt5.12.1 instead of gmt for all bio-samtools commands!';
+    }
+    require Bio::DB::Sam;
+    return $self;
+}
+
 sub perl_path {
-    return '/gsc/var/tmp/perl-5.10.0/bin/perl64';
+    die('Remove perl-5.10.0');
 }
 
 sub bin_path {
-    return '/gsc/var/tmp/Bio-SamTools/bin';
+    die('Remove /gsc/var/tmp/Bio-SamTools');
 }
 
 sub execute_path {
-    my $self = shift;
-    return $self->perl_path .' '. $self->bin_path;
+    die('Do not call execute_path in '. __PACKAGE__);
 }
 
 sub bioperl_path {
-    return '/gsc/pkg/perl_modules/bioperl/BioPerl-1.6.0';
+    die('Do not define bioperl version');
 }
 
 1;

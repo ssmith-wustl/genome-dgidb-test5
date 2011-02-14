@@ -99,7 +99,7 @@ sub create {
     
     my $unlock_callback = sub {
         $class->status_message("Cleaning up lock $lock...");
-        Genome::Utility::FileSystem->unlock_resource(resource_lock=>$lock) || die "Failed to unlock after committing software result";
+        Genome::Sys->unlock_resource(resource_lock=>$lock) || die "Failed to unlock after committing software result";
         $class->status_message("Cleanup completed for lock $lock.");
     };
     # TODO; if an exception occurs before this is assigned to the object, we'll have a stray lock
@@ -152,7 +152,7 @@ sub create {
         else {
             $self->status_message("Creating output directory $output_dir...");
             eval {
-                Genome::Utility::FileSystem->create_directory($output_dir)
+                Genome::Sys->create_directory($output_dir)
             };
             if ($@) {
                 $self->delete;
@@ -236,12 +236,7 @@ sub delete {
         print $self->status_message;
         my $allocation = Genome::Disk::Allocation->get(owner_id=>$self->id, owner_class_name=>ref($self));
         if ($allocation) {
-            my $path = $allocation->absolute_path;
-            unless (rmtree($path)) {
-                $self->error_message("could not rmtree $path");
-                return;
-           }
-           $allocation->deallocate; 
+            $allocation->deallocate; 
         }
     };
 
@@ -260,10 +255,10 @@ sub lock {
     $LOCKS{$resource_lock_name} += 1;
     return $resource_lock_name if ($LOCKS{$resource_lock_name} > 1);
    
-    my $lock = Genome::Utility::FileSystem->lock_resource(resource_lock => $resource_lock_name, max_try => 2);
+    my $lock = Genome::Sys->lock_resource(resource_lock => $resource_lock_name, max_try => 2);
     unless ($lock) {
         $self->status_message("This data set is still being processed by its creator.  Waiting for existing data lock...");
-        $lock = Genome::Utility::FileSystem->lock_resource(resource_lock => $resource_lock_name);
+        $lock = Genome::Sys->lock_resource(resource_lock => $resource_lock_name);
         unless ($lock) {
             $self->error_message("Failed to get existing data lock!");
             die($self->error_message);
@@ -286,7 +281,7 @@ sub unlock {
     
     return if ($LOCKS{$resource_lock_name} > 1);
     
-    unless (Genome::Utility::FileSystem->unlock_resource(resource_lock=>$resource_lock_name)) {
+    unless (Genome::Sys->unlock_resource(resource_lock=>$resource_lock_name)) {
         $self->error_message("Couldn't unlock $resource_lock_name.  error message was " . $self->error_message);
         die $self->error_message;
     }

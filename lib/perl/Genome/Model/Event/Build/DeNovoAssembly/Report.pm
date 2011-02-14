@@ -50,7 +50,7 @@ sub execute {
         return;
     }
     my $html_file = $report->directory.'/report.html';
-    my $fh = Genome::Utility::FileSystem->open_file_for_writing($html_file); # dies
+    my $fh = Genome::Sys->open_file_for_writing($html_file); # dies
     $fh->print( $xslt->{content} );
     $fh->close;
 

@@ -225,15 +225,27 @@ sub execute {
     $self->check_fastq_integritude;
 
     unless(defined($params{read_count})){
-        my $read_count = $self->get_read_count;
+        my ($read_count,$fragment_count) = $self->get_read_count_and_fragment_count;
         unless(defined($read_count)){
             $self->error_message("No read count was specified and none could be calculated from the fastqs");
             die $self->error_message;
         }
+        unless(defined($self->fragment_count)){
+            $self->fragment_count($fragment_count);
+            $params{fragment_count} = $fragment_count;
+        }
         $self->read_count($read_count);
         $params{read_count} = $read_count;
     }
-    unless(defined($params{subset_name})){
+    unless(defined($params{fragment_count})){
+        if($self->is_paired_end){
+            $params{fragment_count} = $params{read_count} * 2;
+        }
+        else {
+            $params{fragment_count} = $params{read_count};
+        }
+    }
+    if(not defined($params{subset_name})){
         my $subset_name = $self->get_subset_name;
         unless($subset_name =~ /[1-8]/){
             $self->error_message("Subset_name must be between 1-8. Found subset_name of \"".$subset_name."\"");
@@ -241,6 +253,15 @@ sub execute {
         }
         $self->subset_name($subset_name);
         $params{subset_name} = $subset_name;
+    }
+    else {
+        my $subset_name = $self->get_subset_name;
+        unless($subset_name eq $params{subset_name}){
+            $self->error_message("Subset name is incorrectly specified. The specified name must match the first digit after s_ in the filenames. 
+                                    You specified ".$params{subset_name}." and the files indicate that the subset name should be ".$subset_name);
+            die $self->error_message;
+        }
+        $self->status_message("Subset name verified to jibe with file names.");
     }
 
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
@@ -345,7 +366,7 @@ sub execute {
         }
     }
     $self->status_message("About to execute tar command, this could take a long time, depending upon the location (across the network?) and size (MB or GB?) of your fastq's.");
-    unless(Genome::Utility::FileSystem->shellcmd(cmd=>$tar_cmd)){
+    unless(Genome::Sys->shellcmd(cmd=>$tar_cmd)){
         $self->error_message("Tar command failed to complete successfully. The command looked like :   ".$tar_cmd);
         die $self->error_message;
     }
@@ -387,7 +408,7 @@ sub execute {
     
     my $real_filename = sprintf("%s/archive.tgz", $disk_alloc->absolute_path);
     $self->status_message("About to calculate the md5sum of the tar'd fastq's. This may take a long time.");
-    my $md5 = Genome::Utility::FileSystem->md5sum($tmp_tar_filename);
+    my $md5 = Genome::Sys->md5sum($tmp_tar_filename);
     $self->status_message("Copying tar'd fastq's into the allocation, this will take some time.");
     unless(copy($tmp_tar_filename, $real_filename)) {
         $self->error_message("Failed to copy to allocated space (copy returned bad value).  Unlinking and deallocating.");
@@ -397,7 +418,7 @@ sub execute {
     }
     $self->status_message("About to calculate the md5sum of the tar'd fastq's in their new habitat on the allocation. This may take a long time.");
     my $copy_md5;
-    unless($copy_md5 = Genome::Utility::FileSystem->md5sum($real_filename)){
+    unless($copy_md5 = Genome::Sys->md5sum($real_filename)){
         $self->error_message("Failed to calculate md5sum.");
         die $self->error_message;
     }
@@ -501,9 +522,9 @@ sub check_last_read {
     return ($read_name,$read_length);
 }
 
-sub get_read_count {
+sub get_read_count_and_fragment_count {
     my $self = shift;
-    my ($line_count,$read_count);
+    my ($line_count,$read_count,$fragment_count);
     my @files = split ",", $self->source_data_files;
     $self->status_message("Now attempting to determine read_count by calling wc on the imported fastq(s). This may take a while if the fastqs are large.");
     for my $file (@files){
@@ -520,7 +541,14 @@ sub get_read_count {
         return;
     }
     $read_count = $line_count / 4;
-    return $read_count
+    if(scalar(@files)==2){
+        $read_count = $read_count / 2;
+        $fragment_count = $read_count * 2;
+    }
+    else {
+        $fragment_count = $read_count;
+    }
+    return $read_count,$fragment_count;
 }
 
 sub get_subset_name {

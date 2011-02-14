@@ -18,7 +18,7 @@ class Genome::InstrumentData::Command::PrintSummaryXml {
 sub execute {
     my $self = shift;
 
-    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+    my $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
     unless ($output_fh) {
         die('Failed to open output file for writing '. $self->output_file);
     }

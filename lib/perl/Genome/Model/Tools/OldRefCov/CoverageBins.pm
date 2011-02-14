@@ -26,7 +26,7 @@ sub execute {
     my $oldout;
     if ($self->output_file) {
         open $oldout, ">&STDOUT"     or die "Can't dup STDOUT: $!";
-        my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_file);
+        my $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
         unless ($output_fh) {
             $self->error_message('Failed to open output file '. $self->output_file .' for writing!');
             return;
@@ -38,7 +38,7 @@ sub execute {
     my %ref;
 
     # Reading in the STATS.tsv file information.
-    my $stats_fh = Genome::Utility::FileSystem->open_file_for_reading($self->stats_file);
+    my $stats_fh = Genome::Sys->open_file_for_reading($self->stats_file);
     unless ($stats_fh) {
         $self->error_message('Failed to open stats file '. $self->stats_file ." for reading:  $!");
         return;

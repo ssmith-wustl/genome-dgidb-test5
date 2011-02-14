@@ -24,7 +24,7 @@ sub required_rusage {
 
 # No need to extract fastqs & run aligner
 
-sub extract_fastqs_and_run_aligner {
+sub collect_inputs_and_run_aligner {
     return 1;
 }
 
@@ -70,7 +70,7 @@ sub create_BAM_in_staging_directory {
                 $self->status_message("Successfully created an all_sequences.bam file.");
             } else {     #otherwise simply symlink the bam into the staging directory 
                 $self->status_message("Attempting to symlink file from import to alignment scratch dir.\n");
-                unless(Genome::Utility::FileSystem->create_symlink($instrument_data->data_directory."/all_sequences.bam",$bam_output_path)) {
+                unless(Genome::Sys->create_symlink($instrument_data->data_directory."/all_sequences.bam",$bam_output_path)) {
                     $self->error_message("Failed to symlink BAM from instrument-data allocation to alignment scratch dir.\n");
                     die $self->errror_message;
                 }

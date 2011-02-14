@@ -14,7 +14,7 @@ ok(-d $data_dir, "Data dir exists") or die;
 ok(-s $data_dir.'/TEST.scafSeq', "Data dir test file exists") or die;
 ok(-s $data_dir.'/supercontigs.fasta', "Data dir supercontigs.fasta file exists") or die;
 
-my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+my $temp_dir = Genome::Sys->create_temp_directory();
 ok(-d $temp_dir, "Temp test dir created") or die;
 
 symlink( $data_dir.'/TEST.scafSeq', $temp_dir.'/TEST.scafSeq' );

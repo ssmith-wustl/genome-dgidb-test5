@@ -87,7 +87,7 @@ sub execute {
     
     $self->status_message("Output stats file: ".$stats_file);
     
-    my $rv_check = Genome::Utility::FileSystem->are_files_ok(input_files=>\@expected_refcov_output_files);
+    my $rv_check = Genome::Sys->are_files_ok(input_files=>\@expected_refcov_output_files);
     if ($rv_check) {
     	$self->status_message("Expected output files exist.  Skipping generation of ref cov stats file.");
     } else {
@@ -95,16 +95,16 @@ sub execute {
     	my $cmd = "/gscuser/jwalker/svn/TechD/RefCov/bin/refcov-64.pl ".$self->aligned_bam_file." ".$self->regions_file." ".$stats_file;    
      														
     	$self->status_message("Running ref cov report at ".UR::Time->now);
-    	my $rv = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd);
+    	my $rv = Genome::Sys->shellcmd(cmd=>$cmd);
     	if ($rv == 1) {
-    		Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_refcov_output_files);
+    		Genome::Sys->mark_files_ok(input_files=>\@expected_refcov_output_files);
     	}
     	$self->status_message("RefCov file generated at ".UR::Time->now);
     }
     	
     	
     my @expected_output_files = ($combined_file);
-    my $rv_output_check = Genome::Utility::FileSystem->are_files_ok(input_files=>\@expected_output_files);
+    my $rv_output_check = Genome::Sys->are_files_ok(input_files=>\@expected_output_files);
     #The re-check of the ref cov check value (rv_check) is necessary because if the refcov stats file has been regenerated,
     #then the subsequent report files should be regenerated.
     if ($rv_output_check && $rv_check) {
@@ -124,12 +124,12 @@ sub execute {
     					"-refcov $stats_file -db_headers  $refcov_headers_file " .
     					"-ref_counts $readcount_file  -output $combined_file ";
     
-    my $rv_combine = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd_combine);
+    my $rv_combine = Genome::Sys->shellcmd(cmd=>$cmd_combine);
     
     $self->status_message("Done combining ref cov stats with read counts at ".UR::Time->now);
     
     if ($rv_combine) {
-    	Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_output_files);
+    	Genome::Sys->mark_files_ok(input_files=>\@expected_output_files);
     }
     
     $self->status_message("<<<Completed RefCov at ".UR::Time->now);

@@ -59,7 +59,7 @@ sub assignment_types {
     return (qw/ assigned unassigned compatible /);
 }
 
-sub _fetch {
+sub _resolve_boolexpr {
     my $self = shift;
 
     # Verify model
@@ -97,12 +97,10 @@ sub _fetch {
 
     my $method = sprintf('%s_instrument_data', $types[0]);
 
-    return Genome::InstrumentData->create_iterator(
-        where => [ id => [ map { $_->id } $self->model->$method ] ],
+    return Genome::InstrumentData->define_boolexpr(
+        id => [ map { $_->id } $self->model->$method ] ,
     );
 }
 
 1;
 
-#$HeadURL$
-#$Id$

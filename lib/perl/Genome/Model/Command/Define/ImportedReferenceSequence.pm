@@ -4,15 +4,36 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command::Define::ImportedReferenceSequence {
-    is => 'Genome::Model::Command::Define',
-    has => [
+    is => [
+        'Genome::Model::Command::Define',
+        'Genome::Command::Base',
+        ],
+    has_input => [
         fasta_file => {
             is => 'Text',
             len => 1000,
             doc => "The full path and filename of the reference sequence fasta file to import."
         }
     ],
-    has_optional => [
+    has_optional_input => [
+        sequence_uri => {
+            is => 'Text',
+            doc => 'URI to the sequence gzip file to write into BAM headers for alignments against this reference.'
+        },
+        use_default_sequence_uri => {
+            is => 'Boolean',
+            doc => 'Use a default generated URI for the BAM header.',
+            default_value => 0,
+        },
+        assembly_name => {
+            is => 'Text',
+            doc => 'Assembly name to store in the SAM header.  Autoderived if not specified.',
+            is_optional => 1, 
+        },
+        derived_from => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            doc => 'The reference sequence build from which this one is derived (if any).',
+        },
         prefix => {
             is => 'Text',
             doc => 'The source of the sequence, such as "NCBI".  May not have spaces.'
@@ -64,6 +85,14 @@ class Genome::Model::Command::Define::ImportedReferenceSequence {
    ],
 };
 
+sub _shell_args_property_meta {
+    return shift->Genome::Command::Base::_shell_args_property_meta(@_);
+}
+
+sub resolve_class_and_params_for_argv {
+    return shift->Genome::Command::Base::resolve_class_and_params_for_argv(@_);
+}
+
 sub help_synopsis {
     return "genome model define imported-reference-sequence --species-name=human --prefix=NCBI --fasta-file=/gscuser/person/fastafile.fasta\n"
 }
@@ -97,6 +126,12 @@ sub _prompt_to_continue {
 
 sub execute {
     my $self = shift;
+
+    if ((!defined $self->sequence_uri && !$self->use_default_sequence_uri) || 
+        (defined $self->sequence_uri && $self->use_default_sequence_uri)) {
+        $self->error_message('Please specify one (and only one) of --sequence-uri or --use-default-sequence-uri.');
+        return;
+    }
 
     unless (-s $self->fasta_file) {
         $self->error_message('Input fasta file: '.$self->fasta_file.' is not valid.');
@@ -267,6 +302,22 @@ sub _create_build {
         data_directory => $self->data_directory,
         fasta_file => $self->fasta_file,
     );
+
+    if ($self->use_default_sequence_uri) {
+        push(@build_parameters, generate_sequence_uri => 1);
+    }
+
+    if ($self->sequence_uri) {
+        push(@build_parameters, sequence_uri => $self->sequence_uri);
+    }
+    
+    if ($self->assembly_name) {
+        push(@build_parameters, assembly_name => $self->assembly_name);
+    }
+
+    if ($self->derived_from) {
+        push(@build_parameters, derived_from => $self->derived_from);
+    }
 
     if($self->version) {
         push @build_parameters,

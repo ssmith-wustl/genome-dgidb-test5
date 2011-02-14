@@ -21,7 +21,7 @@ use Genome;
 use File::Basename;
 
 class Genome::InstrumentData::Solexa {
-    is => ['Genome::InstrumentData', 'Genome::Utility::FileSystem'],
+    is => ['Genome::InstrumentData', 'Genome::Sys'],
     table_name => <<EOS
         (
             select
@@ -187,7 +187,7 @@ EOS
         is_external                     => { },
         adaptor_path                    => { },
         archive_path                    => { },
-        gerald_bam_path                 => { },
+        bam_path                        => { column_name => 'gerald_bam_path'},
         analysis_software_version       => { },
         clusters                        => { column_name => 'filt_clusters' },
         fwd_clusters                    => { column_name => 'fwd_filt_clusters' },
@@ -414,11 +414,18 @@ sub dump_solexa_fastq_files {
 
 sub dump_sanger_fastq_files {
     my $self = shift;
+
+    if (defined $self->bam_path && -s $self->bam_path) {
+       $self->status_message("Now using a bam instead"); 
+        $DB::single = 1;
+       return $self->dump_fastqs_from_bam;
+    }
+
     my @illumina_fastq_pathnames = $self->_unprocessed_fastq_filenames(@_);
 
     my %params = @_;
 
-    my $requested_directory = delete $params{directory} || Genome::Utility::FileSystem->base_temp_directory;
+    my $requested_directory = delete $params{directory} || Genome::Sys->base_temp_directory;
 
     my @converted_pathnames;
     my $counter = 0;

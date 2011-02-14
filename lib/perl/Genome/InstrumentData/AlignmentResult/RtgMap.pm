@@ -96,7 +96,7 @@ sub _run_aligner {
         die $self->error_message;
     }
     
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
             cmd                 => $cmd, 
             input_files         => \@input_pathnames,
             output_directories  => [$prechunk_input_sdf],
@@ -119,7 +119,7 @@ sub _run_aligner {
     $self->status_message("Chunking....");
     my $chunk_size = ($ENV{'TEST_MODE'} ? 200 : 5000000);
     my $chunk_cmd = sprintf("%s -c %s -o %s %s", Genome::Model::Tools::Rtg->path_for_rtg_sdfsplit($self->aligner_version), $chunk_size, $chunk_path, $prechunk_input_sdf);
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
             cmd                 => $chunk_cmd, 
             output_directories  => [$chunk_path],
             skip_if_output_is_present => 0,
@@ -157,7 +157,7 @@ sub _run_aligner {
         
         #rtg grabs all the CPU it can, so create restriction
             
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
             cmd          => $cmd,
             input_files  => [ $input_sdf ],
             output_files => [@output_files, "$output_dir/done"],
@@ -196,7 +196,7 @@ sub _run_aligner {
         my $log_output = $self->temp_staging_directory . "/rtg_map.log";
         $cmd = sprintf('cat %s >> %s', $log_input, $log_output);        
 
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
             cmd          => $cmd,
             input_files  => [ $log_input ],
             output_files => [ $log_output ],

@@ -183,7 +183,7 @@ sub create_model {
 
     my $base_alignment_directory = Genome::Config->alignment_links_directory .'/'.
         $model->read_aligner_name .'/'. $model->reference_sequence_name;
-    Genome::Utility::FileSystem->create_directory($base_alignment_directory);
+    Genome::Sys->create_directory($base_alignment_directory);
 }
 
 sub add_instrument_data {

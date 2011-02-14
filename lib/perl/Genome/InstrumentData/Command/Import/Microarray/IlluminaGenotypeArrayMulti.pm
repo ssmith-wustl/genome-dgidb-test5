@@ -51,7 +51,7 @@ my %properties = (
     },
     allocation => {
         is => 'Genome::Disk::Allocation',
-        id_by => 'allocator_id',
+        id_by => 'id',
         is_optional => 1,
     },
     result_model_ids => {
@@ -72,10 +72,21 @@ my %properties = (
         is_optional => 1,
         doc => 'sample names (names like H_KU-16021-D801387), delineated by commas, to be included in the import command.',
     },
+    reference_sequence_build => {
+        is => 'Genome::Model::Build::ImportedReferenceSequence',
+        id_by => 'reference_sequence_build_id',
+        doc => 'Build of the reference against which the genotype file was produced.',
+        is_optional => 0,
+    },
+    reference_sequence_build_id  => {
+        is => 'Number',
+        doc => 'Build-id of the reference against which the genotype file was produced.',
+        is_optional => 0,
+    },
 );
     
 class Genome::InstrumentData::Command::Import::Microarray::IlluminaGenotypeArrayMulti {
-    is => 'Command',
+    is => 'Genome::Command::Base',
     has => [%properties],
     doc => 'import external microarray instrument data',
 };
@@ -252,7 +263,8 @@ sub process_imported_files {
                 original_data_path => $path,
                 sample_name => $sample_name,
                 library_name => $library->name,
-                sequencing_platform => $self->sequencing_platform, )) {
+                sequencing_platform => $self->sequencing_platform,
+                reference_sequence_build => $self->reference_sequence_build)) {
             $self->error_message("unable to import sample data for ".$sample_name);
             die $self->error_message;
         }
@@ -271,6 +283,7 @@ sub process_imported_files {
                 source_data_file    => $gen,
                 sample_name         => $sample_name,
                 library_name        => $library->name,
+                reference_sequence_build => $self->reference_sequence_build,
                 define_model        => 1,)){
             $self->error_message("Could not define model for ".$sample_name."\n");
             die $self->error_message;

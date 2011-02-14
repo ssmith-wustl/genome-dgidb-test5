@@ -5,7 +5,7 @@ use warnings;
 
 use Genome;
 use Command;
-use Genome::Utility::FileSystem;    #for file parsing etc
+use Genome::Sys;    #for file parsing etc
 use POSIX; #for rounding
 use Bio::PrimarySeq;    #necessary to do pairwise alignment with Bio::dpAlign
 use Bio::Tools::dpAlign;    #for pairwise alignment of the contigs
@@ -101,13 +101,13 @@ sub execute {
 
    
     #check that the reference exists before doing anything
-    Genome::Utility::FileSystem->validate_file_for_reading($self->reference_sequence); #this should croak if the file is invalid
+    Genome::Sys->validate_file_for_reading($self->reference_sequence); #this should croak if the file is invalid
 
     #set the same executable path on the object
     $self->_samtools_exec(Genome::Model::Tools::Sam->path_for_samtools_version($self->samtools_version));
 
     #parse the assembly input file
-    my $input_fh = Genome::Utility::FileSystem->open_file_for_reading($self->input_file); #this should die if it fails
+    my $input_fh = Genome::Sys->open_file_for_reading($self->input_file); #this should die if it fails
     my %expected_contigs;
 
     while(my $line = $input_fh->getline) {
@@ -212,12 +212,18 @@ sub execute {
 
                     #Here we print out annotation information
 
+                    #swap the coords if they are reversed gah!
+                    if($unique_contig->{assem_pos1} > $unique_contig->{assem_pos2}) {
+                        $self->error_message("Genomic coordinates of indel make no sense for variant starting at " . $unique_contig->{'pred_pos1'} . "\n");
+                        ($unique_contig->{assem_pos1},$unique_contig->{assem_pos2}) = ($unique_contig->{assem_pos2},$unique_contig->{assem_pos1});
+                    }
+
                     my ($annotation_start,$annotation_end,$ref,$var);
                     if($unique_contig->{assem_type} eq 'INS') {
                         $annotation_start = $unique_contig->{assem_pos1} - 1; #base before the event
                         $annotation_end = $annotation_start + 1;
                         $ref = 0;
-                        $var = uc(substr($unique_contig->{sequence},$unique_contig->{contig_location_of_variant} + 1, $unique_contig->{assem_size}));
+                        $var = uc(substr($unique_contig->{sequence},$unique_contig->{contig_location_of_variant} - 1, $unique_contig->{assem_size})); #subtracting one in order to change to index as contig_location is the first base of the variant
                     }
                     else {
                         $annotation_start = $unique_contig->{assem_pos1};
@@ -284,7 +290,7 @@ sub execute {
 
 sub read_in_breakpoints {
     my ($self, $breakpoint_file, $source) = @_;
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($breakpoint_file);
+    my $fh = Genome::Sys->open_file_for_reading($breakpoint_file);
     if($fh) {
         my @contigs;
         my $current_contig = {};

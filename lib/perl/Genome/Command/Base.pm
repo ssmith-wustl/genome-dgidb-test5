@@ -17,6 +17,10 @@ class Genome::Command::Base {
             is_optional => 1,
             # 0 = prevent verify, 1 = force verify, undef = allow auto verify
         },
+        file_format => {
+            is => 'Text',
+            is_optional => 1,
+        }
     ],
 };
 
@@ -238,7 +242,7 @@ sub _resolve_param_value_via_related_class_method {
                     $ALTERNATE_FROM_CLASS{$via_class}{$from_class} = [$method];
                 }
                 elsif (!$response) {
-                    $self->status_messag("Exiting...");
+                    $self->status_message("Exiting...");
                 }
             }
             else {
@@ -274,7 +278,15 @@ sub _resolve_param_value_from_text_by_bool_expr {
 sub _resolve_param_value_from_text_by_name_or_id {
     my ($self, $param_class, $str) = @_;
     my (@results);
-    if ($str =~ /^-?\d+$/) { # try to get by ID
+
+    my $class_meta = $param_class->__meta__;
+    my @id_property_names = $class_meta->id_property_names;
+    if (@id_property_names == 0) {
+        die "Failed to determine id property names for class $param_class.";
+    }
+
+    my $first_type = $class_meta->property_meta_for_name($id_property_names[0])->data_type || '';
+    if (@id_property_names > 1 or $first_type eq 'Text' or $str =~ /^-?\d+$/) { # try to get by ID
         @results = $param_class->get($str);
     }
     if (!@results && $param_class->can('name')) {
@@ -565,6 +577,8 @@ sub __errors__ {
 sub _can_resolve_type {
     my ($self, $type) = @_;
 
+    return 0 unless($type);
+
     my $non_classes = 0;
     if (ref($type) ne 'ARRAY') {
         $non_classes = $type !~ m/::/;
@@ -591,7 +605,7 @@ sub _params_to_resolve {
             }
 
             my $param_type = $pmeta->data_type;
-            next if !$self->_can_resolve_type($param_type);
+            next unless($self->_can_resolve_type($param_type));
 
             my $param_arg = $params->{$param_name};
             if (my $arg_type = ref($param_arg)) {

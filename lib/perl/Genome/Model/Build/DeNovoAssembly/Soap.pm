@@ -40,12 +40,12 @@ sub file_prefix {
     my $self = shift;
     #pga model output files are named with sra_sample_id _ center name
     if ($self->processing_profile->name =~ /\s+PGA$/) {
-	if (not exists $self->{_SRA_SAMPLE_ID}) {
-	    $self->sra_sample_id_for_pga_imported_instrument_data;
-	}
-	return $self->{_SRA_SAMPLE_ID}.'_'.$self->center_name;
+        if (not exists $self->{_SRA_SAMPLE_ID}) {
+            $self->sra_sample_id_for_pga_imported_instrument_data;
+        }
+        return $self->{_SRA_SAMPLE_ID}.'_'.$self->center_name;
     }
-    return $self->model->subject_name.'_'.$self->center_name;
+    return Genome::Utility::Text::sanitize_string_for_filesystem( $self->model->subject_name ).'_'.$self->center_name;
 }
 
 #pga output files
@@ -217,20 +217,20 @@ sub sra_sample_id_for_pga_imported_instrument_data {
     my $self = shift;
     my @sra_ids;
     foreach my $data ($self->instrument_data) {
-	unless ($data->subclass_name eq 'Genome::InstrumentData::Imported') {
-	    $self->error_message("Called for sra id on none imported instrument data, subclass was: ".$data->subclass_name);
-	    return;
-	}
-	unless ($data->sra_sample_id) {
-	    $self->error_message("Failed to get sra_sample_id for instrument data: ID ".$data->id);
-	    return;
-	}
-	my $sra_id = $data->sra_sample_id;
-	push @sra_ids, $sra_id unless grep (/^$sra_id$/, @sra_ids);
+        unless ($data->subclass_name eq 'Genome::InstrumentData::Imported') {
+            $self->error_message("Called for sra id on none imported instrument data, subclass was: ".$data->subclass_name);
+            return;
+        }
+        unless ($data->sra_sample_id) {
+            $self->error_message("Failed to get sra_sample_id for instrument data: ID ".$data->id);
+            return;
+        }
+        my $sra_id = $data->sra_sample_id;
+        push @sra_ids, $sra_id unless grep (/^$sra_id$/, @sra_ids);
     }
     if (@sra_ids > 1) {
-	$self->error_message("Expected one but got multiple sra_sample_ids for instrument data: @sra_ids");
-	return;
+        $self->error_message("Expected one but got multiple sra_sample_ids for instrument data: @sra_ids");
+        return;
     }
     $self->{_SRA_SAMPLE_ID} = $sra_ids[0];
 
@@ -241,30 +241,30 @@ sub sra_sample_id_for_pga_imported_instrument_data {
 
 sub files_ignored_by_diff { #all output files .. will differ slightly each time .. this is okay
     return qw/ build.xml Log config_file
-H_KT-185-1-0089515594_WUGC.Arc
-H_KT-185-1-0089515594_WUGC.ContigIndex
-H_KT-185-1-0089515594_WUGC.contig
-H_KT-185-1-0089515594_WUGC.edge
-H_KT-185-1-0089515594_WUGC.gapSeq
-H_KT-185-1-0089515594_WUGC.kmerFreq
-H_KT-185-1-0089515594_WUGC.links
-H_KT-185-1-0089515594_WUGC.markOnEdge
-H_KT-185-1-0089515594_WUGC.newContigIndex
-H_KT-185-1-0089515594_WUGC.path
-H_KT-185-1-0089515594_WUGC.peGrads
-H_KT-185-1-0089515594_WUGC.preArc
-H_KT-185-1-0089515594_WUGC.preGraphBasic
-H_KT-185-1-0089515594_WUGC.readInGap
-H_KT-185-1-0089515594_WUGC.readOnContig
-H_KT-185-1-0089515594_WUGC.scaf
-H_KT-185-1-0089515594_WUGC.scafSeq
-H_KT-185-1-0089515594_WUGC.scaf_gap
-H_KT-185-1-0089515594_WUGC.updated.edge
-H_KT-185-1-0089515594_WUGC.vertex
-H_KT-185-1-0089515594_WUGC.agp
-H_KT-185-1-0089515594_WUGC.contigs.fa
-H_KT-185-1-0089515594_WUGC.scaffolds.fa
-/;
+    H_KT-185-1-0089515594_WUGC.Arc
+    H_KT-185-1-0089515594_WUGC.ContigIndex
+    H_KT-185-1-0089515594_WUGC.contig
+    H_KT-185-1-0089515594_WUGC.edge
+    H_KT-185-1-0089515594_WUGC.gapSeq
+    H_KT-185-1-0089515594_WUGC.kmerFreq
+    H_KT-185-1-0089515594_WUGC.links
+    H_KT-185-1-0089515594_WUGC.markOnEdge
+    H_KT-185-1-0089515594_WUGC.newContigIndex
+    H_KT-185-1-0089515594_WUGC.path
+    H_KT-185-1-0089515594_WUGC.peGrads
+    H_KT-185-1-0089515594_WUGC.preArc
+    H_KT-185-1-0089515594_WUGC.preGraphBasic
+    H_KT-185-1-0089515594_WUGC.readInGap
+    H_KT-185-1-0089515594_WUGC.readOnContig
+    H_KT-185-1-0089515594_WUGC.scaf
+    H_KT-185-1-0089515594_WUGC.scafSeq
+    H_KT-185-1-0089515594_WUGC.scaf_gap
+    H_KT-185-1-0089515594_WUGC.updated.edge
+    H_KT-185-1-0089515594_WUGC.vertex
+    H_KT-185-1-0089515594_WUGC.agp
+    H_KT-185-1-0089515594_WUGC.contigs.fa
+    H_KT-185-1-0089515594_WUGC.scaffolds.fa
+    /;
 }
 
 sub metrics_ignored_by_diff {

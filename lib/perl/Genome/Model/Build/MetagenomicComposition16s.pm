@@ -118,22 +118,16 @@ sub create {
     }
 
     # Create directory structure
-    Genome::Utility::FileSystem->create_directory($self->data_directory )
+    Genome::Sys->create_directory($self->data_directory )
         or return;
 
     for my $dir ( $self->sub_dirs ) {
-        Genome::Utility::FileSystem->create_directory( $self->data_directory."/$dir" )
+        Genome::Sys->create_directory( $self->data_directory."/$dir" )
             or return;
     }
 
     return $self;
 }
-
-sub _X_resolve_subclass_name { # only temporary, subclass will soon be stored
-    my $class = shift;
-    return __PACKAGE__->_resolve_subclass_name_by_sequencing_platform(@_);
-}
-
 
 #< Description >#
 sub description {
@@ -174,8 +168,10 @@ sub amplicon_sets {
 sub amplicon_set_for_name {
     my ($self, $set_name) = @_;
 
-    my $amplicon_iterator = $self->_amplicon_iterator_for_name($set_name)
-        or return;
+    Carp::confess('No amplicon set name to get amplicon iterator') if not defined $set_name;
+
+    my $amplicon_iterator = $self->_amplicon_iterator_for_name($set_name);
+    return if not $amplicon_iterator;
 
     my %params = (
         name => $set_name,
@@ -371,6 +367,16 @@ sub fasta_and_qual_writer_for_type_and_set_name {
 sub orient_amplicons {
     my $self = shift;
 
+    my $amplicons_processed = $self->amplicons_processed;
+    if ( not defined $amplicons_processed ) {
+        $self->error_message('Cannot orient apmplicons because "amplicon processed" is not set on build '.$self->description);
+        return;
+    }
+
+    if ( $amplicons_processed == 0 ) {
+        return 1;
+    }
+
     my @amplicon_sets = $self->amplicon_sets
         or return;
 
@@ -438,8 +444,10 @@ sub classification_file_for_amplicon_name {
 sub classify_amplicons {
     my $self = shift;
    
-    my @amplicon_sets = $self->amplicon_sets
-        or return;
+    $self->status_message('Classify amplicons...');
+
+    my @amplicon_set_names = $self->amplicon_set_names;
+    Carp::confess('No amplicon set names for '.$self->description) if not @amplicon_set_names; # bad
 
     my $classifier;
     my %classifier_params = $self->processing_profile->classifier_params_as_hash;
@@ -457,7 +465,10 @@ sub classify_amplicons {
     my $processed = 0;
     my $classified = 0;
     my $classification_error = 0;
-    for my $amplicon_set ( @amplicon_sets ) {
+    for my $name ( @amplicon_set_names ) {
+        my $amplicon_set = $self->amplicon_set_for_name($name);
+        next if not $amplicon_set;
+
         my $classification_file = $amplicon_set->classification_file;
         unlink $classification_file if -e $classification_file;
         my $writer =  Genome::Utility::MetagenomicClassifier::SequenceClassification::Writer->create(
@@ -466,7 +477,7 @@ sub classify_amplicons {
         );
         unless ( $writer ) {
             $self->error_message("Could not create classification writer for file ($classification_file) for writing.");
-            return;
+            return; # bad
         }
 
         while ( my $amplicon = $amplicon_set->next_amplicon ) {
@@ -492,7 +503,7 @@ sub classify_amplicons {
                 $self->error_message(
                     'Unable to save classification for amplicon '.$amplicon->name.' for '.$self->description
                 );
-                return;
+                return; # next??
             }
 
             # Write classification to file
@@ -500,16 +511,26 @@ sub classify_amplicons {
         }
     }
 
-    unless ( $processed > 0 ) {
-        $self->error_message("There were no processed amplicons available to classify for ".$self->description);
-        return;
-    }
-
+    my $attempted = $self->amplicons_attempted;
     $self->amplicons_processed($processed);
-    $self->amplicons_processed_success( sprintf('%.2f', $processed / $self->amplicons_attempted) );
+    $self->amplicons_processed_success( 
+        defined $attempted and $attempted > 0 ?  sprintf('%.2f', $processed / $attempted) : 0 
+    );
     $self->amplicons_classified($classified);
-    $self->amplicons_classified_success( sprintf('%.2f', $classified / $processed) );
+    $self->amplicons_classified_success( 
+        $processed > 0 ?  sprintf('%.2f', $classified / $processed) : 0
+    );
     $self->amplicons_classification_error($classification_error);
+
+    $self->status_message(
+        sprintf(
+            'Classified %s of %s (%s) amplicons',
+            $self->amplicons_processed,
+            $self->amplicons_processed,
+            $self->amplicons_classified,
+            $self->amplicons_classified_success * 100,
+        )
+    );
 
     return 1;
 }
@@ -541,5 +562,3 @@ sub dirs_ignored_by_diff {
 
 1;
 
-#$HeadURL$
-#$Id$

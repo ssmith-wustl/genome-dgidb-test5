@@ -90,12 +90,12 @@ sub execute {
         $self->status_message("Override temp dir is $tmp");
     }
     else {
-        $tmp = Genome::Utility::FileSystem->create_temp_directory();
+        $tmp = Genome::Sys->create_temp_directory();
         $self->status_message("Autogenerateed temp data is in $tmp");
     }
 
     my $junk_tmp = $tmp . '/junk';
-    Genome::Utility::FileSystem->create_directory($junk_tmp);
+    Genome::Sys->create_directory($junk_tmp);
 
     my $errfile;
     my $cmd;
@@ -130,7 +130,7 @@ sub execute {
             $cmd = "cd $junk_tmp; $scripts_dir/build_public_SRA_run_index.pl --reuse_files "
                 . ' > ' . $sra_index_file 
                 . ' 2> ' . $errfile;        
-            Genome::Utility::FileSystem->shellcmd(
+            Genome::Sys->shellcmd(
                 cmd => $cmd,
                 output_files => [$sra_index_file,$errfile],
                 skip_if_output_is_present => 1,
@@ -140,7 +140,7 @@ sub execute {
         # download each
 
         my $fof = "$tmp/$srr_id.fof";
-        Genome::Utility::FileSystem->write_file($fof, $srr_id);
+        Genome::Sys->write_file($fof, $srr_id);
         
         my $log = $fof;
         $log =~ s/.fof/.log/;
@@ -161,7 +161,7 @@ sub execute {
             ####my $cmd = "cd $tmp; $scripts_dir/get_SRA_runs.pl ascp $sra_index_file $fof >$out 2>$err";
 	    my $cmd = "cd $tmp; $scripts_dir/get_SRA_runs.pl ascp $sra_index_file $fof >$out 2>$err";
 
-            Genome::Utility::FileSystem->shellcmd(
+            Genome::Sys->shellcmd(
                 cmd => $cmd,
                 input_files => [$fof],
 		output_files => [$out],
@@ -169,7 +169,7 @@ sub execute {
                 skip_if_output_is_present => 1,
             );
 
-	    my $out_content = Genome::Utility::FileSystem->read_file($out);
+	    my $out_content = Genome::Sys->read_file($out);
 	    ####if ($out_content =~ /transferred .* SRA runs with ascp, (\d+) failures(s) detected/) {
 	    if ($out_content =~ /transferred\s+.*\s+SRA\s+runs\s+with\s+ascp\,\s+(\d+)\s+failure\(s\)\s+detected/) {
 		my $failures = $1;
@@ -219,7 +219,7 @@ sub slurp_srr_data {
     
     my $original_md5_contents = `cat $path/col/READ/md5 | grep data`;
     my ($expected_md5) = split /\s+/, $original_md5_contents;
-    my $new_md5 = Genome::Utility::FileSystem->md5sum("$path/col/READ/data");
+    my $new_md5 = Genome::Sys->md5sum("$path/col/READ/data");
 
     $self->status_message("Expected $expected_md5, got $new_md5");
 
@@ -297,7 +297,6 @@ sub slurp_srr_data {
 
     unless ($rv == 0) {
         $self->error_message("Did not get a valid return from rsync, rv was $rv for call $call.  Cleaning up and bailing out");
-        rmtree($disk_alloc->absolute_path);
         $disk_alloc->deallocate;
         return;
     }

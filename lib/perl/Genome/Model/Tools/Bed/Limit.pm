@@ -35,12 +35,12 @@ sub execute {
     } else {
         $feature_types{$self->feature_types} = 1;
     }
-    my $input_fh = Genome::Utility::FileSystem->open_file_for_reading($self->input_bed_file);
-    my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($self->output_bed_file);
+    my $input_fh = Genome::Sys->open_file_for_reading($self->input_bed_file);
+    my $output_fh = Genome::Sys->open_file_for_writing($self->output_bed_file);
 
     my %include;
     if ($self->gene_list) {
-        my $list_fh = Genome::Utility::FileSystem->open_file_for_reading($self->gene_list);
+        my $list_fh = Genome::Sys->open_file_for_reading($self->gene_list);
         while (my $line = $list_fh->getline) {
             chomp($line);
             if ($line =~ /^(\S+)/) {

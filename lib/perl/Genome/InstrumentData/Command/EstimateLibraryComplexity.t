@@ -43,7 +43,7 @@ duplication_group_count	H_HY-03023-lib1
 EORESULT
 ;
 
-my $diff = Genome::Utility::FileSystem->diff_file_vs_text($output_file, $expected_result);
+my $diff = Genome::Sys->diff_file_vs_text($output_file, $expected_result);
 
 my @diff_lines = split("\n", $diff);
 @diff_lines = grep($_ !~ m/XXXXX/, @diff_lines);

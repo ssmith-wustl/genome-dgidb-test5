@@ -10,23 +10,20 @@ use Data::Dumper;
 require File::Compare;
 
 use_ok('Genome::Model::Event::Build::DeNovoAssembly::Report');
+
 #< velvet test >#
-my $model = Genome::Model::DeNovoAssembly::Test->get_mock_model(
-    sequencing_platform => 'solexa',
-    assembler_name => 'velvet one-button',
-);
-
-ok($model, 'Got mock de novo assembly model') or die;
-my $build = Genome::Model::DeNovoAssembly::Test->get_mock_build(model => $model);
-ok($build, 'Got mock de novo assembly build') or die;
-
-my $example_build = Genome::Model::DeNovoAssembly::Test->get_mock_build(
+my $model = Genome::Model::DeNovoAssembly::Test->model_for_velvet;
+ok($model, 'Got de novo assembly model') or die;
+my $build = Genome::Model::Build->create(
     model => $model,
-    use_example_directory => 1,
+    data_directory => $model->data_directory,
 );
+ok($build, 'Got de novo assembly build') or die;
+
+my $example_build = Genome::Model::DeNovoAssembly::Test->example_build_for_model($model);
 ok($example_build, 'got example build') or die;
 
-Genome::Utility::FileSystem->create_directory($build->edit_dir);
+Genome::Sys->create_directory($build->edit_dir);
 ok(-d $build->edit_dir, "Made build edit_dir");
 
 #link build dir files

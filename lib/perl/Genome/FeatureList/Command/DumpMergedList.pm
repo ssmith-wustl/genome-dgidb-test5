@@ -44,9 +44,9 @@ sub execute {
     my $bed = $feature_list->merged_bed_file;
 
     if($self->output_path) {
-        Genome::Utility::FileSystem->copy_file($bed, $self->output_path);
+        Genome::Sys->copy_file($bed, $self->output_path);
     } else {
-        Genome::Utility::FileSystem->shellcmd(cmd => "cat $bed", input_files => [$bed]);
+        Genome::Sys->shellcmd(cmd => "cat $bed", input_files => [$bed]);
     }
 
     return 1;

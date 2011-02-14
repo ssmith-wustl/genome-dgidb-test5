@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 use Data::Dumper;
-require Genome::Utility::FileSystem;
+require Genome::Sys;
 
 class Genome::InstrumentData {
     id_by => ['id'],
@@ -88,7 +88,7 @@ EOS
         sample_id           =>  { is => 'Number', via => 'library' },
         sample              =>  { is => 'Genome::Sample', id_by => 'sample_id' },
         sample_name         =>  { via => 'sample', to => 'name' },
-
+	
         # TODO: see if this stuff is used and if not delete it -ss
         events => { is => 'Genome::Model::Event', is_many => 1, reverse_id_by => "instrument_data" },
         # TODO: see if this stuff is used and if not delete it -ss
@@ -164,12 +164,12 @@ sub create_data_directory_and_link {
     my $self = shift;
 
     my $data_path = $self->resolve_full_path;
-    Genome::Utility::FileSystem->create_directory($data_path)
+    Genome::Sys->create_directory($data_path)
         or return;
     
     my $link = $self->data_link;
     unlink $link if -l $link;
-    Genome::Utility::FileSystem->create_symlink($data_path, $link)
+    Genome::Sys->create_symlink($data_path, $link)
         or return;
 
     return $data_path;
@@ -265,6 +265,52 @@ sub run_identifier  {
          "provide a unique identifier for the experiment/run (eg flow_cell_id, ptp barcode, etc).";
 }
 
+sub dump_fastqs_from_bam {
+    my $self = shift;
+    my %p = @_;
+
+    die "cannot call bam path" if (!$self->can('bam_path'));
+    
+    unless (-e $self->bam_path) {
+	$self->error_message("Attempted to dump a bam but the path does not exist:" . $self->bam_path);
+	die $self->error_message;
+    }
+    
+    my $temp_dir = Genome::Sys->create_temp_directory('unpacked_bam');
+
+    my $subset = (defined $self->subset_name ? $self->subset_name : 0);
+
+    my %read_group_params;
+
+    if (defined $p{read_group_id}) {
+        $read_group_params{read_group_id} = delete $p{read_group_id};
+        $self->status_message("Using read group id " . $read_group_params{read_group_id});
+    } 
+
+    my $fwd_file = sprintf("%s/s_%s_1_sequence.txt", $temp_dir, $subset);
+    my $rev_file = sprintf("%s/s_%s_2_sequence.txt", $temp_dir, $subset);
+    my $fragment_file = sprintf("%s/s_%s_sequence.txt", $temp_dir, $subset);
+    my $cmd = Genome::Model::Tools::Picard::SamToFastq->create(input=>$self->bam_path, fastq=>$fwd_file, fastq2=>$rev_file, fragment_fastq=>$fragment_file, %read_group_params);
+    unless ($cmd->execute()) {
+        die $cmd->error_message;
+    }
+
+    if ((-s $fwd_file && !-s $rev_file) ||
+        (!-s $fwd_file && -s $rev_file)) {
+        $self->error_message("Fwd & Rev files are lopsided; one has content and the other doesn't. Can't proceed"); 
+        die $self->error_message;
+    }
+
+    my @files;
+    if (-s $fwd_file && -s $rev_file) { 
+        push @files, ($fwd_file, $rev_file);
+    }
+    if (-s $fragment_file) {
+        push @files, $fragment_file;
+    }
+   
+    return @files; 
+}
 
 1;
 

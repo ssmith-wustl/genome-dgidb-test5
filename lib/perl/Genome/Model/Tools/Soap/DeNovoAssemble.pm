@@ -126,7 +126,7 @@ sub _validate_config_file {
 
     #validate input files in config file
     my @missing_inputs;
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->config_file);
+    my $fh = Genome::Sys->open_file_for_reading($self->config_file);
     while (my $line = $fh->getline) {
 	chomp $line;
 	if ($line =~ /^[fq]\d+\=/ or $line =~ /^[fq]\=/) {

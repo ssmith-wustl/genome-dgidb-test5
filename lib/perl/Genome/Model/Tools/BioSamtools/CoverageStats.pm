@@ -61,10 +61,21 @@ class Genome::Model::Tools::BioSamtools::CoverageStats {
     ]
 };
 
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    unless ($self) { return; }
+
+    unless ($] > 5.012) {
+        die 'Subcommands run by '. __PACKAGE__ .' require perl 5.12! Consider using gmt5.12.1 instead of gmt.';
+    }
+    return $self;
+}
+
 sub execute {
     my $self = shift;
     unless (-d $self->output_directory) {
-        unless (Genome::Utility::FileSystem->create_directory($self->output_directory)) {
+        unless (Genome::Sys->create_directory($self->output_directory)) {
             die('Failed to create output_directory: '. $self->output_directory);
         }
     }
@@ -77,7 +88,7 @@ sub execute {
 
     if($self->log_directory) {
         unless (-d $self->log_directory) {
-            unless (Genome::Utility::FileSystem->create_directory($self->log_directory)) {
+            unless (Genome::Sys->create_directory($self->log_directory)) {
                 die('Failed to create output_directory: '. $self->log_directory);
             }
         }

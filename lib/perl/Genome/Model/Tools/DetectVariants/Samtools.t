@@ -11,7 +11,7 @@ my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
 } else {
-    plan tests => 6;
+    plan tests => 7;
 }
 
 my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants-Samtools/';
@@ -22,14 +22,16 @@ my $bam_input = $test_dir . '/alignments/102922275_merged_rmdup.bam';
 # Updated to .v4 after discussion about our BED standard [insertions start the base before; indels the first removed base]
 # Updated to .v5 for addition of quality data and natural sorting order
 # Updated to .v6 for later and faster samtools version r613
-my $expected_dir = $test_dir . '/expected.v6/';
+# Updated to .v7 for addition of read depth field
+my $expected_dir = $test_dir . '/expected.v7/';
+ok(-d $expected_dir, "expected results directory exists");
 
 my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get(type_name => 'imported reference sequence', name => 'NCBI-human-build36');
 ok($ref_seq_build, 'Got a reference sequence build') or die('Test cannot continue without a reference sequence build');
 is($ref_seq_build->name, 'NCBI-human-build36', 'Got expected reference for test case');
 
 my $ref_seq_input = $ref_seq_build->full_consensus_path('fa');
-ok(Genome::Utility::FileSystem->check_for_path_existence($ref_seq_input), 'Got a reference FASTA') or die('Test cannot continue without a reference FASTA');
+ok(Genome::Sys->check_for_path_existence($ref_seq_input), 'Got a reference FASTA') or die('Test cannot continue without a reference FASTA');
 
 my $version = 'r613';
 

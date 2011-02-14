@@ -56,7 +56,7 @@ sub execute {
 
     # Picard leaves 2 lines of garbage at the top. This sed will strip all lines beginning with @, which are header lines
     my $sed_cmd = sprintf("sed -i '/^@/d' %s", $self->sam_file);
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => $sed_cmd,
         input_files => [$self->sam_file],
         output_files => [$self->sam_file],

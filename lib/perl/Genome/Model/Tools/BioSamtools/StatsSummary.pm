@@ -62,7 +62,7 @@ sub execute {
     my $self = shift;
     if ($self->output_directory) {
         unless (-d $self->output_directory){
-            unless (Genome::Utility::FileSystem->create_directory($self->output_directory)) {
+            unless (Genome::Sys->create_directory($self->output_directory)) {
                 die('Failed to create output directory '. $self->output_directory);
             }
         }
@@ -74,7 +74,7 @@ sub execute {
         }
         $self->output_file($self->output_directory .'/'. $basename .'.txt');
     }
-    my $stats_fh = Genome::Utility::FileSystem->open_file_for_reading($self->stats_file);
+    my $stats_fh = Genome::Sys->open_file_for_reading($self->stats_file);
     unless ($stats_fh) {
         die('Failed to read file stats file: '. $self->stats_file);
     }

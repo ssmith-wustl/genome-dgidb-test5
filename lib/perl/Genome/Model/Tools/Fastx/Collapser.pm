@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 use File::Basename;
 
 class Genome::Model::Tools::Fastx::Collapser {
@@ -29,7 +29,7 @@ class Genome::Model::Tools::Fastx::Collapser {
 
 sub execute {
     my $self = shift;
-    unless (Genome::Utility::FileSystem->validate_file_for_reading($self->input_file)) {
+    unless (Genome::Sys->validate_file_for_reading($self->input_file)) {
         $self->error_message('Failed to validate fastq file for read access '. $self->input_file .":  $!");
         die($self->error_message);
     }
@@ -39,13 +39,13 @@ sub execute {
     unless ($self->output_file) {
         $self->output_file($dirname .'/'. $basename .'_collapsed.fa');
     }
-    unless (Genome::Utility::FileSystem->validate_file_for_writing($self->output_file)) {
+    unless (Genome::Sys->validate_file_for_writing($self->output_file)) {
         $self->error_message('Failed to validate output file for write access '. $self->output_file .":  $!");
         die($self->error_message);
     }
     #fastx_quality_stats (as of 0.0.7) won't process from tmp with -i and -o
     my $cmd = $self->fastx_tool_path .' -i '. $self->input_file .' -o '. $self->output_file;
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$self->input_file],
         output_files => [$self->output_file],

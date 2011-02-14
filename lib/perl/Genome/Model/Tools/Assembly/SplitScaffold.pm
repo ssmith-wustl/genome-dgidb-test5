@@ -70,15 +70,15 @@ sub _split_scaffolds {
 
     my $rename_contigs = $self->_get_contigs_to_rename;
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading( $self->ace_file );
+    my $fh = Genome::Sys->open_file_for_reading( $self->ace_file );
 
     my $ace_out_file = ( $self->out_file_name ) ? $self->out_file_name : $self->ace_file.'.scaffolds_split';
 
     unlink $ace_out_file if -e $ace_out_file;
-    my $fh_out = Genome::Utility::FileSystem->open_file_for_writing( $ace_out_file );
+    my $fh_out = Genome::Sys->open_file_for_writing( $ace_out_file );
 
     unlink $ace_out_file.'.LOG';# if -e $ace_out_file.'LOG';
-    my $log_fh = Genome::Utility::FileSystem->open_file_for_writing( $ace_out_file.'.LOG' );
+    my $log_fh = Genome::Sys->open_file_for_writing( $ace_out_file.'.LOG' );
 
     while ( my $line = $fh->getline ) {
 	if ( $line =~ /^CO\s+/ ) {
@@ -189,7 +189,7 @@ sub _get_ace_contig_names {
 
     my $contig_numbers = {};
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading( $self->ace_file );
+    my $fh = Genome::Sys->open_file_for_reading( $self->ace_file );
 
     while (my $line = $fh->getline) {
 	if ( $line =~ /^CO\s+/ ) {

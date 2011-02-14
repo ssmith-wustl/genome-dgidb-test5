@@ -46,7 +46,7 @@ sub _run_aligner {
 
     my $cmd = "$smalt_path map $aligner_params $static_params -o $output_file.tmp $ref_index_base $input_pathnames >>$log_file && cat $output_file.tmp >>$output_file";
 
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd          => $cmd,
         input_files  => \@_,
         output_files => [ $output_file, $log_file ],

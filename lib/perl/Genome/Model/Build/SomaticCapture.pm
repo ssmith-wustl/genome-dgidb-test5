@@ -23,7 +23,7 @@ class Genome::Model::Build::SomaticCapture {
 sub workflow_instances {
     my $self = shift;
     my @instances = Workflow::Operation::Instance->get(
-        name => $self->resolve_workflow_name
+        name => $self->workflow_name
     );
 
     #older builds used a wrapper workflow
@@ -34,7 +34,7 @@ sub workflow_instances {
     return @instances;
 }
 
-sub resolve_workflow_name {
+sub workflow_name {
     my $self = shift;
 
     return $self->build_id . ' Somatic Capture Pipeline';

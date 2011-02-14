@@ -108,7 +108,7 @@ sub execute {
     $import_params{import_format} = 'sanger fastq';
     $import_params{sra_sample_id} = $self->srs_sample_id;
   
-    my $tmp_dir      = Genome::Utility::FileSystem->create_temp_directory;
+    my $tmp_dir      = Genome::Sys->create_temp_directory;
 
     my $working_dir = $tmp_dir . "/srr_datasets";
     $self->_working_dir($working_dir);
@@ -136,15 +136,15 @@ sub execute {
         my ($singleton_read_bz) = glob($self->container_dir . "/" . $self->srs_sample_id . "/*.trimmed.singleton.fastq.bz2");
 
         $fwd_read = $working_dir . "/s_1_1_sequence.txt";
-        Genome::Utility::FileSystem->shellcmd(cmd=>"bzcat $fwd_read_bz > $fwd_read",
+        Genome::Sys->shellcmd(cmd=>"bzcat $fwd_read_bz > $fwd_read",
                                       output_files=>[$fwd_read]);
         
         $rev_read = $working_dir . "/s_1_2_sequence.txt";
-        Genome::Utility::FileSystem->shellcmd(cmd=>"bzcat $rev_read_bz > $rev_read",
+        Genome::Sys->shellcmd(cmd=>"bzcat $rev_read_bz > $rev_read",
                                       output_files=>[$rev_read]);
         
         $singleton_read = $working_dir . "/s_1_sequence.txt";
-        Genome::Utility::FileSystem->shellcmd(cmd=>"bzcat $singleton_read_bz > $singleton_read",
+        Genome::Sys->shellcmd(cmd=>"bzcat $singleton_read_bz > $singleton_read",
                                       output_files=>[$singleton_read]);
         
 
@@ -205,7 +205,7 @@ sub execute {
         $DB::single = 1;
 
         eval {
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
             cmd => $cmd,
             );
         };
@@ -220,7 +220,7 @@ sub execute {
         my @reads = glob($working_dir . "/" . $self->srs_sample_id . "/*.trimmed.*.fastq.bz2");
         
         for (@reads) {
-            Genome::Utility::FileSystem->shellcmd(cmd=>"bunzip2 $_");
+            Genome::Sys->shellcmd(cmd=>"bunzip2 $_");
         }
         
         
@@ -314,7 +314,7 @@ sub copy_metrics {
 
     for (@masks) {
        my $cmd = sprintf("rsync -rptgovz --copy-links %s %s", $_, $destination);
-       Genome::Utility::FileSystem->shellcmd(cmd=>$cmd);
+       Genome::Sys->shellcmd(cmd=>$cmd);
     }
 
     

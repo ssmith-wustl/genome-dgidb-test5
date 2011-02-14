@@ -138,14 +138,18 @@ foreach my $chr(keys %chrs){
       shift @txEnds;
     }
     next unless(@txEnds>0);
-    foreach my $start(keys %{$$annot{$chr}{$txEnds[0]}}){
-      if($pos>$start-$opts{l}){
-	foreach my $transcript(@{$$annot{$chr}{$txEnds[0]}{$start}}){
-	  push @{$ABKs{$chr}{$pos}},$transcript;
+    foreach my $txEnd(@txEnds){
+      foreach my $start(keys %{$$annot{$chr}{$txEnd}}){
+	if($pos>$start-$opts{l}){
+	  foreach my $transcript(@{$$annot{$chr}{$txEnd}{$start}}){
+	    push @{$ABKs{$chr}{$pos}},$transcript;
+	  }
 	}
       }
     }
   }
+
+  next if(defined $opts{M});  #For mouse, only apply gene annotation and ignore everything else
 
   #Select all SegDup that overlaps the breakpoint
   my $segdup=&ReadUCSCSegDupAnnotation($chr);
@@ -211,6 +215,7 @@ foreach my $chr(keys %chrs){
               	ORDER BY genoStart";
 
   $RPMK{$chr} = $dbh->prepare($query) || die "Could not prepare statement '$query': $DBI::errstr \n";
+
 }
 
 
@@ -226,17 +231,19 @@ foreach my $sv(@SVs){
   my $geneAnnot=&GetGeneAnnotation($chr,$start,$chr2,$end,$type);
   print "$sv\t$geneAnnot";
 
-  my $dbSNPAnnot=&GetVarAnnotation($chr,$start,$chr2,$end,\%dbBK2s);
-  my $dbVarAnnot=&GetVarAnnotation($chr,$start,$chr2,$end,\%dbVarBK2s);
-  my $dbSegDupAnnot=&GetSegDupAnnotation($chr,$start,$chr2,$end);
-  my $repeatAnnot=&GetRepeatMaskerAnnotation($chr,$start,$chr2,$end);
+  if(!defined $opts{M}){  #For human, apply the following crap
+    my $dbSNPAnnot=&GetVarAnnotation($chr,$start,$chr2,$end,\%dbBK2s);
+    my $dbVarAnnot=&GetVarAnnotation($chr,$start,$chr2,$end,\%dbVarBK2s);
+    my $dbSegDupAnnot=&GetSegDupAnnotation($chr,$start,$chr2,$end);
+    my $repeatAnnot=&GetRepeatMaskerAnnotation($chr,$start,$chr2,$end);
 
-  printf "\t%s",join(',',$dbSNPAnnot,$dbVarAnnot);
-  printf "\t%s",$dbSegDupAnnot;
-  printf "\t%s",$repeatAnnot;
-  printf "\tchr%s\:%d\-%d,chr%s\:%d\-%d",$chr,$start-500,$start+500,$chr2,$end-500,$end+500;
-  if($chr eq $chr2){
-    print ",chr$chr:$start\-$end";
+    printf "\t%s",join(',',$dbSNPAnnot,$dbVarAnnot);
+    printf "\t%s",$dbSegDupAnnot;
+    printf "\t%s",$repeatAnnot;
+    printf "\tchr%s\:%d\-%d,chr%s\:%d\-%d",$chr,$start-500,$start+500,$chr2,$end-500,$end+500;
+    if($chr eq $chr2){
+      print ",chr$chr:$start\-$end";
+    }
   }
   print "\n";
 }

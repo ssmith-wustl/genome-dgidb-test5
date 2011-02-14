@@ -17,7 +17,7 @@ use Genome::Info::IUB;
 use Genome::Info::UCSCConservation;
 
 # keep this updated to be the latest blessed, non-experimental version
-sub default_annotator_version { 1 };
+sub default_annotator_version { 2 };
 
 class Genome::Model::Tools::Annotate::TranscriptVariants {
     is => 'Command',
@@ -61,7 +61,7 @@ class Genome::Model::Tools::Annotate::TranscriptVariants {
             is => 'Text',
             default_value => __PACKAGE__->default_annotator_version,
             doc => 'Annotator version to use',
-            valid_values => [0,1,2],#__PACKAGE__->available_versions,
+            valid_values => [0,1,2,3],#__PACKAGE__->available_versions,
         },
         # IO Params
         _is_parallel => {
@@ -327,6 +327,18 @@ sub _create_old_annotator {
     return $annotator;
 }
 
+sub _convert_bed_file {
+    my $self = shift; 
+    my $converted_bed_file = Genome::Sys->create_temp_file_path();
+    my $bed_converter_class = $self->_version_subclass_name. "::BedToAnnotation";
+    my %bed_converter_params = (snv_file => $self->variant_bed_file, output => $converted_bed_file);
+    if ($self->extra_columns and $self->use_version >= 3){
+        $bed_converter_params{'extra_columns'} = $self->extra_columns;
+    }
+    $bed_converter_class->execute(%bed_converter_params) || ($self->error_message("Could not convert BED file to annotator format") and return);
+    $self->variant_file($converted_bed_file);
+}
+
 # debugging help
 my $we_are_done_flag;
 my $last_variant_annotated;
@@ -344,12 +356,7 @@ sub execute {
         return;
     }
 
-    if($self->variant_bed_file){
-        my $converted_bed_file = Genome::Utility::FileSystem->create_temp_file_path();
-        my $bed_converter_class = $self->_version_subclass_name. "::BedToAnnotation";
-        $bed_converter_class->execute( snv_file => $self->variant_bed_file, output => $converted_bed_file) || ($self->error_message("Could not convert BED file to annotator format") and return);
-        $self->variant_file($converted_bed_file);
-    }
+    $self->_convert_bed_file if $self->variant_bed_file;
 
     my $variant_file = $self->variant_file;
 
@@ -410,9 +417,11 @@ sub execute {
     else {
         my ($output_file_basename) = File::Basename::fileparse($output_file);
         ($output_fh, $temp_output_file) = File::Temp::tempfile(
-                                              "$output_file_basename-XXXXXX",
-                                              DIR => Cwd::abs_path(dirname($self->output_file)),
-                                              UNLINK => 1);
+            "$output_file_basename-XXXXXX",
+            DIR => '/tmp/',
+            UNLINK => 1,
+            CLEANUP => 1,
+        );
         chmod(0664, $temp_output_file);
     }
     $self->_transcript_report_fh($output_fh);
@@ -499,17 +508,11 @@ sub execute {
         if ($self->use_version == 0) {
             $annotator = $self->_create_old_annotator($annotator_version_subclass);
         } else {
-            # The new annotator doesn't use the ucsc_conservation_directory param, so these lines can go away...
-            my $full_version = $self->build->version;
-            my ($version) = $full_version =~ /^\d+_(\d+)[a-z]/;
-            my %ucsc_versions = Genome::Info::UCSCConservation->ucsc_conservation_directories;
-
-            my @directories = $self->build->determine_data_directory($self->cache_annotation_data_directory);
+            my @directories = $self->build->determine_merged_data_directory($self->cache_annotation_data_directory);
             $annotator = $annotator_version_subclass->create(
                 data_directory => \@directories,
                 check_variants => $self->check_variants,
                 get_frame_shift_sequence => $self->get_frame_shift_sequence,
-                ucsc_conservation_directory => $ucsc_versions{$version},
             );
         }
     };
@@ -633,7 +636,7 @@ sub execute {
 
     $output_fh->close unless $output_fh eq 'STDOUT';
     if ($temp_output_file){
-        my $mv_return_value = Genome::Utility::FileSystem->shellcmd(cmd => "mv $temp_output_file $output_file");
+        my $mv_return_value = Genome::Sys->shellcmd(cmd => "mv $temp_output_file $output_file");
         unless($mv_return_value){
             $self->error_message("Failed to mv results at $temp_output_file to final location at $output_file: $!");
             return 0;

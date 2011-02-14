@@ -1,4 +1,3 @@
-
 package Genome::Model::Tools::ViromeEvent::SequenceQualityControl;
 
 use strict;
@@ -15,15 +14,7 @@ class Genome::Model::Tools::ViromeEvent::SequenceQualityControl{
 };
 
 sub help_brief {
-    return <<"EOS"
-filtering step prior to blast for virome pipeline
-EOS
-}
-
-sub help_synopsis {
-    return <<"EOS"
-genome-model toold virome-event split-quality-control
-EOS
+    'filtering step prior to blast for virome pipeline';
 }
 
 sub help_detail {
@@ -32,23 +23,10 @@ This script will check each .masked file in the given directory.
 Some sequences have only/lots of Ns because masked by RepeatMasker.
 Remove sequences that do not have greater than 50 nt of consecutive
 sequence without N.
-
-perl script <run folder>
-<run folder> = full path of the folder holding files for this sequence run
-               without last "/"
-
 EOS
 }
 
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    return $self;
-
-}
-
-sub execute
-{
+sub execute {
     my $self = shift;
 
     my $dir = $self->dir;
@@ -104,5 +82,3 @@ sub execute
 }
 
 1;
-
-

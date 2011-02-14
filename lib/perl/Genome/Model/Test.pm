@@ -327,7 +327,7 @@ sub create_basic_mock_model {
     $self->mock_methods(
         $model, # added inst data until it gets back into the class def
         (qw/
-            instrument_data
+            instrument_data 
             builds_with_status abandoned_builds failed_builds running_builds scheduled_builds
             current_running_build current_running_build_id
             completed_builds last_complete_build last_complete_build_id 
@@ -358,7 +358,7 @@ sub create_mock_model {
         or confess "Can't add mock build to mock ".$model->type_name." model";
 
     if ( $model->sequencing_platform ) {
-        my @idas = $self->create_and_assign_mock_instrument_data_to_model($model, $params{instrument_data_count})
+        $self->create_and_add_mock_instrument_data_to_model($model, $params{instrument_data_count})
             or confess "Can't add mock instrument data to mock ".$model->type_name." model";
     }
     
@@ -481,7 +481,7 @@ sub add_mock_event_to_build {
     return $event;
 }
 
-sub create_and_assign_mock_instrument_data_to_model {
+sub create_and_add_mock_instrument_data_to_model {
     my ($self, $model, $cnt) = @_;
 
     confess "No model to create and assign instrument data" unless $model and $model->isa('Genome::Model');
@@ -501,11 +501,9 @@ sub create_and_assign_mock_instrument_data_to_model {
     my @instrument_data = $self->$create_mock_instrument_data_method($cnt)
         or confess "Can't create mock ".$model->sequencing_platform." instrument data";
 
-    # Instrument Data Assignments
-    my @instrument_data_assignments = $self->create_mock_instrument_data_assignments($model, @instrument_data)
-        or confess "Can't create mock instrument data assignments";
+    $model->set_list('instrument_data', @instrument_data);
 
-    return @instrument_data_assignments;
+    return 1;
 }
 
 sub create_mock_instrument_data_assignments {
@@ -709,7 +707,7 @@ sub _build_subclass_specifics_for_metagenomic_composition_16s {
 
     # create dirs
     for my $dir ( $build->sub_dirs ) {
-        Genome::Utility::FileSystem->create_directory( $build->data_directory."/$dir" )
+        Genome::Sys->create_directory( $build->data_directory."/$dir" )
             or return;
     }
 
@@ -783,10 +781,10 @@ sub _build_subclass_specifics_for_reference_alignment {
 sub copy_test_dir {
     my ($self, $source_dir, $dest) = @_;
 
-    Genome::Utility::FileSystem->validate_existing_directory($dest)
+    Genome::Sys->validate_existing_directory($dest)
         or confess;
 
-    my $dh = Genome::Utility::FileSystem->open_directory($source_dir)
+    my $dh = Genome::Sys->open_directory($source_dir)
         or confess;
 
     while ( my $file = $dh->read ) {

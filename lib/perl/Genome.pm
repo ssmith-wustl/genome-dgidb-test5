@@ -3,26 +3,26 @@ package Genome;
 use warnings;
 use strict;
 
-our $VERSION = 0.04;
+our $VERSION = '0.05'; # Genome $VERSION
 
 # software infrastructure
 use UR;
 
-# this keeps available parts of the UR pre-0.01 API we still use
-use UR::ObjectV001removed;
+# local configuration
+use Genome::Site;
 
 # environmental configuration
-use Genome::Config;
+$ENV{GENOME_DB} ||= '/var/lib/genome/db';
+$ENV{GENOME_SW} ||= '/var/lib/genome/sw';
 
-# if the search engine is installed configure its hooks
+# if the search engine is installed, configure its hooks
 eval {
     local $SIG{__WARN__};
     local $SIG{__DIE__};
     require Genome::Search;
 };
 
-# modules we need to auto-load
-use Test::MockObject;
+# modules 
 use File::Temp;
 use IO::String;
 
@@ -132,14 +132,14 @@ That tree has several primary components:
 
 Only the tools system is currently released.  
 
-See B<gmt> for a complete inventory of all tool packages, and for command-line access to
+See B<genome> for a complete inventory of all tool packages, and for command-line access to
 those tools.
 
 =head1 AUTHORS
 
  This software is developed by the analysis and engineering teams at 
  The Genome Center at Washington Univiersity in St. Louis, with funding from 
- the National Human Genome Research Institute.
+ the National Human Genome Research Institute.  Richard K. Wilson, P.I.
 
  Scott Abbott
  Travis Abbott
@@ -151,6 +151,7 @@ those tools.
  C.J. Carey
  Lynn Carmichael
  Ken Chen
+ Lei Chen
  Eric Clark
  Kevin Crouse
  Indraniel Das
@@ -217,7 +218,7 @@ those tools.
 
 =head1 LICENSE
 
-This software is copyright Washington University in St. Louis, 2007-2010.  
+Copyright (C) 2007-2011 Washington University in St. Louis.
 
 It is released under the Lesser GNU Public License (LGPL) version 3.  See the 
 associated LICENSE file in this distribution.
@@ -228,3 +229,4 @@ For defects with any software in the genome namespace,
 contact genome-dev ~at~ genome.wustl.edu.
 
 =cut
+

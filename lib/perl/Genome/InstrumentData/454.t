@@ -81,8 +81,8 @@ is($disk_allocation->absolute_path, $dir, 'disk allocation absolute path points 
 no warnings;
 *Genome::Disk::Allocation::get = sub{ return $disk_allocation; };
 *Genome::Disk::Allocation::allocate = sub{ return $disk_allocation; };
-*Genome::Utility::FileSystem::lock_resource = sub{ ok(1, 'lock'); return 1; };
-*Genome::Utility::FileSystem::unlock_resource = sub{ ok(1, 'unlock'); return 1; };
+*Genome::Sys::lock_resource = sub{ ok(1, 'lock'); return 1; };
+*Genome::Sys::unlock_resource = sub{ ok(1, 'unlock'); return 1; };
 use warnings;
 
 # sff already dumped to disk allocation

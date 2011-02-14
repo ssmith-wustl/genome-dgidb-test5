@@ -45,7 +45,7 @@ class Genome::Model::Build {
         processing_profile_name => { via => 'model' },
         the_events              => { is => 'Genome::Model::Event', reverse_as => 'build', is_many => 1 },
         the_events_statuses     => { via => 'the_events', to => 'event_status' },
-        the_master_event        => { is => 'Genome::Model::Event', via => 'the_events', to => '-filter', reverse_as => 'build', where => [ event_type => 'genome model build' ] },
+        the_master_event        => { is => 'Genome::Model::Event', reverse_as => 'build', where => [ event_type => 'genome model build' ], is_many => 1, is_constant => 1},
         run_by                  => { via => 'the_master_event', to => 'user_name' },
         status                  => { via => 'the_master_event', to => 'event_status', is_mutable => 1 },
         date_scheduled          => { via => 'the_master_event', to => 'date_scheduled', },
@@ -165,10 +165,6 @@ sub create {
     # model
     return unless ($class->_validate_model_id($model_id));
 
-    #unless ($bx->value_for('subclass_name')) {
-    #    $bx = $bx->add_filter(subclass_name => $class);
-    #}
-
     # create
     my $self = $class->SUPER::create($bx);
     return unless $self;
@@ -206,54 +202,6 @@ sub create {
         $self->delete;
         return;
     }
-
-    my $data_directory_undo =  sub {
-        if ($self->data_directory && -e $self->data_directory) {
-            if (rmtree($self->data_directory, { error => \my $remove_errors })) {
-                $self->status_message("Removed build's data directory (" . $self->data_directory . ").");
-            }
-            else {
-                if (@$remove_errors) {
-                    my $error_summary;
-                    for my $error (@$remove_errors) {
-                        my ($file, $error_message) = %$error;
-                        if ($file eq '') {
-                            $error_summary .= "General error removing build directory: $error_message\n";
-                        }
-                        else {
-                            $error_summary .= "Error removing file $file : $error_message\n";
-                        }
-                    }
-                    $self->error_message($error_summary);
-                }
-
-                confess "Failed to remove build directory tree at " . $self->data_directory . ", cannot remove build!";
-            }
-        }
-    };
-    my $data_directory_change = UR::Context::Transaction->log_change($self, 'UR::Value', $self->data_directory, 'external_change', $data_directory_undo);
-    if ($data_directory_change) {
-        $self->status_message("Recorded creation of data directory (" . $self->data_directory . ").");
-    }
-    else {
-        die $self->error_message("Failed to record creation of data directory (" . $self->data_directory . ").");
-    }
-
-    my $disk_allocation = $self->disk_allocation;
-    if ($disk_allocation) {
-        my $allocation_undo = sub {
-            unless ($disk_allocation->deallocate) {
-                $self->warning_message('Failed to deallocate disk space.');
-            }
-        };
-        my $allocation_change = UR::Context::Transaction->log_change($self, 'UR::Value', $self->disk_allocation->id, 'external_change', $allocation_undo);
-        if ($allocation_change) {
-            $self->status_message("Recorded creation of disk allocation (" . $self->disk_allocation->id . ")");
-        }
-        else {
-            die $self->error_message("Failed to record creation of disk allocation (" . $self->disk_allocation->id . ")");
-        }
-    }   
 
     return $self;
 }
@@ -365,20 +313,24 @@ sub instrument_data_count {
     return scalar( $self->instrument_data_assignments );
 }
 
+# why is this not a defined relationship above? -ss
 sub events {
     my $self = shift;
     my @events = Genome::Model::Event->get(
         model_id => $self->model_id,
         build_id => $self->build_id,
+        @_,
     );
     return @events;
 }
 
+# why is this not a defined relationship above? -ss
 sub build_events {
     my $self = shift;
     my @build_events = Genome::Model::Event::Build->get(
         model_id => $self->model_id,
         build_id => $self->build_id,
+        @_
     );
     return @build_events;
 }
@@ -397,10 +349,15 @@ sub build_event {
     return $build_events[0];
 }
 
+sub workflow_name {
+    my $self = shift;
+    return $self->build_id . ' all stages';
+}
+
 sub workflow_instances {
     my $self = shift;
     my @instances = Workflow::Operation::Instance->get(
-        name => $self->build_id . ' all stages'
+        name => $self->workflow_name,
     );
     return @instances;
 }
@@ -415,6 +372,39 @@ sub newest_workflow_instance {
     } else {
         return;
     }
+}
+
+sub cpu_slot_hours {
+    my $self = shift;
+    # TODO: get with Matt and replace with workflow interrogation
+    my @events = $self->events(@_);
+    my $s = 0;
+    for my $event (@events) {
+        # the master event has an elapsed time for the whole process: don't double count
+        next if (ref($event) eq 'Genome::Model::Event::Build');
+
+        # this would be a method on event, but we won't keep it that long
+        # it's just good enough to do the calc for the grant 2011-01-30 -ss
+        my $cores;
+        if (ref($event) =~ /deduplicate/i) {
+            $cores = 4;
+        }
+        elsif (ref($event) =~ /AlignReads/) {
+            $cores = 4;
+        }
+        else {
+            $cores = 1;
+        }
+        my $e = UR::Time->datetime_to_time($event->date_completed)
+                - 
+                UR::Time->datetime_to_time($event->date_scheduled);
+        if ($e < 0) {
+            warn "event " . $event->__display_name__ . " has negative elapsed time!";
+            next;
+        }
+        $s += ($e * $cores);
+    }
+    return $s/(60*60);
 }
 
 sub calculate_estimated_kb_usage {
@@ -439,6 +429,7 @@ sub resolve_data_directory {
     my $model = $self->model;
     my $build_data_directory;
     my $model_data_directory = $model->data_directory;
+    # TODO This check is site specific... what does it matter if the model path doesn't follow this pattern?
     my $model_path_is_abnormal = defined($model_data_directory) && $model_data_directory !~ /\/gscmnt\/.*\/info\/(?:medseq\/)?.*/;
 
     if($model->genome_model_id < 0 && $model_path_is_abnormal)
@@ -447,7 +438,7 @@ sub resolve_data_directory {
         # Rather than relying on this if statement, tests should specify a build directory.
         $build_data_directory = $model_data_directory . '/build' . $self->id;
         warn "Please update this test to set build data_directory. (generated data_directory: \"$build_data_directory\")";
-        unless (Genome::Utility::FileSystem->create_directory($build_data_directory)) {
+        unless (Genome::Sys->create_directory($build_data_directory)) {
             $self->error_message("Failed to create directory '$build_data_directory'");
             die $self->error_message;
         }
@@ -471,24 +462,30 @@ sub resolve_data_directory {
             die $self->error_message('Failed to resolve a disk group for a new build!');
         }
     
-        my $disk_allocation = Genome::Disk::Allocation->allocate(disk_group_name => $disk_group_name,
-                                                                 allocation_path => $allocation_path,
-                                                                 kilobytes_requested => $kb_requested,
-                                                                 owner_class_name => $self->class,
-                                                                 owner_id => $self->id);
-        unless ($disk_allocation) {
-            die $self->error_message('Failed to get disk allocation');
-        }
+        my $class = $self->class;
+        my $id = $self->id;
+        my $disk_allocation = Genome::Disk::Allocation->create(
+            disk_group_name => $disk_group_name,
+            allocation_path => $allocation_path,
+            kilobytes_requested => $kb_requested,
+            owner_class_name => $class,
+            owner_id => $id,
+        );
+        Carp::confess "Failed to create allocation for build!" unless $disk_allocation;
     
         $build_data_directory = $disk_allocation->absolute_path;
-        Genome::Utility::FileSystem->validate_existing_directory($build_data_directory);
-    
+        Genome::Sys->validate_existing_directory($build_data_directory);
+
         # TODO: we should stop having model directories and making build symlinks!!!
-        my $build_symlink = $model_data_directory . '/build' . $self->build_id;
-        unlink $build_symlink if -e $build_symlink;
-        unless (Genome::Utility::FileSystem->create_symlink($build_data_directory,$build_symlink)) {
-            $self->error_message("Failed to make symlink \"$build_symlink\" with target \"$build_data_directory\"");
-            die $self->error_message;
+        if ( -w $model_data_directory ) {
+            my $build_symlink = $model_data_directory . '/build' . $self->build_id;
+            unlink $build_symlink if -e $build_symlink;
+            unless (Genome::Sys->create_symlink($build_data_directory,$build_symlink)) {
+                $self->error_message("Failed to make symlink \"$build_symlink\" with target \"$build_data_directory\"");
+                die $self->error_message;
+            }
+        } else {
+            $self->warning_message("Not creating symlink to build data directory in model data directory; model data directory is not writable.");
         }
     }
 
@@ -497,9 +494,7 @@ sub resolve_data_directory {
 
 sub reallocate {
     my $self = shift;
-
-    my $disk_allocation = $self->disk_allocation
-        or return 1; # ok - may not have an allocation
+    my $disk_allocation = $self->disk_allocation or return 1; # ok - may not have an allocation
 
     unless ($disk_allocation->reallocate) {
         $self->warning_message('Failed to reallocate disk space.');
@@ -542,7 +537,7 @@ sub add_report {
     }
     else {
         $self->status_message("creating directory $directory...");
-        unless (Genome::Utility::FileSystem->create_directory($directory)) {
+        unless (Genome::Sys->create_directory($directory)) {
             die "failed to make directory $directory!: $!";
         }
     }
@@ -617,7 +612,7 @@ sub stop {
 sub _kill_job {
     my ($self, $job) = @_;
 
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => 'bkill '.$job->{Job},
     );
 
@@ -832,7 +827,7 @@ sub _launch {
         # lock model
         my $model_id = $self->model->id;
         my $lock_id = '/gsc/var/lock/build_start/'.$model_id;
-        my $lock = Genome::Utility::FileSystem->lock_resource(
+        my $lock = Genome::Sys->lock_resource(
             resource_lock => $lock_id, 
             block_sleep => 3,
             max_try => 3,
@@ -847,7 +842,7 @@ sub _launch {
 
         my $job_id = $self->_execute_bsub_command($lsf_command);
         unless ($job_id) {
-            Genome::Utility::FileSystem->lock_resource(resource_lock => $lock) if ($lock);
+            Genome::Sys->lock_resource(resource_lock => $lock) if ($lock);
             return;
         }
         
@@ -860,7 +855,7 @@ sub _launch {
                 unless ( $bresume_output =~ /^Job <$job_id> is being resumed$/ ) {
                     $self->status_message($bresume_output);
                 }
-                Genome::Utility::FileSystem->unlock_resource(resource_lock => $lock_id);
+                Genome::Sys->unlock_resource(resource_lock => $lock_id);
             }
         );
         if ($commit_observer) {
@@ -881,10 +876,10 @@ sub _initialize_workflow {
     my $self = shift;
     my $lsf_queue_eliminate_me = shift || 'apipe';
 
-    Genome::Utility::FileSystem->create_directory( $self->data_directory )
+    Genome::Sys->create_directory( $self->data_directory )
         or return;
 
-    Genome::Utility::FileSystem->create_directory( $self->log_directory )
+    Genome::Sys->create_directory( $self->log_directory )
         or return;
 
     if ( my $existing_build_event = $self->build_event ) {
@@ -1133,8 +1128,13 @@ sub _verify_build_is_not_abandoned_and_set_status_to {
 sub abandon {
     my $self = shift;
 
-    if ($self->status eq 'Abandoned') {
+    my $status = $self->status;
+    if ($status && $status eq 'Abandoned') {
         return 1;
+    }
+
+    if ($status && ($status eq 'Running' || $status eq 'Scheduled')) {
+        $self->stop;
     }
 
     # Abandon events
@@ -1445,20 +1445,19 @@ sub add_from_build { # rename "add an underlying build" or something...
 sub delete {
     my $self = shift;
     my %params = @_;
-    my $keep_build_directory = $params{keep_build_directory};
 
-    # Abandon
+    # Abandon events
     $self->status_message("Abandoning events associated with build");
-    unless ( $self->_abandon_events ) {
+    unless ($self->_abandon_events) {
         $self->error_message(
             "Unable to delete build (".$self->id.") because the events could not be abandoned"
         );
-        return;
+        confess $self->error_message;
     }
     
     # Delete all associated objects
     $self->status_message("Deleting other objects associated with build");
-    my @objects = $self->get_all_objects;
+    my @objects = $self->get_all_objects; # TODO this method name should be changed
     for my $object (@objects) {
         $object->delete;
     }
@@ -1481,39 +1480,13 @@ sub delete {
         $idas->first_build_id($next_build_id);
     }
 
-    if ($self->data_directory && -e $self->data_directory && !$keep_build_directory) {
-        $self->status_message("Removing build data directory at " . $self->data_directory);
-        unless (rmtree($self->data_directory, { error => \my $remove_errors })) {
-            if (@$remove_errors) {
-                my $error_summary;
-                for my $error (@$remove_errors) {
-                    my ($file, $error_message) = %$error;
-                    if ($file eq '') {
-                        $error_summary .= "General error removing build directory: $error_message\n";
-                    }
-                    else {
-                        $error_summary .= "Error removing file $file : $error_message\n";
-                    }
-                }
-                $self->error_message($error_summary);
-            }
-
-            confess "Failed to remove build directory tree at " . $self->data_directory . ", cannot remove build!";
-        }
-    }
-    else {
-        $self->status_message("Not removing build data directory at " . $self->data_directory);
-    }
-
+    # Deallocate build directory, which will also remove it (unless no commit is on)
     my $disk_allocation = $self->disk_allocation;
-    if ($disk_allocation && !$keep_build_directory) {
+    if ($disk_allocation) {
         $self->status_message("Deallocating build directory");
         unless ($disk_allocation->deallocate) {
-             $self->warning_message('Failed to deallocate disk space.');
+            $self->warning_message('Failed to deallocate disk space.');
         }
-    }
-    else {
-        $self->status_message("Not deallocating build directory since it was not removed or no allocation was found");
     }
     
     # FIXME Don't know if this should go here, but then we would have to call success and abandon through the model
@@ -1561,11 +1534,12 @@ sub get_metric {
 sub files_in_data_directory { 
     my $self = shift;
     my @files;
-    find(
-        sub {
+    find({
+        wanted => sub {
             my $file = $File::Find::name;
-            push @files, $file if -f $file;
+            push @files, $file;
         },
+        follow => 1, },
         $self->data_directory,
     );
     return \@files;
@@ -1604,6 +1578,8 @@ sub regex_files_for_diff {
     return ();
 }
 
+# A list of metrics that the differ should ignore. Some model/build types store information
+# as metrics that need to be diffed. Override this in subclasses.
 sub metrics_ignored_by_diff {
     return ();
 }
@@ -1649,11 +1625,12 @@ sub compare_output {
     # Create hashes for each build, keys are paths relative to build directory and 
     # values are full file paths
     my (%file_paths, %other_file_paths);
+    require Cwd;
     for my $file (@{$self->files_in_data_directory}) {
-        $file_paths{$self->full_path_to_relative($file)} = $file;
+        $file_paths{$self->full_path_to_relative($file)} = Cwd::abs_path($file);
     }
     for my $other_file (@{$other_build->files_in_data_directory}) {
-        $other_file_paths{$other_build->full_path_to_relative($other_file)} = $other_file;
+        $other_file_paths{$other_build->full_path_to_relative($other_file)} = Cwd::abs_path($other_file);
     }
 
     # Now cycle through files in this build's data directory and compare with 
@@ -1710,8 +1687,8 @@ sub compare_output {
             $diff_result = $self->$method($abs_path, $other_abs_path);
         }
         else {
-            my $file_md5 = Genome::Utility::FileSystem->md5sum($abs_path);
-            my $other_md5 = Genome::Utility::FileSystem->md5sum($other_abs_path);
+            my $file_md5 = Genome::Sys->md5sum($abs_path);
+            my $other_md5 = Genome::Sys->md5sum($other_abs_path);
             $diff_result = ($file_md5 eq $other_md5);
         }
 
@@ -1767,11 +1744,4 @@ sub compare_output {
     return %diffs;
 }
 
-# why hide this here? -ss
-package Genome::Model::Build::AbstractBaseTest;
-
-class Genome::Model::Build::AbstractBaseTest {
-    is => 'Genome::Model::Build',
-};
-
-1;;
+1;

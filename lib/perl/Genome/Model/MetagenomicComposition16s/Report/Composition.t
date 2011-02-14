@@ -6,29 +6,21 @@ use warnings;
 use above 'Genome';
 
 use Genome::Model::MetagenomicComposition16s::Test;
+use Test::More;
 
-Genome::Model::MetagenomicComposition16s::Report::Composition::Test->runtests;
+use_ok('Genome::Model::MetagenomicComposition16s::Report::Composition') or die;
 
+my $model = Genome::Model::MetagenomicComposition16s::Test->model_for_sanger;
+ok($model, 'got mc16s sanger model');
+my $example_build = Genome::Model::MetagenomicComposition16s::Test->example_build_for_model($model);
+ok($example_build, 'got example build');
+
+my $generator = Genome::Model::MetagenomicComposition16s::Report::Composition->create(build_id => $example_build->id);
+ok($generator, 'create');
+my $report = $generator->generate_report;
+ok($report, 'generate report');
+#print $report->xml_string."\n";
+
+done_testing();
 exit;
 
-=pod
-
-=head1 Tests
-
-=head1 Disclaimer
-
- Copyright (C) 2006 Washington University Genome Sequencing Center
-
- This script is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
- License for more details.
-
-=head1 Author(s)
-
- Eddie Belter <ebelter@watson.wustl.edu>
-
-=cut
-
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/AmpliconAssembly/Report/Composition.t $
-#$Id: Composition.t 50675 2009-09-02 21:32:58Z ebelter $

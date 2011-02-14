@@ -53,7 +53,7 @@ sub _execute_build {
     
     #If an error occurs here about refusing to write to an existing file, that was most likely on a re-run of the build
     #and the original error can be found earlier in the logs.  To restart, clear files out of the build directory.
-    unless (Genome::Utility::FileSystem->copy_file($build->fasta_file, $fasta_file_name)) {
+    unless (Genome::Sys->copy_file($build->fasta_file, $fasta_file_name)) {
         $self->error_message('Failed to copy "' . $build->fasta_file . '" to "' . $fasta_file_name . '.');
         return;
     }
@@ -72,7 +72,7 @@ sub _execute_build {
     my $bwa_path = Genome::Model::Tools::Bwa->path_for_bwa_version('0.5.8a');
 
     my $bwa_cmd = sprintf('%s index -a %s %s', $bwa_path, $bwa_index_algorithm, $fasta_file_name);
-    $rv = Genome::Utility::FileSystem->shellcmd(
+    $rv = Genome::Sys->shellcmd(
         cmd => $bwa_cmd,
         input_files => [$fasta_file_name],
     );
@@ -89,7 +89,7 @@ sub _execute_build {
     my $bowtie_path = Genome::Model::Tools::Bowtie->path_for_bowtie_version(Genome::Model::Tools::Bowtie->default_version); 
 
     my $bowtie_cmd = sprintf('%s-build %s %s', $bowtie_path, $fasta_file_name, $bowtie_file_stem);
-    $rv = Genome::Utility::FileSystem->shellcmd(
+    $rv = Genome::Sys->shellcmd(
         cmd => $bowtie_cmd,
         input_files => [$fasta_file_name],
         output_files => ["$bowtie_file_stem.1.ebwt","$bowtie_file_stem.2.ebwt","$bowtie_file_stem.3.ebwt","$bowtie_file_stem.4.ebwt","$bowtie_file_stem.rev.1.ebwt","$bowtie_file_stem.rev.2.ebwt"],    #hardcoding expected names
@@ -107,7 +107,7 @@ sub _execute_build {
     my $maq_path = Genome::Model::Tools::Maq->path_for_maq_version('0.7.1'); #It's lame to hardcode this--but no new versions expected
 
     my $maq_cmd = sprintf('%s fasta2bfa %s %s', $maq_path, $fasta_file_name, $bfa_file_name);
-    $rv = Genome::Utility::FileSystem->shellcmd(
+    $rv = Genome::Sys->shellcmd(
         cmd => $maq_cmd,
         input_files => [$fasta_file_name],
         output_files => [$bfa_file_name],
@@ -123,7 +123,7 @@ sub _execute_build {
     my $samtools_path = Genome::Model::Tools::Sam->path_for_samtools_version(); #uses default version if none passed
 
     my $samtools_cmd = sprintf('%s faidx %s', $samtools_path, $fasta_file_name);
-    $rv = Genome::Utility::FileSystem->shellcmd(
+    $rv = Genome::Sys->shellcmd(
         cmd => $samtools_cmd,
         input_files => [$fasta_file_name],
     );
@@ -151,23 +151,23 @@ sub _execute_build {
         }
     }
     #make symlinks so existence checks pass later on
-    unless(Genome::Utility::FileSystem->create_symlink("$build_directory/all_sequences.fa","$build_directory/all_sequences.bowtie")) {
+    unless(Genome::Sys->create_symlink("$build_directory/all_sequences.fa","$build_directory/all_sequences.bowtie")) {
         $self->error_message("Unable to symlink all_sequences.bowtie to all_sequences.fa");
         return;
     }
 
-    unless(Genome::Utility::FileSystem->create_symlink("$build_directory/all_sequences.fa","$build_directory/all_sequences.bowtie.fa")) {
+    unless(Genome::Sys->create_symlink("$build_directory/all_sequences.fa","$build_directory/all_sequences.bowtie.fa")) {
         $self->error_message("Unable to symlink all_sequences.bowtie.fa to all_sequences.fa");
         return;
     }
 
     #link in the samtools indexes
-    unless(Genome::Utility::FileSystem->create_symlink("$build_directory/all_sequences.fa.fai","$build_directory/all_sequences.bowtie.fai")) {
+    unless(Genome::Sys->create_symlink("$build_directory/all_sequences.fa.fai","$build_directory/all_sequences.bowtie.fai")) {
         $self->error_message("Unable to symlink all_sequences.bowtie.fai to all_sequences.fa.fai");
         return;
     }
 
-    unless(Genome::Utility::FileSystem->create_symlink("$build_directory/all_sequences.fa.fai","$build_directory/all_sequences.bowtie.fa.fai")) {
+    unless(Genome::Sys->create_symlink("$build_directory/all_sequences.fa.fai","$build_directory/all_sequences.bowtie.fa.fai")) {
         $self->error_message("Unable to symlink all_sequences.bowtie.fa.fai to all_sequences.fa.fai");
         return;
     }
@@ -190,9 +190,9 @@ sub _make_bases_files {
     my ($fa,$output_dir) = @_;
 
     my $bases_dir = join('/', $output_dir, 'bases');
-    Genome::Utility::FileSystem->create_directory($bases_dir);
+    Genome::Sys->create_directory($bases_dir);
 
-    my $fafh = Genome::Utility::FileSystem->open_file_for_reading($fa);
+    my $fafh = Genome::Sys->open_file_for_reading($fa);
     unless($fafh){
         $self->error_message("Could not open file $fa for reading.");
         die $self->error_message;
@@ -213,7 +213,7 @@ sub _make_bases_files {
             }
 
             my $file_name = join('/', $bases_dir, $chr . ".bases");
-            $file = Genome::Utility::FileSystem->open_file_for_writing($file_name);
+            $file = Genome::Sys->open_file_for_writing($file_name);
             unless($file){
                 $self->error_message("Could not open file " . $file_name . " for reading.");
                 die $self->error_message;
@@ -257,7 +257,7 @@ sub _create_manifest_file_line {
     my $file = shift;
 
     my $file_size = -s ($file);
-    my $md5 = Genome::Utility::FileSystem->md5sum($file);
+    my $md5 = Genome::Sys->md5sum($file);
     return join("\t", $file, $file_size, $md5);
 }
 
@@ -273,7 +273,7 @@ sub _list_bases_files {
     my @bases_files;
 
     if ($fa and -e $fa){
-        my $fafh = Genome::Utility::FileSystem->open_file_for_reading($fa);
+        my $fafh = Genome::Sys->open_file_for_reading($fa);
         unless($fafh){
             $self->error_message("Could not open file $fa for reading.");
             die $self->error_message;

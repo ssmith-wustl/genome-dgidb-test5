@@ -8,6 +8,9 @@ use Carp qw/croak/;
 use File::Basename;
 use Sort::Naturally;
 
+my $CURRENT_VERSION = "v2";
+my @COMPATIBLE_PREVIOUS_VERSIONS = ( "v1" );
+
 class Genome::Model::Tools::Bed::Convert {
     is => ['Command'],
     has_input => [
@@ -22,16 +25,6 @@ class Genome::Model::Tools::Bed::Convert {
             doc => 'Where to write the output BED file',
         },
     ],
-    has => {
-        sorted_filename => {
-            is => 'File',
-            calculate_from => 'output',
-            calculate => q|
-                $output =~ s/\.bed$//;
-                return "$output.v1.bed";
-            |
-        },
-    },
     has_transient_optional => [
         _input_fh => {
             is => 'IO::File',
@@ -70,6 +63,12 @@ sub help_detail {
 EOS
 }
 
+sub versioned_path {
+    my ($base, $version) = @_;
+    $base =~ s/\.bed$//;
+    return "$base.$version.bed";
+}
+
 sub execute {
     my $self = shift;
     
@@ -83,10 +82,11 @@ sub execute {
 
     return unless $retval;
 
+    my $final_output = versioned_path($self->output, $CURRENT_VERSION);
     if ($self->_need_chrom_sort) {
         my $sort_cmd = Genome::Model::Tools::Bed::ChromSort->create(
             input => $self->output,
-            output => $self->sorted_filename
+            output => $final_output,
         );
 
         if ($sort_cmd->execute()) {
@@ -96,9 +96,12 @@ sub execute {
             return;
         }
     } else {
-        rename($self->output, $self->sorted_filename);
+        rename($self->output, $final_output);
     }
-    symlink(basename($self->sorted_filename), $self->output);
+    symlink(basename($final_output), $self->output);
+    for my $v (@COMPATIBLE_PREVIOUS_VERSIONS) {
+        symlink(basename($final_output), versioned_path($self->output, $v));
+    }
 
     return 1;
 }
@@ -114,8 +117,8 @@ sub initialize_filehandles {
     my $output = $self->output;
     
     eval {
-        my $input_fh = Genome::Utility::FileSystem->open_file_for_reading($input);
-        my $output_fh = Genome::Utility::FileSystem->open_file_for_writing($output);
+        my $input_fh = Genome::Sys->open_file_for_reading($input);
+        my $output_fh = Genome::Sys->open_file_for_writing($output);
         
         $self->_input_fh($input_fh);
         $self->_output_fh($output_fh);
@@ -148,8 +151,10 @@ sub format_line {
         croak "Not enough fields to write bed file in input: ".join("\t", @values);
     }
     splice(@values,3,2, join('/', @values[3,4]));
-    # if no quality field is present, push -
-    push(@values, '-') if @values < 5;
+    # push - if quality and/or depth fields are missing
+    while (@values < 6) {
+        push(@values, '-');
+    }
     return join("\t", @values);
 }
 

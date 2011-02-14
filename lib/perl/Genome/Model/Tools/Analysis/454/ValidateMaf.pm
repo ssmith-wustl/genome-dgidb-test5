@@ -25,9 +25,9 @@ class Genome::Model::Tools::Analysis::454::ValidateMaf {
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		maf_file	=> { is => 'Text', doc => "Complete MAF file to be updated" },
-		status_file	=> { is => 'Text', doc => "Status file from VarScan with somatic_status in 13th column" },
-		snp_status_file	=> { is => 'Text', doc => "Status file from VarScan with somatic_status in 13th column", is_optional => 1 },
-		indel_status_file	=> { is => 'Text', doc => "Status file from VarScan with somatic_status in 13th column", is_optional => 1 },
+		status_file	=> { is => 'Text', doc => "Status file from Varscan with somatic_status in 13th column" },
+		snp_status_file	=> { is => 'Text', doc => "Status file from Varscan with somatic_status in 13th column", is_optional => 1 },
+		indel_status_file	=> { is => 'Text', doc => "Status file from Varscan with somatic_status in 13th column", is_optional => 1 },
 		positions_file		=> { is => 'Text', doc => "Positions that were targeted for validation" },
 		variant_type		=> { is => 'Text', doc => "Variant type, either SNP or INDEL"},
 		output_file		=> { is => 'Text', doc => "Output file for updated MAF" },

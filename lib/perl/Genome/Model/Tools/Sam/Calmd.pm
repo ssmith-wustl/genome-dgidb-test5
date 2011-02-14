@@ -17,7 +17,7 @@ class Genome::Model::Tools::Sam::Calmd {
 sub execute {
     my $self = shift;
     my $cmd = $self->samtools_path .' calmd -b '. $self->input_file .' '. $self->refseq_file .' > '. $self->output_file;
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$self->input_file,$self->refseq_file],
         output_files => [$self->output_file],

@@ -136,7 +136,7 @@ sub execute {                               # replace with real execution logic.
 			}
 			else
 			{
-				## Assume VarScan File ##
+				## Assume Varscan File ##
 	
 				my $tumor_cns = $lineContents[12];
 				if($tumor_cns eq "A" || $tumor_cns eq "C" || $tumor_cns eq "G" || $tumor_cns eq "T")

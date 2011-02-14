@@ -14,7 +14,7 @@ my $data_dir = '/gscmnt/sata420/info/testsuite_data/Genome-Model/DeNovoAssembly/
 ok (-d $data_dir, "Test suite data dir exists") or die;
 
 #create temp test dir .. tool creates edit_dir above it
-my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+my $temp_dir = Genome::Sys->create_temp_directory();
 ok (-d $temp_dir, "Temp test dir created") or die;
 
 #copy post assembly input files

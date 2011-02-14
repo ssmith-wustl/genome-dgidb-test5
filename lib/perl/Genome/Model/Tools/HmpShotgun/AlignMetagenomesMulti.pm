@@ -113,7 +113,7 @@ sub execute {
     my $parent_directory = $self->working_directory."/$subdirectory/";
     my $working_directory = $self->working_directory."/$subdirectory/".$reads_basename."_aligned_against_".$refseq_basename;
     unless (-e $working_directory) {
-    	Genome::Utility::FileSystem->create_directory("$working_directory");
+    	Genome::Sys->create_directory("$working_directory");
     }
     
     #$self->aligned_file($alignment_file);
@@ -130,7 +130,7 @@ sub execute {
     
     #check to see if those files exist
     my @expected_output_files = ( $aligner_output_file, $alignment_file );
-    my $rv_check = Genome::Utility::FileSystem->are_files_ok(input_files=>\@expected_output_files);
+    my $rv_check = Genome::Sys->are_files_ok(input_files=>\@expected_output_files);
     
     if (defined($rv_check)) {
 	    if ($rv_check == 1) {
@@ -185,7 +185,7 @@ sub execute {
    		#set outputs for next step in workflow
     	$self->aligned_file($alignment_file);
     	$self->working_directory($parent_directory);
-    	Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_output_files);
+    	Genome::Sys->mark_files_ok(input_files=>\@expected_output_files);
     	$self->status_message("<<<Completed alignment at ".UR::Time->now);
     	return 1;
     }
@@ -206,7 +206,7 @@ sub execute {
 
 	$self->status_message("Moving $sorted_file into $alignment_file.");
    	my $mv_cmd = "mv $sorted_file $alignment_file";
-   	my $rv_mv = Genome::Utility::FileSystem->shellcmd(cmd=>$mv_cmd);
+   	my $rv_mv = Genome::Sys->shellcmd(cmd=>$mv_cmd);
    	if ($rv_mv != 1) {
    		$self->error_message("Move of sorted file failed.  Return value: $rv_sort");
    	return;	
@@ -214,7 +214,7 @@ sub execute {
     	
     $self->aligned_file($alignment_file);
     $self->working_directory($parent_directory);
-    Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_output_files);
+    Genome::Sys->mark_files_ok(input_files=>\@expected_output_files);
     
     $self->status_message("<<<Completed alignment at ".UR::Time->now);
     

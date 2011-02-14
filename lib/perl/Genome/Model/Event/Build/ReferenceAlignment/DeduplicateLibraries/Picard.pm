@@ -24,6 +24,142 @@ sub max_jvm_heap_size {
     return $MAX_JVM_HEAP_SIZE;
 }
 
+sub shortcut {
+    my $self = shift;
+    $self->status_message('Looking for existing merged BAM for our alignments...');
+
+    #first check the previous build of our own model
+    my $model = $self->model;
+    if(my $build = $self->_find_compatible_build_in_model($model)) {
+        return $self->_link_result_from_build($build);
+    }
+
+    #try other models of the same subject
+    my $processing_profile = $model->processing_profile;
+    my @candidate_processing_profiles = Genome::ProcessingProfile::ReferenceAlignment->get(
+        %{ $processing_profile->processing_profile_params_for_alignment },
+        merger_name => $model->merger_name,
+        merger_version => $model->merger_version,
+        merger_params => $model->merger_params,
+        duplication_handler_name => $model->duplication_handler_name,
+        duplication_handler_version => $model->duplication_handler_version,
+        duplication_handler_params => $model->duplication_handler_params,
+        samtools_version => $model->samtools_version,
+    );
+
+    my @processing_profile_ids = map($_->id, @candidate_processing_profiles);
+    my @candidate_models = Genome::Model::ReferenceAlignment->get(
+        subject_id => $model->subject_id,
+        subject_class_name => $model->subject_class_name,
+        reference_sequence_build => $model->reference_sequence_build,
+        'genome_model_id !=' => $model->id,
+        processing_profile_id => \@processing_profile_ids,
+    );
+    for my $model (@candidate_models) {
+        if(my $build = $self->_find_compatible_build_in_model($model)){
+            return $self->_link_result_from_build($build);
+        }
+    }
+
+    $self->status_message('No suitable builds found for shortcutting.');
+    return;
+}
+
+#see if this other model has a build that already computed the result we need
+sub _find_compatible_build_in_model {
+    my $self = shift;
+    my $candidate_model = shift;
+    my $build = $self->build;
+
+    #load these all at once
+    $candidate_model->instrument_data_assignments;
+
+    my @build_idas = $build->instrument_data_assignments;
+    @build_idas = sort { $a->instrument_data_id <=> $b->instrument_data_id } @build_idas;
+    my @build_alignments = map { $build->model->processing_profile->results_for_instrument_data_assignment($_) } $build->instrument_data_assignments;
+
+    my @candidate_builds = $candidate_model->completed_builds;
+    BUILD: for my $candidate_build (reverse sort {$a->id <=> $b->id} @candidate_builds) {
+        next if $candidate_build eq $build; #We can't use ourself to shortcut. (This shouldn't happen anyway, since we're not completed.)
+
+        my @candidate_idas = $candidate_build->instrument_data_assignments;
+
+        next BUILD unless scalar(@candidate_idas) == scalar(@build_idas);
+        @candidate_idas = sort { $a->instrument_data_id <=> $b->instrument_data_id } @candidate_idas;
+
+        for my $i (0..$#build_idas) {
+            next BUILD if $build_idas[$i]->instrument_data_id != $candidate_idas[$i]->instrument_data_id;
+            next BUILD if ($build_idas[$i]->filter_desc || '') ne ($candidate_idas[$i]->filter_desc  || '');
+        }
+
+        #okay, both builds have same instrument data assignments--as last check, try to load the individual alignments
+        my @candidate_alignments = map { $build->model->processing_profile->results_for_instrument_data_assignment($_) } $build->instrument_data_assignments;
+
+        next BUILD unless scalar(@candidate_alignments) == scalar(@build_alignments);
+        for my $i (0..$#build_alignments) {
+            next BUILD unless $build_alignments[$i] eq $candidate_alignments[$i];
+        }
+
+        #passed all checks--this build can be used to shortcut
+        $self->status_message('Found candidate build: ' . $build->__display_name__);
+        return $candidate_build;
+    }
+
+    #exhausted builds--give up
+    return;
+}
+
+sub _link_result_from_build {
+    my $self = shift;
+    my $build = shift;
+
+    my $target_bam = $build->whole_rmdup_bam_file;
+    unless(-e $target_bam) {
+        $self->error_message('BAM file not found on target build (' . $build->__display_name__ . '): ' . $target_bam);
+        return;
+    }
+
+    if(-l $target_bam) {
+        $target_bam = readlink($target_bam);
+        unless(-e $target_bam) {
+            $self->error_message('BAM file symlink target not found on target build (' . $build->__display_name__ . '): ' . $target_bam);
+            return;
+        }
+    }
+
+    my $accumulated_alignments_directory = $self->build->accumulated_alignments_directory;
+    unless(-d $accumulated_alignments_directory || -l $accumulated_alignments_directory) {
+        Genome::Sys->create_directory($accumulated_alignments_directory);
+    }
+
+    $self->status_message('Going to link ' . $target_bam);
+
+    my @ext = ('.bai', '.flagstat', '');
+    for my $ext (@ext) {
+        unless(-e $target_bam . $ext) {
+            $self->error_message('Did not find ' . $target_bam . $ext);
+            return;
+        }
+    }
+
+    my $whole_rmdup_bam_file = $self->build->whole_rmdup_bam_file;
+    for my $ext (@ext) {
+        Genome::Sys->create_symlink($target_bam . $ext, $whole_rmdup_bam_file . $ext)
+            unless -e ($whole_rmdup_bam_file . $ext);
+    }
+
+    #make a note in the other build that its BAM is used externally
+    my $in_use_file = $target_bam . '.in_use';
+    Genome::Sys->shellcmd(
+        cmd => 'echo ' . $self->build->id . ' >> ' . $in_use_file,
+        output_files => [$in_use_file],
+        skip_if_output_is_present => 0,
+    );
+
+    $self->status_message('Successfully shortcut duplication.');
+    return 1;
+}
+
 sub execute {
     my $self = shift;
     my $now  = UR::Time->now;
@@ -113,7 +249,7 @@ sub execute {
     if (scalar @bam_files == 1 and $self->model->read_aligner_name =~ /^Imported$/i) {
         $self->status_message('Get 1 imported bam '.$bam_files[0]);
         
-        unless (Genome::Utility::FileSystem->create_symlink($bam_files[0], $bam_merged_output_file)) {
+        unless (Genome::Sys->create_symlink($bam_files[0], $bam_merged_output_file)) {
             $self->error_message("Failed to symlink $bam_files[0] to $bam_merged_output_file");
             return;
         }
@@ -246,6 +382,8 @@ sub execute {
         
         rename($dedup_temp_file, $bam_merged_output_file);
         rename($dedup_temp_file . '.flagstat', $bam_merged_output_file . '.flagstat');
+        unlink("$merged_file");
+        unlink("$merged_file.flagstat");
     
         $now = UR::Time->now;
         $self->status_message("<<< Completing MarkDuplicates at $now.");

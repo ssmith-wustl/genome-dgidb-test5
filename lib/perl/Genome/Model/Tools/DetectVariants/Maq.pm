@@ -160,8 +160,8 @@ sub _detect_variants {
         $result = $self->_run_maq($snv_output, $filtered_snv_output, $indel_output, $genotyper_params);
     } else {
         # Run just snvs or indels if we dont want both. Throw away the other type of variant
-        my ($temp_fh, $temp_name) = Genome::Utility::FileSystem->create_temp_file();
-        my ($filtered_temp_fh, $filtered_temp_name) = Genome::Utility::FileSystem->create_temp_file();
+        my ($temp_fh, $temp_name) = Genome::Sys->create_temp_file();
+        my ($filtered_temp_fh, $filtered_temp_name) = Genome::Sys->create_temp_file();
 
         if ($self->detect_snvs) {
             $result = $self->_run_maq($snv_output, $filtered_snv_output, $temp_name, $genotyper_params);
@@ -186,7 +186,7 @@ sub _run_maq {
     $self->update_genotype($genotyper_params);
 
     my $assembly_output = $self->_consensus_staging_output;
-    unless ( Genome::Utility::FileSystem->check_for_path_existence($assembly_output) ) {
+    unless ( Genome::Sys->check_for_path_existence($assembly_output) ) {
         $self->error_message("Assembly output file $assembly_output does not exist");
         return;
     }
@@ -200,20 +200,20 @@ sub _run_maq {
     unlink ($snv_output, $filtered_snv_output, $indel_output, $pileup_output, $indelpe_output, $sorted_indelpe_output);
 
     my $cmd = "$maq_pathname cns2snp $assembly_output > $snv_output";
-    unless (Genome::Utility::FileSystem->shellcmd(cmd => $cmd, input_files => [$assembly_output]) ) {
+    unless (Genome::Sys->shellcmd(cmd => $cmd, input_files => [$assembly_output]) ) {
         $self->error_message("cns2snp.\ncmd: $cmd");
         return;
     }
 
     $cmd = "$maq_pathname indelsoa $reference_sequence $accumulated_alignments > $indel_output";
-    unless (Genome::Utility::FileSystem->shellcmd(cmd => $cmd, input_files => [$reference_sequence, $accumulated_alignments]) ) {
+    unless (Genome::Sys->shellcmd(cmd => $cmd, input_files => [$reference_sequence, $accumulated_alignments]) ) {
         $self->error_message("indelsoa.\ncmd: $cmd");
         return;
     }
 
     my $filter = 'perl -nae '."'".'print if $F[2] =~ /^(\*|\+)$/'."'";
     $cmd = "$maq_pathname indelpe $reference_sequence $accumulated_alignments | $filter > $indelpe_output";
-    unless (Genome::Utility::FileSystem->shellcmd(cmd => $cmd, input_files => [$reference_sequence, $accumulated_alignments]) ) {
+    unless (Genome::Sys->shellcmd(cmd => $cmd, input_files => [$reference_sequence, $accumulated_alignments]) ) {
         $self->error_message("indelpe.\ncmd: $cmd");
         return;
     }
@@ -237,14 +237,14 @@ sub _run_maq {
     }
 
     $cmd = "$maq_pl_pathname SNPfilter $indel_param $snv_output > $filtered_snv_output";
-    unless (Genome::Utility::FileSystem->shellcmd(cmd => $cmd, input_files => [$snv_output]) ) {
+    unless (Genome::Sys->shellcmd(cmd => $cmd, input_files => [$snv_output]) ) {
         $self->error_message("SNPfilter.\ncmd: $cmd");
         return;
     }
     
     # Running pileup requires some parsing of the snv file
-    my ($tmp_fh, $temp_filename) = Genome::Utility::FileSystem->create_temp_file;
-    my $snv_fh = Genome::Utility::FileSystem->open_file_for_reading($snv_output);
+    my ($tmp_fh, $temp_filename) = Genome::Sys->create_temp_file;
+    my $snv_fh = Genome::Sys->open_file_for_reading($snv_output);
     unless ($snv_fh) {
         $self->error_message("Can't open snv output file for reading: $!");
         return;
@@ -265,7 +265,7 @@ sub _run_maq {
         $accumulated_alignments,
         $pileup_output
     );
-    unless (Genome::Utility::FileSystem->shellcmd(cmd => $cmd, input_files => [$temp_filename, $reference_sequence, $accumulated_alignments]) ) {
+    unless (Genome::Sys->shellcmd(cmd => $cmd, input_files => [$temp_filename, $reference_sequence, $accumulated_alignments]) ) {
         $self->error_message("pileup.\ncmd: $cmd");
         return;
     }
@@ -292,7 +292,7 @@ sub _generate_standard_files {
         my $snv_module = join('::', $module_base, 'Snv', $detector . 'ToBed'); 
         
         for my $variant_file ($self->_snv_staging_output, $self->_filtered_snv_staging_output) {
-            if(Genome::Utility::FileSystem->check_for_path_existence($variant_file)) {
+            if(Genome::Sys->check_for_path_existence($variant_file)) {
                 $retval &&= $self->_run_converter($snv_module, $variant_file);
             }  
         }
@@ -302,7 +302,7 @@ sub _generate_standard_files {
         my $snv_module = join('::', $module_base, 'Indel', $detector . 'ToBed'); 
         
         for my $variant_file ($self->_indelpe_staging_output, $self->_sorted_indelpe_staging_output) {
-            if(Genome::Utility::FileSystem->check_for_path_existence($variant_file)) {
+            if(Genome::Sys->check_for_path_existence($variant_file)) {
                 $retval &&= $self->_run_converter($snv_module, $variant_file);
             }  
         }
@@ -360,7 +360,7 @@ sub generate_metrics {
         my $snp_count_good = 0;
         
         my $snv_output = $self->_snv_staging_output;
-        my $snv_fh = Genome::Utility::FileSystem->open_file_for_reading($snv_output);
+        my $snv_fh = Genome::Sys->open_file_for_reading($snv_output);
         while (my $row = $snv_fh->getline) {
             $snp_count++;
             my ($r,$p,$a1,$a2,$q,$c) = split /\s+/, $row;
@@ -375,7 +375,7 @@ sub generate_metrics {
         my $indel_count    = 0;
         
         my $indel_output = $self->_indel_staging_output;
-        my $indel_fh = Genome::Utility::FileSystem->open_file_for_reading($indel_output);
+        my $indel_fh = Genome::Sys->open_file_for_reading($indel_output);
         while (my $row = $indel_fh->getline) {
             $indel_count++;
         }   
@@ -395,7 +395,7 @@ sub update_genotype {
     my $maq_pathname = Genome::Model::Tools::Maq->path_for_maq_version($self->version);
     my $consensus_dir = $self->_consensus_staging_directory;
     unless (-d $consensus_dir) {
-        unless (Genome::Utility::FileSystem->create_directory($consensus_dir)) {
+        unless (Genome::Sys->create_directory($consensus_dir)) {
             $self->error_message("Failed to create consensus directory $consensus_dir:  $!");
             return;
         }
@@ -407,7 +407,7 @@ sub update_genotype {
 
     my $cmd = $maq_pathname .' assemble '. $genotyper_params.' '. $consensus_file .' '. $ref_seq_file .' '. $accumulated_alignments_file;
     $self->status_message("\n************* UpdateGenotype cmd: $cmd *************************\n\n");
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
                     cmd => $cmd,
                     input_files => [$ref_seq_file,$accumulated_alignments_file],
                     output_files => [$consensus_file],

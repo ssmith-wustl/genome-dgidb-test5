@@ -19,7 +19,7 @@ sub _resolve_workflow_for_build {
 
     my $log_directory = $build->log_directory;
     $operation->log_dir($log_directory);
-    $operation->name($build->resolve_workflow_name);
+    $operation->name($build->workflow_name);
 
     return $operation;
 }

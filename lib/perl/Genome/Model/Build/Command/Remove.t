@@ -6,7 +6,7 @@ use warnings;
 use above "Genome";
 
 # init the test harness, and declare the number of tests we will run
-use Test::More tests => 10;
+use Test::More tests => 9;
 
 # this ensures we don't talk to the database just to get new ID values for objects
 # it will just use negative numbers instead of real IDs
@@ -57,13 +57,12 @@ $ENV{GENOME_NO_REQUIRE_USER_VERIFY} = 0;
 ok(!$@, "the command did not crash");
 is($exit_code1, 0, "command believes it succeeded");
 isa_ok($b1,"UR::DeletedRef", "build object is deleted");
-ok(!-d $b1_dir, "build directory is present: $b1_dir");
 
 =cut
 
 # THIS TESTS THE MODEL'S LAST_SUCCEEDED_BUILD METHOD, BUT DOES NOT WORK YET
 
-my $bdir = Genome::Utility::FileSystem->create_temp_directory();
+my $bdir = Genome::Sys->create_temp_directory();
 ok(-d $bdir, "temp directory is $bdir on $ENV{HOSTNAME}");
 
 my $b1 = $m->add_build(id => -2, data_directory => "$bdir/b1");

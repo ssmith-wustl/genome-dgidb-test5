@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 use IO::File;
 
 my %positions;
@@ -36,7 +36,7 @@ class Genome::Model::Tools::Somatic::CalculatePindelReadSupport {
             type => 'Boolean',
             is_input => 1,
             is_optional => 1,
-            default => 0,
+            default => 1,
             doc => 'Run on pindel 0.2 or 0.1',
         },
         germline_events => {
@@ -80,11 +80,11 @@ sub execute {
         $self->error_message("Output for calculate pindel read support at ".$self->_output_filename." already exists. Skipping.");
         return 1;
     }
-    my $output = Genome::Utility::FileSystem->open_file_for_writing($self->_output_filename);
+    my $output = Genome::Sys->open_file_for_writing($self->_output_filename);
     my %indels;
     my %answers;
 
-    my $ifh = Genome::Utility::FileSystem->open_file_for_reading($self->_dbsnp_insertions); #IO::File->new($self->_dbsnp_insertions);
+    my $ifh = Genome::Sys->open_file_for_reading($self->_dbsnp_insertions); #IO::File->new($self->_dbsnp_insertions);
     while (my $line = $ifh->getline) {
         chomp $line;
         my ($chr, $start, $stop, $id, $allele, undef) = split /\t/, $line;
@@ -94,7 +94,7 @@ sub execute {
         $insertions{$chr}{$start}{$stop}{'id'}=$id;
     }
     $ifh->close;
-    my $dfh = Genome::Utility::FileSystem->open_file_for_reading($self->_dbsnp_deletions);#IO::File->new($self->_dbsnp_deletions);
+    my $dfh = Genome::Sys->open_file_for_reading($self->_dbsnp_deletions);#IO::File->new($self->_dbsnp_deletions);
 
 
     while (my $line = $dfh->getline) {
@@ -108,7 +108,7 @@ sub execute {
     $dfh->close;
     $DB::single=1;
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($self->indels_all_sequences_bed_file);
+    my $fh = Genome::Sys->open_file_for_reading($self->indels_all_sequences_bed_file);
     while (<$fh>){
         my $line = $_;
         my ($chr,$start,$stop,$refvar) = split /\t/, $line;
@@ -134,12 +134,16 @@ sub process_file {
     my $output = shift;
     my $dir = $self->pindel_output_directory;
     my $filename = $dir."/".$chr."/indels_all_sequences";
-    my $pindel_output = Genome::Utility::FileSystem->open_file_for_reading($filename); #IO::File->new($filename);
+    my $pindel_output = Genome::Sys->open_file_for_reading($filename); #IO::File->new($filename);
     my $pindel_config = $dir."/".$chr."/pindel.config";
-    my $pconf = Genome::Utility::FileSystem->open_file_for_reading($pindel_config);  #IO::File->new($pindel_config);
-    my $normal_bam = $pconf->getline;
+    my $pconf = Genome::Sys->open_file_for_reading($pindel_config);  #IO::File->new($pindel_config);
     my $tumor_bam = $pconf->getline;
-    ($normal_bam) = split /\s/, $normal_bam;
+    if($tumor_bam =~ m/normal/){
+        $tumor_bam = $pconf->getline;
+        unless($tumor_bam =~ m/tumor/){
+            die $self->error_message("Could not locate a tumor bam in the pindel config file at ".$pindel_config);
+        }
+    }
     ($tumor_bam) = split /\s/, $tumor_bam;
     unless(-s $tumor_bam){
         die "couldnt find tumor bam reference in pindel.config at ".$tumor_bam."\n";
@@ -208,12 +212,6 @@ sub process_file {
             unless(exists $indels_by_chrom->{$start}){
                 next;
             }
-            if($type eq 'I') {
-                $start = $start - 1;
-            }else{
-                $stop = $stop - 1;
-            }
-            
             my @bed_line = $self->parse($call, $reference, $read);
             next unless scalar(@bed_line)>1;
             unless((@bed_line)&& scalar(@bed_line)==4){
@@ -349,7 +347,7 @@ sub parse {
         $ref = $allele_string;
     }
     elsif($type =~ m/I/) {
-        $start = $start - 1;
+        $stop = $stop - 1;
         $ref=0;
         my ($letters_until_space) =   ($reference =~ m/^([ACGTN]+) /);
         my $offset_into_first_read = length($letters_until_space);

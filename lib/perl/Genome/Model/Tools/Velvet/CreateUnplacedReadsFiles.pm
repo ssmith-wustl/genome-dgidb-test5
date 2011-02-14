@@ -84,7 +84,7 @@ sub _print_unplaced_reads {
     my ($self, $unplaced_reads, $sequences_file) = @_;
 
     unlink $self->reads_unplaced_file;
-    my $unplaced_fh = Genome::Utility::FileSystem->open_file_for_writing($self->reads_unplaced_file) ||
+    my $unplaced_fh = Genome::Sys->open_file_for_writing($self->reads_unplaced_file) ||
 	return;
     my $fasta_out = Bio::SeqIO->new(-format => 'fasta', -file => '>'.$self->reads_unplaced_fasta_file) ||
 	die;
@@ -102,7 +102,7 @@ sub _print_unplaced_reads {
 	    return;
 	}
 	#This doesn't seek to work properly if fh is held open constantly
-	my $seq_fh = Genome::Utility::FileSystem->open_file_for_reading( $sequences_file ) || 
+	my $seq_fh = Genome::Sys->open_file_for_reading( $sequences_file ) || 
 	    return;
 	$seq_fh->seek($seek_pos, 0);
 	my $io = Bio::SeqIO->new(-fh => $seq_fh, -format => 'fasta');
@@ -121,7 +121,7 @@ sub _remove_placed_reads {
 
     my $afg_file = ($self->afg_file) ? $self->afg_file : $self->velvet_afg_file;
 
-    my $afg_fh = Genome::Utility::FileSystem->open_file_for_reading($afg_file) ||
+    my $afg_fh = Genome::Sys->open_file_for_reading($afg_file) ||
 	return;
     while (my $record = getRecord($afg_fh)) {
 	my ($rec, $fields, $recs) = parseRecord($record);

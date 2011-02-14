@@ -2,7 +2,6 @@ package Genome::Model::Command;
 
 #:eclark 11/17/2009 Code review.
 
-# Should not inherit from Genome::Utility::FileSystem.
 # get_model_class* methods at the bottom should be in Genome::Model, not here.
 # create_directory and bsub_rusage probably don't even belong in this class
 
@@ -13,11 +12,10 @@ use Genome;
 
 require Carp;
 use Data::Dumper 'Dumper';
-require Genome::Utility::FileSystem;
 use Regexp::Common;
 
 class Genome::Model::Command {
-    is => ['Command','Genome::Utility::FileSystem'],
+    is => ['Command'],
     has => [
         model           => { is => 'Genome::Model', id_by => 'model_id' },
         model_id        => { is => 'Integer', doc => 'identifies the genome model by id' },
@@ -257,10 +255,19 @@ sub bsub_rusage {
     '' 
 }
 
+sub create_temp_directory {
+    my $self = shift;
+    my $basename = shift;
+    my $path = Genome::Sys->create_temp_directory($basename, @_)
+        or die;
+    $self->status_message("Created directory: $path");
+    return $path;
+}
+
 sub create_directory {
     my ($self, $path) = @_;
 
-    Genome::Utility::FileSystem->create_directory($path)
+    Genome::Sys->create_directory($path)
         or die;
 
     $self->status_message("Created directory: $path");
@@ -294,7 +301,7 @@ sub _ask_user_question {
 
 #< Models Classes and Subclasses >#
 sub get_model_classes {
-    my @classes = Genome::Utility::FileSystem::get_classes_in_subdirectory_that_isa(
+    my @classes = Genome::Sys::get_classes_in_subdirectory_that_isa(
         'Genome/Model',
         'Genome::Model',
     );

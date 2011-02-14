@@ -23,32 +23,67 @@ sub required_rusage {
     my %p = @_;
     my $instrument_data = delete $p{instrument_data};
 
-    my $estimated_usage_mb = 90000;
-    if (defined $instrument_data && $instrument_data->can("calculate_aligned_estimated_kb_usage")) {
-        my $kb_usage = $instrument_data->calculate_alignment_estimated_kb_usage;
-        $estimated_usage_mb = int(($kb_usage * 5) / 1024)+100;
-    }
+    my $estimated_usage_mb = $class->tmp_megabytes_estimated($instrument_data);
     
     my $mem = 10000;
-    my ($double_mem, $mem_kb) = ($mem*2, $mem*1000);
+    my ($double_mem, $mem_kb, $double_mem_kb) = ($mem*2, $mem*1000, $mem*2*1000);
     my $tmp = $estimated_usage_mb;
     my $double_tmp = $tmp*2; 
     my $cpus = 4;
     my $double_cpus = $cpus*2;
-    my $rusage = "rusage[mem=$mem, tmp=$tmp]";
 
-    my $select_half_blades = "select[model!=Opteron250 && type==LINUX64 && ncpus>=$double_cpus && maxtmp>=$double_tmp && maxmem>$double_mem] span[hosts=1]";
-    my $select_whole_blades = "select[model!=Opteron250 && type==LINUX64 && ncpus>=$double_cpus && maxtmp>=$tmp && maxmem>$mem] span[hosts=1]";
+    my $select_half_blades  = "select[ncpus>=$double_cpus && maxmem>$double_mem && maxtmp>=$double_tmp] span[hosts=1]";
     my @selected_half_blades = `bhosts -R '$select_half_blades' alignment | grep ^blade`;
-    my @selected_whole_blades = `bhosts -R '$select_whole_blades' alignment | grep ^blade`;
 
+    my $user = getpwuid($<);
+    my $queue = ($user eq 'apipe-builder' ? 'alignment-pd' : 'alignment');
+
+    my $required_usage = "-R '$select_half_blades rusage[mem=$mem]' -M $mem_kb -n $cpus -q $queue -m alignment";
     if (@selected_half_blades) {
-        return "-R '$select_half_blades rusage[mem=$mem, tmp=$tmp]' -M $mem_kb -n $cpus -q alignment -m alignment";
-    } elsif (@selected_whole_blades) {
-        return "-R '$select_whole_blades rusage[mem=$mem, tmp=$tmp]' -M $mem_kb -n $double_cpus -q alignment -m alignment";
+        return $required_usage;
     } else {
-        die $class->error_message("Failed to find hosts that meet resource requirements.");
+        die $class->error_message("Failed to find hosts that meet resource requirements ($required_usage).");
     }
+}
+
+sub tmp_megabytes_estimated {
+    my $class = shift || die;
+    my $instrument_data = shift;
+
+    my $default_megabytes = 90000;
+
+
+    if (not defined $instrument_data) {
+        return $default_megabytes;
+    }
+    elsif ($instrument_data->bam_path) {
+        my $bam_path = $instrument_data->bam_path;
+
+        my $scale_factor = 3.25; # assumption: up to 3x during sort/fixmate/sort and also during fastq extraction (2x) + bam = 3
+
+        my $bam_bytes = -s $bam_path;
+        unless ($bam_bytes) {
+            die $class->error_message("Instrument Data has BAM ($bam_path) but has no size!");
+        }
+
+        if ($instrument_data->can('get_segments')) {
+            my $bam_segments = scalar $instrument_data->get_segments;
+            if ($bam_segments > 1) {
+                $scale_factor = $scale_factor / $bam_segments;
+            }
+        }
+
+        return int(($bam_bytes * $scale_factor) / 1024**2);
+    }
+    elsif ($instrument_data->can("calculate_alignment_estimated_kb_usage")) {
+        my $kb_usage = $instrument_data->calculate_alignment_estimated_kb_usage;
+        return int(($kb_usage * 3) / 1024) + 100; # assumption: 2x for the quality conversion, one gets rm'di after; aligner generates 0.5 (1.5 total now); rm orig; sort and merge maybe 2-2.5
+    }
+    else {
+        return $default_megabytes;
+    }
+
+    return;
 }
 
 
@@ -65,21 +100,38 @@ sub _run_aligner {
     # decompose aligner params for each stage of bwa alignment
     my %aligner_params = $self->decomposed_aligner_params;
 
+    my @input_path_params;
+
+    for my $i (0..$#input_pathnames) {
+        my $path = $input_pathnames[$i];
+        my ($input_pass) = $path =~ m/\.bam:(\d)$/;
+        
+        if ($input_pass) {
+            $path =~ s/\.bam:\d$/\.bam/;
+            $input_pathnames[$i] = $path;
+            
+            $input_path_params[$i] = "-b". $input_pass;
+        } else {
+            $input_path_params[$i] = "";
+        }
+    }
    
     #### STEP 1: Use "bwa aln" to align each fastq independently to the reference sequence 
 
     my $bwa_aln_params = (defined $aligner_params{'bwa_aln_params'} ? $aligner_params{'bwa_aln_params'} : "");
     my @sai_intermediate_files;
     my @aln_log_files; 
-    foreach my $input (@input_pathnames) {
-   
+    foreach my $i (0..$#input_pathnames) {
+    
+        my $input = $input_pathnames[$i];
+        my $input_params = $input_path_params[$i];
         my ($tmp_base) = fileparse($input); 
-        my $tmp_sai_file = $tmp_dir . "/" . $tmp_base . ".sai";
+        my $tmp_sai_file = $tmp_dir . "/" . $tmp_base . "." . $i . ".sai";
         my $tmp_log_file = $tmp_dir . "/" . $tmp_base . ".bwa.aln.log"; 
         
         my $cmdline = Genome::Model::Tools::Bwa->path_for_bwa_version($self->aligner_version)
-            . sprintf( ' aln %s %s %s 1> ',
-                $bwa_aln_params, $reference_fasta_path, $input )
+            . sprintf( ' aln %s %s %s %s 1> ',
+                $bwa_aln_params, $input_params, $reference_fasta_path, $input )
             . $tmp_sai_file . ' 2>>'
             . $tmp_log_file;
         
@@ -87,9 +139,12 @@ sub _run_aligner {
         push @aln_log_files, $tmp_log_file;
         
         # disconnect the db handle before this long-running event
-        Genome::DataSource::GMSchema->disconnect_default_dbh; 
+        if (Genome::DataSource::GMSchema->has_default_handle) {
+            $self->status_message("Disconnecting GMSchema default handle.");
+            Genome::DataSource::GMSchema->disconnect_default_dbh();
+        }
         
-        Genome::Utility::FileSystem->shellcmd(
+        Genome::Sys->shellcmd(
             cmd          => $cmdline,
             input_files  => [ $reference_fasta_path, $input ],
             output_files => [ $tmp_sai_file, $tmp_log_file ],
@@ -165,7 +220,7 @@ sub _run_aligner {
     my $log_output_file   = $self->temp_staging_directory . "/aligner.log";
     my $concat_log_cmd = sprintf('cat %s >> %s', $log_input_fileset, $log_output_file);
 
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd          => $concat_log_cmd,
         input_files  => [ @aln_log_files, $samxe_logfile ],
         output_files => [ $log_output_file ],
@@ -181,7 +236,7 @@ sub _filter_samxe_output {
 #    my $cmd = "$sam_cmd | grep -v ^@ >> $sam_file_name";
 #    print $cmd,"\n\n";
 #    $DB::single = 1;
-#    Genome::Utility::FileSystem->shellcmd(cmd => $cmd);
+#    Genome::Sys->shellcmd(cmd => $cmd);
 #    return 1;
 
     $DB::single = 1;
@@ -208,7 +263,6 @@ sub _filter_samxe_output {
     } else {
         $sam_out_fh = IO::File->new(">>" . $self->temp_scratch_directory . "/all_sequences.sam");
     }
-#    my $sam_out_fh = $Genome::InstrumentData::AlignmentResult::BAM_FH;
     my $add_rg_cmd = Genome::Model::Tools::Sam::AddReadGroupTag->create(
             input_filehandle     => $sam_run_output_fh,
             output_filehandle    => $sam_out_fh,
@@ -356,4 +410,9 @@ sub requires_read_group_addition {
 
 sub supports_streaming_to_bam {
     return 1;
+}
+
+sub accepts_bam_input {
+    my $self = shift;
+    return Genome::Model::Tools::Bwa->supports_bam_input($self->aligner_version);
 }

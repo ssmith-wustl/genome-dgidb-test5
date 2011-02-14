@@ -1,0 +1,27 @@
+[submodule "somatic-sniper"]
+	path = somatic-sniper
+	url = ssh://git/srv/git/somatic-sniper.git
+[submodule "joinx"]
+	path = joinx
+	url = ssh://git/srv/git/joinx.git
+[submodule "vendor/Net-HTTPServer"]
+	path = vendor/Net-HTTPServer
+	url = ssh://git/srv/git/vendor/Net-HTTPServer.git
+[submodule "vendor/File-Grep"]
+	path = vendor/File-Grep
+	url = ssh://git/srv/git/vendor/File-Grep.git
+[submodule "tigra"]
+	path = tigra
+	url = ssh://git//srv/git/tigra.git
+[submodule "genome-music-testdata"]
+	path = genome-music-testdata
+	url = ssh://git//srv/git/genome-music-testdata.git
+[submodule "varscan"]
+	path = varscan
+	url = ssh://git//srv/git/varscan.git
+[submodule "tigra-sv"]
+	path = tigra-sv
+	url = ssh://git/srv/git/tigra-sv.git
+[submodule "breakdancer"]
+	path = breakdancer
+	url = ssh://git/srv/git/breakdancer.git

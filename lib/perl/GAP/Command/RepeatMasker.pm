@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use GAP;
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 
 use Bio::SeqIO;
 use Bio::Tools::Run::RepeatMasker;
@@ -101,7 +101,7 @@ sub execute {
     }
 
     if ($self->fasta_file =~ /\.bz2$/) {
-        my $unzipped_file = Genome::Utility::FileSystem->bunzip($self->fasta_file);
+        my $unzipped_file = Genome::Sys->bunzip($self->fasta_file);
         confess "Could not unzip fasta file at " . $self->fasta_file unless defined $unzipped_file;
         $self->fasta_file($unzipped_file);
     }
@@ -123,7 +123,7 @@ sub execute {
 
     if ($self->skip_masking) {
         $self->status_message("skip_masking flag is set, copying input fasta to masked fasta location");
-        my $rv = Genome::Utility::FileSystem->copy_file($self->fasta_file, $self->masked_fasta);
+        my $rv = Genome::Sys->copy_file($self->fasta_file, $self->masked_fasta);
         confess "Trouble executing copy of " . $self->fasta_file . " to " . $self->masked_fasta unless defined $rv and $rv;
         $self->status_message("Copy of input fasta at " . $self->fasta_file . " to masked fasta path at " .
             $self->masked_fasta . " successful, exiting!");

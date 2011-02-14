@@ -69,18 +69,18 @@ sub execute {
     if (defined $self->output_file) {
         $output_file = $self->output_file;
     } else {
-        $output_file = Genome::Utility::FileSystem->create_temp_file_path('mapcheck_coverage_results');
+        $output_file = Genome::Sys->create_temp_file_path('mapcheck_coverage_results');
     }
  
     my $cmd = "$coverage_cmd $aligned_reads -f $reference > $output_file";
 
     $self->status_message("Mapcheck coverage command: ".$cmd);
-    my $report_rv = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd,output_files=>[$output_file],input_files=>[$aligned_reads,$reference]);
+    my $report_rv = Genome::Sys->shellcmd(cmd=>$cmd,output_files=>[$output_file],input_files=>[$aligned_reads,$reference]);
     
     my @output_text;
     my $return_text; 
     if ($self->return_output) {
-        my $out_fh = Genome::Utility::FileSystem->open_file_for_reading($output_file);
+        my $out_fh = Genome::Sys->open_file_for_reading($output_file);
         if ($out_fh) {
             @output_text = $out_fh->getlines;
         } 

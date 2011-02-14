@@ -32,6 +32,7 @@ class Genome::Model::Tools::Analysis::LaneQc::CompareSnps {
 		min_depth_hom	=> { is => 'Text', doc => "Minimum depth to compare a hom call [8]", is_optional => 1, is_input => 1},
 		verbose	=> { is => 'Text', doc => "Turns on verbose output [0]", is_optional => 1, is_input => 1},
 		flip_alleles 	=> { is => 'Text', doc => "If set to 1, try to avoid strand issues by flipping alleles to match", is_optional => 1, is_input => 1},
+		fast 	=> { is => 'Text', doc => "If set to 1, run a quick check on just chromosome 1", is_optional => 1, is_input => 1},
 		output_file	=> { is => 'Text', doc => "Output file for QC result", is_optional => 1, is_input => 1}
 	],
 };
@@ -86,7 +87,7 @@ sub execute {                               # replace with real execution logic.
 
 
 	print "Loading genotypes from $genotype_file...\n" if($self->verbose);
-	my %genotypes = load_genotypes($genotype_file);
+	my %genotypes = load_genotypes($genotype_file, $self);
 
 	
 	if($self->bam_file)
@@ -106,7 +107,7 @@ sub execute {                               # replace with real execution logic.
 		}
 		
 		## If BAM provided, call the variants ##
-		    my ($tfh,$temp_path) = Genome::Utility::FileSystem->create_temp_file;
+		    my ($tfh,$temp_path) = Genome::Sys->create_temp_file;
 		    unless($tfh) {
 		        $self->error_message("Unable to create temporary file $!");
 		        die;
@@ -119,7 +120,7 @@ sub execute {                               # replace with real execution logic.
 		if($search_string && $key_count < 100)
 		{
 			print "Extracting genotypes for $key_count positions...\n";		
-			$cmd = "samtools view -b $bam_file $search_string | samtools pileup -f /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa - | java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan pileup2cns >$temp_path";			
+			$cmd = "samtools view -b $bam_file $search_string | samtools pileup -f /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa - | java -classpath ~dkoboldt/Software/Varscan net.sf.varscan.Varscan pileup2cns >$temp_path";			
 			print "$cmd\n";
 		}
 		else
@@ -180,6 +181,11 @@ sub execute {                               # replace with real execution logic.
 		my $ref_base = $lineContents[2];
 		my $cns_call = $lineContents[3];
 		
+		if($self->fast && $chrom && $chrom ne "1")
+		{
+			close($input);
+		}
+		
 		my $depth = 0;
 		
 		if(lc($chrom) =~ "chrom")
@@ -204,13 +210,13 @@ sub execute {                               # replace with real execution logic.
 	
 				if($file_type eq "varscan" && $cns_call ne "A" && $cns_call ne "C" && $cns_call ne "G" && $cns_call ne "T")
 				{
-					## VarScan CNS format ##
+					## Varscan CNS format ##
 					$depth = $lineContents[4] + $lineContents[5];
 					$cons_gt = code_to_genotype($cns_call);			
 				}
 				elsif($file_type eq "varscan")
 				{
-					## VarScan SNP format ##
+					## Varscan SNP format ##
 					$depth = $lineContents[4] + $lineContents[5];
 					my $var_freq = $lineContents[6];
 					my $allele1 = $lineContents[2];
@@ -317,7 +323,7 @@ sub execute {                               # replace with real execution logic.
 							}
 							else
 							{
-								warn "Uncounted comparison: Chip=$chip_gt but Seq=$cons_gt\n";
+								warn "Uncounted comparison: Chip=$chip_gt but Seq=$cons_gt\n" if($self->verbose);
 							}
 							
 
@@ -457,6 +463,7 @@ sub execute {                               # replace with real execution logic.
 sub load_genotypes
 {                               # replace with real execution logic.
 	my $genotype_file = shift(@_);
+	my $self = shift(@_);
 	my %genotypes = ();
 	
 	my $input = new FileHandle ($genotype_file);
@@ -475,8 +482,11 @@ sub load_genotypes
 		
 		if($genotype && $genotype ne "--")
 		{
-			$genotypes{$key} = $genotype;
-			$gtCounter++;
+			if(!$self->fast || $chrom eq "1")
+			{
+				$genotypes{$key} = $genotype;
+				$gtCounter++;				
+			}
 		}
 	}
 	close($input);

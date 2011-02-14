@@ -43,9 +43,9 @@ sub create {
 
 sub execute {
     my $self = shift;
-    my $reader = Genome::Utility::FileSystem->open_file_for_reading($self->fastq_file);
+    my $reader = Genome::Sys->open_file_for_reading($self->fastq_file);
     binmode $reader, ":utf8";
-    my $writer = Genome::Utility::FileSystem->open_file_for_writing($self->phred_fastq_file);
+    my $writer = Genome::Sys->open_file_for_writing($self->phred_fastq_file);
     binmode $writer, ":utf8";
     while (my $line = $reader->getline) {
         chomp($line);
@@ -56,12 +56,8 @@ sub execute {
             # parse the solexa quality data line and interpolate to phred quality values
             my $qual_line = $reader->getline;
             chomp($qual_line);
-            my @sol_quals = split("",$qual_line);
-            my @phred_quals;
-            for my $solq (@sol_quals) {
-                push @phred_quals, chr(ord($solq) - 31);
-            }
-            print $writer join("",@phred_quals) ."\n";
+            my @sol_quals = unpack("C*", $qual_line);
+            print $writer (join "", map {chr($_-31)} @sol_quals), "\n";
         } else {
             # print the sequence read name and sequence data lines
             print $writer $line ."\n";
@@ -71,5 +67,3 @@ sub execute {
     $reader->close;
     return 1;
 };
-
-1;

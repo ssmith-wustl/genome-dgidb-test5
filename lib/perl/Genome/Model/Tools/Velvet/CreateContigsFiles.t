@@ -16,7 +16,7 @@ my $data_dir = "/gsc/var/cache/testsuite/data/$module";
 
 ok(-d $data_dir, "Found data directory: $data_dir");
 
-my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+my $temp_dir = Genome::Sys->create_temp_directory();
 
 #link afg file in tmp dir
 ok(-s $data_dir.'/velvet_asm.afg', "Data dir velvet_asm.afg file exists");

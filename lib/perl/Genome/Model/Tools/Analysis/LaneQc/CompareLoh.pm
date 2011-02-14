@@ -223,13 +223,13 @@ sub compare_variants
 	
 				if($file_type eq "varscan" && $cns_call ne "A" && $cns_call ne "C" && $cns_call ne "G" && $cns_call ne "T")
 				{
-					## VarScan CNS format ##
+					## Varscan CNS format ##
 					$depth = $lineContents[4] + $lineContents[5];
 					$cons_gt = code_to_genotype($cns_call);			
 				}
 				elsif($file_type eq "varscan")
 				{
-					## VarScan SNP format ##
+					## Varscan SNP format ##
 					$depth = $lineContents[4] + $lineContents[5];
 					my $var_freq = $lineContents[6];
 					my $allele1 = $lineContents[2];

@@ -132,7 +132,7 @@ sub _run_phred {
     
     my $phd_name = $self->_phd_schema->next_phd_name($scf_name);
     my $phd_file = $self->_phd_schema->phd_file($phd_name);
-    my $command = "phred $scf_file -nocall -p $phd_file";
+    my $command = "phred $scf_file -zt /tmp -nocall -p $phd_file";
     system "$command";
 
     unless ( -s $phd_file ) {
@@ -192,7 +192,7 @@ type: $primer_type
 WR_TAG
 
     my $phd_file = $self->_phd_schema->latest_phd_file($scf_name);
-    my $fh = eval{ Genome::Utility::FileSystem->open_file_for_appending($phd_file); };
+    my $fh = eval{ Genome::Sys->open_file_for_appending($phd_file); };
     if ( not defined $fh ) {
         Carp::confess(
             $self->error_message("Cannot open phd file ($phd_file) to append: $@")

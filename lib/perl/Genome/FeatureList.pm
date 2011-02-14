@@ -9,10 +9,10 @@ class Genome::FeatureList {
     is => 'UR::Object',
     table_name => 'FEATURE_LIST',
     has => [
-        id => { is => 'VARCHAR2', len => 64 },
-        name => { is => 'VARCHAR2', len => 200 },
-        format => { is => 'VARCHAR2', len => 64, doc => 'Indicates whether the file follows the BED spec.', valid_values => ['1-based', 'true-BED', 'multi-tracked', 'multi-tracked 1-based', 'unknown'], },
-        file_content_hash => { is => 'VARCHAR2', len => 32, doc => 'MD5 of the BED file (to ensure integrity' },
+        id => { is => 'Text', len => 64 },
+        name => { is => 'Text', len => 200 },
+        format => { is => 'Text', len => 64, doc => 'Indicates whether the file follows the BED spec.', valid_values => ['1-based', 'true-BED', 'multi-tracked', 'multi-tracked 1-based', 'unknown'], },
+        file_content_hash => { is => 'Text', len => 32, doc => 'MD5 of the BED file (to ensure integrity' },
         is_multitracked => {
             is => 'Boolean', calculate_from => ['format'],
             calculate => q{ return scalar ($format =~ /multi-tracked/); },
@@ -23,7 +23,7 @@ class Genome::FeatureList {
         }
     ],
     has_optional => [
-        source => { is => 'VARCHAR2', len => 64, doc => 'Provenance of this feature list. (e.g. Agilent)', },
+        source => { is => 'Text', len => 64, doc => 'Provenance of this feature list. (e.g. Agilent)', },
         reference_id => { is => 'NUMBER', len => 10, doc => 'ID of the reference sequence build for which the features apply' },
         reference => { is => 'Genome::Model::Build::ImportedReferenceSequence', id_by => 'reference_id' },
         subject_id => { is => 'NUMBER', len => 10, doc => 'ID of the subject to which the features are relevant' },
@@ -78,7 +78,7 @@ sub create {
 
     my $self = $class->SUPER::create(%params, id => $id);
 
-    if($file and Genome::Utility::FileSystem->check_for_path_existence($file)) {
+    if($file and Genome::Sys->check_for_path_existence($file)) {
         my $allocation = Genome::Disk::Allocation->allocate(
             disk_group_name => 'info_apipe_ref',
             allocation_path => 'feature_list/' . $self->id,
@@ -92,12 +92,8 @@ sub create {
             return;
         }
 
-        #If we rollback the create, need to get rid of the allocation.
-        my $upon_delete_callback = $self->_cleanup_allocation_sub;
-        $self->create_subscription(method=>'rollback', callback=>$upon_delete_callback);
-
         my $retval = eval {
-            Genome::Utility::FileSystem->copy_file($file, $self->file_path);
+            Genome::Sys->copy_file($file, $self->file_path);
         };
         if($@ or not $retval) {
             $self->error_message('Copy failed: ' . ($@ || 'returned' . $retval) );
@@ -149,12 +145,7 @@ sub _cleanup_allocation_sub {
         print $self->status_message;
         my $allocation = $self->disk_allocation;
         if ($allocation) {
-            my $path = $allocation->absolute_path;
-            unless (rmtree($path)) {
-                $self->error_message("could not rmtree $path");
-                return;
-           }
-           $allocation->deallocate; 
+            $allocation->deallocate; 
         }
     };
 }
@@ -164,7 +155,7 @@ sub verify_file_md5 {
 
     my $bed_file = $self->file_path;
 
-    my $md5_sum = Genome::Utility::FileSystem->md5sum($bed_file);
+    my $md5_sum = Genome::Sys->md5sum($bed_file);
     if($md5_sum eq $self->file_content_hash) {
         return $md5_sum;
     } else {
@@ -188,7 +179,7 @@ sub processed_bed_file_content {
         die $self->error_message;
     }
 
-    my $fh = Genome::Utility::FileSystem->open_file_for_reading($file);
+    my $fh = Genome::Sys->open_file_for_reading($file);
 
     my $print = 1;
     my $bed_file_content;
@@ -241,8 +232,8 @@ sub processed_bed_file {
 
     unless($self->_processed_bed_file_path) {
         my $content = $self->processed_bed_file_content;
-        my $temp_file = Genome::Utility::FileSystem->create_temp_file_path( $self->id . '.processed.bed' );
-        Genome::Utility::FileSystem->write_file($temp_file, $content);
+        my $temp_file = Genome::Sys->create_temp_file_path( $self->id . '.processed.bed' );
+        Genome::Sys->write_file($temp_file, $content);
         $self->_processed_bed_file_path($temp_file);
     }
 
@@ -259,7 +250,7 @@ sub merged_bed_file {
 
     unless($self->_merged_bed_file_path) {
         my $processed_bed_file = $self->processed_bed_file;
-        my $temp_file = Genome::Utility::FileSystem->create_temp_file_path( $self->id . '.merged.bed' );
+        my $temp_file = Genome::Sys->create_temp_file_path( $self->id . '.merged.bed' );
 
         my %merge_params = (
             input_file => $processed_bed_file,
@@ -283,6 +274,24 @@ sub merged_bed_file {
     }
 
     return $self->_merged_bed_file_path;
+}
+
+sub _resolve_param_value_from_text_by_name_or_id {
+    my $class = shift;
+    my $param_arg = shift;
+
+    #First try default behaviour of looking up by name or id
+    my @results = Genome::Command::Base->_resolve_param_value_from_text_by_name_or_id($class, $param_arg);
+
+    #If that didn't work, and the argument is a filename, see if we have a feature list matching the provided file.
+    if(!@results and -f $param_arg) {
+        my $md5 = Genome::Sys->md5sum($param_arg);
+        @results = Genome::FeatureList->get(file_content_hash => $md5);
+
+        @results = grep( !Genome::Sys->diff_file_vs_file($param_arg, $_->file_path), @results);
+    }
+
+    return @results;
 }
 
 1;

@@ -28,33 +28,43 @@ sub execute {
             die($self->error_message);
         }
     }
-    unless (Genome::Utility::FileSystem->create_directory($coverage_dir)) {
+    unless (Genome::Sys->create_directory($coverage_dir)) {
         $self->error_message('Failed to create coverage directory '. $coverage_dir .":  $!");
         return;
     }
     my $bed_file = $self->build->region_of_interest_set_bed_file;
     my $log_file = $self->build->log_directory;
-    my %coverage_stats_params = (
-        output_directory => $coverage_dir,
-        log_directory => $log_file,
-        bed_file => $bed_file,
-        bam_file => $self->build->whole_rmdup_bam_file,
-        minimum_depths => $self->build->minimum_depths,
-        wingspan_values => $self->build->wingspan_values,
-    );
+    my $bam_file = $self->build->whole_rmdup_bam_file;
+    my $cmd = 'gmt5.12.1 bio-samtools coverage-stats --output-directory='. $coverage_dir .' --log-directory='. $log_file
+        .' --bed-file='. $bed_file .' --bam-file='. $bam_file .' --minimum-depths='. $self->build->minimum_depths
+            .' --wingspan-values='. $self->build->wingspan_values;
+    #my %coverage_stats_params = (
+    #    output_directory => $coverage_dir,
+    #    log_directory => $log_file,
+    #    bed_file => $bed_file,
+    #    bam_file => $self->build->whole_rmdup_bam_file,
+    #    minimum_depths => $self->build->minimum_depths,
+    #    wingspan_values => $self->build->wingspan_values,
+    #);
 
     my $minimum_base_quality = $self->build->minimum_base_quality;
     if (defined($minimum_base_quality)) {
-        $coverage_stats_params{minimum_base_quality} = $minimum_base_quality;
+        $cmd .= ' --minimum-base-quality='. $minimum_base_quality;
+        #$coverage_stats_params{minimum_base_quality} = $minimum_base_quality;
     }
     my $minimum_mapping_quality = $self->build->minimum_mapping_quality;
     if (defined($minimum_mapping_quality)) {
-        $coverage_stats_params{minimum_mapping_quality} = $minimum_mapping_quality;
+        $cmd .= ' --minimum-mapping-quality='. $minimum_mapping_quality;
+        #$coverage_stats_params{minimum_mapping_quality} = $minimum_mapping_quality;
     }
-    unless (Genome::Model::Tools::BioSamtools::CoverageStats->execute(%coverage_stats_params)) {
-        $self->error_message('Failed to generate coverage stats with params: '.  Data::Dumper::Dumper(%coverage_stats_params));
-        die($self->error_message);
-    }
+    #unless (Genome::Model::Tools::BioSamtools::CoverageStats->execute(%coverage_stats_params)) {
+    #    $self->error_message('Failed to generate coverage stats with params: '.  Data::Dumper::Dumper(%coverage_stats_params));
+    #    die($self->error_message);
+    #}
+    Genome::Sys->shellcmd(
+        cmd => $cmd,
+        input_files => [$bed_file,$bam_file],
+    );
     my $as_ref = $self->build->alignment_summary_hash_ref;
     unless ($as_ref) {
         $self->error_message('Failed to load the alignment summary metrics!');

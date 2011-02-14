@@ -32,7 +32,7 @@ sub process_source {
     my $input_fh = $self->_input_fh;
     
     while(my $line = <$input_fh>) {
-        my ($chromosome, $position, $quality, $_num_reads_across, $length, $bases, @extra) = split(/[\t:]/, $line);
+        my ($chromosome, $position, $quality, $depth, $length, $bases, @extra) = split(/[\t:]/, $line);
         
         unless($quality =~ m/[*+-.]/) {
             $self->error_message('The file does not appear to be the output from `maq indelpe`. (Encountered unexpected quality value: ' . $quality . ') This converter does not support `maq indelsoa` output.');
@@ -56,7 +56,7 @@ sub process_source {
             $stop = $start + 2; #Two positions are included--the base preceding and the base following the insertion event
         }
         
-        $self->write_bed_line($chromosome, $start, $stop, $reference, $variant);
+        $self->write_bed_line($chromosome, $start, $stop, $reference, $variant, $quality, $depth);
     }
     
     return 1;

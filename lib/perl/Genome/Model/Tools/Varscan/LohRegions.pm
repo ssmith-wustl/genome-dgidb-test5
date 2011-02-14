@@ -2,7 +2,7 @@
 package Genome::Model::Tools::Varscan::LohRegions;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# RunVarscan - Run VarScan somatic on two BAM files.
+# RunVarscan - Run Varscan somatic on two BAM files.
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@genome.wustl.edu)
 #
@@ -39,12 +39,12 @@ class Genome::Model::Tools::Varscan::LohRegions {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Call regions of LOH using VarScan somatic output"                 
+    "Call regions of LOH using Varscan somatic output"                 
 }
 
 sub help_synopsis {
     return <<EOS
-Call regions of LOH using VarScan somatic output
+Call regions of LOH using Varscan somatic output
 EXAMPLE:	gmt capture loh-regions ...
 EOS
 }
@@ -104,7 +104,12 @@ sub execute {                               # replace with real execution logic.
 			my $somatic_status = $lineContents[12];
 			my $germline_p_value = $lineContents[13];
 			my $somatic_p_value= $lineContents[14];
-			
+			if($lineContents[13] eq "Somatic" || $lineContents[13] eq "LOH" || $lineContents[13] eq "Germline")
+			{
+				$somatic_status = $lineContents[13];
+				$germline_p_value = $lineContents[14];
+				$somatic_p_value= $lineContents[15];
+			}	
 			if($chrom ne $loh_chrom)
 			{
 				report_loh_region($loh_chrom, $loh_start, $loh_stop, $loh_snps);

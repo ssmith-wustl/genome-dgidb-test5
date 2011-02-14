@@ -73,6 +73,7 @@ sub execute {                               # replace with real execution logic.
 	my @level_2_folders = split(/\,/, $level_2_folders);
 
 	my $output_dir = $self->output_dir;
+	my $snp_info_file = $self->snp_info_file;
 
 
 	## Load information in all mage-tab files ##
@@ -109,25 +110,39 @@ sub execute {                               # replace with real execution logic.
 				{
 					$stats{'have_tcga_name'}++;
 					my $sample_name = $array_sample_names{$key};
-					my $washu_sample_name = get_washu_sample_name($sample_name);
+#					my $washu_sample_name = get_washu_sample_name($sample_name);
 					
-					if($washu_sample_name)
-					{
+#					if($washu_sample_name)
+#					{
 						$stats{'have_washu_name'}++;
 
 						print "Attempting to convert this sample:\n";
-						print join("\t", $key, $sample_name, $washu_sample_name) . "\n";						
-						my $output_file = $self->output_dir . "/" . $washu_sample_name . ".genotype";						
-						my $cmd = "gmt snp-array birdseed-to-genotype --birdseed-file $path_to_file --output-file $output_file";
+#						print join("\t", $key, $sample_name, $washu_sample_name) . "\n";						
+#						my $output_file = $self->output_dir . "/" . $washu_sample_name . ".genotype";						
+						print join("\t", $key, $sample_name) . "\n";						
+						my $output_file = $self->output_dir . "/" . $sample_name . ".genotype";						
+
+						my $cmd = "gmt snp-array birdseed-to-genotype --birdseed-file $path_to_file --output-file $output_file --snp-info-file $snp_info_file";
 
 						if(!($self->report_only))
 						{
-							system("bsub -q long -oo $output_file.log -R\"select[model != Opteron250 && mem>4000] rusage[mem=4000]\" \"$cmd\"");
-	#						system($cmd);							
+							if($self->use_bsub)
+							{
+								system("bsub -q tcga -oo $output_file.log -R\"select[model != Opteron250 && mem>4000] rusage[mem=4000]\" \"$cmd\"");								
+							}
+							else
+							{
+								system($cmd);															
+							}
+
+						}
+						else
+						{
+							print "$cmd\n";
 						}
 
 						$stats{'num_converted'}++;
-					}
+#					}
 
 
 				}
@@ -145,9 +160,8 @@ sub execute {                               # replace with real execution logic.
 		print "\n************CURRENT STATS****************\n";
 		print $stats{'num_birdseed_files'} . " birdseed genotype files\n";
 		print $stats{'have_tcga_name'} . " were matched to a TCGA sample identifier using mage-tab info\n";
-		print $stats{'have_washu_name'} . " have a WashU sample name in the database\n";
-		print $stats{'num_converted'} . " genotype files skipped because they're already imported\n";
-		print $stats{'num_converted'} . " genotype files imported\n";
+#		print $stats{'have_washu_name'} . " have a WashU sample name in the database\n";
+		print $stats{'num_converted'} . " genotype files converted\n";
 		print "*****************************************\n";
 		
 		

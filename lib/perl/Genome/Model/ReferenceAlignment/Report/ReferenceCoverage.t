@@ -6,9 +6,9 @@ use warnings;
 use above 'Genome';
 use Test::More tests => 5;
 
-use Genome::Utility::FileSystem;
+use Genome::Sys;
 
-my $tmp = Genome::Utility::FileSystem->create_temp_directory();
+my $tmp = Genome::Sys->create_temp_directory();
 
 # TODO: use a "testing" cDNA model to get build rather than this real build
 my $build_id = 98314469;

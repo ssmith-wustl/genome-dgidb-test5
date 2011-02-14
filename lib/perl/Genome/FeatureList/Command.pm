@@ -17,7 +17,7 @@ class Genome::FeatureList::Command {
 };
 
 sub help_brief {
-    "Commands to interact with feature-lists.",
+    "work with feature-lists"
 }
 
 sub help_synopsis {

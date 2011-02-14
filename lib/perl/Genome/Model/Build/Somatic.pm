@@ -71,7 +71,7 @@ sub create {
 sub workflow_instances {
     my $self = shift;
     my @instances = Workflow::Operation::Instance->get(
-        name => $self->resolve_workflow_name
+        name => $self->workflow_name
     );
 
     #older builds used a wrapper workflow
@@ -82,9 +82,8 @@ sub workflow_instances {
     return @instances;
 }
 
-sub resolve_workflow_name {
+sub workflow_name {
     my $self = shift;
-
     return $self->build_id . ' Somatic Pipeline';
 }
 
@@ -140,7 +139,7 @@ sub somatic_workflow_inputs {
         my $dbh = $ds->get_default_dbh;
         $dbh->{LongReadLen} = 1024*1024;
 
-        my $new_workflow_instance_name = $self->resolve_workflow_name;
+        my $new_workflow_instance_name = $self->workflow_name;
         my $old_workflow_instance_name = "Somatic Pipeline Build " . $self->build_id;
         my $results = $dbh->selectrow_arrayref("SELECT input_stored FROM workflow_instance WHERE name IN (?,?)", {}, $new_workflow_instance_name, $old_workflow_instance_name);
         unless ($results) {

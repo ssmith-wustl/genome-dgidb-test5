@@ -5,8 +5,7 @@ use warnings;
 
 use Genome;
 
-use lib '/gsc/var/tmp/Bio-SamTools/lib';
-use Bio::DB::Sam::RefCov::Bed;
+use Genome::RefCov::ROI::Bed;
 
 class Genome::Model::Tools::Annotate::ChromosomeRegions {
     is => ['Command'],
@@ -37,8 +36,12 @@ sub execute {
 
     my ($basename,$dirname,$suffix) = File::Basename::fileparse($self->bed_file,qw/.bed/);
 
-    Genome::Utility::FileSystem->create_directory($self->output_directory);
-    my $bed = Bio::DB::Sam::RefCov::Bed->new(file => $self->bed_file);
+    Genome::Sys->create_directory($self->output_directory);
+    my $bed = Genome::RefCov::ROI::Bed->create(
+        file => $self->bed_file,
+        make_objects => 1,
+        load_all => 1,
+    );
     my @chromosomes;
     unless ($self->chromosome) {
         @chromosomes = $bed->chromosomes;
@@ -64,7 +67,7 @@ sub execute {
                 }
                 my @sub_structure = $t->ordered_sub_structures;
                 for my $ss (@sub_structure){
-                    my $ss_region = Bio::DB::Sam::RefCov::Region->new(
+                    my $ss_region = Genome::RefCov::ROI::Region(
                         start => $ss->structure_start,
                         end => $ss->structure_stop,
                         strand => $t->strand,

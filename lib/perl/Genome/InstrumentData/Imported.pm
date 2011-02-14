@@ -12,7 +12,7 @@ use File::stat;
 use File::Path;
 
 class Genome::InstrumentData::Imported {
-    is => [ 'Genome::InstrumentData','Genome::Utility::FileSystem' ],
+    is => [ 'Genome::InstrumentData','Genome::Sys' ],
     type_name => 'imported instrument data',
     table_name => 'IMPORTED_INSTRUMENT_DATA',
     subclassify_by => 'subclass_name',
@@ -29,7 +29,8 @@ class Genome::InstrumentData::Imported {
         description          => { is => 'VARCHAR2', len => 512, is_optional => 1 },
         read_count           => { is => 'NUMBER', len => 20, is_optional => 1 },
         base_count           => { is => 'NUMBER', len => 20, is_optional => 1 },
-        disk_allocations     => { is => 'Genome::Disk::Allocation', reverse_as => 'owner', where => [ allocation_path => { operator => 'like', value => '%imported%' }  ], is_optional => 1, is_many => 1 },
+        disk_allocations     => { is => 'Genome::Disk::Allocation', reverse_as => 'owner', is_optional => 1, is_many => 1 },
+        #disk_allocations     => { is => 'Genome::Disk::Allocation', reverse_as => 'owner', where => [ allocation_path => { operator => 'like', value => '%imported%' }  ], is_optional => 1, is_many => 1 },
         fragment_count       => { is => 'NUMBER', len => 20, is_optional => 1 },
         fwd_read_length      => { is => 'NUMBER', len => 20, is_optional => 1 },
         is_paired_end        => { is => 'NUMBER', len => 1, is_optional => 1 },
@@ -86,6 +87,7 @@ class Genome::InstrumentData::Imported {
                 entity_class_name => 'Genome::InstrumentData::Imported', 
             ],
         },
+        bam_path => { calculate => q|my $f = $self->disk_allocations->absolute_path . '/all_sequences.bam';  return $f if (-e $f);| },
     ],
     has_many_optional => [
         attributes => { is => 'Genome::MiscAttribute', reverse_as => '_instrument_data', where => [ entity_class_name => 'Genome::InstrumentData::Imported' ] },
@@ -126,9 +128,16 @@ sub get_disk_allocation {
 sub calculate_alignment_estimated_kb_usage {
     my $self = shift;
     my $answer;
+
+    # Check for an existing allocation for this instrument data, which would've been created by the importer
+    my $allocation = Genome::Disk::Allocation->get(owner_class_name => $self->class, owner_id => $self->id);
+    if ($allocation) {
+        return int(($allocation->kilobytes_requested/1000) + 100);
+    }
+
     if($self->original_data_path !~ /\,/ ) {
         if (-d $self->original_data_path) {
-            my $source_size = Genome::Utility::FileSystem->directory_size_recursive($self->original_data_path);
+            my $source_size = Genome::Sys->directory_size_recursive($self->original_data_path);
             $answer = ($source_size/1000)+ 100;
         } else {
             unless ( -e $self->original_data_path) {
@@ -176,6 +185,13 @@ sub create {
 
 sub delete {
     my $self = shift;
+
+    my @alignment_results = Genome::InstrumentData::AlignmentResult->get(instrument_data_id => $self->id);
+    if (@alignment_results) {
+        $self->error_message("Cannot remove instrument data (" . $self->id . ") because it has " . scalar @alignment_results . " alignment result(s).");
+        return;
+    }
+
     my @allocations = Genome::Disk::Allocation->get(owner => $self);
     if (@allocations) {
         UR::Context->create_subscription(
@@ -184,11 +200,6 @@ sub delete {
                 for my $allocation (@allocations) {
                     my $id = $allocation->id;
                     print 'Now deleting allocation with owner_id = ' . $id . "\n";
-                    my $path = $allocation->absolute_path;
-                    unless (rmtree($path)) {
-                        print STDERR "ERROR: could not rmtree $path\n";
-                        return;
-                    }
                     $allocation->deallocate; 
                     print "Deletion complete.\n";
                 }
@@ -205,6 +216,7 @@ sub delete {
 ##################################################
 BEGIN: {
 Genome::InstrumentData::Solexa->class;
+no warnings 'once';
 *solexa_dump_sanger_fastq_files= \&Genome::InstrumentData::Solexa::dump_sanger_fastq_files;
 *dump_illumina_fastq_files= \&Genome::InstrumentData::Solexa::dump_illumina_fastq_files;
 *dump_solexa_fastq_files= \&Genome::InstrumentData::Solexa::dump_solexa_fastq_files;
@@ -227,44 +239,7 @@ sub dump_sanger_fastq_files {
     }
 }
 
-sub dump_fastqs_from_bam {
-    my $self = shift;
-    my %p = @_;
-    my $temp_dir = Genome::Utility::FileSystem->create_temp_directory('unpacked_bam');
 
-    my $subset = (defined $self->subset_name ? $self->subset_name : 0);
-
-    my %read_group_params;
-
-    if (defined $p{read_group_id}) {
-        $read_group_params{read_group_id} = delete $p{read_group_id};
-        $self->status_message("Using read group id " . $read_group_params{read_group_id});
-    } 
-
-    my $fwd_file = sprintf("%s/s_%s_1_sequence.txt", $temp_dir, $subset);
-    my $rev_file = sprintf("%s/s_%s_2_sequence.txt", $temp_dir, $subset);
-    my $fragment_file = sprintf("%s/s_%s_sequence.txt", $temp_dir, $subset);
-    my $cmd = Genome::Model::Tools::Picard::SamToFastq->create(input=>$self->data_directory . "/all_sequences.bam", fastq=>$fwd_file, fastq2=>$rev_file, fragment_fastq=>$fragment_file, %read_group_params);
-    unless ($cmd->execute()) {
-        die $cmd->error_message;
-    }
-
-    if ((-s $fwd_file && !-s $rev_file) ||
-        (!-s $fwd_file && -s $rev_file)) {
-        $self->error_message("Fwd & Rev files are lopsided; one has content and the other doesn't. Can't proceed"); 
-        die $self->error_message;
-    }
-
-    my @files;
-    if (-s $fwd_file && -s $rev_file) { 
-        push @files, ($fwd_file, $rev_file);
-    }
-    if (-s $fragment_file) {
-        push @files, $fragment_file;
-    }
-   
-    return @files; 
-}
 
 
 sub total_bases_read {
@@ -326,7 +301,7 @@ sub lane {
 }
 
 sub run_start_date_formatted {
-    UR::Time->now();
+    return Genome::Model::Tools::Sam->time();
 }
 
 sub seq_id {
@@ -417,7 +392,7 @@ sub get_segments {
         $self->error_message("Bam file $bam_file doesn't exist, can't get segments for it.");
         die $self->error_message;
     }
-    my $cmd = Genome::Model::Tools::Sam::ListReadGroups->create(input=>$bam_file);
+    my $cmd = Genome::Model::Tools::Sam::ListReadGroups->create(input=>$bam_file, silence_output=>1);
     unless ($cmd->execute) {
         $self->error_message("Failed to run list read groups command for $bam_file");
         die $self->error_message;
@@ -428,4 +403,47 @@ sub get_segments {
     return map {{segment_type=>'read_group', segment_id=>$_}} @read_groups;
 }
 
+# Microarray stuff eventually need to subclass
+sub genotype_microarray_raw_file {
+    my $self = shift;
+
+    my $disk_allocation = $self->disk_allocations;
+    return if not $disk_allocation;
+
+    my $absolute_path = $disk_allocation->absolute_path;
+    Carp::confess('No absolute path for instrument data ('.$self->id.') disk allocation: '.$disk_allocation->id) if not $absolute_path;
+    my $sample_name = $self->sample_name;
+    Carp::confess('No sample name for instrument data: '.$self->id) if not $sample_name;
+
+    return $absolute_path.'/'.$sample_name.'.raw.genotype';
+}
+
+sub genotype_microarray_file_for_subject_and_version {
+    my ($self, $subject_name, $version) = @_;
+
+    Carp::confess('No reference name given to get genotype microarray file') if not $subject_name;
+    Carp::confess('No version given to get genotype microarray file') if not defined $version;
+
+    my $disk_allocation = $self->disk_allocations;
+    return if not $disk_allocation;
+
+    my $absolute_path = $disk_allocation->absolute_path;
+    Carp::confess('No absolute path for instrument data ('.$self->id.') disk allocation: '.$disk_allocation->id) if not $absolute_path;
+    my $sample_name = $self->sample_name;
+    Carp::confess('No sample name for instrument data: '.$self->id) if not $sample_name;
+
+    return $absolute_path.'/'.$sample_name.'.'.$subject_name.'-'.$version.'.genotype';
+}
+
+sub genotype_microarray_file_for_human_version_37 {
+    my $self = shift;
+    return $self->genotype_microarray_file_for_subject_and_version('human', '37');
+}
+
+sub genotype_microarray_file_for_human_version_36 {
+    my $self = shift;
+    return $self->genotype_microarray_file_for_subject_and_version('human', '36');
+}
+
 1;
+

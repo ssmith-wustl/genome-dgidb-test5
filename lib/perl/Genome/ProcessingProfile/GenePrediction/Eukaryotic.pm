@@ -68,7 +68,7 @@ sub _resolve_workflow_for_build {
     confess "Could not create workflow object from $xml!" unless $workflow;
 
     $workflow->log_dir($build->log_directory);
-    $workflow->name($build->resolve_workflow_name);
+    $workflow->name($build->workflow_name);
 
     return $workflow;
 }
@@ -97,7 +97,7 @@ sub _map_workflow_inputs {
         prediction_directory => $build->prediction_directory,
         skip_repeat_masker => $self->skip_repeat_masker,
         repeat_masker_ace_file => $build->repeat_masker_ace_file,
-        predictions_ace_file => $build->predictions_ace_file,
+        predictions_ace_file => $build->predictions_ace_file;
 
     my $params;
     for (my $i = 0; $i < (scalar @inputs); $i += 2) {

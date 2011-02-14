@@ -9,6 +9,17 @@ class Genome::Model::Build::GenePrediction::Eukaryotic {
     is => 'Genome::Model::Build::GenePrediction',
 };
 
+# >75% of this comes from split fasta directories, which get cleaned
+# up when the build successfully completes
+sub calculate_estimated_kb_usage {
+    return 2_048_000;
+}
+
+sub workflow_name {
+    my $self = shift;
+    return 'eukaryotic gene prediction ' . $self->build_id;
+}
+
 sub repeat_masker_ace_file {
     my $self = shift;
     return $self->data_directory . "/repeat_masker.ace";
@@ -22,11 +33,6 @@ sub predictions_ace_file {
 sub log_directory {
     my $self = shift;
     return $self->data_directory . '/logs/';
-}
-
-sub resolve_workflow_name {
-    my $self = shift;
-    return 'eukaryotic gene prediction ' . $self->build_id;
 }
 
 sub split_fastas_output_directory {

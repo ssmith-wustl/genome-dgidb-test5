@@ -13,7 +13,7 @@ my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-AssemblReads-Pc
 ok (-d $test_dir, "Test suite directory exists");
 
 #create temp test dir
-my $temp_dir = Genome::Utility::FileSystem->create_temp_directory();
+my $temp_dir = Genome::Sys->create_temp_directory();
 ok (-d $temp_dir, "Created temp test directory");
 
 #parts of pcap must run in assembly directory

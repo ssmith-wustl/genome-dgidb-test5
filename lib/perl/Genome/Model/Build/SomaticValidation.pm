@@ -71,18 +71,8 @@ sub create {
     return $self;
 }
 
-sub workflow_instances {
+sub workflow_name {
     my $self = shift;
-    my @instances = Workflow::Operation::Instance->get(
-        name => $self->resolve_workflow_name
-    );
-
-    return @instances;
-}
-
-sub resolve_workflow_name {
-    my $self = shift;
-
     return $self->build_id . ' Somatic Variant Validation Pipeline';
 }
 

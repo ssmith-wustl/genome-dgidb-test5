@@ -12,15 +12,13 @@ use Test::More;
 # use
 use_ok('Genome::Model::Build::MetagenomicComposition16s::Sanger') or die;
 
-# mock model
-my $model = Genome::Model::MetagenomicComposition16s::Test->get_mock_model(
-    sequencing_platform => 'sanger',
-) or die "Can't create metagenomic composition 16s sanger model";
-ok($model, 'MC16s sanger model');
+# model
+my $model = Genome::Model::MetagenomicComposition16s::Test->model_for_sanger;
+ok($model, 'MC16s sanger model') or die;
 
 # create w/o subclass
 my $build = Genome::Model::Build::MetagenomicComposition16s->create(
-    model_id => $model->id,
+    model => $model,
     data_directory => $model->data_directory.'/build',
 );
 isa_ok($build, 'Genome::Model::Build::MetagenomicComposition16s::Sanger');
@@ -193,10 +191,10 @@ exit;
 sub _link_dir_contents {
     my ($source_dir, $dest_dir) = @_;
 
-    Genome::Utility::FileSystem->validate_existing_directory($dest_dir)
+    Genome::Sys->validate_existing_directory($dest_dir)
         or die;
 
-    my $dh = Genome::Utility::FileSystem->open_directory($source_dir)
+    my $dh = Genome::Sys->open_directory($source_dir)
         or die;
 
     $dh->read; $dh->read; # . and .. dirs

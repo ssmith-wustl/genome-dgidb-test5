@@ -56,7 +56,7 @@ sub _run_aligner {
     my $static_params = $self->static_params;
     my $cmd = "$shrimp_path $aligner_params $static_params $input_path $ref_index 2>>$log_file >>$output_file";
 
-    Genome::Utility::FileSystem->shellcmd(
+    Genome::Sys->shellcmd(
         cmd          => $cmd,
         input_files  => [ $ref_index, $input_path ],
         output_files => [ $output_file, $log_file ],

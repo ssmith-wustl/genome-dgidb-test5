@@ -1,0 +1,60 @@
+WHERE TO PUT CODE:
+
+Perl:
+
+ The modules go under lib/perl.
+
+ In the shipit branch, the code is divided up like the C/C++ standard below.
+ We will move to the new structure as soon as it's easy to develop and test there.
+ 
+
+C/C++/Java:
+
+ These are in a new structure.  
+ 
+ Each gets its own top-level directory AND private git repo inside it.
+ 
+ Git calls these submodules, and the whole story is in .gitmodules at
+ the top of the repo.
+ 
+ These directories start out empty, but you can get their code by doing:
+
+    git submodule update --init somatic-sniper
+
+  Updates to sub-modules must be committed and pushed independently,
+  from inside the subdir.
+
+    Example:
+
+    git submodule update --init somatic-sniper
+    cd somatic-sniper
+    # change things
+    git commit 
+    git push origin master
+
+  To make a new one, run:
+
+    create-c-project $DIRNAME
+
+  The above puts a new git repo on the git server, and links it in.
+
+Test Data:
+
+  If it's very small, put it next-to the test case, and use __FILE__ to
+  find the path when running.
+
+  If it's big, make a separate project/submodule like above, so it won't 
+  bog down the source repo.  We'll package it separately as a dependency.
+
+XML/XSL:
+ 
+ All of the web server infrastructure is under genome-webserver in both branches.
+
+ For the specific entity views, they live under Genome/xsl in the master branch,
+ and under various package dirs in the shipit branch, depending on what they view.
+
+R:
+
+ R libraries live next-to the Perl module which provides an interface to them
+ for the rest of the system.
+ 

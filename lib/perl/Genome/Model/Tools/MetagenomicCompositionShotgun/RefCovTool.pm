@@ -68,12 +68,12 @@ sub execute {
     my @expected_refcov_output_files = ($stats_file);
     $self->status_message("Output stats file: ".$stats_file);
 
-    my $cmd = "/gsc/var/tmp/Bio-SamTools/bin/refcov-64.pl ".$self->aligned_bam_file." ".$self->regions_file." ".$stats_file;    
+    my $cmd = "/gsc/bin/perl5.12.1 /gsc/var/tmp/Bio-SamTools/bin/refcov-64.pl ".$self->aligned_bam_file." ".$self->regions_file." ".$stats_file;    
 
     $self->status_message("Running ref cov report at ".UR::Time->now);
-    my $rv = Genome::Utility::FileSystem->shellcmd(cmd=>$cmd);
+    my $rv = Genome::Sys->shellcmd(cmd=>$cmd);
     if ($rv == 1) {
-        Genome::Utility::FileSystem->mark_files_ok(input_files=>\@expected_refcov_output_files);
+        Genome::Sys->mark_files_ok(input_files=>\@expected_refcov_output_files);
     }else{
         $self->error_message("Failed to complete refcov!");
         die $self->error_message;

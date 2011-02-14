@@ -7,7 +7,7 @@ use Test::More tests => 5;
 my $input = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sample-NameConversion/test.in";
 ok(-e $input, 'Input file exists');
 
-my $output = Genome::Utility::FileSystem->create_temp_file_path("out"); #"/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sample-NameConversion/test.out";
+my $output = Genome::Sys->create_temp_file_path("out"); #"/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sample-NameConversion/test.out";
 my $expected_output = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sample-NameConversion/expected.test.out";
 ok(-e $expected_output, 'Expected output file exists');
 

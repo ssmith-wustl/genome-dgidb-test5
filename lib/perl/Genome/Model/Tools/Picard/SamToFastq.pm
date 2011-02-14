@@ -63,13 +63,13 @@ sub execute {
         $unlink_input_bam_on_end = 1;
         my $samtools_path = Genome::Model::Tools::Sam->path_for_samtools_version;
         
-        my $temp = Genome::Utility::FileSystem->base_temp_directory;
+        my $temp = Genome::Sys->base_temp_directory;
         my $temp_bam_file = $temp . "/temp_rg." . $$ . ".bam";
         
         my $samtools_strip_cmd = sprintf("%s view -h -r%s %s | samtools view -S -b -o %s -",
                                           $samtools_path, $self->read_group_id, $input_file, $temp_bam_file);
     
-        Genome::Utility::FileSystem->shellcmd(cmd=>$samtools_strip_cmd, 
+        Genome::Sys->shellcmd(cmd=>$samtools_strip_cmd, 
                                               output_files=>[$temp_bam_file],
                                               skip_if_output_is_present=>0);
 

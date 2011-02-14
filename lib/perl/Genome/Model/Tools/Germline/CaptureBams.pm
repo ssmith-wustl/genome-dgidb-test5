@@ -80,6 +80,39 @@ sub pre_execute {
         $self->only_tier_1_indel(0);
     }
 
+#dbsnp lookup-variants settings
+    unless (defined $self->report_mode) {
+        $self->report_mode("known-only");
+    }
+    unless (defined $self->append_rs_id) {
+        $self->append_rs_id(1);
+    }
+
+#filter false positives
+    unless (defined $self->analysis_type) {
+        $self->analysis_type("capture");
+    }
+
+#maf file creation
+    unless (defined $self->project_name) {
+        $self->project_name("Germline Project");
+    }
+    unless (defined $self->center) {
+        $self->center("genome.wustl.edu");
+    }
+    unless (defined $self->build) {
+        $self->build("NCBI-human-build36");
+    }
+    unless (defined $self->sequence_phase) {
+        $self->sequence_phase("4");
+    }
+    unless (defined $self->sequence_source) {
+        $self->sequence_source("Capture");
+    }
+    unless (defined $self->sequencer) {
+        $self->sequencer("Illumina_GAIIx_or_Hiseq");
+    }
+
     return 1;
 }
 
@@ -91,21 +124,28 @@ sub default_filenames{
         adaptor_output_indel                => 'samtools.output.indel.formatted',
         samtools_snp_output_adaptor         => 'samtools.output.snp.adaptor',
 
-        ## VarScan Output Files ##
+        ## Varscan Output Files ##
         varscan_snp_output                  => 'varScan.output.snp',
         varscan_indel_output                => 'varScan.output.indel',
 
-        ## VarScan Adapted Output Files ##
+        ## Varscan Adapted Output Files ##
         varscan_adaptor_snp                 => 'varScan.output.snp.formatted',
         varscan_adaptor_indel               => 'varScan.output.indel.formatted',
 
-        ## Combined samtools+VarScan Output files ##
-        merged_snp_output                   => 'merged.germline.snp',            ## Generated from merge-variants of samtools and varScan
-        merged_indel_output                 => 'merged.germline.indel',          ## Generated from merge-variants of samtools and varScan ##
+        ## GATK Output Files
+        GATK_indel_output                   => 'GATK.output.indel',
+	GATK_indel_formatted_output         => 'GATK.output.indel.formatted',
 
-        ## Limit to ROI, Combined samtools+VarScan Output files ##
+        ## GATK Adapted Output Files
+        GATK_adaptor_indel                  => 'GATK.output.indel.adaptor',
+
+        ## Combined samtools+Varscan Output files ##
+        merged_snp_output                   => 'merged.germline.snp',            ## Generated from merge-variants of samtools and varScan
+        merged_indel_output                 => 'merged.germline.indel',          ## Generated from merge-variants of samtools and varScan and gatk ##
+
+        ## Limit to ROI, Combined samtools+Varscan Output files ##
         merged_snp_output_ROI               => 'merged.germline.snp.ROI',          ## Generated from merge-variants of samtools and varScan ##
-        merged_indel_output_ROI             => 'merged.germline.indel.ROI',          ## Generated from merge-variants of samtools and varScan ##
+        merged_indel_output_ROI             => 'merged.germline.indel.ROI',          ## Generated from merge-variants of samtools and varScan and gatk ##
 
         ## Annotation output files ##
         annotate_output_snp                 => 'annotation.germline.snp.transcript',
@@ -125,6 +165,15 @@ sub default_filenames{
         tier_3_indel_file                   => 'merged.germline.indel.ROI.tier3.out',
         tier_4_indel_file                   => 'merged.germline.indel.ROI.tier4.out',
 
+        ## dbsnp and falsepositive SNP and Indel files (all confidence) ##
+        tier_1_dbsnp_file                   => 'merged.germline.snp.ROI.tier1.out.dbsnp',
+        tier_1_snpfilter_file               => 'merged.germline.snp.ROI.tier1.out.strandfilter',
+        tier_1_snpfilter_file_filtered      => 'merged.germline.snp.ROI.tier1.out.strandfilter_filtered',
+        tier_1_indelfilter_file             => 'merged.germline.indel.ROI.tier1.out.strandfilter',
+        tier_1_indelfilter_file_filtered    => 'merged.germline.indel.ROI.tier1.out.strandfilter_filtered',
+
+	## maf file ##
+        tier1_maf_file                      => 'merged.germline.ROI.tier1.out.maf',
     );
 
     return %default_filenames;
@@ -144,14 +193,11 @@ __DATA__
   <link fromOperation="input connector" fromProperty="varscan_snp_output" toOperation="Varscan Germline" toProperty="output_snp" />
   <link fromOperation="input connector" fromProperty="varscan_indel_output" toOperation="Varscan Germline" toProperty="output_indel" />
 
-<!-- FORMAT VARSCAN SNPS/INDELS -->
+<!-- FORMAT VARSCAN SNPS -->
 
   <link fromOperation="Varscan Germline" fromProperty="output_snp" toOperation="Format Varscan Snvs" toProperty="variants_file" />
   <link fromOperation="input connector" fromProperty="varscan_adaptor_snp" toOperation="Format Varscan Snvs" toProperty="output_file" />
 
-  <link fromOperation="Varscan Germline" fromProperty="output_indel" toOperation="Format Varscan Indels" toProperty="variants_file" />
-  <link fromOperation="input connector" fromProperty="varscan_adaptor_indel" toOperation="Format Varscan Indels" toProperty="output_file" />
-  
 <!-- FORMAT FILTERED SAMTOOLS SNPS -->
 
   <link fromOperation="input connector" fromProperty="filtered_indelpe_snps" toOperation="Format Samtools Snvs" toProperty="variants_file" />
@@ -197,15 +243,48 @@ __DATA__
   <link fromOperation="Merge SNPs" fromProperty="output_file" toOperation="Tier Variants Snp" toProperty="variant_file" />
   <link fromOperation="Annotate Transcript Variants Snp" fromProperty="output_file" toOperation="Tier Variants Snp" toProperty="transcript_annotation_file" />
 
+<!-- MARK DBSNP VARIANTS -->
+
+  <link fromOperation="Tier Variants Snp" fromProperty="tier1_file" toOperation="dbSNP Snp" toProperty="variant_file" />
+  <link fromOperation="input connector" fromProperty="tier_1_dbsnp_file" toOperation="dbSNP Snp" toProperty="output_file" />
+  <link fromOperation="input connector" fromProperty="report_mode" toOperation="dbSNP Snp" toProperty="report_mode" />
+  <link fromOperation="input connector" fromProperty="append_rs_id" toOperation="dbSNP Snp" toProperty="append_rs_id" />
+
+<!-- FILTER SNP VARIANTS -->
+
+  <link fromOperation="Tier Variants Snp" fromProperty="tier1_file" toOperation="Filter Snp" toProperty="variant_file" />
+  <link fromOperation="input connector" fromProperty="germline_bam_file" toOperation="Filter Snp" toProperty="bam_file" />
+  <link fromOperation="input connector" fromProperty="tier_1_snpfilter_file" toOperation="Filter Snp" toProperty="output_file" />
+  <link fromOperation="input connector" fromProperty="tier_1_snpfilter_file_filtered" toOperation="Filter Snp" toProperty="filtered_file" />
+
+<!-- INDELS START HERE -->
+
+<!-- GATK GERMLINE -->
+
+  <link fromOperation="input connector" fromProperty="germline_bam_file" toOperation="GATK Germline" toProperty="bam_file" /> 
+  <link fromOperation="input connector" fromProperty="GATK_indel_output" toOperation="GATK Germline" toProperty="output_file" />
+  <link fromOperation="input connector" fromProperty="GATK_indel_formatted_output" toOperation="GATK Germline" toProperty="formatted_file" />  
+
+<!-- FORMAT GATK INDELS -->
+
+  <link fromOperation="GATK Germline" fromProperty="output_file" toOperation="Format GATK Indels" toProperty="variants_file" /> 
+  <link fromOperation="input connector" fromProperty="GATK_adaptor_indel" toOperation="Format GATK Indels" toProperty="output_file" /> 
+
 <!-- FORMAT SAMTOOLS INDELS -->
 
   <link fromOperation="input connector" fromProperty="indels_all_sequences_filtered" toOperation="Format Samtools Indels" toProperty="variants_file" />
   <link fromOperation="input connector" fromProperty="adaptor_output_indel" toOperation="Format Samtools Indels" toProperty="output_file" />
 
-<!-- MERGE ADAPTED INDELS FROM SAMTOOLS AND VARSCAN -->
+<!-- FORMAT VARSCAN INDELS -->
+
+  <link fromOperation="Varscan Germline" fromProperty="output_indel" toOperation="Format Varscan Indels" toProperty="variants_file" />
+  <link fromOperation="input connector" fromProperty="varscan_adaptor_indel" toOperation="Format Varscan Indels" toProperty="output_file" />
+
+<!-- MERGE ADAPTED INDELS FROM SAMTOOLS AND VARSCAN AND GATK-->
 
   <link fromOperation="Format Varscan Indels" fromProperty="output_file" toOperation="Merge Indels" toProperty="varscan_file" />
   <link fromOperation="Format Samtools Indels" fromProperty="output_file" toOperation="Merge Indels" toProperty="glf_file" />
+  <link fromOperation="Format GATK Indels" fromProperty="output_file" toOperation="Merge Indels" toProperty="gatk_file" />
   <link fromOperation="input connector" fromProperty="merged_indel_output" toOperation="Merge Indels" toProperty="output_file" />
 
 <!-- Limit Indels ROI -->
@@ -242,14 +321,43 @@ __DATA__
   <link fromOperation="Merge Indels" fromProperty="output_file" toOperation="Tier Variants Indel" toProperty="variant_file" />
   <link fromOperation="Annotate Transcript Variants Indel" fromProperty="output_file" toOperation="Tier Variants Indel" toProperty="transcript_annotation_file" />
 
+<!-- FILTER INDEL VARIANTS -->
+
+  <link fromOperation="Tier Variants Indel" fromProperty="tier1_file" toOperation="Filter Indel" toProperty="variant_file" />
+  <link fromOperation="input connector" fromProperty="germline_bam_file" toOperation="Filter Indel" toProperty="bam_file" />
+  <link fromOperation="input connector" fromProperty="tier_1_indelfilter_file" toOperation="Filter Indel" toProperty="output_file" />
+  <link fromOperation="input connector" fromProperty="tier_1_indelfilter_file_filtered" toOperation="Filter Indel" toProperty="filtered_file" />
+
+<!-- SNV AND INDEL TO MAF -->
+
+  <link fromOperation="Tier Variants Snp" fromProperty="tier1_file" toOperation="Tier1 Maf" toProperty="variant_file" />
+  <link fromOperation="dbSNP Snp" fromProperty="output_file" toOperation="Tier1 Maf" toProperty="dbsnp_file" />
+  <link fromOperation="Filter Snp" fromProperty="output_file" toOperation="Tier1 Maf" toProperty="snv_filtered_file" />
+  <link fromOperation="Filter Snp" fromProperty="filtered_file" toOperation="Tier1 Maf" toProperty="snv_failfiltered_file" />
+  <link fromOperation="Annotate Transcript Variants Snp" fromProperty="output_file" toOperation="Tier1 Maf" toProperty="snv_annotation_file" />
+  <link fromOperation="Tier Variants Indel" fromProperty="tier1_file" toOperation="Tier1 Maf" toProperty="indel_file" />
+  <link fromOperation="Filter Indel" fromProperty="output_file" toOperation="Tier1 Maf" toProperty="indel_filtered_file" />
+  <link fromOperation="Filter Indel" fromProperty="filtered_file" toOperation="Tier1 Maf" toProperty="indel_failfiltered_file" />
+  <link fromOperation="Annotate Transcript Variants Indel" fromProperty="output_file" toOperation="Tier1 Maf" toProperty="indel_annotation_file" />
+
+  <link fromOperation="input connector" fromProperty="germline_bam_file" toOperation="Tier1 Maf" toProperty="bam_file" />
+  <link fromOperation="input connector" fromProperty="build_id" toOperation="Tier1 Maf" toProperty="build_id" />  
+  <link fromOperation="input connector" fromProperty="tier1_maf_file" toOperation="Tier1 Maf" toProperty="output_file" />
+  <link fromOperation="input connector" fromProperty="project_name" toOperation="Tier1 Maf" toProperty="project_name" />
+  <link fromOperation="input connector" fromProperty="center" toOperation="Tier1 Maf" toProperty="center" />
+  <link fromOperation="input connector" fromProperty="build" toOperation="Tier1 Maf" toProperty="build" />
+  <link fromOperation="input connector" fromProperty="sequence_phase" toOperation="Tier1 Maf" toProperty="sequence_phase" />
+  <link fromOperation="input connector" fromProperty="sequence_source" toOperation="Tier1 Maf" toProperty="sequence_source" />
+  <link fromOperation="input connector" fromProperty="sequencer" toOperation="Tier1 Maf" toProperty="sequencer" />
+
 <!-- OUTPUT CONNECTORS -->
 
-  <link fromOperation="Tier Variants Snp" fromProperty="tier1_file" toOperation="output connector" toProperty="tier_1_snp" />
+  <link fromOperation="Tier1 Maf" fromProperty="output_file" toOperation="output connector" toProperty="maf_file_out" />
+
   <link fromOperation="Tier Variants Snp" fromProperty="tier2_file" toOperation="output connector" toProperty="tier_2_snp" />
   <link fromOperation="Tier Variants Snp" fromProperty="tier3_file" toOperation="output connector" toProperty="tier_3_snp" />
   <link fromOperation="Tier Variants Snp" fromProperty="tier4_file" toOperation="output connector" toProperty="tier_4_snp" />
 
-  <link fromOperation="Tier Variants Indel" fromProperty="tier1_file" toOperation="output connector" toProperty="tier_1_indel_output" />
   <link fromOperation="Tier Variants Indel" fromProperty="tier2_file" toOperation="output connector" toProperty="tier_2_indel_output" />
   <link fromOperation="Tier Variants Indel" fromProperty="tier3_file" toOperation="output connector" toProperty="tier_3_indel_output" />
   <link fromOperation="Tier Variants Indel" fromProperty="tier4_file" toOperation="output connector" toProperty="tier_4_indel_output" />
@@ -267,11 +375,18 @@ __DATA__
     <operationtype commandClass="Genome::Model::Tools::Capture::MergeVariantCalls" typeClass="Workflow::OperationType::Command" />
   </operation>  
 
+  <operation name="GATK Germline">
+    <operationtype commandClass="Genome::Model::Tools::Gatk::GermlineIndel" typeClass="Workflow::OperationType::Command" />
+  </operation>
+
   <operation name="Format Varscan Indels">
     <operationtype commandClass="Genome::Model::Tools::Capture::FormatIndels" typeClass="Workflow::OperationType::Command" />
   </operation>
   <operation name="Format Samtools Indels">
     <operationtype commandClass="Genome::Model::Tools::Capture::FormatIndels" typeClass="Workflow::OperationType::Command" />
+  </operation>
+  <operation name="Format GATK Indels">
+    <operationtype commandClass="Genome::Model::Tools::Gatk::FormatIndels" typeClass="Workflow::OperationType::Command" />
   </operation>
   <operation name="Merge Indels">
     <operationtype commandClass="Genome::Model::Tools::Capture::MergeAdaptedIndels" typeClass="Workflow::OperationType::Command" />
@@ -306,13 +421,29 @@ __DATA__
     <operationtype commandClass="Genome::Model::Tools::Somatic::TierVariants" typeClass="Workflow::OperationType::Command" />
   </operation>
 
+  <operation name="dbSNP Snp">
+    <operationtype commandClass="Genome::Model::Tools::Annotate::LookupVariants" typeClass="Workflow::OperationType::Command" />
+  </operation>
+
+  <operation name="Filter Snp">
+    <operationtype commandClass="Genome::Model::Tools::Somatic::FilterFalsePositives" typeClass="Workflow::OperationType::Command" />
+  </operation>
+
+  <operation name="Filter Indel">
+    <operationtype commandClass="Genome::Model::Tools::Somatic::FilterFalseIndels" typeClass="Workflow::OperationType::Command" />
+  </operation>
+
+  <operation name="Tier1 Maf">
+    <operationtype commandClass="Genome::Model::Tools::Capture::GermlinePipelineMafMaker" typeClass="Workflow::OperationType::Command" />
+  </operation>
+
   <operationtype typeClass="Workflow::OperationType::Model">
     <inputproperty>build_id</inputproperty>
     <inputproperty>filtered_indelpe_snps</inputproperty>
     <inputproperty>indels_all_sequences_filtered</inputproperty>
     <inputproperty>regions_file</inputproperty>
 
-    <inputproperty isOptional="Y">germline_bam_file</inputproperty>   
+    <inputproperty isOptional="Y">germline_bam_file</inputproperty>
     <inputproperty isOptional="Y">reference_fasta</inputproperty>
 
     <inputproperty isOptional="Y">samtools_snp_output_adaptor</inputproperty>
@@ -350,6 +481,10 @@ __DATA__
     <inputproperty isOptional="Y">varscan_adaptor_snp</inputproperty>
     <inputproperty isOptional="Y">varscan_adaptor_indel</inputproperty>
 
+    <inputproperty isOptional="Y">GATK_indel_output</inputproperty>
+    <inputproperty isOptional="Y">GATK_adaptor_indel</inputproperty>
+    <inputproperty isOptional="Y">GATK_indel_formatted_output</inputproperty>
+
     <inputproperty isOptional="Y">merged_snp_output</inputproperty>
     <inputproperty isOptional="Y">merged_indel_output</inputproperty>
     <inputproperty isOptional="Y">merged_snp_output_ROI</inputproperty>
@@ -364,16 +499,36 @@ __DATA__
     <inputproperty isOptional="Y">tier_2_indel_file</inputproperty>
     <inputproperty isOptional="Y">tier_3_indel_file</inputproperty>
     <inputproperty isOptional="Y">tier_4_indel_file</inputproperty>
-   
-    <outputproperty>tier_1_snp</outputproperty>
+
+    <inputproperty isOptional="Y">tier_1_dbsnp_file</inputproperty>
+    <inputproperty isOptional="Y">report_mode</inputproperty>
+    <inputproperty isOptional="Y">append_rs_id</inputproperty>
+
+    <inputproperty isOptional="Y">tier_1_snpfilter_file</inputproperty>
+    <inputproperty isOptional="Y">tier_1_snpfilter_file_filtered</inputproperty>
+    <inputproperty isOptional="Y">analysis_type</inputproperty>
+
+    <inputproperty isOptional="Y">tier_1_indelfilter_file</inputproperty>
+    <inputproperty isOptional="Y">tier_1_indelfilter_file_filtered</inputproperty>
+
+    <inputproperty isOptional="Y">tier1_maf_file</inputproperty>
+    <inputproperty isOptional="Y">project_name</inputproperty>
+    <inputproperty isOptional="Y">center</inputproperty>
+    <inputproperty isOptional="Y">build</inputproperty>
+    <inputproperty isOptional="Y">sequence_phase</inputproperty>
+    <inputproperty isOptional="Y">sequence_source</inputproperty>
+    <inputproperty isOptional="Y">sequencer</inputproperty>
+
+    <outputproperty>maf_file_out</outputproperty>
+
     <outputproperty>tier_2_snp</outputproperty>
     <outputproperty>tier_3_snp</outputproperty>
     <outputproperty>tier_4_snp</outputproperty>
 
-    <outputproperty>tier_1_indel_output</outputproperty>
     <outputproperty>tier_2_indel_output</outputproperty>
     <outputproperty>tier_3_indel_output</outputproperty>
     <outputproperty>tier_4_indel_output</outputproperty>
+
   </operationtype>
 
 </workflow>

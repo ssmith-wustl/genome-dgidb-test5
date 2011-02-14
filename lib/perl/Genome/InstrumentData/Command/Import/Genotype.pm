@@ -241,7 +241,7 @@ sub execute {
     $self->status_message("Disk allocation created for $instrument_data_id ." . $disk_alloc->absolute_path);
     
     $self->status_message("About to calculate the md5sum of the genotype.");
-    my $md5 = Genome::Utility::FileSystem->md5sum($self->source_data_file);
+    my $md5 = Genome::Sys->md5sum($self->source_data_file);
     $self->status_message("Copying genotype the allocation.");
     my $real_filename = $disk_alloc->absolute_path ."/". $self->sample_name . ".genotype";
     unless(copy($self->source_data_file, $real_filename)) {
@@ -252,7 +252,7 @@ sub execute {
     }
     $self->status_message("About to calculate the md5sum of the genotype in its new habitat on the allocation.");
     my $copy_md5;
-    unless($copy_md5 = Genome::Utility::FileSystem->md5sum($real_filename)){
+    unless($copy_md5 = Genome::Sys->md5sum($real_filename)){
         $self->error_message("Failed to calculate md5sum.");
         die $self->error_message;
     }
@@ -312,17 +312,10 @@ sub define_genotype_model {
         }
     }
     $self->status_message("SNPArray defined, now defining/building model.");
-    my $no_build;
-    if($self->generated_instrument_data_id < 0) {
-        $no_build = 1;
-    } else {
-        $no_build = 0;
-    }
     unless($model = Genome::Model::Command::Define::GenotypeMicroarray->execute(     
         processing_profile_name => $processing_profile,
         file                    => $snp_array,
         subject_name            => $self->sample_name,
-        no_build                => $no_build,
         reference               => $self->reference_sequence_build,
         )) {
         $self->error_message("GenotpeMicroarray Model Define failed.");

@@ -20,28 +20,28 @@ class Genome::Individual {
         individual_id => { is => 'Number', len => 10, column_name => 'ORGANISM_ID' },
     ],
     has => [
-        name => { is => 'Text', len => 64, column_name => 'FULL_NAME', },
-        taxon => { is => 'Genome::Taxon', id_by => 'taxon_id', },
-        species_name    => { via => 'taxon' },
-        description => { is => 'Text', is_optional => 1, len => 500, },
+        name => { is => 'Text', len => 64, column_name => 'FULL_NAME', doc => 'Name of the individual', },
+        taxon => { is => 'Genome::Taxon', id_by => 'taxon_id', doc => 'The taxon to which this individual belongs', },
+        species_name    => { is => 'Text', via => 'taxon' },
+        description => { is => 'Text', is_optional => 1, len => 500, doc => 'Description', },
         subject_type => { is => 'Text', is_constant => 1, value => 'organism individual', column_name => '', },
     ],
     has_optional => [
-        father  => { is => 'Genome::Individual', id_by => 'father_id' },
-        father_name => { via => 'father', to => 'name' },
-        mother  => { is => 'Genome::Individual', id_by => 'mother_id' },
-        mother_name => { via => 'mother', to => 'name' },
+        father  => { is => 'Genome::Individual', id_by => 'father_id', doc => 'Father of this individual', },
+        father_name => { is => 'Text', via => 'father', to => 'name' },
+        mother  => { is => 'Genome::Individual', id_by => 'mother_id', doc => 'Mother of this individual', },
+        mother_name => { is => 'Text', via => 'mother', to => 'name' },
         upn => { 
             is => 'Text', 
             column_name => 'NAME',
             doc => 'fully qualified internal name for the patient', 
         },
-        common_name     => { 
+        common_name => { 
             is => 'Text',
             len => 10,
             doc => 'a name like "aml1" for the patient, by which the patient is commonly referred-to in the lab' 
         },
-        gender          => { 
+        gender => { 
             is => 'Text',
             len => 16,
             doc => 'when the gender of the individual is known, this value is set to male/female/...' 
@@ -51,7 +51,7 @@ class Genome::Individual {
             len => 64,
             doc => 'the "ethnicity" of the individual, Hispanic/Non-Hispanic/...'
         },
-        race            => { 
+        race => { 
             is => 'Text',
             len => 64,
             doc => 'the "race" of the individual, African American/Caucasian/...'
@@ -60,6 +60,7 @@ class Genome::Individual {
             is => 'Text',
             len => 64,
             default_value => 'WUGC',
+            doc => 'Nomenclature',
         },
         samples => { 
             is => 'Genome::Sample', 
@@ -67,8 +68,10 @@ class Genome::Individual {
             reverse_id_by => 'source',
         },
         sample_names => {
+            is => 'Text',
             via => 'samples',
-            to => 'name', is_many => 1,
+            to => 'name',
+            is_many => 1,
         },
     ],
     data_source => 'Genome::DataSource::GMSchema',
