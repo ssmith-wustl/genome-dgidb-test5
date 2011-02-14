@@ -673,8 +673,10 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     my $annotation_build;
     if($reference_sequence_build) {
         $model_params{reference_sequence_build} = $reference_sequence_build;
-        $dbsnp_build = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($reference_sequence_build); 
-        $annotation_build = Genome::Model::ImportedAnnotation->annotation_build_for_reference($reference_sequence_build);
+        $dbsnp_build = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($reference_sequence_build);
+        if($processing_profile->isa('Genome::ProcessingProfile::ReferenceAlignment')){
+            $annotation_build = Genome::Model::ImportedAnnotation->annotation_build_for_reference($reference_sequence_build);
+        }
     }
 
     $model_params{dbsnp_build} = $dbsnp_build if $dbsnp_build;
