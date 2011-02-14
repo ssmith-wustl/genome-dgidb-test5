@@ -23,23 +23,29 @@ sub required_rusage {
     my %p = @_;
     my $instrument_data = delete $p{instrument_data};
 
-    my $estimated_usage_mb = $class->tmp_megabytes_estimated($instrument_data);
-    
-    my $mem = 10000;
-    my ($double_mem, $mem_kb, $double_mem_kb) = ($mem*2, $mem*1000, $mem*2*1000);
-    my $tmp = $estimated_usage_mb;
-    my $double_tmp = $tmp*2; 
+    my $tmp_mb = $class->tmp_megabytes_estimated($instrument_data);
+    my $mem_mb = 10240;
     my $cpus = 4;
-    my $double_cpus = $cpus*2;
-
-    my $select_half_blades  = "select[ncpus>=$double_cpus && maxmem>$double_mem && maxtmp>=$double_tmp] span[hosts=1]";
-    my @selected_half_blades = `bhosts -R '$select_half_blades' alignment | grep ^blade`;
+    
+    my $mem_kb = $mem_mb*1024;
+    my $tmp_gb = $tmp_mb/1024;
 
     my $user = getpwuid($<);
-    my $queue = ($user eq 'apipe-builder' ? 'alignment-pd' : 'alignment');
+    my $queue = ($user eq 'apipe-builder' ? 'alignment-pd' : 'alignment-test');
 
-    my $required_usage = "-R '$select_half_blades rusage[mem=$mem]' -M $mem_kb -n $cpus -q $queue -m alignment";
-    if (@selected_half_blades) {
+    my $host_groups;
+    $host_groups = qx(bqueues -l $queue | grep ^HOSTS:);
+    $host_groups =~ s/\/\s+/\ /;
+    $host_groups =~ s/^HOSTS:\s+//;
+
+    my $select  = "select[ncpus >= $cpus && mem >= $mem_mb && gtmp >= $tmp_gb] span[hosts=1]";
+    my $rusage  = "rusage[mem=$mem_mb, gtmp=$tmp_gb]";
+    my $options = "-M $mem_kb -n $cpus -q $queue";
+
+    my $required_usage = "-R '$select $rusage' $options";
+
+    my @selected_blades = `bhosts -R '$select' $host_groups | grep ^blade`;
+    if (@selected_blades) {
         return $required_usage;
     } else {
         die $class->error_message("Failed to find hosts that meet resource requirements ($required_usage).");
