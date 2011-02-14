@@ -108,8 +108,9 @@ create_git_repo $project_name
 git add $project_name
 [ $DO_PUSH -eq 1 ] && {
     git pull
-    git commit $project_name -m "Added submodule $project_name"
+    git commit -m "Added submodule $project_name"
     git push
+    echo "** pushed changes"
 }
 git status
 

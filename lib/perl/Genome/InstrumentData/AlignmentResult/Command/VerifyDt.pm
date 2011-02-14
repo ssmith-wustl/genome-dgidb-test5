@@ -140,6 +140,7 @@ sub repair_dt {
     (my $out_bam = $in_bam) =~ s/\.bam$/_fixed.bam/;
     (my $out_sam_h = $in_sam_h) =~ s/\.sam\.h$/_fixed.sam.h/;
     system("samtools view -H $in_bam > $in_sam_h") && die;
+    system("cp $in_sam_h $out_sam_h") && die;
     chomp(my @dt_lines = qx(samtools view -H $in_bam | grep DT:));
     print "Repairing headers...\n";
     for my $dt_line (@dt_lines) {
@@ -167,7 +168,7 @@ sub repair_dt {
         my $new_dt_tag = "DT:${datetime}Z";
         print "\tChanging DT tag from $dt_tag to $new_dt_tag.\n";
         $dt_tag =~ s/\ /\\ /;
-        system("cat $in_sam_h | sed 's/$dt_tag/$new_dt_tag/' > $out_sam_h") && die;
+        system("sed -i 's/$dt_tag/$new_dt_tag/' $out_sam_h") && die;
     }
     print "Repairing bam...\n";
     #system("samtools reheader $out_sam_h $in_bam > $out_bam") && die;

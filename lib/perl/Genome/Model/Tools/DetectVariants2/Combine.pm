@@ -9,25 +9,17 @@ class Genome::Model::Tools::DetectVariants2::Combine {
     is  => ['Genome::Model::Tools::DetectVariants2::Base'],
     is_abstract => 1,
     has => [
-        variant_file_a => {
+        input_directory_a => {
             type => 'String',
             is_input => 1,
-            is_optional => 0,
-            doc => 'input variant file a, to be combined with file b',
-        },
-        variant_file_b => {
+            doc => 'input directory a, find <variant_type>.hq.bed in here to combine with the same in dir b',
+        },    
+        input_directory_b => {
             type => 'String',
             is_input => 1,
-            is_optional => 0,
-            doc => 'input variant file b, to be combined with file a',
+            doc => 'input directory b, find <variant_type>.hq.bed in here to combine with the same in dir a',
         },
-        output_file => {
-            type => 'String',
-            is_input => 1,
-            is_output => 1,
-            doc => 'File in which to write output',
-        },
-    ]
+    ],
 };
 
 sub help_brief {
@@ -67,22 +59,16 @@ sub _combine_variants {
 sub _validate_file {
     my $self = shift;
 
-    my $input_file = $self->variant_file_a;
-    unless (Genome::Sys->check_for_path_existence($input_file)) {
-        $self->error_message("variant_file_a input $input_file does not exist");
+    my $input_dir = $self->input_directory_a;
+    unless (Genome::Sys->check_for_path_existence($input_dir)) {
+        $self->error_message("variant_file_a input $input_dir does not exist");
         return;
     }
-    $input_file = $self->variant_file_b;
-    unless (Genome::Sys->check_for_path_existence($input_file)) {
-        $self->error_message("variant_file_b input $input_file does not exist");
+    $input_dir = $self->input_directory_b;
+    unless (Genome::Sys->check_for_path_existence($input_dir)) {
+        $self->error_message("variant_file_b input $input_dir does not exist");
         return;
     }
-    my $output_file = $self->output_file;
-    unless(Genome::Sys->validate_file_for_writing($output_file)) {
-        $self->error_message("output file $output_file is not writable.");
-        return;
-    }
-    
     
     return 1;
 }

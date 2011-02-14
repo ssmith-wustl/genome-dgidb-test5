@@ -33,7 +33,7 @@ is(
 );
 
 # calculated kb
-is($build->calculate_estimated_kb_usage, 100, 'Estimated kb usage');
+is($build->calculate_estimated_kb_usage, 1024, 'estimated kb usage');
 
 # dirs
 my $existing_build_dir = '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16s454/build';
