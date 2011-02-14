@@ -10,52 +10,9 @@ my $DEFAULT_VERSION = '0.7.3';
 my $SNIPER_COMMAND = 'bam-somaticsniper';
 
 class Genome::Model::Tools::DetectVariants2::Sniper {
-    is => ['Genome::Model::Tools::DetectVariants::Somatic', 'Genome::Model::Tools::DetectVariants2::Base'],
-    has => [
-        version => {
-            is => 'Version',
-            is_optional => 1,
-            is_input => 1,
-            default_value => $DEFAULT_VERSION,
-            doc => "Version of sniper to use",
-        },
-        detect_snvs => { 
-            default_value => 1,
-            doc => "Whether or not the tool should detect snps.  If set to false, the tool will still discover snps and indels at the same time, but will throw away any snps it detects",
-            is_optional => 1,
-        },
-        detect_indels => { 
-            default_value => 1,
-            doc => "Whether or not the tool should detect indels.  If set to false, the tool will still discover snps and indels at the same time, but will throw away any indels it detects",
-            is_optional => 1,
-        },
-        snv_params => {
-            is => 'Text',
-            default => '-q 1 -Q 15',
-            is_input=>1, 
-            doc => "Parameters for running bam-somaticsniper for snps. Since it discovers both snps and indels in one run, providing different parameters for snps and indels causes bam-somatisniper to run twice.",
-        },
-        indel_params => {
-            is => 'Text',
-            default => '-q 1 -Q 15',
-            is_input=>1, 
-            doc => "Parameters for running bam-somaticsniper for indels. Since it discovers both snps and indels in one run, providing different parameters for snps and indels causes bam-somatisniper to run twice.",
-        },
-        reference_sequence_input => {
-            is  => 'String',
-            is_input=>1,
-            is_optional=>1, 
-            default => Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa', 
-            doc => 'The somatic sniper reference file',
-        },
-        skip_if_output_present => {
-            is => 'Boolean',
-            is_optional => 1,
-            is_input => 1,
-            default => 1,
-            doc => 'enable this flag to skip this step if the output_file is already present. Useful for pipelines.',
-        },
-    ],
+    is => ['Genome::Model::Tools::DetectVariants2::Detector'],
+    doc => "Produces a list of high confidence somatic snps and indels.",
+# TODO ... make sure this works without old default snv and indel params default => '-q 1 -Q 15',
     # Make workflow choose 64 bit blades
     has_param => [
         lsf_queue => {
@@ -79,10 +36,6 @@ my %SNIPER_VERSIONS = (
     '0.7.3' => '/gsc/pkg/bio/samtools/sniper/somatic_sniper-v0.7.3/' . $SNIPER_COMMAND,
 );
 
-sub help_brief {
-    "Produces a list of high confidence somatic snps and indels.";
-}
-
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
@@ -97,33 +50,11 @@ sub help_detail {
 EOS
 }
 
-sub _should_skip_execution {
-    my $self = shift;
-    
-    if (($self->skip_if_output_present)&&(-s $self->snv_output)&&(-s $self->indel_output)) {
-        $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
-        return 1;
-    }
-    
-    return $self->SUPER::_should_skip_execution;
-}
-
 sub _detect_variants {
     my $self = shift;
     $DB::single = 1;
 
     $self->status_message("beginning execute");
-
-    # Validate files
-    unless ( Genome::Sys->validate_file_for_reading($self->aligned_reads_input) ) {
-        $self->error_message("Could not validate tumor file:  ".$self->aligned_reads_input );
-        die;
-    } 
-
-    unless ( Genome::Sys->validate_file_for_reading($self->control_aligned_reads_input) ) {
-        $self->error_message("Could not validate normal file:  ".$self->control_aligned_reads_input );
-        die;
-    } 
 
     # Run sniper C program... run twice if we get different sets of params for snps and indels
     my $snv_params = $self->snv_params || "";
