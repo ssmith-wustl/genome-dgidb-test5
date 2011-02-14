@@ -16,13 +16,21 @@ class Genome::Disk::Volume {
         unallocated_kb => { is => 'Number' },
         disk_status => { is => 'Text' },
         can_allocate => { is => 'Number' },
+        used_kb => {
+            calculate_from => ['mount_path'],
+            calculate => sub { my $mount_path = shift; my ($used_kb) = qx(df -k $mount_path | grep $mount_path | awk '{print \$3}') =~ /(\d+)/; },
+        },
         allocated_kb => { 
             calculate_from => ['total_kb','unallocated_kb'],
             calculate => q{ return ($total_kb - $unallocated_kb); },
         },
+        percent_used => {
+            calculate_from => ['total_kb', 'used_kb'],
+            calculate => sub { my ($total_kb, $used_kb) = @_; return sprintf("%.2f%%", ( $used_kb / $total_kb ) * 100); },
+        },
         percent_allocated => {
             calculate_from => ['total_kb', 'allocated_kb'],
-            calculate => q{ return  sprintf("%.2f", ( $allocated_kb / $total_kb ) * 100); },
+            calculate => q{ return sprintf("%.2f%%", ( $allocated_kb / $total_kb ) * 100); },
         },
         reserve_size => {
             calculate_from => ['total_kb', 'unusable_volume_percent', 'maximum_reserve_size'],
