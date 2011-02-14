@@ -25,8 +25,19 @@ ok(_link_example_data($build, $example_build), 'linked example data');
 ok(!-e $build->oriented_fasta_file_for_set_name(''), 'oriented fasta does not exist');
 ok(!-e $build->oriented_qual_file_for_set_name(''), 'oriented qual does not exist');
 
-# run
+# run - fail w/o amplicons processed
 my $orient = Genome::Model::Event::Build::MetagenomicComposition16s::Orient->create(build => $build);
+ok($orient, 'create');
+$orient->dump_status_messages(1);
+ok(!$orient->execute, 'execute failed');
+
+# set amplicons metrics
+$build->amplicons_attempted(5);
+$build->amplicons_processed(4);
+$build->amplicons_processed_success('0.80');
+
+# run
+$orient = Genome::Model::Event::Build::MetagenomicComposition16s::Orient->create(build => $build);
 ok($orient, 'create');
 $orient->dump_status_messages(1);
 ok($orient->execute, 'execute');

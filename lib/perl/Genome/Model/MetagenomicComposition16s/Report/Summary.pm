@@ -22,18 +22,14 @@ sub description {
 sub _add_to_report_xml {
     my $self = shift;
 
-    my $build = $self->build;
-    unless ( $self->build->amplicons_attempted ) {
-        $self->error_message("No amplicons attempted for ".$build->description);
-        return;
-    }
-    
     $self->_create_metrics;
 
-    my @amplicon_sets = $self->build->amplicon_sets
-        or return;
+    my @amplicon_set_names = $self->build->amplicon_set_names;
+    Carp::confess('No amplicon set names for '.$self->build) if not @amplicon_set_names; # bad
 
-    for my $amplicon_set ( @amplicon_sets ) {
+    for my $name ( @amplicon_set_names ) {
+        my $amplicon_set = $self->build->amplicon_set_for_name($name);
+        next if not $amplicon_set; # ok
         while ( my $amplicon = $amplicon_set->next_amplicon ) {
             $self->_add_amplicon($amplicon);
         }
@@ -85,14 +81,13 @@ sub get_summary_stats {
     my $self = shift;
 
     my $build = $self->build;
-    my $attempted = $build->amplicons_attempted;
+    my $attempted = $build->amplicons_attempted || 0;
     my $processed = $build->amplicons_processed;
     my $processed_success = $build->amplicons_processed_success;
-    unless ( $processed ) {
-        $self->warning_message("No amplicons processed for ".$build->description);
+    if ( not defined $processed or $processed == 0 ) {
         return {
             headers => [qw/ amplicons-processed amplicons-attempted amplicons-success /],
-            stats => [ $processed, $attempted, $processed_success ] 
+            stats => [ 0, $attempted, 0 ] 
         };
     }
 
@@ -138,5 +133,3 @@ sub get_summary_stats {
 
 1;
 
-#$HeadURL$
-#$Id$
