@@ -42,8 +42,12 @@ EOS
 
 sub execute {
     my $self = shift;
-    unless($self->_validate_file) {
-        die $self->error_message('Failed to validate file.');
+    unless($self->_validate_inputs) {
+        die $self->error_message('Failed to validate inputs.');
+    }
+    
+    unless($self->_create_directories) {
+        die $self->error_message('Failed to create directories.');
     }
 
     unless($self->_combine_variants){
@@ -56,17 +60,17 @@ sub _combine_variants {
     die "overload this function to do work";
 }
 
-sub _validate_file {
+sub _validate_inputs {
     my $self = shift;
 
     my $input_dir = $self->input_directory_a;
     unless (Genome::Sys->check_for_path_existence($input_dir)) {
-        $self->error_message("variant_file_a input $input_dir does not exist");
+        $self->error_message("input_directory_a input $input_dir does not exist");
         return;
     }
     $input_dir = $self->input_directory_b;
     unless (Genome::Sys->check_for_path_existence($input_dir)) {
-        $self->error_message("variant_file_b input $input_dir does not exist");
+        $self->error_message("input_directory_b input $input_dir does not exist");
         return;
     }
     

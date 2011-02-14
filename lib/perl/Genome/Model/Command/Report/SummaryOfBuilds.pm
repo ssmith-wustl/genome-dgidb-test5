@@ -47,6 +47,11 @@ class Genome::Model::Command::Report::SummaryOfBuilds {
             default_value => 0,
             doc => 'If a model has multiple builds completed, only show the most recent.',
         },
+        succeeded_only => {
+            is => 'Boolean',
+            default_value => 1,
+            doc => 'Only show succeeded builds. If a model has builds no succeeded builds, it will not be shown.',
+        },
         # Show
         show => {
             is => 'Text',
@@ -232,9 +237,13 @@ SQL
     # where for event type and completed date
     push @{$query_parts->{where}}, (
         "e.event_type = 'genome model build'",
-        "e.event_status = 'Succeeded'",
         #'e.date_completed is NOT NULL'
     );
+
+    if ( $self->succeeded_only ) {
+        push @{$query_parts->{where}}, "e.event_status = 'Succeeded'"; 
+    }
+
     # add to query
     $query .= 'FROM '.join(", ", @{$query_parts->{from}});
     $query .= join('', map { "\nJOIN ".$_ } @{$query_parts->{'join'}});
@@ -242,6 +251,10 @@ SQL
 
     # add time constraint
     if ( $self->days ) {
+        if ( not $self->succeeded_only ) {
+            $self->error_message('Cannot restrict by days and all builds for a model');
+            return;
+        }
         $self->_validate_days
             or return;
         $query .=  "\nAND e.date_completed > sysdate - ".$self->days;

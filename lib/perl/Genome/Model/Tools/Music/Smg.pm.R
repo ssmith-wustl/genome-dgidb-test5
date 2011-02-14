@@ -34,9 +34,9 @@ convolute_b=function(a,b)
 {
   tt=NULL
   for (i in a){
-  for (j in b){
-  temp=i+j
-  tt=c(tt,temp)
+    for (j in b){
+      temp=i+j
+      tt=c(tt,temp)
   }}
   tt
 }
@@ -51,15 +51,15 @@ mut_class_test=function(x,xmax=100,hmax=25,bin=0.001)
   hists=NULL
   for (i in 1:nrow(x))
   {
-  x$p[i]=binom.test(x$x[i],x$n[i],x$e[i],alternative="greater")$p.value
-  x$lh0[i]=dbinom(x$x[i],x$n[i],x$e[i],log=T)
-  x$lh1[i]=dbinom(x$x[i],x$n[i],x$x[i]/x$n[i],log=T)
-  ni=x$n[i];ei=x$e[i]
-  gethist(xmax,ni,ei,ptype="positive_log")->bi
-  binit(bi,hmax,bin)->bi
-  if (i==1) hist0=bi
-  if (i>1 & i<nrow(x)) {hist0=convolute_b(hist0,bi);binit(hist0,hmax,bin)->hist0}
-  if (i==nrow(x)) hist0=convolute_b(hist0,bi)
+    x$p[i]=binom.test(x$x[i],x$n[i],x$e[i],alternative="greater")$p.value
+    x$lh0[i]=dbinom(x$x[i],x$n[i],x$e[i],log=T)
+    x$lh1[i]=dbinom(x$x[i],x$n[i],x$x[i]/x$n[i],log=T)
+    ni=x$n[i];ei=x$e[i]
+    gethist(xmax,ni,ei,ptype="positive_log")->bi
+    binit(bi,hmax,bin)->bi
+    if (i==1) hist0=bi
+    if (i>1 & i<nrow(x)) {hist0=convolute_b(hist0,bi);binit(hist0,hmax,bin)->hist0}
+    if (i==nrow(x)) hist0=convolute_b(hist0,bi)
   }
 
   # Fisher combined p-value
@@ -76,7 +76,6 @@ mut_class_test=function(x,xmax=100,hmax=25,bin=0.001)
   # Convolution test
   tx=sum(x[,"x"])
   tn=sum(x[,"n"])
-
   (bx=-sum(x[,"lh0"]))
   (p.convol=sum(exp(-hist0[hist0>=bx])))
   (qc=sum(exp(-hist0)))
@@ -88,32 +87,36 @@ mut_class_test=function(x,xmax=100,hmax=25,bin=0.001)
 
 smg_test=function(gene_mr_file,pval_file)
 {
+  pval_file_full=paste(pval_file,"_detailed",sep="")
   read.table(gene_mr_file,header=T,sep="\t")->mut
+  colnames(mut)=c("Gene","Class","Bases_Covered","Non_Syn_Mutations","BMR")
   mut$BMR=as.numeric(as.character(mut$BMR))
 
   #select the rows with BMR data
   mut=mut[mut$BMR>0 & !is.na(mut$BMR) & mut$Bases>0,]
   tt=NULL
-  for (gene in unique(as.character(mut$Gene)))
+  tt_full=NULL
+  for (Gene in unique(as.character(mut$Gene)))
   {
-    mutgi=mut[mut$Gene==gene,]
+    mutgi=mut[mut$Gene==Gene,]
     mut_class_test(mutgi[,3:5],hmax=25,bin=0.001)->z
-    tt=rbind(tt,cbind(mutgi,z$x[,-(1:3)]))
+    tt_full=rbind(tt_full,cbind(mutgi,z$x[,-(1:3)]))
+    tt=rbind(tt,cbind(Gene,unique(z$x[,(9:11)])))
   }
   write.table(tt,file=pval_file,quote=FALSE,row.names=F,sep="\t")
+  write.table(tt_full,file=pval_file_full,quote=FALSE,row.names=F,sep="\t")
 }
 
 smg_fdr=function(pval_file,fdr_file)
 {
   read.table(pval_file,header=T,sep="\t")->x
-  x=unique(x)
 
   #Calculate FDR measure and write FDR output
   p.adjust(x[,2],method="BH")->fdr.fisher
   p.adjust(x[,3],method="BH")->fdr.lr
   p.adjust(x[,4],method="BH")->fdr.convol
   x=cbind(x,fdr.fisher,fdr.lr,fdr.convol)
-  write.table(x,file=fdr_file,sep="\t",quote=FALSE,row.names=F)
+  write.table(x,file=fdr_file,quote=FALSE,row.names=F,sep="\t")
 }
 
 # Figure out which function needs to be invoked and call it

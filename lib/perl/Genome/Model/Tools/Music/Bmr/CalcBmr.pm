@@ -352,10 +352,6 @@ sub execute {
   $geneBmrFh->print( "#Gene\tMutation_Class\tCovered_Bases\tNon_Syn_Mutations\tOverall_BMR\n" );
   foreach my $gene ( sort keys %genes )
   {
-    # Skip printing mutation rates for genes without any mutations
-    $tot_muts = 0;
-    $tot_muts += $gene_mr{$gene}{$_}{mutations} foreach( @mut_classes );
-    next if( $tot_muts == 0 );
     foreach my $class ( @mut_classes )
     {
       $geneBmrFh->print( join( "\t", $gene, $class, $gene_mr{$gene}{$class}{covd_bases}, $gene_mr{$gene}{$class}{mutations}, $overall_bmr{$class}{bmr} ), "\n" );

@@ -22,6 +22,6 @@
 [submodule "tigra-sv"]
 	path = tigra-sv
 	url = ssh://git/srv/git/tigra-sv.git
-[submodule "squaredancer"]
-	path = squaredancer
-	url = ssh://git/srv/git/squaredancer.git
+[submodule "breakdancer"]
+	path = breakdancer
+	url = ssh://git/srv/git/breakdancer.git
