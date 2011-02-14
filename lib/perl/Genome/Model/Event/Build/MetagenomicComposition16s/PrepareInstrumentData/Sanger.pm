@@ -17,14 +17,16 @@ sub execute {
     $self->_dump_and_link_instrument_data
         or return;
 
-    my @amplicon_sets = $self->build->amplicon_sets
-        or return;
+    my @amplicon_set_names = $self->build->amplicon_set_names;
+    Carp::confess('No amplicon set names for '.$self->build->description) if not @amplicon_set_names; # bad
 
     $self->_raw_reads_fasta_and_qual_writer
         or return;
 
     my $attempted = 0;
-    for my $amplicon_set ( @amplicon_sets ) {
+    for my $name ( @amplicon_set_names ) {
+        my $amplicon_set = $self->build->amplicon_set_for_name($name);
+        next if not $amplicon_set; # ok
         while ( my $amplicon = $amplicon_set->next_amplicon ) {
             $attempted++;
             $self->_prepare_instrument_data_for_phred_phrap($amplicon)

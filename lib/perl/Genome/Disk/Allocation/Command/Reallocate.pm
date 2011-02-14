@@ -22,6 +22,11 @@ class Genome::Disk::Allocation::Command::Reallocate {
             doc => 'Number of kilobytes that target allocation should reserve, if not ' .
                 'provided then the current size of the allocation is used',
         },
+        allow_reallocate_with_move => {
+            is => 'Boolean',
+            default => 0,
+            doc => 'Allow the allocation to be moved to a new volume if current volume is too small.',
+        }
     ],
     doc => 'This command changes the requested kilobytes for a target allocation',
 };
@@ -52,6 +57,7 @@ sub execute {
         my %params;
         $params{allocation_id} = $allocation->id;
         $params{kilobytes_requested} = $self->kilobytes_requested if defined $self->kilobytes_requested;
+        $params{allow_reallocate_with_move} = $self->allow_reallocate_with_move if $self->allow_reallocate_with_move;
 
         my $transaction = UR::Context::Transaction->begin();
         my $successful = Genome::Disk::Allocation->reallocate(%params);
