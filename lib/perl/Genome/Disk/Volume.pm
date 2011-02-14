@@ -26,11 +26,11 @@ class Genome::Disk::Volume {
         },
         percent_used => {
             calculate_from => ['total_kb', 'used_kb'],
-            calculate => sub { my ($total_kb, $used_kb) = @_; return sprintf("%.2f%%", ( $used_kb / $total_kb ) * 100); },
+            calculate => sub { my ($total_kb, $used_kb) = @_; return sprintf("%.2f", ( $used_kb / $total_kb ) * 100); },
         },
         percent_allocated => {
             calculate_from => ['total_kb', 'allocated_kb'],
-            calculate => q{ return sprintf("%.2f%%", ( $allocated_kb / $total_kb ) * 100); },
+            calculate => q{ return sprintf("%.2f", ( $allocated_kb / $total_kb ) * 100); },
         },
         reserve_size => {
             calculate_from => ['total_kb', 'unusable_volume_percent', 'maximum_reserve_size'],
