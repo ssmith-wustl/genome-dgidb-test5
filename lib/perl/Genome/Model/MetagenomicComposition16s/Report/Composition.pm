@@ -38,10 +38,12 @@ sub _add_to_report_xml {
         confidence_threshold => $self->confidence_threshold,
     );
 
-    my @amplicon_sets = $self->build->amplicon_sets
-        or return;
+    my @amplicon_set_names = $self->build->amplicon_set_names;
+    Carp::confess('No amplicon set names for '.$self->build) if not @amplicon_set_names; # bad
 
-    for my $amplicon_set ( @amplicon_sets ) {
+    for my $name ( @amplicon_set_names ) {
+        my $amplicon_set = $self->build->amplicon_set_for_name($name);
+        next if not $amplicon_set; # ok
         while ( my $amplicon = $amplicon_set->next_amplicon ) {
             my $classification = $amplicon->classification
                 or next;

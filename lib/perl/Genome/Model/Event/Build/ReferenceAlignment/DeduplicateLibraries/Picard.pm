@@ -153,7 +153,7 @@ sub _link_result_from_build {
     Genome::Sys->shellcmd(
         cmd => 'echo ' . $self->build->id . ' >> ' . $in_use_file,
         output_files => [$in_use_file],
-        skip_if_output_present => 0,
+        skip_if_output_is_present => 0,
     );
 
     $self->status_message('Successfully shortcut duplication.');
