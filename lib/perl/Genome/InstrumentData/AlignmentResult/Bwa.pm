@@ -31,7 +31,7 @@ sub required_rusage {
     my $tmp_gb = $tmp_mb/1024;
 
     my $user = getpwuid($<);
-    my $queue = ($user eq 'apipe-builder' ? 'alignment-pd' : 'alignment-test');
+    my $queue = ($user eq 'apipe-builder' ? 'alignment-pd' : 'alignment');
 
     my $host_groups;
     $host_groups = qx(bqueues -l $queue | grep ^HOSTS:);
