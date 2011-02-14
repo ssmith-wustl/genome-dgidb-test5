@@ -5,31 +5,25 @@ use warnings;
 
 use above 'Genome';
 
-use Genome::Model::Command::Report::Test;
+require File::Temp;
+use Test::More;
 
-Genome::Model::Command::Report::GenerateTest->runtests;
+use_ok('Genome::Model::Command::Report::Generate') or die;
 
+my $build = Genome::Model::Build->get(107664200); # build for apipe-test-03-MC16s
+ok($build, 'Got MC16s build') or die;
+
+my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
+my $generator = Genome::Model::Command::Report::Generate->create(
+    build => $build,
+    report_name => 'Summary',
+    directory => $tmpdir,
+    force => 1,
+);
+ok($generator, 'create');
+$generator->dump_status_messages(1);
+ok($generator->execute, 'execute');
+
+done_testing();
 exit;
-
-=pod
-
-=head1 Tests
-
-=head1 Disclaimer
-
- Copyright (C) 2006 Washington University Genome Sequencing Center
-
- This script is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
- License for more details.
-
-=head1 Author(s)
-
- Eddie Belter <ebelter@watson.wustl.edu>
-
-=cut
-
-#$HeadURL$
-#$Id$
 

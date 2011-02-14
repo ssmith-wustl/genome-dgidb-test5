@@ -14,6 +14,7 @@ class Genome::Model::Build::MetagenomicComposition16s::454 {
 
 sub calculate_estimated_kb_usage {
     # Based on the total reads in the instrument data. The build needs about 3 kb (use 3.5) per read.
+    #  So request 5 per read or at least a MiB
     #  If we don't keep the classifications around, then we will have to lower this number.
     my $self = shift;
 
@@ -27,12 +28,8 @@ sub calculate_estimated_kb_usage {
         $total_reads += $instrument_data->total_reads;
     }
 
-    unless ( $total_reads > 0 ) {
-        Carp::confess('No reads were found in instrument data('.join(', ', map { $_->id } @instrument_data).') for '.$self->description);
-    }
-
-    return $total_reads * 5; # really 3 kb per, but request more to cover the reallocation buffer. 
-                             #  then when we reallocate, we'll be close to what the usage + the buffer
+    my $kb = $total_reads * 5;
+    return ( $kb >= 1024 ? $kb : 1024 );
 }
 
 #< DIRS >#

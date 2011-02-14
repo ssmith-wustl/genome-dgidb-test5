@@ -111,6 +111,11 @@ sub Genome::Disk::Allocation::Type::autogenerate_new_object_id {
     return $UR::Object::Type::autogenerate_id_base . ' ' . (++$UR::Object::Type::autogenerate_id_iter);
 }
 
+sub __display_name__ {
+    my $self = shift;
+    return $self->absolute_path;
+}
+
 # The allocation process should be done in a separate process to ensure it completes and commits quickly, since
 # locks on allocations and volumes persist until commit completes. To make this invisible to everyone, the
 # create/delete/reallocate methods perform the system calls that execute _create/_delete/_reallocate methods.
@@ -288,6 +293,9 @@ sub _create {
 
         # Make sure that the allocation doesn't infringe on the empty buffer required for each volume
         @volumes = grep { ($_->unallocated_kb - $_->reserve_size) > $kilobytes_requested } @volumes;
+        unless (@volumes) {
+            confess "No volumes of group $disk_group_name have enough space after excluding reserves to store $kilobytes_requested KB.";
+        }
 
         # Only allocate to the first MAX_VOLUMES retrieved
         my $max = @volumes > $MAX_VOLUMES ? $MAX_VOLUMES : @volumes;
@@ -410,6 +418,7 @@ sub _reallocate {
     my $id = delete $params{allocation_id};
     confess "Require allocation ID!" unless defined $id;
     my $kilobytes_requested = delete $params{kilobytes_requested};
+    my $allow_reallocate_with_move = delete $params{allow_reallocate_with_move};
     if (%params) {
         confess "Found extra params: " . Data::Dumper::Dumper(\%params);
     }
@@ -463,17 +472,56 @@ sub _reallocate {
     $self->_select_volume_for_update($volume->id);
 
     # Make sure there's room for the allocation... only applies if the new allocation is bigger than the old
-    if ($diff > 0 and $volume->unallocated_kb < $diff) {
+    if ($diff > 0 and $volume->unallocated_kb < $diff and !$allow_reallocate_with_move) {
         Genome::Sys->unlock_resource(resource_lock => $volume_lock);
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Not enough unallocated space on volume ' . $volume->mount_path . " to increase allocation size by $diff kb";
     }
+    elsif ($diff > 0 and $volume->unallocated_kb < $diff and $allow_reallocate_with_move) {
+        return $self->_reallocate_with_move($kilobytes_requested);
+    }
+    else {
+        # Update allocation and volume, create unlock observer, and return
+        $self->kilobytes_requested($kilobytes_requested);
+        $volume->unallocated_kb($volume->unallocated_kb - $diff);
+        $class->_create_observer($class->_unlock_closure($volume_lock, $allocation_lock));
+        return 1;
+    }
+}
 
-    # Update allocation and volume, create unlock observer, and return
-    $self->kilobytes_requested($kilobytes_requested);
-    $volume->unallocated_kb($volume->unallocated_kb - $diff);
+sub _reallocate_with_move {
+    my $self = shift;
+    my $kilobytes_requested = shift;
 
-    $class->_create_observer($class->_unlock_closure($volume_lock, $allocation_lock));
+    my %params;
+    $params{owner_class_name   } = $self->owner_class_name;
+    $params{owner_id           } = $self->owner_id;
+    $params{allocation_path    } = $self->allocation_path;
+    $params{mount_path         } = $self->mount_path;
+    $params{disk_group_name    } = $self->disk_group_name;
+    $params{group_subdirectory } = $self->group_subdirectory;
+
+    $params{kilobytes_used     } = Genome::Sys->disk_usage_for_path($self->absolute_path);
+    $params{kilobytes_requested} = $kilobytes_requested;
+
+    my $new_allocation = Genome::Disk::Allocation->create(%params);
+    unless ($new_allocation) {
+        $self->error_message("Failed to create new allocation to move data to.");
+        return;
+    }
+
+    my $source      = $self->absolute_path;
+    my $destination = $new_allocation->absolute_path;
+    unless(Genome::Sys->copy_directory($source, $destination)) {
+        $self->error_message("Failed to copy data from old allocation to new.");
+        return;
+    }
+
+    unless($self->delete) {
+        $self->error_message("Failed to delete old allocation after moving data to new allocation.");
+        return
+    }
+
     return 1;
 }
 

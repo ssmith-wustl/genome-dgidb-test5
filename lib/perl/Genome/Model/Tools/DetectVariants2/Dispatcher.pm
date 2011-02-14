@@ -56,6 +56,12 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
         _workflow_inputs => {
             doc => "Inputs to pass into the workflow when executing",
         },
+        _workflow_links => {
+            doc => "A hash of the detector/filter subgroups",
+        },
+        _workflow_model => {
+            doc => "This is the workflow model",
+        },
     ],
 };
 
@@ -170,7 +176,7 @@ sub _dump_workflow {
     my $xml_file = Genome::Sys->open_file_for_writing($xml_location);
     print $xml_file $xml;
     $xml_file->close;
-    #$workflow->as_png($self->output_directory."/workflow.png"); currently commented out because blades do not all have the "dot" library to use graphviz
+    #$workflow->as_png($self->output_directory."/workflow.png"); #currently commented out because blades do not all have the "dot" library to use graphviz
 }
 
 sub get_relative_path_to_output_directory {
@@ -333,23 +339,168 @@ sub generate_workflow {
     );
 
     $workflow_model->log_dir($self->output_directory);
-
+    print "PLAN:\n";
+    print Data::Dumper::Dumper($plan);
+    print "TREES:\n";
+    print Data::Dumper::Dumper($trees);
     for my $detector (keys %$plan) {
         # Get the hashref that contains all versions to be run for a detector
         my $detector_hash = $plan->{$detector};
         $workflow_model = $self->generate_workflow_operation($detector_hash, $workflow_model);
     }
+    $DB::single=1;
+    my @root = keys( %{ $trees} );
+    for my $variant_type (@root){
+        my ($key) = keys(%{$trees->{$variant_type}});
+        my $end_result = $self->link_operations( $trees->{$variant_type}, $key, $variant_type );
+        my $workflow_links = $self->_workflow_links;
 
-    # TODO union and intersect each post-filtering detector output if necessary
-
+        my $last_operation_name = $workflow_links->{$end_result."_output_directory"}->{last_operation};
+        my $last_operation = $workflow_links->{$last_operation_name."_output_directory"}->{right_operation};
+        $workflow_model->add_link(
+            left_operation => $last_operation,
+            left_property => "output_directory",
+            right_operation => $workflow_model->get_output_connector,
+            right_property => $variant_type."_output_directory",
+        );
+        print "Result of a call to link_operation is:  ".$end_result."\n";
+    }
     return $workflow_model;
 }
+
+sub link_operations { 
+    my $self = shift;
+
+    ## TODO UGLY, please make cleaner
+    my $tree = shift;
+    my $current_key = shift;
+    my $variant_type = shift;
+
+    my ($key) = keys( %{$tree} );
+    my @incoming_links;
+    my $unique_combine_name;
+    
+    # This is a leaf node, cease recursion and return the unique detector name
+    if($key eq 'detector'){
+        return $self->get_unique_detector_name($tree->{$key}, $variant_type);
+    }
+
+    # We expect to see an intersect or union operation here, if there are more or less than 2 keys, asplode
+    my @inputs = @{$tree->{$key}};
+    unless(scalar(@inputs)==2){
+        $self->error_message("attempting to build a workflow, but we have found an operation ( ".$key." ) with more or less than 2 inputs: ".Data::Dumper::Dumper(\@inputs));
+        die $self->error_message;
+    }
+
+    # recurse to find the inputs to this operation
+    for my $input (@inputs) {
+        push @incoming_links, $self->link_operations($input, undef, $variant_type);
+    }
+    $unique_combine_name = $self->create_combine_operation( $key , \@incoming_links, $variant_type );
+
+    # return the unique name of the operation created
+    return $unique_combine_name;
+}
+
+sub create_combine_operation {
+    my $self = shift;
+    my $operation_type = shift;
+    my $links = shift;
+    my $variant_type = shift;
+    my $class = 'Genome::Model::Tools::DetectVariants2::Combine::'.ucfirst($operation_type).ucfirst($variant_type);
+    eval {
+        $class->__meta__;
+    };
+    if($@){
+        $self->error_message("Could not create an instance of ".$class);
+        die $self->error_message;
+    }
+    my $workflow_links = $self->_workflow_links;
+
+    my $input_a_key = $links->[0]."_output_directory";
+    my $input_a_last_op_name = $workflow_links->{$input_a_key}->{last_operation};
+
+    my $input_b_key = $links->[1]."_output_directory";
+    my $input_b_last_op_name = $workflow_links->{$input_b_key}->{last_operation};
+
+    print "creating a ".$operation_type." for ".$variant_type."\n";
+
+    my $workflow_model = $self->_workflow_model;
+    my $unique_combine_name = join("_",($variant_type,$operation_type, @{$links}));
+    my $combine_directory = $self->output_directory."/".$unique_combine_name;
+
+    my $combine_operation = $workflow_model->add_operation(
+        name => join(" ",($variant_type,$operation_type, $links->[0], $links->[1])),
+        operation_type => Workflow::OperationType::Command->get($class),
+        );
+    my @properties_to_each_operation =  ( 'reference_sequence_input', 'aligned_reads_input', 'control_aligned_reads_input');
+    for my $property ( @properties_to_each_operation) {
+        $workflow_model->add_link(
+                left_operation => $workflow_model->get_input_connector,
+                left_property => $property,
+                right_operation => $combine_operation,
+                right_property => $property,
+                );
+    }
+    my $left_operation = $workflow_links->{$input_a_last_op_name."_output_directory"}->{right_operation};
+    $workflow_model->add_link(
+        left_operation => $left_operation,
+        left_property => "output_directory",
+        right_operation => $combine_operation,
+        right_property => "input_directory_a",
+    );
+    $left_operation = $workflow_links->{$input_b_last_op_name."_output_directory"}->{right_operation};
+    $workflow_model->add_link(
+        left_operation => $left_operation,
+        left_property => "output_directory",
+        right_operation => $combine_operation,
+        right_property => "input_directory_b",
+    );
+
+    $workflow_links->{$unique_combine_name."_output_directory"}->{value} = $combine_directory;
+    $workflow_links->{$unique_combine_name."_output_directory"}->{right_property_name} = 'output_directory';
+    $workflow_links->{$unique_combine_name."_output_directory"}->{right_operation} = $combine_operation;
+    $workflow_links->{$unique_combine_name."_output_directory"}->{last_operation} = $unique_combine_name;
+
+    my @new_input_connector_properties = ($unique_combine_name."_output_directory");
+    my $input_connector = $workflow_model->get_input_connector;
+    my $input_connector_properties = $input_connector->operation_type->output_properties;
+    push @{$input_connector_properties}, @new_input_connector_properties;
+    $input_connector->operation_type->output_properties($input_connector_properties);
+
+    #if(defined($self->_workflow_inputs)){
+    #    %workflow_inputs = ( %{$self->_workflow_inputs}, %{$workflow_links});
+    #}
+    #else {
+    #    %workflow_inputs = %{$workflow_links};
+    #}
+
+    $self->_workflow_inputs($workflow_links); 
+
+    $self->_workflow_links($workflow_links);
+    $self->_workflow_model($workflow_model);
+    return $unique_combine_name;
+}
+
+
+sub get_unique_detector_name {
+    my $self = shift;
+    my $hash = shift;
+    my $variant_type = shift;
+    my $answer;
+    my $params = $hash->{params};
+    my $name = $hash->{name};
+    my $version = $hash->{version};
+    return join("_", ($variant_type, $name, $version, $params) );
+}
+
 
 # FIXME rename this, or make it return the operations to be added instead of adding them itself
 sub generate_workflow_operation { 
     my $self = shift;
     my $detector_hash = shift;
     my $workflow_model = shift;
+    my $workflow_links;
 
     for my $version (keys %$detector_hash) {
         # Get the hashref that contains all the variant types to be run for a given detector version
@@ -364,7 +515,7 @@ sub generate_workflow_operation {
                 $name = $instance->{name};
                 $version = $instance->{version};
                 my @filters = @{$instance->{filters}};
-                print Data::Dumper::Dumper(\@filters);
+                #print Data::Dumper::Dumper(\@filters);
 
                 # Make the operation
                 my $detector_operation = $workflow_model->add_operation(
@@ -418,7 +569,8 @@ sub generate_workflow_operation {
                 $inputs_to_store->{$unique_detector_base_name."_output_directory"}->{value} = $detector_output_directory;
                 $inputs_to_store->{$unique_detector_base_name."_output_directory"}->{right_property_name} = 'output_directory';
                 $inputs_to_store->{$unique_detector_base_name."_output_directory"}->{right_operation} = $detector_operation;
-                
+                $inputs_to_store->{$unique_detector_base_name."_output_directory"}->{last_operation} = $unique_detector_base_name;
+
                 # adding in links from input_connector to filters to the hash
                 for my $filter (@filters){
                     my $fname = $filter->{name};
@@ -438,6 +590,8 @@ sub generate_workflow_operation {
                     $inputs_to_store->{$unique_filter_name."_detector_directory"}->{value} = $detector_output_directory;
                     $inputs_to_store->{$unique_filter_name."_detector_directory"}->{right_property_name} = 'detector_directory';
                     $inputs_to_store->{$unique_filter_name."_detector_directory"}->{right_operation} = $filter->{operation};
+
+                    $inputs_to_store->{$unique_detector_base_name."_output_directory"}->{last_operation} = $unique_filter_name;
                 }
                 
                 # use the hash keys, which are input_connector property names, to add the links to the workflow
@@ -467,7 +621,7 @@ sub generate_workflow_operation {
                 }
                 $self->_workflow_inputs(\%workflow_inputs); 
 
-                print Data::Dumper::Dumper($self->_workflow_inputs);
+                #print Data::Dumper::Dumper($self->_workflow_inputs);
             
                 # connect the output to the input between all operations in this detector's branch
                 for my $index (0..(scalar(@filters)-1)){
@@ -487,26 +641,20 @@ sub generate_workflow_operation {
                     );
                     
                 }
-
-                # Find which is the last operation and connect it to the output connector
-                my $last_operation;
-                if(scalar(@filters)>0){
-                    $last_operation = $filters[-1]->{operation};
+                $DB::single=1;
+                $workflow_links = $self->_workflow_links;
+                if($workflow_links){
+                    my $hash_maker = $workflow_links;
+                    %{$workflow_links} = ( %{$hash_maker}, %{$inputs_to_store} );
                 }
                 else {
-                    $last_operation = $detector_operation;
+                    $workflow_links = $inputs_to_store;
                 }
-
-                $workflow_model->add_link(
-                    left_operation => $last_operation,
-                    left_property => "output_directory",
-                    right_operation => $workflow_model->get_output_connector,
-                    right_property => $variant_type."_output_directory",
-                );
+                $self->_workflow_links($workflow_links);
             }
         }
     }
-
+    $self->_workflow_model($workflow_model);
     return $workflow_model;
 }
 

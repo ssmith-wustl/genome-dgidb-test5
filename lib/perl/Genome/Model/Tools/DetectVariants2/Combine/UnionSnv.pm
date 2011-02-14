@@ -7,12 +7,8 @@ use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Combine::UnionSnv{
     is => 'Genome::Model::Tools::DetectVariants2::Combine',
+    doc => 'Union snvs into one file',
 };
-
-
-sub help_brief {
-    "Union two snv variant bed files",
-}
 
 sub help_synopsis {
     my $self = shift;
@@ -21,18 +17,18 @@ gmt detect-variants combine --variant-file-a samtools.hq.v1.bed --variant-file-b
 EOS
 }
 
-sub help_detail {                           
-    return <<EOS 
-This filters out SNVs that are likely to be the result of Loss of Heterozygosity (LOH) events. The Somatic Pipeline will pass these through on its own as they are tumor variants that differ from the normal. This script defines a variant as LOH if it is homozygous, there is a heterozygous SNP at the same position in the normal and the tumor allele is one of the two alleles in the normal.  
-EOS
-}
 
 sub _combine_variants {
     my $self = shift;
+    my $snvs_a = $self->input_directory_a."/snvs.hq.bed";
+    my $snvs_b = $self->input_directory_b."/snvs.hq.bed";
+    my $output_file = $self->output_directory."/snvs.hq.bed";
     
     ### TODO Replace this with real unioning - this is very naive.
-    my $cmd = "sort -m ".$self->variant_file_a." ".$self->variant_file_b." > ".$self->output_file;
+    my $cmd = "sort -m ".$snvs_a." ".$snvs_b." > ".$output_file;
     my $result = Genome::Sys->shellcmd( cmd => $cmd);
+    my $lq_file = $self->output_directory."/snvs.lq.bed";
+    `touch $lq_file`;
     return 1;
 }
 
