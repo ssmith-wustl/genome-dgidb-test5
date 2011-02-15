@@ -449,7 +449,7 @@ sub create_combine_operation {
         right_operation => $combine_operation,
         right_property => "input_directory_a",
     );
-    my $left_operation = $workflow_links->{$input_b_last_op_name."_output_directory"}->{right_operation};
+    $left_operation = $workflow_links->{$input_b_last_op_name."_output_directory"}->{right_operation};
     $workflow_model->add_link(
         left_operation => $left_operation,
         left_property => "output_directory",
@@ -699,6 +699,7 @@ sub _promote_staged_data {
 sub set_output_files {
     my $self = shift;
     my $result = shift;
+    $DB::single=1;
 
     for my $variant_type (@{$self->variant_types}){
         my $file_accessor = $variant_type."_hq_output_file";
@@ -713,7 +714,7 @@ sub set_output_files {
             my $hq_output_dir = $self->output_directory."/".$relative_path; #FIXME complications arise here when we have just a single column file... or other stuff. May just need to drop the version, too?
             my $hq_file = $variant_type."s.hq.bed";
             my $file;
-            if(-l $hq_file){
+            if(-l $hq_output_dir."/".$hq_file){
                 $file = readlink($hq_output_dir."/".$hq_file); # Should look like "dir/snvs_hq.bed" 
             }
             else{
