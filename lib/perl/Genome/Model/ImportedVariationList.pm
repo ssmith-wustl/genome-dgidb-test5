@@ -27,6 +27,9 @@ class Genome::Model::ImportedVariationList {
 sub dbsnp_model_for_reference {
     my ($class, $reference) = @_;
     my @models = $class->get(name => "dbSNP-" . $reference->name);
+    if (!@models and defined $reference->coordinates_from) {
+        @models = $class->get(name => "dbSNP-" . $reference->coordinates_from->name);
+    }
     return if @models != 1;
     return $models[0];
 }
