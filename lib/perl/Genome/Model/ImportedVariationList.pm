@@ -30,7 +30,7 @@ sub dbsnp_model_for_reference {
     if (!@models and defined $reference->coordinates_from) {
         @models = $class->get(name => "dbSNP-" . $reference->coordinates_from->name);
     }
-    return if @models != 1;
+    return if @models != 1 or !$models[0]->reference->is_compatible_with($reference);
     return $models[0];
 }
 
