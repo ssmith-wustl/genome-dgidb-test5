@@ -169,6 +169,8 @@ sub execute {                               # replace with real execution logic.
 					#my @dataLineContents = split(/\,/, $data_line);
 					my ($id, $platform, $format) = split(/\,/, $data_line);
 					warn "Found $id\t$platform\t$format\n" if($self->verbose);
+                    next if $platform =~ /affymetrix/i; #want to skip microarray models
+                    next if $format =~ /genotype/i; #same, skipping microarray models
 					my $cmd = "genome model instrument-data assign --model-id $model_id --instrument-data-id $id --force";
 	
 					if(!$self->report_only)
