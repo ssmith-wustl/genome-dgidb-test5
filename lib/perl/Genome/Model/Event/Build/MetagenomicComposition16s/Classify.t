@@ -25,14 +25,14 @@ ok(_link_example_data($build, $example_build), 'linked example data');
 # set some values
 $build->amplicons_attempted(5);
 is($build->amplicons_attempted, 5, 'amplicons attempted set');
-$build->amplicons_processed(0);
-is($build->amplicons_processed, 0, 'amplicons processed set');
-$build->amplicons_processed_success(0);
-is($build->amplicons_processed_success, 0, 'amplicons processed success set');
-$build->amplicons_classified(0);
-is($build->amplicons_classified, 0, 'amplicons classified set');
-$build->amplicons_classified_success(0);
-is($build->amplicons_classified_success, 0, 'amplicons classified success set');
+#$build->amplicons_processed(0);
+#is($build->amplicons_processed, 0, 'amplicons processed set');
+#$build->amplicons_processed_success(0);
+#is($build->amplicons_processed_success, 0, 'amplicons processed success set');
+#$build->amplicons_classified(0);
+#is($build->amplicons_classified, 0, 'amplicons classified set');
+#$build->amplicons_classified_success(0);
+#is($build->amplicons_classified_success, 0, 'amplicons classified success set');
 
 # run
 my $classify = Genome::Model::Event::Build::MetagenomicComposition16s::Classify->create(build => $build);

@@ -14,11 +14,13 @@ class Genome::Model::Event::Build::MetagenomicComposition16s::Assemble::PhredPhr
 sub execute {
     my $self = shift;
 
-    my @amplicon_sets = $self->build->amplicon_sets
-        or return;
+    my @amplicon_set_names = $self->build->amplicon_set_names;
+    Carp::confess('No amplicon set names for '.$self->build->description) if not @amplicon_set_names; # bad
 
     my %assembler_params = $self->processing_profile->assembler_params_as_hash;
-    for my $amplicon_set ( @amplicon_sets ) {
+    for my $name ( @amplicon_set_names ) {
+        my $amplicon_set = $self->build->amplicon_set_for_name($name);
+        next if not $amplicon_set;
 
         my $writer = $self->build->fasta_and_qual_writer_for_type_and_set_name('processed', $amplicon_set->name)
             or return;
@@ -54,5 +56,3 @@ sub execute {
 
 1;
 
-#$HeadURL$
-#$Id$

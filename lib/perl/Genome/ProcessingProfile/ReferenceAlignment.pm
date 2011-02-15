@@ -245,7 +245,7 @@ sub _fetch_alignment_sets {
             delete $params{instrument_data_segment_id};
             delete $params{instrument_data_segment_type};
         }
-        my $alignment = Genome::InstrumentData::AlignmentResult->$mode(%$_, %$segment_info);
+        my $alignment = Genome::InstrumentData::AlignmentResult->$mode(%params, %$segment_info);
         unless ($alignment) {
              #$self->error_message("Failed to $mode an alignment object");
              return;

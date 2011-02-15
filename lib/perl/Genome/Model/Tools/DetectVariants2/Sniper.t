@@ -10,11 +10,11 @@ use Test::More;
 use above 'Genome';
 
 my $archos = `uname -a`;
-if ($archos !~ /64/) {
-    plan skip_all => "Must run from 64-bit machine";
-} else {
-    plan tests => 4;
-}
+#if ($archos !~ /64/) {
+    plan skip_all => "Under construction.";#"Must run from 64-bit machine";
+#} else {
+#    plan tests => 4;
+#}
 
 my $tumor =  "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants-Somatic-Sniper/tumor.tiny.bam";
 my $normal = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants-Somatic-Sniper/normal.tiny.bam";

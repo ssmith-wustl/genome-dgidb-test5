@@ -12,7 +12,7 @@ class Genome::Model::Tools::Music::Bmr::CalcCovg {
     roi_file => { is => 'Text', doc => "Tab delimited list of ROIs [chr start stop gene_name] (See Description)" },
     ref_seq => { is => 'Text', doc => "Path to reference sequence in FASTA format" },
     bam_list => { is => 'Text', doc => "Tab delimited list of BAM files [sample_name normal_bam tumor_bam] (See Description)" },
-    output_dir => { is => 'Text', doc => "Directory where output files will be written" },
+    output_dir => { is => 'Text', doc => "Directory where output files and subdirectories will be written" },
     cmd_list_file => { is => 'Text', doc => "A file to write calcRoiCovg commands to (See Description)", is_optional => 1 },
     cmd_prefix => { is => 'Text', doc => "A command that submits a job to your cluster (See Description)", is_optional => 1 },
     normal_min_depth => { is => 'Integer', doc => "The minimum read depth to consider a Normal BAM base as covered", is_optional => 1, default => 6 },
@@ -39,7 +39,7 @@ allows you to run your own calcRoiCovg jobs in parallel or on multiple machines 
 
 Speed things up by running calcRoiCovg jobs in parallel:
 If a compute cluster or multiple machines are available, run this script twice as follows:
-- Define a cmd-list-file and cmd-prefix to generate a file with commands that can be submit to a
+- Define cmd-list-file and cmd-prefix to generate a file with commands that can be submitted to a
   cluster or run manually. These jobs will write per-ROI base counts in a subdirectory roi_covgs.
 - After all the parallelized calcRoiCovg jobs are completed, run this script again to add them up
   and generate the final per-gene base counts in a subdirectory gene_covgs. Remember to remove the
@@ -72,15 +72,14 @@ ARGUMENTS:
   total_covgs: File containing the overall non-overlapping coverages per sample.
 
 --cmd-list-file
-  If a compute cluster is available, specify a file into which a list of calcRoiCovg jobs will be
-  written to. These can be scheduled in parallel, and will write per-ROI coverages into the output
-  directory roi_covgs. If cmd-list-file is left unspecified, this script runs calcRoiCovg for each
-  sample one after another, taking ~30 mins per sample, unless the per-ROI coverage already exists
-  in the output directory roi_covgs.
+  Specify a file into which a list of calcRoiCovg jobs will be written to. These can be scheduled
+  in parallel, and will write per-ROI covered base-counts into the output subdirectory roi_covgs.
+  If cmd-list-file is left unspecified, this script runs calcRoiCovg per sample one after another,
+  taking ~30 mins per sample, but it skips samples whose output is already in roi_covgs.
 
 --cmd-prefix
-  Specify a job submission command that will be prefixed to each job command in cmd-list-file. This
-  makes batch submission easier - Just run the cmd-list-file file as a shell script to submit jobs.
+  Specify a job submission command that will be prefixed to each command in cmd-list-file. This
+  makes batch submission easier. Just run the cmd-list-file file as a shell script to submit jobs.
   cmd-prefix is "bsub" if your cluster uses the LSF job scheduler, or "qsub" in Torque. Add
   arguments as necessary. For example, "bsub -M 4GB" sets a soft memory limit of 4GB.
 HELP
@@ -93,7 +92,7 @@ sub execute {
   my $ref_seq = $self->ref_seq;
   my $bam_list = $self->bam_list;
   my $output_dir = $self->output_dir;
-  my $cmd_list = $self->cmd_list_file;
+  my $cmd_list_file = $self->cmd_list_file;
   my $cmd_prefix = $self->cmd_prefix;
   my $normal_min_depth = $self->normal_min_depth;
   my $tumor_min_depth = $self->tumor_min_depth;
@@ -137,9 +136,18 @@ sub execute {
   mkdir $roi_covg_dir unless( -e $roi_covg_dir );
   mkdir $gene_covg_dir unless( -e $gene_covg_dir );
 
-  my $cmdFh = IO::File->new( $cmd_list, ">" ) if( defined $cmd_list );
-  my $totCovgFh = IO::File->new( $tot_covg_file, ">" ) unless( defined $cmd_list );
-  $totCovgFh->print( "#Sample\tCovered_Bases\tAT_Bases_Covered\tCG_Bases_Covered\tCpG_Bases_Covered\n" ) unless( defined $cmd_list );
+  my ( $cmdFh, $totCovgFh );
+  if( defined $cmd_list_file )
+  {
+    $cmdFh = IO::File->new( $cmd_list_file, ">" );
+    print "Creating a list of parallelizable jobs at $cmd_list_file.\n";
+    print "Be sure to run this script a second time (without defining the cmd-list-file argument).\n";
+  }
+  else
+  {
+    $totCovgFh = IO::File->new( $tot_covg_file, ">" );
+    $totCovgFh->print( "#Sample\tCovered_Bases\tAT_Bases_Covered\tCG_Bases_Covered\tCpG_Bases_Covered\n" );
+  }
 
   # Parse through each pair of BAM files provided and run calcRoiCovg as necessary
   my $bamFh = IO::File->new( $bam_list );
@@ -156,7 +164,7 @@ sub execute {
     my $calcRoiCovg_cmd = "calcRoiCovg $normal_bam $tumor_bam $roi_file $ref_seq $roi_covg_dir/$sample.covg $normal_min_depth $tumor_min_depth $min_mapq";
 
     # If user only wants the calcRoiCovg commands, write them to file and skip running calcRoiCovg
-    if( defined $cmd_list )
+    if( defined $cmd_list_file )
     {
       $calcRoiCovg_cmd = $cmd_prefix . " $calcRoiCovg_cmd" if( defined $cmd_prefix );
       $cmdFh->print( "$calcRoiCovg_cmd\n" );
@@ -216,8 +224,8 @@ sub execute {
     $totCovgFh->print( "$sample\t$tot_covd\t$tot_at_covd\t$tot_cg_covg\t$tot_cpg_covd\n" );
   }
   $bamFh->close;
-  $cmdFh->close if( defined $cmd_list );
-  $totCovgFh->close unless( defined $cmd_list );
+  $cmdFh->close if( defined $cmd_list_file );
+  $totCovgFh->close unless( defined $cmd_list_file );
 
   return 1;
 }
