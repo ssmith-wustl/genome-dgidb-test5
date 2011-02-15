@@ -53,7 +53,7 @@ sub path_for_version {
     }
 
     unless(exists $VARSCAN_VERSIONS{$version}) {
-        $class->error_message('No path found for VarScan Version ' . $version);
+        $class->error_message('No path found for Varscan Version ' . $version);
         die $class->error_message;
     }
 
@@ -75,7 +75,7 @@ sub default_version {
     my $class = shift;
 
     unless(exists $VARSCAN_VERSIONS{$DEFAULT_VERSION}) {
-        $class->error_message('Default VarScan version (' . $DEFAULT_VERSION . ') is invalid.');
+        $class->error_message('Default Varscan version (' . $DEFAULT_VERSION . ') is invalid.');
         die $class->error_message;
     }
 

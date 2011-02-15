@@ -5,7 +5,7 @@ use strict;
 
 use IO::File;
 use Genome;
-use IPC::Run;
+use IPC::Cmd qw/can_run/;
 
 =head1 NAME
 
@@ -20,14 +20,18 @@ Version 1.01
 our $VERSION = '1.01';
 
 class Genome::Model::Tools::Music::Pfam {
-    is => 'Command',                       
+    is => 'Genome::Command::Base',
     has => [ 
     maf_file => {
-        is => 'Text', 
+        is => 'Text',
+        is_input => 1,
+        file_format => 'maf',
         doc => "List of mutations in MAF format",
     },
-    output_file => { 
-        is => 'Text', 
+    output_file => {
+        is => 'Text',
+        is_output => 1,
+        file_format => 'pfam',
         doc => "MAF file with Pfam domain column appended",
     },
     ],
@@ -122,10 +126,9 @@ sub execute {
         my $stop = $fields[$maf_columns{'End_position'}];
         #my $ref = $fields[$maf_columns{'Reference_Allele'}];
         # use environment variable but fall back to reasonable default
-        my $db_path = $ENV{GC_GMT_MUSIC_DBFILES};
-        $db_path ||= '/usr/local/share/genome/music/dbfiles';
+        my $db_path = Genome::Sys->dbpath('pfam', 'latest') or die "Cannot find the pfam db path.";
         my $tabix = can_run('tabix') or die "Cannot find the tabix command. It can be obtained from http://sourceforge.net/projects/samtools/files/tabix";
-        my $tabix_cmd = "$tabix $db_path/pfam/pfam.annotation.gz $chr:$start-$stop - |";
+        my $tabix_cmd = "$tabix $db_path/pfam.annotation.gz $chr:$start-$stop - |";
         my %domains;
         open(TABIX,$tabix_cmd) or die "Cannot open() the tabix command. Please check it is in your PATH. It can be installed from the samtools project. $!";
         while (my $tabline = <TABIX>) {

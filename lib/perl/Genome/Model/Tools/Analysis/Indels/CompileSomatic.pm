@@ -8,7 +8,7 @@ use warnings;
 use IO::File;
 use IO::Handle;
 use Genome;
-require("/gscuser/dkoboldt/src/perl_modules/trunk/VarScan/VarScan/lib/VarScan/FisherTest.pm");  #using for FET. TODO move to genome model if this is going to be used
+require("/gscuser/dkoboldt/src/perl_modules/trunk/Varscan/Varscan/lib/Varscan/FisherTest.pm");  #using for FET. TODO move to genome model if this is going to be used
 
 my %stats = ();
 
@@ -115,7 +115,7 @@ sub execute {
             my $expected_variant_reads = sprintf("%d",$entry->{normal_var}/($entry->{normal_ref} + $entry->{normal_var}) * $total_observed_reads);  #make sure it rounds properly to an integer
             my $expected_normal_reads = $total_observed_reads - $expected_variant_reads;
 
-            $p_value = VarScan::FisherTest::calculate_p_value($expected_normal_reads, $expected_variant_reads, $ref, $var, 0);
+            $p_value = Varscan::FisherTest::calculate_p_value($expected_normal_reads, $expected_variant_reads, $ref, $var, 0);
 
 
             #calculate LLR

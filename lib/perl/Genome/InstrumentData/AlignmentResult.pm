@@ -362,30 +362,49 @@ sub create {
         $self->error_message("Reference sequences are invalid.  We can't proceed:  " . $self->error_message);
         die $self->error_message();
     }
+
+    eval {
     
-    # STEP 6: PREPARE THE ALIGNMENT FILE (groups file, sequence dictionary)
-    $self->status_message("Preparing the all_sequences.sam in scratch");
-    unless ($self->prepare_scratch_sam_file) {
-        $self->error_message("Failed to prepare the scratch sam file with groups and sequence dictionary");
-        die $self->error_message;
-    }
-
-    # STEP 7: RUN THE ALIGNER
-    $self->status_message("Running aligner...");
-    unless ($self->extract_fastqs_and_run_aligner ) {
-        $self->error_message("Failed to extract fastqs and/or run the aligner!");
-        die $self->error_message;
-    }
-
-    # STEP 8: CREATE BAM IN STAGING DIRECTORY
-    if ($self->supports_streaming_to_bam) {
-        $self->close_out_streamed_bam_file;
-    } else {
-        $self->status_message("Constructing a BAM file (if necessary)...");
-        unless( $self->create_BAM_in_staging_directory()) {
-            $self->error_message("Call to create_BAM_in_staging_directory failed.\n");
+        # STEP 6: PREPARE THE ALIGNMENT FILE (groups file, sequence dictionary)
+        # this also prepares the bam output pipe and crams the alignment headers through it.
+        $self->status_message("Preparing the all_sequences.sam in scratch");
+        unless ($self->prepare_scratch_sam_file) {
+            $self->error_message("Failed to prepare the scratch sam file with groups and sequence dictionary");
             die $self->error_message;
         }
+
+        # STEP 7: RUN THE ALIGNER
+        $self->status_message("Running aligner...");
+        unless ($self->collect_inputs_and_run_aligner ) {
+            $self->error_message("Failed to collect inputs and/or run the aligner!");
+            die $self->error_message;
+        }
+
+        # STEP 8: CREATE BAM IN STAGING DIRECTORY
+        if ($self->supports_streaming_to_bam) {
+            $self->close_out_streamed_bam_file;
+        } else {
+            $self->status_message("Constructing a BAM file (if necessary)...");
+            unless( $self->create_BAM_in_staging_directory()) {
+                $self->error_message("Call to create_BAM_in_staging_directory failed.\n");
+                die $self->error_message;
+            }
+        }
+    };
+
+    if ($@) {
+        my $error = $@;
+        $self->status_message("Oh no!  Caught an exception while in the critical point where the BAM pipe was open: $@");
+        if (defined $self->_bam_output_fh) {
+            eval {
+                $self->_bam_output_fh->close;
+            };
+            if ($@) {
+                $error .= " ... and the input filehandle failed to close due to $@";
+            }
+        }
+    
+        die $error;
     }
 
     # STEP 9-10, validate BAM file (if necessary)
@@ -458,7 +477,7 @@ sub prepare_scratch_sam_file {
     
     if ($self->supports_streaming_to_bam) {
         my $ref_list  = $self->reference_build->full_consensus_sam_index_path($self->samtools_version);
-        my $sam_cmd = sprintf("| %s view -S -b -o %s - ", Genome::Model::Tools::Sam->path_for_samtools_version($self->samtools_version), $self->temp_staging_directory . "/all_sequences.bam");
+        my $sam_cmd = sprintf("| %s view -S -b -o %s - ", Genome::Model::Tools::Sam->path_for_samtools_version($self->samtools_version), $self->temp_scratch_directory . "/raw_all_sequences.bam");
         $self->status_message("Opening $sam_cmd");
 
         $self->_bam_output_fh(IO::File->new($sam_cmd));
@@ -485,18 +504,49 @@ sub prepare_scratch_sam_file {
     return 1;
 }
 
-sub extract_fastqs_and_run_aligner {
+sub requires_fastqs_to_align {
+    my $self = shift;
+   
+    # n-remove, complex filters, trimmers, and chunked instrument data disqualify bam processing 
+    return 1 if ($self->n_remove_threshold);
+    return 1 if ($self->filter_name && ($self->filter_name ne 'forward-only' && $self->filter_name ne 'reverse-only'));
+    return 1 if ($self->trimmer_name);
+    return 1 if ($self->instrument_data_segment_id);
+   
+    # obviously we need fastq if we don't have a bam 
+    return 1 unless (defined $self->instrument_data->bam_path && -e $self->instrument_data->bam_path);
+
+    # disqualify if the aligner can't take a bam
+    return 1 unless ($self->accepts_bam_input);
+    
+    return 0;
+}
+
+sub collect_inputs_and_run_aligner {
     my $self = shift;
     
     # STEP 6: UNPACK THE ALIGNMENT FILES
     $self->status_message("Unpacking reads...");
-    my @fastqs = $self->_extract_input_fastq_filenames;
-    unless (@fastqs) {
+    
+    my @inputs;
+    
+    if ($self->requires_fastqs_to_align) {
+        @inputs = $self->_extract_input_fastq_filenames;    
+    } else {
+        if ($self->instrument_data->is_paired_end) {
+            push @inputs, $self->instrument_data->bam_path . ":1";
+            push @inputs, $self->instrument_data->bam_path . ":2";
+        } else {
+            push @inputs, $self->instrument_data->bam_path . ":0";
+        }
+    }
+    
+    unless (@inputs) {
         $self->error_message("Failed to gather fastq files: " . $self->error_message);
         die $self->error_message;
     }
-    $self->status_message("Got " . scalar(@fastqs) . " fastq files");
-    if (@fastqs > 3) {
+    $self->status_message("Got " . scalar(@inputs) . " fastq files");
+    if (@inputs > 3) {
         $self->error_message("We don't support aligning with more than 3 inputs (the first 2 are treated as PE and last 1 is treated as SE)");
         die $self->error_message;
     }
@@ -508,7 +558,7 @@ sub extract_fastqs_and_run_aligner {
 
         my @n_removed_fastqs;
 
-        for my $input_pathname (@fastqs) {
+        for my $input_pathname (@inputs) {
             my $n_removed_file = $input_pathname . ".n-removed.fastq";
             my $n_remove_cmd = Genome::Model::Tools::Fastq::RemoveN->create(n_removed_file=>$n_removed_file, n_removal_threshold=>$self->n_remove_threshold, fastq_file=>$input_pathname); 
             unless ($n_remove_cmd->execute) {
@@ -528,16 +578,16 @@ sub extract_fastqs_and_run_aligner {
                 unlink($input_pathname);
             }
         }
-        if (@fastqs == 1 && @n_removed_fastqs == 2) {
+        if (@inputs == 1 && @n_removed_fastqs == 2) {
             $self->status_message("NOTE: An entire side of the read pairs was filtered away after n-removal.  We'll be running in SE mode from here on out.");
         }
 
-        if (@fastqs == 0) {
+        if (@inputs == 0) {
             $self->error_message("All reads were filtered away after n-removal.  Nothing to do here, bailing out.");
             die $self->error_message;
         }
         
-        @fastqs = @n_removed_fastqs;
+        @inputs = @n_removed_fastqs;
     }
 
     # STEP 7: DETERMINE HOW MANY PASSES OF ALIGNMENT ARE REQUIRED
@@ -550,50 +600,64 @@ sub extract_fastqs_and_run_aligner {
         )
     ) {
         my $filter_name = $self->filter_name;
-        if (@fastqs == 3) {
+        if (@inputs == 3) {
             die "cannot handle PE and SE data together with $filter_name only data"
         }
         elsif ($filter_name eq 'forward-only') {
-            @passes = ( [ shift @fastqs ] );
+            @passes = ( [ shift @inputs ] );
         }
         elsif ($filter_name eq 'reverse-only') {
-            @passes = ( [ pop @fastqs ] );
+            @passes = ( [ pop @inputs ] );
         }
         $self->status_message("Running the aligner with the $filter_name filter.");
     }
     elsif ($self->force_fragment) {
         $self->status_message("Running the aligner in force-fragment mode.");
-        @passes = map { [ $_ ] } @fastqs; 
+        @passes = map { [ $_ ] } @inputs; 
     }
-    elsif (@fastqs == 3) {
+    elsif (@inputs == 3) {
         $self->status_message("Running aligner twice: once for PE & once for SE");
-        @passes = ( [ $fastqs[0], $fastqs[1] ], [ $fastqs[2] ] );
+        @passes = ( [ $inputs[0], $inputs[1] ], [ $inputs[2] ] );
     }
-    elsif (@fastqs == 2) {
+    elsif (@inputs == 2) {
         $self->status_message("Running aligner in PE mode");
-        @passes = ( \@fastqs ); 
+        @passes = ( \@inputs ); 
     }
-    elsif (@fastqs == 1) {
+    elsif (@inputs == 1) {
         $self->status_message("Running aligner in SE mode");
-        @passes = ( \@fastqs ); 
+        @passes = ( \@inputs ); 
     }
 
     # STEP 8: RUN THE ALIGNER, APPEND TO all_sequences.sam IN SCRATCH DIRECTORY
-    my $fastq_rd_ct;
-    for my $pass (@passes) {
-        for my $file (@$pass) {
-            my $line = `wc -l $file`;
-            my ($wc_ct) = $line =~ /^(\d+)\s/;
-            unless ($wc_ct) {
-                $self->error_message("Fail to count reads in FASTQ file: $file");
-                return;
+    my $fastq_rd_ct = 0;
+    
+  
+    if ($self->requires_fastqs_to_align) {
+    
+        for my $pass (@passes) {
+            for my $file (@$pass) {
+                my $line = `wc -l $file`;
+                my ($wc_ct) = $line =~ /^(\d+)\s/;
+                unless ($wc_ct) {
+                    $self->error_message("Fail to count reads in FASTQ file: $file");
+                    return;
+                }
+                if ($wc_ct % 4) {
+                    $self->warning_message("run has a line count of $wc_ct, which is not divisible by four!");
+                }
+                $fastq_rd_ct += $wc_ct/4;
             }
-            if ($wc_ct % 4) {
-                $self->warning_message("run has a line count of $wc_ct, which is not divisible by four!");
-            }
-            $fastq_rd_ct += $wc_ct/4;
         }
+    } else {
+        $fastq_rd_ct = $self->determine_input_read_count_from_bam;       
+    }
+    unless ($fastq_rd_ct) {
+        $self->error_message("Failed to get a read count before aligning.");
+        return;
+    }
+        
 
+    for my $pass (@passes) {
         $self->status_message("Aligning @$pass...");
         unless ($self->_run_aligner_chunked(@$pass)) {
             if (@$pass == 2) {
@@ -618,8 +682,8 @@ sub extract_fastqs_and_run_aligner {
 
     $self->_fastq_read_count($fastq_rd_ct);
 
-    for (@fastqs) {
-       if ($_ =~ m/^\/tmp\//) {
+    for (@inputs) {
+       if ($_ =~ m/^\/tmp\/.*\.fastq$/) {
         $self->status_message("Unlinking fastq file to save space now that we've aligned: $_");
        } 
     }
@@ -627,6 +691,49 @@ sub extract_fastqs_and_run_aligner {
     return 1;
 }
 
+sub determine_input_read_count_from_bam {
+    my $self = shift;
+    
+    
+    my $bam_file = $self->instrument_data->bam_path;
+    my $output_file = $self->temp_scratch_directory . "/input_bam.flagstat";
+    
+    my $cmd = Genome::Model::Tools::Sam::Flagstat->create(
+        bam_file       => $bam_file,
+        output_file    => $output_file,
+        include_stderr => 1,
+    );
+    
+    unless ($cmd and $cmd->execute) {
+        $self->error_message('Failed to create or execute flagstat command.');
+        return;
+    }
+    
+    my $stats = Genome::Info::BamFlagstat->get_data($output_file);
+    
+    unless($stats) {
+        $self->status_message('Failed to get flagstat data  on input sequences from '.$output_file);
+        return;
+    }
+    
+    my $total_reads = 0;
+    
+    if ($self->filter_name) {
+        my $filter_name = $self->filter_name;
+        
+        if ($filter_name eq 'forward-only') {
+            $total_reads += $stats->{reads_marked_as_read1};
+        } elsif ($filter_name eq 'reverse-only') {
+            $total_reads += $stats->{reads_marked_as_read2};
+        } else {
+            $self->error_message("don't know how to handle $filter_name when counting reads in the bam.");
+        }
+    } else {
+        $total_reads += $stats->{total_reads};
+    }
+    
+    return $total_reads;
+}
 
 
 
@@ -638,7 +745,8 @@ sub close_out_streamed_bam_file {
     $self->_bam_output_fh(undef);
 
     $self->status_message("Sorting by name to do fixmate...");
-    my $bam_file = $self->temp_staging_directory . "/all_sequences.bam";
+    my $bam_file = $self->temp_scratch_directory . "/raw_all_sequences.bam";
+    my $final_bam_file = $self->temp_staging_directory . "/all_sequences.bam";
     my $samtools = Genome::Model::Tools::Sam->path_for_samtools_version($self->samtools_version);
 
     my $tmp_file = $bam_file.'.sort';
@@ -658,7 +766,7 @@ sub close_out_streamed_bam_file {
     unlink "$tmp_file.fixmate";
     unlink $bam_file;
 
-    move "$tmp_file.fix.bam", $bam_file;
+    move "$tmp_file.fix.bam", $final_bam_file;
     return 1;
 }
 
@@ -1888,26 +1996,11 @@ sub requires_read_group_addition {
     return 1;
 }
 
-=cut
-sub delete {
-    my $self = shift;
-
-    my $allocation = Genome::Disk::Allocation->get(owner_id=>$self->id, owner_class_name=>ref($self));
-    if ($allocation) {
-        my $path = $allocation->absolute_path;
-        unless (rmtree($path)) {
-            $self->error_message("could not rmtree $path");
-            return;
-       }
-
-       $allocation->deallocate; 
-    }
-
-    $self->SUPER::delete(@_);
-}
-=cut
-
 sub supports_streaming_to_bam {
+    0;
+}
+
+sub accepts_bam_input {
     0;
 }
 

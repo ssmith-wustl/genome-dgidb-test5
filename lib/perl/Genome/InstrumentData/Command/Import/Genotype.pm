@@ -312,17 +312,10 @@ sub define_genotype_model {
         }
     }
     $self->status_message("SNPArray defined, now defining/building model.");
-    my $no_build;
-    if($self->generated_instrument_data_id < 0) {
-        $no_build = 1;
-    } else {
-        $no_build = 0;
-    }
     unless($model = Genome::Model::Command::Define::GenotypeMicroarray->execute(     
         processing_profile_name => $processing_profile,
         file                    => $snp_array,
         subject_name            => $self->sample_name,
-        no_build                => $no_build,
         reference               => $self->reference_sequence_build,
         )) {
         $self->error_message("GenotpeMicroarray Model Define failed.");

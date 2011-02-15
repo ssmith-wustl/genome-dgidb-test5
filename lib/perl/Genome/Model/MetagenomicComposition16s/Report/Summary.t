@@ -10,15 +10,12 @@ use Test::More;
 
 use_ok('Genome::Model::MetagenomicComposition16s::Report::Summary') or die;
 
-my $model = Genome::Model::MetagenomicComposition16s::Test->get_mock_model(
-    sequencing_platform => 'sanger',
-);
+my $model = Genome::Model::MetagenomicComposition16s::Test->model_for_sanger;
 ok($model, 'Got mock model') or die;
-my $build = Genome::Model::MetagenomicComposition16s::Test->get_mock_build(
-    model => $model,
-    use_example_directory => 1,
-);
+my $build = Genome::Model::MetagenomicComposition16s::Test->example_build_for_model($model);
 ok($build, 'Got mock build') or die;
+$build->amplicons_attempted(5);
+$build->amplicons_processed(5);
 
 my $generator = Genome::Model::MetagenomicComposition16s::Report::Summary->create(
     build_id => $build->id,

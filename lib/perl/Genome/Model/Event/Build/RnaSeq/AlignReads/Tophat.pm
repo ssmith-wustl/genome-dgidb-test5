@@ -75,14 +75,13 @@ sub execute {
 
     # Find unaligned reads and merge with aligned while calculating basic alignment metrics
     my $tmp_merged_bam_file = Genome::Sys->create_temp_file_path('accepted_hits_all_unsorted.bam');
-    unless (Genome::Model::Tools::BioSamtools::TophatAlignmentStats->execute(
-        aligned_bam_file => $tmp_aligned_bam_file,
-        unaligned_bam_file => $tmp_unaligned_bam_file,
-        merged_bam_file => $tmp_merged_bam_file,
-        alignment_stats_file => $self->build->alignment_stats_file,
-    )) {
-        die('Failed to merge aligned/unaligned and calculate alignment metrics!');
-    }
+    my $alignment_stats_file = $self->build->alignment_stats_file;
+    my $cmd = "gmt5.12.1 bio-samtools tophat-alignment-stats --aligned-bam-file=$tmp_aligned_bam_file --unaligned-bam-file=$tmp_unaligned_bam_file --merged-bam-file=$tmp_merged_bam_file --alignment-stats-file=$alignment_stats_file";
+    Genome::Sys->shellcmd(
+        cmd => $cmd,
+        input_files => [$tmp_aligned_bam_file,$tmp_unaligned_bam_file],
+        output_files => [$tmp_merged_bam_file,$alignment_stats_file],
+    );
     unlink($tmp_unaligned_bam_file);
     unlink($tmp_aligned_bam_file);
 

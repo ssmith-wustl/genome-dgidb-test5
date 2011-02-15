@@ -6,118 +6,133 @@ use warnings;
 use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Filter {
-    is  => 'Command',
+    is  => ['Genome::Model::Tools::DetectVariants2::Base'],
+    doc => 'Tools to filter variations that have been detected',
+    is_abstract => 1,
     has => [
-        variant_file => {
-           type => 'String',
+        input_directory => {
+           is => 'Genome::Model::Tools::DetectVariants2::Result',
            is_input => 1,
-           doc => 'input variant file, means tumor usually',
+           doc => 'The directory to filter',
         },
-        output_file => {
-            type => 'String',
+        output_directory => {
+            is => 'Genome::Model::Tools::DetectVariants2::Result',
             is_input => 1,
             is_output => 1,
-            doc => 'File name in which to write output',
+            doc => 'The directory containing the results of filtering',
         },
-        control_variant_file => {
-            type => 'String',
+        detector_directory => {
+            is => 'String',
+            is_input => 1,
+            is_output => 1,
+            is_optional => 1,
+            doc => 'The directory containing the results of filtering',
+        },
+        params => {
+            is => 'String',
             is_input => 1,
             is_optional => 1,
-            doc => 'control input variant file, means normal usually',
+            doc => 'The param string as passed in from the strategy',
         },
         version => {
-            is_input => 1,
             is => 'Version',
+            is_input => 1,
             is_optional => 1,
             doc => 'The version of the variant filter to use.',
-        },
-        extra_output_file => {
-            type => 'String',
-            is_input => 1,
-            is_optional => 1,
-            doc => 'extra output file ceated by the tools',
-        },
-        skip_if_output_present => {
-            is => 'Boolean',
-            is_optional => 1,
-            is_input => 1,
-            default => 0,
-            doc => 'enable this flag to shortcut through if the output_file is already present. Useful for pipelines.',
-        },
-        lsf_resource => {
-            is_param => 1,
-            is_optional => 1,
-            default_value => 'rusage[mem=4000] select[type==LINUX64] span[hosts=1]',
-        },
-        lsf_queue => {
-            is_param => 1,
-            is_optional => 1,
-            default_value => 'long',
         },
     ]
 };
 
-sub help_brief {
-    "A selection of variant detectors.",
-}
-
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gmt filter-variants ...
+gmt detect-variants2 filter ...
 EOS
 }
 
 sub help_detail {
     return <<EOS 
-Tools to run variant detectors with a common API and output their results in a standard format.
+Tools to run variant detector filters with a common API
 EOS
 }
 
 
-sub create {
+sub execute {
     my $self = shift;
        
-    unless($self->_validate_file) {
+    unless($self->_validate_input) {
         die $self->error_message('Failed to validate file.');
     }
+    unless($self->_create_directories) {
+        die $self->error_message('Failed to create directories.');
+    }
+    unless($self->_filter_variants){
+        die $self->error_message("Failed to run _filter_variants");
+    }
+    unless($self->_promote_staged_data) {
+        die $self->error_message('Failed to promote staged data.');
+    }
     
     return 1;
 }
 
+sub _filter_variants {
+    die "This function should be overloaded by the filter when implemented."
+}
 
-sub _validate_file {
+sub _validate_input {
     my $self = shift;
 
-    my $input_file = $self->variant_file;
-    unless (Genome::Sys->check_for_path_existence($input_file)) {
-        $self->error_message("variant file input $input_file does not exist");
+    my $input_directory = $self->input_directory;
+    unless (Genome::Sys->check_for_path_existence($input_directory)) {
+        $self->error_message("input directory $input_directory does not exist");
         return;
-    }
-
-    my $output_file = $self->output_file;
-    unless(Genome::Sys->validate_file_for_writing($output_file)) {
-        $self->error_message("output file $output_file is not writable.");
-        return;
-    }
-    
-    my $c_input_file = $self->control_variant_file;
-    if ($c_input_file) {
-        unless (Genome::Sys->check_for_path_existence($c_input_file)) {
-            $self->error_message("control variant file input $c_input_file does not exist");
-            return;
-        }
-    }
-
-    my $extra_out_file = $self->extra_output_file;
-    if ($extra_out_file) {
-        unless (Genome::Sys->validate_file_for_writing($extra_out_file)) {
-            $self->error_message("extra output file $extra_out_file is not writable.");
-            return;
-        }
     }
 
     return 1;
 }
+
+sub has_version {
+   
+    ## No Filter version checking is currently done.
+    ## Overloading this in an individual filter module
+    ## will enable version checking for that module.
+
+    return 1;
+}
+
+# This are crazy and ugly, but are just a very temporary solution until we start handing strategies down to detectors and filters
+# For now this method is unnecessary because we are only accounting for one level of filtering. Later this will change.
+sub _get_detector_output_directory {
+    my $self = shift;
+    
+    my $input_directory = $self->input_directory;
+    return $input_directory;
+}
+
+sub _get_detector_version {
+    my $self = shift;
+    my $detector_output_directory = $self->_get_detector_output_directory;
+
+    my @subdirs = split("/", $detector_output_directory);
+    my $detector_subdir = $subdirs[-1];
+
+    my ($variant_type, $detector_name, $detector_version, $detector_params) = split("-", $detector_subdir);
+    
+    return $detector_version;
+}
+
+sub _get_detector_parameters {
+    my $self = shift;
+    my $detector_output_directory = $self->_get_detector_output_directory;
+
+    my @subdirs = split("/", $detector_output_directory);
+    my $detector_subdir = $subdirs[-1];
+
+    my ($variant_type, $detector_name, $detector_version, $detector_params) = split("-", $detector_subdir);
+    
+    return $detector_params;
+}
+
 
 1;

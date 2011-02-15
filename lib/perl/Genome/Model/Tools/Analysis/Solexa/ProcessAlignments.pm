@@ -331,9 +331,9 @@ sub execute {                               # replace with real execution logic.
 									print SCRIPT "$cmd\n";
 									$cmd = "varscan combine-indels $novoalign_file.indels $novoalign_file.indels.combined";
 									print SCRIPT "$cmd\n";
-									$cmd = "perl /gscuser/dkoboldt/src/perl_modules/trunk/VarScan/varscan.pl get-readcounts $novoalign_file.indels.combined $bowtie_file $novoalign_file.indels.combined.b-readcounts";
+									$cmd = "perl /gscuser/dkoboldt/src/perl_modules/trunk/Varscan/varscan.pl get-readcounts $novoalign_file.indels.combined $bowtie_file $novoalign_file.indels.combined.b-readcounts";
 									print SCRIPT "$cmd\n";
-									$cmd = "perl /gscuser/dkoboldt/src/perl_modules/trunk/VarScan/varscan.pl get-readcounts $novoalign_file.indels.combined $novoalign_file $novoalign_file.indels.combined.n-readcounts";
+									$cmd = "perl /gscuser/dkoboldt/src/perl_modules/trunk/Varscan/varscan.pl get-readcounts $novoalign_file.indels.combined $novoalign_file $novoalign_file.indels.combined.n-readcounts";
 									print SCRIPT "$cmd\n";
 									
 									close(SCRIPT);

@@ -219,7 +219,7 @@ sub default_filenames{
         adaptor_output_indel                => 'somaticSniper.output.indel.formatted',
         filter_indel_output                 => 'somaticSniper.output.indel.formatted.filter',
 
-        ## VarScan Output Files ##
+        ## Varscan Output Files ##
         varscan_snp_output                  => 'varScan.output.snp',
 #        varscan_snp_output_filter           => 'varScan.output.snp.filter',
         varscan_indel_output                => 'varScan.output.indel',
@@ -242,7 +242,7 @@ sub default_filenames{
         annotate_output_gatk_indel   => 'annotation.somatic.gatk-indel.transcript',        
         gatk_output_tier1                   => 'gatk.output.indel.formatted.Somatic.tier1',
 
-        ## Combined glfSomatic+VarScan Output files ##
+        ## Combined glfSomatic+Varscan Output files ##
         merged_snp_output                   => 'merged.somatic.snp',            ## Generated from merge-variants of somaticSniper and varScan
         merged_indel_output                 => 'merged.somatic.indel',          ## Generated from merge-variants of somaticSniper and varScan ##
         merged_indel_output_filter          => 'merged.somatic.indel.filter',          ## The homopolymer-filtered list of indels ##

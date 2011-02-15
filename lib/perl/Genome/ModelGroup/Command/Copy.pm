@@ -104,8 +104,7 @@ sub execute {
 
     # Now grab all the instrument data.
     $self->status_message("Preloading instrument data.  This might take a few moments.");
-    my @idas = Genome::Model::InstrumentDataAssignment->get(model_id=>[map {$_->id} $from->models]);
-    my @ids = Genome::InstrumentData->get(id=>[map {$_->instrument_data_id} @idas]);
+    my @ids = map { $_->instrument_data } @from_models;
   
     # Now preload all the subjects. 
     my %subjects;

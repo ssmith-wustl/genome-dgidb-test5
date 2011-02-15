@@ -35,7 +35,7 @@ sub help_detail {
         'on the command line.  If none are given, this tool will document',
         '`genome`, `gmt`, `ur`, and `workflow` by default.  This tool should be run',
         'from within a directory of the namespace to document',
-        '(e.g. /gsc/scripts/opt/genome-stable/lib/perl/Genome/)');
+        '(e.g. /gsc/scripts/opt/genome/current/pipeline/lib/perl/Genome/)');
 }
 
 sub execute {

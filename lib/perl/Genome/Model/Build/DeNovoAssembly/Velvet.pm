@@ -54,8 +54,39 @@ sub ace_file {
     return $_[0]->edit_dir.'/velvet_asm.ace';
 }
 
-#for build diff testing
+sub _additional_metrics {
+    my ($self, $metrics) = @_;
 
+    my $kmer_used = $self->assembler_kmer_used;
+    return if not defined $kmer_used;
+
+    $metrics->{assembler_kmer_used} = $kmer_used;
+
+    return 1;
+}
+
+#< Kmer Used in Assembly >#
+sub assembler_kmer_used {
+    my $self = shift;
+
+    my $velvet_log = $self->data_directory.'/Log';
+    my $fh = eval{ Genome::Sys->open_file_for_reading($velvet_log); };
+    if ( not $fh ) {
+        $self->error_message("Cannot open velvet log file ($velvet_log) to get assembler kmer used.");
+        return;
+    }
+
+    $fh->getline;
+    my $line = $fh->getline;
+    return if not $line;
+
+    $line =~ s/^\s+//;
+    my @tokens = split(/\s+/, $line);
+
+    return $tokens[2];
+}
+
+#for build diff testing
 sub files_ignored_by_diff {
     return qw/ build.xml Log /;
 }

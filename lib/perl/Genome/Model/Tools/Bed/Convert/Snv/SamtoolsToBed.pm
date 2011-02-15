@@ -34,9 +34,10 @@ sub process_source {
     while(my $line = <$input_fh>) {
         my ($chromosome, $position, $reference, $consensus, $quality, @extra) = split("\t", $line);
         
+        my $depth = $extra[2];
         #position => 1-based position of the SNV
         #BED uses 0-based position of and after the event
-        $self->write_bed_line($chromosome, $position - 1, $position, $reference, $consensus, $quality);
+        $self->write_bed_line($chromosome, $position - 1, $position, $reference, $consensus, $quality, $depth);
     }
     
     return 1;

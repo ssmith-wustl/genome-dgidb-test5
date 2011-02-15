@@ -27,8 +27,24 @@ class Genome::Model::GenotypeMicroarray{
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             id_by => 'reference_sequence_build_id',
         },
+        dbsnp_build_id => {
+            is => 'Text',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'dbsnp_build', value_class_name => 'Genome::Model::Build::ImportedVariationList' ],
+            is_many => 0,
+            is_mutable => 1,
+            is_optional => 1,
+            doc => 'dbsnp build that this model is built against'
+        },
+        dbsnp_build => {
+            is => 'Genome::Model::Build::ImportedVariationList',
+            id_by => 'dbsnp_build_id',
+        },
     ],
 };
+
+sub sequencing_platform { return 'genotype file'; }
 
 sub default_model_name {
     my $self = shift;

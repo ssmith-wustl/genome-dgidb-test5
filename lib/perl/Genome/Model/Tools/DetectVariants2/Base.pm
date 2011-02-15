@@ -6,11 +6,11 @@ use warnings;
 use Clone qw/clone/;
 use Data::Compare;
 use Data::Dumper;
+use File::Path;
 use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Base {
-#    is => ['Genome::Command::Base'], FIXME this must be removed for now because when we separate params on the command line with a comma, command base effs everything up
-    is => ['Command'],
+    is => ['Genome::Command::Base'],
     has => [
         reference_sequence_input => {
             is => 'Text',
@@ -38,31 +38,6 @@ class Genome::Model::Tools::DetectVariants2::Base {
             is_input => 1,
             is_output => 1,
         },
-        snv_detection_strategy => {
-            #is => "Genome::Model::Tools::DetectVariants2::Strategy", FIXME this must be removed for now because when we separate params on the command line with a comma, command base effs everything up
-            is => "Text",
-            doc => 'The variant detector strategy to use for finding SNVs',
-        },
-        indel_detection_strategy => {
-            #is => "Genome::Model::Tools::DetectVariants2::Strategy",
-            is => "Text",
-            doc => 'The variant detector strategy to use for finding indels',
-        },
-        sv_detection_strategy => {
-            #is => "Genome::Model::Tools::DetectVariants2::Strategy",
-            is => "Text",
-            doc => 'The variant detector strategy to use for finding SVs',
-        },
-    ],
-    has_constant => [
-        variant_types => {
-            is => 'ARRAY',
-            value => [('snv', 'indel', 'sv')],
-        },
-        #These can't be turned off--just pass no detector name to skip
-        detect_snvs => { value => 1 },
-        detect_indels => { value => 1 },
-        detect_svs => { value => 1 },
     ],
     has_transient_optional => [
         _temp_staging_directory  => {
@@ -77,10 +52,6 @@ class Genome::Model::Tools::DetectVariants2::Base {
     doc => 'This is the base class for all detect variants classes and the variant detector dispatcher',
 };
 
-sub help_brief {
-    "The base class for variant detectors.",
-}
-
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
@@ -94,32 +65,9 @@ This is just an abstract base class for variant detector modules.
 EOS
 }
 
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-
-    for my $variant_type (@{ $self->variant_types }) {
-        my $name_property = $variant_type . '_detection_strategy';
-        my $strategy = $self->$name_property;
-        if($strategy and !ref $strategy) {
-            $self->$name_property(Genome::Model::Tools::DetectVariants2::Strategy->get($strategy));
-        }
-        if ($strategy) {
-            die if $self->$name_property->__errors__; # TODO make this a more descriptive error
-        }
-    }
-
-    return $self;
-}
-
 sub execute {
     
     my $self = shift;
-    if($self->_should_skip_execution) {
-        $self->status_message('All processes skipped.');
-        return 1;
-    }
-    
     unless($self->_verify_inputs) {
         die $self->error_message('Failed to verify inputs.');
     }
@@ -140,19 +88,6 @@ sub execute {
         die $self->error_message('Failed to promote staged data.');
     }
     
-    return 1;
-}
-
-sub _should_skip_execution {
-    my $self = shift;
-    
-    for my $variant_type (@{ $self->variant_types }) {
-        my $name_property = $variant_type . '_detection_strategy';
-        
-        return if defined $self->$name_property;
-    }
-    
-    $self->status_message('No variant detectors specified.');
     return 1;
 }
 
@@ -198,7 +133,15 @@ sub _create_directories {
         $self->status_message("Created directory: $output_directory");
         chmod 02775, $output_directory;
     }
-    
+
+    $self->_create_temp_directories;
+
+    return 1;
+}
+
+sub _create_temp_directories {
+    my $self = shift;
+
     $self->_temp_staging_directory(Genome::Sys->create_temp_directory);
     $self->_temp_scratch_directory(Genome::Sys->create_temp_directory);
     
@@ -229,7 +172,7 @@ sub _generate_standard_files {
     if($self->detect_snvs) {
         my $snv_module = join('::', $module_base, 'Snv', $detector . 'ToBed'); 
         
-        for my $variant_file ($self->_snv_staging_output, $self->_filtered_snv_staging_output) {
+        for my $variant_file ($self->_snv_staging_output) {
             if(Genome::Sys->check_for_path_existence($variant_file)) {
                 $self->status_message("executing $snv_module on file $variant_file");
                 $retval &&= $self->_run_converter($snv_module, $variant_file);
@@ -240,7 +183,7 @@ sub _generate_standard_files {
     if($self->detect_indels) {
         my $snv_module = join('::', $module_base, 'Indel', $detector . 'ToBed'); 
         
-        for my $variant_file ($self->_indel_staging_output, $self->_filtered_indel_staging_output) {
+        for my $variant_file ($self->_indel_staging_output) {
             if(Genome::Sys->check_for_path_existence($variant_file)) {
                 $self->status_message("executing $snv_module on file $variant_file");
                 $retval &&= $self->_run_converter($snv_module, $variant_file);
@@ -273,7 +216,6 @@ sub _run_converter {
 
 sub _promote_staged_data {
     my $self = shift;
-
     my $staging_dir = $self->_temp_staging_directory;
     my $output_dir  = $self->output_directory;
 
@@ -300,3 +242,6 @@ sub _promote_staged_data {
     return $output_dir;
 }
 
+sub has_version {
+    die "This should be overloaded by the detector/filter";
+}

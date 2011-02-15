@@ -132,7 +132,7 @@ That tree has several primary components:
 
 Only the tools system is currently released.  
 
-See B<gmt> for a complete inventory of all tool packages, and for command-line access to
+See B<genome> for a complete inventory of all tool packages, and for command-line access to
 those tools.
 
 =head1 AUTHORS
@@ -151,6 +151,7 @@ those tools.
  C.J. Carey
  Lynn Carmichael
  Ken Chen
+ Lei Chen
  Eric Clark
  Kevin Crouse
  Indraniel Das
@@ -217,7 +218,7 @@ those tools.
 
 =head1 LICENSE
 
-Copyright (C) 2007-2010 Washington University in St. Louis.
+Copyright (C) 2007-2011 Washington University in St. Louis.
 
 It is released under the Lesser GNU Public License (LGPL) version 3.  See the 
 associated LICENSE file in this distribution.
@@ -228,3 +229,4 @@ For defects with any software in the genome namespace,
 contact genome-dev ~at~ genome.wustl.edu.
 
 =cut
+

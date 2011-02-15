@@ -139,7 +139,7 @@ sub is_compatible_with_reference_sequence_build {
     my ($self, $rsb) = @_;
     return if !defined $self->status || $self->status ne "Succeeded";
 
-    return $rsb->id == $self->reference_sequence_id if defined $self->reference_sequence_id;
+    return $rsb->is_compatible_with($self->reference_sequence) if defined $self->reference_sequence;
 
     my $version = $self->version;
     $version =~ s/^[^_]*_([0-9]+).*/$1/;

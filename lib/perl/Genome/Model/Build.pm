@@ -165,10 +165,6 @@ sub create {
     # model
     return unless ($class->_validate_model_id($model_id));
 
-    #unless ($bx->value_for('subclass_name')) {
-    #    $bx = $bx->add_filter(subclass_name => $class);
-    #}
-
     # create
     my $self = $class->SUPER::create($bx);
     return unless $self;
@@ -206,54 +202,6 @@ sub create {
         $self->delete;
         return;
     }
-
-    my $data_directory_undo =  sub {
-        if ($self->data_directory && -e $self->data_directory) {
-            if (rmtree($self->data_directory, { error => \my $remove_errors })) {
-                $self->status_message("Removed build's data directory (" . $self->data_directory . ").");
-            }
-            else {
-                if (@$remove_errors) {
-                    my $error_summary;
-                    for my $error (@$remove_errors) {
-                        my ($file, $error_message) = %$error;
-                        if ($file eq '') {
-                            $error_summary .= "General error removing build directory: $error_message\n";
-                        }
-                        else {
-                            $error_summary .= "Error removing file $file : $error_message\n";
-                        }
-                    }
-                    $self->error_message($error_summary);
-                }
-
-                confess "Failed to remove build directory tree at " . $self->data_directory . ", cannot remove build!";
-            }
-        }
-    };
-    my $data_directory_change = UR::Context::Transaction->log_change($self, 'UR::Value', $self->data_directory, 'external_change', $data_directory_undo);
-    if ($data_directory_change) {
-        $self->status_message("Recorded creation of data directory (" . $self->data_directory . ").");
-    }
-    else {
-        die $self->error_message("Failed to record creation of data directory (" . $self->data_directory . ").");
-    }
-
-    my $disk_allocation = $self->disk_allocation;
-    if ($disk_allocation) {
-        my $allocation_undo = sub {
-            unless ($disk_allocation->deallocate) {
-                $self->warning_message('Failed to deallocate disk space.');
-            }
-        };
-        my $allocation_change = UR::Context::Transaction->log_change($self, 'UR::Value', $self->disk_allocation->id, 'external_change', $allocation_undo);
-        if ($allocation_change) {
-            $self->status_message("Recorded creation of disk allocation (" . $self->disk_allocation->id . ")");
-        }
-        else {
-            die $self->error_message("Failed to record creation of disk allocation (" . $self->disk_allocation->id . ")");
-        }
-    }   
 
     return $self;
 }
@@ -365,20 +313,24 @@ sub instrument_data_count {
     return scalar( $self->instrument_data_assignments );
 }
 
+# why is this not a defined relationship above? -ss
 sub events {
     my $self = shift;
     my @events = Genome::Model::Event->get(
         model_id => $self->model_id,
         build_id => $self->build_id,
+        @_,
     );
     return @events;
 }
 
+# why is this not a defined relationship above? -ss
 sub build_events {
     my $self = shift;
     my @build_events = Genome::Model::Event::Build->get(
         model_id => $self->model_id,
         build_id => $self->build_id,
+        @_
     );
     return @build_events;
 }
@@ -422,6 +374,39 @@ sub newest_workflow_instance {
     }
 }
 
+sub cpu_slot_hours {
+    my $self = shift;
+    # TODO: get with Matt and replace with workflow interrogation
+    my @events = $self->events(@_);
+    my $s = 0;
+    for my $event (@events) {
+        # the master event has an elapsed time for the whole process: don't double count
+        next if (ref($event) eq 'Genome::Model::Event::Build');
+
+        # this would be a method on event, but we won't keep it that long
+        # it's just good enough to do the calc for the grant 2011-01-30 -ss
+        my $cores;
+        if (ref($event) =~ /deduplicate/i) {
+            $cores = 4;
+        }
+        elsif (ref($event) =~ /AlignReads/) {
+            $cores = 4;
+        }
+        else {
+            $cores = 1;
+        }
+        my $e = UR::Time->datetime_to_time($event->date_completed)
+                - 
+                UR::Time->datetime_to_time($event->date_scheduled);
+        if ($e < 0) {
+            warn "event " . $event->__display_name__ . " has negative elapsed time!";
+            next;
+        }
+        $s += ($e * $cores);
+    }
+    return $s/(60*60);
+}
+
 sub calculate_estimated_kb_usage {
     my $self = shift;
 
@@ -444,6 +429,7 @@ sub resolve_data_directory {
     my $model = $self->model;
     my $build_data_directory;
     my $model_data_directory = $model->data_directory;
+    # TODO This check is site specific... what does it matter if the model path doesn't follow this pattern?
     my $model_path_is_abnormal = defined($model_data_directory) && $model_data_directory !~ /\/gscmnt\/.*\/info\/(?:medseq\/)?.*/;
 
     if($model->genome_model_id < 0 && $model_path_is_abnormal)
@@ -476,24 +462,30 @@ sub resolve_data_directory {
             die $self->error_message('Failed to resolve a disk group for a new build!');
         }
     
-        my $disk_allocation = Genome::Disk::Allocation->allocate(disk_group_name => $disk_group_name,
-                                                                 allocation_path => $allocation_path,
-                                                                 kilobytes_requested => $kb_requested,
-                                                                 owner_class_name => $self->class,
-                                                                 owner_id => $self->id);
-        unless ($disk_allocation) {
-            die $self->error_message('Failed to get disk allocation');
-        }
+        my $class = $self->class;
+        my $id = $self->id;
+        my $disk_allocation = Genome::Disk::Allocation->create(
+            disk_group_name => $disk_group_name,
+            allocation_path => $allocation_path,
+            kilobytes_requested => $kb_requested,
+            owner_class_name => $class,
+            owner_id => $id,
+        );
+        Carp::confess "Failed to create allocation for build!" unless $disk_allocation;
     
         $build_data_directory = $disk_allocation->absolute_path;
         Genome::Sys->validate_existing_directory($build_data_directory);
-    
+
         # TODO: we should stop having model directories and making build symlinks!!!
-        my $build_symlink = $model_data_directory . '/build' . $self->build_id;
-        unlink $build_symlink if -e $build_symlink;
-        unless (Genome::Sys->create_symlink($build_data_directory,$build_symlink)) {
-            $self->error_message("Failed to make symlink \"$build_symlink\" with target \"$build_data_directory\"");
-            die $self->error_message;
+        if ( -w $model_data_directory ) {
+            my $build_symlink = $model_data_directory . '/build' . $self->build_id;
+            unlink $build_symlink if -e $build_symlink;
+            unless (Genome::Sys->create_symlink($build_data_directory,$build_symlink)) {
+                $self->error_message("Failed to make symlink \"$build_symlink\" with target \"$build_data_directory\"");
+                die $self->error_message;
+            }
+        } else {
+            $self->warning_message("Not creating symlink to build data directory in model data directory; model data directory is not writable.");
         }
     }
 
@@ -502,9 +494,7 @@ sub resolve_data_directory {
 
 sub reallocate {
     my $self = shift;
-
-    my $disk_allocation = $self->disk_allocation
-        or return 1; # ok - may not have an allocation
+    my $disk_allocation = $self->disk_allocation or return 1; # ok - may not have an allocation
 
     unless ($disk_allocation->reallocate) {
         $self->warning_message('Failed to reallocate disk space.');
@@ -1455,7 +1445,6 @@ sub add_from_build { # rename "add an underlying build" or something...
 sub delete {
     my $self = shift;
     my %params = @_;
-    my $keep_build_directory = $params{keep_build_directory};
 
     # Abandon events
     $self->status_message("Abandoning events associated with build");
@@ -1468,7 +1457,7 @@ sub delete {
     
     # Delete all associated objects
     $self->status_message("Deleting other objects associated with build");
-    my @objects = $self->get_all_objects;
+    my @objects = $self->get_all_objects; # TODO this method name should be changed
     for my $object (@objects) {
         $object->delete;
     }
@@ -1491,27 +1480,13 @@ sub delete {
         $idas->first_build_id($next_build_id);
     }
 
-    # Remove build directory unless told not to
-    # TODO If no-commit is on, the build directory should not be removed
-    if ($self->data_directory && -e $self->data_directory && !$keep_build_directory) {
-        $self->status_message("Removing build data directory at " . $self->data_directory);
-        my $rv = Genome::Sys->remove_directory_tree($self->data_directory);
-        confess "Failed to remove build directory at " . $self->data_directory unless defined $rv and $rv;
-    }
-    else {
-        $self->status_message("Not removing build data directory at " . $self->data_directory);
-    }
-
-    # Deallocate build directory if it was removed and an allocation is found
+    # Deallocate build directory, which will also remove it (unless no commit is on)
     my $disk_allocation = $self->disk_allocation;
-    if ($disk_allocation && !$keep_build_directory) {
+    if ($disk_allocation) {
         $self->status_message("Deallocating build directory");
         unless ($disk_allocation->deallocate) {
-             $self->warning_message('Failed to deallocate disk space.');
+            $self->warning_message('Failed to deallocate disk space.');
         }
-    }
-    else {
-        $self->status_message("Not deallocating build directory since it was not removed or no allocation was found");
     }
     
     # FIXME Don't know if this should go here, but then we would have to call success and abandon through the model

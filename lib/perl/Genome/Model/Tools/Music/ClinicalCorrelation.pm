@@ -22,15 +22,19 @@ Version 1.01
 #our $VERSION = '1.01';
 
 class Genome::Model::Tools::Music::ClinicalCorrelation {
-    is => 'Command',                       
+    is => 'Genome::Command::Base',                       
     has => [ 
     output_file => {
         is => 'Text',
+        is_output => 1,
+        file_format => 'text',
         doc => "Results of clinical-correlation tool",
     },
     maf_file => { 
         is => 'Text',
         doc => "List of mutations in MAF format",
+        is_input => 1,
+        file_format => 'maf',
         is_optional => 1,
     },
     matrix_file => {
@@ -141,6 +145,9 @@ sub execute {
         my %samples;
         my $samples = \%samples;
         my $clin_fh = new IO::File $clinical_data_file,"r";
+        unless ($clin_fh) {
+            die "failed to open $clinical_data_file for reading: $!";
+        }
         my $header = $clin_fh->getline;
         while (my $line = $clin_fh->getline) {
             my ($sample) = split /\t/,$line;
@@ -161,7 +168,7 @@ sub execute {
 
     }
 
-    my $R_cmd = "R --slave --args < clinical_correlation.R $clinical_data_file $matrix_file $output_file $test_method";
+    my $R_cmd = "R --slave --args < " . __FILE__ . ".R $clinical_data_file $matrix_file $output_file $test_method";
     WIFEXITED(system $R_cmd) or croak "Couldn't run: $R_cmd ($?)";
 
     return(1);
@@ -222,9 +229,12 @@ sub create_sample_gene_matrix_gene {
     @all_genes = sort keys %all_genes;
 
     #write the input matrix for R code to a file #FIXME HARD CODE FILE NAME, OR INPUT OPTION
-    my $matrix_file = $clinical_data_file . ".correlation_matrix";
+    #my $matrix_file = $clinical_data_file . ".correlation_matrix";
+    my $matrix_file = Genome::Sys->create_temp_file_path();
     my $matrix_fh = new IO::File $matrix_file,"w";
-
+    unless ($matrix_fh) {
+        die "Failed to create matrix file $matrix_file!: $!";
+    }
     #print input matrix file header
     my $header = join("\t","Sample",@all_genes);
     $matrix_fh->print("$header\n");

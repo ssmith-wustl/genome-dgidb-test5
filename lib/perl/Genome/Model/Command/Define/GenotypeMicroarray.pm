@@ -9,12 +9,13 @@ use warnings;
 
 use Genome;
 
+use Data::Dumper 'Dumper';
+
 class Genome::Model::Command::Define::GenotypeMicroarray {
     is => [
         'Genome::Model::Command::Define',
         'Genome::Command::Base',
-        ],
-
+    ],
     has => [
         file => {
             is => 'Path',
@@ -26,11 +27,6 @@ class Genome::Model::Command::Define::GenotypeMicroarray {
             is_input => 1,
             doc => 'reference sequence build for this model',
         },
-        no_build => {
-            is => 'Boolean',
-            is_optional => 1,
-        },
-
     ],
 };
 
@@ -66,70 +62,116 @@ sub type_specific_parameters_for_create {
 }
 
 sub execute {
+    # This command takes a snp array (ne gold), creates a genotype microarray model and build
+    #  and copies the file to the build. This happens because microarray data was not tracked 
+    #  as instrument data. This is being changed. The LIMS/AIMS PSE bridge is now handling 
+    #  genotype microarray data. Consult rlong or tabbott before significantly 
     my $self = shift;
-    my $file = $self->file;
 
-    # This only needs to be done b/c we're not tracking microarray data as instrument data.
-    # Once it _is_ tracked as instrument data, the normal model/build process would occur.
-
-    $DB::single = 1;
-
-    unless ($file and -s $file) {
-        $self->error_message("Provided genotype file: $file is not valid.");
-        return;
-    }
-    
-    #step to validate input genotype snp file is 9-column like followings:
-    #1       554484  554484  C       C       ref     ref     ref     ref
-    my $head    = `head -1 $file`;
-    my @columns = split /\s+/, $head;
-    
-    unless (@columns and @columns == 9) {
-        $self->error_message("Genotype file: $file is not 9-column format");
-        return;
-    }
-    
+    my $file = $self->_validate_snp_array_file;
+    return if not $file;
+   
     # let the super class make the model
     my $super = $self->super_can('_execute_body');
-    $super->($self,@_);
-    unless ($self->result_model_id) {
+    $super->($self);
+    unless ( $self->result_model_id ) {
         $self->error_message("Failed to define a new model: " . $self->error_message);
         return;
     }
 
     my $model = Genome::Model->get($self->result_model_id);
     unless ($model) {
-        $self->error_message("Failed to find new model : " . $self->result_model_id);
+        $self->error_message("Failed to find new model: " . $self->result_model_id);
         return;
     }
 
-    # TODO: we should flag model types which do not do multiple builds and which should auto build when defined.
-    # For now this is just handled in the command which does the model definition.
+    my $build = $self->_create_and_run_build($model);
+    return if not $build;
 
-    unless ($self->no_build) {
+    my $copy = $self->_copy_snp_array_file_to_build($file, $build);
+    return if not $copy;
 
-        $self->status_message("building...\n");
-        my $cmd = Genome::Model::Build::Command::Start->execute(models => [$model]);
-        unless ($cmd) {
-            $self->error_message("Failed to run a build on model " . $model->id . ": " . Genome::Model::Build::Command::Start->error_message);
-            return;
-        }
+    return 1;
+}
 
-        my ($build) = $cmd->builds;
-        unless ($build) {
-            $self->error_message("Failed to generate a new build for model " . $model->id . ": " . $cmd->error_message);
-            return;
-        }
+sub _validate_snp_array_file {
+    my $self = shift;
 
-        $self->status_message("Copying genotype data to " . $build->formatted_genotype_file_path . "...");
-        Genome::Sys->copy_file(
-            $file,
-            $build->formatted_genotype_file_path
-        );
-
+    my $file = $self->file;
+    $self->status_message("Validate SNP file: $file");
+    if ( not $file or not -s $file ) {
+        $self->error_message("Provided genotype file: $file is not valid.");
+        return;
     }
 
-    return $self;
+    #step to validate input genotype snp file is 9-column like followings:
+    #1       554484  554484  C       C       ref     ref     ref     ref
+    my $head    = `head -1 $file`;
+    my @columns = split /\s+/, $head;
+    if ( not @columns or @columns != 9 ) {
+        $self->error_message("Genotype file: $file is not 9-column format");
+        return;
+    }
+
+    $self->status_message("Validate SNP file...OK");
+
+    return $file;
+}
+
+sub _create_and_run_build {
+    my ($self, $model) = @_;
+
+    $self->status_message("Run build");
+    my $build = Genome::Model::Build::GenotypeMicroarray->create(
+        model => $model,
+    );
+    if ( not $build ) {
+        $self->error_message('Failed to create build for model '.$model->__display_name__);
+        return;
+    }
+
+    my $start = $build->start(server_dispatch => 'inline', job_dispatch => 'inline');
+    if ( not $start ) {
+        $self->error_message('Failed to start build '.$build->__display_name__);
+        return;
+    }
+    $self->status_message("Run build...OK");
+
+    return $build;
+}
+
+sub _copy_snp_array_file_to_build {
+    my ($self, $file, $build) = @_;
+
+    my $formatted_genotype_file_path = $build->formatted_genotype_file_path;
+    $self->status_message("Copy $file to $formatted_genotype_file_path");
+
+    my $copy = Genome::Sys->copy_file($file, $formatted_genotype_file_path);
+    if ( not $copy ) {
+        $self->error_message("Copy failed");
+        return;
+    }
+
+    if ( not -s $formatted_genotype_file_path ) {
+        $self->error_message("Copy succeeded, but file does not exist: $formatted_genotype_file_path");
+        return;
+    }
+
+    $self->status_message('Copy...OK');
+
+    my $gold_snp_bed = $build->snvs_bed;
+    my $cmd = Genome::Model::GenotypeMicroarray::Command::CreateGoldSnpBed->create(
+        input_file => $file,
+        output_file => $gold_snp_bed,
+        reference => $self->reference,
+    );
+    my @errs = $cmd->__errors__;
+    if (!$cmd->execute) {
+        $self->error_message("Failed to create Gold SNP bed file at $gold_snp_bed");
+        return;
+    }
+
+    return 1;
 }
 
 1;

@@ -18,7 +18,7 @@ use above 'Genome';
 #}
 
 #Parsing tests
-my $detector_string = '(samtools && var-scan) || maq';
+my $detector_string = '(samtools && varscan) || maq';
 
 my $dispatcher = 'Genome::Model::Tools::DetectVariants::Dispatcher';
 
@@ -43,21 +43,21 @@ my $leaf_case = sub {
 
 my $parsed_string = $dispatcher->walk_tree($tree, $branch_case, $leaf_case);
 
-my $expected_parsed_string = '((samtools (call #0) intersect var-scan (call #1)) union maq (call #2))';
+my $expected_parsed_string = '((samtools (call #0) intersect varscan (call #1)) union maq (call #2))';
 is($parsed_string, $expected_parsed_string, 'tree-walker returns expected result');
 
-my $varscan_class = $dispatcher->detector_class('var-scan');
-is($varscan_class, 'Genome::Model::Tools::DetectVariants::VarScan', 'resolved detector class for var-scan');
-ok($dispatcher->is_valid_detector($varscan_class), 'determined that var-scan is in fact a detector');
+my $varscan_class = $dispatcher->detector_class('varscan');
+is($varscan_class, 'Genome::Model::Tools::DetectVariants::Varscan', 'resolved detector class for varscan');
+ok($dispatcher->is_valid_detector($varscan_class), 'determined that varscan is in fact a detector');
 
 my $nonexistent_class = $dispatcher->detector_class('non-existent');
 ok((not $dispatcher->is_valid_detector($nonexistent_class)), 'determined that non-existent is not a detector');
 
-my $somatic_detector_string = '(somatic sniper || somatic var-scan)';
+my $somatic_detector_string = '(somatic sniper || somatic varscan)';
 my $somatic_tree = $dispatcher->parse_detector_string($somatic_detector_string);
 ok($somatic_tree, 'able to parse detector_string');
 
 my $somatic_parsed_string = $dispatcher->walk_tree($somatic_tree, $branch_case, $leaf_case);
 
-my $expected_somatic_parsed_string = '(somatic sniper (call #0) union somatic var-scan (call #1))';
+my $expected_somatic_parsed_string = '(somatic sniper (call #0) union somatic varscan (call #1))';
 is($somatic_parsed_string, $expected_somatic_parsed_string, 'tree-walker returns expected somatic result');

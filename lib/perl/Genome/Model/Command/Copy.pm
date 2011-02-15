@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Data::Dumper;
 
 require Genome::Sys;
 
@@ -188,6 +189,20 @@ sub execute {
 # read in parameters passed in the form of key=value
 #
 
+sub _check_dependent_properties {
+    my ($self, $class, %overrides) = @_;
+    my %dependency_problems;
+    for my $prop (keys %overrides) {
+        my @deps = $class->dependent_properties($prop);
+        my @unset = grep { !exists $overrides{$_} } @deps;
+        if (@unset) {
+            $dependency_problems{$prop} = \@unset;
+            $self->warning_message("Changing property $prop affects the following properties which were not updated:\n\t" . join("\n\t", @unset));
+        }
+    }
+    
+}
+
 sub _parse_overrides {
     my $self = shift;
     my @bare_args = $self->model_overrides;
@@ -203,7 +218,7 @@ sub _parse_overrides {
         }
         
     }
-    
+
     return %overrides;
 }
 

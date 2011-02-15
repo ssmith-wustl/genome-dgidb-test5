@@ -32,11 +32,10 @@ sub process_source {
     my $input_fh = $self->_input_fh;
     
     while(my $line = <$input_fh>) {
-        my ($chromosome, $position, $reference, $genotype, $score, @extra) = split("\t", $line);
-        
+        my ($chromosome, $position, $reference, $genotype, $somatic_score, $snv_qual, $tumor_rms_map_qual, $tumor_depth, $normal_depth) = split("\t", $line);
         #position => 1-based position of the SNV
         #BED uses 0-based position of and after the event
-        $self->write_bed_line($chromosome, $position - 1, $position, $reference, $genotype, $score);
+        $self->write_bed_line($chromosome, $position - 1, $position, $reference, $genotype, $somatic_score, $tumor_depth);
     }
     
     return 1;

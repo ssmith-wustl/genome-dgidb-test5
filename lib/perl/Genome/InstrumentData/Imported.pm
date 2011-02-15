@@ -29,7 +29,8 @@ class Genome::InstrumentData::Imported {
         description          => { is => 'VARCHAR2', len => 512, is_optional => 1 },
         read_count           => { is => 'NUMBER', len => 20, is_optional => 1 },
         base_count           => { is => 'NUMBER', len => 20, is_optional => 1 },
-        disk_allocations     => { is => 'Genome::Disk::Allocation', reverse_as => 'owner', where => [ allocation_path => { operator => 'like', value => '%imported%' }  ], is_optional => 1, is_many => 1 },
+        disk_allocations     => { is => 'Genome::Disk::Allocation', reverse_as => 'owner', is_optional => 1, is_many => 1 },
+        #disk_allocations     => { is => 'Genome::Disk::Allocation', reverse_as => 'owner', where => [ allocation_path => { operator => 'like', value => '%imported%' }  ], is_optional => 1, is_many => 1 },
         fragment_count       => { is => 'NUMBER', len => 20, is_optional => 1 },
         fwd_read_length      => { is => 'NUMBER', len => 20, is_optional => 1 },
         is_paired_end        => { is => 'NUMBER', len => 1, is_optional => 1 },
@@ -127,6 +128,13 @@ sub get_disk_allocation {
 sub calculate_alignment_estimated_kb_usage {
     my $self = shift;
     my $answer;
+
+    # Check for an existing allocation for this instrument data, which would've been created by the importer
+    my $allocation = Genome::Disk::Allocation->get(owner_class_name => $self->class, owner_id => $self->id);
+    if ($allocation) {
+        return int(($allocation->kilobytes_requested/1000) + 100);
+    }
+
     if($self->original_data_path !~ /\,/ ) {
         if (-d $self->original_data_path) {
             my $source_size = Genome::Sys->directory_size_recursive($self->original_data_path);
@@ -177,6 +185,13 @@ sub create {
 
 sub delete {
     my $self = shift;
+
+    my @alignment_results = Genome::InstrumentData::AlignmentResult->get(instrument_data_id => $self->id);
+    if (@alignment_results) {
+        $self->error_message("Cannot remove instrument data (" . $self->id . ") because it has " . scalar @alignment_results . " alignment result(s).");
+        return;
+    }
+
     my @allocations = Genome::Disk::Allocation->get(owner => $self);
     if (@allocations) {
         UR::Context->create_subscription(
@@ -185,11 +200,6 @@ sub delete {
                 for my $allocation (@allocations) {
                     my $id = $allocation->id;
                     print 'Now deleting allocation with owner_id = ' . $id . "\n";
-                    my $path = $allocation->absolute_path;
-                    unless (rmtree($path)) {
-                        print STDERR "ERROR: could not rmtree $path\n";
-                        return;
-                    }
                     $allocation->deallocate; 
                     print "Deletion complete.\n";
                 }
@@ -291,7 +301,7 @@ sub lane {
 }
 
 sub run_start_date_formatted {
-    UR::Time->now();
+    return Genome::Model::Tools::Sam->time();
 }
 
 sub seq_id {
@@ -393,11 +403,9 @@ sub get_segments {
     return map {{segment_type=>'read_group', segment_id=>$_}} @read_groups;
 }
 
-# Microarry stuff eventually need to subclass
-sub genotype_microarry_file_for_reference_name {
-    my ($self, $reference_name) = @_;
-
-    Carp::confess('No reference name given to get genotype microarry file') if not $reference_name;
+# Microarray stuff eventually need to subclass
+sub genotype_microarray_raw_file {
+    my $self = shift;
 
     my $disk_allocation = $self->disk_allocations;
     return if not $disk_allocation;
@@ -407,17 +415,34 @@ sub genotype_microarry_file_for_reference_name {
     my $sample_name = $self->sample_name;
     Carp::confess('No sample name for instrument data: '.$self->id) if not $sample_name;
 
-    return $absolute_path.'/'.$sample_name.'.'.$reference_name.'.genotype';
+    return $absolute_path.'/'.$sample_name.'.raw.genotype';
 }
 
-sub genotype_microarray_file_for_human_build_37 {
-    my $self = shift;
-    return $self->genotype_microarry_file_for_reference_name('human-build37');
+sub genotype_microarray_file_for_subject_and_version {
+    my ($self, $subject_name, $version) = @_;
+
+    Carp::confess('No reference name given to get genotype microarray file') if not $subject_name;
+    Carp::confess('No version given to get genotype microarray file') if not defined $version;
+
+    my $disk_allocation = $self->disk_allocations;
+    return if not $disk_allocation;
+
+    my $absolute_path = $disk_allocation->absolute_path;
+    Carp::confess('No absolute path for instrument data ('.$self->id.') disk allocation: '.$disk_allocation->id) if not $absolute_path;
+    my $sample_name = $self->sample_name;
+    Carp::confess('No sample name for instrument data: '.$self->id) if not $sample_name;
+
+    return $absolute_path.'/'.$sample_name.'.'.$subject_name.'-'.$version.'.genotype';
 }
 
-sub genotype_microarray_file_for_human_build_36 {
+sub genotype_microarray_file_for_human_version_37 {
     my $self = shift;
-    return $self->genotype_microarry_file_for_reference_name('human-build36');
+    return $self->genotype_microarray_file_for_subject_and_version('human', '37');
+}
+
+sub genotype_microarray_file_for_human_version_36 {
+    my $self = shift;
+    return $self->genotype_microarray_file_for_subject_and_version('human', '36');
 }
 
 1;

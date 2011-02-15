@@ -17,6 +17,10 @@ class Genome::Command::Base {
             is_optional => 1,
             # 0 = prevent verify, 1 = force verify, undef = allow auto verify
         },
+        file_format => {
+            is => 'Text',
+            is_optional => 1,
+        }
     ],
 };
 
@@ -238,7 +242,7 @@ sub _resolve_param_value_via_related_class_method {
                     $ALTERNATE_FROM_CLASS{$via_class}{$from_class} = [$method];
                 }
                 elsif (!$response) {
-                    $self->status_messag("Exiting...");
+                    $self->status_message("Exiting...");
                 }
             }
             else {
@@ -281,7 +285,7 @@ sub _resolve_param_value_from_text_by_name_or_id {
         die "Failed to determine id property names for class $param_class.";
     }
 
-    my $first_type = $class_meta->property_meta_for_name($id_property_names[0])->data_type;
+    my $first_type = $class_meta->property_meta_for_name($id_property_names[0])->data_type || '';
     if (@id_property_names > 1 or $first_type eq 'Text' or $str =~ /^-?\d+$/) { # try to get by ID
         @results = $param_class->get($str);
     }
