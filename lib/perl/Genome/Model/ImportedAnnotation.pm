@@ -84,5 +84,20 @@ sub notify_input_build_success {
     return 1;
 }
 
+sub annotation_build_for_reference {
+    my ($class, $reference) = @_;
+    my $build;
+
+    #TODO: Remove this hardcoded crap and come up with an intelligent heuristic
+
+    if($reference->name eq 'NCBI-human-build36'){
+        $build = Genome::Model::Build::ImportedAnnotation->get(102550711);
+    }
+    elsif($reference->name eq 'GRCh37-lite-build37' || $reference->name eq 'g1k-human-build37'){
+        $build = Genome::Model::Build::ImportedAnnotation->get(105407461);
+    }
+    return $build;
+}
+
 1;
 

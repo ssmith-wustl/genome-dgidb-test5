@@ -5,6 +5,7 @@ use warnings;
 
 use Genome;
 
+require Carp;
 use Data::Dumper 'Dumper';
 use Genome::Model::Tools::Fasta::ScreenVector; # not sure why gotta use, buttest fails
 use Genome::Model::Tools::Fasta::Trim::Trim3; # not sure why gotta use, buttest fails
@@ -16,11 +17,14 @@ class Genome::Model::Event::Build::MetagenomicComposition16s::Trim::Finishing {
 sub execute {
     my $self = shift;
 
-    my @amplicon_sets = $self->build->amplicon_sets
-        or return;
+    my @amplicon_set_names = $self->build->amplicon_set_names;
+    Carp::confess('No amplicon set names for '.$self->build->description) if not @amplicon_set_names; # bad
 
     my %trimmer_params = $self->processing_profile->trimmer_params_as_hash; # TODO separate out params - screen only has project name
-    for my $amplicon_set ( @amplicon_sets ) {
+    for my $name ( @amplicon_set_names ) {
+        my $amplicon_set = $self->build->amplicon_set_for_name($name);
+        next if not $amplicon_set; # ok
+
         while ( my $amplicon = $amplicon_set->next_amplicon ) {
             my $fasta_file = $self->build->reads_fasta_file_for_amplicon($amplicon);
             next unless -s $fasta_file; # ok

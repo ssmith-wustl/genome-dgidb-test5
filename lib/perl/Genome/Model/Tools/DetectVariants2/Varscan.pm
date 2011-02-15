@@ -8,7 +8,7 @@ use FileHandle;
 use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Varscan {
-    is => ['Genome::Model::Tools::DetectVariants', 'Genome::Model::Tools::DetectVariants2::Base'],
+    is => ['Genome::Model::Tools::DetectVariants2::Detector'],
     has => [
         reference_sequence_input => {
             default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa",
@@ -70,32 +70,29 @@ sub _detect_variants {
 
     ## Get required parameters ##
     my $output_snp = $self->_snv_staging_output;
-    my $output_snp_filtered = $self->_filtered_snv_staging_output;
     my $output_indel = $self->_indel_staging_output;
-    my $output_indel_filtered = $self->_filtered_indel_staging_output;
 
     ## Get Varscan parameters ##
     my $snv_params = $self->snv_params || "";
     my $indel_params = $self->indel_params || "";
     my $result;
     if ( ($self->detect_snvs && $self->detect_indels) && ($snv_params eq $indel_params) ) {
-        $result = $self->_run_varscan($output_snp, $output_snp_filtered, $output_indel, $output_indel_filtered, $snv_params);
+        $result = $self->_run_varscan($output_snp, $output_indel, $snv_params);
     } else {
         # Run twice, since we have different parameters. Detect snps and throw away indels, then detect indels and throw away snps
         if ($self->detect_snvs && $self->detect_indels) {
             $self->status_message("Snp and indel params are different. Executing Varscan twice: once each for snps and indels with their respective parameters");
         }
         my ($temp_fh, $temp_name) = Genome::Sys->create_temp_file();
-        my ($filtered_temp_fh, $filtered_temp_name) = Genome::Sys->create_filtered_temp_file();
 
         if ($self->detect_snvs) {
-            $result = $self->_run_varscan($output_snp, $output_snp_filtered, $temp_name, $filtered_temp_name, $snv_params);
+            $result = $self->_run_varscan($output_snp, $temp_name, $snv_params);
         }
         if ($self->detect_indels) {
             if($self->detect_snvs and not $result) {
                 $self->status_message('Varscan did not report success for snv detection. Skipping indel detection.')
             } else {
-                $result = $self->_run_varscan($temp_name, $filtered_temp_name, $output_indel, $output_indel_filtered, $indel_params);
+                $result = $self->_run_varscan($temp_name, $output_indel, $indel_params);
             }
         }
     }
@@ -105,7 +102,7 @@ sub _detect_variants {
 
 sub _run_varscan {
     my $self = shift;
-    my ($output_snp, $output_snp_filtered, $output_indel, $output_indel_filtered, $varscan_params) = @_;
+    my ($output_snp, $output_indel, $varscan_params) = @_;
 
     my $reference = $self->reference_sequence_input;
     my $bam_file = $self->aligned_reads_input;
@@ -114,9 +111,7 @@ sub _run_varscan {
         bam_file => $bam_file,
         reference => $reference,
         output_snp => $output_snp,
-        output_snp_filtered => $output_snp_filtered,
         output_indel => $output_indel,
-        output_indel_filtered => $output_indel_filtered,
         varscan_params => $varscan_params,
     );
 

@@ -9,9 +9,11 @@ use Carp 'confess';
 class Genome::Disk::Allocation::Command::Reallocate {
     is => 'Genome::Disk::Allocation::Command',
     has => [
-        allocation_id => {
-            is => 'Number',
-            doc => 'ID for allocation to be resized',
+        allocations => {
+            is => 'Genome::Disk::Allocation',
+            shell_args_position => 1,
+            doc => 'allocation(s) to reallocate, resolved by Genome::Command::Base',
+            is_many => 1,
         },
     ],
     has_optional => [
@@ -20,6 +22,11 @@ class Genome::Disk::Allocation::Command::Reallocate {
             doc => 'Number of kilobytes that target allocation should reserve, if not ' .
                 'provided then the current size of the allocation is used',
         },
+        allow_reallocate_with_move => {
+            is => 'Boolean',
+            default => 0,
+            doc => 'Allow the allocation to be moved to a new volume if current volume is too small.',
+        }
     ],
     doc => 'This command changes the requested kilobytes for a target allocation',
 };
@@ -42,14 +49,32 @@ EOS
 
 sub execute {
     my $self = shift;
-    my %params;
-    $params{allocation_id} = $self->allocation_id;
-    $params{kilobytes_requested} = $self->kilobytes_requested if defined $self->kilobytes_requested;
-    my $rv = Genome::Disk::Allocation->reallocate(%params);
-    unless (defined $rv and $rv == 1) {
-        confess 'Could not reallocate allocation ' . $self->allocation_id;
+
+    my @allocations = $self->allocations;
+    
+    my @errors;
+    for my $allocation (@allocations) {
+        my %params;
+        $params{allocation_id} = $allocation->id;
+        $params{kilobytes_requested} = $self->kilobytes_requested if defined $self->kilobytes_requested;
+        $params{allow_reallocate_with_move} = $self->allow_reallocate_with_move if $self->allow_reallocate_with_move;
+
+        my $transaction = UR::Context::Transaction->begin();
+        my $successful = Genome::Disk::Allocation->reallocate(%params);
+        
+        if ($successful) {
+            $self->status_message("Successfully reallocated (" . $allocation->__display_name__ . ").");
+            $transaction->commit();
+        }
+        else {
+            push @errors, "Failed to reallocate (" . $allocation->__display_name__ . "): $@.";
+            $transaction->rollback();
+        }
     }
-    return 1;
+
+    $self->display_summary_report(scalar(@allocations), @errors);
+
+    return !scalar(@errors);
 }
 
 1;
