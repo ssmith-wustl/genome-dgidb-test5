@@ -14,14 +14,14 @@ my %properties = (
         is => 'Text',
         doc => 'source data path of import data file',
     },
-    library_name => {
-        is => 'Text',
-        doc => 'Define this OR sample_name OR both if you like.',
+    library => {
+        is => 'Genome::Library',
+        doc => 'Define this OR sample OR both if you like.',
         is_optional => 1,
     },
-    sample_name => {
-        is => 'Text',
-        doc => 'Define this OR library_name OR both if you like.',
+    sample => {
+        is => 'Genome::Sample',
+        doc => 'Define this OR library OR both if you like.',
         is_optional => 1,
     },
     import_source_name => {
@@ -56,13 +56,7 @@ my %properties = (
     },
     reference_sequence_build => {
         is => 'Genome::Model::Build::ImportedReferenceSequence',
-        id_by => 'reference_sequence_build_id',
         doc => 'Build of the reference against which the genotype file was produced.',
-        is_optional => 0,
-    },
-    reference_sequence_build_id  => {
-        is => 'Number',
-        doc => 'Build-id of the reference against which the genotype file was produced.',
         is_optional => 0,
     },
     allocation => {
@@ -91,66 +85,15 @@ class Genome::InstrumentData::Command::Import::Genotype {
 
 sub execute {
     my $self = shift;
-    my $allocation = $self->allocation if defined($self->allocation);
-    unless(defined($self->sample_name) || defined($self->library_name)){
-        $self->error_message("In order to import a genotype, a library-name or sample-name is required.");
-        die $self->error_message;
-    }
-    my $sample;
-    my $library;
 
-    if (!defined $self->reference_sequence_build or ref $self->reference_sequence_build ne 'Genome::Model::Build::ImportedReferenceSequence') {
-        $self->error_message("Invalid reference_sequence_build property. reference_sequence_build_id='" . ($self->reference_sequence_build_id || "") . "'");
+    if ( not $self->reference_sequence_build ) {
+        $self->error_message('No reference sequence build given');
         return;
     }
 
-    if(defined($self->sample_name) && defined($self->library_name)){
-        $sample = Genome::Sample->get(name => $self->sample_name);
-        $library = Genome::Library->get(name => $self->library_name);
-        unless(defined($sample)){
-            $self->error_message("Could not locate a sample by the name of ".$self->sample_name);
-            die $self->error_message;
-        }
-        unless(defined($library)){
-            $self->error_message("Could not locate a library by the name of ".$self->library_name);
-            die $self->error_message;
-        }
-        unless($sample->name eq $library->sample_name){
-            $self->error_message("The supplied sample-name ".$self->sample_name." and the supplied library ".$self->library_name." do not match.");
-            die $self->error_message;
-        }
-    } elsif (defined($self->library_name)){
-        $library = Genome::Library->get(name => $self->library_name);
-        unless(defined($library)) {
-            $self->error_message("Library name not found.");
-            die $self->error_message;
-        }
-        $sample = Genome::Sample->get(id => $library->sample_id);
-        unless (defined($sample)) {
-            $self->error_message("Could not retrieve sample from library name");
-            die $self->error_message;
-        }
-        $self->sample_name($sample->name);
-    } elsif (defined($self->sample_name)){
-        $sample = Genome::Sample->get(name=>$self->sample_name);
-        unless(defined($sample)){
-            $self->error_message("Could not locate sample with the name ".$self->sample_name);
-            die $self->error_message;
-        }
-        ($library) = Genome::Library->get(sample=>$sample, name => $sample->name . "-microarraylib");
-        unless(defined($library)){
-            $library = Genome::Library->create(sample=>$sample, name => $sample->name . "-microarraylib");
-        }
-        unless(defined($library)){
-            $self->error_message("Could not locate a library associated with the sample w/ library name ".$sample->name . "-microarraylib and couldn't create one either.");
-            die $self->error_message;
-        }
-        $self->library_name($library->name);
-    } else {
-        $self->error_message("Failed to define a sample or library.");
-        die $self->error_message;
-    }
-   
+    my $resolve_sample_library = $self->_resolve_sample_and_library;
+    return if not $resolve_sample_library;
+
     # gather together params to create the imported instrument data object 
     my %params = ();
     for my $property_name (keys %properties) {
@@ -165,15 +108,15 @@ sub execute {
         next if $property_name =~ /^(species|reference)_name$/;
         next if $property_name =~ /^source_data_file$/;
         next if $property_name =~ /^allocation$/;
-        next if $property_name =~ /^library_name$/;
         next if $property_name =~ /^define_model$/;
-        next if $property_name =~ /^sample_name$/;
+        next if $property_name =~ /^sample/;
+        next if $property_name =~ /^library/;
         $params{$property_name} = $self->$property_name if $self->$property_name;
     }
 
     $params{sequencing_platform} = $self->sequencing_platform; 
     $params{import_format} = $self->import_format;
-    $params{library_id} = $library->id;
+    $params{library} = $self->library;
     if(defined($self->allocation)){
         $params{disk_allocations} = $self->allocation;
     }
@@ -196,7 +139,6 @@ sub execute {
     }
 
     unless ($import_instrument_data->library_id) {
-        $DB::single = 1;
         Carp::confess("No library on new instrument data?"); 
     }
 
@@ -243,7 +185,7 @@ sub execute {
     $self->status_message("About to calculate the md5sum of the genotype.");
     my $md5 = Genome::Sys->md5sum($self->source_data_file);
     $self->status_message("Copying genotype the allocation.");
-    my $real_filename = $disk_alloc->absolute_path ."/". $self->sample_name . ".genotype";
+    my $real_filename = $disk_alloc->absolute_path ."/". $self->sample->name . ".genotype";
     unless(copy($self->source_data_file, $real_filename)) {
         $self->error_message("Failed to copy to allocated space (copy returned bad value).  Unlinking and deallocating.");
         unlink($real_filename);
@@ -285,21 +227,65 @@ sub get_read_count {
     return $line_count
 }
 
+sub _resolve_sample_and_library {
+    my $self = shift;
+
+    my $sample = $self->sample;
+    my $library = $self->library;
+    if ( $sample and $library and $sample->id ne $library->sample_id ) {
+        $self->error_message();
+        return;
+    }
+    elsif ( $sample ) { # get/create library
+        my %library_params = (
+            sample_id => $sample->id,
+            name => $sample->name.'-microarraylib',
+        );
+        $library = Genome::Library->get(%library_params);
+        if ( not $library ) {
+            $library = Genome::Library->create(%library_params);
+            if ( not $library ) {
+                $self->error_message('Cannot create microarray library for sample: '.$sample->id);
+                return;
+            }
+        }
+        $self->library($library);
+    }
+    elsif ( $library ) { # get/set sample
+        $sample = $library->sample;
+        if ( not $sample ) { # should not happen
+            $self->error_message('No sample ('.$sample->id.') for library: '.$library->id);
+            return;
+        }
+        $self->sample($sample);
+    }
+    else {
+        $self->error_message('Need sample or library to import genotype microarray');
+        return;
+    }
+
+    return 1;
+}
+
+sub _create_genotype_microarray_model {
+    my $self = shift;
+}
+
 sub define_genotype_model {
     my $self = shift;
     my $model;
     my $processing_profile = "unknown/wugc";
     my %get_params = (
-        sample_name => $self->sample_name,
+        sample_name => $self->sample->name,
         reference_sequence_build => $self->reference_sequence_build
     );
     if($model = Genome::Model::GenotypeMicroarray->get(%get_params)){
         $self->error_message("Warning: a GenotypeMicroarry model (id ".$model->genome_model_id.  ") ".
-            "has already been defined for this sample (name = ".$self->sample_name.", reference = ".$self->reference_sequence_build->name .").");
+            "has already been defined for this sample (name = ".$self->sample->name.", reference = ".$self->reference_sequence_build->name .").");
         die $self->error_message;
     }
-    my $genotype_path_and_file = $self->allocation->absolute_path . "/" . $self->sample_name . ".genotype";
-    my $snp_array = $self->allocation->absolute_path . "/" . $self->sample_name . "_SNPArray.genotype";
+    my $genotype_path_and_file = $self->allocation->absolute_path . "/" . $self->sample->name . ".genotype";
+    my $snp_array = $self->allocation->absolute_path . "/" . $self->sample->name . "_SNPArray.genotype";
     unless(-s $snp_array){
         $self->status_message("Now creating a SNPArray file. This may take some time.");
         unless(Genome::Model::Tools::Array::CreateGoldSnpFromGenotypes->execute(    
@@ -315,7 +301,7 @@ sub define_genotype_model {
     unless($model = Genome::Model::Command::Define::GenotypeMicroarray->execute(     
         processing_profile_name => $processing_profile,
         file                    => $snp_array,
-        subject_name            => $self->sample_name,
+        subject_name            => $self->sample->name,
         reference               => $self->reference_sequence_build,
         )) {
         $self->error_message("GenotpeMicroarray Model Define failed.");
@@ -324,5 +310,5 @@ sub define_genotype_model {
     
 }
     
-
 1;
+
