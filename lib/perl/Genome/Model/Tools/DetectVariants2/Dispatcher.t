@@ -5,8 +5,7 @@ use warnings;
 
 use Parse::RecDescent qw/RD_ERRORS RD_WARN RD_TRACE/;
 use Data::Dumper;
-use Test::More tests => 2;
-#use Test::More skip_all => 'test in development';
+use Test::More tests => 6;
 use above 'Genome';
 
 #Parsing tests
@@ -73,5 +72,30 @@ my $expected_plan = {
 
 my ($trees, $plan) = $obj->plan;
 is_deeply($plan, $expected_plan, "plan matches expectations");
+
+# Test dispatcher for running only samtools for snvs
+my $snv_test = $dispatcher_class->create(
+    snv_detection_strategy => 'samtools r599',
+);
+ok($snv_test, "Object to test a simple snv case created");
+
+# Test dispatcher for running only samtools for indels 
+my $indel_test = $dispatcher_class->create(
+    indel_detection_strategy => 'samtools r599',
+);
+ok($indel_test, "Object to test a simple indel case created");
+
+# Test dispatcher for running only samtools for snvs with 1 filter
+my $snv_filter_test = $dispatcher_class->create(
+    snv_detection_strategy => 'samtools r599 filtered by snp-filter v1',
+);
+ok($snv_filter_test, "Object to test a simple snv case with one filter created");
+
+# Test dispatcher for running a complex case
+my $complex_test = $dispatcher_class->create(
+    snv_detection_strategy => 'samtools r599 filtered by snp-filter v1 intersect varscan 2.2.4 union samtools r544',
+    indel_detection_strategy => 'samtools r599 union samtools r544 intersect samtools r599',
+);
+ok($complex_test, "Object to test a complex combine case created");
 
 done_testing();
