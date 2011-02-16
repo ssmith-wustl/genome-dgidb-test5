@@ -386,7 +386,13 @@ sub get_segments {
         return ();
     }
     
-    my $bam_file = $self->disk_allocations->absolute_path . "/all_sequences.bam";
+    my ($allocation) = $self->disk_allocations;
+    unless ($allocation) {
+        $self->error_message("Found no disk allocation for imported instrument data " . $self->id, ", so cannot find bam!");
+        die $self->error_message;
+    }
+
+    my $bam_file = $allocation->absolute_path . "/all_sequences.bam";
     
     unless (-e $bam_file) {
         $self->error_message("Bam file $bam_file doesn't exist, can't get segments for it.");

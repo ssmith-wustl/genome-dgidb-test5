@@ -112,7 +112,7 @@ sub _run_aligner {
         my $path = $input_pathnames[$i];
         my ($input_pass) = $path =~ m/\.bam:(\d)$/;
         
-        if ($input_pass) {
+        if (defined($input_pass)) {
             $path =~ s/\.bam:\d$/\.bam/;
             $input_pathnames[$i] = $path;
             

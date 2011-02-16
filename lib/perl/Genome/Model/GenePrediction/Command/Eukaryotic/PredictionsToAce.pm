@@ -233,7 +233,7 @@ sub execute {
             if ($source =~ /trnascan/i) {
                 $method = 'tRNAscan';
                 $remark = "\"tRNA-$amino_acid Sc=$gene_score\"";
-                $transcript = "tRNA $codon $amino_acid $amino_acid_code";
+                $transcript = "tRNA \"$codon $amino_acid $amino_acid_code\"";
             }
             elsif ($source =~ /rfam/i) {
                 $method = 'Rfam';

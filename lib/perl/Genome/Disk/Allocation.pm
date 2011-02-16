@@ -102,7 +102,9 @@ END {
 }
 sub remove_test_paths {
     for my $path (@paths_to_remove) {
-        Genome::Sys->remove_directory_tree($path) if -d $path;
+        next unless -d $path;
+        Genome::Sys->remove_directory_tree($path);
+        print STDERR "Removing allocation path $path because UR_DBI_NO_COMMIT is on\n";
     }
 }
 
@@ -130,7 +132,7 @@ sub create {
     # child process' UR object cache). Just call the _create method directly and return
     if ($ENV{UR_DBI_NO_COMMIT}) {
         my $allocation = $class->_create(%params);
-        #push @paths_to_remove, $allocation->absolute_path;
+        push @paths_to_remove, $allocation->absolute_path;
         return $allocation;
     }
 
@@ -564,13 +566,14 @@ sub _create_directory_closure {
     my ($class, $path) = @_;
     return sub {
         # This method currently returns the path if it already exists instead of failing
-        my $dir = Genome::Sys->create_directory($path);
+        my $dir = eval{ Genome::Sys->create_directory($path) };
         if (defined $dir and -d $dir) {
-            chmod(0755, $dir);
+            chmod(2775, $dir);
             print STDERR "Created allocation directory at $path\n";
         }
         else {
             print STDERR "Could not create allocation directcory at $path!\n";
+            print "$@\n" if $@;
         }
     };
 }
