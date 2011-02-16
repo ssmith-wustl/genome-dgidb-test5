@@ -24,23 +24,27 @@ class Genome::Model::Tools::FastTier::FastTier {
                     into it in order to get around bedtools silently failing when start==stop",
         },
         tier1_output => {
-            calculate_from => ['variant_bed_file'],
-            calculate => q{ "$variant_bed_file.tier1"; },
+            is => 'Text',
+            is_optional => 1,
+            is_input => 1, 
             is_output => 1,
         },
         tier2_output => {
-            calculate_from => ['variant_bed_file'],
-            calculate => q{ "$variant_bed_file.tier2"; },
+            is => 'Text',
+            is_optional => 1,
+            is_input => 1,
             is_output => 1,
         },
         tier3_output => {
-            calculate_from => ['variant_bed_file'],
-            calculate => q{ "$variant_bed_file.tier3"; },
+            is => 'Text',
+            is_optional => 1,
+            is_input => 1,
             is_output => 1,
         },
         tier4_output => {
-            calculate_from => ['variant_bed_file'],
-            calculate => q{ "$variant_bed_file.tier4"; },
+            is => 'Text',
+            is_optional => 1,
+            is_input => 1,
             is_output => 1,
         },
         tier_file_location => {
@@ -92,6 +96,13 @@ sub execute {
     unless(-s $self->variant_bed_file) {
         $self->error_message("The variant file you supplied: " . $self->variant_bed_file . " appears to be 0 size. You need computer more better.");
         return;
+    }
+
+    for my $tier(1..4){
+        my $output_accessor = "tier".$tier."_output";
+        unless ($self->$output_accessor){
+            $self->$output_accessor($self->variant_bed_file.".tier".$tier);
+        }
     }
 
     #if the user specified an alternate location for tier bed files, check and load them
