@@ -46,7 +46,6 @@ sub required_rusage {
 
     my @selected_blades = `bhosts -R '$select' $host_groups | grep ^blade`;
 
-    die "required usage is $required_usage temp meg is $tmp_mb\n";
     if (@selected_blades) {
         return $required_usage;
     } else {
