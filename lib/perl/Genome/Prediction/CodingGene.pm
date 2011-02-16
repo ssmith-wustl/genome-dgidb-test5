@@ -24,6 +24,10 @@ class Genome::Prediction::CodingGene {
         sequence_name => { is => 'Text' },
         start => { is => 'Number' },
         end => { is => 'Number' },
+        length => { 
+            calculate_from => ['start', 'end'],
+            calculate => q{ return abs($start - $end) - 1; },
+        },
         transcript => { 
             calculate_from => ['directory', 'gene_name'],
             calculate => q|

@@ -20,14 +20,11 @@ sub required_arch_os { 'x86_64' }
 
 # fill me in here with what compute resources you need.
 sub required_rusage { 
-    my $self = shift;
-    my %params = $self->decomposed_aligner_params;
-    if ($params{mosaik_align_params} =~ /-p\s+([0-9]+)/) { 
-        return "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>4000] span[hosts=1] rusage[tmp=90000, mem=4000]' -M 24000000 -n $1";
-    } else {
-        print "Could not determine number of cores to use from params! Defaulting to 4.";
-        return "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>4000] span[hosts=1] rusage[tmp=90000, mem=4000]' -M 24000000 -n 4";
-    }
+my $class = shift;
+    my %p = @_;
+    my $instrument_data = delete $p{instrument_data};
+
+    return "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>4000] span[hosts=1] rusage[tmp=90000, mem=4000]' -M 24000000 -n 4";
 }
 
 # TODO should generate the reference index and jump databases using MosaikJump and MosaikBuild

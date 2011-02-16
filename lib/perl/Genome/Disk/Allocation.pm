@@ -102,7 +102,9 @@ END {
 }
 sub remove_test_paths {
     for my $path (@paths_to_remove) {
-        Genome::Sys->remove_directory_tree($path) if -d $path;
+        next unless -d $path;
+        Genome::Sys->remove_directory_tree($path);
+        print STDERR "Removing allocation path $path because UR_DBI_NO_COMMIT is on\n";
     }
 }
 
@@ -130,15 +132,17 @@ sub create {
     # child process' UR object cache). Just call the _create method directly and return
     if ($ENV{UR_DBI_NO_COMMIT}) {
         my $allocation = $class->_create(%params);
-        #push @paths_to_remove, $allocation->absolute_path;
+        push @paths_to_remove, $allocation->absolute_path;
         return $allocation;
     }
 
     # Serialize hash and create allocation via system call to ensure commit occurs
     my $param_string = Genome::Utility::Text::hash_to_string(\%params);
     my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
-    my $rv = system("perl $includes -e \"use above Genome; $class->_create($param_string); UR::Context->commit;\"");
-    confess "Could not create allocation" unless $rv == 0;
+    my $cmd = "perl $includes -e \"use above Genome; $class->_create($param_string); UR::Context->commit;\"";
+    unless (Genome::Sys->shellcmd(cmd => $cmd)) {
+        confess "Could not create allocation";
+    }
 
     my $allocation = $class->get(id => $params{id});
     confess "Could not retrieve created allocation with id " . $params{id} unless $allocation;
@@ -169,10 +173,13 @@ sub delete {
         return $class->_delete(%params);
     }
 
+    # Serialize params hash, construct command, and execute
     my $param_string = Genome::Utility::Text::hash_to_string(\%params);
     my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
-    my $rv = system("perl $includes -e \"use above Genome; $class->_delete($param_string); UR::Context->commit;\"");
-    confess "Could not deallocate" unless $rv == 0;
+    my $cmd = "perl $includes -e \"use above Genome; $class->_delete($param_string); UR::Context->commit;\"";
+    unless (Genome::Sys->shellcmd(cmd => $cmd)) {
+        confess "Could not deallocate";
+    }
     return 1;
 }
 
@@ -189,10 +196,14 @@ sub reallocate {
         return $class->_reallocate(%params);
     }
 
+    # Serialize params hash, construct command, and execute
     my $param_string = Genome::Utility::Text::hash_to_string(\%params);
     my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
-    my $rv = system("perl $includes -e \"use above Genome; $class->_reallocate($param_string); UR::Context->commit;\"");
-    confess "Could not reallocate!" unless $rv == 0;
+    my $cmd = "perl $includes -e \"use above Genome; $class->_reallocate($param_string); UR::Context->commit;\"";
+    unless (Genome::Sys->shellcmd(cmd => $cmd)) {
+        confess "Could not reallocate!";
+    }
+
     return 1;
 }
 
@@ -564,13 +575,14 @@ sub _create_directory_closure {
     my ($class, $path) = @_;
     return sub {
         # This method currently returns the path if it already exists instead of failing
-        my $dir = Genome::Sys->create_directory($path);
+        my $dir = eval{ Genome::Sys->create_directory($path) };
         if (defined $dir and -d $dir) {
-            chmod(0755, $dir);
+            chmod(02775, $dir);
             print STDERR "Created allocation directory at $path\n";
         }
         else {
             print STDERR "Could not create allocation directcory at $path!\n";
+            print "$@\n" if $@;
         }
     };
 }
