@@ -103,16 +103,9 @@ sub has_version {
 
 # This are crazy and ugly, but are just a very temporary solution until we start handing strategies down to detectors and filters
 # For now this method is unnecessary because we are only accounting for one level of filtering. Later this will change.
-sub _get_detector_output_directory {
-    my $self = shift;
-    
-    my $input_directory = $self->input_directory;
-    return $input_directory;
-}
-
 sub _get_detector_version {
     my $self = shift;
-    my $detector_output_directory = $self->_get_detector_output_directory;
+    my $detector_output_directory = $self->detector_directory;
 
     my @subdirs = split("/", $detector_output_directory);
     my $detector_subdir = $subdirs[-1];
@@ -124,7 +117,7 @@ sub _get_detector_version {
 
 sub _get_detector_parameters {
     my $self = shift;
-    my $detector_output_directory = $self->_get_detector_output_directory;
+    my $detector_output_directory = $self->detector_directory;
 
     my @subdirs = split("/", $detector_output_directory);
     my $detector_subdir = $subdirs[-1];
