@@ -142,6 +142,7 @@ sub execute {                               # replace with real execution logic.
 
 	}
 	
+    return 1;
 
 }
 

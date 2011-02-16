@@ -150,8 +150,6 @@ sub _detect_variants {
     $input->{reference_sequence_input} = $self->reference_sequence_input;
     $input->{output_directory} = $self->_temp_staging_directory;
    
-    print Data::Dumper::Dumper( $input );
-    #die;
     $self->_dump_workflow($workflow);
 
     $self->status_message("Now launching the dispatcher workflow.");
@@ -339,10 +337,6 @@ sub generate_workflow {
         ],
     );
     $workflow_model->log_dir($self->output_directory);
-    print "PLAN:\n";
-    print Data::Dumper::Dumper($plan);
-    print "TREES:\n";
-    print Data::Dumper::Dumper($trees);
     for my $detector (keys %$plan) {
         # Get the hashref that contains all versions to be run for a detector
         my $detector_hash = $plan->{$detector};
