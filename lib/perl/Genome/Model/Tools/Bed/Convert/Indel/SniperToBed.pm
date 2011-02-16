@@ -61,7 +61,7 @@ sub _process_indel {
     if($length > 0) {
         $reference = '*';
         $variant = $indel;
-        $stop = $start + 2; #Two positions are included--the base preceding and the base following the insertion event
+        $stop = $start; #Two positions are included-- but an insertion has no "length" so stop and start are the same
     } elsif($length < 0) {
         $start += 1; #sniper reports the position before the first deleted base
         $reference = $indel;

@@ -53,7 +53,7 @@ sub process_source {
             $start -= 1; #Want to output the base before the insertion
             $reference = '*';
             $variant = $bases;
-            $stop = $start + 2; #Two positions are included--the base preceding and the base following the insertion event
+            $stop = $start; #Two positions are included-- but an insertion has no "length" so stop and start are the same
         }
         
         $self->write_bed_line($chromosome, $start, $stop, $reference, $variant, $quality, $depth);
