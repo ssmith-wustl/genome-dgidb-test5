@@ -92,6 +92,7 @@ our @APIPE_DISK_GROUPS = qw/
     info_apipe_ref
     info_alignments
     info_genome_models
+    systems_benchmarking
 /;
 
 # Dummy allocations (don't commit to db) still create files on the filesystem, and the tests/scripts/whatever
@@ -267,9 +268,6 @@ sub _create {
         my $volume = Genome::Disk::Volume->get(mount_path => $mount_path, disk_status => 'active');
         confess "Could not get volume with mount path $mount_path" unless $volume;
 
-        # FIXME Temporarily use LIMS style locking, uses a select for update
-        $class->_select_volume_for_update($volume->id);
-
         unless (grep { $_ eq $disk_group_name } $volume->disk_group_names) {
             confess "Volume with mount path $mount_path is not in supplied group $disk_group_name!";
         }
@@ -288,9 +286,6 @@ sub _create {
     # pick one at random from the top MAX_VOLUMES. It's been decided that we want to fill up a small subset of volumes
     # at a time instead of all of them.
     else {
-        # FIXME Temporarily using LIMS style locking, uses a select for update
-        $class->_select_group_for_update($group->id);
-
         my @volumes = Genome::Disk::Volume->get(
             disk_group_names => $disk_group_name,
             'unallocated_kb >=' => $kilobytes_requested,
@@ -407,9 +402,6 @@ sub _delete {
         confess 'Found no disk volume with mount path ' . $self->mount_path;
     }
 
-    # FIXME Lock volume using old LIMS style, this is temporary
-    $self->_select_volume_for_update($volume->id);
-
     # Update
     $volume->unallocated_kb($volume->unallocated_kb + $self->kilobytes_requested);
     $self->SUPER::delete;
@@ -479,16 +471,14 @@ sub _reallocate {
         confess 'Could not get volume with mount path ' . $self->mount_path;
     }
 
-    # FIXME Get LIMS style lock, this is temporary
-    $self->_select_volume_for_update($volume->id);
-
     # Make sure there's room for the allocation... only applies if the new allocation is bigger than the old
-    if ($diff > 0 and $volume->unallocated_kb < $diff and !$allow_reallocate_with_move) {
+    my $available_space = $volume->unallocated_kb - $volume->reserve_size;
+    if ($diff > 0 and $available_space < $diff and !$allow_reallocate_with_move) {
         Genome::Sys->unlock_resource(resource_lock => $volume_lock);
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Not enough unallocated space on volume ' . $volume->mount_path . " to increase allocation size by $diff kb";
     }
-    elsif ($diff > 0 and $volume->unallocated_kb < $diff and $allow_reallocate_with_move) {
+    elsif ($diff > 0 and $available_space < $diff and $allow_reallocate_with_move) {
         return $self->_reallocate_with_move($kilobytes_requested);
     }
     else {
@@ -639,28 +629,6 @@ sub _check_kb_requested {
     my ($class, $kb) = @_;
     return 0 unless defined $kb;
     return 0 if $kb < $MINIMUM_ALLOCATION_SIZE;
-    return 1;
-}
-
-# FIXME This emulates the old style locking for allocations, which uses select for update. This can
-# be phased out as soon as I'm sure that the new style is being used everywhere
-sub _select_group_for_update {
-    my ($class, $group_id) = @_;
-    return 1 if $ENV{UR_DBI_NO_COMMIT};
-    Genome::DataSource::Oltp->get_default_dbh->do(
-        "select dv.* from disk_volume dv " .
-        "join disk_volume_group dvg on dv.dv_id = dvg.dv_id " .
-        "and dvg.dg_id = $group_id " .
-        "for update"
-    );
-    return 1;
-}
-
-# FIXME Same as above method, but locks the volume instead of the group
-sub _select_volume_for_update {
-    my ($class, $volume_id) = @_;
-    return 1 if $ENV{UR_DBI_NO_COMMIT};
-    Genome::DataSource::Oltp->get_default_dbh->do("select * from disk_volume where dv_id = $volume_id for update");
     return 1;
 }
 

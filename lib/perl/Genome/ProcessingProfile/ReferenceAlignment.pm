@@ -214,6 +214,15 @@ sub results_for_instrument_data_assignment {
     return $self->_fetch_alignment_sets($assignment,\%segment_info,'get');
 }
 
+sub results_for_instrument_data_assignment_with_lock {
+    my $self = shift;
+    my $assignment = shift;
+    my %segment_info = @_;
+
+    #return if $build and $build->id < $assignment->first_build_id;
+    return $self->_fetch_alignment_sets($assignment,\%segment_info,'get_with_lock');
+}
+
 # create alignments (called by Genome::Model::Event::Build::ReferenceAlignment::AlignReads for now...
 sub generate_results_for_instrument_data_assignment {
     my $self = shift;

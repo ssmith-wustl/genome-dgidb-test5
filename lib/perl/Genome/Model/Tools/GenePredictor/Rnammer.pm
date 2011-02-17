@@ -20,7 +20,7 @@ class Genome::Model::Tools::GenePredictor::Rnammer {
         version => {
             is => 'Text',
             is_input => 1,
-            default => '1.2',
+            default => '1.2.1',
             doc => 'Version of rnammer to use',
         },
         molecule_type => {
