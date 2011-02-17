@@ -92,6 +92,7 @@ our @APIPE_DISK_GROUPS = qw/
     info_apipe_ref
     info_alignments
     info_genome_models
+    systems_benchmarking
 /;
 
 # Dummy allocations (don't commit to db) still create files on the filesystem, and the tests/scripts/whatever
