@@ -436,7 +436,10 @@ sub create {
     # TODO: move this into the actual original allocation so we don't need to do this 
     $self->status_message("Resizing the disk allocation...");
     if ($self->_disk_allocation) {
-        unless ($self->_disk_allocation->reallocate) {
+        my %params;
+        $params{allow_reallocate_with_move} = 0;
+        $params{allow_reallocate_with_move} = 1 if $self->_disk_allocation->kilobytes_requested < 10_485_760; # 10GB
+        unless ($self->_disk_allocation->reallocate(%params)) {
             $self->warning_message("Failed to reallocate my disk allocation: " . $self->_disk_allocation->id);
         }
     }

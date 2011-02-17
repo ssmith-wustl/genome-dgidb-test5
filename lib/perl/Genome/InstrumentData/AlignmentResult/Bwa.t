@@ -9,7 +9,7 @@ use above 'Genome';
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 26;
+        plan tests => 28;
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -202,6 +202,16 @@ sub test_shortcutting {
     ok(-d $dir, "result is a real directory");
     ok(-s $dir."/all_sequences.bam", "found a bam file in there");
 
+    my $alignment_from_lock = Genome::InstrumentData::AlignmentResult->get_with_lock(
+                                                              instrument_data_id => $fake_instrument_data->id,
+                                                              aligner_name => $aligner_name,
+                                                              aligner_version => $aligner_version,
+                                                              samtools_version => $samtools_version,
+                                                              picard_version => $picard_version,
+                                                              reference_build => $reference_build,
+                                                              );
+    ok($alignment_from_lock, "got an alignment object using get_with_lock");
+    is($alignment_from_lock, $alignment, "got same object as without locking");
 }
 
 
