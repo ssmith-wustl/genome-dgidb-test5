@@ -8,7 +8,7 @@ use Bio::SeqIO;
 
 use File::Temp 'tempdir';
 use File::Basename;
-use Test::More 'skip_all';
+use Test::More; 
 
 BEGIN {
     use_ok('Genome::Model::Tools::GenePredictor');
