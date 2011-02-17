@@ -86,7 +86,7 @@ sub execute {                               # replace with real execution logic.
 	$cmd .= " --bedOutput $bed_output_file";
 
 	## Run GATK Command ##
-
+	my $return;
 	if($self->skip_if_output_present && -e $output_file)
 	{
 		
@@ -96,8 +96,15 @@ sub execute {                               # replace with real execution logic.
 		system("touch $output_file"); # This will create an empty output file to help prevent GATK from crashing 
 		system("touch $bed_output_file"); # This will create an empty output file to help prevent GATK from crashing 
 		system("touch " . $self->somatic_file) if($self->somatic_file);
-		print "RUN: $cmd\n";
-		system($cmd);
+		$return = Genome::Sys->shellcmd(
+                           cmd => "$cmd",
+                           output_files => [$output_file],
+                           skip_if_output_is_present => 0,
+                       );
+		unless($return) { 
+			$self->error_message("Failed to execute GATK: GATK Returned $return");
+			die $self->error_message;
+		}
 	}
 
 
@@ -142,7 +149,7 @@ sub execute {                               # replace with real execution logic.
 
 	}
 	
-    return 1;
+	return $return;
 
 }
 
