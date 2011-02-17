@@ -139,8 +139,10 @@ sub create {
     # Serialize hash and create allocation via system call to ensure commit occurs
     my $param_string = Genome::Utility::Text::hash_to_string(\%params);
     my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
-    my $rv = system("perl $includes -e \"use above Genome; $class->_create($param_string); UR::Context->commit;\"");
-    confess "Could not create allocation" unless $rv == 0;
+    my $cmd = "perl $includes -e \"use above Genome; $class->_create($param_string); UR::Context->commit;\"";
+    unless (Genome::Sys->shellcmd(cmd => $cmd)) {
+        confess "Could not create allocation";
+    }
 
     my $allocation = $class->get(id => $params{id});
     confess "Could not retrieve created allocation with id " . $params{id} unless $allocation;
@@ -171,10 +173,13 @@ sub delete {
         return $class->_delete(%params);
     }
 
+    # Serialize params hash, construct command, and execute
     my $param_string = Genome::Utility::Text::hash_to_string(\%params);
     my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
-    my $rv = system("perl $includes -e \"use above Genome; $class->_delete($param_string); UR::Context->commit;\"");
-    confess "Could not deallocate" unless $rv == 0;
+    my $cmd = "perl $includes -e \"use above Genome; $class->_delete($param_string); UR::Context->commit;\"";
+    unless (Genome::Sys->shellcmd(cmd => $cmd)) {
+        confess "Could not deallocate";
+    }
     return 1;
 }
 
@@ -191,10 +196,14 @@ sub reallocate {
         return $class->_reallocate(%params);
     }
 
+    # Serialize params hash, construct command, and execute
     my $param_string = Genome::Utility::Text::hash_to_string(\%params);
     my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
-    my $rv = system("perl $includes -e \"use above Genome; $class->_reallocate($param_string); UR::Context->commit;\"");
-    confess "Could not reallocate!" unless $rv == 0;
+    my $cmd = "perl $includes -e \"use above Genome; $class->_reallocate($param_string); UR::Context->commit;\"";
+    unless (Genome::Sys->shellcmd(cmd => $cmd)) {
+        confess "Could not reallocate!";
+    }
+
     return 1;
 }
 
@@ -568,7 +577,7 @@ sub _create_directory_closure {
         # This method currently returns the path if it already exists instead of failing
         my $dir = eval{ Genome::Sys->create_directory($path) };
         if (defined $dir and -d $dir) {
-            chmod(2775, $dir);
+            chmod(02775, $dir);
             print STDERR "Created allocation directory at $path\n";
         }
         else {

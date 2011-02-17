@@ -31,7 +31,7 @@ sub _filter_variants {
     my $filtered_snv_output_file = $self->_temp_staging_directory . "/snvs.hq";
 
     # This is where samtools would have put an indel file if one was generated
-    my $filtered_indel_file = $self->_get_detector_output_directory . "/indels_all_sequences.filtered";
+    my $filtered_indel_file = $self->detector_directory . "/indels_all_sequences.filtered";
     unless (-e $filtered_indel_file ) {
         $filtered_indel_file = $self->_generate_indels_for_filtering;
     }

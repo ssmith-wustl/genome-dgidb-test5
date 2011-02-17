@@ -45,6 +45,7 @@ sub required_rusage {
     my $required_usage = "-R '$select $rusage' $options";
 
     my @selected_blades = `bhosts -R '$select' $host_groups | grep ^blade`;
+
     if (@selected_blades) {
         return $required_usage;
     } else {
@@ -217,6 +218,13 @@ sub _run_aligner {
 
     unless (-s $sam_file) {
         die "The sam output file $sam_file is zero length; something went wrong.";
+    }
+
+    for my $file (@input_pathnames) {
+        if ($file =~ m/^\/tmp\//) {
+            $self->status_message("removing $file to save space!");
+            unlink($file);
+        }
     }
 
 

@@ -453,8 +453,7 @@ sub resolve_data_directory {
         my $allocation_path = 'model_data/' . $model->id . '/build'. $self->build_id;
         my $kb_requested = $self->calculate_estimated_kb_usage;
         unless ($kb_requested) {
-            warn "No disk allocation for this build.";
-            return;
+            die $self->error_message("Could not estimate kb usage for allocation!");
         }
     
         my $disk_group_name = $model->processing_profile->_resolve_disk_group_name_for_build($self);
@@ -472,7 +471,7 @@ sub resolve_data_directory {
             owner_id => $id,
         );
         Carp::confess "Failed to create allocation for build!" unless $disk_allocation;
-    
+   
         $build_data_directory = $disk_allocation->absolute_path;
         Genome::Sys->validate_existing_directory($build_data_directory);
 

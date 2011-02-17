@@ -82,12 +82,8 @@ sub execute {                               # replace with real execution logic.
 
 	$cmd .= " --bedOutput $bed_output_file";
 
-
-
-
-
 	## Run GATK Command ##
-
+	my $return;
 	if($self->skip_if_output_present && -e $output_file)
 	{
 		
@@ -97,10 +93,16 @@ sub execute {                               # replace with real execution logic.
 		system("touch $output_file"); # This will create an empty output file to help prevent GATK from crashing 
 		system("touch $bed_output_file"); # This will create an empty output file to help prevent GATK from crashing 
 		system("touch $output_file.vcf"); # This will create an empty output file to help prevent GATK from crashing 
-		print "RUN: $cmd\n";
-		system($cmd);
+		$return = Genome::Sys->shellcmd(
+                           cmd => "$cmd",
+                           output_files => [$output_file, "$output_file.vcf"],
+                           skip_if_output_is_present => 0,
+                       );
+		unless($return) { 
+			$self->error_message("Failed to execute GATK: GATK Returned $return");
+			die $self->error_message;
+		}
 	}
-
 	if($self->formatted_file)
 	{
 		my $formatted_output_file = $self->formatted_file;
@@ -128,7 +130,7 @@ sub execute {                               # replace with real execution logic.
 
 	}
 
-	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
+	return $return;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 
 }
 
