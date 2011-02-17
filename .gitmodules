@@ -28,3 +28,6 @@
 [submodule "genome-db-cosmic"]
 	path = genome-db-cosmic
 	url = ssh://git//srv/git/genome-db-cosmic.git
+[submodule "genome-db-omim"]
+	path = genome-db-omim
+	url = ssh://git//srv/git/genome-db-omim.git
