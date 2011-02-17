@@ -12,15 +12,13 @@ use Test::More;
 # use
 use_ok('Genome::Model::Build::MetagenomicComposition16s::454') or die;
 
-# mock model
-my $model = Genome::Model::MetagenomicComposition16s::Test->get_mock_model(
-    sequencing_platform => '454',
-) or die "Can't create metagenomic composition 16s 454 model";
-ok($model, 'MC16s 454 model');
+# model
+my $model = Genome::Model::MetagenomicComposition16s::Test->model_for_454;
+ok($model, 'MC16s 454 model') or die;
 
 # create w/o subclass
 my $build = Genome::Model::Build::MetagenomicComposition16s->create(
-    model_id => $model->id,
+    model => $model,
     data_directory => $model->data_directory.'/build',
 );
 isa_ok($build, 'Genome::Model::Build::MetagenomicComposition16s::454');
@@ -35,7 +33,7 @@ is(
 );
 
 # calculated kb
-is($build->calculate_estimated_kb_usage, 100, 'Estimated kb usage');
+is($build->calculate_estimated_kb_usage, 1024, 'estimated kb usage');
 
 # dirs
 my $existing_build_dir = '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16s454/build';
@@ -117,7 +115,6 @@ for my $amplicon_set ( @amplicon_sets ) {
 }
 
 #print $build->data_directory."\n";<STDIN>;
-
 done_testing();
 exit;
 

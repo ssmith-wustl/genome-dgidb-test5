@@ -86,6 +86,12 @@ sub pre_execute {
         $self->error_message("tumor bam $tumor_bam does not exist or has 0 size");
         die;
     }
+    unless(defined($self->reference_sequence_input)){
+        $self->reference_sequence_input( Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa' );
+    }
+    unless(defined($self->tier_file_directory)){
+        $self->tier_file_directory('/gscmnt/sata921/info/medseq/make_tier_bed_files/NCBI-human-build36/');
+    }
 
     # Set default params
     unless ($self->annotate_no_headers) { $self->annotate_no_headers(1); }
@@ -141,11 +147,13 @@ __DATA__
   <link fromOperation="input connector" fromProperty="output_directory" toOperation="Pindel" toProperty="output_directory" />
   <link fromOperation="input connector" fromProperty="chromosome_list" toOperation="Pindel" toProperty="chromosome" />
   <link fromOperation="input connector" fromProperty="version" toOperation="Pindel" toProperty="version" />
+  <link fromOperation="input connector" fromProperty="reference_sequence_input" toOperation="Pindel" toProperty="reference_sequence_input" />
 
   <link fromOperation="Pindel" fromProperty="indel_bed_output" toOperation="Cat" toProperty="source" />
   <link fromOperation="input connector" fromProperty="indel_bed_output" toOperation="Cat" toProperty="dest" />
 
   <link fromOperation="Cat" fromProperty="dest" toOperation="Pre-Assembly Tiering" toProperty="variant_bed_file" />
+  <link fromOperation="input connector" fromProperty="tier_file_directory" toOperation="Pre-Assembly Tiering" toProperty="tier_file_location" />
 
   <link fromOperation="Pre-Assembly Tiering" fromProperty="tier1_output" toOperation="Annotation" toProperty="variant_bed_file" />
   <link fromOperation="input connector" fromProperty="annotation_output" toOperation="Annotation" toProperty="output_file" />
@@ -221,6 +229,9 @@ __DATA__
     <inputproperty isOptional="Y">indel_bed_output</inputproperty>
     <inputproperty isOptional="Y">tiered_bed_files</inputproperty>
     <inputproperty isOptional="Y">use_old_pindel</inputproperty>
+    <inputproperty isOptional="Y">reference_sequence_input</inputproperty>
+    <inputproperty isOptional="Y">tier_file_directory</inputproperty>
+
     <outputproperty>output</outputproperty>
     <outputproperty>tier_1_filtered_read_support</outputproperty>
     <outputproperty>tier_2_filtered_read_support</outputproperty>

@@ -8,7 +8,7 @@ use Bio::SeqIO;
 
 use File::Temp 'tempdir';
 use File::Basename;
-use Test::More 'skip_all';
+use Test::More; 
 
 BEGIN {
     use_ok('Genome::Model::Tools::GenePredictor');
@@ -45,4 +45,6 @@ my @rna = Genome::Prediction::RNAGene->get(
 );
 my $num_rna = scalar @rna;
 ok ($num_rna > 0, "able to retrieve $num_rna RNAGene objects");
+
+done_testing();
 

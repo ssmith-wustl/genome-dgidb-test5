@@ -140,61 +140,45 @@ sub execute {
 sub _assign_instrument_data {
     my ($self, $instrument_data) = @_;
 
-    # Non imported solexa needs to have the copy sequences file pse run ok
-   if ( $instrument_data->sequencing_platform eq 'solexa' and $instrument_data->class !~ /imported/i ) {
-       my $index_illumina = $instrument_data->index_illumina;
-       if ( not $index_illumina ) {
-           $self->error_message('No index illumina for solexa instrument data '.$instrument_data->id);
-           return;
-       }
-       if ( not $index_illumina->copy_sequence_files_confirmed_successfully ) {
-           $self->warning_message(
-               'SKIPPING instrument data ('.join(' ', map { $instrument_data->$_ } (qw/ id sequencing_platform /)).' because '
-               .'it does not have a successfully confirmed copy sequence files pse. This means it is not ready or may be corrupted. It cannot be assigned individually.'
-           );
-           return 1; # OK, just skipping
-       }
-   }
-
-   # Check if already assigned
-   my $existing_ida = Genome::Model::InstrumentDataAssignment->get(
-        model_id => $self->model->id,
-        instrument_data_id => $instrument_data->id
-    );
-
-    if ( $existing_ida ) {
+    # Check if already assigned
+    my $model = $self->model;
+    if ( grep { $instrument_data->id eq $_->id } $model->instrument_data ) {
         $self->status_message(
             sprintf(
-                'Instrument data (id<%s> name<%s>) has already been assigned to model (id<%s> name<%s>)%s.',
-                $existing_ida->instrument_data_id,
-                $existing_ida->run_name,
-                $self->model->id,
-                $self->model->name,
-                (
-                    $existing_ida->filter_desc 
-                    ? ' with filter ' . $existing_ida->filter_desc
-                    : ''
-                )
+                'Instrument data (%s) already assigned to model (%s). Skipping.',
+                $instrument_data->id,
+                $model->__display_name__,
             )
         );
         return 1;
     }
 
-    my $ida = Genome::Model::InstrumentDataAssignment->create(
-        model_id => $self->model->id,
-        instrument_data_id => $instrument_data->id,
-        filter_desc => $self->filter,
-        #first_build_id  => undef,  # set when we run the first build with this instrument data
-    );
+    # Non imported solexa needs to have the copy sequences file pse run ok
+    if ( $instrument_data->sequencing_platform eq 'solexa' and $instrument_data->class !~ /imported/i ) {
+        my $index_illumina = $instrument_data->index_illumina;
+        if ( not $index_illumina ) {
+            $self->error_message('No index illumina for solexa instrument data '.$instrument_data->id);
+            return;
+        }
+        if ( not $index_illumina->copy_sequence_files_confirmed_successfully ) {
+            $self->warning_message(
+                'SKIPPING instrument data ('.join(' ', map { $instrument_data->$_ } (qw/ id sequencing_platform /)).' because '
+                .'it does not have a successfully confirmed copy sequence files pse. This means it is not ready or may be corrupted. It cannot be assigned individually.'
+            );
+            return 1; # OK, just skipping
+        }
+    }
 
-    unless ( $ida ) { 
+    my $add = $model->add_instrument_data(
+        value => $instrument_data,
+        filter_desc => $self->filter,
+    );
+    if ( not $add ) {
         $self->error_message(
             sprintf(
-                'Failed to add instrument data (id<%s> name<%s>) to model (id<%s> name<%s>).',
+                'Failed to add instrument data (%s) to model (%s).',
                 $instrument_data->id,
-                $instrument_data->run_name,
-                $self->model->id,
-                $self->model->name,
+                $model->__display_name__,
             )
         );
         return;
@@ -202,15 +186,10 @@ sub _assign_instrument_data {
 
     $self->status_message(
         sprintf(
-            'Instrument data (id<%s>) assigned to model (id<%s> name<%s>)%s.',
+            'Instrument data (%s) assigned to model (%s)%s.',
             $instrument_data->id,
-            $self->model->id,
-            $self->model->name,
-            (
-                $ida->filter_desc 
-                ? (' with filter ' . $ida->filter_desc)
-                : ''
-            )
+            $model->__display_name__,
+            ( $self->filter ? (' with filter ' . $self->filter) : '')
         )
     );
 
@@ -308,8 +287,7 @@ sub _assign_all_within_maximum_allowed_error {
 
     $self->status_message("Attempting to assign all available instrument data within maximum allowed error of " . $self->maximum_allowed_error . ".");
 
-    my $model_id = $self->model_id;
-
+    my $model = $self->model;
     my $instdata_iterator = Genome::InstrumentData->create_iterator(
         where => [ id => [ map { $_->id } $self->model->unassigned_instrument_data ] ],
     );
@@ -345,34 +323,30 @@ sub _assign_all_within_maximum_allowed_error {
     $self->status_message(sprintf("%d forward only\n",scalar(@forward)));
     $self->status_message(sprintf("%d reverse only\n",scalar(@reverse)));
 
-    # TODO: should assign data rather than calling a new command
-    if(@allin) {
-        my $add_instdata = Genome::Model::Command::InstrumentData::Assign->create(
-            model_id => $model_id,
-            instrument_data_ids => join(' ', @allin),
+    for my $allin ( @allin ) {
+        my $add = $model->add_instrument_data(
+            value => $allin,
         );
-        unless ($add_instdata->execute) {
-            $self->error_message("Failed to add instrument data to model $model_id for IDs (" . join(", ", @allin) . ").");
+        if ( not $add ) {
+            $self->error_message('Failed to add instrument data ('.$allin->id.') to model '.$model->__display_name__);
         }
     }
-    if(@forward) {
-        my $add_instdata = Genome::Model::Command::InstrumentData::Assign->create(
-            model_id => $model_id,
-            instrument_data_ids => join(' ', @forward),
+    for my $fwd ( @forward ) {
+        my $add = $model->add_instrument_data(
+            value => $fwd,
             filter => 'forward-only',
         );
-        unless ($add_instdata->execute) {
-            $self->error_message("Failed to add instrument data to model $model_id for IDs (" . join(", ", @allin) . ").");
+        if ( not $add ) {
+            $self->error_message('Failed to add instrument data ('.$fwd->id.') to model '.$model->__display_name__);
         }
     }
-    if(@reverse) {
-        my $add_instdata = Genome::Model::Command::InstrumentData::Assign->create(
-            model_id => $model_id,
-            instrument_data_ids => join(' ', @reverse),
+    for my $rev ( @reverse ) {
+        my $add = $model->add_instrument_data(
+            value => $rev,
             filter => 'reverse-only',
         );
-        unless ($add_instdata->execute) {
-            $self->error_message("Failed to add instrument data to model $model_id for IDs (" . join(", ", @allin) . ").");
+        if ( not $add ) {
+            $self->error_message('Failed to add instrument data ('.$rev->id.') to model '.$model->__display_name__);
         }
     }
     return 1;

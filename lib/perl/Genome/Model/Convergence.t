@@ -90,14 +90,8 @@ sub setup_test_models {
     );
     ok($test_model, 'created test model');
     
-    my $test_assignment = Genome::Model::InstrumentDataAssignment->create(
-        model_id => $test_model->id,
-        instrument_data_id => $test_instrument_data->id
-    );
+    my $test_assignment = $test_model->add_instrument_data(value => $test_instrument_data);
     ok($test_assignment, 'assigned data to model');
-    
-    #TODO Once we're using inputs, just use this line instead
-    #ok($test_model->add_inst_data($test_instrument_data), 'assigned data to model');
     
     my $test_build = Genome::Model::Build->create(
         model_id => $test_model->id,
@@ -125,14 +119,8 @@ sub setup_test_models {
     );
     ok($test_model_two, 'created second test model');
     
-    my $test_assignment_two = Genome::Model::InstrumentDataAssignment->create(
-        model_id => $test_model_two->id,
-        instrument_data_id => $test_instrument_data->id
-    );
+    my $test_assignment_two = $test_model_two->add_instrument_data(value => $test_instrument_data);
     ok($test_assignment_two, 'assigned data to second model');
-    
-    #TODO Once we're using inputs, just use this line instead
-    #ok($test_model_two->add_inst_data($test_instrument_data), 'assigned data to model');
     
     my $test_build_two = Genome::Model::Build->create(
         model_id => $test_model_two->id,

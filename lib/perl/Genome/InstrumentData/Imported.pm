@@ -29,7 +29,8 @@ class Genome::InstrumentData::Imported {
         description          => { is => 'VARCHAR2', len => 512, is_optional => 1 },
         read_count           => { is => 'NUMBER', len => 20, is_optional => 1 },
         base_count           => { is => 'NUMBER', len => 20, is_optional => 1 },
-        disk_allocations     => { is => 'Genome::Disk::Allocation', reverse_as => 'owner', where => [ allocation_path => { operator => 'like', value => '%imported%' }  ], is_optional => 1, is_many => 1 },
+        disk_allocations     => { is => 'Genome::Disk::Allocation', reverse_as => 'owner', is_optional => 1, is_many => 1 },
+        #disk_allocations     => { is => 'Genome::Disk::Allocation', reverse_as => 'owner', where => [ allocation_path => { operator => 'like', value => '%imported%' }  ], is_optional => 1, is_many => 1 },
         fragment_count       => { is => 'NUMBER', len => 20, is_optional => 1 },
         fwd_read_length      => { is => 'NUMBER', len => 20, is_optional => 1 },
         is_paired_end        => { is => 'NUMBER', len => 1, is_optional => 1 },
@@ -127,6 +128,13 @@ sub get_disk_allocation {
 sub calculate_alignment_estimated_kb_usage {
     my $self = shift;
     my $answer;
+
+    # Check for an existing allocation for this instrument data, which would've been created by the importer
+    my $allocation = Genome::Disk::Allocation->get(owner_class_name => $self->class, owner_id => $self->id);
+    if ($allocation) {
+        return int(($allocation->kilobytes_requested/1000) + 100);
+    }
+
     if($self->original_data_path !~ /\,/ ) {
         if (-d $self->original_data_path) {
             my $source_size = Genome::Sys->directory_size_recursive($self->original_data_path);
@@ -177,6 +185,13 @@ sub create {
 
 sub delete {
     my $self = shift;
+
+    my @alignment_results = Genome::InstrumentData::AlignmentResult->get(instrument_data_id => $self->id);
+    if (@alignment_results) {
+        $self->error_message("Cannot remove instrument data (" . $self->id . ") because it has " . scalar @alignment_results . " alignment result(s).");
+        return;
+    }
+
     my @allocations = Genome::Disk::Allocation->get(owner => $self);
     if (@allocations) {
         UR::Context->create_subscription(
@@ -185,11 +200,6 @@ sub delete {
                 for my $allocation (@allocations) {
                     my $id = $allocation->id;
                     print 'Now deleting allocation with owner_id = ' . $id . "\n";
-                    my $path = $allocation->absolute_path;
-                    unless (rmtree($path)) {
-                        print STDERR "ERROR: could not rmtree $path\n";
-                        return;
-                    }
                     $allocation->deallocate; 
                     print "Deletion complete.\n";
                 }
@@ -376,7 +386,13 @@ sub get_segments {
         return ();
     }
     
-    my $bam_file = $self->disk_allocations->absolute_path . "/all_sequences.bam";
+    my ($allocation) = $self->disk_allocations;
+    unless ($allocation) {
+        $self->error_message("Found no disk allocation for imported instrument data " . $self->id, ", so cannot find bam!");
+        die $self->error_message;
+    }
+
+    my $bam_file = $allocation->absolute_path . "/all_sequences.bam";
     
     unless (-e $bam_file) {
         $self->error_message("Bam file $bam_file doesn't exist, can't get segments for it.");

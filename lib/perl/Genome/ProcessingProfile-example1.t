@@ -72,11 +72,8 @@ isa_ok($m,'Genome::Model::Foo',"the model is of the correct subclass");
 is($init_model,$m,"model is initialized");
 
 # add instrument data
-my $a = $m->add_instrument_data_assignment(
-    instrument_data => $i,
-    filter_desc => '',
-);
-ok($a, "assigned instrument data to the model");
+my $a = $m->add_instrument_data($i);
+ok($a, "added instrument data to the model");
 
 # add other input
 my $n = $m->add_input(name => "foo", value_class_name => "UR::Value", value_id => "123");

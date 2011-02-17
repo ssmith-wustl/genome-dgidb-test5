@@ -5,331 +5,131 @@ use strict;
 
 use Genome;
 use Workflow;
+use File::Copy;
+use Workflow::Simple;
+use Cwd;
 
-my $DEFAULT_VERSION = '0.1';
+my $DEFAULT_VERSION = '0.2';
 my $PINDEL_COMMAND = 'pindel_64';
 
 class Genome::Model::Tools::DetectVariants2::Pindel {
-    is => ['Genome::Model::Tools::DetectVariants::Somatic', 'Genome::Model::Tools::DetectVariants2::Base'],
+    is => ['Genome::Model::Tools::DetectVariants2::Detector'],
+    doc => "Runs the pindel pipeline on the last complete build of a somatic model.",
     has => [
-        version => {
-            is => 'Version',
+        chromosome_list => {
+            is => 'ARRAY',
             is_optional => 1,
-            is_input => 1,
-            default_value => $DEFAULT_VERSION,
-            doc => "Version of pindel to use",
-        },
-        detect_indels => { 
-            default_value => 1,
-            doc => "Whether or not the tool should detect indels. ",
-            is_optional => 1,
-        },
-        reference_sequence_input => {
-            is  => 'String',
-            is_input=>1,
-            is_optional=>1, 
-            default => Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa', 
-            doc => 'The somatic sniper reference file',
-        },
-        chromosome => {
-            is  => 'String',
-            is_input=>1,
-            is_optional=>1, 
-            doc => 'Run pindel with this chromosome. If not set, pindel will run in serial for all chromosomes.',
-        },
-        # Temporary output files
-        _temp_long_insertion_output => {
-            calculate_from => ['_temp_staging_directory'],
-            calculate => q{ join("/", $_temp_staging_directory, "all_sequences_LI"); },
-            doc => "Where the long insertion output should be in the temp staging directory. This is contingent upon code in pindel and will change if the pindel binary does.",
-        },
-        _temp_short_insertion_output => {
-            calculate_from => ['_temp_staging_directory'],
-            calculate => q{ join("/", $_temp_staging_directory, "all_sequences_SI"); },
-            doc => "Where the short insertion output should be in the temp staging directory. This is contingent upon code in pindel and will change if the pindel binary does.",
-        },
-        _temp_deletion_output => {
-            calculate_from => ['_temp_staging_directory'],
-            calculate => q{ join("/", $_temp_staging_directory, "all_sequences_D"); },
-            doc => "Where the deletion output should be in the temp staging directory. This is contingent upon code in pindel and will change if the pindel binary does.",
-        },
-        _temp_inversion_output => {
-            calculate_from => ['_temp_staging_directory'],
-            calculate => q{ join("/", $_temp_staging_directory, "all_sequences_INV"); },
-            doc => "Where the inversion output should be in the temp staging directory. This is contingent upon code in pindel and will change if the pindel binary does.",
-        },
-        _temp_tandem_duplication_output => {
-            calculate_from => ['_temp_staging_directory'],
-            calculate => q{ join("/", $_temp_staging_directory, "all_sequences_TD"); },
-            doc => "Where the tandem duplication output should be in the temp staging directory. This is contingent upon code in pindel and will change if the pindel binary does.",
-        },
-        _temp_breakpoint_output => {
-            calculate_from => ['_temp_staging_directory'],
-            calculate => q{ join("/", $_temp_staging_directory, "all_sequences_BP"); },
-            doc => "Where the breakpoing output should be in the temp staging directory. This is contingent upon code in pindel and will change if the pindel binary does.",
-        },
-        # output files
-        long_insertion_output => {
-            calculate_from => ['output_directory'],
-            calculate => q{ join("/", $output_directory, "all_sequences_LI"); },
-            doc => "Where the long insertion output should be in the temp staging directory. This is contingent upon code in pindel and will change if the pindel binary does.",
-        },
-        short_insertion_output => {
-            calculate_from => ['output_directory'],
-            calculate => q{ join("/", $output_directory, "all_sequences_SI"); },
-            doc => "Where the short insertion output should be in the temp staging directory. This is contingent upon code in pindel and will change if the pindel binary does.",
-        },
-        deletion_output => {
-            calculate_from => ['output_directory'],
-            calculate => q{ join("/", $output_directory, "all_sequences_D"); },
-            doc => "Where the deletion output should be in the temp staging directory. This is contingent upon code in pindel and will change if the pindel binary does.",
-        },
-        inversion_output => {
-            calculate_from => ['output_directory'],
-            calculate => q{ join("/", $output_directory, "all_sequences_INV"); },
-            doc => "Where the inversion output should be in the temp staging directory. This is contingent upon code in pindel and will change if the pindel binary does.",
-        },
-        tandem_duplication_output => {
-            calculate_from => ['output_directory'],
-            calculate => q{ join("/", $output_directory, "all_sequences_TD"); },
-            doc => "Where the tandem duplication output should be in the temp staging directory. This is contingent upon code in pindel and will change if the pindel binary does.",
-        },
-        breakpoint_output => {
-            calculate_from => ['output_directory'],
-            calculate => q{ join("/", $output_directory, "all_sequences_BP"); },
-            doc => "Where the breakpoint output should be in the temp staging directory. This is contingent upon code in pindel and will change if the pindel binary does.",
+            doc => 'list of chromosomes to run on.',
         },
     ],
-    # Make workflow choose 64 bit blades
-    has_param => [
-        lsf_queue => {
-            default_value => 'tcga'
-        }, 
-        lsf_resource => {
-            default_value => "-M 16000000 -R 'select[type==LINUX64 && mem>16000] rusage[mem=16000]'",
-        },
-    ],
-    # These are params from the superclass' standard API that we do not require for this class (dont show in the help)
     has_constant_optional => [
         sv_params=>{},
-        sv_version=>{},
+        detect_svs=>{},
         snv_params=>{},
-        snv_version=>{},
-        indel_params=>{}, # pindel does not currently accept any processing parameters that this tool does not provide
-        capture_set_input=>{},
+        detect_snvs=>{},
+    ],
+    has_transient_optional => [
+        _workflow_result => {
+            doc => 'Result of the workflow',
+        },
+        _indel_output_dir => {
+            is => 'String',
+            doc => 'The location of the indels.hq.bed file',
+        },
     ],
 };
 
-# FIXME make this the real deployed path
-my %PINDEL_VERSIONS = (
-    '0.1' => '/gscmnt/sata921/info/medseq/Pindel_test/' . $PINDEL_COMMAND,
-    '0.2' => '/gscmnt/sata921/info/medseq/Pindel_test/maq/'.$PINDEL_COMMAND,     # This version and up works with MAQ aligned bams
-    '0.3' => '/gscmnt/sata921/info/medseq/Pindel_test/merged_with_kai/'.$PINDEL_COMMAND,    #this version is merged with changes from KAI
-);
 
-sub help_brief {
-    "Discovers somatic indels when provided a control bam (usually a normal sample) and a comparison bam (usually a tumor sample).";
-}
-
-sub help_synopsis {
-    my $self = shift;
-    return <<"EOS"
-gmt detect-variants somatic pindel --aligned-reads-input tumor.bam --control-aligned-reads-input normal.bam --output-directory pindel 
-EOS
-}
-
-sub help_detail {                           
-    return <<EOS 
-    Provide a tumor and normal BAM file and get a list of somatic indels.  
-EOS
-}
-
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-
-    if ($self->chromosome) {
-        mkdir $self->output_directory . '/' . $self->chromosome;
-        $self->output_directory($self->output_directory . '/' . $self->chromosome);
-    }
-
-    return $self;
-}
-
-# The config file that is internally generated to store bams, average insert size, and tag
-sub _config_file {
-    my $self = shift;
-    return $self->_temp_staging_directory . "/pindel.config";
-}
-
-# TODO hardcoded for now, but look at bam headers soon or go back to the old method of calculating via a model id and instrument data assignments as in gmt pindel run-pindel
-sub _calculate_average_insert_size { 
-    return "400";
-}
-
-sub _output_basename_for_chrom {
-    my $self = shift;
-    my $chromosome = shift;
-    return join("/", $self->_temp_staging_directory, $chromosome);
-}
-
-# Generate the config file that is required by pindel. It needs one line each for normal and tumor. The format is tab delimited and contains (per line): bam_name, avg_insert_size, tag (normal or tumor)
-sub _generate_config_file { 
-    my $self = shift;
-
-    my $config_path = $self->_config_file;
-    my $config_fh = Genome::Sys->open_file_for_writing($config_path);
-    unless ($config_fh) {
-        $self->error_message("Could not open $config_path for writing");
-        die;
-    }
-
-    my $normal_line = join("\t", ($self->control_aligned_reads_input, $self->_calculate_average_insert_size, "normal") );
-    $config_fh->print("$normal_line\n");
-
-    my $tumor_line = join("\t", ($self->aligned_reads_input, $self->_calculate_average_insert_size, "tumor") );
-    $config_fh->print("$tumor_line\n");
-
-    $config_fh->close;
-
-    unless (-s $self->_config_file) {
-        $self->error_message("Config file: " . $self->_config_file . " does not exist or has zero size");
-        die;
-    }
-
-    return 1;
-}
 
 sub _detect_variants {
     my $self = shift;
-    # test architecture to make sure we can run
-    unless (`uname -a` =~ /x86_64/) {
-        $self->error_message("Must run on a 64 bit machine");
-        die;
+    # Obtain normal and tumor bams and check them. Either from somatic model id or from direct specification. 
+    $DB::single=1;
+    my ($build, $tumor_bam, $normal_bam);
+    $tumor_bam = $self->aligned_reads_input;
+    $normal_bam = $self->control_aligned_reads_input if defined $self->control_aligned_reads_input;
+
+    unless(defined($self->reference_sequence_input)){
+        $self->reference_sequence_input( Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa' );
     }
 
-    $self->_generate_config_file;
+    # Set default params
+    unless ($self->chromosome_list) { $self->chromosome_list([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,'X','Y']); }
 
-    my $result;
-    if ($self->chromosome) {
-        $result  = $self->_run_pindel_for_chromosome($self->chromosome);
+    unless ($self->indel_bed_output) { $self->indel_bed_output($self->_temp_staging_directory. '/indels.hq.bed'); }
 
-        ## this is a hack, because the rest of the DetectVariants wants things to
-        ## be named like all_sequences, there's probably a cleaner way to do this
-        ## Eric
-        my $chromosome = $self->chromosome;
-        for my $target_file ($self->_temp_short_insertion_output, $self->_temp_long_insertion_output, $self->_temp_deletion_output, 
-                             $self->_temp_tandem_duplication_output, $self->_temp_inversion_output, $self->_temp_breakpoint_output) {
-            my $chunk_file = $target_file;
-            $chunk_file =~ s/all_sequences/$chromosome/;
-            unless (-e $chunk_file) {
-                $self->error_message("Output for chromosome $chromosome: file $chunk_file does not appear to exist"); 
-                die;
-            }
-
-            rename($chunk_file,$target_file) or die $!;
-        }
-
-        # Put the insertions and deletions where the rest of the pipe expects them 
-        my $files_to_cat = join(" ", ($self->_temp_short_insertion_output, $self->_temp_deletion_output) );
-
-        my $cmd = "cat $files_to_cat > " . $self->_indel_staging_output;
-        unless (system($cmd) == 0) {
-            $self->error_message("Problem running $cmd");
-            die;
-        }
-    } else {
-        $result = $self->_run_pindel($self->_indel_staging_output);
-    }
+    my $workflow = Workflow::Operation->create_from_xml(\*DATA);
+    my %input;
+    $input{chromosome_list}=$self->chromosome_list;
+    $input{reference_sequence_input}=$self->reference_sequence_input;
+    $input{tumor_bam}=$self->aligned_reads_input;
+    $input{normal_bam}=$self->control_aligned_reads_input if defined $self->control_aligned_reads_input;
+    $input{output_directory} = $self->_temp_staging_directory;
+    $input{version}=$self->version;
     
-    return $result; 
-}
+    $workflow->log_dir($self->output_directory);
+    $self->_dump_workflow($workflow);
 
-sub _run_pindel {
-    my $self = shift;
-    for my $chromosome (1..22, "X", "Y") {
-        unless ( $self->_run_pindel_for_chromosome($chromosome) ) {
-            $self->error_message("Failed to run pindel for chromosome $chromosome");
-            die;
-        }
-        # Append this chromosome's output files to the rest
-        for my $target_file ($self->_temp_short_insertion_output, $self->_temp_long_insertion_output, $self->_temp_deletion_output, 
-                             $self->_temp_tandem_duplication_output, $self->_temp_inversion_output, $self->_temp_breakpoint_output) {
-            my $chunk_file = $target_file;
-            $chunk_file =~ s/all_sequences/$chromosome/;
-            unless (-e $chunk_file) {
-                $self->error_message("Output for chromosome $chromosome: file $chunk_file does not appear to exist"); 
-                die;
-            }
+    my $result = Workflow::Simple::run_workflow_lsf( $workflow, %input);
 
-            my $cmd = "cat $chunk_file >> $target_file";
-            unless (system($cmd) == 0) {
-                $self->error_message("Problem running $cmd");
-                die;
-            }
-        }
-
-        # Clean up the per chromosome files
-        my $output_basename = $self->_output_basename_for_chrom($chromosome);
-        unlink glob $output_basename . "_*";
+    unless($result){
+        die $self->error_message("Workflow did not return correctly.");
     }
-
-    # Put the insertions and deletions where the rest of the pipe expects them 
-    my $files_to_cat = join(" ", ($self->_temp_short_insertion_output, $self->_temp_deletion_output) );
-    my $cmd = "cat $files_to_cat > " . $self->_indel_staging_output;
-    unless (system($cmd) == 0) {
-        $self->error_message("Problem running $cmd");
-        die;
-    }
+    $self->_workflow_result($result);
+    #my $old = $self->_temp_staging_directory."/".$input{indel_bed_output};
+    #my $new = $self->_temp_staging_directory."/indels.hq.bed";
+    #symlink($old,$new);
 
     return 1;
 }
 
-sub _run_pindel_for_chromosome {
+sub _dump_workflow {
     my $self = shift;
-    my $chromosome = shift;
-
-    my $reference_sequence_for_chrom = $self->reference_sequence_input;
-    $reference_sequence_for_chrom =~ s/all_sequences/$chromosome/;
-    unless (-e $reference_sequence_for_chrom) {
-        $self->error_message("Reference sequence file $reference_sequence_for_chrom does not exist");
-        die;
-    }
-    my $output_basename = $self->_output_basename_for_chrom($chromosome);
-    my $cmd = $self->pindel_path . " -f $reference_sequence_for_chrom" . " -i " . $self->_config_file . " -o $output_basename" . " -c $chromosome" . " -b /dev/null";
-    my $result = Genome::Sys->shellcmd( cmd=>$cmd, input_files=>[$self->aligned_reads_input,$self->control_aligned_reads_input]);
-
-    unless($result) {
-        $self->error_message("Running pindel failed with command $cmd");
-        die;
-    }
-
-    return $result;
+    my $workflow = shift;
+    my $xml = $workflow->save_to_xml;
+    my $xml_location = $self->output_directory."/workflow.xml";
+    my $xml_file = Genome::Sys->open_file_for_writing($xml_location);
+    print $xml_file $xml;
+    $xml_file->close;
+    #$workflow->as_png($self->output_directory."/workflow.png"); #currently commented out because blades do not all have the "dot" library to use graphviz
 }
 
-sub pindel_path {
-    my $self = $_[0];
-    return $self->path_for_pindel_version($self->version);
-}
-
-sub available_pindel_versions {
+sub _create_temp_directories {
     my $self = shift;
-    return keys %PINDEL_VERSIONS;
+
+    $ENV{TMPDIR} = $self->output_directory;
+
+    return $self->SUPER::_create_temp_directories(@_);
 }
 
-sub path_for_pindel_version {
-    my $class = shift;
-    my $version = shift;
-
-    if (defined $PINDEL_VERSIONS{$version}) {
-        return $PINDEL_VERSIONS{$version};
+sub _promote_staged_data {
+    my $self = shift;
+    my $staging_dir = $self->_temp_staging_directory;
+    my $output_dir  = $self->output_directory;
+    unless($self->SUPER::_promote_staged_data(@_)){
+        $self->error_message("_promote_staged_data failed in Pindel");
+        die $self->error_message;
     }
-    die('No path for pindel version '. $version);
-}
+    $DB::single =1 ;
+    my @chrom_list = @{$self->chromosome_list};
+    my $test_chrom = $chrom_list[0];
+    my $bed = $self->output_directory."/".$test_chrom."/indels_all_sequences.bed";
+    $bed = readlink($bed);
+    my @stuff = split "\\.", $bed;
+    my $bed_version = $stuff[-2];
 
-sub default_pindel_version {
-    die "default pindel version: $DEFAULT_VERSION is not valid" unless $PINDEL_VERSIONS{$DEFAULT_VERSION};
-    return $DEFAULT_VERSION;
+    my $output_file = $output_dir."/indels.hq.".$bed_version.".bed";
+    my @inputs = map { $output_dir."/".$_."/indels_all_sequences.bed" } @chrom_list;
+    my $cat_cmd = Genome::Model::Tools::Cat->create( dest => $output_file, source => \@inputs);
+    unless($cat_cmd->execute){
+        $self->error_message("Cat command failed to execute.");
+        die $self->error_message;
+    }
+    my $cwd = getcwd;
+    chdir $output_dir;
+    Genome::Sys->create_symlink("indels.hq.".$bed_version.".bed", "indels.hq.bed");
+    chdir $cwd; 
+    return 1;
 }
 
 sub has_version {
@@ -338,10 +138,50 @@ sub has_version {
     unless(defined($version)){
         $version = $self->version;
     }
-    if(exists($PINDEL_VERSIONS{$version})){
-        return 1;
+    my @versions = Genome::Model::Tools::DetectVariants::Somatic::Pindel->available_pindel_versions;
+
+    for my $v (@versions){
+        if($v eq $version){
+            return 1;
+        }
     }
+
     return 0;
 }
 
+
+
+
 1;
+
+__DATA__
+<?xml version='1.0' standalone='yes'?>
+
+<workflow name="Pindel Detect Variants Module">
+
+  <link fromOperation="input connector" fromProperty="normal_bam" toOperation="Pindel" toProperty="control_aligned_reads_input" />
+  <link fromOperation="input connector" fromProperty="tumor_bam" toOperation="Pindel" toProperty="aligned_reads_input" />
+  <link fromOperation="input connector" fromProperty="output_directory" toOperation="Pindel" toProperty="output_directory" />
+  <link fromOperation="input connector" fromProperty="chromosome_list" toOperation="Pindel" toProperty="chromosome" />
+  <link fromOperation="input connector" fromProperty="version" toOperation="Pindel" toProperty="version" />
+  <link fromOperation="input connector" fromProperty="reference_sequence_input" toOperation="Pindel" toProperty="reference_sequence_input" />
+
+  <link fromOperation="Pindel" fromProperty="output_directory" toOperation="output connector" toProperty="output" />
+
+  <operation name="Pindel" parallelBy="chromosome">
+    <operationtype commandClass="Genome::Model::Tools::DetectVariants::Somatic::Pindel" typeClass="Workflow::OperationType::Command" />
+  </operation>
+
+  <operationtype typeClass="Workflow::OperationType::Model">
+    <inputproperty isOptional="Y">normal_bam</inputproperty>
+    <inputproperty isOptional="Y">tumor_bam</inputproperty>
+    <inputproperty isOptional="Y">output_directory</inputproperty>
+    <inputproperty isOptional="Y">version</inputproperty>
+    <inputproperty isOptional="Y">chromosome_list</inputproperty>
+    <inputproperty isOptional="Y">reference_sequence_input</inputproperty>
+
+    <outputproperty>output</outputproperty>
+    
+  </operationtype>
+
+</workflow>

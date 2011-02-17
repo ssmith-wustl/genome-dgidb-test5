@@ -50,6 +50,16 @@ class Genome::Prediction::Transcript {
     ],
 };
 
+# Returns the total length of coding exons
+sub spliced_length {
+    my $self = shift;
+    my $sum = 0;
+    for my $exon ($self->exons) {
+        $sum += $exon->length;
+    }
+    return $sum;
+}
+
 # Returns the first transcribed exon of the transcript (most five prime)
 sub five_prime_exon {
     my $self = shift;

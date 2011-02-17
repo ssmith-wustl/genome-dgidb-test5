@@ -362,30 +362,49 @@ sub create {
         $self->error_message("Reference sequences are invalid.  We can't proceed:  " . $self->error_message);
         die $self->error_message();
     }
+
+    eval {
     
-    # STEP 6: PREPARE THE ALIGNMENT FILE (groups file, sequence dictionary)
-    $self->status_message("Preparing the all_sequences.sam in scratch");
-    unless ($self->prepare_scratch_sam_file) {
-        $self->error_message("Failed to prepare the scratch sam file with groups and sequence dictionary");
-        die $self->error_message;
-    }
-
-    # STEP 7: RUN THE ALIGNER
-    $self->status_message("Running aligner...");
-    unless ($self->collect_inputs_and_run_aligner ) {
-        $self->error_message("Failed to collect inputs and/or run the aligner!");
-        die $self->error_message;
-    }
-
-    # STEP 8: CREATE BAM IN STAGING DIRECTORY
-    if ($self->supports_streaming_to_bam) {
-        $self->close_out_streamed_bam_file;
-    } else {
-        $self->status_message("Constructing a BAM file (if necessary)...");
-        unless( $self->create_BAM_in_staging_directory()) {
-            $self->error_message("Call to create_BAM_in_staging_directory failed.\n");
+        # STEP 6: PREPARE THE ALIGNMENT FILE (groups file, sequence dictionary)
+        # this also prepares the bam output pipe and crams the alignment headers through it.
+        $self->status_message("Preparing the all_sequences.sam in scratch");
+        unless ($self->prepare_scratch_sam_file) {
+            $self->error_message("Failed to prepare the scratch sam file with groups and sequence dictionary");
             die $self->error_message;
         }
+
+        # STEP 7: RUN THE ALIGNER
+        $self->status_message("Running aligner...");
+        unless ($self->collect_inputs_and_run_aligner ) {
+            $self->error_message("Failed to collect inputs and/or run the aligner!");
+            die $self->error_message;
+        }
+
+        # STEP 8: CREATE BAM IN STAGING DIRECTORY
+        if ($self->supports_streaming_to_bam) {
+            $self->close_out_streamed_bam_file;
+        } else {
+            $self->status_message("Constructing a BAM file (if necessary)...");
+            unless( $self->create_BAM_in_staging_directory()) {
+                $self->error_message("Call to create_BAM_in_staging_directory failed.\n");
+                die $self->error_message;
+            }
+        }
+    };
+
+    if ($@) {
+        my $error = $@;
+        $self->status_message("Oh no!  Caught an exception while in the critical point where the BAM pipe was open: $@");
+        if (defined $self->_bam_output_fh) {
+            eval {
+                $self->_bam_output_fh->close;
+            };
+            if ($@) {
+                $error .= " ... and the input filehandle failed to close due to $@";
+            }
+        }
+    
+        die $error;
     }
 
     # STEP 9-10, validate BAM file (if necessary)
@@ -417,7 +436,10 @@ sub create {
     # TODO: move this into the actual original allocation so we don't need to do this 
     $self->status_message("Resizing the disk allocation...");
     if ($self->_disk_allocation) {
-        unless ($self->_disk_allocation->reallocate) {
+        my %params;
+        $params{allow_reallocate_with_move} = 0;
+        $params{allow_reallocate_with_move} = 1 if $self->_disk_allocation->kilobytes_requested < 10_485_760; # 10GB
+        unless ($self->_disk_allocation->reallocate(%params)) {
             $self->warning_message("Failed to reallocate my disk allocation: " . $self->_disk_allocation->id);
         }
     }
@@ -458,7 +480,7 @@ sub prepare_scratch_sam_file {
     
     if ($self->supports_streaming_to_bam) {
         my $ref_list  = $self->reference_build->full_consensus_sam_index_path($self->samtools_version);
-        my $sam_cmd = sprintf("| %s view -S -b -o %s - ", Genome::Model::Tools::Sam->path_for_samtools_version($self->samtools_version), $self->temp_staging_directory . "/all_sequences.bam");
+        my $sam_cmd = sprintf("| %s view -S -b -o %s - ", Genome::Model::Tools::Sam->path_for_samtools_version($self->samtools_version), $self->temp_scratch_directory . "/raw_all_sequences.bam");
         $self->status_message("Opening $sam_cmd");
 
         $self->_bam_output_fh(IO::File->new($sam_cmd));
@@ -726,7 +748,8 @@ sub close_out_streamed_bam_file {
     $self->_bam_output_fh(undef);
 
     $self->status_message("Sorting by name to do fixmate...");
-    my $bam_file = $self->temp_staging_directory . "/all_sequences.bam";
+    my $bam_file = $self->temp_scratch_directory . "/raw_all_sequences.bam";
+    my $final_bam_file = $self->temp_staging_directory . "/all_sequences.bam";
     my $samtools = Genome::Model::Tools::Sam->path_for_samtools_version($self->samtools_version);
 
     my $tmp_file = $bam_file.'.sort';
@@ -746,7 +769,7 @@ sub close_out_streamed_bam_file {
     unlink "$tmp_file.fixmate";
     unlink $bam_file;
 
-    move "$tmp_file.fix.bam", $bam_file;
+    move "$tmp_file.fix.bam", $final_bam_file;
     return 1;
 }
 
@@ -1975,25 +1998,6 @@ sub alignment_bam_file_paths {
 sub requires_read_group_addition {
     return 1;
 }
-
-=cut
-sub delete {
-    my $self = shift;
-
-    my $allocation = Genome::Disk::Allocation->get(owner_id=>$self->id, owner_class_name=>ref($self));
-    if ($allocation) {
-        my $path = $allocation->absolute_path;
-        unless (rmtree($path)) {
-            $self->error_message("could not rmtree $path");
-            return;
-       }
-
-       $allocation->deallocate; 
-    }
-
-    $self->SUPER::delete(@_);
-}
-=cut
 
 sub supports_streaming_to_bam {
     0;

@@ -23,31 +23,74 @@ sub required_rusage {
     my %p = @_;
     my $instrument_data = delete $p{instrument_data};
 
-    my $estimated_usage_mb = 90000;
-    if (defined $instrument_data && $instrument_data->can("calculate_alignment_estimated_kb_usage")) {
-        my $kb_usage = $instrument_data->calculate_alignment_estimated_kb_usage;
-        $estimated_usage_mb = int(($kb_usage * 5) / 1024)+100;
-    }
-    
-    my $mem = 10000;
-    my ($double_mem, $mem_kb, $double_mem_kb) = ($mem*2, $mem*1000, $mem*2*1000);
-    my $tmp = $estimated_usage_mb;
-    my $double_tmp = $tmp*2; 
+    my $tmp_mb = $class->tmp_megabytes_estimated($instrument_data);
+    my $mem_mb = 10240;
     my $cpus = 4;
-    my $double_cpus = $cpus*2;
-
-    my $select_half_blades  = "select[ncpus>=$double_cpus && maxmem>$double_mem && maxtmp>=$double_tmp] span[hosts=1]";
-    my @selected_half_blades = `bhosts -R '$select_half_blades' alignment | grep ^blade`;
+    
+    my $mem_kb = $mem_mb*1024;
+    my $tmp_gb = $tmp_mb/1024;
 
     my $user = getpwuid($<);
     my $queue = ($user eq 'apipe-builder' ? 'alignment-pd' : 'alignment');
 
-    my $required_usage = "-R '$select_half_blades rusage[mem=$mem]' -M $mem_kb -n $cpus -q $queue -m alignment";
-    if (@selected_half_blades) {
+    my $host_groups;
+    $host_groups = qx(bqueues -l $queue | grep ^HOSTS:);
+    $host_groups =~ s/\/\s+/\ /;
+    $host_groups =~ s/^HOSTS:\s+//;
+
+    my $select  = "select[ncpus >= $cpus && mem >= $mem_mb && gtmp >= $tmp_gb] span[hosts=1]";
+    my $rusage  = "rusage[mem=$mem_mb, gtmp=$tmp_gb]";
+    my $options = "-M $mem_kb -n $cpus -q $queue";
+
+    my $required_usage = "-R '$select $rusage' $options";
+
+    my @selected_blades = `bhosts -R '$select' $host_groups | grep ^blade`;
+
+    if (@selected_blades) {
         return $required_usage;
     } else {
         die $class->error_message("Failed to find hosts that meet resource requirements ($required_usage).");
     }
+}
+
+sub tmp_megabytes_estimated {
+    my $class = shift || die;
+    my $instrument_data = shift;
+
+    my $default_megabytes = 90000;
+
+
+    if (not defined $instrument_data) {
+        return $default_megabytes;
+    }
+    elsif ($instrument_data->bam_path) {
+        my $bam_path = $instrument_data->bam_path;
+
+        my $scale_factor = 3.25; # assumption: up to 3x during sort/fixmate/sort and also during fastq extraction (2x) + bam = 3
+
+        my $bam_bytes = -s $bam_path;
+        unless ($bam_bytes) {
+            die $class->error_message("Instrument Data has BAM ($bam_path) but has no size!");
+        }
+
+        if ($instrument_data->can('get_segments')) {
+            my $bam_segments = scalar $instrument_data->get_segments;
+            if ($bam_segments > 1) {
+                $scale_factor = $scale_factor / $bam_segments;
+            }
+        }
+
+        return int(($bam_bytes * $scale_factor) / 1024**2);
+    }
+    elsif ($instrument_data->can("calculate_alignment_estimated_kb_usage")) {
+        my $kb_usage = $instrument_data->calculate_alignment_estimated_kb_usage;
+        return int(($kb_usage * 3) / 1024) + 100; # assumption: 2x for the quality conversion, one gets rm'di after; aligner generates 0.5 (1.5 total now); rm orig; sort and merge maybe 2-2.5
+    }
+    else {
+        return $default_megabytes;
+    }
+
+    return;
 }
 
 
@@ -70,7 +113,7 @@ sub _run_aligner {
         my $path = $input_pathnames[$i];
         my ($input_pass) = $path =~ m/\.bam:(\d)$/;
         
-        if ($input_pass) {
+        if (defined($input_pass)) {
             $path =~ s/\.bam:\d$/\.bam/;
             $input_pathnames[$i] = $path;
             
@@ -175,6 +218,13 @@ sub _run_aligner {
 
     unless (-s $sam_file) {
         die "The sam output file $sam_file is zero length; something went wrong.";
+    }
+
+    for my $file (@input_pathnames) {
+        if ($file =~ m/^\/tmp\//) {
+            $self->status_message("removing $file to save space!");
+            unlink($file);
+        }
     }
 
 

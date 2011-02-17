@@ -38,19 +38,21 @@ my $ref_model = Genome::Model::ImportedReferenceSequence->create(
     subject_class_name  => 'Genome::Taxon',
     subject_id          => 1653198737,
 );
-my $rbuild = Genome::Model::Build::ImportedReferenceSequence->create(
-    name            => 'test_ref_sequence_build',
-    model           => $ref_model,
-    fasta_file      => 'nofile', 
-    data_directory  => $tempdir,
-    version         => "37",
-);
-ok($rbuild, 'created reference sequence build');
+#my $rbuild = Genome::Model::Build::ImportedReferenceSequence->create(
+    #name            => 'test_ref_sequence_build',
+    #model           => $ref_model,
+    #fasta_file      => 'nofile', 
+    #data_directory  => $tempdir,
+    #version         => "37",
+#);
+my $rbuild = Genome::Model::Build::ImportedReferenceSequence->get(name => "NCBI-human-build36");
+ok($rbuild, 'got reference sequence build');
 
 my $test_model_name = "genotype-ma-test-".$ENV{USER}."-".$$;
 $test_model_name ='H_KA-123172-S.3576';
 my $ppid = 2166945;
 my $ppname = 'illumina/wugc';
+
 
 #write_file($temp_wugc,'1\t72017\tAA\n1\t311622\tAA\n1\t314893\t--\n');
 write_file($temp_wugc,"1\t72017\t72017\tA\tA\tref\tref\tref\tref\n1\t311622\t311622\tG\tA\tref\tSNP\tref\tSNP\n1\t314893\t--\n");
@@ -95,11 +97,11 @@ my $dest_contents = read_file($build->data_directory."/formatted_genotype_file_p
 #formatted_genotype_file_path.genotype
 is($dest_contents,$orig_contents,'original and copied files match');
 
+ok(-s $build->snvs_bed("v1"), "gold snp bed file exists");
+
 # let us nuke the build and model...
 system("rm -rf ".$model->data_directory);
 $build->delete;
 $model->delete;
 
-done_testing(9);
-exit;
-
+done_testing(10);

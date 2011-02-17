@@ -2,118 +2,52 @@ package Genome::Model::Tools::Music::Smg;
 
 use warnings;
 use strict;
-
-=head1 NAME
-
-Genome::Music::SMG - identification of significantly mutated genes
-
-=head1 VERSION
-
-Version 1.01
-
-=cut
+use Carp;
+use POSIX qw( WIFEXITED );
 
 our $VERSION = '1.01';
 
 class Genome::Model::Tools::Music::Smg {
-	is => 'Command',                       
-	
-	has => [                                # specify the command's single-value properties (parameters) <--- 
-		maf_file	=> { is => 'Text', doc => "List of mutations in MAF format" },
-		reference		=> { is => 'Text', doc => "Path to reference sequence in FASTA format", is_optional => 1 },
-	],
+  is => 'Command',
+  has => [
+    gene_mr_file => { is => 'Text', doc => "File with per-gene mutation rates (Created using music bmr calc-bmr)" },
+    output_file => { is => 'Text', doc => "Output file that will list significantly mutated genes and their p-values" },
+  ],
 };
 
-sub sub_command_sort_position { 12 }
-
-sub help_brief {                            # keep this to just a few words <---
-    "Identify significantly mutated genes"                 
+sub help_brief {
+  "Identifies significantly mutated genes, given their mutation rates (MR) and the background MR";
 }
 
-sub help_synopsis {
-    return <<EOS
-This command identifies significantly mutated genes
-EXAMPLE:	gmt music smg --maf-file myMAF.tsv
-EOS
+sub help_detail {
+  return <<HELP
+This script runs R-based statistical tools to calculate the significance of mutated genes, given
+their individual mutation rates categorized by mutation type and the overall background mutations
+rates for each of those categories.
+HELP
 }
 
-sub help_detail {                           # this is what the user will see with the longer version of help. <---
-    return <<EOS 
+sub execute
+{
+  my $self = shift;
+  $DB::single = 1;
+  my $gene_mr_file = $self->gene_mr_file;
+  my $output_file = $self->output_file;
+  my $pval_file = $output_file . "_pvals";
 
-EOS
+  # Check on all the input data before starting work
+  print STDERR "Gene mutation rate file not found or is empty: $gene_mr_file\n" unless( -s $gene_mr_file );
+  return 1 unless( -s $gene_mr_file );
+
+  # Call R for Fisher combined test, Likelihood ratio test, and convolution test on each gene
+  my $smg_cmd = "R --slave --args < " . __FILE__ . ".R $gene_mr_file $pval_file smg_test";
+  WIFEXITED( system $smg_cmd ) or croak "Couldn't run: $smg_cmd ($?)";
+
+  # Call R for calculating FDR on the p-values calculated in the SMG test
+  my $fdr_cmd = "R --slave --args < " . __FILE__ . ".R $pval_file $output_file calc_fdr";
+  WIFEXITED( system $fdr_cmd ) or croak "Couldn't run: $fdr_cmd ($?)";
+
+  return 1;
 }
 
-=head1 SYNOPSIS
-
-Identifies significantly mutated genes
-
-
-=head1 USAGE
-
-      music.pl smg OPTIONS
-      
-      OPTIONS:
-      
-      --maf-file		List of mutations in MAF format
-      --reference		Path to reference FASTA file
-      --output-file		Output file to contain results      
-
-
-=head1 FUNCTIONS
-
-=cut
-
-################################################################################
-
-=head2	execute
-
-Initializes a new analysis
-
-=cut
-
-################################################################################
-
-sub execute {
-    my $self = shift;
-
-    print "Running analysis...\n";
-
-    return(0);
-}
-
-
-################################################################################
-
-=head2	function2
-
-Your description here
-
-=cut
-
-################################################################################
-
-sub function2 {
-}
-
-=head1 AUTHOR
-
-The Genome Center at Washington University, C<< <software at genome.wustl.edu> >>
-
-
-=head1 SUPPORT
-
-You can find documentation for this module with the perldoc command.
-
-    perldoc Genome::Music::SMG
-
-For more information, please visit http://genome.wustl.edu.
-
-=head1 COPYRIGHT & LICENSE
-
-Copyright 2010 The Genome Center at Washington University, all rights reserved.
-
-This program is free and open source under the GNU license.
-
-=cut
-
-1; # End of Genome::Music::SMG
+1;

@@ -1,24 +1,15 @@
 package Genome::Disk::Allocation;
 
-# Adaptor for GSC::DiskAllocation
-
-# Do NOT use this module from anything in the GSC schema,
-# though the converse will work just fine.
-
-# This module will handle all PSE calls based on modifications
-
 use strict;
 use warnings;
 
 use Genome;
-use Genome::Utility::AsyncFileSystem qw/on_each_line/;
-use Sys::Hostname qw/hostname/;
+use Carp 'confess';
 
 class Genome::Disk::Allocation {
-    table_name => 'GSC.disk_allocation disk_allocation',
     id_by => [
-        allocator_id => {
-            is => 'Number',
+        id => {
+            is => 'Text',
             doc => 'The id for the allocator event',
         },
     ],
@@ -39,10 +30,6 @@ class Genome::Disk::Allocation {
             is => 'Number',
             doc => 'The disk space allocated in kilobytes',
         },
-        kilobytes_used => {
-            is => 'Number',
-            doc => 'The actual disk space used by owner',
-        },
         owner_class_name => {
             is => 'Text',
             doc => 'The class name for the owner of this allocation',
@@ -51,7 +38,11 @@ class Genome::Disk::Allocation {
             is => 'Text',
             doc => 'The id for the owner of this allocation',
         },
-        owner => { id_by => 'owner_id', is => 'UR::Object', id_class_by => 'owner_class_name' },
+        owner => { 
+            id_by => 'owner_id', 
+            is => 'UR::Object', 
+            id_class_by => 'owner_class_name' 
+        },
         group_subdirectory => {
             is => 'Text',
             doc => 'The group specific subdirectory where space is allocated',
@@ -62,327 +53,623 @@ class Genome::Disk::Allocation {
                 return $mount_path .'/'. $group_subdirectory .'/'. $allocation_path;
             |,
         },
+        volume => { 
+            is => 'Genome::Disk::Volume',
+            calculate_from => 'mount_path',
+            calculate => q| return Genome::Disk::Volume->get(mount_path => $mount_path, disk_status => 'active'); |
+        },
+        group => {
+            is => 'Genome::Disk::Group',
+            calculate_from => 'disk_group_name',
+            calculate => q| return Genome::Disk::Group->get(disk_group_name => $disk_group_name); |,
+        },
     ],
     has_optional => [
-        allocator => {
-            calculate_from => 'allocator_id',
-            calculate => q|
-                return GSC::PSE::AllocateDiskSpace->get($allocator_id);
-            |,
-            doc => 'The allocate disk space PSE',
+        kilobytes_used => {
+            is => 'Number',
+            default => 0,
+            doc => 'The actual disk space used by owner',
         },
-        volume => { 
-                        is => 'Genome::Disk::Volume',
-            calculate_from => 'mount_path',
-            calculate => q{
-                return Genome::Disk::Volume->get(mount_path => $mount_path);
-            },
-        }
-    ],
+    ],    
+    table_name => 'GENOME_DISK_ALLOCATION',
     data_source => 'Genome::DataSource::GMSchema',
 };
 
-sub build {
+my $MAX_VOLUMES = 5;
+my $MINIMUM_ALLOCATION_SIZE = 0;
+my $MAX_ATTEMPTS_TO_LOCK_VOLUME = 30;
+my @REQUIRED_PARAMETERS = qw/
+    disk_group_name
+    allocation_path
+    kilobytes_requested
+    owner_class_name
+    owner_id
+/;
 
-    my ($self) = @_;
-    return if $self->owner_class_name !~ /^Genome::Model::Build/;
+# TODO This needs to be removed, site-specific
+our @APIPE_DISK_GROUPS = qw/
+    info_apipe
+    info_apipe_ref
+    info_alignments
+    info_genome_models
+    systems_benchmarking
+/;
 
-    my $build_id = $self->owner_id();
-    my $build = Genome::Model::Build->get($build_id);
-    return $build;
+# Dummy allocations (don't commit to db) still create files on the filesystem, and the tests/scripts/whatever
+# that make these allocations may not deallocate and clean up. Do so here.
+my @paths_to_remove;
+END {
+    remove_test_paths();
+}
+sub remove_test_paths {
+    for my $path (@paths_to_remove) {
+        next unless -d $path;
+        Genome::Sys->remove_directory_tree($path);
+        print STDERR "Removing allocation path $path because UR_DBI_NO_COMMIT is on\n";
+    }
 }
 
-our $test_allocation = 0;
-sub test_allocation {
-    my $class = shift;
-    if (@_) {
-        $test_allocation = shift;
-    }
-    return $test_allocation;
+# This generates a unique text ID for the object. The format is <hostname> <PID> <time in seconds> <some number>
+sub Genome::Disk::Allocation::Type::autogenerate_new_object_id {
+    return $UR::Object::Type::autogenerate_id_base . ' ' . (++$UR::Object::Type::autogenerate_id_iter);
 }
 
-sub allocate {
-    my $class = shift;
-    my %params = (@_);
+sub __display_name__ {
+    my $self = shift;
+    return $self->absolute_path;
+}
 
-    my @required_params = qw (allocation_path disk_group_name kilobytes_requested owner_class_name owner_id);
-    for (@required_params) {
-        unless (defined($params{$_})) {
-            die($_ .' param is required to allocate in '. $class .' and got params '. "\n". Data::Dumper::Dumper(%params) ."\n");
-        }
+# The allocation process should be done in a separate process to ensure it completes and commits quickly, since
+# locks on allocations and volumes persist until commit completes. To make this invisible to everyone, the
+# create/delete/reallocate methods perform the system calls that execute _create/_delete/_reallocate methods.
+sub allocate { return shift->create(@_); }
+sub create {
+    my ($class, %params) = @_;
+    unless (exists $params{id}) {
+        $params{id} = Genome::Disk::Allocation::Type::autogenerate_new_object_id;
     }
-    my $allocation;
+
+    # If no commit is on, the created object won't be retrievable via a get (since it will only live in the
+    # child process' UR object cache). Just call the _create method directly and return
     if ($ENV{UR_DBI_NO_COMMIT}) {
-        if ($class->test_allocation) {
-            my $allocate_cmd = Genome::Disk::Allocation::Command::Allocate->execute(%params);
-
-            unless($allocate_cmd) {
-                die('Failed to allocate disk space with params '. %params);
-            }
-            $allocation = Genome::Disk::Allocation->load(
-                                                           allocation_path => $params{allocation_path},
-                                                           disk_group_name => $params{disk_group_name},
-                                                           owner_class_name => $params{owner_class_name},
-                                                           owner_id => $params{owner_id},
-                                                       );
-        } else {
-            local $UR::DataSource::use_dummy_autogenerated_ids = 1;
-
-            my $group = Genome::Disk::Group->get(disk_group_name => $params{disk_group_name});
-            unless ($group) {
-                die 'cannot find disk group: ' . $params{disk_group_name};
-            }
-
-            my $tmpdir = Genome::Sys->base_temp_directory();
-
-            my $id = $class->__meta__->autogenerate_new_object_id;
-            $allocation = $class->__define__(
-                id => $id,
-                allocator_id => $id,
-                allocation_path => $params{allocation_path},
-                disk_group_name => $params{disk_group_name},
-                owner_class_name => $params{owner_class_name},
-                owner_id => $params{owner_id},
-                kilobytes_requested => $params{kilobytes_requested},
-                kilobytes_used => 0,
-                group_subdirectory => $group->subdirectory,
-                mount_path => $tmpdir,
-                absolute_path => $tmpdir . '/' . $group->subdirectory . '/' . $params{allocation_path} 
-            );
-            my $path = $allocation->absolute_path;
-            unless (-e $path) {
-                Genome::Sys->create_directory($path);
-                unless (-e $path) {
-                    die $class->error_message("Failed to create directory $path! $!");
-                }
-            }
-        }
-    } else {
-        my $allocate_cmd = sprintf('genome disk allocation allocate --allocation-path=%s --disk-group-name=%s --kilobytes-requested=%s --owner-class-name=%s --owner-id=%s',
-                                $params{allocation_path},
-                                $params{disk_group_name},
-                                $params{kilobytes_requested},
-                                $params{owner_class_name},
-                                $params{owner_id},
-                            );
-        if ($params{mount_path}) {
-            $allocate_cmd .= ' --mount-path='. $params{mount_path};
-        }
-        unless($class->monitor_allocate_command($allocate_cmd)) {
-            die('Failed to allocate disk space with command '. $allocate_cmd);
-        }
-        $allocation = Genome::Disk::Allocation->load(
-                                                       allocation_path => $params{allocation_path},
-                                                       disk_group_name => $params{disk_group_name},
-                                                       owner_class_name => $params{owner_class_name},
-                                                       owner_id => $params{owner_id},
-                                                   );
+        my $allocation = $class->_create(%params);
+        push @paths_to_remove, $allocation->absolute_path;
+        return $allocation;
     }
 
-    unless ($allocation) {
-        die('Failed to get '. $params{disk_group_name} .' disk allocation for '. $params{owner_class_name} .'('. $params{owner_id}
-            .') with allocation path '. $params{allocation_path});
+    # Serialize hash and create allocation via system call to ensure commit occurs
+    my $param_string = Genome::Utility::Text::hash_to_string(\%params);
+    my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
+    my $cmd = "perl $includes -e \"use above Genome; $class->_create($param_string); UR::Context->commit;\"";
+    unless (Genome::Sys->shellcmd(cmd => $cmd)) {
+        confess "Could not create allocation";
     }
-    return $allocation;
+
+    my $allocation = $class->get(id => $params{id});
+    confess "Could not retrieve created allocation with id " . $params{id} unless $allocation;
+    
+    # If the owner gets rolled back, then delete the allocation
+    my $allocation_change = UR::Context::Transaction->log_change(
+        $allocation->owner, 'UR::Value', $allocation->id, 'external_change', sub { $allocation->delete },
+    );
+    # Not being able to roll back the allocation shouldn't be grounds for failure methinks
+    unless ($allocation_change) { 
+        print STDERR "Failed to record allocation creation!\n";
+    }
+
+    return $allocation;    
+}
+
+sub deallocate { return shift->delete(@_); }
+sub delete {
+    my ($class, %params) = @_;
+    if (ref($class)) {
+        $params{allocation_id} = $class->id;
+        $class = ref($class);
+    }
+    confess "Require allocation ID" unless exists $params{allocation_id};
+
+    # Same as above... if no commit is on, just call the _delete method directly so changes will be in UR cache
+    if ($ENV{UR_DBI_NO_COMMIT}) {
+        return $class->_delete(%params);
+    }
+
+    # Serialize params hash, construct command, and execute
+    my $param_string = Genome::Utility::Text::hash_to_string(\%params);
+    my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
+    my $cmd = "perl $includes -e \"use above Genome; $class->_delete($param_string); UR::Context->commit;\"";
+    unless (Genome::Sys->shellcmd(cmd => $cmd)) {
+        confess "Could not deallocate";
+    }
+    return 1;
 }
 
 sub reallocate {
-    my $self = shift;
-    my %params = @_;
+    my ($class, %params) = @_;
+    if (ref($class)) {
+        $params{allocation_id} = $class->id;
+        $class = ref($class);
+    }
+    confess "Require allocation ID!" unless exists $params{allocation_id};
+
+    # Again, call _reallocate directly if no commit is on so changes occur in UR cache
     if ($ENV{UR_DBI_NO_COMMIT}) {
-        if ($self->test_allocation) {
-            my $reallocate_cmd = Genome::Disk::Allocation::Command::Reallocate->execute(
-                                                                                        allocator_id => $self->allocator_id,
-                                                                                        %params
-                                                                                    );
-            unless ($reallocate_cmd) {
-                $self->error_message('Failed to reallocate disk space with command '. $reallocate_cmd);
-                return;
+        return $class->_reallocate(%params);
+    }
+
+    # Serialize params hash, construct command, and execute
+    my $param_string = Genome::Utility::Text::hash_to_string(\%params);
+    my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
+    my $cmd = "perl $includes -e \"use above Genome; $class->_reallocate($param_string); UR::Context->commit;\"";
+    unless (Genome::Sys->shellcmd(cmd => $cmd)) {
+        confess "Could not reallocate!";
+    }
+
+    return 1;
+}
+
+sub _create {
+    my $class = shift;
+    my %params = @_;
+
+    # Make sure that required parameters are provided
+    my @missing_params;
+    for my $param (@REQUIRED_PARAMETERS) {
+        unless (exists $params{$param} and defined $params{$param}) {
+            push @missing_params, $param;
+        }
+    }
+    if (@missing_params) {
+        confess "Missing required params for allocation:\n" . join("\n", @missing_params);
+    }
+
+    my $id = delete $params{id};
+    $id = Genome::Disk::Allocation::Type::autogenerate_new_object_id unless defined $id;
+    my $kilobytes_requested = delete $params{kilobytes_requested};
+    my $owner_class_name = delete $params{owner_class_name};
+    my $owner_id = delete $params{owner_id};
+    my $allocation_path = delete $params{allocation_path};
+    my $disk_group_name = delete $params{disk_group_name};
+    my $mount_path = delete $params{mount_path};
+    my $group_subdirectory = delete $params{group_subdirectory};
+    my $kilobytes_used = delete $params{kilobytes_used} || 0;
+    if (%params) {
+        confess "Extra parameters detected: " . Data::Dumper::Dumper(\%params);
+    }
+
+    unless ($owner_class_name->__meta__) {
+        confess "Could not find meta information for owner class $owner_class_name, make sure this class exists!";
+    }
+    unless ($class->_check_kb_requested($kilobytes_requested)) {
+        confess 'Kilobytes requested is not valid!';
+    }
+    unless ($class->_verify_no_parent_allocation($allocation_path)) {
+        confess "Parent allocation found for $allocation_path";
+    }
+    unless ($class->_verify_no_child_allocations($allocation_path)) {
+        confess "Child allocation found for $allocation_path!";
+    }
+    unless (grep { $disk_group_name eq $_ } @APIPE_DISK_GROUPS) {
+        confess "Can only allocate disk in apipe disk groups, not $disk_group_name. Apipe groups are: " . join(", ", @APIPE_DISK_GROUPS);
+    }
+
+    my $group = Genome::Disk::Group->get(disk_group_name => $disk_group_name);
+    confess "Could not find a group with name $disk_group_name" unless $group;
+    if (defined $group_subdirectory and $group_subdirectory ne $group->subdirectory) {
+        print STDERR "Given group subdirectory $group_subdirectory does not match retrieved group's subdirectory, ignoring provided value\n";
+    }
+    $group_subdirectory = $group->subdirectory;
+
+    # If given a mount path, need to ensure it's valid by trying to get a disk volume with it. Also need to make
+    # sure that the retrieved volume actually belongs to the supplied disk group and that it can be allocated to
+    my @candidate_volumes; 
+    if (defined $mount_path) {
+        $mount_path =~ s/\/$//; # mount paths in database don't have trailing /
+        my $volume = Genome::Disk::Volume->get(mount_path => $mount_path, disk_status => 'active');
+        confess "Could not get volume with mount path $mount_path" unless $volume;
+
+        unless (grep { $_ eq $disk_group_name } $volume->disk_group_names) {
+            confess "Volume with mount path $mount_path is not in supplied group $disk_group_name!";
+        }
+
+        my @reasons;
+        push @reasons, 'disk is not active' if $volume->disk_status ne 'active';
+        push @reasons, 'allocation turned off for this disk' if $volume->can_allocate != 1;
+        push @reasons, 'not enough space on disk' if ($volume->unallocated_kb - $volume->reserve_size) < $kilobytes_requested;
+        if (@reasons) {
+            confess "Requested volume with mount path $mount_path cannot be allocated to:\n" . join("\n", @reasons);
+        }
+
+        push @candidate_volumes, $volume;
+    }
+    # If not given a mount path, get all the volumes that belong to the supplied group that have enough space and
+    # pick one at random from the top MAX_VOLUMES. It's been decided that we want to fill up a small subset of volumes
+    # at a time instead of all of them.
+    else {
+        my @volumes = Genome::Disk::Volume->get(
+            disk_group_names => $disk_group_name,
+            'unallocated_kb >=' => $kilobytes_requested,
+            can_allocate => 1,
+            disk_status => 'active',
+        );
+        unless (@volumes) {
+            confess "Did not get any allocatable and active volumes belonging to group $disk_group_name with " .
+                "$kilobytes_requested kb of unallocated space!";
+        }
+
+        # Make sure that the allocation doesn't infringe on the empty buffer required for each volume
+        @volumes = grep { ($_->unallocated_kb - $_->reserve_size) > $kilobytes_requested } @volumes;
+        unless (@volumes) {
+            confess "No volumes of group $disk_group_name have enough space after excluding reserves to store $kilobytes_requested KB.";
+        }
+
+        # Only allocate to the first MAX_VOLUMES retrieved
+        my $max = @volumes > $MAX_VOLUMES ? $MAX_VOLUMES : @volumes;
+        @volumes = @volumes[0,$max - 1];
+        push @candidate_volumes, @volumes;
+    }
+
+    # Now pick a volume and try to lock it
+    my $volume;
+    my $volume_lock;
+    my $attempts = 0;
+    while (1) {
+        if ($attempts > $MAX_ATTEMPTS_TO_LOCK_VOLUME) {
+            confess "Could not lock a volume after $MAX_ATTEMPTS_TO_LOCK_VOLUME attempts, giving up";
+        }
+        $attempts++;
+
+        # Pick a random volume from the list of candidates and try to lock it
+        my $index = int(rand(@candidate_volumes));
+        my $candidate_volume = $candidate_volumes[$index];
+        my $lock = $class->_get_volume_lock($candidate_volume->mount_path);
+        next unless defined $lock;
+
+        # Reload volume, if anything has changed restart (there's a small window between looking at the volume
+        # and locking it in which someone could modify it)
+        $candidate_volume = Genome::Disk::Volume->load($candidate_volume->id);
+        unless($candidate_volume->unallocated_kb >= $kilobytes_requested 
+                and $candidate_volume->can_allocate eq '1' 
+                and $candidate_volume->disk_status eq 'active') {
+            Genome::Sys->unlock_resource(resource_lock => $lock);
+            next;
+        }
+
+        $volume = $candidate_volume;
+        $volume_lock = $lock;
+        $mount_path = $volume->mount_path;
+        last;
+    }
+
+    # Decrement the available space on the volume and create allocation object
+    $volume->unallocated_kb($volume->unallocated_kb - $kilobytes_requested);
+    my $self = $class->SUPER::create(
+        mount_path => $mount_path,
+        disk_group_name => $disk_group_name,
+        kilobytes_requested => $kilobytes_requested,
+        allocation_path => $allocation_path,
+        owner_class_name => $owner_class_name,
+        owner_id => $owner_id,
+        group_subdirectory => $group_subdirectory,
+        id => $id,
+    );
+    unless ($self) {
+        Genome::Sys->unlock_resource(resource_lock => $volume_lock);
+        confess "Could not create allocation!";
+    }
+
+    $self->status_message("Allocation " . $self->id . " created at " . $self->absolute_path);
+
+    # Add commit hooks to unlock and create directory (in that order)
+    $class->_create_observer(
+        $class->_unlock_closure($volume_lock), 
+        $class->_create_directory_closure($self->absolute_path),
+    );
+    return $self;
+}
+
+sub _delete {
+    my ($class, %params) = @_;
+    my $id = delete $params{allocation_id};
+    confess "Require allocation ID!" unless defined $id;
+    if (%params) {
+        confess "Extra params found: " . Data::Dumper::Dumper(\%params);
+    }
+
+    # Lock and retrieve allocation
+    my $allocation_lock = $class->_get_allocation_lock($id);
+    confess 'Could not get lock for allocation ' . $id unless defined $allocation_lock;
+
+    my $self = $class->get($id);
+    unless ($self) {
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
+        confess "Could not find allocation with id $id" unless $self;
+    }
+    my $absolute_path = $self->absolute_path;
+
+    $self->status_message("Beginning deallocation process for allocation " . $self->id);
+
+    # Lock and retrieve volume
+    my $volume_lock = $self->_get_volume_lock($self->mount_path);
+    unless ($volume_lock) {
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
+        confess 'Could not get lock on volume ' . $self->mount_path;
+    }
+    my $volume = Genome::Disk::Volume->load(mount_path => $self->mount_path, disk_status => 'active');
+    unless ($volume) {
+        Genome::Sys->unlock_resource(resource_lock => $volume_lock);
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
+        confess 'Found no disk volume with mount path ' . $self->mount_path;
+    }
+
+    # Update
+    $volume->unallocated_kb($volume->unallocated_kb + $self->kilobytes_requested);
+    $self->SUPER::delete;
+
+    # Add commit hooks to remove locks, mark for deletion, and deletion
+    $class->_create_observer(
+        $class->_unlock_closure($volume_lock, $allocation_lock),
+        $class->_mark_for_deletion_closure($absolute_path),
+        $class->_remove_directory_closure($absolute_path),
+    );
+    return 1;
+}
+
+# Changes the size of the allocation and updates the volume appropriately
+sub _reallocate {
+    my ($class, %params) = @_;
+    my $id = delete $params{allocation_id};
+    confess "Require allocation ID!" unless defined $id;
+    my $kilobytes_requested = delete $params{kilobytes_requested};
+    my $allow_reallocate_with_move = delete $params{allow_reallocate_with_move};
+    if (%params) {
+        confess "Found extra params: " . Data::Dumper::Dumper(\%params);
+    }
+
+    # Lock and retrieve allocation
+    my $allocation_lock = $class->_get_allocation_lock($id);
+    confess "Could not get lock on allocation $id" unless defined $allocation_lock;
+
+    my $self = $class->get($id);
+    unless ($self) {
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
+        confess "Could not find allocation $id";
+    }
+
+    $self->status_message("Beginning reallocation process for allocation " . $self->id);
+
+    # Either check the new size (if given) or get the current size of the allocation directory
+    if (defined $kilobytes_requested) {
+        unless ($self->_check_kb_requested($kilobytes_requested)) {
+            Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
+            confess 'Kilobytes requested not valid!';
+        }
+    }
+    else {
+        $self->status_message('New allocation size not supplied, setting to size of data in allocated directory');
+        $kilobytes_requested = Genome::Sys->disk_usage_for_path($self->absolute_path);
+        unless (defined $kilobytes_requested) {
+            Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
+            confess 'Could not determine size of allocation directory ' . $self->absolute_path;
+        }
+    }
+
+    my $diff = $kilobytes_requested - $self->kilobytes_requested;
+    $self->status_message("Resizing from " . $self->kilobytes_requested . " kb to $kilobytes_requested kb (changed by $diff)"); 
+
+    # Lock and retrieve volume
+    my $volume_lock = $self->_get_volume_lock($self->mount_path);
+    unless (defined $volume_lock) {
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
+        confess 'Could not get lock on volume ' . $self->mount_path;
+    }
+
+    my $volume = Genome::Disk::Volume->load(mount_path => $self->mount_path, disk_status => 'active');
+    unless ($volume) {
+        Genome::Sys->unlock_resource(resource_lock => $volume_lock);
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
+        confess 'Could not get volume with mount path ' . $self->mount_path;
+    }
+
+    # Make sure there's room for the allocation... only applies if the new allocation is bigger than the old
+    my $available_space = $volume->unallocated_kb - $volume->reserve_size;
+    if ($diff > 0 and $available_space < $diff and !$allow_reallocate_with_move) {
+        Genome::Sys->unlock_resource(resource_lock => $volume_lock);
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
+        confess 'Not enough unallocated space on volume ' . $volume->mount_path . " to increase allocation size by $diff kb";
+    }
+    elsif ($diff > 0 and $available_space < $diff and $allow_reallocate_with_move) {
+        $self->status_message("Current volume " . $self->mount_path . " doesn't have enough space to reallocate, moving to new volume");
+        Genome::Sys->unlock_resource(resource_lock => $volume_lock);
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
+        return $self->_reallocate_with_move($kilobytes_requested);
+    }
+    else {
+        # Update allocation and volume, create unlock observer, and return
+        $self->kilobytes_requested($kilobytes_requested);
+        $volume->unallocated_kb($volume->unallocated_kb - $diff);
+        $class->_create_observer($class->_unlock_closure($volume_lock, $allocation_lock));
+        return 1;
+    }
+}
+
+sub _reallocate_with_move {
+    my $self = shift;
+    my $kilobytes_requested = shift;
+
+    my %params;
+    $params{owner_class_name   } = $self->owner_class_name;
+    $params{owner_id           } = $self->owner_id;
+    $params{allocation_path    } = $self->allocation_path . '_temp'; # to avoid duplicate allocation errors
+    $params{disk_group_name    } = $self->disk_group_name;
+    $params{group_subdirectory } = $self->group_subdirectory;
+    $params{kilobytes_requested} = $kilobytes_requested;
+
+    my $new_allocation = Genome::Disk::Allocation->create(%params);
+    unless ($new_allocation) {
+        $self->error_message("Failed to create new allocation to move data to.");
+        return;
+    }
+
+    my $source      = $self->absolute_path;
+    my $destination = $new_allocation->absolute_path;
+    unless(Genome::Sys->copy_directory($source, $destination)) {
+        $self->error_message("Failed to copy data from old allocation to new.");
+        return;
+    }
+
+    unless($self->delete) {
+        $self->error_message("Failed to delete old allocation after moving data to new allocation.");
+        return;
+    }
+
+    my $allocation_lock = Genome::Disk::Allocation->_get_allocation_lock($new_allocation->id);
+
+    my $move_allocation_path = $new_allocation->allocation_path;
+    $move_allocation_path =~ s/_temp$//;
+    my $move_destination = join('/', $new_allocation->mount_path, $new_allocation->group_subdirectory, $move_allocation_path);
+    unless (File::Copy::move($new_allocation->absolute_path, $move_destination)) {
+        $self->error_message("Could not move new allocation to $move_destination from temp location " . $new_allocation->absolute_path);
+        return;
+    }
+    $new_allocation->allocation_path($move_allocation_path);
+
+    Genome::Disk::Allocation->_create_observer(Genome::Disk::Allocation->_unlock_closure($allocation_lock));
+
+    return 1;
+}
+
+# Creates an observer that executes the supplied closures
+sub _create_observer {
+    my ($class, @closures) = @_;
+    my $observer;
+    my $callback = sub {
+        for my $closure (@closures) {
+            &$closure;
+        }
+        $observer->delete if $observer;
+    };
+
+    if ($ENV{UR_DBI_NO_COMMIT}) {
+        &$callback;
+        return 1;
+    }
+
+    $observer = UR::Context->add_observer(
+        aspect => 'commit',
+        callback => $callback,
+    );
+    return 1;
+}
+
+# Returns a closure that removes the given locks 
+sub _unlock_closure {
+    my ($class, @locks) = @_;
+    return sub {
+        for my $lock (@locks) {
+            Genome::Sys->unlock_resource(resource_lock => $lock);
+        }
+        print STDERR "Allocation locks released\n";
+    };
+}
+
+# Returns a closure that creates a directory at the given path
+sub _create_directory_closure {
+    my ($class, $path) = @_;
+    return sub {
+        # This method currently returns the path if it already exists instead of failing
+        my $dir = eval{ Genome::Sys->create_directory($path) };
+        if (defined $dir and -d $dir) {
+            chmod(02775, $dir);
+            print STDERR "Created allocation directory at $path\n";
+        }
+        else {
+            print STDERR "Could not create allocation directcory at $path!\n";
+            print "$@\n" if $@;
+        }
+    };
+}
+
+# Returns a closure that removes the given directory
+sub _remove_directory_closure {
+    my ($class, $path) = @_;
+    return sub {
+        if (-d $path and not $ENV{UR_DBI_NO_COMMIT}) {
+            print STDERR "Removing allocation directory $path\n";
+            my $rv = Genome::Sys->remove_directory_tree($path);
+            unless (defined $rv and $rv == 1) {
+                confess "Could not remove allocation directory $path!";
             }
         }
-        ## no-op here.  may need to fix this if people actually start checking the kilobytes_requested
-    } else {
-        my $reallocate_cmd = sprintf('genome disk allocation reallocate --allocator-id=%s',$self->allocator_id);
-        if ($params{kilobytes_requested}) {
-            $reallocate_cmd .= ' --kilobytes-requested='. $params{kilobytes_requested};
+    };
+}
+
+# Make a file at the root of the allocation directory indicating that the allocation is gone,
+# which makes it possible to figure out which directories should have been deleted but failed.
+sub _mark_for_deletion_closure {
+    my ($class, $path) = @_;
+    return sub {
+        if (-d $path) {
+            print STDERR "Marking directory at $path as deallocated\n";
+            system("touch $path/ALLOCATION_DELETED"); 
         }
-        unless($self->monitor_allocate_command($reallocate_cmd)) {
-            $self->error_message('Failed to reallocate disk space with command '. $reallocate_cmd);
-            return;
-        }
+    };
+}
+
+# Class method for determining if the given path has a parent allocation
+sub _verify_no_parent_allocation {
+    my ($class, $path) = @_;
+    my ($allocation) = $class->get(allocation_path => $path);
+    return 0 if $allocation;
+
+    my $dir = File::Basename::dirname($path);
+    if ($dir ne '.' and $dir ne '/') {
+        return $class->_verify_no_parent_allocation($dir);
     }
     return 1;
 }
 
-sub deallocate {
-    my $self = shift;
-    if ($ENV{UR_DBI_NO_COMMIT}) {
-        if ($self->test_allocation) {
-            my $deallocate_cmd = Genome::Disk::Allocation::Command::Deallocate->execute(allocator_id => $self->allocator_id);
-            unless ($deallocate_cmd) {
-                $self->error_message('Failed to deallocate disk space with command '. $deallocate_cmd);
-                return;
-            }
-        }
-        ## no-op here.  may need to fix this if people actually start checking for the allocator
-    } else {
-        my $deallocate_cmd = sprintf('genome disk allocation deallocate --allocator-id=%s',$self->allocator_id);
-        unless ($self->monitor_allocate_command($deallocate_cmd)) {
-            $self->error_message('Failed to deallocate disk space with command '. $deallocate_cmd);
-            return;
-        }
-    }
+# Checks for allocations beneath this one, which is also invalid
+sub _verify_no_child_allocations {
+    my ($class, $path) = @_;
+    my ($allocation) = $class->get('allocation_path like' => $path . '%');
+    return 0 if $allocation;
     return 1;
+}
+
+# Makes sure the supplied kb amount is valid
+sub _check_kb_requested {
+    my ($class, $kb) = @_;
+    return 0 unless defined $kb;
+    return 0 if $kb < $MINIMUM_ALLOCATION_SIZE;
+    return 1;
+}
+
+sub _get_volume_lock {
+    my ($class, $mount_path) = @_;
+    my $modified_mount = $mount_path;
+    $modified_mount =~ s/\//_/g;
+    my $volume_lock = Genome::Sys->lock_resource(
+        resource_lock => '/gsc/var/lock/allocation/volume' . $modified_mount,
+        max_try => 100,
+        block_sleep => 1,
+    );
+    return $volume_lock;
+}
+
+sub _get_allocation_lock {
+    my ($class, $id) = @_;
+    my $allocation_lock = Genome::Sys->lock_resource(
+        resource_lock => '/gsc/var/lock/allocation/allocation_' . join('_', split(' ', $id)),
+        max_try => 20,
+        block_sleep => 1,
+    );
+    return $allocation_lock;
 }
 
 sub get_actual_disk_usage {
     my $self = shift;
-    
-    my $allocator = $self->allocator;
-
-    my $kb = $allocator->get_actual_disk_usage;
-
-    return $kb;
+    return Genome::Sys->disk_usage_for_path($self->absolute_path);
 }
-
-sub pse_not_complete {
-    my $self = shift;
-    my $pse = shift;
-    my @not_completed = grep { $_ eq $pse->pse_status } ('scheduled', 'wait', 'confirm', 'confirming');
-    unless (@not_completed) {
-        return;
-    }
-    return 1;
-}
-
-## warning times in seconds
-our $after_start = 3600;
-our $after_lock_acquired = 600;
-sub monitor_allocate_command {
-    my $self = shift;
-    my $cmd = shift;
-
-    my $pid;
-    my $lock_acquire_time;         # will be set once we see the lock acquired
-    my $ow;                        # overall watcher;
-    my $w;                         # after lock acquired watcher;
-
-    my $trace_fh = File::Temp->new(
-        'TEMPLATE' => hostname . '-' . $$ . '_XXXX',
-        'DIR'      => '/gsc/var/log/genome/allocation_debugging',
-        'SUFFIX'   => '.log',
-        'UNLINK'   => '1'
-    );
-    $trace_fh->autoflush(1);
-    chmod 0644, $trace_fh;
- 
-    $ow = AnyEvent->timer(
-        after => $after_start,
-        cb => sub {
-           $self->send_message_about_command($cmd,$pid,$after_start,0);
-           undef $ow;
-           undef $w;
-    });
-    
-    $self->status_message('Allocation process started at ' . UR::Time->now);
-    my $cv = Genome::Utility::AsyncFileSystem->shellcmd(
-        cmd => $cmd,
-        '>' => sub {
-            if (defined $_[0]) {
-                print $trace_fh $_[0];
-                print STDOUT $_[0];
-            }
-        },
-        '3>' => sub {
-            if (defined $_[0]) {
-                print $trace_fh $_[0];
-            }
-        },
-        '2>' => on_each_line {
-            if (defined $_[0]) {
-                print $trace_fh $_[0];
-                if ($_[0] =~ /^genome allocate: STATUS: Lock acquired/) {
-                    $self->status_message('Allocation lock acquired at ' . UR::Time->now);
-                    $w = AnyEvent->timer(
-                        after => $after_lock_acquired,
-                        cb => sub {
-                           $self->send_message_about_command($cmd,$pid,$after_lock_acquired,1);
-                           undef $ow;
-                           undef $w;
-                    });
-                } elsif ($_[0] =~ /Committed and released lock/) {
-                    $self->status_message('Allocation lock released at ' . UR::Time->now);
-                    undef $w;
-                    undef $ow;
-                } else {
-                    print STDERR $_[0];
-                }
-            }
-        },
-        '$$' => \$pid
-    );
-    $cv->cb(sub {
-        undef $ow;
-        undef $w;
-        $self->status_message('Allocation command ended at ' . UR::Time->now);
-        close $trace_fh;
-        undef $trace_fh;  #explicit destroy
-
-    });
-    
-    return $cv->recv;
-}
-
-sub send_message_about_command {
-    my $self = shift;
-    my $cmd = shift;
-    my $pid = shift;
-    my $after = shift;
-    my $was_lock_acquired = shift;
-
-    my $lock_msg = $was_lock_acquired 
-        ? 'Lock Held' 
-        : '';
-
-    my $message = <<MESSAGE;
-To whom it may concern,
-
-This command:
-
-$cmd
-
-Has not exited after $after seconds. $lock_msg
-
-Host: %s
-My Pid: %s 
-Allocation Pid: %s
-LSF Job: %s
-User: %s
-
-This is the only warning you will receive about this process.  Action
-may be required.
-MESSAGE
-
-    my $from = '"' . __PACKAGE__ . sprintf('" <%s@genome.wustl.edu>', $ENV{USER});
-
-    my $to = join(', ', map { Genome::Config->user_email($_) } Genome::Config->admin_notice_users());
-    my $subject = 'Allocation problem on ' . hostname . ' pid ' . $pid . '. ' . $lock_msg;
-    my $data = sprintf($message,
-        hostname,$$,$pid,($ENV{LSB_JOBID} || ''),scalar(getpwuid($<)));
-
-    my $msg = MIME::Lite->new(
-        From => $from,
-        To => $to,
-        Subject => $subject,
-        Data => $data
-    );
-    $msg->send();
-
-}
-
 
 1;
-
-
-
-

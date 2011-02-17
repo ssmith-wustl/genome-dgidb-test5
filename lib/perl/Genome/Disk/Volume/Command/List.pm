@@ -9,10 +9,12 @@ class Genome::Disk::Volume::Command::List {
     is => 'UR::Object::Command::List',
     has => [
         subject_class_name  => {
-                                is_constant => 1,
-                                value => 'Genome::Disk::Volume',
-                            },
-        show => { default_value => 'mount_path,total_kb,unallocated_kb,disk_group_names' },
+            is_constant => 1,
+            value => 'Genome::Disk::Volume',
+        },
+        show => { 
+            default_value => 'mount_path,disk_group_names,total_kb,usable_unallocated_kb' 
+        },
     ],
 };
 

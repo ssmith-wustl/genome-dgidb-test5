@@ -2,6 +2,7 @@ package Genome::Model::InstrumentDataAssignment;
 
 use strict;
 use warnings;
+
 use Genome;
 
 class Genome::Model::InstrumentDataAssignment {
@@ -18,21 +19,16 @@ class Genome::Model::InstrumentDataAssignment {
     ],
     has => [
         first_build_id => { is => 'NUMBER', len => 10, is_optional => 1 },
-        
         filter_desc         => { is => 'Text', is_optional => 1, 
                                 valid_values => ['forward-only','reverse-only',undef],
                                 doc => 'limit the reads to use from this instrument data set' },
-        
         first_build         => { is => 'Genome::Model::Build', id_by => 'first_build_id', is_optional => 1 },
-        
         #< Attributes from the instrument data >#
         run_name            => { via => 'instrument_data'},
-        
         #< Left over from Genome::Model::ReadSet >#
         # PICK ONE AND FIX EVERYTHING THAT USES THIS
         subset_name         => { via => 'instrument_data'},
         run_subset_name     => { via => 'instrument_data', to => 'subset_name'},
-        
         # PICK ONE AND FIX EVERYTHING THAT USES THIS
         short_name          => { via => 'instrument_data' },
         run_short_name      => { via => 'instrument_data', to => 'short_name' },
@@ -59,37 +55,26 @@ class Genome::Model::InstrumentDataAssignment {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
-# FIXME temporary - copy model instrument data as inputs, when all 
-#  inst_data is an input, this (the whole create) can be removed
 sub create {
     my $class = shift;
-    my $self = $class->SUPER::create(@_)
-        or return;
 
-    if ( not $self->model_id or not $self->model ) {
-        $self->error_message("No model id or model.");
-        #$self->delete;
-        return $self;
-    }
-    
-    if ( not $self->instrument_data_id or not $self->instrument_data ) {
-        $self->error_message("No instrument data id or instrument data.");
-        #$self->delete;
-        return $self;
+    my $caller = caller();
+    if ( not $caller and $caller ne 'Genome::Model::Input') {
+        Carp::confess('Genome::Model::InstrumentDataAssignment create must be called from Genome::Model::Input create!');
     }
 
-     # Adding as input cuz of mock inst data
-    unless ( $self->model->add_input(
-            name => 'instrument_data',
-            value_class_name => $self->instrument_data->class,
-            value_id => $self->instrument_data->id,
-        ) ) {
-        $self->error_message("Can't add instrument data (".$self->instrument_data_id.") as an input to mode.");
-        $self->delete;
-        return;
+    return $class->SUPER::create(@_);
+}
+
+sub delete {
+    my $self = shift;
+
+    my $caller = caller();
+    if ( not $caller and $caller ne 'Genome::Model::Input') {
+        Carp::confess('Genome::Model::InstrumentDataAssignment delete must be called from Genome::Model::Input delete!');
     }
 
-    return $self;
+    return $self->SUPER::delete;
 }
 
 # Replace alignments() and alignment_sets() with something generic.
@@ -144,50 +129,5 @@ sub yaml_string {
     return YAML::Dump($self);
 }
 
-sub delete {
-    my $self = shift;
-
-    # ensure we are unassigned from models
-    if (my $first_build = $self->first_build) {
-        my @subsequent_builds = Genome::Model::Build->get(
-            'model_id'  => $first_build->model_id,
-            'id >'      => $first_build->id, 
-        );
-        for my $build ($first_build, @subsequent_builds) {
-            $self->status_message(
-                sprintf(
-                    'Abandoning build %s for model %s (%s)',
-                    $build->id,
-                    $build->model->name,
-                    $build->model->id
-                )
-            );
-            # Throws exceptions, which will prevent db commit if there are errors
-            $build->abandon;
-        }
-    }
-
-    #< Temp - remove input, if exists.
-    #   - get input that matches this ida
-    #   - delete input
-    #   - delete ida 
-    my $input = Genome::Model::Input->get(
-        model_id => $self->model_id,
-        name => 'instrument_data',
-        value_id => $self->instrument_data_id,
-    );
-    if ( $input ) {
-        $input->delete;
-    }
-    #>
-    
-    $self->warning_message('DELETING '. $self->class .': '. $self->id);
-    $self->SUPER::delete;
-
-    return 1;
-}
-
 1;
 
-#$HeadURL$
-#$Id$

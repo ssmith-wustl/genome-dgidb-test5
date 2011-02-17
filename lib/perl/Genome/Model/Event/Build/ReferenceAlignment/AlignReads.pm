@@ -443,7 +443,7 @@ sub _process_and_link_alignments_to_build {
             push @errors, $self->error_message;
         }
     } elsif ($mode eq 'get') {
-        @alignments = $processing_profile->results_for_instrument_data_assignment($instrument_data_assignment, %segment_info); 
+        @alignments = $processing_profile->results_for_instrument_data_assignment_with_lock($instrument_data_assignment, %segment_info);
         unless (@alignments) {
             return undef; 
         }

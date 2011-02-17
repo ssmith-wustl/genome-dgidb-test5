@@ -7,6 +7,22 @@ use Genome;
 
 class Genome::Model::Build::GenotypeMicroarray {
     is => 'Genome::Model::Build',
+    has => [
+        dbsnp_build_id => {
+            is => 'Text',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'dbsnp_build', value_class_name => 'Genome::Model::Build::ImportedVariationList' ],
+            is_many => 0,
+            is_mutable => 1,
+            is_optional => 1,
+            doc => 'dbsnp build to compare against'
+        },
+        dbsnp_build => {
+            is => 'Genome::Model::Build::ImportedVariationList',
+            id_by => 'dbsnp_build_id',
+        },
+    ],
 };
 
 sub create {
@@ -44,6 +60,14 @@ sub create {
 
 sub formatted_genotype_file_path {
     shift->data_directory . '/formatted_genotype_file_path.genotype';
+}
+
+sub snvs_bed {
+    shift->data_directory . '/gold_snp.v2.bed';
+}
+
+sub filtered_snvs_bed {
+    shift->data_directory . '/gold_snp.v2.bed';
 }
 
 1;

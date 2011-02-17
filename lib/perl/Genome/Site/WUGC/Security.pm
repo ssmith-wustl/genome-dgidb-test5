@@ -30,6 +30,7 @@ sub log_command {
 
     unless (-e $log_dir and -d $log_dir) {
         mkdir $log_dir;
+        chmod(0777, $log_dir);
     }
 
     my $log_path = $log_dir . $log_file;
@@ -80,15 +81,6 @@ sub check_for_svn_repo {
         );
 
         return;
-    }
-}
-
-# Spawn child process for logging and repo checking
-unless ($ENV{PERLDB_PIDS}) {
-    unless(fork()) {
-        log_command();
-        #check_for_svn_repo();
-        exit;
     }
 }
 

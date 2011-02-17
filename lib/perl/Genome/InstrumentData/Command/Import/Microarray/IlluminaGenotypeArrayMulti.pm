@@ -51,7 +51,7 @@ my %properties = (
     },
     allocation => {
         is => 'Genome::Disk::Allocation',
-        id_by => 'allocator_id',
+        id_by => 'id',
         is_optional => 1,
     },
     result_model_ids => {
@@ -281,8 +281,8 @@ sub process_imported_files {
 
         unless(Genome::InstrumentData::Command::Import::Genotype->create(
                 source_data_file    => $gen,
-                sample_name         => $sample_name,
-                library_name        => $library->name,
+                sample              => $sample,
+                library             => $library,
                 reference_sequence_build => $self->reference_sequence_build,
                 define_model        => 1,)){
             $self->error_message("Could not define model for ".$sample_name."\n");

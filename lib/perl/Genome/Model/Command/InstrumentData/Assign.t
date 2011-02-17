@@ -59,6 +59,7 @@ $assign = Genome::Model::Command::InstrumentData::Assign->create(
     instrument_data_ids => '44 44',
 );
 ok($assign, 'create to request multiple functions - will fail execute');
+$assign->dump_status_messages(1);
 ok(!$assign->execute, 'execute');
 
 # Sucess
@@ -68,6 +69,7 @@ $assign = Genome::Model::Command::InstrumentData::Assign->create(
     force => 1,
 );
 ok($assign, 'create to assign single instrument data');
+$assign->dump_status_messages(1);
 ok($assign->execute, 'execute');
 @assigned_inst_data = $model->instrument_data;
 is_deeply(\@assigned_inst_data, [ $sanger_id[0], ], 'confirmed assigned inst data');
@@ -78,6 +80,7 @@ $assign = Genome::Model::Command::InstrumentData::Assign->create(
     force => 1,
 );
 ok($assign, 'create to assign multiple instrument data');
+$assign->dump_status_messages(1);
 ok($assign->execute, 'execute');
 @assigned_inst_data = $model->instrument_data;
 is_deeply(\@assigned_inst_data, [ @sanger_id[0..2], ], 'confirmed assigned inst data');
@@ -87,6 +90,7 @@ $assign = Genome::Model::Command::InstrumentData::Assign->create(
     all => 1,
 );
 ok($assign, 'create to assign all available instrument data');
+$assign->dump_status_messages(1);
 ok($assign->execute, 'execute');
 @assigned_inst_data = $model->instrument_data;
 is_deeply(\@assigned_inst_data, \@sanger_id, 'confirmed assigned inst data');
@@ -97,9 +101,20 @@ $assign = Genome::Model::Command::InstrumentData::Assign->create(
     force => 1,
 );
 ok($assign, 'create to assign by flow cell id');
+$assign->dump_status_messages(1);
 ok($assign->execute, 'execute');
 @assigned_inst_data = $model->instrument_data;
-is_deeply(\@assigned_inst_data, [ $solexa_id, @sanger_id ], 'confirmed assigned inst data');
+is_deeply(\@assigned_inst_data, [ @sanger_id, $solexa_id ], 'confirmed assigned inst data');
+
+note('Reassign inst data is ok');
+$assign = Genome::Model::Command::InstrumentData::Assign->create(
+    model_id => $model->id,
+    instrument_data_id => $sanger_id[0]->id,
+    force => 1,
+);
+ok($assign, 'create to reassign single instrument data');
+$assign->dump_status_messages(1);
+ok($assign->execute, 'execute');
 
 done_testing();
 exit;
