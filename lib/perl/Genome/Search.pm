@@ -437,18 +437,18 @@ sub generate_document {
 # NOTE: turning off this optimization; it reuses the first object, which doesnt work
 #  out so well when your view is doing $self->property (self is the original instance)
  
-        if(defined $views{$object->class}) {
-            $view = $views{$object->class};
-            $view->subject($object);
-            $view->_update_view_from_subject();
-        } else {
+#        if(defined $views{$object->class}) {
+#            $view = $views{$object->class};
+#            $view->subject($object);
+#            $view->_update_view_from_subject();
+#        } else {
              if(my $view_class = $class->_resolve_solr_xml_view($object)) {
                  $view = $view_class->create(subject => $object, perspective => 'solr', toolkit => 'xml');
                  $views{$object->class} = $view;
              } else {
                  Carp::confess('To make an object searchable create an appropriate ::View::Solr::Xml that inherits from Genome::View::Solr::Xml.');
              }
-        }
+#        }
         
         push @docs, $view->content_doc;
     }
