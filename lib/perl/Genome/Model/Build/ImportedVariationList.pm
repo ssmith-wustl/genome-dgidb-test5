@@ -58,7 +58,13 @@ class Genome::Model::Build::ImportedVariationList {
 };
 
 sub snvs_bed {
-    my $self = shift;
+    my ($self, $version) = @_;
+    # TODO: get a real api for this
+    my $name = $self->model->name . "-" . $self->version;
+    if (defined $version and $version ne "v1") {
+        die "No version of snvs .bed file version $version available for $name";
+    }
+
     return $self->snv_feature_list->file_path if $self->snv_feature_list;
 }
 
