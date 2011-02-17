@@ -31,6 +31,11 @@ sub execute {
         die();
     }
     $self->status_message("Galaxy has been copied to $path. Installing Genome commands.");
+    my $update_command = Genome::Model::Tools::Galaxy::Update->create(
+        path => $path,
+        pull => 0
+    );
+    $update_command->execute();
     system($path . "/run.sh");
 }
 
