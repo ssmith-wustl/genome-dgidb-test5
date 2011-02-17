@@ -31,7 +31,7 @@ function enforce_clean_master() {
     git status -uno | grep -A1 '^# Your branch ' &&
         bail "Your branch is not in sync with the remote repo, pull/push first"
 
-    git push --dry-run > /dev/null 2>&1 ||
+    git push origin master --dry-run > /dev/null 2>&1 ||
         bail "git push --dry-run failed, please make sure your repo is in sync with the remote (pull/push)."
 }
 
