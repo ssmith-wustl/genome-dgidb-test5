@@ -72,10 +72,6 @@ sub execute {                               # replace with real execution logic.
 	
 	my %succeeded_models_by_sample = ();
 
-	## Save stats for each model ##
-	
-	my %stats_for_models = ();
-
 	## Output build dirs##
 	
 	if($self->output_build_dirs)
@@ -86,7 +82,7 @@ sub execute {                               # replace with real execution logic.
 	## Open the output file ##
 	
 	open(OUTFILE, ">$output_file") or die "Can't open output file: $!\n";
-	print OUTFILE "Model_id\tBuild_id\tSubject_name\tBuild_Dir\tCoverage_Wingspan0_Depth20x\tPercent_Duplicates\tMapping_Rate\n";
+	print OUTFILE "Model_id\tBuild_id\tSubject_name\tBuild_Dir\tCoverage_Wingspan0_Depth20x\tPercent_Target_Space_Covered_20x\tPercent_Duplicates\tMapping_Rate\n";
 
 	## Get the models in each model group ##
 
@@ -108,58 +104,59 @@ sub execute {                               # replace with real execution logic.
 				print BUILDDIRS join("\t", $model_id, $subject_name, $build_id, "Succeeded", $last_build_dir) . "\n";
 			}
 
-			my $duplicates_file = "$last_build_dir/logs/mark_duplicates.metrics";
-			my $input;
-			my $marker = 0;
-			my $duplicate_pct;
-			if ($input = new FileHandle ($duplicates_file)) {
-				while (my $line = <$input>) {
-					chomp($line);
-					if ($line =~ m/^LIBRARY/) {
-						$marker = 1;
-						next;
-					}
-					if ($marker == 0) {next;}
-					$marker = 0;
-	
-					my ($library, $unpaired_reads, $reads, $unmapped_reads, $unpaired_duplicates, $reads_duplicates, $optical_duplicates, $percent_duplication, $lib_size) = split(/\t/, $line);
-					$duplicate_pct = $percent_duplication;
+			my ($duplicate_pct, $mark_dup_hash_ref);
+			my $dup_metric = 'PERCENT_DUPLICATION';
+			my @data = $model->instrument_data;
+			my $length = @data;
+			my $libname;
+			if ($length > 1) {
+				foreach my $possible (@data) {
+					$libname = $possible->library_name;
+					print join("\t", $model_id, $build_id, $subject_name, $last_build_dir, $libname) . "\n";
 				}
-				close($input);
 			}
 			else {
-				print "Failed to find: $duplicates_file\n";
+				$libname = $model->instrument_data->library_name;
 			}
 
-			my $flagstat_file = "$last_build_dir/alignments/$build_id"."_merged_rmdup.bam.flagstat";
-			unless ($input = new FileHandle ($flagstat_file)) {die "Failed to find: $flagstat_file\n";}
-			my $mapping_pct;
-			while (my $line = <$input>) {
-				chomp($line);
-				if ($line =~ m/\d+ mapped \(/) {
-					my ($mapped) = $line =~ m/mapped \((\d+\.\d+)\%\)/;
-					$mapping_pct = $mapped;
-				}
+			if (-e $build->rmdup_metrics_file) {
+				$mark_dup_hash_ref = $build->mark_duplicates_library_metrics_hash_ref;
+				$duplicate_pct = $mark_dup_hash_ref->{$libname}->{$dup_metric};
 			}
-			close($input);
+			else {
+				print $build->rmdup_metrics_file . " does not exist\n";
+				$duplicate_pct = "N/A";
+			}
+
+			my ($fs_stats, $mapping_pct);
+			my $fs_pct = 'reads_mapped_percentage';
+			my $flagstat_file = $build->whole_rmdup_bam_flagstat_file;
+			if (-e $flagstat_file) {
+				$fs_stats = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($flagstat_file);
+				$mapping_pct = $fs_stats->{$fs_pct};
+			}
 
 			if($self->output_coverage_stats) {
-				#raw metrics per ROI:
-				#Column 13 is the min_depth_filter column.  If you want 20x stats only then grep or parse the file for 20 in column 13.   For a definition of the output format try 'gmt ref-cov standard --help'.
 				my $wingspan = 0;
 				my $minimum_depth = 20;
 				my $average_depth = 'mean_depth';
+				my $target_space_covered = 'pc_target_space_covered';
+				#raw metrics per ROI:
+				#Column 13 is the min_depth_filter column.  If you want 20x stats only then grep or parse the file for 20 in column 13.   For a definition of the output format try 'gmt ref-cov standard --help'.
 				my $wingspan_zero_stats_file = $build->stats_file($wingspan);
-
-				# summary of the coverage stats:
-				my $wingspan_zero_summary_stats_file = $build->coverage_stats_summary_file($wingspan);
-
-				# summary metrics for wingspan 0 and 20x minimum depth:
-				my $hash_ref = $build->coverage_stats_summary_hash_ref;
-				my $summary_stats_ref = $hash_ref->{$wingspan}->{$minimum_depth}->{$average_depth};
-				$stats_for_models{$model_id}{$summary_stats_ref}++;
-#				print Data::Dumper::Dumper($summary_stats_ref);
-				print OUTFILE join("\t", $model_id, $build_id, $subject_name, $last_build_dir, $summary_stats_ref, $duplicate_pct, $mapping_pct) . "\n";
+				if ($wingspan_zero_stats_file) {
+					# summary of the coverage stats:
+					my $wingspan_zero_summary_stats_file = $build->coverage_stats_summary_file($wingspan);
+					# summary metrics for wingspan 0 and 20x minimum depth:
+					my $hash_ref = $build->coverage_stats_summary_hash_ref;
+#					print Data::Dumper::Dumper($hash_ref);
+					my $summary_stats_ref = $hash_ref->{$wingspan}->{$minimum_depth}->{$average_depth};
+					my $summary_stats_ref2 = $hash_ref->{$wingspan}->{$minimum_depth}->{$target_space_covered};
+					print OUTFILE join("\t", $model_id, $build_id, $subject_name, $last_build_dir, $summary_stats_ref, $summary_stats_ref2, $duplicate_pct, $mapping_pct) . "\n";
+				}
+				else {
+					print OUTFILE join("\t", $model_id, $build_id, $subject_name, $last_build_dir, "N/A", "N/A", $duplicate_pct, $mapping_pct) . "\n";
+				}
 			}
 
 #SNP array concordance
