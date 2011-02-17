@@ -479,6 +479,9 @@ sub _reallocate {
         confess 'Not enough unallocated space on volume ' . $volume->mount_path . " to increase allocation size by $diff kb";
     }
     elsif ($diff > 0 and $available_space < $diff and $allow_reallocate_with_move) {
+        $self->status_message("Current volume " . $self->mount_path . " doesn't have enough space to reallocate, moving to new volume");
+        Genome::Sys->unlock_resource(resource_lock => $volume_lock);
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         return $self->_reallocate_with_move($kilobytes_requested);
     }
     else {
@@ -497,12 +500,9 @@ sub _reallocate_with_move {
     my %params;
     $params{owner_class_name   } = $self->owner_class_name;
     $params{owner_id           } = $self->owner_id;
-    $params{allocation_path    } = $self->allocation_path;
-    $params{mount_path         } = $self->mount_path;
+    $params{allocation_path    } = $self->allocation_path . '_temp'; # to avoid duplicate allocation errors
     $params{disk_group_name    } = $self->disk_group_name;
     $params{group_subdirectory } = $self->group_subdirectory;
-
-    $params{kilobytes_used     } = Genome::Sys->disk_usage_for_path($self->absolute_path);
     $params{kilobytes_requested} = $kilobytes_requested;
 
     my $new_allocation = Genome::Disk::Allocation->create(%params);
@@ -520,8 +520,21 @@ sub _reallocate_with_move {
 
     unless($self->delete) {
         $self->error_message("Failed to delete old allocation after moving data to new allocation.");
-        return
+        return;
     }
+
+    my $allocation_lock = Genome::Disk::Allocation->_get_allocation_lock($new_allocation->id);
+
+    my $move_allocation_path = $new_allocation->allocation_path;
+    $move_allocation_path =~ s/_temp$//;
+    my $move_destination = join('/', $new_allocation->mount_path, $new_allocation->group_subdirectory, $move_allocation_path);
+    unless (File::Copy::move($new_allocation->absolute_path, $move_destination)) {
+        $self->error_message("Could not move new allocation to $move_destination from temp location " . $new_allocation->absolute_path);
+        return;
+    }
+    $new_allocation->allocation_path($move_allocation_path);
+
+    Genome::Disk::Allocation->_create_observer(Genome::Disk::Allocation->_unlock_closure($allocation_lock));
 
     return 1;
 }
