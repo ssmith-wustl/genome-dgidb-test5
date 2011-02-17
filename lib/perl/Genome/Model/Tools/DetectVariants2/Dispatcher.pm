@@ -150,8 +150,6 @@ sub _detect_variants {
     $input->{reference_sequence_input} = $self->reference_sequence_input;
     $input->{output_directory} = $self->_temp_staging_directory;
    
-    print Data::Dumper::Dumper( $input );
-    #die;
     $self->_dump_workflow($workflow);
 
     $self->status_message("Now launching the dispatcher workflow.");
@@ -339,10 +337,6 @@ sub generate_workflow {
         ],
     );
     $workflow_model->log_dir($self->output_directory);
-    print "PLAN:\n";
-    print Data::Dumper::Dumper($plan);
-    print "TREES:\n";
-    print Data::Dumper::Dumper($trees);
     for my $detector (keys %$plan) {
         # Get the hashref that contains all versions to be run for a detector
         my $detector_hash = $plan->{$detector};
@@ -572,13 +566,14 @@ sub add_detectors_and_filters {
                 $inputs_to_store->{$unique_detector_base_name."_output_directory"}->{last_operation} = $unique_detector_base_name;
 
                 # adding in links from input_connector to filters to the hash
+                my $previous_output_directory = $detector_output_directory;
                 for my $filter (@filters){
                     my $fname = $filter->{name};
                     my $fversion = $filter->{version};
                     my $fparams = $filter->{params};
                     my $unique_filter_name = join( "_",($unique_detector_base_name,$fname,$fversion,$fparams));
-                    my $filter_output_directory = $self->calculate_operation_output_directory($detector_output_directory, $variant_type, $fname, $fversion, $fparams);
-
+                    my $filter_output_directory = $self->calculate_operation_output_directory($previous_output_directory, $variant_type, $fname, $fversion, $fparams);
+                    $previous_output_directory = $filter_output_directory;
                     $inputs_to_store->{$unique_filter_name."_params"}->{value} = $filter->{params};
                     $inputs_to_store->{$unique_filter_name."_params"}->{right_property_name} = 'params';
                     $inputs_to_store->{$unique_filter_name."_params"}->{right_operation} = $filter->{operation};

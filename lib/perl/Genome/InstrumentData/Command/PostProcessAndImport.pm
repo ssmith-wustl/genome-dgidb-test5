@@ -54,12 +54,8 @@ sub execute {
 
     $tmp_dir .= "/$instrument_data_id";
 
-    if (-e $tmp_dir) {
-        die $self->error_message("Temp directory $tmp_dir already exists?!?!");
-    }
-
-    unless (mkdir $tmp_dir) {
-        die "Failed to create temp directory $tmp_dir : $!";
+    unless (-d $tmp_dir) {
+        mkdir $tmp_dir or die "Failed to create temp directory $tmp_dir : $!";
     }
 
     # TODO: dust, n-remove and set the sub-dir based on the formula

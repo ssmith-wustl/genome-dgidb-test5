@@ -181,12 +181,12 @@ sub _generate_standard_files {
     }
     
     if($self->detect_indels) {
-        my $snv_module = join('::', $module_base, 'Indel', $detector . 'ToBed'); 
+        my $indel_module = join('::', $module_base, 'Indel', $detector . 'ToBed'); 
         
         for my $variant_file ($self->_indel_staging_output) {
             if(Genome::Sys->check_for_path_existence($variant_file)) {
-                $self->status_message("executing $snv_module on file $variant_file");
-                $retval &&= $self->_run_converter($snv_module, $variant_file);
+                $self->status_message("executing $indel_module on file $variant_file");
+                $retval &&= $self->_run_converter($indel_module, $variant_file);
             }  
         }
     }
