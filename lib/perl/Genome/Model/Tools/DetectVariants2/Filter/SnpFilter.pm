@@ -29,6 +29,7 @@ sub _filter_variants {
 
     my $snv_input_file = $self->input_directory . "/snvs.hq";
     my $filtered_snv_output_file = $self->_temp_staging_directory . "/snvs.hq";
+    my $fail_filter_snv_output_file = $self->_temp_staging_directory . "/snvs.lq";
 
     # This is where samtools would have put an indel file if one was generated
     my $filtered_indel_file = $self->detector_directory . "/indels_all_sequences.filtered";
@@ -40,6 +41,7 @@ sub _filter_variants {
         my $snp_filter = Genome::Model::Tools::Sam::SnpFilter->create(
             snp_file   => $snv_input_file,
             out_file   => $filtered_snv_output_file,
+            lq_output  => $fail_filter_snv_output_file,
             indel_file => $filtered_indel_file,
         );
         unless($snp_filter->execute) {
@@ -61,6 +63,14 @@ sub _filter_variants {
         die $self->error_message;
     }
 
+    my $convert_lq = Genome::Model::Tools::Bed::Convert::Snv::SamtoolsToBed->create( 
+                source => $fail_filter_snv_output_file, 
+                output => $self->_temp_staging_directory . "/snvs.lq.bed");
+
+    unless($convert_lq->execute){
+        $self->error_message("Failed to convert failed-filter output to bed.");
+        die $self->error_message;
+    }
 
     return 1;
 }
