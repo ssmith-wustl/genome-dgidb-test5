@@ -128,7 +128,15 @@ sub execute {                               # replace with real execution logic.
 			$cmd = "samtools pileup -cf /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa $bam_file | cut --fields=1-8 >$temp_path";			
 		}
 
-		system($cmd);
+		my $return = Genome::Sys->shellcmd(
+                           cmd => "$cmd",
+                           output_files => [$temp_path],
+                           skip_if_output_is_present => 0,
+                       );
+		unless($return) { 
+			$self->error_message("Failed to execute samtools pileup: Pileup Returned $return");
+			die $self->error_message;
+		}
 		
 		$variant_file = $temp_path;
 	}
