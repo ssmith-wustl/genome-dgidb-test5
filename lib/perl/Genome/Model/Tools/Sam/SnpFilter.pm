@@ -169,15 +169,27 @@ sub execute {
             if ($snps[$#snps]->{pos} - $snps[0]->{pos} < $self->snp_win_size) {
                 map{$_->{pass} = 0}@snps;
             }
-            $out_fh->print($snps[0]->{line}) if $snps[0]->{pass};
+            if ($snps[0]->{pass}) {
+                $out_fh->print($snps[0]->{line});
+            }
+            else {
+                if(defined($self->lq_output)){
+                    $lq_out_fh->print($snps[0]->{line});
+                }
+            }
             shift @snps; # keep the size of @snps, moving the window snp by snp, check the snp density in a window for all snps.
         }
     }
     map{$out_fh->print($_->{line}) if $_->{pass}}@snps;
+    if(defined($self->lq_output)){
+        map{$lq_out_fh->print($_->{line}) unless $_->{pass}}@snps;
+    }
 
     $snp_fh->close;
     $out_fh->close;
-    $lq_out_fh->close if defined($self->lq_output);
+    if(defined($self->lq_output)){
+        $lq_out_fh->close;
+    }
     
     return 1;
 }
