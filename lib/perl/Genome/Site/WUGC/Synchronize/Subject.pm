@@ -53,22 +53,24 @@ class Genome::Site::WUGC::Synchronize::Subject {
 sub objects_to_sync {
     return (
         'Genome::Subject::Individual' => 'Genome::Individual',
-        'Genome::Subject::PopulationGroup' => 'Genome::Site::WUGC::PopulationGroup',
-        'Genome::Subject::Taxon' => 'Genome::Site::WUGC::Taxon',
-        'Genome::Subject::Sample' => 'Genome::Site::WUGC::Sample',
-        'Genome::Subject::Library' => 'Genome::Site::WUGC::Library',
-        'Genome::Subject::FeatureList' => 'Genome::Site::WUGC::CaptureSet',
+        'Genome::Subject::PopulationGroup' => 'Genome::PopulationGroup',
+        'Genome::Subject::Taxon' => 'Genome::Taxon',
+        'Genome::Subject::Sample' => 'Genome::Sample',
+        'Genome::Subject::Library' => 'Genome::Library',
+        #'Genome::Subject::FeatureList' => 'Genome::Site::WUGC::CaptureSet',
     );
 }
 
+my $object_count = 0;
 sub execute {
     my $self = shift;
 
     my %types = $self->objects_to_sync;
     for my $new_type (sort keys %types) {
         my $old_type = $types{$new_type};
+        $object_count = 0;
 
-        $self->status_message("Syncing $new_type and $old_type");
+        $self->status_message("\n\nSyncing $new_type and $old_type");
 
         my $new_meta = $new_type->__meta__;
         confess "Could not get meta object for $new_type" unless $new_meta;
@@ -91,10 +93,11 @@ sub execute {
         my $new_object = $new_iterator->next;
         my $old_object = $old_iterator->next;
         while ($new_object or $old_object) {
+
             # Old iterator exhausted
             if ($new_object and not $old_object) {
                 if ($self->_reverse) {
-                    $self->copy_object($new_object, $old_type, $self->{_current_old_attributes}); 
+                    $self->copy_object($new_object, $old_type, $self->{_current_old_attributes});
                     $new_object = $new_iterator->next;
                 }
                 else {
@@ -152,15 +155,22 @@ sub get_class_attributes {
 sub copy_object {
     my ($self, $original_object, $new_object_class, $new_object_attributes) = @_;
     my %attributes;
-    map { $attributes{$_} = $original_object->{$_} } @$new_object_attributes;
+    map { $attributes{$_} = $original_object->{$_} if defined $original_object->{$_} } @$new_object_attributes;
 
-    print Data::Dumper::Dumper(\%attributes) . "\n";
     my $object = $new_object_class->create(%attributes);
     confess "Could not create new object of type $new_object_class based on object of type " .
         $original_object->class . " with id " . $original_object->id unless $object;
 
     # Committing after each object is created so progress isn't lost if a subsequent failure occurs
-    UR::Context->commit;
+    unless (UR::Context->commit) {
+        confess 'Could not commit object type ' . $object->class . ' with id ' . $object->id . '!';
+    }
+    $object_count++;
+
+    if ($object_count > 0 and $object_count % 1000 == 0) {
+        $self->status_message("Created $object_count objects!");
+    }
+
     return 1;
 }
 
