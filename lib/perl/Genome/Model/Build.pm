@@ -68,6 +68,7 @@ class Genome::Model::Build {
                               doc => 'Inputs assigned to the model when the build was created.' },
         instrument_data  => { is => 'Genome::InstrumentData', via => 'inputs', to => 'value', is_mutable => 1, where => [ name => 'instrument_data' ], 
                               doc => 'Instrument data assigned to the model when the build was created.' },
+        instrument_data_ids => { via => 'instrument_data', to => 'id', is_many => 1, },
         from_build_links => { is => 'Genome::Model::Build::Link', reverse_as => 'to_build', 
                               doc => 'bridge table entries where this is the \"to\" build(used to retrieve builds this build is \"from\")' },
         from_builds      => { is => 'Genome::Model::Build', via => 'from_build_links', to => 'from_build', 
@@ -453,8 +454,7 @@ sub resolve_data_directory {
         my $allocation_path = 'model_data/' . $model->id . '/build'. $self->build_id;
         my $kb_requested = $self->calculate_estimated_kb_usage;
         unless ($kb_requested) {
-            warn "No disk allocation for this build.";
-            return;
+            die $self->error_message("Could not estimate kb usage for allocation!");
         }
     
         my $disk_group_name = $model->processing_profile->_resolve_disk_group_name_for_build($self);
@@ -472,7 +472,7 @@ sub resolve_data_directory {
             owner_id => $id,
         );
         Carp::confess "Failed to create allocation for build!" unless $disk_allocation;
-    
+   
         $build_data_directory = $disk_allocation->absolute_path;
         Genome::Sys->validate_existing_directory($build_data_directory);
 

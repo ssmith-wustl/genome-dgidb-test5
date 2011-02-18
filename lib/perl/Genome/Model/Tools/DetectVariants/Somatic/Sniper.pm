@@ -77,6 +77,7 @@ my %SNIPER_VERSIONS = (
     '0.7.1' => '/gsc/pkg/bio/samtools/sniper/somatic_sniper-v0.7.1/' . $SNIPER_COMMAND,
     '0.7.2' => '/gsc/pkg/bio/samtools/sniper/somatic_sniper-v0.7.2/' . $SNIPER_COMMAND,
     '0.7.3' => '/gsc/pkg/bio/samtools/sniper/somatic_sniper-v0.7.3/' . $SNIPER_COMMAND,
+    '0.7.4' => "/usr/bin/${SNIPER_COMMAND}0.7.4",
 );
 
 sub help_brief {

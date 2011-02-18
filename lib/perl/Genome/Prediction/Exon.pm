@@ -39,6 +39,10 @@ class Genome::Prediction::Exon {
                 return $gene
             |,
         },
+        length => {
+            calculate_from => ['start', 'end'],
+            calculate => q{ return abs($start - $end) + 1; },
+        },
     ],
 };
 

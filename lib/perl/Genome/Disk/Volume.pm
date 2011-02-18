@@ -38,7 +38,13 @@ class Genome::Disk::Volume {
                 my $buffer = int($total_kb * $unusable_volume_percent);
                 $buffer = $maximum_reserve_size if $buffer > $maximum_reserve_size;
                 return $buffer;
-            }
+            },
+            doc => 'Amount of space not to be used',
+        },
+        usable_unallocated_kb => {
+            calculate_from => ['unallocated_kb', 'reserve_size'],
+            calculate => q{ return $unallocated_kb - $reserve_size; },
+            doc => 'Amount of space that can be allocated to, accounting for reserve size',
         },
     ],
     has_many_optional => [
@@ -68,15 +74,5 @@ class Genome::Disk::Volume {
 
 sub unusable_volume_percent { return .05 }
 sub maximum_reserve_size { return 1_073_741_824 } # 1 TB
-
-sub most_recent_allocation {
-    my $self = shift;
-    # Unless otherwise specified, the objects returned by this get will be sorted by increasing
-    # id value. This is ONLY true if the id is numeric and single-column. If any fields other than
-    # allocator id are ever added to the id_by property of allocations, this get will need to be modified
-    my @allocations = Genome::Disk::Allocation->get(mount_path => $self->mount_path);
-    return unless @allocations;
-    return $allocations[-1];
-}
 
 1;
