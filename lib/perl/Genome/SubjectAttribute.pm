@@ -10,23 +10,20 @@ class Genome::SubjectAttribute {
     data_source => 'Genome::DataSource::GMSchema',
     doc => 'Represents a particular attribute of a subject',
     id_by => [
-        subject_attribute_id => {
-            is => 'Number',
+        attribute_label => {
+            is => 'Text',
+        },
+        subject_id => {
+            is => 'Text',
+        },
+        attribute_value => {
+            is => 'Text',
         },
     ],
     has => [
         nomenclature => {
             is => 'Text',
             default => 'WUGC',
-        },
-        attribute_label => {
-            is => 'Text',
-        },
-        attribute_value => {
-            is => 'Text',
-        },
-        subject_id => {
-            is => 'Text',
         },
         subject => {
             is => 'Genome::Subject',
