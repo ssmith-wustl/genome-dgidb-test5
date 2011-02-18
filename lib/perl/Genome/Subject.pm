@@ -14,9 +14,6 @@ class Genome::Subject {
         },
     ],
     has => [
-        name => {
-            is => 'Text',
-        },
         subclass_name => {
             is => 'Text',
         },
@@ -28,6 +25,9 @@ class Genome::Subject {
         },
     ],
     has_optional => [
+        name => {
+            is => 'Text',
+        },
         description => { 
             is => 'Text',
             via => 'attributes',
