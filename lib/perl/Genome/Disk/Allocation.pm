@@ -390,7 +390,7 @@ sub _delete {
     $self->status_message("Beginning deallocation process for allocation " . $self->id);
 
     # Lock and retrieve volume
-    my $volume_lock = $self->_get_volume_lock($self->mount_path);
+    my $volume_lock = $self->_get_volume_lock($self->mount_path, 3600);
     unless ($volume_lock) {
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Could not get lock on volume ' . $self->mount_path;
@@ -458,7 +458,7 @@ sub _reallocate {
     $self->status_message("Resizing from " . $self->kilobytes_requested . " kb to $kilobytes_requested kb (changed by $diff)"); 
 
     # Lock and retrieve volume
-    my $volume_lock = $self->_get_volume_lock($self->mount_path);
+    my $volume_lock = $self->_get_volume_lock($self->mount_path, 3600);
     unless (defined $volume_lock) {
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Could not get lock on volume ' . $self->mount_path;
@@ -646,22 +646,24 @@ sub _check_kb_requested {
 }
 
 sub _get_volume_lock {
-    my ($class, $mount_path) = @_;
+    my ($class, $mount_path, $tries) = @_;
+    $tries ||= 120;
     my $modified_mount = $mount_path;
     $modified_mount =~ s/\//_/g;
     my $volume_lock = Genome::Sys->lock_resource(
         resource_lock => '/gsc/var/lock/allocation/volume' . $modified_mount,
-        max_try => 100,
+        max_try => $tries,
         block_sleep => 1,
     );
     return $volume_lock;
 }
 
 sub _get_allocation_lock {
-    my ($class, $id) = @_;
+    my ($class, $id, $tries) = @_;
+    $tries ||= 60;
     my $allocation_lock = Genome::Sys->lock_resource(
         resource_lock => '/gsc/var/lock/allocation/allocation_' . join('_', split(' ', $id)),
-        max_try => 20,
+        max_try => $tries,
         block_sleep => 1,
     );
     return $allocation_lock;
