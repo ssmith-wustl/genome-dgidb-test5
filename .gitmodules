@@ -31,3 +31,6 @@
 [submodule "genome-db-omim"]
 	path = genome-db-omim
 	url = ssh://git//srv/git/genome-db-omim.git
+[submodule "genome-db-pfam"]
+	path = genome-db-pfam
+	url = ssh://git//srv/git/genome-db-pfam.git
