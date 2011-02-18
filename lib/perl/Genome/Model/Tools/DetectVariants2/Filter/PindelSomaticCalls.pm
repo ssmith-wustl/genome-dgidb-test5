@@ -1,39 +1,20 @@
-package Genome::Model::Tools::DetectVariants2::Filter::PindelReadSupport;
+package Genome::Model::Tools::DetectVariants2::Filter::PindelSomaticCalls;
 
 use warnings;
 use strict;
 
 use Genome;
-
 my %positions;
 
-class Genome::Model::Tools::DetectVariants2::Filter::PindelReadSupport{
+class Genome::Model::Tools::DetectVariants2::Filter::PindelSomaticCalls{
     is => 'Genome::Model::Tools::DetectVariants2::Filter',
     has => [
         germline_events => {
             is => 'Boolean',
             default => 0,
+            is_optional => 1,
             doc => 'Set this to only include events with some support in the control',
         },
-        min_variant_support => {
-            is => 'String',
-            is_optional => 1,
-            default => '0',
-            doc => 'Required number of variant-supporting reads. Note: Pindel doesn\'t actually report the indel if var-support < 3.',
-        },
-        var_to_ref_read_ratio => {
-            is => 'String',
-            is_optional => 1,
-            default => '0.2',
-            doc => 'This ratio determines what ratio of variant supporting reads to reference supporting reads to allow',
-        },
-        remove_single_stranded => {
-            is => 'Boolean',
-            is_optional => 1,
-            default => 1,
-            doc => 'enable this to filter out variants which have exclusively pos or neg strand supporting reads.',
-        },
-
     ],
     has_constant => [
         use_old_pindel => {
@@ -52,18 +33,19 @@ sub _filter_variants {
     my $output_lq_file = $self->_temp_staging_directory."/indels.lq.bed";
     my $indel_file = $self->input_directory."/indels.hq.bed";
 
-    $self->calculate_read_support($indel_file, $read_support_file);
-
-    $self->filter_read_support($read_support_file,$output_file,$output_lq_file);
+    $self->find_somatic_events($indel_file, $output_file, $output_lq_file);
 
     return 1;
 }
 
-sub calculate_read_support {
+sub find_somatic_events {
     my $self = shift;
     my $indel_file = shift;
-    my $read_support_file = shift;
-    my $output = Genome::Sys->open_file_for_writing($read_support_file);
+    my $output_file = shift;
+    my $output_lq_file = shift;
+
+    my $output = Genome::Sys->open_file_for_writing($output_file);
+    my $output_lq = Genome::Sys->open_file_for_writing($output_lq_file);
     my %indels;
     my %answers;
 
@@ -79,10 +61,11 @@ sub calculate_read_support {
     #print $output "CHR\tSTART\tSTOP\tREF/VAR\tINDEL_SUPPORT\tREFERENCE_SUPPORT\t%+STRAND\n";
     for my $chr (sort(keys(%indels))){
         my %indels_by_chr = %{$indels{$chr}};
-        $self->process_file($chr, \%indels_by_chr, $output);
+        $self->process_file($chr, \%indels_by_chr, $output, $output_lq);
 
     }
     $output->close;
+    $output_lq->close;
 
 }
 
@@ -91,6 +74,7 @@ sub process_file {
     my $chr = shift;
     my $indels_by_chrom = shift;
     my $output = shift;
+    my $output_lq = shift;
     my $dir = $self->detector_directory;
     my $filename = $dir."/".$chr."/indels_all_sequences";
     my $pindel_output = Genome::Sys->open_file_for_reading($filename); #IO::File->new($filename);
@@ -137,11 +121,6 @@ sub process_file {
                 if($line =~ m/normal/) {
                     $normal_support=1;
                 }
-                if($line =~ m/\+/){
-                    $pos_strand++;
-                }else{
-                    $neg_strand++;
-                }
                 $read=$line;
             }
 #charris speed hack
@@ -176,47 +155,17 @@ sub process_file {
     for $chrom (sort {$a cmp $b} (keys(%events))){
         for $pos (sort{$a <=> $b} (keys( %{$events{$chrom}}))){
             for my $type_and_size (sort(keys( %{$events{$chrom}{$pos}}))){
-                unless(exists($events{$chrom}{$pos}{$type_and_size}{'normal'})&&(not $self->germline_events)){
-                    my $pos_strand = $events{$chrom}{$pos}{$type_and_size}{'pos'};
-                    my $neg_strand = $events{$chrom}{$pos}{$type_and_size}{'neg'};
-                    my $pos_percent=0;
-                    if($neg_strand==0){
-                        $pos_percent = 1.0;
-                    } else {
-                        $pos_percent = sprintf("%.2f", $pos_strand / ($pos_strand + $neg_strand));
-                    }
-                    my $answer = "neg = ".$neg_strand."\tpos = ".$pos_strand." which gives % pos str = ".$pos_percent."\n";
-                    my $reads = $pos_strand + $neg_strand;
-                    my @stop = keys(%{$positions{$chrom}{$pos}});
-                    #unless(scalar(@stop)==1){
-                    #    
-                    #    die "too many stop positions at ".$chrom." ".$pos."\n";
-                    #}
+                if((not exists($events{$chrom}{$pos}{$type_and_size}{'normal'}) && not $self->germline_events) || ( $self->germline_events && exists($events{$chrom}{$pos}{$type_and_size}{'normal'}))){
                     my ($type,$size) = split /\//, $type_and_size;
-                    #my $stop = ($type eq 'I') ? $pos+2 : $pos + $size;
                     my $stop = $pos;
-                    my @results = `samtools view $tumor_bam $chrom:$pos-$stop | grep -v "XT:A:M"`;
-                    if($self->germline_events){
-                        push @results, `samtools view $tumor_bam $chrom:$pos-$stop | grep -v "XT:A:M"`;
-                    }
-                    my $read_support=0;
-                    for my $result (@results){
-                        #print $result;
-                        chomp $result;
-                        my @details = split /\t/, $result;
-                        if($result =~ /NM:i:(\d+)/){
-                            if($1>2){
-                                next;
-                            }
-                        }
-                        unless($details[5] =~ m/[ID]/){
-                            if(($details[3] > ($pos - 40))&&($details[3] < ($pos -10))){
-                                $read_support++;
-                            }
-                        }
-                    }
-                    my $bed_output = $events{$chrom}{$pos}{$type_and_size}{'bed'}."\t".$reads."\t".$read_support."\t".$pos_percent."\n";
+                    my $bed_output = $events{$chrom}{$pos}{$type_and_size}{'bed'}."\n";
                     print $output $bed_output;
+                }
+                else {
+                    my ($type,$size) = split /\//, $type_and_size;
+                    my $stop = $pos;
+                    my $bed_output = $events{$chrom}{$pos}{$type_and_size}{'bed'}."\n";
+                    print $output_lq $bed_output;
                 }
             }
         }
@@ -323,6 +272,5 @@ sub filter_read_support {
 
     return 1;
 }
-
 
 1;

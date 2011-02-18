@@ -43,6 +43,44 @@ class Genome::SoftwareResult {
 
 our %LOCKS;
 
+
+sub get_with_lock {
+    my $class = shift;
+
+    my $params_processed = $class->_gather_params_for_get_or_create(@_);
+    my %is_input = %{$params_processed->{inputs}};
+    my %is_param = %{$params_processed->{params}};
+
+    my $lock;
+    unless ($lock = $class->lock(%is_input, %is_param)) {
+        die "Failed to get a lock for " . Dumper(\%is_input,\%is_param);
+    }
+
+    my @objects;
+    eval {
+        @objects = $class->get(%is_input, %is_param);
+    };
+    my $error = $@;
+
+    $class->status_message("Cleaning up lock $lock...");
+    Genome::Sys->unlock_resource(resource_lock=>$lock) || die "Failed to unlock after getting software result";
+    $class->status_message("Cleanup completed for lock $lock.");
+
+    if($error) {
+        $class->error_message('Failed in get! ' . $error);
+        die $class->error_message;
+    }
+
+    if (@objects > 1) {
+        return @objects if wantarray;
+        my @ids = map { $_->id } @objects;
+        die "Multiple matches for $class but get or create was called in scalar context!  Found ids: @ids";
+    } else {
+        return $objects[0];
+    }
+}
+
+
 sub get_or_create {
     my $class = shift;
 

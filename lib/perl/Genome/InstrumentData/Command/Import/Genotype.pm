@@ -79,20 +79,29 @@ my %properties = (
 
 class Genome::InstrumentData::Command::Import::Genotype {
     is  => 'Genome::Command::Base',
-    has => [%properties],
+    has => [
+        %properties,
+        _model => { is_optional => 1, },
+    ],
 };
 
 
 sub execute {
     my $self = shift;
 
-    if ( not $self->reference_sequence_build ) {
+    my $reference_sequence_build = $self->reference_sequence_build;
+    if ( not $reference_sequence_build ) {
         $self->error_message('No reference sequence build given');
         return;
     }
 
     my $resolve_sample_library = $self->_resolve_sample_and_library;
     return if not $resolve_sample_library;
+
+    if ( $self->define_model ) {
+        my $model = $self->_create_model;
+        return if not $model;
+    }
 
     # gather together params to create the imported instrument data object 
     my %params = ();
@@ -156,8 +165,6 @@ sub execute {
     }
 
     my $alloc_path = sprintf('instrument_data/imported/%s', $instrument_data_id);
-
-    
     my %alloc_params = (
         disk_group_name     => 'info_alignments',     #'info_apipe',
         allocation_path     => $alloc_path,
@@ -166,10 +173,7 @@ sub execute {
         owner_id            => $import_instrument_data->id,
     );
 
-
     my $disk_alloc;
-
-
     if($self->allocation) {
         $disk_alloc = $self->allocation;
     } else {
@@ -185,7 +189,14 @@ sub execute {
     $self->status_message("About to calculate the md5sum of the genotype.");
     my $md5 = Genome::Sys->md5sum($self->source_data_file);
     $self->status_message("Copying genotype the allocation.");
-    my $real_filename = $disk_alloc->absolute_path ."/". $self->sample->name . ".genotype";
+
+    #my $real_filename = $disk_alloc->absolute_path ."/". $self->sample->name . ".genotype";
+    my $subject_name = $reference_sequence_build->subject_name;
+    my $version = $reference_sequence_build->version;
+    $self->status_message("Getting genotype microarray file for subject ($subject_name) and version ($version)");
+    my $real_filename = $import_instrument_data->genotype_microarray_file_for_subject_and_version($subject_name, $version);
+    #my $genotype_file = $instrument_data->genotype_microarray_file_for_subject_and_version($subject_name, $version);
+
     unless(copy($self->source_data_file, $real_filename)) {
         $self->error_message("Failed to copy to allocated space (copy returned bad value).  Unlinking and deallocating.");
         unlink($real_filename);
@@ -206,11 +217,13 @@ sub execute {
     }
     $self->status_message("The md5sum for the copied genotype file is: ".$copy_md5);
     $self->status_message("The instrument-data id of your new record is ".$instrument_data_id);
-    if($self->define_model){
-        $self->define_genotype_model;
-    }
-    return 1;
 
+    if ( $self->define_model ) {
+        my $add_and_build = $self->_add_instrument_data_to_model_and_build($import_instrument_data);
+        return if not $add_and_build;
+    }
+
+    return 1;
 }
 
 sub get_read_count {
@@ -267,11 +280,73 @@ sub _resolve_sample_and_library {
     return 1;
 }
 
-sub _create_genotype_microarray_model {
+sub _create_model {
     my $self = shift;
+
+    $self->status_message('Create genotype model');
+    my $processing_profile = Genome::ProcessingProfile->get(2186707); # name => unknown/wugc
+    if ( not $processing_profile ) {
+        $self->error_message('Cannot find genotype microarray processing profile "unknown/wugc" to create model');
+        return;
+    }
+
+    my %model_params = (
+        processing_profile => $processing_profile,
+        subject_id => $self->sample->id,
+        subject_class_name => $self->sample->class,
+        reference_sequence_build => $self->reference_sequence_build,
+    );
+
+    my $model = Genome::Model::GenotypeMicroarray->get(%model_params);
+    if ( $model ) {
+        $self->error_message("Model exists");
+        return;
+    }
+    $model = Genome::Model::GenotypeMicroarray->create(%model_params);
+    if ( not $model ) {
+        $self->error_message('Cannot create genotype microarray model');
+        return;
+    }
+
+    $self->status_message('Create genotype model OK');
+
+    return $self->_model($model);
 }
 
-sub define_genotype_model {
+sub _add_instrument_data_to_model_and_build {
+    my ($self, $instrument_data) = @_;
+
+    my $model = $self->_model;
+
+    $self->status_message('Add instrument data '.$instrument_data->id.' to model '.$model->__display_name__);
+    my $add_ok = $model->add_instrument_data($instrument_data);
+    if ( not $add_ok ) {
+        $self->error_message('Cannot add genotype microarray instrument data to model '.$model->__display_name__);
+        return;
+    }
+    $self->status_message('Add instrument data OK');
+
+    $self->status_message('Build model '.$model->__display_name__);
+    my $build_start = Genome::Model::Build::Command::Start->create(
+        models => [ $model ],
+        server_dispatch => 'inline',
+        job_dispatch => 'inline',
+    );
+    if ( not $build_start ) {
+        $self->error_message('Cannot create build start command for model '.$model->__display_name__);
+        return
+    }
+    $build_start->dump_status_messages(1);
+    if ( not $build_start->execute ) {
+        $self->error_message('Cannot execute build start command for model '.$model->__display_name__);
+        return;
+    }
+    $self->status_message('Build OK');
+
+    return 1;
+}
+
+sub XXdefine_genotype_model {
     my $self = shift;
     my $model;
     my $processing_profile = "unknown/wugc";

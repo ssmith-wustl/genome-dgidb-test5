@@ -132,6 +132,27 @@ sub _promote_staged_data {
     return 1;
 }
 
+sub _run_converter {
+    my $self = shift;
+    my $converter = shift;
+    my $source = shift;
+    
+    my $output = $source . '.bed'; #shift; #TODO Possibly create accessors for the bed files instead of hard-coding this
+    
+    my $command = $converter->create(
+        source => $source,
+        output => $output, 
+        include_normal => 1,
+    );
+    
+    unless($command->execute) {
+        $self->error_message('Failed to convert ' . $source . ' to the standard format.');
+        return;
+    }
+
+    return 1;
+}
+
 sub has_version {
     my $self = shift;
     my $version = shift;

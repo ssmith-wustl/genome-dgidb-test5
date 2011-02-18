@@ -55,6 +55,8 @@ sub create {
 
     my $model = $self->model;
     Carp::confess('No model to create input') if not $model;
+    my $name = $self->name;
+    Carp::confess('No name to create input') if not $name;
     my $obj = $self->value;
     Carp::confess('No value to create input') if not $obj;
 

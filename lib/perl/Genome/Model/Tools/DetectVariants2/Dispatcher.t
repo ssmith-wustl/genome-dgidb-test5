@@ -88,7 +88,7 @@ my $tumor_bam = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants
 my $normal_bam = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Dispatcher/flank_normal_sorted.bam";
 
 # Test dispatcher for running a complex case -- the intersect is nonsensical, but tests intersections while still keeping the test short
-my $test_working_dir = File::Temp::tempdir('DetectVariants2-Dispatcher-combineXXXXX', DIR => '/gscuser/gsanders/test_output/', CLEANUP => 0);
+my $test_working_dir = File::Temp::tempdir('DetectVariants2-Dispatcher-combineXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
 my $combine_test = $dispatcher_class->create(
     snv_detection_strategy => 'samtools r599 filtered by snp-filter v1 union samtools r599 filtered by snp-filter v1',
     output_directory => $test_working_dir,

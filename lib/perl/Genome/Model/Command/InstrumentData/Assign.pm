@@ -140,6 +140,19 @@ sub execute {
 sub _assign_instrument_data {
     my ($self, $instrument_data) = @_;
 
+    # Check if already assigned
+    my $model = $self->model;
+    if ( grep { $instrument_data->id eq $_->id } $model->instrument_data ) {
+        $self->status_message(
+            sprintf(
+                'Instrument data (%s) already assigned to model (%s). Skipping.',
+                $instrument_data->id,
+                $model->__display_name__,
+            )
+        );
+        return 1;
+    }
+
     # Non imported solexa needs to have the copy sequences file pse run ok
     if ( $instrument_data->sequencing_platform eq 'solexa' and $instrument_data->class !~ /imported/i ) {
         my $index_illumina = $instrument_data->index_illumina;
@@ -156,18 +169,16 @@ sub _assign_instrument_data {
         }
     }
 
-    my $add = $self->model->add_instrument_data(
+    my $add = $model->add_instrument_data(
         value => $instrument_data,
         filter_desc => $self->filter,
     );
     if ( not $add ) {
         $self->error_message(
             sprintf(
-                'Failed to add instrument data (id<%s> name<%s>) to model (id<%s> name<%s>).',
+                'Failed to add instrument data (%s) to model (%s).',
                 $instrument_data->id,
-                $instrument_data->run_name,
-                $self->model->id,
-                $self->model->name,
+                $model->__display_name__,
             )
         );
         return;
@@ -175,10 +186,9 @@ sub _assign_instrument_data {
 
     $self->status_message(
         sprintf(
-            'Instrument data (id<%s>) assigned to model (id<%s> name<%s>)%s.',
+            'Instrument data (%s) assigned to model (%s)%s.',
             $instrument_data->id,
-            $self->model->id,
-            $self->model->name,
+            $model->__display_name__,
             ( $self->filter ? (' with filter ' . $self->filter) : '')
         )
     );

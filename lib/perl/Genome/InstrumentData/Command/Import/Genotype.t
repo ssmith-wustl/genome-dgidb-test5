@@ -58,6 +58,7 @@ my $cmd = Genome::InstrumentData::Command::Import::Genotype->create(
     define_model => 1,
     sequencing_platform => "unit test industries",
 );
+$cmd->dump_status_messages(1);
 ok(!$cmd->execute, "attempt to create command w/o reference is an error"); 
 $cmd->delete;
 
@@ -68,6 +69,7 @@ $cmd = Genome::InstrumentData::Command::Import::Genotype->create(
     reference_sequence_build => $reference_build,
     sequencing_platform => "unit test industries",
 );
+$cmd->dump_status_messages(1);
 ok(!$cmd->execute, "attempt to create command w/o sample or library is an error"); 
 $cmd->delete;
 
@@ -81,6 +83,7 @@ $cmd = Genome::InstrumentData::Command::Import::Genotype->create(
     sequencing_platform => "unit test industries",
 );
 ok($cmd, "constructed an import command");
+$cmd->dump_status_messages(1);
 my @errors = $cmd->__errors__;
 is(scalar(@errors),0, "no errors in cmd");
 ok($cmd->execute, "execution was successful");
@@ -92,23 +95,27 @@ my $i = Genome::InstrumentData::Imported->get(
 );
 
 my $disk = Genome::Disk::Allocation->get(owner_class_name => $i->class, owner_id => $i->id, id => -123459);
-
 ok($disk, "found an allocation owned by the new instrument data");
-
 my $owner_class = $disk->owner_class_name;
-
 is($owner_class, "Genome::InstrumentData::Imported", "allocation belongs to  G::I::Imported");
-
 is($disk->owner_id, $i->id, "allocation owner ID matches imported instrument data id");
-
 ok(-e $i->data_directory, "output directory is present");
-
 is($i->library_id,$library->id,"library_id matches");
 
-my $genotype_file = $i->disk_allocations->absolute_path ."/". $sample_name . ".genotype";
+my $genotype_file = $i->genotype_microarray_file_for_subject_and_version($reference_build->subject_name, $reference_build->version);
+ok($genotype_file, 'got genotype file');
+ok(-s $genotype_file, "genotype file exists");
 
-ok(-s $genotype_file, "Found properly named genotype file.");
+my $model = Genome::Model::GenotypeMicroarray->get(
+    subject_id => $sample->id,
+    processing_profile_id => 2186707,
+);
+ok($model, 'created model');
+my $build = $model->last_complete_build;
+ok($build, 'created build');
+my $snp_array_file = $build->formatted_genotype_file_path;
+ok(-s $snp_array_file, 'created snp array file');
 
-done_testing(14);
+done_testing(18);
 exit;
 
