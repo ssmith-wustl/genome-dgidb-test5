@@ -347,6 +347,9 @@ sub generate_workflow {
     for my $variant_type (@root){
         my ($key) = keys(%{$trees->{$variant_type}});
         my $end_result = $self->link_operations( $trees->{$variant_type}, $variant_type );
+        if($end_result =~ m/unfiltered$/){
+            $end_result =~ s/unfiltered$//;
+        }
         my $workflow_links = $self->_workflow_links;
         $workflow_model = $self->_workflow_model;
         my $last_operation_name = $workflow_links->{$end_result."_output_directory"}->{last_operation};
