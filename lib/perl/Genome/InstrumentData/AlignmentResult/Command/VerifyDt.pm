@@ -136,6 +136,11 @@ sub reheader {
 
 sub repair_dt {
     my $in_bam = shift;
+    my $in_bam_lock = "$in_bam.verify-dt.lock";
+    if (-e $in_bam_lock) {
+        die "Already running a Verify-DT on bam ($in_bam), lock file exists.\n";
+    }
+    system("touch $in_bam_lock");
     (my $in_sam_h = $in_bam) =~ s/\.bam$/.sam.h/;
     (my $out_bam = $in_bam) =~ s/\.bam$/_fixed.bam/;
     (my $out_sam_h = $in_sam_h) =~ s/\.sam\.h$/_fixed.sam.h/;
@@ -203,6 +208,7 @@ sub repair_dt {
     unlink("$in_bam.orig") || die;
     unlink($out_sam_h) || die;
     unlink($in_sam_h) || die;
+    unlink($in_bam_lock) || die;
     print "\n";
 }
 
