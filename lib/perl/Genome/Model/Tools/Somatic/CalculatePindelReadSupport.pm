@@ -66,7 +66,7 @@ class Genome::Model::Tools::Somatic::CalculatePindelReadSupport {
     ],
     has_param => [
          lsf_queue => {
-             default_value => 'tcga',
+             default_value => 'long',
          }, 
          lsf_resource => {
              default_value => "-M 6000000 -R 'select[type==LINUX64 && mem>16000] rusage[mem=16000]'",
