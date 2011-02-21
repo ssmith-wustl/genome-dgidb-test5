@@ -303,6 +303,8 @@ sub _create {
             confess "No volumes of group $disk_group_name have enough space after excluding reserves to store $kilobytes_requested KB.";
         }
 
+        @volumes = sort { $b->unallocated_kb <=> $a->unallocated_kb } @volumes;
+
         # Only allocate to the first MAX_VOLUMES retrieved
         my $max = @volumes > $MAX_VOLUMES ? $MAX_VOLUMES : @volumes;
         @volumes = @volumes[0,$max - 1];
