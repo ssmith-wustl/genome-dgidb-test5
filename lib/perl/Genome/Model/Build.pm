@@ -68,6 +68,7 @@ class Genome::Model::Build {
                               doc => 'Inputs assigned to the model when the build was created.' },
         instrument_data  => { is => 'Genome::InstrumentData', via => 'inputs', to => 'value', is_mutable => 1, where => [ name => 'instrument_data' ], 
                               doc => 'Instrument data assigned to the model when the build was created.' },
+        instrument_data_ids => { via => 'instrument_data', to => 'id', is_many => 1, },
         from_build_links => { is => 'Genome::Model::Build::Link', reverse_as => 'to_build', 
                               doc => 'bridge table entries where this is the \"to\" build(used to retrieve builds this build is \"from\")' },
         from_builds      => { is => 'Genome::Model::Build', via => 'from_build_links', to => 'from_build', 

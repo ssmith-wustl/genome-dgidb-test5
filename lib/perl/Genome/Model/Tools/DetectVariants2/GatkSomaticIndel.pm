@@ -28,6 +28,14 @@ sub _detect_variants {
         $self->error_message("Failed to run GATK command.");
         die $self->error_message;
     }
+    unless(-s $self->_temp_staging_directory."/indels.hq"){
+        my $filename = $self->_temp_staging_directory."/indels.hq";
+        my $output = `touch $filename`;
+        unless($output){
+            $self->error_message("creating an empty indels.hq file failed.");
+            die $self->error_message;
+        }
+    }
     return 1;
 }
 

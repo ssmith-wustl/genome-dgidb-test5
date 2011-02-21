@@ -48,8 +48,12 @@ sub execute{
     my $self = shift;
 
     my $model = $self->model;
+    my $pp = $model->processing_profile;
+    
+    my $annotator_version = $pp->transcript_variant_annotator_version;
+    my $adaptor_version = "Genome::Model::Tools::Annotate::TranscriptVariants::Version" . $annotator_version . "::BedToAnnotation";
 
-    my $adaptor = Genome::Model::Tools::Bed::Convert::BedToAnnotation->create(
+    my $adaptor = $adaptor_version->create(
         snv_file => $self->filtered_snp_output_file,
         indel_file => $self->filtered_indel_output_file,
         output => $self->pre_annotation_filtered_variant_file,

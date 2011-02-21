@@ -290,7 +290,7 @@ sub dump_fastqs_from_bam {
     my $fwd_file = sprintf("%s/s_%s_1_sequence.txt", $temp_dir, $subset);
     my $rev_file = sprintf("%s/s_%s_2_sequence.txt", $temp_dir, $subset);
     my $fragment_file = sprintf("%s/s_%s_sequence.txt", $temp_dir, $subset);
-    my $cmd = Genome::Model::Tools::Picard::SamToFastq->create(input=>$self->bam_path, fastq=>$fwd_file, fastq2=>$rev_file, fragment_fastq=>$fragment_file, %read_group_params);
+    my $cmd = Genome::Model::Tools::Picard::SamToFastq->create(input=>$self->bam_path, fastq=>$fwd_file, fastq2=>$rev_file, fragment_fastq=>$fragment_file, no_orphans=>1, %read_group_params);
     unless ($cmd->execute()) {
         die $cmd->error_message;
     }

@@ -180,6 +180,7 @@ sub _dump_workflow {
 
 sub get_relative_path_to_output_directory {
     my $self = shift;
+    #my $variant_type = shift;
     my $full_path = shift;
     my $relative_path = $full_path; 
     my $temp_path = $self->_temp_staging_directory;
@@ -189,8 +190,8 @@ sub get_relative_path_to_output_directory {
 
 sub calculate_operation_output_directory {
     my $self = shift;
-    my ($base_directory, $variant_type, $name, $version, $param_list) = @_;
-    my $subdirectory = join('-', $variant_type, $name, $version, $param_list);
+    my ($base_directory, $name, $version, $param_list) = @_;
+    my $subdirectory = join('-', $name, $version, $param_list);
     
     return $base_directory . '/' . Genome::Utility::Text::sanitize_string_for_filesystem($subdirectory);
 }
@@ -345,7 +346,10 @@ sub generate_workflow {
     my @root = keys( %{ $trees} );
     for my $variant_type (@root){
         my ($key) = keys(%{$trees->{$variant_type}});
-        my $end_result = $self->link_operations( $trees->{$variant_type}, $key, $variant_type );
+        my $end_result = $self->link_operations( $trees->{$variant_type}, $variant_type );
+        if($end_result =~ m/unfiltered$/){
+            $end_result =~ s/unfiltered$//;
+        }
         my $workflow_links = $self->_workflow_links;
         $workflow_model = $self->_workflow_model;
         my $last_operation_name = $workflow_links->{$end_result."_output_directory"}->{last_operation};
@@ -363,9 +367,7 @@ sub generate_workflow {
 sub link_operations { 
     my $self = shift;
 
-    ## TODO UGLY, please make cleaner
     my $tree = shift;
-    my $current_key = shift;
     my $variant_type = shift;
 
     my ($key) = keys( %{$tree} );
@@ -374,7 +376,12 @@ sub link_operations {
     
     # This is a leaf node, cease recursion and return the unique detector name
     if($key eq 'detector'){
-        return $self->get_unique_detector_name($tree->{$key}, $variant_type);
+        my $name =  $self->get_unique_detector_name($tree->{$key}, $variant_type);
+        my $filters = scalar(@{$tree->{$key}->{filters}});
+        unless($filters){
+            $name .= 'unfiltered';
+        }
+        return $name;
     }
 
     # We expect to see an intersect or union operation here, if there are more or less than 2 keys, asplode
@@ -386,7 +393,7 @@ sub link_operations {
 
     # recurse to find the inputs to this operation
     for my $input (@inputs) {
-        push @incoming_links, $self->link_operations($input, undef, $variant_type);
+        push @incoming_links, $self->link_operations($input, $variant_type);
     }
     $unique_combine_name = $self->create_combine_operation( $key , \@incoming_links, $variant_type );
 
@@ -407,22 +414,46 @@ sub create_combine_operation {
         $self->error_message("Could not create an instance of ".$class);
         die $self->error_message;
     }
+
     my $workflow_links = $self->_workflow_links;
 
-    my $input_a_key = $links->[0]."_output_directory";
-    my $input_a_last_op_name = $workflow_links->{$input_a_key}->{last_operation};
+    my @links = @{$links};
+    my ($op_a,$op_b);
+    my ($alink,$afilter);
+    my ($blink,$bfilter);
 
-    my $input_b_key = $links->[1]."_output_directory";
-    my $input_b_last_op_name = $workflow_links->{$input_b_key}->{last_operation};
+    if($links[0] =~ m/unfiltered/){
+        $afilter = undef;
+        $links[0] =~ s/unfiltered//;
+    }
+    else {
+        $afilter = 1;
+    }
+    $alink = $links[0];
+    if($links[1] =~ m/unfiltered/){
+        $bfilter = undef;
+        $links[1] =~ s/unfiltered//;
+    }
+    else {
+        $bfilter = 1;
+    }
+    $blink = $links[1];
+
+    my $input_a_key = $alink."_output_directory";
+    my $input_b_key = $blink."_output_directory";
+
+    my $input_a_last_op_name = $afilter ? $workflow_links->{$input_a_key}->{'last_operation'} : $alink;
+    my $input_b_last_op_name = $bfilter ? $workflow_links->{$input_a_key}->{'last_operation'} : $blink;
+
 
     #print "creating a ".$operation_type." for ".$variant_type."\n";
 
     my $workflow_model = $self->_workflow_model;
-    my $unique_combine_name = join("-",($variant_type,$operation_type, @{$links}));
-    my $combine_directory = $self->_temp_staging_directory."/".$unique_combine_name;
+    my $unique_combine_name = join("-",($operation_type, $alink,$blink));
+    my $combine_directory = $self->_temp_staging_directory."/".$variant_type."/".$unique_combine_name;
 
     my $combine_operation = $workflow_model->add_operation(
-        name => join(" ",($variant_type,$operation_type, $links->[0], $links->[1])),
+        name => join(" ",($operation_type, $alink, $blink)),
         operation_type => Workflow::OperationType::Command->get($class),
     );
 
@@ -549,7 +580,7 @@ sub add_detectors_and_filters {
 
                 # first add links from input_connector to detector
                 my $unique_detector_base_name = join( "_", ($variant_type, $name, $version, $params));
-                my $detector_output_directory = $self->calculate_operation_output_directory($self->_temp_staging_directory, $variant_type, $name, $version, $params);
+                my $detector_output_directory = $self->calculate_operation_output_directory($self->_temp_staging_directory."/".$variant_type, $name, $version, $params);
                 
                 my $inputs_to_store;
                 $inputs_to_store->{$unique_detector_base_name."_version"}->{value} = $version;
@@ -572,7 +603,7 @@ sub add_detectors_and_filters {
                     my $fversion = $filter->{version};
                     my $fparams = $filter->{params};
                     my $unique_filter_name = join( "_",($unique_detector_base_name,$fname,$fversion,$fparams));
-                    my $filter_output_directory = $self->calculate_operation_output_directory($previous_output_directory, $variant_type, $fname, $fversion, $fparams);
+                    my $filter_output_directory = $self->calculate_operation_output_directory($previous_output_directory, $fname, $fversion, $fparams);
                     $previous_output_directory = $filter_output_directory;
                     $inputs_to_store->{$unique_filter_name."_params"}->{value} = $filter->{params};
                     $inputs_to_store->{$unique_filter_name."_params"}->{right_property_name} = 'params';
@@ -652,6 +683,40 @@ sub add_detectors_and_filters {
     return $workflow_model;
 }
 
+sub _create_directories {
+    my $self = shift;
+    $self->SUPER::_create_directories(@_);
+
+    # Make a list of the variant types we wish to detect
+    my @variant_types;
+    for my $type (@{$self->variant_types}){
+        my $type_strat = $type."_detection_strategy";
+        if(defined($self->$type_strat)){
+            push @variant_types, $type;
+        }
+    }
+    # create subdirectories for the variant types we are detecting
+    my @subdirs = map {$self->_temp_staging_directory."/".$_ } @variant_types;
+    for my $output_directory (@subdirs) {
+        unless (-d $output_directory) {
+            eval {
+                Genome::Sys->create_directory($output_directory);
+            };
+            
+            if($@) {
+                $self->error_message($@);
+                return;
+            }
+
+            $self->status_message("Created directory: $output_directory");
+            chmod 02775, $output_directory;
+        }
+    }
+
+    return 1;
+}
+
+
 # Set the tempdir environment variable to the dispatchers output directory. This is done so that all detectors and filters run by the dispatcher will base their temp directories in the dispatchers directory
 # We do this in order that our temp dirs are on network accessible disk, in order that detectors and filters may write their results into it
 sub _create_temp_directories {
@@ -694,7 +759,6 @@ sub _promote_staged_data {
 sub set_output_files {
     my $self = shift;
     my $result = shift;
-    $DB::single=1;
 
     for my $variant_type (@{$self->variant_types}){
         my $file_accessor = $variant_type."_hq_output_file";

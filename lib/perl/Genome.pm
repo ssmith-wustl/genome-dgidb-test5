@@ -3,7 +3,7 @@ package Genome;
 use warnings;
 use strict;
 
-our $VERSION = '0.05'; # Genome $VERSION
+our $VERSION = '0.06'; # Genome $VERSION
 
 # software infrastructure
 use UR;
