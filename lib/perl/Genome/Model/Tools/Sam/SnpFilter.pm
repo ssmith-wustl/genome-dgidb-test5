@@ -16,6 +16,10 @@ class Genome::Model::Tools::Sam::SnpFilter {
         },
     ],
     has_optional => [
+        lq_output => {
+            is => 'String',
+            doc => 'This is an optional place to stick sn(p|v)s which have failed to pass this filter.',
+        },
         max_map_qual => {
             is  => 'Integer',
             doc => 'max mapping quality of the reads covering the SNP, default 40',
@@ -85,8 +89,9 @@ sub help_detail {
 EOS
 }
 
-
-
+##  FIXME  TODO  FIXME  TODO
+##  This whole module could use some attention...
+##  TODO  FIXME  TODO  FIXME
 sub execute {
     my $self = shift;
     my $snp_file = $self->snp_file;
@@ -115,6 +120,10 @@ sub execute {
     
     my $out_file = $self->out_file || $self->snp_file . '.sam_SNPfilter';
     my $out_fh = Genome::Sys->open_file_for_writing($out_file) or return;
+    my $lq_out_fh = undef;
+    if(defined($self->lq_output)) {
+        $lq_out_fh = Genome::Sys->open_file_for_writing($self->lq_output) or return;
+    }
     my $snp_fh = Genome::Sys->open_file_for_reading($snp_file) or return;
     
     while (my $snp = $snp_fh->getline) {
@@ -126,12 +135,23 @@ sub execute {
                 last;
             }
         }
-        next if $test;
+        if ($test) {
+            if($self->lq_output){
+                print $lq_out_fh $snp;
+            }
+            next;
+        }
         #next if $indel_filter{$chr,$pos};
         
         my $pass = 1 if $map_qual >= $self->max_map_qual and $rd_depth >= $self->min_read_depth and $rd_depth <= $self->max_read_depth;
         $pass = 0 unless $cns_qual >= $self->min_cns_qual || $snp_qual >= $self->min_snp_qual;
-        next unless $pass;
+
+        unless( $pass ) {
+            if($self->lq_output){
+                print $lq_out_fh $snp;
+            }
+            next;
+        }
         
         if ($chr ne $last_chr) {
             map{$out_fh->print($_->{line}) if $_->{pass}}@snps;
@@ -149,14 +169,27 @@ sub execute {
             if ($snps[$#snps]->{pos} - $snps[0]->{pos} < $self->snp_win_size) {
                 map{$_->{pass} = 0}@snps;
             }
-            $out_fh->print($snps[0]->{line}) if $snps[0]->{pass};
+            if ($snps[0]->{pass}) {
+                $out_fh->print($snps[0]->{line});
+            }
+            else {
+                if(defined($self->lq_output)){
+                    $lq_out_fh->print($snps[0]->{line});
+                }
+            }
             shift @snps; # keep the size of @snps, moving the window snp by snp, check the snp density in a window for all snps.
         }
     }
     map{$out_fh->print($_->{line}) if $_->{pass}}@snps;
+    if(defined($self->lq_output)){
+        map{$lq_out_fh->print($_->{line}) unless $_->{pass}}@snps;
+    }
 
     $snp_fh->close;
     $out_fh->close;
+    if(defined($self->lq_output)){
+        $lq_out_fh->close;
+    }
     
     return 1;
 }

@@ -20,7 +20,7 @@ package Genome::Model::Tools::Capture::ParsingScript;     # rename this when you
 #__SPECIAL GENOME CENTER PACKAGES
    #use GSCApp;
    use Genome::Model::Tools::Capture::PipelineParser;
-   use MG::IO::Parse::Cosmic;
+#   use MG::IO::Parse::Cosmic;
    use Genome;
 
 class Genome::Model::Tools::Capture::ParsingScript {
