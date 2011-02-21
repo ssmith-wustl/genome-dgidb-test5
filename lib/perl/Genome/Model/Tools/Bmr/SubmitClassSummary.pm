@@ -97,7 +97,7 @@ sub execute {
         my $stdout_file = $stdout_dir . $wigfile . ".stdout";
         my $wiggle = $wiggle_files{$wigfile};
         sleep(0.1); #Pause for a short while to avoid overloading LDAP, and for the disk's sake
-        print `bsub -q tcga -M 2500000 -R 'select[localdata && mem>2500] rusage[mem=2500]' -oo $stdout_file -J $jobname gmt bmr class-summary --mutation-maf-file $maf --output-file $outfile --roi-bedfile $roi_bed --wiggle-file $wiggle $genes_to_exclude_arg`;
+        print `bsub -M 2500000 -R 'select[localdata && mem>2500] rusage[mem=2500]' -oo $stdout_file -J $jobname gmt bmr class-summary --mutation-maf-file $maf --output-file $outfile --roi-bedfile $roi_bed --wiggle-file $wiggle $genes_to_exclude_arg`;
     }
 
     return 1;
