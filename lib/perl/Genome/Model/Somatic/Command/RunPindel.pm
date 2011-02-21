@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Workflow;
+use File::Basename;
 
 class Genome::Model::Somatic::Command::RunPindel {
     is => ['Workflow::Operation::Command'],
@@ -97,7 +98,14 @@ sub pre_execute {
     unless ($self->annotate_no_headers) { $self->annotate_no_headers(1); }
     unless ($self->transcript_annotation_filter) { $self->transcript_annotation_filter("top"); }
 
-    unless ($self->chromosome_list) { $self->chromosome_list([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,'X','Y']); }
+    if($self->chromosome_list) { 
+        my @chrom_list = split ",", $self->chromosome_list;
+        $self->chromosome_list(\@chrom_list);
+    }
+    else {
+        my @chrom_list = $self->get_chromosome_list;
+        $self->chromosome_list(\@chrom_list); 
+    }
     unless ($self->indel_bed_output) { $self->indel_bed_output($self->output_directory . '/indels_all_sequences.bed'); }
 
     unless(defined($self->version)){
@@ -123,6 +131,31 @@ sub pre_execute {
     #}
 
     return 1;
+}
+
+sub get_chromosome_list {
+    my $self = shift;
+    my $fasta = shift;
+    my ($filename, $path,$suffix) = fileparse($fasta,('.fa','.fasta'));
+    my $index_file = $path."/all_sequences.fasta.fai";
+    unless(-e $index_file){
+        $self->error_message("Could not locate reference sequence index file at ".$index_file);
+        die $self->error_message;
+    }
+    my $fh = Genome::Sys->open_file_for_reading($index_file);
+    my @chrom_list;
+    while ( my $line = $fh->getline){
+        chomp $line;
+        my ($chr) = split "\t", $line;
+
+        #for now, we are not including MT or NT contigs
+        if($chr =~ m/[MT,NT]/i){
+            next;
+        }
+        push @chrom_list, $chr;
+    }
+
+    return @chrom_list;
 }
 
 sub default_filenames{
