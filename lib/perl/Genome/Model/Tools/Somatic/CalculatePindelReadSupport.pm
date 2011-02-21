@@ -117,7 +117,7 @@ sub execute {
         $indels{$chr}{$start} = $refvar;
     }
 
-    print $output "CHR\tSTART\tSTOP\tREF/VAR\tINDEL_SUPPORT\tREFERENCE_SUPPORT\t%+STRAND\tDBSNP_ID\n";
+    #print $output "CHR\tSTART\tSTOP\tREF/VAR\tINDEL_SUPPORT\tREFERENCE_SUPPORT\t%+STRAND\tDBSNP_ID\n";
     for my $chr (sort(keys(%indels))){
         my %indels_by_chr = %{$indels{$chr}};
         $self->process_file($chr, \%indels_by_chr, $output);
