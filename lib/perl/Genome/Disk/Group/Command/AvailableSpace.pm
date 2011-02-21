@@ -54,7 +54,7 @@ sub execute {
         Carp::confess "Could not find disk group with name " . $self->disk_group_name;
     }
 
-    my @volumes = $group->volumes;
+    my @volumes = grep { $_->can_allocate == 1 and $_->disk_status eq 'active' } $group->volumes;
     unless (@volumes) {
         Carp::confess "Found no volume belonging to group " . $self->disk_group_name;
     }
