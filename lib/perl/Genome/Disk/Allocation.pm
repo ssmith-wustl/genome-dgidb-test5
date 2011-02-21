@@ -265,7 +265,7 @@ sub _create {
     my @candidate_volumes; 
     if (defined $mount_path) {
         $mount_path =~ s/\/$//; # mount paths in database don't have trailing /
-        my $volume = Genome::Disk::Volume->get(mount_path => $mount_path, disk_status => 'active');
+        my $volume = Genome::Disk::Volume->get(mount_path => $mount_path, disk_status => 'active', can_allocate => 1);
         confess "Could not get volume with mount path $mount_path" unless $volume;
 
         unless (grep { $_ eq $disk_group_name } $volume->disk_group_names) {
@@ -274,7 +274,7 @@ sub _create {
 
         my @reasons;
         push @reasons, 'disk is not active' if $volume->disk_status ne 'active';
-        #push @reasons, 'allocation turned off for this disk' if $volume->can_allocate != 1;
+        push @reasons, 'allocation turned off for this disk' if $volume->can_allocate != 1;
         push @reasons, 'not enough space on disk' if ($volume->unallocated_kb - $volume->reserve_size) < $kilobytes_requested;
         if (@reasons) {
             confess "Requested volume with mount path $mount_path cannot be allocated to:\n" . join("\n", @reasons);
@@ -329,7 +329,7 @@ sub _create {
         # and locking it in which someone could modify it)
         $candidate_volume = Genome::Disk::Volume->load($candidate_volume->id);
         unless($candidate_volume->unallocated_kb >= $kilobytes_requested 
-            #and $candidate_volume->can_allocate eq '1' 
+                and $candidate_volume->can_allocate eq '1' 
                 and $candidate_volume->disk_status eq 'active') {
             Genome::Sys->unlock_resource(resource_lock => $lock);
             next;
