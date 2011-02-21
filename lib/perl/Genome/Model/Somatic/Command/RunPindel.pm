@@ -103,7 +103,7 @@ sub pre_execute {
         $self->chromosome_list(\@chrom_list);
     }
     else {
-        my @chrom_list = $self->get_chromosome_list;
+        my @chrom_list = $self->get_chromosome_list($self->reference_sequence_input);
         $self->chromosome_list(\@chrom_list); 
     }
     unless ($self->indel_bed_output) { $self->indel_bed_output($self->output_directory . '/indels_all_sequences.bed'); }
@@ -136,7 +136,7 @@ sub pre_execute {
 sub get_chromosome_list {
     my $self = shift;
     my $fasta = shift;
-    my ($filename, $path,$suffix) = fileparse($fasta,('.fa','.fasta'));
+    my ($filename, $path,$suffix) = fileparse($fasta,['.fa','.fasta']);
     my $index_file = $path."/all_sequences.fasta.fai";
     unless(-e $index_file){
         $self->error_message("Could not locate reference sequence index file at ".$index_file);
