@@ -27,6 +27,11 @@ class Genome::Model::Tools::Picard::SamToFastq {
             doc         => 'Output fastq file for bams which contain a mix of fragments & pairs -- required if paired',
             is_optional => 1,
         },
+        no_orphans      => {
+            is => 'Boolean',
+            doc => 'Ignore orphaned reads (good reads, but whose mates were marked as failing quality filtering)',
+            default_value => 0,
+        },
         read_group_id => {
             is          => 'String',
             doc         => 'Limit to a single read group',
@@ -104,6 +109,7 @@ sub execute {
     $args .= ' FASTQ=' . "'" . $self->fastq . "'";
     $args .= ' SECOND_END_FASTQ=' . "'" . $self->fastq2 . "'" if ($self->fastq2);
     $args .= ' FRAGMENT_FASTQ=' . "'" . $self->fragment_fastq. "'" if ($self->fragment_fastq);
+    $args .= ' NO_ORPHAN=true' if ($self->no_orphans);
 
     $java_vm_cmd .= $args;
 

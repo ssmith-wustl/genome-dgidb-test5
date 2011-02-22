@@ -4,6 +4,7 @@ package Genome::Model::Tools::Galaxy::Setup;
 use strict;
 use warnings;
 use Genome;
+use File::Copy;
 
 class Genome::Model::Tools::Galaxy::Setup {
     is  => 'Command',
@@ -31,6 +32,8 @@ sub execute {
         die();
     }
     $self->status_message("Galaxy has been copied to $path. Installing Genome commands.");
+    copy($path . "/tool_conf.xml.sample", $path . "/tool_conf.xml");
+
     my $update_command = Genome::Model::Tools::Galaxy::Update->create(
         path => $path,
         pull => 0

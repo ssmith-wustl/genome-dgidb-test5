@@ -134,7 +134,7 @@ sub execute
         my $outfile = $output_dir . $piece . ".gene_summary";
         my $stdout_file = $stdout_dir . $piece . ".stdout";
         sleep(0.1); #Pause for a short while to avoid overloading LDAP, and to help out the disks
-        print `bsub -q tcga -M 3000000 -R 'select[localdata && mem>3000] rusage[mem=3000]' -oo $stdout_file -J $jobname gmt bmr gene-summary --mutation-maf-file $maf_file --output-file $outfile --roi-bedfile $roi_file --wiggle-file-dirs $wiggle_dirs --class-summary-file $class_summary`;
+        print `bsub -M 3000000 -R 'select[localdata && mem>3000] rusage[mem=3000]' -oo $stdout_file -J $jobname gmt bmr gene-summary --mutation-maf-file $maf_file --output-file $outfile --roi-bedfile $roi_file --wiggle-file-dirs $wiggle_dirs --class-summary-file $class_summary`;
     }
 
     return 1;

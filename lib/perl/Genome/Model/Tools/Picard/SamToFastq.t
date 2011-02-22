@@ -20,11 +20,13 @@ my $fq1    = $tmpdir->file('s_1_1_sequence.txt');
 my $fq2    = $tmpdir->file('s_1_2_sequence.txt');
 my $fq3    = $tmpdir->file('s_1_sequence.txt');
 my $bam    = $dir->file('gerald_20GF1_1.bam');
+
 my $cmd_1  = Genome::Model::Tools::Picard::SamToFastq->create(
     input  => $bam . '',
     fastq  => $fq1 . '',
     fastq2 => $fq2 . '',
-    fragment_fastq => $fq2 . '',
+    fragment_fastq => $fq3 . '',
+    no_orphans => 1,
 );
 isa_ok( $cmd_1, 'Genome::Model::Tools::Picard::SamToFastq' );
 ok( $cmd_1->execute, 'execute' );

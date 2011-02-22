@@ -180,7 +180,6 @@ sub _dump_workflow {
 
 sub get_relative_path_to_output_directory {
     my $self = shift;
-    #my $variant_type = shift;
     my $full_path = shift;
     my $relative_path = $full_path; 
     my $temp_path = $self->_temp_staging_directory;
@@ -347,8 +346,17 @@ sub generate_workflow {
     for my $variant_type (@root){
         my ($key) = keys(%{$trees->{$variant_type}});
         my $end_result = $self->link_operations( $trees->{$variant_type}, $variant_type );
+
+        #this is a hack that allows the innards of our workflow composition to re-use
+        # detector output. This should be replaced by something less hackish.
+        if($end_result =~ m/unfiltered$/){
+            $end_result =~ s/unfiltered$//;
+        }
         my $workflow_links = $self->_workflow_links;
         $workflow_model = $self->_workflow_model;
+
+        # this links in the very last operation in workflow, as determined by link_operations,
+        # and connects it to the proper output connector.
         my $last_operation_name = $workflow_links->{$end_result."_output_directory"}->{last_operation};
         my $last_operation = $workflow_links->{$last_operation_name."_output_directory"}->{right_operation};
         $workflow_model->add_link(
@@ -360,6 +368,12 @@ sub generate_workflow {
     }
     return $workflow_model;
 }
+
+# This sub functions in a recursive manner on the detection strategies. It is given a hash of the
+# entire strategy, and it breaks off the next level of the strategy and calls itself on those. It then
+# receives operation names from those lower level operations, and creates the current operation, linking
+# the lower level ops into it.  The anchor case is when a detector is reached. Then recursion stops
+# and the function returns the unqiue detector name.
 
 sub link_operations { 
     my $self = shift;

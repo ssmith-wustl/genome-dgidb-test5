@@ -141,8 +141,8 @@ sub create {
     my $param_string = Genome::Utility::Text::hash_to_string(\%params);
     my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
     my $cmd = "perl $includes -e \"use above Genome; $class->_create($param_string); UR::Context->commit;\"";
-    unless (Genome::Sys->shellcmd(cmd => $cmd)) {
-        confess "Could not create allocation";
+    unless (my $rv = eval{Genome::Sys->shellcmd(cmd => $cmd)}) {
+        confess "Could not create allocation, failure message: $rv";
     }
 
     my $allocation = $class->get(id => $params{id});
@@ -178,8 +178,8 @@ sub delete {
     my $param_string = Genome::Utility::Text::hash_to_string(\%params);
     my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
     my $cmd = "perl $includes -e \"use above Genome; $class->_delete($param_string); UR::Context->commit;\"";
-    unless (Genome::Sys->shellcmd(cmd => $cmd)) {
-        confess "Could not deallocate";
+    unless (my $rv = eval{Genome::Sys->shellcmd(cmd => $cmd)}) {
+        confess "Could not deallocate, failure message: $rv";
     }
     return 1;
 }
@@ -201,8 +201,8 @@ sub reallocate {
     my $param_string = Genome::Utility::Text::hash_to_string(\%params);
     my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
     my $cmd = "perl $includes -e \"use above Genome; $class->_reallocate($param_string); UR::Context->commit;\"";
-    unless (Genome::Sys->shellcmd(cmd => $cmd)) {
-        confess "Could not reallocate!";
+    unless (my $rv = eval{Genome::Sys->shellcmd(cmd => $cmd)}) {
+        confess "Could not reallocate, failure message: $rv";
     }
 
     return 1;
@@ -265,7 +265,7 @@ sub _create {
     my @candidate_volumes; 
     if (defined $mount_path) {
         $mount_path =~ s/\/$//; # mount paths in database don't have trailing /
-        my $volume = Genome::Disk::Volume->get(mount_path => $mount_path, disk_status => 'active');
+        my $volume = Genome::Disk::Volume->get(mount_path => $mount_path, disk_status => 'active', can_allocate => 1);
         confess "Could not get volume with mount path $mount_path" unless $volume;
 
         unless (grep { $_ eq $disk_group_name } $volume->disk_group_names) {
@@ -302,6 +302,8 @@ sub _create {
         unless (@volumes) {
             confess "No volumes of group $disk_group_name have enough space after excluding reserves to store $kilobytes_requested KB.";
         }
+
+        @volumes = sort { $b->unallocated_kb <=> $a->unallocated_kb } @volumes;
 
         # Only allocate to the first MAX_VOLUMES retrieved
         my $max = @volumes > $MAX_VOLUMES ? $MAX_VOLUMES : @volumes;
@@ -390,7 +392,7 @@ sub _delete {
     $self->status_message("Beginning deallocation process for allocation " . $self->id);
 
     # Lock and retrieve volume
-    my $volume_lock = $self->_get_volume_lock($self->mount_path);
+    my $volume_lock = $self->_get_volume_lock($self->mount_path, 3600);
     unless ($volume_lock) {
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Could not get lock on volume ' . $self->mount_path;
@@ -458,7 +460,7 @@ sub _reallocate {
     $self->status_message("Resizing from " . $self->kilobytes_requested . " kb to $kilobytes_requested kb (changed by $diff)"); 
 
     # Lock and retrieve volume
-    my $volume_lock = $self->_get_volume_lock($self->mount_path);
+    my $volume_lock = $self->_get_volume_lock($self->mount_path, 3600);
     unless (defined $volume_lock) {
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Could not get lock on volume ' . $self->mount_path;
@@ -646,22 +648,24 @@ sub _check_kb_requested {
 }
 
 sub _get_volume_lock {
-    my ($class, $mount_path) = @_;
+    my ($class, $mount_path, $tries) = @_;
+    $tries ||= 120;
     my $modified_mount = $mount_path;
     $modified_mount =~ s/\//_/g;
     my $volume_lock = Genome::Sys->lock_resource(
         resource_lock => '/gsc/var/lock/allocation/volume' . $modified_mount,
-        max_try => 100,
+        max_try => $tries,
         block_sleep => 1,
     );
     return $volume_lock;
 }
 
 sub _get_allocation_lock {
-    my ($class, $id) = @_;
+    my ($class, $id, $tries) = @_;
+    $tries ||= 60;
     my $allocation_lock = Genome::Sys->lock_resource(
         resource_lock => '/gsc/var/lock/allocation/allocation_' . join('_', split(' ', $id)),
-        max_try => 20,
+        max_try => $tries,
         block_sleep => 1,
     );
     return $allocation_lock;

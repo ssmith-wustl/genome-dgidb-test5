@@ -1,0 +1,50 @@
+<tool id="gmt_music_pfam" name="gmt_music_pfam">
+  <description>
+    Add Pfam annotation to a MAF file
+  </description>
+  <command>
+    gmt music pfam --maf-file=$maf_file --output-file=$output_file
+  </command>
+  <inputs>
+    <param name="maf_file" format="maf" type="data" help="" />
+
+  </inputs>
+  <outputs>
+    <data name="output_file" format="pfam" label="" help="" />
+
+  </outputs>
+  <help>
+    
+
+**USAGE**
+
+ gmt music pfam --maf-file=? --output-file=?
+
+
+**SYNOPSIS**
+
+This command adds Pfam Domains to a column at the end of a MAF file.
+
+**EXAMPLE:**
+	gmt music pfam --maf-file myMAF.tsv --output-file myMAF.tsv.pfam
+
+
+**REQUIRED ARGUMENTS**
+
+  maf-file   Text
+    List of mutations in MAF format 
+  output-file   Text
+    MAF file with Pfam domain column appended 
+
+
+**DESCRIPTION**
+
+ This tool takes a MAF file, determines the location of each variant therein, and then uses a
+ fast-lookup to retrieve all of the Pfam annotation domains that the variant crosses. A column is
+ appended to the end of the input MAF file called "Pfam_Annotation_Domains" where the results are
+ listed. "NA" is listed if no Pfam domains are found.
+
+
+
+  </help>
+</tool>

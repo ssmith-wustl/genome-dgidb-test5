@@ -756,6 +756,8 @@ sub close_out_streamed_bam_file {
     #402653184 bytes = 3 Gb 
     my $rv = system "$samtools sort -n -m 402653184 $bam_file $tmp_file";
     $self->error_message("Sort by name failed") and return if $rv or !-s $tmp_file.'.bam';
+    $self->status_message("unlinking original bam file $bam_file.");
+    unlink $bam_file;
 
     $self->status_message("Now running fixmate");
     $rv = system "$samtools fixmate $tmp_file.bam $tmp_file.fixmate";

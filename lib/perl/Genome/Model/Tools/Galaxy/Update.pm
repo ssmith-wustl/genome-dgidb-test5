@@ -35,7 +35,6 @@ sub execute {
     my @key_files = (".hg", "run_galaxy_listener.sh", "run.sh");
     foreach my $k (@key_files) {
         my $file_path = $path . "/" . $k;
-        print $file_path . "\n";
         unless (-e $file_path) {
             $self->warning_message("Does not appear to be valid galaxy folder");
             die();
@@ -53,7 +52,7 @@ sub execute {
     }
 
     # FIXME Because of ur test use fails, only searching Genome::Model::Tools::Music subcommands 
-    my @xml_files = [];
+    my @xml_files = ();
     my @gmt_tools = Genome::Model::Tools::Music->sorted_sub_command_classes;
     foreach my $c (@gmt_tools) {
         push(@gmt_tools, $c->sorted_sub_command_classes);
@@ -68,6 +67,32 @@ sub execute {
     }
     mkdir("$path/tools/genome");
     foreach my $xml_file (@xml_files) {
-        copy($xml_file, "$path/tools/genome/");
+        (my $fn) = ($xml_file =~ /\/(\w+).pm.galaxy.xml/);
+        copy($xml_file, "$path/tools/genome/$fn.xml");
     }
+    # handle tool_conf.xml rewrite
+    # read tool_conf.xml
+    open(tool_conf_ifh, '<', "$path/tool_conf.xml");
+    print "$path/tool_conf.xml" . "\n";
+    my $tool_xml = '';
+    while (<tool_conf_ifh>) {
+        $tool_xml .= $_;
+    }
+    close(tool_conf_ifh);
+    # Either replace existing Genome section or put it right after toolbox tag
+    my $new_genome_section = '<section name="Genome" id="genome">' . "\n";
+    foreach my $tool (@xml_files) {
+        (my $fn) = ($tool =~ /\/(\w+).pm.galaxy.xml/);
+        $new_genome_section .= '    <tool file="genome/' . $fn . '.xml" />' . "\n"; 
+    }
+    $new_genome_section .= "</section>\n";
+    print $new_genome_section . "\n";
+    unless ($tool_xml =~ s/^\s+<section name="Genome" id="genome">.*?<\/section>\n/$new_genome_section/ms) {
+        $tool_xml =~ s/^<toolbox>\n/<toolbox>\n$new_genome_section/ms;
+    }
+    print $tool_xml;
+    # write tool_conf.xml
+    open(tool_conf_ofh, '>', "$path/tool_conf.xml");
+    print tool_conf_ofh $tool_xml;
+    close(tool_conf_ofh);
 }
