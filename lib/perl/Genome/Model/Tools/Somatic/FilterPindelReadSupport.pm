@@ -87,7 +87,7 @@ sub execute {
     }
     my $input = Genome::Sys->open_file_for_reading( $self->read_support_file );
     my $output = Genome::Sys->open_file_for_writing( $self->output_file );
-    $input->getline;  # throw out header line
+    #$input->getline;  # throw out header line
     while( my $line = $input->getline){
         chomp $line;
         my ($chr,$start,$stop,$refvar,$vs,$rs,$ps,$dbsnp) = split "\t", $line;
@@ -112,6 +112,10 @@ sub execute {
     }
     $input->close;
     $output->close;
+    unless( -e $self->output_file ){
+        my $file = $self->output_file;
+        `touch $file`;
+    }
     return 1;
 }
 

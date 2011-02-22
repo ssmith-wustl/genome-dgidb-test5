@@ -141,8 +141,8 @@ sub create {
     my $param_string = Genome::Utility::Text::hash_to_string(\%params);
     my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
     my $cmd = "perl $includes -e \"use above Genome; $class->_create($param_string); UR::Context->commit;\"";
-    unless (Genome::Sys->shellcmd(cmd => $cmd)) {
-        confess "Could not create allocation";
+    unless (my $rv = eval{Genome::Sys->shellcmd(cmd => $cmd)}) {
+        confess "Could not create allocation, failure message: $rv";
     }
 
     my $allocation = $class->get(id => $params{id});
@@ -178,8 +178,8 @@ sub delete {
     my $param_string = Genome::Utility::Text::hash_to_string(\%params);
     my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
     my $cmd = "perl $includes -e \"use above Genome; $class->_delete($param_string); UR::Context->commit;\"";
-    unless (Genome::Sys->shellcmd(cmd => $cmd)) {
-        confess "Could not deallocate";
+    unless (my $rv = eval{Genome::Sys->shellcmd(cmd => $cmd)}) {
+        confess "Could not deallocate, failure message: $rv";
     }
     return 1;
 }
@@ -201,8 +201,8 @@ sub reallocate {
     my $param_string = Genome::Utility::Text::hash_to_string(\%params);
     my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
     my $cmd = "perl $includes -e \"use above Genome; $class->_reallocate($param_string); UR::Context->commit;\"";
-    unless (Genome::Sys->shellcmd(cmd => $cmd)) {
-        confess "Could not reallocate!";
+    unless (my $rv = eval{Genome::Sys->shellcmd(cmd => $cmd)}) {
+        confess "Could not reallocate, failure message: $rv";
     }
 
     return 1;
@@ -265,7 +265,7 @@ sub _create {
     my @candidate_volumes; 
     if (defined $mount_path) {
         $mount_path =~ s/\/$//; # mount paths in database don't have trailing /
-        my $volume = Genome::Disk::Volume->get(mount_path => $mount_path, disk_status => 'active');
+        my $volume = Genome::Disk::Volume->get(mount_path => $mount_path, disk_status => 'active', can_allocate => 1);
         confess "Could not get volume with mount path $mount_path" unless $volume;
 
         unless (grep { $_ eq $disk_group_name } $volume->disk_group_names) {
@@ -302,6 +302,8 @@ sub _create {
         unless (@volumes) {
             confess "No volumes of group $disk_group_name have enough space after excluding reserves to store $kilobytes_requested KB.";
         }
+
+        @volumes = sort { $b->unallocated_kb <=> $a->unallocated_kb } @volumes;
 
         # Only allocate to the first MAX_VOLUMES retrieved
         my $max = @volumes > $MAX_VOLUMES ? $MAX_VOLUMES : @volumes;
