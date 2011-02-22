@@ -319,6 +319,75 @@ sub params_for_alignment {
     return @param_set;
 }
 
+sub params_for_merged_alignment {
+    my $self = shift;
+    my $build = shift; #TODO possibly calculate segment info in _fetch_merged_alignment_result (which calls this)
+    my @assignments = @_;
+
+    my $model = $assignments[0]->model;
+
+    my $filters = [];
+    for my $i (0..$#assignments) {
+        my $assignment = $assignments[$i];
+        if($assignment->filter_desc) {
+            push @$filters, join(':', $assignment->instrument_data_id, $assignment->filter_desc);
+        }
+    }
+
+    my $segment_parameters = [];
+    if($build) {
+        my @align_reads_events = grep {$_->isa('Genome::Model::Event::Build::ReferenceAlignment::AlignReads')} $build->events;
+        for my $i (0..$#assignments) {
+            my $assignment = $assignments[$i];
+            my @alignment_events = grep {$_->instrument_data_id == $assignment->instrument_data_id} @align_reads_events;
+        
+            #if multiple events, this is a chunked alignment
+            if (@alignment_events > 1) {
+                for my $alignment_event (@alignment_events) {
+                    push @$segment_parameters, join(':', $alignment_event->instrument_data_id, $alignment_event->instrument_data_segment_id, $alignment_event->instrument_data_segment_type);
+                }
+            }
+        }
+    }
+
+    my $instrument_data = [];
+
+    for my $i (0..$#assignments) {
+        push @$instrument_data, $assignments[$i]->instrument_data_id;
+    }
+
+    my %params = (
+        instrument_data_id => $instrument_data,
+        reference_build_id => $model->reference_sequence_build->id,
+        merger_name => $model->merger_name,
+        merger_params => $model->merger_params,
+        merger_version => $model->merger_version,
+        duplication_handler_name => $model->duplication_handler_name,
+        duplication_handler_params => $model->duplication_handler_params,
+        duplication_handler_version => $model->duplication_handler_version,
+        aligner_name => $model->read_aligner_name || undef,
+        aligner_version => $model->read_aligner_version || undef,
+        aligner_params => $model->read_aligner_params || undef,
+        force_fragment => $model->force_fragment || undef,
+        trimmer_name => $model->read_trimmer_name || undef,
+        trimmer_version => $model->read_trimmer_version || undef,
+        trimmer_params => $model->read_trimmer_params || undef,
+        picard_version => $model->picard_version || undef,
+        samtools_version => $model->samtools_version || undef,
+        test_name => undef,
+        #filter_name => undef,
+        #instrument_data_segment => undef,
+    );
+    if(scalar @$filters) {
+        $params{filter_name} = $filters;
+    }
+    if(scalar @$segment_parameters) {
+        $params{instrument_data_segment} = $segment_parameters;
+    }
+
+    my @param_set = (\%params);
+    return @param_set;
+}
 
 # TODO: remove
 sub prior {
@@ -466,7 +535,6 @@ sub deduplication_job_classes {
     my $self = shift;
     my @steps = ( 
         'Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries',
-        'Genome::Model::Event::Build::ReferenceAlignment::PostDedupReallocate',
     );
     if(defined $self->duplication_handler_name) {
         return @steps;
