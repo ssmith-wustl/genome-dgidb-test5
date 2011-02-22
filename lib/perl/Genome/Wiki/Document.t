@@ -4,8 +4,7 @@
 use above "Genome";
 use Data::Dumper;
 
-# use Test::More tests => 6;
-use Test::More skip_all => "SKIPPING until ticket 67710 is resolved";
+use Test::More tests => 6;
 
 use_ok('Genome::Wiki::Document');
 
