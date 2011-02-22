@@ -423,6 +423,7 @@ sub _reallocate {
     my $id = delete $params{allocation_id};
     confess "Require allocation ID!" unless defined $id;
     my $kilobytes_requested = delete $params{kilobytes_requested};
+    my $kilobytes_requested_is_actual_disk_usage = 0;
     my $allow_reallocate_with_move = delete $params{allow_reallocate_with_move};
     if (%params) {
         confess "Found extra params: " . Data::Dumper::Dumper(\%params);
@@ -454,6 +455,7 @@ sub _reallocate {
             Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
             confess 'Could not determine size of allocation directory ' . $self->absolute_path;
         }
+        $kilobytes_requested_is_actual_disk_usage = 1;
     }
 
     my $diff = $kilobytes_requested - $self->kilobytes_requested;
@@ -473,25 +475,30 @@ sub _reallocate {
         confess 'Could not get volume with mount path ' . $self->mount_path;
     }
 
-    # Make sure there's room for the allocation... only applies if the new allocation is bigger than the old
+    # Make sure there's room for the allocation... only applies if the new allocation is bigger than the old and the size was specified
     my $available_space = $volume->unallocated_kb - $volume->reserve_size;
-    if ($diff > 0 and $available_space < $diff and !$allow_reallocate_with_move) {
-        Genome::Sys->unlock_resource(resource_lock => $volume_lock);
-        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
-        confess 'Not enough unallocated space on volume ' . $volume->mount_path . " to increase allocation size by $diff kb";
-    }
-    elsif ($diff > 0 and $available_space < $diff and $allow_reallocate_with_move) {
-        $self->status_message("Current volume " . $self->mount_path . " doesn't have enough space to reallocate, moving to new volume");
-        Genome::Sys->unlock_resource(resource_lock => $volume_lock);
-        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
-        return $self->_reallocate_with_move($kilobytes_requested);
-    }
-    else {
+    if ($diff <= 0
+            or ($diff > 0 and $diff < $available_space)
+            or $kilobytes_requested_is_actual_disk_usage) {
         # Update allocation and volume, create unlock observer, and return
         $self->kilobytes_requested($kilobytes_requested);
         $volume->unallocated_kb($volume->unallocated_kb - $diff);
         $class->_create_observer($class->_unlock_closure($volume_lock, $allocation_lock));
         return 1;
+    }
+    elsif ($diff > 0 and $diff > $available_space and $allow_reallocate_with_move) { # 
+        $self->status_message("Current volume " . $self->mount_path . " doesn't have enough space to reallocate, moving to new volume");
+        Genome::Sys->unlock_resource(resource_lock => $volume_lock);
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
+        return $self->_reallocate_with_move($kilobytes_requested);
+    }
+    elsif ($diff > 0 and $diff > $available_space) { # 
+        Genome::Sys->unlock_resource(resource_lock => $volume_lock);
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
+        confess 'Not enough unallocated space on volume ' . $volume->mount_path . " to increase allocation size by $diff kb";
+    }
+    else {
+        confess "Unexpected condition reached for _reallocate.\n";
     }
 }
 
