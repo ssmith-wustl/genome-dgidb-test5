@@ -52,7 +52,8 @@ sub get_with_lock {
     my %is_param = %{$params_processed->{params}};
 
     my $lock;
-    unless ($lock = $class->lock(%is_input, %is_param)) {
+    my $subclass = $params_processed->{subclass};
+    unless ($lock = $subclass->lock(%is_input, %is_param)) {
         die "Failed to get a lock for " . Dumper(\%is_input,\%is_param);
     }
 
@@ -63,7 +64,7 @@ sub get_with_lock {
     my $error = $@;
 
     $class->status_message("Cleaning up lock $lock...");
-    Genome::Sys->unlock_resource(resource_lock=>$lock) || die "Failed to unlock after getting software result";
+    $subclass->unlock(%is_input, %is_param) || die "Failed to unlock after getting software result";
     $class->status_message("Cleanup completed for lock $lock.");
 
     if($error) {
