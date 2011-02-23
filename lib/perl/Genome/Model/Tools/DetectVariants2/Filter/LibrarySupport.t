@@ -5,7 +5,7 @@ use warnings;
 
 use above "Genome";
 use File::Temp;
-use Test::More tests => 8;
+use Test::More tests => 7;
 use Data::Dumper;
 use File::Compare;
 
