@@ -115,8 +115,8 @@ sub remove_test_paths {
     }
 }
 
-# When no commit is on, some wonky problems can occur that are prevented by locks/commits when running normally.
-# One way to prevent this is to only load objects from the db when committing.
+# When no commit is on, ordinarily allocation goes to a dummy volume that only exists locally. Trying to load
+# that dummy volume would lead to an error, so use a get instead.
 sub retrieve_mode {
     return 'get' if $ENV{UR_DBI_NO_COMMIT};
     return 'load';
@@ -142,9 +142,26 @@ sub create {
         $params{id} = Genome::Disk::Allocation::Type::autogenerate_new_object_id;
     }
 
-    # If no commit is on, the created object won't be retrievable via a get (since it will only live in the
-    # child process' UR object cache). Just call the _create method directly and return
+    # If no commit is on, make a dummy volume to allocate to and allocate without shelling out
     if ($ENV{UR_DBI_NO_COMMIT}) {
+        my $mount_path = $params{mount_path};
+        if (!$mount_path || ($mount_path && $mount_path !~ /^\/tmp\//)) {
+            $params{mount_path} = File::Temp::tempdir( TEMPLATE => 'tempXXXXX', CLEANUP => 1 );
+            my $tmp_volume = Genome::Disk::Volume->__define__(
+                mount_path => $params{mount_path},
+                unallocated_kb => 104857600, # 100 GB
+                total_kb => 104857600,
+                can_allocate => 1,
+                disk_status => 'active',
+                hostname => 'localhost',
+                physical_path => '/tmp',
+            );
+            my $disk_group = Genome::Disk::Group->get(disk_group_name => $params{disk_group_name});
+            Genome::Disk::Assignment->__define__(
+                volume => $tmp_volume,
+                group => $disk_group,
+            );
+        }
         my $allocation = $class->_create(%params);
         push @paths_to_remove, $allocation->absolute_path;
         return $allocation;
