@@ -100,6 +100,7 @@ our @APIPE_DISK_GROUPS = qw/
     info_genome_models
     systems_benchmarking
 /;
+our $CREATE_DUMMY_VOLUMES_FOR_TESTING = 1;
 
 # Dummy allocations (don't commit to db) still create files on the filesystem, and the tests/scripts/whatever
 # that make these allocations may not deallocate and clean up. Do so here.
@@ -144,23 +145,25 @@ sub create {
 
     # If no commit is on, make a dummy volume to allocate to and allocate without shelling out
     if ($ENV{UR_DBI_NO_COMMIT}) {
-        my $mount_path = $params{mount_path};
-        if (!$mount_path || ($mount_path && $mount_path !~ /^\/tmp\//)) {
-            $params{mount_path} = File::Temp::tempdir( TEMPLATE => 'tempXXXXX', CLEANUP => 1 );
-            my $tmp_volume = Genome::Disk::Volume->__define__(
-                mount_path => $params{mount_path},
-                unallocated_kb => 104857600, # 100 GB
-                total_kb => 104857600,
-                can_allocate => 1,
-                disk_status => 'active',
-                hostname => 'localhost',
-                physical_path => '/tmp',
-            );
-            my $disk_group = Genome::Disk::Group->get(disk_group_name => $params{disk_group_name});
-            Genome::Disk::Assignment->__define__(
-                volume => $tmp_volume,
-                group => $disk_group,
-            );
+        if ($CREATE_DUMMY_VOLUMES_FOR_TESTING) {
+            my $mount_path = $params{mount_path};
+            if (!$mount_path || ($mount_path && $mount_path !~ /^\/tmp\//)) {
+                $params{mount_path} = File::Temp::tempdir( TEMPLATE => 'tempXXXXX', CLEANUP => 1 );
+                my $tmp_volume = Genome::Disk::Volume->__define__(
+                    mount_path => $params{mount_path},
+                    unallocated_kb => 104857600, # 100 GB
+                    total_kb => 104857600,
+                    can_allocate => 1,
+                    disk_status => 'active',
+                    hostname => 'localhost',
+                    physical_path => '/tmp',
+                );
+                my $disk_group = Genome::Disk::Group->get(disk_group_name => $params{disk_group_name});
+                Genome::Disk::Assignment->__define__(
+                    volume => $tmp_volume,
+                    group => $disk_group,
+                );
+            }
         }
         my $allocation = $class->_create(%params);
         push @paths_to_remove, $allocation->absolute_path;
@@ -566,7 +569,7 @@ sub _reallocate_with_move {
         return;
     }
 
-    my $source      = $self->absolute_path;
+    my $source      = $self->absolute_path . '/';
     my $destination = $new_allocation->absolute_path;
     unless(Genome::Sys->copy_directory($source, $destination)) {
         $self->error_message("Failed to copy data from old allocation to new.");
