@@ -57,18 +57,19 @@ sub objects_to_sync {
         'Genome::Subject::Taxon' => 'Genome::Taxon',
         'Genome::Subject::Sample' => 'Genome::Sample',
         'Genome::Subject::Library' => 'Genome::Library',
-        #'Genome::Subject::FeatureList' => 'Genome::Site::WUGC::CaptureSet',
     );
 }
 
-my $object_count = 0;
+my $created_object_count = 0;
 sub execute {
     my $self = shift;
 
+    my $objects_seen_count = 0;
     my %types = $self->objects_to_sync;
     for my $new_type (sort keys %types) {
         my $old_type = $types{$new_type};
-        $object_count = 0;
+        $created_object_count = 0;
+        $objects_seen_count = 0;
 
         $self->status_message("\n\nSyncing $new_type and $old_type");
 
@@ -93,6 +94,10 @@ sub execute {
         my $new_object = $new_iterator->next;
         my $old_object = $old_iterator->next;
         while ($new_object or $old_object) {
+            $objects_seen_count++;
+            if ($objects_seen_count != 0 and $objects_seen_count % 10000 == 0) {
+                $self->status_message("Looked at $objects_seen_count objects!");
+            }
 
             # Old iterator exhausted
             if ($new_object and not $old_object) {
@@ -140,6 +145,7 @@ sub execute {
             }
         }
 
+        UR::Context->commit;
         $self->status_message("Done syncing $new_type and $old_type");
     }
 
@@ -161,14 +167,13 @@ sub copy_object {
     confess "Could not create new object of type $new_object_class based on object of type " .
         $original_object->class . " with id " . $original_object->id unless $object;
 
-    # Committing after each object is created so progress isn't lost if a subsequent failure occurs
-    unless (UR::Context->commit) {
-        confess 'Could not commit object type ' . $object->class . ' with id ' . $object->id . '!';
-    }
-    $object_count++;
-
-    if ($object_count > 0 and $object_count % 1000 == 0) {
-        $self->status_message("Created $object_count objects!");
+    $created_object_count++;
+    if ($created_object_count > 0 and $created_object_count % 1000 == 0) {
+        $self->status_message("Created $created_object_count objects!");
+        # Committing periodically to prevent too much progress from being lost
+        unless (UR::Context->commit) {
+            confess 'Could not commit object type ' . $object->class . ' with id ' . $object->id . '!';
+        }
     }
 
     return 1;
