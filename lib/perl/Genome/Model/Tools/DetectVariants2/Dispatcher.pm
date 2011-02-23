@@ -461,6 +461,7 @@ sub create_combine_operation {
 
     my $workflow_model = $self->_workflow_model;
     my $unique_combine_name = join("-",($operation_type, $alink,$blink));
+    $unique_combine_name =  Genome::Utility::Text::sanitize_string_for_filesystem($unique_combine_name);
     my $combine_directory = $self->_temp_staging_directory."/".$variant_type."/".$unique_combine_name;
 
     my $combine_operation = $workflow_model->add_operation(
