@@ -138,7 +138,9 @@ sub process_file {
     my $pindel_config = $dir."/".$chr."/pindel.config";
     my $pconf = Genome::Sys->open_file_for_reading($pindel_config);  #IO::File->new($pindel_config);
     my $tumor_bam = $pconf->getline;
+    my $normal_bam;
     if($tumor_bam =~ m/normal/){
+        ($normal_bam)= split /\s/, $tumor_bam;
         $tumor_bam = $pconf->getline;
         unless($tumor_bam =~ m/tumor/){
             die $self->error_message("Could not locate a tumor bam in the pindel config file at ".$pindel_config);
@@ -248,28 +250,33 @@ sub process_file {
                     my ($type,$size) = split /\//, $type_and_size;
                     #my $stop = ($type eq 'I') ? $pos+2 : $pos + $size;
                     my $stop = $pos;
-                    my @results = `samtools view $tumor_bam $chrom:$pos-$stop | grep -v "XT:A:M"`;
+                    #my @results = `samtools view $tumor_bam $chrom:$pos-$stop | grep -v "XT:A:M"`;
+                    my @results = `samtools view $tumor_bam $chrom:$pos-$stop`;
+                    my $tumor_read_support=0;
                     if($self->germline_events){
-                        push @results, `samtools view $tumor_bam $chrom:$pos-$stop | grep -v "XT:A:M"`;
+                        push @results, `samtools view $tumor_bam $chrom:$pos-$stop`;
                     }
                     my $read_support=0;
                     for my $result (@results){
                         #print $result;
                         chomp $result;
                         my @details = split /\t/, $result;
-                        if($result =~ /NM:i:(\d+)/){
-                            if($1>2){
-                                next;
-                            }
+                        if($details[5] =~ m/[ID]/){
+                            $tumor_read_support++;
                         }
-                        unless($details[5] =~ m/[ID]/){
-                            if(($details[3] > ($pos - 40))&&($details[3] < ($pos -10))){
-                                $read_support++;
-                            }
+                    }
+                    @results = `samtools view $normal_bam $chrom:$pos-$stop`;
+                    my $normal_read_support=0;
+                    for my $result (@results){
+                        #print $result;
+                        chomp $result;
+                        my @details = split /\t/, $result;
+                        if($details[5] =~ m/[ID]/){
+                            $normal_read_support++;
                         }
                     }
                     my $dbsnp_id = $self->dbsnp_lookup($events{$chrom}{$pos}{$type_and_size}{'bed'});
-                    my $bed_output = $events{$chrom}{$pos}{$type_and_size}{'bed'}."\t".$reads."\t".$read_support."\t".$pos_percent."\t$dbsnp_id\n";
+                    my $bed_output = $events{$chrom}{$pos}{$type_and_size}{'bed'}."\t".$reads."\t".$tumor_read_support."\t".$normal_read_support."\t".$pos_percent."\t$dbsnp_id\n";
                     print $output $bed_output;
                 }
             }

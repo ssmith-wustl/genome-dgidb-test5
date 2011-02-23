@@ -22,10 +22,12 @@ my $s = Genome::Sample->create(name => $tname);
 my $lib = Genome::Library->create(sample => $s, name => $s->name . '-lib1');
 ok($s, "made a sample on which to test");
 
+my $temp_directory = Genome::Sys->create_temp_directory();
+
 # create new imported instrument data
 my $i = Genome::InstrumentData::Imported->create(
     library_id=> $lib->id, 
-    original_data_path => '/tmp/foo',
+    original_data_path => $temp_directory,
     import_format => 'sanger fastq',
     sequencing_platform => 'solexa',
 );
@@ -84,7 +86,8 @@ my @mi = $m->inputs;
 is(scalar(@mi),2, "found two model inputs");
 
 # create a build
-my $b = $m->add_build(data_directory => '/tmp/foo');
+
+my $b = $m->add_build(data_directory => $temp_directory);
 ok($b, "created a new build");
 is($init_build,$b,"build created (initialized)");
 
