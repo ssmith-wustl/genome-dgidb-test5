@@ -49,9 +49,7 @@ class Genome::Disk::Allocation {
         },
         absolute_path => {
             calculate_from => ['mount_path','group_subdirectory','allocation_path'],
-            calculate => q|
-                return $mount_path .'/'. $group_subdirectory .'/'. $allocation_path;
-            |,
+            calculate => q{ return $mount_path .'/'. $group_subdirectory .'/'. $allocation_path; },
         },
         volume => { 
             is => 'Genome::Disk::Volume',
@@ -69,6 +67,14 @@ class Genome::Disk::Allocation {
             is => 'Number',
             default => 0,
             doc => 'The actual disk space used by owner',
+        },
+        creation_time => {
+            is => 'DateTime',
+            doc => 'Time at which the allocation was created',
+        },
+        reallocation_time => {
+            is => 'DateTime',
+            doc => 'The last time at which the allocation was reallocated',
         },
     ],    
     table_name => 'GENOME_DISK_ALLOCATION',
@@ -365,6 +371,7 @@ sub _create {
         owner_id => $owner_id,
         group_subdirectory => $group_subdirectory,
         id => $id,
+        creation_time => UR::Time->now,
     );
     unless ($self) {
         Genome::Sys->unlock_resource(resource_lock => $volume_lock);
@@ -496,6 +503,7 @@ sub _reallocate {
         # Update allocation and volume, create unlock observer, and return
         $self->kilobytes_requested($kilobytes_requested);
         $volume->unallocated_kb($volume->unallocated_kb - $diff);
+        $self->reallocation_time(UR::Time->now);
         $class->_create_observer($class->_unlock_closure($volume_lock, $allocation_lock));
         return 1;
     }
@@ -526,6 +534,7 @@ sub _reallocate_with_move {
     $params{disk_group_name    } = $self->disk_group_name;
     $params{group_subdirectory } = $self->group_subdirectory;
     $params{kilobytes_requested} = $kilobytes_requested;
+    $params{creation_time      } = $self->creation_time;
 
     my $new_allocation = Genome::Disk::Allocation->create(%params);
     unless ($new_allocation) {
@@ -555,6 +564,7 @@ sub _reallocate_with_move {
         return;
     }
     $new_allocation->allocation_path($move_allocation_path);
+    $new_allocation->reallocation_time(UR::Time->now);
 
     Genome::Disk::Allocation->_create_observer(Genome::Disk::Allocation->_unlock_closure($allocation_lock));
 
