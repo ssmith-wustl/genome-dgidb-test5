@@ -225,8 +225,7 @@ sub process_file {
                             $normal_read_support++;
                         }
                     }
-                    my $dbsnp_id = $self->dbsnp_lookup($events{$chrom}{$pos}{$type_and_size}{'bed'});
-                    my $bed_output = $events{$chrom}{$pos}{$type_and_size}{'bed'}."\t".$reads."\t".$tumor_read_support."\t".$normal_read_support."\t".$pos_percent."\t$dbsnp_id\n";
+                    my $bed_output = $events{$chrom}{$pos}{$type_and_size}{'bed'}."\t".$reads."\t".$tumor_read_support."\t".$normal_read_support."\t".$pos_percent."\n";
                     print $output $bed_output;
                 }
             }

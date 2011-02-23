@@ -11,12 +11,12 @@ class Genome::Model::Tools::DetectVariants2::Filter {
     is_abstract => 1,
     has => [
         input_directory => {
-           is => 'Genome::Model::Tools::DetectVariants2::Result',
+           is => 'String',
            is_input => 1,
            doc => 'The directory to filter',
         },
         output_directory => {
-            is => 'Genome::Model::Tools::DetectVariants2::Result',
+            is => 'String',
             is_input => 1,
             is_output => 1,
             doc => 'The directory containing the results of filtering',
