@@ -22,7 +22,7 @@ Version 1.01
 #our $VERSION = '1.01';
 
 class Genome::Model::Tools::Music::ClinicalCorrelation {
-    is => 'Genome::Command::Base',                       
+    is => 'Command',                       
     has => [ 
     output_file => {
         is => 'Text',
