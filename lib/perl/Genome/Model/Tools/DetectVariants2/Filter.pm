@@ -61,7 +61,7 @@ sub execute {
     my $self = shift;
        
     unless($self->_validate_input) {
-        die $self->error_message('Failed to validate file.');
+        die $self->error_message('Failed to validate input.');
     }
     unless($self->_create_directories) {
         die $self->error_message('Failed to create directories.');
@@ -72,7 +72,9 @@ sub execute {
     unless($self->_promote_staged_data) {
         die $self->error_message('Failed to promote staged data.');
     }
-    
+    unless($self->_validate_output){
+        die $self->error_message("Failed to validate output");
+    }
     return 1;
 }
 
@@ -89,6 +91,21 @@ sub _validate_input {
         return;
     }
 
+    return 1;
+}
+
+sub _validate_output {
+    my $self = shift;
+    unless(-d $self->output_directory){
+        die $self->error_message("Could not validate the existence of output_directory");
+    }
+    my @files = glob($self->output_directory."/*");
+    my ($hq,$lq);
+    ($hq) = grep /[svs|snvs|indels]\.hq\.bed/, @files;
+    ($lq) = grep /[svs|snvs|indels]\.lq\.bed/, @files;
+    unless($hq && $lq){
+        die $self->error_message("Could not locate either or both hq and lq files");
+    }
     return 1;
 }
 

@@ -33,7 +33,13 @@ class Genome::Model::Tools::DetectVariants2::Filter::PindelReadSupport{
             default => 1,
             doc => 'enable this to filter out variants which have exclusively pos or neg strand supporting reads.',
         },
-
+        sw_ratio => {
+            is => 'String',
+            is_optional => 1,
+            is_input => 1,
+            default => '0.25',
+            doc => 'Throw out indels which have a normalized ratio of normal smith waterman reads to tumor smith waterman reads (nsw/(nsw+tsw)) at or below this amount.',
+        },
     ],
     has_constant => [
         use_old_pindel => {
@@ -46,7 +52,6 @@ class Genome::Model::Tools::DetectVariants2::Filter::PindelReadSupport{
 
 sub _filter_variants {
     my $self = shift;
-
     my $read_support_file = $self->_temp_staging_directory."/indels.hq.read_support.bed";
     my $output_file = $self->_temp_staging_directory."/indels.hq.bed";
     my $output_lq_file = $self->_temp_staging_directory."/indels.lq.bed";
@@ -95,6 +100,7 @@ sub process_file {
     my $filename = $dir."/".$chr."/indels_all_sequences";
     my $pindel_output = Genome::Sys->open_file_for_reading($filename); #IO::File->new($filename);
     my $tumor_bam = $self->aligned_reads_input;
+    my $normal_bam = $self->control_aligned_reads_input if defined($self->control_aligned_reads_input);
 
     my %events;
     my ($chrom,$pos,$size,$type);
@@ -195,27 +201,32 @@ sub process_file {
                     my ($type,$size) = split /\//, $type_and_size;
                     #my $stop = ($type eq 'I') ? $pos+2 : $pos + $size;
                     my $stop = $pos;
-                    my @results = `samtools view $tumor_bam $chrom:$pos-$stop | grep -v "XT:A:M"`;
+                    my @results = `samtools view $tumor_bam $chrom:$pos-$stop`;
+                    my $tumor_read_support=0;
                     if($self->germline_events){
-                        push @results, `samtools view $tumor_bam $chrom:$pos-$stop | grep -v "XT:A:M"`;
+                        push @results, `samtools view $tumor_bam $chrom:$pos-$stop`;
                     }
                     my $read_support=0;
                     for my $result (@results){
                         #print $result;
                         chomp $result;
                         my @details = split /\t/, $result;
-                        if($result =~ /NM:i:(\d+)/){
-                            if($1>2){
-                                next;
-                            }
-                        }
-                        unless($details[5] =~ m/[ID]/){
-                            if(($details[3] > ($pos - 40))&&($details[3] < ($pos -10))){
-                                $read_support++;
-                            }
+                        if($details[5] =~ m/[ID]/){
+                            $tumor_read_support++;
                         }
                     }
-                    my $bed_output = $events{$chrom}{$pos}{$type_and_size}{'bed'}."\t".$reads."\t".$read_support."\t".$pos_percent."\n";
+                    @results = `samtools view $normal_bam $chrom:$pos-$stop`;
+                    my $normal_read_support=0;
+                    for my $result (@results){
+                        #print $result;
+                        chomp $result;
+                        my @details = split /\t/, $result;
+                        if($details[5] =~ m/[ID]/){
+                            $normal_read_support++;
+                        }
+                    }
+                    my $dbsnp_id = $self->dbsnp_lookup($events{$chrom}{$pos}{$type_and_size}{'bed'});
+                    my $bed_output = $events{$chrom}{$pos}{$type_and_size}{'bed'}."\t".$reads."\t".$tumor_read_support."\t".$normal_read_support."\t".$pos_percent."\t$dbsnp_id\n";
                     print $output $bed_output;
                 }
             }
@@ -296,12 +307,9 @@ sub filter_read_support {
 
     while( my $line = $input->getline){
         chomp $line;
-        my ($chr,$start,$stop,$refvar,$vs,$rs,$ps) = split "\t", $line;
+        my ($chr,$start,$stop,$refvar,$vs,$tsw,$nsw,$ps) = split "\t", $line;
         my $hq=1;
-        unless($vs >= $self->min_variant_support){
-            $hq = 0;
-        }
-        unless($vs/($vs+$rs) <= $self->var_to_ref_read_ratio){
+        unless(($nsw/($tsw+$nsw)) < $self->sw_ratio){
             $hq = 0;
         }
         if($self->remove_single_stranded){
