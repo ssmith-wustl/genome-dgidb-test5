@@ -133,6 +133,11 @@ sub plan {
 sub _detect_variants {
     my $self = shift;
 
+    unless ($self->snv_detection_strategy || $self->indel_detection_strategy || $self->sv_detection_strategy) {
+        $self->error_message("Please provide one or more of: snv_detection_strategy, indel_detection_strategy, or sv_detection_strategy");
+        die $self->error_message;
+    }
+
     my ($trees, $plan) = $self->plan;
     my $workflow = $self->generate_workflow($trees, $plan);
 
