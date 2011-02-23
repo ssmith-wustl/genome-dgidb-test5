@@ -146,7 +146,33 @@ sub _filter_variants {
         Genome::Sys->copy_file($single_lib_output_file, $hq_output_file);
     }
 
+    $self->_generate_standard_files;
+
     return 1; 
+}
+
+sub _generate_standard_files {
+    my $self = shift;
+
+    my $convert = Genome::Model::Tools::Bed::Convert::Indel::SniperToBed->create( 
+                source => $self->_temp_staging_directory . "/indels.hq",
+                output => $self->_temp_staging_directory . "/indels.hq.bed");
+
+    unless($convert->execute){
+        $self->error_message("Failed to convert hq output to bed.");
+        die $self->error_message;
+    }
+
+    my $convert_lq = Genome::Model::Tools::Bed::Convert::Indel::SniperToBed->create( 
+                source => $self->_temp_staging_directory . "/indels.lq",
+                output => $self->_temp_staging_directory . "/indels.lq.bed");
+
+    unless($convert_lq->execute){
+        $self->error_message("Failed to convert lq output to bed.");
+        die $self->error_message;
+    }
+
+    return 1;
 }
 
 1;
