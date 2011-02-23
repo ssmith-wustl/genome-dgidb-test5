@@ -118,12 +118,8 @@ sub remove_test_paths {
 # When no commit is on, some wonky problems can occur that are prevented by locks/commits when running normally.
 # One way to prevent this is to only load objects from the db when committing.
 sub retrieve_mode {
-    if ($ENV{UR_DBI_NO_COMMIT}) {
-        return 'get';
-    }
-    else {
-        return 'load';
-    }
+    return 'get' if $ENV{UR_DBI_NO_COMMIT};
+    return 'load';
 }
 
 # This generates a unique text ID for the object. The format is <hostname> <PID> <time in seconds> <some number>
@@ -165,9 +161,15 @@ sub create {
     my $allocation = $class->get(id => $params{id});
     confess "Could not retrieve created allocation with id " . $params{id} unless $allocation;
     
-    # If the owner gets rolled back, then delete the allocation
+    # If the owner gets rolled back, then delete the allocation. Make sure the allocation hasn't already been deleted,
+    # which can happen if the owner is coded well and cleans up its own mess during rollback.
+    my $remove_sub = sub {
+        if ($allocation and $allocation->class !~ /UR::DeletedRef/) {
+            $allocation->delete;
+        }
+    };
     my $allocation_change = UR::Context::Transaction->log_change(
-        $allocation->owner, 'UR::Value', $allocation->id, 'external_change', sub { $allocation->delete },
+        $allocation->owner, 'UR::Value', $allocation->id, 'external_change', $remove_sub,
     );
     # Not being able to roll back the allocation shouldn't be grounds for failure methinks
     unless ($allocation_change) { 
