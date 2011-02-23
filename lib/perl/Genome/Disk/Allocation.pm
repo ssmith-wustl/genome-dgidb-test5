@@ -471,7 +471,12 @@ sub _reallocate {
     }
     else {
         $self->status_message('New allocation size not supplied, setting to size of data in allocated directory');
-        $kilobytes_requested = Genome::Sys->disk_usage_for_path($self->absolute_path);
+        if (-d $self->absolute_path) {
+            $kilobytes_requested = Genome::Sys->disk_usage_for_path($self->absolute_path);
+        }
+        else {
+            $kilobytes_requested = 0;
+        }
         unless (defined $kilobytes_requested) {
             Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
             confess 'Could not determine size of allocation directory ' . $self->absolute_path;
