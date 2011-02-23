@@ -95,6 +95,7 @@ sub _verify_inputs {
     my $self = shift;
     
     my $ref_seq_file = $self->reference_sequence_input;
+
     unless(Genome::Sys->validate_file_for_reading($ref_seq_file)) {
         $self->error_message("reference sequence input $ref_seq_file does not exist");
         return;
@@ -105,11 +106,19 @@ sub _verify_inputs {
         $self->error_message("aligned reads input $aligned_reads_file was not found.");
         return;
     }
+    unless(Genome::Sys->validate_file_for_reading($aligned_reads_file.".bai")) {
+        $self->error_message("aligned reads input index ".$aligned_reads_file.".bai was not found.");
+        return;
+    }
     
     if(defined($self->control_aligned_reads_input)){
         my $control_aligned_reads_file = $self->control_aligned_reads_input;
         unless(Genome::Sys->validate_file_for_reading($control_aligned_reads_file)) {
             $self->error_message("control aligned reads input $control_aligned_reads_file was not found.");
+            return;
+        }
+        unless(Genome::Sys->validate_file_for_reading($control_aligned_reads_file.".bai")) {
+            $self->error_message("control aligned reads input index ".$control_aligned_reads_file.".bai was not found.");
             return;
         }
     }

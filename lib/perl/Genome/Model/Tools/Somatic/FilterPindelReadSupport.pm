@@ -35,18 +35,18 @@ class Genome::Model::Tools::Somatic::FilterPindelReadSupport{
             default => 1,
             doc => 'Boolean parameter which specifies whether or not to remove dbsnp matches.',
         },
-        var_to_ref_read_ratio => {
+        sw_ratio => {
             is => 'String',
             is_optional => 1,
             is_input => 1,
-            default => '0.2',
-            doc => 'This ratio determines what ratio of variant supporting reads to reference supporting reads to allow',
+            default => '0.25',
+            doc => 'Throw out indels which have a normalized ratio of normal smith waterman reads to tumor smith waterman reads (nsw/(nsw+tsw)) at or below this amount.',
         },
         remove_single_stranded => {
             is => 'Boolean',
             is_optional => 1,
             is_input => 1,
-            default => 1,
+            default => 0,
             doc => 'enable this to filter out variants which have exclusively pos or neg strand supporting reads.',
         },
         skip_if_output_present => {
@@ -72,7 +72,7 @@ EOS
 
 sub execute {
     my $self = shift;
-
+    $DB::single=1;
     unless(defined($self->output_file)){
         $self->output_file($self->read_support_file.".filtered");
     }
@@ -90,10 +90,9 @@ sub execute {
     #$input->getline;  # throw out header line
     while( my $line = $input->getline){
         chomp $line;
-        my ($chr,$start,$stop,$refvar,$vs,$rs,$ps,$dbsnp) = split "\t", $line;
+        my ($chr,$start,$stop,$refvar,$vs,$tsw,$nsw,$ps,$dbsnp) = split "\t", $line;
         unless(($self->filter_dbsnp)&&($dbsnp ne '-')){
-            unless($vs < $self->min_variant_support){
-                if($vs/($vs+$rs) > $self->var_to_ref_read_ratio){
+                if(($nsw/($tsw+$nsw)) < $self->sw_ratio){
                     my $display=undef;
                     if($self->remove_single_stranded){
                         if(($ps != 1)&&($ps !=0)){
@@ -104,10 +103,9 @@ sub execute {
                         $display=1;
                     }
                     if($display){
-                        print $output join("\t", ($chr,$start,$stop,$refvar,$vs,$rs,$ps))."\n";
+                        print $output join("\t", ($chr,$start,$stop,$refvar,$vs,$tsw,$nsw,$ps))."\n";
                     }
                 }
-            }
         }
     }
     $input->close;
