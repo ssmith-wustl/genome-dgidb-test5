@@ -4,90 +4,71 @@ use strict;
 use warnings;
 
 use Genome;
+
 use File::Copy;
 use File::Basename;
 use Data::Dumper;
 use IO::File;
 
-my %properties = (
-    source_data_file => {
-        is => 'Text',
-        doc => 'source data path of import data file',
-    },
-    library => {
-        is => 'Genome::Library',
-        doc => 'Define this OR sample OR both if you like.',
-        is_optional => 1,
-    },
-    sample => {
-        is => 'Genome::Sample',
-        doc => 'Define this OR library OR both if you like.',
-        is_optional => 1,
-    },
-    import_source_name => {
-        is => 'Text',
-        doc => 'source name for imported file, like Broad Institute',
-        is_optional => 1,
-    },
-    species_name => {
-        is => 'Text',
-        doc => 'species name for imported file, like human, mouse',
-        is_optional => 1,
-    },
-    import_format => {
-        is => 'Text',
-        doc => 'format of import data, like bam',
-        valid_values => ['genotype file'],
-        default_value => 'genotype file',
-    },
-    sequencing_platform => {
-        is => 'Text',
-        doc => 'sequencing platform of import data, like solexa',
-    },
-    description  => {
-        is => 'Text',
-        doc => 'general description of import data, like which software maq/bwa/bowtie to used to generate this data',
-        is_optional => 1,
-    },
-    read_count => {
-        is => 'Number',
-        doc => 'The number of reads in the genotype file',
-        is_optional => 1,
-    },
-    reference_sequence_build => {
-        is => 'Genome::Model::Build::ImportedReferenceSequence',
-        doc => 'Build of the reference against which the genotype file was produced.',
-        is_optional => 0,
-    },
-    allocation => {
-        is => 'Genome::Disk::Allocation',
-        is_optional => 1,
-    },
-    generated_instrument_data_id=> {
-        is=>'Number',
-        doc => 'generated sample ID',
-        is_optional => 1,
-    },
-    define_model => {
-        is=>'Boolean',
-        doc => 'Create a goldSNP file from the imported genotype and define/build a GenotypeMicroarray model.',
-        default_value => 0,
-        is_optional => 1,
-    },
-);
-    
-
 class Genome::InstrumentData::Command::Import::Genotype {
     is  => 'Genome::Command::Base',
     has => [
-        %properties,
+        source_data_file => {
+            is => 'Text',
+            doc => 'source data path of import data file',
+        },
+        library => {
+            is => 'Genome::Library',
+            doc => 'Define this OR sample OR both if you like.',
+            is_optional => 1,
+        },
+        sample => {
+            is => 'Genome::Sample',
+            doc => 'Define this OR library OR both if you like.',
+            is_optional => 1,
+        },
+        import_source_name => {
+            is => 'Text',
+            doc => 'source name for imported file, like Broad Institute',
+            is_optional => 1,
+        },
+        sequencing_platform => {
+            is => 'Text',
+            doc => 'sequencing platform of import data. Ex: infinium, affymetrix',
+        },
+        description  => {
+            is => 'Text',
+            doc => 'General description of the genotype data',
+        },
+        read_count => {
+            is => 'Number',
+            doc => 'The number of reads in the genotype file',
+            is_optional => 1,
+        },
+        reference_sequence_build => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            doc => 'Build of the reference against which the genotype file was produced.',
+        },
+        define_model => {
+            is=>'Boolean',
+            doc => 'Create a goldSNP file from the imported genotype and define/build a GenotypeMicroarray model.',
+            default_value => 0,
+            is_optional => 1,
+        },
         _model => { is_optional => 1, },
+        _instrument_data => { is_optional => 1, },
     ],
 };
 
+sub generated_instrument_data_id {
+    return $_[0]->_instrument_data->id;
+}
 
 sub execute {
     my $self = shift;
+
+    my $file_ok = $self->_validate_genotype_file;
+    return if not $file_ok;
 
     my $reference_sequence_build = $self->reference_sequence_build;
     if ( not $reference_sequence_build ) {
@@ -103,127 +84,64 @@ sub execute {
         return if not $model;
     }
 
-    # gather together params to create the imported instrument data object 
-    my %params = ();
-    for my $property_name (keys %properties) {
-        unless ($properties{$property_name}->{is_optional}) {
-            # required
-            unless ($self->$property_name) {
-                # null
-                $self->error_message ("Required property: $property_name is not given");
-                return;
-            }
-        }
-        next if $property_name =~ /^(species|reference)_name$/;
-        next if $property_name =~ /^source_data_file$/;
-        next if $property_name =~ /^allocation$/;
-        next if $property_name =~ /^define_model$/;
-        next if $property_name =~ /^sample/;
-        next if $property_name =~ /^library/;
-        $params{$property_name} = $self->$property_name if $self->$property_name;
-    }
+    my $instrument_data = $self->_create_instrument_data;
+    return if not $instrument_data;
 
-    $params{sequencing_platform} = $self->sequencing_platform; 
-    $params{import_format} = $self->import_format;
-    $params{library} = $self->library;
-    if(defined($self->allocation)){
-        $params{disk_allocations} = $self->allocation;
-    }
+    my $allocation = $self->_resolve_allocation;
+    return if not $allocation;
 
-
-    unless(defined($params{read_count})){
-        my $read_count = $self->get_read_count();
-        unless(defined($read_count)){
-            $self->error_message("No read count was specified and none could be calculated from the file.");
-            die $self->error_message;
-        }
-        $self->read_count($read_count);
-        $params{read_count} = $read_count;
-    }
-
-    my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);
-    unless ($import_instrument_data) {
-       $self->error_message('Failed to create imported instrument data for '.$self->source_data_file);
-       return;
-    }
-
-    unless ($import_instrument_data->library_id) {
-        Carp::confess("No library on new instrument data?"); 
-    }
-
-    my $instrument_data_id = $import_instrument_data->id;
-    $self->status_message("Instrument data record $instrument_data_id has been created.");
-    $self->generated_instrument_data_id($instrument_data_id);
-
-    $import_instrument_data->original_data_path($self->source_data_file);
-
-    my $kb_usage = $import_instrument_data->calculate_alignment_estimated_kb_usage;
-
-    unless ($kb_usage) {
-        $self->warning_message('Failed to get estimate kb usage for instrument data '.$instrument_data_id);
-        return 1;
-    }
-
-    my $alloc_path = sprintf('instrument_data/imported/%s', $instrument_data_id);
-    my %alloc_params = (
-        disk_group_name     => 'info_alignments',     #'info_apipe',
-        allocation_path     => $alloc_path,
-        kilobytes_requested => $kb_usage,
-        owner_class_name    => $import_instrument_data->class,
-        owner_id            => $import_instrument_data->id,
-    );
-
-    my $disk_alloc;
-    if($self->allocation) {
-        $disk_alloc = $self->allocation;
-    } else {
-        $disk_alloc = Genome::Disk::Allocation->allocate(%alloc_params);
-    }
-    unless ($disk_alloc) {
-        $self->error_message("Failed to get disk allocation with params:\n". Data::Dumper::Dumper(%alloc_params));
-        return 1;
-    }
-    $self->allocation($disk_alloc);
-    $self->status_message("Disk allocation created for $instrument_data_id ." . $disk_alloc->absolute_path);
-    
-    $self->status_message("About to calculate the md5sum of the genotype.");
-    my $md5 = Genome::Sys->md5sum($self->source_data_file);
-    $self->status_message("Copying genotype the allocation.");
-
-    #my $real_filename = $disk_alloc->absolute_path ."/". $self->sample->name . ".genotype";
-    my $subject_name = $reference_sequence_build->subject_name;
-    my $version = $reference_sequence_build->version;
-    $self->status_message("Getting genotype microarray file for subject ($subject_name) and version ($version)");
-    my $real_filename = $import_instrument_data->genotype_microarray_file_for_subject_and_version($subject_name, $version);
-    #my $genotype_file = $instrument_data->genotype_microarray_file_for_subject_and_version($subject_name, $version);
-
-    unless(copy($self->source_data_file, $real_filename)) {
-        $self->error_message("Failed to copy to allocated space (copy returned bad value).  Unlinking and deallocating.");
-        unlink($real_filename);
-        $disk_alloc->deallocate;
-        return;
-    }
-    $self->status_message("About to calculate the md5sum of the genotype in its new habitat on the allocation.");
-    my $copy_md5;
-    unless($copy_md5 = Genome::Sys->md5sum($real_filename)){
-        $self->error_message("Failed to calculate md5sum.");
-        die $self->error_message;
-    }
-    unless($copy_md5 eq $md5) {
-        $self->error_message("Failed to copy to allocated space (md5 mismatch).  Unlinking and deallocating.");
-        unlink($real_filename);
-        $disk_alloc->deallocate;
-        return;
-    }
-    $self->status_message("The md5sum for the copied genotype file is: ".$copy_md5);
-    $self->status_message("The instrument-data id of your new record is ".$instrument_data_id);
+    my $copy_and_md5 = $self->_copy_and_validate_md5;
+    return if not $copy_and_md5;
 
     if ( $self->define_model ) {
-        my $add_and_build = $self->_add_instrument_data_to_model_and_build($import_instrument_data);
+        my $add_and_build = $self->_add_instrument_data_to_model_and_build($instrument_data);
         return if not $add_and_build;
     }
 
     return 1;
+}
+
+sub _validate_genotype_file {
+    my $self = shift;
+
+    $self->status_message("Validate genotype file");
+
+    my $file = $self->source_data_file;
+    if ( not $file ) { 
+        $self->error_message("No genotype file given");
+        return;
+    }
+
+    $self->status_message("Genotype file: $file");
+
+    if ( not -s $file ) {
+        $self->error_message("Genotype file ($file) does not exist");
+        return;
+    }
+
+    # Format, space separated:
+    # chr pos alleles
+    my $fh = IO::File->new($file, 'r');
+    if ( not $fh ) {
+        $self->error_message("Cannot open genotype file ($file): $!");
+        return;
+    }
+    my $line = $fh->getline;
+    if ( not $line ) {
+        $self->error_message();
+        return;
+    }
+    chomp $line;
+    my @tokens = split(/\s+/, $line);
+    if ( not @tokens or @tokens != 3 ) {
+        $self->error_message('Genotype file ($file) is not in 3 column format');
+        return;
+    }
+    $fh->close;
+
+    $self->status_message("Validate genotype file...OK");
+
+    return $file;
 }
 
 sub get_read_count {
@@ -243,10 +161,12 @@ sub get_read_count {
 sub _resolve_sample_and_library {
     my $self = shift;
 
+    $self->status_message("Resolve sample and library");
+
     my $sample = $self->sample;
     my $library = $self->library;
     if ( $sample and $library and $sample->id ne $library->sample_id ) {
-        $self->error_message();
+        $self->error_message('Library ('.$library->id.') sample id ('.$library->sample_id.') does not match given sample id ('.$sample->id.')');
         return;
     }
     elsif ( $sample ) { # get/create library
@@ -277,6 +197,8 @@ sub _resolve_sample_and_library {
         return;
     }
 
+    $self->status_message('Resolve sample ('.$sample->id.') and library ('.$library->id.')');
+    
     return 1;
 }
 
@@ -284,6 +206,7 @@ sub _create_model {
     my $self = shift;
 
     $self->status_message('Create genotype model');
+
     my $processing_profile = Genome::ProcessingProfile->get(2186707); # name => unknown/wugc
     if ( not $processing_profile ) {
         $self->error_message('Cannot find genotype microarray processing profile "unknown/wugc" to create model');
@@ -297,9 +220,13 @@ sub _create_model {
         reference_sequence_build => $self->reference_sequence_build,
     );
 
+    $self->status_message('Processing profile: '.$processing_profile->name);
+    $self->status_message('Sample: '.$self->sample->name);
+    $self->status_message('Reference build: '.$self->reference_sequence_build->__display_name__);
+
     my $model = Genome::Model::GenotypeMicroarray->get(%model_params);
     if ( $model ) {
-        $self->error_message("Model exists");
+        $self->error_message('Cannot create genotype microarray model because one exists for processing profile ('.$processing_profile->name.'), sample ('.$self->sample->name.') and reference sequence build ('.$self->reference_sequence_build->name.')');
         return;
     }
     $model = Genome::Model::GenotypeMicroarray->create(%model_params);
@@ -308,9 +235,114 @@ sub _create_model {
         return;
     }
 
-    $self->status_message('Create genotype model OK');
+    $self->status_message('Create genotype model: '.$model->id);
 
     return $self->_model($model);
+}
+
+sub _create_instrument_data {
+    my $self = shift;
+
+    $self->status_message('Create instrument data');
+
+    my $read_count = $self->read_count;
+    if ( not $read_count ) {
+        my $read_count = $self->get_read_count();
+        if( not $read_count ){
+            $self->error_message("No read count was specified and none could be calculated from the file.");
+            return;
+        }
+        $self->read_count($read_count);
+    }
+
+    my $instrument_data = Genome::InstrumentData::Imported->create(
+        library => $self->library,
+        sequencing_platform => $self->sequencing_platform,
+        description => $self->description,
+        import_format => 'genotype file',
+        import_source_name => $self->import_source_name,
+        read_count => $read_count,
+        original_data_path => $self->source_data_file,
+    );
+    if ( not $instrument_data ) {
+       $self->error_message('Failed to create imported instrument data');
+       return;
+    }
+
+    $self->_instrument_data($instrument_data);
+
+    $self->status_message('Instrument data: '.$instrument_data->id);
+
+    return $instrument_data;
+}
+
+sub _resolve_allocation {
+    my $self = shift;
+
+    $self->status_message('Resolve allocation');
+
+    my $instrument_data = $self->_instrument_data;
+    Carp::confess('No instrument data set to resolve allocation') if not $instrument_data;
+
+    my $file = $self->source_data_file;
+    my $file_sz = -s $file;
+    my $kb_requested = $file_sz * 1.5;
+    my $allocation = Genome::Disk::Allocation->allocate(
+        disk_group_name     => 'info_alignments',     #'info_apipe',
+        allocation_path     => 'instrument_data/imported/'.$instrument_data->id,
+        kilobytes_requested => $kb_requested,
+        owner_class_name    => $instrument_data->class,
+        owner_id            => $instrument_data->id,
+    );
+
+    if ( not $allocation ) {
+        $self->error_message('Failed to create disk allocation');
+        return;
+    }
+
+    $self->status_message('Allocation: '.$allocation->id);
+
+    return $allocation;
+}
+
+sub _copy_and_validate_md5 {
+    my $self = shift;
+
+    $self->status_message("Copy and validate MD5");
+
+    my $file = $self->source_data_file;
+    my $md5 = Genome::Sys->md5sum($file);
+    if ( not $md5 ) {
+        $self->error_message('Failed to get md5 for source data file: '.$file);
+        return;
+    }
+    $self->status_message('MD5: '.$md5);
+
+    my $dest_file = $self->_instrument_data->genotype_microarray_file_for_reference_sequence_build(
+        $self->reference_sequence_build,
+    );
+    $self->status_message('Destination file: '.$dest_file);
+
+    my $copy = File::Copy::copy($file, $dest_file);
+    if ( not $copy ) {
+        $self->error_message("Failed to copy $file to $dest_file");
+        return;
+    }
+    my $dest_md5 = Genome::Sys->md5sum($dest_file);
+    if ( not $dest_file ) {
+        $self->error_message('Failed to get md5 for destination file: '.$dest_file);
+        return;
+    }
+    $self->status_message('Destination MD5: '.$md5);
+
+    if ( $md5 ne $dest_md5 ) {
+        $self->error_message("Source MD5 ($md5) does not match destination MD5)");
+        return;
+    }
+
+    $self->status_message("Copy and validate MD5...OK");
+
+    return 1;
 }
 
 sub _add_instrument_data_to_model_and_build {
@@ -346,44 +378,5 @@ sub _add_instrument_data_to_model_and_build {
     return 1;
 }
 
-sub XXdefine_genotype_model {
-    my $self = shift;
-    my $model;
-    my $processing_profile = "unknown/wugc";
-    my %get_params = (
-        sample_name => $self->sample->name,
-        reference_sequence_build => $self->reference_sequence_build
-    );
-    if($model = Genome::Model::GenotypeMicroarray->get(%get_params)){
-        $self->error_message("Warning: a GenotypeMicroarry model (id ".$model->genome_model_id.  ") ".
-            "has already been defined for this sample (name = ".$self->sample->name.", reference = ".$self->reference_sequence_build->name .").");
-        die $self->error_message;
-    }
-    my $genotype_path_and_file = $self->allocation->absolute_path . "/" . $self->sample->name . ".genotype";
-    my $snp_array = $self->allocation->absolute_path . "/" . $self->sample->name . "_SNPArray.genotype";
-    unless(-s $snp_array){
-        $self->status_message("Now creating a SNPArray file. This may take some time.");
-        unless(Genome::Model::Tools::Array::CreateGoldSnpFromGenotypes->execute(    
-            genotype_file1 => $genotype_path_and_file,
-            genotype_file2 => $genotype_path_and_file,
-            output_file    => $snp_array,)) {
-
-            $self->error_message("SNP Array Genotype creation failed");
-            die $self->error_message;
-        }
-    }
-    $self->status_message("SNPArray defined, now defining/building model.");
-    unless($model = Genome::Model::Command::Define::GenotypeMicroarray->execute(     
-        processing_profile_name => $processing_profile,
-        file                    => $snp_array,
-        subject_name            => $self->sample->name,
-        reference               => $self->reference_sequence_build,
-        )) {
-        $self->error_message("GenotpeMicroarray Model Define failed.");
-        die $self->error_message;
-    }
-    
-}
-    
 1;
 
