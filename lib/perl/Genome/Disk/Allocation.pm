@@ -109,6 +109,17 @@ sub remove_test_paths {
     }
 }
 
+# When no commit is on, some wonky problems can occur that are prevented by locks/commits when running normally.
+# One way to prevent this is to only load objects from the db when committing.
+sub retrieve_mode {
+    if ($ENV{UR_DBI_NO_COMMIT}) {
+        return 'get';
+    }
+    else {
+        return 'load';
+    }
+}
+
 # This generates a unique text ID for the object. The format is <hostname> <PID> <time in seconds> <some number>
 sub Genome::Disk::Allocation::Type::autogenerate_new_object_id {
     return $UR::Object::Type::autogenerate_id_base . ' ' . (++$UR::Object::Type::autogenerate_id_iter);
@@ -316,10 +327,9 @@ sub _create {
     my $volume_lock;
     my $attempts = 0;
     while (1) {
-        if ($attempts > $MAX_ATTEMPTS_TO_LOCK_VOLUME) {
+        if ($attempts++ > $MAX_ATTEMPTS_TO_LOCK_VOLUME) {
             confess "Could not lock a volume after $MAX_ATTEMPTS_TO_LOCK_VOLUME attempts, giving up";
         }
-        $attempts++;
 
         # Pick a random volume from the list of candidates and try to lock it
         my $index = int(rand(@candidate_volumes));
@@ -329,7 +339,8 @@ sub _create {
 
         # Reload volume, if anything has changed restart (there's a small window between looking at the volume
         # and locking it in which someone could modify it)
-        $candidate_volume = Genome::Disk::Volume->load($candidate_volume->id);
+        my $mode = $class->retrieve_mode;
+        $candidate_volume = Genome::Disk::Volume->$mode($candidate_volume->id);
         unless($candidate_volume->unallocated_kb >= $kilobytes_requested 
                 and $candidate_volume->can_allocate eq '1' 
                 and $candidate_volume->disk_status eq 'active') {
@@ -397,7 +408,8 @@ sub _delete {
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Could not get lock on volume ' . $self->mount_path;
     }
-    my $volume = Genome::Disk::Volume->load(mount_path => $self->mount_path, disk_status => 'active');
+    my $mode = $self->retrieve_mode;
+    my $volume = Genome::Disk::Volume->$mode(mount_path => $self->mount_path, disk_status => 'active');
     unless ($volume) {
         Genome::Sys->unlock_resource(resource_lock => $volume_lock);
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
@@ -468,7 +480,8 @@ sub _reallocate {
         confess 'Could not get lock on volume ' . $self->mount_path;
     }
 
-    my $volume = Genome::Disk::Volume->load(mount_path => $self->mount_path, disk_status => 'active');
+    my $mode = $self->retrieve_mode;
+    my $volume = Genome::Disk::Volume->$mode(mount_path => $self->mount_path, disk_status => 'active');
     unless ($volume) {
         Genome::Sys->unlock_resource(resource_lock => $volume_lock);
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
