@@ -347,6 +347,7 @@ sub _run_converter {
     my $command = $converter->create(
         source => $source,
         output => $output, 
+        reference_sequence_input => $self->reference_sequence_input,
     );
     
     unless($command->execute) {
