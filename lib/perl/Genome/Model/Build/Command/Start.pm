@@ -125,7 +125,8 @@ sub execute {
         }
     }
 
-    $self->display_summary_report(scalar(@models), @errors);
+    my $total_count = $self->max_builds || scalar @models;
+    $self->display_summary_report($total_count, @errors);
 
     return !scalar(@errors);
 }
