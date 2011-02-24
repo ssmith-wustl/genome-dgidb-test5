@@ -125,7 +125,7 @@ sub execute {
         }
     }
 
-    my $total_count = $self->max_builds || scalar @models;
+    my $total_count = ($self->max_builds && $self->max_builds < scalar @models) ? $self->max_builds : scalar @models;
     $self->display_summary_report($total_count, @errors);
 
     return !scalar(@errors);
