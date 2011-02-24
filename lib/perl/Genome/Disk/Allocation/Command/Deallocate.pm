@@ -8,10 +8,12 @@ use Carp 'confess';
 
 class Genome::Disk::Allocation::Command::Deallocate {
     is => 'Genome::Disk::Allocation::Command',
-    has => [
-        allocation_id => {
-            is => 'Number',
-            doc => 'The id for the allocator event',
+    has => [        
+        allocations => {
+            is => 'Genome::Disk::Allocation',
+            shell_args_position => 1,
+            doc => 'allocation(s) to deallocate, resolved by Genome::Command::Base',
+            is_many => 1,
         },
     ],
     doc => 'Removes target allocation and deletes its directories',
@@ -31,9 +33,27 @@ sub help_detail {
 
 sub execute { 
     my $self = shift;
-    my $rv = Genome::Disk::Allocation->delete(allocation_id => $self->allocation_id);
-    confess 'Could not deallocate allocation ' . $self->allocation_id unless defined $rv and $rv == 1;
-    return 1;
+
+    my @allocations = $self->allocations;
+    my @errors;
+    for my $allocation (@allocations) {
+        my $display_name = $allocation->__display_name__;
+        my $transaction = UR::Context::Transaction->begin();
+        my $successful = Genome::Disk::Allocation->delete(allocation_id => $allocation->id);
+
+        if ($successful) {
+            $self->status_message("Successfully deallocated ($display_name).");
+            $transaction->commit;
+        }
+        else {
+            push @errors, "Failed to deallocate ($display_name): $@.";  
+            $transaction->rollback;
+        }
+    }
+
+    $self->display_summary_report(scalar(@allocations), @errors);
+
+    return !scalar(@errors);
 }
 
     

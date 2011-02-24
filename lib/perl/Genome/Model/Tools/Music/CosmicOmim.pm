@@ -8,7 +8,7 @@ package Genome::Model::Tools::Music::CosmicOmim;
    use Text::CSV_XS;
 
 class Genome::Model::Tools::Music::CosmicOmim {
-    is => 'Genome::Command::Base',
+    is => 'Genome::Model::Tools::Music',
     has => [
        mutation_file => {
            is => 'Path',
