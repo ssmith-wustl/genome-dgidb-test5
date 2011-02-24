@@ -232,7 +232,7 @@ sub solexa_instrument_data {
 
     my $archive_path = $class->_instrument_data_dir.'/2854709902/sequence_61H93_8_CGATGT.tar.gz';
     if ( not -s $archive_path ) {
-        Carp::confess('No archive path in example directory');
+        Carp::confess("No archive path in example directory ($archive_path)");
     }
 
     $solexa_instrument_data = Genome::InstrumentData::Imported->create(

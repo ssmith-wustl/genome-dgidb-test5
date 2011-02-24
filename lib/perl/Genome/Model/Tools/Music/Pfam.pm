@@ -20,7 +20,7 @@ Version 1.01
 our $VERSION = '1.01';
 
 class Genome::Model::Tools::Music::Pfam {
-    is => 'Genome::Command::Base',
+    is => 'Genome::Model::Tools::Music',
     has_input => [ 
     maf_file => {
         is => 'Text',
