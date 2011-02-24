@@ -17,10 +17,6 @@ class Genome::Command::Base {
             is_optional => 1,
             # 0 = prevent verify, 1 = force verify, undef = allow auto verify
         },
-        file_format => {
-            is => 'Text',
-            is_optional => 1,
-        }
     ],
 };
 

@@ -24,6 +24,11 @@ class Genome::Model::Tools::Bed::Convert {
             shell_args_position => 2,
             doc => 'Where to write the output BED file',
         },
+        reference_sequence_input => {
+            is => 'String',
+            doc => 'Reference sequence to use, if necessary, by the ____toBed converter',
+            is_optional => 1,
+        },
     ],
     has_transient_optional => [
         _input_fh => {
