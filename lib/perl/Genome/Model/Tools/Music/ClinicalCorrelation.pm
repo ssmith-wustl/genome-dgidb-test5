@@ -23,7 +23,7 @@ Version 1.01
 
 class Genome::Model::Tools::Music::ClinicalCorrelation {
     is => 'Genome::Command::Base',                       
-    has => [ 
+    has_input => [ 
     output_file => {
         is => 'Text',
         is_output => 1,
