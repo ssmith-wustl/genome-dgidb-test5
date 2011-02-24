@@ -437,7 +437,7 @@ sub execute {
 	                $type = 'CTX';
                         #my ($chrom1) = $aln1->{refseq} =~ /\.([\w\d]+)\.fa*/;
                         #my ($chrom1)=($aln1->{refseq}=~/[\.\/]([\w\d]+)\.fa*/); # to handle mouse reference as well
-                        my ($chrom1) = ($aln1->{refseq} =~ /\d+\.(\S+):\d+-\d+/);
+                        my ($chrom1) = ($aln1->{refseq} =~ /(\S+):\d+-\d+/);
                     #if (&GLess($aln1->{refseq}, $aln2->{refseq})) { #keep the repeat in the lower chromosome
                     if (!defined $chr1 || $chrom1 eq $chr1) {    
 	                    if ($aln1->{orientation} eq 'U'){
