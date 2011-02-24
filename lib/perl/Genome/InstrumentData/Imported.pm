@@ -451,5 +451,13 @@ sub genotype_microarray_file_for_human_version_36 {
     return $self->genotype_microarray_file_for_subject_and_version('human', '36');
 }
 
+sub genotype_microarray_file_for_reference_sequence_build {
+    my ($self, $build) = @_;
+
+    Carp::confess('No refernce sequence build given to get genotype microarray file') if not $build;
+
+    return $self->genotype_microarray_file_for_subject_and_version($build->subject_name, $build->version);
+}
+
 1;
 

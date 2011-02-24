@@ -9,7 +9,7 @@ our $VERSION = '1.01';
 
 class Genome::Model::Tools::Music::Smg {
   is => 'Command',
-  has => [
+  has_input => [
     gene_mr_file => { is => 'Text', doc => "File with per-gene mutation rates (Created using music bmr calc-bmr)" },
     output_file => { is => 'Text', doc => "Output file that will list significantly mutated genes and their p-values" },
   ],
