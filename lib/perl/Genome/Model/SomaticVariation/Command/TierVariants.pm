@@ -32,7 +32,11 @@ sub execute{
     my $version = 2;
     #my $version = GMT:BED:CONVERT::version();  TODO, something like this instead of hardcoding
     
-    my $tier_file_directory = $build->data_directory."/effects";
+    my $tier_file_location = $build->annotation_build->tier_file_directory;
+
+    unless (-d $tier_file_location){
+        die $self->error_message("Couldn't find tiering bed files from annotation build");
+    }
 
     if ($build->snv_detection_strategy){
 
@@ -46,7 +50,11 @@ sub execute{
         if (-s $novel_detected_snvs_path){
             my %snvs_params = (
                 variant_bed_file => $novel_detected_snvs_path,
-                tier_file_directory => $tier_file_directory,
+                tier_file_location => $tier_file_location,
+                tier1_output => $tier1_path,
+                tier2_output => $tier2_path,
+                tier3_output => $tier3_path,
+                tier4_output => $tier4_path,
             );
             my $tier_snvs_command = Genome::Model::Tools::FastTier::FastTier->create(%snvs_params);
             unless ($tier_snvs_command){
@@ -83,7 +91,11 @@ sub execute{
             my %indels_params = (
                 variant_bed_file => $novel_detected_indels_path,
                 indels => 1,
-                tier_file_directory => $tier_file_directory
+                tier_file_location => $tier_file_location,
+                tier1_output => $tier1_path,
+                tier2_output => $tier2_path,
+                tier3_output => $tier3_path,
+                tier4_output => $tier4_path,
             );
 
             my $tier_indels_command = Genome::Model::Tools::FastTier::FastTier->create(%indels_params);
