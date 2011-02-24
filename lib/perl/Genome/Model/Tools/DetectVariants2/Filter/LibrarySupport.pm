@@ -69,19 +69,19 @@ sub _filter_variants {
         my $indel_strength=0;
         unless($indel1 eq '*' || $indel2 eq '*') {
             #skip double indel case. probably ref error.
-            $lq_output_fh->print($line);
+            $lq_output_fh->print($line . "\n");
             next;
         }
 
         if($indel1 ne '*') {
             if($normal_reads_indel1 > 0) {
-                $lq_output_fh->print($line);
+                $lq_output_fh->print($line . "\n");
                 next;
             }
             if($indel1_size <= 2 && $indel1_size >= -2) {
                 if($tumor_reads_indel2> 0) {
                     if($tumor_reads_indel1/$tumor_reads_indel2 < (.2/(abs $indel1_size))) {
-                        $lq_output_fh->print($line);
+                        $lq_output_fh->print($line . "\n");
                         next;
                     }
                 }
@@ -95,13 +95,13 @@ sub _filter_variants {
         }
         elsif($indel2 ne '*') {
             if($normal_reads_indel2 > 0) {
-                $lq_output_fh->print($line);
+                $lq_output_fh->print($line . "\n");
                 next;
             }
             if($indel2_size <= 2 && $indel2_size >= -2) {
                 if($tumor_reads_indel1 > 0) {
                     if($tumor_reads_indel2/$tumor_reads_indel1 < (.2 / (abs $indel2_size))) {
-                        $lq_output_fh->print($line);
+                        $lq_output_fh->print($line . "\n");
                         next;
                     }
                 }
