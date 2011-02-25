@@ -1,0 +1,325 @@
+package Finishing::Assembly::Project::ContigsToProjects;
+
+# TODO this needs to be tweaked a bit, the projs are greater than the
+# target size by the difference of the overlap
+
+use strict;
+use warnings;
+
+use Finfo::Std;
+
+use Data::Dumper;
+
+# req
+my %ci :name(contig_iterator:r)
+    :isa('object Finishing::Assembly::Iterator');
+my %ctg_db :name(contig_db:r)
+    :isa(string)
+    :desc("Database where the contig lives");
+my %ctg_file :name(contig_file:o)
+    :isa(file_r)
+    :desc("File for contig_db (if applicable)");
+my %project_namer :name(project_namer:r) 
+    :isa('object Finishing::Assembly::Project::Namer');
+my %proj_db :name(project_db:r)
+    :isa(string)
+    :desc("Database where to create the project");
+my %proj_file :name(project_file:o)
+    :isa(file_r)
+    :desc("File for project_db (if applicable)");
+my %xml :name(xml:r)
+    :isa('object Finishing::Assembly::Project::XML');
+#TODO add substitution code to get the acefile for each contig
+my %target_size :name(target_size:o)    
+    :isa('int gte 5000')
+    :default(1000000)
+    :clo('ts')
+    :desc('Target bp size of projects (1,000,000)');
+my %no_split :name(no_split:o) 
+    :isa(boolean)
+    :default(0)
+    :clo('ns')
+    :desc('No Split - don\'t split contigs.  Can\'t use --ov and --gr (flag)');
+my %overlap :name(overlap:o) 
+    :isa('int between 0 10000')
+    :default(2000)
+    :clo('o')
+    :desc('Amount of overalp between projects (2000)');
+my %gap_range :name(gap_range:o) 
+    :isa('int between 0 10000')
+    :default(2000)
+    :clo('gr')
+    :desc('Distance to move back when splitting near gap (2000)');
+my %min_size :name(min_size:o)
+    :isa('int non_neg')
+    :default(4000)
+    :clo('ms')
+    :desc('Minimum size of contig to split (4000)');
+# priv
+my %saved_ctg :name(_saved_contig:p);
+my %saved_start :name(_saved_start:p) :isa('int pos');
+my %saved_stop :name(_saved_stop:p) :isa('int pos');
+my %queued_ctg :name(_queued_contig:p);
+
+sub START
+{
+    my $self = shift;
+
+    # validate the min size
+    if ( $self->min_size and $self->gap_range and ( $self->min_size < 2 * $self->gap_range ) )
+    {
+        $self->fatal_msg("Minimum size must be at least twice the gap range");
+    }
+    
+    $self->_queue_contig
+        or return;
+    
+    return 1;
+}
+
+sub execute
+{
+    my $self = shift;
+
+    my ($projects, $name);
+    while (1)
+    {
+        my ($contig, $u_start, $u_stop) = $self->_next_contig
+            or last;
+        my $u_length = $u_stop - $u_start + 1;
+
+        unless ( $name and exists $projects->{$name} )
+        {
+            $name = $self->project_namer->next_name;
+            $projects->{$name} = 
+            {
+                db => $self->project_db,
+                size => 0,
+                contigs => [],
+            };
+            $projects->{$name}->{file} = $self->project_file if $self->project_file;
+        }
+
+        my $size = $projects->{$name}->{size};
+        $self->info_msg("$u_length|$size|".($u_length+$size).'|'.$self->target_size.'|'.$self->min_size);
+        if ($u_length + $projects->{$name}->{size} > $self->target_size )
+        {
+            if ( $self->no_split or $u_length > $self->min_size )
+            {
+                $self->_add_contig_to_project
+                (
+                    $projects->{$name}, $contig->name, $u_start, $u_stop
+                );
+                $name = undef;
+                next;
+            }
+            
+            my $split_stop = $self->target_size - $projects->{$name}->{size} + $u_start - 1;
+
+            # Adjust the split_stop if the split_stop would fall w/in
+            # the gap_range of the start or stop of the contig
+            if ( $split_stop < $self->gap_range )
+            {
+                $split_stop = $self->gap_range;
+            }
+            elsif ( $split_stop >= $u_length - $self->gap_range )
+            {
+                $split_stop = $u_length - $self->gap_range;
+            }
+
+            # Save The contig, start and stop for the next pass
+            my $saved_start = ($split_stop - $self->overlap + 1 > 1)
+            ? $split_stop - $self->overlap + 1
+            : 1;
+            
+            # Add the overlap to the split stop
+            $split_stop = ($split_stop + $self->overlap < $u_stop)
+            ? $split_stop + $self->overlap
+            : $u_stop;
+
+            $self->_save_contig($contig, $saved_start, $u_stop);
+            $self->_add_contig_to_project
+            (
+                $projects->{$name}, $contig->name, $u_start, $split_stop
+            );
+            $name = undef;
+        }
+        else
+        {
+            $self->_add_contig_to_project
+            (
+                $projects->{$name}, $contig->name, $u_start, $u_stop
+            );
+        }
+    }
+    
+    $self->xml->write_projects($projects);
+    
+    return $projects;
+}
+
+sub _next_contig : PRIVATE
+{
+    my $self = shift;
+
+    if ( $self->_saved_contig )
+    {
+        return $self->_get_saved_contig;
+    }
+    elsif ( $self->_queued_contig )
+    {
+        return $self->_get_queued_contig;
+    }
+
+    return;
+}
+
+sub _queue_contig : RESTRICTED
+{
+    my $self = shift;
+
+    $self->undef_attribute('_queued_contig');
+    my $next_contig = $self->contig_iterator->next;
+    $self->_queued_contig($next_contig) if $next_contig;
+
+    return 1;
+}
+
+sub _get_queued_contig : RESTRICTED
+{
+    my $self = shift;
+
+    my $contig = $self->_queued_contig;
+    $self->_queue_contig;
+    
+    if ( $contig )
+    {
+        my $start = 1;
+        my $length = $contig->unpadded_length;
+        return ($contig, $start, $length);
+    }
+    
+    return;
+}
+
+sub _get_saved_contig : RESTRICTED
+{
+    my $self = shift;
+
+    my $contig = $self->_saved_contig;
+    my $start = $self->_saved_start;
+    my $stop = $self->_saved_stop;
+
+    $self->undef_attribute('_saved_contig');
+    $self->undef_attribute('_saved_start');
+    $self->undef_attribute('_saved_stop');
+
+    return ($contig, $start, $stop);
+}
+
+sub _save_contig : RESTRICTED
+{
+    my ($self, $contig, $start, $stop) = @_;
+
+    $self->_saved_contig($contig);
+    $self->_saved_start($start);
+    $self->_saved_stop($stop);
+
+    return 1;
+}
+
+sub _add_contig_to_project : PRIVATE
+{
+    my ($self, $project, $name, $start, $stop) = @_;
+
+    $self->fatal_msg("Missing param to add contig to project:\n" . Dumper(\@_)) unless @_ == 5;
+    
+    my $ctg = 
+    {
+        name => $name,
+        db => $self->contig_db,
+        start => $start,
+        stop => $stop,
+    };
+    $ctg->{file} = $self->contig_file if $self->contig_file;
+
+    push @{ $project->{contigs} }, $ctg;
+
+    $project->{size} += $stop - $start + 1;
+
+    return 1;
+}
+
+1;
+
+=pod
+
+B<documentation incomplete>
+
+=head1 Name
+
+Finishing::Assembly::Project::ContigsToProjects
+
+=head1 Synopsis
+
+Given a contig iterator, this module will set the contigs into projects based on the target size and other params.  Each project will be given a name from the given namer (Finishing::Assembly::Project::Namer), and with the contigs be written using the given xml module (Finishing::Assembly::Project::XML).
+
+=head1 Usage
+
+ use Finishing::Assembly::Project::ContigsToProjects;
+
+ my $c2p = Finishing::Assembly::Project::ContigsToProjects->new
+ (
+    #more doc to come!
+ );
+
+ my $projects = $c2p->execute;
+
+ ...
+
+=head1 Methods
+
+head2 execute
+
+ $c2p->execute;
+ 
+=over
+
+=item Synopsis  splits contigs into projects, writes to xml object
+    
+=item Params    none
+
+=item Returns   projects hash 
+
+=back
+
+=head1 See Also
+
+=over
+
+=item B<Finishing::Assembly::Project>
+
+=item B<Finishing::Assembly::Factory>
+
+=item B<Finishing::Assembly::Project::Checkout>
+
+=item B<Finishing::Assembly::Project::XML::Checkout>
+
+=item B<Finishing::Assembly::Project::XML::ContigsToProjects>
+
+=back
+
+=head1 Disclaimer
+
+Copyright (C) 2007 Washington University Genome Sequencing Center
+
+This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+=head1 Author(s)
+
+B<Eddie Belter> I<ebelter@watson.wustl.edu>
+
+=cut
+
+#$HeadURL
+#$Id$
