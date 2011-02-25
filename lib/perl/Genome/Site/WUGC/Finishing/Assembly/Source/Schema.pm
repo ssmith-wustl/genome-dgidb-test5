@@ -7,7 +7,7 @@ use base 'Finfo::Singleton';
 
 use Data::Dumper;
 use Genome::Site::WUGC::Finishing::Assembly::Cache;
-use Genome::Site::WUGC::Finishing::Assembly::Project::Utils;
+#use Genome::Site::WUGC::Finishing::Assembly::Project::Utils;
 
 # models
 use Genome::Site::WUGC::Finishing::Assembly::Source::AssembledRead;

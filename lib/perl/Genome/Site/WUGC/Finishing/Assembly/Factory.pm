@@ -24,7 +24,7 @@ use Genome::Site::WUGC::Finishing::Assembly::Contig;
 use Genome::Site::WUGC::Finishing::Assembly::Gap;
 use Genome::Site::WUGC::Finishing::Assembly::ImprovementCorrelation;
 use Genome::Site::WUGC::Finishing::Assembly::Organism;
-use Genome::Site::WUGC::Finishing::Assembly::Project;  
+#use Genome::Site::WUGC::Finishing::Assembly::Project;  
 use Genome::Site::WUGC::Finishing::Assembly::Iterator;  
 use Genome::Site::WUGC::Finishing::Assembly::Scaffold;
 use Genome::Site::WUGC::Finishing::Assembly::Tags;
@@ -40,7 +40,7 @@ use Genome::Site::WUGC::Finishing::Assembly::Source::Proxies;
 #others
 use Data::Dumper;
 use Finfo::ClassUtils 'class';
-use Genome::Site::WUGC::Finishing::Assembly::Project::Utils;
+#use Genome::Site::WUGC::Finishing::Assembly::Project::Utils;
 use XML::Simple;
 
 #- ATTRIBUTES -#
