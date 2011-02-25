@@ -475,7 +475,6 @@ sub _resolve_type_name_for_class {
 
 sub _expand_param_properties {
     my ($class, $desc) = @_;
-    
     while (my ($prop_name, $prop_desc) = each(%{ $desc->{has} })) {
         if (exists $prop_desc->{'is_param'} and $prop_desc->{'is_param'}) {
             $prop_desc->{'to'} = 'value';
@@ -484,6 +483,7 @@ sub _expand_param_properties {
                 'name' => $prop_name
             ];
             $prop_desc->{'via'} = 'params';
+            $prop_desc->{'is_mutable'} = 1;
         }
     }
 
@@ -500,5 +500,5 @@ sub _resolve_disk_group_name_for_build {
     return 'info_genome_models';
 }
 
-
 1;
+
