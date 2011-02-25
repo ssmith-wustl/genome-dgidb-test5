@@ -308,7 +308,7 @@ sub _create {
         my @reasons;
         push @reasons, 'disk is not active' if $volume->disk_status ne 'active';
         push @reasons, 'allocation turned off for this disk' if $volume->can_allocate != 1;
-        push @reasons, 'not enough space on disk' if ($volume->unallocated_kb - $volume->reserve_size) < $kilobytes_requested;
+        push @reasons, 'not enough space on disk' if ($volume->unallocated_kb - $volume->unallocatable_reserve_size) < $kilobytes_requested;
         if (@reasons) {
             confess "Requested volume with mount path $mount_path cannot be allocated to:\n" . join("\n", @reasons);
         }
@@ -319,7 +319,10 @@ sub _create {
     # pick one at random from the top MAX_VOLUMES. It's been decided that we want to fill up a small subset of volumes
     # at a time instead of all of them.
     else {
-        push @candidate_volumes, $class->_get_candidate_volumes($disk_group_name, $kilobytes_requested);
+        push @candidate_volumes, $class->_get_candidate_volumes(
+            disk_group_name => $disk_group_name,
+            kilobytes_requested => $kilobytes_requested
+        );
     }
 
     # Now pick a volume and try to lock it
@@ -466,7 +469,8 @@ sub _reallocate {
     }
 
     # If there's enough space, just change the size, no worries!
-    if ($diff <= 0 or ($diff <= $volume->usable_unallocated_kb)) {
+    my $available_space = $volume->unallocated_kb - $volume->unusable_reserve_size;
+    if ($diff <= 0 or ($diff <= $available_space)) {
         $self->kilobytes_requested($kilobytes_requested);
         $volume->unallocated_kb($volume->unallocated_kb - $diff);
         $self->reallocation_time(UR::Time->now);
@@ -506,7 +510,11 @@ sub _reallocate_with_move {
     my $old_volume = $self->volume;
 
     # First, need to figure out which volume we want to move to, lock it, and update it
-    my @candidate_volumes = $self->_get_candidate_volumes($self->disk_group_name, $kilobytes_requested);
+    my @candidate_volumes = $self->_get_candidate_volumes(
+        disk_group_name => $self->disk_group_name, 
+        kilobytes_requested => $kilobytes_requested,
+        reallocating => 1,
+    );
     my ($new_volume, $new_volume_lock) = $self->_lock_volume_from_list($kilobytes_requested, @candidate_volumes);
 
     $new_volume->unallocated_kb($new_volume->unallocated_kb - $kilobytes_requested);
@@ -710,7 +718,11 @@ sub _get_allocation_lock {
 
 # Returns a list of volumes that meets the given criteria
 sub _get_candidate_volumes {
-    my ($class, $disk_group_name, $kilobytes_requested) = @_;
+    my ($class, %params) = @_;
+    my $disk_group_name = delete $params{disk_group_name};
+    my $kilobytes_requested = delete $params{kilobytes_requested};
+    my $reallocating = delete $params{reallocating};
+    $reallocating ||= 0;
 
     my @volumes = Genome::Disk::Volume->get(
         disk_group_names => $disk_group_name,
@@ -722,9 +734,13 @@ sub _get_candidate_volumes {
         confess "Did not get any allocatable and active volumes belonging to group $disk_group_name with " .
             "$kilobytes_requested kb of unallocated space!";
     }
+    $DB::single = 1;
 
     # Make sure that the allocation doesn't infringe on the empty buffer required for each volume
-    @volumes = grep { $_->usable_unallocated_kb > $kilobytes_requested } @volumes;
+    @volumes = grep {
+        my $reserve_size = ($reallocating ? $_->unusable_reserve_size : $_->unallocatable_reserve_size);
+        ($_->unallocated_kb - $reserve_size) > $kilobytes_requested
+    } @volumes;
     unless (@volumes) {
         confess "No volumes of group $disk_group_name have enough space after excluding reserves to store $kilobytes_requested KB.";
     }
