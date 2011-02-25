@@ -122,9 +122,17 @@ ok($other_allocation->mount_path eq $volumes[-1]->mount_path, 'allocation landed
 Genome::Disk::Allocation->delete(allocation_id => $other_allocation->id);
 isa_ok($other_allocation, 'UR::DeletedRef', 'successfully removed allocation');
 
-# Try to reallocate existing allocation
-my $reallo_rv = Genome::Disk::Allocation->reallocate(allocation_id => $allocation->id, kilobytes_requested => 5);
-ok($allocation->kilobytes_requested == 5, 'allocation has been resized');
+# Lower size of allocation's volume, then reallocate with move and make sure that works
+my $touch_file = $allocation->absolute_path . "/test_file";
+system("touch $touch_file");
+ok(-e $touch_file, "touched file exists in allocation directory");
+
+my $current_volume = $allocation->volume;
+$current_volume->unallocated_kb(100);
+my $move_rv = Genome::Disk::Allocation->reallocate(allocation_id => $allocation->id, kilobytes_requested => 500, allow_reallocate_with_move => 1);
+
+ok ($allocation->volume->mount_path ne $current_volume, "allocation moved to new volume");
+ok(-e $allocation->absolute_path . "/test_file", "touched file correctly moved to new allocation directory");
 
 # Now delete the allocation
 Genome::Disk::Allocation->delete(allocation_id => $allocation->id);
