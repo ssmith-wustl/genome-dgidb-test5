@@ -5,8 +5,6 @@ use warnings;
 
 use Genome;
 
-use Finishing::Assembly::Consed::Navigation;
-
 class Genome::Model::Tools::Consed::Navigation::Reader {
     is => 'Genome::Utility::IO::Reader',
 };
@@ -73,7 +71,7 @@ A stream based reader, parses a consed navigation file, returning navigation has
 
  use Genome::Model::Tools::Consed::Navigation::Reader;
 
- my $reader = Finishing::Assembly::Consed::Navigation::Reader->new(
+ my $reader = Genome::Model::Tools::Consed::Navigation::Reader->new(
      input => 'cafcop.nav', # REQUIRED, file or an object that can 'getline' and 'seek'
  )
      or die;
