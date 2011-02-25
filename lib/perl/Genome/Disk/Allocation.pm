@@ -171,9 +171,10 @@ sub create {
     # If the owner gets rolled back, then delete the allocation. Make sure the allocation hasn't already been deleted,
     # which can happen if the owner is coded well and cleans up its own mess during rollback.
     my $remove_sub = sub {
-        if ($allocation and $allocation->class !~ /UR::DeletedRef/) {
-            $allocation->delete;
-        }
+        my $allocation_id = $allocation->id;
+        $allocation->unload;
+        my $loaded_allocation = Genome::Disk::Allocation->get($allocation_id);
+        $loaded_allocation->delete if ($loaded_allocation);
     };
     my $allocation_change = UR::Context::Transaction->log_change(
         $allocation->owner, 'UR::Value', $allocation->id, 'external_change', $remove_sub,

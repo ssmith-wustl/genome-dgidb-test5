@@ -9,7 +9,7 @@ our $VERSION = '1.01';
 
 class Genome::Model::Tools::Music::PathScan {
   is => 'Command',
-  has => [
+  has_input => [
     gene_covg_dir => { is => 'Text', doc => "Directory containing per-gene coverage files (Created using music bmr calc-covg)" },
     bam_list => { is => 'Text', doc => "Tab delimited list of BAM files [sample_name normal_bam tumor_bam] (See Description)" },
     pathway_file => { is => 'Text', doc => "Tab-delimited file of pathway information (See Description)" },

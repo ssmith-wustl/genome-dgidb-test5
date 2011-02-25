@@ -32,6 +32,10 @@ sub _init_created_dbh {
     $self->SUPER::_init_created_dbh($dbh);
 
     $dbh->do('alter session set "_hash_join_enabled"=TRUE');
+
+    # stores program name as "MODULE" and user name as "ACTION"
+    $self->set_userenv('dbh' => $dbh); # very very important to pass dbh here ;)
+
     return $dbh;
 }
 

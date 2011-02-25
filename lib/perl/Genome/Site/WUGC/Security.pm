@@ -36,7 +36,7 @@ sub log_command {
     my $log_path = $log_dir . $log_file;
     my $log_fh = IO::File->new($log_path, 'a');
     unless ($log_fh) {
-        print "Could not get file handle for log file at $log_path, command execution will continue!\n";
+        print STDERR "Could not get file handle for log file at $log_path, command execution will continue!\n";
 
         my $email_msg = "User: $ENV{USER}\n" .
                         "Date: $date\n" .

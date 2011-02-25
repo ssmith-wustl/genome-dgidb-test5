@@ -73,23 +73,35 @@ sub execute{
     #my $version = GMT:BED:CONVERT::version();  TODO, something like this instead of hardcoding
 
     if ($build->snv_detection_strategy){
-        my $result = $build->data_set_path("variants/snv_hq_output",$version,'bed'); 
+        my $result = $build->data_set_path("variants/snvs.hq",$version,'bed'); 
         unless (-e $result){
-            die $self->error_message("Expected hq detected snvs file $result, but it does not exist!");
+            my $unexpected_format_output = $command->snv_hq_output_file;
+            unless (-e $unexpected_format_output){
+                die $self->error_message("Expected hq detected snvs file $result, but it does not exist!");
+            }
+            symlink($unexpected_format_output, $result);
         }
     }
             
     if ($build->indel_detection_strategy){
-        my $result = $build->data_set_path("variants/indel_hq_output",$version,'bed'); 
+        my $result = $build->data_set_path("variants/indels.hq",$version,'bed'); 
         unless (-e $result){
-            die $self->error_message("Expected hq detected indels file $result, but it does not exist!");
+            my $unexpected_format_output = $command->indel_hq_output_file;
+            unless (-e $unexpected_format_output){
+                die $self->error_message("Expected hq detected snvs file $result, but it does not exist!");
+            }
+            symlink($unexpected_format_output, $result);
         }
     }
 
     if ($build->sv_detection_strategy){
-        my $result = $build->data_set_path("variants/sv_hq_output",$version,'bed'); 
+        my $result = $build->data_set_path("variants/svs.hq",$version,'bed'); 
         unless (-e $result){
-            die $self->error_message("Expected hq detected sv file $result, but it does not exist!");
+            my $unexpected_format_output = $command->sv_hq_output_file;
+            unless (-e $unexpected_format_output){
+                die $self->error_message("Expected hq detected snvs file $result, but it does not exist!");
+            }
+            symlink($unexpected_format_output, $result);
         }
     }
 
