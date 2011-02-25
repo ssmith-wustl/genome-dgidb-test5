@@ -111,7 +111,6 @@ delete $params{mount_path};
 my $fail_allocation = eval { Genome::Disk::Allocation->create(%params) };
 ok(!$fail_allocation, 'failed to allocate when volumes are turned off, as expected');
 
-$DB::single = 1;
 # Turn on one volume, make sure allocation succeeds
 $volumes[-1]->can_allocate(1);
 $params{kilobytes_requested} = 100;
