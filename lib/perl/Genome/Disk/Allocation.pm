@@ -498,20 +498,36 @@ sub _reallocate {
 }
 
 # Moves an allocation to another volume with more space
+# This is hairy with a bazillion possible failure points...
 sub _reallocate_with_move {
     my ($self, $allocation_lock, $kilobytes_requested) = @_;
     $self->status_message("Current volume " . $self->mount_path . " doesn't have enough space to reallocate, moving to new volume");
 
     my $old_volume = $self->volume;
 
-    # First, need to figure out which volume we want to move to
+    # First, need to figure out which volume we want to move to, lock it, and update it
     my @candidate_volumes = $self->_get_candidate_volumes($self->disk_group_name, $kilobytes_requested);
-    my $new_volume = $candidate_volumes[rand(@candidate_volumes)];
-    my $old_allocation_dir = $self->absolute_path;
-    my $new_allocation_dir = join('/', $new_volume->mount_path, $self->group_subdirectory, $self->allocation_path);
+    my ($new_volume, $new_volume_lock) = $self->_lock_volume_from_list($kilobytes_requested, @candidate_volumes);
+
+    $new_volume->unallocated_kb($new_volume->unallocated_kb - $kilobytes_requested);
+    $self->_create_observer($self->_unlock_closure($new_volume_lock));
+
+    unless (UR::Context->commit) {
+        Genome::Sys->unlock_resource(resource_lock => $new_volume_lock);
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
+        confess 'Could not update target volume ' . $new_volume->mount_path;
+    }
+
+    # If rollback occurs, need to increment size of new volume
+    my $volume_change = UR::Context::Transaction->log_change(
+        $self, 'UR::Value', $self->id, 'external_change', sub { $new_volume->unallocated_kb($new_volume->unallocated_kb + $kilobytes_requested) }
+    );
 
     # Now copy data to the new location
+    my $old_allocation_dir = $self->absolute_path;
+    my $new_allocation_dir = join('/', $new_volume->mount_path, $self->group_subdirectory, $self->allocation_path);
     $self->status_message("Copying data from $old_allocation_dir to $new_allocation_dir");
+    push @paths_to_remove, $new_allocation_dir; # If the process dies while copying, need to clean up the new directory
     unless (dircopy($old_allocation_dir, $new_allocation_dir)) {
         Genome::Sys->remove_directory_tree($new_allocation_dir) if -d $new_allocation_dir;
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
@@ -519,15 +535,15 @@ sub _reallocate_with_move {
     }
 
     # Get lock for new volume and update it
-    my $new_volume_lock = $self->_get_volume_lock($new_volume->mount_path, 3600);
+    $new_volume_lock = $self->_get_volume_lock($new_volume->mount_path, 3600);
     unless (defined $new_volume_lock) {
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Could not get lock for volume ' . $new_volume->mount_path;
     }
+
     $self->mount_path($new_volume->mount_path);
     $self->kilobytes_requested($kilobytes_requested);
     $self->reallocation_time(UR::Time->now);
-    $new_volume->unallocated_kb($new_volume->unallocated_kb - $kilobytes_requested);
 
     $self->_create_observer($self->_unlock_closure($new_volume_lock, $allocation_lock));
     unless (UR::Context->commit) {
@@ -536,6 +552,8 @@ sub _reallocate_with_move {
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Could not commit move of allocation ' . $self->id . " from $old_allocation_dir to $new_allocation_dir";
     }
+
+    pop @paths_to_remove; # No longer need to remove new directory, changes are committed
 
     # Delete data from old volume and update it
     unless (Genome::Sys->remove_directory_tree($old_allocation_dir)) {
