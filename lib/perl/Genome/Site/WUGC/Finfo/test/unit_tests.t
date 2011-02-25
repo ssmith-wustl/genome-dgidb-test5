@@ -366,12 +366,12 @@ sub test01_std : Tests
 
     $obj2->info_msg("str_rw is now " . $obj2->str_rw);
 
-    my $fh = IO::File->new('<' . $obj->log_file);
-    die $obj->log_file ." $!\n" unless $fh;
-    my $log_string = join('', $fh->getlines);
-    $fh->close;
+    #my $fh = IO::File->new('<' . $obj->log_file);
+    #die $obj->log_file ." $!\n" unless $fh;
+    #my $log_string = join('', $fh->getlines);
+    #$fh->close;
 
-    ok($log_string, "Logged msgs from $class:\n$log_string");
+    #ok($log_string, "Logged msgs from $class:\n$log_string");
 
     # Test dump
     my $dump1 = $obj->DUMP;
@@ -661,9 +661,9 @@ sub test05_validations : Tests
         [ 'hashref', {}, 1 ],
         [ 'non_empty_hashref', { hash => 'ref' }, {} ],
         [ 'non_empty_hashref', { hash => 6 }, { hash => 6, re => 66 }, [qw/ 5 7 /], 'integer_between' ],
-        [qw/ file unit_tests.t . /],
-        [qw/ input_file  unit_tests.t nowaythisexists /],
-        [qw/ output_file jjj unit_tests.t /],
+        [qw| file /gsc/var/cache/testsuite/data/Genome-Utility-Filesystem/existing_file.txt . |],
+        [qw| input_file  /gsc/var/cache/testsuite/data/Genome-Utility-Filesystem/existing_file.txt nowaythisexists |],
+        [qw| output_file jjj /gsc/var/cache/testsuite/data/Genome-Utility-Filesystem/existing_file.txt |],
         [qw/ path . hoopla_dir /],
         [qw/ input_path . hoopla_dir /],
         [qw/ output_path . hoopla_dir /],
@@ -885,22 +885,22 @@ sub test05_validations2 : Tests
         },
         {
             isa => 'file',
-            g => 'unit_tests.t',
+            g => '/gsc/var/cache/testsuite/data/Genome-Utility-Filesystem/existing_file.txt',
             b => '.',
         },
         {
             isa => 'file_r',
-            g => 'unit_tests.t',
+            g => '/gsc/var/cache/testsuite/data/Genome-Utility-Filesystem/existing_file.txt',
             b => 'nowaythisexists',
         },
         {
             isa => 'file_w',
             g => 'nowaythisexists',
-            b => 'unit_tests.t',
+            b => '/gsc/var/cache/testsuite/data/Genome-Utility-Filesystem/existing_file.txt',
         },
         {
             isa => 'file_rw',
-            g => 'unit_tests.t',
+            g => '/gsc/var/cache/testsuite/data/Genome-Utility-Filesystem/existing_file.txt',
             b => '/lost+found/nowaythisexists',
         },
         {
@@ -1244,6 +1244,4 @@ Test::Class->runtests('FinfoTest');
 
 exit 0;
 
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Finfo/unit_tests.t $
-#$Id: unit_tests.t 32440 2008-02-20 18:38:49Z ebelter $
 

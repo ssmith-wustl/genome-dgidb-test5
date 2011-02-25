@@ -26,6 +26,7 @@ is(scalar(@csv_data), 20, 'got 20 from csv reader');
 my $tsv_reader = $class->new(
     io => _create_tsv_io(),
     separator => '\t',
+    is_regex => 1,
 );
 isa_ok($tsv_reader, $class);
 is_deeply($tsv_reader->headers, \@expected_headers, 'header parsed correctly for tsv');
@@ -36,6 +37,7 @@ is(scalar(@tsv_data), 20, 'got 20 from tsv reader');
 my $ssv_reader = $class->new(
     io => _create_ssv_io(),
     separator => '\s+',
+    is_regex => 1,
 );
 isa_ok($ssv_reader,$class);
 is_deeply($ssv_reader->headers, \@expected_headers, 'header parsed correctly for ssv');
@@ -46,6 +48,7 @@ is(scalar(@ssv_data), 20, 'got 20 from ssv reader');
 my $osv_reader = $class->new(
     io => _create_osv_io(),
     separator => '#\w+#',
+    is_regex => 1,
 );
 isa_ok($osv_reader,$class);
 is_deeply($osv_reader->headers, \@expected_headers, 'header parsed correctly for osv');
