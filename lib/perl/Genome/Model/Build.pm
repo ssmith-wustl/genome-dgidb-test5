@@ -850,7 +850,7 @@ sub _launch {
         my $commit_observer = $build_event->add_observer(
             aspect => 'commit',
             callback => sub {
-                $self->status_message("Resuming LSF job ($job_id) for build " . $self->__display_name__ . ".");
+                #$self->status_message("Resuming LSF job ($job_id) for build " . $self->__display_name__ . ".");
                 my $bresume_output = `bresume $job_id`; chomp $bresume_output;
                 unless ( $bresume_output =~ /^Job <$job_id> is being resumed$/ ) {
                     $self->status_message($bresume_output);
