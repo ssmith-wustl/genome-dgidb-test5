@@ -1,4 +1,4 @@
-package Finishing::Assembly::DBIx::Schema::Organism;
+package Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Organism;
 
 use strict;
 use warnings;
@@ -33,8 +33,8 @@ __PACKAGE__->add_columns
     },
 );
 __PACKAGE__->set_primary_key('id');
-__PACKAGE__->has_many('chromosomes', 'Finishing::Assembly::DBIx::Schema::Chromosome', 'organism_id');
-__PACKAGE__->has_many('assemblies', 'Finishing::Assembly::DBIx::Schema::Assembly', 'organism_id');
+__PACKAGE__->has_many('chromosomes', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Chromosome', 'organism_id');
+__PACKAGE__->has_many('assemblies', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Assembly', 'organism_id');
 
 #- CHROMOSOME-#
 sub get_chromosome

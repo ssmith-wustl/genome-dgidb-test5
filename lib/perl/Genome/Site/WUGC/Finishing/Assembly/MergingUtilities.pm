@@ -1,12 +1,12 @@
-package Finishing::Assembly::MergingUtilities;
+package Genome::Site::WUGC::Finishing::Assembly::MergingUtilities;
 
 use strict;
 use warnings;
 use File::Copy 'cp';
 
-#use Finishing::Assembly::Factory;
+#use Genome::Site::WUGC::Finishing::Assembly::Factory;
 use Finfo::Std;
-use Finishing::Assembly::DBIx::AssemblyImporter;
+use Genome::Site::WUGC::Finishing::Assembly::DBIx::AssemblyImporter;
 
 my %schema :name(schema:p) :isa(object);
 
@@ -24,7 +24,7 @@ sub remove_and_replace{
     
 
     $self->fatal_msg("Missing params: ".join(" ", @missing_params)) if @missing_params;
-    $self->fatal_msg("Replacement contig Finishing::Assembly::Contig!") unless $rp_contig->isa("Finishing::Assembly::Contig");
+    $self->fatal_msg("Replacement contig Genome::Site::WUGC::Finishing::Assembly::Contig!") unless $rp_contig->isa("Genome::Site::WUGC::Finishing::Assembly::Contig");
     $self->fatal_msg("Start contig num must be less than end contig num!") unless $remove_start <= $remove_stop;
     
     $self->schema($db_asm->result_source->schema);
@@ -50,7 +50,7 @@ sub remove_and_replace{
     $self->schema->txn_do(
         sub{
 
-            my $importer = Finishing::Assembly::DBIx::AssemblyImporter->new(
+            my $importer = Genome::Site::WUGC::Finishing::Assembly::DBIx::AssemblyImporter->new(
                 store_reads => 0, 
                 store_ace   => 1,
                 store_tags  => 0,

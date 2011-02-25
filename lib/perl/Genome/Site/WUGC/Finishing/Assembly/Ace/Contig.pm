@@ -1,9 +1,9 @@
-package Finishing::Assembly::Ace::Contig;
+package Genome::Site::WUGC::Finishing::Assembly::Ace::Contig;
 
 use strict;
 use warnings;
 
-use base 'Finishing::Assembly::Ace::Source';
+use base 'Genome::Site::WUGC::Finishing::Assembly::Ace::Source';
 
 use Data::Dumper;
 
@@ -21,7 +21,7 @@ __PACKAGE__->mk_code_accessors
 
 =head1 Name
 
-Finishing::Assembly::Ace::Contig.pm
+Genome::Site::WUGC::Finishing::Assembly::Ace::Contig.pm
 
 =head1 Synopsis
 

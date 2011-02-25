@@ -1,4 +1,4 @@
-package Finishing::Assembly::Factory; 
+package Genome::Site::WUGC::Finishing::Assembly::Factory; 
 
 use strict;
 use warnings;
@@ -6,41 +6,41 @@ use warnings;
 use Finfo::Std;
 
 #schemas
-use Finishing::Assembly::Ace::Schema;
-use Finishing::Assembly::Consed::Schema;
-use Finishing::Assembly::GSC::Schema;
-use Finishing::Assembly::DBIx::Schema;
-use Finishing::Assembly::Phd::Ball;
-use Finishing::Assembly::Phd::Directory;
-use Finishing::Assembly::Phd::FastaAndQualDB;
-use Finishing::Assembly::Source::Schema;
+use Genome::Site::WUGC::Finishing::Assembly::Ace::Schema;
+use Genome::Site::WUGC::Finishing::Assembly::Consed::Schema;
+use Genome::Site::WUGC::Finishing::Assembly::GSC::Schema;
+use Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema;
+use Genome::Site::WUGC::Finishing::Assembly::Phd::Ball;
+use Genome::Site::WUGC::Finishing::Assembly::Phd::Directory;
+use Genome::Site::WUGC::Finishing::Assembly::Phd::FastaAndQualDB;
+use Genome::Site::WUGC::Finishing::Assembly::Source::Schema;
 
 #objects
-use Finishing::Assembly::Assembly;
-use Finishing::Assembly::AssembledRead;
-use Finishing::Assembly::Chromosome;
-use Finishing::Assembly::ChromosomeFirstScaffold;
-use Finishing::Assembly::Contig;
-use Finishing::Assembly::Gap;
-use Finishing::Assembly::ImprovementCorrelation;
-use Finishing::Assembly::Organism;
-use Finishing::Assembly::Project;  
-use Finishing::Assembly::Iterator;  
-use Finishing::Assembly::Scaffold;
-use Finishing::Assembly::Tags;
+use Genome::Site::WUGC::Finishing::Assembly::Assembly;
+use Genome::Site::WUGC::Finishing::Assembly::AssembledRead;
+use Genome::Site::WUGC::Finishing::Assembly::Chromosome;
+use Genome::Site::WUGC::Finishing::Assembly::ChromosomeFirstScaffold;
+use Genome::Site::WUGC::Finishing::Assembly::Contig;
+use Genome::Site::WUGC::Finishing::Assembly::Gap;
+use Genome::Site::WUGC::Finishing::Assembly::ImprovementCorrelation;
+use Genome::Site::WUGC::Finishing::Assembly::Organism;
+use Genome::Site::WUGC::Finishing::Assembly::Project;  
+use Genome::Site::WUGC::Finishing::Assembly::Iterator;  
+use Genome::Site::WUGC::Finishing::Assembly::Scaffold;
+use Genome::Site::WUGC::Finishing::Assembly::Tags;
 
 #proxies
-use Finishing::Assembly::Ace::Proxies;
-use Finishing::Assembly::Consed::Proxies;
-use Finishing::Assembly::DBIx::Proxies;
-use Finishing::Assembly::DSProxies;
-use Finishing::Assembly::GSC::Proxies;
-use Finishing::Assembly::Source::Proxies;
+use Genome::Site::WUGC::Finishing::Assembly::Ace::Proxies;
+use Genome::Site::WUGC::Finishing::Assembly::Consed::Proxies;
+use Genome::Site::WUGC::Finishing::Assembly::DBIx::Proxies;
+use Genome::Site::WUGC::Finishing::Assembly::DSProxies;
+use Genome::Site::WUGC::Finishing::Assembly::GSC::Proxies;
+use Genome::Site::WUGC::Finishing::Assembly::Source::Proxies;
 
 #others
 use Data::Dumper;
 use Finfo::ClassUtils 'class';
-use Finishing::Assembly::Project::Utils;
+use Genome::Site::WUGC::Finishing::Assembly::Project::Utils;
 use XML::Simple;
 
 #- ATTRIBUTES -#
@@ -108,15 +108,15 @@ sub AUTOMETHOD
     # put this in conf??
     my $schema_methods = 
     {
-        'Finishing::Assembly::Ace::Schema' =>
+        'Genome::Site::WUGC::Finishing::Assembly::Ace::Schema' =>
         {
             get_assembly => 'assembly',
         },
-        'Finishing::Assembly::Consed::Schema' =>
+        'Genome::Site::WUGC::Finishing::Assembly::Consed::Schema' =>
         {
             get_assembly => 'assembly',
         },
-        'Finishing::Assembly::DBIx::Schema' =>
+        'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema' =>
         {
             create_project => 'project',
             get_project => 'project',
@@ -128,12 +128,12 @@ sub AUTOMETHOD
             get_assembly => 'assembly',
             #get_project => 'project',
         },
-        'Finishing::Assembly::GSC::Schema' =>
+        'Genome::Site::WUGC::Finishing::Assembly::GSC::Schema' =>
         {
             get_project => 'project',
             create_project => 'project',
         },
-        'Finishing::Assembly::Phd::Ball' =>
+        'Genome::Site::WUGC::Finishing::Assembly::Phd::Ball' =>
         {
             phd_names => 'null',
             phd_exists => 'null',
@@ -144,7 +144,7 @@ sub AUTOMETHOD
             next_phd_name => 'null',
             next_phd_file => 'null',
         },
-        'Finishing::Assembly::Phd::Directory' =>
+        'Genome::Site::WUGC::Finishing::Assembly::Phd::Directory' =>
         {
             phd_names => 'null',
             phd_exists => 'null',
@@ -155,7 +155,7 @@ sub AUTOMETHOD
             next_phd_name => 'null',
             next_phd_file => 'null',
         },
-        'Finishing::Assembly::Phd::FastaAndQualDB' =>
+        'Genome::Site::WUGC::Finishing::Assembly::Phd::FastaAndQualDB' =>
         {
             phd_names => 'null',
             phd_exists => 'null',
@@ -166,7 +166,7 @@ sub AUTOMETHOD
             next_phd_name => 'null',
             next_phd_file => 'null',
         },
-        'Finishing::Assembly::Source::Schema' =>
+        'Genome::Site::WUGC::Finishing::Assembly::Source::Schema' =>
         {
             create_project => 'project',
             get_project => 'project',
@@ -228,7 +228,7 @@ sub connect
         msg => 'fatal',
     );
    
-    my $schema_class = 'Finishing::Assembly::' . $conf->{db}->{$db}->{schema};
+    my $schema_class = 'Genome::Site::WUGC::Finishing::Assembly::' . $conf->{db}->{$db}->{schema};
     my $dbi = $conf->{db}->{$db}->{dbi};
     my $string = '';
     if ( $srcs )
@@ -359,14 +359,14 @@ sub _wrap_organism
     my $proxy = $self->_get_proxy('organism', $source)
         or return $source;
 
-    return Finishing::Assembly::Organism->new(proxy => $proxy);
+    return Genome::Site::WUGC::Finishing::Assembly::Organism->new(proxy => $proxy);
 }
 
 sub _wrap_organism_iterator
 {
     my ($self, $rs) = @_;
 
-    return Finishing::Assembly::Iterator->new
+    return Genome::Site::WUGC::Finishing::Assembly::Iterator->new
     (
         iterator => $rs,
         object_constructor => sub 
@@ -384,14 +384,14 @@ sub _wrap_assembly
     my $proxy = $self->_get_proxy('assembly', $source)
         or return $source;
 
-    return Finishing::Assembly::Assembly->new(proxy => $proxy);
+    return Genome::Site::WUGC::Finishing::Assembly::Assembly->new(proxy => $proxy);
 }
 
 sub _wrap_assembly_iterator
 {
     my ($self, $rs) = @_;
 
-    return Finishing::Assembly::Iterator->new
+    return Genome::Site::WUGC::Finishing::Assembly::Iterator->new
     (
         iterator => $rs,
         object_constructor => sub
@@ -409,14 +409,14 @@ sub _wrap_assembly_tag
     my $proxy = $self->_get_proxy('assembly_tag', $source)
         or return $source;
 
-    return Finishing::Assembly::AssemblyTag->new(proxy => $proxy);
+    return Genome::Site::WUGC::Finishing::Assembly::AssemblyTag->new(proxy => $proxy);
 }
 
 sub _wrap_assembly_tag_iterator
 {
     my ($self, $rs) = @_;
 
-    return Finishing::Assembly::Iterator->new
+    return Genome::Site::WUGC::Finishing::Assembly::Iterator->new
     (
         iterator => $rs,
         object_constructor =>  sub
@@ -434,14 +434,14 @@ sub _wrap_consensus_tag
     my $proxy = $self->_get_proxy('consensus_tag', $source)
         or return $source;
 
-    return Finishing::Assembly::ConsensusTag->new(proxy => $proxy);
+    return Genome::Site::WUGC::Finishing::Assembly::ConsensusTag->new(proxy => $proxy);
 }
 
 sub _wrap_consensus_tag_iterator
 {
     my ($self, $rs) = @_;
 
-    return Finishing::Assembly::Iterator->new
+    return Genome::Site::WUGC::Finishing::Assembly::Iterator->new
     (
         iterator => $rs,
         object_constructor =>  sub
@@ -459,14 +459,14 @@ sub _wrap_read_tag
     my $proxy = $self->_get_proxy('read_tag', $source)
         or return $source;
 
-    return Finishing::Assembly::ReadTag->new(proxy => $proxy);
+    return Genome::Site::WUGC::Finishing::Assembly::ReadTag->new(proxy => $proxy);
 }
 
 sub _wrap_read_tag_iterator
 {
     my ($self, $rs) = @_;
 
-    return Finishing::Assembly::Iterator->new
+    return Genome::Site::WUGC::Finishing::Assembly::Iterator->new
     (
         iterator => $rs,
         object_constructor =>  sub
@@ -484,14 +484,14 @@ sub _wrap_scaffold
     my $proxy = $self->_get_proxy('scaffold', $source)
         or return $source;
     
-    return Finishing::Assembly::Scaffold->new(proxy => $proxy);
+    return Genome::Site::WUGC::Finishing::Assembly::Scaffold->new(proxy => $proxy);
 }
 
 sub _wrap_scaffold_iterator
 {
     my ($self, $rs) = @_;
 
-    return Finishing::Assembly::Iterator->new
+    return Genome::Site::WUGC::Finishing::Assembly::Iterator->new
     (
         iterator => $rs,
         object_constructor =>  sub
@@ -509,14 +509,14 @@ sub _wrap_contig
     my $proxy = $self->_get_proxy('contig', $source)
         or return $source;
 
-    return Finishing::Assembly::Contig->new(proxy => $proxy);
+    return Genome::Site::WUGC::Finishing::Assembly::Contig->new(proxy => $proxy);
 }
 
 sub _wrap_contig_iterator
 {
     my ($self, $rs) = @_;
     
-    return Finishing::Assembly::Iterator->new
+    return Genome::Site::WUGC::Finishing::Assembly::Iterator->new
     (
         iterator => $rs,
         object_constructor => sub 
@@ -534,14 +534,14 @@ sub _wrap_gap
     my $proxy = $self->_get_proxy('gap', $source)
         or return $source;
 
-    return Finishing::Assembly::Gap->new(proxy => $proxy);
+    return Genome::Site::WUGC::Finishing::Assembly::Gap->new(proxy => $proxy);
 }
 
 sub _wrap_gap_iterator
 {
     my ($self, $rs) = @_;
 
-    return Finishing::Assembly::Iterator->new
+    return Genome::Site::WUGC::Finishing::Assembly::Iterator->new
     (
         iterator => $rs,
         object_constructor => sub 
@@ -559,14 +559,14 @@ sub _wrap_assembled_read
     my $proxy = $self->_get_proxy('assembled_read', $source)
         or return $source;
 
-    return Finishing::Assembly::AssembledRead->new(proxy => $proxy);
+    return Genome::Site::WUGC::Finishing::Assembly::AssembledRead->new(proxy => $proxy);
 }
 
 sub _wrap_assembled_read_iterator
 {
     my ($self, $rs) = @_;
     
-    return Finishing::Assembly::Iterator->new
+    return Genome::Site::WUGC::Finishing::Assembly::Iterator->new
     (
         iterator => $rs,
         object_constructor => sub
@@ -584,14 +584,14 @@ sub _wrap_chromosome
     my $proxy = $self->_get_proxy('chromosome', $source)
         or return $source;
 
-    return Finishing::Assembly::Chromosome->new(proxy => $proxy);
+    return Genome::Site::WUGC::Finishing::Assembly::Chromosome->new(proxy => $proxy);
 }
 
 sub _wrap_chromosome_iterator
 {
     my ($self, $rs) = @_;
 
-    return Finishing::Assembly::Iterator->new
+    return Genome::Site::WUGC::Finishing::Assembly::Iterator->new
     (
         iterator => $rs,
         object_constructor => sub
@@ -609,14 +609,14 @@ sub _wrap_improvement_correlation
     my $proxy = $self->_get_proxy('improvement_correlation', $source)
         or return $source;
 
-    return Finishing::Assembly::ImprovementCorrelation->new(proxy => $proxy);
+    return Genome::Site::WUGC::Finishing::Assembly::ImprovementCorrelation->new(proxy => $proxy);
 }
 
 sub _wrap_improvement_correlation_iterator
 {
     my ($self, $rs) = @_;
 
-    return Finishing::Assembly::Iterator->new
+    return Genome::Site::WUGC::Finishing::Assembly::Iterator->new
     (
         iterator =>$rs, 
         object_constructor => sub 
@@ -634,7 +634,7 @@ sub _wrap_chromosome_first_scaffold
     my $proxy = $self->_get_proxy('chromosome_first_scaffold', $source)
         or return $source;
 
-    return Finishing::Assembly::ChromosomeFirstScaffold->new(proxy => $proxy);
+    return Genome::Site::WUGC::Finishing::Assembly::ChromosomeFirstScaffold->new(proxy => $proxy);
 }
 
 sub _wrap_project
@@ -644,14 +644,14 @@ sub _wrap_project
     my $proxy = $self->_get_proxy('project', $source)
         or return $source;
     
-    return Finishing::Assembly::Project->new(proxy => $proxy);
+    return Genome::Site::WUGC::Finishing::Assembly::Project->new(proxy => $proxy);
 }
 
 sub _wrap_project_iterator
 {
     my ($self, $rs) = @_;
 
-    return Finishing::Assembly::Iterator->new
+    return Genome::Site::WUGC::Finishing::Assembly::Iterator->new
     (
         iterator =>$rs, 
         object_constructor => sub 
@@ -670,14 +670,14 @@ sub _get_proxy
     my $object_class = join('', map { ucfirst } split(/_/, $object_type));
     my $source_type = ref($source);
 
-    if ( $source_type =~ /^Finishing::Assembly::\w+$/ )
+    if ( $source_type =~ /^Genome::Site::WUGC::Finishing::Assembly::\w+$/ )
     {
         # this is the already wrapped behavior object
         return;
     }
-    elsif ( $source_type =~ /^Finishing::Assembly::DBIx::Schema::/i )
+    elsif ( $source_type =~ /^Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::/i )
     {
-        my $proxy_class = sprintf('Finishing::Assembly::%sDSProxy', $object_class);
+        my $proxy_class = sprintf('Genome::Site::WUGC::Finishing::Assembly::%sDSProxy', $object_class);
         return $proxy_class->new
         (
             source => $source,
@@ -686,7 +686,7 @@ sub _get_proxy
     }
     elsif ( $source_type =~ /^GSC::/ )
     {
-        my $proxy_class = sprintf('Finishing::Assembly::GSC::%sProxy', $object_class);
+        my $proxy_class = sprintf('Genome::Site::WUGC::Finishing::Assembly::GSC::%sProxy', $object_class);
         return $proxy_class->new
         (
             source => $source,
@@ -695,8 +695,8 @@ sub _get_proxy
     }
     else 
     {
-        $source_type =~ /^Finishing::Assembly::(\w+)::/;
-        my $proxy_class = sprintf('Finishing::Assembly::%s::%sProxy', $1, $object_class);
+        $source_type =~ /^Genome::Site::WUGC::Finishing::Assembly::(\w+)::/;
+        my $proxy_class = sprintf('Genome::Site::WUGC::Finishing::Assembly::%s::%sProxy', $1, $object_class);
         return $proxy_class->new
         (
             source => $source,

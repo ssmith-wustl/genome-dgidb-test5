@@ -1,27 +1,27 @@
-package Finishing::Assembly::ContigTools;
+package Genome::Site::WUGC::Finishing::Assembly::ContigTools;
 our $VERSION = 0.01;
 
 use strict;
 
-use Finishing::Assembly::Transform;
+use Genome::Site::WUGC::Finishing::Assembly::Transform;
 use Carp::Assert;
 use Cwd;
 use Bio::Seq;
 use Bio::Tools::dpAlign;
-use Finishing::Assembly::Utility;
+use Genome::Site::WUGC::Finishing::Assembly::Utility;
 use Gtk;
 use Gtk::ButtonCrate::Radio;
 use GSC::IO::Assembly::Ace::Writer;
-#use Finishing::Assembly::Ace::Reader;
-#use Finishing::Assembly::Ace;
+#use Genome::Site::WUGC::Finishing::Assembly::Ace::Reader;
+#use Genome::Site::WUGC::Finishing::Assembly::Ace;
 use List::Util qw(min max);
-use Finishing::Assembly::Factory;
-use Finishing::Assembly::PhdDB;
-use Finishing::Assembly::Phd;
+use Genome::Site::WUGC::Finishing::Assembly::Factory;
+use Genome::Site::WUGC::Finishing::Assembly::PhdDB;
+use Genome::Site::WUGC::Finishing::Assembly::Phd;
 #use GSC::Sequence::Assembly::AceAdaptor;
-use Finishing::Assembly::AlignBP;
-use Finishing::Assembly::AlignBPUP;
-use Finishing::Assembly::AlignDerive;
+use Genome::Site::WUGC::Finishing::Assembly::AlignBP;
+use Genome::Site::WUGC::Finishing::Assembly::AlignBPUP;
+use Genome::Site::WUGC::Finishing::Assembly::AlignDerive;
 use Data::Dumper;
 use Finfo::Logging;
 
@@ -124,8 +124,8 @@ sub _convert_bioperl_to_gsc_transform
 	$left_contig->align->{merge_seq} =~ tr/-/*/;
 
 
-	my $left_transform = Finishing::Assembly::Transform->new($left_contig->align->{align_seq}, '-');#this creates a transform for the merge region as it originally 
-	my $right_transform = Finishing::Assembly::Transform->new($right_contig->align->{align_seq}, '-');#this creates a transform for the merge region as it originally 
+	my $left_transform = Genome::Site::WUGC::Finishing::Assembly::Transform->new($left_contig->align->{align_seq}, '-');#this creates a transform for the merge region as it originally 
+	my $right_transform = Genome::Site::WUGC::Finishing::Assembly::Transform->new($right_contig->align->{align_seq}, '-');#this creates a transform for the merge region as it originally 
 	$right_transform->_offset( $left_contig->align->{start}-$right_contig->align->{start});
 	#may want to check if offset is valid
 	#go ahead and convert pads
@@ -184,7 +184,7 @@ sub _create_merge_tag
 	$year = "20$year";
 	my $tempstring = sprintf("%4d-%02d-%02d %02d:%02d:%02d", $year, ($temptime[4]+1), $temptime[3], 
 	$temptime[2], $temptime[1], $temptime[0] );
-	my $factory = Finishing::Assembly::Factory->connect("source");
+	my $factory = Genome::Site::WUGC::Finishing::Assembly::Factory->connect("source");
 	return $factory->create_consensus_tag(parent => $contig_name, type => 'comment', start => $left_end_of_merge, stop => $right_end_of_merge, date => $tempstring,
 	   source => "cmt", no_trans => "NoTrans");#, scope => "ACE");
 }
@@ -513,12 +513,12 @@ sub merge
 	my @align;
 	if(!exists $params{derive_read})
 	{
-		@align = Finishing::Assembly::AlignBP::align($left_contig->padded_base_string, $right_contig->padded_base_string, %params);	
+		@align = Genome::Site::WUGC::Finishing::Assembly::AlignBP::align($left_contig->padded_base_string, $right_contig->padded_base_string, %params);	
 	}
 	else
 	{
 		$params{read_name} = $params{derive_read};#'fake2.b1';#'TPAC-30H12a.b1';#'fake2.b1';
-		@align = Finishing::Assembly::AlignDerive::align($left_contig, $right_contig, %params);	
+		@align = Genome::Site::WUGC::Finishing::Assembly::AlignDerive::align($left_contig, $right_contig, %params);	
 	}
     $self->info_msg("4");
 	#my $dumper =  Dumper @align;
@@ -538,8 +538,8 @@ sub merge
 	#will be the same for the left and right contigs.  So, we just add the consensus in the right contig that occurs
 	#after the locally aligned region to the left contig.
 
-	#my $merge_contig = Finishing::Assembly::Contig->new;
-	my $factory = Finishing::Assembly::Factory->connect("source");
+	#my $merge_contig = Genome::Site::WUGC::Finishing::Assembly::Contig->new;
+	my $factory = Genome::Site::WUGC::Finishing::Assembly::Factory->connect("source");
 	my $merge_contig = $factory->create_contig(name => $left_contig->name);
     $self->info_msg("5");
 	$merge_contig->name( $left_contig->name );
@@ -556,7 +556,7 @@ sub merge
 		if($_->align_stop > $left_contig->align->{start} )
 		{	
 			my $new_seq = $left_contig->align->{transform}->pad_string_partial($_->padded_base_string, $_->position-1, '-');
-			my $transform = Finishing::Assembly::Transform->new($new_seq, '-');
+			my $transform = Genome::Site::WUGC::Finishing::Assembly::Transform->new($new_seq, '-');
 			$new_seq =~ tr/-/*/;
 			$_->padded_base_string( $new_seq);
 
@@ -577,7 +577,7 @@ sub merge
 		{
 			my $tempoffset = 0;#$right_contig->align->{transform}->_offset;
 			my $new_seq = $right_contig->align->{transform}->pad_string_partial($_->padded_base_string, $_->position-$tempoffset-1, '-');
-			my $transform = Finishing::Assembly::Transform->new($new_seq, '-');
+			my $transform = Genome::Site::WUGC::Finishing::Assembly::Transform->new($new_seq, '-');
 			$new_seq =~ tr/-/*/;
 			$_->padded_base_string( $new_seq);
 
@@ -691,7 +691,7 @@ sub merge
     $self->info_msg("14");
 	# now recalculate consensus qualities
 
-	Finishing::Assembly::Utility::recalculate_consensus_qualities_and_change( $merge_contig, $merge_contig->align->{start}, $merge_contig->align->{end}, \@overlap_reads  );
+	Genome::Site::WUGC::Finishing::Assembly::Utility::recalculate_consensus_qualities_and_change( $merge_contig, $merge_contig->align->{start}, $merge_contig->align->{end}, \@overlap_reads  );
 
 	#transfer left contig tags and translated right contig tags
 	my @merge_contig_tags = (@{$left_contig->tags}, _translate_tag_positions($right_contig,$merge_contig));
@@ -748,7 +748,7 @@ sub _get_ace_object
 #		$in_fh = new IO::File($data_source);
 #		
 #	}
-	#return Finishing::Assembly::Ace->new(input => $in_fh);
+	#return Genome::Site::WUGC::Finishing::Assembly::Ace->new(input => $in_fh);
 }
 
 sub _get_phd_object
@@ -756,12 +756,12 @@ sub _get_phd_object
 	my ($self, $data_source) = @_;
 	if(!($data_source =~ /\.ace/))
 	{		
-		return Finishing::Assembly::PhdDB->new;
+		return Genome::Site::WUGC::Finishing::Assembly::PhdDB->new;
 	}
 	else		
 	{
 		my $cwd = getcwd;
-		return Finishing::Assembly::Phd->new(input_directory => "$cwd/../phd_dir/");		
+		return Genome::Site::WUGC::Finishing::Assembly::Phd->new(input_directory => "$cwd/../phd_dir/");		
 	}
 }
 
@@ -1096,7 +1096,7 @@ sub split
 	# base segment.
 
 	my ($split_region_start, $split_region_stop) = _calculate_split_region(\@left_reads,\@right_reads,$contig->length);
-    my $transform = Finishing::Assembly::Transform->new($contig->padded_base_string);
+    my $transform = Genome::Site::WUGC::Finishing::Assembly::Transform->new($contig->padded_base_string);
 	print "tearing contigs from ", $transform->get_unpad_position($split_region_start), 
 		  " to ", $transform->get_unpad_position($split_region_stop), "\n";
 
@@ -1127,9 +1127,9 @@ sub split
 
 	# Transfer reads to new contigs.
 	# Fix alignment positions and tag positions of the right contig 326-592, 592-870
-	my $factory = Finishing::Assembly::Factory->connect("source");
+	my $factory = Genome::Site::WUGC::Finishing::Assembly::Factory->connect("source");
 	my $left_contig = $factory->create_contig(name => $contig->name . "a");
-	#my $left_contig = Finishing::Assembly::Contig->new;
+	#my $left_contig = Genome::Site::WUGC::Finishing::Assembly::Contig->new;
 	#$left_contig->name( $contig->name . "a" );
 	$left_contig->assembled_reads(\@left_reads);
 	$left_contig->complemented( $contig->complemented);
@@ -1281,7 +1281,7 @@ sub split
 		 )
 	  )
 	{
-		Finishing::Assembly::Utility::recalculate_consensus_qualities_and_change($left_contig, $nConsPosLeftToRecalculate, $nConsPosRightToRecalculate, $left_overlap_reads);
+		Genome::Site::WUGC::Finishing::Assembly::Utility::recalculate_consensus_qualities_and_change($left_contig, $nConsPosLeftToRecalculate, $nConsPosRightToRecalculate, $left_overlap_reads);
 	}
 
 	# That completes the base segments for the new left contig
@@ -1315,7 +1315,7 @@ sub split
 		$read->position($read->position + $offset);
 	}
 	
-	#my $right_contig = Finishing::Assembly::Contig->new;
+	#my $right_contig = Genome::Site::WUGC::Finishing::Assembly::Contig->new;
 	my $right_contig = $factory->create_contig(name => $contig->name . "a");
 	#$right_contig->name( $contig->name . "b" );
 	$right_contig->assembled_reads( \@right_reads);
@@ -1425,7 +1425,7 @@ sub split
 		 )
 	  )
 	{
-		Finishing::Assembly::Utility::recalculate_consensus_qualities_and_change($right_contig,
+		Genome::Site::WUGC::Finishing::Assembly::Utility::recalculate_consensus_qualities_and_change($right_contig,
 			$clipped_start,
 			$clipped_stop,
 			\@right_reads);
@@ -1861,7 +1861,7 @@ sub remove_reads
     #my $region = $ori_contig->get_contiguous_reads([values %reads],$ori_contig->tags);
     #if(!defined $region) {print $ori_contig->name."\n"; return undef;}
 
-    my $src_fac = Finishing::Assembly::Factory->connect('source'); 
+    my $src_fac = Genome::Site::WUGC::Finishing::Assembly::Factory->connect('source'); 
     my $contig  = $src_fac->copy_contig($ori_contig);
 
     #$contig->assembled_reads($region->{reads});
@@ -1968,7 +1968,7 @@ sub remove_reads
 	# of these may be in the right contig and thus the start_
 	# may be to the left of where the new left contig starts.)
 
-	Finishing::Assembly::Utility::recalculate_consensus_qualities_and_change($contig, $start, $stop, [values %reads]);
+	Genome::Site::WUGC::Finishing::Assembly::Utility::recalculate_consensus_qualities_and_change($contig, $start, $stop, [values %reads]);
 	
 	# That completes the base segments for the new left contig
 	# do full checking once
@@ -1986,7 +1986,7 @@ sub remove_read
     my %reads = map{$_->name, $_}$ori_contig->assembled_reads->all;
     my $read = delete $reads{$params{remove_read}};
 
-    my $src_fac = Finishing::Assembly::Factory->connect('source'); 
+    my $src_fac = Genome::Site::WUGC::Finishing::Assembly::Factory->connect('source'); 
     my $contig  = $src_fac->copy_contig($ori_contig);
     $contig->assembled_reads([values %reads]);
     $contig->tags($ori_contig->tags);
@@ -2081,7 +2081,7 @@ sub remove_read
 				   )
 	    )
 	{
-	    Finishing::Assembly::Utility::recalculate_consensus_qualities_and_change($contig, $nConsPosLeftToRecalculate, $nConsPosRightToRecalculate, $overlap_reads);
+	    Genome::Site::WUGC::Finishing::Assembly::Utility::recalculate_consensus_qualities_and_change($contig, $nConsPosLeftToRecalculate, $nConsPosRightToRecalculate, $overlap_reads);
 	}
 
 	# That completes the base segments for the new left contig
@@ -2226,7 +2226,7 @@ ContigTools - Object oriented contig toolkit
     
 =head1 DESCRIPTION
 
-Finishing::Assembly::ContigTools performs operation on objects of type contig.  So far the functions supported are merging and splitting.
+Genome::Site::WUGC::Finishing::Assembly::ContigTools performs operation on objects of type contig.  So far the functions supported are merging and splitting.
 
 =head1 METHODS
 

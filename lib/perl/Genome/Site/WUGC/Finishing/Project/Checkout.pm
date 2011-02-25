@@ -1,4 +1,4 @@
-package Finishing::Project::Checkout;
+package Genome::Site::WUGC::Finishing::Project::Checkout;
 
 use strict;
 use warnings;
@@ -6,8 +6,8 @@ use warnings;
 use Finfo::Std;
 
 use Data::Dumper;
-use Finishing::Assembly::Ace::Ext;
-use Finishing::Project::Utils;
+use Genome::Site::WUGC::Finishing::Assembly::Ace::Ext;
+use Genome::Site::WUGC::Finishing::Project::Utils;
 use GSC::IO::Assembly::Ace;
 use GSC::IO::Assembly::Ace::Writer;
 use GSC::Sequence::Assembly::AceAdaptor;
@@ -20,13 +20,13 @@ require File::Copy;
 
 my %xml :name(xml:r)
     :type(inherits_from)
-    :options([qw/ Finishing::Project::XML /]);
+    :options([qw/ Genome::Site::WUGC::Finishing::Project::XML /]);
 
 my %missed_db_traces :name(_missed_db_traces:p) :type(aryref) :default([]);
 
 sub utils : PRIVATE
 {
-    return Finishing::Project::Utils->instance;
+    return Genome::Site::WUGC::Finishing::Project::Utils->instance;
 }
 
 sub execute
@@ -43,7 +43,7 @@ sub execute
     foreach my $name ( keys %$projects )
     {
         $self->info_msG("Checking out $name");
-        my $fin_proj = Finishing::Project->new(dir => $projects->{$name}->{dir});
+        my $fin_proj = Genome::Site::WUGC::Finishing::Project->new(dir => $projects->{$name}->{dir});
         $fin_proj->create_consed_dir_structure;
 
         my ($co_type) = grep { exists $projects->{$name}->{$_} } (qw/ acefile ctgs seq_region /);
@@ -89,7 +89,7 @@ sub _checkout_acefile
     my $ace = GSC::IO::Assembly::Ace->new(input_file => $acefile)
         or return;
 
-    my $aceext = Finishing::Assembly::Ace::Ext->new(ace => $ace)
+    my $aceext = Genome::Site::WUGC::Finishing::Assembly::Ace::Ext->new(ace => $ace)
         or return;
 
     my $reads = $aceext->get_reads;
@@ -165,7 +165,7 @@ sub _checkout_ctgs : PRIVATE
     my $ace = GSC::IO::Assembly::Ace->new();
     return unless $ace;
 
-    Finishing::Project::ContigCollector->instance->execute($project, $ace)
+    Genome::Site::WUGC::Finishing::Project::ContigCollector->instance->execute($project, $ace)
         or return;
 
     $ace->write_file(output_file => $acefile);
@@ -182,7 +182,7 @@ sub _checkout_ctgs : PRIVATE
 
     $self->info_msg("Getting reads and phds for $project->{name}");
     
-    my $acemodel = Finishing::ProjectWorkBench::Model::Ace->new(aceobject => $ace)
+    my $acemodel = Genome::Site::WUGC::Finishing::ProjectWorkBench::Model::Ace->new(aceobject => $ace)
         or return;
 
     my $reads = $acemodel->contigs_to_reads;
@@ -233,7 +233,7 @@ sub _checkout_gsc_sequence_region : PRIVATE
 {
     my ($self, $project) = @_;
 
-    my $region = Finishing::Project::Utils->instance->get_gsc_sequence_item
+    my $region = Genome::Site::WUGC::Finishing::Project::Utils->instance->get_gsc_sequence_item
     (
         $project->{seq_region_id} 
     )
@@ -380,13 +380,13 @@ sub _create_gsc_seq_fin_project
 
     return unless $proj_utils->validate_project($project);
 
-    my $gsc_seq_proj = GSC::Sequence::Setup::Finishing::Project->get(name => $project->{name});
+    my $gsc_seq_proj = GSC::Sequence::Setup::Genome::Site::WUGC::Finishing::Project->get(name => $project->{name});
 
     unless ( $gsc_seq_proj )
     {
         return unless $proj_utils->validate_new_seq_name($project->{name});
 
-        $gsc_seq_proj = GSC::Sequence::Setup::Finishing::Project->new
+        $gsc_seq_proj = GSC::Sequence::Setup::Genome::Site::WUGC::Finishing::Project->new
         (
             name => $project->{name},
             project_status => 'prefinish_done',
@@ -398,7 +398,7 @@ sub _create_gsc_seq_fin_project
 
         $self->error_msg
         (
-            "Could not create GSC::Sequence::Setup::Finishing::Project for $project->{name}"
+            "Could not create GSC::Sequence::Setup::Genome::Site::WUGC::Finishing::Project for $project->{name}"
         )
             and return unless $gsc_seq_proj;
 

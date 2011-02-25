@@ -1,9 +1,9 @@
-package Finishing::Project::GSC;
+package Genome::Site::WUGC::Finishing::Project::GSC;
 
 use strict;
 use warnings;
 
-use base 'Finishing::Project';
+use base 'Genome::Site::WUGC::Finishing::Project';
 
 use Bio::DB::GenBank;
 use Data::Dumper;

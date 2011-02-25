@@ -1,9 +1,9 @@
-package Finishing::Assembly::Ace::AssembledRead;
+package Genome::Site::WUGC::Finishing::Assembly::Ace::AssembledRead;
 
 use strict;
 use warnings;
 
-use base 'Finishing::Assembly::Ace::Source';
+use base 'Genome::Site::WUGC::Finishing::Assembly::Ace::Source';
 
 use Data::Dumper;
 
@@ -23,7 +23,7 @@ __PACKAGE__->mk_code_accessors
 
 =head1 Name
 
-Finishing::Assembly::Ace::AssembledRead
+Genome::Site::WUGC::Finishing::Assembly::Ace::AssembledRead
 
 =head1 Synopsis
 

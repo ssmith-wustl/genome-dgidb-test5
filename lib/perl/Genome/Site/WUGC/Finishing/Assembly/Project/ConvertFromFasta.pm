@@ -1,4 +1,4 @@
-package Finishing::Assembly::Project::ConvertFromFasta;
+package Genome::Site::WUGC::Finishing::Assembly::Project::ConvertFromFasta;
 
 use strict;
 use warnings;
@@ -7,22 +7,22 @@ use Finfo::Std;
 
 use Bio::SeqIO;
 use Data::Dumper;
-use Finishing::Assembly::Project::Utils;
+use Genome::Site::WUGC::Finishing::Assembly::Project::Utils;
 use IO::File;
 
 my %namer :name(namer:r)
-    :isa('object Finishing::Assembly::Project::Namer');
+    :isa('object Genome::Site::WUGC::Finishing::Assembly::Project::Namer');
 my %fasta :name(fasta:r) 
     :isa(file_r)
     :desc('Fasta file');
 my %xml :name(xml:r)
-    :isa('object Finishing::Assembly::Project::XML');
+    :isa('object Genome::Site::WUGC::Finishing::Assembly::Project::XML');
 my %proj_db :name(project_db:r)
-    :isa([ 'in_list', Finishing::Assembly::Factory->available_dbs ])
-    :desc('DB to create project in: ' . join(', ', Finishing::Assembly::Factory->available_dbs));
+    :isa([ 'in_list', Genome::Site::WUGC::Finishing::Assembly::Factory->available_dbs ])
+    :desc('DB to create project in: ' . join(', ', Genome::Site::WUGC::Finishing::Assembly::Factory->available_dbs));
 my %ctg_db :name(contig_db:r)
-    :isa([ 'in_list', Finishing::Assembly::Factory->available_dbs ])
-    :desc('DB source of contigs: ' . join(', ', Finishing::Assembly::Factory->available_dbs));
+    :isa([ 'in_list', Genome::Site::WUGC::Finishing::Assembly::Factory->available_dbs ])
+    :desc('DB source of contigs: ' . join(', ', Genome::Site::WUGC::Finishing::Assembly::Factory->available_dbs));
 my %rename_contigs :name(rename_contigs:o)
     :isa('in_list renumber include_project_name renumber_and_include')
     :default(0)
@@ -38,7 +38,7 @@ my %ctg_pattern :name(pattern:o)
 
 sub utils : PRIVATE
 {
-    return Finishing::Project::Utils->instance;
+    return Genome::Site::WUGC::Finishing::Project::Utils->instance;
 }
 
 sub execute
@@ -58,7 +58,7 @@ sub execute
         my $name = $self->namer->next_name;
         my $pattern = $self->pattern;
         #TODO
-        my $ctg_namer = Finishing::Project::Namer->new
+        my $ctg_namer = Genome::Site::WUGC::Finishing::Project::Namer->new
         (
             base_name => sprintf
             (
@@ -73,7 +73,7 @@ sub execute
             my $file;
             if ( $file = $self->file_info )
             {
-                my $num = Finishing::Assembly::Project::Utils->instance->contig_lookup_number($ctg);
+                my $num = Genome::Site::WUGC::Finishing::Assembly::Project::Utils->instance->contig_lookup_number($ctg);
                 $file =~ s/\[\]/$num/;
             }
 

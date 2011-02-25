@@ -1,6 +1,6 @@
-package Finishing::Assembly::Source::ContigProxy;
+package Genome::Site::WUGC::Finishing::Assembly::Source::ContigProxy;
 
-use base 'Finishing::Assembly::Proxy';
+use base 'Genome::Site::WUGC::Finishing::Assembly::Proxy';
 
 sub methods_for_source_method
 {
@@ -24,9 +24,9 @@ sub methods_for_source_method
 
 ##############################################################
 
-package Finishing::Assembly::Source::AssembledReadProxy;
+package Genome::Site::WUGC::Finishing::Assembly::Source::AssembledReadProxy;
 
-use base 'Finishing::Assembly::Proxy';
+use base 'Genome::Site::WUGC::Finishing::Assembly::Proxy';
 
 sub methods_for_source_method
 {
@@ -57,9 +57,9 @@ sub methods_for_source_method
 
 ##############################################################
 
-package Finishing::Assembly::Source::ProjectProxy;
+package Genome::Site::WUGC::Finishing::Assembly::Source::ProjectProxy;
 
-use base 'Finishing::Assembly::Proxy';
+use base 'Genome::Site::WUGC::Finishing::Assembly::Proxy';
 
 sub methods_for_source_method : CUMULATIVE
 {
@@ -76,9 +76,9 @@ sub methods_for_source_method : CUMULATIVE
 #- TAG PROXIES -#
 #################
 
-package Finishing::Assembly::Source::TagProxy;
+package Genome::Site::WUGC::Finishing::Assembly::Source::TagProxy;
 
-use base 'Finishing::Assembly::Proxy';
+use base 'Genome::Site::WUGC::Finishing::Assembly::Proxy';
 
 sub methods_for_source_method : CUMULATIVE
 {
@@ -94,15 +94,15 @@ sub methods_for_source_method : CUMULATIVE
 
 #-#
 
-package Finishing::Assembly::Source::AssemblyTagProxy;
+package Genome::Site::WUGC::Finishing::Assembly::Source::AssemblyTagProxy;
 
-use base 'Finishing::Assembly::Source::TagProxy';
+use base 'Genome::Site::WUGC::Finishing::Assembly::Source::TagProxy';
 
 #-#
 
-package Finishing::Assembly::Source::SequenceTagProxy;
+package Genome::Site::WUGC::Finishing::Assembly::Source::SequenceTagProxy;
 
-use base 'Finishing::Assembly::Source::TagProxy';
+use base 'Genome::Site::WUGC::Finishing::Assembly::Source::TagProxy';
 
 sub methods_for_source_method : CUMULATIVE
 {
@@ -119,9 +119,9 @@ sub methods_for_source_method : CUMULATIVE
 
 #-#
 
-package Finishing::Assembly::Source::ConsensusTagProxy;
+package Genome::Site::WUGC::Finishing::Assembly::Source::ConsensusTagProxy;
 
-use base 'Finishing::Assembly::Source::SequenceTagProxy';
+use base 'Genome::Site::WUGC::Finishing::Assembly::Source::SequenceTagProxy';
 
 my %is_oligo :name(is_oligo:p) :isa(boolean);
 my %is_auto_finish_exp :name(is_auto_finish_exp:p) :isa(boolean);
@@ -174,9 +174,9 @@ sub methods_for_source_method : CUMULATIVE
 #vvv AUTOEXP and OLIGO methods go here vvv
 #-#
 
-package Finishing::Assembly::Source::ReadTagProxy;
+package Genome::Site::WUGC::Finishing::Assembly::Source::ReadTagProxy;
 
-use base 'Finishing::Assembly::Source::SequenceTagProxy';
+use base 'Genome::Site::WUGC::Finishing::Assembly::Source::SequenceTagProxy';
 
 1;
 

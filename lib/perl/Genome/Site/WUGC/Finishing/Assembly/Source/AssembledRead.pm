@@ -1,4 +1,4 @@
-package Finishing::Assembly::Source::AssembledRead;
+package Genome::Site::WUGC::Finishing::Assembly::Source::AssembledRead;
 
 use strict;
 use warnings;
@@ -222,7 +222,7 @@ sub primer
 
 =head1 Name
 
-Finishing::Assembly::Source::AssembledRead
+Genome::Site::WUGC::Finishing::Assembly::Source::AssembledRead
 
 =head1 Synopsis
 

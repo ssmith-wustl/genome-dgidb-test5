@@ -1,4 +1,4 @@
-package Finishing::Project::Splitter;
+package Genome::Site::WUGC::Finishing::Project::Splitter;
 
 # TODO this needs to be tweaked a bit, the projs are greater than the
 # target size by the difference of the overlap
@@ -13,10 +13,10 @@ use Data::Dumper;
 # req
 my %project_namer :name(project_namer:r) 
     :type(inherits_from) 
-    :options([ 'Finishing::Project::Namer' ]);
+    :options([ 'Genome::Site::WUGC::Finishing::Project::Namer' ]);
 my %xml :name(xml:r)
     :type(inherits_from)
-    :options([qw/ Finishing::Project::XML /]);
+    :options([qw/ Genome::Site::WUGC::Finishing::Project::XML /]);
 #opt
 my %inc_proj_name_in_ctg_name :name(include_proj_name_in_ctg_name:o) 
     :type(defined) 

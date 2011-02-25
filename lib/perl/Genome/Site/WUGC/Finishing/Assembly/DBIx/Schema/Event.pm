@@ -1,4 +1,4 @@
-package Finishing::Assembly::DBIx::Schema::Event;
+package Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Event;
 use base 'DBIx::Class';
 use strict;
 use warnings;

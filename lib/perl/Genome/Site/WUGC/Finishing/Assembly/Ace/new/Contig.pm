@@ -1,4 +1,4 @@
-package Finishing::Assembly::Ace::Contig;
+package Genome::Site::WUGC::Finishing::Assembly::Ace::Contig;
 
 use strict;
 use warnings;
@@ -95,7 +95,7 @@ sub base_segment_count
 
 =head1 Name
 
-Finishing::Assembly::Ace::Contig.pm
+Genome::Site::WUGC::Finishing::Assembly::Ace::Contig.pm
 
 =head1 Synopsis
 

@@ -1,10 +1,10 @@
-package Finishing::Assembly::Commands::MakeChromosomeBlastdb;
+package Genome::Site::WUGC::Finishing::Assembly::Commands::MakeChromosomeBlastdb;
 
 use strict;
 use warnings;
 
 
-use base 'Finishing::Assembly::Commands::Base';
+use base 'Genome::Site::WUGC::Finishing::Assembly::Commands::Base';
 
 use Bio::SeqIO;
 
@@ -55,7 +55,7 @@ sub execute {
 
 =head1 Name
 
-Finishing::Assembly::Commands::MakeChromosomeBlastdb
+Genome::Site::WUGC::Finishing::Assembly::Commands::MakeChromosomeBlastdb
 
 =head1 Description
 
@@ -63,7 +63,7 @@ This module is to make chromosome contig blast DB out of database
 
 =head1 Synopsis
 
-$mkdb = Finishing::Assembly::Commands::MakeChromosomeBlastdb->new(
+$mkdb = Genome::Site::WUGC::Finishing::Assembly::Commands::MakeChromosomeBlastdb->new(
     db       => 'dwrac_asm',
     org_name => 'pan_troglodytes',
     asm_name => '3.0',

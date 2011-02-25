@@ -1,4 +1,4 @@
-package Finishing::Assembly::Consed;
+package Genome::Site::WUGC::Finishing::Assembly::Consed;
 
 use warnings;
 use strict;
@@ -517,7 +517,7 @@ sub _handle_consed_return_value : PRIVATE
 
 =head1 Name
 
-Finishing::Assembly::Consed::Run
+Genome::Site::WUGC::Finishing::Assembly::Consed::Run
 
 =head1 Synopsis
 
@@ -525,7 +525,7 @@ Manages and runs the many versions of consed.
 
 =head1 Usage
 
- my $consed = Finishing::Assembly::Consed::Run->new(%params)
+ my $consed = Genome::Site::WUGC::Finishing::Assembly::Consed::Run->new(%params)
     or die;
  my $exit_status = $consed->execute;
  exit($exit_status);

@@ -1,4 +1,4 @@
-package Finishing::Project::StepExecutor;
+package Genome::Site::WUGC::Finishing::Project::StepExecutor;
 
 use strict;
 use warnings;
@@ -85,7 +85,7 @@ sub _collect_contigs_and_create_acefiles
     return unless $self->params->{projects};
     return unless $self->params->{dir};
     
-    my $collector = Finishing::Project::ContigCollector->instance;
+    my $collector = Genome::Site::WUGC::Finishing::Project::ContigCollector->instance;
     
     foreach my $project ( @{ $self->params->{projects} } )
     {

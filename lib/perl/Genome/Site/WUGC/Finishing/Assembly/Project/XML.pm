@@ -1,4 +1,4 @@
-package Finishing::Assembly::Project::XML;
+package Genome::Site::WUGC::Finishing::Assembly::Project::XML;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use Finfo::Std;
 
 use Data::Dumper;
-use Finishing::Assembly::Project::Utils;
+use Genome::Site::WUGC::Finishing::Assembly::Project::Utils;
 use XML::Simple ':strict';
 
 my %file :name(file:r)
@@ -50,7 +50,7 @@ sub read_projects
         $projects = $self->_xml_simple->XMLin( join('', $fh->getlines) );
     };
 
-    Finishing::Assembly::Project::Utils->instance->validate_projects_hash($projects);
+    Genome::Site::WUGC::Finishing::Assembly::Project::Utils->instance->validate_projects_hash($projects);
 
     return $projects;
 }
@@ -59,7 +59,7 @@ sub write_projects
 {
     my ($self, $projects) = @_;
 
-    Finishing::Assembly::Project::Utils->instance->validate_projects_hash($projects);
+    Genome::Site::WUGC::Finishing::Assembly::Project::Utils->instance->validate_projects_hash($projects);
 
     my $xml;
     eval
@@ -87,7 +87,7 @@ sub write_projects
 
 =head1 Name
 
-Finishing::Assembly::Project::XML
+Genome::Site::WUGC::Finishing::Assembly::Project::XML
 
 =head1 Synopsis
 
@@ -95,9 +95,9 @@ Converts a projects hash to and from xml for file system storage.
 
 =head1 Usage
 
- use Finishing::Assembly::Project::XML;
+ use Genome::Site::WUGC::Finishing::Assembly::Project::XML;
 
- my $project_xml = Finishing::Assembly::Project::XML->new(file => $file);
+ my $project_xml = Genome::Site::WUGC::Finishing::Assembly::Project::XML->new(file => $file);
 
  # Modify projects
  my $projects = $project_xml->read_projects;
@@ -205,13 +205,13 @@ Additionally, the contig can be renamed.  If the original name is desired, do no
 
 =over
 
-=item B<Finishing::Assembly::Project>
+=item B<Genome::Site::WUGC::Finishing::Assembly::Project>
 
-=item B<Finishing::Assembly::Factory>
+=item B<Genome::Site::WUGC::Finishing::Assembly::Factory>
 
-=item B<Finishing::Assembly::Project::Checkout>
+=item B<Genome::Site::WUGC::Finishing::Assembly::Project::Checkout>
 
-=item B<Finishing::Assembly::Project::XML::Checkout>
+=item B<Genome::Site::WUGC::Finishing::Assembly::Project::XML::Checkout>
 
 =back
 

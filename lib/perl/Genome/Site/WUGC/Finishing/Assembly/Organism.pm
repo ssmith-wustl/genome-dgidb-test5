@@ -1,9 +1,9 @@
-package Finishing::Assembly::Organism;
+package Genome::Site::WUGC::Finishing::Assembly::Organism;
 
 use strict;
 use warnings;
 
-use base 'Finishing::Assembly::Item';
+use base 'Genome::Site::WUGC::Finishing::Assembly::Item';
 
 #- NAMES -#
 sub spaced_name { return species_name(@_); }

@@ -1,12 +1,12 @@
-package Finishing::Assembly::SequencedItem;
+package Genome::Site::WUGC::Finishing::Assembly::SequencedItem;
 
 use strict;
 use warnings;
 
-use base 'Finishing::Assembly::Item';
+use base 'Genome::Site::WUGC::Finishing::Assembly::Item';
 
 use Data::Dumper;
-use Finishing::Assembly::Sequence;
+use Genome::Site::WUGC::Finishing::Assembly::Sequence;
 
 my %seq :name(_sequence:p) :isa('object');
 
@@ -27,7 +27,7 @@ sub START
     my $qualities = $self->proxy->get_method('qualities')->();
     return $self->_sequence
     (
-        Finishing::Assembly::Sequence->new
+        Genome::Site::WUGC::Finishing::Assembly::Sequence->new
         (
             base_string => $base_string || undef,
             qualities => $qualities || undef,

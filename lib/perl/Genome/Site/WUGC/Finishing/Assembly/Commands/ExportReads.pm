@@ -1,4 +1,4 @@
-package Finishing::Assembly::Commands::ExportReads;
+package Genome::Site::WUGC::Finishing::Assembly::Commands::ExportReads;
 
 use strict;
 use warnings;
@@ -6,9 +6,9 @@ use warnings;
 use Finfo::Std;
 
 use Data::Dumper;
-use Finishing::Assembly::Commands::ExportGscReads;
-use Finishing::Assembly::Phd::Exporter;
-use Finishing::Assembly::Phd::FastaAndQualDB;
+use Genome::Site::WUGC::Finishing::Assembly::Commands::ExportGscReads;
+use Genome::Site::WUGC::Finishing::Assembly::Phd::Exporter;
+use Genome::Site::WUGC::Finishing::Assembly::Phd::FastaAndQualDB;
 use NCBI::TraceArchive;
 use NCBI::TraceArchive::ProcessTraces;
 
@@ -55,7 +55,7 @@ sub _gsc
 {
     my ($self, $read_names) = @_;
 
-    my $read_xporter = Finishing::Assembly::Commands::ExportGscReads->new
+    my $read_xporter = Genome::Site::WUGC::Finishing::Assembly::Commands::ExportGscReads->new
     (
         read_names => $read_names,
         chromat_dir => $self->chromat_dir,
@@ -104,7 +104,7 @@ sub _chimp
     my $chromat_dir = $self->chromat_dir;
     my $phd_dir = $self->phd_dir;
 
-    my $factory = Finishing::Assembly::Factory->connect
+    my $factory = Genome::Site::WUGC::Finishing::Assembly::Factory->connect
     (
         'phd_fnqdb',
         '/gscmnt/temp113/finishing/scratch/chimp/2.1_051011/clipped_fasta_and_qual/chimp_read_fa_qual_index.sqlite'
@@ -117,7 +117,7 @@ sub _chimp
         push @missed_names, $name
             and next unless $phd;
 
-        my $xporter = Finishing::Assembly::Phd::Exporter->new
+        my $xporter = Genome::Site::WUGC::Finishing::Assembly::Phd::Exporter->new
         (
             read => $phd,
             file => sprintf('%s/%s', $phd_dir, $phd->phd_file),
@@ -154,7 +154,7 @@ sub _chimp
 
 =head1 Name
 
-Finishing::Assembly::Commands::GetScfsAndPhds
+Genome::Site::WUGC::Finishing::Assembly::Commands::GetScfsAndPhds
 
 =head1 Synopsis
 

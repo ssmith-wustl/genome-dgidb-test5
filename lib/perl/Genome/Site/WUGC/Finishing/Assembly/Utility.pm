@@ -1,4 +1,4 @@
-package Finishing::Assembly::Utility;
+package Genome::Site::WUGC::Finishing::Assembly::Utility;
 
 use Exporter;
 use Compress::Zlib;

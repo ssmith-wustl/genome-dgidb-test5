@@ -1,6 +1,6 @@
-package Finishing::Assembly::Phd::AssembledReadProxy;
+package Genome::Site::WUGC::Finishing::Assembly::Phd::AssembledReadProxy;
 
-use base 'Finishing::Assembly::Proxy';
+use base 'Genome::Site::WUGC::Finishing::Assembly::Proxy';
 
 use Data::Dumper;
 

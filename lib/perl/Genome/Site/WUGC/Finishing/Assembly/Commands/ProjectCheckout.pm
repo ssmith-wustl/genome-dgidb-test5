@@ -1,17 +1,17 @@
-package Finishing::Assembly::Commands::ProjectCheckout;
+package Genome::Site::WUGC::Finishing::Assembly::Commands::ProjectCheckout;
 
 use strict;
 use warnings;
 
-use base 'Finishing::Assembly::Commands::Base';
+use base 'Genome::Site::WUGC::Finishing::Assembly::Commands::Base';
 
 use Cwd 'abs_path';
 use Data::Dumper;
 use File::Basename;
-use Finishing::Assembly::Ace::Exporter;
-use Finishing::Assembly::Commands::ExportReads;
-use Finishing::Assembly::Commands::SyncAcePhds;
-use Finishing::Assembly::Project::Utils;
+use Genome::Site::WUGC::Finishing::Assembly::Ace::Exporter;
+use Genome::Site::WUGC::Finishing::Assembly::Commands::ExportReads;
+use Genome::Site::WUGC::Finishing::Assembly::Commands::SyncAcePhds;
+use Genome::Site::WUGC::Finishing::Assembly::Project::Utils;
 use IO::File;
 
 my %name :name(name:r);
@@ -33,12 +33,12 @@ my %sync_phds :name(sync_phds:o)
 
 sub valid_read_sources
 {
-    return Finishing::Assembly::Commands::ExportReads->valid_read_sources;
+    return Genome::Site::WUGC::Finishing::Assembly::Commands::ExportReads->valid_read_sources;
 }
     
 sub project_utils
 {
-    return Finishing::Assembly::Project::Utils->instance;
+    return Genome::Site::WUGC::Finishing::Assembly::Project::Utils->instance;
 }
 
 sub execute
@@ -65,7 +65,7 @@ sub execute
     {
         my $acefile = sprintf('%s/%s.ace', $project->edit_dir, $project->name);
         $project->touch_singlets_file_for_acefile($acefile); 
-        my $xporter = Finishing::Assembly::Ace::Exporter->new
+        my $xporter = Genome::Site::WUGC::Finishing::Assembly::Ace::Exporter->new
         (
             file => $acefile,
         );
@@ -74,7 +74,7 @@ sub execute
         {
             my $name = $contig_info->{name};
             my $db = $contig_info->{db};
-            my $factory = Finishing::Assembly::Factory->connect 
+            my $factory = Genome::Site::WUGC::Finishing::Assembly::Factory->connect 
             (
                 $db,
                 ( exists $contig_info->{file} ) ? $contig_info->{file} : undef,
@@ -125,7 +125,7 @@ sub _export_reads
 {
     my ($self, $read_names, $chromat_dir, $phd_dir) = @_;
 
-    my $read_xporter = Finishing::Assembly::Commands::ExportReads->new
+    my $read_xporter = Genome::Site::WUGC::Finishing::Assembly::Commands::ExportReads->new
     (
         read_names => $read_names,
         chromat_dir => $chromat_dir,
@@ -141,7 +141,7 @@ sub _sync_phds
 {
     my ($self, $acefile, $phd_dir) = @_;
 
-    my $syncr = Finishing::Assembly::Commands::SyncAcePhds->new
+    my $syncr = Genome::Site::WUGC::Finishing::Assembly::Commands::SyncAcePhds->new
     (
         file => $acefile,
         phd_dir => $phd_dir,
@@ -158,7 +158,7 @@ sub _sync_phds
 
 =head1 Name
 
-Finishing::Assembly::Project::Checkout
+Genome::Site::WUGC::Finishing::Assembly::Project::Checkout
 
 =head1 Synopsis
 
@@ -166,12 +166,12 @@ Given a project's attributes, creates the project in a given database, creates i
 
 =head1 Usage
 
- use Finishing::Assembly::Project::Checkout;
+ use Genome::Site::WUGC::Finishing::Assembly::Project::Checkout;
 
- my $checkout = Finishing::Assembly::Project::Checkout->new
+ my $checkout = Genome::Site::WUGC::Finishing::Assembly::Project::Checkout->new
  (
     # base command params
-    db => $db_to_crete_project_in, #req, see Finishing::Assembly::Factory->available_dbs
+    db => $db_to_crete_project_in, #req, see Genome::Site::WUGC::Finishing::Assembly::Factory->available_dbs
     db_file => $db_file, #req for some dbs like ace and sqlite
     # checkout project 
     name => $project_name, #req
@@ -220,13 +220,13 @@ head2 execute
 
 =over
 
-=item B<Finishing::Assembly::Project>
+=item B<Genome::Site::WUGC::Finishing::Assembly::Project>
 
-=item B<Finishing::Assembly::Factory>
+=item B<Genome::Site::WUGC::Finishing::Assembly::Factory>
 
-=item B<Finishing::Assembly::Project::Checkout>
+=item B<Genome::Site::WUGC::Finishing::Assembly::Project::Checkout>
 
-=item B<Finishing::Assembly::Project::XML::Checkout>
+=item B<Genome::Site::WUGC::Finishing::Assembly::Project::XML::Checkout>
 
 =back
 

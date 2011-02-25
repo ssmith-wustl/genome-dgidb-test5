@@ -1,4 +1,4 @@
-package Finishing::Assembly::DBIx::Schema::Assembly;
+package Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Assembly;
 
 use strict;
 use warnings;
@@ -47,12 +47,12 @@ __PACKAGE__->add_columns
 );
 __PACKAGE__->set_primary_key('id');
 __PACKAGE__->add_unique_constraint([qw/ organism_id name /]);
-__PACKAGE__->belongs_to('organism', 'Finishing::Assembly::DBIx::Schema::Organism', 'organism_id');
-__PACKAGE__->has_many('scaffolds', 'Finishing::Assembly::DBIx::Schema::Scaffold', 'assembly_id');
-__PACKAGE__->has_many('contigs', 'Finishing::Assembly::DBIx::Schema::Contig', 'assembly_id');
-__PACKAGE__->has_many('assembled_reads', 'Finishing::Assembly::DBIx::Schema::AssembledRead', 'assembly_id');
-__PACKAGE__->has_many('tags', 'Finishing::Assembly::DBIx::Schema::AssemblyTag', 'assembly_id');
-__PACKAGE__->has_many('improvement_correlations', 'Finishing::Assembly::DBIx::Schema::ImprovementCorrelation', 'assembly_id');
+__PACKAGE__->belongs_to('organism', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Organism', 'organism_id');
+__PACKAGE__->has_many('scaffolds', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Scaffold', 'assembly_id');
+__PACKAGE__->has_many('contigs', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Contig', 'assembly_id');
+__PACKAGE__->has_many('assembled_reads', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::AssembledRead', 'assembly_id');
+__PACKAGE__->has_many('tags', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::AssemblyTag', 'assembly_id');
+__PACKAGE__->has_many('improvement_correlations', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::ImprovementCorrelation', 'assembly_id');
 
 sub get_scaffold
 {

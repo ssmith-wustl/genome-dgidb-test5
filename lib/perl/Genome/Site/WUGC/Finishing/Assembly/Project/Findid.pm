@@ -1,4 +1,4 @@
-package Finishing::Assembly::Project::Findid;
+package Genome::Site::WUGC::Finishing::Assembly::Project::Findid;
 
 use strict;
 use warnings;
@@ -207,7 +207,7 @@ sub transposon_identifiers
 
 =head1 Name
 
-Assembly::Finishing::Project::Findid
+Assembly::Genome::Site::WUGC::Finishing::Project::Findid
 
 =head1 Synopsis
 
@@ -215,18 +215,18 @@ Provides access to a project's findid (blast) output.
 
 =head1 Usage
 
- use Finishing::Assembly::Factory;
+ use Genome::Site::WUGC::Finishing::Assembly::Factory;
  
- my $factory = Finishing::Assembly::Factory->connect('gsc');
+ my $factory = Genome::Site::WUGC::Finishing::Assembly::Factory->connect('gsc');
  my $project = $factory->get_project('C_AB0278M16');
  my $findid = $project->findid;
 
   * or directly *
 
- use Finishing::Assembly::Project::Findid;
+ use Genome::Site::WUGC::Finishing::Assembly::Project::Findid;
  use Alignment::Findid::Reader;
 
- my $findid = Finishing::Assembly::Project::Findid->new
+ my $findid = Genome::Site::WUGC::Finishing::Assembly::Project::Findid->new
  (
     project_name => 'C_AB0278M16',
     species => 'chimp',

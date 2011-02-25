@@ -1,13 +1,13 @@
-package Finishing::Project::AcefileSplitter;
+package Genome::Site::WUGC::Finishing::Project::AcefileSplitter;
 
 use strict;
 use warnings;
 
-use base 'Finishing::Project::Splitter';
+use base 'Genome::Site::WUGC::Finishing::Project::Splitter';
 
 use Data::Dumper;
 use GSC::IO::Assembly::Ace;
-#use Finishing::Assembly::AceSQLite;
+#use Genome::Site::WUGC::Finishing::Assembly::AceSQLite;
 
 my %acefile :name(acefile:r)
     :type(input_file)

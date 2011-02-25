@@ -1,4 +1,4 @@
-package Finishing::Assembly::Sequence;
+package Genome::Site::WUGC::Finishing::Assembly::Sequence;
 
 use strict;
 use warnings;

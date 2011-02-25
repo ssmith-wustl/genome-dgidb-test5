@@ -1,4 +1,4 @@
-package Finishing::Assembly::Project::XML::Checkout;
+package Genome::Site::WUGC::Finishing::Assembly::Project::XML::Checkout;
 
 use strict;
 use warnings;
@@ -6,11 +6,11 @@ use warnings;
 use Finfo::Std;
 
 use Data::Dumper;
-use Finishing::Assembly::Project::Checkout;
-use Finishing::Assembly::Project::Utils;
+use Genome::Site::WUGC::Finishing::Assembly::Project::Checkout;
+use Genome::Site::WUGC::Finishing::Assembly::Project::Utils;
 
 my %xml :name(xml:r)
-    :isa('object Finishing::Project::XML');
+    :isa('object Genome::Site::WUGC::Finishing::Project::XML');
 
 my %missed_db_traces :name(_missed_db_traces:p)
     :ds(aryref)
@@ -19,7 +19,7 @@ my %missed_db_traces :name(_missed_db_traces:p)
 
 sub utils : PRIVATE
 {
-    return Finishing::Assembly::Project::Utils->instance;
+    return Genome::Site::WUGC::Finishing::Assembly::Project::Utils->instance;
 }
 
 sub execute
@@ -30,7 +30,7 @@ sub execute
 
     while ( my ($name, $project_info) = each %$projects )
     {
-        my $checkout = Finishing::Assembly::Project::Checkout->new
+        my $checkout = Genome::Site::WUGC::Finishing::Assembly::Project::Checkout->new
         (
             name => $name,
             directory => $project_info->{directory},

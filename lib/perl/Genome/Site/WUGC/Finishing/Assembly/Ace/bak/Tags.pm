@@ -1,4 +1,4 @@
-package Finishing::Assembly::Ace::TagFactory;
+package Genome::Site::WUGC::Finishing::Assembly::Ace::TagFactory;
 {
     use strict;
     use warnings;
@@ -13,9 +13,9 @@ package Finishing::Assembly::Ace::TagFactory;
         
         my %types_and_classes =
         (
-            assembly_tag => 'Finishing::Assembly::Ace::AssemblyTag',
-            contig_tag => 'Finishing::Assembly::Ace::ConsensusTag',
-            read_tag => 'Finishing::Assembly::Ace::ReadTag',
+            assembly_tag => 'Genome::Site::WUGC::Finishing::Assembly::Ace::AssemblyTag',
+            contig_tag => 'Genome::Site::WUGC::Finishing::Assembly::Ace::ConsensusTag',
+            read_tag => 'Genome::Site::WUGC::Finishing::Assembly::Ace::ReadTag',
         );
         
         my %tag_types_and_class_additions = 
@@ -38,7 +38,7 @@ package Finishing::Assembly::Ace::TagFactory;
 
 ##################################################################
 
-package Finishing::Assembly::Ace::Tag;
+package Genome::Site::WUGC::Finishing::Assembly::Ace::Tag;
 {
 
     use strict;
@@ -57,26 +57,26 @@ package Finishing::Assembly::Ace::Tag;
 
 ##################################################################
 
-package Finishing::Assembly::Ace::AssemblyTag;
+package Genome::Site::WUGC::Finishing::Assembly::Ace::AssemblyTag;
 {
 
     use strict;
     use warnings;
     
-    use base 'Finishing::Assembly::Ace::Tag';
+    use base 'Genome::Site::WUGC::Finishing::Assembly::Ace::Tag';
     
     1;
 }
 
 ##################################################################
 
-package Finishing::Assembly::Ace::SequenceTag;
+package Genome::Site::WUGC::Finishing::Assembly::Ace::SequenceTag;
 {
 
     use strict;
     use warnings;
     
-    use base 'Finishing::Assembly::Ace::Tag';
+    use base 'Genome::Site::WUGC::Finishing::Assembly::Ace::Tag';
     
     my %parent :name(parent:r);
     my %start :name(start:r) :isa('int pos');
@@ -89,9 +89,9 @@ package Finishing::Assembly::Ace::SequenceTag;
 
 ##################################################################
 
-package Finishing::Assembly::Ace::ConsensusTag;
+package Genome::Site::WUGC::Finishing::Assembly::Ace::ConsensusTag;
 {
-    use base 'Finishing::Assembly::Ace::SequenceTag';
+    use base 'Genome::Site::WUGC::Finishing::Assembly::Ace::SequenceTag';
 
     my %no_trans :name(no_trans:o) :default(0);
 
@@ -100,12 +100,12 @@ package Finishing::Assembly::Ace::ConsensusTag;
 
 ##################################################################
 
-package Finishing::Assembly::Ace::AutoFinishExpTag;
+package Genome::Site::WUGC::Finishing::Assembly::Ace::AutoFinishExpTag;
 {
     use strict;
     use warnings;
               
-    use base 'Finishing::Assembly::Ace::ConsensusTag';
+    use base 'Genome::Site::WUGC::Finishing::Assembly::Ace::ConsensusTag';
 
     my %ori :name(orientation:o);
     my %n1 :name(num1:o);
@@ -130,13 +130,13 @@ package Finishing::Assembly::Ace::AutoFinishExpTag;
 
 ##################################################################
 
-package Finishing::Assembly::Ace::OligoTag;
+package Genome::Site::WUGC::Finishing::Assembly::Ace::OligoTag;
 {
 
     use strict;
     use warnings;
 
-    use base 'Finishing::Assembly::Ace::ConsensusTag';
+    use base 'Genome::Site::WUGC::Finishing::Assembly::Ace::ConsensusTag';
 
     my %name :name(oligo_name:r) :isa(string);
     my %seq :name(oligo_seq:r) :isa(string);
@@ -149,10 +149,10 @@ package Finishing::Assembly::Ace::OligoTag;
 
 ##################################################################
 
-package Finishing::Assembly::Ace::ReadTag;
+package Genome::Site::WUGC::Finishing::Assembly::Ace::ReadTag;
 {
 
-    use base 'Finishing::Assembly::Ace::SequenceTag';
+    use base 'Genome::Site::WUGC::Finishing::Assembly::Ace::SequenceTag';
 
     1;
 }
@@ -161,9 +161,9 @@ package Finishing::Assembly::Ace::ReadTag;
 
 =head1 Name
 
- Finishing::Assembly::Tag::Oligo - Represents an oligo tag on a Finishing::Assembly::Item
+ Genome::Site::WUGC::Finishing::Assembly::Tag::Oligo - Represents an oligo tag on a Genome::Site::WUGC::Finishing::Assembly::Item
 
-  > Inherits from Finishing::Assembly::Tag;
+  > Inherits from Genome::Site::WUGC::Finishing::Assembly::Tag;
 
 =head2 Contig Tag Format
 
@@ -224,9 +224,9 @@ package Finishing::Assembly::Ace::ReadTag;
 
 =head1 Name
 
- Finishing::Assembly::Tag::Oligo - Represents an oligo tag on a Finishing::Assembly::Item
+ Genome::Site::WUGC::Finishing::Assembly::Tag::Oligo - Represents an oligo tag on a Genome::Site::WUGC::Finishing::Assembly::Item
 
-  > Inherits from Finishing::Assembly::Tag;
+  > Inherits from Genome::Site::WUGC::Finishing::Assembly::Tag;
 
 =head2 Contig Tag Format
 

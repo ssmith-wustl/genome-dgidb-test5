@@ -1,14 +1,14 @@
-package Finishing::Assembly::Commands::ImportChromosomeAgp;
+package Genome::Site::WUGC::Finishing::Assembly::Commands::ImportChromosomeAgp;
 
 use strict;
 use warnings;
 
 
-use base('Finishing::Assembly::Commands::Base');
+use base('Genome::Site::WUGC::Finishing::Assembly::Commands::Base');
 
 use Bio::SeqIO;
 use Data::Dumper;
-use Finishing::Assembly::AGP::Reader;
+use Genome::Site::WUGC::Finishing::Assembly::AGP::Reader;
 
 my %assem_name :name(assembly_name:r)
     :isa(string)
@@ -21,7 +21,7 @@ my %assem :name(_assembly:p)
 my %org :name(_organism:p)
     :isa('object');
 my %reader :name(reader:r)
-    :isa('object Finishing::Assembly::AGP::Reader');
+    :isa('object Genome::Site::WUGC::Finishing::Assembly::AGP::Reader');
 my %create_assembly :name(create_assembly:o)
     :isa(boolean)
     :default(0)
@@ -268,7 +268,7 @@ sub _create_or_update_contig_from_agp : PRIVATE
 
 =head1 Name
 
-Finishing::Assembly::AGP::DBIxImporter
+Genome::Site::WUGC::Finishing::Assembly::AGP::DBIxImporter
 
 =head1 Synopsis
 

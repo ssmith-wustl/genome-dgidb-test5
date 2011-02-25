@@ -1,4 +1,4 @@
-package Finishing::Project::ContigCollector;
+package Genome::Site::WUGC::Finishing::Project::ContigCollector;
 
 use strict;
 use warnings;
@@ -8,16 +8,16 @@ use base qw(Finfo::Singleton);
 use Data::Dumper;
 use File::Basename;
 use GSC::IO::Assembly::Ace;
-use Finishing::Project::Utils;
+use Genome::Site::WUGC::Finishing::Project::Utils;
 
 my %project :name(project:r) :type(non_empty_hashref);
-my %ace :name(ace:r) :type(inherits_from) :options([qw/ Finishing::Assembly::Ace /]);
+my %ace :name(ace:r) :type(inherits_from) :options([qw/ Genome::Site::WUGC::Finishing::Assembly::Ace /]);
 
 sub START
 {
     my $self = shift;
 
-    return Finishing::Project::Utils->instance->validate_project( $self->project );
+    return Genome::Site::WUGC::Finishing::Project::Utils->instance->validate_project( $self->project );
 }
 
 sub execute
@@ -142,7 +142,7 @@ sub _grab_contig_from_acefile : PRIVATE
     my $new_contig;
     if (0)# TODO( exists $ctg->{start} or exists $ctg->{stop} ) 
     {
-        my $am = Finishing::ProjectWorkBench::Model::Ace->new(aceobject => $aceobject);
+        my $am = Genome::Site::WUGC::Finishing::ProjectWorkBench::Model::Ace->new(aceobject => $aceobject);
 
         my $start = $contig->{start} || 1;
         my $stop = $contig->{stop} || $contig->length; # TODO
@@ -197,10 +197,10 @@ sub _grab_contig_from_db : PRIVATE
 {
     my ($self, $new_name, $ctg) = @_;
 
-    my $contig = Finishing::Project::Utils->instance->get_gsc_seq_item($ctg->{seqinfo})
+    my $contig = Genome::Site::WUGC::Finishing::Project::Utils->instance->get_gsc_seq_item($ctg->{seqinfo})
         or return;
 
-    return unless Finishing::Project::Utils->instance->validate_new_seq_name($new_name);
+    return unless Genome::Site::WUGC::Finishing::Project::Utils->instance->validate_new_seq_name($new_name);
 
     my $new_contig;
     if ( exists $ctg->{start} or exists $ctg->{stop} ) 

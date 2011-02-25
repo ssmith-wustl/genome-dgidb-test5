@@ -1,13 +1,13 @@
-package Finishing::Assembly::Ace::CoverageFilter;
+package Genome::Site::WUGC::Finishing::Assembly::Ace::CoverageFilter;
 
 use strict;
 use warnings;
 
 use base qw(Class::Accessor);
 
-use Finishing::Assembly::Map;
+use Genome::Site::WUGC::Finishing::Assembly::Map;
 
-Finishing::Assembly::Ace::CoverageFilter->mk_accessors
+Genome::Site::WUGC::Finishing::Assembly::Ace::CoverageFilter->mk_accessors
 (qw/
     inverted
     patterns
@@ -82,7 +82,7 @@ sub create_map
 
     my $bases = $contig->sequence->padded_base_string;
 
-    my $map = Finishing::Assembly::Map->new($name, $bases);
+    my $map = Genome::Site::WUGC::Finishing::Assembly::Map->new($name, $bases);
 
     return $self->map_obj($name, $map);
 }
@@ -139,11 +139,11 @@ sub extend_maps
 
 =head1 Name
 
-Finishing::Assembly::Ace::CoverageFilter
+Genome::Site::WUGC::Finishing::Assembly::Ace::CoverageFilter
  
  ** BASE CLASS **
  
-> Creates a Finishing::Assembly::Map object for each given contig.
+> Creates a Genome::Site::WUGC::Finishing::Assembly::Map object for each given contig.
 
 =head1 Synopsis
 
@@ -153,7 +153,7 @@ Finishing::Assembly::Ace::CoverageFilter
 
 =head2 eval_contig($contig)
 
- Evaluates the tags in a Finishing::Assembly::Contig and creates a contig map.
+ Evaluates the tags in a Genome::Site::WUGC::Finishing::Assembly::Contig and creates a contig map.
  
 =head2 map_obj($contig_name, $map)
 
@@ -179,7 +179,7 @@ Finishing::Assembly::Ace::CoverageFilter
 
 =head1 See Also
 
-Finishing::Assembly::Map, GSC::IO::Assembly::Mappping  
+Genome::Site::WUGC::Finishing::Assembly::Map, GSC::IO::Assembly::Mappping  
 
 =head1 Disclaimer
 

@@ -1,4 +1,4 @@
-package Finishing::Assembly::Phd::Directory;
+package Genome::Site::WUGC::Finishing::Assembly::Phd::Directory;
 
 use strict;
 use warnings;
@@ -6,8 +6,8 @@ use warnings;
 use Finfo::Std;
 
 use Data::Dumper;
-use Finishing::Assembly::Phd::Exporter;
-use Finishing::Assembly::Phd::FileReader;
+use Genome::Site::WUGC::Finishing::Assembly::Phd::Exporter;
+use Genome::Site::WUGC::Finishing::Assembly::Phd::FileReader;
 use IO::Dir;
 use IO::File;
 
@@ -35,7 +35,7 @@ sub disconnect
 
 sub reader
 {
-    return Finishing::Assembly::Phd::FileReader->instance;
+    return Genome::Site::WUGC::Finishing::Assembly::Phd::FileReader->instance;
 }
 
 #- GENERAL -#
@@ -187,7 +187,7 @@ sub add_tag_to_phd
     my $tmp_file = sprintf('%s/tmp', $self->directory);
     unlink $tmp_file if -e $tmp_file;
 
-    my $exporter = Finishing::Assembly::Phd::Exporter->new
+    my $exporter = Genome::Site::WUGC::Finishing::Assembly::Phd::Exporter->new
     (
         'read' => $read,
         file => $tmp_file,
@@ -223,7 +223,7 @@ sub _set_defaults_for_tags : PRIVATE
 
 =head1 Name
 
- Finishing::Assembly::Phd
+ Genome::Site::WUGC::Finishing::Assembly::Phd
  
   > Object oriented phd/phd.ball file reader/writer
 
@@ -231,7 +231,7 @@ sub _set_defaults_for_tags : PRIVATE
 
 =head1 Usage
 
- my $phd_schema = Finishing::Assembly::Phd::Directory->new
+ my $phd_schema = Genome::Site::WUGC::Finishing::Assembly::Phd::Directory->new
  (
     directory => './phd_dir',
  );

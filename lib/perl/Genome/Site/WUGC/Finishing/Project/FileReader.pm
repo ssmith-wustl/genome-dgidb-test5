@@ -1,4 +1,4 @@
-package Finishing::Project::FileReader;
+package Genome::Site::WUGC::Finishing::Project::FileReader;
 
 use strict;
 use warnings;
@@ -33,7 +33,7 @@ sub _next
 
 =head1 Name
 
-Finishing::Project::FileReader
+Genome::Site::WUGC::Finishing::Project::FileReader
 
 =head1 Synopsis
 

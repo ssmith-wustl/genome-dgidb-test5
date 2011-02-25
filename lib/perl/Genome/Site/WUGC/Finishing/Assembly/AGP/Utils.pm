@@ -1,4 +1,4 @@
-package Finishing::Assembly::AGP::Utils;
+package Genome::Site::WUGC::Finishing::Assembly::AGP::Utils;
 
 use strict;
 use warnings;
@@ -6,11 +6,11 @@ use warnings;
 use base 'Finfo::Singleton';
 
 use Data::Dumper;
-use Finishing::Assembly::AGP::Info;
+use Genome::Site::WUGC::Finishing::Assembly::AGP::Info;
 
 sub agp_info : PRIVATE
 {
-    return Finishing::Assembly::AGP::Info->instance;
+    return Genome::Site::WUGC::Finishing::Assembly::AGP::Info->instance;
 }
 
 sub string_to_agp_hashref
@@ -117,7 +117,7 @@ sub fasta_index_to_string
     (
         attr => 'fasta index',
         value => $fasta_index,
-        isa => 'object Finishing::Assembly::AGP::FastaIndex',
+        isa => 'object Genome::Site::WUGC::Finishing::Assembly::AGP::FastaIndex',
         msg => 'fatal',
     );
 
@@ -137,7 +137,7 @@ sub fasta_index_to_string
 
 =head1 Name
 
-Finishing::Assembly::AGP::Utils
+Genome::Site::WUGC::Finishing::Assembly::AGP::Utils
 
 =head1 Synopsis
 

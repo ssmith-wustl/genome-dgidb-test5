@@ -1,4 +1,4 @@
-package Finishing::Assembly::DBIx::Schema::ProjectContig;
+package Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::ProjectContig;
 
 use strict;
 use warnings;
@@ -24,8 +24,8 @@ __PACKAGE__->add_columns
       'is_nullable' => 0,
     },
 );
-__PACKAGE__->belongs_to('project', 'Finishing::Assembly::DBIx::Schema::Project', 'project_id');
-__PACKAGE__->belongs_to('contig', 'Finishing::Assembly::DBIx::Schema::Contig', 'contig_id');
+__PACKAGE__->belongs_to('project', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Project', 'project_id');
+__PACKAGE__->belongs_to('contig', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Contig', 'contig_id');
 
 1;
 

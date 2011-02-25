@@ -2,9 +2,9 @@
 #- READ PROXY -#
 ################
 
-package Finishing::Assembly::Consed::AssembledReadProxy;
+package Genome::Site::WUGC::Finishing::Assembly::Consed::AssembledReadProxy;
 
-use base 'Finishing::Assembly::Proxy';
+use base 'Genome::Site::WUGC::Finishing::Assembly::Proxy';
 
 use Data::Dumper;
 

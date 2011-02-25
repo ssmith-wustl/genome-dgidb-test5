@@ -1,11 +1,11 @@
-package Finishing::Assembly::AGP::Reader;
+package Genome::Site::WUGC::Finishing::Assembly::AGP::Reader;
 
 use strict;
 use warnings;
 
 use base qw(Finfo::Reader);
 
-use Finishing::Assembly::AGP::Utils;
+use Genome::Site::WUGC::Finishing::Assembly::AGP::Utils;
 
 sub _next
 {
@@ -19,7 +19,7 @@ sub _next
         chomp $line;
     } until defined $line and $line =~ /\w/;
 
-    return Finishing::Assembly::AGP::Utils->instance->string_to_agp_hashref($line);
+    return Genome::Site::WUGC::Finishing::Assembly::AGP::Utils->instance->string_to_agp_hashref($line);
 }
 
 1;

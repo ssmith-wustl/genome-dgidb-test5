@@ -1,9 +1,9 @@
-package Finishing::Assembly::Chromosome;
+package Genome::Site::WUGC::Finishing::Assembly::Chromosome;
 
 use strict;
 use warnings;
 
-use base 'Finishing::Assembly::Item';
+use base 'Genome::Site::WUGC::Finishing::Assembly::Item';
 
 1;
 

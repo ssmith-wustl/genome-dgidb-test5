@@ -1,4 +1,4 @@
-package Finishing::Assembly::DBIx::Schema::TemplateLink;
+package Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::TemplateLink;
 use base 'DBIx::Class';
 use strict;
 use warnings;
@@ -83,20 +83,20 @@ __PACKAGE__->add_columns(
 
 
 
-__PACKAGE__->belongs_to('left_contig','Finishing::Assembly::DBIx::Schema::Contig',
+__PACKAGE__->belongs_to('left_contig','Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Contig',
     'left_contig_id',
 );
 
-__PACKAGE__->belongs_to('right_contig','Finishing::Assembly::DBIx::Schema::Contig',
+__PACKAGE__->belongs_to('right_contig','Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Contig',
     'right_contig_id'
 );
-__PACKAGE__->belongs_to('left_read','Finishing::Assembly::DBIx::Schema::AssembledRead',
+__PACKAGE__->belongs_to('left_read','Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::AssembledRead',
     'left_read_id'
 );
-__PACKAGE__->belongs_to('right_read','Finishing::Assembly::DBIx::Schema::AssembledRead',
+__PACKAGE__->belongs_to('right_read','Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::AssembledRead',
     'right_read_id'
 );
-__PACKAGE__->belongs_to('assembly','Finishing::Assembly::DBIx::Schema::Assembly',
+__PACKAGE__->belongs_to('assembly','Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Assembly',
     'assembly_id'
 );
 

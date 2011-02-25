@@ -1,4 +1,4 @@
-package Finishing::Assembly::DBIx::Schema::CorrelationContig;
+package Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::CorrelationContig;
 
 use base 'DBIx::Class';
 
@@ -21,7 +21,7 @@ __PACKAGE__->add_columns(
       'size' => '11'
     },
 );
-__PACKAGE__->belongs_to('correlation', 'Finishing::Assembly::DBIx::Schema::ImprovementCorrelation', 'correlation_id');
-__PACKAGE__->belongs_to('contig', 'Finishing::Assembly::DBIx::Schema::Contig', 'contig_id');
+__PACKAGE__->belongs_to('correlation', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::ImprovementCorrelation', 'correlation_id');
+__PACKAGE__->belongs_to('contig', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Contig', 'contig_id');
 
 1;

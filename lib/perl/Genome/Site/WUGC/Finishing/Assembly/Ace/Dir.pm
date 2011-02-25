@@ -1,4 +1,4 @@
-package Finishing::Assembly::Ace::Dir;
+package Genome::Site::WUGC::Finishing::Assembly::Ace::Dir;
 
 use strict;
 use warnings;
@@ -272,7 +272,7 @@ sub owner_for_ace
 
 =head1 Name
 
-Finishing::Assembly::Ace::Dir
+Genome::Site::WUGC::Finishing::Assembly::Ace::Dir
 
 =head1 Synopsis
 
@@ -280,9 +280,9 @@ Provides methods to get info about acefiles in a directory.
 
 =head1 Usage
 
- use Finishing::Assembly::Ace::Dir;
+ use Genome::Site::WUGC::Finishing::Assembly::Ace::Dir;
 
- my $acedir = Finishing::Assembly::Ace::Dir->new(dir => $dir)
+ my $acedir = Genome::Site::WUGC::Finishing::Assembly::Ace::Dir->new(dir => $dir)
     or die;
 
  my $recent_acefile = $acedir->recent_acefile;

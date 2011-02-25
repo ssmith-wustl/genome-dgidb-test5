@@ -1,4 +1,4 @@
-package Finishing::Assembly::DBIx::Schema::Library;
+package Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Library;
 use base 'DBIx::Class';
 use strict;
 use warnings;

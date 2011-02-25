@@ -1,4 +1,4 @@
-package Finishing::Assembly::Consed::Navigation::ConvertFromList;
+package Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::ConvertFromList;
 
 use strict;
 use warnings;
@@ -6,9 +6,9 @@ use warnings;
 use Finfo::Std;
 
 my %reader :name(reader:r)
-    :isa('object Finishing::Assembly::Consed::Navigation::ListReader');
+    :isa('object Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::ListReader');
 my %writer :name(writer:r)
-    :isa('object Finishing::Assembly::Consed::Navigation::Writer');
+    :isa('object Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::Writer');
 
 sub execute
 {
@@ -32,7 +32,7 @@ sub execute
 
 =head1 Name
 
-Finishing::Assembly::Consed::Navigation::ConvertFromList
+Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::ConvertFromList
 
 =head1 Synopsis
 
@@ -40,25 +40,25 @@ Takes navigations from a consed list reader, then writes them as consed navigati
 
 =head1 Usage
 
- use Finishing::Assembly::Consed::Navigation::ConvertFromList;
- use Finishing::Assembly::Consed::Navigation::ListReader;
- use Finishing::Assembly::Consed::Navigation::Writer;
+ use Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::ConvertFromList;
+ use Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::ListReader;
+ use Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::Writer;
 
- my $reader = Finishing::Assembly::Consed::Navigation::ListReader->new
+ my $reader = Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::ListReader->new
  (
      io => 'list.txt', # file or IO::* object
      return_as_objs => 1,
  )
      or die;
  
- my $writer = Finishing::Assembly::Consed::Navigation::Writer->new
+ my $writer = Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::Writer->new
  (
      io => 'list.txt', # file or IO::* object
      title => 'List Converted to Navs', # optional
  )
      or die;
  
- my $converter = Finishing::Assembly::Consed::Navigation::ConvertFromList->new
+ my $converter = Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::ConvertFromList->new
  (
      reader => $reader,
      writer => $writer,
@@ -78,7 +78,7 @@ The main method.
 
 =over
 
-=item Finishing::Assembly::Consed::Navigation directory
+=item Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation directory
 
 =item consed
 

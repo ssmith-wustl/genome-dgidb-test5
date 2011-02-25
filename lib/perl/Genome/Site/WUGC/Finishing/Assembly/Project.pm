@@ -1,19 +1,19 @@
-package Finishing::Assembly::Project;
+package Genome::Site::WUGC::Finishing::Assembly::Project;
 
 use strict;
 use warnings;
 
-use base 'Finishing::Assembly::Item';
+use base 'Genome::Site::WUGC::Finishing::Assembly::Item';
 
 use Date::Format;
 use Data::Dumper;
 use File::Copy;
 use Findid::Utility;
-#use Finishing::Assembly::Phd;
+#use Genome::Site::WUGC::Finishing::Assembly::Phd;
 use GSC::IO::Assembly::Phd;
-use Finishing::Assembly::Ace::Dir;
-use Finishing::Assembly::Ace::Output;
-#use Finishing::Assembly::Project::Findid; #TODO Findid doesn't exist
+use Genome::Site::WUGC::Finishing::Assembly::Ace::Dir;
+use Genome::Site::WUGC::Finishing::Assembly::Ace::Output;
+#use Genome::Site::WUGC::Finishing::Assembly::Project::Findid; #TODO Findid doesn't exist
 
 my %offline :name(_offline:p) :isa(boolean) :default(0);
 my %findid :name(_findid:p);
@@ -89,7 +89,7 @@ sub acedir
     my $edit_dir = $self->edit_dir
         or return;
 
-    return Finishing::Assembly::Ace::Dir->new(dir => $edit_dir);
+    return Genome::Site::WUGC::Finishing::Assembly::Ace::Dir->new(dir => $edit_dir);
 }
 
 sub recent_ace
@@ -144,7 +144,7 @@ sub aceobject
         msg => 'fatal',
     );
 
-    my $ao = Finishing::Assembly::Ace::Ext->new(input_file => $acefile);
+    my $ao = Genome::Site::WUGC::Finishing::Assembly::Ace::Ext->new(input_file => $acefile);
 
     $self->fatal_msg("Could not create ace for acefile ($acefile)") unless $ao;
 
@@ -168,7 +168,7 @@ sub aceext
     my $ao = $self->aceobject($acefile)
         or return;
 
-    return Finishing::Assembly::Ace::Ext->new(aceobject => $ao);
+    return Genome::Site::WUGC::Finishing::Assembly::Ace::Ext->new(aceobject => $ao);
 }
 
 sub recent_aceext
@@ -233,7 +233,7 @@ sub move_scfs_and_phds_in_acefile
         msg =>'fatal', 
     );
     
-    my $ace_factory = Finishing::Assembly::Factory->connect("ace", $acefile);
+    my $ace_factory = Genome::Site::WUGC::Finishing::Assembly::Factory->connect("ace", $acefile);
     $self->fatal_msg("Can't connect to ace factory for acefile ($acefile)") unless $ace_factory;
     my $assembly = $ace_factory->get_assembly;
     my $ri = $assembly->get_assembled_read_iterator;
@@ -345,7 +345,7 @@ sub findid
         
         $self->_findid
         (
-            Finishing::Assembly::Project::Findid->new
+            Genome::Site::WUGC::Finishing::Assembly::Project::Findid->new
             (
                 project_name => $self->name,
                 species => Findid::Utility->convert_GSC_to_DB($self->species_name),
@@ -390,7 +390,7 @@ sub findid_db
 
 =head1 Name
 
-Finishing::Assembly::Project
+Genome::Site::WUGC::Finishing::Assembly::Project
  
 =head1 Synopsis
 

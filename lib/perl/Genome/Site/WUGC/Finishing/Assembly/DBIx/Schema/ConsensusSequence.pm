@@ -1,4 +1,4 @@
-package Finishing::Assembly::DBIx::Schema::ConsensusSequence;
+package Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::ConsensusSequence;
 use base 'DBIx::Class';
 use strict;
 use warnings;
@@ -57,7 +57,7 @@ __PACKAGE__->set_primary_key('id');
 
 
 
-__PACKAGE__->belongs_to('contig', 'Finishing::Assembly::DBIx::Schema::Contig', 'contig_id');
+__PACKAGE__->belongs_to('contig', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Contig', 'contig_id');
 
 
 1;

@@ -1,4 +1,4 @@
-package Finishing::Project::BaseSource;
+package Genome::Site::WUGC::Finishing::Project::BaseSource;
 
 use strict;
 use warnings;
@@ -13,12 +13,12 @@ my %dir :name(dir:r)
 ##################################################################################
 ##################################################################################
 
-package Finishing::Project::Source;
+package Genome::Site::WUGC::Finishing::Project::Source;
 
 use strict;
 use warnings;
 
-use base 'Finishing::Project::BaseSource';
+use base 'Genome::Site::WUGC::Finishing::Project::BaseSource';
 
 ##################################################################################
 ##################################################################################
@@ -29,7 +29,7 @@ use base 'Finishing::Project::BaseSource';
 
 =head1 Name
 
-Finishing::Project::Source
+Genome::Site::WUGC::Finishing::Project::Source
 
 =head1 Synopsis
 

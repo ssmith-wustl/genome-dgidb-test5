@@ -1,12 +1,12 @@
-package Finishing::Assembly::Commands::AnalyzeJoin;
+package Genome::Site::WUGC::Finishing::Assembly::Commands::AnalyzeJoin;
 
 use strict;
 use warnings;
 
-use base 'Finishing::Assembly::Commands::Base';
+use base 'Genome::Site::WUGC::Finishing::Assembly::Commands::Base';
 
 use Data::Dumper;
-use Finishing::Assembly::ContigTools;
+use Genome::Site::WUGC::Finishing::Assembly::ContigTools;
 use IO::File;
 
 my %organism_name :name(organism_name:r)
@@ -60,7 +60,7 @@ sub START
         sprintf('Can\'t get right contig (%s)', $self->right_contig_name)
     ) unless $right_contig;
 
-    my $contig_tools = Finishing::Assembly::ContigTools->new;
+    my $contig_tools = Genome::Site::WUGC::Finishing::Assembly::ContigTools->new;
     my $po;# = GSC::IO::Assembly::PhdDB->new;
 
     my %params = 
@@ -88,7 +88,7 @@ sub execute
 {
     my $self = shift;
 
-    my $contig_tools = Finishing::Assembly::ContigTools->new;
+    my $contig_tools = Genome::Site::WUGC::Finishing::Assembly::ContigTools->new;
     $contig_tools->merge
     (
         $self->_left_contig,
@@ -106,7 +106,7 @@ sub execute
 
 =head1 Name
 
-Finishing::Assembly::Commands::JoinContigs
+Genome::Site::WUGC::Finishing::Assembly::Commands::JoinContigs
 
 =head1 Synopsis
 

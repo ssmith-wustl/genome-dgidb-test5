@@ -1,4 +1,4 @@
-package Finishing::Project::ProcessFactory;
+package Genome::Site::WUGC::Finishing::Project::ProcessFactory;
 
 use strict;
 use warnings;
@@ -8,10 +8,10 @@ use Finfo::Std;
 use Data::Dumper;
 use File::Basename;
 use Finfo::CommandLineOptions;
-use Finishing::Project::Factory;
-use Finishing::Project::Namer;
-use Finishing::Project::Reader;
-use Finishing::Project::Writer;
+use Genome::Site::WUGC::Finishing::Project::Factory;
+use Genome::Site::WUGC::Finishing::Project::Namer;
+use Genome::Site::WUGC::Finishing::Project::Reader;
+use Genome::Site::WUGC::Finishing::Project::Writer;
 use PP::LSF;
 
 my %process :name(process:r)
@@ -38,12 +38,12 @@ sub _processes_and_classes
 {
     return
     {
-        checkout => [qw/ Finishing::Project::Checkout /], 
-        convert => [qw/ Finishing::Project::Converter Finishing::Project::Namer /],
-        convert_from_agp => [qw/ Finishing::Project::AGPConverter Finishing::Project::Namer /],
-        create  => [qw/ Finishing::Project::Reader Finishing::Project::Factory /],
-        split_sc  => [qw/ Finishing::Project::SuperContigSplitter Finishing::Project::Namer /],
-        split_acefile => [qw/ Finishing::Project::AcefileSplitter Finishing::Project::Namer /],
+        checkout => [qw/ Genome::Site::WUGC::Finishing::Project::Checkout /], 
+        convert => [qw/ Genome::Site::WUGC::Finishing::Project::Converter Genome::Site::WUGC::Finishing::Project::Namer /],
+        convert_from_agp => [qw/ Genome::Site::WUGC::Finishing::Project::AGPConverter Genome::Site::WUGC::Finishing::Project::Namer /],
+        create  => [qw/ Genome::Site::WUGC::Finishing::Project::Reader Genome::Site::WUGC::Finishing::Project::Factory /],
+        split_sc  => [qw/ Genome::Site::WUGC::Finishing::Project::SuperContigSplitter Genome::Site::WUGC::Finishing::Project::Namer /],
+        split_acefile => [qw/ Genome::Site::WUGC::Finishing::Project::AcefileSplitter Genome::Site::WUGC::Finishing::Project::Namer /],
     };
 }
 
@@ -175,9 +175,9 @@ sub _create_steps_for_create
     $self->_validate_class_options
         or return;
 
-    my $reader =  Finishing::Project::Reader->new
+    my $reader =  Genome::Site::WUGC::Finishing::Project::Reader->new
     (
-        io => %{ $self->_opts->{'Finishing::Project::Reader'} }
+        io => %{ $self->_opts->{'Genome::Site::WUGC::Finishing::Project::Reader'} }
     );
 
     my $tmp_file = ".$$.tmp";
@@ -189,7 +189,7 @@ sub _create_steps_for_create
         err_cb => $self,
     );
 
-    my $writer = Finishing::Project::Writer->new(io => $tmp_file)
+    my $writer = Genome::Site::WUGC::Finishing::Project::Writer->new(io => $tmp_file)
         or return;
 
     return Project::Factory->new

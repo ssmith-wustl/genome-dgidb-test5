@@ -1,4 +1,4 @@
-package Finishing::Project::FileSplitter;
+package Genome::Site::WUGC::Finishing::Project::FileSplitter;
 
 use strict;
 use warnings;
@@ -11,7 +11,7 @@ require File::Basename;
 
 my %xml :name(xml:r)
     :type(inherits_from)
-    :options([qw/ Finishing::Project::XML /]);
+    :options([qw/ Genome::Site::WUGC::Finishing::Project::XML /]);
 my %projs_per_file  :name(max_projs_per_file:o) 
     :type(positive_integer)
     :default(10) 
@@ -56,7 +56,7 @@ sub execute
         }
         my $file = sprintf('%s/%s%d.xml', $dir, $file_base, $file_num);
         push @xml_files, $file,
-        my $proj_xml = Finishing::Project::XML->new(file => $file);
+        my $proj_xml = Genome::Site::WUGC::Finishing::Project::XML->new(file => $file);
         $proj_xml->write_projects($batch_projs);
     }
 
@@ -69,7 +69,7 @@ sub execute
 
 =head1 Name
 
-Finishing::Project::FileSplitter
+Genome::Site::WUGC::Finishing::Project::FileSplitter
 
 =head1 Synopsis
 

@@ -1,9 +1,9 @@
-package Finishing::Assembly::Commands::CreateOrganism;
+package Genome::Site::WUGC::Finishing::Assembly::Commands::CreateOrganism;
 
 use strict;
 use warnings;
 
-use base 'Finishing::Assembly::Commands::Base';
+use base 'Genome::Site::WUGC::Finishing::Assembly::Commands::Base';
 
 use Data::Dumper;
 
@@ -28,7 +28,7 @@ sub execute
 
 =head1 Name
 
-Finishing::Assembly::Commands::CreateOrganism
+Genome::Site::WUGC::Finishing::Assembly::Commands::CreateOrganism
 
 =head1 Synopsis
 

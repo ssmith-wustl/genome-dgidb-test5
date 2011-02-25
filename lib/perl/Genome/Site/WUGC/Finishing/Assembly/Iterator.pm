@@ -1,4 +1,4 @@
-package Finishing::Assembly::Iterator;
+package Genome::Site::WUGC::Finishing::Assembly::Iterator;
 
 use strict;
 use warnings;

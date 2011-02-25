@@ -1,4 +1,4 @@
-package Finishing::Project::Utils;
+package Genome::Site::WUGC::Finishing::Project::Utils;
 
 use strict;
 use warnings;

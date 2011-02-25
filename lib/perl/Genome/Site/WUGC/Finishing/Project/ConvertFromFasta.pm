@@ -1,4 +1,4 @@
-package Finishing::Project::ConvertFromFasta;
+package Genome::Site::WUGC::Finishing::Project::ConvertFromFasta;
 
 use strict;
 use warnings;
@@ -7,27 +7,27 @@ use Finfo::Std;
 
 use Bio::SeqIO;
 use Data::Dumper;
-use Finishing::Project::Utils;
+use Genome::Site::WUGC::Finishing::Project::Utils;
 use IO::File;
 
 my %namer :name(namer:r)
     :type(inherits_from)
-    :options([qw/ Finishing::Project::Namer /]);
+    :options([qw/ Genome::Site::WUGC::Finishing::Project::Namer /]);
 my %fasta :name(fasta:r) 
     :type(input_file)
     :clo('fasta=s') 
     :desc('Fasta file');
 my %writer :name(writer:r)
     :type(inherits_from)
-    :options([qw/ Finishing::Project::Writer /]);
+    :options([qw/ Genome::Site::WUGC::Finishing::Project::Writer /]);
 my %type :name(type:r)
     :type(in_list)
-    :options([ Finishing::Project::Utils->valid_project_types ])
+    :options([ Genome::Site::WUGC::Finishing::Project::Utils->valid_project_types ])
     :clo('type=s')
-    :desc( sprintf('Type of project: %s', join(', ', Finishing::Project::Utils->project_types)) );
+    :desc( sprintf('Type of project: %s', join(', ', Genome::Site::WUGC::Finishing::Project::Utils->project_types)) );
 my %src :name(src:r)
     :type(in_list)
-    :options([ Finishing::Project::Utils->contig_sources ])
+    :options([ Genome::Site::WUGC::Finishing::Project::Utils->contig_sources ])
     :clo('src=s')
     :desc('Source of projects contigs: ');
 my %inc_proj_in_ctg :name(inc_proj_in_ctg:o)
@@ -46,7 +46,7 @@ my %ctg_pattern :name(pattern:o)
 
 sub utils : PRIVATE
 {
-    return Finishing::Project::Utils->instance;
+    return Genome::Site::WUGC::Finishing::Project::Utils->instance;
 }
 
 sub execute : PRIVATE
@@ -71,7 +71,7 @@ sub execute : PRIVATE
 
         my $pattern = $self->pattern;
 
-        my $ctg_namer = Finishing::Project::Namer->new
+        my $ctg_namer = Genome::Site::WUGC::Finishing::Project::Namer->new
         (
             base_name => sprintf
             (
@@ -85,7 +85,7 @@ sub execute : PRIVATE
             my $src;
             if ( $self->ace_src )
             {
-                my $acenum = Finishing::Project::Utils->instance->contig_lookup_number($ctg)
+                my $acenum = Genome::Site::WUGC::Finishing::Project::Utils->instance->contig_lookup_number($ctg)
                     or return;
                 my $ace = $self->ace_src;
                 $ace =~ s/\[\]/$acenum/;

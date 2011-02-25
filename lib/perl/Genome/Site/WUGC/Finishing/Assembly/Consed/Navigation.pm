@@ -1,4 +1,4 @@
-package Finishing::Assembly::Consed::Navigation;
+package Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation;
 
 use strict;
 use warnings;

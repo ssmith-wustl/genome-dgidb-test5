@@ -1,4 +1,4 @@
-package Finishing::Assembly::Cache;
+package Genome::Site::WUGC::Finishing::Assembly::Cache;
 
 use strict;
 use warnings;

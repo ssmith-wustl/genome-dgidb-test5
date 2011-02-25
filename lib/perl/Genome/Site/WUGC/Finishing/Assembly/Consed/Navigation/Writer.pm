@@ -1,4 +1,4 @@
-package Finishing::Assembly::Consed::Navigation::Writer;
+package Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::Writer;
 
 use strict;
 use warnings;
@@ -38,7 +38,7 @@ sub _write_one
         attr => 'navigation',
         value => $nav,
         type => 'inherits_from',
-        options => [qw/ Finishing::Assembly::Consed::Navigation /],
+        options => [qw/ Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation /],
         err_cb => $self,
     );
 
@@ -64,13 +64,13 @@ sub _write_one
 
 =head1 Name
 
-Finishing::Assembly::Consed::Navigation::Writer
+Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::Writer
 
 =head1 Usage
 
- use Finishing::Assembly::Consed::Navigation::Writer;
+ use Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::Writer;
  
- my $wirter = Finishing::Assembly::Consed::Navigation::Writer->new
+ my $wirter = Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::Writer->new
  (
      io => 'out.nav', # required, file or IO::* object
      title => '', # optional, sting(new method writes the title to the io)
@@ -99,7 +99,7 @@ Finishing::Assembly::Consed::Navigation::Writer
 
 =over
 
-=item Finishing::Assembly::Consed::Navigation directory
+=item Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation directory
 
 =item Finfo::Writer (parent class)
 

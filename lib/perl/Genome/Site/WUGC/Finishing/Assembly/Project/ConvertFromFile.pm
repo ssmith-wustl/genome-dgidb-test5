@@ -1,4 +1,4 @@
-package Finishing::Assembly::Project::ConvertFromFile;
+package Genome::Site::WUGC::Finishing::Assembly::Project::ConvertFromFile;
 
 use strict;
 use warnings;
@@ -7,19 +7,19 @@ use Finfo::Std;
 
 use Bio::SeqIO;
 use Data::Dumper;
-use Finishing::Assembly::Project::Utils;
+use Genome::Site::WUGC::Finishing::Assembly::Project::Utils;
 use IO::File;
 
 my %namer :name(namer:r)
-    :isa('object Finishing::Assembly::Project::Namer');
+    :isa('object Genome::Site::WUGC::Finishing::Assembly::Project::Namer');
 my %filereader :name(filereader:r) 
-    :isa('object Finishing::Assembly::Project::FileReader');
+    :isa('object Genome::Site::WUGC::Finishing::Assembly::Project::FileReader');
 my %xml :name(xml:r)
-    :isa('object Finishing::Assembly::Project::XML');
+    :isa('object Genome::Site::WUGC::Finishing::Assembly::Project::XML');
 my %type :name(type:r)
-    :isa([ 'in_list', Finishing::Assembly::Project::Utils->project_types ])
+    :isa([ 'in_list', Genome::Site::WUGC::Finishing::Assembly::Project::Utils->project_types ])
     :clo('type=s')
-    :desc( sprintf('Type of project: %s', join(', ', Finishing::Assembly::Project::Utils->project_types)) );
+    :desc( sprintf('Type of project: %s', join(', ', Genome::Site::WUGC::Finishing::Assembly::Project::Utils->project_types)) );
 
 sub execute
 {

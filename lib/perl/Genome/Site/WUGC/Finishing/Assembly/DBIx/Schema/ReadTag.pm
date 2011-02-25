@@ -1,4 +1,4 @@
-package Finishing::Assembly::DBIx::Schema::ReadTag;
+package Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::ReadTag;
 use base 'DBIx::Class';
 use strict;
 use warnings;
@@ -93,7 +93,7 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key('id');
 
 
-__PACKAGE__->belongs_to('read', 'Finishing::Assembly::DBIx::Schema::AssembledRead', 'read_id');
+__PACKAGE__->belongs_to('read', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::AssembledRead', 'read_id');
 
 
 1;

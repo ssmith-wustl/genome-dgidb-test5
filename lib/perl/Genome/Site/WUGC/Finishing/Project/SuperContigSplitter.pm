@@ -1,9 +1,9 @@
-package Finishing::Project::SuperContigSplitter;
+package Genome::Site::WUGC::Finishing::Project::SuperContigSplitter;
 
 use strict;
 use warnings;
 
-use base 'Finishing::Project::Splitter';
+use base 'Genome::Site::WUGC::Finishing::Project::Splitter';
 
 my %superctg :name(supercontig:r) 
     # TODO change to seq_id or name

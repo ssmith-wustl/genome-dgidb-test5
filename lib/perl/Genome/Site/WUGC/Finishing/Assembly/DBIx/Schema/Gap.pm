@@ -1,4 +1,4 @@
-package Finishing::Assembly::DBIx::Schema::Gap;
+package Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Gap;
 
 use strict;
 use warnings;
@@ -55,11 +55,11 @@ __PACKAGE__->add_columns
 __PACKAGE__->set_primary_key('id');
 __PACKAGE__->belongs_to
 (
-    'left_contig', 'Finishing::Assembly::DBIx::Schema::Contig', 'left_contig_id'
+    'left_contig', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Contig', 'left_contig_id'
 );
 __PACKAGE__->belongs_to
 (
-    'right_contig', 'Finishing::Assembly::DBIx::Schema::Contig', 'right_contig_id'
+    'right_contig', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Contig', 'right_contig_id'
 );
 
 1;

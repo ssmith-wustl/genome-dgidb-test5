@@ -1,17 +1,17 @@
-package Finishing::Assembly::AGP::Writer;
+package Genome::Site::WUGC::Finishing::Assembly::AGP::Writer;
 
 use strict;
 use warnings;
 
 use base qw(Finfo::Writer);
 
-use Finishing::Assembly::AGP::Utils;
+use Genome::Site::WUGC::Finishing::Assembly::AGP::Utils;
 
 sub _write_one
 {
     my ($self, $agp) = @_;
 
-    my $string = Finishing::Assembly::AGP::Utils->instance->agp_to_string($agp);
+    my $string = Genome::Site::WUGC::Finishing::Assembly::AGP::Utils->instance->agp_to_string($agp);
 
     return unless $string;
     

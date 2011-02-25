@@ -1,4 +1,4 @@
-package Finishing::Assembly::Project::Namer;
+package Genome::Site::WUGC::Finishing::Assembly::Project::Namer;
 
 use strict;
 use warnings;

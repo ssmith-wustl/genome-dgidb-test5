@@ -1,13 +1,13 @@
-package Finishing::Assembly::Contig;
+package Genome::Site::WUGC::Finishing::Assembly::Contig;
 
 use strict;
 use warnings;
 
-use base 'Finishing::Assembly::SequencedItem';
+use base 'Genome::Site::WUGC::Finishing::Assembly::SequencedItem';
 use List::Util qw(min max);
 
 use Data::Dumper;
-use Finishing::Assembly::Utility;
+use Genome::Site::WUGC::Finishing::Assembly::Utility;
 
 require Storable;
 
@@ -399,7 +399,7 @@ sub get_best_quality_reads
 				{					
 					$aBestQuality[$nConsPos] =
 					
-					Finishing::Assembly::Utility::nNormalQualityFrom9899Quality(
+					Genome::Site::WUGC::Finishing::Assembly::Utility::nNormalQualityFrom9899Quality(
 						$read->padded_base_quality->
 						[ $read->get_child_position_from_parent_position( $nConsPos-1 ) ] );
 				}
@@ -414,7 +414,7 @@ sub get_best_quality_reads
 				else
 				{					
 					$q =
-					Finishing::Assembly::Utility::nNormalQualityFrom9899Quality(
+					Genome::Site::WUGC::Finishing::Assembly::Utility::nNormalQualityFrom9899Quality(
 						$read->padded_base_quality->
 						[ $read->get_child_position_from_parent_position( $nConsPos-1 ) ] );
 				}

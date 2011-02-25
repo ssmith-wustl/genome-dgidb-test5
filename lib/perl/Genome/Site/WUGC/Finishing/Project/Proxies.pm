@@ -1,4 +1,4 @@
-package Finishing::Project::BaseProxy;
+package Genome::Site::WUGC::Finishing::Project::BaseProxy;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use Finfo::ClassUtils 'class';
 use Finfo::Std;
 
 my %source :name(source:r)
-    :isa('object Finishing::Project::Source GSC::Project');
+    :isa('object Genome::Site::WUGC::Finishing::Project::Source GSC::Project');
 
 sub source_attributes
 {
@@ -34,12 +34,12 @@ sub get_attribute_subroutine
 ##################################################################################
 ##################################################################################
 
-package Finishing::Project::Proxy;
+package Genome::Site::WUGC::Finishing::Project::Proxy;
 
 use strict;
 use warnings;
 
-use base 'Finishing::Project::BaseProxy';
+use base 'Genome::Site::WUGC::Finishing::Project::BaseProxy';
 
 sub source_attributes
 {
@@ -49,12 +49,12 @@ sub source_attributes
 ##################################################################################
 ##################################################################################
 
-package Finishing::Project::GSCProxy;
+package Genome::Site::WUGC::Finishing::Project::GSCProxy;
 
 use strict;
 use warnings;
 
-use base 'Finishing::Project::BaseProxy';
+use base 'Genome::Site::WUGC::Finishing::Project::BaseProxy';
 
 sub source_attributes
 {
@@ -83,7 +83,7 @@ sub source_attributes
 
 =head1 Name
 
-Finishing::Project::Proxy
+Genome::Site::WUGC::Finishing::Project::Proxy
 
 =head1 Synopsis
 

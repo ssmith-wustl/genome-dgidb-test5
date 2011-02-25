@@ -1,4 +1,4 @@
-package Finishing::Assembly::Ace::Assembly;
+package Genome::Site::WUGC::Finishing::Assembly::Ace::Assembly;
 
 use strict;
 use warnings;
@@ -75,7 +75,7 @@ sub tags
 
 =head1 Name
 
-Finishing::Assembly::Ace::Assembly
+Genome::Site::WUGC::Finishing::Assembly::Ace::Assembly
 
 =head1 Synopsis
 

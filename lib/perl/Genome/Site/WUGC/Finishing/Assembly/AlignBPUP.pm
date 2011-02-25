@@ -1,7 +1,7 @@
-package Finishing::Assembly::AlignBPUP;
+package Genome::Site::WUGC::Finishing::Assembly::AlignBPUP;
 our $VERSION = 0.01;
 
-use Finishing::Assembly::Transform;
+use Genome::Site::WUGC::Finishing::Assembly::Transform;
 use Carp::Assert;
 use Bio::Seq;
 use Bio::Tools::dpAlign;
@@ -29,8 +29,8 @@ sub align
 		$right_string = substr($right_string, 0, $max_length);	
 	}
 	
-	my $left_transform = Finishing::Assembly::Transform->new($left_string);
-	my $right_transform = Finishing::Assembly::Transform->new($right_string);
+	my $left_transform = Genome::Site::WUGC::Finishing::Assembly::Transform->new($left_string);
+	my $right_transform = Genome::Site::WUGC::Finishing::Assembly::Transform->new($right_string);
 	my $left_string_padded = $left_string;
 	my $right_string_padded = $right_string;
 	$left_string =~ tr/*//d;
@@ -56,8 +56,8 @@ sub align
 	my $out = $factory->pairwise_alignment($left_seq, $right_seq);
 	my $left_seq_string = $out->{_start_end_lists}{"left_string"}[0]{seq};
 	my $right_seq_string = $out->{_start_end_lists}{"right_string"}[0]{seq};
-	my $bp_left_transform = Finishing::Assembly::Transform->new($left_seq_string,'-');
-	my $bp_right_transform = Finishing::Assembly::Transform->new($right_seq_string,'-');
+	my $bp_left_transform = Genome::Site::WUGC::Finishing::Assembly::Transform->new($left_seq_string,'-');
+	my $bp_right_transform = Genome::Site::WUGC::Finishing::Assembly::Transform->new($right_seq_string,'-');
 	my $clipped_left_transform = $left_transform->get_sub_transform(unpad_start => $out->{_start_end_lists}{"left_string"}[0]{start}-1,
 																	unpad_end => $out->{_start_end_lists}{"left_string"}[0]{end}-1);
 	my $clipped_right_transform = $right_transform->get_sub_transform(unpad_start => $out->{_start_end_lists}{"right_string"}[0]{start}-1,
@@ -146,8 +146,8 @@ sub _convert_bioperl_to_gsc_transform
 	$left_align->{merge_seq} =~ tr/-/*/;
 
 
-	my $left_transform = Finishing::Assembly::Transform->new($left_align->{align_seq}, '-');#this creates a transform for the merge region as it originally 
-	my $right_transform = Finishing::Assembly::Transform->new($right_align->{align_seq}, '-');#this creates a transform for the merge region as it originally 
+	my $left_transform = Genome::Site::WUGC::Finishing::Assembly::Transform->new($left_align->{align_seq}, '-');#this creates a transform for the merge region as it originally 
+	my $right_transform = Genome::Site::WUGC::Finishing::Assembly::Transform->new($right_align->{align_seq}, '-');#this creates a transform for the merge region as it originally 
 	$right_transform->_offset( $left_align->{start}-$right_align->{start});
 	#may want to check if offset is valid
 	$left_align->{transform} = $left_transform;
@@ -179,7 +179,7 @@ sub get_combined_transform
 sub SL
 {
 	my ($t1, $t2) = @_;
-	my $transform = Finishing::Assembly::Transform->new;
+	my $transform = Genome::Site::WUGC::Finishing::Assembly::Transform->new;
 	my @t1ptu = @{$t1->{padded_to_unpadded}};
 	my @t1utp = @{$t1->{unpadded_to_padded}};
 	my @t2ptu = @{$t2->{padded_to_unpadded}};
@@ -224,7 +224,7 @@ sub cmp_ins
 sub SR
 {
 	my ($t1, $t2) = @_;
-	my $transform = Finishing::Assembly::Transform->new;
+	my $transform = Genome::Site::WUGC::Finishing::Assembly::Transform->new;
 	my @t1ptu = @{$t1->{padded_to_unpadded}};
 	my @t1utp = @{$t1->{unpadded_to_padded}};
 	my @t2ptu = @{$t2->{padded_to_unpadded}};
@@ -288,7 +288,7 @@ sub SR
 sub SIL
 {
 	my ($t1, $t2) = @_;
-	my $transform = Finishing::Assembly::Transform->new;
+	my $transform = Genome::Site::WUGC::Finishing::Assembly::Transform->new;
 	my @t1ptu = @{$t1->{padded_to_unpadded}};
 	my @t1utp = @{$t1->{unpadded_to_padded}};
 	my @t2ptu = @{$t2->{padded_to_unpadded}};
@@ -336,7 +336,7 @@ sub SIL
 sub SIR
 {
 	my ($t1, $t2) = @_;
-	my $transform = Finishing::Assembly::Transform->new;
+	my $transform = Genome::Site::WUGC::Finishing::Assembly::Transform->new;
 	my @t1ptu = @{$t1->{padded_to_unpadded}};
 	my @t1utp = @{$t1->{unpadded_to_padded}};
 	my @t2ptu = @{$t2->{padded_to_unpadded}};
@@ -389,7 +389,7 @@ sub SIR
 sub combine_pads
 {
 	my ($t1, $t2) = @_;
-	my $transform = Finishing::Assembly::Transform->new;
+	my $transform = Genome::Site::WUGC::Finishing::Assembly::Transform->new;
 	my @t1ptu = @{$t1->{padded_to_unpadded}};
 	my @t1utp = @{$t1->{unpadded_to_padded}};
 	my @t2ptu = @{$t2->{padded_to_unpadded}};
@@ -490,7 +490,7 @@ sub get_pad_list
 sub compact_pads
 {
 	my ($t1) = @_;
-	my $transform = Finishing::Assembly::Transform->new;
+	my $transform = Genome::Site::WUGC::Finishing::Assembly::Transform->new;
 	my @t1ptu = @{$t1->{padded_to_unpadded}};
 	my @t1utp = @{$t1->{unpadded_to_padded}};
 	my @t2ptu;

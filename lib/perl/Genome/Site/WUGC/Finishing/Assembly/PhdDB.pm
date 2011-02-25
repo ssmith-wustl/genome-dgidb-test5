@@ -1,4 +1,4 @@
-package Finishing::Assembly::PhdDB;
+package Genome::Site::WUGC::Finishing::Assembly::PhdDB;
 our $VERSION = 0.01;
 
 use strict;
@@ -11,18 +11,18 @@ App::DBI->no_commit(1);
 use IO::File;
 use IO::String;
 use Storable;
-use Finishing::Assembly::Phd::Reader;
-use Finishing::Assembly::Phd::Writer;
+use Genome::Site::WUGC::Finishing::Assembly::Phd::Reader;
+use Genome::Site::WUGC::Finishing::Assembly::Phd::Writer;
 
-Finishing::Assembly::PhdDB->mk_accessors(qw(assembly_name assembly _reader _writer));
+Genome::Site::WUGC::Finishing::Assembly::PhdDB->mk_accessors(qw(assembly_name assembly _reader _writer));
 
-my $pkg = 'Finishing::Assembly::PhdDB';
+my $pkg = 'Genome::Site::WUGC::Finishing::Assembly::PhdDB';
 
 =pod
 
 =head1 new 
 
-my $phd_object = new Finishing::Assembly::PhdDB(project_name => "my_project");
+my $phd_object = new Genome::Site::WUGC::Finishing::Assembly::PhdDB(project_name => "my_project");
 
 =cut
 
@@ -33,8 +33,8 @@ sub new {
     my $class = $caller_is_obj || $caller;
     my $self = {};
     bless ($self, $class);
-	$self->_reader( Finishing::Assembly::Phd::Reader->new );
-	$self->_writer( Finishing::Assembly::Phd::Writer->new );
+	$self->_reader( Genome::Site::WUGC::Finishing::Assembly::Phd::Reader->new );
+	$self->_writer( Genome::Site::WUGC::Finishing::Assembly::Phd::Writer->new );
 	if(exists $params{project_name})
 	{
 		$self->project_name($params{project_name});

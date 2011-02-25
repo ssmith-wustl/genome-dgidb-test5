@@ -1,4 +1,4 @@
-package Finishing::Assembly::Item;
+package Genome::Site::WUGC::Finishing::Assembly::Item;
 
 use Finfo::Std;
 

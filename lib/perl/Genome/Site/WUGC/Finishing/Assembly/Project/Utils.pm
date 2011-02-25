@@ -1,4 +1,4 @@
-package Finishing::Assembly::Project::Utils;
+package Genome::Site::WUGC::Finishing::Assembly::Project::Utils;
 
 use strict;
 use warnings;
@@ -122,7 +122,7 @@ sub validate_projects_hash
         (
             attr => "project's ($name) db",
             value => $info->{db},
-            isa => [ 'in_list', Finishing::Assembly::Factory->available_dbs ],
+            isa => [ 'in_list', Genome::Site::WUGC::Finishing::Assembly::Factory->available_dbs ],
             msg => 'fatal',
             caller_level => 1,
         );
@@ -174,7 +174,7 @@ sub validate_projects_contigs
         (
             attr => "contig's db ($contig_name, project: $project_name)",
             value => $contig->{db},
-            isa => [ 'in_list', Finishing::Assembly::Factory->available_dbs ],
+            isa => [ 'in_list', Genome::Site::WUGC::Finishing::Assembly::Factory->available_dbs ],
             msg => 'fatal',
         );
 
@@ -185,7 +185,7 @@ sub validate_projects_contigs
             (
                 attr => "contig's file ($file, project: $project_name)",
                 value => $contig->{db},
-                isa => [ 'in_list', Finishing::Assembly::Factory->available_dbs ],
+                isa => [ 'in_list', Genome::Site::WUGC::Finishing::Assembly::Factory->available_dbs ],
                 msg => 'fatal',
             );
         }
@@ -240,13 +240,13 @@ sub validate_projects_contigs
 
 =over
 
-=item B<Finishing::Assembly::Project>
+=item B<Genome::Site::WUGC::Finishing::Assembly::Project>
 
-=item B<Finishing::Assembly::Factory>
+=item B<Genome::Site::WUGC::Finishing::Assembly::Factory>
 
-=item B<Finishing::Assembly::Project::Checkout>
+=item B<Genome::Site::WUGC::Finishing::Assembly::Project::Checkout>
 
-=item B<Finishing::Assembly::Project::XML::Checkout>
+=item B<Genome::Site::WUGC::Finishing::Assembly::Project::XML::Checkout>
 
 =back
 

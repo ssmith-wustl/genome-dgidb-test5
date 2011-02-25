@@ -1,4 +1,4 @@
-package Finishing::Project::Factory;
+package Genome::Site::WUGC::Finishing::Project::Factory;
 
 use strict;
 use warnings;
@@ -7,12 +7,12 @@ use base 'Finfo::Singleton';
 
 use Bio::SeqIO;
 use Data::Dumper;
-use Finishing::Project;
-use Finishing::Project::FileReader;
-use Finishing::Project::GSC;
-use Finishing::Project::Proxies;
-use Finishing::Project::Sources;
-use Finishing::Project::Utils;
+use Genome::Site::WUGC::Finishing::Project;
+use Genome::Site::WUGC::Finishing::Project::FileReader;
+use Genome::Site::WUGC::Finishing::Project::GSC;
+use Genome::Site::WUGC::Finishing::Project::Proxies;
+use Genome::Site::WUGC::Finishing::Project::Sources;
+use Genome::Site::WUGC::Finishing::Project::Utils;
 use IO::File;
 
 sub get_project
@@ -28,8 +28,8 @@ sub get_project
     my ($project_class, $proxy_class, $source);
     if ( $name )
     {
-        $project_class = 'Finishing::Project::GSC';
-        $proxy_class = 'Finishing::Project::GSCProxy';
+        $project_class = 'Genome::Site::WUGC::Finishing::Project::GSC';
+        $proxy_class = 'Genome::Site::WUGC::Finishing::Project::GSCProxy';
         use GSCApp;
         App->init unless App::Init->initialized;
         $source = GSC::Project->get(name => $name);
@@ -41,9 +41,9 @@ sub get_project
         my %src_params;
         $src_params{name} = $name if $name;
         $src_params{dir} = $dir if $dir;
-        $project_class = 'Finishing::Project';
-        $source = Finishing::Project::Source->new(%src_params);
-        $proxy_class = 'Finishing::Project::Proxy';
+        $project_class = 'Genome::Site::WUGC::Finishing::Project';
+        $source = Genome::Site::WUGC::Finishing::Project::Source->new(%src_params);
+        $proxy_class = 'Genome::Site::WUGC::Finishing::Project::Proxy';
     }
     
     my $proxy = $proxy_class->new
@@ -67,7 +67,7 @@ sub create_projects
     (
         attr => 'project xml',
         value => $xml,
-        isa => 'object Finishing::Project::XML',
+        isa => 'object Genome::Site::WUGC::Finishing::Project::XML',
         msg => 'fatal',
     );
 
@@ -84,7 +84,7 @@ sub create_projects
 
 sub utils : PRIVATE
 {
-    return Finishing::Project::Utils->instance;
+    return Genome::Site::WUGC::Finishing::Project::Utils->instance;
 }
 
 sub _create_tmp_projects : PRIVATE

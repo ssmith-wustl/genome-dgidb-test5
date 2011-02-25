@@ -1,10 +1,10 @@
-package Finishing::Assembly::Phd::Writer;
+package Genome::Site::WUGC::Finishing::Assembly::Phd::Writer;
 
 use strict;
 use warnings;
 use Carp;
 
-my $pkg = 'Finishing::Assembly::Phd::Writer';
+my $pkg = 'Genome::Site::WUGC::Finishing::Assembly::Phd::Writer';
 
 sub new {
     croak("$pkg:new:no class given, quitting") if @_ < 1;
@@ -116,12 +116,12 @@ PhdWriter - Phd file writer
 
 =head1 SYNOPSIS
 
-    my $writer = new Finishing::Phd::Writer();
+    my $writer = new Genome::Site::WUGC::Finishing::Phd::Writer();
     $writer->write(\*STDOUT,$phd);
 
 =head1 DESCRIPTION
 
-Finishing::Phd::Writer takes a handle to a phd object and writes it to the given file handle
+Genome::Site::WUGC::Finishing::Phd::Writer takes a handle to a phd object and writes it to the given file handle
 
 =head1 METHODS
 
@@ -132,13 +132,13 @@ Finishing::Phd::Writer takes a handle to a phd object and writes it to the given
 
 =item new 
 
-    my $writer = new Finishing::Phd::Writer;
+    my $writer = new Genome::Site::WUGC::Finishing::Phd::Writer;
 
 =cut
 
 =pod
 
-=item Finishing::Phd::Reader::write 
+=item Genome::Site::WUGC::Finishing::Phd::Reader::write 
 
     $writer->read(\*STDOUT,$phd);
 

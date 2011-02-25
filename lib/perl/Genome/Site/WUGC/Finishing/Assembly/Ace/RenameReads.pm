@@ -1,4 +1,4 @@
-package Finishing::Assembly::Ace::RenameReads;
+package Genome::Site::WUGC::Finishing::Assembly::Ace::RenameReads;
 
 use strict;
 use warnings;
@@ -6,8 +6,8 @@ use warnings;
 use Finfo::Std;
 
 use Data::Dumper;
-use Finishing::Assembly::Ace::Exporter;
-use Finishing::Assembly::Ace::Schema;
+use Genome::Site::WUGC::Finishing::Assembly::Ace::Exporter;
+use Genome::Site::WUGC::Finishing::Assembly::Ace::Schema;
 use NCBI::TraceArchive::Trace;
 
 require File::Copy;
@@ -22,9 +22,9 @@ sub execute
 
     my $tmp_ace = $self->file . '.tmp';
     unlink $tmp_ace if -e $tmp_ace;
-    my $xporter = Finishing::Assembly::Ace::Exporter->new(file => $tmp_ace);
+    my $xporter = Genome::Site::WUGC::Finishing::Assembly::Ace::Exporter->new(file => $tmp_ace);
 
-    my $ace_schema = Finishing::Assembly::Ace::Schema->connect($self->file);
+    my $ace_schema = Genome::Site::WUGC::Finishing::Assembly::Ace::Schema->connect($self->file);
     my $assembly = $ace_schema->get_assembly;
     my $contigs = $assembly->contigs;
 
@@ -72,7 +72,7 @@ sub execute
 
 =head1 Name
 
-Finishing::Assembly::Ace::RenameReads
+Genome::Site::WUGC::Finishing::Assembly::Ace::RenameReads
 
 =head1 Synopsis
 

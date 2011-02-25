@@ -1,4 +1,4 @@
-package Finishing::Assembly::Consed::Navigation::External;
+package Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::External;
 
 use strict;
 use warnings;
@@ -13,7 +13,7 @@ use Data::Dumper;
 use File::Basename;
 use IO::File;
 use IO::Socket;
-use Finishing::Assembly::Consed::Navigation::Reader;
+use Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::Reader;
 use Getopt::Long;
 use POE::Session;
 use POE::Kernel { loop => 'Glib' };
@@ -196,7 +196,7 @@ sub _ui_start
                     }
                     elsif (defined($pid))
                     {
-                        exec("firefox http://gscweb.gsc.wustl.edu/wiki/SoftwareDevelopment:Perl_Modules/Finishing::Assembly::Consed::Navigator::External")
+                        exec("firefox http://gscweb.gsc.wustl.edu/wiki/SoftwareDevelopment:Perl_Modules/Genome::Site::WUGC::Finishing::Assembly::Consed::Navigator::External")
                             or $self->error_msg("Could not launch firefox: $!");
                     }
                     else
@@ -400,7 +400,7 @@ sub _load_acenav : PRIVATE
     my $fh = IO::File->new("< $file");
     $self->fatal_msg("Can't open file ($file): $!")
         and return unless $fh;
-    my $reader = Finishing::Assembly::Consed::Navigation::Reader->new
+    my $reader = Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::Reader->new
     (
         io => $fh,
         return_as_objs => 1,
@@ -581,15 +581,15 @@ sub _ui_stop
 
 =head1 Name
 
-Finishing::Assembly::Consed::Navigation::ConvertFromList
+Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::ConvertFromList
 
 =head1 Synopsis
 
 =head1 Usage
 
- use Finishing::Assembly::Consed::Navigation::External;
+ use Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::External;
 
- my $ex_nav = Finishing::Assembly::Consed::Navigation::External->new
+ my $ex_nav = Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::External->new
  (
     acenav => $acefile_navigator, # opt
     break => 100, # opt - breaks each navigation location into this many base pairs
@@ -620,7 +620,7 @@ Finishing::Assembly::Consed::Navigation::ConvertFromList
 
 =item consed
 
-=item Finishing::Assembly::Consed::Navigation directory
+=item Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation directory
 
 =item nav2acenav(.pl)
 

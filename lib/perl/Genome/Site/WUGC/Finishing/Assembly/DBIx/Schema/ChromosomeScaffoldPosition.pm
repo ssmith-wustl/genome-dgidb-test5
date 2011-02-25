@@ -1,4 +1,4 @@
-package Finishing::Assembly::DBIx::Schema::ChromosomeScaffoldPosition;
+package Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::ChromosomeScaffoldPosition;
 # TODO remove this package and table
 
 use strict;
@@ -48,8 +48,8 @@ __PACKAGE__->add_columns
 
 __PACKAGE__->set_primary_key('chromosome_id', 'scaffold_id');
 __PACKAGE__->add_unique_constraint([qw/ chromosome_id scaffold_id /]);
-__PACKAGE__->belongs_to('scaffold', 'Finishing::Assembly::DBIx::Schema::Scaffold', 'scaffold_id');
-__PACKAGE__->belongs_to('chromosome', 'Finishing::Assembly::DBIx::Schema::Chromosome', 'chromosome_id');
+__PACKAGE__->belongs_to('scaffold', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Scaffold', 'scaffold_id');
+__PACKAGE__->belongs_to('chromosome', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Chromosome', 'chromosome_id');
 
 sub orientation
 {

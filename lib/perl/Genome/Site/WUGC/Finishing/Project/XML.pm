@@ -1,4 +1,4 @@
-package Finishing::Project::XML;
+package Genome::Site::WUGC::Finishing::Project::XML;
 
 use strict;
 use warnings;
@@ -98,7 +98,7 @@ sub write_projects
 
 =head1 Name
 
-Finishing::Project::XML
+Genome::Site::WUGC::Finishing::Project::XML
 
 =head1 Synopsis
 

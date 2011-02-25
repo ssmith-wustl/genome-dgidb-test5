@@ -365,13 +365,13 @@ sub _create_gsc_seq_fin_project
 
     return unless $proj_utils->validate_project($project);
 
-    my $gsc_seq_proj = GSC::Sequence::Setup::Finishing::Project->get(name => $project->{name});
+    my $gsc_seq_proj = GSC::Sequence::Setup::Genome::Site::WUGC::Finishing::Project->get(name => $project->{name});
 
     unless ( $gsc_seq_proj )
     {
         return unless $proj_utils->validate_new_seq_name($project->{name});
 
-        $gsc_seq_proj = GSC::Sequence::Setup::Finishing::Project->new
+        $gsc_seq_proj = GSC::Sequence::Setup::Genome::Site::WUGC::Finishing::Project->new
         (
             name => $project->{name},
             project_status => 'prefinish_done',
@@ -383,7 +383,7 @@ sub _create_gsc_seq_fin_project
 
         $self->error_msg
         (
-            "Could not create GSC::Sequence::Setup::Finishing::Project for $project->{name}"
+            "Could not create GSC::Sequence::Setup::Genome::Site::WUGC::Finishing::Project for $project->{name}"
         )
             and return unless $gsc_seq_proj;
 
