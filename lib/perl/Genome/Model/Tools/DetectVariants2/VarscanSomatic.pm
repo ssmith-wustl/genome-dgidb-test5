@@ -3,15 +3,11 @@ package Genome::Model::Tools::DetectVariants2::VarscanSomatic;
 use strict;
 use warnings;
 
+use File::Copy;
 use Genome;
 
 class Genome::Model::Tools::DetectVariants2::VarscanSomatic {
-    is => ['Genome::Model::Tools::DetectVariants::Somatic', 'Genome::Model::Tools::DetectVariants2::Base'],
-    has => [
-        reference_sequence_input => {
-            default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa",
-        }
-    ],
+    is => ['Genome::Model::Tools::DetectVariants2::Detector'],
     has_optional => [
         detect_snvs => {
             default => '1',
@@ -26,13 +22,6 @@ class Genome::Model::Tools::DetectVariants2::VarscanSomatic {
             default => "--min-coverage 3 --min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.05 --strand-filter 1",
         },
     ],
-
-    has_param => [
-        lsf_resource => {
-            value => Genome::Model::Tools::Varscan::Somatic->__meta__->property('lsf_resource')->default_value,
-        }
-    ],
-
     #This section hides those parameters that are unsupported from appearing in the help text
     has_constant_optional => [
         sv_params => {},
@@ -61,13 +50,13 @@ sub _detect_variants {
     my $self = shift;
 
     ## Get required parameters ##
-    my $output_snp = $self->_snv_staging_output;
-    my $output_indel = $self->_indel_staging_output;
+    my $output_snp = $self->_temp_staging_directory."/snvs.hq";
+    my $output_indel = $self->_temp_staging_directory."/indels.hq";
 
     my $snv_params = $self->snv_params || "";
     my $indel_params = $self->indel_params || "";
     my $result;
-    if ( ($self->detect_svps && $self->detect_indels) && ($snv_params eq $indel_params) ) {
+    if ( ($self->detect_snvs && $self->detect_indels) && ($snv_params eq $indel_params) ) {
         $result = $self->_run_varscan($output_snp, $output_indel, $snv_params);
     } else {
         # Run twice, since we have different parameters. Detect snps and throw away indels, then detect indels and throw away snps
