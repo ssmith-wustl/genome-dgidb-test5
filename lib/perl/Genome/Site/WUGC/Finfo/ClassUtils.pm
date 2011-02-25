@@ -1,4 +1,4 @@
-package Finfo::ClassUtils;
+package Genome::Site::WUGC::Finfo::ClassUtils;
 
 use strict;
 use warnings;
@@ -60,7 +60,7 @@ sub use_class {
 
 =head1 Name
 
-Finfo::ClassUtils
+Genome::Site::WUGC::Finfo::ClassUtils
 
 =head1 Synopsis
 
@@ -71,13 +71,13 @@ Some generic methods exported to your class.  Some methods inspired by Conway's 
 I<To use it, use it!>
 
 B<Exports all methods>
- use Finfo::ClassUtils;
+ use Genome::Site::WUGC::Finfo::ClassUtils;
 
 B<Exports class method>
- use Finfo::ClassUtils 'class';
+ use Genome::Site::WUGC::Finfo::ClassUtils 'class';
 
 B<Exports anon_scalar and class methods>
- use Finfo::ClassUtils 'anon_scalar class';
+ use Genome::Site::WUGC::Finfo::ClassUtils 'anon_scalar class';
 
 I<...or require then import!>
 

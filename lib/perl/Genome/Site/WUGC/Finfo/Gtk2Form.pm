@@ -1,9 +1,9 @@
-package Finfo::Gtk2Form;
+package Genome::Site::WUGC::Finfo::Gtk2Form;
 
 use strict;
 use warnings;
 
-use Finfo::Std;
+use Genome::Site::WUGC::Finfo::Std;
 
 use Data::Dumper;
 use File::Basename;
@@ -90,7 +90,7 @@ sub _create_widget_params : PRIVATE
             #my $label = join(' ', map { ucfirst } split(/_/, $attr));
             my $attr_type = $class->attributes_attribute($attr, 'attr_type');
             my $attr_isa = $class->attributes_attribute($attr, 'isa');
-            my ($isa) = Finfo::Validate->is_isa
+            my ($isa) = Genome::Site::WUGC::Finfo::Validate->is_isa
             (
                 attr => "isa for attribute ($attr)",
                 value => $attr_isa,
@@ -262,7 +262,7 @@ sub get_values
 
 =head1 Name
 
-Finfo::Gtk2WidgetFactory
+Genome::Site::WUGC::Finfo::Gtk2WidgetFactory
 
 
 =head1 Synopsis

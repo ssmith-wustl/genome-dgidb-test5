@@ -1,11 +1,11 @@
-package Finfo::StepConfiguration;
+package Genome::Site::WUGC::Finfo::StepConfiguration;
 
 use strict;
 use warnings;
 use Data::Dumper;
 use IO::File;
 
-use base qw(Finfo::Object);
+use base qw(Genome::Site::WUGC::Finfo::Object);
 
 sub _attrs
 {
@@ -157,7 +157,7 @@ If no requirements are given for a class, that class is used for the step and th
 <requirement>=<value>
 comma separated requirements are or'd to determine if step will be executed, if the requirement is not associated with a value, it will be checked for definition
 
-Requirements must be valid keys in the Finfo::StepFactory parameters. 
+Requirements must be valid keys in the Genome::Site::WUGC::Finfo::StepFactory parameters. 
 multiple class choices are evaluated in order, as soon as a requirement is met, that class is assigned for the step
 if no requirements are given for a class, that class is used for the step and the step is executed
 

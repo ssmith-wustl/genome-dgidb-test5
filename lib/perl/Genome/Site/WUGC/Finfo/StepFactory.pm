@@ -1,10 +1,10 @@
-package Finfo::StepFactory;
+package Genome::Site::WUGC::Finfo::StepFactory;
 
 use strict;
 use warnings;
 use Data::Dumper;
-use Finfo::StepConfiguration;
-use base qw(Finfo::Object);
+use Genome::Site::WUGC::Finfo::StepConfiguration;
+use base qw(Genome::Site::WUGC::Finfo::Object);
 
 our $AUTOLOAD;
 
@@ -30,7 +30,7 @@ sub _attrs
 sub _init
 {
     my ($self) = @_;
-    my $conf = Finfo::StepConfiguration->new( configuration_file => $self->configuration_file );
+    my $conf = Genome::Site::WUGC::Finfo::StepConfiguration->new( configuration_file => $self->configuration_file );
     return 0 unless defined $conf;
     $self->check_parameters; 
     $self->configuration_object($conf);
@@ -138,11 +138,11 @@ sub execute
 =pod
 
 =head1 NAME
-StepFactory - This is a module use to manage a set of Finfo::Object 'steps' in a process.
+StepFactory - This is a module use to manage a set of Genome::Site::WUGC::Finfo::Object 'steps' in a process.
 
 =head1 SYNOPSIS
-The StepFactory module provides a simple interface for executing several Finfo::Object modules in sequence.
-my $factory = Finfo::StepFactory->new(configuration_file => $conf_file, parameters => \%parameters);
+The StepFactory module provides a simple interface for executing several Genome::Site::WUGC::Finfo::Object modules in sequence.
+my $factory = Genome::Site::WUGC::Finfo::StepFactory->new(configuration_file => $conf_file, parameters => \%parameters);
 $factory->execute;
 
 The configuration file determines step order and implementation details, the parameters contain the hashref of parameters to be used by all steps.
@@ -151,15 +151,15 @@ Each step should be a finfo object and contain an execute method which calls all
 
 =head1 DESCRIPTION 
 
-StepFactory was created to facilitate the creation, design, and maintenance of multi-part operations and applications.  By breaking down a long process into step modules, inheriting from Finfo::Object, different steps can be modified, maintained or swapped out for an entirely new implementation without affecting other parts of the process.  
+StepFactory was created to facilitate the creation, design, and maintenance of multi-part operations and applications.  By breaking down a long process into step modules, inheriting from Genome::Site::WUGC::Finfo::Object, different steps can be modified, maintained or swapped out for an entirely new implementation without affecting other parts of the process.  
 
 Using a configuration file, one can define a series of steps to be executed in order.  For each step a class is provided that implements the step.  Multiple classes can be defined for a step, as well as requirements for a certain class to be used for the step.  If no classes satisfy their requirements, that step is skipped.
 
 =head1 SEE ALSO
 
-Finfo::Object for details on building a Finfo::Object
+Genome::Site::WUGC::Finfo::Object for details on building a Genome::Site::WUGC::Finfo::Object
 
-Finfo::StepConfiguration for information on the configuration file syntax
+Genome::Site::WUGC::Finfo::StepConfiguration for information on the configuration file syntax
 
 =cut
 

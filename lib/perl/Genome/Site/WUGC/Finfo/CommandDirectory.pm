@@ -1,14 +1,14 @@
-package Finfo::CommandDirectory;
+package Genome::Site::WUGC::Finfo::CommandDirectory;
 
 use strict;
 use warnings;
 
-use Finfo::Std;
+use Genome::Site::WUGC::Finfo::Std;
 
 require File::Basename;
 use Data::Dumper;
-require Finfo::CommandLineOptions;
-use Finfo::ClassUtils 'use_class';
+require Genome::Site::WUGC::Finfo::CommandLineOptions;
+use Genome::Site::WUGC::Finfo::ClassUtils 'use_class';
 require Term::ANSIColor;
 require Text::Wrap;
 
@@ -91,7 +91,7 @@ sub execute {
         exit 1;
     }
 
-    Finfo::Validate->validate(
+    Genome::Site::WUGC::Finfo::Validate->validate(
         attr => 'function',
         value => $function,
         isa => [ 'in_list', @functions ],
@@ -99,7 +99,7 @@ sub execute {
     );
 
     my $class = $functions_and_classes->{$function};
-    my $clo = Finfo::CommandLineOptions->new (
+    my $clo = Genome::Site::WUGC::Finfo::CommandLineOptions->new (
         classes => [ $class ],
         add_q => 1,
     );

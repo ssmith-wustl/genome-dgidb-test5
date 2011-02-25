@@ -1,9 +1,9 @@
-package Finfo::SeparatedValueReader;
+package Genome::Site::WUGC::Finfo::SeparatedValueReader;
 
 use strict;
 use warnings;
 
-use base 'Finfo::Reader';
+use base 'Genome::Site::WUGC::Finfo::Reader';
 
 use Data::Dumper;
 
@@ -97,7 +97,7 @@ sub _get_and_split_next_line {
 
 =head1 Name
 
-Finfo::SeparatedValueReader
+Genome::Site::WUGC::Finfo::SeparatedValueReader
 
 =head1 Synopsis
 
@@ -105,9 +105,9 @@ Iterates through an io, splitting each line by the given separator.  If no heade
 
 =head1 Usage
 
- use Finfo::SeparatedValueReader;
+ use Genome::Site::WUGC::Finfo::SeparatedValueReader;
 
- my $reader = Finfo::SeparatedValueReader->new (
+ my $reader = Genome::Site::WUGC::Finfo::SeparatedValueReader->new (
     io => 'myalbmus.txt', # req; file or IO:: object
     headers => [qw/ title artist /], # opt; headers for the file
     separator => '\t', # opt; default is ','
@@ -150,7 +150,7 @@ Iterates through an io, splitting each line by the given separator.  If no heade
 
 =head1 See Also
 
-I<Finfo::Reader> (inherits from), I<Finfo::Std>, I<Finfo::Logging>
+I<Genome::Site::WUGC::Finfo::Reader> (inherits from), I<Genome::Site::WUGC::Finfo::Std>, I<Genome::Site::WUGC::Finfo::Logging>
 
 =head1 Disclaimer
 

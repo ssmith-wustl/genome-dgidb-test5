@@ -1,9 +1,9 @@
-package Finfo::Reader;
+package Genome::Site::WUGC::Finfo::Reader;
 
 use strict;
 use warnings;
 
-use Finfo::Std;
+use Genome::Site::WUGC::Finfo::Std;
 require Scalar::Util;
 
 my %io :name(io:r)
@@ -33,7 +33,7 @@ sub START
     my $io = $self->io;
     if ( ref($io) )
     {
-        Finfo::Validate->validate
+        Genome::Site::WUGC::Finfo::Validate->validate
         (
             attr => 'io for reading',
             value => $io,
@@ -44,7 +44,7 @@ sub START
     }
     else
     {
-        Finfo::Validate->validate
+        Genome::Site::WUGC::Finfo::Validate->validate
         (
             attr => 'file for reading',
             value => $io,
@@ -109,7 +109,7 @@ sub next
         my @attr_objs;
         foreach my $value ( @values )
         {
-            return unless Finfo::Validate->validate
+            return unless Genome::Site::WUGC::Finfo::Validate->validate
             (
                 attr => "Attrs for $attr_class",
                 value => $ref->{$attr},
@@ -151,7 +151,7 @@ sub all
 
 =head1 Name
 
-Finfo::Reader
+Genome::Site::WUGC::Finfo::Reader
 
 =head1 Synopsis
 
@@ -166,13 +166,13 @@ B<In your class>
  use strict;
  use warnings;
 
- use base 'Finfo::Reader';
+ use base 'Genome::Site::WUGC::Finfo::Reader';
 
  # use the return classes, OPTIONAL, if allowing to return_as_objects
  use Album; 
  use Album::Track; 
 
- # add your attributes, OPTIONAL, see Finfo::Std
+ # add your attributes, OPTIONAL, see Genome::Site::WUGC::Finfo::Std
  my %albums_count :name(album_count) :isa(int) default(0);
  
  # add a START method, OPTIONAL, see Fifno::Std;
@@ -338,7 +338,7 @@ $reader->_reset
 
 =head1 See Also
 
-I<Finfo::Std>, I<Finfo::Logging>
+I<Genome::Site::WUGC::Finfo::Std>, I<Genome::Site::WUGC::Finfo::Logging>
 
 =head1 Disclaimer
 

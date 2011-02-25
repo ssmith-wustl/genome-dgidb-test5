@@ -3,7 +3,7 @@ package Finishing::Assembly::Ace::ResultSet;
 use strict;
 use warnings;
 
-use Finfo::Std;
+use Genome::Site::WUGC::Finfo::Std;
 
 my %objects :name(objects:r) :ds(aryref) :access(ro);
 my %count :name(_count:p) :isa('int gt 0');

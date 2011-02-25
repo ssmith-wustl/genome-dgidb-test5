@@ -1,15 +1,15 @@
-package Finfo::Accessor;
+package Genome::Site::WUGC::Finfo::Accessor;
 use base 'Class::Accessor';
 use strict;
 
 =head1 NAME
 
-Finfo::Accessor::Fast - Faster, but less expandable, accessors, modified from Class::Accessor::Fast to include an accessors method, which returns an array of accessor names for a class.
+Genome::Site::WUGC::Finfo::Accessor::Fast - Faster, but less expandable, accessors, modified from Class::Accessor::Fast to include an accessors method, which returns an array of accessor names for a class.
 
 =head1 SYNOPSIS
 
   package Foo;
-  use base qw(Finfo::Accessor::Fast);
+  use base qw(Genome::Site::WUGC::Finfo::Accessor::Fast);
 
   # The rest as Class::Accessor except no set() or get().
 
@@ -29,7 +29,7 @@ Class::Accessor.
 
 =cut
 
-use Finfo::Logging;
+use Genome::Site::WUGC::Finfo::Logging;
 
 my %accessor_names;
 

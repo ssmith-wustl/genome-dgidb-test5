@@ -1,9 +1,9 @@
-package Finfo::Iterator;
+package Genome::Site::WUGC::Finfo::Iterator;
 
 use strict;
 use warnings;
 
-use Finfo::Std;
+use Genome::Site::WUGC::Finfo::Std;
 
 use Data::Dumper;
 
@@ -138,7 +138,7 @@ sub search
         }
     }
 
-    Finfo::Validate->validate
+    Genome::Site::WUGC::Finfo::Validate->validate
     (
         attr => 'search conditions',
         value => $conditions,
@@ -148,7 +148,7 @@ sub search
 
     if ( $params )
     {
-        Finfo::Validate->validate
+        Genome::Site::WUGC::Finfo::Validate->validate
         (
             attr => 'search params',
             value => $params,
@@ -238,18 +238,18 @@ sub _increment_position : PRIVATE
 
 =head1 Name
 
-Finfo::Iterator
+Genome::Site::WUGC::Finfo::Iterator
 
 =head1 Synopsis
 
 =head1 Usage
 
 
- use Finfo::Iterator;
+ use Genome::Site::WUGC::Finfo::Iterator;
 
 B<create with ids and a callback to get the object associated with the id:>
 
- my $iterator = Finfo::Iterator->new
+ my $iterator = Genome::Site::WUGC::Finfo::Iterator->new
  (
     ids => [qw/ 1 2 3 /],
     callback => sub{ return _get_object_by_id(@_); },
@@ -257,7 +257,7 @@ B<create with ids and a callback to get the object associated with the id:>
 
 B<or use the objects themselves:>
 
- my $iterator = Finfo::Iterator->new
+ my $iterator = Genome::Site::WUGC::Finfo::Iterator->new
  (
     objects => \@objects,
  );
