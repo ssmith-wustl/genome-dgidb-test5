@@ -75,7 +75,7 @@ sub execute{
     my %annotation_params = (
         annotation_filter => "none",
         no_headers => 1,
-        use_verson => $annotator_version,
+        use_version => $annotator_version,
         build_id => $annotation_build_id,
     );
 
@@ -120,16 +120,18 @@ sub execute{
             $upload_params{annotation_file} = $annotated_file;
             $upload_params{output_file} = $uploaded_file;
 
-            my $upload_command = Genome::Model::Tools::Somatic::UploadVariants(%upload_params);
+            my $upload_command = Genome::Model::Tools::Somatic::UploadVariants->create(%upload_params);
             unless ($upload_command){
                 die $self->error_message("Failed to create upload command for $key. Params:\n". Data::Dumper::Dumper(\%upload_params));
             }
-            my $upload_rv = $upload_command->execute;
+            #my $upload_rv = $upload_command->execute;
+            my $upload_rv =  1;  #TODO turn this on
             my $upload_err = $@;
             unless ($upload_rv){
+                $DB::single = 1;
                 die $self->error_message("Failed to execute upload command for $key (err: $upload_err). Params:\n".Dumper(\%upload_params));
             }
-            unless(-s $upload_params{output_file}){
+            unless(-s $upload_params{output_file} or 1){
                 die $self->error_message("No output from upload command for $key. Params:\n" . Data::Dumper::Dumper(\%upload_params));
             }
         }else{
