@@ -61,6 +61,9 @@ the input BAM files and then uses that configuration to run breakdancer.
 EOS
 }
 
+sub available_breakdancer_versions {
+    return keys %BREAKDANCER_VERSIONS;
+}
 
 sub breakdancer_path {
     my $self = shift;

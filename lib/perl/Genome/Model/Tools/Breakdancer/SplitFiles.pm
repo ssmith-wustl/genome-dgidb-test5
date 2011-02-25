@@ -29,8 +29,16 @@ class Genome::Model::Tools::Breakdancer::SplitFiles {
             is_transient => 1,
             doc => 'Array containing paths of all created output files',
         },
+        split_column => {
+            is => 'Number',
+            default => 'chr2',
+            valid_values => ['chr1', 'chr2'],
+            doc => 'Chromosome column to split on',
+        },
     ],
 };
+
+my @FULL_CHR_LIST = (1..22, 'X', 'Y');
 
 sub help_synopsis {
     return 'Splits up a breakdancer output file by chromosome';
@@ -42,30 +50,6 @@ sub help_brief {
 
 sub help_detail {
     return 'Splits up a breakdancer output file by chromosome';
-}
-
-sub headers {
-    return qw/ 
-        chr1
-        pos1
-        orientation1
-        chr2
-        pos2
-        orientation2
-        type
-        size
-        score
-        num_reads
-        num_reads_lib
-        allele_frequency
-    /;
-}
-
-# Unfortunately, separated value reader has no method that returns the original line, so you
-# have to use the hash and headers to remake it. Lame.
-sub recreate_original_line {
-    my ($self, $line_hash) = @_;
-    return join("\t", map { $line_hash->{$_ } } $self->headers);
 }
 
 sub execute {
@@ -89,27 +73,31 @@ sub execute {
 
     $self->status_message("Split files being written to " . $self->output_directory);
 
+    my $split_index = $self->split_column eq 'chr1' ? 0 : 3;
     my $input_fh = IO::File->new($self->input_file, 'r');
     my %output_handles;
     my $output_fh;
     my $chrom;
-    my $svr = Genome::Utility::IO::SeparatedValueReader->create(
-        headers => [$self->headers],
-        input => $self->input_file,
-        separator => "\t",
-        is_regex => 1,
-        ignore_extra_columns => 1,
-    );
-    confess 'Could not create reader for input file ' . $self->input_file unless $svr;
-    
-    $DB::single = 1;
-    my $line = $svr->next;
-    my $header = $self->recreate_original_line($line);
-
+    my $header;
     my @files;
-    while ($line = $svr->next) {
-        unless (defined $chrom and $chrom eq $line->{chr1}) {
-            $chrom = $line->{chr1};
+    while (my $line = $input_fh->getline) {
+        if ($line =~ /^#/) {
+            next if defined $header;
+            if ($line =~ /^#Chr1/i) {
+                $header = $line;
+            }
+            next;
+        }
+
+        my @fields = split("\t", $line);
+        my $chr = $fields[$split_index];
+
+        unless (grep { $_ eq $chr } @FULL_CHR_LIST) {
+            $chr = 'other';
+        }
+
+        unless (defined $chrom and $chrom eq $chr) {
+            $chrom = $chr;
             if (exists $output_handles{$chrom}) {
                 $output_fh = $output_handles{$chrom};
             }
@@ -120,13 +108,13 @@ sub execute {
                 $output_fh = IO::File->new($file_name, 'w');
                 confess "Could not get file handled for output file $output_fh!" unless $output_fh;
                 $output_handles{$chrom} = $output_fh;
-                $output_fh->print($header . "\n");
+                $output_fh->print($header);
                 push @files, $file_name;
                 $self->status_message("Created output file $file_name");
             }
         }
 
-        $output_fh->print($self->recreate_original_line($line) . "\n");
+        $output_fh->print($line);
     }
 
     $input_fh->close;

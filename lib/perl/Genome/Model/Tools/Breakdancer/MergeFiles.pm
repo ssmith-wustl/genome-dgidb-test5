@@ -33,8 +33,16 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
-    my @files = grep { -e $_ } split(',', $self->input_files);
-    confess 'No files found that for merging!' unless @files;
+    #my @files = grep { -e $_ } split(',', $self->input_files);
+    #confess 'No files found that for merging!' unless @files;
+    my @files = split ',', $self->input_files;
+
+    for my $input_file (@files) {
+        unless (-e $input_file) {
+            $self->error_message("Input file for merge: $input_file not existing");
+            die;
+        }
+    }
 
     if (-e $self->output_file) {
         $self->warning_message('Removing existing output file at ' . $self->output_file);
@@ -54,7 +62,7 @@ sub execute {
         while (my $line = $input_fh->getline) {
             if ($line =~ /^#/) {
                 next if defined $header;
-                next unless $line =~ /^#Chr1/;
+                next unless $line =~ /^#Chr1/i; #tigra validation output using CHR1
                 $header = $line;
             }
             $output_fh->print($line);
