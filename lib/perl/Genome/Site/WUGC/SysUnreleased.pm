@@ -395,8 +395,10 @@ sub lock_resource {
     }
     my $basename = File::Basename::basename($resource_lock);
 
-    my $block_sleep = delete $args{block_sleep} || 60;
-    my $max_try = delete $args{max_try} || 7200;
+    my $block_sleep = delete $args{block_sleep};
+    $block_sleep = 60 unless defined $block_sleep;
+    my $max_try = delete $args{max_try};
+    $max_try = 7200 unless defined $max_try;
 
     my $my_host = hostname;
     my $job_id = (defined $ENV{'LSB_JOBID'} ? $ENV{'LSB_JOBID'} : "NONE");
