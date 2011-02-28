@@ -393,6 +393,7 @@ sub lock_resource {
         $resource_lock = $lock_directory . '/' . $resource_id . ".lock";
         $parent_dir = $lock_directory
     }
+    my $wait_on_self = delete $args{wait_on_self} || 0;
     my $basename = File::Basename::basename($resource_lock);
 
     my $block_sleep = delete $args{block_sleep};
@@ -463,7 +464,7 @@ sub lock_resource {
         $target_basename =~ s/lock-.*?--//;;
         my ($host, $user, $pid, $lsf_id) = split /_/, $target_basename;
 
-        if ($host eq $my_host and $user eq $my_user and $pid eq $my_pid and $lsf_id eq $my_lsf_id) {
+        if (not $wait_on_self and $host eq $my_host and $user eq $my_user and $pid eq $my_pid and $lsf_id eq $my_lsf_id) {
             $self->warning_message("Looks like I'm waiting on my own lock, forcing unlock...");
             $self->unlock_resource(resource_lock => $resource_lock, force => 1);
             next;
