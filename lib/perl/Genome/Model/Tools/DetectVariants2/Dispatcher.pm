@@ -158,9 +158,7 @@ sub _detect_variants {
     $self->_dump_workflow($workflow);
 
     $self->status_message("Now launching the dispatcher workflow.");
-
     ## Worklow launches here
-
     my $result = Workflow::Simple::run_workflow_lsf( $workflow, %{$input});
 
     unless($result){
@@ -459,7 +457,7 @@ sub create_combine_operation {
     my $input_b_key = $blink."_output_directory";
 
     my $input_a_last_op_name = $afilter ? $workflow_links->{$input_a_key}->{'last_operation'} : $alink;
-    my $input_b_last_op_name = $bfilter ? $workflow_links->{$input_a_key}->{'last_operation'} : $blink;
+    my $input_b_last_op_name = $bfilter ? $workflow_links->{$input_b_key}->{'last_operation'} : $blink;
 
 
     #print "creating a ".$operation_type." for ".$variant_type."\n";
@@ -557,8 +555,8 @@ sub add_detectors_and_filters {
                 $class = $instance->{class};
                 $name = $instance->{name};
                 $version = $instance->{version};
+                my $unique_detector_base_name = join( "_", ($variant_type, $name, $version, $params));
                 my @filters = @{$instance->{filters}};
-
                 # Make the operation
                 my $detector_operation = $workflow_model->add_operation(
                     name => "$variant_type $name $version $params",
@@ -571,7 +569,7 @@ sub add_detectors_and_filters {
                 # create filter operations
                 for my $filter (@filters){
                     my $foperation = $workflow_model->add_operation(
-                        name => $filter->{name}." ".$filter->{version}." ".$filter->{params},
+                        name => join(" ",($unique_detector_base_name,$filter->{name},$filter->{version},$filter->{params})),
                         operation_type => Workflow::OperationType::Command->get($filter->{class})
                     ); 
                     unless($foperation){
@@ -596,7 +594,6 @@ sub add_detectors_and_filters {
                 # compose a hash containing input_connector outputs and the operations to which they connect, then connect them
 
                 # first add links from input_connector to detector
-                my $unique_detector_base_name = join( "_", ($variant_type, $name, $version, $params));
                 my $detector_output_directory = $self->calculate_operation_output_directory($self->_temp_staging_directory."/".$variant_type, $name, $version, $params);
                 
                 my $inputs_to_store;
