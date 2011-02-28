@@ -464,7 +464,7 @@ sub lock_resource {
         my ($host, $user, $pid, $lsf_id) = split /_/, $target_basename;
         
         my $info_content=sprintf("HOST %s\nPID %s\nLSF_JOB_ID %s\nUSER %s",$host,$pid,$lsf_id,$user);
-        $self->status_message("waiting on lock for resource '$resource_lock': $symlink_error\n. lock_info is $info_content");
+        $self->status_message("waiting on lock for resource '$resource_lock': $symlink_error. lock_info is:\n$info_content");
        
         if ($lsf_id ne "NONE") { 
             my ($job_info,$events) = Genome::Model::Event->lsf_state($lsf_id);
