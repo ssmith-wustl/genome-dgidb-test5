@@ -120,7 +120,7 @@ sub execute {                               # replace with real execution logic.
 		if($search_string && $key_count < 100)
 		{
 			print "Extracting genotypes for $key_count positions...\n";		
-			$cmd = "samtools view -b $bam_file $search_string | samtools pileup -f /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa - | java -classpath ~dkoboldt/Software/Varscan net.sf.varscan.Varscan pileup2cns >$temp_path";			
+			$cmd = "samtools view -b $bam_file $search_string | samtools pileup -f /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa - | java -jar /gsc/scripts/lib/java/VarScan/VarScan.jar pileup2cns >$temp_path";			
 			print "$cmd\n";
 		}
 		else

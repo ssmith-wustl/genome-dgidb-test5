@@ -75,7 +75,9 @@ sub _find_compatible_build_in_model {
     $candidate_model->instrument_data_assignments;
 
     my @build_idas = $build->instrument_data_assignments;
+    my @build_id_inputs = $build->inputs(name => 'instrument_data');
     @build_idas = sort { $a->instrument_data_id <=> $b->instrument_data_id } @build_idas;
+    @build_id_inputs = sort { $a->value_id <=> $b->value_id } @build_id_inputs;
     my @build_alignments = map { $build->model->processing_profile->results_for_instrument_data_assignment($_) } $build->instrument_data_assignments;
 
     my @candidate_builds = $candidate_model->completed_builds;
@@ -83,13 +85,20 @@ sub _find_compatible_build_in_model {
         next if $candidate_build eq $build; #We can't use ourself to shortcut. (This shouldn't happen anyway, since we're not completed.)
 
         my @candidate_idas = $candidate_build->instrument_data_assignments;
+        my @candidate_id_inputs = $build->inputs(name => 'instrument_data');
 
         next BUILD unless scalar(@candidate_idas) == scalar(@build_idas);
+        next BUILD unless scalar(@candidate_id_inputs) == scalar(@build_id_inputs);
         @candidate_idas = sort { $a->instrument_data_id <=> $b->instrument_data_id } @candidate_idas;
+        @candidate_id_inputs = sort { $a->value_id <=> $b->value_id } @candidate_id_inputs;
 
         for my $i (0..$#build_idas) {
             next BUILD if $build_idas[$i]->instrument_data_id != $candidate_idas[$i]->instrument_data_id;
             next BUILD if ($build_idas[$i]->filter_desc || '') ne ($candidate_idas[$i]->filter_desc  || '');
+        }
+
+        for my $i (0..$#build_id_inputs) {
+            next BUILD if $build_id_inputs[$i]->value_id != $candidate_id_inputs[$i]->value_id;
         }
 
         #okay, both builds have same instrument data assignments--as last check, try to load the individual alignments

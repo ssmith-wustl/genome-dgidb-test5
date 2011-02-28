@@ -18,6 +18,9 @@ BEGIN {
 
 my $refseq = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa';
 my $input_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-LibrarySupport/";
+
+# Updated to .v2 for correcting an error with newlines
+my $expected_dir = $input_directory . "/expected.v2/";
 my $tumor_bam_file  = $input_directory. '/tumor.tiny.bam';
 my $test_output_dir = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Filter-LibrarySupport-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 
@@ -26,10 +29,10 @@ my $lq_output = "$test_output_dir/indels.lq";
 my $hq_output_bed = "$test_output_dir/indels.hq.bed";
 my $lq_output_bed = "$test_output_dir/indels.lq.bed";
 
-my $expected_hq_output = "$input_directory/indels.hq.expected";
-my $expected_lq_output = "$input_directory/indels.lq.expected";
-my $expected_hq_bed_output = "$input_directory/indels.hq.expected.bed";
-my $expected_lq_bed_output = "$input_directory/indels.lq.expected.bed";
+my $expected_hq_output = "$expected_dir/indels.hq.expected";
+my $expected_lq_output = "$expected_dir/indels.lq.expected";
+my $expected_hq_bed_output = "$expected_dir/indels.hq.expected.bed";
+my $expected_lq_bed_output = "$expected_dir/indels.lq.expected.bed";
 
 my $library_support_filter = Genome::Model::Tools::DetectVariants2::Filter::LibrarySupport->create(
     input_directory => $input_directory,

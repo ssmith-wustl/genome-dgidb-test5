@@ -21,7 +21,7 @@ our $VERSION = '1.01';
 
 class Genome::Model::Tools::Music::MutationRelation {
     is => 'Command',                       
-    has => [ 
+    has_input => [ 
     output_file => {
         is => 'Text',
         doc => "Results of mutation-relation tool",

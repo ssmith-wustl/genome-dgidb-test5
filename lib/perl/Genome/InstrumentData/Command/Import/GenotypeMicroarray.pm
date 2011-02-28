@@ -1,4 +1,4 @@
-package Genome::InstrumentData::Command::Import::Genotype;
+package Genome::InstrumentData::Command::Import::GenotypeMicroarray;
 
 use strict;
 use warnings;
@@ -10,8 +10,9 @@ use File::Basename;
 use Data::Dumper;
 use IO::File;
 
-class Genome::InstrumentData::Command::Import::Genotype {
+class Genome::InstrumentData::Command::Import::GenotypeMicroarray {
     is  => 'Genome::Command::Base',
+    is_abstract => 1,
     has => [
         source_data_file => {
             is => 'Text',

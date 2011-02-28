@@ -21,7 +21,7 @@ our $VERSION = '1.01';
 
 class Genome::Model::Tools::Music::Pfam {
     is => 'Genome::Model::Tools::Music',
-    has => [ 
+    has_input => [ 
     maf_file => {
         is => 'Text',
         is_input => 1,
