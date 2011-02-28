@@ -388,6 +388,7 @@ sub test4_resource_locking : Test(20) {
                                                          resource_id => $bogus_id,
                                                          max_try => 1,
                                                          block_sleep => 3,
+                                                         wait_on_self => 1,
                                                      ),'failed lock resource with real lsf_job_id blocking');
           ok(Genome::Sys->unlock_resource(
                                                           lock_directory => $tmp_dir,
