@@ -36,7 +36,7 @@ my $filter_test = $dispatcher_class->create(
     control_aligned_reads_input => $normal_bam,
 );
 ok($filter_test, "Object to test a filter case created");
-ok($filter_test->execute);
+ok($filter_test->execute, "Successfully executed test.");
 
 done_testing();
 

@@ -7,13 +7,11 @@ use MIME::Lite;
 
 class Genome::Disk::Group::Command::AvailableSpace {
     is => 'Genome::Disk::Group::Command',
-    has => [
-        disk_group_name => {
-            is => 'Text',
-            doc => 'name of disk group for which available space will be found',
-        },
-    ],
     has_optional => [
+        disk_group_names => {
+            is => 'Text',
+            doc => 'comma delimited list of disk groups to be checked',
+        },
         send_alert => {
             is => 'Boolean',
             default => 0,
@@ -21,7 +19,7 @@ class Genome::Disk::Group::Command::AvailableSpace {
         },
         alert_recipients => {
             is => 'Text',
-            default => 'jeldred,bdericks',
+            default => 'jeldred,bdericks,apipebulk',
             doc => 'If an alert is sent, these are the recipients',
         },
     ],
@@ -49,49 +47,56 @@ sub help_detail {
 sub execute {
     my $self = shift;
     
-    my $group = Genome::Disk::Group->get(disk_group_name => $self->disk_group_name);
-    unless ($group) {
-        Carp::confess "Could not find disk group with name " . $self->disk_group_name;
+    my @disk_groups;
+    if ($self->disk_group_names) {
+        @disk_groups = split(',', $self->disk_group_names);
+    }
+    else {
+        @disk_groups = keys %minimum_space_for_group;
     }
 
-    my @volumes = grep { $_->can_allocate == 1 and $_->disk_status eq 'active' } $group->volumes;
-    unless (@volumes) {
-        Carp::confess "Found no volume belonging to group " . $self->disk_group_name;
-    }
+    my $group_is_low = 0;
+    my @reports;
+    for my $group_name (@disk_groups) {
+        my $group = Genome::Disk::Group->get(disk_group_name => $group_name);
+        next unless $group;
 
-    $self->status_message("Found " . scalar @volumes . " disk volumes belonging to group " . $self->disk_group_name);
+        my @volumes = grep { $_->can_allocate == 1 and $_->disk_status eq 'active' } $group->volumes;
+        next unless @volumes;
 
-    my $sum;
-    for my $volume (@volumes) {
-        my $space = $volume->unallocated_kb - $volume->reserve_size;
-        $sum += $space unless $space < 0;  # I've learned not to trust the system to be consistent
-    }
+        my $sum;
+        for my $volume (@volumes) {
+            my $space = $volume->unallocated_kb - $volume->unallocatable_reserve_size;
+            $sum += $space unless $space < 0;  # I've learned not to trust the system to be consistent
+        }
 
-    my $sum_gb = $self->kb_to_gb($sum);
-    my $sum_tb = $self->kb_to_tb($sum);
-    $self->status_message("Group " . $self->disk_group_name . " has $sum KB ($sum_gb GB, $sum_tb TB) of free space");
+        my $sum_gb = $self->kb_to_gb($sum);
+        my $sum_tb = $self->kb_to_tb($sum);
 
-    if (exists $minimum_space_for_group{$self->disk_group_name}) {
-        my $min = $minimum_space_for_group{$self->disk_group_name};
-        if ($sum < $min) {
+        if (exists $minimum_space_for_group{$group_name} and $sum < $minimum_space_for_group{$group_name}) {
+            my $min = $minimum_space_for_group{$group_name};
+            $group_is_low = 1;
             my $min_gb = $self->kb_to_gb($min);
             my $min_tb = $self->kb_to_tb($min);
-            $self->warning_message("Free space below minimum $min kb ($min_gb GB, $min_tb TB)!");
-
-            if ($self->send_alert) {
-                my $data = 'Disk group ' . $self->disk_group_name . " has $sum KB ($sum_gb GB, $sum_tb TB) of free space, " .
-                    "which is below the minimum of $min KB ($min_gb GB, $min_tb TB). Either free some disk or request more!";
-                my $msg = MIME::Lite->new(
-                    From => $ENV{USER} . '@genome.wustl.edu',
-                    To => join(',', map { $_ . '@genome.wustl.edu' } split(',', $self->alert_recipients)),
-                    Subject => 'Disk Group ' . $self->disk_group_name . ' Running Low!',
-                    Data => $data,
-                );
-                $msg->send();
-
-                $self->warning_message("Sent alert to " . $self->alert_recipients);
-            }
+            push @reports, "Disk group $group_name has $sum KB ($sum_gb GB, $sum_tb TB) of free space, " .
+                "which is below the minimum of $min KB ($min_gb GB, $min_tb TB). Either free some disk or request more!";
         }
+        else {
+            push @reports, "Disk group $group_name has $sum KB ($sum_gb GB, $sum_tb TB) of free space";
+        }
+    }
+
+    $self->status_message(join("\n", @reports));
+
+    if ($group_is_low and $self->send_alert) {
+        my $msg = MIME::Lite->new(
+            From => $ENV{USER} . '@genome.wustl.edu',
+            To => join(',', map { $_ . '@genome.wustl.edu' } split(',', $self->alert_recipients)),
+            Subject => 'Disk Groups Running Low on Space!',
+            Data => join("\n", @reports),
+        );
+        $msg->send();
+        $self->warning_message("Sent alert to " . $self->alert_recipients);
     }
 
     return 1;

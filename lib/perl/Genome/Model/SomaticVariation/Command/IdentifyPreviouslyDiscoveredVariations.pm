@@ -27,6 +27,8 @@ sub execute{
         die $self->error_message("no build provided!");
     }
 
+    $DB::single = 1;
+
     $self->status_message("Comparing detected variants to previously discovered variations");
 
     my $prev_variations_build = $build->previously_discovered_variations_build;
@@ -48,21 +50,30 @@ sub execute{
     #my $version = GMT:BED:CONVERT::version();  TODO, something like this instead of hardcoding
 
     if ($build->snv_detection_strategy){
-        my $detected_snv_path = $build->data_set_path("variants/snv_hq_output",$version,"bed"); 
+        my $detected_snv_path = $build->data_set_path("variants/snvs.hq",$version,"bed"); 
         my $novel_detected_snv_path = $build->data_set_path("novel/snvs.hq",$version,'bed');
+        my $previously_detected_snv_path = $build->data_set_path("novel/snvs.hq.previously_detected",$version,'bed');
 
         if ($snv_feature_list){
+            my $snv_feature_list_path = $snv_feature_list->file_path;
+
+            unless (-e $snv_feature_list_path){
+                die $self->error_message("Snv feature list does not have an associated file!");
+            }
 
             unless (-e $detected_snv_path){
                 die $self->error_message("No high confidence detected snvs to filter against previously discovered variants");
             }
 
-            if (-s $detected_snv_path){
-                my $snv_output_tmp_file = Genome::Sys::Filesystem->create_temp_file();
-                my $snv_compare = Genome::Model::Tools::CmpBed::Snv->create(
+            if (-s $detected_snv_path){ #TODO turn this on
+                my $snv_output_tmp_file = Genome::Sys->create_temp_file_path();
+                my $previously_detected_output_tmp_file = Genome::Sys->create_temp_file_path();
+                my $snv_compare = Genome::Model::Tools::Joinx::Intersect->create(
                     input_file_a => $detected_snv_path,
-                    input_file_b => $snv_feature_list,
-                    output_file => $snv_output_tmp_file,
+                    input_file_b => $snv_feature_list_path,
+                    miss_a_file => $snv_output_tmp_file,
+                    output_file => $previously_detected_output_tmp_file,
+                    exact_allele => 1,
                 );
                 unless ($snv_compare){
                     die $self->error_message("Couldn't create snv comparison tool!");
@@ -74,34 +85,46 @@ sub execute{
                 }
                 $self->status_message("Intersection against previously discovered snv feature list complete");
                 File::Copy::copy($snv_output_tmp_file, $novel_detected_snv_path);
+                File::Copy::copy($previously_detected_output_tmp_file, $previously_detected_snv_path);
             }else{
                 $self->status_message("high confidence snv output is empty, skipping intersection");
                 File::Copy::copy($detected_snv_path, $novel_detected_snv_path);
+                File::Copy::copy($detected_snv_path, $previously_detected_snv_path);
             }
 
         }else{
             $self->status_message("No snv feature list found on previously discovered variations build, skipping snv intersection");
             File::Copy::copy($detected_snv_path, $novel_detected_snv_path);
+            File::Copy::copy($detected_snv_path, $previously_detected_snv_path);
         }
 
     }
 
     if ($build->indel_detection_strategy){
-        my $detected_indel_path =$build->data_set_path("variants/indel_hq_output",$version,"bed"); 
+        my $detected_indel_path =$build->data_set_path("variants/indels.hq",$version,"bed"); 
         my $novel_detected_indel_path = $build->data_set_path("novel/indels.hq",$version,"bed");
+        my $previously_detected_indel_path = $build->data_set_path("novel/indels.hq", $version, "bed");
 
         if ($indel_feature_list){
+            my $indel_feature_list_path = $indel_feature_list->file_path;
+
+            unless (-e $indel_feature_list_path){
+                die $self->error_message("Indel feature list does not have an associated file!");
+            }
 
             unless (-e $detected_indel_path){
                 die $self->error_message("No high confidence detected indels to filter against previously discovered variants");
             }
 
-            if (-s $detected_indel_path){
-                my $indel_output_tmp_file = Genome::Sys::Filesystem->create_temp_file();
-                my $indel_compare = Genome::Model::Tools::CmpBed::Indel->create(
+            if (-s $detected_indel_path){ #TODO turn this on
+                my $indel_output_tmp_file = Genome::Sys->create_temp_file_path();
+                my $previously_detected_output_tmp_file = Genome::Sys->create_temp_file_path();
+                my $indel_compare = Genome::Model::Tools::Joinx::Intersect->create(
                     input_file_a => $detected_indel_path,
-                    input_file_b => $indel_feature_list,
-                    output_file => $indel_output_tmp_file,
+                    input_file_b => $indel_feature_list_path,
+                    miss_a_file => $indel_output_tmp_file,
+                    output_file => $previously_detected_output_tmp_file,
+                    exact_allele => 1,
                 );
                 unless ($indel_compare){
                     die $self->error_message("Couldn't create indel comparison tool!");
@@ -113,14 +136,17 @@ sub execute{
                 }
                 $self->status_message("Intersection against previously discovered indel feature list complete");
                 File::Copy::copy($indel_output_tmp_file, $novel_detected_indel_path);
+                File::Copy::copy($previously_detected_output_tmp_file, $previously_detected_indel_path);
             }else{
                 $self->status_message("high confidence indel output is empty, skipping intersection");
                 File::Copy::copy($detected_indel_path, $novel_detected_indel_path);
+                File::Copy::copy($detected_indel_path, $previously_detected_indel_path);
             }
 
         }else{
             $self->status_message("No indel feature list found on previously discovered variations build, skipping indel intersection");
             File::Copy::copy($detected_indel_path, $novel_detected_indel_path);
+            File::Copy::copy($detected_indel_path, $previously_detected_indel_path);
         }
     }
 

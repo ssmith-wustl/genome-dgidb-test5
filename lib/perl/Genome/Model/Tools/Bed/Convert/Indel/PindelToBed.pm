@@ -9,11 +9,6 @@ use Workflow;
 class Genome::Model::Tools::Bed::Convert::Indel::PindelToBed {
     is => ['Genome::Model::Tools::Bed::Convert::Indel'],
     has => [
-        reference_fasta => {
-            is => 'String',
-            default=> Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa',
-            doc => "The reference fasta file used to look up the reference sequence with samtools faidx. This is necessary because pindel will truncate long reference sequences.",
-        },
         use_old_pindel => {
             type => 'Boolean',
             is_optional => 1,
@@ -222,7 +217,7 @@ sub parse {
         my $allele_string;
         my $start_for_faidx = $start+1; 
         my $sam_default = Genome::Model::Tools::Sam->path_for_samtools_version;
-        my $faidx_cmd = "$sam_default faidx " . $self->reference_fasta . " $chr:$start_for_faidx-$stop"; 
+        my $faidx_cmd = "$sam_default faidx " . $self->reference_sequence_input . " $chr:$start_for_faidx-$stop"; 
         my @faidx_return= `$faidx_cmd`;
         shift(@faidx_return);
         chomp @faidx_return;

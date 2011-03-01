@@ -275,13 +275,13 @@ sub svn_info {
 
 sub _expand_param_and_input_properties {
     my ($class, $desc) = @_;
-
     for my $t ('input','param','metric') {
         while (my ($prop_name, $prop_desc) = each(%{ $desc->{has} })) {
             if (exists $prop_desc->{'is_'.$t} and $prop_desc->{'is_'.$t}) {
                 my $is_many = ($t ne 'metric' and exists $prop_desc->{'is_many'} and $prop_desc->{'is_many'});
                 $prop_desc->{'to'} = $t.'_value';
                 $prop_desc->{'is_delegated'} = 1;
+
                 if($is_many) {
                     $prop_desc->{'where'} = [
                         $t.'_name like' => $prop_name . '-%',
@@ -291,6 +291,8 @@ sub _expand_param_and_input_properties {
                         $t.'_name' => $prop_name
                     ];
                 }
+
+                $prop_desc->{'is_mutable'} = 1;
                 $prop_desc->{'via'} = $t.'s';
 
                 if($is_many) {
@@ -341,7 +343,6 @@ sub _expand_param_and_input_properties {
             }
         }
     }
-
     return $desc;
 }
 

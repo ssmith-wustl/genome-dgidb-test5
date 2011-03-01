@@ -9,7 +9,7 @@ use above 'Genome';
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 28;
+        plan tests => 30;
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -215,42 +215,36 @@ sub test_shortcutting {
 }
 
 
+my ($library, $sample);
 sub generate_fake_instrument_data {
 
+    if ( not $library or not $sample ) {
+        $sample = Genome::Sample->create(
+            name => 'test_sample_name',
+        );
+        ok($sample, 'create sample') or die;
+        $library = Genome::Library->create(
+            name => $sample->name.'-lib1',
+            sample => $sample,
+        );
+        ok($library, 'create library');
+    }
+
     my $fastq_directory = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Align-Maq/test_sample_name';
-    my $instrument_data = Genome::InstrumentData::Solexa->create_mock(
-                                                                      id => $FAKE_INSTRUMENT_DATA_ID,
-                                                                      sequencing_platform => 'solexa',
-                                                                      flow_cell_id => '12345',
-                                                                      lane => '1',
-                                                                      seq_id => $FAKE_INSTRUMENT_DATA_ID,
-                                                                      median_insert_size => '22',
-                                                                      sample_name => 'test_sample_name',
-                                                                      library_name => 'test_sample_name-lib1',
-                                                                      run_name => 'test_run_name',
-                                                                      subset_name => 4,
-                                                                      run_type => 'Paired End Read 2',
-                                                                      gerald_directory => $fastq_directory,
-                                                                      bam_path => '/gsc/var/cache/testsuite/data/Genome-InstrumentData-AlignmentResult-Bwa/input.bam'
-                                                                  );
-
-
-    # confirm there are fastq files here, and fake the fastq_filenames method to return them
-    my @in_fastq_files = glob($instrument_data->gerald_directory.'/*.txt');
-
-    $instrument_data->mock('dump_fastqs_from_bam', sub {return Genome::InstrumentData::dump_fastqs_from_bam($instrument_data)});
-
-    # fake out some properties on the instrument data
-    isa_ok($instrument_data,'Genome::InstrumentData::Solexa');
-    $instrument_data->set_always('sample_type','dna');
-    $instrument_data->set_always('sample_id','2791246676');
-    $instrument_data->set_always('is_paired_end',1);
-    ok($instrument_data->is_paired_end,'instrument data is paired end');
-    $instrument_data->set_always('calculate_alignment_estimated_kb_usage',10000);
-    $instrument_data->set_always('resolve_quality_converter','sol2sanger');
-    $instrument_data->set_always('run_start_date_formatted','Fri Jul 10 00:00:00 CDT 2009');
-    $instrument_data->mock('status_message',sub {print "STATUS: " . $_[1], "\n"});
-    $instrument_data->mock('error_message',sub {print STDERR "ERROR: " . $_[1], "\n"});
+    my $instrument_data = Genome::InstrumentData::Solexa->create(
+        id => $FAKE_INSTRUMENT_DATA_ID,
+        library => $library,
+        flow_cell_id => '12345',
+        lane => '1',
+        median_insert_size => '22',
+        run_name => '110101_TEST',
+        subset_name => 4,
+        run_type => 'Paired',
+        gerald_directory => $fastq_directory,
+        bam_path => '/gsc/var/cache/testsuite/data/Genome-InstrumentData-AlignmentResult-Bwa/input.bam'
+    );
+    ok($instrument_data, 'create instrument data: '.$instrument_data->id);
+    ok($instrument_data->is_paired_end, 'instrument data is paired end');
 
     return $instrument_data;
 

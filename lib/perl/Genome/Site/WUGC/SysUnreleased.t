@@ -343,6 +343,7 @@ sub test4_resource_locking : Test(20) {
                  resource_id => $bogus_id,);
 
     test_locking(successful => 0,
+                 wait_on_self => 1,
                  message => 'failed lock resource_id '. $bogus_id,
                  lock_directory => $tmp_dir,
                  resource_id => $bogus_id,
@@ -361,6 +362,7 @@ sub test4_resource_locking : Test(20) {
                  resource_id => $bogus_id,);
     test_locking(
                  successful=> 1,
+                 wait_on_self => 1,
                  message => 'lock resource with removing invalid lock with bogus lsf_job_id first',
                  lock_directory => $tmp_dir,
                  resource_id => $bogus_id,
@@ -386,6 +388,7 @@ sub test4_resource_locking : Test(20) {
                                                          resource_id => $bogus_id,
                                                          max_try => 1,
                                                          block_sleep => 3,
+                                                         wait_on_self => 1,
                                                      ),'failed lock resource with real lsf_job_id blocking');
           ok(Genome::Sys->unlock_resource(
                                                           lock_directory => $tmp_dir,

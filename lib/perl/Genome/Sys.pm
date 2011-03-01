@@ -84,7 +84,14 @@ sub base_temp_directory {
         $tmp_location = $lsf_possible_tempdir if (-d $lsf_possible_tempdir);
     }
     # tempdir() thows its own exception if there's a problem
-    my $dir = File::Temp::tempdir($template, DIR=>$tmp_location, CLEANUP => 1);
+
+    # For debugging purposes, allow cleanup to be disabled
+    my $cleanup = 1;
+    if($ENV{'GENOME_SYS_NO_CLEANUP'}) {
+        $cleanup = 0;
+    } 
+    my $dir = File::Temp::tempdir($template, DIR=>$tmp_location, CLEANUP => $cleanup);
+
     $self->create_directory($dir);
 
     if (ref($self)) {
