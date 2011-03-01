@@ -426,6 +426,7 @@ sub run_filter {
                         my ($var_count, $var_map_qual, $var_base_qual, $var_semq, $var_plus, $var_minus, $var_pos, $var_subs, $var_mmqs, $var_q2_reads, $var_q2_dist, $var_avg_rl, $var_dist_3) = split(/\t/, $var_result);
 
                         my $ref_strandedness = my $var_strandedness = 0.50;
+                        $ref_dist_3 = 0.5 if(!$ref_dist_3);
 
                         ## Use conservative defaults if we can't get mismatch quality sums ##
                         $ref_mmqs = 50 if(!$ref_mmqs);
@@ -627,7 +628,7 @@ sub fails_homopolymer_check {
 
     if($sequence) {
         if($sequence =~ $homoVar) { #$sequence =~ $homoRef || {
-            print join("\t", $chrom, $chr_start, $chr_stop, $ref, $var, "Homopolymer: $sequence") . "\n";
+            print join("\t", $chrom, $chr_start, $chr_stop, $ref, $var, "Homopolymer: $sequence") . "\n" if($self->verbose);
             return($sequence);
         }
     }
