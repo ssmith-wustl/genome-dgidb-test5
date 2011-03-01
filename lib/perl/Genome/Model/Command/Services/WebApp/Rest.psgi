@@ -151,6 +151,11 @@ dispatch {
             }
         }
 
+        my %view_special_args;
+        for my $view_key (grep {$_=~ m/^-/} keys %$args) {
+            $view_special_args{substr($view_key,1,length($view_key))} = delete $args->{$view_key}; 
+        }
+
         my @matches = $class->get(%$args);
         unless (@matches) {
             return [ 404, [ 'Content-type', 'text/plain' ],
@@ -179,7 +184,9 @@ dispatch {
         my $view;
         # all objects in UR have create_view
         # this probably ought to be revisited for performance resouns because it has to do a lot of hierarchy walking
-        eval { $view = $matches[0]->create_view(%view_args); };
+        print Data::Dumper::Dumper($matches[0], \%view_args, \%view_special_args);
+        print "*****************\n";
+        eval { $view = $matches[0]->create_view(%view_args, %view_special_args); };
 
         if ( $@ && !$view ) {
             $view_args{'desired_perspective'} = $perspective;
