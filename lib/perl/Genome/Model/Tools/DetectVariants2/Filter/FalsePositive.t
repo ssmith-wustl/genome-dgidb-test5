@@ -15,7 +15,8 @@ use Test::More tests => 23;
 use_ok('Genome::Model::Tools::DetectVariants2::Filter::FalsePositive');
 
 my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-FalsePositive';
-my $expected_dir = join('/', $test_data_dir, 'expected.v1');
+# v2 adjustment included input/output bed files as a base instead of varscan lines
+my $expected_dir = join('/', $test_data_dir, 'expected.v2');
 
 my $bam_file = join('/', $test_data_dir, 'tumor.tiny.bam');
 my $input_directory = join('/', $test_data_dir, "input");
