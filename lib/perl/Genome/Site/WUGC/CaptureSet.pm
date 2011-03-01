@@ -129,8 +129,12 @@ sub _resolve_format {
         }
     }
 
-    if($self->name =~ /agilent/i or $self->name =~ /nimblegen/i) {
+    if($self->name =~ /agilent/i) {
         return '1-based';
+    }
+
+    if($self->name =~ /nimblegen/i) {
+        return 'true-BED';
     }
 
     return 'unknown';
