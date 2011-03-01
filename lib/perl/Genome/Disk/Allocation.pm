@@ -107,6 +107,7 @@ our $CREATE_DUMMY_VOLUMES_FOR_TESTING = 1;
 # Does a du on the allocation directory and returns size in kilobytes, included so old API doesn't break
 sub get_actual_disk_usage {
     my $self = shift;
+    return 0 unless -d $self->absolute_path;
     return Genome::Sys->disk_usage_for_path($self->absolute_path);
 }
 
@@ -470,7 +471,7 @@ sub _reallocate {
 
     # If there's enough space, just change the size, no worries!
     my $available_space = $volume->unallocated_kb - $volume->unusable_reserve_size;
-    if ($diff <= 0 or ($diff <= $available_space)) {
+    if ($kilobytes_requested == 0 or $diff < 0 or ($diff <= $available_space)) {
         $self->kilobytes_requested($kilobytes_requested);
         $volume->unallocated_kb($volume->unallocated_kb - $diff);
         $self->reallocation_time(UR::Time->now);
@@ -505,6 +506,7 @@ sub _reallocate {
 # This is hairy with a bazillion possible failure points...
 sub _reallocate_with_move {
     my ($self, $allocation_lock, $kilobytes_requested) = @_;
+    my $original_allocation_size = $self->kilobytes_requested;
     $self->status_message("Current volume " . $self->mount_path . " doesn't have enough space to reallocate, moving to new volume");
 
     my $old_volume = $self->volume;
@@ -552,6 +554,7 @@ sub _reallocate_with_move {
     $self->mount_path($new_volume->mount_path);
     $self->kilobytes_requested($kilobytes_requested);
     $self->reallocation_time(UR::Time->now);
+    $self->_update_owner_for_move;
 
     $self->_create_observer($self->_unlock_closure($new_volume_lock, $allocation_lock));
     unless (UR::Context->commit) {
@@ -574,8 +577,24 @@ sub _reallocate_with_move {
         confess 'Could not get lock for volume ' . $old_volume->mount_path;
     }
 
-    $old_volume->unallocated_kb($old_volume->unallocated_kb + $kilobytes_requested);
+    $old_volume->unallocated_kb($old_volume->unallocated_kb + $original_allocation_size);
     $self->_create_observer($self->_unlock_closure($old_volume_lock));
+    return 1;
+}
+
+sub _update_owner_for_move {
+    my $self = shift;
+    my $owner = $self->owner;
+    return 1 unless $owner;
+
+    if ($owner->isa('Genome::SoftwareResult')) {
+        $owner->output_dir($self->absolute_path);
+    }
+    elsif ($owner->isa('Genome::Model::Build')) {
+        die 'Have not implemented reallocate with move for builds!';
+        $owner->data_directory($self->absolute_path);
+    }
+
     return 1;
 }
 
@@ -734,7 +753,6 @@ sub _get_candidate_volumes {
         confess "Did not get any allocatable and active volumes belonging to group $disk_group_name with " .
             "$kilobytes_requested kb of unallocated space!";
     }
-    $DB::single = 1;
 
     # Make sure that the allocation doesn't infringe on the empty buffer required for each volume
     @volumes = grep {
