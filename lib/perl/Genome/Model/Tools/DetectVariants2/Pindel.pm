@@ -37,6 +37,11 @@ class Genome::Model::Tools::DetectVariants2::Pindel {
             doc => 'The location of the indels.hq.bed file',
         },
     ],
+    has_param => [
+        lsf_queue => {
+            default_value => 'workflow'
+        },
+    ],
 };
 
 
@@ -44,7 +49,6 @@ class Genome::Model::Tools::DetectVariants2::Pindel {
 sub _detect_variants {
     my $self = shift;
     # Obtain normal and tumor bams and check them. Either from somatic model id or from direct specification. 
-    $DB::single=1;
     my ($build, $tumor_bam, $normal_bam);
     $tumor_bam = $self->aligned_reads_input;
     $normal_bam = $self->control_aligned_reads_input if defined $self->control_aligned_reads_input;
