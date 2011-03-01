@@ -19,7 +19,6 @@ class Genome::Model::Tools::DetectVariants2::Filter::PindelSomaticCalls{
 sub _filter_variants {
     my $self = shift;
 
-    my $read_support_file = $self->_temp_staging_directory."/indels.hq.read_support.bed";
     my $output_file = $self->_temp_staging_directory."/indels.hq.bed";
     my $output_lq_file = $self->_temp_staging_directory."/indels.lq.bed";
     my $indel_file = $self->input_directory."/indels.hq.bed";

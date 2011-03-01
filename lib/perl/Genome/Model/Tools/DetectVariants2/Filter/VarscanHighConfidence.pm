@@ -53,6 +53,7 @@ sub _filter_variants {
     return 1;
 }
 
+# Condition output into one hq (sns.Somatic.hc) and one lq file (cat all other outputs)
 sub prepare_output {
     my $self = shift;
     my $somatic_hq = $self->_temp_staging_directory."/snvs.Somatic.hc";
@@ -84,12 +85,14 @@ sub prepare_output {
 
 }
 
+# This sub provides the functionality of copying all but the first line from arg1 to arg2
 sub copy_no_header {
     my $self = shift;
     my $from = shift;
     my $to = shift;
     my $cmd = "tail -n +2 $from > $to";
     my $result = Genome::Sys->shellcmd( cmd => $cmd);
+    return $result;
 }
 
 1;
