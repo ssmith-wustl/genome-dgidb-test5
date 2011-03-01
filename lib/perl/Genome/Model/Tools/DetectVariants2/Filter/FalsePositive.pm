@@ -588,7 +588,7 @@ sub _generate_standard_files {
     while (my $line = $hq_ifh->getline) {
         # assume bed version 2
         my ($chrom, $start, $stop, $ref_var, $score, $depth) = split "\t", $line;
-        $hq_ofh->print(join "\t", ($chrom, $start, $stop, $ref_var, $score, $depth));
+        $hq_ofh->print(join "\t", ($chrom, $start, $stop, $ref_var, $score, $depth) . "\n");
     }
     $hq_ifh->close;
     $hq_ofh->close;
@@ -601,7 +601,7 @@ sub _generate_standard_files {
     while (my $line = $lq_ifh->getline) {
         # assume bed version 2
         my ($chrom, $start, $stop, $ref_var, $score, $depth) = split "\t", $line;
-        $lq_ofh->print(join "\t", ($chrom, $start, $stop, $ref_var, $score, $depth));
+        $lq_ofh->print(join "\t", ($chrom, $start, $stop, $ref_var, $score, $depth) . "\n");
     }
     $lq_ifh->close;
     $lq_ofh->close;
