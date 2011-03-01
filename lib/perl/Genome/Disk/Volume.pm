@@ -79,4 +79,17 @@ sub unallocatable_volume_percent { return .05 } # 5% can't be allocated to, but 
 sub unusable_volume_percent { return .02 } # 2% can't be used at all
 sub maximum_reserve_size { return 1_073_741_824 } # maximum size of unallocatable disk
 
+sub get_lock {
+    my ($class, $mount_path, $tries) = @_;
+    $tries ||= 120;
+    my $modified_mount = $mount_path;
+    $modified_mount =~ s/\//_/g;
+    my $volume_lock = Genome::Sys->lock_resource(
+        resource_lock => '/gsc/var/lock/allocation/volume' . $modified_mount,
+        max_try => $tries,
+        block_sleep => 1,
+    );
+    return $volume_lock;
+}
+
 1;
