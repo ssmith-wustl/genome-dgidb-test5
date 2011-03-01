@@ -111,7 +111,6 @@ delete $params{mount_path};
 my $fail_allocation = eval { Genome::Disk::Allocation->create(%params) };
 ok(!$fail_allocation, 'failed to allocate when volumes are turned off, as expected');
 
-$DB::single = 1;
 # Turn on one volume, make sure allocation succeeds
 $volumes[-1]->can_allocate(1);
 $params{kilobytes_requested} = 100;
@@ -129,11 +128,16 @@ system("touch $touch_file");
 ok(-e $touch_file, "touched file exists in allocation directory");
 
 my $current_volume = $allocation->volume;
+my $old_allocation_size = $allocation->kilobytes_requested;
 $current_volume->unallocated_kb(100);
+my $current_volume_unallocated_kb = $current_volume->unallocated_kb;
+
 my $move_rv = Genome::Disk::Allocation->reallocate(allocation_id => $allocation->id, kilobytes_requested => 500, allow_reallocate_with_move => 1);
 
-ok ($allocation->volume->mount_path ne $current_volume, "allocation moved to new volume");
+ok($allocation->volume->mount_path ne $current_volume, "allocation moved to new volume");
 ok(-e $allocation->absolute_path . "/test_file", "touched file correctly moved to new allocation directory");
+ok(!Genome::Disk::Allocation->get(mount_path => $current_volume->mount_path, allocation_path => $allocation->allocation_path), 'no redundant allocation on old volume');
+ok($current_volume->unallocated_kb == ($current_volume_unallocated_kb + $old_allocation_size), 'volume size indicates allocation has been moved');
 
 # Now delete the allocation
 Genome::Disk::Allocation->delete(allocation_id => $allocation->id);
