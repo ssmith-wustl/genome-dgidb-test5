@@ -222,8 +222,6 @@ sub merge_filters {
     return [values %filters];
 }
 
-# return value is a hash like:
-# { samtools => { r453 => {snv => ['']}}, 'var-scan' => { '' => { snv => ['']} }, maq => { '0.7.1' => { snv => ['a'] } }}
 sub build_detector_list {
     my $self = shift;
     my ($detector_tree, $detector_list, $detector_type) = @_;
@@ -389,6 +387,9 @@ sub link_operations {
     my $unique_combine_name;
     
     # This is a leaf node, cease recursion and return the unique detector name
+    # If the detector has no filters, tack on "unfiltered" to the name. This is 
+    # a hack in order to allow smarter shortcutting for strategies which have 
+    # multiple instances of the same detector, but filtered differently
     if($key eq 'detector'){
         my $name =  $self->get_unique_detector_name($tree->{$key}, $variant_type);
         my $filters = scalar(@{$tree->{$key}->{filters}});
@@ -415,6 +416,7 @@ sub link_operations {
     return $unique_combine_name;
 }
 
+# This sub creates and links in any combine operations.
 sub create_combine_operation {
     my $self = shift;
     my $operation_type = shift;
@@ -432,6 +434,15 @@ sub create_combine_operation {
     my $workflow_links = $self->_workflow_links;
 
     my @links = @{$links};
+
+    # This bit of code (below) allows re-use of detectors. For example, a 
+    # strategy which had 'samtools r599 intersect samtools r599 filtered by snp-filter'
+    # would run samtools r599 once, then intersect the output of the detector with the 
+    # output of the filter, which itself ran on the output of the detector
+
+    ### TODO However! This code only allows shortcutting if one or both of the instances of the 
+    ### repeated detector are unfiltered.
+
     my ($op_a,$op_b);
     my ($alink,$afilter);
     my ($blink,$bfilter);
@@ -458,9 +469,6 @@ sub create_combine_operation {
 
     my $input_a_last_op_name = $afilter ? $workflow_links->{$input_a_key}->{'last_operation'} : $alink;
     my $input_b_last_op_name = $bfilter ? $workflow_links->{$input_b_key}->{'last_operation'} : $blink;
-
-
-    #print "creating a ".$operation_type." for ".$variant_type."\n";
 
     my $workflow_model = $self->_workflow_model;
     my $unique_combine_name = join("-",($operation_type, $alink,$blink));
@@ -536,7 +544,6 @@ sub get_unique_detector_name {
 }
 
 
-# FIXME rename this, or make it return the operations to be added instead of adding them itself
 sub add_detectors_and_filters { 
     my $self = shift;
     my $detector_hash = shift;
@@ -660,8 +667,6 @@ sub add_detectors_and_filters {
                     %workflow_inputs = %{$inputs_to_store};
                 }
                 $self->_workflow_inputs(\%workflow_inputs); 
-
-                #print Data::Dumper::Dumper($self->_workflow_inputs);
             
                 # connect the output to the input between all operations in this detector's branch
                 for my $index (0..(scalar(@filters)-1)){

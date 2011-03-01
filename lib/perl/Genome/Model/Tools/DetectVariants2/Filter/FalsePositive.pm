@@ -168,24 +168,19 @@ sub _filter_variants {
     $self->status_message('Running BAM Readcounts...');
 
     #First, need to create a variant list file to use for generating the readcounts.
-    my $input_file = $self->input_directory . "/snvs.hq";
+    my $input_file = $self->input_directory . "/snvs.hq.bed";
     my $input = Genome::Sys->open_file_for_reading($input_file);
 
     ## Build temp file for positions where readcounts are needed ##
     my ($tfh,$temp_path) = Genome::Sys->create_temp_file;
 
-    ## Print each line to file, prepending chromosome if necessary ##
+    ## Print each line to file in order to get readcounts
     $self->status_message('Printing variants to temp file...');
     while(my $line = $input->getline) {
-        chomp $line;
         my ($chr, $start, $stop) = split /\t/, $line;
-        next unless($start =~ /^\d+$/); #header line
-
-        if($stop =~ /^\d+$/) { #annotation format
-            print $tfh "$chr\t$start\t$stop\n";
-        } else { #varscan format
-            print $tfh "$chr\t$start\t$start\n";
-        }
+        # Since we read in bed input (0-based start position) and the bed will be 1-based... adjust the start.
+        $start++;
+        print $tfh "$chr\t$start\t$stop\n";
     }
     $tfh->close;
     close($input);
@@ -209,6 +204,8 @@ sub _filter_variants {
     my @readcounts = split(/\n/, $readcounts);
     foreach my $rc_line (@readcounts) {
         (my $chrom, my $pos) = split(/\t/, $rc_line);
+        # Since we read in bed input (0-based start position) and the bed will be 1-based... adjust the start BACK to the bed position
+        $pos--;
         $readcounts_by_position{"$chrom\t$pos"} = $rc_line;
     }
 
@@ -232,7 +229,8 @@ sub _filter_variants {
         $stats{'num_variants'}++;
 
 #        if($lineCounter <= 10) {
-            (my $chrom, my $chr_start, my $chr_stop, my $ref, my $var) = split(/\t/, $line);
+            (my $chrom, my $chr_start, my $chr_stop, my $ref_var) = split(/\t/, $line);
+            my ($ref, $var) = split("/", $ref_var);
             next unless($chr_start =~ /^\d+$/); #header line
             unless($chr_stop =~ /^\d+$/) {
                 my @rest;
@@ -265,9 +263,6 @@ sub _filter_variants {
                     print $hq_fh "$line\n";
                 } else {
                     ## Run Readcounts ##
-#                    my $cmd = $self->readcount_program() . " -b 15 " . $self->aligned_reads_input . " $query_string";
-#                    my $readcounts = `$cmd`;
-#                    chomp($readcounts) if($readcounts);
 
                     my $readcounts = "";
                     $readcounts = $readcounts_by_position{"$chrom\t$chr_start"} if($readcounts_by_position{"$chrom\t$chr_start"});
@@ -317,6 +312,7 @@ sub _filter_variants {
 
                         if($var_count && ($var_plus + $var_minus)) {
                             ## We must obtain variant read counts to proceed ##
+                            $DB::single=1;
 
                             my $var_freq = $var_count / ($ref_count + $var_count);
 
@@ -461,10 +457,6 @@ sub fails_homopolymer_check {
     ## Build strings of homopolymer bases ##
     my $homoRef = $ref x $min_homopolymer;
     my $homoVar = $var x $min_homopolymer;
-#    my $homoA = 'A' x $min_homopolymer;
-#    my $homoC = 'C' x $min_homopolymer;
-#    my $homoG = 'G' x $min_homopolymer;
-#    my $homoT = 'T' x $min_homopolymer;
 
     ## Build a query string for the homopolymer check ##
 
@@ -506,8 +498,7 @@ sub wgs_filter {
 sub readcount_program {
     my $self = shift;
     my $reference = $self->reference_sequence_input;
-    return "/gscuser/dlarson/src/bamsey/readcount/trunk/bam-readcount-test2 -f $reference";
-#    return "/gscuser/dlarson/src/bamsey/readcount/trunk/bam-readcount -f $reference";
+    return "/usr/bin/bam-readcount0.3 -f $reference";
 }
 
 
@@ -540,12 +531,6 @@ sub read_counts_by_allele {
             }
 
             return($return_string);
-
-#            if($return_sum) {
-#                return($return_string);
-#            } else {
-#                return("");
-#            }
         }
     }
 
@@ -595,32 +580,31 @@ sub iupac_to_base {
 sub _generate_standard_files {
     my $self = shift;
 
+    # FIXME this should use a Bed::Convert module so that we have versioning. but this works for now
     my $hq_output = $self->_temp_staging_directory . "/snvs.hq";
     my $hq_bed_output = $self->_temp_staging_directory . "/snvs.hq.bed";
-    
-    # TODO this should not really use the annotation to bed converter, but it fits
-    my $convert_hq_command = Genome::Model::Tools::Bed::Convert::Snv::AnnotationToBed->create(
-        source => $hq_output,
-        output => $hq_bed_output,
-    );
-
-    unless ($convert_hq_command->execute) {
-        $self->error_message("Could not execute hq to bed conversion command");
-        die $self->error_message;
+    my $hq_ifh = Genome::Sys->open_file_for_reading($hq_output);
+    my $hq_ofh = Genome::Sys->open_file_for_writing($hq_bed_output);
+    while (my $line = $hq_ifh->getline) {
+        # assume bed version 2
+        my ($chrom, $start, $stop, $ref_var, $score, $depth) = split "\t", $line;
+        $hq_ofh->print(join "\t", ($chrom, $start, $stop, $ref_var, $score, $depth));
     }
+    $hq_ifh->close;
+    $hq_ofh->close;
 
+    # FIXME this should use a Bed::Convert module so that we have versioning.
     my $lq_output = $self->_temp_staging_directory . "/snvs.lq";
     my $lq_bed_output = $self->_temp_staging_directory . "/snvs.lq.bed";
-
-    # TODO this should not really use the annotation to bed converter, but it fits
-    my $convert_lq_command = Genome::Model::Tools::Bed::Convert::Snv::AnnotationToBed->create(
-        source => $lq_output,
-        output => $lq_bed_output,
-    );
-    unless ($convert_lq_command->execute) {
-        $self->error_message("Could not execute lq to bed conversion command");
-        die $self->error_message;
+    my $lq_ifh = Genome::Sys->open_file_for_reading($lq_output);
+    my $lq_ofh = Genome::Sys->open_file_for_writing($lq_bed_output);
+    while (my $line = $lq_ifh->getline) {
+        # assume bed version 2
+        my ($chrom, $start, $stop, $ref_var, $score, $depth) = split "\t", $line;
+        $lq_ofh->print(join "\t", ($chrom, $start, $stop, $ref_var, $score, $depth));
     }
+    $lq_ifh->close;
+    $lq_ofh->close;
 
     return 1;
 }
