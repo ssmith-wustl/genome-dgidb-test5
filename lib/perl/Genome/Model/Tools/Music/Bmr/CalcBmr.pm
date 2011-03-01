@@ -9,7 +9,7 @@ our $VERSION = '1.01';
 
 class Genome::Model::Tools::Music::Bmr::CalcBmr {
   is => 'Command',
-  has => [
+  has_input => [
     roi_file => { is => 'Text', doc => "Tab delimited list of ROIs [chr start stop gene_name] (See Description)" },
     ref_seq => { is => 'Text', doc => "Path to reference sequence in FASTA format" },
     bam_list => { is => 'Text', doc => "Tab delimited list of BAM files [sample_name normal_bam tumor_bam] (See Description)" },

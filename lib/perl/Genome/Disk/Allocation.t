@@ -28,6 +28,7 @@ my $test_dir = tempdir(
 
 # Add our testing group to the allowed list of disk groups
 push @Genome::Disk::Allocation::APIPE_DISK_GROUPS, 'testing_group';
+$Genome::Disk::Allocation::CREATE_DUMMY_VOLUMES_FOR_TESTING = 0;
 
 # Make a dummy group and some dummy volumes
 my $group = Genome::Disk::Group->create(
@@ -97,26 +98,12 @@ $params{allocation_path} .= '/subdir';
 my $subdir_allocation = eval { Genome::Disk::Allocation->create(%params) };
 ok(!$subdir_allocation, 'allocation creation failed as expected');
 
+# Now try to make an allocation that's too big for the volume
 $params{allocation_path} =~ s/allocation_test_1/allocation_test_2/;
 $params{allocation_path} =~ s/subdir//;
-$params{kilobytes_requested} = 1024*0.96; # 4% less than volume's total_kb which should fall in reserved space
-eval { Genome::Disk::Allocation->create(%params) };
-ok($@ =~ /not\ enough\ space\ on\ disk/, 'allocation (with mount_path) exceeding volumes 95% of total_kb fails with message, "not enough space on disk", as expected');
-
-$params{kilobytes_requested} = 10000; # Now try to make an allocation that's too big for the volume
-eval { Genome::Disk::Allocation->create(%params) };
-ok($@ =~ /not\ enough\ space\ on\ disk/, 'allocation (with mount_path) exceeding volumes total_kb fails with message, "not enough space on disk", as expected');
-
-my $mount_path = delete $params{mount_path};
-ok($mount_path, 'backed up mount_path variable and deleted');
-$params{kilobytes_requested} = 1024*0.96; # 4% less than volume's total_kb which should fall in reserved space
-eval { Genome::Disk::Allocation->create(%params) };
-ok($@ =~ /No\ volumes\ of\ group\ testing_group\ have\ enough\ space\ after\ excluding\ reserves/, 'allocation (with mount_path) exceeding volumes 95% of total_kb fails with message, "not enough space on disk", as expected');
-
-$params{kilobytes_requested} = 10000; # Now try to make an allocation that's too big for the volume
-eval { Genome::Disk::Allocation->create(%params) };
-ok($@ =~ /Did\ not\ get\ any\ allocatable\ and\ active\ volumes\ belonging\ to\ group\ testing_group/, 'allocation (with mount_path) exceeding volumes total_kb fails with message, "not enough space on disk", as expected');
-ok($params{mount_path} = $mount_path, 'restored mount_path variable');
+$params{kilobytes_requested} = 10000;
+my $big_allocation = eval { Genome::Disk::Allocation->create(%params) };
+ok(!$big_allocation, 'allocation fails when request is too big, as expected');
 
 # Turn off all volumes in the group, make sure allocation fails
 map { $_->can_allocate(0) } @volumes;
@@ -135,9 +122,22 @@ ok($other_allocation->mount_path eq $volumes[-1]->mount_path, 'allocation landed
 Genome::Disk::Allocation->delete(allocation_id => $other_allocation->id);
 isa_ok($other_allocation, 'UR::DeletedRef', 'successfully removed allocation');
 
-# Try to reallocate existing allocation
-my $reallo_rv = Genome::Disk::Allocation->reallocate(allocation_id => $allocation->id, kilobytes_requested => 5);
-ok($allocation->kilobytes_requested == 5, 'allocation has been resized');
+# Lower size of allocation's volume, then reallocate with move and make sure that works
+my $touch_file = $allocation->absolute_path . "/test_file";
+system("touch $touch_file");
+ok(-e $touch_file, "touched file exists in allocation directory");
+
+my $current_volume = $allocation->volume;
+my $old_allocation_size = $allocation->kilobytes_requested;
+$current_volume->unallocated_kb(100);
+my $current_volume_unallocated_kb = $current_volume->unallocated_kb;
+
+my $move_rv = Genome::Disk::Allocation->reallocate(allocation_id => $allocation->id, kilobytes_requested => 500, allow_reallocate_with_move => 1);
+
+ok($allocation->volume->mount_path ne $current_volume, "allocation moved to new volume");
+ok(-e $allocation->absolute_path . "/test_file", "touched file correctly moved to new allocation directory");
+ok(!Genome::Disk::Allocation->get(mount_path => $current_volume->mount_path, allocation_path => $allocation->allocation_path), 'no redundant allocation on old volume');
+ok($current_volume->unallocated_kb == ($current_volume_unallocated_kb + $old_allocation_size), 'volume size indicates allocation has been moved');
 
 # Now delete the allocation
 Genome::Disk::Allocation->delete(allocation_id => $allocation->id);

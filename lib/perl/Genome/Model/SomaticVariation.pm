@@ -194,11 +194,11 @@ sub update_tumor_and_normal_build_inputs {
     
     my $tumor_model = $self->tumor_model;
     my $tumor_build = $tumor_model->last_complete_build;
-    $self->tumor_build_id($tumor_build->id) if $tumor_build; 
+    $self->tumor_build_id($tumor_build->id) if $tumor_build and $self->tumor_build_id ne $tumor_build->id; 
 
     my $normal_model = $self->normal_model;
     my $normal_build = $normal_model->last_complete_build;
-    $self->normal_build_id($normal_build->id) if $normal_build; 
+    $self->normal_build_id($normal_build->id) if $normal_build and $self->normal_build_id ne $normal_build->id; 
 
     return 1;
 }

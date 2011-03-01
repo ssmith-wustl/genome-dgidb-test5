@@ -97,7 +97,7 @@ my $combine_test = $dispatcher_class->create(
     control_aligned_reads_input => $normal_bam,
 );
 ok($combine_test, "Object to test a combine case created");
-ok($combine_test->execute);
+ok($combine_test->execute, "Test executed successfully");
 
 done_testing();
 

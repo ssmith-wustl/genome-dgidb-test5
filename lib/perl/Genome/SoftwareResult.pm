@@ -241,7 +241,6 @@ sub svn_info {
 
 sub _expand_param_and_input_properties {
     my ($class, $desc) = @_;
-
     for my $t ('input','param','metric') {
         while (my ($prop_name, $prop_desc) = each(%{ $desc->{has} })) {
             if (exists $prop_desc->{'is_'.$t} and $prop_desc->{'is_'.$t}) {
@@ -250,11 +249,11 @@ sub _expand_param_and_input_properties {
                 $prop_desc->{'where'} = [
                     $t.'_name' => $prop_name
                 ];
+                $prop_desc->{'is_mutable'} = 1;
                 $prop_desc->{'via'} = $t.'s';
             }
         }
     }
-
     return $desc;
 }
 

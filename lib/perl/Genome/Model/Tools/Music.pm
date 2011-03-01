@@ -17,6 +17,12 @@ class Genome::Model::Tools::Music {
              doc   => 'version of Music application to use',
          },
     ],
+    attributes_have => [
+        file_format => {
+            is => 'Text',
+            is_optional => 1,
+        }
+    ],
 };
 
 sub help_brief {

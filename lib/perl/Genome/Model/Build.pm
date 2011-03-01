@@ -796,22 +796,14 @@ sub _launch {
             $add_args .= ' --restart';
         }
 
-        my $host_group = `bqueues -l $server_dispatch | grep ^HOSTS:`;
-        chomp $host_group;
-        $host_group =~ s/^HOSTS:\s+//;
-        $host_group =~ s/\///g;
-        $host_group =~ s/\s+$//g;
-        $host_group = "-m '$host_group'";
-
         my $lsf_project = "build" . $self->id;
 
         # bsub into the queue specified by the dispatch spec
         my $user = getpwuid($<);
         my $lsf_command = sprintf(
-            'bsub -P %s -N -H -q %s %s %s -u %s@genome.wustl.edu -o %s -e %s annotate-log genome model services build run%s --model-id %s --build-id %s',
+            'bsub -P %s -N -H -q %s %s -u %s@genome.wustl.edu -o %s -e %s annotate-log genome model services build run%s --model-id %s --build-id %s',
             $lsf_project,
             $server_dispatch, ## lsf queue
-            $host_group,
             $job_group_spec,
             $user, 
             $build_event->output_log_file,
@@ -850,7 +842,7 @@ sub _launch {
         my $commit_observer = $build_event->add_observer(
             aspect => 'commit',
             callback => sub {
-                $self->status_message("Resuming LSF job ($job_id) for build " . $self->__display_name__ . ".");
+                #$self->status_message("Resuming LSF job ($job_id) for build " . $self->__display_name__ . ".");
                 my $bresume_output = `bresume $job_id`; chomp $bresume_output;
                 unless ( $bresume_output =~ /^Job <$job_id> is being resumed$/ ) {
                     $self->status_message($bresume_output);
@@ -1230,9 +1222,11 @@ sub generate_send_and_save_report {
         );
         return;
     }
-    
-    my $to = $self->_get_to_addressees_for_report_generator_class($generator_class)
+    $self->add_report($report)
         or return;
+
+    my $to = $self->_get_to_addressees_for_report_generator_class($generator_class);
+    return 1 if not $to; # OK - do not send email
     
     my $email_confirmation = Genome::Report::Email->send_report(
         report => $report,
@@ -1247,9 +1241,6 @@ sub generate_send_and_save_report {
         return;
     }
 
-    $self->add_report($report)
-        or return;
-
     return $report;
 }
 
@@ -1259,16 +1250,14 @@ sub _get_to_addressees_for_report_generator_class {
     confess "No report generator class given to get 'to' addressees" unless $generator_class;
 
     my $user = $self->build_event->user_name;
-    # Send reports to user unless it's apipe
-    unless ( $user eq 'apipe' ) {
-        return $self->build_event->user_name.'@genome.wustl.edu';
+    my $to = $user.'@genome.wustl.edu';
+
+    # Do not send init and succ reports to apipe-builder
+    if ( $user eq 'apipe-builder' and $generator_class ne 'Genome::Model::Report::BuildFailed' ) {
+        return;
     }
 
-    # Send failed reports to bulk
-    return 'apipe-bulk@genome.wustl.edu' if $generator_class eq 'Genome::Model::Report::BuildFailed';
-
-    # Send others to run
-    return 'apipe-run@genome.wustl.edu';
+    return $to;
 }
 
 sub report_generator_class_for_success { # in subclass replace w/ summary or the like?

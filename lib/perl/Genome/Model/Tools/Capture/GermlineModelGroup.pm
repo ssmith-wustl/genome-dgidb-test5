@@ -66,7 +66,6 @@ sub execute {                               # replace with real execution logic.
 	my $self = shift;
 
 	my $group_id = $self->group_id;
-	my $output_file = $self->output_coverage_stats;
 
 	## Save model ids by subject name ##
 	
@@ -80,9 +79,10 @@ sub execute {                               # replace with real execution logic.
 	}
 
 	## Open the output file ##
-	
-	open(OUTFILE, ">$output_file") or die "Can't open output file: $!\n";
-	print OUTFILE "Model_id\tBuild_id\tSubject_name\tBuild_Dir\tCoverage_Wingspan0_Depth20x\tPercent_Target_Space_Covered_20x\tPercent_Duplicates\tMapping_Rate\n";
+	if($self->output_coverage_stats) {
+		open(OUTFILE, ">" . $self->output_coverage_stats) or die "Can't open output file: $!\n";
+		print OUTFILE "Model_id\tBuild_id\tSubject_name\tBuild_Dir\tCoverage_Wingspan0_Depth20x\tPercent_Target_Space_Covered_20x\tPercent_Duplicates\tMapping_Rate\n";
+	}
 
 	## Get the models in each model group ##
 
@@ -102,6 +102,9 @@ sub execute {                               # replace with real execution logic.
 			my $last_build_dir = $model->last_succeeded_build_directory;
 			if($self->output_build_dirs) {
 				print BUILDDIRS join("\t", $model_id, $subject_name, $build_id, "Succeeded", $last_build_dir) . "\n";
+				unless($self->output_coverage_stats) {
+					next;
+				}
 			}
 
 			my ($duplicate_pct, $mark_dup_hash_ref);

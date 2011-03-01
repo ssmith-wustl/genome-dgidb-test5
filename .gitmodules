@@ -34,3 +34,6 @@
 [submodule "genome-db-pfam"]
 	path = genome-db-pfam
 	url = ssh://git//srv/git/genome-db-pfam.git
+[submodule "bam-readcount"]
+	path = bam-readcount
+	url = ssh://git//srv/git/bam-readcount.git

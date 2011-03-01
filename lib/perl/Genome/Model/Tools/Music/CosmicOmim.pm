@@ -8,12 +8,11 @@ package Genome::Model::Tools::Music::CosmicOmim;
    use Text::CSV_XS;
 
 class Genome::Model::Tools::Music::CosmicOmim {
-    is => 'Genome::Command::Base',
-    has => [
+    is => 'Genome::Model::Tools::Music',
+    has_input => [
        mutation_file => {
            is => 'Path',
            doc => 'list of annotated mutations in MAF format (or any file with MAF+annotation headers)',
-           is_input => 1,
            file_format => 'maf',
        },
        output_file => {
@@ -22,7 +21,7 @@ class Genome::Model::Tools::Music::CosmicOmim {
            is_output => 1,
        }
     ],
-    has_optional => [
+    has_optional_input => [
        omimaa_dir => {
            is => 'Path',
            doc => 'omim amino acid mutation database folder',

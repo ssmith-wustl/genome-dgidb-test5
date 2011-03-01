@@ -10,11 +10,6 @@ my %positions;
 class Genome::Model::Tools::DetectVariants2::Filter::PindelReadSupport{
     is => 'Genome::Model::Tools::DetectVariants2::Filter',
     has => [
-        germline_events => {
-            is => 'Boolean',
-            default => 0,
-            doc => 'Set this to only include events with some support in the control',
-        },
         min_variant_support => {
             is => 'String',
             is_optional => 1,
@@ -33,7 +28,13 @@ class Genome::Model::Tools::DetectVariants2::Filter::PindelReadSupport{
             default => 1,
             doc => 'enable this to filter out variants which have exclusively pos or neg strand supporting reads.',
         },
-
+        sw_ratio => {
+            is => 'String',
+            is_optional => 1,
+            is_input => 1,
+            default => '0.25',
+            doc => 'Throw out indels which have a normalized ratio of normal smith waterman reads to tumor smith waterman reads (nsw/(nsw+tsw)) at or below this amount.',
+        },
     ],
     has_constant => [
         use_old_pindel => {
@@ -46,7 +47,6 @@ class Genome::Model::Tools::DetectVariants2::Filter::PindelReadSupport{
 
 sub _filter_variants {
     my $self = shift;
-
     my $read_support_file = $self->_temp_staging_directory."/indels.hq.read_support.bed";
     my $output_file = $self->_temp_staging_directory."/indels.hq.bed";
     my $output_lq_file = $self->_temp_staging_directory."/indels.lq.bed";
@@ -67,21 +67,22 @@ sub calculate_read_support {
     my %indels;
     my %answers;
 
+    # Read the input file into the positions and indels hashes
     my $fh = Genome::Sys->open_file_for_reading($indel_file);
     while (my $line = $fh->getline){
         chomp $line;
         my ($chr,$start,$stop,$refvar) = split /\t/, $line;
-        $positions{$chr}{$start}{$stop}=$refvar;
+        #$positions{$chr}{$start}{$stop}=$refvar;
         my ($ref,$var) = split "/", $refvar;
         $indels{$chr}{$start} = $refvar;
     }
 
-    #print $output "CHR\tSTART\tSTOP\tREF/VAR\tINDEL_SUPPORT\tREFERENCE_SUPPORT\t%+STRAND\n";
     for my $chr (sort(keys(%indels))){
         my %indels_by_chr = %{$indels{$chr}};
         $self->process_file($chr, \%indels_by_chr, $output);
 
     }
+
     $output->close;
 
 }
@@ -91,133 +92,158 @@ sub process_file {
     my $chr = shift;
     my $indels_by_chrom = shift;
     my $output = shift;
+    
+    # This is the directory containing the raw pindel output
     my $dir = $self->detector_directory;
     my $filename = $dir."/".$chr."/indels_all_sequences";
-    my $pindel_output = Genome::Sys->open_file_for_reading($filename); #IO::File->new($filename);
+    my $pindel_output = Genome::Sys->open_file_for_reading($filename); 
+
+    # Get the BAMs from the DetectVariants API
     my $tumor_bam = $self->aligned_reads_input;
+    my $normal_bam = $self->control_aligned_reads_input if defined($self->control_aligned_reads_input);
 
     my %events;
-    my ($chrom,$pos,$size,$type);
 
+    # Read in the raw output from pindel
     while(my $line = $pindel_output->getline){
         my $normal_support=0;
         my $read = 0;
-        if($line =~ m/^#+$/){
-            my $call = $pindel_output->getline;
-            if($call =~ m/^Chr/){
-                while(1) {
-                    $line = $pindel_output->getline;
-                    if($line =~ m/#####/) {
-                        $call = $pindel_output->getline;
-                    } 
-                    if($call !~ m/^Chr/) {
-                        last;
-                    }          
-                }
-            }
-            my $reference = $pindel_output->getline;
-            my @call_fields = split /\s/, $call;
-            my $type = $call_fields[1];
-            my $size = $call_fields[2];   #12
-                my $pos_strand = 0;
-            my $neg_strand = 0;
-            my $mod = ($call =~ m/BP_range/) ? 2: -1;
-            my $support;
-            if($self->use_old_pindel){
-                $support = ($type eq "I") ? $call_fields[10+$mod] : $call_fields[12+$mod];
-            } else {
-                $support = $call_fields[12+$mod];
-            }
-            unless(defined($support)){
-                print "No support. Call was:   ".$call."\n";
-                die;
-            }
-            for (1..$support){
+
+        unless($line =~ m/^#+$/){
+            next;
+        }
+
+        my $call = $pindel_output->getline;
+
+        if($call =~ m/^Chr/){
+            while(1) {
                 $line = $pindel_output->getline;
-                if($line =~ m/normal/) {
-                    $normal_support=1;
-                }
-                if($line =~ m/\+/){
-                    $pos_strand++;
-                }else{
-                    $neg_strand++;
-                }
-                $read=$line;
-            }
-#charris speed hack
-            my ($chr,$start,$stop);
-            if($self->use_old_pindel){
-                $chr = ($type eq "I") ? $call_fields[4] : $call_fields[6];
-                $start= ($type eq "I") ? $call_fields[6] : $call_fields[8];
-                $stop = ($type eq "I") ? $call_fields[7] : $call_fields[9];
-            } else {
-                $chr = $call_fields[6];
-                $start= $call_fields[8];
-                $stop = $call_fields[9];
-            }
-#charris speed hack
-            unless(exists $indels_by_chrom->{$start}){
-                next;
-            }
-            my @bed_line = $self->parse($call, $reference, $read);
-            next unless scalar(@bed_line)>1;
-            unless((@bed_line)&& scalar(@bed_line)==4){
-                next;
-            }
-            my $type_and_size = $type."/".$size;
-            $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'neg'}=$neg_strand;
-            $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'pos'}=$pos_strand;
-            $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'bed'}=join("\t",@bed_line);
-            if($normal_support){
-                $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'normal'}=$normal_support;
+                if($line =~ m/#####/) {
+                    $call = $pindel_output->getline;
+                } 
+                if($call !~ m/^Chr/) {
+                    last;
+                }          
             }
         }
+        my $reference = $pindel_output->getline;
+        my @call_fields = split /\s/, $call;
+        my $type = $call_fields[1];
+        my $size = $call_fields[2];   #12
+
+        my $pos_strand = 0;
+        my $neg_strand = 0;
+
+        my $mod = ($call =~ m/BP_range/) ? 2: -1;
+
+        my $support;
+
+        if($self->use_old_pindel){
+            $support = ($type eq "I") ? $call_fields[10+$mod] : $call_fields[12+$mod];
+        } else {
+            $support = $call_fields[12+$mod];
+        }
+        unless(defined($support)){
+            print "No support. Call was:   ".$call."\n";
+            die;
+        }
+
+        # Read info for all the supporting reads
+        for (1..$support){
+            $line = $pindel_output->getline;
+            if($line =~ m/normal/) {
+                $normal_support=1;
+            }
+            if($line =~ m/\+/){
+                $pos_strand++;
+            }else{
+                $neg_strand++;
+            }
+            $read=$line;
+        }
+
+        # Parse the call for its chr start stop
+        my ($chr,$start,$stop);
+        if($self->use_old_pindel){
+            $chr = ($type eq "I") ? $call_fields[4] : $call_fields[6];
+            $start= ($type eq "I") ? $call_fields[6] : $call_fields[8];
+            $stop = ($type eq "I") ? $call_fields[7] : $call_fields[9];
+        } else {
+            $chr = $call_fields[6];
+            $start= $call_fields[8];
+            $stop = $call_fields[9];
+        }
+
+        # Skip this call if it is not found in the input_file ( this could mean it was filtered by pindel-somatic-calls)
+        unless(exists $indels_by_chrom->{$start}){
+            next;
+        }
+
+        # Convert the call info into bed format
+        my @bed_line = $self->parse($call, $reference, $read);
+
+        unless((@bed_line)&& scalar(@bed_line)==4){
+            next;
+        }
+
+        ($chr,$start) = @bed_line;
+
+        my $type_and_size = $type."/".$size;
+        $events{$chr}{$start}{$type_and_size}{'neg'}=$neg_strand;
+        $events{$chr}{$start}{$type_and_size}{'pos'}=$pos_strand;
+        $events{$chr}{$start}{$type_and_size}{'bed'}=join("\t",@bed_line);
+        if($normal_support){
+            $events{$chr}{$start}{$type_and_size}{'normal'}=$normal_support;
+        }
     }
+
+    my ($chrom,$pos,$size,$type);
+
     for $chrom (sort {$a cmp $b} (keys(%events))){
         for $pos (sort{$a <=> $b} (keys( %{$events{$chrom}}))){
             for my $type_and_size (sort(keys( %{$events{$chrom}{$pos}}))){
-                unless(exists($events{$chrom}{$pos}{$type_and_size}{'normal'})&&(not $self->germline_events)){
-                    my $pos_strand = $events{$chrom}{$pos}{$type_and_size}{'pos'};
-                    my $neg_strand = $events{$chrom}{$pos}{$type_and_size}{'neg'};
-                    my $pos_percent=0;
-                    if($neg_strand==0){
-                        $pos_percent = 1.0;
-                    } else {
-                        $pos_percent = sprintf("%.2f", $pos_strand / ($pos_strand + $neg_strand));
-                    }
-                    my $answer = "neg = ".$neg_strand."\tpos = ".$pos_strand." which gives % pos str = ".$pos_percent."\n";
-                    my $reads = $pos_strand + $neg_strand;
-                    my @stop = keys(%{$positions{$chrom}{$pos}});
-                    #unless(scalar(@stop)==1){
-                    #    
-                    #    die "too many stop positions at ".$chrom." ".$pos."\n";
-                    #}
-                    my ($type,$size) = split /\//, $type_and_size;
-                    #my $stop = ($type eq 'I') ? $pos+2 : $pos + $size;
-                    my $stop = $pos;
-                    my @results = `samtools view $tumor_bam $chrom:$pos-$stop | grep -v "XT:A:M"`;
-                    if($self->germline_events){
-                        push @results, `samtools view $tumor_bam $chrom:$pos-$stop | grep -v "XT:A:M"`;
-                    }
-                    my $read_support=0;
-                    for my $result (@results){
-                        #print $result;
-                        chomp $result;
-                        my @details = split /\t/, $result;
-                        if($result =~ /NM:i:(\d+)/){
-                            if($1>2){
-                                next;
-                            }
-                        }
-                        unless($details[5] =~ m/[ID]/){
-                            if(($details[3] > ($pos - 40))&&($details[3] < ($pos -10))){
-                                $read_support++;
-                            }
-                        }
-                    }
-                    my $bed_output = $events{$chrom}{$pos}{$type_and_size}{'bed'}."\t".$reads."\t".$read_support."\t".$pos_percent."\n";
-                    print $output $bed_output;
+                my $pos_strand = $events{$chrom}{$pos}{$type_and_size}{'pos'};
+                my $neg_strand = $events{$chrom}{$pos}{$type_and_size}{'neg'};
+                my $pos_percent=0;
+                if($neg_strand==0){
+                    $pos_percent = 1.0;
+                } else {
+                    $pos_percent = sprintf("%.2f", $pos_strand / ($pos_strand + $neg_strand));
                 }
+                my $answer = "neg = ".$neg_strand."\tpos = ".$pos_strand." which gives % pos str = ".$pos_percent."\n";
+                my $reads = $pos_strand + $neg_strand;
+                #my @stop = keys(%{$positions{$chrom}{$pos}});
+                my ($type,$size) = split /\//, $type_and_size;
+                my $stop = $pos;
+
+                # Call samtools over the variant start-stop to get overlapping reads
+                my @results = `samtools view $tumor_bam $chrom:$pos-$stop`;
+                my $tumor_read_support=0;
+                my $read_support=0;
+                for my $result (@results){
+                    chomp $result;
+                    my @details = split /\t/, $result;
+                    # Parse overlapping reads for cigar strings containing insertions or deletions
+                    if($details[5] =~ m/[ID]/){
+                        $tumor_read_support++;
+                    }
+                }
+
+                # Call samtools over the variant start-stop in the normal bam to get overlapping reads
+                @results = `samtools view $normal_bam $chrom:$pos-$stop`;
+                my $normal_read_support=0;
+                for my $result (@results){
+                    chomp $result;
+                    my @details = split /\t/, $result;
+                    # Parse overlapping reads for insertions or deletions
+                    if($details[5] =~ m/[ID]/){
+                        $normal_read_support++;
+                    }
+                }
+                my $bed_output = $events{$chrom}{$pos}{$type_and_size}{'bed'}."\t".$reads."\t".$tumor_read_support."\t".$normal_read_support."\t".$pos_percent."\n";
+
+                print $output $bed_output;
+
             }
         }
     }
@@ -296,12 +322,9 @@ sub filter_read_support {
 
     while( my $line = $input->getline){
         chomp $line;
-        my ($chr,$start,$stop,$refvar,$vs,$rs,$ps) = split "\t", $line;
+        my ($chr,$start,$stop,$refvar,$vs,$tsw,$nsw,$ps) = split "\t", $line;
         my $hq=1;
-        unless($vs >= $self->min_variant_support){
-            $hq = 0;
-        }
-        unless($vs/($vs+$rs) <= $self->var_to_ref_read_ratio){
+        unless(($nsw/($tsw+$nsw)) < $self->sw_ratio){
             $hq = 0;
         }
         if($self->remove_single_stranded){
