@@ -57,7 +57,8 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    # Either use provided directory or get a build and use it's data directory
+    # Either use provided directory or get a build and use it's data directory. Expect to find coding gene,
+    # rna, protein, etc prediction files here
     my $prediction_directory = $self->prediction_directory;
     my $sequence_file = $self->sequence_file;
     unless (defined $prediction_directory and defined $sequence_file) {
@@ -79,7 +80,7 @@ sub execute {
     confess "No sequence file found at $sequence_file!" unless -e $sequence_file;
     confess "No directory found at $prediction_directory!" unless -d $prediction_directory;
 
-    # Now either use the supplied ace file or create a temp one in the predictions directory
+    # Now either use the supplied ace file or create a temp one in the predictions directory for output
     my $ace_fh;
     if (defined $self->ace_file) {
         if (-e $self->ace_file) {
@@ -92,7 +93,7 @@ sub execute {
     else {
         $ace_fh = File::Temp->new(
             TEMPLATE => 'predictions_XXXXXX',
-            SUFFIX => 'ace',
+            SUFFIX => '.ace',
             UNLINK => 0,
             CLEANUP => 0,
             DIR => $prediction_directory,

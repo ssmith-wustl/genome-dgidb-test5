@@ -96,7 +96,7 @@ sub execute {
 
         my $rna_gene = Genome::Prediction::RNAGene->create(
             directory => $self->prediction_directory,
-            gene_name => $seq_name . $trna_num,
+            gene_name => $seq_name . '.t' . $trna_num,
             description => $type,
             start => $begin,
             end => $end,
