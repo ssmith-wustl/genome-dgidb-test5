@@ -104,6 +104,19 @@ our @APIPE_DISK_GROUPS = qw/
 /;
 our $CREATE_DUMMY_VOLUMES_FOR_TESTING = 1;
 
+# Locks the allocation, if lock is not manually released (it had better be!) it'll be automatically
+# cleaned up on program exit
+sub get_lock {
+    my ($class, $id, $tries) = @_;
+    $tries ||= 60;
+    my $allocation_lock = Genome::Sys->lock_resource(
+        resource_lock => '/gsc/var/lock/allocation/allocation_' . join('_', split(' ', $id)),
+        max_try => $tries,
+        block_sleep => 1,
+    );
+    return $allocation_lock;
+}
+
 # Does a du on the allocation directory and returns size in kilobytes, included so old API doesn't break
 sub get_actual_disk_usage {
     my $self = shift;
@@ -366,7 +379,7 @@ sub _delete {
     }
 
     # Lock and retrieve allocation
-    my $allocation_lock = $class->_get_allocation_lock($id);
+    my $allocation_lock = $class->get_lock($id);
     confess 'Could not get lock for allocation ' . $id unless defined $allocation_lock;
 
     my $self = $class->get($id);
@@ -379,7 +392,7 @@ sub _delete {
     $self->status_message("Beginning deallocation process for allocation " . $self->id);
 
     # Lock and retrieve volume
-    my $volume_lock = $self->_get_volume_lock($self->mount_path, 3600);
+    my $volume_lock = Genome::Disk::Volume->get_lock($self->mount_path, 3600);
     unless ($volume_lock) {
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Could not get lock on volume ' . $self->mount_path;
@@ -418,7 +431,7 @@ sub _reallocate {
     }
 
     # Lock and retrieve allocation
-    my $allocation_lock = $class->_get_allocation_lock($id);
+    my $allocation_lock = $class->get_lock($id);
     confess "Could not get lock on allocation $id" unless defined $allocation_lock;
 
     my $mode = $class->_retrieve_mode;
@@ -456,7 +469,7 @@ sub _reallocate {
     $self->status_message("Resizing from " . $self->kilobytes_requested . " kb to $kilobytes_requested kb (changed by $diff)"); 
 
     # Lock and retrieve volume
-    my $volume_lock = $self->_get_volume_lock($self->mount_path, 3600);
+    my $volume_lock = Genome::Disk::Volume->get_lock($self->mount_path, 3600);
     unless (defined $volume_lock) {
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Could not get lock on volume ' . $self->mount_path;
@@ -545,7 +558,7 @@ sub _reallocate_with_move {
     }
 
     # Get lock for new volume and update it
-    $new_volume_lock = $self->_get_volume_lock($new_volume->mount_path, 3600);
+    $new_volume_lock = Genome::Disk::Volume->get_lock($new_volume->mount_path, 3600);
     unless (defined $new_volume_lock) {
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Could not get lock for volume ' . $new_volume->mount_path;
@@ -572,7 +585,7 @@ sub _reallocate_with_move {
     }
 
     # FIXME This is a potential way for volumes and allocations to get out of sync
-    my $old_volume_lock = $self->_get_volume_lock($old_volume->mount_path, 3600);
+    my $old_volume_lock = Genome::Disk::Volume->get_lock($old_volume->mount_path, 3600);
     unless (defined $old_volume_lock) {
         confess 'Could not get lock for volume ' . $old_volume->mount_path;
     }
@@ -710,31 +723,6 @@ sub _check_kb_requested {
     return 1;
 }
 
-sub _get_volume_lock {
-    my ($class, $mount_path, $tries) = @_;
-    $tries ||= 120;
-    my $modified_mount = $mount_path;
-    $modified_mount =~ s/\//_/g;
-    my $volume_lock = Genome::Sys->lock_resource(
-        resource_lock => '/gsc/var/lock/allocation/volume' . $modified_mount,
-        max_try => $tries,
-        block_sleep => 1,
-    );
-    return $volume_lock;
-}
-
-sub _get_allocation_lock {
-    my ($class, $id, $tries) = @_;
-    $tries ||= 60;
-    my $allocation_lock = Genome::Sys->lock_resource(
-        resource_lock => '/gsc/var/lock/allocation/allocation_' . join('_', split(' ', $id)),
-        max_try => $tries,
-        block_sleep => 1,
-    );
-    return $allocation_lock;
-}
-
-
 # Returns a list of volumes that meets the given criteria
 sub _get_candidate_volumes {
     my ($class, %params) = @_;
@@ -787,7 +775,7 @@ sub _lock_volume_from_list {
         # Pick a random volume from the list of candidates and try to lock it
         my $index = int(rand(@candidate_volumes));
         my $candidate_volume = $candidate_volumes[$index];
-        my $lock = $self->_get_volume_lock($candidate_volume->mount_path);
+        my $lock = Genome::Disk::Volume->get_lock($candidate_volume->mount_path);
         next unless defined $lock;
 
         # Reload volume, if anything has changed restart (there's a small window between looking at the volume
