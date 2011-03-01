@@ -10,7 +10,7 @@ package Genome::Model::Tools::Music::CosmicOmim;
 class Genome::Model::Tools::Music::CosmicOmim {
     is => 'Genome::Model::Tools::Music',
     has_input => [
-       mutation_file => {
+       maf_file => {
            is => 'Path',
            doc => 'list of annotated mutations in MAF format (or any file with MAF+annotation headers)',
            file_format => 'maf',
@@ -50,7 +50,7 @@ sub execute{
 #  PRE-PROCESSING  #
 ####################
 
-   my $mut_file = $self->mutation_file;
+   my $mut_file = $self->maf_file;
    my $cosmic_dir = $self->cosmic_dir;
    my $basename = $self->output_file;
    my $omimaa_dir = $self->omimaa_dir;
