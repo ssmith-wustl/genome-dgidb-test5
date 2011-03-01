@@ -19,7 +19,7 @@ our $VERSION = '1.01';
 
 class Genome::Model::Tools::Music::Proximity {
     is => 'Command',                       
-    has => [
+    has_input => [
     maf_file => {
         is => 'Text',
         doc => "List of mutations (MAF)",
@@ -36,6 +36,7 @@ class Genome::Model::Tools::Music::Proximity {
         is => 'Text',
         doc => "Maximum AA distance between 2 mutations [10]",
         default => 10,
+        is_optional => 1,
     },
     ],
 };

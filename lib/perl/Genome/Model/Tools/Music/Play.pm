@@ -96,6 +96,10 @@ class Genome::Model::Tools::Music::Play {
             is => 'Number',
             doc => 'Background mutation rate in the targeted regions',
         },
+        max_proximity => {
+            is => 'Text',
+            doc => 'Maximum AA distance between 2 mutations',
+        },
     ],
     has_calculated_optional => [
         gene_covg_dir => {
@@ -132,7 +136,7 @@ sub execute {
     my $self = shift;
 
     #Proximity command left out until it has been implemented
-    my @no_dependencies = ('ClinicalCorrelation', 'CosmicOmim', 'MutationRelation', 'Pfam');
+    my @no_dependencies = ('Proximity', 'ClinicalCorrelation', 'CosmicOmim', 'MutationRelation', 'Pfam');
     my @bmr = ('Bmr::CalcCovg', 'Bmr::CalcBmr');
     my @depend_on_bmr = ('PathScan', 'Smg');
     for my $command_name (@no_dependencies, @bmr, @depend_on_bmr) {
