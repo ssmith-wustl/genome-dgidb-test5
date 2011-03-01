@@ -34,7 +34,7 @@ my $detector_test = $dispatcher_class->create(
     control_aligned_reads_input => $normal_bam,
 );
 ok($detector_test, "Object to test a detector case created");
-ok($detector_test->execute);
+ok($detector_test->execute, "Execution completed successfully.");
 
 done_testing();
 
