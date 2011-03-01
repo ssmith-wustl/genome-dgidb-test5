@@ -117,7 +117,7 @@ sub _resolve_format {
     }
 
     if($bed_file_content =~ /track name=/ims) {
-        return 'multi-tracked 1-based';
+        return 'multi-tracked';
     }
 
     my @lines = split("\n",$bed_file_content);
