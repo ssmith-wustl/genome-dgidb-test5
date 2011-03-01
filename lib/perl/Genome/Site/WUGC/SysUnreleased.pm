@@ -33,6 +33,12 @@ sub disk_usage_for_path {
     my $self = shift;
     my $path = shift;
 
+    unless (-d $path) {
+        $self->error_message("Path $path does not exist!");
+        return;
+    }
+
+    return unless -d $path;
     my $cmd = "du -sk $path 2>&1";
     my $du_output = qx{$cmd};
     my $kb_used = ( split( ' ', $du_output, 2 ) )[0];
