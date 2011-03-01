@@ -573,15 +573,15 @@ sub create_default_per_lane_qc_model {
     my $reference_sequence_build = shift;
     my $pse = shift;
 
-    my $subset_name = $genome_instrument_data->subset_name || 'Unknown';
-    my $run_name = $genome_instrument_data->run_name || 'Unknown';
+    my $subset_name = $genome_instrument_data->subset_name || 'unknown-subset';
+    my $run_name = $genome_instrument_data->short_name || 'unknown-run';
 
     my ($processing_profile, $model_name);
     my $dbsnp_build;
     my $ncbi_human_build36 = Genome::Model::Build->get(101947881);
     if ($reference_sequence_build && $reference_sequence_build->is_compatible_with($ncbi_human_build36)) {
         $processing_profile = Genome::ProcessingProfile->get(2581081);
-        $model_name = join('_', $subset_name, $run_name, $processing_profile->name);
+        $model_name = $run_name . '.' . $subset_name . '.prod-qc';
         $dbsnp_build = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($reference_sequence_build); 
     } else {
         $self->status_message('Per lane QC only configured for human reference alignments');
@@ -654,8 +654,12 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         }
     }
 
-    if ( $processing_profile->isa('Genome::ProcessingProfile::GenotypeMicroarray') ) {
-	$model_name .= ' '.$reference_sequence_build->name;
+    if ($processing_profile->isa('Genome::ProcessingProfile::GenotypeMicroarray') ) {
+        $model_name .= '-microarray';
+    }elsif($processing_profile->isa('Genome::ProcessingProfile::DeNovoAssembly')){
+        $model_name .= '-assembly';
+    }else{
+        $model_name .= '-refalign';
     }
 
     #make sure the name we'd like isn't already in use
