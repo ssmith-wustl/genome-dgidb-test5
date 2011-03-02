@@ -14,8 +14,13 @@ use Genome::Site::WUGC::SysUnreleased;      # extensions to Genome::Sys
 
 # we removed UR::Time, but lots of things still depend on it
 # this brings back UR::Time as a namespace, but only or legacy things
-unless ($INC{"UR/Time.pm"}) {
-    require Genome::Site::WUGC::LegacyTime;
+do {
+    local $SIG{__DIE__};
+    local $SIG{__WARN__};
+    eval "use UR::Time";
+    unless ($INC{"UR/Time.pm"}) {
+        require Genome::Site::WUGC::LegacyTime;
+    };
 };
 
 # the old Genome::Config is all deprecated
