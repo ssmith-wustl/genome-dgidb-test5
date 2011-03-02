@@ -4,18 +4,9 @@ use warnings;
 use strict;
 
 use Genome;
-my %positions;
 
 class Genome::Model::Tools::DetectVariants2::Filter::PindelSomaticCalls{
     is => 'Genome::Model::Tools::DetectVariants2::Filter',
-    has => [
-        germline_events => {
-            is => 'Boolean',
-            default => 0,
-            is_optional => 1,
-            doc => 'Set this to only include events with some support in the control',
-        },
-    ],
     has_constant => [
         use_old_pindel => {
             is => 'Number',
@@ -28,7 +19,6 @@ class Genome::Model::Tools::DetectVariants2::Filter::PindelSomaticCalls{
 sub _filter_variants {
     my $self = shift;
 
-    my $read_support_file = $self->_temp_staging_directory."/indels.hq.read_support.bed";
     my $output_file = $self->_temp_staging_directory."/indels.hq.bed";
     my $output_lq_file = $self->_temp_staging_directory."/indels.lq.bed";
     my $indel_file = $self->input_directory."/indels.hq.bed";
@@ -53,16 +43,14 @@ sub find_somatic_events {
     while (my $line = $fh->getline){
         chomp $line;
         my ($chr,$start,$stop,$refvar) = split /\t/, $line;
-        $positions{$chr}{$start}{$stop}=$refvar;
         my ($ref,$var) = split "/", $refvar;
         $indels{$chr}{$start} = $refvar;
     }
 
-    #print $output "CHR\tSTART\tSTOP\tREF/VAR\tINDEL_SUPPORT\tREFERENCE_SUPPORT\t%+STRAND\n";
     for my $chr (sort(keys(%indels))){
         my %indels_by_chr = %{$indels{$chr}};
         $self->process_file($chr, \%indels_by_chr, $output, $output_lq);
-
+        delete $indels{$chr};
     }
     $output->close;
     $output_lq->close;
@@ -103,8 +91,6 @@ sub process_file {
             my @call_fields = split /\s/, $call;
             my $type = $call_fields[1];
             my $size = $call_fields[2];   #12
-                my $pos_strand = 0;
-            my $neg_strand = 0;
             my $mod = ($call =~ m/BP_range/) ? 2: -1;
             my $support;
             if($self->use_old_pindel){
@@ -123,7 +109,6 @@ sub process_file {
                 }
                 $read=$line;
             }
-#charris speed hack
             my ($chr,$start,$stop);
             if($self->use_old_pindel){
                 $chr = ($type eq "I") ? $call_fields[4] : $call_fields[6];
@@ -134,7 +119,6 @@ sub process_file {
                 $start= $call_fields[8];
                 $stop = $call_fields[9];
             }
-#charris speed hack
             unless(exists $indels_by_chrom->{$start}){
                 next;
             }
@@ -144,8 +128,6 @@ sub process_file {
                 next;
             }
             my $type_and_size = $type."/".$size;
-            $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'neg'}=$neg_strand;
-            $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'pos'}=$pos_strand;
             $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'bed'}=join("\t",@bed_line);
             if($normal_support){
                 $events{$bed_line[0]}{$bed_line[1]}{$type_and_size}{'normal'}=$normal_support;
@@ -155,7 +137,7 @@ sub process_file {
     for $chrom (sort {$a cmp $b} (keys(%events))){
         for $pos (sort{$a <=> $b} (keys( %{$events{$chrom}}))){
             for my $type_and_size (sort(keys( %{$events{$chrom}{$pos}}))){
-                if((not exists($events{$chrom}{$pos}{$type_and_size}{'normal'}) && not $self->germline_events) || ( $self->germline_events && exists($events{$chrom}{$pos}{$type_and_size}{'normal'}))){
+                if(not exists($events{$chrom}{$pos}{$type_and_size}{'normal'})){
                     my ($type,$size) = split /\//, $type_and_size;
                     my $stop = $pos;
                     my $bed_output = $events{$chrom}{$pos}{$type_and_size}{'bed'}."\n";
@@ -176,7 +158,6 @@ sub parse {
     my $self = shift;
     my $reference_fasta = $self->reference_sequence_input;
     my ($call, $reference, $first_read) = @_;
-    #parse out call bullshit
     chomp $call;
     my @call_fields = split /\s+/, $call;
     my $type = $call_fields[1];
@@ -204,7 +185,6 @@ sub parse {
         my $start_for_faidx = $start+1;
         my $sam_default = Genome::Model::Tools::Sam->path_for_samtools_version;
         my $faidx_cmd = "$sam_default faidx " . $reference_fasta . " $chr:$start_for_faidx-$stop";
-        #my $faidx_cmd = "$sam_default faidx " . $reference_fasta . " $chr:$start-$stop";
         my @faidx_return= `$faidx_cmd`;
         shift(@faidx_return);
         chomp @faidx_return;
@@ -220,57 +200,10 @@ sub parse {
         $var = substr($first_read, $offset_into_first_read, $size);
     }
     if($size >= 100) {
-        #my $big_fh = $self->_big_output_fh;
-        #$big_fh->print("$chr\t$start\t$stop\t$size\t$support\n");
         return undef;
     }
     my $refvar = "$ref/$var";
     return ($chr,$start,$stop,$refvar);
-}
-
-sub filter_read_support {
-    my $self = shift;
-    my $read_support_file = shift;
-    my $output_file = shift;
-    my $output_lq_file = shift;
-    
-    unless(-e $read_support_file) {
-        $self->error_message($self->read_support_file . " is not found or is empty.");
-        die $self->error_message;
-    }
-
-    my $input = Genome::Sys->open_file_for_reading( $read_support_file );
-    my $output = Genome::Sys->open_file_for_writing( $output_file );
-    my $output_lq = Genome::Sys->open_file_for_writing( $output_lq_file );
-
-    while( my $line = $input->getline){
-        chomp $line;
-        my ($chr,$start,$stop,$refvar,$vs,$rs,$ps) = split "\t", $line;
-        my $hq=1;
-        unless($vs >= $self->min_variant_support){
-            $hq = 0;
-        }
-        unless($vs/($vs+$rs) <= $self->var_to_ref_read_ratio){
-            $hq = 0;
-        }
-        if($self->remove_single_stranded){
-            unless(($ps != 1)&&($ps !=0)){
-                $hq=0;
-            }
-        }
-        if($hq==1){
-            print $output join("\t", ($chr,$start,$stop,$refvar))."\n";
-        }
-        else {
-            print $output_lq join("\t", ($chr,$start,$stop,$refvar))."\n";
-        }
-    }
-
-    $input->close;
-    $output->close;
-    $output_lq->close;
-
-    return 1;
 }
 
 1;

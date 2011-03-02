@@ -47,6 +47,7 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
+    return 1 unless -s $self->input_file_a and -s $self->input_file_b;
     my $cmd = $self->snvcmp_path . ' ' . $self->input_file_a . ' ' . $self->input_file_b . ' > ' . $self->output_file;
     Genome::Sys->shellcmd(
         cmd => $cmd,

@@ -33,6 +33,8 @@ ok($ref_seq_build, 'Got a reference sequence build') or die('Test cannot continu
 is($ref_seq_build->name, 'NCBI-human-build36', 'Got expected reference for test case');
 my $ref_seq_input = $ref_seq_build->full_consensus_path('fa');
 
+$ref_seq_input =~ s/\/opt\/fscache//;
+
 my $pindel = Genome::Model::Tools::DetectVariants2::Pindel->create(aligned_reads_input=>$tumor, 
                                                                    control_aligned_reads_input=>$normal,
                                                                    reference_sequence_input => $ref_seq_input,
