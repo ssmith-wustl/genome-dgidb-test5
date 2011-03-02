@@ -147,28 +147,12 @@ sub execute {
                 $spliced_length += abs($exon->end - $exon->start) + 1;
             }
 
+            # Coding gene names follow pattern <sequence_name>.<method>.<id>... need to extract method.
+            $gene_name =~ /$sequence\.(\w+)\..*/;
+            my $method = $1;
+
             $ace_fh->print("Sequence : $gene_name\n");
             $ace_fh->print("Source $sequence\n");
-
-            # FIXME Dirty dirty snap hack
-            my $method = $source;
-            if ($method =~ /snap/i) {
-                # This is a dirty hack that removes the . from the gene name so the dirty
-                # hack below doesn't fail. I know, this is the epitome of elegance.
-                # TODO Talked to Kym about this. There is some sort of sequence length limit during
-                # assembly, so for a particular case they split up contigs into Congig.a, Contig.b, etc,
-                # which is what caused some problems. If some other character than . can be used, this
-                # dirty hack can be removed.
-                my $modified_sequence = $sequence;
-                $modified_sequence =~ s/\./_/g;
-                my $modified_gene_name = $gene_name;
-                $modified_gene_name =~ s/$sequence/$modified_sequence/g;
-
-                my @fields = split(/\./, $modified_gene_name);
-                # For snap, the gene name template is contig_name.predictor.model_file_abbrev.gene_number
-                # We are interested in the predictor name (snap, in this case) and the model file
-                $method = join('.', $fields[1], $fields[2]);
-            }
             $ace_fh->print("Method $method\n");
             $ace_fh->print("CDS\t1 $spliced_length\n");
             $ace_fh->print("CDS_predicted_by $source\n");
