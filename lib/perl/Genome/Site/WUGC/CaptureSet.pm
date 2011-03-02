@@ -117,7 +117,7 @@ sub _resolve_format {
     }
 
     if($bed_file_content =~ /track name=/ims) {
-        return 'multi-tracked 1-based';
+        return 'multi-tracked';
     }
 
     my @lines = split("\n",$bed_file_content);
@@ -129,8 +129,12 @@ sub _resolve_format {
         }
     }
 
-    if($self->name =~ /agilent/i or $self->name =~ /nimblegen/i) {
+    if($self->name =~ /agilent/i) {
         return '1-based';
+    }
+
+    if($self->name =~ /nimblegen/i) {
+        return 'true-BED';
     }
 
     return 'unknown';

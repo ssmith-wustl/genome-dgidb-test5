@@ -9,95 +9,59 @@ use POSIX qw( WIFEXITED );
 
 our $VERSION = $Genome::Model::Tools::Music::VERSION;
 
-=head1 NAME
-
-Genome::Music::ClinicalCorrelation - identification of relevant clinical phenotypes
-
-=head1 VERSION
-
-Version 1.01
-
-=cut
-
-#our $VERSION = '1.01';
-
 class Genome::Model::Tools::Music::ClinicalCorrelation {
-    is => 'Genome::Model::Tools::Music',                       
+    is => 'Genome::Model::Tools::Music::Base',                       
     has_input => [ 
-    output_file => {
-        is => 'Text',
-        is_output => 1,
-        file_format => 'text',
-        doc => "Results of clinical-correlation tool",
-    },
-    maf_file => { 
-        is => 'Text',
-        doc => "List of mutations in MAF format",
-        is_input => 1,
-        file_format => 'maf',
-        is_optional => 1,
-    },
-    matrix_file => {
-        is => 'Text',
-        doc => "Matrix of samples (y) vs. mutations (x)",
-        is_optional => 1,
-    },
-    clinical_data_file => {
-        is => 'Text',
-        doc => "Table of samples (y) vs. clinical data category (x)",
-    },
-    clinical_data_type => {
-        is => 'Text',
-        doc => "Data must be either \"numeric\" or \"class\" type data",
-    },
-    genetic_data_type => {
-        is => 'Text',
-        doc => "Data in matrix file must be either \"gene\" or \"variant\" type data",
-    },
+        output_file => {
+            is => 'Text',
+            is_output => 1,
+            file_format => 'text',
+            doc => "Results of clinical-correlation tool",
+        },
+        maf_file => { 
+            is => 'Text',
+            doc => "List of mutations in MAF format",
+            is_input => 1,
+            file_format => 'maf',
+            is_optional => 1,
+        },
+        matrix_file => {
+            is => 'Text',
+            doc => "Matrix of samples (y) vs. mutations (x)",
+            is_optional => 1,
+        },
+        clinical_data_file => {
+            is => 'Text',
+            doc => "Table of samples (y) vs. clinical data category (x)",
+        },
+        clinical_data_type => {
+            is => 'Text',
+            doc => "Data must be either \"numeric\" or \"class\" type data",
+        },
+        genetic_data_type => {
+            is => 'Text',
+            doc => "Data in matrix file must be either \"gene\" or \"variant\" type data",
+        },
     ],
+    doc => "identify correlations between mutations in genes and particular phenotypic traits"
 };
 
 sub sub_command_sort_position { 12 }
 
-sub help_brief {
-    "Identify correlations between mutations in genes and particular phenotypic traits"
-}
-
 sub help_synopsis {
     return <<EOS
-This command identifies correlations between mutations in genes and particular phenotypic traits
-EXAMPLE:	gmt music clinical-correlation --maf-file myMAF.tsv --clinical-data-file myData.tsv --clinical-data-type 'numeric' --genetic-data-type 'gene'
+genome music clinical-correlation --maf-file myMAF.tsv --clinical-data-file myData.tsv --clinical-data-type 'numeric' --genetic-data-type 'gene'
 EOS
 }
 
 sub help_detail {
     return <<EOS
-This tool accepts either a MAF file or a matrix of samples vs. genes, where the values in the matrix are the number of mutations in each sample per gene. If the matrix is provided, the MAF file is not needed. If only the MAF file is provided, the matrix will be created by the tool and saved to a file whose name will be the name of the clinical data file appended with ".correlation_matrix". This matrix is fed into an R tool which calculates a P-value representing the probability that the correlation seen between the mutations in each gene and each phenotype trait are random. Lower P-values indicate lower randomness, or true correlations.
+This command identifies correlations between mutations in genes and particular phenotypic traits.  
+
+It tool accepts either a MAF file or a matrix of samples vs. genes, where the values in the matrix are the number of mutations in each sample per gene. If the matrix is provided, the MAF file is not needed. If only the MAF file is provided, the matrix will be created by the tool and saved to a file whose name will be the name of the clinical data file appended with ".correlation_matrix". This matrix is fed into an R tool which calculates a P-value representing the probability that the correlation seen between the mutations in each gene and each phenotype trait are random. Lower P-values indicate lower randomness, or true correlations.
 EOS
 }
 
-
-=head1 SYNOPSIS
-
-Identifies significant phenotypic traits
-
-
-=head1 USAGE
-
-      music.pl clinical-corellation OPTIONS
-
-      OPTIONS:
-
-      --output-file		Output file for writing results
-      --maf-file		List of mutations in MAF format
-      --matrix-file		Path to samples-vs-mutated-genes matrix
-      --clinical-data-file		Table of samples vs. clinical
-      --clinical-data-type		Either 'numeric' or 'class' type of data
-      --genetic_data_type 	Either 'gene' or 'variant' type of data
-
-=head1 FUNCTIONS
-
-=cut
 
 ################################################################################
 
@@ -364,25 +328,5 @@ sub create_sample_gene_matrix_variant {
     return $matrix_file;
 }
 
-=head1 AUTHOR
+1;
 
-The Genome Center at Washington University, C<< <software at genome.wustl.edu> >>
-
-
-=head1 SUPPORT
-
-You can find documentation for this module with the perldoc command.
-
-    perldoc Genome::Music::ClinicalCorrelation
-
-For more information, please visit http://genome.wustl.edu.
-
-=head1 COPYRIGHT & LICENSE
-
-Copyright 2010 The Genome Center at Washington University, all rights reserved.
-
-This program is free and open source under the GNU license.
-
-=cut
-
-1; # End of Genome::Music::ClinicalCorrelation

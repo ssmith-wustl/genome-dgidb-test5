@@ -10,8 +10,8 @@ use AMOS::AmosLib;
 use Bio::SeqIO;
 use Bio::Seq::Quality;
 use Bio::Seq::SequenceTrace;
-use Finishing::Assembly::Factory;
-use Finishing::Assembly::ContigTools;
+use Genome::Site::WUGC::Finishing::Assembly::Factory;
+use Genome::Site::WUGC::Finishing::Assembly::ContigTools;
 use Data::Dumper;
 
 class Genome::Model::Tools::Assembly::Stats {
@@ -784,7 +784,7 @@ sub get_read_depth_stats_from_ace {
 	return $text;
     }
 
-    my $fo = Finishing::Assembly::Factory->connect('ace', $acefile);
+    my $fo = Genome::Site::WUGC::Finishing::Assembly::Factory->connect('ace', $acefile);
     my $assembly_obj = $fo->get_assembly;
     my $contigs= $assembly_obj->contigs;
 

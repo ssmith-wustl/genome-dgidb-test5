@@ -560,6 +560,7 @@ sub _reallocate_with_move {
     # Get lock for new volume and update it
     $new_volume_lock = Genome::Disk::Volume->get_lock($new_volume->mount_path, 3600);
     unless (defined $new_volume_lock) {
+        Genome::Sys->remove_directory_tree($new_allocation_dir);
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Could not get lock for volume ' . $new_volume->mount_path;
     }
@@ -646,7 +647,7 @@ sub _unlock_closure {
     my ($class, @locks) = @_;
     return sub {
         for my $lock (@locks) {
-            Genome::Sys->unlock_resource(resource_lock => $lock);
+            Genome::Sys->unlock_resource(resource_lock => $lock) if -e $lock;
         }
     };
 }
@@ -813,7 +814,12 @@ sub remove_test_paths {
     for my $path (@paths_to_remove) {
         next unless -d $path;
         Genome::Sys->remove_directory_tree($path);
-        print STDERR "Removing allocation path $path because UR_DBI_NO_COMMIT is on\n";
+        if ($ENV{UR_DBI_NO_COMMIT}) {
+            print STDERR "Removing allocation path $path because UR_DBI_NO_COMMIT is on\n";
+        }
+        else {
+            print STDERR "Cleaning up allocation path $path\n";
+        }
     }
 }
 
