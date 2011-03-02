@@ -8,7 +8,7 @@ package Genome::Model::Tools::Music::CosmicOmim;
    use Text::CSV_XS;
 
 class Genome::Model::Tools::Music::CosmicOmim {
-    is => 'Genome::Model::Tools::Music',
+    is => 'Genome::Model::Tools::Music::Base',
     has_input => [
        maf_file => {
            is => 'Path',

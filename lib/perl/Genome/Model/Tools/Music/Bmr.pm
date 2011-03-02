@@ -18,7 +18,7 @@ our $VERSION = '1.01';
 
 class Genome::Model::Tools::Music::Bmr
 {
-  is => 'Command',
+  is => 'Command::Tree',
   has => [ # specify the command's single-value properties (parameters) <---
     maf_file  => { is => 'Text', doc => "List of mutations in MAF format" },
     reference_sequence    => { is => 'Text', doc => "Path to reference sequence in FASTA format", is_optional => 1 },
