@@ -262,6 +262,6 @@ sub line_count {
         die $self->error_message("Could not locate file for line count: $input");
     }
     my $result = `wc -l $input`; 
-    my ($answer)  = split "\t",$result;
+    my ($answer)  = split /\s/,$result;
     return $answer
 }

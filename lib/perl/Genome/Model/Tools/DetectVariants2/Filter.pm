@@ -40,7 +40,14 @@ class Genome::Model::Tools::DetectVariants2::Filter {
             is_optional => 1,
             doc => 'The version of the variant filter to use.',
         },
-    ]
+    ],
+    has_constant => [
+        _variant_type => {
+            type => 'String',
+            default => 'variant_type',
+            doc => 'variant type that this module operates on, overload this in submodules accordingly',
+        },
+    ],
 };
 
 sub help_synopsis {
@@ -105,6 +112,15 @@ sub _validate_output {
     ($lq) = grep /[svs|snvs|indels]\.lq\.bed/, @files;
     unless($hq && $lq){
         die $self->error_message("Could not locate either or both hq and lq files");
+    }
+
+    my $input_file = $self->input_directory."/".$self->_variant_type.".hq.bed";
+    my $hq_output_file = $self->output_directory."/".$self->_variant_type.".hq.bed";
+    my $lq_output_file = $self->output_directory."/".$self->_variant_type.".lq.bed";
+    my $total_input = $self->line_count($input_file);
+    my $total_output = $self->line_count($hq_output_file) + $self->line_count($lq_output_file);
+    unless(($total_input - $total_output) == 0){
+        die $self->error_message("Total lines of output did not match total input lines. Input lines: $total_input \t output lines: $total_output");
     }
     return 1;
 }
