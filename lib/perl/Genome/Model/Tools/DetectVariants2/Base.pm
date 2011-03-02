@@ -254,3 +254,14 @@ sub _promote_staged_data {
 sub has_version {
     die "This should be overloaded by the detector/filter";
 }
+
+sub line_count {
+    my $self = shift;
+    my $input = shift;
+    unless( -e $input ) {
+        die $self->error_message("Could not locate file for line count: $input");
+    }
+    my $result = `wc -l $input`; 
+    my ($answer)  = split "\t",$result;
+    return $answer
+}
