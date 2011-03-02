@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 my %model_files = (
-    'Acanium.hmm' => 'sn_acan',
+    'A.canium.hmm' => 'sn_acan',
     'B.malayi.hmm' => 'sn_bmal',
     'bmal.intronset.hmm' => 'sn_bmal30',
     'C.elegans.hmm' => 'sn_cele',
