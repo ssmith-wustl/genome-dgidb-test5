@@ -308,4 +308,8 @@ sub _run_cmd {
     return 1;
 }
 
+sub _validate_output {
+    return 1;
+}
+
 1;
