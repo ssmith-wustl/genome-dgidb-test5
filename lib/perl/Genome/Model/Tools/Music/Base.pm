@@ -8,6 +8,7 @@ our $VERSION = '0.01';
 
 class Genome::Model::Tools::Music::Base {
     is => ['Command::V2'],
+    is_abstract => 1,
     has_optional => [
          version => {
              is    => 'String',
