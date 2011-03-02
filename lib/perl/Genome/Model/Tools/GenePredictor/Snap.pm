@@ -221,7 +221,7 @@ sub _create_prediction_objects {
     # different abbreviation that is included in the gene name
     my $model_file_abbrev = $self->_model_file_abbreviation($model_file);
 
-    my $gene_name = join('.', $current_seq_name, $source, $model_file_abbrev, $gene_count);
+    my $gene_name = join('.', $current_seq_name, $model_file_abbrev, $gene_count);
     my $transcript_name = $gene_name . '.1';
     my $protein_name = $transcript_name . "_protein.1";
 
@@ -361,6 +361,7 @@ sub _model_file_abbreviation {
 
     my $abbrev = Genome::Info::SnapModelFileAbbreviations::abbreviation_for_model_file($file_name);
     $abbrev = $file_name unless defined $abbrev;
+    $abbrev =~ s/\./_/g; # Having extra periods can screw up processing later on
     return $abbrev;
 }
 

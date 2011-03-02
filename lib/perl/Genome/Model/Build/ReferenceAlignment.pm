@@ -12,6 +12,7 @@ use warnings;
 use Genome;
 use File::Path 'rmtree';
 use Carp;
+use Math::Trig;
 
 class Genome::Model::Build::ReferenceAlignment {
     is => 'Genome::Model::Build',
@@ -77,27 +78,28 @@ sub get_alignment_bams {
 sub calculate_estimated_kb_usage {
     my $self = shift;
     my $model = $self->model;
-    #my $reference_build = $model->reference_sequence_build;
-    #my $reference_file_path = $reference_build->full_consensus_path;
+    my $estimated_kb_usage;
 
-    #my $du_output = `du -sk $reference_file_path`;
-    #my @fields = split(/\s+/,$du_output);
-    #my $reference_kb = $fields[0];
-    #my $estimate_from_reference = $reference_kb * 30;
+    my $total_clusters = 0;
+    my @instrument_datas = $model->instrument_data;
+    for my $instrument_data (@instrument_datas) {
+        next unless ($instrument_data && $instrument_data->can('clusters'));
 
-    my @idas = $model->instrument_data_assignments;
-    my $estimate_from_instrument_data = scalar(@idas) * 10000;
+        my $clusters = $instrument_data->clusters;
+        next unless ($clusters);
 
-    #return ($estimate_from_reference + $estimate_from_instrument_data);
-    my $temporary_value = 10485760; # 30GB  -----> old #629145600; #600GB
+        $total_clusters += $clusters;
+    }
 
-    my $processing_profile_name = $model->processing_profile_name;
-
-    if ($processing_profile_name =~ /alignments only/i) {
-        $temporary_value = 10240; #10 MiB
+    if ($total_clusters) {
+        $estimated_kb_usage = 5_242_880*atan($total_clusters/200_000_000) + 524_288; # empirical fit, see RT #67851: 5GB * atan(reads/2M) + 0.5GB
+        $estimated_kb_usage = int($estimated_kb_usage);
+    }
+    else {
+        $estimated_kb_usage = 7_864_320; # 7.5GB
     }
     
-    return $temporary_value; 
+    return $estimated_kb_usage; 
 }
 
 sub calculate_input_base_counts_after_trimq2 {
