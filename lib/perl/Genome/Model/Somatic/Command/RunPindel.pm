@@ -208,7 +208,7 @@ __DATA__
   <link fromOperation="Filter Read Support Tier1" fromProperty="output_file" toOperation="output connector" toProperty="tier_1_filtered_read_support" />
   <link fromOperation="Calculate Read Support Tier2" fromProperty="_output_filename" toOperation="Filter Read Support Tier2" toProperty="read_support_file" />
   <link fromOperation="Filter Read Support Tier2" fromProperty="output_file" toOperation="output connector" toProperty="tier_2_filtered_read_support" />
-  <link fromOperation="Calculate Read Support Tier3" fromProperty="_output_filename" toOperation="Filter Read Support Tier2" toProperty="read_support_file" />
+  <link fromOperation="Calculate Read Support Tier3" fromProperty="_output_filename" toOperation="Filter Read Support Tier3" toProperty="read_support_file" />
   <link fromOperation="Filter Read Support Tier3" fromProperty="output_file" toOperation="output connector" toProperty="tier_3_filtered_read_support" />
 
   <link fromOperation="Annotation" fromProperty="output_file" toOperation="output connector" toProperty="output" />
