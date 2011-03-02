@@ -6,13 +6,14 @@ use warnings;
 use above 'Genome';
 
 use Test::More;
+use File::Compare;
 
 my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
 } else {
-    plan skip_all => "This test is incomplete.";
-    #plan tests => 7;
+    #plan skip_all => "This test is incomplete.";
+    plan tests => 24;
 }
 
 my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-VarscanSomatic/';
@@ -25,7 +26,8 @@ my $normal_bam = $test_dir . '/alignments/102922275_merged_rmdup.bam';
 # Updated to .v6 due to the addition of quality and natural sort order to bed file output 
 # Updated to .v7 due to the addition of read depth
 # Updated to .v8 due to directory structure changes
-my $expected_dir = $test_dir . '/expected.v8/';
+# Updated to .v9 due to DetVar2 module
+my $expected_dir = $test_dir . '/expected.v9/';
 ok(-d $expected_dir, "expected results directory exists");
 
 my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get(type_name => 'imported reference sequence', name => 'NCBI-human-build36');
@@ -52,7 +54,23 @@ my $command = Genome::Model::Tools::DetectVariants2::VarscanSomatic->create(
 ok($command, 'Created `gmt detect-variants varscan-somtic` command');
 ok($command->execute, 'Executed `gmt detect-variants varscan-somatic` command');
 
-my $diff_cmd = sprintf('diff -r -q %s %s', $test_working_dir, $expected_dir);
+my @file_names = qw|    indels.hq
+                        indels.hq.bed
+                        indels.hq.v1.bed
+                        indels.hq.v2.bed
+                        snvs.hq
+                        snvs.hq.bed
+                        snvs.hq.unfiltered
+                        snvs.hq.v1.bed
+                        snvs.hq.v2.bed      |;
 
-my $diff = `$diff_cmd`;
-is($diff, '', 'No differences in output from expected result from running varscan for this version and parameters');
+for my $file_name (@file_names){
+    my $file = $expected_dir."/".$file_name;
+    ok( -s $file, "$file_name exists and has size");
+}
+
+for my $file_name (@file_names){
+    my $output_file = $test_working_dir."/".$file_name;
+    my $expected_file = $expected_dir."/".$file_name;
+    is(compare($output_file, $expected_file), 0, "$output_file output matched expected output");
+}
