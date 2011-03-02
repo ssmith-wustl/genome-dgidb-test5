@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Disk::Volume::Command {
-    is => 'Command',
+    is => 'Genome::Command::Base',
     is_abstract => 1,
     doc => 'work with disk volumes',
 };
