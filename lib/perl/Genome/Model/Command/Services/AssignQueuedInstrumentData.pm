@@ -642,6 +642,14 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
 
     my $model_name = $subject->name . '.prod';
 
+    if ($processing_profile->isa('Genome::ProcessingProfile::GenotypeMicroarray') ) {
+        $model_name .= '-microarray';
+    }elsif($processing_profile->isa('Genome::ProcessingProfile::DeNovoAssembly')){
+        $model_name .= '-assembly';
+    }else{
+        $model_name .= '-refalign';
+    }
+
     my $capture_target;
 
     # Label Solexa/454 capture stuff as such
@@ -652,14 +660,6 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             $model_name =
                 join( '.', $model_name, 'capture', $capture_target );
         }
-    }
-
-    if ($processing_profile->isa('Genome::ProcessingProfile::GenotypeMicroarray') ) {
-        $model_name .= '-microarray';
-    }elsif($processing_profile->isa('Genome::ProcessingProfile::DeNovoAssembly')){
-        $model_name .= '-assembly';
-    }else{
-        $model_name .= '-refalign';
     }
 
     #make sure the name we'd like isn't already in use
