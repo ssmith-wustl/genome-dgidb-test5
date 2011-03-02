@@ -8,6 +8,14 @@ use Genome;
 class Genome::Model::Tools::DetectVariants2::Combine::UnionSnv{
     is => 'Genome::Model::Tools::DetectVariants2::Combine',
     doc => 'Union snvs into one file',
+    has_constant => [
+        _variant_type => {
+            type => 'String',
+            default => 'snvs',
+            doc => 'variant type that this module operates on',
+        },
+    ],
+
 };
 
 sub help_synopsis {
