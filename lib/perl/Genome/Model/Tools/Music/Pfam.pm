@@ -20,20 +20,20 @@ Version 1.01
 our $VERSION = '1.01';
 
 class Genome::Model::Tools::Music::Pfam {
-    is => 'Genome::Model::Tools::Music',
+    is => 'Genome::Model::Tools::Music::Base',
     has_input => [ 
-    maf_file => {
-        is => 'Text',
-        is_input => 1,
-        file_format => 'maf',
-        doc => "List of mutations in MAF format",
-    },
-    output_file => {
-        is => 'Text',
-        is_output => 1,
-        file_format => 'pfam',
-        doc => "MAF file with Pfam domain column appended",
-    },
+        maf_file => {
+            is => 'Text',
+            is_input => 1,
+            file_format => 'maf',
+            doc => "List of mutations in MAF format",
+        },
+        output_file => {
+            is => 'Text',
+            is_output => 1,
+            file_format => 'pfam',
+            doc => "MAF file with Pfam domain column appended",
+        },
     ],
 };
 
