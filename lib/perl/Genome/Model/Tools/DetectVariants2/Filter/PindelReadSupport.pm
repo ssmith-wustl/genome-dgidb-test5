@@ -42,7 +42,13 @@ class Genome::Model::Tools::DetectVariants2::Filter::PindelReadSupport{
             default => 1,
             doc => 'This will be updated when more than one version of pindel, 0.2,  is available',
         },
+        _variant_type => {
+            type => 'String',
+            default => 'indels',
+            doc => 'variant type that this module operates on, overload this in submodules accordingly',
+        },
     ],
+
 };
 
 sub _filter_variants {

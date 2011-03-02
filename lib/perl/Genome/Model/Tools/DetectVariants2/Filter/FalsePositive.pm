@@ -103,7 +103,14 @@ class Genome::Model::Tools::DetectVariants2::Filter::FalsePositive {
             is_input => 1,
             doc => 'version of samtools to use',
         },
-    ]
+    ],
+    has_constant => [
+        _variant_type => {
+            type => 'String',
+            default => 'snvs',
+            doc => 'variant type that this module operates on, overload this in submodules accordingly',
+        },
+    ],
 };
 
 sub help_synopsis {
