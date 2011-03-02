@@ -60,7 +60,7 @@ sub execute {
     unless($self->_combine_variants){
         die $self->error_message('Failted to combine variants');
     }
-    unless($self->_validate_outputs) {
+    unless($self->_validate_output) {
         die $self->error_message('Failed to validate output.');
     }
     return 1;
@@ -87,7 +87,7 @@ sub _validate_inputs {
     return 1;
 }
 
-sub _validate_outputs {
+sub _validate_output {
     my $self = shift;
     my $variant_type = $self->_variant_type;
     my $input_a_file = $self->input_directory_a."/".$variant_type.".hq.bed";

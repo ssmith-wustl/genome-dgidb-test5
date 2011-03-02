@@ -8,6 +8,13 @@ use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Filter::VarscanHighConfidence{
     is => 'Genome::Model::Tools::DetectVariants2::Filter',
+    has_constant => [
+        _variant_type => {
+            type => 'String',
+            default => 'snvs',
+            doc => 'variant type that this module operates on, overload this in submodules accordingly',
+        },
+    ],
 };
 
 sub _filter_variants {

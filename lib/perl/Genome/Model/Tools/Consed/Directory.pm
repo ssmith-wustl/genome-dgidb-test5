@@ -341,7 +341,7 @@ sub aceobject {
         msg => 'fatal',
     );
 
-    my $ao = Finishing::Assembly::Ace::Ext->new(input_file => $acefile);
+    my $ao = Genome::Site::WUGC::Finishing::Assembly::Ace::Ext->new(input_file => $acefile);
 
     $self->fatal_msg("Could not create ace for acefile ($acefile)") unless $ao;
 

@@ -45,6 +45,7 @@ use strict;
 our $VERSION = "0.29"; # UR $VERSION;
 
 # set up module
+use UR;
 use base qw(UR::ModuleBase UR::ModuleConfig);
 use Date::Pcalc;
 use Date::Parse;

@@ -84,11 +84,13 @@ sub execute {
     my @models = $self->models;
     my @errors;
     my $builds_started = 0;
+    my $total_count = 0;
     for my $model (@models) {
         if ($self->max_builds && $builds_started >= $self->max_builds){
             $self->status_message("Already started max builds $builds_started, quitting");
             last; 
         }
+        $total_count++;
         $self->status_message("Trying to start " . $model->__display_name__ . "...");
         my $transaction = UR::Context::Transaction->begin();
         my $build = eval {
@@ -125,7 +127,6 @@ sub execute {
         }
     }
 
-    my $total_count = ($self->max_builds && $self->max_builds < scalar @models) ? $self->max_builds : scalar @models;
     $self->display_summary_report($total_count, @errors);
 
     return !scalar(@errors);
