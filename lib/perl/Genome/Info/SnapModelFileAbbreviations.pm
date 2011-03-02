@@ -12,6 +12,8 @@ my %model_files = (
     'caninum_maker.hmm' => 'sn_acmk',
     'spiralis_cegma_mod.hmm' => 'sn_tscg',
     'spiralis_cegma_mod_intron_min30.hmm' => 'sn_tscg30',
+    'D.viviparus_cegma.hmm' => 'sn_dvcg',
+    'N.americanus_cegma.hmm' => 'sn_nacg',
 );
 
 sub abbreviation_for_model_file {
