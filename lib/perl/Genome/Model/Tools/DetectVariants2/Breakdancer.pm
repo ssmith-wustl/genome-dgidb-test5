@@ -133,21 +133,6 @@ the input BAM files and then uses that configuration to run breakdancer.
 EOS
 }
 
-sub _should_skip_execution {
-    my $self = shift;
-    
-    if ($self->skip) {
-        $self->status_message("Skipping execution: Skip flag set");
-        return 1;
-    }
-    if (($self->skip_if_output_present)&&(-s $self->sv_output)) {
-        $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
-        return 1;
-    }
-    
-    return $self->SUPER::_should_skip_execution;
-}
-
 
 sub _create_temp_directories {
     my $self = shift;
@@ -159,9 +144,25 @@ sub _create_temp_directories {
 sub _detect_variants {
     my $self = shift;
     
+    $self->set_params;
     $self->run_config;
     $self->run_breakdancer;
 
+    return 1;
+}
+
+
+sub set_params {
+    my $self = shift;
+
+    unless ($self->sv_params) {
+        $self->warning_message ("No sv_params option provided. Now try params");
+        unless ($self->params) {
+            $self->error_message("Neither sv_params nor params is set");
+            die;
+        }
+        $self->sv_params($self->params);
+    }
     return 1;
 }
 
@@ -178,7 +179,8 @@ sub run_config {
         $self->status_message("Using given breakdancer config file: $cfg_file");
     }
     else {
-        my $config_path = $self->breakdancer_config_command;
+        #my $config_path = $self->breakdancer_config_command;
+        my $config_path = '/gscuser/fdu/bin/bam2cfg.pl';  #test broken pipe case 
         my $cmd = "$config_path " . $self->_bam2cfg_params .' '.$self->aligned_reads_input . ' ' . $self->control_aligned_reads_input . " > "  . $self->_config_staging_output;
 
         $self->status_message("EXECUTING CONFIG STEP: $cmd");
@@ -330,7 +332,8 @@ sub _get_chr_list {
     my $tmp_idx_dir = File::Temp::tempdir(
         "Normal_bam_idxstats_XXXXX",
         CLEANUP => 1,
-        DIR     => $self->_temp_staging_directory,
+        DIR     => '/tmp',  #File::Temp can not remove inside dir for _temp_staging_dir
+        #DIR     => $self->_temp_staging_directory,
     );
 
     my $tmp_idx_file = $tmp_idx_dir . '/normal_bam.idxstats';
