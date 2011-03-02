@@ -10,7 +10,7 @@ use Carp 'confess';
 use Data::Dumper 'Dumper';
 use File::Grep 'fgrep';
 require Genome::Utility::MetagenomicClassifier::SequenceClassification;
-require Finishing::Assembly::Factory;
+require Genome::Site::WUGC::Finishing::Assembly::Factory;
 use Storable;
 
 sub new {
@@ -362,7 +362,7 @@ sub get_ace_factory {
     my $acefile = $self->ace_file;
     return unless -s $acefile; # ok
 
-    return Finishing::Assembly::Factory->connect('ace', $acefile);
+    return Genome::Site::WUGC::Finishing::Assembly::Factory->connect('ace', $acefile);
 }
 
 sub get_successfully_assembled_contig_from_assembly {

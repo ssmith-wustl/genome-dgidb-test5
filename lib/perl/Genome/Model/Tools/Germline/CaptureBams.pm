@@ -79,6 +79,9 @@ sub pre_execute {
     unless (defined $self->only_tier_1_indel) {
         $self->only_tier_1_indel(0);
     }
+    unless (defined $self->skip_roi) {
+        $self->skip_roi(0);
+    }
 
 #dbsnp lookup-variants settings
     unless (defined $self->report_mode) {
@@ -214,6 +217,7 @@ __DATA__
   <link fromOperation="Merge SNPs" fromProperty="output_file" toOperation="Limit SNPs ROI" toProperty="input_file" />
   <link fromOperation="input connector" fromProperty="regions_file" toOperation="Limit SNPs ROI" toProperty="regions_file" />
   <link fromOperation="input connector" fromProperty="merged_snp_output_ROI" toOperation="Limit SNPs ROI" toProperty="output_file" />
+  <link fromOperation="input connector" fromProperty="skip_roi" toOperation="Limit SNPs ROI" toProperty="skip_roi" />
 
 <!-- RUN TRANSCRIPT ANNOTATION FOR SNPS --> 
   
@@ -292,6 +296,7 @@ __DATA__
   <link fromOperation="Merge Indels" fromProperty="output_file" toOperation="Limit Indels ROI" toProperty="input_file" />
   <link fromOperation="input connector" fromProperty="regions_file" toOperation="Limit Indels ROI" toProperty="regions_file" />
   <link fromOperation="input connector" fromProperty="merged_indel_output_ROI" toOperation="Limit Indels ROI" toProperty="output_file" />
+  <link fromOperation="input connector" fromProperty="skip_roi" toOperation="Limit Indels ROI" toProperty="skip_roi" />
 
 <!-- RUN TRANSCRIPT ANNOTATION FOR INDELS -->
 

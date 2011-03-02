@@ -9,7 +9,7 @@ use Carp 'confess';
 use Data::Dumper 'Dumper';
 use File::Grep 'fgrep';
 require Genome::Utility::MetagenomicClassifier::SequenceClassification;
-require Finishing::Assembly::Factory;
+require Genome::Site::WUGC::Finishing::Assembly::Factory;
 use Storable;
 
 class Genome::AmpliconAssembly::Amplicon {
@@ -415,7 +415,7 @@ sub get_ace_factory {
     unless ( $self->{_ace_factory} ) {
         my $acefile = $self->ace_file;
         return unless -s $acefile; # ok
-        $self->{_ace_factory} = Finishing::Assembly::Factory->connect('ace', $acefile);
+        $self->{_ace_factory} = Genome::Site::WUGC::Finishing::Assembly::Factory->connect('ace', $acefile);
     }
 
     return $self->{_ace_factory};
