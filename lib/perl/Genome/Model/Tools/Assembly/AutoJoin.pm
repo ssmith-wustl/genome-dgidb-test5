@@ -8,8 +8,8 @@ use IO::File;
 use Data::Dumper;
 use Sort::Naturally;
 use Cwd;
-use Finishing::Assembly::Factory;
-use Finishing::Assembly::ContigTools;
+use Genome::Site::WUGC::Finishing::Assembly::Factory;
+use Genome::Site::WUGC::Finishing::Assembly::ContigTools;
 
 class Genome::Model::Tools::Assembly::AutoJoin {
     is => 'Command',
@@ -180,9 +180,9 @@ sub _load_ace_obj
 {
     my ($self, $ace) = @_;
 
-    my $tool = Finishing::Assembly::ContigTools->new;
+    my $tool = Genome::Site::WUGC::Finishing::Assembly::ContigTools->new;
 
-    my $fo = Finishing::Assembly::Factory->connect('ace', $ace);
+    my $fo = Genome::Site::WUGC::Finishing::Assembly::Factory->connect('ace', $ace);
 
     return $fo->get_assembly, $tool;
 }
@@ -540,7 +540,7 @@ sub make_joins
     print "Please wait: gathering phds and ace file .. this could take up to 10 minutes\n";
 
     my $ace_out = $self->ace.'.autojoined';
-    my $xport = Finishing::Assembly::Ace::Exporter->new( file => $ace_out );
+    my $xport = Genome::Site::WUGC::Finishing::Assembly::Ace::Exporter->new( file => $ace_out );
     my @phd_objs;
 
     my $phd_dir = "$dir/../phd_dir";
@@ -555,7 +555,7 @@ sub make_joins
 	    }
 	}
 	unless ($dir_is_empty) {
-	    $phd_obj = Finishing::Assembly::Phd->new(input_directory => "$phd_dir");
+	    $phd_obj = Genome::Site::WUGC::Finishing::Assembly::Phd->new(input_directory => "$phd_dir");
 	    unless ($phd_obj) {
 		$self->error_message("Unable to create phd_dir object");
 		return;
@@ -567,7 +567,7 @@ sub make_joins
 
     if (-s $phd_ball)
     {
-        my $phd_ball_obj = Finishing::Assembly::Phd::Ball->connect(ball => $phd_ball);
+        my $phd_ball_obj = Genome::Site::WUGC::Finishing::Assembly::Phd::Ball->connect(ball => $phd_ball);
 
 	unless ($phd_ball_obj)
 	{
