@@ -183,9 +183,7 @@ dispatch {
 
         my $view;
         # all objects in UR have create_view
-        # this probably ought to be revisited for performance resouns because it has to do a lot of hierarchy walking
-        print Data::Dumper::Dumper($matches[0], \%view_args, \%view_special_args);
-        print "*****************\n";
+        # this probably ought to be revisited for performance reasons because it has to do a lot of hierarchy walking
         eval { $view = $matches[0]->create_view(%view_args, %view_special_args); };
 
         if ( $@ && !$view ) {
