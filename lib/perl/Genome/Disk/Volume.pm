@@ -16,21 +16,25 @@ class Genome::Disk::Volume {
         unallocated_kb => { is => 'Number' },
         disk_status => { is => 'Text' },
         can_allocate => { is => 'Number' },
-        used_kb => {
-            calculate_from => ['mount_path'],
-            calculate => sub { my $mount_path = shift; my ($used_kb) = qx(df -k $mount_path | grep $mount_path | awk '{print \$3}') =~ /(\d+)/; },
-        },
         allocated_kb => { 
             calculate_from => ['total_kb','unallocated_kb'],
             calculate => q{ return ($total_kb - $unallocated_kb); },
         },
-        percent_used => {
-            calculate_from => ['total_kb', 'used_kb'],
-            calculate => sub { my ($total_kb, $used_kb) = @_; return sprintf("%.2f", ( $used_kb / $total_kb ) * 100); },
-        },
         percent_allocated => {
             calculate_from => ['total_kb', 'allocated_kb'],
             calculate => q{ return sprintf("%.2f", ( $allocated_kb / $total_kb ) * 100); },
+        },
+        used_kb => {
+            calculate_from => ['mount_path'],
+            calculate => sub { 
+                my $mount_path = shift; 
+                my ($used_kb) = qx(df -k $mount_path | grep $mount_path | awk '{print \$3}') =~ /(\d+)/; 
+                return $used_kb
+            },
+        },
+        percent_used => {
+            calculate_from => ['total_kb', 'used_kb'],
+            calculate => sub { my ($total_kb, $used_kb) = @_; return sprintf("%.2f", ( $used_kb / $total_kb ) * 100); },
         },
         unallocatable_reserve_size => {
             calculate_from => ['total_kb', 'unallocatable_volume_percent', 'maximum_reserve_size'],
@@ -78,5 +82,18 @@ class Genome::Disk::Volume {
 sub unallocatable_volume_percent { return .05 } # 5% can't be allocated to, but can be used by reallocates
 sub unusable_volume_percent { return .02 } # 2% can't be used at all
 sub maximum_reserve_size { return 1_073_741_824 } # maximum size of unallocatable disk
+
+sub get_lock {
+    my ($class, $mount_path, $tries) = @_;
+    $tries ||= 120;
+    my $modified_mount = $mount_path;
+    $modified_mount =~ s/\//_/g;
+    my $volume_lock = Genome::Sys->lock_resource(
+        resource_lock => '/gsc/var/lock/allocation/volume' . $modified_mount,
+        max_try => $tries,
+        block_sleep => 1,
+    );
+    return $volume_lock;
+}
 
 1;

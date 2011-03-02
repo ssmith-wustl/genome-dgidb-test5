@@ -573,15 +573,15 @@ sub create_default_per_lane_qc_model {
     my $reference_sequence_build = shift;
     my $pse = shift;
 
-    my $subset_name = $genome_instrument_data->subset_name || 'Unknown';
-    my $run_name = $genome_instrument_data->run_name || 'Unknown';
+    my $subset_name = $genome_instrument_data->subset_name || 'unknown-subset';
+    my $run_name = $genome_instrument_data->short_name || 'unknown-run';
 
     my ($processing_profile, $model_name);
     my $dbsnp_build;
     my $ncbi_human_build36 = Genome::Model::Build->get(101947881);
     if ($reference_sequence_build && $reference_sequence_build->is_compatible_with($ncbi_human_build36)) {
         $processing_profile = Genome::ProcessingProfile->get(2581081);
-        $model_name = join('_', $subset_name, $run_name, $processing_profile->name);
+        $model_name = $run_name . '.' . $subset_name . '.prod-qc';
         $dbsnp_build = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($reference_sequence_build); 
     } else {
         $self->status_message('Per lane QC only configured for human reference alignments');
@@ -642,6 +642,14 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
 
     my $model_name = $subject->name . '.prod';
 
+    if ($processing_profile->isa('Genome::ProcessingProfile::GenotypeMicroarray') ) {
+        $model_name .= '-microarray';
+    }elsif($processing_profile->isa('Genome::ProcessingProfile::DeNovoAssembly')){
+        $model_name .= '-assembly';
+    }else{
+        $model_name .= '-refalign';
+    }
+
     my $capture_target;
 
     # Label Solexa/454 capture stuff as such
@@ -652,10 +660,6 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             $model_name =
                 join( '.', $model_name, 'capture', $capture_target );
         }
-    }
-
-    if ( $processing_profile->isa('Genome::ProcessingProfile::GenotypeMicroarray') ) {
-	$model_name .= ' '.$reference_sequence_build->name;
     }
 
     #make sure the name we'd like isn't already in use
@@ -699,8 +703,10 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             'hg18 nimblegen exome version 2' => 'hg19 nimblegen exome version 2',
             'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA' => 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA_build36-build37_liftOver',
             );
+        
+        my $root_build37_ref_seq = Genome::Model::Build::ReferenceSequence->get(name =>'g1k-human-build37');
 
-        if($reference_sequence_build and $reference_sequence_build->name eq 'g1k-human-build37'
+        if($reference_sequence_build and $reference_sequence_build->is_compatible_with($root_build37_ref_seq) 
                 and exists $build36_to_37_rois{$capture_target}) {
             $roi_list = $build36_to_37_rois{$capture_target};
         } else {

@@ -73,7 +73,7 @@ sub _verify_build_and_set_paths {
             die "Don't know how to find snv bed file for build $bname.";
         }
         my $snv_file = $build->$type("v1");
-        if (!defined $snv_file || ! -s $snv_file) {
+        if (!defined $snv_file || ! -f $snv_file) {
             die "No suitable snv bed file found for build $bname [$type].";
         }
         my $propname = "_$type";
