@@ -48,6 +48,13 @@ class Genome::Model::Tools::DetectVariants2::Filter {
             doc => 'variant type that this module operates on, overload this in submodules accordingly',
         },
     ],
+    has_transient_optional => [
+        _validate_output_offset => {
+            type => 'Integer',
+            default => 0,
+            doc => 'The offset added to the number of lines in input  when compared to the number of lines in output',
+        },
+    ],
 };
 
 sub help_synopsis {
@@ -106,6 +113,7 @@ sub _validate_input {
 
 sub _validate_output {
     my $self = shift;
+    $DB::single=1;
     unless(-d $self->output_directory){
         die $self->error_message("Could not validate the existence of output_directory");
     }
@@ -131,14 +139,17 @@ sub _check_file_counts {
     my $lq_output_file = $self->output_directory."/".$self->_variant_type.".lq.bed";
     my $detector_style_file = $self->output_directory."/".$self->_variant_type.".hq";
     my $total_input = $self->line_count($input_file);
+    # Add the offset to the input (some filters output more or less lines than they take as input)
+    $total_input += $self->_validate_output_offset;
+
     my $total_output = $self->line_count($hq_output_file) + $self->line_count($lq_output_file);
     unless(($total_input - $total_output) == 0){
         die $self->error_message("Total lines of bed-formatted output did not match total input lines. Input lines: $total_input \t output lines: $total_output");
     }
-    my $detector_style_output = $self->line_count($detector_style_file) + $self->line_count($lq_output_file);
-    unless(($total_input - $detector_style_output) == 0){
-        die $self->error_message("Total lines of detector-style output did not match total input lines. Input lines: $total_input \t output lines: $detector_style_output");
-    }
+    #my $detector_style_output = $self->line_count($detector_style_file) + $self->line_count($lq_output_file);
+    #unless(($total_input - $detector_style_output) == 0){
+    #    die $self->error_message("Total lines of detector-style output did not match total input lines. Input lines: $total_input \t output lines: $detector_style_output");
+    #}
 
     return 1;
 }
