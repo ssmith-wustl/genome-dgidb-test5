@@ -8,7 +8,7 @@ package Genome::Model::Tools::Music::CosmicOmim;
    use Text::CSV_XS;
 
 class Genome::Model::Tools::Music::CosmicOmim {
-    is => 'Genome::Model::Tools::Music',
+    is => 'Genome::Model::Tools::Music::Base',
     has_input => [
        maf_file => {
            is => 'Path',
@@ -40,10 +40,37 @@ class Genome::Model::Tools::Music::CosmicOmim {
            default => '1',
        },
     ],
-    doc => 'add columns for cosmic and OMIM database results'
+    doc => 'compare amino acide changes in MAF input to COSMIC and OMIM and add columns to the output'
 };
 
-sub execute{
+sub help_synopsis_FIXME {
+    return <<EOS;
+gmt annotate compare-mutations --mutation=/gscuser/wschierd/code/test_annotated/Test/06-02-2010_cosmic_omim_test.csv --omimaa=/gscmnt/200/medseq/analysis/software/resources/OMIM/OMIM_Will/OMIM_aa_will.csv --cosmic-dir=/gscmnt/sata180/info/medseq/biodb/shared/cosmic/cosmic_will/ --output-file=/gscuser/wschierd/code/test_annotated/Test/cosmic_OMIM_test_results_compare.csv 
+
+gmt annotate compare-mutations-speedup --mutation=/gscuser/wschierd/code/test_annotated/Test/06-02-2010_cosmic_omim_test.csv --omimaa=/gscmnt/200/medseq/analysis/software/resources/OMIM/OMIM_Will/OMIM_aa_will.csv --cosmic-dir=/gscmnt/sata180/info/medseq/biodb/shared/cosmic/cosmic_will/ --output-file=/gscuser/wschierd/code/test_annotated/Test/cosmic_OMIM_test_results_compare_speedup.csv 
+EOS
+}
+
+sub help_detail {
+    return <<EOS;
+This script takes a gmt annotated file, the directory where COSMIC files are stored, and the file containing amino acids in OMIM. The last two files are created by their respective importer scripts. It compares all possible annotations for every mutation in the file and outputs the results as a file with the input file columns and two columns of results appended.
+EOS
+}
+
+sub doc_authors {
+    return (
+        'Brian Dunford-Shore, E<lt>bshore@watson.wustl.eduE<gt>',
+        'David Larson, E<lt>dlarson@watson.wustl.eduE<gt>',
+        'Michael C. Wendl, E<lt>mwendl@wustl.eduE<gt>',
+        'William Schierding, E<lt>wschierd@genome.wustl.eduE<gt>'
+    )
+}
+
+sub doc_copyright_years {
+    return (2007,2011);
+}
+
+sub execute {
     my $self = shift;
 
 ####################
@@ -923,48 +950,4 @@ sub AA_Check {
 }
 
 
-################################################################################
-#                                                                              #
-#                      P O D   D O C U M E N T A T I O N                       #
-#                                                                              #
-################################################################################
 
-=head1 NAME
-
-gmt annotate compare-mutations -- compares the amino acid changes in an annotated file to the entries (if present) in the COSMIC and OMIM files
-
-=head1 SYNOPSIS
-
-gmt annotate compare-mutations --mutation=/gscuser/wschierd/code/test_annotated/Test/06-02-2010_cosmic_omim_test.csv --omimaa=/gscmnt/200/medseq/analysis/software/resources/OMIM/OMIM_Will/OMIM_aa_will.csv --cosmic-dir=/gscmnt/sata180/info/medseq/biodb/shared/cosmic/cosmic_will/ --output-file=/gscuser/wschierd/code/test_annotated/Test/cosmic_OMIM_test_results_compare.csv 
-
-gmt annotate compare-mutations-speedup --mutation=/gscuser/wschierd/code/test_annotated/Test/06-02-2010_cosmic_omim_test.csv --omimaa=/gscmnt/200/medseq/analysis/software/resources/OMIM/OMIM_Will/OMIM_aa_will.csv --cosmic-dir=/gscmnt/sata180/info/medseq/biodb/shared/cosmic/cosmic_will/ --output-file=/gscuser/wschierd/code/test_annotated/Test/cosmic_OMIM_test_results_compare_speedup.csv 
-
-=head1 DESCRIPTION
-
-This script takes a gmt annotated file, the directory where COSMIC files are stored, and the file containing amino acids in OMIM. The last two files are created by their respective importer scripts. It compares all possible annotations for every mutation in the file and outputs the results as a file with the input file columns and two columns of results appended.
-
-As of December 2010, the headers in this file were up-to-date. This file will have to be modified any time these header names change.
-
-In order to speed up this program, I added support for a cosmic archive file. This file is generated in the COSMIC directory by the importer. It is not comprehensive, but rather only contains cosmic entries with amino acid changes listed. This is reliable to the point where the COSMIC database is reliable...which is to say that anywhere they have erroneously missing data in the aa field, this archive file will fail to contain that information (and so cannot check nucleotide position).
-
-=head1 BUGS
-
-I'm sure that you'll find some. Let us know. Ants.
-
-=head1 AUTHORS
-
-Brian Dunford-Shore, E<lt>bshore@watson.wustl.eduE<gt>
-
-David Larson, E<lt>dlarson@watson.wustl.eduE<gt>
-
-Michael C. Wendl, E<lt>mwendl@wustl.eduE<gt>
-
-William Schierding, E<lt>wschierd@genome.wustl.eduE<gt>
-
-=head1 COPYRIGHT AND LICENSE
-
-Copyright (C) 2007-2011 Washington University.  All Rights Reserved.
-
-=cut
-
-# $Header$

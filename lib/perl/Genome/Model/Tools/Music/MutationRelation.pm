@@ -7,80 +7,47 @@ use Genome;
 use IO::File;
 use POSIX qw( WIFEXITED );
 
-=head1 NAME
-
-Genome::Music::MutationRelation - identification of significantly mutated genes
-
-=head1 VERSION
-
-Version 1.01
-
-=cut
-
-our $VERSION = '1.01';
+our $VERSION = $Genome::Model::Tools::Music::VERSION;
 
 class Genome::Model::Tools::Music::MutationRelation {
-    is => 'Command',                       
+    is => 'Command::V2',                       
     has_input => [ 
-    output_file => {
-        is => 'Text',
-        doc => "Results of mutation-relation tool",
-    },
-    maf_file => { 
-        is => 'Text',
-        doc => "List of mutations in MAF format",
-        is_optional => 1,
-    },
-    matrix_file => {
-        is => 'Text',
-        doc => "Matrix of samples (y) vs. genes with mutations (x)",
-        is_optional => 1,
-    },
-    permutations => {
-        is => 'Number',
-        doc => "Number of permutations used to determine P-values",
-        is_optional => 1,
-        default => 100,
-    },
+        output_file => {
+            is => 'Text',
+            doc => "results of mutation-relation tool",
+        },
+        maf_file => { 
+            is => 'Text',
+            doc => "list of mutations in MAF format",
+            is_optional => 1,
+        },
+        matrix_file => {
+            is => 'Text',
+            doc => "discrete matrix of samples (y) vs. genes with mutations (x)",
+            is_optional => 1,
+        },
+        permutations => {
+            is => 'Number',
+            doc => "number of permutations used to determine P-values",
+            is_optional => 1,
+            default => 100,
+        },
     ],
+    doc => 'identify relationships between mutated genes'
 };
-
-sub sub_command_sort_position { 12 }
-
-sub help_brief {
-    "Identify relationships between mutated genes"                 
-}
 
 sub help_synopsis {
     return <<EOS
-This command identifies relationships between mutated genes
-EXAMPLE:	gmt music mutation-relation --maf-file myMAF.tsv --permutations 1000 --output-file mut.rel.csv
+ ... music mutation-relation --maf-file myMAF.tsv --permutations 1000 --output-file mut.rel.csv
 EOS
 }
 
 sub help_detail { #FIXME
     return <<EOS
-This tool accepts either a MAF file or a matrix of samples vs. gene, where the values in the matrix are a 1 if the gene has a mutations for a particular sample, and a 0 if there are no mutations in that gene for that sample. If the matrix is provided, the MAF file is not needed. If only the MAF file is provided, the matrix will be created by the tool and saved to a file whose name will be the name of the MAF file appended with ".mutation_relation_matrix". The matrix is fed to an R tool which 
+This tool accepts either a MAF file or a matrix of samples vs. gene, where the values in the matrix are a 1 if the gene has a mutations for a particular sample, and a 0 if there are no mutations in that gene for that sample. If the matrix is provided, the MAF file is not needed. If only the MAF file is provided, the matrix will be created by the tool and saved to a file whose name will be the name of the MAF file appended with ".mutation_relation_matrix". 
 EOS
+# The matrix is fed to an R tool which ... 
 }
-
-
-=head1 SYNOPSIS
-
-Identifies significantly mutated genes
-
-
-=head1 USAGE
-
-      music.pl mutation-relation OPTIONS
-
-      OPTIONS:
-
-      --output-file		Output file to contain results
-      --maf-file		List of mutations in MAF format
-      --matrix-file		Discrete matrix of sample vs genes with mutations
-      --permutations		Number of permutations used to determine P-values
-
 
 =head1 FUNCTIONS
 
@@ -201,25 +168,5 @@ sub create_sample_gene_matrix {
     return $matrix_file;
 }
 
-=head1 AUTHOR
+1;
 
-The Genome Center at Washington University, C<< <software at genome.wustl.edu> >>
-
-
-=head1 SUPPORT
-
-You can find documentation for this module with the perldoc command.
-
-    perldoc Genome::Music::MutationRelation
-
-For more information, please visit http://genome.wustl.edu.
-
-=head1 COPYRIGHT & LICENSE
-
-Copyright 2010 The Genome Center at Washington University, all rights reserved.
-
-This program is free and open source under the GNU license.
-
-=cut
-
-1; # End of Genome::Music::MutationRelation

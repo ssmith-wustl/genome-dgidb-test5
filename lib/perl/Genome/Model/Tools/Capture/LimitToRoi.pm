@@ -25,6 +25,7 @@ class Genome::Model::Tools::Capture::LimitToRoi {
 		input_file	=> { is => 'Text', doc => "Input file of variants or positions", is_optional => 0, is_input => 1 },
 		regions_file	=> { is => 'Text', doc => "Region coordinates in chrom-start-stop format", is_optional => 0, is_input => 1 },
 		output_file     => { is => 'Text', doc => "Output file to receive limited variants", is_optional => 0, is_input => 1, is_output => 1 },
+		skip_roi     => { is => 'Text', doc => "Skip roi in germline pipeline when performing exome analysis", is_optional => 1, is_input => 1, default => 0},
 	],
 };
 
@@ -60,10 +61,18 @@ sub execute {                               # replace with real execution logic.
 	my $input_file = $self->input_file;
 	my $regions_file = $self->regions_file;
 	my $output_file = $self->output_file;
-	
+	my $skip_roi = $self->skip_roi;
 	## Call Varscan Limit ##
 
-	if(-e $input_file && -e $regions_file)
+	if ($skip_roi) {
+		#pass input file on to output
+		my $input = new FileHandle ($input_file);
+		open(OUTFILE, ">$output_file") or die "Can't open output file: $!\n";
+		while( my $line = <$input> ) {
+			print OUTFILE $line;
+		}
+	}
+	elsif(-e $input_file && -e $regions_file)
 	{
 		my $cmd = "java -Xms3000m -Xmx3000m -jar /gsc/scripts/lib/java/VarScan/VarScan.jar limit $input_file --regions-file $regions_file --output-file $output_file";
 		system($cmd);
