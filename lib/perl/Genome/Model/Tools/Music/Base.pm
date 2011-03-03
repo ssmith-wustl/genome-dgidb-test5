@@ -8,12 +8,7 @@ our $VERSION = '0.01';
 
 class Genome::Model::Tools::Music::Base {
     is => ['Command::V2'],
-    has_optional => [
-         version => {
-             is    => 'String',
-             doc   => 'version of Music application to use',
-         },
-    ],
+    is_abstract => 1,
     attributes_have => [
         file_format => {
             is => 'Text',
@@ -23,7 +18,26 @@ class Genome::Model::Tools::Music::Base {
     doc => "cancer mutation analysis"
 };
 
-sub help_detail { "" }
+sub help_detail { 
+    # for things without docs, we will keep this pretty
+    "" 
+}
+
+sub doc_manual {
+
+}
+
+sub doc_copyright_years {
+    return (2010, 2011);
+}
+
+sub doc_copyright_licenese {
+
+}
+
+sub doc_authors {
+
+}
 
 1;
 
