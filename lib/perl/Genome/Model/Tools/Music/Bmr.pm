@@ -10,6 +10,4 @@ class Genome::Model::Tools::Music::Bmr {
     doc => "calculate gene coverages and background mutation rates"
 };
 
-sub sub_command_sort_position { 12 }
-
 1;
