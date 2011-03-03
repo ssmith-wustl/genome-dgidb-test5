@@ -494,6 +494,7 @@ __DATA__
     <inputproperty isOptional="Y">merged_indel_output</inputproperty>
     <inputproperty isOptional="Y">merged_snp_output_ROI</inputproperty>
     <inputproperty isOptional="Y">merged_indel_output_ROI</inputproperty>
+    <inputproperty isOptional="Y">skip_roi</inputproperty>
 
     <inputproperty isOptional="Y">tier_1_snp_file</inputproperty>
     <inputproperty isOptional="Y">tier_2_snp_file</inputproperty>

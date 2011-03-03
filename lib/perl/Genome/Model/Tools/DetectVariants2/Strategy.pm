@@ -320,15 +320,15 @@ Genome::Model::Tools::DetectVariants2::Strategy
     # Detect indels using sniper version 0.7.3 with parameters and filter the results with the library-support filter version v1
     'sniper 0.7.3 [ -q 1 -Q 15 ] filtered by library-support v1 ' 
     
-    # Detect structural variations using breakdancer version 2010_06_24 and filter the results by applying the tigra-assembly filter version v1
-    'breakdancer 2010_06_24  filtered by tigra-assembly v1 '
+    # Detect structural variations using breakdancer version 2010_06_24 and filter the results by applying the tigra-validation filter version v1
+    'breakdancer 2010_06_24  filtered by tigra-validation v1 '
 
     
     # Detect indels using sniper version 0.7.3 with parameters and filter the results with the library-support filter version v1
     'sniper 0.7.3 [ -q 1 -Q 15 ] filtered by library-support v1 ' 
     
-    # Detect structural variations using breakdancer version 2010_06_24 and filter the results by applying the tigra-assembly filter version v1
-    'breakdancer 2010_06_24  filtered by tigra-assembly v1 '
+    # Detect structural variations using breakdancer version 2010_06_24 and filter the results by applying the tigra-validation filter version v1
+    'breakdancer 2010_06_24  filtered by tigra-validation v1 '
 
 =head1 DESCRIPTION
 

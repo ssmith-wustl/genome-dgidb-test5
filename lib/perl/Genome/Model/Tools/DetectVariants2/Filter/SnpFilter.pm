@@ -9,6 +9,13 @@ use IO::File;
 class Genome::Model::Tools::DetectVariants2::Filter::SnpFilter{
     is => ['Genome::Model::Tools::DetectVariants2::Filter'],
     doc => 'Filters out snvs that are around indels',
+    has_constant => [
+        _variant_type => {
+            type => 'String',
+            default => 'snvs',
+            doc => 'variant type that this module operates on, overload this in submodules accordingly',
+        },
+    ],
 };
 
 sub help_synopsis {
