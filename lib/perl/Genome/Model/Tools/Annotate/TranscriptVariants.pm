@@ -375,7 +375,7 @@ sub execute {
     }
 
     # Useful information for debugging...
-    my ($date, $time) = split(' ',UR::Time->now);
+    my ($date, $time) = split(' ',$self->__context__->now());
     my $host = hostname;
     $self->status_message("Executing on host $host on $date at $time");
 
