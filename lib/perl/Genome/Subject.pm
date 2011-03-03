@@ -49,5 +49,37 @@ class Genome::Subject {
     doc => 'Contains all information about a particular subject (library, sample, etc)',
 };
 
+sub create {
+    my ($class, %params) = @_;
+
+    # Extra parameters are turned into attributes later
+    my %extra;
+    my @attributes = map { $_->property_name } $class->__meta__->properties;
+    for my $param (sort keys %params) {
+        unless (grep { $param eq $_ } @attributes) {
+            $extra{$param} = delete $params{$param};
+        }
+    }
+
+    my $self = $class->SUPER::create(%params);
+    unless ($self) {
+        Carp::confess "Could not create subject with params: " . Data::Dumper::Dumper(\%params);
+    }
+
+    for my $label (sort keys %extra) {
+        my $attribute = Genome::SubjectAttribute->create(
+            attribute_label => $label,
+            attribute_value => $extra{$label},
+            subject_id => $self->subject_id,
+        );
+        unless ($attribute) {
+            $self->error_message("Could not create attribute $label => " . $extra{$label} . " for subject " . $self->subect_id);
+            $self->delete;
+        }
+    }
+
+    return $self;
+}
+
 1;
 
