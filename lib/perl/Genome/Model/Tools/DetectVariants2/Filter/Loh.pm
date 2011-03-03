@@ -118,4 +118,12 @@ sub _generate_control_file {
     return $copy_destination;
 }
 
+sub _check_file_counts {
+    return 1;
+}
+
+sub _create_detector_file {
+    return 1;
+}
+
 1;

@@ -140,7 +140,7 @@ sub create_aligner_tool {
 
         #Resolved the FASTQ format for quality param
         my $lane_fastq_format;
-        unless(defined $instrument_data->bam_path && -s $self->bam_path) {
+        unless(defined $instrument_data->bam_path && -s $instrument_data->bam_path) {
             my $quality_converter = $instrument_data->resolve_quality_converter;
             if ($quality_converter eq 'sol2phred') {
                 $lane_fastq_format = 'solexa1.3-quals';
