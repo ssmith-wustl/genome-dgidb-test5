@@ -46,8 +46,6 @@ class Genome::Model::Tools::Music::ClinicalCorrelation {
     doc => "identify correlations between mutations in genes and particular phenotypic traits"
 };
 
-sub sub_command_sort_position { 12 }
-
 sub help_synopsis {
     return <<EOS
 genome music clinical-correlation --maf-file myMAF.tsv --clinical-data-file myData.tsv --clinical-data-type 'numeric' --genetic-data-type 'gene'
