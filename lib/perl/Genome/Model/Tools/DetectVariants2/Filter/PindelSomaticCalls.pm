@@ -211,4 +211,12 @@ sub parse {
     return ($chr,$start,$stop,$refvar);
 }
 
+sub _check_file_counts {
+    return 1;
+}
+
+sub _generate_standard_output {
+    return 1;
+}
+
 1;
