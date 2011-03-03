@@ -62,6 +62,7 @@ sub execute {
         cmd => $cmd,
         # Sometimes these files come in empty in pipelines. We don't want this to choke when this happens, so don't check input file sizes.
         #input_files => \@inputs,
+        allow_zero_size_output_files=>1,
     );
     $params{output_files} = [$output] if $output ne "-";
     Genome::Sys->shellcmd(%params);

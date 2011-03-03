@@ -9,6 +9,14 @@ use Genome::Info::IUB;
 class Genome::Model::Tools::DetectVariants2::Filter::Loh{
     is => 'Genome::Model::Tools::DetectVariants2::Filter',
     doc => 'Separate LOH calls from non-LOH calls. Requires bed file input.',
+    has_constant => [
+        _variant_type => {
+            type => 'String',
+            default => 'snvs',
+            doc => 'variant type that this module operates on, overload this in submodules accordingly',
+        },
+    ],
+
 };
 
 sub help_synopsis {

@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More tests => 7; 
+use Test::More tests => 10; 
 use File::Compare;
 use File::Temp;
 
@@ -49,9 +49,10 @@ my $sv_valid = Genome::Model::Tools::DetectVariants2::Filter::TigraValidation->c
 ok($sv_valid, 'created AssemblyValidation object');
 ok($sv_valid->execute(), 'executed AssemblyValidation object OK');
 
-ok(-e $tmp_dir . '/tigra.out.18', 'tigra output file exists!');
-ok(-e $tmp_dir . '/breakpoint_seq.fa', 'breakpoint sequence file exists!');
-ok(-e $tmp_dir . '/cm_aln.out', 'crossmatch alignment file exists!');
+for my $file_name (qw(tigra.out breakpoint_seq.fa cm_aln.out)) {
+    ok(-s $tmp_dir."/$file_name", "output file $file_name generated ok"); 
+    is(compare($tmp_dir."/$file_name", $test_input_dir."/$file_name"), 0, "output $file_name matches as expected");
+}
 
 done_testing();
 

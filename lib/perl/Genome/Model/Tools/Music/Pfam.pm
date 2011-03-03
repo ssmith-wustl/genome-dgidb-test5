@@ -13,11 +13,11 @@ Genome::Music::Pfam - Adding Pfam annotation to a MAF file
 
 =head1 VERSION
 
-Version 1.01
+Version 0.01
 
 =cut
 
-our $VERSION = '1.01';
+our $VERSION = $Genome::Model::Tools::Music::VERSION;
 
 class Genome::Model::Tools::Music::Pfam {
     is => 'Genome::Model::Tools::Music::Base',
@@ -35,18 +35,18 @@ class Genome::Model::Tools::Music::Pfam {
             doc => "MAF file with Pfam domain column appended",
         },
     ],
+    doc => 'Add Pfam annotation to a MAF file',
 };
 
 sub sub_command_sort_position { 12 }
 
-sub help_brief { 
-    "Add Pfam annotation to a MAF file" 
-}
 
 sub help_synopsis {
     return <<EOS
 This command adds Pfam Domains to a column at the end of a MAF file.
+
 EXAMPLE:	gmt music pfam --maf-file myMAF.tsv --output-file myMAF.tsv.pfam
+
 EOS
 }
 

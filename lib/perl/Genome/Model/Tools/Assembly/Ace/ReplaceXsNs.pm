@@ -33,7 +33,7 @@ sub execute {
         return;
     }
 
-    my $fo = Finishing::Assembly::Factory->connect('ace', $acefile);
+    my $fo = Genome::Site::WUGC::Finishing::Assembly::Factory->connect('ace', $acefile);
     unless ( $fo ) {
         $self->error_message("Can't create assembly factory for acefile ($acefile)");
         return;
@@ -42,11 +42,11 @@ sub execute {
     my $contigs = $asm_obj->contigs();
 
     # Contig tools and exporter
-    my $ct = Finishing::Assembly::ContigTools->new;
+    my $ct = Genome::Site::WUGC::Finishing::Assembly::ContigTools->new;
     unless ( defined $self->output_acefile ) {
         $self->output_acefile( $self->acefile.'.xns_replaced' );
     }
-    my $xport = Finishing::Assembly::Ace::Exporter->new(file => $self->output_acefile);
+    my $xport = Genome::Site::WUGC::Finishing::Assembly::Ace::Exporter->new(file => $self->output_acefile);
 
     # Go through contigs
     while ( my $contig = $contigs->next ) {

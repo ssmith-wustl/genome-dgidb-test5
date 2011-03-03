@@ -242,7 +242,7 @@ sub class_for_pre_assembly_processor {
 #- POST ASSEMBLY PROCESSORS -#
 sub post_assembly_processors_and_classes { 
     return (
-        #'add-singlets' => 'Finishing::Assembly::Consed::Assembler::ScreenVector',
+        #'add-singlets' => 'Genome::Site::WUGC::Finishing::Assembly::Consed::Assembler::ScreenVector',
     );
 }
 

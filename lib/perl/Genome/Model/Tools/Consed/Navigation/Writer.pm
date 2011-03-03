@@ -61,7 +61,7 @@ Genome::Model::Tools::Consed::Navigation::Writer
 
  use Genome::Model::Tools::Consed::Navigation::Writer;
  
- my $writer = Finishing::Assembly::Consed::Navigation::Writer->new(
+ my $writer = Genome::Model::Tools::Consed::Navigation::Writer->new(
      output => 'repeats.nav', # REQUIRED, file or an object that can 'print'
      title => 'Repeat Found', # REQUIRED, string
  )
