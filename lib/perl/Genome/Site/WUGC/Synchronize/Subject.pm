@@ -52,11 +52,31 @@ class Genome::Site::WUGC::Synchronize::Subject {
 
 sub objects_to_sync {
     return (
-        'Genome::Subject::Individual' => 'Genome::Individual',
-        'Genome::Subject::PopulationGroup' => 'Genome::PopulationGroup',
-        'Genome::Subject::Taxon' => 'Genome::Taxon',
-        'Genome::Subject::Sample' => 'Genome::Sample',
+        'Genome::Individual' => 'Genome::Site::WUGC::Individual',
+        'Genome::PopulationGroup' => 'Genome::Site::WUGC::PopulationGroup',
+        'Genome::Taxon' => 'Genome::Site::WUGC::Taxon',
+        'Genome::Sample' => 'Genome::Site::WUGC::Sample',
     );
+}
+
+# Every time a new object is made, it'll check if there's a method like this
+# for that type, which will contain special handling code.
+sub genome_populationgroup {
+    my ($self, $old_object) = @_;
+    my @member_ids = map { $_->id } $old_object->members;
+    my %extra;
+    $extra{member_ids} = \@member_ids;
+    return %extra;
+}
+
+sub genome_sample {
+    my ($self, $old_object) = @_;
+    my @attributes = $old_object->attributes;
+    my %extra;
+    for my $attribute (@attributes) {
+        $extra{$attribute->name} = $attribute->value;
+    }
+    return %extra;
 }
 
 my $created_object_count = 0;
@@ -162,7 +182,15 @@ sub copy_object {
     my %attributes;
     map { $attributes{$_} = $original_object->{$_} if defined $original_object->{$_} } @$new_object_attributes;
 
-    my $object = $new_object_class->create(%attributes, id => $original_object->id);
+    # Some classes may require special handling... see if this class has such a method and execute it
+    my $method_name = lc $new_object_class;
+    $method_name =~ s/::/_/g;
+    my %extra_params;
+    if ($self->can($method_name)) {
+        %extra_params = $self->$method_name($original_object);
+    }
+
+    my $object = $new_object_class->create(%attributes, %extra_params);
     confess "Could not create new object of type $new_object_class based on object of type " .
         $original_object->class . " with id " . $original_object->id unless $object;
 
