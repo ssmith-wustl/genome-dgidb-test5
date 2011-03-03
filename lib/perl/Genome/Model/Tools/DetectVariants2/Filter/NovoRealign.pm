@@ -37,12 +37,12 @@ class Genome::Model::Tools::DetectVariants2::Filter::NovoRealign {
         pass_staging_output => {
             is => 'FilePath',
             calculate_from => '_temp_staging_directory',
-            calculate => q{ return $_temp_staging_directory . '/svs.hq.filtered'; },
+            calculate => q{ return $_temp_staging_directory . '/svs.hq'; },
         },
         fail_staging_output => {
             is => 'FilePath',
             calculate_from => '_temp_staging_directory',
-            calculate => q{ return $_temp_staging_directory . '/svs.lq.filtered'; },
+            calculate => q{ return $_temp_staging_directory . '/svs.lq'; },
         },
         #output_file => {
         #    type => 'String',
@@ -97,7 +97,14 @@ class Genome::Model::Tools::DetectVariants2::Filter::NovoRealign {
     ],
     has_param => [
         lsf_resource => {
-            default_value => "-R 'select[mem>8000] rusage[mem=8000] -M 8000000'", #novoalign needs this memory usage to run
+            default_value => "-R 'select[mem>24000] rusage[mem=24000] -M 24000000'", #novoalign needs this memory usage 8G to run
+        },
+    ],
+    has_constant => [
+        _variant_type => {
+            type => 'String',
+            default => 'svs',
+            doc => 'variant type that this module operates on, overload this in submodules accordingly',
         },
     ],
 };
@@ -170,9 +177,25 @@ sub _filter_variants {
     my $novosam_path  = $self->novo2sam_path;
     my $samtools_path = $self->samtools_path;
 
-    my $ref_seq_model = Genome::Model::ImportedReferenceSequence->get(name => 'NCBI-human');
-    my $ref_seq_dir   = $ref_seq_model->build_by_version('36')->data_directory;
-    my $ref_seq_idx   = $ref_seq_dir.'/all_sequences.fasta.fai';
+    #my $ref_seq_model = Genome::Model::ImportedReferenceSequence->get(name => 'NCBI-human');
+    #my $ref_seq_dir   = $ref_seq_model->build_by_version('36')->data_directory;
+    #my $ref_seq_idx   = $ref_seq_dir.'/all_sequences.fasta.fai';
+    my $ref_seq     = $self->reference_sequence_input;
+    my $ref_seq_idx = $ref_seq . '.fai';
+    unless (-s $ref_seq_idx) {
+        $self->error_message("Failed to find ref seq fasta index file: $ref_seq_idx");
+        die;
+    }
+
+    #FIXME hardcode for this index right now and add human build37 to elsif block. 
+    #But this is bad and sits in ken's directory. Change this asap.
+    my $novo_idx;
+    if ($ref_seq =~ /build101947881/) {
+        $novo_idx = '/gscuser/kchen/sata114/kchen/Hs_build36/all_fragments/Hs36_rDNA.fa.k14.s3.ndx';
+    }
+    else {
+        die "Now NovoRealign only applied to NCBI-human-Build36, not " . $ref_seq;
+    }
 
     for my $lib (keys %fastqs) {
         my @read1s = @{$fastqs{$lib}{1}};
@@ -183,7 +206,7 @@ sub _filter_variants {
         my $cmd;
         for (my $i=0; $i<=$#read1s; $i++) {
             my $fout_novo = "$prefix.$lib.$i.novo";
-            $cmd = $novo_path. ' -d '.$self->reference_sequence_input." -f $read1s[$i] $read2s[$i] -i $mean_insertsize{$lib} $std_insertsize{$lib} > $fout_novo";
+            $cmd = $novo_path . ' -d '. $novo_idx . " -f $read1s[$i] $read2s[$i] -i $mean_insertsize{$lib} $std_insertsize{$lib} > $fout_novo";
 
             $self->_run_cmd($cmd);
             push @novoaligns,$fout_novo;
@@ -289,6 +312,21 @@ sub _filter_variants {
 }
 
 
+sub _validate_output {
+    my $self = shift;
+
+    unless(-d $self->output_directory){
+        die $self->error_message("Could not validate the existence of output_directory");
+    }
+    
+    my @files = glob($self->output_directory."/svs.hq");
+    unless (@files) {
+        die $self->error_message("Failed to get svs.hq");
+    }
+    return 1;
+}
+
+
 sub _get_match_key {
     my $line = shift;
     my @columns = split /\s+/, $line;
@@ -305,10 +343,6 @@ sub _run_cmd {
         $self->error_message("Failed to run $cmd");
         die $self->error_message;
     }
-    return 1;
-}
-
-sub _validate_output {
     return 1;
 }
 
