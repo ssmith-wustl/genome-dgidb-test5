@@ -60,12 +60,17 @@ class Genome::Model::Tools::DetectVariants2::Filter::TigraValidation {
         pass_output => {
             is => 'FilePath',
             calculate_from => 'output_directory',
-            calculate => q{ return $output_directory . '/svs.hq.filtered'; },
+            calculate => q{ return $output_directory . '/svs.hq'; },
         },
         fail_output => {
             is => 'FilePath',
             calculate_from => 'output_directory',
-            calculate => q{ return $output_directory . '/svs.lq.filtered'; },
+            calculate => q{ return $output_directory . '/svs.lq'; },
+        },
+        tigra_output => { 
+            is => 'FilePath',
+            calculate_from => 'output_directory',
+            calculate => q{ return $output_directory . '/tigra.out'; },
         },
         # TODO Need to point to a specific version of tigra that's not in a home dir
         tigra_path => {
@@ -232,7 +237,13 @@ class Genome::Model::Tools::DetectVariants2::Filter::TigraValidation {
             default_value => "-R 'select[mem>8000] rusage[mem=8000] -M 8000000'", 
         },
     ],
-
+    has_constant => [
+        _variant_type => {
+            type => 'String',
+            default => 'svs',
+            doc => 'variant type that this module operates on, overload this in submodules accordingly',
+        },
+    ],
 };
 
 my %TIGRA_PARAMS_LIST = (
@@ -352,7 +363,7 @@ sub _filter_variants {
         # Now merge together all the pass/fail files produced for each chromosome
         $self->status_message("Merging output files together");
 
-        for my $file ($self->pass_output, $self->fail_output) {
+        for my $file ($self->pass_output, $self->fail_output, $self->tigra_output) {
             my $merge_obj = Genome::Model::Tools::Breakdancer::MergeFiles->create(
                 input_files => join(',', map { $self->_temp_staging_directory . '/' . $_ . '/' . basename($file) } @use_chr_list),
                 output_file => $file,
@@ -413,16 +424,15 @@ sub _filter_variants {
         #    $self->error_message("Failed to create tmp_tigra_dir: $tmp_tigra_dir");
         #    die;
         #}
-        #$ENV{TMPDIR} = '/tmp';  #for now to get around temp_staging dir cleanup problem
         #my $tmp_tigra_dir = Genome::Sys->create_temp_directory('tigra_sv_out_'.$i);
 
-        my $tmp_tigra_dir = File::Temp::tempdir('tigra_sv_out_'.$i.'_XXXXXX', DIR => '/tmp', CLEANUP => 1);
+        my $tmp_tigra_dir = File::Temp::tempdir('tigra_sv_out_'.$self->specify_chr.'_'.$i.'_XXXXXX', DIR => '/tmp', CLEANUP => 1);
         $self->_tigra_data_dir($tmp_tigra_dir); 
 
         # Construct tigra command and execute
         $self->status_message("Making tigra command and executing");
 
-        my $tigra_output  = $tmp_tigra_dir . '/tigra.out.' . $self->specify_chr;
+        my $tigra_output  = $tmp_tigra_dir . '/tigra.out';
         my $tigra_options = $self->_get_tigra_options;
         $tigra_options = '-I ' . $tmp_tigra_dir . ' ' . $tigra_options; #hack for now, need separate tigra dump dirs
 
@@ -502,7 +512,7 @@ sub _filter_variants {
 
     $self->status_message("Done validating, now merging multiple tigra outputs into one");
 
-    my $tigra_out_file = $self->output_directory . '/tigra.out.' . $self->specify_chr;
+    my $tigra_out_file = $self->output_directory . '/tigra.out';
     my $input_files    = join ',', @tmp_tigra_files;
 
     my $tigra_merge = Genome::Model::Tools::Breakdancer::MergeFiles->create(
@@ -546,18 +556,13 @@ sub _validate_output {
 #breakdancer run or from novorealign filter
 sub _breakdancer_input {
     my $self     = shift;
-    my $bd_input = $self->input_directory . '/svs.hq.filtered';
+    my $bd_input = $self->input_directory . '/svs.hq';
 
     unless (-e $bd_input) {
-        $bd_input = $self->input_directory . '/svs.hq';
-        unless (-s $bd_input) {
-            $bd_input = $self->detector_directory . '/svs.hq';
-            unless (-s $bd_input) {
-                $self->error_message("Failed to find breakdancer input file from both input and detector directory");
-                die;
-            }
-        }
+        $self->error_message('Failed to find breakdancer input file from input directory: '. $self->input_directory);
+        die;
     }
+    
     $self->status_message("Find breakdancer input: $bd_input");
     return $bd_input;
 }
