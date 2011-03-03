@@ -7,7 +7,7 @@ use Genome;
 
 use Carp;
 use Data::Dumper;
-use Finishing::Assembly::Phd::Directory;
+use Genome::Site::WUGC::Finishing::Assembly::Phd::Directory;
 use IO::Dir;
 
 class Genome::Model::Tools::PhredPhrap::ScfToPhd {
@@ -64,7 +64,7 @@ sub execute {
     my $self = shift;
 
     $DB::single = 1;
-    $self->_phd_schema( Finishing::Assembly::Phd::Directory->connect($self->phd_dir) );
+    $self->_phd_schema( Genome::Site::WUGC::Finishing::Assembly::Phd::Directory->connect($self->phd_dir) );
 
     $self->_remove_phds if $self->rmphd;
     

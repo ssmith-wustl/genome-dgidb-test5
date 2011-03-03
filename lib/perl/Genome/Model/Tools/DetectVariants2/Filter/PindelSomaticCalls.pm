@@ -13,13 +13,17 @@ class Genome::Model::Tools::DetectVariants2::Filter::PindelSomaticCalls{
             default => 1,
             doc => 'This will be updated when more than one version of pindel, 0.2,  is available',
         },
+        _variant_type => {
+            type => 'String',
+            default => 'indels',
+            doc => 'variant type that this module operates on, overload this in submodules accordingly',
+        },
     ],
 };
 
 sub _filter_variants {
     my $self = shift;
 
-    my $read_support_file = $self->_temp_staging_directory."/indels.hq.read_support.bed";
     my $output_file = $self->_temp_staging_directory."/indels.hq.bed";
     my $output_lq_file = $self->_temp_staging_directory."/indels.lq.bed";
     my $indel_file = $self->input_directory."/indels.hq.bed";

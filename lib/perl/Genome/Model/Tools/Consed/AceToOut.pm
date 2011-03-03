@@ -9,8 +9,8 @@ use Bio::Seq::Quality;
 use Bio::SeqIO;
 use Data::Dumper;
 use File::Basename;
-use Finishing::Assembly::Factory;
-use Finishing::Assembly::Ace::Output;
+use Genome::Site::WUGC::Finishing::Assembly::Factory;
+use Genome::Site::WUGC::Finishing::Assembly::Ace::Output;
 use Genome::Sys; 
 
 my @FORMATS = (qw/ fasta qual contig_names read_names /);
@@ -83,7 +83,7 @@ sub execute {
         or return;
     
     # Connect 
-    my $ace = Finishing::Assembly::Factory->connect('ace', $self->acefile)
+    my $ace = Genome::Site::WUGC::Finishing::Assembly::Factory->connect('ace', $self->acefile)
         or return;
 
     my $assembly = $ace->get_assembly;

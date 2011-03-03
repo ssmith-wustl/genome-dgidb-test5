@@ -760,6 +760,7 @@ sub _promote_staged_data {
 
     # Symlink the most recent version bed files of the final hq calls into the base of the output directory
     for my $variant_type (@{$self->variant_types}){
+        next if $variant_type eq 'sv';  #off for now because sv does not have bed output yet
         my $output_accessor = $variant_type."_hq_output_file";
         if(defined($self->$output_accessor)){
             my $file = $self->$output_accessor;

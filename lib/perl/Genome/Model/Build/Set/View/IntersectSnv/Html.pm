@@ -17,6 +17,15 @@ class Genome::Model::Build::Set::View::IntersectSnv::Html {
             value => 'intersect',
         },
     ],
+    has => [
+        standard_build_id => {
+            is => 'Number',
+        },
+        standard_build => {
+            is => 'Genome::Model::Build',
+            id_by => 'standard_build_id'
+        }
+    ],
 };
 
 sub build_detail_html {
@@ -71,11 +80,17 @@ sub _generate_content {
 
     my $ids = $self->subject->id;
     $ids = [$ids] if !ref $ids;
-    if (@$ids != 2) {
-        return $self->_format_error("Error: expected 2 build ids but got ". (scalar @$ids) .", [". join(',', @$ids) ."]");
+    if (@$ids != 1) {
+        return $self->_format_error(sprintf("Error: expected one (and only one) build id.  I got %s ids.", scalar @$ids));
+    }
+    
+    if (!$self->standard_build) {
+        return $self->_format_error("Error: expected a standard build id but did not get one.");
     }
 
-    my @builds = map {Genome::Model::Build->get($_)} @$ids;
+    my $subject_build = Genome::Model::Build->get($ids->[0]);
+
+    my @builds = ($self->standard_build, $subject_build);
     for my $b (@builds) {
         eval { check_build($b); };
         if ($@) {
@@ -83,11 +98,11 @@ sub _generate_content {
         }
     }
 
-    if (!get_reference($builds[0])->is_compatible_with(get_reference($builds[1]))) {
-        my $b1name = $builds[0]->__display_name__;
-        my $b2name = $builds[1]->__display_name__;
-        my $r1name = get_reference($builds[0])->name;
-        my $r2name = get_reference($builds[1])->name;
+    if (!get_reference($self->standard_build)->is_compatible_with(get_reference($subject_build))) {
+        my $b1name = $self->standard_build->__display_name__;
+        my $b2name = $subject_build->__display_name__;
+        my $r1name = get_reference($self->standard_build)->name;
+        my $r2name = get_reference($subject_build)->name;
         return $self->_format_error("Incompatible reference sequences for builds:\n '$b1name' uses $r1name\n'$b2name' uses $r2name");
     }
 

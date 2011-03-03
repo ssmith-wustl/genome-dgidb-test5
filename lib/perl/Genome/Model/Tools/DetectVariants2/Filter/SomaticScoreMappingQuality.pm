@@ -43,7 +43,14 @@ class Genome::Model::Tools::DetectVariants2::Filter::SomaticScoreMappingQuality{
             is_input => 1,
             doc => 'minimum somatic quality threshold for high confidence call',
         },
-    ]
+    ],
+    has_constant => [
+        _variant_type => {
+            type => 'String',
+            default => 'snvs',
+            doc => 'variant type that this module operates on, overload this in submodules accordingly',
+        },
+    ],
 };
 
 my %READCOUNT_VERSIONS = (
