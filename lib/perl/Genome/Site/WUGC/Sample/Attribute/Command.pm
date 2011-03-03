@@ -1,16 +1,16 @@
-package Genome::Sample::Attribute::Command;
+package Genome::Site::WUGC::Sample::Attribute::Command;
 
 use strict;
 use warnings;
 
 use Genome;
       
-class Genome::Sample::Attribute::Command {
+class Genome::Site::WUGC::Sample::Attribute::Command {
     is => 'Command',
     is_abstract => 1,
     has => [
         sample_name => {
-            is => 'Genome::Sample::Attribute',
+            is => 'Genome::Site::WUGC::Sample::Attribute',
             id_by => 'sample_id',
         },
     ],

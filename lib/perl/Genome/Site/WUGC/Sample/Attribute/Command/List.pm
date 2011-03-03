@@ -1,16 +1,16 @@
-package Genome::Sample::Attribute::Command::List;
+package Genome::Site::WUGC::Sample::Attribute::Command::List;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Sample::Attribute::Command::List {
+class Genome::Site::WUGC::Sample::Attribute::Command::List {
     is => 'UR::Object::Command::List',
     has => [
         subject_class_name  => {
             is_constant => 1, 
-            value => 'Genome::Sample::Attribute' 
+            value => 'Genome::Site::WUGC::Sample::Attribute' 
         },
         show => { default_value => 'sample_id,common_name,sample_name,nomenclature,name,value' },
     ],

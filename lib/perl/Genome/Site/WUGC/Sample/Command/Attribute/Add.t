@@ -12,13 +12,13 @@ use above "Genome";
 
 use Test::More tests => 13;
 
-use_ok('Genome::Sample::Command::Attribute::Add');
+use_ok('Genome::Site::WUGC::Sample::Command::Attribute::Add');
 
-my $test_sample = Genome::Sample->create(
+my $test_sample = Genome::Site::WUGC::Sample->create(
     name => 'GS_attribute_test.1',
     common_name => 'GSAt' . $_, 
 );
-isa_ok($test_sample, 'Genome::Sample', 'created test sample');
+isa_ok($test_sample, 'Genome::Site::WUGC::Sample', 'created test sample');
 
 my %attribute_params = (
     name => 'test_attribute_name',
@@ -27,7 +27,7 @@ my %attribute_params = (
     sample => $test_sample,
 );
 
-my $add_command_1 = Genome::Sample::Command::Attribute::Add->create(%attribute_params);
+my $add_command_1 = Genome::Site::WUGC::Sample::Command::Attribute::Add->create(%attribute_params);
 ok($add_command_1, 'created add command');
 
 my $ok_1 = $add_command_1->execute();
@@ -40,7 +40,7 @@ for my $key (keys %attribute_params) {
 }
 
 #Duplicate add with same param is fine.
-my $add_command_2 = Genome::Sample::Command::Attribute::Add->create(%attribute_params);
+my $add_command_2 = Genome::Site::WUGC::Sample::Command::Attribute::Add->create(%attribute_params);
 ok($add_command_2, 'created second add command');
 
 my $ok_2 = $add_command_2->execute();
@@ -49,7 +49,7 @@ ok($ok_2, 'successfully execute a duplicate request with same value');
 
 #Duplicate add with different param should fail.
 $attribute_params{value} = 'test_attribute_value_3';
-my $add_command_3 = Genome::Sample::Command::Attribute::Add->create(%attribute_params);
+my $add_command_3 = Genome::Site::WUGC::Sample::Command::Attribute::Add->create(%attribute_params);
 ok($add_command_3, 'created second add command');
 
 my $ok_3 = $add_command_3->execute();

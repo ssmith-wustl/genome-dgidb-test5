@@ -1,7 +1,7 @@
-package Genome::Sample::Command::Attribute::List;
+package Genome::Site::WUGC::Sample::Command::Attribute::List;
 
-class Genome::Sample::Command::Attribute::List {
-    is => 'Genome::Sample::Attribute::Command::List',
+class Genome::Site::WUGC::Sample::Command::Attribute::List {
+    is => 'Genome::Site::WUGC::Sample::Attribute::Command::List',
 };
 
 1;

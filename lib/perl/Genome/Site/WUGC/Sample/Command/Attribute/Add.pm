@@ -1,15 +1,15 @@
-package Genome::Sample::Command::Attribute::Add;
+package Genome::Site::WUGC::Sample::Command::Attribute::Add;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Sample::Command::Attribute::Add {
+class Genome::Site::WUGC::Sample::Command::Attribute::Add {
     is => 'Genome::Command::Base',
     has => [
         sample => { 
-            is => 'Genome::Sample',
+            is => 'Genome::Site::WUGC::Sample',
             doc => 'The sample for which to add an attribute',
             shell_args_position => 1,
         },
@@ -49,7 +49,7 @@ EOS
 sub execute {
     my $self = shift;
 
-    my $existing_attribute = Genome::Sample::Attribute->get(
+    my $existing_attribute = Genome::Site::WUGC::Sample::Attribute->get(
         sample_id => $self->sample->id,
         nomenclature => $self->nomenclature,
         name => $self->name,
@@ -62,12 +62,12 @@ sub execute {
             $self->error_message('Found existing attribute for that name, sample, and nomenclature. Existing attributes for this sample:');
 
             my $filter = 'sample_id=' . $self->sample->id;
-            Genome::Sample::Command::Attribute::List->execute( filter => $filter );
+            Genome::Site::WUGC::Sample::Command::Attribute::List->execute( filter => $filter );
             return;
         }
     }
 
-    my $attribute = Genome::Sample::Attribute->create(
+    my $attribute = Genome::Site::WUGC::Sample::Attribute->create(
         sample_id => $self->sample->id,
         nomenclature => $self->nomenclature,
         name => $self->name,

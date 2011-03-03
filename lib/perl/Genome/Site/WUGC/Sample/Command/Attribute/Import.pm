@@ -1,11 +1,11 @@
-package Genome::Sample::Command::Attribute::Import;
+package Genome::Site::WUGC::Sample::Command::Attribute::Import;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Sample::Command::Attribute::Import {
+class Genome::Site::WUGC::Sample::Command::Attribute::Import {
     is => 'Genome::Command::Base',
     has => [
         file => {
@@ -98,7 +98,7 @@ sub execute {
 
         for my $sample (@samples) {
             for my $i (0..$#names) {
-                my $attribute_add_command = Genome::Sample::Command::Attribute::Add->create(
+                my $attribute_add_command = Genome::Site::WUGC::Sample::Command::Attribute::Add->create(
                     sample => $sample,
                     name => $names[$i],
                     value => $values[$i],
@@ -121,13 +121,13 @@ sub _resolve_samples {
 
     my $sample_by_id;
     eval { #can fail if datatypes mismatch
-        $sample_by_id = Genome::Sample->get($identifier);
+        $sample_by_id = Genome::Site::WUGC::Sample->get($identifier);
     };
     return $sample_by_id if $sample_by_id;
 
     my $individual_by_id;
     eval {
-        $individual_by_id = Genome::Individual->get($identifier);
+        $individual_by_id = Genome::Site::WUGC::Individual->get($identifier);
     };
     return $individual_by_id->samples if $individual_by_id;
 

@@ -14,28 +14,28 @@ use constant NUM_SAMPLES => 5;
 
 use Test::More tests => 10 + NUM_SAMPLES*5;
 
-use_ok('Genome::Sample::Command::Attribute::Import');
+use_ok('Genome::Site::WUGC::Sample::Command::Attribute::Import');
 
 my @test_samples;
 
-my $test_individual = Genome::Individual->create(
+my $test_individual = Genome::Site::WUGC::Individual->create(
     name => 'GS_attribute_test_individual.1',
     common_name => 'GSAiti1',
 );
-isa_ok($test_individual, 'Genome::Individual');
+isa_ok($test_individual, 'Genome::Site::WUGC::Individual');
 
 for(1..NUM_SAMPLES) {
-    my $test_sample = Genome::Sample->create(
+    my $test_sample = Genome::Site::WUGC::Sample->create(
         name => 'GS_attribute_import_test.' . $_,
         common_name => 'GSAit' . $_,
         source => $test_individual,
     );
-    isa_ok($test_sample, 'Genome::Sample', 'created test sample ' . $_);
+    isa_ok($test_sample, 'Genome::Site::WUGC::Sample', 'created test sample ' . $_);
     push @test_samples, $test_sample;
 }
 
 #first test--straight by-id sample update
-my $delimiter = Genome::Sample::Command::Attribute::Import->__meta__->property('delimiter')->default_value;
+my $delimiter = Genome::Site::WUGC::Sample::Command::Attribute::Import->__meta__->property('delimiter')->default_value;
 my $line_separator = "\n";
 
 my $data_file_1 = Genome::Sys->create_temp_file_path;
@@ -47,15 +47,15 @@ for my $sample (@test_samples) {
 
 Genome::Sys->write_file($data_file_1, $data_string_1);
 
-my $import_command_1 = Genome::Sample::Command::Attribute::Import->create(
+my $import_command_1 = Genome::Site::WUGC::Sample::Command::Attribute::Import->create(
     file => $data_file_1,
 );
-isa_ok($import_command_1, 'Genome::Sample::Command::Attribute::Import', 'created import command 1');
+isa_ok($import_command_1, 'Genome::Site::WUGC::Sample::Command::Attribute::Import', 'created import command 1');
 ok($import_command_1->execute, 'executed import command 1');
 
 for my $sample (@test_samples) {
     my $attribute = $sample->attributes(name => 'test_attribute_1a');
-    isa_ok($attribute, 'Genome::Sample::Attribute', 'test_attribute_1a for sample ' . $sample->id);
+    isa_ok($attribute, 'Genome::Site::WUGC::Sample::Attribute', 'test_attribute_1a for sample ' . $sample->id);
     is($attribute->value, 'test_value_1', 'has expected value');
 }
 
@@ -67,15 +67,15 @@ $data_string_2 .= join($delimiter, $test_individual->id, 'test_value_2') . $line
 
 Genome::Sys->write_file($data_file_2, $data_string_2);
 
-my $import_command_2 = Genome::Sample::Command::Attribute::Import->create(
+my $import_command_2 = Genome::Site::WUGC::Sample::Command::Attribute::Import->create(
     file => $data_file_2,
 );
-isa_ok($import_command_2, 'Genome::Sample::Command::Attribute::Import', 'created import command 2');
+isa_ok($import_command_2, 'Genome::Site::WUGC::Sample::Command::Attribute::Import', 'created import command 2');
 ok($import_command_2->execute, 'executed import command 2');
 
 for my $sample (@test_samples) {
     my $attribute = $sample->attributes(name => 'test_attribute_2a');
-    isa_ok($attribute, 'Genome::Sample::Attribute', 'test_attribute_2a for sample ' . $sample->id);
+    isa_ok($attribute, 'Genome::Site::WUGC::Sample::Attribute', 'test_attribute_2a for sample ' . $sample->id);
     is($attribute->value, 'test_value_2', 'has expected value');
 }
 
@@ -89,10 +89,10 @@ $data_string_5 .= join($delimiter, $test_individual->id, 'test_value_5a') . $lin
 
 Genome::Sys->write_file($data_file_5, $data_string_5);
 
-my $import_command_5 = Genome::Sample::Command::Attribute::Import->create(
+my $import_command_5 = Genome::Site::WUGC::Sample::Command::Attribute::Import->create(
     file => $data_file_5,
 );
-isa_ok($import_command_5, 'Genome::Sample::Command::Attribute::Import', 'created import command 5');
+isa_ok($import_command_5, 'Genome::Site::WUGC::Sample::Command::Attribute::Import', 'created import command 5');
 my $ok = eval { $import_command_5->execute(); };
 
 ok(($@ || !$ok), 'failed executing import command 5 as expected (column count mismatch)');
@@ -105,9 +105,9 @@ $data_string_6 .= join($delimiter, 'unknown_id!', 'test_value_6a') . $line_separ
 
 Genome::Sys->write_file($data_file_6, $data_string_6);
 
-my $import_command_6 = Genome::Sample::Command::Attribute::Import->create(
+my $import_command_6 = Genome::Site::WUGC::Sample::Command::Attribute::Import->create(
     file => $data_file_6,
 );
-isa_ok($import_command_6, 'Genome::Sample::Command::Attribute::Import', 'created import command 6');
+isa_ok($import_command_6, 'Genome::Site::WUGC::Sample::Command::Attribute::Import', 'created import command 6');
 $ok = eval { $import_command_6->execute };
 ok(($@ || !$ok), 'failed executing import command 6 as expected (unknown id)');

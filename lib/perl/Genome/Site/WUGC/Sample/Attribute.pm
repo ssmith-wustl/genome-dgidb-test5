@@ -1,10 +1,9 @@
-package Genome::Sample::Attribute;
+package Genome::Site::WUGC::Sample::Attribute;
 use strict;
 use warnings;
 use Genome;
-use Genome::Sample;
 
-class Genome::Sample::Attribute {
+class Genome::Site::WUGC::Sample::Attribute {
     table_name => 'GSC.SAMPLE_ATTRIBUTE',
     id_by => [
         sample_id        => { column_name => 'ORGANISM_SAMPLE_ID' },
@@ -13,9 +12,9 @@ class Genome::Sample::Attribute {
     ],
     has_optional => [
         value           => { column_name => 'ATTRIBUTE_VALUE' },
-        sample          => { is => 'Genome::Sample', id_by => 'sample_id' },
+        sample          => { is => 'Genome::Site::WUGC::Sample', id_by => 'sample_id' },
         sample_name     => { via => 'sample', to => 'name' },
-        patient         => { is => 'Genome::Individual', via => 'sample', to => 'source' },
+        patient         => { is => 'Genome::Site::WUGC::Individual', via => 'sample', to => 'source' },
         common_name     => { via => 'patient', doc => 'patient common name' },
     ],
     data_source => 'Genome::DataSource::GMSchema',

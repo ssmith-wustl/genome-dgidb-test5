@@ -1,9 +1,10 @@
-package Genome::Sample::Genomic;
+package Genome::Site::WUGC::Sample::Genomic;
 
 use strict;
 use warnings;
+use Genome;
 
-class Genome::Sample::Genomic {
+class Genome::Site::WUGC::Sample::Genomic {
     table_name => "
         (select dna.*,o.taxon_id 
          from dna\@oltp
@@ -24,7 +25,7 @@ class Genome::Sample::Genomic {
     ],
     has => [
             name => { is => 'Text', len => 64, column_name => 'DNA_NAME' },
-            taxon                       => { is => 'Genome::Taxon', id_by => 'taxon_id' },
+            taxon                       => { is => 'Genome::Site::WUGC::Taxon', id_by => 'taxon_id' },
             species_name                => { via => 'taxon' },
         ],
     data_source => 'Genome::DataSource::GMSchema',
