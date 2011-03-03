@@ -32,14 +32,16 @@ class Genome::PopulationGroup {
         species_name => { via => 'taxon' },
     ],
     has_many => [
-        member_links => { 
-            is => 'Genome::PopulationGroup::Member', 
-            reverse_id_by => 'population_group' 
+        member_ids => {
+            is => 'Number',
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'member' ],
+            is_mutable => 1,
         },
         members => { 
             is => 'Genome::Individual', 
-            via => 'member_links', 
-            to => 'member' 
+            id_by => 'member_ids',
         },
         samples => { 
             is => 'Genome::Sample', 
