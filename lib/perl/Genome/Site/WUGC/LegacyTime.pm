@@ -1,5 +1,5 @@
 # A few useful time functions.
-
+ 
 package UR::Time;
 
 =pod
