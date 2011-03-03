@@ -56,7 +56,6 @@ sub objects_to_sync {
         'Genome::Subject::PopulationGroup' => 'Genome::PopulationGroup',
         'Genome::Subject::Taxon' => 'Genome::Taxon',
         'Genome::Subject::Sample' => 'Genome::Sample',
-        'Genome::Subject::Library' => 'Genome::Library',
     );
 }
 
@@ -163,7 +162,7 @@ sub copy_object {
     my %attributes;
     map { $attributes{$_} = $original_object->{$_} if defined $original_object->{$_} } @$new_object_attributes;
 
-    my $object = $new_object_class->create(%attributes);
+    my $object = $new_object_class->create(%attributes, id => $original_object->id);
     confess "Could not create new object of type $new_object_class based on object of type " .
         $original_object->class . " with id " . $original_object->id unless $object;
 
