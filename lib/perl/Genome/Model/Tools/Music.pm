@@ -13,8 +13,8 @@ sub doc_authors {
     return (
         'Nathan Dees Ph.D.',
         'Cyriac Kandoth, Ph.D.',
-        'Dan Koboldt',
-        'William Scheirding, Ph.D.',
+        'Dan Koboldt, M.S.',
+        'William Schierding, M.S.',
         'Michael Wendl, Ph.D.',
     );
 }
