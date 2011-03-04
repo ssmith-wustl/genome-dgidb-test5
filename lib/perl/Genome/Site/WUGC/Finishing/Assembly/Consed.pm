@@ -17,7 +17,6 @@ use XML::Simple;
 my $conf;
 # Load conf file
 {
-    #my $conf_file = '/gscuser/ebelter/dev/svn/finishing/consed/consed-conf.xml';
     my $conf_file = '/gsc/scripts/share/consed/consed-conf.xml';
     my $fh = IO::File->new('<' . $conf_file);
     __PACKAGE__->fatal_msg("Can't open conf file ($conf_file): $!")

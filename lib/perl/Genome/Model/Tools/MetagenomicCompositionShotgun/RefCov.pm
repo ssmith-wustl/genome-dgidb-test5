@@ -86,7 +86,6 @@ sub execute {
     	$self->status_message("Expected output files exist.  Skipping generation of ref cov stats file.");
     } else {
     
-    	#my $cmd = "/gscuser/jwalker/svn/TechD/RefCov/bin/refcov-64.pl ".$self->aligned_bam_file." ".$self->regions_file." ".$stats_file;    
         my $cmd = Genome::Model::Tools::MetagenomicCompositionShotgun::ParallelRefCov->create(aligned_bam_file=>$self->aligned_bam_file, regions_file=>$self->regions_file, report_file=>$stats_file, working_directory=>$self->working_directory);	
 													
     	$self->status_message("Running ref cov report at ".UR::Time->now);

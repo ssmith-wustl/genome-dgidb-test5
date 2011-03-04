@@ -8,7 +8,6 @@ use Genome::Model::Tools::Interproscan::DomainMutationReport;
 use Test::More;
 plan "skip_all";
 
-#my $file = "/gscuser/charris/svn/pm2/Genome/Model/Tools/test.fastq";
 my $file = "";
 my $outfile = "";
 #my $total = lines($file);

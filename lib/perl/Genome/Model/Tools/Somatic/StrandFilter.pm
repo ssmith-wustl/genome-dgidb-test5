@@ -536,7 +536,6 @@ sub execute {
 
 sub readcount_program {
     return "/gscuser/dlarson/src/bamsey/readcount/trunk/bam-readcount-test2 -f /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa";
-#    return "/gscuser/dlarson/src/bamsey/readcount/trunk/bam-readcount -f /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa";
 }
 
 
