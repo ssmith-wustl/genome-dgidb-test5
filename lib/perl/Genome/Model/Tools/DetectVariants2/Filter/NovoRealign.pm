@@ -73,8 +73,8 @@ class Genome::Model::Tools::DetectVariants2::Filter::NovoRealign {
     ],
     has_param => [
         lsf_resource => {
-            #default_value => "-R 'select[mem>24000] rusage[mem=24000]' -M 24000000", #novoalign needs this memory usage 8G to run
-            default_value => "-R 'select[type==LINUX64 && model!=Opteron250 && mem>10000] rusage[mem=10000] span[hosts=1]' -n 1 -M 12000000",
+            #default_value => "-R 'select[mem>8000] rusage[mem=8000]' -M 8000000", #novoalign needs this memory usage 8G to run
+            default_value => "-R 'select[mem>10000] rusage[mem=10000]' -M 10000000",
         },
     ],
     has_constant => [
@@ -321,5 +321,10 @@ sub _run_cmd {
     }
     return 1;
 }
+
+sub _create_filter_file {
+    return 1;
+}
+
 
 1;
