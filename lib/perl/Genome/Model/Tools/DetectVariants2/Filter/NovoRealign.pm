@@ -7,25 +7,6 @@ use Genome;
 use File::Copy;
 use File::Basename;
 
-
-#my %opts = (
-#	    n=>"/gscuser/kchen/bin/novoalign-2.05.13",
-#	    i=>"/gscuser/kchen/sata114/kchen/Hs_build36/all_fragments/Hs36_rDNA.fa.k14.s3.ndx",
-#	    t=>"/gscuser/kchen/1000genomes/analysis/scripts/novo2sam.pl",
-#	    f=>"SLX"
-#	   );
-#getopts('n:i:f:t:',\%opts);
-#die("
-#Usage:   novoRealign.pl <breakdancer configure file>\n
-#Options:
-#         -n STRING  Path to novoalign executable
-#         -i STRING  Path to novoalign reference sequence index
-#         -t STRING  Path to novo2sam.pl
-#         -f STRING  Specify platform [$opts{f}]
-#\n"
-#) unless (@ARGV);
-
-
 class Genome::Model::Tools::DetectVariants2::Filter::NovoRealign {
     is  => 'Genome::Model::Tools::DetectVariants2::Filter',
     has_optional => [
