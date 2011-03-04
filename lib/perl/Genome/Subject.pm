@@ -18,7 +18,7 @@ class Genome::Subject {
             is => 'Text',
         },
     ],
-    has_many => [
+    has_many_optional => [
         attributes => {
             is => 'Genome::SubjectAttribute',
             reverse_as => 'subject',
