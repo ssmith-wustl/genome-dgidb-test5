@@ -1,4 +1,4 @@
-package Genome::InstrumentData::454;
+package Genome::Site::WUGC::InstrumentData::454;
 
 use strict;
 use warnings;
@@ -7,8 +7,8 @@ use Genome;
 
 require Carp;
 
-class Genome::InstrumentData::454 {
-    is  => 'Genome::InstrumentData',
+class Genome::Site::WUGC::InstrumentData::454 {
+    is  => 'Genome::Site::WUGC::InstrumentData',
     table_name => <<'EOS'
         (
             select 
@@ -84,7 +84,7 @@ EOS
 
         # indirect via the sample source, but we let the sample manage that
         # since we sometimes don't know the source, it also tracks taxon directly
-        taxon               => { via => 'sample', to => 'taxon', is => 'Genome::Taxon' },
+        taxon               => { via => 'sample', to => 'taxon', is => 'Genome::Site::WUGC::Taxon' },
         species_name        => { via => 'taxon' },
     ],
 };

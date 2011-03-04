@@ -1,12 +1,12 @@
-package Genome::InstrumentData::Sanger;
+package Genome::Site::WUGC::InstrumentData::Sanger;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::InstrumentData::Sanger {
-    is  => 'Genome::InstrumentData',
+class Genome::Site::WUGC::InstrumentData::Sanger {
+    is  => 'Genome::Site::WUGC::InstrumentData',
     has_constant => [
         sequencing_platform => { value => 'sanger' },
     ],
@@ -22,7 +22,7 @@ class Genome::InstrumentData::Sanger {
                         via   => 'attributes',
                         to    => 'value',
                         where => [
-                                  entity_class_name => 'Genome::InstrumentData::Sanger',
+                                  entity_class_name => 'Genome::Site::WUGC::InstrumentData::Sanger',
                                   property_name     => 'sample_name',
                                  ],
                         is_optional => 1,
@@ -32,19 +32,19 @@ class Genome::InstrumentData::Sanger {
                       via   => 'attributes',
                       to    => 'value',
                       where => [
-                                entity_class_name => 'Genome::InstrumentData::Sanger',
+                                entity_class_name => 'Genome::Site::WUGC::InstrumentData::Sanger',
                                 property_name     => 'sample_id',
                                ],
                       is_optional => 1,
                       is_mutable  => 1,
                      },     
-        sample => { is => 'Genome::Sample', id_by => 'sample_id' },
-        taxon => { via => 'sample', to => 'taxon', is => 'Genome::Taxon' },
+        sample => { is => 'Genome::Site::WUGC::Sample', id_by => 'sample_id' },
+        taxon => { via => 'sample', to => 'taxon', is => 'Genome::Site::WUGC::Taxon' },
         library_name => {
                          via   => 'attributes',
                          to    => 'value',
                          where => [
-                                   entity_class_name => 'Genome::InstrumentData::Sanger',
+                                   entity_class_name => 'Genome::Site::WUGC::InstrumentData::Sanger',
                                    property_name     => 'library_name',
                                   ],
                          is_optional => 1,
@@ -54,7 +54,7 @@ class Genome::InstrumentData::Sanger {
                        via   => 'attributes',
                        to    => 'value',
                        where => [
-                                 entity_class_name => 'Genome::InstrumentData::Sanger',
+                                 entity_class_name => 'Genome::Site::WUGC::InstrumentData::Sanger',
                                  property_name     => 'library_id',
                                 ],
                        is_optional => 1,
@@ -64,7 +64,7 @@ class Genome::InstrumentData::Sanger {
                  via   => 'attributes',
                  to    => 'value',
                  where => [
-                       entity_class_name => 'Genome::InstrumentData::Sanger',
+                       entity_class_name => 'Genome::Site::WUGC::InstrumentData::Sanger',
                        property_name     => 'research_project',
                    ],
              is_optional => 1,

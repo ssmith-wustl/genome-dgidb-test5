@@ -1,4 +1,4 @@
-package Genome::InstrumentData;
+package Genome::Site::WUGC::InstrumentData;
 
 use strict;
 use warnings;
@@ -8,13 +8,13 @@ use Genome;
 use Data::Dumper;
 require Genome::Sys;
 
-class Genome::InstrumentData {
+class Genome::Site::WUGC::InstrumentData {
     id_by => ['id'],
     table_name => <<EOS
     (
          SELECT to_char(solexa.analysis_id) id,
                fc.run_name,
-               'Genome::InstrumentData::Solexa' subclass_name,
+               'Genome::Site::WUGC::InstrumentData::Solexa' subclass_name,
                'solexa' sequencing_platform,
                (
                     case 
@@ -29,7 +29,7 @@ class Genome::InstrumentData {
             SELECT 
                to_char(case when ri.index_sequence is null then ri.region_id else ri.seq_id end) id,
                r.run_name,
-               'Genome::InstrumentData::454' subclass_name,
+               'Genome::Site::WUGC::InstrumentData::454' subclass_name,
                '454' sequencing_platform,
                (
                 case
@@ -48,7 +48,7 @@ class Genome::InstrumentData {
      UNION ALL
         SELECT to_char(imported.id) id,
                run_name,
-               'Genome::InstrumentData::Imported' subclass_name,
+               'Genome::Site::WUGC::InstrumentData::Imported' subclass_name,
                sequencing_platform,
                subset_name,
                library_id
@@ -56,14 +56,14 @@ class Genome::InstrumentData {
      UNION ALL
         SELECT run_name id,
                sanger.run_name,
-               'Genome::InstrumentData::Sanger' subclass_name,
+               'Genome::Site::WUGC::InstrumentData::Sanger' subclass_name,
                'sanger' sequencing_platform,
                '1' subset_name,
                libsum.library_id
           FROM gsc_run\@oltp sanger
           LEFT JOIN misc_attribute library_misc
             on library_misc.entity_id = sanger.run_name
-            and library_misc.entity_class_name = 'Genome::InstrumentData::Sanger'
+            and library_misc.entity_class_name = 'Genome::Site::WUGC::InstrumentData::Sanger'
             and library_misc.property_name = 'library_name'
           LEFT JOIN gsc.library_summary libsum on libsum.full_name = library_misc.value
     ) idata
@@ -82,11 +82,11 @@ EOS
     ],
     has_optional => [        
         library_id          =>  { is => 'VARCHAR2', len => 15 },
-        library             =>  { is => 'Genome::Library', id_by => 'library_id' },
+        library             =>  { is => 'Genome::Site::WUGC::Library', id_by => 'library_id' },
         library_name        =>  { via => 'library', to => 'name' },
 
         sample_id           =>  { is => 'Number', via => 'library' },
-        sample              =>  { is => 'Genome::Sample', id_by => 'sample_id' },
+        sample              =>  { is => 'Genome::Site::WUGC::Sample', id_by => 'sample_id' },
         sample_name         =>  { via => 'sample', to => 'name' },
 	
         # TODO: see if this stuff is used and if not delete it -ss
@@ -95,7 +95,7 @@ EOS
         full_path => {
             via => 'attributes',
             to => 'value', 
-            where => [ entity_class_name => 'Genome::InstrumentData', property_name => 'full_path' ],
+            where => [ entity_class_name => 'Genome::Site::WUGC::InstrumentData', property_name => 'full_path' ],
             is_mutable => 1,
         },
     ],
@@ -146,13 +146,13 @@ sub _resolve_subclass_name_for_sequencing_platform {
     my @sub_parts = map { ucfirst } @type_parts;
     my $subclass = join('',@sub_parts);
 
-    my $class_name = join('::', 'Genome::InstrumentData' , $subclass);
+    my $class_name = join('::', 'Genome::Site::WUGC::InstrumentData' , $subclass);
     return $class_name;
 }
 
 sub _resolve_sequencing_platform_for_subclass_name {
     my ($class,$subclass_name) = @_;
-    my ($ext) = ($subclass_name =~ /Genome::InstrumentData::(.*)/);
+    my ($ext) = ($subclass_name =~ /Genome::Site::WUGC::InstrumentData::(.*)/);
     return unless ($ext);
     my @words = $ext =~ /[a-z]+|[A-Z](?:[A-Z]+|[a-z]*)(?=$|[A-Z])/g;
     my $sequencing_platform = lc(join(" ", @words));
@@ -257,7 +257,7 @@ sub old_name {
 
 sub create_mock {
     my $class = shift;
-    return $class->SUPER::create_mock(subclass_name => 'Genome::InstrumentData', @_);
+    return $class->SUPER::create_mock(subclass_name => 'Genome::Site::WUGC::InstrumentData', @_);
 }
 
 sub run_identifier  {

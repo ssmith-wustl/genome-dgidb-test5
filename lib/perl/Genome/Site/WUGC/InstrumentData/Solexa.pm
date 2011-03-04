@@ -11,7 +11,7 @@
 
 
 
-package Genome::InstrumentData::Solexa;
+package Genome::Site::WUGC::InstrumentData::Solexa;
 
 use strict;
 use warnings;
@@ -20,8 +20,8 @@ use Genome;
 
 use File::Basename;
 
-class Genome::InstrumentData::Solexa {
-    is => ['Genome::InstrumentData', 'Genome::Sys'],
+class Genome::Site::WUGC::InstrumentData::Solexa {
+    is => ['Genome::Site::WUGC::InstrumentData', 'Genome::Sys'],
     table_name => <<EOS
         (
             select
@@ -242,7 +242,7 @@ EOS
 
         # indirect via the sample source, but we let the sample manage that
         # since we sometimes don't know the source, it also tracks taxon directly
-        taxon               => { via => 'sample', to => 'taxon', is => 'Genome::Taxon' },
+        taxon               => { via => 'sample', to => 'taxon', is => 'Genome::Site::WUGC::Taxon' },
         species_name        => { via => 'taxon' },
     ],
 };
