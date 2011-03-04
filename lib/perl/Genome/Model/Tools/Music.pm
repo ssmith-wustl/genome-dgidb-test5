@@ -34,5 +34,17 @@ sub doc_manual {
 EOS
 }
 
+sub doc_credits {
+    return <<EOS
+The MuSiC suite uses tabix, by Heng Li.  See http://...
+
+MuSiC depends on copies of data from the following databases, converted into a form useable for quick analysis:
+* COSMIC
+* OMIM
+* GenBank
+* EnsEMBL
+EOS
+}
+
 1;
 
