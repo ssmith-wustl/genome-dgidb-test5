@@ -24,19 +24,24 @@ sub help_detail {
 }
 
 sub doc_manual {
-
+    # POD to go into man pages, but not help
+    return;
 }
 
 sub doc_copyright_years {
+    # used to compose man pages
     return (2010, 2011);
 }
 
 sub doc_copyright_licenese {
-
+    # used to compose man pages
+    return;
 }
 
 sub doc_authors {
-
+    # used to compose man pages 
+    # (return a list of strings)
+    return;
 }
 
 1;
