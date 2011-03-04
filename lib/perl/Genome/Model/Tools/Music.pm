@@ -16,6 +16,7 @@ sub doc_authors {
         'Dan Koboldt, M.S.',
         'William Schierding, M.S.',
         'Michael Wendl, Ph.D.',
+        'Qunyuan Zhang, Ph.D.',
     );
 }
 
