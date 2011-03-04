@@ -5,87 +5,157 @@ use warnings;
 
 use Genome;
 
-require Carp;
-
 class Genome::InstrumentData::454 {
-    is  => 'Genome::InstrumentData',
-    table_name => <<'EOS'
-        (
-            select 
-                to_char(case when ri.index_sequence is null then ri.region_id else ri.seq_id end) id,
-                '454' sequencing_platform,
-                r.region_id genome_model_run_id, --legacy
-                BEADS_LOADED,
-                COPIES_PER_BEAD,          
-                FC_ID,                    
-                INCOMING_DNA_NAME,        
-                KEY_PASS_WELLS,           
-                ri.library_id, --r.LIBRARY_ID,               
-                lib.full_name library_name, -- r.LIBRARY_NAME,             
-                PAIRED_END,               
-                PREDICTED_RECOVERY_BEADS, 
-                r.REGION_ID,                
-                REGION_NUMBER,            
-                RESEARCH_PROJECT,         
-                RUN_NAME,                 
-                lib.SAMPLE_ID,                
-                s.full_name SAMPLE_NAME,              
-                SAMPLE_SET,               
-                SS_ID,                    
-                SUPERNATANT_BEADS,        
-                TOTAL_KEY_PASS,           
-                TOTAL_RAW_WELLS,
-                NUM_BASES,
-                NUM_READS,
-                INDEX_SEQUENCE
-            from GSC.run_region_454 r 
-            join GSC.region_index_454 ri on ri.region_id = r.region_id
-            join GSC.library_summary lib on lib.library_id = ri.library_id
-            join GSC.organism_sample s on s.organism_sample_id = lib.sample_id
-        ) x454_detail
-EOS
-    ,
-    has_constant => [
-        sequencing_platform => { value => '454' },
-    ],    
+    is => 'Genome::InstrumentData',
     has_optional => [
-        _fasta_file => {
-                        is => 'String',
-                        is_transient => 1,
-                        is_mutable => 1,
-                  },
-        _qual_file => {
-                       is => 'String',
-                       is_transient => 1,
-                       is_mutable => 1,
-                   },
-        #< Run Region 454 from DW Attrs >#
-        run_region_454     => {
-            doc => '454 Run Region from LIMS.',
+        beads_loaded => {
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'beads_loaded' ],
+            is_mutable => 1,
+        },
+        copies_per_bead => {
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'copies_per_bead' ],
+            is_mutable => 1,
+        },
+        fc_id => {
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'fc_id' ],
+            is_mutable => 1,
+        },
+        incoming_dna_name => {
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'incoming_dna_name' ],
+            is_mutable => 1,
+        },
+        key_pass_wells => {
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'key_pass_wells' ],
+            is_mutable => 1,
+        },
+        paired_end => {
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'paired_end' ],
+            is_mutable => 1,
+        },
+        predicted_recovery_beads => {
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'predicted_recovery_beads' ],
+            is_mutable => 1,
+        },
+        region_id => {
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'region_id' ],
+            is_mutable => 1,
+        },
+        region_number => {
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'region_number' ],
+            is_mutable => 1,
+        },
+        research_project => {
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'research_project' ],
+            is_mutable => 1,
+        },
+        run_name => {
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'run_name' ],
+            is_mutable => 1,
+        },
+        sample_set => {
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'sample_set' ],
+            is_mutable => 1,
+        },
+        ss_id => {
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'ss_id' ],
+            is_mutable => 1,
+        },
+        supernatant_beads => {
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'supernatant_beads' ],
+            is_mutable => 1,
+        },
+        total_key_pass => {
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'total_key_pass' ],
+            is_mutable => 1,
+        },
+        total_raw_wells => {
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'total_raw_wells' ],
+            is_mutable => 1,
+        },
+        num_bases => {
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'num_bases' ],
+            is_mutable => 1,
+        },
+        num_reads => {
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'num_reads' ],
+            is_mutable => 1,
+        },
+        index_sequence => {
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'index_sequence' ],
+            is_mutable => 1,
+        },
+        total_reads => {
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'total_reads' ],
+            is_mutable => 1,
+        },
+        total_bases_read => {
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'total_bases_read' ],
+            is_mutable => 1,
+        },
+        is_paired_end => {
+            calculate_from => ['paired_end'],
+            calculate => q{ return $paired_end; },
+        },
+
+        # TODO Need to refactor these objects away
+        run_region_454 => {
             is => 'GSC::RunRegion454',
+            calculate_from => ['region_id'],
             calculate => q| GSC::RunRegion454->get($region_id); |,
-            calculate_from => ['region_id']
+            doc => '454 Run Region from LIMS.',
         },
-        region_index_454     => {
-            doc => 'Region Index 454 from LIMS.',
+        region_index_454 => {
             is => 'GSC::RegionIndex454',
+            calculate_from => ['id'],
             calculate => q| GSC::RegionIndex454->get($id); |,
-            calculate_from => ['id']
+            doc => 'Region Index 454 from LIMS.',
         },
-        region_id           => { },
-        region_number       => { },
-        total_reads         => { column_name => "NUM_READS" },
-        total_bases_read    => { column_name => "NUM_BASES" },
-        is_paired_end       => { column_name => "PAIRED_END" },
-        index_sequence      => { },
-
-        sample_source       => { via => 'sample', to => 'source', },
-        sample_source_name  => { via => 'sample_source', to => 'name' },
-
-        # indirect via the sample source, but we let the sample manage that
-        # since we sometimes don't know the source, it also tracks taxon directly
-        taxon               => { via => 'sample', to => 'taxon', is => 'Genome::Taxon' },
-        species_name        => { via => 'taxon' },
+    ],
+    has_optional_transient => [
+        _fasta_file => { is => 'FilePath', is_mutable => 1, },
+        _qual_file => { is => 'FilePath', is_mutable => 1, },
     ],
 };
 
