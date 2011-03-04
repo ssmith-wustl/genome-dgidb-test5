@@ -39,6 +39,8 @@
           <br/>
         </div>
         <hr class="space"/>
+<h2><font color="red">** This search engine is currently under maintenance **</font></h2>
+(Things should be back to normal on Monday, March 7)
         <div class="main_search_hints clearfix">
           <div class="box_header span-8 last rounded-top">
             <div class="box_title"><h3 class="nontyped last">Can't find what you're looking for?</h3></div>
