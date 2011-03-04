@@ -18,25 +18,25 @@ class Genome::Model::Tools::Music::Base {
     doc => "cancer mutation analysis"
 };
 
+# fill all of these in the subclasses
+
 sub help_detail { 
-    # for things without docs, we will keep this pretty
-    "" 
+    return <<EOS
+EOS
 }
 
 sub doc_manual {
-
+    return <<EOS
+EOS
 }
 
 sub doc_copyright_years {
     return (2010, 2011);
 }
 
-sub doc_copyright_licenese {
-
-}
-
 sub doc_authors {
-
+    return <<EOS
+EOS
 }
 
 1;
