@@ -62,6 +62,9 @@ sub execute {
     }elsif($self->version eq '0.7.1') {
     $maq_pathname = '/gscuser/charris/c-src-BLECH/maq-0.7.2/maq';
     }
+    print $maq_pathname . "\n";
+    print Genome::Model::Tools::Maq->path_for_maq_version($self->version) . "\n";
+    $maq_pathname = Genome::Model::Tools::Maq->path_for_maq_version($self->version);
     my $maplist = $self->maplist;
 
     my @maplist;

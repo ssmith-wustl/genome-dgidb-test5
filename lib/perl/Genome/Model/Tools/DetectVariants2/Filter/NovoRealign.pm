@@ -35,11 +35,6 @@ class Genome::Model::Tools::DetectVariants2::Filter::NovoRealign {
             doc  => 'novoalign executeable path to use',
             default_value => '/gscuser/kchen/bin/novoalign-2.05.13',
         },
-        #novoalign_ref_index => {
-        #   type => 'String',
-        #    doc  => 'Path to novoalign reference sequence index',
-        #    default_value => '/gscuser/kchen/sata114/kchen/Hs_build36/all_fragments/Hs36_rDNA.fa.k14.s3.ndx',
-        #},
         novo2sam_path => {
             type => 'String',
             doc  => 'Path to novoalign reference sequence index',
@@ -194,7 +189,6 @@ sub _filter_variants {
             push @novoaligns,$fout_novo;
             
             my $sort_prefix = "$prefix.$lib.$i";
-            #$cmd = $novosam_path . " -g $lib -f ".$self->platform." -l $lib $fout_novo | ". $samtools_path. " view -b -S - -t /gscuser/kchen/reference_sequence/in.ref_list | ".$samtools_path." sort - $sort_prefix";
             $cmd = $novosam_path . " -g $lib -f ".$self->platform." -l $lib $fout_novo | ". $samtools_path. " view -b -S - -t ". $ref_seq_idx .' | ' . $samtools_path." sort - $sort_prefix";
             $self->_run_cmd($cmd);
             push @bams, $sort_prefix.'.bam';
