@@ -92,6 +92,9 @@ sub execute {
         chomp $line;
         my ($chr,$start,$stop,$refvar,$vs,$tsw,$nsw,$ps,$dbsnp) = split "\t", $line;
         unless(($self->filter_dbsnp)&&($dbsnp ne '-')){
+                if(($nsw+$tsw)==0){
+                    next;
+                }
                 if(($nsw/($tsw+$nsw)) < $self->sw_ratio){
                     my $display=undef;
                     if($self->remove_single_stranded){

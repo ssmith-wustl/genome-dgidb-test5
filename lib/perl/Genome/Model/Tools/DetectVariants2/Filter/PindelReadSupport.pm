@@ -330,7 +330,12 @@ sub filter_read_support {
         chomp $line;
         my ($chr,$start,$stop,$refvar,$vs,$tsw,$nsw,$ps) = split "\t", $line;
         my $hq=1;
-        unless(($nsw/($tsw+$nsw)) < $self->sw_ratio){
+        if(not (($tsw+$nsw)==0)){
+            unless(($nsw/($tsw+$nsw)) < $self->sw_ratio){
+                $hq = 0;
+            }
+        }
+        else {
             $hq = 0;
         }
         if($self->remove_single_stranded){
@@ -353,5 +358,12 @@ sub filter_read_support {
     return 1;
 }
 
+sub _check_file_counts {
+    return 1;
+}
+
+sub _generate_standard_output {
+    return 1;
+}
 
 1;

@@ -5,7 +5,7 @@ use strict;
 use Genome::Model::Tools::Music::PathScan::PopulationPathScan;
 use IO::File;
 
-our $VERSION = '1.01';
+our $VERSION = $Genome::Model::Tools::Music::VERSION;
 
 class Genome::Model::Tools::Music::PathScan {
   is => 'Command',

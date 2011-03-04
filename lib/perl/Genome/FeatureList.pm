@@ -26,6 +26,7 @@ class Genome::FeatureList {
         source => { is => 'Text', len => 64, doc => 'Provenance of this feature list. (e.g. Agilent)', },
         reference_id => { is => 'NUMBER', len => 10, doc => 'ID of the reference sequence build for which the features apply' },
         reference => { is => 'Genome::Model::Build::ImportedReferenceSequence', id_by => 'reference_id' },
+        reference_name => { via => 'reference', to => 'name', },
         subject_id => { is => 'NUMBER', len => 10, doc => 'ID of the subject to which the features are relevant' },
         subject => { is => 'Genome::Model::Build', id_by => 'subject_id' },
         disk_allocation   => { is => 'Genome::Disk::Allocation', is_optional => 1, is_many => 1, reverse_as => 'owner', },

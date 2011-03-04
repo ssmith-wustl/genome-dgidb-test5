@@ -132,6 +132,7 @@ sub _filter_variants {
     unless(@sniper_lines) {
         $lq_output_fh->close;
         $ofh->close;
+        $self->sort_lq_output($lq_output_file, $sorted_lq_output_file);
         return 1;
     }
     #Run readcount program 
@@ -174,6 +175,10 @@ sub _filter_variants {
         }
 
         my @vars = Genome::Info::IUB->variant_alleles_for_iub($vref,$viub);
+        # If this IUB would create more than one variant in the output, adjust the expected value of output linecounts
+        if (scalar @vars > 1) {
+            $self->_validate_output_offset($self->_validate_output_offset + (scalar (@vars) - 1) );
+        }
         foreach my $var (@vars) {
             if(exists($bases{$var}) && $bases{$var} >= $self->min_mapping_quality) {
                 print $ofh $current_variant, "\n";
@@ -198,12 +203,20 @@ sub _filter_variants {
     $fh->close;
 
     # Sort the LQ output file (This is necessary since we filter things out twice, once by somatic score, once by mapping quality...they will be out of order)
+    $self->sort_lq_output($lq_output_file, $sorted_lq_output_file);
+
+    return 1;
+}
+
+sub sort_lq_output {
+    my $self = shift;
+    my $lq_output_file = shift;
+    my $sorted_lq_output_file = shift;
     my @sort_input = ($lq_output_file);
     unless ( Genome::Model::Tools::Joinx::Sort->execute(input_files => \@sort_input, output_file => $sorted_lq_output_file) ) {
         $self->error_message("Failed to sort the LQ output $lq_output_file into $sorted_lq_output_file using Joinx::Sort");
         die $self->error_message;
     }
-    
     return 1;
 }
 
@@ -230,6 +243,10 @@ sub path_for_readcount_version {
 sub default_readcount_version {
     die "default bam-readcount version: $DEFAULT_VERSION is not valid" unless $READCOUNT_VERSIONS{$DEFAULT_VERSION};
     return $DEFAULT_VERSION;
+}
+
+sub _create_detector_file {
+    return 1;
 }
 
 1;

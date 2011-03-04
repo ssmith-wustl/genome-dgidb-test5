@@ -16,6 +16,7 @@ sub doc_authors {
         'Dan Koboldt, M.S.',
         'William Schierding, M.S.',
         'Michael Wendl, Ph.D.',
+        'Qunyuan Zhang, Ph.D.',
     );
 }
 
@@ -31,6 +32,18 @@ sub doc_manual {
     # place POD for content which should ONLY be in the cross-tool manual page
     return <<EOS
 
+EOS
+}
+
+sub doc_credits {
+    return <<EOS
+The MuSiC suite uses tabix, by Heng Li.  See http://...
+
+MuSiC depends on copies of data from the following databases, converted into a form useable for quick analysis:
+* COSMIC
+* OMIM
+* GenBank
+* EnsEMBL
 EOS
 }
 
