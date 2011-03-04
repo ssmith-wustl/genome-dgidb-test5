@@ -20,7 +20,7 @@ class Genome::Model::Tools::Music::Base {
 
 sub doc_copyright_licenese {
     # once license, following the main module
-    return Genome::Model::Tools::Music->doc_copyright license();    
+    return Genome::Model::Tools::Music->doc_copyright_license();    
 }
 
 # fill all of these in the subclasses
