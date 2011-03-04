@@ -84,7 +84,6 @@ sub execute {                               # replace with real execution logic.
 	$reference_file = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa' if(!$self->reference);
 
 	my $dbsnp_file = $self->dbsnp_file;
-#	$dbsnp_file = "/gscuser/dkoboldt/SNPseek/SNPseek2/ucsc/snp130.variants.txt" if(!$dbsnp_file);
 
 	## Create output directory ##
 	mkdir($self->output_dir) if(!(-d $self->output_dir));
