@@ -18,25 +18,33 @@ class Genome::Model::Tools::Music::Base {
     doc => "cancer mutation analysis"
 };
 
+sub doc_copyright_licenese {
+    # once license, following the main module
+    return Genome::Model::Tools::Music->doc_copyright license();    
+}
+
+# fill all of these in the subclasses
+
 sub help_detail { 
-    # for things without docs, we will keep this pretty
-    "" 
+    return <<EOS
+EOS
 }
 
 sub doc_manual {
-
+    # POD to go into man pages, but not help
+    return <<EOS
+EOS
 }
 
 sub doc_copyright_years {
+    # used to compose man pages
     return (2010, 2011);
 }
 
-sub doc_copyright_licenese {
-
-}
-
 sub doc_authors {
-
+    # used to compose man pages 
+    # (return a list of strings)
+    return;
 }
 
 1;
