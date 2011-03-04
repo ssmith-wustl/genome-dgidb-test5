@@ -7,25 +7,6 @@ use Genome;
 use File::Copy;
 use File::Basename;
 
-
-#my %opts = (
-#	    n=>"/gscuser/kchen/bin/novoalign-2.05.13",
-#	    i=>"/gscuser/kchen/sata114/kchen/Hs_build36/all_fragments/Hs36_rDNA.fa.k14.s3.ndx",
-#	    t=>"/gscuser/kchen/1000genomes/analysis/scripts/novo2sam.pl",
-#	    f=>"SLX"
-#	   );
-#getopts('n:i:f:t:',\%opts);
-#die("
-#Usage:   novoRealign.pl <breakdancer configure file>\n
-#Options:
-#         -n STRING  Path to novoalign executable
-#         -i STRING  Path to novoalign reference sequence index
-#         -t STRING  Path to novo2sam.pl
-#         -f STRING  Specify platform [$opts{f}]
-#\n"
-#) unless (@ARGV);
-
-
 class Genome::Model::Tools::DetectVariants2::Filter::NovoRealign {
     is  => 'Genome::Model::Tools::DetectVariants2::Filter',
     has_optional => [
@@ -54,11 +35,6 @@ class Genome::Model::Tools::DetectVariants2::Filter::NovoRealign {
             doc  => 'novoalign executeable path to use',
             default_value => '/gscuser/kchen/bin/novoalign-2.05.13',
         },
-        #novoalign_ref_index => {
-        #   type => 'String',
-        #    doc  => 'Path to novoalign reference sequence index',
-        #    default_value => '/gscuser/kchen/sata114/kchen/Hs_build36/all_fragments/Hs36_rDNA.fa.k14.s3.ndx',
-        #},
         novo2sam_path => {
             type => 'String',
             doc  => 'Path to novoalign reference sequence index',
@@ -97,8 +73,8 @@ class Genome::Model::Tools::DetectVariants2::Filter::NovoRealign {
     ],
     has_param => [
         lsf_resource => {
-            #default_value => "-R 'select[mem>24000] rusage[mem=24000]' -M 24000000", #novoalign needs this memory usage 8G to run
-            default_value => "-R 'select[type==LINUX64 && model!=Opteron250 && mem>10000] rusage[mem=10000] span[hosts=1]' -n 1 -M 12000000",
+            #default_value => "-R 'select[mem>8000] rusage[mem=8000]' -M 8000000", #novoalign needs this memory usage 8G to run
+            default_value => "-R 'select[mem>10000] rusage[mem=10000]' -M 10000000",
         },
     ],
     has_constant => [
@@ -213,7 +189,6 @@ sub _filter_variants {
             push @novoaligns,$fout_novo;
             
             my $sort_prefix = "$prefix.$lib.$i";
-            #$cmd = $novosam_path . " -g $lib -f ".$self->platform." -l $lib $fout_novo | ". $samtools_path. " view -b -S - -t /gscuser/kchen/reference_sequence/in.ref_list | ".$samtools_path." sort - $sort_prefix";
             $cmd = $novosam_path . " -g $lib -f ".$self->platform." -l $lib $fout_novo | ". $samtools_path. " view -b -S - -t ". $ref_seq_idx .' | ' . $samtools_path." sort - $sort_prefix";
             $self->_run_cmd($cmd);
             push @bams, $sort_prefix.'.bam';
@@ -346,5 +321,10 @@ sub _run_cmd {
     }
     return 1;
 }
+
+sub _create_filter_file {
+    return 1;
+}
+
 
 1;

@@ -325,10 +325,6 @@ if ($left_merge_contig){
     $merge_contig = $ct->merge($left_merge_contig, $merge_contig,undef,phd_array => [$po,$output_phd, $phddb ], output_phd=>$output_phd, statsfh =>$statsfh);
     main->info_msg("l merge done");
 }
-#my $dir = '/gscuser/adukes/svn/test_modules/Finishing/Assembly/Scripts';
-#my $ex1 = Finishing::Assembly::Ace::Exporter->new(file=>"$dir/pre.ace");
-#$ex1->export_contig(contig=>$bac_contig);
-#$ex1->close;
 
 if ($right_merge_contig){
     $merge_contig = $ct->merge($merge_contig, $right_merge_contig,undef,phd_array => [$po,$output_phd, $phddb ], output_phd=>$output_phd, statsfh =>$statsfh);

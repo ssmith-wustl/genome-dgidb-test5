@@ -16,7 +16,6 @@ use Getopt::Long;
 use Statistics::Descriptive;
 use FindBin qw($Bin);
 use lib "$FindBin::Bin";
-#use lib "/gscuser/jwallis/svn/perl_modules/test_project/jwallis";
 use ReadRemap;
 use BreakDancerLine;
 
