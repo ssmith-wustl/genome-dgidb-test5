@@ -20,20 +20,21 @@ EOS
 
 sub _combine_variants {
     my $self  = shift;
-    my $svs_a = $self->input_directory_a.'/svs.hq';
-    my $svs_b = $self->input_directory_b.'/svs.hq';
 
-    my $output_file = $self->output_directory.'/svs.hq';
-    my $input_files = join ',', $snvs_a, $snvs_b;
+    for my $file_name qw(svs.hq tigra.out) {  #hardcoded tigra.out for now might use a generic name like sv.out later
+        my @files = map{$_.'/'.$file_name}($self->input_directory_a, $self->input_directory_b);
+        my $input_files = join ',', @files;
+        my $output_file = $self->output_directory.'/'.$file_name;
 
-    my $union_command = Genome::Model::Tools::Breakdancer::MergeFiles->create(
-        input_files => $input_files,
-        output_file => $output_file,
-    );
+        my $union_command = Genome::Model::Tools::Breakdancer::MergeFiles->create(
+            input_files => $input_files,
+            output_file => $output_file,
+        );
     
-    unless ($union_command->execute) {
-        $self->error_message("Error executing union command");
-        die $self->error_message;
+        unless ($union_command->execute) {
+            $self->error_message("Error executing union command");
+            die $self->error_message;
+        }
     }
 
     # When unioning, there is no "fail" really, everything should be in the hq file
@@ -46,9 +47,12 @@ sub _validate_output {
     my $self = shift;
     my $variant_type = $self->_variant_type;
     my $out_file     = $self->output_directory.'/'.$variant_type.'.hq';
+    my $tigra_out    = $self->output_directory.'/tigra.out';
 
-    unless (-e $out_file) {
-        die $self->error_message("Fail to find valid output file: $out_file");
+    for my $file ($out_file, $tigra_out) {
+        unless (-e $out_file) {
+            die $self->error_message("Fail to find valid output file: $out_file");
+        }
     }
     return 1;
 }

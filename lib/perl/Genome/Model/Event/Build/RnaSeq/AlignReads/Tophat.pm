@@ -139,13 +139,16 @@ sub create_aligner_tool {
         my $instrument_data = $instrument_data_assignment->instrument_data;
 
         #Resolved the FASTQ format for quality param
-        my $quality_converter = $instrument_data->resolve_quality_converter;
         my $lane_fastq_format;
-        if ($quality_converter eq 'sol2phred') {
-            $lane_fastq_format = 'solexa1.3-quals';
-        } elsif ($quality_converter eq 'sol2sanger') {
-            $lane_fastq_format = 'solexa-quals';
+        unless(defined $instrument_data->bam_path && -s $instrument_data->bam_path) {
+            my $quality_converter = $instrument_data->resolve_quality_converter;
+            if ($quality_converter eq 'sol2phred') {
+                $lane_fastq_format = 'solexa1.3-quals';
+            } elsif ($quality_converter eq 'sol2sanger') {
+                $lane_fastq_format = 'solexa-quals';
+            }
         }
+
         unless ($fastq_format) {
             $fastq_format = $lane_fastq_format;
         } elsif ($fastq_format ne $lane_fastq_format) {
