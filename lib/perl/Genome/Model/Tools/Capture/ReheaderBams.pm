@@ -31,16 +31,16 @@ class Genome::Model::Tools::Capture::ReheaderBams {
 		output_bam_file	=> { is => 'Text', doc => "Bam File" , is_optional => 0},
 		old_as	=> { is => 'Text', doc => "Original AS Field to Change, ex: g1k-human-build37" , is_optional => 1},
 		old_ur	=> { is => 'Text', doc => "Original UR Field to Change, ex: ftp://ftp.ncbi.nih.gov/genbank/genomes/Eukaryotes/vertebrates_mammals/Homo_sapiens/GRCh37/special_requests/GRCh37-lite.fa.gz" , is_optional => 1},
-		old_sn	=> { is => 'Text', doc => "Original SN Field to Change" , is_optional => 1},
-		old_ln	=> { is => 'Text', doc => "Original LN Field to Change" , is_optional => 1},
-		old_m5	=> { is => 'Text', doc => "Original M5 Field to Change" , is_optional => 1},
-		old_sp	=> { is => 'Text', doc => "Original SP Field to Change" , is_optional => 1},
+#		old_sn	=> { is => 'Text', doc => "Original SN Field to Change" , is_optional => 1},
+#		old_ln	=> { is => 'Text', doc => "Original LN Field to Change" , is_optional => 1},
+#		old_m5	=> { is => 'Text', doc => "Original M5 Field to Change" , is_optional => 1},
+#		old_sp	=> { is => 'Text', doc => "Original SP Field to Change" , is_optional => 1},
 		new_as	=> { is => 'Text', doc => "Changes to New AS Field" , is_optional => 1},
 		new_ur	=> { is => 'Text', doc => "Changes to New UR Field" , is_optional => 1},
-		new_sn	=> { is => 'Text', doc => "Changes to New SN Field" , is_optional => 1},
-		new_ln	=> { is => 'Text', doc => "Changes to New LN Field" , is_optional => 1},
-		new_m5	=> { is => 'Text', doc => "Changes to New M5 Field" , is_optional => 1},
-		new_sp	=> { is => 'Text', doc => "Changes to New SP Field" , is_optional => 1},
+#		new_sn	=> { is => 'Text', doc => "Changes to New SN Field" , is_optional => 1},
+#		new_ln	=> { is => 'Text', doc => "Changes to New LN Field" , is_optional => 1},
+#		new_m5	=> { is => 'Text', doc => "Changes to New M5 Field" , is_optional => 1},
+#		new_sp	=> { is => 'Text', doc => "Changes to New SP Field" , is_optional => 1},
 
 	],
 };
@@ -53,7 +53,7 @@ sub help_brief {                            # keep this to just a few words <---
 
 sub help_synopsis {
     return <<EOS
-Generate MAF File, Get dbsnp output, and strandfilter -- for GERMLINE events
+Tool to reheader the bam files, used primarily for TCGA bams
 EXAMPLE:	gmt capture reheader-bams
 EOS
 }
@@ -75,16 +75,16 @@ sub execute {                               # replace with real execution logic.
 
 	my $old_AS = "AS:" . $self->old_as if $self->old_as;
 	my $old_UR = "UR:" . $self->old_ur if $self->old_ur;
-	my $old_SN = "SN:" . $self->old_sn if $self->old_sn;
-	my $old_LN = "LN:" . $self->old_ln if $self->old_ln;
-	my $old_M5 = "M5:" . $self->old_m5 if $self->old_m5;
-	my $old_SP = "SP:" . $self->old_sp if $self->old_sp;
+#	my $old_SN = "SN:" . $self->old_sn if $self->old_sn;
+#	my $old_LN = "LN:" . $self->old_ln if $self->old_ln;
+#	my $old_M5 = "M5:" . $self->old_m5 if $self->old_m5;
+#	my $old_SP = "SP:" . $self->old_sp if $self->old_sp;
 	my $new_AS = "AS:" . $self->new_as if $self->new_as;
 	my $new_UR = "UR:" . $self->new_ur if $self->new_ur;
-	my $new_SN = "SN:" . $self->new_sn if $self->new_sn;
-	my $new_LN = "LN:" . $self->new_ln if $self->new_ln;
-	my $new_M5 = "M5:" . $self->new_m5 if $self->new_m5;
-	my $new_SP = "SP:" . $self->new_sp if $self->new_sp;
+#	my $new_SN = "SN:" . $self->new_sn if $self->new_sn;
+#	my $new_LN = "LN:" . $self->new_ln if $self->new_ln;
+#	my $new_M5 = "M5:" . $self->new_m5 if $self->new_m5;
+#	my $new_SP = "SP:" . $self->new_sp if $self->new_sp;
 
 	if ($self->old_as || $self->new_as) {
 		unless ($self->old_as && $self->new_as) {
