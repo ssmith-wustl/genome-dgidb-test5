@@ -12,8 +12,6 @@ unless ($test_data_dir) {
     die "failed to find test data for genome-music-testdata version $Genome::Model::Tools::Music::VERSION!";
 }
 
-#my $input_dir = '/gscuser/ndees/893/music_testdata/';
-#my $expected_output_dir = '/gscuser/ndees/893/music_test_output/';
 my $input_dir = $test_data_dir . '/inputs';
 my $expected_output_dir = $test_data_dir . '/expected_outputs/';
 

@@ -150,8 +150,6 @@ sub execute {
                return 1;  
             }
       
-            #my $rmdup_file =  $self->accumulated_alignments_dir."/".$library."_merged_rmdup.bam";
-            #my $rmdup_tool = "/gscuser/dlarson/src/samtools/tags/samtools-0.1.2/samtools rmdup";
             my $rmdup_tool = Genome::Model::Tools::Sam->path_for_samtools_version($self->dedup_version);
             $rmdup_tool .= ' rmdup';
             my $rmdup_params = $self->dedup_params;
