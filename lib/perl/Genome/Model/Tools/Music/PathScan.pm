@@ -18,7 +18,7 @@ class Genome::Model::Tools::Music::PathScan {
     bmr => { is => 'Number', doc => "Background mutation rate in the targeted regions", is_optional => 1, default => 1.7E-6 },
     genes_to_ignore => { is => 'Text', doc => "Comma-delimited list of genes whose mutations should be ignored", is_optional => 1 },
   ],
-  doc => "Find the various pathways significant to the cancer given a list of somatic mutations";
+  doc => "Find the various pathways significant to the cancer given a list of somatic mutations",
 };
 
 sub help_detail {
