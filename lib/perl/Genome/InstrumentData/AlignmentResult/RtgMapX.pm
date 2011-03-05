@@ -59,7 +59,7 @@ sub _run_aligner {
     # get refseq info
     my $reference_build = $self->reference_build;
     
-    my $reference_sdf_path = $reference_build->full_consensus_path('sdf'); 
+    my $reference_sdf_path = $self->get_reference_sequence_index->full_consensus_path('sdf'); 
     
     # Check the local cache on the blade for the fasta if it exists.
     if (-e "/opt/fscache/" . $reference_sdf_path) {
@@ -248,6 +248,34 @@ sub _prepare_reference_sequences {
     unless(-e $reference_fasta_path) {
         $self->error_message("Alignment reference path $reference_fasta_path does not exist");
         die $self->error_message;
+    }
+
+    return 1;
+}
+
+sub prepare_reference_sequence_index {
+    my $class = shift;
+    
+     my $refindex = shift;
+
+    my $staging_dir = $refindex->temp_staging_directory;
+    my $staged_fasta_file = sprintf("%s/all_sequences.fa", $staging_dir);
+
+    my $actual_fasta_file = $staged_fasta_file;    
+
+    $class->status_message("Making an RTG index out of $staged_fasta_file");
+
+    my $rtg_path = Genome::Model::Tools::Rtg->path_for_rtg_format($refindex->aligner_version);
+
+    my $cmd = sprintf("%s format --protein -o %s/all_sequences.sdf %s", $rtg_path, $staging_dir, $staged_fasta_file);
+
+    my $rv = Genome::Sys->shellcmd(
+        cmd=>$cmd
+    );
+
+    unless ($rv) {
+        $class->error_message("rtg indexing failed");
+        return;
     }
 
     return 1;

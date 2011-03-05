@@ -53,7 +53,7 @@ sub _run_aligner {
     
     # get refseq info
     my $reference_build = $self->reference_build;
-    my $ref_path = $reference_build->full_consensus_path('fa');
+    my $ref_path = $self->reference_build->full_consensus_path('fa');
 
     my $clc_path = '/gsc/bin/clc_ref_assemble_long';
     my $castosam_path = '/gscmnt/233/analysis/sequence_analysis/species_independant/jmartin/CLC/server_based/castosam';
@@ -166,6 +166,13 @@ sub aligner_params_for_sam_header {
 sub fillmd_for_sam {
 #___Tells AlignmentResult.pm to run samtools fillmd
     return 0;
+}
+
+sub prepare_reference_sequence_index {
+    my $class = shift;
+
+    $class->status_message("CLC doesn't need any index made, doing nothing.");
+
 }
 
 
