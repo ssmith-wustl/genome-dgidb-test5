@@ -64,6 +64,7 @@ eval "use $alignment_result_class_name";
 
 my $reference_model = Genome::Model::ImportedReferenceSequence->get(name => 'TEST-human');
 ok($reference_model, "got reference model");
+my $temp_reference_index = Genome::Model::Build::ReferenceSequence::AlignerIndex->create(reference_build=>$reference_build, aligner_version=>$aligner_version, aligner_name=>$aligner_version, aligner_params=>undef);
 
 $DB::single = 1;
 my $reference_build = $reference_model->build_by_version('1');
