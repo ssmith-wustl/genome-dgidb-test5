@@ -5,7 +5,7 @@ use warnings;
 
 use Genome;
 
-our $VERSION = '1.01';
+our $VERSION = $Genome::Model::Tools::Music::VERSION;
 
 class Genome::Model::Tools::Music::Play {
     is => 'Command::V2',

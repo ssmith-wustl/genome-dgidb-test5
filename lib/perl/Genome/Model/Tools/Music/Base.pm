@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Genome;
 
-our $VERSION = '0.01';
+our $VERSION = $Genome::Model::Tools::Music::VERSION;
 
 class Genome::Model::Tools::Music::Base {
     is => ['Command::V2'],
