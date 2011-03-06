@@ -9,7 +9,7 @@ use Test::More;
 # the package with this data is a dependency so this should work when deployed externally
 my $test_data_dir = Genome::Sys->dbpath('genome-music-testdata',$Genome::Model::Tools::Music::VERSION);
 unless ($test_data_dir) {
-    die "failed to find test data for genome-music-testdata version $Genome::Model::Tools::Music::VERSION!";
+    plan skip_all => "failed to find test data for genome-music-testdata version $Genome::Model::Tools::Music::VERSION!";
 }
 
 my $input_dir = $test_data_dir . '/inputs';
