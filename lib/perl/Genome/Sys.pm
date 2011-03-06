@@ -69,7 +69,7 @@ sub base_temp_directory {
     unless ($template) {
         my $prefix = $self->_temp_directory_prefix();
         $prefix ||= $class;
-        my $time = UR::Time->now;
+        my $time = $self->__context__->now;
 
         $time =~ s/[\s\: ]/_/g;
         $template = "/gm-$prefix-$time-$id-XXXX";
