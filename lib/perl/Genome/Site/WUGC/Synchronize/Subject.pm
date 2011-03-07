@@ -5,8 +5,8 @@ use warnings;
 use Genome;
 use Carp 'confess';
 
-my $low = 20_000;
-my $high = 200_000;
+my $low = 50_000;
+my $high = 400_000;
 UR::Context->object_cache_size_highwater($high);
 UR::Context->object_cache_size_lowwater($low);
 
@@ -52,6 +52,9 @@ class Genome::Site::WUGC::Synchronize::Subject {
 
 sub objects_to_sync {
     return (
+        'Genome::InstrumentData::454' => 'Genome::Site::WUGC::InstrumentData::454',
+        'Genome::InstrumentData::Sanger' => 'Genome::Site::WUGC::InstrumentData::Sanger',
+        'Genome::InstrumentData::Solexa' => 'Genome::Site::WUGC::InstrumentData::Solexa',
         'Genome::Individual' => 'Genome::Site::WUGC::Individual',
         'Genome::PopulationGroup' => 'Genome::Site::WUGC::PopulationGroup',
         'Genome::Taxon' => 'Genome::Site::WUGC::Taxon',
@@ -76,6 +79,29 @@ sub genome_sample {
     for my $attribute (@attributes) {
         $extra{$attribute->name} = $attribute->value;
     }
+
+    # Unload UR::Object::View::Aspect, which for whatever reason accumulates during sync
+    UR::Object::View::Aspect->unload;
+
+    return %extra;
+}
+
+sub genome_instrumentdata_solexa { shift->genome_instrumentdata(shift) };
+sub genome_instrumentdata_454 { shift->genome_instrumentdata(shift) };
+sub genome_instrumentdata_sanger { shift->genome_instrumentdata(shift) };
+sub genome_instrumentdata {
+    my ($self, $old_object) = @_;
+    my @attributes = $old_object->attributes;
+    my %extra;
+    for my $attribute (@attributes) {
+        $extra{$attribute->name} = $attribute->value;
+    }
+
+    # Subclass name should be Genome::InstrumentData::*, not Genome::Site::WUGC::InstrumentData*
+    my $subclass_name = $old_object->subclass_name;
+    $subclass_name =~ s/Site::WUGC:://;
+    $extra{subclass_name} = $subclass_name;
+
     return %extra;
 }
 
