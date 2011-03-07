@@ -825,30 +825,6 @@ sub ReadRegions{
 		$breakdancer_hit_cen ++ if($satelliteRegion == 1 && $fin =~ /.sv/);    	
     	next if($satelliteRegion == 1);
     }
-
-
-#			my $f_centromere = "/gscuser/kchen/SNPHMM/SolexaCNV/scripts/centromere.csv";
-#			open(CENTRO,"<$f_centromere") || die "unable to find centromere coordinates file\n";
-#		    while(<CENTRO>){
-#			    chomp;
-#		        my ($bin_cen,$chr_cen,$start_cen,$end_cen,$ix_cen,$n_cen,$size_cen,$type_cen,$bridge_cen)=split;
- #			    $chr_cen=~s/chr//;
-	#		    push @{$CenStart{$chr_cen}},$start_cen;
-	#		    push @{$CenEnd{$chr_cen}},$end_cen;
-  	#		}
-	#		close(CENTRO);
-	#	}
-	#	for(my $i = 0; $i <= $#{$CenStart{$reg->{chr1}}}; $i++){
-#		print "${$CenStart{$reg->{chr1}}}[$i]\t${$CenEnd{$reg->{chr1}}}[$i]\t$reg->{start}\n";
-	#		$hit_cen = 1 if($reg->{start} >= ${$CenStart{$reg->{chr1}}}[$i] && $reg->{start} <= ${$CenEnd{$reg->{chr1}}}[$i]);
-	#	}
-	#	for(my $i = 0; $i <= $#{$CenStart{$reg->{chr2}}}; $i++){
-	#		$hit_cen = 1 if($reg->{end} >= ${$CenStart{$reg->{chr2}}}[$i] && $reg->{end} <= ${$CenEnd{$reg->{chr2}}}[$i]);			
-	#	}
-	#	$assembly_hit_cen ++ if($hit_cen == 1 && $fin =~ /assembled/);
-	#	$breakdancer_hit_cen ++ if($hit_cen == 1 && $fin =~ /.sv/);
-	#	next if($hit_cen == 1);
-	#}
 	
     if(!$opts{x}){
 	$reg->{size} = $reg->{end} - $reg->{start} + 1 if(! defined $reg->{size});

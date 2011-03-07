@@ -9,7 +9,7 @@ use above 'Genome';
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 25;
+        plan tests => 26;
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -66,6 +66,9 @@ ok($reference_model, "got reference model");
 
 my $reference_build = $reference_model->build_by_version('1');
 ok($reference_build, "got reference build");
+
+my $reference_index = Genome::Model::Build::ReferenceSequence::AlignerIndex->create(aligner_name=>$aligner_name, aligner_version=>$aligner_version, aligner_params=>undef, reference_build=>$reference_build);
+ok($reference_index, "generated reference index");
 
 # Uncomment this to create the dataset necessary for shorcutting to work
 #test_alignment(generate_shortcut_data => 1);

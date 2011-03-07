@@ -1,8 +1,7 @@
 package Genome::InstrumentData::AlignmentResult;
 
 use Genome;
-use Genome::Info::BamFlagstat;
-use Data::Dumper;
+use Genome::Info::BamFlagstat; use Data::Dumper;
 use Sys::Hostname;
 use IO::File;
 use File::Path;
@@ -19,7 +18,7 @@ our $BAM_FH;
 
 class Genome::InstrumentData::AlignmentResult {
     is_abstract => 1,
-    is=>['Genome::SoftwareResult'],
+    is=>['Genome::SoftwareResult::Stageable'],
     sub_classification_method_name => '_resolve_subclass_name',   
     has => [
         instrument_data         => {
@@ -248,11 +247,6 @@ class Genome::InstrumentData::AlignmentResult {
                                 },
     ],
     has_transient => [
-        temp_staging_directory  => {
-                                    is => 'Text',
-                                    doc => 'A directory to use for staging the alignment data before putting it on allocated disk.',
-                                    is_optional=>1,
-                                },
         temp_scratch_directory  => {
                                     is=>'Text',
                                     doc=>'Temp scratch directory',
@@ -275,6 +269,24 @@ sub required_rusage {
     # e.x.: "-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[tmp=50000:mem=12000]' -M 1610612736";
     ''
 }
+
+sub required_rusage_for_building_index {
+    # override if necessary in subclasses.
+    my $class = shift;
+    my %p = @_;
+    my $reference_build = $p{reference_build};
+
+    my $select = "select[mem>=10000 && tmp>=15]";
+    my $rusage = "rusage[mem=10000, tmp=15]";
+    my $options = "-M 10000000 -q long";
+
+    return sprintf("-R '%s %s' %s", $select, $rusage, $options);
+}
+
+sub _working_dir_prefix {
+    "alignment";
+}
+
 
 sub extra_metrics {
     # this will probably go away: override in subclasses if the aligner has custom metrics
@@ -352,7 +364,7 @@ sub create {
 
     # STEP 4: PREPARE THE STAGING DIRECTORY
     $self->status_message("Prepare working directories...");
-    $self->_prepare_working_directories;
+    $self->_prepare_working_and_staging_directories;
     $self->status_message("Staging path is " . $self->temp_staging_directory);
     $self->status_message("Working path is " . $self->temp_scratch_directory);
 
@@ -421,13 +433,13 @@ sub create {
     # STEP 12: PREPARE THE ALIGNMENT DIRECTORY ON NETWORK DISK
     $self->status_message("Preparing the output directory...");
     $self->status_message("Staging disk usage is " . $self->_staging_disk_usage . " KB");
-    my $output_dir = $self->output_dir || $self->_prepare_alignment_directory;
+    my $output_dir = $self->output_dir || $self->_prepare_output_directory;
     $self->status_message("Alignment output path is $output_dir");
 
     # STEP 13: PROMOTE THE DATA INTO ALIGNMENT DIRECTORY
     $self->status_message("Moving results to network disk...");
     my $product_path;
-    unless($product_path= $self->_promote_validated_data) {
+    unless($product_path= $self->_promote_data) {
         $self->error_message("Failed to de-stage data into alignment directory " . $self->error_message);
         die $self->error_message;
     }
@@ -1262,21 +1274,15 @@ sub _gather_params_for_get_or_create {
 }
 
    
-sub _prepare_working_directories {
+sub _prepare_working_and_staging_directories {
     my $self = shift;
 
-    return $self->temp_staging_directory if ($self->temp_staging_directory);
-
-    my $base_temp_dir = Genome::Sys->base_temp_directory();
-
+    unless ($self->_prepare_staging_directory) {
+        $self->error_message("Failed to prepare staging directory");
+        return;
+    }
     my $hostname = hostname;
     my $user = $ENV{'USER'};
-    my $basedir = sprintf("alignment-%s-%s-%s-%s", $hostname, $user, $$, $self->id);
-    my $tempdir = Genome::Sys->create_temp_directory($basedir);
-    unless($tempdir) {
-        die "failed to create a temp staging directory for completed files";
-    }
-    $self->temp_staging_directory($tempdir);
 
     my $scratch_basedir = sprintf("scratch-%s-%s-%s", $hostname, $user, $$);
     my $scratch_tempdir =  Genome::Sys->create_temp_directory($scratch_basedir);
@@ -1301,57 +1307,22 @@ sub _staging_disk_usage {
     return $usage;
 }
 
-sub _prepare_alignment_directory {
-
-    my $self = shift;
-
-    my $subdir = $self->resolve_alignment_subdirectory;
-    unless ($subdir) {
-        $self->error_message("failed to resolve subdirectory for instrument data.  cannot proceed.");
-        die $self->error_message;
-    }
-    
-    my %allocation_get_parameters = (
-        disk_group_name => 'info_alignments',
-        allocation_path => $subdir,
-    );
-
-    my %allocation_create_parameters = (
-        %allocation_get_parameters,
-        kilobytes_requested => $self->_staging_disk_usage,
-        owner_class_name => $self->class,
-        owner_id => $self->id
-    );
-    
-    my $allocation = Genome::Disk::Allocation->allocate(%allocation_create_parameters);
-    unless ($allocation) {
-        $self->error_message("Failed to get disk allocation with params:\n". Dumper(%allocation_create_parameters));
-        die($self->error_message);
-    }
-
-    my $output_dir = $allocation->absolute_path;
-    unless (-d $output_dir) {
-        $self->error_message("Allocation path $output_dir doesn't exist!");
-        die $self->error_message;
-    }
-    
-    $self->output_dir($output_dir);
-    
-    return $output_dir;
-}
-
 sub estimated_kb_usage {
     30000000;
     #die "unimplemented method: please define estimated_kb_usage in your alignment subclass.";
 }
 
-sub resolve_alignment_subdirectory {
+sub resolve_allocation_subdirectory {
     my $self = shift;
     my $instrument_data = $self->instrument_data;
     my $staged_basename = File::Basename::basename($self->temp_staging_directory);
     # TODO: the first subdir is actually specified by the disk management system.
     my $directory = join('/', 'alignment_data',$instrument_data->id,$staged_basename);
     return $directory;
+}
+
+sub resolve_allocation_disk_group_name {
+    return "info_alignments";
 }
 
 
@@ -2007,6 +1978,26 @@ sub supports_streaming_to_bam {
 
 sub accepts_bam_input {
     0;
+}
+
+sub aligner_params_required_for_index {
+    0;
+}
+
+sub get_reference_sequence_index {
+    my $self = shift;
+    my $index = Genome::Model::Build::ReferenceSequence::AlignerIndex->get(aligner_name=>$self->aligner_name, aligner_version=>$self->aligner_version, aligner_params=>$self->aligner_params, reference_build=>$self->reference_build);
+
+    if (!$index) {
+        $self->error_message(sprintf("No reference index prepared for %s with params %s and reference build %s", $self->aligner_name, $self->aligner_params, $self->reference_build->id));
+    }
+
+    return $index;
+}
+
+# this behavior was in the alignment class earlier and was set as changeable in SoftwareResult::Stageable.
+sub _needs_symlinks_followed_when_syncing {
+    1;
 }
 
 1;

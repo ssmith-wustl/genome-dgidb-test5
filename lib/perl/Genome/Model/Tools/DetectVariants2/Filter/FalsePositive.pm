@@ -88,15 +88,6 @@ class Genome::Model::Tools::DetectVariants2::Filter::FalsePositive {
             is_input => 1,
             doc => 'Print the filtering result for each site.',
         },
-        # Make workflow choose 64 bit blades
-        lsf_resource => {
-            is_param => 1,
-            default_value => 'rusage[mem=4000,tmp=1000] select[type==LINUX64 && tmp>1000] span[hosts=1]',
-        },
-        lsf_queue => {
-            is_param => 1,
-            default_value => 'long',
-        },
         samtools_version => {
             is => 'Text',
             is_optional => 1,
@@ -111,6 +102,15 @@ class Genome::Model::Tools::DetectVariants2::Filter::FalsePositive {
             doc => 'variant type that this module operates on, overload this in submodules accordingly',
         },
     ],
+    has_param => [
+         lsf_queue => {
+             default_value => 'long',
+         }, 
+         lsf_resource => {
+             default_value => "-M 8000000 -R 'select[type==LINUX64 && mem>8000] rusage[mem=8000]'",
+         },
+     ],
+
 };
 
 sub help_synopsis {
@@ -179,7 +179,8 @@ sub _filter_variants {
     my $input = Genome::Sys->open_file_for_reading($input_file);
 
     ## Build temp file for positions where readcounts are needed ##
-    my ($tfh,$temp_path) = Genome::Sys->create_temp_file;
+    my $temp_path = $self->_temp_scratch_directory."/temp_dump";
+    my $tfh = Genome::Sys->open_file_for_writing($temp_path);#Genome::Sys->create_temp_file;
 
     ## Print each line to file in order to get readcounts
     $self->status_message('Printing variants to temp file...');
