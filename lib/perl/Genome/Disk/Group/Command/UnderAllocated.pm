@@ -47,10 +47,12 @@ sub execute {
 
         for my $volume (@volumes) {
             my $allocated = $volume->allocated_kb;
+            my $percent_allocated = $volume->percent_allocated;
             my $used = $volume->used_kb;
+            my $percent_used = $volume->percent_used;
             if ($used > $allocated) {
                 push @{$under_allocated_volumes{$group}}, 
-                    "Volume " . $volume->mount_path . " using $used kb but only $allocated kb allocated";
+                    "Volume " . $volume->mount_path . " using $used kb ($percent_used \%) but only $allocated kb ($percent_allocated \%) allocated";
                 $under_allocated = 1;
             }
         }

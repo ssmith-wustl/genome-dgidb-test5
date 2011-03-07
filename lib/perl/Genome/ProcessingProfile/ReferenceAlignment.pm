@@ -474,6 +474,7 @@ $DB::single=1;
     ## if it is 1 and no job events are made at start time
     ## a warning will be printed to the user
     my @stages = (
+        reference_preparation => 1,
         alignment             => 1,
         deduplication         => 1,
         reference_coverage    => 1,
@@ -490,6 +491,19 @@ $DB::single=1;
     }
     
     return @filtered_stages;
+}
+
+sub reference_preparation_job_classes {
+    my $self = shift;
+
+    my @sub_command_classes;
+
+    my $aligner_class = 'Genome::InstrumentData::AlignmentResult::' . Genome::InstrumentData::AlignmentResult->_resolve_subclass_name_for_aligner_name($self->read_aligner_name);
+
+    if ($aligner_class->can('prepare_reference_sequence_index')) {
+        push @sub_command_classes, 'Genome::Model::Event::Build::ReferenceAlignment::PrepareReferenceSequenceIndex'
+    }
+    return @sub_command_classes;
 }
 
 sub alignment_job_classes {
@@ -565,6 +579,10 @@ sub generate_reports_job_classes {
     else {
         return;
     }
+}
+
+sub reference_preparation_objects {
+    "all_sequences";
 }
 
 sub alignment_objects {

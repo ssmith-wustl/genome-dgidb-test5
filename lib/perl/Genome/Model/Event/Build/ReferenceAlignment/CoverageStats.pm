@@ -92,7 +92,7 @@ sub _reference_sequence_matches {
         return;
     }
 
-    unless ($roi_reference eq $reference) {
+    unless ($roi_reference->is_compatible_with($reference)) {
         $self->error_message('reference sequence: ' . $reference->name . ' does not match the reference on the region of interest: ' . $roi_reference->name);
         return;
     }

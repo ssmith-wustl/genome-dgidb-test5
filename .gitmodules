@@ -39,13 +39,13 @@
 	url = ssh://git//srv/git/bam-readcount.git
 [submodule "ur"]
 	path = ur
-	url = git@github.com:genome/UR.git
+	url = https://github.com/genome/UR.git
 [submodule "workflow"]
 	path = workflow
 	url = ssh://git/srv/git/workflow.git
 [submodule "jenkins"]
 	path = jenkins
-	url = git@github.com:genome/wugc-hudson.git
+	url = https://github.com/genome/wugc-hudson.git
 [submodule "getopt-complete"]
 	path = getopt-complete
-	url = git@github.com:genome/Getopt--Complete-for-Perl.git
+	url = https://github.com/genome/Getopt--Complete-for-Perl.git

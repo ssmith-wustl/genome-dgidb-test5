@@ -44,14 +44,17 @@ sub execute {
 
     $self->status_message("Concatenating " . scalar @chunks_with_output . " ace file chunks into $ace_file");
 
-    my $rv = Genome::Sys->cat(
-        input_files => @ace_file_chunks,
-        output_file => $ace_file,
-    );
-    confess "Could not concatenate ace files!" unless defined $rv and $rv;
+    my $rv = eval { 
+        Genome::Sys->cat(
+            input_files => \@chunks_with_output,
+            output_file => $ace_file,
+        );
+    };
+    confess "Could not concatenate ace files: $@" unless defined $rv and $rv;
 
     $self->status_message("Done merging, merged file at $ace_file");
     return 1;
 }
+
 1;
 

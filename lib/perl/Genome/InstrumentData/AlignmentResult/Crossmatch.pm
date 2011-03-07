@@ -48,7 +48,7 @@ sub _run_aligner {
     my $staging_sam_file = "$tmp_dir/all_sequences.sam";
     
     # get refseq info
-    my $ref_file = $self->reference_build->full_consensus_path('fa');
+    my $ref_file = $self->get_reference_sequence_index->full_consensus_path('fa');
 
     my $crossmatch_path = Genome::Model::Tools::Crossmatch->path_for_crossmatch_version($self->aligner_version);
     # TODO (iferguso) figure out how to get nonmatching to work correctly. it currently seems to cause crashes.
@@ -415,4 +415,11 @@ sub _sam_string {
     }
 
     return qq!$query\t$flag\t$reference\t$hit_left_end\t$score\t$cigar_string\t*\t0\t0\t$sequence\t$qual_string\n!;
+}
+
+sub prepare_reference_sequence_index {
+    my $class = shift;
+
+    $class->status_message("Crossmatch doesn't need any index made, doing nothing.");
+
 }

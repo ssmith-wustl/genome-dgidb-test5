@@ -15,7 +15,7 @@ if ($archos !~ /64/) {
     plan tests => 6;
 }
 
-my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Breakdancer/';
+my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Breakdancer';
 my $test_working_dir = File::Temp::tempdir('DetectVariants2-Breakdancer-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
 
 my $normal_bam = $test_dir . '/normal.bam';
@@ -47,7 +47,7 @@ my $command = Genome::Model::Tools::DetectVariants2::Breakdancer->create(
     config_file => $cfg_file,
 );
 ok($command, 'Created `gmt detect-variants2 breakdancer` command');
-ok($command->execute, 'Executed `gmt detect-variants2 samtools` command');
+ok($command->execute, 'Executed `gmt detect-variants2 breakdancer` command');
 
 is(compare($out_file, $test_out), 0, "svs.hq output as expected");
 

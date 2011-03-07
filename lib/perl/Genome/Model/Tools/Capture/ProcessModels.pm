@@ -34,6 +34,7 @@ class Genome::Model::Tools::Capture::ProcessModels {
 		skip_if_output_present => { is => 'Text', doc => "Do not attempt to run pipeline if output present" , is_optional => 1},
 		verbose => { is => 'Text', doc => "Display Lots of Output" , is_optional => 1, default => 1},
 		use_stable => { is => 'Text', doc => "1 if you want to submit genome-stable version, 0 if you want to use your present dir version" , is_optional => 1, default => 0},
+		skip_roi => { is => 'Text', doc => "1 if you want to skip roi filtering (exome), 0 if you want to use the filter" , is_optional => 1, default => 0},
 	],
 };
 
@@ -69,6 +70,7 @@ sub execute {                               # replace with real execution logic.
 	my $model_list = $self->model_list;
 	my $verbose = $self->verbose;
 	my $stable = $self->use_stable;
+	my $skip_roi = $self->skip_roi;
 	my $output_dir = "./";
 	$output_dir = $self->output_dir if($self->output_dir);
 	my $regions_file = $self->regions_file if($self->regions_file);
@@ -181,10 +183,10 @@ sub execute {                               # replace with real execution logic.
 				}
 				my $cmd;
 				if ($stable) {
-					$cmd = "perl -I /gscuser/wschierd/genome-stable/ `which gmt` germline capture-bams --build-id $build_id --germline-bam-file $bam_file --filtered-indelpe-snps $snp_file --indels-all-sequences-filtered $indel_file --data-directory $sample_output_dir --regions-file $regions_file";
+					$cmd = "perl -I /gscuser/wschierd/genome-stable/ `which gmt` germline capture-bams --build-id $build_id --germline-bam-file $bam_file --filtered-indelpe-snps $snp_file --indels-all-sequences-filtered $indel_file --data-directory $sample_output_dir --regions-file $regions_file --skip-roi $skip_roi";
 				}
 				else {
-					$cmd = "gmt germline capture-bams --build-id $build_id --germline-bam-file $bam_file --filtered-indelpe-snps $snp_file --indels-all-sequences-filtered $indel_file --data-directory $sample_output_dir --regions-file $regions_file";
+					$cmd = "gmt germline capture-bams --build-id $build_id --germline-bam-file $bam_file --filtered-indelpe-snps $snp_file --indels-all-sequences-filtered $indel_file --data-directory $sample_output_dir --regions-file $regions_file --skip-roi $skip_roi";
 				}
 				if($verbose) {
 					print "$cmd\n";

@@ -2,13 +2,14 @@ package Genome::Model::Tools::Music::PathScan;
 
 use warnings;
 use strict;
+use Genome;
 use Genome::Model::Tools::Music::PathScan::PopulationPathScan;
 use IO::File;
 
-our $VERSION = '1.01';
+our $VERSION = $Genome::Model::Tools::Music::VERSION;
 
 class Genome::Model::Tools::Music::PathScan {
-  is => 'Command',
+  is => 'Command::V2',
   has_input => [
     gene_covg_dir => { is => 'Text', doc => "Directory containing per-gene coverage files (Created using music bmr calc-covg)" },
     bam_list => { is => 'Text', doc => "Tab delimited list of BAM files [sample_name normal_bam tumor_bam] (See Description)" },
@@ -18,13 +19,12 @@ class Genome::Model::Tools::Music::PathScan {
     bmr => { is => 'Number', doc => "Background mutation rate in the targeted regions", is_optional => 1, default => 1.7E-6 },
     genes_to_ignore => { is => 'Text', doc => "Comma-delimited list of genes whose mutations should be ignored", is_optional => 1 },
   ],
+  doc => "find the various pathways significant to the cancer given a list of somatic mutations",
 };
 
-sub help_brief {
-  "Find the various pathways significant to the cancer given a list of somatic mutations";
-}
-
 sub help_detail {
+  # TODO: merge those arugments up if they go in the --help
+  # for things which go ONLY in the manual page, put it into doc_manual.
   return <<HELP
 Only the following four columns in the MAF are used. All other columns may as well be blank.
 Col 1: Hugo_Symbol (Need not be HUGO, but must match gene names used in the pathway file)
