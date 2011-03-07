@@ -5,9 +5,6 @@ use warnings;
 
 use Genome;
 
-use Data::Dumper;
-require Genome::Sys;
-
 class Genome::InstrumentData {
     is => 'Genome::Notable',
     is_abstract => 1,
