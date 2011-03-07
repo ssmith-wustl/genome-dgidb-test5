@@ -14,17 +14,17 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
     is => ['Genome::Model::Tools::DetectVariants2::Base'],
     doc => 'This tool is used to handle delegating variant detection to one or more specified tools and filtering and/or combining the results',
     has_optional => [
-        snv_hq_output_file => {
+        _snv_hq_output_file => {
             is => 'String',
             is_output => 1,
             doc => 'High Quality SNV output file',
         },
-        indel_hq_output_file => {
+        _indel_hq_output_file => {
             is => 'String',
             is_output => 1,
             doc => 'High Quality indel output file',
         },
-        sv_hq_output_file => {
+        _sv_hq_output_file => {
             is => 'String',
             is_output => 1,
             doc => 'High Quality SV output file',
@@ -761,7 +761,7 @@ sub _promote_staged_data {
     # Symlink the most recent version bed files of the final hq calls into the base of the output directory
     for my $variant_type (@{$self->variant_types}){
         next if $variant_type eq 'sv';  #off for now because sv does not have bed output yet
-        my $output_accessor = $variant_type."_hq_output_file";
+        my $output_accessor = "_".$variant_type."_hq_output_file";
         if(defined($self->$output_accessor)){
             my $file = $self->$output_accessor;
             my @subdirs = split( "/", $file );
@@ -781,7 +781,7 @@ sub set_output_files {
     my $result = shift;
 
     for my $variant_type (@{$self->variant_types}){
-        my $file_accessor = $variant_type."_hq_output_file";
+        my $file_accessor = "_".$variant_type."_hq_output_file";
         my $strategy = $variant_type."_detection_strategy";
         my $out_dir = $variant_type."_output_directory";
         if(defined( $self->$strategy)){
