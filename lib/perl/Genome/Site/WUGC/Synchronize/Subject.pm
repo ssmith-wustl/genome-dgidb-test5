@@ -216,7 +216,7 @@ sub copy_object {
         %extra_params = $self->$method_name($original_object);
     }
 
-    my $object = $new_object_class->create(%attributes, %extra_params);
+    my $object = $new_object_class->create(%attributes, id => $original_object->id, %extra_params);
     confess "Could not create new object of type $new_object_class based on object of type " .
         $original_object->class . " with id " . $original_object->id unless $object;
 
