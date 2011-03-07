@@ -1,4 +1,3 @@
-
 # review jlolofie:
 # 2. resolve_full_path - remove return that comments say is not needed?
 # 3. add comments to resolve_full_path- why it is trying to find a collection of paths and die if multiple- do the other
@@ -168,10 +167,10 @@ class Genome::InstrumentData::Solexa {
             where => [ attribute_label => 'archive_path' ],
             is_mutable => 1,
         },
-        gerald_bam_path => {
+        bam_path => {
             via => 'attributes',
             to => 'attribute_value',
-            where => [ attribute_label => 'gerald_bam_path' ],
+            where => [ attribute_label => 'bam_path' ],
             is_mutable => 1,
         },
         adaptor_path => {
@@ -180,28 +179,28 @@ class Genome::InstrumentData::Solexa {
             where => [ attribute_label => 'adaptor_path' ],
             is_mutable => 1,
         },
-        rev_filt_clusters => {
+        rev_clusters => {
             via => 'attributes',
             to => 'attribute_value',
-            where => [ attribute_label => 'rev_filt_clusters' ],
+            where => [ attribute_label => 'rev_clusters' ],
             is_mutable => 1,
         },
-        fwd_filt_clusters => {
+        fwd_clusters => {
             via => 'attributes',
             to => 'attribute_value',
-            where => [ attribute_label => 'fwd_filt_clusters' ],
+            where => [ attribute_label => 'fwd_clusters' ],
             is_mutable => 1,
         },
-        filt_clusters => {
+        clusters => {
             via => 'attributes',
             to => 'attribute_value',
-            where => [ attribute_label => 'filt_clusters' ],
+            where => [ attribute_label => 'clusters' ],
             is_mutable => 1,
         },
-        analysis_software_revision => {
+        analysis_software_version => {
             via => 'attributes',
             to => 'attribute_value',
-            where => [ attribute_label => 'analysis_software_revision' ],
+            where => [ attribute_label => 'analysis_software_version' ],
             is_mutable => 1,
         },
         index_sequence => {
@@ -217,10 +216,6 @@ class Genome::InstrumentData::Solexa {
         _sls_fwd_read_length => { calculate => q| return $self->fwd_read_length + 1| },
         _sls_rev_read_length => { calculate => q| return $self->rev_read_length + 1| },
         cycles => { calculate => q| return $self->read_length + 1| }, #TODO point to an actual "cycles" column
-        bam_path => { calculate_from => 'gerald_bam_path', calculate => q{ return $gerald_bam_path }, },
-        clusters => { calculate_from => 'filt_clusters', calculate => q{ return $filt_clusters }, },
-        fwd_clusters => { calculate_from => 'fwd_filt_clusters', calculate => q{ return $fwd_filt_clusters }, },
-        rev_clusters => { calculate_from => 'rev_filt_clusters', calculate => q{ return $fwd_filt_clusters }, },
         short_name => {
             is => 'Text',
             calculate_from => ['run_name'],

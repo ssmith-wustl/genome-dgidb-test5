@@ -38,12 +38,6 @@ class Genome::InstrumentData::454 {
             where => [ attribute_label => 'key_pass_wells' ],
             is_mutable => 1,
         },
-        paired_end => {
-            via => 'attributes',
-            to => 'attribute_value',
-            where => [ attribute_label => 'paired_end' ],
-            is_mutable => 1,
-        },
         predicted_recovery_beads => {
             via => 'attributes',
             to => 'attribute_value',
@@ -66,12 +60,6 @@ class Genome::InstrumentData::454 {
             via => 'attributes',
             to => 'attribute_value',
             where => [ attribute_label => 'research_project' ],
-            is_mutable => 1,
-        },
-        run_name => {
-            via => 'attributes',
-            to => 'attribute_value',
-            where => [ attribute_label => 'run_name' ],
             is_mutable => 1,
         },
         sample_set => {
@@ -104,18 +92,6 @@ class Genome::InstrumentData::454 {
             where => [ attribute_label => 'total_raw_wells' ],
             is_mutable => 1,
         },
-        num_bases => {
-            via => 'attributes',
-            to => 'attribute_value',
-            where => [ attribute_label => 'num_bases' ],
-            is_mutable => 1,
-        },
-        num_reads => {
-            via => 'attributes',
-            to => 'attribute_value',
-            where => [ attribute_label => 'num_reads' ],
-            is_mutable => 1,
-        },
         index_sequence => {
             via => 'attributes',
             to => 'attribute_value',
@@ -138,7 +114,6 @@ class Genome::InstrumentData::454 {
             calculate_from => ['paired_end'],
             calculate => q{ return $paired_end; },
         },
-
         # TODO Need to refactor these objects away
         run_region_454 => {
             is => 'GSC::RunRegion454',
