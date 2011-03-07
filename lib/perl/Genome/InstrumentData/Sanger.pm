@@ -13,7 +13,7 @@ class Genome::InstrumentData::Sanger {
         research_project => {
             via => 'attributes',
             to => 'attribute_value',
-            where => [ attribute_label => 'research_property' ],
+            where => [ attribute_label => 'research_project' ],
             is_mutable => 1,
             default_value => 'unknown',
         },
