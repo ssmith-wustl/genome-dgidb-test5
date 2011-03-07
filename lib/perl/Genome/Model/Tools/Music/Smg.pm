@@ -2,22 +2,20 @@ package Genome::Model::Tools::Music::Smg;
 
 use warnings;
 use strict;
+use Genome;
 use Carp;
 use POSIX qw( WIFEXITED );
 
-our $VERSION = '1.01';
+our $VERSION = $Genome::Model::Tools::Music::VERSION;
 
 class Genome::Model::Tools::Music::Smg {
-  is => 'Command',
+  is => 'Command::V2',
   has_input => [
     gene_mr_file => { is => 'Text', doc => "File with per-gene mutation rates (Created using music bmr calc-bmr)" },
     output_file => { is => 'Text', doc => "Output file that will list significantly mutated genes and their p-values" },
   ],
+  doc => "identifies significantly mutated genes, given their mutation rates (MR) and the background MR"
 };
-
-sub help_brief {
-  "Identifies significantly mutated genes, given their mutation rates (MR) and the background MR";
-}
 
 sub help_detail {
   return <<HELP
@@ -27,8 +25,7 @@ rates for each of those categories.
 HELP
 }
 
-sub execute
-{
+sub execute {
   my $self = shift;
   $DB::single = 1;
   my $gene_mr_file = $self->gene_mr_file;

@@ -1,3 +1,1 @@
 gcc -D_FILE_OFFSET_BITS=64 -D__USE_FILE_OFFSET64 -o test main.c ovc_test.c bfa.c dedup.c ov.c stack.c maqmap.c snplist.c `pkg-config glib-2.0 --cflags --libs` -I/gscuser/jschindl/svn/gsc/zlib-1.2.3 -L/gscuser/jschindl/svn/gsc/zlib-1.2.3 -lz
-#gcc -g -D_FILE_OFFSET_BITS=64 -D__USE_FILE_OFFSET64 -o test main.c ovc_test.c bfa.c dedup.c ov.c maqmap.c snplist.c `pkg-config glib-2.0 --cflags --libs` -I/gscuser/jschindl/svn/gsc/zlib-1.2.3 -L/gscuser/jschindl/svn/gsc/zlib-1.2.3 -lz
-#./test /gscmnt/sata182/info/medseq/aml1/no_duplicate_starts_26bp_sorted_new/test.map /gscmnt/sata182/info/medseq/aml1/no_duplicate_starts_26bp_sorted_new/testsort.csv
