@@ -1,14 +1,14 @@
-package Genome::InstrumentData::Attribute;
+package Genome::InstrumentDataAttribute;
 
 use strict;
 use warnings;
 use Genome;
 
-class Genome::InstrumentData::Attribute {
+class Genome::InstrumentDataAttribute {
     table_name => 'INSTRUMENT_DATA_ATTRIBUTE',
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
-    doc => 'Represents a particular attribute of an instrument data object'
+    doc => 'Represents a particular attribute of an instrument data object',
     id_by => [
         instrument_data_id => {
             is => 'Text',
