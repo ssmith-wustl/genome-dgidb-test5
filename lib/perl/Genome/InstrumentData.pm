@@ -50,7 +50,10 @@ class Genome::InstrumentData {
             is => 'Genome::InstrumentDataAttribute',
             reverse_as => 'instrument_data',
         },
-        events => { is => 'Genome::Model::Event', reverse_id_by => "instrument_data" },
+        events => { 
+            is => 'Genome::Model::Event', 
+            reverse_id_by => "instrument_data"
+        },
         allocations => { 
             is => 'Genome::Disk::Allocation',
             calculate_from => ['subclass_name', 'id'],
