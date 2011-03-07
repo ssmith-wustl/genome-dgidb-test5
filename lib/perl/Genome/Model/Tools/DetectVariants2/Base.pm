@@ -69,10 +69,6 @@ sub execute {
     
     my $self = shift;
 
-    my $fh = IO::File->new(">>/gscuser/adukes/notes/at_inc");
-    $fh->print("DISPATCHER:\n\t".join("\n\t", @INC)."\n");
-    $self->error_message("DISPATCHER:\n\t".join("\n\t", @INC));
-
     unless($self->_verify_inputs) {
         die $self->error_message('Failed to verify inputs.');
     }
