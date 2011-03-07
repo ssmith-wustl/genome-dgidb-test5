@@ -54,6 +54,11 @@ EOS
 
 sub _detect_variants {
     my $self = shift;
+    
+    my $fh = IO::File->new(">>/gscuser/adukes/notes/at_inc");
+    $fh->print("SAMTOOLS:\n\t".join("\n\t", @INC)."\n");
+    $self->error_message("SAMTOOLS:\n\t".join("\n\t", @INC));
+
     my $snv_params = $self->snv_params || "";
     my $indel_params = $self->indel_params || "";
     my $result;
