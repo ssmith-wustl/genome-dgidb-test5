@@ -45,9 +45,8 @@ sub execute {
 
     my $individual_name = 'METAHIT-'.$self->name;
     my $individual = $self->_get_and_update_or_create_individual(
-        name => $individual_name,
         upn => $individual_name,
-        nomenclature => 'unknown',
+        nomenclature => 'METAHIT',
         gender => $self->gender,
         description => 'METAHit individual: unknown source',
     );

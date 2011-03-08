@@ -643,7 +643,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     my $model_name = $subject->name . '.prod';
 
     if ($processing_profile->isa('Genome::ProcessingProfile::GenotypeMicroarray') ) {
-        $model_name .= '-microarray';
+        $model_name .= '-microarray' . '-' . $reference_sequence_build->version;
     }elsif($processing_profile->isa('Genome::ProcessingProfile::DeNovoAssembly')){
         $model_name .= '-assembly';
     }else{
