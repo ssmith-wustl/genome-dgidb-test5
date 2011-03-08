@@ -441,29 +441,27 @@ sub gold_snp_build {
         my $subject = $self->subject;
         $subject_name = $self->sample_name;
     }
+
     my @genotype_models = Genome::Model::GenotypeMicroarray->get(
         subject_id => $self->subject_id,
         reference_sequence_build_id => $self->reference_sequence_build_id
-        );
-
-    my $gold_model = pop(@genotype_models);
-    if(!defined($gold_model))
-    {
-        $self->error_message("no genotype microarray model defined for ".$subject_name);
+    );
+    unless (@genotype_models) {
+        $self->error_message("No genotype microarray model defined for $subject_name");
         return;
     }
-    my @builds = $gold_model->builds;
-    if(@builds > 1)
-    {
-        $self->error_message("WTF!?!? multiple genotype files for ".$subject_name);
-    } 
 
-    if(scalar(@builds) == 0)
-    {
-        $self->error_message("no build for model ".$subject_name);
+    my $build;
+    for my $gold_model (reverse @genotype_models) {
+        $build = $gold_model->last_succeeded_build;
+        last if $build;
+    }
+
+    unless ($build) {
+        $self->error_message("Found no successful genotype microarray build for $subject_name");
         return;
     }
-    my $build = shift @builds;
+
     return $build;
 }
 
@@ -472,15 +470,12 @@ sub gold_snp_path {
     my $self = shift;
     my $build = $self->gold_snp_build;
     return unless $build;
-
     return $build->formatted_genotype_file_path;
 }
-
 
 sub build_subclass_name {
     return 'reference alignment';
 }
-
 
 sub inputs_necessary_for_copy {
     my $self = shift;
