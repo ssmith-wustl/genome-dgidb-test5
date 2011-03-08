@@ -77,6 +77,11 @@ class Genome::Disk::Allocation {
             is => 'DateTime',
             doc => 'The last time at which the allocation was reallocated',
         },
+        owner_exists => {
+            is => 'Boolean',
+            calculate_from => 'owner',
+            calculate => q| return (defined $owner ? 1 : 0); |,
+        }
     ],    
     table_name => 'GENOME_DISK_ALLOCATION',
     data_source => 'Genome::DataSource::GMSchema',
