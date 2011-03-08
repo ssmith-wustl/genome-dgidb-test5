@@ -28,8 +28,7 @@ my @expected_files = map{$test_input_dir . $_}@file_names;
 my $tmp_dir = File::Temp::tempdir(
     'Genome-Model-Tools-DetectVariants2-Filter-TigraValidation-XXXXX', 
     DIR     => '/gsc/var/cache/testsuite/running_testsuites', 
-    CLEANUP => 0,
-    UNLINK => 0,
+    CLEANUP => 1,
 );
 
 ok(-d $tmp_dir, "temp output directory made at $tmp_dir");
