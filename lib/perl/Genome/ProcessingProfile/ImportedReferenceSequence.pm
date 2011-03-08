@@ -88,27 +88,6 @@ sub _execute_build {
             return;
         }
     }
-    #make symlinks so existence checks pass later on
-    unless(Genome::Sys->create_symlink("$build_directory/all_sequences.fa","$build_directory/all_sequences.bowtie")) {
-        $self->error_message("Unable to symlink all_sequences.bowtie to all_sequences.fa");
-        return;
-    }
-
-    unless(Genome::Sys->create_symlink("$build_directory/all_sequences.fa","$build_directory/all_sequences.bowtie.fa")) {
-        $self->error_message("Unable to symlink all_sequences.bowtie.fa to all_sequences.fa");
-        return;
-    }
-
-    #link in the samtools indexes
-    unless(Genome::Sys->create_symlink("$build_directory/all_sequences.fa.fai","$build_directory/all_sequences.bowtie.fai")) {
-        $self->error_message("Unable to symlink all_sequences.bowtie.fai to all_sequences.fa.fai");
-        return;
-    }
-
-    unless(Genome::Sys->create_symlink("$build_directory/all_sequences.fa.fai","$build_directory/all_sequences.bowtie.fa.fai")) {
-        $self->error_message("Unable to symlink all_sequences.bowtie.fa.fai to all_sequences.fa.fai");
-        return;
-    }
     
     #create manifest file
     unless ($self->create_manifest_file($build)){
