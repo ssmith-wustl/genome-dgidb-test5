@@ -48,9 +48,8 @@ sub basic_import {
     Carp::confess('Cannot get human taxon') if not $taxon;
 
     my $individual = $self->_get_and_update_or_create_individual(
-        name => 'dbGaP-'.$self->sra_sample_id,
         upn => 'dbGaP-'.$self->sra_sample_id,
-        nomenclature => 'unknown',
+        nomenclature => 'dbGaP',
         description => 'dbGaP individual: unknown, used SRS sample id',
     );
     return if not $individual;
@@ -89,8 +88,8 @@ sub xml_import {
         return;
     }
     my $individual = $self->_get_and_update_or_create_individual(
-        name => 'dbGaP-'.$sample_info->{gap_subject_id},
         upn => 'dbGaP-'.$sample_info->{gap_subject_id},
+        nomenclature => 'dbGaP',
         gender => $sample_info->{sex},
         description => 'dbGaP individual: '.$sample_info->{gap_subject_id},
     );

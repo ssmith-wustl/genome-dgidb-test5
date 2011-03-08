@@ -442,7 +442,7 @@ sub gold_snp_build {
         $subject_name = $self->sample_name;
     }
     my @genotype_models = Genome::Model::GenotypeMicroarray->get(
-        subject_name => $subject_name,
+        subject_id => $self->subject_id,
         reference_sequence_build_id => $self->reference_sequence_build_id
         );
 

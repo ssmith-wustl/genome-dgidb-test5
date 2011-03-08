@@ -30,16 +30,6 @@ sub _execute_build {
         return;
     }
 
-    my $four_gigabytes = 4_294_967_296;
-    if($fasta_size >= $four_gigabytes) {
-        my $error = "Reference sequence fasta file \"". $build->fasta_file . "\" is larger than 4GiB.  In order to accommodate " .
-                    "BWA, reference sequence fasta files > 4GiB are not supported.  Such sequences must be broken up and each chunk must " .
-                    "have its own build and model(s).  Support for associating multiple fastas with a single reference model is " .
-                    "desired but will require modifying the alignment code.";
-        $self->error_message($error);
-        return;
-    }
-
     my $build_directory = $build->data_directory;
     my $output_directory = File::Temp->newdir(
         "tmp_XXXXX",
@@ -63,58 +53,6 @@ sub _execute_build {
 
     unless($rv) {
         $self->error_message('Making bases files failed.');
-        return;
-    }
-
-    $self->status_message("Doing bwa indexing.");
-    my $bwa_index_algorithm = ($fasta_size < 11_000_000) ? "is" : "bwtsw";
-
-    my $bwa_path = Genome::Model::Tools::Bwa->path_for_bwa_version('0.5.8a');
-
-    my $bwa_cmd = sprintf('%s index -a %s %s', $bwa_path, $bwa_index_algorithm, $fasta_file_name);
-    $rv = Genome::Sys->shellcmd(
-        cmd => $bwa_cmd,
-        input_files => [$fasta_file_name],
-    );
-
-    unless($rv) {
-        #Really, shellcmd dies in most failure circumstances so this code is not expected to run
-        $self->error_message('bwa indexing failed');
-        return;
-    }
-
-    $self->status_message("Doing bowtie indexing.");
-    my $bowtie_file_stem = File::Spec->catfile($output_directory, 'all_sequences.bowtie');
-
-    my $bowtie_path = Genome::Model::Tools::Bowtie->path_for_bowtie_version(Genome::Model::Tools::Bowtie->default_version); 
-
-    my $bowtie_cmd = sprintf('%s-build %s %s', $bowtie_path, $fasta_file_name, $bowtie_file_stem);
-    $rv = Genome::Sys->shellcmd(
-        cmd => $bowtie_cmd,
-        input_files => [$fasta_file_name],
-        output_files => ["$bowtie_file_stem.1.ebwt","$bowtie_file_stem.2.ebwt","$bowtie_file_stem.3.ebwt","$bowtie_file_stem.4.ebwt","$bowtie_file_stem.rev.1.ebwt","$bowtie_file_stem.rev.2.ebwt"],    #hardcoding expected names
-    );
-
-    unless($rv) {
-        $self->error_message('bowtie-build failed.');
-        return;
-    }
-
-
-    $self->status_message("Doing maq fasta2bfa.");
-    my $bfa_file_name = File::Spec->catfile($output_directory, 'all_sequences.bfa');
-
-    my $maq_path = Genome::Model::Tools::Maq->path_for_maq_version('0.7.1'); #It's lame to hardcode this--but no new versions expected
-
-    my $maq_cmd = sprintf('%s fasta2bfa %s %s', $maq_path, $fasta_file_name, $bfa_file_name);
-    $rv = Genome::Sys->shellcmd(
-        cmd => $maq_cmd,
-        input_files => [$fasta_file_name],
-        output_files => [$bfa_file_name],
-    );
-
-    unless($rv) {
-        $self->error_message('maq fasta2bfa failed.');
         return;
     }
 
@@ -149,27 +87,6 @@ sub _execute_build {
             $self->error_message("Reallocation failed.");
             return;
         }
-    }
-    #make symlinks so existence checks pass later on
-    unless(Genome::Sys->create_symlink("$build_directory/all_sequences.fa","$build_directory/all_sequences.bowtie")) {
-        $self->error_message("Unable to symlink all_sequences.bowtie to all_sequences.fa");
-        return;
-    }
-
-    unless(Genome::Sys->create_symlink("$build_directory/all_sequences.fa","$build_directory/all_sequences.bowtie.fa")) {
-        $self->error_message("Unable to symlink all_sequences.bowtie.fa to all_sequences.fa");
-        return;
-    }
-
-    #link in the samtools indexes
-    unless(Genome::Sys->create_symlink("$build_directory/all_sequences.fa.fai","$build_directory/all_sequences.bowtie.fai")) {
-        $self->error_message("Unable to symlink all_sequences.bowtie.fai to all_sequences.fa.fai");
-        return;
-    }
-
-    unless(Genome::Sys->create_symlink("$build_directory/all_sequences.fa.fai","$build_directory/all_sequences.bowtie.fa.fai")) {
-        $self->error_message("Unable to symlink all_sequences.bowtie.fa.fai to all_sequences.fa.fai");
-        return;
     }
     
     #create manifest file
