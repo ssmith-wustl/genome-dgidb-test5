@@ -140,11 +140,12 @@ sub _check_file_counts {
     my $detector_style_file = $self->output_directory."/".$self->_variant_type.".hq";
     my $total_input = $self->line_count($input_file);
     # Add the offset to the input (some filters output more or less lines than they take as input)
-    $total_input += $self->_validate_output_offset;
+    my $offset = $self->_validate_output_offset;
+    $total_input += $offset;
 
     my $total_output = $self->line_count($hq_output_file) + $self->line_count($lq_output_file);
     unless(($total_input - $total_output) == 0){
-        die $self->error_message("Total lines of bed-formatted output did not match total input lines. Input lines: $total_input \t output lines: $total_output");
+        die $self->error_message("Total lines of bed-formatted output did not match total input lines. Input lines (including an offset of $offset): $total_input \t output lines: $total_output");
     }
     #my $detector_style_output = $self->line_count($detector_style_file) + $self->line_count($lq_output_file);
     #unless(($total_input - $detector_style_output) == 0){
