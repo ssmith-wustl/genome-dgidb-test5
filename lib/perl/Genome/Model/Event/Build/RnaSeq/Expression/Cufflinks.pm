@@ -23,27 +23,23 @@ sub execute {
     unless (-d $expression_directory) {
         Genome::Sys->create_directory($expression_directory);
     }
-    my $align_reads = Genome::Model::Event::Build::RnaSeq::AlignReads->get(
-        model_id => $self->model_id,
-        build_id => $self->build_id,
-    );
-    my $aligner = $align_reads->create_aligner_tool;
+    my $alignment_result = $self->build->alignment_result;
     my $sam_file;
-    if (version->parse($aligner->use_version) >= version->parse('1.1.0')) {
+    if (version->parse($alignment_result->aligner_version) >= version->parse('1.1.0')) {
         if (version->parse($self->model->expression_version) >= version->parse('0.9.0')) {
-            $sam_file = $aligner->bam_file;
+            $sam_file = $alignment_result->bam_file;
         } else {
             $sam_file = Genome::Sys->create_temp_file_path($self->build->id .'.sam');
             unless (Genome::Model::Tools::Sam::BamToSam->execute(
-                bam_file => $aligner->bam_file,
+                bam_file => $alignment_result->bam_file,
                 sam_file => $sam_file,
             )) {
-                $self->error_message('Failed to convert BAM '. $aligner->bam_file .' to tmp SAM file '. $sam_file);
+                $self->error_message('Failed to convert BAM '. $alignment_result->bam_file .' to tmp SAM file '. $sam_file);
                 die($self->error_message);
             }
         }
     } else {
-        $sam_file = $aligner->sam_file;
+        $sam_file = $alignment_result->sam_file;
     }
     my $params = $self->model->expression_params || '';
     if (version->parse($self->model->expression_version) >= version->parse('0.9.0')) {
