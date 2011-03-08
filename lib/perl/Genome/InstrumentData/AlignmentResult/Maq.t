@@ -11,7 +11,7 @@ use above 'Genome';
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 25;
+        plan tests => 26;
     } 
     else {
         plan skip_all => 'Must run on a 64 bit machine';
@@ -30,6 +30,9 @@ ok($reference_model, "got reference model");
 
 my $reference_build = $reference_model->build_by_version('1');
 ok($reference_build, "got reference build");
+
+my $reference_index = Genome::Model::Build::ReferenceSequence::AlignerIndex->create(aligner_name=>'maq', aligner_version=>'0.7.1', aligner_params=>undef, reference_build=>$reference_build);
+ok($reference_index, "generated reference index");
 
 # The following line is to pretend to add a software-result record to
 # DB and make the codes following this taking it as already existing

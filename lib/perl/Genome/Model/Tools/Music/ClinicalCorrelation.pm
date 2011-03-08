@@ -3,7 +3,7 @@ package Genome::Model::Tools::Music::ClinicalCorrelation;
 use warnings;
 use strict;
 use Carp;
-use Genome::Model::Tools::Music;
+use Genome;
 use IO::File;
 use POSIX qw( WIFEXITED );
 

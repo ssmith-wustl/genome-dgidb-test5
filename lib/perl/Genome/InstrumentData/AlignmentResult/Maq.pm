@@ -167,8 +167,7 @@ sub _run_aligner {
     my $instrument_data = $self->instrument_data;
     my $aligner_params  = $self->aligner_params;
 
-    my $reference_build = $self->reference_build;
-    my $ref_seq_file    = $reference_build->full_consensus_path('bfa');
+    my $ref_seq_file    = $self->get_reference_sequence_index->full_consensus_path('bfa');
 
     unless ($ref_seq_file && -e $ref_seq_file) {
         $self->error_message("Reference build full consensus path '$ref_seq_file' does not exist.");
@@ -396,6 +395,33 @@ sub aligner_params_for_sam_header {
 
 
 sub fillmd_for_sam {
+    return 1;
+}
+
+sub prepare_reference_sequence_index {
+    my $class = shift;
+    my $refindex = shift;
+
+    my $staging_dir = $refindex->temp_staging_directory;
+    my $staged_fasta_file = sprintf("%s/all_sequences.fa", $staging_dir);
+
+    $class->status_message("Doing maq fasta2bfa.");
+    my $bfa_file_name = File::Spec->catfile($staging_dir, 'all_sequences.bfa');
+
+    my $maq_path = Genome::Model::Tools::Maq->path_for_maq_version($refindex->aligner_version);
+
+    my $maq_cmd = sprintf('%s fasta2bfa %s %s', $maq_path, $staged_fasta_file, $bfa_file_name);
+    my $rv = Genome::Sys->shellcmd(
+        cmd => $maq_cmd,
+        input_files => [$staged_fasta_file],
+        output_files => [$bfa_file_name],
+    );
+
+    unless($rv) {
+        $class->error_message('maq fasta2bfa failed.');
+        return;
+    }
+
     return 1;
 }
 

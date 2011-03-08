@@ -39,6 +39,7 @@ my %BREAKDANCER_VERSIONS = (
     '2010_06_24' => {
         dir => '/gsc/pkg/bio/breakdancermax/breakdancer-20100624',
         cfg => 'perl/bam2cfg_2.pl',
+        #cfg => 'perl/bam2cfg.pl',
         max => 'cpp/breakdancer_max',
     },
 );

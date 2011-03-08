@@ -141,7 +141,7 @@ sub get_summary_information
 
     my $mapcheck_report_file = $report_dir."/Mapcheck/report.html";
     my $goldsnp_report_file = $report_dir."/Gold_SNP_Concordance/report.html";
-    my $dbsnp_report_file = $report_dir."/dbSNP_Concordance/report.html";
+    my $dbsnp_report_file = $build->dbsnp_file_filtered;
     my $input_base_count_report_file = $report_dir . "/Input_Base_Count/report.html";
 
     ##match mapcheck report
@@ -210,46 +210,52 @@ sub get_summary_information
     }
 
     ##match dbsnp report
-    $fh = new IO::File($dbsnp_report_file, "r");
-    if ($fh) {
-        my $dbsnp_contents = get_contents($fh);
+    my $dbsnp_filtered_report_file = $build->dbsnp_file_filtered;
+    my $dbsnp_unfiltered_report_file = $build->dbsnp_file_unfiltered;
+    # Execute report if any of the files can't be found
+    unless (-e $dbsnp_filtered_report_file and -e $dbsnp_filtered_report_file) {
+        Genome::Model::ReferenceAlignment::Command::CreateMetrics::DbSnpConcordance->execute(build => $build);
+    }
+
+    if (-e $dbsnp_filtered_report_file and -e $dbsnp_unfiltered_report_file) {
+        my $dbsnp_filtered_data = Genome::Model::Tools::SnvCmp::Concordance::parse_results_file($dbsnp_filtered_report_file);
+        my $dbsnp_unfiltered_data = Genome::Model::Tools::SnvCmp::Concordance::parse_results_file($dbsnp_unfiltered_report_file);
+
         # get unfiltered data
-        #if ( $dbsnp_contents =~ /^\s*total unfiltered SNPs: (\S+)$/m) {
-        if ($dbsnp_contents =~ /total unfiltered SNPs:\s+<\/td>\s+<td class.*?>\s+(\S+)/) {
-            $total_unfiltered_snps = $1;
-        } 
+        if (exists $dbsnp_unfiltered_data->{total_snvs}) {
+            $total_unfiltered_snps = $dbsnp_unfiltered_data->{total_snvs};
+        }
         else {
-            $self->status_message("Could not extract total unfiltered SNPs from $dbsnp_report_file!");
+            $self->status_message("Could not extract total unfiltered SNPs from $dbsnp_unfiltered_report_file!");
         }
 
-        if ( $dbsnp_contents =~ /unfiltered concordance:\s+<\/td>\s+<td class.*?>\s+(\S+)/) {
-            $unfiltered_dbsnp_concordance = $1;
-        } 
+        if (exists $dbsnp_unfiltered_data->{total_concordance}) {
+            $unfiltered_dbsnp_concordance = $dbsnp_unfiltered_data->{total_concordance};
+        }
         else {
-            $self->status_message("Could not extract unfiltered concordance from $dbsnp_report_file!");
+            $self->status_message("Could not extract unfiltered concordance from $dbsnp_unfiltered_report_file!");
         }
 
         # get filtered data
-        if ( $dbsnp_contents =~ /total filtered SNPs:\s+<\/td>\s+<td class.*?>\s+(\S+)/) {
-            $total_filtered_snps = $1;
+        if (exists $dbsnp_filtered_data->{total_snvs}) {
+            $total_filtered_snps = $dbsnp_filtered_data->{total_snvs};
             $self->status_message("total_filtered_snps: $total_filtered_snps");
-        } 
+        }
         else {
-            $self->status_message("Could not extract total filtered SNPs from $dbsnp_report_file!");
+            $self->status_message("Could not extract total filtered SNPs from $dbsnp_filtered_report_file!");
         }
 
-        if ( $dbsnp_contents =~ /\sfiltered concordance:\s+<\/td>\s+<td class.*?>\s+(\S+)/) {
-            $filtered_dbsnp_concordance = $1;
+        if (exists $dbsnp_filtered_data->{total_concordance}) {
+            $filtered_dbsnp_concordance = $dbsnp_filtered_data->{total_concordance};
             $self->status_message("filtered_dbsnp_concordance: $filtered_dbsnp_concordance");
         } 
         else {
-            $self->status_message("Could not extract filtered concordance from $dbsnp_report_file!");
+            $self->status_message("Could not extract filtered concordance from $dbsnp_filtered_report_file!");
         }
-
-        $fh->close();
     }
     else {
-        $self->status_message("dbSNP concordance report: $dbsnp_report_file is not available");
+        $self->status_message("dbSNP filtered report: $dbsnp_filtered_report_file is not available") unless -e $dbsnp_filtered_report_file;
+        $self->status_message("dbSNP unfiltered report: $dbsnp_unfiltered_report_file is not available") unless -e $dbsnp_unfiltered_report_file;
     }
 
     ##the number of instrument data assignments is:
