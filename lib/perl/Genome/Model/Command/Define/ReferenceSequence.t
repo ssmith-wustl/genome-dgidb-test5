@@ -14,7 +14,7 @@ use Test::More;
 use File::Spec;
 
 if(Genome::Config->arch_os() =~ '64') {
-    plan tests => 45;
+    plan tests => 26;
 } else {
     plan skip_all => 'Must be run on a 64-bit machine',
 }
