@@ -42,7 +42,7 @@ sub execute {
     my $under_allocated = 0;
     # Why yes, I do like my if blocks and for loops nested. Thank you for noticing.
     for my $group (@groups) {
-        my @volumes = Genome::Disk::Volume->get(disk_group_names => $group, disk_status => 'active');
+        my @volumes = Genome::Disk::Volume->get(disk_group_names => $group, disk_status => 'active', can_allocate => 1);
         next unless @volumes;
 
         for my $volume (@volumes) {

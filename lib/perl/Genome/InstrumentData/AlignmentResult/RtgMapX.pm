@@ -92,7 +92,10 @@ sub _run_aligner {
 
 
         # disconnect db before long-running action 
-        Genome::DataSource::GMSchema->disconnect_default_dbh; 
+        if (Genome::DataSource::GMSchema->has_default_handle) {
+            $self->status_message("Disconnecting GMSchema default handle.");
+            Genome::DataSource::GMSchema->disconnect_default_dbh();
+        }
 
 
         #STEP 1 - convert input to sdf

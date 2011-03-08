@@ -230,7 +230,7 @@ sub _filter_variants {
     $novo_cfg->close;
 
     unlink (@bams2remove, @librmdupbams, @novoaligns, $header_file);
-    unlink glob($self->_temp_staging_directory."/*.bam");   #In case leftover bam
+    #unlink glob($self->_temp_staging_directory."/*.bam");   #In case leftover bam
 
     #my $bd_run = Genome::Model::Tools::DetectVariants2::Breakdancer->create(
     #    aligned_reads_input         => $self->aligned_reads_input,
