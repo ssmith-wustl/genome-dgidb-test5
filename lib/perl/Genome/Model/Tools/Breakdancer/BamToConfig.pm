@@ -66,7 +66,6 @@ sub execute {
     }
 
     my $cfg_cmd = $self->breakdancer_config_command; 
-    #my $cfg_cmd = '/gscuser/fdu/bin/bam2cfg.pl';
     $cfg_cmd .= ' ' . $self->params . ' ' . $self->tumor_bam . ' ' . $self->normal_bam . ' > '. $out_file;
     $self->status_message("Breakdancer command: $cfg_cmd");
 

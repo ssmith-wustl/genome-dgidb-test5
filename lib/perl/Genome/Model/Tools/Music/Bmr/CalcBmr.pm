@@ -5,7 +5,7 @@ use strict;
 use IO::File;
 use Bit::Vector;
 
-our $VERSION = '1.01';
+our $VERSION = $Genome::Model::Tools::Music::VERSION;
 
 class Genome::Model::Tools::Music::Bmr::CalcBmr {
   is => 'Command',

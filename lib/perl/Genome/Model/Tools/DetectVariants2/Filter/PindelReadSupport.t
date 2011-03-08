@@ -19,8 +19,8 @@ BEGIN {
 my $refseq = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa';
 my $input_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-PindelReadSupport";
 
-# Updated to .v2 for correcting an error with newlines
-my $expected_dir = $input_directory . "/expected/";
+# Updated to v2 to allow for new columns 
+my $expected_dir = $input_directory . "/expected_v2/";
 my $tumor_bam_file  = $input_directory. '/flank_tumor_sorted.bam';
 my $normal_bam_file  = $input_directory. '/flank_normal_sorted.bam';
 my $test_output_dir = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Filter-PindelReadSupport-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
