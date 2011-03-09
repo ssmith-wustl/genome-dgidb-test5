@@ -342,9 +342,9 @@ sub filter_read_support {
     while( my $line = $input->getline){
         chomp $line;
         my ($chr,$start,$stop,$refvar,$pindel_reads,$t_reads,$t_sw_reads,$n_reads,$n_sw_reads,$ps, $p_value) = split "\t", $line;
-        my $hq=1;
-        if($p_value > .15) { #assuming significant smith waterman support, trust the fishers exact test to make a germline determination
-            $hq=0;
+        my $hq=0;
+        if($p_value <= .15) { #assuming significant smith waterman support, trust the fishers exact test to make a germline determination
+            $hq=1;
         }
         if(($t_sw_reads + $t_reads < 10) && ($pindel_reads > $t_sw_reads)) { #low coverage area, and pindel found more reads than were smith waterman mapped available-- rescue this from pvalue filter
             $hq=1;
