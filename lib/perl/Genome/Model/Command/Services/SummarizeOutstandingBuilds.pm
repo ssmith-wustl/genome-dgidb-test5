@@ -66,6 +66,7 @@ sub get_models {
 
 sub get_models_with_unsucceeded_builds {
     my $self = shift;
+    #The events get here is a to try and avoid an n+1 problem with these data structures.  As of early March 2011, it doesn't work, and makes this slow as hell.
     my @events = Genome::Model::Event->get(event_type => 'genome model build', 'event_status ne' => 'Succeeded');
     my @builds = Genome::Model::Build->get('status ne' => 'Succeeded', -hint => ['model', 'the_master_event']);
 
@@ -375,7 +376,7 @@ sub _process_preserved {
 
 sub _age_in_days {
     my ($self, $date) = @_;
-    my ($age_in_days) = Delta_DHMS(split("-|:| ", $date), split("-|:| ",UR::Time->now));
+    my ($age_in_days) = Delta_DHMS(split("-|:| ", $date), split("-|:| ",$self->__context__->now));
     return $age_in_days;
 }
 
