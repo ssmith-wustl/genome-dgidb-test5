@@ -40,10 +40,6 @@ sub _generate_content {
     my $subject = $self->subject();
 
     #preload data for efficiency
-    my @members_pre = Genome::ModelGroup->get( id => $subject->id, -hints => ["models"]);
-
-    $DB::single = 1;
-
     my @members = $self->members;
     my @model_ids = map($_->id, @members);
     my @idas = Genome::Model::InstrumentDataAssignment->get(model_id => \@model_ids);

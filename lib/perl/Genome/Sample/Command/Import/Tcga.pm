@@ -36,9 +36,8 @@ sub execute {
     Carp::confess('Cannot get human taxon') if not $taxon;
 
     my $individual = $self->_get_and_update_or_create_individual(
-        name => $individual_name,
         upn => $individual_name,
-        nomenclature => 'unknown',
+        nomenclature => 'TCGA',
     );
     return if not $individual;
 

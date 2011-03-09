@@ -29,7 +29,7 @@ class Genome::Model::Tools::Gatk::SomaticIndel {
 		formatted_file => { is => 'Text', doc => "Optional output file of indels in annotation format", is_optional => 1, is_input => 1, is_output => 1 },
 		somatic_file => { is => 'Text', doc => "Optional output file for Somatic indels parsed from formatted file", is_optional => 1, is_input => 1, is_output => 1 },
 		gatk_params => { is => 'Text', doc => "Parameters for GATK", is_optional => 1, is_input => 1, is_output => 1, default => "-R /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa -T IndelGenotyperV2 --somatic --window_size 300" },
-		path_to_gatk => { is => 'Text', doc => "Path to GATK command", is_optional => 1, is_input => 1, is_output => 1, default => "java -Xms3000m -Xmx3000m -jar /gsc/pkg/bio/gatk/GenomeAnalysisTK-1.0.4168/GenomeAnalysisTK.jar" },
+		path_to_gatk => { is => 'Text', doc => "Path to GATK command", is_optional => 1, is_input => 1, is_output => 1, default => "java -Xms3000m -Xmx3000m -jar /gsc/scripts/pkg/bio/gatk/GenomeAnalysisTK-1.0.4168/GenomeAnalysisTK.jar" },
 		skip_if_output_present => { is => 'Text', doc => "Skip if output is present", is_optional => 1, is_input => 1},
 	],
 };
@@ -149,7 +149,7 @@ sub execute {                               # replace with real execution logic.
 
 	}
 	
-	return $return;
+	return 1;
 
 }
 

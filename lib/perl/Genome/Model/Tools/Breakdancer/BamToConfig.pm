@@ -84,8 +84,8 @@ sub execute {
     my @moved_files = glob($out_dir."/*insertsize_histogram*");
 
     unless (@other_files == @moved_files) {
-        $self->error_message("insertsize_histogram files not completely moved to $out_dir"); 
-        die $self->error_message;
+        $self->warning_message("insertsize_histogram files not completely moved to $out_dir"); 
+        #It should not die here just give a warning
     }
 
     return 1;
