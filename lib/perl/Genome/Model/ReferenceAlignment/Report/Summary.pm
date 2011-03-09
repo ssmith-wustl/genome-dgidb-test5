@@ -162,6 +162,7 @@ sub get_summary_information
     ##match goldsnp report
     my %gold_snp_metrics = $self->format_gold_snp_metrics($build);
     unless (%gold_snp_metrics) {
+        $self->status_message("Could not generate gold snp metrics, regenerating gold snp concordance and trying again");
         Genome::Model::ReferenceAlignment::Command::CreateMetrics::GoldSnpConcordance->execute(build => $build);
         %gold_snp_metrics = $self->format_gold_snp_metrics($build);
     }
@@ -180,6 +181,7 @@ sub get_summary_information
     my $dbsnp_filtered_report_file = $build->dbsnp_file_filtered;
     my $dbsnp_unfiltered_report_file = $build->dbsnp_file_unfiltered;
     unless (-e $dbsnp_filtered_report_file and -e $dbsnp_filtered_report_file) {
+        $self->status_message("Did not find dbSNP concordance files, rerunning dbSNP concordance");
         Genome::Model::ReferenceAlignment::Command::CreateMetrics::DbSnpConcordance->execute(build => $build);
     }
 
@@ -205,7 +207,6 @@ sub get_summary_information
         # get filtered data
         if (exists $dbsnp_filtered_data->{total_snvs}) {
             $total_filtered_snps = $dbsnp_filtered_data->{total_snvs};
-            $self->status_message("total_filtered_snps: $total_filtered_snps");
         }
         else {
             $self->status_message("Could not extract total filtered SNPs from $dbsnp_filtered_report_file!");
@@ -213,7 +214,6 @@ sub get_summary_information
 
         if (exists $dbsnp_filtered_data->{total_concordance}) {
             $filtered_dbsnp_concordance = $dbsnp_filtered_data->{total_concordance};
-            $self->status_message("filtered_dbsnp_concordance: $filtered_dbsnp_concordance");
         } 
         else {
             $self->status_message("Could not extract filtered concordance from $dbsnp_filtered_report_file!");
