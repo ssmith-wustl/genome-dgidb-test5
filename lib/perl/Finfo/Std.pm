@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finfo::Std;
+package Finfo::Std;
 
 use version; $VERSION = qv('0.0.1');
 
@@ -7,9 +7,9 @@ use warnings;
 
 use Carp;
 use Data::Dumper;
-use Genome::Site::WUGC::Finfo::ClassUtils 'anon_scalar class ident';
-use Genome::Site::WUGC::Finfo::Logging 'info_msg fatal_msg';
-use Genome::Site::WUGC::Finfo::Validate;
+use Finfo::ClassUtils 'anon_scalar class ident';
+use Finfo::Logging 'info_msg fatal_msg';
+use Finfo::Validate;
 use Scalar::Util 'blessed';
 use Storable 'dclone';
 $Storable::Deparse = 1;
@@ -48,7 +48,7 @@ sub import # eb modified
     }
 
     # import logging methods
-    Genome::Site::WUGC::Finfo::Logging->import({ class => $caller });
+    Finfo::Logging->import({ class => $caller });
 
     no strict 'refs';
     for my $sub ( @exported_subs ) 
@@ -205,14 +205,14 @@ sub attributes_attribute
 {
     my ($self, $attr, $attrs_attr) = @_;
 
-    Genome::Site::WUGC::Finfo::Validate->validate
+    Finfo::Validate->validate
     (
         attr => 'attribute',
         value => $attr,
         msg => 'fatal',
     );
 
-    Genome::Site::WUGC::Finfo::Validate->validate
+    Finfo::Validate->validate
     (
         attr => "attribute's ($attr) attribute",
         value => $attrs_attr,
@@ -262,7 +262,7 @@ sub MODIFY_HASH_ATTRIBUTES
     @pkg_attrs_attrs{qw/ name attr_type /} = $name_config =~ /^name\(([\w\d_]*):([rop])\)$/i;
 
     # Validate name
-    Genome::Site::WUGC::Finfo::Validate->validate
+    Finfo::Validate->validate
     (
         attr => "attribute name in attribute config ($name_config)",# in $package",
         value => $pkg_attrs_attrs{name},
@@ -272,7 +272,7 @@ sub MODIFY_HASH_ATTRIBUTES
     );
 
     # Validate attr type
-    Genome::Site::WUGC::Finfo::Validate->validate
+    Finfo::Validate->validate
     (
         attr => "attribute type for attribute ($pkg_attrs_attrs{name})",# in $package",
         value => $pkg_attrs_attrs{attr_type},
@@ -300,7 +300,7 @@ sub MODIFY_HASH_ATTRIBUTES
             );
         }
         
-        Genome::Site::WUGC::Finfo::Validate->validate
+        Finfo::Validate->validate
         (
             attr => "attribute's ($pkg_attrs_attrs{name}) attribute value ($attr_value)",# in $package",
             value => $attr_value,
@@ -324,7 +324,7 @@ sub MODIFY_HASH_ATTRIBUTES
     }
 
     # Validate type
-    Genome::Site::WUGC::Finfo::Validate->is_isa
+    Finfo::Validate->is_isa
     (
         attr => "$pkg_attrs_attrs{name} in $package",
         value => $pkg_attrs_attrs{isa},
@@ -360,7 +360,7 @@ sub MODIFY_HASH_ATTRIBUTES
             }
 
             # Validate
-            Genome::Site::WUGC::Finfo::Validate->validate
+            Finfo::Validate->validate
             ( 
                 attr => $pkg_attrs_attrs{name},
                 value => $value,
@@ -457,7 +457,7 @@ sub _DUMP
 
             if ( $recursive and my $value_class = blessed($attr_ref->{ref}{$id}) )
             {
-                # ok, it's an object, test whether it is stored w/in Genome::Site::WUGC::Finfo::Std
+                # ok, it's an object, test whether it is stored w/in Finfo::Std
                 if ( exists $attribute{$value_class} )
                 {
                     $value = _DUMP
@@ -686,7 +686,7 @@ sub initialize # eb modified
                 my $level = 0;
                 while ($caller = caller($level++)) 
                 {
-                    last if $caller !~ /^(?: Genome::Site::WUGC::Finfo::Std | attributes )$/xms;
+                    last if $caller !~ /^(?: Finfo::Std | attributes )$/xms;
                 }
                 goto &{$original} if !$caller || $caller->isa($package) || $package->isa($caller);
                                               
@@ -752,7 +752,7 @@ sub initialize # eb modified
                 }
                 return if !defined $list_context;
                 return @results if $list_context;
-                return Genome::Site::WUGC::Finfo::Std::SCR->new({
+                return Finfo::Std::SCR->new({
                     values  => \@results,
                     classes => \@classes,
                 });
@@ -798,7 +798,7 @@ sub initialize # eb modified
                 }
                 return if !defined $list_context;
                 return @results if $list_context;
-                return Genome::Site::WUGC::Finfo::Std::SCR->new({
+                return Finfo::Std::SCR->new({
                     values  => \@results,
                     classes => \@classes,
                 });
@@ -830,7 +830,7 @@ sub new # eb modified
 
     #print Dumper([$class, \%params]);
 
-    Genome::Site::WUGC::Finfo::Std::initialize();   # Ensure run-time (and mod_perl) setup is done
+    Finfo::Std::initialize();   # Ensure run-time (and mod_perl) setup is done
 
     no strict 'refs';
     unless ( keys %{$class.'::'} )
@@ -897,7 +897,7 @@ sub new # eb modified
             next ATTR unless defined $value;
 
             # Validate value
-            return unless Genome::Site::WUGC::Finfo::Validate->validate
+            return unless Finfo::Validate->validate
             ( 
                 attr => $attr_ref->{name},
                 value => $value,
@@ -1126,11 +1126,11 @@ sub STORABLE_thaw
 
 ###################################################
 
-package Genome::Site::WUGC::Finfo::Std::SCR;
+package Finfo::Std::SCR;
 
-use base qw( Genome::Site::WUGC::Finfo::Std );
+use base qw( Finfo::Std );
 
-use Genome::Site::WUGC::Finfo::ClassUtils 'ident';
+use Finfo::ClassUtils 'ident';
 
 my %values_of  :name(values:o);
 my %classes_of :name(classes:o);
@@ -1163,7 +1163,7 @@ return \%hash;
 
 =head1 Name
 
-Genome::Site::WUGC::Finfo::Std
+Finfo::Std
 
 =head1 Synopsis
 
@@ -1173,7 +1173,7 @@ Genome::Site::WUGC::Finfo::Std
 
  package MyClass;
     
- use Genome::Site::WUGC::Finfo::Std;
+ use Finfo::Std;
 
  use IO::File;
 
@@ -1239,7 +1239,7 @@ Genome::Site::WUGC::Finfo::Std
 
 =head2 new
 
-Every class that loads the Genome::Site::WUGC::Finfo::Std module automatically has a C<new()>
+Every class that loads the Finfo::Std module automatically has a C<new()>
 constructor, which returns an inside-out object (i.e. a blessed scalar).
 
     $obj = MyClass->new();
@@ -1254,7 +1254,7 @@ object. This argument must be a hash reference.
  );
 
 It is almost always an error to implement your own C<new()> in any class
-that uses Genome::Site::WUGC::Finfo::Std. You almost certainly want to write a C<BUILD()> or
+that uses Finfo::Std. You almost certainly want to write a C<BUILD()> or
 C<START()> method instead. See below.
 
 =head2 undef_attribute
@@ -1283,21 +1283,21 @@ Gets the attribute of an object's attribute.
 
 =head2 DESTROY
 
-Every class that loads the Genome::Site::WUGC::Finfo::Std module automatically has a C<DESTROY>
+Every class that loads the Finfo::Std module automatically has a C<DESTROY>
 destructor, which automatically cleans up any attributes declared.
 
 It is almost always an error to write your own C<DESTROY> in any class that
-uses Genome::Site::WUGC::Finfo::Std. You almost certainly want to write your own C<DEMOLISH>
+uses Finfo::Std. You almost certainly want to write your own C<DEMOLISH>
 instead. See below.
 
 =head2 AUTOLOAD
 
-Every class that loads the Genome::Site::WUGC::Finfo::Std module automatically has an
+Every class that loads the Finfo::Std module automatically has an
 C<AUTOLOAD> method, which implements the C<AUTOMETHOD()> mechanism
 described below. 
 
 It is almost always an error to write your own C<AUTOLOAD()> in any class that
-uses Genome::Site::WUGC::Finfo::Std. You almost certainly want to write your own C<AUTOMETHOD()>
+uses Finfo::Std. You almost certainly want to write your own C<AUTOMETHOD()>
 instead.
 
 =head2 DUMP(%params)
@@ -1311,7 +1311,7 @@ B<Params:>
 
 =item I<separate>   boolean - separate the attributes into their respective classes
 
-=item I<recursive>  boolean - recursively DUMP Genome::Site::WUGC::Finfo::Std objects in attributes (only works on scalar attributes)
+=item I<recursive>  boolean - recursively DUMP Finfo::Std objects in attributes (only works on scalar attributes)
 
 =back
 
@@ -1326,7 +1326,7 @@ Allows for use of Storable.
 =head1 Methods that can be supplied by the developer
 
 The following subroutines can be specified as standard methods of a
-Genome::Site::WUGC::Finfo::Std class.
+Finfo::Std class.
 
 =head2 BUILD
 
@@ -1353,7 +1353,7 @@ arguments that was originally passed to the constructor:
 =head2 START
 
 Once the initialization values or defaults have been subsequently applied to
-attributes, Genome::Site::WUGC::Finfo::Std arranges for any C<START()> methods
+attributes, Finfo::Std arranges for any C<START()> methods
 in the class's hierarchy to be called befre the constructor finishes.
 That is, after the build and default initialization processes are
 complete, the constructor walks down the class's inheritance tree a
@@ -1366,7 +1366,7 @@ originally passed to the constructor.
 
 =head2 DEMOLISH
 
-The C<DESTROY()> method that is automatically provided by Genome::Site::WUGC::Finfo::Std ensures
+The C<DESTROY()> method that is automatically provided by Finfo::Std ensures
 that all the marked attributes of an object, from all the classes in its 
 inheritance hierarchy, are automatically cleaned up.
 
@@ -1374,8 +1374,8 @@ But, if a class requires other destructor behaviours (e.g. closing
 filehandles, decrementing allocation counts, etc.) then you may need to
 specify those explicitly.
 
-Whenever an object of a Genome::Site::WUGC::Finfo::Std class is destroyed, the C<DESTROY()>
-method supplied by Genome::Site::WUGC::Finfo::Std automatically calls every method named
+Whenever an object of a Finfo::Std class is destroyed, the C<DESTROY()>
+method supplied by Finfo::Std automatically calls every method named
 C<DEMOLISH> in I<all> the classes in the new object's hierarchy. That
 is, when the destructor is called, it walks the class's inheritance
 tree (from derived classes upwards) and calls every C<DEMOLISH()> method it
@@ -1414,25 +1414,25 @@ in place of base classes (a feature known as "Liskov substitutability")
 because their inherited autoloading behaviour may be pre-empted by some
 other unrelated base class on their left in the hierarchy.
 
-Genome::Site::WUGC::Finfo::Std provides a mechanism that solves this problem: the
+Finfo::Std provides a mechanism that solves this problem: the
 C<AUTOMETHOD> method. An AUTOMETHOD is expected to return either a
 handler subroutine that implements the requested method functionality,
 or else an C<undef> to indicate that it doesn't know how to handle the
-request. Genome::Site::WUGC::Finfo::Std then coordinates every C<AUTOMETHOD> in an object's
+request. Finfo::Std then coordinates every C<AUTOMETHOD> in an object's
 hierarchy, trying each one in turn until one of them produces a
 suitable handler.
 
 The advantage of this approach is that the first C<AUTOMETHOD> that's
 invoked doesn't have to disenfranchise every other C<AUTOMETHOD> in the
 hierarchy. If the first one can't handle a particular method call, it
-simply declines it and Genome::Site::WUGC::Finfo::Std tries the next candidate instead.
+simply declines it and Finfo::Std tries the next candidate instead.
 
 Using C<AUTOMETHOD> instead of C<AUTOLOAD> makes a class
 cleaner, more robust, and less disruptive in class hierarchies.
 For example:
 
     package Phonebook;
-    use Genome::Site::WUGC::Finfo::Std;
+    use Finfo::Std;
     {
         my %entries_of : ATTR;
 
@@ -1484,7 +1484,7 @@ available as C<$CALLER::_>.
 
 =head1 Variable traits that can be ascribed
 
-The following markers can be added to the definition of any hash used as an attribute storage within a Genome::Site::WUGC::Finfo::Std class.  These attribute's attributes can be on the same line or on different lines.
+The following markers can be added to the definition of any hash used as an attribute storage within a Finfo::Std class.  These attribute's attributes can be on the same line or on different lines.
 
 Example:
 
@@ -1557,7 +1557,7 @@ Optional, default is 'scalar.'  Indicats the data structure of the attribute.
 
  :isa('int pos')
  
-Optional, default is 'defined.'  Use quotes when using int.  Also accepts aryrefs for types in_list and object.  What the attribute is.  If there is a ds (data structure) indicated, each value will also be checked.  See Genome::Site::WUGC::Finfo::Validate for a list of valid isas. 
+Optional, default is 'defined.'  Use quotes when using int.  Also accepts aryrefs for types in_list and object.  What the attribute is.  If there is a ds (data structure) indicated, each value will also be checked.  See Finfo::Validate for a list of valid isas. 
 
 =head2 default
 
@@ -1565,7 +1565,7 @@ Optional, no default.  Can be a string, array ref, etc.  Sets this value to the 
 
 =head2 clo
 
-Optional, no default.  Use quotes.  The commandline option for the attribute.  Use quotes around the value.  This allows Genome::Site::WUGC::Finfo::CommandLineOptions use a class and derive commanline options form the attributes, then get them when a command is executed.  Use only when wanting to allow the attribute to be assigned from the commandline.  See GetOpt:Long for formatting.
+Optional, no default.  Use quotes.  The commandline option for the attribute.  Use quotes around the value.  This allows Finfo::CommandLineOptions use a class and derive commanline options form the attributes, then get them when a command is executed.  Use only when wanting to allow the attribute to be assigned from the commandline.  See GetOpt:Long for formatting.
 
 =head2 desc
 
@@ -1582,7 +1582,7 @@ called within a class itself.
 
 Typically these types of methods are I<utility> methods: subroutines
 that provide some internal service for a class, or a class hierarchy.
-Genome::Site::WUGC::Finfo::Std supports the creation of these kinds of methods by providing two
+Finfo::Std supports the creation of these kinds of methods by providing two
 special markers: C<:RESTRICTED()> and C<:PRIVATE()>.
 
 Methods marked C<:RESTRICTED()> are modified at the end of the
@@ -1594,7 +1594,7 @@ which they're declared.
 For example:
 
     package DogTag;
-    use Genome::Site::WUGC::Finfo::Std;
+    use Finfo::Std;
     {
         my %ID_of   : ATTR;
         my %rank_of : ATTR;
@@ -1610,9 +1610,9 @@ For example:
 =head2 :CUMULATIVE
 
 One of the most important advantages of using the C<BUILD()> and C<DEMOLISH()>
-mechanisms supplied by Genome::Site::WUGC::Finfo::Std is that those methods don't require
+mechanisms supplied by Finfo::Std is that those methods don't require
 nested calls to their ancestral methods, via the C<SUPER> pseudo-class. The
-constructor and destructor provided by Genome::Site::WUGC::Finfo::Std take care of the
+constructor and destructor provided by Finfo::Std take care of the
 necessary redispatching automatically. Each C<BUILD()> method can focus
 solely on its own responsibilities; it doesn't have to also help
 orchestrate the cumulative constructor effects across the class
@@ -1621,7 +1621,7 @@ hierarchy by remembering to call C<< $self->SUPER::BUILD() >>.
 Moreover, calls via C<SUPER> can only ever call the method of exactly one
 ancestral class, which is not sufficient under multiple inheritance.
 
-Genome::Site::WUGC::Finfo::Std provides a different way of creating methods whose effects
+Finfo::Std provides a different way of creating methods whose effects
 accumulate through a class hierarchy, in the same way as those of
 C<BUILD()> and C<DEMOLISH()> do. Specifically, the module allows you to define
 your own "cumulative methods".
@@ -1639,7 +1639,7 @@ For example, you could define a cumulative C<describe()> method to the various
 classes in a simple class hierarchy like so:
 
     package Wax::Floor;
-    use Genome::Site::WUGC::Finfo::Std;
+    use Finfo::Std;
     {
         my %name_of    :name(name:r);
         my %patent_of  :name(patent:r);
@@ -1655,7 +1655,7 @@ classes in a simple class hierarchy like so:
     }
 
     package Topping::Dessert;
-    use Genome::Site::WUGC::Finfo::Std;
+    use Finfo::Std;
     {
         my %name_of     :name(name:r);
         my %flavour_of  :name(flavour:r);
@@ -1672,7 +1672,7 @@ classes in a simple class hierarchy like so:
 
     package Shimmer;
     use base qw( Wax::Floor  Topping::Dessert );
-    use Genome::Site::WUGC::Finfo::Std;
+    use Finfo::Std;
     {
         my %name_of    :name(name:r);
         my %patent_of  :name(patent:r);
@@ -1741,7 +1741,7 @@ For example, if the classes each have a cumulative method that returns
 their list of sales features:
 
     package Wax::Floor;
-    use Genome::Site::WUGC::Finfo::Std;
+    use Finfo::Std;
     {
         sub feature_list :CUMULATIVE {
             return ('Long-lasting', 'Non-toxic', 'Polymer-based');
@@ -1749,7 +1749,7 @@ their list of sales features:
     }
 
     package Topping::Dessert;
-    use Genome::Site::WUGC::Finfo::Std;
+    use Finfo::Std;
     {
         sub feature_list :CUMULATIVE {
             return ('Low-carb', 'Non-dairy', 'Sugar-free');
@@ -1757,7 +1757,7 @@ their list of sales features:
     }
 
     package Shimmer;
-    use Genome::Site::WUGC::Finfo::Std;
+    use Finfo::Std;
     use base qw( Wax::Floor  Topping::Dessert );
     {
         sub feature_list :CUMULATIVE {
@@ -1783,7 +1783,7 @@ BUILD() does. To get that effect, you simply mark each method with
 :CUMULATIVE(BASE FIRST), instead of just :CUMULATIVE. For example:
 
     package Wax::Floor;
-    use Genome::Site::WUGC::Finfo::Std;
+    use Finfo::Std;
     {
         sub active_ingredients :CUMULATIVE(BASE FIRST) {
             return "\tparadichlorobenzene, cyanoacrylate, peanuts\n";
@@ -1791,7 +1791,7 @@ BUILD() does. To get that effect, you simply mark each method with
     }
 
     package Topping::Dessert;
-    use Genome::Site::WUGC::Finfo::Std;
+    use Finfo::Std;
     {
         sub active_ingredients :CUMULATIVE(BASE FIRST) {
             return "\tsodium hypochlorite, isobutyl ketone, ethylene glycol\n";
@@ -1799,7 +1799,7 @@ BUILD() does. To get that effect, you simply mark each method with
     }
 
     package Shimmer;
-    use Genome::Site::WUGC::Finfo::Std;
+    use Finfo::Std;
     use base qw( Wax::Floor  Topping::Dessert );
 
     {
@@ -1841,7 +1841,7 @@ and see which ingredients came from where:
 Note that you can't specify both C<:CUMULATIVE> and C<:CUMULATIVE(BASE
 FIRST)> on methods of the same name in the same hierarchy. The resulting
 set of methods would have no well-defined invocation order, so
-Genome::Site::WUGC::Finfo::Std throws a compile-time exception instead.
+Finfo::Std throws a compile-time exception instead.
 
 
 =head2 :STRINGIFY
@@ -1963,13 +1963,13 @@ subroutine reference (C<:CODIFY>), or a typeglob reference
 
 =item Can't find class %s
 
-You tried to call the Genome::Site::WUGC::Finfo::Std::new() constructor on a class 
-that isn't built using Genome::Site::WUGC::Finfo::Std. Did you forget to write C<use Genome::Site::WUGC::Finfo::Std>
+You tried to call the Finfo::Std::new() constructor on a class 
+that isn't built using Finfo::Std. Did you forget to write C<use Finfo::Std>
 after the package declaration?
 
 =item Argument to %s->new() must be hash reference
 
-The constructors created by Genome::Site::WUGC::Finfo::Std require all initializer values
+The constructors created by Finfo::Std require all initializer values
 to be passed in a hash, but you passed something that wasn't a hash.
 Put your constructor arguments in a hash.
 
@@ -2037,7 +2037,7 @@ method, or the right method from the wrong place?
 
 =item Internal error: %s
 
-Your code is okay, but it uncovered a bug in the Genome::Site::WUGC::Finfo::Std module.
+Your code is okay, but it uncovered a bug in the Finfo::Std module.
 L<BUGS AND LIMITATIONS> explains how to report the problem.
 
 =back
@@ -2045,12 +2045,12 @@ L<BUGS AND LIMITATIONS> explains how to report the problem.
 
 =head1 CONFIGURATION AND ENVIRONMENT
 
-Genome::Site::WUGC::Finfo::Std requires no configuration files or environment variables.
+Finfo::Std requires no configuration files or environment variables.
 
 
 =head1 DEPENDENCIES
 
-Genome::Site::WUGC::Finfo::Std depends on the following modules:
+Finfo::Std depends on the following modules:
 
 =over
 

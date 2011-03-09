@@ -1,9 +1,9 @@
-package Genome::Site::WUGC::Finfo::Singleton;
+package Finfo::Singleton;
 
 use strict;
 use warnings;
 
-use Genome::Site::WUGC::Finfo::Std;
+use Finfo::Std;
 
 use Data::Dumper;
 
@@ -23,7 +23,7 @@ sub instance
 
     unless ( exists $instance{$class} ) 
     {
-        $instance{$class} = Genome::Site::WUGC::Finfo::Std::new($class, @_);
+        $instance{$class} = Finfo::Std::new($class, @_);
     }
     elsif ( @_ )
     {
@@ -70,11 +70,11 @@ sub new
 
 =head1 Name
 
-Genome::Site::WUGC::Finfo::Singleton
+Finfo::Singleton
  
 =head1 Synopsis
 
-A Singleton describes an object class that can have only one instance in any system.  An example of a Singleton might be a print spooler or system registry.  This module implements a Singleton class from which other classes can be derived.  This class provides the management of the instantiation of a single object, attribute handling (see Genome::Site::WUGC::Finfo::Std) and logging (see Genome::Site::WUGC::Finfo::logging).  In deriving a class from Genome::Site::WUGC::Finfo::Singleton, your module will inherit the instance and enforce_instance methods and then can implement whatever specific functionality is required. 
+A Singleton describes an object class that can have only one instance in any system.  An example of a Singleton might be a print spooler or system registry.  This module implements a Singleton class from which other classes can be derived.  This class provides the management of the instantiation of a single object, attribute handling (see Finfo::Std) and logging (see Finfo::logging).  In deriving a class from Finfo::Singleton, your module will inherit the instance and enforce_instance methods and then can implement whatever specific functionality is required. 
 
 For a description and discussion of the Singleton class, see "Design Patterns", Gamma et al, Addison-Wesley,
 1995, ISBN 0-201-63361-2.
@@ -85,9 +85,9 @@ B<In your class...>
 
  pakage Good;
  
- use base 'Genome::Site::WUGC::Finfo::Singleton';
+ use base 'Finfo::Singleton';
 
- # see Genome::Site::WUGC::Finfo::Std for attribute handling
+ # see Finfo::Std for attribute handling
  my %foo :name(foo:r) :type(string);
  my %bar :name(bar:o) :type(int) :default(20);
 
@@ -175,9 +175,9 @@ B<In the code...>
 
 =over
 
-=item Genome::Site::WUGC::Finfo::Std
+=item Finfo::Std
 
-=item Genome::Site::WUGC::Finfo::Logging
+=item Finfo::Logging
 
 =back
 

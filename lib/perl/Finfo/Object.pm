@@ -1,13 +1,13 @@
-package Genome::Site::WUGC::Finfo::Object;
+package Finfo::Object;
 
 use strict;
 use warnings;
 
 use Data::Dumper;
-use Genome::Site::WUGC::Finfo::ClassUtils 'class';
-use Genome::Site::WUGC::Finfo::Logging;
-use Genome::Site::WUGC::Finfo::Validate;
-use Genome::Site::WUGC::Finfo::OldValidate;
+use Finfo::ClassUtils 'class';
+use Finfo::Logging;
+use Finfo::Validate;
+use Finfo::OldValidate;
 
 sub new
 {
@@ -78,7 +78,7 @@ sub undef_attribute
 {
     my ($self, $attr) = @_;
 
-    return unless Genome::Site::WUGC::Finfo::Validate->validate
+    return unless Finfo::Validate->validate
     (
         attr => 'attr to set undef',
         value => $attr,
@@ -149,7 +149,7 @@ sub _add_attributes
 
     my $attrs = $self->_attrs;
 
-    return unless Genome::Site::WUGC::Finfo::Validate->validate
+    return unless Finfo::Validate->validate
     (
         attr => 'attribute hashref',
         value => $attrs,
@@ -192,7 +192,7 @@ sub _attrs
         {
             $self->info_msg
             (
-                "Genome::Site::WUGC::Finfo::Object attribute api has changed, and this class has not been updated"
+                "Finfo::Object attribute api has changed, and this class has not been updated"
             );
         }
         ${"$class".'::OLD_OBJECT_WARNED'} = 1;
@@ -285,7 +285,7 @@ sub _validate
 {
     my ($self, $attr, $value) = @_;
 
-    return Genome::Site::WUGC::Finfo::OldValidate->validate
+    return Finfo::OldValidate->validate
     (
         attr => $attr,
         value => $value,
@@ -307,7 +307,7 @@ sub attributes_attribute
     $self->error_msg("No attribute to get default for attribute")
         and return unless defined $attr;
     
-    return unless Genome::Site::WUGC::Finfo::Validate->validate
+    return unless Finfo::Validate->validate
     (
         attr => "attributes ($attr) attribute",
         value => $attrs_attr,
@@ -378,13 +378,13 @@ sub command_line_option_for_attribute
 
 =head1 Name
 
-Genome::Site::WUGC::Finfo::Object
+Finfo::Object
 
 ** abstract base class ** 
 
 =head1 Synopsis
 
-This hash based abstract base class provides a contsructor which will auto build accessors, validate and set the incoming params and execute the _init method.  Uses Genome::Site::WUGC::Finfo::Logging to handle messaging and logging.  If the object fails the construction, an error message will be set on the class.
+This hash based abstract base class provides a contsructor which will auto build accessors, validate and set the incoming params and execute the _init method.  Uses Finfo::Logging to handle messaging and logging.  If the object fails the construction, an error message will be set on the class.
   
 =head1 Methods to Overwrite in Your Class
 
@@ -439,7 +439,7 @@ This hash based abstract base class provides a contsructor which will auto build
 
 =item B<options>    The validation options to use (required for some  validation types)
 
-=item B<ref_type>   The validation ref type (optional, no default see Genome::Site::WUGC::Finfo::Validate)
+=item B<ref_type>   The validation ref type (optional, no default see Finfo::Validate)
 
 =item B<default>    The default value to set to the attribute (optional, no default)
 
@@ -479,7 +479,7 @@ If inheritting from a class that already uses the _attrs and/orthe _init methods
 
 =head1 See Also
 
-I<Genome::Site::WUGC::Finfo::Validate> I<Genome::Site::WUGC::Finfo::Logging> I<Genome::Site::WUGC::Finfo::CommandLineOptions>
+I<Finfo::Validate> I<Finfo::Logging> I<Finfo::CommandLineOptions>
 
 =head1 Disclaimer
 

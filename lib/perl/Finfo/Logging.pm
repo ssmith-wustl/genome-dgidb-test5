@@ -1,13 +1,13 @@
-package Genome::Site::WUGC::Finfo::Logging;
+package Finfo::Logging;
 
 use strict;
 use warnings;
 
 use Carp;
 use Data::Dumper;
-use Genome::Site::WUGC::Finfo::ClassUtils 'class';
-use Genome::Site::WUGC::Finfo::Msg;
-use Genome::Site::WUGC::Finfo::Validate;
+use Finfo::ClassUtils 'class';
+use Finfo::Msg;
+use Finfo::Validate;
 use Log::Log4perl;
 use Log::Log4perl::Level;
 
@@ -23,7 +23,7 @@ log4perl.appender.screen.layout.ConversionPattern=%m%n
 
 Log::Log4perl->init( \$conf );
 
-my @levels = Genome::Site::WUGC::Finfo::Msg->levels;
+my @levels = Finfo::Msg->levels;
 
 my @exported_subs = 
 (qw/
@@ -76,17 +76,17 @@ sub _log_msg
 {
     my $msg = shift;
 
-    Genome::Site::WUGC::Finfo::Validate->validate
+    Finfo::Validate->validate
     (
         attr => 'message object to log',
         value => $msg,
-        isa => 'object Genome::Site::WUGC::Finfo::Msg',
+        isa => 'object Finfo::Msg',
         cb => sub{ print Dumper(\@_); __PACKAGE__->fatal_msg(@_); },
     );
 
     unless ( Log::Log4perl->initialized )
     {
-        my $not_init_msg = Genome::Site::WUGC::Finfo::Msg->new
+        my $not_init_msg = Finfo::Msg->new
         (
             msg => "Can't log messages, logger not initialized",
             level => 'fatal',
@@ -183,7 +183,7 @@ sub _create_appender
 
     __PACKAGE__->fatal_msg("Unsupported appender type ($type)") unless $class;
 
-    Genome::Site::WUGC::Finfo::Validate->validate
+    Finfo::Validate->validate
     (
         attr => 'appender params',
         value => $params,
@@ -203,11 +203,11 @@ sub _is_msg_level_valid
 {
     my $level = shift;
 
-    Genome::Site::WUGC::Finfo::Validate->validate
+    Finfo::Validate->validate
     (
         attr => 'message level',
         value => $level,
-        isa => [ 'in_list',  Genome::Site::WUGC::Finfo::Msg->levels ],
+        isa => [ 'in_list',  Finfo::Msg->levels ],
         cb => sub{ __PACKAGE__->fatal_msg(@_); },
     );
 }
@@ -216,7 +216,7 @@ sub get_msg_detail_level
 {
     my $class = shift;
     
-    Genome::Site::WUGC::Finfo::Validate->validate
+    Finfo::Validate->validate
     (
         attr => 'class to set detail level',
         value => $class,
@@ -230,18 +230,18 @@ sub set_msg_detail_level
 {
     my ($class, $detail_level) = @_;
     
-    Genome::Site::WUGC::Finfo::Validate->validate
+    Finfo::Validate->validate
     (
         attr => 'class to set detail level',
         value => $class,
         cb => sub{ $class->fatal_msg(@_); },
     );
 
-    Genome::Site::WUGC::Finfo::Validate->validate
+    Finfo::Validate->validate
     (
         attr => 'msg detail to set',
         value => $detail_level,
-        isa => [ 'in_list', Genome::Site::WUGC::Finfo::Msg->detail_levels ],
+        isa => [ 'in_list', Finfo::Msg->detail_levels ],
         cb => sub{ $class->fatal_msg(@_); },
     );
     
@@ -362,20 +362,20 @@ sub fatal_msg
     $msg = 'Something really bad happened, but no message was provided' unless $msg;
     my $class = delete $p->{class} || class($self);
     my $caller = delete $p->{'caller'} || [ caller ];
-    # TODO get error codes from Genome::Site::WUGC::Finfo::ErrorCode??
+    # TODO get error codes from Finfo::ErrorCode??
     if ( my $err_code = delete $p->{err_code})
     {
         $msg .= sprintf(' (error code %s)', $err_code)
     }
     
-    my $msg_obj = Genome::Site::WUGC::Finfo::Msg->new
+    my $msg_obj = Finfo::Msg->new
     (
         msg => $msg,
         level => 'fatal',
         detail_level => 'more',#get_msg_detail_level($class),
         'caller' => [ $class, $caller->[1], $caller->[2] ],
     )
-        or croak "Can't create Genome::Site::WUGC::Finfo::Msg";
+        or croak "Can't create Finfo::Msg";
 
     my $msg_var = _msg_var('fatal');
 
@@ -440,14 +440,14 @@ sub _msg
 
     if ( defined $p{msg} )
     {
-        my $msg_obj = Genome::Site::WUGC::Finfo::Msg->new
+        my $msg_obj = Finfo::Msg->new
         (
             msg => $p{msg},
             level => $p{level},
             detail_level => get_msg_detail_level($p{class}),
             'caller' => [ $p{class}, $p{'caller'}->[1], $p{'caller'}->[2] ],
         )
-            or croak "Can't create Genome::Site::WUGC::Finfo::Msg";
+            or croak "Can't create Finfo::Msg";
 
         _log_msg($msg_obj);
 
@@ -479,7 +479,7 @@ sub destroy_msgs
 
 =head1 Name
 
-Genome::Site::WUGC::Finfo::Logging
+Finfo::Logging
  
 =head1 Synopsis
 
@@ -488,14 +488,14 @@ screen logger and add Log::Log4perl appenders that write to files, sockects, etc
 
 =head1 Usage
 
-B<Create a class, 'use' Genome::Site::WUGC::Finfo::Logging>
+B<Create a class, 'use' Finfo::Logging>
 
  pakage MyClass;
  
  use strict;
  use warnings;
 
- use Genome::Site::WUGC::Finfo::Logging;
+ use Finfo::Logging;
 
  sub new
  {
@@ -524,7 +524,7 @@ B<Can be used to add logging to a script...use 'main' as the class when creating
  use strict;
  use warnings;
 
- use Genome::Site::WUGC::Finfo::Logging;
+ use Finfo::Logging;
 
  # use arrow method on 'main' package
  main->info_msg("Starting...");
@@ -558,7 +558,7 @@ my $msg_obj = $obj->error_msg("Oops...I did it again");
 
 =item I<Params>     message (string)
 
-=item I<Returns>    Genome::Site::WUGC::Finfo::Msg (object) 
+=item I<Returns>    Finfo::Msg (object) 
 
 =back
 
@@ -576,18 +576,18 @@ my $short_error_msg = $self->short_error_msg;
 
 =back
 
-=head1 Methods not exported (call from Genome::Site::WUGC::Finfo::Logging, as class methods)
+=head1 Methods not exported (call from Finfo::Logging, as class methods)
 
 =head2 set_screen_logger_level
 
- Genome::Site::WUGC::Finfo::Logging::set_screen_logger_level($level)
+ Finfo::Logging::set_screen_logger_level($level)
     or die;
 
 =over
 
 =item I<Synopsis>   Sets the 'base' screen logger to a new level threshold
 
-=item I<Params>     level (string, Genome::Site::WUGC::Finfo::Msg->levels)
+=item I<Params>     level (string, Finfo::Msg->levels)
 
 =item I<Returns>    boolean - true on success
 
@@ -595,37 +595,37 @@ my $short_error_msg = $self->short_error_msg;
 
 =head2 get_msg_detail_level
 
- Genome::Site::WUGC::Finfo::Logging::set_screen_logger_level($level)
+ Finfo::Logging::set_screen_logger_level($level)
     or die;
 
 =over
 
-=item I<Synopsis>   Get the msg detail (see Genome::Site::WUGC::Finfo::Msg) for the class
+=item I<Synopsis>   Get the msg detail (see Finfo::Msg) for the class
 
 =item I<Params>     none 
 
-=item I<Returns>    msg detail (string, Genome::Site::WUGC::Finfo::Msg::detil_levels)
+=item I<Returns>    msg detail (string, Finfo::Msg::detil_levels)
 
 =back
 
 =head2 set_msg_detail_level
 
- Genome::Site::WUGC::Finfo::Logging::set_screen_logger_level($level)
+ Finfo::Logging::set_screen_logger_level($level)
     or die;
 
 =over
 
-=item I<Synopsis>   Set the msg detail (see Genome::Site::WUGC::Finfo::Msg) for the class
+=item I<Synopsis>   Set the msg detail (see Finfo::Msg) for the class
 
-=item I<Params>     msg detail (string, Genome::Site::WUGC::Finfo::Msg::detil_levels)
+=item I<Params>     msg detail (string, Finfo::Msg::detil_levels)
 
-=item I<Returns>    msg detail (string, Genome::Site::WUGC::Finfo::Msg::detil_levels)
+=item I<Returns>    msg detail (string, Finfo::Msg::detil_levels)
 
 =back
 
 =head2 add_appender
 
- Genome::Site::WUGC::Finfo::Logging::add_appender(%p)
+ Finfo::Logging::add_appender(%p)
     or die;
 
 =over
@@ -654,7 +654,7 @@ my $short_error_msg = $self->short_error_msg;
 
 =head1 See Also
 
-I<Genome::Site::WUGC::Finfo::Std>, I<Genome::Site::WUGC::Finfo::Msg>, I<Genome::Site::WUGC::Finfo::Validate>, I<Log::Log4perl>, I<Class::Std>
+I<Finfo::Std>, I<Finfo::Msg>, I<Finfo::Validate>, I<Log::Log4perl>, I<Class::Std>
 
 =head1 Disclaimer
 

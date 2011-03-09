@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finfo::Msg;
+package Finfo::Msg;
 
 use strict;
 use warnings;
@@ -11,7 +11,7 @@ use Date::Format;
 use Devel::StackTrace;
 use Term::ANSIColor;
 
-Genome::Site::WUGC::Finfo::Msg->mk_ro_accessors(qw/ class_of_obj msg level detail_level file_name line /);
+Finfo::Msg->mk_ro_accessors(qw/ class_of_obj msg level detail_level file_name line /);
 
 sub new
 {
@@ -109,7 +109,7 @@ sub _stack_string
 
     my $stack_trace = Devel::StackTrace->new
     (
-        ignore_class => 'Genome::Site::WUGC::Finfo::Msg',
+        ignore_class => 'Finfo::Msg',
     );
 
     return sprintf
@@ -166,17 +166,17 @@ sub color_params_for_level
 
 =head1 Name
 
-Genome::Site::WUGC::Finfo::Msg
+Finfo::Msg
  
 =head1 Synopsis
 
-A simple message class.  Used by the Genome::Site::WUGC::Finfo::Logging classes to communicate messages
+A simple message class.  Used by the Finfo::Logging classes to communicate messages
 and store mesage data.
 
 =head1 Usage
 
  my $caller = [ caller ];
- my $msg = Genome::Site::WUGC::Finfo::Msg->new
+ my $msg = Finfo::Msg->new
  (
     class_of_obj => $obj->class, # req
     msg => 'got foo barred', # req
@@ -249,7 +249,7 @@ The message detail level determines how much infomation is added to the output g
 
 =over
 
-=item Genome::Site::WUGC::Finfo::Logging
+=item Finfo::Logging
 
 =back
 

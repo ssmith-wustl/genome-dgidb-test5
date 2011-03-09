@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl
 
 
-package Genome::Site::WUGC::Finfo::Validate;
+package Finfo::Validate;
 
 use strict;
 use warnings;
@@ -11,9 +11,9 @@ use base qw(Class::Accessor);
 use Carp;
 use Data::Dumper;
 use File::Basename;
-use Genome::Site::WUGC::Finfo::ClassUtils 'class';
-use Genome::Site::WUGC::Finfo::Msg;
-use Genome::Site::WUGC::Finfo::OldValidate;
+use Finfo::ClassUtils 'class';
+use Finfo::Msg;
+use Finfo::OldValidate;
 use Regexp::Common;
 use Scalar::Util 'blessed';
 
@@ -55,7 +55,7 @@ sub validate
         no strict 'refs';
         warn_msg("API has changed, please update $caller[0]") unless ${ $class . '::' . $caller[0] };
         ${ $class . '::' . $caller[0] } = 1;
-        return Genome::Site::WUGC::Finfo::OldValidate->validate(%p, caller => \@caller);
+        return Finfo::OldValidate->validate(%p, caller => \@caller);
     }
     
     my $original_isa = delete $p{isa} || $isas[0];
@@ -260,7 +260,7 @@ sub _communicate_error
         : $caller->[0];
 
         $msg_level = ( $msg_level ) ? $msg_level : 'fatal';
-        unless ( grep { $msg_level eq $_ } Genome::Site::WUGC::Finfo::Msg->levels )
+        unless ( grep { $msg_level eq $_ } Finfo::Msg->levels )
         {
             fatal_msg("Invalid msg level ($msg_level)", $caller);
         }
@@ -278,7 +278,7 @@ sub warn_msg
 {
     my ($msg) = @_;
 
-    my $msg_obj = Genome::Site::WUGC::Finfo::Msg->new
+    my $msg_obj = Finfo::Msg->new
     (
         msg => $msg,
         level => 'warn',
@@ -293,7 +293,7 @@ sub fatal_msg
 { 
     my ($msg, $caller) = @_;
 
-    my $msg_obj = Genome::Site::WUGC::Finfo::Msg->new
+    my $msg_obj = Finfo::Msg->new
     (
         msg => $msg,
         level => 'fatal',
@@ -879,7 +879,7 @@ sub _project_name
 
 =head1 Name
 
- Genome::Site::WUGC::Finfo::Validate
+ Finfo::Validate
 
 =head1 Synopsis
 
@@ -891,7 +891,7 @@ Package with generic validation methods.  Evaluates a value for an attribute's i
 
 =item message method (msg), if defined will call the message method on the object (obj, if defiend) or the calling class.
 
-=item create a Genome::Site::WUGC::Finfo::Msg with level of fatal, print it, then croak.
+=item create a Finfo::Msg with level of fatal, print it, then croak.
  
 =back
 
@@ -905,7 +905,7 @@ Note that the value will be checked to see if it is defined.
  my $age = <STDIN>;
  chomp $age;
 
- Genome::Site::WUGC::Finfo::Validate->validate
+ Finfo::Validate->validate
  (
     attr => 'age',
     value => $age,
@@ -920,7 +920,7 @@ The main method, evaluates a value.  Returns 1 if ok or undef and executes error
 
 =head2 is_isa
 
- my ($isa, @opts) = Genome::Site::WUGC::Finfo::Validate->is_isa # or call as scalar
+ my ($isa, @opts) = Finfo::Validate->is_isa # or call as scalar
  (
     attr => 'Isa for attribute age',
     value => $isa,
@@ -931,7 +931,7 @@ Tests if the value is a valid isa.  Returns the 'isa and valid options on succes
 
 =head2 is_ds
 
- Genome::Site::WUGC::Finfo::Validate->is_ds
+ Finfo::Validate->is_ds
  (
     attr => 'data structure for attribute age',
     value => $ds,
@@ -982,11 +982,11 @@ A custom callback created by the caller.  Executed with the error msg as the fir
 
 =head2 msg (Message Level, optional)
 
-The msg method to call, if failure occurs (should be one of Genome::Site::WUGC::Finfo::Msg::levels)
+The msg method to call, if failure occurs (should be one of Finfo::Msg::levels)
 
 =head2 obj (Object/Class, optional)
 
-The object/class to call the above mesage method on failrue.  If this is set and the msg is not, an attempt to call 'fatl_msg' on the object/class will be made.  If the object cannot do this method, a fatal msg will be called from Genome::Site::WUGC::Finfo::Validate to indicate this.
+The object/class to call the above mesage method on failrue.  If this is set and the msg is not, an attempt to call 'fatl_msg' on the object/class will be made.  If the object cannot do this method, a fatal msg will be called from Finfo::Validate to indicate this.
  
 =head1 ISAs
 
@@ -1015,9 +1015,9 @@ Checks if value is defined.  This is done automatically, so there isn't a need t
 Valid options can be specified with these isas.  To do that, just add the options to the isa, separating each by a space.  After the value is checked to see if it is defiend, The value will be checked against the valid options.  
 
 Ex: 
-'object Genome::Site::WUGC::Finfo::Std',
+'object Finfo::Std',
 
-This would check if the value is defined, a blessed reference and if it inherits from Genome::Site::WUGC::Finfo::Std
+This would check if the value is defined, a blessed reference and if it inherits from Finfo::Std
 
 =over 
 
@@ -1110,7 +1110,7 @@ greater than or equal to the first number(#1) and less than or equal to the seco
  # options in the isa
  my $value = $entry->get_text;
 
- Genome::Site::WUGC::Finfo::Validate->validtate
+ Finfo::Validate->validtate
  (
     attr => 'answer',
     value => $value,

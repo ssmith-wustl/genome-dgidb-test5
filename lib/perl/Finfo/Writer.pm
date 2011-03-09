@@ -1,9 +1,9 @@
-package Genome::Site::WUGC::Finfo::Writer;
+package Finfo::Writer;
 
 use strict;
 use warnings;
 
-use Genome::Site::WUGC::Finfo::Std;
+use Finfo::Std;
 require Scalar::Util;
 
 my %io :name(io:r)
@@ -24,7 +24,7 @@ sub START
     my $io = $self->io;
     if ( ref($io) )
     {
-        Genome::Site::WUGC::Finfo::Validate->validate
+        Finfo::Validate->validate
         (
             attr => 'io for writing',
             value => $io,
@@ -35,7 +35,7 @@ sub START
     }
     else
     {
-        Genome::Site::WUGC::Finfo::Validate->validate
+        Finfo::Validate->validate
         (
             attr => 'file for writing',
             value => $io,
@@ -65,7 +65,7 @@ sub write_many
 {
     my ($self, $refs) = @_;
 
-    Genome::Site::WUGC::Finfo::Validate->validate
+    Finfo::Validate->validate
     (
         attr => 'objects to write',
         value => $refs,
@@ -89,7 +89,7 @@ sub write_many
 
 =head1 Name
 
-Genome::Site::WUGC::Finfo::Writer
+Finfo::Writer
 
 =head1 Synopsis
 
@@ -104,12 +104,12 @@ B<In your class>
  use strict;
  use warnings;
 
- use base 'Genome::Site::WUGC::Finfo::Writer';
+ use base 'Finfo::Writer';
 
- # additional attributes, OPTIONAL, see Genome::Site::WUGC::Finfo::Std
+ # additional attributes, OPTIONAL, see Finfo::Std
  my %album_count :name(album_count) :isa(int) :default(0);
 
- # add a START (or BUILD) method, OPTIONAL, see Genome::Site::WUGC::Finfo::Std;
+ # add a START (or BUILD) method, OPTIONAL, see Finfo::Std;
  sub START 
  {
     my $self = shift;
@@ -127,7 +127,7 @@ B<In your class>
  {
     my ($self, $album) = @_;
 
-    Genome::Site::WUGC::Finfo::Validate->validate # optional
+    Finfo::Validate->validate # optional
     (
         attr => 'album to write',
         value => $album,
@@ -204,7 +204,7 @@ $writer->write_many(@objs)
 
 =head1 See Also
 
-I<Genome::Site::WUGC::Finfo::Std>, I<Genome::Site::WUGC::Finfo::Logging>
+I<Finfo::Std>, I<Finfo::Logging>
 
 =head1 Disclaimer
 

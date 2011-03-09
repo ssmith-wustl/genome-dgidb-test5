@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finfo::OldValidate;
+package Finfo::OldValidate;
 
 use strict;
 use warnings;
@@ -978,7 +978,7 @@ sub project_name
 
 =head1 Name
 
- Genome::Site::WUGC::Finfo::Validate
+ Finfo::Validate
 
 =head1 Synopsis
 
@@ -1005,7 +1005,7 @@ sub project_name
  
  True:
  
- Genome::Site::WUGC::Finfo::Validate->validtate
+ Finfo::Validate->validtate
  (
     obj => $self,
     attr => 'answer',
@@ -1017,7 +1017,7 @@ sub project_name
 
  False, sets error_msg in $self:
 
- Genome::Site::WUGC::Finfo::Validate->validtate
+ Finfo::Validate->validtate
  (
     obj => $self,
     attr => 'answer',
@@ -1035,7 +1035,7 @@ See above, checks value, returns 1 if ok, undef and executes error callbacks.  I
 
 =head2 test_type
 
- Genome::Site::WUGC::Finfo::Validate->test_type($validation_type)
+ Finfo::Validate->test_type($validation_type)
    or die;
 
 Tests if the $validation_type is a valid type.  Returns undef on failure.
@@ -1227,7 +1227,7 @@ validation.
 
  Ex:
 
- Genome::Site::WUGC::Finfo::Validate->validate
+ Finfo::Validate->validate
  (
    attr => 'sum of x^2 + y^2',
    value => 4,

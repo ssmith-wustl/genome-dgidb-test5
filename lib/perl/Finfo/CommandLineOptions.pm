@@ -1,9 +1,9 @@
-package Genome::Site::WUGC::Finfo::CommandLineOptions;
+package Finfo::CommandLineOptions;
 
 use strict;
 use warnings;
 
-use Genome::Site::WUGC::Finfo::Std;
+use Finfo::Std;
 
 use Data::Dumper;
 use File::Basename;
@@ -12,7 +12,7 @@ use PP::LSF;
 use Term::ANSIColor;
 use Text::Wrap;
 
-require Genome::Site::WUGC::Finfo::ClassUtils;
+require Finfo::ClassUtils;
 
 my %classes :name(classes:o) :ds(aryref) :default([]) :empty_ok(1);
 my %add_q :name(add_q:o) :default(0);
@@ -109,7 +109,7 @@ sub _clos_for_class : PRIVATE
         {
             my $ds = $class->attributes_attribute($attr, 'ds');
             my $isa = $class->attributes_attribute($attr, 'isa');
-            my ($is_a, @opts) = Genome::Site::WUGC::Finfo::Validate->is_isa
+            my ($is_a, @opts) = Finfo::Validate->is_isa
             (
                 attr => $attr,
                 value => $isa,
@@ -181,7 +181,7 @@ sub _add_clo : PRIVATE
     $usage_opt =~ s/=.*$//;
     
     my $cat = ucfirst( lc ( $p{cat} || 'optional' ) );
-    return unless Genome::Site::WUGC::Finfo::Validate->validate
+    return unless Finfo::Validate->validate
     (
         attr => 'usage category',
         value => $cat,
@@ -254,7 +254,7 @@ sub _execute_script_in_queue : PRIVATE
 {
     my ($self, $opts) = @_;
 
-    Genome::Site::WUGC::Finfo::Validate->validate
+    Finfo::Validate->validate
     (
         attr => 'script to run in the queue',
         value => $0,
@@ -427,27 +427,27 @@ sub usage
 
 =head1 Name
 
-Genome::Site::WUGC::Finfo::CommandLineOptions
+Finfo::CommandLineOptions
 
 =head1 Synopsis
 
-This class combines the usefulness of the Genome::Site::WUGC::Finfo::Std and Genome::Site::WUGC::Finfo::Object attributes and Getopt::Long to get the command line options and process them for your classes.
+This class combines the usefulness of the Finfo::Std and Finfo::Object attributes and Getopt::Long to get the command line options and process them for your classes.
 
 =head1 Usage
 
-B<In your class using Genome::Site::WUGC::Finfo::Std> 
+B<In your class using Finfo::Std> 
 
  package Album::Reader;
 
- use Genome::Site::WUGC::Finfo::Std;
+ use Finfo::Std;
  
  my %input_file :name(input_file:r) :type(input_file) :clo("input-file=s") :desc("File to get albums");
 
-B<or in your class using base Genome::Site::WUGC::Finfo::Object> 
+B<or in your class using base Finfo::Object> 
 
  package Album::Reader;
 
- use base 'Genome::Site::WUGC::Finfo::Object';
+ use base 'Finfo::Object';
 
  sub _attrs
  {
@@ -466,7 +466,7 @@ B<later...>
 
 # Note: clo = command line options
 
- my $clo = Genome::Site::WUGC::Finfo::CommandLineOptions->new
+ my $clo = Finfo::CommandLineOptions->new
  (
     classes => [qw/ AblumReader /], 
     header_msg => 'Display you alnums!',
@@ -504,7 +504,7 @@ B<Required Params> (defaults)
 
 =over
 
-=item I<classes>    aryref of the Genome::Site::WUGC::Finfo::Std (or Genome::Site::WUGC::Finfo::Object) classes to use (req)
+=item I<classes>    aryref of the Finfo::Std (or Finfo::Object) classes to use (req)
 
 =back
 
@@ -564,7 +564,7 @@ Return the usage (string) for the classes and additional options.
 
 =head1 See Also
 
-I<Genome::Site::WUGC::Finfo::Std>, I<Genome::Site::WUGC::Finfo::Object>, I<PP::LSF>, I<Getopt::Long>
+I<Finfo::Std>, I<Finfo::Object>, I<PP::LSF>, I<Getopt::Long>
 
 =head1 Disclaimer
 
