@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::Ace::Exporter;
+package Finishing::Assembly::Ace::Exporter;
 
 use strict;
 use warnings;
@@ -93,7 +93,7 @@ sub export_contigs
     (
         attr => 'contig iterator to export',
         value => $ci,
-        isa => 'object Genome::Site::WUGC::Finishing::Assembly::Iterator',
+        isa => 'object Finishing::Assembly::Iterator',
         msg => 'fatal',
     );
     
@@ -118,7 +118,7 @@ sub export_contig
     (
         attr => 'contig to export',
         value => $contig,
-        isa => 'object',# Genome::Site::WUGC::Finishing::Assembly::Contig Genome::Site::WUGC::Finishing::Assembly::Ace::Contig',
+        isa => 'object',# Finishing::Assembly::Contig Finishing::Assembly::Ace::Contig',
         msg => 'fatal',
     );
 
@@ -447,7 +447,7 @@ sub _serialize_oligo_tag_text
 
 =head1 Name
 
-Genome::Site::WUGC::Finishing::Assembly::Ace::Exporter
+Finishing::Assembly::Ace::Exporter
 
 =head1 Synopsis
 
@@ -455,13 +455,13 @@ Writes a contig or contigs from an iterator to a file in the ace format.
 
 =head1 Usage
 
- use Genome::Site::WUGC::Finishing::Assembly::Ace::Exporter;
- use Genome::Site::WUGC::Finishing::Assembly::Factory;
+ use Finishing::Assembly::Ace::Exporter;
+ use Finishing::Assembly::Factory;
 
- my $factory =  Genome::Site::WUGC::Finishing::Assembly::Factory->connect->('cmap_user');
+ my $factory =  Finishing::Assembly::Factory->connect->('cmap_user');
  my $organism = $factory->get_organism("pan_troglodytes");
  my $assembly = $organism->get_assembly('2.1_051011');
- my $xporter = Genome::Site::WUGC::Finishing::Assembly::Ace::Exporter->new(file => 'new.ace');
+ my $xporter = Finishing::Assembly::Ace::Exporter->new(file => 'new.ace');
 
 I<write w/ contig iterator>
 
@@ -499,7 +499,7 @@ I<or one contig at a time>
 
 =item I<Synopsis>   goes thru a contig iterator, writing each contig to the file in 'ace' format
 
-=item I<Params>     contig iterator (Genome::Site::WUGC::Finishing::Assembly::Iterator)
+=item I<Params>     contig iterator (Finishing::Assembly::Iterator)
 
 =item I<Returns>    true on success
 
@@ -507,7 +507,7 @@ I<or one contig at a time>
 
 =head2 export_contig
 
- Genome::Site::WUGC::Finishing::Assembly::Ace::Exporter->instance->export_contig
+ Finishing::Assembly::Ace::Exporter->instance->export_contig
  (
     contig => $contig,
     # rename contig, optional, use one only:
@@ -519,7 +519,7 @@ I<or one contig at a time>
 
 =item I<Synopsis>   writes a contig to the file in 'ace' format
 
-=item I<Params>     contigs (Genome::Site::WUGC::Finishing::Assembly::Contig)
+=item I<Params>     contigs (Finishing::Assembly::Contig)
 
 =item I<Returns>    true on success
 
@@ -529,7 +529,7 @@ I<or one contig at a time>
 
 =over
 
-=item B<Genome::Site::WUGC::Finishing::Assembly::Factory>
+=item B<Finishing::Assembly::Factory>
 
 =back
 

@@ -1,6 +1,6 @@
 #The Contig Merging and Splitting Utility Library has several classes.
 
-package Genome::Site::WUGC::Finishing::Assembly::Transform;
+package Finishing::Assembly::Transform;
 our $VERSION = 0.01;
 
 use strict;
@@ -8,7 +8,7 @@ use warnings;
 use Carp;
 use List::Util qw(min max);
    
-my $pkg = "Genome::Site::WUGC::Finishing::Assembly::Transform";
+my $pkg = "Finishing::Assembly::Transform";
 sub new#($padded_string, $pad_char)#return $transform
 {
 	croak("$pkg:new:no class given, quitting") if @_ < 1;
@@ -532,7 +532,7 @@ sub copy
 sub get_sub_transform
 {
 	my ($self,%params) = @_;
-	my $transform = Genome::Site::WUGC::Finishing::Assembly::Transform->new;
+	my $transform = Finishing::Assembly::Transform->new;
 	if(exists $params{unpad_start})
 	{
 		my $unpad_start = $params{unpad_start};

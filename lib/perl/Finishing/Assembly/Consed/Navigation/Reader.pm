@@ -1,17 +1,17 @@
-package Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::Reader;
+package Finishing::Assembly::Consed::Navigation::Reader;
 
 use strict;
 use warnings;
 
 use base 'Finfo::Reader';
 
-use Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation;
+use Finishing::Assembly::Consed::Navigation;
 
 my %title :name(_title:p);
 
 sub _return_class
 {
-    return 'Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation';
+    return 'Finishing::Assembly::Consed::Navigation';
 }   
 
 sub title
@@ -89,7 +89,7 @@ sub _next
 
 =head1 Name
 
- Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::Reader
+ Finishing::Assembly::Consed::Navigation::Reader
 
 =head1 Synopsis
 
@@ -97,9 +97,9 @@ Reads a consed navigation file, returns navigation hashrefs or objects
 
 =head1 Usage
 
- use Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::Reader;
+ use Finishing::Assembly::Consed::Navigation::Reader;
 
- my $reader = Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::Reader->new
+ my $reader = Finishing::Assembly::Consed::Navigation::Reader->new
  (
      io => 'cafcop.nav', # can be file, or IO::* object
      return_as_objects => 1, # default is 0 returns hashrefs, 1 returns objects
@@ -129,7 +129,7 @@ Reads a consed navigation file, returns navigation hashrefs or objects
 
 =over
 
-=item Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation directory
+=item Finishing::Assembly::Consed::Navigation directory
 
 =item Finfo::Reader (parent class)
 

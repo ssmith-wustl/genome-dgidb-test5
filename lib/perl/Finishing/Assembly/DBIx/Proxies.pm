@@ -1,9 +1,9 @@
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::Proxy;
+package Finishing::Assembly::DBIx::Proxy;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::Proxy';
+use base 'Finishing::Assembly::Proxy';
 
 use Data::Dumper;
 use Finfo::ClassUtils 'class';
@@ -271,12 +271,12 @@ sub _count_related : RESTRICTED
 
 ###########################################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::OrganismProxy;
+package Finishing::Assembly::DBIx::OrganismProxy;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Proxy'; 
+use base 'Finishing::Assembly::DBIx::Proxy'; 
 
 sub methods_for_source_method : CUMULATIVE
 {
@@ -313,12 +313,12 @@ sub methods_for_related : RESTRICTED
 
 ###########################################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::AssemblyProxy;
+package Finishing::Assembly::DBIx::AssemblyProxy;
 
 use strict;
 use warnings;
 
-use base (qw/Genome::Site::WUGC::Finishing::Assembly::DBIx::Proxy/); 
+use base (qw/Finishing::Assembly::DBIx::Proxy/); 
 
 sub methods_for_source_method : CUMULATIVE
 {
@@ -382,12 +382,12 @@ sub add_tag
 
 #############################################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::SequencedItemProxy;
+package Finishing::Assembly::DBIx::SequencedItemProxy;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Proxy'; 
+use base 'Finishing::Assembly::DBIx::Proxy'; 
 
 #- BASES/QUALs -#
 sub base_string
@@ -447,12 +447,12 @@ sub length
 
 ###########################################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::AssembledReadProxy;
+package Finishing::Assembly::DBIx::AssembledReadProxy;
 
 use strict;
 use warnings;
 
-use base (qw/Genome::Site::WUGC::Finishing::Assembly::DBIx::SequencedItemProxy/); 
+use base (qw/Finishing::Assembly::DBIx::SequencedItemProxy/); 
 
 sub methods_for_source_method : CUMULATIVE 
 {
@@ -533,16 +533,16 @@ sub add_tag{
 
 ###########################################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::ContigProxy;
+package Finishing::Assembly::DBIx::ContigProxy;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::DBIx::SequencedItemProxy'; 
+use base 'Finishing::Assembly::DBIx::SequencedItemProxy'; 
 
-use Genome::Site::WUGC::Finishing::Assembly::Sequence;
+use Finishing::Assembly::Sequence;
 
-my %_sequence :name(_sequence:p) :isa('object Genome::Site::WUGC::Finishing::Assembly::Sequence');
+my %_sequence :name(_sequence:p) :isa('object Finishing::Assembly::Sequence');
 
 sub methods_for_source_method : CUMULATIVE
 {
@@ -617,7 +617,7 @@ sub scaffold_num
 #- SCAFFOLD -#
 sub set_scaffold{
     my ($self, $scaffold) = @_;
-    $self->fatal_msg("Need a scaffold object!") unless ref $scaffold =~ /Genome::Site::WUGC::Finishing::Assembly::Scaffold/;
+    $self->fatal_msg("Need a scaffold object!") unless ref $scaffold =~ /Finishing::Assembly::Scaffold/;
     my $id = $scaffold->id;
     $self->fatal_msg("Need a scaffold object with an id!") unless $id;
     $self->_set_scaffold_id($id);
@@ -753,12 +753,12 @@ sub add_tag
 
 ###########################################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::ChromosomeProxy;
+package Finishing::Assembly::DBIx::ChromosomeProxy;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Proxy'; 
+use base 'Finishing::Assembly::DBIx::Proxy'; 
 
 sub methods_for_source_method : CUMULATIVE
 {
@@ -787,12 +787,12 @@ sub methods_for_related : RESTRICTED
 
 ###########################################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::ChromosomeFirstScaffoldProxy;
+package Finishing::Assembly::DBIx::ChromosomeFirstScaffoldProxy;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Proxy'; 
+use base 'Finishing::Assembly::DBIx::Proxy'; 
 
 sub methods_for_source_method : CUMULATIVE
 {
@@ -807,12 +807,12 @@ sub methods_for_source_method : CUMULATIVE
 
 ###########################################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::ScaffoldProxy;
+package Finishing::Assembly::DBIx::ScaffoldProxy;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Proxy'; 
+use base 'Finishing::Assembly::DBIx::Proxy'; 
 
 sub methods_for_source_method : CUMULATIVE
 {
@@ -873,12 +873,12 @@ sub dump{
 
 ###########################################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::ImprovementCorrelationProxy;
+package Finishing::Assembly::DBIx::ImprovementCorrelationProxy;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Proxy'; 
+use base 'Finishing::Assembly::DBIx::Proxy'; 
 
 sub methods_for_source_method : CUMULATIVE
 {
@@ -904,12 +904,12 @@ sub methods_for_related : RESTRICTED
 
 ###########################################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::ProjectProxy;
+package Finishing::Assembly::DBIx::ProjectProxy;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Proxy'; 
+use base 'Finishing::Assembly::DBIx::Proxy'; 
 
 sub methods_for_source_method : CUMULATIVE
 {
@@ -974,12 +974,12 @@ sub dump{
 
 ###########################################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::GapProxy;
+package Finishing::Assembly::DBIx::GapProxy;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Proxy'; 
+use base 'Finishing::Assembly::DBIx::Proxy'; 
 
 sub methods_for_source_method : CUMULATIVE
 {
@@ -1015,9 +1015,9 @@ sub set_right_contig
 
 ###########################################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::TagProxy;
+package Finishing::Assembly::DBIx::TagProxy;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Proxy';
+use base 'Finishing::Assembly::DBIx::Proxy';
 
 sub methods_for_source_method : CUMULATIVE
 {
@@ -1040,9 +1040,9 @@ sub date
 
 ###########################################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::SequenceTagProxy;
+package Finishing::Assembly::DBIx::SequenceTagProxy;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::DBIx::TagProxy';
+use base 'Finishing::Assembly::DBIx::TagProxy';
 
 sub methods_for_source_method : CUMULATIVE
 {
@@ -1077,9 +1077,9 @@ sub type
 
 ###########################################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::ConsensusTagProxy;
+package Finishing::Assembly::DBIx::ConsensusTagProxy;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::DBIx::SequenceTagProxy';
+use base 'Finishing::Assembly::DBIx::SequenceTagProxy';
 
 my %is_oligo :name(is_oligo:p) :isa(boolean);
 my %is_auto_finish_exp :name(is_auto_finish_exp:p) :isa(boolean);
@@ -1138,9 +1138,9 @@ sub parent{
 
 ###########################################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::ReadTagProxy;
+package Finishing::Assembly::DBIx::ReadTagProxy;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::DBIx::SequenceTagProxy';
+use base 'Finishing::Assembly::DBIx::SequenceTagProxy';
 
 sub methods_for_source_method : CUMULATIVE
 {
@@ -1156,9 +1156,9 @@ sub parent{
 }
 
 ###########################################################################################
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::AssemblyTagProxy;
+package Finishing::Assembly::DBIx::AssemblyTagProxy;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::DBIx::TagProxy';
+use base 'Finishing::Assembly::DBIx::TagProxy';
 
 sub methods_for_source_method : CUMULATIVE
 {

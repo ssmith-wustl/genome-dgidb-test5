@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::Phd::CreateSqliteFromBall;
+package Finishing::Assembly::Phd::CreateSqliteFromBall;
 
 use strict;
 use warnings;
@@ -78,12 +78,12 @@ sub _insert_values {
 
 =head1 NAME
 
- Genome::Site::WUGC::Finishing::Assembly::Phd::CreateSqliteFromBall
+ Finishing::Assembly::Phd::CreateSqliteFromBall
  
 
 =head1 SYNOPSIS
 
- my $create = Genome::Site::WUGC::Finishing::Assembly::Phd::CreateSqliteFromBall->connect(
+ my $create = Finishing::Assembly::Phd::CreateSqliteFromBall->connect(
     ball => $ball_file,
  );
 

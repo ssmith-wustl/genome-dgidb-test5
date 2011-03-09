@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Scaffold;
+package Finishing::Assembly::DBIx::Schema::Scaffold;
 
 use strict;
 use warnings;
@@ -49,11 +49,11 @@ __PACKAGE__->add_columns
 );
 __PACKAGE__->set_primary_key('id');
 __PACKAGE__->add_unique_constraint([qw/ assembly_id scaffold_num /]);
-__PACKAGE__->belongs_to('assembly', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Assembly','assembly_id');
+__PACKAGE__->belongs_to('assembly', 'Finishing::Assembly::DBIx::Schema::Assembly','assembly_id');
 __PACKAGE__->has_many
 (
     'contigs', 
-    'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Contig', 
+    'Finishing::Assembly::DBIx::Schema::Contig', 
     'scaffold_id',
     {
         proxy => [qw/assembled_reads/],
@@ -62,7 +62,7 @@ __PACKAGE__->has_many
 __PACKAGE__->has_one
 (
     'chromosomes_first',
-    'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::ChromosomeFirstScaffold', 
+    'Finishing::Assembly::DBIx::Schema::ChromosomeFirstScaffold', 
     'scaffold_id'
 );
 

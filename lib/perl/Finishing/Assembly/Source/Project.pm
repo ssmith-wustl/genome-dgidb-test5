@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::Source::Project;
+package Finishing::Assembly::Source::Project;
 
 use strict;
 use warnings;

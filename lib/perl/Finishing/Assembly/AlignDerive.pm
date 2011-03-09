@@ -1,7 +1,7 @@
-package Genome::Site::WUGC::Finishing::Assembly::AlignDerive;
+package Finishing::Assembly::AlignDerive;
 our $VERSION = 0.01;
 
-use Genome::Site::WUGC::Finishing::Assembly::Transform;
+use Finishing::Assembly::Transform;
 use Carp::Assert;
 use strict;
 use warnings;
@@ -28,9 +28,9 @@ sub align
 	my $right_read = $right_reads->{$read_name};
 	my $left_transform = $left_read->sequence->get_transform;
 	my $right_transform = $right_read->sequence->get_transform;
-	my $new_left_transform = Genome::Site::WUGC::Finishing::Assembly::Transform->new;
+	my $new_left_transform = Finishing::Assembly::Transform->new;
 	$new_left_transform->derive_from_transforms($left_transform,$right_transform);
-	my $new_right_transform = Genome::Site::WUGC::Finishing::Assembly::Transform->new;
+	my $new_right_transform = Finishing::Assembly::Transform->new;
 	$new_right_transform->derive_from_transforms($right_transform,$left_transform);
 	$params{left_read} = $left_read;
 	$params{right_read} = $right_read;
@@ -88,8 +88,8 @@ sub _create_align_objects
 	#print "Right align seq: $right_align->{align_seq}\n";
 	#rint "Merge seq: $left_align->{merge_seq}\n";
 
-	my $left_transform = Genome::Site::WUGC::Finishing::Assembly::Transform->new($left_align->{align_seq}, '-');#this creates a transform for the merge region as it originally 
-	my $right_transform = Genome::Site::WUGC::Finishing::Assembly::Transform->new($right_align->{align_seq}, '-');#this creates a transform for the merge region as it originally 
+	my $left_transform = Finishing::Assembly::Transform->new($left_align->{align_seq}, '-');#this creates a transform for the merge region as it originally 
+	my $right_transform = Finishing::Assembly::Transform->new($right_align->{align_seq}, '-');#this creates a transform for the merge region as it originally 
 	$right_transform->_offset( $left_align->{start}-$right_align->{start});
 	#$left_align->{end} = $params->{new_left_transform}->get_pad_position($left_align->{end}-$left_align->{start})+$left_align->{start};
 	#$right_align->{end} = $params->{new_right_transform}->get_pad_position($right_align->{end}-$right_align->{start})+$right_align->{start};

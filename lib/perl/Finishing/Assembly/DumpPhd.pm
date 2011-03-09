@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::DumpPhd;
+package Finishing::Assembly::DumpPhd;
 
 use strict;
 use warnings;
@@ -34,7 +34,7 @@ sub get_phd{
     $phd_path = $self->grab_dir."/$phd_name" unless -e $phd_path;
     die "Can't find $phd_name in ".$self->phd_dir." or ".$self->grab_dir unless -e $phd_path;
     my $fh = IO::File->new("< $phd_path");
-    my $reader= Genome::Site::WUGC::Finishing::Assembly::Phd::Reader->new();
+    my $reader= Finishing::Assembly::Phd::Reader->new();
     return $reader->read($fh);
 }
 
@@ -78,7 +78,7 @@ sub dump_phd{
             next;
         }
 
-        my $pdo = Genome::Site::WUGC::Finishing::Assembly::PhdDB->new;
+        my $pdo = Finishing::Assembly::PhdDB->new;
 
         my $po;
         eval {$po = $pdo->get_phd($phd_name)};
@@ -108,7 +108,7 @@ sub dump_phd{
             }
             my $fh  = IO::File->new("> $phd_file") 
                 or die "can't write to $phd_file\n";
-            my $phd = Genome::Site::WUGC::Finishing::Assembly::Phd::Writer->new();
+            my $phd = Finishing::Assembly::Phd::Writer->new();
             $phd->write($fh, $po);
             $fh->close;
         }

@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::Source::Assembly;
+package Finishing::Assembly::Source::Assembly;
 
 use strict;
 use warnings;
@@ -53,7 +53,7 @@ sub tags{
 
 =head1 Name
 
-Genome::Site::WUGC::Finishing::Assembly::Ace::Assembly
+Finishing::Assembly::Ace::Assembly
 
 =head1 Synopsis
 

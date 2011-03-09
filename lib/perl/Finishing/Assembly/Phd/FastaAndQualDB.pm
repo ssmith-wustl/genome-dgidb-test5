@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::Phd::FastaAndQualDB;
+package Finishing::Assembly::Phd::FastaAndQualDB;
 
 use strict;
 use warnings;
@@ -8,10 +8,10 @@ use File::Basename;
 
 use Bio::SeqIO;
 use Data::Dumper;
-use Genome::Site::WUGC::Finishing::Assembly::Phd::Exporter;
-use Genome::Site::WUGC::Finishing::Assembly::Factory;
-#use Genome::Site::WUGC::Finishing::Assembly::Source::AssembledRead;
-use Genome::Site::WUGC::Finishing::Assembly::Source::Tags;
+use Finishing::Assembly::Phd::Exporter;
+use Finishing::Assembly::Factory;
+#use Finishing::Assembly::Source::AssembledRead;
+use Finishing::Assembly::Source::Tags;
 
 my %file :name(file:r) :isa(file_rw);
 my %dbh :name(_dbh:p);
@@ -179,8 +179,8 @@ sub get_phd
     $qual_fh->close;
 
     #print Dumper(\%phd);
-    #return Genome::Site::WUGC::Finishing::Assembly::Source::AssembledRead->new(%phd);
-    my $fac = Genome::Site::WUGC::Finishing::Assembly::Factory->connect('source');
+    #return Finishing::Assembly::Source::AssembledRead->new(%phd);
+    my $fac = Finishing::Assembly::Factory->connect('source');
     return $fac->create_assembled_read(%phd);
 }
 
@@ -231,13 +231,13 @@ sub get_latest_phd
 
 =head1 Name
 
- Genome::Site::WUGC::Finishing::Assembly::Phd
+ Finishing::Assembly::Phd
  
   > Object oriented phd/phd.ball file reader/writer
 
 =head1 Synopsis
 
- my $phd_object = Genome::Site::WUGC::Finishing::Assembly::Phd->new
+ my $phd_object = Finishing::Assembly::Phd->new
  (
     input_directory => "inputdirname",
  );
@@ -248,7 +248,7 @@ sub get_latest_phd
     
 =head1 Description
 
-Genome::Site::WUGC::Finishing::Assembly::Phd takes either a Phd file, and allows the user to get Contig objects from the ace file, edit them, and write the file back to the hard disk when finished.
+Finishing::Assembly::Phd takes either a Phd file, and allows the user to get Contig objects from the ace file, edit them, and write the file back to the hard disk when finished.
 
 =head1 METHODS
 

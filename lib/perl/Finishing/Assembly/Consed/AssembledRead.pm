@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::Consed::AssembledRead;
+package Finishing::Assembly::Consed::AssembledRead;
 
 use strict;
 use warnings;
@@ -24,7 +24,7 @@ sub phd_source
 
 =head1 Name
 
-Genome::Site::WUGC::Finishing::Assembly::Ace::AssembledRead
+Finishing::Assembly::Ace::AssembledRead
 
 =head1 Synopsis
 

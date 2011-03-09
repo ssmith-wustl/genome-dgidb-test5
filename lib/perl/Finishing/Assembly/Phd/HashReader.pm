@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::Phd::HashReader;
+package Finishing::Assembly::Phd::HashReader;
 
 use strict;
 use warnings;
@@ -123,7 +123,7 @@ sub _parse_tag
     }
     my @pos = split / /, $tag_data{UNPADDED_READ_POS};
     
-    my $tag = new Genome::Site::WUGC::Finishing::Assembly::Tag
+    my $tag = new Finishing::Assembly::Tag
     {
         type   => $tag_data{TYPE},
         source => $tag_data{SOURCE},
@@ -150,17 +150,17 @@ PhdReader - Phd file iterator
 
 =head1 SYNOPSIS
 
-    my $reader = new Genome::Site::WUGC::Finishing::Assembly::Phd::Reader(\*STDIN);
+    my $reader = new Finishing::Assembly::Phd::Reader(\*STDIN);
     while (my $obj = $reader->nextObject()) {
     }
 
 =head1 DESCRIPTION
 
-Genome::Site::WUGC::Finishing::Assembly::Phd::Reader iterates over a phd file, returning one element at a time.
+Finishing::Assembly::Phd::Reader iterates over a phd file, returning one element at a time.
 
 =head1 METHODS
 
-=item Genome::Site::WUGC::Finishing::Assembly::Phd::Reader::read 
+=item Finishing::Assembly::Phd::Reader::read 
 
     $phd = $reader->read(\*STDIN);
 

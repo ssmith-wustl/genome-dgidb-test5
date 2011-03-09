@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::Commands::ExportGscReads;
+package Finishing::Assembly::Commands::ExportGscReads;
 
 use strict;
 use warnings;
@@ -127,7 +127,7 @@ sub missed_names
 
 =head1 Name
 
-Genome::Site::WUGC::Finishing::Assembly::GSC::ReadExporter
+Finishing::Assembly::GSC::ReadExporter
 
 =head1 Synopsis
 

@@ -1,9 +1,9 @@
-package Genome::Site::WUGC::Finishing::Assembly::Scaffold;
+package Finishing::Assembly::Scaffold;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::Item';
+use base 'Finishing::Assembly::Item';
 
 sub contig_count
 {
@@ -48,7 +48,7 @@ sub reverse_orientation{
         foreach my $contig (@contigs_to_complement_ace){
             my $acefile = $contig->acefile;
             copy($acefile, $acefile.".bak");
-            my $ace_factory = Genome::Site::WUGC::Finishing::Assembly::Factory->connect('ace', $acefile);
+            my $ace_factory = Finishing::Assembly::Factory->connect('ace', $acefile);
             $ace_factory->commit;
         }
     }

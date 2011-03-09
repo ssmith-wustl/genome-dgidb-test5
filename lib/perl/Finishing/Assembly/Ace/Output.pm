@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::Ace::Output;
+package Finishing::Assembly::Ace::Output;
 
 use strict;
 use warnings;
@@ -230,7 +230,7 @@ sub bp_start_end : PRIVATE
 
 =head1 Name
 
-Genome::Site::WUGC::Finishing::Assembly::Ace::Output
+Finishing::Assembly::Ace::Output
 
 =head1 Synopsis
 
@@ -240,22 +240,22 @@ This module takes an aryref of objects and format.  It will then create the outp
 
 I<Get fasta sequence from an acefile>
 
- my $ace_dir = Genome::Site::WUGC::Finishing::Assembly::Ace::Dir->new(dir => '~/seqmgr/M_BB0392D19/edit_dir')
+ my $ace_dir = Finishing::Assembly::Ace::Dir->new(dir => '~/seqmgr/M_BB0392D19/edit_dir')
     or die;
     
  my $acefile = $acedir->recent_acefile;
     or die "\n";
     
- my $ace = Genome::Site::WUGC::Finishing::Assembly::Ace->new(input_file => $acefile) # see usage for more details
+ my $ace = Finishing::Assembly::Ace->new(input_file => $acefile) # see usage for more details
     or die;
 
- my $ace_ext = Genome::Site::WUGC::Finishing::Assembly::Ace::Ext->new(ace => $ace) # see usage for more details
+ my $ace_ext = Finishing::Assembly::Ace::Ext->new(ace => $ace) # see usage for more details
     or die;
 
  my $bioseqs = $ace_ext->contigs_to_bioseqs # see usage for details
     or die; 
 
- my $aceout = Genome::Site::WUGC::Finishing::Assembly::Ace::Output->new(objects => $bioseqs, type => 'fasta')
+ my $aceout = Finishing::Assembly::Ace::Output->new(objects => $bioseqs, type => 'fasta')
     or die;
 
  my $fasta_seq = $aceout->execute

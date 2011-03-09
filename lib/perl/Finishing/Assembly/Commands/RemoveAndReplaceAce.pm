@@ -1,11 +1,11 @@
-package Genome::Site::WUGC::Finishing::Assembly::Commands::RemoveAndReplaceAce;
+package Finishing::Assembly::Commands::RemoveAndReplaceAce;
 
 use strict;
 use warnings;
 use Data::Dumper;
 use IO::File;
-use Genome::Site::WUGC::Finishing::Assembly::Ace::Exporter;
-use Genome::Site::WUGC::Finishing::Assembly::Factory;
+use Finishing::Assembly::Ace::Exporter;
+use Finishing::Assembly::Factory;
 
 use Finfo::Std;
 
@@ -28,18 +28,18 @@ sub START{
     my $self = shift;
     
     Finfo::Logging::add_appender(
-        class => 'Genome::Site::WUGC::Finishing::Assembly::Commands::RemoveAndReplaceAce',
+        class => 'Finishing::Assembly::Commands::RemoveAndReplaceAce',
         type => 'file',
         params => {filename=>$self->log_file, mode =>'clobber'},
     );
 
     $self->info_msg("Replacing contigs Contig".$self->scaffold_num.".".$self->start." to Contig".$self->scaffold_num.".".$self->stop." in file \n".$self->source_ace_file."\n from file\n".$self->replacement_ace_file);
-    $self->source_assembly(Genome::Site::WUGC::Finishing::Assembly::Factory->connect('ace', $self->source_ace_file)->get_assembly);
+    $self->source_assembly(Finishing::Assembly::Factory->connect('ace', $self->source_ace_file)->get_assembly);
     $self->source_contigs($self->source_assembly->contigs);
     
-    $self->replacement_contig( Genome::Site::WUGC::Finishing::Assembly::Factory->connect('ace', $self->replacement_ace_file)->get_assembly->contigs->first );
+    $self->replacement_contig( Finishing::Assembly::Factory->connect('ace', $self->replacement_ace_file)->get_assembly->contigs->first );
     
-    $self->exporter( Genome::Site::WUGC::Finishing::Assembly::Ace::Exporter->new(file=>$self->output_file) );
+    $self->exporter( Finishing::Assembly::Ace::Exporter->new(file=>$self->output_file) );
     
 
     $self->fatal_msg("stop must be larger than start!") unless $self->stop >= $self->start;
@@ -59,7 +59,7 @@ sub execute{
     #    $acefile_for_deletes .= "$_";
     #    last;
     #}
-    my $ex_deletes = Genome::Site::WUGC::Finishing::Assembly::Ace::Exporter->new(file =>$acefile_for_deletes);
+    my $ex_deletes = Finishing::Assembly::Ace::Exporter->new(file =>$acefile_for_deletes);
     my $total_ctgs=0;
     my $deletes = 0;
     my $deletes_written = 0;

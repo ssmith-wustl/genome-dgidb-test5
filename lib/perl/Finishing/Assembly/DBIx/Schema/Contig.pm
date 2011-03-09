@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Contig;
+package Finishing::Assembly::DBIx::Schema::Contig;
 
 use strict;
 use warnings;
@@ -58,24 +58,24 @@ __PACKAGE__->add_columns(
 );
 __PACKAGE__->set_primary_key('id');
 __PACKAGE__->add_unique_constraint([qw/ scaffold_id contig_num /]);
-__PACKAGE__->belongs_to('chromosome', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Chromosome', 'chromosome_id');
-__PACKAGE__->belongs_to('assembly', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Assembly', 'assembly_id');
-__PACKAGE__->belongs_to('scaffold', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Scaffold', 'scaffold_id');
+__PACKAGE__->belongs_to('chromosome', 'Finishing::Assembly::DBIx::Schema::Chromosome', 'chromosome_id');
+__PACKAGE__->belongs_to('assembly', 'Finishing::Assembly::DBIx::Schema::Assembly', 'assembly_id');
+__PACKAGE__->belongs_to('scaffold', 'Finishing::Assembly::DBIx::Schema::Scaffold', 'scaffold_id');
 __PACKAGE__->has_one
 (
-    'consensus', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::ConsensusSequence', 'contig_id'
+    'consensus', 'Finishing::Assembly::DBIx::Schema::ConsensusSequence', 'contig_id'
 );
-__PACKAGE__->has_many('right_gaps', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Gap', 'left_contig_id');
-__PACKAGE__->has_many('left_gaps', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Gap', 'right_contig_id');
+__PACKAGE__->has_many('right_gaps', 'Finishing::Assembly::DBIx::Schema::Gap', 'left_contig_id');
+__PACKAGE__->has_many('left_gaps', 'Finishing::Assembly::DBIx::Schema::Gap', 'right_contig_id');
 __PACKAGE__->has_many
 (
-    'assembled_reads', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::AssembledRead', 'contig_id'
+    'assembled_reads', 'Finishing::Assembly::DBIx::Schema::AssembledRead', 'contig_id'
 );
-__PACKAGE__->has_many('tags', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::ConsensusTag', 'contig_id');
+__PACKAGE__->has_many('tags', 'Finishing::Assembly::DBIx::Schema::ConsensusTag', 'contig_id');
 __PACKAGE__->has_many
 (
     'left_links',
-    'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::TemplateLink',
+    'Finishing::Assembly::DBIx::Schema::TemplateLink',
     {
         'foreign.left_contig_id' => 'self.id'
     },
@@ -83,7 +83,7 @@ __PACKAGE__->has_many
 __PACKAGE__->has_many
 (
     'right_links',
-    'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::TemplateLink',
+    'Finishing::Assembly::DBIx::Schema::TemplateLink',
     {
         'foreign.right_contig_id' => 'self.id'
     },
@@ -91,7 +91,7 @@ __PACKAGE__->has_many
 __PACKAGE__->has_many
 (
     'linking_reads', 
-    'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::AssembledRead',
+    'Finishing::Assembly::DBIx::Schema::AssembledRead',
     'contig_id',
     {
         join => 'mate',
@@ -100,7 +100,7 @@ __PACKAGE__->has_many
 );
 __PACKAGE__->has_many
 (
-    'correlation_contigs', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::CorrelationContig', 'contig_id',
+    'correlation_contigs', 'Finishing::Assembly::DBIx::Schema::CorrelationContig', 'contig_id',
 );
 __PACKAGE__->many_to_many('correlations', 'correlation_contigs', 'correlation');
 

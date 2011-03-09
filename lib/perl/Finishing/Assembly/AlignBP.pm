@@ -1,7 +1,7 @@
-package Genome::Site::WUGC::Finishing::Assembly::AlignBP;
+package Finishing::Assembly::AlignBP;
 our $VERSION = 0.01;
 
-use Genome::Site::WUGC::Finishing::Assembly::Transform;
+use Finishing::Assembly::Transform;
 use Carp::Assert;
 use Bio::Seq;
 use Bio::Tools::dpAlign;
@@ -108,8 +108,8 @@ sub _convert_bioperl_to_gsc_transform
 	$left_align->{merge_seq} =~ tr/-/*/;
 
 
-	my $left_transform = Genome::Site::WUGC::Finishing::Assembly::Transform->new($left_align->{align_seq}, '-');#this creates a transform for the merge region as it originally 
-	my $right_transform = Genome::Site::WUGC::Finishing::Assembly::Transform->new($right_align->{align_seq}, '-');#this creates a transform for the merge region as it originally 
+	my $left_transform = Finishing::Assembly::Transform->new($left_align->{align_seq}, '-');#this creates a transform for the merge region as it originally 
+	my $right_transform = Finishing::Assembly::Transform->new($right_align->{align_seq}, '-');#this creates a transform for the merge region as it originally 
 	$right_transform->_offset( $left_align->{start}-$right_align->{start});
 	#may want to check if offset is valid
 	$left_align->{transform} = $left_transform;

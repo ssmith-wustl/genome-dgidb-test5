@@ -1,19 +1,19 @@
-package Genome::Site::WUGC::Finishing::Assembly::Tag;
+package Finishing::Assembly::Tag;
 {
     use strict;
     use warnings;
 
-    use base 'Genome::Site::WUGC::Finishing::Assembly::Item';
+    use base 'Finishing::Assembly::Item';
 }
 
 ######################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::SequenceTag;
+package Finishing::Assembly::SequenceTag;
 {
     use strict;
     use warnings;
 
-    use base 'Genome::Site::WUGC::Finishing::Assembly::Tag';
+    use base 'Finishing::Assembly::Tag';
 
     my %unpad_start :name(unpad_start:o);
     my %unpad_stop :name(unpad_stop:o);
@@ -28,9 +28,9 @@ package Genome::Site::WUGC::Finishing::Assembly::SequenceTag;
 
 ######################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::ReadTag;
+package Finishing::Assembly::ReadTag;
 {
-    use base 'Genome::Site::WUGC::Finishing::Assembly::SequenceTag';
+    use base 'Finishing::Assembly::SequenceTag';
 
     sub read_name
     {
@@ -47,9 +47,9 @@ package Genome::Site::WUGC::Finishing::Assembly::ReadTag;
 
 ######################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::ConsensusTag;
+package Finishing::Assembly::ConsensusTag;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::SequenceTag';
+use base 'Finishing::Assembly::SequenceTag';
 
 sub contig_name
 {
@@ -61,12 +61,12 @@ sub contig_name
 #may need to move some of these methods down to proxy
 ######################################################################
 =cut
-package Genome::Site::WUGC::Finishing::Assembly::OligoTag;
+package Finishing::Assembly::OligoTag;
 {
     use strict;
     use warnings;
 
-    use base 'Genome::Site::WUGC::Finishing::Assembly::ConsensusTag';
+    use base 'Finishing::Assembly::ConsensusTag';
 
     sub oligo_num
     {
@@ -82,12 +82,12 @@ package Genome::Site::WUGC::Finishing::Assembly::OligoTag;
 
 ######################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::AutoFinishExpTag;
+package Finishing::Assembly::AutoFinishExpTag;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::ConsensusTag';
+use base 'Finishing::Assembly::ConsensusTag';
 
 sub ace
 {
@@ -142,13 +142,13 @@ sub template_for_id
 =cut
 ######################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::AssemblyTag;
+package Finishing::Assembly::AssemblyTag;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::Tag';
+use base 'Finishing::Assembly::Tag';
 
 ######################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::TagInfo;
+package Finishing::Assembly::TagInfo;
 
 use strict;
 use warnings;

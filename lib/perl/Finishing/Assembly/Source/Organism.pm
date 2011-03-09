@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::Source::Organism;
+package Finishing::Assembly::Source::Organism;
 
 use strict;
 use warnings;
@@ -15,7 +15,7 @@ __PACKAGE__->mk_accessors(qw/ name /);
 
 =head1 Name
 
-Genome::Site::WUGC::Finishing::Assembly::Source::Organism
+Finishing::Assembly::Source::Organism
 
 =head1 Synopsis
 

@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Project;
+package Finishing::Assembly::DBIx::Schema::Project;
 
 use strict;
 use warnings;
@@ -62,8 +62,8 @@ __PACKAGE__->add_columns
     },
 );
 __PACKAGE__->set_primary_key('id');
-__PACKAGE__->belongs_to('organism', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Organism', 'organism_id');
-__PACKAGE__->has_many('project_contigs', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::ProjectContig', 'project_id');
+__PACKAGE__->belongs_to('organism', 'Finishing::Assembly::DBIx::Schema::Organism', 'organism_id');
+__PACKAGE__->has_many('project_contigs', 'Finishing::Assembly::DBIx::Schema::ProjectContig', 'project_id');
 __PACKAGE__->many_to_many('contigs', 'project_contigs', 'contig');
 
 1;

@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::ReplacedContig;
+package Finishing::Assembly::DBIx::Schema::ReplacedContig;
 
 use strict;
 use warnings;
@@ -27,13 +27,13 @@ __PACKAGE__->set_primary_key('id');
 __PACKAGE__->has_one
 (
     'replaced_contig_event',
-    'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::ReplacedContigEvent',
+    'Finishing::Assembly::DBIx::Schema::ReplacedContigEvent',
     'old_contig_id'
 );
 __PACKAGE__->might_have
 (
     'replacing_contig_event',
-    'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::ReplacedContigEvent',
+    'Finishing::Assembly::DBIx::Schema::ReplacedContigEvent',
     'new_contig_id'
 );
 

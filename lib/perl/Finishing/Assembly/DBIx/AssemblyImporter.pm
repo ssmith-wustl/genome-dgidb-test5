@@ -1,8 +1,8 @@
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::AssemblyImporter;
+package Finishing::Assembly::DBIx::AssemblyImporter;
 
 =pod
 
-=head1 Genome::Site::WUGC::Finishing::Assembly::DBIx::AssemblyImporter
+=head1 Finishing::Assembly::DBIx::AssemblyImporter
 
 =head1 SYNOPSIS
 
@@ -10,7 +10,7 @@ This module is used to import an ace file into the DBIX db/filesystem schema for
 
 =head1 DESCRIPTION
 
-my $importer = Genome::Site::WUGC::Finishing::Assembly::AceImporter->new
+my $importer = Finishing::Assembly::AceImporter->new
     (
     root_path   => <path_for_single_contig_acefiles>,   ( optional.  default => '/gscmnt/843/finishing/assembly/WholeGenomeImprovement/' )
     store_tags  => 1, ( optional, default 1 )
@@ -20,8 +20,8 @@ my $importer = Genome::Site::WUGC::Finishing::Assembly::AceImporter->new
 
 $importer->import_acefile
     (
-    ace_assembly => <Genome::Site::WUGC::Finishing::Assembly::Assembly object>, assembly with acefile source
-    dbix_assembly => <Genome::Site::WUGC::Finishing::Assembly::Assembly object>, assembly with dbix database source
+    ace_assembly => <Finishing::Assembly::Assembly object>, assembly with acefile source
+    dbix_assembly => <Finishing::Assembly::Assembly object>, assembly with dbix database source
     );
 
 
@@ -43,7 +43,7 @@ use warnings;
 
 use DateTime;
 use Finfo::Std;
-use Genome::Site::WUGC::Finishing::Assembly::Ace::Exporter;
+use Finishing::Assembly::Ace::Exporter;
 
 my %root_path :name(root_path:o) :isa(string) :default('/gscmnt/853/finishing/assembly/WholeGenomeImprovement/');
 my %store_tags :name(store_tags:o) :default(1);
@@ -251,7 +251,7 @@ sub _write_acefile_for_contig{
     if (-e $ace_path){
         $self->fatal_msg("error contig acefile found! $ace_path\n");
     }else{
-        my $exp = Genome::Site::WUGC::Finishing::Assembly::Ace::Exporter->new(file => $ace_path);
+        my $exp = Finishing::Assembly::Ace::Exporter->new(file => $ace_path);
         $exp->export_contig(contig=>$contig, new_name=>$contig_id);
         $exp->close;
     }

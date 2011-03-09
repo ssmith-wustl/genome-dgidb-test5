@@ -2,12 +2,12 @@
 #- ASSEMBLY PROXY -#
 ####################
 
-package Genome::Site::WUGC::Finishing::Assembly::Ace::AssemblyProxy;
+package Finishing::Assembly::Ace::AssemblyProxy;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::Proxy';
+use base 'Finishing::Assembly::Proxy';
 
 use Storable;
 
@@ -39,14 +39,14 @@ sub get_longest_contig{
 #- SEQUENCED ITEM PROXY -#
 ##########################
 
-package Genome::Site::WUGC::Finishing::Assembly::Ace::SequencedItemProxy;
+package Finishing::Assembly::Ace::SequencedItemProxy;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::Proxy';
+use base 'Finishing::Assembly::Proxy';
 
-use Genome::Site::WUGC::Finishing::Assembly::Sequence;
+use Finishing::Assembly::Sequence;
 
 my %seq :name(_seq:p) :isa('object');
 
@@ -61,13 +61,13 @@ sub _sequence
         "Private method (_sequence) can not be accessed from an outside caller ($caller)"
     ) unless grep 
     {
-        $caller eq "Genome::Site::WUGC::Finishing::Assembly::$_" 
+        $caller eq "Finishing::Assembly::$_" 
     } (qw/ AssembledRead Contig SequencedItem /);
     
     #return $self->_seq or $self->_seq
     return $self->_seq
     (
-        Genome::Site::WUGC::Finishing::Assembly::Sequence->new
+        Finishing::Assembly::Sequence->new
         (
             base_string => $self->source->base_string,
             qualities => $self->source->qualities,
@@ -105,12 +105,12 @@ sub qualities
 #- CONTIG PROXY -#
 ##################
 
-package Genome::Site::WUGC::Finishing::Assembly::Ace::ContigProxy;
+package Finishing::Assembly::Ace::ContigProxy;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::Ace::SequencedItemProxy';
+use base 'Finishing::Assembly::Ace::SequencedItemProxy';
 
 sub methods_for_source_method
 {
@@ -136,9 +136,9 @@ sub contig_num{
 #- READ PROXY -#
 ################
 
-package Genome::Site::WUGC::Finishing::Assembly::Ace::AssembledReadProxy;
+package Finishing::Assembly::Ace::AssembledReadProxy;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::Ace::SequencedItemProxy';
+use base 'Finishing::Assembly::Ace::SequencedItemProxy';
 
 sub methods_for_source_method
 {
@@ -187,9 +187,9 @@ sub direction{
 #- TAG PROXIES -#
 #################
 
-package Genome::Site::WUGC::Finishing::Assembly::Ace::TagProxy;
+package Finishing::Assembly::Ace::TagProxy;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::Proxy';
+use base 'Finishing::Assembly::Proxy';
 
 sub methods_for_source_method : CUMULATIVE
 {
@@ -205,15 +205,15 @@ sub methods_for_source_method : CUMULATIVE
 
 #-#
 
-package Genome::Site::WUGC::Finishing::Assembly::Ace::AssemblyTagProxy;
+package Finishing::Assembly::Ace::AssemblyTagProxy;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::Ace::TagProxy';
+use base 'Finishing::Assembly::Ace::TagProxy';
 
 #-#
 
-package Genome::Site::WUGC::Finishing::Assembly::Ace::SequenceTagProxy;
+package Finishing::Assembly::Ace::SequenceTagProxy;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::Ace::TagProxy';
+use base 'Finishing::Assembly::Ace::TagProxy';
 
 sub methods_for_source_method : CUMULATIVE
 {
@@ -230,9 +230,9 @@ sub methods_for_source_method : CUMULATIVE
 
 #-#
 
-package Genome::Site::WUGC::Finishing::Assembly::Ace::ConsensusTagProxy;
+package Finishing::Assembly::Ace::ConsensusTagProxy;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::Ace::SequenceTagProxy';
+use base 'Finishing::Assembly::Ace::SequenceTagProxy';
 
 my %is_oligo :name(is_oligo:p) :isa(boolean);
 my %is_auto_finish_exp :name(is_auto_finish_exp:p) :isa(boolean);
@@ -283,9 +283,9 @@ sub methods_for_source_method : CUMULATIVE
 
 #-#
 
-package Genome::Site::WUGC::Finishing::Assembly::Ace::ReadTagProxy;
+package Finishing::Assembly::Ace::ReadTagProxy;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::Ace::SequenceTagProxy';
+use base 'Finishing::Assembly::Ace::SequenceTagProxy';
 
 1;
 

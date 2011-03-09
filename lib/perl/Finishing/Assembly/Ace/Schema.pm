@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::Ace::Schema;
+package Finishing::Assembly::Ace::Schema;
 
 use strict;
 use warnings;
@@ -7,12 +7,12 @@ use Finfo::Std;
 
 use Data::Dumper;
 use Finfo::Iterator;
-use Genome::Site::WUGC::Finishing::Assembly::Ace::AssembledRead;
-use Genome::Site::WUGC::Finishing::Assembly::Ace::Assembly;
-use Genome::Site::WUGC::Finishing::Assembly::Ace::Contig;
-use Genome::Site::WUGC::Finishing::Assembly::Ace::Exporter;
-use Genome::Site::WUGC::Finishing::Assembly::Ace::Tags;
-use Genome::Site::WUGC::Finishing::Assembly::Cache;
+use Finishing::Assembly::Ace::AssembledRead;
+use Finishing::Assembly::Ace::Assembly;
+use Finishing::Assembly::Ace::Contig;
+use Finishing::Assembly::Ace::Exporter;
+use Finishing::Assembly::Ace::Tags;
+use Finishing::Assembly::Cache;
 use IO::File;
 
 require File::Copy;
@@ -26,9 +26,9 @@ sub START
 {
     my $self = shift;
 
-    $self->_assembly_cache( Genome::Site::WUGC::Finishing::Assembly::Cache->new() );
-    $self->_contig_cache( Genome::Site::WUGC::Finishing::Assembly::Cache->new() );
-    $self->_read_cache( Genome::Site::WUGC::Finishing::Assembly::Cache->new() );
+    $self->_assembly_cache( Finishing::Assembly::Cache->new() );
+    $self->_contig_cache( Finishing::Assembly::Cache->new() );
+    $self->_read_cache( Finishing::Assembly::Cache->new() );
 
     $self->_build_cache;
 
@@ -89,7 +89,7 @@ sub _read_from_fh
 
 sub tag_factory
 {
-    return Genome::Site::WUGC::Finishing::Assembly::Ace::TagFactory->instance;
+    return Finishing::Assembly::Ace::TagFactory->instance;
 }
 
 sub _build_cache : PRIVATE
@@ -239,7 +239,7 @@ sub get_assembly
 {
     my $self = shift;
 
-    return Genome::Site::WUGC::Finishing::Assembly::Ace::Assembly->new
+    return Finishing::Assembly::Ace::Assembly->new
     (
         _tags => sub{ $self->_assembly_tags(@_); },
         _scaffolds => sub{ $self->_scaffolds },
@@ -327,7 +327,7 @@ sub _get_contig : PRIVATE
     $scope++;
     $self->_contig_cache->set($name, 'in_scope', $scope);
     
-    return Genome::Site::WUGC::Finishing::Assembly::Ace::Contig->new
+    return Finishing::Assembly::Ace::Contig->new
     (
         _name => sub{ return $self->_contig_name($name, @_); },
         _complemented => sub{ $self->_contig_complemented($name, @_); },
@@ -577,7 +577,7 @@ sub _get_assembled_read : PRIVATE
     $scope++;
     $self->_read_cache->set($name, 'in_scope', $scope);
     
-    return Genome::Site::WUGC::Finishing::Assembly::Ace::AssembledRead->new
+    return Finishing::Assembly::Ace::AssembledRead->new
     (
         _name => sub{ return $self->_assembled_read_name($name, @_); },
         _rename => sub{ return $self->_rename_assembled_read($name, @_); },
@@ -918,7 +918,7 @@ sub _flush_assembled_read {
 
 =head1 Name
 
-Genome::Site::WUGC::Finishing::Assembly::Ace::Schema
+Finishing::Assembly::Ace::Schema
 
 =head1 Synopsis
 

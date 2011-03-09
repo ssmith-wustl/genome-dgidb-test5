@@ -1,12 +1,12 @@
-package Genome::Site::WUGC::Finishing::Assembly::Commands::ExportChromosomeAgp;
+package Finishing::Assembly::Commands::ExportChromosomeAgp;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::Commands::Base';
+use base 'Finishing::Assembly::Commands::Base';
 
 use Data::Dumper;
-use Genome::Site::WUGC::Finishing::Assembly::AGP::Writer;
+use Finishing::Assembly::AGP::Writer;
 
 my %assembly_name :name(assembly_name:r)
     :desc('Name of assembly to create ');
@@ -23,7 +23,7 @@ my %ordered :name(ordered:o)
     :default(0)
     :desc('Export the ordered contigs on the chromosome.  Default is to export the *unordered* contigs');
 my %writer :name(writer:r)
-    :isa('object Genome::Site::WUGC::Finishing::Assembly::AGP::Writer');
+    :isa('object Finishing::Assembly::AGP::Writer');
 my %ob :name(_object_begin:p)
     :isa('int')
     :default(1);
@@ -233,7 +233,7 @@ sub _add_to_object_begin : PRIVATE
 
 =head1 Name
 
-Genome::Site::WUGC::Finishing::Assembly::Commands::CreateOrganism
+Finishing::Assembly::Commands::CreateOrganism
 
 =head1 Synopsis
 

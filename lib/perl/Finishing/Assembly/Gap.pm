@@ -1,9 +1,9 @@
-package Genome::Site::WUGC::Finishing::Assembly::Gap;
+package Finishing::Assembly::Gap;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::Item';
+use base 'Finishing::Assembly::Item';
 
 1;
 

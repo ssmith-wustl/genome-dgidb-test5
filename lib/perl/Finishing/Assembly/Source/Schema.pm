@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::Source::Schema;
+package Finishing::Assembly::Source::Schema;
 
 use strict;
 use warnings;
@@ -6,20 +6,20 @@ use warnings;
 use base 'Finfo::Singleton';
 
 use Data::Dumper;
-use Genome::Site::WUGC::Finishing::Assembly::Cache;
-#use Genome::Site::WUGC::Finishing::Assembly::Project::Utils;
+use Finishing::Assembly::Cache;
+#use Finishing::Assembly::Project::Utils;
 
 # models
-use Genome::Site::WUGC::Finishing::Assembly::Source::AssembledRead;
-use Genome::Site::WUGC::Finishing::Assembly::Source::Assembly;
-use Genome::Site::WUGC::Finishing::Assembly::Source::Contig;
-use Genome::Site::WUGC::Finishing::Assembly::Source::Organism;
-use Genome::Site::WUGC::Finishing::Assembly::Source::Project;
-use Genome::Site::WUGC::Finishing::Assembly::Source::Tags;
+use Finishing::Assembly::Source::AssembledRead;
+use Finishing::Assembly::Source::Assembly;
+use Finishing::Assembly::Source::Contig;
+use Finishing::Assembly::Source::Organism;
+use Finishing::Assembly::Source::Project;
+use Finishing::Assembly::Source::Tags;
 
-my %cache :name(_cache:p) :isa(object) :default( Genome::Site::WUGC::Finishing::Assembly::Cache->new() );
-my %ctg_cache :name(_contig_cache:p) :isa(object) :default( Genome::Site::WUGC::Finishing::Assembly::Cache->new() );
-my %proj_cache :name(_project_cache:p) :isa(object) :default( Genome::Site::WUGC::Finishing::Assembly::Cache->new() );
+my %cache :name(_cache:p) :isa(object) :default( Finishing::Assembly::Cache->new() );
+my %ctg_cache :name(_contig_cache:p) :isa(object) :default( Finishing::Assembly::Cache->new() );
+my %proj_cache :name(_project_cache:p) :isa(object) :default( Finishing::Assembly::Cache->new() );
 
 sub connect
 {
@@ -31,18 +31,18 @@ sub create_contig
 {
     my ($self, %p) = @_;
  
-    return Genome::Site::WUGC::Finishing::Assembly::Source::Contig->new(%p);
+    return Finishing::Assembly::Source::Contig->new(%p);
 }
 
 sub copy_contig
 {
     my ($self, $obj) = @_;
-    my @accessors = Genome::Site::WUGC::Finishing::Assembly::Source::Contig->accessors;
+    my @accessors = Finishing::Assembly::Source::Contig->accessors;
     my %p;
     foreach ( @accessors){
         $p{$_} = $obj->$_;
     }
-    return Genome::Site::WUGC::Finishing::Assembly::Source::Contig->new(%p);
+    return Finishing::Assembly::Source::Contig->new(%p);
 }
 
 #- ASSEMBLED READ -#
@@ -50,76 +50,76 @@ sub create_assembled_read
 {
 	my ($self, %p) = @_;
 
-	return Genome::Site::WUGC::Finishing::Assembly::Source::AssembledRead->new(%p);
+	return Finishing::Assembly::Source::AssembledRead->new(%p);
 }
 
 sub copy_assembled_read
 {
     my ($self, $obj) = @_;
 
-    my @accessors = Genome::Site::WUGC::Finishing::Assembly::Source::AssembledRead->accessors;
+    my @accessors = Finishing::Assembly::Source::AssembledRead->accessors;
     my %p;
     foreach ( @accessors )
     {
         $p{$_} = $obj->$_;
     }
     
-    return Genome::Site::WUGC::Finishing::Assembly::Source::AssembledRead->new(%p);
+    return Finishing::Assembly::Source::AssembledRead->new(%p);
 }
 
 #- CONSENSUS TAG -#
 sub create_consensus_tag {
     my ($self, %p) = @_;
-    return Genome::Site::WUGC::Finishing::Assembly::Source::ConsensusTag->new(%p);
+    return Finishing::Assembly::Source::ConsensusTag->new(%p);
 }
 
 sub copy_consensus_tag
 {
     my ($self, $obj) = @_;
-    my @accessors = Genome::Site::WUGC::Finishing::Assembly::Source::ConsensusTag->accessors;
+    my @accessors = Finishing::Assembly::Source::ConsensusTag->accessors;
     my %p;
     foreach (@accessors){
         $p{$_} = $obj->$_;
     }
-    return Genome::Site::WUGC::Finishing::Assembly::Source::ConsensusTag->new(%p);
+    return Finishing::Assembly::Source::ConsensusTag->new(%p);
 }
 
 sub create_read_tag { 
     my ($self, %p) = @_;
-    return Genome::Site::WUGC::Finishing::Assembly::Source::ReadTag->new(%p);
+    return Finishing::Assembly::Source::ReadTag->new(%p);
 }
 
 sub copy_read_tag
 {
     my ($self, $obj) = @_;
-    my @accessors = Genome::Site::WUGC::Finishing::Assembly::Source::ReadTag->accessors;
+    my @accessors = Finishing::Assembly::Source::ReadTag->accessors;
     my %p;
     foreach (@accessors){
         $p{$_} = $obj->$_;
     }
-    return Genome::Site::WUGC::Finishing::Assembly::Source::ReadTag->new(%p);
+    return Finishing::Assembly::Source::ReadTag->new(%p);
 }
 
 sub create_assembly_tag { 
     my ($self, %p) = @_;
-    return Genome::Site::WUGC::Finishing::Assembly::Source::AssemblyTag->new(%p);
+    return Finishing::Assembly::Source::AssemblyTag->new(%p);
 }
 
 sub copy_assembly_tag
 {
     my ($self, $obj) = @_;
-    my @accessors = Genome::Site::WUGC::Finishing::Assembly::Source::AssemblyTag->accessors;
+    my @accessors = Finishing::Assembly::Source::AssemblyTag->accessors;
     my %p;
     foreach (@accessors){
         $p{$_} = $obj->$_;
     }
-    return Genome::Site::WUGC::Finishing::Assembly::Source::AssemblyTag->new(%p);
+    return Finishing::Assembly::Source::AssemblyTag->new(%p);
 }
 
 #- PROJECT -#
 sub project_utils
 {
-    return Genome::Site::WUGC::Finishing::Assembly::Project::Utils->instance;
+    return Finishing::Assembly::Project::Utils->instance;
 }
 
 sub get_or_create_project
@@ -161,7 +161,7 @@ sub create_project
             or $self->fatal_msg("Can't create directory ($directory) for $name\: $!");
     }
 
-    return Genome::Site::WUGC::Finishing::Assembly::Source::Project->new
+    return Finishing::Assembly::Source::Project->new
     (
         name => $name,
         directory => $directory,
@@ -174,7 +174,7 @@ sub create_project
 
 =head1 Name
 
-Genome::Site::WUGC::Finishing::Assembly::GSCSchema
+Finishing::Assembly::GSCSchema
 
 =head1 Synopsis
 

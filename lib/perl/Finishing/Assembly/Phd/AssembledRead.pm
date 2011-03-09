@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::Phd::AssembledRead;
+package Finishing::Assembly::Phd::AssembledRead;
 
 use strict;
 use warnings;
@@ -29,7 +29,7 @@ sub tags
 
 =head1 Name
 
-Genome::Site::WUGC::Finishing::Assembly::Ace::AssembledRead
+Finishing::Assembly::Ace::AssembledRead
 
 =head1 Synopsis
 

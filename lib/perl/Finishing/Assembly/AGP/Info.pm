@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::AGP::Info;
+package Finishing::Assembly::AGP::Info;
 
 use strict;
 use warnings;

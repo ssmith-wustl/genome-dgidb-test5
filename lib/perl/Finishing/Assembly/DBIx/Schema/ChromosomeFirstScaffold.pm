@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::ChromosomeFirstScaffold;
+package Finishing::Assembly::DBIx::Schema::ChromosomeFirstScaffold;
 
 use strict;
 use warnings;
@@ -35,9 +35,9 @@ __PACKAGE__->add_columns
     },
 );
 __PACKAGE__->set_primary_key('chromosome_id', 'assembly_id');
-__PACKAGE__->belongs_to('chromosome', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Chromosome', 'chromosome_id');
-__PACKAGE__->belongs_to('assembly', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Assembly', 'assembly_id');
-__PACKAGE__->belongs_to('scaffold', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Scaffold', 'scaffold_id');
+__PACKAGE__->belongs_to('chromosome', 'Finishing::Assembly::DBIx::Schema::Chromosome', 'chromosome_id');
+__PACKAGE__->belongs_to('assembly', 'Finishing::Assembly::DBIx::Schema::Assembly', 'assembly_id');
+__PACKAGE__->belongs_to('scaffold', 'Finishing::Assembly::DBIx::Schema::Scaffold', 'scaffold_id');
 
 1;
 

@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::ImprovementCorrelation;
+package Finishing::Assembly::DBIx::Schema::ImprovementCorrelation;
 
 use base 'DBIx::Class';
 
@@ -33,8 +33,8 @@ __PACKAGE__->add_columns(
     },
 );
 __PACKAGE__->set_primary_key('id');
-__PACKAGE__->belongs_to('assembly', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Assembly', 'assembly_id');
-__PACKAGE__->has_many('correlation_contigs', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::CorrelationContig', 'correlation_id');
+__PACKAGE__->belongs_to('assembly', 'Finishing::Assembly::DBIx::Schema::Assembly', 'assembly_id');
+__PACKAGE__->has_many('correlation_contigs', 'Finishing::Assembly::DBIx::Schema::CorrelationContig', 'correlation_id');
 __PACKAGE__->many_to_many('contigs', 'correlation_contigs', 'contig');
 
 sub extended_contigs {

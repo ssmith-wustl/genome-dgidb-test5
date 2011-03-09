@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::ReplacedContigEvent;
+package Finishing::Assembly::DBIx::Schema::ReplacedContigEvent;
 use base 'DBIx::Class';
 use strict;
 use warnings;
@@ -30,18 +30,18 @@ __PACKAGE__->add_columns
       'size' => '11'
     },
 );
-__PACKAGE__->belongs_to('event', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Event', 'event_id');
-__PACKAGE__->belongs_to('old_contig', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::ReplacedContig', 'old_contig_id');
+__PACKAGE__->belongs_to('event', 'Finishing::Assembly::DBIx::Schema::Event', 'event_id');
+__PACKAGE__->belongs_to('old_contig', 'Finishing::Assembly::DBIx::Schema::ReplacedContig', 'old_contig_id');
 __PACKAGE__->might_have
 (
     'new_contig', 
-    'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Contig',
+    'Finishing::Assembly::DBIx::Schema::Contig',
     {'foreign.id' => 'self.new_contig_id'}
 );
 __PACKAGE__->might_have
 (
     'new_contig_replaced', 
-    'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::ReplacedContig', 
+    'Finishing::Assembly::DBIx::Schema::ReplacedContig', 
     {'foreign.id' =>'self.new_contig_id'}
 );
 

@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::Ace::TagFactory;
+package Finishing::Assembly::Ace::TagFactory;
 {
     use strict;
     use warnings;
@@ -20,7 +20,7 @@ package Genome::Site::WUGC::Finishing::Assembly::Ace::TagFactory;
         $tag{date} = $self->_convert_from_ace_tag_date($tag{date});
         $self->_parse_tag_text_and_comment($io, \%tag);
 
-        return Genome::Site::WUGC::Finishing::Assembly::Ace::AssemblyTag->new(%tag);
+        return Finishing::Assembly::Ace::AssemblyTag->new(%tag);
     }
 
     sub build_contig_tag
@@ -36,7 +36,7 @@ package Genome::Site::WUGC::Finishing::Assembly::Ace::TagFactory;
         $tag{date} = $self->_convert_from_ace_tag_date($tag{date});
         $self->_parse_tag_text_and_comment($io, \%tag);
 
-        my $class = 'Genome::Site::WUGC::Finishing::Assembly::Ace::';
+        my $class = 'Finishing::Assembly::Ace::';
         my %tag_types_and_class_additions = 
         (
             oligo => 'OligoTag',
@@ -67,7 +67,7 @@ package Genome::Site::WUGC::Finishing::Assembly::Ace::TagFactory;
         $tag{date} = $self->_convert_from_ace_tag_date($tag{date});
         $self->_parse_tag_text_and_comment($io, \%tag);
 
-        return Genome::Site::WUGC::Finishing::Assembly::Ace::ReadTag->new(%tag);
+        return Finishing::Assembly::Ace::ReadTag->new(%tag);
     }
 
     sub _convert_from_ace_tag_date
@@ -204,9 +204,9 @@ package Genome::Site::WUGC::Finishing::Assembly::Ace::TagFactory;
 
         my %types_and_classes =
         (
-            assembly_tag => 'Genome::Site::WUGC::Finishing::Assembly::Ace::AssemblyTag',
-            contig_tag => 'Genome::Site::WUGC::Finishing::Assembly::Ace::ConsensusTag',
-            read_tag => 'Genome::Site::WUGC::Finishing::Assembly::Ace::ReadTag',
+            assembly_tag => 'Finishing::Assembly::Ace::AssemblyTag',
+            contig_tag => 'Finishing::Assembly::Ace::ConsensusTag',
+            read_tag => 'Finishing::Assembly::Ace::ReadTag',
         );
 
         my %tag_types_and_class_additions = 
@@ -229,7 +229,7 @@ package Genome::Site::WUGC::Finishing::Assembly::Ace::TagFactory;
 
 ##################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::Ace::Tag;
+package Finishing::Assembly::Ace::Tag;
 {
     use strict;
     use warnings;
@@ -250,24 +250,24 @@ package Genome::Site::WUGC::Finishing::Assembly::Ace::Tag;
 
 ##################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::Ace::AssemblyTag;
+package Finishing::Assembly::Ace::AssemblyTag;
 {
     use strict;
     use warnings;
     
-    use base 'Genome::Site::WUGC::Finishing::Assembly::Ace::Tag';
+    use base 'Finishing::Assembly::Ace::Tag';
     
     1;
 }
 
 ##################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::Ace::SequenceTag;
+package Finishing::Assembly::Ace::SequenceTag;
 {
     use strict;
     use warnings;
     
-    use base 'Genome::Site::WUGC::Finishing::Assembly::Ace::Tag';
+    use base 'Finishing::Assembly::Ace::Tag';
     
     __PACKAGE__->mk_accessors(qw/ parent start stop /);
     #unpad_start unpad_stop 
@@ -282,9 +282,9 @@ package Genome::Site::WUGC::Finishing::Assembly::Ace::SequenceTag;
 
 ##################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::Ace::ConsensusTag;
+package Finishing::Assembly::Ace::ConsensusTag;
 {
-    use base 'Genome::Site::WUGC::Finishing::Assembly::Ace::SequenceTag';
+    use base 'Finishing::Assembly::Ace::SequenceTag';
 
     __PACKAGE__->mk_accessors(qw/ no_trans /);
 
@@ -293,12 +293,12 @@ package Genome::Site::WUGC::Finishing::Assembly::Ace::ConsensusTag;
 
 ##################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::Ace::AutoFinishExpTag;
+package Finishing::Assembly::Ace::AutoFinishExpTag;
 {
     use strict;
     use warnings;
               
-    use base 'Genome::Site::WUGC::Finishing::Assembly::Ace::ConsensusTag';
+    use base 'Finishing::Assembly::Ace::ConsensusTag';
 
     __PACKAGE__->mk_accessors
     (qw/ 
@@ -312,12 +312,12 @@ package Genome::Site::WUGC::Finishing::Assembly::Ace::AutoFinishExpTag;
 
 ##################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::Ace::OligoTag;
+package Finishing::Assembly::Ace::OligoTag;
 {
     use strict;
     use warnings;
 
-    use base 'Genome::Site::WUGC::Finishing::Assembly::Ace::ConsensusTag';
+    use base 'Finishing::Assembly::Ace::ConsensusTag';
 
     __PACKAGE__->mk_accessors(qw/ oligo_name oligo_seq oligo_temp oligo_templates complemented /);
 
@@ -332,10 +332,10 @@ package Genome::Site::WUGC::Finishing::Assembly::Ace::OligoTag;
 
 ##################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::Ace::ReadTag;
+package Finishing::Assembly::Ace::ReadTag;
 {
 
-    use base 'Genome::Site::WUGC::Finishing::Assembly::Ace::SequenceTag';
+    use base 'Finishing::Assembly::Ace::SequenceTag';
 
     1;
 }

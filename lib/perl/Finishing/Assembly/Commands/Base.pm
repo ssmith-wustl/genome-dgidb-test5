@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::Commands::Base;
+package Finishing::Assembly::Commands::Base;
 
 use strict;
 use warnings;
@@ -6,10 +6,10 @@ use warnings;
 use Finfo::Std;
 
 use Data::Dumper;
-use Genome::Site::WUGC::Finishing::Assembly::Factory;
+use Finishing::Assembly::Factory;
 
 my %db :name(db:r)
-    :isa(['in_list', Genome::Site::WUGC::Finishing::Assembly::Factory->available_dbs ])
+    :isa(['in_list', Finishing::Assembly::Factory->available_dbs ])
     :desc('Database to connect to');
 my %db_file :name(db_file:o)
     :isa('file_rw')
@@ -21,7 +21,7 @@ sub START : CUMULATIVE
 {
     my $self = shift;
     
-    return $self->_factory( Genome::Site::WUGC::Finishing::Assembly::Factory->connect($self->db, $self->db_file) );
+    return $self->_factory( Finishing::Assembly::Factory->connect($self->db, $self->db_file) );
 }
 
 sub DEMOLISH
@@ -41,7 +41,7 @@ sub DEMOLISH
 
 =head1 Name
 
-Genome::Site::WUGC::Finishing::Assembly::Commands::Base
+Finishing::Assembly::Commands::Base
 
 =head1 Synopsis
 

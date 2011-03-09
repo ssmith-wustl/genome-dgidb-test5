@@ -18,7 +18,7 @@
 
 # Last modified: <Thu, 2008/01/31 16:11:56 ebelter linus108>
 
-package Genome::Site::WUGC::Finishing::Assembly::Phd::Reader;
+package Finishing::Assembly::Phd::Reader;
 our $VERSION = 0.01;
 
 =pod
@@ -29,13 +29,13 @@ PhdReader - Phd file iterator
 
 =head1 SYNOPSIS
 
-    my $reader = new Genome::Site::WUGC::Finishing::Assembly::Phd::Reader(\*STDIN);
+    my $reader = new Finishing::Assembly::Phd::Reader(\*STDIN);
     while (my $obj = $reader->nextObject()) {
     }
 
 =head1 DESCRIPTION
 
-Genome::Site::WUGC::Finishing::Assembly::Phd::Reader iterates over a phd file, returning one element at a time.
+Finishing::Assembly::Phd::Reader iterates over a phd file, returning one element at a time.
 
 =head1 METHODS
 
@@ -45,15 +45,15 @@ use strict;
 use warnings;
 use Carp;
 
-use Genome::Site::WUGC::Finishing::Assembly::Factory;
+use Finishing::Assembly::Factory;
 
-my $pkg = 'Genome::Site::WUGC::Finishing::Assembly::Phd::Reader';
+my $pkg = 'Finishing::Assembly::Phd::Reader';
 
 =pod
 
 =item new 
 
-    my $reader = new Genome::Site::WUGC::Finishing::Assembly::Phd::Reader;
+    my $reader = new Finishing::Assembly::Phd::Reader;
 
 =cut
 sub new {
@@ -79,14 +79,14 @@ sub new {
 
 =pod
 
-=item Genome::Site::WUGC::Finishing::Assembly::Phd::Reader::read 
+=item Finishing::Assembly::Phd::Reader::read 
 
     $phd = $reader->read(\*STDIN);
 
 =cut
 sub read {
     my ($self,$IN) = @_;
-	my $factory = Genome::Site::WUGC::Finishing::Assembly::Factory->connect("source");
+	my $factory = Finishing::Assembly::Factory->connect("source");
     my $phd = $factory->create_assembled_read();
     while (my $line = <$IN>) {
         chomp $line;
@@ -185,7 +185,7 @@ sub read_tag {
         $tag_data{$element[0]} = $element[1] if defined $element[0];
     }
     my @pos = split / /, $tag_data{UNPADDED_READ_POS};
-    my $fact = Genome::Site::WUGC::Finishing::Assembly::Factory->connect("source");
+    my $fact = Finishing::Assembly::Factory->connect("source");
 	my $tag = $fact->create_read_tag(
         type   => $tag_data{TYPE},
         source => $tag_data{SOURCE},

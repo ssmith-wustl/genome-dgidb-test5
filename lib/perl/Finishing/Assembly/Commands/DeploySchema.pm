@@ -1,9 +1,9 @@
-package Genome::Site::WUGC::Finishing::Assembly::Commands::DeploySchema;
+package Finishing::Assembly::Commands::DeploySchema;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::Commands::Base';
+use base 'Finishing::Assembly::Commands::Base';
 
 use Data::Dumper;
 
@@ -22,7 +22,7 @@ sub execute
 
 =head1 Name
 
-Genome::Site::WUGC::Finishing::Assembly::Commands::DeploySchema
+Finishing::Assembly::Commands::DeploySchema
 
 =head1 Synopsis
 

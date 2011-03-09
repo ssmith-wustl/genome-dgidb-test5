@@ -1,12 +1,12 @@
-package Genome::Site::WUGC::Finishing::Assembly::DSProxy;
+package Finishing::Assembly::DSProxy;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::Proxy';
+use base 'Finishing::Assembly::Proxy';
 
 use Finfo::ClassUtils 'class';
-use Genome::Site::WUGC::Finishing::Assembly::DBIx::Proxies;
+use Finishing::Assembly::DBIx::Proxies;
 
 my %dbic_proxy :name(_dbic_proxy:p);
 
@@ -15,7 +15,7 @@ sub START
     my $self = shift;
 
     my ($source_class) = class( $self->source ) =~ /::(\w+)$/;
-    my $dbic_proxy_class = sprintf('Genome::Site::WUGC::Finishing::Assembly::DBIx::%sProxy', $source_class);
+    my $dbic_proxy_class = sprintf('Finishing::Assembly::DBIx::%sProxy', $source_class);
     $self->_dbic_proxy
     (
         $dbic_proxy_class->new
@@ -52,30 +52,30 @@ sub get_method
 
 #############################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::OrganismDSProxy;
+package Finishing::Assembly::OrganismDSProxy;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::DSProxy';
-
-#############################################################################
-
-package Genome::Site::WUGC::Finishing::Assembly::AssemblyDSProxy;
-
-use base 'Genome::Site::WUGC::Finishing::Assembly::DSProxy';
+use base 'Finishing::Assembly::DSProxy';
 
 #############################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::ScaffoldDSProxy;
+package Finishing::Assembly::AssemblyDSProxy;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::DSProxy';
+use base 'Finishing::Assembly::DSProxy';
 
 #############################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::ContigDSProxy;
+package Finishing::Assembly::ScaffoldDSProxy;
+
+use base 'Finishing::Assembly::DSProxy';
+
+#############################################################################
+
+package Finishing::Assembly::ContigDSProxy;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::DSProxy';
+use base 'Finishing::Assembly::DSProxy';
 
 my %ace_contig :name(_ace_contig:p);
 
@@ -86,7 +86,7 @@ sub START
     my $acefile;
     if ( $acefile = $self->acefile and -e $acefile)
     {
-        my $ace_factory = Genome::Site::WUGC::Finishing::Assembly::Factory->connect('ace', $acefile);
+        my $ace_factory = Finishing::Assembly::Factory->connect('ace', $acefile);
         my $assembly = $ace_factory->get_assembly;
         my $ace_contig = $assembly->get_contig( $self->source->id );
         $self->_ace_contig($ace_contig);
@@ -208,12 +208,12 @@ sub length
 
 #############################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::AssembledReadDSProxy;
+package Finishing::Assembly::AssembledReadDSProxy;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::DSProxy';
+use base 'Finishing::Assembly::DSProxy';
 
 use Data::Dumper;
 
@@ -226,7 +226,7 @@ sub START
     my $acefile;
     if ( $acefile = $self->acefile and -e $acefile)
     {
-        my $ace_factory = Genome::Site::WUGC::Finishing::Assembly::Factory->connect('ace', $acefile);
+        my $ace_factory = Finishing::Assembly::Factory->connect('ace', $acefile);
         my $assembly = $ace_factory->get_assembly;
         my $ace_read = $assembly->get_assembled_read( $self->source->name );
         $self->_ace_read($ace_read);
@@ -355,51 +355,51 @@ sub length
 
 #############################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::ChromosomeFirstScaffoldDSProxy;
+package Finishing::Assembly::ChromosomeFirstScaffoldDSProxy;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::DSProxy';
-
-#############################################################################
-
-package Genome::Site::WUGC::Finishing::Assembly::ChromosomeDSProxy;
-
-use base 'Genome::Site::WUGC::Finishing::Assembly::DSProxy';
+use base 'Finishing::Assembly::DSProxy';
 
 #############################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::ImprovementCorrelationDSProxy;
+package Finishing::Assembly::ChromosomeDSProxy;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::DSProxy';
-
-#############################################################################
-
-package Genome::Site::WUGC::Finishing::Assembly::ProjectDSProxy;
-
-use base 'Genome::Site::WUGC::Finishing::Assembly::DSProxy';
+use base 'Finishing::Assembly::DSProxy';
 
 #############################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::ConsensusTagDSProxy;
+package Finishing::Assembly::ImprovementCorrelationDSProxy;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::DSProxy';
-
-#############################################################################
-
-package Genome::Site::WUGC::Finishing::Assembly::ReadTagDSProxy;
-
-use base 'Genome::Site::WUGC::Finishing::Assembly::DSProxy';
+use base 'Finishing::Assembly::DSProxy';
 
 #############################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::AssemblyTagDSProxy;
+package Finishing::Assembly::ProjectDSProxy;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::DSProxy';
+use base 'Finishing::Assembly::DSProxy';
 
 #############################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::GapDSProxy;
+package Finishing::Assembly::ConsensusTagDSProxy;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::DSProxy';
+use base 'Finishing::Assembly::DSProxy';
+
+#############################################################################
+
+package Finishing::Assembly::ReadTagDSProxy;
+
+use base 'Finishing::Assembly::DSProxy';
+
+#############################################################################
+
+package Finishing::Assembly::AssemblyTagDSProxy;
+
+use base 'Finishing::Assembly::DSProxy';
+
+#############################################################################
+
+package Finishing::Assembly::GapDSProxy;
+
+use base 'Finishing::Assembly::DSProxy';
 1;
 
 #$HeadURL$

@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::AssembledRead;
+package Finishing::Assembly::DBIx::Schema::AssembledRead;
 
 use base 'DBIx::Class';
 
@@ -104,8 +104,8 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key('id');
 
 
-__PACKAGE__->belongs_to('assembly', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Assembly','assembly_id');
-__PACKAGE__->belongs_to('contig', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Contig', 'contig_id',
+__PACKAGE__->belongs_to('assembly', 'Finishing::Assembly::DBIx::Schema::Assembly','assembly_id');
+__PACKAGE__->belongs_to('contig', 'Finishing::Assembly::DBIx::Schema::Contig', 'contig_id',
     {
         proxy => [qw/scaffold/],
     }
@@ -113,7 +113,7 @@ __PACKAGE__->belongs_to('contig', 'Genome::Site::WUGC::Finishing::Assembly::DBIx
 
 __PACKAGE__->belongs_to(
     'mate', 
-    'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::AssembledRead',
+    'Finishing::Assembly::DBIx::Schema::AssembledRead',
     {
         'foreign.template_name' => 'self.template_name',
         'foreign.assembly_id'   => 'self.assembly_id',
@@ -165,11 +165,11 @@ sub insert_stdev {
 }
 
 
-__PACKAGE__->has_many('tags', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::ReadTag', 'read_id');
-__PACKAGE__->has_one('sequence', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::AssembledReadSequence', 'assembled_read_id');
+__PACKAGE__->has_many('tags', 'Finishing::Assembly::DBIx::Schema::ReadTag', 'read_id');
+__PACKAGE__->has_one('sequence', 'Finishing::Assembly::DBIx::Schema::AssembledReadSequence', 'assembled_read_id');
 
 =cut
-__PACKAGE__->add_relationship('mate', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::AssembledRead', 
+__PACKAGE__->add_relationship('mate', 'Finishing::Assembly::DBIx::Schema::AssembledRead', 
     {
         'foreign.template_name' => 'self.template_name',
         'foreign.assembly_id' => 'self.assembly_id',

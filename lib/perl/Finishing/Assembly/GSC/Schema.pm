@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::GSC::Schema;
+package Finishing::Assembly::GSC::Schema;
 
 use strict;
 use warnings;
@@ -82,7 +82,7 @@ sub create_project
     }
     else
     {
-        $directory = Genome::Site::WUGC::Finishing::Assembly::Project::Utils->instance->determine_and_create_projects_directory
+        $directory = Finishing::Assembly::Project::Utils->instance->determine_and_create_projects_directory
         (
             $name,
             $oraganism_name || 'unknown',
@@ -128,7 +128,7 @@ sub create_project
 
 =head1 Name
 
-Genome::Site::WUGC::Finishing::Assembly::GSCSchema
+Finishing::Assembly::GSCSchema
 
 =head1 Synopsis
 

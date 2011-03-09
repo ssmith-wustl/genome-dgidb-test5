@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::Phd::Ball;
+package Finishing::Assembly::Phd::Ball;
 
 use strict;
 use warnings;
@@ -6,8 +6,8 @@ use warnings;
 use Finfo::Std;
 use File::Temp;
 
-use Genome::Site::WUGC::Finishing::Assembly::Phd::FileReader;
-use Genome::Site::WUGC::Finishing::Assembly::Phd::CreateSqliteFromBall;
+use Finishing::Assembly::Phd::FileReader;
+use Finishing::Assembly::Phd::CreateSqliteFromBall;
 use IO::File;
 
 my %ball :name(ball:r) :isa(file_rw);
@@ -34,7 +34,7 @@ sub START {
             TEMPLATE => 'phd_ball_XXXXXX',
         )->filename;
 
-        Genome::Site::WUGC::Finishing::Assembly::Phd::CreateSqliteFromBall->new(
+        Finishing::Assembly::Phd::CreateSqliteFromBall->new(
             ball    => $self->ball,
             db_file => $db_file,
         )->execute;
@@ -48,7 +48,7 @@ sub START {
         or $self->fatal_msg("Can't connect: " . $DBI::errstr);
 
     $self->dbh($dbh);
-    $self->reader(Genome::Site::WUGC::Finishing::Assembly::Phd::FileReader->instance);
+    $self->reader(Finishing::Assembly::Phd::FileReader->instance);
 
     return 1;
 }
@@ -106,13 +106,13 @@ sub DEMOLISH {
 
 =head1 NAME
 
- Genome::Site::WUGC::Finishing::Assembly::Phd::Ball
+ Finishing::Assembly::Phd::Ball
  
   > Object oriented phd/phd.ball file reader
 
 =head1 SYNOPSIS
 
- my $phd_object = Genome::Site::WUGC::Finishing::Assembly::Phd::Ball->connect(
+ my $phd_object = Finishing::Assembly::Phd::Ball->connect(
     ball    => 'phd.ball',
     db_file => 'phd_ball.sqlite',
  );
@@ -122,7 +122,7 @@ sub DEMOLISH {
     
 =head1 DESCRIPTION
 
-Genome::Site::WUGC::Finishing::Assembly::Phd:Ball takes phd.ball (required) file and sqlite db_file (optional). If without sqlite db_file, this module will create one in /tmp. sqlite store read name and their corresponding file index position. 
+Finishing::Assembly::Phd:Ball takes phd.ball (required) file and sqlite db_file (optional). If without sqlite db_file, this module will create one in /tmp. sqlite store read name and their corresponding file index position. 
 
 =head1 METHODS
 

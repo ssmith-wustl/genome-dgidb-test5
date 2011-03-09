@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Chromosome;
+package Finishing::Assembly::DBIx::Schema::Chromosome;
 
 use strict;
 use warnings;
@@ -34,11 +34,11 @@ __PACKAGE__->add_columns
 );
 __PACKAGE__->set_primary_key('id');
 __PACKAGE__->add_unique_constraint([qw/ organism_id name /]);
-__PACKAGE__->belongs_to('organism', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Organism', 'organism_id');
+__PACKAGE__->belongs_to('organism', 'Finishing::Assembly::DBIx::Schema::Organism', 'organism_id');
 __PACKAGE__->has_many
 (
     'first_scaffolds',
-    'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::ChromosomeFirstScaffold', 
+    'Finishing::Assembly::DBIx::Schema::ChromosomeFirstScaffold', 
     'chromosome_id'
 );
 
@@ -50,7 +50,7 @@ sub first_scaffold_for_assembly
     (
         attr => 'assembly to get first scaffold',
         value => $assembly,
-        isa => 'object Genome::Site::WUGC::Finishing::Assembly::Assembly Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Assembly',
+        isa => 'object Finishing::Assembly::Assembly Finishing::Assembly::DBIx::Schema::Assembly',
         msg => 'fatal',
     );
 
@@ -70,7 +70,7 @@ sub set_first_scaffold
     (
         attr => 'scaffold to set first on chromosome',
         value => $scaffold,
-        isa => 'object Genome::Site::WUGC::Finishing::Assembly::Scaffold Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Scaffold',
+        isa => 'object Finishing::Assembly::Scaffold Finishing::Assembly::DBIx::Schema::Scaffold',
         msg => 'fatal',
     );
 

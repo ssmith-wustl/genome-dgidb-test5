@@ -1,9 +1,9 @@
-package Genome::Site::WUGC::Finishing::Assembly::Assembly;
+package Finishing::Assembly::Assembly;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::Item';
+use base 'Finishing::Assembly::Item';
 
 use Bio::Seq::Quality;
 

@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::Commands::Makecon;
+package Finishing::Assembly::Commands::Makecon;
 
 use strict;
 use warnings;
@@ -181,7 +181,7 @@ sub get_test {
 
 =head1 Name
 
-Genome::Site::WUGC::Finishing::Assembly::Commands::Makecon
+Finishing::Assembly::Commands::Makecon
 
 =head1 Synopsis
 

@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::Phd::FileReader;
+package Finishing::Assembly::Phd::FileReader;
 
 use strict;
 use warnings;
@@ -6,8 +6,8 @@ use warnings;
 use base 'Finfo::Singleton';
 
 use Data::Dumper;
-use Genome::Site::WUGC::Finishing::Assembly::Factory;
-use Genome::Site::WUGC::Finishing::Assembly::Source::Tags;
+use Finishing::Assembly::Factory;
+use Finishing::Assembly::Source::Tags;
 
 sub execute
 {
@@ -41,7 +41,7 @@ sub execute
         }
     }
 
-    return Genome::Site::WUGC::Finishing::Assembly::Factory->connect('source')->create_assembled_read(%phd);
+    return Finishing::Assembly::Factory->connect('source')->create_assembled_read(%phd);
 }
 
 # COMMENT EX:
@@ -127,7 +127,7 @@ sub _parse_tag
     }
     my @pos = split(/\s/, $tag_data{UNPADDED_READ_POS});
     
-    my $tag = Genome::Site::WUGC::Finishing::Assembly::Source::ReadTag->new
+    my $tag = Finishing::Assembly::Source::ReadTag->new
     (
         parent => $phd->{name},
         type   => $tag_data{TYPE},
@@ -155,7 +155,7 @@ sub _convert_from_phd_tag_date : PRIVATE
 
 =head1 Name
 
-Genome::Site::WUGC::Finishing::Assembly::Phd::FileReader 
+Finishing::Assembly::Phd::FileReader 
 
 =head1 Synopsis
 
@@ -163,12 +163,12 @@ This package is a phd file reader.  Given an IO object, an assemled read object 
 
 =head1 Usage
 
- use Genome::Site::WUGC::Finishing::Assembly::Phd::FileReader;
+ use Finishing::Assembly::Phd::FileReader;
  use IO::File;
 
  my $fh = IO::File->new("< read.phd.1")
     or die "$!\n";
- my $reader = Genome::Site::WUGC::Finishing::Assembly::Phd::FileReader->instance;
+ my $reader = Finishing::Assembly::Phd::FileReader->instance;
  my $phd = $reader->execute($fh);
  $fh->close;
 
@@ -176,7 +176,7 @@ This package is a phd file reader.  Given an IO object, an assemled read object 
 
 =head1 Methods
 
- my $phd = Genome::Site::WUGC::Finishing::Assembly::Phd::FileReader->instance->execute($file_handle);
+ my $phd = Finishing::Assembly::Phd::FileReader->instance->execute($file_handle);
  
 =over
 
@@ -184,7 +184,7 @@ This package is a phd file reader.  Given an IO object, an assemled read object 
 
 =item I<Params>     file handle (IO::File or related object)
 
-=item I<Returns>    Genome::Site::WUGC::Finishing::Assembly::Source::AssembledRead (object)
+=item I<Returns>    Finishing::Assembly::Source::AssembledRead (object)
 
 =back
 

@@ -1,9 +1,9 @@
-package Genome::Site::WUGC::Finishing::Assembly::Ace::Assembly;
+package Finishing::Assembly::Ace::Assembly;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::Ace::Source';
+use base 'Finishing::Assembly::Ace::Source';
 
 use Data::Dumper;
 
@@ -25,7 +25,7 @@ sub read_count
 
 =head1 Name
 
-Genome::Site::WUGC::Finishing::Assembly::Ace::Assembly
+Finishing::Assembly::Ace::Assembly
 
 =head1 Synopsis
 

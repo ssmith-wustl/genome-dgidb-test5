@@ -1,15 +1,15 @@
-package Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::ListReader;
+package Finishing::Assembly::Consed::Navigation::ListReader;
 
 use strict;
 use warnings;
 
 use base 'Finfo::Reader';
 
-use Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation;
+use Finishing::Assembly::Consed::Navigation;
 
 sub _return_class
 {
-    return 'Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation';
+    return 'Finishing::Assembly::Consed::Navigation';
 }
 
 sub _next
@@ -54,7 +54,7 @@ sub _next
 
 =head1 Name
 
-Genome::Site::WUGC::Finishing::Assembly::Navigation::ListReader
+Finishing::Assembly::Navigation::ListReader
 
 =head1 Synopsis
 
@@ -62,12 +62,12 @@ Reads a consed 'list' file, returns navigation hashrefs or objects
 
 =head1 Usage
 
- use Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation::ListReader
+ use Finishing::Assembly::Consed::Navigation::ListReader
  use IO::File;
  
  my $fh = IO::File->new("< $infile")
      or die "$!\n";
- my $reader = Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation:ListReader->new
+ my $reader = Finishing::Assembly::Consed::Navigation:ListReader->new
  (
      io => $io, # file or IO::* object
      return_as_objects => 1,
@@ -93,7 +93,7 @@ Reads a consed 'list' file, returns navigation hashrefs or objects
 
 =over
 
-=item Genome::Site::WUGC::Finishing::Assembly::Consed::Navigation directory
+=item Finishing::Assembly::Consed::Navigation directory
 
 =item Finfo::Reader (parent class)
 

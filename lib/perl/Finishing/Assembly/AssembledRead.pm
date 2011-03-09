@@ -1,9 +1,9 @@
-package Genome::Site::WUGC::Finishing::Assembly::AssembledRead;
+package Finishing::Assembly::AssembledRead;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::SequencedItem';
+use base 'Finishing::Assembly::SequencedItem';
 
 my %phd_v :name(phd_v:p); #phd_version, used by sub phd_version below, maybe move this down?
 
@@ -159,7 +159,7 @@ sub template  #TODO do the same for lib and primer?
 
 $read->ace_read($ace_read)           
 
-This is a getter/setter that takes or returns a copy of the read hash in the same format as the read hash that is produced by Genome::Site::WUGC::Finishing::Assembly::Ace::Reader/Writer.  This method helps to provide compatibility with the low-level Ace Reader/Writer.
+This is a getter/setter that takes or returns a copy of the read hash in the same format as the read hash that is produced by Finishing::Assembly::Ace::Reader/Writer.  This method helps to provide compatibility with the low-level Ace Reader/Writer.
 
 =cut
 sub ace_read
@@ -205,7 +205,7 @@ sub ace_read
 
 $read->ace_read_position($ace_read_position)           
 
-This is a getter/setter that takes or returns a copy of the read_position hash in the same format as the read_position hash that is produced by Genome::Site::WUGC::Finishing::Assembly::Ace::Reader/Writer.  This method helps to provide compatibility with the low-level Ace Reader/Writer.
+This is a getter/setter that takes or returns a copy of the read_position hash in the same format as the read_position hash that is produced by Finishing::Assembly::Ace::Reader/Writer.  This method helps to provide compatibility with the low-level Ace Reader/Writer.
 
 =cut
 

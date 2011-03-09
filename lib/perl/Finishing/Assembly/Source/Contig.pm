@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::Source::Contig;
+package Finishing::Assembly::Source::Contig;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use base 'Finfo::Accessor';
 
 use Data::Dumper;
-use Genome::Site::WUGC::Finishing::Assembly::Source::Tags;
+use Finishing::Assembly::Source::Tags;
 use Finfo::Iterator;
 
 __PACKAGE__->mk_accessors
@@ -62,7 +62,7 @@ sub create_tag
 {
     my $self = shift;
 
-    return Genome::Site::WUGC::Finishing::Assembly::Source::Tag->new
+    return Finishing::Assembly::Source::Tag->new
     (
         parent => $self->name,
         @_,

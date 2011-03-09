@@ -1,9 +1,9 @@
-package Genome::Site::WUGC::Finishing::Assembly::ImprovementCorrelation;
+package Finishing::Assembly::ImprovementCorrelation;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::Item';
+use base 'Finishing::Assembly::Item';
 
 
 sub contig_count{

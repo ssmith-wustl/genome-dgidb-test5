@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::Consed::Schema;
+package Finishing::Assembly::Consed::Schema;
 
 use strict;
 use warnings;
@@ -6,11 +6,11 @@ use warnings;
 use Finfo::Std;
 
 use Data::Dumper;
-use Genome::Site::WUGC::Finishing::Assembly::Ace::Schema;
-use Genome::Site::WUGC::Finishing::Assembly::Phd::Ball;
-use Genome::Site::WUGC::Finishing::Assembly::Phd::Directory;
-use Genome::Site::WUGC::Finishing::Assembly::Phd::FastaAndQualDB;
-use Genome::Site::WUGC::Finishing::Assembly::Consed::AssembledRead;
+use Finishing::Assembly::Ace::Schema;
+use Finishing::Assembly::Phd::Ball;
+use Finishing::Assembly::Phd::Directory;
+use Finishing::Assembly::Phd::FastaAndQualDB;
+use Finishing::Assembly::Consed::AssembledRead;
 
 my %ace_schema :name(ace_schema:r) :isa(object);
 my %phd_schemas :name(phd_schemas:r) :ds(aryref) :isa(object);
@@ -42,13 +42,13 @@ sub connect
     my @phd_schemas;
     foreach my $type ( @types )
     {
-        my $phd_schema_class = 'Genome::Site::WUGC::Finishing::Assembly::Phd::' . $types_and_schemas{$type};
+        my $phd_schema_class = 'Finishing::Assembly::Phd::' . $types_and_schemas{$type};
         push @phd_schemas, $phd_schema_class->connect($sources->{$type});
     }
 
     return $class->new
     (
-        ace_schema => Genome::Site::WUGC::Finishing::Assembly::Ace::Schema->connect($acefile),
+        ace_schema => Finishing::Assembly::Ace::Schema->connect($acefile),
         phd_schemas => \@phd_schemas,
     );
 }
@@ -71,7 +71,7 @@ sub get_assembly
         my @reads;
         while ( my $read = $reads->next )
         {
-            push @reads, Genome::Site::WUGC::Finishing::Assembly::Consed::AssembledRead->new
+            push @reads, Finishing::Assembly::Consed::AssembledRead->new
             (
                 ace_source => $read,
                 phd_source => sub{ return $self->_get_phd( $read->phd_file ); },
@@ -85,7 +85,7 @@ sub get_assembly
     $assembly->{_get_assembled_read} = sub
     {
         my $read = $orig_get_assembled_read->($_[0]);
-        return Genome::Site::WUGC::Finishing::Assembly::Consed::AssembledRead->new
+        return Finishing::Assembly::Consed::AssembledRead->new
         (
             ace_source => $read,
             phd_source => sub{ return $self->_get_phd( $read->phd_file ); },
@@ -114,7 +114,7 @@ sub _get_phd : PRIVATE
 
 =head1 Name
 
-Genome::Site::WUGC::Finishing::Assembly::Consed::Schema
+Finishing::Assembly::Consed::Schema
 
 =head1 Synopsis
 

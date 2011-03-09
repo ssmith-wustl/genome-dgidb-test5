@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::Ace::Source;
+package Finishing::Assembly::Ace::Source;
 
 use strict;
 use warnings;
@@ -43,7 +43,7 @@ sub DESTROY
 
 =head1 Name
 
-Genome::Site::WUGC::Finishing::Assembly::Ace::Source
+Finishing::Assembly::Ace::Source
 
 =head1 Synopsis
 

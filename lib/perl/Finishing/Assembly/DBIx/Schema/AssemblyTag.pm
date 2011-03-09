@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::AssemblyTag;
+package Finishing::Assembly::DBIx::Schema::AssemblyTag;
 use base 'DBIx::Class';
 use strict;
 use warnings;
@@ -66,7 +66,7 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key('id');
 
 
-__PACKAGE__->belongs_to('assembly', 'Genome::Site::WUGC::Finishing::Assembly::DBIx::Schema::Assembly', 'assembly_id');
+__PACKAGE__->belongs_to('assembly', 'Finishing::Assembly::DBIx::Schema::Assembly', 'assembly_id');
 
 
 1;

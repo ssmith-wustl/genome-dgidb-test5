@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::Proxy;
+package Finishing::Assembly::Proxy;
 
 use strict;
 use warnings;
@@ -132,7 +132,7 @@ sub _construct_object : RESTRICTED
 
 =head1 Name
 
-Genome::Site::WUGC::Finishing::Assembly::Proxy
+Finishing::Assembly::Proxy
 
 =head1 Synopsis
 

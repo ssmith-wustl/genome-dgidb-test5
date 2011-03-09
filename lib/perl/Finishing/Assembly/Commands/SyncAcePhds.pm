@@ -1,4 +1,4 @@
-package Genome::Site::WUGC::Finishing::Assembly::Commands::SyncAcePhds;
+package Finishing::Assembly::Commands::SyncAcePhds;
 
 use strict;
 use warnings;
@@ -6,9 +6,9 @@ use warnings;
 use Finfo::Std;
 
 use Data::Dumper;
-use Genome::Site::WUGC::Finishing::Assembly::Ace::Exporter;
-use Genome::Site::WUGC::Finishing::Assembly::Ace::Schema;
-use Genome::Site::WUGC::Finishing::Assembly::Phd::Directory;
+use Finishing::Assembly::Ace::Exporter;
+use Finishing::Assembly::Ace::Schema;
+use Finishing::Assembly::Phd::Directory;
 
 require File::Copy;
 
@@ -23,13 +23,13 @@ sub execute
     
     my @list;
     
-    my $phd_schema = Genome::Site::WUGC::Finishing::Assembly::Phd::Directory->connect($self->phd_dir);
+    my $phd_schema = Finishing::Assembly::Phd::Directory->connect($self->phd_dir);
     
     my $tmp_ace = $self->file . '.tmp';
     unlink $tmp_ace if -e $tmp_ace;
-    my $xporter = Genome::Site::WUGC::Finishing::Assembly::Ace::Exporter->new(file => $tmp_ace);
+    my $xporter = Finishing::Assembly::Ace::Exporter->new(file => $tmp_ace);
 
-    my $ace_schema = Genome::Site::WUGC::Finishing::Assembly::Ace::Schema->connect($self->file);
+    my $ace_schema = Finishing::Assembly::Ace::Schema->connect($self->file);
     my $assembly = $ace_schema->get_assembly;
     my $contigs = $assembly->contigs;
 
@@ -74,7 +74,7 @@ sub missed_names {
 
 =head1 Name
 
-Genome::Site::WUGC::Finishing::Assembly::Ace::SyncPhdTimes
+Finishing::Assembly::Ace::SyncPhdTimes
 
 =head1 Synopsis
 

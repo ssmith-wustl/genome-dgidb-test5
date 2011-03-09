@@ -1,9 +1,9 @@
-package Genome::Site::WUGC::Finishing::Assembly::GSC::Proxy;
+package Finishing::Assembly::GSC::Proxy;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::Proxy';
+use base 'Finishing::Assembly::Proxy';
 
 sub _get_only : RESTRICTED
 {
@@ -14,12 +14,12 @@ sub _get_only : RESTRICTED
 
 ##################################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::GSC::ProjectProxy;
+package Finishing::Assembly::GSC::ProjectProxy;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::GSC::Proxy';
+use base 'Finishing::Assembly::GSC::Proxy';
 
 my %dir :name(_dir:p);
 
@@ -113,12 +113,12 @@ sub create_wg_clone_link
 
 ##################################################################################
 
-package Genome::Site::WUGC::Finishing::Assembly::GSC::ScaffoldProxy;
+package Finishing::Assembly::GSC::ScaffoldProxy;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::GSC::Proxy';
+use base 'Finishing::Assembly::GSC::Proxy';
 
 sub methods_for_source_method
 {
@@ -157,7 +157,7 @@ sub unpadded_length
 
 =head1 Name
 
-Genome::Site::WUGC::Finishing::Project::Proxy
+Finishing::Project::Proxy
 
 =head1 Synopsis
 

@@ -1,9 +1,9 @@
-package Genome::Site::WUGC::Finishing::Assembly::Commands::JoinContigs;
+package Finishing::Assembly::Commands::JoinContigs;
 
 use strict;
 use warnings;
 
-use base 'Genome::Site::WUGC::Finishing::Assembly::Commands::AnalyzeJoin';
+use base 'Finishing::Assembly::Commands::AnalyzeJoin';
 
 use Data::Dumper;
 
@@ -11,7 +11,7 @@ sub execute
 {
     my $self = shift;
 
-    my $contig_tools = Genome::Site::WUGC::Finishing::Assembly::ContigTools->new;
+    my $contig_tools = Finishing::Assembly::ContigTools->new;
     my $new_contig = $contig_tools->merge
     (
         $self->_left_contig,
@@ -31,7 +31,7 @@ sub execute
 
 =head1 Name
 
-Genome::Site::WUGC::Finishing::Assembly::Commands::JoinContigs
+Finishing::Assembly::Commands::JoinContigs
 
 =head1 Synopsis
 
