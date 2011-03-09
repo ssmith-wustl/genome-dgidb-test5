@@ -159,7 +159,7 @@ sub execute {                               # replace with real execution logic.
 		close($file_handles{$chrom}) if($file_handles{$chrom});
 		my $chrom_filename = "$output_basename.$chrom.infile";
 		my $script_filename = $chrom_filename . ".R";
-		my $image_filename = "$output_basename.$chrom.jpg";
+		my $image_filename = "$output_basename.$chrom.png";
 		open(SCRIPT, ">$script_filename") or die "Can't open script $script_filename: $!\n";
 	
 		print SCRIPT "library(DNAcopy)\n";
@@ -205,7 +205,7 @@ write.table(p.segment.smoothed.CNA.object, file="$chrom_filename.segments.p_valu
 
 		my $chrom_filename = $output_basename . ".$chrom_name.infile";
 		my $segments_filename = "$chrom_filename.segments.p_value";
-		my $image_filename = $image_basename . "." . $chrom_name . ".jpg";
+		my $image_filename = $image_basename . "." . $chrom_name . ".png";
 		print INDEX "<TD><A HREF=\"$image_filename\"><IMG SRC=\"$image_filename\" HEIGHT=240 WIDTH=320 BORDER=0></A></TD>\n";
 
 		print SEGMENTS parse_segments($segments_filename) if(-e $segments_filename);
