@@ -5,6 +5,9 @@ use warnings;
 
 use Genome;
 
+require Finishing::Assembly::Factory;
+require Finishing::Assembly::ContigTools;
+
 class Genome::Model::Tools::Assembly::Ace::ReplaceXsNs {
     is => 'Command',
     has => [
