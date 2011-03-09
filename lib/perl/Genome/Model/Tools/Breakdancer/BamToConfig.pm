@@ -66,7 +66,6 @@ sub execute {
     }
 
     my $cfg_cmd = $self->breakdancer_config_command; 
-    #my $cfg_cmd = '/gscuser/fdu/bin/bam2cfg.pl';
     $cfg_cmd .= ' ' . $self->params . ' ' . $self->tumor_bam . ' ' . $self->normal_bam . ' > '. $out_file;
     $self->status_message("Breakdancer command: $cfg_cmd");
 
@@ -85,8 +84,8 @@ sub execute {
     my @moved_files = glob($out_dir."/*insertsize_histogram*");
 
     unless (@other_files == @moved_files) {
-        $self->error_message("insertsize_histogram files not completely moved to $out_dir"); 
-        die $self->error_message;
+        $self->warning_message("insertsize_histogram files not completely moved to $out_dir"); 
+        #It should not die here just give a warning
     }
 
     return 1;

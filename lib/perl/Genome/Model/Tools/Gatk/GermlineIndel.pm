@@ -27,7 +27,7 @@ class Genome::Model::Tools::Gatk::GermlineIndel {
 		bed_output_file => { is => 'Text', doc => "Optional abbreviated output in BED format", is_optional => 1, is_input => 1, is_output => 1 },
 		formatted_file => { is => 'Text', doc => "Optional output file of indels in annotation format", is_optional => 1, is_input => 1, is_output => 1 },
 		gatk_params => { is => 'Text', doc => "Parameters for GATK", is_optional => 1, is_input => 1, is_output => 1, default => "-R /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa -T IndelGenotyperV2 --window_size 300 --verbose" },
-		path_to_gatk => { is => 'Text', doc => "Path to GATK command", is_optional => 1, is_input => 1, is_output => 1, default => "java  -Xms3000m -Xmx3000m -jar /gsc/pkg/bio/gatk/GenomeAnalysisTK-1.0.3362P/GenomeAnalysisTK.jar" },
+		path_to_gatk => { is => 'Text', doc => "Path to GATK command", is_optional => 1, is_input => 1, is_output => 1, default => "java  -Xms3000m -Xmx3000m -jar /gsc/scripts/pkg/bio/gatk/GenomeAnalysisTK-1.0.3362P/GenomeAnalysisTK.jar" },
 		skip_if_output_present => { is => 'Text', doc => "Skip if output is present", is_optional => 1, is_input => 1},
 	],
 };

@@ -77,6 +77,11 @@ class Genome::Disk::Allocation {
             is => 'DateTime',
             doc => 'The last time at which the allocation was reallocated',
         },
+        owner_exists => {
+            is => 'Boolean',
+            calculate_from => ['owner_class_name', 'owner_id'],
+            calculate => sub { my ($owner_class_name, $owner_id) = @_; my $owner_exists = eval { $owner_class_name->get($owner_id) }; return $owner_exists ? 1 : 0; },
+        }
     ],    
     table_name => 'GENOME_DISK_ALLOCATION',
     data_source => 'Genome::DataSource::GMSchema',
@@ -625,7 +630,6 @@ sub _update_owner_for_move {
         $owner->output_dir($self->absolute_path);
     }
     elsif ($owner->isa('Genome::Model::Build')) {
-        die 'Have not implemented reallocate with move for builds!';
         $owner->data_directory($self->absolute_path);
     }
 

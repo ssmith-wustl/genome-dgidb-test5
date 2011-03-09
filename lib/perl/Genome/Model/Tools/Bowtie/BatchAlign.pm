@@ -161,8 +161,6 @@ sub execute {                               # replace with real execution logic.
 
 	}
 
-#	system("bsub -q bigmem -R\"select[type==LINUX64 && mem>16000] rusage[mem=16000]\" -M 16000000 \"/gscuser/dkoboldt/Software/NovoCraft/novocraftV2.03.12/novocraft/novoalign -a -l 36 -t 120 -d $reference -f $query_file >$output_file\"");
-
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
 

@@ -593,6 +593,7 @@ sub _params_to_resolve {
         my @params_may_require_verification;
 
         for my $param_name (keys %$params) {
+            next if ($param_name eq 'help');
             my $pmeta = $cmeta->property($param_name); 
             unless ($pmeta) {
                 # This message was a die after a next, so I guess it isn't supposed to be fatal?
