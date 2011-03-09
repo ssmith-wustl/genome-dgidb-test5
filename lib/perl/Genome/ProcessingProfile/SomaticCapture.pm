@@ -185,7 +185,7 @@ sub _map_workflow_inputs {
         only_tier_1_indel => 1,
         normal_indelpe_data_directory => join('/', $build->data_directory, "normal_indelpe_data" ),
         tumor_indelpe_data_directory => join('/', $build->data_directory, "tumor_indelpe_data" ),
-        reference_fasta => join('/', Genome::Config::reference_sequence_directory(), 'NCBI-human-build36/all_sequences.fa'),
+        reference_fasta => $tumor_build->model->reference_sequence_build->full_consensus_path('fa'),
         prepend_chr => 0;
 
     # Set values from processing profile parameters

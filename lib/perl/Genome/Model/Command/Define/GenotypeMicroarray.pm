@@ -88,7 +88,7 @@ sub execute {
     my $build = $self->_create_and_run_build($model);
     return if not $build;
 
-    my $copy = $self->_copy_snp_array_file_to_build($file, $build);
+    my $copy = $build->copy_snp_array_file($file);
     return if not $copy;
 
     return 1;
@@ -138,40 +138,6 @@ sub _create_and_run_build {
     $self->status_message("Run build...OK");
 
     return $build;
-}
-
-sub _copy_snp_array_file_to_build {
-    my ($self, $file, $build) = @_;
-
-    my $formatted_genotype_file_path = $build->formatted_genotype_file_path;
-    $self->status_message("Copy $file to $formatted_genotype_file_path");
-
-    my $copy = Genome::Sys->copy_file($file, $formatted_genotype_file_path);
-    if ( not $copy ) {
-        $self->error_message("Copy failed");
-        return;
-    }
-
-    if ( not -s $formatted_genotype_file_path ) {
-        $self->error_message("Copy succeeded, but file does not exist: $formatted_genotype_file_path");
-        return;
-    }
-
-    $self->status_message('Copy...OK');
-
-    my $gold_snp_bed = $build->snvs_bed;
-    my $cmd = Genome::Model::GenotypeMicroarray::Command::CreateGoldSnpBed->create(
-        input_file => $file,
-        output_file => $gold_snp_bed,
-        reference => $self->reference,
-    );
-    my @errs = $cmd->__errors__;
-    if (!$cmd->execute) {
-        $self->error_message("Failed to create Gold SNP bed file at $gold_snp_bed");
-        return;
-    }
-
-    return 1;
 }
 
 1;
