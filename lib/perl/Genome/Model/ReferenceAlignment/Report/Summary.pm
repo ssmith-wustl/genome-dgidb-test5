@@ -160,59 +160,25 @@ sub get_summary_information
     }
 
     ##match goldsnp report
-    $fh = new IO::File($goldsnp_report_file, "r");
-
-    my $unfiltered_diploid_het_coverage_actual_number = $na;
-    my $unfiltered_diploid_het_coverage_percent = $na;
-    my $unfiltered_diploid_hom_coverage_actual_number = $na;
-    my $unfiltered_diploid_hom_coverage_percent = $na;
-
-    my $filtered_diploid_het_coverage_actual_number = $na;
-    my $filtered_diploid_het_coverage_percent = $na;
-    my $filtered_diploid_hom_coverage_actual_number = $na;
-    my $filtered_diploid_hom_coverage_percent = $na;
-
-    if ($fh) {
-        my $goldsnp_contents = get_contents($fh);
-        my ($unfiltered,$filtered) = ($goldsnp_contents =~ /Gold Concordance for Unfiltered SNVs(.*)Gold Concordance for SNPFilter SNVs(.*)/ms);
-
-        my ($unfiltered_het, $unfiltered_hom) = ($unfiltered    =~ /(heterozygous calls.*)Partially.*?(homozygous calls.*)Partially/ms);
-        my ($filtered_het,   $filtered_hom)   = ($filtered      =~ /(heterozygous calls.*)Partially.*?(homozygous calls.*)Partially/ms);
-
-
-        if ($unfiltered_het =~ m|heterozygous - 1 allele variant</td><td>(.*?)</td><td>(.*?)</td><td>(.*?)</td></tr>|) {
-            #print ("Found match. >$1, $2<\n");
-            $unfiltered_diploid_het_coverage_actual_number=$1;
-            $unfiltered_diploid_het_coverage_percent=$2;
-        }
-
-        if ($filtered_het =~ m|heterozygous - 1 allele variant</td><td>(.*?)</td><td>(.*?)</td><td>(.*?)</td></tr>|) {
-            #print ("Found match. >$1, $2, $3<\n");
-            $filtered_diploid_het_coverage_actual_number=$1;
-            $filtered_diploid_het_coverage_percent=$2;
-        }
-
-        if ($unfiltered_hom =~ m|homozygous variant</td><td>(.*?)</td><td>(.*?)</td><td>(.*?)</td></tr>|) {
-            #print ("Found match. >$1, $2, $3<\n");
-            $unfiltered_diploid_hom_coverage_actual_number=$1;
-            $unfiltered_diploid_hom_coverage_percent=$2;
-        }
-
-        if ($filtered_hom =~ m|homozygous variant</td><td>(.*?)</td><td>(.*?)</td><td>(.*?)</td></tr>|) {
-            #print ("Found match. >$1, $2, $3<\n");
-            $filtered_diploid_hom_coverage_actual_number=$1;
-            $filtered_diploid_hom_coverage_percent=$2;
-        }
-        $fh->close;
+    my %gold_snp_metrics = $self->format_gold_snp_metrics($build);
+    unless (%gold_snp_metrics) {
+        Genome::Model::ReferenceAlignment::Command::CreateMetrics::GoldSnpConcordance->execute(build => $build);
+        %gold_snp_metrics = $self->format_gold_snp_metrics($build);
     }
-    else {
-        $self->status_message("Gold snp report file: $goldsnp_report_file is not available");
-    }
+
+    my $unfiltered_diploid_het_coverage_actual_number = $gold_snp_metrics{unfiltered}{het_hits} || $na;
+    my $unfiltered_diploid_het_coverage_percent = $gold_snp_metrics{unfiltered}{het_percent} || $na;
+    my $unfiltered_diploid_hom_coverage_actual_number = $gold_snp_metrics{unfiltered}{hom_hits} || $na;
+    my $unfiltered_diploid_hom_coverage_percent = $gold_snp_metrics{unfiltered}{hom_percent} || $na;
+
+    my $filtered_diploid_het_coverage_actual_number = $gold_snp_metrics{filtered}{het_hits} || $na;
+    my $filtered_diploid_het_coverage_percent = $gold_snp_metrics{filtered}{het_percent} || $na;
+    my $filtered_diploid_hom_coverage_actual_number = $gold_snp_metrics{filtered}{hom_hits} || $na;
+    my $filtered_diploid_hom_coverage_percent = $gold_snp_metrics{filtered}{hom_percent} || $na;
 
     ##match dbsnp report
     my $dbsnp_filtered_report_file = $build->dbsnp_file_filtered;
     my $dbsnp_unfiltered_report_file = $build->dbsnp_file_unfiltered;
-    # Execute report if any of the files can't be found
     unless (-e $dbsnp_filtered_report_file and -e $dbsnp_filtered_report_file) {
         Genome::Model::ReferenceAlignment::Command::CreateMetrics::DbSnpConcordance->execute(build => $build);
     }
@@ -359,8 +325,6 @@ sub get_summary_information
 
     my $ref_seq_dir = $self->model->reference_sequence_build->data_directory;
 
-    $DB::single = 1;
-
     # processing profile
     my $pp = $model->processing_profile;
 
@@ -506,4 +470,41 @@ sub commify {
 	return $_;
 }
 
+sub format_gold_snp_metrics {
+    my ($self, $build) = @_;
+
+    my $filtered_file = $build->gold_snp_report_file_filtered;
+    my $unfiltered_file = $build->gold_snp_report_file_unfiltered;
+    if (! -s $filtered_file or ! -s $unfiltered_file) {
+        # ... no gold snp data!
+        return;
+    }
+
+    my $gold_snp_raw = {
+        unfiltered => Genome::Model::Tools::Joinx::SnvConcordance::parse_results_file($unfiltered_file),
+        filtered => Genome::Model::Tools::Joinx::SnvConcordance::parse_results_file($filtered_file),
+    };
+
+    my %metrics;
+    for my $type (qw/filtered unfiltered/) {
+        my $het_data = $gold_snp_raw->{$type}{'heterozygous snv'};
+        my $het_hits = $het_data->{hits}{match}{'heterozygous (1 alleles) snv'}{count};
+        my $het_percent = ($het_data->{total} == 0) ? 0 : # don't divide by zero
+                    sprintf("%.02f", 100.0 * $het_hits / $het_data->{total});
+
+        my $hom_data = $gold_snp_raw->{$type}{'homozygous snv'};
+        my $hom_hits = $hom_data->{hits}{match}{'homozygous snv'}{count};
+        my $hom_percent = ($hom_data->{total} == 0) ? 0 : # don't divide by zero
+                    sprintf("%.02f", 100.0 * $hom_hits / $hom_data->{total});
+
+        $metrics{$type} = {
+            het_hits => $het_hits,
+            het_percent => $het_percent,
+            hom_hits => $hom_hits,
+            hom_percent => $hom_percent,
+        };
+    }
+
+    return %metrics;
+}
 1;
