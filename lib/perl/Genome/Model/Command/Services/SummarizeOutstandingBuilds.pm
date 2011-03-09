@@ -80,8 +80,8 @@ sub get_models_with_unsucceeded_builds {
 
 sub get_models_with_no_builds {
     my $self = shift;
-    my @models = Genome::Model->get(-hint => ['builds']); 
     my %models_without_builds;
+    my @models = Genome::Model->get(-hint => ['builds']);
 
     for my $model (@models){
         my @builds = $model->builds;
@@ -95,7 +95,7 @@ sub get_models_with_no_builds {
 
 sub process_buckets {
     my $self = shift;
-    my @buckets = qw(_none_email_user _none_kill_and_email_user _scheduled_incorrect_state _running_incorrect_state _running_email_user _running_kill_and_email_user _succeeded_abandon_builds _succeeded_eviscerate_builds _succeeded_kill_running_builds _abandoned_start_new_builds _failed_start_new_builds _failed_flag_for_manual_attention);
+    my @buckets = $self->_bucket_names;
     for my $bucket (@buckets){
         my $method_name = "_process" . $bucket;
         $self->$method_name;
@@ -210,19 +210,10 @@ sub separate_model_with_preserved_build{
 
 sub initialize_buckets {
     my $self = shift;
-    $self->_none_email_user([]);
-    $self->_none_kill_and_email_user([]);
-    $self->_scheduled_incorrect_state([]);
-    $self->_running_incorrect_state([]);
-    $self->_running_email_user([]);
-    $self->_running_kill_and_email_user([]);
-    $self->_succeeded_abandon_builds([]);
-    $self->_succeeded_eviscerate_builds([]);
-    $self->_succeeded_kill_running_builds([]);
-    $self->_abandoned_start_new_builds([]);
-    $self->_failed_start_new_builds([]);
-    $self->_failed_flag_for_manual_attention([]);
-    $self->_preserved([]);
+    for my $bucket ($self->_bucket_names){
+        $self->$bucket([]);
+    }
+    
     return 1;
 }
 
@@ -376,10 +367,21 @@ sub _process_preserved {
         #TODO: iterate the bucket and take appropriate action 
     }
 
-    print "FLAG MODEL WITH TWO FAILED BUILDS IN A ROW FOR MANUAL ATTENTION\n";
+    print "IGNORE MODEL WITH PRESERVED BUILD\n";
     for my $model (@{$self->_preserved}){
         print join("\t", $model->id, $model->creation_date), "\n"; 
     }
+}
+
+sub _age_in_days {
+    my ($self, $date) = @_;
+    my ($age_in_days) = Delta_DHMS(split("-|:| ", $date), split("-|:| ",UR::Time->now));
+    return $age_in_days;
+}
+
+sub _bucket_names{
+    my @buckets = qw(_none_email_user _none_kill_and_email_user _scheduled_incorrect_state _running_incorrect_state _running_email_user _running_kill_and_email_user _succeeded_abandon_builds _succeeded_eviscerate_builds _succeeded_kill_running_builds _abandoned_start_new_builds _failed_start_new_builds _failed_flag_for_manual_attention _preserved);
+    return @buckets;
 }
 
 sub _none_email_user {
@@ -459,10 +461,4 @@ sub _preserved{
     my ($self, $hash_ref) = @_;
     $self->{_preserved} = $hash_ref if $hash_ref;
     return $self->{_preserved};
-}
-
-sub _age_in_days {
-    my ($self, $date) = @_;
-    my ($age_in_days) = Delta_DHMS(split("-|:| ", $date), split("-|:| ",UR::Time->now));
-    return $age_in_days;
 }
