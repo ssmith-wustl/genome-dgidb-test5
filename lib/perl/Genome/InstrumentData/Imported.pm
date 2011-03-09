@@ -421,6 +421,8 @@ sub genotype_microarray_raw_file {
     my $sample_name = $self->sample_name;
     Carp::confess('No sample name for instrument data: '.$self->id) if not $sample_name;
 
+    # sanitize these 
+    $sample_name =~ s/[^\w\-\.]/_/g;
     return $absolute_path.'/'.$sample_name.'.raw.genotype';
 }
 
@@ -436,6 +438,10 @@ sub genotype_microarray_file_for_subject_and_version {
     my $absolute_path = $disk_allocation->absolute_path;
     Carp::confess('No absolute path for instrument data ('.$self->id.') disk allocation: '.$disk_allocation->id) if not $absolute_path;
     my $sample_name = $self->sample_name;
+
+    # sanitize these 
+    $sample_name =~ s/[^\w\-\.]/_/g;
+    $subject_name =~ s/[^\w\-\.]/_/g;
     Carp::confess('No sample name for instrument data: '.$self->id) if not $sample_name;
 
     return $absolute_path.'/'.$sample_name.'.'.$subject_name.'-'.$version.'.genotype';
