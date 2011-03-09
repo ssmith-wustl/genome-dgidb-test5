@@ -18,6 +18,7 @@ use warnings;
 
 use FileHandle;
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
+use POSIX;
 
 ## Declare global statistics hash ##
 
@@ -29,6 +30,7 @@ class Genome::Model::Tools::Capture::GermlineMafStatistics {
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		maf_file	=> { is => 'Text', doc => "Maf File To Read (or space separated list of Maf files to merge then read" , is_optional => 0},
+		regions_file	=> { is => 'Text', doc => "Regions File -- Used to Get Targeted Region Basic Stats" , is_optional => 1},
 		output_file	=> { is => 'Text', doc => "Output File With Statistics" , is_optional => 0},
 	],
 };
@@ -83,9 +85,9 @@ sub execute {                               # replace with real execution logic.
 
 	my %variant_status;
 	my @maffiles = split(/\s/, $maf_list);
+	my %variants;
 	foreach my $maf_file (@maffiles) {
 		my %samples;
-		my %variants;
 		my $input = new FileHandle ($maf_file);
 		my $header = <$input>;
 		while (my $line = <$input>) {
@@ -96,13 +98,16 @@ sub execute {                               # replace with real execution logic.
 			$stats{$strandfilter_status}{$variant_type}++;
 			$stats{$strandfilter_status}{'total'}++;
 			my $variant = "$chromosome\t$chr_start\t$chr_stop\t$ref\t$tumor_gt_allele2";
+			my $variant_pos = "$chromosome\t$chr_start\t$chr_stop";
 			if ($dbsnp_rs =~ m/novel/i) {
 				my $dbsnp = 'novel';
 				$stats{$dbsnp}++;
 				$stats{$strandfilter_status}{$dbsnp}++;
 				$stats2{$strandfilter_status}{$dbsnp}{$variant_type}++;
 				$variant_status{$variant_type}++;
-				$variants{$strandfilter_status}{$dbsnp}{$variant}++;
+				$variants{$strandfilter_status}{$dbsnp}{'variant'}{$variant}++;
+				$variants{$strandfilter_status}{$dbsnp}{'position'}{$variant_pos}++;
+
 			}
 			else {
 				my $dbsnp = 'dbsnp';
@@ -110,62 +115,109 @@ sub execute {                               # replace with real execution logic.
 				$stats{$strandfilter_status}{$dbsnp}++;
 				$stats2{$strandfilter_status}{$dbsnp}{$variant_type}++;
 				$variant_status{$variant_type}++;
-				$variants{$strandfilter_status}{$dbsnp}{$variant}++;
+				$variants{$strandfilter_status}{$dbsnp}{'variant'}{$variant}++;
+				$variants{$strandfilter_status}{$dbsnp}{'position'}{$variant_pos}++;
+
 			}
 	
 		}
 		foreach my $sample_name (sort keys %samples) {
 			$stats{'samples'}++;
 		}
-	
-		foreach my $strandfilter_status (sort keys %variants) {
-			foreach my $dbsnp (sort keys %{$variants{'Strandfilter_Passed'}}) {
-				foreach my $variant (sort keys %{$variants{'Strandfilter_Passed'}{$dbsnp}}) {
-					if ($variants{'Strandfilter_Passed'}{$dbsnp}{$variant} == 1) {
-						$stats2{'Strandfilter_Passed'}{$dbsnp}{'singletons'}++;
-					}
+
+	}
+
+#	print OUTFILE Data::Dumper::Dumper(%variants);
+#	my @blah = (sort keys %variants);
+#	print "@blah\n";
+my $sum = 0;
+my $sum2 = 0;
+	foreach my $strandfilter_status (sort keys %variants) {
+		foreach my $dbsnp (sort keys %{$variants{$strandfilter_status}}) {
+			foreach my $variant (sort keys %{$variants{$strandfilter_status}{$dbsnp}{'variant'}}) {
+				if (defined($variants{$strandfilter_status}{$dbsnp}{'variant'}{$variant}) && $variants{$strandfilter_status}{$dbsnp}{'variant'}{$variant} == 1) {
+					$stats2{$strandfilter_status}{$dbsnp}{'singletons'}++;
+#					print OUTFILE "$variant\n";
+					$sum += $variants{$strandfilter_status}{$dbsnp}{'variant'}{$variant};
+				}
+				elsif (defined($variants{$strandfilter_status}{$dbsnp}{'variant'}{$variant}) && $variants{$strandfilter_status}{$dbsnp}{'variant'}{$variant} > 1) {
+					$stats2{$strandfilter_status}{$dbsnp}{'nonsingletons'}++;
+#					print OUTFILE "$variant\n";
+					$sum2 += $variants{$strandfilter_status}{$dbsnp}{'variant'}{$variant};
 				}
 			}
-			foreach my $variant (sort keys %{$variants{'Strandfilter_Failed'}}) {
+			foreach my $variant (sort keys %{$variants{$strandfilter_status}{$dbsnp}{'position'}}) {
+				$stats2{$strandfilter_status}{$dbsnp}{'TotalVariantsSNV'}++;
 			}
+		}
+	}
+
+	my $total_targeted_region = 0;
+	if ($self->regions_file) {
+		my $regions_file = $self->regions_file;
+		my $region_input = new FileHandle ($regions_file);
+#		my $header = <$region_input>;
+		while (my $line = <$region_input>) {
+			chomp($line);
+			my ($region_chr,$region_start,$region_stop,$region_name) = split(/\t/, $line);
+			my $area = $region_stop - $region_start + 1;
+			$total_targeted_region += $area;
 		}
 	}
 #	print Data::Dumper::Dumper(%stats);
 #	print Data::Dumper::Dumper(%stats2);
+
 	print OUTFILE "Total Samples $stats{'samples'}\n";
-	print OUTFILE "Total Unfiltered Variants $stats{'TotalVariants'}\n";
-	print OUTFILE "Total Variants Passing Strand/Indel Filter $stats{'Strandfilter_Passed'}{'total'}\n";
-	print OUTFILE "Total Variants Failing Strand/Indel Filter $stats{'Strandfilter_Failed'}{'total'}\n";
-	print OUTFILE "Total Novel Variants $stats{'novel'}\n";
-	print OUTFILE "Total Variants in dbSNP $stats{'dbsnp'}\n";
-	print OUTFILE "Total FilterPassed Novel Singletons $stats2{'Strandfilter_Passed'}{'novel'}{'singletons'}\n";
-	print OUTFILE "Total FilterPassed dbSNP Singletons $stats2{'Strandfilter_Passed'}{'dbsnp'}{'singletons'}\n";
-	print OUTFILE "Total FilterPassed Novel Variants $stats{'Strandfilter_Passed'}{'novel'}\n";
-	print OUTFILE "Total FilterPassed Variants in dbSNP $stats{'Strandfilter_Passed'}{'dbsnp'}\n";
-	print OUTFILE "Total FilterFailed Novel Variants $stats{'Strandfilter_Failed'}{'novel'}\n";
-	print OUTFILE "Total FilterFailed Variants in dbSNP $stats{'Strandfilter_Failed'}{'dbsnp'}\n";
-	
+	if ($self->regions_file) {
+		print OUTFILE "Total Size of Targeted Regions: $total_targeted_region\n";
+	}
+	print OUTFILE "Total Unfiltered Variants: $stats{'TotalVariants'}"." - Per Sample:". sprintf("%.3f", ($stats{'TotalVariants'} / $stats{'samples'}))."\n";
+	print OUTFILE "Total Variants Passing Strand/Indel Filter: $stats{'Strandfilter_Passed'}{'total'}"." - Per Sample:".sprintf("%.3f", ($stats{'Strandfilter_Passed'}{'total'} / $stats{'samples'}))."\n";
+	print OUTFILE "Total Variants Failing Strand/Indel Filter: $stats{'Strandfilter_Failed'}{'total'}"." - Per Sample:".sprintf("%.3f", ($stats{'Strandfilter_Failed'}{'total'} / $stats{'samples'}))."\n";
+	print OUTFILE "Total Novel Variants: $stats{'novel'}"." - Per Sample:".sprintf("%.3f", ($stats{'novel'} / $stats{'samples'}))."\n";
+	print OUTFILE "Total Variants in dbSNP: $stats{'dbsnp'}"." - Per Sample:".sprintf("%.3f", ($stats{'dbsnp'} / $stats{'samples'}))."\n";
+	print OUTFILE "Total FilterPassed Novel Variants: $stats{'Strandfilter_Passed'}{'novel'}"." - Per Sample:".sprintf("%.3f", ($stats{'Strandfilter_Passed'}{'novel'} / $stats{'samples'}))."\n";
+	print OUTFILE "Total FilterPassed Variants in dbSNP: $stats{'Strandfilter_Passed'}{'dbsnp'}"." - Per Sample:".sprintf("%.3f", ($stats{'Strandfilter_Passed'}{'dbsnp'} / $stats{'samples'}))."\n";
+	print OUTFILE "Total FilterFailed Novel Variants: $stats{'Strandfilter_Failed'}{'novel'}"." - Per Sample:".sprintf("%.3f", ($stats{'Strandfilter_Failed'}{'novel'} / $stats{'samples'}))."\n";
+	print OUTFILE "Total FilterFailed Variants in dbSNP: $stats{'Strandfilter_Failed'}{'dbsnp'}"." - Per Sample:".sprintf("%.3f", ($stats{'Strandfilter_Failed'}{'dbsnp'} / $stats{'samples'}))."\n";
+	print OUTFILE "\n";
+	print OUTFILE "Total Number of Variants That are Singletons: $sum"." - Per Sample:". sprintf("%.3f", ($sum / $stats{'samples'}))."\n";
+	print OUTFILE "Total Number of Variants That are Not Singletons: $sum2"." - Per Sample:". sprintf("%.3f", ($sum2 / $stats{'samples'}))."\n";
+	my $singleton_sites = 0;
+	my $nonsingleton_sites = 0;
+	foreach my $strandfilter_status (sort keys %variants) {
+		foreach my $dbsnp (sort keys %{$variants{$strandfilter_status}}) {
+			print OUTFILE "Total $dbsnp $strandfilter_status SNV Variant Sites: $stats2{$strandfilter_status}{$dbsnp}{'TotalVariantsSNV'}"." - Per Sample:". sprintf("%.3f", ($stats2{$strandfilter_status}{$dbsnp}{'TotalVariantsSNV'} / $stats{'samples'}))."\n";
+			print OUTFILE "Total $strandfilter_status $dbsnp Singletons: $stats2{$strandfilter_status}{$dbsnp}{'singletons'}"." - Per Sample:".sprintf("%.3f", ($stats2{$strandfilter_status}{$dbsnp}{'singletons'} / $stats{'samples'}))."\n";
+			print OUTFILE "Total $strandfilter_status $dbsnp nonSingletons: $stats2{$strandfilter_status}{$dbsnp}{'nonsingletons'}"." - Per Sample:".sprintf("%.3f", ($stats2{$strandfilter_status}{$dbsnp}{'singletons'} / $stats{'samples'}))."\n";
+			$singleton_sites += $stats2{$strandfilter_status}{$dbsnp}{'singletons'};
+			$nonsingleton_sites += $stats2{$strandfilter_status}{$dbsnp}{'nonsingletons'};
+		}
+	}
+	print OUTFILE "Total Number of Sites That are Singletons: $singleton_sites\n";
+	print OUTFILE "Total Number of Sites That are Not Singletons: $nonsingleton_sites\n";
+	print OUTFILE "\n";
 	foreach my $variant_type (sort keys %variant_status) {
-		print OUTFILE "Total FilterPassed $variant_type"."s $stats{'Strandfilter_Passed'}{$variant_type}\n";
-		print OUTFILE "Total FilterPassed Novel $variant_type"."s $stats2{'Strandfilter_Passed'}{'novel'}{$variant_type}\n";
+		print OUTFILE "Total FilterPassed $variant_type"."s: $stats{'Strandfilter_Passed'}{$variant_type}"." - Per Sample:".sprintf("%.3f", ($stats{'Strandfilter_Passed'}{$variant_type} / $stats{'samples'}))."\n";
 		if ($variant_type eq "SNP") {
-			print OUTFILE "Total FilterPassed $variant_type"."s in dbSNP $stats2{'Strandfilter_Passed'}{'dbsnp'}{$variant_type}\n";
+			print OUTFILE "Total FilterPassed Novel $variant_type"."s: $stats2{'Strandfilter_Passed'}{'novel'}{$variant_type}"." - Per Sample:".sprintf("%.3f", ($stats2{'Strandfilter_Passed'}{'novel'}{$variant_type} / $stats{'samples'}))."\n";
+			print OUTFILE "Total FilterPassed $variant_type"."s in dbSNP: $stats2{'Strandfilter_Passed'}{'dbsnp'}{$variant_type}"." - Per Sample:".sprintf("%.3f", ($stats2{'Strandfilter_Passed'}{'dbsnp'}{$variant_type} / $stats{'samples'}))."\n";
 		}
 	}
 	foreach my $variant_type (sort keys %variant_status) {
-		print OUTFILE "Total FilterFailed $variant_type"."s $stats{'Strandfilter_Failed'}{$variant_type}\n";
-		print OUTFILE "Total FilterFailed Novel $variant_type"."s $stats2{'Strandfilter_Failed'}{'novel'}{$variant_type}\n";
+		print OUTFILE "Total FilterFailed $variant_type"."s: $stats{'Strandfilter_Failed'}{$variant_type}"." - Per Sample:".sprintf("%.3f", ($stats{'Strandfilter_Failed'}{$variant_type} / $stats{'samples'}))."\n";
 		if ($variant_type eq "SNP") {
-			print OUTFILE "Total FilterFailed $variant_type"."s in dbSNP $stats2{'Strandfilter_Failed'}{'dbsnp'}{$variant_type}\n";
+			print OUTFILE "Total FilterFailed Novel $variant_type"."s: $stats2{'Strandfilter_Failed'}{'novel'}{$variant_type}"." - Per Sample:".sprintf("%.3f", ($stats2{'Strandfilter_Failed'}{'novel'}{$variant_type} / $stats{'samples'}))."\n";
+			print OUTFILE "Total FilterFailed $variant_type"."s in dbSNP: $stats2{'Strandfilter_Failed'}{'dbsnp'}{$variant_type}"." - Per Sample:".sprintf("%.3f", ($stats2{'Strandfilter_Failed'}{'dbsnp'}{$variant_type} / $stats{'samples'}))."\n";
 		}
 	}
 }
 
 
 =cut
-Number of samples
 Number of snps, ins, del
 Avg Per Sample
+Total Number of Sites with Variant
 #unique, #dbsnp
 	Of each, #snv, #ins, #del, #other
 	average per sample
