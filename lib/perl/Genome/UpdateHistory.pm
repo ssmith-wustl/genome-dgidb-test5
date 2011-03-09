@@ -11,7 +11,11 @@ class Genome::UpdateHistory {
                   edit_date => { is => 'TIMESTAMP', column_name => 'EDIT_DATE'}
     ],
     has => [
-        description => { is => 'VARCHAR2', len => 255, column_name => 'DESCRIPTION', doc => 'insert, update, or delete'}
+        description => { is => 'VARCHAR2', len => 255, column_name => 'DESCRIPTION', doc => 'insert, update, or delete'},
+        app_user    => { is => 'VARCHAR2', len => 255, column_name => 'APP_USER'},
+        app_name    => { is => 'VARCHAR2', len => 255, column_name => 'APP_NAME'},
+        oracle_user => { is => 'VARCHAR2', len => 255, column_name => 'ORACLE_USER'},
+        oracle_session_id => { is => 'VARCHAR2', len => 15, column_name => 'ORACLE_SESSION_ID'}
     ],
     has_optional => [
         old_value => { is => 'VARCHAR2', len => 1000, column_name => 'OLD_VALUE'},
