@@ -149,7 +149,7 @@ sub execute {                               # replace with real execution logic.
 
 	}
 	
-	return $return;
+	return 1;
 
 }
 
