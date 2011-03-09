@@ -61,7 +61,7 @@ class Genome::Sample {
                                         column_name => 'FULL_NAME',
                                     },
         subject_type => { is => 'Text', is_constant => 1, value => 'organism sample', column_name => '', },
-        _nomenclature                => { column_name => 'NOMENCLATURE', default_value => "WUGC" }, 
+        nomenclature                => { column_name => 'NOMENCLATURE', default_value => "WUGC" }, 
 
     ],
     has_optional => [	
