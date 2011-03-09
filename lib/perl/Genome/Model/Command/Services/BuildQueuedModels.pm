@@ -87,10 +87,10 @@ sub execute {
 
     my @builds = $command->builds;
     unless (@builds == $builds_to_start){
-        $self->error_message("Failed to start expected number of builds. $builds_to_start expected, ".scalar @builds." built.\nErr:$@");
+        $self->error_message("Failed to start expected number of builds. $builds_to_start expected, ".scalar @builds." built.\nErr:$err");
     }
     elsif (!$rv){
-        $self->error_message("Built expected number of builds, but had some failures:\nErr:$@");
+        $self->error_message("Built expected number of builds, but had some failures:\nErr:$err");
     }
 
     Genome::Sys->unlock_resource(resource_lock=>$lock);

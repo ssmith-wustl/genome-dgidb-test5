@@ -58,6 +58,16 @@ sub create {
     return $self;
 }
 
+sub gold_snp_report_file_filtered {
+	my $self = shift;
+    return $self->data_directory . "/reports/gold_snp_concordance.filtered.txt"
+}
+
+sub gold_snp_report_file_unfiltered {
+	my $self = shift;
+    return $self->data_directory . "/reports/gold_snp_concordance.unfiltered.txt"
+}
+
 sub dbsnp_file_filtered {
     my $self = shift;
     return $self->data_directory . "/reports/dbsnp_concordance.filtered.txt"
@@ -213,12 +223,12 @@ sub get_variant_bed_file {
 
 sub snvs_bed {
     my ($self, $ver) = @_;
-    return $self->get_variant_bed_file("snps_all_sequences", "v1");
+    return $self->get_variant_bed_file("snps_all_sequences", $ver);
 }
 
 sub filtered_snvs_bed {
     my ($self, $ver) = @_;
-    return $self->get_variant_bed_file("snps_all_sequences.filtered", "v1");
+    return $self->get_variant_bed_file("snps_all_sequences.filtered", $ver);
 }
 
 sub filtered_indel_file {

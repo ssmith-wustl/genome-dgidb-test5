@@ -39,7 +39,7 @@ sub execute {
 
     my @chunks_with_output;
     for my $chunk (@ace_file_chunks) {
-        push @chunks_with_output, $chunk if -s $chunk;
+        push @chunks_with_output, $chunk if -e $chunk and -s $chunk;
     }
 
     $self->status_message("Concatenating " . scalar @chunks_with_output . " ace file chunks into $ace_file");

@@ -70,7 +70,7 @@ sub _get_taxon {
 sub _get_and_update_or_create_individual {
     my ($self, %params) = @_;
 
-    my $individual = $self->_get_individual($params{name});
+    my $individual = $self->_get_individual($params{upn});
     if ( $individual ) {
         my $update = $self->_update_object($individual, %params);
         return if not $update;
@@ -84,14 +84,14 @@ sub _get_and_update_or_create_individual {
 }
 
 sub _get_individual {
-    my ($self, $name) = @_;
+    my ($self, $upn) = @_;
 
-    Carp::confess('No name given to get individual') if not $name;
+    Carp::confess('No name given to get individual') if not $upn;
 
-    my $individual = Genome::Individual->get(name => $name);
+    my $individual = Genome::Individual->get(upn => $upn);
     return if not defined $individual;
 
-    $self->status_message('Individual: '.join(' ', map{ $individual->$_ } (qw/ id name/)));
+    $self->status_message('Individual: '.join(' ', map{ $individual->$_ } (qw/ id name upn /)));
 
     return $self->_individual($individual);
 }
@@ -99,10 +99,10 @@ sub _get_individual {
 sub _create_individual {
     my ($self, %params) = @_;
 
-    Carp::confess('No individual name given to create individual') if not $params{name};
+    Carp::confess('No "upn" given to create individual') if not $params{upn};
     Carp::confess('No taxon set to create individual') if not $self->_taxon;
 
-    $params{upn} = $params{name} if not $params{upn};
+    $params{name} = $params{upn} if not $params{name};
     $params{taxon_id} = $self->_taxon->id;
     $params{gender} = 'unspecified' if not $params{gender};
     $params{nomenclature} = 'WUGC' if not $params{nomenclature};

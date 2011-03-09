@@ -68,6 +68,7 @@ EOS
 sub execute {
     
     my $self = shift;
+
     unless($self->_verify_inputs) {
         die $self->error_message('Failed to verify inputs.');
     }

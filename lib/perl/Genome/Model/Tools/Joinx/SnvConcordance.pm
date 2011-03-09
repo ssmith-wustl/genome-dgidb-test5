@@ -81,6 +81,7 @@ sub parse_results_file {
     my $category;
     my $match_type;
     while (my $l = <$fh>) {
+		chomp $l;
         if ($l =~ /^([^\t]+)\t([0-9]+)$/) {
             $category = $1;
             my $total = $2;

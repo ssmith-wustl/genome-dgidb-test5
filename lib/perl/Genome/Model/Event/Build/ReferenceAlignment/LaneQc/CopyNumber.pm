@@ -21,7 +21,7 @@ sub execute {
     }
 
     if ( !$self->validate_gold_snp_path ) {
-        die $self->error_message("No valid gold_snp_path for the build, skipping compare_snps!");
+        die $self->error_message("No valid gold_snp_path for the build, aborting copy number!");
     }
 
     my $output_dir = $build->data_directory . '/qc';
