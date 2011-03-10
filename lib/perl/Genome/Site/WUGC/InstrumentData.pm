@@ -95,15 +95,14 @@ EOS
         full_path => {
             via => 'attributes',
             to => 'value', 
-            where => [ entity_class_name => 'Genome::Site::WUGC::InstrumentData', property_name => 'full_path' ],
+            where => [ property_name => 'full_path' ],
             is_mutable => 1,
         },
     ],
     has_many_optional => [
         attributes => {
-            is => 'Genome::MiscAttribute',
-            reverse_id_by => '_instrument_data',
-            where => [ entity_class_name => __PACKAGE__ ],
+            is => 'Genome::Site::WUGC::MiscAttribute',
+            reverse_as => '_instrument_data',
         },
     ],
     schema_name => 'GMSchema',

@@ -22,7 +22,6 @@ class Genome::Site::WUGC::InstrumentData::Sanger {
                         via   => 'attributes',
                         to    => 'value',
                         where => [
-                                  entity_class_name => 'Genome::Site::WUGC::InstrumentData::Sanger',
                                   property_name     => 'sample_name',
                                  ],
                         is_optional => 1,
@@ -32,7 +31,6 @@ class Genome::Site::WUGC::InstrumentData::Sanger {
                       via   => 'attributes',
                       to    => 'value',
                       where => [
-                                entity_class_name => 'Genome::Site::WUGC::InstrumentData::Sanger',
                                 property_name     => 'sample_id',
                                ],
                       is_optional => 1,
@@ -44,27 +42,23 @@ class Genome::Site::WUGC::InstrumentData::Sanger {
                          via   => 'attributes',
                          to    => 'value',
                          where => [
-                                   entity_class_name => 'Genome::Site::WUGC::InstrumentData::Sanger',
                                    property_name     => 'library_name',
                                   ],
                          is_optional => 1,
                          is_mutable  => 1,
                      },
         library_id => {
-                       via   => 'attributes',
-                       to    => 'value',
-                       where => [
-                                 entity_class_name => 'Genome::Site::WUGC::InstrumentData::Sanger',
-                                 property_name     => 'library_id',
-                                ],
-                       is_optional => 1,
-                       is_mutable  => 1,
-                      },
+            is => 'Text',
+            via => 'attributes',
+            to => 'value',
+            where => [ property_name => 'library_id' ],
+            is_optional => 1,
+            is_mutable  => 1,
+        },
         research_project => {
                  via   => 'attributes',
                  to    => 'value',
                  where => [
-                       entity_class_name => 'Genome::Site::WUGC::InstrumentData::Sanger',
                        property_name     => 'research_project',
                    ],
              is_optional => 1,
