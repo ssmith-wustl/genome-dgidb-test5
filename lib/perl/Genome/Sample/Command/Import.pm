@@ -3,6 +3,8 @@ package Genome::Sample::Command::Import;
 use strict;
 use warnings;
 
+use Genome;
+
 require Carp;
 use Data::Dumper 'Dumper';
 
@@ -20,14 +22,7 @@ class Genome::Sample::Command::Import {
 };
 
 sub help_brief {
-    my $class = shift;
-    my $name = $class->command_name_brief;
-    if ( $name  eq 'import' ) { # base
-        return 'import samples from known sources';
-    }
-    else {
-        return "import $name samples";
-    }
+    return 'import samples from known sources';
 }
 
 sub help_detail {

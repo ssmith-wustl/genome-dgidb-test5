@@ -21,6 +21,7 @@ use_ok('Genome::Sample::Command::Import::Tcga') or die;
 my $name = 'TCGA-00-0000-000-00R-0000-00';
 my $import = Genome::Sample::Command::Import::Tcga->create(
     name => $name,
+    files => [qw| /gsc/var/cache/testsuite/data/Genome-Sample/test.xml /gsc/var/cache/testsuite/data/Genome-Sample/test2.xml |],
 );
 ok($import, 'create');
 $import->dump_status_messages(1);
@@ -33,6 +34,8 @@ is($import->_sample->nomenclature, 'TCGA', 'sample nomenclature');
 is($import->_sample->extraction_label, $name, 'sample extraction label');
 is($import->_sample->extraction_type, 'rna', 'sample extraction type');
 is_deeply($import->_sample->source, $import->_individual, 'sample source');
+ok($import->_sample->data_directory, 'sample data directory');
+is_deeply([$import->_sample->get_files], [ map { $import->_sample->data_directory.'/'.$_ } (qw/ test.xml test2.xml /)], 'sample files');
 is($import->_library->name, $name.'-extlibs', 'library name');
 is_deeply($import->_library->sample, $import->_sample, 'library sample');
 is(@{$import->_created_objects}, 3, 'created 3 objects');
