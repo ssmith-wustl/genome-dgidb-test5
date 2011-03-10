@@ -1,4 +1,4 @@
-package Genome::InstrumentData::Command::Import::GenotypeMicroarray;
+package Genome::InstrumentData::Command::Import::Microarray::Base;
 
 use strict;
 use warnings;
@@ -10,7 +10,7 @@ use File::Basename;
 use Data::Dumper;
 use IO::File;
 
-class Genome::InstrumentData::Command::Import::GenotypeMicroarray {
+class Genome::InstrumentData::Command::Import::Microarray::Base {
     is  => 'Genome::Command::Base',
     is_abstract => 1,
     has => [
@@ -52,7 +52,7 @@ class Genome::InstrumentData::Command::Import::GenotypeMicroarray {
         },
         define_model => {
             is=>'Boolean',
-            doc => 'Create a goldSNP file from the imported genotype and define/build a GenotypeMicroarray model.',
+            doc => 'Create a goldSNP file from the imported genotype and define/build a genotype microarray model.',
             default_value => 0,
             is_optional => 1,
         },

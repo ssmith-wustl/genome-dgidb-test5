@@ -116,7 +116,7 @@ sub process_imported_files {
     $self->status_message("finished creating genotype file, importing genotype and defining model.");
 
     unless(defined($self->allocation)){
-        unless(Genome::InstrumentData::Command::Import::GenotypeMicroarray::File->execute(
+        unless(Genome::InstrumentData::Command::Import::Microarray::GenotypeFile->execute(
             source_data_file => $genotype_path_and_file,
             import_source_name => $self->import_source_name,
             sequencing_platform => $self->sequencing_platform,
