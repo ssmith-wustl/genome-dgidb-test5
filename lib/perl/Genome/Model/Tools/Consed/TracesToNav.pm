@@ -118,13 +118,13 @@ sub execute {
 
     my ($sites_to_nav) = &get_sites_to_nav($self,$refseq_info); #read in list
     unless ($sites_to_nav) {
-	App->error_message( "\n\ndidn't find sites to nav\n\n");
+	$self->error_message( "\n\ndidn't find sites to nav\n\n");
 	return;
     }
 
     my ($reads_to_nav,$main_contig) = &get_reads_to_nav($ace_name,$sites_to_nav); #find the reads for samples from the list
     unless ($reads_to_nav) {
-	App->error_message( "\n\ndidn't find reads to nav\n\n");
+	$self->error_message( "\n\ndidn't find reads to nav\n\n");
     }
 
 
@@ -132,7 +132,7 @@ sub execute {
     if ($done) {
 	return 1;    
     } else {
-	App->error_message( "\n\ndidn't write to $out.nav or $out.csv\n\n");
+	$self->error_message( "\n\ndidn't write to $out.nav or $out.csv\n\n");
 	return;
     }
 }
@@ -146,7 +146,7 @@ sub get_sites_to_nav {
 #(file_check);
 
     my ($sites_to_nav,$samples_pos_info,$tumor_samples,$paired_samples);
-    open(LIST,"$list") ||  App->error_message( "\n\ncouldn't open the list $list\n\n") && return;
+    open(LIST,"$list") ||  $self->error_message( "\n\ncouldn't open the list $list\n\n") && return;
     while (<LIST>) {
 	chomp;
 	
@@ -160,7 +160,7 @@ sub get_sites_to_nav {
 	} elsif ($self->input_type eq "paired") {
 	    ($sample,$pos,$pair,$note) = split(/\,/,$line);
 	} elsif ($self->input_type eq "expanded") {
-	    App->error_message( "\n\ninput_type expanded not yet supported\n\n");
+	    $self->error_message( "\n\ninput_type expanded not yet supported\n\n");
 	    return;
 	}
 	if ($refseq_info) {
@@ -190,7 +190,7 @@ sub get_reads_to_nav {
 
     use GSC::IO::Assembly::Ace;
     my $ao = GSC::IO::Assembly::Ace->new(input_file => $ace);
-    unless ($ao) { App->error_message( "\n\ndidn't get the ace object\n\n") && return;}
+    unless ($ao) { $self->error_message( "\n\ndidn't get the ace object\n\n") && return;}
     my ($reads_to_nav,$main_contig);
     foreach my $name (@{ $ao->get_contig_names }) {
 	my $contig = $ao->get_contig($name);
@@ -206,7 +206,7 @@ sub get_reads_to_nav {
     my $q;
     my @con_seq;
     
-    open (ACE_file, "$ace")  ||  App->error_message( "\n\ncouldn't open the ace file\n\n") && return;
+    open (ACE_file, "$ace")  ||  $self->error_message( "\n\ncouldn't open the ace file\n\n") && return;
     my @seq_line = ();
     my @file = <ACE_file>;
     my $file_n = @file;
@@ -353,8 +353,8 @@ sub make_read_nav {
 #	$sites_to_nav->{$pos}->{$sample}->{comment}=$note;
 #	$sites_to_nav->{$pos}->{$sample}->{pair}=$pair;
     
-    open (NAV,">$out.nav") || App->error_message( "\n\ncouldn't open $out.nav to for writting\n\n") && return;
-    open (CSV,">$out.csv") || App->error_message( "\n\ncouldn't open $out.csv to for writting\n\n") && return;
+    open (NAV,">$out.nav") || $self->error_message( "\n\ncouldn't open $out.nav to for writting\n\n") && return;
+    open (CSV,">$out.csv") || $self->error_message( "\n\ncouldn't open $out.csv to for writting\n\n") && return;
     if ($self->unpaired) {
 	#($sample,$pos,$note) = split(/\,/,$line);
 	print CSV qq(refpos\tsample\treads\tnote\tmanual_genotype\tcomments\n);
@@ -439,7 +439,7 @@ sub make_read_nav {
 sub make_cons_nav {
     
     my ($out,$main_contig,$sites_to_nav) = @_;
-    open (NAV3,">$out.consensus.nav") || App->error_message( "\n\ncouldn't open $out.consensus.nav to for writting\n\n") && return;
+    open (NAV3,">$out.consensus.nav") || $self->error_message( "\n\ncouldn't open $out.consensus.nav to for writting\n\n") && return;
 
     print NAV3 qq(TITLE:\n\n);
 
@@ -516,7 +516,7 @@ sub parse_ref {
     my $orientation;
     my $genomic_coord;
     my $refseq_info;
-    open(REF,"$refseq")  || App->error_message( "\n\ncouldn't open $refseq\n\n") && return;
+    open(REF,"$refseq")  || $self->error_message( "\n\ncouldn't open $refseq\n\n") && return;
     while (<REF>) {
 	chomp; 
 	my $line = $_;
