@@ -630,7 +630,6 @@ sub _update_owner_for_move {
         $owner->output_dir($self->absolute_path);
     }
     elsif ($owner->isa('Genome::Model::Build')) {
-        die 'Have not implemented reallocate with move for builds!';
         $owner->data_directory($self->absolute_path);
     }
 

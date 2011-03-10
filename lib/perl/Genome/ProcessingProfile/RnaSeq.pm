@@ -132,4 +132,32 @@ sub _resolve_sequencing_platform_for_class {
     return lc(join(" ", @words));
 }
 
+sub params_for_alignment {
+    my $self = shift;
+    my @assignments = @_;
+
+    my $model = $assignments[0]->model;
+    my $reference_build = $model->reference_sequence_build;
+    my $reference_build_id = $reference_build->id;
+
+    my %params = (
+                    instrument_data_id => [map($_->instrument_data_id, @assignments)],
+                    aligner_name => 'tophat',
+                    reference_build_id => $reference_build_id || undef,
+                    aligner_version => $self->read_aligner_version || undef,
+                    aligner_params => $self->read_aligner_params || undef,
+                    force_fragment => undef, #unused,
+                    trimmer_name => $self->read_trimmer_name || undef,
+                    trimmer_version => $self->read_trimmer_version || undef,
+                    trimmer_params => $self->read_trimmer_params || undef,
+                    picard_version => $self->picard_version || undef,
+                    samtools_version => undef, #unused
+                    filter_name => undef, #unused
+                    test_name => undef,
+                );
+
+    my @param_set = (\%params);
+    return @param_set;
+}
+
 1;
