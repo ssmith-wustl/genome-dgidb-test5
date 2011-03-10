@@ -38,9 +38,16 @@ sub _update_object {
     my ($self, $obj, %params) = @_;
 
     $self->status_message('Update '.$obj->name.' ('.$obj->id.')');
-    $self->status_message( Dumper(\%params) );
+    my $force = delete $params{__force__};
+    $self->status_message('Force is '.($force ? 'on' : 'off'));
+    $self->status_message('Params: '.Dumper(\%params));
 
     for my $attr ( keys %params ) {
+        my $val = $obj->$attr;
+        if ( defined $val and not $force ) {
+            $self->status_message("Not updating '$attr' for ".$obj->id." because it already has a value ($val)");
+            next;
+        }
         $obj->$attr( $params{$attr} );
     }
 
@@ -54,58 +61,130 @@ sub _update_object {
     return 1;
 }
 
-sub _get_taxon {
-    my ($self, $name) = @_;
-
-    Carp::confess('No name given to get taxon') if not $name;
-
-    my $taxon = Genome::Taxon->get(name => $name);
-    return if not $taxon;
-
-    $self->status_message('Taxon: '.join(' ', map{ $taxon->$_ } (qw/ id name/)));
-
-    return $self->_taxon($taxon);
-}
-
-sub _get_and_update_or_create_individual {
+sub _import {
     my ($self, %params) = @_;
 
-    my $individual = $self->_get_individual($params{upn});
-    if ( $individual ) {
-        my $update = $self->_update_object($individual, %params);
-        return if not $update;
+    # params
+    Carp::confess('No params given to import') if not %params;
+    my $taxon_name = delete $params{taxon};
+    Carp::confess('No taxon name given to import') if not $taxon_name;
+    my $individual_params = delete $params{individual};
+    Carp::confess('No individual params given to import') if not $individual_params;
+    my $individual_upn = delete $individual_params->{upn};
+    Carp::confess('No individual upn in individual params given to import') if not $individual_upn;
+    my $sample_params = delete $params{sample};
+    Carp::confess('No sample params given to import') if not $sample_params;
+    my $sample_name = delete $sample_params->{name};
+    Carp::confess('No sample name in sample params given to import') if not $sample_name;
+    my $library_ext = delete $params{library};
+    Carp::confess('No library extention given to import') if not $library_ext;
+
+    # taxon
+    $self->_taxon( Genome::Taxon->get(name => $taxon_name) );
+    Carp::confess("Cannot get taxon for '$taxon_name'") if not $self->_taxon;
+    $self->status_message('Found taxon: '.$self->_taxon->__display_name__);
+
+    # sample
+    my $sample = Genome::Sample->get(name => $sample_name);
+    if ( $sample ) {
+        $self->_sample($sample);
+        $self->status_message('Found sample: '.join(' ', map{ $sample->$_ } (qw/ id name/)));
+        if ( %$sample_params ) { # got additional params - try to update
+            my $update = $self->_update_object($sample, %$sample_params);
+            return if not $update;
+        }
     }
-    else {
-        $individual = $self->_create_individual(%params);
+    else { # create, set individual later
+        $sample = $self->_create_sample(
+            name => $sample_name,
+            %$sample_params,
+        );
+        return if not $sample;
+    }
+
+    # individual
+    my $individual = $self->_get_individual($individual_upn); # get by sample and upn
+    if ( not $individual ) {
+        $individual = $self->_create_individual(
+            upn => $individual_upn,
+            %$individual_params,
+        );
         return if not $individual;
     }
-   
-    return $individual;
+
+    if ( not $sample->source_id ) {
+        $sample->source_id( $individual->id );
+    }
+    if ( $sample->source_id ne $individual->id ) {
+        $self->_bail('Sample ('.$sample->id.') source id ('.$sample->source_id.') does not match found individual ('.$individual->id.')');
+        return;
+    }
+
+    if ( not $sample->source_type ) {
+        $sample->source_type( $individual->subject_type );
+    }
+    if ( $sample->source_id ne $individual->id ) {
+        $self->_bail('Sample ('.$sample->id.') source type ('.$sample->source_type.') does not match individual ('.$individual->subject_type.')');
+        return;
+    }
+
+    # library
+    my $library = $self->_get_or_create_library_for_extension($library_ext);
+    return if not $library;
+
+    return 1;
 }
 
 sub _get_individual {
     my ($self, $upn) = @_;
 
-    Carp::confess('No name given to get individual') if not $upn;
+    my $sample = $self->_sample;
+    Carp::confess('No sample set to get individual') if not $sample;
+    Carp::confess('No "upn" given to get individual') if not $upn;
 
-    my $individual = Genome::Individual->get(upn => $upn);
-    return if not defined $individual;
+    if ( my $individual = $sample->source ) {
+        $self->status_message('Found individual: '.join(' ', map{ $individual->$_ } (qw/ id name upn /)));
+        return $self->_individual($individual);
+    }
 
-    $self->status_message('Individual: '.join(' ', map{ $individual->$_ } (qw/ id name upn /)));
+    my $individual_from_sample_name;
+    my @tokens = split('-', $sample->name);
+    for ( my $i = 1; $i <= $#tokens; $i++  ) {
+        my $calculated_upn = join('-', @tokens[0..$i]);
+        my $individual_from_sample_name = Genome::Individual->get(upn => $calculated_upn);
+        last if $individual_from_sample_name;
+    }
 
-    return $self->_individual($individual);
+    my $individual_for_given_upn = Genome::Individual->get(upn => $upn);
+
+    return if not $individual_from_sample_name and not $individual_for_given_upn;
+
+    if ( $individual_from_sample_name and $individual_for_given_upn and $individual_from_sample_name->id ne $individual_for_given_upn->id) {
+        $self->_bail('Found individuals for given upn ('.$individual_for_given_upn->__display_name__.') and calculated from sample name ('.$individual_from_sample_name->__display_name__.'), but they do not match.');
+        return;
+    }
+    elsif ( $individual_from_sample_name ) {
+        $self->_individual($individual_from_sample_name);
+    }
+    elsif ( $individual_for_given_upn ) {
+        $self->_individual($individual_for_given_upn);
+    }
+
+    $self->status_message('Found individual: '.join(' ', map{ $self->_individual->$_ } (qw/ id name upn /)));
+
+    return $self->_individual;
 }
 
 sub _create_individual {
     my ($self, %params) = @_;
 
     Carp::confess('No "upn" given to create individual') if not $params{upn};
+    Carp::confess('No "nomenclature" given to create individual') if not $params{nomenclature};
     Carp::confess('No taxon set to create individual') if not $self->_taxon;
 
     $params{name} = $params{upn} if not $params{name};
     $params{taxon_id} = $self->_taxon->id;
     $params{gender} = 'unspecified' if not $params{gender};
-    $params{nomenclature} = 'WUGC' if not $params{nomenclature};
 
     $self->status_message('Create individual: '.Dumper(\%params));
     my $individual = Genome::Individual->create(%params);
@@ -122,85 +201,29 @@ sub _create_individual {
     my $created_objects = $self->_created_objects;
     push @$created_objects, $individual;
     $self->_created_objects($created_objects);
-    $self->status_message('Individual: '.join(' ', map{ $individual->$_ } (qw/ id name/)));
+    $self->status_message('Create individual: '.join(' ', map{ $individual->$_ } (qw/ id name/)));
 
     return $self->_individual($individual);
-}
-
-sub _get_and_update_or_create_sample {
-    my ($self, %params) = @_;
-
-    if ( $self->_individual ) {
-        $params{source_id} = $self->_individual->id;
-        $params{source_type} = $self->_individual->subject_type;
-    }
-
-    my $sample = $self->_get_sample($params{name});
-    if ( $sample ) {
-        my $update = $self->_update_object($sample, %params);
-        return if not $update;
-    }
-    else {
-        $sample = $self->_create_sample(%params);
-        return if not $sample;
-    }
-   
-    return $sample;
-}
-
-sub _validate_or_set_sample_params {
-    my ($self, $params) = @_;
-
-    Carp::confess('No sample params given to validate or set') if not $params;
-    Carp::confess('Need sample params as hash ref to validate or set') if ref $params ne 'HASH';
-
-    if ( $self->_individual ) {
-        $params->{source_id} = $self->_individual->id;
-        $params->{source_type} = $self->_individual->subject_type;
-    }
-
-    if ( $params->{nomenclature} ) {
-        my $nomenclature = GSC::Nomenclature->get($params->{nomenclature});
-        return if not $nomenclature;
-        $params->{_nomenclature} = delete $params->{nomenclature};
-    }
-    elsif ( not defined $params->{_nomenclature} ) {
-        $params->{_nomenclature} = 'WUGC';
-    }
-
-    if ( defined $params->{organ_name} ) {
-        my $organ = GSC::Organ->get($params->{organ_name});
-        return if not $organ;
-    }
-
-    if ( defined $params->{tissue_desc} ) {
-        my $tissue = $self->_get_or_create_tissue($params->{tissue_desc});
-        return if not $tissue;
-    }
-
-    return 1;
-}
-
-sub _get_sample {
-    my ($self, $name) = @_;
-
-    Carp::confess('No name given to get sample') if not $name;
-
-    my $sample = Genome::Sample->get(name => $name);
-    return if not defined $sample;
-
-    $self->status_message('Sample: '.join(' ', map{ $sample->$_ } (qw/ id name/)));
-
-    return $self->_sample($sample);
 }
 
 sub _create_sample {
     my ($self, %params) = @_;
 
     Carp::confess('No name given to create sample') if not $params{name};
+    Carp::confess('No nomenclature set to create sample') if not $params{nomenclature};
 
-    my $validate_or_set = $self->_validate_or_set_sample_params(\%params);
-    return if not $validate_or_set;
+    Carp::confess('No taxon set to create sample') if not $self->_taxon;
+    $params{taxon_id} = $self->_taxon->id;
+
+    if ( $self->_individual ) {
+        $params{source_id} = $self->_individual->id;
+        $params{source_type} = $self->_individual->subject_type;
+    }
+
+    if ( defined $params{tissue_desc} ) {
+        my $tissue = $self->_get_or_create_tissue($params{tissue_desc});
+        return if not $tissue;
+    }
 
     $self->status_message('Create sample: '.Dumper(\%params));
     my $sample = Genome::Sample->create(%params);
@@ -218,7 +241,7 @@ sub _create_sample {
     push @$created_objects, $sample;
     $self->_created_objects($created_objects);
 
-    $self->status_message('Sample: '.join(' ', map { $sample->$_ } (qw/ id name /)));
+    $self->status_message('Create sample: '.join(' ', map { $sample->$_ } (qw/ id name /)));
 
     return $self->_sample($sample);
 }
@@ -229,7 +252,7 @@ sub _get_or_create_tissue {
     my $tissue = GSC::Tissue->get($tissue_name);
 
     if ( defined $tissue ) {
-        $self->status_message('Tissue: '.$tissue->tissue_name);
+        $self->status_message('Found tissue: '.$tissue->tissue_name);
         return 1;
     }
 
@@ -249,7 +272,7 @@ sub _get_or_create_tissue {
     push @$created_objects, $tissue;
     $self->_created_objects($created_objects);
 
-    $self->status_message('Tissue: '.$tissue->tissue_name);
+    $self->status_message('Create issue: '.$tissue->tissue_name);
 
     return $tissue;
 }
@@ -281,7 +304,7 @@ sub _get_library_for_extension {
     my $library = Genome::Library->get(name => $name);
     return if not $library;
 
-    $self->status_message('Library: '.join(' ', map{ $library->$_ } (qw/ id name/)));
+    $self->status_message('Found library: '.join(' ', map{ $library->$_ } (qw/ id name/)));
 
     return $self->_library($library);
 
@@ -311,7 +334,7 @@ sub _create_library_for_extension {
     push @$created_objects, $library;
     $self->_created_objects($created_objects);
 
-    $self->status_message('Library: '.join(' ', map{ $library->$_ } (qw/ id name/)));
+    $self->status_message('Create library: '.join(' ', map{ $library->$_ } (qw/ id name/)));
     
     return $self->_library($library);
 }

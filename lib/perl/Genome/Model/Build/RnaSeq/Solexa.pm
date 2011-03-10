@@ -34,12 +34,9 @@ sub create {
 
 sub calculate_estimated_kb_usage {
     my $self = shift;
-    my $model = $self->model;
-    my @idas = $model->instrument_data_assignments;
-    #50GB per lane
-    my $estimate_from_instrument_data = scalar(@idas) * 52428800;
 
-    return $estimate_from_instrument_data;
+    #most space is allocated from within the alignment result
+    return 10_240_000;
 }
 
 sub log_directory {
