@@ -3,7 +3,6 @@ package Genome::Model::Tools::Fasta::GetBreakpointFasta;
 use strict;
 use warnings;
 use Genome;
-#use GSCApp;
 
 class Genome::Model::Tools::Fasta::GetBreakpointFasta {
     is => 'Command',                    
