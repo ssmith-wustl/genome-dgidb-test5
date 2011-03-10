@@ -37,6 +37,10 @@ class Genome::Model::View::Solr::Xml {
                     name => 'data_directory',
                     position => 'content',
                 },
+                {
+                    name => 'subject_name',
+                    position => 'content',
+                },
 # Loading instrument data is *so* slow
 #                {
 #                    name => 'instrument_data',

@@ -8,7 +8,7 @@ use Genome;
 use Carp 'confess';
 use Data::Dumper 'Dumper';
 require File::Copy;
-use Genome::Site::WUGC::Finishing::Assembly::Factory;
+use Finishing::Assembly::Factory;
 
 class Genome::Model::Build::MetagenomicComposition16s::Sanger {
     is => 'Genome::Model::Build::MetagenomicComposition16s',
@@ -237,7 +237,7 @@ sub load_bioseq_for_amplicon {
     # get contig from acefile
     my $acefile = $self->ace_file_for_amplicon($amplicon);
     return unless -s $acefile; # ok
-    my $ace = Genome::Site::WUGC::Finishing::Assembly::Factory->connect('ace', $acefile);
+    my $ace = Finishing::Assembly::Factory->connect('ace', $acefile);
     my $assembly = $ace->get_assembly;
     my $contigs = $assembly->contigs;
     my ($contig, $reads);

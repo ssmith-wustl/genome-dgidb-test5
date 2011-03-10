@@ -156,32 +156,35 @@ sub execute {
 
     my $tier1_coding = $self->shadow_genome(\%genome);
     my $tier1_rna = $self->shadow_genome(\%genome);
-
+    my $transcript_iterator;
+    my $transcript;
+    my @exons;
     #now iterate over all transcripts
     for my $chromosome_name(@chromosomes) {
-        my $transcript_iterator = $build->transcript_iterator(chrom_name => $chromosome_name);
+        $transcript_iterator = $build->transcript_iterator(chrom_name => $chromosome_name);
         print STDERR "Parsing $chromosome_name\n";
         $self->status_message("Parsing $chromosome_name\n");
         unless($transcript_iterator) {
             warn "No iterator because ", Genome::Transcript->error_message, " Skipping to next\n";
             next;
         }
-        while(my $transcript = $transcript_iterator->next) {
+        while( $transcript = $transcript_iterator->next) {
             if($transcript->source ne 'ccds' && $transcript->transcript_status ne 'unknown') {
                 #then this transcript is considered for annotation
-                my @exons = $transcript->cds_exons;
+                @exons = $transcript->cds_exons;
                 push @exons, $transcript->introns;
                 push @exons, grep { $_->structure_type eq 'rna' } $transcript->ordered_sub_structures;
+                my $type;
                 for my $exon (@exons) {
-                    my $type = $exon->structure_type;
+                    $type = $exon->structure_type;
                     if($type eq 'rna') {
                         $self->add_substructure_to_set($tier1_rna, $exon, $chromosome_name);
                     } elsif ($type eq 'intron') {
-                        $DB::single=1;
                         $self->add_splice_sites_to_set($tier1_coding,$exon,$chromosome_name);
                     } else {
                         $self->add_substructure_to_set($tier1_coding, $exon, $chromosome_name);
                     }
+                    $type = undef;
                 }
             }
         }

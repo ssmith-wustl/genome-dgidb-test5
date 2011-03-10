@@ -220,6 +220,7 @@ sub generate_fake_instrument_data {
     # confirm there are fastq files here, and fake the fastq_filenames method to return them
     my @in_fastq_files = glob($instrument_data->gerald_directory.'/*.txt');
     $instrument_data->set_list('dump_sanger_fastq_files',@in_fastq_files);
+    $instrument_data->mock('dump_trimmed_fastq_files', sub {return Genome::InstrumentData::Solexa::dump_trimmed_fastq_files($instrument_data)});
 
     # fake out some properties on the instrument data
     isa_ok($instrument_data,'Genome::InstrumentData::Solexa');

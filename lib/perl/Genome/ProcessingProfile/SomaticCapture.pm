@@ -169,6 +169,21 @@ sub _map_workflow_inputs {
         die $self->error_message;
     }
     
+    ## Set a default reference transcript annotator version ##
+    
+    my $annotation_reference_transcripts = "NCBI-human.combined-annotation/54_36p_v2";
+    my $ref_id = $tumor_build->model->reference_sequence_build->id;
+
+    ## Human build 37 ##    
+    if($ref_id == 106942997 || $ref_id == 102671028)
+    {
+        $annotation_reference_transcripts = "NCBI-human.combined-annotation/57_37b";
+    }
+    elsif($ref_id == 104420993 || $ref_id == 103785428)
+    {
+        $annotation_reference_transcripts = "NCBI-mouse.combined-annotation/54_37g_v2";
+    }
+
     push @inputs,
         tumor_bam_file => $tumor_bam,
         normal_bam_file => $normal_bam,
@@ -186,6 +201,7 @@ sub _map_workflow_inputs {
         normal_indelpe_data_directory => join('/', $build->data_directory, "normal_indelpe_data" ),
         tumor_indelpe_data_directory => join('/', $build->data_directory, "tumor_indelpe_data" ),
         reference_fasta => $tumor_build->model->reference_sequence_build->full_consensus_path('fa'),
+        annotation_reference_transcripts => $annotation_reference_transcripts,
         prepend_chr => 0;
 
     # Set values from processing profile parameters

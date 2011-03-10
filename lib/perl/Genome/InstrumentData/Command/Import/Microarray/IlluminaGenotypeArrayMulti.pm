@@ -279,7 +279,7 @@ sub process_imported_files {
         }
         my $gen = "$temp_dir/$internal{$sample_name}.genotype";
 
-        unless(Genome::InstrumentData::Command::Import::GenotypeMicroarray::File->create(
+        unless(Genome::InstrumentData::Command::Import::Microarray::GenotypeFile->create(
                 source_data_file    => $gen,
                 sample              => $sample,
                 library             => $library,

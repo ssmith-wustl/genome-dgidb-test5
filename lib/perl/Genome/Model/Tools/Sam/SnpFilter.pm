@@ -155,6 +155,9 @@ sub execute {
         
         if ($chr ne $last_chr) {
             map{$out_fh->print($_->{line}) if $_->{pass}}@snps;
+            if(defined($self->lq_output)){
+                map{$lq_out_fh->print($_->{line}) unless $_->{pass}}@snps;
+            }
             @snps = ();       #reset
             $last_chr = $chr; #reset
         }

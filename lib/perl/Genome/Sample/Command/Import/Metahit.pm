@@ -35,42 +35,40 @@ class Genome::Sample::Command::Import::Metahit {
     ],
 };
 
+sub help_brief {
+    return 'import METAHIT samples';
+}
+
 sub execute {
     my $self = shift;
 
-   $self->status_message('Import METAHit Sample...');
-
-    my $taxon = $self->_get_taxon('human');
-    Carp::confess('Cannot get human taxon') if not $taxon;
+    $self->status_message('Import METAHit Sample...');
 
     my $individual_name = 'METAHIT-'.$self->name;
-    my $individual = $self->_get_and_update_or_create_individual(
-        upn => $individual_name,
-        nomenclature => 'METAHIT',
-        gender => $self->gender,
-        description => 'METAHit individual: unknown source',
+    my $sample_name = $individual_name.'-1'; # TODO allow for more than one sample
+    my $import = $self->_import(
+        taxon => 'human',
+        individual => {
+            name => $individual_name,
+            upn => $individual_name,
+            nomenclature => 'METAHIT',
+            gender => $self->gender,
+            description => 'METAHit individual: unknown source',
+        },
+        sample => {
+            name => $sample_name,
+            extraction_label => $sample_name,
+            tissue_desc => $self->tissue_name,
+            tissue_label => $self->tissue_name,
+            extraction_type => 'genomic dna',
+            cell_type => 'unknown',
+            nomenclature => 'METAHIT',
+            age => $self->age,
+            body_mass_index => $self->bmi,
+        },
+        library => 'extlibs',
     );
-    return if not $individual;
-
-    my $name = $individual->name.'-1'; # TODO allow for more than one sample
-    my $sample = $self->_get_and_update_or_create_sample(
-        name => $name,
-        extraction_label => $name,
-        source_id => $individual->id,
-        source_type => $individual->subject_type,
-        tissue_desc => $self->tissue_name,
-        tissue_label => $self->tissue_name,
-        extraction_type => 'genomic',
-        cell_type => 'unknown',
-        _nomenclature => 'unknown',
-        age => $self->age,
-        body_mass_index => $self->bmi,
-    );
-    return if not $sample;
-
-    my $library = $self->_get_or_create_library_for_extension('extlibs');
-    return if not $library;
-    $self->_library($library);
+    return if not $import;
 
     $self->status_message('Import...OK');
 
@@ -78,18 +76,4 @@ sub execute {
 }
 
 1;
-
-=pod
-
-=head1 Disclaimer
-
-Copyright (C) 2005 - 2010 Genome Center at Washington University in St. Louis
-
-This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-
-=head1 Author(s)
-
-B<Eddie Belter> I<ebelter@genome.wustl.edu>
-
-=cut
 
