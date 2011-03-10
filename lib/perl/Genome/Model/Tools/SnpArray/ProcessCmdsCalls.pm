@@ -179,7 +179,7 @@ write.table(p.segment.smoothed.CNA.object, file="$chrom_filename.segments.p_valu
 		close(SCRIPT);
 		
 		print "Running $script_filename\n";
-#		system("R --no-save < $script_filename");# if($chrom eq "X" || $chrom eq "Y");	
+		system("R --no-save < $script_filename");# if($chrom eq "X" || $chrom eq "Y");	
 	}
 
 	## Parse out segments and build an index HTML file ##
