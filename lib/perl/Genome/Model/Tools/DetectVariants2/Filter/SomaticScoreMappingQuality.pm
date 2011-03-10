@@ -175,23 +175,17 @@ sub _filter_variants {
         }
 
         my @vars = Genome::Info::IUB->variant_alleles_for_iub($vref,$viub);
-        my $lines_printed;
+        my $variant_is_hq = 0;
         foreach my $var (@vars) {
             if(exists($bases{$var}) && $bases{$var} >= $self->min_mapping_quality) {
                 print $ofh $current_variant, "\n";
-                # If this IUB would create more than one variant in the output, adjust the expected value of output linecounts
-                if ($lines_printed > 1) {
-                    $self->_validate_output_offset($self->_validate_output_offset + ($lines_printed - 1) );
-                }
+                $variant_is_hq =1;
                 last;
-            } else {
-                print $lq_output_fh $current_variant ."\n";
-                $lines_printed++;
             }
         }
-        # If this IUB would create more than one variant in the output, adjust the expected value of output linecounts
-        if ($lines_printed > 1) {
-            $self->_validate_output_offset($self->_validate_output_offset + ($lines_printed - 1) );
+        # Unless the IUB had one possible allele that was HQ, make it LQ
+        unless ($variant_is_hq) {
+            print $lq_output_fh $current_variant ."\n";
         }
     }
 
