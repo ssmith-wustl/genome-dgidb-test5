@@ -101,13 +101,6 @@ sub create {
     return $self;
 }
 
-
-# FIXME this is a hack to get things to run until I decide how to implement this in the dispatcher
-# In the first version of the dispatcher... this was not implemented if there were unions or intersections... and if there were none of those it just grabbed the inputs from the only variant detector run and made it its own
-sub _generate_standard_files {
-    return 1;
-}
-
 # Takes all of the strategies specified and uses G::M::T::DV2::Strategy to turn them into a traversable hash containing the complete action plan to detect variants
 sub plan {
     my $self = shift;
@@ -805,5 +798,43 @@ sub set_output_files {
     }
     return 1;
 }
+
+# The HQ bed files for each variant type are already symlinked to the base output directory. 
+# This method collects all the LQ variants that fell out at each filter and combine stage and sorts them into one LQ output.
+# FIXME _validate_output should be added to check that the HQ and LQ bed files totaled have the same line count as each detectors HQ bed output files
+sub _generate_standard_files {
+    my $self = shift;
+    
+    # For each variant type that is expected, gather all the lq files that exist for that variant type and sort them into the dispatcher output directory
+    for my $variant_type (@{ $self->variant_types }) {
+        my $strategy = $variant_type."_detection_strategy";
+        if(defined( $self->$strategy)){
+            my $find_command = "find " . $self->output_directory . " -name $variant_type" . "s.lq.bed";
+            my @lq_files = `$find_command`;
+            chomp @lq_files;
+
+            unless (@lq_files) {
+                $self->error_message("Could not find any lq bed files");
+                die $self->error_message;
+            }
+
+            my $output_file = $self->output_directory . "/$variant_type" . "s.lq.bed";
+            my $sort_command = Genome::Model::Tools::Joinx::Sort->create(
+                input_files => \@lq_files,
+                merge_only => 1,
+                output_file => $output_file,
+            );
+
+            unless ($sort_command->execute) {
+                $self->error_message("Error executing lq sort command");
+                die $self->error_message;
+            }
+        }
+    }
+
+    return 1;
+}
+
+
 
 1;
