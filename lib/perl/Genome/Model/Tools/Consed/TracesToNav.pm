@@ -111,7 +111,7 @@ sub execute {
     my $refseq = $self->convert_coords;
     my ($refseq_info);
     if ($refseq) {
-	($refseq_info) = &parse_ref($refseq);
+	($refseq_info) = &parse_ref($self, $refseq);
     } else {
 	$refseq_info = 0;
     }
@@ -122,7 +122,7 @@ sub execute {
 	return;
     }
 
-    my ($reads_to_nav,$main_contig) = &get_reads_to_nav($ace_name,$sites_to_nav); #find the reads for samples from the list
+    my ($reads_to_nav,$main_contig) = &get_reads_to_nav($self, $ace_name,$sites_to_nav); #find the reads for samples from the list
     unless ($reads_to_nav) {
 	$self->error_message( "\n\ndidn't find reads to nav\n\n");
     }
@@ -186,7 +186,7 @@ sub get_sites_to_nav {
 sub get_reads_to_nav {
     
 
-    my ($ace,$sites_to_nav) = @_;
+    my ($self, $ace,$sites_to_nav) = @_;
 
     use GSC::IO::Assembly::Ace;
     my $ao = GSC::IO::Assembly::Ace->new(input_file => $ace);
@@ -438,7 +438,7 @@ sub make_read_nav {
 ####################################################################
 sub make_cons_nav {
     
-    my ($out,$main_contig,$sites_to_nav) = @_;
+    my ($self, $out,$main_contig,$sites_to_nav) = @_;
     open (NAV3,">$out.consensus.nav") || $self->error_message( "\n\ncouldn't open $out.consensus.nav to for writting\n\n") && return;
 
     print NAV3 qq(TITLE:\n\n);
@@ -512,7 +512,7 @@ sub get_date_tag {
 sub parse_ref {
     
     
-    my ($refseq) = @_;
+    my ($self, $refseq) = @_;
     my $orientation;
     my $genomic_coord;
     my $refseq_info;
