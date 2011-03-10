@@ -3,7 +3,6 @@ package Genome::Model::Tools::Consed::TracesToNav;
 use strict;
 use warnings;
 use Genome;
-#use GSCApp;
 use IPC::Run;
 
 class Genome::Model::Tools::Consed::TracesToNav {
