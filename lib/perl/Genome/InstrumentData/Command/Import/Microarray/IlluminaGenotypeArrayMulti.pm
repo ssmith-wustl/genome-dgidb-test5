@@ -280,11 +280,11 @@ sub process_imported_files {
         my $gen = "$temp_dir/$internal{$sample_name}.genotype";
 
         unless(Genome::InstrumentData::Command::Import::Microarray::GenotypeFile->create(
-                source_data_file    => $gen,
+                original_data_path    => $gen,
                 sample              => $sample,
                 library             => $library,
                 reference_sequence_build => $self->reference_sequence_build,
-                define_model        => 1,)){
+                )){
             $self->error_message("Could not define model for ".$sample_name."\n");
             die $self->error_message;
         }
