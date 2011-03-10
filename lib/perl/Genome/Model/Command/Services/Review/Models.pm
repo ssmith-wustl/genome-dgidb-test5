@@ -28,22 +28,38 @@ sub execute {
     my %action = map { $_ => '-' } keys %models;
     for my $model_id (keys %models) {
         my $model = $models{$model_id};
+
         my @builds = $model->builds;
+        @builds = grep { $_->run_by eq $user } @builds;
+        @builds = @builds[-3..-1] if (@builds > 3);
+
         my @bad_builds = grep { $_->status eq 'Failed' or $_->status eq 'Abandoned' } @builds;
         my $latest_build = $model->latest_build;
         my $current_version = $self->current_version();
         my @instrument_data = $model->instrument_data;
 
-        if (@instrument_data == 0) {
-            $action{$model_id} = 'assign instrument data';
-            next;
-        }
         if (@builds == 0) {
             $action{$model_id} = 'start new build';
             next;
         }
+        if ($latest_build->status eq 'Succeeded') {
+            $action{$model_id} = 'remove old fails';
+            next;
+        }
         if (@bad_builds >= 3) {
             $action{$model_id} = 'investigate';
+            next;
+        }
+        if ($latest_build->status eq 'Scheduled') {
+            $action{$model_id} = 'already scheduled';
+            next;
+        }
+        if ($latest_build->status eq 'Running') {
+            $action{$model_id} = 'already running';
+            next;
+        }
+        if (@instrument_data == 0) {
+            $action{$model_id} = 'assign instrument data';
             next;
         }
         if ($latest_build->status eq 'Abandoned') {
