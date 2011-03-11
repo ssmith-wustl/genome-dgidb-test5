@@ -31,6 +31,10 @@ class Genome::Disk::Allocation {
             is => 'Number',
             doc => 'The disk space allocated in kilobytes',
         },
+        original_kilobytes_requested => {
+            is => 'Number',
+            doc => 'The disk space allocated in kilobytes',
+        },
         owner_class_name => {
             is => 'Text',
             doc => 'The class name for the owner of this allocation',
@@ -373,6 +377,7 @@ sub _create {
         mount_path => $volume->mount_path,
         disk_group_name => $disk_group_name,
         kilobytes_requested => $kilobytes_requested,
+        original_kilobytes_requested => $kilobytes_requested,
         allocation_path => $allocation_path,
         owner_class_name => $owner_class_name,
         owner_id => $owner_id,
