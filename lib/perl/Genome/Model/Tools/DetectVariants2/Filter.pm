@@ -28,6 +28,27 @@ class Genome::Model::Tools::DetectVariants2::Filter {
             is_optional => 1,
             doc => 'The directory containing the results of filtering',
         },
+        detector_name => {
+            is => 'String',
+            is_input => 1,
+            is_output => 1,
+            is_optional => 1,
+            doc => 'The name of the detector this filter is running below',
+        },
+        detector_version => {
+            is => 'String',
+            is_input => 1,
+            is_output => 1,
+            is_optional => 1,
+            doc => 'The version of the detector this filter is running below',
+        },
+        detector_params => {
+            is => 'String',
+            is_input => 1,
+            is_output => 1,
+            is_optional => 1,
+            doc => 'The params of the detector this filter is running below',
+        },
         params => {
             is => 'String',
             is_input => 1,
@@ -161,49 +182,6 @@ sub has_version {
     ## will enable version checking for that module.
 
     return 1;
-}
-
-# This are crazy and ugly, but are just a very temporary solution until we start handing strategies down to detectors and filters
-# For now this method is unnecessary because we are only accounting for one level of filtering. Later this will change.
-sub _get_detector_version {
-    my $self = shift;
-    my $detector_output_directory = $self->detector_directory;
-
-    my @subdirs = split("/", $detector_output_directory);
-    my $detector_subdir = $subdirs[-1];
-
-    my ($variant_type, $detector_name, $detector_version, $detector_params) = split("-", $detector_subdir);
-    
-    return $detector_version;
-}
-
-sub _get_detector_info {
-    my $self = shift;
-    my $detector_directory = $self->detector_directory;
-
-    my @subdirs = split("/",$detector_directory);
-    my $detector_subdir = $subdirs[-1];
-    my ($detector_name, $detector_version, $detector_params, $other) = split("-", $detector_subdir);
-
-    # FIXME this is really ugly and should be fixed promptly. "varscan-somatic" is misinterpreted in the detector directory path.
-    if($detector_version eq 'somatic'){
-        $detector_name = 'varscan';
-        $detector_version = $detector_params;
-        $detector_params = $other;
-    }
-    return ($detector_name, $detector_version, $detector_params);
-}
-
-sub _get_detector_parameters {
-    my $self = shift;
-    my $detector_output_directory = $self->detector_directory;
-
-    my @subdirs = split("/", $detector_output_directory);
-    my $detector_subdir = $subdirs[-1];
-
-    my ($variant_type, $detector_name, $detector_version, $detector_params) = split("-", $detector_subdir);
-    
-    return $detector_params;
 }
 
 # Look for Detector formatted output and bed formatted output
