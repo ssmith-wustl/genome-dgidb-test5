@@ -813,9 +813,9 @@ sub _generate_standard_files {
             my @lq_files = `$find_command`;
             chomp @lq_files;
 
+            # If we find no LQ files, just skip this variant type. No filters were run.
             unless (@lq_files) {
-                $self->error_message("Could not find any lq bed files");
-                die $self->error_message;
+                next;
             }
 
             my $output_file = $self->output_directory . "/$variant_type" . "s.lq.bed";
