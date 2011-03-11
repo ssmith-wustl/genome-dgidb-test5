@@ -69,8 +69,8 @@ sub execute {
     if($self->normal_build && $self->tumor_build) { 
         my $normal_build = Genome::Model::Build::ReferenceAlignment->get($self->normal_build);
         my $tumor_build = Genome::Model::Build::ReferenceAlignment->get($self->tumor_build);
-        my $normal_bam = $normal_build->whole_rmdup_bam_file;
-        my $tumor_bam = $tumor_build->whole_rmdup_bam_file;
+         $normal_bam = $normal_build->whole_rmdup_bam_file;
+         $tumor_bam = $tumor_build->whole_rmdup_bam_file;
     }
     Genome::Sys->validate_file_for_reading($normal_bam); 
     Genome::Sys->validate_file_for_reading($tumor_bam);
