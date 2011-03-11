@@ -44,7 +44,7 @@ sub java_command_line {
     my $parameter_string = shift;
 
     my $path = $self->path_for_version($self->version);
-    my $headers = $self->no_headers ? "--no-headers=1" : "";
+    my $headers = $self->no_headers ? "--no-headers 1" : "";
     my $command_line = 'bash -c "java -jar ' . $path . ' ' . $parameter_string . ' '.$headers.' "';
 
     return $command_line;
