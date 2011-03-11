@@ -631,6 +631,18 @@ sub add_detectors_and_filters {
                     $inputs_to_store->{$unique_filter_name."_detector_directory"}->{right_property_name} = 'detector_directory';
                     $inputs_to_store->{$unique_filter_name."_detector_directory"}->{right_operation} = $filter->{operation};
 
+                    $inputs_to_store->{$unique_filter_name."_detector_name"}->{value} = $name;
+                    $inputs_to_store->{$unique_filter_name."_detector_name"}->{right_property_name} = 'detector_name';
+                    $inputs_to_store->{$unique_filter_name."_detector_name"}->{right_operation} = $filter->{operation};
+
+                    $inputs_to_store->{$unique_filter_name."_detector_version"}->{value} = $version;
+                    $inputs_to_store->{$unique_filter_name."_detector_version"}->{right_property_name} = 'detector_version';
+                    $inputs_to_store->{$unique_filter_name."_detector_version"}->{right_operation} = $filter->{operation};
+
+                    $inputs_to_store->{$unique_filter_name."_detector_params"}->{value} = $params;
+                    $inputs_to_store->{$unique_filter_name."_detector_params"}->{right_property_name} = 'detector_params';
+                    $inputs_to_store->{$unique_filter_name."_detector_params"}->{right_operation} = $filter->{operation};
+
                     $inputs_to_store->{$unique_detector_base_name."_output_directory"}->{last_operation} = $unique_filter_name;
                 }
                 
