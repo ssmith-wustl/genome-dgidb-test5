@@ -67,39 +67,28 @@ sub prepare_output {
     my $somatic_lq = $self->_temp_staging_directory."/snvs.Somatic.lc";
     my $germline = $self->_temp_staging_directory."/snvs.Germline";
     my $loh = $self->_temp_staging_directory."/snvs.LOH";
-    my $somatic_lq_temp = Genome::Sys->create_temp_file_path;
-    my $germline_temp = Genome::Sys->create_temp_file_path;
-    my $loh_temp = Genome::Sys->create_temp_file_path;
 
     my $hq_file = $self->_temp_staging_directory."/snvs.hq";
     my $lq_file = $self->_temp_staging_directory."/snvs.lq";
+    my $lq_scratch_file = $self->_temp_scratch_directory."/snvs.lq";
 
-    $self->copy_no_header( $somatic_hq, $hq_file );
-    $self->copy_no_header( $somatic_lq, $somatic_lq_temp );
-    $self->copy_no_header( $germline, $germline_temp );
-    $self->copy_no_header( $loh, $loh_temp );
+    Genome::Sys->copy_file( $somatic_hq, $hq_file );
 
-    my @lq_source = ($somatic_lq_temp, $germline_temp, $loh_temp);
-
+    my @lq_source = ($somatic_lq, $germline, $loh);
     my $catcmd = Genome::Model::Tools::Cat->create(
-        dest => $lq_file,
+        dest => $lq_scratch_file,
         source => \@lq_source,
     );
-
     unless( $catcmd->execute ){
         die $self->error_message("Failed to run gmt cat on lq files.");
     }
+    my $lq_scratch_file_temp = $lq_scratch_file.".tmp";
+    my $result = `sort -k2 -n $lq_scratch_file > $lq_scratch_file_temp`;
 
-}
-
-# This sub provides the functionality of copying all but the first line from arg1 to arg2
-sub copy_no_header {
-    my $self = shift;
-    my $from = shift;
-    my $to = shift;
-    my $cmd = "tail -n +2 $from > $to";
-    my $result = Genome::Sys->shellcmd( cmd => $cmd);
-    return $result;
+    unless(Genome::Model::Tools::Bed::ChromSort->execute( input => $lq_scratch_file_temp, output => $lq_file)){
+        die $self->error_message("Failed to chrom sort lq output.");
+    }
+    return 1; 
 }
 
 1;

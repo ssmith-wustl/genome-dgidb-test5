@@ -938,7 +938,7 @@ sub _ComputeTigraWeightedAvgSize{
     return $totaldepth > 0 ? int($totalsize*100/$totaldepth)/100 : 0;
 }
 
-sub _create_filter_file {
+sub _create_bed_file {
     return 1;
 }
 
