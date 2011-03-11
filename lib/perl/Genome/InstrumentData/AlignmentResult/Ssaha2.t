@@ -27,6 +27,8 @@ BEGIN {
 # this ought to match the name as seen in the processing profile
 my $aligner_name = "ssaha2";
 
+my $aligner_params = "-kmer 13";
+
 
 # End aligner-specific configuration,
 # everything below here ought to be generic.
@@ -67,7 +69,7 @@ ok($reference_model, "got reference model");
 my $reference_build = $reference_model->build_by_version('1');
 ok($reference_build, "got reference build");
 
-my $temp_reference_index = Genome::Model::Build::ReferenceSequence::AlignerIndex->create(reference_build=>$reference_build, aligner_version=>$aligner_version, aligner_name=>$aligner_name, aligner_params=>'');
+my $temp_reference_index = Genome::Model::Build::ReferenceSequence::AlignerIndex->create(reference_build=>$reference_build, aligner_version=>$aligner_version, aligner_name=>$aligner_name, aligner_params=>$aligner_params);
 
 
 # Uncomment this to create the dataset necessary for shorcutting to work
@@ -93,6 +95,7 @@ sub test_alignment {
                                                        aligner_version => $aligner_version,
                                                        aligner_name => $aligner_name,
                                                        reference_build => $reference_build, 
+                                                       aligner_params => $aligner_params,
                                                        %p,
                                                    );
 

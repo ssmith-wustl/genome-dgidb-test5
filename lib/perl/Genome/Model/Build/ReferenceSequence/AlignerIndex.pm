@@ -72,8 +72,7 @@ sub aligner_requires_param_masking {
 
     # if aligner params are not required for index, and we can   generically create an index for that version, then filter it out.
     if ($aligner_class->aligner_params_required_for_index) {
-        print "HAY!!!\n\n\n\n\n\n\n\n\n\n";
-        $class->status_message("This aligner does not require a parameter-specific index.");
+        $class->status_message("This aligner requires a parameter-specific index.  Can't mask params out.");
         return 0;
     }
 

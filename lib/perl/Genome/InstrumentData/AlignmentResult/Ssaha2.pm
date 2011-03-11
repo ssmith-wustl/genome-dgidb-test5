@@ -115,8 +115,15 @@ sub prepare_reference_sequence_index {
     my $refindex = shift;
 
     my $aligner_params = $refindex->aligner_params;
-    if ($aligner_params) {
-        die "Ssaha2 may depend on word size in the index.  I don't know how to handle aligner params yet.";
+    my $reference_build_params = ""; 
+    if ($aligner_params =~ m/rtype (.*?)/)  {
+        $reference_build_params .= " -rtype $1";
+    }
+    if ($aligner_params =~ m/kmer\s*(.*?)(\s.*|)$/) {
+        $reference_build_params .= " -kmer $1";
+    }
+    if ($aligner_params =~ m/skip\s*(.*?)(\s.*|)$/) {
+        $reference_build_params .= " -skip $1";
     }
 
     my $staging_dir = $refindex->temp_staging_directory;
@@ -134,7 +141,7 @@ sub prepare_reference_sequence_index {
     
 
     my $ss_path = Genome::Model::Tools::Ssaha2->path_for_ssaha2_version($refindex->aligner_version);
-    my $ss_cmd = sprintf('%sBuild -save %s.ssaha2 %s', $ss_path, $staged_fasta_file, $staged_fasta_file);
+    my $ss_cmd = sprintf('%sBuild %s -save %s.ssaha2 %s', $ss_path, $reference_build_params, $staged_fasta_file, $staged_fasta_file);
     my $rv = Genome::Sys->shellcmd(
         cmd => $ss_cmd,
     );
