@@ -178,6 +178,23 @@ sub _get_detector_version {
     return $detector_version;
 }
 
+sub _get_detector_info {
+    my $self = shift;
+    my $detector_directory = $self->detector_directory;
+
+    my @subdirs = split("/",$detector_directory);
+    my $detector_subdir = $subdirs[-1];
+    my ($detector_name, $detector_version, $detector_params, $other) = split("-", $detector_subdir);
+
+    # FIXME this is really ugly and should be fixed promptly. "varscan-somatic" is misinterpreted in the detector directory path.
+    if($detector_version eq 'somatic'){
+        $detector_name = 'varscan';
+        $detector_version = $detector_params;
+        $detector_params = $other;
+    }
+    return ($detector_name, $detector_version, $detector_params);
+}
+
 sub _get_detector_parameters {
     my $self = shift;
     my $detector_output_directory = $self->detector_directory;
@@ -193,21 +210,33 @@ sub _get_detector_parameters {
 # Look for Detector formatted output and bed formatted output
 sub _generate_standard_output {
     my $self = shift;
-    my $detector_output = $self->output_directory."/".$self->_variant_type.".hq";
-    my $filter_output = $self->output_directory."/".$self->_variant_type.".hq.bed";
-    my $detector_file = -e $detector_output;
-    my $filter_file = -e $filter_output;
+    my $hq_detector_output = $self->output_directory."/".$self->_variant_type.".hq";
+    my $hq_bed_output = $self->output_directory."/".$self->_variant_type.".hq.bed";
+    my $lq_detector_output = $self->output_directory."/".$self->_variant_type.".lq";
+    my $lq_bed_output = $self->output_directory."/".$self->_variant_type.".lq.bed";
+    my $original_detector_file = $self->input_directory."/".$self->_variant_type.".hq";
 
-    # If there is a filter_file (bed format) and not a detector file, generate a detector file
-    if( $filter_file && not $detector_file){
-        $self->_create_detector_file($filter_file,$detector_file);
+    my $hq_detector_file = -e $hq_detector_output;
+    my $hq_bed_file = -e $hq_bed_output;
+    my $lq_detector_file = -e $lq_detector_output;
+    my $lq_bed_file = -e $lq_bed_output;
+
+    # If there is a hq_bed_file (bed format) and not a detector file, generate a detector file
+    if( $hq_bed_file && not $hq_detector_file){
+        $self->_create_detector_file($hq_bed_output,$original_detector_file);
+        unless($lq_detector_file){
+            $self->_create_detector_file($lq_bed_output,$original_detector_file);
+        }
     } 
-    # If there is a detector_file and not a filter_file, generate a filter_file
-    elsif ($detector_file && not $filter_file) {
-        $self->_create_filter_file($detector_file,$filter_file);
+    # If there is a hq_detector_file and not a hq_bed_file, generate a hq_bed_file
+    elsif ($hq_detector_file && not $hq_bed_file) {
+        $self->_create_bed_file($hq_detector_file,$hq_bed_file);
+        unless($lq_bed_file){
+            $self->_create_bed_file($lq_detector_file,$lq_bed_file);
+        }
     } 
-    # If there is neither a detector_file nor a filter_file, explode
-    elsif ((not $detector_file) &&( not $filter_file)) {
+    # If there is neither a hq_detector_file nor a hq_bed_file, explode
+    elsif ((not $hq_detector_file) &&( not $hq_bed_file)) {
         die $self->error_message("Could not locate output file of any type for this filter.");
     }
 
@@ -217,12 +246,39 @@ sub _generate_standard_output {
 # If the filter has a bed formatted output file, but no detector-style file, generate the detector-style
 sub _create_detector_file {
     my $self = shift;
-    my $filter_file = shift;
+    my $bed_file = shift;
     my $detector_file = shift;
-    my $original_detector_file = $self->input_directory."/".$self->_variant_type.".hq";
-    unless(Genome::Model::Tools::Joinx::Intersect->execute( input_file_a => $original_detector_file, input_file_b => $filter_file, output_file => $detector_file )) {
-        die $self->error_message("Failed to execute gmt joinx intersect in order to generate detector-style output file");
-    }        
+    my ($detector_name) = $self->_get_detector_info;
+    my $variant_type = $self->_variant_type;
+    $variant_type =~ s/s$//;
+    my $module_base = 'Genome::Model::Tools::Bed::Convert';
+    my @supported_variant_types = ('indel','snv'); 
+    unless(grep($variant_type,@supported_variant_types)){
+        die $self->error_message("Filter has encountered an unsupported variant type: ".$variant_type);
+    }
+    my $converter = join('::', $module_base, ucfirst($variant_type), ucfirst($detector_name) . 'ToBed'); 
+    $self->status_message(" About to call converter: $converter");
+    eval{
+        $converter->__meta__;
+    };
+    if($@){
+        die $self->error_message("Could not interpret the string: $converter");
+    }
+    my @bed = split "/",$bed_file;
+    my (undef,$quality,undef) = split /\./,$bed[-1];
+    my $output_file = $self->output_directory."/".$variant_type."s.".$quality;
+    my $result = $converter->create(
+        source => $bed_file,
+        output => $output_file, 
+        detector_style_input => $detector_file,
+        reference_sequence_input => $self->reference_sequence_input,
+    );
+     
+    unless($result->convert_bed_to_detector) {
+        $self->error_message('Failed to execute '.$converter);
+        return;
+    }
+
     unless(-e $detector_file){
         die $self->error_message("Failed to create a detector-style output file");
     }
@@ -231,12 +287,17 @@ sub _create_detector_file {
 }
 
 # If the filter has no bed formatted output file, but does have a detector-style file, generate the bed formatt
-sub _create_filter_file {
+sub _create_bed_file {
     my $self = shift;
     my $filter_file = shift;
     my $detector_file = shift;
+    my $original_detector_file = $self->input_directory."/".$self->_variant_type.".hq";
 
-    die $self->error_message("This functionality has not yet been implemented.");
+
+
+    unless(-e $detector_file){
+        die $self->error_message("Failed to create a detector-style output file");
+    }
 
     return 1;
 }

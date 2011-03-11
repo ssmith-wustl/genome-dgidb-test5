@@ -69,8 +69,8 @@ sub _detect_variants {
     my $self = shift;
 
     ## Get required parameters ##
-    my $output_snp = $self->_snv_staging_output;
-    my $output_indel = $self->_indel_staging_output;
+    my $output_snp = $self->_temp_scratch_directory."/snvs.hq";
+    my $output_indel = $self->_temp_scratch_directory."/indels.hq";
 
     ## Get Varscan parameters ##
     my $snv_params = $self->snv_params || "";
@@ -95,6 +95,10 @@ sub _detect_variants {
                 $result = $self->_run_varscan($temp_name, $output_indel, $indel_params);
             }
         }
+    }
+
+    unless($self->_deheader_output){
+        die $self->error_message("Deheader output failed to complete.");
     }
 
     return $result;
@@ -153,6 +157,29 @@ sub generate_metrics {
     return $metrics;
 }
 
+sub _deheader_output {
+    my $self = shift;
+    my $snvs_scratch = $self->_temp_scratch_directory."/snvs.hq";
+    my $indels_scratch = $self->_temp_scratch_directory."/indels.hq";
+    my $snvs = $self->_temp_staging_directory."/snvs.hq";
+    my $indels = $self->_temp_staging_directory."/indels.hq";
+
+    #deheader the files in scratch, dumping them into staging
+    $self->copy_no_header($snvs_scratch, $snvs);
+    $self->copy_no_header($indels_scratch,$indels);
+
+    return 1;
+}
+
+# This sub provides the functionality of copying all but the first line from arg1 to arg2
+sub copy_no_header {
+    my $self = shift;
+    my $from = shift;
+    my $to = shift;
+    my $cmd = "tail -n +2 $from > $to";
+    my $result = Genome::Sys->shellcmd( cmd => $cmd);
+    return $result;
+}
 sub has_version {
     my $self = shift;
     my $version = shift;

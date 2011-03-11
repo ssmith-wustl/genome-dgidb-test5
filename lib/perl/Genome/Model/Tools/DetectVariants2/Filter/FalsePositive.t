@@ -16,11 +16,12 @@ use_ok('Genome::Model::Tools::DetectVariants2::Filter::FalsePositive');
 
 my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-FalsePositive';
 # v2 adjustment included input/output bed files as a base instead of varscan lines
-my $expected_dir = join('/', $test_data_dir, 'expected.v2');
+my $expected_dir = join('/', $test_data_dir, 'expected.v3');
 
 my $bam_file = join('/', $test_data_dir, 'tumor.tiny.bam');
 my $input_directory = join('/', $test_data_dir, "input");
 my $varscan_input = join('/', $test_data_dir, 'varscan_input');
+my $detector_directory = join('/', $test_data_dir, 'varscan-somatic-2.2.4-');
 
 my $expected_hq_file = join('/', $expected_dir, 'snvs.hq');
 my $expected_lq_file = join('/', $expected_dir, 'snvs.lq');
@@ -39,9 +40,10 @@ isa_ok($reference, 'Genome::Model::Build::ImportedReferenceSequence', 'loaded re
 
 my $filter_command = Genome::Model::Tools::DetectVariants2::Filter::FalsePositive->create(
     aligned_reads_input => $bam_file,
-    input_directory => $input_directory,
+    input_directory => $detector_directory,
     output_directory => $output_dir,
     reference_sequence_input => $reference->fasta_file,
+    detector_directory => $detector_directory,
     min_strandedness => 0.01,
     min_var_freq => 0.05,
     min_var_count => 4,
@@ -74,9 +76,10 @@ $lq_output = join('/', $output_dir, 'snvs.lq');
 $readcount_file = join('/', $output_dir, 'readcounts');
 my $filter_command2 = Genome::Model::Tools::DetectVariants2::Filter::FalsePositive->create(
     aligned_reads_input => $bam_file,
-    input_directory => $input_directory,
+    input_directory => $detector_directory,
     output_directory => $output_dir,
     reference_sequence_input => $reference->fasta_file,
+    detector_directory => $detector_directory,
     min_strandedness => 0.01,
     min_var_freq => 0.05,
     min_var_count => 4,
@@ -111,9 +114,10 @@ $lq_output = join('/', $output_dir, 'snvs.lq');
 $readcount_file = join('/', $output_dir, 'readcounts');
 my $filter_command3 = Genome::Model::Tools::DetectVariants2::Filter::FalsePositive->create(
     aligned_reads_input => $bam_file,
-    input_directory => $input_directory,
+    input_directory => $detector_directory,
     output_directory => $output_dir,
     reference_sequence_input => $reference->fasta_file,
+    detector_directory => $detector_directory,
     min_strandedness => 0.01,
     min_var_freq => 0.05,
     min_var_count => 4,

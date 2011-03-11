@@ -245,8 +245,4 @@ sub default_readcount_version {
     return $DEFAULT_VERSION;
 }
 
-sub _create_detector_file {
-    return 1;
-}
-
 1;
