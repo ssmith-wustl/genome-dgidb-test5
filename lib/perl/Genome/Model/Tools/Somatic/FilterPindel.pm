@@ -57,7 +57,7 @@ EOS
 sub help_detail {                           
     return <<EOS 
 The temporary pipeline to run pindel removed dbsnp filtering, tiering, and annotation so this replaces that until DetectVariants2 is ready.  Supply a bed input and an output directory and it will filter out dbsnp sites, tier the remaining, and annotate them
-    EOS
+EOS
 }
 
 sub execute {
