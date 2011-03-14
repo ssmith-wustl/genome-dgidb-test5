@@ -98,8 +98,7 @@ sub execute {
           $chr =~ s/chr//i;
           ++$var_cnt{snvs} if( defined $valid_chrs{$chr} );
         }
-        elsif( $muttype eq 'indels' && ( $line =~ m/^\w+\t\d+\t\d+\t[0-]\t\w+/ || $line =~ m/^\w+\t\d+\t\d+\t\w+\t[0-]/ || #WU formatting```
-               $line =~ m/^\w+\t\d+\t\d+\t-\t\w+\t(insertion|deletion)/ || $line =~ m/^\w+\t\d+\t\d+\t\w+\t-\t(insertion|deletion)/ )) #SJ formatting
+        elsif( $muttype eq 'indels' && ( $line =~ m/^\w+\t\d+\t\d+\t[0-]\t\w+/ || $line =~ m/^\w+\t\d+\t\d+\t\w+\t[0-]/) )  #WU and StJude formatting```
         {
           my ( $chr ) = split( /\t/, $line );
           $chr =~ s/chr//i;
