@@ -30,6 +30,7 @@ class Genome::Model::Tools::Capture::ReportRefcov {
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		sample_stats_files	=> { is => 'Text', doc => "Tab-delimited list of sample names and refcov summary files" , is_optional => 0},
+		sample_alignsum_files	=> { is => 'Text', doc => "Tab-delimited list of sample names and alignment summary files" , is_optional => 1},
 		output_file	=> { is => 'Text', doc => "Output file for summary report" , is_optional => 1},
 	],
 };
@@ -64,6 +65,14 @@ sub execute {                               # replace with real execution logic.
 
 	## Get required parameters ##
 	my $sample_stats_files = $self->sample_stats_files;
+	my %alignment_summaries = ();
+	
+	if($self->sample_alignsum_files)
+	{
+		%alignment_summaries = load_alignment_summaries($self->sample_alignsum_files);
+	}
+
+	my $alignsum_header = "unique_on_target\tdup_on_target\tunique_off_target\tdup_off_target\ton_target_rate";
 
 	## Reset statistics ##
 	$stats{'num_samples'} = 0;
@@ -96,13 +105,32 @@ sub execute {                               # replace with real execution logic.
 			
 			if(!$header_printed)
 			{
-				print "Sample\t$stats_header\n";
-				print OUTFILE "Sample\t$stats_header\n" if($self->output_file);
+				print "Sample\t$stats_header";
+				print "\t$alignsum_header" if($self->sample_alignsum_files);
+				print "\n";
+				if($self->output_file)
+				{
+					print OUTFILE "Sample\t$stats_header";
+					print OUTFILE "\t$alignsum_header" if($self->sample_alignsum_files);
+					print OUTFILE "\n";
+				}
+
 				$header_printed = 1;
 			}
 
-			print "$sample_name\t$sample_stats\n" if($self->output_file);
-			print OUTFILE "$sample_name\t$sample_stats\n" if($self->output_file);
+			my ($cov_20x) = split(/\t/, $sample_stats);
+
+			print "$sample_name\t$sample_stats";
+			print "\t" . $alignment_summaries{$sample_name} if($alignment_summaries{$sample_name});
+			print "\tFLAG" if($cov_20x < 70);
+			print "\n";
+			if($self->output_file)
+			{
+				print OUTFILE "$sample_name\t$sample_stats";
+				print OUTFILE "\t" . $alignment_summaries{$sample_name} if($alignment_summaries{$sample_name});
+				print OUTFILE "\n" 				
+			}
+
 		}
 
 
@@ -178,6 +206,113 @@ sub parse_stats_file
 	return($coverage_report);
 }
 
+
+
+#############################################################
+# ParseFile - takes input file and parses it
+#
+#############################################################
+
+sub load_alignment_summaries
+{
+	my ($FileName) = shift(@_);
+
+	my %sample_results = ();
+
+	my $input = new FileHandle ($FileName);
+	my $lineCounter = 0;
+	my $header_printed = 0;
+	
+	while (<$input>)
+	{
+		chomp;
+		my $line = $_;
+		$lineCounter++;
+		
+		(my $sample_name, my $alignsum_file) = split(/\t/, $line);
+
+		if(-e $alignsum_file)
+		{
+			(my $alignment_summary) = parse_alignsum_file($alignsum_file);
+			$sample_results{$sample_name} = $alignment_summary;
+		}
+
+
+	}
+
+	close($input);
+	
+	return(%sample_results);
+}
+
+
+
+#############################################################
+# ParseFile - takes input file and parses it
+#
+#############################################################
+
+sub parse_alignsum_file
+{
+	(my $stats_file) = @_;
+	
+	## Parse the file ##
+
+	my $input = new FileHandle ($stats_file);
+	my $lineCounter = 0;
+
+	my @headers = ();
+	
+	my %summary = ();
+	
+	while (<$input>)
+	{
+		chomp;
+		my $line = $_;
+		$lineCounter++;
+		my @lineContents = split(/\t/, $line);
+		my $numContents = @lineContents;
+		
+		if($lineCounter == 1)
+		{
+			for(my $colCounter = 0; $colCounter < $numContents; $colCounter++)
+			{
+				$headers[$colCounter] = $lineContents[$colCounter];
+			}
+		}
+		elsif($lineCounter > 1)
+		{
+			for(my $colCounter = 0; $colCounter < $numContents; $colCounter++)
+			{
+				my $field_name = $headers[$colCounter];
+				my $field_value = $lineContents[$colCounter];
+				$summary{$field_name} = $field_value;
+			}
+		}
+		
+	}
+	
+	close($input);
+
+	my $on_target_rate = ($summary{'unique_target_aligned_bp'} + $summary{'duplicate_target_aligned_bp'}) / ($summary{'unique_target_aligned_bp'} + $summary{'duplicate_target_aligned_bp'} + $summary{'unique_off_target_aligned_bp'} + $summary{'duplicate_off_target_aligned_bp'});
+	$on_target_rate = sprintf("%.2f", $on_target_rate * 100);
+
+	## Change all keys to gigabases ##
+	
+	foreach my $key (sort keys %summary)
+	{
+		my $adjusted_value = $summary{$key} / 1000000000;
+		$adjusted_value = sprintf("%.2f", $adjusted_value);
+		$summary{$key} = $adjusted_value;
+	}
+
+	my $result = join("\t", $summary{'unique_target_aligned_bp'}, $summary{'duplicate_target_aligned_bp'}, $summary{'unique_off_target_aligned_bp'}, $summary{'duplicate_off_target_aligned_bp'}, $on_target_rate);
+	
+	
+	
+	
+	return($result);
+}
 
 1;
 

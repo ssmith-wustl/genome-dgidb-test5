@@ -12,11 +12,16 @@ my $DEFAULT_VERSION = '2.2.4';
 class Genome::Model::Tools::Varscan {
     is => ['Command'],
     has_optional_input => [
-         version => {
-             is    => 'String',
-             doc   => 'version of Varscan application to use',
-             default_value => 'latest',
-         },
+        version => {
+            is    => 'String',
+            doc   => 'version of Varscan application to use',
+            default_value => 'latest',
+        },
+        no_headers => {
+            is => 'Boolean',
+            doc => 'Stop varscan from putting headers on its output files',
+            default_value => '0',
+        },
     ],
 };
 
@@ -39,7 +44,8 @@ sub java_command_line {
     my $parameter_string = shift;
 
     my $path = $self->path_for_version($self->version);
-    my $command_line = 'bash -c "java -jar ' . $path . ' ' . $parameter_string . ' "';
+    my $headers = $self->no_headers ? "--no-headers 1" : "";
+    my $command_line = 'bash -c "java -jar ' . $path . ' ' . $parameter_string . ' '.$headers.' "';
 
     return $command_line;
 }

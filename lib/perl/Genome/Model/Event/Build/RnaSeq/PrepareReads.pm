@@ -35,7 +35,7 @@ sub execute {
     my $quality_format;
     my $dump_fastq_method;
 
-    if(defined $instrument_data->bam_path && -s $self->bam_path) {
+    if(defined $instrument_data->bam_path && -s $instrument_data->bam_path) {
         $quality_format='Standard';
         $dump_fastq_method = 'dump_sanger_fastq_files';
     } else {

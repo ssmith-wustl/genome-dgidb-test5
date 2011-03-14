@@ -14,17 +14,17 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
     is => ['Genome::Model::Tools::DetectVariants2::Base'],
     doc => 'This tool is used to handle delegating variant detection to one or more specified tools and filtering and/or combining the results',
     has_optional => [
-        snv_hq_output_file => {
+        _snv_hq_output_file => {
             is => 'String',
             is_output => 1,
             doc => 'High Quality SNV output file',
         },
-        indel_hq_output_file => {
+        _indel_hq_output_file => {
             is => 'String',
             is_output => 1,
             doc => 'High Quality indel output file',
         },
-        sv_hq_output_file => {
+        _sv_hq_output_file => {
             is => 'String',
             is_output => 1,
             doc => 'High Quality SV output file',
@@ -99,13 +99,6 @@ sub create {
     }
 
     return $self;
-}
-
-
-# FIXME this is a hack to get things to run until I decide how to implement this in the dispatcher
-# In the first version of the dispatcher... this was not implemented if there were unions or intersections... and if there were none of those it just grabbed the inputs from the only variant detector run and made it its own
-sub _generate_standard_files {
-    return 1;
 }
 
 # Takes all of the strategies specified and uses G::M::T::DV2::Strategy to turn them into a traversable hash containing the complete action plan to detect variants
@@ -638,6 +631,18 @@ sub add_detectors_and_filters {
                     $inputs_to_store->{$unique_filter_name."_detector_directory"}->{right_property_name} = 'detector_directory';
                     $inputs_to_store->{$unique_filter_name."_detector_directory"}->{right_operation} = $filter->{operation};
 
+                    $inputs_to_store->{$unique_filter_name."_detector_name"}->{value} = $name;
+                    $inputs_to_store->{$unique_filter_name."_detector_name"}->{right_property_name} = 'detector_name';
+                    $inputs_to_store->{$unique_filter_name."_detector_name"}->{right_operation} = $filter->{operation};
+
+                    $inputs_to_store->{$unique_filter_name."_detector_version"}->{value} = $version;
+                    $inputs_to_store->{$unique_filter_name."_detector_version"}->{right_property_name} = 'detector_version';
+                    $inputs_to_store->{$unique_filter_name."_detector_version"}->{right_operation} = $filter->{operation};
+
+                    $inputs_to_store->{$unique_filter_name."_detector_params"}->{value} = $params;
+                    $inputs_to_store->{$unique_filter_name."_detector_params"}->{right_property_name} = 'detector_params';
+                    $inputs_to_store->{$unique_filter_name."_detector_params"}->{right_operation} = $filter->{operation};
+
                     $inputs_to_store->{$unique_detector_base_name."_output_directory"}->{last_operation} = $unique_filter_name;
                 }
                 
@@ -761,7 +766,7 @@ sub _promote_staged_data {
     # Symlink the most recent version bed files of the final hq calls into the base of the output directory
     for my $variant_type (@{$self->variant_types}){
         next if $variant_type eq 'sv';  #off for now because sv does not have bed output yet
-        my $output_accessor = $variant_type."_hq_output_file";
+        my $output_accessor = "_".$variant_type."_hq_output_file";
         if(defined($self->$output_accessor)){
             my $file = $self->$output_accessor;
             my @subdirs = split( "/", $file );
@@ -781,7 +786,7 @@ sub set_output_files {
     my $result = shift;
 
     for my $variant_type (@{$self->variant_types}){
-        my $file_accessor = $variant_type."_hq_output_file";
+        my $file_accessor = "_".$variant_type."_hq_output_file";
         my $strategy = $variant_type."_detection_strategy";
         my $out_dir = $variant_type."_output_directory";
         if(defined( $self->$strategy)){
@@ -805,5 +810,43 @@ sub set_output_files {
     }
     return 1;
 }
+
+# The HQ bed files for each variant type are already symlinked to the base output directory. 
+# This method collects all the LQ variants that fell out at each filter and combine stage and sorts them into one LQ output.
+# FIXME _validate_output should be added to check that the HQ and LQ bed files totaled have the same line count as each detectors HQ bed output files
+sub _generate_standard_files {
+    my $self = shift;
+    
+    # For each variant type that is expected, gather all the lq files that exist for that variant type and sort them into the dispatcher output directory
+    for my $variant_type (@{ $self->variant_types }) {
+        my $strategy = $variant_type."_detection_strategy";
+        if(defined( $self->$strategy)){
+            my $find_command = "find " . $self->output_directory . " -name $variant_type" . "s.lq.bed";
+            my @lq_files = `$find_command`;
+            chomp @lq_files;
+
+            # If we find no LQ files, just skip this variant type. No filters were run.
+            unless (@lq_files) {
+                next;
+            }
+
+            my $output_file = $self->output_directory . "/$variant_type" . "s.lq.bed";
+            my $sort_command = Genome::Model::Tools::Joinx::Sort->create(
+                input_files => \@lq_files,
+                merge_only => 1,
+                output_file => $output_file,
+            );
+
+            unless ($sort_command->execute) {
+                $self->error_message("Error executing lq sort command");
+                die $self->error_message;
+            }
+        }
+    }
+
+    return 1;
+}
+
+
 
 1;

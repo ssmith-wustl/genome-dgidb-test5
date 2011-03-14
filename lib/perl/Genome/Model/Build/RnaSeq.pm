@@ -56,6 +56,43 @@ sub accumulated_expression_directory {
     return $self->data_directory . '/expression';
 }
 
+sub alignment_result {
+    my $self = shift;
+
+    my @u = Genome::SoftwareResult::User->get(user_id => $self->build_id);
+    my $alignment_class = Genome::InstrumentData::AlignmentResult->_resolve_subclass_name_for_aligner_name($self->processing_profile->read_aligner_name);
+    my $alignment = join('::', 'Genome::InstrumentData::AlignmentResult', $alignment_class)->get([map($_->software_result_id, @u)]);
+    return $alignment;
+}
+
+sub alignment_result_with_lock {
+    my $self = shift;
+
+    return $self->_fetch_alignment_result('get_with_lock');
+}
+
+sub generate_alignment_result {
+    my $self = shift;
+
+    return $self->_fetch_alignment_result('get_or_create');
+}
+
+sub _fetch_alignment_result {
+    my $self = shift;
+    my $mode = shift;
+
+    my @idas = $self->instrument_data_assignments;
+
+    my ($params) = $self->processing_profile->params_for_alignment(@idas);
+
+    my $alignment_class = Genome::InstrumentData::AlignmentResult->_resolve_subclass_name_for_aligner_name($self->processing_profile->read_aligner_name);
+    my $alignment = join('::', 'Genome::InstrumentData::AlignmentResult', $alignment_class)->$mode(
+        %$params,
+    );
+
+    return $alignment;
+}
+
 sub delete {
     my $self = shift;
     
@@ -76,42 +113,60 @@ sub eviscerate {
     my $self = shift;
     
     $self->status_message('Entering eviscerate for build:' . $self->id);
-    
-    my $alignment_alloc = $self->accumulated_alignments_disk_allocation;
-    my $alignment_path = ($alignment_alloc ? $alignment_alloc->absolute_path :  $self->accumulated_alignments_directory);
+
+
+    if($self->alignment_result) {
+        my $alignment_result = $self->alignment_result;
+
+        if (-l $self->accumulated_alignments_directory && readlink($self->accumulated_alignments_directory) eq $alignment_result->output_dir) {
+           $self->status_message("Unlinking symlink to alignment result: " . $self->accumulated_alignments_directory);
+            unless(unlink($self->accumulated_alignments_directory)) {
+                $self->error_message("could not remove symlink to alignment result path");
+                return;
+            }
+        }
+
+        my @users = $alignment_result->users(user => $self);
+        map($_->delete, @users);
+        $self->status_message('Removed self as user of alignment result.');
+    } else {
+        my $alignment_alloc = $self->accumulated_alignments_disk_allocation;
+        my $alignment_path = ($alignment_alloc ? $alignment_alloc->absolute_path :  $self->accumulated_alignments_directory);
+
+        if (!-d $alignment_path && !-l $self->accumulated_alignments_directory) {
+            $self->status_message("Nothing to do, alignment path doesn't exist and this build has no alignments symlink.");
+        }
+
+        $self->status_message("Removing tree $alignment_path");
+        if (-d $alignment_path) {
+            rmtree($alignment_path);
+            if (-d $alignment_path) {
+                $self->error_message("alignment path $alignment_path still exists after evisceration attempt, something went wrong.");
+                return;
+            }
+        }
+
+        if ($alignment_alloc) {
+            unless ($alignment_alloc->deallocate) {
+                $self->error_message("could not deallocate the alignment allocation.");
+                return;
+            }
+        }
+
+        if (-l $self->accumulated_alignments_directory && readlink($self->accumulated_alignments_directory) eq $alignment_path ) {
+            $self->status_message("Unlinking symlink: " . $self->accumulated_alignments_directory);
+            unless(unlink($self->accumulated_alignments_directory)) {
+                $self->error_message("could not remove symlink to deallocated accumulated alignments path");
+                return;
+            }
+        }
+    }
+
     my $fastq_directory = $self->accumulated_fastq_directory;
     my $expression_directory = $self->accumulated_expression_directory;
-    
-    if (!-d $alignment_path && !-l $self->accumulated_alignments_directory && !-d $fastq_directory && !-d $expression_directory) {
-        $self->status_message("Nothing to do, alignment path doesn't exist and this build has no alignments symlink.  Skipping out.");
-        return;
-    }
-
-    $self->status_message("Removing tree $alignment_path");
-    if (-d $alignment_path) {
-        rmtree($alignment_path);
-        if (-d $alignment_path) {
-            $self->error_message("alignment path $alignment_path still exists after evisceration attempt, something went wrong.");
-            return;
-        }
-    }
-
-    if ($alignment_alloc) {
-        unless ($alignment_alloc->deallocate) {
-            $self->error_message("could not deallocate the alignment allocation.");
-            return;
-        }
-    }
-
-    if (-l $self->accumulated_alignments_directory && readlink($self->accumulated_alignments_directory) eq $alignment_path ) {
-        $self->status_message("Unlinking symlink: " . $self->accumulated_alignments_directory);
-        unless(unlink($self->accumulated_alignments_directory)) {
-            $self->error_message("could not remove symlink to deallocated accumulated alignments path");
-            return;
-        }
-    }
 
     if (-d $fastq_directory) {
+        $self->status_message('removing fastq directory');
         rmtree($fastq_directory);
         if (-d $fastq_directory) {
             $self->error_message("fastq path $fastq_directory still exists after evisceration attempt, something went wrong.");
@@ -120,6 +175,7 @@ sub eviscerate {
     }
 
     if (-d $expression_directory) {
+        $self->status_message('removing expression directory');
         rmtree($expression_directory);
         if (-d $expression_directory) {
             $self->error_message("expression path $expression_directory still exists after evisceration attempt, something went wrong.");

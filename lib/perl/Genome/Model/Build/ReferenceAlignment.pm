@@ -58,6 +58,16 @@ sub create {
     return $self;
 }
 
+sub gold_snp_report_file_filtered {
+	my $self = shift;
+    return $self->data_directory . "/reports/gold_snp_concordance.filtered.txt"
+}
+
+sub gold_snp_report_file_unfiltered {
+	my $self = shift;
+    return $self->data_directory . "/reports/gold_snp_concordance.unfiltered.txt"
+}
+
 sub dbsnp_file_filtered {
     my $self = shift;
     return $self->data_directory . "/reports/dbsnp_concordance.filtered.txt"
@@ -213,12 +223,12 @@ sub get_variant_bed_file {
 
 sub snvs_bed {
     my ($self, $ver) = @_;
-    return $self->get_variant_bed_file("snps_all_sequences", "v1");
+    return $self->get_variant_bed_file("snps_all_sequences", $ver);
 }
 
 sub filtered_snvs_bed {
     my ($self, $ver) = @_;
-    return $self->get_variant_bed_file("snps_all_sequences.filtered", "v1");
+    return $self->get_variant_bed_file("snps_all_sequences.filtered", $ver);
 }
 
 sub filtered_indel_file {
@@ -371,52 +381,57 @@ sub log_directory {
 
 sub rmdup_metrics_file {
     my $self = shift;
+
+    my $merged_alignment_result = $self->merged_alignment_result;
+    if($merged_alignment_result) {
+        return glob($merged_alignment_result->output_dir."/*.metrics");
+    }
+
+    #location prior to merged alignment results
     return $self->log_directory."/mark_duplicates.metrics";
 }
 
 sub mark_duplicates_library_metrics_hash_ref {
     my $self = shift;
     my $subject = $self->model->subject_name;
-    my $mark_duplicates_metrics = $self->rmdup_metrics_file;
-    my $fh = Genome::Sys->open_file_for_reading($mark_duplicates_metrics);
-    unless ($fh) {
-        die('Failed to open mark duplicates metrics file '. $mark_duplicates_metrics);
-    }
-    my %library_metrics;
-    my @keys;
-    while (my $line = $fh->getline) {
-        chomp($line);
-        if ($line =~ /^LIBRARY/) {
-            @keys = split("\t",$line);
-        }
-        if ($line =~ /^($subject\S*)/) {
-            unless (@keys) {
-                die('Failed to find header line starting with LIBRARY!');
-            }
-            my $library = $1;
-            my @values = split("\t",$line);
-            for (my $i = 0; $i < scalar(@values); $i++) {
-                my $key = $keys[$i];
-                my $value = $values[$i];
-                $library_metrics{$library}{$key} = $value;
+    my @mark_duplicates_metrics = $self->rmdup_metrics_file;
 
-                my $metric_key = join('_', $library, $key);
-                $self->set_metric($metric_key, $value);
+    my %library_metrics;
+    for my $mark_duplicates_metrics (@mark_duplicates_metrics) {
+        my $fh = Genome::Sys->open_file_for_reading($mark_duplicates_metrics);
+        unless ($fh) {
+            die('Failed to open mark duplicates metrics file '. $mark_duplicates_metrics);
+        }
+
+        my @keys;
+        while (my $line = $fh->getline) {
+            chomp($line);
+            if ($line =~ /^LIBRARY/) {
+                @keys = split("\t",$line);
+            }
+            if ($line =~ /^($subject\S*)/) {
+                unless (@keys) {
+                    die('Failed to find header line starting with LIBRARY!');
+                }
+                my $library = $1;
+                my @values = split("\t",$line);
+                for (my $i = 0; $i < scalar(@values); $i++) {
+                    my $key = $keys[$i];
+                    my $value = $values[$i];
+                    $library_metrics{$library}{$key} = $value;
+
+                    my $metric_key = join('_', $library, $key);
+                    $self->set_metric($metric_key, $value);
+                }
             }
         }
+        $fh->close;
     }
-    $fh->close;
     unless (keys %library_metrics) {
         die('Failed to find a library that matches the subject name '. $subject); 
     }
     return \%library_metrics;
 }
-
-sub rmdup_log_file {
-    my $self = shift;
-    return $self->log_directory."/mark_duplicates.log";
-} 
-
 
 sub whole_map_file {
     my $self = shift;
@@ -431,9 +446,15 @@ sub whole_rmdup_map_file {
 sub whole_rmdup_bam_file {
     my $self = shift;
 
+    my $merged_alignment = $self->merged_alignment_result;
+    if($merged_alignment) {
+        return $merged_alignment->merged_alignment_bam_path;
+    }
+
+    #for BAMs produced prior to merged alignment results
     my $expected_whole_rmdup_bam_file = $self->accumulated_alignments_directory.'/'.$self->build_id.'_merged_rmdup.bam';
     if(-e $expected_whole_rmdup_bam_file) {
-        #If we found one that matches the current naming convention, use it.
+        #If we found one that matches the naming convention, use it.
         return $expected_whole_rmdup_bam_file; 
     }
 
@@ -460,15 +481,48 @@ sub whole_rmdup_bam_file {
             return;
         }
     }
-    elsif (@files == 0) {
-         #There hasn't been one generated yet at all--give the name we'd expect to find
-            return $expected_whole_rmdup_bam_file;
-    }
-    else {
+    elsif(@files == 1) {
         return $files[0];
     }
+
+    $self->error_message('Could not determine merged rmdup bam file location.');
+    return;
 }
 
+sub merged_alignment_result {
+    my $self = shift;
+
+    my @u = Genome::SoftwareResult::User->get(user_id => $self->build_id);
+    my $merged_alignment = Genome::InstrumentData::AlignmentResult::Merged->get([map($_->software_result_id, @u)]);
+    return $merged_alignment;
+    #return $self->_fetch_merged_alignment_result('get');
+}
+
+sub merged_alignment_result_with_lock {
+    my $self = shift;
+
+    return $self->_fetch_merged_alignment_result('get_with_lock');
+}
+
+sub generate_merged_alignment_result {
+    my $self = shift;
+
+    return $self->_fetch_merged_alignment_result('get_or_create');
+}
+
+sub _fetch_merged_alignment_result {
+    my $self = shift;
+    my $mode = shift;
+
+    my @idas = $self->instrument_data_assignments;
+
+    my ($params) = $self->processing_profile->params_for_merged_alignment($self, @idas);
+    my $alignment = Genome::InstrumentData::AlignmentResult::Merged->$mode(
+        %$params,
+    );
+
+    return $alignment;
+}
 
 sub whole_rmdup_bam_flagstat_file {
     my $self = shift;
@@ -796,46 +850,64 @@ sub eviscerate {
     my $self = shift;
     
     $self->status_message('Entering eviscerate for build:' . $self->id);
-    
-    my $alignment_alloc = $self->accumulated_alignments_disk_allocation;
-    my $alignment_path = ($alignment_alloc ? $alignment_alloc->absolute_path :  $self->accumulated_alignments_directory);
-    
-    if (!-d $alignment_path && !-l $self->accumulated_alignments_directory) {
-        $self->status_message("Nothing to do, alignment path doesn't exist and this build has no alignments symlink.  Skipping out.");
-        return;
-    }
 
-    $self->status_message("Removing tree $alignment_path");
-    if (-d $alignment_path) {
-        my @in_use = glob($alignment_path . '/*.in_use');
-        if(scalar @in_use) {
-            $self->error_message('alignment appears to be in use by other builds. cannot remove');
+    if($self->merged_alignment_result) {
+        my $merged_alignment_result = $self->merged_alignment_result;
+
+        if (-l $self->accumulated_alignments_directory && readlink($self->accumulated_alignments_directory) eq $merged_alignment_result->output_dir) {
+           $self->status_message("Unlinking symlink to merged alignment result: " . $self->accumulated_alignments_directory);
+            unless(unlink($self->accumulated_alignments_directory)) {
+                $self->error_message("could not remove symlink to merged alignment result path");
+                return;
+            }
+        }
+
+        my @users = $merged_alignment_result->users(user => $self);
+        map($_->delete, @users);
+        $self->status_message('Removed self as user of merged alignment result.');
+        return 1;
+    } else {
+
+        my $alignment_alloc = $self->accumulated_alignments_disk_allocation;
+        my $alignment_path = ($alignment_alloc ? $alignment_alloc->absolute_path :  $self->accumulated_alignments_directory);
+
+        if (!-d $alignment_path && !-l $self->accumulated_alignments_directory) {
+            $self->status_message("Nothing to do, alignment path doesn't exist and this build has no alignments symlink.  Skipping out.");
             return;
         }
 
-        rmtree($alignment_path);
+        $self->status_message("Removing tree $alignment_path");
         if (-d $alignment_path) {
-            $self->error_message("alignment path $alignment_path still exists after evisceration attempt, something went wrong.");
-            return;
-        }
-    }
-    
-    if ($alignment_alloc) {
-        unless ($alignment_alloc->deallocate) {
-            $self->error_message("could not deallocate the alignment allocation.");
-            return;
-        }
-    }
+            my @in_use = glob($alignment_path . '/*.in_use');
+            if(scalar @in_use) {
+                $self->error_message('alignment appears to be in use by other builds. cannot remove');
+                return;
+            }
 
-    if (-l $self->accumulated_alignments_directory && readlink($self->accumulated_alignments_directory) eq $alignment_path ) {
-        $self->status_message("Unlinking symlink: " . $self->accumulated_alignments_directory);
-        unless(unlink($self->accumulated_alignments_directory)) {
-            $self->error_message("could not remove symlink to deallocated accumulated alignments path");
-            return;
+            rmtree($alignment_path);
+            if (-d $alignment_path) {
+                $self->error_message("alignment path $alignment_path still exists after evisceration attempt, something went wrong.");
+                return;
+            }
         }
-    }
 
-    return 1;
+        if ($alignment_alloc) {
+            unless ($alignment_alloc->deallocate) {
+                $self->error_message("could not deallocate the alignment allocation.");
+                return;
+            }
+        }
+
+        if (-l $self->accumulated_alignments_directory && readlink($self->accumulated_alignments_directory) eq $alignment_path ) {
+            $self->status_message("Unlinking symlink: " . $self->accumulated_alignments_directory);
+            unless(unlink($self->accumulated_alignments_directory)) {
+                $self->error_message("could not remove symlink to deallocated accumulated alignments path");
+                return;
+            }
+        }
+
+        return 1;
+    }
 }
 
 sub _X_resolve_subclass_name { # only temporary, subclass will soon be stored
@@ -1173,7 +1245,9 @@ sub minimum_mapping_quality {
 sub files_ignored_by_diff {
     return qw(
         build.xml
-        alignments/\d+_merged_rmdup.bam.md5
+        alignments/\d+(?:_merged_rmdup)?.bam.md5
+        alignments/(.*).log
+        alignments/(.*).metrics
         reports/Build_Initialized/report.xml
         reports/Build_Succeeded/report.xml
         reports/Input_Base_Counts/report.html
@@ -1196,9 +1270,9 @@ sub dirs_ignored_by_diff {
 
 sub regex_files_for_diff {
     return qw( 
-        alignments/\d+_merged_rmdup.bam$
-        alignments/\d+_merged_rmdup.bam.bai$
-        alignments/\d+_merged_rmdup.bam.flagstat$
+        alignments/\d+(?:_merged_rmdup)?.bam$
+        alignments/\d+(?:_merged_rmdup)?.bam.bai$
+        alignments/\d+(?:_merged_rmdup)?.bam.flagstat$
     );
 }
 1;

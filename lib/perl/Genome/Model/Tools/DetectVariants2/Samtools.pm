@@ -54,6 +54,7 @@ EOS
 
 sub _detect_variants {
     my $self = shift;
+    
     my $snv_params = $self->snv_params || "";
     my $indel_params = $self->indel_params || "";
     my $result;

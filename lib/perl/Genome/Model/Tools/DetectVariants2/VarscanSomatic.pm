@@ -95,6 +95,7 @@ sub _run_varscan {
         output_snp => $output_snp,
         output_indel => $output_indel,
         varscan_params => $varscan_params,
+        no_headers => 1,
     );
 
     unless($varscan->execute()) {

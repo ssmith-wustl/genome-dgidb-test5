@@ -24,7 +24,6 @@
 
 use strict;
 use warnings;
-#use lib '/gscuser/kchen/1000genomes/analysis/scripts/';
 package CrossMatch;
 
 sub new{

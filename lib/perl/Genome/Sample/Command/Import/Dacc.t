@@ -35,10 +35,17 @@ ok($import, 'create');
 $import->dump_status_messages(1);
 ok($import->execute, 'execute');
 
-my $individual_name = 'dbGaP-241763';
-is($import->_individual->name, $individual_name, 'individual name');
+is($import->_individual->name, 'dbGaP-241763', 'individual name');
+is($import->_individual->upn, 'dbGaP-241763', 'individual upn');
+is($import->_individual->nomenclature, 'dbGaP', 'individual nomenclature');
 is($import->_sample->name, $sample_name, 'sample name');
+is($import->_sample->nomenclature, 'dbGaP', 'sample nomenclature');
+is($import->_sample->extraction_label, $sample_name, 'sample extraction label');
+is($import->_sample->extraction_type, 'genomic dna', 'sample extraction type');
+is_deeply($import->_sample->source, $import->_individual, 'sample source');
 is($import->_library->name, $library_name, 'library name');
+is_deeply($import->_library->sample, $import->_sample, 'library sample');
+is(@{$import->_created_objects}, 2, 'created 2 objects');
 
 # basic import
 note('basic import');
@@ -49,30 +56,18 @@ ok($import, 'create');
 $import->dump_status_messages(1);
 ok($import->execute, 'execute');
 
-$individual_name = 'dbGaP-'.$sample_name;
-is($import->_individual->name, $individual_name, 'individual name');
+is($import->_individual->name, 'dbGaP-241763', 'individual name');
+is($import->_individual->upn, 'dbGaP-241763', 'individual upn');
+is($import->_individual->nomenclature, 'dbGaP', 'individual nomenclature');
 is($import->_sample->name, $sample_name, 'sample name');
+is($import->_sample->nomenclature, 'dbGaP', 'sample nomenclature');
+is($import->_sample->extraction_label, $sample_name, 'sample extraction label');
+is($import->_sample->extraction_type, 'genomic dna', 'sample extraction type');
+is_deeply($import->_sample->source, $import->_individual, 'sample source');
 is($import->_library->name, $library_name, 'library name');
+is_deeply($import->_library->sample, $import->_sample, 'library sample');
+ok(!$import->_created_objects, 'did not create any objects');
 
 done_testing();
 exit;
-
-=pod
-
-=head1 Tests
-
-=head1 Disclaimer
-
- Copyright (C) 2010 Washington University Genome Sequencing Center
-
- This script is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
- License for more details.
-
-=head1 Author(s)
-
- Eddie Belter <ebelter@watson.wustl.edu>
-
-=cut
 

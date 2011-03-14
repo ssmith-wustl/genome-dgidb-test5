@@ -5,7 +5,7 @@ use warnings;
 
 use above "Genome";
 use File::Temp;
-use Test::More tests => 37;
+use Test::More tests => 20;
 use Data::Dumper;
 use File::Compare;
 
@@ -17,11 +17,13 @@ BEGIN {
 };
 
 my $refseq = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa';
-my $input_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-VarscanHighConfidence";
+my $test_data_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-VarscanHighConfidence";
 
 # Updated to .v2 for correcting an error with newlines
-my $expected_dir = $input_directory . "/expected/";
-my $tumor_bam_file  = $input_directory. '/flank_tumor_sorted.bam';
+my $expected_directory = $test_data_directory . "/expected.v2";
+my $detector_directory = $test_data_directory . "/varscan-somatic-2.2.4-";
+my $tumor_bam_file  = $test_data_directory. '/flank_tumor_sorted.bam';
+my $normal_bam_file  = $test_data_directory. '/flank_normal_sorted.bam';
 my $test_output_dir = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Filter-VarscanHighConfidence-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 
 my $hq_output_bed = "$test_output_dir/indels.hq.bed";
@@ -47,10 +49,11 @@ my @expected_output_files = qw| snvs.Germline
 
 
 my $varscan_high_confidence = Genome::Model::Tools::DetectVariants2::Filter::VarscanHighConfidence->create(
-    input_directory => $input_directory,
-    detector_directory => $input_directory,
+    input_directory => $detector_directory,
+    detector_directory => $detector_directory,
     output_directory => $test_output_dir,
     aligned_reads_input => $tumor_bam_file,
+    control_aligned_reads_input => $normal_bam_file,
     reference_sequence_input => $refseq,
 );
 
@@ -58,12 +61,7 @@ ok($varscan_high_confidence, "created VarscanHighConfidence object");
 ok($varscan_high_confidence->execute(), "executed VarscanHighConfidence");
 
 for my $output_file (@expected_output_files){
-    my $file = $expected_dir."/".$output_file;
-    ok( -s $file, "$output_file exists and has size");
-}
-
-for my $output_file (@expected_output_files){
-    my $expected_file = $expected_dir."/".$output_file;
+    my $expected_file = $expected_directory."/".$output_file;
     my $actual_file = $test_output_dir."/".$output_file;
     is(compare($actual_file, $expected_file), 0, "$actual_file output matched expected output");
 }

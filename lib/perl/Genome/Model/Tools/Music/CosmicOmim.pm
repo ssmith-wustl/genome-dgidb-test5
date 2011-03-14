@@ -852,6 +852,10 @@ sub ParseMutationFile {
 	while ($line = <$fh>) {
 		chomp ($line);
         my $temp = $line;
+
+        #edit for punctuation characters in annotation section of MAF
+        $temp =~ s/"//g;
+        $temp =~ s/'//g;
         unless(defined($separator)) {
             #maintain original default behavior of handling both tabs and
             #commas    
@@ -868,6 +872,7 @@ sub ParseMutationFile {
 		unshift (@values, $line_num++);	# and the line number
 
 		my $sub_record;
+                $DB::single=1;
 		# Construct the hierarchical key structure
 		$sub_record = $record;
 		foreach my $sub_key  (@key_fields) {

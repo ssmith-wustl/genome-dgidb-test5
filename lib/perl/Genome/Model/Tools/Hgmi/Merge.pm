@@ -114,7 +114,7 @@ sub execute
     my %params = $self->gather_details();
 
     $self->status_message("running merge now");
-    my $rv = Genome::Model::GenePrediction::Bacterial::Command::Merge->execute(%params);
+    my $rv = Genome::Model::GenePrediction::Command::Bacterial::Merge->execute(%params);
     $params{iprpath} = $self->iprpath;
 
     unless($rv) {

@@ -102,7 +102,7 @@ sub _run_aligner {
 
     # get refseq info
     my $reference_build = $self->reference_build;
-    my $reference_fasta_path = $reference_build->full_consensus_path('fa');
+    my $reference_fasta_path = $self->get_reference_sequence_index->full_consensus_path('fa');
 
     # decompose aligner params for each stage of bwa alignment
     my %aligner_params = $self->decomposed_aligner_params;
@@ -429,4 +429,48 @@ sub supports_streaming_to_bam {
 sub accepts_bam_input {
     my $self = shift;
     return Genome::Model::Tools::Bwa->supports_bam_input($self->aligner_version);
+}
+
+sub prepare_reference_sequence_index {
+    my $class = shift;
+    my $refindex = shift;
+
+    my $staging_dir = $refindex->temp_staging_directory;
+    my $staged_fasta_file = sprintf("%s/all_sequences.fa", $staging_dir);
+
+    my $actual_fasta_file = $staged_fasta_file;
+
+    if (-l $staged_fasta_file) {
+        $class->status_message(sprintf("Following symlink for fasta file %s", $staged_fasta_file));
+        $actual_fasta_file = readlink($staged_fasta_file);
+        unless($actual_fasta_file) {
+            $class->error_message("Can't read target of symlink $staged_fasta_file");
+            return;
+        } 
+    }
+
+    $class->status_message(sprintf("Checking size of fasta file %s", $actual_fasta_file));
+
+    my $fasta_size = -s $actual_fasta_file;
+    my $bwa_index_algorithm = ($fasta_size < 11_000_000) ? "is" : "bwtsw";
+    my $bwa_path = Genome::Model::Tools::Bwa->path_for_bwa_version($refindex->aligner_version);
+
+    $class->status_message(sprintf("Building a BWA index in %s using %s.  The file size is %s; selecting the %s algorithm to build it.", $staging_dir, $staged_fasta_file, $fasta_size, $bwa_index_algorithm));
+
+    # expected output files from bwa index
+    my @output_files = map {sprintf("%s.%s", $staged_fasta_file, $_)} qw(amb ann bwt pac rbwt rpac rsa sa);
+
+    my $bwa_cmd = sprintf('%s index -a %s %s', $bwa_path, $bwa_index_algorithm, $staged_fasta_file);
+    my $rv = Genome::Sys->shellcmd(
+        cmd => $bwa_cmd,
+        input_files => [$staged_fasta_file],
+        output_files => [@output_files]
+    );
+
+    unless($rv) {
+        $class->error_message('bwa indexing failed');
+        return;
+    }
+
+    return 1;
 }

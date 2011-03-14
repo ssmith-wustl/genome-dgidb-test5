@@ -1,8 +1,7 @@
 package Genome::InstrumentData::AlignmentResult;
 
 use Genome;
-use Genome::Info::BamFlagstat;
-use Data::Dumper;
+use Genome::Info::BamFlagstat; use Data::Dumper;
 use Sys::Hostname;
 use IO::File;
 use File::Path;
@@ -19,7 +18,7 @@ our $BAM_FH;
 
 class Genome::InstrumentData::AlignmentResult {
     is_abstract => 1,
-    is=>['Genome::SoftwareResult'],
+    is=>['Genome::SoftwareResult::Stageable'],
     sub_classification_method_name => '_resolve_subclass_name',   
     has => [
         instrument_data         => {
@@ -248,11 +247,6 @@ class Genome::InstrumentData::AlignmentResult {
                                 },
     ],
     has_transient => [
-        temp_staging_directory  => {
-                                    is => 'Text',
-                                    doc => 'A directory to use for staging the alignment data before putting it on allocated disk.',
-                                    is_optional=>1,
-                                },
         temp_scratch_directory  => {
                                     is=>'Text',
                                     doc=>'Temp scratch directory',
@@ -275,6 +269,24 @@ sub required_rusage {
     # e.x.: "-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[tmp=50000:mem=12000]' -M 1610612736";
     ''
 }
+
+sub required_rusage_for_building_index {
+    # override if necessary in subclasses.
+    my $class = shift;
+    my %p = @_;
+    my $reference_build = $p{reference_build};
+
+    my $select = "select[mem>=10000 && tmp>=15000]";
+    my $rusage = "rusage[mem=10000, tmp=15000]";
+    my $options = "-M 10000000 -q long";
+
+    return sprintf("-R '%s %s' %s", $select, $rusage, $options);
+}
+
+sub _working_dir_prefix {
+    "alignment";
+}
+
 
 sub extra_metrics {
     # this will probably go away: override in subclasses if the aligner has custom metrics
@@ -352,7 +364,7 @@ sub create {
 
     # STEP 4: PREPARE THE STAGING DIRECTORY
     $self->status_message("Prepare working directories...");
-    $self->_prepare_working_directories;
+    $self->_prepare_working_and_staging_directories;
     $self->status_message("Staging path is " . $self->temp_staging_directory);
     $self->status_message("Working path is " . $self->temp_scratch_directory);
 
@@ -421,13 +433,13 @@ sub create {
     # STEP 12: PREPARE THE ALIGNMENT DIRECTORY ON NETWORK DISK
     $self->status_message("Preparing the output directory...");
     $self->status_message("Staging disk usage is " . $self->_staging_disk_usage . " KB");
-    my $output_dir = $self->output_dir || $self->_prepare_alignment_directory;
+    my $output_dir = $self->output_dir || $self->_prepare_output_directory;
     $self->status_message("Alignment output path is $output_dir");
 
     # STEP 13: PROMOTE THE DATA INTO ALIGNMENT DIRECTORY
     $self->status_message("Moving results to network disk...");
     my $product_path;
-    unless($product_path= $self->_promote_validated_data) {
+    unless($product_path= $self->_promote_data) {
         $self->error_message("Failed to de-stage data into alignment directory " . $self->error_message);
         die $self->error_message;
     }
@@ -1262,21 +1274,15 @@ sub _gather_params_for_get_or_create {
 }
 
    
-sub _prepare_working_directories {
+sub _prepare_working_and_staging_directories {
     my $self = shift;
 
-    return $self->temp_staging_directory if ($self->temp_staging_directory);
-
-    my $base_temp_dir = Genome::Sys->base_temp_directory();
-
+    unless ($self->_prepare_staging_directory) {
+        $self->error_message("Failed to prepare staging directory");
+        return;
+    }
     my $hostname = hostname;
     my $user = $ENV{'USER'};
-    my $basedir = sprintf("alignment-%s-%s-%s-%s", $hostname, $user, $$, $self->id);
-    my $tempdir = Genome::Sys->create_temp_directory($basedir);
-    unless($tempdir) {
-        die "failed to create a temp staging directory for completed files";
-    }
-    $self->temp_staging_directory($tempdir);
 
     my $scratch_basedir = sprintf("scratch-%s-%s-%s", $hostname, $user, $$);
     my $scratch_tempdir =  Genome::Sys->create_temp_directory($scratch_basedir);
@@ -1301,57 +1307,22 @@ sub _staging_disk_usage {
     return $usage;
 }
 
-sub _prepare_alignment_directory {
-
-    my $self = shift;
-
-    my $subdir = $self->resolve_alignment_subdirectory;
-    unless ($subdir) {
-        $self->error_message("failed to resolve subdirectory for instrument data.  cannot proceed.");
-        die $self->error_message;
-    }
-    
-    my %allocation_get_parameters = (
-        disk_group_name => 'info_alignments',
-        allocation_path => $subdir,
-    );
-
-    my %allocation_create_parameters = (
-        %allocation_get_parameters,
-        kilobytes_requested => $self->_staging_disk_usage,
-        owner_class_name => $self->class,
-        owner_id => $self->id
-    );
-    
-    my $allocation = Genome::Disk::Allocation->allocate(%allocation_create_parameters);
-    unless ($allocation) {
-        $self->error_message("Failed to get disk allocation with params:\n". Dumper(%allocation_create_parameters));
-        die($self->error_message);
-    }
-
-    my $output_dir = $allocation->absolute_path;
-    unless (-d $output_dir) {
-        $self->error_message("Allocation path $output_dir doesn't exist!");
-        die $self->error_message;
-    }
-    
-    $self->output_dir($output_dir);
-    
-    return $output_dir;
-}
-
 sub estimated_kb_usage {
     30000000;
     #die "unimplemented method: please define estimated_kb_usage in your alignment subclass.";
 }
 
-sub resolve_alignment_subdirectory {
+sub resolve_allocation_subdirectory {
     my $self = shift;
     my $instrument_data = $self->instrument_data;
     my $staged_basename = File::Basename::basename($self->temp_staging_directory);
     # TODO: the first subdir is actually specified by the disk management system.
     my $directory = join('/', 'alignment_data',$instrument_data->id,$staged_basename);
     return $directory;
+}
+
+sub resolve_allocation_disk_group_name {
+    return "info_alignments";
 }
 
 
@@ -1364,7 +1335,7 @@ sub _extract_input_fastq_filenames {
     
     if (defined $self->instrument_data_segment_type) {
         # sanity check this can be segmented
-        if (! $self->instrument_data->can('get_segments') && $self->instrument_data->get_segments > 0) {
+        if (! $instrument_data->can('get_segments') && $instrument_data->get_segments > 0) {
             $self->error_message("requested to align a given segment, but this instrument data either can't be segmented or has no segments.");
             die $self->error_message;
         }
@@ -1393,10 +1364,7 @@ sub _extract_input_fastq_filenames {
                 die($self->error_message);
             }
         }
-    } 
-    else {
-        my %params;
-        
+    } else {
         # FIXME - getting a warning about undefined string with 'eq'
         if (! defined($self->filter_name)) {
             $self->status_message('No special filter for this assignment');
@@ -1412,145 +1380,27 @@ sub _extract_input_fastq_filenames {
         else {
             die 'Unsupported filter: "' . $self->filter_name . '"!';
         }
-    
-        $DB::single = 1;
-        my @illumina_fastq_pathnames = $instrument_data->dump_sanger_fastq_files(%params, %segment_params);
-        my $counter = 0;
-        for my $input_fastq_pathname (@illumina_fastq_pathnames) {
-            if ($self->trimmer_name) {
-                unless ($self->trimmer_name eq 'trimq2_shortfilter') {
-                    my $trimmed_input_fastq_pathname = Genome::Sys->create_temp_file_path('trimmed-sanger-fastq-'. $counter);
-                    my $trimmer;
-                    if ($self->trimmer_name eq 'fastx_clipper') {
-                        #THIS DOES NOT EXIST YET
-                        $trimmer = Genome::Model::Tools::Fastq::Clipper->create(
-                            params => $self->trimmer_params,
-                            version => $self->trimmer_version,
-                            input => $input_fastq_pathname,
-                            output => $trimmed_input_fastq_pathname,
-                        );
-                    } 
-                    elsif ($self->trimmer_name eq 'trim5') {
-                        $trimmer = Genome::Model::Tools::Fastq::Trim5->create(
-                            length => $self->trimmer_params,
-                            input => $input_fastq_pathname,
-                            output => $trimmed_input_fastq_pathname,
-                        );
-                    } 
-                    elsif ($self->trimmer_name eq 'bwa_style') {
-                        my ($trim_qual) = $self->trimmer_params =~ /--trim-qual-level\s*=?\s*(\S+)/;
-                        $trimmer = Genome::Model::Tools::Fastq::TrimBwaStyle->create(
-                            trim_qual_level => $trim_qual,
-                            fastq_file      => $input_fastq_pathname,
-                            out_file        => $trimmed_input_fastq_pathname,
-                            qual_type       => 'sanger',  #hardcoded for now
-                            report_file     => $self->temp_staging_directory.'/trim_bwa_style.report.'.$counter,
-                        );
-                    }
-                    elsif ($self->trimmer_name =~ /trimq2_(\S+)/) {
-                        #This is for trimq2 no_filter style
-                        #move trimq2.report to alignment directory
-                        
-                        my %params = (
-                            fastq_file  => $input_fastq_pathname,
-                            out_file    => $trimmed_input_fastq_pathname,
-                            report_file => $self->temp_staging_directory.'/trimq2.report.'.$counter,
-                            trim_style  => $1,
-                        );
-                        my ($qual_level, $string) = $self->_get_trimq2_params;
-                 
-                        my $param = $self->trimmer_params;
-                        my ($primer_sequence) = $param =~ /--primer-sequence\s*=?\s*(\S+)/;
-                        $params{trim_qual_level} = $qual_level if $qual_level;
-                        $params{trim_string}     = $string if $string;
-                        $params{primer_sequence} = $primer_sequence if $primer_sequence;
-                        $params{primer_report_file} = $self->temp_staging_directory.'/trim_primer.report.'.$counter if $primer_sequence;
-        
-                        $trimmer = Genome::Model::Tools::Fastq::Trimq2::Simple->create(%params);
-                    } 
-                    elsif ($self->trimmer_name eq 'random_subset') {
-                        my $seed_phrase = $instrument_data->run_name .'_'. $instrument_data->id;
-                        $trimmer = Genome::Model::Tools::Fastq::RandomSubset->create(
-                            input_read_1_fastq_files => [$input_fastq_pathname],
-                            output_read_1_fastq_file => $trimmed_input_fastq_pathname,
-                            limit_type => 'reads',
-                            limit_value => $self->trimmer_params,
-                            seed_phrase => $seed_phrase,
-                        );
-                    } 
-                    elsif ($self->trimmer_name eq 'normalize') {
-                        my $params = $self->trimmer_params;
-                        my ($read_length,$reads) = split(':',$params);
-                        my $trim = Genome::Model::Tools::Fastq::Trim->execute(
-                            read_length => $read_length,
-                            orientation => 3,
-                            input => $input_fastq_pathname,
-                            output => $trimmed_input_fastq_pathname,
-                        );
-                        unless ($trim) {
-                            die('Failed to trim reads using test_trim_and_random_subset');
-                        }
-                        my $random_input_fastq_pathname = Genome::Sys->create_temp_file_path('random-sanger-fastq-'. $counter);
-                        $trimmer = Genome::Model::Tools::Fastq::RandomSubset->create(
-                            input_read_1_fastq_files => [$trimmed_input_fastq_pathname],
-                            output_read_1_fastq_file => $random_input_fastq_pathname,
-                            limit_type  => 'reads',
-                            limit_value => $reads,
-                            seed_phrase => $instrument_data->run_name .'_'. $instrument_data->id,
-                        );
-                        $trimmed_input_fastq_pathname = $random_input_fastq_pathname;
-                    } 
-                    else {
-                        # TODO: modularize the above and refactor until they work in this logic:
-                        # Then ensure that the trimmer gets to work on paired files, and is 
-                        # a more generic "preprocess_reads = 'foo | bar | baz' & "[1,2],[],[3,4,5]"
-                        my $params = $self->trimmer_params;
-                        my @params = eval("no strict; no warnings; $params");
-                        if ($@) {
-                            die "error in params: $@\n$params\n";
-                        }
 
-                        my $class_name = 'Genome::Model::Tools::FastQual::Trimmer';
-                        my @words = split(' ',$self->trimmer_name);
-                        for my $word (@words) {
-                            my @parts = map { ucfirst($_) } split('-',$word);
-                            $class_name .= "::" . join('',@parts);
-                        }
-                        eval {
-                            $trimmer = $class_name->create(
-                                input => [$input_fastq_pathname],
-                                output => [$trimmed_input_fastq_pathname],
-                                @params,
-                            );
-                        };
-                        unless ($trimmer) {
-                            $self->error_message(
-                                sprintf(
-                                    "Unknown read trimmer_name %s.  Class $class_name params @params. $@",
-                                    $self->trimmer_name,
-                                    $class_name
-                                )
-                            );
-                            die($self->error_message);
-                        }
-                    }
-                    unless ($trimmer) {
-                        $self->error_message('Failed to create fastq trim command');
-                        die($self->error_message);
-                    }
-                    unless ($trimmer->execute) {
-                        $self->error_message('Failed to execute fastq trim command '. $trimmer->command_name);
-                        die($self->error_message);
-                    }
-                    if ($self->trimmer_name eq 'normalize') {
-                        my @empty = ();
-                        $trimmer->_index(\@empty);
-                    }
-                    $input_fastq_pathname = $trimmed_input_fastq_pathname;
-                }
-            }
-            push @input_fastq_pathnames, $input_fastq_pathname;
-            $counter++;
+        my $temp_directory = Genome::Sys->create_temp_directory;
+
+        my $trimmer_name = $self->trimmer_name;
+        undef($trimmer_name) if $trimmer_name eq 'trimq2_shortfilter';
+
+        @input_fastq_pathnames = $instrument_data->dump_trimmed_fastq_files(
+            segment_params => \%segment_params,
+            trimmer_name => $self->trimmer_name,
+            trimmer_version => $self->trimmer_version,
+            trimmer_params => $self->trimmer_params,
+            directory => $temp_directory,
+        );
+
+        my @report_files = glob($temp_directory ."/*report*");
+        for my $report_file (@report_files) {
+            my $staged_path = $report_file;
+            my $staging_directory = $self->temp_staging_directory;
+            $staged_path =~ s/$temp_directory/$staging_directory/;
+            Genome::Sys->copy_file($report_file, $staged_path);
+            unlink($report_file);
         }
 
         # this previously happened at the beginning of _run_aligner
@@ -2007,6 +1857,26 @@ sub supports_streaming_to_bam {
 
 sub accepts_bam_input {
     0;
+}
+
+sub aligner_params_required_for_index {
+    0;
+}
+
+sub get_reference_sequence_index {
+    my $self = shift;
+    my $index = Genome::Model::Build::ReferenceSequence::AlignerIndex->get(aligner_name=>$self->aligner_name, aligner_version=>$self->aligner_version, aligner_params=>$self->aligner_params, reference_build=>$self->reference_build);
+
+    if (!$index) {
+        $self->error_message(sprintf("No reference index prepared for %s with params %s and reference build %s", $self->aligner_name, $self->aligner_params, $self->reference_build->id));
+    }
+
+    return $index;
+}
+
+# this behavior was in the alignment class earlier and was set as changeable in SoftwareResult::Stageable.
+sub _needs_symlinks_followed_when_syncing {
+    1;
 }
 
 1;
