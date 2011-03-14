@@ -9,8 +9,7 @@ use Sys::Hostname;
 use base qw(GAP::Job);
 
 sub new {
-
-    my ($class, $job_id, $seq, $mask_ref, $db, $core_num $expansion, $mask_char, $bit_score) = @_;
+    my ($class, $job_id, $seq, $mask_ref, $db, $core_num, $expansion, $mask_char, $bit_score) = @_;
     
     my $self = { };
     bless $self, $class;
