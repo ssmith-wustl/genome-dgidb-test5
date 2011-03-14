@@ -35,6 +35,10 @@ class Genome::Sample::Command::Import::Metahit {
     ],
 };
 
+sub help_brief {
+    return 'import METAHIT samples';
+}
+
 sub execute {
     my $self = shift;
 

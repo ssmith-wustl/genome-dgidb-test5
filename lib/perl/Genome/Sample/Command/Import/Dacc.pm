@@ -28,6 +28,10 @@ class Genome::Sample::Command::Import::Dacc {
     ],
 };
 
+sub help_brief {
+    return 'import DACC samples';
+}
+
 sub execute {
     my $self = shift;
 

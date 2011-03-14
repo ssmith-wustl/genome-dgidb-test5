@@ -97,6 +97,21 @@ class Genome::Model::View::Solr::Xml {
                     name => '__display_name__',
                     position => 'display_title',
                 },
+                {
+                    name => 'subject_name',
+                    position => 'content',
+                },
+# Loading instrument data is *so* slow
+#                {
+#                    name => 'instrument_data',
+#                    position => 'content',
+#                    perspective => 'default',
+#                    toolkit => 'text',
+#                    aspects => [
+#                        'id',
+#                        'run_name',
+#                    ]
+#                }
             ],
         }
     ]
