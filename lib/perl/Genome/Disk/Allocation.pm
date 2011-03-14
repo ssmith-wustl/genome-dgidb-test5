@@ -31,6 +31,10 @@ class Genome::Disk::Allocation {
             is => 'Number',
             doc => 'The disk space allocated in kilobytes',
         },
+        original_kilobytes_requested => {
+            is => 'Number',
+            doc => 'The disk space allocated in kilobytes',
+        },
         owner_class_name => {
             is => 'Text',
             doc => 'The class name for the owner of this allocation',
@@ -373,6 +377,7 @@ sub _create {
         mount_path => $volume->mount_path,
         disk_group_name => $disk_group_name,
         kilobytes_requested => $kilobytes_requested,
+        original_kilobytes_requested => $kilobytes_requested,
         allocation_path => $allocation_path,
         owner_class_name => $owner_class_name,
         owner_id => $owner_id,
@@ -621,6 +626,8 @@ sub _reallocate_with_move {
     return 1;
 }
 
+# Some owners track their absolute path separately from the allocation, which means they also need to be
+# updated when the allocation is moved. That special logic goes here
 sub _update_owner_for_move {
     my $self = shift;
     my $owner = $self->owner;
@@ -829,8 +836,8 @@ sub _retrieve_mode {
     return 'load';
 }
 
-# Dummy allocations (don't commit to db) still create files on the filesystem, and the tests/scripts/whatever
-# that make these allocations may not deallocate and clean up. Do so here.
+# Cleans up directories, useful when no commit is on and the test doesn't clean up its allocation directories
+# or in the case of reallocate with move when a copy fails and temp data needs to be removed
 END {
     remove_test_paths();
 }

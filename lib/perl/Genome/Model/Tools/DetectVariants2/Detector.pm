@@ -3,6 +3,8 @@ package Genome::Model::Tools::DetectVariants2::Detector;
 use strict;
 use warnings;
 
+use File::Copy;
+use File::Basename;
 use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Detector {
@@ -145,3 +147,57 @@ This is just an abstract base class for variant detector modules.
 EOS
 }
 
+sub execute {
+
+    my $self = shift;
+    unless($self->_verify_inputs) {
+        die $self->error_message('Failed to verify inputs.');
+    }
+
+    unless($self->_create_directories) {
+        die $self->error_message('Failed to create directories.');
+    }
+
+    unless($self->_detect_variants) {
+        die $self->error_message('Failed in main execution logic.');
+    }
+
+    unless($self->_sort_detector_output){
+        die $self->error_message('Failed in _sort_detector_output');
+    }
+
+    unless($self->_generate_standard_files) {
+        die $self->error_message('Failed to generate standard files from detector-specific files');
+    }
+
+    unless($self->_promote_staged_data) {
+        die $self->error_message('Failed to promote staged data.');
+    }
+
+    return 1;
+}
+
+sub _sort_detector_output {
+    my $self = shift;
+
+    my @detector_files = glob($self->_temp_staging_directory."/*.hq");
+
+    for my $detector_file (@detector_files){
+        my $detector_unsorted_output = $self->_temp_scratch_directory . "/" . basename($detector_file) . ".unsorted";
+
+        Genome::Sys->copy_file($detector_file,$detector_unsorted_output);
+        unlink($detector_file);
+
+        my $sort_cmd = Genome::Model::Tools::Bed::ChromSort->create(
+            input => $detector_unsorted_output,
+            output => $detector_file,
+        );
+
+        unless ($sort_cmd->execute()) {
+            $self->error_message("Failed to sort detector file " . $detector_unsorted_output);
+            return;
+        }
+    }
+
+    return 1;
+}   

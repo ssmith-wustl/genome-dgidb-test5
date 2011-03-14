@@ -117,16 +117,17 @@ class Genome::Model {
         
         # refactor to use the inputs entirely
         instrument_data_assignments => { is => 'Genome::Model::InstrumentDataAssignment', reverse_as => 'model' },
-            instrument_data             => {
-                is => 'Genome::InstrumentData',
-                via => 'inputs',
-                to => 'value', 
-                is_mutable => 1, 
-                where => [ name => 'instrument_data' ],
-                doc => 'Instrument data currently assigned to the model.' 
-            },
-        ],    
-        has_optional_deprecated => [
+        instrument_data             => {
+            is => 'Genome::InstrumentData',
+            via => 'inputs',
+            to => 'value', 
+            is_mutable => 1, 
+            where => [ name => 'instrument_data' ],
+            doc => 'Instrument data currently assigned to the model.' 
+        },
+        instrument_data_ids         => { via => 'instrument_data', to => 'id' },
+    ],    
+    has_optional_deprecated => [
         # this is all junk but things really use them right now 
         data_directory          => { is => 'Text', len => 1000, is_optional => 1 },
         ref_seqs                => { is => 'Genome::Model::RefSeq', reverse_as => 'model', is_many => 1, is_optional => 1 },

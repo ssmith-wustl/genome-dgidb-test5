@@ -97,9 +97,9 @@ sub execute {
     my $output = $self->output;
 
     if ($output) {
-	open(OUT,">$output.txt") || App->error_message( "\n\ncouldn't open the output file $output.txt\n\n") && return; 
+	open(OUT,">$output.txt") || $self->error_message( "\n\ncouldn't open the output file $output.txt\n\n") && return; 
 	if ($self->fasta) {
-	    open(FASTA,">$output.fasta") || App->error_message( "\n\ncouldn't open the output file $output.fasta\n\n") && return;
+	    open(FASTA,">$output.fasta") || $self->error_message( "\n\ncouldn't open the output file $output.fasta\n\n") && return;
 	}
     }
     

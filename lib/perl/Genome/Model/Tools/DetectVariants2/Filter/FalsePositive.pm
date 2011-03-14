@@ -163,7 +163,7 @@ sub _filter_variants {
 
     ## Open the output file ##
 
-    my $hq_output_file = $self->_temp_staging_directory . "/snvs.hq";
+    my $hq_output_file = $self->_temp_staging_directory . "/snvs.hq.raw_filter";
     my $hq_fh = Genome::Sys->open_file_for_writing($hq_output_file);
     unless($hq_fh) {
         $self->error_message("Unable to open temp output file $hq_output_file for writing.");
@@ -221,7 +221,7 @@ sub _filter_variants {
 
 
     ## Open the filtered output file ##
-    my $lq_file = $self->_temp_staging_directory . "/snvs.lq";
+    my $lq_file = $self->_temp_staging_directory . "/snvs.lq.raw_filter";
     my $lq_fh = Genome::Sys->open_file_for_writing($lq_file);
 
     ## Reopen file for parsing ##
@@ -321,7 +321,6 @@ sub _filter_variants {
 
                         if($var_count && ($var_plus + $var_minus)) {
                             ## We must obtain variant read counts to proceed ##
-                            $DB::single=1;
 
                             my $var_freq = $var_count / ($ref_count + $var_count);
 
@@ -590,7 +589,7 @@ sub _generate_standard_files {
     my $self = shift;
 
     # FIXME this should use a Bed::Convert module so that we have versioning. but this works for now
-    my $hq_output = $self->_temp_staging_directory . "/snvs.hq";
+    my $hq_output = $self->_temp_staging_directory . "/snvs.hq.raw_filter";
     my $hq_bed_output = $self->_temp_staging_directory . "/snvs.hq.bed";
     my $hq_ifh = Genome::Sys->open_file_for_reading($hq_output);
     my $hq_ofh = Genome::Sys->open_file_for_writing($hq_bed_output);
@@ -603,7 +602,7 @@ sub _generate_standard_files {
     $hq_ofh->close;
 
     # FIXME this should use a Bed::Convert module so that we have versioning.
-    my $lq_output = $self->_temp_staging_directory . "/snvs.lq";
+    my $lq_output = $self->_temp_staging_directory . "/snvs.lq.raw_filter";
     my $lq_bed_output = $self->_temp_staging_directory . "/snvs.lq.bed";
     my $lq_ifh = Genome::Sys->open_file_for_reading($lq_output);
     my $lq_ofh = Genome::Sys->open_file_for_writing($lq_bed_output);

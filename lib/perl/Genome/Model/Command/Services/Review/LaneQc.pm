@@ -47,16 +47,16 @@ sub confirm_or_create_lane_qc {
     my @inputs_models = map { $_->model } @inputs;
     my ($feb_model) = grep { $_->processing_profile_name eq 'february 2011 illumina lane qc' } @inputs_models;
     if ($feb_model) {
-        $self->status_message("$instrument_data_id: already has a lane QC");
+        $self->print_message("$instrument_data_id: already has a lane QC");
         return $feb_model;
     }
     else {
         if ($self->auto_action) {
-            $self->status_message("$instrument_data_id: creating a lane QC");
+            $self->print_message("$instrument_data_id: creating a lane QC");
             return $self->create_lane_qc($instrument_data_id);
         }
         else {
-            $self->status_message("$instrument_data_id: needs a lane QC");
+            $self->print_message("$instrument_data_id: needs a lane QC");
             return 1;
         }
     }
@@ -90,4 +90,14 @@ sub create_lane_qc {
 
     $lane_qc_model->add_instrument_data($instrument_data);
     $lane_qc_model->build_requested(1);
+}
+
+sub print_message {
+    my $self = shift;
+    my $msg = shift;
+    chomp($msg);
+
+    print "$msg\n";
+
+    return 1;
 }

@@ -5,7 +5,6 @@ use warnings;
 use DBI;
 use Compress::Zlib;
 use Genome;
-#use GSCApp;
 use IPC::Run;
 
 class Genome::Model::Tools::Consed::TracesToConsed {

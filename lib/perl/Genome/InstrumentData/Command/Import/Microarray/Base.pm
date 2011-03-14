@@ -1,4 +1,4 @@
-package Genome::InstrumentData::Command::Import::GenotypeMicroarray;
+package Genome::InstrumentData::Command::Import::Microarray::Base;
 
 use strict;
 use warnings;
@@ -10,22 +10,22 @@ use File::Basename;
 use Data::Dumper;
 use IO::File;
 
-class Genome::InstrumentData::Command::Import::GenotypeMicroarray {
+class Genome::InstrumentData::Command::Import::Microarray::Base {
     is  => 'Genome::Command::Base',
     is_abstract => 1,
     has => [
-        source_data_file => {
+        original_data_path => {
             is => 'Text',
-            doc => 'source data path of import data file',
+            doc => 'Directory or file(s) (comma separated) to import.',
         },
         library => {
             is => 'Genome::Library',
-            doc => 'Define this OR sample OR both if you like.',
+            doc => 'Library to associate with this microarray data. If not given, a library from the sample will be used or created.',
             is_optional => 1,
         },
         sample => {
             is => 'Genome::Sample',
-            doc => 'Define this OR library OR both if you like.',
+            doc => 'Sample to associate with this microarray data. If not given, it will be resolved via the library.',
             is_optional => 1,
         },
         import_source_name => {
@@ -50,12 +50,6 @@ class Genome::InstrumentData::Command::Import::GenotypeMicroarray {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             doc => 'Build of the reference against which the genotype file was produced.',
         },
-        define_model => {
-            is=>'Boolean',
-            doc => 'Create a goldSNP file from the imported genotype and define/build a GenotypeMicroarray model.',
-            default_value => 0,
-            is_optional => 1,
-        },
         _model => { is_optional => 1, },
         _instrument_data => { is_optional => 1, },
     ],
@@ -68,8 +62,8 @@ sub generated_instrument_data_id {
 sub execute {
     my $self = shift;
 
-    my $file_ok = $self->_validate_genotype_file;
-    return if not $file_ok;
+    my $data_path_ok = $self->_validate_original_data_path;
+    return if not $data_path_ok;
 
     my $reference_sequence_build = $self->reference_sequence_build;
     if ( not $reference_sequence_build ) {
@@ -80,76 +74,35 @@ sub execute {
     my $resolve_sample_library = $self->_resolve_sample_and_library;
     return if not $resolve_sample_library;
 
-    if ( $self->define_model ) {
-        my $model = $self->_create_model;
-        return if not $model;
-    }
+    my $model = $self->_create_model;
+    return if not $model;
 
     my $instrument_data = $self->_create_instrument_data;
     return if not $instrument_data;
 
-    my $allocation = $self->_resolve_allocation;
+    my $allocation = $self->_create_allocation;
     return if not $allocation;
 
-    my $copy_and_md5 = $self->_copy_and_validate_md5;
-    return if not $copy_and_md5;
+    my $copy = $self->_copy_original_data_path;
+    return if not $copy;
 
-    if ( $self->define_model ) {
-        my $add_and_build = $self->_add_instrument_data_to_model_and_build($instrument_data);
-        return if not $add_and_build;
-    }
+    my $add_and_build = $self->_add_instrument_data_to_model_and_build($instrument_data);
+    return if not $add_and_build;
 
     return 1;
 }
 
-sub _validate_genotype_file {
+sub _validate_original_data_path {
     my $self = shift;
 
-    $self->status_message("Validate genotype file");
-
-    my $file = $self->source_data_file;
-    if ( not $file ) { 
-        $self->error_message("No genotype file given");
-        return;
-    }
-
-    $self->status_message("Genotype file: $file");
-
-    if ( not -s $file ) {
-        $self->error_message("Genotype file ($file) does not exist");
-        return;
-    }
-
-    # Format, space separated:
-    # chr pos alleles
-    my $fh = IO::File->new($file, 'r');
-    if ( not $fh ) {
-        $self->error_message("Cannot open genotype file ($file): $!");
-        return;
-    }
-    my $line = $fh->getline;
-    if ( not $line ) {
-        $self->error_message();
-        return;
-    }
-    chomp $line;
-    my @tokens = split(/\s+/, $line);
-    if ( not @tokens or @tokens != 3 ) {
-        $self->error_message('Genotype file ($file) is not in 3 column format');
-        return;
-    }
-    $fh->close;
-
-    $self->status_message("Validate genotype file...OK");
-
-    return $file;
+    return 1;
 }
 
 sub get_read_count {
     my $self = shift;
     my $line_count;
     $self->status_message("Now attempting to determine read_count by calling wc on the imported genotype.");
-    my $file = $self->source_data_file;
+    my $file = $self->original_data_path;
     $line_count = `wc -l $file`;
     ($line_count) = split " ",$line_count;
     unless(defined($line_count)&&($line_count > 0)){
@@ -166,9 +119,11 @@ sub _resolve_sample_and_library {
 
     my $sample = $self->sample;
     my $library = $self->library;
-    if ( $sample and $library and $sample->id ne $library->sample_id ) {
-        $self->error_message('Library ('.$library->id.') sample id ('.$library->sample_id.') does not match given sample id ('.$sample->id.')');
-        return;
+    if ( $sample and $library ) { 
+        if ( $sample->id ne $library->sample_id ) {
+            $self->error_message('Library ('.$library->id.') sample id ('.$library->sample_id.') does not match given sample id ('.$sample->id.')');
+            return;
+        }
     }
     elsif ( $sample ) { # get/create library
         my %library_params = (
@@ -246,7 +201,7 @@ sub _create_instrument_data {
 
     $self->status_message('Create instrument data');
 
-    my $read_count = $self->read_count;
+    my $read_count = $self->read_count; #FIXME
     if ( not $read_count ) {
         my $read_count = $self->get_read_count();
         if( not $read_count ){
@@ -263,7 +218,7 @@ sub _create_instrument_data {
         import_format => 'genotype file',
         import_source_name => $self->import_source_name,
         read_count => $read_count,
-        original_data_path => $self->source_data_file,
+        original_data_path => $self->original_data_path,
     );
     if ( not $instrument_data ) {
        $self->error_message('Failed to create imported instrument data');
@@ -277,19 +232,29 @@ sub _create_instrument_data {
     return $instrument_data;
 }
 
-sub _resolve_allocation {
+sub _create_allocation {
     my $self = shift;
 
-    $self->status_message('Resolve allocation');
+    $self->status_message('Create allocation');
 
     my $instrument_data = $self->_instrument_data;
     Carp::confess('No instrument data set to resolve allocation') if not $instrument_data;
 
-    my $file = $self->source_data_file;
-    my $file_sz = -s $file;
-    my $kb_requested = $file_sz * 1.5;
+    my $kb_requested;
+    my $original_data_path = $self->original_data_path;
+    if ( -d $original_data_path ) {
+        $kb_requested = Genome::Sys->directory_size_recursive($original_data_path);
+    }
+    else {
+        for my $file ( split(',', $original_data_path) ) {
+            $kb_requested += -s $file;
+        }
+    }
+    $kb_requested += 100_000; # to dump a genotype file
+    $self->status_message("KB requested: $kb_requested");
+
     my $allocation = Genome::Disk::Allocation->allocate(
-        disk_group_name     => 'info_alignments',     #'info_apipe',
+        disk_group_name     => 'info_alignments',
         allocation_path     => 'instrument_data/imported/'.$instrument_data->id,
         kilobytes_requested => $kb_requested,
         owner_class_name    => $instrument_data->class,
@@ -306,12 +271,73 @@ sub _resolve_allocation {
     return $allocation;
 }
 
-sub _copy_and_validate_md5 {
+sub _copy_original_data_path {
     my $self = shift;
 
-    $self->status_message("Copy and validate MD5");
+    my $original_data_path = $self->original_data_path;
+    if ( -d $original_data_path ) {
+        return $self->_copy_directory($original_data_path);
+    }
+    else {
+        my @files = split(',', $original_data_path);
+        for my $file ( @files ) {
+            my $copy = $self->_copy_file($file);
+            return if not $copy;
+        }
+        return 1;
+    }
+}
 
-    my $file = $self->source_data_file;
+sub _copy_directory {
+    my ($self, $directory) = @_;
+
+    Carp::confess('No directory given to copy') if not $directory;
+    Carp::confess("Directory $directory does not exist") if not -d $directory;
+    $self->status_message("Copy directory: $directory");
+
+    my $instrument_data = $self->_instrument_data;
+    Carp::confess('No instruemnt data set to copy directory') if not $instrument_data;
+    my $allocation = $instrument_data->disk_allocations;
+    Carp::confess('No allocation for instrument data ('.$instrument_data->id.') to copy directory') if not $allocation;
+    my $destination = $allocation->absolute_path;
+    Carp::confess('No absolute path for allocation ('.$allocation->id.') to copy directory') if not $allocation;
+    $self->status_message('Destination: '.$destination);
+
+    my $size = Genome::Sys->directory_size_recursive($directory);             
+    if ( not $size ) {
+        $self->error_message("Failed to get size for $directory");
+        return;
+    }
+    $self->status_message('Size: '.$size);
+
+    local $File::Copy::Recursive::KeepMode = 0;
+    my $copy = File::Copy::Recursive::dircopy($directory, $destination);
+    if ( not $copy ) {
+        $self->error_message("Failed to copy directory ($directory) to destination ($destination).");
+        return;
+    }
+
+    my $new_size = Genome::Sys->directory_size_recursive($destination);             
+    if ( not $new_size ) {
+        $self->error_message("Failed to get new size for $destination");
+        return;
+    }
+    $self->status_message('New size: '.$size);
+
+    if ( $size != $new_size ) {
+        $self->error_message("Failed to copy directory ($directory) to destination ($destination). The sizes do not match $size <=> $new_size");
+        return;
+    }
+
+    return 1;
+}
+
+sub _copy_file {
+    my ($self, $file) = @_;
+
+    Carp::confess('No file given to copy and validate md5') if not $file;
+    $self->status_message("Copy file: $file");
+
     my $md5 = Genome::Sys->md5sum($file);
     if ( not $md5 ) {
         $self->error_message('Failed to get md5 for source data file: '.$file);

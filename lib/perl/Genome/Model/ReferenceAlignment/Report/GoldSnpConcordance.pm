@@ -8,13 +8,8 @@ use warnings;
 
 use Genome;
 
-use App::Report;
-use CGI;
 use IO::String;
-use Data::Dumper;
 use Template;
-use POSIX;
-use XML::Simple;
 
 class Genome::Model::ReferenceAlignment::Report::GoldSnpConcordance {
     is => 'Genome::Model::Report',

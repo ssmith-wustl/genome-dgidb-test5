@@ -28,6 +28,27 @@ class Genome::Model::Tools::DetectVariants2::Filter {
             is_optional => 1,
             doc => 'The directory containing the results of filtering',
         },
+        detector_name => {
+            is => 'String',
+            is_input => 1,
+            is_output => 1,
+            is_optional => 1,
+            doc => 'The name of the detector this filter is running below',
+        },
+        detector_version => {
+            is => 'String',
+            is_input => 1,
+            is_output => 1,
+            is_optional => 1,
+            doc => 'The version of the detector this filter is running below',
+        },
+        detector_params => {
+            is => 'String',
+            is_input => 1,
+            is_output => 1,
+            is_optional => 1,
+            doc => 'The params of the detector this filter is running below',
+        },
         params => {
             is => 'String',
             is_input => 1,
@@ -113,7 +134,6 @@ sub _validate_input {
 
 sub _validate_output {
     my $self = shift;
-    $DB::single=1;
     unless(-d $self->output_directory){
         die $self->error_message("Could not validate the existence of output_directory");
     }
@@ -147,10 +167,10 @@ sub _check_file_counts {
     unless(($total_input - $total_output) == 0){
         die $self->error_message("Total lines of bed-formatted output did not match total input lines. Input lines (including an offset of $offset): $total_input \t output lines: $total_output");
     }
-    #my $detector_style_output = $self->line_count($detector_style_file) + $self->line_count($lq_output_file);
-    #unless(($total_input - $detector_style_output) == 0){
-    #    die $self->error_message("Total lines of detector-style output did not match total input lines. Input lines: $total_input \t output lines: $detector_style_output");
-    #}
+    my $detector_style_output = $self->line_count($detector_style_file) + $self->line_count($lq_output_file);
+    unless(($total_input - $detector_style_output) == 0){
+        die $self->error_message("Total lines of detector-style output did not match total input lines. Input lines: $total_input \t output lines: $detector_style_output");
+    }
 
     return 1;
 }
@@ -164,81 +184,90 @@ sub has_version {
     return 1;
 }
 
-# This are crazy and ugly, but are just a very temporary solution until we start handing strategies down to detectors and filters
-# For now this method is unnecessary because we are only accounting for one level of filtering. Later this will change.
-sub _get_detector_version {
-    my $self = shift;
-    my $detector_output_directory = $self->detector_directory;
-
-    my @subdirs = split("/", $detector_output_directory);
-    my $detector_subdir = $subdirs[-1];
-
-    my ($variant_type, $detector_name, $detector_version, $detector_params) = split("-", $detector_subdir);
-    
-    return $detector_version;
-}
-
-sub _get_detector_parameters {
-    my $self = shift;
-    my $detector_output_directory = $self->detector_directory;
-
-    my @subdirs = split("/", $detector_output_directory);
-    my $detector_subdir = $subdirs[-1];
-
-    my ($variant_type, $detector_name, $detector_version, $detector_params) = split("-", $detector_subdir);
-    
-    return $detector_params;
-}
-
 # Look for Detector formatted output and bed formatted output
 sub _generate_standard_output {
     my $self = shift;
-    my $detector_output = $self->output_directory."/".$self->_variant_type.".hq";
-    my $filter_output = $self->output_directory."/".$self->_variant_type.".hq.bed";
-    my $detector_file = -e $detector_output;
-    my $filter_file = -e $filter_output;
+    my $hq_detector_output = $self->output_directory."/".$self->_variant_type.".hq";
+    my $hq_bed_output = $self->output_directory."/".$self->_variant_type.".hq.bed";
+    my $lq_detector_output = $self->output_directory."/".$self->_variant_type.".lq";
+    my $lq_bed_output = $self->output_directory."/".$self->_variant_type.".lq.bed";
+    my $original_detector_file = $self->input_directory."/".$self->_variant_type.".hq";
 
-    # If there is a filter_file (bed format) and not a detector file, generate a detector file
-    if( $filter_file && not $detector_file){
-        $self->_create_detector_file($filter_file,$detector_file);
+    my $hq_detector_file = -e $hq_detector_output;
+    my $hq_bed_file = -e $hq_bed_output;
+    my $lq_detector_file = -e $lq_detector_output;
+    my $lq_bed_file = -e $lq_bed_output;
+
+    # If there is a hq_bed_file (bed format) and not a detector file, generate a detector file
+    if( $hq_bed_file && not $hq_detector_file){
+        $self->_convert_bed_to_detector($original_detector_file,$hq_bed_output,$hq_detector_output);
+        unless($lq_detector_file){
+            $self->_convert_bed_to_detector($original_detector_file,$lq_bed_output,$lq_detector_output);
+        }
     } 
-    # If there is a detector_file and not a filter_file, generate a filter_file
-    elsif ($detector_file && not $filter_file) {
-        $self->_create_filter_file($detector_file,$filter_file);
+    # If there is a hq_detector_file and not a hq_bed_file, generate a hq_bed_file
+    elsif ($hq_detector_file && not $hq_bed_file) {
+        $self->_create_bed_file($hq_detector_file,$hq_bed_file);
+        unless($lq_bed_file){
+            $self->_create_bed_file($lq_detector_file,$lq_bed_file);
+        }
     } 
-    # If there is neither a detector_file nor a filter_file, explode
-    elsif ((not $detector_file) &&( not $filter_file)) {
+    # If there is neither a hq_detector_file nor a hq_bed_file, explode
+    elsif ((not $hq_detector_file) &&( not $hq_bed_file)) {
         die $self->error_message("Could not locate output file of any type for this filter.");
     }
 
     return 1;
 }
 
-# If the filter has a bed formatted output file, but no detector-style file, generate the detector-style
-sub _create_detector_file {
+# If the filter has no bed formatted output file, but does have a detector-style file, generate the bed formatt
+sub _create_bed_file {
     my $self = shift;
     my $filter_file = shift;
     my $detector_file = shift;
     my $original_detector_file = $self->input_directory."/".$self->_variant_type.".hq";
-    unless(Genome::Model::Tools::Joinx::Intersect->execute( input_file_a => $original_detector_file, input_file_b => $filter_file, output_file => $detector_file )) {
-        die $self->error_message("Failed to execute gmt joinx intersect in order to generate detector-style output file");
-    }        
+
+
     unless(-e $detector_file){
-        die $self->error_message("Failed to create a detector-style output file");
+        die $self->error_message("Failed to create a bed-style output file");
     }
 
     return 1;
 }
 
-# If the filter has no bed formatted output file, but does have a detector-style file, generate the bed formatt
-sub _create_filter_file {
+sub _convert_bed_to_detector {
     my $self = shift;
-    my $filter_file = shift;
-    my $detector_file = shift;
+    my $detector_file = shift;  #$self->detector_style_input;
+    my $bed_file = shift;       #$self->source;
+    my $output = shift;         #$self->output;
 
-    die $self->error_message("This functionality has not yet been implemented.");
+    my $ofh = Genome::Sys->open_file_for_writing($output);
+    my $detector_fh = Genome::Sys->open_file_for_reading($detector_file);
+    my $bed_fh = Genome::Sys->open_file_for_reading($bed_file);
 
+    #This cycles through the bed and original detector file, looking for intersecting lines 
+    # to dump into the detector style output
+
+    OUTER: while(my $line = $bed_fh->getline){
+        chomp $line;
+        my ($chr,$start,$stop,$refvar,@data) = split "\t", $line;
+        my ($ref,$var) = split "/", $refvar;
+        my $scan=undef;
+        while(my $dline = $detector_fh->getline){
+            chomp $dline;
+            my ($dchr,$dpos,$dref,$dvar) = split "\t", $dline;
+            if(($chr eq $dchr)&&($stop == $dpos)&&($ref eq $dref)&&($var eq $dvar)){
+                print $ofh $dline."\n";
+                next OUTER;
+            }
+        }
+    }
+
+    $bed_fh->close;
+    $ofh->close;
+    $detector_fh->close;
     return 1;
 }
+
 
 1;

@@ -15,95 +15,41 @@ BEGIN {
     if ($archos !~ /64/) {
         plan skip_all => "Must run from 64-bit machine";
     } else {
-        plan tests => 19;
+        plan tests => 7;
     }
 };
 
 use_ok( 'Genome::Model::Tools::DetectVariants2::Filter::SomaticScoreMappingQuality');
 
-my $test_input_dir  = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-SomaticScoreMappingQuality/';
+my $test_data_dir  = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-SomaticScoreMappingQuality';
 my $refseq = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa';
-my $tumor_bam_file  = $test_input_dir . 'tumor.tiny.bam';
-
-my $map50_somatic50_expected = $test_input_dir . 'map50_somatic50.bed';
-my $map10_somatic50_expected = $test_input_dir . 'map10_somatic50.bed';
-my $map10_somatic80_expected = $test_input_dir . 'map10_somatic80.bed';
-
-my $map50_somatic50_expected_lq = $test_input_dir . 'map50_somatic50.lq.bed';
-my $map10_somatic50_expected_lq = $test_input_dir . 'map10_somatic50.lq.bed';
-my $map10_somatic80_expected_lq = $test_input_dir . 'map10_somatic80.lq.bed';
+my $tumor_bam_file  = $test_data_dir . '/flank_tumor_sorted.bam';
+my $normal_bam_file  = $test_data_dir . '/flank_normal_sorted.bam';
+my $detector_directory = $test_data_dir."/sniper-0.7.3-";
+my $expected_output = $test_data_dir."/expected";
 
 my $test_output_dir = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Filter-SomaticScoreMappingQuality-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 
-# Test default cutoffs
-my $output_file_default     = $test_output_dir . '/snvs.hq.bed';
-my $high_confidence_default = Genome::Model::Tools::DetectVariants2::Filter::SomaticScoreMappingQuality->create(
-    input_directory     => $test_input_dir,
+my $ssmq_object = Genome::Model::Tools::DetectVariants2::Filter::SomaticScoreMappingQuality->create(
+    input_directory     => $detector_directory,
     aligned_reads_input => $tumor_bam_file,
+    control_aligned_reads_input => $normal_bam_file,
     output_directory    => $test_output_dir,
+    detector_directory => $detector_directory,
     reference_sequence_input => $refseq,
 );
 
-ok($high_confidence_default, 'created SomaticScoreMappingQuality object (default mapping & somatic quality)');
-ok($high_confidence_default->execute(), 'executed SomaticScoreMappingQuality object');
-ok(-e $output_file_default, 'generated an (possibly empty) output file');
+ok($ssmq_object, 'created SomaticScoreMappingQuality object (default mapping & somatic quality)');
+ok($ssmq_object->execute(), 'executed SomaticScoreMappingQuality object');
 
-# Test mapping quality 50, somatic quality 50, and verify the contents of the hq and lq files
-$test_output_dir = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Filter-SomaticScoreMappingQuality-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
-my $output_file_m50_s50     = $test_output_dir . '/snvs.hq.bed';
-my $lq_output_file_m50_s50     = $test_output_dir . '/snvs.lq.bed';
-my $high_confidence_m50_s50 = Genome::Model::Tools::DetectVariants2::Filter::SomaticScoreMappingQuality->create(
-    input_directory     => $test_input_dir,
-    aligned_reads_input => $tumor_bam_file,
-    output_directory    => $test_output_dir,
-    reference_sequence_input => $refseq,
-    min_mapping_quality => 50,
-    min_somatic_quality => 50,
-);
+my @files = qw| snvs.hq
+                snvs.lq
+                snvs.hq.bed
+                snvs.lq.bed |;
 
-ok($high_confidence_m50_s50, 'created SomaticScoreMappingQuality object (quality minima: mapping 50, quality 50)');
-ok($high_confidence_m50_s50->execute(), 'executed SomaticScoreMappingQuality object');
-ok(-s $output_file_m50_s50, 'generated an output file');
-print "diffing $output_file_m50_s50, $map50_somatic50_expected $lq_output_file_m50_s50, $map50_somatic50_expected_lq\n";
-is(compare($output_file_m50_s50, $map50_somatic50_expected), 0, 'output matched expected output');
-is(compare($lq_output_file_m50_s50, $map50_somatic50_expected_lq), 0, 'output matched expected output for lq file');
+for my $file (@files) {
+    my $test_output = $test_output_dir."/".$file;
+    my $expected_output = $expected_output."/".$file;
+    is(compare($test_output,$expected_output),0, "Found no difference between test output: ".$test_output." and expected output:".$expected_output);
+}
 
-# Test mapping quality 10, somatic quality 50, and verify the contents of the hq and lq files
-$test_output_dir = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Filter-SomaticScoreMappingQuality-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
-my $output_file_m10_s50     = $test_output_dir . '/snvs.hq.bed';
-my $lq_output_file_m10_s50     = $test_output_dir . '/snvs.lq.bed';
-my $high_confidence_m10_s50 = Genome::Model::Tools::DetectVariants2::Filter::SomaticScoreMappingQuality->create(
-    input_directory     => $test_input_dir,
-    aligned_reads_input => $tumor_bam_file,
-    output_directory    => $test_output_dir,
-    reference_sequence_input => $refseq,
-    min_mapping_quality => 10,
-    min_somatic_quality => 50,
-);
-
-ok($high_confidence_m10_s50, 'created SomaticScoreMappingQuality object (quality minima: mapping 10, quality 50)');
-ok($high_confidence_m10_s50->execute(), 'executed SomaticScoreMappingQuality object');
-ok(-s $output_file_m10_s50, 'generated an output file');
-print "diffing $output_file_m10_s50, $map10_somatic50_expected $lq_output_file_m10_s50, $map10_somatic50_expected_lq\n";
-is(compare($output_file_m10_s50, $map10_somatic50_expected), 0, 'output matched expected output');
-is(compare($lq_output_file_m10_s50, $map10_somatic50_expected_lq), 0, 'output matched expected output for lq file');
-
-# Test mapping quality 10, somatic quality 80, and verify the contents of the hq and lq files
-$test_output_dir = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Filter-SomaticScoreMappingQuality-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
-
-my $output_file_m10_s80     = $test_output_dir . '/snvs.hq.bed';
-my $lq_output_file_m10_s80     = $test_output_dir . '/snvs.lq.bed';
-my $high_confidence_m10_s80 = Genome::Model::Tools::DetectVariants2::Filter::SomaticScoreMappingQuality->create(
-    input_directory     => $test_input_dir,
-    aligned_reads_input => $tumor_bam_file,
-    output_directory    => $test_output_dir,
-    reference_sequence_input => $refseq,
-    min_mapping_quality => 10,
-    min_somatic_quality => 80,
-);
-
-ok($high_confidence_m10_s80, 'created SomaticScoreMappingQuality object (quality minima: mapping 10, quality 80)');
-ok($high_confidence_m10_s80->execute(), 'executed SomaticScoreMappingQuality object');
-ok(-s $output_file_m10_s80, 'generated an output file');
-is(compare($output_file_m10_s80, $map10_somatic80_expected), 0, 'output matched expected output');
-is(compare($lq_output_file_m10_s80, $map10_somatic80_expected_lq), 0, 'output matched expected output for lq file');
