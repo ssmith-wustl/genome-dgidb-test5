@@ -39,7 +39,6 @@ use XML::DOM::XPath;
 
 class Genome::Model::GenePrediction::Command::Bacterial::Merge {
     is  => 'Command',
-    doc => "",
     has => [
         sequence_set_id => {
             is  => 'Integer',
@@ -55,11 +54,6 @@ class Genome::Model::GenePrediction::Command::Bacterial::Merge {
             is => 'Scalar',
             doc => "alternative path to iprscan",
             default => "/gsc/scripts/bin/iprscan",
-        },
-        use_local_nr => {
-            is => 'Boolean',
-            default => 1,
-            doc => 'If set, blast jobs use a locally installed copy of the NR database',
         },
         runner_count => {
             is  => 'Integer',
@@ -77,8 +71,7 @@ class Genome::Model::GenePrediction::Command::Bacterial::Merge {
         only_phase => {
             is  => 'Integer',
             doc => "only run specified phase (1,2,3,4,or 5)",
-
-            # what's the format to limit this to specific things?
+            valid_values => ['1', '2', '3', '4', '5'],
         },
         debug_file => {
             is  => 'String',
@@ -195,9 +188,6 @@ sub execute
     my $self = shift;
     my $user = $ENV{USER};
 
-    $self->status_message("Skipping merge step");
-    return 1;
-
     $self->status_message("iprpath : ".$self->iprpath);
 
     my $runner_count = $self->runner_count;
@@ -244,7 +234,6 @@ sub execute
     # verbose to -1 suppresses these warnings and keeps the error log from being
     # filled with hundreds of thousands of lines of warning messages.
     $rfam_io->verbose(-1);
-    $DB::single = 1;
     while (my $aln = $rfam_io->next_aln) {
         my $accession   = $aln->accession();
         my $description = $aln->description();
@@ -289,16 +278,6 @@ sub execute
         maxmessage   => 81920000,
         lib_paths    => [ UR::Util::used_libs ],
     );
-
-    # Selecting blades that have NR cached locally only makes sense if we are actually 
-    # gonna use the local database. However, the leading single quote of the arguments 
-    # to R needs to be removed before prepending the select localdata bit.
-    if ($self->use_local_nr) {
-        my $r_arg = $rpc_args{'R'};
-        $r_arg = substr($r_arg, 1);  # Removing leading single quote
-        $r_arg = "'select[localdata] " . $r_arg;
-        $rpc_args{'R'} = $r_arg;
-    }
 
     if ( defined( $self->job_stdout ) ) {
         $rpc_args{'o'} = $self->job_stdout;
@@ -655,7 +634,7 @@ sub phase3
 
     my $job_source
         = BAP::JobSource::InterGenicBlastX->new( $seqstream, $featstream,
-        $self->nr_db, $self->rpc_core_number, $self->use_local_nr );
+        $self->nr_db, $self->rpc_core_number);
 
     local $rpc_args{job_source} = $job_source;
 
@@ -1046,7 +1025,7 @@ sub blastp
     my ( $fasta_file, $blast_db ) = @_;
 
     my $job_source = BAP::JobSource::Phase2BlastP->new( $blast_db, $fasta_file,
-        $self->rpc_core_number, $self->use_local_nr);
+        $self->rpc_core_number);
     local $rpc_args{'job_source'} = $job_source;
     my $server = PP::RPC->new(%rpc_args);
 
