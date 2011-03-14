@@ -40,6 +40,7 @@ class Genome::Model::Tools::Varscan::ProcessSomatic {
         output_somatic        => { is => 'Text', calculate_from => 'output_basename', calculate => q{ $output_basename . '.Somatic' }, is_output => 1, },
         output_somatic_hc     => { is => 'Text', calculate_from => 'output_somatic', calculate => q{ $output_somatic . '.hc' }, is_output => 1, },
         output_somatic_lc     => { is => 'Text', calculate_from => 'output_somatic', calculate => q{ $output_somatic . '.lc' }, is_output => 1, },
+        output_other          => { is => 'Text', calculate_from => 'output_basename', calculate => q{ $output_basename . '.other' }, is_output => 1, },
     ],
     has_param => [
         lsf_resource => { value => 'select[tmp>1000] rusage[tmp=1000]'},
@@ -257,6 +258,14 @@ sub process_results {
 
             print "\t$numHiConf high confidence\n";
             print "\t$numLowConf low confidence\n";
+        } else {
+            # Print all non-LOH/Somatic/Germline things to the "other" filehandle so we account for all variants that come into the tool
+            if(!$report_only) {
+                my $other_fh = Genome::Sys->open_file_for_appending($self->output_other);
+                foreach my $line (@lines) {
+                    $other_fh->print("$line\n");
+                }
+            }
         }
     }
 
