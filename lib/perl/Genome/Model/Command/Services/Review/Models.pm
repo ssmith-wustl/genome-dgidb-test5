@@ -8,6 +8,7 @@ class Genome::Model::Command::Services::Review::Models {
             is => 'Genome::Model',
             is_many => 1,
             shell_args_position => 1,
+            require_user_verify => 0,
         },
     ],
 };
@@ -19,8 +20,6 @@ use Genome;
 sub execute {
     my $self = shift;
 
-    my $user = getpwuid($<);
-
     my @models = $self->models;
 
     my %models = map { my $model_id = $_->id; $model_id => $_; } @models;
@@ -30,7 +29,7 @@ sub execute {
         my $model = $models{$model_id};
 
         my @builds = $model->builds;
-        @builds = grep { $_->run_by eq $user } @builds;
+        @builds = grep { $_->run_by eq 'apipe-builder' || $_->run_by eq 'ebelter' } @builds;
         @builds = @builds[-3..-1] if (@builds > 3);
 
         my @bad_builds = grep { $_->status eq 'Failed' or $_->status eq 'Abandoned' } @builds;
@@ -38,49 +37,62 @@ sub execute {
         my $current_version = $self->current_version();
         my @instrument_data = $model->instrument_data;
 
+        if (my $known_issue = $self->known_issue($model)) {
+            $self->print_action_for_model($model, $known_issue);
+            next;
+        }
         if (@builds == 0) {
-            $action{$model_id} = 'start new build';
+            $self->print_action_for_model($model, 'start new build');
             next;
         }
         if ($latest_build->status eq 'Succeeded') {
-            $action{$model_id} = 'remove old fails';
+            $self->print_action_for_model($model, 'remove old fails');
             next;
         }
         if (@bad_builds >= 3) {
-            $action{$model_id} = 'investigate';
+            $self->print_action_for_model($model, 'investigate');
             next;
         }
         if ($latest_build->status eq 'Scheduled') {
-            $action{$model_id} = 'already scheduled';
+            $self->print_action_for_model($model, 'already scheduled');
             next;
         }
         if ($latest_build->status eq 'Running') {
-            $action{$model_id} = 'already running';
+            $self->print_action_for_model($model, 'already running');
             next;
         }
         if (@instrument_data == 0) {
-            $action{$model_id} = 'assign instrument data';
+            $self->print_action_for_model($model, 'assign instrument data');
             next;
         }
         if ($latest_build->status eq 'Abandoned') {
-            $action{$model_id} = 'start new build';
+            $self->print_action_for_model($model, 'start new build');
             next;
         }
         if ($latest_build->status eq 'Failed') {
-            if ($latest_build->software_revision =~ /$current_version/) {
-                $action{$model_id} = 'restart build';
+            if ($latest_build->software_revision && $latest_build->software_revision =~ /$current_version/) {
+                $self->print_action_for_model($model, 'restart build');
                 next;
             }
             else {
-                $action{$model_id} = 'start new build';
+                $self->print_action_for_model($model, 'start new build');
                 next;
             }
         }
     }
 
-    for my $model_id (keys %models) {
-        print "$model_id\t" . $action{$model_id} . "\n";
-    }
+    return 1;
+}
+
+sub print_action_for_model {
+    my $self = shift;
+    my $model = shift;
+    my $action = shift;
+    
+    my $model_id = $model->id;
+    my $pp_name = $model->processing_profile->name;
+
+    print "$model_id\t$pp_name\t" . $action . "\n";
 
     return 1;
 }
@@ -89,4 +101,18 @@ sub current_version {
     my $self = shift;
     my $symlink_path = readlink('/gsc/scripts/opt/genome/current/pipeline') || die;
     my $version = (split('/', $symlink_path))[-1];
+}
+
+sub known_issue {
+    my $self = shift;
+    my $model = shift;
+
+    if ($model->region_of_interest_set_name && $model->region_of_interest_set_name eq 'hg18 nimblegen exome version 2') {
+        return 'known issue: feature list, hg18 nimblegen exome version 2, contains chromosome not in human 36';
+    }
+    if ($model->region_of_interest_set_name && $model->region_of_interest_set_name eq 'hg19 nimblegen exome version 2') {
+        return 'known issue: feature list, hg19 nimblegen exome version 2, contains chromosome not in GRCh37-lite-build37';
+    }
+
+    return;
 }
