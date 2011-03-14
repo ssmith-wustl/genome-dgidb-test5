@@ -24,7 +24,7 @@ my $expected_directory = $test_data_directory . "/expected";
 my $detector_directory = $test_data_directory . "/samtools-r599-";
 my $tumor_bam_file  = $test_data_directory. '/flank_tumor_sorted.bam';
 my $normal_bam_file  = $test_data_directory. '/flank_normal_sorted.bam';
-my $test_output_dir = '/gscuser/rlong/disp/snp';#File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Filter-SnpFilter-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+my $test_output_dir = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Filter-SnpFilter-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 
 my @expected_output_files = qw| snvs.hq
                                 snvs.hq.bed
