@@ -184,12 +184,12 @@ class Genome::Sample {
             is_many => 1,
         },
         # TODO These can be removed when project is refactored
-        project_assignments          => { is => 'Genome::Sample::ProjectAssignment', reverse_id_by => 'sample', is_many => 1 },
+        project_assignments          => { is => 'Genome::Sample::ProjectAssignment', reverse_as => 'sample', is_many => 1 },
         projects                     => { is => 'Genome::Site::WUGC::Project', via => 'project_assignments', to => 'project', is_many => 1},
     ],
     has_many => [
-        libraries                   => { is => 'Genome::Library', reverse_id_by => 'sample' },
-        solexa_lanes                => { is => 'Genome::InstrumentData::Solexa', reverse_id_by => 'sample' },
+        libraries                   => { is => 'Genome::Library', reverse_as => 'sample' },
+        solexa_lanes                => { is => 'Genome::InstrumentData::Solexa', reverse_as => 'sample' },
         solexa_lane_names           => { via => 'solexa_lanes', to => 'full_name' },
     ],
 
