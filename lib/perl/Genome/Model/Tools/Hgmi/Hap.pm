@@ -34,73 +34,50 @@ use File::Spec;
 use YAML qw( LoadFile DumpFile );
 use Data::Dumper;
 
-# should have a crap load of options.
-UR::Object::Type->define(
-    class_name => __PACKAGE__,
-    is         => 'Command',
-    has        => [
-        'config' => {
+class Genome::Model::Tools::Hgmi::Hap (
+    is => 'Command',
+    has => [
+        config => {
             is  => 'String',
-            doc => "YAML file for reading"
+            doc => 'YAML file for reading',
         },
-        'gen_example' => {
-            is          => 'Boolean',
-            doc         => "Generate an example yaml config file",
-            is_optional => 1
+    ],
+    has_optional => [
+        gen_example => {
+            is => 'Boolean',
+            doc => 'Generate an example yaml config file',
         },
-        'internalhash' => {
-            is          => 'HashRef',
-            doc         => "internal",
-            is_optional => 1
+        internalhash => {
+            is => 'HashRef',
+            is_transient => 1,
+            doc => 'internal',
         },
-        'dev' => {
-            is          => 'Boolean',
-            doc         => "development flag for testing",
-            is_optional => 1
+        dev => {
+            is => 'Boolean',
+            doc => 'development flag for testing',
         },
-        'skip_core_check' => {
-            is          => 'Boolean',
-            doc         => "skips core genes check",
-            is_optional => 1,
-            default     => 0,
+        skip_core_check => {
+            is => 'Boolean',
+            doc => 'skips core genes check',
+            default => 0,
         },
-        'skip_ber' => {
-            is          => 'Boolean',
-            doc         => "skips the JCVI product naming tools",
-            is_optional => 1,
-            default     => 0,
+        skip_ber => {
+            is => 'Boolean',
+            doc => 'skips the JCVI product naming tools',
+            default => 0,
         },
-        'skip_protein_annotation' => {
-            is          => 'Boolean',
-            doc         => "skips running bap_finish, protein annotation and ber",
-            is_optional => 1,
-            default     => 0,
+        skip_protein_annotation => {
+            is => 'Boolean',
+            doc => 'skips running bap_finish, protein annotation and ber',
+            default => 0,
         },
     ]
 );
 
-sub help_brief
-{
-    "Runs the entire HGMI tools pipeline";
-}
-
-sub help_synopsis
-{
-    my $self = shift;
-    return <<"EOS"
-For running the entire HGMI tools pipeline.
-EOS
-
-}
-
-sub help_detail
-{
-    my $self = shift;
-    return <<"EOS"
-For running the entire HGMI tools pipeline.
-Takes in a YAML file for configuration parameters and then runs each tool
-for the HGMI pipeline.
-EOS
+sub help_brief { return 'Runs the HGMI tools pipeline' }
+sub help_synopsis { help_brief() }
+sub help_detail {
+    return 'Runs the entire HGMI pipeline, includes prediction, merging, finishing, PAP, and BER';
 }
 
 sub execute {
@@ -118,6 +95,7 @@ sub execute {
         $self->skip_core_check(1);
     }
 
+    # FIXME This directory structure can really be simplified
     $self->status_message("Creating directory structure.");
 
     # Directory structure is created
@@ -133,7 +111,7 @@ sub execute {
     my $dir_build_rv = $dir_builder->execute;
     confess "Trouble executing directory builder!" unless defined $dir_build_rv and $dir_build_rv == 1;
 
-    $self->status_message("Directories created, now collectin sequence!");
+    $self->status_message("Directories created, now collecting sequence!");
 
     # FIXME Should not be changing directories like this
     my $next_dir = $config->{path} . "/"
