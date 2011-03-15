@@ -201,6 +201,7 @@ sub _filter_variants {
         input_files => [$self->aligned_reads_input],
         output_files => [$readcount_file],
     );
+    $self->status_message('Done running BAM Readcounts.');
 
     my $readcounts = Genome::Sys->read_file($readcount_file);
     chomp($readcounts) if($readcounts);
