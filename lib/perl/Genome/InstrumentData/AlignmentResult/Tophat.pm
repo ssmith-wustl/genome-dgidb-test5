@@ -110,6 +110,7 @@ sub create {
 
     #This will do some locking and the like for us.
     my $self = $class->SUPER::create(@_);
+    return unless ($self);
 
     my $rv = eval {
         $self->status_message('Preparing directories...');
