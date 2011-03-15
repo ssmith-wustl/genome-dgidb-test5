@@ -61,9 +61,9 @@ class Genome::Site::WUGC::InstrumentData {
                '1' subset_name,
                libsum.library_id
           FROM gsc_run\@oltp sanger
-          LEFT JOIN misc_attribute library_misc
+          JOIN misc_attribute library_misc
             on library_misc.entity_id = sanger.run_name
-            and library_misc.entity_class_name = 'Genome::Site::WUGC::InstrumentData::Sanger'
+            and library_misc.entity_class_name = 'Genome::InstrumentData::Sanger'
             and library_misc.property_name = 'library_name'
           LEFT JOIN gsc.library_summary libsum on libsum.full_name = library_misc.value
     ) idata
@@ -82,8 +82,11 @@ EOS
     ],
     has_optional => [        
         library_id          =>  { is => 'VARCHAR2', len => 15 },
-        library             =>  { is => 'Genome::Site::WUGC::Library', id_by => 'library_id' },
+        library             =>  { is => 'Genome::Library', id_by => 'library_id' },
         library_name        =>  { via => 'library', to => 'name' },
+
+        # Library id is overridden in some subclasses, having this alias allows the actual db value to be accessed in that case.
+        library_summary_id  =>  { calculate_from => 'library_id', calculate => q{ return $library_id } },
 
         sample_id           =>  { is => 'Number', via => 'library' },
         sample              =>  { is => 'Genome::Site::WUGC::Sample', id_by => 'sample_id' },
