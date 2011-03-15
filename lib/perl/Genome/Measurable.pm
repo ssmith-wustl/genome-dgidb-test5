@@ -30,9 +30,15 @@ class Genome::Measurable {
         # disk
         disk_allocation => {
             is => 'Genome::Disk::Allocation', 
-            is_many => 1,
-            reverse_as => 'owner',
-            is_optional => 1,
+            calculate_from => [ 'class', 'id' ],
+            calculate => sub{
+                my ($class, $id) = @_;
+                my $disk_allocation = Genome::Disk::Allocation->get(
+                    owner_class_name => $class,
+                    owner_id => $id,
+                );
+                return $disk_allocation;
+            },
         },
         data_directory => { is => 'Text', via => 'disk_allocation', to => 'absolute_path', },
 
