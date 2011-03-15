@@ -46,9 +46,8 @@ class Genome::Subject {
             is => 'Genome::Disk::Allocation', 
             calculate_from => [ 'subclass_name', 'id' ],
             calculate => q{
-                my ($class, $id) = @_;
                 my $disk_allocation = Genome::Disk::Allocation->get(
-                    owner_class_name => $class,
+                    owner_class_name => $subclass_name,
                     owner_id => $id,
                 );
                 return $disk_allocation;
@@ -58,7 +57,6 @@ class Genome::Subject {
             is => 'Text', 
             calculate_from => 'disk_allocation',
             calculate => q{
-                my $disk_allocation = shift;
                 return unless $disk_allocation;
                 return $disk_allocation->absolute_path;
             },
