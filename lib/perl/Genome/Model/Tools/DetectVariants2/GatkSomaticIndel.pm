@@ -38,6 +38,7 @@ sub _detect_variants {
         normal_bam => $self->control_aligned_reads_input,
         output_file => $self->_temp_staging_directory."/gatk_output_file",
         bed_output_file => $self->_temp_staging_directory."/indels.hq",
+        mb_of_ram => $self->mb_of_ram,
     );
     unless($gatk_cmd->execute){
         $self->error_message("Failed to run GATK command.");
