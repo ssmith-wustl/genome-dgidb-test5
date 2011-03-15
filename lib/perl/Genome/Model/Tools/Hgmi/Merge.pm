@@ -107,15 +107,13 @@ sub execute
     my $self = shift;
 
     my %params = $self->gather_details();
-
-    $self->status_message("running merge now");
-    my $rv = Genome::Model::GenePrediction::Command::Bacterial::Merge->execute(%params);
     $params{iprpath} = $self->iprpath;
+    
+    $self->status_message("Gathered params, now running merge:\n" . Data::Dumper::Dumper(\%params));
+    my $rv = Genome::Model::GenePrediction::Command::Bacterial::Merge->execute(%params);
 
     unless($rv) {
-        $self->error_message("can't run merge step");
-        # do we need to croak or exit here? or just a return 0?
-        return 0;
+        confess 'Could not run merge step!';
     }
 
     # executed successfully
