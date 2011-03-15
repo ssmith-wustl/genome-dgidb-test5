@@ -107,7 +107,7 @@ class Genome::Model::Tools::DetectVariants2::Filter::FalsePositive {
              default_value => 'long',
          }, 
          lsf_resource => {
-             default_value => "-M 8000000 -R 'select[type==LINUX64 && mem>8000] rusage[mem=8000]'",
+             default_value => "-M 16000000 -R 'select[type==LINUX64 && mem>16000] rusage[mem=16000]'",
          },
      ],
 

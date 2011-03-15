@@ -149,6 +149,7 @@ sub _detect_variants {
     $input->{output_directory} = $self->_temp_staging_directory;
    
     $self->_dump_workflow($workflow);
+    $self->_dump_dv_cmd;
 
     $self->status_message("Now launching the dispatcher workflow.");
     ## Worklow launches here
@@ -172,6 +173,24 @@ sub _dump_workflow {
     print $xml_file $xml;
     $xml_file->close;
     #$workflow->as_png($self->output_directory."/workflow.png"); #currently commented out because blades do not all have the "dot" library to use graphviz
+}
+
+sub _dump_dv_cmd {
+    my $self = shift;
+    my $cmd =   "gmt detect-variants2 dispatcher --output-directory ".$self->output_directory
+                ." --aligned-reads-input ".$self->aligned_reads_input
+                ." --control-aligned-reads-input ".$self->control_aligned_reads_input
+                ." --reference-sequence-input ".$self->reference_sequence_input;
+    for my $var ('snv','sv','indel'){
+        my $strat = $var."_detection_strategy";
+        if(defined($self->$strat)){
+            $cmd .= " --".$strat." \'".$self->$strat->id."\'";
+        }
+    }
+    my $dfh = Genome::Sys->open_file_for_writing($self->output_directory."/dispatcher.cmd");
+    print $dfh $cmd."\n";
+    $dfh->close;
+    return 1;
 }
 
 sub get_relative_path_to_output_directory {
