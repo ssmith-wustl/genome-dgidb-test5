@@ -114,7 +114,7 @@ sub execute {                               # replace with real execution logic.
 
 		## Format GATK Indels ##
 
-		if($self->skip_if_output_present && -e $formatted_output_file)
+		if($self->skip_if_output_present && -s $formatted_output_file)
 		{
 			
 		}
@@ -134,7 +134,7 @@ sub execute {                               # replace with real execution logic.
 
 		if($self->somatic_file)
 		{
-			if($self->skip_if_output_present && -e $self->somatic_file)
+			if($self->skip_if_output_present && -s $self->somatic_file)
 			{
 				
 			}
