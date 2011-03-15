@@ -52,10 +52,10 @@ sub full_path {
 sub _full_path {
     my $self = shift;
 
-    my ($full_path_attr) = grep { $_->property_name eq 'full_path' } $self->attributes;
+    my ($full_path_attr) = grep { $_->attribute_label eq 'full_path' } $self->attributes;
     return unless $full_path_attr;
     
-    my $full_path = $full_path_attr->value;
+    my $full_path = $full_path_attr->attribute_value;
     return $full_path if -d $full_path;
     
     return;
