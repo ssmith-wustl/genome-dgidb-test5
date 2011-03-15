@@ -7,6 +7,7 @@ use strict;
 use warnings;
 
 use Genome;
+use CGI;
 
 use IO::String;
 use Template;

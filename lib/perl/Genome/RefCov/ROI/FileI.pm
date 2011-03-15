@@ -143,7 +143,7 @@ sub _add_region {
     }
     if ($self->make_objects) {
         # This is only necessary to perform arithmetic operations
-        $region = Genome::RefCov::ROI::Region(%{$region});
+        $region = Genome::RefCov::ROI::Region->create(%{$region});
     }
     push @{$self->{chrom_regions}->{$chrom}}, $region;
     return 1;

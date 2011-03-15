@@ -266,7 +266,8 @@ sub default_filenames{
         ## Combined glfSomatic+Varscan Output files ##
         merged_snp_output                   => 'merged.somatic.snp',            ## Generated from merge-variants of somaticSniper and varScan
         merged_indel_output                 => 'merged.somatic.indel',          ## Generated from merge-variants of somaticSniper and varScan ##
-        merged_indel_output_filter          => 'merged.somatic.indel.filter',          ## The homopolymer-filtered list of indels ##
+        merged_indel_output_filter          => 'merged.somatic.indel.filter',          ## The fp-filtered list of indels ##
+        merged_indel_output_filter_rem          => 'merged.somatic.indel.filter.removed',          ## The fp-filter removed list of indels ##
 
         ## Strand Filtering and Lookup Variants Files ##
         merged_snp_output_filter        => 'merged.somatic.snp.filter',
