@@ -44,12 +44,6 @@ class Genome::Model::Command::Define::GenePrediction::Bacterial {
             default => '/gscmnt/gpfstest2/analysis/blast_db/gsc_bacterial/bacterial_nr/bacterial_nr',
             doc => 'Default location of the NR database, may be overridden with a local copy if specified',
         },
-        use_local_nr => {
-            is => 'Boolean',
-            default => 0,
-            doc => 'If set, local NR databases are used by blast jobs instead of accessing ' .
-                   'the default location over the network',
-        },
     ],
 };
 
@@ -95,7 +89,6 @@ sub type_specific_parameters_for_create {
         create_assembly_model => $self->create_assembly_model, 
         start_assembly_build => $self->start_assembly_build,
         assembly_processing_profile_name => $self->assembly_processing_profile_name,
-        use_local_nr => $self->use_local_nr,
         nr_database_location => $self->nr_database_location,
         acedb_version => $self->acedb_version,
         pipeline_version => $self->pipeline_version,

@@ -30,7 +30,7 @@ sub _run_aligner {
     
     # collect filepaths
     my $ssaha_path = Genome::Model::Tools::Ssaha2->path_for_ssaha2_version($self->aligner_version);
-    my $ref_index = $self->reference_build->full_consensus_path('ssaha2.body');
+    my $ref_index = $self->get_reference_sequence_index->full_consensus_path('fa.ssaha2.body');
     $ref_index =~ s/\.body$//;;  # all we want to pass is all_sequences.ssaha2
     
     unless (defined $ref_index && -s $ref_index) {
@@ -108,4 +108,54 @@ sub _check_read_count {
     $self->warning_message("SSAHA2 does not support outputting unaligned reads.  Cannot verify read count against original fasta.");
     return 1;
 }
+
+
+sub prepare_reference_sequence_index {
+    my $class = shift;
+    my $refindex = shift;
+
+    my $aligner_params = $refindex->aligner_params;
+    my $reference_build_params = ""; 
+    if ($aligner_params =~ m/rtype (.*?)/)  {
+        $reference_build_params .= " -rtype $1";
+    }
+    if ($aligner_params =~ m/kmer\s*(.*?)(\s.*|)$/) {
+        $reference_build_params .= " -kmer $1";
+    }
+    if ($aligner_params =~ m/skip\s*(.*?)(\s.*|)$/) {
+        $reference_build_params .= " -skip $1";
+    }
+
+    my $staging_dir = $refindex->temp_staging_directory;
+    my $staged_fasta_file = sprintf("%s/all_sequences.fa", $staging_dir);
+    my $target_fasta_file = readlink($staged_fasta_file);
+    unless ($target_fasta_file) {
+        $class->error_message("Cant resolve the target of the fasta symlink dropped in the staging directory.");
+        return;
+    }
+    unless (symlink($target_fasta_file, $staged_fasta_file.'.ssaha2')) {
+        $class->error_message("Couldn't make an all_sequences.fa.ssaha2 symlink to the raw fasta file");
+        return;
+    }
+        
+    
+
+    my $ss_path = Genome::Model::Tools::Ssaha2->path_for_ssaha2_version($refindex->aligner_version);
+    my $ss_cmd = sprintf('%sBuild %s -save %s.ssaha2 %s', $ss_path, $reference_build_params, $staged_fasta_file, $staged_fasta_file);
+    my $rv = Genome::Sys->shellcmd(
+        cmd => $ss_cmd,
+    );
+
+    unless($rv) {
+        $class->error_message('ssaha2 indexing failed');
+        return;
+    }
+
+    return 1;
+}
+
+sub aligner_params_required_for_index {
+    return 1;
+}
+
 

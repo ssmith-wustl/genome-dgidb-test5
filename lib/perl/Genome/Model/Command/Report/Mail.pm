@@ -204,7 +204,6 @@ sub send_mail {
                             to => $recipients,
                             from => 'apipe@genome.wustl.edu',
                             subject => $subject,
-                            #debug => '/gscuser/ssmith/svn/pmr3/Genome/err.log',
                             multipart => 'related',
                             on_error => 'die',
                     }

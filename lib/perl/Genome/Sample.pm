@@ -11,7 +11,11 @@ package Genome::Sample;
 
 use strict;
 use warnings;
+
 use Genome;
+
+require Carp;
+use Data::Dumper 'Dumper';
 
 =pod
 
@@ -61,7 +65,7 @@ class Genome::Sample {
                                         column_name => 'FULL_NAME',
                                     },
         subject_type => { is => 'Text', is_constant => 1, value => 'organism sample', column_name => '', },
-        _nomenclature                => { column_name => 'NOMENCLATURE', default_value => "WUGC" }, 
+        nomenclature                => { column_name => 'NOMENCLATURE', default_value => "WUGC" }, 
 
     ],
     has_optional => [	
@@ -151,8 +155,8 @@ class Genome::Sample {
 
         project_assignments          => { is => 'Genome::Sample::ProjectAssignment', reverse_id_by => 'sample', is_many => 1 },
         projects                     => { is => 'Genome::Site::WUGC::Project', via => 'project_assignments', to => 'project', is_many => 1},
-    ],
-    has_many => [
+        ],
+        has_many => [
         attributes                  => { is => 'Genome::Sample::Attribute', reverse_as => 'sample', specify_by => 'name', is_optional => 1, is_many => 1, },
         libraries                   => { is => 'Genome::Library', reverse_id_by => 'sample' },
         solexa_lanes                => { is => 'Genome::InstrumentData::Solexa', reverse_id_by => 'sample' },
@@ -165,16 +169,6 @@ class Genome::Sample {
 sub __display_name__ {
     my $self = $_[0];
     return $self->name . ($self->patient_common_name ? ' (' . $self->patient_common_name . ' ' . $self->common_name . ')' : '');
-}
-
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    return if not defined $self;
-
-    # FIXME add tissue, nomenclature?
-
-    return $self;
 }
 
 sub sample_type {

@@ -68,7 +68,7 @@ sub execute {
     my $gene = $self->gene;
 
     unless ($transcript || $gene) {
-	App->error_message("\nyou need to provide either a hugo gene name or a transcript name\n\n"); return;
+	$self->error_message("\nyou need to provide either a hugo gene name or a transcript name\n\n"); return;
     }
 
     my $amino_acid = $self->amino_acid_substitution;
@@ -86,26 +86,26 @@ sub execute {
 
     my $output = $self->output;
     if ($output) {
-	open(OUT,">$output.txt") || App->error_message("couldn't open the output file $output.txt") && return;
+	open(OUT,">$output.txt") || $self->error_message("couldn't open the output file $output.txt") && return;
     }
     my @results;
     for my $transcript (@transcripts) {
 
 	my $TranscriptSequence = Genome::Model::Tools::Annotate::TranscriptSequence->create(transcript => $transcript, organism => $organism, version => $version, no_stdout => "1");
-	unless ($TranscriptSequence) { App->error_message("couldn't create a transcript sequence object for $transcript"); next;}
+	unless ($TranscriptSequence) { $self->error_message("couldn't create a transcript sequence object for $transcript"); next;}
 	
 	my ($transcript_info) = $TranscriptSequence->execute();
-	unless ($transcript_info) { App->error_message("couldn't execute the transcript sequence object for $transcript"); next;}
+	unless ($transcript_info) { $self->error_message("couldn't execute the transcript sequence object for $transcript"); next;}
 	
 	my @positions = &get_positions ($transcript_info,$transcript);
-	unless (@positions) { App->error_message("couldn't extract positions from the transcript sequence object for $transcript"); next;}
+	unless (@positions) { $self->error_message("couldn't extract positions from the transcript sequence object for $transcript"); next;}
 	
 	my @amino_acid_subs = split(/\,/,$amino_acid);
 	for my $nsprotein (@amino_acid_subs) { #nsprotein nonsynonymous protein
 	    
 	    my ($taa,$protein_number,$daa) = $nsprotein =~ /^(\D)([\d]+)(\D)$/;
 	    unless ($taa && $protein_number && $daa) {
-		App->error_message("\n$nsprotein is an invalid format. The amino acid change should be represented in this format => P2249A. $nsprotein will be skipped.\n\n");
+		$self->error_message("\n$nsprotein is an invalid format. The amino acid change should be represented in this format => P2249A. $nsprotein will be skipped.\n\n");
 		if ($output) {
 		    print OUT qq(\n$nsprotein is an invalid format. The amino acid change should be represented in this format => P2249A. $nsprotein will be skipped.\n\n);
 		} 
@@ -114,7 +114,7 @@ sub execute {
 	    $taa =~ s/(\D)/\U$1/;
 	    $daa =~ s/(\D)/\U$1/;
 	    unless ($taa =~ /[C,H,I,M,S,V,A,G,L,P,T,R,F,Y,W,D,N,E,Q,K]/ && $daa =~ /[C,H,I,M,S,V,A,G,L,P,T,R,F,Y,W,D,N,E,Q,K]/) {
-		App->error_message("\n$nsprotein is an invalid format. The amino acids most be one of twenty found in a protein chain. $nsprotein will be skipped.\n\n");
+		$self->error_message("\n$nsprotein is an invalid format. The amino acids most be one of twenty found in a protein chain. $nsprotein will be skipped.\n\n");
 		if ($output) {
 		    print OUT qq(\n$nsprotein is an invalid format. The amino acids most be one of twenty found in a protein chain. $nsprotein will be skipped.\n\n);
 		} 
@@ -123,7 +123,7 @@ sub execute {
 	    
 	    my ($p1,$p2,$p3,$b1,$b2,$b3) = &get_codon ($transcript_info,$transcript,$protein_number,@positions);
 	    unless ($p1 && $p2 && $p3 && $b1 && $b2 && $b3) {  
-		App->error_message("\nCouldn't identify the target codon $protein_number in $transcript.  $nsprotein will be skipped for $transcript.\n\n");
+		$self->error_message("\nCouldn't identify the target codon $protein_number in $transcript.  $nsprotein will be skipped for $transcript.\n\n");
 		if ($output) {
 		    print OUT qq(\nCouldn't identify the target codon $protein_number in $transcript.  $nsprotein will be skipped for $transcript.\n\n);
 		} 
@@ -132,7 +132,7 @@ sub execute {
 	    
 	    my ($result) = &get_result($p1,$p2,$p3,$b1,$b2,$b3,$transcript,$taa,$protein_number,$daa);
 	    unless ($result) {
-		App->error_message("\nNo result was found for $nsprotein in $transcript. $nsprotein will be skipped for $transcript.\n\n");
+		$self->error_message("\nNo result was found for $nsprotein in $transcript. $nsprotein will be skipped for $transcript.\n\n");
 		if ($output) {
 		    print OUT qq(\nNo result was found for $nsprotein in $transcript.  $nsprotein will be skipped for $transcript.\n\n);
 		} 

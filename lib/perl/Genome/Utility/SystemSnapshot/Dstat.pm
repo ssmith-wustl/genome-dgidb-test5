@@ -28,7 +28,14 @@ sub pre_run {
     warn "comand not found: $cmd: NOT profiling";
     return;
   }
-  my $args = "-Tcldigmnpsy --ipc --lock --tcp --udp --unix --output $self->{metrics}";
+  #my $args = "-Tcldigmnpsy --ipc --lock --tcp --udp --unix --output $self->{metrics}";
+  my $args;
+  if ($ENV{DSTAT_ARGS}) {
+      $args = "--output $self->{metrics} ";
+      $args .= $ENV{DSTAT_ARGS};
+  } else {
+      $args = "-Tcldigmnpsy --ipc --lock --tcp --udp --unix --output $self->{metrics}";
+  }
 
   # Add a command to a condition variable event loop.
   # This gets started by our caller's use of $cmd_cv->recv;

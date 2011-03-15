@@ -167,7 +167,7 @@ sub resolve_param_value_from_text {
         push @results, @results_by_string;
     }
     # if we still don't have any values then try via alternate class
-    if (!@results && $param_arg !~ /,/) {
+    if (!@results) {
         @results = $self->_resolve_param_value_via_related_class_method($param_class, $param_arg, $via_method);
     }
 
@@ -593,6 +593,7 @@ sub _params_to_resolve {
         my @params_may_require_verification;
 
         for my $param_name (keys %$params) {
+            next if ($param_name eq 'help');
             my $pmeta = $cmeta->property($param_name); 
             unless ($pmeta) {
                 # This message was a die after a next, so I guess it isn't supposed to be fatal?

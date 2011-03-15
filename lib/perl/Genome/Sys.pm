@@ -69,7 +69,7 @@ sub base_temp_directory {
     unless ($template) {
         my $prefix = $self->_temp_directory_prefix();
         $prefix ||= $class;
-        my $time = UR::Time->now;
+        my $time = $self->__context__->now;
 
         $time =~ s/[\s\: ]/_/g;
         $template = "/gm-$prefix-$time-$id-XXXX";
@@ -160,7 +160,7 @@ sub create_directory {
 
     my $errors;
     # make_path may throw its own exceptions...
-    File::Path::make_path($directory, { mode => 02775, error => \$errors });
+    File::Path::make_path($directory, { mode => 02775, group => 'info', error => \$errors });
     
     if ($errors and @$errors) {
         my $message = "create_directory for path $directory failed:\n";

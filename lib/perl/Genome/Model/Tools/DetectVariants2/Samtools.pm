@@ -54,8 +54,9 @@ EOS
 
 sub _detect_variants {
     my $self = shift;
-    my $snv_params = $self->snv_params || "";
-    my $indel_params = $self->indel_params || "";
+    
+    my $snv_params = $self->params || $self->snv_params || "";
+    my $indel_params = $self->params || $self->indel_params || "";
     my $result;
     if ( ($self->detect_snvs && $self->detect_indels) && ($snv_params eq $indel_params) ) {
         $result = $self->_run_samtools($self->_snv_staging_output, $self->_indel_staging_output, $self->_filtered_indel_staging_output, $snv_params);

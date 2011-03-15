@@ -68,6 +68,7 @@ EOS
 sub execute {
     
     my $self = shift;
+
     unless($self->_verify_inputs) {
         die $self->error_message('Failed to verify inputs.');
     }
@@ -237,7 +238,7 @@ sub _promote_staged_data {
 
     unless ($rv == 0) {
         $self->error_message("Did not get a valid return from rsync, rv was $rv for call $call.  Cleaning up and bailing out");
-        rmpath($output_dir);
+        rmtree($output_dir);
         die $self->error_message;
     }
 

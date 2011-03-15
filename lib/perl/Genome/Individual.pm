@@ -13,6 +13,8 @@ use warnings;
 
 use Genome;
 
+use Carp;
+
 class Genome::Individual {
     is => 'Genome::Measurable',
     table_name => 'GSC.ORGANISM_INDIVIDUAL',

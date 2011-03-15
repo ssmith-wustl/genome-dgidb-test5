@@ -640,19 +640,30 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
 
     my @new_models;
 
-    my $model_name = $subject->name . '.prod';
+    my %model_params = (
+        subject_id              => $subject->id,
+        subject_class_name      => $subject->class,
+        processing_profile_id   => $processing_profile->id,
+        auto_assign_inst_data   => 1,
+    );
 
+    #< MODEL NAME >#
+    my $model_name = $subject->name . '.prod';
     if ($processing_profile->isa('Genome::ProcessingProfile::GenotypeMicroarray') ) {
-        $model_name .= '-microarray';
+        $model_name .= '-microarray' . '-' . $reference_sequence_build->version;
+        $model_params{auto_assign_inst_data} = 0;
     }elsif($processing_profile->isa('Genome::ProcessingProfile::DeNovoAssembly')){
-        $model_name .= '-assembly';
+        $model_name .= '-denovo';
+    }elsif($processing_profile->isa('Genome::ProcessingProfile::MetagenomicComposition16s')){
+        $model_name .= '-mc16s';
+    }elsif($processing_profile->isa('Genome::ProcessingProfile::AmpliconAssembly')){
+        $model_name .= '-aa';
     }else{
         $model_name .= '-refalign';
     }
 
-    my $capture_target;
-
     # Label Solexa/454 capture stuff as such
+    my $capture_target;
     if ( $genome_instrument_data->can('target_region_set_name') ) {
         $capture_target = $genome_instrument_data->target_region_set_name();
         
@@ -663,15 +674,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     }
 
     #make sure the name we'd like isn't already in use
-    $model_name = $self->find_unused_model_name($model_name);
-
-    my %model_params = (
-        name                    => $model_name,
-        subject_id              => $subject->id,
-        subject_class_name      => $subject->class,
-        processing_profile_id   => $processing_profile->id,
-        auto_assign_inst_data   => 1,
-    );
+    $model_params{name} = $self->find_unused_model_name($model_name);
 
     my $dbsnp_build;
     my $annotation_build;
@@ -704,7 +707,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA' => 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA_build36-build37_liftOver',
             );
         
-        my $root_build37_ref_seq = Genome::Model::Build::ReferenceSequence->get(name =>'g1k-human-build37');
+        my $root_build37_ref_seq = Genome::Model::Build::ImportedReferenceSequence->get(name =>'g1k-human-build37') || die;
 
         if($reference_sequence_build and $reference_sequence_build->is_compatible_with($root_build37_ref_seq) 
                 and exists $build36_to_37_rois{$capture_target}) {

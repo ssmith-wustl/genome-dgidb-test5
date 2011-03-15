@@ -145,3 +145,32 @@ sub aligner_params_for_sam_header {
 sub fillmd_for_sam { return 0; }
 
 sub _check_read_count { return 1; }
+
+sub prepare_reference_sequence_index {
+    my $class = shift;
+    my $refindex = shift;
+
+    my $staging_dir = $refindex->temp_staging_directory;
+    my $staged_fasta_file = sprintf("%s/all_sequences.fa", $staging_dir);
+
+    $class->status_message("Doing bowtie indexing.");
+    my $bowtie_file_stem = File::Spec->catfile($staging_dir, 'all_sequences.bowtie');
+
+    my $bowtie_path = Genome::Model::Tools::Bowtie->path_for_bowtie_version($refindex->aligner_version);
+
+    my $bowtie_cmd = sprintf('%s-build %s %s', $bowtie_path, $staged_fasta_file, $bowtie_file_stem);
+    my $rv = Genome::Sys->shellcmd(
+        cmd => $bowtie_cmd,
+        input_files => [$staged_fasta_file],
+        output_files => ["$bowtie_file_stem.1.ebwt","$bowtie_file_stem.2.ebwt","$bowtie_file_stem.3.ebwt","$bowtie_file_stem.4.ebwt","$bowtie_file_stem.rev.1.ebwt","$bowtie_file_stem.rev.2.ebwt"],    #hardcoding expected names
+    );
+
+    unless($rv) {
+        $class->error_message('bowtie-build failed.');
+        return;
+    }
+
+
+    return 1;
+}
+

@@ -75,7 +75,7 @@ sub execute{
     if ($build->snv_detection_strategy){
         my $result = $build->data_set_path("variants/snvs.hq",$version,'bed'); 
         unless (-e $result){
-            my $unexpected_format_output = $command->snv_hq_output_file;
+            my $unexpected_format_output = $command->_snv_hq_output_file;
             unless (-e $unexpected_format_output){
                 die $self->error_message("Expected hq detected snvs file $result, but it does not exist!");
             }
@@ -86,7 +86,7 @@ sub execute{
     if ($build->indel_detection_strategy){
         my $result = $build->data_set_path("variants/indels.hq",$version,'bed'); 
         unless (-e $result){
-            my $unexpected_format_output = $command->indel_hq_output_file;
+            my $unexpected_format_output = $command->_indel_hq_output_file;
             unless (-e $unexpected_format_output){
                 die $self->error_message("Expected hq detected snvs file $result, but it does not exist!");
             }
@@ -97,7 +97,7 @@ sub execute{
     if ($build->sv_detection_strategy){
         my $result = $build->data_set_path("variants/svs.hq",$version,'bed'); 
         unless (-e $result){
-            my $unexpected_format_output = $command->sv_hq_output_file;
+            my $unexpected_format_output = $command->_sv_hq_output_file;
             unless (-e $unexpected_format_output){
                 die $self->error_message("Expected hq detected snvs file $result, but it does not exist!");
             }

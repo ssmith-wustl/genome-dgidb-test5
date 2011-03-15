@@ -43,11 +43,12 @@ class Genome::SoftwareResult {
 
 our %LOCKS;
 
-
+#This requires the full set of params (as would be passed to create) in order to work correctly
 sub get_with_lock {
     my $class = shift;
 
-    my $params_processed = $class->_gather_params_for_get_or_create(@_);
+    my $params_processed = $class->_gather_params_for_get_or_create($class->_preprocess_params_for_get_or_create(@_));
+
     my %is_input = %{$params_processed->{inputs}};
     my %is_param = %{$params_processed->{params}};
 
@@ -81,11 +82,10 @@ sub get_with_lock {
     }
 }
 
-
 sub get_or_create {
     my $class = shift;
 
-    my $params_processed = $class->_gather_params_for_get_or_create(@_);
+    my $params_processed = $class->_gather_params_for_get_or_create($class->_preprocess_params_for_get_or_create(@_));
     my %is_input = %{$params_processed->{inputs}};
     my %is_param = %{$params_processed->{params}};
     
@@ -116,12 +116,12 @@ sub get_or_create {
 sub create {
     my $class = shift;
 
-     if ($class eq __PACKAGE__ || $class->__meta__->is_abstract) {
+    if ($class eq __PACKAGE__ || $class->__meta__->is_abstract) {
         # this class is abstract, and the super-class re-calls the constructor from the correct subclass
         return $class->SUPER::create(@_);
     }
 
-    my $params_processed = $class->_gather_params_for_get_or_create(@_);
+    my $params_processed = $class->_gather_params_for_get_or_create($class->_preprocess_params_for_get_or_create(@_));
     my %is_input = %{$params_processed->{inputs}};
     my %is_param = %{$params_processed->{params}};
 
@@ -162,7 +162,7 @@ sub create {
     # Do the same for inputs (e.g. alignment results have nullable segment values for instrument data, which are treated as inputs)
     my @param_remove = grep { not (defined $is_param{$_}) || $is_param{$_} eq "" } keys %is_param;
     my @input_remove = grep { not (defined $is_input{$_}) || $is_input{$_} eq "" } keys %is_input;
-    my $bx = $class->define_boolexpr(@_);
+    my $bx = $class->define_boolexpr($class->_preprocess_params_for_get_or_create(@_));
     for my $i (@param_remove, @input_remove) {
         $bx = $bx->remove_filter($i);
     }
@@ -205,6 +205,40 @@ sub create {
     return $self;
 }
 
+sub _preprocess_params_for_get_or_create {
+    my $class = shift;
+    if(scalar @_ eq 1) {
+        return @_; #don't process a UR::BoolExpr or plain ID
+    }
+
+    my %params = @_;
+
+    my $class_object = $class->__meta__;
+    for my $key ($class->property_names) {
+        my $meta = $class_object->property_meta_for_name($key);
+
+        for my $t ('input', 'param') {
+            if ($meta->{'is_' . $t} && $meta->is_many) {
+                my $value_list = delete $params{$key};
+                if(defined $value_list) {
+                    my @values = sort @$value_list;
+                    my $t_params = $params{$t . 's'} || [];
+                    for my $i (0..$#values) {
+                        push @$t_params, {$t . '_name' => $key . '-' . $i, $t . '_value' => $values[$i]};
+                    }
+                    $params{$t . 's'} = $t_params;
+
+                    $params{$key . '_count'} = scalar @values;
+                    $params{$key . '_md5'} = md5_hex( join(':', @values));
+                } else {
+                    $params{$key . '_count'} = 0;
+                    $params{$key . '_md5'} = undef;
+                }
+            }
+        }
+    }
+    return %params;
+}
 
 sub resolve_module_version {
     #TODO, this tries to get svn revision info, then snapshot info, then date commited to trunk.  This actually isn't used anywhere to verify versions, so as long as it doesn't die here we are ok for the time being
@@ -244,13 +278,68 @@ sub _expand_param_and_input_properties {
     for my $t ('input','param','metric') {
         while (my ($prop_name, $prop_desc) = each(%{ $desc->{has} })) {
             if (exists $prop_desc->{'is_'.$t} and $prop_desc->{'is_'.$t}) {
+                my $is_many = ($t ne 'metric' and exists $prop_desc->{'is_many'} and $prop_desc->{'is_many'});
                 $prop_desc->{'to'} = $t.'_value';
                 $prop_desc->{'is_delegated'} = 1;
-                $prop_desc->{'where'} = [
-                    $t.'_name' => $prop_name
-                ];
+
+                if($is_many) {
+                    $prop_desc->{'where'} = [
+                        $t.'_name like' => $prop_name . '-%',
+                    ];
+                } else {
+                    $prop_desc->{'where'} = [
+                        $t.'_name' => $prop_name
+                    ];
+                }
+
                 $prop_desc->{'is_mutable'} = 1;
                 $prop_desc->{'via'} = $t.'s';
+
+                if($is_many) {
+                    my $md5_name = $prop_name . '_md5';
+                    unless(exists $desc->{has}{$md5_name}) {
+                        my $md5_prop = {};
+                        $md5_prop->{'is'} = 'Text';
+                        $md5_prop->{'data_type'} = 'Text';
+                        $md5_prop->{'is_param'} = 1;
+                        $md5_prop->{'is_delegated'} = 1;
+                        $md5_prop->{'via'} = 'params';
+                        $md5_prop->{'to'} = 'param_value';
+                        $md5_prop->{'where'} = [
+                            'param_name' => $md5_name
+                        ];
+                        $md5_prop->{'doc'} = 'MD5 sum of the sorted list of values for ' . $prop_name;
+                        $md5_prop->{'is_mutable'} = 1;
+                        $md5_prop->{'is_optional'} = 1;
+
+                        $md5_prop->{'property_name'} = $md5_name;
+                        $md5_prop->{'type_name'} = $desc->{type_name};
+                        $md5_prop->{'class_name'} = $desc->{class_name};
+                        $desc->{has}{$md5_name} = $md5_prop;
+                    }
+
+                    my $count_name = $prop_name . '_count';
+                    unless(exists $desc->{has}{$count_name}) {
+                        my $count_prop = {};
+                        $count_prop->{'is'} = 'Number';
+                        $count_prop->{'data_type'} = 'Number';
+                        $count_prop->{'is_param'} = 1;
+                        $count_prop->{'is_delegated'} = 1;
+                        $count_prop->{'via'} = 'params';
+                        $count_prop->{'to'} = 'param_value';
+                        $count_prop->{'where'} = [
+                            'param_name' => $count_name
+                        ];
+                        $count_prop->{'doc'} = 'number of values for ' . $prop_name;
+                        $count_prop->{'is_mutable'} = 1;
+                        $count_prop->{'is_optional'} = 1;
+
+                        $count_prop->{'property_name'} = $count_name;
+                        $count_prop->{'type_name'} = $desc->{type_name};
+                        $count_prop->{'class_name'} = $desc->{class_name};
+                        $desc->{has}{$count_name} = $count_prop;
+                    }
+                }
             }
         }
     }

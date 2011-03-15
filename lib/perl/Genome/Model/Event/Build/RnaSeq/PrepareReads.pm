@@ -34,19 +34,25 @@ sub execute {
 
     my $quality_format;
     my $dump_fastq_method;
-    my $quality_converter = $instrument_data->resolve_quality_converter;
-    if($quality_converter eq 'sol2phred') {
-        $quality_format = 'Illumina';
-        $dump_fastq_method = 'dump_illumina_fastq_files';
-    } elsif ($quality_converter eq 'sol2sanger') {
-        $quality_format = 'Solexa';
-        $dump_fastq_method = 'dump_solexa_fastq_files';
-    } elsif ($quality_converter eq 'none') {
-        $quality_format = 'Standard';
+
+    if(defined $instrument_data->bam_path && -s $instrument_data->bam_path) {
+        $quality_format='Standard';
         $dump_fastq_method = 'dump_sanger_fastq_files';
     } else {
-        $self->error_message('Unknown or unsupported quality converter ' . $quality_converter . ' encountered.');
-        return;
+        my $quality_converter = $instrument_data->resolve_quality_converter;
+        if($quality_converter eq 'sol2phred') {
+            $quality_format = 'Illumina';
+            $dump_fastq_method = 'dump_illumina_fastq_files';
+        } elsif ($quality_converter eq 'sol2sanger') {
+            $quality_format = 'Solexa';
+            $dump_fastq_method = 'dump_solexa_fastq_files';
+        } elsif ($quality_converter eq 'none') {
+            $quality_format = 'Standard';
+            $dump_fastq_method = 'dump_sanger_fastq_files';
+        } else {
+            $self->error_message('Unknown or unsupported quality converter ' . $quality_converter . ' encountered.');
+            return;
+        }
     }
 
     unless ($self->instrument_data->$dump_fastq_method(directory => $fastq_directory)) {

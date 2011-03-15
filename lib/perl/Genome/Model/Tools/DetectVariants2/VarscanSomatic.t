@@ -13,7 +13,7 @@ if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
 } else {
     #plan skip_all => "This test is incomplete.";
-    plan tests => 24;
+    plan tests => 22;
 }
 
 my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-VarscanSomatic/';
@@ -27,7 +27,7 @@ my $normal_bam = $test_dir . '/alignments/102922275_merged_rmdup.bam';
 # Updated to .v7 due to the addition of read depth
 # Updated to .v8 due to directory structure changes
 # Updated to .v9 due to DetVar2 module
-my $expected_dir = $test_dir . '/expected.v9/';
+my $expected_dir = $test_dir . '/expected.v10/';
 ok(-d $expected_dir, "expected results directory exists");
 
 my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get(type_name => 'imported reference sequence', name => 'NCBI-human-build36');
@@ -60,7 +60,6 @@ my @file_names = qw|    indels.hq
                         indels.hq.v2.bed
                         snvs.hq
                         snvs.hq.bed
-                        snvs.hq.unfiltered
                         snvs.hq.v1.bed
                         snvs.hq.v2.bed      |;
 

@@ -5,10 +5,10 @@ use warnings;
 
 use Genome;
 
-our $VERSION = '1.01';
+our $VERSION = $Genome::Model::Tools::Music::VERSION;
 
 class Genome::Model::Tools::Music::Play {
-    is => 'Genome::Command::Base',
+    is => 'Command::V2',
     has_input => [
         bam_list => {
             is => 'Text',

@@ -93,7 +93,6 @@ sub create_config_file {
         seq_file_dir     => $self->sequence_file_directory,
         seq_file_name    => $self->sequence_file_name,
         skip_acedb_parse => $model->skip_acedb_parse,
-        use_local_nr     => $model->use_local_nr,
     );
 
     my $rv = YAML::DumpFile($config_file_path, \%params);

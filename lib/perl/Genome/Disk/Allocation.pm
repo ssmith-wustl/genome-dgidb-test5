@@ -31,6 +31,10 @@ class Genome::Disk::Allocation {
             is => 'Number',
             doc => 'The disk space allocated in kilobytes',
         },
+        original_kilobytes_requested => {
+            is => 'Number',
+            doc => 'The disk space allocated in kilobytes',
+        },
         owner_class_name => {
             is => 'Text',
             doc => 'The class name for the owner of this allocation',
@@ -77,6 +81,11 @@ class Genome::Disk::Allocation {
             is => 'DateTime',
             doc => 'The last time at which the allocation was reallocated',
         },
+        owner_exists => {
+            is => 'Boolean',
+            calculate_from => ['owner_class_name', 'owner_id'],
+            calculate => sub { my ($owner_class_name, $owner_id) = @_; my $owner_exists = eval { $owner_class_name->get($owner_id) }; return $owner_exists ? 1 : 0; },
+        }
     ],    
     table_name => 'GENOME_DISK_ALLOCATION',
     data_source => 'Genome::DataSource::GMSchema',
@@ -85,7 +94,7 @@ class Genome::Disk::Allocation {
 my $MAX_VOLUMES = 5;
 my $MINIMUM_ALLOCATION_SIZE = 0;
 my $MAX_ATTEMPTS_TO_LOCK_VOLUME = 30;
-my @paths_to_remove; # Keeps track of paths created when no commit is on
+my @PATHS_TO_REMOVE; # Keeps track of paths created when no commit is on
 my @REQUIRED_PARAMETERS = qw/
     disk_group_name
     allocation_path
@@ -93,7 +102,10 @@ my @REQUIRED_PARAMETERS = qw/
     owner_class_name
     owner_id
 /;
-
+my @OWNER_CLASSES_TO_CHECK = qw/
+    Genome::Model::Build
+    Genome::InstrumentData::AlignmentResult
+/;
 # TODO This needs to be removed, site-specific
 our @APIPE_DISK_GROUPS = qw/
     info_apipe
@@ -117,11 +129,28 @@ sub get_lock {
     return $allocation_lock;
 }
 
-# Does a du on the allocation directory and returns size in kilobytes, included so old API doesn't break
 sub get_actual_disk_usage {
     my $self = shift;
     return 0 unless -d $self->absolute_path;
     return Genome::Sys->disk_usage_for_path($self->absolute_path);
+}
+
+sub has_valid_size {
+    my $self = shift;
+    return 0 unless $self->get_actual_disk_usage < $self->kilobytes_requested;
+    return 1;
+}
+
+sub has_valid_owner {
+    my $self = shift;
+
+    my $meta = $self->owner_class_name->__meta__;
+    return 0 unless $meta;
+
+    return 1 unless grep { $meta->isa($_) } @OWNER_CLASSES_TO_CHECK;
+
+    return 0 unless $self->owner;
+    return 1;
 }
 
 # This generates a unique text ID for the object. The format is <hostname> <PID> <time in seconds> <some number>
@@ -135,7 +164,7 @@ sub __display_name__ {
 }
 
 # The allocation process should be done in a separate process to ensure it completes and commits quickly, since
-# locks on allocations and volumes persist until commit completes. To make this invisible to everyone, the
+# locks on allocations and volumes persist until commit completes. To make this invisible to the caller, the
 # create/delete/reallocate methods perform the system calls that execute _create/_delete/_reallocate methods.
 sub allocate { return shift->create(@_); }
 sub create {
@@ -167,7 +196,7 @@ sub create {
             }
         }
         my $allocation = $class->_create(%params);
-        push @paths_to_remove, $allocation->absolute_path;
+        push @PATHS_TO_REMOVE, $allocation->absolute_path;
         return $allocation;
     }
 
@@ -348,6 +377,7 @@ sub _create {
         mount_path => $volume->mount_path,
         disk_group_name => $disk_group_name,
         kilobytes_requested => $kilobytes_requested,
+        original_kilobytes_requested => $kilobytes_requested,
         allocation_path => $allocation_path,
         owner_class_name => $owner_class_name,
         owner_id => $owner_id,
@@ -453,7 +483,7 @@ sub _reallocate {
     else {
         $self->status_message('New allocation size not supplied, setting to size of data in allocated directory');
         if (-d $self->absolute_path) {
-            $kilobytes_requested = Genome::Sys->disk_usage_for_path($self->absolute_path);
+            $kilobytes_requested = $self->get_actual_disk_usage($self->absolute_path);
         }
         else {
             $kilobytes_requested = 0;
@@ -550,7 +580,7 @@ sub _reallocate_with_move {
     my $old_allocation_dir = $self->absolute_path;
     my $new_allocation_dir = join('/', $new_volume->mount_path, $self->group_subdirectory, $self->allocation_path);
     $self->status_message("Copying data from $old_allocation_dir to $new_allocation_dir");
-    push @paths_to_remove, $new_allocation_dir; # If the process dies while copying, need to clean up the new directory
+    push @PATHS_TO_REMOVE, $new_allocation_dir; # If the process dies while copying, need to clean up the new directory
     unless (dircopy($old_allocation_dir, $new_allocation_dir)) {
         Genome::Sys->remove_directory_tree($new_allocation_dir) if -d $new_allocation_dir;
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
@@ -578,7 +608,7 @@ sub _reallocate_with_move {
         confess 'Could not commit move of allocation ' . $self->id . " from $old_allocation_dir to $new_allocation_dir";
     }
 
-    pop @paths_to_remove; # No longer need to remove new directory, changes are committed
+    pop @PATHS_TO_REMOVE; # No longer need to remove new directory, changes are committed
 
     # Delete data from old volume and update it
     unless (Genome::Sys->remove_directory_tree($old_allocation_dir)) {
@@ -596,6 +626,8 @@ sub _reallocate_with_move {
     return 1;
 }
 
+# Some owners track their absolute path separately from the allocation, which means they also need to be
+# updated when the allocation is moved. That special logic goes here
 sub _update_owner_for_move {
     my $self = shift;
     my $owner = $self->owner;
@@ -605,7 +637,6 @@ sub _update_owner_for_move {
         $owner->output_dir($self->absolute_path);
     }
     elsif ($owner->isa('Genome::Model::Build')) {
-        die 'Have not implemented reallocate with move for builds!';
         $owner->data_directory($self->absolute_path);
     }
 
@@ -805,13 +836,13 @@ sub _retrieve_mode {
     return 'load';
 }
 
-# Dummy allocations (don't commit to db) still create files on the filesystem, and the tests/scripts/whatever
-# that make these allocations may not deallocate and clean up. Do so here.
+# Cleans up directories, useful when no commit is on and the test doesn't clean up its allocation directories
+# or in the case of reallocate with move when a copy fails and temp data needs to be removed
 END {
     remove_test_paths();
 }
 sub remove_test_paths {
-    for my $path (@paths_to_remove) {
+    for my $path (@PATHS_TO_REMOVE) {
         next unless -d $path;
         Genome::Sys->remove_directory_tree($path);
         if ($ENV{UR_DBI_NO_COMMIT}) {
