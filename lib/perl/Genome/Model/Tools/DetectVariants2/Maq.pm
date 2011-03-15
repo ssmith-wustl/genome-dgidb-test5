@@ -136,8 +136,8 @@ EOS
 sub _detect_variants {
     my $self = shift;
 
-    my $snv_params = $self->snv_params || "";
-    my $indel_params = $self->indel_params || "";
+    my $snv_params = $self->params || $self->snv_params || "";
+    my $indel_params = $self->params || $self->indel_params || "";
     my $genotyper_params;
 
     # make sure the params are the same, or we are only detecting one type of variant
