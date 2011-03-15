@@ -28,6 +28,27 @@ class Genome::Model::Tools::DetectVariants2::Filter {
             is_optional => 1,
             doc => 'The directory containing the results of filtering',
         },
+        detector_name => {
+            is => 'String',
+            is_input => 1,
+            is_output => 1,
+            is_optional => 1,
+            doc => 'The name of the detector this filter is running below',
+        },
+        detector_version => {
+            is => 'String',
+            is_input => 1,
+            is_output => 1,
+            is_optional => 1,
+            doc => 'The version of the detector this filter is running below',
+        },
+        detector_params => {
+            is => 'String',
+            is_input => 1,
+            is_output => 1,
+            is_optional => 1,
+            doc => 'The params of the detector this filter is running below',
+        },
         params => {
             is => 'String',
             is_input => 1,
@@ -113,7 +134,6 @@ sub _validate_input {
 
 sub _validate_output {
     my $self = shift;
-    $DB::single=1;
     unless(-d $self->output_directory){
         die $self->error_message("Could not validate the existence of output_directory");
     }
@@ -147,10 +167,10 @@ sub _check_file_counts {
     unless(($total_input - $total_output) == 0){
         die $self->error_message("Total lines of bed-formatted output did not match total input lines. Input lines (including an offset of $offset): $total_input \t output lines: $total_output");
     }
-    #my $detector_style_output = $self->line_count($detector_style_file) + $self->line_count($lq_output_file);
-    #unless(($total_input - $detector_style_output) == 0){
-    #    die $self->error_message("Total lines of detector-style output did not match total input lines. Input lines: $total_input \t output lines: $detector_style_output");
-    #}
+    my $detector_style_output = $self->line_count($detector_style_file) + $self->line_count($lq_output_file);
+    unless(($total_input - $detector_style_output) == 0){
+        die $self->error_message("Total lines of detector-style output did not match total input lines. Input lines: $total_input \t output lines: $detector_style_output");
+    }
 
     return 1;
 }
@@ -162,49 +182,6 @@ sub has_version {
     ## will enable version checking for that module.
 
     return 1;
-}
-
-# This are crazy and ugly, but are just a very temporary solution until we start handing strategies down to detectors and filters
-# For now this method is unnecessary because we are only accounting for one level of filtering. Later this will change.
-sub _get_detector_version {
-    my $self = shift;
-    my $detector_output_directory = $self->detector_directory;
-
-    my @subdirs = split("/", $detector_output_directory);
-    my $detector_subdir = $subdirs[-1];
-
-    my ($variant_type, $detector_name, $detector_version, $detector_params) = split("-", $detector_subdir);
-    
-    return $detector_version;
-}
-
-sub _get_detector_info {
-    my $self = shift;
-    my $detector_directory = $self->detector_directory;
-
-    my @subdirs = split("/",$detector_directory);
-    my $detector_subdir = $subdirs[-1];
-    my ($detector_name, $detector_version, $detector_params, $other) = split("-", $detector_subdir);
-
-    # FIXME this is really ugly and should be fixed promptly. "varscan-somatic" is misinterpreted in the detector directory path.
-    if($detector_version eq 'somatic'){
-        $detector_name = 'varscan';
-        $detector_version = $detector_params;
-        $detector_params = $other;
-    }
-    return ($detector_name, $detector_version, $detector_params);
-}
-
-sub _get_detector_parameters {
-    my $self = shift;
-    my $detector_output_directory = $self->detector_directory;
-
-    my @subdirs = split("/", $detector_output_directory);
-    my $detector_subdir = $subdirs[-1];
-
-    my ($variant_type, $detector_name, $detector_version, $detector_params) = split("-", $detector_subdir);
-    
-    return $detector_params;
 }
 
 # Look for Detector formatted output and bed formatted output
@@ -223,9 +200,9 @@ sub _generate_standard_output {
 
     # If there is a hq_bed_file (bed format) and not a detector file, generate a detector file
     if( $hq_bed_file && not $hq_detector_file){
-        $self->_create_detector_file($hq_bed_output,$original_detector_file);
+        $self->_convert_bed_to_detector($original_detector_file,$hq_bed_output,$hq_detector_output);
         unless($lq_detector_file){
-            $self->_create_detector_file($lq_bed_output,$original_detector_file);
+            $self->_convert_bed_to_detector($original_detector_file,$lq_bed_output,$lq_detector_output);
         }
     } 
     # If there is a hq_detector_file and not a hq_bed_file, generate a hq_bed_file
@@ -243,49 +220,6 @@ sub _generate_standard_output {
     return 1;
 }
 
-# If the filter has a bed formatted output file, but no detector-style file, generate the detector-style
-sub _create_detector_file {
-    my $self = shift;
-    my $bed_file = shift;
-    my $detector_file = shift;
-    my ($detector_name) = $self->_get_detector_info;
-    my $variant_type = $self->_variant_type;
-    $variant_type =~ s/s$//;
-    my $module_base = 'Genome::Model::Tools::Bed::Convert';
-    my @supported_variant_types = ('indel','snv'); 
-    unless(grep($variant_type,@supported_variant_types)){
-        die $self->error_message("Filter has encountered an unsupported variant type: ".$variant_type);
-    }
-    my $converter = join('::', $module_base, ucfirst($variant_type), ucfirst($detector_name) . 'ToBed'); 
-    $self->status_message(" About to call converter: $converter");
-    eval{
-        $converter->__meta__;
-    };
-    if($@){
-        die $self->error_message("Could not interpret the string: $converter");
-    }
-    my @bed = split "/",$bed_file;
-    my (undef,$quality,undef) = split /\./,$bed[-1];
-    my $output_file = $self->output_directory."/".$variant_type."s.".$quality;
-    my $result = $converter->create(
-        source => $bed_file,
-        output => $output_file, 
-        detector_style_input => $detector_file,
-        reference_sequence_input => $self->reference_sequence_input,
-    );
-     
-    unless($result->convert_bed_to_detector) {
-        $self->error_message('Failed to execute '.$converter);
-        return;
-    }
-
-    unless(-e $detector_file){
-        die $self->error_message("Failed to create a detector-style output file");
-    }
-
-    return 1;
-}
-
 # If the filter has no bed formatted output file, but does have a detector-style file, generate the bed formatt
 sub _create_bed_file {
     my $self = shift;
@@ -294,12 +228,46 @@ sub _create_bed_file {
     my $original_detector_file = $self->input_directory."/".$self->_variant_type.".hq";
 
 
-
     unless(-e $detector_file){
-        die $self->error_message("Failed to create a detector-style output file");
+        die $self->error_message("Failed to create a bed-style output file");
     }
 
     return 1;
 }
+
+sub _convert_bed_to_detector {
+    my $self = shift;
+    my $detector_file = shift;  #$self->detector_style_input;
+    my $bed_file = shift;       #$self->source;
+    my $output = shift;         #$self->output;
+
+    my $ofh = Genome::Sys->open_file_for_writing($output);
+    my $detector_fh = Genome::Sys->open_file_for_reading($detector_file);
+    my $bed_fh = Genome::Sys->open_file_for_reading($bed_file);
+
+    #This cycles through the bed and original detector file, looking for intersecting lines 
+    # to dump into the detector style output
+
+    OUTER: while(my $line = $bed_fh->getline){
+        chomp $line;
+        my ($chr,$start,$stop,$refvar,@data) = split "\t", $line;
+        my ($ref,$var) = split "/", $refvar;
+        my $scan=undef;
+        while(my $dline = $detector_fh->getline){
+            chomp $dline;
+            my ($dchr,$dpos,$dref,$dvar) = split "\t", $dline;
+            if(($chr eq $dchr)&&($stop == $dpos)&&($ref eq $dref)&&($var eq $dvar)){
+                print $ofh $dline."\n";
+                next OUTER;
+            }
+        }
+    }
+
+    $bed_fh->close;
+    $ofh->close;
+    $detector_fh->close;
+    return 1;
+}
+
 
 1;

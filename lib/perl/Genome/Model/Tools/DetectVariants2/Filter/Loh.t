@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More tests => 7;
+use Test::More tests => 8;
 use File::Compare;
 
 BEGIN {
@@ -19,18 +19,26 @@ my $refseq = Genome::Config::reference_sequence_directory() . '/NCBI-human-build
 my $test_input_dir      = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-Loh';
 my $tumor_snp_file      = $test_input_dir . '/snvs.hq.bed'; 
 my $tumor_bam_file      = $test_input_dir. '/tumor.tiny.bam';
-my $normal_bam_file      = $test_input_dir. '/normal.tiny.bam';
+my $normal_bam_file     = $test_input_dir. '/normal.tiny.bam';
+my $detector_directory  = $test_input_dir. '/varscan-somatic-2.2.4-';
 
 my $test_output_dir     = File::Temp::tempdir('Genome-Model-Tools-Somatic-FilterLoh-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $hq_output_file      = $test_output_dir . '/snvs.hq.bed';
 my $lq_output_file      = $test_output_dir . '/snvs.lq.bed';
 
-my $expected_hq_file    = $test_input_dir. '/snvs.hq.expected.bed';
-my $expected_lq_file    = $test_input_dir. '/snvs.lq.expected.bed';
+my $expected_output_directory    = $test_input_dir. '/expected';
+
+my @expected_files = qw|    snvs.hq
+                            snvs.hq.bed
+                            snvs.lq
+                            snvs.lq.bed
+                            samtools.normal.snvs.hq.bed |;
+
 
 my $loh = Genome::Model::Tools::DetectVariants2::Filter::Loh->create(
     output_directory => $test_output_dir,
-    input_directory => $test_input_dir,
+    input_directory => $detector_directory,
+    detector_directory => $detector_directory,
     aligned_reads_input => $tumor_bam_file,
     control_aligned_reads_input => $normal_bam_file,
     reference_sequence_input => $refseq,
@@ -39,8 +47,8 @@ my $loh = Genome::Model::Tools::DetectVariants2::Filter::Loh->create(
 ok($loh, 'created loh object');
 ok($loh->execute(), 'executed loh object');
 
-ok(-s $hq_output_file, 'generated hq output file');
-ok(-s $lq_output_file, 'generated lq output file');
-
-is(compare($expected_hq_file, $hq_output_file), 0, 'hq output matched expected results');
-is(compare($expected_lq_file, $lq_output_file), 0, 'lq output matched expected results');
+for my $file (@expected_files){
+    my $expected_file = $expected_output_directory."/".$file;
+    my $output_file = $test_output_dir."/".$file;
+    is(compare($expected_file, $output_file), 0, 'output matched expected results');
+}

@@ -51,11 +51,6 @@ UR::Object::Type->define(
             doc => "specify different version of iprscan",
             default => "/gsc/scripts/bin/iprscan",
         },
-        use_local_nr => {
-            is => 'Boolean',
-            doc => 'If set, use local copies of the NR database instead of the default held in nr_db parameter',
-            default => 1,
-        },
         locus_id => {
             is => 'String',
 			doc => 'locus_tag with OUT DFT/FNL postpended',
@@ -114,7 +109,7 @@ sub execute
     my %params = $self->gather_details();
 
     $self->status_message("running merge now");
-    my $rv = Genome::Model::GenePrediction::Bacterial::Command::Merge->execute(%params);
+    my $rv = Genome::Model::GenePrediction::Command::Bacterial::Merge->execute(%params);
     $params{iprpath} = $self->iprpath;
 
     unless($rv) {
@@ -256,8 +251,6 @@ sub gather_details
                    'runner_count' => $runner_count,
                    'debug_file' => $debug_file,
                    'nr_db' => $self->nr_db,
-                   'use_local_nr' => $self->use_local_nr,
-                   #'no_mail' => 1,
                    );
 
     if(defined($self->dev)) { $params{dev} = 1; }
