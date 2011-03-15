@@ -14,6 +14,21 @@ class Genome::Model::Tools::DetectVariants2::GatkSomaticIndel{
         detect_svs => {},
         detect_indels => { value => 1 },
     ],
+    has => [
+        mb_of_ram => {
+            is => 'Text',
+            doc => 'Amount of memory to allow GATK to use',
+            default => 5000,
+        },
+    ],
+    has_param => [
+         lsf_queue => {
+             default_value => 'long',
+         },
+         lsf_resource => {
+             default_value => "-M 8000000 -R 'select[type==LINUX64 && mem>8000] rusage[mem=8000]'",
+         },
+     ],
 };
 
 sub _detect_variants {
