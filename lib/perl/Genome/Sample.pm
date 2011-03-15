@@ -7,6 +7,11 @@ use Genome;
 class Genome::Sample {
     is => 'Genome::Subject',
     has => [
+        sample_id => {
+            is => 'Text',
+            calculate_from => 'subject_id',
+            calculate => q{ return $subject_id },
+        },
         subject_type => { 
             is => 'Text', 
             is_constant => 1, 
@@ -188,7 +193,11 @@ class Genome::Sample {
         projects                     => { is => 'Genome::Site::WUGC::Project', via => 'project_assignments', to => 'project', is_many => 1},
     ],
     has_many => [
-        libraries                   => { is => 'Genome::Library', reverse_as => 'sample' },
+        libraries => { 
+            is => 'Genome::Library', 
+            calculate_from => 'id',
+            calculate => q{ return Genome::Library->get(sample_id => $id) },
+        },
         solexa_lanes                => { is => 'Genome::InstrumentData::Solexa', reverse_as => 'sample' },
         solexa_lane_names           => { via => 'solexa_lanes', to => 'full_name' },
     ],
