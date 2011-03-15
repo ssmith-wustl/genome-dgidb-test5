@@ -8,12 +8,8 @@ use warnings;
 
 use Genome;
 
-use App::Report;
-use CGI;
 use IO::String;
 use Template;
-use Data::Dumper;
-use POSIX;
 
 my $base_template_path = __PACKAGE__->_base_path_for_templates;
 
@@ -427,8 +423,6 @@ sub get_summary_information
         filtered_diploid_hom_coverage_actual_number   => commify($filtered_diploid_hom_coverage_actual_number),
         filtered_diploid_hom_coverage_percent         => $filtered_diploid_hom_coverage_percent,
     );
-
-    #$self->status_message("Summary Report values: ".Dumper(\@vars) );
 
     ##################################
 

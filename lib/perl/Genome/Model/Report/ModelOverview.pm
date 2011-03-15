@@ -5,7 +5,6 @@ use warnings;
 
 use Genome;
 
-use App::Report;
 use CGI;
 use IO::String;
 use Data::Dumper;

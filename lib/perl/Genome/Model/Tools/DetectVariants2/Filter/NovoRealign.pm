@@ -322,7 +322,7 @@ sub _run_cmd {
     return 1;
 }
 
-sub _create_filter_file {
+sub _create_bed_file {
     return 1;
 }
 

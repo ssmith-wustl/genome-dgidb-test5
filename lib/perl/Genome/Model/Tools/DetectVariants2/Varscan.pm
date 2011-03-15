@@ -69,8 +69,8 @@ sub _detect_variants {
     my $self = shift;
 
     ## Get required parameters ##
-    my $output_snp = $self->_snv_staging_output;
-    my $output_indel = $self->_indel_staging_output;
+    my $output_snp = $self->_temp_staging_directory."/snvs.hq";
+    my $output_indel = $self->_temp_staging_directory."/indels.hq";
 
     ## Get Varscan parameters ##
     my $snv_params = $self->snv_params || "";
@@ -113,6 +113,7 @@ sub _run_varscan {
         output_snp => $output_snp,
         output_indel => $output_indel,
         varscan_params => $varscan_params,
+        no_headers => 1,
     );
 
     unless($varscan->execute()) {

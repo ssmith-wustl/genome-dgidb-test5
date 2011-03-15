@@ -7,14 +7,10 @@ use strict;
 use warnings;
 
 use Genome;
-
-use App::Report;
 use CGI;
+
 use IO::String;
-use Data::Dumper;
 use Template;
-use POSIX; 
-use XML::Simple;
 
 my $base_template_path = __PACKAGE__->_base_path_for_templates;
 

@@ -6,7 +6,6 @@ use warnings;
 use Genome;
 use Command;
 use IO::File;
-#use GSCApp;
 
 class Genome::Model::Tools::Snp::CreateDbsnpFileFromSnpFile {
     is => 'Command',

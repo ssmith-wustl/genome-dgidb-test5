@@ -175,17 +175,17 @@ sub _filter_variants {
         }
 
         my @vars = Genome::Info::IUB->variant_alleles_for_iub($vref,$viub);
-        # If this IUB would create more than one variant in the output, adjust the expected value of output linecounts
-        if (scalar @vars > 1) {
-            $self->_validate_output_offset($self->_validate_output_offset + (scalar (@vars) - 1) );
-        }
+        my $variant_is_hq = 0;
         foreach my $var (@vars) {
             if(exists($bases{$var}) && $bases{$var} >= $self->min_mapping_quality) {
                 print $ofh $current_variant, "\n";
+                $variant_is_hq =1;
                 last;
-            } else {
-                print $lq_output_fh $current_variant ."\n";;
             }
+        }
+        # Unless the IUB had one possible allele that was HQ, make it LQ
+        unless ($variant_is_hq) {
+            print $lq_output_fh $current_variant ."\n";
         }
     }
 
@@ -243,10 +243,6 @@ sub path_for_readcount_version {
 sub default_readcount_version {
     die "default bam-readcount version: $DEFAULT_VERSION is not valid" unless $READCOUNT_VERSIONS{$DEFAULT_VERSION};
     return $DEFAULT_VERSION;
-}
-
-sub _create_detector_file {
-    return 1;
 }
 
 1;

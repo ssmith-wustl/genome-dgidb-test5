@@ -86,8 +86,8 @@ sub _generate_indels_for_filtering {
     my $self = shift;
 
     # TODO grab samtools version and parameters by parsing the path of the input directory
-    my $version = $self->_get_detector_version;
-    my $parameters = $self->_get_detector_parameters;
+    my $version = $self->detector_version;
+    my $parameters = $self->detector_params;
 
     my $sam_pathname = Genome::Model::Tools::Sam->path_for_samtools_version($version);
     my $bam_file = $self->aligned_reads_input;

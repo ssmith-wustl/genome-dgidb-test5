@@ -30,6 +30,12 @@ class Genome::Model::Tools::Bed::Convert {
             is_optional => 1,
         },
     ],
+    has_optional => [
+        detector_style_input => {
+            is => 'String',
+            doc => 'Original file output by detector to provide lines for the output',
+        },
+    ],
     has_transient_optional => [
         _input_fh => {
             is => 'IO::File',
@@ -183,6 +189,12 @@ sub process_source {
 
     $self->error_message('The process_source() method should be implemented by subclasses of this module.');
     return;
+}
+
+sub convert_bed_to_detector {
+    my $self = shift;
+
+    die $self->error_message("This should be overloaded by the detector-specific classes");
 }
 
 1;

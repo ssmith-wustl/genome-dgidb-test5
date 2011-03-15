@@ -12,7 +12,7 @@ BEGIN {
 use above 'Genome';
 
 require Genome::InstrumentData::Solexa;
-use Test::More tests => 62;
+use Test::More tests => 63;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
 
@@ -122,7 +122,8 @@ $command_1->dump_status_messages(1);
 ok($command_1->execute(), 'assign-queued-instrument-data executed successfully.');
 
 my $new_models = $command_1->_newly_created_models;
-is(scalar(keys %$new_models), 2, 'the cron created two model');
+is(scalar(keys %$new_models), 2, 'the cron created two models');
+is_deeply([sort map { $_->name } values %$new_models], [sort qw/ unknown-run.unknown-subset.prod-qc AQID-test-sample.prod-refalign /], 'the cron named the new models correctly');
 
 my $models_changed = $command_1->_existing_models_assigned_to;
 is(scalar(keys %$models_changed), 0, 'the cron did no work for the second PSE, since the first assigns all on creation');

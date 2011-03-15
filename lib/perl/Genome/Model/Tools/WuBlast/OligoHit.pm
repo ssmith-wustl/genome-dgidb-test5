@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-#use GSCApp;
 
 class Genome::Model::Tools::WuBlast::OligoHit {
     is => 'Command',                    

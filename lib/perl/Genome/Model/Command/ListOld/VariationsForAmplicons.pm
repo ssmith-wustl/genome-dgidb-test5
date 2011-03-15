@@ -53,9 +53,6 @@ sub execute {
     $self->error_meassage("Can't open file ($primer_file)")
         and return unless $fh;
 
-    # this breaks things if done in modules
-    #App->init unless App::Init->initialized;
-
     while ( my $primer = $fh->getline )
     {
         next if $primer =~ /^\s*$/;

@@ -35,11 +35,6 @@ sub new {
     unless (defined($core_num)) {
         croak 'missing number of cores to run blast in JobSource!';
     }
-    
-    my $use_local_nr = shift @args;
-    unless (defined $use_local_nr) {
-        $use_local_nr = 1;
-    }
 
     $self->{_evidence} = { };
     
@@ -51,7 +46,6 @@ sub new {
                                                             $db,
                                                             $self->next_job_id(),
                                                             $core_num,
-                                                            $use_local_nr,
                                                         );
     }
     

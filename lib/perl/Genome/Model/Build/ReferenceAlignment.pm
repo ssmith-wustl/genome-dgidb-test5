@@ -1246,8 +1246,8 @@ sub files_ignored_by_diff {
     return qw(
         build.xml
         alignments/\d+(?:_merged_rmdup)?.bam.md5
-        alignments/mark_duplicates.log
-        alignments/mark_duplicates.metrics
+        alignments/(.*).log
+        alignments/(.*).metrics
         reports/Build_Initialized/report.xml
         reports/Build_Succeeded/report.xml
         reports/Input_Base_Counts/report.html

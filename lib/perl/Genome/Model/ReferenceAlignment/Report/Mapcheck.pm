@@ -9,8 +9,6 @@ use Genome;
 
 use CGI;
 use IO::String;
-use App::Report;
-
 
 class Genome::Model::ReferenceAlignment::Report::Mapcheck {
     is => 'Genome::Model::Report',

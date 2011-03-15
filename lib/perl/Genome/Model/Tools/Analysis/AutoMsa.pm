@@ -188,7 +188,7 @@ sub execute {
     my ($handle) = getpwuid($<);
 
     unless ($ace_fof || ($ace_file && $project_dir)) {
-	App->error_message( "\n\nIt is manditory to use either an ace_fof or and ace_file and project_dir."
+	$self->error_message( "\n\nIt is manditory to use either an ace_fof or and ace_file and project_dir."
 			    . " invalid command ."
 			    . " See gmt analysis auto-msa --help for options.\n\n");
 	
@@ -230,7 +230,7 @@ sub execute {
 	    return 1;
 	} else {
 	    my $failed_to_launch_projects = join '\t\n' , @failed_to_launch;
-	    App->error_message( "\n\nOnly $r_n of the $n projects in your ace fof were submitted to the blades for processing.  The following projects will need to be checked and restarted;\n\t$failed_to_launch_projects.\n\n"); 
+	    $self->error_message( "\n\nOnly $r_n of the $n projects in your ace fof were submitted to the blades for processing.  The following projects will need to be checked and restarted;\n\t$failed_to_launch_projects.\n\n"); 
 	    $send_it =  qq(echo "Only $r_n of the $n projects in your ace fof was submitted to the blades for processing. The following projects will need to be checked and restarted;\n\t$failed_to_launch_projects." | mailx -s 'Only $r_n of the $n projects in $ace_fof were submitted to the blades for processing.' $handle);
 	    if ($mail_me) {`$send_it`;}
 	    return;
@@ -303,7 +303,7 @@ sub set_up_and_run {
 		    if ($refseq_id) {
 			$send_it =  qq(echo "More than one refseq_id was found. Please stipulate refseq_id as a command line option and restart your analysis of $ed/$ace_file." | mailx -s 'Anaysis did not start for $ed/$ace_file. More than one refseq_id was found.' $handle);
 			if ($mail_me) {`$send_it`;}
-			App->error_message( "\n\nMore than one refseq_id was found. Please stipulate refseq_id as a command line option. See "
+			$self->error_message( "\n\nMore than one refseq_id was found. Please stipulate refseq_id as a command line option. See "
 					    . App::Name->prog_name
 					    . " --help for more command line parameters.\n\n" );
 			return;
@@ -345,7 +345,7 @@ sub set_up_and_run {
 	unless ($refseq_fasta && -e $refseq_fasta) {
 	    $send_it =  qq(echo "Could not find the refseq fasta file provided $refseq_fasta. Check your edit_dir and restart your analysis of $ed/$ace_file." | mailx -s 'Anaysis did not start for $ed/$ace_file. Could not find the refseq fasta.' $handle);
 	    if ($mail_me) {`$send_it`;}
-	    App->error_message( "\n\nCould not find the refseq fasta file provided. Check your edit_dir and restart your analysis of $ed/$ace_file.\n\n"); 
+	    $self->error_message( "\n\nCould not find the refseq fasta file provided. Check your edit_dir and restart your analysis of $ed/$ace_file.\n\n"); 
 	    return;
 	}
 	
@@ -354,7 +354,7 @@ sub set_up_and_run {
 	unless ($refseq_fasta && -e $refseq_fasta) {
 	    $send_it =  qq(echo "Could not find the refseq fasta file. Check your edit_dir and restart your analysis of $ed/$ace_file." | mailx -s 'Anaysis did not start for $ed/$ace_file. Could not find the refseq fasta.' $handle);
 	    if ($mail_me) {`$send_it`;}
-	    App->error_message( "\n\nCould not find the refseq fasta file in the edit_dir. Check your edit_dir and restart your analysis of $ed/$ace_file.\n\n"); 
+	    $self->error_message( "\n\nCould not find the refseq fasta file in the edit_dir. Check your edit_dir and restart your analysis of $ed/$ace_file.\n\n"); 
 	    return;
 	}
     }
@@ -368,7 +368,7 @@ sub set_up_and_run {
 	    unless ($cds && -e $cds) {
 		$send_it =  qq(echo "Could not find the cds file. Check your edit_dir and restart your analysis of $ed/$ace_file." | mailx -s 'Anaysis did not start for $ed/$ace_file. Could not find the cds file.' $handle);
 		if ($mail_me) {`$send_it`;}
-		App->error_message( "\n\nCould not find the cds file provided. Check your edit_dir and restart your analysis of $ed/$ace_file.\n\n"); 
+		$self->error_message( "\n\nCould not find the cds file provided. Check your edit_dir and restart your analysis of $ed/$ace_file.\n\n"); 
 		return;
 	    }
 	} else {
@@ -383,7 +383,7 @@ sub set_up_and_run {
 		    unless ($cds && -e $cds) {
 			$send_it =  qq(echo "Could not find the cds file. Check your edit_dir and restart your analysis of $ed/$ace_file." | mailx -s 'Anaysis did not start for $ed/$ace_file. Could not find the cds file.' $handle);
 			if ($mail_me) {`$send_it`;}
-			App->error_message( "\n\nCould not find the cds file. Check your edit_dir and restart your analysis of $ed/$ace_file.\n\n"); 
+			$self->error_message( "\n\nCould not find the cds file. Check your edit_dir and restart your analysis of $ed/$ace_file.\n\n"); 
 			return;
 			
 		    }
@@ -398,7 +398,7 @@ sub set_up_and_run {
 		unless ($domain && -e $domain) {
 		    $send_it =  qq(echo "Could not find the domain file. Check your edit_dir and restart your analysis of $ed/$ace_file." | mailx -s 'Anaysis did not start for $ed/$ace_file. Could not find the domain file.' $handle);
 		    if ($mail_me) {`$send_it`;}
-		    App->error_message( "\n\nCould not find the domain file provided. Check your edit_dir and restart your analysis of $ed/$ace_file.\n\n"); 
+		    $self->error_message( "\n\nCould not find the domain file provided. Check your edit_dir and restart your analysis of $ed/$ace_file.\n\n"); 
 		    return;
 		}
 	    } else {
@@ -407,7 +407,7 @@ sub set_up_and_run {
 		    $domain = <$gene_id.$gene.*.$d_date.domain.gff>;	
 		    unless ($domain && -e $domain) {
 			undef($domain);
-			App->error_message( "\n\nCould not find the domain file in the edit_dir. Autoanalysis will continue without it.\n\n"); 
+			$self->error_message( "\n\nCould not find the domain file in the edit_dir. Autoanalysis will continue without it.\n\n"); 
 		    }
 		}
 	    }
@@ -416,7 +416,7 @@ sub set_up_and_run {
 		unless ($snp && -e $snp) {
 		    $send_it =  qq(echo "Could not find the dbsnp file. Check your edit_dir and restart your analysis of $ed/$ace_file." | mailx -s 'Anaysis did not start for $ed/$ace_file. Could not find the dbsnp file.' $handle);
 		    if ($mail_me) {`$send_it`;}
-		    App->error_message( "\n\nCould not find snp file provided. Check your edit_dir and restart your analysis of $ed/$ace_file.\n\n"); 
+		    $self->error_message( "\n\nCould not find snp file provided. Check your edit_dir and restart your analysis of $ed/$ace_file.\n\n"); 
 		    return;
 		}
 	    } else {
@@ -425,7 +425,7 @@ sub set_up_and_run {
 		    $snp = <$gene_id.$gene.*.$d_date.domain.gff>;
 		    unless ($snp && -e $snp) {
 			undef($snp);
-			App->error_message( "\n\nCould not find the dbsnp file in the edit_dir. Autoanalysis will continue without it.\n\n"); 
+			$self->error_message( "\n\nCould not find the dbsnp file in the edit_dir. Autoanalysis will continue without it.\n\n"); 
 		    }
 		}
 	    }
@@ -434,7 +434,7 @@ sub set_up_and_run {
 		unless ($amplicon && -e $amplicon) {
 		    $send_it =  qq(echo "Could not find the amplicon file. Check your edit_dir and restart your analysis of $ed/$ace_file." | mailx -s 'Anaysis did not start for $ed/$ace_file. Could not find the amplicon file.' $handle);
 		    if ($mail_me) {`$send_it`;}
-		    App->error_message( "\n\nCould not find the amplicon file provided. Check your edit_dir and restart your analysis of $ed/$ace_file.\n\n");
+		    $self->error_message( "\n\nCould not find the amplicon file provided. Check your edit_dir and restart your analysis of $ed/$ace_file.\n\n");
 		    return;
 		}
 	    } else {
@@ -443,7 +443,7 @@ sub set_up_and_run {
 		    $amplicon = <$gene_id.$gene.*.$d_date.domain.gff>;
 		    unless ($amplicon && -e $amplicon) {
 			undef($amplicon);
-			App->error_message( "\n\nCould not find the amplicon file in the edit_dir. Autoanalysis will continue without it.\n\n"); 
+			$self->error_message( "\n\nCould not find the amplicon file in the edit_dir. Autoanalysis will continue without it.\n\n"); 
 		    }
 		}
 	    }
@@ -477,7 +477,7 @@ sub set_up_and_run {
 	    unless ($snp && -e $snp) { #added the extra check here for the benifit of v6
 		$send_it =  qq(echo "Could not find the dbsnp file. Check your edit_dir and restart your analysis." | mailx -s 'Anaysis did not start for $ed/$ace_file. Could not find the dbsnp file.' $handle);
 		if ($mail_me) {`$send_it`;}
-		App->error_message( "\n\nCould not find snp file provided. Check your edit_dir and restart your analysis of $ed/$ace_file.\n\n"); 
+		$self->error_message( "\n\nCould not find snp file provided. Check your edit_dir and restart your analysis of $ed/$ace_file.\n\n"); 
 		return;}
 	}
 	if ($amplicon) {
@@ -518,7 +518,7 @@ sub set_up_and_run {
 
 	my $memory_requirement = $self->lsf_memory_requirement;
 	unless ($memory_requirement =~ /^[4 5 6 7 8]$/) {
-	    App->error_message( "\n\nyour request for $memory_requirement as a memory requirement has been denied. Your job will run with 4G memory. See gmt analysis auto-msa -h for more details.\n");
+	    $self->error_message( "\n\nyour request for $memory_requirement as a memory requirement has been denied. Your job will run with 4G memory. See gmt analysis auto-msa -h for more details.\n");
 	    $memory_requirement = 4;
 	}
 	my $lsf_memory_requirement = "-R 'select[mem>$memory_requirement" . "000] rusage[mem=$memory_requirement" . "000]' -M $memory_requirement" . "000000";
@@ -551,7 +551,7 @@ sub set_up_and_run {
     } else {
 	$send_it =  qq(echo "Could not find the refseq fasta file. Check your edit_dir and restart your analysis of $ed/$ace_file." | mailx -s 'Anaysis did not start for $ed/$ace_file. Could not find the refseq fasta.' $handle);
 	if ($mail_me) {`$send_it`;}
-	App->error_message( "\n\nCould not find the refseq fasta file in the edit_dir. Check your edit_dir and restart your analysis of $ed/$ace_file.\n\n"); 
+	$self->error_message( "\n\nCould not find the refseq fasta file in the edit_dir. Check your edit_dir and restart your analysis of $ed/$ace_file.\n\n"); 
 	return;
     }
 }
@@ -564,10 +564,10 @@ sub check_ace_dir {
     my $ace_fof = $self->ace_fof;
     
     unless ($project_dir && -e "$project_dir") {
-	App->error_message( "\n\nCould not see the project directory.$project_dir. Your analysis of $project_dir $ace_file failed to start.\n\n");
+	$self->error_message( "\n\nCould not see the project directory.$project_dir. Your analysis of $project_dir $ace_file failed to start.\n\n");
 	$send_it =  qq(echo "You'll need to restart your analysis of $project_dir $ace_file. Could not see the project directory." | mailx -s 'Analysis of $ace_file failed.' $handle);
 	unless (qq($project_dir/edit_dir/$ace_file) && -e qq($project_dir/edit_dir/$ace_file)) { 
-	    App->error_message( "\n\nCould not find the ace file. $project_dir/edit_dir/$ace_file\n\n");
+	    $self->error_message( "\n\nCould not find the ace file. $project_dir/edit_dir/$ace_file\n\n");
 	    $send_it =  qq(echo "You'll need to restart your analysis of $project_dir $ace_file. Could not see the project directory and Could not find the ace file." | mailx -s 'Analysis of $ace_file failed.' $handle);
 	}
 	if ($mail_me) {`$send_it`;}
@@ -577,7 +577,7 @@ sub check_ace_dir {
     unless (qq($project_dir/edit_dir/$ace_file) && -e qq($project_dir/edit_dir/$ace_file)) { 
 	$send_it =  qq(echo "You'll need to restart your analysis of $project_dir $ace_file. Could not find the ace file." | mailx -s 'Analysis of $ace_file failed.' $handle);
 	if ($mail_me) {`$send_it`;}
-	App->error_message( "\n\nCould not find the ace file. Your analysis of $project_dir/edit_dir/$ace_file failed to start.\n\n");
+	$self->error_message( "\n\nCould not find the ace file. Your analysis of $project_dir/edit_dir/$ace_file failed to start.\n\n");
 	return;
     }
     return 1;
