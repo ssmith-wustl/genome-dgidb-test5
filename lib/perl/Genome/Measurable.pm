@@ -40,8 +40,16 @@ class Genome::Measurable {
                 return $disk_allocation;
             },
         },
-        data_directory => { is => 'Text', via => 'disk_allocation', to => 'absolute_path', },
-
+        data_directory => { 
+            is => 'Text', 
+            calculate_from => [qw/ disk_allocation /],
+            calculate => sub{
+                my $disk_allocation = shift;
+                return if not $disk_allocation;
+                return $disk_allocation->absolute_path;
+            },
+            #is => 'Text', via => 'disk_allocation', to => 'absolute_path', },
+        },
     ],
     data_source => 'Genome::DataSource::GMSchema',
 };
@@ -88,7 +96,7 @@ sub add_file {
         # Create
         $disk_allocation = Genome::Disk::Allocation->allocate(
             disk_group_name => 'info_genome_models',
-            allocation_path => '/subject/'.$self->id,
+            allocation_path => '/model_data/'.$self->id,
             kilobytes_requested => $size,
             owner_class_name => $self->class,
             owner_id => $self->id
