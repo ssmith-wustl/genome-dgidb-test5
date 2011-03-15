@@ -234,7 +234,6 @@ sub execute {
         locus_tag     => $config->{locus_tag},
         project_type  => $config->{project_type},
         runner_count  => $config->{runner_count},
-        use_local_nr  => $config->{use_local_nr},
         dev           => $self->dev,
         nr_db         => $config->{nr_db},
         iprpath       => $config->{iprpath},

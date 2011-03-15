@@ -107,7 +107,7 @@ class Genome::Model::Tools::DetectVariants2::Filter::FalsePositive {
              default_value => 'long',
          }, 
          lsf_resource => {
-             default_value => "-M 8000000 -R 'select[type==LINUX64 && mem>8000] rusage[mem=8000]'",
+             default_value => "-M 16000000 -R 'select[type==LINUX64 && mem>16000] rusage[mem=16000]'",
          },
      ],
 
@@ -201,6 +201,7 @@ sub _filter_variants {
         input_files => [$self->aligned_reads_input],
         output_files => [$readcount_file],
     );
+    $self->status_message('Done running BAM Readcounts.');
 
     my $readcounts = Genome::Sys->read_file($readcount_file);
     chomp($readcounts) if($readcounts);

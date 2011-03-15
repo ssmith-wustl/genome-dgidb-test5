@@ -67,14 +67,19 @@ sub prepare_output {
     my $somatic_lq = $self->_temp_staging_directory."/snvs.Somatic.lc";
     my $germline = $self->_temp_staging_directory."/snvs.Germline";
     my $loh = $self->_temp_staging_directory."/snvs.LOH";
+    my $other = $self->_temp_staging_directory."/snvs.other";
 
     my $hq_file = $self->_temp_staging_directory."/snvs.hq";
     my $lq_file = $self->_temp_staging_directory."/snvs.lq";
     my $lq_scratch_file = $self->_temp_scratch_directory."/snvs.lq";
 
     Genome::Sys->copy_file( $somatic_hq, $hq_file );
-
+    
+    # FIXME other is possibly not sorted by position
     my @lq_source = ($somatic_lq, $germline, $loh);
+    if (-e $other) {
+        push @lq_source, $other;
+    }
     my $catcmd = Genome::Model::Tools::Cat->create(
         dest => $lq_scratch_file,
         source => \@lq_source,

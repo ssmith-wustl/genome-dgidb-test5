@@ -26,10 +26,11 @@ EOS
 
 
 sub _combine_variants {
-    my $self  = shift;
+    my $self = shift;
+    my ($dir_a, $dir_b) = ($self->input_directory_a, $self->input_directory_b);
 
-    for my $file_name qw(svs.hq tigra.out) {  #hardcoded tigra.out for now might use a generic name like sv.out later
-        my @files = map{$_.'/'.$file_name}($self->input_directory_a, $self->input_directory_b);
+    for my $file_name qw(svs.hq) {
+        my @files = map{$_.'/'.$file_name}($dir_a, $dir_b);
         my $input_files = join ',', @files;
         my $output_file = $self->output_directory.'/'.$file_name;
 
@@ -44,19 +45,46 @@ sub _combine_variants {
         }
     }
 
-    # When unioning, there is no "fail" really, everything should be in the hq file
-    #my $lq_file = $self->output_directory.'/svs.lq';
-    #`touch $lq_file`;
+    $self->status_message("Now make symlink to sv merge outputs");
+    my @file_names = map{$self->_variant_type.'.merge.'.$_}qw(fasta file file.annot out);
+
+    DIR: for my $dir ($dir_a, $dir_b) {
+        my $dir_type;
+        if ($dir =~ /\-q_10_\-d/) {
+            $dir_type = 'Inter.';
+        }
+        elsif ($dir =~ /\-q_10_\-o/) {
+            $dir_type = 'Intra.';
+        }
+        else {
+            $self->warning_message("Failed to figure out the dir type for $dir");
+            next DIR;
+        }
+        LINK: for my $i (0..$#file_names) {
+            my $target = $dir .'/'. $file_names[$i];
+            my $link   = $self->output_directory ."/$dir_type". $file_names[$i];
+            
+            if (-e $target) {
+                unless (Genome::Sys->create_symlink($target, $link)) {
+                    $self->warning_message("Failed to symlink $target to $link");
+                    next LINK;
+                }
+            }
+            else {
+                $self->warning_message("Target file: $target not existing");
+            }
+        }
+    }        
     return 1;
 }
+
 
 sub _validate_output {
     my $self = shift;
     my $variant_type = $self->_variant_type;
     my $out_file     = $self->output_directory.'/'.$variant_type.'.hq';
-    my $tigra_out    = $self->output_directory.'/tigra.out';
 
-    for my $file ($out_file, $tigra_out) {
+    for my $file ($out_file) {
         unless (-e $out_file) {
             die $self->error_message("Fail to find valid output file: $out_file");
         }

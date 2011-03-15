@@ -57,8 +57,8 @@ sub _detect_variants {
     $self->status_message("beginning execute");
 
     # Run sniper C program... run twice if we get different sets of params for snps and indels
-    my $snv_params = $self->snv_params || "";
-    my $indel_params = $self->indel_params || "";
+    my $snv_params = $self->params || $self->snv_params || "";
+    my $indel_params = $self->params || $self->indel_params || "";
     my $result;
     if ( ($self->detect_snvs && $self->detect_indels) && ($snv_params eq $indel_params) ) {
         $result = $self->_run_sniper($snv_params, $self->_snv_staging_output, $self->_indel_staging_output);

@@ -707,7 +707,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA' => 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA_build36-build37_liftOver',
             );
         
-        my $root_build37_ref_seq = Genome::Model::Build::ReferenceSequence->get(name =>'g1k-human-build37');
+        my $root_build37_ref_seq = Genome::Model::Build::ImportedReferenceSequence->get(name =>'g1k-human-build37') || die;
 
         if($reference_sequence_build and $reference_sequence_build->is_compatible_with($root_build37_ref_seq) 
                 and exists $build36_to_37_rois{$capture_target}) {

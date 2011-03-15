@@ -190,6 +190,11 @@ sub _map_workflow_inputs {
         tumor_snp_file => $tumor_snp_file,
         normal_snp_file => $normal_snp_file; 
 
+    # sanitize this to not pass opt/fscache if we run the processing profile on a blade with the 
+    # fscache
+    my $reference_fasta = $tumor_build->model->reference_sequence_build->full_consensus_path('fa');
+    $reference_fasta =~ s/\/opt\/fscache//;
+
     # Set (hardcoded) defaults for tools that have defaults that do not agree with somatic pipeline
     push @inputs,
         skip_if_output_present => 1,
@@ -200,7 +205,7 @@ sub _map_workflow_inputs {
         only_tier_1_indel => 1,
         normal_indelpe_data_directory => join('/', $build->data_directory, "normal_indelpe_data" ),
         tumor_indelpe_data_directory => join('/', $build->data_directory, "tumor_indelpe_data" ),
-        reference_fasta => $tumor_build->model->reference_sequence_build->full_consensus_path('fa'),
+        reference_fasta => $reference_fasta,
         annotation_reference_transcripts => $annotation_reference_transcripts,
         prepend_chr => 0;
 
@@ -261,7 +266,8 @@ sub default_filenames{
         ## Combined glfSomatic+Varscan Output files ##
         merged_snp_output                   => 'merged.somatic.snp',            ## Generated from merge-variants of somaticSniper and varScan
         merged_indel_output                 => 'merged.somatic.indel',          ## Generated from merge-variants of somaticSniper and varScan ##
-        merged_indel_output_filter          => 'merged.somatic.indel.filter',          ## The homopolymer-filtered list of indels ##
+        merged_indel_output_filter          => 'merged.somatic.indel.filter',          ## The fp-filtered list of indels ##
+        merged_indel_output_filter_rem          => 'merged.somatic.indel.filter.removed',          ## The fp-filter removed list of indels ##
 
         ## Strand Filtering and Lookup Variants Files ##
         merged_snp_output_filter        => 'merged.somatic.snp.filter',

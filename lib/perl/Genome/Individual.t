@@ -37,11 +37,8 @@ is($individual->__display_name__, "George Bush ($id)", "display name");
 is($individual->subject_type, 'organism individual', 'subject type is organism individual');
 print Data::Dumper::Dumper($individual);
 
-my $commit = eval{ UR::Context->commit; };
-ok($commit, 'commit');
-
 $individual = Genome::Individual->get($id);
-ok($individual, 're-get individual');
+ok($individual, 'get individual');
 
 done_testing();
 exit();
