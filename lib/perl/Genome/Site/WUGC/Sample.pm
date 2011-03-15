@@ -154,7 +154,7 @@ class Genome::Site::WUGC::Sample {
     ],
     has_many => [
         attributes                  => { is => 'Genome::Site::WUGC::Sample::Attribute', reverse_as => 'sample', specify_by => 'name', is_optional => 1, is_many => 1, },
-        libraries                   => { is => 'Genome::Site::WUGC::Library', reverse_id_by => 'sample' },
+        libraries                   => { is => 'Genome::Library', reverse_id_by => 'sample' },
         solexa_lanes                => { is => 'Genome::InstrumentData::Solexa', reverse_id_by => 'sample' },
         solexa_lane_names           => { via => 'solexa_lanes', to => 'full_name' },
     ],
