@@ -73,8 +73,8 @@ sub _detect_variants {
     my $output_indel = $self->_temp_staging_directory."/indels.hq";
 
     ## Get Varscan parameters ##
-    my $snv_params = $self->snv_params || "";
-    my $indel_params = $self->indel_params || "";
+    my $snv_params = $self->params || $self->snv_params || "";
+    my $indel_params = $self->params || $self->indel_params || "";
     my $result;
     if ( ($self->detect_snvs && $self->detect_indels) && ($snv_params eq $indel_params) ) {
         $result = $self->_run_varscan($output_snp, $output_indel, $snv_params);

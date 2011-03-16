@@ -96,6 +96,15 @@ sub _create_temp_directories {
 sub _filter_variants {
     my $self     = shift;
     my $cfg_file = $self->config_file;
+
+    #Allow 0 size of output
+    if (-z $cfg_file) {
+        $self->warning_message('0 size of breakdancer config file. Probably it is for testing of samll bam files');
+        my $output_file = $self->pass_staging_output;
+        `touch $output_file`;
+        return 1;
+    }
+
     my (%mean_insertsize, %std_insertsize, %readlens);
 
     my $fh = Genome::Sys->open_file_for_reading($cfg_file) or die "unable to open config file: $cfg_file";
@@ -232,20 +241,6 @@ sub _filter_variants {
     unlink (@bams2remove, @librmdupbams, @novoaligns, $header_file);
     #unlink glob($self->_temp_staging_directory."/*.bam");   #In case leftover bam
 
-    #my $bd_run = Genome::Model::Tools::DetectVariants2::Breakdancer->create(
-    #    aligned_reads_input         => $self->aligned_reads_input,
-    #    control_aligned_reads_input => $self->control_aligned_reads_input,
-    #    reference_sequence_input    => $self->reference_sequence_input,
-    #    output_directory            => $self->_temp_staging_directory,
-    #    config_file                 => $out_file,
-    #    sv_params                   => '-g -h:-t',
-    #);
-    #unless ($bd_run->execute) {
-    #    $self->error_message("Failed to run Breakdancer on Novoalign file: $out_file");
-    #    die;
-    #}
-    
-    #my $bd_out_hq          = $self->_temp_staging_directory.'/'.$self->_sv_base_name; #breakdancer under DV2 api will output svs.hq
     my $bd_out_hq_filtered = $self->pass_staging_output;
     my $bd_out_lq_filtered = $self->fail_staging_output;
     my $bd_in_hq           = $self->detector_directory .'/svs.hq';  #DV2::Filter does not have _sv_base_name preset

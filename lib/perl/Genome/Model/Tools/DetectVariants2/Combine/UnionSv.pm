@@ -26,13 +26,19 @@ EOS
 
 
 sub _combine_variants {
-    my $self  = shift;
+    my $self = shift;
+    my $base_name = 'svs.hq';
 
-    for my $file_name qw(svs.hq tigra.out) {  #hardcoded tigra.out for now might use a generic name like sv.out later
-        my @files = map{$_.'/'.$file_name}($self->input_directory_a, $self->input_directory_b);
+    my ($dir_a, $dir_b) = ($self->input_directory_a, $self->input_directory_b);
+    my @files = map{$_ .'/'. $base_name}($dir_a, $dir_b);
+    my $output_file = $self->output_directory . '/' . $base_name;
+
+    if (-z $files[0] and -z $files[1]) {
+        $self->warning_message("0 size of $base_name from both input dir. Probably for testing of small bams");
+        `touch $output_file`;
+    }
+    else {
         my $input_files = join ',', @files;
-        my $output_file = $self->output_directory.'/'.$file_name;
-
         my $union_command = Genome::Model::Tools::Breakdancer::MergeFiles->create(
             input_files => $input_files,
             output_file => $output_file,
@@ -44,19 +50,47 @@ sub _combine_variants {
         }
     }
 
-    # When unioning, there is no "fail" really, everything should be in the hq file
-    #my $lq_file = $self->output_directory.'/svs.lq';
-    #`touch $lq_file`;
+    $self->status_message("Now make symlink to sv merge outputs");
+    my @file_names = map{$self->_variant_type.'.merge.'.$_}qw(fasta file file.annot out);
+
+    DIR: for my $dir ($dir_a, $dir_b) {
+        my $dir_type;
+        if ($dir =~ /\-q_10_\-d/) {
+            $dir_type = 'Inter.';
+        }
+        elsif ($dir =~ /\-q_10_\-o/) {
+            $dir_type = 'Intra.';
+        }
+        else {
+            $self->warning_message("Failed to figure out the dir type for $dir");
+            next DIR;
+        }
+        COPY: for my $i (0..$#file_names) {
+            my $target = $dir .'/'. $file_names[$i];
+            my $dest   = $self->output_directory ."/$dir_type". $file_names[$i];
+            
+            if (-e $target) {
+                #unless (Genome::Sys->create_symlink($target, $link)) {
+                unless (Genome::Sys->copy_file($target, $dest)) {
+                    $self->warning_message("Failed to copy $target to $dest");
+                    next COPY;
+                }
+            }
+            else {
+                $self->warning_message("Target file: $target not existing");
+            }
+        }
+    }        
     return 1;
 }
+
 
 sub _validate_output {
     my $self = shift;
     my $variant_type = $self->_variant_type;
     my $out_file     = $self->output_directory.'/'.$variant_type.'.hq';
-    my $tigra_out    = $self->output_directory.'/tigra.out';
 
-    for my $file ($out_file, $tigra_out) {
+    for my $file ($out_file) {
         unless (-e $out_file) {
             die $self->error_message("Fail to find valid output file: $out_file");
         }

@@ -106,6 +106,10 @@ sub _import {
         );
         return if not $individual;
     }
+    else {
+        $self->status_message('Found individual: '.join(' ', map{ $individual->$_ } (qw/ id name upn /)));
+        $self->status_message("Found individual 'upn' (".$self->_individual->upn.") does not match the upn given ($individual_upn). This is probably ok.") if $individual->upn ne $individual_upn;
+    }
 
     if ( not $sample->source_id ) {
         $sample->source_id( $individual->id );
@@ -138,36 +142,36 @@ sub _get_individual {
     Carp::confess('No "upn" given to get individual') if not $upn;
 
     if ( my $individual = $sample->source ) {
-        $self->status_message('Found individual: '.join(' ', map{ $individual->$_ } (qw/ id name upn /)));
         return $self->_individual($individual);
     }
 
-    my $individual_from_sample_name;
+    my %individuals_from_similar_samples;
     my @tokens = split('-', $sample->name);
-    for ( my $i = 1; $i <= $#tokens; $i++  ) {
-        my $calculated_upn = join('-', @tokens[0..$i]);
-        my $individual_from_sample_name = Genome::Individual->get(upn => $calculated_upn);
-        last if $individual_from_sample_name;
+    for ( my $i = $#tokens - 1; $i > 0; $i--  ) { # go down to 2 levels
+        my $extraction_label = join('-', @tokens[0..$i]);
+        my @samples = Genome::Sample->get('extraction_label like' => $extraction_label.'%');
+        for my $sample ( @samples ) {
+            my $source = $sample->source;
+            next if not $source;
+            next if $source->subject_type !~ /individual/;
+            $individuals_from_similar_samples{$source->id} = $source;
+        }
+        last if %individuals_from_similar_samples;
+    }
+
+    if ( %individuals_from_similar_samples ) {
+        my %individuals = map { $_->id => $_ } values %individuals_from_similar_samples;
+        if ( keys %individuals > 1 ) {
+            $self->_bail("Found multiple individuals for similar samples: ".join(' ', keys %individuals));
+            return;
+        }
+        my ($individual) = values %individuals;
+        return $self->_individual($individual);
     }
 
     my $individual_for_given_upn = Genome::Individual->get(upn => $upn);
-
-    return if not $individual_from_sample_name and not $individual_for_given_upn;
-
-    if ( $individual_from_sample_name and $individual_for_given_upn and $individual_from_sample_name->id ne $individual_for_given_upn->id) {
-        $self->_bail('Found individuals for given upn ('.$individual_for_given_upn->__display_name__.') and calculated from sample name ('.$individual_from_sample_name->__display_name__.'), but they do not match.');
-        return;
-    }
-    elsif ( $individual_from_sample_name ) {
-        $self->_individual($individual_from_sample_name);
-    }
-    elsif ( $individual_for_given_upn ) {
-        $self->_individual($individual_for_given_upn);
-    }
-
-    $self->status_message('Found individual: '.join(' ', map{ $self->_individual->$_ } (qw/ id name upn /)));
-
-    return $self->_individual;
+    return if not $individual_for_given_upn;
+    return $self->_individual($individual_for_given_upn);
 }
 
 sub _create_individual {
@@ -182,13 +186,15 @@ sub _create_individual {
     $params{gender} = 'unspecified' if not $params{gender};
 
     $self->status_message('Create individual: '.Dumper(\%params));
+    my $transaction = UR::Context::Transaction->begin();
     my $individual = Genome::Individual->create(%params);
     if ( not defined $individual ) {
         $self->_bail('Could not create individual');
         return;
     }
 
-    if ( not UR::Context->commit ) {
+    #if ( not UR::Context->commit ) {
+    if ( not $transaction->commit ) {
         $self->_bail('Cannot commit new individual to DB');
         return;
     }
@@ -345,8 +351,9 @@ sub _bail {
     $self->status_message('Encountered an error, removing newly created objects.');
 
     for my $obj ( @$created_objects ) { 
+        my $transaction = UR::Context::Transaction->begin();
         $obj->delete;
-        if ( not UR::Context->commit ) {
+        if ( not $transaction->commit ) {
             $self->status_message('Cannot commit removal of '.ref($obj).' '.$obj->id);
         }
     }

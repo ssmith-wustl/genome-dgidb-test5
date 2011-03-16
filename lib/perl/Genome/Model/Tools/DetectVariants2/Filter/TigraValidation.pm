@@ -52,30 +52,32 @@ my @FULL_CHR_LIST = (1..22, 'X', 'Y');
 class Genome::Model::Tools::DetectVariants2::Filter::TigraValidation {
     is  => 'Genome::Model::Tools::DetectVariants2::Filter',
     has_optional => [
-        #breakdancer_input => {
-        #    is => 'FilePath',
-        #    calculate_from => 'detector_directory',
-        #    calculate => q{ return $detector_directory . '/svs.hq'; },
-        #},
         pass_output => {
             is => 'FilePath',
-            calculate_from => 'output_directory',
-            calculate => q{ return $output_directory . '/svs.hq'; },
+            calculate_from => '_temp_staging_directory',
+            calculate => q{ return $_temp_staging_directory . '/svs.hq'; },
         },
         fail_output => {
             is => 'FilePath',
-            calculate_from => 'output_directory',
-            calculate => q{ return $output_directory . '/svs.lq'; },
+            calculate_from => '_temp_staging_directory',
+            calculate => q{ return $_temp_staging_directory . '/svs.lq'; },
         },
-        tigra_output => { 
-            is => 'FilePath',
-            calculate_from => 'output_directory',
-            calculate => q{ return $output_directory . '/tigra.out'; },
+        sv_output_name => { 
+            is => 'Text',
+            default_value => 'svs.out',
         },
         # TODO Need to point to a specific version of tigra that's not in a home dir
         tigra_path => {
             is => 'FilePath',
             default => '/gscuser/xfan/kdevelop/TIGRA_SV/src/tigra_sv',
+        },
+        sv_merge_path => {
+            is => 'FilePath',
+            default => '/gscuser/kchen/1000genomes/analysis/scripts/MergeAssembledCallsets.pl',
+        },
+        sv_annot_path => {
+            is => 'FilePath',
+            default => '/gscuser/kchen/1000genomes/analysis/scripts/BreakAnnot.pl',
         },
         # TODO Either point to a specific version of phrap or (even better) use the crossmatch tool
         crossmatch_path => {
@@ -88,7 +90,7 @@ class Genome::Model::Tools::DetectVariants2::Filter::TigraValidation {
         },
         breakpoint_seq_file => {
             calculate_from => '_temp_staging_directory',
-            calculate => q{ return $_temp_staging_directory . '/breakpoint_seq.fa'; },
+            calculate => q{ return $_temp_staging_directory . '/breakpoint_seq'; },
         },
         specify_chr => {
             is => 'String',
@@ -297,6 +299,16 @@ sub _filter_variants {
     my $self = shift;
     my $variant_file = $self->_breakdancer_input;
 
+    #Allow 0 size of output
+    if (-z $variant_file) {
+        $self->warning_message('0 size of breakdancer input : '.$variant_file.'. Probably it is for testing of small bams');
+        my $pass_out = $self->pass_output;
+        `touch $pass_out`;
+        my @output_files = map{$self->_temp_staging_directory .'/'.$self->_variant_type.'.merge.'.$_}qw(file out fasta);
+        `touch @output_files`;
+        return 1;
+    }
+
     if ($self->specify_chr eq 'all') {
         $self->status_message("Splitting breakdancer input file by chromosome");
 
@@ -363,7 +375,7 @@ sub _filter_variants {
         # Now merge together all the pass/fail files produced for each chromosome
         $self->status_message("Merging output files together");
 
-        for my $file ($self->pass_output, $self->fail_output, $self->tigra_output) {
+        for my $file ($self->pass_output, $self->fail_output) {
             my $merge_obj = Genome::Model::Tools::Breakdancer::MergeFiles->create(
                 input_files => join(',', map { $self->_temp_staging_directory . '/' . $_ . '/' . basename($file) } @use_chr_list),
                 output_file => $file,
@@ -371,7 +383,43 @@ sub _filter_variants {
             my $merge_rv = $merge_obj->execute;
             Carp::confess 'Could not execute breakdancer merge command!' unless defined $merge_rv and $merge_rv == 1;
         }
+        $self->status_message("Running MergeCallSet");
 
+        my ($merge_index, $merge_file, $merge_annot, $merge_out, $merge_fa) = 
+            map{$self->_temp_staging_directory .'/'.$self->_variant_type.'.merge.'.$_}qw(index file file.annot out fasta);
+
+        my $idx_fh = IO::File->new(">$merge_index") or die "Failed to open $merge_index for writing\n";
+
+        for my $chr (@use_chr_list) {
+            my $chr_dir = $self->_temp_staging_directory . '/' . $chr;
+            if (-d $chr_dir) {
+                for my $type qw(normal tumor) {
+                    my $name   = $type.$chr;
+                    my $sv_fa  = $chr_dir .'/'. basename($self->breakpoint_seq_file) .".$type.fa";
+                    my $sv_out = $chr_dir .'/'. $self->sv_output_name .'.'. $type;
+                    if (-e $sv_fa and -e $sv_out) {
+                        $idx_fh->print($name.' '.$sv_out.' '.$sv_fa."\n");
+                    }
+                    else {
+                        $self->warning_message("$name: $sv_fa and $sv_out are not both valid");
+                    }
+                }
+            }
+            else {
+                $self->warning_message("chromosome subdir $chr_dir is not available");
+            }
+        }
+        $idx_fh->close;
+
+        my $merge_cmd = $self->sv_merge_path . ' -c -f '.$merge_fa.' -d 200 -h '.$merge_index.' 1> '.$merge_file.' 2> '.$merge_out;
+        $rv = system $merge_cmd;
+        unless ($rv == 0) {
+            $self->warning_message("Command: $merge_cmd probably did not finish ok");
+            return 1;
+        }
+
+        my $annot_cmd = $self->sv_annot_path . ' -A '. $merge_file . ' > '. $merge_annot;
+        $self->warning_message("Annot command: $annot_cmd probably did not finished ok");         
         return 1;
     }
 
@@ -393,31 +441,13 @@ sub _filter_variants {
     $self->status_message("Parsing params");
     $self->parse_params; # goes through the param string, sets object properties
 
-    my $bp_file = $self->breakpoint_seq_file;
-    my $bp_io;
-    if ($bp_file) {
-        if (-s $bp_file) {
-            $self->warning_message('breakpoint seq file: '.$bp_file. ' existing, Now remove it');
-            unlink $bp_file;
-        }
-        $bp_io = Bio::SeqIO->new(
-            -file   => ">>$bp_file",
-            -format => 'Fasta',
-        );
-    }
-
-    my $cm_aln_fh = new IO::File;
-    my $cm_aln_file = $self->cm_aln_file;
-    if ($cm_aln_file) {
-        $cm_aln_fh->open(">$cm_aln_file");
-    }
-
-    my @bam_files = $self->_check_bam;
+    my %bam_files = $self->_check_bam;
     my @tmp_tigra_files = ();
 
     #MG need tigra_sv run on each single bam separately not all bams
-    for my $i (0..$#bam_files) {
-        my $bam_file = $bam_files[$i];
+    #for my $i (0..$#bam_files) {
+    for my $type (keys %bam_files) {
+        my $bam_file = $bam_files{$type};
 
         #my $tmp_tigra_dir = $self->_temp_scratch_directory . "/$i";
         #unless (Genome::Sys->create_directory($tmp_tigra_dir)) {
@@ -426,17 +456,17 @@ sub _filter_variants {
         #}
         #my $tmp_tigra_dir = Genome::Sys->create_temp_directory('tigra_sv_out_'.$i);
 
-        my $tmp_tigra_dir = File::Temp::tempdir('tigra_sv_out_'.$self->specify_chr.'_'.$i.'_XXXXXX', DIR => '/tmp', CLEANUP => 1);
+        my $tmp_tigra_dir = File::Temp::tempdir('tigra_sv_out_'.$self->specify_chr.'_'.$type.'_XXXXXX', DIR => '/tmp', CLEANUP => 1);
         $self->_tigra_data_dir($tmp_tigra_dir); 
 
         # Construct tigra command and execute
         $self->status_message("Making tigra command and executing");
 
-        my $tigra_output  = $tmp_tigra_dir . '/tigra.out';
+        my $sv_output     = $self->_temp_staging_directory . '/' .$self->sv_output_name .'.'. $type;
         my $tigra_options = $self->_get_tigra_options;
         $tigra_options = '-I ' . $tmp_tigra_dir . ' ' . $tigra_options; #hack for now, need separate tigra dump dirs
 
-        my $tigra_sv_cmd = join(' ', $self->tigra_path, $tigra_options, $variant_file, $bam_file, '>', $tigra_output);
+        my $tigra_sv_cmd = join(' ', $self->tigra_path, $tigra_options, $variant_file, $bam_file, '>', $sv_output);
 
         my $rv = Genome::Sys->shellcmd(
             cmd         => $tigra_sv_cmd,
@@ -446,14 +476,29 @@ sub _filter_variants {
             $self->error_message("Running tigra_sv failed.\nCommand: $tigra_sv_cmd");
             die;
         }
-
         $self->status_message("Done running tigra, now parsing");
+
+        my $bp_file = $self->breakpoint_seq_file . '.' . $type .'.fa';
+        my $bp_io;
+        if ($bp_file) {
+            if (-s $bp_file) {
+                $self->warning_message('breakpoint seq file: '.$bp_file. ' existing, Now remove it');
+                unlink $bp_file;
+            }
+            $bp_io = Bio::SeqIO->new(
+                -file   => ">>$bp_file",
+                -format => 'Fasta',
+            );
+        }
+
+        my $cm_aln_file = $self->cm_aln_file . '.' . $type;
+        my $cm_aln_fh   = IO::File->new(">$cm_aln_file") or die "Failed to open $cm_aln_file for writing";
 
         my @tigra_sv_fas = glob($tmp_tigra_dir . "/*.fa.contigs.fa"); #get tigra homo ctg list
         @tigra_sv_fas = sort{(basename ($a)=~/^\S+?\.(\d+)\./)[0]<=> (basename ($b)=~/^\S+?\.(\d+)\./)[0]}@tigra_sv_fas; #sort ctg file by chr pos
     
         # open output file for the following resume
-        my $out_fh = IO::File->new(">>". $tigra_output);
+        my $out_fh = IO::File->new(">>". $sv_output) or die "Failed to open $sv_output for writing";
     
         for my $tigra_sv_fa (@tigra_sv_fas) {
             my ($tigra_sv_name) = basename $tigra_sv_fa =~ /^(\S+)\.fa\.contigs\.fa/;
@@ -506,18 +551,17 @@ sub _filter_variants {
             $self->_WeightAvgSize(undef) if $self->_WeightAvgSize;
         }
         $out_fh->close;
-        push @tmp_tigra_files, $tigra_output;
+        $cm_aln_fh->close if $cm_aln_fh;
+        push @tmp_tigra_files, $sv_output;
     }
-    $cm_aln_fh->close if $cm_aln_fh;
-
     $self->status_message("Done validating, now merging multiple tigra outputs into one");
 
-    my $tigra_out_file = $self->output_directory . '/tigra.out';
-    my $input_files    = join ',', @tmp_tigra_files;
+    my $sv_out_file = $self->_temp_staging_directory . '/' . $self->sv_output_name;
+    my $input_files = join ',', @tmp_tigra_files;
 
     my $tigra_merge = Genome::Model::Tools::Breakdancer::MergeFiles->create(
         input_files => $input_files,
-        output_file => $tigra_out_file,
+        output_file => $sv_out_file,
     );
     my $merge_rv = $tigra_merge->execute;
     confess 'Could not merge multiple tigra validation lists' unless defined $merge_rv and $merge_rv == 1;
@@ -526,7 +570,7 @@ sub _filter_variants {
 
     my $tigra_adaptor_obj = Genome::Model::Tools::Breakdancer::TigraToBreakdancer->create(
         original_breakdancer_file => $variant_file,
-        tigra_output_file         => $tigra_out_file,
+        tigra_output_file         => $sv_out_file,
         pass_filter_file          => $self->pass_output,
         fail_filter_file          => $self->fail_output,
     );
@@ -534,20 +578,22 @@ sub _filter_variants {
     confess 'Could not produce filtered breakdancer files from tigra output!' unless defined $adaptor_rv and $adaptor_rv == 1;
     
     $self->status_message('TigraValidation finished ok.');
-
     return 1;
 }
+
 
 #overwrite this base method because there is no svs.bed out for now
 sub _validate_output {
     my $self = shift;
+    #my $name = $self->sv_output_name;
+    my $name = "sv*out";
 
     unless(-d $self->output_directory){
         die $self->error_message("Could not validate the existence of output_directory");
     }
-    my @files = glob($self->output_directory."/*tigra.out*");
+    my @files = glob($self->output_directory."/*$name*");
     unless (@files) {
-        die $self->error_message("Failed to get tigra.out");
+        die $self->error_message("Failed to get $name from ". $self->output_directory);
     }
     return 1;
 }
@@ -571,7 +617,7 @@ sub _breakdancer_input {
 sub _check_bam {
     my $self = shift;
     my $bam_files = join(',', $self->aligned_reads_input, $self->control_aligned_reads_input);
-    my (@bam_files, @valid_bams);
+    my (@bam_files, %valid_bams);
 
     if ($bam_files =~ /\,/) {
         @bam_files = split /\,/, $bam_files; #TODO validation check each file
@@ -589,9 +635,17 @@ sub _check_bam {
             $self->error_message("bam index file: $bam.bai is not valid");
             die $self->error_message;
         }
-        push @valid_bams, $bam;
+        if ($bam eq $self->aligned_reads_input) {
+            $valid_bams{tumor}  = $bam;
+        }
+        elsif ($bam eq $self->control_aligned_reads_input) {
+            $valid_bams{normal} = $bam;
+        }
+        else {
+            die $self->error_message("Can not figure out the type of $bam");
+        }
     }
-    return @valid_bams;
+    return %valid_bams;
 }
 
 sub parse_params {
