@@ -31,10 +31,6 @@ class Genome::Disk::Allocation {
             is => 'Number',
             doc => 'The disk space allocated in kilobytes',
         },
-        original_kilobytes_requested => {
-            is => 'Number',
-            doc => 'The disk space allocated in kilobytes',
-        },
         owner_class_name => {
             is => 'Text',
             doc => 'The class name for the owner of this allocation',
@@ -68,6 +64,10 @@ class Genome::Disk::Allocation {
         },
     ],
     has_optional => [
+        original_kilobytes_requested => {
+            is => 'Number',
+            doc => 'The disk space allocated in kilobytes',
+        },
         kilobytes_used => {
             is => 'Number',
             default => 0,
