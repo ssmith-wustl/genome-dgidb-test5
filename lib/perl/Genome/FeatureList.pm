@@ -206,6 +206,15 @@ sub processed_bed_file_content {
             $entry[0] =~ s/chr//g;
             if ($entry[0] =~ /random/) { next; }
 
+            #this is a temporary measure to resolve a support issue.  Will be replaced by more general conversion mechanism
+            if ($self->reference_name =~ /^GRCh37-lite/) {
+                if($entry[0] =~ /\d+_(GL\d+)R/) {
+                    $entry[0] = $1 . '.1';
+                } elsif ($entry[0] =~ /Un_gl(\d+)/) {
+                    $entry[0] = 'GL' . $1 . '.1';
+                }
+            }
+
             # Correct for 1-based start positions in imported BED files,
             # unless at zero already(which means we shouldn't be correcting the position anyway...)
             if ($self->is_1_based) {
