@@ -73,6 +73,7 @@ sub execute {
         cmd => $cfg_cmd,
         input_files  => [$self->tumor_bam, $self->normal_bam],
         output_files => [$self->output_file],
+        allow_zero_size_output_files => 1,
     );
     unless ($rv) {
         $self->error_message("Running breakdancer config failed using command: $cfg_cmd");

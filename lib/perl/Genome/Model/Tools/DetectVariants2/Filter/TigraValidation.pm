@@ -299,6 +299,16 @@ sub _filter_variants {
     my $self = shift;
     my $variant_file = $self->_breakdancer_input;
 
+    #Allow 0 size of output
+    if (-z $variant_file) {
+        $self->warning_message('0 size of breakdancer input : '.$variant_file.'. Probably it is for testing of small bams');
+        my $pass_out = $self->pass_output;
+        `touch $pass_out`;
+        my @output_files = map{$self->_temp_staging_directory .'/'.$self->_variant_type.'.merge.'.$_}qw(file out fasta);
+        `touch @output_files`;
+        return 1;
+    }
+
     if ($self->specify_chr eq 'all') {
         $self->status_message("Splitting breakdancer input file by chromosome");
 
