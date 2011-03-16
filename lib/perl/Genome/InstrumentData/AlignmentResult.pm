@@ -1165,7 +1165,7 @@ sub _process_sam_files {
         my $add_rg_cmd = Genome::Model::Tools::Sam::AddReadGroupTag->create(
             input_file     => $sam_input_file,
             output_file    => $per_lane_sam_file_rg,
-            read_group_tag => $self->instrument_data->id,
+            read_group_tag => $self->read_and_platform_group_tag_id,
         );
 
         unless ($add_rg_cmd->execute) {
@@ -1794,7 +1794,7 @@ sub construct_groups_file {
 
 
     # build the header
-    my $id_tag = $self->instrument_data->id;
+    my $id_tag = $self->read_and_platform_group_tag_id;
     my $pu_tag = sprintf("%s.%s",$self->instrument_data->run_identifier,$self->instrument_data->subset_name);
     my $lib_tag = $self->instrument_data->library_name;
     my $date_run_tag = $self->instrument_data->run_start_date_formatted;
@@ -1824,8 +1824,17 @@ sub construct_groups_file {
     }
 
     return 1;
+}
 
+sub read_and_platform_group_tag_id {
+    my $self = shift;
+    my $id = $self->instrument_data->id;
 
+    if ($self->instrument_data_segment_id) {
+        $id .= "-". $self->instrument_data_segment_id;
+    }
+
+    return $id;
 }
 
 sub aligner_params_for_sam_header {
