@@ -1479,6 +1479,13 @@ sub delete {
             $self->warning_message('Failed to deallocate disk space.');
         }
     }
+
+    # Remove model link
+    my $model_data_directory = $self->model->data_directory;
+    if ($model_data_directory) {
+        my $model_build_symlink = $model_data_directory . '/build' . $self->build_id;
+        unlink($model_build_symlink) if (-e $model_build_symlink);
+    }
     
     # FIXME Don't know if this should go here, but then we would have to call success and abandon through the model
     #  This works b/c the events are deleted prior to this call, so the model doesn't think this is a completed
