@@ -784,7 +784,6 @@ sub _promote_staged_data {
 
     # Symlink the most recent version bed files of the final hq calls into the base of the output directory
     for my $variant_type (@{$self->variant_types}){
-        next if $variant_type eq 'sv';  #off for now because sv does not have bed output yet
         my $output_accessor = "_".$variant_type."_hq_output_file";
         if(defined($self->$output_accessor)){
             my $file = $self->$output_accessor;
@@ -815,7 +814,12 @@ sub set_output_files {
                 die $self->error_message;
             }
             my $hq_output_dir = $self->output_directory."/".$relative_path; #FIXME complications arise here when we have just a single column file... or other stuff. May just need to drop the version, too?
-            my $hq_file = $variant_type."s.hq.bed";
+            my $hq_file;
+            if ($variant_type eq 'sv'){
+                $hq_file = $variant_type."s.hq";
+            }else{
+                $hq_file = $variant_type."s.hq.bed";
+            }
             my $file;
             if(-l $hq_output_dir."/".$hq_file){
                 $file = readlink($hq_output_dir."/".$hq_file); # Should look like "dir/snvs_hq.bed" 

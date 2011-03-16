@@ -26,7 +26,7 @@ class Genome::Model::Tools::Gatk::GermlineIndel {
 		output_file     => { is => 'Text', doc => "Output file to receive formatted lines", is_optional => 0, is_input => 1, is_output => 1 },
 		bed_output_file => { is => 'Text', doc => "Optional abbreviated output in BED format", is_optional => 1, is_input => 1, is_output => 1 },
 		formatted_file => { is => 'Text', doc => "Optional output file of indels in annotation format", is_optional => 1, is_input => 1, is_output => 1 },
-		gatk_params => { is => 'Text', doc => "Parameters for GATK", is_optional => 1, is_input => 1, is_output => 1, default => "-R /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa -T IndelGenotyperV2 --window_size 300 --verbose" },
+		gatk_params => { is => 'Text', doc => "Parameters for GATK", is_optional => 1, is_input => 1, is_output => 1, default => "-R /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa -T IndelGenotyperV2 --window_size 300" },
 		path_to_gatk => { is => 'Text', doc => "Path to GATK command", is_optional => 1, is_input => 1, is_output => 1, default => "/gsc/scripts/pkg/bio/gatk/GenomeAnalysisTK-1.0.5336/GenomeAnalysisTK.jar" },
 	        mb_of_ram => {
 	            is => 'Text',
@@ -71,12 +71,12 @@ sub execute {                               # replace with real execution logic.
 	#-I /gscmnt/sata905/info/model_data/2858219475/build103084961/alignments/103084961_merged_rmdup.bam
 	#-I /gscmnt/sata871/info/model_data/2858334303/build103084933/alignments/103084933_merged_rmdup.bam
 	#-O gatk_testing/indels.GATK.H_GP-13-0890-01A-01-1.tsv -o gatk_testing/indels.GATK.H_GP-13-0890-01A-01-1.out 
-	
+
 	my $output_file = $self->output_file;
 	my $ram = $self->mb_of_ram;
 	my $cmd = 'java -Xms'.$ram.'m -Xmx'.$ram.'m -jar ';
 
-	$cmd .= join(" ", $path_to_gatk, $gatk_params, "-I", $self->bam_file, "-o", $output_file);
+	$cmd .= join(" ", $path_to_gatk, $gatk_params, "-I", $self->bam_file, "--verboseOutput", $output_file, "-o", $output_file.".vcf");
 
 	## Optionally append BED output file ##
 
@@ -88,7 +88,7 @@ sub execute {                               # replace with real execution logic.
 
 	}
 
-	$cmd .= " -O $bed_output_file";
+	$cmd .= " --bedOutput $bed_output_file";
 
 	## Run GATK Command ##
 	my $return;

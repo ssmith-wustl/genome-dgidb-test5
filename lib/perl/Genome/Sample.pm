@@ -159,6 +159,7 @@ class Genome::Sample {
         has_many => [
         attributes                  => { is => 'Genome::Sample::Attribute', reverse_as => 'sample', specify_by => 'name', is_optional => 1, is_many => 1, },
         libraries                   => { is => 'Genome::Library', reverse_id_by => 'sample' },
+        library_names               => { is => 'Text', via => 'libraries', to => 'name' },
         solexa_lanes                => { is => 'Genome::InstrumentData::Solexa', reverse_id_by => 'sample' },
         solexa_lane_names           => { via => 'solexa_lanes', to => 'full_name' },
     ],

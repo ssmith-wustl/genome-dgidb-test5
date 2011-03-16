@@ -27,13 +27,18 @@ EOS
 
 sub _combine_variants {
     my $self = shift;
+    my $base_name = 'svs.hq';
+
     my ($dir_a, $dir_b) = ($self->input_directory_a, $self->input_directory_b);
+    my @files = map{$_ .'/'. $base_name}($dir_a, $dir_b);
+    my $output_file = $self->output_directory . '/' . $base_name;
 
-    for my $file_name qw(svs.hq) {
-        my @files = map{$_.'/'.$file_name}($dir_a, $dir_b);
+    if (-z $files[0] and -z $files[1]) {
+        $self->warning_message("0 size of $base_name from both input dir. Probably for testing of small bams");
+        `touch $output_file`;
+    }
+    else {
         my $input_files = join ',', @files;
-        my $output_file = $self->output_directory.'/'.$file_name;
-
         my $union_command = Genome::Model::Tools::Breakdancer::MergeFiles->create(
             input_files => $input_files,
             output_file => $output_file,
@@ -60,14 +65,15 @@ sub _combine_variants {
             $self->warning_message("Failed to figure out the dir type for $dir");
             next DIR;
         }
-        LINK: for my $i (0..$#file_names) {
+        COPY: for my $i (0..$#file_names) {
             my $target = $dir .'/'. $file_names[$i];
-            my $link   = $self->output_directory ."/$dir_type". $file_names[$i];
+            my $dest   = $self->output_directory ."/$dir_type". $file_names[$i];
             
             if (-e $target) {
-                unless (Genome::Sys->create_symlink($target, $link)) {
-                    $self->warning_message("Failed to symlink $target to $link");
-                    next LINK;
+                #unless (Genome::Sys->create_symlink($target, $link)) {
+                unless (Genome::Sys->copy_file($target, $dest)) {
+                    $self->warning_message("Failed to copy $target to $dest");
+                    next COPY;
                 }
             }
             else {
