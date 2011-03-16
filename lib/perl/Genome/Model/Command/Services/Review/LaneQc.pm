@@ -47,7 +47,9 @@ sub confirm_or_create_lane_qc {
     my @inputs_models = map { $_->model } @inputs;
     my ($feb_model) = grep { $_->processing_profile_name eq 'february 2011 illumina lane qc' } @inputs_models;
     if ($feb_model) {
-        $self->print_message("$instrument_data_id: already has a lane QC");
+        my $build = $feb_model->last_succeeded_build || $feb_model->latest_build;
+        my $build_status = lc($build ? $build->status : 'missing build');
+        $self->print_message("$instrument_data_id: already has a ($build_status) lane QC " . $feb_model->__display_name__);
         return $feb_model;
     }
     else {
