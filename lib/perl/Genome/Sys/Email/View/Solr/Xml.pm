@@ -7,7 +7,7 @@ use Genome;
 
 class Genome::Sys::Email::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
-    has_constant => [
+    has => [
         type => {
             is => 'Text',
             default => 'mail'

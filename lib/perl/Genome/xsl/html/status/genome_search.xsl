@@ -40,7 +40,8 @@
         </div>
         <hr class="space"/>
 <h2><font color="red">** This search engine is currently under maintenance **</font></h2>
-(You might not find what you're looking for- should be back up tomorrow March 8)
+When the maintenance is done (Monday March 21), search results will look a little different but 
+queries will return results much quicker.
         <div class="main_search_hints clearfix">
           <div class="box_header span-8 last rounded-top">
             <div class="box_title"><h3 class="nontyped last">Can't find what you're looking for?</h3></div>

@@ -7,7 +7,7 @@ use Genome;
 
 class Genome::Wiki::Document::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
-    has_constant => [
+    has => [
         type => {
             is => 'Text',
             default => 'wiki-page'

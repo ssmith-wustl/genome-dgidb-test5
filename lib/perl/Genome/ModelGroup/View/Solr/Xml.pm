@@ -7,7 +7,7 @@ use Genome;
 
 class Genome::ModelGroup::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
-    has_constant => [
+    has => [
         type => {
             is => 'Text',
             default => 'modelgroup'
