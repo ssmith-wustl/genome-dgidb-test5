@@ -573,13 +573,13 @@ sub create_default_per_lane_qc_model {
     my $reference_sequence_build = shift;
     my $pse = shift;
 
-    my $subset_name = $genome_instrument_data->subset_name || 'unknown-subset';
-    my $run_name = $genome_instrument_data->short_name || 'unknown-run';
-
     my ($processing_profile, $model_name);
     my $dbsnp_build;
     my $ncbi_human_build36 = Genome::Model::Build->get(101947881);
     if ($reference_sequence_build && $reference_sequence_build->is_compatible_with($ncbi_human_build36)) {
+        my $subset_name = $genome_instrument_data->subset_name || 'unknown-subset';
+        my $run_name = $genome_instrument_data->short_name || 'unknown-run';
+
         $processing_profile = Genome::ProcessingProfile->get(2581081);
         $model_name = $run_name . '.' . $subset_name . '.prod-qc';
         $dbsnp_build = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($reference_sequence_build); 
