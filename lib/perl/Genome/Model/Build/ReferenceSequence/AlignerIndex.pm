@@ -3,7 +3,6 @@ package Genome::Model::Build::ReferenceSequence::AlignerIndex;
 use Genome;
 use warnings;
 use strict;
-use Sys::Hostname;
 
 
 class Genome::Model::Build::ReferenceSequence::AlignerIndex {
@@ -92,13 +91,18 @@ sub aligner_requires_param_masking {
 
 sub get {
     my $class = shift;
-    my %p = @_;
 
-    if (exists $p{aligner_name} && $class->aligner_requires_param_masking($p{aligner_name})) {
-        $p{aligner_params} = undef;
+    my @objects;
+    if (@_ % 2 == 0) {
+        my %p = @_;
+        if (exists $p{aligner_name} && $class->aligner_requires_param_masking($p{aligner_name})) {
+            $p{aligner_params} = undef;
+        }
+        @objects = $class->SUPER::get(%p);
+    } else {
+        @objects = $class->SUPER::get(@_);
     }
 
-    my @objects = $class->SUPER::get(%p);
     return unless @objects;
 
     for my $obj (@objects) {
