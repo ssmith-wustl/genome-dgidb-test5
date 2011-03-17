@@ -130,7 +130,7 @@ sub execute {
 }
 
 sub help_brief {
-    "Takes an annotation file and produces a BED file for capture validation.";
+    "Takes an annotation file and produces a Design file for capture validation.";
 }
 
 sub help_detail {
