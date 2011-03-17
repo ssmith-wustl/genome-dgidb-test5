@@ -10,7 +10,7 @@ use above 'Genome';
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 23;
+        plan tests => 25;
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -58,8 +58,11 @@ my %params = (
     input_pass => 1,
 );
 
+my @result_ids;
+
 my $result = $result_class->create(%params);
-ok($result, "Created result (1st end)");
+ok($result, "created result (1st end)");
+push(@result_ids, $result->id);
 is($result->parent_result, $parent_result, "parent result is set correctly");
 my $dir = $result->output_dir;
 ok(-s $result->sai_file, "sai file exists");
@@ -68,14 +71,15 @@ ok(-s $result->log_file, "log file exists");
 my $md5_1 = $result->md5sum;
 
 my $duplicate = $result_class->create(%params);
-ok(!$duplicate, 'creating duplicate result fails as expected');
+ok(!$duplicate, "creating duplicate result fails as expected");
 my $fetched = $result_class->get_or_create(%params);
-ok($fetched, 'fetched object with get_or_create');
-is($result->id, $fetched->id, 'get_or_create returned the right object');
+ok($fetched, "fetched object with get_or_create");
+is($result->id, $fetched->id, "get_or_create returned the right object");
 
 $params{input_pass} = 2;
 $result = $result_class->create(%params);
-ok($result, "Created result (2nd end)");
+ok($result, "created result (2nd end)");
+push(@result_ids, $result->id);
 is($result->parent_result, $parent_result, "parent result is set correctly");
 $dir = $result->output_dir;
 ok(-s $result->sai_file, "sai file exists");
@@ -83,7 +87,17 @@ ok($result->md5sum, "sai md5 exists");
 ok(-s $result->log_file, "log file exists");
 my $md5_2 = $result->md5sum;
 
-ok($md5_1 ne $md5_2, 'md5sums differ as expected');
+ok($md5_1 ne $md5_2, "md5sums differ as expected");
+$fetched = $result_class->get_or_create(%params);
+
+eval { $fetched->delete; };
+ok(($@ and $fetched->id), "direct deletion of non-orphaned IntermediateAlignmentResult forbidden");
+
+
+$parent_result->delete();
+
+my @objs = $result_class->get(\@result_ids);
+ok(!@objs, "deleting parent result deleted children as well");
 
 done_testing();
 
