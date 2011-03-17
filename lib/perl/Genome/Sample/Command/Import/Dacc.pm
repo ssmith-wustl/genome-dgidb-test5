@@ -28,6 +28,10 @@ class Genome::Sample::Command::Import::Dacc {
     ],
 };
 
+sub help_brief {
+    return 'import DACC samples';
+}
+
 sub execute {
     my $self = shift;
 
@@ -44,29 +48,24 @@ sub basic_import {
 
     $self->status_message('Import DACC Sample Basic...');
 
-    my $taxon = $self->_get_taxon('Human Metagenome');
-    Carp::confess('Cannot get human taxon') if not $taxon;
-
-    my $individual = $self->_get_and_update_or_create_individual(
-        name => 'dbGaP-'.$self->sra_sample_id,
-        upn => 'dbGaP-'.$self->sra_sample_id,
-        nomenclature => 'unknown',
-        description => 'dbGaP individual: unknown, used SRS sample id',
+    my $ok = $self->_import(
+        taxon => 'Human Metagenome',
+        individual => {
+            upn => 'dbGaP-'.$self->sra_sample_id,
+            nomenclature => 'dbGaP',
+            description => 'dbGaP individual: unknown, used SRS sample id',
+        },
+        sample => {
+            name => $self->sra_sample_id,
+            nomenclature => 'dbGaP',
+            extraction_label => $self->sra_sample_id,
+            extraction_type => 'genomic dna',
+            cell_type => 'unknown',
+            nomenclature => 'dbGaP',
+        },
+        library => 'extlibs',
     );
-    return if not $individual;
-
-    my $sample = $self->_get_and_update_or_create_sample(
-        name => $self->sra_sample_id,
-        taxon_id => $taxon->id,
-        extraction_label => $self->sra_sample_id,
-        extraction_type => 'genomic',
-        cell_type => 'unknown',
-        _nomenclature => 'unknown',
-    );
-    return if not $sample;
-
-    my $library = $self->_get_or_create_library_for_extension('extlibs');
-    return if not $library;
+    return if not $ok;
 
     $self->status_message('Import...OK');
 
@@ -81,38 +80,38 @@ sub xml_import {
     my $sample_info = $self->_sample_info_from_xmls;
     return if not $sample_info;
 
-    my $taxon = $self->_get_taxon($sample_info->{scientific_name});
-    return if not $taxon;
-
     if ( not defined $sample_info->{gap_subject_id} ) {
         $self->error_message('No gap subject id for SRA id: '.$self->sra_sample_id);
         return;
     }
-    my $individual = $self->_get_and_update_or_create_individual(
-        name => 'dbGaP-'.$sample_info->{gap_subject_id},
-        upn => 'dbGaP-'.$sample_info->{gap_subject_id},
-        gender => $sample_info->{sex},
-        description => 'dbGaP individual: '.$sample_info->{gap_subject_id},
-    );
-    return if not $individual;
 
-    my $sample = $self->_get_and_update_or_create_sample(
-        name => $self->sra_sample_id,
-        taxon_id => $taxon->id,
-        #source_id => $individual->id,
-        #source_type => $individual->subject_type,
-        tissue_label => $sample_info->{sample_type}, 
-        tissue_desc => $sample_info->{body_site}, 
-        extraction_label => $sample_info->{sra_sample_id},
-        extraction_type => 'genomic',
-        extraction_desc => $sample_info->{description}, 
-        cell_type => 'unknown',
-        _nomenclature => 'unknown',
-    );
-    return if not $sample;
+    if ( not defined $sample_info->{scientific_name} ) {
+        $self->error_message('No scientific name for SRA id: '.$self->sra_sample_id);
+        return;
+    }
 
-    my $library = $self->_get_or_create_library_for_extension('extlibs');
-    return if not $library;
+    my $ok = $self->_import(
+        taxon => $sample_info->{scientific_name},
+        individual => {
+            upn => 'dbGaP-'.$sample_info->{gap_subject_id},
+            nomenclature => 'dbGaP',
+            gender => $sample_info->{sex} || 'unspecified',
+            description => 'dbGaP individual: '.$sample_info->{gap_subject_id},
+        },
+        sample => { 
+            name => $self->sra_sample_id,
+            nomenclature => 'dbGaP',
+            tissue_label => $sample_info->{sample_type}, 
+            tissue_desc => $sample_info->{body_site}, 
+            extraction_label => $sample_info->{sra_sample_id},
+            extraction_type => 'genomic dna',
+            extraction_desc => $sample_info->{description}, 
+            cell_type => 'unknown',
+            nomenclature => 'dbGaP',
+        },
+        library => 'extlibs',
+    );
+    return if not $ok;
 
     $self->status_message('Import...OK');
 
@@ -222,18 +221,4 @@ sub _sample_info_from_xmls {
 }
 
 1;
-
-=pod
-
-=head1 Disclaimer
-
-Copyright (C) 2005 - 2010 Genome Center at Washington University in St. Louis
-
-This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-
-=head1 Author(s)
-
-B<Eddie Belter> I<ebelter@genome.wustl.edu>
-
-=cut
 

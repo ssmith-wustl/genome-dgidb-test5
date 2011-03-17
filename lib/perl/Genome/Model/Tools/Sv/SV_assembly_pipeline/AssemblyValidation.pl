@@ -433,7 +433,6 @@ sub AssembleBestSV{
 
       if((!defined $opts{I}) || (!-s "$datadir/$prefix.a$a.b$b.het.stat")){
 	#produce het contigs
-	#`/gscuser/kchen/1000genomes/analysis/scripts/hetAtlas.pl -n 100 $datadir/$prefix.a$a.b$b.fa.contigs.fa > $datadir/$prefix.a$a.b$b.fa.contigs.fa.het` if((!defined $opts{I}) || (!-s "$datadir/$prefix.a$a.b$b.fa.contigs.fa.het"));
 	#test het contigs
 	$cmd="cross_match $datadir/$prefix.a$a.b$b.fa.contigs.het.fa $datadir/$prefix.ref.fa -bandwidth 20 -minmatch 20 -minscore 25 -penalty $opts{P} -discrep_lists -tags -gap_init $opts{G} -gap_ext -1 > $datadir/$prefix.a$a.b$b.het.stat 2>/dev/null";
 	print STDERR "$cmd\n";

@@ -7,51 +7,37 @@ use IO::File;
 use Genome;
 use IPC::Cmd qw/can_run/;
 
-=head1 NAME
-
-Genome::Music::Pfam - Adding Pfam annotation to a MAF file
-
-=head1 VERSION
-
-Version 1.01
-
-=cut
-
-our $VERSION = '1.01';
+our $VERSION = $Genome::Model::Tools::Music::VERSION;
 
 class Genome::Model::Tools::Music::Pfam {
-    is => 'Genome::Model::Tools::Music',
+    is => 'Genome::Model::Tools::Music::Base',
     has_input => [ 
-    maf_file => {
-        is => 'Text',
-        is_input => 1,
-        file_format => 'maf',
-        doc => "List of mutations in MAF format",
-    },
-    output_file => {
-        is => 'Text',
-        is_output => 1,
-        file_format => 'pfam',
-        doc => "MAF file with Pfam domain column appended",
-    },
+        maf_file => {
+            is => 'Text',
+            is_input => 1,
+            file_format => 'maf',
+            doc => "List of mutations in MAF format",
+        },
+        output_file => {
+            is => 'Text',
+            is_output => 1,
+            file_format => 'pfam',
+            doc => "MAF file with Pfam domain column appended",
+        },
     ],
+    doc => 'Add Pfam annotation to a MAF file',
 };
-
-sub sub_command_sort_position { 12 }
-
-sub help_brief { 
-    "Add Pfam annotation to a MAF file" 
-}
 
 sub help_synopsis {
     return <<EOS
-This command adds Pfam Domains to a column at the end of a MAF file.
-EXAMPLE:	gmt music pfam --maf-file myMAF.tsv --output-file myMAF.tsv.pfam
+... music pfam --maf-file myMAF.tsv --output-file myMAF.tsv.pfam
 EOS
 }
 
 sub help_detail {
     return <<EOS 
+This command adds Pfam Domains to a column at the end of a MAF file.
+
 This tool takes a MAF file, determines the location of each variant therein, and then uses a fast-lookup to retrieve all of the Pfam annotation domains that the variant crosses. A column is appended to the end of the input MAF file called "Pfam_Annotation_Domains" where the results are listed. "NA" is listed if no Pfam domains are found.
 EOS
 }

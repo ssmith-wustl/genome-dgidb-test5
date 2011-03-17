@@ -16,35 +16,43 @@ class Genome::Disk::Volume {
         unallocated_kb => { is => 'Number' },
         disk_status => { is => 'Text' },
         can_allocate => { is => 'Number' },
-        used_kb => {
-            calculate_from => ['mount_path'],
-            calculate => sub { my $mount_path = shift; my ($used_kb) = qx(df -k $mount_path | grep $mount_path | awk '{print \$3}') =~ /(\d+)/; },
-        },
         allocated_kb => { 
             calculate_from => ['total_kb','unallocated_kb'],
             calculate => q{ return ($total_kb - $unallocated_kb); },
-        },
-        percent_used => {
-            calculate_from => ['total_kb', 'used_kb'],
-            calculate => sub { my ($total_kb, $used_kb) = @_; return sprintf("%.2f", ( $used_kb / $total_kb ) * 100); },
         },
         percent_allocated => {
             calculate_from => ['total_kb', 'allocated_kb'],
             calculate => q{ return sprintf("%.2f", ( $allocated_kb / $total_kb ) * 100); },
         },
-        reserve_size => {
-            calculate_from => ['total_kb', 'unusable_volume_percent', 'maximum_reserve_size'],
+        used_kb => {
+            calculate_from => ['mount_path'],
+            calculate => sub { 
+                my $mount_path = shift; 
+                my ($used_kb) = qx(df -k $mount_path | grep $mount_path | awk '{print \$3}') =~ /(\d+)/; 
+                return $used_kb
+            },
+        },
+        percent_used => {
+            calculate_from => ['total_kb', 'used_kb'],
+            calculate => sub { my ($total_kb, $used_kb) = @_; return sprintf("%.2f", ( $used_kb / $total_kb ) * 100); },
+        },
+        unallocatable_reserve_size => {
+            calculate_from => ['total_kb', 'unallocatable_volume_percent', 'maximum_reserve_size'],
             calculate => q{
-                my $buffer = int($total_kb * $unusable_volume_percent);
+                my $buffer = int($total_kb * $unallocatable_volume_percent);
                 $buffer = $maximum_reserve_size if $buffer > $maximum_reserve_size;
                 return $buffer;
             },
-            doc => 'Amount of space not to be used',
+            doc => 'Size of reserve in kb that cannot be allocated to but can still be used by reallocations',
         },
-        usable_unallocated_kb => {
-            calculate_from => ['unallocated_kb', 'reserve_size'],
-            calculate => q{ return $unallocated_kb - $reserve_size; },
-            doc => 'Amount of space that can be allocated to, accounting for reserve size',
+        unusable_reserve_size => {
+            calculate_from => ['total_kb', 'unusable_volume_percent', 'unallocatable_reserve_size'],
+            calculate => q{
+                my $buffer = int($total_kb * $unusable_volume_percent);
+                $buffer = $unallocatable_reserve_size if $buffer > $unallocatable_reserve_size;
+                return $buffer;
+            },
+            doc => 'Size of reserve in kb that cannot be allocated to in any way',
         },
     ],
     has_many_optional => [
@@ -67,12 +75,25 @@ class Genome::Disk::Volume {
             calculate => q| return Genome::Disk::Allocation->get(mount_path => $mount_path); |,
         },
     ],
-    schema_name => 'Oltp',
     data_source => 'Genome::DataSource::Oltp',
     doc => 'Represents a particular disk volume (eg, sata483)',
 };
 
-sub unusable_volume_percent { return .05 }
-sub maximum_reserve_size { return 1_073_741_824 } # 1 TB
+sub unallocatable_volume_percent { return .05 } # 5% can't be allocated to, but can be used by reallocates
+sub unusable_volume_percent { return .02 } # 2% can't be used at all
+sub maximum_reserve_size { return 1_073_741_824 } # maximum size of unallocatable disk
+
+sub get_lock {
+    my ($class, $mount_path, $tries) = @_;
+    $tries ||= 120;
+    my $modified_mount = $mount_path;
+    $modified_mount =~ s/\//_/g;
+    my $volume_lock = Genome::Sys->lock_resource(
+        resource_lock => '/gsc/var/lock/allocation/volume' . $modified_mount,
+        max_try => $tries,
+        block_sleep => 1,
+    );
+    return $volume_lock;
+}
 
 1;

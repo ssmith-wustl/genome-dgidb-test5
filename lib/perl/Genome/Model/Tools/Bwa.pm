@@ -36,10 +36,10 @@ EOS
 
 
 my %BWA_VERSIONS = (
-	'0.4.2' => '/gsc/pkg/bio/bwa/bwa-0.4.2-64/bwa',
-	'0.4.9' => '/gsc/pkg/bio/bwa/bwa-0.4.9-64/bwa',
-	'0.5.0' => '/gsc/pkg/bio/bwa/bwa-0.5.0-64/bwa',
-	'0.5.1' => '/gsc/pkg/bio/bwa/bwa-0.5.1-64/bwa',
+    '0.4.2' => '/gsc/pkg/bio/bwa/bwa-0.4.2-64/bwa',
+    '0.4.9' => '/gsc/pkg/bio/bwa/bwa-0.4.9-64/bwa',
+    '0.5.0' => '/gsc/pkg/bio/bwa/bwa-0.5.0-64/bwa',
+    '0.5.1' => '/gsc/pkg/bio/bwa/bwa-0.5.1-64/bwa',
     '0.5.2' => '/gsc/pkg/bio/bwa/bwa-0.5.2-64/bwa',
     '0.5.3' => '/gsc/pkg/bio/bwa/bwa-0.5.3-64/bwa',
     '0.5.4' => '/gsc/pkg/bio/bwa/bwa-0.5.4-64/bwa',
@@ -51,6 +51,7 @@ my %BWA_VERSIONS = (
     '0.5.8c' => '/gsc/pkg/bio/bwa/bwa-0.5.8c-64/bwa',
     '0.5.9rc1' => '/gsc/pkg/bio/bwa/bwa-0.5.9rc1-64/bwa',
     '0.5.9' => '/gsc/pkg/bio/bwa/bwa-0.5.9-64/bwa',
+    '0.5.9-pem0.1' => '/usr/bin/bwa-0.5.9-pem0.1',
     'bwa'   => 'bwa',
 );
 
@@ -91,6 +92,15 @@ sub supports_bam_input {
 
     return (exists $ok_versions{$version});
 
+}
+
+sub supports_multiple_reference {
+    my $class = shift;
+    my $version = shift;
+
+    my %ok_versions = ('0.5.9-pem0.1' => 1);
+
+    return exists $ok_versions{$version};
 }
 
 1;

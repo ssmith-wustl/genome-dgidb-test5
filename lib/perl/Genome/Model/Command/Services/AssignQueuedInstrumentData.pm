@@ -573,15 +573,16 @@ sub create_default_per_lane_qc_model {
     my $reference_sequence_build = shift;
     my $pse = shift;
 
-    my $subset_name = $genome_instrument_data->subset_name || 'Unknown';
-    my $run_name = $genome_instrument_data->run_name || 'Unknown';
-
     my ($processing_profile, $model_name);
     my $dbsnp_build;
     my $ncbi_human_build36 = Genome::Model::Build->get(101947881);
     if ($reference_sequence_build && $reference_sequence_build->is_compatible_with($ncbi_human_build36)) {
+        my $subset_name = $genome_instrument_data->subset_name || 'unknown-subset';
+        my $run_name_method = $genome_instrument_data->can('short_name') ? 'short_name' : 'run_name';
+        my $run_name = $genome_instrument_data->$run_name_method;
+        $model_name = $run_name . '.' . $subset_name . '.prod-qc';
+
         $processing_profile = Genome::ProcessingProfile->get(2581081);
-        $model_name = join('_', $subset_name, $run_name, $processing_profile->name);
         $dbsnp_build = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($reference_sequence_build); 
     } else {
         $self->status_message('Per lane QC only configured for human reference alignments');
@@ -640,11 +641,30 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
 
     my @new_models;
 
-    my $model_name = $subject->name . '.prod';
+    my %model_params = (
+        subject_id              => $subject->id,
+        subject_class_name      => $subject->class,
+        processing_profile_id   => $processing_profile->id,
+        auto_assign_inst_data   => 1,
+    );
 
-    my $capture_target;
+    #< MODEL NAME >#
+    my $model_name = $subject->name . '.prod';
+    if ($processing_profile->isa('Genome::ProcessingProfile::GenotypeMicroarray') ) {
+        $model_name .= '-microarray' . '-' . $reference_sequence_build->version;
+        $model_params{auto_assign_inst_data} = 0;
+    }elsif($processing_profile->isa('Genome::ProcessingProfile::DeNovoAssembly')){
+        $model_name .= '-denovo';
+    }elsif($processing_profile->isa('Genome::ProcessingProfile::MetagenomicComposition16s')){
+        $model_name .= '-mc16s';
+    }elsif($processing_profile->isa('Genome::ProcessingProfile::AmpliconAssembly')){
+        $model_name .= '-aa';
+    }else{
+        $model_name .= '-refalign';
+    }
 
     # Label Solexa/454 capture stuff as such
+    my $capture_target;
     if ( $genome_instrument_data->can('target_region_set_name') ) {
         $capture_target = $genome_instrument_data->target_region_set_name();
         
@@ -654,20 +674,8 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         }
     }
 
-    if ( $processing_profile->isa('Genome::ProcessingProfile::GenotypeMicroarray') ) {
-	$model_name .= ' '.$reference_sequence_build->name;
-    }
-
     #make sure the name we'd like isn't already in use
-    $model_name = $self->find_unused_model_name($model_name);
-
-    my %model_params = (
-        name                    => $model_name,
-        subject_id              => $subject->id,
-        subject_class_name      => $subject->class,
-        processing_profile_id   => $processing_profile->id,
-        auto_assign_inst_data   => 1,
-    );
+    $model_params{name} = $self->find_unused_model_name($model_name);
 
     my $dbsnp_build;
     my $annotation_build;
@@ -699,8 +707,10 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             'hg18 nimblegen exome version 2' => 'hg19 nimblegen exome version 2',
             'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA' => 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA_build36-build37_liftOver',
             );
+        
+        my $root_build37_ref_seq = Genome::Model::Build::ImportedReferenceSequence->get(name =>'g1k-human-build37') || die;
 
-        if($reference_sequence_build and $reference_sequence_build->name eq 'g1k-human-build37'
+        if($reference_sequence_build and $reference_sequence_build->is_compatible_with($root_build37_ref_seq) 
                 and exists $build36_to_37_rois{$capture_target}) {
             $roi_list = $build36_to_37_rois{$capture_target};
         } else {

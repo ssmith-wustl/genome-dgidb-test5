@@ -52,7 +52,10 @@ class Genome::Site::WUGC::CaptureSet {
         reference => {
             is => 'Number',
             calculate => q{
-                return undef; #No way to determine at this time
+                unless($self->_reference) {
+                    $self->_reference($self->_resolve_reference);
+                }
+                return $self->_reference;
             },
         },
         subject => {
@@ -91,6 +94,9 @@ class Genome::Site::WUGC::CaptureSet {
         _source => {
             is => 'Text',
         },
+        _reference => {
+            is => 'Genome::Model::Build::ReferenceSequence',
+        },
         _file_path => {
             is => 'Text',
         }
@@ -117,7 +123,7 @@ sub _resolve_format {
     }
 
     if($bed_file_content =~ /track name=/ims) {
-        return 'multi-tracked 1-based';
+        return 'multi-tracked';
     }
 
     my @lines = split("\n",$bed_file_content);
@@ -129,8 +135,12 @@ sub _resolve_format {
         }
     }
 
-    if($self->name =~ /agilent/i or $self->name =~ /nimblegen/i) {
+    if($self->name =~ /agilent/i) {
         return '1-based';
+    }
+
+    if($self->name =~ /nimblegen/i) {
+        return 'true-BED';
     }
 
     return 'unknown';
@@ -162,6 +172,25 @@ sub _resolve_file_path {
     Genome::Sys->write_file($temp_bed_file, $bed_file_content);
 
     return $temp_bed_file;
+}
+
+sub _resolve_reference {
+    my $self = shift;
+
+    #Try to determine reference based on original file name
+    my $fs = $self->_capture_set->get_file_storage;
+    if($fs) {
+        my $name = $fs->file_name;
+        if($name =~ /HG18/) {
+            return Genome::Model::Build::ReferenceSequence->get_by_name('NCBI-human-build36');
+        } elsif($name =~ /HG19/) {
+            return Genome::Model::Build::ReferenceSequence->get_by_name('GRCh37-lite-build37');
+        } else {
+            return undef;
+        }
+    } else {
+        return undef;
+    }
 }
 
 1;

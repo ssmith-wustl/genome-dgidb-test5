@@ -28,17 +28,25 @@ class Genome::Model::Build::SomaticVariation {
             is => 'Genome::Model::ReferenceAlignment',
             via => 'model',
         },
-        normal_build_id => {
-            is => 'Text',
+        normal_build => {
+            is => 'Genome::Model::Build::ReferenceAlignment',
             via => 'inputs',
-            to => 'value_id',
+            is_many => 0,
+            to => 'value',
             where => [ name => 'normal_build', value_class_name => 'Genome::Model::Build::ReferenceAlignment' ],
             is_mutable => 1,
         },
-        normal_build => {
-            is => 'Genome::Model::Build::ReferenceAlignment',
-            id_by => 'normal_build_id',
-        },
+#        normal_build_id => {
+#            is => 'Text',
+#            via => 'inputs',
+#            to => 'value_id',
+#            where => [ name => 'normal_build', value_class_name => 'Genome::Model::Build::ReferenceAlignment' ],
+#            is_mutable => 1,
+#        },
+        #normal_build => {
+        #    is => 'Genome::Model::Build::ReferenceAlignment',
+        #    id_by => 'normal_build_id',
+        #},
         annotation_build => {
             is => 'Genome::Model::Build::ImportedAnnotation',
             via => 'model',

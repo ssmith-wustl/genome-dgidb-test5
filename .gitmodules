@@ -34,3 +34,18 @@
 [submodule "genome-db-pfam"]
 	path = genome-db-pfam
 	url = ssh://git//srv/git/genome-db-pfam.git
+[submodule "bam-readcount"]
+	path = bam-readcount
+	url = ssh://git//srv/git/bam-readcount.git
+[submodule "ur"]
+	path = ur
+	url = https://github.com/genome/UR.git
+[submodule "workflow"]
+	path = workflow
+	url = ssh://git/srv/git/workflow.git
+[submodule "jenkins"]
+	path = jenkins
+	url = https://github.com/genome/wugc-hudson.git
+[submodule "getopt-complete"]
+	path = getopt-complete
+	url = https://github.com/genome/Getopt--Complete-for-Perl.git

@@ -43,7 +43,14 @@ class Genome::Model::Tools::DetectVariants2::Filter::SomaticScoreMappingQuality{
             is_input => 1,
             doc => 'minimum somatic quality threshold for high confidence call',
         },
-    ]
+    ],
+    has_constant => [
+        _variant_type => {
+            type => 'String',
+            default => 'snvs',
+            doc => 'variant type that this module operates on, overload this in submodules accordingly',
+        },
+    ],
 };
 
 my %READCOUNT_VERSIONS = (
@@ -125,6 +132,7 @@ sub _filter_variants {
     unless(@sniper_lines) {
         $lq_output_fh->close;
         $ofh->close;
+        $self->sort_lq_output($lq_output_file, $sorted_lq_output_file);
         return 1;
     }
     #Run readcount program 
@@ -167,13 +175,17 @@ sub _filter_variants {
         }
 
         my @vars = Genome::Info::IUB->variant_alleles_for_iub($vref,$viub);
+        my $variant_is_hq = 0;
         foreach my $var (@vars) {
             if(exists($bases{$var}) && $bases{$var} >= $self->min_mapping_quality) {
                 print $ofh $current_variant, "\n";
+                $variant_is_hq =1;
                 last;
-            } else {
-                print $lq_output_fh $current_variant ."\n";;
             }
+        }
+        # Unless the IUB had one possible allele that was HQ, make it LQ
+        unless ($variant_is_hq) {
+            print $lq_output_fh $current_variant ."\n";
         }
     }
 
@@ -191,12 +203,20 @@ sub _filter_variants {
     $fh->close;
 
     # Sort the LQ output file (This is necessary since we filter things out twice, once by somatic score, once by mapping quality...they will be out of order)
+    $self->sort_lq_output($lq_output_file, $sorted_lq_output_file);
+
+    return 1;
+}
+
+sub sort_lq_output {
+    my $self = shift;
+    my $lq_output_file = shift;
+    my $sorted_lq_output_file = shift;
     my @sort_input = ($lq_output_file);
     unless ( Genome::Model::Tools::Joinx::Sort->execute(input_files => \@sort_input, output_file => $sorted_lq_output_file) ) {
         $self->error_message("Failed to sort the LQ output $lq_output_file into $sorted_lq_output_file using Joinx::Sort");
         die $self->error_message;
     }
-    
     return 1;
 }
 

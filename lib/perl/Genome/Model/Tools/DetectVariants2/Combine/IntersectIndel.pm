@@ -7,6 +7,14 @@ use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Combine::IntersectIndel{
     is => 'Genome::Model::Tools::DetectVariants2::Combine',
+    has_constant => [
+        _variant_type => {
+            type => 'String',
+            default => 'indels',
+            doc => 'variant type that this module operates on',
+        },
+    ],
+
 };
 
 
@@ -59,6 +67,23 @@ sub _combine_variants {
         die $self->error_message;
     }
 
+    return 1;
+}
+
+sub _validate_output {
+    my $self = shift;
+    my $variant_type = $self->_variant_type;
+    my $input_a_file = $self->input_directory_a."/".$variant_type.".hq.bed";
+    my $input_b_file = $self->input_directory_b."/".$variant_type.".hq.bed";
+    my $hq_output_file = $self->output_directory."/".$variant_type.".hq.bed";
+    my $lq_output_file = $self->output_directory."/".$variant_type.".lq.bed";
+    my $input_total = $self->line_count($input_a_file) + $self->line_count($input_b_file);
+
+    # Count hq * 2 because every hq line for an intersection implies 2 lines from input combined into one
+    my $output_total = $self->line_count($hq_output_file) * 2 + $self->line_count($lq_output_file);
+    unless(($input_total - $output_total) == 0){
+        die $self->error_message("Combine operation in/out check failed. Input total: $input_total \toutput total: $output_total");
+    }
     return 1;
 }
 

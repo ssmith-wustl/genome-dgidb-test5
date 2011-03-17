@@ -9,7 +9,7 @@ use above 'Genome';
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 25;
+        plan tests => 26;
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -66,6 +66,9 @@ ok($reference_model, "got reference model");
 
 my $reference_build = $reference_model->build_by_version('1');
 ok($reference_build, "got reference build");
+
+my $reference_index = Genome::Model::Build::ReferenceSequence::AlignerIndex->create(aligner_name=>$aligner_name, aligner_version=>$aligner_version, aligner_params=>undef, reference_build=>$reference_build);
+ok($reference_index, "generated reference index");
 
 # Uncomment this to create the dataset necessary for shorcutting to work
 #test_alignment(generate_shortcut_data => 1);
@@ -210,6 +213,7 @@ sub generate_fake_instrument_data {
     # confirm there are fastq files here, and fake the fastq_filenames method to return them
     my @in_fastq_files = glob($instrument_data->gerald_directory.'/*.txt');
     $instrument_data->set_list('dump_sanger_fastq_files',@in_fastq_files);
+    $instrument_data->mock('dump_trimmed_fastq_files', sub {return Genome::InstrumentData::Solexa::dump_trimmed_fastq_files($instrument_data)});
 
     # fake out some properties on the instrument data
     isa_ok($instrument_data,'Genome::InstrumentData::Solexa');

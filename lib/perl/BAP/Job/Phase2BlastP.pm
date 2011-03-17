@@ -18,7 +18,7 @@ use base qw(GAP::Job);
 
 sub new {
 
-    my ($class, $seq, $db, $job_id, $core_num, $use_local_nr) = @_;
+    my ($class, $seq, $db, $job_id, $core_num) = @_;
     
     my $self = { };
     bless $self, $class;
@@ -45,11 +45,6 @@ sub new {
         croak 'missing number of cores to run blast in Job!';
     }
     $self->{_core_num} = $core_num;
-
-    unless (defined $use_local_nr) {
-        $use_local_nr = 1;
-    }
-    $self->{_use_local_nr} = $use_local_nr;
     
     return $self;
 }
@@ -57,16 +52,6 @@ sub new {
 sub execute {
     
     my ($self) = @_;
-
-    my $local_db = "/opt/databases/bacterial_nr/bacterial_nr";
-    if ($self->{_use_local_nr}) {
-        if (-e $local_db) {
-            $self->{_db} = $local_db;
-        }
-        else {
-            warn "Could not find local NR database, using default at " . $self->{_db} . "!";
-        } 
-    }
 
     $self->SUPER::execute(@_);
 

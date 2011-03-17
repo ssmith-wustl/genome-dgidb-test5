@@ -1,127 +1,59 @@
 package Genome::Model::Tools::Music::Bmr;
-
 use warnings;
 use strict;
-use IO::File;
+use Genome;
 
-=head1 NAME
+our $VERSION = $Genome::Model::Tools::Music::VERSION; 
 
-Genome::Model::Tools::Music::Bmr - Calculation of gene coverages and background mutation rates
-
-=head1 VERSION
-
-Version 1.01
-
-=cut
-
-our $VERSION = '1.01';
-
-class Genome::Model::Tools::Music::Bmr
-{
-  is => 'Command',
-  has => [ # specify the command's single-value properties (parameters) <---
-    maf_file  => { is => 'Text', doc => "List of mutations in MAF format" },
-    reference    => { is => 'Text', doc => "Path to reference sequence in FASTA format", is_optional => 1 },
-  ],
+class Genome::Model::Tools::Music::Bmr {
+    is  => ['Command::Tree','Genome::Model::Tools::Music::Base'],
+    doc => "calculate gene coverages and background mutation rates"
 };
 
-sub sub_command_sort_position { 12 }
-
-# keep this to just a few words <---
-sub help_brief
-{
-  "Calculate gene coverages and background mutation rates"
+sub _doc_copyright_years {
+    (2010,2011);
 }
 
-# The usage syntax for this command
-sub help_synopsis
-{
-  return <<EOS
-This command identifies significantly mutated genes
-EXAMPLE:  gmt music smg --maf-file myMAF.tsv
-EOS
-}
-
-# this is what the user will see with the longer version of help. <---
-sub help_detail
-{
-  return <<EOS
-
-EOS
-}
-
-=head1 SYNOPSIS
-
-Calculate gene coverages per sample, per gene, and per mutation category
-
-=head1 USAGE
-
-  music.pl smg OPTIONS
-
-  OPTIONS:
-
-  --maf-file    List of mutations in MAF format
-  --reference    Path to reference FASTA file
-  --output-file    Output file to contain results
-
-
-=head1 FUNCTIONS
-
-=cut
-
-################################################################################
-
-=head2  execute
-
-Initializes a new analysis
-
-=cut
-
-################################################################################
-
-sub execute
-{
+sub _doc_license {
     my $self = shift;
+    my (@y) = $self->_doc_copyright_years;  
+    return <<EOS
+Copyright (C) $y[0]-$y[1] Washington University in St. Louis.
 
-    print "Running analysis...\n";
-
-    return(0);
+It is released under the Lesser GNU Public License (LGPL) version 3.  See the 
+associated LICENSE file in this distribution.
+EOS
 }
 
 
-################################################################################
+# fill all of these in the subclasses
 
-=head2  function2
-
-Your description here
-
-=cut
-
-################################################################################
-
-sub function2
-{
+sub _doc_authors {
+    # used to compose man pages 
+    # (return a list of strings)
+    return ('','FILL ME _doc_authors','FILL ME _doc_authors');
 }
 
-=head1 AUTHOR
+sub _doc_credits {
+    # used to compose man pages 
+    # (return a list of strings)
+    return ('','FILL ME _doc_credits');
+}
 
-The Genome Center at Washington University, C<< <software at genome.wustl.edu> >>
+sub _doc_see_also {
+    return ('','B<genome-music>(1)','B<genome>(1)','FILL ME _doc_see_also')
+}
 
+sub _doc_manual_body {
+    # TODO: replace this with more extensive text if you want the manual page
+    # to be bigger than the help
+    return shift->help_detail;
+}
 
-=head1 SUPPORT
+sub help_detail { 
+    return <<EOS
+FILL ME _doc_manual_body or _help_detail and _doc_manual_body
+EOS
+}
 
-You can find documentation for this module with the perldoc command.
-
-    perldoc Genome::Music::SMG
-
-For more information, please visit http://genome.wustl.edu.
-
-=head1 COPYRIGHT & LICENSE
-
-Copyright 2010 The Genome Center at Washington University, all rights reserved.
-
-This program is free and open source under the GNU license.
-
-=cut
-
-1; # End of Genome::Music::SMG
+1;

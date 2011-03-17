@@ -8,13 +8,8 @@ use warnings;
 
 use Genome;
 
-use App::Report;
-use CGI;
 use IO::String;
-use Data::Dumper;
 use Template;
-use POSIX; 
-
 
 class Genome::Model::ReferenceAlignment::Report::DbSnpConcordance {
     is => 'Genome::Model::Report',

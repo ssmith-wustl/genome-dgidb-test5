@@ -27,6 +27,7 @@ class Genome::Model::Tools::Capture::MergeAdaptedIndels {
 		glf_file	=> { is => 'Text', doc => "Somatic Sniper Adapted Indel Input File", is_optional => 0, is_input => 1 },
 		varscan_file	=> { is => 'Text', doc => "Varscan Adapted Indel Input File", is_optional => 0, is_input => 1 },
 		gatk_file	=> { is => 'Text', doc => "GATK Adapted Indel Input File", is_optional => 1, is_input => 1 },
+		gatk_unified_file	=> { is => 'Text', doc => "GATK Unified Genotyper Adapted Indel Input File", is_optional => 1, is_input => 1 },
 		output_file	=> { is => 'Text', doc => "Merged Indel Output File" , is_optional => 0, is_input => 1, is_output => 1},
 	],
 };
@@ -67,6 +68,10 @@ sub execute {                               # replace with real execution logic.
 	if ($self->gatk_file) {
 		$gatk_file = $self->gatk_file;
 	}
+	my $gatk_unified_file;
+	if ($self->gatk_unified_file) {
+		$gatk_unified_file = $self->gatk_unified_file;
+	}
 	my $output_file = $self->output_file;
 
 	my %stats = ();
@@ -76,8 +81,23 @@ sub execute {                               # replace with real execution logic.
 	my %glf_indels = load_indels($glf_file);
 	my %varscan_indels = load_indels($varscan_file);
 	my %gatk_indels;
-	if ($self->gatk_file) {
+	my %gatk_IndelGenotyperV2_indels;
+	my %gatk_unified_indels;
+	if ($self->gatk_file && $self->gatk_unified_file) {
+		%gatk_IndelGenotyperV2_indels = load_indels($gatk_file);
+		%gatk_unified_indels = load_indels($gatk_unified_file);
+		foreach my $keys (sort keys %gatk_unified_indels) {
+			$gatk_indels{$keys} = $gatk_unified_indels{$keys};
+		}
+		foreach my $keys (sort keys %gatk_IndelGenotyperV2_indels) {
+			$gatk_indels{$keys} = $gatk_IndelGenotyperV2_indels{$keys};
+		}
+	}
+	elsif ($self->gatk_file) {
 		%gatk_indels = load_indels($gatk_file);
+	}
+	elsif ($self->gatk_unified_file) {
+		%gatk_indels = load_indels($gatk_unified_file);
 	}
 
 	## Build a list of all unique indel keys ##

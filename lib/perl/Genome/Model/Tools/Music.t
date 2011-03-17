@@ -9,11 +9,9 @@ use Test::More;
 # the package with this data is a dependency so this should work when deployed externally
 my $test_data_dir = Genome::Sys->dbpath('genome-music-testdata',$Genome::Model::Tools::Music::VERSION);
 unless ($test_data_dir) {
-    die "failed to find test data for genome-music-testdata version $Genome::Model::Tools::Music::VERSION!";
+    plan skip_all => "failed to find test data for genome-music-testdata version $Genome::Model::Tools::Music::VERSION!";
 }
 
-#my $input_dir = '/gscuser/ndees/893/music_testdata/';
-#my $expected_output_dir = '/gscuser/ndees/893/music_test_output/';
 my $input_dir = $test_data_dir . '/inputs';
 my $expected_output_dir = $test_data_dir . '/expected_outputs/';
 
@@ -66,7 +64,7 @@ my @cases = (
     },
     {
         run => "music cosmic-omim \n"
-            . " --mutation-file $input_dir/short.maf\n"
+            . " --maf-file $input_dir/short.maf\n"
             . " --output-file $actual_output_dir/short_maf.cosmic_omim \n"
             . " --verbose 0",
         expect => [

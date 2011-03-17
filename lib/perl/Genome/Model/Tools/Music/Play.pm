@@ -3,10 +3,12 @@ package Genome::Model::Tools::Music::Play;
 use strict;
 use warnings;
 
-our $VERSION = '1.01';
+use Genome;
+
+our $VERSION = $Genome::Model::Tools::Music::VERSION;
 
 class Genome::Model::Tools::Music::Play {
-    is => 'Genome::Command::Base',
+    is => 'Command::V2',
     has_input => [
         bam_list => {
             is => 'Text',
@@ -16,7 +18,7 @@ class Genome::Model::Tools::Music::Play {
             is => 'Text',
             doc => 'Tab delimited list of ROIs [chr start stop gene_name]'
         },
-        ref_seq => {
+        reference_sequence => {
             is => 'Text',
             doc => 'Path to reference sequence in FASTA format'
         },
@@ -94,16 +96,12 @@ class Genome::Model::Tools::Music::Play {
             is => 'Number',
             doc => 'Background mutation rate in the targeted regions',
         },
+        max_proximity => {
+            is => 'Text',
+            doc => 'Maximum AA distance between 2 mutations',
+        },
     ],
     has_calculated_optional => [
-        reference => { #TODO standardize input name across tools
-            calculate_from => ['ref_seq'],
-            calculate => q{ $ref_seq; },
-        },
-        mutation_file => { #TODO standardize input name across tools
-            calculate_from => ['maf_file'],
-            calculate => q{ $maf_file; },
-        },
         gene_covg_dir => {
             calculate_from => ['output_dir'],
             calculate => q{ $output_dir . '/gene_covgs'; },
@@ -138,7 +136,7 @@ sub execute {
     my $self = shift;
 
     #Proximity command left out until it has been implemented
-    my @no_dependencies = ('ClinicalCorrelation', 'CosmicOmim', 'MutationRelation', 'Pfam');
+    my @no_dependencies = ('Proximity', 'ClinicalCorrelation', 'CosmicOmim', 'MutationRelation', 'Pfam');
     my @bmr = ('Bmr::CalcCovg', 'Bmr::CalcBmr');
     my @depend_on_bmr = ('PathScan', 'Smg');
     for my $command_name (@no_dependencies, @bmr, @depend_on_bmr) {

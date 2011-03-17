@@ -276,7 +276,8 @@ sub dump_fastqs_from_bam {
 	die $self->error_message;
     }
     
-    my $temp_dir = Genome::Sys->create_temp_directory('unpacked_bam');
+    my $directory = delete $p{directory};
+    $directory ||= Genome::Sys->create_temp_directory('unpacked_bam');
 
     my $subset = (defined $self->subset_name ? $self->subset_name : 0);
 
@@ -287,9 +288,9 @@ sub dump_fastqs_from_bam {
         $self->status_message("Using read group id " . $read_group_params{read_group_id});
     } 
 
-    my $fwd_file = sprintf("%s/s_%s_1_sequence.txt", $temp_dir, $subset);
-    my $rev_file = sprintf("%s/s_%s_2_sequence.txt", $temp_dir, $subset);
-    my $fragment_file = sprintf("%s/s_%s_sequence.txt", $temp_dir, $subset);
+    my $fwd_file = sprintf("%s/s_%s_1_sequence.txt", $directory, $subset);
+    my $rev_file = sprintf("%s/s_%s_2_sequence.txt", $directory, $subset);
+    my $fragment_file = sprintf("%s/s_%s_sequence.txt", $directory, $subset);
     my $cmd = Genome::Model::Tools::Picard::SamToFastq->create(input=>$self->bam_path, fastq=>$fwd_file, fastq2=>$rev_file, fragment_fastq=>$fragment_file, no_orphans=>1, %read_group_params);
     unless ($cmd->execute()) {
         die $cmd->error_message;
@@ -310,6 +311,41 @@ sub dump_fastqs_from_bam {
     }
    
     return @files; 
+}
+
+sub lane_qc_model {
+    my $self = shift;
+    my $instrument_data_id = $self->id;
+
+    my @inputs = Genome::Model::Input->get(value_id => $instrument_data_id);
+    my @inputs_models = map { $_->model } @inputs;
+    my ($qc_model) = grep { $_->processing_profile_name eq 'february 2011 illumina lane qc' } @inputs_models;
+
+    return $qc_model;
+}
+
+sub lane_qc_build {
+    my $self = shift;
+    my $qc_model = $self->lane_qc_model;
+    if ($qc_model) {
+        return $qc_model->last_succeeded_build;
+    }
+    else {
+        return;
+    }
+}
+
+sub lane_qc_dir {
+    my $self = shift;
+    my $qc_build = $self->lane_qc_build;
+    return unless ($qc_build);
+    my $qc_dir = $qc_build->data_directory . "/qc";
+    if (-d $qc_dir) {
+        return $qc_dir;
+    }
+    else {
+        return;
+    }
 }
 
 1;

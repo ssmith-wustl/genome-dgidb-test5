@@ -14,17 +14,17 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
     is => ['Genome::Model::Tools::DetectVariants2::Base'],
     doc => 'This tool is used to handle delegating variant detection to one or more specified tools and filtering and/or combining the results',
     has_optional => [
-        snv_hq_output_file => {
+        _snv_hq_output_file => {
             is => 'String',
             is_output => 1,
             doc => 'High Quality SNV output file',
         },
-        indel_hq_output_file => {
+        _indel_hq_output_file => {
             is => 'String',
             is_output => 1,
             doc => 'High Quality indel output file',
         },
-        sv_hq_output_file => {
+        _sv_hq_output_file => {
             is => 'String',
             is_output => 1,
             doc => 'High Quality SV output file',
@@ -101,13 +101,6 @@ sub create {
     return $self;
 }
 
-
-# FIXME this is a hack to get things to run until I decide how to implement this in the dispatcher
-# In the first version of the dispatcher... this was not implemented if there were unions or intersections... and if there were none of those it just grabbed the inputs from the only variant detector run and made it its own
-sub _generate_standard_files {
-    return 1;
-}
-
 # Takes all of the strategies specified and uses G::M::T::DV2::Strategy to turn them into a traversable hash containing the complete action plan to detect variants
 sub plan {
     my $self = shift;
@@ -156,11 +149,10 @@ sub _detect_variants {
     $input->{output_directory} = $self->_temp_staging_directory;
    
     $self->_dump_workflow($workflow);
+    $self->_dump_dv_cmd;
 
     $self->status_message("Now launching the dispatcher workflow.");
-
     ## Worklow launches here
-
     my $result = Workflow::Simple::run_workflow_lsf( $workflow, %{$input});
 
     unless($result){
@@ -181,6 +173,24 @@ sub _dump_workflow {
     print $xml_file $xml;
     $xml_file->close;
     #$workflow->as_png($self->output_directory."/workflow.png"); #currently commented out because blades do not all have the "dot" library to use graphviz
+}
+
+sub _dump_dv_cmd {
+    my $self = shift;
+    my $cmd =   "gmt detect-variants2 dispatcher --output-directory ".$self->output_directory
+                ." --aligned-reads-input ".$self->aligned_reads_input
+                ." --control-aligned-reads-input ".$self->control_aligned_reads_input
+                ." --reference-sequence-input ".$self->reference_sequence_input;
+    for my $var ('snv','sv','indel'){
+        my $strat = $var."_detection_strategy";
+        if(defined($self->$strat)){
+            $cmd .= " --".$strat." \'".$self->$strat->id."\'";
+        }
+    }
+    my $dfh = Genome::Sys->open_file_for_writing($self->output_directory."/dispatcher.cmd");
+    print $dfh $cmd."\n";
+    $dfh->close;
+    return 1;
 }
 
 sub get_relative_path_to_output_directory {
@@ -224,8 +234,6 @@ sub merge_filters {
     return [values %filters];
 }
 
-# return value is a hash like:
-# { samtools => { r453 => {snv => ['']}}, 'var-scan' => { '' => { snv => ['']} }, maq => { '0.7.1' => { snv => ['a'] } }}
 sub build_detector_list {
     my $self = shift;
     my ($detector_tree, $detector_list, $detector_type) = @_;
@@ -391,6 +399,9 @@ sub link_operations {
     my $unique_combine_name;
     
     # This is a leaf node, cease recursion and return the unique detector name
+    # If the detector has no filters, tack on "unfiltered" to the name. This is 
+    # a hack in order to allow smarter shortcutting for strategies which have 
+    # multiple instances of the same detector, but filtered differently
     if($key eq 'detector'){
         my $name =  $self->get_unique_detector_name($tree->{$key}, $variant_type);
         my $filters = scalar(@{$tree->{$key}->{filters}});
@@ -417,6 +428,7 @@ sub link_operations {
     return $unique_combine_name;
 }
 
+# This sub creates and links in any combine operations.
 sub create_combine_operation {
     my $self = shift;
     my $operation_type = shift;
@@ -434,6 +446,15 @@ sub create_combine_operation {
     my $workflow_links = $self->_workflow_links;
 
     my @links = @{$links};
+
+    # This bit of code (below) allows re-use of detectors. For example, a 
+    # strategy which had 'samtools r599 intersect samtools r599 filtered by snp-filter'
+    # would run samtools r599 once, then intersect the output of the detector with the 
+    # output of the filter, which itself ran on the output of the detector
+
+    ### TODO However! This code only allows shortcutting if one or both of the instances of the 
+    ### repeated detector are unfiltered.
+
     my ($op_a,$op_b);
     my ($alink,$afilter);
     my ($blink,$bfilter);
@@ -459,10 +480,7 @@ sub create_combine_operation {
     my $input_b_key = $blink."_output_directory";
 
     my $input_a_last_op_name = $afilter ? $workflow_links->{$input_a_key}->{'last_operation'} : $alink;
-    my $input_b_last_op_name = $bfilter ? $workflow_links->{$input_a_key}->{'last_operation'} : $blink;
-
-
-    #print "creating a ".$operation_type." for ".$variant_type."\n";
+    my $input_b_last_op_name = $bfilter ? $workflow_links->{$input_b_key}->{'last_operation'} : $blink;
 
     my $workflow_model = $self->_workflow_model;
     my $unique_combine_name = join("-",($operation_type, $alink,$blink));
@@ -538,7 +556,6 @@ sub get_unique_detector_name {
 }
 
 
-# FIXME rename this, or make it return the operations to be added instead of adding them itself
 sub add_detectors_and_filters { 
     my $self = shift;
     my $detector_hash = shift;
@@ -557,8 +574,8 @@ sub add_detectors_and_filters {
                 $class = $instance->{class};
                 $name = $instance->{name};
                 $version = $instance->{version};
+                my $unique_detector_base_name = join( "_", ($variant_type, $name, $version, $params));
                 my @filters = @{$instance->{filters}};
-
                 # Make the operation
                 my $detector_operation = $workflow_model->add_operation(
                     name => "$variant_type $name $version $params",
@@ -571,7 +588,7 @@ sub add_detectors_and_filters {
                 # create filter operations
                 for my $filter (@filters){
                     my $foperation = $workflow_model->add_operation(
-                        name => $filter->{name}." ".$filter->{version}." ".$filter->{params},
+                        name => join(" ",($unique_detector_base_name,$filter->{name},$filter->{version},$filter->{params})),
                         operation_type => Workflow::OperationType::Command->get($filter->{class})
                     ); 
                     unless($foperation){
@@ -596,7 +613,6 @@ sub add_detectors_and_filters {
                 # compose a hash containing input_connector outputs and the operations to which they connect, then connect them
 
                 # first add links from input_connector to detector
-                my $unique_detector_base_name = join( "_", ($variant_type, $name, $version, $params));
                 my $detector_output_directory = $self->calculate_operation_output_directory($self->_temp_staging_directory."/".$variant_type, $name, $version, $params);
                 
                 my $inputs_to_store;
@@ -634,6 +650,18 @@ sub add_detectors_and_filters {
                     $inputs_to_store->{$unique_filter_name."_detector_directory"}->{right_property_name} = 'detector_directory';
                     $inputs_to_store->{$unique_filter_name."_detector_directory"}->{right_operation} = $filter->{operation};
 
+                    $inputs_to_store->{$unique_filter_name."_detector_name"}->{value} = $name;
+                    $inputs_to_store->{$unique_filter_name."_detector_name"}->{right_property_name} = 'detector_name';
+                    $inputs_to_store->{$unique_filter_name."_detector_name"}->{right_operation} = $filter->{operation};
+
+                    $inputs_to_store->{$unique_filter_name."_detector_version"}->{value} = $version;
+                    $inputs_to_store->{$unique_filter_name."_detector_version"}->{right_property_name} = 'detector_version';
+                    $inputs_to_store->{$unique_filter_name."_detector_version"}->{right_operation} = $filter->{operation};
+
+                    $inputs_to_store->{$unique_filter_name."_detector_params"}->{value} = $params;
+                    $inputs_to_store->{$unique_filter_name."_detector_params"}->{right_property_name} = 'detector_params';
+                    $inputs_to_store->{$unique_filter_name."_detector_params"}->{right_operation} = $filter->{operation};
+
                     $inputs_to_store->{$unique_detector_base_name."_output_directory"}->{last_operation} = $unique_filter_name;
                 }
                 
@@ -663,8 +691,6 @@ sub add_detectors_and_filters {
                     %workflow_inputs = %{$inputs_to_store};
                 }
                 $self->_workflow_inputs(\%workflow_inputs); 
-
-                #print Data::Dumper::Dumper($self->_workflow_inputs);
             
                 # connect the output to the input between all operations in this detector's branch
                 for my $index (0..(scalar(@filters)-1)){
@@ -758,7 +784,7 @@ sub _promote_staged_data {
 
     # Symlink the most recent version bed files of the final hq calls into the base of the output directory
     for my $variant_type (@{$self->variant_types}){
-        my $output_accessor = $variant_type."_hq_output_file";
+        my $output_accessor = "_".$variant_type."_hq_output_file";
         if(defined($self->$output_accessor)){
             my $file = $self->$output_accessor;
             my @subdirs = split( "/", $file );
@@ -778,7 +804,7 @@ sub set_output_files {
     my $result = shift;
 
     for my $variant_type (@{$self->variant_types}){
-        my $file_accessor = $variant_type."_hq_output_file";
+        my $file_accessor = "_".$variant_type."_hq_output_file";
         my $strategy = $variant_type."_detection_strategy";
         my $out_dir = $variant_type."_output_directory";
         if(defined( $self->$strategy)){
@@ -788,7 +814,12 @@ sub set_output_files {
                 die $self->error_message;
             }
             my $hq_output_dir = $self->output_directory."/".$relative_path; #FIXME complications arise here when we have just a single column file... or other stuff. May just need to drop the version, too?
-            my $hq_file = $variant_type."s.hq.bed";
+            my $hq_file;
+            if ($variant_type eq 'sv'){
+                $hq_file = $variant_type."s.hq";
+            }else{
+                $hq_file = $variant_type."s.hq.bed";
+            }
             my $file;
             if(-l $hq_output_dir."/".$hq_file){
                 $file = readlink($hq_output_dir."/".$hq_file); # Should look like "dir/snvs_hq.bed" 
@@ -802,5 +833,43 @@ sub set_output_files {
     }
     return 1;
 }
+
+# The HQ bed files for each variant type are already symlinked to the base output directory. 
+# This method collects all the LQ variants that fell out at each filter and combine stage and sorts them into one LQ output.
+# FIXME _validate_output should be added to check that the HQ and LQ bed files totaled have the same line count as each detectors HQ bed output files
+sub _generate_standard_files {
+    my $self = shift;
+    
+    # For each variant type that is expected, gather all the lq files that exist for that variant type and sort them into the dispatcher output directory
+    for my $variant_type (@{ $self->variant_types }) {
+        my $strategy = $variant_type."_detection_strategy";
+        if(defined( $self->$strategy)){
+            my $find_command = "find " . $self->output_directory . " -name $variant_type" . "s.lq.bed";
+            my @lq_files = `$find_command`;
+            chomp @lq_files;
+
+            # If we find no LQ files, just skip this variant type. No filters were run.
+            unless (@lq_files) {
+                next;
+            }
+
+            my $output_file = $self->output_directory . "/$variant_type" . "s.lq.bed";
+            my $sort_command = Genome::Model::Tools::Joinx::Sort->create(
+                input_files => \@lq_files,
+                merge_only => 1,
+                output_file => $output_file,
+            );
+
+            unless ($sort_command->execute) {
+                $self->error_message("Error executing lq sort command");
+                die $self->error_message;
+            }
+        }
+    }
+
+    return 1;
+}
+
+
 
 1;

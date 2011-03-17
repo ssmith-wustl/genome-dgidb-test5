@@ -8,6 +8,14 @@ use Genome;
 class Genome::Model::Tools::DetectVariants2::Filter::LibrarySupport{
     is => 'Genome::Model::Tools::DetectVariants2::Filter',
     doc => "Outputs list of input indels from Sniper that have high library support.",
+    has_constant => [
+        _variant_type => {
+            type => 'String',
+            default => 'indels',
+            doc => 'variant type that this module operates on, overload this in submodules accordingly',
+        },
+    ],
+
 };
 
 sub help_synopsis {
@@ -123,6 +131,9 @@ sub _filter_variants {
             if($indel_score > 0) {
                 print $single_lib_output_fh "$line\t$num_libs_match\t$indel_score\n";
             }    
+            else {
+                print $lq_output_fh $line . "\n";
+            }
         }
         else {
             my $indel_score = sprintf( "%.3f", abs($indel_strength * $indel_size * $num_libs_match));

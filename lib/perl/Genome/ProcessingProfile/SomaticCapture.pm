@@ -169,11 +169,31 @@ sub _map_workflow_inputs {
         die $self->error_message;
     }
     
+    ## Set a default reference transcript annotator version ##
+    
+    my $annotation_reference_transcripts = "NCBI-human.combined-annotation/54_36p_v2";
+    my $ref_id = $tumor_build->model->reference_sequence_build->id;
+
+    ## Human build 37 ##    
+    if($ref_id == 106942997 || $ref_id == 102671028)
+    {
+        $annotation_reference_transcripts = "NCBI-human.combined-annotation/57_37b";
+    }
+    elsif($ref_id == 104420993 || $ref_id == 103785428)
+    {
+        $annotation_reference_transcripts = "NCBI-mouse.combined-annotation/54_37g_v2";
+    }
+
     push @inputs,
         tumor_bam_file => $tumor_bam,
         normal_bam_file => $normal_bam,
         tumor_snp_file => $tumor_snp_file,
         normal_snp_file => $normal_snp_file; 
+
+    # sanitize this to not pass opt/fscache if we run the processing profile on a blade with the 
+    # fscache
+    my $reference_fasta = $tumor_build->model->reference_sequence_build->full_consensus_path('fa');
+    $reference_fasta =~ s/\/opt\/fscache//;
 
     # Set (hardcoded) defaults for tools that have defaults that do not agree with somatic pipeline
     push @inputs,
@@ -185,7 +205,8 @@ sub _map_workflow_inputs {
         only_tier_1_indel => 1,
         normal_indelpe_data_directory => join('/', $build->data_directory, "normal_indelpe_data" ),
         tumor_indelpe_data_directory => join('/', $build->data_directory, "tumor_indelpe_data" ),
-        reference_fasta => join('/', Genome::Config::reference_sequence_directory(), 'NCBI-human-build36/all_sequences.fa'),
+        reference_fasta => $reference_fasta,
+        annotation_reference_transcripts => $annotation_reference_transcripts,
         prepend_chr => 0;
 
     # Set values from processing profile parameters
@@ -245,7 +266,8 @@ sub default_filenames{
         ## Combined glfSomatic+Varscan Output files ##
         merged_snp_output                   => 'merged.somatic.snp',            ## Generated from merge-variants of somaticSniper and varScan
         merged_indel_output                 => 'merged.somatic.indel',          ## Generated from merge-variants of somaticSniper and varScan ##
-        merged_indel_output_filter          => 'merged.somatic.indel.filter',          ## The homopolymer-filtered list of indels ##
+        merged_indel_output_filter          => 'merged.somatic.indel.filter',          ## The fp-filtered list of indels ##
+        merged_indel_output_filter_rem          => 'merged.somatic.indel.filter.removed',          ## The fp-filter removed list of indels ##
 
         ## Strand Filtering and Lookup Variants Files ##
         merged_snp_output_filter        => 'merged.somatic.snp.filter',

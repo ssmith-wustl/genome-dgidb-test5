@@ -9,7 +9,6 @@ use Genome::Utility::DiffStream;
 use Genome::Utility::FastaStreamIn;
 use Genome;
 use Command;
-#use GSCApp;
 
 use IO::File;
 

@@ -5,13 +5,13 @@ use strict;
 use IO::File;
 use Bit::Vector;
 
-our $VERSION = '1.01';
+our $VERSION = $Genome::Model::Tools::Music::VERSION;
 
 class Genome::Model::Tools::Music::Bmr::CalcBmr {
   is => 'Command',
   has_input => [
     roi_file => { is => 'Text', doc => "Tab delimited list of ROIs [chr start stop gene_name] (See Description)" },
-    ref_seq => { is => 'Text', doc => "Path to reference sequence in FASTA format" },
+    reference_sequence => { is => 'Text', doc => "Path to reference sequence in FASTA format" },
     bam_list => { is => 'Text', doc => "Tab delimited list of BAM files [sample_name normal_bam tumor_bam] (See Description)" },
     output_dir => { is => 'Text', doc => "Directory where output files will be written (Use the same one used with calc-covg)" },
     maf_file => { is => 'Text', doc => "List of mutations using TCGA MAF specifications v2.2" },
@@ -40,7 +40,7 @@ ARGUMENTS:
   base will be counted each time it appears in an ROI of the same gene. To avoid this, be sure to
   merge together overlapping ROIs of the same gene. BEDtools' mergeBed can help if used per gene.
 
---ref-seq
+--reference-sequence
   The reference sequence in FASTA format. If a reference sequence index is not found next to this
   file (a .fai file), it will be created.
 
@@ -66,7 +66,7 @@ sub execute {
   my $self = shift;
   $DB::single = 1;
   my $roi_file = $self->roi_file;
-  my $ref_seq = $self->ref_seq;
+  my $ref_seq = $self->reference_sequence;
   my $bam_list = $self->bam_list;
   my $output_dir = $self->output_dir;
   my $maf_file = $self->maf_file;

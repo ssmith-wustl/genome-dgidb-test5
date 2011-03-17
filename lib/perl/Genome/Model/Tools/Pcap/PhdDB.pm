@@ -6,7 +6,6 @@ use warnings;
 use Carp;
 use base qw(Class::Accessor::Fast);
 
-#use GSCApp;
 App::DBI->no_commit(1);
 use IO::File;
 use IO::String;

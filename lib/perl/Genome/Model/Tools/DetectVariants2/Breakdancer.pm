@@ -5,31 +5,50 @@ use strict;
 
 use Genome;
 
-my $DEFAULT_VERSION = '2010_06_24';
+my @FULL_CHR_LIST = (1..22, 'X', 'Y');
 
 class Genome::Model::Tools::DetectVariants2::Breakdancer{
-    is => ['Genome::Model::Tools::DetectVariants::Somatic', 'Genome::Model::Tools::DetectVariants2::Base'],
+    is => 'Genome::Model::Tools::DetectVariants2::Detector',
     has => [
         _config_base_name => {
             is => 'Text',
             default_value => 'breakdancer_config',
-            is_input => 1,
+            is_constant => 1,
         },
-        config_output => {
-            calculate_from => ['_config_base_name', 'output_directory'],
-            calculate => q{ join("/", $output_directory, $_config_base_name); },
-            is_output => 1,
+        config_file => {
+            #calculate_from => ['_config_base_name', 'output_directory'],
+            #calculate => q{ join("/", $output_directory, $_config_base_name); },
+            is_output   => 1,
+            is_input    => 1,
+            is_optional => 1,
+            doc => 'breakdancer config file path if provided not made by this tool',
         },
         _config_staging_output => {
             calculate_from => ['_temp_staging_directory', '_config_base_name'],
             calculate => q{ join("/", $_temp_staging_directory, $_config_base_name); },
+            is_optional => 1,
+        },
+        chromosome => {
+            is => 'Text',
+            is_input => 1,
+            is_optional => 1,
+            valid_values => [@FULL_CHR_LIST, 'all'],
+            default_value => 'all',
         },
         version => {
             is => 'Version',
             is_optional => 1,
             is_input => 1,
-            default_value => $DEFAULT_VERSION,
-            doc => "Version of breakdancer to use"
+            default_value =>  Genome::Model::Tools::Breakdancer->default_breakdancer_version,
+            valid_values  => [Genome::Model::Tools::Breakdancer->available_breakdancer_versions],
+            doc => "Version of breakdancer to use",
+        },
+        workflow_log_dir => {
+            is => 'Text',
+            calculate_from => '_temp_staging_directory',
+            calculate => q{ return $_temp_staging_directory . '/workflow_log/'; },
+            is_optional => 1,
+            doc => 'workflow log directory of per chromosome breakdancer run',
         },
         detect_svs => { value => 1, is_constant => 1, },
         sv_params => {
@@ -43,6 +62,7 @@ class Genome::Model::Tools::DetectVariants2::Breakdancer{
             calculate => q{
                 return (split(':', $sv_params))[0];
             },
+            is_optional => 1,
             doc => 'This is the property used internally by the tool for bam2cfg parameters. It splits sv_params.',
         },
         _breakdancer_params => {
@@ -50,30 +70,14 @@ class Genome::Model::Tools::DetectVariants2::Breakdancer{
             calculate => q{
                 return (split(':', $sv_params))[1];
             },
+            is_optional => 1,
             doc => 'This is the property used internally by the tool for breakdancer parameters. It splits sv_params.',
         },
-        skip => {
-            is => 'Boolean',
-            default => '0',
-            is_input => 1,
-            is_optional => 1,
-            doc => "If set to true... this will do nothing! Fairly useless, except this is necessary for workflow.",
-        },
-        skip_if_output_present => {
-            is => 'Boolean',
-            is_optional => 1,
-            is_input => 1,
-            default => 0,
-            doc => 'enable this flag to shortcut this step if the output is already present. Useful for pipelines.',
-        },
-        ],
+    ],
     has_param => [ 
         lsf_resource => {
             default_value => "-M 8000000 -R 'select[type==LINUX64 && mem>8000] rusage[mem=8000]'",
         },
-        lsf_queue => {
-            default_value => 'long'
-        }, 
     ],
     # These are params from the superclass' standard API that we do not require for this class (dont show in the help)
     has_constant_optional => [
@@ -85,26 +89,6 @@ class Genome::Model::Tools::DetectVariants2::Breakdancer{
     ],
 };
 
-my %BREAKDANCER_BASE_DIRS = (
-    '0.0.1r59' => '/gsc/scripts/pkg/bio/breakdancer/breakdancer-0.0.1r59',
-    '2010_02_17' => '/gsc/scripts/pkg/bio/breakdancer/breakdancer-2010_02_17/bin',
-    '2010_03_02' => '/gsc/scripts/pkg/bio/breakdancer/breakdancer-2010_03_02/bin',
-    '2010_06_24' => '/gsc/pkg/bio/breakdancermax/breakdancer-20100624',
-);
-
-my %BREAKDANCER_CONFIG_COMMAND = (
-    '0.0.1r59' => 'bam2cfg.pl',
-    '2010_02_17' => 'bam2cfg.pl',
-    '2010_03_02' => 'bam2cfg.pl',
-    '2010_06_24' => 'perl/bam2cfg.pl',
-);
-
-my %BREAKDANCER_MAX_COMMAND = (
-    '0.0.1r59' => 'BreakDancerMax.pl',
-    '2010_02_17' => 'BreakDancerMax.pl',
-    '2010_03_02' => 'BreakDancerMax.pl',
-    '2010_06_24' => 'cpp/breakdancer_max',
-);
 
 sub help_brief {
     "discovers structural variation using breakdancer",
@@ -113,8 +97,8 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gmt somatic breakdancer -t tumor.bam -n normal.bam --output-dir breakdancer_dir
-gmt somatic breakdancer -t tumor.bam -n normal.bam --output-dir breakdancer_dir --version 0.0.1r59 --skip-if-output-present 
+gmt detect-variants2 breakdancer -aligned-reads-input tumor.bam -control-aligned-reads-input normal.bam --output-dir breakdancer_dir
+gmt detect-variants2 breakdancer -aligned-reads-input tumor.bam -control-aligned-reads-input normal.bam --output-dir breakdancer_dir --version 0.0.1r59
 EOS
 }
 
@@ -125,66 +109,173 @@ the input BAM files and then uses that configuration to run breakdancer.
 EOS
 }
 
-sub _should_skip_execution {
+
+sub _create_temp_directories {
     my $self = shift;
-    
-    if ($self->skip) {
-        $self->status_message("Skipping execution: Skip flag set");
-        return 1;
-    }
-    if (($self->skip_if_output_present)&&(-s $self->sv_output)) {
-        $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
-        return 1;
-    }
-    
-    return $self->SUPER::_should_skip_execution;
+    $ENV{TMPDIR} = $self->output_directory;
+    return $self->SUPER::_create_temp_directories(@_);
 }
+
 
 sub _detect_variants {
     my $self = shift;
     
+    $self->set_params;
     $self->run_config;
-
     $self->run_breakdancer;
 
     return 1;
 }
 
-sub run_config {
+
+sub set_params {
     my $self = shift;
 
-    my $config_path = $self->breakdancer_config_command;
-    my $cmd = "$config_path " . $self->aligned_reads_input . " " . $self->control_aligned_reads_input . " " . $self->_bam2cfg_params . " > "  . $self->_config_staging_output;
-    $self->status_message("EXECUTING CONFIG STEP: $cmd");
-    my $return = Genome::Sys->shellcmd(
-        cmd => $cmd,
-        input_files => [$self->aligned_reads_input, $self->control_aligned_reads_input],
-        output_files => [$self->_config_staging_output],
-    );
-
-    unless ($return) {
-        $self->error_message("Running breakdancer config failed using command: $cmd");
-        die;
+    unless ($self->sv_params) {
+        $self->warning_message ("No sv_params option provided. Now try params");
+        unless ($self->params) {
+            $self->error_message("Neither sv_params nor params is set");
+            die;
+        }
+        $self->sv_params($self->params);
     }
-
-    unless (-s $self->_config_staging_output) {
-        $self->error_message("$cmd output " . $self->_config_staging_output . " does not exist or has zero size");
-        die;
-    }
-
-    
     return 1;
 }
 
+
+sub run_config {
+    my $self = shift;
+    my $cfg_file = $self->config_file;
+
+    if ($cfg_file) {
+        unless (Genome::Sys->check_for_path_existence($cfg_file)) {
+            $self->error_message("Given breakdancer config file $cfg_file is not valid");
+            die $self->error_message;
+        }
+        $self->status_message("Using given breakdancer config file: $cfg_file");
+    }
+    else {
+        $self->status_message("Run bam2cfg to make breakdancer_config file");
+
+        my $bam2cfg = Genome::Model::Tools::Breakdancer::BamToConfig->create(
+            normal_bam  => $self->control_aligned_reads_input,
+            tumor_bam   => $self->aligned_reads_input,
+            output_file => $self->_config_staging_output,
+            params      => $self->_bam2cfg_params,
+            use_version => $self->version,
+        );
+
+        unless ($bam2cfg->execute) {
+            $self->error_message("Failed to run bam2cfg");
+            die;
+        }
+
+        $self->config_file($self->_config_staging_output);
+        $self->status_message('Breakdancer config is created ok');
+    }
+    return 1;
+}
+
+
 sub run_breakdancer {
     my $self = shift;
+    my $bd_params = $self->_breakdancer_params;
 
-    my $breakdancer_path = $self->breakdancer_max_command;
-    my $cmd = "$breakdancer_path " . $self->_config_staging_output . " " . $self->_breakdancer_params . " > "  . $self->_sv_staging_output;
+    #Allow 0 size of config, breakdancer output
+    if (-z $self->config_file) {
+        $self->warning_message("0 size of breakdancer config file. Probably it is for testing of small bam files");
+        my $output_file = $self->_sv_staging_output;
+        `touch $output_file`;
+        return 1;
+    }
+
+    if ($bd_params =~ /\-o/) {
+        my $chr = $self->chromosome;
+        if ($chr eq 'all') {
+            require Workflow::Simple;
+        
+            my $op = Workflow::Operation->create(
+                name => 'Breakdancer by chromosome',
+                operation_type => Workflow::OperationType::Command->get('Genome::Model::Tools::DetectVariants2::Breakdancer'),
+            );
+
+            $op->parallel_by('chromosome');
+            if ($self->workflow_log_dir) {
+                unless (-d $self->workflow_log_dir) {
+                    unless (Genome::Sys->create_directory($self->workflow_log_dir)) {
+                        $self->error_message('Failed to create workflow_log_dir: '. $self->workflow_log_dir);
+                        die;
+                    }
+                }
+                $op->log_dir($self->workflow_log_dir);
+            }
+
+            my $cfg_file = $self->config_file;
+
+            unless (Genome::Sys->check_for_path_existence($cfg_file)) {
+                $self->error_message('prerun breakdancer config file '.$cfg_file.' does not exist');
+                die $self->error_message;
+            }
+
+            my @chr_list = $self->_get_chr_list;
+            if (scalar @chr_list == 0) {
+                #FIXME Sometimes samtools idxstats does not get correct
+                #stats because of bam's bai file is not created by
+                #later samtools version (0.1.9 ?)
+                $self->warning_message("chr list from samtools idxstats is empty, using full chr list now"); 
+                @chr_list = @FULL_CHR_LIST;
+            }
+
+            $self->status_message('chromosome list is '.join ',', @chr_list);
+
+            my $output = Workflow::Simple::run_workflow_lsf(
+                $op,
+                aligned_reads_input         => $self->aligned_reads_input, 
+                control_aligned_reads_input => $self->control_aligned_reads_input,
+                reference_sequence_input    => $self->reference_sequence_input,
+                output_directory            => $self->_temp_staging_directory,
+                config_file => $cfg_file,
+                sv_params   => $self->sv_params,
+                version     => $self->version,
+                chromosome  => \@chr_list,
+            );
+            unless (defined $output) {
+                my @error;
+                for (@Workflow::Simple::ERROR) {
+                    push @error, $_->error;
+                }
+                $self->error_message(join("\n", @error));
+                die $self->error_message;
+            }
+
+            my $merge_obj = Genome::Model::Tools::Breakdancer::MergeFiles->create(
+                input_files => join(',', map { $self->_temp_staging_directory . '/' . $self->_sv_base_name . '.' . $_ } @chr_list),
+                output_file => $self->_sv_staging_output,
+            );
+            my $merge_rv = $merge_obj->execute;
+            Carp::confess 'Could not execute breakdancer file merging!' unless defined $merge_rv and $merge_rv == 1;
+
+            return 1;
+        }
+        else {
+            $self->_sv_base_name($self->_sv_base_name . '.' . $chr); 
+            $bd_params =~ s/\-o/\-o $chr/;
+        }
+    }
+    elsif ($bd_params =~ /\-d/) {
+        my $sv_staging_out = $self->_sv_staging_output;
+        $bd_params =~ s/\-d/\-d $sv_staging_out/;
+    }
+
+    my $breakdancer_path = Genome::Model::Tools::Breakdancer->breakdancer_max_command_for_version($self->version);
+    my $cfg_file         = $self->config_file;
+
+    my $cmd = "$breakdancer_path " . $cfg_file . " " . $bd_params . " > "  . $self->_sv_staging_output;
+
     $self->status_message("EXECUTING BREAKDANCER STEP: $cmd");
     my $return = Genome::Sys->shellcmd(
         cmd => $cmd,
-        input_files => [$self->_config_staging_output],
+        input_files  => [$cfg_file],
         output_files => [$self->_sv_staging_output],
         allow_zero_size_output_files => 1,
     );
@@ -198,73 +289,57 @@ sub run_breakdancer {
         $self->error_message("$cmd output " . $self->_sv_staging_output . " does not exist or has zero size");
         die;
     }
- 
 
+    $self->status_message('breakdancer run finished ok');
     return 1;
 }
 
-sub breakdancer_path {
-    my $self = $_[0];
-    return $self->path_for_breakdancer_version($self->version);
-}
-
-sub breakdancer_max_command { 
-    my $self = $_[0];
-    return $self->breakdancer_max_command_for_version($self->version);
-}
-
-sub breakdancer_config_command { 
-    my $self = $_[0];
-    return $self->breakdancer_config_command_for_version($self->version);
-}
-
-sub available_breakdancer_versions {
+sub _get_chr_list {
     my $self = shift;
-    return keys %BREAKDANCER_BASE_DIRS;
-}
 
-sub path_for_breakdancer_version {
-    my $class = shift;
-    my $version = shift;
+    my $tmp_idx_dir = File::Temp::tempdir(
+        "Normal_bam_idxstats_XXXXX",
+        CLEANUP => 1,
+        DIR     => '/tmp',  #File::Temp can not remove inside dir for _temp_staging_dir
+        #DIR     => $self->_temp_staging_directory,
+    );
 
-    if (defined $BREAKDANCER_BASE_DIRS{$version}) {
-        return $BREAKDANCER_BASE_DIRS{$version};
+    my $tmp_idx_file = $tmp_idx_dir . '/normal_bam.idxstats';
+
+    my $idxstats = Genome::Model::Tools::Sam::Idxstats->create(
+        bam_file    => $self->control_aligned_reads_input,
+        output_file => $tmp_idx_file,
+    );
+    unless ($idxstats->execute) {
+        $self->error_message("Failed to run samtools idxstats output $tmp_idx_file");
+        die;
     }
-    die('No path for breakdancer version '. $version);
-}
 
-sub breakdancer_max_command_for_version {
-    my $class = shift;
-    my $version = shift;
+    my $unmap_chr_list = $idxstats->unmap_ref_list($tmp_idx_file);
+    my @chr_list; 
 
-    if (defined $BREAKDANCER_MAX_COMMAND{$version}) {
-        return $class->path_for_breakdancer_version($version) . "/" .  $BREAKDANCER_MAX_COMMAND{$version};
+    for my $chr (@FULL_CHR_LIST) {
+        push @chr_list, $chr unless grep{$chr eq $_}@$unmap_chr_list;
     }
-    die('No breakdancer max command for breakdancer version '. $version);
+
+    return @chr_list;
 }
 
-sub breakdancer_config_command_for_version {
-    my $class = shift;
-    my $version = shift;
-
-    if (defined $BREAKDANCER_CONFIG_COMMAND{$version}) {
-        return $class->path_for_breakdancer_version($version) . "/" .  $BREAKDANCER_CONFIG_COMMAND{$version};
-    }
-    die('No breakdancer config command for breakdancer version '. $version);
-}
-
-sub default_breakdancer_version {
-    die "default breakdancer version: $DEFAULT_VERSION is not valid" unless $BREAKDANCER_BASE_DIRS{$DEFAULT_VERSION};
-    return $DEFAULT_VERSION;
-}
 
 sub has_version {
-    my $self = shift;
+    my $self    = shift;
     my $version = shift;
-    if(exists($BREAKDANCER_BASE_DIRS{$version})){
-        return 1;
+
+    unless (defined $version) {
+        $version = $self->version;
     }
-    return 0;
+    my @versions = Genome::Model::Tools::Breakdancer->available_breakdancer_versions;
+    for my $v (@versions) {
+        if ($v eq $version) {
+            return 1;
+        }
+    }
+    return 0;  
 }
 
 1;

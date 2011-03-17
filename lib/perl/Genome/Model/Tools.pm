@@ -7,7 +7,7 @@ use Genome;
 our $VERSION = $Genome::VERSION;
 
 class Genome::Model::Tools {
-    is => 'Command',
+    is => 'Command::Tree',
     doc => 'bioinformatics tools for genomics'
 };
 
@@ -18,6 +18,15 @@ sub help_sub_commands {
         $txt = "ERROR: *** no genome modeling tools installed yet! ***";
     }
     return $txt;
+}
+
+sub doc_copyright_license {
+   return <<EOS
+Copyright (C) 2007-2011 Washington University in St. Louis.
+
+It is released under the Lesser GNU Public License (LGPL) version 3.  See the 
+associated LICENSE file in this distribution.
+EOS
 }
 
 1;

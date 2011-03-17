@@ -62,6 +62,8 @@ class Genome::Model::Build {
                                     return $disk_allocation;
                                 ) },
         software_revision => { is => 'VARCHAR2', len => 1000 },
+        region_of_interest_set_value     => { is_many => 1, is => 'UR::Value', via => 'inputs', to => 'value', where => [ name => 'region_of_interest_set_name'] },
+        region_of_interest_set_name      => { via => 'region_of_interest_set_value', to => 'id', },
     ],
     has_many_optional => [
         inputs           => { is => 'Genome::Model::Build::Input', reverse_as => 'build', 
@@ -796,22 +798,14 @@ sub _launch {
             $add_args .= ' --restart';
         }
 
-        my $host_group = `bqueues -l $server_dispatch | grep ^HOSTS:`;
-        chomp $host_group;
-        $host_group =~ s/^HOSTS:\s+//;
-        $host_group =~ s/\///g;
-        $host_group =~ s/\s+$//g;
-        $host_group = "-m '$host_group'";
-
         my $lsf_project = "build" . $self->id;
 
         # bsub into the queue specified by the dispatch spec
         my $user = getpwuid($<);
         my $lsf_command = sprintf(
-            'bsub -P %s -N -H -q %s %s %s -u %s@genome.wustl.edu -o %s -e %s annotate-log genome model services build run%s --model-id %s --build-id %s',
+            'bsub -P %s -N -H -q %s %s -u %s@genome.wustl.edu -o %s -e %s annotate-log genome model services build run%s --model-id %s --build-id %s',
             $lsf_project,
             $server_dispatch, ## lsf queue
-            $host_group,
             $job_group_spec,
             $user, 
             $build_event->output_log_file,
@@ -850,7 +844,7 @@ sub _launch {
         my $commit_observer = $build_event->add_observer(
             aspect => 'commit',
             callback => sub {
-                $self->status_message("Resuming LSF job ($job_id) for build " . $self->__display_name__ . ".");
+                #$self->status_message("Resuming LSF job ($job_id) for build " . $self->__display_name__ . ".");
                 my $bresume_output = `bresume $job_id`; chomp $bresume_output;
                 unless ( $bresume_output =~ /^Job <$job_id> is being resumed$/ ) {
                     $self->status_message($bresume_output);
@@ -1484,6 +1478,13 @@ sub delete {
         unless ($disk_allocation->deallocate) {
             $self->warning_message('Failed to deallocate disk space.');
         }
+    }
+
+    # Remove model link
+    my $model_data_directory = $self->model->data_directory;
+    if ($model_data_directory) {
+        my $model_build_symlink = $model_data_directory . '/build' . $self->build_id;
+        unlink($model_build_symlink) if (-e $model_build_symlink);
     }
     
     # FIXME Don't know if this should go here, but then we would have to call success and abandon through the model

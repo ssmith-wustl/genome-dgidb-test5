@@ -33,6 +33,9 @@ class Genome::Model::Tools::Capture::ProcessModels {
 		regions_file	=> { is => 'Text', doc => "Optional limit to regions file" , is_optional => 1},
 		skip_if_output_present => { is => 'Text', doc => "Do not attempt to run pipeline if output present" , is_optional => 1},
 		verbose => { is => 'Text', doc => "Display Lots of Output" , is_optional => 1, default => 1},
+		use_stable => { is => 'Text', doc => "1 if you want to submit genome-stable version, 0 if you want to use your present dir version" , is_optional => 1, default => 0},
+		skip_roi => { is => 'Text', doc => "1 if you want to skip roi filtering (exome), 0 if you want to use the filter" , is_optional => 1, default => 0},
+		only_tier_1 => { is => 'Text', doc => "1 if you want to have only tier 1 results (skip ucsc), 0 if you want full tiering" , is_optional => 1, default => 0},
 	],
 };
 
@@ -67,6 +70,9 @@ sub execute {                               # replace with real execution logic.
 	## Get required parameters ##
 	my $model_list = $self->model_list;
 	my $verbose = $self->verbose;
+	my $stable = $self->use_stable;
+	my $skip_roi = $self->skip_roi;
+	my $only_tier_1 = $self->only_tier_1;
 	my $output_dir = "./";
 	$output_dir = $self->output_dir if($self->output_dir);
 	my $regions_file = $self->regions_file if($self->regions_file);
@@ -170,21 +176,32 @@ sub execute {                               # replace with real execution logic.
 				if($verbose) {
 					print "$model_id\t$sample_name\t$build_status\t$build_dir\n";
 				}
-				my @outfile_list = qw(annotation.germline.indel.ucsc merged.germline.indel merged.germline.indel.ROI.tier4.out merged.germline.snp.ROI samtools.output.indel.formatted varScan.output.snp annotation.germline.indel.unannot-ucsc merged.germline.indel.ROI merged.germline.indel.shared merged.germline.snp.ROI.tier1.out samtools.output.snp.adaptor varScan.output.snp.filter annotation.germline.snp.transcript merged.germline.indel.ROI.tier1.out merged.germline.indel.sniper-only merged.germline.snp.ROI.tier2.out varScan.output.indel varScan.output.snp.formatted annotation.germline.snp.ucsc merged.germline.indel.ROI.tier2.out merged.germline.indel.varscan-only merged.germline.snp.ROI.tier3.out varScan.output.indel.filter varScan.output.snp.variants annotation.germline.indel.transcript annotation.germline.snp.unannot-ucsc merged.germline.indel.ROI.tier3.out merged.germline.snp merged.germline.snp.ROI.tier4.out varScan.output.indel.formatted $sample_name.out $sample_name.err);
+				my @outfile_list = qw(annotation.germline.indel.ucsc merged.germline.indel merged.germline.indel.ROI.tier4.out merged.germline.snp.ROI samtools.output.indel.formatted varScan.output.snp annotation.germline.indel.unannot-ucsc merged.germline.indel.ROI merged.germline.indel.shared merged.germline.snp.ROI.tier1.out samtools.output.snp.adaptor varScan.output.snp.filter annotation.germline.snp.transcript merged.germline.indel.ROI.tier1.out merged.germline.indel.sniper-only merged.germline.snp.ROI.tier2.out varScan.output.indel varScan.output.snp.formatted annotation.germline.snp.ucsc merged.germline.indel.ROI.tier2.out merged.germline.indel.varscan-only merged.germline.snp.ROI.tier3.out varScan.output.indel.filter varScan.output.snp.variants annotation.germline.indel.transcript annotation.germline.snp.unannot-ucsc merged.germline.indel.ROI.tier3.out merged.germline.snp merged.germline.snp.ROI.tier4.out varScan.output.indel.formatted $sample_name.out $sample_name.err merged.germline.snp.ROI.tier1.out.strandfilter.readcounts merged.germline.snp.ROI.tier1.out.strandfilter_filtered merged.germline.snp.ROI.tier1.out.strandfilter GATK.output.indel GATK.output.indel.vcf GATK.output.indel.bed GATK.output.indel.formatted GATK.output.indel.adaptor merged.germline.snp.ROI.tier1.out.dbsnp merged.germline.indel.ROI.tier1.out.strandfilter merged.germline.indel.ROI.tier1.out.strandfilter.readcounts merged.germline.indel.ROI.tier1.out.strandfilter_filtered merged.germline.ROI.tier1.out.maf);
 				foreach my $file (@outfile_list) {
 					my $del_file = "$sample_output_dir/$file";
-					unlink("$del_file");
+					if (-e $del_file) {
+						unlink("$del_file");
+					}
 				}
-
-				my $cmd = "perl -I /gscuser/wschierd/genome-stable/ `which gmt` germline capture-bams --build-id $build_id --germline-bam-file $bam_file --filtered-indelpe-snps $snp_file --indels-all-sequences-filtered $indel_file --data-directory $sample_output_dir --regions-file $regions_file";
+				my $cmd;
+				if ($stable) {
+					$cmd = "perl -I /gscuser/wschierd/genome-stable/ `which gmt` germline capture-bams --build-id $build_id --germline-bam-file $bam_file --filtered-indelpe-snps $snp_file --indels-all-sequences-filtered $indel_file --data-directory $sample_output_dir --regions-file $regions_file --skip-roi $skip_roi --only-tier-1 $only_tier_1 --only-tier-1-indel $only_tier_1";
+				}
+				else {
+					$cmd = "gmt germline capture-bams --build-id $build_id --germline-bam-file $bam_file --filtered-indelpe-snps $snp_file --indels-all-sequences-filtered $indel_file --data-directory $sample_output_dir --regions-file $regions_file --skip-roi $skip_roi --only-tier-1 $only_tier_1 --only-tier-1-indel $only_tier_1";
+				}
 				if($verbose) {
 					print "$cmd\n";
 				}
 				my $job_name = "$sample_output_dir/$sample_name";
 				my $output_name = "$sample_output_dir/$sample_name.output";
 				my $error_name = "$sample_output_dir/$sample_name.err";
-				unlink("$output_name");
-				unlink("$error_name");
+				if (-e $output_name) {
+					unlink("$output_name")
+				}
+				if (-e $error_name) {;
+					unlink("$error_name");
+				}
 				system("bsub -q apipe -R\"select[type==LINUX64 && model != Opteron250 && mem>4000] rusage[mem=4000]\" -M 4000000 -J $job_name -o $output_name -e $error_name \"$cmd\"");
 				sleep(1);
 			}
