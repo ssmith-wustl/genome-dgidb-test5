@@ -27,13 +27,13 @@ class Genome::Model::Tools::Nimblegen::DesignFromAnnotation {
         doc => "The number of bases to span the region upstream and downstream of a variant locus",
     },
     exclude_non_canonical_sites => {
-        type => 'Bool',
+        type => 'Boolean',
         is_optional => 1,
         default => 1,
         doc => "Whether or not to remove sites on the mitochondria or non-chromosomal contigs",
     },
     include_y => {
-        type => 'Bool',
+        type => 'Boolean',
         is_optional => 1,
         default => 1,
         doc => "Whether or not to include sites on the Y chromosome in the output",
