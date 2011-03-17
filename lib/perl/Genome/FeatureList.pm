@@ -25,7 +25,7 @@ class Genome::FeatureList {
     has_optional => [
         source => { is => 'Text', len => 64, doc => 'Provenance of this feature list. (e.g. Agilent)', },
         reference_id => { is => 'NUMBER', len => 10, doc => 'ID of the reference sequence build for which the features apply' },
-        reference => { is => 'Genome::Model::Build::ImportedReferenceSequence', id_by => 'reference_id' },
+        reference => { is => 'Genome::Model::Build::ReferenceSequence', id_by => 'reference_id' },
         reference_name => { via => 'reference', to => 'name', },
         subject_id => { is => 'NUMBER', len => 10, doc => 'ID of the subject to which the features are relevant' },
         subject => { is => 'Genome::Model::Build', id_by => 'subject_id' },
@@ -46,10 +46,6 @@ class Genome::FeatureList {
     ],
     has_optional_transient => [
         #TODO These could be pre-computed and stored in the allocation rather than re-generated every time
-        _lims_file_path => {
-            is => 'Text',
-            doc => 'The path to the temporary dumped copy of the BED file from LIMS',
-        },
         _processed_bed_file_path => {
             is => 'Text',
             doc => 'The path to the temporary dumped copy of the post-processed BED file',
@@ -57,6 +53,10 @@ class Genome::FeatureList {
         _merged_bed_file_path => {
             is => 'Text',
             doc => 'The path to the temporary dumped copy of the merged post-processed BED file',
+        },
+        _converted_bed_file_paths => {
+            is => 'HASH',
+            doc => 'The paths to the temporary dumped copies of merged post-processed BED files converted to other references',
         }
     ],
     doc => 'A feature-list is, generically, a set of coördinates for some reference',
@@ -250,6 +250,33 @@ sub processed_bed_file {
     return $self->_processed_bed_file_path;
 }
 
+sub generate_merged_bed_file {
+    my $self = shift;
+
+    my $processed_bed_file = $self->processed_bed_file;
+    my $output_file = shift || Genome::Sys->create_temp_file_path( $self->id . '.merged.bed' );
+
+    my %merge_params = (
+        input_file => $processed_bed_file,
+        output_file => $output_file,
+        report_names => 1,
+        #All files should have zero-based start postitions at this point
+        maximum_distance => 0,
+    );
+
+    my $merge_command = Genome::Model::Tools::BedTools::Merge->create(%merge_params);
+    unless($merge_command) {
+        $self->error_message('Failed to create merge command.');
+        die $self->error_message;
+    }
+    unless ($merge_command->execute) {
+        $self->error_message('Failed to merge BED file with params '. Data::Dumper::Dumper(%merge_params) . ' ' . $merge_command->error_message);
+        die $self->error_message;
+    }
+
+    return $output_file;
+}
+
 sub merged_bed_file {
     my $self = shift;
 
@@ -259,31 +286,51 @@ sub merged_bed_file {
     }
 
     unless($self->_merged_bed_file_path) {
-        my $processed_bed_file = $self->processed_bed_file;
-        my $temp_file = Genome::Sys->create_temp_file_path( $self->id . '.merged.bed' );
-
-        my %merge_params = (
-            input_file => $processed_bed_file,
-            output_file => $temp_file,
-            report_names => 1,
-            #All files should have zero-based start postitions at this point
-            maximum_distance => 0,
-        );
-
-        my $merge_command = Genome::Model::Tools::BedTools::Merge->create(%merge_params);
-        unless($merge_command) {
-            $self->error_message('Failed to create merge command.');
-            die $self->error_message;
-        }
-        unless ($merge_command->execute) {
-            $self->error_message('Failed to merge BED file with params '. Data::Dumper::Dumper(%merge_params) . ' ' . $merge_command->error_message);
-            die $self->error_message;
-        }
+        my $temp_file = $self->generate_merged_bed_file;
 
         $self->_merged_bed_file_path($temp_file);
     }
 
     return $self->_merged_bed_file_path;
+}
+
+sub generate_converted_bed_file {
+    my $self = shift;
+    my $reference = shift;
+
+    my $converted_file_path = shift || Genome::Sys->create_temp_file_path( $self->id . '.merged.' . $reference->id . '.converted.bed' );
+    my $converted_bed_file = Genome::Model::Build::ReferenceSequence::Converter->convert_bed($self->merged_bed_file, $self->reference, $converted_file_path, $reference);
+
+    unless(-s $converted_bed_file) {
+        $self->error_message('Could not convert to requested reference!');
+        die $self->error_message;
+    }
+
+    return $converted_bed_file;
+}
+
+sub converted_bed_file {
+    my $self = shift;
+    my $reference = shift;
+
+    if ($self->format eq 'unknown'){
+        $self->error_message('Cannot convert BED file with unknown format');
+        die $self->error_message;
+    }
+
+    unless ($self->reference) {
+        $self->error_message('Cannot convert BED file without an associated reference');
+        die $self->error_message;
+    }
+
+    my $converted_bed_files = $self->_converted_bed_file_paths;
+
+    unless(exists $converted_bed_files->{$reference->id}) {
+        $converted_bed_files->{$reference->id} = $self->generate_converted_bed_file($reference);
+        $self->_converted_bed_file_paths($converted_bed_files);
+    }
+
+    return $converted_bed_files->{$reference->id};
 }
 
 sub _resolve_param_value_from_text_by_name_or_id {
