@@ -316,7 +316,7 @@ sub _resolve_subclass_name_for_aligner_name {
     return $subclass;
 }
 
-sub create { 
+sub create {
     my $class = shift;
     
     if ($class eq __PACKAGE__ or $class->__meta__->is_abstract) {
@@ -458,6 +458,23 @@ sub create {
         
     $self->status_message("Alignment complete.");
     return $self;
+}
+
+sub delete {
+    my $self = shift;
+
+    my @children = Genome::InstrumentData::IntermediateAlignmentResult->get(parent_result => $self);
+    my $name = $self->__display_name__;
+    my $class_name = $self->class;
+
+    if (@children) {
+        $self->status_message("$class_name $name: deleting child IntermediateAlignmentResults: " .
+            join(", ", map { $_->__display_name__ } @children));
+    }
+    my $rv = $self->SUPER::delete(@_);
+    $_->delete for @children;
+
+    return $rv;
 }
 
 sub prepare_scratch_sam_file {

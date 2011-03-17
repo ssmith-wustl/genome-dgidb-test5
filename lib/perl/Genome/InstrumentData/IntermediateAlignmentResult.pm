@@ -177,7 +177,7 @@ sub verify_disk_space {
     }
 }
 
-sub create { 
+sub create {
     my $class = shift;
 
     if ($class eq __PACKAGE__ or $class->__meta__->is_abstract) {
@@ -230,6 +230,18 @@ sub create {
         
     $self->status_message("Intermediate alignment result generation complete.");
     return $self;
+}
+
+sub delete {
+    my $self = shift;
+    my $class_name = $self->class;
+    if (defined $self->parent_result) {
+        my $name = $self->__display_name__;
+        my $parent_name = $self->parent_result->__display_name__;
+        die "Refusing to delete $class_name $name as parent object $parent_name exists. Delete that instead.";
+    } else {
+        return $self->SUPER::delete(@_);
+    }
 }
 
 sub _gather_params_for_get_or_create {
