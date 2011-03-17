@@ -579,7 +579,7 @@ sub create_default_per_lane_qc_model {
     if ($reference_sequence_build && $reference_sequence_build->is_compatible_with($ncbi_human_build36)) {
         my $subset_name = $genome_instrument_data->subset_name || 'unknown-subset';
         my $run_name_method = $genome_instrument_data->can('short_name') ? 'short_name' : 'run_name';
-        my $run_name = $genome_instrument_data->$run_name_method;
+        my $run_name = $genome_instrument_data->$run_name_method || 'unknown-run';
         $model_name = $run_name . '.' . $subset_name . '.prod-qc';
 
         $processing_profile = Genome::ProcessingProfile->get(2581081);
