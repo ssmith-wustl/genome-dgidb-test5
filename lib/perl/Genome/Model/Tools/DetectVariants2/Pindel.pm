@@ -68,7 +68,7 @@ sub _detect_variants {
     $input{reference_sequence_input}=$self->reference_sequence_input;
     $input{tumor_bam}=$self->aligned_reads_input;
     $input{normal_bam}=$self->control_aligned_reads_input if defined $self->control_aligned_reads_input;
-    $input{output_directory} = $self->_temp_staging_directory;
+    $input{output_directory} = $self->output_directory;#$self->_temp_staging_directory;
     $input{version}=$self->version;
     
     $workflow->log_dir($self->output_directory);
@@ -100,8 +100,9 @@ sub _dump_workflow {
 
 sub _create_temp_directories {
     my $self = shift;
-
-    $ENV{TMPDIR} = $self->output_directory;
+    $self->_temp_staging_directory($self->output_directory);
+    $self->_temp_scratch_directory($self->output_directory);
+    return 1;
 
     return $self->SUPER::_create_temp_directories(@_);
 }
@@ -110,11 +111,6 @@ sub _promote_staged_data {
     my $self = shift;
     my $staging_dir = $self->_temp_staging_directory;
     my $output_dir  = $self->output_directory;
-    unless($self->SUPER::_promote_staged_data(@_)){
-        $self->error_message("_promote_staged_data failed in Pindel");
-        die $self->error_message;
-    }
-    $DB::single =1 ;
     my @chrom_list = @{$self->chromosome_list};
     my $test_chrom = $chrom_list[0];
     my $bed = $self->output_directory."/".$test_chrom."/indels_all_sequences.bed";

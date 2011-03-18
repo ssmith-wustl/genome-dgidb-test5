@@ -177,7 +177,8 @@ sub _dump_workflow {
 
 sub _dump_dv_cmd {
     my $self = shift;
-    my $cmd =   "gmt detect-variants2 dispatcher --output-directory ".$self->output_directory
+    my $cmd = join(" ",@INC)."\n===============================================\n";
+    $cmd .=   "gmt detect-variants2 dispatcher --output-directory ".$self->output_directory
                 ." --aligned-reads-input ".$self->aligned_reads_input
                 ." --control-aligned-reads-input ".$self->control_aligned_reads_input
                 ." --reference-sequence-input ".$self->reference_sequence_input;
@@ -759,26 +760,18 @@ sub _create_directories {
     return 1;
 }
 
-
-# Set the tempdir environment variable to the dispatchers output directory. This is done so that all detectors and filters run by the dispatcher will base their temp directories in the dispatchers directory
-# We do this in order that our temp dirs are on network accessible disk, in order that detectors and filters may write their results into it
 sub _create_temp_directories {
     my $self = shift;
-
-    $ENV{TMPDIR} = $self->output_directory;
-
-    return $self->SUPER::_create_temp_directories(@_);
+    $self->_temp_staging_directory($self->output_directory);
+    $self->_temp_scratch_directory($self->output_directory);
+    return 1;
 }
 
 # After promoting staged data as per normal, create a symlink from the final output files to the top level of the dispatcher output directory
 sub _promote_staged_data {
     my $self = shift;
-    my $staging_dir = $self->_temp_staging_directory;
     my $output_dir  = $self->output_directory;
-    unless($self->SUPER::_promote_staged_data(@_)){
-        $self->error_message("_promote_staged_data failed in Dispatcher");
-        die $self->error_message;
-    }
+
     # This sifts the workflow results for relative paths to output files, and places them in the appropriate params
     $self->set_output_files($self->_workflow_result);
 
