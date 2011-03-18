@@ -313,6 +313,41 @@ sub dump_fastqs_from_bam {
     return @files; 
 }
 
+sub lane_qc_model {
+    my $self = shift;
+    my $instrument_data_id = $self->id;
+
+    my @inputs = Genome::Model::Input->get(value_id => $instrument_data_id);
+    my @inputs_models = map { $_->model } @inputs;
+    my ($qc_model) = grep { $_->processing_profile_name eq 'february 2011 illumina lane qc' } @inputs_models;
+
+    return $qc_model;
+}
+
+sub lane_qc_build {
+    my $self = shift;
+    my $qc_model = $self->lane_qc_model;
+    if ($qc_model) {
+        return $qc_model->last_succeeded_build;
+    }
+    else {
+        return;
+    }
+}
+
+sub lane_qc_dir {
+    my $self = shift;
+    my $qc_build = $self->lane_qc_build;
+    return unless ($qc_build);
+    my $qc_dir = $qc_build->data_directory . "/qc";
+    if (-d $qc_dir) {
+        return $qc_dir;
+    }
+    else {
+        return;
+    }
+}
+
 1;
 
 #$HeadURL$
