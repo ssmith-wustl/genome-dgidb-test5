@@ -43,7 +43,7 @@ sub _run_aligner {
     my $fasta_file = $self->aligner_index->full_consensus_path('fa');
     my $tmp_dir = $self->temp_scratch_directory;
 
-    my $bam_flag;
+    my $bam_flag = "";
     if ($self->input_file =~ /\.bam/) {
         $bam_flag = "-b" . ($self->input_pass||'');
     }
