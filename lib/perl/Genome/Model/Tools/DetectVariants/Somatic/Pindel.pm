@@ -303,6 +303,7 @@ sub _run_pindel_for_chromosome {
 
     my $reference_sequence_for_chrom = $self->reference_sequence_input;
     $reference_sequence_for_chrom =~ s/all_sequences/$chromosome/;
+    $reference_sequence_for_chrom =~ s/fasta$/fa/;
     unless (-e $reference_sequence_for_chrom) {
         $self->error_message("Reference sequence file $reference_sequence_for_chrom does not exist");
         die;
