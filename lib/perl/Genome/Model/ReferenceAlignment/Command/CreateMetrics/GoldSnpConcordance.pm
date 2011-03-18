@@ -85,6 +85,7 @@ sub _gen_concordance {
     my ($self, $f1, $f2, $output_path) = @_;
 
     my $snvcmp_cmd = Genome::Model::Tools::Joinx::SnvConcordance->create(
+        depth => 1,
         input_file_a => $f1,
         input_file_b => $f2,
         output_file  => $output_path,

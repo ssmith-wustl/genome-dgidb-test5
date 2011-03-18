@@ -522,7 +522,7 @@ sub prepare_scratch_sam_file {
 sub requires_fastqs_to_align {
     my $self = shift;
    
-    # n-remove, complex filters, trimmers, and chunked instrument data disqualify bam processing 
+    # n-remove, complex filters, trimmers, instrument data disqualify bam processing 
     return 1 if ($self->n_remove_threshold);
     return 1 if ($self->filter_name && ($self->filter_name ne 'forward-only' && $self->filter_name ne 'reverse-only'));
     return 1 if ($self->trimmer_name);
@@ -674,7 +674,7 @@ sub collect_inputs_and_run_aligner {
 
     for my $pass (@passes) {
         $self->status_message("Aligning @$pass...");
-        unless ($self->_run_aligner_chunked(@$pass)) {
+        unless ($self->_run_aligner(@$pass)) {
             if (@$pass == 2) {
                 $self->error_message("Failed to run aligner on first PE pass");
                 die $self->error_message;
@@ -823,116 +823,6 @@ sub postprocess_bam_file {
     }
     return 1;
 }
-
-sub _run_aligner_chunked {
-    my $self = shift;
-
-    unless ($self->can('input_chunk_size')) {
-        return $self->_run_aligner(@_);
-    }
-
-    my @reads = @_;
-
-    if (@reads > 2 || @reads == 0) {
-        $self->error_message("Chunker can only accept one or two read sets, but it got " . scalar @reads . ". aborting");
-        die $self->error_message;
-    }
-
-    my $chunk_size = $self->input_chunk_size;
-
-    $self->status_message("Running in chunked mode.  Each pass will be in $chunk_size read chunks.");
-    if (@reads == 2) {
-        $chunk_size = ceil($chunk_size/2);
-        $self->status_message("Chunking paired end reads.  Taking $chunk_size per pass.");
-    }
-    
-    
-    my @read_fhs;
-    for my $read (@reads) {
-        my $fh = IO::File->new("<" . $read);
-        unless ($fh) {
-            $self->error_message("Failed to open read file $read for chunking");
-            die $self->error_message;
-        }
-        push @read_fhs, $fh;
-    }
-
-    my $successful_passes = 0;
-
-    while(1) {
-        my @chunks;
-        my $cnt = 0;
-        
-        for my $i (0..$#read_fhs) {
-            my $lines_read = 0;
-            my $in_fh = $read_fhs[$i];
-            my $chunk_path = Genome::Sys->base_temp_directory . "/chunked-read-" . $i . ".fastq";
-            $self->status_message("Prepping chunk: $chunk_path");
-            my $chunk_fh = IO::File->new(">" . $chunk_path);
-            unless($chunk_fh) {
-                $self->error_message("Failed to open for writing the chunked read file: $chunk_path ...  Aborting");
-                die $self->error_message;
-            }
-            push @chunks, $chunk_path;
-            while (my $row = <$in_fh>) { 
-                print $chunk_fh $row; 
-                $lines_read++; 
-                $cnt++;
-
-                # stop when we hit chunk size
-                last if ($lines_read >= ($chunk_size*4));
-            }
-            $chunk_fh->close;
-            if ($lines_read %4 != 0) {
-                $self->error_message("Failed to read lines in multiples of 4, is the input file truncated?");
-                die $self->error_message;
-            }
-            $self->status_message("Read " . $lines_read/4 . " reads for file $chunk_path");
-
-        }
-
-        # If we're done reading, return if we successfully aligned anything in previous passes
-        # This covers the case where we happened to read up to the very end of the file and stopped without getting an EOF
-        # that is, the file is an exact multiple of the chunk size
-        if ($cnt == 0) {
-            return ($successful_passes > 0);
-        }
-
-        my @remaining_fhs = grep {!eof $_} @read_fhs;
-        print scalar(@remaining_fhs) .  " is the remaining set\n";
-        if (@remaining_fhs > 0 && @remaining_fhs < @reads) {
-            $self->error_message("It looks like the read files are not the same length.  We've exhausted one but not the other.");
-            die $self->error_message;
-        }
-
-        my $start_time = [Time::HiRes::gettimeofday()];
-        $self->status_message("Beginning alignment of " . $cnt/4 . " reads");
-        my $res = $self->_run_aligner(@chunks);
-        if (!$res) {
-            $self->error_message("Failed to run aligner!");
-            die $self->error_message;
-        }
-        my ($user, $system, $child_user, $child_system) = times;
-        $self->status_message("wall clock time was ". Time::HiRes::tv_interval($start_time). "\n".
-        "user time for $$ was $user\n".
-        "system time for $$ was $system\n".
-        "user time for all children was $child_user\n".
-        "system time for all children was $child_system\n");
-        $successful_passes++;
-        for (@chunks) {
-            unlink($_);
-        }
-
-        # if we hit the EOF in this pass, then stop
-        if (@remaining_fhs == 0) {
-            $self->status_message("Done chunking and aligning read chunks.");
-            last;
-        }
-    }
-
-    1;
-}
-
 
 sub _compute_alignment_metrics {
     my $self = shift;

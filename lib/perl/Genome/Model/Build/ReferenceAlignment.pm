@@ -1160,9 +1160,15 @@ sub region_of_interest_set_bed_file {
     my $roi_set = $self->model->region_of_interest_set;
     return unless $roi_set;
 
+    my $alt_reference;
+    my $reference = $self->model->reference_sequence_build;
+    unless($reference->is_compatible_with($roi_set->reference)) {
+        $alt_reference = $reference;
+    }
+
     my $bed_file_path = $self->reference_coverage_directory .'/'. $roi_set->id .'.bed';
     unless (-e $bed_file_path) {
-        my $dump_command = Genome::FeatureList::Command::DumpMergedList->create(feature_list => $roi_set, output_path => $bed_file_path);
+        my $dump_command = Genome::FeatureList::Command::DumpMergedList->create(feature_list => $roi_set, output_path => $bed_file_path, alternate_reference => $alt_reference);
         unless ($dump_command->execute) {
             die('Failed to print bed file to path '. $bed_file_path);
         }

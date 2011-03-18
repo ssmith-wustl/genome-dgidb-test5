@@ -117,7 +117,8 @@ sub execute {
         }
 
         #If the span goes out of bounds of the chromosome, then clip it
-        my $new_start = (( $start - $span < 1 ) ? 0 : $start - $span - 1 );
+        #Nimblegen design files are one based, so don't clip to 0 and don't calculate the start as a 0-based coordinate
+        my $new_start = (( $start - $span < 1 ) ? 1 : $start - $span);
         my $new_stop = (( $stop + $span > $chromosome_lengths{$chr} ) ? $chromosome_lengths{$chr} : $stop + $span );
         printf $output_fh "chr%s\t%d\t%d\t%d\t%s\n", $chr, $new_start, $new_stop, ($new_stop - $new_start), $line;
     }
