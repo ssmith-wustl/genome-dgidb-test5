@@ -1,8 +1,8 @@
 
-package Genome::Model::Tools::SnpArray::RegionsToGenes;     # rename this when you give the module file a different name <--
+package Genome::Model::Tools::SnpArray::RegionsToBands;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# RegionsToGenes - retrieves the symbol(s) of Known Genes for a region based on coordinates using UCSC KnownGenes
+# RegionsToBands - retrieves the symbol(s) of Known Genes for a region based on coordinates using UCSC KnownGenes
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
 #
@@ -22,12 +22,12 @@ use Genome;                                 # using the namespace authorizes Cla
 
 my %stats = ();
 
-class Genome::Model::Tools::SnpArray::RegionsToGenes {
+class Genome::Model::Tools::SnpArray::RegionsToBands {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		regions_file	=> { is => 'Text', doc => "Regions file in chromosome start stop format", is_optional => 0, is_input => 1 },
-		ucsc_refgene	=> { is => 'Text', doc => "Path to the UCSC refGene.txt file", is_optional => 0, is_input => 1, default => '/gscuser/dkoboldt/SNPseek/SNPseek2/ucsc/refGene.txt'},
+		ucsc_cytoband	=> { is => 'Text', doc => "Path to the UCSC refGene.txt file", is_optional => 0, is_input => 1, default => '/gscuser/dkoboldt/SNPseek/SNPseek2/ucsc/cytoBand.txt'},
 		output_file	=> { is => 'Text', doc => "Output file", is_optional => 1, is_input => 1},
 		output_gene_counts	=> { is => 'Text', doc => "Output file for the counts of affected regions by gene", is_optional => 1, is_input => 1},
 	],
@@ -64,11 +64,11 @@ sub execute
 
 	## Get required parameters ##
 	my $regions_file = $self->regions_file;
-	my $ucsc_refgene = $self->ucsc_refgene;
+	my $ucsc_cytoband = $self->ucsc_cytoband;
 	my $output_file = $self->output_file;
 	my $output_gene_counts = $self->output_gene_counts;
 
-	my %genes_by_chrom = load_genes($ucsc_refgene);
+	my %genes_by_chrom = load_genes($ucsc_cytoband);
 
 
 	## Open output file ##
@@ -120,13 +120,14 @@ sub execute
 
 #						print join("\t", $num_hits, $chrom, $chr_start, $chr_stop, $gene_list) . "\n";
 #					}					
+
 				}
 
 				print OUTFILE join("\t", $line, $gene_list) . "\n" if($output_file);
 			}
 			elsif($chrom)
 			{
-				print OUTFILE "$line\tknown_gene(s)\n"; 
+				print OUTFILE "$line\tcyto_band\n"; 
 			}
 		}
 
@@ -212,10 +213,10 @@ sub load_genes
 		if($lineCounter >= 1)
 		{
 			my @lineContents = split(/\t/, $line);
-			my $chrom = $lineContents[2];
-			my $tx_start = $lineContents[4];
-			my $tx_stop = $lineContents[5];
-			my $gene_symbol = $lineContents[12];
+			my $chrom = $lineContents[0];
+			my $tx_start = $lineContents[1];
+			my $tx_stop = $lineContents[2];
+			my $gene_symbol = $chrom . $lineContents[3];
 			
 			$chrom =~ s/chr//g;
 			$tx_start++;

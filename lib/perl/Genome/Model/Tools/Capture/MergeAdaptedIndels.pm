@@ -151,6 +151,8 @@ sub execute {                               # replace with real execution logic.
 	open(SHARED, ">$output_file.shared") or die "Can't open outfile: $!\n";
 	open(SNIPER, ">$output_file.sniper-only") or die "Can't open outfile: $!\n";
 	open(VARSCAN, ">$output_file.varscan-only") or die "Can't open outfile: $!\n";
+
+
 	if ($self->gatk_file) {
 		open(GATK, ">$output_file.gatk-only") or die "Can't open outfile: $!\n";
 	}
@@ -215,6 +217,16 @@ sub execute {                               # replace with real execution logic.
 	close(SNIPER);
 	close(VARSCAN);
 	close(GATK);
+	
+	## Sort the file ##
+	
+	my $cmd_obj = Genome::Model::Tools::Capture::SortByChrPos->create(
+	    input_file => $output_file,
+	    output_file => $output_file,
+	);
+
+	$cmd_obj->execute();
+	
 
 	print $stats{'total'} . " unique indels\n";
 	if ($self->gatk_file) {
