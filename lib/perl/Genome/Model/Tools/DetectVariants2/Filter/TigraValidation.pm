@@ -73,11 +73,11 @@ class Genome::Model::Tools::DetectVariants2::Filter::TigraValidation {
         },
         sv_merge_path => {
             is => 'FilePath',
-            default => '/gscuser/kchen/1000genomes/analysis/scripts/MergeAssembledCallsets.pl',
+            default => '/gsc/scripts/opt/genome-stable/lib/perl/Genome/Model/Tools/Sv/MergeAssembledCallsets.pl',
         },
         sv_annot_path => {
             is => 'FilePath',
-            default => '/gscuser/kchen/1000genomes/analysis/scripts/BreakAnnot.pl',
+            default => '/gsc/scripts/opt/genome-stable/lib/perl/Genome/Model/Tools/Sv/BreakAnnot.pl',
         },
         # TODO Either point to a specific version of phrap or (even better) use the crossmatch tool
         crossmatch_path => {

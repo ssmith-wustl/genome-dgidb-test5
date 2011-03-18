@@ -177,7 +177,8 @@ sub _filter_variants {
     #But this is bad and sits in ken's directory. Change this asap.
     my $novo_idx;
     if ($ref_seq =~ /build101947881/) {
-        $novo_idx = '/gscuser/kchen/sata114/kchen/Hs_build36/all_fragments/Hs36_rDNA.fa.k14.s3.ndx';
+        #$novo_idx = '/gscuser/kchen/sata114/kchen/Hs_build36/all_fragments/Hs36_rDNA.fa.k14.s3.ndx';
+        $novo_idx = '/gscmnt/sata420/info/model_data/2741951221/build101947881/Hs36_rDNA.fa.k14.s3.ndx';
     }
     else {
         die "Now NovoRealign only applied to NCBI-human-Build36, not " . $ref_seq;
