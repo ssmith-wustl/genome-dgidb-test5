@@ -119,33 +119,35 @@ sub execute {                               # replace with real execution logic.
 	print R_COMMANDS 'covnorm1=(z1$V5+z1$V6);'."\n";
 	print R_COMMANDS 'covnorm2=(z2$V5+z2$V6);'."\n";
 	print R_COMMANDS 'maxx2=max(c(covnorm1,covnorm2));'."\n";
+	print R_COMMANDS 'if (maxx >= 1000) {maxx = 1000};'."\n";
+	print R_COMMANDS 'if (maxx2 >= 1000) {maxx2 = 1000};'."\n";
 	print R_COMMANDS "pdf(file=\"$coverage_output_file\",width=10,height=7.5);"."\n";
 	print R_COMMANDS 'par(mfrow=c(2,3));'."\n";
 	print R_COMMANDS 'plot.default(x=z1$V7,y=z1$V11,xlab="Normal Variant Allele Frequency",ylab="Tumor Variant Allele Frequency", main=paste(genome," Allele Frequency"), type="p",pch=19,cex=0.4, col="#FF000039",xlim=c(0,100),ylim=c(0,100));'."\n";
 	print R_COMMANDS 'plot.default(x=(z1$V5+z1$V6),y=z1$V7,xlab="Normal Coverage",ylab="Normal Variant Allele Frequency", main=paste(genome," Coverage"), type="p",pch=19,cex=0.4,col="#FF000039",xlim=c(0,maxx2),ylim=c(0,100));'."\n";
 	print R_COMMANDS 'lines(c(20,20),c(1,100), col="black");'."\n";
 	print R_COMMANDS 'lines(c(30,30),c(1,100), col="blue");'."\n";
-	print R_COMMANDS 'lines(c(100,100),c(1,100), col="green");'."\n";
-	print R_COMMANDS 'legend(x="bottomright", title = "Coverage", c("20x", "30x", "100x"),col=c("black","blue","green"),lty = c(1,1,1), lwd = 1);'."\n"; #bottom right will rarely have any points
+	print R_COMMANDS 'lines(c(100,100),c(1,100), col="green4");'."\n";
+	print R_COMMANDS 'legend(x="topright", title = "Coverage", c("20x", "30x", "100x"),col=c("black","blue","green4"),lty = c(1,1,1), lwd = 1);'."\n"; #top right will rarely have any points
 	print R_COMMANDS 'plot.default(x=(z1$V9+z1$V10),y=z1$V11,xlab="Tumor Coverage",ylab="Tumor Variant Allele Frequency", main=paste(genome," Coverage"), type="p",pch=19,cex=0.4,col="#FF000039",xlim=c(0,maxx),ylim=c(0,100));'."\n";
 	print R_COMMANDS 'lines(c(20,20),c(1,100), col="black");'."\n";
 	print R_COMMANDS 'lines(c(30,30),c(1,100), col="blue");'."\n";
-	print R_COMMANDS 'lines(c(100,100),c(1,100), col="green");'."\n";
-	print R_COMMANDS 'legend(x="bottomright", title = "Coverage", c("20x", "30x", "100x"),col=c("black","blue","green"),lty = c(1,1,1), lwd = 1);'."\n"; #bottom right will rarely have any points
+	print R_COMMANDS 'lines(c(100,100),c(1,100), col="green4");'."\n";
+	print R_COMMANDS 'legend(x="topright", title = "Coverage", c("20x", "30x", "100x"),col=c("black","blue","green4"),lty = c(1,1,1), lwd = 1);'."\n"; #top right will rarely have any points
 	print R_COMMANDS 'plot.default(x=z2$V7,y=z2$V11,xlab="Normal Variant Allele Frequency",ylab="Tumor Variant Allele Frequency", main=paste(genome," Allele Frequency"),type="p",pch=19,cex=0.4,col="#FF000039",xlim=c(0,100),ylim=c(0,100));'."\n";
 	print R_COMMANDS 'mtext("Normal and Tumor Coverage > 100",cex=0.7, padj=-0.5);'."\n";
 	print R_COMMANDS 'plot.default(x=(z2$V5+z2$V6),y=z2$V7,xlab="Normal Coverage",ylab="Normal Variant Allele Frequency", main=paste(genome," Coverage"), type="p",pch=19,cex=0.4,col="#FF000039",xlim=c(0,maxx2),ylim=c(0,100));'."\n";
 	print R_COMMANDS 'mtext("Normal and Tumor Coverage > 100",cex=0.7, padj=-0.5);'."\n";
 	print R_COMMANDS 'lines(c(20,20),c(1,100), col="black");'."\n";
 	print R_COMMANDS 'lines(c(30,30),c(1,100), col="blue");'."\n";
-	print R_COMMANDS 'lines(c(100,100),c(1,100), col="green");'."\n";
-	print R_COMMANDS 'legend(x="bottomright", title = "Coverage", c("20x", "30x", "100x"),col=c("black","blue","green"),lty = c(1,1,1), lwd = 1);'."\n"; #bottom right will rarely have any points
+	print R_COMMANDS 'lines(c(100,100),c(1,100), col="green4");'."\n";
+	print R_COMMANDS 'legend(x="topright", title = "Coverage", c("20x", "30x", "100x"),col=c("black","blue","green4"),lty = c(1,1,1), lwd = 1);'."\n"; #top right will rarely have any points
 	print R_COMMANDS 'plot.default(x=(z2$V9+z2$V10),y=z2$V11,xlab="Tumor Coverage",ylab="Tumor Variant Allele Frequency", main=paste(genome," Coverage"), type="p",pch=19,cex=0.4,col="#FF000039",xlim=c(0,maxx),ylim=c(0,100));'."\n";
 	print R_COMMANDS 'mtext("Normal and Tumor Coverage > 100",cex=0.7, padj=-0.5);'."\n";
 	print R_COMMANDS 'lines(c(20,20),c(1,100), col="black");'."\n";
 	print R_COMMANDS 'lines(c(30,30),c(1,100), col="blue");'."\n";
-	print R_COMMANDS 'lines(c(100,100),c(1,100), col="green");'."\n";
-	print R_COMMANDS 'legend(x="bottomright", title = "Coverage", c("20x", "30x", "100x"),col=c("black","blue","green"),lty = c(1,1,1), lwd = 1);'."\n"; #bottom right will rarely have any points
+	print R_COMMANDS 'lines(c(100,100),c(1,100), col="green4");'."\n";
+	print R_COMMANDS 'legend(x="topright", title = "Coverage", c("20x", "30x", "100x"),col=c("black","blue","green4"),lty = c(1,1,1), lwd = 1);'."\n"; #top right will rarely have any points
 	print R_COMMANDS 'devoff <- dev.off();'."\n";
 #copy number
 	print R_COMMANDS "pdf(file=\"$copynumber_output_file\",width=10,height=7.5);"."\n";
@@ -153,6 +155,7 @@ sub execute {                               # replace with real execution logic.
 	print R_COMMANDS 'cov1=(z1$V20);'."\n";
 	print R_COMMANDS 'cov2=(z2$V20);'."\n";
 	print R_COMMANDS 'maxx3=max(c(cov1,cov2));'."\n";
+	print R_COMMANDS 'if (maxx <= 4) {maxx = 4};'."\n";
 	print R_COMMANDS 'plot.default(x=z1$V7,y=z1$V11,xlab="Normal Variant Allele Frequency",ylab="Tumor Variant Allele Frequency", main=paste(genome," Allele Frequency"), type="p",pch=19,cex=0.4,col="#FF000055",xlim=c(0,100),ylim=c(0,100));'."\n";
 	print R_COMMANDS 'plot.default(x=z1$V20,y=z1$V11,xlab="Copy Number",ylab="Tumor Variant Allele Frequency", main=paste(genome," Copy Number"), type="p",pch=19,cex=0.4,col="#FF000055",xlim=c(0,maxx3),ylim=c(0,100));'."\n";
 	print R_COMMANDS 'plot.default(x=z2$V7,y=z2$V11,xlab="Normal Variant Allele Frequency",ylab="Tumor Variant Allele Frequency", main=paste(genome," Allele Frequency"), type="p",pch=19,cex=0.4,col="#FF000055",xlim=c(0,100),ylim=c(0,100));'."\n";
