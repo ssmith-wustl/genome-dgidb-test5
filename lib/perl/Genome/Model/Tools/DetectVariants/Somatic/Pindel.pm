@@ -134,7 +134,8 @@ my %PINDEL_VERSIONS = (
     '0.1' => '/gscmnt/sata921/info/medseq/Pindel_test/' . $PINDEL_COMMAND,
     '0.2' => '/gscmnt/sata921/info/medseq/Pindel_test/maq/'.$PINDEL_COMMAND,     # This version and up works with MAQ aligned bams
     '0.3' => '/gscmnt/sata921/info/medseq/Pindel_test/merged_with_kai/'.$PINDEL_COMMAND,    #this version is merged with changes from KAI
-    '0.4' => '/gscmnt/sata921/info/medseq/Pindel_test/version_4/'.$PINDEL_COMMAND,    #This is the correct version
+    '0.4' => '/gscmnt/sata921/info/medseq/Pindel_test/version_4/'.$PINDEL_COMMAND,
+    '0.5' => '/gscmnt/sata921/info/medseq/Pindel_test/pindel_v0.5/'.$PINDEL_COMMAND,
 );
 
 sub help_brief {
@@ -302,6 +303,7 @@ sub _run_pindel_for_chromosome {
 
     my $reference_sequence_for_chrom = $self->reference_sequence_input;
     $reference_sequence_for_chrom =~ s/all_sequences/$chromosome/;
+    $reference_sequence_for_chrom =~ s/fasta$/fa/;
     unless (-e $reference_sequence_for_chrom) {
         $self->error_message("Reference sequence file $reference_sequence_for_chrom does not exist");
         die;
