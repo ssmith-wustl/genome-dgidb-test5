@@ -32,11 +32,21 @@ class Genome::Model::Tools::Gatk::GermlineSnv {
 		run_unsafe_mode => { is => 'Text', doc => "Make GATK print errors instead of dying", is_optional => 1, is_input => 1, default => 1 },
 	        mb_of_ram => {
 	            is => 'Text',
-        	    doc => 'The amount of RAM to use, in megabytes',
+        	    doc => 'The amount of RAM to use, in megabytes -- if you change this higher, must change lsf_resource to match',
         	    default => 5000,
 	        },
 		skip_if_output_present => { is => 'Text', doc => "Skip if output is present", is_optional => 1, is_input => 1},
 	],
+    # Make workflow choose 64 bit blades
+    has_param => [
+        lsf_queue => {
+            default_value => 'long'
+        }, 
+        lsf_resource => {
+            default_value => "-R 'rusage[mem=6000] select[type==LINUX64 && model != Opteron250 && mem>6000 && maxtmp>100000] span[hosts=1]' -M 6000000",
+        },
+    ],
+
 };
 
 sub sub_command_sort_position { 12 }
