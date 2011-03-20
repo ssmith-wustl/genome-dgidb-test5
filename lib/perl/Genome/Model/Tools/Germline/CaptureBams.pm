@@ -95,7 +95,7 @@ sub pre_execute {
         $self->annotation_reference_transcripts($annotation_reference_transcripts);
     }
     unless (defined $self->transcript_variant_annotator_version) {
-        $self->transcript_variant_annotator_version(':');
+        $self->transcript_variant_annotator_version(Genome::Model::Tools::Annotate::TranscriptVariants->default_annotator_version);
     }
 
 #tiering options
