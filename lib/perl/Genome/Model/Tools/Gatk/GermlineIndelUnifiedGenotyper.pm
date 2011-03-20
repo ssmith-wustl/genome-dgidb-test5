@@ -33,8 +33,17 @@ class Genome::Model::Tools::Gatk::GermlineIndelUnifiedGenotyper {
         	    doc => 'The amount of RAM to use, in megabytes',
         	    default => 5000,
 	        },
+		run_unsafe_mode => { is => 'Text', doc => "Make GATK print errors instead of dying", is_optional => 1, is_input => 1, default => 1 },
 		skip_if_output_present => { is => 'Text', doc => "Skip if output is present", is_optional => 1, is_input => 1},
 	],
+    has_param => [
+        lsf_queue => {
+            default_value => 'long'
+        }, 
+        lsf_resource => {
+            default_value => "-R 'rusage[mem=6000] select[type==LINUX64 && model != Opteron250 && mem>6000 && maxtmp>100000] span[hosts=1]' -M 6000000",
+        },
+    ],
 };
 
 sub sub_command_sort_position { 12 }
@@ -77,10 +86,16 @@ sub execute {                               # replace with real execution logic.
 	my $cmd = 'java -Xms'.$ram.'m -Xmx'.$ram.'m -jar ';
 	$cmd .= join(" ", $path_to_gatk, $gatk_params, $reference_fasta, $bam_input, $output_file);
 	
-	## Optionally append BED output file ##
+	## Optionally append STDOUT output file ##
 
 	if($self->verbose_output_file) {
 		$cmd .= " -verbose " . $self->verbose_output_file;
+	}
+
+	## Optionally run in unsafe mode ##
+
+	if($self->run_unsafe_mode) {
+		$cmd .= " -U ALL";
 	}
 
 	## Run GATK Command ##
@@ -91,10 +106,11 @@ sub execute {                               # replace with real execution logic.
 	}
 	else
 	{
-		system("touch $output_file"); # This will create an empty output file to help prevent GATK from crashing 
+		my $file = $self->vcf_output_file;
+		system("touch $file"); # This will create an empty output file to help prevent GATK from crashing 
 		$return = Genome::Sys->shellcmd(
                            cmd => "$cmd",
-                           output_files => [$output_file],
+                           output_files => [$file],
                            skip_if_output_is_present => 0,
                        );
 		unless($return) { 
