@@ -121,6 +121,8 @@ sub execute {                               # replace with real execution logic.
 	print R_COMMANDS 'maxx2=max(c(covnorm1,covnorm2));'."\n";
 	print R_COMMANDS 'if (maxx >= 1000) {maxx = 1000};'."\n";
 	print R_COMMANDS 'if (maxx2 >= 1000) {maxx2 = 1000};'."\n";
+	print R_COMMANDS 'maxx = 800;'."\n";
+	print R_COMMANDS 'maxx2 = 800;'."\n";
 	print R_COMMANDS "pdf(file=\"$coverage_output_file\",width=10,height=7.5);"."\n";
 	print R_COMMANDS 'par(mfrow=c(2,3));'."\n";
 	print R_COMMANDS 'plot.default(x=z1$V7,y=z1$V11,xlab="Normal Variant Allele Frequency",ylab="Tumor Variant Allele Frequency", main=paste(genome," Allele Frequency"), type="p",pch=19,cex=0.4, col="#FF000039",xlim=c(0,100),ylim=c(0,100));'."\n";
