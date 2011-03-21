@@ -76,14 +76,6 @@ sub create {
         return;
     }
 
-    # Do not allow a rebuild
-    my @other_builds = grep { $self->id ne $_->id } $self->model->builds;
-    if ( @other_builds ) {
-        $self->error_message('Cannot start a second build of genotype microarray model '.$self->model->__display_name__);
-        $self->delete;
-        return;
-    }
-
     return $self;
 }
 
