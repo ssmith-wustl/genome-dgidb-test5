@@ -72,13 +72,6 @@ class Genome::Model::GenePrediction::Bacterial {
             where => [ name => 'nr_database_location' ],
             doc => 'The NR database that should be used by default, may be overridden by local copies',
         },
-        use_local_nr => {
-            is => 'Boolean',
-            via => 'inputs',
-            to => 'value_id',
-            where => [ name => 'use_local_nr' ],
-            doc => 'If set, local NR databases are used by blast jobs instead of accessing the default location',
-        },
     ],
 };
 

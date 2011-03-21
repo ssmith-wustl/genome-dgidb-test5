@@ -573,15 +573,16 @@ sub create_default_per_lane_qc_model {
     my $reference_sequence_build = shift;
     my $pse = shift;
 
-    my $subset_name = $genome_instrument_data->subset_name || 'unknown-subset';
-    my $run_name = $genome_instrument_data->short_name || 'unknown-run';
-
     my ($processing_profile, $model_name);
     my $dbsnp_build;
     my $ncbi_human_build36 = Genome::Model::Build->get(101947881);
     if ($reference_sequence_build && $reference_sequence_build->is_compatible_with($ncbi_human_build36)) {
-        $processing_profile = Genome::ProcessingProfile->get(2581081);
+        my $subset_name = $genome_instrument_data->subset_name || 'unknown-subset';
+        my $run_name_method = $genome_instrument_data->can('short_name') ? 'short_name' : 'run_name';
+        my $run_name = $genome_instrument_data->$run_name_method || 'unknown-run';
         $model_name = $run_name . '.' . $subset_name . '.prod-qc';
+
+        $processing_profile = Genome::ProcessingProfile->get(2581081);
         $dbsnp_build = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($reference_sequence_build); 
     } else {
         $self->status_message('Per lane QC only configured for human reference alignments');
@@ -707,7 +708,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA' => 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA_build36-build37_liftOver',
             );
         
-        my $root_build37_ref_seq = Genome::Model::Build::ReferenceSequence->get(name =>'g1k-human-build37');
+        my $root_build37_ref_seq = Genome::Model::Build::ImportedReferenceSequence->get(name =>'g1k-human-build37') || die;
 
         if($reference_sequence_build and $reference_sequence_build->is_compatible_with($root_build37_ref_seq) 
                 and exists $build36_to_37_rois{$capture_target}) {
@@ -803,7 +804,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
 	    next;
         }
 
-        my @project_names = $self->_resolve_project_names($pse);
+        my @project_names = $self->_resolve_project_and_work_order_names($pse);
         $self->add_model_to_default_modelgroups($m, @project_names);
 
         my $new_models = $self->_newly_created_models;
@@ -903,7 +904,7 @@ sub add_model_to_default_modelgroups {
     return 1;
 }
 
-sub _resolve_project_names {
+sub _resolve_project_and_work_order_names {
     my $self = shift;
     my $pse = shift;
 
@@ -912,7 +913,7 @@ sub _resolve_project_names {
         $self->warning_message('No work order found for PSE ' . $pse->id);
     }
 
-    return map($_->research_project_name, @work_orders);
+    return map(($_->setup_name, $_->research_project_name), @work_orders);
 }
 
 sub request_builds {

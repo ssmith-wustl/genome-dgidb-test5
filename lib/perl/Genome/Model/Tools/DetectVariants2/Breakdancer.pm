@@ -181,6 +181,14 @@ sub run_breakdancer {
     my $self = shift;
     my $bd_params = $self->_breakdancer_params;
 
+    #Allow 0 size of config, breakdancer output
+    if (-z $self->config_file) {
+        $self->warning_message("0 size of breakdancer config file. Probably it is for testing of small bam files");
+        my $output_file = $self->_sv_staging_output;
+        `touch $output_file`;
+        return 1;
+    }
+
     if ($bd_params =~ /\-o/) {
         my $chr = $self->chromosome;
         if ($chr eq 'all') {
@@ -206,11 +214,6 @@ sub run_breakdancer {
 
             unless (Genome::Sys->check_for_path_existence($cfg_file)) {
                 $self->error_message('prerun breakdancer config file '.$cfg_file.' does not exist');
-                die $self->error_message;
-            }
-
-            unless (Genome::Sys->check_for_path_existence($cfg_file)) {
-                $self->error_message("breakdancer config file $cfg_file is not copied ok");
                 die $self->error_message;
             }
 
@@ -247,7 +250,7 @@ sub run_breakdancer {
 
             my $merge_obj = Genome::Model::Tools::Breakdancer::MergeFiles->create(
                 input_files => join(',', map { $self->_temp_staging_directory . '/' . $self->_sv_base_name . '.' . $_ } @chr_list),
-                output_file => $self->_temp_staging_directory . '/' . $self->_sv_base_name,
+                output_file => $self->_sv_staging_output,
             );
             my $merge_rv = $merge_obj->execute;
             Carp::confess 'Could not execute breakdancer file merging!' unless defined $merge_rv and $merge_rv == 1;

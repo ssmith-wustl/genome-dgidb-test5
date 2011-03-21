@@ -674,6 +674,11 @@ td.stage_name {
     color: #666;
 }
 
+.result p.result_summary em {
+    font-weight: bold;
+    font-style: normal;
+}
+
 .result p.resource_buttons {
     margin: 5px 0 5px 0;
     color: #666;

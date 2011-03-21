@@ -92,7 +92,7 @@ sub _generate_content {
     my $timestamp = $self->_generate_timestamp_field_data;
     my $content = $self->_generate_content_field_data;
     my $type = $self->_generate_type_field_data;
-        
+
     push @fields, WebService::Solr::Field->new( class => $class );
     push @fields, WebService::Solr::Field->new( title => $title );
     push @fields, WebService::Solr::Field->new( id => $id );
@@ -101,9 +101,58 @@ sub _generate_content {
     push @fields, WebService::Solr::Field->new( content => $content );
     push @fields, WebService::Solr::Field->new( type => $type );
 
+
+    
+    # WARNING! There exists code in Genome::Search that is trying to reuse objects;
+    # when it does so, calling $self->property() doesnt work out so well since $self is
+    # the old object that is being reused and property() gets you the OLD property
+    # ...turning the recycling off for now
+
+
+    # required to display result
+    push @fields, WebService::Solr::Field->new( display_title => $self->_generate_display_title_field_data() );
+    push @fields, WebService::Solr::Field->new( display_type  => $self->display_type() );
+    push @fields, WebService::Solr::Field->new( display_icon_url  => $self->display_icon_url() );
+
+    # optional to display result
+    # notice there is no display_content? plan is to generate "display_content" with highlighted area that matched
+    push @fields, WebService::Solr::Field->new( display_url0  => $self->display_url0() );
+
+    if ($self->display_label1 && $self->display_url1) {
+        push @fields, WebService::Solr::Field->new( display_label1 => $self->display_label1() );
+        push @fields, WebService::Solr::Field->new( display_url1   => $self->display_url1() );
+    }
+
+    if ($self->display_label2 && $self->display_url2) {
+        push @fields, WebService::Solr::Field->new( display_label2 => $self->display_label2() );
+        push @fields, WebService::Solr::Field->new( display_url2   => $self->display_url2() );
+    }
+
+    if ($self->display_label3 && $self->display_url3) {
+        push @fields, WebService::Solr::Field->new( display_label3 => $self->display_label3() );
+        push @fields, WebService::Solr::Field->new( display_url3   => $self->display_url3() );
+    }
+
+
     $self->_doc( WebService::Solr::Document->new(@fields) );
     return $self->_doc->to_xml;
 }
+
+
+sub _generate_display_title_field_data {
+
+    my ($self) = @_;
+    my $subject = $self->subject;
+    
+    my @aspects = $self->aspects;
+    my @display_title_aspects = grep($_->position eq 'display_title', @aspects);
+    die "TWO display_title properties are defined in xml for solr submitting" if @display_title_aspects > 1;
+
+    my $method = $display_title_aspects[0]->name();
+    my $display_title = $subject->$method();
+    return $display_title;
+}
+
 
 sub _generate_class_field_data {
     my $self = shift;
@@ -236,5 +285,6 @@ sub _generate_type_field_data {
     
     return $self->type;
 }
+
 
 1;

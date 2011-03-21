@@ -4,9 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-use File::Basename;
-use Sort::Naturally;
-use IO::File;
 
 class Genome::Model::GenotypeMicroarray{
     is => 'Genome::Model',
@@ -27,6 +24,16 @@ class Genome::Model::GenotypeMicroarray{
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             id_by => 'reference_sequence_build_id',
         },
+        refseq_name => { 
+            is => 'Text',
+            via => 'reference_sequence_build',
+            to => 'name',
+        },
+        refseq_version => { 
+            is => 'Text',
+            via => 'reference_sequence_build',
+            to => 'version',
+        },
         dbsnp_build_id => {
             is => 'Text',
             via => 'inputs',
@@ -41,6 +48,11 @@ class Genome::Model::GenotypeMicroarray{
             is => 'Genome::Model::Build::ImportedVariationList',
             id_by => 'dbsnp_build_id',
         },
+        dbsnp_version => { 
+            is => 'Text',
+            via => 'dbsnp_build',
+            to => 'version',
+        },
     ],
 };
 
@@ -52,3 +64,4 @@ sub default_model_name {
 }
 
 1;
+

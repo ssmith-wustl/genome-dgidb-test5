@@ -15,6 +15,11 @@ class Genome::FeatureList::Command::DumpMergedList {
             is_optional => 1,
             doc => 'Where to save the merged BED file.  Will print to STDOUT if not provided.',
             shell_args_position => 2,
+        },
+        alternate_reference => {
+            is => 'Genome::Model::Build::ReferenceSequence',
+            doc => 'To convert the coordinates of the BED file to a different reference',
+            is_optional => 1,
         }
     ]
 };
@@ -41,7 +46,14 @@ sub execute {
     my $self = shift;
     my $feature_list = $self->feature_list;
 
-    my $bed = $feature_list->merged_bed_file;
+    my $bed;
+
+    my $alternate_reference = $self->alternate_reference;
+    if($alternate_reference) {
+        $bed = $feature_list->converted_bed_file($alternate_reference);
+    } else {
+        $bed = $feature_list->merged_bed_file;
+    }
 
     if($self->output_path) {
         Genome::Sys->copy_file($bed, $self->output_path);
