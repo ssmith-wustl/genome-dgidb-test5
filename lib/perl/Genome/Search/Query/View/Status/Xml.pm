@@ -4,6 +4,8 @@ use strict;
 use warnings;
 use Genome;
 
+use XML::Simple;
+
 class Genome::Search::Query::View::Status::Xml {
     is           => 'UR::Object::View::Default::Xml',
     has_constant => [ perspective => { value => 'status', }, ],
@@ -38,6 +40,9 @@ sub _generate_content {
         $results_node->addChild( $doc->createAttribute( "facet-name", $facet_name ));
     }
 
+    $params->{'hl'} = 'true';
+#    $params->{'hl.fl'} = 'title,content';
+
     $params->{'qs'} = 1;
 
     my $solrQuery = $query;
@@ -59,6 +64,33 @@ sub _generate_content {
     $results_node->addChild( $doc->createAttribute( "query",        $query ) );
     $results_node->addChild( $doc->createAttribute( "params",        $param_str) );
     $results_node->addChild( $doc->createAttribute( "num-found", $response->content->{'response'}->{'numFound'} ));
+
+
+#   HIGHLIGHTING XML
+
+    my $highlights_node = $doc->createElement('highlights');
+
+    $DB::single = 1;
+
+    my $highlights_raw = $response->content->{'highlighting'};
+    for my $found_id (keys %$highlights_raw) {
+        my $h = $highlights_raw->{$found_id};
+        my $field_str;
+        for my $field (keys %$h) {
+            my @field_highlights = @{ $h->{$field} };
+            $field_str = "$field: " . join(',', @field_highlights) . '</br>';
+        }
+        my $highlight_item = $doc->createElement('highlight_item');
+        $highlight_item->addChild($doc->createAttribute('id',$found_id));
+        $highlight_item->addChild($doc->createAttribute('description',$field_str));
+        $highlights_node->addChild($highlight_item);
+    }
+
+    $results_node->addChild($highlights_node);
+
+
+#   END OF HIGHLIGHTING XML
+
 
 #   FACET XML
 #    facet_dates
@@ -118,17 +150,24 @@ sub _generate_content {
 #    my @ordered_docs = sort_solr_docs( $response->docs );
     my @ordered_docs = $response->docs();
 
-    my @result_nodes =
-      Genome::Search->generate_result_xml( \@ordered_docs, $doc, $format );
+#    my @result_nodes =
+#      Genome::Search->generate_result_xml( \@ordered_docs, $doc, $format );
+    my @docs = @ordered_docs;
 
-    for my $result_node (@result_nodes) {
-        $results_node->addChild($result_node);
+#            my $raw_xml = XMLout($doc, 'root_name' => 'result');
+#            $result_node = XML::LibXML->load_xml(string => $raw_xml);
+
+    for my $doc (@docs) {
+        my $raw_xml = $doc->to_xml();
+        my $result_node = XML::LibXML->load_xml(string => $raw_xml);
+        $results_node->addChild($result_node->documentElement->cloneNode(1));
     }
 
     $doc->setDocumentElement($results_node);
 
     $doc->toString(1);
 }
+
 
 sub icon_prefix {
 
