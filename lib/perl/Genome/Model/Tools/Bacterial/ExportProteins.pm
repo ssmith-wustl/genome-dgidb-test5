@@ -50,7 +50,6 @@ sub help_synopsis { help_brief() }
 sub execute {
     my $self = shift;
 
-    $DB::single = 1;
     $BAP::DB::DBI::db_env = 'dev' if $self->dev;
     
     my $output_fh;
@@ -75,7 +74,7 @@ sub execute {
     my @sequences = $sequence_set->sequences();
 
     my $phase = 'phase_' . $self->phase;
-    foreach my $sequence (@sequences) {
+    for my $sequence (@sequences) {
         my @coding_genes = $sequence->coding_genes($phase => 1);
         foreach my $coding_gene (@coding_genes) {
             my @proteins = $coding_gene->protein();
