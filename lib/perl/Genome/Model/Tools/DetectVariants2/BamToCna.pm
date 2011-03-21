@@ -27,7 +27,7 @@ sub _detect_variants {
     my $b2c_cmd = Genome::Model::Tools::Somatic::BamToCna->create( 
         tumor_bam_file => $self->aligned_reads_input, 
         normal_bam_file => $self->control_aligned_reads_input,
-        output_file => $self->_temp_staging_directory."/bam_to_cna_output",
+        output_file => $self->_temp_staging_directory."/cnvs.hq",
     );
     unless($b2c_cmd->execute){
         $self->error_message("Failed to run BamToCna command.");

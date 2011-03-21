@@ -818,7 +818,7 @@ sub set_output_files {
             }
             my $hq_output_dir = $self->output_directory."/".$relative_path; #FIXME complications arise here when we have just a single column file... or other stuff. May just need to drop the version, too?
             my $hq_file;
-            if ($variant_type eq 'sv'){
+            if ($variant_type eq 'sv' || $variant_type eq 'cnv'){
                 $hq_file = $variant_type."s.hq";
             }else{
                 $hq_file = $variant_type."s.hq.bed";
