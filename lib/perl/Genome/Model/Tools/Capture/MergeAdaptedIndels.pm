@@ -250,7 +250,7 @@ sub execute {                               # replace with real execution logic.
 	print $stats{'varscan-only'} . " Varscan-only\n";
 	print $stats{'sniper-only'} . " Sniper-only\n";
 	if ($self->gatk_file) {
-		print $stats{'gatk-only'} . "gatk-only\n";
+		print $stats{'gatk-only'} . " gatk-only\n";
 	}
 
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
