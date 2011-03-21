@@ -227,13 +227,22 @@ sub execute {                               # replace with real execution logic.
 
 	$cmd_obj->execute();
 	
+	## Reset stats if necessary ##
+	$stats{'tri-shared'} = 0 if(!$stats{'tri-shared'});
+	$stats{'sniper-varscan-shared'} = 0 if(!$stats{'sniper-varscan-shared'});
+	$stats{'sniper-gatk-shared'} = 0 if(!$stats{'sniper-gatk-shared'});
+	$stats{'varscan-gatk-shared'} = 0 if(!$stats{'varscan-gatk-shared'});
+	$stats{'shared'} = 0 if(!$stats{'shared'});
+	$stats{'varscan-only'} = 0 if(!$stats{'varscan-only'});
+	$stats{'sniper-only'} = 0 if(!$stats{'sniper-only'});
+	$stats{'gatk-only'} = 0 if(!$stats{'gatk-only'});
 
 	print $stats{'total'} . " unique indels\n";
 	if ($self->gatk_file) {
-		print $stats{'tri-shared'} . "shared in gatk, sniper, and varscan\n";
-		print $stats{'sniper-varscan-shared'} . "shared in sniper and varscan\n";
-		print $stats{'sniper-gatk-shared'} . "shared in gatk and sniper\n";
-		print $stats{'varscan-gatk-shared'} . "shared in gatk and varscan\n";
+		print $stats{'tri-shared'} . " shared in gatk, sniper, and varscan\n";
+		print $stats{'sniper-varscan-shared'} . " shared in sniper and varscan\n";
+		print $stats{'sniper-gatk-shared'} . " shared in gatk and sniper\n";
+		print $stats{'varscan-gatk-shared'} . " shared in gatk and varscan\n";
 	}
 	else {
 		print $stats{'shared'} . " shared\n";		
