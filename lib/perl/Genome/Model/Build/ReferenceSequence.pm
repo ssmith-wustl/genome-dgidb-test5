@@ -235,7 +235,13 @@ sub get{
     my @results = $self->SUPER::get(@_);
     return $self->SUPER::get(@_) if @results;
 
-    return Genome::Model::Build::ImportedReferenceSequence->get(@_);
+    $DB::single = 1;
+    my @caller = caller(1);
+    if($caller[3] =~ m/Genome::Model::Build::ImportedReferenceSequence::get/){
+        return;
+    }else{
+        return Genome::Model::Build::ImportedReferenceSequence->get(@_);
+    }
 }
 
 sub is_derived_from {
