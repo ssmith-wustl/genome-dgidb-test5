@@ -13,18 +13,11 @@ package Genome::Model::Tools::Hgmi::Hap;
 use strict;
 use warnings;
 
+# FIXME Remove this dependency
 use lib "/gsc/scripts/opt/bacterial-bioperl";
 
 use Genome;
 use Command;
-use Genome::Model::Tools::Hgmi::DirBuilder;
-use Genome::Model::Tools::Hgmi::CollectSequence;
-use Genome::Model::Tools::Hgmi::SequenceName;
-use Genome::Model::Tools::Hgmi::MkPredictionModels;
-use Genome::Model::Tools::Hgmi::Predict;
-use Genome::Model::Tools::Hgmi::Merge;
-use Genome::Model::Tools::Hgmi::Finish;
-use Genome::Model::Tools::Hgmi::SendToPap;
 
 use Carp;
 use English;
@@ -121,6 +114,7 @@ sub execute {
         . "Sequence/Unmasked";
     confess "Directory does not exist: $next_dir" unless -d $next_dir;
     chdir($next_dir);
+    $self->status_message("Changed directory to $next_dir");
 
     # Collect sequence into directory
     # FIXME Add output directory param here so changing directories isn't necessary
@@ -158,6 +152,7 @@ sub execute {
         . "/Sequence";
     confess "Directory does not exist: $next_dir" unless -d $next_dir;
     chdir($next_dir);
+    $self->status_message("Changed directory to $next_dir");
 
     $self->status_message("Sequence naming complete, now making prediction models.");
 
@@ -179,6 +174,7 @@ sub execute {
         . $config->{pipe_version};
     confess "Directory does not exist: $next_dir" unless -d $next_dir;
     chdir($next_dir);
+    $self->status_message("Changed directory to $next_dir");
 
     $self->status_message("Prediction models created, now running gene prediction!");
 
@@ -196,6 +192,7 @@ sub execute {
     confess "Could not make prediction object!" unless $predict;
 
     # Skip execution if previous gene prediction execution was successful
+    # TODO Can be removed when this is a workflow
     if ($predict->is_valid()) {
         $self->status_message("Prediction has already been run successfully, continuing!");
     }
@@ -219,6 +216,7 @@ sub execute {
     confess "Could not create gene merging object!" unless $merge;
 
     # Skip execution if previous gene merging run was successful
+    # TODO Can be removed when this is a workflow
     if ($merge->is_valid) {
         $self->status_message("Skipping gene merging step, previous execution was successful!");
     }
@@ -248,6 +246,7 @@ sub execute {
         . "/Annotated_submission";
     confess "Directory does not exist: $next_dir" unless -d $next_dir;
     chdir($next_dir);
+    $self->status_message("Changed directory to $next_dir");
 
     $self->status_message("Overlaps are totally tagged, running rrna screen.");
 
@@ -416,6 +415,7 @@ sub execute {
             chdir($next_dir)
                 or croak
                 "Failed to change to '$next_dir', from Hap.pm: $OS_ERROR\n\n";
+            $self->status_message("Changed directory to $next_dir");
         }
 
         #run /gsc/scripts/gsc/annotation/biosql2ace <locus_tag>
