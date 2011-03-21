@@ -235,7 +235,6 @@ sub get{
     my @results = $self->SUPER::get(@_);
     return $self->SUPER::get(@_) if @results;
 
-    $DB::single = 1;
     my @caller = caller(1);
     if($caller[3] =~ m/Genome::Model::Build::ImportedReferenceSequence::get/){
         return;
