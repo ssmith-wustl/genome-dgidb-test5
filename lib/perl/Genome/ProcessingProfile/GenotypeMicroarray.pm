@@ -38,7 +38,7 @@ sub _execute_build {
 
     $self->status_message('Reference sequence build: '.$reference_sequence_build->__display_name__);
 
-    my $fasta_file = $build->full_consensus_path('fa');
+    my $fasta_file = $reference_sequence_build->full_consensus_path('fa');
     if ( ! -s $fasta_file ) {
         $self->error_message("Reference sequence has missing or 0 byte fasta file at $fasta_file.");
         return;
