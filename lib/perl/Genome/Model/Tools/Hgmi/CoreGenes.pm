@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-use Command;
 use Carp;
 use Bio::Seq;
 use Bio::SeqIO;
@@ -16,136 +15,80 @@ use IPC::Run;
 use File::Slurp;
 use File::Temp qw/ tempfile tempdir /;
 
-
-UR::Object::Type->define(
-    class_name => __PACKAGE__,
+class Genome::Model::Tools::Hgmi::CoreGenes (
     is => 'Command',
-        has => [
-            'cell_type'  => { is => 'String',
-                                  doc => "Type of genome to check; either ARCHEA or BACTERIA",
-            },
-            'sequence_set_id' => { is => 'String',
-                    doc => "sequence set id of organism",
-            },
-            'dev' => { is => 'Boolean',
-                       doc => "development flag",
-                       is_optional => 1,
-                       default => 0,
-            },
+    has => [
+        cell_type => { 
+            is => 'String',
+            doc => 'Type of genome to check',
+            valid_values => ['ARCHAEA', 'BACTERIA'],
+        },
+        sequence_set_id => { 
+            is => 'String',
+            doc => 'sequence set id of organism',
+        },
+    ],
+    has_optional => [
+        dev => { 
+            is => 'Boolean',
+            doc => 'development flag',
+            default => 0,
+        },
     ],
 );
 
+my %CORE_GENE_PARAMS = (
+    'BACTERIA' => {
+        percent_id => '30',
+        fraction_of_length => '0.3',
+    },
+    'ARCHAEA' => {
+        percent_id => '50',
+        fraction_of_length => '0.7',
+    },
+);
+    
+sub help_brief { return 'Runs a core gene check on the predicted sequences' }
 
-sub help_brief
-{
-    "run the core genes screen after everything has been finished.";
+sub help_synopsis { return help_brief() }
+
+sub help_detail {
+    return 'Takes a bunch of predicted sequences (retrieved via sequence set id) ' . 
+        'and makes sure the coverage of core genes meets some minimum percentage';
 }
 
-sub help_synopsis
-{
-    my $self = shift;
-    return <<"EOS"
-need to put help synopsis here
-EOS
-}
-
-sub help_detail
-{
-    my $self = shift;
-    return <<"EOS"
-need to put help detail here.
-EOS
-}
-
-
-#sub create
-#{
-#    my $self = shift;
-#    
-#    return 1;
-#}
-
-sub execute
-{
+sub execute {
     my $self = shift;
 
-    # bap_export_proteins should be deployed.
-    my @pep_export = (
-                      'gmt','bacterial','export-proteins',
-                      '--sequence-set-id', 
-                      $self->sequence_set_id(),
-        );
+    my ($protein_seq_fasta_fh, $protein_seq_fasta) = File::Temp->tempfile(
+        "coregenes_XXXXXX",
+        DIR => './', # FIXME Should not place files into CWD!
+    );
+    $protein_seq_fasta_fh->close;
 
-    if($self->dev)
-    {
-        push(@pep_export,'--dev');
-    }
-    my ($stdout,$stderr);
-    IPC::Run::run(
-        \@pep_export,
-        '>',
-        \$stdout,
-        '2>',
-        \$stderr,
-      );
+    # Grabs all proteins from the sequence set that passed merging and writes their sequence to the supplied fasta
+    my $protein_export_cmd = Genome::Model::Tools::Bacterial::ExportProteins->create(
+        sequence_set_id => $self->sequence_set_id,
+        dev => $self->dev,
+        output_file => $protein_seq_fasta
+    );
+    confess 'Could not create protein export command!' unless $protein_export_cmd;
+    confess 'Could not execute protein export for sequence set ' . $self->sequence_set_id unless $protein_export_cmd->execute;
 
+    my $core_gene_cmd = Genome::Model::Tools::Bacterial::CoreGeneCoverage->create(
+        fasta_file => $protein_seq_fasta,
+        percent_id => $CORE_GENE_PARAMS{$self->cell_type}{percent_id},
+        fraction_of_length => $CORE_GENE_PARAMS{$self->cell_type}{fraction_of_length},
+        cell_type => $self->cell_type,
+        output_file => 'Coregene_results', # FIXME Should not place files into CWD!
+    );
+    confess 'Could not create core gene command object!' unless $core_gene_cmd;
+    confess 'Could not execute core gene check!' unless $core_gene_cmd->execute;
 
-    # write out what's in $stdout
-    my ($tempfh, $tempfasta) = tempfile("coregenesXXXXXX", DIR => './');
-    write_file($tempfasta,$stdout);
-
-    my ($typeflag,$percent_id,$coverage);
-    if($self->cell_type =~ /BACTER/)
-    {
-        #$typeflag = '-bact';
-        $typeflag = 'bact';
-        $percent_id  = 30;
-        $coverage = 0.3;
-    }
-    else
-    {
-        #$typeflag = '-archaea';
-        $typeflag = 'archaea';
-        $percent_id  = 50;
-        $coverage = 0.7;
-    }
-    my @core_genes = ('/gsc/scripts/bin/run_coregene_cov_pid_script',
-                      $tempfasta,
-                      $percent_id,
-                      $coverage,
-                      '-geneset',
-                      $typeflag,
-        );
-
-    # eventually change this to a module call.
-    @core_genes = ('gmt','bacterial','core-gene-coverage',
-                   '--fasta-file', $tempfasta,
-                   '--pid' , $percent_id,
-                   '--option', 'geneset',
-                   '--fol', $coverage,
-                   '--genome',$typeflag );
-
-    my $results;
-    IPC::Run::run(
-        \@core_genes,
-        '>',
-        \$results,
-        '2>',
-        \$stderr,
-      ) or confess "\n\nfailed to run core genes screen script ... CoreGenes.pm\n\n";
-
-    write_file('Coregene_results',$results);
-    unless($results =~ /PASSED/)
-    {
-        $self->error_message("core genes check fail:");
-        $self->error_message("$results");
-        croak "\n\nWARNING: core genes did not pass:\n$results ... CoreGenes.pm\n\n";
-    }
-    $self->status_message("Core gene results passed");
-    $self->status_message($results);    
+    confess 'Core genes check failed, results can be found in ' . $core_gene_cmd->output_file unless $core_gene_cmd->_passed;
+    $self->status_message('Core gene check passed, results can be found in ' . $core_gene_cmd->output_file);
     return 1;
 }
 
 1;
 
-# $Id$
