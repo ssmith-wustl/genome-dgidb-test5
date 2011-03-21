@@ -316,7 +316,7 @@ sub _resolve_subclass_name_for_aligner_name {
     return $subclass;
 }
 
-sub create { 
+sub create {
     my $class = shift;
     
     if ($class eq __PACKAGE__ or $class->__meta__->is_abstract) {
@@ -458,6 +458,23 @@ sub create {
         
     $self->status_message("Alignment complete.");
     return $self;
+}
+
+sub delete {
+    my $self = shift;
+
+    my @children = Genome::InstrumentData::IntermediateAlignmentResult->get(parent_result => $self);
+    my $name = $self->__display_name__;
+    my $class_name = $self->class;
+
+    if (@children) {
+        $self->status_message("$class_name $name: deleting child IntermediateAlignmentResults: " .
+            join(", ", map { $_->__display_name__ } @children));
+    }
+    my $rv = $self->SUPER::delete(@_);
+    $_->delete for @children;
+
+    return $rv;
 }
 
 sub prepare_scratch_sam_file {
@@ -1764,10 +1781,11 @@ sub aligner_params_required_for_index {
 
 sub get_reference_sequence_index {
     my $self = shift;
-    my $index = Genome::Model::Build::ReferenceSequence::AlignerIndex->get(aligner_name=>$self->aligner_name, aligner_version=>$self->aligner_version, aligner_params=>$self->aligner_params, reference_build=>$self->reference_build);
+    my $build = shift || $self->reference_build;
+    my $index = Genome::Model::Build::ReferenceSequence::AlignerIndex->get(aligner_name=>$self->aligner_name, aligner_version=>$self->aligner_version, aligner_params=>$self->aligner_params, reference_build=>$build);
 
     if (!$index) {
-        $self->error_message(sprintf("No reference index prepared for %s with params %s and reference build %s", $self->aligner_name, $self->aligner_params, $self->reference_build->id));
+        die $self->error_message(sprintf("No reference index prepared for %s with params %s and reference build %s", $self->aligner_name, $self->aligner_params, $self->reference_build->id));
     }
 
     return $index;
