@@ -25,20 +25,23 @@ class Genome::Model::Tools::DetectVariants2::Filter::NovoRealign {
             calculate_from => '_temp_staging_directory',
             calculate => q{ return $_temp_staging_directory . '/svs.lq'; },
         },
-        #output_file => {
-        #    type => 'String',
-        #    doc  => 'output novo config file',
-        #    is_output => 1,
-        #},
+        novoalign_version => {
+            type => 'String',
+            doc  => 'novoalign version to use in this process',
+            default_value =>  '2.05.13',  #originally used in kchen's perl script, other version not tested
+            valid_values  => [Genome::Model::Tools::Novocraft->available_novocraft_versions],
+        },
         novoalign_path => {
             type => 'String',
             doc  => 'novoalign executeable path to use',
-            default_value => '/gscuser/kchen/bin/novoalign-2.05.13',
+            calculate_from => 'novoalign_version',
+            calculate => q{ return Genome::Model::Tools::Novocraft->path_for_novocraft_version($novoalign_version); },
         },
         novo2sam_path => {
             type => 'String',
-            doc  => 'Path to novoalign reference sequence index',
-            default_value => '/gscuser/kchen/1000genomes/analysis/scripts/novo2sam.pl',
+            doc  => 'Path to novosam.pl',
+            calculate_from => 'novoalign_version',
+            calculate => q{ return Genome::Model::Tools::Novocraft->path_for_novosam_version($novoalign_version); },
         },
         platform => {
             type => 'String',
@@ -86,16 +89,21 @@ class Genome::Model::Tools::DetectVariants2::Filter::NovoRealign {
     ],
 };
 
-sub _create_temp_directories {
-    my $self = shift;
-    $ENV{TMPDIR} = $self->output_directory;
-    return $self->SUPER::_create_temp_directories(@_);
-}
-
 
 sub _filter_variants {
     my $self     = shift;
     my $cfg_file = $self->config_file;
+
+    $ENV{GENOME_SYS_NO_CLEANUP} = 1;
+
+    #Allow 0 size of output
+    if (-z $cfg_file) {
+        $self->warning_message('0 size of breakdancer config file. Probably it is for testing of samll bam files');
+        my $output_file = $self->pass_staging_output;
+        `touch $output_file`;
+        return 1;
+    }
+
     my (%mean_insertsize, %std_insertsize, %readlens);
 
     my $fh = Genome::Sys->open_file_for_reading($cfg_file) or die "unable to open config file: $cfg_file";
@@ -135,9 +143,8 @@ sub _filter_variants {
 
     #Move breakdancer_config to output_directory so TigraValidation
     #can use it to parse out skip_libraries
-    my $bd_cfg = $dir . '/breakdancer_config';
-    if (-s $bd_cfg) {
-        copy $bd_cfg, $self->_temp_staging_directory;
+    if (-s $cfg_file) {
+        copy $cfg_file, $self->_temp_staging_directory;
     }
     else {
         $self->warning_message("Failed to find breakdancer_config from detector_directory: $dir");
@@ -168,7 +175,8 @@ sub _filter_variants {
     #But this is bad and sits in ken's directory. Change this asap.
     my $novo_idx;
     if ($ref_seq =~ /build101947881/) {
-        $novo_idx = '/gscuser/kchen/sata114/kchen/Hs_build36/all_fragments/Hs36_rDNA.fa.k14.s3.ndx';
+        #$novo_idx = '/gscuser/kchen/sata114/kchen/Hs_build36/all_fragments/Hs36_rDNA.fa.k14.s3.ndx';
+        $novo_idx = '/gscmnt/sata420/info/model_data/2741951221/build101947881/Hs36_rDNA.fa.k14.s3.ndx';
     }
     else {
         die "Now NovoRealign only applied to NCBI-human-Build36, not " . $ref_seq;
@@ -232,20 +240,6 @@ sub _filter_variants {
     unlink (@bams2remove, @librmdupbams, @novoaligns, $header_file);
     #unlink glob($self->_temp_staging_directory."/*.bam");   #In case leftover bam
 
-    #my $bd_run = Genome::Model::Tools::DetectVariants2::Breakdancer->create(
-    #    aligned_reads_input         => $self->aligned_reads_input,
-    #    control_aligned_reads_input => $self->control_aligned_reads_input,
-    #    reference_sequence_input    => $self->reference_sequence_input,
-    #    output_directory            => $self->_temp_staging_directory,
-    #    config_file                 => $out_file,
-    #    sv_params                   => '-g -h:-t',
-    #);
-    #unless ($bd_run->execute) {
-    #    $self->error_message("Failed to run Breakdancer on Novoalign file: $out_file");
-    #    die;
-    #}
-    
-    #my $bd_out_hq          = $self->_temp_staging_directory.'/'.$self->_sv_base_name; #breakdancer under DV2 api will output svs.hq
     my $bd_out_hq_filtered = $self->pass_staging_output;
     my $bd_out_lq_filtered = $self->fail_staging_output;
     my $bd_in_hq           = $self->detector_directory .'/svs.hq';  #DV2::Filter does not have _sv_base_name preset

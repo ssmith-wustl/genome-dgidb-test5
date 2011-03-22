@@ -26,7 +26,10 @@ my $test_output_dir     = File::Temp::tempdir('Genome-Model-Tools-Somatic-Filter
 my $hq_output_file      = $test_output_dir . '/snvs.hq.bed';
 my $lq_output_file      = $test_output_dir . '/snvs.lq.bed';
 
-my $expected_output_directory    = $test_input_dir. '/expected';
+my $expected_output_base = $test_input_dir. '/expected';
+# Version 2 expects output files to be different due to adding snpfilter after samtools calls
+my $expected_version = "v2";
+my $expected_output_directory    = "$expected_output_base/$expected_version";
 
 my @expected_files = qw|    snvs.hq
                             snvs.hq.bed

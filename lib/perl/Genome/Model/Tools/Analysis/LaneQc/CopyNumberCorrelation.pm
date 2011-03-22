@@ -8,19 +8,22 @@ use List::Util qw(sum);
 use Statistics::Descriptive;
 
 class Genome::Model::Tools::Analysis::LaneQc::CopyNumberCorrelation {
-    is => 'Command',
-    has => [
-    copy_number_laneqc_file_glob => {
-        type => 'FilePath',
-        is_optional => 0,
-        doc => 'glob string for grabbing copy-number laneqc files to compare',
-    },
-    output_file => {
-        type => 'FilePath',
-        is_optional => 0,
-        doc => 'output filename',
-    },
-    ]
+    is => 'Genome::Command::Base',
+    has_optional => [
+        output_file => {
+            type => 'FilePath',
+            doc => 'output filename',
+        },
+        copy_number_laneqc_file_glob => {
+            type => 'FilePath',
+            doc => 'glob string for grabbing copy-number laneqc files to compare',
+        },
+        instrument_data => {
+            is => 'Genome::InstrumentData',
+            is_many => 1,
+            doc => 'instrument data to correlate lane-qc for',
+        },
+    ],
 };
 
 sub help_brief {
@@ -30,17 +33,48 @@ sub help_detail {
     "Script to create a correlation matrix from copy-number lane-qc data."
 }
 
+sub resolve_copy_number_laneqc_files {
+    my $self = shift;
+    if ($self->copy_number_laneqc_file_glob && !$self->instrument_data) {
+        my @files = sort glob($self->copy_number_laneqc_file_glob);
+        return @files;
+    }
+    elsif (!$self->copy_number_laneqc_file_glob && $self->instrument_data) {
+        my @files;
+        for my $instrument_data ($self->instrument_data) {
+            my $dir = $instrument_data->lane_qc_dir;
+            print "Instrument data " . $instrument_data->__display_name__ . " (" . $instrument_data->id . ") " . ($dir ? 'has' : 'is missing') . " lane QC.\n";
+            next unless ($dir);
+            push @files, sort glob("$dir/*.cnqc");
+        }
+        print "\n";
+        return @files;
+    }
+    else {
+        print STDERR "ERROR: Cannot provide both instrument data and files, please only use one option.\n";
+    }
+}
+
 sub execute {
     my $self = shift;
 
     #parse inputs
-    my $fileglob = $self->copy_number_laneqc_file_glob;
-    my @cnfiles = sort glob($fileglob);
+    my @cnfiles = $self->resolve_copy_number_laneqc_files;
     my $num_files = $#cnfiles;
-    my $outfile = $self->output_file;
+
+    my $outfh;
+    if ($self->output_file) {
+        my $outfile = $self->output_file;
+        $outfh = new IO::File $outfile, "w";
+        unless ($outfh) {
+            die $self->error_message("Failed to open $outfile for writing.");
+        }
+    }
+    else {
+        $outfh = *STDOUT;
+    }
 
     #print outfile headers
-    my $outfh = new IO::File $outfile,"w";
     print $outfh "File1\tFile2\tCommon_Probes\tCorrelation_coefficient(max=1)\n";
 
     #Check that files are reasonably similar

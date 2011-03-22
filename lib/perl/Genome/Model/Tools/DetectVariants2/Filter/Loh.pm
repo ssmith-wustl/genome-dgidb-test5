@@ -92,27 +92,47 @@ sub _filter_variants {
 sub _generate_control_file {
     my $self = shift;
 
+    # Temporarily hardcode, but this could be flexible later
+    my $detector_version = "r599";
+    my $detector_params = "";
+    my $detector_name = "samtools";
+    my $normal_detector = "Genome::Model::Tools::DetectVariants2::" . ucfirst($detector_name);
+
     # Detect snvs on the normal sample
-    my $detector_command = Genome::Model::Tools::DetectVariants2::Samtools->create(
-        version => "r599",
-        snv_params => "",
+    my $detector_command = $normal_detector->create(
+        version => "$detector_version",
+        snv_params => "$detector_params",
         output_directory => $self->_temp_scratch_directory,
         aligned_reads_input => $self->control_aligned_reads_input,
         reference_sequence_input => $self->reference_sequence_input,
     );
 
     unless($detector_command->execute) {
-        $self->error_message("Could not execute samtools to detect snvs on the normal sample");
-        die $self->error_message;
+        die $self->error_message("Could not execute samtools to detect snvs on the normal sample");
     }
 
-    my $normal_snv_file = $self->_temp_scratch_directory . "/snvs.hq.bed";
+    my $filter_output = $self->_temp_scratch_directory . "/snpfilter";
+    my $filter_command = Genome::Model::Tools::DetectVariants2::Filter::SnpFilter->create(
+        aligned_reads_input => $self->control_aligned_reads_input,
+        reference_sequence_input => $self->reference_sequence_input,
+        input_directory => $self->_temp_scratch_directory,
+        detector_directory => $self->_temp_scratch_directory,
+        output_directory => $filter_output,
+        detector_name => $detector_name,
+        detector_version => $detector_version,
+        detector_params => $detector_params,
+    );
+
+    unless($filter_command->execute) {
+        die $self->error_message("Could not execute samtools to detect snvs on the normal sample");
+    }
+
+    my $normal_snv_file = "$filter_output/snvs.hq.bed";
+    unless (-e $normal_snv_file) {
+        die $self->error_message("Normal snv file $normal_snv_file does not exist");
+    }
+
     my $copy_destination = $self->_temp_staging_directory . "/samtools.normal.snvs.hq.bed";
-    unless (-s $normal_snv_file) {
-        $self->error_message("Normal snv file $normal_snv_file does not exist with size");
-        die $self->error_message;
-    }
-
     Genome::Sys->copy_file($normal_snv_file, $copy_destination);
 
     return $copy_destination;

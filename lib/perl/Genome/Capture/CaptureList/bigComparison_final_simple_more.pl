@@ -691,6 +691,8 @@ sub ReadRegions{
 
     # basic forms
     ($reg->{chr1},$reg->{start},$reg->{chr2},$reg->{end})=($u[$c[0]],$u[$c[1]],$u[$c[2]],$u[$c[3]]);
+    next if($reg->{start} !~ /^\d+$/ ||
+	    $reg->{end} !~ /^\d+$/);
     if($opts{x} && $reg->{chr1} eq $reg->{chr2}){
         next;
     }
@@ -720,7 +722,7 @@ sub ReadRegions{
 				$reg->{score} = $max_score;
 			}	
 		}
-		if(defined $c[$p] && $p == 11 && $c[$p] ne "NA"){ # if NA, like CNA
+		if(defined $c[$p] && $p == 11 && $c[$p] ne "NA" && defined $u[$c[$p]]) { # if NA, like CNA
 			if($u[$c[$p]] !~ /^\d+/ && $u[$c[$p]] !~ /tumor/i && $u[$c[$p]] !~ /normal/i){ # like BD
 				$reg->{sp_reads} = $u[$c[$p]];	
 				$reg = &parse_header_sp_reads($header, $reg) if($reg->{sp_reads});

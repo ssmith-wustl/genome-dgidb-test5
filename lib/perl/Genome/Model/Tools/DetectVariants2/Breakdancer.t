@@ -33,7 +33,7 @@ is($ref_seq_build->name, 'NCBI-human-build36', 'Got expected reference for test 
 my $ref_seq_input = $ref_seq_build->full_consensus_path('fa');
 ok(Genome::Sys->check_for_path_existence($ref_seq_input), 'Got a reference FASTA') or die('Test cannot continue without a reference FASTA');
 
-my $version = '2010_06_24';
+my $version = '2010_07_19';
 note("use breakdancer version: $version");
 
 my $command = Genome::Model::Tools::DetectVariants2::Breakdancer->create(

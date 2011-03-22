@@ -7,10 +7,41 @@ use Genome;
 
 class Genome::Sample::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
-    has_constant => [
+    has => [
         type => {
             is => 'Text',
             default => 'sample'
+        },
+        display_type => {
+            is  => 'Text',
+            default => 'Sample',
+        },
+        display_icon_url => {
+            is  => 'Text',
+            default => 'genome_sample_32',
+        },
+        display_url0 => {
+            is => 'Text',
+            calculate_from => ['subject'],
+            calculate => sub { return join ('?id=', '/view/genome/sample/status.html',$_[0]->id()); },
+        },
+        display_label1 => {
+            is  => 'Text',
+        },
+        display_url1 => {
+            is  => 'Text',
+        },
+        display_label2 => {
+            is  => 'Text',
+        },
+        display_url2 => {
+            is  => 'Text',
+        },
+        display_label3 => {
+            is  => 'Text',
+        },
+        display_url3 => {
+            is  => 'Text',
         },
         default_aspects => {
             is => 'ARRAY',
@@ -42,7 +73,11 @@ class Genome::Sample::View::Solr::Xml {
                 {
                     name => 'organ_name',
                     position => 'content',
-                }
+                },
+                {
+                    name => '__display_name__',
+                    position => 'display_title',
+                },
             ],
         }
     ]

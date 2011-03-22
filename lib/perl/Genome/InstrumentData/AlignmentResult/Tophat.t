@@ -22,7 +22,7 @@ use_ok('Genome::InstrumentData::AlignmentResult::Tophat');
 
 # Override lock name because if people cancel tests locks don't get cleaned up.
 *Genome::SoftwareResult::_resolve_lock_name = sub {
-    return "/tmp/lock/Genome--InstrumentData--AlignmentResult--Tophat/" . time(). '.' . $$;
+    return Genome::Sys->create_temp_file_path;
 };
 
 *Genome::InstrumentData::AlignmentResult::Tophat::estimated_kb_usage = sub {

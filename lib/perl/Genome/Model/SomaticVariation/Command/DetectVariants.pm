@@ -41,7 +41,7 @@ sub execute{
     $params{aligned_reads_input} = $tumor_bam;
 
     my $reference_build = $build->reference_sequence_build;
-    my $reference_fasta = $reference_build->fasta_file;
+    my $reference_fasta = $reference_build->sequence_path;
     unless(-e $reference_fasta){
         die $self->error_message("fasta file for reference build doesn't exist!");
     }

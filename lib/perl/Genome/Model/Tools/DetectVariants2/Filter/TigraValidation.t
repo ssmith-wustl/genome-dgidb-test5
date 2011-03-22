@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More tests => 10; 
+use Test::More tests => 18; 
 use File::Compare;
 use File::Temp;
 
@@ -21,9 +21,6 @@ my $test_input_dir  = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVa
 my $normal_bam  = $test_input_dir . 'normal.bam';
 my $tumor_bam   = $test_input_dir . 'tumor.bam';
 my $sv_file     = $test_input_dir . 'svs.hq';
-
-my @file_names = qw(normal.out normal.cm_aln.out normal.bp_seq.out);
-my @expected_files = map{$test_input_dir . $_}@file_names;
 
 my $tmp_dir = File::Temp::tempdir(
     'Genome-Model-Tools-DetectVariants2-Filter-TigraValidation-XXXXX', 
@@ -45,10 +42,11 @@ my $sv_valid = Genome::Model::Tools::DetectVariants2::Filter::TigraValidation->c
     specify_chr => 18,
 );
 
-ok($sv_valid, 'created AssemblyValidation object');
-ok($sv_valid->execute(), 'executed AssemblyValidation object OK');
+ok($sv_valid, 'created TigraValidation object');
+ok($sv_valid->execute(), 'executed TigraValidation object OK');
 
-for my $file_name (qw(tigra.out breakpoint_seq.fa cm_aln.out)) {
+my @test_file_names = qw(svs.out svs.out.normal svs.out.tumor breakpoint_seq.normal.fa breakpoint_seq.tumor.fa cm_aln.out.normal cm_aln.out.tumor);
+for my $file_name (@test_file_names) {
     ok(-s $tmp_dir."/$file_name", "output file $file_name generated ok"); 
     is(compare($tmp_dir."/$file_name", $test_input_dir."/$file_name"), 0, "output $file_name matches as expected");
 }

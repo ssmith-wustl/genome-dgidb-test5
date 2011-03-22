@@ -96,7 +96,7 @@ sub execute
 		{
 			my ($chrom, $chr_start, $chr_stop, $num_hits) = split(/\t/, $line);
 			
-			if($chrom && $chrom ne "chrom")
+			if($chrom && lc(substr($chrom, 0, 5)) ne "chrom")
 			{
 				my $gene_list = "";
 				## See if we have genes for this chromosome ##
@@ -117,14 +117,16 @@ sub execute
 							}
 						}
 
-						print OUTFILE join("\t", $line, $gene_list) . "\n" if($output_file);
+
 #						print join("\t", $num_hits, $chrom, $chr_start, $chr_stop, $gene_list) . "\n";
 #					}					
 				}
+
+				print OUTFILE join("\t", $line, $gene_list) . "\n" if($output_file);
 			}
 			elsif($chrom)
 			{
-				print OUTFILE "$line\tgenes\n"; 
+				print OUTFILE "$line\tknown_gene(s)\n"; 
 			}
 		}
 
@@ -140,14 +142,16 @@ sub execute
 	if($output_gene_counts)
 	{
 		open (OUTFILE, ">$output_gene_counts") or die "Can't open outfile: $!\n";
+
+		foreach my $gene (sort keys %max_affected)
+		{
+			print OUTFILE join("\t", $max_affected{$gene}, $gene) . "\n";
+		}
+	
+		close(OUTFILE);
 	}
 	
-	foreach my $gene (sort keys %max_affected)
-	{
-		print OUTFILE join("\t", $max_affected{$gene}, $gene) . "\n";
-	}
 
-	close(OUTFILE);
 
 
 }

@@ -7,10 +7,40 @@ use Genome;
 
 class Genome::Sys::Email::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
-    has_constant => [
+    has => [
         type => {
             is => 'Text',
             default => 'mail'
+        },
+        display_type => {
+            is => 'Text',
+            default => 'Wiki Page',
+        },
+        display_icon_url => {
+            is  => 'Text',
+            default => 'genome_wiki_document_32',
+        },
+        display_url0 => {
+            is => 'Text',
+            calculate => q{ return build_url0(@_); },
+        },
+        display_label1 => {
+            is  => 'Text',
+        },
+        display_url1 => {
+            is  => 'Text',
+        },
+        display_label2 => {
+            is  => 'Text',
+        },
+        display_url2 => {
+            is  => 'Text',
+        },
+        display_label3 => {
+            is  => 'Text',
+        },
+        display_url3 => {
+            is  => 'Text',
         },
         default_aspects => {
             is => 'ARRAY',
@@ -22,11 +52,22 @@ class Genome::Sys::Email::View::Solr::Xml {
                 {
                     name => 'body',
                     position => 'content',
+                },
+                {
+                    name => '__display_name__',
+                    position => 'display_title',
                 }
             ],
         }
     ]
 };
+
+sub build_url0 {
+
+    my ($self) = @_;
+
+
+}
 
 sub _reconstitute_from_doc {
     my $class = shift;

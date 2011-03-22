@@ -155,6 +155,21 @@ class Genome::Model::Build::ReferenceSequence {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             id_by => 'coordinates_from_id',
         },
+
+        append_to_id => {
+            is => 'Text',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'append_to', value_class_name => 'Genome::Model::Build::ReferenceSequence' ],
+            doc => 'If specified, the created reference will be logically appended to the one specified by this parameter for aligners that support it.',
+            is_mutable => 1,
+            is_many => 1,
+            is_optional => 1,
+        },
+        append_to => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            id_by => 'append_to_id',
+        },
     ],
     doc => 'a specific version of a reference sequence, with cordinates suitable for annotation',
 };
@@ -213,6 +228,19 @@ sub __errors__ {
             desc => "A build cannot be explicitly derived from itself!");
     }
     return @tags;
+}
+
+sub get{
+    my $self = shift;
+    my @results = $self->SUPER::get(@_);
+    return $self->SUPER::get(@_) if @results;
+
+    my @caller = caller(1);
+    if($caller[3] =~ m/Genome::Model::Build::ImportedReferenceSequence::get/){
+        return;
+    }else{
+        return Genome::Model::Build::ImportedReferenceSequence->get(@_);
+    }
 }
 
 sub is_derived_from {
@@ -274,6 +302,12 @@ sub sequence_path {
 
 sub calculate_estimated_kb_usage {
     my $self = shift;
+    for my $i ($self->inputs) {
+        my $k = $i->name;
+        my $v = $i->value_id;
+        $self->status_message("INPUT: $k=$v\n");
+    }
+
     my $fastaSize = -s $self->fasta_file;
     if(defined($fastaSize) && $fastaSize > 0)
     {

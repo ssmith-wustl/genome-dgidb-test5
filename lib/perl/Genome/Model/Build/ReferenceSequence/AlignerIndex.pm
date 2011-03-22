@@ -3,23 +3,22 @@ package Genome::Model::Build::ReferenceSequence::AlignerIndex;
 use Genome;
 use warnings;
 use strict;
-use Sys::Hostname;
 
 
 class Genome::Model::Build::ReferenceSequence::AlignerIndex {
     is => ['Genome::SoftwareResult::Stageable'],
 
     has => [
-    
+
         reference_build         => {
                                     is => 'Genome::Model::Build::ImportedReferenceSequence',
                                     id_by => 'reference_build_id',
                                 },
         reference_name          => { via => 'reference_build', to => 'name', is_mutable => 0, is_optional => 1 },
 
-        aligner                 => { 
-                                    calculate_from => [qw/aligner_name aligner_version aligner_params/], 
-                                    calculate => q|no warnings; "$aligner_name $aligner_version $aligner_params"| 
+        aligner                 => {
+                                    calculate_from => [qw/aligner_name aligner_version aligner_params/],
+                                    calculate => q|no warnings; "$aligner_name $aligner_version $aligner_params"|
                                 },
     ],
     has_input => [
@@ -57,8 +56,19 @@ sub _working_dir_prefix {
     "aligner-index";
 }
 
+sub __display_name__ {
+    my $self = shift;
+    my @class_name = split("::", $self->class);
+    my $class_name = $class_name[-1];
+    return sprintf("%s for build %s with %s, version %s, params='%s'",
+        $class_name,
+        $self->reference_name,
+        $self->aligner_name,
+        $self->aligner_version,
+        $self->aligner_params || "");
+}
 
-sub required_rusage { 
+sub required_rusage {
     # override in subclasses
     # e.x.: "-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[tmp=50000:mem=12000]' -M 1610612736";
     ''
@@ -67,7 +77,7 @@ sub required_rusage {
 sub aligner_requires_param_masking {
     my $class = shift;
     my $aligner_name = shift;
-    
+
     my $aligner_class = 'Genome::InstrumentData::AlignmentResult::'  . Genome::InstrumentData::AlignmentResult->_resolve_subclass_name_for_aligner_name($aligner_name);
 
     # if aligner params are not required for index, and we can   generically create an index for that version, then filter it out.
@@ -81,42 +91,60 @@ sub aligner_requires_param_masking {
 
 sub get {
     my $class = shift;
-    my @params = @_;
-    my %p = @_;
 
-    if (exists $p{aligner_name} && $class->aligner_requires_param_masking($p{aligner_name})) {
-        $p{aligner_params} = undef; 
-        return $class->SUPER::get(%p);
+    my @objects;
+    if (@_ % 2 == 0) {
+        my %p = @_;
+        if (exists $p{aligner_name} && $class->aligner_requires_param_masking($p{aligner_name})) {
+            $p{aligner_params} = undef;
+        }
+        @objects = $class->SUPER::get(%p);
     } else {
-        return $class->SUPER::get(@_);
+        @objects = $class->SUPER::get(@_);
+    }
+
+    return unless @objects;
+
+    for my $obj (@objects) {
+        unless ($obj->check_dependencies()) {
+            $obj->error_message("Failed to get AlignmentIndex objects for dependencies of " . $obj->__display_name__);
+            return;
+        }
+    }
+
+    if (@objects > 1) {
+        return @objects if wantarray;
+        my @ids = map { $_->id } @objects;
+        die "Multiple matches for $class but get or create was called in scalar context! Found ids: @ids";
+    } else {
+        return $objects[0];
     }
 }
 
-
-sub create { 
+sub create {
     my $class = shift;
     my %p = @_;
-    
+
     my $aligner_class = 'Genome::InstrumentData::AlignmentResult::'  . Genome::InstrumentData::AlignmentResult->_resolve_subclass_name_for_aligner_name($p{aligner_name});
     $class->status_message("Aligner class name is $aligner_class");
-   
-    $class->status_message(sprintf("Resolved aligner class %s, making sure it's real and can be loaded.", $aligner_class)); 
+
+    $class->status_message(sprintf("Resolved aligner class %s, making sure it's real and can be loaded.", $aligner_class));
     unless ($aligner_class->class) {
         $class->error_message(sprintf("Failed to load aligner class (%s).", $aligner_class));
         return;
     }
-    
+
     if ($class->aligner_requires_param_masking($p{aligner_name})) {
-        $p{aligner_params} = undef; 
+        $p{aligner_params} = undef;
     }
-    
+
     my $self = $class->SUPER::create(%p);
     return unless $self;
     $self->aligner_class_name($aligner_class);
-    
+
     $self->status_message("Prepare staging directories...");
     unless ($self->_prepare_staging_directory) {
-        $self->error_message("Failed to prepare working directory"); 
+        $self->error_message("Failed to prepare working directory");
         return;
     }
 
@@ -125,12 +153,45 @@ sub create {
         return;
     }
 
+    unless ($self->check_dependencies()) {
+        $self->error_message("Failed to create AlignmentIndex objects for dependencies");
+        return;
+    }
+
     return $self;
+}
+
+sub check_dependencies {
+    my $self = shift;
+
+    my %params = (
+        aligner_name => $self->aligner_name,
+        aligner_params => $self->aligner_params,
+        aligner_version => $self->aligner_version,
+    );
+
+    # if the reference is a compound reference
+    if ($self->reference_build->append_to) {
+        for my $b ($self->reference_build->append_to) { # (append_to is_many)
+            $params{reference_build} = $b;
+            $self->status_message("Creating AlignmentIndex for build dependency " . $b->name);
+            my $result = Genome::Model::Build::ReferenceSequence::AlignerIndex->get_or_create(%params);
+            unless($result) {
+                $self->error_message("Failed to create AlignmentIndex for dependency " . $b->name);
+                return;
+            }
+            unless ($result->check_dependencies()) {
+                $self->error_message("Failed while checking dependencies of " . $b->name);
+                return;
+            }
+        }
+    }
+    return 1;
 }
 
 sub _prepare_reference_index {
     my $self = shift;
-    
+
     my $reference_fasta_file = sprintf("%s/all_sequences.fa", $self->reference_build->data_directory);
 
     unless (-s $reference_fasta_file) {
@@ -176,7 +237,7 @@ sub _gather_params_for_get_or_create {
         if ($meta->{is_input} && exists $params{$key}) {
             $is_input{$key} = $params{$key};
         } elsif ($meta->{is_param} && exists $params{$key}) {
-            $is_param{$key} = $params{$key}; 
+            $is_param{$key} = $params{$key};
         }
     }
 
@@ -186,7 +247,7 @@ sub _gather_params_for_get_or_create {
     my %software_result_params = (params_id=>$params_bx->id,
                                   inputs_id=>$inputs_bx->id,
                                   subclass_name=>$class);
-    
+
     return {
         software_result_params => \%software_result_params,
         subclass => $class,
@@ -211,9 +272,9 @@ sub resolve_allocation_subdirectory {
     if ($self->aligner_params) {
         my $aligner_params_tag = $self->aligner_params;
         $aligner_params_tag =~ s/[^\w]/_/g;
-        push @path_components, $aligner_params_tag; 
+        push @path_components, $aligner_params_tag;
     }
-        
+
     my $staged_basename = File::Basename::basename($self->temp_staging_directory);
     my $directory = join('/', @path_components);
 
