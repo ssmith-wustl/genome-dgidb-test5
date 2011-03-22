@@ -112,6 +112,7 @@ EOS
 
 sub _create_temp_directories {
     my $self = shift;
+    local %ENV = %ENV;
     $ENV{TMPDIR} = $self->output_directory;
     return $self->SUPER::_create_temp_directories(@_);
 }

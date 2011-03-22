@@ -25,20 +25,23 @@ class Genome::Model::Tools::DetectVariants2::Filter::NovoRealign {
             calculate_from => '_temp_staging_directory',
             calculate => q{ return $_temp_staging_directory . '/svs.lq'; },
         },
-        #output_file => {
-        #    type => 'String',
-        #    doc  => 'output novo config file',
-        #    is_output => 1,
-        #},
+        novoalign_version => {
+            type => 'String',
+            doc  => 'novoalign version to use in this process',
+            default_value =>  '2.05.13',  #originally used in kchen's perl script, other version not tested
+            valid_values  => [Genome::Model::Tools::Novocraft->available_novocraft_versions],
+        },
         novoalign_path => {
             type => 'String',
             doc  => 'novoalign executeable path to use',
-            default_value => '/gscuser/kchen/bin/novoalign-2.05.13',
+            calculate_from => 'novoalign_version',
+            calculate => q{ return Genome::Model::Tools::Novocraft->path_for_novocraft_version($novoalign_version); },
         },
         novo2sam_path => {
             type => 'String',
-            doc  => 'Path to novoalign reference sequence index',
-            default_value => '/gscuser/kchen/1000genomes/analysis/scripts/novo2sam.pl',
+            doc  => 'Path to novosam.pl',
+            calculate_from => 'novoalign_version',
+            calculate => q{ return Genome::Model::Tools::Novocraft->path_for_novosam_version($novoalign_version); },
         },
         platform => {
             type => 'String',
@@ -86,16 +89,12 @@ class Genome::Model::Tools::DetectVariants2::Filter::NovoRealign {
     ],
 };
 
-sub _create_temp_directories {
-    my $self = shift;
-    $ENV{TMPDIR} = $self->output_directory;
-    return $self->SUPER::_create_temp_directories(@_);
-}
-
 
 sub _filter_variants {
     my $self     = shift;
     my $cfg_file = $self->config_file;
+
+    $ENV{GENOME_SYS_NO_CLEANUP} = 1;
 
     #Allow 0 size of output
     if (-z $cfg_file) {
@@ -144,9 +143,8 @@ sub _filter_variants {
 
     #Move breakdancer_config to output_directory so TigraValidation
     #can use it to parse out skip_libraries
-    my $bd_cfg = $dir . '/breakdancer_config';
-    if (-s $bd_cfg) {
-        copy $bd_cfg, $self->_temp_staging_directory;
+    if (-s $cfg_file) {
+        copy $cfg_file, $self->_temp_staging_directory;
     }
     else {
         $self->warning_message("Failed to find breakdancer_config from detector_directory: $dir");
