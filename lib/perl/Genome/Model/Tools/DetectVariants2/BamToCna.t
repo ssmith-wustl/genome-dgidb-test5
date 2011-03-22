@@ -124,9 +124,3 @@ ok(-s $output_file_4, 'generated output for ratio of 0.25 and whole genome norma
 is(compare($output_file_4, $expected_output_file_4), 0, 'output for ratio of 0.25 matched expected results and whole genome normalization');
 
 ok(-s $output_file_4 . ".png", 'generated copy number graphs for ratio of 0.25 and whole genome normalization');
-
-
-print `cat $output_file_1`;
-print `cat $output_file_2`;
-print `cat $output_file_3`;
-print `cat $output_file_4`;
