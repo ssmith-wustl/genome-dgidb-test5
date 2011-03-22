@@ -9,6 +9,27 @@ use Genome;
 
 class Genome::Model::Tools::DetectVariants2::BamToCna{
     is => ['Genome::Model::Tools::DetectVariants2::Detector'],
+    has => [
+        ratio => {
+            type => 'Number',
+            is_optional => 1,
+            default => 0.25,
+            doc => 'Ratio diverged from median, used to find copy number neutral region (default = 0.25).'
+        },
+        window_size => {
+            type => 'Number',
+            is_optional => 1,
+            default => 10000,
+            doc => 'Window size (bp) for counting reads contributing to copy number in that window (resolution, default = 10000 bp).'
+        },
+        normalize_by_genome => {
+            is => 'Boolean',
+            is_optional => 1,
+            is_input => 1,
+            default => 1,
+            doc => 'enable this flag to normalize by the whole genome median.',
+        },
+    ],
     has_constant => [
         detect_snvs => {},
         detect_svs => {},
@@ -28,6 +49,9 @@ sub _detect_variants {
         tumor_bam_file => $self->aligned_reads_input, 
         normal_bam_file => $self->control_aligned_reads_input,
         output_file => $self->_temp_staging_directory."/cnvs.hq",
+        ratio => $self->ratio,
+        window_size => $self->window_size,
+        normalize_by_genome => $self->normalize_by_genome,
     );
     unless($b2c_cmd->execute){
         $self->error_message("Failed to run BamToCna command.");
