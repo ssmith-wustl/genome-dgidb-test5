@@ -65,4 +65,9 @@ sub has_version {
     return 1; #FIXME implement this when this module is filled out
 }
 
+# Cna current does need to sort its output (header lines being the primary problem, can probably remove them soon)
+sub _sort_detector_output {
+    return 1;
+}
+
 1;
