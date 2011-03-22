@@ -174,7 +174,7 @@ sub _create_model {
 
     $self->status_message('Create genotype model');
 
-    my $name = $self->sequencing_platform.'/wugc';
+    my $name = $self->sequencing_platform.' wugc';
     my $processing_profile = Genome::ProcessingProfile->get(name => $name);
     if ( not $processing_profile ) {
         $self->error_message("Cannot find genotype microarray processing profile for $name to create model");
