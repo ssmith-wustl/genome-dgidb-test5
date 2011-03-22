@@ -115,10 +115,15 @@ sub _intermediate_result {
     my ($self, $params, $index, @input_files) = @_;
 
     my @results;
-    for my $path (@input_files) {
+    for my $idx (0..$#input_files) {
+        my $path = $input_files[$idx];
         my ($input_pass) = $path =~ m/\.bam:(\d)$/;
+        $DB::single=1;
+        print "INPUT FILE: $path, INPUT PASS: $input_pass\n" . Dumper(\@_);
         if (defined($input_pass)) {
             $path =~ s/\.bam:\d$/\.bam/;
+        } else {
+            $input_pass = $idx+1;
         }
  
         my %intermediate_params = (
@@ -129,7 +134,7 @@ sub _intermediate_result {
             aligner_index => $index,
             parent_result => $self,
             input_file => $path,
-            input_pass => ($input_pass||''),
+            input_pass => $input_pass,
         ); 
 
         my $intermediate_result = Genome::InstrumentData::IntermediateAlignmentResult::Bwa->get_or_create(%intermediate_params);

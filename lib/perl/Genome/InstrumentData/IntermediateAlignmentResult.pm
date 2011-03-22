@@ -1,7 +1,10 @@
 package Genome::InstrumentData::IntermediateAlignmentResult;
 
+use Data::Dumper;
 use Genome;
 use Sys::Hostname;
+use File::Basename;
+use Carp qw/confess/;
 
 use warnings;
 use strict;
@@ -11,15 +14,9 @@ class Genome::InstrumentData::IntermediateAlignmentResult {
     is=>['Genome::SoftwareResult::Stageable'],
     sub_classification_method_name => '_resolve_subclass_name',   
     has => [
-        parent_result           => {
-                                    is => 'Genome::InstrumentData::AlignmentResult',
-                                    id_by => 'parent_result_id',
-                                },
-
         input_file              => {
                                     is=>'Text',
                                     doc=>'Path to the (potentially pre-processed) input fastq or bam file',
-                                    is_transient => 1,
                                 },
         instrument_data         => {
                                     is => 'Genome::InstrumentData',
@@ -40,10 +37,6 @@ class Genome::InstrumentData::IntermediateAlignmentResult {
 
     ],
     has_input => [
-        parent_result_id        => {
-                                    is => 'Number',
-                                    doc => 'The parent AlignmentResult object for this intermediate set of results',
-                                },
         instrument_data_id      => {
                                     is => 'Number',
                                     doc => 'the local database id of the instrument data (reads) to align',
@@ -95,6 +88,18 @@ class Genome::InstrumentData::IntermediateAlignmentResult {
                                 },
     ],
     has_transient => [
+        parent_result_id        => {
+                                    is => 'Number',
+                                    doc => 'The parent AlignmentResult object for this intermediate set of results',
+                                    is_transient => 1,
+                                },
+
+        parent_result           => {
+                                    is => 'Genome::InstrumentData::AlignmentResult',
+                                    id_by => 'parent_result_id',
+                                    is_transient => 1,
+                                },
+
         temp_scratch_directory  => {
                                     is=>'Text',
                                     doc=>'Temp scratch directory',
@@ -104,7 +109,7 @@ class Genome::InstrumentData::IntermediateAlignmentResult {
 };
 
 sub _run_aligner {
-    die "unimplemented method: please define _run_aligner in your alignment subclass.";
+    confess "unimplemented method: please define _run_aligner in your alignment subclass.";
 }
 
 sub required_arch_os {
@@ -152,7 +157,7 @@ sub verify_os {
     my $required_os = $class->required_arch_os;
     $class->status_message("Required OS is $required_os");
     unless ($required_os eq $actual_os) {
-        die $class->error_message("This logic can only be run on a $required_os machine!  (running on $actual_os)");
+        confess $class->error_message("This logic can only be run on a $required_os machine!  (running on $actual_os)");
     }
 }
 
@@ -173,13 +178,24 @@ sub verify_disk_space {
     my $factor = 20;
     unless ($unallocated_kb > ($factor * $estimated_kb_usage)) {
         $self->error_message("NOT ENOUGH DISK SPACE!  This step requires $factor x as much disk as the job will use to be available before starting.");
-        die $self->error_message();
+        confess $self->error_message();
     }
+}
+
+sub get {
+    my $class = shift;
+
+    # If get is called on a blessed object, we are looking for properties on that instance, not objects.
+    # Defining a BoolExpr in that case will cause things to fail.
+    return $class->SUPER::get(@_) if ref($class);
+
+    my ($bx, @extra) = $class->define_boolexpr(@_);
+    $bx = $bx->remove_filter("parent_result")->remove_filter("parent_result_id");
+    return $class->SUPER::get($bx);
 }
 
 sub create {
     my $class = shift;
-
     if ($class eq __PACKAGE__ or $class->__meta__->is_abstract) {
         # this class is abstract, and the super-class re-calls the constructor from the correct subclass
         return $class->SUPER::create(@_);
@@ -197,11 +213,12 @@ sub create {
         }
     }
 
+    unless ($self->parent_result and $self->parent_result->id) {
+        confess "Bad or missing value specified for required property: parent_result.";
+    }
+
     $self->verify_disk_space();
     $self->_prepare_working_and_staging_directories;
-
-    # do some work!
-    $self->_run_aligner();
 
     # PREPARE THE ALIGNMENT DIRECTORY ON NETWORK DISK
     $self->status_message("Preparing the output directory...");
@@ -209,11 +226,21 @@ sub create {
     my $output_dir = $self->output_dir || $self->_prepare_output_directory;
     $self->status_message("Alignment output path is $output_dir");
 
+    # symlink the input file in the working directory, drop the full path from the input
+    my $symlink_target = $self->temp_scratch_directory . "/" . basename($self->input_file);
+    unless(symlink($self->input_file, $symlink_target)) {
+        confess "Failed to create symlink of input file " . $self->input_file . " at $symlink_target.";
+    }
+    $self->input_file( basename($self->input_file) );
+
+    # do some work!
+    $self->_run_aligner();
+
     # PROMOTE THE DATA INTO ALIGNMENT DIRECTORY
     $self->status_message("Moving results to network disk...");
     my $product_path;
     unless($product_path = $self->_promote_data) {
-        die $self->error_message("Failed to de-stage data into alignment directory " . $self->error_message);
+        confess $self->error_message("Failed to de-stage data into alignment directory " . $self->error_message);
     }
     
     # RESIZE THE DISK
@@ -229,19 +256,14 @@ sub create {
     }
         
     $self->status_message("Intermediate alignment result generation complete.");
-    return $self;
-}
 
-sub delete {
-    my $self = shift;
-    my $class_name = $self->class;
-    if (defined $self->parent_result) {
-        my $name = $self->__display_name__;
-        my $parent_name = $self->parent_result->__display_name__;
-        die "Refusing to delete $class_name $name as parent object $parent_name exists. Delete that instead.";
-    } else {
-        return $self->SUPER::delete(@_);
-    }
+    my $result_user = Genome::SoftwareResult::User->create(
+        software_result_id => $self->id,
+        user_class_name => $self->parent_result->class,
+        user_id => $self->parent_result->id,
+        );
+
+    return $self;
 }
 
 sub _gather_params_for_get_or_create {
@@ -296,18 +318,16 @@ sub _prepare_working_and_staging_directories {
     my $scratch_tempdir = Genome::Sys->create_temp_directory();
     $self->temp_scratch_directory($scratch_tempdir);
     unless(-d $scratch_tempdir) {
-        die "failed to create a temp scrach directory for working files";
+        confess "Failed to create a temp scrach directory for working files.";
     }
 
     $self->status_message("Staging path is " . $self->temp_staging_directory);
     $self->status_message("Working path is " . $self->temp_scratch_directory);
-
     return 1;
 } 
 
 sub estimated_kb_usage {
     30000000;
-    #die "unimplemented method: please define estimated_kb_usage in your alignment subclass.";
 }
 
 sub resolve_allocation_subdirectory {

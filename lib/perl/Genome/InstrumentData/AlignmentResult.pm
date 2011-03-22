@@ -1,7 +1,7 @@
 package Genome::InstrumentData::AlignmentResult;
 
 use Genome;
-use Genome::Info::BamFlagstat; use Data::Dumper;
+use Genome::Info::BamFlagstat;
 use Sys::Hostname;
 use IO::File;
 use File::Path;
@@ -463,18 +463,21 @@ sub create {
 sub delete {
     my $self = shift;
 
-    my @children = Genome::InstrumentData::IntermediateAlignmentResult->get(parent_result => $self);
     my $name = $self->__display_name__;
     my $class_name = $self->class;
 
-    if (@children) {
-        $self->status_message("$class_name $name: deleting child IntermediateAlignmentResults: " .
-            join(", ", map { $_->__display_name__ } @children));
-    }
-    my $rv = $self->SUPER::delete(@_);
-    $_->delete for @children;
+    # Find all the SoftwareResultUser objects that the one being deleted uses
+    my @uses = Genome::SoftwareResult::User->get(user => $self);
+    my @child_objects = map { $_->software_result } @uses;
+    map { $_->delete } @uses;
 
-    return $rv;
+    # find child objects for which there are no more users.
+    for my $child (@child_objects) {
+        my @users = Genome::SoftwareResult::User->get(software_result => $child);
+        $child->delete if !@users;
+    }
+
+    return $self->SUPER::delete(@_);
 }
 
 sub prepare_scratch_sam_file {
