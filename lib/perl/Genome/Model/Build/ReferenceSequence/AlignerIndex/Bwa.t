@@ -1,9 +1,7 @@
 use strict;
 use warnings;
 
-use File::Path;
 use Test::More;
-use Sys::Hostname;
 
 use above 'Genome';
 
@@ -32,9 +30,9 @@ my $dependency = $reference_build->append_to;
 ok($dependency, "found reference build dependency");
 
 my %params = (
-    aligner_name=>$aligner_name,
-    aligner_version=>$aligner_version,
-    aligner_params=>$aligner_params,
+    aligner_name => $aligner_name,
+    aligner_version => $aligner_version,
+    aligner_params => $aligner_params,
     reference_build => $reference_build
     );
 

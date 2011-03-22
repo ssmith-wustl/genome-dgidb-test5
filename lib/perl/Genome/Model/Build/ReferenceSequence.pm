@@ -230,6 +230,19 @@ sub __errors__ {
     return @tags;
 }
 
+sub get{
+    my $self = shift;
+    my @results = $self->SUPER::get(@_);
+    return $self->SUPER::get(@_) if @results;
+
+    my @caller = caller(1);
+    if($caller[3] =~ m/Genome::Model::Build::ImportedReferenceSequence::get/){
+        return;
+    }else{
+        return Genome::Model::Build::ImportedReferenceSequence->get(@_);
+    }
+}
+
 sub is_derived_from {
     my ($self, $build, $seen) = @_;
     $seen = {} if !defined $seen;
