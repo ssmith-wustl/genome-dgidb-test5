@@ -31,7 +31,7 @@ my $expected_output_file_2 = $test_input_dir . 'cna.2.expected';
 my $expected_output_file_3 = $test_input_dir . 'cna.3.expected';
 my $expected_output_file_4 = $test_input_dir . 'cna.4.expected';
 
-my $test_output_dir = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-BamToCna-XXXXX', '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 0);
+my $test_output_dir = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-BamToCna-XXXXX', '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 $test_output_dir .= '/';
 
 my $output_directory_1     = $test_output_dir . 'cna.1.out';
