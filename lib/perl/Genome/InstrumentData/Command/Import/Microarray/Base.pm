@@ -41,17 +41,13 @@ class Genome::InstrumentData::Command::Import::Microarray::Base {
             is => 'Text',
             doc => 'General description of the genotype data',
         },
-        read_count => {
-            is => 'Number',
-            doc => 'The number of reads in the genotype file',
-            is_optional => 1,
-        },
         reference_sequence_build => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
-            doc => 'Build of the reference against which the genotype file was produced.',
+            doc => 'Build of the reference against which the genotype file was/will be produced.',
         },
         _model => { is_optional => 1, },
         _instrument_data => { is_optional => 1, },
+        _kb_requested => { is_optional => 1, },
     ],
 };
 
@@ -62,7 +58,7 @@ sub generated_instrument_data_id {
 sub execute {
     my $self = shift;
 
-    my $data_path_ok = $self->_validate_original_data_path;
+    my $data_path_ok = $self->_validate_original_data_path_and_set_kb_requested;
     return if not $data_path_ok;
 
     my $reference_sequence_build = $self->reference_sequence_build;
@@ -86,30 +82,45 @@ sub execute {
     my $copy = $self->_copy_original_data_path;
     return if not $copy;
 
+    # process/dump genotype files
+    my $process = $self->process_imported_files;
+    return if not $process;
+
     my $add_and_build = $self->_add_instrument_data_to_model_and_build($instrument_data);
     return if not $add_and_build;
 
     return 1;
 }
 
-sub _validate_original_data_path {
+
+sub _validate_original_data_path_and_set_kb_requested {
     my $self = shift;
+    
+    my $kb_requested;
+    my $original_data_path = $self->original_data_path;
+    if ( -d $original_data_path ) {
+        $kb_requested = Genome::Sys->directory_size_recursive($original_data_path);
+    }
+    else {
+        for my $file ( split(',', $original_data_path) ) {
+            if ( not -e $file ) {
+                $self->error_message('Original data file does not exist: '.$file);
+                return;
+            }
+            $kb_requested += -s $file;
+        }
+    }
+
+    $kb_requested += 100_000; # to dump a genotype file
+    $self->status_message("KB requested: $kb_requested");
+    $self->_kb_requested($kb_requested);
 
     return 1;
 }
 
-sub get_read_count {
+sub process_imported_files {
     my $self = shift;
-    my $line_count;
-    $self->status_message("Now attempting to determine read_count by calling wc on the imported genotype.");
-    my $file = $self->original_data_path;
-    $line_count = `wc -l $file`;
-    ($line_count) = split " ",$line_count;
-    unless(defined($line_count)&&($line_count > 0)){
-        $self->error_message("couldn't get a response from wc.");
-        return;
-    }
-    return $line_count
+    return 1;
 }
 
 sub _resolve_sample_and_library {
@@ -163,9 +174,10 @@ sub _create_model {
 
     $self->status_message('Create genotype model');
 
-    my $processing_profile = Genome::ProcessingProfile->get(2186707); # name => unknown/wugc
+    my $name = $self->sequencing_platform.'/wugc';
+    my $processing_profile = Genome::ProcessingProfile->get(name => $name);
     if ( not $processing_profile ) {
-        $self->error_message('Cannot find genotype microarray processing profile "unknown/wugc" to create model');
+        $self->error_message("Cannot find genotype microarray processing profile for $name to create model");
         return;
     }
 
@@ -201,23 +213,12 @@ sub _create_instrument_data {
 
     $self->status_message('Create instrument data');
 
-    my $read_count = $self->read_count; #FIXME
-    if ( not $read_count ) {
-        my $read_count = $self->get_read_count();
-        if( not $read_count ){
-            $self->error_message("No read count was specified and none could be calculated from the file.");
-            return;
-        }
-        $self->read_count($read_count);
-    }
-
     my $instrument_data = Genome::InstrumentData::Imported->create(
         library => $self->library,
         sequencing_platform => $self->sequencing_platform,
         description => $self->description,
         import_format => 'genotype file',
         import_source_name => $self->import_source_name,
-        read_count => $read_count,
         original_data_path => $self->original_data_path,
     );
     if ( not $instrument_data ) {
@@ -240,23 +241,10 @@ sub _create_allocation {
     my $instrument_data = $self->_instrument_data;
     Carp::confess('No instrument data set to resolve allocation') if not $instrument_data;
 
-    my $kb_requested;
-    my $original_data_path = $self->original_data_path;
-    if ( -d $original_data_path ) {
-        $kb_requested = Genome::Sys->directory_size_recursive($original_data_path);
-    }
-    else {
-        for my $file ( split(',', $original_data_path) ) {
-            $kb_requested += -s $file;
-        }
-    }
-    $kb_requested += 100_000; # to dump a genotype file
-    $self->status_message("KB requested: $kb_requested");
-
     my $allocation = Genome::Disk::Allocation->allocate(
         disk_group_name     => 'info_alignments',
         allocation_path     => 'instrument_data/imported/'.$instrument_data->id,
-        kilobytes_requested => $kb_requested,
+        kilobytes_requested => $self->_kb_requested,
         owner_class_name    => $instrument_data->class,
         owner_id            => $instrument_data->id,
     );
