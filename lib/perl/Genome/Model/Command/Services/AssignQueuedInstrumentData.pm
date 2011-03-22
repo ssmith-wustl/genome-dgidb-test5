@@ -743,7 +743,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         push @new_models, $wuspace_model;
 
         my $wuspace_roi_list;
-        if($reference_sequence_build and $reference_sequence_build->name eq 'g1k-human-build37') {
+        if($reference_sequence_build and $reference_sequence_build->is_compatible_with($root_build37_ref_seq)) {
             $wuspace_roi_list = 'NCBI-human.combined-annotation-58_37c_cds_exon_and_rna_merged_by_gene';
         } else {
             $wuspace_roi_list = 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA';
