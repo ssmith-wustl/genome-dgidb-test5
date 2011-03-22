@@ -17,13 +17,12 @@ class Genome::Model::Tools::Bacterial::ExportProteins (
             is => 'Number',
             doc => "sequence set id of genes to dump out",
         },
-    ],
-    has_optional => [
         output_file => {
             is => 'FilePath',
             doc => 'Output is placed in this file',
-            default => 'STDOUT',
         },
+    ],
+    has_optional => [
         phase => {
             is => 'Number',
             doc => "specify which phase of gene merging to dump from",
@@ -51,20 +50,9 @@ sub execute {
     my $self = shift;
 
     $BAP::DB::DBI::db_env = 'dev' if $self->dev;
-    
-    my $output_fh;
-    if ($self->output_file eq 'STDOUT') {
-        $output_fh = $self->output_file;
-    }
-    else {
-        if (-e $self->output_file) {
-            unlink $self->output_file;
-            $self->status_message('Removing existing output file at ' . $self->output_file);
-        }
-        $output_fh = IO::File->new($self->output_file, 'w');
-    }
 
-    my $fasta_out = Bio::SeqIO->new(-format => 'Fasta', -fh => $output_fh);
+    my $fasta_out = Bio::SeqIO->new(-format => 'Fasta', -file => '>' . $self->output_file);
+    confess 'Could not create file handle for output fasta ' . $self->output_file unless $fasta_out; 
 
     $self->status_message('Running export proteins on sequence set ' . $self->sequence_set_id . 
         ', sequences being dumped to ' . $self->output_file);
@@ -89,7 +77,6 @@ sub execute {
         }
     }
 
-    $output_fh->close;
     return 1;
 }
 
