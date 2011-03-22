@@ -10,5 +10,12 @@ class Genome::Model::Build::ImportedReferenceSequence {
     is => 'Genome::Model::Build::ReferenceSequence',
 };
 
-1;
+sub get{
+    my $self = shift;
+    my @results = $self->SUPER::get(@_);
+    return $self->SUPER::get(@_) if @results;
 
+    return Genome::Model::Build::ReferenceSequence->get(@_);
+}
+
+1;

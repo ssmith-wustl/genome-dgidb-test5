@@ -9,14 +9,11 @@ use Statistics::Descriptive;
 
 class Genome::Model::Tools::Analysis::LaneQc::CopyNumberCorrelation {
     is => 'Genome::Command::Base',
-    has => [
+    has_optional => [
         output_file => {
             type => 'FilePath',
-            is_optional => 0,
             doc => 'output filename',
         },
-    ],
-    has_optional => [
         copy_number_laneqc_file_glob => {
             type => 'FilePath',
             doc => 'glob string for grabbing copy-number laneqc files to compare',
@@ -64,10 +61,20 @@ sub execute {
     #parse inputs
     my @cnfiles = $self->resolve_copy_number_laneqc_files;
     my $num_files = $#cnfiles;
-    my $outfile = $self->output_file;
+
+    my $outfh;
+    if ($self->output_file) {
+        my $outfile = $self->output_file;
+        $outfh = new IO::File $outfile, "w";
+        unless ($outfh) {
+            die $self->error_message("Failed to open $outfile for writing.");
+        }
+    }
+    else {
+        $outfh = *STDOUT;
+    }
 
     #print outfile headers
-    my $outfh = new IO::File $outfile,"w";
     print $outfh "File1\tFile2\tCommon_Probes\tCorrelation_coefficient(max=1)\n";
 
     #Check that files are reasonably similar

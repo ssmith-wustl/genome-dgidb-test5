@@ -3,7 +3,8 @@ package Genome::InstrumentData::AlignmentResult::Bwa;
 use strict;
 use warnings;
 use File::Basename;
-
+use Data::Dumper;
+use Carp qw/confess/;
 use Genome;
 
 class Genome::InstrumentData::AlignmentResult::Bwa {
@@ -93,6 +94,97 @@ sub tmp_megabytes_estimated {
     return;
 }
 
+sub _all_reference_indices {
+    my $self = shift;
+
+    my @indices;
+    if ($self->multiple_reference_mode) {
+        my $b = $self->reference_build;
+        do {
+            $self->status_message("Getting reference sequence index for build ".$b->__display_name__);
+            push(@indices, $self->get_reference_sequence_index($b));
+            $b = $b->append_to;
+        } while ($b);
+    } else {
+        push(@indices, $self->get_reference_sequence_index);
+    }
+    return @indices;
+}
+
+sub _intermediate_result {
+    my ($self, $params, $index, @input_files) = @_;
+
+    my @results;
+    for my $path (@input_files) {
+        my ($input_pass) = $path =~ m/\.bam:(\d)$/;
+        if (defined($input_pass)) {
+            $path =~ s/\.bam:\d$/\.bam/;
+        }
+ 
+        my %intermediate_params = (
+            instrument_data => $self->instrument_data,
+            aligner_name => $self->aligner_name,
+            aligner_version => $self->aligner_version,
+            aligner_params => $params,
+            aligner_index => $index,
+            parent_result => $self,
+            input_file => $path,
+            input_pass => ($input_pass||''),
+        ); 
+
+        my $intermediate_result = Genome::InstrumentData::IntermediateAlignmentResult::Bwa->get_or_create(%intermediate_params);
+        unless ($intermediate_result) {
+            confess "Failed to generate IntermediateAlignmentResult for $path, params were: " . Dumper(\%intermediate_params);
+        }
+        push(@results, $intermediate_result);
+    }
+
+    return @results;
+}
+
+sub _samxe_cmdline {
+    my ($self, $aligner_params, $input_groups, @input_pathnames) = @_;
+
+    my $cmdline;
+    if (@input_pathnames == 1) {
+        my $params = $aligner_params->{'bwa_samse_params'} || '';
+        $self->_bwa_sam_cmd("bwa samse " . $params);
+
+        unless (scalar @$input_groups == 1) {
+            die "Multiple reference mode not supported for bwa samse!";
+        }
+
+        my $aligner_index = $input_groups->[0]->{aligner_index};
+        my $intermediate_results = $input_groups->[0]->{intermediate_results};
+        $cmdline = sprintf("samse $params %s %s %s",
+            $aligner_index->full_consensus_path('fa'),
+            $input_groups->[0]->{intermediate_results}->[0]->sai_file,
+            $input_pathnames[0]);
+
+    } elsif (@input_pathnames == 2) {
+        my $params = $self->_derive_bwa_sampe_parameters;
+        $self->_bwa_sam_cmd("bwa sampe " . $params);
+
+        my @cmdline_inputs;
+        for my $group (@$input_groups) {
+            my $aligner_index = $group->{aligner_index};
+            my $intermediate_results = $group->{intermediate_results};
+            push(@cmdline_inputs,
+                $aligner_index->full_consensus_path('fa'),
+                map { $_->sai_file } @$intermediate_results,
+                );
+        }
+
+        # fastq/bam input files come after the first set of "ref.fa seq1.sai seq2.sai"
+        # insert them where they need to go
+        splice(@cmdline_inputs, 3, 0, @input_pathnames);
+        $cmdline = "sampe $params " . join(' ', @cmdline_inputs);
+    } else {
+        $self->error_message("Input pathnames should have 2 elements... contents: " . Dumper(\@input_pathnames) );
+    }
+
+    return $cmdline;
+}
 
 sub _run_aligner {
     my $self = shift;
@@ -106,114 +198,37 @@ sub _run_aligner {
 
     # decompose aligner params for each stage of bwa alignment
     my %aligner_params = $self->decomposed_aligner_params;
-
-    my @input_path_params;
-
-    for my $i (0..$#input_pathnames) {
-        my $path = $input_pathnames[$i];
-        my ($input_pass) = $path =~ m/\.bam:(\d)$/;
-        
-        if (defined($input_pass)) {
-            $path =~ s/\.bam:\d$/\.bam/;
-            $input_pathnames[$i] = $path;
-            
-            $input_path_params[$i] = "-b". $input_pass;
-        } else {
-            $input_path_params[$i] = "";
-        }
-    }
    
     #### STEP 1: Use "bwa aln" to align each fastq independently to the reference sequence 
 
     my $bwa_aln_params = (defined $aligner_params{'bwa_aln_params'} ? $aligner_params{'bwa_aln_params'} : "");
-    my @sai_intermediate_files;
-    my @aln_log_files; 
-    foreach my $i (0..$#input_pathnames) {
-    
-        my $input = $input_pathnames[$i];
-        my $input_params = $input_path_params[$i];
-        my ($tmp_base) = fileparse($input); 
-        my $tmp_sai_file = $tmp_dir . "/" . $tmp_base . "." . $i . ".sai";
-        my $tmp_log_file = $tmp_dir . "/" . $tmp_base . ".bwa.aln.log"; 
-        
-        my $cmdline = Genome::Model::Tools::Bwa->path_for_bwa_version($self->aligner_version)
-            . sprintf( ' aln %s %s %s %s 1> ',
-                $bwa_aln_params, $input_params, $reference_fasta_path, $input )
-            . $tmp_sai_file . ' 2>>'
-            . $tmp_log_file;
-        
-        push @sai_intermediate_files, $tmp_sai_file;
-        push @aln_log_files, $tmp_log_file;
-        
-        # disconnect the db handle before this long-running event
-        if (Genome::DataSource::GMSchema->has_default_handle) {
-            $self->status_message("Disconnecting GMSchema default handle.");
-            Genome::DataSource::GMSchema->disconnect_default_dbh();
-        }
-        
-        Genome::Sys->shellcmd(
-            cmd          => $cmdline,
-            input_files  => [ $reference_fasta_path, $input ],
-            output_files => [ $tmp_sai_file, $tmp_log_file ],
-            skip_if_output_is_present => 0,
+    my @indices = $self->_all_reference_indices;
+    my @input_groups;
+    my @aln_log_files;
+    for my $index (@indices) {
+        my @results = $self->_intermediate_result($bwa_aln_params, $index, @input_pathnames);
+        push(@input_groups, {
+                aligner_index => $index,
+                intermediate_results => [ @results ],
+            }
         );
-
-        unless ($self->_verify_bwa_aln_did_happen(sai_file => $tmp_sai_file,
-                        log_file => $tmp_log_file)) {
-            $self->error_message("bwa aln did not seem to successfully take place for " . $reference_fasta_path);
-            $self->die($self->error_message);
-        }
+        push(@aln_log_files, map { $_->log_file } @results);
     }
-
 
     #### STEP 2: Use "bwa samse" or "bwa sampe" to perform single-ended or paired alignments, respectively.
     #### Runs once for ALL input files
 
-    my $samxe_logfile       = $tmp_dir . "/bwa.samxe.log"; 
-    my $sam_command_line = ""; 
-    my @input_files;
+    map { s/\.bam:\d/.bam/ } @input_pathnames; # strip :[12] suffix from bam files if present
+
+    my $samxe_logfile = $tmp_dir . "/bwa.samxe.log"; 
+    my $samxe_cmdline = $self->_samxe_cmdline(\%aligner_params, \@input_groups, @input_pathnames);
     my $sam_file = $self->temp_scratch_directory . "/all_sequences.sam";
 
-    if ( @input_pathnames == 1 ) {
-        my $bwa_samse_params = (defined $aligner_params{'bwa_samse_params'} ? $aligner_params{'bwa_samse_params'} : "");
-        @input_files = ($sai_intermediate_files[0], $input_pathnames[0]);
-    
-         $self->_bwa_sam_cmd("bwa samse " . $bwa_samse_params);
-         $sam_command_line = Genome::Model::Tools::Bwa->path_for_bwa_version($self->aligner_version)
-                . sprintf(
-                ' samse %s %s %s %s',
-                $bwa_samse_params, $reference_fasta_path,
-                $sai_intermediate_files[0],
-                $input_pathnames[0]
-                )
-                . " 2>>"
-                . $samxe_logfile;
+    my $sam_command_line = sprintf("%s $samxe_cmdline 2>> $samxe_logfile",
+        Genome::Model::Tools::Bwa->path_for_bwa_version($self->aligner_version));
 
-        die "Failed to process sam command line, error_message is ".$self->error_message unless $self->_filter_samxe_output($sam_command_line, $sam_file);
-    
-    }
-    elsif (@input_pathnames == 2) {
-        my $bwa_sampe_params = $self->_derive_bwa_sampe_parameters;
-        @input_files = (@sai_intermediate_files, @input_pathnames);
-
-        # store the calculated sampe params
-        $sam_command_line = Genome::Model::Tools::Bwa->path_for_bwa_version($self->aligner_version)
-            . sprintf(
-            ' sampe %s %s %s %s',
-            $bwa_sampe_params,
-            $reference_fasta_path,
-            join (' ', @sai_intermediate_files),
-            join (' ', @input_pathnames)
-            )
-            . " 2>>"
-            . $samxe_logfile;
-    
-        die "Failed to process sam command line, error_message is ".$self->error_message unless $self->_filter_samxe_output($sam_command_line, $sam_file);
-
-    } 
-    else {
-        $self->error_message("Input pathnames shouldn't have more than 2... contents: " . Data::Dumper::Dumper(\@input_pathnames) );
-        die $self->error_message;
+    unless ($self->_filter_samxe_output($sam_command_line, $sam_file)) {
+        die "Failed to process sam command line, error_message is ".$self->error_message;
     }
 
     unless (-s $sam_file) {
@@ -226,7 +241,6 @@ sub _run_aligner {
             unlink($file);
         }
     }
-
 
     #### STEP 3: Merge log files.
  
@@ -424,6 +438,11 @@ sub requires_read_group_addition {
 
 sub supports_streaming_to_bam {
     return 1;
+}
+
+sub multiple_reference_mode {
+    my $self = shift;
+    return $self->reference_build->append_to and Genome::Model::Tools::Bwa->multiple_reference($self->aligner_version);
 }
 
 sub accepts_bam_input {
