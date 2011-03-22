@@ -351,6 +351,11 @@ sub create {
         $self->creation_date(UR::Time->now);
     }
 
+    # If data directory has not been supplied, figure it out
+    unless ($self->data_directory) {
+        $self->data_directory( $self->resolve_data_directory );
+    }
+
     unless ( $self->_build_model_filesystem_paths() ) {
         $self->error_message('Filesystem path creation failed');
         $self->SUPER::delete;
