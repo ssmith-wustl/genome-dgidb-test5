@@ -203,23 +203,7 @@ sub _filter_variants {
     );
     $self->status_message('Done running BAM Readcounts.');
 
-    my $readcounts = Genome::Sys->read_file($readcount_file);
-    chomp($readcounts) if($readcounts);
-
-    ## Load the results of the readcounts ##
-
-    my %readcounts_by_position = ();
-
-    my @readcounts = split(/\n/, $readcounts);
-    foreach my $rc_line (@readcounts) {
-        (my $chrom, my $pos) = split(/\t/, $rc_line);
-        # Since we read in bed input (0-based start position) and the bed will be 1-based... adjust the start BACK to the bed position
-        $pos--;
-        $readcounts_by_position{"$chrom\t$pos"} = $rc_line;
-    }
-
-    $self->status_message('Readcounts loaded');
-
+    my $readcount_fh = Genome::Sys->open_file_for_reading($readcount_file);
 
     ## Open the filtered output file ##
     my $lq_file = $self->_temp_staging_directory . "/snvs.lq.raw_filter";
@@ -237,7 +221,6 @@ sub _filter_variants {
 
         $stats{'num_variants'}++;
 
-#        if($lineCounter <= 10) {
             (my $chrom, my $chr_start, my $chr_stop, my $ref_var) = split(/\t/, $line);
             my ($ref, $var) = split("/", $ref_var);
             next unless($chr_start =~ /^\d+$/); #header line
@@ -273,12 +256,12 @@ sub _filter_variants {
                 } else {
                     ## Run Readcounts ##
 
-                    my $readcounts = "";
-                    $readcounts = $readcounts_by_position{"$chrom\t$chr_start"} if($readcounts_by_position{"$chrom\t$chr_start"});
-
+                    my $readcounts; 
+                    unless($readcounts = $self->_get_readcount_line($readcount_fh, $chrom,$chr_start)){
+                        die $self->error_message("Failed to find readcount data for: ".$chrom."\t".$chr_start);
+                    }
 
                     ## Parse the results for each allele ##
-
                     my $ref_result = $self->read_counts_by_allele($readcounts, $ref);
                     my $var_result = $self->read_counts_by_allele($readcounts, $var);
 
@@ -447,6 +430,23 @@ sub _filter_variants {
 
     return 1;
 }
+
+# This method scans the lines of the readcount file until the matching line is found
+sub _get_readcount_line {
+    my $self = shift;
+    my ($readcount_fh,$chr,$start) = @_;
+    while( my $line = $readcount_fh->getline){
+        chomp $line;
+        my ($rc_chr,$rc_pos) = split "\t", $line;
+        # input is 1-based, subtract from the start position to match bed format
+        $rc_pos--;
+        if(($chr eq $rc_chr)&&($start == $rc_pos)){
+            return $line;
+        }
+    }
+    return;
+}
+
 
 #############################################################
 # Read_Counts_By_Allele - parse out readcount info for an allele

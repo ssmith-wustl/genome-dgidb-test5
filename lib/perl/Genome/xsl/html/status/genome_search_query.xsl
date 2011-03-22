@@ -85,9 +85,9 @@
         <div class="span-19 last">
           <div style="margin: 0 15px;">
 
-            <xsl:for-each select="result">
-              <!-- Pre-generated HTML from a View module -->
-              <xsl:value-of disable-output-escaping="yes" select='.'/>
+            <!--            <xsl:apply-templates/> -->
+            <xsl:for-each select="/solr-results/doc">
+                <xsl:call-template name="universal_search_result"/>
             </xsl:for-each>
 
 
@@ -144,5 +144,11 @@
     </xsl:call-template>
 
   </xsl:template>
+
+<!--
+<xsl:template match="doc">
+<p>hi</p>
+</xsl:template>
+-->
 
 </xsl:stylesheet>
