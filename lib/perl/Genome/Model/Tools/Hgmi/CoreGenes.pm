@@ -4,16 +4,9 @@ use strict;
 use warnings;
 
 use Genome;
-use Carp;
-use Bio::Seq;
-use Bio::SeqIO;
-use English;
-
-use File::Copy;
-use Cwd;
-use IPC::Run;
-use File::Slurp;
-use File::Temp qw/ tempfile tempdir /;
+use Carp 'confess';
+use Cwd 'abs_path';
+use File::Temp;
 
 class Genome::Model::Tools::Hgmi::CoreGenes (
     is => 'Command',
@@ -75,18 +68,22 @@ sub execute {
     confess 'Could not create protein export command!' unless $protein_export_cmd;
     confess 'Could not execute protein export for sequence set ' . $self->sequence_set_id unless $protein_export_cmd->execute;
 
+    # Convert Coregene_results to an absolute path
+    # TODO Still need to not write this to cwd...
+    my $core_gene_output_file = abs_path('Coregene_results');
+    
     my $core_gene_cmd = Genome::Model::Tools::Bacterial::CoreGeneCoverage->create(
         fasta_file => $protein_seq_fasta,
         percent_id => $CORE_GENE_PARAMS{$self->cell_type}{percent_id},
         fraction_of_length => $CORE_GENE_PARAMS{$self->cell_type}{fraction_of_length},
         cell_type => $self->cell_type,
-        output_file => 'Coregene_results', # FIXME Should not place files into CWD!
+        output_file => $core_gene_output_file, 
     );
     confess 'Could not create core gene command object!' unless $core_gene_cmd;
     confess 'Could not execute core gene check!' unless $core_gene_cmd->execute;
 
-    confess 'Core genes check failed, results can be found in ' . $core_gene_cmd->output_file unless $core_gene_cmd->_passed;
-    $self->status_message('Core gene check passed, results can be found in ' . $core_gene_cmd->output_file);
+    confess "Core genes check failed, results can be found in $core_gene_output_file" unless $core_gene_cmd->_passed;
+    $self->status_message("Core gene check passed, results can be found in $core_gene_output_file");
     return 1;
 }
 

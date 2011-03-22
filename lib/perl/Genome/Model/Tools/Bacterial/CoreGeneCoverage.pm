@@ -1,5 +1,7 @@
 package Genome::Model::Tools::Bacterial::CoreGeneCoverage;
 
+# bdericks: This entire module needs a major overhaul.
+
 use strict;
 use warnings;
 
@@ -30,7 +32,6 @@ class Genome::Model::Tools::Bacterial::CoreGeneCoverage (
         },
         output_file => {
             is => 'FilePath',
-            default_value => 'STDOUT',
             doc => 'File to write coverage results to',
         },
     ],
@@ -124,14 +125,15 @@ sub execute {
 
     $self->status_message("Blastp done, parsing");
 
+    # TODO Change into a module call
     # run parse_blast_results_percid_fraction_oflength on the output
     my @parse = (
         'gmt','bacterial','parse-blast-results',
         '--input', $blastresults,
         '--output', 'Cov_30_PID_30' ,  # TODO Don't write to CWD!
         '--num-hits', 1,
-        '--percent', $self->pid,
-        '--fol', $self->fol,
+        '--percent', $self->percent_id,
+        '--fol', $self->fraction_of_length,
         '--blast-query', $blast_query_file,
     );
 
@@ -157,8 +159,10 @@ sub execute {
     # the easy way, but we will have to change it eventually
     my $cmd1 = "grep \"====\" Cov_30_PID_30 | awk '{print \$2}' | sort | uniq | wc -l";
     my $core_gene_count = `$cmd1`;
+    chomp $core_gene_count;
     my $cmd2 = "grep \">\" ".$blast_query_file." | wc -l"; # counting seqs
     my $query_count = `$cmd2`;
+    chomp $query_count;
     my $core_groups = scalar(@$core_groups_ref_arry);
 
     # this doesn't make alot of sense yet.
@@ -179,27 +183,38 @@ sub execute {
     }
     confess 'Could not get file handle for output file ' . $self->output_file unless $output_fh;
 
-    $output_fh->print("Perc of Coregenes present in this assembly: $coregene_pct \%\n");
-    $output_fh->print("Number of Core Groups present in this assembly: $core_groups\n");
+    $output_fh->print("Percentage of core genes present in this assembly: $coregene_pct \%\n");
+    $output_fh->print("Core gene count: $core_gene_count\n");
+    $output_fh->print("Query count: $query_count\n");
+    $output_fh->print("Number of Core Groups present in this assembly: $core_groups\n");    
+    
+    $self->status_message("Percentage of core genes present in this assembly: $coregene_pct \%");
+    $self->status_message("Core gene count: $core_gene_count");
+    $self->status_message("Query count: $query_count");
+    $self->status_message("Number of Core Groups present in this assembly: $core_groups");
+
     if($core_pct <= $self->minimum_percent_coverage) {
         $output_fh->print("Core gene test FAILED!\n");
+        $self->status_message("Core gene test FAILED!");
         $self->_passed(0);
     }
     else {
         $output_fh->print("Core gene test PASSED\n");
+        $self->status_message("Core gene test PASSED");
         $self->_passed(1);
     }
 
     # the below replicates 'cat Cov_30_PID_30 CoregeneTest_result >Cov_30_PID_30.out
+    # TODO This can be replaced with Genome::Sys->cat I think
     my $covdata = read_file("Cov_30_PID_30");
-    my $cgtest_result = read_file("CoregeneTest_result");
+    my $cgtest_result = read_file($self->output_file);
     write_file("Cov_30_PID_30.out",$covdata.$cgtest_result);
 
     # unlink temp files. these really should be absolute path
     # and should go to a writable directory....
     unlink("Cov_30_PID_30");
     unlink("CoregeneTest_result");
-    unlink($blastresults);
+    #unlink($blastresults);
     unlink($bsubout);
     unlink($bsuberr);
     unlink($self->fasta_file."xpd");
@@ -220,13 +235,14 @@ sub get_core_groups_coverage {
     {
         $core_groups = $self->archaea_group_file;
     }
-    my $gene_list = shift;
+
     use IO::String;
     # stolen from  get_core_groups_coverage script
     # altered to 
     #read list to make an array of genes covered
 
-    #my $gene_list=new FileHandle("$options{gene_list}");
+    my $gene_list = `grep "===="  Cov_30_PID_30  | awk '{print \$2}' | sort | uniq`;
+
     my $gl = IO::String->new($gene_list);
     my %gene_hash;
     while (<$gl>){
@@ -236,7 +252,6 @@ sub get_core_groups_coverage {
     }
 
     #Output file
-#    my $o=new FileHandle("> $options{output}");
     my @results = ( );
 
     #Read ortholog data
