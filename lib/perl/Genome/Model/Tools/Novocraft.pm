@@ -55,6 +55,7 @@ sub novocraft_path {
 my %NOVOCRAFT_VERSIONS = (
                     '2.03.12' => '/gsc/pkg/bio/novocraft/novocraft-2.03.12',
                     '2.04.02' => '/gsc/pkg/bio/novocraft/novocraft-2.04.02',
+                    '2.05.13' => '/gsc/pkg/bio/novocraft/novocraft-2.05.13',
                     '2.05.20' => '/gsc/pkg/bio/novocraft/novocraft-2.05.20',
                     '2.05.32' => '/gsc/pkg/bio/novocraft/novocraft-2.05.33',
                     'novocraft'   => 'novoalign',
@@ -74,6 +75,15 @@ sub path_for_novocraft_version {
     }
     die('No path for novocraft version '. $version);
 }
+
+sub path_for_novosam_version {
+    my ($class, $version) = @_;
+    $version ||= $DEFAULT_VERSION;
+    my $path = $NOVOCRAFT_VERSIONS{$version} . '/novo2sam.pl';
+    return $path if -s $path and -x $path;
+    die "novosam path of version: $version is invalid\n";
+}
+
 
 sub default_novocraft_version {
     die "default novocraft version: $DEFAULT_VERSION is not valid" unless $NOVOCRAFT_VERSIONS{$DEFAULT_VERSION};

@@ -193,28 +193,28 @@ sub execute {
         if($outer_start - $self->span < 1) {
             $outer_start_ = 1;
         }
-        if($outer_start - $self->span > $chromosome_lengths{$chr1} - 1) {
+        if($outer_start - $self->span > $chromosome_lengths{$chr1}) {
             printf $filtered_out_fh "Out of bounds: %s\n", $line;
             next;
         }
         if($inner_start + $self->span < 1) {
             $inner_start_ = 1;
         }
-        if($inner_start + $self->span > $chromosome_lengths{$chr1} - 1) {
-            $inner_start_ = $chromosome_lengths{$chr1} - 1;
+        if($inner_start + $self->span > $chromosome_lengths{$chr1}) {
+            $inner_start_ = $chromosome_lengths{$chr1};
         }
         if($outer_end + $self->span < 1){
             printf $filtered_out_fh "Out of bounds: %s\n", $line;
             next;
         }
-        if($outer_end + $self->span > $chromosome_lengths{$chr2} - 1) {
-            $outer_end_ = $chromosome_lengths{$chr2} - 1;
+        if($outer_end + $self->span > $chromosome_lengths{$chr2}) {
+            $outer_end_ = $chromosome_lengths{$chr2};
         }
         if($inner_end - $self->span < 1){
             $inner_end_ = 1;
         }
-        if($inner_end - $self->span > $chromosome_lengths{$chr2} - 1) {
-            $inner_end_ = $chromosome_lengths{$chr2} - 1;
+        if($inner_end - $self->span > $chromosome_lengths{$chr2}) {
+            $inner_end_ = $chromosome_lengths{$chr2};
         }
 
         # filter out those resolution > 2k

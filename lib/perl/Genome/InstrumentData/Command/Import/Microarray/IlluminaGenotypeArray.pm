@@ -133,9 +133,11 @@ sub process_imported_files {
 
     #create SNP Array Genotype (goldSNP)
     my $genotype_path_and_SNP = $genotype_path."/".$genome_sample->name."_SNPArray.genotype";
+    my $reference_fasta_file = $self->reference_sequence_build->full_consensus_path('fa');
     unless(Genome::Model::Tools::Array::CreateGoldSnpFromGenotypes->execute(    genotype_file1 => $genotype_path_and_file,
                                                                                 genotype_file2 => $genotype_path_and_file,
-                                                                                output_file    => $genotype_path_and_SNP,)) {
+                                                                                output_file    => $genotype_path_and_SNP,
+                                                                                reference_fasta_file => $reference_fasta_file, )) {
         $self->error_message("SNP Array Genotype creation failed");
         die $self->error_message;
     }

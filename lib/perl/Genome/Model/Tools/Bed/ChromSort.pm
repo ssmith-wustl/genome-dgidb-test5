@@ -98,6 +98,11 @@ sub close_filehandles {
 sub sort  {
     my $self = shift;
     while (my $line = $self->_input_fh->getline) {
+        #svs.hq could contain # lines
+        if ($line =~ /^#/) {
+            $self->_output_fh->print($line);
+            next;
+        }
         my ($chrom, $junk) = split("\t", $line, 2);
         my $tmpfile = $self->_get_filehandle_for_chrom($chrom);
         $tmpfile->{fh}->print($line);

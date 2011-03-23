@@ -29,13 +29,10 @@ class Genome::Model::Tools::Array::CreateGoldSnpFromGenotypes {
         is_optional => 0,
         doc => "a Gold SNP file",
     },        
-    REFDIR =>
-    {
-        #This is the path to the reference sequence used for aligning the model
+    reference_fasta_file => {
         type => 'String',
-        is_optional => 0,
-        default => "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c",
-    },        
+        doc => 'The path to the reference sequence fasta file to use',
+    },
     refdb =>
     {
         type => 'Reference',
@@ -80,7 +77,7 @@ sub execute {
         return;
     }
 
-    $self->refdb(Bio::DB::Fasta->new($self->REFDIR));
+    $self->refdb(Bio::DB::Fasta->new($self->reference_fasta_file));
 
     my ($chr2, $pos2, $genotype2) = (1,1,q{}); #expecting 
 

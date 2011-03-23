@@ -260,8 +260,6 @@ sub default_filenames{
         gatk_output                         => 'gatk.output.indel',
         gatk_output_formatted               => 'gatk.output.indel.formatted',
         gatk_output_somatic                 => 'gatk.output.indel.formatted.Somatic',
-        annotate_output_gatk_indel   => 'annotation.somatic.gatk-indel.transcript',        
-        gatk_output_tier1                   => 'gatk.output.indel.formatted.Somatic.tier1',
 
         ## Combined glfSomatic+Varscan Output files ##
         merged_snp_output                   => 'merged.somatic.snp',            ## Generated from merge-variants of somaticSniper and varScan
