@@ -36,7 +36,7 @@ class Genome::Model::Tools::Varscan::Somatic {
 	],	
 
 	has_param => [
-		lsf_resource => { default_value => 'select[model!=Opteron250 && type==LINUX64] rusage[mem=4000]'},
+		lsf_resource => { default_value => 'select[model!=Opteron250 && type==LINUX64 && mem>4000 && tmp>2000] rusage[mem=4000] span[hosts=1]'},
        ],
 };
 
@@ -122,6 +122,10 @@ sub execute {                               # replace with real execution logic.
 		my $normal_pileup = "samtools view -b -u -q 10 $normal_bam | samtools pileup -f $reference -";
 		my $tumor_pileup = "samtools view -b -u -q 10 $tumor_bam | samtools pileup -f $reference -";
 
+		## First, head the pileup files to get SAMtools warmed up ##
+#		print "Heading pileup files to get SAMtools warmed up...\n";
+#		system("$normal_pileup | head");
+#		system("$tumor_pileup | head");		
 		
 		my $cmd = $self->java_command_line(" somatic <\($normal_pileup\) <\($tumor_pileup\) --output-snp $output_snp --output-indel $output_indel $varscan_params");
 
@@ -133,6 +137,20 @@ sub execute {                               # replace with real execution logic.
 
 		print "Running $cmd\n";
 		system($cmd);
+
+		## Count the output. If it's truncated or empty, let's try again ##
+		my $num_snvs = 0;
+		if(-e $output_snp)
+		{
+			$num_snvs = `cat $output_snp | wc -l`;
+			chomp($num_snvs);
+		}
+		
+		if($num_snvs < 2)
+		{
+			print "That attempt seemed to fail, so re-running $cmd\n";
+			system($cmd);
+		}
 
 
 		## Run the filter command ##
