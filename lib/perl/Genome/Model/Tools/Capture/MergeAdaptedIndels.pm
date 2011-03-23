@@ -151,6 +151,8 @@ sub execute {                               # replace with real execution logic.
 	open(SHARED, ">$output_file.shared") or die "Can't open outfile: $!\n";
 	open(SNIPER, ">$output_file.sniper-only") or die "Can't open outfile: $!\n";
 	open(VARSCAN, ">$output_file.varscan-only") or die "Can't open outfile: $!\n";
+
+
 	if ($self->gatk_file) {
 		open(GATK, ">$output_file.gatk-only") or die "Can't open outfile: $!\n";
 	}
@@ -215,13 +217,32 @@ sub execute {                               # replace with real execution logic.
 	close(SNIPER);
 	close(VARSCAN);
 	close(GATK);
+	
+	## Sort the file ##
+	
+	my $cmd_obj = Genome::Model::Tools::Capture::SortByChrPos->create(
+	    input_file => $output_file,
+	    output_file => $output_file,
+	);
+
+	$cmd_obj->execute();
+	
+	## Reset stats if necessary ##
+	$stats{'tri-shared'} = 0 if(!$stats{'tri-shared'});
+	$stats{'sniper-varscan-shared'} = 0 if(!$stats{'sniper-varscan-shared'});
+	$stats{'sniper-gatk-shared'} = 0 if(!$stats{'sniper-gatk-shared'});
+	$stats{'varscan-gatk-shared'} = 0 if(!$stats{'varscan-gatk-shared'});
+	$stats{'shared'} = 0 if(!$stats{'shared'});
+	$stats{'varscan-only'} = 0 if(!$stats{'varscan-only'});
+	$stats{'sniper-only'} = 0 if(!$stats{'sniper-only'});
+	$stats{'gatk-only'} = 0 if(!$stats{'gatk-only'});
 
 	print $stats{'total'} . " unique indels\n";
 	if ($self->gatk_file) {
-		print $stats{'tri-shared'} . "shared in gatk, sniper, and varscan\n";
-		print $stats{'sniper-varscan-shared'} . "shared in sniper and varscan\n";
-		print $stats{'sniper-gatk-shared'} . "shared in gatk and sniper\n";
-		print $stats{'varscan-gatk-shared'} . "shared in gatk and varscan\n";
+		print $stats{'tri-shared'} . " shared in gatk, sniper, and varscan\n";
+		print $stats{'sniper-varscan-shared'} . " shared in sniper and varscan\n";
+		print $stats{'sniper-gatk-shared'} . " shared in gatk and sniper\n";
+		print $stats{'varscan-gatk-shared'} . " shared in gatk and varscan\n";
 	}
 	else {
 		print $stats{'shared'} . " shared\n";		
@@ -229,7 +250,7 @@ sub execute {                               # replace with real execution logic.
 	print $stats{'varscan-only'} . " Varscan-only\n";
 	print $stats{'sniper-only'} . " Sniper-only\n";
 	if ($self->gatk_file) {
-		print $stats{'gatk-only'} . "gatk-only\n";
+		print $stats{'gatk-only'} . " gatk-only\n";
 	}
 
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)

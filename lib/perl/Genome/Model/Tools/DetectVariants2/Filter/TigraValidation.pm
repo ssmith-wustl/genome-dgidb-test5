@@ -69,15 +69,16 @@ class Genome::Model::Tools::DetectVariants2::Filter::TigraValidation {
         # TODO Need to point to a specific version of tigra that's not in a home dir
         tigra_path => {
             is => 'FilePath',
-            default => '/gscuser/xfan/kdevelop/TIGRA_SV/src/tigra_sv',
+            #default => '/gscuser/xfan/kdevelop/TIGRA_SV/src/tigra_sv',
+            default => '/gsc/bin/tigra_sv',
         },
         sv_merge_path => {
             is => 'FilePath',
-            default => '/gscuser/kchen/1000genomes/analysis/scripts/MergeAssembledCallsets.pl',
+            default => '/gsc/scripts/opt/genome-stable/lib/perl/Genome/Model/Tools/Sv/MergeAssembledCallsets.pl',
         },
         sv_annot_path => {
             is => 'FilePath',
-            default => '/gscuser/kchen/1000genomes/analysis/scripts/BreakAnnot.pl',
+            default => '/gsc/scripts/opt/genome-stable/lib/perl/Genome/Model/Tools/Sv/BreakAnnot.pl',
         },
         # TODO Either point to a specific version of phrap or (even better) use the crossmatch tool
         crossmatch_path => {
@@ -291,6 +292,7 @@ my %CROSSMATCH_FLAGS_LIST = (
 
 sub _create_temp_directories {
     my $self = shift;
+    local %ENV = %ENV;
     $ENV{TMPDIR} = $self->output_directory;
     return $self->SUPER::_create_temp_directories(@_);
 }

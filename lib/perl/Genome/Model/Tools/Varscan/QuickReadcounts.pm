@@ -27,6 +27,7 @@ class Genome::Model::Tools::Varscan::QuickReadcounts {
 		bam_file	=> { is => 'Text', doc => "Path to BAM file", is_optional => 0 },
 		variants_file	=> { is => 'Text', doc => "Path to variant positions file", is_optional => 0 },
 		output_file	=> { is => 'Text', doc => "Path to output file" , is_optional => 0},
+		reference	=> { is => 'Text', doc => "Reference FASTA file for BAMs (default= genome model)" , is_optional => 1, is_input => 1},
 		min_coverage	=> { is => 'Text', doc => "Minimum base coverage to report readcounts [8]" , is_optional => 1},
 		min_base_qual	=> { is => 'Text', doc => "Minimum base quality to count a read [30]" , is_optional => 1},
 	],
@@ -63,6 +64,7 @@ sub execute {                               # replace with real execution logic.
 	## Get required parameters ##
 	my $bam_file = $self->bam_file;
 	my $reference = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa";
+	$reference = $self->reference if($self->reference);
 	my $variants_file = $self->variants_file;
 	my $output_file = $self->output_file;
 	my $min_coverage = 4;

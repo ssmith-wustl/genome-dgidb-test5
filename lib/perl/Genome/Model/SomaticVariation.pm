@@ -21,6 +21,10 @@ class Genome::Model::SomaticVariation {
             is => 'Text',
             via => 'processing_profile',
         },
+        cnv_detection_strategy => {
+            is => 'Text',
+            via => 'processing_profile',
+        },
         tumor_model_id => {
             is => 'Text',
             via => 'inputs',

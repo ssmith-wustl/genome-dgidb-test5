@@ -110,61 +110,47 @@ sub execute {                               # replace with real execution logic.
 			$varscan_snps = `cat $sample_output_dir/varScan.output.snp | wc -l` if(-e "$sample_output_dir/varScan.output.snp");
 			chomp($varscan_snps) if($varscan_snps);
 
-			my $final_snp_file = "$sample_output_dir/merged.germline.snp.ROI.tier1.out";
-			my $final_snp_file2 = "$sample_output_dir/merged.germline.snp.ROI.tier2.out";
-			my $final_snp_file3 = "$sample_output_dir/merged.germline.snp.ROI.tier3.out";
-			my $final_snp_file4 = "$sample_output_dir/merged.germline.snp.ROI.tier4.out";
+			my $final_snp_file = "$sample_output_dir/merged.germline.snp.ROI.strandfilter.tier1.out";
+			my $final_indel_file = "$sample_output_dir/merged.germline.indel.ROI.strandfilter.tier1.out";
 
-			my $final_indel_file = "$sample_output_dir/merged.germline.indel.ROI.tier1.out";
-			my $final_indel_file2 = "$sample_output_dir/merged.germline.indel.ROI.tier2.out";
-			my $final_indel_file3 = "$sample_output_dir/merged.germline.indel.ROI.tier3.out";
-			my $final_indel_file4 = "$sample_output_dir/merged.germline.indel.ROI.tier4.out";
-
+			my $final_snp_file2 = "$sample_output_dir/merged.germline.snp.ROI.strandfilter.tier2.out";
+			my $final_indel_file2 = "$sample_output_dir/merged.germline.indel.ROI.strandfilter.tier2.out";
+			my $final_snp_file3 = "$sample_output_dir/merged.germline.snp.ROI.strandfilter.tier3.out";
+			my $final_indel_file3 = "$sample_output_dir/merged.germline.indel.ROI.strandfilter.tier3.out";
+			my $final_snp_file4 = "$sample_output_dir/merged.germline.snp.ROI.strandfilter.tier4.out";
+			my $final_indel_file4 = "$sample_output_dir/merged.germline.indel.ROI.strandfilter.tier4.out";
 
 			my $snpexists = 0;
 			my $indelexists = 0;
-			if (-s $final_snp_file || -s $final_snp_file2) {
+			if (-s $final_snp_file) {
 				$snpexists = 1;
 			}
-			elsif (-s $final_snp_file3 || -s $final_snp_file4) {
+			elsif (!$only_tier_1 && (-s $final_snp_file2 || -s $final_snp_file3 || -s $final_snp_file4)) {
+				print "No tier 1 SNP File: $sample_name\n";
 				$snpexists = 1;
-				print "SHIT! ONLY TIER 3 OR 4!\n";
 			}
 			else {
 				print "No tiered SNP File: $sample_name\n";
 			}
 
-			if (-s $final_indel_file || -s $final_indel_file2) {
+			if (-s $final_indel_file) {
 				$indelexists = 1;
 			}
-			elsif (-s $final_indel_file3 || -s $final_indel_file4) {
+			elsif (!$only_tier_1 && (-s $final_indel_file2 || -s $final_indel_file3 || -s $final_indel_file4)){
+				print "No tier 1 Indel File: $sample_name\n";
 				$indelexists = 1;
-				print "SHIT! ONLY TIER 3 OR 4!\n";
 			}
 			else {
 				print "No tiered Indel File: $sample_name\n";
 			}
 
 			if ($snpexists == 1) {
-				my $snp_lastline = `grep -P "^19\t" $sample_output_dir/annotation.germline.snp.transcript`;
-#				my $indel_lastline = `tail -n 1 $sample_output_dir/annotation.germline.indel.transcript`;
-#				if ($snp_lastline =~ m/^19\t/ && $indel_lastline =~ m/^19\t/) {
-				unless($snp_lastline) {
-					$snpexists = 0;
-					print "Possibly Truncated SNP File: $sample_name";
-				}
-			}
-
-			if ($snpexists == 1) {
-				my $output_completed = `grep "Successfully completed" $sample_output_dir/$sample_name.output`;
+				my $output_completed = `grep -i "Successfully completed" $sample_output_dir/$sample_name.output`;
 				unless($output_completed) {
 					$snpexists = 0;
 					print "LSF Didn't Report Success: $sample_name";
 				}
 			}
-
-
-#			print "$snpexists\t$indelexists\n";
 
 			if($self->skip_if_output_present && $snpexists && $indelexists)
 			{
@@ -176,7 +162,7 @@ sub execute {                               # replace with real execution logic.
 				if($verbose) {
 					print "$model_id\t$sample_name\t$build_status\t$build_dir\n";
 				}
-				my @outfile_list = qw(annotation.germline.indel.ucsc merged.germline.indel merged.germline.indel.ROI.tier4.out merged.germline.snp.ROI samtools.output.indel.formatted varScan.output.snp annotation.germline.indel.unannot-ucsc merged.germline.indel.ROI merged.germline.indel.shared merged.germline.snp.ROI.tier1.out samtools.output.snp.adaptor varScan.output.snp.filter annotation.germline.snp.transcript merged.germline.indel.ROI.tier1.out merged.germline.indel.sniper-only merged.germline.snp.ROI.tier2.out varScan.output.indel varScan.output.snp.formatted annotation.germline.snp.ucsc merged.germline.indel.ROI.tier2.out merged.germline.indel.varscan-only merged.germline.snp.ROI.tier3.out varScan.output.indel.filter varScan.output.snp.variants annotation.germline.indel.transcript annotation.germline.snp.unannot-ucsc merged.germline.indel.ROI.tier3.out merged.germline.snp merged.germline.snp.ROI.tier4.out varScan.output.indel.formatted $sample_name.out $sample_name.err merged.germline.snp.ROI.tier1.out.strandfilter.readcounts merged.germline.snp.ROI.tier1.out.strandfilter_filtered merged.germline.snp.ROI.tier1.out.strandfilter GATK.output.indel GATK.output.indel.vcf GATK.output.indel.bed GATK.output.indel.formatted GATK.output.indel.adaptor merged.germline.snp.ROI.tier1.out.dbsnp merged.germline.indel.ROI.tier1.out.strandfilter merged.germline.indel.ROI.tier1.out.strandfilter.readcounts merged.germline.indel.ROI.tier1.out.strandfilter_filtered merged.germline.ROI.tier1.out.maf);
+				my @outfile_list = qw(annotation.germline.indel.ucsc merged.germline.indel merged.germline.indel.ROI.tier4.out merged.germline.snp.ROI samtools.output.indel.formatted varScan.output.snp annotation.germline.indel.unannot-ucsc merged.germline.indel.ROI merged.germline.indel.shared merged.germline.snp.ROI.tier1.out samtools.output.snp.adaptor varScan.output.snp.filter annotation.germline.snp.transcript merged.germline.indel.ROI.tier1.out merged.germline.indel.sniper-only merged.germline.snp.ROI.tier2.out varScan.output.indel varScan.output.snp.formatted annotation.germline.snp.ucsc merged.germline.indel.ROI.tier2.out merged.germline.indel.varscan-only merged.germline.snp.ROI.tier3.out varScan.output.indel.filter varScan.output.snp.variants annotation.germline.indel.transcript annotation.germline.snp.unannot-ucsc merged.germline.indel.ROI.tier3.out merged.germline.snp merged.germline.snp.ROI.tier4.out varScan.output.indel.formatted $sample_name.out $sample_name.err merged.germline.snp.ROI.tier1.out.strandfilter.readcounts merged.germline.snp.ROI.tier1.out.strandfilter_filtered merged.germline.snp.ROI.tier1.out.strandfilter GATK.output.indel GATK.output.indel.vcf GATK.output.indel.bed GATK.output.indel.formatted GATK.output.indel.adaptor merged.germline.snp.ROI.tier1.out.dbsnp merged.germline.indel.ROI.tier1.out.strandfilter merged.germline.indel.ROI.tier1.out.strandfilter.readcounts merged.germline.indel.ROI.tier1.out.strandfilter_filtered merged.germline.ROI.tier1.out.maf merged.germline.snp.ROI.strandfilter.tier1.out merged.germline.indel.ROI.strandfilter.tier1.out annotation.germline.indel.strandfilter.unannot-ucsc annotation.germline.snp.strandfilter.unannot-ucsc merged.germline.snp.ROI.strandfilter.readcounts merged.germline.snp.ROI.strandfilter merged.germline.snp.ROI.strandfilter_filtered annotation.germline.snp.strandfilter.ucsc annotation.germline.indel.strandfilter.ucsc annotation.germline.snp.strandfilter.transcript GATK.ug.output.indel.adaptor merged.germline.indel.gatk-only merged.germline.indel.ROI.strandfilter.readcounts merged.germline.indel.ROI.strandfilter_filtered merged.germline.indel.ROI.strandfilter annotation.germline.indel.strandfilter.transcript);
 				foreach my $file (@outfile_list) {
 					my $del_file = "$sample_output_dir/$file";
 					if (-e $del_file) {

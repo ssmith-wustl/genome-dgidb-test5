@@ -743,7 +743,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         push @new_models, $wuspace_model;
 
         my $wuspace_roi_list;
-        if($reference_sequence_build and $reference_sequence_build->name eq 'g1k-human-build37') {
+        if($reference_sequence_build and $reference_sequence_build->is_compatible_with($root_build37_ref_seq)) {
             $wuspace_roi_list = 'NCBI-human.combined-annotation-58_37c_cds_exon_and_rna_merged_by_gene';
         } else {
             $wuspace_roi_list = 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA';
@@ -804,7 +804,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
 	    next;
         }
 
-        my @project_names = $self->_resolve_project_names($pse);
+        my @project_names = $self->_resolve_project_and_work_order_names($pse);
         $self->add_model_to_default_modelgroups($m, @project_names);
 
         my $new_models = $self->_newly_created_models;
@@ -904,7 +904,7 @@ sub add_model_to_default_modelgroups {
     return 1;
 }
 
-sub _resolve_project_names {
+sub _resolve_project_and_work_order_names {
     my $self = shift;
     my $pse = shift;
 
@@ -913,7 +913,7 @@ sub _resolve_project_names {
         $self->warning_message('No work order found for PSE ' . $pse->id);
     }
 
-    return map($_->research_project_name, @work_orders);
+    return map(($_->setup_name, $_->research_project_name), @work_orders);
 }
 
 sub request_builds {
