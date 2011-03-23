@@ -28,8 +28,8 @@ class Genome::Model::Tools::Analysis::LaneQc::CompareSnps {
 		variant_file	=> { is => 'Text', doc => "Variant calls in SAMtools pileup-consensus format", is_optional => 1, is_input => 1 },
 		bam_file	=> { is => 'Text', doc => "Alternatively, provide a BAM file", is_optional => 1, is_input => 1 },		
 		sample_name	=> { is => 'Text', doc => "Variant calls in SAMtools pileup-consensus format", is_optional => 1, is_input => 1 },
-		min_depth_het	=> { is => 'Text', doc => "Minimum depth to compare a het call [4]", is_optional => 1, is_input => 1},
-		min_depth_hom	=> { is => 'Text', doc => "Minimum depth to compare a hom call [8]", is_optional => 1, is_input => 1},
+		min_depth_het	=> { is => 'Text', doc => "Minimum depth to compare a het call", is_optional => 1, is_input => 1, default => 8},
+		min_depth_hom	=> { is => 'Text', doc => "Minimum depth to compare a hom call", is_optional => 1, is_input => 1, default => 4},
 		verbose	=> { is => 'Text', doc => "Turns on verbose output [0]", is_optional => 1, is_input => 1},
 		flip_alleles 	=> { is => 'Text', doc => "If set to 1, try to avoid strand issues by flipping alleles to match", is_optional => 1, is_input => 1},
 		fast 	=> { is => 'Text', doc => "If set to 1, run a quick check on just chromosome 1", is_optional => 1, is_input => 1},
@@ -150,10 +150,8 @@ sub execute {                               # replace with real execution logic.
 	}
 
 	$sample_name = $self->sample_name if($self->sample_name);
-	my $min_depth_hom = 4;
-	my $min_depth_het = 8;
-	$min_depth_hom = $self->min_depth_hom if($self->min_depth_hom);
-	$min_depth_het = $self->min_depth_het if($self->min_depth_het);
+	my $min_depth_hom = $self->min_depth_hom if($self->min_depth_hom);
+	my $min_depth_het = $self->min_depth_het if($self->min_depth_het);
 	
 	if($self->output_file)
 	{
