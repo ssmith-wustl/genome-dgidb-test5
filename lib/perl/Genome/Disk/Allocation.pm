@@ -84,7 +84,11 @@ class Genome::Disk::Allocation {
         owner_exists => {
             is => 'Boolean',
             calculate_from => ['owner_class_name', 'owner_id'],
-            calculate => sub { my ($owner_class_name, $owner_id) = @_; my $owner_exists = eval { $owner_class_name->get($owner_id) }; return $owner_exists ? 1 : 0; },
+            calculate => q| 
+                my ($owner_class_name, $owner_id) = @_; 
+                my $owner_exists = eval { $owner_class_name->get($owner_id) }; 
+                return $owner_exists ? 1 : 0; 
+            |,
         }
     ],    
     table_name => 'GENOME_DISK_ALLOCATION',
@@ -299,6 +303,7 @@ sub _create {
         confess "Missing required params for allocation:\n" . join("\n", @missing_params);
     }
 
+    # Make sure there aren't any extra params
     my $id = delete $params{id};
     $id = Genome::Disk::Allocation::Type::autogenerate_new_object_id unless defined $id;
     my $kilobytes_requested = delete $params{kilobytes_requested};
@@ -774,7 +779,8 @@ sub _get_candidate_volumes {
             "$kilobytes_requested kb of unallocated space!";
     }
 
-    # Make sure that the allocation doesn't infringe on the empty buffer required for each volume
+    # Make sure that the allocation doesn't infringe on the empty buffer required for each volume. Reallocations
+    # can use up to 98% of a disk, but new allocations can only use up to 95%.
     @volumes = grep {
         my $reserve_size = ($reallocating ? $_->unusable_reserve_size : $_->unallocatable_reserve_size);
         ($_->unallocated_kb - $reserve_size) > $kilobytes_requested
@@ -783,7 +789,7 @@ sub _get_candidate_volumes {
         confess "No volumes of group $disk_group_name have enough space after excluding reserves to store $kilobytes_requested KB.";
     }
 
-    @volumes = sort { $b->unallocated_kb <=> $a->unallocated_kb } @volumes;
+    @volumes = sort { $a->unallocated_kb <=> $b->unallocated_kb } @volumes;
 
     # Only allocate to the first MAX_VOLUMES retrieved
     my $max = @volumes > $MAX_VOLUMES ? $MAX_VOLUMES : @volumes;
