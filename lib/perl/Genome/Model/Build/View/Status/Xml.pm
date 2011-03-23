@@ -416,7 +416,7 @@ sub get_inputs_node {
         my $view = $input->create_view(
             perspective => 'default',
             toolkit => 'xml',
-            aspects => [ 'name', 'value_class_name', 'value_id' ],
+            aspects => [ 'name', 'value_class_name', 'value_id', 'value' ],
             parent_view => $self,
         );
         
