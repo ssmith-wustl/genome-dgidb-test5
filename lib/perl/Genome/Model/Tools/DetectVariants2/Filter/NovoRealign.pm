@@ -60,16 +60,10 @@ class Genome::Model::Tools::DetectVariants2::Filter::NovoRealign {
             calculate => q{ return Genome::Model::Tools::Sam->path_for_samtools_version($samtools_version); },
             doc => 'path to samtools executable',
         },
-        breakdancer_version => {
-            type => 'String',
-            doc  => 'breakdancer version to use in this process',
-            default_value =>  Genome::Model::Tools::Breakdancer->default_breakdancer_version,
-            valid_values  => [Genome::Model::Tools::Breakdancer->available_breakdancer_versions],
-        },
         breakdancer_path => {
             type => 'String',
-            calculate_from => 'breakdancer_version',
-            calculate => q{ return Genome::Model::Tools::Breakdancer->breakdancer_max_command_for_version($breakdancer_version); },
+            calculate_from => 'detector_version',
+            calculate => q{ return Genome::Model::Tools::Breakdancer->breakdancer_max_command_for_version($detector_version); },
             doc => 'path to breakdancer executable',
         },
 
