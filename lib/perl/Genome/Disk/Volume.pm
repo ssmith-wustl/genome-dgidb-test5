@@ -12,10 +12,18 @@ class Genome::Disk::Volume {
         hostname => { is => 'Text' },
         physical_path => { is => 'Text' },
         mount_path => { is => 'Text' },
-        total_kb => { is => 'Number' },
-        unallocated_kb => { is => 'Number' },
         disk_status => { is => 'Text' },
         can_allocate => { is => 'Number' },
+        total_kb => { is => 'Number' },
+        total_gb => {
+            calculate_from => 'total_kb',
+            calculate => q{ return int($total_kb / (2**20)) },
+        },
+        unallocated_kb => { is => 'Number' },
+        unallocated_gb => {
+            calculate_from => 'unallocated_kb',
+            calculate => q{ return int($unallocated_kb / (2**20)) },
+        },
         allocated_kb => { 
             calculate_from => ['total_kb','unallocated_kb'],
             calculate => q{ return ($total_kb - $unallocated_kb); },
@@ -53,6 +61,18 @@ class Genome::Disk::Volume {
                 return $buffer;
             },
             doc => 'Size of reserve in kb that cannot be allocated to in any way',
+        },
+        allocatable_kb => {
+            calculate_from => ['unallocated_kb', 'unallocatable_reserve_size'],
+            calculate => q{ 
+                my $allocatable = $unallocated_kb - $unallocatable_reserve_size;
+                $allocatable = 0 if $allocatable < 0;  # Possible due to reallocation having a smaller reserve
+                return $allocatable;
+            },
+        },
+        allocatable_gb => {
+            calculate_from => 'allocatable_kb',
+            calculate => q{ return int($allocatable_kb / (2**20)) },
         },
     ],
     has_many_optional => [
