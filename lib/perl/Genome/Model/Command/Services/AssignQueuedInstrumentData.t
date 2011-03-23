@@ -16,6 +16,21 @@ use Test::More tests => 99;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
 
+my $project = Genome::Site::WUGC::Project->create(
+    setup_project_id => '-4',
+    name             => 'AQID-test-project',
+);
+
+isa_ok($project, 'Genome::Site::WUGC::Project');
+
+my $work_order = Genome::WorkOrder->create(
+    id => '-1000',
+    pipeline => 'Illumina',
+    project_id => '-4',
+);
+
+isa_ok($work_order, 'Genome::WorkOrder');
+
 my $taxon = Genome::Taxon->get( species_name => 'human' );
 my $individual = Genome::Individual->create(
     id => '-10',
@@ -38,8 +53,6 @@ my $library = Genome::Library->create(
 );
 
 isa_ok($library, 'Genome::Library');
-
-#my $sample = Genome::Sample->get(name => 'TEST-patient1-sample1');
 isa_ok($sample, 'Genome::Sample');
 
 my $ii = Test::MockObject->new();
@@ -59,6 +72,19 @@ my $instrument_data_1 = Genome::InstrumentData::Solexa->create(
     rev_clusters => 65536,
 );
 ok($instrument_data_1, 'Created an instrument data');
+
+my $work_order_item_1 = Genome::WorkOrderItem->create(
+    woi_id =>  '-1234567',
+    work_order => $work_order,
+);
+isa_ok($work_order_item_1, 'Genome::WorkOrderItem');
+
+my $sequence_product = GSC::WoiSequenceProduct->create(
+    woi_id => $work_order_item_1->woi_id,
+    seq_id => $instrument_data_1->id,
+);
+
+isa_ok($sequence_product, 'GSC::WoiSequenceProduct');
 
 my $processing_profile = Genome::ProcessingProfile::ReferenceAlignment->create(
     dna_type => 'genomic dna',
