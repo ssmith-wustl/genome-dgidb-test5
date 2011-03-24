@@ -86,7 +86,7 @@ sub execute {
         unless (-d $metagenomic_ref_hmp_dir){
             die $self->error_message("regions profile not defined and no derived directory from reference to look in!");
         }
-        $self->regions_file("$metagenomic_ref_hmp_dir/combined_refcov_regions_file.regions.txt");
+        $self->regions_file("$metagenomic_ref_hmp_dir/combined_refcov_regions_file.regions.bed");
         unless (-s $self->regions_file){
             die $self->error_message("refcov regions file doesn't exist or have size: ".$self->regions_file);
         }
@@ -122,41 +122,43 @@ sub execute {
     if (-e $refcov_output and -e "$refcov_output.ok"){
         $self->status_message("Refcov already complete, shortcutting");
     }else{
-#        my $command = "gmt5.12.1 ref-cov standard";
-#        $command .= " --alignment-file-path ".$sorted_bam;
-#        $command .= " --roi-file-path ".$self->regions_file;
-#        $command .= " --stats-file ".$refcov_output;
-#
-#        my $rv = system($command);
-#        if ($rv){
-#            die $self->error_message("refcov command died with error code $rv");
-#        }
-#        unless ( -e $refcov_output ){
-#            die $self->error_message("expected refcov output file $refcov_output does not exist");
-#        }
-#        
+        my $command = "gmt5.12.1 ref-cov standard";
+        $command .= " --alignment-file-path ".$sorted_bam;
+        $command .= " --roi-file-path ".$self->regions_file;
+        $command .= " --stats-file ".$refcov_output;
+        $command .= " --min-depth-filter 0";
+
+        my $rv = system($command);
+        if ($rv){
+            die $self->error_message("refcov command died with error code $rv");
+        }
+        unless ( -e $refcov_output ){
+            die $self->error_message("expected refcov output file $refcov_output does not exist");
+        }
+       
+#######OLD METHOD#######
 #        $self->status_message("refcov completed successfully, stats file: $refcov_output");
-
-        my $refcov = Genome::Model::Tools::MetagenomicCompositionShotgun::RefCovTool->create(
-            working_directory => $self->report_dir,
-            aligned_bam_file => $sorted_bam,
-            regions_file => $self->regions_file,
-        );
-
-        $self->status_message("Executing RefCov command ". $refcov->command_name);
-        my $rv;
-        eval{$rv=$refcov->execute};
-        if($@ or !$rv){
-            die $self->error_message("failed to execute refcov: $@");
-        }
-        unless ($refcov_output eq $refcov->report_file){
-            die $self->error_message("refcov report file and expected output path differ, dying!");
-        }
-        $refcov_output = $refcov->report_file;
-        unless (-s $refcov_output){
-            die $self->error_message("refcov output doesn't exist or has zero size: $refcov_output");
-        }
-        $self->status_message("refcov completed successfully, stats file: $refcov_output");
+#        my $refcov = Genome::Model::Tools::MetagenomicCompositionShotgun::RefCovTool->create(
+#            working_directory => $self->report_dir,
+#            aligned_bam_file => $sorted_bam,
+#            regions_file => $self->regions_file,
+#        );
+#
+#        $self->status_message("Executing RefCov command ". $refcov->command_name);
+#        my $rv;
+#        eval{$rv=$refcov->execute};
+#        if($@ or !$rv){
+#            die $self->error_message("failed to execute refcov: $@");
+#        }
+#        unless ($refcov_output eq $refcov->report_file){
+#            die $self->error_message("refcov report file and expected output path differ, dying!");
+#        }
+#        $refcov_output = $refcov->report_file;
+#        unless (-s $refcov_output){
+#            die $self->error_message("refcov output doesn't exist or has zero size: $refcov_output");
+#        }
+#        $self->status_message("refcov completed successfully, stats file: $refcov_output");
+########################        
     }
 
     $self->status_message("Combining refcov results with taxonomy reports for final summary file");

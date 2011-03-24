@@ -21,7 +21,17 @@ sub build_subclass_name {
     return 'metagenomic-16s-composition';
 }
 
+sub _additional_parts_for_default_model_name {
+    my $self = shift;
+
+    my @parts;
+    my $subject = $self->subject;
+    if ( $subject->isa('Genome::Sample') and defined $subject->tissue_desc ) {
+        push @parts, $subject->tissue_desc;
+    }
+
+    return @parts;
+}
+
 1;
 
-#$HeadURL$
-#$Id$

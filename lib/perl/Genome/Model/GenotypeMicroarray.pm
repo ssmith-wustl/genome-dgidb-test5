@@ -58,9 +58,9 @@ class Genome::Model::GenotypeMicroarray{
 
 sub sequencing_platform { return 'genotype file'; }
 
-sub default_model_name {
+sub _additional_parts_for_default_name {
     my $self = shift;
-    return $self->SUPER::default_model_name . " " . $self->reference_sequence_build->name;
+    return ( $self->processing_profile->instrument_type, $self->refseq_name );
 }
 
 1;
