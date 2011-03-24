@@ -38,7 +38,7 @@ class Genome::Model::Tools::Bmr::ClassSummary {
         doc => 'Output file containing BMR for 7 classes for this group of regions, mutations, and a wiggle file',
     },
     genes_to_exclude => {
-        type => 'Comma-delimited String',
+        type => 'Csv',
         is_optional => 1,
         doc => 'Comma-delimited list of genes to exclude in BMR calculation',
     },

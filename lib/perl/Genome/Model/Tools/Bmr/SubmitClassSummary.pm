@@ -11,7 +11,7 @@ class Genome::Model::Tools::Bmr::SubmitClassSummary {
     is => 'Genome::Command::Base',
     has_input => [
     wiggle_file_dirs => {
-        is => 'Comma-delimited String',
+        is => 'Csv',
         is_optional => 0,
         doc => 'Comma-delimited list of directories containing wiggle files',
     },
@@ -31,7 +31,7 @@ class Genome::Model::Tools::Bmr::SubmitClassSummary {
         doc => 'Directory where the submitted jobs can write their results and stdout',
     },
     genes_to_exclude => {
-        is => 'Comma-delimited String',
+        is => 'Csv',
         is_optional => 1,
         doc => 'Comma-delimited list of genes to exclude in the BMR calculation',
     },
