@@ -685,15 +685,15 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         #Also want to make a second model against a standard region of interest
         my $wuspace_model = Genome::Model->create(%model_params);
         unless ( $wuspace_model ) {
-            $self->error_message('Failed to create wuspace model: '.Dumper(\%model_params));
+            $self->error_message('Failed to create wu-space model: '.Dumper(\%model_params));
             for (@new_models) { $_->delete; }
             return;
         }
         push @new_models, $wuspace_model;
 
-        my $wuspace_name = $model->default_model_name(capture_target => $capture_target);
-        if ( not $name ) {
-            $self->error_message('Failed to get wuspace model name for params: '.Dumper(\%model_params));
+        my $wuspace_name = $model->default_model_name(capture_target => $capture_target, roi => 'wu-space');
+        if ( not $wuspace_name ) {
+            $self->error_message('Failed to get wu-space model name for params: '.Dumper(\%model_params));
             for (@new_models) { $_->delete; }
             return;
         }
