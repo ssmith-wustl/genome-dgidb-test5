@@ -67,6 +67,10 @@ class Genome::Model::Build::SomaticVariation {
             is => 'Text',
             via => 'model',
         },
+        cnv_detection_strategy => {
+            is => 'Text',
+            via => 'model',
+        },
     ],
 };
 

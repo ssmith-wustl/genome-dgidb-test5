@@ -477,18 +477,6 @@ sub resolve_data_directory {
    
         $build_data_directory = $disk_allocation->absolute_path;
         Genome::Sys->validate_existing_directory($build_data_directory);
-
-        # TODO: we should stop having model directories and making build symlinks!!!
-        if ( -w $model_data_directory ) {
-            my $build_symlink = $model_data_directory . '/build' . $self->build_id;
-            unlink $build_symlink if -e $build_symlink;
-            unless (Genome::Sys->create_symlink($build_data_directory,$build_symlink)) {
-                $self->error_message("Failed to make symlink \"$build_symlink\" with target \"$build_data_directory\"");
-                die $self->error_message;
-            }
-        } else {
-            $self->warning_message("Not creating symlink to build data directory in model data directory; model data directory is not writable.");
-        }
     }
 
     return $build_data_directory;

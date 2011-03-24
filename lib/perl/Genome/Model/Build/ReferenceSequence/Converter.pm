@@ -106,24 +106,37 @@ sub convert_bed {
         return;
     }
 
-    my $source_fh = Genome::Sys->open_file_for_reading($source_bed);
-    my $destination_fh = Genome::Sys->open_file_for_writing($destination_bed);
-
-    while(my $line = <$source_fh>) {
-        chomp $line;
-        my ($chrom, $start, $stop, @extra) = split("\t", $line);
-        my ($new_chrom, $new_start, $new_stop) = $self->convert($chrom, $start, $stop);
-        my $new_line = join("\t", $new_chrom, $new_start, $new_stop, @extra) . "\n";
-        print $destination_fh $new_line;
+    if($self->is_per_position_algorithm) {
+        my $source_fh = Genome::Sys->open_file_for_reading($source_bed);
+        my $destination_fh = Genome::Sys->open_file_for_writing($destination_bed);
+    
+        while(my $line = <$source_fh>) {
+            chomp $line;
+            my ($chrom, $start, $stop, @extra) = split("\t", $line);
+            my ($new_chrom, $new_start, $new_stop) = $self->convert_position($chrom, $start, $stop);
+            my $new_line = join("\t", $new_chrom, $new_start, $new_stop, @extra) . "\n";
+            print $destination_fh $new_line;
+        }
+    
+       $source_fh->close;
+       $destination_fh->close;
+    } else {
+        #operate on the whole BED file at once
+        my $algorithm = $self->algorithm;
+        $self->$algorithm($source_bed, $source_reference, $destination_bed, $destination_reference);
     }
-
-   $source_fh->close;
-   $destination_fh->close;
 
    return $destination_bed;
 }
 
-sub convert {
+sub is_per_position_algorithm {
+    my $self = shift;
+
+    my $algorithm = $self->algorithm;
+    return !grep($_ eq $algorithm, 'liftOver', 'no_op');
+}
+
+sub convert_position {
     my $self = shift;
     my ($chrom, $start, $stop) = @_;
 
@@ -177,16 +190,32 @@ sub prepend_chr {
 
 sub lift_over {
     my $self = shift;
-    my ($chrom, $start, $stop) = @_;
+    my ($source_bed, $source_reference, $destination_bed, $destination_reference) = @_;
 
-    die('liftOver support not implemented');
+    my $chain_file = $self->resource;
+    unless($chain_file and -s $chain_file) {
+        $self->error_message('No chain file resource found for liftOver.');
+        die $self->error_message;
+    }
+    my $lift_over_cmd = Genome::Model::Tools::LiftOver->create(
+        source_file => $source_bed,
+        chain_file => $chain_file,
+        destination_file => $destination_bed,
+    );
+    unless($lift_over_cmd->execute()) {
+        die $self->error_message('LiftOver failed: ' . $lift_over_cmd->error_message);
+    }
+
+    return $destination_bed;
 }
 
 sub no_op {
     my $self = shift;
+    my ($source_bed, $source_reference, $destination_bed, $destination_reference) = @_;
 
     #possibly useful for recording that two reference sequences are completely equivalent except in name
-    return @_;
+    Genome::Sys->copy_file($source_bed, $destination_bed);
+    return $destination_bed;
 }
 
 1;

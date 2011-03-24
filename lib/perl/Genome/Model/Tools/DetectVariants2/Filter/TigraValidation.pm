@@ -69,7 +69,8 @@ class Genome::Model::Tools::DetectVariants2::Filter::TigraValidation {
         # TODO Need to point to a specific version of tigra that's not in a home dir
         tigra_path => {
             is => 'FilePath',
-            default => '/gscuser/xfan/kdevelop/TIGRA_SV/src/tigra_sv',
+            #default => '/gscuser/xfan/kdevelop/TIGRA_SV/src/tigra_sv',
+            default => '/gsc/bin/tigra_sv',
         },
         sv_merge_path => {
             is => 'FilePath',
@@ -291,6 +292,7 @@ my %CROSSMATCH_FLAGS_LIST = (
 
 sub _create_temp_directories {
     my $self = shift;
+    local %ENV = %ENV;
     $ENV{TMPDIR} = $self->output_directory;
     return $self->SUPER::_create_temp_directories(@_);
 }
