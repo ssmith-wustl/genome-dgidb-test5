@@ -447,12 +447,15 @@ sub default_model_name {
     $name_template .= ( exists $short_names{$type_name} )
     ? $short_names{$type_name}
     : join('_', split(/\s+/, $type_name));
-    $name_template .= '.capture.'.$params{capture_target}.'.' if defined $params{capture_target};
-    $name_template .= '.'.$params{roi}.'.' if defined $params{roi};
+
     $name_template .= '%s%s';
 
-    my @name_parts = eval{ $self->_additional_parts_for_default_name; };
-    $name_template .= join('.', '', @name_parts);
+    my @parts;
+    push @parts, 'capture', $params{capture_target} if defined $params{capture_target};
+    push @parts, $params{roi} if defined $params{roi};
+    my @additional_parts = eval{ $self->_additional_parts_for_default_name; };
+    push @parts, @additional_parts if @additional_parts;
+    $name_template .= '.'.join('.', @parts) if @parts;
 
     my $name = Genome::Utility::Text::sanitize_string_for_filesystem( sprintf($name_template, '', '') );
     my $cnt = 0;
