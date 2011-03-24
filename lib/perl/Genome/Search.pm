@@ -56,6 +56,11 @@ class Genome::Search {
     ],
 };
 
+sub snapshot {
+    my $g = $INC{'Genome.pm'};
+    return $g;
+}
+
 #What classes are searchable is actually determined automatically by the existence of the relevant views.
 #This just lists the order by which the results are typically sorted.
 sub searchable_classes {

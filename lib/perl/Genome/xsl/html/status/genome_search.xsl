@@ -67,7 +67,7 @@
 
     <xsl:call-template name="footer">
       <xsl:with-param name="footer_text">
-        <br/>
+        <xsl:value-of select="/object/aspect[@name='snapshot']/value"/><br/>
       </xsl:with-param>
     </xsl:call-template>
 
