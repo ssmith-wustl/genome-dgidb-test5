@@ -56,10 +56,18 @@ class Genome::Search {
     ],
 };
 
-sub snapshot {
-    my $g = $INC{'Genome.pm'};
-    return $g;
+sub genome_path {
+    return $INC{'Genome.pm'};
 }
+
+sub ur_path {
+    return $INC{'UR.pm'};
+}
+
+sub workflow_path {
+    return $INC{'Workflow.pm'};
+}
+
 
 #What classes are searchable is actually determined automatically by the existence of the relevant views.
 #This just lists the order by which the results are typically sorted.
