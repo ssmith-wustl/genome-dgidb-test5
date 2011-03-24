@@ -10,7 +10,7 @@ class Genome::Search::View::Status::Xml {
         perspective => 'status',
         toolkit => 'xml',
         default_aspects => {
-            value => []
+            value => ['genome_path', 'ur_path', 'workflow_path']
         }
     ]
 };
