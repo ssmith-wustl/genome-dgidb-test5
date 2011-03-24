@@ -4,8 +4,11 @@ use strict;
 use warnings;
 
 use GSCApp;
-App::DB->db_access_level('rw');
-App->init;
+
+if ( not App::Init->initialized ) {
+    App::DB->db_access_level('rw');
+    App->init;
+}
 
 use Genome;
 

@@ -193,7 +193,7 @@ sub run_genotype_qc
 	my $cmd = "gmt analysis lane-qc compare-snps --genotype $genotype_file --variant $snp_file --output-file $output_file";
 #	print "RUN: $cmd\n";
 	
-	system("bsub -q tcga -R\"select[model != Opteron250 && mem>1000] rusage[mem=1000]\" \"$cmd\"");
+	system("bsub -q short -R\"select[model != Opteron250 && mem>1000] rusage[mem=1000]\" \"$cmd\"");
 }
 
 

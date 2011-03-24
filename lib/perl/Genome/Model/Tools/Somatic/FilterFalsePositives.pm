@@ -656,7 +656,7 @@ sub wgs_filter {
 sub readcount_program {
     my $self = shift;
     my $reference = $self->reference;
-    return "/usr/bin/bam-readcount0.3 -f $reference";
+    return "/gscuser/dlarson/src/bamsey/readcount/trunk/bam-readcount-test3 -f $reference";
 }
 
 
