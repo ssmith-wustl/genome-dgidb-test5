@@ -6,11 +6,15 @@
   <xsl:template name="genome_model_set_coverage" match="object[@type='Genome::Model::Set'] | object[@type='Genome::ModelGroup']">
     <xsl:comment>template: /html/coverage/genome_model.xsl match="object[@type='Genome::Model::Set'] | object[@type='Genome::ModelGroup']"</xsl:comment>
 
+    <link rel="stylesheet" href="/res/js/pkg/TableTools/media/css/TableTools.css" media="screen"/>
+
     <script type="text/javascript" src="/res/js/pkg/protovis.js"></script>
     <script type="text/javascript" src="/res/js/pkg/dataTables/media/js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" src="/res/js/pkg/TableTools/media/js/TableTools.min.js"></script>
 
     <script type="text/javascript" src="/res/js/app/genome_model_alignment_chart.js"></script>
     <script type="text/javascript" src="/res/js/app/genome_model_coverage_chart.js"></script>
+    <script type="text/javascript" src="/res/js/app/genome_model_coverage_tables.js"></script>
     <script type="text/javascript" src="/res/js/app/genome_model_enrichment_chart.js"></script>
     <script type="text/javascript" src="/res/js/app/datatable_sort_extensions/percent.js"></script>
     <script type="text/javascript" src="/res/js/app/datatable_sort_extensions/formatted-num.js"></script>
@@ -217,21 +221,6 @@
           <div class="box_title"><h3 class="nontyped span-24 last">alignment</h3></div>
         </div>
         <div class="box_content rounded-bottom span-24 last">
-          <script type="text/javascript">
-            $(document).ready(function() {
-                $('#alignment-lister').dataTable( {
-                    "sPaginationType": "full_numbers",
-                    "aoColumns": [  null, 
-                                    {"sType": "formatted-num"},
-                                    {"sType": "formatted-num"},
-                                    {"sType": "formatted-num"},
-                                    {"sType": "formatted-num"},
-                                    {"sType": "formatted-num"},
-                                 ]
-                    });
-
-            }); 
-          </script>
 
           <table class="lister datatable" width="100%" cellspacing="0" cellpadding="0" border="0" id="alignment-lister">
             <thead>
@@ -277,22 +266,6 @@
           <div class="box_title"><h3 class="nontyped span-24 last">coverage depth</h3></div>
         </div>
         <div class="box_content rounded-bottom span-24 last">
-
-          <script type="text/javascript">
-            $(document).ready(function() {
-                $('#coverage-depth-lister').dataTable( {
-                    "sPaginationType": "full_numbers",
-                    "aoColumns": [  null, 
-                                    {"sType": "percent"},
-                                    {"sType": "percent"},
-                                    {"sType": "percent"},
-                                    {"sType": "percent"},
-                                    {"sType": "percent"},
-                                 ]
-                    });
-
-            }); 
-          </script>
           <table class="lister datatable" width="100%" cellspacing="0" cellpadding="0" border="0" id="coverage-depth-lister">
             <thead>
               <tr>
@@ -329,22 +302,6 @@
           <div class="box_title"><h3 class="nontyped span-24 last">coverage breadth (&gt;= 80%)</h3></div>
         </div>
         <div class="box_content rounded-bottom span-24 last">
-
-          <script type="text/javascript">
-            $(document).ready(function() {
-                $('#coverage-summary-lister').dataTable( {
-                    "sPaginationType": "full_numbers",
-                    "aoColumns": [  null, 
-                                    {"sType": "percent"},
-                                    {"sType": "percent"},
-                                    {"sType": "percent"},
-                                    {"sType": "percent"},
-                                    {"sType": "percent"},
-                                 ]
-                    });
-            });
-          </script>
-
           <table class="lister datatable" width="100%" cellspacing="0" cellpadding="0" border="0" id="coverage-summary-lister">
             <thead>
               <tr>
@@ -382,19 +339,6 @@
           <div class="box_title"><h3 class="nontyped span-24 last">enrichment factor</h3></div>
         </div>
         <div class="box_content rounded-bottom span-24 last">
-
-          <script type="text/javascript">
-            $(document).ready(function() {
-                $('#enrichment-factor-lister').dataTable( {
-                    "sPaginationType": "full_numbers",
-                    "aoColumns": [  null, 
-                                    {"sType": "formatted-num"},
-                                    {"sType": "formatted-num"},
-                                    {"sType": "formatted-num"},
-                                 ]
-                    });
-            });
-          </script>
           <table class="lister datatable" width="100%" cellspacing="0" cellpadding="0" border="0" id="enrichment-factor-lister">
             <thead>
               <tr>
