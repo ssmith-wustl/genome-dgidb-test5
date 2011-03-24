@@ -7,12 +7,22 @@
     <xsl:comment>template: /html/coverage/genome_model.xsl match="object[@type='Genome::Model::Set'] | object[@type='Genome::ModelGroup']"</xsl:comment>
 
     <script type="text/javascript" src="/res/js/pkg/protovis.js"></script>
+    <script type="text/javascript" src="/res/js/pkg/dataTables/media/js/jquery.dataTables.min.js"></script>
 
     <script type="text/javascript" src="/res/js/app/genome_model_alignment_chart.js"></script>
     <script type="text/javascript" src="/res/js/app/genome_model_coverage_chart.js"></script>
     <script type="text/javascript" src="/res/js/app/genome_model_enrichment_chart.js"></script>
 
     <script type="text/javascript">
+
+      // do some data table initialization for things further down on the page
+      $(document).ready(function() {
+        $('#alignment_table').dataTable();
+        $('#coverage_depth_table').dataTable();
+        $('#coverage_breadth_table').dataTable();
+        $('#enrichment_factor_table').dataTable();
+      } );
+
       window.aSummary = [
       <xsl:for-each select="//alignment-summary/model/wingspan[@size='0']">
         <xsl:sort data-type="text" order="ascending" select="../@subject_name"/>
@@ -214,7 +224,7 @@
         </div>
         <div class="box_content rounded-bottom span-24 last">
 
-          <table class="lister" width="100%" cellspacing="0" cellpadding="0" border="0">
+          <table class="lister" width="100%" cellspacing="0" cellpadding="0" border="0" id="alignment_table">
             <thead>
               <tr>
                 <th>model</th>
@@ -259,7 +269,7 @@
         </div>
         <div class="box_content rounded-bottom span-24 last">
 
-          <table class="lister" width="100%" cellspacing="0" cellpadding="0" border="0">
+          <table class="lister" width="100%" cellspacing="0" cellpadding="0" border="0" id="coverage_depth_table">
             <thead>
               <tr>
                 <th>model</th>
@@ -296,7 +306,7 @@
         </div>
         <div class="box_content rounded-bottom span-24 last">
 
-          <table class="lister" width="100%" cellspacing="0" cellpadding="0" border="0">
+          <table class="lister" width="100%" cellspacing="0" cellpadding="0" border="0" id="coverage_breadth_table">
             <thead>
               <tr>
                 <th>model</th>
@@ -334,7 +344,7 @@
         </div>
         <div class="box_content rounded-bottom span-24 last">
 
-          <table class="lister" width="100%" cellspacing="0" cellpadding="0" border="0">
+          <table class="lister" width="100%" cellspacing="0" cellpadding="0" border="0" id="enrichment_factor_table">
             <thead>
               <tr>
                 <th>model</th>
