@@ -19,17 +19,17 @@ sub properties_hash {
             doc => "Version to use: " . join(', ', __PACKAGE__->versions)
         },
         forcelevel  => {
-            type => 'int non_neg',
+            type => 'Integer',
             default => 1,
             doc => 'Relaxes stringency to varying degree during final contig merge pass.  Allowed values are integers from 0 (most stringent, to 10 (least stringent). (1)',
         },
         minmatch  => {
-            type => 'int non_neg',
+            type => 'Integer',
             default => 17,
             doc => 'Minimum length of matching word to nucleate SWAT comparison. if minmatch = 0, a full (non-banded, comparison is done [N.B. NOT PERMITTED IN CURRENT VERSION]. Increasing -minmatch can dramatically decrease the time required for the pairwise sequence comparisons; in phrap, it also tends to have the effect of increasing assembly stringency. However it may cause some significant matches to be missed, and it may increase the risk of incorrect joins in phrap in certain situations (by causing implied overlaps between reads with high-quality discrepancies to be missed). (17)',
         },
         minscore  => {
-            type => 'int non_neg',
+            type => 'Integer',
             default => 30,
             doc => 'Minimum alignment score. (30)',
         },

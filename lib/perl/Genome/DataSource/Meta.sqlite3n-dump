@@ -184,7 +184,9 @@ INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG'
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_INPUT','MODEL_ID',1);
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_INPUT','VALUE_CLASS_NAME',2);
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_INPUT','VALUE_ID',3);
-INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','MISC_NOTE','ID',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','MISC_NOTE','SUBJECT_CLASS_NAME',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','MISC_NOTE','SUBJECT_ID',2);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','MISC_NOTE','HEADER_TEXT',3);
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_INPUT','BUILD_ID',1);
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_INPUT','VALUE_CLASS_NAME',2);
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_INPUT','VALUE_ID',3);
@@ -450,7 +452,6 @@ INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_VARIANT','AMINO_ACID_CHANGE','VARCHAR2','255','Y','2009-09-16 16:45:23',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_VARIANT','STRAND','VARCHAR2','255','Y','2009-09-16 16:45:23',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_VARIANTVALIDATION','VALIDATION_RESULT','VARCHAR2','10','N','2009-09-16 16:45:20',NULL);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','MISC_NOTE','ID','NUMBER','10','N','2009-10-02 11:07:30',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_BUILD_INPUT','VALUE_ID','VARCHAR2','1000','N','2009-10-02 11:07:22',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_INPUT','MODEL_ID','NUMBER','11','N','2009-10-02 11:04:47',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','MISC_NOTE','SUBJECT_CLASS_NAME','VARCHAR2','255','N','2009-10-02 11:07:30',NULL);

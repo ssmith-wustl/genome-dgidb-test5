@@ -6,10 +6,7 @@ use warnings;
 use Genome;
 use File::Basename;
 
-
-#declare a default version here
-##########################################
-my $DEFAULT = '1.0.1388';
+my $DEFAULT = '1.1.0021';
 
 class Genome::Model::Tools::Mosaik {
     is => 'Command',
@@ -33,15 +30,16 @@ EOS
 
 sub help_detail {                           
     return <<EOS 
+More information about Mosaik can be found at http://bioinformatics.bc.edu/marthlab/Mosaik
 EOS
 }
 
 
 my %MOSAIK_VERSIONS = (
-	'1.0.1388' => '/gscmnt/sata820/info/medseq/alignment-test/mosaik_x64/bin/Mosaik',
+    '1.0.1388' => '/gsc/pkg/bio/mosaik/Mosaik-1.0.1388/mosaik_x64/bin/Mosaik',
+    '1.1.0021' => '/gsc/pkg/bio/mosaik/mosaik-1.1.0021/bin/Mosaik',
     'mosaik'   => 'Mosaik',
 );
-
 
 sub mosaik_path {
     my $self = $_[0];
@@ -67,7 +65,6 @@ sub default_mosaik_version {
     die "default samtools version: $DEFAULT is not valid" unless $MOSAIK_VERSIONS{$DEFAULT};
     return $DEFAULT;
 }
-        
 
 1;
 
