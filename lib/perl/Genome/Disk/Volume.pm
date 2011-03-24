@@ -34,15 +34,14 @@ class Genome::Disk::Volume {
         },
         used_kb => {
             calculate_from => ['mount_path'],
-            calculate => sub { 
-                my $mount_path = shift; 
+            calculate => q{ 
                 my ($used_kb) = qx(df -k $mount_path | grep $mount_path | awk '{print \$3}') =~ /(\d+)/; 
                 return $used_kb
             },
         },
         percent_used => {
             calculate_from => ['total_kb', 'used_kb'],
-            calculate => sub { my ($total_kb, $used_kb) = @_; return sprintf("%.2f", ( $used_kb / $total_kb ) * 100); },
+            calculate => q{ return sprintf("%.2f", ( $used_kb / $total_kb ) * 100); },
         },
         unallocatable_reserve_size => {
             calculate_from => ['total_kb', 'unallocatable_volume_percent', 'maximum_reserve_size'],

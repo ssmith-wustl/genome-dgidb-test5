@@ -85,7 +85,6 @@ class Genome::Disk::Allocation {
             is => 'Boolean',
             calculate_from => ['owner_class_name', 'owner_id'],
             calculate => q| 
-                my ($owner_class_name, $owner_id) = @_; 
                 my $owner_exists = eval { $owner_class_name->get($owner_id) }; 
                 return $owner_exists ? 1 : 0; 
             |,
