@@ -220,6 +220,7 @@
           <script type="text/javascript">
             $(document).ready(function() {
                 $('#alignment-lister').dataTable( {
+                    "sPaginationType": "full_numbers",
                     "aoColumns": [  null, 
                                     {"sType": "formatted-num"},
                                     {"sType": "formatted-num"},
@@ -280,6 +281,7 @@
           <script type="text/javascript">
             $(document).ready(function() {
                 $('#coverage-depth-lister').dataTable( {
+                    "sPaginationType": "full_numbers",
                     "aoColumns": [  null, 
                                     {"sType": "percent"},
                                     {"sType": "percent"},
@@ -331,6 +333,7 @@
           <script type="text/javascript">
             $(document).ready(function() {
                 $('#coverage-summary-lister').dataTable( {
+                    "sPaginationType": "full_numbers",
                     "aoColumns": [  null, 
                                     {"sType": "percent"},
                                     {"sType": "percent"},
@@ -383,6 +386,7 @@
           <script type="text/javascript">
             $(document).ready(function() {
                 $('#enrichment-factor-lister').dataTable( {
+                    "sPaginationType": "full_numbers",
                     "aoColumns": [  null, 
                                     {"sType": "formatted-num"},
                                     {"sType": "formatted-num"},
