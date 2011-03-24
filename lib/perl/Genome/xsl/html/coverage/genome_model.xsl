@@ -12,16 +12,10 @@
     <script type="text/javascript" src="/res/js/app/genome_model_alignment_chart.js"></script>
     <script type="text/javascript" src="/res/js/app/genome_model_coverage_chart.js"></script>
     <script type="text/javascript" src="/res/js/app/genome_model_enrichment_chart.js"></script>
+    <script type="text/javascript" src="/res/js/app/datatable_sort_extensions/percent.js"></script>
+    <script type="text/javascript" src="/res/js/app/datatable_sort_extensions/formatted-num.js"></script>
 
     <script type="text/javascript">
-
-      // do some data table initialization for things further down on the page
-      $(document).ready(function() {
-        $('#alignment_table').dataTable();
-        $('#coverage_depth_table').dataTable();
-        $('#coverage_breadth_table').dataTable();
-        $('#enrichment_factor_table').dataTable();
-      } );
 
       window.aSummary = [
       <xsl:for-each select="//alignment-summary/model/wingspan[@size='0']">
@@ -223,8 +217,22 @@
           <div class="box_title"><h3 class="nontyped span-24 last">alignment</h3></div>
         </div>
         <div class="box_content rounded-bottom span-24 last">
+          <script type="text/javascript">
+            $(document).ready(function() {
+                $('#alignment-lister').dataTable( {
+                    "aoColumns": [  null, 
+                                    {"sType": "formatted-num"},
+                                    {"sType": "formatted-num"},
+                                    {"sType": "formatted-num"},
+                                    {"sType": "formatted-num"},
+                                    {"sType": "formatted-num"},
+                                 ]
+                    });
 
-          <table class="lister" width="100%" cellspacing="0" cellpadding="0" border="0" id="alignment_table">
+            }); 
+          </script>
+
+          <table class="lister datatable" width="100%" cellspacing="0" cellpadding="0" border="0" id="alignment-lister">
             <thead>
               <tr>
                 <th>model</th>
@@ -269,7 +277,21 @@
         </div>
         <div class="box_content rounded-bottom span-24 last">
 
-          <table class="lister" width="100%" cellspacing="0" cellpadding="0" border="0" id="coverage_depth_table">
+          <script type="text/javascript">
+            $(document).ready(function() {
+                $('#coverage-depth-lister').dataTable( {
+                    "aoColumns": [  null, 
+                                    {"sType": "percent"},
+                                    {"sType": "percent"},
+                                    {"sType": "percent"},
+                                    {"sType": "percent"},
+                                    {"sType": "percent"},
+                                 ]
+                    });
+
+            }); 
+          </script>
+          <table class="lister datatable" width="100%" cellspacing="0" cellpadding="0" border="0" id="coverage-depth-lister">
             <thead>
               <tr>
                 <th>model</th>
@@ -306,7 +328,21 @@
         </div>
         <div class="box_content rounded-bottom span-24 last">
 
-          <table class="lister" width="100%" cellspacing="0" cellpadding="0" border="0" id="coverage_breadth_table">
+          <script type="text/javascript">
+            $(document).ready(function() {
+                $('#coverage-summary-lister').dataTable( {
+                    "aoColumns": [  null, 
+                                    {"sType": "percent"},
+                                    {"sType": "percent"},
+                                    {"sType": "percent"},
+                                    {"sType": "percent"},
+                                    {"sType": "percent"},
+                                 ]
+                    });
+            });
+          </script>
+
+          <table class="lister datatable" width="100%" cellspacing="0" cellpadding="0" border="0" id="coverage-summary-lister">
             <thead>
               <tr>
                 <th>model</th>
@@ -344,7 +380,18 @@
         </div>
         <div class="box_content rounded-bottom span-24 last">
 
-          <table class="lister" width="100%" cellspacing="0" cellpadding="0" border="0" id="enrichment_factor_table">
+          <script type="text/javascript">
+            $(document).ready(function() {
+                $('#enrichment-factor-lister').dataTable( {
+                    "aoColumns": [  null, 
+                                    {"sType": "formatted-num"},
+                                    {"sType": "formatted-num"},
+                                    {"sType": "formatted-num"},
+                                 ]
+                    });
+            });
+          </script>
+          <table class="lister datatable" width="100%" cellspacing="0" cellpadding="0" border="0" id="enrichment-factor-lister">
             <thead>
               <tr>
                 <th>model</th>
