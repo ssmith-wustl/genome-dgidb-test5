@@ -22,7 +22,7 @@ class Genome::Model::Tools::Bmr::CompareWiggles {
         doc => 'BED file used to limit background regions of interest when calculating background mutation rate',
     },
     wiggle_file_list => {
-        type => 'Comma-delimited String',
+        type => 'Csv',
         is_optional => 0,
         doc => 'Wiggle files detailing genome-wide coverage of each sample in dataset, separated by commas',
     },

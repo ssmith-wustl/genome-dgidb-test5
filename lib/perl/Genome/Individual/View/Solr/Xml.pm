@@ -46,7 +46,7 @@ class Genome::Individual::View::Solr::Xml {
             is  => 'Text',
         },
         default_aspects => {
-            is => 'ARRAY,',
+            is => 'ARRAY',
             default => [
                 {
                     name => 'common_name',

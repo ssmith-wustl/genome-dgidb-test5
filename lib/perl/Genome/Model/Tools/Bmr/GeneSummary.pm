@@ -28,7 +28,7 @@ class Genome::Model::Tools::Bmr::GeneSummary {
         doc => 'List of mutations used to calculate background mutation rate',
     },
     wiggle_file_dirs => {
-        type => 'Comma-delimited String',
+        type => 'Csv',
         is_optional => 0,
         doc => 'directories containing wiggle files detailing genome-wide coverage of each sample in dataset (comma-delimited)',
     },
