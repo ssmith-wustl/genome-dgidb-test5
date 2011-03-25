@@ -1054,7 +1054,7 @@ sub _resolve_project_and_work_order_names {
         $self->warning_message('No work order found for PSE ' . $pse->id);
     }
 
-    return map(($_->setup_name, $_->research_project_name), @work_orders);
+    return map(($_->name, $_->project_name), @work_orders);
 }
 
 sub _resolve_pooled_sample_name_for_instrument_data {
@@ -1220,7 +1220,7 @@ sub add_processing_profiles_to_pses{
                 for my $name (qw/ NCBI-human-build36 GRCh37-lite-build37/) {
                     my $imported_reference_sequence = Genome::Model::Build::ImportedReferenceSequence->get_by_name($name);
                     Carp::confess("No imported reference sequence build for $name") if not $imported_reference_sequence;
-                    $self->add_reference_sequence_build_param_for_processing_profile($pp, $imported_reference_sequence);
+                    $pse->add_reference_sequence_build_param_for_processing_profile($pp, $imported_reference_sequence);
                 }
             }
             elsif ($instrument_data_type =~ /solexa/i) {
@@ -1275,7 +1275,7 @@ PP:         for my $pp_id (@processing_profile_ids_to_add) {
                         }
                     }
                 }
-                $self->add_param("processing_profile_id", $pp->id);
+                $pse->add_param("processing_profile_id", $pp->id);
             }
 
             for my $pp_id (keys %reference_sequence_names_for_processing_profile_ids) {
@@ -1283,7 +1283,7 @@ PP:         for my $pp_id (@processing_profile_ids_to_add) {
 
                 my $pp = Genome::ProcessingProfile->get($pp_id);
                 my $imported_reference_sequence = Genome::Model::Build::ImportedReferenceSequence->get_by_name($imported_reference_sequence_name);
-                $self->add_reference_sequence_build_param_for_processing_profile($pp, $imported_reference_sequence);
+                $pse->add_reference_sequence_build_param_for_processing_profile($pp, $imported_reference_sequence);
             }        
         };
         if($@){
@@ -1431,7 +1431,6 @@ sub _is_st_jude {
     my $self = shift;
     my $pse = shift;
 
-    $DB::single = 1; #TODO: remove me
     my @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
 
     unless (@work_orders > 0) {

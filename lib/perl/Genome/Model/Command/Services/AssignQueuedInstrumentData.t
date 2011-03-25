@@ -139,6 +139,15 @@ $pse_2->add_param('subject_id', $sample->id);
 $pse_2->add_param('processing_profile_id', $processing_profile->id);
 $pse_2->add_reference_sequence_build_param_for_processing_profile( $processing_profile, $ref_seq_build);
 
+no warnings;
+sub GSC::PSE::QueueInstrumentDataForGenomeModeling::get_inherited_assigned_directed_setups_filter_on {
+    # return [$work_order];
+    my @a;
+    push @a, $work_order;
+    return @a;
+}
+use warnings;
+
 my $command_1 = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
     test => 1,
 );
@@ -154,8 +163,8 @@ $ii->mock('get_copy_sequence_files_pse', sub { $copy_sequence_pse });
 ok($command_1->execute(), 'assign-queued-instrument-data executed successfully.');
 
 my $new_models = $command_1->_newly_created_models;
-is(scalar(keys %$new_models), 2, 'the cron created two models');
-is_deeply([sort map { $_->name } values %$new_models], [sort qw/ unknown-run.unknown-subset.prod-qc AQID-test-sample.prod-refalign /], 'the cron named the new models correctly');
+is(scalar(keys %$new_models), 3, 'the cron created three models');
+is_deeply([sort map { $_->name } values %$new_models], [sort qw/ unknown-run.unknown-subset.prod-qc AQID-test-sample.prod-refalign AQID-test-sample.prof-refalign_auto1/], 'the cron named the new models correctly');
 
 my $models_changed = $command_1->_existing_models_assigned_to;
 is(scalar(keys %$models_changed), 0, 'the cron did no work for the second PSE, since the first assigns all on creation');
