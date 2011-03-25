@@ -32,7 +32,7 @@ class Genome::Model::Tools::Bmr::SubmitGeneSummary
         doc => 'Directory where the submitted jobs can write their results and stdout',
     },
     wiggle_file_dirs => {
-        type => 'Comma-delimited String',
+        type => 'Csv',
         is_optional => 0,
         doc => 'Directories containing wiggle files for each sample (comma-delimited)',
     },

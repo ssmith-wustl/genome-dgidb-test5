@@ -29,6 +29,11 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
             is_output => 1,
             doc => 'High Quality SV output file',
         },
+        _cnv_hq_output_file => {
+            is => 'String',
+            is_output => 1,
+            doc => 'High Quality CNV output file',
+        },
         snv_detection_strategy => {
             is => "Genome::Model::Tools::DetectVariants2::Strategy",
             doc => 'The variant detector strategy to use for finding SNVs',
@@ -41,12 +46,16 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
             is => "Genome::Model::Tools::DetectVariants2::Strategy",
             doc => 'The variant detector strategy to use for finding SVs',
         },
+        cnv_detection_strategy => {
+            is => "Genome::Model::Tools::DetectVariants2::Strategy",
+            doc => 'The variant detector strategy to use for finding copy number variation',
+        },
 
     ],
     has_constant => [
         variant_types => {
             is => 'ARRAY',
-            value => [('snv', 'indel', 'sv')],
+            value => [('snv', 'indel', 'sv', 'cnv')],
         },
     ],
     has_transient_optional => [
@@ -126,8 +135,8 @@ sub plan {
 sub _detect_variants {
     my $self = shift;
 
-    unless ($self->snv_detection_strategy || $self->indel_detection_strategy || $self->sv_detection_strategy) {
-        $self->error_message("Please provide one or more of: snv_detection_strategy, indel_detection_strategy, or sv_detection_strategy");
+    unless ($self->snv_detection_strategy || $self->indel_detection_strategy || $self->sv_detection_strategy || $self->cnv_detection_strategy) {
+        $self->error_message("Please provide one or more of: snv_detection_strategy, indel_detection_strategy, sv_detection_strategy, or cnv_detection_strategy");
         die $self->error_message;
     }
 
@@ -337,6 +346,7 @@ sub generate_workflow {
     push @output_properties, 'snv_output_directory' if defined ($self->snv_detection_strategy);
     push @output_properties, 'sv_output_directory' if defined ($self->sv_detection_strategy);
     push @output_properties, 'indel_output_directory' if defined ($self->indel_detection_strategy);
+    push @output_properties, 'cnv_output_directory' if defined ($self->cnv_detection_strategy);
 
     my $workflow_model = Workflow::Model->create(
         name => 'Somatic Variation Pipeline',
@@ -808,7 +818,7 @@ sub set_output_files {
             }
             my $hq_output_dir = $self->output_directory."/".$relative_path; #FIXME complications arise here when we have just a single column file... or other stuff. May just need to drop the version, too?
             my $hq_file;
-            if ($variant_type eq 'sv'){
+            if ($variant_type eq 'sv' || $variant_type eq 'cnv'){
                 $hq_file = $variant_type."s.hq";
             }else{
                 $hq_file = $variant_type."s.hq.bed";

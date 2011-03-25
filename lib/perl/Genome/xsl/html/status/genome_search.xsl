@@ -39,8 +39,7 @@
           <br/>
         </div>
         <hr class="space"/>
-<h2><font color="red">** This search engine is currently under maintenance **</font></h2>
-Records may be missing for the first half of today (Monday).
+
         <div class="main_search_hints clearfix">
           <div class="box_header span-8 last rounded-top">
             <div class="box_title"><h3 class="nontyped last">Can't find what you're looking for?</h3></div>
@@ -71,6 +70,12 @@ Records may be missing for the first half of today (Monday).
         <br/>
       </xsl:with-param>
     </xsl:call-template>
+
+    <div class="">
+        <xsl:value-of select="/object/aspect[@name='genome_path']/value"/><br/>
+        <xsl:value-of select="/object/aspect[@name='ur_path']/value"/><br/>
+        <xsl:value-of select="/object/aspect[@name='workflow_path']/value"/>
+    </div>
 
   </xsl:template>
 

@@ -15,7 +15,7 @@ class Genome::Model::Tools::Cmds::CreateMappedSnpArrayFile {
             doc => 'map.csv file giving coordinates of log2 snp array data'
         },
         snp_array_files => {
-            type => 'Single-quoted String',
+            type => 'String',
             is_optional => 0,
             doc => "A single-quoted string describing the input snp array data files, such as '/dir/*.log2' or '/dir/BRC*'.",
         },

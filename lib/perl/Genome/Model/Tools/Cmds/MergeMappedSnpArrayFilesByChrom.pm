@@ -11,7 +11,7 @@ class Genome::Model::Tools::Cmds::MergeMappedSnpArrayFilesByChrom {
     is => 'Command',
     has => [
         mapped_snp_array_files => {
-            type => 'Single-quoted String',
+            type => 'String',
             is_optional => 0,
             is_input => 1,
             doc => "A single-quoted string describing the list of snp array files with format [Chr \t Pos \t Sample_data], such as '/dir/*.merged'.  There may be more than one sample-data column in this file (see gmt cmds create-mapped-snp-array-file)."

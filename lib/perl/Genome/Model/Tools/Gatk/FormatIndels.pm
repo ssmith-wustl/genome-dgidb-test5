@@ -35,8 +35,8 @@ sub help_brief {                            # keep this to just a few words <---
 
 sub help_synopsis {
     return <<EOS
-This command formats indels for the annotation pipeline
-EXAMPLE:	gmt analysis somatic-pipeline format-indels-for-annotation --variants-file [file] --output-file [file]
+This command formats GATK indels for the annotation pipeline
+EXAMPLE:	gmt gatk format-indel-bed --variants-file GATK.out --output-file GATK.out.formatted
 EOS
 }
 

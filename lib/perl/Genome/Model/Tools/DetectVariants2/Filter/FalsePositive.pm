@@ -153,6 +153,7 @@ sub _filter_variants {
     my $max_readlen_diff = $self->max_readlen_diff;
     my $min_var_dist_3 = $self->min_var_dist_3;
     my $max_var_mm_qualsum = $self->max_var_mm_qualsum if($self->max_var_mm_qualsum);
+    
 
     ## Reset counters ##
 
@@ -194,7 +195,6 @@ sub _filter_variants {
     close($input);
 
     $readcount_file = $self->_temp_staging_directory . "/readcounts";
-
     my $cmd = $self->readcount_program() . " -b 15 " . $self->aligned_reads_input . " -l $temp_path";
     Genome::Sys->shellcmd(
         cmd => "$cmd > $readcount_file 2> /dev/null",
@@ -202,7 +202,6 @@ sub _filter_variants {
         output_files => [$readcount_file],
     );
     $self->status_message('Done running BAM Readcounts.');
-
     my $readcount_fh = Genome::Sys->open_file_for_reading($readcount_file);
 
     ## Open the filtered output file ##
@@ -214,193 +213,191 @@ sub _filter_variants {
 
     ## Parse the variants file ##
     my $lineCounter = 0;
-
     while(my $line = $input->getline) {
         chomp $line;
         $lineCounter++;
 
         $stats{'num_variants'}++;
 
-            (my $chrom, my $chr_start, my $chr_stop, my $ref_var) = split(/\t/, $line);
-            my ($ref, $var) = split("/", $ref_var);
-            next unless($chr_start =~ /^\d+$/); #header line
-            unless($chr_stop =~ /^\d+$/) {
-                my @rest;
-                ($chrom, $chr_start, $ref, $var, @rest) = split(/\t/, $line); #varscan snp format doesn't list stop separately
-                $chr_stop = $chr_start;
+        (my $chrom, my $chr_start, my $chr_stop, my $ref_var) = split(/\t/, $line);
+        my ($ref, $var) = split("/", $ref_var);
+        next unless($chr_start =~ /^\d+$/); #header line
+        unless($chr_stop =~ /^\d+$/) {
+            my @rest;
+            ($chrom, $chr_start, $ref, $var, @rest) = split(/\t/, $line); #varscan snp format doesn't list stop separately
+            $chr_stop = $chr_start;
 
-                #convert to annotation format
-                $line = join("\t", $chrom, $chr_start, $chr_stop, $ref, $var, @rest);
-            }
+            #convert to annotation format
+            $line = join("\t", $chrom, $chr_start, $chr_stop, $ref, $var, @rest);
+        }
 
-            $ref = uc($ref);
-            $var = uc($var);
+        $ref = uc($ref);
+        $var = uc($var);
 
-            my $query_string = "";
+        my $query_string = "";
 
-            $query_string = $chrom . ":" . $chr_start . "-" . $chr_stop;
+        $query_string = $chrom . ":" . $chr_start . "-" . $chr_stop;
 
-            ## if the variant allele is an IUPAC code, convert it: ##
+        ## if the variant allele is an IUPAC code, convert it: ##
 
-            if(!($var =~ /[ACGT]/)) {
-                $var = $self->iupac_to_base($ref, $var);
-            }
+        if(!($var =~ /[ACGT]/)) {
+            $var = $self->iupac_to_base($ref, $var);
+        }
 
-            if($var =~ /[ACGT]/) {
+        if($var =~ /[ACGT]/) {
 
-                ## Skip MT chromosome sites,w hich almost always pass ##
-                if($chrom eq "MT" || $chrom eq "chrMT") {
-                    ## Auto-pass it to increase performance ##
-                    $stats{'num_MT_sites_autopassed'}++;
-                    print $hq_fh "$line\n";
-                } else {
-                    ## Run Readcounts ##
+            ## Skip MT chromosome sites,w hich almost always pass ##
+            if($chrom eq "MT" || $chrom eq "chrMT") {
+                ## Auto-pass it to increase performance ##
+                $stats{'num_MT_sites_autopassed'}++;
+                print $hq_fh $line."\n";
+            } else {
+                ## Run Readcounts ##
 
-                    my $readcounts; 
-                    unless($readcounts = $self->_get_readcount_line($readcount_fh, $chrom,$chr_start)){
-                        die $self->error_message("Failed to find readcount data for: ".$chrom."\t".$chr_start);
+                my $readcounts; 
+                unless($readcounts = $self->_get_readcount_line($readcount_fh, $chrom,$chr_start)){
+                    die $self->error_message("Failed to find readcount data for: ".$chrom."\t".$chr_start);
+                }
+
+                ## Parse the results for each allele ##
+                my $ref_result = $self->read_counts_by_allele($readcounts, $ref);
+                my $var_result = $self->read_counts_by_allele($readcounts, $var);
+
+                if($ref_result && $var_result) {
+                    ## Parse out the bam-readcounts details for each allele. The fields should be: ##
+                    #num_reads : avg_mapqual : avg_basequal : avg_semq : reads_plus : reads_minus : avg_clip_read_pos : avg_mmqs : reads_q2 : avg_dist_to_q2 : avgRLclipped : avg_eff_3'_dist
+                    my ($ref_count, $ref_map_qual, $ref_base_qual, $ref_semq, $ref_plus, $ref_minus, $ref_pos, $ref_subs, $ref_mmqs, $ref_q2_reads, $ref_q2_dist, $ref_avg_rl, $ref_dist_3) = split(/\t/, $ref_result);
+                    my ($var_count, $var_map_qual, $var_base_qual, $var_semq, $var_plus, $var_minus, $var_pos, $var_subs, $var_mmqs, $var_q2_reads, $var_q2_dist, $var_avg_rl, $var_dist_3) = split(/\t/, $var_result);
+
+                    my $ref_strandedness = my $var_strandedness = 0.50;
+                    $ref_dist_3 = 0.5 if(!$ref_dist_3);
+
+                    ## Use conservative defaults if we can't get mismatch quality sums ##
+                    $ref_mmqs = 50 if(!$ref_mmqs);
+                    $var_mmqs = 0 if(!$var_mmqs);
+                    my $mismatch_qualsum_diff = $var_mmqs - $ref_mmqs;
+
+                    ## Determine map qual diff ##
+
+                    my $mapqual_diff = $ref_map_qual - $var_map_qual;
+
+
+                    ## Determine difference in average supporting read length ##
+
+                    my $readlen_diff = $ref_avg_rl - $var_avg_rl;
+
+
+                    ## Determine ref strandedness ##
+
+                    if(($ref_plus + $ref_minus) > 0) {
+                        $ref_strandedness = $ref_plus / ($ref_plus + $ref_minus);
+                        $ref_strandedness = sprintf("%.2f", $ref_strandedness);
                     }
 
-                    ## Parse the results for each allele ##
-                    my $ref_result = $self->read_counts_by_allele($readcounts, $ref);
-                    my $var_result = $self->read_counts_by_allele($readcounts, $var);
+                    ## Determine var strandedness ##
 
-                    if($ref_result && $var_result) {
-                        ## Parse out the bam-readcounts details for each allele. The fields should be: ##
-                        #num_reads : avg_mapqual : avg_basequal : avg_semq : reads_plus : reads_minus : avg_clip_read_pos : avg_mmqs : reads_q2 : avg_dist_to_q2 : avgRLclipped : avg_eff_3'_dist
-                        my ($ref_count, $ref_map_qual, $ref_base_qual, $ref_semq, $ref_plus, $ref_minus, $ref_pos, $ref_subs, $ref_mmqs, $ref_q2_reads, $ref_q2_dist, $ref_avg_rl, $ref_dist_3) = split(/\t/, $ref_result);
-                        my ($var_count, $var_map_qual, $var_base_qual, $var_semq, $var_plus, $var_minus, $var_pos, $var_subs, $var_mmqs, $var_q2_reads, $var_q2_dist, $var_avg_rl, $var_dist_3) = split(/\t/, $var_result);
+                    if(($var_plus + $var_minus) > 0) {
+                        $var_strandedness = $var_plus / ($var_plus + $var_minus);
+                        $var_strandedness = sprintf("%.2f", $var_strandedness);
+                    }
 
-                        my $ref_strandedness = my $var_strandedness = 0.50;
-                        $ref_dist_3 = 0.5 if(!$ref_dist_3);
+                    if($var_count && ($var_plus + $var_minus)) {
+                        ## We must obtain variant read counts to proceed ##
 
-                        ## Use conservative defaults if we can't get mismatch quality sums ##
-                        $ref_mmqs = 50 if(!$ref_mmqs);
-                        $var_mmqs = 0 if(!$var_mmqs);
-                        my $mismatch_qualsum_diff = $var_mmqs - $ref_mmqs;
+                        my $var_freq = $var_count / ($ref_count + $var_count);
 
-                        ## Determine map qual diff ##
-
-                        my $mapqual_diff = $ref_map_qual - $var_map_qual;
-
-
-                        ## Determine difference in average supporting read length ##
-
-                        my $readlen_diff = $ref_avg_rl - $var_avg_rl;
-
-
-                        ## Determine ref strandedness ##
-
-                        if(($ref_plus + $ref_minus) > 0) {
-                            $ref_strandedness = $ref_plus / ($ref_plus + $ref_minus);
-                            $ref_strandedness = sprintf("%.2f", $ref_strandedness);
+                        ## FAILURE 1: READ POSITION ##
+                        if(($var_pos < $min_read_pos)) {
+                            print $lq_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tReadPos<$min_read_pos\n";
+                            print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tReadPos<$min_read_pos\n"if ($self->verbose);
+                            $stats{'num_fail_pos'}++;
                         }
 
-                        ## Determine var strandedness ##
-
-                        if(($var_plus + $var_minus) > 0) {
-                            $var_strandedness = $var_plus / ($var_plus + $var_minus);
-                            $var_strandedness = sprintf("%.2f", $var_strandedness);
+                        ## FAILURE 2: Variant is strand-specific but reference is NOT strand-specific ##
+                        elsif(($var_strandedness < $min_strandedness || $var_strandedness > $max_strandedness) && ($ref_strandedness >= $min_strandedness && $ref_strandedness <= $max_strandedness)) {
+                            ## Print failure to output file if desired ##
+                            print $lq_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tStrandedness: Ref=$ref_strandedness Var=$var_strandedness\n";
+                            print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tStrandedness: Ref=$ref_strandedness Var=$var_strandedness\n"if ($self->verbose);
+                            $stats{'num_fail_strand'}++;
                         }
 
-                        if($var_count && ($var_plus + $var_minus)) {
-                            ## We must obtain variant read counts to proceed ##
+                        ## FAILURE : Variant allele count does not meet minimum ##
+                        elsif($var_count < $min_var_count) {
+                            print $lq_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarCount:$var_count\n";
+                            print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarCount:$var_count\n" if ($self->verbose);
+                            $stats{'num_fail_varcount'}++;
+                        }
 
-                            my $var_freq = $var_count / ($ref_count + $var_count);
+                        ## FAILURE : Variant allele frequency does not meet minimum ##
+                        elsif($var_freq < $min_var_freq) {
+                            print $lq_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarFreq:$var_freq\n";
+                            print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarFreq:$var_freq\n" if ($self->verbose);
+                            $stats{'num_fail_varfreq'}++;
+                        }
 
-                            ## FAILURE 1: READ POSITION ##
-                            if(($var_pos < $min_read_pos)) { # || $var_pos > $max_read_pos)) {
-                                print $lq_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tReadPos<$min_read_pos\n";
-                                print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tReadPos<$min_read_pos\n"if ($self->verbose);
-                                $stats{'num_fail_pos'}++;
-                            }
+                        ## FAILURE 3: Paralog filter for sites where variant allele mismatch-quality-sum is significantly higher than reference allele mmqs
+                        elsif($mismatch_qualsum_diff> $max_mm_qualsum_diff) {
+                            ## Print failure to output file if desired ##
+                            print $lq_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tMismatchQualsum:$var_mmqs-$ref_mmqs=$mismatch_qualsum_diff\n";
+                            print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tMismatchQualsum:$var_mmqs-$ref_mmqs=$mismatch_qualsum_diff" if ($self->verbose);
+                            $stats{'num_fail_mmqs'}++;
+                        }
 
-                            ## FAILURE 2: Variant is strand-specific but reference is NOT strand-specific ##
-                            elsif(($var_strandedness < $min_strandedness || $var_strandedness > $max_strandedness) && ($ref_strandedness >= $min_strandedness && $ref_strandedness <= $max_strandedness)) {
-                                ## Print failure to output file if desired ##
-                                print $lq_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tStrandedness: Ref=$ref_strandedness Var=$var_strandedness\n";
-                                print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tStrandedness: Ref=$ref_strandedness Var=$var_strandedness\n"if ($self->verbose);
-                                $stats{'num_fail_strand'}++;
-                            }
+                        ## FAILURE 4: Mapping quality difference exceeds allowable maximum ##
+                        elsif($mapqual_diff > $max_mapqual_diff) {
+                            print $lq_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tMapQual:$ref_map_qual-$var_map_qual=$mapqual_diff\n";
+                            print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tMapQual:$ref_map_qual-$var_map_qual=$mapqual_diff" if ($self->verbose);
+                            $stats{'num_fail_mapqual'}++;
+                        }
 
-                            ## FAILURE : Variant allele count does not meet minimum ##
-                            elsif($var_count < $min_var_count) {
-                                print $lq_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarCount:$var_count\n";
-                                print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarCount:$var_count\n" if ($self->verbose);
-                                $stats{'num_fail_varcount'}++;
-                            }
+                        ## FAILURE 5: Read length difference exceeds allowable maximum ##
+                        elsif($readlen_diff > $max_readlen_diff) {
+                            print $lq_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tReadLen:$ref_avg_rl-$var_avg_rl=$readlen_diff\n";
+                            print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tReadLen:$ref_avg_rl-$var_avg_rl=$readlen_diff" if ($self->verbose);
+                            $stats{'num_fail_readlen'}++;
+                        }
 
-                            ## FAILURE : Variant allele frequency does not meet minimum ##
-                            elsif($var_freq < $min_var_freq) {
-                                print $lq_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarFreq:$var_freq\n";
-                                print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarFreq:$var_freq\n" if ($self->verbose);
-                                $stats{'num_fail_varfreq'}++;
-                            }
+                        ## FAILURE 5: Read length difference exceeds allowable maximum ##
+                        elsif($var_dist_3 < $min_var_dist_3) {
+                            print $lq_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarDist3:$var_dist_3\n";
+                            print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarDist3:$var_dist_3\n" if ($self->verbose);
+                            $stats{'num_fail_dist3'}++;
+                        }
 
-                            ## FAILURE 3: Paralog filter for sites where variant allele mismatch-quality-sum is significantly higher than reference allele mmqs
-                            elsif($mismatch_qualsum_diff> $max_mm_qualsum_diff) {
-                                ## Print failure to output file if desired ##
-                                print $lq_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tMismatchQualsum:$var_mmqs-$ref_mmqs=$mismatch_qualsum_diff\n";
-                                print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tMismatchQualsum:$var_mmqs-$ref_mmqs=$mismatch_qualsum_diff" if ($self->verbose);
-                                $stats{'num_fail_mmqs'}++;
-                            }
+                        elsif($self->fails_homopolymer_check($self->reference_sequence_input, $self->min_homopolymer, $chrom, $chr_start, $chr_stop, $ref, $var)) {
+                            print $lq_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tHomopolymer\n";
+                            print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tHomopolymer\n" if ($self->verbose);
+                            $stats{'num_fail_homopolymer'}++;
+                        }
 
-                            ## FAILURE 4: Mapping quality difference exceeds allowable maximum ##
-                            elsif($mapqual_diff > $max_mapqual_diff) {
-                                print $lq_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tMapQual:$ref_map_qual-$var_map_qual=$mapqual_diff\n";
-                                print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tMapQual:$ref_map_qual-$var_map_qual=$mapqual_diff" if ($self->verbose);
-                                $stats{'num_fail_mapqual'}++;
-                            }
+                        elsif($max_var_mm_qualsum && $var_mmqs > $max_var_mm_qualsum) {
+                            print $lq_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarMMQS: $var_mmqs > $max_var_mm_qualsum\n";
+                            print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarMMQS: $var_mmqs > $max_var_mm_qualsum\n" if ($self->verbose);
+                            $stats{'num_fail_var_mmqs'}++;
+                        }
 
-                            ## FAILURE 5: Read length difference exceeds allowable maximum ##
-                            elsif($readlen_diff > $max_readlen_diff) {
-                                print $lq_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tReadLen:$ref_avg_rl-$var_avg_rl=$readlen_diff\n";
-                                print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tReadLen:$ref_avg_rl-$var_avg_rl=$readlen_diff" if ($self->verbose);
-                                $stats{'num_fail_readlen'}++;
-                            }
-
-                            ## FAILURE 5: Read length difference exceeds allowable maximum ##
-                            elsif($var_dist_3 < $min_var_dist_3) {
-                                print $lq_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarDist3:$var_dist_3\n";
-                                print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarDist3:$var_dist_3\n" if ($self->verbose);
-                                $stats{'num_fail_dist3'}++;
-                            }
-
-                            elsif($self->fails_homopolymer_check($self->reference_sequence_input, $self->min_homopolymer, $chrom, $chr_start, $chr_stop, $ref, $var)) {
-                                print $lq_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tHomopolymer\n";
-                                print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tHomopolymer\n" if ($self->verbose);
-                                $stats{'num_fail_homopolymer'}++;
-                            }
-
-                            elsif($max_var_mm_qualsum && $var_mmqs > $max_var_mm_qualsum) {
-                                print $lq_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarMMQS: $var_mmqs > $max_var_mm_qualsum\n";
-                                print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarMMQS: $var_mmqs > $max_var_mm_qualsum\n" if ($self->verbose);
-                                $stats{'num_fail_var_mmqs'}++;
-                            }
-
-                            ## SUCCESS: Pass Filter ##
-                            else {
-                                $stats{'num_pass_filter'}++;
-                                ## Print output, and append strandedness information ##
-                                print $hq_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\t$ref_mmqs\t$var_mmqs\t$mismatch_qualsum_diff\t$ref_dist_3\t$var_dist_3\t$ref_avg_rl\t$var_avg_rl\n";
-                                print "$line\t\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tPASS\n" if($self->verbose);
-                            }
-                        } else {
-                            $stats{'num_no_readcounts'}++;
-                            print $lq_fh "$line\tno_reads\n" if($lq_file);
-                            print "$chrom\t$chr_start\t$chr_stop\t$ref\t$var\tFAIL no reads in $var_result\n" if($self->verbose);
+                        ## SUCCESS: Pass Filter ##
+                        else {
+                            $stats{'num_pass_filter'}++;
+                            ## Print output, and append strandedness information ##
+                            print $hq_fh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\t$ref_mmqs\t$var_mmqs\t$mismatch_qualsum_diff\t$ref_dist_3\t$var_dist_3\t$ref_avg_rl\t$var_avg_rl\n";
+                            print "$line\t\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tPASS\n" if($self->verbose);
                         }
                     } else {
+                        $stats{'num_no_readcounts'}++;
+                        print $lq_fh "$line\tno_reads\n" if($lq_file);
+                        print "$chrom\t$chr_start\t$chr_stop\t$ref\t$var\tFAIL no reads in $var_result\n" if($self->verbose);
+                    }
+                } else {
 #                       $self->error_message("Unable to get read counts for $ref/$var at position $chrom\t$chr_start\t$chr_stop");
 #                       die;
-                    }
                 }
-            } else {
-                print $lq_fh "$line\tno_allele\n";
-                print "$line\tFailure: Unable to determine allele!\n" if($self->verbose);
-                $stats{'num_no_allele'}++;
             }
-#       }
+        } else {
+            print $lq_fh "$line\tno_allele\n";
+            print "$line\tFailure: Unable to determine allele!\n" if($self->verbose);
+            $stats{'num_no_allele'}++;
+        }
     }
 
     close($input);
@@ -595,6 +592,7 @@ sub _generate_standard_files {
     my $hq_ifh = Genome::Sys->open_file_for_reading($hq_output);
     my $hq_ofh = Genome::Sys->open_file_for_writing($hq_bed_output);
     while (my $line = $hq_ifh->getline) {
+        chomp $line;
         # assume bed version 2
         my ($chrom, $start, $stop, $ref_var, $score, $depth) = split "\t", $line;
         $hq_ofh->print( join("\t",($chrom, $start, $stop, $ref_var, $score, $depth)) . "\n" );
@@ -608,6 +606,7 @@ sub _generate_standard_files {
     my $lq_ifh = Genome::Sys->open_file_for_reading($lq_output);
     my $lq_ofh = Genome::Sys->open_file_for_writing($lq_bed_output);
     while (my $line = $lq_ifh->getline) {
+        chomp $line;
         # assume bed version 2
         my ($chrom, $start, $stop, $ref_var, $score, $depth) = split "\t", $line;
         $lq_ofh->print( join("\t",($chrom, $start, $stop, $ref_var, $score, $depth)) . "\n" );

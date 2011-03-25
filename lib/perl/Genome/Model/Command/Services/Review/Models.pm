@@ -10,6 +10,12 @@ class Genome::Model::Command::Services::Review::Models {
             shell_args_position => 1,
             require_user_verify => 0,
         },
+        hide_statuses => {
+            is => 'Text',
+            is_many => 1,
+            is_optional => 1,
+            doc => 'Hide build details for statuses listed.',
+        },
     ],
 };
 
@@ -17,7 +23,7 @@ use strict;
 use warnings;
 use Genome;
 
-sub execute {
+sub old_execute {
     my $self = shift;
 
     my @models = $self->models;
@@ -81,6 +87,47 @@ sub execute {
         }
     }
 
+    return 1;
+}
+
+sub execute {
+    my $self = shift;
+
+    my @models = $self->models;
+    my @hide_statuses = $self->hide_statuses;
+
+    for my $model (@models) {
+        my $latest_build        = ($model        ? $model->latest_build  : undef);
+        my $latest_build_status = ($latest_build ? $latest_build->status : '-');
+
+        next if (grep { lc $_ eq lc $latest_build_status } @hide_statuses);
+
+        my $fail_count   = ($model ? scalar $model->failed_builds     : undef);
+        my $model_id     = ($model ? $model->id                       : '-');
+        my $model_name   = ($model ? $model->name                     : '-');
+        my $model_class  = ($model ? $model->class                    : '-');
+        my $pp_name      = ($model ? $model->processing_profile->name : '-');
+
+        my $latest_build_revision = (($latest_build && $latest_build->software_revision) ? $latest_build->software_revision : '-');
+
+        $model_name =~ s/\.?$pp_name\.?/.../;
+        
+        $latest_build_revision =~ s/\/gsc\/scripts\/opt\/genome\/snapshots\/[\w\-]+\///;
+        $latest_build_revision =~ s/\/lib\/perl\/?//;
+        $latest_build_revision =~ s/:$//;
+
+        my $action = '-';
+
+        $self->print_message(join "\t", $model_id, $latest_build_status, $latest_build_revision, $model_name, $model_class, $pp_name, $fail_count, $action);
+    }
+
+    return 1;
+}
+
+sub print_message {
+    my $self = shift;
+    my $msg = shift;
+    print STDOUT $msg . "\n";
     return 1;
 }
 

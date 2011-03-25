@@ -27,6 +27,12 @@ class Genome::ProcessingProfile::SomaticVariation{
             is_optional =>1,
             doc => "Strategy to be used to detect svs.",
         },
+        cnv_detection_strategy => {
+            is => "Text",
+            is_many => 0,
+            is_optional =>1,
+            doc => "Strategy to be used to detect cnvs.",
+        },
     ],
 };
 

@@ -198,6 +198,7 @@ sub execute {
     my $sv_file = $self->sv_file;
     my $out_file= $self->output_file;
 
+    $DB::single=1;
     my $bp_file = $self->breakpoint_seq_file;
     my $bp_io;
     my $cm_aln_fh = new IO::File;
@@ -434,6 +435,11 @@ sub _cross_match_validation {
     
     unless (-s $tigra_sv_fa) {
         $self->warning_message("tigra sv fasta: $tigra_sv_fa is not valid. Skip this $ctg_type cross_match run");
+        return;
+    }
+
+    unless (-s $ref_fa){
+        $self->warning_message("tigra sv ref: $ref_fa is not valid. Skip this $ref_fa cross_match run");
         return;
     }
 

@@ -15,7 +15,7 @@ class Genome::Model::Tools::Nimblegen::CheckArrayDesign {
         doc => 'Zip file provided by nimblegen after designing your array',
     },
     design_files => {
-        type => 'Comma-delimited String',
+        type => 'Csv',
         is_optional => 1,
         doc => 'A comma-delimited list of files that went into the array design',
     },

@@ -33,7 +33,7 @@ my %params = (
     reference_sequence_build => $reference_sequence_build,
     library => $library,
     original_data_path => $original_data_path,
-    sequencing_platform => "unit test industries",
+    sequencing_platform => "affymetrix",
     description => 'TEST Import genotype file',
 );
 
@@ -94,10 +94,7 @@ my $genotype_file = $i->genotype_microarray_file_for_subject_and_version(
 ok($genotype_file, 'got genotype file');
 ok(-s $genotype_file, "genotype file exists");
 
-my $model = Genome::Model::GenotypeMicroarray->get(
-    subject_id => $sample->id,
-    processing_profile_id => 2186707,
-);
+my $model = $cmd->_model;
 ok($model, 'created model');
 my $build = $model->last_complete_build;
 ok($build, 'created build');

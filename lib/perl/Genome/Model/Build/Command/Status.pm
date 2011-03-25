@@ -16,6 +16,12 @@ class Genome::Model::Build::Command::Status {
             doc => 'Build(s) to check status. Resolved from command line via text string.',
             shell_args_position => 1,
         },
+        hide_statuses => {
+            is => 'Text',
+            is_many => 1,
+            is_optional => 1,
+            doc => 'Hide build details for statuses listed.',
+        },
         show_event_info => {
             is => 'Boolean',
             default => 0,
@@ -27,13 +33,15 @@ class Genome::Model::Build::Command::Status {
 sub execute {
     my $self = shift;
 
+    my @hide_statuses = $self->hide_statuses;
+
     my %status;
     my @builds = sort {$a->model_name cmp $b->model_name} $self->builds;
     my $model_name;
     for my $build (@builds) {
         my $build_status = $build->status;
         $status{$build_status}++;
-        if ($build_status ne 'Succeeded') {
+        if (not grep { lc $_ eq lc $build_status } @hide_statuses) {
             if (!$model_name || $model_name ne $build->model_name) {
                 $model_name = $build->model_name;
                 $self->print_message("\nModel: ".$model_name);

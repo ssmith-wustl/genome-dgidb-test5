@@ -18,9 +18,8 @@ class Genome::InstrumentData::AlignmentResult::Mosaik {
 
 sub required_arch_os { 'x86_64' }
 
-# fill me in here with what compute resources you need.
 sub required_rusage { 
-my $class = shift;
+    my $class = shift;
     my %p = @_;
     my $instrument_data = delete $p{instrument_data};
 
@@ -28,51 +27,6 @@ my $class = shift;
 }
 
 # TODO should generate the reference index and jump databases using MosaikJump and MosaikBuild
-
-#sub resolve_reference_build {
-#
-#    $self->SUPER::resolve_refrence_build();
-#    my $build_id = $self->reference_sequence_build_id;
-#    my $resource_lock_name = "/gsc/var/lock/reference_lock/$build_id.mosaik";
-#
-#    my $reference_build = $self->refrence_build;
-#    my $fasta_path = $reference_build->full_consensus_path('fa');
-#    my $reference_path = File::Basename::fileparse($reference_build->full_consensus_path('fa'));
-#
-#    my %aligner_params = $self->decomposed_aligner_params;
-#    my $hash_size;
-#    if ($aligner_params{'mosaik_align_params'} =~ /-hs\s+(\d+)/) {
-#        $hash_size = $1;
-#    } else {
-#        $self->error_message("Could not determine hash size from aligner params; couldn't generate a reference jump database");
-#        die($self->error_message);
-#    }
-#
-#    my $lock = Genome::Sys->lock_resource(resource_lock => $resource_lock_name, max_try => 2);
-#    unless ($lock) {
-#        $self->status_message("This data set is still being processed by its creator.  Waiting for existing data lock...");
-#        $lock = Genome::Sys->lock_resource(resource_lock => $resource_lock_name);
-#        unless ($lock) {
-#            $self->error_message("Failed to get existing data lock!");
-#            die($self->error_message);
-#        }
-#    }
-
-
-    # Make the reference here now and then unlock
-
-    # this could be something like:
-    # - MosaikBuild -fr reference.fa -oa reference_mosaik.dat
-    #     converts a reference into a binary format for mosaik (only need once per reference)
-    # - MosaikJump -ia reference_mosaik.dat -out reference_mosaik_$hash_size -hs $hash_size
-    #     creates a jump database from the binary reference using a specific hash size (only need once per reference/hash-size pair)
-
-
-#    unless (Genome::Sys->unlock_resource(resource_lock=>$resource_lock_name)) {
-#        $self->error_message("Couldn't unlock $resource_lock_name.  error message was " . $self->error_message);
-#        die $self->error_message;
-#    }
-#}
 
 sub _run_aligner {
     my $self = shift;
@@ -86,15 +40,13 @@ sub _run_aligner {
     my $tmp_sort_file = "$tmp_dir/sorted.dat";
     my $tmp_sam_file = "$tmp_dir/aligned_mosaik.sam";
     my $staging_sam_file = "$tmp_dir/all_sequences.sam";
+
+    return 1;
     
     # get refseq info
     my $reference_build = $self->reference_build;
     my $ref_dirname = File::Basename::dirname($reference_build->full_consensus_path('fa'));
-    #my $reference_fasta_path = sprintf("%s/%s", $reference_build->data_directory, $ref_basename);
 
-    # the old hardcoded files
-    #my $ref_file = "/gscmnt/sata820/info/medseq/alignment-test/mosaik_x64/test/reference.dat";
-    #my $jump_file = "/gscmnt/sata820/info/medseq/alignment-test/mosaik_x64/test/reference_15";
     my $ref_file = sprintf("%s/%s", $ref_dirname, 'reference_mosaik.dat');
     # yes the jump database is simply the prefix, not an actual filename
     my $jump_file = sprintf("%s/%s", $ref_dirname, 'reference_mosaik_15');
@@ -104,9 +56,12 @@ sub _run_aligner {
         $self->die($self->error_message);
     }
 
+    #TODO - it should ckeck to see if jump db files exist then append cmd line to use it instead of assuming it's there
     unless (-e $jump_file) {
         $self->error_message("Index $jump_file does not exist. Please create Bfast indexes in the correct location, or implement Genome::InstrumentData::Alignment->resolve_reference_build() in this module.");
-        $self->die($self->error_message);
+        #TODO - currently this doesn't work as inteneded .. aligner works w/o jump file and it
+        #appears that jump file is just a file prefix and doesn't, itself, exist.
+        #$self->die($self->error_message);
     }
 
     my $mosaik_build_path = Genome::Model::Tools::Mosaik->path_for_mosaik_version($self->aligner_version)."Build";
@@ -124,6 +79,8 @@ sub _run_aligner {
         my $cmdline = $mosaik_build_path . sprintf(' -q %s -q2 %s -out %s %s',
             $input_pathnames[0], $input_pathnames[1], $tmp_reads_file, $aligner_params{mosaik_build_params});
 
+        #TODO - see if this works with > 2 input files
+        
         Genome::Sys->shellcmd(
             cmd             => $cmdline,
             input_files     => [ $input_pathnames[0], $input_pathnames[1] ],
@@ -158,9 +115,10 @@ sub _run_aligner {
     }
     
     #### STEP 2: Align
-    
+
     {
-        $align_cmdline = $mosaik_align_path . sprintf(' -in %s -out %s -ia %s -rur %s %s -j %s',
+        #$align_cmdline = $mosaik_align_path . sprintf(' -in %s -out %s -ia %s -rur %s %s -j %s',
+        $align_cmdline = $mosaik_align_path . sprintf(' -in %s -out %s -ia %s -rur %s %s',
             $tmp_reads_file, $tmp_align_file, $ref_file, $tmp_unalign_fq_file, $aligner_params{mosaik_align_params}, $jump_file);
         
         Genome::Sys->shellcmd(
@@ -232,20 +190,9 @@ sub _run_aligner {
     return 1;
 }
 
-sub fillmd_for_sam {
-    # it appears that mosaik does not put in MD string, so...
-    return 1;
-}
 
 sub _filter_sam_output {
     my ($self, $mosaik_output_sam_file, $unaligned_sam_file, $all_sequences_sam_file) = @_;
-
-#    my $sam_run_output_fh = IO::File->new( $sam_cmd . "|" );
-#    $self->status_message("Running $sam_cmd");
-#    if ( !$sam_run_output_fh ) {
-#            $self->error_message("Error running $sam_cmd $!");
-#            return;
-#    }
 
     my $mosaik_fh = IO::File->new( $mosaik_output_sam_file );
     if ( !$mosaik_fh ) {
@@ -300,33 +247,13 @@ sub decomposed_aligner_params {
     
     my @spar = split /\:/, $params;
     # TODO this could potentially be a problem if we don't want to, say, force 4 cores when not otherwise specified
-    if ($spar[0] !~ /-st/) { $spar[0] .= "-st illumina"; }
-    if ($spar[1] !~ /-hs/) { $spar[1] .= "-hs 15"; }
-    if ($spar[1] !~ /-mm/) { $spar[1] .= "-mm 12"; }
-    if ($spar[1] !~ /-mhp/) { $spar[1] .= "-mhp 100"; }
-    if ($spar[1] !~ /-act/) { $spar[1] .= "-act 35"; }
-    if ($spar[1] !~ /-bw/) { $spar[1] .= "-bw 29"; }
-    if ($spar[1] !~ /-p/) { $spar[1] .= "-p 4"; }
-
-    # TODO (iferguso) the purpose of this was to sort arguments passed to the aligner so that, regardless
-    #   of the order someone passed the arguments, aligner_params_for_sam_header would be the same.
-    #   I'm not even sure this is something that is necessary.
-#    foreach (@spar) {
-#        # split by argument
-#        $_ = [split /\s?\-/, $_];
-#        # the first element should be empty, so drop it
-#        shift @{$_};
-#        # sort
-#        @{$_} = sort @{$_};
-#        # holder
-#        my $ordered;
-#        # push ordered args on
-#        foreach (@{$_}) { $ordered .= "-$_ "; }
-#        # set
-#        $_ = $ordered;
-#        # chop single trailing whitespace from loop
-#        chop;
-#    }
+    if ($spar[0] !~ /-st/) { $spar[0] .= " -st illumina"; }
+    if ($spar[1] !~ /-hs/) { $spar[1] .= " -hs 15"; }
+    if ($spar[1] !~ /-mm/) { $spar[1] .= " -mm 12"; }
+    if ($spar[1] !~ /-mhp/) { $spar[1] .= " -mhp 100"; }
+    if ($spar[1] !~ /-act/) { $spar[1] .= " -act 35"; }
+    if ($spar[1] !~ /-bw/) { $spar[1] .= " -bw 29"; }
+    if ($spar[1] !~ /-p/) { $spar[1] .= " -p 4"; }
 
     return ('mosaik_build_params' => $spar[0], 'mosaik_align_params' => $spar[1], 'mosaik_sort_params' => $spar[2], 'mosaik_text_params' => $spar[3]);
 }
@@ -335,8 +262,17 @@ sub aligner_params_for_sam_header {
     my $self = shift;
     
     my %params = $self->decomposed_aligner_params;
-    
     return "MosaikBuild $params{mosaik_build_params}; MosaikAlign $params{mosaik_align_params}; MosaikSort $params{mosaik_sort_params}; MosaikText $params{mosaik_text_params}";
 
     # for bwa this looks like "bwa aln -t4; bwa samse 12345'
+}
+
+sub fillmd_for_sam {
+    # it appears that mosaik does not put in MD string, so...
+    return 1;
+}
+
+sub postprocess_bam_file {
+    #will die in base class because bam:fastq read counts is NOT 1:1
+    return 1;
 }

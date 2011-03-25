@@ -54,7 +54,14 @@ class Genome::Model::Tools::Gatk::SomaticIndel {
             is_optional => 1, 
             is_input => 1, 
             is_output => 1, 
-            default => "-R /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa -T IndelGenotyperV2 --somatic --window_size 300", 
+            default => "-T IndelGenotyperV2 --somatic --window_size 300", 
+        },
+        reference => { 
+            is => 'Text', 
+            doc => "Parameters for GATK", 
+            is_optional => 1, 
+            is_input => 1, 
+            default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa", 
         },
         path_to_gatk => { 
             is => 'Text', 
@@ -109,6 +116,10 @@ sub execute {
     ## Run GATK ##
     my $path_to_gatk = $self->path_to_gatk;
     my $gatk_params = $self->gatk_params;
+    my $reference = $self->reference;
+    
+    ## Add reference to GATK params ##
+    $gatk_params = "-R $reference " . $gatk_params;
     #-I /gscmnt/sata905/info/model_data/2858219475/build103084961/alignments/103084961_merged_rmdup.bam
     #-I /gscmnt/sata871/info/model_data/2858334303/build103084933/alignments/103084933_merged_rmdup.bam
     #-O gatk_testing/indels.GATK.H_GP-13-0890-01A-01-1.tsv -o gatk_testing/indels.GATK.H_GP-13-0890-01A-01-1.out 
@@ -135,9 +146,9 @@ sub execute {
 
     }
     else {
-        system("touch $output_file"); # This will create an empty output file to help prevent GATK from crashing 
-        system("touch $bed_output_file"); # This will create an empty output file to help prevent GATK from crashing 
-        system("touch " . $self->somatic_file) if($self->somatic_file);
+  #      system("touch $output_file"); # This will create an empty output file to help prevent GATK from crashing 
+ #       system("touch $bed_output_file"); # This will create an empty output file to help prevent GATK from crashing 
+#        system("touch " . $self->somatic_file) if($self->somatic_file);
         $return = Genome::Sys->shellcmd(
                 cmd => "$cmd",
                 output_files => [$output_file],
