@@ -257,12 +257,7 @@ sub create {
         
     $self->status_message("Intermediate alignment result generation complete.");
 
-    my $result_user = Genome::SoftwareResult::User->create(
-        software_result_id => $self->id,
-        user_class_name => $self->parent_result->class,
-        user_id => $self->parent_result->id,
-        );
-
+    $self->add_user(user => $self->parent_result, label => 'uses');
     return $self;
 }
 
