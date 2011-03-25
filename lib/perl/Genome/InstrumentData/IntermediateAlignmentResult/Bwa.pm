@@ -1,6 +1,5 @@
 package Genome::InstrumentData::IntermediateAlignmentResult::Bwa;
 
-use Data::Dumper;
 use Genome;
 use File::Copy qw/mv/;
 use File::Basename;
@@ -71,7 +70,6 @@ sub _run_aligner {
         "1> $sai_file 2>> $log_file"
     );
 
-    print Dumper(\@args);
     my $cmd = join(" ", $bwa, @args);
 
     # disconnect the db handle before this long-running event
