@@ -10,7 +10,7 @@ use above 'Genome';
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 25;
+        plan tests => 27;
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -60,27 +60,41 @@ my %params = (
 
 my @result_ids;
 
+######################################################################
+# Make first object
 my $result = $result_class->create(%params);
 ok($result, "created result (1st end)");
 push(@result_ids, $result->id);
-is($result->parent_result, $parent_result, "parent result is set correctly");
+
+ok($result->users, "found parent in software result users");
+my $parent_in_users = grep {$_->user_id == $parent_result->id and $_->user_class_name eq $parent_result->class} $result->users;
+ok($parent_in_users, "found parent in list of users");
+
 my $dir = $result->output_dir;
 ok(-s $result->sai_file, "sai file exists");
 ok($result->md5sum, "sai md5 exists");
 ok(-s $result->log_file, "log file exists");
 my $md5_1 = $result->md5sum;
 
+######################################################################
+# Check that making a duplicate fails, but get_or_create works
 my $duplicate = $result_class->create(%params);
 ok(!$duplicate, "creating duplicate result fails as expected");
 my $fetched = $result_class->get_or_create(%params);
 ok($fetched, "fetched object with get_or_create");
 is($result->id, $fetched->id, "get_or_create returned the right object");
 
+######################################################################
+# Create 2nd object
 $params{input_pass} = 2;
 $result = $result_class->create(%params);
 ok($result, "created result (2nd end)");
 push(@result_ids, $result->id);
-is($result->parent_result, $parent_result, "parent result is set correctly");
+
+ok($result->users, "found parent in software result users");
+$parent_in_users = grep {$_->user_id == $parent_result->id and $_->user_class_name eq $parent_result->class} $result->users;
+ok($parent_in_users, "found parent in list of users");
+
 $dir = $result->output_dir;
 ok(-s $result->sai_file, "sai file exists");
 ok($result->md5sum, "sai md5 exists");
@@ -89,10 +103,8 @@ my $md5_2 = $result->md5sum;
 
 ok($md5_1 ne $md5_2, "md5sums differ as expected");
 $fetched = $result_class->get_or_create(%params);
-
 eval { $fetched->delete; };
 ok(($@ and $fetched->id), "direct deletion of non-orphaned IntermediateAlignmentResult forbidden");
-
 
 $parent_result->delete();
 

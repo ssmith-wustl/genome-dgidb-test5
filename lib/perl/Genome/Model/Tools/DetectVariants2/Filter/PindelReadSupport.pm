@@ -53,15 +53,15 @@ class Genome::Model::Tools::DetectVariants2::Filter::PindelReadSupport{
 
 sub _filter_variants {
     my $self = shift;
+    $DB::single=1;
     my $read_support_file = $self->_temp_staging_directory."/indels.hq.read_support.bed";
-    my $output_file = $self->_temp_staging_directory."/indels.hq.bed";
+    my $output_file = $self->_temp_staging_directory."/indels.hq.v2.bed";
     my $output_lq_file = $self->_temp_staging_directory."/indels.lq.bed";
     my $indel_file = $self->input_directory."/indels.hq.bed";
 
     $self->calculate_read_support($indel_file, $read_support_file);
 
     $self->filter_read_support($read_support_file,$output_file,$output_lq_file);
-
     return 1;
 }
 
@@ -351,10 +351,10 @@ sub filter_read_support {
         }
 
         if($hq==1){
-            print $output join("\t", ($chr,$start,$stop,$refvar))."\n";
+            print $output join("\t", ($chr,$start,$stop,$refvar,'-','-'))."\n";
         }
         else {
-            print $output_lq join("\t", ($chr,$start,$stop,$refvar))."\n";
+            print $output_lq join("\t", ($chr,$start,$stop,$refvar,'-','-'))."\n";
         }
     }
 
@@ -370,6 +370,10 @@ sub _check_file_counts {
 }
 
 sub _generate_standard_output {
+    my $self = shift;
+    my $output = $self->output_directory."/indels.hq.v2.bed";
+    my $output_link = $self->output_directory."/indels.hq.bed";
+    Genome::Sys->create_symlink($output, $output_link);
     return 1;
 }
 

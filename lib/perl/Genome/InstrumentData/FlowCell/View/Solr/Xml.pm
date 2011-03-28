@@ -51,7 +51,7 @@ class Genome::InstrumentData::FlowCell::View::Solr::Xml {
             is  => 'Text',
         },
         default_aspects => {
-            is => 'ARRAY,',
+            is => 'ARRAY',
             default => [
                 {
                     name => 'flow_cell_id',

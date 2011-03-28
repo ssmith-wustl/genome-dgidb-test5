@@ -116,5 +116,12 @@ sub xitems {
     return Genome::WorkOrderItem->get(setup_wo_id => $_[0]->id);
 }
 
+sub sample_description {
+    my ($self) = @_;
+    my @samples = $self->samples();
+    my @names = map {$_->sample} @samples;
+    return join(',',@names);
+}
+
 1;
 

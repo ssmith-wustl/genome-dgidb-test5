@@ -346,7 +346,10 @@ sub _fastq_files_from_solexa {
         }
         $self->status_message("Attempting to get fastqs from bam");
 
-        @fastq_files = $inst_data->dump_fastqs_from_bam;
+        my $tempdir = $self->_tempdir;
+        my $inst_data_tempdir = $tempdir.'/'.$inst_data->id;
+
+        @fastq_files = $inst_data->dump_fastqs_from_bam( directory => $tempdir );
 
         $self->status_message('Fastq files from bam OK:'.join(", ", @fastq_files));
     }

@@ -71,6 +71,12 @@
       </xsl:with-param>
     </xsl:call-template>
 
+    <div class="">
+        <xsl:value-of select="/object/aspect[@name='genome_path']/value"/><br/>
+        <xsl:value-of select="/object/aspect[@name='ur_path']/value"/><br/>
+        <xsl:value-of select="/object/aspect[@name='workflow_path']/value"/>
+    </div>
+
   </xsl:template>
 
 </xsl:stylesheet>

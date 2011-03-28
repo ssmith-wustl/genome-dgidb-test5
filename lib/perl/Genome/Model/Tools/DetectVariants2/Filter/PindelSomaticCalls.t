@@ -31,8 +31,8 @@ my $expected_hq_bed_output = "$expected_dir/indels.hq.expected.bed";
 my $expected_lq_bed_output = "$expected_dir/indels.lq.expected.bed";
 
 my $pindel_somatic_calls = Genome::Model::Tools::DetectVariants2::Filter::PindelSomaticCalls->create(
-    input_directory => $input_directory,
-    detector_directory => $input_directory,
+    input_directory => $input_directory."/pindel",
+    detector_directory => $input_directory."/pindel",
     output_directory => $test_output_dir,
     aligned_reads_input => $tumor_bam_file,
     reference_sequence_input => $refseq,

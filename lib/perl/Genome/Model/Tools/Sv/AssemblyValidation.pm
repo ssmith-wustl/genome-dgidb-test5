@@ -439,7 +439,7 @@ sub _cross_match_validation {
     }
 
     unless (-s $ref_fa){
-        $self->warning_meesage("tigra sv ref: $ref_fa is not valid. Skip this $ref_fa cross_match run");
+        $self->warning_message("tigra sv ref: $ref_fa is not valid. Skip this $ref_fa cross_match run");
         return;
     }
 

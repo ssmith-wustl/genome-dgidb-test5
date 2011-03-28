@@ -4,8 +4,8 @@ use strict;
 use warnings;
 
 use Genome;
-use Data::Dumper;
 use Digest::MD5 qw(md5_hex);
+use Data::Dumper;
 
 class Genome::SoftwareResult {
     is_abstract => 1,
@@ -348,6 +348,14 @@ sub _expand_param_and_input_properties {
 
 sub delete {
     my $self = shift;
+
+    my $class_name = $self->class;
+    my @users = $self->users;
+    if (@users) {
+        my $name = $self->__display_name__;
+        die "Refusing to delete $class_name $name as it still has users:\n\t"
+            .join("\n\t", map { $_->user_class . "\t" . $_->user_id } @users);
+    }
 
     my @to_nuke = ($self->params, $self->inputs, $self->metrics); 
 
