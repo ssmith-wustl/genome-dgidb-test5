@@ -566,7 +566,7 @@ sub soap_import_bsub_rusage {
 }
 
 sub velvet_one_button_bsub_rusage {
-    return "-R 'select[type==LINUX64 && mem>20000] rusage[mem=20000] span[hosts=1]' -M 20000000";
+    return "-R 'select[type==LINUX64 && mem>30000] rusage[mem=30000] span[hosts=1]' -M 30000000";
 }
 
 #< soap specific methods to run during build >#
