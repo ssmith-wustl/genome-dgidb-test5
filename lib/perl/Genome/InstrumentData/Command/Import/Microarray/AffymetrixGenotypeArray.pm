@@ -4,10 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-use File::Copy;
-use File::Copy::Recursive;
-use File::Basename;
-use IO::Handle;
 
 class Genome::InstrumentData::Command::Import::Microarray::AffymetrixGenotypeArray {
     is  => 'Genome::InstrumentData::Command::Import::Microarray::Base',
@@ -21,16 +17,13 @@ class Genome::InstrumentData::Command::Import::Microarray::AffymetrixGenotypeArr
     ],
 };
 
-sub process_imported_files {
+sub _resolve_unsorted_genotype_file {
     my $self = shift;
 
-    my $genotype_file = $self->_instrument_data->genotype_microarray_file_for_reference_sequence_build($self->reference_sequence_build);
-    if ( -s $genotype_file ) {
-        # Validate?
-        $self->status_message('Genotype file exists: '.$genotype_file);
-        return 1;
-    }
-    $self->status_message('Generate genotype file: '.$genotype_file);
+    my $unsorted_genotype_file = $self->_instrument_data->data_directory.'/'.$self->sample->name.'.genotype';
+    return $unsorted_genotype_file if -s $unsorted_genotype_file;
+    $self->status_message('Generate unsorted genotype file: '.$unsorted_genotype_file);
+    unlink $unsorted_genotype_file if -e $unsorted_genotype_file;
 
     my $call_file = $self->_resolve_call_file;
     return if not $call_file;
@@ -41,7 +34,7 @@ sub process_imported_files {
     my $tool = Genome::Model::Tools::Array::CreateGenotypesFromAffyCalls->create(  
         call_file =>  $call_file,
         annotation_file => $annotation_file,
-        output_filename => $genotype_file,
+        output_filename => $unsorted_genotype_file,
     );
     if ( not $tool ) {
         $self->error_message('Failed to create "create genotypes from illumina calls" tool');
@@ -52,14 +45,14 @@ sub process_imported_files {
         return;
     }
 
-    if ( not -s $genotype_file ) {
+    if ( not -s $unsorted_genotype_file ) {
         $self->error_message('Successfully executed "create genotypes from illumina calls" tool, but genotype file does not exist');
         return;
     }
 
     $self->status_message('Generate genotype file...OK');
 
-    return 1;
+    return $unsorted_genotype_file;
 }
 
 sub _resolve_call_file {
