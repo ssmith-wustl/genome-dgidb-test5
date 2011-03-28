@@ -641,22 +641,22 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         }
     }
 
-    my $model = Genome::Model->create(%model_params);
-    unless ( $model ) {
+    my $regular_model = Genome::Model->create(%model_params);
+    unless ( $regular_model ) {
         $self->error_message('Failed to create model with params: '.Dumper(\%model_params));
         return;
     }
-    push @new_models, $model;
+    push @new_models, $regular_model;
 
     my $capture_target = eval{ $genome_instrument_data->target_region_set_name; };
 
-    my $name = $model->default_model_name(capture_target => $capture_target);
+    my $name = $regular_model->default_model_name(capture_target => $capture_target);
     if ( not $name ) {
         $self->error_message('Failed to get model name for params: '.Dumper(\%model_params));
-        for ( @new_models ) { $_->delete; }
+        for my $model ( @new_models ) { $model->delete; }
         return;
     }
-    $model->name($name);
+    $regular_model->name($name);
 
     if ( $capture_target ) {
         my $roi_list;
@@ -677,8 +677,8 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             $roi_list = $capture_target;
         }
 
-        unless($self->assign_capture_inputs($model, $capture_target, $roi_list)) {
-            for ( @new_models ) { $_->delete; }
+        unless($self->assign_capture_inputs($regular_model, $capture_target, $roi_list)) {
+            for my $model ( @new_models ) { $model->delete; }
             return;
         }
 
@@ -686,18 +686,18 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         my $wuspace_model = Genome::Model->create(%model_params);
         unless ( $wuspace_model ) {
             $self->error_message('Failed to create wu-space model: '.Dumper(\%model_params));
-            for (@new_models) { $_->delete; }
+            for my $model (@new_models) { $model->delete; }
             return;
         }
         push @new_models, $wuspace_model;
 
-        my $wuspace_name = $model->default_model_name(capture_target => $capture_target, roi => 'wu-space');
+        my $wuspace_name = $wuspace_model->default_model_name(capture_target => $capture_target, roi => 'wu-space');
         if ( not $wuspace_name ) {
             $self->error_message('Failed to get wu-space model name for params: '.Dumper(\%model_params));
-            for (@new_models) { $_->delete; }
+            for my $model (@new_models) { $model->delete; }
             return;
         }
-        $model->name($wuspace_name);
+        $wuspace_model->name($wuspace_name);
 
         my $wuspace_roi_list;
         if($reference_sequence_build and $reference_sequence_build->is_compatible_with($root_build37_ref_seq)) {
@@ -707,10 +707,8 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         }
 
         unless($self->assign_capture_inputs($wuspace_model, $capture_target, $wuspace_roi_list)) {
-            for (@new_models) {
-                $_->delete;
-                return;
-            }
+            for my $model (@new_models) { $model->delete; }
+            return;
         }
     }
 
