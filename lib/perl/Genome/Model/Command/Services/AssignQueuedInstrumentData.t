@@ -119,6 +119,12 @@ my $command_1 = Genome::Model::Command::Services::AssignQueuedInstrumentData->cr
 
 isa_ok($command_1, 'Genome::Model::Command::Services::AssignQueuedInstrumentData');
 $command_1->dump_status_messages(1);
+
+# Mock copy sequence files pse and its status
+my $copy_sequence_pse = Test::MockObject->new;
+$copy_sequence_pse->mock('pse_status', sub { 'inprogress' });
+$ii->mock('get_copy_sequence_files_pse', sub { $copy_sequence_pse });
+
 ok($command_1->execute(), 'assign-queued-instrument-data executed successfully.');
 
 my $new_models = $command_1->_newly_created_models;
