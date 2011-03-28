@@ -283,7 +283,7 @@ sub resolve_allocation_subdirectory {
 }
 
 sub resolve_allocation_disk_group_name {
-    "info_genome_models";
+    "info_apipe_ref";
 }
 
 sub full_consensus_path {
