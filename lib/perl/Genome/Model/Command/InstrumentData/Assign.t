@@ -102,6 +102,12 @@ $assign = Genome::Model::Command::InstrumentData::Assign->create(
 );
 ok($assign, 'create to assign by flow cell id');
 $assign->dump_status_messages(1);
+
+# Mock copy sequence files pse and its status
+my $copy_sequence_pse = Test::MockObject->new;
+$copy_sequence_pse->mock('pse_status', sub { 'inprogress' });
+$index_illumina->mock('get_copy_sequence_files_pse', sub { $copy_sequence_pse });
+
 ok($assign->execute, 'execute');
 @assigned_inst_data = $model->instrument_data;
 is_deeply(\@assigned_inst_data, [ @sanger_id, $solexa_id ], 'confirmed assigned inst data');
