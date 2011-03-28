@@ -12,7 +12,7 @@ BEGIN {
 use above 'Genome';
 
 require Genome::InstrumentData::Solexa;
-use Test::More tests => 63;
+use Test::More tests => 66;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
 
@@ -169,6 +169,8 @@ my $instrument_data_3 = Genome::InstrumentData::Solexa->create(
     library_id => $library->id,
     flow_cell_id => 'TM-021',
     lane => '3',
+    index_sequence => 'CGTACG',
+    subset_name => '3-CGTACG',
     run_type => 'Paired',
     fwd_read_length => 100,
     rev_read_length => 100,
@@ -193,6 +195,36 @@ my $instrument_data_4 = Genome::InstrumentData::Solexa->create(
     library_id => $library->id, 
     flow_cell_id => 'TM-021',
     lane => '3',
+    index_sequence => 'ACGTAC',
+    subset_name => '3-ACGTAC',
+    run_type => 'Paired',
+    fwd_read_length => 100,
+    rev_read_length => 100,
+    fwd_clusters => 65535,
+    rev_clusters => 65536,
+    target_region_set_name => 'test-capture-data',
+);
+
+my $sample_pool = Genome::Sample->create(
+    id => '-10001',
+    name => 'AQID-test-sample-pooled',
+    common_name => 'normal',
+    taxon_id => $taxon->id,
+    source_id => $individual->id,
+);
+
+my $library_pool = Genome::Library->create(
+    id => '-10002',
+    sample_id => $sample_pool->id,
+);
+
+my $instrument_data_pool = Genome::InstrumentData::Solexa->create(
+    id => '-103',
+    library_id => $library->id,
+    flow_cell_id => 'TM-021',
+    lane => '3',
+    index_sequence => 'unknown',
+    subset_name => '3-unknown',
     run_type => 'Paired',
     fwd_read_length => 100,
     rev_read_length => 100,
@@ -221,7 +253,7 @@ isa_ok($command_2, 'Genome::Model::Command::Services::AssignQueuedInstrumentData
 ok($command_2->execute(), 'assign-queued-instrument-data executed successfully.');
 
 my $new_models_2 = $command_2->_newly_created_models;
-is(scalar(keys %$new_models_2), 2, 'the cron created two new models (capture data causes two models to be created)');
+is(scalar(keys %$new_models_2), 4, 'the cron created four new models (capture data causes two models to be created, each has a per-lane QC)');
 
 my $models_changed_2 = $command_2->_existing_models_assigned_to;
 is(scalar(keys %$models_changed_2), 1, 'data was assigned to an existing model');
@@ -238,7 +270,11 @@ for my $m (@new_models_2, $model_changed_2) {
     ok($m->build_requested, 'the cron set the model to be built');
 }
 
-for my $m (@new_models_2) {
+my @new_refalign_models = grep($_->name !~ /prod-qc$/, @new_models_2);
+is(scalar(@new_refalign_models), 2, 'created two refalign capture models');
+
+for my $m (@new_refalign_models) {
+
     ok($m->region_of_interest_set_name, 'the new model has a region_of_interest_set_name defined');
 
     my @instrument_data = $m->instrument_data;
@@ -250,7 +286,7 @@ for my $m (@new_models_2) {
     subject_class_name => 'Genome::Sample',
     subject_id => $sample->id,
 );
-is(scalar(@models_for_sample), 4, 'found 4 models created for the subject');
+is(scalar(@models_for_sample), 6, 'found 6 models created for the subject');
 
 @instrument_data = $new_model->instrument_data;
 is(scalar(@instrument_data), 3, 'the new model has three instrument data assigned');
@@ -264,7 +300,7 @@ my (@pse_4_genome_model_ids) = $pse_4->added_param('genome_model_id');
 
 is(scalar(@pse_3_genome_model_ids), 1, 'one genome_model_id parameter for third pse');
 is($pse_3_genome_model_ids[0], $new_model->id, 'genome_model_id parameter set correctly for third pse');
-is_deeply([sort @pse_4_genome_model_ids], [sort map($_->id, @new_models_2)], 'genome_model_id parameter set correctly to match builds created for fourth pse');
+is_deeply([sort @pse_4_genome_model_ids], [sort map($_->id, @new_refalign_models)], 'genome_model_id parameter set correctly to match builds created for fourth pse');
 
 my @members_2 = $group->models;
 is(scalar(@members_2) - scalar(@members), 2, 'two subsequent models added to the group');

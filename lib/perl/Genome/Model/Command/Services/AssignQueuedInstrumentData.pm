@@ -758,8 +758,9 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             next;
         }
 
-        my @project_names = $self->_resolve_project_and_work_order_names($pse);
-        $self->add_model_to_default_modelgroups($m, @project_names);
+        my @group_names = $self->_resolve_project_and_work_order_names($pse);
+        push @group_names, $self->_resolve_pooled_sample_name_for_instrument_data($genome_instrument_data);
+        $self->add_model_to_default_modelgroups($m, @group_names);
 
         my $new_models = $self->_newly_created_models;
         $new_models->{$m->id} = $m;
@@ -868,6 +869,33 @@ sub _resolve_project_and_work_order_names {
     }
 
     return map(($_->setup_name, $_->research_project_name), @work_orders);
+}
+
+sub _resolve_pooled_sample_name_for_instrument_data {
+    my $self = shift;
+    my $instrument_data = shift;
+
+    return unless $instrument_data->can('index_sequence');
+    my $index = $instrument_data->index_sequence;
+    if($index) {
+        my $instrument_data_class = $instrument_data->class;
+        my $pooled_subset_name = $instrument_data->subset_name;
+        $pooled_subset_name =~ s/${index}$/unknown/;
+
+        my $pooled_instrument_data = $instrument_data_class->get(
+            run_name => $instrument_data->run_name,
+            subset_name => $pooled_subset_name,
+            index_sequence => 'unknown',
+        );
+        return unless $pooled_instrument_data;
+
+        my $sample = $pooled_instrument_data->sample;
+        return unless $sample;
+
+        return $sample->name;
+    }
+
+    return;
 }
 
 sub request_builds {
