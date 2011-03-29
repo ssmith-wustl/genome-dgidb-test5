@@ -819,21 +819,19 @@ sub add_model_to_default_modelgroups {
         my $sample = $subject->sample;
         $source = $sample->source;
     } else {
-        $self->error_message('Unhandled subject for model--not adding to model-groups');
-        return;
-    }
-
-    unless($source) {
-        $self->error_message('Failed to get source for subject.');
-        return;
+        $self->error_message('Unhandled subject for model--not adding to common name model-groups');
     }
 
     my @group_names = @project_names;
 
-    my $common_name = $source->common_name;
-    if($common_name) {
-        my ($source_grouping) = $common_name =~ /^([a-z]+)\d+$/i;
-        push @group_names, $source_grouping if $source_grouping;
+    unless($source) {
+        $self->error_message('Failed to get source for subject.');
+    } else {
+        my $common_name = $source->common_name;
+        if($common_name) {
+            my ($source_grouping) = $common_name =~ /^([a-z]+)\d+$/i;
+            push @group_names, $source_grouping if $source_grouping;
+        }
     }
 
     for my $group_name (@group_names) {
