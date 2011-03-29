@@ -160,9 +160,10 @@ sub _assign_instrument_data {
             $self->error_message('No index illumina for solexa instrument data '.$instrument_data->id);
             return;
         }
-        if ( not $index_illumina->copy_sequence_files_confirmed_successfully ) {
+        my $copy_sequence_files_pse = $index_illumina->get_copy_sequence_files_pse;
+        unless (grep { $copy_sequence_files_pse->pse_status eq $_ } qw/ completed inprogress /) {
             $self->warning_message(
-                'SKIPPING instrument data ('.join(' ', map { $instrument_data->$_ } (qw/ id sequencing_platform /)).' because '
+                'SKIPPING instrument data ('.join(' ', map { $instrument_data->$_ } (qw/ id sequencing_platform /)).') because '
                 .'it does not have a successfully confirmed copy sequence files pse. This means it is not ready or may be corrupted. It cannot be assigned individually.'
             );
             return 1; # OK, just skipping

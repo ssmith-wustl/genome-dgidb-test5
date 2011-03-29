@@ -34,6 +34,7 @@ our %app = map { $_ => load_app($_) } qw/
   404Handler.psgi
   Dump.psgi
   Cache.psgi
+  Info.psgi
   /;
 
 ## Utility functions
@@ -71,6 +72,9 @@ dispatch {
         }
 
         return $resp;
+    },
+    sub (/view/debug) {
+        redispatch_psgi($app{'Info.psgi'});
     },
     sub (/res/**) {
       redispatch_to "/view/genome/resource.html/$_[1]";

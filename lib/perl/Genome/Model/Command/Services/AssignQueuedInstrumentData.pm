@@ -641,22 +641,22 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         }
     }
 
-    my $model = Genome::Model->create(%model_params);
-    unless ( $model ) {
+    my $regular_model = Genome::Model->create(%model_params);
+    unless ( $regular_model ) {
         $self->error_message('Failed to create model with params: '.Dumper(\%model_params));
         return;
     }
-    push @new_models, $model;
+    push @new_models, $regular_model;
 
     my $capture_target = eval{ $genome_instrument_data->target_region_set_name; };
 
-    my $name = $model->default_model_name(capture_target => $capture_target);
+    my $name = $regular_model->default_model_name(capture_target => $capture_target);
     if ( not $name ) {
         $self->error_message('Failed to get model name for params: '.Dumper(\%model_params));
-        for ( @new_models ) { $_->delete; }
+        for my $model ( @new_models ) { $model->delete; }
         return;
     }
-    $model->name($name);
+    $regular_model->name($name);
 
     if ( $capture_target ) {
         my $roi_list;
@@ -677,8 +677,8 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             $roi_list = $capture_target;
         }
 
-        unless($self->assign_capture_inputs($model, $capture_target, $roi_list)) {
-            for ( @new_models ) { $_->delete; }
+        unless($self->assign_capture_inputs($regular_model, $capture_target, $roi_list)) {
+            for my $model ( @new_models ) { $model->delete; }
             return;
         }
 
@@ -686,18 +686,18 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         my $wuspace_model = Genome::Model->create(%model_params);
         unless ( $wuspace_model ) {
             $self->error_message('Failed to create wu-space model: '.Dumper(\%model_params));
-            for (@new_models) { $_->delete; }
+            for my $model (@new_models) { $model->delete; }
             return;
         }
         push @new_models, $wuspace_model;
 
-        my $wuspace_name = $model->default_model_name(capture_target => $capture_target, roi => 'wu-space');
+        my $wuspace_name = $wuspace_model->default_model_name(capture_target => $capture_target, roi => 'wu-space');
         if ( not $wuspace_name ) {
             $self->error_message('Failed to get wu-space model name for params: '.Dumper(\%model_params));
-            for (@new_models) { $_->delete; }
+            for my $model (@new_models) { $model->delete; }
             return;
         }
-        $model->name($wuspace_name);
+        $wuspace_model->name($wuspace_name);
 
         my $wuspace_roi_list;
         if($reference_sequence_build and $reference_sequence_build->is_compatible_with($root_build37_ref_seq)) {
@@ -707,10 +707,8 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         }
 
         unless($self->assign_capture_inputs($wuspace_model, $capture_target, $wuspace_roi_list)) {
-            for (@new_models) {
-                $_->delete;
-                return;
-            }
+            for my $model (@new_models) { $model->delete; }
+            return;
         }
     }
 
@@ -760,8 +758,9 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             next;
         }
 
-        my @project_names = $self->_resolve_project_and_work_order_names($pse);
-        $self->add_model_to_default_modelgroups($m, @project_names);
+        my @group_names = $self->_resolve_project_and_work_order_names($pse);
+        push @group_names, $self->_resolve_pooled_sample_name_for_instrument_data($genome_instrument_data);
+        $self->add_model_to_default_modelgroups($m, @group_names);
 
         my $new_models = $self->_newly_created_models;
         $new_models->{$m->id} = $m;
@@ -820,21 +819,19 @@ sub add_model_to_default_modelgroups {
         my $sample = $subject->sample;
         $source = $sample->source;
     } else {
-        $self->error_message('Unhandled subject for model--not adding to model-groups');
-        return;
-    }
-
-    unless($source) {
-        $self->error_message('Failed to get source for subject.');
-        return;
+        $self->error_message('Unhandled subject for model--not adding to common name model-groups');
     }
 
     my @group_names = @project_names;
 
-    my $common_name = $source->common_name;
-    if($common_name) {
-        my ($source_grouping) = $common_name =~ /^([a-z]+)\d+$/i;
-        push @group_names, $source_grouping if $source_grouping;
+    unless($source) {
+        $self->error_message('Failed to get source for subject.');
+    } else {
+        my $common_name = $source->common_name;
+        if($common_name) {
+            my ($source_grouping) = $common_name =~ /^([a-z]+)\d+$/i;
+            push @group_names, $source_grouping if $source_grouping;
+        }
     }
 
     for my $group_name (@group_names) {
@@ -870,6 +867,33 @@ sub _resolve_project_and_work_order_names {
     }
 
     return map(($_->setup_name, $_->research_project_name), @work_orders);
+}
+
+sub _resolve_pooled_sample_name_for_instrument_data {
+    my $self = shift;
+    my $instrument_data = shift;
+
+    return unless $instrument_data->can('index_sequence');
+    my $index = $instrument_data->index_sequence;
+    if($index) {
+        my $instrument_data_class = $instrument_data->class;
+        my $pooled_subset_name = $instrument_data->subset_name;
+        $pooled_subset_name =~ s/${index}$/unknown/;
+
+        my $pooled_instrument_data = $instrument_data_class->get(
+            run_name => $instrument_data->run_name,
+            subset_name => $pooled_subset_name,
+            index_sequence => 'unknown',
+        );
+        return unless $pooled_instrument_data;
+
+        my $sample = $pooled_instrument_data->sample;
+        return unless $sample;
+
+        return $sample->name;
+    }
+
+    return;
 }
 
 sub request_builds {
