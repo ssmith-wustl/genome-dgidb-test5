@@ -307,33 +307,18 @@ sub execute {
         return 1;
     }
 
-    $self->status_message("Getting ready to run PAP!");
-
-    # FIXME bdericks: Not looking at this stuff for now... probably needs some work
-    warn qq{\n\nBeginning to run SendToPap.pm(workflow) ... from Hap.pm\n\n};
-#    $self->status_message("starting send-to-pap/PAP workflow...");
-
-    unless ( defined( $config->{workflowxml} ) )
-    {
+    # Also skip PAP if there's no workflow file spepcifed in the config file! 
+    unless (defined $config->{workflowxml}) {
+        $self->status_message("No workflow xml path provided in config file, so PAP/BER will not be run. Exiting...");
         return 1;
     }
 
-    {
-        my $gram_stain = $config->{gram_stain};
+    $self->status_message("Getting ready to run PAP!");
 
-        unless ( defined($gram_stain) )
-        {
-            die
-                'cannot start workflow - no gram_stain specified in config file...Hap.pm\n\n';
-        }
-
-        unless ( ( $gram_stain eq 'positive' )
-            || ( $gram_stain eq 'negative' ) )
-        {
-            die
-                "cannot start workflow - gram_stain must be 'postive' or 'negative', not '$gram_stain'...Hap.pm\n\n";
-        }
-
+    my $gram_stain = $config->{gram_stain};
+    confess 'Gram stain not specified in config file, cannot start PAP workflow!' unless defined $gram_stain;
+    unless ($gram_stain eq 'positive' or $gram_stain eq 'negative') {
+        confess "Gram stain invalid: must be either positive or negative, not $gram_stain";
     }
 
     my $base_archive_dir = File::Spec->catdir(
@@ -341,50 +326,29 @@ sub execute {
         $config->{assembly_name}, $config->{assembly_version},
     );
 
-    my $blastp_archive_dir = File::Spec->catdir( $base_archive_dir, 'Blastp',
-        $config->{pipe_version}, 'Hybrid', );
-
-    my $interpro_archive_dir
-        = File::Spec->catdir( $base_archive_dir, 'Interpro',
-        $config->{pipe_version}, 'Hybrid', );
-
-    my $keggscan_archive_dir = File::Spec->catfile(
-        $base_archive_dir, 'Kegg', $config->{pipe_version},
-        'Hybrid',
-        join( '.', 'KS-OUTPUT', $config->{locus_tag}, 'CDS', 'pep', ),
-    );
-
-    my $psortb_archive_dir = File::Spec->catfile(
-        $base_archive_dir, 'psortB', $config->{pipe_version}, 'Hybrid');
+    my $blastp_archive_dir = File::Spec->catdir($base_archive_dir, 'Blastp', $config->{pipe_version}, 'Hybrid');
+    my $interpro_archive_dir = File::Spec->catdir($base_archive_dir, 'Interpro', $config->{pipe_version}, 'Hybrid');
+    my $keggscan_archive_dir = File::Spec->catfile($base_archive_dir, 'Kegg', $config->{pipe_version}, 
+        'Hybrid', join('.', 'KS-OUTPUT', $config->{locus_tag}, 'CDS', 'pep'));
+    my $psortb_archive_dir = File::Spec->catfile($base_archive_dir, 'psortB', $config->{pipe_version}, 'Hybrid');
 
     my $send = Genome::Model::Tools::Hgmi::SendToPap->create(
-        'locus_tag'            => $config->{locus_tag},
-        'sequence_set_id'      => $merge->sequence_set_id,
-        'sequence_name'        => $config->{assembly_name},
-        'organism_name'        => $config->{organism_name},
-        'workflow_xml'         => $config->{workflowxml},
-        'gram_stain'           => $config->{gram_stain},
-        'blastp_archive_dir'   => $blastp_archive_dir,
-        'interpro_archive_dir' => $interpro_archive_dir,
-        'keggscan_archive_dir' => $keggscan_archive_dir,
-        'psortb_archive_dir'   => $psortb_archive_dir,
-
-        # pepfile should be constructed automagically here.
+        locus_tag            => $config->{locus_tag},
+        sequence_set_id      => $merge->sequence_set_id,
+        sequence_name        => $config->{assembly_name},
+        organism_name        => $config->{organism_name},
+        workflow_xml         => $config->{workflowxml},
+        gram_stain           => $config->{gram_stain},
+        blastp_archive_dir   => $blastp_archive_dir,
+        interpro_archive_dir => $interpro_archive_dir,
+        keggscan_archive_dir => $keggscan_archive_dir,
+        psortb_archive_dir   => $psortb_archive_dir,
+        dev                  => $self->dev,
     );
+    confess 'Could not create command object for send to pap!' unless $send;
 
-    if ( $self->dev )
-    {
-        $send->dev(1);
-    }
-
-    if ($send)
-    {
-        $send->execute() or croak "can't run workflow pap step in Hap.pm\n\n";
-    }
-    else
-    {
-        croak "can't set up workflow pap step... Hap.pm\n\n";
-    }
+    $self->status_message("Parameters for protein annotation:\n" . Data::Dumper::Dumper($send));
+    confess 'Could not run pap!' unless $send->execute;
 
     # jcvi product naming goes here.
     # need tochdir
