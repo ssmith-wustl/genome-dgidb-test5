@@ -5,17 +5,14 @@ use warnings;
 
 use Genome;
 
-require File::Basename;
-require File::Copy;
-require IO::Dir;
-require IO::File;
+use IO::File;
 
 class Genome::InstrumentData::Command::Import::Microarray::IlluminaGenotypeArray {
-    is  => 'Genome::InstrumentData::Command::Import::Microarray::Base',
+    is => 'Genome::InstrumentData::Command::Import::Microarray::Base',
     has => [
         sequencing_platform => { is => 'Text', is_param => 0, is_constant => 1, value => 'illumina', },
     ],
-    doc => 'create an instrument data for a microarray',
+    doc => 'import illumina microarray data',
 };
 
 sub _resolve_unsorted_genotype_file {

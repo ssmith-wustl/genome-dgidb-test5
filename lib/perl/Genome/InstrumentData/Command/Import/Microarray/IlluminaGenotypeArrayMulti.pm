@@ -4,299 +4,274 @@ use strict;
 use warnings;
 
 use Genome;
-use File::Copy;
-use File::Copy::Recursive;
-use File::Basename;
-use File::Temp;
-use IO::Handle;
-use Data::Dumper;
 
-my %properties = (
-    original_data_path => {
-        is => 'Text',
-        doc => 'original data path of import data file(s): all files in path will be used as input',
-    },
-    sample_name_list => {
-        is => 'Text',
-        doc => 'The list of samples associated with the FinalReport file.',
-        is_many => 1,
-        is_optional => 1,
-    },
-    sample_name => {
-        is => 'Text',
-        doc => 'The tool will automagically populate this to multiple',
-        is_optional => 1,
-    },
-    import_source_name => {
-        is => 'Text',
-        doc => 'source name for imported file, like Broad Institute',
-        is_optional => 1,
-    },
-    import_format => {
-        is => 'Text',
-        doc => 'format of import data, like microarray',
-        valid_values => ['unknown'],                
-        is_optional => 1,
-    },
-    sequencing_platform => {
-        is => 'Text',
-        doc => 'The tool will automagically populate this to be illumina genotype array',
-        valid_values => ['illumina genotype array', 'illumina expression array', 'affymetrix genotype array', '454','sanger','unknown'],
-        is_optional => 1,
-    },
-    description  => {
-        is => 'Text',
-        doc => 'general description of import data, like which software maq/bwa/bowtie to used to generate this data',
-        is_optional => 1,
-    },
-    allocation => {
-        is => 'Genome::Disk::Allocation',
-        id_by => 'id',
-        is_optional => 1,
-    },
-    result_model_ids => {
-        is => 'Array',
-        is_optional => 1,
-    },
-    ucsc_array_file => {
-        is => 'Text',
-        is_optional => 1,
-    },
-    exclude_sample_names => {
-        is => 'Text',
-        is_optional => 1,
-        doc => 'sample names (names like H_KU-16021-D801387), delineated by commas, to be excluded from the import command.',
-    },
-    include_sample_names => {
-        is => 'Text',
-        is_optional => 1,
-        doc => 'sample names (names like H_KU-16021-D801387), delineated by commas, to be included in the import command.',
-    },
-    reference_sequence_build => {
-        is => 'Genome::Model::Build::ImportedReferenceSequence',
-        id_by => 'reference_sequence_build_id',
-        doc => 'Build of the reference against which the genotype file was produced.',
-        is_optional => 0,
-    },
-    reference_sequence_build_id  => {
-        is => 'Number',
-        doc => 'Build-id of the reference against which the genotype file was produced.',
-        is_optional => 0,
-    },
-);
-    
+use Data::Dumper;
+require File::Temp;
+require IO::Dir;
+require IO::File;
+
 class Genome::InstrumentData::Command::Import::Microarray::IlluminaGenotypeArrayMulti {
     is => 'Genome::Command::Base',
-    has => [%properties],
-    doc => 'import external microarray instrument data',
+    has => [
+        original_data_path => {
+            is => 'Text',
+            doc => 'original data path of import data file(s): all files in path will be used as input',
+        },
+        reference_sequence_build => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            doc => 'Build of the reference against which the genotype file was/will be produced.',
+        },
+        ucsc_array_file => {
+            is => 'Text',
+            is_optional => 1,
+            default_value => "/gscmnt/sata135/info/medseq/dlarson/snpArrayIllumina1M",
+        },
+        exclude_samples => {
+            is => 'Text',
+            is_optional => 1,
+            is_many => 1,
+            doc => 'Do not import these samples.',
+        },
+        include_samples => {
+            is => 'Text',
+            is_optional => 1,
+            is_many => 1,
+            doc => 'Only import these samples.',
+        }, 
+        import_source_name => {
+            is => 'Text',
+            doc => 'Source of the microarray data. Ex: WUGC, Broad, TIGR...',
+            is_optional => 1,
+            default_value => 'WUGC',
+        },
+        description  => {
+            is => 'Text',
+            doc => 'General description of the genotype data',
+        },
+        sequencing_platform => { is => 'Text', is_param => 0, is_constant => 1, value => 'illumina', },
+        _models => { is => 'Array', is_optional => 1, is_param => 0, },
+    ],
+    doc => 'import multiple illumina microarray data',
 };
 
 sub execute {
     my $self = shift;
-    $self->sample_name("multiple");
-    $self->sequencing_platform("illumina genotype array");
-    $self->process_imported_files;
+
+    my ($master_file_name, $sample_map_file_name) = $self->_resolve_master_file_and_sample_map;
+    return if not $master_file_name or not $sample_map_file_name;
+
+    my $output_directory = $self->_create_genotypes_from_master_file($master_file_name);
+    return if not $output_directory;
+
+    my @samples = $self->_resolve_samples($sample_map_file_name);
+    return if not @samples;
+
+    for my $sample_info ( @samples ) {
+        $sample_info->{genotype_file} = $output_directory.'/'.$sample_info->{external_name}.'.genotype';
+    }
+
+    my $import = $self->_import_samples(@samples);
+    return if not $import;
+
     return 1;
 }
 
-sub process_imported_files {
+sub _resolve_master_file_and_sample_map {
     my $self = shift;
 
-    my %excluded_names;
-    my %included_names;
+    $self->status_message('Resolve call file and sample map');
 
-    my $genome_sample;
-    my $genotype_path;
-    my $genotype_path_and_file;
-    my $processing_profile;
-    my $call_file;
-    my $genotype;
-    my $sample_map;
-    my $illumina_manifest;
-    my $forward_strand_report;
-
-    if(defined($self->exclude_sample_names) and not defined($self->include_sample_names)) {
-        %excluded_names = map { $_ => 1} split( ',', $self->exclude_sample_names);
-        $self->status_message("Found exclude-sample-names.");
-        print $self->status_message;
-        for (sort(keys(%excluded_names))) {
-            print "Exclude sample :  ".$_."\n";
+    my $io_dir = IO::Dir->new($self->original_data_path);
+    if ( not $io_dir ) {
+        $self->error_message('Failed to open original path: '.$self->original_data_path);
+        return;
+    }
+    $io_dir->read; $io_dir->read;
+    my ($master_file_name, $sample_map_file_name);
+    while ( my $file = $io_dir->read ) {
+        if ($file =~ /FinalReport\.(txt|csv)/) {
+            $master_file_name = $file;
         }
-    }
-    if(defined($self->include_sample_names) and not defined($self->exclude_sample_names)) {
-        %included_names = map { $_ => 1} split( ',', $self->include_sample_names);
-        $self->status_message("Found include-sample-names.");
-        print $self->status_message;
-        for (sort(keys(%included_names))) {
-            print "Include sample :  ".$_."  \$included_names{\$_}=".$included_names{$_}."\n";
+        elsif ($file =~ /Sample_Map/) {
+            $sample_map_file_name = $file;
         }
+        last if $master_file_name and $sample_map_file_name;
     }
-    if(defined($self->include_sample_names) and defined($self->exclude_sample_names)) {
-        $self->error_message("You may not simultaneously include and exclude sample names.");
-        die $self->error_message;
+    if ( not $master_file_name ) {
+        $self->error_message('Could not find master genotype file in original data path: '.$self->original_data_path);
+        return;
+    }
+    if ( not $sample_map_file_name ) {
+        $self->error_message('Could not find sample map file in original data path: '.$self->original_data_path);
+        return;
+    }
+    $self->status_message("Master file name: $master_file_name");
+    $self->status_message("Sample map name: $sample_map_file_name");
+
+    $self->status_message('Resolve call file and sample map...OK');
+
+    return ($master_file_name, $sample_map_file_name);
+}
+
+sub _create_genotypes_from_master_file {
+    my ($self, $master_file_name) = @_;
+
+    Carp::confess('No master file name given') if not $master_file_name;
+
+    $self->status_message('Create genotypes from master file');
+
+    my $master_file = $self->original_data_path.'/'.$master_file_name;
+    $self->status_message('Master file: '.$master_file);
+
+    my $temp_dir = File::Temp::tempdir(CLEANUP => 1); 
+    $self->status_message('Temp dir: '.$temp_dir);
+    my $tool = Genome::Model::Tools::Array::CreateGenotypesFromBeadstudioCalls->create(
+        genotype_file => $master_file,
+        output_directory => $temp_dir, 
+        ucsc_array_file => $self->ucsc_array_file,
+    );
+    if ( not $tool ) {
+        $self->error_message('Failed to create "create genotypes from beadstudio calls" tool');
+        return;
+    }
+    $tool->dump_status_messages(1);
+    if ( not $tool->execute ) {
+        $self->error_message('Failed to execute "create genotypes from beadstudio calls" tool');
+        return;
     }
 
-    unless(defined($self->ucsc_array_file)) {
-        $self->ucsc_array_file("/gscmnt/sata135/info/medseq/dlarson/snpArrayIllumina1M");
+    $self->status_message('Create genotypes from master call file...OK');
+
+    return $temp_dir
+}
+
+sub _resolve_samples {
+    my ($self, $sample_map_file_name) = @_;
+
+    Carp::confess('No sample map file name given') if not $sample_map_file_name;
+
+    $self->status_message('Resolve samples and genotype files');
+
+    my $sample_map_file = $self->original_data_path.'/'.$sample_map_file_name;
+    $self->status_message('Sample map file: '.$sample_map_file);
+
+    my $this_sample_should_be_excluded;
+    if ( $self->exclude_samples and $self->include_samples ) {
+        $self->error_message('Cannot use included and excluded sample names at the same time.');
+        return;
+    }
+    elsif ( $self->exclude_samples ) {
+        $self->status_message('Exclude samples: '.join(' ', $self->exclude_samples));
+        $this_sample_should_be_excluded = sub{
+            return grep { $_[0] eq $_ } $self->exclude_samples;
+        };
+    }
+    elsif ( $self->include_samples ) {
+        $self->status_message('Include samples: '.join(' ', $self->include_samples));
+        $this_sample_should_be_excluded = sub{
+            return not grep { $_[0] eq $_ } $self->include_samples;
+        };
+    }
+    else {
+        $self->status_message('Include all samples');
+        $this_sample_should_be_excluded = sub{ return; };
     }
 
-    my $path = $self->original_data_path;
-
-    my @files = glob( $path."/*" );
-
-
-    #Find the exact file names of the Final Report and the Sample Map.    
-    for (@files) {
-        if ($_ =~ /FinalReport\.(txt|csv)/) {
-            $genotype = $_;
-            next;
-        }
-        if ($_ =~ /Sample_Map/) {
-            $sample_map = $_;
-            next;
-        }
-        if(defined($sample_map) && defined($genotype)) {
-            last;
-        }
+    my $fh = IO::File->new($sample_map_file, "r");
+    if ( not $fh ) {
+        $self->error_message("Could not open sample map file ($sample_map_file): $!");
+        return;
     }
 
-    print "genotype = ".$genotype."\n";
-    print "sample map = ".$sample_map."\n";
-
-    my $sample_map_fh;
-    unless($sample_map_fh = new IO::File $sample_map,"r"){
-        $self->error_message("Could not open file ".$sample_map);
-        die $self->error_message;
-    }
-
-    my $line = $sample_map_fh->getline;
-    my %names;
-    my %normal;
-    my %internal;
-    my %samples;
-    my %sample_names;
+    my $header = $fh->getline;
     my $split_char;
-    if((not defined($split_char))&& ($line =~ /\,/)) {
-        $split_char = ",";
-        $self->status_message("Using comma as the delineating character for files.");
-        print $self->status_message;
-    } elsif (not defined($split_char) && ($line =~ /\t/)) {
+    if ( $header =~ /\,/ ) {
+        $split_char = ',';
+    }
+    elsif ( $header =~ /\t/ ) {
         $split_char = "\t";
-    } elsif (not defined($split_char)) {
-        die "couldn't find the proper character used to delineate the Sample_Map file";
+    }
+    else {
+        $self->error_message('Could not determine split character in sample map file from line: '.$header);
+        return;
     }
 
-    #extract sample_name from sample mapping, and include or exclude as directed by parameters
-    while($line = $sample_map_fh->getline) {
-        my @stuff = split $split_char, $line;
-        my $sample_name=$stuff[1];
-        my $internal_name=$stuff[2];
-        if (scalar(keys(%included_names))) {
-            unless(defined($included_names{$sample_name})) {
-                next;
-            }
-        } elsif (scalar(keys(%excluded_names))) {
-            if (defined($excluded_names{$sample_name})) {
-                next;
-            }
+    my @samples;
+    while ( my $line = $fh->getline ) {
+        my (undef, $name, $external_name) = split($split_char, $line);
+        if ( not $name ) {
+            $self->error_message('No sample name found in line: '.$line);
+            return;
         }
-        $sample_names{$internal_name} = $sample_name;
-        $internal{$sample_name} = $internal_name;
+        if ( not $external_name ) {
+            $self->error_message('No external name found in line: '.$line);
+            return;
+        }
+        next if $this_sample_should_be_excluded->($name);
+        my $sample = Genome::Sample->get(name => $name);
+        if ( not $sample ) {
+            $self->error_message('Cannot get sample for name: '.$name);
+            return;
+        }
+        push @samples, {
+            sample => $sample,
+            external_name => $external_name,
+        };
+    }
+    $fh->close;
+
+    if ( not @samples ) {
+        $self->error_message("Found none or excluded all samples");
+        return;
     }
 
-    unless(scalar(keys(%sample_names))) {
-        $self->error_message("Found no samples / excluded all samples");
-        die $self->error_message;
+    $self->status_message('Resolve samples and genotype files...OK');
+
+    return @samples;
+}
+
+sub _import_samples {
+    my ($self, @samples) = @_;
+
+    Carp::confess('No samples given to import samples') if not @samples;
+
+    $self->status_message('Import genotype file for samples');
+
+    my @models;
+    for my $sample ( @samples ) {
+        $self->status_message('Sample: '.$sample->{sample}->name);
+        my $genotype_file = $sample->{genotype_file};
+        $self->status_message('Genotype file: '.$genotype_file);
+        if ( not -s $genotype_file ) {
+            $self->error_message('No genotype file for sample: '.Dumper($sample));
+            return;
+        }
+        my $import = Genome::InstrumentData::Command::Import::Microarray::GenotypeFile->create(
+            sample => $sample->{sample},
+            original_data_path => $self->original_data_path,
+            reference_sequence_build => $self->reference_sequence_build,
+            sequencing_platform => 'illumina',
+            genotype_file => $genotype_file,
+            description => $self->description,
+            import_source_name => $self->import_source_name,
+        );
+        if ( not $import ) {
+            $self->error_message('Failed to create genotype file importer');
+            return;
+        }
+        $import->dump_status_messages(1);
+        if ( not $import->execute ) {
+            $self->error_message('Failed to execute genotype file importer');
+            return;
+        }
+        push @models, $import->_model;
     }
+    $self->_models(\@models);
 
-    #Grab sample objects and toss them into the samples hash    
-    for(sort(keys(%sample_names))) {
-        print "sample_name = ".$_."\n";
-        my $local_sample = Genome::Sample->get( name => $sample_names{$_} );
-        unless($local_sample) {
-            $self->error_message("Could not locate sample by the name of $sample_names{$_}.");
-            die $self->error_message;
-        }
-        $samples{$_} = $local_sample;
-        print "Found sample: ".$local_sample->name." to associate with barcode: ".$_."\n";
-    }
+    $self->status_message('Import genotype file for samples...OK');
 
-
-    my $temp_dir = File::Temp::tempdir('Genome-InstrumentData-Commnd-Import-Microarray-Illumina-Multi-Sample-XXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1); 
-
-    #create genotype files from machine data, store them on tmp disk, to be copied to individual allocations on a per-sample basis.
-    $self->status_message("Now running Genome::Model::Tools::Array::CreateGenotypesFromBeadstudioCalls");
-    print $self->status_message."\n";
-    unless(Genome::Model::Tools::Array::CreateGenotypesFromBeadstudioCalls->execute(
-        genotype_file => $genotype,
-        output_directory => "$temp_dir", 
-        ucsc_array_file => $self->ucsc_array_file,)) {
-            $self->error_message("Call to Genome::Model::Tools::Array::CreateGenotypesFromBeadstudioCalls failed");
-            die $self->error_message;
-    }
-    print "finished call to Genome::Model::Tools::Array::CreateGenotypesFromBeadstudioCalls.\n";   
-
-
-    my $count=0;
-    my @model_ids;
-
-    #This loops through the list of samples and creates instrument-data records for each, copies the genotype file into the associated allocation,
-    # and then deposits the goldSNP file, then kicks off a define/build model.
-    for my $k (sort(keys(%samples))) {
-        my $sample_name = $samples{$k}->name;
-        my $sample = $samples{$k};
-
-        $self->status_message("working on sample ".$sample_name);
-        my $num_samples = scalar(keys(%samples));
-        print "working on sample ".$sample_name." # ".($count+1)." of $num_samples samples.\n";
-
-        my $library = Genome::Library->get(sample=>$sample, name =>$sample->name . "-microarraylib");
-        unless ($library) {
-            $library = Genome::Library->create(sample=>$sample, name =>$sample->name . "-microarraylib");
-        }
-        unless ($library) {
-            $self->error_message("Can't get or create library for " . $sample->name . "-microarraylib");
-            die $self->error_message;
-        }
-        
-        unless(Genome::InstrumentData::Command::Import::Microarray::Misc->execute(
-                original_data_path => $path,
-                sample_name => $sample_name,
-                library_name => $library->name,
-                sequencing_platform => $self->sequencing_platform,
-                reference_sequence_build => $self->reference_sequence_build)) {
-            $self->error_message("unable to import sample data for ".$sample_name);
-            die $self->error_message;
-        }
-        my $imported_instrument_data;
-        unless($imported_instrument_data = Genome::InstrumentData::Imported->get(
-                sample_name => $sample_name,
-                original_data_path => $path,
-                sequencing_platform => $self->sequencing_platform,
-            )) {
-            $self->error_message("unable to find imported data for ".$sample_name);
-            die $self->error_message;
-        }
-        my $gen = "$temp_dir/$internal{$sample_name}.genotype";
-
-        unless(Genome::InstrumentData::Command::Import::Microarray::GenotypeFile->create(
-                original_data_path    => $gen,
-                sample              => $sample,
-                library             => $library,
-                reference_sequence_build => $self->reference_sequence_build,
-                )){
-            $self->error_message("Could not define model for ".$sample_name."\n");
-            die $self->error_message;
-        }
-    }
     return 1;
 }
 
-
 1;
-
-    
-
-
-    
 

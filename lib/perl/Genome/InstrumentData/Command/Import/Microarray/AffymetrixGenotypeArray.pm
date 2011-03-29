@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::InstrumentData::Command::Import::Microarray::AffymetrixGenotypeArray {
-    is  => 'Genome::InstrumentData::Command::Import::Microarray::Base',
+    is => 'Genome::InstrumentData::Command::Import::Microarray::Base',
     has => [
         annotation_file => {
             is => 'Text',
@@ -15,6 +15,7 @@ class Genome::InstrumentData::Command::Import::Microarray::AffymetrixGenotypeArr
         },
         sequencing_platform => { is => 'Text', is_param => 0, is_constant => 1, value => 'affymetrix', },
     ],
+    doc => 'import affymetrix microarray data',
 };
 
 sub _resolve_unsorted_genotype_file {

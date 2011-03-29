@@ -83,7 +83,7 @@ ok($cmd->execute, "execution was successful");
 
 my $i = Genome::InstrumentData::Imported->get($cmd->generated_instrument_data_id);
 is($i->import_format, 'genotype file', 'import format');
-ok(!$i->import_source_name, 'import source name');
+is($i->import_source_name, 'WUGC', 'import source name');
 is($i->description, $params{description}, 'description');
 is($i->library_id, $library->id, 'description');
 
@@ -110,12 +110,6 @@ my $snp_array_file = $build->formatted_genotype_file_path;
 ok(-s $snp_array_file, 'created snp array file');
 my $snvs_bed = $build->snvs_bed;
 ok(-s $snvs_bed, 'created snvs bed file');
-
-# Fail - model exists
-$cmd = Genome::InstrumentData::Command::Import::Microarray::GenotypeFile->create(%params);
-$cmd->dump_status_messages(1);
-ok(!$cmd->execute, "fail as expected - recreate model"); 
-$cmd->delete;
 
 done_testing();
 exit;
