@@ -9,11 +9,29 @@ class Genome::Model::Tools::AmpliconAssembly {
     is => 'Command',
     is_abstract => 1,
     has => [
-    directory => {
-        is => 'Text',
-        doc => 'Base directory for the amplicon assembly.  It is required that the amplicon assembly have been previously created, saving it\'s properties.  See the "create" command.',
-    },
-    map( { $_ => { via => 'amplicon_assembly' } } Genome::AmpliconAssembly->helpful_methods ),
+        directory => {
+            is => 'Text',
+            doc => 'Base directory for the amplicon assembly.  It is required that the ' .
+                'amplicon assembly have been previously created, saving it\'s properties. ' .
+                'See the "create" command.',
+        },
+        amplicon_assembly => {
+            is => 'Genome::AmpliconAssembly',
+            via => 'directory',
+        },
+        chromat_dir => { via => 'amplicon_assembly' },
+        phd_dir => { via => 'amplicon_assembly' },
+        edit_dir => { via => 'amplicon_assembly' },
+        consed_directory => { via => 'amplicon_assembly' },
+        create_directory_structure => { via => 'amplicon_assembly' },
+        get_amplicons => { via => 'amplicon_assembly' },
+        amplicon_fasta_types => { via => 'amplicon_assembly' },
+        amplicon_bioseq_method_for_type => { via => 'amplicon_assembly' },
+        fasta_file_for_type => { via => 'amplicon_assembly' },
+        qual_file_for_type => { via => 'amplicon_assembly' },
+        assembly_fasta => { via => 'amplicon_assembly' },
+        reads_fasta => { via => 'amplicon_assembly' },
+        processed_fasta => { via => 'amplicon_assembly' },
     ],
 };
 
@@ -38,20 +56,6 @@ sub create {
     }
 
     return $self;
-}
-
-#< AA >#
-sub amplicon_assembly {
-    my $self = shift;
-
-    unless ( $self->{_amplicon_assembly} ) {
-        #$self->{_amplicon_assembly} = Genome::AmpliconAssembly->create(
-        $self->{_amplicon_assembly} = Genome::AmpliconAssembly->get(
-            directory => $self->directory,
-        );
-    }
-
-    return $self->{_amplicon_assembly};
 }
 
 1;
