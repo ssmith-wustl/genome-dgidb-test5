@@ -32,6 +32,7 @@ class Genome::InstrumentData::Command::Import::Microarray::Base {
             is => 'Text',
             doc => 'source name for imported file, like Broad Institute',
             is_optional => 1,
+            default_value => 'WUGC',
         },
         sequencing_platform => {
             is => 'Text',
@@ -80,18 +81,21 @@ sub execute {
     return if not $allocation;
 
     my $copy = $self->_copy_original_data_path;
-    return if not $copy;
+    return $self->_deallocate if not $copy;
 
-    # process/dump genotype files
-    my $process = $self->process_imported_files;
-    return if not $process;
+    my $unsorted_genotype_file = $self->_resolve_unsorted_genotype_file;
+    return $self->_deallocate if not $unsorted_genotype_file;
+
+    my $sort_ok = $self->_sort_genotype_file($unsorted_genotype_file);
+    return $self->_deallocate if not $sort_ok;
 
     my $add_and_build = $self->_add_instrument_data_to_model_and_build($instrument_data);
-    return if not $add_and_build;
+    return $self->_deallocate if not $add_and_build;
+
+    my $reallocate = eval{ $self->_instrument_data->disk_allocations->reallcoate; };
 
     return 1;
 }
-
 
 sub _validate_original_data_path_and_set_kb_requested {
     my $self = shift;
@@ -174,34 +178,34 @@ sub _create_model {
 
     $self->status_message('Create genotype model');
 
-    my $name = $self->sequencing_platform.' wugc';
-    my $processing_profile = Genome::ProcessingProfile->get(name => $name);
+    my $processing_profile = Genome::ProcessingProfile::GenotypeMicroarray->get(instrument_type => $self->sequencing_platform);
     if ( not $processing_profile ) {
-        $self->error_message("Cannot find genotype microarray processing profile for $name to create model");
+        $self->error_message('Cannot find genotype microarray processing profile for '.$self->sequencing_platform.' to create model');
         return;
     }
-
-    my %model_params = (
-        processing_profile => $processing_profile,
-        subject_id => $self->sample->id,
-        subject_class_name => $self->sample->class,
-        reference_sequence_build => $self->reference_sequence_build,
-    );
 
     $self->status_message('Processing profile: '.$processing_profile->name);
     $self->status_message('Sample: '.$self->sample->name);
     $self->status_message('Reference build: '.$self->reference_sequence_build->__display_name__);
 
-    my $model = Genome::Model::GenotypeMicroarray->get(%model_params);
-    if ( $model ) {
-        $self->error_message('Cannot create genotype microarray model because one exists for processing profile ('.$processing_profile->name.'), sample ('.$self->sample->name.') and reference sequence build ('.$self->reference_sequence_build->name.')');
-        return;
-    }
-    $model = Genome::Model::GenotypeMicroarray->create(%model_params);
+    my $model = Genome::Model::GenotypeMicroarray->create(
+        name => 'IMPORT_GM_PLACE_HOLDER',
+        processing_profile => $processing_profile,
+        subject_id => $self->sample->id,
+        subject_class_name => $self->sample->class,
+        reference_sequence_build => $self->reference_sequence_build,
+    );
     if ( not $model ) {
         $self->error_message('Cannot create genotype microarray model');
         return;
     }
+    my $name = $model->default_model_name;
+    if ( not $name ) {
+        $self->error_message('No default name for genotype microarray model');
+        $model->delete;
+        return;
+    }
+    $model->name($name);
 
     $self->status_message('Create genotype model: '.$model->id);
 
@@ -333,9 +337,8 @@ sub _copy_file {
     }
     $self->status_message('MD5: '.$md5);
 
-    my $dest_file = $self->_instrument_data->genotype_microarray_file_for_reference_sequence_build(
-        $self->reference_sequence_build,
-    );
+    my $basename = File::Basename::basename($file);
+    my $dest_file = $self->_instrument_data->data_directory.'/'.$basename;
     $self->status_message('Destination file: '.$dest_file);
 
     my $copy = File::Copy::copy($file, $dest_file);
@@ -374,23 +377,77 @@ sub _add_instrument_data_to_model_and_build {
     $self->status_message('Add instrument data OK');
 
     $self->status_message('Build model '.$model->__display_name__);
-    my $build_start = Genome::Model::Build::Command::Start->create(
-        models => [ $model ],
+    my $build = Genome::Model::Build->create(model => $model);
+    if ( not $build) {
+        $self->error_message("Failed to create build for model (".$model->name.", ID: ".$model->id.").");
+        return;
+    }
+    my $start = $build->start(
         server_dispatch => 'inline',
         job_dispatch => 'inline',
     );
-    if ( not $build_start ) {
-        $self->error_message('Cannot create build start command for model '.$model->__display_name__);
-        return
-    }
-    $build_start->dump_status_messages(1);
-    if ( not $build_start->execute ) {
-        $self->error_message('Cannot execute build start command for model '.$model->__display_name__);
-        return;
+    if ( not $start ) {
+         $self->error_message("Failed to start build: " . $build->__display_name__);
+         return;
     }
     $self->status_message('Build OK');
 
     return 1;
+}
+
+sub _sort_genotype_file {
+    my ($self, $unsorted_genotype_file) = @_;
+
+    $self->status_message('Sort genotype file');
+
+    my $genotype_file = $self->_instrument_data->genotype_microarray_file_for_reference_sequence_build($self->reference_sequence_build);
+    if ( not $genotype_file ) {
+        $self->error_message('Failed to get gneotype microarray file name from instruemnt data');
+        return;
+    }
+    $self->status_message('Genotype file:'. $genotype_file);
+    $self->status_message('Unsorted genotype file:'. $unsorted_genotype_file);
+
+    my $sort = Genome::Model::Tools::Snp::Sort->create(
+        snp_file => $unsorted_genotype_file,
+        output_file => $genotype_file,
+    );
+    if ( not $sort ) {
+        unlink $unsorted_genotype_file;
+        $self->error_message('Failed to create sort command');
+        return;
+    }
+    $sort->dump_status_messages(1);
+    if ( not $sort->execute ) {
+        unlink $genotype_file;
+        unlink $unsorted_genotype_file;
+        $self->error_message('Failed to execute sort command');
+        return;
+    }
+    $self->status_message("Sort genotype file...OK");
+
+    return 1;
+}
+
+sub _deallocate {
+    my $self = shift;
+
+    my $instrument_data = $self->_instrument_data;
+    return if not $instrument_data;
+
+    my $allocation = $instrument_data->disk_allocations;
+    return if not $allocation;
+
+    $self->status_message('Deallocate');
+    my $dealloc = eval{ $allocation->deallocate; };
+    if ( $dealloc ) {
+        $self->status_message('Deallocate...OK');
+    }
+    else {
+        $self->error_message('Failed to deallocate! This is a rogue allocation: '.$allocation->id);
+    }
+
+    return;
 }
 
 1;

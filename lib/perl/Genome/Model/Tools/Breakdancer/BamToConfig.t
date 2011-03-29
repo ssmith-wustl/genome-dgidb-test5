@@ -37,6 +37,7 @@ my $bd = Genome::Model::Tools::Breakdancer::BamToConfig->create(
     output_file => $out_file,
 );
 
+$bd->dump_status_messages(1);
 ok($bd, 'BamToConfig created ok');
 ok($bd->execute(), 'BamToConfig executed ok');
 

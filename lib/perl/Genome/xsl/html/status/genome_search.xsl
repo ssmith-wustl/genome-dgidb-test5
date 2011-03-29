@@ -5,6 +5,12 @@
 
   <xsl:template name="genome_search" match="object[./types[./isa[@type='Genome::Search']]]">
 
+    <xsl:comment> ***************************************************** </xsl:comment>
+    <xsl:comment> Genome: <xsl:value-of select="/object/aspect[@name='genome_path']/value"/> </xsl:comment>
+    <xsl:comment> UR: <xsl:value-of select="/object/aspect[@name='ur_path']/value"/> </xsl:comment>
+    <xsl:comment> Workflow: <xsl:value-of select="/object/aspect[@name='workflow_path']/value"/> </xsl:comment>
+    <xsl:comment> ***************************************************** </xsl:comment>
+
     <script type="text/javascript" src="/res/js/app/genome_search.js"></script>
 
     <xsl:call-template name="control_bar_app"/>

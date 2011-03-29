@@ -181,11 +181,19 @@ sub calculate_estimated_kb_usage {
 
 sub files_ignored_by_diff {
     return qw(
+        reports/Build_Initialized/report.xml
+        reports/Build_Succeeded/report.xml
+        variants/dispatcher.cmd
+        \.vcf$
+        \.vcf.idx$
+        workflow.xml$
     );
 }
 
 sub dirs_ignored_by_diff {
     return qw(
+        logs/
+        /\d+/
     );
 }
 

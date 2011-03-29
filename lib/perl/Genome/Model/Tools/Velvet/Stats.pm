@@ -11,12 +11,12 @@ class Genome::Model::Tools::Velvet::Stats {
     is => ['Genome::Model::Tools::Assembly::Stats'],
     has => [
 	first_tier => {
-	    type => 'int non_neg',
+	    type => 'Integer',
 	    is_optional => 1,
 	    doc => "first tier value",
 	},
 	second_tier => {
-	    type => 'int non_neg',
+	    type => 'Integer',
 	    is_optional => 1,
 	    doc => "second tier value",
 	},
@@ -26,7 +26,7 @@ class Genome::Model::Tools::Velvet::Stats {
 	    doc => "path to assembly",
 	},
 	major_contig_length => {
-	    type => 'int non_neg',
+	    type => 'Integer',
 	    is_optional => 1,
 	    default_value => 500,
 	    doc => "Major contig length cutoff",

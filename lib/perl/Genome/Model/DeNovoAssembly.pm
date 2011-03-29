@@ -30,33 +30,25 @@ sub build_subclass_name {
     return 'de-novo-assembly';
 }
 
-sub default_model_name {
+sub _additional_parts_for_default_name {
     my $self = shift;
 
+    my @parts;
     my $subject = $self->subject;
-    if ( not defined $subject ) {
-        $self->error_message('No subject to get default model name for de novo assembly model.');
-        return;
-    }
-    my @name_parts = ( $subject->name );
-
     if ( $subject->isa('Genome::Sample') and defined $subject->tissue_desc ) {
         my $tissue_name_part = $self->_get_name_part_from_tissue_desc($subject->tissue_desc);
-        push @name_parts, $tissue_name_part if defined $tissue_name_part;
+        push @parts, $tissue_name_part if defined $tissue_name_part;
     }
 
     my $center_name = $self->center_name;
     if ( not $center_name ) {
-        $self->error_message('No center name to get default model name for de novo assembly model.');
-        return;
+        Carp::confess('No center name to get default model name for de novo assembly model.');
     }
     if ( $center_name ne 'WUGC' ) {
-        push @name_parts, $center_name;
+        push @parts, $center_name;
     }
 
-    push @name_parts, $self->processing_profile->name;
-
-    return join(' ', @name_parts);
+    return @parts;
 }
 
 sub _get_name_part_from_tissue_desc {

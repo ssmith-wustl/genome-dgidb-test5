@@ -10,14 +10,20 @@ use warnings;
 use strict;
 
 class Genome::InstrumentData::IntermediateAlignmentResult::Bwa {
-    is=>['Genome::InstrumentData::IntermediateAlignmentResult']
+    is=>['Genome::InstrumentData::IntermediateAlignmentResult'],
+    has => [
+        sai_file => {
+            is => 'Text',
+            doc => 'name of sai file within data directory.',
+        }
+    ],
 };
 
 sub output_file_prefix {
     my $self = shift;
-    my $prefix = basename($self->input_file);
+    my $prefix = $self->input_file;
     my $input_pass = $self->input_pass || '';
-    $prefix .= ".$input_pass" if defined $input_pass;
+    $prefix .= ".$input_pass" if $input_pass;
     return $prefix;
 }
 
@@ -42,9 +48,10 @@ sub _run_aligner {
 
     my $fasta_file = $self->aligner_index->full_consensus_path('fa');
     my $tmp_dir = $self->temp_scratch_directory;
+    my $input_file = "$tmp_dir/" . $self->input_file;
 
     my $bam_flag = "";
-    if ($self->input_file =~ /\.bam/) {
+    if ($input_file =~ /\.bam/) {
         $bam_flag = "-b" . ($self->input_pass||'');
     }
 
@@ -56,10 +63,10 @@ sub _run_aligner {
 
     my @args = (
         "aln", 
-        $self->aligner_params,
+        $self->aligner_params || '',
         $bam_flag,
         $fasta_file,
-        $self->input_file,
+        $input_file,
         "1> $sai_file 2>> $log_file"
     );
 
@@ -73,13 +80,13 @@ sub _run_aligner {
 
     Genome::Sys->shellcmd(
         cmd          => $cmd,
-        input_files  => [ $fasta_file, $self->input_file ],
+        input_files  => [ $fasta_file, $input_file ],
         output_files => [ $sai_file, $log_file ],
         skip_if_output_is_present => 0,
     );
 
     unless ($self->_verify_bwa_aln_did_happen(sai_file => $sai_file, log_file => $log_file)) {
-        die $self->error_message("bwa aln did not seem to successfully take place for " . $fasta_file);
+        confess $self->error_message("bwa aln did not seem to successfully take place for " . $fasta_file);
     }
 
     my $sai_bytes = -s $sai_file;
@@ -87,7 +94,7 @@ sub _run_aligner {
 
     my $md5_file = $self->_create_md5($sai_file);
     unless($md5_file) {
-        die $self->error_message("Failed to create md5 file for sai file $sai_file");
+        confess $self->error_message("Failed to create md5 file for sai file $sai_file");
     }
 
     $self->_promote_to_staging($sai_file, $log_file, $md5_file);
