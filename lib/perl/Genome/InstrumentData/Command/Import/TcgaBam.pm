@@ -7,70 +7,62 @@ use Genome;
 
 require File::Basename;
 
-my %properties = (
-    original_data_path => {
-        is => 'Text',
-        doc => 'original data path of import data file',
-    },
-    tcga_name => {
-        is => 'Text',
-        doc => 'TCGA name for imported file',
-    },
-    target_region => {
-        is => 'Text',
-        doc => 'Provide the target region set name (capture) or \'none\' (whole genome or RNA/cDNA)',
-    },
-    remove_original_bam => {
-        is => 'Boolean',
-        doc => 'By uncluding this in your command, the tool will remove (delete!) the original bam file after importation, without warning.',
-        default => 0,
-        is_optional => 1,
-    },
-    no_md5 => {
-        is => 'Boolean',
-        default => 0,
-        is_optional => 1,
-    },
-    import_source_name => {
-        is => 'Text',
-        doc => 'source name for imported file, like broad',
-        is_optional => 1,
-    },
-    description  => {
-        is => 'Text',
-        doc => 'general description of import data, like which software maq/bwa/bowtie to used to generate this data',
-        is_optional => 1,
-    },
-    read_count  => {
-        is => 'Number',
-        doc => 'total read count of import data',
-        is_optional => 1,
-    },
-    base_count  => {
-        is => 'Number',
-        doc => 'total base count of import data',
-        is_optional => 1,
-    },
-    reference_sequence_build_id => {
-        is => 'Number',
-        doc => 'This is the reference sequence that the imported BAM was aligned against.',
-        is_optional => 1,
-    },
-);
-    
-
 class Genome::InstrumentData::Command::Import::TcgaBam {
     is  => 'Genome::InstrumentData::Command::Import',
-    has => [%properties],
-    doc => 'create an instrument data AND and alignment for a BAM',
-    has_optional => [
-        import_instrument_data_id => {
-            is  => 'Number',
-            doc => 'output instrument data id after import',
+    has => [
+        original_data_path => {
+            is => 'Text',
+            doc => 'original data path of import data file',
         },
+        tcga_name => {
+            is => 'Text',
+            doc => 'TCGA name for imported file',
+        },
+        target_region => {
+            is => 'Text',
+            doc => 'Provide the target region set name (capture) or \'none\' (whole genome or RNA/cDNA)',
+        },
+        remove_original_bam => {
+            is => 'Boolean',
+            doc => 'By uncluding this in your command, the tool will remove (delete!) the original bam file after importation, without warning.',
+            default => 0,
+            is_optional => 1,
+        },
+        no_md5 => {
+            is => 'Boolean',
+            default => 0,
+            is_optional => 1,
+        },
+        import_source_name => {
+            is => 'Text',
+            doc => 'source name for imported file, like broad',
+            is_optional => 1,
+        },
+        description  => {
+            is => 'Text',
+            doc => 'general description of import data, like which software maq/bwa/bowtie to used to generate this data',
+            is_optional => 1,
+        },
+        read_count  => {
+            is => 'Number',
+            doc => 'total read count of import data',
+            is_optional => 1,
+        },
+        base_count  => {
+            is => 'Number',
+            doc => 'total base count of import data',
+            is_optional => 1,
+        },
+        reference_sequence_build => { 
+            calculate => q| return Genome::Model::Build::ImportedReferenceSequence->get(101947881); |,
+            is_param => 0,
+            doc => 'The reference sequence build the data was aligned against, currently "NCBI-build-36".',
+        },
+        _model => { is_optional => 1, },
         _inst_data => { is_optional => 1, },
-        _allocation => { via => '_inst_data', to => 'disk_allocations' },
-        _absolute_path => { via => '_allocation', to => 'absolute_path' },
+        import_instrument_data_id => { via => '_inst_data', to => 'id', },
+        _allocation => { via => '_inst_data', to => 'disk_allocations', },
+        _absolute_path => { via => '_allocation', to => 'absolute_path', },
         _new_bam => { 
             calculate_from => [qw/ _absolute_path /], 
             calculate => q| $_absolute_path.'/all_sequences.bam' |,
@@ -80,7 +72,18 @@ class Genome::InstrumentData::Command::Import::TcgaBam {
             calculate => q| $_new_bam.'.md5' |,
         },
     ],
+    doc => 'create an instrument data AND and alignment for a BAM',
 };
+
+sub help_detail {
+    return <<HELP;
+    This command imports a BAM for a TCGA patient. Workflow:
+    * creates an instrument data
+    * copies the BAM into the allocated spaace of the instruemt data
+    * validates the MD5 of the BAM (optional)
+    * creates a model and requests a build
+HELP
+}
 
 sub execute {
     my $self = shift;
@@ -112,38 +115,7 @@ sub execute {
         $self->_remove_original_bam; # no error check
     }
 
-    $self->status_message("Importation of BAM completed successfully.");
-    $self->status_message("Your instrument-data id is ".$self->import_instrument_data_id);
-
-    return 1;
-}
-
-
-sub Xexecute {
-    my $self = shift;
-
-    # Validate BAM
-    my $bam_ok = $self->_validate_bam;
-    return if not $bam_ok;
-
-    # Validate MD5../Site/WUGC/Synchronize/
-    if ( not $self->no_md5 ) {
-        my $md5_ok = $self->_validate_md5;
-        return if not $md5_ok;
-    }
-    
-    # Create inst data
-    my $inst_data = $self->_create_imported_instrument_data;
-    return if not $inst_data;
-
-    # Rsync the BAM
-    my $rsync_ok = $self->_rsync_bam;
-    return if not $rsync_ok;
-    
-    # Rm Original BAM
-    if($self->remove_original_bam){
-        $self->_remove_original_bam; # no error check
-    }
+    $self->_create_model_and_request_build; # no error check, prints messages
 
     $self->status_message("Importation of BAM completed successfully.");
     $self->status_message("Your instrument-data id is ".$self->import_instrument_data_id);
@@ -265,33 +237,19 @@ sub _create_imported_instrument_data {
         }
     }
 
-    my %params = (import_format => 'bam');
-    for my $property_name (keys %properties) {
-        unless ($properties{$property_name}->{is_optional}) {
-            unless ($self->$property_name) {
-                $self->error_message ("Required property: $property_name is not given");
-                return;
-            }
-        }
-        next if $property_name eq 'remove_original_bam';
-        next if $property_name =~ /^library$/;
-        next if $property_name =~ /tcga/;
-        next if $property_name =~ /target_region/;
-        next if $property_name =~ /sample/;
-        next if $property_name =~ /no_md5/;
-        $params{$property_name} = $self->$property_name if $self->$property_name;
-    }
-    $params{sequencing_platform} = "solexa";
-    $params{import_format} = "bam";
-    $params{reference_sequence_build_id} = $self->reference_sequence_build_id;
-    $params{library_id} = $library->id;
-    $params{target_region_set_name} = $target_region;
-    unless(exists($params{description})){
-        $params{description} = "imported ".$self->import_source_name." bam, tcga name is ".$tcga_name;
-    }
+    my $description = $self->description || "imported ".$self->import_source_name." bam, tcga name is ".$tcga_name;
     if($self->no_md5){
-        $params{description} = $params{description} . ", no md5 file was provided with the import.";
+        $description = $description . ", no md5 file was provided with the import.";
     }
+    my %params = (
+        original_data_path => $self->original_data_path,
+        sequencing_platform => "solexa",
+        import_format => "bam",
+        reference_sequence_build => $self->reference_sequence_build,
+        library => $library,
+        target_region_set_name => $target_region,
+        description => $description,
+    );
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
     unless ($import_instrument_data) {
        $self->error_message('Failed to create imported instrument data for '.$self->original_data_path);
@@ -301,7 +259,6 @@ sub _create_imported_instrument_data {
 
     my $instrument_data_id = $import_instrument_data->id;
     $self->status_message("Instrument data: $instrument_data_id is imported");
-    $self->import_instrument_data_id($instrument_data_id);
 
     my $kb_usage = $import_instrument_data->calculate_alignment_estimated_kb_usage;
     unless ($kb_usage) {
@@ -489,5 +446,51 @@ sub _remove_original_bam {
 
     return 1;
 }
+
+sub _create_model_and_request_build {
+    my $self =  shift;
+
+    $self->status_message('Create model and request build');
+
+    my $refseq_build = $self->reference_sequence_build;
+    $self->status_message('Reference build: '.$refseq_build->__display_name__);
+
+    my $pp = Genome::ProcessingProfile::ReferenceAlignment->get(2580856);
+    if ( not $pp ) {
+        $self->error_message('Cannot find ref align processing profile for 2580856 to create model');
+        return;
+    }
+    $self->status_message('Processing profile: '.$pp->name);
+
+    my $sample = $self->_inst_data->sample;
+    $self->status_message('Sample: '.$sample->name);
+
+    my $model = Genome::Model::ReferenceAlignment->create(
+        name => 'TCGA_BAM_PLACE_HOLDER',
+        processing_profile => $pp,
+        reference_sequence_build => $refseq_build,
+        subject_id => $sample->id,
+        subject_class_name => $sample->class,
+        build_requested => 1,
+        auto_assign_inst_data => 0,
+    );
+    if ( not $model ) {
+        $self->error_message('Failed to create model');
+        return;
+    }
+    my $name = $model->default_model_name;
+    if ( not $name ) {
+        $self->error_message('Failed to get default model name');
+        $model->delete;
+        return;
+    }
+    $model->name($name);
+    $self->_model($model);
+
+    $self->status_message('Create model and request build...OK');
+
+    return $model;
+}
+
 1;
 
