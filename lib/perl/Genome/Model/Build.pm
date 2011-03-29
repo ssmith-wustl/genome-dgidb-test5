@@ -1525,7 +1525,8 @@ sub files_in_data_directory {
             my $file = $File::Find::name;
             push @files, $file;
         },
-        follow => 1, },
+        follow => 1, 
+        follow_skip => 2, },
         $self->data_directory,
     );
     return \@files;
