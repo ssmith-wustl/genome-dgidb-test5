@@ -13,18 +13,11 @@ package Genome::Model::Tools::Hgmi::Hap;
 use strict;
 use warnings;
 
+# FIXME Remove this dependency
 use lib "/gsc/scripts/opt/bacterial-bioperl";
 
 use Genome;
 use Command;
-use Genome::Model::Tools::Hgmi::DirBuilder;
-use Genome::Model::Tools::Hgmi::CollectSequence;
-use Genome::Model::Tools::Hgmi::SequenceName;
-use Genome::Model::Tools::Hgmi::MkPredictionModels;
-use Genome::Model::Tools::Hgmi::Predict;
-use Genome::Model::Tools::Hgmi::Merge;
-use Genome::Model::Tools::Hgmi::Finish;
-use Genome::Model::Tools::Hgmi::SendToPap;
 
 use Carp;
 use English;
@@ -34,73 +27,50 @@ use File::Spec;
 use YAML qw( LoadFile DumpFile );
 use Data::Dumper;
 
-# should have a crap load of options.
-UR::Object::Type->define(
-    class_name => __PACKAGE__,
-    is         => 'Command',
-    has        => [
-        'config' => {
+class Genome::Model::Tools::Hgmi::Hap (
+    is => 'Command',
+    has => [
+        config => {
             is  => 'String',
-            doc => "YAML file for reading"
+            doc => 'YAML file for reading',
         },
-        'gen_example' => {
-            is          => 'Boolean',
-            doc         => "Generate an example yaml config file",
-            is_optional => 1
+    ],
+    has_optional => [
+        gen_example => {
+            is => 'Boolean',
+            doc => 'Generate an example yaml config file',
         },
-        'internalhash' => {
-            is          => 'HashRef',
-            doc         => "internal",
-            is_optional => 1
+        internalhash => {
+            is => 'HashRef',
+            is_transient => 1,
+            doc => 'internal',
         },
-        'dev' => {
-            is          => 'Boolean',
-            doc         => "development flag for testing",
-            is_optional => 1
+        dev => {
+            is => 'Boolean',
+            doc => 'development flag for testing',
         },
-        'skip_core_check' => {
-            is          => 'Boolean',
-            doc         => "skips core genes check",
-            is_optional => 1,
-            default     => 0,
+        skip_core_check => {
+            is => 'Boolean',
+            doc => 'skips core genes check',
+            default => 0,
         },
-        'skip_ber' => {
-            is          => 'Boolean',
-            doc         => "skips the JCVI product naming tools",
-            is_optional => 1,
-            default     => 0,
+        skip_ber => {
+            is => 'Boolean',
+            doc => 'skips the JCVI product naming tools',
+            default => 0,
         },
-        'skip_protein_annotation' => {
-            is          => 'Boolean',
-            doc         => "skips running bap_finish, protein annotation and ber",
-            is_optional => 1,
-            default     => 0,
+        skip_protein_annotation => {
+            is => 'Boolean',
+            doc => 'skips running bap_finish, protein annotation and ber',
+            default => 0,
         },
     ]
 );
 
-sub help_brief
-{
-    "Runs the entire HGMI tools pipeline";
-}
-
-sub help_synopsis
-{
-    my $self = shift;
-    return <<"EOS"
-For running the entire HGMI tools pipeline.
-EOS
-
-}
-
-sub help_detail
-{
-    my $self = shift;
-    return <<"EOS"
-For running the entire HGMI tools pipeline.
-Takes in a YAML file for configuration parameters and then runs each tool
-for the HGMI pipeline.
-EOS
+sub help_brief { return 'Runs the HGMI tools pipeline' }
+sub help_synopsis { help_brief() }
+sub help_detail {
+    return 'Runs the entire HGMI pipeline, includes prediction, merging, finishing, PAP, and BER';
 }
 
 sub execute {
@@ -118,6 +88,7 @@ sub execute {
         $self->skip_core_check(1);
     }
 
+    # FIXME This directory structure can really be simplified
     $self->status_message("Creating directory structure.");
 
     # Directory structure is created
@@ -133,7 +104,7 @@ sub execute {
     my $dir_build_rv = $dir_builder->execute;
     confess "Trouble executing directory builder!" unless defined $dir_build_rv and $dir_build_rv == 1;
 
-    $self->status_message("Directories created, now collectin sequence!");
+    $self->status_message("Directories created, now collecting sequence!");
 
     # FIXME Should not be changing directories like this
     my $next_dir = $config->{path} . "/"
@@ -143,6 +114,7 @@ sub execute {
         . "Sequence/Unmasked";
     confess "Directory does not exist: $next_dir" unless -d $next_dir;
     chdir($next_dir);
+    $self->status_message("Changed directory to $next_dir");
 
     # Collect sequence into directory
     # FIXME Add output directory param here so changing directories isn't necessary
@@ -180,6 +152,7 @@ sub execute {
         . "/Sequence";
     confess "Directory does not exist: $next_dir" unless -d $next_dir;
     chdir($next_dir);
+    $self->status_message("Changed directory to $next_dir");
 
     $self->status_message("Sequence naming complete, now making prediction models.");
 
@@ -201,6 +174,7 @@ sub execute {
         . $config->{pipe_version};
     confess "Directory does not exist: $next_dir" unless -d $next_dir;
     chdir($next_dir);
+    $self->status_message("Changed directory to $next_dir");
 
     $self->status_message("Prediction models created, now running gene prediction!");
 
@@ -218,6 +192,7 @@ sub execute {
     confess "Could not make prediction object!" unless $predict;
 
     # Skip execution if previous gene prediction execution was successful
+    # TODO Can be removed when this is a workflow
     if ($predict->is_valid()) {
         $self->status_message("Prediction has already been run successfully, continuing!");
     }
@@ -241,6 +216,7 @@ sub execute {
     confess "Could not create gene merging object!" unless $merge;
 
     # Skip execution if previous gene merging run was successful
+    # TODO Can be removed when this is a workflow
     if ($merge->is_valid) {
         $self->status_message("Skipping gene merging step, previous execution was successful!");
     }
@@ -270,6 +246,7 @@ sub execute {
         . "/Annotated_submission";
     confess "Directory does not exist: $next_dir" unless -d $next_dir;
     chdir($next_dir);
+    $self->status_message("Changed directory to $next_dir");
 
     $self->status_message("Overlaps are totally tagged, running rrna screen.");
 
@@ -330,33 +307,18 @@ sub execute {
         return 1;
     }
 
-    $self->status_message("Getting ready to run PAP!");
-
-    # FIXME bdericks: Not looking at this stuff for now... probably needs some work
-    warn qq{\n\nBeginning to run SendToPap.pm(workflow) ... from Hap.pm\n\n};
-#    $self->status_message("starting send-to-pap/PAP workflow...");
-
-    unless ( defined( $config->{workflowxml} ) )
-    {
+    # Also skip PAP if there's no workflow file spepcifed in the config file! 
+    unless (defined $config->{workflowxml}) {
+        $self->status_message("No workflow xml path provided in config file, so PAP/BER will not be run. Exiting...");
         return 1;
     }
 
-    {
-        my $gram_stain = $config->{gram_stain};
+    $self->status_message("Getting ready to run PAP!");
 
-        unless ( defined($gram_stain) )
-        {
-            die
-                'cannot start workflow - no gram_stain specified in config file...Hap.pm\n\n';
-        }
-
-        unless ( ( $gram_stain eq 'positive' )
-            || ( $gram_stain eq 'negative' ) )
-        {
-            die
-                "cannot start workflow - gram_stain must be 'postive' or 'negative', not '$gram_stain'...Hap.pm\n\n";
-        }
-
+    my $gram_stain = $config->{gram_stain};
+    confess 'Gram stain not specified in config file, cannot start PAP workflow!' unless defined $gram_stain;
+    unless ($gram_stain eq 'positive' or $gram_stain eq 'negative') {
+        confess "Gram stain invalid: must be either positive or negative, not $gram_stain";
     }
 
     my $base_archive_dir = File::Spec->catdir(
@@ -364,50 +326,29 @@ sub execute {
         $config->{assembly_name}, $config->{assembly_version},
     );
 
-    my $blastp_archive_dir = File::Spec->catdir( $base_archive_dir, 'Blastp',
-        $config->{pipe_version}, 'Hybrid', );
-
-    my $interpro_archive_dir
-        = File::Spec->catdir( $base_archive_dir, 'Interpro',
-        $config->{pipe_version}, 'Hybrid', );
-
-    my $keggscan_archive_dir = File::Spec->catfile(
-        $base_archive_dir, 'Kegg', $config->{pipe_version},
-        'Hybrid',
-        join( '.', 'KS-OUTPUT', $config->{locus_tag}, 'CDS', 'pep', ),
-    );
-
-    my $psortb_archive_dir = File::Spec->catfile(
-        $base_archive_dir, 'psortB', $config->{pipe_version}, 'Hybrid');
+    my $blastp_archive_dir = File::Spec->catdir($base_archive_dir, 'Blastp', $config->{pipe_version}, 'Hybrid');
+    my $interpro_archive_dir = File::Spec->catdir($base_archive_dir, 'Interpro', $config->{pipe_version}, 'Hybrid');
+    my $keggscan_archive_dir = File::Spec->catfile($base_archive_dir, 'Kegg', $config->{pipe_version}, 
+        'Hybrid', join('.', 'KS-OUTPUT', $config->{locus_tag}, 'CDS', 'pep'));
+    my $psortb_archive_dir = File::Spec->catfile($base_archive_dir, 'psortB', $config->{pipe_version}, 'Hybrid');
 
     my $send = Genome::Model::Tools::Hgmi::SendToPap->create(
-        'locus_tag'            => $config->{locus_tag},
-        'sequence_set_id'      => $merge->sequence_set_id,
-        'sequence_name'        => $config->{assembly_name},
-        'organism_name'        => $config->{organism_name},
-        'workflow_xml'         => $config->{workflowxml},
-        'gram_stain'           => $config->{gram_stain},
-        'blastp_archive_dir'   => $blastp_archive_dir,
-        'interpro_archive_dir' => $interpro_archive_dir,
-        'keggscan_archive_dir' => $keggscan_archive_dir,
-        'psortb_archive_dir'   => $psortb_archive_dir,
-
-        # pepfile should be constructed automagically here.
+        locus_tag            => $config->{locus_tag},
+        sequence_set_id      => $merge->sequence_set_id,
+        sequence_name        => $config->{assembly_name},
+        organism_name        => $config->{organism_name},
+        workflow_xml         => $config->{workflowxml},
+        gram_stain           => $config->{gram_stain},
+        blastp_archive_dir   => $blastp_archive_dir,
+        interpro_archive_dir => $interpro_archive_dir,
+        keggscan_archive_dir => $keggscan_archive_dir,
+        psortb_archive_dir   => $psortb_archive_dir,
+        dev                  => $self->dev,
     );
+    confess 'Could not create command object for send to pap!' unless $send;
 
-    if ( $self->dev )
-    {
-        $send->dev(1);
-    }
-
-    if ($send)
-    {
-        $send->execute() or croak "can't run workflow pap step in Hap.pm\n\n";
-    }
-    else
-    {
-        croak "can't set up workflow pap step... Hap.pm\n\n";
-    }
+    $self->status_message("Parameters for protein annotation:\n" . Data::Dumper::Dumper($send));
+    confess 'Could not run pap!' unless $send->execute;
 
     # jcvi product naming goes here.
     # need tochdir
@@ -438,6 +379,7 @@ sub execute {
             chdir($next_dir)
                 or croak
                 "Failed to change to '$next_dir', from Hap.pm: $OS_ERROR\n\n";
+            $self->status_message("Changed directory to $next_dir");
         }
 
         #run /gsc/scripts/gsc/annotation/biosql2ace <locus_tag>

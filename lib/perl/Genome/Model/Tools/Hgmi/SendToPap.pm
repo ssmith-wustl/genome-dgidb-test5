@@ -4,14 +4,8 @@ use strict;
 use warnings;
 
 use Genome;
-use PAP;
 use Command;
 use Carp;
-
-use Bio::SeqIO;
-use Bio::Seq;
-use Bio::DB::BioDB;
-use Bio::DB::Query::BioQuery;
 
 use File::Slurp;
 use File::Path qw/ mkpath /;
@@ -22,9 +16,7 @@ use IPC::Run;
 use Workflow::Simple;
 use Data::Dumper;
 
-
-UR::Object::Type->define(
-    class_name => __PACKAGE__,
+class Genome::Model::Tools::Hgmi::SendToPap (
     is => 'Command',
     has => [
         locus_tag => {
@@ -104,22 +96,10 @@ UR::Object::Type->define(
     ],
 );
 
-sub help_brief
-{
-    "Bridges between HGMI tools and PAP";
-}
-
-sub help_synopsis
-{
-    return <<"EOS"
-Bridges between HGMI tools and PAP.  This tool pulls data from biosql,
-then initializes and runs the PAP workflow.
-EOS
-}
-
-sub help_detail
-{
-    return <<"EOS"
+sub help_brief { return 'Kicks off the protein annotation workflow'; }
+sub help_synopsis { return help_brief(); }
+sub help_detail {
+    return <<EOS
 Bridges between HGMI tools and PAP.  This tool loads predictions from mgap to
 biosql, pulls data from biosql, then initializes and runs the PAP workflow.
 EOS
@@ -162,15 +142,11 @@ sub execute {
     return 1;
 }
 
-sub get_gene_peps
-{
+sub get_gene_peps {
     my $self = shift;
-    # this needs to handle switching to
-    # either dev or prod
     my $dbadp;
 
-    if($self->dev())
-    {
+    if($self->dev()) {
         $dbadp = Bio::DB::BioDB->new(
             -database => 'biosql',
             -user     => 'sg_user',
@@ -179,8 +155,7 @@ sub get_gene_peps
             -driver   => 'Oracle'
         );
     }
-    else
-    {
+    else {
         $dbadp = Bio::DB::BioDB->new(
             -database => 'biosql',
             -user     => 'sg_user',
@@ -192,20 +167,19 @@ sub get_gene_peps
 
     my $cleanup = $self->keep_pep ? 0 : 1;
     my $tempdir = tempdir( 
-                          CLEANUP => $cleanup,
-                          DIR     => '/gscmnt/temp212/info/annotation/PAP_tmp',
-                         );
-    my ( $fh, $file ) = tempfile(
+        CLEANUP => $cleanup,
+        DIR     => '/gscmnt/temp212/info/annotation/PAP_tmp', # FIXME Shouldn't have hard-coded paths for temp stuff
+    );
+    my ($fh, $file) = tempfile(
         "pap-XXXXXX",
         DIR    => $tempdir,
         SUFFIX => '.fa'
     );
-    #print "tempdir: ", $tempdir, ", tempfile: ", $file, ", cleanup: ",
-    #    $cleanup, "\n";
-    unless(defined($self->pep_file))
-    {
+
+    unless(defined($self->pep_file)) {
         $self->pep_file($file);
     }
+
     $file = $self->pep_file();
     my $seqout = new Bio::SeqIO(
         -file   => ">$file",
@@ -213,7 +187,6 @@ sub get_gene_peps
     );
 
     my $adp = $dbadp->get_object_adaptor("Bio::SeqI");
-
     $adp->dbh->{'LongTruncOk'} = 0;
     $adp->dbh->{'LongReadLen'} = 1000000000;
 
@@ -223,16 +196,11 @@ sub get_gene_peps
     my $locus_tag = $self->locus_tag;
     $query->where( ["s.display_id like '$locus_tag%'"] );
     my $res = $adp->find_by_query($query);
-GENE: while ( my $seq = $res->next_object() )
-    {
+    GENE: while (my $seq = $res->next_object()) {
         my $gene_name = $seq->display_name();
-
-        #print $gene_name, "\n";
         my @feat = $seq->get_SeqFeatures();
-        foreach my $f (@feat)
-        {
+        foreach my $f (@feat) {
             my $display_name = $f->display_name();
-            #print STDERR $display_name," ", $f->primary_tag,"\n";
             next GENE if $f->primary_tag ne 'gene';
             next if $f->has_tag('Dead');
             my $ss;
@@ -244,19 +212,16 @@ GENE: while ( my $seq = $res->next_object() )
             
             my $pep = $self->make_into_pep( $f->strand,
                 $ss,
-                #$seq->subseq($f->start,$f->end),
                 $display_name );
             $seqout->write_seq($pep);
-            #print STDERR "sequence should be written out\n";
         }
     }
-    if(! -f $file )
-    {
+    
+    unless (-f $file) {
         print STDERR "the fasta file $file doesn't exist! SendToPap.pm\n";
         return 0;
     }
-    unless( -s $file > 0 )
-    {
+    unless(-s $file > 0) {
         print STDERR "the fasta file $file still empty! SendToPap.pm\n";
     }
 
@@ -294,6 +259,8 @@ sub mgap_to_biosql
     my $ssid      = $self->sequence_set_id;
     my $taxid     = $self->taxon_id;
     my $testnorun = shift;
+
+    # FIXME Deployed code... NOOOOOOOOOOOOOO!
     my @command = (
         'bap_load_biosql', '--sequence-set-id', $ssid,
         #'--tax-id',        $taxid,
@@ -338,39 +305,28 @@ sub mgap_to_biosql
 
 ## need workflow item here...
 
-sub do_pap_workflow
-{
+sub do_pap_workflow {
     my $self = shift;
 
     my $xml_file = $self->workflow_xml;
     my $fasta_file = $self->pep_file;
     my $chunk_size = $self->chunk_size;
-    #print STDERR "\n",$xml_file,"\n";
-    #print STDERR "\nfasta file is ",$fasta_file,"\n";
 
     my $previous_workflow_id = $self->resume_workflow();
    
-    unless (defined($previous_workflow_id)) {
-    
-        if (! -f $fasta_file) {
-            print STDERR "\nwhere is the fasta file ", $fasta_file, "? SendToPap.pm\n";
-            croak "fasta file doesn't exist! SendToPap.pm";
+    unless (defined $previous_workflow_id) {
+        unless (-f $fasta_file) {
+            confess "Could not find fasta file at $fasta_file";
         }
-    
     }
 
     my $workflow_dev_flag = 0;
-
     if ($self->dev()) { $workflow_dev_flag = 1; }
 
     my $output;
-
     if (defined($previous_workflow_id)) {
-
         $output = resume_lsf($previous_workflow_id);
-
     }
-
     else {
         my $workflow = Workflow::Operation->create_from_xml($xml_file);
         confess "Could not create workflow!" unless $workflow;

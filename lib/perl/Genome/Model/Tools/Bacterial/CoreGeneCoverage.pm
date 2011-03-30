@@ -1,5 +1,7 @@
 package Genome::Model::Tools::Bacterial::CoreGeneCoverage;
 
+# bdericks: This entire module needs a major overhaul.
+
 use strict;
 use warnings;
 
@@ -8,195 +10,217 @@ use Carp;
 use IPC::Run;
 use File::Slurp;
 
-UR::Object::Type->define(
-    class_name => __PACKAGE__,
+class Genome::Model::Tools::Bacterial::CoreGeneCoverage (
     is => 'Command',
     has => [
-        fasta_file => { is => 'Scalar',
-                             doc => "fasta sequence to check coverage on",
-                           },
-        pid => { is => 'Scalar',
-                 doc => "acceptable percent identity",
-                },
-        fol => { is => 'Scalar',
-                      doc => "fraction of length coverage number",
-                },
-        option => { is => 'Scalar',
-                    doc => "either assembly or geneset",
-                  },
-        genome => { is => 'Scalar',
-                    doc => "either archaea or bact; determines which core gene set/group files to use",
-                   },
+        fasta_file => { 
+            is => 'Filepath',
+            doc => 'Fasta containing protein sequence on which core gene coverage is checked',
+        },
+        percent_id => { 
+            is => 'Number',
+            doc => 'Acceptable percent identity',
+        },
+        fraction_of_length => { 
+            is => 'Number',
+            doc => 'Minimum fraction of the total length of a gene that needs to be present to be counted as covered',
+        },
+        cell_type => { 
+            is => 'String',
+            doc => 'Determines which core gene set/group file to use',
+            valid_values => ['ARCHAEA', 'BACTERIA'],
+        },
+        output_file => {
+            is => 'FilePath',
+            doc => 'File to write coverage results to',
+        },
     ],
     has_optional => [
+        _passed => {
+            is => 'Boolean',
+            is_transient => 1,
+            doc => 'Set by command module during execution, if true the core gene check passed',
+        },
+        minimum_percent_coverage => {
+            is => 'Number',
+            default => 90,
+            doc => 'Minimum percentage of core genes that need to be covered for the core gene check to pass',
+        },
+        # TODO Need to replace these paths with reference sequence builds of some sort
         bacterial_query_file => {
-             is => 'Scalar',
-             doc => "200 core genes pep file",
-             default => '/gsc/var/lib/blastdb/CoreGenes.faa',
+             is => 'FilePath',
+             doc => 'File containing bacterial core gene sequences',
+             default => '/gscmnt/ams1102/info/core_genes/bacteria/CoreGenes.faa',
         },
         bacterial_group_file => {
-             is => 'Scalar',
-             doc => "66 core groups",
-             default => '/gscmnt/233/info/seqana/databases/CoreGroups_66.cgf',
+             is => 'FilePath',
+             doc => 'File containing bacterial core group sets',
+             default => '/gscmnt/ams1102/info/core_genes/bacteria/CoreGroups_66.cgf',
         },
         archaea_query_file => {
-             is => 'Scalar',
-             doc => "archaea core genes pep file",
-             default => '/gscmnt/218/info/seqana/species_independant/sabubuck/ARCHAEA/CORE_SET_25/Archaea_coreset_104.gi.faa'
+             is => 'FilePath',
+             doc => 'File containing archaeal core gene sequences',
+             default => '/gscmnt/ams1102/info/core_genes/archaea/Archaea_coreset_104.gi.faa'
         },
         archaea_group_file => {
-                     is => 'Scalar',
-             doc => "archaea core groups",
-             default => '/gscmnt/218/info/seqana/species_independant/sabubuck/ARCHAEA/CORE_SET_25/Archaea_coreset_104.gi.cgf',
+            is => 'FilePath',
+            doc => 'File containing archaeal core group sets',
+            default => '/gscmnt/ams1102/info/core_genes/archaea/Archaea_coreset_104.gi.cgf',
         },
     ],
 );
 
 sub help_brief {
-"for detecting presence of coregenes/groups in given assembled geneset"
+    return 'Detects the presence of core genes/groups in the given set of predicted genes';
 }
+sub help_synopsis { return help_brief() }
 
 sub help_detail {
-return <<EOS
-for checking genesets or assemblies for coregene/group presence
-EOS
-
+    return 'Given a file with a bunch of protein sequences, determines the total coverage of core genes';
 }
-
-sub help_synopsis {
-return <<EOS
-gmt bacterial core-gene-coverage --fasta-file try.pep 
-    --genome bact --option assembly --pid 70 --fol 0.7
-EOS
-}
-
 
 sub execute {
     my $self = shift;
     $self->status_message("Running core gene coverage command");
 
-    if($self->option eq 'assembly') {
-        # xdformat -n -I subj file
-        # bsub a tblastn on the subj/query file
-        $self->error_message("not implemented yet");
-        return 1;
+    # TODO Make sure this is a tool that others can install, otherwise turn this into a genome tool
+    my @xdformat = ('xdformat','-p','-I', $self->fasta_file);
+    my ($xdf_out,$xdf_err);
+    my $xdf_rv = IPC::Run::run(\@xdformat,
+        '>',
+        \$xdf_out,
+        '2>',
+        \$xdf_err, );
+    unless($xdf_rv) {
+        $self->error_message("failed to format fasta file ".$self->fasta_file."\n".$xdf_err."\n");
+        return 0; # or should we exit(1)?
     }
-    elsif($self->option eq 'geneset') {
-        #looks like we xdformat -p -I the geneset
-        my @xdformat = ('xdformat','-p','-I', $self->fasta_file);
-        my ($xdf_out,$xdf_err);
-        my $xdf_rv = IPC::Run::run(\@xdformat,
-                                   '>',
-                                   \$xdf_out,
-                                   '2>',
-                                   \$xdf_err, );
-        unless($xdf_rv) {
-            $self->error_message("failed to format fasta file ".$self->fasta_file."\n".$xdf_err."\n");
-            return 0; # or should we exit(1)?
-        }
-        # bsub a blastp query on that,
-        my ($bsubout,$bsuberr) = ($self->fasta_file.".blastout", $self->fasta_file.".blasterr");
-        my $blastresults = $self->fasta_file.".blastp_results";
-        my $blast_query_file;
-        if($self->genome eq 'bact' ) {
-            $blast_query_file = $self->bacterial_query_file;
-        }
-        elsif($self->genome eq 'archaea' ) 
-        {
-            $blast_query_file = $self->archaea_query_file;
-        }
 
-        $DB::single = 1;
-        my $blastp_cmd = join(' ', 'blastp', $self->fasta_file, $blast_query_file, '-o', $blastresults);
-        $self->status_message("bsubbing blastp command: $blastp_cmd");
-        my $blastp_job = PP::LSF->create(
-            command => $blastp_cmd,
-            q => 'long',
-            o => $bsubout,
-            e => $bsuberr,
-        );
-        my $start_rv = $blastp_job->start;
-        confess "Trouble starting LSF job for blastp ($blastp_cmd)" unless defined $start_rv and $start_rv;
-
-        my $wait_rv = $blastp_job->wait_on;
-        confess "Trouble while waiting for LSF job for blastp ($blastp_cmd) to complete!" unless defined $wait_rv and $wait_rv;
-
-        $self->status_message("Blastp done, parsing");
-
-        # run parse_blast_results_percid_fraction_oflength on the output
-        my @parse = (
-                     'gmt','bacterial','parse-blast-results',
-                     '--input', $blastresults,
-                     '--output', 'Cov_30_PID_30' ,
-                     '--num-hits', 1,
-                     '--percent', $self->pid,
-                     '--fol', $self->fol,
-                     '--blast-query', $blast_query_file,
-                    );
-
-        my ($parse_stdout, $parse_stderr);
-        my $parse_rv = IPC::Run::run(\@parse,
-                                     '>',
-                                     \$parse_stdout,
-                                     '2>',
-                                     \$parse_stderr, );
-        unless($parse_rv) {
-            $self->error_message("failed to parse output ".$blastresults."\n".$parse_stderr);
-            return 0;
-        }
-
-        $self->status_message("Done parsing, calculating core gene coverage percentage");
-
-        my $core_gene_lines = read_file("Cov_30_PID_30");
-        #@core_gene_lines = grep /====/
-        my $core_groups_ref_arry = $self->get_core_groups_coverage(
-                                                                   $core_gene_lines,
-                                                                  );
-
-        # the easy way, but we will have to change it eventually
-        my $cmd1 = "grep \"====\" Cov_30_PID_30 | awk '{print \$2}' | sort | uniq | wc -l";
-        my $core_gene_count = `$cmd1`;
-        my $cmd2 = "grep \">\" ".$blast_query_file." | wc -l"; # counting seqs
-        my $query_count = `$cmd2`;
-        my $core_groups = scalar(@$core_groups_ref_arry);
-
-        # this doesn't make alot of sense yet.
-        my $core_pct = 100 * $core_gene_count / $query_count;
-        my $coregene_pct = sprintf("%.02f",100 * $core_gene_count / $query_count);
-        
-        if($core_pct <= 90) {
-            print "Perc of Coregenes present in this assembly: $coregene_pct \%\n";
-            #print "FAILED\n";
-            print "Number of Core Groups present in this assembly: $core_groups\nCore gene test FAILED\n";
-            write_file('CoregeneTest_result', "\nPerc of Coregenes present in this assembly: :$coregene_pct %\nNumber of Core Groups present in this assembly: $core_groups\nCore genetest FAILED\n");
-
-        }
-        else
-        {
-            print "Perc of Coregenes present in this assembly: :$coregene_pct \%\n";
-            print "Number of Core Groups present in this assembly: $core_groups\nCore gene test PASSED\n";
-            write_file('CoregeneTest_result',"\nPerc of Coregenes present in this assembly: :$coregene_pct \%\nNumber of Core Groups present in this assembly: $core_groups\nCore gene test PASSED\n");
-
-        }
-
-        # the below replicates 'cat Cov_30_PID_30 CoregeneTest_result >Cov_30_PID_30.out
-        my $covdata = read_file("Cov_30_PID_30");
-        my $cgtest_result = read_file("CoregeneTest_result");
-        write_file("Cov_30_PID_30.out",$covdata.$cgtest_result);
-
-        # unlink temp files. these really should be absolute path
-        # and should go to a writable directory....
-        unlink("Cov_30_PID_30");
-        unlink("CoregeneTest_result");
-        unlink($blastresults);
-        unlink($bsubout);
-        unlink($bsuberr);
-        unlink($self->fasta_file."xpd");
-        unlink($self->fasta_file."xpi");
-        unlink($self->fasta_file."xps");
-        unlink($self->fasta_file."xpt");
+    # TODO Is the bsub necessary here?
+    # bsub a blastp query on that,
+    my ($bsubout,$bsuberr) = ($self->fasta_file.".blastout", $self->fasta_file.".blasterr");
+    my $blastresults = $self->fasta_file.".blastp_results";
+    my $blast_query_file;
+    if($self->cell_type eq 'BACTERIA' ) {
+        $blast_query_file = $self->bacterial_query_file;
     }
+    elsif($self->cell_type eq 'ARCHAEA' ) 
+    {
+        $blast_query_file = $self->archaea_query_file;
+    }
+
+    my $blastp_cmd = join(' ', 'blastp', $self->fasta_file, $blast_query_file, '-o', $blastresults);
+    $self->status_message("bsubbing blastp command: $blastp_cmd");
+    my $blastp_job = PP::LSF->create(
+        command => $blastp_cmd,
+        q => 'long',
+        o => $bsubout,
+        e => $bsuberr,
+    );
+    my $start_rv = $blastp_job->start;
+    confess "Trouble starting LSF job for blastp ($blastp_cmd)" unless defined $start_rv and $start_rv;
+
+    my $wait_rv = $blastp_job->wait_on;
+    confess "Trouble while waiting for LSF job for blastp ($blastp_cmd) to complete!" unless defined $wait_rv and $wait_rv;
+
+    $self->status_message("Blastp done, parsing");
+
+    # TODO Change into a module call
+    # run parse_blast_results_percid_fraction_oflength on the output
+    my @parse = (
+        'gmt','bacterial','parse-blast-results',
+        '--input', $blastresults,
+        '--output', 'Cov_30_PID_30' ,  # TODO Don't write to CWD!
+        '--num-hits', 1,
+        '--percent', $self->percent_id,
+        '--fol', $self->fraction_of_length,
+        '--blast-query', $blast_query_file,
+    );
+
+    my ($parse_stdout, $parse_stderr);
+    my $parse_rv = IPC::Run::run(\@parse,
+        '>',
+        \$parse_stdout,
+        '2>',
+        \$parse_stderr, );
+    unless($parse_rv) {
+        $self->error_message("failed to parse output ".$blastresults."\n".$parse_stderr);
+        return 0;
+    }
+
+    $self->status_message("Done parsing, calculating core gene coverage percentage");
+
+    my $core_gene_lines = read_file("Cov_30_PID_30");
+    #@core_gene_lines = grep /====/
+    my $core_groups_ref_arry = $self->get_core_groups_coverage(
+        $core_gene_lines,
+    );
+
+    # the easy way, but we will have to change it eventually
+    my $cmd1 = "grep \"====\" Cov_30_PID_30 | awk '{print \$2}' | sort | uniq | wc -l";
+    my $core_gene_count = `$cmd1`;
+    chomp $core_gene_count;
+    my $cmd2 = "grep \">\" ".$blast_query_file." | wc -l"; # counting seqs
+    my $query_count = `$cmd2`;
+    chomp $query_count;
+    my $core_groups = scalar(@$core_groups_ref_arry);
+
+    # this doesn't make alot of sense yet.
+    # TODO Seriously? Instead of illuminating what's going on here, you're just gonna say you're confused too?
+    my $core_pct = 100 * $core_gene_count / $query_count;
+    my $coregene_pct = sprintf("%.02f",100 * $core_gene_count / $query_count);
+
+    my $output_fh;
+    if ($self->output_file eq 'STDOUT') {
+        $output_fh = $self->output_file;
+    }
+    else {
+        if (-e $self->output_file) {
+            unlink $self->output_file;
+            $self->status_message('Removed existing output file at ' . $self->output_file);
+        }
+        $output_fh = IO::File->new($self->output_file, 'w');
+    }
+    confess 'Could not get file handle for output file ' . $self->output_file unless $output_fh;
+
+    $output_fh->print("Percentage of core genes present in this assembly: $coregene_pct \%\n");
+    $output_fh->print("Core gene count: $core_gene_count\n");
+    $output_fh->print("Query count: $query_count\n");
+    $output_fh->print("Number of Core Groups present in this assembly: $core_groups\n");    
     
+    $self->status_message("Percentage of core genes present in this assembly: $coregene_pct \%");
+    $self->status_message("Core gene count: $core_gene_count");
+    $self->status_message("Query count: $query_count");
+    $self->status_message("Number of Core Groups present in this assembly: $core_groups");
+
+    if($core_pct <= $self->minimum_percent_coverage) {
+        $output_fh->print("Core gene test FAILED!\n");
+        $self->status_message("Core gene test FAILED!");
+        $self->_passed(0);
+    }
+    else {
+        $output_fh->print("Core gene test PASSED\n");
+        $self->status_message("Core gene test PASSED");
+        $self->_passed(1);
+    }
+
+    # the below replicates 'cat Cov_30_PID_30 CoregeneTest_result >Cov_30_PID_30.out
+    # TODO This can be replaced with Genome::Sys->cat I think
+    my $covdata = read_file("Cov_30_PID_30");
+    my $cgtest_result = read_file($self->output_file);
+    write_file("Cov_30_PID_30.out",$covdata.$cgtest_result);
+
+    # unlink temp files. these really should be absolute path
+    # and should go to a writable directory....
+    unlink("Cov_30_PID_30");
+    unlink("CoregeneTest_result");
+    #unlink($blastresults);
+    unlink($bsubout);
+    unlink($bsuberr);
+    unlink($self->fasta_file."xpd");
+    unlink($self->fasta_file."xpi");
+    unlink($self->fasta_file."xps");
+    unlink($self->fasta_file."xpt");
 
     return 1;
 }
@@ -204,20 +228,21 @@ sub execute {
 sub get_core_groups_coverage {
     my $self = shift;
     my $core_groups ;
-    if($self->genome eq 'bact') {
+    if($self->cell_type eq 'BACTERIA') {
         $core_groups = $self->bacterial_group_file;
     }
-    elsif($self->genome eq 'archaea') 
+    elsif($self->cell_type eq 'ARCHAEA') 
     {
         $core_groups = $self->archaea_group_file;
     }
-    my $gene_list = shift;
+
     use IO::String;
     # stolen from  get_core_groups_coverage script
     # altered to 
     #read list to make an array of genes covered
 
-    #my $gene_list=new FileHandle("$options{gene_list}");
+    my $gene_list = `grep "===="  Cov_30_PID_30  | awk '{print \$2}' | sort | uniq`;
+
     my $gl = IO::String->new($gene_list);
     my %gene_hash;
     while (<$gl>){
@@ -227,9 +252,8 @@ sub get_core_groups_coverage {
     }
 
     #Output file
-#    my $o=new FileHandle("> $options{output}");
     my @results = ( );
-    
+
     #Read ortholog data
     my $cgf=new FileHandle("$core_groups");
     while(<$cgf>){
