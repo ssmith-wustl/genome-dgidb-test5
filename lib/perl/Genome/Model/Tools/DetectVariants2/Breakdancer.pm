@@ -45,8 +45,8 @@ class Genome::Model::Tools::DetectVariants2::Breakdancer{
         },
         workflow_log_dir => {
             is => 'Text',
-            calculate_from => '_temp_staging_directory',
-            calculate => q{ return $_temp_staging_directory . '/workflow_log/'; },
+            calculate_from => 'output_directory',
+            calculate => q{ return $output_directory . '/workflow_log/'; },
             is_optional => 1,
             doc => 'workflow log directory of per chromosome breakdancer run',
         },

@@ -86,8 +86,8 @@ class Genome::Model::Tools::DetectVariants2::Filter::TigraValidation {
             default => '/gsc/bin/cross_match',
         },
         workflow_log_directory => {
-            calculate_from => '_temp_staging_directory',
-            calculate => q{ return $_temp_staging_directory . '/workflow_log'; },
+            calculate_from => 'output_directory',
+            calculate => q{ return $output_directory . '/workflow_log'; },
         },
         breakpoint_seq_file => {
             calculate_from => '_temp_staging_directory',
