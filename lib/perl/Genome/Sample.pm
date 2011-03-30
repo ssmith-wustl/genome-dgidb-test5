@@ -101,7 +101,8 @@ class Genome::Sample {
         },
         source_type => { 
             is => 'Text',
-            doc => 'either "organism individual" for individual patients, or "population group" for cross-individual samples' 
+            calculate_from => 'source',
+            calculate => q{ return $source->subject_type; },
         },
         source_name => { 
             via => 'source', 
@@ -163,7 +164,6 @@ class Genome::Sample {
         },
         species_name => { 
             via => 'taxon', 
-            to => 'species_name', 
             doc => 'the name of the species of the sample source\'s taxonomic category' 
         },
         # TODO What are these for? What do they represent?
