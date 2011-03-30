@@ -12,7 +12,7 @@ BEGIN {
 use above 'Genome';
 
 require Genome::InstrumentData::Solexa;
-use Test::More tests => 66;
+use Test::More tests => 99;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
 
@@ -430,3 +430,224 @@ my ($pse_6_genome_model_id) = $pse_6->added_param('genome_model_id');
 
 is($pse_5_genome_model_id, undef, 'genome_model_id parameter remains unset on fifth pse');
 is($pse_6_genome_model_id, $new_de_novo_model->id, 'genome_model_id parameter set correctly for sixth pse');
+
+##Cleanup failure case from previous test
+$pse_5 = undef;
+$instrument_data_5->delete;
+##
+
+my $sample_2 = Genome::Sample->create(
+    id => '-70',
+    name => 'TCGA-TEST-SAMPLE-01A-01D',
+    common_name => 'normal',
+    taxon_id => $taxon->id,
+    source_id => $individual->id,
+    nomenclature => 'TCGA-Test',
+);
+ok($sample_2, 'Created TCGA sample');
+
+my $sample_3 = Genome::Sample->create(
+    id => '-71',
+    name => 'TCGA-TEST-SAMPLE-10A-01D',
+    common_name => 'normal',
+    taxon_id => $taxon->id,
+    source_id => $individual->id,
+    nomenclature => 'TCGA-Test',
+);
+ok($sample_3, 'Created TCGA sample pair');
+
+my $library_2 = Genome::Library->create(
+    id => '-7',
+    sample_id => $sample_2->id,
+);
+isa_ok($library_2, 'Genome::Library');
+
+my $instrument_data_7 = Genome::InstrumentData::Solexa->create(
+    id => '-700',
+    library_id => $library_2->id,
+    flow_cell_id => 'TM-021',
+    lane => '1',
+    run_type => 'Paired',
+    fwd_read_length => 100,
+    rev_read_length => 100,
+    fwd_clusters => 65535,
+    rev_clusters => 65536,
+);
+ok($instrument_data_7, 'Created an instrument data');
+
+my $pse_7 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
+    pse_status => 'inprogress',
+    pse_id => '-7675309',
+    ps_id => $ps->ps_id,
+);
+
+$pse_7->add_param('instrument_data_type', 'solexa');
+$pse_7->add_param('instrument_data_id', $instrument_data_7->id);
+$pse_7->add_param('subject_class_name', 'Genome::Sample');
+$pse_7->add_param('subject_id', $sample_2->id);
+$pse_7->add_param('processing_profile_id', $processing_profile->id);
+$pse_7->add_reference_sequence_build_param_for_processing_profile( $processing_profile, $ref_seq_build);
+
+my $command_4 = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
+    test => 1,
+);
+
+isa_ok($command_4, 'Genome::Model::Command::Services::AssignQueuedInstrumentData');
+ok($command_4->execute(), 'assign-queued-instrument-data executed successfully.');
+
+my $new_models_4 = $command_4->_newly_created_models;
+is(scalar(keys %$new_models_4), 3, 'the cron created three new models');
+my ($somatic_variation) =  grep($_->isa("Genome::Model::SomaticVariation"), values %$new_models_4);
+my @tumor = grep($_->subject_name eq  $sample_2->name, values %$new_models_4);
+my ($normal) = grep($_->subject_name eq  $sample_3->name, values %$new_models_4);
+ok($somatic_variation, 'the cron created a somatic variation model');
+ok(@tumor, 'the cron created a tumor model for the first sample');
+ok($normal, 'the cron created a paired normal model');
+ok(grep($_ ==  $somatic_variation->tumor_model, @tumor), 'somatic variation has the correct tumor model');
+is($normal, $somatic_variation->normal_model, 'somatic variation has the correct normal model');
+
+is($pse_7->pse_status, 'completed', 'seventh pse completed');
+
+my $library_3 = Genome::Library->create(
+    id => '-9',
+    sample_id => $sample_3->id,
+);
+isa_ok($library_3, 'Genome::Library');
+
+my $instrument_data_8 = Genome::InstrumentData::Solexa->create(
+    id => '-777',
+    library_id => $library_3->id,
+    flow_cell_id => 'TM-021',
+    lane => '1',
+    run_type => 'Paired',
+    fwd_read_length => 100,
+    rev_read_length => 100,
+    fwd_clusters => 65535,
+    rev_clusters => 65536,
+);
+ok($instrument_data_8, 'Created an instrument data');
+
+my $pse_8 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
+    pse_status => 'inprogress',
+    pse_id => '-7775309',
+    ps_id => $ps->ps_id,
+);
+
+$pse_8->add_param('instrument_data_type', 'solexa');
+$pse_8->add_param('instrument_data_id', $instrument_data_8->id);
+$pse_8->add_param('subject_class_name', 'Genome::Sample');
+$pse_8->add_param('subject_id', $sample_3->id);
+$pse_8->add_param('processing_profile_id', $processing_profile->id);
+$pse_8->add_reference_sequence_build_param_for_processing_profile( $processing_profile, $ref_seq_build);
+
+
+my $command_5 = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
+    test => 1,
+);
+
+isa_ok($command_5, 'Genome::Model::Command::Services::AssignQueuedInstrumentData');
+ok($command_5->execute(), 'assign-queued-instrument-data executed successfully.');
+my $new_models_5 = $command_5->_newly_created_models;
+is(scalar(keys %$new_models_5), 0, 'the cron created zero new models');
+ok(scalar($normal->instrument_data), 'the cron assigned the new instrument data to the empty paired model');
+
+###
+my $sample_4 = Genome::Sample->create(
+    id => '-80',
+    name => 'TCGA-TEST-SAMPLE2-01A-01D',
+    common_name => 'normal',
+    taxon_id => $taxon->id,
+    source_id => $individual->id,
+    nomenclature => 'TCGA-Test',
+);
+ok($sample_4, 'Created TCGA sample');
+
+my $sample_5 = Genome::Sample->create(
+    id => '-81',
+    name => 'TCGA-TEST-SAMPLE2-10A-01D',
+    common_name => 'normal',
+    taxon_id => $taxon->id,
+    source_id => $individual->id,
+    nomenclature => 'TCGA-Test',
+);
+ok($sample_5, 'Created TCGA sample pair');
+
+my $library_4 = Genome::Library->create(
+    id => '-11',
+    sample_id => $sample_4->id,
+);
+isa_ok($library_4, 'Genome::Library');
+
+my $library_5 = Genome::Library->create(
+    id => '-10',
+    sample_id => $sample_5->id,
+);
+isa_ok($library_5, 'Genome::Library');
+
+my $instrument_data_9 = Genome::InstrumentData::Solexa->create(
+    id => '-800',
+    library_id => $library_4->id,
+    flow_cell_id => 'TM-021',
+    lane => '1',
+    run_type => 'Paired',
+    fwd_read_length => 100,
+    rev_read_length => 100,
+    fwd_clusters => 65535,
+    rev_clusters => 65536,
+);
+ok($instrument_data_9, 'Created an instrument data');
+
+my $instrument_data_10 = Genome::InstrumentData::Solexa->create(
+    id => '-801',
+    library_id => $library_5->id,
+    flow_cell_id => 'TM-021',
+    lane => '1',
+    run_type => 'Paired',
+    fwd_read_length => 100,
+    rev_read_length => 100,
+    fwd_clusters => 65535,
+    rev_clusters => 65536,
+);
+ok($instrument_data_10, 'Created an instrument data');
+
+my $pse_9 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
+    pse_status => 'inprogress',
+    pse_id => '-7600000',
+    ps_id => $ps->ps_id,
+);
+$pse_9->add_param('instrument_data_type', 'solexa');
+$pse_9->add_param('instrument_data_id', $instrument_data_9->id);
+$pse_9->add_param('subject_class_name', 'Genome::Sample');
+$pse_9->add_param('subject_id', $sample_4->id);
+$pse_9->add_param('processing_profile_id', $processing_profile->id);
+$pse_9->add_reference_sequence_build_param_for_processing_profile( $processing_profile, $ref_seq_build);
+
+my $pse_10 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
+    pse_status => 'inprogress',
+    pse_id => '-7600001',
+    ps_id => $ps->ps_id,
+);
+$pse_10->add_param('instrument_data_type', 'solexa');
+$pse_10->add_param('instrument_data_id', $instrument_data_10->id);
+$pse_10->add_param('subject_class_name', 'Genome::Sample');
+$pse_10->add_param('subject_id', $sample_5->id);
+$pse_10->add_param('processing_profile_id', $processing_profile->id);
+$pse_10->add_reference_sequence_build_param_for_processing_profile( $processing_profile, $ref_seq_build);
+
+my $command_6 = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
+    test => 1,
+);
+
+isa_ok($command_6, 'Genome::Model::Command::Services::AssignQueuedInstrumentData');
+ok($command_6->execute(), 'assign-queued-instrument-data executed successfully.');
+
+my $new_models_6 = $command_6->_newly_created_models;
+is(scalar(keys %$new_models_6), 3, 'the cron created three new models');
+my ($somatic_variation_2) =  grep($_->isa("Genome::Model::SomaticVariation"), values %$new_models_6);
+my @tumor_2 = grep($_->subject_name eq  $sample_4->name, values %$new_models_6);
+my ($normal_2) = grep($_->subject_name eq  $sample_5->name, values %$new_models_6);
+ok($somatic_variation_2, 'the cron created a somatic variation model');
+ok(@tumor_2, 'the cron created a tumor model for the first sample');
+ok($normal_2, 'the cron created a paired normal model');
+ok(grep($_ ==  $somatic_variation_2->tumor_model, @tumor_2), 'somatic variation has the correct tumor model');
+is($normal_2, $somatic_variation_2->normal_model, 'somatic variation has the correct normal model');
