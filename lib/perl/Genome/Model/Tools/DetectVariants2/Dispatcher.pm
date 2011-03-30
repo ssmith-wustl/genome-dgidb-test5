@@ -855,10 +855,12 @@ sub _generate_standard_files {
             unless (@lq_files) {
                 next;
             }
+            # Sort the files so they will go into joinx in a predictable order to produce results that will not vary
+            my @sorted_lq_files = sort(@lq_files);
 
             my $output_file = $self->output_directory . "/$variant_type" . "s.lq.bed";
             my $sort_command = Genome::Model::Tools::Joinx::Sort->create(
-                input_files => \@lq_files,
+                input_files => \@sorted_lq_files,
                 merge_only => 1,
                 output_file => $output_file,
             );

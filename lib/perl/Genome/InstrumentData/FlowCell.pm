@@ -23,9 +23,7 @@ class Genome::InstrumentData::FlowCell {
                     is => 'Text',
                     len => 255,
                     calculate => q(
-                         my @runs = $self->solexa_runs();
-                         my $pse_id = $runs[0]->creation_event_id() || return;
-                         my $creation_event = GSC::PSE->get(pse_id => $pse_id);
+                         my $creation_event = GSC::PSE->get(pse_id => $self->creation_event_id);
                          return $creation_event->date_scheduled();
                     ),
                 },
@@ -60,16 +58,6 @@ class Genome::InstrumentData::FlowCell {
 
 #            where   => [ flow_cell_id => '' ],
 #            to => 'value',
-
-sub solexa_runs {
-
-    # oltp solexa_run
-    my ($self) = @_;
-
-    my @runs = GSC::Equipment::Solexa::Run->get( flow_cell_id => $self->flow_cell_id );
-
-    return @runs;
-}
 
 sub lane_info {
     my ($self) = @_;
