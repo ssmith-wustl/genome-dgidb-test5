@@ -35,7 +35,7 @@ class Genome::InstrumentData::FlowCell::View::Solr::Xml {
             calculate => sub {
                 my $flow_cell_id = $_[0]->flow_cell_id();
                 return 'none' if !$flow_cell_id;
-                return join ('=', '/solexa/equipment/flowcell?flow_cell_id',$flow_cell_id);
+                return '/solexa/equipment/flowcell/' . $flow_cell_id;
             },
         },
         display_label2 => {
