@@ -7,8 +7,8 @@ use warnings;
 use Genome;
 use Carp 'confess';
 
-my $low = 40_000;
-my $high = 400_000;
+my $low = 20_000;
+my $high = 200_000;
 UR::Context->object_cache_size_highwater($high);
 UR::Context->object_cache_size_lowwater($low);
 
@@ -115,6 +115,7 @@ sub execute {
                 }
             }
 
+            # Periodic commits to prevent lost progress in case of failure
             if ($created_objects != 0 and $created_objects % 1000 == 0) {
                 confess 'Could not commit!' unless UR::Context->commit;
                 print STDERR "\n" and $self->print_object_cache_summary if $self->show_object_cache_summary;
@@ -128,21 +129,25 @@ sub execute {
         $self->print_object_cache_summary if $self->show_object_cache_summary;
         $self->status_message("Done syncning $new_type and $old_type");
     }
+    print STDERR "\n";
 
     $self->_report(\%report);
     $self->generate_report if defined $self->report_file;
     return 1;
 }
 
+# Looks at the UR object cache and prints out how many objects of each type are loaded
 sub print_object_cache_summary {
     my $self = shift;
     for my $type (sort keys %$UR::Context::all_objects_loaded) {
         my $count = scalar keys %{$UR::Context::all_objects_loaded->{$type}};
+        next unless $count > 0;
         $self->status_message("$type : $count");
     }
     return 1;
 }
 
+# Writes a report detailing the IDs of objects that have been created/missed
 sub generate_report {
     my $self = shift;
     my %report = %{$self->_report};
@@ -158,6 +163,7 @@ sub generate_report {
         for my $type (sort keys %report) {
             $fh->print("*** Type $type ***\n");
             for my $operation (qw/ copied missing /) {
+                next unless exists $report{$type}{$operation};
                 $fh->print(ucfirst $operation . "\n");
                 $fh->print(join("\n", @{$report{$type}{$operation}}) . "\n");
             }
@@ -179,7 +185,6 @@ sub copy_object {
     $method_base =~ s/::/_/g;
     my $create_method = '_create_' . $method_base;
     if ($self->can($create_method)) {
-        $DB::single = 1;
         return $self->$create_method($original_object, $new_object_class);
     }
     else {
@@ -187,6 +192,8 @@ sub copy_object {
     }
 }
 
+# Below are type-specific create methods. They are each responsible for taking an object and a class
+# and creating a new object of the given class based on the given object.
 sub _create_genome_instrumentdata_solexa {
     my ($self, $original_object, $new_object_class) = @_;
     
@@ -273,7 +280,7 @@ sub _create_genome_instrumentdata_sanger {
         ) 
     };
     confess "Could not create new object of type $new_object_class based on object of type " .
-        $original_object->class . " with id " . $original_object->id . ":\n$!" unless $object;
+        $original_object->class . " with id " . $original_object->id . ":\n$@" unless $object;
 
     for my $property_name (sort keys %indirect_properties) {
         Genome::InstrumentDataAttribute->create(
@@ -314,7 +321,7 @@ sub _create_genome_instrumentdata_454 {
         ) 
     };
     confess "Could not create new object of type $new_object_class based on object of type " .
-        $original_object->class . " with id " . $original_object->id . ":\n$!" unless $object;
+        $original_object->class . " with id " . $original_object->id . ":\n$@" unless $object;
 
     
     # TODO Need to talk to Scott about how to go about dumping SFF files. Currently, this info is stored in a
@@ -337,29 +344,42 @@ sub _create_genome_instrumentdata_454 {
 sub _create_genome_sample {
     my ($self, $original_object, $new_object_class) = @_;
 
-    my %params;
-    for my $property ($new_object_class->__meta__->properties) {
+    my @properties = $new_object_class->__meta__->properties; 
+    my %direct_properties;
+    my %indirect_properties;
+    for my $property (@properties) {
         my $property_name = $property->property_name;
-        $params{$property_name} = $original_object->{$property_name} if defined $original_object->{$property_name};
+        my $value = $original_object->{$property_name};
+        my $via = $property->via;
+        if (defined $via and $via eq 'attributes') {
+            $indirect_properties{$property_name} = $value if defined $value; 
+        }
+        else {
+            $direct_properties{$property_name} = $value if defined $value;
+        }
     }
-    # Need to grab sample attributes, UR will correctly turn them into subject attributes during create
+
     for my $attribute ($original_object->attributes) {
-        $params{$attribute->name} = $attribute->value;
+        $indirect_properties{$attribute->name} = $attribute->value;
     }
 
     my $object = eval { 
         $new_object_class->create(
-            %params, 
+            %direct_properties, 
             id => $original_object->id, 
             subclass_name => $new_object_class
         ) 
     };
     confess "Could not create new object of type $new_object_class based on object of type " .
-        $original_object->class . " with id " . $original_object->id . ":\n$!" unless $object;
+        $original_object->class . " with id " . $original_object->id . ":\n$@" unless $object;
 
-    # Unload UR::Object::View::Aspect, which for whatever reason accumulates during sync and
-    # can cause the cache to be filled with unprunable objects
-    UR::Object::View::Aspect->unload;
+    for my $property_name (sort keys %indirect_properties) {
+        Genome::SubjectAttribute->create(
+            subject_id => $object->id,
+            attribute_label => $property_name,
+            attribute_value => $indirect_properties{$property_name},
+        );
+    }
 
     return 1;
 }
@@ -385,7 +405,7 @@ sub _create_genome_populationgroup {
         ) 
     };
     confess "Could not create new object of type $new_object_class based on object of type " .
-        $original_object->class . " with id " . $original_object->id . ":\n$!" unless $object;
+        $original_object->class . " with id " . $original_object->id . ":\n$@" unless $object;
 
     return 1;
 }
@@ -407,11 +427,7 @@ sub _create_genome_individual {
         ) 
     };
     confess "Could not create new object of type $new_object_class based on object of type " .
-        $original_object->class . " with id " . $original_object->id . ":\n$!" unless $object;
-
-    # Unload UR::Object::View::Aspect, which for whatever reason accumulates during sync and
-    # can cause the cache to be filled with unprunable objects
-    UR::Object::View::Aspect->unload;
+        $original_object->class . " with id " . $original_object->id . ":\n$@" unless $object;
 
     return 1;
 }
@@ -433,7 +449,7 @@ sub _create_genome_taxon {
         ) 
     };
     confess "Could not create new object of type $new_object_class based on object of type " .
-        $original_object->class . " with id " . $original_object->id . ":\n$!" unless $object;
+        $original_object->class . " with id " . $original_object->id . ":\n$@" unless $object;
 
     return 1;
 }
