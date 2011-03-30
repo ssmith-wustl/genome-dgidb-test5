@@ -11,7 +11,7 @@ use lib "$FindBin::Bin";
 
 my $log2=log(2);
 my $floor=1e-3;
-my $version="SquareDancer-0.1r162";
+my $version="SquareDancer-0.1r176";
 my %opts = (q=>35,r=>2,k=>25,n=>1,c=>1,m=>3,e=>0.5);
 my %opts1;
 getopts('o:q:r:k:n:c:l:m:ubdg:e:', \%opts1);
@@ -59,7 +59,7 @@ foreach my $fbam(@ARGV){
     }
     elsif(/^\@SQ/){
       my ($chr)=($_=~/SN\:(\S+)/);
-      $Chrs{$chr}=1;
+      $Chrs{$chr}=1 if($chr !~ /\|/);  #refname containing | can't be randomly accessed through samtools view
     }
   }
   close(BAM);
@@ -105,10 +105,6 @@ foreach my $chr(@chrs){
       chomp;
       my $t;
       ($t->{readname},$t->{flag},$t->{chr},$t->{pos},$t->{mqual},$t->{cigar},$t->{mchr},$t->{mpos},$t->{isize},$t->{seq},$t->{qual},@tags)=split;
-
-#      if($t->{pos}>206579684){
-#	print "";
-#      }
 
       next if($t->{flag} & 0x0400 ||
 	      $t->{mqual}<$opts{q}
