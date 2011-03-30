@@ -96,22 +96,10 @@ class Genome::Model::Tools::Hgmi::SendToPap (
     ],
 );
 
-sub help_brief
-{
-    "Bridges between HGMI tools and PAP";
-}
-
-sub help_synopsis
-{
-    return <<"EOS"
-Bridges between HGMI tools and PAP.  This tool pulls data from biosql,
-then initializes and runs the PAP workflow.
-EOS
-}
-
-sub help_detail
-{
-    return <<"EOS"
+sub help_brief { return 'Kicks off the protein annotation workflow'; }
+sub help_synopsis { return help_brief(); }
+sub help_detail {
+    return <<EOS
 Bridges between HGMI tools and PAP.  This tool loads predictions from mgap to
 biosql, pulls data from biosql, then initializes and runs the PAP workflow.
 EOS
@@ -317,39 +305,28 @@ sub mgap_to_biosql
 
 ## need workflow item here...
 
-sub do_pap_workflow
-{
+sub do_pap_workflow {
     my $self = shift;
 
     my $xml_file = $self->workflow_xml;
     my $fasta_file = $self->pep_file;
     my $chunk_size = $self->chunk_size;
-    #print STDERR "\n",$xml_file,"\n";
-    #print STDERR "\nfasta file is ",$fasta_file,"\n";
 
     my $previous_workflow_id = $self->resume_workflow();
    
-    unless (defined($previous_workflow_id)) {
-    
-        if (! -f $fasta_file) {
-            print STDERR "\nwhere is the fasta file ", $fasta_file, "? SendToPap.pm\n";
-            croak "fasta file doesn't exist! SendToPap.pm";
+    unless (defined $previous_workflow_id) {
+        unless (-f $fasta_file) {
+            confess "Could not find fasta file at $fasta_file";
         }
-    
     }
 
     my $workflow_dev_flag = 0;
-
     if ($self->dev()) { $workflow_dev_flag = 1; }
 
     my $output;
-
     if (defined($previous_workflow_id)) {
-
         $output = resume_lsf($previous_workflow_id);
-
     }
-
     else {
         my $workflow = Workflow::Operation->create_from_xml($xml_file);
         confess "Could not create workflow!" unless $workflow;
