@@ -1227,14 +1227,8 @@ sub add_processing_profiles_to_pses{
                 if ($taxon->species_latin_name =~ /homo sapiens/i) {
                     if ($self->_is_st_jude($pse)) {
                         my $individual = $organism_sample->patient;
-                        my $pp_id;
+                        my $pp_id = '2586039';
                         my $common_name = $individual ? $individual->common_name : '';
-
-                        if($common_name and grep($common_name =~ $_, qr(^SJTALL\d), qr(^SJMB\d), qr(^SJRB\d), qr(^SJINF\d) )) {
-                            $pp_id = '2574937'; #bwa 0.5.5 untrimmed and samtools r453 and picard_align 1.17 and picard_dedup 1.29 with annotation 54_36p_v2
-                        } else {
-                            $pp_id = '2574938';
-                        }
 
                         push @processing_profile_ids_to_add, $pp_id;
                         $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'NCBI-human-build36';
