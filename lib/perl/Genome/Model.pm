@@ -173,6 +173,14 @@ class Genome::Model {
                                     return;
                                 }
                             | },
+        subject_common_name => {
+            is => 'Text',
+            len => 255,
+            calculate_from => 'subject',
+            calculate => q{
+                return $subject->common_name();
+            }
+        },
         subject_type    => { is => 'Text', len => 255, 
                             valid_values => ["species_name","sample_group","flow_cell_id","genomic_dna","library_name","sample_name","dna_resource_item_name"], 
                             calculate_from => 'subject_class_name',

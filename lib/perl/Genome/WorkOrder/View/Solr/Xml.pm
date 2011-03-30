@@ -53,7 +53,7 @@ class Genome::WorkOrder::View::Solr::Xml {
         },
         display_icon_url => {
             is  => 'Text',
-            default => 'genome_work_order_32',
+            default => 'genome_workorder_32',
         },
         display_url0 => {
             is => 'Text',

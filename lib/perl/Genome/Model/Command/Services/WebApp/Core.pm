@@ -13,6 +13,10 @@ sub import {
     $imported = 1;
     my @classes = ();
 
+    # destroy args from plackup command line
+    # so they dont interact with anything else
+    undef @ARGV;
+
     my $base_dir = Genome->base_dir;
     find(
         sub {

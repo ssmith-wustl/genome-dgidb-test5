@@ -42,7 +42,7 @@ EOS
 
 sub flags {
     my $self = shift;
-    my @flags;
+    my @flags = ('--stable');
     push(@flags, "--merge-only") if $self->merge_only;
     return @flags;
 }

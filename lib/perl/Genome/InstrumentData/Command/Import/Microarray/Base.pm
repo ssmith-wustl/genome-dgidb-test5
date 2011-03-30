@@ -32,6 +32,7 @@ class Genome::InstrumentData::Command::Import::Microarray::Base {
             is => 'Text',
             doc => 'source name for imported file, like Broad Institute',
             is_optional => 1,
+            default_value => 'WUGC',
         },
         sequencing_platform => {
             is => 'Text',
@@ -80,18 +81,18 @@ sub execute {
     return if not $allocation;
 
     my $copy = $self->_copy_original_data_path;
-    return if not $copy;
+    return $self->_deallocate if not $copy;
 
     my $unsorted_genotype_file = $self->_resolve_unsorted_genotype_file;
-    return if not $unsorted_genotype_file;
+    return $self->_deallocate if not $unsorted_genotype_file;
 
     my $sort_ok = $self->_sort_genotype_file($unsorted_genotype_file);
-    return if not $sort_ok;
+    return $self->_deallocate if not $sort_ok;
 
     my $add_and_build = $self->_add_instrument_data_to_model_and_build($instrument_data);
-    return if not $add_and_build;
+    return $self->_deallocate if not $add_and_build;
 
-    #my $reallocate = eval{ $self->_instrument_data->disk_allocations->reallcoate; };
+    my $reallocate = eval{ $self->_instrument_data->disk_allocations->reallcoate; };
 
     return 1;
 }
@@ -177,34 +178,34 @@ sub _create_model {
 
     $self->status_message('Create genotype model');
 
-    my $name = $self->sequencing_platform.' wugc';
-    my $processing_profile = Genome::ProcessingProfile->get(name => $name);
+    my $processing_profile = Genome::ProcessingProfile::GenotypeMicroarray->get(instrument_type => $self->sequencing_platform);
     if ( not $processing_profile ) {
-        $self->error_message("Cannot find genotype microarray processing profile for $name to create model");
+        $self->error_message('Cannot find genotype microarray processing profile for '.$self->sequencing_platform.' to create model');
         return;
     }
-
-    my %model_params = (
-        processing_profile => $processing_profile,
-        subject_id => $self->sample->id,
-        subject_class_name => $self->sample->class,
-        reference_sequence_build => $self->reference_sequence_build,
-    );
 
     $self->status_message('Processing profile: '.$processing_profile->name);
     $self->status_message('Sample: '.$self->sample->name);
     $self->status_message('Reference build: '.$self->reference_sequence_build->__display_name__);
 
-    my $model = Genome::Model::GenotypeMicroarray->get(%model_params);
-    if ( $model ) {
-        $self->error_message('Cannot create genotype microarray model because one exists for processing profile ('.$processing_profile->name.'), sample ('.$self->sample->name.') and reference sequence build ('.$self->reference_sequence_build->name.')');
-        return;
-    }
-    $model = Genome::Model::GenotypeMicroarray->create(%model_params);
+    my $model = Genome::Model::GenotypeMicroarray->create(
+        name => 'IMPORT_GM_PLACE_HOLDER',
+        processing_profile => $processing_profile,
+        subject_id => $self->sample->id,
+        subject_class_name => $self->sample->class,
+        reference_sequence_build => $self->reference_sequence_build,
+    );
     if ( not $model ) {
         $self->error_message('Cannot create genotype microarray model');
         return;
     }
+    my $name = $model->default_model_name;
+    if ( not $name ) {
+        $self->error_message('No default name for genotype microarray model');
+        $model->delete;
+        return;
+    }
+    $model->name($name);
 
     $self->status_message('Create genotype model: '.$model->id);
 
@@ -426,6 +427,27 @@ sub _sort_genotype_file {
     $self->status_message("Sort genotype file...OK");
 
     return 1;
+}
+
+sub _deallocate {
+    my $self = shift;
+
+    my $instrument_data = $self->_instrument_data;
+    return if not $instrument_data;
+
+    my $allocation = $instrument_data->disk_allocations;
+    return if not $allocation;
+
+    $self->status_message('Deallocate');
+    my $dealloc = eval{ $allocation->deallocate; };
+    if ( $dealloc ) {
+        $self->status_message('Deallocate...OK');
+    }
+    else {
+        $self->error_message('Failed to deallocate! This is a rogue allocation: '.$allocation->id);
+    }
+
+    return;
 }
 
 1;

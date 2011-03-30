@@ -80,6 +80,10 @@ class Genome::Model::View::Solr::Xml {
                     position => 'content',
                 },
                 {
+                    name => 'user_name',
+                    position => 'content',
+                },
+                {
                     name => 'processing_profile',
                     position => 'content',
                     perspective => 'default',
@@ -101,6 +105,10 @@ class Genome::Model::View::Solr::Xml {
                     name => 'subject_name',
                     position => 'content',
                 },
+                {
+                    name => 'subject_common_name',
+                    position => 'content',
+                }
 # Loading instrument data is *so* slow
 #                {
 #                    name => 'instrument_data',
