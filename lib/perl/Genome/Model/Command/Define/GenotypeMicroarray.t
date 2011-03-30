@@ -51,7 +51,7 @@ ok($rbuild, 'got reference sequence build');
 my $test_model_name = "genotype-ma-test-".$ENV{USER}."-".$$;
 $test_model_name ='H_KA-123172-S.3576';
 my $ppid = 2166945;
-my $ppname = 'illumina/wugc';
+my $ppname = 'illumina wugc';
 
 
 #write_file($temp_wugc,'1\t72017\tAA\n1\t311622\tAA\n1\t314893\t--\n');

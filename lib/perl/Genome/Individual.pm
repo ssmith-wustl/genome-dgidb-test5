@@ -5,6 +5,8 @@ use warnings;
 
 use Genome;
 
+use Carp;
+
 class Genome::Individual {
     is => 'Genome::Subject',
     has => [

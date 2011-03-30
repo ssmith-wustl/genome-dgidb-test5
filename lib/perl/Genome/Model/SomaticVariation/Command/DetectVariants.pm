@@ -33,6 +33,7 @@ sub execute{
     $params{snv_detection_strategy} = $build->snv_detection_strategy if $build->snv_detection_strategy;
     $params{indel_detection_strategy} = $build->indel_detection_strategy if $build->indel_detection_strategy;
     $params{sv_detection_strategy} = $build->sv_detection_strategy if $build->sv_detection_strategy;
+    $params{cnv_detection_strategy} = $build->cnv_detection_strategy if $build->cnv_detection_strategy;
     
     my $tumor_bam = $build->tumor_bam;
     unless (-e $tumor_bam){
@@ -41,7 +42,7 @@ sub execute{
     $params{aligned_reads_input} = $tumor_bam;
 
     my $reference_build = $build->reference_sequence_build;
-    my $reference_fasta = $reference_build->fasta_file;
+    my $reference_fasta = $reference_build->sequence_path;
     unless(-e $reference_fasta){
         die $self->error_message("fasta file for reference build doesn't exist!");
     }
@@ -75,7 +76,7 @@ sub execute{
     if ($build->snv_detection_strategy){
         my $result = $build->data_set_path("variants/snvs.hq",$version,'bed'); 
         unless (-e $result){
-            my $unexpected_format_output = $command->snv_hq_output_file;
+            my $unexpected_format_output = $command->_snv_hq_output_file;
             unless (-e $unexpected_format_output){
                 die $self->error_message("Expected hq detected snvs file $result, but it does not exist!");
             }
@@ -86,7 +87,7 @@ sub execute{
     if ($build->indel_detection_strategy){
         my $result = $build->data_set_path("variants/indels.hq",$version,'bed'); 
         unless (-e $result){
-            my $unexpected_format_output = $command->indel_hq_output_file;
+            my $unexpected_format_output = $command->_indel_hq_output_file;
             unless (-e $unexpected_format_output){
                 die $self->error_message("Expected hq detected snvs file $result, but it does not exist!");
             }
@@ -97,7 +98,18 @@ sub execute{
     if ($build->sv_detection_strategy){
         my $result = $build->data_set_path("variants/svs.hq",$version,'bed'); 
         unless (-e $result){
-            my $unexpected_format_output = $command->sv_hq_output_file;
+            my $unexpected_format_output = $command->_sv_hq_output_file;
+            unless (-e $unexpected_format_output){
+                die $self->error_message("Expected hq detected snvs file $result, but it does not exist!");
+            }
+            symlink($unexpected_format_output, $result);
+        }
+    }
+
+    if ($build->cnv_detection_strategy){
+        my $result = $build->data_set_path("variants/cnvs.hq",$version,'bed'); 
+        unless (-e $result){
+            my $unexpected_format_output = $command->_cnv_hq_output_file;
             unless (-e $unexpected_format_output){
                 die $self->error_message("Expected hq detected snvs file $result, but it does not exist!");
             }

@@ -117,16 +117,17 @@ class Genome::Model {
         
         # refactor to use the inputs entirely
         instrument_data_assignments => { is => 'Genome::Model::InstrumentDataAssignment', reverse_as => 'model' },
-            instrument_data             => {
-                is => 'Genome::InstrumentData',
-                via => 'inputs',
-                to => 'value', 
-                is_mutable => 1, 
-                where => [ name => 'instrument_data' ],
-                doc => 'Instrument data currently assigned to the model.' 
-            },
-        ],    
-        has_optional_deprecated => [
+        instrument_data             => {
+            is => 'Genome::InstrumentData',
+            via => 'inputs',
+            to => 'value', 
+            is_mutable => 1, 
+            where => [ name => 'instrument_data' ],
+            doc => 'Instrument data currently assigned to the model.' 
+        },
+        instrument_data_ids         => { via => 'instrument_data', to => 'id' },
+    ],    
+    has_optional_deprecated => [
         # this is all junk but things really use them right now 
         data_directory          => { is => 'Text', len => 1000, is_optional => 1 },
         ref_seqs                => { is => 'Genome::Model::RefSeq', reverse_as => 'model', is_many => 1, is_optional => 1 },
@@ -172,6 +173,14 @@ class Genome::Model {
                                     return;
                                 }
                             | },
+        subject_common_name => {
+            is => 'Text',
+            len => 255,
+            calculate_from => 'subject',
+            calculate => q{
+                return $subject->common_name();
+            }
+        },
         subject_type    => { is => 'Text', len => 255, 
                             valid_values => ["species_name","sample_group","flow_cell_id","genomic_dna","library_name","sample_name","dna_resource_item_name"], 
                             calculate_from => 'subject_class_name',
@@ -324,6 +333,16 @@ sub create {
         return;
     }
 
+    # user/creation
+    unless ($self->user_name) {
+        my $user = getpwuid($<);
+        $self->user_name($user);
+    }
+
+    unless ($self->creation_date) {
+        $self->creation_date(UR::Time->now);
+    }
+
     #<model name>#
     # set default if none given
     if ( not defined $self->name ) {
@@ -341,14 +360,6 @@ sub create {
     $self->_verify_no_other_models_with_same_name_and_type_name_exist
         or return;
     #</model name>
-
-    unless ($self->user_name) {
-        my $user = getpwuid($<);
-        $self->user_name($user);
-    }
-    unless ($self->creation_date) {
-        $self->creation_date(UR::Time->now);
-    }
 
     # If data directory has not been supplied, figure it out
     unless ($self->data_directory) {
@@ -429,12 +440,38 @@ sub _verify_no_other_models_with_same_name_and_type_name_exist {
 }
 
 sub default_model_name {
-    my $self  = shift;
-    return join(
-        '.',
-        Genome::Utility::Text::sanitize_string_for_filesystem($self->subject_name),
-        $self->processing_profile_name
+    my ($self, %params) = @_;
+
+    my $name_template = ($self->subject_name).'.';
+    $name_template .= 'prod-' if $self->user_name eq 'apipe-builder';
+
+    my $type_name = $self->processing_profile->type_name;
+    my %short_names = (
+        'genotype microarray' => 'microarray',
+        'reference alignment' => 'refalign',
+        'de novo assembly' => 'denovo',
+        'metagenoic composition 16s' => 'mc16s',
     );
+    $name_template .= ( exists $short_names{$type_name} )
+    ? $short_names{$type_name}
+    : join('_', split(/\s+/, $type_name));
+
+    $name_template .= '%s%s';
+
+    my @parts;
+    push @parts, 'capture', $params{capture_target} if defined $params{capture_target};
+    push @parts, $params{roi} if defined $params{roi};
+    my @additional_parts = eval{ $self->_additional_parts_for_default_name; };
+    push @parts, @additional_parts if @additional_parts;
+    $name_template .= '.'.join('.', @parts) if @parts;
+
+    my $name = Genome::Utility::Text::sanitize_string_for_filesystem( sprintf($name_template, '', '') );
+    my $cnt = 0;
+    while ( Genome::Model->get(name => $name) ) {
+        $name = Genome::Utility::Text::sanitize_string_for_filesystem( sprintf($name_template, '-', ++$cnt) );
+    }
+
+    return $name;
 }
 
 #If a user defines a model with a name (and possibly type), we need to find/make sure there's an

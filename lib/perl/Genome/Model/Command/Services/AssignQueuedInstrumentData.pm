@@ -284,29 +284,6 @@ sub execute {
     return 1;    
 }
 
-# There may be a model with auto assign off already using the
-# default model name just determined previously.  Thus this lame
-# attempt to create a unique name;
-sub find_unused_model_name {
-    my $self = shift;
-    my $desired_model_name = shift;
-
-    my $existing_model = Genome::Model->get( name => $desired_model_name );
-
-    my $name_counter = 0;
-    my $new_model_name;
-
-    while ( defined($existing_model) ) {
-        $name_counter++;
-
-        $new_model_name = $desired_model_name . '_auto' . $name_counter;
-        $existing_model = Genome::Model->get( name => $new_model_name );
-    }
-
-    #new_model_name is only set if we ran into an existing model with the desired one.
-    return $new_model_name || $desired_model_name;
-}
-
 sub load_pses {
     my $self = shift;
 
@@ -573,15 +550,16 @@ sub create_default_per_lane_qc_model {
     my $reference_sequence_build = shift;
     my $pse = shift;
 
-    my $subset_name = $genome_instrument_data->subset_name || 'unknown-subset';
-    my $run_name = $genome_instrument_data->short_name || 'unknown-run';
-
     my ($processing_profile, $model_name);
     my $dbsnp_build;
     my $ncbi_human_build36 = Genome::Model::Build->get(101947881);
     if ($reference_sequence_build && $reference_sequence_build->is_compatible_with($ncbi_human_build36)) {
-        $processing_profile = Genome::ProcessingProfile->get(2581081);
+        my $subset_name = $genome_instrument_data->subset_name || 'unknown-subset';
+        my $run_name_method = $genome_instrument_data->can('short_name') ? 'short_name' : 'run_name';
+        my $run_name = $genome_instrument_data->$run_name_method || 'unknown-run';
         $model_name = $run_name . '.' . $subset_name . '.prod-qc';
+
+        $processing_profile = Genome::ProcessingProfile->get(2581081);
         $dbsnp_build = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($reference_sequence_build); 
     } else {
         $self->status_message('Per lane QC only configured for human reference alignments');
@@ -640,61 +618,47 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
 
     my @new_models;
 
-    my $model_name = $subject->name . '.prod';
-
-    if ($processing_profile->isa('Genome::ProcessingProfile::GenotypeMicroarray') ) {
-        $model_name .= '-microarray';
-    }elsif($processing_profile->isa('Genome::ProcessingProfile::DeNovoAssembly')){
-        $model_name .= '-assembly';
-    }else{
-        $model_name .= '-refalign';
-    }
-
-    my $capture_target;
-
-    # Label Solexa/454 capture stuff as such
-    if ( $genome_instrument_data->can('target_region_set_name') ) {
-        $capture_target = $genome_instrument_data->target_region_set_name();
-        
-        if ( defined($capture_target) ) {
-            $model_name =
-                join( '.', $model_name, 'capture', $capture_target );
-        }
-    }
-
-    #make sure the name we'd like isn't already in use
-    $model_name = $self->find_unused_model_name($model_name);
-
     my %model_params = (
-        name                    => $model_name,
+        name                    => 'AQID-PLACE_HOLDER',
+        user_name               => 'apipe-builder',
         subject_id              => $subject->id,
         subject_class_name      => $subject->class,
         processing_profile_id   => $processing_profile->id,
         auto_assign_inst_data   => 1,
     );
 
-    my $dbsnp_build;
-    my $annotation_build;
-    if($reference_sequence_build) {
+    if ($processing_profile->isa('Genome::ProcessingProfile::GenotypeMicroarray') ) {
+        $model_params{auto_assign_inst_data} = 0;
+    }
+
+    if ( $reference_sequence_build ) {
         $model_params{reference_sequence_build} = $reference_sequence_build;
-        $dbsnp_build = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($reference_sequence_build);
-        if($processing_profile->isa('Genome::ProcessingProfile::ReferenceAlignment')){
-            $annotation_build = Genome::Model::ImportedAnnotation->annotation_build_for_reference($reference_sequence_build);
+        my $dbsnp_build = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($reference_sequence_build);
+        $model_params{dbsnp_build} = $dbsnp_build if $dbsnp_build;
+        if ( $processing_profile->isa('Genome::ProcessingProfile::ReferenceAlignment')){
+            my $annotation_build = Genome::Model::ImportedAnnotation->annotation_build_for_reference($reference_sequence_build);
+            $model_params{annotation_reference_build} = $annotation_build if $annotation_build;
         }
     }
 
-    $model_params{dbsnp_build} = $dbsnp_build if $dbsnp_build;
-    $model_params{annotation_reference_build} = $annotation_build if $annotation_build;
-
-    my $model = Genome::Model->create(%model_params);
-    unless ( defined($model) ) {
-        $self->error_message("Failed to create model '$model_name'");
+    my $regular_model = Genome::Model->create(%model_params);
+    unless ( $regular_model ) {
+        $self->error_message('Failed to create model with params: '.Dumper(\%model_params));
         return;
     }
+    push @new_models, $regular_model;
 
-    push @new_models, $model;
+    my $capture_target = eval{ $genome_instrument_data->target_region_set_name; };
 
-    if ( defined($capture_target) ) {
+    my $name = $regular_model->default_model_name(capture_target => $capture_target);
+    if ( not $name ) {
+        $self->error_message('Failed to get model name for params: '.Dumper(\%model_params));
+        for my $model ( @new_models ) { $model->delete; }
+        return;
+    }
+    $regular_model->name($name);
+
+    if ( $capture_target ) {
         my $roi_list;
         #FIXME This is a lame hack for these capture sets
         my %build36_to_37_rois = (
@@ -702,9 +666,9 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             'agilent sureselect exome version 2 broad' => 'agilent sureselect exome version 2 broad hg19 liftover',
             'hg18 nimblegen exome version 2' => 'hg19 nimblegen exome version 2',
             'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA' => 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA_build36-build37_liftOver',
-            );
-        
-        my $root_build37_ref_seq = Genome::Model::Build::ReferenceSequence->get(name =>'g1k-human-build37');
+        );
+
+        my $root_build37_ref_seq = Genome::Model::Build::ImportedReferenceSequence->get(name =>'g1k-human-build37') || die;
 
         if($reference_sequence_build and $reference_sequence_build->is_compatible_with($root_build37_ref_seq) 
                 and exists $build36_to_37_rois{$capture_target}) {
@@ -713,95 +677,90 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             $roi_list = $capture_target;
         }
 
-        unless($self->assign_capture_inputs($model, $capture_target, $roi_list)) {
-            for (@new_models) {
-                $_->delete;
-                return;
-            }
-        }
-
-        #Also want to make a second model against a standard region of interest
-        my $wuspace_model_name = $self->find_unused_model_name($model_name . '.wu-space');
-        $model_params{name} = $wuspace_model_name;
-
-        my $wuspace_model = Genome::Model->create(
-            %model_params
-        );
-
-        unless ( defined($wuspace_model) ) {
-            $self->error_message("Failed to create model '$model_name'");
-            for (@new_models) {
-                $_->delete;
-            }
+        unless($self->assign_capture_inputs($regular_model, $capture_target, $roi_list)) {
+            for my $model ( @new_models ) { $model->delete; }
             return;
         }
 
+        #Also want to make a second model against a standard region of interest
+        my $wuspace_model = Genome::Model->create(%model_params);
+        unless ( $wuspace_model ) {
+            $self->error_message('Failed to create wu-space model: '.Dumper(\%model_params));
+            for my $model (@new_models) { $model->delete; }
+            return;
+        }
         push @new_models, $wuspace_model;
 
+        my $wuspace_name = $wuspace_model->default_model_name(capture_target => $capture_target, roi => 'wu-space');
+        if ( not $wuspace_name ) {
+            $self->error_message('Failed to get wu-space model name for params: '.Dumper(\%model_params));
+            for my $model (@new_models) { $model->delete; }
+            return;
+        }
+        $wuspace_model->name($wuspace_name);
+
         my $wuspace_roi_list;
-        if($reference_sequence_build and $reference_sequence_build->name eq 'g1k-human-build37') {
+        if($reference_sequence_build and $reference_sequence_build->is_compatible_with($root_build37_ref_seq)) {
             $wuspace_roi_list = 'NCBI-human.combined-annotation-58_37c_cds_exon_and_rna_merged_by_gene';
         } else {
             $wuspace_roi_list = 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA';
         }
 
         unless($self->assign_capture_inputs($wuspace_model, $capture_target, $wuspace_roi_list)) {
-            for (@new_models) {
-                $_->delete;
-                return;
-            }
+            for my $model (@new_models) { $model->delete; }
+            return;
         }
     }
 
-    $DB::single = 1;
     for my $m (@new_models) {
         my $assign =
-            Genome::Model::Command::InstrumentData::Assign->create(
-                model_id => $m->id,
-		instrument_data_id => $genome_instrument_data->id,
-		include_imported => 1,
-		force => 1,
-            );
+        Genome::Model::Command::InstrumentData::Assign->create(
+            model_id => $m->id,
+            instrument_data_id => $genome_instrument_data->id,
+            include_imported => 1,
+            force => 1,
+        );
 
         unless ( $assign->execute ) {
             $self->error_message(
                 'Failed to execute instrument-data assign for model '
                 . $m->id . ' instrument data '.$genome_instrument_data->id );
 
-	    $m->delete;
-	    next;
+            $m->delete;
+            next;
         }
-	
-	my $assign_all =
-            Genome::Model::Command::InstrumentData::Assign->create(
-                model_id => $m->id,
-		all => 1,
-            );
+
+        my $assign_all =
+        Genome::Model::Command::InstrumentData::Assign->create(
+            model_id => $m->id,
+            all => 1,
+        );
 
         unless ( $assign_all->execute ) {
             $self->error_message(
                 'Failed to execute instrument-data assign --all for model '
                 . $m->id );
-	    $m->delete;
-	    next;
+            $m->delete;
+            next;
         }
 
         my @existing_instrument_data =
-            Genome::Model::InstrumentDataAssignment->get(
-                instrument_data_id => $genome_instrument_data->id,
-                model_id           => $m->id,
-            );
+        Genome::Model::InstrumentDataAssignment->get(
+            instrument_data_id => $genome_instrument_data->id,
+            model_id           => $m->id,
+        );
 
         unless (@existing_instrument_data) {
             $self->error_message(
                 'instrument data ' . $genome_instrument_data->id . ' not assigned to model ????? (' . $m->id . ')'
             );
-	    $m->delete;
-	    next;
+            $m->delete;
+            next;
         }
 
-        my @project_names = $self->_resolve_project_names($pse);
-        $self->add_model_to_default_modelgroups($m, @project_names);
+        my @group_names = $self->_resolve_project_and_work_order_names($pse);
+        push @group_names, $self->_resolve_pooled_sample_name_for_instrument_data($genome_instrument_data);
+        $self->add_model_to_default_modelgroups($m, @group_names);
 
         my $new_models = $self->_newly_created_models;
         $new_models->{$m->id} = $m;
@@ -860,21 +819,19 @@ sub add_model_to_default_modelgroups {
         my $sample = $subject->sample;
         $source = $sample->source;
     } else {
-        $self->error_message('Unhandled subject for model--not adding to model-groups');
-        return;
-    }
-
-    unless($source) {
-        $self->error_message('Failed to get source for subject.');
-        return;
+        $self->error_message('Unhandled subject for model--not adding to common name model-groups');
     }
 
     my @group_names = @project_names;
 
-    my $common_name = $source->common_name;
-    if($common_name) {
-        my ($source_grouping) = $common_name =~ /^([a-z]+)\d+$/i;
-        push @group_names, $source_grouping if $source_grouping;
+    unless($source) {
+        $self->error_message('Failed to get source for subject.');
+    } else {
+        my $common_name = $source->common_name;
+        if($common_name) {
+            my ($source_grouping) = $common_name =~ /^([a-z]+)\d+$/i;
+            push @group_names, $source_grouping if $source_grouping;
+        }
     }
 
     for my $group_name (@group_names) {
@@ -900,7 +857,7 @@ sub add_model_to_default_modelgroups {
     return 1;
 }
 
-sub _resolve_project_names {
+sub _resolve_project_and_work_order_names {
     my $self = shift;
     my $pse = shift;
 
@@ -909,7 +866,34 @@ sub _resolve_project_names {
         $self->warning_message('No work order found for PSE ' . $pse->id);
     }
 
-    return map($_->research_project_name, @work_orders);
+    return map(($_->setup_name, $_->research_project_name), @work_orders);
+}
+
+sub _resolve_pooled_sample_name_for_instrument_data {
+    my $self = shift;
+    my $instrument_data = shift;
+
+    return unless $instrument_data->can('index_sequence');
+    my $index = $instrument_data->index_sequence;
+    if($index) {
+        my $instrument_data_class = $instrument_data->class;
+        my $pooled_subset_name = $instrument_data->subset_name;
+        $pooled_subset_name =~ s/${index}$/unknown/;
+
+        my $pooled_instrument_data = $instrument_data_class->get(
+            run_name => $instrument_data->run_name,
+            subset_name => $pooled_subset_name,
+            index_sequence => 'unknown',
+        );
+        return unless $pooled_instrument_data;
+
+        my $sample = $pooled_instrument_data->sample;
+        return unless $sample;
+
+        return $sample->name;
+    }
+
+    return;
 }
 
 sub request_builds {
@@ -931,7 +915,7 @@ sub request_builds {
             $self->status_message('Requesting build of model ' . $model->__display_name__ . ' because it has no builds.');
             $models_to_build{$model->id} = $model;
         } else {
-        
+
             my %last_build_instdata = ( );
 
             my @last_build_inputs = $last_build->inputs;
@@ -942,8 +926,8 @@ sub request_builds {
             my @missing_assignments_in_last_build = grep { not $last_build_instdata{$_->instrument_data_id} } @assignments;
 
             if (@missing_assignments_in_last_build) {
-                    $self->status_message("Requesting build of model " . $model->__display_name__ . " because it does not have a final build with all assignments");
-                    $models_to_build{$model->id} = $model;
+                $self->status_message("Requesting build of model " . $model->__display_name__ . " because it does not have a final build with all assignments");
+                $models_to_build{$model->id} = $model;
             } else {
                 $self->status_message("skipping rebuild of model " . $model->__display_name__ . " because all instrument data assignments are on the last build");
             }
@@ -951,7 +935,7 @@ sub request_builds {
     }
 
     $self->status_message("Requesting builds...");
- 
+
     for my $model (values %models_to_build) {
         #Will be picked up by next run of `genome model services build-queued-models`
         $model->build_requested(1);

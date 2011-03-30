@@ -64,6 +64,10 @@ class Genome::Disk::Allocation {
         },
     ],
     has_optional => [
+        original_kilobytes_requested => {
+            is => 'Number',
+            doc => 'The disk space allocated in kilobytes',
+        },
         kilobytes_used => {
             is => 'Number',
             default => 0,
@@ -77,6 +81,14 @@ class Genome::Disk::Allocation {
             is => 'DateTime',
             doc => 'The last time at which the allocation was reallocated',
         },
+        owner_exists => {
+            is => 'Boolean',
+            calculate_from => ['owner_class_name', 'owner_id'],
+            calculate => q| 
+                my $owner_exists = eval { $owner_class_name->get($owner_id) }; 
+                return $owner_exists ? 1 : 0; 
+            |,
+        }
     ],    
     table_name => 'GENOME_DISK_ALLOCATION',
     data_source => 'Genome::DataSource::GMSchema',
@@ -290,6 +302,7 @@ sub _create {
         confess "Missing required params for allocation:\n" . join("\n", @missing_params);
     }
 
+    # Make sure there aren't any extra params
     my $id = delete $params{id};
     $id = Genome::Disk::Allocation::Type::autogenerate_new_object_id unless defined $id;
     my $kilobytes_requested = delete $params{kilobytes_requested};
@@ -368,6 +381,7 @@ sub _create {
         mount_path => $volume->mount_path,
         disk_group_name => $disk_group_name,
         kilobytes_requested => $kilobytes_requested,
+        original_kilobytes_requested => $kilobytes_requested,
         allocation_path => $allocation_path,
         owner_class_name => $owner_class_name,
         owner_id => $owner_id,
@@ -616,6 +630,8 @@ sub _reallocate_with_move {
     return 1;
 }
 
+# Some owners track their absolute path separately from the allocation, which means they also need to be
+# updated when the allocation is moved. That special logic goes here
 sub _update_owner_for_move {
     my $self = shift;
     my $owner = $self->owner;
@@ -625,7 +641,6 @@ sub _update_owner_for_move {
         $owner->output_dir($self->absolute_path);
     }
     elsif ($owner->isa('Genome::Model::Build')) {
-        die 'Have not implemented reallocate with move for builds!';
         $owner->data_directory($self->absolute_path);
     }
 
@@ -763,7 +778,8 @@ sub _get_candidate_volumes {
             "$kilobytes_requested kb of unallocated space!";
     }
 
-    # Make sure that the allocation doesn't infringe on the empty buffer required for each volume
+    # Make sure that the allocation doesn't infringe on the empty buffer required for each volume. Reallocations
+    # can use up to 98% of a disk, but new allocations can only use up to 95%.
     @volumes = grep {
         my $reserve_size = ($reallocating ? $_->unusable_reserve_size : $_->unallocatable_reserve_size);
         ($_->unallocated_kb - $reserve_size) > $kilobytes_requested
@@ -772,7 +788,7 @@ sub _get_candidate_volumes {
         confess "No volumes of group $disk_group_name have enough space after excluding reserves to store $kilobytes_requested KB.";
     }
 
-    @volumes = sort { $b->unallocated_kb <=> $a->unallocated_kb } @volumes;
+    @volumes = sort { $a->unallocated_kb <=> $b->unallocated_kb } @volumes;
 
     # Only allocate to the first MAX_VOLUMES retrieved
     my $max = @volumes > $MAX_VOLUMES ? $MAX_VOLUMES : @volumes;
@@ -825,8 +841,8 @@ sub _retrieve_mode {
     return 'load';
 }
 
-# Dummy allocations (don't commit to db) still create files on the filesystem, and the tests/scripts/whatever
-# that make these allocations may not deallocate and clean up. Do so here.
+# Cleans up directories, useful when no commit is on and the test doesn't clean up its allocation directories
+# or in the case of reallocate with move when a copy fails and temp data needs to be removed
 END {
     remove_test_paths();
 }

@@ -19,8 +19,8 @@ BEGIN {
 my $refseq = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa';
 my $input_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-PindelReadSupport";
 
-# Updated to .v2 for correcting an error with newlines
-my $expected_dir = $input_directory . "/expected/";
+# Updated to v2 to allow for new columns 
+my $expected_dir = $input_directory . "/expected_v2/mod/";
 my $tumor_bam_file  = $input_directory. '/flank_tumor_sorted.bam';
 my $normal_bam_file  = $input_directory. '/flank_normal_sorted.bam';
 my $test_output_dir = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Filter-PindelReadSupport-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
@@ -29,12 +29,12 @@ my $hq_output_bed = "$test_output_dir/indels.hq.bed";
 my $read_support_output_bed = "$test_output_dir/indels.hq.read_support.bed";
 my $lq_output_bed = "$test_output_dir/indels.lq.bed";
 
-my $expected_hq_bed_output = "$expected_dir/indels.hq.expected.bed";
-my $expected_lq_bed_output = "$expected_dir/indels.lq.expected.bed";
-my $expected_read_support_output = "$expected_dir/indels.hq.read_support.expected.bed";
+my $expected_hq_bed_output = "$expected_dir/indels.hq.bed";
+my $expected_lq_bed_output = "$expected_dir/indels.lq.bed";
+my $expected_read_support_output = "$expected_dir/indels.hq.read_support.bed";
 
 my $pindel_read_support = Genome::Model::Tools::DetectVariants2::Filter::PindelReadSupport->create(
-    input_directory => $input_directory."/pindel-somatic-calls-v1-",
+    input_directory => $input_directory."/old_input",#"/pindel-somatic-calls-v1-",
     detector_directory => $input_directory,
     output_directory => $test_output_dir,
     aligned_reads_input => $tumor_bam_file,

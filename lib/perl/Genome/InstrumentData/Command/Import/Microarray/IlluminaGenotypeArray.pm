@@ -4,164 +4,120 @@ use strict;
 use warnings;
 
 use Genome;
-use File::Copy;
-use File::Copy::Recursive;
-use File::Basename;
-use IO::Handle;
+
+use IO::File;
 
 class Genome::InstrumentData::Command::Import::Microarray::IlluminaGenotypeArray {
-    is  => 'Genome::InstrumentData::Command::Import::Microarray',
-    doc => 'create an instrument data for a microarray',
+    is => 'Genome::InstrumentData::Command::Import::Microarray::Base',
+    has => [
+        sequencing_platform => { is => 'Text', is_param => 0, is_constant => 1, value => 'illumina', },
+    ],
+    doc => 'import illumina microarray data',
 };
 
-
-sub process_imported_files {
-
+sub _resolve_unsorted_genotype_file {
     my $self = shift;
-    $self->sequencing_platform("illumina genotype array");
-    $self->SUPER::process_imported_files(@_);
-    my $instrument_data = Genome::InstrumentData::Imported->get( sample_name => $self->sample_name, sequencing_platform => $self->sequencing_platform);
-    my $disk_alloc;# = $self->allocation;
-    if($instrument_data) {
-        $disk_alloc = $instrument_data->disk_allocations;
+
+    my $data_directory = $self->_instrument_data->data_directory;
+    my $unsorted_genotype_file = $self->_instrument_data->data_directory.'/'.$self->sample->name.'.genotype';
+    return $unsorted_genotype_file if -s $unsorted_genotype_file;
+    $self->status_message('Generate unsorted genotype file: '.$unsorted_genotype_file);
+    unlink $unsorted_genotype_file if -e $unsorted_genotype_file;
+
+    my ($call_file, $manifest_file) = $self->_resolve_call_and_manifest_files;
+    if ( not $call_file ) {
+        $self->error_message('Failed to generate genotype file. No call file was found');
+        return;
     }
-    unless($disk_alloc) {
-        $self->error_message("could not retrieve disk allocation");
-        die $self->error_message;
+    $self->status_message("Call file: ".$call_file);
+    if ( not $manifest_file ) {
+        $self->error_message('Failed to generate genotype file. No manifest file was found');
+        return;
     }
+    $self->status_message("Manifest: ".$manifest_file);
 
-    my $genome_sample = Genome::Sample->get(name => $self->sample_name);
-
-
-    my $path = $disk_alloc->absolute_path;
-    my $genotype_path = $disk_alloc->absolute_path;
-
-    unless (-d $genotype_path) {
-        print "No genotype folder was found, attempting to generate one\n";
-        
-        unless(mkdir $genotype_path) {
-            $self->error_message("Unable to create path for genotype file.");
-            die $self->error_message;
-        }
+    $self->status_message('Create unsorted genotype file');
+    my $tool = Genome::Model::Tools::Array::CreateGenotypesFromIlluminaCalls->create(  
+        sample_name => $self->sample->name,
+        call_file => $call_file,
+        illumina_manifest_file => $manifest_file,
+        output_path => $data_directory, 
+    );
+    if ( not $tool ) {
+        $self->error_message('Failed to create "create genotype file from illumina calls" tool');
+        return;
     }
-
-    
-    #find illumina manifest and call files among the imported data
-    opendir(DIR,$path);
-    my @files = readdir(DIR);
-
-    my $genotype_path_and_file;
-    my $processing_profile;
-
-    my $call_file;
-    my $illumina_manifest;
-
-    for my $file (@files) {
-        #print $file."\n";
-        if(-d "$path/$file") {
-            next;
-        } elsif (-b "$path/$file") {
-            next;
-        } else {
-            my $fh = new IO::File "$path/$file","r";
-            #unless($fh->fdopen( "$path/$file","r")) {
-            unless(defined($fh)) {
-                print "could not open ".$file.". Skipping this file.\n";
-                next;
-            }
-            my $count = 0;
-
-            #test to see if files for illumina genotype array are present
-            my $match;
-            while ($count < 10) {
-                my $line = $fh->getline; 
-                unless(defined($line)) {
-                    last;
-                }
-                if ($line =~ /Assay/) {
-                    $match = $&;
-                    last;
-                }
-                if ($line =~ /Data/) {
-                    $match = $&;
-                    last;
-                }
-                $count++;
-            }
-            $fh->close;
-            if (defined($match)) {
-                if ($match eq "Assay") {
-                    $illumina_manifest = $path."/".$file;
-                } elsif ($match eq "Data") {
-                    $call_file = $path."/".$file;
-                }
-            }
-            if ((defined($illumina_manifest)) and (defined($call_file))) {
-                #files are present, deciding this is an illumina genotype array
-                print "Input files determined to be Illumina Genotype Array.\n";
-                print "call_file = ".$call_file."\n";
-                print "illumina_manifest = ".$illumina_manifest."\n";
-                $genotype_path_and_file = $genotype_path."/".$genome_sample->name.".genotype";
-                $processing_profile = "illumina/wugc";
-                last;
-            }
-        }
+    $tool->dump_status_messages(1);
+    if ( not $tool->execute ) {
+        $self->error_message('Failed to execute "create genotype file from illumina calls" tool');
+        return;
     }
 
-    unless(defined($genotype_path_and_file)) {
-        $genotype_path_and_file = $genotype_path."/".$genome_sample->name.".genotype";
-    }
+    $self->status_message('Create unsorted genotype file...OK');
 
-    unless(defined($processing_profile)) {
-        $processing_profile = "illumina/wugc";
-    }
-
-    unless (-s $genotype_path_and_file) {
-
-        print "genotype file not found, attempting to generate one.\n";
-
-        unless (Genome::Model::Tools::Array::CreateGenotypesFromIlluminaCalls->execute(  
-                                            sample_name     =>  $genome_sample->name,
-                                            call_file       =>  $call_file,
-                                            illumina_manifest_file  =>  $illumina_manifest,
-                                            output_path     =>  $genotype_path, )) {
-            $self->error_message("Call to CreateGenotypesFromIlluminaCalls failed.");
-            die $self->error_message;
-        }
-        print "Created genotype file at ".$genotype_path_and_file."\n";
-    }
-
-    #create SNP Array Genotype (goldSNP)
-    my $genotype_path_and_SNP = $genotype_path."/".$genome_sample->name."_SNPArray.genotype";
-    unless(Genome::Model::Tools::Array::CreateGoldSnpFromGenotypes->execute(    genotype_file1 => $genotype_path_and_file,
-                                                                                genotype_file2 => $genotype_path_and_file,
-                                                                                output_file    => $genotype_path_and_SNP,)) {
-        $self->error_message("SNP Array Genotype creation failed");
-        die $self->error_message;
-    }
-
-    $disk_alloc->reallocate;
-    
-    #create genotype model
-
-    unless(Genome::Model::Command::Define::GenotypeMicroarray->execute(     file                        =>  $genotype_path_and_SNP,
-                                                                            processing_profile_name     =>  $processing_profile,
-                                                                            subject_name                =>  $genome_sample->name,
-                                                                            reference                   =>  $self->reference_sequence_build,
-            )) {
-        $self->error_message("GenotpeMicroarray Model Define failed.");
-        die $self->error_message;
-    }
-
-
-    return 1;
+    return $unsorted_genotype_file;
 }
 
+sub _resolve_call_and_manifest_files {
+    my $self = shift;
+
+    my $data_directory = $self->_instrument_data->data_directory;
+    my $io_dir = IO::Dir->new($data_directory);
+    if ( not $io_dir ) {
+        $self->error_message("Failed to open instrument data directory ($data_directory): $!");
+        return;
+    }
+    $io_dir->read; $io_dir->read; # . & ..
+
+    my ($call_file, $manifest_file);
+    while ( my $file = $io_dir->read ) {
+        if ( -d "$data_directory/$file" or -b "$data_directory/$file" ) {
+            next;
+        }
+
+        my $fh = IO::File->new("$data_directory/$file", "r");
+        unless(defined($fh)) {
+            print "could not open ".$file.". Skipping this file.\n";
+            next;
+        }
+
+        #test to see if files for illumina genotype array are present
+        my $count = 0;
+        my $match;
+        while ($count < 10) {
+            my $line = $fh->getline; 
+            unless(defined($line)) {
+                last;
+            }
+            if ($line =~ /Assay/) {
+                $match = $&;
+                last;
+            }
+            if ($line =~ /Data/) {
+                $match = $&;
+                last;
+            }
+            $count++;
+        }
+        $fh->close;
+
+        if (defined($match)) {
+            if ($match eq "Assay") {
+                $manifest_file = $data_directory."/".$file;
+            } elsif ($match eq "Data") {
+                $call_file = $data_directory."/".$file;
+            }
+        }
+
+        if ( $manifest_file and $call_file ) {
+            #files are present, deciding this is an illumina genotype array
+            $self->status_message("Input files determined to be Illumina Genotype Array");
+            last;
+        }
+    }
+
+    return ($call_file, $manifest_file);
+}
 
 1;
-
-    
-
-
-    
 

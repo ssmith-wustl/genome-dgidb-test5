@@ -25,7 +25,9 @@ use Genome;                                 # using the namespace authorizes Cla
 my %stats = ();
 
 my %already_reviewed = ();
-my %wildtype_sites = my %germline_sites = ();
+my %passed_sites = my %wildtype_sites = my %germline_sites = ();
+my $maf_header = "";
+my $maf_header_printed = 0;
 
 class Genome::Model::Tools::Capture::SomaticModelGroup {
 	is => 'Command',                       
@@ -34,6 +36,7 @@ class Genome::Model::Tools::Capture::SomaticModelGroup {
 		group_id		=> { is => 'Text', doc => "ID of model group" , is_optional => 0},
 		output_build_dirs	=> { is => 'Text', doc => "If specified, outputs last succeeded build directory for each sample to this file" , is_optional => 1},
 		output_review	=> 	{ is => 'Text', doc => "Specify a directory to output SNV/indel files for manual review" , is_optional => 1},
+		output_maf_file	=> 	{ is => 'Text', doc => "Output a MAF file for downstream analysis" , is_optional => 1},
 		review_database_snvs	=> 	{ is => 'Text', doc => "If provided, use to exclude already-reviewed sites" , is_optional => 1},
 		review_database_indels	=> 	{ is => 'Text', doc => "If provided, use to exclude already-reviewed indels" , is_optional => 1},
 	],
@@ -98,6 +101,10 @@ sub execute {                               # replace with real execution logic.
 		open(BUILDDIRS, ">" . $self->output_build_dirs) or die "Can't open outfile: $!\n";
 	}
 
+	if($self->output_maf_file)
+	{
+		open(MAF, ">" . $self->output_maf_file) or die "Can't open MAF file: $!\n";
+	}
 
 	## Get the models in each model group ##
 
@@ -115,8 +122,10 @@ sub execute {                               # replace with real execution logic.
 		my $last_build_dir = "";
 		my $model_status = "New";
 		my $final_build_result = "";
+		my $last_build_id = 0;
 
 		my $num_builds = 0;		
+		my $num_maf_mutations = 0;
 
 		my $build_ids = my $build_statuses = "";
 		my @builds = $model->builds;
@@ -156,7 +165,7 @@ sub execute {                               # replace with real execution logic.
 
 				
 				my %build_results = get_build_results($last_build_dir);
-				$final_build_result = $build_results{'tier1_snvs'} . " Tier1 SNVs, ";
+				$final_build_result = $build_results{'tier1_snvs'} . " Tier1 SNVs, " . $build_results{'tier1_indels'} . " Tier1 Indels, ";
 
 				if($self->output_review)
 				{
@@ -169,13 +178,32 @@ sub execute {                               # replace with real execution logic.
 					my $output_tier1_indels = $self->output_review . "/" . $subject_name . ".$model_id.Indels.tsv";
 					output_indels_for_review($model_id, $tier1_indels, $tier1_gatk, $output_tier1_indels);
 				}
+				
+				if($self->output_maf_file)
+				{
+					my $sample_maf_file = $last_build_dir . "/tcga-maf.tsv";
+					if(-e $sample_maf_file)
+					{
+						my $sample_maf_results = parse_maf_file($subject_name, $sample_maf_file);
+						my @sample_results = split(/\n/, $sample_maf_results);
+						$num_maf_mutations = @sample_results;
+						
+						if($maf_header && !$maf_header_printed)
+						{
+							print MAF "$maf_header\n";
+							$maf_header_printed = 1;
+						}
+						print MAF "$sample_maf_results\n";
+					}
+
+				}
 
 				
 			}
 
 		}
 
-		print join("\t", $model_id, $subject_name, $model_status, $build_ids, $build_statuses, $final_build_result) . "\n";
+		print join("\t", $model_id, $subject_name, $model_status, $build_ids, $build_statuses, $final_build_result, $num_maf_mutations . " mutations added to MAF") . "\n";
 
 	}	
 	
@@ -201,9 +229,108 @@ sub execute {                               # replace with real execution logic.
 	}
 
 
+	close(MAF) if($self->output_maf_file);
 }
 
 
+
+################################################################################################
+# Get Build Results - Summarize the progress/results of a given build
+#
+################################################################################################
+
+sub parse_maf_file
+{
+	my $sample_name = shift(@_);
+	my $FileName = shift(@_);
+
+	my $sample_maf = "";
+
+	## Column index for fields in MAF file ##
+	
+	my %column_index = ();
+	my @columns = ();
+
+	## Parse the Tier 1 SNVs file ##
+
+	my $input = new FileHandle ($FileName);
+	my $lineCounter = 0;
+
+	while (<$input>)
+	{
+		chomp;
+		my $line = $_;
+		$lineCounter++;
+
+		my @lineContents = split(/\t/, $line);
+	
+		if($lineCounter <= 2 && $line =~ "Chrom")
+		{
+			$maf_header = $line;
+			
+			## Parse the MAF header line to determine field locations ##	
+			my $numContents = @lineContents;
+			
+			for(my $colCounter = 0; $colCounter < $numContents; $colCounter++)
+			{
+				if($lineContents[$colCounter])
+				{
+					$column_index{$lineContents[$colCounter]} = $colCounter;
+				}
+			}
+			
+			foreach my $column (keys %column_index)
+			{
+				## Print out the columns as parsed ##
+				#print "$column_index{$column}\t$column\n";
+				$columns[$column_index{$column}] = $column;	## Save the column order ##
+			}
+		}
+		elsif($lineCounter < 2)
+		{
+
+		}
+		elsif($lineCounter > 2 && !@columns)
+		{
+			die "No Header in MAF file!\n";
+		}
+		elsif($lineCounter > 2 && @columns)
+		{
+			## Build a record for this line, assigning all values to respective fields ##
+			
+			my %record = ();
+
+			foreach my $column_name (keys %column_index)
+			{
+				my $column_number = $column_index{$column_name};
+				$record{$column_name} = $lineContents[$column_number];
+			}
+			
+			my $chrom = $record{'Chromosome'};
+			my $chr_start = $record{'Start_position'};
+			my $chr_stop = $record{'End_position'};
+			my $ref_allele = $record{'Reference_Allele'};
+			my $var_allele = $record{'Tumor_Seq_Allele2'};
+			$var_allele = $record{'Tumor_Seq_Allele1'} if($var_allele eq $ref_allele);
+			my $var_type = $record{'Variant_Type'};
+			
+			my @temp = split(/\-/, $sample_name);
+			my $patient_id = join("-", "TCGA", $temp[1], $temp[2]);
+			my $variant_key = join("\t", $patient_id, $chrom, $chr_start, $chr_stop); #, $ref_allele, $var_allele);
+			
+			## Include variant if it had a review-passed call, or if no reviews were loaded ##
+			if($passed_sites{$variant_key} || !(%passed_sites))
+			{
+				$sample_maf .= "\n" if($sample_maf);
+				$sample_maf .= $line;
+			}
+		}
+	}
+	
+	close($input);
+	
+	return($sample_maf);
+}
 
 
 ################################################################################################
@@ -228,6 +355,14 @@ sub get_build_results
 		my $count = `cat $tier1_snvs | wc -l`;
 		chomp($count);
 		$results{'tier1_snvs'} = $count;
+	}
+	
+	if(-e $tier1_indels)
+	{
+		my $count = `cat $tier1_indels $tier1_gatk | cut --fields=1-3 | sort -u | wc -l`;
+		chomp($count);
+
+		$results{'tier1_indels'} = $count;
 	}
 	
 	return(%results);
@@ -300,6 +435,13 @@ sub load_review_database
 		{
 			my $key = join("\t", $chrom, $chr_start, $chr_stop, $ref, $var);
 			$germline_sites{$key}++;			
+		}
+		elsif($code eq "S" || $code eq "V")
+		{
+			my @temp = split(/\-/, $sample_name);
+			my $patient_id = join("-", "TCGA", $temp[1], $temp[2]);
+			my $key = join("\t", $patient_id, $chrom, $chr_start, $chr_stop);
+			$passed_sites{$key} = 1;
 		}
 	}
 	

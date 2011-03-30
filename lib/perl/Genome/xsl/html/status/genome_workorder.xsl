@@ -221,10 +221,10 @@
                     <xsl:for-each select="aspect[@name='models']/object">
                       <tr>
                         <td>
-                          <a><xsl:attribute name="href">/view/Genome/Model/status.html?id=<xsl:value-of select="display_name"/></xsl:attribute><xsl:value-of select="display_name"/></a> (<xsl:value-of select="aspect[@name='name']/value"/>)
+                          <a><xsl:attribute name="href">/view/Genome/Model/status.html?id=<xsl:value-of select="@id"/></xsl:attribute><xsl:value-of select="display_name"/></a> (<xsl:value-of select="aspect[@name='name']/value"/>)
                         </td>
                         <td>
-                          <a><xsl:attribute name="href">/view/Genome/Model/Build/status.html?id=<xsl:value-of select="aspect[@name='latest_build']/object/display_name"/></xsl:attribute><xsl:value-of select="aspect[@name='latest_build']/object/display_name"/></a>
+                          <a><xsl:attribute name="href">/view/Genome/Model/Build/status.html?id=<xsl:value-of select="aspect[@name='latest_build']/object/@id"/></xsl:attribute><xsl:value-of select="aspect[@name='latest_build']/object/display_name"/></a>
                         </td>
                         <td><xsl:attribute name="class"><xsl:text>status </xsl:text><xsl:value-of select="translate(aspect[@name='latest_build']/object/aspect[@name='master_event_status']/value, $uppercase, $lowercase)"/></xsl:attribute>
                         <xsl:value-of select="aspect[@name='latest_build']/object/aspect[@name='master_event_status']/value"/>

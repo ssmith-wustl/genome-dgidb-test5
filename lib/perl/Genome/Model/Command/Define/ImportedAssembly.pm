@@ -5,7 +5,6 @@ use strict;
 use warnings;
 
 use Genome;
-##use GSCApp;
 use File::Basename;
 use Data::Dumper;
 

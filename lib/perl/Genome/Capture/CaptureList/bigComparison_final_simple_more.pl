@@ -691,6 +691,8 @@ sub ReadRegions{
 
     # basic forms
     ($reg->{chr1},$reg->{start},$reg->{chr2},$reg->{end})=($u[$c[0]],$u[$c[1]],$u[$c[2]],$u[$c[3]]);
+    next if($reg->{start} !~ /^\d+$/ ||
+	    $reg->{end} !~ /^\d+$/);
     if($opts{x} && $reg->{chr1} eq $reg->{chr2}){
         next;
     }
@@ -720,7 +722,7 @@ sub ReadRegions{
 				$reg->{score} = $max_score;
 			}	
 		}
-		if(defined $c[$p] && $p == 11 && $c[$p] ne "NA"){ # if NA, like CNA
+		if(defined $c[$p] && $p == 11 && $c[$p] ne "NA" && defined $u[$c[$p]]) { # if NA, like CNA
 			if($u[$c[$p]] !~ /^\d+/ && $u[$c[$p]] !~ /tumor/i && $u[$c[$p]] !~ /normal/i){ # like BD
 				$reg->{sp_reads} = $u[$c[$p]];	
 				$reg = &parse_header_sp_reads($header, $reg) if($reg->{sp_reads});
@@ -825,30 +827,6 @@ sub ReadRegions{
 		$breakdancer_hit_cen ++ if($satelliteRegion == 1 && $fin =~ /.sv/);    	
     	next if($satelliteRegion == 1);
     }
-
-
-#			my $f_centromere = "/gscuser/kchen/SNPHMM/SolexaCNV/scripts/centromere.csv";
-#			open(CENTRO,"<$f_centromere") || die "unable to find centromere coordinates file\n";
-#		    while(<CENTRO>){
-#			    chomp;
-#		        my ($bin_cen,$chr_cen,$start_cen,$end_cen,$ix_cen,$n_cen,$size_cen,$type_cen,$bridge_cen)=split;
- #			    $chr_cen=~s/chr//;
-	#		    push @{$CenStart{$chr_cen}},$start_cen;
-	#		    push @{$CenEnd{$chr_cen}},$end_cen;
-  	#		}
-	#		close(CENTRO);
-	#	}
-	#	for(my $i = 0; $i <= $#{$CenStart{$reg->{chr1}}}; $i++){
-#		print "${$CenStart{$reg->{chr1}}}[$i]\t${$CenEnd{$reg->{chr1}}}[$i]\t$reg->{start}\n";
-	#		$hit_cen = 1 if($reg->{start} >= ${$CenStart{$reg->{chr1}}}[$i] && $reg->{start} <= ${$CenEnd{$reg->{chr1}}}[$i]);
-	#	}
-	#	for(my $i = 0; $i <= $#{$CenStart{$reg->{chr2}}}; $i++){
-	#		$hit_cen = 1 if($reg->{end} >= ${$CenStart{$reg->{chr2}}}[$i] && $reg->{end} <= ${$CenEnd{$reg->{chr2}}}[$i]);			
-	#	}
-	#	$assembly_hit_cen ++ if($hit_cen == 1 && $fin =~ /assembled/);
-	#	$breakdancer_hit_cen ++ if($hit_cen == 1 && $fin =~ /.sv/);
-	#	next if($hit_cen == 1);
-	#}
 	
     if(!$opts{x}){
 	$reg->{size} = $reg->{end} - $reg->{start} + 1 if(! defined $reg->{size});

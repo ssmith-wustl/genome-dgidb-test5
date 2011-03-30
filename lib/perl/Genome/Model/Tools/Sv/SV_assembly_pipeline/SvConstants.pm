@@ -11,12 +11,6 @@ use Carp;
 #
 
 # This is where reads are dumped and all output files are written (different subdirectory for each chromosome)
-#$PathToOutput = "/gscuser/jwallis/structuralVariationExamples/YRI";
-#$PathToOutput = "/gscuser/jwallis/structuralVariationExamples/GBM/H_GP-0124tn-082608a/somatic090107";
-#$PathToOutput = "/gscuser/jwallis/GBM_translocation";
-#$PathToOutput = "/gscuser/jwallis/structuralVariationExamples/Venter/100x";
-#$PathToOutput = "/gscuser/jwallis/structuralVariationExamples/GBM/H_GP-0124tn-082608a/2009Jan12/inv_irx";
-#$PathToOutput = "/gscuser/jwallis/structuralVariationExamples/AML2/090202";
 #$PathToOutput = "/gscmnt/sata194/info/sralign/jwallis/structuralVariationExamples/ceuTril";
 #$PathToOutput = "/gscmnt/sata194/info/sralign/jwallis/structuralVariationExamples/GBM/H_GP-0124t_090410";
 #$PathToOutput = "/gscmnt/sata831/info/medseq/jwallis/OV1/090510/translocation";   # translocations

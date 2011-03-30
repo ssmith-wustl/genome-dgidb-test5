@@ -113,7 +113,7 @@ sub execute
     #    carp "uh, we should have quit by now";
     #    exit 1;
     #}
-    my $rv = Genome::Model::GenePrediction::Bacterial::Command::Predict->execute(%params);
+    my $rv = Genome::Model::GenePrediction::Command::Bacterial::Predict->execute(%params);
     unless($rv) {
         $self->error_message("can't run prediction step");
         return 0;

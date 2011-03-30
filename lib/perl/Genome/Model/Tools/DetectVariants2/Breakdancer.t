@@ -15,7 +15,7 @@ if ($archos !~ /64/) {
     plan tests => 6;
 }
 
-my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Breakdancer/';
+my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Breakdancer';
 my $test_working_dir = File::Temp::tempdir('DetectVariants2-Breakdancer-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
 
 my $normal_bam = $test_dir . '/normal.bam';
@@ -33,7 +33,7 @@ is($ref_seq_build->name, 'NCBI-human-build36', 'Got expected reference for test 
 my $ref_seq_input = $ref_seq_build->full_consensus_path('fa');
 ok(Genome::Sys->check_for_path_existence($ref_seq_input), 'Got a reference FASTA') or die('Test cannot continue without a reference FASTA');
 
-my $version = '2010_06_24';
+my $version = '2010_07_19';
 note("use breakdancer version: $version");
 
 my $command = Genome::Model::Tools::DetectVariants2::Breakdancer->create(
@@ -47,7 +47,7 @@ my $command = Genome::Model::Tools::DetectVariants2::Breakdancer->create(
     config_file => $cfg_file,
 );
 ok($command, 'Created `gmt detect-variants2 breakdancer` command');
-ok($command->execute, 'Executed `gmt detect-variants2 samtools` command');
+ok($command->execute, 'Executed `gmt detect-variants2 breakdancer` command');
 
 is(compare($out_file, $test_out), 0, "svs.hq output as expected");
 

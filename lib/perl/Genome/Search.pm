@@ -10,7 +10,7 @@ use MRO::Compat;
 use UR;
 use Genome::Memcache;
 
-# old server: default_value => 'http://solr',
+# JTAL: solr-dev is going to be prod, because old code will still point to solr
 
 class Genome::Search { 
     is => 'UR::Singleton',
@@ -22,7 +22,7 @@ class Genome::Search {
         },
         _solr_server_location => {
             is => 'Text',
-            default_value => 'http://solr:8080/solr',
+            default_value => 'http://solr-dev:8080/solr',
             doc => 'Location of the Solr server',
         },
         _dev_solr_server_location => {
@@ -55,6 +55,19 @@ class Genome::Search {
         }
     ],
 };
+
+sub genome_path {
+    return $INC{'Genome.pm'};
+}
+
+sub ur_path {
+    return $INC{'UR.pm'};
+}
+
+sub workflow_path {
+    return $INC{'Workflow.pm'};
+}
+
 
 #What classes are searchable is actually determined automatically by the existence of the relevant views.
 #This just lists the order by which the results are typically sorted.
@@ -319,7 +332,10 @@ sub generate_result_xml {
         }
         
         my $view;
-        
+# NOTE: turning off this optimization; it reuses the first object, which doesnt work
+#  out so well when your view is doing $self->property (self is the original instance)
+
+
         if($views{$object->class}) {
             $view = $views{$object->class};
             $view->subject($object);
@@ -423,25 +439,26 @@ sub generate_document {
     my $class = shift;
     my @objects = @_;
     
-    
-    
     my @docs = ();
     
     # Building new instances of View classes is slow as the system has to resolve a large set of information
     # According to NYTProf, recycling the view reduced the time spent here from 457s to 45.5s on a set of 1000 models
     
     my %views;    
-    for my $object (@objects) {
+    for my $o (@objects) {
         my $view;
-        
-        if(defined $views{$object->class}) {
-            $view = $views{$object->class};
-            $view->subject($object);
+ 
+# NOTE: turning off this optimization; it reuses the first object, which doesnt work
+#  out so well when your view is doing $self->property (self is the original instance)
+ 
+        if(defined $views{$o->class}) {
+            $view = $views{$o->class};
+            $view->subject($o);
             $view->_update_view_from_subject();
         } else {
-             if(my $view_class = $class->_resolve_solr_xml_view($object)) {
-                 $view = $view_class->create(subject => $object, perspective => 'solr', toolkit => 'xml');
-                 $views{$object->class} = $view;
+             if(my $view_class = $class->_resolve_solr_xml_view($o)) {
+                 $view = $view_class->create(subject => $o, perspective => 'solr', toolkit => 'xml');
+                 $views{$o->class} = $view;
              } else {
                  Carp::confess('To make an object searchable create an appropriate ::View::Solr::Xml that inherits from Genome::View::Solr::Xml.');
              }
@@ -472,8 +489,9 @@ sub _commit_callback {
     };
     
     if($@) {
+        system("echo '$@' | mailx -s 'search commit callback failed' jlolofie\@genome.wustl.edu");
         my $self = $class->_singleton_object;
-        $self->error_message('Error in commit callback: ' . $@);
+        $self->error_message('failed to update search engine, sending an email.');
         return;
     }
     

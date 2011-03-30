@@ -7,6 +7,8 @@ package Genome::DataSource::GMSchema;
 
 use Genome;
 
+use Cwd;
+
 class Genome::DataSource::GMSchema {
     is => ['UR::DataSource::Oracle'],
     type_name => 'genome datasource gmschema',
@@ -34,7 +36,10 @@ sub _init_created_dbh {
     $dbh->do('alter session set "_hash_join_enabled"=TRUE');
 
     # stores program name as "MODULE" and user name as "ACTION"
-    $self->set_userenv('dbh' => $dbh); # very very important to pass dbh here ;)
+    $self->set_userenv(
+        'dbh' => $dbh,
+        'module' => substr(Cwd::abs_path($0), -48, 48)
+    ); # our oracle module variable is 48 characters
 
     return $dbh;
 }

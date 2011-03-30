@@ -37,6 +37,8 @@ class Genome::Model::Tools::Capture::CreateMafFile {
     source  => { is => 'Text', doc => "Library source (PCR/Capture) [Capture]", is_optional => 1 },
     platform  => { is => 'Text', doc => "Sequencing platform [Illumina GAIIx]", is_optional => 1 },
     center  => { is => 'Text', doc => "Sequencing center [genome.wustl.edu]", is_optional => 1 },
+    normal_gt_field  => { is => 'Text', doc => "1-based column number of field containing the normal genotype", is_optional => 1 },
+    tumor_gt_field  => { is => 'Text', doc => "1-based column number of field containing the tumor genotype", is_optional => 1 },
     output_file  => { is => 'Text', doc => "Output file for MAF format", is_optional => 0 },
   ],
 };
@@ -136,15 +138,50 @@ sub execute {                               # replace with real execution logic.
 
       if($annotations{$key})
       {
+        my $tumor_allele1 = $ref;
+        my $tumor_allele2 = $var;
+        my $normal_allele1 = $ref;
+        my $normal_allele2 = $ref;
+        
+        ## Parse the normal genotype ##
+        if($self->normal_gt_field && $lineContents[$self->normal_gt_field - 1])
+        {
+          my $normal_call= $lineContents[$self->normal_gt_field - 1];
+          if($normal_call eq "A" || $normal_call eq "C" || $normal_call eq "G" || $normal_call eq "T")
+          {
+            $normal_allele1 = $normal_allele2 = $normal_call;
+          }
+          else
+          {
+            $normal_allele1 = $ref;
+            $normal_allele2 = code_to_var_allele($ref, $normal_call);
+          }
+        }
+
+        ## Parse the tumor genotype ##
+        if($self->tumor_gt_field && $lineContents[$self->tumor_gt_field - 1])
+        {
+          my $tumor_call= $lineContents[$self->tumor_gt_field - 1];
+          if($tumor_call eq "A" || $tumor_call eq "C" || $tumor_call eq "G" || $tumor_call eq "T")
+          {
+            $tumor_allele1 = $tumor_allele2 = $tumor_call;
+          }
+          else
+          {
+            $tumor_allele1 = $ref;
+            $tumor_allele2 = code_to_var_allele($ref, $tumor_call);
+          }
+        }
+        
         my ( $var_type, $gene, $trv_type ) = split( /\t/, $annotations{$key} );
         my $var_class = trv_to_mutation_type( $trv_type );
         my $maf_line = "$gene\t0\t$center\t$genome_build\t$chrom\t$chr_start\t$chr_stop\t+\t";
         $maf_line .=  "$var_class\t$var_type\t$ref\t";
-        $maf_line .=  "$var\t$var\t";
+        $maf_line .=  "$tumor_allele1\t$tumor_allele2\t";
         $maf_line .=  "\t\t"; #dbSNP
-        $maf_line .=  "$tumor_sample\t$normal_sample\t$ref\t$ref\t";
+        $maf_line .=  "$tumor_sample\t$normal_sample\t$normal_allele1\t$normal_allele2\t";
         $maf_line .=  "\t\t\t\t"; # Validation alleles
-        $maf_line .=  "Unknown\tUnknown\tSomatic\t";
+        $maf_line .=  "Unknown\tUnknown\t$somatic_status\t";
         $maf_line .=  "$phase\tCapture\t";
         $maf_line .=  "\t"; # Val method
         $maf_line .=  "1\t"; # Score
@@ -183,13 +220,50 @@ sub execute {                               # replace with real execution logic.
       {
         my ( $var_type, $gene, $trv_type ) = split( /\t/, $annotations{$key} );
         my $var_class = trv_to_mutation_type( $trv_type );
+
+        my $tumor_allele1 = $ref;
+        my $tumor_allele2 = $var;
+        my $normal_allele1 = $ref;
+        my $normal_allele2 = $ref;
+        
+        ## Parse the normal genotype ##
+        if($self->normal_gt_field && $lineContents[$self->normal_gt_field - 1])
+        {
+          my $normal_call= $lineContents[$self->normal_gt_field - 1];
+          if($normal_call =~ '\*')
+          {
+            $normal_allele1 = $ref;
+            $normal_allele2 = $var;
+          }
+          else
+          {
+            $normal_allele1 = $normal_allele2 = $var;
+          }
+        }
+
+        ## Parse the tumor genotype ##
+        if($self->tumor_gt_field && $lineContents[$self->tumor_gt_field - 1])
+        {
+          my $tumor_call= $lineContents[$self->tumor_gt_field - 1];
+          if($tumor_call =~ '\*')
+          {
+            $tumor_allele1 = $ref;
+            $tumor_allele2 = $var;
+          }
+          else
+          {
+            $tumor_allele1 = $tumor_allele2 = $var;
+          }
+        }
+
+
         my $maf_line =  "$gene\t0\t$center\t$genome_build\t$chrom\t$chr_start\t$chr_stop\t+\t";
         $maf_line .=  "$var_class\t$var_type\t$ref\t";
-        $maf_line .=  "$var\t$var\t";
+        $maf_line .=  "$tumor_allele1\t$tumor_allele2\t";
         $maf_line .=  "\t\t"; #dbSNP
-        $maf_line .=  "$tumor_sample\t$normal_sample\t$ref\t$ref\t";
+        $maf_line .=  "$tumor_sample\t$normal_sample\t$normal_allele1\t$normal_allele2\t";
         $maf_line .=  "\t\t\t\t"; # Validation alleles
-        $maf_line .=  "Unknown\tUnknown\tSomatic\t";
+        $maf_line .=  "Unknown\tUnknown\t$somatic_status\t";
         $maf_line .=  "$phase\tCapture\t";
         $maf_line .=  "\t"; # Val method
         $maf_line .=  "1\t"; # Score
@@ -268,5 +342,95 @@ sub trv_to_mutation_type
   warn( "Unknown mutation type $trv_type\n" );
   return( "Unknown" );
 }
+
+
+## Convert an IUPAC code to 
+
+sub code_to_var_allele
+{
+        my $ref = shift(@_);
+	my $code = shift(@_);        
+	
+	return("A") if($code eq "A");
+	return("C") if($code eq "C");
+	return("G") if($code eq "G");
+	return("T") if($code eq "T");
+
+	if($code eq "M")
+        {
+          if($ref eq "A")
+          {
+            return("C");
+          }
+          else
+          {
+            return("A");
+          }
+        }
+        
+	if($code eq "R")
+        {
+          if($ref eq "A")
+          {
+            return("G");
+          }
+          else
+          {
+            return("A");
+          }
+        }
+	if($code eq "W")
+        {
+          if($ref eq "A")
+          {
+            return("T");
+          }
+          else
+          {
+            return("A");
+          }          
+        }
+
+	if($code eq "S")
+        {
+          if($ref eq "C")
+          {
+            return("G");
+          }
+          else
+          {
+            return("C");
+          }          
+        }
+
+	if($code eq "Y")
+        {
+          if($ref eq "C")
+          {
+            return("T");
+          }
+          else
+          {
+            return("C");
+          }          
+        }
+	if($code eq "K")
+        {
+          if($ref eq "G")
+          {
+            return("T");
+          }
+          else
+          {
+            return("G");
+          }          
+        }
+
+
+	warn "Unrecognized ambiguity code $code!\n";
+
+	return("N");	
+}
+
 
 1;

@@ -67,6 +67,8 @@ ok($reference_model, "got reference model");
 my $reference_build = $reference_model->build_by_version('1');
 ok($reference_build, "got reference build");
 
+my $temp_reference_index = Genome::Model::Build::ReferenceSequence::AlignerIndex->create(reference_build=>$reference_build, aligner_version=>$aligner_version, aligner_name=>$aligner_name, aligner_params=>'');
+
 # Uncomment this to create the dataset necessary for shorcutting to work
 #test_alignment(generate_shortcut_data => 1);
 
@@ -210,7 +212,7 @@ sub generate_fake_instrument_data {
     # confirm there are fastq files here, and fake the fastq_filenames method to return them
     my @in_fastq_files = glob($instrument_data->gerald_directory.'/*.txt');
     $instrument_data->set_list('dump_sanger_fastq_files',@in_fastq_files);
-
+    $instrument_data->mock('dump_trimmed_fastq_files', sub {return Genome::InstrumentData::Solexa::dump_trimmed_fastq_files($instrument_data)});
     # fake out some properties on the instrument data
     isa_ok($instrument_data,'Genome::InstrumentData::Solexa');
     $instrument_data->set_always('sample_type','dna');

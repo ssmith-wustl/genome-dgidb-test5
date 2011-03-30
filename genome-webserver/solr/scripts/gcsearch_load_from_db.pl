@@ -1,6 +1,12 @@
 #!/gsc/bin/perl
 
-use above "Genome";
+use lib '/gscuser/jlolofie/dev/git/genome/lib/perl';
+
+use Genome;
+
+#UR::Context->object_cache_size_highwater(200_000);
+#UR::Context->object_cache_size_lowwater(20_000);
+
 
 
 use warnings;
@@ -8,14 +14,15 @@ use strict;
 
 use Getopt::Long;
 
-my ($rebuild, $help, $add_all, $add, $lock_name);
+my ($rebuild, $help, $add_all, $add, $lock_name, $chunk);
 
 GetOptions(
     "rebuild" => \$rebuild,
     "help" => \$help,
     "add-all" => \$add_all,
     "add=s" => \$add,
-    "lock=s" => \$lock_name
+    "lock=s" => \$lock_name,
+    "chunk=s" => \$chunk
 );
 
 my @types = qw(
@@ -28,7 +35,7 @@ flowcell
 sample 
 population_group 
 taxon 
-libary 
+library 
 disk_group 
 disk_volume 
 );
@@ -38,7 +45,7 @@ my @types_to_add;
 if ($help) {
     my $type_str = join("\n",@types);
     print "\nUSAGE: gcsearch_load_from_db --add [type1,type2, ...]\n\ntypes:\n$type_str\n\n";
-    exit;
+    exit 1;
 }
 
 if (!$add) {
@@ -47,7 +54,7 @@ if (!$add) {
         print "trying to add all types of objects to search index\n\n";
     } else {
         print "\nError: must specify --add [type1,type2, ...] or --add-all\n\n";
-        exit;
+        exit 1;
     }
 } else {
     @types_to_add = split(/,/, $add);
@@ -56,13 +63,13 @@ if (!$add) {
         if (! grep /$t/, @types) {
             my $type_str = join("\n",@types);
             print "\nError: \'$t\' is not a valid type:\n$type_str\n\n";
-            exit;
+            exit 1;
         }
     } 
 }
 
 #Just clear the cache for each entry instead of building all the search result views for now
-Genome::Search->get()->refresh_cache_on_add(0);
+Genome::Search->get()->refresh_cache_on_add(1);
 
 my $time;
 
@@ -140,21 +147,6 @@ sub get_functions {
         done;
     };
 
-    $f->{'model'} = sub {
-        loading "models";
-        my @models;
-        eval { 
-            @models = Genome::Model->get();
-        };
-        if($@) {
-            #Somebody currently has a model in the DB without having deployed the module.  Fall back on a safe set of model types
-            @models = Genome::Model->get(type_name => {operator => 'IN', value => ['reference alignment', 'somatic', 'assembly', 'amplicon assembly', 'de novo assembly', 'genotype microarray', 'virome screen', 'convergence'] });    
-        }
-        Genome::Model::Build->get(-hint => ['events', 'status']); #Load these all at once rather than letting each model query for its own in turn (but do this after the models are loaded)
-        Genome::Search->add(@models);
-        done;
-    };
-
     $f->{'model_group'} = sub {
         loading "model groups";
         my @model_groups = Genome::ModelGroup->get();
@@ -165,14 +157,83 @@ sub get_functions {
     $f->{'individual'} = sub {
         loading "individuals";
         my @individuals = Genome::Individual->get( common_name => {operator => 'ne', value => undef } );
+        print 'adding ' . scalar(@individuals) . ' individuals';
         Genome::Search->add(@individuals);
+        done;
+    };
+
+    $f->{'model'} = sub {
+        loading "models";
+        my @models;
+
+        eval { 
+            @models = Genome::Model->get(type_name => 
+            {operator => 'IN', 
+                value => ['reference alignment', 
+                            'somatic', 
+                            'convergence'] 
+            });    
+
+#                value => ['reference alignment', 
+#                            'somatic', 
+#                            'assembly', 
+#                            'amplicon assembly', 
+#                            'de novo assembly', 
+#                            'genotype microarray', 
+#                            'virome screen', 
+#                            'convergence'] 
+        };
+
+        if($@) {
+            #Somebody currently has a model in the DB without having deployed the module.  Fall back on a safe set of model types
+            @models = Genome::Model->get(type_name => {operator => 'IN', value => ['reference alignment', 'somatic', 'assembly', 'amplicon assembly', 'de novo assembly', 'genotype microarray', 'virome screen', 'convergence'] });    
+        }
+
+#        Genome::Model::Build->get(-hint => ['events', 'status']); #Load these all at once rather than letting each model query for its own in turn (but do this after the models are loaded)
+
+        my $num_chunks = 21;
+        my $chunk_size = int(scalar(@models) / $num_chunks);
+        my ($i, $j);
+
+        die 'need --chunk for models' if !defined($chunk);
+
+        print "objects loaded: " . $UR::Context::all_objects_cache_size . "\n";
+
+        $i = $chunk * $chunk_size;
+        warn "\nmodel chunk $chunk (offset: $i length: $chunk_size)\n";
+        Genome::Search->add(splice(@models, $i, $chunk_size));
+
+        open(my $fh, ">>/gscuser/jlolofie/tmp/search_transition/models_added." . $ENV{'LSB_JOBID'});
+        for my $m (splice(@models, $i, $chunk_size)) {
+            print $fh $m->genome_model_id() . "\n";
+        }
+        close($fh);
+
         done;
     };
 
     $f->{'flowcell'} = sub {
         loading "flow cells";
         my @flow_cells = Genome::InstrumentData::FlowCell->get();
-        Genome::Search->add(@flow_cells);
+        my $num_chunks = 21;
+        my $chunk_size = int(scalar(@flow_cells) / $num_chunks);
+        my ($i, $j);
+
+        die 'need --chunk for flowcell cuz it doesnt fit in memory ;)' if !defined($chunk);
+
+        $i = $chunk * $chunk_size;
+        $j = $i + $chunk_size;
+        print "\nflowcell chunk $chunk ($i to $j) size: $chunk_size\n";
+
+        my @fc = splice(@flow_cells, $i, $chunk_size);
+        Genome::Search->add(@fc);
+
+        open(my $fh, ">>/gscuser/jlolofie/tmp/search_transition/flowcells_added." . $ENV{'LSB_JOBID'});
+        for my $fc (@fc) {
+            print $fh $fc->flow_cell_id . "\n";
+        }
+        close($fh);
+
         done;
     };
 
@@ -197,7 +258,8 @@ sub get_functions {
         done;
     };
 
-    $f->{'libary'} = sub {
+    $f->{'library'} = sub {
+        $DB::single = 1;
         loading "libraries";
         my @libraries = Genome::Library->get(); #Would hint samples and taxons, but were already loaded above
         Genome::Search->add(@libraries);

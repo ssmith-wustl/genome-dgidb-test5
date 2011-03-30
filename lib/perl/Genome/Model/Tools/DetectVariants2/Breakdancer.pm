@@ -4,10 +4,8 @@ use warnings;
 use strict;
 
 use Genome;
-use File::Copy;
 
-my $DEFAULT_VERSION = '2010_06_24';
-my @FULL_CHR_LIST   = (1..22, 'X', 'Y');
+my @FULL_CHR_LIST = (1..22, 'X', 'Y');
 
 class Genome::Model::Tools::DetectVariants2::Breakdancer{
     is => 'Genome::Model::Tools::DetectVariants2::Detector',
@@ -41,7 +39,8 @@ class Genome::Model::Tools::DetectVariants2::Breakdancer{
             is => 'Version',
             is_optional => 1,
             is_input => 1,
-            default_value => $DEFAULT_VERSION,
+            default_value =>  Genome::Model::Tools::Breakdancer->default_breakdancer_version,
+            valid_values  => [Genome::Model::Tools::Breakdancer->available_breakdancer_versions],
             doc => "Version of breakdancer to use",
         },
         workflow_log_dir => {
@@ -90,29 +89,6 @@ class Genome::Model::Tools::DetectVariants2::Breakdancer{
     ],
 };
 
-my %BREAKDANCER_VERSIONS = (
-    '0.0.1r59'   => {
-        dir => '/gsc/scripts/pkg/bio/breakdancer/breakdancer-0.0.1r59',
-        cfg => 'bam2cfg.pl',
-        max => 'BreakDancerMax.pl',
-    },
-    '2010_02_17' => {
-        dir => '/gsc/scripts/pkg/bio/breakdancer/breakdancer-2010_02_17/bin',
-        cfg => 'bam2cfg.pl',
-        max => 'BreakDancerMax.pl',
-    },
-    '2010_03_02' => {
-        dir => '/gsc/scripts/pkg/bio/breakdancer/breakdancer-2010_03_02/bin',
-        cfg => 'bam2cfg.pl',
-        max => 'BreakDancerMax.pl',
-    },
-    '2010_06_24' => {
-        dir => '/gsc/pkg/bio/breakdancermax/breakdancer-20100624',
-        cfg => 'perl/bam2cfg.pl',
-        max => 'cpp/breakdancer_max',
-    },
-);
-
 
 sub help_brief {
     "discovers structural variation using breakdancer",
@@ -121,8 +97,8 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gmt somatic breakdancer -t tumor.bam -n normal.bam --output-dir breakdancer_dir
-gmt somatic breakdancer -t tumor.bam -n normal.bam --output-dir breakdancer_dir --version 0.0.1r59 --skip-if-output-present 
+gmt detect-variants2 breakdancer -aligned-reads-input tumor.bam -control-aligned-reads-input normal.bam --output-dir breakdancer_dir
+gmt detect-variants2 breakdancer -aligned-reads-input tumor.bam -control-aligned-reads-input normal.bam --output-dir breakdancer_dir --version 0.0.1r59
 EOS
 }
 
@@ -136,6 +112,7 @@ EOS
 
 sub _create_temp_directories {
     my $self = shift;
+    local %ENV = %ENV;
     $ENV{TMPDIR} = $self->output_directory;
     return $self->SUPER::_create_temp_directories(@_);
 }
@@ -179,32 +156,23 @@ sub run_config {
         $self->status_message("Using given breakdancer config file: $cfg_file");
     }
     else {
-        #my $config_path = $self->breakdancer_config_command;
-        my $config_path = '/gscuser/fdu/bin/bam2cfg.pl';  #test broken pipe case 
-        my $cmd = "$config_path " . $self->_bam2cfg_params .' '.$self->aligned_reads_input . ' ' . $self->control_aligned_reads_input . " > "  . $self->_config_staging_output;
+        $self->status_message("Run bam2cfg to make breakdancer_config file");
 
-        $self->status_message("EXECUTING CONFIG STEP: $cmd");
-        my $return = Genome::Sys->shellcmd(
-            cmd => $cmd,
-            input_files  => [$self->aligned_reads_input, $self->control_aligned_reads_input],
-            output_files => [$self->_config_staging_output],
+        my $bam2cfg = Genome::Model::Tools::Breakdancer::BamToConfig->create(
+            normal_bam  => $self->control_aligned_reads_input,
+            tumor_bam   => $self->aligned_reads_input,
+            output_file => $self->_config_staging_output,
+            params      => $self->_bam2cfg_params,
+            use_version => $self->version,
         );
 
-        unless ($return) {
-            $self->error_message("Running breakdancer config failed using command: $cmd");
+        unless ($bam2cfg->execute) {
+            $self->error_message("Failed to run bam2cfg");
             die;
         }
 
-        unless (-s $self->_config_staging_output) {
-            $self->error_message("$cmd output " . $self->_config_staging_output . " does not exist or has zero size");
-            die;
-        }
         $self->config_file($self->_config_staging_output);
         $self->status_message('Breakdancer config is created ok');
-
-        my @other_files = glob("*insertsize_histogram*");
-        map{move $_, $self->_temp_staging_directory}@other_files;
-        $self->warning_message('insertsize_histogram files not completely moved') if glob("*insertsize_histogram*");
     }
     return 1;
 }
@@ -213,6 +181,14 @@ sub run_config {
 sub run_breakdancer {
     my $self = shift;
     my $bd_params = $self->_breakdancer_params;
+
+    #Allow 0 size of config, breakdancer output
+    if (-z $self->config_file) {
+        $self->warning_message("0 size of breakdancer config file. Probably it is for testing of small bam files");
+        my $output_file = $self->_sv_staging_output;
+        `touch $output_file`;
+        return 1;
+    }
 
     if ($bd_params =~ /\-o/) {
         my $chr = $self->chromosome;
@@ -239,13 +215,6 @@ sub run_breakdancer {
 
             unless (Genome::Sys->check_for_path_existence($cfg_file)) {
                 $self->error_message('prerun breakdancer config file '.$cfg_file.' does not exist');
-                die $self->error_message;
-            }
-
-            #copy $self->config_file, $cfg_file; #Make each chr run sharing the same config file
-
-            unless (Genome::Sys->check_for_path_existence($cfg_file)) {
-                $self->error_message("breakdancer config file $cfg_file is not copied ok");
                 die $self->error_message;
             }
 
@@ -282,7 +251,7 @@ sub run_breakdancer {
 
             my $merge_obj = Genome::Model::Tools::Breakdancer::MergeFiles->create(
                 input_files => join(',', map { $self->_temp_staging_directory . '/' . $self->_sv_base_name . '.' . $_ } @chr_list),
-                output_file => $self->_temp_staging_directory . '/' . $self->_sv_base_name,
+                output_file => $self->_sv_staging_output,
             );
             my $merge_rv = $merge_obj->execute;
             Carp::confess 'Could not execute breakdancer file merging!' unless defined $merge_rv and $merge_rv == 1;
@@ -299,7 +268,7 @@ sub run_breakdancer {
         $bd_params =~ s/\-d/\-d $sv_staging_out/;
     }
 
-    my $breakdancer_path = $self->breakdancer_max_command;
+    my $breakdancer_path = Genome::Model::Tools::Breakdancer->breakdancer_max_command_for_version($self->version);
     my $cfg_file         = $self->config_file;
 
     my $cmd = "$breakdancer_path " . $cfg_file . " " . $bd_params . " > "  . $self->_sv_staging_output;
@@ -358,73 +327,6 @@ sub _get_chr_list {
 }
 
 
-sub breakdancer_path {
-    my $self = shift;
-    return $self->path_for_breakdancer_version($self->version);
-}
-
-sub breakdancer_max_command { 
-    my $self = shift;
-    return $self->breakdancer_max_command_for_version($self->version);
-}
-
-sub breakdancer_config_command { 
-    my $self = shift;
-    return $self->breakdancer_config_command_for_version($self->version);
-}
-
-sub available_breakdancer_versions {
-    my $self = shift;
-    return keys %BREAKDANCER_VERSIONS;
-}
-
-sub path_for_breakdancer_version {
-    my ($self, $version) = @_;
-
-    if (defined $BREAKDANCER_VERSIONS{$version}) {
-        my $dir = $BREAKDANCER_VERSIONS{$version}->{dir};
-        unless (-d $dir) {
-            $self->error_message("breakdancer base dir $dir for version $version is not valid");
-            die $self->error_message;
-        }
-        return $dir;
-    }
-    die 'No path for breakdancer version '. $version;
-}
-
-sub breakdancer_max_command_for_version {
-    my ($self, $version) = @_;
-
-    if (defined $BREAKDANCER_VERSIONS{$version}->{max}) {
-        my $max_cmd = $self->path_for_breakdancer_version($version) . "/" .  $BREAKDANCER_VERSIONS{$version}->{max};
-        unless (-s $max_cmd and -x $max_cmd) {
-            $self->error_message("breakdancer_max command $max_cmd for version $version is not valid");
-            die $self->error_messge;
-        }
-        return $max_cmd;
-    }
-    die 'No breakdancer max command for breakdancer version '. $version;
-}
-
-sub breakdancer_config_command_for_version {
-    my ($self, $version) = @_;
-
-    if (defined $BREAKDANCER_VERSIONS{$version}->{cfg}) {
-        my $cfg_cmd = $self->path_for_breakdancer_version($version) . "/" .  $BREAKDANCER_VERSIONS{$version}->{cfg};
-        unless (-s $cfg_cmd and -x $cfg_cmd) {
-            $self->error_message("breakdancer config command $cfg_cmd for version $version is not valid");
-            die $self->error_messge;
-        }
-        return $cfg_cmd;
-    }
-    die 'No breakdancer config command for breakdancer version '. $version;
-}
-
-sub default_breakdancer_version {
-    die "default breakdancer version: $DEFAULT_VERSION is not valid" unless $BREAKDANCER_VERSIONS{$DEFAULT_VERSION};
-    return $DEFAULT_VERSION;
-}
- 
 sub has_version {
     my $self    = shift;
     my $version = shift;

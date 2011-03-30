@@ -62,6 +62,8 @@ class Genome::Model::Build {
                                     return $disk_allocation;
                                 ) },
         software_revision => { is => 'VARCHAR2', len => 1000 },
+        region_of_interest_set_value     => { is_many => 1, is => 'UR::Value', via => 'inputs', to => 'value', where => [ name => 'region_of_interest_set_name'] },
+        region_of_interest_set_name      => { via => 'region_of_interest_set_value', to => 'id', },
     ],
     has_many_optional => [
         inputs           => { is => 'Genome::Model::Build::Input', reverse_as => 'build', 
@@ -475,18 +477,6 @@ sub resolve_data_directory {
    
         $build_data_directory = $disk_allocation->absolute_path;
         Genome::Sys->validate_existing_directory($build_data_directory);
-
-        # TODO: we should stop having model directories and making build symlinks!!!
-        if ( -w $model_data_directory ) {
-            my $build_symlink = $model_data_directory . '/build' . $self->build_id;
-            unlink $build_symlink if -e $build_symlink;
-            unless (Genome::Sys->create_symlink($build_data_directory,$build_symlink)) {
-                $self->error_message("Failed to make symlink \"$build_symlink\" with target \"$build_data_directory\"");
-                die $self->error_message;
-            }
-        } else {
-            $self->warning_message("Not creating symlink to build data directory in model data directory; model data directory is not writable.");
-        }
     }
 
     return $build_data_directory;
@@ -1477,6 +1467,13 @@ sub delete {
             $self->warning_message('Failed to deallocate disk space.');
         }
     }
+
+    # Remove model link
+    my $model_data_directory = $self->model->data_directory;
+    if ($model_data_directory) {
+        my $model_build_symlink = $model_data_directory . '/build' . $self->build_id;
+        unlink($model_build_symlink) if (-e $model_build_symlink);
+    }
     
     # FIXME Don't know if this should go here, but then we would have to call success and abandon through the model
     #  This works b/c the events are deleted prior to this call, so the model doesn't think this is a completed
@@ -1528,7 +1525,8 @@ sub files_in_data_directory {
             my $file = $File::Find::name;
             push @files, $file;
         },
-        follow => 1, },
+        follow => 1, 
+        follow_skip => 2, },
         $self->data_directory,
     );
     return \@files;

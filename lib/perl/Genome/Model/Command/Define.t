@@ -24,30 +24,6 @@ like(Genome::Model::Command::Define->help_detail,qr(^This defines a new genome m
 
 my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
 
-# test normal model and processing profile creation for reference alignment
-test_model_from_params(
-    model_params => {
-        model_name              => "test_model_incomplete_data_dir_$ENV{USER}",
-        subject_name            => $default_subject_name,
-        subject_type            => $default_subject_type,
-        processing_profile_name => $default_pp_name,
-        data_directory          => $tmp_dir,
-        reference_sequence_build => '93636924', #NCBI-human build 36
-    },
-);
-
-test_model_from_params(
-    model_params => {
-        model_name              => "test_model_complete_data_dir_$ENV{USER}",
-        subject_name            => $default_subject_name,
-        subject_type            => $default_subject_type,
-        processing_profile_name => $default_pp_name,
-        data_directory          => $tmp_dir ."/test_model_complete_data_dir_$ENV{USER}",
-        reference_sequence_build => '93636924', #NCBI-human build 36
-    },
-);
-
-
 # test create for a genome model with defined model_name
 test_model_from_params(
     model_params => {
@@ -127,7 +103,6 @@ sub test_model_from_params_with_group {
             subject_name            => $default_subject_name,
             subject_type            => $default_subject_type,
             processing_profile_name => $default_pp_name,
-            data_directory          => $tmp_dir."/test_model_with_modelgroup_$ENV{USER}",
             reference_sequence_build => '93636924', #NCBI-human build 36
             groups => $model_group_id_string,
         },
@@ -158,22 +133,6 @@ sub successful_create_model {
     my $subclass = join('', map { ucfirst($_) } split('\s+',$pp->type_name));
     if (!$params{subject_name}) {
         $params{subject_name} = 'invalid_subject_name';
-    }
-    my $expected_model_name;
-    if ($params{model_name}) {
-        $expected_model_name = $params{model_name};
-    } else {
-        my $subject_name = Genome::Utility::Text::sanitize_string_for_filesystem($params{subject_name});
-        $expected_model_name = $subject_name .'.'. $params{processing_profile_name};
-    }
-    my $expected_data_directory;
-    if ($params{data_directory}) {
-        my $base_name = File::Basename::basename($params{data_directory});
-        if ($expected_model_name eq $base_name) {
-            $expected_data_directory = $params{data_directory};
-        } else {
-            $expected_data_directory = $params{data_directory} .'/'. $expected_model_name;
-        }
     }
     my $expected_user_name = $ENV{USER};
     my $current_time = UR::Time->now;
@@ -231,14 +190,14 @@ sub successful_create_model {
     ok(@create_status_messages, 'Got create status message');
     # FIXME - some of those have a second message about creating a directory
     # should probably test for that too
-    delete($params{data_directory});
     delete($params{bare_args});
     delete($params{model_name});
     delete($params{reference_sequence_build}); #This property will be the build, not the name/ID
-    my $model = Genome::Model->get(name => $expected_model_name,);
+    my $model_id = $create_command->result_model_id;
+    ok($model_id, 'got created model id') or die;
+    my $model = Genome::Model->get($model_id,);
     isa_ok($model,'Genome::Model::'. $subclass);
-    ok($model, 'creation worked for '. $expected_model_name .' model');
-    is($model->name,$expected_model_name,'model model_name accessor');
+    ok($model, 'creation worked for '. $model->name .' model');
     for my $property_name (keys %params) {
         # Don't test this one, since it comes in as a string and gets split. They will not be equal
         next if ($property_name eq "groups");
@@ -258,15 +217,6 @@ sub successful_create_model {
         is(scalar(@groups_actual), scalar(@groups_expected), "Model is a member of the correct number of groups");
     }
 
-
-
-  SKIP: {
-        skip 'only test data_directory if one is expected', 1 unless $expected_data_directory;
-        is($model->data_directory,$expected_data_directory,'found expected data directory '. $expected_data_directory);
-
-        ### TEST PERMISSIONS HERE #### 
-        is_group_writable($model->data_directory);
-    }
     for my $param ($pp->params) {
         my $accessor = $param->name;
         my $value = $param->value;
@@ -344,5 +294,3 @@ sub is_group_writable {
 
 1;
 
-#$HeadURL$
-#$Id$

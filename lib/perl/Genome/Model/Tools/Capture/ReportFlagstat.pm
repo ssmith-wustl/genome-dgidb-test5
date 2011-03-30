@@ -96,12 +96,27 @@ sub execute {                               # replace with real execution logic.
 		my $line = $_;
 		$lineCounter++;
 		
-		(my $flagstat_file) = split(/\t/, $line);
+		my @lineContents = split(/\t/, $line);
+		my $numContents = @lineContents;
+		
+		my $flagstat_file = "";
+		my $sample_name = "";
+		
+		if($numContents == 2)
+		{
+			($sample_name, $flagstat_file) = split(/\t/, $line);
+		}
+		else
+		{
+			($flagstat_file) = split(/\t/, $line);
+		}
+
 		$stats{'num_files'}++;
 		
 		my @pathContents = split(/\//, $flagstat_file);
-		my $numContents = @pathContents;
+		$numContents = @pathContents;
 		my $local_filename = $pathContents[$numContents - 1];
+		$local_filename = $sample_name if($sample_name);
 		
 		if(-e $flagstat_file)
 		{

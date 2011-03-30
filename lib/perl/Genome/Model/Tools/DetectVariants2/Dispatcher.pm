@@ -14,20 +14,25 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
     is => ['Genome::Model::Tools::DetectVariants2::Base'],
     doc => 'This tool is used to handle delegating variant detection to one or more specified tools and filtering and/or combining the results',
     has_optional => [
-        snv_hq_output_file => {
+        _snv_hq_output_file => {
             is => 'String',
             is_output => 1,
             doc => 'High Quality SNV output file',
         },
-        indel_hq_output_file => {
+        _indel_hq_output_file => {
             is => 'String',
             is_output => 1,
             doc => 'High Quality indel output file',
         },
-        sv_hq_output_file => {
+        _sv_hq_output_file => {
             is => 'String',
             is_output => 1,
             doc => 'High Quality SV output file',
+        },
+        _cnv_hq_output_file => {
+            is => 'String',
+            is_output => 1,
+            doc => 'High Quality CNV output file',
         },
         snv_detection_strategy => {
             is => "Genome::Model::Tools::DetectVariants2::Strategy",
@@ -41,12 +46,16 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
             is => "Genome::Model::Tools::DetectVariants2::Strategy",
             doc => 'The variant detector strategy to use for finding SVs',
         },
+        cnv_detection_strategy => {
+            is => "Genome::Model::Tools::DetectVariants2::Strategy",
+            doc => 'The variant detector strategy to use for finding copy number variation',
+        },
 
     ],
     has_constant => [
         variant_types => {
             is => 'ARRAY',
-            value => [('snv', 'indel', 'sv')],
+            value => [('snv', 'indel', 'sv', 'cnv')],
         },
     ],
     has_transient_optional => [
@@ -101,13 +110,6 @@ sub create {
     return $self;
 }
 
-
-# FIXME this is a hack to get things to run until I decide how to implement this in the dispatcher
-# In the first version of the dispatcher... this was not implemented if there were unions or intersections... and if there were none of those it just grabbed the inputs from the only variant detector run and made it its own
-sub _generate_standard_files {
-    return 1;
-}
-
 # Takes all of the strategies specified and uses G::M::T::DV2::Strategy to turn them into a traversable hash containing the complete action plan to detect variants
 sub plan {
     my $self = shift;
@@ -133,8 +135,8 @@ sub plan {
 sub _detect_variants {
     my $self = shift;
 
-    unless ($self->snv_detection_strategy || $self->indel_detection_strategy || $self->sv_detection_strategy) {
-        $self->error_message("Please provide one or more of: snv_detection_strategy, indel_detection_strategy, or sv_detection_strategy");
+    unless ($self->snv_detection_strategy || $self->indel_detection_strategy || $self->sv_detection_strategy || $self->cnv_detection_strategy) {
+        $self->error_message("Please provide one or more of: snv_detection_strategy, indel_detection_strategy, sv_detection_strategy, or cnv_detection_strategy");
         die $self->error_message;
     }
 
@@ -156,6 +158,7 @@ sub _detect_variants {
     $input->{output_directory} = $self->_temp_staging_directory;
    
     $self->_dump_workflow($workflow);
+    $self->_dump_dv_cmd;
 
     $self->status_message("Now launching the dispatcher workflow.");
     ## Worklow launches here
@@ -179,6 +182,25 @@ sub _dump_workflow {
     print $xml_file $xml;
     $xml_file->close;
     #$workflow->as_png($self->output_directory."/workflow.png"); #currently commented out because blades do not all have the "dot" library to use graphviz
+}
+
+sub _dump_dv_cmd {
+    my $self = shift;
+    my $cmd = join(" ",@INC)."\n===============================================\n";
+    $cmd .=   "gmt detect-variants2 dispatcher --output-directory ".$self->output_directory
+                ." --aligned-reads-input ".$self->aligned_reads_input
+                ." --control-aligned-reads-input ".$self->control_aligned_reads_input
+                ." --reference-sequence-input ".$self->reference_sequence_input;
+    for my $var ('snv','sv','indel'){
+        my $strat = $var."_detection_strategy";
+        if(defined($self->$strat)){
+            $cmd .= " --".$strat." \'".$self->$strat->id."\'";
+        }
+    }
+    my $dfh = Genome::Sys->open_file_for_writing($self->output_directory."/dispatcher.cmd");
+    print $dfh $cmd."\n";
+    $dfh->close;
+    return 1;
 }
 
 sub get_relative_path_to_output_directory {
@@ -324,6 +346,7 @@ sub generate_workflow {
     push @output_properties, 'snv_output_directory' if defined ($self->snv_detection_strategy);
     push @output_properties, 'sv_output_directory' if defined ($self->sv_detection_strategy);
     push @output_properties, 'indel_output_directory' if defined ($self->indel_detection_strategy);
+    push @output_properties, 'cnv_output_directory' if defined ($self->cnv_detection_strategy);
 
     my $workflow_model = Workflow::Model->create(
         name => 'Somatic Variation Pipeline',
@@ -638,6 +661,18 @@ sub add_detectors_and_filters {
                     $inputs_to_store->{$unique_filter_name."_detector_directory"}->{right_property_name} = 'detector_directory';
                     $inputs_to_store->{$unique_filter_name."_detector_directory"}->{right_operation} = $filter->{operation};
 
+                    $inputs_to_store->{$unique_filter_name."_detector_name"}->{value} = $name;
+                    $inputs_to_store->{$unique_filter_name."_detector_name"}->{right_property_name} = 'detector_name';
+                    $inputs_to_store->{$unique_filter_name."_detector_name"}->{right_operation} = $filter->{operation};
+
+                    $inputs_to_store->{$unique_filter_name."_detector_version"}->{value} = $version;
+                    $inputs_to_store->{$unique_filter_name."_detector_version"}->{right_property_name} = 'detector_version';
+                    $inputs_to_store->{$unique_filter_name."_detector_version"}->{right_operation} = $filter->{operation};
+
+                    $inputs_to_store->{$unique_filter_name."_detector_params"}->{value} = $params;
+                    $inputs_to_store->{$unique_filter_name."_detector_params"}->{right_property_name} = 'detector_params';
+                    $inputs_to_store->{$unique_filter_name."_detector_params"}->{right_operation} = $filter->{operation};
+
                     $inputs_to_store->{$unique_detector_base_name."_output_directory"}->{last_operation} = $unique_filter_name;
                 }
                 
@@ -735,33 +770,24 @@ sub _create_directories {
     return 1;
 }
 
-
-# Set the tempdir environment variable to the dispatchers output directory. This is done so that all detectors and filters run by the dispatcher will base their temp directories in the dispatchers directory
-# We do this in order that our temp dirs are on network accessible disk, in order that detectors and filters may write their results into it
 sub _create_temp_directories {
     my $self = shift;
-
-    $ENV{TMPDIR} = $self->output_directory;
-
-    return $self->SUPER::_create_temp_directories(@_);
+    $self->_temp_staging_directory($self->output_directory);
+    $self->_temp_scratch_directory($self->output_directory);
+    return 1;
 }
 
 # After promoting staged data as per normal, create a symlink from the final output files to the top level of the dispatcher output directory
 sub _promote_staged_data {
     my $self = shift;
-    my $staging_dir = $self->_temp_staging_directory;
     my $output_dir  = $self->output_directory;
-    unless($self->SUPER::_promote_staged_data(@_)){
-        $self->error_message("_promote_staged_data failed in Dispatcher");
-        die $self->error_message;
-    }
+
     # This sifts the workflow results for relative paths to output files, and places them in the appropriate params
     $self->set_output_files($self->_workflow_result);
 
     # Symlink the most recent version bed files of the final hq calls into the base of the output directory
     for my $variant_type (@{$self->variant_types}){
-        next if $variant_type eq 'sv';  #off for now because sv does not have bed output yet
-        my $output_accessor = $variant_type."_hq_output_file";
+        my $output_accessor = "_".$variant_type."_hq_output_file";
         if(defined($self->$output_accessor)){
             my $file = $self->$output_accessor;
             my @subdirs = split( "/", $file );
@@ -781,7 +807,7 @@ sub set_output_files {
     my $result = shift;
 
     for my $variant_type (@{$self->variant_types}){
-        my $file_accessor = $variant_type."_hq_output_file";
+        my $file_accessor = "_".$variant_type."_hq_output_file";
         my $strategy = $variant_type."_detection_strategy";
         my $out_dir = $variant_type."_output_directory";
         if(defined( $self->$strategy)){
@@ -791,7 +817,12 @@ sub set_output_files {
                 die $self->error_message;
             }
             my $hq_output_dir = $self->output_directory."/".$relative_path; #FIXME complications arise here when we have just a single column file... or other stuff. May just need to drop the version, too?
-            my $hq_file = $variant_type."s.hq.bed";
+            my $hq_file;
+            if ($variant_type eq 'sv' || $variant_type eq 'cnv'){
+                $hq_file = $variant_type."s.hq";
+            }else{
+                $hq_file = $variant_type."s.hq.bed";
+            }
             my $file;
             if(-l $hq_output_dir."/".$hq_file){
                 $file = readlink($hq_output_dir."/".$hq_file); # Should look like "dir/snvs_hq.bed" 
@@ -805,5 +836,45 @@ sub set_output_files {
     }
     return 1;
 }
+
+# The HQ bed files for each variant type are already symlinked to the base output directory. 
+# This method collects all the LQ variants that fell out at each filter and combine stage and sorts them into one LQ output.
+# FIXME _validate_output should be added to check that the HQ and LQ bed files totaled have the same line count as each detectors HQ bed output files
+sub _generate_standard_files {
+    my $self = shift;
+    
+    # For each variant type that is expected, gather all the lq files that exist for that variant type and sort them into the dispatcher output directory
+    for my $variant_type (@{ $self->variant_types }) {
+        my $strategy = $variant_type."_detection_strategy";
+        if(defined( $self->$strategy)){
+            my $find_command = "find " . $self->output_directory . " -name $variant_type" . "s.lq.bed";
+            my @lq_files = `$find_command`;
+            chomp @lq_files;
+
+            # If we find no LQ files, just skip this variant type. No filters were run.
+            unless (@lq_files) {
+                next;
+            }
+            # Sort the files so they will go into joinx in a predictable order to produce results that will not vary
+            my @sorted_lq_files = sort(@lq_files);
+
+            my $output_file = $self->output_directory . "/$variant_type" . "s.lq.bed";
+            my $sort_command = Genome::Model::Tools::Joinx::Sort->create(
+                input_files => \@sorted_lq_files,
+                merge_only => 1,
+                output_file => $output_file,
+            );
+
+            unless ($sort_command->execute) {
+                $self->error_message("Error executing lq sort command");
+                die $self->error_message;
+            }
+        }
+    }
+
+    return 1;
+}
+
+
 
 1;

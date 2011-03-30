@@ -5,7 +5,7 @@ use warnings;
 use Genome;
 
 class Genome::Library {
-    is => ['Genome::Notable'],
+    is => 'Genome::Notable',
     table_name => 'GSC.LIBRARY_SUMMARY',
     id_by => [
         library_id => { 
@@ -57,6 +57,21 @@ class Genome::Library {
         protocol_name => { 
             is_transient => 1, 
             is => 'Text', 
+        },
+        sample_source => { 
+            via => 'sample', 
+            to => 'source', 
+            doc => 'Source of the sample', 
+        },
+        sample_source_name => { 
+            via => 'sample_source', 
+            to => 'name', 
+            doc => 'Name of the sample\'s source' 
+        },
+        sample_source_id => { 
+            via => 'sample_source', 
+            to => 'id', 
+            doc => 'ID of the sample\'s source' 
         },
     ],
     data_source => 'Genome::DataSource::GMSchema',

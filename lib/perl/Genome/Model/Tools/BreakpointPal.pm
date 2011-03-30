@@ -3,7 +3,6 @@ package Genome::Model::Tools::BreakpointPal;
 use strict;
 use warnings;
 use Genome;
-#use GSCApp;
 
 class Genome::Model::Tools::BreakpointPal {
     is => 'Command',                    

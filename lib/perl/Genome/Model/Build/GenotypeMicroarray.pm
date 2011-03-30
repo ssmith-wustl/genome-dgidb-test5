@@ -8,6 +8,30 @@ use Genome;
 class Genome::Model::Build::GenotypeMicroarray {
     is => 'Genome::Model::Build',
     has => [
+       reference_sequence_build_id => {
+            is => 'Text',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'reference_sequence_build', value_class_name => 'Genome::Model::Build::ImportedReferenceSequence' ],
+            is_many => 0,
+            is_mutable => 1, # TODO: make this non-optional once backfilling is complete and reference placeholder is deleted
+            is_optional => 1,
+            doc => 'reference sequence to align against'
+        },
+        reference_sequence_build => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            id_by => 'reference_sequence_build_id',
+        },
+        refseq_name => { 
+            is => 'Text',
+            via => 'reference_sequence_build',
+            to => 'name',
+        },
+        refseq_version => { 
+            is => 'Text',
+            via => 'reference_sequence_build',
+            to => 'version',
+        },
         dbsnp_build_id => {
             is => 'Text',
             via => 'inputs',
@@ -21,6 +45,11 @@ class Genome::Model::Build::GenotypeMicroarray {
         dbsnp_build => {
             is => 'Genome::Model::Build::ImportedVariationList',
             id_by => 'dbsnp_build_id',
+        },
+        dbsnp_version => { 
+            is => 'Text',
+            via => 'dbsnp_build',
+            to => 'version',
         },
     ],
 };
@@ -47,15 +76,40 @@ sub create {
         return;
     }
 
-    # Do not allow a rebuild
-    my @other_builds = grep { $self->id ne $_->id } $self->model->builds;
-    if ( @other_builds ) {
-        $self->error_message('Cannot start a second build of genotype microarray model '.$self->model->__display_name__);
-        $self->delete;
+    return $self;
+}
+
+sub copy_snp_array_file {
+    my ($self, $file) = @_;
+
+    my $formatted_genotype_file_path = $self->formatted_genotype_file_path;
+    $self->status_message("Copy $file to $formatted_genotype_file_path");
+
+    my $copy = Genome::Sys->copy_file($file, $formatted_genotype_file_path);
+    if (not $copy) {
+        $self->error_message("Copy failed");
         return;
     }
 
-    return $self;
+    if (not -s $formatted_genotype_file_path) {
+        $self->error_message("Copy succeeded, but file does not exist: $formatted_genotype_file_path");
+        return;
+    }
+
+    $self->status_message('Copy...OK');
+
+    my $gold_snp_bed = $self->snvs_bed;
+    my $cmd = Genome::Model::GenotypeMicroarray::Command::CreateGoldSnpBed->create(
+        input_file => $file,
+        output_file => $gold_snp_bed,
+        reference => $self->model->reference_sequence_build,
+    );
+    if (!$cmd->execute) {
+        $self->error_message("Failed to create Gold SNP bed file at $gold_snp_bed");
+        return;
+    }
+
+    return 1;
 }
 
 sub formatted_genotype_file_path {

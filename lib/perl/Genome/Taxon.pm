@@ -18,7 +18,6 @@ class Genome::Taxon {
             is_mutable => 1,
         },
         # TODO this actually embeds the strain name, parse it away
-        # TODO is there a simpler way to do this?
         species_name => { 
             is => "Text",
             calculate => q|$name|, 

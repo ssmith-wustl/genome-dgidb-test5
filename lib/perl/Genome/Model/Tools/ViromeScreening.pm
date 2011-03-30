@@ -52,7 +52,6 @@ sub execute {
     unlink($self->logfile) if (-e $self->logfile);
     my $output = run_workflow_lsf(
 	'/gsc/var/cache/testsuite/data/Genome-Model-Tools-ViromeScreening/virome-screening2.xml',
-#	'/gscuser/kkyung/bin/virome-screening2.xml',
 	'fasta_file'  => $self->fasta_file,
 	'barcode_file'=> $self->barcode_file,
 	'dir'         => $self->dir,

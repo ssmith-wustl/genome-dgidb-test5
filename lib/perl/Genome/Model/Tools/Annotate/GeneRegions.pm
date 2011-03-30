@@ -65,11 +65,11 @@ sub execute {
     my $self = shift;
     my $output = $self->output;
     if ($output) {
-	open(OUT,">$output") || App->error_message("\n\nCouldn't open the file $output for writting\n\n.") && return;
+	open(OUT,">$output") || $self->error_message("\n\nCouldn't open the file $output for writting\n\n.") && return;
     }
 
     my $gene_list = &get_gene_list($self);
-    unless ($gene_list) {App->error_message( "\n\nCouldn't generate a gene list\n\n.");return;}
+    unless ($gene_list) {$self->error_message( "\n\nCouldn't generate a gene list\n\n.");return;}
 
     my $organism = $self->organism;
     my $version = $self->version;
@@ -205,7 +205,7 @@ sub parse_genes {
     my $list = $self->list;
     
     if (-f $list) {
-	open (LIST,"$list") || App->error_message( "\n\nCouldn't open your list $list\n\n.") && return;
+	open (LIST,"$list") || $self->error_message( "\n\nCouldn't open your list $list\n\n.") && return;
 	while (<LIST>) {
 	    chomp;
 	    my $gene = $_;
@@ -239,12 +239,12 @@ sub parse_coordinates {
 
     unless (-f $list) {
 	system qq(gmt annotate gene-regions --help);
-	App->error_message("\nYour file $list was not found.\t\n\tPlease check that your list is in place and try again.\n\n\n");
+	$self->error_message("\nYour file $list was not found.\t\n\tPlease check that your list is in place and try again.\n\n\n");
 	return;
     }
     
     my @genes;
-    open(LIST,"$list") || App->error_message( "\n\nCouldn't open your list $list\n\n.") && return;
+    open(LIST,"$list") || $self->error_message( "\n\nCouldn't open your list $list\n\n.") && return;
     my $gene_list;
 
     my $coords;
@@ -254,7 +254,7 @@ sub parse_coordinates {
 	my ($chr,$start,$stop) = (split(/[\s]+/,$line))[0,1,2];
 
 	unless ($chr =~ /^(1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|X|Y|M)$/ && $start =~ /^[\d]+$/ && $stop =~ /^[\d]+$/) {
-	    App->error_message("$line does not represent valid coordinates\n");
+	    $self->error_message("$line does not represent valid coordinates\n");
 	    next;
 	}
 	$coords->{$chr}->{$start}->{$stop}=$line;
@@ -263,9 +263,9 @@ sub parse_coordinates {
 
     foreach my $chr (sort keys %{$coords}) {
 	my $ti = Genome::Model->get(name => $anno_db)->build_by_version($version)->transcript_iterator(chrom_name => $chr);
-	unless ($ti) {App->error_message("\ncouldn't get a transcript iterator for $chr\n\n");next;}
+	unless ($ti) {$self->error_message("\ncouldn't get a transcript iterator for $chr\n\n");next;}
 	my $transcript_window =  Genome::Utility::Window::Transcript->create(iterator => $ti);
-	unless ($transcript_window) {App->error_message("\ncouldn't get a transcript window for $chr\n\n");next;}
+	unless ($transcript_window) {$self->error_message("\ncouldn't get a transcript window for $chr\n\n");next;}
 	
 	foreach my $start (sort {$a<=>$b} keys %{$coords->{$chr}}) {
 	    foreach my $stop (sort {$a<=>$b} keys %{$coords->{$chr}->{$start}}) {

@@ -4,6 +4,7 @@ use strict;
 use Genome;
 use File::Basename;
 use File::Copy;
+use File::chdir;
 
 class Genome::Model::Tools::Breakdancer::BamToConfig {
     is  => 'Genome::Model::Tools::Breakdancer',
@@ -61,34 +62,33 @@ sub execute {
         die "Failed to make out_dir $out_dir\n" unless -d $out_dir;
     }
 
+    unless (Genome::Sys->validate_directory_for_write_access($out_dir)) {
+        $self->error_message("$out_dir can not be written to");
+        die;
+    }
+
     unless (Genome::Sys->validate_file_for_writing($out_file)) {
         die "output file $out_file can not be written\n";
     }
 
-    #my $cfg_cmd = $self->breakdancer_config_command; 
-    my $cfg_cmd = '/gscuser/fdu/bin/bam2cfg.pl';
+    my $cfg_cmd = $self->breakdancer_config_command; 
     $cfg_cmd .= ' ' . $self->params . ' ' . $self->tumor_bam . ' ' . $self->normal_bam . ' > '. $out_file;
     $self->status_message("Breakdancer command: $cfg_cmd");
 
-    my $rv = Genome::Sys->shellcmd(
-        cmd => $cfg_cmd,
-        input_files  => [$self->tumor_bam, $self->normal_bam],
-        output_files => [$self->output_file],
-    );
-    unless ($rv) {
-        $self->error_message("Running breakdancer config failed using command: $cfg_cmd");
-        die;
+    {
+        local $CWD = $out_dir;  #change current work dir to out_dir so *.insert.histogram can be written there
+        my $rv = Genome::Sys->shellcmd(
+            cmd => $cfg_cmd,
+            input_files  => [$self->tumor_bam, $self->normal_bam],
+            output_files => [$self->output_file],
+            allow_zero_size_output_files => 1,
+        );
+        unless ($rv) {
+            $self->error_message("Running breakdancer config failed using command: $cfg_cmd");
+            die;
+        }
+        $self->status_message("bam2cfg finished ok. The insert.histogram files are created in $out_dir");
     }
-
-    my @other_files = glob("*insertsize_histogram*");
-    map{move $_, $out_dir}@other_files;
-    my @moved_files = glob($out_dir."/*insertsize_histogram*");
-
-    unless (@other_files == @moved_files) {
-        $self->error_message("insertsize_histogram files not completely moved to $out_dir"); 
-        die $self->error_message;
-    }
-
     return 1;
 }
 

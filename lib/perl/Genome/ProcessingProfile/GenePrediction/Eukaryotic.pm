@@ -23,14 +23,14 @@ class Genome::ProcessingProfile::GenePrediction::Eukaryotic {
         rnammer_version => {
             is => 'Text',
             is_optional => 1,
-            default => '1.2', 
+            default => '1.2.1', 
             doc => 'Version of rnammer predictor to use',
         },
         rfamscan_version => {
             is => 'Text',
             is_optional => 1,
             valid_values => ['7.0', '8.0', '8.1', '8.1.skip_introns'],
-            default => '8.1',
+            default => '8.1.skip_introns',
             doc => 'Version of rfamscan predictor to use',
         },
         snap_version => {
@@ -64,6 +64,8 @@ sub _resolve_workflow_for_build {
     my ($self, $build) = @_;
 
     my $xml = __FILE__ . '.xml';
+    confess "Did not find workflow xml file at $xml!" unless -e $xml;
+
     my $workflow = Workflow::Operation->create_from_xml($xml);
     confess "Could not create workflow object from $xml!" unless $workflow;
 

@@ -24,10 +24,10 @@ class Genome::Model::Tools::Capture::BuildMafFile {
   is => 'Command',
 
   has => [                                # specify the command's single-value properties (parameters) <---
-    data_dir    => { is => 'Text', doc => "ID of model group" , is_optional => 0},
+    data_dir    => { is => 'Text', doc => "Somatic-capture model build dir" , is_optional => 0},
     tumor_sample  => { is => 'Text', doc => "Name of the tumor sample" , is_optional => 0},
     normal_sample  => { is => 'Text', doc => "Name of the matched normal control" , is_optional => 0},
-    output_file  => { is => 'Text', doc => "Optional output file for paired normal-tumor model ids" , is_optional => 0},
+    output_file  => { is => 'Text', doc => "Output file to contain the MAF" , is_optional => 0},
     limit_variants  => { is => 'Text', doc => "List of variant positions to include" , is_optional => 1},
     build     => { is => 'Text', doc => "Reference genome build" , is_optional => 1, default => "36"},
     center     => { is => 'Text', doc => "Genome center name" , is_optional => 1, default => "genome.wustl.edu"},
@@ -77,9 +77,14 @@ sub execute {                               # replace with real execution logic.
 
 
   ## Fix sample names ##
-
-  $normal_sample =~ s/H\_GP/TCGA/;
-  $tumor_sample =~ s/H\_GP/TCGA/;
+  my ($sample_name_header) = split(/\-/, $tumor_sample);
+  
+  ## If we have WashU sample names, correc tthem
+  if(substr($sample_name_header, 0, 1) eq "H")
+  {
+    $normal_sample =~ s/$sample_name_header/TCGA/;
+    $tumor_sample =~ s/$sample_name_header/TCGA/;    
+  }
 
   ## Keep stats in a single hash ##
 

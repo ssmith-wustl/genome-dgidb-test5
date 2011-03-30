@@ -10,58 +10,58 @@ my %positions;
 class Genome::Model::Tools::DetectVariants2::Filter::PindelReadSupport{
     is => 'Genome::Model::Tools::DetectVariants2::Filter',
     has => [
-        min_variant_support => {
-            is => 'String',
-            is_optional => 1,
-            default => '0',
-            doc => 'Required number of variant-supporting reads. Note: Pindel doesn\'t actually report the indel if var-support < 3.',
-        },
-        var_to_ref_read_ratio => {
-            is => 'String',
-            is_optional => 1,
-            default => '0.2',
-            doc => 'This ratio determines what ratio of variant supporting reads to reference supporting reads to allow',
-        },
-        remove_single_stranded => {
-            is => 'Boolean',
-            is_optional => 1,
-            default => 1,
-            doc => 'enable this to filter out variants which have exclusively pos or neg strand supporting reads.',
-        },
-        sw_ratio => {
-            is => 'String',
-            is_optional => 1,
-            is_input => 1,
-            default => '0.25',
-            doc => 'Throw out indels which have a normalized ratio of normal smith waterman reads to tumor smith waterman reads (nsw/(nsw+tsw)) at or below this amount.',
-        },
+    min_variant_support => {
+        is => 'String',
+        is_optional => 1,
+        default => '0',
+        doc => 'Required number of variant-supporting reads. Note: Pindel doesn\'t actually report the indel if var-support < 3.',
+    },
+    var_to_ref_read_ratio => {
+        is => 'String',
+        is_optional => 1,
+        default => '0.2',
+        doc => 'This ratio determines what ratio of variant supporting reads to reference supporting reads to allow',
+    },
+    remove_single_stranded => {
+        is => 'Boolean',
+        is_optional => 1,
+        default => 1,
+        doc => 'enable this to filter out variants which have exclusively pos or neg strand supporting reads.',
+    },
+    sw_ratio => {
+        is => 'String',
+        is_optional => 1,
+        is_input => 1,
+        default => '0.25',
+        doc => 'Throw out indels which have a normalized ratio of normal smith waterman reads to tumor smith waterman reads (nsw/(nsw+tsw)) at or below this amount.',
+    },
     ],
     has_constant => [
-        use_old_pindel => {
-            is => 'Number',
-            default => 1,
-            doc => 'This will be updated when more than one version of pindel, 0.2,  is available',
-        },
-        _variant_type => {
-            type => 'String',
-            default => 'indels',
-            doc => 'variant type that this module operates on, overload this in submodules accordingly',
-        },
+    use_old_pindel => {
+        is => 'Number',
+        default => 1,
+        doc => 'This will be updated when more than one version of pindel, 0.2,  is available',
+    },
+    _variant_type => {
+        type => 'String',
+        default => 'indels',
+        doc => 'variant type that this module operates on, overload this in submodules accordingly',
+    },
     ],
 
 };
 
 sub _filter_variants {
     my $self = shift;
+    $DB::single=1;
     my $read_support_file = $self->_temp_staging_directory."/indels.hq.read_support.bed";
-    my $output_file = $self->_temp_staging_directory."/indels.hq.bed";
+    my $output_file = $self->_temp_staging_directory."/indels.hq.v2.bed";
     my $output_lq_file = $self->_temp_staging_directory."/indels.lq.bed";
     my $indel_file = $self->input_directory."/indels.hq.bed";
 
     $self->calculate_read_support($indel_file, $read_support_file);
 
     $self->filter_read_support($read_support_file,$output_file,$output_lq_file);
-
     return 1;
 }
 
@@ -98,7 +98,7 @@ sub process_file {
     my $chr = shift;
     my $indels_by_chrom = shift;
     my $output = shift;
-    
+
     # This is the directory containing the raw pindel output
     my $dir = $self->detector_directory;
     my $filename = $dir."/".$chr."/indels_all_sequences";
@@ -225,12 +225,15 @@ sub process_file {
                 # Call samtools over the variant start-stop to get overlapping reads
                 my @results = `samtools view $tumor_bam $chrom:$pos-$stop`;
                 my $tumor_read_support=0;
-                my $read_support=0;
+                my $tumor_read_sw_support=0;
                 for my $result (@results){
                     chomp $result;
                     my @details = split /\t/, $result;
                     # Parse overlapping reads for cigar strings containing insertions or deletions
                     if($details[5] =~ m/[ID]/){
+                        $tumor_read_sw_support++;
+                    }
+                    else {
                         $tumor_read_support++;
                     }
                 }
@@ -238,15 +241,25 @@ sub process_file {
                 # Call samtools over the variant start-stop in the normal bam to get overlapping reads
                 @results = `samtools view $normal_bam $chrom:$pos-$stop`;
                 my $normal_read_support=0;
+                my $normal_read_sw_support=0;
+
                 for my $result (@results){
                     chomp $result;
                     my @details = split /\t/, $result;
                     # Parse overlapping reads for insertions or deletions
                     if($details[5] =~ m/[ID]/){
+                        $normal_read_sw_support++;
+                    }
+                    else {
                         $normal_read_support++;
                     }
+
                 }
-                my $bed_output = $events{$chrom}{$pos}{$type_and_size}{'bed'}."\t".$reads."\t".$tumor_read_support."\t".$normal_read_support."\t".$pos_percent."\n";
+                my $p_value = Genome::Statistics::calculate_p_value($normal_read_support, $normal_read_sw_support, $tumor_read_support, $tumor_read_sw_support); 
+                if($p_value eq '1') {
+                    $p_value = Genome::Statistics::calculate_p_value($normal_read_sw_support, $normal_read_support, $tumor_read_sw_support, $tumor_read_support); 
+                } 
+                my $bed_output = $events{$chrom}{$pos}{$type_and_size}{'bed'}."\t$reads\t$tumor_read_support\t$tumor_read_sw_support\t$normal_read_support\t$normal_read_sw_support\t$pos_percent\t$p_value\n";
 
                 print $output $bed_output;
 
@@ -316,7 +329,7 @@ sub filter_read_support {
     my $read_support_file = shift;
     my $output_file = shift;
     my $output_lq_file = shift;
-    
+
     unless(-e $read_support_file) {
         $self->error_message($self->read_support_file . " is not found or is empty.");
         die $self->error_message;
@@ -328,21 +341,20 @@ sub filter_read_support {
 
     while( my $line = $input->getline){
         chomp $line;
-        my ($chr,$start,$stop,$refvar,$vs,$tsw,$nsw,$ps) = split "\t", $line;
-        my $hq=1;
-        unless(($nsw/($tsw+$nsw)) < $self->sw_ratio){
-            $hq = 0;
+        my ($chr,$start,$stop,$refvar,$pindel_reads,$t_reads,$t_sw_reads,$n_reads,$n_sw_reads,$ps, $p_value) = split "\t", $line;
+        my $hq=0;
+        if($p_value <= .15) { #assuming significant smith waterman support, trust the fishers exact test to make a germline determination
+            $hq=1;
         }
-        if($self->remove_single_stranded){
-            unless(($ps != 1)&&($ps !=0)){
-                $hq=0;
-            }
+        if(($t_sw_reads + $t_reads < 10) && ($pindel_reads > $t_sw_reads)) { #low coverage area, and pindel found more reads than were smith waterman mapped available-- rescue this from pvalue filter
+            $hq=1;
         }
+
         if($hq==1){
-            print $output join("\t", ($chr,$start,$stop,$refvar))."\n";
+            print $output join("\t", ($chr,$start,$stop,$refvar,'-','-'))."\n";
         }
         else {
-            print $output_lq join("\t", ($chr,$start,$stop,$refvar))."\n";
+            print $output_lq join("\t", ($chr,$start,$stop,$refvar,'-','-'))."\n";
         }
     }
 
@@ -358,6 +370,10 @@ sub _check_file_counts {
 }
 
 sub _generate_standard_output {
+    my $self = shift;
+    my $output = $self->output_directory."/indels.hq.v2.bed";
+    my $output_link = $self->output_directory."/indels.hq.bed";
+    Genome::Sys->create_symlink($output, $output_link);
     return 1;
 }
 

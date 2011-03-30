@@ -134,8 +134,20 @@ class Genome::InstrumentData::454 {
     ],
 };
 
+BEGIN: {
+    Genome::InstrumentData::Solexa->class;
+    no warnings 'once';
+    *dump_trimmed_fastq_files = \&Genome::InstrumentData::Solexa::dump_trimmed_fastq_files;
+}
+
 sub full_path {
     Carp::confess("Full path is not valid for 454 instrument data");
+}
+
+sub bam_path {
+    my $self = shift;
+    $self->warning_message("Asked this 454 instrument data for bam path, but this is not implemented yet.");
+    return undef;
 }
 
 sub _default_full_path {

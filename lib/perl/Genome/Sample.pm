@@ -2,6 +2,7 @@ package Genome::Sample;
 
 use strict;
 use warnings;
+
 use Genome;
 
 class Genome::Sample {

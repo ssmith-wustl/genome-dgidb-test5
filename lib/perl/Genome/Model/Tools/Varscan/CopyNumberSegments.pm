@@ -21,9 +21,7 @@ use FileHandle;
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
 ## SET DEFAULT PARAMS ##
-my $min_loh_size = 10;
-my $min_loh_snps = 3;
-my $num_loh_regions = 0;
+my $undo_sd = 2;
 
 class Genome::Model::Tools::Varscan::CopyNumberSegments {
 	is => 'Command',                       
@@ -33,6 +31,7 @@ class Genome::Model::Tools::Varscan::CopyNumberSegments {
 		output_basename 	=> { is => 'Text', doc => "Output file basename for cnv plots", is_optional => 0 },
 		min_depth 	=> { is => 'Text', doc => "Minimum depth for a region (in one sample) to include it", is_optional => 0, default => 8 },
 		min_points_to_plot 	=> { is => 'Text', doc => "Minimum number of points for a chromosome to plot it", is_optional => 0, default => 100 },
+		undo_sd 	=> { is => 'Text', doc => "Remove change-points of less than this number of standard deviations", is_optional => 0, default => 2 },
 	],
 };
 
@@ -68,6 +67,7 @@ sub execute {                               # replace with real execution logic.
 	my $regions_file = $self->regions_file;
 	my $output_basename = $self->output_basename;
 	my $min_depth = $self->min_depth;
+	$undo_sd = $self->undo_sd;
 
 	## Open the index HTML file ##
 	my @tempArray = split(/\//, $output_basename);
@@ -105,7 +105,7 @@ sub execute {                               # replace with real execution logic.
 			if($current_chrom && $chrom ne $current_chrom)
 			{
 				print "Chromosome $chrom...\n";
-#				process_results($self, $current_chrom, $current_chrom_results);
+				process_results($self, $current_chrom, $current_chrom_results);
 				$current_chrom_results = "";	
 			}
 	
@@ -263,7 +263,7 @@ sub process_results
 		print SCRIPT qq{
 CNA.object <- CNA(regions\$V$num_columns, regions\$V1, regions\$V2, data.type="logratio", sampleid=c("Chromosome $chrom"))\n
 smoothed.CNA.object <- smooth.CNA(CNA.object)\n
-segment.smoothed.CNA.object <- segment(smoothed.CNA.object, undo.splits="sdundo", undo.SD=2, verbose=1)
+segment.smoothed.CNA.object <- segment(smoothed.CNA.object, undo.splits="sdundo", undo.SD=$undo_sd, verbose=1)
 p.segment.smoothed.CNA.object <- segments.p(segment.smoothed.CNA.object)
 plot(segment.smoothed.CNA.object, type="w", cex=0.5, cex.axis=1.5, cex.lab=1.5)
 write.table(p.segment.smoothed.CNA.object, file="$chrom_filename.segments.p_value")

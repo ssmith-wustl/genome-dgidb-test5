@@ -27,6 +27,7 @@ class Genome::Model::Tools::Capture::MergeAdaptedIndels {
 		glf_file	=> { is => 'Text', doc => "Somatic Sniper Adapted Indel Input File", is_optional => 0, is_input => 1 },
 		varscan_file	=> { is => 'Text', doc => "Varscan Adapted Indel Input File", is_optional => 0, is_input => 1 },
 		gatk_file	=> { is => 'Text', doc => "GATK Adapted Indel Input File", is_optional => 1, is_input => 1 },
+		gatk_unified_file	=> { is => 'Text', doc => "GATK Unified Genotyper Adapted Indel Input File", is_optional => 1, is_input => 1 },
 		output_file	=> { is => 'Text', doc => "Merged Indel Output File" , is_optional => 0, is_input => 1, is_output => 1},
 	],
 };
@@ -67,6 +68,10 @@ sub execute {                               # replace with real execution logic.
 	if ($self->gatk_file) {
 		$gatk_file = $self->gatk_file;
 	}
+	my $gatk_unified_file;
+	if ($self->gatk_unified_file) {
+		$gatk_unified_file = $self->gatk_unified_file;
+	}
 	my $output_file = $self->output_file;
 
 	my %stats = ();
@@ -76,8 +81,23 @@ sub execute {                               # replace with real execution logic.
 	my %glf_indels = load_indels($glf_file);
 	my %varscan_indels = load_indels($varscan_file);
 	my %gatk_indels;
-	if ($self->gatk_file) {
+	my %gatk_IndelGenotyperV2_indels;
+	my %gatk_unified_indels;
+	if ($self->gatk_file && $self->gatk_unified_file) {
+		%gatk_IndelGenotyperV2_indels = load_indels($gatk_file);
+		%gatk_unified_indels = load_indels($gatk_unified_file);
+		foreach my $keys (sort keys %gatk_unified_indels) {
+			$gatk_indels{$keys} = $gatk_unified_indels{$keys};
+		}
+		foreach my $keys (sort keys %gatk_IndelGenotyperV2_indels) {
+			$gatk_indels{$keys} = $gatk_IndelGenotyperV2_indels{$keys};
+		}
+	}
+	elsif ($self->gatk_file) {
 		%gatk_indels = load_indels($gatk_file);
+	}
+	elsif ($self->gatk_unified_file) {
+		%gatk_indels = load_indels($gatk_unified_file);
 	}
 
 	## Build a list of all unique indel keys ##
@@ -131,6 +151,8 @@ sub execute {                               # replace with real execution logic.
 	open(SHARED, ">$output_file.shared") or die "Can't open outfile: $!\n";
 	open(SNIPER, ">$output_file.sniper-only") or die "Can't open outfile: $!\n";
 	open(VARSCAN, ">$output_file.varscan-only") or die "Can't open outfile: $!\n";
+
+
 	if ($self->gatk_file) {
 		open(GATK, ">$output_file.gatk-only") or die "Can't open outfile: $!\n";
 	}
@@ -195,13 +217,32 @@ sub execute {                               # replace with real execution logic.
 	close(SNIPER);
 	close(VARSCAN);
 	close(GATK);
+	
+	## Sort the file ##
+	
+	my $cmd_obj = Genome::Model::Tools::Capture::SortByChrPos->create(
+	    input_file => $output_file,
+	    output_file => $output_file,
+	);
+
+	$cmd_obj->execute();
+	
+	## Reset stats if necessary ##
+	$stats{'tri-shared'} = 0 if(!$stats{'tri-shared'});
+	$stats{'sniper-varscan-shared'} = 0 if(!$stats{'sniper-varscan-shared'});
+	$stats{'sniper-gatk-shared'} = 0 if(!$stats{'sniper-gatk-shared'});
+	$stats{'varscan-gatk-shared'} = 0 if(!$stats{'varscan-gatk-shared'});
+	$stats{'shared'} = 0 if(!$stats{'shared'});
+	$stats{'varscan-only'} = 0 if(!$stats{'varscan-only'});
+	$stats{'sniper-only'} = 0 if(!$stats{'sniper-only'});
+	$stats{'gatk-only'} = 0 if(!$stats{'gatk-only'});
 
 	print $stats{'total'} . " unique indels\n";
 	if ($self->gatk_file) {
-		print $stats{'tri-shared'} . "shared in gatk, sniper, and varscan\n";
-		print $stats{'sniper-varscan-shared'} . "shared in sniper and varscan\n";
-		print $stats{'sniper-gatk-shared'} . "shared in gatk and sniper\n";
-		print $stats{'varscan-gatk-shared'} . "shared in gatk and varscan\n";
+		print $stats{'tri-shared'} . " shared in gatk, sniper, and varscan\n";
+		print $stats{'sniper-varscan-shared'} . " shared in sniper and varscan\n";
+		print $stats{'sniper-gatk-shared'} . " shared in gatk and sniper\n";
+		print $stats{'varscan-gatk-shared'} . " shared in gatk and varscan\n";
 	}
 	else {
 		print $stats{'shared'} . " shared\n";		
@@ -209,7 +250,7 @@ sub execute {                               # replace with real execution logic.
 	print $stats{'varscan-only'} . " Varscan-only\n";
 	print $stats{'sniper-only'} . " Sniper-only\n";
 	if ($self->gatk_file) {
-		print $stats{'gatk-only'} . "gatk-only\n";
+		print $stats{'gatk-only'} . " gatk-only\n";
 	}
 
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)

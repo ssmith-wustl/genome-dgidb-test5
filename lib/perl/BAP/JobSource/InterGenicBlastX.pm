@@ -24,7 +24,6 @@ sub new {
         $feature_source,
         $blastx_db,
 	    $core_num,
-        $use_local_nr,
     ) = @args;
     
     unless (defined($sequence_source)) {
@@ -49,10 +48,6 @@ sub new {
     
     unless (defined($core_num)) {
 	croak 'missing number of cores to run blast in JobSource!';
-    }
-
-    unless (defined $use_local_nr) {
-        $use_local_nr = 1;
     }
 
     $self->{_feature_collection} = Bio::SeqFeature::Collection->new();
@@ -86,7 +81,6 @@ sub new {
             $mask_ref,
             $blastx_db,
 			$core_num,
-            $use_local_nr,
         );
         
     }

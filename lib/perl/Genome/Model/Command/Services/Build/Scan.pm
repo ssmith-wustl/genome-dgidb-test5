@@ -244,6 +244,7 @@ sub build_lists {
     {
         my $ji = Job::Iterator->new;
         while ( my $job = $ji->next ) {
+            next if ( $job->{Status} eq 'PSUSP' );
             if ( $job->{Command} =~ /build run.+?--build-id (\d+)/ ) {
                 $builds_lsf->{$1} ||= [];
                 push @{ $builds_lsf->{$1} }, $job->{Job};

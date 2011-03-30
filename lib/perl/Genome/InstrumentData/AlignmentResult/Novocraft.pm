@@ -27,7 +27,7 @@ sub _run_aligner {
 
     # get refseq info
     my $reference_build = $self->reference_build;
-    my $reference_novocraft_index_path = $reference_build->full_consensus_path('novocraft');
+    my $reference_novocraft_index_path = $self->get_reference_sequence_index->full_consensus_path('fa.novocraft');
     
     # check index file exists and is non-zero sized.
     unless (-s $reference_novocraft_index_path) {
@@ -132,3 +132,42 @@ sub aligner_params_for_sam_header {
 sub fillmd_for_sam { return 0; }
 
 sub _check_read_count { return 1; }
+
+sub prepare_reference_sequence_index {
+    my $class = shift;
+    my $refindex = shift;
+
+    my $staging_dir = $refindex->temp_staging_directory;
+    my $staged_fasta_file = sprintf("%s/all_sequences.fa", $staging_dir);
+    my $target_fasta_file = readlink($staged_fasta_file);
+    unless ($target_fasta_file) {
+        $class->error_message("Cant resolve the target of the fasta symlink dropped in the staging directory.");
+        return;
+    }
+    unless (symlink($target_fasta_file, $staged_fasta_file.'.ssaha2')) {
+        $class->error_message("Couldn't make an all_sequences.fa.ssaha2 symlink to the raw fasta file");
+        return;
+    }
+        
+    
+
+    my $nv_path = Genome::Model::Tools::Novocraft->path_for_novocraft_version($refindex->aligner_version);
+    $nv_path =~ s/novoalign/novoindex/;
+    my $assembly_name = $refindex->reference_build->assembly_name;
+    if (!$assembly_name) {
+        $assembly_name = $refindex->reference_build->name;
+    }
+    my $nv_cmd = sprintf('%s %s.novocraft %s -n %s', $nv_path, $staged_fasta_file, $staged_fasta_file, $assembly_name);
+    my $rv = Genome::Sys->shellcmd(
+        cmd => $nv_cmd,
+    );
+
+    unless($rv) {
+        $class->error_message('novocraft indexing failed');
+        return;
+    }
+
+    return 1;
+}
+
+    

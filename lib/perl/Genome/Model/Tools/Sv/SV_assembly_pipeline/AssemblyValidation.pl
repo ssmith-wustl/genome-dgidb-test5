@@ -108,7 +108,8 @@ foreach my $SV(@SVs){
   $chr1=~s/chr//; $chr2=~s/chr//;
   next unless ($start=~/^\d/ && $end=~/^\d/ && $size=~/^\d/);
 
-  my $datadir;
+  my $datadir = $opts{d};
+
   if(!defined $opts{I}){
     if(defined $opts{d}){
       $datadir="/tmp/chr$chr1.$start.$end.$type.$size";
@@ -121,6 +122,7 @@ foreach my $SV(@SVs){
   else{
     $datadir=$opts{I};
   }
+
   print STDERR "Data directory: $datadir\n";
 
   if($chr1 eq $chr2 && $start>$end){my $tmp=$start;$start=$end;$end=$tmp;}
@@ -150,7 +152,7 @@ foreach my $SV(@SVs){
 
   #keep
   if(!defined $opts{I} && defined $opts{d}){
-    `mv -f $datadir $opts{d}`;
+    `mv $datadir/* $opts{d}/`;
   }
   elsif(!defined $opts{I}){
     File::Temp::cleanup();
@@ -258,7 +260,8 @@ sub AssembleBestSV{
 
       if($refsize>1e6){printf STDERR "reference size %d too large, skip ...",$refsize; return;}
       my $cmd;
-      if((!defined $opts{I}) || (!-s "$datadir/$prefix.a$a.b$b.stat")){
+      #if((!defined $opts{I}) || (!-s "$datadir/$prefix.a$a.b$b.stat")){
+      if(!-s "$datadir/$prefix.a$a.b$b.stat"){
 	#create reference
 	if(-s "$datadir/$prefix.ref.fa" && !defined $opts{I}){
 	  `rm $datadir/$prefix.ref.fa`;
@@ -270,12 +273,15 @@ sub AssembleBestSV{
 	  }
 	  else{
 	    $cmd="expiece $start_ref $end_ref /gscuser/kchen/sata114/kchen/Hs_build36/all_fragments/Homo_sapiens.NCBI36.45.dna.chromosome.${chr_ref}.fa >> $datadir/$prefix.ref.fa";
+            #  $cmd="expiece $start_ref $end_ref /gscmnt/839/info/medseq/reference_sequences/NCBI-mouse-build37/${chr_ref}.fasta >> /gscmnt/sata872/info/medseq/xfan/test1";
+            #my $test = `expiece $start_ref $end_ref /gscuser/kchen/sata114/kchen/Hs_build36/all_fragments/Homo_sapiens.NCBI36.45.dna.chromosome.${chr_ref}.fa`;
+            #print "Test::$test\n";
 	  }
 
-	  if(!defined $opts{I}){
+          #if(!defined $opts{I}){
 	    system($cmd);
 	    print STDERR "$cmd\n";
-	  }
+            #}
 	}
 
 	if($makeup_size>0){  #piece together 2 refs as one
@@ -394,6 +400,7 @@ sub AssembleBestSV{
 
 	#Assemble
 	$cmd="time $FindBin::Bin/tigra/tigra.pl ";
+#	$cmd="time /gscuser/xfan/kdevelop/tigra/debug/TIGRA_new/tigra.pl ";
 	if($type=~/ITX/i || $type=~/INS/i){  #Tandem duplication
 	  $cmd.="-N 1 ";
 	}
@@ -404,7 +411,7 @@ sub AssembleBestSV{
 	  $cmd.="-h $datadir/$prefix.a$a.b$b.fa.contigs.het.fa -o $datadir/$prefix.a$a.b$b.fa.contigs.fa -k25 -p SV -r $datadir/$prefix.ref.fa $datadir/$prefix.a$a.b$b.fa";
 	}
 	else{
-	  $cmd.="-h $datadir/$prefix.a$a.b$b.fa.contigs.het.fa -o $datadir/$prefix.a$a.b$b.fa.contigs.fa -k15,25 -p SV -r $datadir/$prefix.ref.fa $datadir/$prefix.a$a.b$b.fa";
+	  $cmd.="-h $datadir/$prefix.a$a.b$b.fa.contigs.het.fa -o $datadir/$prefix.a$a.b$b.fa.contigs.fa -k 15,25 -p SV -r $datadir/$prefix.ref.fa $datadir/$prefix.a$a.b$b.fa";
 	}
 	if((!defined $opts{I}) || (!-s "$datadir/$prefix.a$a.b$b.fa.contigs.fa") || (!-s "$datadir/$prefix.a$a.b$b.fa.contigs.het.fa")){
 	  print STDERR "$cmd\n";
@@ -426,7 +433,6 @@ sub AssembleBestSV{
 
       if((!defined $opts{I}) || (!-s "$datadir/$prefix.a$a.b$b.het.stat")){
 	#produce het contigs
-	#`/gscuser/kchen/1000genomes/analysis/scripts/hetAtlas.pl -n 100 $datadir/$prefix.a$a.b$b.fa.contigs.fa > $datadir/$prefix.a$a.b$b.fa.contigs.fa.het` if((!defined $opts{I}) || (!-s "$datadir/$prefix.a$a.b$b.fa.contigs.fa.het"));
 	#test het contigs
 	$cmd="cross_match $datadir/$prefix.a$a.b$b.fa.contigs.het.fa $datadir/$prefix.ref.fa -bandwidth 20 -minmatch 20 -minscore 25 -penalty $opts{P} -discrep_lists -tags -gap_init $opts{G} -gap_ext -1 > $datadir/$prefix.a$a.b$b.het.stat 2>/dev/null";
 	print STDERR "$cmd\n";
@@ -584,7 +590,8 @@ sub ReadBDCoor{
 	    defined $opts{s} && abs($cr->{size})<$opts{s} ||
 	    defined $opts{n} && $cr->{nreads}<$opts{n} ||
 	    defined $opts{Q} && $cr->{score}<$opts{Q} ||
-	    defined $opts{c} && $cr->{chr1} ne $opts{c}
+	    defined $opts{c} && $cr->{chr1} ne $opts{c} || 
+            defined $opts{M} && abs($cr->{size})<$opts{M} # also apply M to the predicted size as in the new version
 	   );
 
     #Ignore events detected in a library
@@ -592,6 +599,7 @@ sub ReadBDCoor{
     foreach my $nlib(@nlibs){
       $ignore=1 if($cr->{nreads_lib}=~/$nlib/);
     }
+    next if($ignore == 1);
 
     #Include Copy Number Altered events if available
     if(@col_cn){

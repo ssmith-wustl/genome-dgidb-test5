@@ -88,7 +88,7 @@ sub execute {
     my $dbsnp_submitters;
     if ($self->output_file) {
 	my $output_file = $self->output_file;
-	open(OUT,">$output_file")  || App->error_message( "\n\nCouldn't open the output file $output_file\n\n.") && return;
+	open(OUT,">$output_file")  || $self->error_message( "\n\nCouldn't open the output file $output_file\n\n.") && return;
     }
     
     my $order = $self->order;
@@ -214,12 +214,12 @@ sub parse_maf {
     
     my $maf_file = $self->maf_file;
     unless (-f $maf_file) {
-	App->error_message( "\n\nCouldn't open the MAF $maf_file\n\n.");
+	$self->error_message( "\n\nCouldn't open the MAF $maf_file\n\n.");
 	return;
     }
     
     if ($self->revise_dbsnp) {
-	open(TEMP,">temp_out_file_for_look_up_variants.txt") || App->error_message( "\n\nCouldn't open a file to write a lookup variants file\n\n.") && return;
+	open(TEMP,">temp_out_file_for_look_up_variants.txt") || $self->error_message( "\n\nCouldn't open a file to write a lookup variants file\n\n.") && return;
     }
     
     my $delimiter = $self->delimiter;
@@ -229,7 +229,7 @@ sub parse_maf {
     my $n=0;
     my $column_n=0;
 
-    open(MAF,$maf_file) || App->error_message( "\n\nCouldn't open the MAF $maf_file\n\n.") && return;
+    open(MAF,$maf_file) || $self->error_message( "\n\nCouldn't open the MAF $maf_file\n\n.") && return;
     while (<MAF>) {
 	chomp;
 	my $line = $_;
@@ -302,7 +302,7 @@ sub parse_maf {
     die "Failed to LookupVariants: $!" unless $rv;
 	
 	unless (-f "temp_output_file") {
-	    App->error_message( "\n\nCouldn't open the temp_output_file\n\n.");
+	    $self->error_message( "\n\nCouldn't open the temp_output_file\n\n.");
 	    return;
 	}
 	open(DBSNP,"temp_output_file");

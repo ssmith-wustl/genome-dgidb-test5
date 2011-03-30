@@ -38,6 +38,14 @@ sub _execute_build {
 
     $self->status_message('Reference sequence build: '.$reference_sequence_build->__display_name__);
 
+    my $fasta_file = $reference_sequence_build->full_consensus_path('fa');
+    if ( ! -s $fasta_file ) {
+        $self->error_message("Reference sequence has missing or 0 byte fasta file at $fasta_file.");
+        return;
+    }
+    $self->status_message("Reference fasta file: $fasta_file");
+
+
     my $subject_name = $reference_sequence_build->subject_name;
     my $version = $reference_sequence_build->version;
     $self->status_message("Getting genotype microarray file for subject ($subject_name) and version ($version)");
@@ -56,6 +64,7 @@ sub _execute_build {
         genotype_file1 => $genotype_file,
         genotype_file2 => $genotype_file,
         output_file => $snp_array_file,
+        reference_fasta_file => $fasta_file,
     );
     if ( not $gold_snp ) {
         $self->error_message("Cannot create gold snp tool.");
@@ -65,13 +74,28 @@ sub _execute_build {
         $self->error_message("Cannot execute gold snp tool");
         return;
     }
-
     if ( not -s $snp_array_file ) {
-        $self->error_message("Execute gold snp tool, but snp array file ($snp_array_file) does not exist");
+        $self->error_message("Executed gold snp tool, but snp array file ($snp_array_file) does not exist");
         return;
     }
-
     $self->status_message("Create snp array (gold) file...OK");
+
+    my $snvs_bed = $build->snvs_bed;
+    $self->status_message('Create gold snp bed file: '.$snvs_bed);
+    my $gold_snp_bed = Genome::Model::GenotypeMicroarray::Command::CreateGoldSnpBed->create(
+        input_file => $snp_array_file,
+        output_file => $snvs_bed,
+        reference => $build->model->reference_sequence_build,
+    );
+    unless ($gold_snp_bed->execute) {
+        $self->error_message("Could not generate gold snp bed file at $snvs_bed from snp array file $snp_array_file");
+        return;
+    }
+    if ( not -s $snvs_bed ) {
+        $self->error_message("Executed 'create gold snp bed', but snvs bed file ($snvs_bed) does not exist");
+        return;
+    }
+    $self->status_message("Create gold snp bed file...OK");
 
     $self->status_message('Execute genotype microarray build...OK');
 

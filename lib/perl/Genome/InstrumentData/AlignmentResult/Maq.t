@@ -11,7 +11,7 @@ use above 'Genome';
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 25;
+        plan tests => 26;
     } 
     else {
         plan skip_all => 'Must run on a 64 bit machine';
@@ -30,6 +30,9 @@ ok($reference_model, "got reference model");
 
 my $reference_build = $reference_model->build_by_version('1');
 ok($reference_build, "got reference build");
+
+my $reference_index = Genome::Model::Build::ReferenceSequence::AlignerIndex->create(aligner_name=>'maq', aligner_version=>'0.7.1', aligner_params=>undef, reference_build=>$reference_build);
+ok($reference_index, "generated reference index");
 
 # The following line is to pretend to add a software-result record to
 # DB and make the codes following this taking it as already existing
@@ -69,6 +72,7 @@ my $instrument_data = Genome::InstrumentData::Solexa->create_mock(%ins_data_para
 
 my @fastq_files = glob($instrument_data->gerald_directory.'/*.txt');
 $instrument_data->mock('dump_fastqs_from_bam', sub {return Genome::InstrumentData::dump_fastqs_from_bam($instrument_data)});
+$instrument_data->mock('dump_trimmed_fastq_files', sub {return Genome::InstrumentData::Solexa::dump_trimmed_fastq_files($instrument_data)});
 isa_ok($instrument_data,'Genome::InstrumentData::Solexa');
 $instrument_data->set_always('sample_type','dna');
 $instrument_data->set_always('resolve_quality_converter','sol2sanger');
@@ -135,6 +139,7 @@ $ins_data_params{median_insert_size} = 313;
 my $instrument_data2 = Genome::InstrumentData::Solexa->create_mock(%ins_data_params);
 
 isa_ok($instrument_data2,'Genome::InstrumentData::Solexa');
+$instrument_data2->mock('dump_trimmed_fastq_files', sub {return Genome::InstrumentData::Solexa::dump_trimmed_fastq_files($instrument_data2)});
 $instrument_data2->set_always('sample_type','dna');
 $instrument_data2->set_always('resolve_quality_converter','sol2sanger');
 $instrument_data2->set_always('run_start_date_formatted','Fri Jul 10 00:00:00 CDT 2009');

@@ -78,7 +78,7 @@ sub _generate_content {
     unless ($self->instance) {
         $self->instance($subject->newest_workflow_instance);
     }
-
+$DB::single = 1;
     if ($self->instance) {
 =pod
         # silly UR tricks to get everything i'm interested in loaded into the cache in 2 queries
@@ -416,7 +416,7 @@ sub get_inputs_node {
         my $view = $input->create_view(
             perspective => 'default',
             toolkit => 'xml',
-            aspects => [ 'name', 'value_class_name', 'value_id' ],
+            aspects => [ 'name', 'value_class_name', 'value_id', 'value' ],
             parent_view => $self,
         );
         

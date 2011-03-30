@@ -2,7 +2,6 @@ package Genome::InstrumentData::AlignmentResult;
 
 use Genome;
 use Genome::Info::BamFlagstat;
-use Data::Dumper;
 use Sys::Hostname;
 use IO::File;
 use File::Path;
@@ -10,6 +9,7 @@ use YAML;
 use Time::HiRes;
 use POSIX qw(ceil);
 use File::Copy;
+use Carp qw(confess);
 
 use warnings;
 use strict;
@@ -19,7 +19,7 @@ our $BAM_FH;
 
 class Genome::InstrumentData::AlignmentResult {
     is_abstract => 1,
-    is=>['Genome::SoftwareResult'],
+    is=>['Genome::SoftwareResult::Stageable'],
     sub_classification_method_name => '_resolve_subclass_name',   
     has => [
         instrument_data         => {
@@ -248,11 +248,6 @@ class Genome::InstrumentData::AlignmentResult {
                                 },
     ],
     has_transient => [
-        temp_staging_directory  => {
-                                    is => 'Text',
-                                    doc => 'A directory to use for staging the alignment data before putting it on allocated disk.',
-                                    is_optional=>1,
-                                },
         temp_scratch_directory  => {
                                     is=>'Text',
                                     doc=>'Temp scratch directory',
@@ -275,6 +270,24 @@ sub required_rusage {
     # e.x.: "-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[tmp=50000:mem=12000]' -M 1610612736";
     ''
 }
+
+sub required_rusage_for_building_index {
+    # override if necessary in subclasses.
+    my $class = shift;
+    my %p = @_;
+    my $reference_build = $p{reference_build};
+
+    my $select = "select[mem>=10000 && tmp>=15000]";
+    my $rusage = "rusage[mem=10000, tmp=15000]";
+    my $options = "-M 10000000 -q long";
+
+    return sprintf("-R '%s %s' %s", $select, $rusage, $options);
+}
+
+sub _working_dir_prefix {
+    "alignment";
+}
+
 
 sub extra_metrics {
     # this will probably go away: override in subclasses if the aligner has custom metrics
@@ -304,7 +317,7 @@ sub _resolve_subclass_name_for_aligner_name {
     return $subclass;
 }
 
-sub create { 
+sub create {
     my $class = shift;
     
     if ($class eq __PACKAGE__ or $class->__meta__->is_abstract) {
@@ -352,7 +365,7 @@ sub create {
 
     # STEP 4: PREPARE THE STAGING DIRECTORY
     $self->status_message("Prepare working directories...");
-    $self->_prepare_working_directories;
+    $self->_prepare_working_and_staging_directories;
     $self->status_message("Staging path is " . $self->temp_staging_directory);
     $self->status_message("Working path is " . $self->temp_scratch_directory);
 
@@ -421,13 +434,13 @@ sub create {
     # STEP 12: PREPARE THE ALIGNMENT DIRECTORY ON NETWORK DISK
     $self->status_message("Preparing the output directory...");
     $self->status_message("Staging disk usage is " . $self->_staging_disk_usage . " KB");
-    my $output_dir = $self->output_dir || $self->_prepare_alignment_directory;
+    my $output_dir = $self->output_dir || $self->_prepare_output_directory;
     $self->status_message("Alignment output path is $output_dir");
 
     # STEP 13: PROMOTE THE DATA INTO ALIGNMENT DIRECTORY
     $self->status_message("Moving results to network disk...");
     my $product_path;
-    unless($product_path= $self->_promote_validated_data) {
+    unless($product_path= $self->_promote_data) {
         $self->error_message("Failed to de-stage data into alignment directory " . $self->error_message);
         die $self->error_message;
     }
@@ -446,6 +459,26 @@ sub create {
         
     $self->status_message("Alignment complete.");
     return $self;
+}
+
+sub delete {
+    my $self = shift;
+
+    my $name = $self->__display_name__;
+    my $class_name = $self->class;
+
+    # Find all the SoftwareResultUser objects that the one being deleted uses
+    my @uses = Genome::SoftwareResult::User->get(user => $self);
+    my @child_objects = map { $_->software_result } @uses;
+    map { $_->delete } @uses;
+
+    # find child objects for which there are no more users.
+    for my $child (@child_objects) {
+        my @users = Genome::SoftwareResult::User->get(software_result => $child);
+        $child->delete if !@users;
+    }
+
+    return $self->SUPER::delete(@_);
 }
 
 sub prepare_scratch_sam_file {
@@ -510,7 +543,7 @@ sub prepare_scratch_sam_file {
 sub requires_fastqs_to_align {
     my $self = shift;
    
-    # n-remove, complex filters, trimmers, and chunked instrument data disqualify bam processing 
+    # n-remove, complex filters, trimmers, instrument data disqualify bam processing 
     return 1 if ($self->n_remove_threshold);
     return 1 if ($self->filter_name && ($self->filter_name ne 'forward-only' && $self->filter_name ne 'reverse-only'));
     return 1 if ($self->trimmer_name);
@@ -662,7 +695,7 @@ sub collect_inputs_and_run_aligner {
 
     for my $pass (@passes) {
         $self->status_message("Aligning @$pass...");
-        unless ($self->_run_aligner_chunked(@$pass)) {
+        unless ($self->_run_aligner(@$pass)) {
             if (@$pass == 2) {
                 $self->error_message("Failed to run aligner on first PE pass");
                 die $self->error_message;
@@ -811,116 +844,6 @@ sub postprocess_bam_file {
     }
     return 1;
 }
-
-sub _run_aligner_chunked {
-    my $self = shift;
-
-    unless ($self->can('input_chunk_size')) {
-        return $self->_run_aligner(@_);
-    }
-
-    my @reads = @_;
-
-    if (@reads > 2 || @reads == 0) {
-        $self->error_message("Chunker can only accept one or two read sets, but it got " . scalar @reads . ". aborting");
-        die $self->error_message;
-    }
-
-    my $chunk_size = $self->input_chunk_size;
-
-    $self->status_message("Running in chunked mode.  Each pass will be in $chunk_size read chunks.");
-    if (@reads == 2) {
-        $chunk_size = ceil($chunk_size/2);
-        $self->status_message("Chunking paired end reads.  Taking $chunk_size per pass.");
-    }
-    
-    
-    my @read_fhs;
-    for my $read (@reads) {
-        my $fh = IO::File->new("<" . $read);
-        unless ($fh) {
-            $self->error_message("Failed to open read file $read for chunking");
-            die $self->error_message;
-        }
-        push @read_fhs, $fh;
-    }
-
-    my $successful_passes = 0;
-
-    while(1) {
-        my @chunks;
-        my $cnt = 0;
-        
-        for my $i (0..$#read_fhs) {
-            my $lines_read = 0;
-            my $in_fh = $read_fhs[$i];
-            my $chunk_path = Genome::Sys->base_temp_directory . "/chunked-read-" . $i . ".fastq";
-            $self->status_message("Prepping chunk: $chunk_path");
-            my $chunk_fh = IO::File->new(">" . $chunk_path);
-            unless($chunk_fh) {
-                $self->error_message("Failed to open for writing the chunked read file: $chunk_path ...  Aborting");
-                die $self->error_message;
-            }
-            push @chunks, $chunk_path;
-            while (my $row = <$in_fh>) { 
-                print $chunk_fh $row; 
-                $lines_read++; 
-                $cnt++;
-
-                # stop when we hit chunk size
-                last if ($lines_read >= ($chunk_size*4));
-            }
-            $chunk_fh->close;
-            if ($lines_read %4 != 0) {
-                $self->error_message("Failed to read lines in multiples of 4, is the input file truncated?");
-                die $self->error_message;
-            }
-            $self->status_message("Read " . $lines_read/4 . " reads for file $chunk_path");
-
-        }
-
-        # If we're done reading, return if we successfully aligned anything in previous passes
-        # This covers the case where we happened to read up to the very end of the file and stopped without getting an EOF
-        # that is, the file is an exact multiple of the chunk size
-        if ($cnt == 0) {
-            return ($successful_passes > 0);
-        }
-
-        my @remaining_fhs = grep {!eof $_} @read_fhs;
-        print scalar(@remaining_fhs) .  " is the remaining set\n";
-        if (@remaining_fhs > 0 && @remaining_fhs < @reads) {
-            $self->error_message("It looks like the read files are not the same length.  We've exhausted one but not the other.");
-            die $self->error_message;
-        }
-
-        my $start_time = [Time::HiRes::gettimeofday()];
-        $self->status_message("Beginning alignment of " . $cnt/4 . " reads");
-        my $res = $self->_run_aligner(@chunks);
-        if (!$res) {
-            $self->error_message("Failed to run aligner!");
-            die $self->error_message;
-        }
-        my ($user, $system, $child_user, $child_system) = times;
-        $self->status_message("wall clock time was ". Time::HiRes::tv_interval($start_time). "\n".
-        "user time for $$ was $user\n".
-        "system time for $$ was $system\n".
-        "user time for all children was $child_user\n".
-        "system time for all children was $child_system\n");
-        $successful_passes++;
-        for (@chunks) {
-            unlink($_);
-        }
-
-        # if we hit the EOF in this pass, then stop
-        if (@remaining_fhs == 0) {
-            $self->status_message("Done chunking and aligning read chunks.");
-            last;
-        }
-    }
-
-    1;
-}
-
 
 sub _compute_alignment_metrics {
     my $self = shift;
@@ -1153,7 +1076,7 @@ sub _process_sam_files {
         my $add_rg_cmd = Genome::Model::Tools::Sam::AddReadGroupTag->create(
             input_file     => $sam_input_file,
             output_file    => $per_lane_sam_file_rg,
-            read_group_tag => $self->instrument_data->id,
+            read_group_tag => $self->read_and_platform_group_tag_id,
         );
 
         unless ($add_rg_cmd->execute) {
@@ -1262,21 +1185,15 @@ sub _gather_params_for_get_or_create {
 }
 
    
-sub _prepare_working_directories {
+sub _prepare_working_and_staging_directories {
     my $self = shift;
 
-    return $self->temp_staging_directory if ($self->temp_staging_directory);
-
-    my $base_temp_dir = Genome::Sys->base_temp_directory();
-
+    unless ($self->_prepare_staging_directory) {
+        $self->error_message("Failed to prepare staging directory");
+        return;
+    }
     my $hostname = hostname;
     my $user = $ENV{'USER'};
-    my $basedir = sprintf("alignment-%s-%s-%s-%s", $hostname, $user, $$, $self->id);
-    my $tempdir = Genome::Sys->create_temp_directory($basedir);
-    unless($tempdir) {
-        die "failed to create a temp staging directory for completed files";
-    }
-    $self->temp_staging_directory($tempdir);
 
     my $scratch_basedir = sprintf("scratch-%s-%s-%s", $hostname, $user, $$);
     my $scratch_tempdir =  Genome::Sys->create_temp_directory($scratch_basedir);
@@ -1301,57 +1218,22 @@ sub _staging_disk_usage {
     return $usage;
 }
 
-sub _prepare_alignment_directory {
-
-    my $self = shift;
-
-    my $subdir = $self->resolve_alignment_subdirectory;
-    unless ($subdir) {
-        $self->error_message("failed to resolve subdirectory for instrument data.  cannot proceed.");
-        die $self->error_message;
-    }
-    
-    my %allocation_get_parameters = (
-        disk_group_name => 'info_alignments',
-        allocation_path => $subdir,
-    );
-
-    my %allocation_create_parameters = (
-        %allocation_get_parameters,
-        kilobytes_requested => $self->_staging_disk_usage,
-        owner_class_name => $self->class,
-        owner_id => $self->id
-    );
-    
-    my $allocation = Genome::Disk::Allocation->allocate(%allocation_create_parameters);
-    unless ($allocation) {
-        $self->error_message("Failed to get disk allocation with params:\n". Dumper(%allocation_create_parameters));
-        die($self->error_message);
-    }
-
-    my $output_dir = $allocation->absolute_path;
-    unless (-d $output_dir) {
-        $self->error_message("Allocation path $output_dir doesn't exist!");
-        die $self->error_message;
-    }
-    
-    $self->output_dir($output_dir);
-    
-    return $output_dir;
-}
-
 sub estimated_kb_usage {
     30000000;
     #die "unimplemented method: please define estimated_kb_usage in your alignment subclass.";
 }
 
-sub resolve_alignment_subdirectory {
+sub resolve_allocation_subdirectory {
     my $self = shift;
     my $instrument_data = $self->instrument_data;
     my $staged_basename = File::Basename::basename($self->temp_staging_directory);
     # TODO: the first subdir is actually specified by the disk management system.
     my $directory = join('/', 'alignment_data',$instrument_data->id,$staged_basename);
     return $directory;
+}
+
+sub resolve_allocation_disk_group_name {
+    return "info_alignments";
 }
 
 
@@ -1364,7 +1246,7 @@ sub _extract_input_fastq_filenames {
     
     if (defined $self->instrument_data_segment_type) {
         # sanity check this can be segmented
-        if (! $self->instrument_data->can('get_segments') && $self->instrument_data->get_segments > 0) {
+        if (! $instrument_data->can('get_segments') && $instrument_data->get_segments > 0) {
             $self->error_message("requested to align a given segment, but this instrument data either can't be segmented or has no segments.");
             die $self->error_message;
         }
@@ -1393,10 +1275,7 @@ sub _extract_input_fastq_filenames {
                 die($self->error_message);
             }
         }
-    } 
-    else {
-        my %params;
-        
+    } else {
         # FIXME - getting a warning about undefined string with 'eq'
         if (! defined($self->filter_name)) {
             $self->status_message('No special filter for this assignment');
@@ -1412,145 +1291,27 @@ sub _extract_input_fastq_filenames {
         else {
             die 'Unsupported filter: "' . $self->filter_name . '"!';
         }
-    
-        $DB::single = 1;
-        my @illumina_fastq_pathnames = $instrument_data->dump_sanger_fastq_files(%params, %segment_params);
-        my $counter = 0;
-        for my $input_fastq_pathname (@illumina_fastq_pathnames) {
-            if ($self->trimmer_name) {
-                unless ($self->trimmer_name eq 'trimq2_shortfilter') {
-                    my $trimmed_input_fastq_pathname = Genome::Sys->create_temp_file_path('trimmed-sanger-fastq-'. $counter);
-                    my $trimmer;
-                    if ($self->trimmer_name eq 'fastx_clipper') {
-                        #THIS DOES NOT EXIST YET
-                        $trimmer = Genome::Model::Tools::Fastq::Clipper->create(
-                            params => $self->trimmer_params,
-                            version => $self->trimmer_version,
-                            input => $input_fastq_pathname,
-                            output => $trimmed_input_fastq_pathname,
-                        );
-                    } 
-                    elsif ($self->trimmer_name eq 'trim5') {
-                        $trimmer = Genome::Model::Tools::Fastq::Trim5->create(
-                            length => $self->trimmer_params,
-                            input => $input_fastq_pathname,
-                            output => $trimmed_input_fastq_pathname,
-                        );
-                    } 
-                    elsif ($self->trimmer_name eq 'bwa_style') {
-                        my ($trim_qual) = $self->trimmer_params =~ /--trim-qual-level\s*=?\s*(\S+)/;
-                        $trimmer = Genome::Model::Tools::Fastq::TrimBwaStyle->create(
-                            trim_qual_level => $trim_qual,
-                            fastq_file      => $input_fastq_pathname,
-                            out_file        => $trimmed_input_fastq_pathname,
-                            qual_type       => 'sanger',  #hardcoded for now
-                            report_file     => $self->temp_staging_directory.'/trim_bwa_style.report.'.$counter,
-                        );
-                    }
-                    elsif ($self->trimmer_name =~ /trimq2_(\S+)/) {
-                        #This is for trimq2 no_filter style
-                        #move trimq2.report to alignment directory
-                        
-                        my %params = (
-                            fastq_file  => $input_fastq_pathname,
-                            out_file    => $trimmed_input_fastq_pathname,
-                            report_file => $self->temp_staging_directory.'/trimq2.report.'.$counter,
-                            trim_style  => $1,
-                        );
-                        my ($qual_level, $string) = $self->_get_trimq2_params;
-                 
-                        my $param = $self->trimmer_params;
-                        my ($primer_sequence) = $param =~ /--primer-sequence\s*=?\s*(\S+)/;
-                        $params{trim_qual_level} = $qual_level if $qual_level;
-                        $params{trim_string}     = $string if $string;
-                        $params{primer_sequence} = $primer_sequence if $primer_sequence;
-                        $params{primer_report_file} = $self->temp_staging_directory.'/trim_primer.report.'.$counter if $primer_sequence;
-        
-                        $trimmer = Genome::Model::Tools::Fastq::Trimq2::Simple->create(%params);
-                    } 
-                    elsif ($self->trimmer_name eq 'random_subset') {
-                        my $seed_phrase = $instrument_data->run_name .'_'. $instrument_data->id;
-                        $trimmer = Genome::Model::Tools::Fastq::RandomSubset->create(
-                            input_read_1_fastq_files => [$input_fastq_pathname],
-                            output_read_1_fastq_file => $trimmed_input_fastq_pathname,
-                            limit_type => 'reads',
-                            limit_value => $self->trimmer_params,
-                            seed_phrase => $seed_phrase,
-                        );
-                    } 
-                    elsif ($self->trimmer_name eq 'normalize') {
-                        my $params = $self->trimmer_params;
-                        my ($read_length,$reads) = split(':',$params);
-                        my $trim = Genome::Model::Tools::Fastq::Trim->execute(
-                            read_length => $read_length,
-                            orientation => 3,
-                            input => $input_fastq_pathname,
-                            output => $trimmed_input_fastq_pathname,
-                        );
-                        unless ($trim) {
-                            die('Failed to trim reads using test_trim_and_random_subset');
-                        }
-                        my $random_input_fastq_pathname = Genome::Sys->create_temp_file_path('random-sanger-fastq-'. $counter);
-                        $trimmer = Genome::Model::Tools::Fastq::RandomSubset->create(
-                            input_read_1_fastq_files => [$trimmed_input_fastq_pathname],
-                            output_read_1_fastq_file => $random_input_fastq_pathname,
-                            limit_type  => 'reads',
-                            limit_value => $reads,
-                            seed_phrase => $instrument_data->run_name .'_'. $instrument_data->id,
-                        );
-                        $trimmed_input_fastq_pathname = $random_input_fastq_pathname;
-                    } 
-                    else {
-                        # TODO: modularize the above and refactor until they work in this logic:
-                        # Then ensure that the trimmer gets to work on paired files, and is 
-                        # a more generic "preprocess_reads = 'foo | bar | baz' & "[1,2],[],[3,4,5]"
-                        my $params = $self->trimmer_params;
-                        my @params = eval("no strict; no warnings; $params");
-                        if ($@) {
-                            die "error in params: $@\n$params\n";
-                        }
 
-                        my $class_name = 'Genome::Model::Tools::FastQual::Trimmer';
-                        my @words = split(' ',$self->trimmer_name);
-                        for my $word (@words) {
-                            my @parts = map { ucfirst($_) } split('-',$word);
-                            $class_name .= "::" . join('',@parts);
-                        }
-                        eval {
-                            $trimmer = $class_name->create(
-                                input => [$input_fastq_pathname],
-                                output => [$trimmed_input_fastq_pathname],
-                                @params,
-                            );
-                        };
-                        unless ($trimmer) {
-                            $self->error_message(
-                                sprintf(
-                                    "Unknown read trimmer_name %s.  Class $class_name params @params. $@",
-                                    $self->trimmer_name,
-                                    $class_name
-                                )
-                            );
-                            die($self->error_message);
-                        }
-                    }
-                    unless ($trimmer) {
-                        $self->error_message('Failed to create fastq trim command');
-                        die($self->error_message);
-                    }
-                    unless ($trimmer->execute) {
-                        $self->error_message('Failed to execute fastq trim command '. $trimmer->command_name);
-                        die($self->error_message);
-                    }
-                    if ($self->trimmer_name eq 'normalize') {
-                        my @empty = ();
-                        $trimmer->_index(\@empty);
-                    }
-                    $input_fastq_pathname = $trimmed_input_fastq_pathname;
-                }
-            }
-            push @input_fastq_pathnames, $input_fastq_pathname;
-            $counter++;
+        my $temp_directory = Genome::Sys->create_temp_directory;
+
+        my $trimmer_name = $self->trimmer_name;
+        undef($trimmer_name) if $trimmer_name eq 'trimq2_shortfilter';
+
+        @input_fastq_pathnames = $instrument_data->dump_trimmed_fastq_files(
+            segment_params => \%segment_params,
+            trimmer_name => $self->trimmer_name,
+            trimmer_version => $self->trimmer_version,
+            trimmer_params => $self->trimmer_params,
+            directory => $temp_directory,
+        );
+
+        my @report_files = glob($temp_directory ."/*report*");
+        for my $report_file (@report_files) {
+            my $staged_path = $report_file;
+            my $staging_directory = $self->temp_staging_directory;
+            $staged_path =~ s/$temp_directory/$staging_directory/;
+            Genome::Sys->copy_file($report_file, $staged_path);
+            unlink($report_file);
         }
 
         # this previously happened at the beginning of _run_aligner
@@ -1892,6 +1653,41 @@ sub _prepare_reference_sequences {
     return 1;
 }
 
+sub merge_sequence_dictionaries {
+    my ($class, $output_fh, $primary_file, @additional_files) = @_;
+    
+    my $primary_fh = new IO::File("<$primary_file") or confess "Failed to open sequence dictionary file $primary_file for reading.";
+    my $saw_sq = 0;
+    my $cached_line;
+    while (my $line = <$primary_fh>) {
+        if (substr($line, 0, 4) eq '@SQ ') {
+            $saw_sq = 1;
+        } elsif ($saw_sq) {
+            $cached_line = $line;
+            last;
+        } 
+        $output_fh->print($line);
+    }
+    
+    
+    for my $file (@additional_files) {
+        my $input_fh = new IO::File("<$file") or confess "Failed to open sequence dictionary file $file for reading.";
+        $saw_sq = 0;
+        while (my $line = <$input_fh>) {
+            if (substr($line, 0, 3) ne '@SQ') {
+                last if $saw_sq;
+            } else {
+                $saw_sq = 1;
+                $output_fh->print($line);
+            }
+        }
+        $input_fh->close();
+    }
+
+    $output_fh->print($cached_line);
+    $output_fh->print($_) while <$primary_fh>;
+}
+
 sub get_or_create_sequence_dictionary {
     my $self = shift;
 
@@ -1913,9 +1709,15 @@ sub get_or_create_sequence_dictionary {
     $self->status_message("Species from alignment: ".$species);
 
     my $ref_build = $self->reference_build;
-    my $seq_dict = $ref_build->get_sequence_dictionary("sam",$species,$self->picard_version);
-
-    return $seq_dict;
+    my @seq_dicts;
+    while ($ref_build) {
+        unshift(@seq_dicts, $ref_build->get_sequence_dictionary("sam",$species,$self->picard_version));
+        $ref_build = $ref_build->append_to;
+    }
+    return $seq_dicts[0] if @seq_dicts == 1;
+    my ($fh, $path) = Genome::Sys->create_temp_file();
+    $self->merge_sequence_dictionaries($fh, @seq_dicts);
+    return $path;
 }
 
 sub construct_groups_file {
@@ -1944,7 +1746,7 @@ sub construct_groups_file {
 
 
     # build the header
-    my $id_tag = $self->instrument_data->id;
+    my $id_tag = $self->read_and_platform_group_tag_id;
     my $pu_tag = sprintf("%s.%s",$self->instrument_data->run_identifier,$self->instrument_data->subset_name);
     my $lib_tag = $self->instrument_data->library_name;
     my $date_run_tag = $self->instrument_data->run_start_date_formatted;
@@ -1974,8 +1776,17 @@ sub construct_groups_file {
     }
 
     return 1;
+}
 
+sub read_and_platform_group_tag_id {
+    my $self = shift;
+    my $id = $self->instrument_data->id;
 
+    if ($self->instrument_data_segment_id) {
+        $id .= "-". $self->instrument_data_segment_id;
+    }
+
+    return $id;
 }
 
 sub aligner_params_for_sam_header {
@@ -2007,6 +1818,27 @@ sub supports_streaming_to_bam {
 
 sub accepts_bam_input {
     0;
+}
+
+sub aligner_params_required_for_index {
+    0;
+}
+
+sub get_reference_sequence_index {
+    my $self = shift;
+    my $build = shift || $self->reference_build;
+    my $index = Genome::Model::Build::ReferenceSequence::AlignerIndex->get(aligner_name=>$self->aligner_name, aligner_version=>$self->aligner_version, aligner_params=>$self->aligner_params, reference_build=>$build);
+
+    if (!$index) {
+        die $self->error_message(sprintf("No reference index prepared for %s with params %s and reference build %s", $self->aligner_name, $self->aligner_params, $self->reference_build->id));
+    }
+
+    return $index;
+}
+
+# this behavior was in the alignment class earlier and was set as changeable in SoftwareResult::Stageable.
+sub _needs_symlinks_followed_when_syncing {
+    1;
 }
 
 1;

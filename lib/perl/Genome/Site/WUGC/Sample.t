@@ -1,4 +1,5 @@
 #!/usr/bin/env perl
+
 use strict;
 use warnings;
 
@@ -44,6 +45,31 @@ is($sample->age, 99, 'age');
 is($sample->body_mass_index, 22.4, 'body_mass_index');
 
 $sample = Genome::Site::WUGC::Sample->get($id);
+
+my $file = '/gsc/var/cache/testsuite/data/Genome-Sample/test.xml';
+my $size = -s $file;
+my $add_file = eval{ $sample->add_file($file); };
+diag($@) if $@;
+ok($add_file, 'Add file');
+my @files = $sample->get_files;
+is(@files, 1, 'Got files');
+$add_file = eval{ $sample->add_file($file); };
+diag($@) if $@;
+ok(!$add_file, 'Fail to re-add file');
+my $alloc = $sample->disk_allocation;
+ok($alloc, 'disk allocation') or die;
+is($alloc->kilobytes_requested, $size, 'kb requested');
+my $file2 = '/gsc/var/cache/testsuite/data/Genome-Sample/test2.xml';
+my $size2 = -s $file2;
+$add_file = eval{ $sample->add_file($file2); };
+diag($@) if $@;
+ok($add_file, 'Add another file');
+@files = $sample->get_files;
+is(@files, 2, 'Got files');
+is($alloc->kilobytes_requested, $size + $size2, 'updated kb requested');
+is($sample->data_directory, $alloc->absolute_path, 'sample data directory');
+
+$sample = Genome::Sample->get($id);
 ok($sample, 'got new sample');
 
 done_testing();

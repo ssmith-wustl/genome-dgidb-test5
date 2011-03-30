@@ -11,18 +11,10 @@ class Genome::ProcessingProfile::RnaSeq::Solexa {
 
 sub stages {
     my @stages = qw/
-        prepare_reads
         alignment
         expression
     /;
     return @stages;
-}
-
-sub prepare_reads_job_classes {
-    my @sub_command_classes = qw/
-        Genome::Model::Event::Build::RnaSeq::PrepareReads
-    /;
-    return @sub_command_classes;
 }
 
 sub alignment_job_classes {
@@ -38,22 +30,6 @@ sub expression_job_classes{
         'Genome::Model::Event::Build::RnaSeq::Expression',
     );
     return @steps;
-}
-
-sub prepare_reads_objects {
-
-    my ($self, $model) = @_;
-
-    my @assignments = $model->instrument_data_assignments();
-
-    my @instrument_data_ids = map { $_->instrument_data_id() } @assignments;
-    my @solexa_instrument_data = Genome::InstrumentData::Solexa->get( \@instrument_data_ids );
-    unless (@solexa_instrument_data) {
-        $self->warning_message('Failed to find instrument data for model: '.$model->id.'. Now try imported data');
-        @solexa_instrument_data = Genome::InstrumentData::Imported->get( \@instrument_data_ids );
-        $self->warning_message('Failed to find imported data for model: '.$model->id.' either') unless @solexa_instrument_data;
-    }
-    return @solexa_instrument_data;
 }
 
 sub alignment_objects {

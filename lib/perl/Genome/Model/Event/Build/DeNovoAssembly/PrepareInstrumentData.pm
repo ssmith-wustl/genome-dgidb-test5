@@ -185,18 +185,54 @@ my %qual_types = (
     'Genome::InstrumentData::Imported' => 'sanger',
     #'Genome::Instrument::Data::454' => 'phred', # not ready
 );
+
+sub _instrument_data_qual_type_in {
+    my ( $self, $instrument_data ) = @_;
+    
+    if ( $instrument_data->class eq 'Genome::InstrumentData::Solexa' ) {
+        return 'sanger' if -s $instrument_data->bam_path;
+        return 'illumina';
+    }
+
+    if ( $instrument_data->class eq 'Genome::InstrumentData::Imported' ) {
+        return 'sanger';
+    }
+
+    return;
+}
+
+sub _instrument_data_qual_type_out {
+    my ( $self, $instrument_data ) = @_;
+
+    return 'illumina' if $instrument_data->class eq 'Genome::InstrumentData::Solexa';
+    return 'sanger' if $instrument_data->class eq 'Genome::InstrumentData::Imported';
+
+    return;
+}
+
 sub _process_instrument_data {
     my ($self, $instrument_data) = @_;
 
     # Inst data quality type
     my ($instrument_data_class) = $instrument_data->class;
-    my $qual_type = $qual_types{$instrument_data_class};
-    unless ( $qual_type ) {
-        $self->error_message("Unsupported instrument data class ($instrument_data_class).");
+    #my $qual_type = $qual_types{$instrument_data_class};
+    #unless ( $qual_type ) {
+        #$self->error_message("Unsupported instrument data class ($instrument_data_class).");
+        #return;
+    #}
+
+    my $qual_type_in = $self->_instrument_data_qual_type_in( $instrument_data );
+    unless ( $qual_type_in ) {
+        $self->error_message( "Can't determine quality type in for inst data, ID: ".$instrument_data->id );
         return;
     }
 
-    $self->status_message('Processing: '.join(' ', $instrument_data_class, $instrument_data->id, $qual_type) );
+    my $qual_type_out = $self->_instrument_data_qual_type_out( $instrument_data );
+    unless ( $qual_type_out ) {
+        $self->error_message( "Can't determine quality type out for inst data, ID: ".$instrument_data->id );
+        return;
+    }
+    $self->status_message('Processing: '.join(' ', $instrument_data_class, $instrument_data->id, $qual_type_in) );
 
     # In/out files
     my @input_files = $self->_fastq_files_from_solexa($instrument_data)
@@ -210,10 +246,11 @@ sub _process_instrument_data {
     my %fast_qual_params = (
         input => \@input_files,
         output => \@output_files,
-        type_in => $qual_type,
-        type_out => $qual_type, # TODO make sure this is sanger
+        type_in => $qual_type_in,
+        type_out => $qual_type_out, # TODO make sure this is sanger
         metrics_file => $self->_metrics_file,
     );
+
     if ( not defined $read_processor and not defined $self->_base_limit ) {
         # Run through the base fast qual command. This will rm quality headers and get metrics
         $fast_qual_class = 'Genome::Model::Tools::FastQual';
@@ -248,6 +285,7 @@ sub _process_instrument_data {
         $self->error_message("Cannot execute fast qual command.");
         return;
     }
+
     $self->status_message('Execute OK');
 
     $self->_update_metrics
@@ -263,43 +301,62 @@ sub _fastq_files_from_solexa {
 
     $self->status_message("Getting fastq files from solexa instrument data ".$inst_data->id);
 
-    my $archive_path = $inst_data->archive_path;
-    $self->status_message("Verifying archive path: $archive_path");
-    unless ( -s $archive_path ) {
-        $self->error_message(
-            "No archive path for instrument data (".$inst_data->id.")"
-        );
-        return;
-    }
-    $self->status_message("Archive path OK");
+    my @fastq_files;
 
-    # tar to tempdir
-    my $tempdir = $self->_tempdir;
-    my $inst_data_tempdir = $tempdir.'/'.$inst_data->id;
-    $self->status_message("Creating temp dir: $inst_data_tempdir");
-    Genome::Sys->create_directory($inst_data_tempdir)
-        or die;
-    $self->status_message("Temp dir OK");
+    if ( not $inst_data->bam_path ) {
+        my $archive_path = $inst_data->archive_path;
+        $self->status_message("No bam path for instrument dataq, verifying archive path: $archive_path");
+        unless ( -s $archive_path ) {
+            $self->error_message(
+                "No archive path for instrument data (".$inst_data->id.")"
+                );
+            return;
+        }
+        $self->status_message("Archive path OK");
 
-    my $tar_cmd = "tar zxf $archive_path -C $inst_data_tempdir";
-    $self->status_message("Running tar: $tar_cmd");
-    unless ( Genome::Sys->shellcmd(cmd => $tar_cmd) ) {
-        $self->error_message("Can't extract archive file $archive_path with command '$tar_cmd'");
-        return;
-    }
-    $self->status_message("Tar OK");
+        # tar to tempdir
+        my $tempdir = $self->_tempdir;
+        my $inst_data_tempdir = $tempdir.'/'.$inst_data->id;
+        $self->status_message("Creating temp dir: $inst_data_tempdir");
+        Genome::Sys->create_directory($inst_data_tempdir)
+            or die;
+        $self->status_message("Temp dir OK");
 
-    # glob files
-    $self->status_message("Checking fastqs we're dumped...");
-    my @fastq_files = glob $inst_data_tempdir .'/*';
-    unless ( @fastq_files ) {
-        $self->error_message("Extracted archive path ($archive_path), but no fastqs found.");
-        return;
+        my $tar_cmd = "tar zxf $archive_path -C $inst_data_tempdir";
+        $self->status_message("Running tar: $tar_cmd");
+        unless ( Genome::Sys->shellcmd(cmd => $tar_cmd) ) {
+            $self->error_message("Can't extract archive file $archive_path with command '$tar_cmd'");
+            return;
+        }
+        $self->status_message("Tar OK");
+
+        # glob files
+        $self->status_message("Checking fastqs we're dumped...");
+        @fastq_files = glob $inst_data_tempdir .'/*';
+        unless ( @fastq_files ) {
+            $self->error_message("Extracted archive path ($archive_path), but no fastqs found.");
+            return;
+        }
+        $self->status_message('Fastq files from archive OK:'.join(", ", @fastq_files));
     }
-    $self->status_message('Fastq files OK:'.join(", ", @fastq_files));
+    else {
+        unless ( -s $inst_data->bam_path ) {
+            $self->error_message("No bam file found or file is zero size: ".$inst_data->bam_path);
+            return;
+        }
+        $self->status_message("Attempting to get fastqs from bam");
+
+        my $tempdir = $self->_tempdir;
+        my $inst_data_tempdir = $tempdir.'/'.$inst_data->id;
+
+        @fastq_files = $inst_data->dump_fastqs_from_bam( directory => $tempdir );
+
+        $self->status_message('Fastq files from bam OK:'.join(", ", @fastq_files));
+    }
 
     return @fastq_files;
 }
+
 #<>#
 
 1;

@@ -8,15 +8,14 @@ class Genome::MiscNote {
     type_name => 'misc note',
     table_name => 'MISC_NOTE',
     id_by => [
-        id => { is => 'NUMBER', len => 10 },
-    ],
-    has => [
         subject_class_name => { is => 'VARCHAR2', len => 255 },
         subject_id         => { is => 'VARCHAR2', len => 255 },
+        header_text        => { is => 'VARCHAR2', len => 200 },
+    ],
+    has => [
         subject            => { is => 'UR::Object', id_class_by => 'subject_class_name', id_by => 'subject_id' },
         editor_id          => { is => 'VARCHAR2', len => 200 },
         entry_date         => { is => 'DATE' },
-        header_text        => { is => 'VARCHAR2', len => 200 },
     ],
     has_optional => [
         body_text          => { is => 'VARCHAR2', len => 1000 },

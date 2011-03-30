@@ -67,7 +67,7 @@ sub execute {
                 . scalar(@models) 
                 . ": @names?"
         );
-        unless ($response eq 'yes') {
+        unless (defined $response and $response eq 'yes') {
             $self->status_message('Not deleting model(s).  Exiting.');
             return 1;
         }

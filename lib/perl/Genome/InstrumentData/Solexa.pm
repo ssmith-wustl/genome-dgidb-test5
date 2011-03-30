@@ -1,11 +1,3 @@
-# review jlolofie:
-# 2. resolve_full_path - remove return that comments say is not needed?
-# 3. add comments to resolve_full_path- why it is trying to find a collection of paths and die if multiple- do the other
-#    file types still get used?
-# 4. dump_to_filesystem() ?
-# 5. resolve_fastq_filenames- funny Temp/ hack not needed anymore
-# 6. resolve_adapter_file - make properties out of paths
-
 package Genome::InstrumentData::Solexa;
 
 use strict;
@@ -215,7 +207,8 @@ class Genome::InstrumentData::Solexa {
         _sls_read_length => { calculate => q| return $self->read_length + 1| },
         _sls_fwd_read_length => { calculate => q| return $self->fwd_read_length + 1| },
         _sls_rev_read_length => { calculate => q| return $self->rev_read_length + 1| },
-        cycles => { calculate => q| return $self->read_length + 1| }, #TODO point to an actual "cycles" column
+        cycles => { calculate => q| return $self->read_length + 1| }, 
+
         short_name => {
             is => 'Text',
             calculate_from => ['run_name'],
@@ -424,7 +417,7 @@ sub dump_sanger_fastq_files {
     if (defined $self->bam_path && -s $self->bam_path) {
        $self->status_message("Now using a bam instead"); 
         $DB::single = 1;
-       return $self->dump_fastqs_from_bam;
+       return $self->dump_fastqs_from_bam(@_);
     }
 
     my @illumina_fastq_pathnames = $self->_unprocessed_fastq_filenames(@_);
@@ -479,6 +472,182 @@ sub dump_sanger_fastq_files {
 
     return @converted_pathnames;
 
+}
+
+sub dump_trimmed_fastq_files {
+    my $self = shift;
+    my %params = @_;
+
+    my $data_directory = $params{directory} || Genome::Sys->create_temp_directory;
+
+    my $segment_params = $params{segment_params};
+
+    my $trimmer_name = $params{trimmer_name};
+    my $trimmer_version = $params{trimmer_version};
+    my $trimmer_params = $params{trimmer_params};
+
+    unless($trimmer_name) {
+        return $self->dump_sanger_fastq_files(%$segment_params, directory => $data_directory);
+    }
+
+    my @fastq_pathnames = $self->dump_sanger_fastq_files(%$segment_params);
+    my @trimmed_fastq_pathnames;
+    my $counter = 0;
+    for my $input_fastq_pathname (@fastq_pathnames) {
+        if($trimmer_name eq 'trimq2_shortfilter') {
+            $self->error_message('Trimmer ' . $trimmer_name . ' is not currently supported by this module.');
+            die $self->error_message;
+        }
+
+        my $trimmed_input_fastq_pathname = $data_directory . '/trimmed-sanger-fastq-' . $counter;
+        my $trimmer;
+        if ($trimmer_name eq 'fastx_clipper') {
+            #THIS DOES NOT EXIST YET
+            $trimmer = Genome::Model::Tools::Fastq::Clipper->create(
+                params => $trimmer_params,
+                version => $trimmer_version,
+                input => $input_fastq_pathname,
+                output => $trimmed_input_fastq_pathname,
+            );
+        }
+        elsif ($trimmer_name eq 'trim5') {
+            $trimmer = Genome::Model::Tools::Fastq::Trim5->create(
+                length => $trimmer_params,
+                input => $input_fastq_pathname,
+                output => $trimmed_input_fastq_pathname,
+            );
+        }
+        elsif ($trimmer_name eq 'bwa_style') {
+            my ($trim_qual) = $self->trimmer_params =~ /--trim-qual-level\s*=?\s*(\S+)/;
+            $trimmer = Genome::Model::Tools::Fastq::TrimBwaStyle->create(
+                trim_qual_level => $trim_qual,
+                fastq_file      => $input_fastq_pathname,
+                out_file        => $trimmed_input_fastq_pathname,
+                qual_type       => 'sanger',  #hardcoded for now
+                report_file     => $data_directory.'/trim_bwa_style.report.'.$counter,
+            );
+        }
+        elsif ($trimmer_name =~ /trimq2_(\S+)/) {
+            #This is for trimq2 no_filter style
+            #move trimq2.report to alignment directory
+
+            my %trimq2_params = (
+                fastq_file  => $input_fastq_pathname,
+                out_file    => $trimmed_input_fastq_pathname,
+                report_file => $data_directory.'/trimq2.report.'.$counter,
+                trim_style  => $1,
+            );
+            my ($qual_level, $string) = $self->_get_trimq2_params($trimmer_params);
+
+            my ($primer_sequence) = $trimmer_params =~ /--primer-sequence\s*=?\s*(\S+)/;
+            $trimq2_params{trim_qual_level} = $qual_level if $qual_level;
+            $trimq2_params{trim_string}     = $string if $string;
+            $trimq2_params{primer_sequence} = $primer_sequence if $primer_sequence;
+            $trimq2_params{primer_report_file} = $data_directory.'/trim_primer.report.'.$counter if $primer_sequence;
+
+            $trimmer = Genome::Model::Tools::Fastq::Trimq2::Simple->create(%trimq2_params);
+        }
+        elsif ($trimmer_name eq 'random_subset') {
+            my $seed_phrase = $self->run_name .'_'. $self->id;
+            $trimmer = Genome::Model::Tools::Fastq::RandomSubset->create(
+                input_read_1_fastq_files => [$input_fastq_pathname],
+                output_read_1_fastq_file => $trimmed_input_fastq_pathname,
+                limit_type => 'reads',
+                limit_value => $trimmer_params,
+                seed_phrase => $seed_phrase,
+            );
+        }
+        elsif ($trimmer_name eq 'normalize') {
+            my ($read_length,$reads) = split(':',$trimmer_params);
+            my $trim = Genome::Model::Tools::Fastq::Trim->execute(
+                read_length => $read_length,
+                orientation => 3,
+                input => $input_fastq_pathname,
+                output => $trimmed_input_fastq_pathname,
+            );
+            unless ($trim) {
+                die('Failed to trim reads using test_trim_and_random_subset');
+            }
+            my $random_input_fastq_pathname = $data_directory . '/random-sanger-fastq-' . $counter;
+            $trimmer = Genome::Model::Tools::Fastq::RandomSubset->create(
+                input_read_1_fastq_files => [$trimmed_input_fastq_pathname],
+                output_read_1_fastq_file => $random_input_fastq_pathname,
+                limit_type  => 'reads',
+                limit_value => $reads,
+                seed_phrase => $self->run_name .'_'. $self->id,
+            );
+            $trimmed_input_fastq_pathname = $random_input_fastq_pathname;
+        }
+        else {
+            # TODO: modularize the above and refactor until they work in this logic:
+            # Then ensure that the trimmer gets to work on paired files, and is
+            # a more generic "preprocess_reads = 'foo | bar | baz' & "[1,2],[],[3,4,5]"
+            my @params = eval("no strict; no warnings; $trimmer_params");
+            if ($@) {
+                die "error in params: $@\n$trimmer_params\n";
+            }
+
+            my $class_name = 'Genome::Model::Tools::FastQual::Trimmer';
+            my @words = split(' ',$trimmer_name);
+            for my $word (@words) {
+                my @parts = map { ucfirst($_) } split('-',$word);
+                $class_name .= "::" . join('',@parts);
+            }
+            eval {
+                $trimmer = $class_name->create(
+                    input => [$input_fastq_pathname],
+                    output => [$trimmed_input_fastq_pathname],
+                    @params,
+                );
+            };
+            unless ($trimmer) {
+                $self->error_message(
+                    sprintf(
+                        "Unknown read trimmer_name %s.  Class $class_name params @params. $@",
+                        $trimmer_name,
+                        $class_name
+                    )
+                );
+                die($self->error_message);
+            }
+        }
+        unless ($trimmer) {
+            $self->error_message('Failed to create fastq trim command');
+            die($self->error_message);
+        }
+        unless ($trimmer->execute) {
+            $self->error_message('Failed to execute fastq trim command '. $trimmer->command_name);
+            die($self->error_message);
+        }
+
+        if ($trimmer_name eq 'normalize') {
+            my @empty = ();
+            $trimmer->_index(\@empty);
+        }
+
+        if ($input_fastq_pathname =~ m/^\/tmp/) {
+            $self->status_message("Removing original file before trimming to save space: $input_fastq_pathname");
+            unlink($input_fastq_pathname);
+        }
+
+        push @trimmed_fastq_pathnames, $trimmed_input_fastq_pathname;
+        $counter++;
+    }
+
+    return @trimmed_fastq_pathnames;
+}
+
+sub _get_trimq2_params {
+    my $self = shift;
+    my $trimmer_params = shift;
+
+    #for trimq2_shortfilter, input something like "32:#" (length:string) in processing profile as trimmer_params, for trimq2_smart1, input "20:#" (quality_level:string)
+    if ($trimmer_params !~ /:/){
+        $trimmer_params = '::';
+    }
+    my ($first_param, $string) = split /\:/, $trimmer_params;
+
+    return ($first_param, $string);
 }
 
 sub _unprocessed_fastq_filenames {

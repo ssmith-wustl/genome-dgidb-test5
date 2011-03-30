@@ -14,6 +14,22 @@ class Genome::Model::Tools::DetectVariants2::GatkSomaticIndel{
         detect_svs => {},
         detect_indels => { value => 1 },
     ],
+    has => [
+        mb_of_ram => {
+            is => 'Text',
+            doc => 'Amount of memory to allow GATK to use',
+            default => 5000,
+        },
+    ],
+    has_param => [
+         lsf_queue => {
+             default_value => 'long',
+         },
+         lsf_resource => {
+             # fscache will select blades with fscaching of the human reference directory
+             default_value => "-M 8000000 -R 'select[type==LINUX64 && mem>8000 && fscache] rusage[mem=8000]'",
+         },
+     ],
 };
 
 sub _detect_variants {
@@ -23,6 +39,8 @@ sub _detect_variants {
         normal_bam => $self->control_aligned_reads_input,
         output_file => $self->_temp_staging_directory."/gatk_output_file",
         bed_output_file => $self->_temp_staging_directory."/indels.hq",
+        mb_of_ram => $self->mb_of_ram,
+        reference => $self->reference_sequence_input,
     );
     unless($gatk_cmd->execute){
         $self->error_message("Failed to run GATK command.");

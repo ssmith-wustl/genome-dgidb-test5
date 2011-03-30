@@ -74,10 +74,14 @@ sub schedule_rebuild {
         }
     }
 
-    my @builds_to_kill = grep{$_->status eq 'Scheduled' or $_->status eq 'Running'} $self->builds;
-    if (scalar(@builds_to_kill)){
-        my $rv = Genome::Model::Build::Command::Stop->execute(builds => [@builds_to_kill]);
-        $self->warning_message("Failed to remove pending convergence models: " . join(",", map($_->id, @builds_to_kill))) unless $rv; 
+    my @builds_to_abandon = grep{ $_->status eq 'Scheduled' or $_->status eq 'Running' } $self->builds;
+    if (@builds_to_abandon){
+        Genome::Model::Build::Command::Abandon->execute(builds => [@builds_to_abandon]);
+
+        my @failed_to_abandon = grep{ $_->status ne 'Abandoned' } @builds_to_abandon;
+        if (@failed_to_abandon) {
+            $self->warning_message("Failed to abandon scheduled/running convergence builds: " . join(", ", map { $_->id } @failed_to_abandon) . ".");
+        }
     }
 
     $self->build_requested(1);

@@ -27,13 +27,13 @@ class Genome::Model::Tools::Nimblegen::DesignFromAnnotation {
         doc => "The number of bases to span the region upstream and downstream of a variant locus",
     },
     exclude_non_canonical_sites => {
-        type => 'Bool',
+        type => 'Boolean',
         is_optional => 1,
         default => 1,
         doc => "Whether or not to remove sites on the mitochondria or non-chromosomal contigs",
     },
     include_y => {
-        type => 'Bool',
+        type => 'Boolean',
         is_optional => 1,
         default => 1,
         doc => "Whether or not to include sites on the Y chromosome in the output",
@@ -117,7 +117,8 @@ sub execute {
         }
 
         #If the span goes out of bounds of the chromosome, then clip it
-        my $new_start = (( $start - $span < 1 ) ? 0 : $start - $span - 1 );
+        #Nimblegen design files are one based, so don't clip to 0 and don't calculate the start as a 0-based coordinate
+        my $new_start = (( $start - $span < 1 ) ? 1 : $start - $span);
         my $new_stop = (( $stop + $span > $chromosome_lengths{$chr} ) ? $chromosome_lengths{$chr} : $stop + $span );
         printf $output_fh "chr%s\t%d\t%d\t%d\t%s\n", $chr, $new_start, $new_stop, ($new_stop - $new_start), $line;
     }
@@ -129,7 +130,7 @@ sub execute {
 }
 
 sub help_brief {
-    "Takes an annotation file and produces a BED file for capture validation.";
+    "Takes an annotation file and produces a Design file for capture validation.";
 }
 
 sub help_detail {

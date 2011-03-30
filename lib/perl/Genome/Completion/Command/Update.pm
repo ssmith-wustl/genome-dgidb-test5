@@ -6,6 +6,18 @@ use warnings;
 class Genome::Completion::Command::Update {
     is => 'Genome::Command::Base',
     doc => 'update the tab completion spec files (.opts)',
+    has => [
+        git_add => {
+            is => 'Boolean',
+            doc => 'git add the changed files after update',
+            default => 0,
+        },
+        git_commit => {
+            is => 'Boolean',
+            doc => 'git commit the changed files after update',
+            default => 0,
+        },
+    ],
 };
 
 sub help_detail {
@@ -39,8 +51,15 @@ sub execute {
     my ($genome_opts) = grep { $_ =~ /Command\.pm\.opts/ } @files;
     $genome_opts =~ s/^\s*M\s*//;
     if ($gmt_opts || $genome_opts) {
-        system("git add $gmt_opts $genome_opts");
-        $self->status_message("Remember to push the committed .opts file(s)!");
+        if ($self->git_add) {
+            system("git add $gmt_opts $genome_opts");
+            $self->status_message("Added .opts file(s): " . join(" ", $gmt_opts, $genome_opts));
+            $self->status_message("Remember to commit the .opts file(s)!");
+        }
+        elsif ($self->git_commit) {
+            system("git commit -m 'genome completion updated opts files' $gmt_opts $genome_opts");
+            $self->status_message("Committed .opts file(s): " . join(" ", $gmt_opts, $genome_opts));
+        }
     }
 
 

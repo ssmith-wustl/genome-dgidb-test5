@@ -106,6 +106,14 @@ my $model = Genome::Model->create(
 );
 ok($model, 'create model');
 
+# name
+is($model->default_model_name, 'TEST-00.tester', 'default model name');
+is(
+    $model->default_model_name(capture_target => 'glutius maximus', roi => 'poop'),
+    'TEST-00.tester.capture.glutius_maximus.poop',
+    'default model name w/ capture and roi',
+);
+
 # recreate fails
 $model_fail = eval {
     Genome::Model->create(
