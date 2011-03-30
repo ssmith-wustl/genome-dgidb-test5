@@ -17,7 +17,8 @@ class Genome::Model::Tools::AmpliconAssembly {
         },
         amplicon_assembly => {
             is => 'Genome::AmpliconAssembly',
-            via => 'directory',
+            calculate_from => 'directory',
+            calculate => q{ return Genome::AmpliconAssembly->get(directory => $directory); },
         },
         chromat_dir => { via => 'amplicon_assembly' },
         phd_dir => { via => 'amplicon_assembly' },
