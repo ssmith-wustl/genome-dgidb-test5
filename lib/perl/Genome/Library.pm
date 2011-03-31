@@ -6,24 +6,19 @@ use Genome;
 
 class Genome::Library {
     is => 'Genome::Notable',
-    table_name => 'GSC.LIBRARY_SUMMARY',
     id_by => [
         library_id => { 
             is => 'Number', 
-            len => 20, 
-            column_name => 'LIBRARY_ID', 
         },
     ],
     has => [
         name => { 
             is => 'Text', 
-            len => 64, 
             column_name => 'FULL_NAME', 
             doc => 'Name of the library. Usually has the sample name and an extension.', 
         },
         sample_id => { 
             is => 'Text', 
-            column_name => 'SAMPLE_ID',
         },
         sample => { 
             is => 'Genome::Sample', 
@@ -38,7 +33,7 @@ class Genome::Library {
     ],
     has_optional => [
         fragment_size_range => { 
-            is => 'Text', len => 64, 
+            is => 'Text', 
             column_name => 'LIBRARY_INSERT_SIZE',
             doc => 'intended size range of fragments from library construction' 
         },
@@ -74,6 +69,8 @@ class Genome::Library {
             doc => 'ID of the sample\'s source' 
         },
     ],
+    table_name => 'FRAGMENT_LIBRARY',
+    schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
 
