@@ -10,7 +10,7 @@ class Genome::Subject {
     subclassify_by => 'subclass_name',
     id_by => [
         subject_id => {
-            is => 'Text',
+            is => 'Number',
         },
     ],
     has => [
@@ -27,6 +27,10 @@ class Genome::Subject {
     has_optional => [
         name => {
             is => 'Text',
+        },
+        common_name => {
+            calculate_from => 'name',
+            calculate => q{ return $name },
         },
         description => { 
             is => 'Text',
@@ -78,11 +82,13 @@ sub __display_name__ {
 sub create {
     my ($class, %params) = @_;
 
-    # Extra parameters are turned into attributes later
+    # This extra processing allows for someone to create a subject with properties that aren't listed in any of the
+    # class definitions. Instead of having UR catch these extra and die, they are captured here and later turned into
+    # subject attributes.
     my %extra;
-    my @attributes = map { $_->property_name } $class->__meta__->properties;
+    my @property_names = map { $_->property_name } ($class->__meta__->properties, $class->__meta__->all_id_by_property_metas);
     for my $param (sort keys %params) {
-        unless (grep { $param eq $_ } @attributes) {
+        unless (grep { $param eq $_ } @property_names) {
             $extra{$param} = delete $params{$param};
         }
     }
