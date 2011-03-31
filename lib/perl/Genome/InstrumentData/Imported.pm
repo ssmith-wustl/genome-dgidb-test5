@@ -12,7 +12,7 @@ use File::stat;
 use File::Path;
 
 class Genome::InstrumentData::Imported {
-    is => [ 'Genome::InstrumentData','Genome::Sys' ],
+    is => [ 'Genome::Site::WUGC::InstrumentData','Genome::Sys' ],
     type_name => 'imported instrument data',
     table_name => 'IMPORTED_INSTRUMENT_DATA',
     subclassify_by => 'subclass_name',
@@ -49,7 +49,7 @@ class Genome::InstrumentData::Imported {
         sample => { is => 'Genome::Sample', via => 'library', to => 'sample', },
         sample_id => { is=> 'Text', via => 'sample', to => 'id', },
         sample_name => { is=> 'Text', via => 'sample', to => 'name', },
-        source => { is => 'Genome::Measurable', via => 'sample', to => 'source', },
+        source => { is => 'Genome::Subject', via => 'sample', to => 'source', },
         source_id => { is=> 'Text', via => 'source', to => 'id', },
         source_name => { is=> 'Text', via => 'source', to => 'name', },
         taxon => { is => 'Genome::Taxon', via => 'source', to => 'taxon', },
@@ -179,7 +179,7 @@ sub create {
     my $self = $class->SUPER::create(%params);
 
     $self->_old_sample_id($self->sample_id);
-
+    $self->_old_sample_name($self->sample_name);
     return $self;
 }
 
