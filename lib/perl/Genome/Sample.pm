@@ -96,8 +96,6 @@ class Genome::Sample {
         source => { 
             is => 'Genome::Subject',
             id_by => 'source_id',
-            is_mutable => 1,
-            where => [ 'subject_type in' => [qw/ organism_individual population_group /, 'organism individual', 'population group', ]],
             doc => 'The patient/individual organism from which the sample was taken, or the population for pooled samples.',
         },
         source_type => { 
@@ -164,7 +162,8 @@ class Genome::Sample {
             id_by => 'taxon_id',
         },
         species_name => { 
-            via => 'taxon', 
+            calculate_from => 'taxon',
+            calculate => q{ return $taxon->name; },
             doc => 'the name of the species of the sample source\'s taxonomic category' 
         },
         # TODO What are these for? What do they represent?
