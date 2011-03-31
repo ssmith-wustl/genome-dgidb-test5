@@ -39,7 +39,7 @@ class Genome::InstrumentData {
         },
         sample_source => { via => 'sample', to => 'source' },
         sample_source_name => { via => 'sample_source', to => 'name' },
-        taxon => { via => 'sample' },
+        taxon => { is => 'Genome::Taxon', via => 'sample' },
         species_name => { via => 'taxon' },
     ],
     has_many_optional => [
