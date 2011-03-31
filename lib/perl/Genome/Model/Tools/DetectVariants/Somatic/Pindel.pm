@@ -45,7 +45,11 @@ class Genome::Model::Tools::DetectVariants::Somatic::Pindel {
             is_input => 1,
             is_output => 1,
         },
-
+        mem_usage => {
+            is => 'Text',
+            doc => 'This is the number of MB of memory to request for this instance of pindel',
+            default => '16000',
+        },
         # Temporary output files
         _temp_long_insertion_output => {
             calculate_from => ['_temp_staging_directory'],
@@ -115,7 +119,8 @@ class Genome::Model::Tools::DetectVariants::Somatic::Pindel {
             default_value => 'long'
         }, 
         lsf_resource => {
-            default_value => "-M 16000000 -R 'select[type==LINUX64 && mem>16000] rusage[mem=16000]'",
+            calculate_from => ['mem_usage'],
+            calculate => q{ "-M ".($mem_usage*1000)." -R 'select[type==LINUX64 && mem>".$mem_usage."] rusage[mem=".$mem_usage."]'"},
         },
     ],
     # These are params from the superclass' standard API that we do not require for this class (dont show in the help)
