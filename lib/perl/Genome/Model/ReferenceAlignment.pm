@@ -355,15 +355,6 @@ sub region_of_interest_set {
     return $roi_set;
 }
 
-sub _files_for_pattern_and_params {
-    my $self = shift;
-    my $pattern = shift;
-    my %params = @_;
-    my $ref_seq_id = delete $params{'ref_seq_id'};
-    Carp::confess("unknown params! " . Data::Dumper::Dumper(\%params)) if keys %params;
-    return $self->_files_for_pattern_and_optional_ref_seq_id($pattern, $ref_seq_id);
-}
-
 sub accumulated_alignments_directory {
     my $self = shift;
     return $self->complete_build_directory . '/alignments';
