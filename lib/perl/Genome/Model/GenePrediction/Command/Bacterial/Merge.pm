@@ -1,5 +1,4 @@
-package Genome::Model::GenePrediction::Command::::Bacterial::Merge;
-
+package Genome::Model::GenePrediction::Command::Bacterial::Merge;
 
 use strict;
 use warnings;

@@ -110,6 +110,11 @@ sub execute {
         return;
     }
 
+    # Add stats to the instrument-data taken from flagstat, etc
+    unless($self->_add_stats){
+        die $self->error_message("Could not complete flagstat operation on imported bam");
+    }
+
     # Rm Original BAM
     if($self->remove_original_bam){
         $self->_remove_original_bam; # no error check
@@ -421,6 +426,55 @@ sub _bail {
     $self->_inst_data->delete;
 
     return 1;
+}
+
+sub _add_stats {
+    my $self = shift;
+    my $data = $self->_run_flagstat;
+    my $inst_data = $self->_inst_data;
+    $inst_data->read_count($data->{'total_reads'});
+    $inst_data->fragment_count($data->{'total_reads'}*2);
+    $inst_data->read_length($self->_read_length);
+    $inst_data->base_count(int($inst_data->read_length) * int($inst_data->fragment_count));
+    if($data->{'reads_paired_in_sequencing'} > 0){
+        $inst_data->is_paired_end(1);
+    }
+    else {
+        $inst_data->is_paired_end(0);
+    }
+    $self->_inst_data($inst_data);
+    return 1;
+}
+
+sub _read_length {
+    my $self = shift;
+    $self->status_message("Now calculating read_length via gmt sam->read_length");
+    my $sam = Genome::Model::Tools::Sam->create;
+    my $read_length = $sam->read_length($self->_inst_data->bam_path);
+    unless(defined($read_length)){
+        die $self->error_message("Was not able to run gmt sam->read_length");
+    }
+    $self->status_message("Finished calculating read_length. read_length=".$read_length);
+    return $read_length;
+}
+
+sub _run_flagstat {
+    my $self = shift;
+    unless(defined($self->_inst_data)){
+        die $self->error_message("No instrument data found in self->_inst_data");
+    }
+    my $flagstat_file = $self->_inst_data->bam_path . ".flagstat";
+    my $flagstat_object = Genome::Model::Tools::Sam::Flagstat->create( bam_file => $self->_inst_data->bam_path, output_file => $flagstat_file);
+    unless(-s $flagstat_file){
+        $self->status_message("Generating flagstat file now...");
+        unless($flagstat_object->execute){
+            die $self->error_message("Failed to run gmt sam flagstat");
+        }
+        $self->status_message("Flagstat file created");
+    }
+    my $flag_data = $flagstat_object->parse_file_into_hashref($flagstat_file);
+
+    return $flag_data;
 }
 
 sub _remove_original_bam {

@@ -23,8 +23,7 @@ use YAML qw( DumpFile LoadFile );
 
 use Bio::SeqIO;
 
-UR::Object::Type->define(
-    class_name => __PACKAGE__,
+class Genome::Model::Tools::Hgmi::Merge (
     is => 'Command',
     has => [
         organism_name => {
@@ -49,7 +48,7 @@ UR::Object::Type->define(
         iprpath => {
             is => 'String',
             doc => "specify different version of iprscan",
-            default => "/gsc/scripts/bin/iprscan",
+            default => '/gsc/scripts/bin/iprscan',
         },
         locus_id => {
             is => 'String',
@@ -102,27 +101,21 @@ EOS
 }
 
 
-sub execute
-{
+sub execute {
     my $self = shift;
 
     my %params = $self->gather_details();
-
-    $self->status_message("running merge now");
+    $self->status_message("Gathered params, now running merge:\n" . Data::Dumper::Dumper(\%params));
     my $rv = Genome::Model::GenePrediction::Command::Bacterial::Merge->execute(%params);
-    $params{iprpath} = $self->iprpath;
 
     unless($rv) {
-        $self->error_message("can't run merge step");
-        # do we need to croak or exit here? or just a return 0?
-        return 0;
+        confess 'Could not run merge step!';
     }
 
     # executed successfully
     $self->validate(\%params);
 
     return 1;
-    
 }
 
 sub gather_details

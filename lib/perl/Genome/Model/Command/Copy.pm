@@ -41,6 +41,12 @@ class Genome::Model::Command::Copy {
             shell_args_position => 3,
         }
     ],
+    has_optional => [
+        _copied_model => {
+            is => "Genome::Model",
+            is_output => 1,
+        }
+    ],
     doc => 'create a new genome model based on an existing one'
 };
 
@@ -181,6 +187,8 @@ sub execute {
             return;
         }
     }
+
+    $self->_copied_model($new_model);
 
     return 1;
 }

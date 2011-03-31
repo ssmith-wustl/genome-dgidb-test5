@@ -38,6 +38,11 @@ is($i_d->original_data_path, '/gsc/var/cache/testsuite/data/Genome-InstrumentDat
 is($i_d->user_name, $ENV{USER}, "user name is correct");
 ok($i_d->description,"description was created: ".$i_d->description);
 ok($i_d->import_date, "date is set");
+ok($i_d->is_paired_end, "is_paired_end is set");
+is($i_d->read_count,2742092, "read_count is set");
+is($i_d->fragment_count, 5484184,"fragment_count is set");
+is($i_d->read_length, 50,"read_length is set");
+is($i_d->base_count,274209200, "base_count is set to 274209200");
 ok(-s $i_d->archive_path, "bam exists");
 
 my $model = $cmd->_model;

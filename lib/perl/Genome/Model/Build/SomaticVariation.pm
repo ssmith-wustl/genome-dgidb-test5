@@ -186,7 +186,8 @@ sub files_ignored_by_diff {
         variants/dispatcher.cmd
         \.vcf$
         \.vcf.idx$
-        workflow.xml$
+        workflow\.xml$
+        \.png$
     );
 }
 

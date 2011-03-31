@@ -6,11 +6,12 @@ use Data::Dumper;
 
 my %proxy :name(proxy:r);
 
-sub AUTOMETHOD
-{
-    my ($self, $id, @args) = @_;
-
-    return $self->proxy->get_method($_, @args);
+#sub AUTOMETHOD
+use Class::AutoloadCAN;
+sub CAN {
+    my ($starting_class, $method, $self, @args) = @_; 
+    #my ($self, $id, @args) = @_;
+    return $self->proxy->get_method($method, @args);
 }
 
 1;

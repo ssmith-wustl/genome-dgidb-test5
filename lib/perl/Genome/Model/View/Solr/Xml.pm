@@ -106,7 +106,7 @@ class Genome::Model::View::Solr::Xml {
                     position => 'content',
                 },
                 {
-                    name => 'subject_common_name',
+                    name => 'individual_common_name',
                     position => 'content',
                 }
 # Loading instrument data is *so* slow

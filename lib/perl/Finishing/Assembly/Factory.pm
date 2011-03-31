@@ -97,11 +97,13 @@ sub default_file_system_path
 }
 
 #- FACTORY IS A INSTANCE MANAGER AND PROXY FOR SCHEMA -#
-sub AUTOMETHOD
-{
-    my ($self, $id, @args) = @_;
+#sub AUTOMETHOD
+use Class::AutoloadCAN;
+sub CAN {
+    my ($starting_class, $requested_method, $self, @args) = @_;
 
-    my $requested_method = $_;
+    #my ($self, $id, @args) = @_;
+    #my $requested_method = $_;
 
     return unless $self->schema->can($requested_method);
 

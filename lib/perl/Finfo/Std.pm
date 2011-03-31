@@ -1,5 +1,4 @@
 package Finfo::Std;
-
 use version; $VERSION = qv('0.0.1');
 
 use strict;
@@ -1098,31 +1097,6 @@ sub STORABLE_thaw
     $self->STORABLE_thaw_post($cloning) if $self->can("STORABLE_thaw_post");
 }
 
-{
-    my $real_can = \&UNIVERSAL::can;
-    no warnings 'redefine', 'once';
-    *UNIVERSAL::can = sub {
-        my ($invocant, $method_name) = @_;
-
-        if (my $sub_ref = $real_can->(@_)) {
-            return $sub_ref;
-        }
-
-        for my $parent_class ( _hierarchy_of( class($invocant) ) )
-        {
-            no strict 'refs';
-            if (my $automethod_ref = *{$parent_class.'::AUTOMETHOD'}{CODE}) {
-                local $CALLER::_ = $_;
-                local $_ = $method_name;
-                if (my $method_impl = $automethod_ref->(@_)) {
-                    return sub { my $inv = shift; $inv->$method_name(@_) }
-                }
-            }
-        }
-
-        return;
-    };
-}
 
 ###################################################
 

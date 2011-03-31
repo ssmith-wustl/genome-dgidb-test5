@@ -270,8 +270,11 @@ sub _execute_build {
     unless ($self->skip_contamination_screen){
         my ($screen_bam, $screen_flagstat) = $self->get_bam_and_flagstat_from_build($screen_build);
 
-        unless ($screen_bam and $screen_flagstat and -e $screen_bam and -e $screen_flagstat){
-            die $self->error_message("Bam or flagstat doesn't exist for contamination screen build");
+        unless ($screen_bam and $screen_flagstat){ 
+            die $self->error_message("Bam or flagstat undefined for contamination screen build(screen bam: $screen_bam, screen flagstat: $screen_flagstat) ");
+        }
+        unless (-e $screen_bam and -e $screen_flagstat){
+            die $self->error_message("Bam or flagstat doesn't exist for contamination screen build(screen bam: $screen_bam, screen flagstat: $screen_flagstat) ");
         }
         $self->symlink($screen_bam, "$data_directory/contamination_screen.bam");
         $self->symlink($screen_flagstat, "$data_directory/contamination_screen.bam.flagstat");
@@ -283,9 +286,14 @@ sub _execute_build {
         $counter++;
         my ($meta_bam, $meta_flagstat) = $self->get_bam_and_flagstat_from_build($meta_build);
         push @meta_bams, $meta_bam;
-        unless ($meta_bam and $meta_flagstat and -e $meta_bam and -e $meta_flagstat){
-            die $self->error_message("Bam or flagstat doesn't exist for metagenomic alignment build $counter");
+        
+        unless ($meta_bam and $meta_flagstat){ 
+            die $self->error_message("Bam or flagstat undefined for metagenomic alignemnt build $counter(meta bam: $meta_bam, meta flagstat: $meta_flagstat) ");
         }
+        unless (-e $meta_bam and -e $meta_flagstat){
+            die $self->error_message("Bam or flagstat doesn't exist for metagenomic alignment build $counter(meta bam: $meta_bam, meta flagstat: $meta_flagstat) ");
+        }
+        
         $self->symlink($meta_bam, "$data_directory/metagenomic_alignment$counter.bam");
         $self->symlink($meta_flagstat, "$data_directory/metagenomic_alignment$counter.bam.flagstat");
     }
@@ -588,22 +596,48 @@ sub symlink {
 
 sub get_bam_and_flagstat_from_build{
     my ($self, $build) = @_;
-    $self->status_message("getting bam and flagstat from build: ".Data::Dumper::Dumper($build));
-    my $aln_dir = $build->accumulated_alignments_directory;
-    $aln_dir =~ /\/build(\d+)\//;
-    my $aln_id = $1;
-    my @bam_file = glob("$aln_dir/$aln_id*bam");
-    unless (@bam_file){
-        $self->error_message("no bam file in alignment directory $aln_dir");
-        return;
+    $self->status_message("getting bam and flagstat from build: ".$build->id);
+    
+    #we have to try two different methods to find the merged bam, one uses the <picard software result id>.bam which is the new way, and the old uses the <build_id>.bam
+
+    my @swus = Genome::SoftwareResult::User->get(user_id=>$build->id);
+
+    my @software_results = grep { ref($_) eq "Genome::InstrumentData::AlignmentResult::Merged" } Genome::SoftwareResult->get(id=>[map {$_->software_result_id} @swus]);
+
+    if (scalar @software_results > 1) {
+        die $self->error_message("Found more than one merged bam alignment software result for metagenomic alignment build ".$build->id);
     }
-    if (@bam_file > 1){
-        $self->error_message("more than one bam file found in alignment directory $aln_dir");
-        return;
+    my $alignment = shift @software_results;
+    my $alignment_file;
+    my $alignment_dir;
+    if ($alignment){
+        $alignment_dir = $alignment->output_dir;
+        $alignment_file = $alignment_dir . "/" . $alignment->id . ".bam";
+        unless (-e $alignment_file){
+            die $self->error_message("merged bam ($alignment_file) for build ".$build->id." from software result doesn't exist");
+        }
+    }else{
+        #try old method
+        $alignment_dir = $build->accumulated_alignments_directory;
+        my $build_id = $build->id;
+        my @alignment_file = glob("$alignment_dir/$build_id*bam");
+        unless (@alignment_file){
+            die $self->error_message("no bam file in alignment directory $alignment_dir");
+        }
+        if (@alignment_file > 1){
+            die $self->error_message("more than one bam file found in alignment directory $alignment_dir");
+        }
+        $alignment_file = shift @alignment_file;
+        unless (-e $alignment_file){
+            die $self->error_message("Failed to find bam for build ".$build->id." in alignments dir $alignment_dir");
+        }
+    } 
+
+    my $flagstat_file = "$alignment_file.flagstat";
+    unless (-e $flagstat_file){
+        die $self->error_message("Failed to flagstat for build ".$build->id." in alignments dir $alignment_dir");
     }
-    my $bam_file = shift @bam_file;
-    my $flagstat_file = "$bam_file.flagstat";
-    return ($bam_file, $flagstat_file);
+    return ($alignment_file, $flagstat_file);
 }
 
 # todo move to the model class
@@ -755,7 +789,7 @@ sub _process_sra_instrument_data {
     unless ($rv){
         die $self->error_message("Couldn't execute PostProcessAndImport command for instrument data ".$instrument_data->id);
     }
-    
+
     my @instrument_data = $cmd->post_processed_instrument_data();
 
     unless (@instrument_data){

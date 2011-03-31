@@ -173,12 +173,18 @@ class Genome::Model {
                                     return;
                                 }
                             | },
-        subject_common_name => {
+        individual_common_name => {
             is => 'Text',
             len => 255,
             calculate_from => 'subject',
-            calculate => q{
-                return $subject->common_name();
+            calculate => q {
+                if ($subject->class eq 'Genome::Individual') {
+                    return $subject->common_name();
+                } elsif($subject->class eq 'Genome::Sample') {
+                    return $subject->patient_common_name();
+                } else {
+                    return undef;
+                }
             }
         },
         subject_type    => { is => 'Text', len => 255, 
