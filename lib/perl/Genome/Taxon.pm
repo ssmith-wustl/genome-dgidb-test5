@@ -19,9 +19,9 @@ class Genome::Taxon {
         },
         # TODO this actually embeds the strain name, parse it away
         species_name => { 
-            is => "Text",
-            calculate => q|$name|, 
-            calculate_from => ['name'],
+            is => 'Text',
+            calculate_from => 'name',
+            calculate => q{ return $name; }, 
         },
         subject_type => { 
             is => 'Text', 
