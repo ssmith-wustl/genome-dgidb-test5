@@ -14,7 +14,7 @@ $ENV{UR_DBI_NO_COMMIT} = "1";
 my $l = Genome::Library->get(sample_id=>2850539269,name=>'TEST-patient1-sample1-lib1');
 ok($l, 'got library');
 
-my $i = Genome::InstrumentData::Imported->create(
+my $i = Genome::Site::WUGC::InstrumentData::Imported->create(
     id => -123,
     library_id              => $l->id, 
     import_source_name      => 'Broad',
@@ -27,7 +27,7 @@ my $i = Genome::InstrumentData::Imported->create(
 );
 
 ok($i, "created a new imported instrument data");
-isa_ok($i,"Genome::InstrumentData::Imported");
+isa_ok($i,"Genome::Site::WUGC::InstrumentData::Imported");
 is($i->id,-123, "id is set");
 is($i->sequencing_platform,'solexa','platform is correct');
 is($i->user_name, $ENV{USER}, "user name is correct");
@@ -43,7 +43,7 @@ ok($i->species_name, 'species name');
 
 #print Data::Dumper::Dumper($i);
 
-my $i2 = Genome::InstrumentData::Imported->create(
+my $i2 = Genome::Site::WUGC::InstrumentData::Imported->create(
     id => -456,
     library_id              => $l->id, 
     import_source_name      => 'Broad',
@@ -56,7 +56,7 @@ my $i2 = Genome::InstrumentData::Imported->create(
 );
 
 ok($i2, "created a new imported instrument data");
-isa_ok($i2,"Genome::InstrumentData::Imported");
+isa_ok($i2,"Genome::Site::WUGC::InstrumentData::Imported");
 is($i2->id, -456, "id is set");
 is($i2->sequencing_platform,'454','platform is correct');
 is($i2->user_name, $ENV{USER}, "user name is correct");
@@ -65,7 +65,7 @@ ok($i2->import_date, "date is set");
 
 # Test Imported.pm against fastq data
 
-my $i3 = Genome::InstrumentData::Imported->create(
+my $i3 = Genome::Site::WUGC::InstrumentData::Imported->create(
     id => -789,
     library_id              => $l->id, 
     import_source_name      => 'Broad',
@@ -79,7 +79,7 @@ my $i3 = Genome::InstrumentData::Imported->create(
 );
 
 ok($i3, "created a new imported instrument data");
-isa_ok($i3,"Genome::InstrumentData::Imported");
+isa_ok($i3,"Genome::Site::WUGC::InstrumentData::Imported");
 is($i3->id,-789, "id is set");
 is($i3->sequencing_platform,'solexa','platform is correct');
 is($i3->user_name, $ENV{USER}, "user name is correct");
@@ -90,7 +90,7 @@ is($i3->run_name, "12345-65432-FC666", "run_name is correct");
 is($i3->short_run_name, "FC666", "short_run_name is correct");
 
 note('genotype microarray');
-my $i4 = Genome::InstrumentData::Imported->create(
+my $i4 = Genome::Site::WUGC::InstrumentData::Imported->create(
     library_id              => $l->id, 
     import_source_name      => 'TCGA',
     original_data_path      => '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Command-Import-Fastq/s_5_1_sequence.txt,/gsc/var/cache/testsuite/data/Genome-InstrumentData-Command-Import-Fastq/s_5_2_sequence.txt',
@@ -99,7 +99,7 @@ my $i4 = Genome::InstrumentData::Imported->create(
     description             => 'Imported iscan genotype micrarray file from TCGA',
 );
 ok($i4, "created a new imported instrument data");
-isa_ok($i4,"Genome::InstrumentData::Imported");
+isa_ok($i4,"Genome::Site::WUGC::InstrumentData::Imported");
 my $alloc = Genome::Disk::Allocation->__define__(
     #id => $id,
     #allocator_id => $id,
@@ -130,7 +130,7 @@ ok($ok, "saves to the database!");
 $i4->delete;
 my @errors = grep { /^Cannot\ remove\ instrument\ data/ } $i4->error_message;
 ok(@errors > 0, "got error when trying to delete instrument data that has alignment results");
-ok($i4->isa('Genome::InstrumentData::Imported'), "Genome::InstrumentData::Imported still exists and is correct type");
+ok($i4->isa('Genome::Site::WUGC::InstrumentData::Imported'), "Genome::Site::WUGC::InstrumentData::Imported still exists and is correct type");
 
 done_testing();
 exit;

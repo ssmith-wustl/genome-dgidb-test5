@@ -1,8 +1,4 @@
-package Genome::InstrumentData::Imported;
-
-#REVIEW fdu 11/17/2009
-#More methods could be implemented for calculating metrics and
-#resolving file path with Imported-based models soon in use
+package Genome::Site::WUGC::InstrumentData::Imported;
 
 use strict;
 use warnings;
@@ -11,7 +7,7 @@ use Genome;
 use File::stat;
 use File::Path;
 
-class Genome::InstrumentData::Imported {
+class Genome::Site::WUGC::InstrumentData::Imported {
     is => [ 'Genome::Site::WUGC::InstrumentData','Genome::Sys' ],
     type_name => 'imported instrument data',
     table_name => 'IMPORTED_INSTRUMENT_DATA',
