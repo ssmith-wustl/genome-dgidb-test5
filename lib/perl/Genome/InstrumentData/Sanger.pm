@@ -8,7 +8,7 @@ use warnings;
 use Genome;
 
 class Genome::InstrumentData::Sanger {
-    is  => 'Genome::InstrumentData',
+    is => 'Genome::InstrumentData',
     has_optional => [
         research_project => {
             via => 'attributes',
