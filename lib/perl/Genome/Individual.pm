@@ -10,6 +10,10 @@ use Carp;
 class Genome::Individual {
     is => 'Genome::Subject',
     has => [
+        individual_id => {
+            calculate_from => 'id',
+            calculate => q{ return $id; },
+        },
         taxon_id => {
             is => 'Number',
             via => 'attributes',
@@ -73,7 +77,7 @@ class Genome::Individual {
             is => 'Text',
             via => 'attributes',
             to => 'attribute_value',
-            where => [ attribute_label => 'common_id' ],
+            where => [ attribute_label => 'common_name' ],
             is_mutable => 1,
             doc => 'a name like "aml1" for the patient, by which the patient is commonly referred-to in the lab' 
         },
