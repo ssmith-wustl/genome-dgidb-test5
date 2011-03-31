@@ -37,6 +37,7 @@ class Genome::InstrumentData {
             is_mutable => 1,
             where => [ attribute_label => 'full_path' ],
         },
+        sample_source_id => { via => 'sample', to => 'id' },
         sample_source => { via => 'sample', to => 'source' },
         sample_source_name => { via => 'sample_source', to => 'name' },
         taxon => { is => 'Genome::Taxon', via => 'sample' },
