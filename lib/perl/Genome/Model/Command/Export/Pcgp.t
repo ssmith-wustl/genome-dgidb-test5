@@ -50,6 +50,7 @@ for my $build (
     # uncomment to test on a real PCGP BAM (safe, but reads from db)
     # Genome::Model::Build->get(104502554) 
 ) {
+    $DB::single = 1;
     $build_id = $build->id;
     eval {
         ok(!e("junk"),                                              "fails with bogus path");

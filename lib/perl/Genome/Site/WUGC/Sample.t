@@ -69,7 +69,7 @@ is(@files, 2, 'Got files');
 is($alloc->kilobytes_requested, $size + $size2, 'updated kb requested');
 is($sample->data_directory, $alloc->absolute_path, 'sample data directory');
 
-$sample = Genome::Sample->get($id);
+$sample = Genome::Site::WUGC::Sample->get($id);
 ok($sample, 'got new sample');
 
 done_testing();
