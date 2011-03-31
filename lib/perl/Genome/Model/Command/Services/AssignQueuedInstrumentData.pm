@@ -350,8 +350,8 @@ sub find_or_create_somatic_variation_models{
             $somatic_params{previously_discovered_variations_build} = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($model->reference_sequence_build);
             $self->error_message('Failed to get previously_discovered_variations_build for somatic variation model with model: ' . $model->name) and next unless $somatic_params{previously_discovered_variations_build};
 
-            my $capture_somatic_processing_profile_id = '2587783'; #new somatic pipeline no varscan with cnv test
-            my $somatic_processing_profile_id = '2587783';
+            my $capture_somatic_processing_profile_id = '2589271'; #april 11 somatic-variation exome
+            my $somatic_processing_profile_id = '2589272'; #april 11 somatic-variation wgs
             my $capture_target = eval{$model->target_region_set_name}; 
             if($capture_target){
                 $somatic_params{processing_profile_id} = $capture_somatic_processing_profile_id;
