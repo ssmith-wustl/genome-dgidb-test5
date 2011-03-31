@@ -160,23 +160,6 @@ sub get_maq_content {
     return join('', $fh->getlines);
 }
 
-sub get_ref_seq_iterator {
-    my $self = shift;
-    my $i;
-    if ($self->ref_seq_name)
-    {
-        $i = Genome::Model::RefSeq->create_iterator(where => [ model_id=> $self->model_id,
-            ref_seq_name => $self->ref_seq_name,
-            variation_position_read_depths => 2 ]);
-    }
-    else
-    {
-        $i = Genome::Model::RefSeq->create_iterator(where => [ model_id=> $self->model_id,
-            variation_position_read_depths => 2 ]);
-    }
-    return $i;
-}
-
 sub get_coverage_filename {
     my $self = shift;
     my $reports_dir = $self->build->resolve_reports_directory;
