@@ -8,12 +8,16 @@ $ENV{UR_DBI_NO_COMMIT} = "1";
 use above "Genome";
 use Test::More tests => 12;
 
-my $s = Genome::Sample->get(2824113569);
+my $l = Genome::Library->get(2868598818);
+ok($l, 'got a library');
+
+my $s = $l->sample;
+ok($s, 'got a sample via library');
 
 my $i = Genome::InstrumentData::Command::Import::Bam->create(
     target_region       => 'none',
     sample              => $s->name,  
-    library             => 'TEST-patient1-sample1-lib1',
+    library             => $l->name,
     import_source_name  => 'Broad',
     original_data_path  => '/gsc/var/cache/testsuite/data/Genome-InstrumentData--Command-Import-Bam/test.bam',
     description         => 'bwa file',
@@ -27,6 +31,9 @@ ok($i->execute,"Test Bam is imported ok");
 note "instrument data id is ". $i->import_instrument_data_id."\n";
 
 my $i_d = Genome::InstrumentData::Imported->get($i->import_instrument_data_id);
+is($i_d->sample_id, $s->id, 'sample id is correct');
+is($i_d->_old_sample_id, $s->id, 'old sample id is correct');
+is($i_d->library_id, $l->id, 'library id is correct');
 is($i_d->sequencing_platform,'solexa','platform is correct');
 is($i_d->user_name, $ENV{USER}, "user name is correct");
 ok($i_d->import_date, "date is set");
