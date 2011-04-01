@@ -179,4 +179,8 @@ sub prepare_reference_sequence_index {
     return 1;
 }
 
+
+sub aligner_params_required_for_index {
+    return 1;
+}
     
