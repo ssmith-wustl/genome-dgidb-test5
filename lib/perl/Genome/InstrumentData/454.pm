@@ -111,8 +111,10 @@ class Genome::InstrumentData::454 {
             is_mutable => 1,
         },
         is_paired_end => {
-            calculate_from => ['paired_end'],
-            calculate => q{ return $paired_end; },
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'paired_end' ],
+            is_mutable => 1,
         },
         # TODO Need to refactor these objects away
         run_region_454 => {
