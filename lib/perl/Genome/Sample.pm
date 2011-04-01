@@ -178,6 +178,7 @@ sub sample_type {
 
 sub models {
     my $self = shift;
+    # only returns models who's subject are Genome::Sample
     my @m = Genome::Model->get(subject_id => $self->id, subject_class_name => $self->class);
     return @m;
 }
