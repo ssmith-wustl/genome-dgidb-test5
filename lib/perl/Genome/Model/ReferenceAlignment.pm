@@ -161,20 +161,6 @@ class Genome::Model::ReferenceAlignment {
         alignment_file_paths => { via => 'alignment_events' },
         has_all_alignment_metrics => { via => 'alignment_events', to => 'has_all_metrics' },
         has_all_filter_variation_metrics => { via => 'filter_variation_events', to => 'has_all_metrics' },
-        variant_count => {
-            doc => 'the differences between the genome and the reference',
-            calculate => q|
-                my @f = $self->_variant_list_files();
-                my $c = 0;
-                for (@f) {
-                    my $fh = IO::File->new($_);
-                    while ($fh->getline) {
-                        $c++
-                    }
-                }
-                return $c;
-            |,
-        },
         build_events  => {
             is => 'Genome::Model::Event::Build',
             reverse_id_by => 'model',
@@ -367,58 +353,6 @@ sub region_of_interest_set {
         die('Failed to find feature-list with name: '. $name);
     }
     return $roi_set;
-}
-
-
-#clearly if multiple aligners/programs becomes common practice, we should be delegating to the appropriate module to construct this directory
-sub _variant_list_files {
-    return shift->_variant_files('snps', @_);
-}
-
-sub _variant_pileup_files {
-    return shift->_variant_files('pileup', @_);
-}
-
-sub _variant_detail_files {
-    return shift->_variant_files('report_input', @_);
-}
-
-sub _variant_files {
-    my ($self, $file_type, $ref_seq) = @_;
-    my $caller_type = $self->_snp_caller_type;
-    my $pattern = '%s/'.$caller_type.'_snp_related_metrics/'.$file_type.'_%s';
-    return $self->_files_for_pattern_and_optional_ref_seq_id($pattern, $ref_seq);
-}
-
-sub _files_for_pattern_and_optional_ref_seq_id {
-    my ($self, $pattern, $ref_seq) = @_;
-    
-    if((defined $ref_seq and $ref_seq eq 'all_sequences') or !defined $ref_seq) {
-        return sprintf($pattern, $self->complete_build_directory, 'all_sequences');
-    }
-
-    my @files = 
-        map { 
-            sprintf(
-                $pattern,
-                $self->complete_build_directory,
-                $_
-            )
-        }
-        grep { $_ ne 'all_sequences' }
-        grep { (!defined($ref_seq)) or ($ref_seq eq $_) }
-        $self->get_subreference_names;
-        
-    return @files;
-}
-
-sub _files_for_pattern_and_params {
-    my $self = shift;
-    my $pattern = shift;
-    my %params = @_;
-    my $ref_seq_id = delete $params{'ref_seq_id'};
-    Carp::confess("unknown params! " . Data::Dumper::Dumper(\%params)) if keys %params;
-    return $self->_files_for_pattern_and_optional_ref_seq_id($pattern, $ref_seq_id);
 }
 
 sub accumulated_alignments_directory {
