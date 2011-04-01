@@ -108,26 +108,12 @@ class Genome::InstrumentData::Imported {
             is_mutable => 1,
             where => [ attribute_label => 'rev_read_length' ],
         },
-        run_name => {
-            is => 'Text',
-            via => 'attributes',
-            to => 'attribute_value',
-            is_mutable => 1,
-            where => [ attribute_label => 'run_name' ],
-        },
         sd_above_insert_size => {
             is => 'Number',
             via => 'attributes',
             to => 'attribute_value',
             is_mutable => 1,
             where => [ attribute_label => 'sd_above_insert_size' ],
-        },
-        subset_name => {
-            is => 'Text',
-            via => 'attributes',
-            to => 'attribute_value',
-            is_mutable => 1,
-            where => [ attribute_label => 'subset_name' ],
         },
         target_region_set_name => {
             is => 'Text',
@@ -248,9 +234,6 @@ sub create {
     $params{user_name}   = $user; 
 
     my $self = $class->SUPER::create(%params);
-
-    $self->_old_sample_id($self->sample_id);
-    $self->_old_sample_name($self->sample_name);
     return $self;
 }
 
@@ -338,14 +321,6 @@ sub _calculate_total_read_count {
 #sub fragment_count { 10_000_000 }
 
 sub clusters { shift->fragment_count}
-
-sub run_name {
-    my $self= shift;
-    if($self->__run_name) {
-        return $self->__run_name;
-    }
-    return $self->id;
-}
 
 sub short_run_name {
     my $self = shift;
