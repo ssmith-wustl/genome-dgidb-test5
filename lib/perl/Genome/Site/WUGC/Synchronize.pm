@@ -38,11 +38,28 @@ sub objects_to_sync {
         'Genome::InstrumentData::454' => 'Genome::Site::WUGC::InstrumentData::454',
         'Genome::InstrumentData::Sanger' => 'Genome::Site::WUGC::InstrumentData::Sanger',
         'Genome::InstrumentData::Solexa' => 'Genome::Site::WUGC::InstrumentData::Solexa',
+        'Genome::InstrumentData::Imported' => 'Genome::Site::WUGC::InstrumentData::Imported',
         'Genome::Individual' => 'Genome::Site::WUGC::Individual',
         'Genome::PopulationGroup' => 'Genome::Site::WUGC::PopulationGroup',
         'Genome::Taxon' => 'Genome::Site::WUGC::Taxon',
         'Genome::Sample' => 'Genome::Site::WUGC::Sample',
+        'Genome::Library' => 'Genome::Site::WUGC::Library',
     );
+}
+
+# Specifies the order in which classes should be synced
+sub sync_order {
+    return qw/ 
+        Genome::Taxon
+        Genome::Individual
+        Genome::PopulationGroup
+        Genome::Sample
+        Genome::Library
+        Genome::InstrumentData::Solexa
+        Genome::InstrumentData::Sanger
+        Genome::InstrumentData::454
+        Genome::InstrumentData::Imported
+    /;
 }
 
 # For each pair of classes above, determine which objects exist in both the old and new schemas and
@@ -52,10 +69,17 @@ sub execute {
 
     # Stores copied and missing IDs for each type
     my %report;
-
+    
+    # Maps new classes with old classes
     my %types = $self->objects_to_sync;
-    for my $new_type (sort keys %types) {
+
+    for my $new_type ($self->sync_order) {
+        confess "Type $new_type isn't mapped to an old class!" unless exists $types{$new_type};
         my $old_type = $types{$new_type};
+
+        for my $type ($new_type, $old_type) {
+            confess "Could not get meta object for $type!" unless $type->__meta__;
+        }
 
         $self->status_message("\nSyncing $new_type and $old_type");
         $self->status_message("Creating iterators...");
@@ -178,7 +202,7 @@ sub generate_report {
     return 1;
 }
 
-# Given an object, a class, and a list of properties of the new class, create a new object
+# Create a new object of the given class based on the given object
 sub copy_object {
     my ($self, $original_object, $new_object_class) = @_;
     my $method_base = lc $new_object_class;
@@ -192,45 +216,88 @@ sub copy_object {
     }
 }
 
-# Below are type-specific create methods. They are each responsible for taking an object and a class
-# and creating a new object of the given class based on the given object.
-sub _create_genome_instrumentdata_solexa {
-    my ($self, $original_object, $new_object_class) = @_;
-    
-    my @properties = $new_object_class->__meta__->properties; 
+# Returns indirect and direct properties for an object and the values those properties hold
+sub _get_direct_and_indirect_properties_for_object {
+    my ($self, $original_object, $class, @ignore) = @_;
     my %direct_properties;
     my %indirect_properties;
+
+    my @properties = $class->__meta__->properties;
     for my $property (@properties) {
         my $property_name = $property->property_name;
-        # Library info is stored on instrument data, no need to store sample info
-        next if grep { $property_name eq $_ } qw/ sample_name sample_id /; 
         my $value = $original_object->{$property_name};
+        next if @ignore and grep { $property_name eq $_ } @ignore;
+        next unless defined $value;
+
         my $via = $property->via;
         if (defined $via and $via eq 'attributes') {
-            $indirect_properties{$property_name} = $value if defined $value; 
+            $indirect_properties{$property_name} = $value;
         }
         else {
-            $direct_properties{$property_name} = $value if defined $value;
+            $direct_properties{$property_name} = $value;
         }
     }
 
-    my $object = eval { 
+    return (\%direct_properties, \%indirect_properties);
+}
+
+# Below are type-specific create methods. They are each responsible for taking an object and a class
+# and creating a new object of the given class based on the given object.
+sub _create_genome_instrumentdata_imported {
+    my ($self, $original_object, $new_object_class) = @_;
+
+    my ($direct_properties, $indirect_properties) = $self->_get_direct_and_indirect_properties_for_object(
+        $original_object,
+        $new_object_class, 
+        qw/ sample_name sample_id _old_sample_name _old_sample_id /
+    );
+    
+    my $object = eval {
         $new_object_class->create(
-            %direct_properties, 
-            id => $original_object->id, 
-            subclass_name => $new_object_class
-        ) 
+            %{$direct_properties},
+            id => $original_object->id,
+            subclass_name => $new_object_class,
+        );
     };
     confess "Could not create new object of type $new_object_class based on object of type " .
-        $original_object->class . " with id " . $original_object->id . ":\n$!" unless $object;
+        $original_object->class . " with id " . $original_object->id . ":\n$@" unless $object;
 
-    
-    for my $property_name (sort keys %indirect_properties) {
+    for my $name (sort keys %{$indirect_properties}) {
         Genome::InstrumentDataAttribute->create(
             instrument_data_id => $object->id,
-            attribute_label => $property_name,
-            attribute_value => $indirect_properties{$property_name},
+            attribute_label => $name,
+            attribute_value => $indirect_properties->{$name}, 
+        )
+    }
+
+    return 1;
+}
+
+sub _create_genome_instrumentdata_solexa {
+    my ($self, $original_object, $new_object_class) = @_;
+    
+    my ($direct_properties, $indirect_properties) = $self->_get_direct_and_indirect_properties_for_object(
+        $original_object,
+        $new_object_class, 
+        qw/ sample_name sample_id /
+    );
+    
+    my $object = eval {
+        $new_object_class->create(
+            %{$direct_properties},
+            id => $original_object->id,
+            subclass_name => $new_object_class,
         );
+    };
+    confess "Could not create new object of type $new_object_class based on object of type " .
+        $original_object->class . " with id " . $original_object->id . ":\n$@" unless $object;
+
+    for my $name (sort keys %{$indirect_properties}) {
+        Genome::InstrumentDataAttribute->create(
+            instrument_data_id => $object->id,
+            attribute_label => $name,
+            attribute_value => $indirect_properties->{$name}, 
+        )
     }
 
     return 1;
@@ -254,39 +321,28 @@ sub _create_genome_instrumentdata_sanger {
     my $library = Genome::Library->get(%library_params);
     return 0 unless $library;
 
-    my @properties = $new_object_class->__meta__->properties;
-    my %direct_properties;
-    my %indirect_properties;
-    for my $property (@properties) {
-        my $property_name = $property->property_name;
-        # Library info is stored on instrument data, no need to store sample info
-        next if grep { $property_name eq $_ } qw/ sample_name sample_id /; 
-        my $value = $original_object->{$property_name};
-        my $via = $property->via;
-        if (defined $via and $via eq 'attributes') {
-            $indirect_properties{$property_name} = $value if defined $value; 
-        }
-        else {
-            $direct_properties{$property_name} = $value if defined $value;
-        }
-    }
+    my ($direct_properties, $indirect_properties) = $self->_get_direct_and_indirect_properties_for_object(
+        $original_object,
+        $new_object_class, 
+        qw/ sample_name sample_id /
+    );
 
-    my $object = eval { 
+    my $object = eval {
         $new_object_class->create(
-            %direct_properties, 
+            %{$direct_properties},
             library_id => $library->id,
-            id => $original_object->id, 
-            subclass_name => $new_object_class
-        ) 
+            id => $original_object->id,
+            subclass_name => $new_object_class,
+        )
     };
     confess "Could not create new object of type $new_object_class based on object of type " .
         $original_object->class . " with id " . $original_object->id . ":\n$@" unless $object;
 
-    for my $property_name (sort keys %indirect_properties) {
+    for my $name (sort keys %{$indirect_properties}) {
         Genome::InstrumentDataAttribute->create(
             instrument_data_id => $object->id,
-            attribute_label => $property_name,
-            attribute_value => $indirect_properties{$property_name},
+            attribute_label => $name,
+            attribute_value => $indirect_properties->{$name}, 
         );
     }
 
@@ -296,33 +352,29 @@ sub _create_genome_instrumentdata_sanger {
 sub _create_genome_instrumentdata_454 {
     my ($self, $original_object, $new_object_class) = @_;
 
-    my @properties = $new_object_class->__meta__->properties; 
-    my %direct_properties;
-    my %indirect_properties;
-    for my $property (@properties) {
-        my $property_name = $property->property_name;
-        # Library info is stored on instrument data, no need to store sample info
-        next if grep { $property_name eq $_ } qw/ sample_name sample_id full_path /; 
-        my $value = $original_object->{$property_name};
-        my $via = $property->via;
-        if (defined $via and $via eq 'attributes') {
-            $indirect_properties{$property_name} = $value if defined $value; 
-        }
-        else {
-            $direct_properties{$property_name} = $value if defined $value;
-        }
-    }
+    my ($direct_properties, $indirect_properties) = $self->_get_direct_and_indirect_properties_for_object(
+        $original_object,
+        $new_object_class, 
+        qw/ sample_name sample_id full_path/
+    );
 
-    my $object = eval { 
+    my $object = eval {
         $new_object_class->create(
-            %direct_properties, 
-            id => $original_object->id, 
-            subclass_name => $new_object_class
-        ) 
+            %{$direct_properties},
+            id => $original_object->id,
+            subclass_name => $new_object_class,
+        )
     };
     confess "Could not create new object of type $new_object_class based on object of type " .
-        $original_object->class . " with id " . $original_object->id . ":\n$@" unless $object;
+        $original_object->class . " with id " . $original_object->id . ":\n$!" unless $object;
 
+    for my $name (sort keys %{$indirect_properties}) {
+        Genome::InstrumentDataAttribute->create(
+            instrument_data_id => $object->id,
+            attribute_label => $name,
+            attribute_value => $indirect_properties->{$name}, 
+        );
+    }
     
     # TODO Need to talk to Scott about how to go about dumping SFF files. Currently, this info is stored in a
     # LIMS table and dumped to the filesystem as an SFF file on demand, see Genome::InstrumentData::454->sff_file.
@@ -330,42 +382,25 @@ sub _create_genome_instrumentdata_454 {
     # we can either dump all SFF files from the db and add the dumping logic here in the sync tool, or we can forego
     # the mass dumping and do it manually as needed (it would still be done here as the data is synced).
 
-    for my $property_name (sort keys %indirect_properties) {
-        Genome::InstrumentDataAttribute->create(
-            instrument_data_id => $object->id,
-            attribute_label => $property_name,
-            attribute_value => $indirect_properties{$property_name},
-        );
-    }
-
     return 1;
 }
 
 sub _create_genome_sample {
     my ($self, $original_object, $new_object_class) = @_;
 
-    my @properties = $new_object_class->__meta__->properties; 
-    my %direct_properties;
-    my %indirect_properties;
-    for my $property (@properties) {
-        my $property_name = $property->property_name;
-        my $value = $original_object->{$property_name};
-        my $via = $property->via;
-        if (defined $via and $via eq 'attributes') {
-            $indirect_properties{$property_name} = $value if defined $value; 
-        }
-        else {
-            $direct_properties{$property_name} = $value if defined $value;
-        }
-    }
+    my ($direct_properties, $indirect_properties) = $self->_get_direct_and_indirect_properties_for_object(
+        $original_object,
+        $new_object_class, 
+    );
 
+    # Capture attributes that are attached to the object but aren't spelled out in class definition
     for my $attribute ($original_object->attributes) {
-        $indirect_properties{$attribute->name} = $attribute->value;
+        $indirect_properties->{$attribute->name} = $attribute->value;
     }
 
     my $object = eval { 
         $new_object_class->create(
-            %direct_properties, 
+            %{$direct_properties},
             id => $original_object->id, 
             subclass_name => $new_object_class
         ) 
@@ -373,11 +408,11 @@ sub _create_genome_sample {
     confess "Could not create new object of type $new_object_class based on object of type " .
         $original_object->class . " with id " . $original_object->id . ":\n$@" unless $object;
 
-    for my $property_name (sort keys %indirect_properties) {
+    for my $property_name (sort keys %{$indirect_properties}) {
         Genome::SubjectAttribute->create(
             subject_id => $object->id,
             attribute_label => $property_name,
-            attribute_value => $indirect_properties{$property_name},
+            attribute_value => $indirect_properties->{$property_name},
         );
     }
 
@@ -387,6 +422,7 @@ sub _create_genome_sample {
 sub _create_genome_populationgroup {
     my ($self, $original_object, $new_object_class) = @_;
 
+    # No attributes/indirect properties, etc to worry about here (except members, below)
     my %params;
     for my $property ($new_object_class->__meta__->properties) {
         my $property_name = $property->property_name;
@@ -410,7 +446,7 @@ sub _create_genome_populationgroup {
     return 1;
 }
 
-sub _create_genome_individual {
+sub _create_genome_library {
     my ($self, $original_object, $new_object_class) = @_;
 
     my %params;
@@ -423,13 +459,17 @@ sub _create_genome_individual {
         $new_object_class->create(
             %params, 
             id => $original_object->id, 
-            subclass_name => $new_object_class
         ) 
     };
     confess "Could not create new object of type $new_object_class based on object of type " .
         $original_object->class . " with id " . $original_object->id . ":\n$@" unless $object;
 
     return 1;
+}
+
+sub _create_genome_individual {
+    my ($self, $original_object, $new_object_class) = @_;
+    return $self->_create_genome_taxon($original_object, $new_object_class);
 }
 
 sub _create_genome_taxon {
