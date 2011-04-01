@@ -149,15 +149,24 @@ sub prepare_reference_sequence_index {
         return;
     }
         
-    
-
     my $nv_path = Genome::Model::Tools::Novocraft->path_for_novocraft_version($refindex->aligner_version);
     $nv_path =~ s/novoalign/novoindex/;
     my $assembly_name = $refindex->reference_build->assembly_name;
     if (!$assembly_name) {
         $assembly_name = $refindex->reference_build->name;
     }
-    my $nv_cmd = sprintf('%s %s.novocraft %s -n %s', $nv_path, $staged_fasta_file, $staged_fasta_file, $assembly_name);
+
+    my $nv_param = $refindex->aligner_params;
+    my @others   = ($assembly_name, $staged_fasta_file, $staged_fasta_file);
+    my $nv_cmd;
+
+    if ($nv_param) {
+        $nv_cmd = sprintf('%s %s -n %s %s.novocraft %s', $nv_path, $nv_param, @others);
+    }
+    else {
+        $nv_cmd = sprintf('%s -n %s %s.novocraft %s', $nv_path, @others);
+    }
+
     my $rv = Genome::Sys->shellcmd(
         cmd => $nv_cmd,
     );
