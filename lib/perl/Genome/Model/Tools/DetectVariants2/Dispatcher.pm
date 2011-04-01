@@ -9,6 +9,7 @@ use JSON;
 use Genome;
 use Workflow;
 use Workflow::Simple;
+use File::Basename;
 
 class Genome::Model::Tools::DetectVariants2::Dispatcher {
     is => ['Genome::Model::Tools::DetectVariants2::Base'],
@@ -805,7 +806,6 @@ sub _promote_staged_data {
 sub set_output_files {
     my $self = shift;
     my $result = shift;
-
     for my $variant_type (@{$self->variant_types}){
         my $file_accessor = "_".$variant_type."_hq_output_file";
         my $strategy = $variant_type."_detection_strategy";
@@ -826,6 +826,7 @@ sub set_output_files {
             my $file;
             if(-l $hq_output_dir."/".$hq_file){
                 $file = readlink($hq_output_dir."/".$hq_file); # Should look like "dir/snvs_hq.bed" 
+                $file = basename($file,['bed']); 
             }
             else{
                 $file = $hq_file;
