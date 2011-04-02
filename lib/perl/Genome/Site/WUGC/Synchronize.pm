@@ -156,7 +156,9 @@ sub execute {
     print STDERR "\n";
 
     $self->_report(\%report);
-    $self->generate_report if defined $self->report_file;
+    my $report_string = $self->generate_report;
+    print $report_string;
+    $self->write_report_file($report_string) if defined $self->report_file;
     return 1;
 }
 
@@ -171,34 +173,35 @@ sub print_object_cache_summary {
     return 1;
 }
 
-# Writes a report detailing the IDs of objects that have been created/missed
+# Generates a string representation of the report hash, which details the objects that were copied from the
+# old tables to the new and also lists those IDs that exist in the new tables but not the old.
 sub generate_report {
     my $self = shift;
     my %report = %{$self->_report};
-    $self->status_message("Generating report");
 
-    if (-e $self->report_file) {
-        unlink $self->report_file;
-        $self->status_message("Removed existing report at " . $self->report_file);
-    }
-
-    my $fh = IO::File->new($self->report_file, 'w');
-    if ($fh) {
-        for my $type (sort keys %report) {
-            $fh->print("*** Type $type ***\n");
-            for my $operation (qw/ copied missing /) {
-                next unless exists $report{$type}{$operation};
-                $fh->print(ucfirst $operation . "\n");
-                $fh->print(join("\n", @{$report{$type}{$operation}}) . "\n");
-            }
+    my $string;
+    for my $type (sort keys %report) {
+        $string .= "*** Type $type ***\n";
+        for my $operation (qw/ copied missing /) {
+            next unless exists $report{$type}{$operation};
+            $string .= ucfirst $operation . "\n";
+            $string .= join("\n", @{$report{$type}{$operation}}) . "\n";
         }
-        $fh->close;
-    }
-    else {
-        $self->warning_message("Could not create file handle for report file " . $self->report_file . ", not generating report");
     }
     
-    $self->status_message("Report generated at " . $self->report_file);
+    return 1;
+}
+
+# Writes report string to a file
+sub write_report_file {
+    my ($self, $report_string) = @_;
+    my $fh = IO::File->new($self->report_file, 'w');
+    if ($fh) {
+        $fh->print($report_string);
+    }
+    else {
+        $self->warning_message("Could not get file handle for " . $self->report_file . ", not writing report");
+    }
     return 1;
 }
 
