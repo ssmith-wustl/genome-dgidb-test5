@@ -129,62 +129,6 @@ sub calculate_input_base_counts_after_trimq2 {
     return ($total_ct, $total_trim_ct);
 }
 
-# TODO: we should abstract the genotyper the way we do the aligner
-# for now these are hard-coded maq-ish values.
-
-sub _snv_file_unfiltered {
-    my $self = shift;
-    my $build_id = $self->build_id;
-
-    #Note:  This switch is used to ensure backwards compatibility with 'old' per chromosome data.  
-    #Eventually will be removed.
- 
-    #The 'new' whole genome way 
-    if ( $build_id < 0 || $build_id > 96763806 ) {
-        my $unfiltered = $self->snp_related_metric_directory .'/snps_all_sequences';
-        unless (-e $unfiltered) {
-            die 'No variant snps files were found.';
-        }
-        return $unfiltered;
-    } 
-    else {
-    #The 'old' per chromosome way
-        $self->X_snv_file_unfiltered();
-    }
-
-}
-
-sub _snv_file_filtered {
-    my $self = shift;
-
-    my $filtered;
-    my $unfiltered = $self->_snv_file_unfiltered;
-
-    my $build_id = $self->build_id;
- 
-    #Note:  This switch is to insure backward compatibility while generating reports.  
-    #Builds before the id below generated files on a per chromosome basis.
-    #Test builds and current production builds generate data on a whole genome basis.
-
-    #'new', whole genome 
-    if ( $build_id < 0 || $build_id > 96763806 ) {
-        $filtered = $self->filtered_snp_file();
-        $self->status_message("********************Path for filtered indelpe file: $filtered");
-    } 
-    else {
-    #'old', per chromosme
-       $filtered = $unfiltered; 
-       $filtered =~ s/all/filtered.indelpe/g;
-    }
-
-    unless (-e $filtered) {
-        $self->error_message("Failed to find valid snv_file_filtered: $filtered");
-        return;
-    }
-    
-    return $filtered;
-}
-
 sub filtered_snp_file {
     my ($self) = @_;
     
@@ -234,144 +178,23 @@ sub filtered_snvs_bed {
 sub filtered_indel_file {
     my $self = shift;
 
-    #Current standard location--if this file exists it's the right one
-    my $expected_location = $self->snp_related_metric_directory . '/indels_all_sequences.filtered';
-
-    #Current standard location
-    return $expected_location if Genome::Sys->check_for_path_existence($expected_location);
-    
-    #Old standard varied by detector type
-    my $old_location;
-    if ($self->_snp_caller_type eq 'sam') {
-        $old_location = $self->snp_related_metric_directory . '/indels_all_sequences.filtered';
-    }
-    elsif ($self->_snp_caller_type eq 'maq') {
-        $self->warning_message('Maq tool was used for indel calling. indelpe.sorted.out is filtered sorted indelpe output');
-        $old_location = $self->snp_related_metric_directory . '/indelpe.sorted.out';
-    }
-    elsif ($self->_snp_caller_type eq 'varscan') {
-        $old_location = $self->snp_related_metric_directory . '/varscan.status.indel';
-    }
-
-    return $old_location if $old_location and Genome::Sys->check_for_path_existence($old_location);
-    
-    #If we didn't find it anywhere, it might not have been generated yet--which makes it a new build and should use current standard
-    return $expected_location;
+    return $self->snp_related_metric_directory . '/indels_all_sequences.filtered';
 }
 
 sub unfiltered_indel_file {
     my $self =shift;
-    
-    my $expected_location = $self->snp_related_metric_directory . '/indels_all_sequences';
-    return $expected_location if Genome::Sys->check_for_path_existence($expected_location);
-    
-    #Old standard varied by detector type
-    my $old_location;
-    if ($self->_snp_caller_type eq 'sam') {
-        $old_location = $self->snp_related_metric_directory . '/indels_all_sequences';
-    }
-    elsif ($self->_snp_caller_type eq 'maq') {
-        $self->warning_message('Maq tool was used for indel calling. indels_all_sequences is the output of indelsoa, not indelpe');
-        $old_location = $self->snp_related_metric_directory . '/indels_all_sequences';
-    }
-    elsif ($self->_snp_caller_type eq 'varscan') {
-        $old_location = $self->snp_related_metric_directory . '/varscan.status.indel';
-    }
 
-    return $old_location if $old_location and Genome::Sys->check_for_path_existence($old_location);
-    
-    #If we didn't find it anywhere, it might not have been generated yet--which makes it a new build and should use current standard
-    return $expected_location;
-}
-
-#clearly if multiple aligners/programs becomes common practice, we should be delegating to the appropriate module to construct this directory
-sub _variant_list_files {
-    return shift->_variant_files('snps', @_);
-}
-
-sub _variant_filtered_list_files {
-    my ($self, $ref_seq) = @_;
-    my $caller_type = $self->_snp_caller_type;
-    my $pattern = '%s/'.$caller_type.'_snp_related_metrics/snps_%s.filtered';
-    return $self->_files_for_pattern_and_optional_ref_seq_id($pattern, $ref_seq);
-}
-sub _variant_pileup_files {
-    return shift->_variant_files('pileup', @_);
-}
-
-sub _variant_detail_files {
-    return shift->_variant_files('report_input', @_);
-}
-
-sub _variation_metrics_files {
-    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/other_snp_related_metrics/variation_metrics_%s.csv',@_);
-}
-
-sub _variant_files {
-    my ($self, $file_type, $ref_seq) = @_;
-    my $caller_type = $self->_snp_caller_type;
-    my $pattern = '%s/'.$caller_type.'_snp_related_metrics/'.$file_type.'_%s';
-    return $self->_files_for_pattern_and_optional_ref_seq_id($pattern, $ref_seq);
-}
-
-sub _transcript_annotation_files {
-    return shift->_files_for_pattern_and_optional_ref_seq_id('%s/annotation/%s_snp.transcript',@_);
-}
-
-sub other_snp_related_metric_directory {
-    my $self = shift;
-    return $self->data_directory . "/other_snp_related_metrics/";
+    return $self->snp_related_metric_directory . '/indels_all_sequences';
 }
 
 sub snp_related_metric_directory {
     my $self = shift;
     
-    my $expected_directory = $self->data_directory . '/snp_related_metrics';
-    
-    return $expected_directory if Genome::Sys->check_for_path_existence($expected_directory);
-    
-    #if it doesn't exist, try falling back to the "old" way of doing it
-    my $old_directory = $self->data_directory . '/' . $self->_snp_caller_type . '_snp_related_metrics';
-    
-    return $old_directory if Genome::Sys->check_for_path_existence($old_directory);
-    
-    #if neither exist, then assume we're a new build where it hasn't been created yet
-    return $expected_directory;
+    return $self->data_directory . '/snp_related_metrics';
 }
 
 sub _snp_caller_type {
     return shift->model->_snp_caller_type;
-}
-    
-sub _filtered_variants_dir {
-    my $self = shift;
-    return sprintf('%s/filtered_variations/',$self->data_directory);
-}
-
-sub _reports_dir {
-    my $self = shift;
-    return sprintf('%s/annotation/',$self->data_directory);
-}
-sub _files_for_pattern_and_optional_ref_seq_id {
-    my ($self, $pattern, $ref_seq) = @_;
-
-    if ((defined $ref_seq and $ref_seq eq 'all_sequences') or !defined $ref_seq) {
-        return sprintf($pattern, $self->data_directory, 'all_sequences');
-    }
-
-    my @files = 
-    map { 
-        sprintf(
-            $pattern,
-            $self->data_directory,
-            $_
-        )
-    }
-    grep { $_ ne 'all_sequences' }
-    grep { (!defined($ref_seq)) or ($ref_seq eq $_) }
-    $self->model->get_subreference_names;
-
-    return @files;
 }
 
 sub log_directory {

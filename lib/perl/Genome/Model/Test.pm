@@ -752,7 +752,6 @@ sub _additional_methods_to_reference_alignment_model {
         $model,
         (qw/ 
             complete_build_directory 
-            _filtered_variants_dir 
             gold_snp_file 
             /)
     );
@@ -768,7 +767,6 @@ sub _build_subclass_specifics_for_reference_alignment {
             $build,
             (qw/ snp_related_metric_directory /),
         );
-        $build->mock('_variant_list_files', sub{ return glob($build->snp_related_metric_directory.'/snps_*'); });
     }
     # else { # 454 
 

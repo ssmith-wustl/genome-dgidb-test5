@@ -135,6 +135,8 @@ sub _intermediate_result {
             parent_result => $self,
             input_file => $path,
             input_pass => $input_pass,
+            instrument_data_segment_type => $self->instrument_data_segment_type,
+            instrument_data_segment_id => $self->instrument_data_segment_id,
         ); 
 
         my $intermediate_result = Genome::InstrumentData::IntermediateAlignmentResult::Bwa->get_or_create(%intermediate_params);
