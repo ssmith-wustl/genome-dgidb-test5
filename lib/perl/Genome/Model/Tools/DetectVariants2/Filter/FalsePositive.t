@@ -36,13 +36,13 @@ my $lq_output = join('/', $output_dir, 'snvs.lq');
 my $readcount_file = join('/', $output_dir, 'readcounts');
 
 my $reference = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
-isa_ok($reference, 'Genome::Model::Build::ImportedReferenceSequence', 'loaded reference sequence');
+is($reference->id,101947881, 'Found correct reference sequence');
 
 my $filter_command = Genome::Model::Tools::DetectVariants2::Filter::FalsePositive->create(
     aligned_reads_input => $bam_file,
     input_directory => $detector_directory,
     output_directory => $output_dir,
-    reference_sequence_input => $reference->fasta_file,
+    reference_build_id => $reference->id,
     detector_directory => $detector_directory,
     min_strandedness => 0.01,
     min_var_freq => 0.05,
@@ -78,7 +78,7 @@ my $filter_command2 = Genome::Model::Tools::DetectVariants2::Filter::FalsePositi
     aligned_reads_input => $bam_file,
     input_directory => $detector_directory,
     output_directory => $output_dir,
-    reference_sequence_input => $reference->fasta_file,
+    reference_build_id => $reference->id,
     detector_directory => $detector_directory,
     min_strandedness => 0.01,
     min_var_freq => 0.05,
@@ -116,7 +116,7 @@ my $filter_command3 = Genome::Model::Tools::DetectVariants2::Filter::FalsePositi
     aligned_reads_input => $bam_file,
     input_directory => $detector_directory,
     output_directory => $output_dir,
-    reference_sequence_input => $reference->fasta_file,
+    reference_build_id => $reference->id,
     detector_directory => $detector_directory,
     min_strandedness => 0.01,
     min_var_freq => 0.05,

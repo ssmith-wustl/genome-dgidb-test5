@@ -22,7 +22,7 @@ BEGIN {
 use_ok( 'Genome::Model::Tools::DetectVariants2::Filter::SomaticScoreMappingQuality');
 
 my $test_data_dir  = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-SomaticScoreMappingQuality';
-my $refseq = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa';
+my $refbuild_id = 101947881;
 my $tumor_bam_file  = $test_data_dir . '/flank_tumor_sorted.bam';
 my $normal_bam_file  = $test_data_dir . '/flank_normal_sorted.bam';
 my $detector_directory = $test_data_dir."/sniper-0.7.3-";
@@ -36,7 +36,7 @@ my $ssmq_object = Genome::Model::Tools::DetectVariants2::Filter::SomaticScoreMap
     control_aligned_reads_input => $normal_bam_file,
     output_directory    => $test_output_dir,
     detector_directory => $detector_directory,
-    reference_sequence_input => $refseq,
+    reference_build_id => $refbuild_id,
 );
 
 ok($ssmq_object, 'created SomaticScoreMappingQuality object (default mapping & somatic quality)');

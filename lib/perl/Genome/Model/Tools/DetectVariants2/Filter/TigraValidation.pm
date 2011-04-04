@@ -416,12 +416,13 @@ sub _filter_variants {
         my $merge_cmd = $self->sv_merge_path . ' -c -f '.$merge_fa.' -d 200 -h '.$merge_index.' 1> '.$merge_file.' 2> '.$merge_out;
         $rv = system $merge_cmd;
         unless ($rv == 0) {
-            $self->warning_message("Command: $merge_cmd probably did not finish ok");
+            $self->warning_message("Sv merge command: $merge_cmd probably did not finish ok");
             return 1;
         }
 
-        my $annot_cmd = $self->sv_annot_path . ' -A '. $merge_file . ' > '. $merge_annot;
-        $self->warning_message("Annot command: $annot_cmd probably did not finished ok");         
+        #my $annot_cmd = $self->sv_annot_path . ' -A '. $merge_file . ' > '. $merge_annot;
+        #$rv = system $annot_cmd;
+        #$self->warning_message("Annot command: $annot_cmd probably did not finished ok") unless $rv == 0;       
         return 1;
     }
 

@@ -155,7 +155,7 @@ sub _detect_variants {
     map { $input->{$_} = $workflow_inputs->{$_}->{value}} keys(%{$workflow_inputs});
     $input->{aligned_reads_input}= $self->aligned_reads_input;
     $input->{control_aligned_reads_input} = $self->control_aligned_reads_input;
-    $input->{reference_sequence_input} = $self->reference_sequence_input;
+    $input->{reference_build_id} = $self->reference_build_id;
     $input->{output_directory} = $self->_temp_staging_directory;
    
     $self->_dump_workflow($workflow);
@@ -191,7 +191,7 @@ sub _dump_dv_cmd {
     $cmd .=   "gmt detect-variants2 dispatcher --output-directory ".$self->output_directory
                 ." --aligned-reads-input ".$self->aligned_reads_input
                 ." --control-aligned-reads-input ".$self->control_aligned_reads_input
-                ." --reference-sequence-input ".$self->reference_sequence_input;
+                ." --reference-build-id ".$self->reference_build_id;
     for my $var ('snv','sv','indel'){
         my $strat = $var."_detection_strategy";
         if(defined($self->$strat)){
@@ -352,7 +352,7 @@ sub generate_workflow {
     my $workflow_model = Workflow::Model->create(
         name => 'Somatic Variation Pipeline',
         input_properties => [
-            'reference_sequence_input',
+            'reference_build_id',
             'aligned_reads_input',
             'control_aligned_reads_input',
             'output_directory',
@@ -504,7 +504,7 @@ sub create_combine_operation {
         operation_type => Workflow::OperationType::Command->get($class),
     );
 
-    my @properties_to_each_operation =  ( 'reference_sequence_input', 'aligned_reads_input', 'control_aligned_reads_input');
+    my @properties_to_each_operation =  ( 'reference_build_id', 'aligned_reads_input', 'control_aligned_reads_input');
     for my $property ( @properties_to_each_operation) {
         $workflow_model->add_link(
                 left_operation => $workflow_model->get_input_connector,
@@ -611,7 +611,7 @@ sub add_detectors_and_filters {
 
                 # add links for properties which every operation has from input_connector to each operation
                 for my $op ($detector_operation, map{$_->{operation} } @filters){
-                    my @properties_to_each_operation =  ( 'reference_sequence_input', 'aligned_reads_input', 'control_aligned_reads_input');
+                    my @properties_to_each_operation =  ( 'reference_build_id', 'aligned_reads_input', 'control_aligned_reads_input');
                     for my $property ( @properties_to_each_operation) {
                         $workflow_model->add_link(
                             left_operation => $workflow_model->get_input_connector,
