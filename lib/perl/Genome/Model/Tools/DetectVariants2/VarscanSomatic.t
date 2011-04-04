@@ -13,7 +13,7 @@ if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
 } else {
     #plan skip_all => "This test is incomplete.";
-    plan tests => 22;
+    plan tests => 19;
 }
 
 my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-VarscanSomatic/';
@@ -30,18 +30,13 @@ my $normal_bam = $test_dir . '/alignments/102922275_merged_rmdup.bam';
 my $expected_dir = $test_dir . '/expected.v10/';
 ok(-d $expected_dir, "expected results directory exists");
 
-my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get(type_name => 'imported reference sequence', name => 'NCBI-human-build36');
-ok($ref_seq_build, 'Got a reference sequence build') or die('Test cannot continue without a reference sequence build');
-is($ref_seq_build->name, 'NCBI-human-build36', 'Got expected reference for test case');
-
-my $ref_seq_input = $ref_seq_build->full_consensus_path('fa');
-ok(Genome::Sys->check_for_path_existence($ref_seq_input), 'Got a reference FASTA') or die('Test cannot continue without a reference FASTA');
+my $refbuild_id = 101947881;
 
 my $version = ''; #Currently only one version of varscan
 my $snv_parameters = my $indel_parameters = '';
 
 my $command = Genome::Model::Tools::DetectVariants2::VarscanSomatic->create(
-    reference_sequence_input => $ref_seq_input,
+    reference_build_id => $refbuild_id,
     aligned_reads_input => $bam_input,
     control_aligned_reads_input => $normal_bam,
     version => $version,

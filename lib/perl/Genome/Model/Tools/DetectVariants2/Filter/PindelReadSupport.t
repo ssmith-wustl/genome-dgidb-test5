@@ -16,7 +16,7 @@ BEGIN {
     use_ok( 'Genome::Model::Tools::DetectVariants2::Filter::PindelReadSupport')
 };
 
-my $refseq = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa';
+my $refbuild_id = 101947881;
 my $input_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-PindelReadSupport";
 
 # Updated to v2 to allow for new columns 
@@ -39,7 +39,7 @@ my $pindel_read_support = Genome::Model::Tools::DetectVariants2::Filter::PindelR
     output_directory => $test_output_dir,
     aligned_reads_input => $tumor_bam_file,
     control_aligned_reads_input => $normal_bam_file,
-    reference_sequence_input => $refseq,
+    reference_build_id => $refbuild_id,
 );
 
 ok($pindel_read_support, "created PindelReadSupport object");
