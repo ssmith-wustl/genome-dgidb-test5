@@ -130,7 +130,6 @@ class Genome::Model {
     has_optional_deprecated => [
         # this is all junk but things really use them right now 
         data_directory          => { is => 'Text', len => 1000, is_optional => 1 },
-        ref_seqs                => { is => 'Genome::Model::RefSeq', reverse_as => 'model', is_many => 1, is_optional => 1 },
         events                  => { is => 'Genome::Model::Event', reverse_as => 'model', is_many => 1,
             doc => 'all events which have occurred for this model' },
         reports                 => { via => 'last_succeeded_build' },
@@ -173,12 +172,18 @@ class Genome::Model {
                                     return;
                                 }
                             | },
-        subject_common_name => {
+        individual_common_name => {
             is => 'Text',
             len => 255,
             calculate_from => 'subject',
-            calculate => q{
-                return $subject->common_name();
+            calculate => q {
+                if ($subject->class eq 'Genome::Individual') {
+                    return $subject->common_name();
+                } elsif($subject->class eq 'Genome::Sample') {
+                    return $subject->patient_common_name();
+                } else {
+                    return undef;
+                }
             }
         },
         subject_type    => { is => 'Text', len => 255, 

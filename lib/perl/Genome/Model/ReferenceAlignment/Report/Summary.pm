@@ -324,12 +324,12 @@ sub get_summary_information
     # processing profile
     my $pp = $model->processing_profile;
 
-    my @unfiltered_files = $build->_snv_file_unfiltered;
+    my @unfiltered_files = $build->unfiltered_snp_file;
     my $unfiltered_snp_calls = `wc -l @unfiltered_files | tail -n 1`;
     $unfiltered_snp_calls =~ s/\s\S+\s*$//i;
     $unfiltered_snp_calls =~ s/\s//g;
 
-    my @filtered_files = $build->_snv_file_filtered;
+    my @filtered_files = $build->filtered_snp_file;
     my $filtered_snp_calls = `wc -l @filtered_files | tail -n 1`;
     $filtered_snp_calls =~ s/\s\S+\s*$//i;
     $filtered_snp_calls =~ s/\s//g;

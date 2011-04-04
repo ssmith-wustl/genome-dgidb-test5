@@ -184,13 +184,18 @@ sub execute {
                         for my $m (@assigned) {
                             $pse->add_param('genome_model_id', $m->id);
                         }
+                        #find or create somatic models if applicable
+                        $self->find_or_create_somatic_variation_models(@assigned);
+
                     } else {
                         # no model found for this PP, make one (or more) and assign all applicable data
-                        my $ok = $self->create_default_models_and_assign_all_applicable_instrument_data($genome_instrument_data, $subject, $processing_profile, $reference_sequence_build, $pse);
-                        unless($ok) {
+                        my @new_models = $self->create_default_models_and_assign_all_applicable_instrument_data($genome_instrument_data, $subject, $processing_profile, $reference_sequence_build, $pse);
+                        unless(@new_models) {
                             push @process_errors, $self->error_message;
                             next PP;
                         }
+                        #find or create somatic models if applicable
+                        $self->find_or_create_somatic_variation_models(@new_models);
                     }
                 }
             } # looping through processing profiles for this instdata, finding or creating the default model
@@ -284,6 +289,122 @@ sub execute {
     return 1;    
 }
 
+sub find_or_create_somatic_variation_models{
+    my ($self, @models) = @_;
+    #only want sample-based models
+    @models = grep {$_->subject_type eq "sample_name"} @models;
+    #only want TCGA models
+    @models = grep {$self->is_tcga($_->subject)} @models;
+    for my $model (@models){
+        my $sample = $model->subject;
+        #find or create mate ref-align model
+        if ($sample->name =~ m/([^-]+-[^-]+-[^-]+-)([01]{2}A)(.*)/){
+            my ($prefix, $designator, $suffix) = ($1, $2, $3);
+            my %designator_pairing = ( 
+                '10A' => '01A', 
+                '01A' => '10A',
+            );
+            my $mate_designator = $designator_pairing{$designator};
+            $self->error_message("Not processing somatic variation model with sample name: " . $sample->name . " and designator: $designator") and next unless $mate_designator; 
+            my $mate_name = join("", $prefix, $mate_designator, $suffix);  
+            
+            my $subject_for_mate = Genome::Sample->get(name => $mate_name);
+            $self->error_message("No sample found for mate_name $mate_name (paired to: " . $model->name . ")") and next unless $subject_for_mate; 
+
+            my %mate_params = (
+                subject_id => $subject_for_mate->id, 
+                reference_sequence_build => $model->reference_sequence_build, 
+                processing_profile => $model->processing_profile, 
+                auto_assign_inst_data => '1',
+            );
+            $mate_params{annotation_reference_build_id} = $model->annotation_reference_build_id if $model->annotation_reference_build_id;
+
+            my $mate = Genome::Model::ReferenceAlignment->get( %mate_params );
+            unless ($mate){
+                my $copy = Genome::Model::Command::Copy->execute(
+                    from => $model,
+                    to => 'AQID-PLACE_HOLDER',
+                    skip_instrument_data_assignments => 1,
+                );
+                $self->error_message('Failed to create mate for model name: ' . $model->name) and next unless $copy;
+
+                $mate = $copy->_copied_model;
+                $self->error_message("Failed to find copied mate with subject name: $mate_name") and next unless $mate;
+                
+                $mate->subject_id($subject_for_mate->id);
+
+                my $capture_target = eval{$model->target_region_set_name}; 
+                my $mate_model_name = $mate->default_model_name(capture_target => $capture_target);
+                $self->error_message("Could not name mate model for with subject name: $mate_name") and next unless $mate_model_name;
+                $mate->name($mate_model_name);
+                
+                my $new_models = $self->_newly_created_models;
+                $new_models->{$mate->id} = $mate;
+            }
+
+            my %somatic_params = (
+                auto_assign_inst_data => 1,
+                );
+            $somatic_params{annotation_build} = Genome::Model::ImportedAnnotation->annotation_build_for_reference($model->reference_sequence_build);
+            $self->error_message('Failed to get annotation_build for somatic variation model with model: ' . $model->name) and next unless $somatic_params{annotation_build};
+            $somatic_params{previously_discovered_variations_build} = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($model->reference_sequence_build);
+            $self->error_message('Failed to get previously_discovered_variations_build for somatic variation model with model: ' . $model->name) and next unless $somatic_params{previously_discovered_variations_build};
+
+            my $capture_somatic_processing_profile_id = '2589271'; #april 11 somatic-variation exome
+            my $somatic_processing_profile_id = '2589272'; #april 11 somatic-variation wgs
+            my $capture_target = eval{$model->target_region_set_name}; 
+            if($capture_target){
+                $somatic_params{processing_profile_id} = $capture_somatic_processing_profile_id;
+            }
+            else{
+                $somatic_params{processing_profile_id} = $somatic_processing_profile_id;
+            }
+            if ($designator eq '10A'){ #$model is normal
+                $somatic_params{normal_model} = $model;
+                $somatic_params{tumor_model} = $mate;
+            }elsif ($designator eq '01A'){ #$model is tumor
+                $somatic_params{tumor_model} = $model;
+                $somatic_params{normal_model} = $mate;
+            }else{
+                die $self->error_message("Serious error in sample designators for automated create of somatic-variation models for ".$model->subject_name);
+            }
+            
+            my $somatic_variation = Genome::Model::SomaticVariation->get(%somatic_params);
+
+            unless ($somatic_variation){
+                $somatic_params{model_name} = 'AQID-PLACE_HOLDER';
+                my $create = Genome::Model::Command::Define::SomaticVariation->execute( %somatic_params );
+                $self->error_message('Failed to create somatic variation model with component model: ' . $model->name) and next unless $create;
+                
+                delete $somatic_params{model_name};
+                $somatic_params{name} = 'AQID-PLACE_HOLDER';
+                $somatic_variation = Genome::Model::SomaticVariation->get(%somatic_params);
+                $self->error_message("Failed to find new somatic variation model with component model: " . $model->name) and next unless $somatic_variation;
+
+                my $somatic_variation_model_name = $somatic_variation->default_model_name(capture_target => $capture_target);
+                $self->error_message("Failed to name new somatic variation model with component model: " . $model->name) and next unless $somatic_variation_model_name;
+                $somatic_variation->name($somatic_variation_model_name);
+
+                my $new_models = $self->_newly_created_models;
+                $new_models->{$somatic_variation->id} = $somatic_variation;
+            }
+        }
+        else{
+            $self->error_message("Not processing somatic variation model with sample name: " . $model->subject_name);
+        }
+             
+        
+    }
+}
+
+sub is_tcga {
+    my $self = shift;
+    my $sample = shift;
+
+    return 1 if $sample->nomenclature =~ m/^TCGA/i;
+    return grep{$_->nomenclature =~ m/^TCGA/i} $sample->attributes;
+} 
+
 sub load_pses {
     my $self = shift;
 
@@ -351,9 +472,9 @@ sub preload_data {
     my @pse_params = GSC::PSEParam->get(pse_id => [ map { $_->pse_id } @pses ]);
 
     my @instrument_data_ids = 
-        map { $_->param_value } 
-        grep { $_->param_name eq 'instrument_data_id' } 
-        @pse_params;
+    map { $_->param_value } 
+    grep { $_->param_name eq 'instrument_data_id' } 
+    @pse_params;
 
     $self->status_message("Pre-loading " . scalar(@instrument_data_ids) . " instrument data");
     my @instrument_data = Genome::InstrumentData->get(\@instrument_data_ids);
@@ -413,7 +534,7 @@ sub check_pse {
         unless ( defined($run_name) ) {
             $self->error_message(
                 'failed to get a run_name for sanger instrument data with'
-                    . " id '$instrument_data_id' and pse_id '$pse_id'" 
+                . " id '$instrument_data_id' and pse_id '$pse_id'" 
             );
             return;
         }
@@ -479,15 +600,15 @@ sub assign_instrument_data_to_models {
     # we don't want to (automagically) assign capture and non-capture data to the same model.
     if ( @models and $genome_instrument_data->can('target_region_set_name') ) {
         my $id_capture_target = $genome_instrument_data->target_region_set_name();                 
-                    
+
         if ($id_capture_target) {
             # keep only models with the specified capture target
             my @inputs =
-                Genome::Model::Input->get(
-                    model_id => [ map { $_->id } @models ], 
-                    name => 'target_region_set_name',
-                    value_id => $id_capture_target,
-                );
+            Genome::Model::Input->get(
+                model_id => [ map { $_->id } @models ], 
+                name => 'target_region_set_name',
+                value_id => $id_capture_target,
+            );
             @models = map { $_->model } @inputs;    
         } else {
             # keep only models with NO capture target
@@ -505,10 +626,10 @@ sub assign_instrument_data_to_models {
 
     foreach my $model (@models) {
         my @existing_instrument_data =
-            Genome::Model::InstrumentDataAssignment->get(
-                instrument_data_id => $instrument_data_id,
-                model_id           => $model->id,
-            );
+        Genome::Model::InstrumentDataAssignment->get(
+            instrument_data_id => $instrument_data_id,
+            model_id           => $model->id,
+        );
 
         if (@existing_instrument_data) {
             $self->warning_message(
@@ -520,10 +641,10 @@ sub assign_instrument_data_to_models {
             $existing_models->{$model->id} = $model;
         } else {
             my $assign =
-                Genome::Model::Command::InstrumentData::Assign->create(
-                    instrument_data_id => $instrument_data_id,
-                    model_id           => $model->id,
-                );
+            Genome::Model::Command::InstrumentData::Assign->create(
+                instrument_data_id => $instrument_data_id,
+                model_id           => $model->id,
+            );
 
             unless ( $assign->execute ) {
                 $self->error_message(
@@ -768,7 +889,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         $pse->add_param('genome_model_id', $m->id);
     }
 
-    return 1;
+    return @new_models;
 }
 
 

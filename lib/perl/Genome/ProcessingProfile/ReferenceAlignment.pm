@@ -47,28 +47,52 @@ class Genome::ProcessingProfile::ReferenceAlignment {
             default_value => '0',
             valid_values => [0, 1],
         },
+        snv_detection_strategy => {
+            is => "Text",
+            is_many => 0,
+            is_optional =>1,
+            doc => "Strategy to be used to detect snvs.",
+        },
+        indel_detection_strategy => {
+            is => "Text",
+            is_many => 0,
+            is_optional =>1,
+            doc => "Strategy to be used to detect indels.",
+        },
+        sv_detection_strategy => {
+            is => "Text",
+            is_many => 0,
+            is_optional =>1,
+            doc => "Strategy to be used to detect svs.",
+        },
+        cnv_detection_strategy => {
+            is => "Text",
+            is_many => 0,
+            is_optional =>1,
+            doc => "Strategy to be used to detect cnvs.",
+        },
         snv_detector_name => {
-            doc => 'Name of the snv detector',
+            doc => 'Name of the snv detector--will be replaced by snv_detection_strategy',
             is_optional => 1,
         },
         snv_detector_version => {
-            doc => 'version of the snv detector',
+            doc => 'version of the snv detector--will be replaced by snv_detection_strategy',
             is_optional => 1,
         },
         snv_detector_params => {
-            doc => 'command line args used for the snv detector',  
+            doc => 'command line args used for the snv detector--will be replaced by snv_detection_strategy',
             is_optional => 1,
         },
         indel_detector_name => {
-            doc => 'Name of the indel detector',
+            doc => 'Name of the indel detector--will be replaced by indel_detection_strategy',
             is_optional => 1,
         },
         indel_detector_version => {
-            doc => 'version of the indel detector',
+            doc => 'version of the indel detector--will be replaced by indel_detection_strategy',
             is_optional => 1,
         },
         indel_detector_params => {
-            doc => 'command line args used for the indel detector',  
+            doc => 'command line args used for the indel detector--will be replaced by indel_detection_strategy',
             is_optional => 1,
         },
         multi_read_fragment_strategy => {

@@ -308,7 +308,7 @@ sub {
       <div class="span-12 last">
         <div class="rounded" style="margin-bottom: 10px;">
           <div class="padding10">
-            <p>Please wait while this view is generated and added to the cache. Subsequent loads will be returned rapidly from the cache.<p>
+            <p></p>
             <div id="ajax_status"></div>
           </div>
         </div>

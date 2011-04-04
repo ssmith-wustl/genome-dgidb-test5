@@ -45,7 +45,6 @@ class Genome::Model::Tools::DetectVariants::Somatic::Pindel {
             is_input => 1,
             is_output => 1,
         },
-
         # Temporary output files
         _temp_long_insertion_output => {
             calculate_from => ['_temp_staging_directory'],
@@ -219,7 +218,6 @@ sub _detect_variants {
         $self->error_message("Must run on a 64 bit machine");
         die;
     }
-
     $self->_generate_config_file;
 
     my $result;

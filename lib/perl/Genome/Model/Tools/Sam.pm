@@ -7,6 +7,7 @@ use Genome;
 use File::Basename;
 use POSIX;
 use DateTime;
+use IO::File;
 
 my $DEFAULT = 'r544';
 #3Gb
@@ -167,10 +168,17 @@ sub open_bamsam_out {
 }
 
 sub read_count {
-	my $self = shift;
-	my $filename = shift;
-	
-	my $samtools = $self->samtools_path;
+    my $self = shift;
+    my $filename = shift;
+
+    # Check to see if there is a flagstat file beside the bam before line-counting the entire thing....
+    if(-s $filename.".flagstat" ){
+        my $flag_object = Genome::Model::Tools::Sam::Flagstat->create(bam_file => $filename, output_file => $filename.".flagstat");
+        my $data = $flag_object->parse_file_into_hashref($filename.".flagstat");
+        return $data->{'total_reads'};
+    }
+
+    my $samtools = $self->samtools_path;
 
     my ($type) = ($filename =~ /\.([^\.\s]+)\s*$/i);
     my $count_cmd;
@@ -182,10 +190,22 @@ sub read_count {
         $self->error_message("Unknown type ($type) from filename ($filename).");
         return;
     }
-	
-	chomp(my $read_count = qx($count_cmd));
-	($read_count) = split(' ', $read_count);
-	return $read_count;
+    
+    chomp(my $read_count = qx($count_cmd));
+    ($read_count) = split(' ', $read_count);
+    return $read_count;
+}
+
+sub read_length {
+    my $self = shift;
+    my $filename = shift;
+    my $cmd = $self->samtools_path." view ".$filename."|";
+    my $bam_fh = IO::File->new( $cmd);
+    my $read = $bam_fh->getline;
+    $bam_fh->close;
+    my @read_fields = split /\t/, $read;
+    my $read_length = length($read_fields[9]);
+    return $read_length;
 }
 
 sub date {

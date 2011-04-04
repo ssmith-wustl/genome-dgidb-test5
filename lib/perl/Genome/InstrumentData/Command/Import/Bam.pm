@@ -82,6 +82,9 @@ class Genome::InstrumentData::Command::Import::Bam {
             is  => 'Number',
             doc => 'output instrument data id after import',
         },
+        _inst_data => {
+            is_optional => 1,
+        },
     ],
 };
 
@@ -172,7 +175,7 @@ sub execute {
        $self->error_message('Failed to create imported instrument data for '.$self->original_data_path);
        return;
     }
-
+    $self->_inst_data($import_instrument_data);
     my $instrument_data_id = $import_instrument_data->id;
     $self->status_message("Instrument data: $instrument_data_id is imported");
     $self->import_instrument_data_id($instrument_data_id);
@@ -223,7 +226,7 @@ sub execute {
         ($md5_from_file) = split " ", $md5_from_file;
         chomp $md5_from_file;
         #chomp $md5;
-        $self->error_message("md5 sum from file = ".$md5_from_file);
+        $self->status_message("md5 sum from file = ".$md5_from_file);
         unless($md5 eq $md5_from_file){
             $self->status_message("calcmd5 = ".$md5." and file md5 = ".$md5_from_file);
             $self->error_message("Calculated md5 sum and sum read from file did not match, aborting.");
@@ -245,7 +248,13 @@ sub execute {
         $import_instrument_data->delete;
         die "Import Failed.";
     }
-    $self->status_message("Bam successfully copied to allocation. Now calculating md5sum of the copied bam, to compare with pre-copy md5sum. Again, this could take some time.");
+    $self->status_message("Bam successfully copied to allocation."); 
+    $self->status_message("Running flagstat in order to generate metrics for the instrument-data record."); 
+
+    $self->_add_stats;
+
+
+    $self->status_message("Now calculating md5sum of the copied bam, to compare with pre-copy md5sum. Again, this could take some time.");
     
     #calculate and compare md5 sums
 
@@ -263,5 +272,55 @@ sub execute {
 
     return 1;
 }
+
+sub _add_stats {
+    my $self = shift;
+    my $data = $self->_run_flagstat;
+    my $inst_data = $self->_inst_data;
+    $inst_data->read_count($data->{'total_reads'});
+    $inst_data->fragment_count($data->{'total_reads'}*2);
+    $inst_data->read_length($self->_read_length);
+    $inst_data->base_count(int($inst_data->read_length) * int($inst_data->fragment_count));
+    if($data->{'reads_paired_in_sequencing'} > 0){
+        $inst_data->is_paired_end(1);
+    }
+    else {
+        $inst_data->is_paired_end(0);
+    }
+    $self->_inst_data($inst_data);
+    return 1;
+}
+
+sub _read_length {
+    my $self = shift;
+    $self->status_message("Now calculating read_length via gmt sam->read_length");
+    my $sam = Genome::Model::Tools::Sam->create;
+    my $read_length = $sam->read_length($self->_inst_data->bam_path);
+    unless(defined($read_length)){
+        die $self->error_message("Was not able to run gmt sam->read_length");
+    }
+    $self->status_message("Finished calculating read_length. read_length=".$read_length);
+    return $read_length;
+}
+
+sub _run_flagstat {
+    my $self = shift;
+    unless(defined($self->_inst_data)){
+        die $self->error_message("No instrument data found in self->_inst_data");
+    }
+    my $flagstat_file = $self->_inst_data->bam_path . ".flagstat";
+    my $flagstat_object = Genome::Model::Tools::Sam::Flagstat->create( bam_file => $self->_inst_data->bam_path, output_file => $flagstat_file);
+    unless(-s $flagstat_file){
+        $self->status_message("Generating flagstat file now...");
+        unless($flagstat_object->execute){
+            die $self->error_message("Failed to run gmt sam flagstat");
+        }
+        $self->status_message("Flagstat file created");
+    }
+    my $flag_data = $flagstat_object->parse_file_into_hashref($flagstat_file);
+
+    return $flag_data;
+}
+
 
 1;

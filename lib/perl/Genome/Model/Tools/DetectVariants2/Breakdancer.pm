@@ -45,8 +45,8 @@ class Genome::Model::Tools::DetectVariants2::Breakdancer{
         },
         workflow_log_dir => {
             is => 'Text',
-            calculate_from => '_temp_staging_directory',
-            calculate => q{ return $_temp_staging_directory . '/workflow_log/'; },
+            calculate_from => 'output_directory',
+            calculate => q{ return $output_directory . '/workflow_log/'; },
             is_optional => 1,
             doc => 'workflow log directory of per chromosome breakdancer run',
         },
@@ -76,7 +76,7 @@ class Genome::Model::Tools::DetectVariants2::Breakdancer{
     ],
     has_param => [ 
         lsf_resource => {
-            default_value => "-M 8000000 -R 'select[type==LINUX64 && mem>8000] rusage[mem=8000]'",
+            default_value => "-M 8000000 -R 'select[localdata && mem>8000] rusage[mem=8000]'",
         },
     ],
     # These are params from the superclass' standard API that we do not require for this class (dont show in the help)

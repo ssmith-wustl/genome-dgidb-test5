@@ -71,7 +71,7 @@ class Genome::Model::Tools::DetectVariants2::Filter::NovoRealign {
     has_param => [
         lsf_resource => {
             #default_value => "-R 'select[mem>8000] rusage[mem=8000]' -M 8000000", #novoalign needs this memory usage 8G to run
-            default_value => "-R 'select[mem>10000] rusage[mem=10000]' -M 10000000",
+            default_value => "-R 'select[localdata && mem>10000] rusage[mem=10000]' -M 10000000",
         },
     ],
     has_constant => [
@@ -165,15 +165,28 @@ sub _filter_variants {
         die;
     }
 
-    #FIXME hardcode for this index right now and add human build37 to elsif block. 
-    #But this is bad and sits in ken's directory. Change this asap.
-    my $novo_idx;
-    if ($ref_seq =~ /build101947881/) {
-        #$novo_idx = '/gscuser/kchen/sata114/kchen/Hs_build36/all_fragments/Hs36_rDNA.fa.k14.s3.ndx';
-        $novo_idx = '/gscmnt/sata420/info/model_data/2741951221/build101947881/Hs36_rDNA.fa.k14.s3.ndx';
+    # TODO This can be changed when reference seuqnece build id is added to the filter api
+    my $build_id;
+    if ($ref_seq =~ /build(\d+)/) {
+        $build_id = $1;
     }
     else {
-        die "Now NovoRealign only applied to NCBI-human-Build36, not " . $ref_seq;
+        die "Could not get build id from reference sequence fasta file path $ref_seq";
+    }
+
+    my $novo_idx_obj = Genome::Model::Build::ReferenceSequence::AlignerIndex->get_or_create(
+        reference_build_id => $build_id,
+        aligner_version => $self->novoalign_version,
+        aligner_name => 'novocraft',
+        aligner_params => '-k 14 -s 3',
+    );
+    unless (defined $novo_idx_obj) {
+        die "Could not retrieve novocraft index for reference build $build_id and aligner version " . $self->novoalign_version;
+    }
+
+    my $novo_idx = $novo_idx_obj->full_consensus_path('fa.novocraft');
+    unless (-e $novo_idx) {
+        die "Found no novocraft index file at $novo_idx for reference build $build_id and aligner version " . $self->novoalign_version;
     }
 
     for my $lib (keys %fastqs) {

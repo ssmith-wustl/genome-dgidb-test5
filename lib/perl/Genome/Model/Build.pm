@@ -1337,7 +1337,7 @@ sub get_all_objects {
             #}
     };
 
-    return map { $sorter->( $self->$_ ) } (qw/ events inputs metrics from_build_links to_build_links variants/);
+    return map { $sorter->( $self->$_ ) } (qw(events inputs metrics from_build_links to_build_links variants));
 }
 
 sub yaml_string {
