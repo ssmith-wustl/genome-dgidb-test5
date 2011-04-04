@@ -17,6 +17,7 @@ use above 'Genome';
 #Parsing tests
 my $det_class_base = 'Genome::Model::Tools::DetectVariants2';
 my $dispatcher_class = "${det_class_base}::Dispatcher";
+my $refbuild_id = 101947881;
 use_ok($dispatcher_class);
 
 # hash of strings => expected output hash
@@ -92,7 +93,7 @@ my $test_working_dir = File::Temp::tempdir('DetectVariants2-Dispatcher-combineXX
 my $combine_test = $dispatcher_class->create(
     snv_detection_strategy => 'samtools r599 filtered by snp-filter v1 union samtools r599 filtered by snp-filter v1',
     output_directory => $test_working_dir,
-    reference_sequence_input => $ref_seq_input,
+    reference_build_id => $refbuild_id,
     aligned_reads_input => $tumor_bam,
     control_aligned_reads_input => $normal_bam,
 );

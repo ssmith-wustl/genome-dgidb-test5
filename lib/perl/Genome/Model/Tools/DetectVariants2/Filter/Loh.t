@@ -14,7 +14,7 @@ BEGIN {
     use_ok('Genome::Model::Tools::DetectVariants2::Filter::Loh');    
 };
 
-my $refseq = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa';
+my $refbuild_id = 101947881;
 
 my $test_input_dir      = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-Loh';
 my $tumor_snp_file      = $test_input_dir . '/snvs.hq.bed'; 
@@ -44,7 +44,7 @@ my $loh = Genome::Model::Tools::DetectVariants2::Filter::Loh->create(
     detector_directory => $detector_directory,
     aligned_reads_input => $tumor_bam_file,
     control_aligned_reads_input => $normal_bam_file,
-    reference_sequence_input => $refseq,
+    reference_build_id => $refbuild_id,
 );
 
 ok($loh, 'created loh object');

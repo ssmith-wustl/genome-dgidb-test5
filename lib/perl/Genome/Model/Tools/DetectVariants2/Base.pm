@@ -12,10 +12,15 @@ use Genome;
 class Genome::Model::Tools::DetectVariants2::Base {
     is => ['Genome::Command::Base'],
     has => [
-        reference_sequence_input => {
+        reference_build_id => {
             is => 'Text',
-            doc => 'Location of the reference sequence file',
+            doc => 'The build-id of a reference sequence build',
             is_input => 1,
+        },
+        reference_sequence_input => {
+            calculate_from => ['reference_build_id'],
+            calculate => q{ Genome::Model::Build->get($reference_build_id)->fasta_file },
+            doc => 'Location of the reference sequence file',
         },
         aligned_reads_input => {
             is => 'Text',

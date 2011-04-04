@@ -16,7 +16,7 @@ BEGIN {
     use_ok( 'Genome::Model::Tools::DetectVariants2::Filter::PindelSomaticCalls')
 };
 
-my $refseq = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa';
+my $refbuild_id = 101947881;
 my $input_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-PindelSomaticCalls";
 
 # Updated to .v2 for correcting an error with newlines
@@ -35,7 +35,7 @@ my $pindel_somatic_calls = Genome::Model::Tools::DetectVariants2::Filter::Pindel
     detector_directory => $input_directory."/pindel",
     output_directory => $test_output_dir,
     aligned_reads_input => $tumor_bam_file,
-    reference_sequence_input => $refseq,
+    reference_build_id => $refbuild_id,
 );
 
 ok($pindel_somatic_calls, "created PindelSomaticCalls object");
