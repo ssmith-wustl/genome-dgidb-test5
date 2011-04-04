@@ -49,3 +49,6 @@
 [submodule "getopt-complete"]
 	path = getopt-complete
 	url = https://github.com/genome/Getopt--Complete-for-Perl.git
+[submodule "bassovac"]
+	path = bassovac
+	url = ssh://git/srv/git/bassovac.git
