@@ -470,10 +470,10 @@ sub default_model_name {
     push @parts, @additional_parts if @additional_parts;
     $name_template .= '.'.join('.', @parts) if @parts;
 
-    my $name = Genome::Utility::Text::sanitize_string_for_filesystem( sprintf($name_template, '', '') );
+    my $name = sprintf($name_template, '', '');
     my $cnt = 0;
     while ( Genome::Model->get(name => $name) ) {
-        $name = Genome::Utility::Text::sanitize_string_for_filesystem( sprintf($name_template, '-', ++$cnt) );
+        $name = sprintf($name_template, '-', ++$cnt);
     }
 
     return $name;

@@ -110,7 +110,7 @@ ok($model, 'create model');
 is($model->default_model_name, 'TEST-00.tester', 'default model name');
 is(
     $model->default_model_name(capture_target => 'glutius maximus', roi => 'poop'),
-    'TEST-00.tester.capture.glutius_maximus.poop',
+    'TEST-00.tester.capture.glutius maximus.poop',
     'default model name w/ capture and roi',
 );
 
