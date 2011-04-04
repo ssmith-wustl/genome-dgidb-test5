@@ -82,6 +82,7 @@ sub execute {
         SUFFIX => '.out',
         DIR => $self->psortb_archive_dir,
         CLEANUP => 0,
+        UNLINK => 0,
     );
     my $output_file = $temp_fh->filename();
     $temp_fh->close();
