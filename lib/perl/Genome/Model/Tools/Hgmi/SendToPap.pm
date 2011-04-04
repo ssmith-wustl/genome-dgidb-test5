@@ -331,6 +331,7 @@ sub do_pap_workflow {
         my $workflow = Workflow::Operation->create_from_xml($xml_file);
         confess "Could not create workflow!" unless $workflow;
 
+        # FIXME Temp directory shouldn't be hard-coded
         my $tempdir = tempdir(
             CLEANUP => 0, 
             DIR => '/gscmnt/temp212/info/annotation/pap_workflow_logs/',
@@ -338,69 +339,39 @@ sub do_pap_workflow {
         chmod(0755, $tempdir);
         $workflow->log_dir($tempdir);
 
-        if($xml_file =~ /noblastp/)
-        {
-            $self->status_message("skipping blastp in PAP");
-            $output = run_workflow_lsf(
-                                       $workflow,
-                                       'fasta file'           => $fasta_file,
-                                       'chunk size'           => 1000,
-                                       'dev flag'             => $workflow_dev_flag,
-                                       'biosql namespace'     => 'MGAP',
-                                       'gram stain'           => $self->gram_stain(),
-                                       'interpro archive dir' => $self->interpro_archive_dir(),
-                                       'keggscan archive dir' => $self->keggscan_archive_dir(),
-                                       'psortb archive dir'   => $self->psortb_archive_dir(),
-                                      );
+        # TODO Implement dynamic workflow generation to allow an arbitrary combo of tools to be used
+        my %workflow_params = (
+            'fasta file' => $fasta_file,
+            'chunk size' => 1000,
+            'dev flag' => $workflow_dev_flag,
+            'biosql namespace' => 'MGAP',
+            'gram stain' => $self->gram_stain(),
+            'interpro archive dir' => $self->interpro_archive_dir(),
+            'keggscan archive dir' => $self->keggscan_archive_dir(),
+            'psortb archive dir' => $self->psortb_archive_dir(),
+        );
+        $workflow_params{'blastp archive dir'} = $self->blastp_archive_dir unless $xml_file =~ /noblastp/;
 
-        }
-        else
-        { 
-            $output = run_workflow_lsf(
-                                       $workflow,
-                                       'fasta file'           => $fasta_file,
-                                       'chunk size'           => $self->chunk_size(),
-                                       'dev flag'             => $workflow_dev_flag,
-                                       'biosql namespace'     => 'MGAP',
-                                       'gram stain'           => $self->gram_stain(),
-                                       'blastp archive dir'   => $self->blastp_archive_dir(),
-                                       'interpro archive dir' => $self->interpro_archive_dir(),
-                                       'keggscan archive dir' => $self->keggscan_archive_dir(),
-                                       'psortb archive dir'   => $self->psortb_archive_dir(),
-                                      );
-        }
+        $self->status_message("Kicking off PAP workflow!");
 
+        $output = run_workflow_lsf(
+            $workflow,
+            %workflow_params,
+        );
     }
 
-    
-    # do quick check on the return value.
-    #print STDERR Dumper($output),"\n";
-   
-    if (defined($output)) {
-        print STDERR "workflow completed successfully ... SendToPap.pm\n";
-        return 0;
+    if (defined $output) {
+        $self->status_message("Protein annotation workflow completed successfully!");
     }
     else {
-        
-        foreach my $error (@Workflow::Simple::ERROR) {
- 
-            print STDERR join("\t", 
-                              $error->dispatch_identifier(),
-                              $error->name(), 
-                              $error->start_time(), 
-                              $error->end_time(),
-                              $error->exit_code(),
-                             ), "\n";
-
-            print STDERR $error->stdout(), "\n";
-            print STDERR $error->stderr(), "\n";
-
+        for my $error (@Workflow::Simple::ERROR) {
+            $self->status_message(join("\t", grep { defined $error->$_ } qw/ dispatch_identifier name start_time end_type exit_code /));
+            $self->status_message($error->stdout);
+            $self->status_message($error->stderr);
         }
-    
-        return 1;
-
+        confess 'Protein annotation workflow errors encountered, see above error messages!';
     }
-
+    return 1;
 }
 
 

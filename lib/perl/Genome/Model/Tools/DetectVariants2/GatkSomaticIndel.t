@@ -14,7 +14,7 @@ if ($archos !~ /64/) {
     plan skip_all => "Must run from a 64-bit machine";
 }
 else {
-    plan tests => 9;
+    plan tests => 7;
 }
 
 my $test_data = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-GatkSomaticIndel";
@@ -24,17 +24,12 @@ my $normal = $test_data."/flank_normal_sorted.bam";
 
 my $tmpdir = File::Temp::tempdir('GatkSomaticIndelXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
 
-my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get(type_name => 'imported reference sequence', name => 'NCBI-human-build36');
-ok($ref_seq_build, 'Got a reference sequence build') or die('Test cannot continue without a reference sequence build');
-is($ref_seq_build->name, 'NCBI-human-build36', 'Got expected reference for test case');
-my $ref_seq_input = $ref_seq_build->full_consensus_path('fa');
-# temporary hack - use the network disk instead of the cache since the sequence dictionary was changed and this update was not propagated to all blades. Change this once this problem is solved - gsanders
-$ref_seq_input =~ s/\/opt\/fscache//;
+my $refbuild_id = 101947881;
 
 my $gatk_somatic_indel = Genome::Model::Tools::DetectVariants2::GatkSomaticIndel->create(
         aligned_reads_input=>$tumor, 
         control_aligned_reads_input=>$normal,
-        reference_sequence_input => $ref_seq_input,
+        reference_build_id => $refbuild_id,
         output_directory => $tmpdir, 
         mb_of_ram => 3000,
 );
