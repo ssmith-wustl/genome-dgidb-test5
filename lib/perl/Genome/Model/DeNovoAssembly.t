@@ -14,7 +14,7 @@ use_ok('Genome::Model::DeNovoAssembly');
 my $model = Genome::Model::DeNovoAssembly::Test->model_for_soap;
 ok($model, 'mock model');
 is($model->center_name, 'WUGC', 'center name');
-is($model->default_model_name, 'Escherichia_coli TEST.denovo-1', 'default model name');
+is($model->default_model_name, 'Escherichia coli TEST.denovo-1', 'default model name');
 
 my %tissue_descs_and_name_parts = (
     '20l_p' => undef,

@@ -35,6 +35,12 @@ class Genome::Model::Tools::Somatic::LaunchPindel{
             is_optional => 1,
             doc => 'use this to directly specify normal bam if you do not have a build',
         },
+        reference_sequence_build => {
+            is => 'Integer',
+            is_optional=>1,
+            default=>'101947881',
+            doc=>'default build NCBI human build36',
+        },
         output_dir => {
             is => 'Text',
             is_input => 1,
@@ -80,7 +86,14 @@ sub execute {
     
         my $email_address = $ENV{'LOGNAME'} . "\@genome.wustl.edu";
         $self->status_message("sending a completion mail to: $email_address");
-        print `bsub -u $email_address -N -q workflow "gmt detect-variants2 dispatcher --aligned-reads-input $tumor_bam    --control-aligned-reads-input $normal_bam --reference-sequence-input /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa --output-directory $output --indel-detection-strategy 'pindel 0.4 filtered by pindel-somatic-calls v1 then pindel-read-support v1'"`;
+        my $include;
+        if($INC[0] !~ m/noarch/) {
+            my $newlib  = $INC[0];
+            $include = "-I $newlib";
+            $self->status_message("using $newlib include on bsub");
+        }
+        my $reference_build_id=$self->reference_sequence_build;
+        print `bsub -u $email_address -N -q workflow "perl $include \`which gmt\` detect-variants2 dispatcher --aligned-reads-input $tumor_bam    --control-aligned-reads-input $normal_bam --reference-build-id $reference_build_id --output-directory $output --indel-detection-strategy 'pindel 0.4 filtered by pindel-somatic-calls v1 then pindel-read-support v1'"`;
         return 1;
-}
+    }
 1;
