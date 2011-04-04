@@ -88,8 +88,6 @@ sub _filter_variants {
     my $self     = shift;
     my $cfg_file = $self->config_file;
 
-    $ENV{GENOME_SYS_NO_CLEANUP} = 1;
-
     #Allow 0 size of output
     if (-z $cfg_file) {
         $self->warning_message('0 size of breakdancer config file. Probably it is for testing of samll bam files');
@@ -155,9 +153,6 @@ sub _filter_variants {
     my $novosam_path  = $self->novo2sam_path;
     my $samtools_path = $self->samtools_path;
 
-    #my $ref_seq_model = Genome::Model::ImportedReferenceSequence->get(name => 'NCBI-human');
-    #my $ref_seq_dir   = $ref_seq_model->build_by_version('36')->data_directory;
-    #my $ref_seq_idx   = $ref_seq_dir.'/all_sequences.fasta.fai';
     my $ref_seq     = $self->reference_sequence_input;
     my $ref_seq_idx = $ref_seq . '.fai';
     unless (-s $ref_seq_idx) {
@@ -165,20 +160,14 @@ sub _filter_variants {
         die;
     }
 
-    # TODO This can be changed when reference seuqnece build id is added to the filter api
-    my $build_id;
-    if ($ref_seq =~ /build(\d+)/) {
-        $build_id = $1;
-    }
-    else {
-        die "Could not get build id from reference sequence fasta file path $ref_seq";
-    }
+    my $build_id = $self->reference_build_id;
+    $self->status_message("The reference sequence build id is : $build_id");
 
     my $novo_idx_obj = Genome::Model::Build::ReferenceSequence::AlignerIndex->get_or_create(
         reference_build_id => $build_id,
-        aligner_version => $self->novoalign_version,
-        aligner_name => 'novocraft',
-        aligner_params => '-k 14 -s 3',
+        aligner_version    => $self->novoalign_version,
+        aligner_name       => 'novocraft',
+        aligner_params     => '-k 14 -s 3',
     );
     unless (defined $novo_idx_obj) {
         die "Could not retrieve novocraft index for reference build $build_id and aligner version " . $self->novoalign_version;
@@ -188,6 +177,7 @@ sub _filter_variants {
     unless (-e $novo_idx) {
         die "Found no novocraft index file at $novo_idx for reference build $build_id and aligner version " . $self->novoalign_version;
     }
+    $self->status_message("Found novocraft index file: $novo_idx");
 
     for my $lib (keys %fastqs) {
         my @read1s = @{$fastqs{$lib}{1}};
