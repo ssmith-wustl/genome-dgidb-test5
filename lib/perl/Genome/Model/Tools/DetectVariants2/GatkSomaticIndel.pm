@@ -34,13 +34,15 @@ class Genome::Model::Tools::DetectVariants2::GatkSomaticIndel{
 
 sub _detect_variants {
     my $self = shift;
+    my $refseq = $self->reference_sequence_input;
+    $refseq =~ s/\/opt\/fscache//;
     my $gatk_cmd = Genome::Model::Tools::Gatk::SomaticIndel->create( 
         tumor_bam => $self->aligned_reads_input, 
         normal_bam => $self->control_aligned_reads_input,
         output_file => $self->_temp_staging_directory."/gatk_output_file",
         bed_output_file => $self->_temp_staging_directory."/indels.hq",
         mb_of_ram => $self->mb_of_ram,
-        reference => $self->reference_sequence_input,
+        reference => $refseq,
     );
     unless($gatk_cmd->execute){
         $self->error_message("Failed to run GATK command.");

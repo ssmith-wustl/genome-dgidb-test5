@@ -19,7 +19,7 @@ class Genome::Model::Tools::DetectVariants2::Base {
         },
         reference_sequence_input => {
             calculate_from => ['reference_build_id'],
-            calculate => q{ Genome::Model::Build->get($reference_build_id)->sequence_path },
+            calculate => q{ Genome::Model::Build->get($reference_build_id)->full_consensus_path('fa') },
             doc => 'Location of the reference sequence file',
         },
         aligned_reads_input => {

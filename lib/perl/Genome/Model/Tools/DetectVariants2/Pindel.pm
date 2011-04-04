@@ -97,9 +97,11 @@ sub _detect_variants {
     unless ($self->indel_bed_output) { 
         $self->indel_bed_output($self->_temp_staging_directory. '/indels.hq.bed'); 
     }
+    my $refseq = $self->reference_sequence_input;
+    $refseq =~ s/\/opt\/fscache//;
 
     my %input;
-    $input{reference_sequence_input}=$self->reference_sequence_input;
+    $input{reference_sequence_input}=$refseq;
     $input{aligned_reads_input}=$self->aligned_reads_input;
     $input{control_aligned_reads_input}=$self->control_aligned_reads_input if defined $self->control_aligned_reads_input;
     $input{output_directory} = $self->output_directory;#$self->_temp_staging_directory;
@@ -108,7 +110,6 @@ sub _detect_variants {
     for my $chr (@{$self->chromosome_list}){
         $input{"chr_$chr"}=$chr;
     }
-    print Data::Dumper::Dumper(\%input);
     $self->status_message("Generating workflow now.");
 
     my $workflow = $self->generate_workflow;
