@@ -11,17 +11,14 @@ BEGIN {
 
 use Parse::RecDescent qw/RD_ERRORS RD_WARN RD_TRACE/;
 use Data::Dumper;
-use Test::More tests => 4;
+use Test::More tests => 2;
 use above 'Genome';
 
 #Parsing tests
 my $det_class_base = 'Genome::Model::Tools::DetectVariants2';
 my $dispatcher_class = "${det_class_base}::Dispatcher";
 
-my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get(type_name => 'imported reference sequence', name => 'NCBI-human-build36');
-ok($ref_seq_build, 'Got a reference sequence build') or die('Test cannot continue without a reference sequence build');
-is($ref_seq_build->name, 'NCBI-human-build36', 'Got expected reference for test case');
-my $ref_seq_input = $ref_seq_build->full_consensus_path('fa');
+my $refbuild_id = 101947881;
 
 my $tumor_bam = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Dispatcher/flank_tumor_sorted.bam";
 my $normal_bam = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Dispatcher/flank_normal_sorted.bam";
@@ -31,12 +28,9 @@ my $test_working_dir = File::Temp::tempdir('DetectVariants2-Dispatcher-filterXXX
 my $filter_test = $dispatcher_class->create(
     snv_detection_strategy => 'samtools r599 filtered by snp-filter v1',
     output_directory => $test_working_dir,
-    reference_sequence_input => $ref_seq_input,
+    reference_build_id => $refbuild_id,
     aligned_reads_input => $tumor_bam,
     control_aligned_reads_input => $normal_bam,
 );
 ok($filter_test, "Object to test a filter case created");
 ok($filter_test->execute, "Successfully executed test.");
-
-done_testing();
-

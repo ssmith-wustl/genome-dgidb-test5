@@ -15,7 +15,7 @@ BEGIN {
     if ($archos !~ /64/) {
         plan skip_all => "Must run from 64-bit machine";
     } else {
-        plan tests => 24;
+        plan tests => 23;
     }
 };
 
@@ -47,14 +47,13 @@ my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get(type_na
 ok($ref_seq_build, 'Got a reference sequence build') or die('Test cannot continue without a reference sequence build');
 is($ref_seq_build->name, 'NCBI-human-build36', 'Got expected reference for test case');
 
-my $ref_seq_input = $ref_seq_build->full_consensus_path('fa');
-ok(Genome::Sys->check_for_path_existence($ref_seq_input), 'Got a reference FASTA') or die('Test cannot continue without a reference FASTA');
+my $refbuild_id = 101947881;
 
 #This window size and ratio are atypical, but allow the test to generate all data given a sparse BAM file.
 my $bam_to_cna_1 = Genome::Model::Tools::DetectVariants2::BamToCna->create(
     aligned_reads_input  => $tumor_bam_file,
     control_aligned_reads_input => $normal_bam_file,
-    reference_sequence_input => $ref_seq_input,
+    reference_build_id => $refbuild_id,
     output_directory     => $output_directory_1,
     window_size     => 10000000,
     ratio           => 4.0,
@@ -73,7 +72,7 @@ ok(-s $output_file_1 . ".png", 'generated copy number graphs for ratio of 4.0');
 my $bam_to_cna_2 = Genome::Model::Tools::DetectVariants2::BamToCna->create(
     aligned_reads_input  => $tumor_bam_file,
     control_aligned_reads_input => $normal_bam_file,
-    reference_sequence_input => $ref_seq_input,
+    reference_build_id => $refbuild_id,
     output_directory     => $output_directory_2,
     window_size     => 10000000,
     ratio           => 0.25,
@@ -92,7 +91,7 @@ ok(-s $output_file_2 . ".png", 'generated copy number graphs for ratio of 0.25')
 my $bam_to_cna_3 = Genome::Model::Tools::DetectVariants2::BamToCna->create(
     aligned_reads_input  => $tumor_bam_file,
     control_aligned_reads_input => $normal_bam_file,
-    reference_sequence_input => $ref_seq_input,
+    reference_build_id => $refbuild_id,
     output_directory     => $output_directory_3,
     window_size     => 10000000,
     ratio           => 4.0
@@ -110,7 +109,7 @@ ok(-s $output_file_3 . ".png", 'generated copy number graphs for ratio of 4.0 an
 my $bam_to_cna_4 = Genome::Model::Tools::DetectVariants2::BamToCna->create(
     aligned_reads_input  => $tumor_bam_file,
     control_aligned_reads_input => $normal_bam_file,
-    reference_sequence_input => $ref_seq_input,
+    reference_build_id => $refbuild_id,
     output_directory     => $output_directory_4,
     window_size     => 10000000,
     ratio           => 0.25

@@ -104,7 +104,7 @@ sub _generate_control_file {
         snv_params => "$detector_params",
         output_directory => $self->_temp_scratch_directory,
         aligned_reads_input => $self->control_aligned_reads_input,
-        reference_sequence_input => $self->reference_sequence_input,
+        reference_build_id => $self->reference_build_id,
     );
 
     unless($detector_command->execute) {
@@ -114,7 +114,7 @@ sub _generate_control_file {
     my $filter_output = $self->_temp_scratch_directory . "/snpfilter";
     my $filter_command = Genome::Model::Tools::DetectVariants2::Filter::SnpFilter->create(
         aligned_reads_input => $self->control_aligned_reads_input,
-        reference_sequence_input => $self->reference_sequence_input,
+        reference_build_id => $self->reference_build_id,
         input_directory => $self->_temp_scratch_directory,
         detector_directory => $self->_temp_scratch_directory,
         output_directory => $filter_output,

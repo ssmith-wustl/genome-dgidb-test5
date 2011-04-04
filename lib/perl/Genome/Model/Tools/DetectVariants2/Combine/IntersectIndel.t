@@ -22,7 +22,7 @@ BEGIN {
 use_ok( 'Genome::Model::Tools::DetectVariants2::Combine::IntersectIndel');
 
 my $test_data_dir  = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Combine-IntersectIndel';
-my $refseq = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa';
+my $refbuild_id = 101947881;
 my $tumor_bam_file  = $test_data_dir . '/flank_tumor_sorted.bam';
 my $normal_bam_file  = $test_data_dir . '/flank_normal_sorted.bam';
 my $input_directory_a = $test_data_dir."/pindel-0.4-";
@@ -37,7 +37,7 @@ my $union_indel_object = Genome::Model::Tools::DetectVariants2::Combine::Interse
     aligned_reads_input => $tumor_bam_file,
     control_aligned_reads_input => $normal_bam_file,
     output_directory    => $test_output_dir,
-    reference_sequence_input => $refseq,
+    reference_build_id => $refbuild_id,
 );
 
 ok($union_indel_object, 'created IntersectIndel object');

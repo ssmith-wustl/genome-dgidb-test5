@@ -16,7 +16,7 @@ BEGIN {
     use_ok( 'Genome::Model::Tools::DetectVariants2::Filter::VarscanHighConfidence')
 };
 
-my $refseq = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa';
+my $refbuild_id = 101947881;
 my $test_data_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-VarscanHighConfidence";
 
 # Updated to .v2 for correcting an error with newlines
@@ -54,7 +54,7 @@ my $varscan_high_confidence = Genome::Model::Tools::DetectVariants2::Filter::Var
     output_directory => $test_output_dir,
     aligned_reads_input => $tumor_bam_file,
     control_aligned_reads_input => $normal_bam_file,
-    reference_sequence_input => $refseq,
+    reference_build_id => $refbuild_id,
 );
 
 ok($varscan_high_confidence, "created VarscanHighConfidence object");
