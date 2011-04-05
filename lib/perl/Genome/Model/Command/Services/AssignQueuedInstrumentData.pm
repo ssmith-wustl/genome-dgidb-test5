@@ -373,7 +373,6 @@ sub find_or_create_somatic_variation_models{
 
             unless ($somatic_variation){
                 $somatic_params{model_name} = 'AQID-PLACE_HOLDER';
-                # $somatic_params{build_requested = '0'}; #TODO: uncomment me
                 my $create = Genome::Model::Command::Define::SomaticVariation->execute( %somatic_params );
                 $self->error_message('Failed to create somatic variation model with component model: ' . $model->name) and next unless $create;
                 
@@ -382,6 +381,7 @@ sub find_or_create_somatic_variation_models{
                 $somatic_variation = Genome::Model::SomaticVariation->get(%somatic_params);
                 $self->error_message("Failed to find new somatic variation model with component model: " . $model->name) and next unless $somatic_variation;
 
+                $somatic_variation->build_requested(0);
                 my $somatic_variation_model_name = $somatic_variation->default_model_name(capture_target => $capture_target);
                 $self->error_message("Failed to name new somatic variation model with component model: " . $model->name) and next unless $somatic_variation_model_name;
                 $somatic_variation->name($somatic_variation_model_name);
