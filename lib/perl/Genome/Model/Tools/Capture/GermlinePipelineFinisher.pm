@@ -37,6 +37,7 @@ class Genome::Model::Tools::Capture::GermlinePipelineFinisher {
 		sequence_phase	=> { is => 'Text', doc => "Sequencing phase" , is_optional => 1, default => "4"},
 		sequence_source	=> { is => 'Text', doc => "Sequence source" , is_optional => 1, default => "Capture"},
 		sequencer	=> { is => 'Text', doc => "Sequencing platform name" , is_optional => 1, default => "IlluminaGAIIx"},
+		make_vcf	=> { is => 'Text', doc => "Make a vcf file for each sample" , is_optional => 1, default => "0"},
 	],
 };
 
@@ -80,6 +81,8 @@ sub execute {                               # replace with real execution logic.
 	my $sequence_source = $self->sequence_source;
 	my $sequencer = $self->sequencer;
 
+	my $return = 1;
+
 	my %sample_list;
 	my $sample_input = new FileHandle ($sample_list_file);
 	while (my $sample = <$sample_input>) {
@@ -97,9 +100,9 @@ sub execute {                               # replace with real execution logic.
 	while (my $line = <$model_input>) {
 		chomp($line);
 		$line =~ s/\s+/\t/g;
-		my ($model_id, $sample_name, $build_id, $build_status, $builddir) = split(/\t/, $line);
+		my ($model_id, $sample_name, $build_id, $build_status, $build_dir, $bam_file) = split(/\t/, $line);
 		if (exists $sample_list{$sample_name}) {
-			$model_hash{$sample_name} = "$model_id\t$build_id\t$builddir";
+			$model_hash{$sample_name} = "$model_id\t$build_id\t$build_dir\t$bam_file";
 		}
 	}
 	my $model_count = 0;
@@ -114,7 +117,7 @@ sub execute {                               # replace with real execution logic.
 	my $firstfile = 1;
 	foreach my $sample_name (sort keys %model_hash) {
 		my $sample_output_dir = $data_dir . "/" . $sample_name;
-		my ($model_id, $build_id, $build_dir) = split(/\t/, $model_hash{$sample_name});
+		my ($model_id, $build_id, $build_dir, $bam_file) = split(/\t/, $model_hash{$sample_name});
 		my $maf_file = $sample_output_dir . "/merged.germline.ROI.tier1.out.maf";
 		if (-e $maf_file) {
 			my $input = new FileHandle ($maf_file);
@@ -133,6 +136,66 @@ sub execute {                               # replace with real execution logic.
 			print "Sample $sample_name does not have maf file: $maf_file\n";
 		}
 	}
+
+	if ($self->make_vcf) {
+		foreach my $sample_name (sort keys %model_hash) {
+			my $sample_output_dir = $data_dir . "/" . $sample_name . "/";
+			my $outfile = $sample_output_dir . "merged.germline.ROI.tier1.out.vcf";
+			open(OUTFILE, ">$outfile") or die "Can't open output file: $!\n";
+			my ($model_id, $build_id, $build_dir, $bam_file) = split(/\t/, $model_hash{$sample_name});
+			my $snp_file = $build_dir . "/snp_related_metrics/snps_all_sequences.filtered";
+			my $indel_file = $build_dir . "/snp_related_metrics/indels_all_sequences.filtered";
+			unless ($bam_file) {
+				my $model = Genome::Model->get($model_id);
+				my $build = $model->last_succeeded_build;
+				$bam_file = $build->whole_rmdup_bam_file;
+			}
+			my $snv_filter = $sample_output_dir.'/merged.germline.snp.ROI.tier1.out.strandfilter';
+			my $snv_filter_fail;
+			my $indel_filter;
+			my $indel_filter_fail;
+			my $snv_annotation;
+			my $indel_annotation;
+			my $indel;
+			my $varfile;
+			my $dbsnp = $sample_output_dir.'/merged.germline.snp.ROI.tier1.out.dbsnp';
+			if (-e $snv_filter) {
+				$snv_filter = $sample_output_dir.'/merged.germline.snp.ROI.tier1.out.strandfilter';
+				$snv_filter_fail = $sample_output_dir.'/merged.germline.snp.ROI.tier1.out.strandfilter_filtered';
+				$indel_filter = $sample_output_dir.'/merged.germline.indel.ROI.tier1.out.strandfilter';
+				$indel_filter_fail = $sample_output_dir.'/merged.germline.indel.ROI.tier1.out.strandfilter_filtered';
+				$indel_annotation = $sample_output_dir.'/annotation.germline.indel.transcript';
+				$snv_annotation = $sample_output_dir.'/annotation.germline.snp.transcript';
+				$indel = $sample_output_dir.'/merged.germline.indel.ROI.tier1.out';
+				$varfile = $sample_output_dir.'/merged.germline.snp.ROI.tier1.out';
+			}
+			else {
+				$snv_filter = $sample_output_dir.'/merged.germline.snp.ROI.strandfilter';
+				$snv_filter_fail = $sample_output_dir.'/merged.germline.snp.ROI.strandfilter_filtered';
+				$indel_filter = $sample_output_dir.'/merged.germline.indel.ROI.strandfilter';
+				$indel_filter_fail = $sample_output_dir.'/merged.germline.indel.ROI.strandfilter_filtered';
+				$indel_annotation = $sample_output_dir.'/annotation.germline.indel.strandfilter.transcript';
+				$snv_annotation = $sample_output_dir.'/annotation.germline.snp.strandfilter.transcript';
+				$indel = $sample_output_dir.'/merged.germline.indel.ROI.strandfilter.tier1.out';
+				$varfile = $sample_output_dir.'/merged.germline.snp.ROI.strandfilter.tier1.out';
+			}
+			my $base_cmd = "perl -I ~/git-dir/ `which gmt` germline vcf-maker --bam-file $bam_file --build-id $build_id --dbsnp-file $dbsnp --indel-annotation-file $indel_annotation --indel-failfiltered-file $indel_filter_fail --indel-file $indel --indel-filtered-file $indel_filter --output-file $outfile --snv-annotation-file $snv_annotation --snv-failfiltered-file $snv_filter_fail --snv-filtered-file $snv_filter --variant-file $varfile --build 36 --center WUGC --project-name $project_name --sequence-phase 4 --sequence-source Capture --sequencer Illumina_GAIIx_or_Hiseq";
+#			my $cmd = "bsub -u wschierd\@genome.wustl.edu -q apipe -R\"select[type==LINUX64 && model != Opteron250 && mem>4000] rusage[mem=4000]\" -M 4000000 -J $job_name -o $output_name -e $error_name \"$base_cmd\"");
+			my $cmd = "bsub -q apipe -R\"select[type==LINUX64 && model != Opteron250 && mem>4000] rusage[mem=4000]\" -M 4000000 \"$base_cmd\"";
+			system($cmd);
+#			$return = Genome::Sys->shellcmd(
+#	                           cmd => "$cmd",
+#	                           output_files => [$outfile],
+#	                           skip_if_output_is_present => 0,
+#	                       );
+#			unless($return) { 
+#				$self->error_message("Failed to execute Vcf Maker: Returned $return");
+#				die $self->error_message;
+#			}
+		}
+	}
+
+	return $return;
 
 }
 
