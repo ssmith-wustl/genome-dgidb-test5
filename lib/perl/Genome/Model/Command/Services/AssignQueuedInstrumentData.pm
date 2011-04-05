@@ -317,7 +317,7 @@ sub find_or_create_somatic_variation_models{
                 processing_profile => $model->processing_profile, 
                 auto_assign_inst_data => '1',
             );
-            $mate_params{annotation_reference_build_id} = $model->annotation_reference_build_id if $model->annotation_reference_build_id;
+            $mate_params{annotation_reference_build_id} = $model->annotation_reference_build_id if $model->can('annotation_reference_build_id') and $model->annotation_reference_build_id;
 
             my $mate = Genome::Model::ReferenceAlignment->get( %mate_params );
             unless ($mate){
