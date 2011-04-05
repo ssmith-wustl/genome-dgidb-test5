@@ -75,7 +75,19 @@ sub execute {                               # replace with real execution logic.
 	my $only_tier_1 = $self->only_tier_1;
 	my $output_dir = "./";
 	$output_dir = $self->output_dir if($self->output_dir);
-	my $regions_file = $self->regions_file if($self->regions_file);
+	my $regions_file;
+	if($self->regions_file) {
+		$regions_file = $self->regions_file ;
+	}
+	else {
+		if ($skip_roi) {
+			$regions_file = '/gscmnt/sata424/info/medseq/Freimer-Boehnke/ExomeComparison/WuSpace_2514360.bed'; # dummy roi file = wuspace bed file
+		}
+		else {
+			die "No regions file submitted. Please specify roi file or enable --roi-skip option";
+		}
+	}
+
 	my $input = new FileHandle ($model_list);
 	my $lineCounter = 0;
 	my $i = 0;
@@ -84,28 +96,28 @@ sub execute {                               # replace with real execution logic.
 		$i++;
 		chomp;
 		my $line = $_;
+		$stats{'num_pairs'}++;
 		$lineCounter++;
 		$line =~ s/\s+/\t/g;
-		my ($model_id, $sample_name, $build_id, $build_status, $build_dir) = split(/\t/, $line);
-		$stats{'num_pairs'}++;
+		my ($model_id, $sample_name, $build_id, $build_status, $build_dir, $bam_file) = split(/\t/, $line);
+		## get the bam file ##
+		unless ($bam_file) {
+			my $model = Genome::Model->get($model_id);
+			my $build = $model->last_succeeded_build;
+			$bam_file = $build->whole_rmdup_bam_file;
+		}
 
 		## Establish sample output dir ##
-		
 		my $sample_output_dir = $output_dir . "/" . $sample_name;
 		mkdir($sample_output_dir) if(!(-d $sample_output_dir));
 		if ($verbose) {
-			print "$model_id\t$sample_name\t$build_status\t$build_dir\n";
+			print "$model_id\t$sample_name\t$build_status\t$build_dir\t$bam_file\n";
 		}
-
-		## get the bam file ##
-		
-		my $bam_file = $build_dir . "/alignments/" . $build_id . "_merged_rmdup.bam";
 
 		my $snp_file = $build_dir . "/snp_related_metrics/snps_all_sequences.filtered";
 		my $indel_file = $build_dir . "/snp_related_metrics/indels_all_sequences.filtered";
 
-		if(-e $bam_file && -e $snp_file && -e $indel_file)
-		{
+		if(-e $bam_file && -e $snp_file && -e $indel_file) {
 			my $varscan_snps = "";
 			$varscan_snps = `cat $sample_output_dir/varScan.output.snp | wc -l` if(-e "$sample_output_dir/varScan.output.snp");
 			chomp($varscan_snps) if($varscan_snps);
@@ -126,7 +138,7 @@ sub execute {                               # replace with real execution logic.
 				$snpexists = 1;
 			}
 			elsif (!$only_tier_1 && (-s $final_snp_file2 || -s $final_snp_file3 || -s $final_snp_file4)) {
-				print "No tier 1 SNP File: $sample_name\n";
+				print "No tier 1 SNP File: $sample_name at: $final_snp_file\n";
 				$snpexists = 1;
 			}
 			else {
@@ -137,7 +149,7 @@ sub execute {                               # replace with real execution logic.
 				$indelexists = 1;
 			}
 			elsif (!$only_tier_1 && (-s $final_indel_file2 || -s $final_indel_file3 || -s $final_indel_file4)){
-				print "No tier 1 Indel File: $sample_name\n";
+				print "No tier 1 Indel File: $sample_name at: $final_indel_file\n";
 				$indelexists = 1;
 			}
 			else {
@@ -162,7 +174,8 @@ sub execute {                               # replace with real execution logic.
 				if($verbose) {
 					print "$model_id\t$sample_name\t$build_status\t$build_dir\n";
 				}
-				my @outfile_list = qw(annotation.germline.indel.ucsc merged.germline.indel merged.germline.indel.ROI.tier4.out merged.germline.snp.ROI samtools.output.indel.formatted varScan.output.snp annotation.germline.indel.unannot-ucsc merged.germline.indel.ROI merged.germline.indel.shared merged.germline.snp.ROI.tier1.out samtools.output.snp.adaptor varScan.output.snp.filter annotation.germline.snp.transcript merged.germline.indel.ROI.tier1.out merged.germline.indel.sniper-only merged.germline.snp.ROI.tier2.out varScan.output.indel varScan.output.snp.formatted annotation.germline.snp.ucsc merged.germline.indel.ROI.tier2.out merged.germline.indel.varscan-only merged.germline.snp.ROI.tier3.out varScan.output.indel.filter varScan.output.snp.variants annotation.germline.indel.transcript annotation.germline.snp.unannot-ucsc merged.germline.indel.ROI.tier3.out merged.germline.snp merged.germline.snp.ROI.tier4.out varScan.output.indel.formatted $sample_name.out $sample_name.err merged.germline.snp.ROI.tier1.out.strandfilter.readcounts merged.germline.snp.ROI.tier1.out.strandfilter_filtered merged.germline.snp.ROI.tier1.out.strandfilter GATK.output.indel GATK.output.indel.vcf GATK.output.indel.bed GATK.output.indel.formatted GATK.output.indel.adaptor merged.germline.snp.ROI.tier1.out.dbsnp merged.germline.indel.ROI.tier1.out.strandfilter merged.germline.indel.ROI.tier1.out.strandfilter.readcounts merged.germline.indel.ROI.tier1.out.strandfilter_filtered merged.germline.ROI.tier1.out.maf merged.germline.snp.ROI.strandfilter.tier1.out merged.germline.indel.ROI.strandfilter.tier1.out annotation.germline.indel.strandfilter.unannot-ucsc annotation.germline.snp.strandfilter.unannot-ucsc merged.germline.snp.ROI.strandfilter.readcounts merged.germline.snp.ROI.strandfilter merged.germline.snp.ROI.strandfilter_filtered annotation.germline.snp.strandfilter.ucsc annotation.germline.indel.strandfilter.ucsc annotation.germline.snp.strandfilter.transcript GATK.ug.output.indel.adaptor merged.germline.indel.gatk-only merged.germline.indel.ROI.strandfilter.readcounts merged.germline.indel.ROI.strandfilter_filtered merged.germline.indel.ROI.strandfilter annotation.germline.indel.strandfilter.transcript);
+				my @outfile_list = qw(annotation.germline.indel.ucsc merged.germline.indel merged.germline.indel.ROI.tier4.out merged.germline.snp.ROI samtools.output.indel.formatted varScan.output.snp annotation.germline.indel.unannot-ucsc merged.germline.indel.ROI merged.germline.indel.shared merged.germline.snp.ROI.tier1.out samtools.output.snp.adaptor varScan.output.snp.filter annotation.germline.snp.transcript merged.germline.indel.ROI.tier1.out merged.germline.indel.sniper-only merged.germline.snp.ROI.tier2.out varScan.output.indel varScan.output.snp.formatted annotation.germline.snp.ucsc merged.germline.indel.ROI.tier2.out merged.germline.indel.varscan-only merged.germline.snp.ROI.tier3.out varScan.output.indel.filter varScan.output.snp.variants annotation.germline.indel.transcript annotation.germline.snp.unannot-ucsc merged.germline.indel.ROI.tier3.out merged.germline.snp merged.germline.snp.ROI.tier4.out varScan.output.indel.formatted $sample_name.out $sample_name.err merged.germline.snp.ROI.tier1.out.strandfilter.readcounts merged.germline.snp.ROI.tier1.out.strandfilter_filtered merged.germline.snp.ROI.tier1.out.strandfilter GATK.output.indel GATK.output.indel.vcf GATK.output.indel.bed GATK.output.indel.formatted GATK.output.indel.adaptor merged.germline.snp.ROI.tier1.out.dbsnp merged.germline.indel.ROI.tier1.out.strandfilter merged.germline.indel.ROI.tier1.out.strandfilter.readcounts merged.germline.indel.ROI.tier1.out.strandfilter_filtered merged.germline.ROI.tier1.out.maf merged.germline.snp.ROI.strandfilter.tier1.out merged.germline.indel.ROI.strandfilter.tier1.out annotation.germline.indel.strandfilter.unannot-ucsc annotation.germline.snp.strandfilter.unannot-ucsc merged.germline.snp.ROI.strandfilter.readcounts merged.germline.snp.ROI.strandfilter merged.germline.snp.ROI.strandfilter_filtered annotation.germline.snp.strandfilter.ucsc annotation.germline.indel.strandfilter.ucsc annotation.germline.snp.strandfilter.transcript GATK.ug.output.indel GATK.ug.output.indel.idx GATK.ug.output.indel.adaptor merged.germline.indel.gatk-only merged.germline.indel.ROI.strandfilter.readcounts merged.germline.indel.ROI.strandfilter_filtered merged.germline.indel.ROI.strandfilter annotation.germline.indel.strandfilter.transcript);
+
 				foreach my $file (@outfile_list) {
 					my $del_file = "$sample_output_dir/$file";
 					if (-e $del_file) {
@@ -171,24 +184,29 @@ sub execute {                               # replace with real execution logic.
 				}
 				my $cmd;
 				if ($stable) {
-					$cmd = "perl -I /gscuser/wschierd/genome-stable/ `which gmt` germline capture-bams --build-id $build_id --germline-bam-file $bam_file --filtered-indelpe-snps $snp_file --indels-all-sequences-filtered $indel_file --data-directory $sample_output_dir --regions-file $regions_file --skip-roi $skip_roi --only-tier-1 $only_tier_1 --only-tier-1-indel $only_tier_1";
+					$cmd = "perl -I /gscuser/wschierd/genome-stable/ `which gmt` germline capture-bams --build-id $build_id --germline-bam-file $bam_file --filtered-indelpe-snps $snp_file --indels-all-sequences-filtered $indel_file --data-directory $sample_output_dir --skip-roi $skip_roi --only-tier-1 $only_tier_1 --only-tier-1-indel $only_tier_1 --regions-file $regions_file";
+
 				}
 				else {
-					$cmd = "gmt germline capture-bams --build-id $build_id --germline-bam-file $bam_file --filtered-indelpe-snps $snp_file --indels-all-sequences-filtered $indel_file --data-directory $sample_output_dir --regions-file $regions_file --skip-roi $skip_roi --only-tier-1 $only_tier_1 --only-tier-1-indel $only_tier_1";
+					$cmd = "gmt germline capture-bams --build-id $build_id --germline-bam-file $bam_file --filtered-indelpe-snps $snp_file --indels-all-sequences-filtered $indel_file --data-directory $sample_output_dir --skip-roi $skip_roi --only-tier-1 $only_tier_1 --only-tier-1-indel $only_tier_1 --regions-file $regions_file";
 				}
 				if($verbose) {
 					print "$cmd\n";
 				}
-				my $job_name = "$sample_output_dir/$sample_name";
+				my $job_name = "$sample_output_dir/";
 				my $output_name = "$sample_output_dir/$sample_name.output";
 				my $error_name = "$sample_output_dir/$sample_name.err";
+				my $output_name_bak = "$sample_output_dir/$sample_name.output.bak";
+				my $error_name_bak = "$sample_output_dir/$sample_name.err.bak";
 				if (-e $output_name) {
-					unlink("$output_name")
+					my $cmd_mv = "mv $output_name $output_name_bak";
+					system($cmd_mv);
 				}
 				if (-e $error_name) {;
-					unlink("$error_name");
+					my $cmd_mv = "mv $error_name $error_name_bak";
+					system($cmd_mv);
 				}
-				system("bsub -q apipe -R\"select[type==LINUX64 && model != Opteron250 && mem>4000] rusage[mem=4000]\" -M 4000000 -J $job_name -o $output_name -e $error_name \"$cmd\"");
+				system("bsub -u wschierd\@genome.wustl.edu -q apipe -R\"select[type==LINUX64 && model != Opteron250 && mem>4000] rusage[mem=4000]\" -M 4000000 -J $job_name -o $output_name -e $error_name \"$cmd\"");
 				sleep(1);
 			}
 		}
