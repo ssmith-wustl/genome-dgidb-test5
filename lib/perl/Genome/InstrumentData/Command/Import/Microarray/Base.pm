@@ -71,11 +71,11 @@ sub execute {
     my $resolve_sample_library = $self->_resolve_sample_and_library;
     return if not $resolve_sample_library;
 
-    my $model = $self->_create_model;
-    return if not $model;
-
     my $instrument_data = $self->_create_instrument_data;
     return if not $instrument_data;
+
+    my $model = $self->_create_model;
+    return if not $model;
 
     my $allocation = $self->_create_allocation;
     return if not $allocation;
@@ -199,7 +199,7 @@ sub _create_model {
         $self->error_message('Cannot create genotype microarray model');
         return;
     }
-    my $name = $model->default_model_name;
+    my $name = $model->default_model_name(instrument_data => $self->_instrument_data);
     if ( not $name ) {
         $self->error_message('No default name for genotype microarray model');
         $model->delete;

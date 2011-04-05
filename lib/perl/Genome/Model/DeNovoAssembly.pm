@@ -15,6 +15,7 @@ class Genome::Model::DeNovoAssembly {
             to => 'value_id',
             where => [ name => 'center_name', value_class_name => 'UR::Value' ],
             is_mutable => 1,
+            default_value => 'wugc',
             doc => 'Center name',
         },
 	    map({
