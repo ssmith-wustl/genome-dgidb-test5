@@ -1140,10 +1140,10 @@ sub add_processing_profiles_to_pses{
     my $self = shift;
     my @pses = @_;
     for my $pse (@pses){
+        #next if $pse->added_param('processing_profile_id); #THIS SHOULD ONLY BE USED DURING THE TRANSITION PERIOD WHILE OLD AQID IS IN USE
         my ($instrument_data_id) = $pse->added_param('instrument_data_id');
         my ($instrument_data_type) = $pse->added_param('instrument_data_type');
         my $instrument_data = $self->_instrument_data($pse);
-        #TODO: what do we do if there are alreayd pps assigned to the PSE (during the switch)
         eval {
             my @processing_profile_ids_to_add;
             my %reference_sequence_names_for_processing_profile_ids;
@@ -1161,7 +1161,7 @@ sub add_processing_profiles_to_pses{
                 die $self->error_message;
             }
 
-            my $taxon = $organism_sample->taxon;
+            my $taxon = $organism_sample->get_organism_taxon;
 
             unless (defined($taxon)) {
                 $self->error_message('failed to get taxon via Genome::Taxon for id ' . $instrument_data_id);
