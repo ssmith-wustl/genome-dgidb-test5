@@ -83,7 +83,7 @@ ok($cmd->execute, "execution was successful");
 
 my $i = Genome::InstrumentData::Imported->get($cmd->generated_instrument_data_id);
 is($i->import_format, 'genotype file', 'import format');
-is($i->import_source_name, 'WUGC', 'import source name');
+is($i->import_source_name, 'wugc', 'import source name');
 is($i->description, $params{description}, 'description');
 is($i->library_id, $library->id, 'description');
 

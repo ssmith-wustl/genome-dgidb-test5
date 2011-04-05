@@ -198,7 +198,7 @@ sub generate_fake_instrument_data {
                                                                       seq_id => $FAKE_INSTRUMENT_DATA_ID,
                                                                       median_insert_size => '22',
                                                                       sample_name => 'test_sample_name',
-                                                                      library_name => 'test_sample_name-lib1',
+                                                                      library_id => '144224',
                                                                       run_name => 'test_run_name',
                                                                       subset_name => 4,
                                                                       run_type => 'Paired End Read 2',

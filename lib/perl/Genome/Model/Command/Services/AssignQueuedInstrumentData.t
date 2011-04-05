@@ -225,8 +225,8 @@ my $library_pool = Genome::Library->create(
 );
 
 my $instrument_data_pool = Genome::InstrumentData::Solexa->create(
-    id => '-103',
-    library_id => $library->id,
+    id => '-1003',
+    library_id => $library_pool->id,
     flow_cell_id => 'TM-021',
     lane => '3',
     index_sequence => 'unknown',

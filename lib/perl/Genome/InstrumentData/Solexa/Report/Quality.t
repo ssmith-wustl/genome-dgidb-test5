@@ -22,6 +22,7 @@ my $instrument_data = Genome::InstrumentData::Solexa->create_mock(
                                                                   sequencing_platform => 'solexa',
                                                                   sample_name => 'test_sample_name',
                                                                   library_name => 'test_library_name',
+                                                                  library_id => '-1233445',
                                                                   run_name => 'test_run_name',
                                                                   subset_name => 4,
                                                                   lane => 4,
