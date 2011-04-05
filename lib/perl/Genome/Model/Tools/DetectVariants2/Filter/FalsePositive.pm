@@ -452,6 +452,7 @@ sub _get_readcount_line {
 
 sub fails_homopolymer_check {
     (my $self, my $reference, my $min_homopolymer, my $chrom, my $chr_start, my $chr_stop, my $ref, my $var) = @_;
+    $chr_start++; # Adjust for bed input format
 
     ## Auto-pass large indels ##
 
