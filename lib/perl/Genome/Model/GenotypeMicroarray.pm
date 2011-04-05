@@ -59,8 +59,15 @@ class Genome::Model::GenotypeMicroarray{
 sub sequencing_platform { return 'genotype file'; }
 
 sub _additional_parts_for_default_name {
-    my $self = shift;
-    return ( $self->processing_profile->instrument_type, $self->refseq_name );
+    my ($self, %params) = @_;
+    my ($instrument_data) = $self->instrument_data;
+    if ( not $instrument_data ) {
+        $instrument_data = $params{instrument_data};
+        if ( not $instrument_data ) {
+            die 'No instrument data found for model';
+        }
+    }
+    return ( $instrument_data->import_source_name, $instrument_data->sequencing_platform, $self->refseq_name );
 }
 
 1;

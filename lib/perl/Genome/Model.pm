@@ -466,7 +466,11 @@ sub default_model_name {
     my @parts;
     push @parts, 'capture', $params{capture_target} if defined $params{capture_target};
     push @parts, $params{roi} if defined $params{roi};
-    my @additional_parts = eval{ $self->_additional_parts_for_default_name; };
+    my @additional_parts = eval{ $self->_additional_parts_for_default_name(%params); };
+    if ( $@ ) {
+        $self->error_message("Failed to get addtional default name parts: $@");
+        return;
+    }
     push @parts, @additional_parts if @additional_parts;
     $name_template .= '.'.join('.', @parts) if @parts;
 
@@ -478,6 +482,8 @@ sub default_model_name {
 
     return $name;
 }
+
+sub _additional_parts_for_default_name { return; }
 
 #If a user defines a model with a name (and possibly type), we need to find/make sure there's an
 #appropriate subject to use based upon that name/type.
