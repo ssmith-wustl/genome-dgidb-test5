@@ -15,7 +15,13 @@ class Genome::InstrumentData {
     has => [
         seq_id => { calculate_from => [ 'id' ], calculate => q{ return $id }, },
         subclass_name => { is => 'Text' },
-        sequencing_platform => { is => 'Text' },
+        sequencing_platform => {
+            calculate_from => 'subclass_name',
+            calculate => q{
+                my ($platform) = $subclass_name =~ /::(\w+)$/;
+                return lc $platform;
+            },
+        },
         library_id => { is => 'Number' },
         library => { is => 'Genome::Library', id_by => 'library_id' },
         library_name => { via => 'library', to => 'name' },
@@ -74,6 +80,20 @@ sub delete {
     }
     $self->SUPER::delete;
 
+    return $self;
+}
+
+sub create {
+    my $class = shift;
+    my %params = @_;
+
+    # Attempting to create attributes with an undef value causes problems
+    for my $name (sort keys %params) {
+        delete $params{$name} unless exists $params{$name} and defined $params{$name};
+    }
+
+    my $self = $class->SUPER::create(%params);
+    Carp::confess "Could not create new instrument data objects with params " . Data::Dumper::Dumper(\%params) unless $self;
     return $self;
 }
 
