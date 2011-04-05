@@ -201,9 +201,11 @@ class Genome::Sample {
     has_many => [
         libraries => { 
             is => 'Genome::Library', 
+            is_optional => 1,
             calculate_from => 'id',
             calculate => q{ return Genome::Library->get(sample_id => $id) },
         },
+        library_names => { via => 'libraries', to => 'name', is_optional => 1, },
         solexa_lanes                => { is => 'Genome::InstrumentData::Solexa', reverse_as => 'sample' },
         solexa_lane_names           => { via => 'solexa_lanes', to => 'full_name' },
     ],
