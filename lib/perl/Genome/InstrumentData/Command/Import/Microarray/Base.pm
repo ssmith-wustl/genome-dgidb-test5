@@ -30,9 +30,9 @@ class Genome::InstrumentData::Command::Import::Microarray::Base {
         },
         import_source_name => {
             is => 'Text',
-            doc => 'source name for imported file, like Broad Institute',
+            doc => 'Center name where this data was generated. Ex: wugc, broad...',
             is_optional => 1,
-            default_value => 'WUGC',
+            default_value => 'wugc',
         },
         sequencing_platform => {
             is => 'Text',
