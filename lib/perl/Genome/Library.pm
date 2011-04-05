@@ -68,6 +68,12 @@ class Genome::Library {
             to => 'id', 
             doc => 'ID of the sample\'s source' 
         },
+        models => {
+            via => 'sample',
+            is_many => 1,
+            to => 'models',
+        },
+        protocol_name           => { is_transient => 1, is => 'Text', },
     ],
     table_name => 'FRAGMENT_LIBRARY',
     schema_name => 'GMSchema',
@@ -77,6 +83,7 @@ class Genome::Library {
 sub __display_name__ {
     return $_[0]->name.' ('.$_[0]->id.')';
 }
+
 
 1;
 

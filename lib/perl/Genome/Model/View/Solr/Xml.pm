@@ -84,6 +84,10 @@ class Genome::Model::View::Solr::Xml {
                     position => 'content',
                 },
                 {
+                    name => 'sample_names',
+                    position => 'content',
+                },
+                {
                     name => 'processing_profile',
                     position => 'content',
                     perspective => 'default',
