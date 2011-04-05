@@ -1054,7 +1054,11 @@ sub _resolve_project_and_work_order_names {
         $self->warning_message('No work order found for PSE ' . $pse->id);
     }
 
-    return map(($_->name, $_->project_name), @work_orders);
+    if(@work_orders and $work_orders[0]->isa("Genome::WorkOrder")){
+        return map((($_->can("name") ? $_->name : $_->setup_name ), $_->project_name), @work_orders);
+    }else{
+        return map(($_->setup_name , $_->research_project_name), @work_orders);
+    }
 }
 
 sub _resolve_pooled_sample_name_for_instrument_data {
