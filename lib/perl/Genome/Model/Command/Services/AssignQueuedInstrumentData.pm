@@ -294,7 +294,7 @@ sub find_or_create_somatic_variation_models{
     #only want sample-based models
     @models = grep {$_->subject_type eq "sample_name"} @models;
     #only want TCGA models
-    @models = grep {$self->is_tcga($_->subject)} @models;
+    @models = grep {$self->is_tcga_reference_alignment($_)} @models;
     for my $model (@models){
         my $sample = $model->subject;
         #find or create mate ref-align model
@@ -373,6 +373,7 @@ sub find_or_create_somatic_variation_models{
 
             unless ($somatic_variation){
                 $somatic_params{model_name} = 'AQID-PLACE_HOLDER';
+                # $somatic_params{build_requested = '0'}; #TODO: uncomment me
                 my $create = Genome::Model::Command::Define::SomaticVariation->execute( %somatic_params );
                 $self->error_message('Failed to create somatic variation model with component model: ' . $model->name) and next unless $create;
                 
@@ -397,13 +398,15 @@ sub find_or_create_somatic_variation_models{
     }
 }
 
-sub is_tcga {
+sub is_tcga_reference_alignment {
     my $self = shift;
-    my $sample = shift;
+    my $model = shift;
+    my $sample = $model->subject;
 
+    return unless $model->isa('Genome::Model::ReferenceAlignment');
     return 1 if $sample->nomenclature =~ m/^TCGA/i;
     return grep{$_->nomenclature =~ m/^TCGA/i} $sample->attributes;
-} 
+}
 
 sub load_pses {
     my $self = shift;
