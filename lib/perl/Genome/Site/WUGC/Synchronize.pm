@@ -117,8 +117,8 @@ sub execute {
                 if ($self->copy_object($old_object, $new_type)) {
                     $created_objects++;
                     $object_created = 1;
+                    push @{$report{$new_type}{'copied'}}, $old_id;
                 }
-                push @{$report{$new_type}{'copied'}}, $old_id;
                 $old_object = $old_iterator->next;
             }
             else {
@@ -137,8 +137,8 @@ sub execute {
                     if ($self->copy_object($old_object, $new_type)) {
                         $created_objects++;
                         $object_created = 1;
+                        push @{$report{$new_type}{'copied'}}, $old_id;
                     }
-                    push @{$report{$new_type}{'copied'}}, $old_id;
                     $old_object = $old_iterator->next;
                 }
             }
