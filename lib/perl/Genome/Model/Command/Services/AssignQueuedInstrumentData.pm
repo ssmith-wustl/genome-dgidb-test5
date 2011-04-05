@@ -317,7 +317,7 @@ sub find_or_create_somatic_variation_models{
                 processing_profile => $model->processing_profile, 
                 auto_assign_inst_data => '1',
             );
-            $mate_params{annotation_reference_build_id} = $model->annotation_reference_build_id if $model->annotation_reference_build_id;
+            $mate_params{annotation_reference_build_id} = $model->annotation_reference_build_id if $model->can('annotation_reference_build_id') and $model->annotation_reference_build_id;
 
             my $mate = Genome::Model::ReferenceAlignment->get( %mate_params );
             unless ($mate){
@@ -771,7 +771,10 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
 
     my $capture_target = eval{ $genome_instrument_data->target_region_set_name; };
 
-    my $name = $regular_model->default_model_name(capture_target => $capture_target);
+    my $name = $regular_model->default_model_name(
+        instrument_data => $genome_instrument_data,
+        capture_target => $capture_target,
+    );
     if ( not $name ) {
         $self->error_message('Failed to get model name for params: '.Dumper(\%model_params));
         for my $model ( @new_models ) { $model->delete; }
@@ -812,7 +815,11 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         }
         push @new_models, $wuspace_model;
 
-        my $wuspace_name = $wuspace_model->default_model_name(capture_target => $capture_target, roi => 'wu-space');
+        my $wuspace_name = $wuspace_model->default_model_name(
+            instrument_data => $genome_instrument_data,
+            capture_target => $capture_target,
+            roi => 'wu-space',
+        );
         if ( not $wuspace_name ) {
             $self->error_message('Failed to get wu-space model name for params: '.Dumper(\%model_params));
             for my $model (@new_models) { $model->delete; }

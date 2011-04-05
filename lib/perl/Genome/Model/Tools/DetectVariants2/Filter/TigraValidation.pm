@@ -351,7 +351,7 @@ sub _filter_variants {
         my %options = (
             aligned_reads_input         => $self->aligned_reads_input,
             control_aligned_reads_input => $self->control_aligned_reads_input,
-            reference_sequence_input    => $self->reference_sequence_input,
+            reference_build_id          => $self->reference_build_id,
             input_directory    => $self->input_directory,
             output_directory   => $self->_temp_staging_directory,
             params             => $self->params,

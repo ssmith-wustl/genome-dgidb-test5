@@ -233,7 +233,7 @@ sub run_breakdancer {
                 $op,
                 aligned_reads_input         => $self->aligned_reads_input, 
                 control_aligned_reads_input => $self->control_aligned_reads_input,
-                reference_sequence_input    => $self->reference_sequence_input,
+                reference_build_id          => $self->reference_build_id,
                 output_directory            => $self->_temp_staging_directory,
                 config_file => $cfg_file,
                 sv_params   => $self->sv_params,
