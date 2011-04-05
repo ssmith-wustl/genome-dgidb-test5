@@ -49,6 +49,13 @@
         </xsl:for-each>
 
         </div><!-- end .objects -->
+
+        <xsl:for-each select="aspect[@name='models']/object[./types[./isa[@type='Genome::Model']]]">
+          <xsl:sort select="aspect[@name='is_default']" order="descending"/>
+          <xsl:sort select="aspect[@name='name']"/>
+          <xsl:call-template name="genome_model_builds_list_table"/>
+        </xsl:for-each>
+
       </div> <!-- end .container -->
     </div> <!-- end .content -->
 

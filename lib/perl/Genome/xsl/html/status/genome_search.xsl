@@ -55,7 +55,7 @@
             <div style="width: 100%; float: left;">
               <div class="padding10">
                 <br/>
-                Help us make it better by <a href="mailto:apipe@genome.wustle.du">emailing us</a> with
+                Help us make it better by <a href="mailto:apipe@genome.wustl.edu">emailing us</a> with
                 your search text and what you expected to find.
                 <br/><br/>
                 Currently you will find taxons, individuals, samples, libraries, model groups, models, processing profiles, wiki pages, and instrument data (flow cell).

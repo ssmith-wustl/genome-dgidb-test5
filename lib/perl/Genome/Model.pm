@@ -186,6 +186,13 @@ class Genome::Model {
                 }
             }
         },
+        sample_names => {
+            is => 'Array',
+            calculate => q {
+                my @s = $self->get_all_possible_samples();
+                return sort map {$_->name()} @s;
+            },
+        },
         subject_type    => { is => 'Text', len => 255, 
                             valid_values => ["species_name","sample_group","flow_cell_id","genomic_dna","library_name","sample_name","dna_resource_item_name"], 
                             calculate_from => 'subject_class_name',
@@ -591,8 +598,10 @@ sub get_all_possible_samples {
             map($_->samples, @sources);
     } elsif ($self->subject_class_name eq 'Genome::Sample'){
         @samples = ( $self->subject );
+    } elsif ($self->subject_class_name eq 'Genome::Individual') {
+        @samples = $self->subject->samples();
     #} elsif () {
-        #TODO Possibly fill in for Genome::Individual, Genome::PopulationGroup and possibly others
+        #TODO Possibly fill in for possibly Genome::PopulationGroup and possibly others (possibly)
     } else {
         @samples = ();
     }
