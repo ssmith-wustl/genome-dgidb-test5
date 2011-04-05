@@ -101,7 +101,10 @@ class Genome::Sample {
         source_type => { 
             is => 'Text',
             calculate_from => 'source',
-            calculate => q{ return $source->subject_type; },
+            calculate => q{ 
+                return unless $source;
+                return $source->subject_type; 
+            },
         },
         source_name => { 
             via => 'source', 
@@ -163,7 +166,10 @@ class Genome::Sample {
         },
         species_name => { 
             calculate_from => 'taxon',
-            calculate => q{ return $taxon->name; },
+            calculate => q{ 
+                return unless $taxon;
+                return $taxon->name; 
+            },
             doc => 'the name of the species of the sample source\'s taxonomic category' 
         },
         # TODO What are these for? What do they represent?
