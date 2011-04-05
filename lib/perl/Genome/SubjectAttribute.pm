@@ -20,7 +20,9 @@ class Genome::SubjectAttribute {
             is => 'Text',
         },
     ],
-    has => [
+    has => [        
+        # TODO Should be in id_by, but currently can't have a property in id_by that
+        # also has a default value
         nomenclature => {
             is => 'Text',
             default => 'WUGC',

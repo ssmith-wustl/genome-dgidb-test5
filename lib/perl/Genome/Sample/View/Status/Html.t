@@ -4,8 +4,9 @@ use strict;
 use warnings;
 
 use above "Genome";
-
 use Test::More tests => 6;
+
+$ENV{UR_DBI_NO_COMMIT} = 1;
 
 use_ok('Genome::Sample::View::Status::Html') or die "test cannot continue...";
 
