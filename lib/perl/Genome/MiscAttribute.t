@@ -6,7 +6,7 @@ use warnings;
 use above "Genome";
 use Test::More tests => 7;
 
-my $x = Genome::InstrumentData::Solexa->create(-1);
+my $x = Genome::InstrumentData::Solexa->create(id => -1);
 ok($x, "created a solexa lane object");
 
 $x->full_path("/my/path");
