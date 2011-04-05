@@ -8,6 +8,9 @@ use File::Basename;
 
 class Genome::InstrumentData::Solexa {
     is => 'Genome::InstrumentData',
+    has_constant => [
+        sequencing_platform => { value => 'solexa' },
+    ],
     has_optional => [
         project_name => {
             via => 'attributes',

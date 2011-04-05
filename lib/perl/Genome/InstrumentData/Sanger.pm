@@ -9,6 +9,9 @@ use Genome;
 
 class Genome::InstrumentData::Sanger {
     is => 'Genome::InstrumentData',
+    has_constant => [
+        sequencing_platform => { value => 'sanger' },
+    ],
     has_optional => [
         research_project => {
             via => 'attributes',

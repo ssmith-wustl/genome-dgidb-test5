@@ -15,13 +15,7 @@ class Genome::InstrumentData {
     has => [
         seq_id => { calculate_from => [ 'id' ], calculate => q{ return $id }, },
         subclass_name => { is => 'Text' },
-        sequencing_platform => {
-            calculate_from => 'subclass_name',
-            calculate => q{
-                my ($platform) = $subclass_name =~ /::(\w+)$/;
-                return lc $platform;
-            },
-        },
+        sequencing_platform => { is => 'Text' },
         library_id => { is => 'Number' },
         library => { is => 'Genome::Library', id_by => 'library_id' },
         library_name => { via => 'library', to => 'name' },

@@ -7,6 +7,9 @@ use Genome;
 
 class Genome::InstrumentData::454 {
     is => 'Genome::InstrumentData',
+    has_constant => [
+        sequencing_platform => { value => '454' },
+    ],
     has_optional => [
         beads_loaded => {
             via => 'attributes',
