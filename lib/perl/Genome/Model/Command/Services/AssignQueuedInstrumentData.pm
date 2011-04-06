@@ -1140,7 +1140,7 @@ sub add_processing_profiles_to_pses{
     my $self = shift;
     my @pses = @_;
     for my $pse (@pses){
-        #next if $pse->added_param('processing_profile_id); #THIS SHOULD ONLY BE USED DURING THE TRANSITION PERIOD WHILE OLD AQID IS IN USE
+        next if $pse->added_param('processing_profile_id'); #FIXME: THIS SHOULD ONLY BE USED DURING THE TRANSITION PERIOD WHILE OLD AQID IS IN USE
         my ($instrument_data_id) = $pse->added_param('instrument_data_id');
         my ($instrument_data_type) = $pse->added_param('instrument_data_type');
         my $instrument_data = $self->_instrument_data($pse);
