@@ -60,10 +60,10 @@ sub execute {
     }
     
     #my @fastq_filenames = $instrument_data->fastq_filenames;
-    my $tmp_bam = $instrument_data->base_temp_directory .'/'. $instrument_data->id .'.bam';
+    my $tmp_bam = Genome::Sys->base_temp_directory .'/'. $instrument_data->id .'.bam';
     unless (Genome::Model::Tools::Picard::FastqToSam->execute(
-        fastq => $instrument_data->base_temp_directory.'/'. $instrument_data->read1_fastq_name,
-        fastq2 => $instrument_data->base_temp_directory .'/'. $instrument_data->read2_fastq_name ,
+        fastq => Genome::Sys->base_temp_directory.'/'. $instrument_data->read1_fastq_name,
+        fastq2 => Genome::Sys->base_temp_directory .'/'. $instrument_data->read2_fastq_name ,
         sample_name => $instrument_data->sample_name,
         library_name => $instrument_data->library_name,
         platform => 'illumina',

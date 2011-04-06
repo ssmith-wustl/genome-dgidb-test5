@@ -1,13 +1,5 @@
 package Genome::Individual;
 
-# Adaptor for GSC::Organism::Individual
-
-# Do NOT use this module from anything in the GSC schema,
-# though the converse will work just fine.
-
-# This module should contain only UR class definitions,
-# relationships, and support methods.
-
 use strict;
 use warnings;
 
@@ -16,71 +8,133 @@ use Genome;
 use Carp;
 
 class Genome::Individual {
-    is => 'Genome::Measurable',
-    table_name => 'GSC.ORGANISM_INDIVIDUAL',
-    id_by => [
-        individual_id => { is => 'Number', len => 10, column_name => 'ORGANISM_ID' },
-    ],
+    is => 'Genome::Subject',
     has => [
-        name => { is => 'Text', len => 64, column_name => 'FULL_NAME', doc => 'Name of the individual', },
-        taxon => { is => 'Genome::Taxon', id_by => 'taxon_id', doc => 'The taxon to which this individual belongs', },
-        species_name    => { is => 'Text', via => 'taxon' },
-        description => { is => 'Text', is_optional => 1, len => 500, doc => 'Description', },
-        subject_type => { is => 'Text', is_constant => 1, value => 'organism individual', column_name => '', },
+        individual_id => {
+            calculate_from => 'id',
+            calculate => q{ return $id; },
+        },
+        taxon_id => {
+            is => 'Number',
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'taxon_id' ],
+            is_mutable => 1,
+        },
+        taxon => { 
+            is => 'Genome::Taxon', 
+            id_by => 'taxon_id', 
+        },
+        species_name => { 
+            via => 'taxon' 
+        },
+        subject_type => { 
+            is => 'Text', 
+            is_constant => 1, 
+            value => 'organism individual'
+        },
     ],
     has_optional => [
-        father  => { is => 'Genome::Individual', id_by => 'father_id', doc => 'Father of this individual', },
-        father_name => { is => 'Text', via => 'father', to => 'name' },
-        mother  => { is => 'Genome::Individual', id_by => 'mother_id', doc => 'Mother of this individual', },
-        mother_name => { is => 'Text', via => 'mother', to => 'name' },
+        father_id => {
+            is => 'Number',
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'father_id' ],
+            is_mutable => 1,
+        },
+        father => { 
+            is => 'Genome::Individual', 
+            id_by => 'father_id' 
+        },
+        father_name => { 
+            via => 'father', 
+            to => 'name' 
+        },
+        mother_id => {
+            is => 'Number',
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'mother_id' ],
+            is_mutable => 1,
+        },
+        mother => { 
+            is => 'Genome::Individual', 
+            id_by => 'mother_id' 
+        },
+        mother_name => { 
+            via => 'mother', 
+            to => 'name' 
+        },
         upn => { 
             is => 'Text', 
-            column_name => 'NAME',
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'upn' ],
+            is_mutable => 1,
             doc => 'fully qualified internal name for the patient', 
         },
         common_name => { 
             is => 'Text',
-            len => 10,
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'common_name' ],
+            is_mutable => 1,
             doc => 'a name like "aml1" for the patient, by which the patient is commonly referred-to in the lab' 
         },
         gender => { 
             is => 'Text',
-            len => 16,
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'gender' ],
+            is_mutable => 1,
             doc => 'when the gender of the individual is known, this value is set to male/female/...' 
         },
-        ethnicity       => { 
+        ethnicity => { 
             is => 'Text',
-            len => 64,
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'ethnicity' ],
+            is_mutable => 1,
             doc => 'the "ethnicity" of the individual, Hispanic/Non-Hispanic/...'
         },
         race => { 
             is => 'Text',
-            len => 64,
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'race' ],
+            is_mutable => 1,
             doc => 'the "race" of the individual, African American/Caucasian/...'
         },
         nomenclature => {
             is => 'Text',
-            len => 64,
-            default_value => 'WUGC',
-            doc => 'Nomenclature',
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'nomenclature', nomenclature => 'WUGC', ],
+            is_mutable => 1,
+            doc => 'nomenclature for the individual',
         },
+    ],
+    has_many_optional => [
         samples => { 
             is => 'Genome::Sample', 
-            is_many => 1,
             reverse_id_by => 'source',
         },
         sample_names => {
             is => 'Text',
             via => 'samples',
             to => 'name',
-            is_many => 1,
         },
     ],
-    data_source => 'Genome::DataSource::GMSchema',
 };
 
 sub __display_name__ {
-    return $_[0]->name.' ('.$_[0]->id.')';
+    my $self = shift;
+    if (defined $self->name) {
+        return $self->name .' (' . $self->id . ')';
+    }
+    else {
+        return '(' . $self->id . ')';
+    }
 }
 
 1;

@@ -189,8 +189,15 @@ sub unfiltered_indel_file {
 
 sub snp_related_metric_directory {
     my $self = shift;
-    
-    return $self->data_directory . '/snp_related_metrics';
+
+    my @dir_names = ('snp_related_metrics', 'sam_snp_related_metrics', 'maq_snp_related_metrics', 'var-scan_snp_related_metrics');
+
+    for my $dir_name (@dir_names) {
+        my $dir = $self->data_directory . '/' . $dir_name;
+        return $dir if -d $dir;
+    }
+
+    return $self->data_directory . '/' . $dir_names[0];
 }
 
 sub _snp_caller_type {
