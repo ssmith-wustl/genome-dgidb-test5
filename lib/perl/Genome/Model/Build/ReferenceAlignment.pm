@@ -31,10 +31,20 @@ class Genome::Model::Build::ReferenceAlignment {
                                             return return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($seq_platform);
                                          },
                           },
-        gold_snp_path => {
-            # this should be updated to have an underlying merged microarray model, which could update, and result in a new build
-            via => 'model',
-        }, 
+        genotype_microarray_build_id => {
+            is => 'Text',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'genotype_microarray_build', 'value_class_name' => 'Genome::Model::Build::GenotypeMicroarray', ],
+            is_many => 0,
+            is_mutable => 1,
+            is_optional => 1,
+            doc => 'Genotype Microarray build used for QC and Gold SNP Concordance report',
+        },
+        genotype_microarray_build => {
+            is => 'Genome::Model::Build::GenotypeMicroarray',
+            id_by => 'genotype_microarray_build_id',
+        },
     ],
 };
 
@@ -57,6 +67,27 @@ sub create {
 
     return $self;
 }
+
+
+sub gold_snp_path {
+    my $self = shift;
+
+    # Backfill genotype microarray input
+    unless ($self->genotype_microarray_build_id) {
+        my $models_gold_snp_build = $self->model->gold_snp_build;
+        if ($models_gold_snp_build) {
+            $self->add_input(
+                value_class_name => $models_gold_snp_build->class,
+                value_id => $models_gold_snp_build->id,
+                name => 'genotype_microarray_build',
+            );
+        }
+    }
+
+    my $geno_micro_build = $self->genotype_microarray_build;
+    return ($geno_micro_build ? $geno_micro_build->formatted_genotype_file_path : undef);
+}
+
 
 sub gold_snp_report_file_filtered {
 	my $self = shift;
