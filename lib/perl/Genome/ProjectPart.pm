@@ -35,5 +35,11 @@ class Genome::ProjectPart {
     doc => 'Represents a single part of a project',
 };
 
+# This generates a unique text ID for the object. The format is <hostname> <PID> <time in seconds> <some number>
+sub Genome::ProjectPart::Type::autogenerate_new_object_id {
+    return $UR::Object::Type::autogenerate_id_base . ' ' . (++$UR::Object::Type::autogenerate_id_iter);
+}
+
+
 1;
 
