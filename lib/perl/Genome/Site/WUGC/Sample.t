@@ -71,7 +71,6 @@ is($sample->data_directory, $alloc->absolute_path, 'sample data directory');
 
 $sample = Genome::Site::WUGC::Sample->get($id);
 ok($sample, 'got new sample');
-is($sample->get_organism_taxon, $taxon, 'get_organism_taxon gives expected result');
 
 done_testing();
 exit();
