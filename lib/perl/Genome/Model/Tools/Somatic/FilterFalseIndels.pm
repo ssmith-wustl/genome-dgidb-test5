@@ -296,24 +296,26 @@ sub execute {
     print "Running BAM Readcounts...\n";
 #    my $cmd = readcount_program() . " -b 15 " . $self->bam_file . " -l $temp_path";
     my $cmd = readcount_program() . " -b 1 " . $self->bam_file . " -l $temp_path";
-    my $readcounts = `$cmd 2>/dev/null`;
-    chomp($readcounts) if($readcounts);
+    my $readcount_path = $self->output_file . ".readcounts";
+
+    $cmd .= '> $readcount_path 2> /dev/null';
+    Genome::Sys->shellcmd(
+        cmd => $cmd,
+        input_files => [$self->bam_file],
+        output_files => [$readcount_path],
+    );
 
     ## Load the results of the readcounts ##
-    
     my %readcounts_by_position = ();
 
-    open(OUTTEMP, ">" . $self->output_file . ".readcounts") or die "Can't open output file: !$\n";
-
-    my @readcounts = split(/\n/, $readcounts);
-    foreach my $rc_line (@readcounts)
+    my $readcount_fh = Genome::Sys->open_file_for_reading($readcount_path);
+    while(my $rc_line = $readcount_fh->readline)
     {
-	print OUTTEMP "$rc_line\n";
+     chomp($rc_line);
 	(my $chrom, my $pos) = split(/\t/, $rc_line);
 	$readcounts_by_position{"$chrom\t$pos"} = $rc_line;
    }
 
-    close(OUTTEMP);
     print "Readcounts loaded\n";
 
     
