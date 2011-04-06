@@ -541,6 +541,13 @@ sub _create_model_and_request_build {
     $model->name($name);
     $self->_model($model);
 
+    my $add = $model->add_instrument_data( $self->_inst_data );
+    if ( not $add ) {
+        $self->error_message('Failed to add instrument data to model');
+        $model->delete;
+        return;
+    }
+
     $self->status_message('Create model and request build...OK');
 
     return $model;
