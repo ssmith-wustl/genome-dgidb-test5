@@ -41,11 +41,11 @@ sub process_source {
         use warnings qw(numeric);
         
         my ($indel_call_1, $indel_call_2) = split('/', $consensus);
-        
-        if($indel_call_1 eq $indel_call_2) {
-            undef $indel_call_2;
+        if(defined($indel_call_2)){
+            if($indel_call_1 eq $indel_call_2) {
+                undef $indel_call_2;
+            }
         }
-
         for my $indel ($indel_call_1, $indel_call_2) {
             next unless defined $indel;
             next if $indel eq '*'; #Indicates only one indel call...and this isn't it!
