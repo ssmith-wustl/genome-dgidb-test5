@@ -73,6 +73,10 @@ sub execute {
     my @models = Genome::Model->get(
         build_requested => 1,
     );
+    unless (@models) {
+        $self->status_message("No models to build.");
+        return 1;
+    }
 
     $DB::single = 1;
     my $builds_to_start = $self->max_builds;
