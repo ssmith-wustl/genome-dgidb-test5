@@ -12,7 +12,7 @@ BEGIN {
 use above 'Genome';
 
 require Genome::InstrumentData::Solexa;
-use Test::More tests => 104;
+use Test::More tests => 101;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
 
@@ -172,17 +172,8 @@ my @models_for_sample = Genome::Model->get(
 is(scalar(@models_for_sample), 2, 'found two models created for the subject');
 is($models_for_sample[0], $new_model, 'that model is the same one the cron claims it created');
 
-#TODO: kill me
-my $new_model_1 = $new_model;
-my $new_model_2 = $new_model;
-#
-
-my @instrument_data = $new_model_1->instrument_data;
+my @instrument_data = $new_model->instrument_data;
 is(scalar(@instrument_data), 2, 'the first new model has two instrument data assigned');
-is_deeply([sort(@instrument_data)], [sort($instrument_data_1, $instrument_data_2)], 'those two instrument data are the ones for our PSEs');
-
-@instrument_data = $new_model_2->instrument_data;
-is(scalar(@instrument_data), 2, 'the second new model has two instrument data assigned');
 is_deeply([sort(@instrument_data)], [sort($instrument_data_1, $instrument_data_2)], 'those two instrument data are the ones for our PSEs');
 
 is($pse_1->pse_status, 'completed', 'first pse completed');
@@ -191,15 +182,14 @@ is($pse_2->pse_status, 'completed', 'second pse completed');
 my ($pse_1_genome_model_id) = $pse_1->added_param('genome_model_id');
 my ($pse_2_genome_model_id) = $pse_2->added_param('genome_model_id');
 
-ok(grep($_->id == $pse_1_genome_model_id, ($new_model_1, $new_model_2)), 'genome_model_id parameter set correctly for first pse');
-ok(grep($_->id == $pse_2_genome_model_id, ($new_model_1, $new_model_2)), 'genome_model_id parameter set correctly for second pse');
+is($pse_1_genome_model_id, $new_model->id, 'genome_model_id parameter set correctly for first pse');
+is($pse_2_genome_model_id, $new_model->id, 'genome_model_id parameter set correctly for second pse');
 
 my $group = Genome::ModelGroup->get(name => 'apipe-auto AQID');
 ok($group, 'auto-generated model-group exists');
 
 my @members = $group->models;
-ok(grep($_ eq $new_model_1, @members), 'group contains the first newly created model');
-ok(grep($_ eq $new_model_2, @members), 'group contains the second newly created model');
+ok(grep($_ eq $new_model, @members), 'group contains the newly created model');
 
 my $instrument_data_3 = Genome::InstrumentData::Solexa->create(
     id => '-102',
@@ -300,7 +290,7 @@ is(scalar(keys %$old_models_2), 1, 'after assigning to existing models found tha
 my @new_models_2 = values(%$new_models_2);
 my ($model_changed_2) = values(%$models_changed_2);
 ok(!grep($_ eq $model_changed_2, @new_models_2), 'the models created are not the one reused');
-is($model_changed_2, $new_model_1, 'the reused model is the one created previously');
+is($model_changed_2, $new_model, 'the reused model is the one created previously');
 
 for my $m (@new_models_2, $model_changed_2) {
     ok($m->build_requested, 'the cron set the model to be built');
