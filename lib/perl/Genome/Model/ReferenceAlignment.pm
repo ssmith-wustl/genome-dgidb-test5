@@ -212,7 +212,7 @@ sub create {
         or return;
 
     unless ( $self->reference_sequence_build ) {
-        $self->error_message("No refernce sequence build given to create reference alignment model");
+        $self->error_message("Missing needed reference sequence build during reference alignment model creation.");
         $self->delete;
         return;
     }
