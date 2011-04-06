@@ -19,7 +19,7 @@ use FileHandle;
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
 class Genome::Model::Tools::Gatk::GermlineIndel {
-	is => 'Command',                       
+	is => 'Genome::Model::Tools::Gatk',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		bam_file	=> { is => 'Text', doc => "BAM File for Sample", is_optional => 0, is_input => 1 },
@@ -27,7 +27,6 @@ class Genome::Model::Tools::Gatk::GermlineIndel {
 		bed_output_file => { is => 'Text', doc => "Optional abbreviated output in BED format", is_optional => 1, is_input => 1, is_output => 1 },
 		formatted_file => { is => 'Text', doc => "Optional output file of indels in annotation format", is_optional => 1, is_input => 1, is_output => 1 },
 		gatk_params => { is => 'Text', doc => "Parameters for GATK", is_optional => 1, is_input => 1, is_output => 1, default => "-R /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa -T IndelGenotyperV2 --window_size 300" },
-		path_to_gatk => { is => 'Text', doc => "Path to GATK command", is_optional => 1, is_input => 1, is_output => 1, default => "/gsc/scripts/pkg/bio/gatk/GenomeAnalysisTK-1.0.5336/GenomeAnalysisTK.jar" },
 	        mb_of_ram => {
 	            is => 'Text',
         	    doc => 'The amount of RAM to use, in megabytes',
@@ -76,7 +75,7 @@ sub execute {                               # replace with real execution logic.
 	my $self = shift;
 
 	## Run GATK ##
-	my $path_to_gatk = $self->path_to_gatk;
+	my $path_to_gatk = $self->gatk_path;
 	my $gatk_params = $self->gatk_params;
 	#-I /gscmnt/sata905/info/model_data/2858219475/build103084961/alignments/103084961_merged_rmdup.bam
 	#-I /gscmnt/sata871/info/model_data/2858334303/build103084933/alignments/103084933_merged_rmdup.bam
