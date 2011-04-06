@@ -78,7 +78,6 @@ sub execute {
         return 1;
     }
 
-    $DB::single = 1;
     my $builds_to_start = $self->max_builds;
     $builds_to_start = @models if @models < $builds_to_start;
     my $command = Genome::Model::Build::Command::Start->create(
