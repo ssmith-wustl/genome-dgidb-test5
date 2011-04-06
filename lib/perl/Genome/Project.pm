@@ -33,5 +33,12 @@ class Genome::Project {
     doc => 'A project, can contain any number of objects (of any type)!',
 };
 
+
+# This generates a unique text ID for the object. The format is <hostname> <PID> <time in seconds> <some number>
+sub Genome::Project::Type::autogenerate_new_object_id {
+    return $UR::Object::Type::autogenerate_id_base . ' ' . (++$UR::Object::Type::autogenerate_id_iter);
+}
+
+
 1;
 
