@@ -12,7 +12,7 @@ BEGIN {
 use above 'Genome';
 
 require Genome::InstrumentData::Solexa;
-use Test::More tests => 128;
+use Test::More tests => 104;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
 
@@ -149,33 +149,33 @@ $ii->mock('get_copy_sequence_files_pse', sub { $copy_sequence_pse });
 ok($command_1->execute(), 'assign-queued-instrument-data executed successfully.');
 
 my $new_models = $command_1->_newly_created_models;
-is(scalar(keys %$new_models), 3, 'the cron created three models');
-is_deeply([sort map { $_->name } values %$new_models], [sort qw/ unknown-run.unknown-subset.prod-qc AQID-test-sample.prod-refalign AQID-test-sample.prod-refalign-1 /], 'the cron named the new models correctly');
+is(scalar(keys %$new_models), 2, 'the cron created two models');
+is_deeply([sort map { $_->name } values %$new_models], [sort qw/ unknown-run.unknown-subset.prod-qc AQID-test-sample.prod-refalign /], 'the cron named the new models correctly');
 
 my $models_changed = $command_1->_existing_models_assigned_to;
 is(scalar(keys %$models_changed), 0, 'the cron did no work for the second PSE, since the first assigns all on creation');
 
 my $old_models = $command_1->_existing_models_with_existing_assignments;
-is(scalar(keys %$old_models), 2, 'the cron found models with data [for the second PSE] already assigned');
+is(scalar(keys %$old_models), 1, 'the cron found models with data [for the second PSE] already assigned');
 
-my @old_model_ids = keys(%$old_models);
-my $new_model_1 = $new_models->{$old_model_ids[0]};
-my $old_model_1 = $old_models->{$old_model_ids[0]};
-is_deeply($new_model_1, $old_model_1, 'the first model created is the one reused');
-ok($new_model_1->build_requested, 'the cron set the first new model to be built');
+my ($old_model_id) = keys(%$old_models);
+my $new_model = $new_models->{$old_model_id};
+my $old_model = $old_models->{$old_model_id};
+is_deeply($new_model, $old_model, 'the model created is the one reused');
 
-my $new_model_2 = $new_models->{$old_model_ids[1]};
-my $old_model_2 = $old_models->{$old_model_ids[1]};
-is_deeply($new_model_2, $old_model_2, 'the second model created is the one reused');
-ok($new_model_2->build_requested, 'the cron set the second new model to be built');
+ok($new_model->build_requested, 'the cron set the new model to be built');
 
 my @models_for_sample = Genome::Model->get(
     subject_class_name => 'Genome::Sample',
     subject_id => $sample->id,
 );
-is(scalar(@models_for_sample), 3, 'found three models created for the subject');
-ok(grep($_ eq $new_model_1, @models_for_sample), 'first model is the same one that the cron claims it created');
-ok(grep($_ eq $new_model_2, @models_for_sample), 'second model is the same one that the cron claims it created');
+is(scalar(@models_for_sample), 2, 'found two models created for the subject');
+is($models_for_sample[0], $new_model, 'that model is the same one the cron claims it created');
+
+#TODO: kill me
+my $new_model_1 = $new_model;
+my $new_model_2 = $new_model;
+#
 
 my @instrument_data = $new_model_1->instrument_data;
 is(scalar(@instrument_data), 2, 'the first new model has two instrument data assigned');
@@ -279,7 +279,6 @@ $pse_4->add_param('instrument_data_type', 'solexa');
 $pse_4->add_param('instrument_data_id', $instrument_data_4->id);
 $pse_4->add_param('subject_class_name', 'Genome::Sample');
 $pse_4->add_param('subject_id', $sample->id);
-$pse_4->add_param('processing_profile_id', $processing_profile->id);
 $pse_4->add_reference_sequence_build_param_for_processing_profile( $processing_profile, $ref_seq_build);
 
 my $command_2 = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
@@ -290,27 +289,25 @@ isa_ok($command_2, 'Genome::Model::Command::Services::AssignQueuedInstrumentData
 ok($command_2->execute(), 'assign-queued-instrument-data executed successfully.');
 
 my $new_models_2 = $command_2->_newly_created_models;
-is(scalar(keys %$new_models_2), 6, 'the cron created six new models (capture data causes two models to be created)');
+is(scalar(keys %$new_models_2), 4, 'the cron created four new models (capture data causes two models to be created, each has a per-lane QC)');
 
 my $models_changed_2 = $command_2->_existing_models_assigned_to;
-is(scalar(keys %$models_changed_2), 2, 'data was assigned to existing models');
+is(scalar(keys %$models_changed_2), 1, 'data was assigned to an existing model');
 
 my $old_models_2 = $command_2->_existing_models_with_existing_assignments;
-is(scalar(keys %$old_models_2), 2, 'after assigning to existing models found those models again in generic by-sample assignment');
+is(scalar(keys %$old_models_2), 1, 'after assigning to existing models found that model again in generic by-sample assignment');
 
 my @new_models_2 = values(%$new_models_2);
-my ($model_changed_2, $model_changed_3) = values(%$models_changed_2);
+my ($model_changed_2) = values(%$models_changed_2);
 ok(!grep($_ eq $model_changed_2, @new_models_2), 'the models created are not the one reused');
-is($model_changed_2, $new_model_1, 'the first reused model is the one created previously');
-ok(!grep($_ eq $model_changed_3, @new_models_2), 'the models created are not the one reused');
-is($model_changed_3, $new_model_2, 'the second reused model is the one created previously');
+is($model_changed_2, $new_model_1, 'the reused model is the one created previously');
 
-for my $m (@new_models_2, $model_changed_2, $model_changed_3) {
+for my $m (@new_models_2, $model_changed_2) {
     ok($m->build_requested, 'the cron set the model to be built');
 }
 
 my @new_refalign_models = grep($_->name !~ /prod-qc$/, @new_models_2);
-is(scalar(@new_refalign_models), 4, 'created four refalign capture models');
+is(scalar(@new_refalign_models), 2, 'created two refalign capture models');
 
 for my $m (@new_refalign_models) {
 
@@ -326,14 +323,10 @@ for my $m (@new_refalign_models) {
     subject_id => $sample->id,
 );
 
-is(scalar(@models_for_sample), 9, 'found 9 models created for the subject');
+is(scalar(@models_for_sample), 6, 'found 6 models created for the subject');
 
-@instrument_data = $new_model_1->instrument_data;
-is(scalar(@instrument_data), 3, 'the first new model has three instrument data assigned');
-is_deeply([sort(@instrument_data)], [sort($instrument_data_1, $instrument_data_2, $instrument_data_3)], 'those three instrument data are the ones for our PSEs');
-
-@instrument_data = $new_model_2->instrument_data;
-is(scalar(@instrument_data), 3, 'the second new model has three instrument data assigned');
+@instrument_data = $new_model->instrument_data;
+is(scalar(@instrument_data), 3, 'the new model has three instrument data assigned');
 is_deeply([sort(@instrument_data)], [sort($instrument_data_1, $instrument_data_2, $instrument_data_3)], 'those three instrument data are the ones for our PSEs');
 
 is($pse_3->pse_status, 'completed', 'third pse completed');
@@ -342,14 +335,12 @@ is($pse_4->pse_status, 'completed', 'fourth pse completed');
 my (@pse_3_genome_model_ids) = $pse_3->added_param('genome_model_id');
 my (@pse_4_genome_model_ids) = $pse_4->added_param('genome_model_id');
 
-is(scalar(@pse_3_genome_model_ids), 2, 'two genome_model_id parameters for third pse');
-ok(grep($new_model_1->id, @pse_3_genome_model_ids) , 'first genome_model_id parameter set correctly for third pse');
-for my $id (@pse_4_genome_model_ids){
-    ok(grep($_->id eq $id, @new_models_2),  'genome_model_id parameter set correctly to match builds created for fourth pse');
-}
+is(scalar(@pse_3_genome_model_ids), 1, 'one genome_model_id parameter for third pse');
+is($pse_3_genome_model_ids[0], $new_model->id, 'genome_model_id parameter set correctly for third pse');
+is_deeply([sort @pse_4_genome_model_ids], [sort map($_->id, @new_refalign_models)], 'genome_model_id parameter set correctly to match builds created for fourth pse');
 
 my @members_2 = $group->models;
-is(scalar(@members_2) - scalar(@members), 4, 'four subsequent models added to the group');
+is(scalar(@members_2) - scalar(@members), 2, 'two subsequent models added to the group');
 
 
 my $instrument_data_5 = Genome::InstrumentData::Solexa->create(
@@ -442,10 +433,10 @@ my $new_models_3 = $command_3->_newly_created_models;
 is(scalar(keys %$new_models_3), 1, 'the cron created another new model');
 
 my $models_changed_3 = $command_3->_existing_models_assigned_to;
-is(scalar(keys %$models_changed_3), 2, 'pse 5 added to existing non-capture models despite pp error');
+is(scalar(keys %$models_changed_3), 1, 'pse 5 added to existing non-capture model despite pp error');
 
 my $old_models_3 = $command_3->_existing_models_with_existing_assignments;
-is(scalar(keys %$old_models_3), 1, 'one other model was found with this data assigned');
+is(scalar(keys %$old_models_3), 0, 'no other models were found with this data assigned');
 
 my @models_for_de_novo_sample = Genome::Model->get(
     subject_class_name => 'Genome::Sample',
@@ -459,8 +450,8 @@ my @de_novo_instrument_data = $new_de_novo_model->instrument_data;
 is(scalar(@de_novo_instrument_data), 1, 'the new model has one instrument data assigned');
 is($de_novo_instrument_data[0], $instrument_data_6, 'is the expected instrument data');
 
-ok(grep($new_model_1 , values %$models_changed_3), 'first run first original model was added');
-ok(grep($new_model_2 , values %$models_changed_3), 'first run second original model was added');
+my($changed_model_3) = values %$models_changed_3;
+is($changed_model_3, $new_model, 'latest addition is to the original model from the first run');
 
 is($pse_5->pse_status, 'inprogress', 'fifth pse inprogress (due to incomplete information)');
 is($pse_6->pse_status, 'completed', 'sixth pse completed');
@@ -468,6 +459,7 @@ is($pse_6->pse_status, 'completed', 'sixth pse completed');
 my ($pse_5_genome_model_id) = $pse_5->added_param('genome_model_id');
 my ($pse_6_genome_model_id) = $pse_6->added_param('genome_model_id');
 
+is($pse_5_genome_model_id, undef, 'genome_model_id parameter remains unset on fifth pse');
 is($pse_6_genome_model_id, $new_de_novo_model->id, 'genome_model_id parameter set correctly for sixth pse');
 
 ##Cleanup failure case from previous test
@@ -535,17 +527,15 @@ isa_ok($command_4, 'Genome::Model::Command::Services::AssignQueuedInstrumentData
 ok($command_4->execute(), 'assign-queued-instrument-data executed successfully.');
 
 my $new_models_4 = $command_4->_newly_created_models;
-is(scalar(keys %$new_models_4), 6, 'the cron created six new models');
-my @somatic_variation =  grep($_->isa("Genome::Model::SomaticVariation"), values %$new_models_4);
+is(scalar(keys %$new_models_4), 3, 'the cron created three new models');
+my ($somatic_variation) =  grep($_->isa("Genome::Model::SomaticVariation"), values %$new_models_4);
 my @tumor = grep($_->subject_name eq  $sample_2->name, values %$new_models_4);
-my @normal = grep($_->subject_name eq  $sample_3->name, values %$new_models_4);
-ok(scalar(@somatic_variation) == 2, 'the cron created two somatic variation models');
-ok(scalar(@tumor) == 4, 'the cron created tumor models');
-ok(scalar(@normal) == 2, 'the cron created paired normal models');
-for my $somatic_variation (@somatic_variation){
-    ok(grep($_ == $somatic_variation->tumor_model, @tumor), 'somatic variation has the correct tumor model');
-    ok(grep($_ == $somatic_variation->normal_model, @normal), 'somatic variation has the correct normal model');
-}
+my ($normal) = grep($_->subject_name eq  $sample_3->name, values %$new_models_4);
+ok($somatic_variation, 'the cron created a somatic variation model');
+ok(@tumor, 'the cron created a tumor model for the first sample');
+ok($normal, 'the cron created a paired normal model');
+ok(grep($_ ==  $somatic_variation->tumor_model, @tumor), 'somatic variation has the correct tumor model');
+is($normal, $somatic_variation->normal_model, 'somatic variation has the correct normal model');
 
 is($pse_7->pse_status, 'completed', 'seventh pse completed');
 
@@ -586,13 +576,12 @@ my $command_5 = Genome::Model::Command::Services::AssignQueuedInstrumentData->cr
     test => 1,
 );
 
+
 isa_ok($command_5, 'Genome::Model::Command::Services::AssignQueuedInstrumentData');
 ok($command_5->execute(), 'assign-queued-instrument-data executed successfully.');
 my $new_models_5 = $command_5->_newly_created_models;
 is(scalar(keys %$new_models_5), 0, 'the cron created zero new models');
-for my $normal (@normal){
-    ok(scalar($normal->instrument_data), 'the cron assigned the new instrument data to the empty paired model');
-}
+ok(scalar($normal->instrument_data), 'the cron assigned the new instrument data to the empty paired model');
 
 ###
 my $sample_4 = Genome::Sample->create(
@@ -685,15 +674,12 @@ isa_ok($command_6, 'Genome::Model::Command::Services::AssignQueuedInstrumentData
 ok($command_6->execute(), 'assign-queued-instrument-data executed successfully.');
 
 my $new_models_6 = $command_6->_newly_created_models;
-$DB::single = 1;
-is(scalar(keys %$new_models_6), 6, 'the cron created six new models (three on each processing profile)');
-my @somatic_variation_2 =  grep($_->isa("Genome::Model::SomaticVariation"), values %$new_models_6);
+is(scalar(keys %$new_models_6), 3, 'the cron created three new models');
+my ($somatic_variation_2) =  grep($_->isa("Genome::Model::SomaticVariation"), values %$new_models_6);
 my @tumor_2 = grep($_->subject_name eq  $sample_4->name, values %$new_models_6);
-my @normal_2 = grep($_->subject_name eq  $sample_5->name, values %$new_models_6);
-ok(scalar(@somatic_variation_2) == 2, 'the cron created a pair of somatic variation models');
-ok(scalar(@tumor_2) == 4, 'the cron created tumor models');
-ok(scalar(@normal_2) == 2, 'the cron created paired normal models');
-for my $somatic_variation_2 (@somatic_variation_2){
-    ok(grep($_ == $somatic_variation_2->tumor_model, @tumor_2), 'somatic variation has the correct tumor model');
-    ok(grep($_ == $somatic_variation_2->normal_model, @normal_2), 'somatic variation has the correct normal model');
-}
+my ($normal_2) = grep($_->subject_name eq  $sample_5->name, values %$new_models_6);
+ok($somatic_variation_2, 'the cron created a somatic variation model');
+ok(@tumor_2, 'the cron created a tumor model for the first sample');
+ok($normal_2, 'the cron created a paired normal model');
+ok(grep($_ ==  $somatic_variation_2->tumor_model, @tumor_2), 'somatic variation has the correct tumor model');
+is($normal_2, $somatic_variation_2->normal_model, 'somatic variation has the correct normal model');
