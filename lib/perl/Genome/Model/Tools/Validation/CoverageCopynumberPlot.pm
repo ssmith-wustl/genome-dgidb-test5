@@ -152,6 +152,20 @@ mtext("Enhanced Scatterplot", side=3, outer=TRUE, line=-3)
 	print R_COMMANDS 'cov100x=subset(z1, (z1$V9+z1$V10) >= 50 & (z1$V9+z1$V10) <= 100);'."\n";
 	print R_COMMANDS 'cov100xplus=subset(z1, (z1$V9+z1$V10) >= 100);'."\n";
 
+	print R_COMMANDS 'den1 <- density(cn1minus$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+	print R_COMMANDS 'den2 <- density(cn2$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+	print R_COMMANDS 'den3 <- density(cn3$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+	print R_COMMANDS 'den4 <- density(cn4plus$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+	print R_COMMANDS 'den1100x <- density(cn1minus100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+	print R_COMMANDS 'den2100x <- density(cn2100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+	print R_COMMANDS 'den3100x <- density(cn3100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+	print R_COMMANDS 'den4100x <- density(cn4plus100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+	print R_COMMANDS 'dennormcov <- density((z1$V5+z1$V6), bw=4, from=0,to=800,na.rm=TRUE);'."\n";
+	print R_COMMANDS 'dennormcov100x <- density((z2$V5+z2$V6), bw=4, from=0,to=800,na.rm=TRUE);'."\n";
+	print R_COMMANDS 'dentumcov <- density((z1$V9+z1$V10), bw=4, from=0,to=600,na.rm=TRUE);'."\n";
+	print R_COMMANDS 'dentumcov100x <- density((z2$V9+z2$V10), bw=4, from=0,to=600,na.rm=TRUE);'."\n";
+
+
 	print R_COMMANDS "pdf(file=\"$coverage_output_file\",width=10,height=7.5);"."\n";
 	print R_COMMANDS 'par(mfrow=c(2,3));'."\n";
 =cut
@@ -186,51 +200,65 @@ mtext("Enhanced Scatterplot", side=3, outer=TRUE, line=-3)
 	print R_COMMANDS 'points(x=cn2$V7,y=cn2$V11, type="p",pch=19,cex=0.4,col="#00FF0055");'."\n";
 	print R_COMMANDS 'points(x=cn3$V7,y=cn3$V11, type="p",pch=19,cex=0.4,col="#0000FF55");'."\n";
 	print R_COMMANDS 'points(x=cn4plus$V7,y=cn4plus$V11, type="p",pch=19,cex=0.4,col="#FFA500FF");'."\n";
+	print R_COMMANDS 'points(((den1$y * 100)+20),den1$x,col="#FF000055", type="p",pch=19,cex=0.4);'."\n";
+	print R_COMMANDS 'points(((den2$y * 100)+30),den2$x,col="#00FF0055", type="p",pch=19,cex=0.4);'."\n";
+	print R_COMMANDS 'points(((den3$y * 100)+40),den3$x,col="#0000FF55", type="p",pch=19,cex=0.4);'."\n";
+	print R_COMMANDS 'points(((den4$y * 100)+50),den4$x,col="#FFA500FF", type="p",pch=19,cex=0.4);'."\n";
+	print R_COMMANDS 'legend(x="bottomright", title = "CN Density", c("1", "2", "3", "4+"),col=c("#FF0000","#00FF00","#0000FF","#FFA500"),lty = c(1,1,1), lwd = 1);'."\n"; #top right will rarely have any points
 	print R_COMMANDS 'legend(x="topright", title = "Copy Number", c("1", "2", "3", "4+"),col=c("#FF0000","#00FF00","#0000FF","#FFA500"),pch=19);'."\n"; #top right will rarely have any points
 	print R_COMMANDS 'plot.default(x=(cn1minus$V5+cn1minus$V6),y=(cn1minus$V7),xlab="Normal Coverage",ylab="Normal Variant Allele Frequency", main=paste(genome," Coverage"), type="p",pch=19,cex=0.4,col="#FF000039",xlim=c(0,maxx2),ylim=c(0,100));'."\n";
 	print R_COMMANDS 'points(x=(cn2$V5+cn2$V6),y=(cn2$V7), type="p",pch=19,cex=0.4,col="#00FF0055");'."\n";
 	print R_COMMANDS 'points(x=(cn3$V5+cn3$V6),y=(cn3$V7), type="p",pch=19,cex=0.4,col="#0000FF55");'."\n";
 	print R_COMMANDS 'points(x=(cn4plus$V5+cn4plus$V6),y=(cn4plus$V7), type="p",pch=19,cex=0.4,col="#FFA500FF");'."\n";
+	print R_COMMANDS 'points(dennormcov$x,((dennormcov$y * 1000)+20),col="#0000000F", type="p",pch=19,cex=0.4);'."\n";
 	print R_COMMANDS 'lines(c(20,20),c(1,100), col="black");'."\n";
 	print R_COMMANDS 'lines(c(30,30),c(1,100), col="blue");'."\n";
 	print R_COMMANDS 'lines(c(100,100),c(1,100), col="green4");'."\n";
 	print R_COMMANDS 'legend(x="topright", title = "Copy Number", c("1", "2", "3", "4+"),col=c("#FF0000","#00FF00","#0000FF","#FFA500"),pch=19);'."\n"; #top right will rarely have any points
-	print R_COMMANDS 'legend(x="right", title = "Coverage", c("20x", "30x", "100x"),col=c("black","blue","green4"),lty = c(1,1,1), lwd = 1);'."\n"; #top right will rarely have any points
+	print R_COMMANDS 'legend(x="right", title = "Coverage", c("20x", "30x", "100x", "N"),col=c("black","blue","green4","#00000055"),lty = c(1,1,1,1), lwd = c(1,1,1,2));'."\n"; #top right will rarely have any points
 	print R_COMMANDS 'plot.default(x=(cn1minus$V9+cn1minus$V10),y=(cn1minus$V11),xlab="Tumor Coverage",ylab="Tumor Variant Allele Frequency", main=paste(genome," Coverage"), type="p",pch=19,cex=0.4,col="#FF000039",xlim=c(0,maxx),ylim=c(0,100));'."\n";
 	print R_COMMANDS 'points(x=(cn2$V9+cn2$V10),y=(cn2$V11), type="p",pch=19,cex=0.4,col="#00FF0055");'."\n";
 	print R_COMMANDS 'points(x=(cn3$V9+cn3$V10),y=(cn3$V11), type="p",pch=19,cex=0.4,col="#0000FF55");'."\n";
 	print R_COMMANDS 'points(x=(cn4plus$V9+cn4plus$V10),y=(cn4plus$V11), type="p",pch=19,cex=0.4,col="#FFA500FF");'."\n";
+	print R_COMMANDS 'points(dentumcov$x,((dentumcov$y * 1000)),col="#0000000F", type="p",pch=19,cex=0.4);'."\n";
 	print R_COMMANDS 'lines(c(20,20),c(1,100), col="black");'."\n";
 	print R_COMMANDS 'lines(c(30,30),c(1,100), col="blue");'."\n";
 	print R_COMMANDS 'lines(c(100,100),c(1,100), col="green4");'."\n";
 	print R_COMMANDS 'legend(x="topright", title = "Copy Number", c("1", "2", "3", "4+"),col=c("#FF0000","#00FF00","#0000FF","#FFA500"),pch=19);'."\n"; #top right will rarely have any points
-	print R_COMMANDS 'legend(x="bottomright", title = "Coverage", c("20x", "30x", "100x"),col=c("black","blue","green4"),lty = c(1,1,1), lwd = 1);'."\n"; #top right will rarely have any points
+	print R_COMMANDS 'legend(x="bottomright", title = "Coverage", c("20x", "30x", "100x", "N"),col=c("black","blue","green4","#00000055"),lty = c(1,1,1,1), lwd = c(1,1,1,2));'."\n"; #top right will rarely have any points
 	print R_COMMANDS 'plot.default(x=cn1minus100x$V7,y=cn1minus100x$V11,xlab="Normal Variant Allele Frequency",ylab="Tumor Variant Allele Frequency", main=paste(genome," Allele Frequency"),type="p",pch=19,cex=0.4,col="#FF000039",xlim=c(0,100),ylim=c(0,100));'."\n";
 	print R_COMMANDS 'points(x=cn2100x$V7,y=cn2100x$V11, type="p",pch=19,cex=0.4,col="#00FF0055");'."\n";
 	print R_COMMANDS 'points(x=cn3100x$V7,y=cn3100x$V11, type="p",pch=19,cex=0.4,col="#0000FF55");'."\n";
 	print R_COMMANDS 'points(x=cn4plus100x$V7,y=cn4plus100x$V11, type="p",pch=19,cex=0.4,col="#FFA500FF");'."\n";
+	print R_COMMANDS 'points(((den1100x$y * 100)+20),den1100x$x,col="#FF000055", type="p",pch=19,cex=0.4);'."\n";
+	print R_COMMANDS 'points(((den2100x$y * 100)+30),den2100x$x,col="#00FF0055", type="p",pch=19,cex=0.4);'."\n";
+	print R_COMMANDS 'points(((den3100x$y * 100)+40),den3100x$x,col="#0000FF55", type="p",pch=19,cex=0.4);'."\n";
+	print R_COMMANDS 'points(((den4100x$y * 100)+50),den4100x$x,col="#FFA500FF", type="p",pch=19,cex=0.4);'."\n";
+	print R_COMMANDS 'legend(x="bottomright", title = "CN Density", c("1", "2", "3", "4+"),col=c("#FF0000","#00FF00","#0000FF","#FFA500"),lty = c(1,1,1), lwd = 1);'."\n"; #top right will rarely have any points
 	print R_COMMANDS 'legend(x="topright", title = "Copy Number", c("1", "2", "3", "4+"),col=c("#FF0000","#00FF00","#0000FF","#FFA500"),pch=19);'."\n"; #top right will rarely have any points
 	print R_COMMANDS 'mtext("Normal and Tumor Coverage > 100",cex=0.7, padj=-0.5);'."\n";
 	print R_COMMANDS 'plot.default(x=(cn1minus100x$V5+cn1minus100x$V6),y=(cn1minus100x$V7),xlab="Normal Coverage",ylab="Normal Variant Allele Frequency", main=paste(genome," Coverage"), type="p",pch=19,cex=0.4,col="#FF000039",xlim=c(0,maxx2),ylim=c(0,100));'."\n";
 	print R_COMMANDS 'points(x=(cn2100x$V5+cn2100x$V6),y=(cn2100x$V7), type="p",pch=19,cex=0.4,col="#00FF0055");'."\n";
 	print R_COMMANDS 'points(x=(cn3100x$V5+cn3100x$V6),y=(cn3100x$V7), type="p",pch=19,cex=0.4,col="#0000FF55");'."\n";
 	print R_COMMANDS 'points(x=(cn4plus100x$V5+cn4plus100x$V6),y=(cn4plus100x$V7), type="p",pch=19,cex=0.4,col="#FFA500FF");'."\n";
+	print R_COMMANDS 'points(dennormcov100x$x,((dennormcov100x$y * 1000)+20),col="#0000000F", type="p",pch=19,cex=0.4);'."\n";
 	print R_COMMANDS 'mtext("Normal and Tumor Coverage > 100",cex=0.7, padj=-0.5);'."\n";
 	print R_COMMANDS 'lines(c(20,20),c(1,100), col="black");'."\n";
 	print R_COMMANDS 'lines(c(30,30),c(1,100), col="blue");'."\n";
 	print R_COMMANDS 'lines(c(100,100),c(1,100), col="green4");'."\n";
 	print R_COMMANDS 'legend(x="topright", title = "Copy Number", c("1", "2", "3", "4+"),col=c("#FF0000","#00FF00","#0000FF","#FFA500"),pch=19);'."\n"; #top right will rarely have any points
-	print R_COMMANDS 'legend(x="right", title = "Coverage", c("20x", "30x", "100x"),col=c("black","blue","green4"),lty = c(1,1,1), lwd = 1);'."\n"; #top right will rarely have any points
+	print R_COMMANDS 'legend(x="right", title = "Coverage", c("20x", "30x", "100x", "N"),col=c("black","blue","green4","#00000055"),lty = c(1,1,1,1), lwd = c(1,1,1,2));'."\n"; #top right will rarely have any points
 	print R_COMMANDS 'plot.default(x=(cn1minus100x$V9+cn1minus100x$V10),y=(cn1minus100x$V11),xlab="Tumor Coverage",ylab="Tumor Variant Allele Frequency", main=paste(genome," Coverage"), type="p",pch=19,cex=0.4,col="#FF000039",xlim=c(0,maxx),ylim=c(0,100));'."\n";
 	print R_COMMANDS 'points(x=(cn2100x$V9+cn2100x$V10),y=(cn2100x$V11), type="p",pch=19,cex=0.4,col="#00FF0055");'."\n";
 	print R_COMMANDS 'points(x=(cn3100x$V9+cn3100x$V10),y=(cn3100x$V11), type="p",pch=19,cex=0.4,col="#0000FF55");'."\n";
 	print R_COMMANDS 'points(x=(cn4plus100x$V9+cn4plus100x$V10),y=(cn4plus100x$V11), type="p",pch=19,cex=0.4,col="#FFA500FF");'."\n";
+	print R_COMMANDS 'points(dentumcov100x$x,((dentumcov100x$y * 1000)),col="#0000000F", type="p",pch=19,cex=0.4);'."\n";
 	print R_COMMANDS 'mtext("Normal and Tumor Coverage > 100",cex=0.7, padj=-0.5);'."\n";
 	print R_COMMANDS 'lines(c(20,20),c(1,100), col="black");'."\n";
 	print R_COMMANDS 'lines(c(30,30),c(1,100), col="blue");'."\n";
 	print R_COMMANDS 'lines(c(100,100),c(1,100), col="green4");'."\n";
 	print R_COMMANDS 'legend(x="topright", title = "Copy Number", c("1", "2", "3", "4+"),col=c("#FF0000","#00FF00","#0000FF","#FFA500"),pch=19);'."\n"; #top right will rarely have any points
-	print R_COMMANDS 'legend(x="bottomright", title = "Coverage", c("20x", "30x", "100x"),col=c("black","blue","green4"),lty = c(1,1,1), lwd = 1);'."\n"; #top right will rarely have any points
+	print R_COMMANDS 'legend(x="bottomright", title = "Coverage", c("20x", "30x", "100x", "N"),col=c("black","blue","green4","#00000055"),lty = c(1,1,1,1), lwd = c(1,1,1,2));'."\n"; #top right will rarely have any points
 	print R_COMMANDS 'devoff <- dev.off();'."\n";
 #copy number
 	print R_COMMANDS "pdf(file=\"$copynumber_output_file\",width=10,height=7.5);"."\n";
@@ -251,14 +279,6 @@ mtext("Enhanced Scatterplot", side=3, outer=TRUE, line=-3)
 #	print R_COMMANDS 'mtext("Normal and Tumor Coverage > 100",cex=0.7, padj=-0.5);'."\n";
 
 =cut
-	print R_COMMANDS 'den1 <- density(cn1minus$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	print R_COMMANDS 'den2 <- density(cn2$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	print R_COMMANDS 'den3 <- density(cn3$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	print R_COMMANDS 'den4 <- density(cn4plus$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	print R_COMMANDS 'den1100x <- density(cn1minus100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	print R_COMMANDS 'den2100x <- density(cn2100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	print R_COMMANDS 'den3100x <- density(cn3100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	print R_COMMANDS 'den4100x <- density(cn4plus100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
 
 	print R_COMMANDS 'plot.default(((den2$y * 100)+30),den2$x,xlab="Normal Variant Allele Frequency",ylab="Tumor Variant Allele Frequency",  main=paste(genome," Variant Allele Frequency"),xlim=c(0,100),ylim=c(0,100),col="#00FF0055", type="p",pch=19,cex=0.4);'."\n";
 	print R_COMMANDS 'points(((den1$y * 100)+20),den1$x,col="#FF000055", type="p",pch=19,cex=0.4);'."\n";
