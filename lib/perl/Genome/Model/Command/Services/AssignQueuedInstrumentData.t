@@ -12,9 +12,24 @@ BEGIN {
 use above 'Genome';
 
 require Genome::InstrumentData::Solexa;
-use Test::More tests => 99;
+use Test::More tests => 101;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
+
+my $project = Genome::Site::WUGC::Project->create(
+    setup_project_id => '-4',
+    name             => 'AQID-test-project',
+);
+
+isa_ok($project, 'Genome::Site::WUGC::Project');
+
+my $work_order = Genome::WorkOrder->create(
+    id => '-1000',
+    pipeline => 'Illumina',
+    project_id => '-4',
+);
+
+isa_ok($work_order, 'Genome::WorkOrder');
 
 my $taxon = Genome::Taxon->get( species_name => 'human' );
 my $individual = Genome::Individual->create(
@@ -38,8 +53,6 @@ my $library = Genome::Library->create(
 );
 
 isa_ok($library, 'Genome::Library');
-
-#my $sample = Genome::Sample->get(name => 'TEST-patient1-sample1');
 isa_ok($sample, 'Genome::Sample');
 
 my $ii = Test::MockObject->new();
@@ -113,6 +126,14 @@ $pse_2->add_param('subject_id', $sample->id);
 $pse_2->add_param('processing_profile_id', $processing_profile->id);
 $pse_2->add_reference_sequence_build_param_for_processing_profile( $processing_profile, $ref_seq_build);
 
+no warnings;
+sub GSC::PSE::QueueInstrumentDataForGenomeModeling::get_inherited_assigned_directed_setups_filter_on {
+    my @a;
+    push @a, $work_order;
+    return @a;
+}
+use warnings;
+
 my $command_1 = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
     test => 1,
 );
@@ -135,7 +156,7 @@ my $models_changed = $command_1->_existing_models_assigned_to;
 is(scalar(keys %$models_changed), 0, 'the cron did no work for the second PSE, since the first assigns all on creation');
 
 my $old_models = $command_1->_existing_models_with_existing_assignments;
-is(scalar(keys %$old_models), 1, 'the cron found a model with data [for the second PSE] already assigned');
+is(scalar(keys %$old_models), 1, 'the cron found models with data [for the second PSE] already assigned');
 
 my ($old_model_id) = keys(%$old_models);
 my $new_model = $new_models->{$old_model_id};
@@ -152,7 +173,7 @@ is(scalar(@models_for_sample), 2, 'found two models created for the subject');
 is($models_for_sample[0], $new_model, 'that model is the same one the cron claims it created');
 
 my @instrument_data = $new_model->instrument_data;
-is(scalar(@instrument_data), 2, 'the new model has two instrument data assigned');
+is(scalar(@instrument_data), 2, 'the first new model has two instrument data assigned');
 is_deeply([sort(@instrument_data)], [sort($instrument_data_1, $instrument_data_2)], 'those two instrument data are the ones for our PSEs');
 
 is($pse_1->pse_status, 'completed', 'first pse completed');
@@ -248,7 +269,6 @@ $pse_4->add_param('instrument_data_type', 'solexa');
 $pse_4->add_param('instrument_data_id', $instrument_data_4->id);
 $pse_4->add_param('subject_class_name', 'Genome::Sample');
 $pse_4->add_param('subject_id', $sample->id);
-$pse_4->add_param('processing_profile_id', $processing_profile->id);
 $pse_4->add_reference_sequence_build_param_for_processing_profile( $processing_profile, $ref_seq_build);
 
 my $command_2 = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
@@ -292,6 +312,7 @@ for my $m (@new_refalign_models) {
     subject_class_name => 'Genome::Sample',
     subject_id => $sample->id,
 );
+
 is(scalar(@models_for_sample), 6, 'found 6 models created for the subject');
 
 @instrument_data = $new_model->instrument_data;
@@ -544,6 +565,7 @@ $pse_8->add_reference_sequence_build_param_for_processing_profile( $processing_p
 my $command_5 = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
     test => 1,
 );
+
 
 isa_ok($command_5, 'Genome::Model::Command::Services::AssignQueuedInstrumentData');
 ok($command_5->execute(), 'assign-queued-instrument-data executed successfully.');

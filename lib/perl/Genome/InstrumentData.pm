@@ -77,20 +77,6 @@ sub delete {
     return $self;
 }
 
-sub create {
-    my $class = shift;
-    my %params = @_;
-
-    # Attempting to create attributes with an undef value causes problems
-    for my $name (sort keys %params) {
-        delete $params{$name} unless exists $params{$name} and defined $params{$name};
-    }
-
-    my $self = $class->SUPER::create(%params);
-    Carp::confess "Could not create new instrument data objects with params " . Data::Dumper::Dumper(\%params) unless $self;
-    return $self;
-}
-
 sub calculate_alignment_estimated_kb_usage {
     my $self = shift;
     Carp::confess "calculate_alignment_estimated_kb_usage not overridden in instrument data subclass " . $self->class;

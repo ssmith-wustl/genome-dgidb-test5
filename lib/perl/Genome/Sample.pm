@@ -240,5 +240,29 @@ sub canonical_model {
     return $models[0];
 }
 
-1;
+sub get_organism_taxon {
+    #emulates GSC::Organism::Sample->get_organism_taxon to get the "right" taxon
+    my $self = shift;
+    my $population = $self->get_population;
+    if ($population){
+        return $population->taxon; 
+    }
+    if(!$self->taxon_id){
+        return $self->patient->taxon if $self->patient;
+    }
+    return $self->taxon;
+}
 
+sub get_population {
+    #emulates GSC::Organism::Sample->get_population
+    my $self = shift;
+    my $source_type = $self->source_type;
+    if($source_type && 
+            ($source_type eq 'organism individual' || 
+             $source_type eq 'population group')){
+        return $self->source;
+    }
+    return;
+}   
+
+1;
