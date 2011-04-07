@@ -12,7 +12,7 @@ BEGIN {
 use above 'Genome';
 
 require Genome::InstrumentData::Solexa;
-use Test::More tests => 101;
+use Test::More tests => 105;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
 
@@ -280,6 +280,15 @@ ok($command_2->execute(), 'assign-queued-instrument-data executed successfully.'
 
 my $new_models_2 = $command_2->_newly_created_models;
 is(scalar(keys %$new_models_2), 4, 'the cron created four new models (capture data causes two models to be created, each has a per-lane QC)');
+
+my @models = values %$new_models_2;
+my @model_groups;
+push(@model_groups, $_->model_groups) for (@models);
+
+ok((grep {$_->name eq 'apipe-auto ' . $sample_pool->name} @model_groups) > 0, "found model_group for sample_pool");
+ok((grep {$_->name eq 'apipe-auto ' . $sample_pool->name . '.wu-space'} @model_groups) > 0, "found wu-space model_group for sample_pool");
+ok((grep {$_->name eq 'apipe-auto ' . $project->name} @model_groups) > 0, "found model_group for project");
+ok((grep {$_->name eq 'apipe-auto ' . $project->name . '.wu-space'} @model_groups) > 0, "found wu-space model_group for project");
 
 my $models_changed_2 = $command_2->_existing_models_assigned_to;
 is(scalar(keys %$models_changed_2), 1, 'data was assigned to an existing model');
