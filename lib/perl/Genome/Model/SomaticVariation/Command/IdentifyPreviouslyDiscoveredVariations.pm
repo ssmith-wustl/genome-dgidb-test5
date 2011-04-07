@@ -73,7 +73,7 @@ sub execute{
                     input_file_b => $snv_feature_list_path,
                     miss_a_file => $snv_output_tmp_file,
                     output_file => $previously_detected_output_tmp_file,
-                    exact_allele => 1,
+                    dbsnp_match => 1,
                 );
                 unless ($snv_compare){
                     die $self->error_message("Couldn't create snv comparison tool!");
