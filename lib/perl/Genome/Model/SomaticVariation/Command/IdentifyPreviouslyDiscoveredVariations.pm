@@ -51,7 +51,7 @@ sub execute{
 
     if ($build->snv_detection_strategy){
         my $detected_snv_path = $build->data_set_path("variants/snvs.hq",$version,"bed"); 
-        my $novel_detected_snv_path = $build->data_set_path("novel/snvs.hq",$version,'bed');
+        my $novel_detected_snv_path = $build->data_set_path("novel/snvs.hq.novel",$version,'bed');
         my $previously_detected_snv_path = $build->data_set_path("novel/snvs.hq.previously_detected",$version,'bed');
 
         if ($snv_feature_list){
@@ -102,7 +102,7 @@ sub execute{
 
     if ($build->indel_detection_strategy){
         my $detected_indel_path =$build->data_set_path("variants/indels.hq",$version,"bed"); 
-        my $novel_detected_indel_path = $build->data_set_path("novel/indels.hq",$version,"bed");
+        my $novel_detected_indel_path = $build->data_set_path("novel/indels.hq.novel",$version,"bed");
         my $previously_detected_indel_path = $build->data_set_path("novel/indels.hq.previously_detected", $version, "bed");
 
         if ($indel_feature_list){
@@ -132,9 +132,9 @@ sub execute{
                 my $indel_rv = $indel_compare->execute();
                 my $indel_err = $@;
                 unless ($indel_rv){
-                    die $self->error_message("Failed to execute indel comparison(err: $indel_err )");
+                    die $self->error_message("failed to execute indel comparison(err: $indel_err )");
                 }
-                $self->status_message("Intersection against previously discovered indel feature list complete");
+                $self->status_message("intersection against previously discovered indel feature list complete");
                 File::Copy::copy($indel_output_tmp_file, $novel_detected_indel_path);
                 File::Copy::copy($previously_detected_output_tmp_file, $previously_detected_indel_path);
             }else{

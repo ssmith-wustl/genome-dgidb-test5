@@ -37,13 +37,13 @@ sub execute{
     my ($tier1_snvs, $tier2_snvs, $tier1_indels, $tier2_indels);
     
     if ($build->snv_detection_strategy){
-        $tier1_snvs = $build->data_set_path("effects/snvs.hq.tier1",$version,'bed');
+        $tier1_snvs = $build->data_set_path("effects/snvs.hq.novel.tier1",$version,'bed');
         unless(-e $tier1_snvs){
             die $self->error_message("No tier 1 snvs file for build!");
         }
         $files{'snvs.hq.tier1'} = $tier1_snvs;
 
-        $tier2_snvs = $build->data_set_path("effects/snvs.hq.tier2",$version,'bed');
+        $tier2_snvs = $build->data_set_path("effects/snvs.hq.novel.tier2",$version,'bed');
         unless(-e $tier2_snvs){
             die $self->error_message("No tier 2 snvs file for build!");
         }
@@ -51,13 +51,13 @@ sub execute{
     }
 
     if ($build->indel_detection_strategy){
-        $tier1_indels = $build->data_set_path("effects/indels.hq.tier1",$version,'bed');
+        $tier1_indels = $build->data_set_path("effects/indels.hq.novel.tier1",$version,'bed');
         unless(-e $tier1_indels){
             die $self->error_message("No tier 1 indels file for build!");
         }
         $files{'indels.hq.tier1'} = $tier1_indels;
 
-        $tier2_indels = $build->data_set_path("effects/indels.hq.tier2",$version,'bed');
+        $tier2_indels = $build->data_set_path("effects/indels.hq.novel.tier2",$version,'bed');
         unless(-e $tier2_indels){
             die $self->error_message("No tier 2 indels file for build!");
         }
