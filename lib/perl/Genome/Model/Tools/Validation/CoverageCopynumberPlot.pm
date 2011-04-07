@@ -74,18 +74,13 @@ sub execute {                               # replace with real execution logic.
 	my $r_library = $self->varscan_r_library;
 	my $skip_if_output_is_present = $self->skip_if_output_is_present;
 
-	my $outfile_varscan_plus_cn;
-	if ($varscan_file =~ m/\.txt$/) {
-		$outfile_varscan_plus_cn = $varscan_file;
-		$outfile_varscan_plus_cn =~ s/\.txt$//;
-		$outfile_varscan_plus_cn .= "_copynumber.txt";
+	## Build temp file for positions where readcounts are needed ##
+	my ($tfh,$temp_path) = Genome::Sys->create_temp_file;
+	unless($tfh) {
+		$self->error_message("Unable to create temporary file $!");
+		die;
 	}
-	else {
-		$outfile_varscan_plus_cn = "$varscan_file"."_copynumber";
-	}
-
-
-	open(CN_VARSCAN_OUT, ">$outfile_varscan_plus_cn") or die "Can't open output file: $!\n";
+	$temp_path =~ s/\:/\\\:/g;
 
 	my %copynumber_hash_tumor=%{&build_hash($copynumber_file,'tumor')};
 	my %copynumber_hash_normal=%{&build_hash($copynumber_file,'normal')};
@@ -96,9 +91,9 @@ sub execute {                               # replace with real execution logic.
 		my ($chr, $pos, $ref, $var, $normal_ref, $normal_var, $normal_var_pct, $normal_IUB, $tumor_ref, $tumor_var, $tumor_var_pct, $tumor_IUB, $varscan_call, $germline_pvalue, $somatic_pvalue, @otherstuff) = split(/\t/, $line2);
 		my $varscan_cn_tumor=&get_cn($chr,$pos,$pos,\%copynumber_hash_tumor);
 		my $varscan_cn_normal=&get_cn($chr,$pos,$pos,\%copynumber_hash_normal);
-		print CN_VARSCAN_OUT "$line2\t$varscan_cn_tumor\t$varscan_cn_normal\n"
+		print $tfh "$line2\t$varscan_cn_tumor\t$varscan_cn_normal\n"
 	}
-	close(CN_VARSCAN_OUT);
+	$tfh->close;
 
 	# Open Output
 	unless (open(R_COMMANDS,">$r_script_output_file")) {
@@ -119,12 +114,13 @@ mtext("Enhanced Scatterplot", side=3, outer=TRUE, line=-3)
 
 #coverage
 #	print R_COMMANDS 'options(echo = FALSE)'."\n";#suppress output to stdout
-#	print R_COMMANDS 'sink("/dev/null")'."\n";
+	print R_COMMANDS 'sink("/dev/null")'."\n";
 	print R_COMMANDS "genome=\"$sample_id\";"."\n";
 	print R_COMMANDS "source(\"$r_library\");"."\n"; #this contains R functions for loading and graphing VarScan files
 	print R_COMMANDS 'library(fpc);'."\n";
-	print R_COMMANDS "varscan.load_snp_output(\"$outfile_varscan_plus_cn\",header=F)->xcopy"."\n";
-	print R_COMMANDS "varscan.load_snp_output(\"$outfile_varscan_plus_cn\",header=F,min_tumor_depth=100,min_normal_depth=100)->xcopy100"."\n";
+	print R_COMMANDS 'library(scatterplot3d);'."\n";
+	print R_COMMANDS "varscan.load_snp_output(\"$temp_path\",header=F)->xcopy"."\n";
+	print R_COMMANDS "varscan.load_snp_output(\"$temp_path\",header=F,min_tumor_depth=100,min_normal_depth=100)->xcopy100"."\n";
 	print R_COMMANDS 'z1=subset(xcopy, xcopy$V13 == "Somatic");'."\n";
 	print R_COMMANDS 'z2=subset(xcopy100, xcopy100$V13 == "Somatic");'."\n";
 	print R_COMMANDS 'covtum1=(z1$V9+z1$V10);'."\n";
@@ -318,7 +314,6 @@ mtext("Enhanced Scatterplot", side=3, outer=TRUE, line=-3)
 
 
 	print R_COMMANDS 'par(mfrow=c(1,1));'."\n";
-	print R_COMMANDS 'library(scatterplot3d);'."\n";
 	print R_COMMANDS 's3d <- scatterplot3d(x=cov100xplus$V7,z=cov100xplus$V11,y=cov100xplus$V20, type="p", angle=55, scale.y=0.7, cex.symbols=0.4, pch=19,xlab="Normal Variant Allele Frequency",zlab="Tumor Variant Allele Frequency",ylab="Copy Number",xlim=c(0,100),zlim=c(0,100),ylim=c(0,5),color="#00FF00FF",box=FALSE);'."\n";
 	print R_COMMANDS 's3d$points3d(x=cov20x$V7,z=cov20x$V11,y=cov20x$V20, type="p",pch=19,cex=0.4,col="#FF0000FF");'."\n";
 	print R_COMMANDS 's3d$points3d(x=cov50x$V7,z=cov50x$V11,y=cov50x$V20, type="p",pch=19,cex=0.4,col="#0000FFFF");'."\n";

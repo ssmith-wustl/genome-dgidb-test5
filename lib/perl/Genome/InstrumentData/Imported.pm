@@ -162,6 +162,12 @@ sub __display_name__ {
     );
 }
 
+sub run_name {
+    my $self = shift;
+    return $self->{run_name} if defined $self->{run_name};
+    return $self->id;
+}
+
 sub data_directory {
     my $self = shift;
 
