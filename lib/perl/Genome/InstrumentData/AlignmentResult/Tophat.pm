@@ -401,8 +401,23 @@ sub _run_aligner {
 
     my $tophat_cmd = Genome::Model::Tools::Tophat::AlignReads->create(%params);
 
-    unless($tophat_cmd->execute) {
-        die $self->error_message('Failed to execute tophat command.');
+    eval {
+        unless($tophat_cmd->execute) {
+            die 'Execute did not return a true value.';
+        }
+    };
+    if($@) {
+        my $error = $@ || '_run_aligner failed.';
+        $self->error_message('Failed to execute tophat command.');
+
+        #Try to record a copy of the aligner logs before they get blasted in cleanup
+        my $aligner_log = $self->temp_staging_directory . '/tophat.aligner_output';
+        if(-e $aligner_log) {
+            my $log_text = Genome::Sys->read_file($aligner_log);
+            $self->status_message("Aligner log:\n" . $log_text);
+        }
+
+        die($error);
     }
 
     return 1;

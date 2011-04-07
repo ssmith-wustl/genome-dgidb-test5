@@ -2,7 +2,7 @@
 package Genome::Model::Tools::Capture::GermlinePipelineFinisher;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# GermlinePipelineFinisher - Generate MAF File, Get dbsnp output, and strandfilter -- for GERMLINE events
+# GermlinePipelineFinisher - Merge a set of maf files into one giant one -- for GERMLINE events, also serves as a testing ground for new ideas to be placed into the germline pipeline
 #					
 #	AUTHOR:		Will Schierding (wschierd@genome.wustl.edu)
 #
@@ -44,12 +44,12 @@ class Genome::Model::Tools::Capture::GermlinePipelineFinisher {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Generate MAF File, Get dbsnp output, and strandfilter -- for GERMLINE projects"                 
+    "Merge a set of maf files into one giant one -- for GERMLINE projects, also serves as a testing ground for new ideas to be placed into the germline pipeline"                 
 }
 
 sub help_synopsis {
     return <<EOS
-Generate MAF File, Get dbsnp output, and strandfilter -- for GERMLINE events
+Merge a set of maf files into one giant one -- for GERMLINE events, also serves as a testing ground for new ideas to be placed into the germline pipeline
 EXAMPLE:	gmt capture germline-pipeline-finisher
 EOS
 }

@@ -91,7 +91,7 @@ class Genome::Model::Tools::Somatic::BamToCna {
     plot_only=> {
 	type => 'Boolean',
         is_optional => 1,
-        doc => 'Will ONLY run R plot on the --output-file if it exists.'
+        doc => 'Will ONLY run R plot on the --output-file if it exists. Default is false.'
     },
 
     skip_if_output_present => {

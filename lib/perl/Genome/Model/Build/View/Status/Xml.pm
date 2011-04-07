@@ -225,20 +225,22 @@ sub get_build_node {
         $buildnode->addChild( $doc->createAttribute("kilobytes-requested",$kb_requested) );
     }
     $buildnode->addChild( $doc->createAttribute("data-directory",$build->data_directory) );
-    $buildnode->addChild( $doc->createAttribute("lsf-job-id", $build->build_event->lsf_job_id));
-    
+
     $buildnode->addChild( $doc->createAttribute("software-revision", $build->software_revision) );
 
     my $event = $build->build_event;
+    if ($event) {
+        $buildnode->addChild( $doc->createAttribute("lsf-job-id", $event->lsf_job_id));
 
-    my $out_log_file = $event->resolve_log_directory . "/" . $event->id . ".out";
-    my $err_log_file = $event->resolve_log_directory . "/" . $event->id . ".err";
+        my $out_log_file = $event->resolve_log_directory . "/" . $event->id . ".out";
+        my $err_log_file = $event->resolve_log_directory . "/" . $event->id . ".err";
 
-    if (-e $out_log_file) {
-        $buildnode->addChild( $doc->createAttribute("output-log",$out_log_file));
-    }
-    if (-e $err_log_file) {
-        $buildnode->addChild( $doc->createAttribute("error-log",$err_log_file));
+        if (-e $out_log_file) {
+            $buildnode->addChild( $doc->createAttribute("output-log",$out_log_file));
+        }
+        if (-e $err_log_file) {
+            $buildnode->addChild( $doc->createAttribute("error-log",$err_log_file));
+        }
     }
     
     $buildnode->addChild( $doc->createAttribute("summary-report", $self->get_summary_report_location) );

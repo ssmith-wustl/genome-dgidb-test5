@@ -19,7 +19,7 @@ use FileHandle;
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
 class Genome::Model::Tools::Gatk::GermlineSnv {
-	is => 'Command',                       
+	is => 'Genome::Model::Tools::Gatk',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		bam_file	=> { is => 'Text', doc => "BAM File for Sample", is_optional => 0, is_input => 1 },
@@ -28,7 +28,6 @@ class Genome::Model::Tools::Gatk::GermlineSnv {
 		dbSNP_version     => { is => 'Text', doc => "Version of dbSNP bed file to use", is_optional => 1, is_input => 1, is_output => 1, default => 130 },
 		gatk_params => { is => 'Text', doc => "Parameters for GATK", is_optional => 1, is_input => 1, is_output => 1, default => "-T UnifiedGenotyper" },
 		reference_fasta => { is => 'Text', doc => "Parameters for GATK", is_optional => 1, is_input => 1, is_output => 1, default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa" },
-		path_to_gatk => { is => 'Text', doc => "Path to GATK command", is_optional => 1, is_input => 1, is_output => 1, default => "/gsc/pkg/bio/gatk/GenomeAnalysisTK-1.0.5336/GenomeAnalysisTK.jar" },
 		run_unsafe_mode => { is => 'Text', doc => "Make GATK print errors instead of dying", is_optional => 1, is_input => 1, default => 1 },
 	        mb_of_ram => {
 	            is => 'Text',
@@ -94,7 +93,7 @@ sub execute {                               # replace with real execution logic.
 # [-L targets.interval_list]
 
 	## Run GATK ##
-	my $path_to_gatk = $self->path_to_gatk;
+	my $path_to_gatk = $self->gatk_path;
 	my $gatk_params = $self->gatk_params;
 	my $reference_fasta = "-R " . $self->reference_fasta;
 	my $output_file = "-o " . $self->vcf_output_file;	

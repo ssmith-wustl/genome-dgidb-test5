@@ -49,6 +49,7 @@ my $model = $cmd->_model;
 ok($model, 'created model');
 like($model->name, qr/TCGA-AB-2804-03B-01W-0728-08.refalign/, 'model name');
 is($model->build_requested, 1, 'requested build');
+is_deeply([$model->instrument_data], [$i_d], 'model inst data');
 
 done_testing();
 exit;

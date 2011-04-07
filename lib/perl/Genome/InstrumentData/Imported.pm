@@ -162,6 +162,12 @@ sub __display_name__ {
     );
 }
 
+sub run_name {
+    my $self = shift;
+    return $self->{run_name} if defined $self->{run_name};
+    return $self->id;
+}
+
 sub data_directory {
     my $self = shift;
 
@@ -227,11 +233,15 @@ sub create {
     my $class = shift;
     
     my %params = @_;
-    my $user   = getpwuid($<); 
-    my $date   = UR::Time->now;
-
-    $params{import_date} = $date;
-    $params{user_name}   = $user; 
+    
+    unless (exists $params{import_date}) {
+        my $date = UR::Time->now;
+        $params{import_date} = $date;
+    }
+    unless (exists $params{user_name}) {
+        my $user = getpwuid($<); 
+        $params{user_name} = $user; 
+    }
 
     my $self = $class->SUPER::create(%params);
     return $self;

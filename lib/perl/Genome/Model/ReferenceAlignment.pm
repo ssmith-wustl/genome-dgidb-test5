@@ -107,6 +107,20 @@ class Genome::Model::ReferenceAlignment {
             via => 'dbsnp_build',
             to => 'model',
         },
+        genotype_microarray_build_id => {
+            is => 'Text',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'genotype_microarray_build', 'value_class_name' => 'Genome::Model::Build::GenotypeMicroarray', ],
+            is_many => 0,
+            is_mutable => 1,
+            is_optional => 1,
+            doc => 'Genotype Microarray build used for QC and Gold SNP Concordance report',
+        },
+        genotype_microarray_build => {
+            is => 'Genome::Model::Build::GenotypeMicroarray',
+            id_by => 'genotype_microarray_build_id',
+        },
         annotation_reference_build_id => {
             is => 'Text',
             via => 'inputs',
@@ -212,7 +226,7 @@ sub create {
         or return;
 
     unless ( $self->reference_sequence_build ) {
-        $self->error_message("No refernce sequence build given to create reference alignment model");
+        $self->error_message("Missing needed reference sequence build during reference alignment model creation.");
         $self->delete;
         return;
     }
@@ -403,13 +417,25 @@ sub gold_snp_build {
     return $build;
 }
 
-# moved from base model
 sub gold_snp_path {
     my $self = shift;
-    my $build = $self->gold_snp_build;
-    return unless $build;
-    return $build->formatted_genotype_file_path;
+
+    # Backfill genotype microarray input
+    unless ($self->genotype_microarray_build_id) {
+        my $models_gold_snp_build = $self->gold_snp_build;
+        if ($models_gold_snp_build) {
+            $self->add_input(
+                value_class_name => $models_gold_snp_build->class,
+                value_id => $models_gold_snp_build->id,
+                name => 'genotype_microarray_build',
+            );
+        }
+    }
+
+    my $geno_micro_build = $self->genotype_microarray_build;
+    return ($geno_micro_build ? $geno_micro_build->formatted_genotype_file_path : undef);
 }
+
 
 sub build_subclass_name {
     return 'reference alignment';

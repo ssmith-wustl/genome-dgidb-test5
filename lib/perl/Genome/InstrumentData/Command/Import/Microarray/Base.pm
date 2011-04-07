@@ -382,12 +382,12 @@ sub _add_instrument_data_to_model_and_build {
         $self->error_message("Failed to create build for model (".$model->name.", ID: ".$model->id.").");
         return;
     }
-    my $start = $build->start(
+    $build->start(
         server_dispatch => 'inline',
         job_dispatch => 'inline',
     );
-    if ( not $start ) {
-         $self->error_message("Failed to start build: " . $build->__display_name__);
+    if ( $build->status ne 'Succeeded' ) {
+         $self->error_message("Build failed: " . $build->__display_name__);
          return;
     }
     $self->status_message('Build OK');

@@ -75,6 +75,11 @@ sub pre_execute {
 #        $annotation_reference_transcripts = "NCBI-mouse.combined-annotation/54_37g_v2";
 #    }
 
+    # Dummy regions_file
+    unless (defined $self->regions_file) {
+        $self->regions_file('/gscmnt/sata424/info/medseq/Freimer-Boehnke/ExomeComparison/WuSpace_2514360.bed');
+    }
+
     # Default ref seq
     unless (defined $self->reference_fasta) {
         $self->reference_fasta(Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa');
@@ -210,6 +215,10 @@ sub default_filenames{
 
 	## maf file ##
         tier1_maf_file                      => 'merged.germline.ROI.tier1.out.maf',
+
+	## vcf file ##
+        tier1_vcf_file                      => 'merged.germline.ROI.tier1.out.vcf',
+
     );
 
     return %default_filenames;
@@ -272,7 +281,7 @@ __DATA__
 <!-- RUN UCSC ANNOTATION FOR SNPS --> 
 
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Annotate UCSC" toProperty="skip_if_output_present" />
-  <link fromOperation="Limit SNPs ROI" fromProperty="output_file" toOperation="Annotate UCSC" toProperty="input_file" />
+  <link fromOperation="Filter Snp" fromProperty="output_file" toOperation="Annotate UCSC" toProperty="input_file" />
   <link fromOperation="input connector" fromProperty="ucsc_output_snp" toOperation="Annotate UCSC" toProperty="output_file" /> 
   <link fromOperation="input connector" fromProperty="ucsc_unannotated_output" toOperation="Annotate UCSC" toProperty="unannotated_file" /> 
   <link fromOperation="input connector" fromProperty="only_tier_1" toOperation="Annotate UCSC" toProperty="skip" /> 
@@ -358,7 +367,7 @@ __DATA__
 <!-- RUN UCSC ANNOTATION FOR INDELS --> 
 
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Annotate UCSC Indel" toProperty="skip_if_output_present" />
-  <link fromOperation="Limit Indels ROI" fromProperty="output_file" toOperation="Annotate UCSC Indel" toProperty="input_file" />
+  <link fromOperation="Filter Indel" fromProperty="output_file" toOperation="Annotate UCSC Indel" toProperty="input_file" />
   <link fromOperation="input connector" fromProperty="ucsc_output_indel" toOperation="Annotate UCSC Indel" toProperty="output_file" /> 
   <link fromOperation="input connector" fromProperty="ucsc_unannotated_indel_output" toOperation="Annotate UCSC Indel" toProperty="unannotated_file" /> 
   <link fromOperation="input connector" fromProperty="only_tier_1_indel" toOperation="Annotate UCSC Indel" toProperty="skip" /> 
@@ -397,9 +406,32 @@ __DATA__
   <link fromOperation="input connector" fromProperty="sequence_source" toOperation="Tier1 Maf" toProperty="sequence_source" />
   <link fromOperation="input connector" fromProperty="sequencer" toOperation="Tier1 Maf" toProperty="sequencer" />
 
+<!-- SNV AND INDEL TO VCF -->
+
+  <link fromOperation="Tier Variants Snp" fromProperty="tier1_file" toOperation="Tier1 Vcf" toProperty="variant_file" />
+  <link fromOperation="dbSNP Snp" fromProperty="output_file" toOperation="Tier1 Vcf" toProperty="dbsnp_file" />
+  <link fromOperation="Filter Snp" fromProperty="output_file" toOperation="Tier1 Vcf" toProperty="snv_filtered_file" />
+  <link fromOperation="Filter Snp" fromProperty="filtered_file" toOperation="Tier1 Vcf" toProperty="snv_failfiltered_file" />
+  <link fromOperation="Annotate Transcript Variants Snp" fromProperty="output_file" toOperation="Tier1 Vcf" toProperty="snv_annotation_file" />
+  <link fromOperation="Tier Variants Indel" fromProperty="tier1_file" toOperation="Tier1 Vcf" toProperty="indel_file" />
+  <link fromOperation="Filter Indel" fromProperty="output_file" toOperation="Tier1 Vcf" toProperty="indel_filtered_file" />
+  <link fromOperation="Filter Indel" fromProperty="filtered_file" toOperation="Tier1 Vcf" toProperty="indel_failfiltered_file" />
+  <link fromOperation="Annotate Transcript Variants Indel" fromProperty="output_file" toOperation="Tier1 Vcf" toProperty="indel_annotation_file" />
+
+  <link fromOperation="input connector" fromProperty="germline_bam_file" toOperation="Tier1 Vcf" toProperty="bam_file" />
+  <link fromOperation="input connector" fromProperty="build_id" toOperation="Tier1 Vcf" toProperty="build_id" />  
+  <link fromOperation="input connector" fromProperty="tier1_vcf_file" toOperation="Tier1 Vcf" toProperty="output_file" />
+  <link fromOperation="input connector" fromProperty="project_name" toOperation="Tier1 Vcf" toProperty="project_name" />
+  <link fromOperation="input connector" fromProperty="center" toOperation="Tier1 Vcf" toProperty="center" />
+  <link fromOperation="input connector" fromProperty="build" toOperation="Tier1 Vcf" toProperty="build" />
+  <link fromOperation="input connector" fromProperty="sequence_phase" toOperation="Tier1 Vcf" toProperty="sequence_phase" />
+  <link fromOperation="input connector" fromProperty="sequence_source" toOperation="Tier1 Vcf" toProperty="sequence_source" />
+  <link fromOperation="input connector" fromProperty="sequencer" toOperation="Tier1 Vcf" toProperty="sequencer" />
+
 <!-- OUTPUT CONNECTORS -->
 
   <link fromOperation="Tier1 Maf" fromProperty="output_file" toOperation="output connector" toProperty="maf_file_out" />
+  <link fromOperation="Tier1 Vcf" fromProperty="output_file" toOperation="output connector" toProperty="vcf_file_out" />
 
   <link fromOperation="Tier Variants Snp" fromProperty="tier2_file" toOperation="output connector" toProperty="tier_2_snp" />
   <link fromOperation="Tier Variants Snp" fromProperty="tier3_file" toOperation="output connector" toProperty="tier_3_snp" />
@@ -484,7 +516,10 @@ __DATA__
   </operation>
 
   <operation name="Tier1 Maf">
-    <operationtype commandClass="Genome::Model::Tools::Capture::GermlinePipelineMafMaker" typeClass="Workflow::OperationType::Command" />
+    <operationtype commandClass="Genome::Model::Tools::Germline::MafMaker" typeClass="Workflow::OperationType::Command" />
+  </operation>
+  <operation name="Tier1 Vcf">
+    <operationtype commandClass="Genome::Model::Tools::Germline::VcfMaker" typeClass="Workflow::OperationType::Command" />
   </operation>
 
   <operationtype typeClass="Workflow::OperationType::Model">
@@ -566,6 +601,7 @@ __DATA__
     <inputproperty isOptional="Y">tier_1_indelfilter_file_filtered</inputproperty>
 
     <inputproperty isOptional="Y">tier1_maf_file</inputproperty>
+    <inputproperty isOptional="Y">tier1_vcf_file</inputproperty>
     <inputproperty isOptional="Y">project_name</inputproperty>
     <inputproperty isOptional="Y">center</inputproperty>
     <inputproperty isOptional="Y">build</inputproperty>
@@ -574,6 +610,7 @@ __DATA__
     <inputproperty isOptional="Y">sequencer</inputproperty>
 
     <outputproperty>maf_file_out</outputproperty>
+    <outputproperty>vcf_file_out</outputproperty>
 
     <outputproperty>tier_2_snp</outputproperty>
     <outputproperty>tier_3_snp</outputproperty>
