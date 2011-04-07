@@ -73,8 +73,11 @@ sub execute {
     my @models = Genome::Model->get(
         build_requested => 1,
     );
+    unless (@models) {
+        $self->status_message("No models to build.");
+        return 1;
+    }
 
-    $DB::single = 1;
     my $builds_to_start = $self->max_builds;
     $builds_to_start = @models if @models < $builds_to_start;
     my $command = Genome::Model::Build::Command::Start->create(
@@ -87,7 +90,7 @@ sub execute {
 
     my @builds = $command->builds;
     unless (@builds == $builds_to_start){
-        $self->error_message("Failed to start expected number of builds. $builds_to_start expected, ".scalar @builds." built.\nErr:$err");
+        $self->error_message("Failed to start expected number of builds. $builds_to_start expected, ".scalar @builds." built.");
     }
     elsif (!$rv){
         $self->error_message("Built expected number of builds, but had some failures:\nErr:$err");

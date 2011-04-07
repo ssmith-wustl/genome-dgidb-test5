@@ -26,7 +26,7 @@ $pg = Genome::PopulationGroup->create(
 );
 ok($pg, 'created pg');
 isa_ok($pg, 'Genome::PopulationGroup');
-isa_ok($pg, 'Genome::Measurable');
+isa_ok($pg, 'Genome::Notable');
 is($pg->id, $id, "id: $id");
 is($pg->subject_type, 'population group', 'subject type is population group');
 print Data::Dumper::Dumper($pg);

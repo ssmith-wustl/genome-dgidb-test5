@@ -1,9 +1,5 @@
 package Genome::InstrumentData::Imported;
 
-#REVIEW fdu 11/17/2009
-#More methods could be implemented for calculating metrics and
-#resolving file path with Imported-based models soon in use
-
 use strict;
 use warnings;
 
@@ -12,87 +8,148 @@ use File::stat;
 use File::Path;
 
 class Genome::InstrumentData::Imported {
-    is => [ 'Genome::InstrumentData','Genome::Sys' ],
-    type_name => 'imported instrument data',
-    table_name => 'IMPORTED_INSTRUMENT_DATA',
-    subclassify_by => 'subclass_name',
-    id_by => [
-        id => {  },
-    ],
-    has => [
-        import_date          => { is => 'DATE', len => 19 },
-        user_name            => { is => 'VARCHAR2', len => 256 },
-        original_data_path   => { is => 'VARCHAR2', len => 1000 },
-        import_format        => { is => 'VARCHAR2', len => 64 },
-        sequencing_platform  => { is => 'VARCHAR2', len => 64 },
-        import_source_name   => { is => 'VARCHAR2', len => 64, is_optional => 1 },
-        description          => { is => 'VARCHAR2', len => 512, is_optional => 1 },
-        read_count           => { is => 'NUMBER', len => 20, is_optional => 1 },
-        base_count           => { is => 'NUMBER', len => 20, is_optional => 1 },
-        disk_allocations     => { is => 'Genome::Disk::Allocation', reverse_as => 'owner', is_optional => 1, is_many => 1 },
-        #disk_allocations     => { is => 'Genome::Disk::Allocation', reverse_as => 'owner', where => [ allocation_path => { operator => 'like', value => '%imported%' }  ], is_optional => 1, is_many => 1 },
-        fragment_count       => { is => 'NUMBER', len => 20, is_optional => 1 },
-        fwd_read_length      => { is => 'NUMBER', len => 20, is_optional => 1 },
-        is_paired_end        => { is => 'NUMBER', len => 1, is_optional => 1 },
-        median_insert_size   => { is => 'NUMBER', len => 20, is_optional => 1 },
-        read_length          => { is => 'NUMBER', len => 20, is_optional => 1 },
-        rev_read_length      => { is => 'NUMBER', len => 20, is_optional => 1 },
-        run_name             => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        sd_above_insert_size => { is => 'NUMBER', len => 20, is_optional => 1 },
-        subset_name          => { is => 'VARCHAR2', len => 255, is_optional => 1 },
-        target_region_set_name => { is => 'VARCHAR2', len => 64, is_optional => 1 },
-        library_id           => { is => 'NUMBER', len => 20, is_optional => 0 },
-        _old_sample_name      => { is => 'VARCHAR2', len => 64, is_optional => 1, column_name=>'SAMPLE_NAME' },
-        _old_sample_id        => { is => 'NUMBER', len => 20, is_optional => 1, column_name=>'SAMPLE_ID' },
-        library => { is => 'Genome::Library', id_by => 'library_id', },
-        library_name => { is => 'Text', via => 'library', to => 'name', },
-        sample => { is => 'Genome::Sample', via => 'library', to => 'sample', },
-        sample_id => { is=> 'Text', via => 'sample', to => 'id', },
-        sample_name => { is=> 'Text', via => 'sample', to => 'name', },
-        source => { is => 'Genome::Measurable', via => 'sample', to => 'source', },
-        source_id => { is=> 'Text', via => 'source', to => 'id', },
-        source_name => { is=> 'Text', via => 'source', to => 'name', },
-        taxon => { is => 'Genome::Taxon', via => 'source', to => 'taxon', },
-        species_name => { is => 'Text', via => 'taxon', to => 'species_name', },
-    ],
-    has_optional =>[
+    is => 'Genome::InstrumentData',
+    has_optional => [
+        import_date => {
+            is => 'DateTime',
+            via => 'attributes',
+            to => 'attribute_value',
+            is_mutable => 1,
+            where => [ attribute_label => 'import_date' ],
+        },
+        user_name => {
+            is => 'Text',
+            via => 'attributes',
+            to => 'attribute_value',
+            is_mutable => 1,
+            where => [ attribute_label => 'user_name' ],
+        },
+        original_data_path => {
+            is => 'DirectoryPath',
+            via => 'attributes',
+            to => 'attribute_value',
+            is_mutable => 1,
+            where => [ attribute_label => 'original_data_path' ],
+        },
+        import_format => {
+            is => 'Text',
+            via => 'attributes',
+            to => 'attribute_value',
+            is_mutable => 1,
+            where => [ attribute_label => 'import_format' ],
+        },
+        import_source_name => {
+            is => 'Text',
+            via => 'attributes',
+            to => 'attribute_value',
+            is_mutable => 1,
+            where => [ attribute_label => 'import_source_name' ],
+        },
+        description => {
+            is => 'Text',
+            via => 'attributes',
+            to => 'attribute_value',
+            is_mutable => 1,
+            where => [ attribute_label => 'description' ],
+        },
+        read_count => {
+            is => 'Number',
+            via => 'attributes',
+            to => 'attribute_value',
+            is_mutable => 1,
+            where => [ attribute_label => 'read_count' ],
+        },
+        base_count => {
+            is => 'Number',
+            via => 'attributes',
+            to => 'attribute_value',
+            is_mutable => 1,
+            where => [ attribute_label => 'base_count' ],
+        },
+        fragment_count => {
+            is => 'Number',
+            via => 'attributes',
+            to => 'attribute_value',
+            is_mutable => 1,
+            where => [ attribute_label => 'fragment_count' ],
+        },
+        fwd_read_length => {
+            is => 'Number',
+            via => 'attributes',
+            to => 'attribute_value',
+            is_mutable => 1,
+            where => [ attribute_label => 'fwd_read_length' ],
+        },
+        is_paired_end => {
+            is => 'Boolean',
+            via => 'attributes',
+            to => 'attribute_value',
+            is_mutable => 1,
+            where => [ attribute_label => 'is_paired_end' ],
+        },
+        median_insert_size => {
+            is => 'Number',
+            via => 'attributes',
+            to => 'attribute_value',
+            is_mutable => 1,
+            where => [ attribute_label => 'median_insert_size' ],
+        },
+        read_length => {
+            is => 'Number',
+            via => 'attributes',
+            to => 'attribute_value',
+            is_mutable => 1,
+            where => [ attribute_label => 'read_length' ],
+        },
+        rev_read_length => {
+            is => 'Number',
+            via => 'attributes',
+            to => 'attribute_value',
+            is_mutable => 1,
+            where => [ attribute_label => 'rev_read_length' ],
+        },
+        sd_above_insert_size => {
+            is => 'Number',
+            via => 'attributes',
+            to => 'attribute_value',
+            is_mutable => 1,
+            where => [ attribute_label => 'sd_above_insert_size' ],
+        },
+        target_region_set_name => {
+            is => 'Text',
+            via => 'attributes',
+            to => 'attribute_value',
+            is_mutable => 1,
+            where => [ attribute_label => 'target_region_set_name' ],
+        },
+        sra_accession => {
+            is => 'Text',
+            via => 'attributes',
+            to => 'attribute_value',
+            is_mutable => 1,
+            where => [ attribute_label => 'sra_accession' ],
+        },
+        sra_sample_id => {
+            is => 'Text',
+            via => 'attributes',
+            to => 'attribute_value',
+            is_mutable => 1,
+            where => [ attribute_label => 'sra_sample_id' ],
+        },
+        reference_sequence_build_id => {
+            is => 'Number',
+            via => 'attributes',
+            to => 'attribute_value',
+            is_mutable => 1,
+            where => [ attribute_label => 'reference_sequence_build_id' ],
+        },
         reference_sequence_build => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             id_by => 'reference_sequence_build_id',
         },
-        reference_sequence_build_id => { 
-            via => 'attributes', 
-            to => 'value', 
-            is_mutable => 1, 
-            where => [ 
-                property_name => 'reference_sequence_build', 
-                entity_class_name => 'Genome::InstrumentData::Imported', 
-            ],
-        },
-        sra_accession => { 
-            via => 'attributes', 
-            to => 'value', 
-            is_mutable => 1, 
-            where => [ 
-                property_name => 'sra_accession', 
-                entity_class_name => 'Genome::InstrumentData::Imported', 
-            ],
-        },
-        sra_sample_id => { 
-            via => 'attributes', 
-            to => 'value', 
-            is_mutable => 1, 
-            where => [ 
-                property_name => 'sra_sample_id', 
-                entity_class_name => 'Genome::InstrumentData::Imported', 
-            ],
-        },
+        disk_allocations => { is => 'Genome::Disk::Allocation', reverse_as => 'owner', is_many => 1 },
         bam_path => { calculate => q|my $f = $self->disk_allocations->absolute_path . '/all_sequences.bam';  return $f if (-e $f);| },
     ],
-    has_many_optional => [
-        attributes => { is => 'Genome::MiscAttribute', reverse_as => '_instrument_data', where => [ entity_class_name => 'Genome::InstrumentData::Imported' ] },
-    ],
-
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
@@ -103,6 +160,12 @@ sub __display_name__ {
         join(' ', map { $self->$_ } qw/sequencing_platform import_format id/)
         . ($self->desc ? ' (' . $self->desc . ')' : '')
     );
+}
+
+sub run_name {
+    my $self = shift;
+    return $self->{run_name} if defined $self->{run_name};
+    return $self->id;
 }
 
 sub data_directory {
@@ -170,16 +233,17 @@ sub create {
     my $class = shift;
     
     my %params = @_;
-    my $user   = getpwuid($<); 
-    my $date   = UR::Time->now;
-
-    $params{import_date} = $date;
-    $params{user_name}   = $user; 
+    
+    unless (exists $params{import_date}) {
+        my $date = UR::Time->now;
+        $params{import_date} = $date;
+    }
+    unless (exists $params{user_name}) {
+        my $user = getpwuid($<); 
+        $params{user_name} = $user; 
+    }
 
     my $self = $class->SUPER::create(%params);
-
-    $self->_old_sample_id($self->sample_id);
-
     return $self;
 }
 
@@ -267,14 +331,6 @@ sub _calculate_total_read_count {
 #sub fragment_count { 10_000_000 }
 
 sub clusters { shift->fragment_count}
-
-sub run_name {
-    my $self= shift;
-    if($self->__run_name) {
-        return $self->__run_name;
-    }
-    return $self->id;
-}
 
 sub short_run_name {
     my $self = shift;

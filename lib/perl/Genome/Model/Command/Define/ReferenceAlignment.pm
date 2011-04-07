@@ -26,6 +26,12 @@ class Genome::Model::Command::Define::ReferenceAlignment {
             is_optional => 1,
             is_input => 1,
         },
+        genotype_microarray_build => {
+            is => 'Genome::Model::Build::GenotypeMicroarray',
+            doc => 'ID or name of the genotype microarray build which will be used to obtain the gold snp and genotype files',
+            is_optional => 1,
+            is_input => 1,
+        },
         dbsnp_model => {
             is => 'Genome::Model::ImportedVariationList',
             doc => 'ID or name of the dbSNP model to compare against (the latest build will be selected)',

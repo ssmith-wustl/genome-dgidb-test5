@@ -30,15 +30,14 @@ my $tmp_dir = File::Temp::tempdir(
 
 ok(-d $tmp_dir, "temp output directory made at $tmp_dir");
 
-my $ref_seq = Genome::Model::ImportedReferenceSequence->get(name => 'NCBI-human');
-my $build = $ref_seq->build_by_version('36');
+my $refbuild_id = 101947881;
 
 my $sv_valid = Genome::Model::Tools::DetectVariants2::Filter::TigraValidation->create(
     input_directory  => $test_input_dir,
     output_directory => $tmp_dir,
     aligned_reads_input => $normal_bam,
     control_aligned_reads_input => $tumor_bam,
-    reference_sequence_input => $build->sequence_path,
+    reference_build_id => $refbuild_id,
     specify_chr => 18,
 );
 

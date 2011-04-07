@@ -12,7 +12,7 @@ my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from a 64-bit machine";
 } else {
-    plan tests => 6;
+    plan tests => 4;
 }
 
 my $tumor =  "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants-Somatic-Sniper/tumor.tiny.bam";
@@ -20,14 +20,11 @@ my $normal = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants-So
 
 my $tmpdir = File::Temp::tempdir('SomaticSniperXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
 
-my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get(type_name => 'imported reference sequence', name => 'NCBI-human-build36');
-ok($ref_seq_build, 'Got a reference sequence build') or die('Test cannot continue without a reference sequence build');
-is($ref_seq_build->name, 'NCBI-human-build36', 'Got expected reference for test case');
-my $ref_seq_input = $ref_seq_build->full_consensus_path('fa');
+my $refbuild_id = 101947881;
 
 my $sniper = Genome::Model::Tools::DetectVariants2::Sniper->create(aligned_reads_input=>$tumor, 
                                                                    control_aligned_reads_input=>$normal,
-                                                                   reference_sequence_input => $ref_seq_input,
+                                                                   reference_build_id => $refbuild_id,
                                                                    output_directory => $tmpdir, 
                                                                    version => '0.7.2',
                                                                    snv_params => '-q 1 -Q 15',

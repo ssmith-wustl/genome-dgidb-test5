@@ -47,7 +47,7 @@ my $read_iterator = ReadIterator->create();
 ok($read_iterator, 'created read iterator');
 
 # get real inst data
-my $sanger_inst_data = Genome::InstrumentData::Sanger->get('16may08.912pmba1');
+my $sanger_inst_data = Genome::InstrumentData::Sanger->get('24jun09.906pmcb1');
 ok($sanger_inst_data, 'got sanger inst data');
 
 # full path from attributes - it's undefined

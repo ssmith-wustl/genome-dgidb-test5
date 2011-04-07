@@ -1,3 +1,5 @@
+# bdericks: Need to refactor out dependencies on GSC and App
+
 package Genome::InstrumentData::Sanger;
 
 use strict;
@@ -6,82 +8,32 @@ use warnings;
 use Genome;
 
 class Genome::InstrumentData::Sanger {
-    is  => 'Genome::InstrumentData',
+    is => 'Genome::InstrumentData',
     has_constant => [
         sequencing_platform => { value => 'sanger' },
     ],
-    has => [
-        #< Run from OLTP Attrs >#
-        _gsc_run => {
-                     doc => 'GSC Run from LIMS',
-                     is => 'GSC::Run',
-                     calculate_from => [qw/ id /],
-                     calculate => q| GSC::Run->get($id); |,
-        },
-        sample_name => {
-                        via   => 'attributes',
-                        to    => 'value',
-                        where => [
-                                  entity_class_name => 'Genome::InstrumentData::Sanger',
-                                  property_name     => 'sample_name',
-                                 ],
-                        is_optional => 1,
-                        is_mutable  => 1,
-                    },
-        sample_id => {
-                      via   => 'attributes',
-                      to    => 'value',
-                      where => [
-                                entity_class_name => 'Genome::InstrumentData::Sanger',
-                                property_name     => 'sample_id',
-                               ],
-                      is_optional => 1,
-                      is_mutable  => 1,
-                     },     
-        sample => { is => 'Genome::Sample', id_by => 'sample_id' },
-        taxon => { via => 'sample', to => 'taxon', is => 'Genome::Taxon' },
-        library_name => {
-                         via   => 'attributes',
-                         to    => 'value',
-                         where => [
-                                   entity_class_name => 'Genome::InstrumentData::Sanger',
-                                   property_name     => 'library_name',
-                                  ],
-                         is_optional => 1,
-                         is_mutable  => 1,
-                     },
-        library_id => {
-                       via   => 'attributes',
-                       to    => 'value',
-                       where => [
-                                 entity_class_name => 'Genome::InstrumentData::Sanger',
-                                 property_name     => 'library_id',
-                                ],
-                       is_optional => 1,
-                       is_mutable  => 1,
-                      },
+    has_optional => [
         research_project => {
-                 via   => 'attributes',
-                 to    => 'value',
-                 where => [
-                       entity_class_name => 'Genome::InstrumentData::Sanger',
-                       property_name     => 'research_project',
-                   ],
-             is_optional => 1,
-             is_mutable  => 1,
-             default_value => 'unknown',
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'research_project' ],
+            is_mutable => 1,
+            default_value => 'unknown',
+        },
+        disk_allocation => {
+            is => 'Genome::Disk::Allocation',
+            calculate_from => [ 'subclass_name', 'id' ],
+            calculate => q{ return Genome::Disk::Allocation->get(owner_id => $id, owner_class_name => $subclass_name); },
+        },
+        # TODO Need to refactor this away
+        _gsc_run => {
+            is => 'GSC::Run',
+            calculate_from => [qw/ id /],
+            calculate => q| GSC::Run->get($id); |,
+            doc => 'GSC Run from LIMS',
         },
     ],
 };
-
-sub disk_allocation {
-    my $self = shift;
-
-    return Genome::Disk::Allocation->get(
-        owner_id => $self->id,
-        owner_class_name => $self->class,
-    );
-}
 
 sub full_path {
     my $self = shift;
@@ -103,10 +55,10 @@ sub full_path {
 sub _full_path {
     my $self = shift;
 
-    my ($full_path_attr) = grep { $_->property_name eq 'full_path' } $self->attributes;
+    my ($full_path_attr) = grep { $_->attribute_label eq 'full_path' } $self->attributes;
     return unless $full_path_attr;
     
-    my $full_path = $full_path_attr->value;
+    my $full_path = $full_path_attr->attribute_value;
     return $full_path if -d $full_path;
     
     return;
@@ -169,7 +121,6 @@ sub dump_to_file_system {
 
 sub _get_read_iterator {
     my $self = shift;
-
     my $reads = App::DB::TableRow::Iterator->new(
         class => 'GSC::Sequence::Read',
         params => {
@@ -185,42 +136,4 @@ sub _get_read_iterator {
     return $reads;
 }
 
-sub get_library_summary {
-    my $self = shift;
-    return GSC::LibrarySummary->get(full_name => $self->library_name);
-}
-
-sub get_source_sample {
-    my $self = shift;
-
-    my $library_summary = $self->get_library_summary;
-    unless ($library_summary) {
-        return;
-    }
-    return $library_summary->get_source_sample;
-}
-
-sub get_population {
-    my $self = shift;
-
-    my $library_summary = $self->get_library_summary;
-    unless ($library_summary) {
-        return;
-    }
-    return $library_summary->get_population;
-}
-
-sub get_organism_taxon {
-    my $self = shift;
-
-    my $library_summary = $self->get_library_summary;
-    unless ($library_summary) {
-        return;
-    }
-    return $library_summary->get_organism_taxon;
-}
-
 1;
-
-#$HeadURL$
-#$Id$

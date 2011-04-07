@@ -19,7 +19,7 @@ my %seq_plats_and_ids = (
         # region_id  seq_id     index_sequence
         # 2853729293 2853729194
         # 2853729292 2853729397 AACAACTC
-    sanger  => ['03may05.868pmaa1'],
+    sanger  => ['22sep09.863amcb1'],
     solexa  => ['2338813239'],
 );
 

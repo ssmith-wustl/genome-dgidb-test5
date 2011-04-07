@@ -95,11 +95,8 @@ sub execute {
     # If the target region is set to whole genome, then we want the imported instrument data's
     # target_region_set_name column set to undef. Otherwise, we need to make sure the target region
     # name corresponds to only one Genome::FeatureList.
-    my $target_region;
     unless ($self->target_region eq 'none') {
-        if ($self->validate_target_region) {
-            $target_region = $self->target_region;
-        } else {
+        if ( not $self->validate_target_region ) {
             $self->error_message("Invalid target region " . $self->target_region);
             die $self->error_message;
         }
@@ -168,7 +165,7 @@ sub execute {
     $params{import_format} = "bam";
     $params{reference_sequence_build_id} = $self->reference_sequence_build_id;
     $params{library_id} = $library->id;
-    $params{target_region_set_name} = $target_region;
+    $params{target_region_set_name} = $self->target_region;
     
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
     unless ($import_instrument_data) {

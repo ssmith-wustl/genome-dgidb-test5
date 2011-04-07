@@ -186,6 +186,13 @@ class Genome::Model {
                 }
             }
         },
+        sample_names => {
+            is => 'Array',
+            calculate => q {
+                my @s = $self->get_all_possible_samples();
+                return sort map {$_->name()} @s;
+            },
+        },
         subject_type    => { is => 'Text', len => 255, 
                             valid_values => ["species_name","sample_group","flow_cell_id","genomic_dna","library_name","sample_name","dna_resource_item_name"], 
                             calculate_from => 'subject_class_name',
@@ -466,18 +473,24 @@ sub default_model_name {
     my @parts;
     push @parts, 'capture', $params{capture_target} if defined $params{capture_target};
     push @parts, $params{roi} if defined $params{roi};
-    my @additional_parts = eval{ $self->_additional_parts_for_default_name; };
+    my @additional_parts = eval{ $self->_additional_parts_for_default_name(%params); };
+    if ( $@ ) {
+        $self->error_message("Failed to get addtional default name parts: $@");
+        return;
+    }
     push @parts, @additional_parts if @additional_parts;
     $name_template .= '.'.join('.', @parts) if @parts;
 
-    my $name = Genome::Utility::Text::sanitize_string_for_filesystem( sprintf($name_template, '', '') );
+    my $name = sprintf($name_template, '', '');
     my $cnt = 0;
     while ( Genome::Model->get(name => $name) ) {
-        $name = Genome::Utility::Text::sanitize_string_for_filesystem( sprintf($name_template, '-', ++$cnt) );
+        $name = sprintf($name_template, '-', ++$cnt);
     }
 
     return $name;
 }
+
+sub _additional_parts_for_default_name { return; }
 
 #If a user defines a model with a name (and possibly type), we need to find/make sure there's an
 #appropriate subject to use based upon that name/type.
@@ -585,8 +598,10 @@ sub get_all_possible_samples {
             map($_->samples, @sources);
     } elsif ($self->subject_class_name eq 'Genome::Sample'){
         @samples = ( $self->subject );
+    } elsif ($self->subject_class_name eq 'Genome::Individual') {
+        @samples = $self->subject->samples();
     #} elsif () {
-        #TODO Possibly fill in for Genome::Individual, Genome::PopulationGroup and possibly others
+        #TODO Possibly fill in for possibly Genome::PopulationGroup and possibly others (possibly)
     } else {
         @samples = ();
     }

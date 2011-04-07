@@ -101,7 +101,8 @@ sub execute {                               # replace with real execution logic.
 			$succeeded_models_by_sample{$subject_name} = $model_id;
 			my $last_build_dir = $model->last_succeeded_build_directory;
 			if($self->output_build_dirs) {
-				print BUILDDIRS join("\t", $model_id, $subject_name, $build_id, "Succeeded", $last_build_dir) . "\n";
+				my $bam_file = $build->whole_rmdup_bam_file;
+				print BUILDDIRS join("\t", $model_id, $subject_name, $build_id, "Succeeded", $last_build_dir, $bam_file) . "\n";
 				unless($self->output_coverage_stats) {
 					next;
 				}
@@ -162,7 +163,7 @@ sub execute {                               # replace with real execution logic.
 				}
 			}
 
-#SNP array concordance
+#FUTURE: Pull SNP array concordance here
 		}
 	}	
 	close(OUTFILE);

@@ -46,7 +46,7 @@ sub execute{
     unless(-e $reference_fasta){
         die $self->error_message("fasta file for reference build doesn't exist!");
     }
-    $params{reference_sequence_input} = $reference_fasta;
+    $params{reference_build_id} = $reference_build->id;
     
     my $normal_bam = $build->normal_bam;
     unless (-e $normal_bam){
@@ -82,38 +82,56 @@ sub execute{
             }
             symlink($unexpected_format_output, $result);
         }
+        my $lq_result = $build->data_set_path("variants/snvs.lq",$version,'bed');
+        unless (-e $lq_result){
+            #these are not set on the detect variants command, so I'm hardcoding them.
+            my $unexpected_filename_output = $build->data_directory."/variants/snvs.lq.bed";
+            unless (-e $unexpected_filename_output){
+                die $self->error_message("Expected lq detected snvs $unexpected_filename_output, but it does not exist");
+            }
+            symlink($unexpected_filename_output, $lq_result);
+        }
     }
             
     if ($build->indel_detection_strategy){
         my $result = $build->data_set_path("variants/indels.hq",$version,'bed'); 
         unless (-e $result){
-            my $unexpected_format_output = $command->_indel_hq_output_file;
-            unless (-e $unexpected_format_output){
-                die $self->error_message("Expected hq detected snvs file $result, but it does not exist!");
+            my $unexpected_filename_output = $command->_indel_hq_output_file;
+            unless (-e $unexpected_filename_output){
+                die $self->error_message("Expected hq detected indels file $result, but it does not exist!");
             }
-            symlink($unexpected_format_output, $result);
+            symlink($unexpected_filename_output, $result);
+        }
+        my $lq_result = $build->data_set_path("variants/indels.lq",$version,'bed');
+        unless (-e $lq_result){
+            #these are not set on the detect variants command, so I'm hardcoding them.
+            my $unexpected_filename_output = $build->data_directory."/variants/indels.lq.bed";
+            unless (-e $unexpected_filename_output){
+                die $self->error_message("Expected lq detected indels $unexpected_filename_output, but it does not exist");
+            }
+            symlink($unexpected_filename_output, $lq_result);
         }
     }
 
     if ($build->sv_detection_strategy){
         my $result = $build->data_set_path("variants/svs.hq",$version,'bed'); 
         unless (-e $result){
-            my $unexpected_format_output = $command->_sv_hq_output_file;
-            unless (-e $unexpected_format_output){
+            my $unexpected_filename_output = $command->_sv_hq_output_file;
+            unless (-e $unexpected_filename_output){
                 die $self->error_message("Expected hq detected snvs file $result, but it does not exist!");
             }
-            symlink($unexpected_format_output, $result);
+            symlink($unexpected_filename_output, $result);
         }
     }
 
     if ($build->cnv_detection_strategy){
         my $result = $build->data_set_path("variants/cnvs.hq",$version,'bed'); 
         unless (-e $result){
-            my $unexpected_format_output = $command->_cnv_hq_output_file;
-            unless (-e $unexpected_format_output){
+            my $unexpected_filename_output = $command->_cnv_hq_output_file;
+            unless (-e $unexpected_filename_output){
                 die $self->error_message("Expected hq detected snvs file $result, but it does not exist!");
             }
-            symlink($unexpected_format_output, $result);
+            symlink($unexpected_filename_output, $result);
         }
     }
 

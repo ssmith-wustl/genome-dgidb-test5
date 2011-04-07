@@ -14,6 +14,38 @@ class Genome::Library::View::Status::Xml {
                 'id',
                 'name',
                 {
+                    name => 'models',
+                    perspective => 'default',
+                    toolkit => 'xml',
+                    aspects => [
+                        'genome_model_id',
+                        'name',
+                        'subject_id',
+                        'subject_class_name',
+                        'is_default',
+                        'data_directory',
+                        {
+                            name => 'processing_profile',
+                            aspects => ['id', 'name'],
+                            perspective => 'default',
+                            toolkit => 'xml'
+                        },
+                        'creation_date',
+                        'user_name',
+                        {
+                            name => 'builds',
+                            aspects => [
+                                'id', 'data_directory', 'status', 'date_scheduled', 'date_completed',
+                            ],
+                            perspective => 'default',
+                            toolkit => 'xml',
+                            subject_class_name => 'Genome::Model::Build',
+                        },
+                        'region_of_interest_set_name',
+                    ],
+                    subject_class_name => 'Genome::Model',
+                },
+                {
                     name => 'sample',
                     perspective => 'default',
                     toolkit => 'xml',
@@ -33,7 +65,7 @@ class Genome::Library::View::Status::Xml {
                         'strain_name',
                         'ncbi_taxon_id',
                     ]
-                },
+                }
             ]
         }
     ]

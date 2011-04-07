@@ -83,7 +83,7 @@ sub execute {                               # replace with real execution logic.
 			my @lineContents = split(/\t/, $line);
 			my $numContents = @lineContents;
 			my $chrom = $lineContents[0];
-			my $pos = $lineContents[1];
+			my $pos = $lineContents[1] + 1;
 			my $ref1 = $lineContents[3];
 			my $alt = $lineContents[4];
 			$chrom = fix_chrom($chrom);
@@ -108,7 +108,7 @@ sub execute {                               # replace with real execution logic.
 				$var = "0";
 				$indel_size = length($ref);
 				$chr_start = $pos;
-				$chr_stop = $chr_start + $indel_size;
+				$chr_stop = $chr_start + $indel_size - 1;
 			}
 			else {
 				die "Cannot resolve insertion or deletion from ref:$ref alt:$alt\n";

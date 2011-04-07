@@ -22,21 +22,11 @@ my $taxon = Genome::Taxon->get($id);
 ok(!$taxon, 'taxon does not exist');
 
 $taxon = Genome::Taxon->create(
-    #id => $id,
     name => 'Wookiee',
     domain => 'Unknown',
     strain_name => 'Short Hair',
     species_latin_name => 'Kashyyyk Wookiee',
-    #ncbi_taxon_id => 
-    #ncbi_taxon_species_name => 
-    #locus_tag => 
-    #gram_stain_category => 
     estimated_genome_size => 7000000000,
-    #current_default_org_prefix => 
-    #current_genome_refseq_id => 
-    #model_member_id => 
-    #_legacy_org_id => set in create
-    #_next_amplicon_iteration => set in create
 );
 ok($taxon, "created a new genome taxon");
 isa_ok($taxon, 'Genome::Taxon');
