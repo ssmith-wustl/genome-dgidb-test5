@@ -948,6 +948,10 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
 
         my @group_names = $self->_resolve_project_and_work_order_names($pse);
         push @group_names, $self->_resolve_pooled_sample_name_for_instrument_data($genome_instrument_data);
+
+        if ($m->name =~ /\.wu-space$/) {
+            for (@group_names) {$_ .= ".wu-space" if ($_)};
+        }
         $self->add_model_to_default_modelgroups($m, @group_names);
 
         my $new_models = $self->_newly_created_models;
