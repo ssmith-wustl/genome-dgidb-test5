@@ -162,6 +162,12 @@ sub __display_name__ {
     );
 }
 
+sub run_name {
+    my $self = shift;
+    return $self->{run_name} if defined $self->{run_name};
+    return $self->id;
+}
+
 sub data_directory {
     my $self = shift;
 
@@ -516,12 +522,5 @@ sub genotype_microarray_file_for_reference_sequence_build {
     return $self->genotype_microarray_file_for_subject_and_version($build->subject_name, $build->version);
 }
 
-sub run_name {
-    my $self= shift;
-    if($self->__run_name) {
-        return $self->__run_name;
-    }
-    return $self->id;
-}
 1;
 
