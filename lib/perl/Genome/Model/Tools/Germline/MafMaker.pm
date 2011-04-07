@@ -97,7 +97,7 @@ sub execute {                               # replace with real execution logic.
 
 	my $build_id = $self->build_id;
 	my $build = Genome::Model::Build->get(build_id => $build_id);
-	my $sample_name = $build->model_name;
+	my $sample_name = $build->subject_name;
 
 	## Open the outfile ##
 	open(OUTFILE, ">$output_file") or die "Can't open output file: $!\n";
