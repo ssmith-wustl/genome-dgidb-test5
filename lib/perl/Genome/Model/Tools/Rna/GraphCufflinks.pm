@@ -137,7 +137,7 @@ sub execute {
 
     $script_fh->print("P=path;\n");
     $script_fh->print("path(P, '/gscuser/jbrea/git/genome/lib/perl/Genome/Model/Tools/RNA')\n");
-    $script_fh->print("rnaseq_plots_bams('$config_file');\n");
+    $script_fh->print("rnaseq_plot_bams('$config_file');\n");
     $script_fh->close();
     #$DB::single=1;
     print `matlab -nodisplay < $script_file`;
