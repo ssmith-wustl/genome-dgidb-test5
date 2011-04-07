@@ -138,9 +138,9 @@ mtext("Enhanced Scatterplot", side=3, outer=TRUE, line=-3)
 	print R_COMMANDS 'cn2=subset(z1, z1$V20 >= 1.75 & z1$V20 <= 2.25);'."\n";
 	print R_COMMANDS 'cn3=subset(z1, z1$V20 >= 2.25 & z1$V20 <= 3.5);'."\n";
 	print R_COMMANDS 'cn4plus=subset(z1, z1$V20 >= 3.5);'."\n";
-	print R_COMMANDS 'cn1minus100x=subset(z2, c(z2$V20 >= 0, z2$V20 <= 1.75));'."\n";
-	print R_COMMANDS 'cn2100x=subset(z2, c(z2$V20 >= 1.75, z2$V20 <= 2.25));'."\n";
-	print R_COMMANDS 'cn3100x=subset(z2, c(z2$V20 >= 2.25, z2$V20 <= 3.5));'."\n";
+	print R_COMMANDS 'cn1minus100x=subset(z2, z2$V20 >= 0 & z2$V20 <= 1.75);'."\n";
+	print R_COMMANDS 'cn2100x=subset(z2, z2$V20 >= 1.75 & z2$V20 <= 2.25);'."\n";
+	print R_COMMANDS 'cn3100x=subset(z2, z2$V20 >= 2.25 & z2$V20 <= 3.5);'."\n";
 	print R_COMMANDS 'cn4plus100x=subset(z2, z2$V20 >= 3.5);'."\n";
 
 	print R_COMMANDS 'cov20x=subset(z1, (z1$V9+z1$V10) <= 20);'."\n";
@@ -148,14 +148,35 @@ mtext("Enhanced Scatterplot", side=3, outer=TRUE, line=-3)
 	print R_COMMANDS 'cov100x=subset(z1, (z1$V9+z1$V10) >= 50 & (z1$V9+z1$V10) <= 100);'."\n";
 	print R_COMMANDS 'cov100xplus=subset(z1, (z1$V9+z1$V10) >= 100);'."\n";
 
-	print R_COMMANDS 'den1 <- density(cn1minus$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	print R_COMMANDS 'den2 <- density(cn2$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	print R_COMMANDS 'den3 <- density(cn3$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	print R_COMMANDS 'den4 <- density(cn4plus$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	print R_COMMANDS 'den1100x <- density(cn1minus100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	print R_COMMANDS 'den2100x <- density(cn2100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	print R_COMMANDS 'den3100x <- density(cn3100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	print R_COMMANDS 'den4100x <- density(cn4plus100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+        print R_COMMANDS 'den1 <- 0;'."\n";
+	print R_COMMANDS 'den2 <- 0;'."\n";
+	print R_COMMANDS 'den3 <- 0;'."\n";
+	print R_COMMANDS 'den4 <- 0;'."\n";
+	print R_COMMANDS 'den1100x <-  0;'."\n"; 
+	print R_COMMANDS 'den2100x <-  0;'."\n";
+	print R_COMMANDS 'den3100x <-  0;'."\n";
+	print R_COMMANDS 'den4100x <-  0;'."\n";
+
+
+	print R_COMMANDS 'if(dim(cn1minus)[1] == 0) den1$x = den1$y=1 else den1 <- density(cn1minus$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+	print R_COMMANDS 'if(dim(cn2)[1] == 0) den2$x = den2$y=1 else den2 <- density(cn2$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+	print R_COMMANDS 'if(dim(cn3)[1] == 0) den3$x = den3$y=1 else den3 <- density(cn3$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+	print R_COMMANDS 'if(dim(cn4plus)[1] == 0) den4$x = den4$y=1 else den4 <- density(cn4plus$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+
+	print R_COMMANDS 'if(dim(cn1minus100x)[1] == 0) den1100x$x = den1100x$y=1 else den1100x <- density(cn1minus100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+	print R_COMMANDS 'if(dim(cn2100x)[1] == 0) den2100x$x = den2100x$y=1 else den2100x <- density(cn2100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+	print R_COMMANDS 'if(dim(cn3100x)[1] == 0) den3100x$x = den3100x$y=1 else den3100x <- density(cn3100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+	print R_COMMANDS 'if(dim(cn4plus100x)[1] == 0) den4100x$x = den4100x$y=1 else den4100x <- density(cn4plus100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+
+
+	#print R_COMMANDS 'den1 <- density(cn1minus$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+	#print R_COMMANDS 'den2 <- density(cn2$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+	#print R_COMMANDS 'den3 <- density(cn3$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+	#print R_COMMANDS 'den4 <- density(cn4plus$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+	#print R_COMMANDS 'den1100x <- density(cn1minus100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+	#print R_COMMANDS 'den2100x <- density(cn2100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+	#print R_COMMANDS 'den3100x <- density(cn3100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+	#print R_COMMANDS 'den4100x <- density(cn4plus100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
 	print R_COMMANDS 'dennormcov <- density((z1$V5+z1$V6), bw=4, from=0,to=800,na.rm=TRUE);'."\n";
 	print R_COMMANDS 'dennormcov100x <- density((z2$V5+z2$V6), bw=4, from=0,to=800,na.rm=TRUE);'."\n";
 	print R_COMMANDS 'dentumcov <- density((z1$V9+z1$V10), bw=4, from=0,to=600,na.rm=TRUE);'."\n";
