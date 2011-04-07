@@ -14,33 +14,51 @@ class Genome::Sys::Email::View::Solr::Xml {
         },
         display_type => {
             is => 'Text',
-            default => 'Wiki Page',
+            default => 'Email',
         },
         display_icon_url => {
             is  => 'Text',
-            default => 'genome_wiki_document_32',
+            default => 'genome_email_32',
         },
         display_url0 => {
             is => 'Text',
-            calculate => q{ return build_url0(@_); },
+            calculate_from => ['subject'],
+            calculate =>  q{
+                return $subject->message_url();
+            }
         },
         display_label1 => {
             is  => 'Text',
+            calculate_from => ['subject'],
+            calculate => q{
+                return $subject->list_name() . ' archive';
+            }
         },
         display_url1 => {
             is  => 'Text',
+            calculate_from => ['subject'],
+            calculate => q{
+                return $subject->list_archive_url();
+            }
         },
         display_label2 => {
             is  => 'Text',
+            default => 'All lists',
         },
         display_url2 => {
             is  => 'Text',
+            calculate_from => ['subject'],
+            calculate => q{
+                return $subject->mail_list_path();
+            }
         },
         display_label3 => {
             is  => 'Text',
+            default => '',
         },
         display_url3 => {
             is  => 'Text',
+            default => '',
         },
         default_aspects => {
             is => 'ARRAY',
@@ -54,7 +72,7 @@ class Genome::Sys::Email::View::Solr::Xml {
                     position => 'content',
                 },
                 {
-                    name => '__display_name__',
+                    name => 'subject',
                     position => 'display_title',
                 }
             ],
@@ -62,12 +80,6 @@ class Genome::Sys::Email::View::Solr::Xml {
     ]
 };
 
-sub build_url0 {
-
-    my ($self) = @_;
-
-
-}
 
 sub _reconstitute_from_doc {
     my $class = shift;

@@ -57,7 +57,6 @@ __PACKAGE__->add_observer(
         my ($self) = @_;
 
         $self->initialize();
-    
     }
 );
 
@@ -122,7 +121,7 @@ sub _initialize_from_server {
     
     #Just scrape http://gscsmtp.wustl.edu/pipermail/[list]/[year-month]/[message_id].html to extract subject and body 
     
-    my $response = $ua->get(join('/', $self->mail_server_path, $self->list_name, $self->month, $self->message_id . '.html'));
+    my $response = $ua->get($self->message_url());
     
     unless ($response->is_success) {
         Carp::confess('Failed to load message from the mail server.');
@@ -197,6 +196,24 @@ sub blurb {
 
     return $summary;
 }
+
+sub message_url {
+    my ($self) = @_;
+
+    my $url = join('/', $self->list_archive_url, $self->message_id . '.html');
+    return $url; 
+}
+
+
+sub list_archive_url {
+    my ($self) = @_;
+
+    my $url = join('/', $self->mail_server_path, $self->list_name, $self->month);
+    return $url; 
+}
+
+
+
 
 1;
 

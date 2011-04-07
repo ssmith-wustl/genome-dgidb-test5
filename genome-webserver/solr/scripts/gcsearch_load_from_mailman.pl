@@ -127,10 +127,13 @@ sub process_emails {
         $email->header_set('X-Genome-Search-ID', $search_id);
         
         my $sys_email = Genome::Sys::Email->get($search_id);
-        $sys_email->initialize($email);
+#  If the observer in G:S:Email works, initialize already happens after get()
+#        $sys_email->initialize($email);
+
         push @sys_emails, $sys_email;
         
         $i++;
+
     }
 
     return Genome::Search->add(@sys_emails);
