@@ -26,7 +26,7 @@ sub create {
 sub execute {
     my $self = shift;
 
-    my $cmd = 'python /gscmnt/sata132/techd/pacbio/jwalker/git/pacbio/bin/python/cmpH5AppendConsensus.py';
+    my $cmd = '/gsc/scripts/gsc/techd/cmpH5AppendConsensus.py';
     my @input_files;
     if (defined($self->cons_hdf5_files)) {
         my @cons_hdf5_files = @{$self->cons_hdf5_files};
