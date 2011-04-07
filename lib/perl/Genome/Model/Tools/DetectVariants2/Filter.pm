@@ -61,6 +61,13 @@ class Genome::Model::Tools::DetectVariants2::Filter {
             is_optional => 1,
             doc => 'The version of the variant filter to use.',
         },
+        bed_input_version => {
+            is => 'String',
+            is_input => 1,
+            is_optional => 1,
+            default => 2,
+            doc => 'The version of bed file that the filter requires for input',
+        },
     ],
     has_constant => [
         _variant_type => {
