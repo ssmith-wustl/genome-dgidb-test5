@@ -57,8 +57,7 @@ sub _filter_variants {
     my $read_support_file = $self->_temp_staging_directory."/indels.hq.read_support.bed";
     my $output_file = $self->_temp_staging_directory."/indels.hq.v2.bed";
     my $output_lq_file = $self->_temp_staging_directory."/indels.lq.bed";
-    my $bed_version = $self->bed_input_version;
-    my $indel_file = $self->input_directory."/indels.hq.v".$bed_version.".bed";
+    my $indel_file = $self->input_directory."/indels.hq.bed";
 
     $self->calculate_read_support($indel_file, $read_support_file);
 

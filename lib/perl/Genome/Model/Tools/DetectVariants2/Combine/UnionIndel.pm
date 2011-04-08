@@ -37,10 +37,10 @@ EOS
 
 sub _combine_variants {
     my $self = shift;
-    my $bed_version = $self->bed_input_version;    
-    my $indels_a = $self->input_directory_a."/indels.hq.v".$bed_version.".bed";
-    my $indels_b = $self->input_directory_b."/indels.hq.v".$bed_version.".bed";
-    my $output_file = $self->output_directory."/indels.hq.v".$bed_version.".bed";
+    
+    my $indels_a = $self->input_directory_a."/indels.hq.bed";
+    my $indels_b = $self->input_directory_b."/indels.hq.bed";
+    my $output_file = $self->output_directory."/indels.hq.bed";
 
     my @input_files = ($indels_a, $indels_b);
 
@@ -57,7 +57,7 @@ sub _combine_variants {
     }
 
     # When unioning, there is no "fail" really, everything should be in the hq file
-    my $lq_file = $self->output_directory."/indels.lq.v".$bed_version.".bed";
+    my $lq_file = $self->output_directory."/indels.lq.bed";
     `touch $lq_file`;
     return 1;
 }

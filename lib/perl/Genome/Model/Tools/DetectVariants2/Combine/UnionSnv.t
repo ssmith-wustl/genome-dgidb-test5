@@ -43,8 +43,8 @@ my $union_snv_object = Genome::Model::Tools::DetectVariants2::Combine::UnionSnv-
 ok($union_snv_object, 'created UnionIndel object');
 ok($union_snv_object->execute(), 'executed UnionIndel object');
 
-my @files = qw| snvs.hq.v2.bed
-                snvs.lq.v2.bed |;
+my @files = qw| snvs.hq.bed
+                snvs.lq.bed |;
 
 for my $file (@files) {
     my $test_output = $test_output_dir."/".$file;

@@ -51,11 +51,7 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
             is => "Genome::Model::Tools::DetectVariants2::Strategy",
             doc => 'The variant detector strategy to use for finding copy number variation',
         },
-        min_bed_version => {
-            is => 'String',
-            doc => 'Minimum bed version to allow for output',
-            default => 2,
-        },
+
     ],
     has_constant => [
         variant_types => {
@@ -822,11 +818,10 @@ sub set_output_files {
             }
             my $hq_output_dir = $self->output_directory."/".$relative_path; #FIXME complications arise here when we have just a single column file... or other stuff. May just need to drop the version, too?
             my $hq_file;
-            my $bed_version = $self->min_bed_version;
             if ($variant_type eq 'sv' || $variant_type eq 'cnv'){
                 $hq_file = $variant_type."s.hq";
             }else{
-                $hq_file = $variant_type."s.hq.v".$bed_version.".bed";
+                $hq_file = $variant_type."s.hq.bed";
             }
             my $file;
             if(-l $hq_output_dir."/".$hq_file){

@@ -26,8 +26,7 @@ sub _filter_variants {
 
     my $output_file = $self->_temp_staging_directory."/indels.hq.bed";
     my $output_lq_file = $self->_temp_staging_directory."/indels.lq.bed";
-    my $bed_version = $self->bed_input_version;
-    my $indel_file = $self->input_directory."/indels.hq.v".$bed_version.".bed";
+    my $indel_file = $self->input_directory."/indels.hq.bed";
 
     $self->find_somatic_events($indel_file, $output_file, $output_lq_file);
 

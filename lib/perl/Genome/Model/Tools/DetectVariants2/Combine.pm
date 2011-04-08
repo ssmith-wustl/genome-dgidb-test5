@@ -19,13 +19,6 @@ class Genome::Model::Tools::DetectVariants2::Combine {
             is_input => 1,
             doc => 'input directory b, find <variant_type>.hq.bed in here to combine with the same in dir a',
         },
-        bed_input_version => {
-            is => 'String',
-            doc => 'Version of bed file to select for input',
-            default => 2,
-            is_input => 1,
-            is_optional => 1,
-        },
     ],
     has_constant => [
         _variant_type => {
@@ -97,11 +90,10 @@ sub _validate_inputs {
 sub _validate_output {
     my $self = shift;
     my $variant_type = $self->_variant_type;
-    my $bed_version = $self->bed_input_version;
-    my $input_a_file = $self->input_directory_a."/".$variant_type.".hq.v".$bed_version.".bed";
-    my $input_b_file = $self->input_directory_b."/".$variant_type.".hq.v".$bed_version.".bed";
-    my $hq_output_file = $self->output_directory."/".$variant_type.".hq.v".$bed_version.".bed";
-    my $lq_output_file = $self->output_directory."/".$variant_type.".lq.v".$bed_version.".bed";
+    my $input_a_file = $self->input_directory_a."/".$variant_type.".hq.bed";
+    my $input_b_file = $self->input_directory_b."/".$variant_type.".hq.bed";
+    my $hq_output_file = $self->output_directory."/".$variant_type.".hq.bed";
+    my $lq_output_file = $self->output_directory."/".$variant_type.".lq.bed";
     my $input_total = $self->line_count($input_a_file) + $self->line_count($input_b_file);
     my $output_total = $self->line_count($hq_output_file) + $self->line_count($lq_output_file);
     unless(($input_total - $output_total) == 0){
