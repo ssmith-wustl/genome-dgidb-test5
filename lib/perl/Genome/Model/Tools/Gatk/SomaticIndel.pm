@@ -6,7 +6,7 @@ use FileHandle;
 use Genome;
 
 class Genome::Model::Tools::Gatk::SomaticIndel {
-    is => 'Command',                       
+    is => 'Genome::Model::Tools::Gatk',                       
     has => [
         normal_bam => { 
             is => 'Text', 
@@ -63,15 +63,6 @@ class Genome::Model::Tools::Gatk::SomaticIndel {
             is_input => 1, 
             default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa", 
         },
-        path_to_gatk => { 
-            is => 'Text', 
-            doc => "Path to GATK command", 
-            is_optional => 1, 
-            is_input => 1, 
-            is_output => 1, 
-            #default => "java -Xms5000m -Xmx5000m -jar /gsc/scripts/pkg/bio/gatk/GenomeAnalysisTK-1.0.4168/GenomeAnalysisTK.jar", 
-            default => "/gsc/scripts/pkg/bio/gatk/GenomeAnalysisTK-1.0.5336/GenomeAnalysisTK.jar",
-        },
         mb_of_ram => {
             is => 'Text',
             doc => 'The amount of RAM to use, in megabytes',
@@ -114,7 +105,7 @@ sub execute {
     my $self = shift;
 
     ## Run GATK ##
-    my $path_to_gatk = $self->path_to_gatk;
+    my $path_to_gatk = $self->gatk_path;
     my $gatk_params = $self->gatk_params;
     my $reference = $self->reference;
     

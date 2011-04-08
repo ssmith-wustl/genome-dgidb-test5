@@ -43,10 +43,10 @@ my $union_snv_object = Genome::Model::Tools::DetectVariants2::Combine::Intersect
 ok($union_snv_object, 'created IntersectSnv object');
 ok($union_snv_object->execute(), 'executed IntersectSnv object');
 
-my @files = qw| snvs.hq.bed
-                snvs.lq.a.bed
-                snvs.lq.b.bed
-                snvs.lq.bed |;
+my @files = qw| snvs.hq.v2.bed
+                snvs.lq.a.v2.bed
+                snvs.lq.b.v2.bed
+                snvs.lq.v2.bed |;
 
 for my $file (@files) {
     my $test_output = $test_output_dir."/".$file;

@@ -8,6 +8,13 @@ class Genome::Model::Set::View::Coverage::Xml {
     has_constant => [
         perspective => 'coverage',
     ],
+    has_transient_optional => [
+        _genomes_total_bp => {
+            is => 'HASH',
+            doc => 'store previously computed genome_total_bp to avoid recomputing for each model',
+            default_value => {},
+        },
+    ],
 };
 
 sub all_subject_classes {
@@ -144,16 +151,24 @@ sub get_enrichment_factor_node {
             my $genome_total_bp;
             my $seqdictf = $build->model->reference_sequence_build->data_directory . "/seqdict/seqdict.sam";
 
-            open(my $seqdictfh, "<", $seqdictf) or die "Could not open seqdict at $seqdictf";
+            my $genomes_total_bp = $self->_genomes_total_bp;
+            if($genomes_total_bp and $genomes_total_bp->{$seqdictf}) {
+                $genome_total_bp = $genomes_total_bp->{$seqdictf};
+            } else {
+                open(my $seqdictfh, "<", $seqdictf) or die "Could not open seqdict at $seqdictf";
 
-            while (<$seqdictfh>) {
-                chomp;
-                unless($_ =~ /$@HD/) { # skip the header row
-                    my @f = split(/\t/, $_);
-                    my $ln = $f[2];
-                    $ln =~ s/LN://;
-                    $genome_total_bp += $ln;
+                while (<$seqdictfh>) {
+                    chomp;
+                    unless($_ =~ /$@HD/) { # skip the header row
+                        my @f = split(/\t/, $_);
+                        my $ln = $f[2];
+                        $ln =~ s/LN://;
+                        $genome_total_bp += $ln;
+                    }
                 }
+
+                $genomes_total_bp->{$seqdictf} = $genome_total_bp;
+                $self->_genomes_total_bp($genomes_total_bp);
             }
 
             # get wingspan 0 alignment metrics

@@ -52,6 +52,11 @@ class Genome::Model::Tools::Joinx::Intersect {
             default => 0,
             doc => 'require exact allele match. implies --exact-pos',
         },
+        dbsnp_match => {
+            is => 'Boolean',
+            default => 0,
+            doc => 'Special mode to match alleles to dbsnp and reverse compliment if they do not match the first time',
+        },
     ],
 };
 
@@ -73,6 +78,7 @@ sub flags {
         'output_both',
         'exact_pos',
         'exact_allele',
+        'dbsnp_match',
     );
     for my $bf (@bool_flags) {
         if ($self->$bf) {

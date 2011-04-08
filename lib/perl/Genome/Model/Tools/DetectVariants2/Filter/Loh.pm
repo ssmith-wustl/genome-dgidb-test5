@@ -44,7 +44,8 @@ sub _filter_variants {
 
     my $control_variant_file = $self->_generate_control_file;
     my $normal_snp_fh = Genome::Sys->open_file_for_reading($control_variant_file);
-    my $input_fh = Genome::Sys->open_file_for_reading($self->input_directory . "/snvs.hq.bed");
+    my $bed_version = $self->bed_input_version;
+    my $input_fh = Genome::Sys->open_file_for_reading($self->input_directory . "/snvs.hq.v".$bed_version.".bed");
 
     #MAKE A HASH OF NORMAL SNPS!!!!!!!!!!!!!
     #Assuming that we will generally be doing this on small enough files (I hope). I suck. -- preserved in time from dlarson

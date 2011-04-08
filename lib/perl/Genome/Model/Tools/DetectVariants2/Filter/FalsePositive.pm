@@ -176,7 +176,10 @@ sub _filter_variants {
     $self->status_message('Running BAM Readcounts...');
 
     #First, need to create a variant list file to use for generating the readcounts.
-    my $input_file = $self->input_directory . "/snvs.hq.bed";
+
+    my $bed_version = $self->bed_input_version;
+
+    my $input_file = $self->input_directory . "/snvs.hq.v".$bed_version.".bed";
     my $input = Genome::Sys->open_file_for_reading($input_file);
 
     ## Build temp file for positions where readcounts are needed ##
@@ -389,8 +392,9 @@ sub _filter_variants {
                         print "$chrom\t$chr_start\t$chr_stop\t$ref\t$var\tFAIL no reads in $var_result\n" if($self->verbose);
                     }
                 } else {
-#                       $self->error_message("Unable to get read counts for $ref/$var at position $chrom\t$chr_start\t$chr_stop");
-#                       die;
+                    # was unable to get read_counts_by_allele for both the reference and variant... just consider this low quality for lack of a better plan
+                    # This seemingly only happens when the reference allele is an IUB code, which appears to be rare (1 in a dataset of millions, and only some data sets)
+                    print $lq_fh "$line\n" if($lq_file);
                 }
             }
         } else {
