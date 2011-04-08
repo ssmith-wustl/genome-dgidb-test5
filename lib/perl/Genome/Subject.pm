@@ -113,6 +113,17 @@ sub create {
     return $self;
 }
 
+sub delete {
+    my $self = shift;
+
+    my @attributes = $self->attributes;
+    for my $attribute (@attributes) {
+        Carp::confess "Could not delete attribute " . $attribute->attribute_label . " for subject " . $self->id unless $attribute->delete;
+    }
+
+    return $self->SUPER::delete;
+}
+
 sub add_file {
     my ($self, $file) = @_;
 
