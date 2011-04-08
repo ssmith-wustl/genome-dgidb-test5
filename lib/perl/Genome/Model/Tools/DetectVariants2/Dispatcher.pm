@@ -73,6 +73,11 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
             doc => "This is the workflow model",
         },
     ],
+    has_param => [
+        lsf_queue => {
+            default_value => 'workflow'
+        },
+    ],
 };
 
 sub help_brief {
