@@ -6,6 +6,7 @@ use Genome;
 use Cwd;
 use Statistics::R;
 use Genome::ModelGroup;
+use File::Basename;
 require Genome::Sys;
 
 class Genome::Model::Tools::Rna::GraphCufflinks {
@@ -42,10 +43,10 @@ class Genome::Model::Tools::Rna::GraphCufflinks {
 };
 
 sub help_brief {
-    "Wrapper to call functions in R library."
+    "Plot Tophat and Cufflinks output";
 }
 sub help_detail {
-    "Wrapper to call functions in R library."
+    "Plot Tophat and Cufflinks output";
 }
 
 #this shoudl eventually be derivable from an annotation build
@@ -71,7 +72,7 @@ sub execute {
     }
     else
     {
-        die $self->error_message("wrong input for rwos and columns");
+        die $self->error_message("wrong input for rows and columns");
     }
 
     my($align_fh, $alignments) = Genome::Sys->create_temp_file("alignments");
@@ -135,8 +136,9 @@ sub execute {
     print "$output_dir"."/"."\n";
     my($script_fh, $script_file) = Genome::Sys->create_temp_file("matlab_script.m");
 
+    my $dirname = dirname(__FILE__);
     $script_fh->print("P=path;\n");
-    $script_fh->print("path(P, '/gscuser/jbrea/git/genome/lib/perl/Genome/Model/Tools/RNA')\n");
+    $script_fh->print("path(P, '$dirname')\n");
     $script_fh->print("rnaseq_plot_bams('$config_file');\n");
     $script_fh->close();
     #$DB::single=1;
