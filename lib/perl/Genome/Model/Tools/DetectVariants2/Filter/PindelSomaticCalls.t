@@ -20,15 +20,15 @@ my $refbuild_id = 101947881;
 my $input_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-PindelSomaticCalls";
 
 # Updated to .v2 for correcting an error with newlines
-my $expected_dir = $input_directory . "/expected/exp_2";
+my $expected_dir = $input_directory . "/expected/";
 my $tumor_bam_file  = $input_directory. '/flank_tumor_sorted.bam';
 my $test_output_dir = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Filter-PindelSomaticCalls-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 
-my $hq_output_bed = "$test_output_dir/indels.hq.v2.bed";
-my $lq_output_bed = "$test_output_dir/indels.lq.v2.bed";
+my $hq_output_bed = "$test_output_dir/indels.hq.bed";
+my $lq_output_bed = "$test_output_dir/indels.lq.bed";
 
-my $expected_hq_bed_output = "$expected_dir/indels.hq.v2.bed";
-my $expected_lq_bed_output = "$expected_dir/indels.lq.v2.bed";
+my $expected_hq_bed_output = "$expected_dir/indels.hq.expected.bed";
+my $expected_lq_bed_output = "$expected_dir/indels.lq.expected.bed";
 
 my $pindel_somatic_calls = Genome::Model::Tools::DetectVariants2::Filter::PindelSomaticCalls->create(
     input_directory => $input_directory."/pindel",
