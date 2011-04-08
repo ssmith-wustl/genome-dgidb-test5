@@ -280,6 +280,7 @@ sub execute
 								'org_dirname'     => $config->{org_dirname},
 								'assembly_name'   => $config->{assembly_name},
 								'sequence_set_id' => $self->sequence_set_id,
+								'locustagdir'	  => $locustagdir,
 							       );
 
     if ($brfin) {
