@@ -59,6 +59,9 @@ sub _get_sequence_name_for_table_and_column {
     elsif($table_name =~ /MISC_NOTE/) {
         return 'GENOME_MODEL_SEQ';
     }
+    elsif ($table_name =~ /INSTRUMENT_DATA/) {
+        return 'SEQ_SEQ';
+    }
     elsif ($column_name eq 'ID') {
         return $table_name . '_SEQ';
     }

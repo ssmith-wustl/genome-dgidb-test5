@@ -77,6 +77,10 @@ UR::Object::Type->define(
             is  => 'String',
             doc => "Current sequence set id",
         },
+        'locustagdir' => {
+            is  => 'String',
+            doc => "Locus tag directory",
+        },
     ]
 );
 
@@ -113,6 +117,7 @@ sub execute
     my $org_dirname   = $self->org_dirname;
     my $assembly_name = $self->assembly_name;
     my $ssid          = $self->sequence_set_id;
+    my $locustagdir   = $self->locustagdir;
 
     my $anno_submission = $amgap_path . "/"
         . $org_dirname . "/"
@@ -305,6 +310,8 @@ sub execute
     #				   -filltag => 'Visible',
     #			          );
 
+	if ( defined(@ace_objects) )
+	{
 		foreach my $ace_stuff (@ace_objects)
 		{
 			my $aceseq_obj = $db->fetch( 'Sequence' => $ace_stuff );
@@ -318,6 +325,7 @@ sub execute
 				next;
 			}
 		}
+	}
 		print qq{\n Done checking/removing previous data from ACeDB\n\n};
 
     ########################################################
@@ -529,6 +537,9 @@ sub execute
             die "wc failed: $?\n";
     chomp($dead_genes);
 
+    ## BER data location
+    my $ber_dir = $locustagdir. "/ber";
+
     ########################################################
     # Writing the rt file
     ########################################################
@@ -550,6 +561,7 @@ sub execute
 
     print $rtfile_fh qq{\nA copy of BER naming file $sqlitedatafilename has been placed in $anno_submission$sqlitedatafilename\n\n};
 
+    print $rtfile_fh qq{\nBlast data for this genome can be found at $ber_dir\n\n};
 
     my $sequence_set     = BAP::DB::SequenceSet->retrieve($ssid);
     my $software_version = $sequence_set->software_version();
