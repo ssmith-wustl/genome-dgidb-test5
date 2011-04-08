@@ -116,10 +116,15 @@ sub create {
 sub delete {
     my $self = shift;
 
+    # TODO Need to make sure this subject isn't used anywhere prior to deleting, though this should be done in each specific subclass
+
     my @attributes = $self->attributes;
     for my $attribute (@attributes) {
         Carp::confess "Could not delete attribute " . $attribute->attribute_label . " for subject " . $self->id unless $attribute->delete;
     }
+
+    my $allocation = $self->disk_allocation;
+    $allocation->deallocate if $allocation;
 
     return $self->SUPER::delete;
 }
