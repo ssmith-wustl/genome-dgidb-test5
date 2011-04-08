@@ -7,6 +7,7 @@ use warnings;
 
 use Email::Simple;
 
+my $DEBUG = $ENV{'DEBUG_MAIL_LOADER'};
 my $total_emails;
 
 #Just clear the cache for each entry instead of building all the search result views for now
@@ -48,6 +49,7 @@ sub main {
         @lists = map (lc $_, @{list_names()} );
     }
 
+    print "start year: $startyear\nstart month: $startmonth\n" if $DEBUG;
     collect_docs(\@lists, $startyear, $startmonth);
 
     print "total emails added: $total_emails\n";
@@ -67,9 +69,14 @@ sub collect_docs {
     my $ua = LWP::UserAgent->new();
 
     for my $list (@$lists) {
+
+        print "list: $list\n" if $DEBUG;
         for my $year ($startyear..$currentyear) {
+
+            print "year: $year\n" if $DEBUG;
             for my $month (($year == $startyear ? $startmonth : 0)..($year == $currentyear ? $currentmonth : 11)) {
-                
+
+                print "month: $month\n" if $DEBUG;
                 #process the month index to find the ids for links to the individual messages
                 my $summary_response = $ua->get($HTTP_PATH . '/' . $list . '/'  . $year . '-' . $MONTH_NAMES->[$month] . '/date.html');
 
@@ -127,6 +134,11 @@ sub process_emails {
     for my $email (@$emails) {
         my $msg_id = $sorted_message_ids[$i];
         my $search_id = join('/', $list_name, $year . '-' . $month_name, $msg_id);
+
+        if ($DEBUG) {
+            my $url = join('/', $HTTP_PATH, $search_id . '.html');
+            print "$url\n";
+        }
         
         $email->header_set('X-Genome-Search-ID', $search_id);
         
