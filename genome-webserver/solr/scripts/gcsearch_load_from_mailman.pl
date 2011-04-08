@@ -7,6 +7,8 @@ use warnings;
 
 use Email::Simple;
 
+my $total_emails;
+
 #Just clear the cache for each entry instead of building all the search result views for now
 Genome::Search->get()->refresh_cache_on_add(0);
 
@@ -47,6 +49,8 @@ sub main {
     }
 
     collect_docs(\@lists, $startyear, $startmonth);
+
+    print "total emails added: $total_emails\n";
 }
 
 sub collect_docs {
@@ -135,6 +139,8 @@ sub process_emails {
         $i++;
 
     }
+
+    $total_emails += $i;
 
     return Genome::Search->add(@sys_emails);
 }
