@@ -158,25 +158,30 @@ mtext("Enhanced Scatterplot", side=3, outer=TRUE, line=-3)
 	print R_COMMANDS 'den4100x <-  0;'."\n";
 
 
-	print R_COMMANDS 'if(dim(cn1minus)[1] == 0) den1$x = den1$y=1 else den1 <- density(cn1minus$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	print R_COMMANDS 'if(dim(cn2)[1] == 0) den2$x = den2$y=1 else den2 <- density(cn2$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	print R_COMMANDS 'if(dim(cn3)[1] == 0) den3$x = den3$y=1 else den3 <- density(cn3$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	print R_COMMANDS 'if(dim(cn4plus)[1] == 0) den4$x = den4$y=1 else den4 <- density(cn4plus$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+	print R_COMMANDS 'if(dim(cn1minus)[1] == 0) den1$x = den1$y=1 else den1 <- density(cn1minus$V11, bw=2, from=0,to=100,na.rm=TRUE);'."\n";
+	print R_COMMANDS 'if(dim(cn2)[1] == 0) den2$x = den2$y=1 else den2 <- density(cn2$V11, bw=2, from=0,to=100,na.rm=TRUE);'."\n";
+	print R_COMMANDS 'if(dim(cn3)[1] == 0) den3$x = den3$y=1 else den3 <- density(cn3$V11, bw=2, from=0,to=100,na.rm=TRUE);'."\n";
+	print R_COMMANDS 'if(dim(cn4plus)[1] == 0) den4$x = den4$y=1 else den4 <- density(cn4plus$V11, bw=2, from=0,to=100,na.rm=TRUE);'."\n";
 
-	print R_COMMANDS 'if(dim(cn1minus100x)[1] == 0) den1100x$x = den1100x$y=1 else den1100x <- density(cn1minus100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	print R_COMMANDS 'if(dim(cn2100x)[1] == 0) den2100x$x = den2100x$y=1 else den2100x <- density(cn2100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	print R_COMMANDS 'if(dim(cn3100x)[1] == 0) den3100x$x = den3100x$y=1 else den3100x <- density(cn3100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	print R_COMMANDS 'if(dim(cn4plus100x)[1] == 0) den4100x$x = den4100x$y=1 else den4100x <- density(cn4plus100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+	print R_COMMANDS 'if(dim(cn1minus100x)[1] == 0) den1100x$x = den1100x$y=1 else den1100x <- density(cn1minus100x$V11, bw=2, from=0,to=100,na.rm=TRUE);'."\n";
+	print R_COMMANDS 'if(dim(cn2100x)[1] == 0) den2100x$x = den2100x$y=1 else den2100x <- density(cn2100x$V11, bw=2, from=0,to=100,na.rm=TRUE);'."\n";
+	print R_COMMANDS 'if(dim(cn3100x)[1] == 0) den3100x$x = den3100x$y=1 else den3100x <- density(cn3100x$V11, bw=2, from=0,to=100,na.rm=TRUE);'."\n";
+	print R_COMMANDS 'if(dim(cn4plus100x)[1] == 0) den4100x$x = den4100x$y=1 else den4100x <- density(cn4plus100x$V11, bw=2, from=0,to=100,na.rm=TRUE);'."\n";
+print R_COMMANDS '
+N1 = dim(z1)[1];
+den1factor = dim(cn1minus)[1]/N1 * den1$y;
+den2factor = dim(cn2)[1]/N1 * den2$y;
+den3factor = dim(cn3)[1]/N1 * den3$y;
+den4factor = dim(cn4plus)[1]/N1 * den4$y;
+maxden = max(c(den1factor,den2factor,den3factor,den4factor));
+finalfactor = 40 / maxden;';
+        
 
 
-	#print R_COMMANDS 'den1 <- density(cn1minus$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	#print R_COMMANDS 'den2 <- density(cn2$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	#print R_COMMANDS 'den3 <- density(cn3$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	#print R_COMMANDS 'den4 <- density(cn4plus$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	#print R_COMMANDS 'den1100x <- density(cn1minus100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	#print R_COMMANDS 'den2100x <- density(cn2100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	#print R_COMMANDS 'den3100x <- density(cn3100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
-	#print R_COMMANDS 'den4100x <- density(cn4plus100x$V11, bw=4, from=0,to=100,na.rm=TRUE);'."\n";
+
+
+
+
 	print R_COMMANDS 'dennormcov <- density((z1$V5+z1$V6), bw=4, from=0,to=800,na.rm=TRUE);'."\n";
 	print R_COMMANDS 'dennormcov100x <- density((z2$V5+z2$V6), bw=4, from=0,to=800,na.rm=TRUE);'."\n";
 	print R_COMMANDS 'dentumcov <- density((z1$V9+z1$V10), bw=4, from=0,to=600,na.rm=TRUE);'."\n";
@@ -217,10 +222,16 @@ mtext("Enhanced Scatterplot", side=3, outer=TRUE, line=-3)
 	print R_COMMANDS 'points(x=cn2$V7,y=cn2$V11, type="p",pch=19,cex=0.4,col="#00FF0055");'."\n";
 	print R_COMMANDS 'points(x=cn3$V7,y=cn3$V11, type="p",pch=19,cex=0.4,col="#0000FF55");'."\n";
 	print R_COMMANDS 'points(x=cn4plus$V7,y=cn4plus$V11, type="p",pch=19,cex=0.4,col="#FFA500FF");'."\n";
-	print R_COMMANDS 'points(((den1$y * 100)+20),den1$x,col="#FF000055", type="p",pch=19,cex=0.4);'."\n";
-	print R_COMMANDS 'points(((den2$y * 100)+30),den2$x,col="#00FF0055", type="p",pch=19,cex=0.4);'."\n";
-	print R_COMMANDS 'points(((den3$y * 100)+40),den3$x,col="#0000FF55", type="p",pch=19,cex=0.4);'."\n";
-	print R_COMMANDS 'points(((den4$y * 100)+50),den4$x,col="#FFA500FF", type="p",pch=19,cex=0.4);'."\n";
+print R_COMMANDS '
+lines(((finalfactor * den1factor)+20),den1$x,col="#FF0000AA",lwd=2);
+lines(((finalfactor * den2factor)+20),den2$x,col="#00FF00AA",lwd=2);
+lines(((finalfactor * den3factor)+20),den3$x,col="#0000FFAA",lwd=2);
+lines(((finalfactor * den4factor)+20),den4$x,col="#FFA500AA",lwd=2);';
+
+#	print R_COMMANDS 'points(((den1$y * 100)+20),den1$x,col="#FF000055", type="p",pch=19,cex=0.4);'."\n";
+#	print R_COMMANDS 'points(((den2$y * 100)+30),den2$x,col="#00FF0055", type="p",pch=19,cex=0.4);'."\n";
+#	print R_COMMANDS 'points(((den3$y * 100)+40),den3$x,col="#0000FF55", type="p",pch=19,cex=0.4);'."\n";
+#	print R_COMMANDS 'points(((den4$y * 100)+50),den4$x,col="#FFA500FF", type="p",pch=19,cex=0.4);'."\n";
 	print R_COMMANDS 'legend(x="bottomright", title = "CN Density", c("1", "2", "3", "4+"),col=c("#FF0000","#00FF00","#0000FF","#FFA500"),lty = c(1,1,1), lwd = 1);'."\n"; #top right will rarely have any points
 	print R_COMMANDS 'legend(x="topright", title = "Copy Number", c("1", "2", "3", "4+"),col=c("#FF0000","#00FF00","#0000FF","#FFA500"),pch=19);'."\n"; #top right will rarely have any points
 	print R_COMMANDS 'plot.default(x=(cn1minus$V5+cn1minus$V6),y=(cn1minus$V7),xlab="Normal Coverage",ylab="Normal Variant Allele Frequency", main=paste(genome," Coverage"), type="p",pch=19,cex=0.4,col="#FF000039",xlim=c(0,maxx2),ylim=c(0,100));'."\n";
