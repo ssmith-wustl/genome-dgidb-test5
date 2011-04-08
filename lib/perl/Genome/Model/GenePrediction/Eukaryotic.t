@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above 'Genome';
-use Test::More tests => 9;
+use Test::More tests => 10;
 
 BEGIN {
     $ENV{UR_DBI_NO_COMMIT} = 1;
@@ -15,6 +15,9 @@ use_ok('Genome::Model::GenePrediction');
 use_ok('Genome::Model::GenePrediction::Eukaryotic');
 use_ok('Genome::ProcessingProfile::GenePrediction');
 use_ok('Genome::ProcessingProfile::GenePrediction::Eukaryotic');
+
+my $analysis_dir = "/gscmnt/277/analysis";
+ok(-d $analysis_dir, "Analysis directory exists at $analysis_dir") or die "Could not access $analysis_dir"; 
 
 my $test_contigs = '/gsc/var/cache/testsuite/data/Genome-Model-GenePrediction-Eukaryotic/short_ctg.dna';
 ok(-e $test_contigs, "found test contigs at $test_contigs");
