@@ -34,6 +34,10 @@ class Genome::Utility::IO::SeparatedValueReader {
         default => 0,
         doc => 'Rather than crash when extra columns are found, just drop/ignore them.'
     },
+    ignore_lines_starting_with => {
+        type => 'Text',
+        doc => 'Ignore initial lines starting with character(s).'
+    },
     current_line => {
         type => 'Text',
         doc => 'The current original line of input from the file, pre splitting.'
@@ -88,6 +92,18 @@ sub create {
         $self->{_split} = sub{ return split(/\Q$sep\E/, $_[0], -1) };
     }
 
+    if (defined($self->ignore_lines_starting_with)) {
+        my $char = $self->ignore_lines_starting_with;
+        my $line = $self->getline;
+        my $offset = length($line);
+        while ($line =~ /^$char/) {
+            $line = $self->getline;
+            $offset = length($line);
+        }
+        my $begin = tell($self->input) - $offset;
+        $self->input->seek($begin,0);
+    }
+    
     if ( $headers ) {
         $self->headers($headers);
     }

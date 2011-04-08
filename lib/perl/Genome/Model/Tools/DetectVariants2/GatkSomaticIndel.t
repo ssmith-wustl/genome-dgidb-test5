@@ -18,7 +18,7 @@ else {
 }
 
 my $test_data = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-GatkSomaticIndel";
-my $expected_data = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-GatkSomaticIndel/expected";
+my $expected_data = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-GatkSomaticIndel/expected_3";
 my $tumor =  $test_data."/flank_tumor_sorted.bam";
 my $normal = $test_data."/flank_normal_sorted.bam";
 
@@ -31,7 +31,7 @@ my $gatk_somatic_indel = Genome::Model::Tools::DetectVariants2::GatkSomaticIndel
         control_aligned_reads_input=>$normal,
         reference_build_id => $refbuild_id,
         output_directory => $tmpdir, 
-        mb_of_ram => 3000,
+        mb_of_ram => 3500,
 );
 
 ok($gatk_somatic_indel, 'gatk_somatic_indel command created');

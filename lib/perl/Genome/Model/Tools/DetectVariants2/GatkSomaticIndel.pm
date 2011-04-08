@@ -40,7 +40,7 @@ sub _detect_variants {
         tumor_bam => $self->aligned_reads_input, 
         normal_bam => $self->control_aligned_reads_input,
         output_file => $self->_temp_staging_directory."/gatk_output_file",
-        bed_output_file => $self->_temp_staging_directory."/indels.hq",
+        somatic_file => $self->_temp_staging_directory."/indels.hq",
         mb_of_ram => $self->mb_of_ram,
         reference => $refseq,
     );
@@ -48,11 +48,11 @@ sub _detect_variants {
         $self->error_message("Failed to run GATK command.");
         die $self->error_message;
     }
-    unless(-s $self->_temp_staging_directory."/indels.hq"){
+    unless(-e $self->_temp_staging_directory."/indels.hq"){
         my $filename = $self->_temp_staging_directory."/indels.hq";
-        my $output = `touch $filename`;
-        unless($output){
-            $self->error_message("creating an empty indels.hq file failed.");
+        my $output = system("touch $filename");
+        if($output){
+            $self->error_message("creating an empty indels.hq file failed. output=".$output);
             die $self->error_message;
         }
     }

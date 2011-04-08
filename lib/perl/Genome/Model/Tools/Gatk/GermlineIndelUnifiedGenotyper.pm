@@ -19,7 +19,7 @@ use FileHandle;
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
 class Genome::Model::Tools::Gatk::GermlineIndelUnifiedGenotyper {
-	is => 'Command',                       
+	is => 'Genome::Model::Tools::Gatk',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		bam_file	=> { is => 'Text', doc => "BAM File for Sample", is_optional => 0, is_input => 1 },
@@ -27,7 +27,6 @@ class Genome::Model::Tools::Gatk::GermlineIndelUnifiedGenotyper {
 		verbose_output_file     => { is => 'Text', doc => "STDOUT from GATK", is_optional => 1, is_input => 1, is_output => 1 },
 		gatk_params => { is => 'Text', doc => "Parameters for GATK", is_optional => 1, is_input => 1, is_output => 1, default => "-T UnifiedGenotyper -glm DINDEL" },
 		reference_fasta => { is => 'Text', doc => "Parameters for GATK", is_optional => 1, is_input => 1, is_output => 1, default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa" },
-		path_to_gatk => { is => 'Text', doc => "Path to GATK command", is_optional => 1, is_input => 1, is_output => 1, default => "/gsc/pkg/bio/gatk/GenomeAnalysisTK-1.0.5336/GenomeAnalysisTK.jar" },
 	        mb_of_ram => {
 	            is => 'Text',
         	    doc => 'The amount of RAM to use, in megabytes',
@@ -77,7 +76,7 @@ sub execute {                               # replace with real execution logic.
 	## Run GATK ##
 	#java -Xms3000m -Xmx3000m -jar /gsc/pkg/bio/gatk/GenomeAnalysisTK-1.0.5336/GenomeAnalysisTK.jar -R /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa -T UnifiedGenotyper -glm DINDEL -I /gscmnt/ams1132/info/model_data/2869126180/build106555038//alignments/106555038_merged_rmdup.bam -verbose /gscmnt/sata424/info/medseq/Freimer-Boehnke/ExomeComparison/Agilent/H_HY-01154-lib2/testing/GATK.output.indel_manualrun_5336_Unifiedtest -o /gscmnt/sata424/info/medseq/Freimer-Boehnke/ExomeComparison/Agilent/H_HY-01154-lib2/testing/GATK.output.indel_manualrun_5336_Unifiedtest.vcf
 
-	my $path_to_gatk = $self->path_to_gatk;
+	my $path_to_gatk = $self->gatk_path;
 	my $gatk_params = $self->gatk_params;
 	my $reference_fasta = "-R " . $self->reference_fasta;
 	my $output_file = "-o " . $self->vcf_output_file;	
