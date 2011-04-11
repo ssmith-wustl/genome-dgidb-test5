@@ -85,7 +85,17 @@ sub execute {
     #check clinical_data_type parameter and choose test method accordingly
     my $test_method;
     if ($clinical_data_type =~ /^numeric$/i) {
-        $test_method = "cor";
+        if ($genetic_data_type =~ /^gene$/i) {
+	        $test_method = "cor";
+        }
+        elsif ($genetic_data_type =~ /^variant$/i) {
+	        $test_method = "anova";
+        }
+        else {
+                $self->error_message("Please enter either \"gene\" or \"variant\" for the --genetic-data-type parameter.");
+                return;
+        }
+
     }
     elsif ($clinical_data_type =~ /^class$/i) {
         #$test_method = "chisq";
@@ -129,8 +139,8 @@ sub execute {
         }
 
     }
-
     my $R_cmd = "R --slave --args < " . __FILE__ . ".R $clinical_data_file $matrix_file $output_file $test_method";
+print "R_cmd:\n$R_cmd\n";
     WIFEXITED(system $R_cmd) or croak "Couldn't run: $R_cmd ($?)";
 
     return(1);

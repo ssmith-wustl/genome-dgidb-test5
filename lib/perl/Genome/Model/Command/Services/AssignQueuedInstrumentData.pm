@@ -914,8 +914,10 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
                 'Failed to execute instrument-data assign for model '
                 . $m->id . ' instrument data '.$genome_instrument_data->id );
 
-            $m->delete;
-            next;
+            # $m->delete;
+            # next;
+            for my $model (@new_models) { $model->delete; }
+            return;
         }
 
         my $assign_all =
@@ -928,8 +930,10 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             $self->error_message(
                 'Failed to execute instrument-data assign --all for model '
                 . $m->id );
-            $m->delete;
-            next;
+            # $m->delete;
+            # next;
+            for my $model (@new_models) { $model->delete; }
+            return;
         }
 
         my @existing_instrument_data =
@@ -942,8 +946,10 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             $self->error_message(
                 'instrument data ' . $genome_instrument_data->id . ' not assigned to model ????? (' . $m->id . ')'
             );
-            $m->delete;
-            next;
+            # $m->delete;
+            # next;
+            for my $model (@new_models) { $model->delete; }
+            return;
         }
 
         my @group_names = $self->_resolve_project_and_work_order_names($pse);
@@ -1028,9 +1034,6 @@ sub add_model_to_default_modelgroups {
 
     for my $group_name (@group_names) {
         my $name = 'apipe-auto ' . $group_name;
-        if(length($name) > 50) {
-            $name = substr($name,0,50);
-        }
         my $model_group = Genome::ModelGroup->get(name => $name);
 
         unless($model_group) {

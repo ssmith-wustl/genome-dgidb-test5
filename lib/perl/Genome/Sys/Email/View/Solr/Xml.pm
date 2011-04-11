@@ -18,7 +18,7 @@ class Genome::Sys::Email::View::Solr::Xml {
         },
         display_icon_url => {
             is  => 'Text',
-            default => 'genome_email_32',
+            default => 'genome_sys_email_32',
         },
         display_url0 => {
             is => 'Text',
