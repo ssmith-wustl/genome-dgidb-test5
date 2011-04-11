@@ -7,9 +7,9 @@ use Genome;
 class Genome::ModelGroup {
     type_name  => 'model group',
     table_name => 'MODEL_GROUP',
-    id_by      => [ id => { is => 'NUMBER', len => 11 }, ],
+    id_by      => [ id => { is => 'NUMBER' }, ],
     has        => [
-        name          => { is => 'VARCHAR2', len => 50 },
+        name          => { is => 'VARCHAR2' },
         model_bridges => {
             is         => 'Genome::ModelGroupBridge',
             reverse_as => 'model_group',

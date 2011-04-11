@@ -1034,9 +1034,6 @@ sub add_model_to_default_modelgroups {
 
     for my $group_name (@group_names) {
         my $name = 'apipe-auto ' . $group_name;
-        if(length($name) > 50) {
-            $name = substr($name,0,50);
-        }
         my $model_group = Genome::ModelGroup->get(name => $name);
 
         unless($model_group) {
