@@ -96,7 +96,7 @@ sub execute {
         push @filters, 'MinRL='. $self->min_read_length;
     }
     if (defined($self->read_white_list)) {
-        push @filters, 'ReadWhiteList='. $self->read_white_list;
+        push @filters, 'ReadWhitelist='. $self->read_white_list;
     }
     if (defined($self->min_snr)) {
         push @filters, 'MinSNR='. $self->min_snr;

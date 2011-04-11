@@ -11,19 +11,20 @@ use File::Compare;
 unless ($ENV{USER} eq 'smrtanalysis') {
   plan skip_all => "this test is only runnable by user smrtanalysis"
 }
-plan tests => 9;
+plan tests => 13;
 
 use_ok('Genome::Model::Tools::SmrtAnalysis::FilterPlsH5');
 
 my $data_directory = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-SmrtAnalysis-FilterPlsH5';
 my @bas_h5_files = glob($data_directory .'/*.bas.h5');
+
 my $expected_fofn_file_path = $data_directory .'/input.fofn';
 my $expected_output_summary = $data_directory .'/summary.csv';
 
 my $tmp_dir = File::Temp::tempdir(
     'Genome-Model-Tools-SmrtAnalysis-FilterPlsH5-XXXXXX',
     DIR => '/gscmnt/gc2123/production/lsf_shared_dir',
-    CLEANUP => 1,
+    CLEANUP => 0,
 );
 my $fofn_file_path = $tmp_dir .'/input.fofn';
 
@@ -63,6 +64,33 @@ for my $rgn_h5_file (@rgn_h5_files) {
     ok(-s $rgn_h5_file,'Output region HDF5 file has size.');
 }
 $fh->close;
+
+# The second test is designed to use the read_white_list feature and RCCS reads which may require more stringent params
+my $rccs_data_directory = $data_directory .'/RCCS';
+my $rccs_input_fofn = $rccs_data_directory .'/input.fofn';
+my $rccs_output_directory = $tmp_dir .'/RCCS/data';
+Genome::Sys->create_directory($rccs_output_directory);
+my $rccs_tool = Genome::Model::Tools::SmrtAnalysis::FilterPlsH5->create(
+    input_fofn => $rccs_input_fofn,
+    min_read_length => 50,
+    min_read_score => 0.75,
+    base_output_directory => $rccs_output_directory,
+);
+isa_ok($rccs_tool,'Genome::Model::Tools::SmrtAnalysis::FilterPlsH5');
+ok($rccs_tool->execute,'Execute command '. $rccs_tool->command_name);
+
+my $rccs_read_white_list_output_directory = $tmp_dir .'/white_list_data';
+Genome::Sys->create_directory($rccs_read_white_list_output_directory);
+my $rccs_read_white_list = $rccs_data_directory .'/read_white_list.txt';
+my $rccs_read_white_list_tool = Genome::Model::Tools::SmrtAnalysis::FilterPlsH5->create(
+    input_fofn => $rccs_input_fofn,
+    min_read_length => 50,
+    min_read_score => 0.75,
+    read_white_list => $rccs_read_white_list,
+    base_output_directory => $rccs_read_white_list_output_directory,
+);
+isa_ok($rccs_read_white_list_tool,'Genome::Model::Tools::SmrtAnalysis::FilterPlsH5');
+ok($rccs_read_white_list_tool->execute,'Execute command '. $rccs_read_white_list_tool->command_name);
 
 exit;
 
