@@ -124,5 +124,13 @@ sub filtered_snvs_bed {
     shift->data_directory . '/gold_snp.v2.bed';
 }
 
+sub genotype_file_path {
+    my $self = shift;
+    my @instrument_data = $self->instrument_data;
+    Carp::confess 'Found no instrument data assignments for build ' . $self->id unless @instrument_data;
+    Carp::confess 'Found more than one instrument data assignment for build ' . $self->id if @instrument_data > 1;
+    return $instrument_data[0]->genotype_microarray_file_for_subject_and_version($self->subject_name, $self->reference_sequence_build->version);
+}    
+
 1;
 
