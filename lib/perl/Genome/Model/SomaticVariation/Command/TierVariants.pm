@@ -53,7 +53,7 @@ sub execute{
     }
 
     if ($build->indel_detection_strategy){
-        for my $name_set (["novel","snvs.hq.novel"], ["novel","snvs.hq.previously_detected"], ["variants","snvs.lq"]){ #want to tier lq, previously_discovered, and novel indels 
+        for my $name_set (["novel","indels.hq.novel"], ["novel","indels.hq.previously_detected"], ["variants","indels.lq"]){ #want to tier lq, previously_discovered, and novel indels 
             $self->run_fast_tier($name_set, $version, 'bed');
         }
 

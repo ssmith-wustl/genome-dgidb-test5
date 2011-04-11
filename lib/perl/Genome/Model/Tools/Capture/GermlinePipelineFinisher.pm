@@ -38,6 +38,7 @@ class Genome::Model::Tools::Capture::GermlinePipelineFinisher {
 		sequence_source	=> { is => 'Text', doc => "Sequence source" , is_optional => 1, default => "Capture"},
 		sequencer	=> { is => 'Text', doc => "Sequencing platform name" , is_optional => 1, default => "IlluminaGAIIx"},
 		make_vcf	=> { is => 'Text', doc => "Make a vcf file for each sample" , is_optional => 1, default => "0"},
+	        skip_if_output_present => { is => 'Boolean', is_optional => 1, is_input => 1, default => 0, doc => 'enable this flag to shortcut through vcf file making if the output_file is already present.',},
 	],
 };
 
@@ -80,6 +81,8 @@ sub execute {                               # replace with real execution logic.
 	my $sequence_phase = $self->sequence_phase;
 	my $sequence_source = $self->sequence_source;
 	my $sequencer = $self->sequencer;
+
+	my $skipifoutputpresent  = $self->skip_if_output_present;
 
 	my $return = 1;
 
@@ -141,6 +144,11 @@ sub execute {                               # replace with real execution logic.
 		foreach my $sample_name (sort keys %model_hash) {
 			my $sample_output_dir = $data_dir . "/" . $sample_name . "/";
 			my $outfile = $sample_output_dir . "merged.germline.ROI.tier1.out.vcf";
+			my $wc = `wc -l $outfile`;
+			(my $wc2) = $wc =~ m/(\d+)\s+/;
+			if ($skipifoutputpresent && -s $outfile && $wc2 != 21) {
+				next;
+			}
 			open(OUTFILE, ">$outfile") or die "Can't open output file: $!\n";
 			my ($model_id, $build_id, $build_dir, $bam_file) = split(/\t/, $model_hash{$sample_name});
 			my $snp_file = $build_dir . "/snp_related_metrics/snps_all_sequences.filtered";
@@ -151,6 +159,7 @@ sub execute {                               # replace with real execution logic.
 				$bam_file = $build->whole_rmdup_bam_file;
 			}
 			my $snv_filter = $sample_output_dir.'/merged.germline.snp.ROI.tier1.out.strandfilter';
+			my $varscan_file = $sample_output_dir.'varScan.output.snp.filter';
 			my $snv_filter_fail;
 			my $indel_filter;
 			my $indel_filter_fail;
@@ -179,9 +188,9 @@ sub execute {                               # replace with real execution logic.
 				$indel = $sample_output_dir.'/merged.germline.indel.ROI.strandfilter.tier1.out';
 				$varfile = $sample_output_dir.'/merged.germline.snp.ROI.strandfilter.tier1.out';
 			}
-			my $base_cmd = "perl -I ~/git-dir/ `which gmt` germline vcf-maker --bam-file $bam_file --build-id $build_id --dbsnp-file $dbsnp --indel-annotation-file $indel_annotation --indel-failfiltered-file $indel_filter_fail --indel-file $indel --indel-filtered-file $indel_filter --output-file $outfile --snv-annotation-file $snv_annotation --snv-failfiltered-file $snv_filter_fail --snv-filtered-file $snv_filter --variant-file $varfile --build 36 --center WUGC --project-name $project_name --sequence-phase 4 --sequence-source Capture --sequencer Illumina_GAIIx_or_Hiseq";
+			my $base_cmd = "perl -I ~/git-dir/ `which gmt` germline vcf-maker --bam-file $bam_file --build-id $build_id --samtools-file $snp_file --varscan-file $varscan_file --dbsnp-file $dbsnp --indel-annotation-file $indel_annotation --indel-failfiltered-file $indel_filter_fail --indel-file $indel --indel-filtered-file $indel_filter --output-file $outfile --snv-annotation-file $snv_annotation --snv-failfiltered-file $snv_filter_fail --snv-filtered-file $snv_filter --variant-file $varfile --build 36 --center WUGC --project-name $project_name --sequence-phase 4 --sequence-source Capture --sequencer Illumina_GAIIx_or_Hiseq";
 #			my $cmd = "bsub -u wschierd\@genome.wustl.edu -q apipe -R\"select[type==LINUX64 && model != Opteron250 && mem>4000] rusage[mem=4000]\" -M 4000000 -J $job_name -o $output_name -e $error_name \"$base_cmd\"");
-			my $cmd = "bsub -q apipe -R\"select[type==LINUX64 && model != Opteron250 && mem>4000] rusage[mem=4000]\" -M 4000000 \"$base_cmd\"";
+			my $cmd = "bsub -q apipe -o /gscuser/wschierd/Deleteme/$sample_name.out -e /gscuser/wschierd/Deleteme/$sample_name.err -R\"select[type==LINUX64 && model != Opteron250 && mem>4000] rusage[mem=4000]\" -M 4000000 \"$base_cmd\"";
 			system($cmd);
 #			$return = Genome::Sys->shellcmd(
 #	                           cmd => "$cmd",

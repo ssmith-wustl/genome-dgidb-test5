@@ -418,6 +418,8 @@ __DATA__
   <link fromOperation="Filter Indel" fromProperty="filtered_file" toOperation="Tier1 Vcf" toProperty="indel_failfiltered_file" />
   <link fromOperation="Annotate Transcript Variants Indel" fromProperty="output_file" toOperation="Tier1 Vcf" toProperty="indel_annotation_file" />
 
+  <link fromOperation="input connector" fromProperty="filtered_indelpe_snps" toOperation="Tier1 Vcf" toProperty="samtools_file" />
+  <link fromOperation="Varscan Germline" fromProperty="output_snp" toOperation="Tier1 Vcf" toProperty="varscan_file" />
   <link fromOperation="input connector" fromProperty="germline_bam_file" toOperation="Tier1 Vcf" toProperty="bam_file" />
   <link fromOperation="input connector" fromProperty="build_id" toOperation="Tier1 Vcf" toProperty="build_id" />  
   <link fromOperation="input connector" fromProperty="tier1_vcf_file" toOperation="Tier1 Vcf" toProperty="output_file" />

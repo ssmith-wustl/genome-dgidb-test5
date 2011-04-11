@@ -397,7 +397,8 @@ sub execute
     print PARSEFILE
         "#if you call script from bash, tace will follow links!\n\n";
     print PARSEFILE "TACE=/gsc/scripts/bin/tace\n";
-    print PARSEFILE "ACEDB=" . $acedb_scripts_path . "\n\n";
+    #print PARSEFILE "ACEDB=" . $acedb_scripts_path . "\n\n";
+    print PARSEFILE "ACEDB=" . $acedb_path . "\n\n";
     print PARSEFILE "export ACEDB\n\n";
     print PARSEFILE "echo \$acedb\n\n";
     print PARSEFILE "\$TACE << EOF\n\n";
