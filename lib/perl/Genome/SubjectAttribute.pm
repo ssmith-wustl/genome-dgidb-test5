@@ -20,7 +20,7 @@ class Genome::SubjectAttribute {
         },
         attribute_value => {
             is => 'Text',
-            column_Name => 'ATTRIBUTE_VALUE',
+            column_name => 'ATTRIBUTE_VALUE',
         },
     ],
     has => [        
