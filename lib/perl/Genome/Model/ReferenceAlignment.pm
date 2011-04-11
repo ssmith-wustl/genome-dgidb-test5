@@ -422,19 +422,15 @@ sub gold_snp_build {
 sub gold_snp_path {
     my $self = shift;
 
-    # Backfill genotype microarray input
-    unless ($self->genotype_microarray_build_id) {
-        my $models_gold_snp_build = $self->gold_snp_build;
-        if ($models_gold_snp_build) {
-            $self->add_input(
-                value_class_name => $models_gold_snp_build->class,
-                value_id => $models_gold_snp_build->id,
-                name => 'genotype_microarray_build',
-            );
-        }
+    my $geno_micro_build; 
+    if ($self->genotype_microarray_build_id) {
+        $geno_micro_build = $self->genotype_microarray_build;
+    }
+    else {
+        $geno_micro_build = $self->gold_snp_build;
     }
 
-    my $geno_micro_build = $self->genotype_microarray_build;
+    $self->status_message("model::gold_snp_path: Using Genotype Microarray build " . $geno_micro_build->id . ".") if $geno_micro_build;
     return ($geno_micro_build ? $geno_micro_build->formatted_genotype_file_path : undef);
 }
 
