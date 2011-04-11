@@ -6,6 +6,10 @@ use strict;
 use warnings;
 
 use Email::Simple;
+use Data::Dumper;
+
+STDOUT->autoflush(1);
+STDERR->autoflush(1);
 
 my $DEBUG = $ENV{'DEBUG_MAIL_LOADER'};
 my $total_emails;
@@ -49,7 +53,10 @@ sub main {
         @lists = map (lc $_, @{list_names()} );
     }
 
+    print "LISTS:\n";
+    print Dumper \@lists;
     print "start year: $startyear\nstart month: $startmonth\n" if $DEBUG;
+
     collect_docs(\@lists, $startyear, $startmonth);
 
     print "total emails added: $total_emails\n";
@@ -96,7 +103,13 @@ sub collect_docs {
 
                 if ($response->is_success) {
                     my @emails = get_emails( $response->content );                   
-                    process_emails( $list, $year, $MONTH_NAMES->[$month], \@emails, \@message_ids);
+                    eval {
+                        process_emails( $list, $year, $MONTH_NAMES->[$month], \@emails, \@message_ids);
+                    };
+
+                    if ($@) {
+                        print "Error! skipped $list $year-$month\n" . $@ . "\n";
+                    }
                 } else {
                     die "Couldn't process $list for $year " . $MONTH_NAMES->[$month] . ": " . $response->status_line;
                     next;
