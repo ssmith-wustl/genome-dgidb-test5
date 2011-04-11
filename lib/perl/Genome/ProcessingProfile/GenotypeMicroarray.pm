@@ -58,13 +58,15 @@ sub _execute_build {
 
     $self->status_message('Genotype microarray file: '.$genotype_file);
 
+    # TODO bdericks: I'm guessing that second genotype file is supposed to be the replicate. It should be changed
+    # to be the actual replicate when we know how to figure it out.
     my $snp_array_file = $build->formatted_genotype_file_path;
     $self->status_message("Create snp array (gold) file: ".$snp_array_file);
-    my $gold_snp = Genome::Model::Tools::Array::CreateGoldSnpFromGenotypes->create(    
-        genotype_file1 => $genotype_file,
-        genotype_file2 => $genotype_file,
+    my $gold_snp = Genome::Model::GenotypeMicroarray::Command::CreateGoldSnpFileFromGenotypes->create(
+        genotype_file_1 => $genotype_file,
+        genotype_file_2 => $genotype_file,
         output_file => $snp_array_file,
-        reference_fasta_file => $fasta_file,
+        reference_sequence_build => $reference_sequence_build, 
     );
     if ( not $gold_snp ) {
         $self->error_message("Cannot create gold snp tool.");
