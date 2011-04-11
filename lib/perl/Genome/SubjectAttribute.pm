@@ -12,12 +12,15 @@ class Genome::SubjectAttribute {
     id_by => [
         attribute_label => {
             is => 'Text',
+            column_name => 'ATTRIBUTE_LABEL',
         },
         subject_id => {
             is => 'Text',
+            column_name => 'SUBJECT_ID',
         },
         attribute_value => {
             is => 'Text',
+            column_name => 'ATTRIBUTE_VALUE',
         },
     ],
     has => [        
@@ -25,6 +28,7 @@ class Genome::SubjectAttribute {
         # also has a default value
         nomenclature => {
             is => 'Text',
+            column_name => 'NOMENCLATURE',
             default => 'WUGC',
         },
         subject => {

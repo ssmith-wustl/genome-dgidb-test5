@@ -32,6 +32,10 @@ class Genome::Model::Tools::SmrtAnalysis::Filter {
             doc => 'Minimum Read Quality',
             default_value => 0.75,
         },
+        read_white_list => {
+            is => 'Text',
+            is_optional => 1,
+        },
     ],
     has_optional_output => [
         filtered_summary_file => { },
@@ -108,6 +112,7 @@ sub execute {
         filtered_summary_file => $filtered_summary_file,
         filtered_fofn_file => $filtered_fofn_file,
         filtered_fasta_file => $filtered_fasta_file,
+        read_white_list => $self->read_white_list,
     );
     my $module_path = $self->get_class_object->module_path;
     my $xml_path = $module_path;

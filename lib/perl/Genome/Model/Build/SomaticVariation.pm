@@ -195,6 +195,7 @@ sub dirs_ignored_by_diff {
     return qw(
         logs/
         /\d+/
+        variants/sv/breakdancer
     );
 }
 

@@ -4,6 +4,7 @@
   <link fromOperation="input connector" fromProperty="min_read_length" toOperation="Filter and Write Fasta" toProperty="min_read_length" />
   <link fromOperation="input connector" fromProperty="min_read_score" toOperation="Filter and Write Fasta" toProperty="min_read_score" />
   <link fromOperation="input connector" fromProperty="data_directory" toOperation="Filter and Write Fasta" toProperty="base_output_directory" />
+  <link fromOperation="input connector" fromProperty="read_white_list" toOperation="Filter and Write Fasta" toProperty="read_white_list" />
   
   <link fromOperation="input connector" fromProperty="filtered_summary_file" toOperation="FilteredSummaryMerge" toProperty="output_csv_file" />
   <link fromOperation="input connector" fromProperty="filtered_fofn_file" toOperation="FilteredFofnMerge" toProperty="output_file" />
@@ -24,6 +25,7 @@
     <link fromOperation="input connector" fromProperty="min_read_length" toOperation="FilterPlsH5" toProperty="min_read_length" />
     <link fromOperation="input connector" fromProperty="min_read_score" toOperation="FilterPlsH5" toProperty="min_read_score" />
     <link fromOperation="input connector" fromProperty="base_output_directory" toOperation="FilterPlsH5" toProperty="base_output_directory" />
+    <link fromOperation="input connector" fromProperty="read_white_list" toOperation="FilterPlsH5" toProperty="read_white_list" />
     
     <link fromOperation="input connector" fromProperty="input_fofn" toOperation="Pls2Fasta" toProperty="hdf5_file" />
     <link fromOperation="input connector" fromProperty="base_output_directory" toOperation="Pls2Fasta" toProperty="base_output_directory" />
@@ -48,6 +50,7 @@
       <inputproperty>input_fofn</inputproperty>
       <inputproperty>min_read_length</inputproperty>
       <inputproperty>min_read_score</inputproperty>
+      <inputproperty isOptional="Y">read_white_list</inputproperty>
       <inputproperty>base_output_directory</inputproperty>
       <outputproperty>output_summary</outputproperty>
       <outputproperty>output_fofn</outputproperty>
@@ -72,6 +75,7 @@
     <inputproperty>input_fofns</inputproperty>
     <inputproperty>min_read_length</inputproperty>
     <inputproperty>min_read_score</inputproperty>
+    <inputproperty isOptional="Y">read_white_list</inputproperty>
     <inputproperty>data_directory</inputproperty>
     <inputproperty>filtered_summary_file</inputproperty>
     <inputproperty>filtered_fofn_file</inputproperty>
