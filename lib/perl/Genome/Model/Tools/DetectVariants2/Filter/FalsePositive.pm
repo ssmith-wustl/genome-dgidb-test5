@@ -176,10 +176,7 @@ sub _filter_variants {
     $self->status_message('Running BAM Readcounts...');
 
     #First, need to create a variant list file to use for generating the readcounts.
-
-    my $bed_version = $self->bed_input_version;
-
-    my $input_file = $self->input_directory . "/snvs.hq.v".$bed_version.".bed";
+    my $input_file = $self->input_directory . "/snvs.hq.bed";
     my $input = Genome::Sys->open_file_for_reading($input_file);
 
     ## Build temp file for positions where readcounts are needed ##

@@ -43,8 +43,8 @@ my $union_indel_object = Genome::Model::Tools::DetectVariants2::Combine::UnionIn
 ok($union_indel_object, 'created UnionIndel object');
 ok($union_indel_object->execute(), 'executed UnionIndel object');
 
-my @files = qw| indels.hq.v2.bed
-                indels.lq.v2.bed |;
+my @files = qw| indels.hq.bed
+                indels.lq.bed |;
 
 for my $file (@files) {
     my $test_output = $test_output_dir."/".$file;

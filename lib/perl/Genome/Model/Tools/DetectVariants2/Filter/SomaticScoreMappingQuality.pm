@@ -78,8 +78,7 @@ sub _filter_variants {
     my $self = shift;
 
     my $tumor_bam_file = $self->aligned_reads_input;
-    my $bed_version = $self->bed_input_version;
-    my $input_file = $self->input_directory."/snvs.hq.v".$bed_version.".bed";
+    my $input_file = $self->input_directory."/snvs.hq.bed";
 
     my $output_file = $self->_temp_staging_directory."/snvs.hq.bed";
     # Writes into temp, then sorts into where it should be

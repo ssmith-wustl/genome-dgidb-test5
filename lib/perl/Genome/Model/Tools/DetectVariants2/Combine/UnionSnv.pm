@@ -28,10 +28,9 @@ EOS
 
 sub _combine_variants {
     my $self = shift;
-    my $bed_version = $self->bed_input_version;
-    my $snvs_a = $self->input_directory_a."/snvs.hq.v".$bed_version.".bed";
-    my $snvs_b = $self->input_directory_b."/snvs.hq.v".$bed_version.".bed";
-    my $output_file = $self->output_directory."/snvs.hq.v".$bed_version.".bed";
+    my $snvs_a = $self->input_directory_a."/snvs.hq.bed";
+    my $snvs_b = $self->input_directory_b."/snvs.hq.bed";
+    my $output_file = $self->output_directory."/snvs.hq.bed";
 
     my @input_files = ($snvs_a, $snvs_b);
 
@@ -48,7 +47,7 @@ sub _combine_variants {
     }
 
     # When unioning, there is no "fail" really, everything should be in the hq file
-    my $lq_file = $self->output_directory."/snvs.lq.v".$bed_version.".bed";
+    my $lq_file = $self->output_directory."/snvs.lq.bed";
     `touch $lq_file`;
     return 1;
 }

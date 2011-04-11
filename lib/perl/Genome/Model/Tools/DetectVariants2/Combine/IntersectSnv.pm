@@ -36,12 +36,12 @@ EOS
 
 sub _combine_variants {
     my $self = shift;
-    my $bed_version = $self->bed_input_version; 
-    my $snvs_a = $self->input_directory_a."/snvs.hq.v".$bed_version.".bed";
-    my $snvs_b = $self->input_directory_b."/snvs.hq.v".$bed_version.".bed";
-    my $output_file = $self->output_directory."/snvs.hq.v".$bed_version.".bed";
-    my $miss_a_file = $self->output_directory."/snvs.lq.a.v".$bed_version.".bed";
-    my $miss_b_file = $self->output_directory."/snvs.lq.b.v".$bed_version.".bed";
+    
+    my $snvs_a = $self->input_directory_a."/snvs.hq.bed";
+    my $snvs_b = $self->input_directory_b."/snvs.hq.bed";
+    my $output_file = $self->output_directory."/snvs.hq.bed";
+    my $miss_a_file = $self->output_directory."/snvs.lq.a.bed";
+    my $miss_b_file = $self->output_directory."/snvs.lq.b.bed";
 
     # Using joinx with --merge-only will do a union, effectively
     my $intersect_command = Genome::Model::Tools::Joinx::Intersect->create(
@@ -58,7 +58,7 @@ sub _combine_variants {
     }
 
     # Create an "lq" file that has things that were either in only file a or only file b
-    my $lq_file = $self->output_directory."/snvs.lq.v".$bed_version.".bed";
+    my $lq_file = $self->output_directory."/snvs.lq.bed";
     my $cmd = "sort -m $miss_a_file $miss_b_file > $lq_file";
     my $result = Genome::Sys->shellcmd( cmd => $cmd);
 
@@ -72,12 +72,11 @@ sub _combine_variants {
 
 sub _validate_output {
     my $self = shift;
-    my $bed_version = $self->bed_input_version; 
     my $variant_type = $self->_variant_type;
-    my $input_a_file = $self->input_directory_a."/".$variant_type.".hq.v".$bed_version.".bed";
-    my $input_b_file = $self->input_directory_b."/".$variant_type.".hq.v".$bed_version.".bed";
-    my $hq_output_file = $self->output_directory."/".$variant_type.".hq.v".$bed_version.".bed";
-    my $lq_output_file = $self->output_directory."/".$variant_type.".lq.v".$bed_version.".bed";
+    my $input_a_file = $self->input_directory_a."/".$variant_type.".hq.bed";
+    my $input_b_file = $self->input_directory_b."/".$variant_type.".hq.bed";
+    my $hq_output_file = $self->output_directory."/".$variant_type.".hq.bed";
+    my $lq_output_file = $self->output_directory."/".$variant_type.".lq.bed";
     my $input_total = $self->line_count($input_a_file) + $self->line_count($input_b_file);
 
     # Count hq * 2 because every hq line for an intersection implies 2 lines from input combined into one

@@ -50,6 +50,8 @@ class Genome::Model::Tools::Germline::VcfMaker {
 	indel_filtered_file	=> { is => 'Text', doc => "Strandfilter Output File" , is_optional => 0, is_input => 1},
 	indel_failfiltered_file	=> { is => 'Text', doc => "Strandfilter Failed Output File" , is_optional => 0, is_input => 1},
 	indel_annotation_file	=> { is => 'Text', doc => "Annotation File" , is_optional => 0, is_input => 1},
+	samtools_file	=> { is => 'Text', doc => "Annotation File" , is_optional => 0, is_input => 1},
+	varscan_file	=> { is => 'Text', doc => "Annotation File" , is_optional => 0, is_input => 1},
 	output_file	=> { is => 'Text', doc => "MAF File" , is_optional => 0, is_output => 1, is_input => 1},
 	project_name	=> { is => 'Text', doc => "Name of the project i.e. ASMS" , is_optional => 1, default => "Germline Project", is_input => 1},
 	center 		=> { is => 'Text', doc => "Genome center name" , is_optional => 1, default => "genome.wustl.edu", is_input => 1},
@@ -95,6 +97,10 @@ sub execute {                               # replace with real execution logic.
 	my $sample_name = $build->subject_name;
 
 	my $bam_file = $self->bam_file;
+
+	my $samtools_file = $self->samtools_file;
+	my $varscan_file = $self->varscan_file;
+
 	my $variant_file = $self->variant_file;
 	my $dbsnp_file = $self->dbsnp_file;
 	my $snv_filtered_file = $self->snv_filtered_file;
@@ -167,17 +173,24 @@ sub execute {                               # replace with real execution logic.
 	my %snvs = load_mutations($variant_file);
 	my %snv_annotation = load_annotation($snv_annotation_file);
 
+	## Load the homo vars ##
+
+	my %homo_var_calls = %{&load_homozygous($varscan_file, $samtools_file)};
+
 	foreach my $key (sort byChrPos keys %snvs) {
-			
+
 		my ($chromosome, $chr_start, $chr_stop, $ref, $var, $var_pct, $quality, $depth, $VCF) = split(/\t/, $key);
-		if ($VCF == 1) {
+		if ($VCF == 1 && $strandfilter_lines{$key} eq 'PASS') {
 			print OUTFILE "$snvs{$key}\n";
 			next;
 		}
 		my $snv = $snvs{$key};
 		my $strand = "+";
 
-		my $AB = "AB=$var_pct";
+		$var_pct =~ s/%//;
+		my $ref_pct = (100 - $var_pct);
+		
+		my $AB = "AB=$ref_pct";
 		my $DP = "DP=$depth";
 
 		my @temp = split("\t", $snv);
@@ -222,7 +235,12 @@ sub execute {                               # replace with real execution logic.
 			if ($db) {
 				$info_col .= ";$db";
 			}
-			my $format_col = "GT\:DP\:GL\:GQ"."\t"."\:$depth\:\:"; #GT:DP:GL:GQ	1/1:21:-65.27,-6.34,-0.03:63.09
+
+			my $GT = "0/1";
+			if (defined $homo_var_calls{$key}) {
+				$GT = "1/1";
+			}
+			my $format_col = "GT\:DP"."\t"."$GT\:$depth"; #GT:DP:GL:GQ	1/1:21:-65.27,-6.34,-0.03:63.09
 			print OUTFILE "$chromosome\t$chr_start\t$dbsnp_rs\t$tumor_gt_allele1\t$tumor_gt_allele2\t$quality\t$strandfilter_status\t$info_col\t$format_col\n";
 
 =cut
@@ -255,15 +273,24 @@ $sequencer
 
 	foreach my $key (sort byChrPos keys %indels) {
 		my ($chromosome, $chr_start, $chr_stop, $ref, $var, $var_pct, $quality, $depth, $VCF) = split(/\t/, $key);
-		if ($VCF == 1) {
+		if ($VCF == 1 && $strandfilter_lines{$key} eq 'PASS') {
 			print OUTFILE "$indels{$key}\n";
 			next;
 		}
 		my $indel = $indels{$key};
 		my $strand = "+";
 
-		my $AB = "AB=$var_pct";
-		my $DP = "DP=$depth";
+		$var_pct =~ s/%//;
+		my $ref_pct = (100 - $var_pct);
+		
+		my $AB = "AB=$ref_pct";
+		my $DP;
+		if ($depth > 0) {
+			$DP = "DP=$depth";
+		}
+		else {
+			$DP = "DP=NA";
+		}
 
 		my $variant_type = "Unknown";
 				
@@ -313,7 +340,7 @@ $sequencer
 			my $EID = "EID=$gene_id";
 
 			my $info_col = "$AB;$DP;$EID;$MT";
-			my $format_col = "GT\:DP\:GL\:GQ"."\t"."\:$depth\:\:"; #GT:DP:GL:GQ	1/1:21:-65.27,-6.34,-0.03:63.09
+			my $format_col = "";#"GT\:DP"."\t"."$GT\:$depth"; #GT:DP:GL:GQ	1/1:21:-65.27,-6.34,-0.03:63.09
 			print OUTFILE "$chromosome\t$chr_start\t$dbsnp_rs\t$tumor_gt_allele1\t$tumor_gt_allele2\t$quality\t$strandfilter_status\t$info_col\t$format_col\n";
 		}
 		else {
@@ -338,10 +365,8 @@ sub load_mutations
 
 	my %mutations = ();
 
-	while (<$input>)
-	{
-		chomp;
-		my $line = $_;
+	while (my $line = <$input>) {
+		chomp($line);
 		$lineCounter++;
 		my $VCF = 0;
 		(my $chromosome, my $chr_start, my $chr_stop, my $ref, my $var, my @other) = split(/\t/, $line);
@@ -350,7 +375,13 @@ sub load_mutations
 		my $depth;
 		if ($other[2] =~ m/%/) {
 			$var_pct = $other[2];
-			$germ_likelihood = (-10 * log10($other[7]));
+			if ($other[7] == 0) {
+				print "$other[7]\n$line\n";
+				$germ_likelihood = 256;
+			}
+			else {
+				$germ_likelihood = (-10 * log10($other[7]));
+			}
 			$depth = ($other[0] + $other[1]);
 		}
 		elsif ($other[0] =~ m/OBS_COUNTS/) {
@@ -366,23 +397,37 @@ sub load_mutations
 			($depth) = $other[2] =~ m/DP=(\d+\.\d+);/;
 		}
 		else {
-			$germ_likelihood = $other[1];
-			my @freqs = split(//, $other[4]);
-			my $refcount = my $varcount= 0;
-			foreach my $base (@freqs) {
-				if ($base eq '.' || $base eq ',') {
-					$refcount++;
+			if ($ref eq '-' || $var eq '-') {
+				$germ_likelihood = $other[1];
+				my $refcount = $other[7];
+				my $varcount = $other[6];
+				$depth = ($varcount + $refcount);
+				if ($depth > 0) { 
+					$var_pct = ($varcount / $depth);
 				}
-				elsif ($base =~ m/$var/i) {
-					$varcount++;
+				else {
+					$var_pct = 0;
 				}
-			}
-			$depth = ($varcount + $refcount);
-			if ($depth > 0) { 
-				$var_pct = ($varcount / $depth);
 			}
 			else {
-				$var_pct = 0;
+				$germ_likelihood = $other[1];
+				my @freqs = split(//, $other[4]);
+				my $refcount = my $varcount= 0;
+				foreach my $base (@freqs) {
+					if ($base eq '.' || $base eq ',') {
+						$refcount++;
+					}
+					elsif ($base =~ m/$var/i) {
+						$varcount++;
+					}
+				}
+				$depth = ($varcount + $refcount);
+				if ($depth > 0) { 
+					$var_pct = ($varcount / $depth);
+				}
+				else {
+					$var_pct = 0;
+				}
 			}
 		}
 
@@ -495,6 +540,24 @@ sub load_strandfilter
 	close($strandfilter_junk);
 
 	return(%mutations);
+}
+
+sub load_homozygous
+{  
+	my (@files) = @_;
+	my %homo_var_calls;
+	foreach my $file (@files) {
+		my $variant_file = new FileHandle ($file);
+		while (my $line = <$variant_file>) {
+			chomp($line);
+			my ($Chrom,$Position,$Ref,$Cons) = split(/\t/, $line);
+			my $variant = "$Chrom\t$Position\t$Position\t$Ref\t$Cons";
+			if ($Cons =~ m/A|C|T|G/) {
+				$homo_var_calls{$variant}++;
+			}
+		}
+	}
+	return \%homo_var_calls;
 }
 
 #############################################################

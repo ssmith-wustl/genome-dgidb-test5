@@ -27,7 +27,7 @@ my $tumor_bam_file  = $test_data_dir . '/flank_tumor_sorted.bam';
 my $normal_bam_file  = $test_data_dir . '/flank_normal_sorted.bam';
 my $input_directory_a = $test_data_dir."/pindel-0.4-";
 my $input_directory_b = $test_data_dir."/gatk-somatic-indel-v1-";
-my $expected_output = $test_data_dir."/expected_2";
+my $expected_output = $test_data_dir."/expected";
 
 my $test_output_dir = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Combine-IntersectIndel-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 
@@ -43,10 +43,10 @@ my $union_indel_object = Genome::Model::Tools::DetectVariants2::Combine::Interse
 ok($union_indel_object, 'created IntersectIndel object');
 ok($union_indel_object->execute(), 'executed IntersectIndel object');
 
-my @files = qw| indels.hq.v2.bed
-                indels.lq.a.v2.bed
-                indels.lq.b.v2.bed
-                indels.lq.v2.bed |;
+my @files = qw| indels.hq.bed
+                indels.lq.a.bed
+                indels.lq.b.bed
+                indels.lq.bed |;
 
 for my $file (@files) {
     my $test_output = $test_output_dir."/".$file;

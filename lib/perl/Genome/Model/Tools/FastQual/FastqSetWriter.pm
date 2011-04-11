@@ -41,7 +41,7 @@ sub create {
             file => $file,
         );
         unless ( $writer ) {
-            Carp::Confess("Can't open fastq file.");
+            Carp::confess("Can't open fastq file.");
         }
         push @writers, $writer;
     }

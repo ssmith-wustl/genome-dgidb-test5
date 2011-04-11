@@ -4,7 +4,6 @@ use warnings;
 use strict;
 
 use Genome;
-use File::Copy;
 
 class Genome::Model::Tools::DetectVariants2::Filter::PindelSomaticCalls{
     is => 'Genome::Model::Tools::DetectVariants2::Filter',
@@ -24,16 +23,13 @@ class Genome::Model::Tools::DetectVariants2::Filter::PindelSomaticCalls{
 
 sub _filter_variants {
     my $self = shift;
-    my $bed_version = $self->bed_input_version;
-    my $output_file = $self->_temp_staging_directory."/indels.hq.v".$bed_version.".bed";
-    my $output_lq_file = $self->_temp_staging_directory."/indels.lq.v".$bed_version.".bed";
-    my $indel_file = $self->input_directory."/indels.hq.v".$bed_version.".bed";
+
+    my $output_file = $self->_temp_staging_directory."/indels.hq.bed";
+    my $output_lq_file = $self->_temp_staging_directory."/indels.lq.bed";
+    my $indel_file = $self->input_directory."/indels.hq.bed";
 
     $self->find_somatic_events($indel_file, $output_file, $output_lq_file);
-    #my $general_bed_output = $self->_temp_staging_directory."/indels.hq.bed";
-    #my $general_lq_bed_output = $self->_temp_staging_directory."/indels.lq.bed";
-    #copy($output_file, $general_bed_output);
-    #copy($output_file, $general_lq_bed_output);
+
     return 1;
 }
 
@@ -133,7 +129,7 @@ sub process_file {
             }
             my @bed_line = $self->parse($call, $reference, $read);
             next unless scalar(@bed_line)>1;
-            unless((@bed_line)&& scalar(@bed_line)==6){
+            unless((@bed_line)&& scalar(@bed_line)==4){
                 next;
             }
             my $type_and_size = $type."/".$size;
@@ -212,7 +208,7 @@ sub parse {
         return undef;
     }
     my $refvar = "$ref/$var";
-    return ($chr,$start,$stop,$refvar,'-','-');
+    return ($chr,$start,$stop,$refvar);
 }
 
 sub _check_file_counts {
@@ -220,13 +216,7 @@ sub _check_file_counts {
 }
 
 sub _generate_standard_output {
-    my $self = shift;
-    my $output = $self->output_directory."/indels.hq.v2.bed";
-    my $output_link = $self->output_directory."/indels.hq.bed";
-    Genome::Sys->create_symlink($output, $output_link);
-    my $lq_output = $self->output_directory."/indels.lq.v2.bed";
-    my $output_lq_link = $self->output_directory."/indels.lq.bed";
-    Genome::Sys->create_symlink($lq_output, $output_lq_link);
     return 1;
 }
+
 1;
