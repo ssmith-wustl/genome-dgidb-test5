@@ -96,17 +96,29 @@ sub initialize {
         unless($source_id eq $self->id) {
             Carp::confess('Source object identifier ' . $source_id . ' does not appear to match this identifier (' . $self->id . ').');
         }
+
+        my $body = $source->body();
+        $body =~ s/[\x01-\x08\x0B-\x0C\x0E-\x1F\x7F-\x84\x86-\x9F]//go ;
+        $self->body($body);
+
+        my $subject = $source->header('Subject');
+        $subject =~ s/[\x01-\x08\x0B-\x0C\x0E-\x1F\x7F-\x84\x86-\x9F]//go ;
+        $self->subject($subject);
         
-        $self->body($source->body);
-        $self->subject($source->header('Subject'));
     } elsif (ref $source eq 'WebService::Solr::Document') {
         my $source_id = $source->value_for('object_id');
         unless($source_id eq $self->id) {
             Carp::confess('Source object identifier ' . $source_id . ' does not appear to match this identifier (' . $self->id . ').');
         }
-        
-        $self->body($source->value_for('content'));
-        $self->subject($source->value_for('title')); 
+       
+        my $body = $source->value_for('content');
+        $body =~ s/[\x01-\x08\x0B-\x0C\x0E-\x1F\x7F-\x84\x86-\x9F]//go ;
+        $self->body($body);
+
+        my $subject = $source->value_for('title'); 
+        $subject =~ s/[\x01-\x08\x0B-\x0C\x0E-\x1F\x7F-\x84\x86-\x9F]//go ;
+        $self->subject($subject);
+
     } else {
         Carp::confess('Invalid source object ' . $source . ' passed to initialize().');
     }

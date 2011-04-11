@@ -26,7 +26,7 @@ class Genome::Model::Tools::SmrtAnalysis::Mapping {
         },
         reference_directory => {
             is => 'Text',
-            doc => 'The directory where the PacBio control reference lives.',
+            doc => 'The directory where the PacBio reference lives.',
         },
     ],
     has_optional_input => [

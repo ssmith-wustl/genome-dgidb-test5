@@ -18,7 +18,7 @@ sub create {
 
     my $fh = Genome::Sys->open_file_for_reading( $self->file );
     unless ( $fh ) {
-        Carp::Confess("Can't open fastq file.");
+        Carp::confess("Can't open fastq file.");
     }
     $self->_io($fh);
     

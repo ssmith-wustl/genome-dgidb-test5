@@ -76,7 +76,7 @@
       </operationtype>
   </operation>
   
-  <operation name ="CmpH5AppendConsensus">
+  <operation name="CmpH5AppendConsensus">
     <operationtype commandClass="Genome::Model::Tools::SmrtAnalysis::CmpH5AppendConsensus" typeClass="Workflow::OperationType::Command" />
   </operation>
   
@@ -94,7 +94,7 @@
     <operationtype commandClass="Genome::Model::Tools::SmrtAnalysis::GffToVcf" typeClass="Workflow::OperationType::Command" />
   </operation>
 
-  <operation name ="ConsensusStats">
+  <operation name="ConsensusStats">
     <operationtype commandClass="Genome::Model::Tools::SmrtAnalysis::ConsensusStats" typeClass="Workflow::OperationType::Command" />
   </operation>
 

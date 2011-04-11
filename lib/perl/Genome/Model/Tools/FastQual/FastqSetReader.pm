@@ -40,7 +40,7 @@ sub create {
             file => $file,
         );
         unless ( $reader ) {
-            Carp::Confess("Can't open fastq file.");
+            Carp::confess("Can't open fastq file.");
         }
         push @readers, $reader;
     }

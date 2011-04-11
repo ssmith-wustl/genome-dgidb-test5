@@ -7,8 +7,8 @@ use Genome;
 
 use Data::Dumper 'Dumper';
 use File::Basename;
-#require Genome::Model::Tools::FastQual::FastaQualReader;
-#require Genome::Model::Tools::FastQual::FastaQualWriter;
+require Genome::Model::Tools::FastQual::PhredReader;
+require Genome::Model::Tools::FastQual::PhredWriter;
 require Genome::Model::Tools::FastQual::FastqSetReader;
 require Genome::Model::Tools::FastQual::FastqSetWriter;
 require Genome::Utility::IO::StdinRefReader;
@@ -16,32 +16,27 @@ require Genome::Utility::IO::StdoutRefWriter;
 
 class Genome::Model::Tools::FastQual {
     is  => 'Command',
-    #is_abstract => 1,
     has => [
         input => {
             is => 'Text',
             is_many => 1,
             is_input => 1,
             doc => 'Input files, or "PIPE" if reading from another program. If multiple files are given for fastq types (sanger, illumina), one sequence will be read from each file and then handled as a set.',
-            # TODO includes fasta:
-            # doc => 'Input files, or "PIPE" if reading from another program. If multiple files are given for fastq types (sanger, illumina), one sequence will be read from each file and then handled as a set. If multiple files are given for type phred (fasta), the first file should be the sequences, and the second file should be the qualities.',
+            doc => 'Input files, or "PIPE" if reading from another program. If multiple files are given for fastq types (sanger, illumina), one sequence will be read from each file and then handled as a set. If multiple files are given for type phred (fasta), the first file should be the sequences, and the second file should be the qualities.',
         }, 
         type_in => {
             is  => 'Text',
             default_value => 'sanger',
+            valid_values => [ valid_types() ],
             is_optional => 1,
             is_input => 1,
-            doc => 'The sequence and quality type of the input. Valid values are: '.join(' ', __PACKAGE__->valid_types).'.',
-            # TODO includes phred (fasta):
-            # doc => 'The sequence and quality type. If not given, an attempt will be made to guess the type. If the file ends in "fasta", "fna", or "fa", the type will assumed to be phred (fasta). If the file ends with "fastq", it will assumed to be sanger (fastq).',
+            doc => 'The sequence and quality type. If not given, an attempt will be made to guess the type. If the file ends in "fasta", "fna", or "fa", the type will assumed to be phred (fasta). If the file ends with "fastq", it will assumed to be sanger (fastq).',
         },
         output => {
             is => 'Text',
             is_many => 1,
             is_input => 1,
-            doc => 'Output files, or "PIPE" if writing to another program. If multiple files are given for fastq types (sanger, illumina), one sequence from each set will be written to each file.',
-            # TODO includes fasta: 
-            # doc => 'Output files, or "PIPE" if writing from another program. If multiple files are given for fastq types (sanger, illumina), one sequence from each set will be written to each file. If multiple files are given for type phred (fasta), the sequences will be written to the first file, and the qualities will eb written to the second file.',
+            doc => 'Output files, or "PIPE" if writing from another program. If multiple files are given for fastq types (sanger, illumina), one sequence from each set will be written to each file. If multiple files are given for type phred (fasta), the sequences will be written to the first file, and the qualities will eb written to the second file.',
         },
         _writer => {
             is_optional => 1,
@@ -49,11 +44,10 @@ class Genome::Model::Tools::FastQual {
         type_out => {
             is  => 'Text',
             default_value => 'sanger',
+            valid_values => [ valid_types() ],
             is_optional => 1,
             is_input => 1,
-            doc => 'The sequence and quality type of the output. Currently, this is ognored and the type of the input is used. Valid values are: '.join(' ', __PACKAGE__->valid_types).'.',
-            # TODO includes phred (fasta):
-            # doc => 'The sequence and quality type. If not given, an attempt will be made to guess the type. If the file ends in "fasta", "fna", or "fa", the type will assumed to be phred (fasta). If the file ends with "fastq", it will assumed to be sanger (fastq).',
+            doc => 'The sequence and quality type. If not given, an attempt will be made to guess the type. If the file ends in "fasta", "fna", or "fa", the type will assumed to be phred (fasta). If the file ends with "fastq", it will assumed to be sanger (fastq).',
         },
         metrics_file => {
             is => 'Text',
@@ -78,9 +72,9 @@ sub help_detail { # empty ok
     Process fastq and fasta/quality sequences. See sub-commands for a variety of functionality.
 
     Types Handled
-    * illumina (fastq) - 
-    * sanger (fastq) - 
-    * phred (fasta/quality) - (NOT IMPLEMENTED) original format w/ sequences and qualities in separate files.
+    * illumina (fastq)
+    * sanger (fastq)
+    * phred (fasta/quality) - original format w/ sequences and qualities in separate files.
     
     Things This Base Command Can Do
     * collate two files into one 
@@ -105,28 +99,13 @@ HELP
 # mv metrics generated doc into method
 
 my %supported_types = (
-    sanger => { format => 'fastq', },
-    illumina => { format => 'fastq', },
-    phred => { format => 'fasta', file_exts => [qw/ fna fa /], },
+    sanger => { format => 'fastq', reader_subclass => 'FastqSetReader', writer_subclass => 'FastqSetWriter', },
+    illumina => { format => 'fastq', reader_subclass => 'FastqSetReader', writer_subclass => 'FastqSetWriter', },
+    phred => { format => 'fasta', file_exts => [qw/ fna fa /], reader_subclass => 'PhredReader', writer_subclass => 'PhredWriter', },
 );
 
 sub valid_types {
-    return keys %supported_types;
-}
-
-sub validate_type {
-    my ($self, $type) = @_;
-
-    unless ( defined $type ) {
-        Carp::confess("Cannot validate type. It is not defined");
-    }
-
-    my @valid_types = $self->valid_types;
-    unless ( grep { $type eq $_ } @valid_types ) {
-        Carp::confess("Cannot validate type ($type). It must be: ".join(', ', @valid_types));
-    }
-
-    return $type;
+    return (qw/ sanger illumina phred/);
 }
 
 sub format_for_type {
@@ -137,10 +116,20 @@ sub format_for_type {
     }
 
     unless ( exists $supported_types{$type} ) {
-        Carp::confess("Cannot get format for type ($type). It must be: ".join(', ', $self->valid_types));
+        Carp::confess("Cannot get format for type ($type).");
     }
 
     return $supported_types{$type}->{format};
+}
+
+sub _reader_class {
+    my $self = shift;
+    return 'Genome::Model::Tools::FastQual::'.$supported_types{ $self->type_in }->{reader_subclass};
+}
+
+sub _writer_class {
+    my $self = shift;
+    return 'Genome::Model::Tools::FastQual::'.$supported_types{ $self->type_out }->{writer_subclass};
 }
 
 sub _enforce_type {
@@ -216,9 +205,8 @@ sub _open_reader {
     my $type = $self->_enforce_type
         or return;
 
-    my $reader;
-    eval{
-        $reader = Genome::Model::Tools::FastQual::FastqSetReader->create(
+    my $reader = eval{
+        $self->_reader_class->create(
             files => \@input,
         );
     };
@@ -312,9 +300,8 @@ sub _open_stdout_writer {
 sub _open_fastq_set_writer {
     my ($self, @output) = @_;
 
-    my $writer;
-    eval{
-        $writer = Genome::Model::Tools::FastQual::FastqSetWriter->create(
+    my $writer = eval{
+        $self->_writer_class->create(
             files => \@output,
         );
     };

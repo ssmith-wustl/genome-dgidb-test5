@@ -17,7 +17,7 @@ sub create {
 
     my $fh = Genome::Sys->open_file_for_appending( $self->file );
     unless ( $fh ) {
-        Carp::Confess("Can't open fastq file.");
+        Carp::confess("Can't open fastq file.");
     }
     $fh->autoflush(1);
     $self->_fh($fh);

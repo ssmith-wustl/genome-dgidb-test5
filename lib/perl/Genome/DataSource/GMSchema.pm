@@ -27,6 +27,9 @@ sub auth {
 sub owner {
     "MG";}
 
+
+sub table_and_column_names_are_upper_case { 1; }
+
 sub _init_created_dbh {
     my ($self, $dbh) = @_;
     return unless defined $dbh;
