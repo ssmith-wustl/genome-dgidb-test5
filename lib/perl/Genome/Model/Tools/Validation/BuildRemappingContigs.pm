@@ -106,6 +106,13 @@ sub execute {
     #set the same executable path on the object
     $self->_samtools_exec(Genome::Model::Tools::Sam->path_for_samtools_version($self->samtools_version));
 
+    #open the output file for writing
+    my $output_fh = IO::File->new($self->output_file,"w");
+    unless($output_fh) {
+        $self->error_message("Unable to open " . $self->output_file . " for writing.");
+        return;
+    }
+
     #parse the assembly input file
     my $input_fh = Genome::Sys->open_file_for_reading($self->input_file); #this should die if it fails
     my %expected_contigs;
@@ -159,7 +166,7 @@ sub execute {
 
         unless($contig->{'contig_start'} < $contig->{'contig_stop'}) {
             #we will skip those until they are fixed
-            $self->error_message("Trimmed genomic coordinates make no sense for variant starting at " . $contig->{'pred_pos1'} . "\n");
+            $self->error_message("Trimmed genomic coordinates' start is greater than stop for variant starting at " . $contig->{'pred_pos1'} . "\n");
         }
         else {
             push @resized_contigs, $contig;
@@ -188,7 +195,7 @@ sub execute {
         #these should be sorted by chromosome, start, stop now
         #check for overlap with the current region
         if($current_chr eq $contig->{pred_chr1} && $current_start <= $contig->{contig_start} && $current_stop >= $contig->{contig_start}) {
-            print STDERR "Overlap detected for ",join(".",$contig->{pred_chr1},$contig->{pred_pos1},$contig->{pred_pos2},$contig->{pred_type},$contig->{pred_size}),"\n";
+            $self->error_message("Overlap detected for " . join(".",$contig->{pred_chr1},$contig->{pred_pos1},$contig->{pred_pos2},$contig->{pred_type},$contig->{pred_size}));
             $stats_hash->{number_of_overlapping_contigs}++;
             if($current_stop < $contig->{contig_stop}) {
                 #roll into region we are intersecting with
@@ -204,11 +211,11 @@ sub execute {
                 #Here we will print out a contig
                 #make sure that the info to count the contig is present and make sure that lines are shortish
                 foreach my $unique_contig (@overlapping_contigs) {
-                    print STDOUT ">",join("_",@$unique_contig{qw( pred_chr1 pred_pos1 pred_pos2 pred_type source) });
+                    print $output_fh ">",join("_",@$unique_contig{qw( pred_chr1 pred_pos1 pred_pos2 pred_type source) });
 
                     #need to code in the range on the contig for the variant as well as the range on the reference to count. For non-overlapping contigs this is simple. Let's also code overlap status
-                    printf STDOUT " Overlap:%d",@overlapping_contigs - 1;   #this should code the number of other contigs overlapping the contig
-                    printf STDOUT " Ref:%s.%d.%d Con:%d.%d",@$unique_contig{qw( assem_chr1 assem_pos1 assem_pos2 contig_location_of_variant microhomology_contig_endpoint )};
+                    printf $output_fh " Overlap:%d",@overlapping_contigs - 1;   #this should code the number of other contigs overlapping the contig
+                    printf $output_fh " Ref:%s.%d.%d Con:%d.%d",@$unique_contig{qw( assem_chr1 assem_pos1 assem_pos2 contig_location_of_variant microhomology_contig_endpoint )};
 
                     #Here we print out annotation information
 
@@ -232,13 +239,13 @@ sub execute {
                         $var = 0;
                     }
                     
-                    printf STDOUT " Anno:%s.%d.%d.%s.%s.%s", $unique_contig->{assem_chr1},$annotation_start,$annotation_end,$ref,$var,$unique_contig->{assem_type};
-                    printf STDOUT "\n";
+                    printf $output_fh " Anno:%s.%d.%d.%s.%s.%s", $unique_contig->{assem_chr1},$annotation_start,$annotation_end,$ref,$var,$unique_contig->{assem_type};
+                    printf $output_fh "\n";
 
                     #print sequence with each line containing 80bp
                     my $sequence = $unique_contig->{sequence};
                     while($sequence) {
-                        print substr($sequence,0,80,""),"\n";
+                        print $output_fh substr($sequence,0,80,""),"\n";
                     }
                 }
             }
@@ -281,7 +288,7 @@ sub execute {
 
     #print stats
     foreach my $key (keys %$stats_hash) {
-        print STDERR "$key: ", $stats_hash->{$key},"\n";
+        $self->status_message("$key: " . $stats_hash->{$key});
     }
         
     return 1;
@@ -586,8 +593,8 @@ sub handle_overlap {
                 else {
                     push @contigs_to_continue_examining, $contig2;
                     #write the alignment to stderr for debugging
-                    print STDERR ">",$contig1->{id},"\n",$contig1->{sequence},"\n";
-                    print STDERR ">",$contig2->{id},"\n",$contig2->{sequence},"\n";
+                    $self->status_message(join("",">",$contig1->{id},"\n",$contig1->{sequence}));
+                    $self->status_message(join("",">",$contig2->{id},"\n",$contig2->{sequence}));
 
                     $alnout->write_aln($alignment);
                 }

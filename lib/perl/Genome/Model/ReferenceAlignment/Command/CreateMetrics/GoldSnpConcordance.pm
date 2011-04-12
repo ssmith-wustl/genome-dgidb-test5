@@ -46,7 +46,7 @@ sub _verify_build_and_set_paths {
     my ($self, $build) = @_;
 
     my $bname = $build->__display_name__;
-    my $gold_snp_build = $build->model->gold_snp_build;
+    my $gold_snp_build = $build->gold_snp_build;
     if (!defined $gold_snp_build) {
         die "No gold_snp_build property found on build $bname.";
     }
