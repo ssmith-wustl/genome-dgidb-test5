@@ -398,6 +398,7 @@ sub gold_snp_build {
 
     my @genotype_models = Genome::Model::GenotypeMicroarray->get(
         subject_id => $self->subject_id,
+        processing_profile_name => 'infinium wugc', # only grab internal genotype
         reference_sequence_build_id => $self->reference_sequence_build_id
     );
     unless (@genotype_models) {
