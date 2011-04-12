@@ -49,11 +49,13 @@ is($rbuilds{'human'}[2]->derived_from_root(), $rbuilds{'human'}[0], 'build w/2 l
 my @errs =$rbuilds{'human'}[0]->__errors__ ;
 ok(!@errs, "no errors so far...")
     or die "Unexpected errors:\n\t" . join("\n\t", map{$_->__display_name__} @errs);
-$rbuilds{'human'}[0]->derived_from($rbuilds{'mouse'}[0]);
-@errs = $rbuilds{'human'}[0]->__errors__;
-ok(@errs, "deriving from another model's build is an error");
-ok($errs[0]->type, 'error type is correct');
-is($errs[0]->{properties}->[0], 'derived_from', 'error references derived_from property');
+
+#allowing derived_from builds from other models
+#$rbuilds{'human'}[0]->derived_from($rbuilds{'mouse'}[0]);
+#@errs = $rbuilds{'human'}[0]->__errors__;
+#ok(@errs, "deriving from another model's build is an error");
+#ok($errs[0]->type, 'error type is correct');
+#is($errs[0]->{properties}->[0], 'derived_from', 'error references derived_from property');
 
 # attempt to derive from self
 @errs = $rbuilds{'human'}[1]->__errors__;
