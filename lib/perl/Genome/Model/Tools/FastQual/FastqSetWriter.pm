@@ -11,6 +11,37 @@ require Carp;
 use Data::Dumper 'Dumper';
 require Genome::Model::Tools::FastQual::FastqWriter;
 
+sub Xcreate {
+    my ($class, %params) = @_;
+
+    my $self = bless \%params, $class;
+
+    my $fh = Genome::Sys->open_file_for_appending( $self->file );
+    unless ( $fh ) {
+        Carp::confess("Can't open fastq file.");
+    }
+    $fh->autoflush(1);
+    $self->_fh($fh);
+    
+    return $self;
+}
+
+sub Xwrite {
+    my ($self, $seq) = @_;
+
+    $self->_fh->print(
+        join(
+            "\n",
+            '@'.$seq->{id}.( defined $seq->{desc} ? ' '.$seq->{desc} : '' ),
+            $seq->{seq},
+            '+',
+            $seq->{qual},
+        )."\n"
+    );
+
+    return 1;
+}
+
 my $id = 0;
 sub create {
     my ($class, %params) = @_;

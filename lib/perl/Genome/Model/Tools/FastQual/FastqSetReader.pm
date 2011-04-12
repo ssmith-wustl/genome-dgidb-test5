@@ -11,6 +11,46 @@ require Carp;
 use Data::Dumper 'Dumper';
 require Genome::Model::Tools::FastQual::FastqReader;
 
+sub Xcreate {
+    my ($class, %params) = @_;
+
+    my $self = bless \%params, $class;
+
+    my $fh = Genome::Sys->open_file_for_reading( $self->file );
+    unless ( $fh ) {
+        Carp::confess("Can't open fastq file.");
+    }
+    $self->_io($fh);
+    
+    return $self;
+}
+
+sub Xnext {
+    my $self = shift;
+
+    my $fh = $self->_io;
+    my $line = $fh->getline
+        or return; #ok
+    chomp $line;
+    my ($id, $desc) = split(/\s/, $line, 2);
+    $id =~ s/^@//;
+
+    my $seq = $fh->getline;
+    chomp $seq; 
+
+    $fh->getline; 
+    
+    my $qual = $fh->getline;
+    chomp $qual;
+
+    return {
+        id => $id,
+        desc => $desc,
+        seq => $seq,
+        qual => $qual,
+    };
+}
+
 sub create {
     my ($class, %params) = @_;
 
