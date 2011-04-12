@@ -11,8 +11,8 @@ require File::Compare;
 use Test::More;
 
 #< Use >#
-use_ok('Genome::Model::Tools::FastQual::FastqSetReader') or die;
-use_ok('Genome::Model::Tools::FastQual::FastqSetWriter') or die;
+use_ok('Genome::Model::Tools::FastQual::FastqReader') or die;
+use_ok('Genome::Model::Tools::FastQual::FastqWriter') or die;
 
 #< Files >#
 my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastQual/';
@@ -31,39 +31,39 @@ my $out_reverse_fastq = $tmpdir.'/reverse.fastq';
 
 #< Create Fails >#
 my $failed_create;
-eval{ $failed_create = Genome::Model::Tools::FastQual::FastqSetReader->create(); };
+eval{ $failed_create = Genome::Model::Tools::FastQual::FastqReader->create(); };
 ok(($@ && !$failed_create), 'Failed to create w/ reader w/o fastqs');
 eval{ 
-    $failed_create = Genome::Model::Tools::FastQual::FastqSetReader->create(files => []); 
+    $failed_create = Genome::Model::Tools::FastQual::FastqReader->create(files => []); 
 };
 ok(($@ && !$failed_create), 'Failed to create w/ reader w/ empty fastqs aryref');
 eval{ 
-    $failed_create = Genome::Model::Tools::FastQual::FastqSetReader->create(files => [qw/ 1 2 3/]); 
+    $failed_create = Genome::Model::Tools::FastQual::FastqReader->create(files => [qw/ 1 2 3/]); 
 };
 ok(($@ && !$failed_create), 'Failed to create w/ reader w/ too many fastqs');
-eval{ $failed_create = Genome::Model::Tools::FastQual::FastqSetWriter->create(); };
+eval{ $failed_create = Genome::Model::Tools::FastQual::FastqWriter->create(); };
 ok(($@ && !$failed_create), 'Failed to create w/ writer w/o fastqs');
 eval{ 
-    $failed_create = Genome::Model::Tools::FastQual::FastqSetWriter->create(files => []); 
+    $failed_create = Genome::Model::Tools::FastQual::FastqWriter->create(files => []); 
 };
 ok(($@ && !$failed_create), 'Failed to create w/ writer w/ empty fastqs aryref');
 eval{ 
-    $failed_create = Genome::Model::Tools::FastQual::FastqSetWriter->create(files => [qw/ 1 2 3/]); 
+    $failed_create = Genome::Model::Tools::FastQual::FastqWriter->create(files => [qw/ 1 2 3/]); 
 };
 ok(($@ && !$failed_create), 'Failed to create w/ writer w/ too many fastqs');
 
 #< Write Fails >#
 my $failed_write;
-eval{ $failed_write = Genome::Model::Tools::FastQual::FastqSetWriter->write(); };
+eval{ $failed_write = Genome::Model::Tools::FastQual::FastqWriter->write(); };
 ok(($@ && !$failed_write), 'Failed to write w/o fastqs');
 
 #< Read/write separate >#
 note('Read separate, write separate');
-my $reader = Genome::Model::Tools::FastQual::FastqSetReader->create(
+my $reader = Genome::Model::Tools::FastQual::FastqReader->create(
     files => [ $forward_fastq, $reverse_fastq ],
 );
 ok($reader, 'Create reader');
-my $writer = Genome::Model::Tools::FastQual::FastqSetWriter->create(
+my $writer = Genome::Model::Tools::FastQual::FastqWriter->create(
     files => [ $out_forward_fastq, $out_reverse_fastq ],
 );
 ok($writer, 'Create writer');
@@ -81,11 +81,11 @@ is(File::Compare::compare($reverse_fastq, $out_reverse_fastq), 0, 'Reverse in/ou
 
 #< Read/write collate and test giving fastq file as a string >#
 note('Read collated, write collated');
-$reader = Genome::Model::Tools::FastQual::FastqSetReader->create(
+$reader = Genome::Model::Tools::FastQual::FastqReader->create(
     files => [ $forward_fastq, $reverse_fastq ],
 );
 ok($reader, 'Create reader');
-$writer = Genome::Model::Tools::FastQual::FastqSetWriter->create(
+$writer = Genome::Model::Tools::FastQual::FastqWriter->create(
     files => $out_collated_fastq,
 );
 ok($writer, 'Create writer');
@@ -103,24 +103,3 @@ is(File::Compare::compare($collated_fastq, $out_collated_fastq), 0, 'Reverse in/
 done_testing();
 exit;
 
-=pod
-
-=head1 Tests
-
-=head1 Disclaimer
-
- Copyright (C) 2010 Washington University Genome Sequencing Center
-
- This script is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
- License for more details.
-
-=head1 Author(s)
-
- Eddie Belter <ebelter@genome.wustl.edu>
-
-=cut
-
-#$HeadURL$
-#$Id$
