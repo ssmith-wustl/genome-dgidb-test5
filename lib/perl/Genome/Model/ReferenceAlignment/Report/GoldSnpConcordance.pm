@@ -45,7 +45,7 @@ sub generate_report_detail {
     my $build = $self->build;
     my $content;
 
-    my $gold_snp_build = $build->model->gold_snp_build;
+    my $gold_snp_build = $build->gold_snp_build;
     if (!defined $gold_snp_build) {
         return $self->error_message("Unable to locate gold snp build for " . $build->__display_name__);
     }

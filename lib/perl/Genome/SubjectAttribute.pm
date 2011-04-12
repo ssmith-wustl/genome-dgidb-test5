@@ -12,31 +12,37 @@ class Genome::SubjectAttribute {
     id_by => [
         attribute_label => {
             is => 'Text',
-            column_name => 'ATTRIBUTE_LABEL',
         },
         subject_id => {
             is => 'Text',
-            column_name => 'SUBJECT_ID',
         },
         attribute_value => {
             is => 'Text',
-            column_name => 'ATTRIBUTE_VALUE',
+        },
+        nomenclature => {
+            is => 'Text',
         },
     ],
     has => [        
-        # TODO Should be in id_by, but currently can't have a property in id_by that
-        # also has a default value
-        nomenclature => {
-            is => 'Text',
-            column_name => 'NOMENCLATURE',
-            default => 'WUGC',
-        },
         subject => {
             is => 'Genome::Subject',
             id_by => 'subject_id',
         },
     ],
 };
+
+sub create {
+    my $class = shift;
+    my $bx = $class->define_boolexpr(@_);    
+    # TODO This is a workaround that allows nomenclature to be in the id_by block
+    # and have a default value. Doing so in the class definition doesn't work due
+    # to some sort of UR bug that Tony is aware of.
+    unless ($bx->specifies_value_for('nomenclature')) {
+        $bx = $bx->add_filter('nomenclature' => 'WUGC');
+    }
+    return $class->SUPER::create($bx);
+}
+
 
 1;
 

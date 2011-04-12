@@ -55,7 +55,7 @@
                     <tr>
                       <td class="item_title"><xsl:value-of select="label_name"/> (<xsl:value-of select="display_name"/>)</td>
                       <td class="item_attr_label">Sample:</td>
-                      <td class="item_attr_value"><a><xsl:attribute name="href">/view/Genome/Sample/status.html?id=<xsl:value-of select="aspect[@name='sample']/object/display_name"/></xsl:attribute> <xsl:value-of select="aspect[@name='sample']/object/aspect[@name='name']/value"/></a></td>
+                      <td class="item_attr_value"><a><xsl:attribute name="href">/view/Genome/Sample/status.html?id=<xsl:value-of select="aspect[@name='sample']/object/@id"/></xsl:attribute> <xsl:value-of select="aspect[@name='sample']/object/aspect[@name='name']/value"/></a></td>
                       <td class="item_attr_label">Species Name:</td>
                       <td class="item_attr_value"><xsl:value-of select="aspect[@name='sample']/object/aspect[@name='species_name']/value"/></td>
                       <td class="item_attr_label">Common Name:</td>

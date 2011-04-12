@@ -68,18 +68,19 @@ sub create {
     return $self;
 }
 
+sub gold_snp_build {
+    my $self = shift;
+    if ($self->genotype_microarray_build_id) {
+        return $self->genotype_microarray_build;
+    }
+    else {
+        return $self->model->gold_snp_build;
+    }
+}
 
 sub gold_snp_path {
     my $self = shift;
-
-    my $geno_micro_build;
-    if ($self->genotype_microarray_build_id) {
-        $geno_micro_build = $self->genotype_microarray_build;
-    }
-    else {
-        $geno_micro_build = $self->model->gold_snp_build;
-    }
-
+    my $geno_micro_build = $self->gold_snp_build;
     $self->status_message("build::gold_snp_path: Using Genotype Microarray build " . $geno_micro_build->id . ".") if $geno_micro_build;
     return ($geno_micro_build ? $geno_micro_build->formatted_genotype_file_path : undef);
 }
