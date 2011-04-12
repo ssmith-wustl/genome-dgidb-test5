@@ -23,8 +23,10 @@ sub process_source {
     my $input_fh = $self->_input_fh;
     
     while(my $line = $input_fh->getline) {
+        chomp $line;
         my ($chr,$start,$stop, $refvar) = split("\t", $line);
         my ($ref, $var, $type);
+        ($refvar) = split ":", $refvar;
         if ($refvar =~ m/\-/) {
             $type = '-';
         }
