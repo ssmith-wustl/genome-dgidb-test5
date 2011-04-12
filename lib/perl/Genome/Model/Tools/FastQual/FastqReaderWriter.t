@@ -86,7 +86,7 @@ $reader = Genome::Model::Tools::FastQual::FastqReader->create(
 );
 ok($reader, 'Create reader');
 $writer = Genome::Model::Tools::FastQual::FastqWriter->create(
-    files => $out_collated_fastq,
+    files => [ $out_collated_fastq ],
 );
 ok($writer, 'Create writer');
 #is($writer->_write_strategy, '_collate', 'Write to collated file');

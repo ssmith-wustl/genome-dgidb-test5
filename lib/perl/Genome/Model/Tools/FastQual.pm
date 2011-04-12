@@ -108,20 +108,6 @@ sub valid_types {
     return (qw/ sanger illumina phred/);
 }
 
-sub format_for_type {
-    my ($self, $type) = @_;
-
-    unless ( defined $type ) {
-        Carp::confess("Cannot get format for type. It is not defined");
-    }
-
-    unless ( exists $supported_types{$type} ) {
-        Carp::confess("Cannot get format for type ($type).");
-    }
-
-    return $supported_types{$type}->{format};
-}
-
 sub _reader_class {
     my $self = shift;
     return 'Genome::Model::Tools::FastQual::'.$supported_types{ $self->type_in }->{reader_subclass};
@@ -133,15 +119,14 @@ sub _writer_class {
 }
 
 sub _enforce_type {
-    my $self = shift;
+    my ($self, $type) = @_;
 
-    my $type = $self->type_in;
-    unless ( defined $type ) {
-        Carp::confess("No type set.");
-    }
+    Carp::confess('No type given to validate') if not $type;
+
     my @valid_types = $self->valid_types;
-    unless ( grep { $type eq $_ } @valid_types ) {
-        Carp::confess("Invalid type ($type). Must be ".join(', ', @valid_types));
+    if ( not grep { $type eq $_ } @valid_types ) {
+        $self->error_message("Invalid type ($type). Must be ".join(', ', @valid_types));
+        return;
     }
 
     return $type;
@@ -178,7 +163,7 @@ sub execute {
         return;
     }
 
-    if ( scalar(@{$reader->files}) == 1 and scalar(@{$writer->files}) == 2 ) {
+    if ( scalar($reader->files) == 1 and scalar($writer->files) == 2 ) {
         $self->error_message("Cannot decollate from one input file to two output files! (YET)");
         return;
     }
@@ -202,16 +187,12 @@ sub _open_reader {
         return $self->_open_stdin_reader;
     }
 
-    my $type = $self->_enforce_type
-        or return;
+    my $type = $self->_enforce_type( $self->type_in );
+    return if not $type;
 
-    my $reader = eval{
-        $self->_reader_class->create(
-            files => \@input,
-        );
-    };
-    unless ( $reader ) {
-        $self->error_message("Can't create fastq reader for input files (".join(', ', @input)."): $@");
+    my $reader = eval{ $self->_reader_class->create(files => \@input); };
+    if ( not  $reader ) {
+        $self->error_message("Failed to create reader for input files (".join(', ', @input)."): $@");
         return;
     }
 
@@ -245,9 +226,10 @@ sub _open_stdin_reader {
     if ( not defined $reader_info->{type_in} ) {
         Carp::confess("No type out from pipe");
     }
-    $self->type_out( $reader_info->{type_out} );
 
-    $self->_enforce_type;
+    my $type = $self->_enforce_type( $reader_info->{type_out} );
+    return if not $type;
+    $self->type_out($type);
     
     return $reader;
 }
@@ -260,19 +242,20 @@ sub _open_writer {
         Carp::confess("Output files or 'PIPE' is required.");
     }
 
-    my $type = $self->_enforce_type
-        or return;
-    my $format = $self->format_for_type($type);
+    my $type = $self->_enforce_type( $self->type_out );
+    return if not $type;
 
     my $writer;
     if ( $output[0] eq 'PIPE' ) {
         $writer = $self->_open_stdout_writer; # confess in sub
     }
-    elsif ( $format eq  'fastq' ) {
-        $writer = $self->_open_fastq_set_writer(@output); # confess in sub
+    else {
+        $writer = eval{ $self->_writer_class->create(files => \@output); };
     }
-    else { 
-        Carp::confess("Cannot open writer, unknown output type ($type).");
+
+    if ( not $writer ) {
+        $self->error_message("Failed to create $type writer for output files (".join(', ', @output)."): $@");
+        return;
     }
 
     if ( $self->metrics_file ) {
@@ -297,7 +280,7 @@ sub _open_stdout_writer {
     return $writer;
 }
 
-sub _open_fastq_set_writer {
+sub _open_fastq_writer {
     my ($self, @output) = @_;
 
     my $writer = eval{

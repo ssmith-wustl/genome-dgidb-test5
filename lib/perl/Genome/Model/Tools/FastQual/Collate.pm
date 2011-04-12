@@ -34,7 +34,7 @@ sub execute {
         $self->error_message('Cannot read from a PIPE! Can only collate files!');
         return;
     }
-    if ( scalar (@{$reader->files}) == 1 ) {
+    if ( scalar($reader->files) == 1 ) {
         $self->error_message("Cannot collate from one input file!");
         return;
     }
@@ -45,7 +45,7 @@ sub execute {
         $self->error_message('Cannot write to a PIPE! Can only collate files!');
         return;
     }
-    unless ( scalar (@{$writer->files}) == 1 ) {
+    unless ( scalar($writer->files) == 1 ) {
         $self->error_message("Cannot collate to more than one output file!");
         return;
     }
