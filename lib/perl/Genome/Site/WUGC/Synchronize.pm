@@ -7,11 +7,6 @@ use warnings;
 use Genome;
 use Carp 'confess';
 
-my $low = 20_000;
-my $high = 200_000;
-UR::Context->object_cache_size_highwater($high);
-UR::Context->object_cache_size_lowwater($low);
-
 class Genome::Site::WUGC::Synchronize {
     is => 'Genome::Command::Base',
     has_optional => [
@@ -68,6 +63,11 @@ sub sync_order {
 # copy the old objects into the new schema and report the new objects that don't exist in the old schema
 sub execute {
     my $self = shift;
+
+    my $low = 20_000;
+    my $high = 200_000;
+    UR::Context->object_cache_size_highwater($high);
+    UR::Context->object_cache_size_lowwater($low);
 
     # Stores copied and missing IDs for each type
     my %report;
