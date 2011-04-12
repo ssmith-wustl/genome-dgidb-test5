@@ -7,7 +7,7 @@ use above 'Genome';
 
 use Test::More;
 
-use_ok('Genome::Model::Tools::FastQual::SeqWriter') or die;
+use_ok('Genome::Model::Tools::FastQual::SeqReaderWriter') or die;
 
 done_testing();
 exit;

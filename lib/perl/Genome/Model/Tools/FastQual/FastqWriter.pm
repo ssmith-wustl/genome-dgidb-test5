@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Tools::FastQual::FastqWriter {
-    is => 'Genome::Model::Tools::FastQual::SeqWriter',
+    is => 'Genome::Model::Tools::FastQual::SeqReaderWriter',
     has => [
         _fhs => { is_optional => 1, is_many => 1, }, 
         _write_strategy => { is_optional => 1, },

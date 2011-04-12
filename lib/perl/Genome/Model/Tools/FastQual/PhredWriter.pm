@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Tools::FastQual::PhredWriter {
-    is => 'Genome::Model::Tools::FastQual::SeqWriter',
+    is => 'Genome::Model::Tools::FastQual::SeqReaderWriter',
     has => [
         _fasta_io => { is_optional => 1, }, 
         _qual_io => { is_optional => 1, },
