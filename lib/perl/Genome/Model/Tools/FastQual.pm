@@ -9,8 +9,8 @@ use Data::Dumper 'Dumper';
 use File::Basename;
 require Genome::Model::Tools::FastQual::PhredReader;
 require Genome::Model::Tools::FastQual::PhredWriter;
-require Genome::Model::Tools::FastQual::FastqSetReader;
-require Genome::Model::Tools::FastQual::FastqSetWriter;
+require Genome::Model::Tools::FastQual::FastqReader;
+require Genome::Model::Tools::FastQual::FastqWriter;
 require Genome::Utility::IO::StdinRefReader;
 require Genome::Utility::IO::StdoutRefWriter;
 
@@ -99,8 +99,8 @@ HELP
 # mv metrics generated doc into method
 
 my %supported_types = (
-    sanger => { format => 'fastq', reader_subclass => 'FastqSetReader', writer_subclass => 'FastqSetWriter', },
-    illumina => { format => 'fastq', reader_subclass => 'FastqSetReader', writer_subclass => 'FastqSetWriter', },
+    sanger => { format => 'fastq', reader_subclass => 'FastqReader', writer_subclass => 'FastqWriter', },
+    illumina => { format => 'fastq', reader_subclass => 'FastqReader', writer_subclass => 'FastqWriter', },
     phred => { format => 'fasta', file_exts => [qw/ fna fa /], reader_subclass => 'PhredReader', writer_subclass => 'PhredWriter', },
 );
 

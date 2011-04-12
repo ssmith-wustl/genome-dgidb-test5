@@ -22,11 +22,11 @@ sub Genome::Model::Tools::FastQual::Tester::execute {
     # test opening readers /writers
     my $fastq_reader = $self->_open_reader;
     ok($fastq_reader, 'opened reader for fastq files') or die;
-    isa_ok($fastq_reader, 'Genome::Model::Tools::FastQual::FastqSetReader');
+    isa_ok($fastq_reader, 'Genome::Model::Tools::FastQual::FastqReader');
     is($self->type_in, 'sanger', 'type in is sanger');
     my $fastq_writer = $self->_open_writer;
     ok($fastq_writer, 'opened writer for fastq files') or die;
-    isa_ok($fastq_writer, 'Genome::Model::Tools::FastQual::FastqSetWriter');
+    isa_ok($fastq_writer, 'Genome::Model::Tools::FastQual::FastqWriter');
 
     # write one fastq
     $fastq_writer->write( $fastq_reader->next );
