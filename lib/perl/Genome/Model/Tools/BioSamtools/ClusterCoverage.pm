@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Statistics::Descriptive;
 
 my $DEFAULT_MINIMUM_DEPTHS = '1,5,10,15,20';
 my $DEFAULT_OFFSET = 10_000_000;
@@ -43,6 +44,11 @@ class Genome::Model::Tools::BioSamtools::ClusterCoverage {
             is => 'Text',
             doc => 'The output directory to generate cluster files per min depth.',
         },
+        print_mean_coverage => {
+            is => 'Boolean',
+            doc => 'Calculate the mean depth across cluster.',
+            default_value => 0,
+        },
     ],
 };
 
@@ -54,7 +60,7 @@ sub execute {
             die('Failed to create output_directory: '. $output_directory);
         }
     }
-    my $refcov_bam  = Genome::RefCov::Bam->new(bam_file => $self->bam_file );
+    my $refcov_bam  = Genome::RefCov::Bam->create(bam_file => $self->bam_file );
     unless ($refcov_bam) {
         die('Failed to load bam file '. $self->bam_file);
     }
@@ -92,14 +98,14 @@ sub execute {
         for my $pileup (@$pileups) {
             my $base_position = $pileup->qpos;
             my $alignment = $pileup->alignment;
-            if (defined($self->mapping_quality_filter)) {
-                unless ($alignment->qual >= $self->mapping_quality_filter) {
+            if (defined($self->minimum_mapping_quality)) {
+                unless ($alignment->qual >= $self->minimum_mapping_quality) {
                     next;
                 }
             }
             my @base_qualities = $alignment->qscore;
             my $quality = $base_qualities[$base_position];
-            if ($quality >= $self->base_quality_filter) {
+            if ($quality >= $self->minimum_base_quality) {
                 @$coverage[$index]++;
             }
         }
@@ -127,7 +133,7 @@ sub execute {
             # the API must be expecting BED like inputs where the start is zero based and the end is 1-based
             # you can see in the docs for the low-level Bio::DB::BAM::Alignment class that start 'pos' is 0-based,but calend really returns 1-based
             my $coverage;
-            if (defined($self->base_quality_filter) || defined($self->mapping_quality_filter)) {
+            if (defined($self->minimum_base_quality) || defined($self->minimum_mapping_quality)) {
                 #Start with an empty array of zeros
                 my @coverage = map { 0 } (1 .. $offset);
                 $coverage = \@coverage;
@@ -138,7 +144,7 @@ sub execute {
                 #print $start ."\t". $end ."\n";
             }
             for my $min_depth (@min_depths) {
-                my @clusters = cluster_coverage($coverage,$min_depth,$start);
+                my @clusters = $self->cluster_coverage($coverage,$min_depth,$start);
                 my $min_depth_clusters_fh = $min_depth_clusters_fhs{$min_depth};
                 if (@clusters) {
                     if ($min_depth_previous_clusters{$min_depth}) {
@@ -148,10 +154,28 @@ sub execute {
                         if (($first_cluster->[0] == $last_cluster->[1])) {
                             #Blunt end clusters: merge
                             $last_cluster->[1] = $first_cluster->[1];
+                            #Merge the stats
+                            if ($self->print_mean_coverage) {
+                                my @last_data = $last_cluster->[2]->get_data;
+                                my @first_data = $first_cluster->[2]->get_data;
+                                my @data;
+                                push @data, @last_data;
+                                push @data, @first_data;
+                                my $new_stat = Statistics::Descriptive::Full->new();
+                                $new_stat->add_data(@data);
+                                $last_cluster->[2] = $new_stat;
+                            }
                             shift(@clusters);
                         }
                         for my $cluster (@{$min_depth_previous_clusters{$min_depth}}) {
-                            print $min_depth_clusters_fh $chr ."\t". $cluster->[0] ."\t". $cluster->[1] ."\n";
+                            my $start = $cluster->[0];
+                            my $end = $cluster->[1];
+                            my $stat = $cluster->[2];
+                            print $min_depth_clusters_fh $chr ."\t". $start ."\t". $end ."\t". $chr .':'. $start .'-'. $end;
+                            if ($stat) {
+                                print $min_depth_clusters_fh "\t". $stat->mean;
+                            }
+                            print $min_depth_clusters_fh "\n";
                         }
                     }
                     $min_depth_previous_clusters{$min_depth} = \@clusters;
@@ -161,7 +185,14 @@ sub execute {
         for my $min_depth (keys %min_depth_previous_clusters) {
             my $min_depth_clusters_fh = $min_depth_clusters_fhs{$min_depth};
             for my $cluster (@{$min_depth_previous_clusters{$min_depth}}) {
-                print $min_depth_clusters_fh $chr ."\t". $cluster->[0] ."\t". $cluster->[1] ."\n";
+                my $start = $cluster->[0];
+                my $end = $cluster->[1];
+                my $stat = $cluster->[2];
+                print $min_depth_clusters_fh $chr ."\t". $start ."\t". $end ."\t". $chr .':'. $start .'-'. $end;
+                if ($stat) {
+                    print $min_depth_clusters_fh "\t". $stat->mean;
+                }
+                print $min_depth_clusters_fh "\n";
             }
             $min_depth_previous_clusters{$min_depth} = undef;
         }
@@ -174,16 +205,23 @@ sub execute {
 }
 
 sub cluster_coverage {
-    my ($coverage, $min_depth, $offset) = @_;
+    my ($self, $coverage, $min_depth, $offset) = @_;
     my @clusters;
     # Populate the cluster data structure based on the coverage depth array.
 
     map {$_ = undef} my ($is_cluster, $start, $stop);
     my $last = scalar(@{ $coverage });
+    my $stat;
+    if ($self->print_mean_coverage) {
+        $stat = Statistics::Descriptive::Full->new();
+    }
     for (my $i = 0; $i < $last; $i++) {
         my $depth = $coverage->[$i];
         if ($depth >= $min_depth) {
             if ($is_cluster) {
+                if ($stat) {
+                    $stat->add_data($depth);
+                }
                 # continue extending existing cluster
                 if ($i == ($last - 1)) {
                     # end of coverage array, so end cluster and finish
@@ -199,6 +237,10 @@ sub cluster_coverage {
                 }
                 $start = $i + $offset;
                 $is_cluster = 1;
+                if ($self->print_mean_coverage) {
+                    $stat = Statistics::Descriptive::Full->new();
+                    $stat->add_data($depth);
+                }
             }
         } else {
             if ($is_cluster) {
@@ -212,12 +254,12 @@ sub cluster_coverage {
         }
         # Update collection hash:
         if (defined($start) && defined($stop)) {
-            push @clusters, [$start,$stop];
+            push @clusters, [$start,$stop,$stat];
             $start = undef;
             $stop = undef;
         } elsif ($i == ($last - 1)) {
             # one base long cluster on end of coverage array
-            push @clusters, [$start,$start];
+            push @clusters, [$start,$start,$stat];
             $start = undef;
             $stop = undef;
         }
