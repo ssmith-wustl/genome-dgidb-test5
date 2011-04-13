@@ -32,30 +32,32 @@ class Genome::Site::WUGC::Synchronize {
 # it can lead to some attributes not being copied over.
 sub objects_to_sync {
     return (
-        'Genome::InstrumentData::454' => 'Genome::Site::WUGC::InstrumentData::454',
-        'Genome::InstrumentData::Sanger' => 'Genome::Site::WUGC::InstrumentData::Sanger',
-        'Genome::InstrumentData::Solexa' => 'Genome::Site::WUGC::InstrumentData::Solexa',
-        'Genome::InstrumentData::Imported' => 'Genome::Site::WUGC::InstrumentData::Imported',
-        'Genome::Individual' => 'Genome::Site::WUGC::Individual',
-        'Genome::PopulationGroup' => 'Genome::Site::WUGC::PopulationGroup',
-        'Genome::Taxon' => 'Genome::Site::WUGC::Taxon',
-        'Genome::Sample' => 'Genome::Site::WUGC::Sample',
-        'Genome::Library' => 'Genome::Site::WUGC::Library',
+        'Genome::Site::WUGC::InstrumentData::454' => 'Genome::InstrumentData::454',
+        'Genome::Site::WUGC::InstrumentData::Sanger' => 'Genome::InstrumentData::Sanger',
+        'Genome::Site::WUGC::InstrumentData::Solexa' => 'Genome::InstrumentData::Solexa',
+        'Genome::Site::WUGC::InstrumentData::Imported' => 'Genome::InstrumentData::Imported',
+        'Genome::Site::WUGC::Individual' => 'Genome::Individual',
+        'Genome::Site::WUGC::PopulationGroup' => 'Genome::PopulationGroup',
+        'Genome::Site::WUGC::Taxon' => 'Genome::Taxon',
+        'Genome::Site::WUGC::Sample' => 'Genome::Sample',
+        'Genome::Site::WUGC::Library' => 'Genome::Library',
+        'Genome::Site::WUGC::IlluminaGenotyping' => 'Genome::InstrumentData::Imported',
     );
 }
 
 # Specifies the order in which classes should be synced
 sub sync_order {
     return qw/ 
-        Genome::Taxon
-        Genome::Individual
-        Genome::PopulationGroup
-        Genome::Sample
-        Genome::Library
-        Genome::InstrumentData::Solexa
-        Genome::InstrumentData::Sanger
-        Genome::InstrumentData::454
-        Genome::InstrumentData::Imported
+        Genome::Site::WUGC::Taxon
+        Genome::Site::WUGC::Individual
+        Genome::Site::WUGC::PopulationGroup
+        Genome::Site::WUGC::Sample
+        Genome::Site::WUGC::Library
+        Genome::Site::WUGC::InstrumentData::Solexa
+        Genome::Site::WUGC::InstrumentData::Sanger
+        Genome::Site::WUGC::InstrumentData::454
+        Genome::Site::WUGC::InstrumentData::Imported
+        Genome::Site::WUGC::IlluminaGenotyping
     /;
 }
 
@@ -75,9 +77,9 @@ sub execute {
     # Maps new classes with old classes
     my %types = $self->objects_to_sync;
 
-    for my $new_type ($self->sync_order) {
-        confess "Type $new_type isn't mapped to an old class!" unless exists $types{$new_type};
-        my $old_type = $types{$new_type};
+    for my $old_type ($self->sync_order) {
+        confess "Type $old_type isn't mapped to an new class!" unless exists $types{$old_type};
+        my $new_type = $types{$old_type};
 
         for my $type ($new_type, $old_type) {
             confess "Could not get meta object for $type!" unless $type->__meta__;
