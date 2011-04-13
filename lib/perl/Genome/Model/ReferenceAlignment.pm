@@ -387,6 +387,32 @@ sub is_eliminate_all_duplicates {
     }
 }
 
+sub default_genotype_build {
+    my $self = shift;
+
+    my $rsb = $self->reference_sequence_build;
+    die $self->error_message("No reference sequence build specified.")
+        unless ($rsb);
+
+    my $sample = $self->subject;
+    die $self->error_message("No subject/sample specified.")
+        unless ($sample);
+
+    my @default_genotype_builds =
+        grep { $_->reference_sequence_build->is_compatible_with($rsb) } $sample->default_genotype_builds;
+    die $self->error_message("No compatible default_genotype_builds for sample.")
+        unless (@default_genotype_builds);
+
+    if (@default_genotype_builds == 1) {
+        return $default_genotype_builds[0];
+    }
+    else {
+        $self->warning_message("Multiple compatible default_genotype_builds for sample.");
+        return;
+    }
+
+}
+
 sub gold_snp_build {
     my $self = shift;
 
