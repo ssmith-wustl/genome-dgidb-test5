@@ -6,11 +6,7 @@ use warnings;
 use Genome;
 
 use Data::Dumper 'Dumper';
-use File::Basename;
-require Genome::Model::Tools::FastQual::PhredReader;
-require Genome::Model::Tools::FastQual::PhredWriter;
-require Genome::Model::Tools::FastQual::FastqReader;
-require Genome::Model::Tools::FastQual::FastqWriter;
+require File::Basename;
 require Genome::Utility::IO::StdinRefReader;
 require Genome::Utility::IO::StdoutRefWriter;
 
@@ -69,12 +65,12 @@ HELP
 
 sub help_detail { # empty ok
     return <<HELP 
-    Process fastq and fasta/quality sequences. See sub-commands for a variety of functionality.
+    Process sequences. See sub-commands for a variety of functionality.
 
     Types Handled
     * illumina (fastq)
     * sanger (fastq)
-    * phred (fasta/quality) - original format w/ sequences and qualities in separate files.
+    * phred (fasta/quality)
     
     Things This Base Command Can Do
     * collate two files into one 

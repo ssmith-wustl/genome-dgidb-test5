@@ -7,43 +7,11 @@ use Genome;
 
 class Genome::Model::Tools::FastQual::PhredWriter {
     is => 'Genome::Model::Tools::FastQual::SeqReaderWriter',
-    has => [
-        _fasta_io => { is_optional => 1, }, 
-        _qual_io => { is_optional => 1, },
+    has => [ 
+        _fasta_io => { calculate => q| ($self->_fhs)[0] |, },
+        _qual_io => { calculate => q|  ($self->_fhs)[1] |, }, 
     ],
 };
-
-sub create {
-    my $class = shift;
-
-    my $self = $class->SUPER::create(@_);
-    return if not $self;
-
-    my @files = $self->files;
-    if ( not @files ) {
-        Carp::confess("No fasta/quality files given");
-    }
-    elsif ( @files > 2 ) {
-        Carp::confess('Too many fasta/quality files given to write');
-    }
-
-    my $fasta_fh = eval{ Genome::Sys->open_file_for_appending($files[0]) };
-    if ( not $fasta_fh ) {
-        Carp::confess('Cannot open fasta file ('.$files[0].') for appending: '.$@);
-    }
-    $fasta_fh->autoflush(1);
-    $self->_fasta_io($fasta_fh);
-    
-    if ( $files[1] ) {
-        my $qual_fh = eval{ Genome::Sys->open_file_for_appending($files[1]); };
-        if ( not $qual_fh ) {
-            Carp::confess('Cannot open quality file ('.$files[1].') for appending: '.$@);
-        }
-        $self->_qual_io($qual_fh);
-    }
-    
-    return $self;
-}
 
 sub write {
     my ($self, $seqs) = @_;
