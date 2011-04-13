@@ -42,6 +42,10 @@ sub execute {
     }
 
     my $genotype_data = $self->_resolve_genotype_data($genotype);
+    unless ($genotype_data) {
+        $self->error_message('Unable to find genotype data.')
+        return;
+    }
 
     if ($sample->default_genotype_data && $self->overwrite) {
         $self->status_message('Deleting default genotype data for sample ' . $sample->__display_name__ . ' because --overwrite was specified.');
@@ -64,8 +68,6 @@ sub _resolve_genotype_data {
         id => $seq_id,
         import_format => 'genotype file',
     );
-    die $self->error_message('No instrument data exists.')
-        unless ($instrument_data);
 
     return $instrument_data;
 }
