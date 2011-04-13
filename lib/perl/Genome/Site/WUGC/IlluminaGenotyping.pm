@@ -11,7 +11,7 @@ class Genome::Site::WUGC::IlluminaGenotyping {
         seq_id => { is => 'Number' },
     ],
     has => [
-        dna_name => { is => 'Text' },
+        name => { is => 'Text' , column_name => 'DNA_NAME'},
         source_barcode => { is => 'Text' },
         well => { is => 'Text' },
         bead_chip_barcode => { is => 'Text' },
@@ -35,7 +35,7 @@ class Genome::Site::WUGC::IlluminaGenotyping {
 
 sub __display_name__ {
     my $self = shift;
-    return $self->source_barcode . ' for sample ' . $self->dna_name;
+    return $self->source_barcode . ' for sample ' . $self->name;
 }
 
 1;
