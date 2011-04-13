@@ -18,6 +18,11 @@ class Genome::Sample::Command::Update::DefaultGenotypeData {
             is_many => 0,
             doc => 'Genotype to use as the default genotype data for sample. Resolved by Genome::Command::Base.',
         },
+        overwrite => {
+            is => 'Boolean',
+            default => 0,
+            doc => 'Allow the current default genotype data to be overwrittern.',
+        },
     ],
 };
 
@@ -30,9 +35,19 @@ sub execute {
 
     my $sample = $self->sample;
     my $genotype = $self->genotype;
+    
+    if ($sample->default_genotype_data && !$self->overwrite) {
+        $self->error_message('Default genotype data already specified for sample ' . $sample->__display_name__ . '. Use --overwrite to allow overwriting it.');
+        return;
+    }
 
     my $genotype_data = $self->_resolve_genotype_data($genotype);
 
+    if ($sample->default_genotype_data && $self->overwrite) {
+        $self->status_message('Deleting default genotype data for sample ' . $sample->__display_name__ . ' because --overwrite was specified.');
+        my $attribute = $sample->attributes(attribute_label => 'default_genotype_data');
+        $attribute->delete;
+    }
     $self->status_message('Setting default genotype data to ' . $genotype_data->__display_name__ . ' for sample ' . $sample->__display_name__ . '.');
     $sample->set_default_genotype_data($genotype_data);
 
