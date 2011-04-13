@@ -38,6 +38,9 @@ class Genome::Model::Tools::SmrtAnalysis::CircularConsensus {
             doc => 'Minimum Read Quality',
             default_value => 0.75,
         },
+        read_white_list => {
+            doc => 'A newline separated list of read ids (movie_id/hole_number)',
+        },
     ],
 };
 
@@ -51,6 +54,7 @@ sub execute {
         job_directory => $self->job_directory,
         reference_directory => $self->reference_directory,
         control_reference_directory => $self->control_reference_directory,
+        read_white_list => $self->read_white_list,
     );
     my $module_path = $self->get_class_object->module_path;
     my $xml_path = $module_path;
