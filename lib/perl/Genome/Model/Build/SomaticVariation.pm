@@ -188,6 +188,7 @@ sub files_ignored_by_diff {
         \.vcf.idx$
         workflow\.xml$
         \.png$
+        readcounts$
     );
 }
 
