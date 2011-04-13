@@ -109,7 +109,7 @@ sub execute {
     my $rd_ori_ct  = 0;
     my $rd_trim_ct = 0;
 
-    while ( my $seqs = $reader->next ) {
+    while ( my $seqs = $reader->read ) {
         for my $seq ( @$seqs ) {
             my $seq_length = length $seq->{seq};
             $ori_ct += $seq_length;
@@ -144,7 +144,7 @@ sub _open_reader {
     my $reader;
     eval{
         $reader = Genome::Model::Tools::FastQual::FastqReader->create(
-            files => $fastq_file,
+            files => [ $fastq_file ],
         );
     };
     unless ( $reader ) {
@@ -173,7 +173,7 @@ sub _open_writer {
     my $writer;
     eval{
         $writer = Genome::Model::Tools::FastQual::FastqWriter->create(
-            files => $out_file,
+            files => [ $out_file ],
         );
     };
     unless ( $writer ) {

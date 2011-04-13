@@ -26,7 +26,7 @@ sub execute {
     my $writer = $self->_open_writer;
     return unless $writer;
 
-    while ( my $seqs = $reader->next ) {
+    while ( my $seqs = $reader->read ) {
         $self->_filter($seqs) or next;
         $writer->write($seqs);
     }

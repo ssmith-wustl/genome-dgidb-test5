@@ -23,16 +23,13 @@ sub create {
     return $self;
 }
 
-sub write {
-    my ($self, $fastqs) = @_;
-
-    Carp::confess("No fastqs to write") if not $fastqs;
-
-    my $write_strategy = $self->_write_strategy;
-    return $self->$write_strategy($fastqs);
+sub _write {
+    #my ($self, $fastqs) = @_;
+    my $write_strategy = $_[0]->_write_strategy;
+    return $_[0]->$write_strategy($_[1]);
 }
     
-sub _write {
+sub _print_seq_to_fh {
     my ($self, $fh, $seq) = @_;
 
     $fh->print(
@@ -52,7 +49,7 @@ sub _separate {
     my ($self, $fastqs) = @_;
 
     for my $i (0..1) {
-        $self->_write(($self->_fhs)[$i], $fastqs->[$i])
+        $self->_print_seq_to_fh(($self->_fhs)[$i], $fastqs->[$i])
             or Carp::confess("Can't write fastq: ".Dumper($fastqs->[$i]));
     }
 
@@ -64,7 +61,7 @@ sub _collate {
 
     my $fh = ($self->_fhs)[0];
     for my $fastq ( @$fastqs ) {
-        $self->_write($fh, $fastq)
+        $self->_print_seq_to_fh($fh, $fastq)
             or Carp::confess("Can't write fastq: ".Dumper($fastq));
     }
 

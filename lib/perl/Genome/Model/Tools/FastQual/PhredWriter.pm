@@ -8,15 +8,26 @@ use Genome;
 class Genome::Model::Tools::FastQual::PhredWriter {
     is => 'Genome::Model::Tools::FastQual::SeqReaderWriter',
     has => [ 
-        _fasta_io => { calculate => q| ($self->_fhs)[0] |, },
-        _qual_io => { calculate => q|  ($self->_fhs)[1] |, }, 
+        _fasta_io => { is_optional => 1, },
+        _qual_io => { is_optional => 1, }, 
     ],
 };
 
-sub write {
-    my ($self, $seqs) = @_;
+sub create {
+    my $class = shift;
 
-    Carp::confess('Need array of sequences to write') if not $seqs or ref $seqs ne 'ARRAY';
+    my $self = $class->SUPER::create(@_);
+    return if not $self;
+
+    my @fhs = $self->_fhs;
+    $self->_fasta_io($fhs[0]);
+    $self->_qual_io($fhs[1]);
+
+    return $self;
+}
+
+sub _write {
+    my ($self, $seqs) = @_;
 
     for my $seq ( @$seqs ) { 
         $self->_write_seq($seq) or return;

@@ -35,7 +35,7 @@ sub execute {
     
     my $temp_fh = File::Temp->new() or die;
     no warnings 'uninitialized';
-    while ( my $seqs = $reader->next ) {
+    while ( my $seqs = $reader->read ) {
         for my $seq ( @$seqs ) { 
             $temp_fh->print(
                 join("\t", map { $seq->{$_} } (qw/ id desc seq qual /))."\n"

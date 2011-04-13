@@ -49,6 +49,7 @@ my $metrics2_file = $tmpdir.'/metrics2.txt';
 
 # Create and execute
 my $fastq_tester = Genome::Model::Tools::FastQual->create(
+    #input => [ $dir.'/big.fastq' ],
     input => [ $example_in_file ],
     output => [ $out_file ],
     metrics_file => $metrics_file,
@@ -89,21 +90,3 @@ ok((!$rv && $@ =~ /No pipe meta info/), 'failed to open reader b/c no meta info'
 done_testing();
 exit;
     
-=pod
-
-=head1 Tests
-
-=head1 Disclaimer
-
- Copyright (C) 2010 Washington University Genome Sequencing Center
-
- This script is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
- License for more details.
-
-=head1 Author(s)
-
- Eddie Belter <ebelter@watson.wustl.edu>
-
-=cut

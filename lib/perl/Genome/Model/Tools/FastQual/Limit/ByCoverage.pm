@@ -80,7 +80,7 @@ sub execute {
     my $count_limiter = $self->_create_count_limiter;
     push @limiters, $count_limiter if $count_limiter;
     
-    READER: while ( my $seqs = $reader->next ) {
+    READER: while ( my $seqs = $reader->read ) {
         $writer->write($seqs);
         for my $limiter ( @limiters ) {
             last READER unless $limiter->($seqs); # returns 0 when done
@@ -119,5 +119,3 @@ sub _create_count_limiter {
 
 1;
 
-#$HeadURL$
-#$Id$

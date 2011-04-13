@@ -78,7 +78,7 @@ sub execute {
     my $writer = $self->_open_writer
         or return;
     
-    while ( my $seqs = $reader->next ) {
+    while ( my $seqs = $reader->read ) {
         for my $seq ( @$seqs ) { 
             MnR: for my $match_and_replace ( @{$self->_match_and_replace} ) {
                 if ( $seq->{id} =~ s/$match_and_replace->[0]/$match_and_replace->[1]/g ) {

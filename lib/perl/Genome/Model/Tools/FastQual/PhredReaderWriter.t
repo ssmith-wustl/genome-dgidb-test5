@@ -38,7 +38,7 @@ ok($writer, 'Create writer');
 
 #< Read/Write >#
 my $count = 0;
-while ( my $seq = $reader->next ) {
+while ( my $seq = $reader->read ) {
     $count++;
     $writer->write($seq);
 }
@@ -55,7 +55,7 @@ $reader = Genome::Model::Tools::FastQual::PhredReader->create(
     files => [ $input_fasta, $id_does_not_match ],
 );
 ok($reader, 'Create reader');
-my $rv = eval{ $reader->next; };
+my $rv = eval{ $reader->read; };
 diag($@);
 ok((!$rv && $@ =~ /^Fasta and quality ids do not match:/), 'Failed when base and quals do not match');
 my $quals_do_not_match = $dir.'/reader_writer.quals_do_not_match.fasta.qual';
@@ -63,7 +63,7 @@ $reader = Genome::Model::Tools::FastQual::PhredReader->create(
     files => [ $input_fasta, $quals_do_not_match ],
 );
 ok($reader, 'Create reader');
-$rv = eval{ $reader->next; };
+$rv = eval{ $reader->read; };
 diag($@);
 ok((!$rv && $@ =~ /^Number of qualities does not match/), 'Failed when id in fasta does not match qual');
 

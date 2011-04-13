@@ -36,7 +36,7 @@ sub execute {
         [ qr{#.*/2$}, '.g1' ],
     );
 
-    while ( my $seqs = $reader->next ) {
+    while ( my $seqs = $reader->read ) {
         for my $seq ( @$seqs ) { 
             MnR: for my $match_and_replace ( @match_and_replace ) {
                 $seq->{id} =~ s/$match_and_replace->[0]/$match_and_replace->[1]/g 

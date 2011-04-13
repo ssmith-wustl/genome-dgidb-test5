@@ -164,7 +164,7 @@ sub execute {
         return;
     }
 
-    while ( my $seqs = $reader->next ) {
+    while ( my $seqs = $reader->read ) {
         $writer->write($seqs);
     }
 
@@ -255,7 +255,7 @@ sub _open_writer {
     }
 
     if ( $self->metrics_file ) {
-        $self->_setup_write_observer($writer); # confess in sub
+        $writer->metrics( Genome::Model::Tools::FastQual::Metrics->create() );
     }
 
     return $self->_writer($writer);
@@ -292,11 +292,6 @@ sub _open_fastq_writer {
 }
 
 #< Observers >#
-
-# Need these as class vars
-my %metrics; # writer class and id => metrics
-my @writer_classes_overloaded; # writer classes that are overloaded below
-
 sub _add_result_observer { # to write metrics file
     my $self = shift;
 
@@ -305,32 +300,31 @@ sub _add_result_observer { # to write metrics file
         callback => sub {
             #print Dumper(\@_);
             my ($self, $method_name, $prior_value, $new_value) = @_;
+            # skip if new result is not successful
             if ( not $new_value ) {
                 return 1;
             }
 
-            # Skip if we don't have a metrics file or a writer
+            # Skip if we don't have a metrics file
             my $metrics_file = $self->metrics_file;
-            return 1 if not defined $self->_writer or not defined $self->metrics_file;
+            return 1 if not $self->metrics_file;
 
-            my $writer_class_id = ref( $self->_writer ).' '.$self->_writer->id;
-            my $metrics = $metrics{$writer_class_id};
-            if ( not defined $metrics ) { # very bad
-                Carp::confess("Requested to output metrics, but none were found for writer ($writer_class_id)");
+            # Problem if the writer or writer metric object does not exist
+            if ( not $self->_writer ) {
+                Carp::confess('Requested to output metrics, but the associated sequence writer does not exists');
+            }
+            if ( not $self->_writer->metrics ) { # very bad
+                Carp::confess('Requested to output metrics, but none were found for writer:'.$self->_writer->class);
             }
 
             unlink $metrics_file if -e $metrics_file;
-            my $fh;
-            eval{
-                $fh= Genome::Sys->open_file_for_writing($metrics_file);
-            };
-            unless ( $fh ) {
+            my $fh = eval{ Genome::Sys->open_file_for_writing($metrics_file); };
+            if ( not $fh ) {
                 Carp::confess("Cannot open metrics file ($metrics_file) for writing: $@");
             }
 
-            for my $stat ( sort keys %$metrics) {
-                $fh->print( $stat.'='.$metrics->{$stat}."\n");
-            }
+            my $metrics_as_string = $self->_writer->metrics->to_string;
+            $fh->print($metrics_as_string);
             $fh->close;
             return 1;
         }
@@ -338,42 +332,6 @@ sub _add_result_observer { # to write metrics file
 
     if ( not defined $result_observer ) {
         Carp::confess("Cannot create result observer");
-    }
-
-    return 1;
-}
-
-sub _setup_write_observer { # to add to metrics when seqs are written
-    my ($self, $writer) = @_;
-
-    # Writer Class and ID - set in writers observed, 
-    my $writer_class_id = ref($writer).' '.$writer->id;
-    return 1 if exists $metrics{$writer_class_id}; # already observing
-    $metrics{$writer_class_id} = { 
-        bases => 0, 
-        count => 0,
-    }; # Add more??
-
-    # Don't overload the writer class more than once
-    my $writer_class = ref($writer);
-    unless (  grep { $writer_class eq $_ } @writer_classes_overloaded ) {
-        my $write_method = $writer_class.'::write';
-        my $write = \&{$write_method};
-        no strict 'refs';
-        no warnings 'redefine';
-        *{$write_method} = sub{ 
-            $write->(@_) or return; 
-            my $writer_class_id = ref($_[0]).' '.$_[0]->id;
-            my $metrics = $metrics{$writer_class_id};
-            for ( @{$_[1]} ) { 
-                $metrics->{bases} += length($_->{seq});
-                $metrics->{count}++;
-            }
-            return 1;
-        }; 
-        use strict;
-        use warnings;
-        push @writer_classes_overloaded, $writer_class;
     }
 
     return 1;

@@ -70,7 +70,7 @@ ok($writer, 'Create writer');
 ok($writer->id, 'wrtier has id');
 #is($writer->_write_strategy, '_separate', 'Write to separate files');
 my $count = 0;
-while ( my $fastqs = $reader->next ) {
+while ( my $fastqs = $reader->read ) {
     $count++;
     $writer->write($fastqs)
         or die;
@@ -91,7 +91,7 @@ $writer = Genome::Model::Tools::FastQual::FastqWriter->create(
 ok($writer, 'Create writer');
 #is($writer->_write_strategy, '_collate', 'Write to collated file');
 $count = 0;
-while ( my $fastqs = $reader->next ) {
+while ( my $fastqs = $reader->read ) {
     $count++;
     $writer->write($fastqs)
         or die;

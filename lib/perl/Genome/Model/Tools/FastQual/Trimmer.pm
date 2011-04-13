@@ -26,7 +26,7 @@ sub execute {
     my $writer = $self->_open_writer
         or return;
 
-    while ( my $sequences = $reader->next ) {
+    while ( my $sequences = $reader->read ) {
         $self->_trim($sequences);
         $writer->write($sequences);
     }

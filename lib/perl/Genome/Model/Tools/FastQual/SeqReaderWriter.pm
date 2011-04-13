@@ -10,6 +10,7 @@ class Genome::Model::Tools::FastQual::SeqReaderWriter {
     has => [
         files => { is => 'Text', is_many => 1, },
         _fhs => { is_optional => 1, is_many => 1, }, 
+        metrics => { is_optional => 1, },
     ],
 };
 
@@ -57,6 +58,20 @@ sub _file_open_method {
     else {
         Carp::confess('Failed to derive file open method');
     }
+}
+
+sub write {
+    my ($self, $seqs) = @_;
+    $self->metrics->add($seqs) if $self->metrics;
+    return $self->_write($seqs);
+}
+
+sub read {
+    my ($self) = @_;
+    my $seqs = $self->_read;
+    return if not $seqs;
+    $self->metrics->add($seqs) if $seqs and $self->metrics;
+    return $seqs;
 }
 
 1;

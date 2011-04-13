@@ -9,13 +9,13 @@ class Genome::Model::Tools::FastQual::FastqReader {
     is => 'Genome::Model::Tools::FastQual::SeqReaderWriter',
 };
 
-sub next {
+sub _read {
     my $self = shift;
 
     my @fastqs;
     my @fhs = $self->_fhs;
     for my $fh ( @fhs ) {
-        my $fastq = $self->_next($fh);
+        my $fastq = $self->_get_seq_from_fh($fh);
         next unless $fastq;
         push @fastqs, $fastq;
     }
@@ -28,12 +28,13 @@ sub next {
     return \@fastqs;
 }
 
-sub _next {
+sub _get_seq_from_fh {
     my ($self, $fh) = @_;
 
-    my $line = $fh->getline
-        or return; #ok
+    my $line = $fh->getline;
+    return if not defined $line;
     chomp $line;
+
     my ($id, $desc) = split(/\s/, $line, 2);
     $id =~ s/^@//;
 
