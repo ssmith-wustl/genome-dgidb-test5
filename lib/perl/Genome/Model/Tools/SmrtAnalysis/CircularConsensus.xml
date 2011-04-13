@@ -4,6 +4,7 @@
   <link fromOperation="input connector" fromProperty="job_directory" toOperation="Filter" toProperty="job_directory" />
   <link fromOperation="input connector" fromProperty="min_length" toOperation="Filter" toProperty="min_length" />
   <link fromOperation="input connector" fromProperty="read_score" toOperation="Filter" toProperty="read_score" />
+  <link fromOperation="input connector" fromProperty="read_white_list" toOperation="Filter" toProperty="read_white_list" />
   
   <link fromOperation="Filter" fromProperty="filtered_summary_file" toOperation="FilterReports" toProperty="filtered_summary_file" />
   
@@ -105,6 +106,7 @@
     <inputproperty>input_fofn</inputproperty>
     <inputproperty>min_length</inputproperty>
     <inputproperty>read_score</inputproperty>
+    <inputproperty isOptional="Y">read_white_list</inputproperty>
     <inputproperty>job_directory</inputproperty>
     <inputproperty>control_reference_directory</inputproperty>
     <inputproperty>reference_directory</inputproperty>
