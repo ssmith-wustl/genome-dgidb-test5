@@ -502,6 +502,7 @@ my $instrument_data_7 = Genome::InstrumentData::Solexa->create(
     rev_read_length => 100,
     fwd_clusters => 65535,
     rev_clusters => 65536,
+    target_region_set_name => 'BRC10 capture chip set',
 );
 ok($instrument_data_7, 'Created an instrument data');
 
@@ -526,7 +527,7 @@ isa_ok($command_4, 'Genome::Model::Command::Services::AssignQueuedInstrumentData
 ok($command_4->execute(), 'assign-queued-instrument-data executed successfully.');
 
 my $new_models_4 = $command_4->_newly_created_models;
-is(scalar(keys %$new_models_4), 3, 'the cron created three new models');
+is(scalar(keys %$new_models_4), 5, 'the cron created five new models');
 my ($somatic_variation) =  grep($_->isa("Genome::Model::SomaticVariation"), values %$new_models_4);
 my @tumor = grep($_->subject_name eq  $sample_2->name, values %$new_models_4);
 my ($normal) = grep($_->subject_name eq  $sample_3->name, values %$new_models_4);
@@ -554,6 +555,7 @@ my $instrument_data_8 = Genome::InstrumentData::Solexa->create(
     rev_read_length => 100,
     fwd_clusters => 65535,
     rev_clusters => 65536,
+    target_region_set_name => 'BRC10 capture chip set',
 );
 ok($instrument_data_8, 'Created an instrument data');
 
