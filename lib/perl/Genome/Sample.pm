@@ -291,4 +291,24 @@ sub set_default_genotype_data {
     );
 }
 
+sub default_genotype_builds {
+    my $self = shift;
+
+    my $genotype_data = $self->default_genotype_data;
+    return unless ($genotype_data);
+
+    my @inputs = Genome::Model::Build::Input->get(
+        value_class_name => $genotype_data->class,
+        value_id => $genotype_data->id,
+    );
+    my @builds = map { $_->build } @inputs;
+    @builds = grep { $_->status eq 'Succeeded' } @builds;
+    @builds = grep { $_->model->last_succeeded_build->id eq $_->id } @builds;
+
+    $self->warning_message("No default genotype builds found.")
+        unless (@builds);
+
+    return @builds;
+}
+
 1;
