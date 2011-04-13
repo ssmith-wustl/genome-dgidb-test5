@@ -43,7 +43,7 @@ sub execute {
 
     my $genotype_data = $self->_resolve_genotype_data($genotype);
     unless ($genotype_data) {
-        $self->error_message('Unable to find genotype data.')
+        $self->error_message('Unable to find genotype data.');
         return;
     }
 
