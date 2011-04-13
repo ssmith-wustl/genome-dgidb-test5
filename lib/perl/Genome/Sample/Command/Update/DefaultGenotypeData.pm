@@ -33,8 +33,8 @@ sub execute {
 
     my $genotype_data = $self->_resolve_genotype_data($genotype);
 
-    $self->status_message('Setting default genotype data to ' . $genotype_data->id . ' for sample ' . $sample->id . '.');
-    #$sample->set_defaulte_genotype_data($genotype_data);
+    $self->status_message('Setting default genotype data to ' . $genotype_data->__display_name__ . ' for sample ' . $sample->__display_name__ . '.');
+    $sample->set_default_genotype_data($genotype_data);
 
     return 1;
 }
