@@ -267,7 +267,7 @@ sub get_population {
 
 sub default_genotype_data {
     my $self = shift;
-    my $sample_attribute = $self->attribute(attribute_label => 'default_genotype_file');
+    my $sample_attribute = $self->attributes('default_genotype_data');
     my $genotype_data = Genome::InstrumentData->get($sample_attribute->attribute_value);
     return $genotype_data;
 }
@@ -304,6 +304,7 @@ sub default_genotype_builds {
     my @builds = map { $_->build } @inputs;
     @builds = grep { $_->status eq 'Succeeded' } @builds;
     @builds = grep { $_->model->last_succeeded_build->id eq $_->id } @builds;
+    @builds = grep { $_->isa('Genome::Model::Build::GenotypeMicroarray') } @builds;
 
     $self->warning_message("No default genotype builds found.")
         unless (@builds);
