@@ -379,7 +379,7 @@ sub default_genotype_build {
         return $default_genotype_builds[0];
     }
     else {
-        $self->warning_message("Multiple compatible default_genotype_builds for sample.");
+        $self->warning_message("Multiple compatible default_genotype_builds for sample. Build IDs are: " . join(", ", map { $_->id } @default_genotype_builds) . ".");
         return;
     }
 
