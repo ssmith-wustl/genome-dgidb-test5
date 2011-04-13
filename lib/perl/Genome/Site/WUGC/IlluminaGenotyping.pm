@@ -35,7 +35,7 @@ class Genome::Site::WUGC::IlluminaGenotyping {
 
 sub __display_name__ {
     my $self = shift;
-    return join('-', $self->dna_name, $self->bead_chip_barcode);
+    return $self->source_barcode . ' for sample ' . $self->dna_name;
 }
 
 1;
