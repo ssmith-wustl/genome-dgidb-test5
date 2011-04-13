@@ -160,7 +160,7 @@ sub lane_qc_model {
 
     my @inputs = Genome::Model::Input->get(value_id => $instrument_data_id);
     my @inputs_models = map { $_->model } @inputs;
-    my ($qc_model) = grep { $_->processing_profile_name eq 'february 2011 illumina lane qc' } @inputs_models;
+    my ($qc_model) = grep { $_->processing_profile->append_event_steps && $_->processing_profile->append_event_steps =~ /LaneQc/ } @inputs_models;
 
     return $qc_model;
 }

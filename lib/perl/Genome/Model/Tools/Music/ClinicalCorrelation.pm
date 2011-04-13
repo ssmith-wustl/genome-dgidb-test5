@@ -125,7 +125,6 @@ sub execute {
             my ($sample) = split /\t/,$line;
             $samples{$sample}++;
         }
-
         #create correlation matrix
         if ($genetic_data_type =~ /^gene$/i) {
                 $matrix_file = create_sample_gene_matrix_gene($samples,$clinical_data_file,$maf_file);
@@ -191,7 +190,10 @@ sub create_sample_gene_matrix_gene {
         my @fields = split /\t/,$line;
         my $gene = $fields[$maf_columns{'Hugo_Symbol'}];
         my $sample = $fields[$maf_columns{'Tumor_Sample_Barcode'}];
-        next unless exists $samples->{$sample};
+        unless (exists $samples->{$sample}) {
+		warn "Sample Name: $sample from MAF file does not exist in Clinical Data File";
+		next;
+	}
         $all_genes{$gene}++;
         $mutations{$sample}{$gene}++;
     }
@@ -271,7 +273,10 @@ sub create_sample_gene_matrix_variant {
         chomp $line;
         my @fields = split /\t/,$line;
         my $sample = $fields[$maf_columns{'Tumor_Sample_Barcode'}];
-        next unless exists $samples->{$sample};
+        unless (exists $samples->{$sample}) {
+		warn "Sample Name: $sample from MAF file does not exist in Clinical Data File";
+		next;
+	}
         my $gene = $fields[$maf_columns{'Hugo_Symbol'}];
 	my $chr = $fields[$maf_columns{'Chromosome'}];
 	my $start = $fields[$maf_columns{'Start_position'}];
