@@ -242,10 +242,6 @@ sub snp_related_metric_directory {
     return $self->data_directory . '/' . $dir_names[0];
 }
 
-sub _snp_caller_type {
-    return shift->model->_snp_caller_type;
-}
-
 sub log_directory {
     my $self = shift;
     return $self->data_directory."/logs/";

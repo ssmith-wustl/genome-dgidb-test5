@@ -23,7 +23,7 @@ class Genome::Model::Tools::Annotate::CosmicUpdate {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
-		cosmic_folder	=> { is => 'Text', doc => "Path to the current local COSMIC files", is_optional => 1 , default => '/gscmnt/sata180/info/medseq/biodb/shared/cosmic/cosmic_will/' },
+		cosmic_folder	=> { is => 'Text', doc => "Path to the current local COSMIC files", is_optional => 1 , default => '/gscuser/wschierd/git-dir/genome/genome-db-cosmic/' },
 		cosmic_url	=> { is => 'Text', doc => "URL to the online COSMIC repository", is_optional => 1 , default => 'ftp://ftp.sanger.ac.uk/pub/CGP/cosmic/data_export/genes/' },
 		output_file	=> { is => 'Text', doc => "Output file name for flatfile of amino acid changes" , is_optional => 1 , default => 'Cosmic_Database.tsv' },
 	],
