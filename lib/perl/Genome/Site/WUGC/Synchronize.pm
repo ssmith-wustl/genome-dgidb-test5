@@ -28,7 +28,7 @@ class Genome::Site::WUGC::Synchronize {
         'the MG schema and determines if anything needs to be copied over',
 };
 
-# Maps new classes to old classes. Abstract classes should not be included here because 
+# Maps old classes to new classes. Abstract classes should not be included here because 
 # it can lead to some attributes not being copied over.
 sub objects_to_sync {
     return (
@@ -146,7 +146,7 @@ sub execute {
             }
 
             # Periodic commits to prevent lost progress in case of failure
-            if ($created_objects != 0 and $created_objects % 1000 == 0) {
+            if ($created_objects != 0 and $created_objects % 1000 == 0 and $object_created) {
                 confess 'Could not commit!' unless UR::Context->commit;
                 print STDERR "\n" and $self->print_object_cache_summary if $self->show_object_cache_summary;
             }
@@ -214,7 +214,8 @@ sub write_report_file {
 # Create a new object of the given class based on the given object
 sub copy_object {
     my ($self, $original_object, $new_object_class) = @_;
-    my $method_base = lc $new_object_class;
+    my $method_base = lc $original_object->class;
+    $method_base =~ s/Genome::Site::WUGC:://i;
     $method_base =~ s/::/_/g;
     my $create_method = '_create_' . $method_base;
     if ($self->can($create_method)) {
@@ -252,7 +253,14 @@ sub _get_direct_and_indirect_properties_for_object {
 
 # Below are type-specific create methods. They are each responsible for taking an object and a class
 # and creating a new object of the given class based on the given object.
-sub _create_genome_instrumentdata_imported {
+sub _create_illuminagenotyping {
+    my ($self, $original_object, $new_object_class) = @_;
+    return 0;
+
+    # TODO Add sync logic here
+}
+
+sub _create_instrumentdata_imported {
     my ($self, $original_object, $new_object_class) = @_;
 
     # Instrument data is first made with just direct properties. Excluding indirect properties saves UR the 
@@ -286,7 +294,7 @@ sub _create_genome_instrumentdata_imported {
     return 1;
 }
 
-sub _create_genome_instrumentdata_solexa {
+sub _create_instrumentdata_solexa {
     my ($self, $original_object, $new_object_class) = @_;
     
     my ($direct_properties, $indirect_properties) = $self->_get_direct_and_indirect_properties_for_object(
@@ -316,7 +324,7 @@ sub _create_genome_instrumentdata_solexa {
     return 1;
 }
 
-sub _create_genome_instrumentdata_sanger {
+sub _create_instrumentdata_sanger {
     my ($self, $original_object, $new_object_class) = @_;
 
     # Some sanger instrument don't have a library. If that's the case here, just don't create the object
@@ -362,7 +370,7 @@ sub _create_genome_instrumentdata_sanger {
     return 1;
 }
 
-sub _create_genome_instrumentdata_454 {
+sub _create_instrumentdata_454 {
     my ($self, $original_object, $new_object_class) = @_;
 
     my ($direct_properties, $indirect_properties) = $self->_get_direct_and_indirect_properties_for_object(
@@ -398,7 +406,7 @@ sub _create_genome_instrumentdata_454 {
     return 1;
 }
 
-sub _create_genome_sample {
+sub _create_sample {
     my ($self, $original_object, $new_object_class) = @_;
 
     my ($direct_properties, $indirect_properties) = $self->_get_direct_and_indirect_properties_for_object(
@@ -432,7 +440,7 @@ sub _create_genome_sample {
     return 1;
 }
 
-sub _create_genome_populationgroup {
+sub _create_populationgroup {
     my ($self, $original_object, $new_object_class) = @_;
 
     # No attributes/indirect properties, etc to worry about here (except members, below)
@@ -459,7 +467,7 @@ sub _create_genome_populationgroup {
     return 1;
 }
 
-sub _create_genome_library {
+sub _create_library {
     my ($self, $original_object, $new_object_class) = @_;
 
     my %params;
@@ -480,12 +488,12 @@ sub _create_genome_library {
     return 1;
 }
 
-sub _create_genome_individual {
+sub _create_individual {
     my ($self, $original_object, $new_object_class) = @_;
-    return $self->_create_genome_taxon($original_object, $new_object_class);
+    return $self->_create_taxon($original_object, $new_object_class);
 }
 
-sub _create_genome_taxon {
+sub _create_taxon {
     my ($self, $original_object, $new_object_class) = @_;
 
     my %params;
