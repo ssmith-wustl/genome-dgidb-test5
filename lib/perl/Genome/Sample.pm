@@ -265,4 +265,30 @@ sub get_population {
     return;
 }   
 
+sub default_genotype_data {
+    my $self = shift;
+    my $sample_attribute = $self->attribute(attribute_label => 'default_genotype_file');
+    my $genotype_data = Genome::InstrumentData->get($sample_attribute->attribute_value);
+    return $genotype_data;
+}
+
+sub set_default_genotype_data {
+    my $self = shift;
+    my $genotype_instrument_data = shift;
+
+    die $self->error_message("No genotype instrument data provided.")
+        unless ($genotype_instrument_data);
+
+    die $self->error_message("Genotype instrument data is not a Genome::InstrumentData::Imported object.")
+        unless ($genotype_instrument_data->isa('Genome::InstrumentData::Imported'));
+
+    die $self->error_message("Instrument data is not a 'genotype file' format.")
+        unless ($genotype_instrument_data->import_format && $genotype_instrument_data->import_format eq 'genotype file');
+
+    $self->add_attribute(
+        attribute_label => 'default_genotype_data',
+        attribute_value => $genotype_instrument_data->id,
+    );
+}
+
 1;
