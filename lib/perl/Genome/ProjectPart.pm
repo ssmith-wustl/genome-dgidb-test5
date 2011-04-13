@@ -10,15 +10,6 @@ class Genome::ProjectPart {
         id => { is => 'Text' },
     ],
     has => [
-        project_id => {
-            is => 'Text',
-            doc => 'ID of project this part belongs to',
-        },
-        project => {
-            is => 'Genome::Project',
-            id_by => 'project_id',
-            doc => 'Project this part belongs to',
-        },
         entity_class_name => { is => 'Text', column_name => 'PART_CLASS_NAME' },
         entity_id => { is => 'Text', column_name => 'PART_ID' },
         entity => {
@@ -26,8 +17,15 @@ class Genome::ProjectPart {
             calculate => q{ return $entity_class_name->get($entity_id); },
             doc => 'Actual object this project part represents',
         },
+        project => {
+            is => 'Genome::Project',
+            id_by => 'project_id',
+            doc => 'Project this part belongs to',
+        }
+    ],
+    has_optional => [
         label => { is => 'Text' },
-        role => { is => 'Text' },
+        role => { is => 'Text' }
     ],
     table_name => 'GENOME_PROJECT_PART',
     schema_name => 'GMSchema',

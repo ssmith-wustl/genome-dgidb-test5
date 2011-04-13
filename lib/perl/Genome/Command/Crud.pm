@@ -233,6 +233,7 @@ sub _command_properties_for_target_class {
         if ( $property_name =~ s/_id$// ) {
             my $object_meta = $target_meta->property_meta_for_name($property_name);
             if ( $object_meta ) {
+                next if grep { $object_meta->$_ } (qw/ is_calculated is_constant is_transient /);
                 push @seen_properties, $property_name;
                 $property{property_name} = $property_name;
                 $property{data_type} = $object_meta->data_type;
