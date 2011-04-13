@@ -40,8 +40,6 @@ sub _run_aligner {
     my $tmp_sort_file = "$tmp_dir/sorted.dat";
     my $tmp_sam_file = "$tmp_dir/aligned_mosaik.sam";
     my $staging_sam_file = "$tmp_dir/all_sequences.sam";
-
-    return 1;
     
     # get refseq info
     my $reference_build = $self->reference_build;
