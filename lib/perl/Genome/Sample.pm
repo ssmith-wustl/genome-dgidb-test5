@@ -304,6 +304,7 @@ sub default_genotype_builds {
     my @builds = map { $_->build } @inputs;
     @builds = grep { $_->status eq 'Succeeded' } @builds;
     @builds = grep { $_->model->last_succeeded_build->id eq $_->id } @builds;
+    @builds = grep { $_->isa('Genome::Model::Build::GenotypeMicroarray') } @builds;
 
     $self->warning_message("No default genotype builds found.")
         unless (@builds);
