@@ -267,7 +267,7 @@ sub get_population {
 
 sub default_genotype_data {
     my $self = shift;
-    my $sample_attribute = $self->attributes('default_genotype_data');
+    my $sample_attribute = $self->attributes(attribute_label => 'default_genotype_data');
     my $genotype_data = Genome::InstrumentData->get($sample_attribute->attribute_value);
     return $genotype_data;
 }
