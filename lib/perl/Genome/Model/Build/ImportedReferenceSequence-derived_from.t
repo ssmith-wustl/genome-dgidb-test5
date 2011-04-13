@@ -7,7 +7,7 @@ BEGIN {
 
 use above "Genome";
 use Data::Dumper;
-use Test::More tests => 37;
+use Test::More tests => 34;
 use_ok('Genome::Model::Build::ImportedReferenceSequence');
 
 # create a test annotation build and a few reference sequence builds to test compatibility with
