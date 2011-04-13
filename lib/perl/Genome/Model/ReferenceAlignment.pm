@@ -331,34 +331,6 @@ sub _calculate_run_count {
 }
 
 
-#FIXME this is pretty bad, and hardcoded. Used to be coded only to work for samtools and maq. Tacked on varscan for now. 
-# This should be changed to be very generic for new variant detectors to be added.
-sub _snp_caller_type {
-    my $self = shift;
-
-    if ($self->snv_detector_name) {
-        if ($self->snv_detector_name =~ /samtools/i) {
-            return 'sam';
-        } elsif ($self->snv_detector_name =~ /maq/i) {
-            return 'maq';
-        } elsif ($self->snv_detector_name =~ /var-scan/i) {
-            return 'varscan';
-        } else {
-            $self->error_message("Unrecognized snv_detector_name set for model " . $self->name . " " . $self->genome_model_id);
-            return;
-        }
-    } else {
-        $self->error_message("No snv_detector_name set for model " . $self->name . " " . $self->genome_model_id);
-        return;
-    }
-}
-
-sub snp_related_metric_directory {
-    my $self=shift;
-    return $self->complete_build_directory . '/' . $self->_snp_caller_type . '_snp_related_metrics/';
-}
-
-
 sub region_of_interest_set {
     my $self = shift;
 
