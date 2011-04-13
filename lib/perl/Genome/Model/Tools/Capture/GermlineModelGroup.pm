@@ -167,6 +167,8 @@ sub execute {                               # replace with real execution logic.
 		}
 	}	
 	close(OUTFILE);
+
+	return 1;
 }
 
 

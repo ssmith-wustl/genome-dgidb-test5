@@ -5,11 +5,6 @@ use warnings;
 use Genome;
 use Carp 'confess';
 
-my $low = 20_000;
-my $high = 100_000;
-UR::Context->object_cache_size_lowwater($low);
-UR::Context->object_cache_size_highwater($high);
-
 class Genome::Model::GenePrediction::Eukaryotic::MergePredictions {
     is => 'Command',
     has => [
@@ -52,6 +47,12 @@ sub prediction_types {
 
 sub execute {
     my $self = shift;
+
+    my $low = 20_000;
+    my $high = 100_000;
+    UR::Context->object_cache_size_lowwater($low);
+    UR::Context->object_cache_size_highwater($high);
+
     $self->status_message("Merging predictions into files in " . $self->prediction_directory);
 
     # Get meta object for each prediction type, grab attributes of the object (except for directory)

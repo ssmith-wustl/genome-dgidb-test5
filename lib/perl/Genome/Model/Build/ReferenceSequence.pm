@@ -212,14 +212,14 @@ sub __errors__ {
             desc => $@);
     }
 
-    if (defined $self->derived_from and $self->derived_from->model->id != $self->model->id) {
-        push @tags, UR::Object::Tag->create(
-            type => 'error',
-            properties => ['derived_from'],
-            desc => "Reference sequence build " . $self->__display_name__ . " of model " . $self->model->__display_name__ .
-                " is 'derived_from' build " . $self->derived_from->__display_name__ . " which is a build of a different model, ".
-                $self->derived_from->model->__display_name__);
-    }
+    #if (defined $self->derived_from and $self->derived_from->model->id != $self->model->id) {
+    #    push @tags, UR::Object::Tag->create(
+    #        type => 'error',
+    #        properties => ['derived_from'],
+    #        desc => "Reference sequence build " . $self->__display_name__ . " of model " . $self->model->__display_name__ .
+    #            " is 'derived_from' build " . $self->derived_from->__display_name__ . " which is a build of a different model, ".
+    #            $self->derived_from->model->__display_name__);
+    #}
 
     if (defined $self->derived_from and $self->derived_from->id == $self->id) {
         push @tags, UR::Object::Tag->create(
