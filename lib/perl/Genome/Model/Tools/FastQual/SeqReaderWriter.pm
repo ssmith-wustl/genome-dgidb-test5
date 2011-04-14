@@ -53,17 +53,16 @@ sub _file_open_method {
         return 'open_file_for_reading';
     }
     elsif ( $class =~ /Writer$/ ) {
-        return 'open_file_for_appending';
+        if ( ($self->files)[0] eq '-' ) {
+            return 'open_file_for_writing';
+        }
+        else {
+            return 'open_file_for_appending';
+        }
     }
     else {
         Carp::confess('Failed to derive file open method');
     }
-}
-
-sub write {
-    my ($self, $seqs) = @_;
-    $self->metrics->add($seqs) if $self->metrics;
-    return $self->_write($seqs);
 }
 
 sub read {
@@ -72,6 +71,12 @@ sub read {
     return if not $seqs;
     $self->metrics->add($seqs) if $seqs and $self->metrics;
     return $seqs;
+}
+
+sub write {
+    my ($self, $seqs) = @_;
+    $self->metrics->add($seqs) if $self->metrics;
+    return $self->_write($seqs);
 }
 
 1;

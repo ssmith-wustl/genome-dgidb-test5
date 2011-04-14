@@ -52,7 +52,7 @@ my $fastq_tester = Genome::Model::Tools::FastQual->create(
     #input => [ $dir.'/big.fastq' ],
     input => [ $example_in_file ],
     output => [ $out_file ],
-    metrics_file => $metrics_file,
+    metrics_file_out => $metrics_file,
 );
 ok($fastq_tester, 'create w/ fastq files');
 ok($fastq_tester->execute, 'execute');
@@ -63,7 +63,7 @@ is(File::Compare::compare($metrics_file, $example_metrics_file), 0, 'metrics fil
 my $fastq_tester2 = Genome::Model::Tools::FastQual->create(
     input => [ $example_in_file ],
     output => [ $out2_file ],
-    metrics_file => $metrics2_file,
+    metrics_file_out => $metrics2_file,
 );
 ok($fastq_tester2, 'create again to test metrics are not stomping on each other');
 ok($fastq_tester2->execute, 'execute');
@@ -71,10 +71,7 @@ is(File::Compare::compare($out2_file, $example_out_file), 0, 'output 2 file ok')
 is(File::Compare::compare($metrics2_file, $example_metrics_file), 0, 'metrics 2 file ok');
 
 # Test pipes
-my $pipe_tester = Genome::Model::Tools::FastQual->create(
-    input => [qw/ PIPE /],
-    output => [qw/ PIPE /], 
-);
+my $pipe_tester = Genome::Model::Tools::FastQual->create();
 ok($pipe_tester, 'create w/ pipes');
 #my $pipe_writer = $pipe_tester->_open_writer;
 #ok($pipe_writer, 'opened writer for pipes') or die;

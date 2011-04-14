@@ -16,44 +16,50 @@ class Genome::Model::Tools::FastQual {
         input => {
             is => 'Text',
             is_many => 1,
-            is_input => 1,
-            doc => 'Input files, or "PIPE" if reading from another program. If multiple files are given for fastq types (sanger, illumina), one sequence will be read from each file and then handled as a set.',
-            doc => 'Input files, or "PIPE" if reading from another program. If multiple files are given for fastq types (sanger, illumina), one sequence will be read from each file and then handled as a set. If multiple files are given for type phred (fasta), the first file should be the sequences, and the second file should be the qualities.',
+            is_optional => 1,
+            doc => 'Input files, "-" to read from STDIN or undefined if piping between fast-qual commands. If multiple files are given for fastq types (sanger, illumina), one sequence will be read from each file and then handled as a set. If multiple files are given for type phred (fasta), the first file should be the sequences, and the optional second file should be the qualities. Do not use this option when piping between fast-qual commands.',
         }, 
+        input_to_string => {
+            calculate_from => [qw/ input /],
+            calculate => q| 
+                return 'PIPE' if not defined $input;
+                return 'STDin' if $input->[0] eq '-';
+                return join(',', @$input);
+            |,
+        },
         type_in => {
             is  => 'Text',
-            default_value => 'sanger',
             valid_values => [ valid_types() ],
             is_optional => 1,
-            is_input => 1,
-            doc => 'The sequence and quality type. If not given, an attempt will be made to guess the type. If the file ends in "fasta", "fna", or "fa", the type will assumed to be phred (fasta). If the file ends with "fastq", it will assumed to be sanger (fastq).',
+            doc => 'The sequence and quality type for the input. Optional for files, and if not given, will be based on the extension of the first file (.fastq => sanger | .fasta .fna .fa => phred). Required for reading from STDIN. Do not use this option when piping between fast-qual commands.',
+        },
+        metrics_file_out => {
+            is => 'Text',
+            is_optional => 1,
+            doc => 'Output sequence metrics for the output to this file. Current metrics include: count, bases',
         },
         output => {
             is => 'Text',
             is_many => 1,
-            is_input => 1,
-            doc => 'Output files, or "PIPE" if writing from another program. If multiple files are given for fastq types (sanger, illumina), one sequence from each set will be written to each file. If multiple files are given for type phred (fasta), the sequences will be written to the first file, and the qualities will eb written to the second file.',
-        },
-        _writer => {
             is_optional => 1,
+            doc => 'Output files, "-" to write to STDOUT or undefined if piping between fast-qual commands.  Optional for files, and if not given, will be based on the extension of the first file (.fastq => sanger  .fasta .fna .fa => phred). Do not use this option when piping between fast-qual commands. ',
+        },
+        output_to_string => {
+            calculate_from => [qw/ output /],
+            calculate => q| 
+                return 'PIPE' if not defined $output;
+                return 'STDOUT' if $output->[0] eq '-';
+                return join(',', @$output);
+            |,
         },
         type_out => {
             is  => 'Text',
-            default_value => 'sanger',
             valid_values => [ valid_types() ],
             is_optional => 1,
-            is_input => 1,
-            doc => 'The sequence and quality type. If not given, an attempt will be made to guess the type. If the file ends in "fasta", "fna", or "fa", the type will assumed to be phred (fasta). If the file ends with "fastq", it will assumed to be sanger (fastq).',
+            doc => 'The sequence and quality type for the output. Optional for files, and if not given, will be based on the extension of the first file (.fastq => sanger | .fasta .fna .fa => phred). Defaults to sanger (fastq) for writing to STDOUT. Do not use this option when piping between fast-qual commands.',
         },
-        metrics_file => {
-            is => 'Text',
-            is_optional => 1,
-            doc => 'Output general sequence metrics to this file. Current metrics include: count, bases',
-        },
-        _metrics => {
-            is => 'HASH',
-            is_optional => 1,
-        },
+        _reader => { is_optional => 1, },
+        _writer => { is_optional => 1, },
     ],
 };
 
@@ -90,27 +96,53 @@ sub help_detail { # empty ok
 HELP
 }
 
-# TODO 
-# mv types handles doc into method
-# mv metrics generated doc into method
-
 my %supported_types = (
     sanger => { format => 'fastq', reader_subclass => 'FastqReader', writer_subclass => 'FastqWriter', },
     illumina => { format => 'fastq', reader_subclass => 'FastqReader', writer_subclass => 'FastqWriter', },
-    phred => { format => 'fasta', file_exts => [qw/ fna fa /], reader_subclass => 'PhredReader', writer_subclass => 'PhredWriter', },
+    phred => { format => 'fasta', reader_subclass => 'PhredReader', writer_subclass => 'PhredWriter', },
 );
 
 sub valid_types {
     return (qw/ sanger illumina phred/);
 }
 
+sub _resolve_type_for_file {
+    my ($self, $file) = @_;
+
+    Carp::Confess('No file to resolve type') if not $file;
+
+    my ($ext) = $file =~ /\.(\w+)$/;
+    if ( not $ext ) {
+        $self->error_message('Failed to get extension for file: '.$file);
+        return;
+    }
+
+    my %file_exts_and_formats = (
+        fastq => 'sanger',
+        fasta => 'phred',
+        fna => 'phred',
+        fa => 'phred',
+    );
+    return $file_exts_and_formats{$ext} if $file_exts_and_formats{$ext};
+    $self->error_message('Failed to resolve type for file: '.$file);
+    return;
+}
+
 sub _reader_class {
     my $self = shift;
+    if ( not $supported_types{ $self->type_in }->{reader_subclass} ) {
+        $self->error_message('Invalid type in: '.$self->type_in);
+        return;
+    }
     return 'Genome::Model::Tools::FastQual::'.$supported_types{ $self->type_in }->{reader_subclass};
 }
 
 sub _writer_class {
     my $self = shift;
+    if ( not $supported_types{ $self->type_out }->{writer_subclass} ) {
+        $self->error_message('Invalid type out: '.$self->type_out);
+        return;
+    }
     return 'Genome::Model::Tools::FastQual::'.$supported_types{ $self->type_out }->{writer_subclass};
 }
 
@@ -131,14 +163,61 @@ sub _enforce_type {
 sub create {
     my $class = shift;
 
-    my $self = $class->SUPER::create(@_)
-        or return;
+    my $self = $class->SUPER::create(@_);
+    return if not $self;
+
+    my @input = $self->input;
+    my $type_in = $self->type_in;
+    if ( @input ) {
+        if ( $input[0] eq '-' ) { # STDIN
+            if ( @input > 1 ) { # Cannot have morethan one STDIN
+                $self->error_message('Multiple STDIN inputs given: '.$self->input_to_string);
+                return;
+            }
+            if ( not $type_in ) {
+                $self->error_message('Input from STDIN, but no type in given');
+                return;
+            }
+        }
+        else { # FILES
+            if ( not $type_in ) {
+                $type_in = $self->_resolve_type_for_file($input[0]);
+                return if not $type_in;
+                $self->type_in($type_in);
+            }
+        }
+    }
+    elsif ( $type_in ) { # PIPE sets it's own type in
+        $self->error_message('Do not set type in when piping between fast-qual commands.');
+        return;
+    }
+
+    my @output = $self->output;
+    my $type_out = $self->type_out;
+    if ( @output ) {
+        if ( $output[0] eq '-' ) { # STDOUT
+            if ( @output > 1 ) { # Cannot have morethan one STDOUT
+                $self->error_message('Multiple STDOUT outputs given: '.$self->output_to_string);
+                return;
+            }
+            if ( not $type_out ) {
+                $self->type_out('sanger');
+            }
+        }
+        else { # FILES
+            if ( not $type_out ) {
+                $type_out = $self->_resolve_type_for_file($output[0]);
+                return if not $type_out;
+                $self->type_out($type_out);
+            }
+        }
+    }
+    elsif ( $type_out ) { # PIPE sets it's own type out
+        $self->error_message('Do not set type out when piping between fast-qual commands.');
+        return;
+    }
 
     $self->_add_result_observer;  #confesses on error
-
-    if ( not defined $self->type_out ) {
-        $self->type_out( $self->type_in );
-    }
 
     return $self;
 }
@@ -175,20 +254,19 @@ sub _open_reader {
     my $self = shift;
 
     my @input = $self->input;
-    unless ( @input ) {
-        Carp::confess("Input files or 'PIPE' is required.");
+    my $type_in = $self->type_in;
+    my $reader;
+    if ( not @input and not $type_in ) { # PIPE
+        $reader = $self->_open_stdin_reader;
+    }
+    else { # STDIN/files
+        my $reader_class = $self->_reader_class;
+        return if not $reader_class;
+        $reader = eval{ $reader_class->create(files => \@input); };
     }
 
-    if ( $input[0] eq 'PIPE' ) {
-        return $self->_open_stdin_reader;
-    }
-
-    my $type = $self->_enforce_type( $self->type_in );
-    return if not $type;
-
-    my $reader = eval{ $self->_reader_class->create(files => \@input); };
     if ( not  $reader ) {
-        $self->error_message("Failed to create reader for input files (".join(', ', @input)."): $@");
+        $self->error_message("Failed to create reader for input: ".$self->input_to_string);
         return;
     }
 
@@ -223,10 +301,16 @@ sub _open_stdin_reader {
         Carp::confess("No type out from pipe");
     }
 
-    my $type = $self->_enforce_type( $reader_info->{type_out} );
-    return if not $type;
-    $self->type_out($type);
-    
+    my @output = $self->output;
+    if ( @output ) { # STDOUT or FILES
+        my $type = $self->_enforce_type( $reader_info->{type_out} );
+        return if not $type;
+        $self->type_out($type);
+    }
+    else { # PIPE
+        $self->type_out( $self->type_in );
+    }
+
     return $reader;
 }
 
@@ -234,27 +318,22 @@ sub _open_writer {
     my $self = shift;
 
     my @output = $self->output;
-    unless ( @output ) {
-        Carp::confess("Output files or 'PIPE' is required.");
-    }
-
-    my $type = $self->_enforce_type( $self->type_out );
-    return if not $type;
-
     my $writer;
-    if ( $output[0] eq 'PIPE' ) {
-        $writer = $self->_open_stdout_writer; # confess in sub
+    if ( not @output ) { # PIPE - type out is always defined here
+        $writer = $self->_open_stdout_writer;
     }
-    else {
-        $writer = eval{ $self->_writer_class->create(files => \@output); };
+    else { # STDOUT/FILES
+        my $writer_class = $self->_writer_class;
+        return if not $writer_class;
+        $writer = eval{ $writer_class->create(files => \@output); };
     }
 
     if ( not $writer ) {
-        $self->error_message("Failed to create $type writer for output files (".join(', ', @output)."): $@");
+        $self->error_message("Failed to create writer for output: ".$self->output_to_string);
         return;
     }
 
-    if ( $self->metrics_file ) {
+    if ( $self->metrics_file_out ) {
         $writer->metrics( Genome::Model::Tools::FastQual::Metrics->create() );
     }
 
@@ -306,8 +385,8 @@ sub _add_result_observer { # to write metrics file
             }
 
             # Skip if we don't have a metrics file
-            my $metrics_file = $self->metrics_file;
-            return 1 if not $self->metrics_file;
+            my $metrics_file = $self->metrics_file_out;
+            return 1 if not $self->metrics_file_out;
 
             # Problem if the writer or writer metric object does not exist
             if ( not $self->_writer ) {
