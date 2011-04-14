@@ -26,8 +26,8 @@ class Genome::Model::Tools::Annotate::OmimUpdate {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
-		omim_folder	=> { is => 'Text', doc => "Path to the current local OMIM files", is_optional => 1, default => '/gscmnt/200/medseq/analysis/software/resources/OMIM/OMIM_Will/' },
-		omim_url	=> { is => 'Text', doc => "URL to the online OMIM repository", is_optional => 1, default => 'ftp://ftp.ncbi.nih.gov/repository/OMIM/' },
+		omim_folder	=> { is => 'Text', doc => "Path to the current local OMIM files", is_optional => 1, default => '/gscuser/wschierd/git-dir/genome/genome-db-omim/' },
+		omim_url	=> { is => 'Text', doc => "URL to the online OMIM repository", is_optional => 1, default => 'ftp://grcf.jhmi.edu/OMIM/' },
 		omim_db_zipfile	=> { is => 'Text', doc => "Zipped filename to download from the online OMIM repository", is_optional => 1, default => 'omim.txt.Z' },
 		omim_db_file	=> { is => 'Text', doc => "Filename of file inside zip file downloaded from the online OMIM repository", is_optional => 1, default => 'omim.txt' },
 		omim_gene_file	=> { is => 'Text', doc => "Filename of file inside zip file downloaded from the online OMIM repository", is_optional => 1, default => 'genemap' },
@@ -72,12 +72,9 @@ print "retrieving file from OMIM\n";
 chdir ($OMIMpath);
 my $dir = getcwd;
 print "Working Directory: $dir";
-my $cmd1 = "rm $OMIMZINPUT";
-my $cmd2 = "rm $OMIMINPUT";
-my $cmd3 = "rm $OMIM_genemap";
-system ($cmd1);
-system ($cmd2);
-system ($cmd3);
+if ($OMIMZINPUT) {unlink ($OMIMZINPUT);}
+if ($OMIMINPUT) {unlink ($OMIMINPUT);}
+if ($OMIM_genemap) {unlink ($OMIM_genemap);}
 
 #directory on OMIM server
 my $URL_file = $URL.$OMIMZINPUT;

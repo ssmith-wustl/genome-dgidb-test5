@@ -351,7 +351,9 @@ sub find_or_create_somatic_variation_models{
     #only want sample-based models
     @models = grep {$_->subject_type eq "sample_name"} @models;
     #only want TCGA models
-    @models = grep {$self->is_tcga_reference_alignment($_)} @models;
+    @models = grep {$self->is_tcga_reference_alignment($_) } @models;
+    #We want capture models with one of the given roi_set_names and all non capture models here.  Filter the rest out
+    @models = grep {defined($_->region_of_interest_set_name) ? $_->region_of_interest_set_name =~ m/agilent.sureselect.exome.version.2.broad.refseq.cds.only/ : 1} @models;
     for my $model (@models){
         my $sample = $model->subject;
         #find or create mate ref-align model
@@ -375,6 +377,8 @@ sub find_or_create_somatic_variation_models{
                 auto_assign_inst_data => '1',
             );
             $mate_params{annotation_reference_build_id} = $model->annotation_reference_build_id if $model->can('annotation_reference_build_id') and $model->annotation_reference_build_id;
+            $mate_params{target_region_set_name} = $model->target_region_set_name if $model->can('target_region_set_name') and $model->target_region_set_name;
+            $mate_params{region_of_interest_set_name} = $model->region_of_interest_set_name if $model->can('region_of_interest_set_name') and $model->region_of_interest_set_name;
 
             my $mate = Genome::Model::ReferenceAlignment->get( %mate_params );
             unless ($mate){
@@ -897,6 +901,41 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         unless($self->assign_capture_inputs($wuspace_model, $capture_target, $wuspace_roi_list)) {
             for my $model (@new_models) { $model->delete; }
             return;
+        }
+
+        #In addition, make a third model for TCGA against another standard ROI
+        if($self->is_tcga_reference_alignment($regular_model)){ #TODO: Determine if this is a TCGA model you want to make this model for
+            my $tcga_cds_model = Genome::Model->create(%model_params);
+            unless ( $tcga_cds_model ) {
+                $self->error_message('Failed to create tcga-cds model: ' . Dumper(\%model_params));
+                for my $model (@new_models) { $model->delete; }
+                return;
+            }
+            push @new_models, $tcga_cds_model;
+
+            my $tcga_cds_name = $tcga_cds_model->default_model_name(
+                    instrument_data => $genome_instrument_data,
+                    capture_target => $capture_target,
+                    roi => 'tcga-cds',
+                    );
+            if ( not $tcga_cds_name ) {
+                $self->error_message('Failed to get tcga-cds model name for params: ' . Dumper(\%model_params));
+                for my $model (@new_models) { $model->delete; }
+                return;
+            }
+            $tcga_cds_model->name($tcga_cds_name);
+
+            my $tcga_cds_roi_list;
+            if($reference_sequence_build and $reference_sequence_build->is_compatible_with($root_build37_ref_seq)) {
+                $tcga_cds_roi_list = 'agilent_sureselect_exome_version_2_broad_refseq_cds_only_hs37';
+            } else {
+                $tcga_cds_roi_list = 'agilent sureselect exome version 2 broad refseq cds only';
+            }
+
+            unless($self->assign_capture_inputs($tcga_cds_model, $capture_target, $tcga_cds_roi_list)) {
+                for my $model (@new_models) { $model->delete; }
+                return;
+            }
         }
     }
 
