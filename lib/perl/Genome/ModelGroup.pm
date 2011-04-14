@@ -35,7 +35,9 @@ class Genome::ModelGroup {
 
 sub __display_name__ {
     my $self = shift;
-    return $self->name.' ('.$self->id.')';
+
+    my @models = $self->models();
+    return join(' ' ,$self->name, '(#' . $self->id, 'has', scalar(@models) . ' models)');
 }
 
 sub create {
@@ -110,7 +112,8 @@ sub unassign_models {
         );
         
         unless($bridge){
-            die('Model ' . $m->id . ' not found in ModelGroup ' . $self->id);
+            $self->warning_message("Model " . $m->id . " not found in group");
+            next;
         }
         
         $bridge->delete();

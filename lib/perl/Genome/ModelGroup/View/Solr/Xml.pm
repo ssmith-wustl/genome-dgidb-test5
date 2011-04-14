@@ -94,4 +94,8 @@ class Genome::ModelGroup::View::Solr::Xml {
 };
 
 
+
+
+
+
 1;
