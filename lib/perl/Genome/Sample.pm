@@ -93,6 +93,17 @@ class Genome::Sample {
             where => [ attribute_label => 'source_id' ],
             is_mutable => 1,
         },
+        default_genotype_data_id => {
+            is => 'Number',
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'default_genotype_data' ],
+            is_mutable => 0,
+        },
+        default_genotype_data => {
+            is => 'Genome::InstrumentData::Imported',
+            id_by => 'default_genotype_data_id',
+        },
         source => { 
             is => 'Genome::Subject',
             id_by => 'source_id',
@@ -264,14 +275,6 @@ sub get_population {
     }
     return;
 }   
-
-sub default_genotype_data {
-    my $self = shift;
-    my $sample_attribute = $self->attributes(attribute_label => 'default_genotype_data');
-    return unless $sample_attribute;
-    my $genotype_data = Genome::InstrumentData->get($sample_attribute->attribute_value);
-    return $genotype_data;
-}
 
 sub set_default_genotype_data {
     my $self = shift;
