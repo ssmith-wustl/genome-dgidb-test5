@@ -105,14 +105,6 @@ class Genome::Individual {
             is_mutable => 1,
             doc => 'the "race" of the individual, African American/Caucasian/...'
         },
-        nomenclature => {
-            is => 'Text',
-            via => 'attributes',
-            to => 'attribute_value',
-            where => [ attribute_label => 'nomenclature', nomenclature => 'WUGC', ],
-            is_mutable => 1,
-            doc => 'nomenclature for the individual',
-        },
     ],
     has_many_optional => [
         samples => { 
