@@ -45,6 +45,20 @@ class Genome::Model::Build::ReferenceAlignment {
             is => 'Genome::Model::Build::GenotypeMicroarray',
             id_by => 'genotype_microarray_build_id',
         },
+        reference_sequence_build_id => {
+            is => 'Text',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'reference_sequence_build', value_class_name => 'Genome::Model::Build::ImportedReferenceSequence' ],
+            is_many => 0,
+            is_mutable => 1, # TODO: make this non-optional once backfilling is complete and reference placeholder is deleted
+            is_optional => 1,
+            doc => 'reference sequence to align against'
+        },
+        reference_sequence_build => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            id_by => 'reference_sequence_build_id',
+        },
     ],
 };
 
@@ -226,10 +240,6 @@ sub snp_related_metric_directory {
     }
 
     return $self->data_directory . '/' . $dir_names[0];
-}
-
-sub _snp_caller_type {
-    return shift->model->_snp_caller_type;
 }
 
 sub log_directory {

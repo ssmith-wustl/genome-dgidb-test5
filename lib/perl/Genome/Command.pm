@@ -13,21 +13,23 @@ class Genome::Command {
 };
          
 my @SUB_COMMANDS = qw/
-    taxon
-    population-group
+    completion
+    disk
+    feature-list
     individual
-    sample
-    library
     instrument-data
-    processing-profile
+    library
     model
     model-group
-    tools
-    disk
+    population-group
+    processing-profile
+    project
+    project-part
     report
-    feature-list
+    sample
     sys
-    completion
+    taxon
+    tools
 /;
 
 our %SUB_COMMAND_CLASSES = 

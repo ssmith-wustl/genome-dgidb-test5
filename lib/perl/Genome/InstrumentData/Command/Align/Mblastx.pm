@@ -7,11 +7,22 @@ use Genome;
 class Genome::InstrumentData::Command::Align::Mblastx {
     is => ['Genome::InstrumentData::Command::Align'],
     has_constant => [
-        aligner_name  => { value => 'mblastx' },
+        aligner_name  => { 
+            value => 'mblastx', 
+        },
     ],
     has_param => [
-        version       => { default_value => '1.1.0x' },
-        mhashgen_format => { is => 'Text', valid_values=>["K","N"]},
+        version => { 
+            default_value => '09242010', 
+        },
+        mhashgen_format => { 
+            is => 'Text', 
+            valid_values=>[
+                "K",
+                "N",
+                "A",
+            ],
+        },
     ],
     doc => 'align instrument data using MCW mblastx',
 };
