@@ -396,12 +396,20 @@ sub gold_snp_build {
 
     my @genotype_models = Genome::Model::GenotypeMicroarray->get(
         subject_id => $self->subject_id,
-        processing_profile_name => 'infinium wugc', # only grab internal genotype
     );
+    
+    # filter for models with internal data
+    @genotype_models = grep {
+        my $import_source_name = ($_->instrument_data ? $_->instrument_data->import_source_name : undef);
+        ($import_source_name && $import_source_name eq 'wugc');
+    } @genotype_models;
+
+    # filter for models with compatible reference sequence
     @genotype_models = grep {
         my $gm_rsb = $_->reference_sequence_build;
         $gm_rsb->is_compatible_with($self->reference_sequence_build);
     } @genotype_models;
+
     unless (@genotype_models) {
         $self->error_message("No genotype microarray model defined for $subject_name");
         return;
