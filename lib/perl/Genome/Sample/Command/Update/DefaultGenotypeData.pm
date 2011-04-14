@@ -17,6 +17,7 @@ class Genome::Sample::Command::Update::DefaultGenotypeData {
             is => 'Genome::Site::WUGC::IlluminaGenotyping',
             is_many => 0,
             doc => 'Genotype to use as the default genotype data for sample. Resolved by Genome::Command::Base.',
+            require_user_verify => 1,
         },
         overwrite => {
             is => 'Boolean',
