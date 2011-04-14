@@ -249,7 +249,6 @@ sub execute {
             );
 
             $to_model = Genome::Model->get(name => $new_name);
-            $to_model->build_requested(1);
             push @new_models, $to_model;
         }
         else {
