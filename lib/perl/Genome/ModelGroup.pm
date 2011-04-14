@@ -35,7 +35,9 @@ class Genome::ModelGroup {
 
 sub __display_name__ {
     my $self = shift;
-    return $self->name.' ('.$self->id.')';
+
+    my @models = $self->models();
+    return join(' ' ,$self->name, '(#' . $self->id, 'has', scalar(@models) . ' models)');
 }
 
 sub create {
