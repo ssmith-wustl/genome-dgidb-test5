@@ -112,7 +112,8 @@ sub unassign_models {
         );
         
         unless($bridge){
-            die('Model ' . $m->id . ' not found in ModelGroup ' . $self->id);
+            $self->warning_message("Model " . $m->id . " not found in group");
+            next;
         }
         
         $bridge->delete();
