@@ -185,6 +185,8 @@ sub execute {                               # replace with real execution logic.
 		   $jobid8= $1;
 		   print "$jobid8\n";
 	}
+
+	return 1;
 }
 
 
