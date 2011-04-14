@@ -59,6 +59,13 @@ class Genome::Model::Build::ReferenceAlignment {
             is => 'Genome::Site::WUGC::IlluminaGenotyping',
             id_by => 'genotype_data_id',
         },
+        genotype_source_barcode => {
+            via => 'genotype',
+            to => 'source_barcode',
+        },
+        default_genotype_data_id => {
+            via => 'subject',
+        },
         reference_sequence_build_id => {
             is => 'Text',
             via => 'inputs',
