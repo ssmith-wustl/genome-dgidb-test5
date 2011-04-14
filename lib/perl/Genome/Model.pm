@@ -967,16 +967,11 @@ sub delete {
     my $keep_build_directories = $params{keep_build_directories};
     my @build_directories;
 
-    # If the model is a member of model groups, it will not delete due to foreign key constraints.
-    # The easy solution here is to simply tack on "model_bridges" onto the end of get_all_objects and they will be deleted automatically (though some solution would have to be devised to update convergence model builds when this happens).
-    # For now it has been decided to simply let the user know what model groups the model is a part of, so they can remove them from those groups manually so we can be sure that is really what should happen.
-    my @model_bridges = $self->model_bridges;
-    if (@model_bridges) {
-        # Make a list of commands to run for each model group to which the model being removed belongs
-        my $deletion_commands = join ("", map("\tgenome model-group member remove --model-group-id " . $_->model_group_id . " --model-id " . $self->genome_model_id . "\n", @model_bridges) );
-        $self->error_message("Cannot delete this model because it is a member of one or more model groups. If you are sure you wish you delete this model, you may do so after removing the model from these group(s) by running the following command(s):\n$deletion_commands");
-        die $self->error_message();
+    for my $model_group ($self->model_groups) {
+        $self->status_message("Removing model " . $self->__display_name__ . " from model group " . $model_group->__display_name__ . ".");
+        $model_group->unassign_models($self);
     }
+    die $self->error_message("Failed to remove model from all model groups.") if ($self->model_groups);
 
     # This may not be the way things are working but here is the order of operations for removing db events
     # 1.) Remove all instrument data assignment entries for model
@@ -1048,7 +1043,8 @@ sub inputs_necessary_for_copy {
     my $self = shift;
     # skip instrument data assignments; these should be handled by applying the instrument data assign command
     # to the target model
-    my @inputs_to_copy = grep {$_->name ne "instrument_data"} $self->inputs;
+    # The 2nd grep is to skip all model inputs that have already been set. This avoids a crash problem when genome model copy will have already copied the input over via its accessor
+    my @inputs_to_copy = grep {my $input = $_->name; $input ne "instrument_data" and !(grep{$input eq $_->name} $self->inputs)} $self->inputs;
     return @inputs_to_copy; 
 }
 
