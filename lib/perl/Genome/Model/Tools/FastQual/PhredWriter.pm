@@ -60,16 +60,13 @@ sub _write_qual {
     my ($self, $seq) = @_;
 
     $self->_qual_io->print('>'.$seq->{id}."\n");
-    my $max;
-    my $last = @{$seq->{qual}} - 1;
-    for ( my $count = 0; $count < $last; $count += 25 ) {
-        $max = ( $count + 24 > $last )
-        ? $last
-        : $count + 24;
-        $self->_qual_io->print(
-            join(' ', @{$seq->{qual}}[$count..$max])."\n" 
-        );
-    }
+
+    my $qual_string = join(' ', map { ord($_) - 33 } split('', $seq->{qual}));
+    $qual_string .= ' ';
+    $qual_string =~ s/((\d\d?\s){1,25})/$1\n/g;
+    $qual_string =~ s/ \n/\n/g;
+    print $qual_string;
+    $self->_qual_io->print($qual_string);
 
     return 1;
 }

@@ -44,15 +44,13 @@ sub _read {
         Carp::confess('Fasta and quality ids do not match: '.$seq{id}." <=> $id");
     }
 
-    my @quals = split(/[\s\n]+/, $data);
-    if ( not @quals ) {
-        Carp::confess("Could not split quality string for $id: $data");
+    $seq{qual} = join('', map { chr($_ + 33) } split(/[\s\n]+/, $data));
+    if ( not $seq{qual} ) {
+        Carp::confess("Could not convert phred quality to sanger: $data");
     }
-    if ( length($seq{seq}) != @quals ) {
-        Carp::confess("Number of qualities does not match number of bases for fasta $id. Have ".length($seq{seq}).' bases and '.scalar(@quals).' qualities');
+    if ( length($seq{seq}) != length($seq{qual}) ) {
+        Carp::confess("Number of qualities does not match number of bases for fasta $id. Have ".length($seq{seq}).' bases and '.length($seq{qual}).' qualities');
     }
-
-    $seq{qual} = \@quals;
 
     return [ \%seq ];
 }

@@ -39,6 +39,7 @@ ok($writer, 'Create writer');
 #< Read/Write >#
 my $count = 0;
 while ( my $seq = $reader->read ) {
+    print Dumper($seq);
     $count++;
     $writer->write($seq);
 }
