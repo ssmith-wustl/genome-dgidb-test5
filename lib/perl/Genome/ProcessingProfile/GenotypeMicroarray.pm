@@ -12,7 +12,7 @@ class Genome::ProcessingProfile::GenotypeMicroarray {
         },
         instrument_type => {
             doc => 'the type of microarray instrument',
-            valid_values => [qw/ affymetrix illumina infinium unknown /],
+            valid_values => [qw/ affymetrix illumina infinium plink unknown /],
         },
     ],
 };

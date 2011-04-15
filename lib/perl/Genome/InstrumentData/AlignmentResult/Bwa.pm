@@ -301,7 +301,7 @@ sub _filter_samxe_output {
     my $add_rg_cmd = Genome::Model::Tools::Sam::AddReadGroupTag->create(
             input_filehandle     => $sam_run_output_fh,
             output_filehandle    => $sam_out_fh,
-            read_group_tag => $self->instrument_data->id,
+            read_group_tag => $self->read_and_platform_group_tag_id,
             pass_sam_headers => 0,
         );
 
