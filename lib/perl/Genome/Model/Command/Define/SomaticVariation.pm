@@ -127,6 +127,12 @@ sub execute {
 
         my $tumor_source = $tumor_subject->source;
         my $normal_source = $normal_subject->source;
+        unless($tumor_source) {
+            die $self->error_message("Could not get a source for the tumor subject: " . Data::Dumper::Dumper $tumor_subject);
+        }
+        unless($normal_source) {
+            die $self->error_message("Could not get a source for the normal subject: " . Data::Dumper::Dumper $normal_subject);
+        }
         
         unless ($tumor_source eq $normal_source) {
             my $tumor_common_name = $tumor_source->common_name || "unknown";
