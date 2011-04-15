@@ -33,10 +33,23 @@ class Genome::Site::WUGC::IlluminaGenotyping {
     ],
 };
 
+
 sub __display_name__ {
     my $self = shift;
     return $self->source_barcode . ' for sample ' . $self->name;
 }
+
+
+sub meets_default_criteria {
+    my $self = shift;
+
+    my @snp_concordance = Genome::Site::WUGC::SnpConcordance->get(seq_id => $self->seq_id);
+    @snp_concordance = grep { $_->is_external_comparison } @snp_concordance;
+    @snp_concordance = grep { $_->match_percent && $_->match_percent > 0.9 } @snp_concordance;
+
+    return (scalar @snp_concordance ? 1 : 0);
+}
+
 
 1;
 
