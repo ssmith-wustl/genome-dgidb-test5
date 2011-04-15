@@ -45,7 +45,7 @@ sub meets_default_criteria {
 
     my @snp_concordance = Genome::Site::WUGC::SnpConcordance->get(seq_id => $self->seq_id);
     @snp_concordance = grep { $_->is_external_comparison } @snp_concordance;
-    @snp_concordance = grep { $_->match_percent && $_->match_percent > 0.9 } @snp_concordance;
+    @snp_concordance = grep { $_->match_percent && $_->match_percent > 90 } @snp_concordance;
 
     return (scalar @snp_concordance ? 1 : 0);
 }

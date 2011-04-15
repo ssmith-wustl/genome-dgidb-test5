@@ -35,7 +35,7 @@ sub match_percent {
 
     my $match_percent;
     if (defined $match && $total) { # match could be zero but total shouldn't
-        $match_percent = $match / $total;
+        $match_percent = $match / $total * 100;
     }
 
     return $match_percent;
