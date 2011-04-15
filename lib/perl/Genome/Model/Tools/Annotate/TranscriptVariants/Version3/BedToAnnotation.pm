@@ -38,27 +38,36 @@ class Genome::Model::Tools::Annotate::TranscriptVariants::Version3::BedToAnnotat
 
 sub execute{
     my $self = shift;
-    $DB::single = 1; #TODO:Delete me
     
     unless(defined $self->snv_file or defined $self->indel_file){
         $self->error_message("snv-file and/or indel-file must be defined") and die; 
     }
 
-
     my ($snv_file, $indel_file);
     $snv_file   = $self->_convert_input_file($self->snv_file) if defined $self->snv_file;
     $indel_file = $self->_convert_input_file($self->indel_file) if defined $self->indel_file;
 
-    if (defined $snv_file and defined $indel_file){
-        #Merge the two
-        Genome::Sys->shellcmd(cmd => "sort -k 1,1 -k 2,2n -k 3,3n  -o " . $self->output . " " . $indel_file->filename . " " . $snv_file->filename);
-    }elsif (defined $snv_file){
-        Genome::Sys->shellcmd(cmd => "cp " . $snv_file->filename . "  " . $self->output) || ($self->error_message("Copy failed, exiting") and die); 
-    }elsif (defined $indel_file){
-        Genome::Sys->shellcmd(cmd => "cp " . $indel_file->filename . "  " . $self->output) || ($self->error_message("Copy failed, exiting") and die); 
-    }else{
+    if (defined $snv_file and defined $indel_file) {
+        my $max_memory_kb = "3145728"; # 3 GB of memory, if sort needs more than this it uses temp files for sorting
+        my $rv = Genome::Sys->shellcmd(
+            cmd => "sort -k 1,1 -k 2,2n -k 3,3 -y$max_memory_kb -m -o " . join(' ', $self->output, $indel_file->filename, $snv_file->filename)
+        );
+        unless ($rv) {
+            Carp::confess "Could not merge together indel file " . $indel_file->filename . " and " . $snv_file->filename;
+        }
+    } elsif (defined $snv_file) {
+        my $rv = Genome::Sys->shellcmd(cmd => "cp " . $snv_file->filename . "  " . $self->output);
+        unless ($rv) {
+            Carp::confess "Failed to copy " . $snv_file->filename . " to " . $self->output;
+        }
+    } elsif (defined $indel_file) {
+        my $rv = Genome::Sys->shellcmd(cmd => "cp " . $indel_file->filename . "  " . $self->output);
+        unless ($rv) {
+            Carp::confess "Failed to copy " . $indel_file->filename . " to " . $self->output;
+        }
+    } else {
         #This should never happen, die if it does
-        $self->error_message("Neither converted file exists, exiting") and die;
+        Carp::confess "Neither converted file exists!";
     }
 
     return 1;
