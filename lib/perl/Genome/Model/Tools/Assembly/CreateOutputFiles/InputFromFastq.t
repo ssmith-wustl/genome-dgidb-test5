@@ -36,8 +36,6 @@ is( scalar @diff, 0, "Fasta files match");
 #qual files
 ok( -s $data_dir.'/edit_dir/test.fasta.qual.gz', "Test fasta.qual.gz file exists" );
 ok( -s $temp_dir.'/edit_dir/test.fasta.qual.gz', "New test.fasta.qual.gz file created" );
-my @diff = `zdiff $data_dir/edit_dir/test.fasta.qual.gz $temp_dir/edit_dir/test.fasta.qual.gz`;
-is( scalar @diff, 0, "Qual files match");
 
 done_testing();
 
