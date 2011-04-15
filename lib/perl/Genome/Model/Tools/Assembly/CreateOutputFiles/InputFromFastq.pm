@@ -55,8 +55,8 @@ sub execute {
 	$f_out->write_seq($seq_obj);
 	my @sanger_qual;
 	for my $i (0..length($seq->{qual}) - 1) {
-	    #subtract -33 to get solexa values, -31 to get phred values (should be 33)
-	    push @sanger_qual, (ord(substr($seq->{qual}, $i, 1)) - 64);
+            #converting sanger qual values to phred ..
+	    push @sanger_qual, (ord(substr($seq->{qual}, $i, 1)) - 33);
 	}
 	my $qual_obj = Bio::Seq::Quality->new(-display_id => $seq->{id}, -seq => $seq->{seq}, -qual => \@sanger_qual);
 	$q_out->write_seq($qual_obj);
