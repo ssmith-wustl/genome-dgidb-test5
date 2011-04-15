@@ -44,25 +44,6 @@ class Genome::Model::Event::Build::ReferenceAlignment::AnnotateAdaptor{
     ],
 };
 
-# TODO For now, this is hard-coded to 8 GB since the variant file isn't available when the build
-# is started (which is when this method gets run, unfortunately). Logic that would either use
-# a file-based Unix sort or bsub with appropriate request will require a new version of the
-# annotator.
-sub bsub_rusage {
-    my $self = shift;
-    my $mem_kb = 8_388_608; # 8 GB
-    my $mem_mb = $mem_kb * 1024;
-    my $cpus = 1;
-    my $queue = "long";
-
-    my $select = "select[ncpus >= $cpus && mem >= $mem_mb] span[hosts=1]";
-    my $rusage = "rusage[mem=$mem_mb]";
-    my $options = "-M $mem_kb -n $cpus -q $queue";
-    
-    my $required_usage = "-R '$select $rusage' $options";
-    return $required_usage;
-}
-
 sub execute{
     my $self = shift;
 
