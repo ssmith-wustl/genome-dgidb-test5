@@ -43,11 +43,17 @@ sub __display_name__ {
 sub meets_default_criteria {
     my $self = shift;
 
-    my @snp_concordance = Genome::Site::WUGC::SnpConcordance->get(seq_id => $self->seq_id);
-    @snp_concordance = grep { $_->is_external_comparison } @snp_concordance;
-    @snp_concordance = grep { $_->match_percent && $_->match_percent > 90 } @snp_concordance;
+    return unless ($self->status eq 'pass');
 
-    return (scalar @snp_concordance ? 1 : 0);
+    my @snp_concordance = Genome::Site::WUGC::SnpConcordance->get(seq_id => $self->seq_id); # will return at least one external comparison and sometimes the internal comparison
+    push @snp_concordance, Genome::Site::WUGC::SnpConcordance->get(replicate_seq_id => $self->seq_id); # returns the internal comparison when the above doesn't
+
+    my $list_has_external_comparison = grep { $_->is_external_comparison } @snp_concordance;
+    my $list_has_internal_comparison = grep { $_->is_internal_comparison } @snp_concordance;
+    return unless ($list_has_internal_comparison && $list_has_external_comparison);
+
+    my @good_snp_concordance = grep { $_->match_percent && $_->match_percent > 90 } @snp_concordance;
+    return (@snp_concordance == @good_snp_concordance);
 }
 
 
