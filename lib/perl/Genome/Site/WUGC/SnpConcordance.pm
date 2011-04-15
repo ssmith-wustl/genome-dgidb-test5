@@ -51,7 +51,7 @@ sub is_external_comparison {
         $genotype = Genome::Site::WUGC::ExternalGenotyping->get($replicate_seq_id);
     }
 
-    return ($genotype ? 1 : 0);
+    return defined $genotype;
 }
 
 
