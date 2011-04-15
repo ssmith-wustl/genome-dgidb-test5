@@ -42,6 +42,19 @@ sub match_percent {
 }
 
 
+sub is_internal_comparison {
+    my $self = shift;
+    my $replicate_seq_id = $self->replicate_seq_id;
+
+    my $genotype;
+    if ($replicate_seq_id) {
+        $genotype = Genome::Site::WUGC::IlluminaGenotyping->get(seq_id => $replicate_seq_id);
+    }
+
+    return defined $genotype;
+}
+
+
 sub is_external_comparison {
     my $self = shift;
     my $replicate_seq_id = $self->replicate_seq_id;
