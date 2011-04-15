@@ -11,7 +11,7 @@ class Genome::Site::WUGC::IlluminaGenotyping {
         seq_id => { is => 'Number' },
     ],
     has => [
-        dna_name => { is => 'Text' },
+        name => { is => 'Text' , column_name => 'DNA_NAME'},
         source_barcode => { is => 'Text' },
         well => { is => 'Text' },
         bead_chip_barcode => { is => 'Text' },
@@ -32,6 +32,24 @@ class Genome::Site::WUGC::IlluminaGenotyping {
         num_of_probe => { is => 'Number' },
     ],
 };
+
+
+sub __display_name__ {
+    my $self = shift;
+    return $self->source_barcode . ' for sample ' . $self->name;
+}
+
+
+sub meets_default_criteria {
+    my $self = shift;
+
+    my @snp_concordance = Genome::Site::WUGC::SnpConcordance->get(seq_id => $self->seq_id);
+    @snp_concordance = grep { $_->is_external_comparison } @snp_concordance;
+    @snp_concordance = grep { $_->match_percent && $_->match_percent > 90 } @snp_concordance;
+
+    return (scalar @snp_concordance ? 1 : 0);
+}
+
 
 1;
 
