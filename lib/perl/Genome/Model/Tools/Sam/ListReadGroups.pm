@@ -94,20 +94,22 @@ sub get_read_group_from_sam_header {
 my $self = shift;
 my $line = shift;
 
-my ($id) = $line =~ m/ID:(.*?)\t/;
+my ($id, $platform_unit, $library_name);
+
+($id) = $line =~ m/ID:(.*?)\t/;
 unless (defined $id)  {
     $self->error_message("failed to parse read group id from SAM line: $line");
     return;
 }
 
-my ($platform_unit) = $line =~ m/PU:(.*?)\t/;
-unless (defined $platform_unit)  {
+($platform_unit) = $line =~ m/PU:(.*?)\t/;
+if ($line =~ m/PU:/ && !defined $platform_unit)  {
     $self->error_message("failed to parse platform unit from SAM line: $line");
     return;
 }
 
-my ($library_name) = $line =~ m/LB:(.*?)\t/;
-unless (defined $library_name)  {
+($library_name) = $line =~ m/LB:(.*?)\t/;
+if ($line =~ m/LB:/ && !defined $library_name) {
     $self->error_message("failed to parse library name from SAM line: $line");
     return;
 }
