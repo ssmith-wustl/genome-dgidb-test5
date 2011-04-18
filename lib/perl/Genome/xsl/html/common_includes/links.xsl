@@ -6,6 +6,7 @@
   <xsl:strip-space elements="*"/>
 
   <xsl:template name="object_link_href">
+    <xsl:param name="rest" select="$rest" />
     <xsl:param name="type" select="./@type"/>
     <xsl:param name="key" select="'id'"/>
     <xsl:param name="id" select="./@id"/>
