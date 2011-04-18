@@ -37,7 +37,7 @@ sub __display_name__ {
     my $self = shift;
 
     my @models = $self->models();
-    return join(' ' ,$self->name, '(', scalar(@models), 'models)');
+    return join(' ' ,$self->name, '('. scalar(@models), 'models)');
 }
 
 sub create {
