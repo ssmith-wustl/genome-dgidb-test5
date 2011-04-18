@@ -11,7 +11,7 @@ class Genome::Site::WUGC::IlluminaGenotyping {
         seq_id => { is => 'Number' },
     ],
     has => [
-        dna_name => { is => 'Text' },
+        name => { is => 'Text' , column_name => 'DNA_NAME'},
         source_barcode => { is => 'Text' },
         well => { is => 'Text' },
         bead_chip_barcode => { is => 'Text' },
@@ -32,6 +32,30 @@ class Genome::Site::WUGC::IlluminaGenotyping {
         num_of_probe => { is => 'Number' },
     ],
 };
+
+
+sub __display_name__ {
+    my $self = shift;
+    return $self->source_barcode . ' for sample ' . $self->name;
+}
+
+
+sub meets_default_criteria {
+    my $self = shift;
+
+    return unless ($self->status eq 'pass');
+
+    my @snp_concordance = Genome::Site::WUGC::SnpConcordance->get(seq_id => $self->seq_id); # will return at least one external comparison and sometimes the internal comparison
+    push @snp_concordance, Genome::Site::WUGC::SnpConcordance->get(replicate_seq_id => $self->seq_id); # returns the internal comparison when the above doesn't
+
+    my $list_has_external_comparison = grep { $_->is_external_comparison } @snp_concordance;
+    my $list_has_internal_comparison = grep { $_->is_internal_comparison } @snp_concordance;
+    return unless ($list_has_internal_comparison && $list_has_external_comparison);
+
+    my @good_snp_concordance = grep { $_->match_percent && $_->match_percent > 90 } @snp_concordance;
+    return (@snp_concordance == @good_snp_concordance);
+}
+
 
 1;
 

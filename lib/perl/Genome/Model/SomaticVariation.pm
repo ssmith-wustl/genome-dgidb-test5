@@ -152,7 +152,9 @@ sub create {
         my $normal_source = $normal_subject->source;
 
         unless ($tumor_source eq $normal_source) {
-            $class->error_message("Tumor model and normal model samples do not come from the same individual.  Tumor ". $tumor_source->common_name .", Normal ". $normal_source->subject_name);
+            my $tumor_common_name = $tumor_source->common_name || "unknown";
+            my $normal_common_name = $normal_source->common_name || "unknown";
+            die $class->error_message("Tumor model and normal model samples do not come from the same individual.  Tumor common name is $tumor_common_name. Normal common name is $normal_common_name.");
         }
         $params{subject_id} = $tumor_subject->id;
         $params{subject_class_name} = $tumor_subject->class;
@@ -207,4 +209,11 @@ sub update_tumor_and_normal_build_inputs {
     return 1;
 }
 
+sub inputs_necessary_for_copy {
+    my $self = shift;
+    my @inputs_to_copy = $self->SUPER::inputs_necessary_for_copy;
+    # The 2nd grep is to skip all model inputs that have already been set. This avoids a crash problem when genome model copy will have already copied the input over via its accessor
+    @inputs_to_copy = grep {my $input = $_->name; !(grep{$input eq $_->name} $self->inputs)} @inputs_to_copy;
+    return @inputs_to_copy; 
+}
 1;

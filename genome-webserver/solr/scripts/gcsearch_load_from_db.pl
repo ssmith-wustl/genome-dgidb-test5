@@ -169,9 +169,14 @@ sub get_functions {
         eval { 
             @models = Genome::Model->get(type_name => 
             {operator => 'IN', 
-                value => ['reference alignment', 
+                value => [  'reference alignment', 
                             'somatic', 
-                            'convergence'] 
+                            'convergence',
+                            'metagenomic composition shotgun',
+                            'assembly', 
+                            'amplicon assembly', 
+                            'de novo assembly', 
+                            'genotype microarray' ] 
             });    
 
 #                value => ['reference alignment', 

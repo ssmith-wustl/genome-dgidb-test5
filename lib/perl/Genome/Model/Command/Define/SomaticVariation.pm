@@ -127,9 +127,17 @@ sub execute {
 
         my $tumor_source = $tumor_subject->source;
         my $normal_source = $normal_subject->source;
+        unless($tumor_source) {
+            die $self->error_message("Could not get a source for the tumor subject: " . Data::Dumper::Dumper $tumor_subject);
+        }
+        unless($normal_source) {
+            die $self->error_message("Could not get a source for the normal subject: " . Data::Dumper::Dumper $normal_subject);
+        }
         
         unless ($tumor_source eq $normal_source) {
-            $self->error_message("Tumor model and normal model samples do not come from the same individual.  Tumor ". $tumor_source->common_name .", Normal ". $normal_source->subject_name);
+            my $tumor_common_name = $tumor_source->common_name || "unknown";
+            my $normal_common_name = $normal_source->common_name || "unknown";
+            die $self->error_message("Tumor model and normal model samples do not come from the same individual.  Tumor common name is $tumor_common_name. Normal common name is $normal_common_name.");
         }
         $self->subject_id($tumor_subject->id);
         $self->subject_class_name($tumor_subject->class);
