@@ -10,7 +10,7 @@ class Genome::Model::Tools::DetectVariants2::Filter::Loh{
     is => 'Genome::Model::Tools::DetectVariants2::Filter',
     doc => 'Separate LOH calls from non-LOH calls. Requires bed file input.',
     has_optional => [
-        _normal_snv_file  => {
+        normal_snv_file  => {
             type => 'String',
             doc => 'Snv file for the LoH filter to use as a control. This will be generated if not provided.',
         },
@@ -49,8 +49,8 @@ sub _filter_variants {
     my $lq_fh = Genome::Sys->open_file_for_writing($self->_temp_staging_directory . "/snvs.lq.bed");
 
     my $control_variant_file;
-    if ($self->_normal_snv_file) {
-        $control_variant_file = $self->_normal_snv_file;
+    if ($self->normal_snv_file) {
+        $control_variant_file = $self->normal_snv_file;
         unless (-s $control_variant_file) {
             die $self->error_message("Normal snv file $control_variant_file does not exist or has zero size");
         }
