@@ -9,6 +9,12 @@ use Genome::Info::IUB;
 class Genome::Model::Tools::DetectVariants2::Filter::Loh{
     is => 'Genome::Model::Tools::DetectVariants2::Filter',
     doc => 'Separate LOH calls from non-LOH calls. Requires bed file input.',
+    has_optional => [
+        _normal_snv_file  => {
+            type => 'String',
+            doc => 'Snv file for the LoH filter to use as a control. This will be generated if not provided.',
+        },
+    ],
     has_constant => [
         _variant_type => {
             type => 'String',
@@ -42,7 +48,15 @@ sub _filter_variants {
     my $hq_fh = Genome::Sys->open_file_for_writing($self->_temp_staging_directory . "/snvs.hq.bed");
     my $lq_fh = Genome::Sys->open_file_for_writing($self->_temp_staging_directory . "/snvs.lq.bed");
 
-    my $control_variant_file = $self->_generate_control_file;
+    my $control_variant_file;
+    if ($self->_normal_snv_file) {
+        $control_variant_file = $self->_normal_snv_file;
+        unless (-s $control_variant_file) {
+            die $self->error_message("Normal snv file $control_variant_file does not exist or has zero size");
+        }
+    } else {
+        $control_variant_file = $self->_generate_control_file;
+    }
     my $normal_snp_fh = Genome::Sys->open_file_for_reading($control_variant_file);
     my $input_fh = Genome::Sys->open_file_for_reading($self->input_directory . "/snvs.hq.bed");
 
