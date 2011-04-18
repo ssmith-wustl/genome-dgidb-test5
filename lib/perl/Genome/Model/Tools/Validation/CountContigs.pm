@@ -22,6 +22,16 @@ class Genome::Model::Tools::Validation::CountContigs {
         is_optional => 0,
         doc => 'File from which to retrieve reads. Must be indexed.',
     },
+    samtools_version => {
+        type => 'String',
+        is_optional => 1,
+        default => 'r783',
+        doc => "The gsc version string for an installed version of samtools. You probably don't want to change this.",
+    },
+    _samtools_exec => {
+        type => 'String',
+        is_optional => 1,
+    },
 
     ]
 };
@@ -36,6 +46,9 @@ sub execute {
         $self->error_message("This script requires a 64-bit system to run samtools");
         return;
     }
+
+    #set the samtools executable path on the object
+    $self->_samtools_exec(Genome::Model::Tools::Sam->path_for_samtools_version($self->samtools_version));
 
     unless(-e $self->bam_file && !-z $self->bam_file) {
         $self->error_message($self->bam_file . " does not exist or is of zero size");
@@ -102,7 +115,8 @@ HELP
 sub _count_across_range {
     my ($self, $alignment_file, $chr, $pos1, $pos2) = @_;
     #unless(open(SAMTOOLS, "samtools view -F 0x400 $alignment_file $chr:$pos1-$pos2 |")) { #this requires that they be unique
-    unless(open(SAMTOOLS, "/gscuser/dlarson/src/samtools/trunk/samtools/samtools view -F 0x404 $alignment_file $chr:$pos1-$pos2 |")) { #this requires that they be unique
+    my $samtools_exec = $self->_samtools_exec;
+    unless(open(SAMTOOLS, "$samtools_exec view -F 0x404 $alignment_file $chr:$pos1-$pos2 |")) { #this requires that they be unique
         $self->error_message("Unable to open pipe to samtools view");
         return;
     }
