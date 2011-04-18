@@ -44,7 +44,7 @@ ok($velvet, 'Created post assemble velvet');
 
 ok($velvet->execute, 'Execute post assemble velvet');
 #TODO - use test suite velvet-solexa-build dir files (not have separate post asm files for test)
-my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/velvet_solexa_build_post_assemble_v3/edit_dir';
+my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/velvet_solexa_build_post_assemble_v4/edit_dir';
 
 my @file_names_to_test = (qw/ 
     reads.placed readinfo.txt
@@ -74,5 +74,6 @@ foreach ('collated.fasta.gz', 'collated.fasta.qual.gz') {
 }
 
 done_testing();
+
 exit;
 

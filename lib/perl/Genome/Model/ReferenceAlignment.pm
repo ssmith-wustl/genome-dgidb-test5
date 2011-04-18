@@ -359,6 +359,32 @@ sub is_eliminate_all_duplicates {
     }
 }
 
+sub default_genotype_build {
+    my $self = shift;
+
+    my $rsb = $self->reference_sequence_build;
+    die $self->error_message("No reference sequence build specified.")
+        unless ($rsb);
+
+    my $sample = $self->subject;
+    die $self->error_message("No subject/sample specified.")
+        unless ($sample);
+
+    my @default_genotype_builds =
+        grep { $_->reference_sequence_build->is_compatible_with($rsb) } $sample->default_genotype_builds;
+    die $self->error_message("No compatible default_genotype_builds for sample.")
+        unless (@default_genotype_builds);
+
+    if (@default_genotype_builds == 1) {
+        return $default_genotype_builds[0];
+    }
+    else {
+        $self->warning_message("Multiple compatible default_genotype_builds for sample. Build IDs are: " . join(", ", map { $_->id } @default_genotype_builds) . ".");
+        return;
+    }
+
+}
+
 sub gold_snp_build {
     my $self = shift;
 
@@ -370,12 +396,20 @@ sub gold_snp_build {
 
     my @genotype_models = Genome::Model::GenotypeMicroarray->get(
         subject_id => $self->subject_id,
-        processing_profile_name => 'infinium wugc', # only grab internal genotype
     );
+    
+    # filter for models with internal data
+    @genotype_models = grep {
+        my $import_source_name = ($_->instrument_data ? $_->instrument_data->import_source_name : undef);
+        ($import_source_name && $import_source_name eq 'wugc');
+    } @genotype_models;
+
+    # filter for models with compatible reference sequence
     @genotype_models = grep {
         my $gm_rsb = $_->reference_sequence_build;
         $gm_rsb->is_compatible_with($self->reference_sequence_build);
     } @genotype_models;
+
     unless (@genotype_models) {
         $self->error_message("No genotype microarray model defined for $subject_name");
         return;

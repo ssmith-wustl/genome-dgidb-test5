@@ -93,6 +93,17 @@ class Genome::Sample {
             where => [ attribute_label => 'source_id' ],
             is_mutable => 1,
         },
+        default_genotype_data_id => {
+            is => 'Number',
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'default_genotype_data' ],
+            is_mutable => 0,
+        },
+        default_genotype_data => {
+            is => 'Genome::InstrumentData::Imported',
+            id_by => 'default_genotype_data_id',
+        },
         source => { 
             is => 'Genome::Subject',
             id_by => 'source_id',
@@ -264,5 +275,45 @@ sub get_population {
     }
     return;
 }   
+
+sub set_default_genotype_data {
+    my $self = shift;
+    my $genotype_instrument_data = shift;
+
+    die $self->error_message("No genotype instrument data provided.")
+        unless ($genotype_instrument_data);
+
+    die $self->error_message("Genotype instrument data is not a Genome::InstrumentData::Imported object.")
+        unless ($genotype_instrument_data->isa('Genome::InstrumentData::Imported'));
+
+    die $self->error_message("Instrument data is not a 'genotype file' format.")
+        unless ($genotype_instrument_data->import_format && $genotype_instrument_data->import_format eq 'genotype file');
+
+    $self->add_attribute(
+        attribute_label => 'default_genotype_data',
+        attribute_value => $genotype_instrument_data->id,
+    );
+}
+
+sub default_genotype_builds {
+    my $self = shift;
+
+    my $genotype_data = $self->default_genotype_data;
+    return unless ($genotype_data);
+
+    my @inputs = Genome::Model::Build::Input->get(
+        value_class_name => $genotype_data->class,
+        value_id => $genotype_data->id,
+    );
+    my @builds = map { $_->build } @inputs;
+    @builds = grep { $_->status eq 'Succeeded' } @builds;
+    @builds = grep { $_->model->last_succeeded_build->id eq $_->id } @builds;
+    @builds = grep { $_->isa('Genome::Model::Build::GenotypeMicroarray') } @builds;
+
+    $self->warning_message("No default genotype builds found.")
+        unless (@builds);
+
+    return @builds;
+}
 
 1;

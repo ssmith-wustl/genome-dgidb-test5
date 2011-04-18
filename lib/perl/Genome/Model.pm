@@ -455,7 +455,7 @@ sub default_model_name {
     my ($self, %params) = @_;
 
     my $name_template = ($self->subject_name).'.';
-    $name_template .= 'prod-' if $self->user_name eq 'apipe-builder';
+    $name_template .= 'prod-' if ($self->user_name eq 'apipe-builder' || $params{prod});
 
     my $type_name = $self->processing_profile->type_name;
     my %short_names = (
@@ -1043,8 +1043,7 @@ sub inputs_necessary_for_copy {
     my $self = shift;
     # skip instrument data assignments; these should be handled by applying the instrument data assign command
     # to the target model
-    # The 2nd grep is to skip all model inputs that have already been set. This avoids a crash problem when genome model copy will have already copied the input over via its accessor
-    my @inputs_to_copy = grep {my $input = $_->name; $input ne "instrument_data" and !(grep{$input eq $_->name} $self->inputs)} $self->inputs;
+    my @inputs_to_copy = grep {$_->name ne "instrument_data"} $self->inputs;
     return @inputs_to_copy; 
 }
 

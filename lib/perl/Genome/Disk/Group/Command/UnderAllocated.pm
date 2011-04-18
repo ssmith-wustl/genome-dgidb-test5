@@ -23,6 +23,11 @@ class Genome::Disk::Group::Command::UnderAllocated {
             default => 'jeldred,bdericks,apipebulk',
             doc => 'If an alert is sent, these are the recipients',
         },
+        percent_tolerance => {
+            is => 'Number',
+            default => 1,
+            doc => 'How far over the allocation allowed',
+        },
     ],
 };
 
@@ -36,10 +41,11 @@ sub help_detail { help_brief() }
 sub execute {
     my $self = shift;
     my @groups = split(',', $self->disk_group_names);
-    
+
     my %under_allocated_volumes;
-    my %under_allocated_allocations; 
-    my $under_allocated = 0;
+    my %under_allocated_allocations;
+    my $tolerance = $self->percent_tolerance;
+
     # Why yes, I do like my if blocks and for loops nested. Thank you for noticing.
     for my $group (@groups) {
         my @volumes = Genome::Disk::Volume->get(disk_group_names => $group, disk_status => 'active', can_allocate => 1);
@@ -47,29 +53,45 @@ sub execute {
 
         for my $volume (@volumes) {
             my $allocated = $volume->allocated_kb;
-            my $percent_allocated = $volume->percent_allocated;
             my $used = $volume->used_kb;
+            my $percent_allocated = $volume->percent_allocated;
             my $percent_used = $volume->percent_used;
-            if ($used > $allocated) {
-                push @{$under_allocated_volumes{$group}}, 
-                    "Volume " . $volume->mount_path . " using $used kb ($percent_used \%) but only $allocated kb ($percent_allocated \%) allocated";
-                $under_allocated = 1;
+            my $difference = $percent_used - $percent_allocated;
+
+            if ($used > $allocated and $difference > $tolerance) {
+                push @{$under_allocated_volumes{$group}},
+                    "Volume " . $volume->mount_path .
+                    " using $used kb ($percent_used \%) but only " .
+                    "$allocated kb ($percent_allocated \%) allocated";
             }
         }
     }
 
+    my $report = $self->_create_report(\%under_allocated_volumes);
+    $self->status_message($report);
+    $self->_send_report(\%under_allocated_volumes, $report);
+
+    return 1;
+}
+
+sub _create_report {
+    my ($self, $under_allocated_volumes) = @_;
+
     my $report;
-    for my $group (sort keys %under_allocated_volumes) {
+    for my $group (sort keys %{$under_allocated_volumes}) {
         $report .= "Group $group\n";
-        for my $volume (@{$under_allocated_volumes{$group}}) {
+        for my $volume (@{$under_allocated_volumes->{$group}}) {
             $report .= "\t$volume\n";
         }
         $report .= "\n";
     }
+    return $report;
+}
 
-    $self->status_message($report);
+sub _send_report {
+    my ($self, $under_allocated_volumes, $report) = @_;
 
-    if ($under_allocated and $self->send_alert) {
+    if ((keys %{$under_allocated_volumes}) and $self->send_alert) {
         my $msg = MIME::Lite->new(
             From => $ENV{USER} . '@genome.wustl.edu',
             To => join(',', map { $_ . '@genome.wustl.edu' } split(',', $self->alert_recipients)),
@@ -79,8 +101,6 @@ sub execute {
         $msg->send;
         $self->status_message("Alert sent to " . $self->alert_recipients);
     }
-    
-    return 1;
 }
 
 1;
