@@ -203,7 +203,7 @@ sub _list_bases_files {
                 my $chr = $';
                 ($chr) = split " ",$chr;
                 $chr =~s/(\/|\\)/_/g;  # "\" or "/" are not allowed in sequence names
-                $chr=~s/(\.1)//; #handle chrom names that end in .1
+                #$chr=~s/(\.1)//; #handle chrom names that end in .1
                 push(@bases_files, join("/", $bases_dir, "$chr.bases")); 
             }
         }
