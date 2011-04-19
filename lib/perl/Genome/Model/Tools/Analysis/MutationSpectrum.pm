@@ -324,8 +324,9 @@ sub execute {
             print TRANS "$base-->$base_change\t" . $nonsyn_type{$base}{$base_change} . "\t" . $synonomous_type{$base}{$base_change} .  "\n";
         }
     } 
-    print TRANS "Transitions: $transitions\tTransversions: $transversions\n";
-    print TRANS "Number of Indels: $indels\tNumber of DNP: $DNP\tTotal Number of Lines: $lines";
+    print TRANS "Transitions\t$transitions\nTransversions\t$transversions\n";
+    my $total_snvs = $transversions + $transitions;
+    print TRANS "SNVs\t$total_snvs\nIndels\t$indels\nDNP$DNP\nTotal\t$lines";
 
     for my $base (sort keys %cpg_island_count) {
         for my $base_change (sort keys %{$cpg_island_count{$base}} ) { 
