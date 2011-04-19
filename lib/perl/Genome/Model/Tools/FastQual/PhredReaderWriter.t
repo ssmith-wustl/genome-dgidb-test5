@@ -39,11 +39,11 @@ ok($writer, 'Create writer');
 #< Read/Write >#
 my $count = 0;
 while ( my $seq = $reader->read ) {
-    print Dumper($seq);
     $count++;
     $writer->write($seq);
 }
 is($count, 10, 'Read/write 10 sequences');
+ok($writer->flush, 'flush');
 ok(-s $output_fasta, 'output fasta exists');
 is(File::Compare::compare($input_fasta, $output_fasta), 0, 'In/out-put fastas match');
 $writer->_qual_io->flush();
@@ -68,7 +68,7 @@ $rv = eval{ $reader->read; };
 diag($@);
 ok((!$rv && $@ =~ /^Number of qualities does not match/), 'Failed when id in fasta does not match qual');
 
-#print "$tmpdir\n"; <STDIN>;
+#print $tmpdir; <STDIN>;
 done_testing();
 exit;
 

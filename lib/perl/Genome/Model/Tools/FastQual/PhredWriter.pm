@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Tools::FastQual::PhredWriter {
-    is => 'Genome::Model::Tools::FastQual::SeqReaderWriter',
+    is => 'Genome::Model::Tools::FastQual::SeqWriter',
     has => [ 
         _fasta_io => { is_optional => 1, },
         _qual_io => { is_optional => 1, }, 
@@ -65,7 +65,6 @@ sub _write_qual {
     $qual_string .= ' ';
     $qual_string =~ s/((\d\d?\s){1,25})/$1\n/g;
     $qual_string =~ s/ \n/\n/g;
-    print $qual_string;
     $self->_qual_io->print($qual_string);
 
     return 1;

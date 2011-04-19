@@ -21,10 +21,8 @@ HELP
 sub execute {
     my $self = shift;
 
-    my $reader = $self->_open_reader
-        or return;
-    my $writer = $self->_open_writer
-        or return;
+    my ($reader, $writer) = $self->_open_reader_and_writer;
+    return if $reader or $writer;
 
     while ( my $sequences = $reader->read ) {
         $self->_trim($sequences);
@@ -48,5 +46,3 @@ sub trim {
 
 1;
 
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Tools/Fastq/Base.pm $
-#$Id: Base.pm 60817 2010-07-09 16:10:34Z ebelter $

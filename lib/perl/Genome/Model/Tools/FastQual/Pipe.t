@@ -52,7 +52,8 @@ my $metrics_file = $tmp_dir.'/metrics';
 my $pipe = Genome::Model::Tools::FastQual::Pipe->create(
     input  => [ $in_fastq ],
     output => [ $out_fastq ],
-    commands => 'limit by-coverage --count 10 | rename illumina-to-pcap | limit by-coverage --bases 200',
+    commands => 'limit by-coverage --count 10 | rename illumina-to-pcap',
+    #commands => 'limit by-coverage --count 10 | rename illumina-to-pcap | limit by-coverage --bases 200',
     metrics_file_out => $metrics_file,
 );
 ok($pipe, 'create pipe');
@@ -79,7 +80,7 @@ else {
     }
 }
 
-#print "$tmp_dir\n"; <STDIN>;
+print "$tmp_dir\n"; <STDIN>;
 done_testing();
 exit;
 

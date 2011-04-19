@@ -6,26 +6,46 @@ use warnings;
 use Genome;
 
 class Genome::Model::Tools::FastQual::FastqReader {
-    is => 'Genome::Model::Tools::FastQual::SeqReaderWriter',
+    is => 'Genome::Model::Tools::FastQual::SeqReader',
+    has => [
+        is_paired => { is => 'Boolean', is_optional => 1, default_value => 0, },
+    ],
 };
+
+sub create {
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_);
+    return if not $self;
+
+    # 1 fh      => f from fh[0]
+    # 1 fh prd  => f & r from fh[0]
+    # 2 fh      => f from fh0; r from fh1
+    my @fhs = $self->_fhs;
+    if ( @fhs == 1 and $self->is_paired ) {
+        $self->_fhs([$fhs[0], $fhs[0]]);
+    }
+
+    return $self;
+}
 
 sub _read {
     my $self = shift;
 
-    my @fastqs;
-    my @fhs = $self->_fhs;
-    for my $fh ( @fhs ) {
-        my $fastq = $self->_get_seq_from_fh($fh);
-        next unless $fastq;
-        push @fastqs, $fastq;
-    }
-    return unless @fastqs; # ok
-
-    unless ( @fastqs == @fhs ) { # not ok??
-        Carp::confess("Have ".scalar(@fhs)." files but only got ".scalar(@fastqs)." fastqs: ".Dumper(\@fastqs));
+    my @seqs;
+    for my $fh ( $self->_fhs ) {
+        my $seq = $self->_get_seq_from_fh($fh);
+        next if not $seq; 
+        push @seqs, $seq;
     }
 
-    return \@fastqs;
+    return if not @seqs;
+
+    if ( @seqs != $self->_fhs ) {
+        Carp::confess("Have ".scalar($self->_fhs)." files but only got ".scalar(@seqs)." fastqs: ".Dumper(\@seqs));
+    }
+
+    return \@seqs;
 }
 
 sub _get_seq_from_fh {

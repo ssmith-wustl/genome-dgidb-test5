@@ -1,16 +1,17 @@
-package Genome::Model::Tools::FastQual::SeqReaderWriter;
+package Genome::Model::Tools::FastQual::SeqReader;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Tools::FastQual::SeqReaderWriter {
+class Genome::Model::Tools::FastQual::SeqReader {
     is_abstract => 1,
     has => [
         files => { is => 'Text', is_many => 1, },
         _fhs => { is_optional => 1, is_many => 1, }, 
         metrics => { is_optional => 1, },
+        _max_files => { value => 2, },
     ],
 };
 
@@ -27,42 +28,23 @@ sub create {
     elsif ( @files > $self->_max_files ) {
         Carp::confess('Too many files given. Can only accept up to '.$self->_max_files);
     }
+    elsif ( grep { $_ eq '-' } @files and @files > 1 ) {
+        $self->error_message('Cannot read from STDIN and a file');
+        return;
+    }
 
-    my $file_open_method = $self->_file_open_method;
     my  @fhs;
     for my $file ( @files ) {
-        my $fh = eval{ Genome::Sys->$file_open_method($file); };
+        my $fh = eval{ Genome::Sys->open_file_for_reading($file); };
         if ( not $fh ) {
             $self->error_message('Failed to open file: '.$@);
             return;
         }
-        $fh->autoflush(1);
         push @fhs, $fh;
     }
     $self->_fhs(\@fhs);
 
     return $self;
-}
-
-sub _max_files { 2; }
-sub _file_open_method { 
-    my $self = shift;
-
-    my $class = $self->class;
-    if ( $class =~ /Reader$/ ) {
-        return 'open_file_for_reading';
-    }
-    elsif ( $class =~ /Writer$/ ) {
-        if ( ($self->files)[0] eq '-' ) {
-            return 'open_file_for_writing';
-        }
-        else {
-            return 'open_file_for_appending';
-        }
-    }
-    else {
-        Carp::confess('Failed to derive file open method');
-    }
 }
 
 sub read {
@@ -71,12 +53,6 @@ sub read {
     return if not $seqs;
     $self->metrics->add($seqs) if $seqs and $self->metrics;
     return $seqs;
-}
-
-sub write {
-    my ($self, $seqs) = @_;
-    $self->metrics->add($seqs) if $self->metrics;
-    return $self->_write($seqs);
 }
 
 1;

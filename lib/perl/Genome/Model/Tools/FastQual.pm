@@ -20,11 +20,11 @@ class Genome::Model::Tools::FastQual {
             doc => 'Input files, "-" to read from STDIN or undefined if piping between fast-qual commands. If multiple files are given for fastq types (sanger, illumina), one sequence will be read from each file and then handled as a set. If multiple files are given for type phred (fasta), the first file should be the sequences, and the optional second file should be the qualities. Do not use this option when piping between fast-qual commands.',
         }, 
         input_to_string => {
-            calculate_from => [qw/ input /],
             calculate => q| 
-                return 'PIPE' if not defined $input;
-                return 'STDin' if $input->[0] eq '-';
-                return join(',', @$input);
+                my @input = $self->input;
+                return 'PIPE' if not @input;
+                return 'STDin' if $input[0] eq '-';
+                return join(',', @input);
             |,
         },
         type_in => {
@@ -45,11 +45,11 @@ class Genome::Model::Tools::FastQual {
             doc => 'Output files, "-" to write to STDOUT or undefined if piping between fast-qual commands.  Optional for files, and if not given, will be based on the extension of the first file (.fastq => sanger  .fasta .fna .fa => phred). Do not use this option when piping between fast-qual commands. ',
         },
         output_to_string => {
-            calculate_from => [qw/ output /],
             calculate => q| 
-                return 'PIPE' if not defined $output;
-                return 'STDOUT' if $output->[0] eq '-';
-                return join(',', @$output);
+                my @output = $self->output;
+                return 'PIPE' if not @output;
+                return 'STDOUT' if $output[0] eq '-';
+                return join(',', @output);
             |,
         },
         type_out => {
@@ -69,7 +69,7 @@ sub help_brief {
 HELP
 }
 
-sub help_detail { # empty ok
+sub help_detail {
     return <<HELP 
     Process sequences. See sub-commands for a variety of functionality.
 
@@ -130,6 +130,9 @@ sub _resolve_type_for_file {
 
 sub _reader_class {
     my $self = shift;
+    if ( not $self->input ) {
+        return 'Genome::Utility::IO::StdinRefReader';
+    }
     if ( not $supported_types{ $self->type_in }->{reader_subclass} ) {
         $self->error_message('Invalid type in: '.$self->type_in);
         return;
@@ -139,6 +142,9 @@ sub _reader_class {
 
 sub _writer_class {
     my $self = shift;
+    if ( not $self->output ) {
+        return 'Genome::Utility::IO::StdoutRefWriter';
+    }
     if ( not $supported_types{ $self->type_out }->{writer_subclass} ) {
         $self->error_message('Invalid type out: '.$self->type_out);
         return;
@@ -187,7 +193,7 @@ sub create {
             }
         }
     }
-    elsif ( $type_in ) { # PIPE sets it's own type in
+    elsif ( $type_in ) { # PIPE is always sanger
         $self->error_message('Do not set type in when piping between fast-qual commands.');
         return;
     }
@@ -225,14 +231,12 @@ sub create {
 sub execute {
     my $self = shift;
 
-    my $reader = $self->_open_reader
+    my ($reader, $writer) = $self->_open_reader_and_writer
         or return;
     if ( $reader->isa('Genome::Utility::IO::StdinRefReader') ) {
         $self->error_message('Cannot read from a PIPE! Can only collate files!');
         return;
     }
-    my $writer = $self->_open_writer
-        or return;
     if ( $writer->isa('Genome::Utility::IO::StdoutRefWriter') ) {
         $self->error_message('Cannot write to a PIPE! Can only collate files!');
         return;
@@ -250,86 +254,37 @@ sub execute {
     return 1;
 }
 
-sub _open_reader {
+sub _open_reader_and_writer {
     my $self = shift;
 
-    my @input = $self->input;
-    my $type_in = $self->type_in;
-    my $reader;
-    if ( not @input and not $type_in ) { # PIPE
-        $reader = $self->_open_stdin_reader;
-    }
-    else { # STDIN/files
-        my $reader_class = $self->_reader_class;
-        return if not $reader_class;
-        $reader = eval{ $reader_class->create(files => \@input); };
-    }
+    my $reader_class = $self->_reader_class;
+    return if not $reader_class;
 
+    my %reader_params;
+    my @input = $self->input;
+    $reader_params{files} = \@input if $self->input;
+    #$reader_params{is_paired} = 1 if $self->input;
+    
+    my $reader = eval{ $reader_class->create(%reader_params); };
     if ( not  $reader ) {
         $self->error_message("Failed to create reader for input: ".$self->input_to_string);
         return;
     }
+    $self->_reader($reader);
 
-    return $reader;
-}
+    my $writer_class = $self->_writer_class;
+    return if not $writer_class;
 
-sub _open_stdin_reader {
-    my $self = shift;
-
-    # open the stdin reader
-    my $reader = Genome::Utility::IO::StdinRefReader->create()
-        or Carp::confess("Can't open pipe to STDIN");
-
-    # get the reader meta, set alarm b/c it will hang if nothing is there
-    my $reader_info;
-    eval {
-        local $SIG{ALRM} = sub{ die; };
-        alarm 5;
-        $reader_info = $reader->read;
-        alarm 0;
-    };
-    unless ( $reader_info ) {
-        Carp::confess("No pipe meta info. Are you sure you wanted to read from a pipe?");
-    }
-
-    if ( not defined $reader_info->{type_in} ) {
-        Carp::confess("No type in from pipe");
-    }
-    $self->type_in( $reader_info->{type_in} );
-
-    if ( not defined $reader_info->{type_in} ) {
-        Carp::confess("No type out from pipe");
-    }
-
+    my %writer_params;
     my @output = $self->output;
-    if ( @output ) { # STDOUT or FILES
-        my $type = $self->_enforce_type( $reader_info->{type_out} );
-        return if not $type;
-        $self->type_out($type);
-    }
-    else { # PIPE
-        $self->type_out( $self->type_in );
+    $writer_params{files} = \@output if @output;
+    if ( $self->input and not $self->_reader->is_paired ) { 
+        $writer_params{keep_singletons} = 1;
     }
 
-    return $reader;
-}
-
-sub _open_writer {
-    my $self = shift;
-
-    my @output = $self->output;
-    my $writer;
-    if ( not @output ) { # PIPE - type out is always defined here
-        $writer = $self->_open_stdout_writer;
-    }
-    else { # STDOUT/FILES
-        my $writer_class = $self->_writer_class;
-        return if not $writer_class;
-        $writer = eval{ $writer_class->create(files => \@output); };
-    }
-
+    my $writer = eval{ $writer_class->create(%writer_params); };
     if ( not $writer ) {
-        $self->error_message("Failed to create writer for output: ".$self->output_to_string);
+        $self->error_message('Failed to create writer for output ('.$self->output_to_string.'): '.($@ || 'no error'));
         return;
     }
 
@@ -337,37 +292,9 @@ sub _open_writer {
         $writer->metrics( Genome::Model::Tools::FastQual::Metrics->create() );
     }
 
-    return $self->_writer($writer);
-}
+    $self->_writer($writer);
 
-sub _open_stdout_writer {
-    my $self = shift;
-
-    # open stdout ref writer
-    my $writer = Genome::Utility::IO::StdoutRefWriter->create
-        or Carp::confess("Can't open pipe to STDOUT");
-    # write the meta info - TODO output type
-    $writer->write({
-            type_in => $self->type_in,
-            type_out => $self->type_out,
-        });
-
-    return $writer;
-}
-
-sub _open_fastq_writer {
-    my ($self, @output) = @_;
-
-    my $writer = eval{
-        $self->_writer_class->create(
-            files => \@output,
-        );
-    };
-    unless ( $writer ) {
-        Carp::confess("Can't create fastq set writer for output files (".join(', ', @output)."): $@");
-    }
-
-    return $writer;
+    return ( $self->_reader, $self->_writer );
 }
 
 #< Observers >#
@@ -384,14 +311,16 @@ sub _add_result_observer { # to write metrics file
                 return 1;
             }
 
+            if ( not $self->_writer ) {
+                Carp::confess('No writer found!');
+            }
+            $self->_writer->flush;
+
             # Skip if we don't have a metrics file
             my $metrics_file = $self->metrics_file_out;
             return 1 if not $self->metrics_file_out;
 
             # Problem if the writer or writer metric object does not exist
-            if ( not $self->_writer ) {
-                Carp::confess('Requested to output metrics, but the associated sequence writer does not exists');
-            }
             if ( not $self->_writer->metrics ) { # very bad
                 Carp::confess('Requested to output metrics, but none were found for writer:'.$self->_writer->class);
             }

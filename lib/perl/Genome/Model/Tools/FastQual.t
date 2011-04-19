@@ -20,11 +20,10 @@ sub Genome::Model::Tools::FastQual::Tester::execute {
     my $self = shift;
 
     # test opening readers /writers
-    my $fastq_reader = $self->_open_reader;
+    my ($fastq_reader, $fastq_writer) = $self->_open_reader_and_writer;
     ok($fastq_reader, 'opened reader for fastq files') or die;
     isa_ok($fastq_reader, 'Genome::Model::Tools::FastQual::FastqReader');
     is($self->type_in, 'sanger', 'type in is sanger');
-    my $fastq_writer = $self->_open_writer;
     ok($fastq_writer, 'opened writer for fastq files') or die;
     isa_ok($fastq_writer, 'Genome::Model::Tools::FastQual::FastqWriter');
 
@@ -73,15 +72,6 @@ is(File::Compare::compare($metrics2_file, $example_metrics_file), 0, 'metrics 2 
 # Test pipes
 my $pipe_tester = Genome::Model::Tools::FastQual->create();
 ok($pipe_tester, 'create w/ pipes');
-#my $pipe_writer = $pipe_tester->_open_writer;
-#ok($pipe_writer, 'opened writer for pipes') or die;
-#isa_ok($pipe_writer, 'Genome::Utility::IO::StdoutRefWriter');
-my $rv;
-eval{
-    $rv = $pipe_tester->_open_reader;
-};
-diag("\n".$@);
-ok((!$rv && $@ =~ /No pipe meta info/), 'failed to open reader b/c no meta info');
 
 #print "$tmpdir\n"; <STDIN>;
 done_testing();

@@ -73,10 +73,8 @@ sub create {
 sub execute {
     my $self = shift;
 
-    my $reader = $self->_open_reader
-        or return;
-    my $writer = $self->_open_writer
-        or return;
+    my ($reader, $writer) = $self->_open_reader_and_writer;
+    return if $reader or $writer;
     
     while ( my $seqs = $reader->read ) {
         for my $seq ( @$seqs ) { 
