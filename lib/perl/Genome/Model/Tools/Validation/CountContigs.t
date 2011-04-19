@@ -16,7 +16,7 @@ BEGIN {
     if ($archos !~ /64/) {
         plan skip_all => "Must run from a 64-bit machine";
     } else {
-        plan tests => 8;
+        plan tests => 6;
     }
     use_ok( 'Genome::Model::Tools::Validation::CountContigs');
 };
@@ -26,10 +26,6 @@ my $fake_read_seq = "ACTATCG";
 my $fake_read_pos = 228;
 my $fake_cigar = "3M1D4M";
 
-my $offset = Genome::Model::Tools::Validation::CountContigs->_calculate_offset(231,$fake_read_pos, $fake_cigar);
-ok(!defined($offset));
-$offset = Genome::Model::Tools::Validation::CountContigs->_calculate_offset(232,$fake_read_pos, $fake_cigar);
-ok(substr($fake_read_seq,$offset,1) eq "A");
 my $spans_range = Genome::Model::Tools::Validation::CountContigs->_spans_range(228,230,$fake_read_pos, $fake_cigar);
 ok(defined $spans_range);
 $spans_range = Genome::Model::Tools::Validation::CountContigs->_spans_range(228,231,$fake_read_pos, $fake_cigar);
