@@ -107,19 +107,18 @@ class Genome::Model::ReferenceAlignment {
             via => 'dbsnp_build',
             to => 'model',
         },
-        genotype_microarray_build_id => {
+        genotype_microarray_model_id => {
             is => 'Text',
             via => 'inputs',
             to => 'value_id',
-            where => [ name => 'genotype_microarray_build', 'value_class_name' => 'Genome::Model::Build::GenotypeMicroarray', ],
-            is_many => 0,
+            where => [ name => 'genotype_microarray_model', 'value_class_name' => 'Genome::Model::GenotypeMicroarray', ],
             is_mutable => 1,
             is_optional => 1,
-            doc => 'Genotype Microarray build used for QC and Gold SNP Concordance report',
+            doc => 'Genotype Microarray model used for QC and Gold SNP Concordance report',
         },
-        genotype_microarray_build => {
-            is => 'Genome::Model::Build::GenotypeMicroarray',
-            id_by => 'genotype_microarray_build_id',
+        genotype_microarray_model => {
+            is => 'Genome::Model::GenotypeMicroarray',
+            id_by => 'genotype_microarray_model_id',
         },
         annotation_reference_build_id => {
             is => 'Text',
@@ -223,7 +222,6 @@ sub create {
         }
     }
 
-
     my $self = $class->SUPER::create(@args)
         or return;
 
@@ -317,7 +315,6 @@ sub complete_build_directory {
     }
 }
 
-
 sub run_names {
     my $self = shift;
     my %distinct_run_names = map { $_->run_name => 1}  $self->instrument_data;
@@ -329,7 +326,6 @@ sub _calculate_run_count {
     my $self = shift;
     return scalar($self->run_names);
 }
-
 
 sub region_of_interest_set {
     my $self = shift;
@@ -359,91 +355,53 @@ sub is_eliminate_all_duplicates {
     }
 }
 
-sub default_genotype_build {
+sub default_genotype_model {
     my $self = shift;
-
-    my $rsb = $self->reference_sequence_build;
-    die $self->error_message("No reference sequence build specified.")
-        unless ($rsb);
-
     my $sample = $self->subject;
-    die $self->error_message("No subject/sample specified.")
-        unless ($sample);
-
-    my @default_genotype_builds =
-        grep { $_->reference_sequence_build->is_compatible_with($rsb) } $sample->default_genotype_builds;
-    die $self->error_message("No compatible default_genotype_builds for sample.")
-        unless (@default_genotype_builds);
-
-    if (@default_genotype_builds == 1) {
-        return $default_genotype_builds[0];
-    }
-    else {
-        $self->warning_message("Multiple compatible default_genotype_builds for sample. Build IDs are: " . join(", ", map { $_->id } @default_genotype_builds) . ".");
+    unless ($sample->isa('Genome::Sample')) {
+        $self->warning_message("Can only determine default genotype model if subject is a Genome::Sample, not " . $sample->class);
         return;
     }
 
+    my @genotype_models = sort { $a->id <=> $b->id } $sample->default_genotype_models;
+    unless (@genotype_models) {
+        $self->warning_message("Could not find any genotype microarray models associated with sample " . $sample->id);
+        return;
+    }
+
+    @genotype_models = grep { $_->reference_sequence_build->is_compatible_with($self->reference_sequence_build) } @genotype_models;
+    unless (@genotype_models) {
+        $self->warning_message("No genotype microarray models for sample " . $sample->id . " use a reference build " .
+            "that is compatible with " . $self->reference_sequence_build_id);
+        return;
+    }
+
+    if (@genotype_models > 1) {
+        $self->warning_message("Found multiple compatiable genotype models for sample " . $sample->id .
+            " and reference alignment model " . $self->id . ", choosing most recent.");
+    }
+    return $genotype_models[-1];
 }
 
+# Kept for backward compatibility only. Can be removed when all samples have had their genotype microarray
+# relationship backfilled.
 sub gold_snp_build {
     my $self = shift;
-
-    my $subject_name = $self->subject_name;
-    if ($self->subject_type eq 'library_name') {
-        my $subject = $self->subject;
-        $subject_name = $self->sample_name;
-    }
-
-    my @genotype_models = Genome::Model::GenotypeMicroarray->get(
-        subject_id => $self->subject_id,
-    );
-    
-    # filter for models with internal data
-    @genotype_models = grep {
-        my $import_source_name = ($_->instrument_data ? $_->instrument_data->import_source_name : undef);
-        ($import_source_name && $import_source_name eq 'wugc');
-    } @genotype_models;
-
-    # filter for models with compatible reference sequence
-    @genotype_models = grep {
-        my $gm_rsb = $_->reference_sequence_build;
-        $gm_rsb->is_compatible_with($self->reference_sequence_build);
-    } @genotype_models;
-
-    unless (@genotype_models) {
-        $self->error_message("No genotype microarray model defined for $subject_name");
-        return;
-    }
-
-    my $build;
-    for my $gold_model (reverse @genotype_models) {
-        $build = $gold_model->last_succeeded_build;
-        last if $build;
-    }
-
-    unless ($build) {
-        $self->error_message("Found no successful genotype microarray build for $subject_name");
-        return;
-    }
-
-    return $build;
+    my $genotype_model = $self->default_genotype_model;
+    return unless $genotype_model;
+    my $genotype_build = $genotype_model->last_succeeded_build;
+    $self->warning_message("No successful build found for default genotype model " . $genotype_model->id) unless $genotype_build;
+    return $genotype_build;
 }
 
+# Again, included only for backward compatibility. This should be removed as soon as genotype microarray
+# relationships are backfilled to samples.
 sub gold_snp_path {
     my $self = shift;
-
-    my $geno_micro_build; 
-    if ($self->genotype_microarray_build_id) {
-        $geno_micro_build = $self->genotype_microarray_build;
-    }
-    else {
-        $geno_micro_build = $self->gold_snp_build;
-    }
-
-    $self->status_message("model::gold_snp_path: Using Genotype Microarray build " . $geno_micro_build->id . ".") if $geno_micro_build;
-    return ($geno_micro_build ? $geno_micro_build->formatted_genotype_file_path : undef);
+    my $genotype_build = $self->gold_snp_build;
+    return unless $genotype_build;
+    return $genotype_build->formatted_genotype_file_path;
 }
-
 
 sub build_subclass_name {
     return 'reference alignment';
