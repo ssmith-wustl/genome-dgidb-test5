@@ -39,6 +39,8 @@ HELP
 }
 #</>#
 
+sub _add_result_observer { return 1; }
+
 sub execute {
     my $self = shift;
 

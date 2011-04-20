@@ -25,6 +25,13 @@ my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 my $out_file = $tmpdir.'/out.fasta';
 my $metrics_file = $tmpdir.'/metrics.txt';
 
+# Resolve type from file
+is(Genome::Model::Tools::FastQual->_resolve_type_for_file('a.fastq'), 'sanger', 'resolve type for fastq file');
+is(Genome::Model::Tools::FastQual->_resolve_type_for_file('a.fasta'), 'phred', 'resolve type for fasta file');
+is(Genome::Model::Tools::FastQual->_resolve_type_for_file('a.fna'), 'phred', 'resolve type for fna file');
+is(Genome::Model::Tools::FastQual->_resolve_type_for_file('a.fa'), 'phred', 'resolve type for fa file');
+ok(!Genome::Model::Tools::FastQual->_resolve_type_for_file('a.blah'), 'cannot resolve type for blah file');
+
 # Fail: read/write to same # of inputs/outputs and same type
 my $fq = Genome::Model::Tools::FastQual->execute(
     input => [ $example_in_file ],

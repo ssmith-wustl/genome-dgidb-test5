@@ -73,7 +73,6 @@ my $writer = Genome::Model::Tools::FastQual::FastqWriter->create(
     files => [ $out_forward_fastq, $out_reverse_fastq ],
 );
 ok($writer, 'Create writer');
-ok($writer->id, 'wrtier has id');
 my $count = 0;
 while ( my $fastqs = $reader->read ) {
 #my $fastqs = $reader->read; while ( 1 ) {

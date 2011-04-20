@@ -17,7 +17,7 @@ class Genome::Model::Tools::FastQual {
             is => 'Text',
             is_many => 1,
             is_optional => 1,
-            doc => 'Input files, "-" to read from STDIN or undefined if piping between fast-qual commands. If multiple files are given for fastq types (sanger), one sequence will be read from each file and then handled as a set. If multiple files are given for type phred (fasta), the first file should be the sequences, and the optional second file should be the qualities. Do not use this option when piping between fast-qual commands.',
+            doc => "Input files, '-' to read from STDIN or undefined if piping between fast-qual commands.\nSANGER/ILLLUMINA: If one input is given, one sequence will be read at a time. Use 'paired_input' to read two sequences from a single input. If multiple inputs are given,  one sequence will be read from each and then handled as a set.\nPHRED: Give fasta first, then optional quality input.\nDo not use this option when piping between fast-qual commands.",
         }, 
         _input_to_string => {
             calculate => q| 
@@ -36,13 +36,13 @@ class Genome::Model::Tools::FastQual {
         paired_input => {
             is => 'Boolean',
             is_optional => 1,
-            doc => "FASTQ: If giving one input, read two sequences at a time. If two inputs are given, a sequence will be read from each.\nPHRED: NA",
+            doc => "FASTQ: If giving one input, read two sequences at a time. If two inputs are given, this will set to true. A sequence will be read from each input.\nPHRED: NA.\nDo not use this option when piping between fast-qual commands.",
         },
         output => {
             is => 'Text',
             is_many => 1,
             is_optional => 1,
-            doc => 'Output files, "-" to write to STDOUT or undefined if piping between fast-qual commands.  Optional for files, and if not given, will be based on the extension of the first file (.fastq => sanger  .fasta .fna .fa => phred). Do not use this option when piping between fast-qual commands. ',
+            doc => "Output files, '-' to write to STDOUT or undefined if piping between fast-qual commands.\nSANGER/ILLLUMINA: If one output is given, sequences will be written to it. To write only pairs, use 'paired_output'. If 2 outputs are given, a sequence will be written to each, and singletons will be disgarded. To write pairs to one output and singletons to the other, use 'paired_output'. If three outputs are given, the first of a pair will be written to the first and and the second of a pair to the second. Singletons will be written to the third.\nPHRED: Give fasta first, then optional quality input.\nDo not use this option when piping between fast-qual commands.",
         },
         _output_to_string => {
             calculate => q| 
@@ -61,7 +61,7 @@ class Genome::Model::Tools::FastQual {
         paired_output => {
             is => 'Boolean',
             is_optional => 1,
-            doc => "FASTQ: If giving one output, only write valid pairs. If given two outputs, write valid pairs to the first, singletons to the second. If given three outputs, foreard will be written to the first, reverse to the second and singletons (valid one from pair) to the third.\nPHRED: NA",
+            doc => "FASTQ: Write pairs to the same output file. If giving one output, write pairs to it, discarding singletons. If given two outputs, write pairs to the first, singletons to the second. Do not use for three outputs.\nPHRED: NA\nDo not use this option when piping between fast-qual commands.",
         },
         metrics_file_out => {
             is => 'Text',
@@ -74,9 +74,7 @@ class Genome::Model::Tools::FastQual {
 };
 
 sub help_brief {
-    return <<HELP
-    Transform sequences
-HELP
+    return 'Transform sequences';
 }
 
 sub help_detail {
@@ -88,8 +86,8 @@ sub help_detail {
     * phred (fasta/quality)
     
     Things This Base Command Can Do
-    * collate two inputs into one (sanger only)
-    * decollate one input into two (sanger only)
+    * collate two inputs into one (sanger, illumina only)
+    * decollate one input into two (sanger, illumina only)
     * convert type
     * remove quality fastq headers
     
@@ -106,7 +104,7 @@ HELP
 
 my %supported_types = (
     sanger => { format => 'fastq', reader_subclass => 'FastqReader', writer_subclass => 'FastqWriter', },
-    #illumina => { format => 'fastq', reader_subclass => 'FastqReader', writer_subclass => 'FastqWriter', },
+    illumina => { format => 'fastq', reader_subclass => 'IlluminaFastqReader', writer_subclass => 'IlluminaFastqWriter', },
     phred => { format => 'fasta', reader_subclass => 'PhredReader', writer_subclass => 'PhredWriter', },
 );
 
@@ -334,7 +332,7 @@ sub _add_result_observer { # to write metrics file
     my $result_observer = $self->add_observer(
         aspect => 'result',
         callback => sub {
-            #print Dumper(\@_);
+            print Dumper(\@_);
             my ($self, $method_name, $prior_value, $new_value) = @_;
             # skip if new result is not successful
             if ( not $new_value ) {
