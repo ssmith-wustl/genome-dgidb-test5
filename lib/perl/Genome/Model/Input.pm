@@ -84,8 +84,6 @@ sub delete {
 
     my $model = $self->model;
     Carp::confess('No model to delete input') if not $model;
-    my $obj = $self->value;
-    Carp::confess('No value to delete input') if not $obj;
     my $name = $self->name;
 
     $self->status_message("Delete input $name ".$self->value_id.' for model '.$model->__display_name__);
@@ -94,13 +92,12 @@ sub delete {
 
     my $ida = Genome::Model::InstrumentDataAssignment->get(
         model => $model,
-        instrument_data => $obj,
+        instrument_data_id => $self->value_id,
     );
     if ( $ida ) { # ignore if not found
         my $delete = $ida->delete;
         if ( not $delete ) {
-            $self->error_message('Could not delete instrument data assignment');
-            return;
+            Carp::confess('Could not delete instrument data assignment');
         }
     }
 
@@ -114,8 +111,7 @@ sub delete {
         $self->status_message('Abandoning build with this input: '.$build->__display_name__);
         my $abandon = eval{ $build->abandon; };
         if ( not $abandon ) {
-            $self->error_message('Failed to abandon build ('.$build->__display_name__.') while deleting input');
-            return;
+            Carp::confess('Failed to abandon build ('.$build->__display_name__.') while deleting input');
         }
     }
 
