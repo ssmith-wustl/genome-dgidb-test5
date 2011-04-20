@@ -244,7 +244,7 @@ sub execute {
             }
         }
         else {
-            print "unident\n";
+            print "Unidentified variant type in line $lines\n";
         }
 
         my @variant_alleles = Genome::Info::IUB->variant_alleles_for_iub($ref_base, $var_base);
@@ -298,9 +298,9 @@ sub execute {
     $fh->close;
 
     #Headers
-    print TRANS "base-->base_change\tNonsynonymous(synonomous)\n";
-    print CPG_ISLAND "base-->base_change\tcpg_island_changes\tnpg_island_changes\t(cpg_island_changes+npg_island_changes)\tcpg_island_changes/(cpg_island_changes+npg_island_changes)\n";
-    print CPG_FINDER "base-->base_change\tcpg_finder_changes\tnpg_finder_changes\t(cpg_finder_changes+npg_finder_changes)\tcpg_finder_changes/(cpg_finder_changes+npg_finder_changes)\n";
+    print TRANS "base->base_change\tAll\tSynonomous\n";
+    print CPG_ISLAND "base->base_change\tcpg_island_changes\tnpg_island_changes\t(cpg_island_changes+npg_island_changes)\tcpg_island_changes/(cpg_island_changes+npg_island_changes)\n";
+    print CPG_FINDER "base->base_change\tcpg_finder_changes\tnpg_finder_changes\t(cpg_finder_changes+npg_finder_changes)\tcpg_finder_changes/(cpg_finder_changes+npg_finder_changes)\n";
 
     my $transitions = 0;
     my $transversions = 0;
@@ -321,11 +321,12 @@ sub execute {
             else {
                 $transversions += $nonsyn_type{$base}{$base_change};
             }
-            print TRANS "$base-->$base_change\t" . $nonsyn_type{$base}{$base_change} . "(" . $synonomous_type{$base}{$base_change} .  ")\n";
+            print TRANS "$base->$base_change\t" . $nonsyn_type{$base}{$base_change} . "\t" . $synonomous_type{$base}{$base_change} .  "\n";
         }
     } 
-    print TRANS "Transitions: $transitions\tTransversions: $transversions\n";
-    print TRANS "Number of Indels: $indels\tNumber of DNP: $DNP\tTotal Number of Lines: $lines";
+    print TRANS "Transitions\t$transitions\nTransversions\t$transversions\n";
+    my $total_snvs = $transversions + $transitions;
+    print TRANS "SNVs\t$total_snvs\nIndels\t$indels\nDNP$DNP\nTotal\t$lines";
 
     for my $base (sort keys %cpg_island_count) {
         for my $base_change (sort keys %{$cpg_island_count{$base}} ) { 
