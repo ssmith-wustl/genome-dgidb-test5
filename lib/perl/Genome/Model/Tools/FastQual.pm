@@ -17,7 +17,7 @@ class Genome::Model::Tools::FastQual {
             is => 'Text',
             is_many => 1,
             is_optional => 1,
-            doc => "Input files, '-' to read from STDIN or undefined if piping between fast-qual commands.\nSANGER/ILLLUMINA: If one input is given, one sequence will be read at a time. Use 'paired_input' to read two sequences from a single input. If multiple inputs are given,  one sequence will be read from each and then handled as a set.\nPHRED: Give fasta first, then optional quality input.\nDo not use this option when piping between fast-qual commands.",
+            doc => "Input files, '-' to read from STDIN or undefined if piping between fast-qual commands.\nSANGER/ILLLUMINA: If one input is given, one sequence will be read at a time. Use 'paired_input' to read two sequences from a single input. If multiple inputs are given,  one sequence will be read from each and then handled as a set.\nPHRED: Give fasta first, then optional quality input.\nDo not use this option when piping from fast-qual commands.",
         }, 
         _input_to_string => {
             calculate => q| 
@@ -31,18 +31,18 @@ class Genome::Model::Tools::FastQual {
             is  => 'Text',
             valid_values => [ valid_types() ],
             is_optional => 1,
-            doc => 'The sequence and quality type for the input. Optional for files, and if not given, will be based on the extension of the first file (.fastq => sanger | .fasta .fna .fa => phred). Required for reading from STDIN. Do not use this option when piping between fast-qual commands.',
+            doc => 'The sequence and quality type for the input. Optional for files, and if not given, will be based on the extension of the first file (.fastq => sanger | .fasta .fna .fa => phred). Required for reading from STDIN. Do not use this option when piping from fast-qual commands.',
         },
         paired_input => {
             is => 'Boolean',
             is_optional => 1,
-            doc => "FASTQ: If giving one input, read two sequences at a time. If two inputs are given, this will set to true. A sequence will be read from each input.\nPHRED: NA.\nDo not use this option when piping between fast-qual commands.",
+            doc => "FASTQ: If giving one input, read two sequences at a time. If two inputs are given, this will set to true. A sequence will be read from each input.\nPHRED: NA.\nDo not use this option when piping from fast-qual commands.",
         },
         output => {
             is => 'Text',
             is_many => 1,
             is_optional => 1,
-            doc => "Output files, '-' to write to STDOUT or undefined if piping between fast-qual commands.\nSANGER/ILLLUMINA: If one output is given, sequences will be written to it. To write only pairs, use 'paired_output'. If 2 outputs are given, a sequence will be written to each, and singletons will be disgarded. To write pairs to one output and singletons to the other, use 'paired_output'. If three outputs are given, the first of a pair will be written to the first and and the second of a pair to the second. Singletons will be written to the third.\nPHRED: Give fasta first, then optional quality input.\nDo not use this option when piping between fast-qual commands.",
+            doc => "Output files, '-' to write to STDOUT or undefined if piping between fast-qual commands.\nSANGER/ILLLUMINA: If one output is given, sequences will be written to it. To write only pairs, use 'paired_output'. If 2 outputs are given, a sequence will be written to each, and singletons will be disgarded. To write pairs to one output and singletons to the other, use 'paired_output'. If three outputs are given, the first of a pair will be written to the first and and the second of a pair to the second. Singletons will be written to the third.\nPHRED: Give fasta first, then optional quality input.\nDo not use this option when piping to fast-qual commands.",
         },
         _output_to_string => {
             calculate => q| 
@@ -56,12 +56,12 @@ class Genome::Model::Tools::FastQual {
             is  => 'Text',
             valid_values => [ valid_types() ],
             is_optional => 1,
-            doc => 'The sequence and quality type for the output. Optional for files, and if not given, will be based on the extension of the first file (.fastq => sanger | .fasta .fna .fa => phred). Defaults to sanger (fastq) for writing to STDOUT. Do not use this option when piping between fast-qual commands.',
+            doc => 'The sequence and quality type for the output. Optional for files, and if not given, will be based on the extension of the first file (.fastq => sanger | .fasta .fna .fa => phred). Defaults to sanger (fastq) for writing to STDOUT. Do not use this option when piping to fast-qual commands.',
         },
         paired_output => {
             is => 'Boolean',
             is_optional => 1,
-            doc => "FASTQ: Write pairs to the same output file. If giving one output, write pairs to it, discarding singletons. If given two outputs, write pairs to the first, singletons to the second. Do not use for three outputs.\nPHRED: NA\nDo not use this option when piping between fast-qual commands.",
+            doc => "FASTQ: Write pairs to the same output file. If giving one output, write pairs to it, discarding singletons. If given two outputs, write pairs to the first, singletons to the second. Do not use for three outputs.\nPHRED: NA\nDo not use this option when piping to fast-qual commands.",
         },
         metrics_file_out => {
             is => 'Text',
@@ -77,8 +77,8 @@ sub help_brief {
     return 'Transform sequences';
 }
 
-sub help_detail {
-    return <<HELP 
+sub help_synopsis {
+    return <<HELP;
     Transform sequences. See sub-commands for a variety of functionality.
 
     Types Handled
@@ -99,6 +99,38 @@ sub help_detail {
     * bases
 
     Contact ebelter\@genome.wustl.edu for help
+HELP
+}
+
+sub help_detail {
+    return <<HELP;
+
+    * Convert type
+    ** illumina fastq to sanger
+    gmt fast-qual --input illumina.fastq --type-in illumina --output sanger.fastq
+    ** sanger fastq to phred fasta
+    gmt fast-qual --input file.fastq --output file.fasta --type-out phred
+    ** sanger fastq to phred fasta w/ quals
+    gmt fast-qual --input file.fastq --output file.fasta file.qual --type-out phred
+
+    * Collate
+    ** from paired fastqs (type-in resolved to sanger, type-out defaults to sanger)
+    gmt fast-qual --input fwd.fastq rev.fastq --output collated.fastq --paired-output
+    ** to paired STDOUT (type-in resolved to sanger, type-out defaults to sanger)
+    gmt fast-qual --input fwd.fastq rev.fastq --output - --paired-output
+
+    * Decollate
+    ** from illumina to paired fastqs (type-in resolved to sanger, type-out defaults to sanger)
+    gmt fast-qual --input collated.fastq --paired-input --output fwd.fastq rev.fastq
+    ** from paired illumina STDIN (type-in req'd = illumina, type-out defaults to sanger)
+    gmt fast-qual --input - --paired-input --type-in illumnia --output fwd.fastq rev.fastq
+
+    * Use in PIPE (cmd represents a fast-qual sub command)
+    ** from singleton fastq file
+    gmt fast-qual cmd1 --cmd1-options --input sanger.fastq | gmt fast-qual cmd2 --cmd2-options --output sanger.fastq
+    ** from paired STDIN to paired fastq and singleton (assuming the sub commands filter singletons)
+    cat collated_fastq | gmt fast-qual cmd1 --cmd1-options --input - --paired-input | gmt fast-qual cmd2 --cmd2-options --output pairs.fastq<STDIN>ng.fastq
+
 HELP
 }
 
@@ -332,7 +364,7 @@ sub _add_result_observer { # to write metrics file
     my $result_observer = $self->add_observer(
         aspect => 'result',
         callback => sub {
-            print Dumper(\@_);
+            #print Dumper(\@_);
             my ($self, $method_name, $prior_value, $new_value) = @_;
             # skip if new result is not successful
             if ( not $new_value ) {
@@ -342,7 +374,6 @@ sub _add_result_observer { # to write metrics file
             if ( not $self->_writer ) {
                 Carp::confess('No writer found!');
             }
-            $self->_writer->flush;
 
             # Skip if we don't have a metrics file
             my $metrics_file = $self->metrics_file_out;

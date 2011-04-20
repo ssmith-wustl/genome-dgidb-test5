@@ -412,7 +412,7 @@ my $de_novo_processing_profile = Genome::ProcessingProfile::DeNovoAssembly->crea
     assembler_name => 'velvet one-button',
     assembler_version => '0.7.57-64',
     sequencing_platform => 'solexa',
-    read_processor => 'trimmer bwa-style --trim-qual-level 9000 --metrics-file this_is_a_test',
+    read_processor => 'trimmer bwa-style --trim-qual-level 9000',
 );
 
 my $pse_6 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(

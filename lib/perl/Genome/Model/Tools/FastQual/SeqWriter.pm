@@ -41,6 +41,7 @@ sub create {
             $self->error_message('Failed to open file: '.$@);
             return;
         }
+        $fh->autoflush(1);
         push @fhs, $fh;
     }
     $self->_fhs(\@fhs);

@@ -16,6 +16,14 @@ sub help_brief {
     return 'Trim sequences';
 }
 
+sub help_synopsis {
+    return help_brief();
+}
+
+sub help_detail {
+    return help_brief();
+}
+
 sub execute {
     my $self = shift;
 
