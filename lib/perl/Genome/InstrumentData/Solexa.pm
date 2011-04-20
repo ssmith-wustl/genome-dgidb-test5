@@ -517,6 +517,13 @@ sub dump_trimmed_fastq_files {
                 input => $input_fastq_pathname,
                 output => $trimmed_input_fastq_pathname,
             );
+        } elsif ($trimmer_name eq 'far') {
+            $trimmer = Genome::Model::Tools::Far::Trimmer->create(
+                params => $trimmer_params,
+                use_version => $trimmer_version,
+                source => $input_fastq_pathname,
+                target => $trimmed_input_fastq_pathname,
+            )
         }
         elsif ($trimmer_name eq 'trim5') {
             $trimmer = Genome::Model::Tools::Fastq::Trim5->create(

@@ -295,10 +295,10 @@ sub execute {
 
     print "Running BAM Readcounts...\n";
 #    my $cmd = readcount_program() . " -b 15 " . $self->bam_file . " -l $temp_path";
-    my $cmd = readcount_program() . " -b 1 " . $self->bam_file . " -l $temp_path";
+    my $cmd = $self->readcount_program . " -b 1 " . $self->bam_file . " -l $temp_path";
     my $readcount_path = $self->output_file . ".readcounts";
 
-    $cmd .= '> $readcount_path 2> /dev/null';
+    $cmd .= "> $readcount_path 2> /dev/null";
     Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$self->bam_file],
@@ -309,7 +309,7 @@ sub execute {
     my %readcounts_by_position = ();
 
     my $readcount_fh = Genome::Sys->open_file_for_reading($readcount_path);
-    while(my $rc_line = $readcount_fh->readline)
+    while(my $rc_line = $readcount_fh->getline)
     {
      chomp($rc_line);
 	(my $chrom, my $pos) = split(/\t/, $rc_line);
@@ -943,7 +943,8 @@ sub read_counts_for_reference
 #############################################################
 
 sub readcount_program {
-    return "/gscuser/dlarson/src/bamsey/readcount/trunk/bam-readcount-test3 -f /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa";
+    my $self = shift;
+    return "/usr/bin/bam-readcount0.3 -f ".$self->reference;
 }
 
 

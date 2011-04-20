@@ -75,7 +75,7 @@ my %CHR_MEM_USAGE = (
     '20' => 'Regular',
     '21' => 'Regular',
     '22' => 'Regular',
-    'X' => 'Regular',
+    'X' => 'Medium',
     'Y' => 'Regular',
 );
 
