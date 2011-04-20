@@ -124,6 +124,7 @@ sub execute {
       }
       $genFh->close;
     }
+    print "Done\n" if( $file_cnt == 1 );
     print "No genotypes found\n" if( $file_cnt == 0 );
     print "Multiple genotypes found. Fetched only one.\n" if( $file_cnt > 1 );
   }
