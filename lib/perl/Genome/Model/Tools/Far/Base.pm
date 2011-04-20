@@ -21,8 +21,8 @@ class Genome::Model::Tools::Far::Base {
 };
 
 my %FAR_VERSIONS = (
-    '1.7'     => '/gsc/pkg/bio/flexibleadapter-1.7/build/far',
-    '1.84'    => '/gsc/pkg/bio/flexibleadapter-1.84/build/far',
+    '1.7'     => '/gsc/pkg/bio/flexibleadapter/flexibleadapter-1.7/far',
+    '1.84'    => '/gsc/pkg/bio/flexibleadapter/flexibleadapter-1.84/build/far',
 );
 
 sub available_far_versions {
