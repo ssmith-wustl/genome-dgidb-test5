@@ -44,8 +44,8 @@ my $library = Genome::Library->create(
 ok($library, 'create library');
 
 # inst data
-my $int_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16s454/inst_data';
-ok(-d $int_data_dir, 'iunst data dir') or die;
+my $inst_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16s454/inst_data';
+ok(-d $inst_data_dir, 'inst data dir') or die;
 my $instrument_data = Genome::InstrumentData::454->create(
     id => -7777,
     region_number => 2,
@@ -56,7 +56,7 @@ my $instrument_data = Genome::InstrumentData::454->create(
 );
 ok($instrument_data, 'create inst data');
 no warnings qw/ once redefine /;
-*Genome::InstrumentData::454::dump_fasta_file = sub{ return $int_data_dir.'/-7777.fasta'; };
+*Genome::InstrumentData::454::dump_fasta_file = sub{ return $inst_data_dir.'/-7777.fasta'; };
 use warnings;
 ok(-s $instrument_data->dump_fasta_file, 'fasta file');
 
