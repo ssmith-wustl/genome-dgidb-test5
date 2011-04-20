@@ -276,44 +276,75 @@ sub get_population {
     return;
 }   
 
-sub set_default_genotype_data {
+sub check_genotype_data {
     my $self = shift;
     my $genotype_instrument_data = shift;
 
-    die $self->error_message("No genotype instrument data provided.")
-        unless ($genotype_instrument_data);
+    Carp::confess $self->error_message("No genotype instrument data provided.") 
+        unless $genotype_instrument_data;
 
-    die $self->error_message("Genotype instrument data is not a Genome::InstrumentData::Imported object.")
-        unless ($genotype_instrument_data->isa('Genome::InstrumentData::Imported'));
+    Carp::confess $self->error_message("Genotype instrument data is not a Genome::InstrumentData::Imported object.")
+        unless $genotype_instrument_data->isa('Genome::InstrumentData::Imported');
 
-    die $self->error_message("Instrument data is not a 'genotype file' format.")
-        unless ($genotype_instrument_data->import_format && $genotype_instrument_data->import_format eq 'genotype file');
+    Carp::confess $self->error_message("Instrument data is not a 'genotype file' format.")
+       unless $genotype_instrument_data->import_format && $genotype_instrument_data->import_format eq 'genotype file';
 
-    $self->add_attribute(
-        attribute_label => 'default_genotype_data',
-        attribute_value => $genotype_instrument_data->id,
-    );
+    return 1;
 }
 
-sub default_genotype_builds {
+sub set_default_genotype_data_and_request_builds {
+    my ($self, $genotype_instrument_data) = @_;
+    Carp::confess 'Genotype instrument data ' . $genotype_instrument_data->id . ' is not valid!'
+        unless $self->check_genotype_data($genotype_instrument_data);
+
+    if (defined $self->default_genotype_data_id) {
+        $self->warning_message("Default genotype data already set to " . $self->default_genotype_data_id . " for sample " . 
+            $self->id . ", changing to " . $genotype_instrument_data->id) if defined $self->default_genotype_data_id;
+
+        # This attribute is not set as mutable in the class definition to prevent someone from changing it without
+        # passing the above checks. Including it in the class definition at all makes for easy access and listing, though. 
+        my $attribute = Genome::SubjectAttribute->get(
+            subject_id => $self->id,
+            attribute_label => 'default_genotype_data',
+        );
+        Carp::confess 'Could not retrieve genotype data attribute for sample ' . $self->id unless $attribute;
+        $attribute->attribute_value($genotype_instrument_data->id);
+    }
+    else {
+        my $attribute = Genome::SubjectAttribute->create(
+            subject_id => $self->id,
+            attribute_label => 'default_genotype_data',
+            attribute_value => $genotype_instrument_data->id,
+        );
+        Carp::confess 'Could not create default genotype data attribute for sample ' . $self->id unless $attribute;
+    }
+
+    # Now check for existing reference alignment models that have this sample as their subject and request new builds.
+    # This will include both plain ol' reference alignment and lane QC models.
+    my @models = Genome::Model::ReferenceAlignment->get(subject_id => $self->id);
+    for my $model (@models) {
+        $model->genotype_microarray_model_id($model->default_genotype_model->id);
+        $model->build_requested(1);
+    }
+
+    return 1;
+}
+
+sub default_genotype_models {
     my $self = shift;
-
+    
     my $genotype_data = $self->default_genotype_data;
-    return unless ($genotype_data);
+    return unless $genotype_data;
 
-    my @inputs = Genome::Model::Build::Input->get(
+    my @inputs = Genome::Model::Input->get(
         value_class_name => $genotype_data->class,
         value_id => $genotype_data->id,
+        name => 'instrument_data',
     );
-    my @builds = map { $_->build } @inputs;
-    @builds = grep { $_->status eq 'Succeeded' } @builds;
-    @builds = grep { $_->model->last_succeeded_build->id eq $_->id } @builds;
-    @builds = grep { $_->isa('Genome::Model::Build::GenotypeMicroarray') } @builds;
+    my @models = map { $_->model } @inputs;
+    @models = grep { $_->subclass_name eq 'Genome::Model::GenotypeMicroarray' } @models;
 
-    $self->warning_message("No default genotype builds found.")
-        unless (@builds);
-
-    return @builds;
+    return @models;
 }
 
 1;
