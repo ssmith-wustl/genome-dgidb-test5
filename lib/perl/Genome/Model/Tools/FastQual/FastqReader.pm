@@ -7,9 +7,6 @@ use Genome;
 
 class Genome::Model::Tools::FastQual::FastqReader {
     is => 'Genome::Model::Tools::FastQual::SeqReader',
-    has => [
-        is_paired => { is => 'Boolean', is_optional => 1, default_value => 0, },
-    ],
 };
 
 sub create {

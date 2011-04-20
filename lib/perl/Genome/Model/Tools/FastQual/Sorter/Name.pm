@@ -29,7 +29,7 @@ sub execute {
     my $self = shift;
 
     my ($reader, $writer) = $self->_open_reader_and_writer;
-    return if $reader or $writer;
+    return if not $reader or not $writer;
     
     my $temp_fh = File::Temp->new() or die;
     no warnings 'uninitialized';

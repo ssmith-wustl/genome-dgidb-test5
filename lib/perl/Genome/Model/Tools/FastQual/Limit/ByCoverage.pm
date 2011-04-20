@@ -70,7 +70,7 @@ sub execute {
     my $self = shift;
 
     my ($reader, $writer) = $self->_open_reader_and_writer;
-    return if $reader or $writer;
+    return if not $reader or not $writer;
 
     my @limiters;
     my $base_limiter = $self->_create_base_limiter;

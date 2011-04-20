@@ -8,7 +8,7 @@ use Genome;
 class Genome::Model::Tools::FastQual::FastqWriter {
     is => 'Genome::Model::Tools::FastQual::SeqWriter',
     has => [
-        keep_singletons => { is => 'Boolean', is_optional => 1, },
+        is_paired => { is => 'Boolean', is_optional => 1, },
         _fwd_fh => { is_optional => 1, },
         _rev_fh => { is_optional => 1, },
         _sing_fh => { is_optional => 1, },
@@ -22,30 +22,24 @@ sub create {
     my $self = $class->SUPER::create(@_);
     return if not $self;
     
-    # STDOUT    => all to fh[0]
-    # 1 fh keep => all to fh[0]
+    # 1 fh      => all to fh[0]
+    # 1 fh prd  => only pairs to fh[0]
     # 2 fh      => f to fh[0] r to fh[1]
-    # 2 fh keep => f & r to fh[0] s to fh[1]
+    # 2 fh prd  => f & r to fh[0] s to fh[1]
     # 3 fh      => f to fh[0] r to fh[1] s to fh[3]
     my @fhs = $self->_fhs;
     if ( @fhs == 1 ) {
         # f & r to fh0
         $self->_fwd_fh($fhs[0]);
         $self->_rev_fh($fhs[0]);
-        if ( $self->keep_singletons ) {
+        if ( not $self->is_paired ) {
             # sing to fh0
             $self->_sing_fh($fhs[0]);
         }
     }
-    elsif ( @fhs == 3 ) {
-        # f to fh0; r to fh1; s to fh2
+    elsif ( @fhs == 2 ) {
         $self->_fwd_fh($fhs[0]);
-        $self->_rev_fh($fhs[1]);
-        $self->_sing_fh($fhs[2]);
-    }
-    else { # 2
-        $self->_fwd_fh($fhs[0]);
-        if ( $self->keep_singletons ) {
+        if ( $self->is_paired ) {
             # f & r to fh0; s to fh1
             $self->_rev_fh($fhs[0]);
             $self->_sing_fh($fhs[1]);
@@ -54,6 +48,12 @@ sub create {
             # f to fh0; r to fh1; no s
             $self->_rev_fh($fhs[1]);
         }
+    }
+    else { 
+        # f to fh0; r to fh1; s to fh2
+        $self->_fwd_fh($fhs[0]);
+        $self->_rev_fh($fhs[1]);
+        $self->_sing_fh($fhs[2]);
     }
 
     return $self;
@@ -67,7 +67,7 @@ sub _write {
         return $self->_print_seq_to_fh($self->_sing_fh, $seqs->[0]);
     }
     else {
-        $self->_print_seq_to_fh($self->_fwd_fh , $seqs->[0]);
+        $self->_print_seq_to_fh($self->_fwd_fh, $seqs->[0]);
         $self->_print_seq_to_fh($self->_rev_fh, $seqs->[1]);
         return 1;
     }

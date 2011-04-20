@@ -76,7 +76,9 @@ ok($writer, 'Create writer');
 ok($writer->id, 'wrtier has id');
 my $count = 0;
 while ( my $fastqs = $reader->read ) {
+#my $fastqs = $reader->read; while ( 1 ) {
     $count++;
+    #if ( $count++ > 100000 ) { last; }
     $writer->write($fastqs)
         or die;
 }

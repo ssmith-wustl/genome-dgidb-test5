@@ -17,6 +17,10 @@ class Genome::Model::Tools::FastQual::Trimmer::Remove {
      ],
 };
 
+sub help_brief {
+    return 'Trim a set length off of a sequence';
+}
+
 sub __errors__ {
     my $self = shift;
     my @errors = $self->SUPER::__errors__(@_);

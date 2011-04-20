@@ -11,6 +11,7 @@ class Genome::Model::Tools::FastQual::SeqReader {
         files => { is => 'Text', is_many => 1, },
         _fhs => { is_optional => 1, is_many => 1, }, 
         metrics => { is_optional => 1, },
+        is_paired => { is => 'Boolean', is_optional => 1, default_value => 0, }, # only for fastq for now
         _max_files => { value => 2, },
     ],
 };

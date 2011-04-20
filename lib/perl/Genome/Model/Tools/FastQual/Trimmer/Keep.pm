@@ -17,6 +17,10 @@ class Genome::Model::Tools::FastQual::Trimmer::Keep {
      ],
 };
 
+sub help_brief {
+    return 'Keep a set length of a sequence';
+}
+
 sub __errors__ {
     my $self = shift;
     my @errors = $self->SUPER::__errors__(@_);

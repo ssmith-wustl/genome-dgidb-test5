@@ -13,35 +13,21 @@ class Genome::Model::Tools::FastQual::Trimmer {
 };
 
 sub help_brief {
-    return <<HELP
-    Trim fastq and fasta/quality sequences
-HELP
+    return 'Trim sequences';
 }
 
 sub execute {
     my $self = shift;
 
     my ($reader, $writer) = $self->_open_reader_and_writer;
-    return if $reader or $writer;
+    return if not $reader or not $writer;
 
-    while ( my $sequences = $reader->read ) {
-        $self->_trim($sequences);
-        $writer->write($sequences);
+    while ( my $seqs = $reader->read ) {
+        $self->_trim($seqs);
+        $writer->write($seqs);
     }
 
     return 1;
-}
-
-sub trim {
-    my ($self, $sequences) = @_;
-
-    unless ( $sequences and ref($sequences) eq 'ARRAY' and @$sequences ) {
-        Carp::confess(
-            $self->error_message("Expecting array ref of sequences, but got ".Dumper($sequences))
-        );
-    }
-
-    return $self->_trim($sequences);
 }
 
 1;

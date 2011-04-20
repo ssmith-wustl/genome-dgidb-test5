@@ -10,62 +10,78 @@ use Regexp::Common;
 
 class Genome::Model::Tools::FastQual::Trimmer::BwaStyle {
     is  => 'Genome::Model::Tools::FastQual::Trimmer',
-    has_input => [
+    has => [
         trim_qual_level => {
             is  => 'Integer',
-            is_optional => 1,
-            default => 10,
             doc => 'Trim quality level.',
-        },
-    ],
-    has => [
-        _trimmer => {
-            is => 'Genome::Model::Tools::Fastq::TrimBwaStyle',
         },
     ],
 };
 
+sub help_brief {
+    return 'Trim bwa style';
+}
+
 sub help_synopsis {
-    return <<EOS
-EOS
+    return <<HELP
+HELP
 }
 
 sub help_detail {
-    return <<EOS 
-EOS
+    return <<HELP 
+HELP
 }
 
-sub create {
-    my $class = shift;
+sub __errors__ {
+    my $self = shift;
 
-    my $self = $class->SUPER::create(@_)
-        or return;
-    
+    my @errors = $self->SUPER::__errors__(@_);
+    return @errors if @errors;
+
     my $trim_qual_level = $self->trim_qual_level;
-    unless ( $trim_qual_level =~ /^$RE{num}{int}$/ and $trim_qual_level > 0 ) {
-        $self->error_message("Trim qual level ($trim_qual_level) must be an integer.");
-        $self->delete;
-        return;
+    if ( not $trim_qual_level or $trim_qual_level !~ /^$RE{num}{int}$/ or $trim_qual_level < 0 ) {
+        push @errors, UR::Object::Tag->create(
+            type => 'invalid',
+            properties => [qw/ trim_qual_level /],
+            desc => 'Trim qual level must be a positive integer: '.$self->trim_qual_level,
+        );
     }
-    my $trimmer = Genome::Model::Tools::Fastq::TrimBwaStyle->create(
-        trim_qual_level => $self->trim_qual_level,
-        qual_type => $self->type_in,
-    );
-    unless ( $trimmer ) {
-        $self->error_message("Can't create BWA trimmer.");
-        $self->delete;
-        return;
-    }
-    $self->_trimmer($trimmer);
 
-    return $self;
+    return @errors;
 }
 
 sub _trim {
-    return $_[0]->_trimmer->trim($_[1]);
+    my ($self, $seqs) = @_;
+
+    # sanger: qual_str => # qual_thresh 33
+    # illumina: qual_str => B qual_thresh => 64
+    for my $seq ( @$seqs ) {
+        my $trimmed_length;
+        my ($pos, $maxPos, $area, $maxArea) = (length $seq->{seq}, length $seq->{seq}, 0, 0);
+
+        while ($pos > 0 and $area >= 0) {
+            $area += $self->trim_qual_level - (ord(substr($seq->{qual}, $pos - 1, 1)) - 33);
+            if ($area > $maxArea) {
+                $maxArea = $area;
+                $maxPos = $pos;
+            }
+            $pos--;
+        }
+
+        if ($pos == 0) { 
+            # scanned whole read and didn't integrate to zero?  replace with "empty" read ...
+            $seq->{seq}  = 'N';
+            $seq->{qual} = '#';
+            $maxPos = 1;  # reset to leave 1 base/qual as N/# there
+        }
+        else {  # integrated to zero?  trim before position where area reached a maximum (~where string of qualities were still below 20 ...)
+            $seq->{seq}  = substr($seq->{seq},  0, $maxPos);
+            $seq->{qual} = substr($seq->{qual}, 0, $maxPos);
+        }
+    }
+
+    return 1;
 }
 
 1;
 
-#$HeadURL$
-#$Id$

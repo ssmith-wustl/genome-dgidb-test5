@@ -17,9 +17,9 @@ class Genome::Model::Tools::FastQual {
             is => 'Text',
             is_many => 1,
             is_optional => 1,
-            doc => 'Input files, "-" to read from STDIN or undefined if piping between fast-qual commands. If multiple files are given for fastq types (sanger, illumina), one sequence will be read from each file and then handled as a set. If multiple files are given for type phred (fasta), the first file should be the sequences, and the optional second file should be the qualities. Do not use this option when piping between fast-qual commands.',
+            doc => 'Input files, "-" to read from STDIN or undefined if piping between fast-qual commands. If multiple files are given for fastq types (sanger), one sequence will be read from each file and then handled as a set. If multiple files are given for type phred (fasta), the first file should be the sequences, and the optional second file should be the qualities. Do not use this option when piping between fast-qual commands.',
         }, 
-        input_to_string => {
+        _input_to_string => {
             calculate => q| 
                 my @input = $self->input;
                 return 'PIPE' if not @input;
@@ -33,10 +33,10 @@ class Genome::Model::Tools::FastQual {
             is_optional => 1,
             doc => 'The sequence and quality type for the input. Optional for files, and if not given, will be based on the extension of the first file (.fastq => sanger | .fasta .fna .fa => phred). Required for reading from STDIN. Do not use this option when piping between fast-qual commands.',
         },
-        metrics_file_out => {
-            is => 'Text',
+        paired_input => {
+            is => 'Boolean',
             is_optional => 1,
-            doc => 'Output sequence metrics for the output to this file. Current metrics include: count, bases',
+            doc => "FASTQ: If giving one input, read two sequences at a time. If two inputs are given, a sequence will be read from each.\nPHRED: NA",
         },
         output => {
             is => 'Text',
@@ -44,7 +44,7 @@ class Genome::Model::Tools::FastQual {
             is_optional => 1,
             doc => 'Output files, "-" to write to STDOUT or undefined if piping between fast-qual commands.  Optional for files, and if not given, will be based on the extension of the first file (.fastq => sanger  .fasta .fna .fa => phred). Do not use this option when piping between fast-qual commands. ',
         },
-        output_to_string => {
+        _output_to_string => {
             calculate => q| 
                 my @output = $self->output;
                 return 'PIPE' if not @output;
@@ -58,6 +58,16 @@ class Genome::Model::Tools::FastQual {
             is_optional => 1,
             doc => 'The sequence and quality type for the output. Optional for files, and if not given, will be based on the extension of the first file (.fastq => sanger | .fasta .fna .fa => phred). Defaults to sanger (fastq) for writing to STDOUT. Do not use this option when piping between fast-qual commands.',
         },
+        paired_output => {
+            is => 'Boolean',
+            is_optional => 1,
+            doc => "FASTQ: If giving one output, only write valid pairs. If given two outputs, write valid pairs to the first, singletons to the second. If given three outputs, foreard will be written to the first, reverse to the second and singletons (valid one from pair) to the third.\nPHRED: NA",
+        },
+        metrics_file_out => {
+            is => 'Text',
+            is_optional => 1,
+            doc => 'Output sequence metrics for the output to this file. Current metrics include: count, bases',
+        },
         _reader => { is_optional => 1, },
         _writer => { is_optional => 1, },
     ],
@@ -65,32 +75,30 @@ class Genome::Model::Tools::FastQual {
 
 sub help_brief {
     return <<HELP
-    Process fastq and fasta/quality sequences
+    Transform sequences
 HELP
 }
 
 sub help_detail {
     return <<HELP 
-    Process sequences. See sub-commands for a variety of functionality.
+    Transform sequences. See sub-commands for a variety of functionality.
 
     Types Handled
-    * illumina (fastq)
     * sanger (fastq)
     * phred (fasta/quality)
     
     Things This Base Command Can Do
-    * collate two files into one 
-    * decollate one file into two (NOT IMPLEMENTED)
-    * get metrics
+    * collate two inputs into one (sanger only)
+    * decollate one input into two (sanger only)
+    * convert type
     * remove quality fastq headers
-
-    Requirements
-    * this base command cannot be used in a pipe
+    
+    Things This Base Command Can Not Do
+    * be used in a pipe
 
     Metrics
     * count
     * bases
-    ...
 
     Contact ebelter\@genome.wustl.edu for help
 HELP
@@ -98,7 +106,7 @@ HELP
 
 my %supported_types = (
     sanger => { format => 'fastq', reader_subclass => 'FastqReader', writer_subclass => 'FastqWriter', },
-    illumina => { format => 'fastq', reader_subclass => 'FastqReader', writer_subclass => 'FastqWriter', },
+    #illumina => { format => 'fastq', reader_subclass => 'FastqReader', writer_subclass => 'FastqWriter', },
     phred => { format => 'fasta', reader_subclass => 'PhredReader', writer_subclass => 'PhredWriter', },
 );
 
@@ -175,9 +183,13 @@ sub create {
     my @input = $self->input;
     my $type_in = $self->type_in;
     if ( @input ) {
+        if ( @input > 2 ) {
+            $self->error_message('Can only handle 1 or 2 inputs');
+            return;
+        }
         if ( $input[0] eq '-' ) { # STDIN
             if ( @input > 1 ) { # Cannot have morethan one STDIN
-                $self->error_message('Multiple STDIN inputs given: '.$self->input_to_string);
+                $self->error_message('Multiple STDIN inputs given: '.$self->_input_to_string);
                 return;
             }
             if ( not $type_in ) {
@@ -186,6 +198,10 @@ sub create {
             }
         }
         else { # FILES
+            if ( defined $self->paired_input and @input > 2 ) {
+                $self->error_message('Cannot use paired_input with more than 2 inputs');
+                return;
+            }
             if ( not $type_in ) {
                 $type_in = $self->_resolve_type_for_file($input[0]);
                 return if not $type_in;
@@ -193,9 +209,15 @@ sub create {
             }
         }
     }
-    elsif ( $type_in ) { # PIPE is always sanger
-        $self->error_message('Do not set type in when piping between fast-qual commands.');
-        return;
+    else {
+        if ( $type_in ) { # PIPE is always sanger
+            $self->error_message('Do not set type in when piping between fast-qual commands');
+            return;
+        }
+        if ( defined $self->paired_input ) {
+            $self->error_message('Do not set paired_input when piping between fast-qual commands');
+            return;
+        }
     }
 
     my @output = $self->output;
@@ -203,7 +225,7 @@ sub create {
     if ( @output ) {
         if ( $output[0] eq '-' ) { # STDOUT
             if ( @output > 1 ) { # Cannot have morethan one STDOUT
-                $self->error_message('Multiple STDOUT outputs given: '.$self->output_to_string);
+                $self->error_message('Multiple STDOUT outputs given: '.$self->_output_to_string);
                 return;
             }
             if ( not $type_out ) {
@@ -218,9 +240,15 @@ sub create {
             }
         }
     }
-    elsif ( $type_out ) { # PIPE sets it's own type out
-        $self->error_message('Do not set type out when piping between fast-qual commands.');
-        return;
+    else {
+        if ( $type_out ) { # PIPE is always sanger
+            $self->error_message('Do not set type out when piping between fast-qual commands.');
+            return;
+        }
+        if ( $self->paired_output ) {
+            $self->error_message('Do not set paired_output when piping between fast-qual commands.');
+            return;
+        }
     }
 
     $self->_add_result_observer;  #confesses on error
@@ -231,19 +259,19 @@ sub create {
 sub execute {
     my $self = shift;
 
-    my ($reader, $writer) = $self->_open_reader_and_writer
-        or return;
-    if ( $reader->isa('Genome::Utility::IO::StdinRefReader') ) {
-        $self->error_message('Cannot read from a PIPE! Can only collate files!');
-        return;
-    }
-    if ( $writer->isa('Genome::Utility::IO::StdoutRefWriter') ) {
-        $self->error_message('Cannot write to a PIPE! Can only collate files!');
+    if ( $self->input == $self->output and $self->type_in eq $self->type_out ) {
+        $self->error_message("Cannot read and write the same number of input/outputs and with the same type in/out");
         return;
     }
 
-    if ( scalar($reader->files) == 1 and scalar($writer->files) == 2 ) {
-        $self->error_message("Cannot decollate from one input file to two output files! (YET)");
+    my ($reader, $writer) = $self->_open_reader_and_writer
+        or return;
+    if ( $reader->isa('Genome::Utility::IO::StdinRefReader') ) {
+        $self->error_message('Cannot read from a PIPE!');
+        return;
+    }
+    if ( $writer->isa('Genome::Utility::IO::StdoutRefWriter') ) {
+        $self->error_message('Cannot write to a PIPE!');
         return;
     }
 
@@ -262,12 +290,14 @@ sub _open_reader_and_writer {
 
     my %reader_params;
     my @input = $self->input;
-    $reader_params{files} = \@input if $self->input;
-    #$reader_params{is_paired} = 1 if $self->input;
-    
+    if ( @input ) { # STDIN/FILES
+        $reader_params{files} = \@input;
+        $reader_params{is_paired} = $self->paired_input;
+    }
+
     my $reader = eval{ $reader_class->create(%reader_params); };
     if ( not  $reader ) {
-        $self->error_message("Failed to create reader for input: ".$self->input_to_string);
+        $self->error_message("Failed to create reader for input: ".$self->_input_to_string);
         return;
     }
     $self->_reader($reader);
@@ -277,14 +307,14 @@ sub _open_reader_and_writer {
 
     my %writer_params;
     my @output = $self->output;
-    $writer_params{files} = \@output if @output;
-    if ( $self->input and not $self->_reader->is_paired ) { 
-        $writer_params{keep_singletons} = 1;
+    if ( @output ) { # STDOUT/FILES
+        $writer_params{files} = \@output;
+        $writer_params{is_paired} = $self->paired_output;
     }
 
     my $writer = eval{ $writer_class->create(%writer_params); };
     if ( not $writer ) {
-        $self->error_message('Failed to create writer for output ('.$self->output_to_string.'): '.($@ || 'no error'));
+        $self->error_message('Failed to create writer for output ('.$self->_output_to_string.'): '.($@ || 'no error'));
         return;
     }
 
