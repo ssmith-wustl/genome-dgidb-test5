@@ -46,7 +46,6 @@ is($count, 10, 'Read/write 10 sequences');
 ok($writer->flush, 'flush');
 ok(-s $output_fasta, 'output fasta exists');
 is(File::Compare::compare($input_fasta, $output_fasta), 0, 'In/out-put fastas match');
-$writer->_qual_io->flush();
 ok(-s $output_qual, 'output qual exists');
 is(File::Compare::compare($input_qual, $output_qual), 0, 'In/out-put qauls match');
 

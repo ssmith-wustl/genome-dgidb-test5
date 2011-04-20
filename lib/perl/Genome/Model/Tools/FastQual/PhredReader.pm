@@ -7,36 +7,20 @@ use Genome;
 
 class Genome::Model::Tools::FastQual::PhredReader {
     is => 'Genome::Model::Tools::FastQual::SeqReader',
-    has => [ 
-        _fasta_io => { is_optional => 1, },
-        _qual_io => { is_optional => 1, }, 
-    ],
 };
-
-sub create {
-    my $class = shift;
-
-    my $self = $class->SUPER::create(@_);
-    return if not $self;
-
-    my @fhs = $self->_fhs;
-    $self->_fasta_io($fhs[0]);
-    $self->_qual_io($fhs[1]);
-
-    return $self;
-}
 
 sub _read {
     my $self = shift;
 
+    my @fhs = $self->_fhs;
     my %seq;
-    @seq{qw/ id desc seq /} = $self->_parse_io( $self->_fasta_io );
+    @seq{qw/ id desc seq /} = $self->_parse_io($fhs[0]);
     return if not $seq{seq};
     $seq{seq} =~ tr/ \t\n\r//d;	# Remove whitespace
 
-    return \%seq if not $self->_qual_io;
+    return \%seq if not $fhs[1];
 
-    my ($id, $desc, $data) = $self->_parse_io( $self->_qual_io );
+    my ($id, $desc, $data) = $self->_parse_io($fhs[1]);
     if ( not defined $id ) {
         Carp::confess("No qualities found for fasta: ".$seq{id});
     }
