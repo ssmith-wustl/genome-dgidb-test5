@@ -523,6 +523,8 @@ sub dump_trimmed_fastq_files {
                 use_version => $trimmer_version,
                 source => $input_fastq_pathname,
                 target => $trimmed_input_fastq_pathname,
+                length_distribution => $data_directory .'/length_distribution_report.txt',
+                far_output => $data_directory .'/far_output_report.txt',
             )
         }
         elsif ($trimmer_name eq 'trim5') {
