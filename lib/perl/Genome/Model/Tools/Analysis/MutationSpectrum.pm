@@ -25,7 +25,7 @@ use IO::File;
 use Bio::DB::Fasta;
 use Genome::Info::IUB;
 use DBI;
-
+use Cwd qw( abs_path );
 class Genome::Model::Tools::Analysis::MutationSpectrum {
     is => ['Command','Genome::Software'],
     has => [
@@ -99,6 +99,22 @@ class Genome::Model::Tools::Analysis::MutationSpectrum {
         is_output => '1',
         doc => 'The CpG Within CpG output file.',
     },
+    plot_spectrum_file_name => {
+        is => 'String',
+        is_optional => 1,
+        is_input => 1,
+        is_output => 1,
+        doc => 'Filename of the pdf to output of the spectrum bar graph',
+    },
+    plot_spectrum_genome_name => {
+        is => 'String',
+        is_optional => 1,
+        is_input => 1,
+        is_output => 1,
+        default => "",
+        doc => 'name to put into the title of the spectrum plot',
+    },   
+
     # Make workflow choose 64 bit blades
     lsf_resource => {
         is_param => 1,
@@ -133,6 +149,7 @@ EOS
 
 sub execute {
     my $self = shift;
+    $DB::single = 1;
 
     my %base_complement;
     $base_complement{'A'} = 'T';
@@ -347,6 +364,22 @@ sub execute {
             print CPG_FINDER "$base-->$base_change\t$cpg_finder_changes\t$npg_finder_changes\t" . ($cpg_finder_changes+$npg_finder_changes) . "\t" .  $cpg_finder_changes/($cpg_finder_changes + $npg_finder_changes) . "\n";
         }
     } 
+
+    close TRANS;
+    my $plot_spectrum_file_name = $self->plot_spectrum_file_name;
+    if($plot_spectrum_file_name) {
+        unless($plot_spectrum_file_name =~ /\.pdf$/) {
+            $plot_spectrum_file_name .= ".pdf";
+        }
+        #statistics::R is horrible so try to prevent people from causing themselves problems
+        my $abs_filename = abs_path($plot_spectrum_file_name);
+        #assume that the spectrum plot is requested
+        my $genome = $self->plot_spectrum_genome_name;
+        my $plot_cmd = qq{ plot_spectrum("$output_trans",output_file="$abs_filename",genome="$genome") };
+        my $call = Genome::Model::Tools::R::CallR->create(command=>$plot_cmd, library=> "MutationSpectrum.R");
+        $call->execute;
+    }
+
 
     return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
 }
