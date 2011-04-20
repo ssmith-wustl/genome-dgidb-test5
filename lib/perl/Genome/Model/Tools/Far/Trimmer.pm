@@ -32,7 +32,7 @@ class Genome::Model::Tools::Far::Trimmer {
             valid_values => ['fastq','fasta','csfastq','csfasta'],
             default_value => 'fastq',
         },
-        min_readlength => {
+        min_read_length => {
             is => 'Text',
             doc => 'minimum readlength in basepairs after adapter removal - read will be discarded otherwise. far default:18',
         },
@@ -52,6 +52,10 @@ class Genome::Model::Tools::Far::Trimmer {
             is          => 'Text',
             doc         => 'Decides on which end adapter removal is performed. far default: right',
             valid_values => ['right','left','any','left_tail','right_tail'],
+        },
+        far_output => {
+            is => 'Text',
+            doc => 'Redirect the stdout from the far command.',
         },
     ],
 };
@@ -73,7 +77,7 @@ sub execute {
         $far_cmd .= ' --trim-end '.$self->trim_end;
     }
     if (defined($self->min_read_length)) {
-        $far_cmd .= ' --min-readlength '.$self->min_readlength
+        $far_cmd .= ' --min-readlength '.$self->min_read_length
     }
     if (defined($self->max_uncalled)) {
         $far_cmd .= ' --max-uncalled '.$self->max_uncalled;
@@ -84,10 +88,16 @@ sub execute {
     if (defined($self->params)) {
         $far_cmd .= ' '. $self->params;
     }
+    my @output_files;
+    push @output_files, $self->target;
+    if (defined($self->far_output)) {
+        $far_cmd .= ' > '. $self->far_output;
+        push @output_files, $self->far_output;
+    }
     Genome::Sys->shellcmd(
         cmd => $far_cmd,
         input_files => [$self->source],
-        output_files => [$self->target],
+        output_files => \@output_files,
         skip_if_output_is_present => 0,
     );
     return 1;
