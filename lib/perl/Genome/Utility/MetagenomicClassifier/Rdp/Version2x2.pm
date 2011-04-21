@@ -74,11 +74,9 @@ END
     JNI => 1,
 ) ;
 
-sub _is_seq_reversed
-{
-    my ($self, $seq) = @_;
-    my $classification_result = $self->{'classifier'}->classify($seq);
-    my $complemented = $classification_result->getSequence()->isReverse();
+sub _is_reversed {
+    my ($self, %params) = @_;
+    return $params{classification_result}->getSequence()->isReverse();
 }
 
 1;
