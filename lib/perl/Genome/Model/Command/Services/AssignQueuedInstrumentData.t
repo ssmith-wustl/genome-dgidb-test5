@@ -130,8 +130,11 @@ $pse_2->add_reference_sequence_build_param_for_processing_profile( $processing_p
 
 no warnings;
 sub GSC::PSE::QueueInstrumentDataForGenomeModeling::get_inherited_assigned_directed_setups_filter_on {
+    my $self = shift;
+    my $filter = shift;
     my @a;
-    push @a, $work_order;
+    push @a, $work_order if $filter eq 'setup work order';
+    push @a, $project if $filter eq 'setup project';
     return @a;
 }
 use warnings;
