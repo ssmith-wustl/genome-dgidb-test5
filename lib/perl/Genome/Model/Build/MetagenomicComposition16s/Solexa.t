@@ -101,7 +101,7 @@ is(
 is($build->calculate_estimated_kb_usage, 500_000, 'estimated kb usage'); 
 
 # dirs
-my $existing_build_dir = '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16sSolexa/build'; #just overwrite /build .. check w/ eddie
+my $existing_build_dir = '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16sSolexa/build_kk'; #just overwrite /build .. check w/ eddie
 ok(-d $existing_build_dir, 'existing build dir exists');
 
 my $classification_dir = $build->classification_dir;
