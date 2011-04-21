@@ -180,12 +180,6 @@ sub _update_metrics {
 }
 #<>#
 
-my %qual_types = (
-    'Genome::InstrumentData::Solexa' => 'illumina',
-    'Genome::InstrumentData::Imported' => 'sanger',
-    #'Genome::Instrument::Data::454' => 'phred', # not ready
-);
-
 sub _instrument_data_qual_type_in {
     my ( $self, $instrument_data ) = @_;
     
@@ -201,38 +195,18 @@ sub _instrument_data_qual_type_in {
     return;
 }
 
-sub _instrument_data_qual_type_out {
-    my ( $self, $instrument_data ) = @_;
-
-    return 'illumina' if $instrument_data->class eq 'Genome::InstrumentData::Solexa';
-    return 'sanger' if $instrument_data->class eq 'Genome::InstrumentData::Imported';
-
-    return;
-}
-
 sub _process_instrument_data {
     my ($self, $instrument_data) = @_;
 
     # Inst data quality type
-    my ($instrument_data_class) = $instrument_data->class;
-    #my $qual_type = $qual_types{$instrument_data_class};
-    #unless ( $qual_type ) {
-        #$self->error_message("Unsupported instrument data class ($instrument_data_class).");
-        #return;
-    #}
-
     my $qual_type_in = $self->_instrument_data_qual_type_in( $instrument_data );
     unless ( $qual_type_in ) {
         $self->error_message( "Can't determine quality type in for inst data, ID: ".$instrument_data->id );
         return;
     }
+    my $qual_type_out = 'sanger';
 
-    my $qual_type_out = $self->_instrument_data_qual_type_out( $instrument_data );
-    unless ( $qual_type_out ) {
-        $self->error_message( "Can't determine quality type out for inst data, ID: ".$instrument_data->id );
-        return;
-    }
-    $self->status_message('Processing: '.join(' ', $instrument_data_class, $instrument_data->id, $qual_type_in) );
+    $self->status_message('Processing: '.join(' ', $instrument_data->class, $instrument_data->id, $qual_type_in) );
 
     # In/out files
     my @input_files = $self->_fastq_files_from_solexa($instrument_data)
@@ -248,7 +222,7 @@ sub _process_instrument_data {
         output => \@output_files,
         type_in => $qual_type_in,
         type_out => $qual_type_out, # TODO make sure this is sanger
-        metrics_file => $self->_metrics_file,
+        metrics_file_out => $self->_metrics_file,
     );
 
     if ( not defined $read_processor and not defined $self->_base_limit ) {

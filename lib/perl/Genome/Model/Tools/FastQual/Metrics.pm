@@ -22,7 +22,7 @@ class Genome::Model::Tools::FastQual::Metrics {
     ],
 };
 
-sub eval_seqs {
+sub add {
     my ($self, $seqs) = @_;
 
     for my $seq ( @$seqs ) {
@@ -31,6 +31,17 @@ sub eval_seqs {
     }
 
     return 1;
+}
+
+sub to_string {
+    my $self = shift;
+
+    my $string;
+    for my $metric (qw/ bases count /) {
+        $string .= $metric.'='.$self->$metric."\n";
+    }
+
+    return $string;
 }
 
 1;

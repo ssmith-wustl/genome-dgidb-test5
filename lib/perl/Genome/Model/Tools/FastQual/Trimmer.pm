@@ -13,40 +13,30 @@ class Genome::Model::Tools::FastQual::Trimmer {
 };
 
 sub help_brief {
-    return <<HELP
-    Trim fastq and fasta/quality sequences
-HELP
+    return 'Trim sequences';
+}
+
+sub help_synopsis {
+    return help_brief();
+}
+
+sub help_detail {
+    return help_brief();
 }
 
 sub execute {
     my $self = shift;
 
-    my $reader = $self->_open_reader
-        or return;
-    my $writer = $self->_open_writer
-        or return;
+    my ($reader, $writer) = $self->_open_reader_and_writer;
+    return if not $reader or not $writer;
 
-    while ( my $sequences = $reader->next ) {
-        $self->_trim($sequences);
-        $writer->write($sequences);
+    while ( my $seqs = $reader->read ) {
+        $self->_trim($seqs);
+        $writer->write($seqs);
     }
 
     return 1;
 }
 
-sub trim {
-    my ($self, $sequences) = @_;
-
-    unless ( $sequences and ref($sequences) eq 'ARRAY' and @$sequences ) {
-        Carp::confess(
-            $self->error_message("Expecting array ref of sequences, but got ".Dumper($sequences))
-        );
-    }
-
-    return $self->_trim($sequences);
-}
-
 1;
 
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Tools/Fastq/Base.pm $
-#$Id: Base.pm 60817 2010-07-09 16:10:34Z ebelter $

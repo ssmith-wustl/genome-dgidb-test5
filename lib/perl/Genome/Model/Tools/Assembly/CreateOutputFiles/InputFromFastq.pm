@@ -40,34 +40,37 @@ sub execute {
 
     my $fasta_file = $self->directory.'/edit_dir/'.$root_name.'.fasta';
     my $qual_file = $self->directory.'/edit_dir/'.$root_name.'.fasta.qual';
+    my $fq = Genome::Model::Tools::FastQual->create(
+        input => [ $self->fastq_file ],
+        type_in => 'sanger',
+        output => [ $fasta_file, $qual_file ],
+        type_out => 'phred',
+    );
+    if ( not $fq ) {
+        $self->error_message('Failed to create fastq to fasta converter');
+        return;
+    }
+    $fq->dump_status_messages(1);
+    if ( not $fq->execute ) {
+        $self->error_message('Failed to execute fastq to fasta converter');
+        return;
+    }
 
-    #if this re-runs in automated pipline, previously created zipped files
-    #must be removed for newly created files to zip
-
-    my $f_out = Bio::SeqIO->new(-format => 'fasta', file => ">$fasta_file");
-    my $q_out = Bio::SeqIO->new(-format => 'qual', file => ">$qual_file");
-
-    my $fq_in =  Genome::Model::Tools::FastQual::FastqReader->create (
-	file => $self->fastq_file,
-	);
-    while (my $seq = $fq_in->next) {
-	my $seq_obj = Bio::Seq->new(-display_id => $seq->{id}, -seq => $seq->{seq});
-	$f_out->write_seq($seq_obj);
-	my @sanger_qual;
-	for my $i (0..length($seq->{qual}) - 1) {
-            #converting sanger qual values to phred ..
-	    push @sanger_qual, (ord(substr($seq->{qual}, $i, 1)) - 33);
-	}
-	my $qual_obj = Bio::Seq::Quality->new(-display_id => $seq->{id}, -seq => $seq->{seq}, -qual => \@sanger_qual);
-	$q_out->write_seq($qual_obj);
+    if ( not -e $fasta_file ) {
+        $self->error_message('Executed fastq to fasta converter, but fasta file does not exist: '.$fasta_file);
+        return;
+    }
+    if ( not -e $qual_file ) {
+        $self->error_message('Executed fastq to fasta converter, but fasta file does not exist: '.$qual_file);
+        return;
     }
 
     unlink $fasta_file.'.gz';
     unlink $qual_file.'.gz';
 
     if (system("gzip $fasta_file $qual_file")) {
-	$self->error_message("Failed to zip files: $fasta_file $qual_file");
-	return;
+        $self->error_message("Failed to zip files: $fasta_file $qual_file");
+        return;
     }
 
     return 1;

@@ -8,8 +8,8 @@ use warnings;
 use Genome;
 
 use File::Basename;
-require Genome::Model::Tools::FastQual::FastqSetReader;
-require Genome::Model::Tools::FastQual::FastqSetWriter;
+require Genome::Model::Tools::FastQual::FastqReader;
+require Genome::Model::Tools::FastQual::FastqWriter;
 
 class Genome::Model::Tools::Fastq::TrimBwaStyle {
     is  => 'Command',
@@ -109,7 +109,7 @@ sub execute {
     my $rd_ori_ct  = 0;
     my $rd_trim_ct = 0;
 
-    while ( my $seqs = $reader->next ) {
+    while ( my $seqs = $reader->read ) {
         for my $seq ( @$seqs ) {
             my $seq_length = length $seq->{seq};
             $ori_ct += $seq_length;
@@ -143,8 +143,8 @@ sub _open_reader {
     my $fastq_file = $self->fastq_file;
     my $reader;
     eval{
-        $reader = Genome::Model::Tools::FastQual::FastqSetReader->create(
-            files => $fastq_file,
+        $reader = Genome::Model::Tools::FastQual::FastqReader->create(
+            files => [ $fastq_file ],
         );
     };
     unless ( $reader ) {
@@ -172,8 +172,8 @@ sub _open_writer {
 
     my $writer;
     eval{
-        $writer = Genome::Model::Tools::FastQual::FastqSetWriter->create(
-            files => $out_file,
+        $writer = Genome::Model::Tools::FastQual::FastqWriter->create(
+            files => [ $out_file ],
         );
     };
     unless ( $writer ) {
