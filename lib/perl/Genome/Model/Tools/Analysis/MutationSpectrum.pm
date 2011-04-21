@@ -114,6 +114,51 @@ class Genome::Model::Tools::Analysis::MutationSpectrum {
         default => "",
         doc => 'name to put into the title of the spectrum plot',
     },   
+    #below here are variables with which to store results
+    #hopefully these can then be judiciously used to write cross-comparison scripts
+
+    _total_lines => {
+        is => 'Integer',
+        is_optional => 1,
+        doc => "Total number of lines in the file",
+    },   
+    _num_indels => {
+        is => 'Integer',
+        is_optional => 1,
+        doc => "Total number of indels in the file",
+    },   
+    _num_mnps => {
+        is => 'Integer',
+        is_optional => 1,
+        doc => "Total number of mnp (likely dnps) in the file",
+    },   
+    _num_snvs => {
+        is => 'Integer',
+        is_optional => 1,
+        doc => "Total number of snvs in the file",
+    },   
+    _transitions_transversion_count => {
+        is => 'HashRef',
+        is_optional => 1,
+        doc => "Hash containing the counts for the various base changes as hash{base1}{base2}",
+    },   
+    _num_transitions => {
+        is => 'Integer',
+        is_optional => 1,
+        doc => "Number of transitions",
+    },
+    _num_transversions => {
+        is => 'Integer',
+        is_optional => 1,
+        doc => "Number of transversions",
+    },
+
+    _synonymous_transitions_transversion_count => {
+        is => 'HashRef',
+        is_optional => 1,
+        doc => "Hash containing the counts for the various base changes for synonymous changes as hash{base1}{base2}",
+    },   
+    #not dealing with CpG/NpG stuff yet
 
     # Make workflow choose 64 bit blades
     lsf_resource => {
@@ -344,6 +389,17 @@ sub execute {
     print TRANS "Transitions\t$transitions\nTransversions\t$transversions\n";
     my $total_snvs = $transversions + $transitions;
     print TRANS "SNVs\t$total_snvs\nIndels\t$indels\nDNP$DNP\nTotal\t$lines";
+    close TRANS;
+
+    #set class values
+    $self->_num_transversions($transversions);
+    $self->_num_transitions($transitions);
+    $self->_synonymous_transitions_transversion_count(\%synonomous_type);
+    $self->_transitions_transversion_count(\%nonsyn_type);
+    $self->_num_snvs($total_snvs);
+    $self->_num_mnps($DNP);
+    $self->_num_indels($indels);
+    $self->_total_lines($lines);
 
     for my $base (sort keys %cpg_island_count) {
         for my $base_change (sort keys %{$cpg_island_count{$base}} ) { 
@@ -351,7 +407,7 @@ sub execute {
             my $npg_island_changes = $npg_island_count{$base}{$base_change} ? $npg_island_count{$base}{$base_change} : 0;
             $cpg_island_changes += $cpg_island_count{$base_complement{$base}}{$base_complement{$base_change}} if exists($cpg_island_count{$base_complement{$base}}{$base_complement{$base_change}});
             $npg_island_changes += $npg_island_count{$base_complement{$base}}{$base_complement{$base_change}} if exists($npg_island_count{$base_complement{$base}}{$base_complement{$base_change}});
-            print CPG_ISLAND "$base-->$base_change\t$cpg_island_changes\t$npg_island_changes\t" . ($cpg_island_changes+$npg_island_changes) . "\t" .  $cpg_island_changes/($cpg_island_changes + $npg_island_changes) . "\n";
+            print CPG_ISLAND "$base->$base_change\t$cpg_island_changes\t$npg_island_changes\t" . ($cpg_island_changes+$npg_island_changes) . "\t" .  $cpg_island_changes/($cpg_island_changes + $npg_island_changes) . "\n";
         }
     } 
 
@@ -361,19 +417,17 @@ sub execute {
             my $npg_finder_changes = $npg_finder_count{$base}{$base_change};
             $cpg_finder_changes += $cpg_finder_count{$base_complement{$base}}{$base_complement{$base_change}} if exists($cpg_finder_count{$base_complement{$base}}{$base_complement{$base_change}});
             $npg_finder_changes += $npg_finder_count{$base_complement{$base}}{$base_complement{$base_change}} if exists($npg_finder_count{$base_complement{$base}}{$base_complement{$base_change}});
-            print CPG_FINDER "$base-->$base_change\t$cpg_finder_changes\t$npg_finder_changes\t" . ($cpg_finder_changes+$npg_finder_changes) . "\t" .  $cpg_finder_changes/($cpg_finder_changes + $npg_finder_changes) . "\n";
+            print CPG_FINDER "$base->$base_change\t$cpg_finder_changes\t$npg_finder_changes\t" . ($cpg_finder_changes+$npg_finder_changes) . "\t" .  $cpg_finder_changes/($cpg_finder_changes + $npg_finder_changes) . "\n";
         }
     } 
-
-    close TRANS;
     my $plot_spectrum_file_name = $self->plot_spectrum_file_name;
     if($plot_spectrum_file_name) {
+        #assume that the spectrum plot is requested
         unless($plot_spectrum_file_name =~ /\.pdf$/) {
             $plot_spectrum_file_name .= ".pdf";
         }
         #statistics::R is horrible so try to prevent people from causing themselves problems
         my $abs_filename = abs_path($plot_spectrum_file_name);
-        #assume that the spectrum plot is requested
         my $genome = $self->plot_spectrum_genome_name;
         my $plot_cmd = qq{ plot_spectrum("$output_trans",output_file="$abs_filename",genome="$genome") };
         my $call = Genome::Model::Tools::R::CallR->create(command=>$plot_cmd, library=> "MutationSpectrum.R");
