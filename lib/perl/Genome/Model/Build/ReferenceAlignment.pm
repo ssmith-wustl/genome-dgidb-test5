@@ -19,23 +19,24 @@ class Genome::Model::Build::ReferenceAlignment {
     is_abstract => 1,
     subclassify_by => 'subclass_name',
     has => [
-        subclass_name => { is => 'String', len => 255, is_mutable => 0, column_name => 'SUBCLASS_NAME',
-                           calculate_from => ['model_id'],
-                           calculate => sub {
-                                            my($model_id) = @_;
-                                            return unless $model_id;
-                                            my $model = Genome::Model->get($model_id);
-                                            Carp::croak("Can't find Genome::Model with ID $model_id while resolving subclass for Build") unless $model;
-                                            my $seq_platform = $model->sequencing_platform;
-                                            Carp::croak("Can't subclass Build: Genome::Model id $model_id has no sequencing_platform") unless $seq_platform;
-                                            return return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($seq_platform);
-                                         },
-                          },
+        subclass_name => { 
+            is => 'String', len => 255, is_mutable => 0, column_name => 'SUBCLASS_NAME',
+            calculate_from => 'model_id',
+            calculate => sub {
+                my($model_id) = @_;
+                return unless $model_id;
+                my $model = Genome::Model->get($model_id);
+                Carp::croak("Can't find Genome::Model with ID $model_id while resolving subclass for Build") unless $model;
+                my $seq_platform = $model->sequencing_platform;
+                Carp::croak("Can't subclass Build: Genome::Model id $model_id has no sequencing_platform") unless $seq_platform;
+                return return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($seq_platform);
+            },
+        },
         genotype_microarray_build_id => {
             is => 'Text',
             via => 'inputs',
             to => 'value_id',
-            where => [ name => 'genotype_microarray_build', 'value_class_name' => 'Genome::Model::Build::GenotypeMicroarray', ],
+            where => [ name => 'genotype_microarray', 'value_class_name' => 'Genome::Model::Build::GenotypeMicroarray', ],
             is_many => 0,
             is_mutable => 1,
             is_optional => 1,
@@ -44,27 +45,6 @@ class Genome::Model::Build::ReferenceAlignment {
         genotype_microarray_build => {
             is => 'Genome::Model::Build::GenotypeMicroarray',
             id_by => 'genotype_microarray_build_id',
-        },
-        genotype_data => {
-            is => 'Genome::InstrumentData::Imported',
-            via => 'genotype_microarray_build',
-            to => 'instrument_data',
-        },
-        genotype_data_id => {
-            is => 'Number',
-            via => 'genotype_data',
-            to => 'id',
-        },
-        genotype => {
-            is => 'Genome::Site::WUGC::IlluminaGenotyping',
-            id_by => 'genotype_data_id',
-        },
-        genotype_source_barcode => {
-            via => 'genotype',
-            to => 'source_barcode',
-        },
-        default_genotype_data_id => {
-            via => 'subject',
         },
         reference_sequence_build_id => {
             is => 'Text',
@@ -82,7 +62,6 @@ class Genome::Model::Build::ReferenceAlignment {
         },
     ],
 };
-
 
 sub create {
     my $class = shift;
@@ -109,17 +88,68 @@ sub gold_snp_build {
         return $self->genotype_microarray_build;
     }
     else {
-        return $self->model->gold_snp_build;
+        return $self->deduce_genotype_microarray_build_via_heuristic;
     }
 }
 
 sub gold_snp_path {
     my $self = shift;
     my $geno_micro_build = $self->gold_snp_build;
-    $self->status_message("build::gold_snp_path: Using Genotype Microarray build " . $geno_micro_build->id . ".") if $geno_micro_build;
-    return ($geno_micro_build ? $geno_micro_build->formatted_genotype_file_path : undef);
+    return unless $geno_micro_build;
+    return $geno_micro_build->formatted_genotype_file_path;
 }
 
+# FIXME Ideally, the correct genotype microarray build would be retrieved via only build inputs. This
+# heuristic only exists so older builds that don't have this input can still run gold snp concordance.
+# Once the genotype microarray <=> sample link is completely backfilled and model/build inputs are 
+# backfilled, this should be removed.
+sub deduce_genotype_microarray_build_via_heuristic {
+    my $self = shift;
+    my $subject = $self->model->subject;
+    unless ($subject->subclass_name eq 'Genome::Sample') {
+        $self->warning_message("Can only deduce genotype microarray build for samples, not " . $subject->subclass_name);
+        return;
+    }
+
+    my @genotype_models = Genome::Model::GenotypeMicroarray->get(
+        subject_id => $subject->id,
+    );
+    unless (@genotype_models) {
+        $self->warning_message("Found no genotype microarray models for sample " . $subject->id);
+        return;
+    }
+
+    # Get rid of genotype models that aren't using internal data
+    @genotype_models = grep { 
+        my $import_source_name = $_->instrument_data->import_source_name;
+        (defined $import_source_name and $import_source_name eq 'wugc');
+    } @genotype_models;
+
+    unless (@genotype_models) {
+        $self->warning_message("Found no genotype microarray models using internal genotype data!");
+        return;
+    }
+
+    # Only grab genotype models with a compatible reference
+    @genotype_models = grep { $_->reference_sequence_build->is_compatible_with($self->reference_sequence_build) } @genotype_models;
+    unless (@genotype_models) {
+        $self->warning_message("Found no genotype microarray models using a reference sequence compatible with " .
+            $self->reference_sequence_build_id);
+        return;
+    }
+
+    my $build;
+    for my $gold_model (reverse @genotype_models) {
+        $build = $gold_model->last_succeeded_build;
+        last if $build;
+    }
+    unless ($build) {
+        $self->warning_message("Found no successful build of a compatible genotype microarray model!");
+        return;
+    }
+
+    return $build;
+}
 
 sub gold_snp_report_file_filtered {
 	my $self = shift;
