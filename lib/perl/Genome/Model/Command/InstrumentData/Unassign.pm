@@ -93,42 +93,17 @@ sub execute {
 sub _unassign_by_instrument_data_id {
     my ($self, $instrument_data_id) = @_;
 
-    # Check if already assigned
-    my $existing_ida = Genome::Model::InstrumentDataAssignment->get(
-        model_id => $self->model->id,
-        instrument_data_id => $instrument_data_id
+    my $input = Genome::Model::Input->get(
+        name => 'instrument_data',
+        value_id => $instrument_data_id,
     );
 
-    if ( $existing_ida ) {
-        $self->status_message(
-            sprintf(
-                'Found instrument data (id<%s>) assigned to model (id<%s> name<%s>)%s.',
-                $existing_ida->instrument_data_id,
-                $self->model->id,
-                $self->model->name,
-                (
-                    $existing_ida->filter_desc 
-                        ? ' with filter ' . $existing_ida->filter_desc
-                        : ''
-                )
-            )
-        );
-        # logic to abandon builds using this assignment is now in the assignment delete
-        $existing_ida->delete;
+    if ( not $input ) {
+        $self->status_message('Did not find instrument data input');
         return 1;
     }
-    else {
-        $self->error_message(
-            sprintf(
-                'Failed to find instrument data (id<%s>) assigned to model (id<%s> name<%s>).',
-                $instrument_data_id,
-                $self->model->id,
-                $self->model->name,
-            )
-        );
-        return;
-    }
 
+    $input->delete;
 
     return 1;
 }

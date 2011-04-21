@@ -69,10 +69,8 @@ sub create {
 sub execute {
     my $self = shift;
 
-    my $reader = $self->_open_reader
-        or return;
-    my $writer = $self->_open_writer
-        or return;
+    my ($reader, $writer) = $self->_open_reader_and_writer;
+    return if not $reader or not $writer;
 
     my @limiters;
     my $base_limiter = $self->_create_base_limiter;
@@ -80,7 +78,7 @@ sub execute {
     my $count_limiter = $self->_create_count_limiter;
     push @limiters, $count_limiter if $count_limiter;
     
-    READER: while ( my $seqs = $reader->next ) {
+    READER: while ( my $seqs = $reader->read ) {
         $writer->write($seqs);
         for my $limiter ( @limiters ) {
             last READER unless $limiter->($seqs); # returns 0 when done
@@ -119,5 +117,3 @@ sub _create_count_limiter {
 
 1;
 
-#$HeadURL$
-#$Id$

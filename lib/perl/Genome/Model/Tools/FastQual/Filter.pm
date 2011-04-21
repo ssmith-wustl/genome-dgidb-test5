@@ -21,12 +21,10 @@ HELP
 sub execute {
     my $self = shift;
 
-    my $reader = $self->_open_reader;
-    return unless $reader;
-    my $writer = $self->_open_writer;
-    return unless $writer;
+    my ($reader, $writer) = $self->_open_reader_and_writer;
+    return if not $reader or not $writer;
 
-    while ( my $seqs = $reader->next ) {
+    while ( my $seqs = $reader->read ) {
         $self->_filter($seqs) or next;
         $writer->write($seqs);
     }
@@ -48,5 +46,3 @@ sub filter {
 
 1;
 
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Tools/Fastq/Base.pm $
-#$Id: Base.pm 60817 2010-07-09 16:10:34Z ebelter $

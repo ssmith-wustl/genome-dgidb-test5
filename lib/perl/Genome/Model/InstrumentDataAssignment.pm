@@ -59,7 +59,7 @@ sub create {
     my $class = shift;
 
     my $caller = caller();
-    if ( not $caller and $caller ne 'Genome::Model::Input') {
+    if ( not $caller or $caller ne 'Genome::Model::Input') {
         Carp::confess('Genome::Model::InstrumentDataAssignment create must be called from Genome::Model::Input create!');
     }
 
@@ -70,7 +70,7 @@ sub delete {
     my $self = shift;
 
     my $caller = caller();
-    if ( not $caller and $caller ne 'Genome::Model::Input') {
+    if ( not $caller or $caller ne 'Genome::Model::Input') {
         Carp::confess('Genome::Model::InstrumentDataAssignment delete must be called from Genome::Model::Input delete!');
     }
 

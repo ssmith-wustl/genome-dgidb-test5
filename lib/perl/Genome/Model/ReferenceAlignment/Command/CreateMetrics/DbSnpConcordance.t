@@ -93,12 +93,7 @@ sub setup_test_builds {
         reference_sequence_build => $reference_sequence_build,
     );
     ok($test_model, 'created test model');
-    
-    my $test_assignment = Genome::Model::InstrumentDataAssignment->create(
-        model_id => $test_model->id,
-        instrument_data_id => $test_instrument_data->id
-    );
-    ok($test_assignment, 'assigned data to model');
+    ok($test_model->add_instrument_data($test_instrument_data), 'added inst data');
     
     my $test_build = Genome::Model::Build->create(
         model_id => $test_model->id,
