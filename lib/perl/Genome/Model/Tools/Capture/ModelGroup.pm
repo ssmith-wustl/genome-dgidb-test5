@@ -376,7 +376,7 @@ sub execute {                               # replace with real execution logic.
 	## Determine normal-tumor pairing and completed models ##
 	if($self->output_model_pairs)
 	{
-		my %tumor_sample_names = my %tumor_model_ids = my %normal_model_ids = ();
+		my %normal_sample_names = my %tumor_sample_names = my %tumor_model_ids = my %normal_model_ids = ();
 	
 		foreach my $sample_name (keys %succeeded_models_by_sample)
 		{
@@ -393,12 +393,15 @@ sub execute {                               # replace with real execution logic.
 	
 			if($sample_type eq "tumor")
 			{
-				$tumor_model_ids{$patient_id} = $model_id;
-				$tumor_sample_names{$patient_id} = $sample_name;
+				$tumor_model_ids{$patient_id} .= "," if($tumor_model_ids{$patient_id});
+				$tumor_model_ids{$patient_id} .= $model_id;
+				$tumor_sample_names{$model_id} = $sample_name;
 			}
 			elsif($sample_type eq "normal")
 			{
-				$normal_model_ids{$patient_id} = $model_id;
+				$normal_model_ids{$patient_id} .= "," if($normal_model_ids{$patient_id});
+				$normal_model_ids{$patient_id} .= $model_id;
+				$normal_sample_names{$model_id} = $sample_name;
 			}
 			
 	#		print "$sample_name\t$patient_id\t$sample_type\n";
@@ -412,14 +415,28 @@ sub execute {                               # replace with real execution logic.
 			{
 				$stats{'num_completed_patients'}++;
 	
-				my $tumor_sample_name = $tumor_sample_names{$patient_id};
-				my $tumor_model_id = $tumor_model_ids{$patient_id};
-				my $normal_model_id = $normal_model_ids{$patient_id};
-	
-				if($self->output_model_pairs)
+				my $tumor_model_ids = $tumor_model_ids{$patient_id};
+				my $normal_model_ids = $normal_model_ids{$patient_id};
+				my @tumor_model_ids = split(/\,/, $tumor_model_ids);
+				my @normal_model_ids = split(/\,/, $normal_model_ids);
+				
+				my $comparison_number = 1;
+				
+				foreach my $tumor_model_id (@tumor_model_ids)
 				{
-					print MODELPAIRS "$tumor_sample_name\t$normal_model_id\t$tumor_model_id\n";
+					my $tumor_sample_name = $tumor_sample_names{$tumor_model_id};
+
+					foreach my $normal_model_id (@normal_model_ids)
+					{
+						my $normal_sample_name = $normal_sample_names{$normal_model_id};
+						if($self->output_model_pairs)
+						{
+							print MODELPAIRS "$tumor_sample_name\t$normal_model_id\t$tumor_model_id\t$normal_sample_name\n";
+						}
+					}
 				}
+
+
 	
 	#			print "$patient_id\t$tumor_sample_name\t$normal_model_id\t$tumor_model_id\n";
 			}
