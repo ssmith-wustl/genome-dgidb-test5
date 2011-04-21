@@ -5,9 +5,6 @@ use warnings;
 
 use Genome;
 
-require Bio::SeqIO;
-require Bio::Seq;
-require Bio::Seq::Quality;
 use Carp 'confess';
 use Data::Dumper 'Dumper';
 require Genome::Utility::MetagenomicClassifier::SequenceClassification;
@@ -316,17 +313,17 @@ sub fasta_and_qual_reader_for_type_and_set_name {
     my $method = $type.'_fasta_file_for_set_name';
     my $fasta_file = $self->$method($set_name);
     return unless -e $fasta_file; # ok
-    my %params = ( fasta_file => $fasta_file );
+    my @files = $fasta_file;
     if ( $self->sequencing_platform eq 'sanger' ) { # has qual
         $method = $type.'_qual_file_for_set_name';
         my $qual_file = $self->$method($set_name);
-        $params{qual_file} = $qual_file if -e $qual_file;
+        push @files, $qual_file if -e $qual_file;
     }
 
     # Create reader, return
-    my $reader =  Genome::Utility::BioPerl::FastaAndQualReader->create(%params);
-    unless ( $reader ) {
-        $self->error_message("Can't create fasta reader for $type fasta file and amplicon set name ($set_name) for ".$self->description);
+    my $reader =  Genome::Model::Tools::FastQual::PhredReader->create(files => \@files);
+    if ( not  $reader ) {
+        $self->error_message("Failed to create phred reader for $type fasta file and amplicon set name ($set_name) for ".$self->description);
         return;
     }
 
@@ -346,17 +343,18 @@ sub fasta_and_qual_writer_for_type_and_set_name {
     my $fasta_file = $self->$method($set_name);
     unlink $fasta_file if -e $fasta_file;
     my %params = ( fasta_file => $fasta_file );
+    my @files = $fasta_file;
     if ( $self->sequencing_platform eq 'sanger' ) { # has qual
         $method = $type.'_qual_file_for_set_name';
         my $qual_file = $self->$method($set_name);
         unlink $qual_file if -e $qual_file;
-        $params{qual_file} = $self->$method($set_name);
+        push @files, $qual_file;
     }
 
     # Create writer, return
-    my $writer =  Genome::Utility::BioPerl::FastaAndQualWriter->create(%params);
+    my $writer =  Genome::Model::Tools::FastQual::PhredWriter->create(files => \@files);
     unless ( $writer ) {
-        $self->error_message("Can't create fasta and qual writer for $type fasta file and amplicon set name ($set_name) for ".$self->description);
+        $self->error_message("Can't create phred writer for $type fasta file and amplicon set name ($set_name) for ".$self->description);
         return;
     }
 
@@ -385,11 +383,8 @@ sub orient_amplicons {
             or return;
 
         while ( my $amplicon = $amplicon_set->next_amplicon ) {
-            my $bioseq = $amplicon->bioseq;
-            unless ( $bioseq ) { 
-                # OK
-                next;
-            }
+            my $seq = $amplicon->seq;
+            next if not $seq; #OK
 
             my $classification = $amplicon->classification;
             unless ( $classification ) {
@@ -398,13 +393,11 @@ sub orient_amplicons {
             }
 
             if ( $classification->is_complemented ) {
-                eval { $bioseq = $bioseq->revcom; };
-                unless ( $bioseq ) {
-                    die "Can't reverse complement biobioseq for amplicon (".$amplicon->name."): $!";
-                }
+                $seq->{seq} = reverse $seq->{seq};
+                $seq->{seq} =~ tr/ATGCatgc/TACGtacg/;
             }
 
-            $writer->write_seq($bioseq);
+            $writer->write([$seq]);
         }
     }
 
@@ -481,16 +474,17 @@ sub classify_amplicons {
         }
 
         while ( my $amplicon = $amplicon_set->next_amplicon ) {
-            my $bioseq = $amplicon->bioseq
+            my $seq = $amplicon->seq
                 or next;
             $processed++;
 
             # Try to classify 2X - per kathie 2009mar3
-            my $classification = $classifier->classify($bioseq);
+            my $parsed_seq = $classifier->create_parsed_seq($seq);
+            my $classification = $classifier->classify_parsed_seq($parsed_seq);
             unless ( $classification ) { # try again
-                $classification = $classifier->classify($bioseq);
+                $classification = $classifier->classify_parsed_seq($parsed_seq);
                 unless ( $classification ) { # warn , go on
-                    $self->error_message('Amplicon '.$amplicon->name.' length ('.$bioseq->length.') did not classify for '.$self->description."\n".$bioseq->seq."\n");
+                    $self->error_message('Amplicon '.$amplicon->name.' length ('.length($seq->{seq}).') did not classify for '.$self->description."\n".$seq->{seq}."\n");
                     $classification_error++;
                     next;
                 }

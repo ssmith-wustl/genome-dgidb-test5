@@ -18,7 +18,7 @@ sub _read {
     return if not $seq{seq};
     $seq{seq} =~ tr/ \t\n\r//d;	# Remove whitespace
 
-    return \%seq if not $fhs[1];
+    return [\%seq] if not $fhs[1];
 
     my ($id, $desc, $data) = $self->_parse_io($fhs[1]);
     if ( not defined $id ) {
@@ -28,12 +28,16 @@ sub _read {
         Carp::confess('Fasta and quality ids do not match: '.$seq{id}." <=> $id");
     }
 
-    $seq{qual} = join('', map { chr($_ + 33) } split(/[\s\n]+/, $data));
+    for my $line ( split("\n", $data) ){
+        $line =~ s/^\s+//;
+        $line =~ s/\s+$//;
+        $seq{qual} .= join('', map { chr($_ + 33) } split(/\s+/, $line));
+    }
     if ( not $seq{qual} ) {
         Carp::confess("Could not convert phred quality to sanger: $data");
     }
     if ( length($seq{seq}) != length($seq{qual}) ) {
-        Carp::confess("Number of qualities does not match number of bases for fasta $id. Have ".length($seq{seq}).' bases and '.length($seq{qual}).' qualities');
+        Carp::confess("Number of qualities does not match number of bases for fasta $id. Have ".length($seq{seq}).' bases and '.length($seq{qual})." qualities.\nSeq: ".$seq{seq}."\nQual: '".$data."'");
     }
 
     return [ \%seq ];

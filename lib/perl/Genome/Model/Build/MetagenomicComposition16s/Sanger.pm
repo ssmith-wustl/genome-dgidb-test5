@@ -203,8 +203,8 @@ sub _amplicon_iterator_for_name {
                 next AMPLICON unless $self->$filter($amplicon);
             }
 
-            # Processed bioseq
-            $self->load_bioseq_for_amplicon($amplicon); # dies on error
+            # Processed oseq
+            $self->load_seq_for_amplicon($amplicon); # dies on error
 
             return $amplicon;
         }
@@ -229,10 +229,10 @@ sub _get_amplicon_name_for_broad_read_name {
     return $read_name;
 }
 
-sub load_bioseq_for_amplicon {
+sub load_seq_for_amplicon {
     my ($self, $amplicon) = @_;
 
-    die "No amplicon to load bioseq." unless $amplicon;
+    die "No amplicon to load seq." unless $amplicon;
 
     # get contig from acefile
     my $acefile = $self->ace_file_for_amplicon($amplicon);
@@ -252,30 +252,25 @@ sub load_bioseq_for_amplicon {
     }
     return unless $contig; # ok
 
-    # create bioseq
-    my $bioseq;
-    eval {
-        $bioseq = Bio::Seq::Quality->new(
-            '-id' => $amplicon->name,
-            '-alphabet' => 'dna',
-            '-force_flush' => 1,
-            '-seq' => $contig->unpadded_base_string,
-            '-qual' => join(' ', @{$contig->qualities}),
-        );
+    my $seq = {
+        id => $amplicon->name,
+        seq => $contig->unpadded_base_string,
+        qual => join('', map { chr($_ + 33) } @{$contig->qualities}),
     };
-    if ( $@ ) { # bad
-        $self->error_message("Can't make bioseq from contig from amplicon acefile ($acefile).");
-        die;
+    if ( $seq->{seq} !~ /^[ATGCNX]+$/i ) {
+        Carp::confess('Illegal caharcters in sequence for amplicon: '.$amplicon->name."\n".$seq->{seq}); 
     }
-    Genome::Utility::BioPerl->validate_fasta_and_qual_bioseq($bioseq, $bioseq)
-        or die; # bad
 
-    $amplicon->bioseq($bioseq);
+    if ( length $seq->{seq} !=  length $seq->{qual} ) {
+        Carp::confess('Unequal lengths of sequence and quality for amplicon: '.$amplicon->name."\n".$seq->{seq}."\n".$seq->{qual});
+    }
+
+    $amplicon->seq($seq);
     $amplicon->reads_processed($reads);
 
     $ace->disconnect;
     
-    return $bioseq;
+    return $seq;
 }
 
 sub _remove_old_read_iterations_from_amplicon {

@@ -39,28 +39,29 @@ sub execute {
             return;
         }
 
-        my $reader = Genome::Utility::BioPerl->create_bioseq_reader($fasta_file); # confesses
+        my $reader = Genome::Model::Tools::FastQual::PhredReader->create(files => [ $fasta_file ]);
         $self->status_message('READING FASTA: '.$instrument_data->id);
-        while ( my $fasta = $reader->next_seq ) {
+        while ( my $fastas = $reader->read ) {
+            my $fasta = $fastas->[0];
             $attempted++;
             # check length here
-            next unless $fasta->length >= $min_length;
+            next unless length $fasta->{seq} >= $min_length;
             my $set_name = 'none';
-            my $seq = $fasta->seq;
+            my $seq = $fasta->{seq};
             REGION: for my $region ( keys %primers ) {
                 for my $primer ( @{$primers{$region}} ) {
                     if ( $seq =~ s/^$primer// ) {
                         # check length again
-                        $fasta->seq($seq); # set new seq w/o primer
+                        $fasta->{seq} = $seq; # set new seq w/o primer
                         $set_name = $region;
                         last REGION; # go on to write 
                     }
                 }
             }
-            next unless $fasta->length >= $min_length;
-            $fasta->desc(undef); # clear description
+            next unless length $fasta->{seq} >= $min_length;
+            $fasta->{desc} = undef; # clear description
             my $writer = $self->_get_writer_for_set_name($set_name);
-            $writer->write_seq($fasta);
+            $writer->write([$fasta]);
         }
         $self->status_message('DONE PROCESSING: '.$instrument_data->id);
     }
@@ -76,9 +77,9 @@ sub _get_writer_for_set_name {
     unless ( $self->{$set_name} ) {
         my $fasta_file = $self->build->processed_fasta_file_for_set_name($set_name);
         unlink $fasta_file if -e $fasta_file;
-        $self->{$set_name} = Genome::Utility::BioPerl->create_bioseq_writer(
-            $fasta_file
-        ); # confesses
+        my $writer = Genome::Model::Tools::FastQual::PhredWriter->create(files => [ $fasta_file ]);
+        Carp::confess("Failed to create phred reader for amplicon set ($set_name)") if not $writer;
+        $self->{$set_name} = $writer;
     }
 
     return $self->{$set_name};
@@ -96,5 +97,3 @@ V1_V3    27Fd2    AGAGTTTGATCCTGGCTCAG
 V3_V6    357F    CCTACGGGAGGCAGCAG
 V6_V9    U968f    AACGCGAAGAACCTTAC
 
-#$HeadURL$
-#$Id$

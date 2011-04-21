@@ -14,12 +14,12 @@ sub _add_amplicon_reads_fasta_and_qual_to_build_processed_fasta_and_qual {
     my ($self, $fasta_file, $qual_file) = @_;
 
     # Write the 'raw' read fastas
-    my $reader = Genome::Utility::BioPerl::FastaAndQualReader->create(
-        fasta_file => $fasta_file,
-        qual_file => $qual_file,
-    ) or return;
-    while ( my $bioseq = $reader->next_seq ) {
-        $self->_processed_reads_fasta_and_qual_writer->write_seq($bioseq)
+    my $reader = Genome::Model::Tools::FastQual::PhredReader->create(
+        files => [ $fasta_file, $qual_file ],
+    );
+    return if not $reader;
+    while ( my $seqs = $reader->read ) {
+        $self->_processed_reads_fasta_and_qual_writer->write($seqs)
             or return;
     }
  
@@ -30,11 +30,13 @@ sub _processed_reads_fasta_and_qual_writer {
     my $self = shift;
 
     unless ( $self->{_processed_reads_fasta_and_qual_writer} ) {
-        $self->{_processed_reads_fasta_and_qual_writer} = Genome::Utility::BioPerl::FastaAndQualWriter->create(
-            fasta_file => $self->build->processed_reads_fasta_file,
-            qual_file => $self->build->processed_reads_qual_file,
-        )
-            or return;
+        my $fasta_file = $self->build->processed_reads_fasta_file;
+        unlink $fasta_file if -e $fasta_file;
+        my $qual_file = $self->build->processed_reads_qual_file;
+        unlink  $qual_file if -e $qual_file;
+        my $writer = Genome::Model::Tools::FastQual::PhredWriter->create(files => [ $fasta_file, $qual_file ]);
+        return if not $writer;
+        $self->{_processed_reads_fasta_and_qual_writer} = $writer;
     }
 
     return $self->{_processed_reads_fasta_and_qual_writer};
@@ -42,5 +44,3 @@ sub _processed_reads_fasta_and_qual_writer {
 
 1;
 
-#$HeadURL$
-#$Id$

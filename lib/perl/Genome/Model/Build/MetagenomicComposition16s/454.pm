@@ -70,18 +70,19 @@ sub _amplicon_iterator_for_name {
     return unless $reader; # returns undef if no file exists OK or dies w/ error 
 
     my $amplicon_iterator = sub{
-        my $bioseq = $reader->next_seq;
-        return unless $bioseq;
+        my $seqs = $reader->read;
+        return unless $seqs;
+        my $seq = $seqs->[0];
 
         my $amplicon = Genome::Model::Build::MetagenomicComposition16s::Amplicon->create(
-            name => $bioseq->id,
-            reads => [ $bioseq->id ],
-            bioseq => $bioseq,
-            classification_file => $self->classification_file_for_amplicon_name( $bioseq->id ),
+            name => $seq->{id},
+            reads => [ $seq->{id} ],
+            seq => $seq,
+            classification_file => $self->classification_file_for_amplicon_name( $seq->{id} ),
         );
 
         unless ( $amplicon ) {
-            die $self->error_message("Can't create amplicon for ".$bioseq->id);
+            die $self->error_message("Can't create amplicon for ".$seq->{id});
         }
         
         return $amplicon;
