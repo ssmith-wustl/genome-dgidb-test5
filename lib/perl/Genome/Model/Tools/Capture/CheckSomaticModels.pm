@@ -80,10 +80,9 @@ sub execute {                               # replace with real execution logic.
 	my $data_dir = "./";
 	$data_dir = $self->data_dir if($self->data_dir);
 
-
 	## Print the header ##
 	
-	print "TUMOR_SAMPLE_NAME\tMODEL_ID\tBUILD_ID\tSTATUS\tVSCAN\tSNIPER\tMERGED\tFILTER\tNOVEL\tTIER1\tINDELS\tTIER1\n";
+	print "NORMAL_SAMPLE_NAME\tTUMOR_SAMPLE_NAME\tMODEL_ID\tBUILD_ID\tSTATUS\tVSCAN\tSNIPER\tMERGED\tFILTER\tNOVEL\tTIER1\tINDELS\tTIER1\n";
 
 
 	my $input = new FileHandle ($sample_list);
@@ -95,223 +94,62 @@ sub execute {                               # replace with real execution logic.
 		my $line = $_;
 		$lineCounter++;
 		
-		(my $sample_name, my $normal_sample_name) = split(/\t/, $line);
+		(my $tumor_sample_name, my $normal_model_id, my $tumor_model_id, my $normal_sample_name) = split(/\t/, $line);
 		$stats{'num_pairs'}++;
 
-		my $model_name = $model_basename . "-" . $sample_name;
-		my $model_id = get_model_id($model_name);
+		my @temp = split(/\-/, $tumor_sample_name);
+		my $patient_id = join("-", $temp[0], $temp[1], $temp[2]);
 		
-		if(!$model_id)
+		if($normal_sample_name)
 		{
-			print "Didn't find $model_name\n";
-			$model_name = substr($model_name, 0, length($model_name) - 2);
-			$model_id = get_model_id($model_name);
-			print "Didn't find $model_name\n";
+			$normal_sample_name =~ s/\$patient_id\-//;
 		}
-		
+
+		my $model_name = $model_basename . "-" . $tumor_sample_name;
+		$model_name .= "_" . $normal_sample_name if($normal_sample_name);
+#		print "Getting model id for $model_name...\n";
+
+		my $model_id = get_model_id($model_name);
+#		print "Got model id $model_id\n";
+	
 		my $model_status = "Unknown";
 
 		## Build the somatic model ##
 		if(!$model_id)
 		{
-			print "$sample_name\tNo Model Named $model_name\n";
+			print "$tumor_sample_name\tNo Model Named $model_name\n";
 		}
 		else
 		{
-			my $model_dir = $data_dir . "/" . $model_name;
-			my @build_ids = get_build_ids($model_dir);
+			my $model = Genome::Model->get($model_id);			
 			
-			## Iterate through builds ##
+			my @builds = $model->builds;
 			
-			my $buildCounter = 0;
-			foreach my $build_id (@build_ids)
+			foreach my $build (@builds)
 			{
-				$buildCounter++;
-				
-				my $build_dir = "$model_dir/build$build_id";
-				
-				## Determine paths to key files ##
-				
-				my $server_status_file = "$build_dir/server_location.txt";
-				my $merged_file = "$build_dir/merged.somatic.snp";
-				my $filter_file = "$build_dir/merged.somatic.snp.filter";
-				my $novel_file = "$build_dir/merged.somatic.snp.filter.novel";
-				my $tier1_file = "$build_dir/merged.somatic.snp.filter.novel.tier1";
-
-				my $indel_file = "$build_dir/merged.somatic.indel";
-				my $indel_tier1_file = "$build_dir/merged.somatic.indel.filter.tier1";
-
-				my $gatk_indel_file = "$build_dir/gatk.output.indel.formatted.Somatic";
-				my $gatk_indel_tier1_file = "$build_dir/gatk.output.indel.formatted.Somatic.tier1";
-
-				my $varscan_file = "$build_dir/varScan.output.snp";
-				my $varscan_somatic_file = "$build_dir/varScan.output.snp.formatted.Somatic.hc";
-
-				my $sniper_somatic_file = "$build_dir/somaticSniper.output.snp.filter.hc.somatic";
-				my $sniper_hc_file = "$build_dir/somaticSniper.output.snp.filter.hc";
-				my $sniper_file = "$build_dir/somaticSniper.output.snp.filter";
-
-
-				## Determine Varscan status ##
-
-				my $varscan_status = "Unknown";
-				$varscan_status = "Done" if(-e $varscan_somatic_file);
-				if(-e $varscan_somatic_file)
-				{
-					$varscan_status = `cat $varscan_somatic_file | wc -l`;
-					chomp($varscan_status);
-				}
-				elsif(-e $varscan_file)
-				{
-					$varscan_status = `tail -2 $varscan_file | head -1 | cut -f 1`;
-					chomp($varscan_status);
-					$varscan_status = "chr" . $varscan_status;
-				}
-				else
-				{
-					$varscan_status = "--";
-				}
-
-				## Get Sniper Status ##
-				my $sniper_status = "Unknown";
-				if(-e $sniper_somatic_file)
-				{
-					$sniper_status = `cat $sniper_somatic_file | wc -l`;
-					chomp($sniper_status);
-				}
-				elsif(-e $sniper_hc_file)
-				{
-					$sniper_status = "HC";
-				}
-				elsif(-e $sniper_file)
-				{
-					$sniper_status = "Filt";
-				}
-
-				## Determine build status ##
-				
-				my $build_status = "New";
-				my %build_stats = ();
-				
-				
-				
-				## Count Indels ##
-				
-				if(-e $indel_file)
-				{
-					$build_stats{'indels_merged'} = `cat $indel_file | wc -l`;
-					chomp($build_stats{'indels_merged'});
-					
-					if(-e $indel_tier1_file)
-					{
-						$build_stats{'indels_tier1'} = `cat $indel_tier1_file | wc -l`;
-						chomp($build_stats{'indels_tier1'});
-						$stats{'indels_completed'}++;
-					}
-				}
-				
-				if(-e $gatk_indel_file)
-				{
-					$build_stats{'gatk_indels'} = `cat $gatk_indel_file | wc -l`;
-					chomp($build_stats{'gatk_indels'});
-					
-					if(-e $gatk_indel_tier1_file)
-					{
-						$build_stats{'gatk_indels_tier1'} = `cat $gatk_indel_tier1_file | wc -l`;
-						chomp($build_stats{'gatk_indels_tier1'});
-					}
-				}
-				
-				if(-e $merged_file)
-				{
-					$build_status = "Merged";
-					
-					## Count merged SNPs ##
-					$build_stats{'snps_merged'} = `cat $merged_file | wc -l`;
-					chomp($build_stats{'snps_merged'});
-					
-					if(-e $filter_file)
-					{						
-						$build_status = "Filtered";
-				
-						## Count Filtered SNPs ##
-						$build_stats{'snps_filtered'} = `cat $filter_file | wc -l`;
-						chomp($build_stats{'snps_filtered'});
-
-						if(-e $novel_file)
-						{
-							$build_status = "Novel";
-							
-							## Count Novel SNPs ##
-							$build_stats{'snps_novel'} = `cat $novel_file | wc -l`;
-							chomp($build_stats{'snps_novel'});
-							
-							if(-e $tier1_file)
-							{
-								$stats{'snvs_completed'}++;
-								
-								if(-e $server_status_file)
-								{
-									$build_status = "Running";
-								}
-								else
-								{
-									$build_status = "Done";
-								}
-									
-								
-								## Count Tier 1 SNPs ##
-								$build_stats{'snps_tier1'} = `cat $tier1_file | wc -l`;
-								chomp($build_stats{'snps_tier1'});
-							}
-						}
-					}
-					
-				}
-				else
-				{
-					## No merged file exists; so check for Varscan/Sniper files ##
-
-				}
-				
-				
-				## If we build the MAFs ##
-				if($self->build_mafs && -e $tier1_file)# && -e $indel_tier1_file)
-				{
-					## Build the MAF file ##
-					
-					my $cmd = "gmt capture build-maf-file --data-dir $build_dir --normal-sample $normal_sample_name --tumor-sample $sample_name --output-file $build_dir/tcga-maf.tsv";
-					system("bsub -q long $cmd");
-				}
-				
-				$build_stats{'snps_merged'} = "-" if(!$build_stats{'snps_merged'});
-				$build_stats{'snps_filtered'} = "-" if(!$build_stats{'snps_filtered'});
-				$build_stats{'snps_novel'} = "-" if(!$build_stats{'snps_novel'});
-				$build_stats{'snps_tier1'} = "-" if(!$build_stats{'snps_tier1'});
-				$build_stats{'indels_merged'} = "-" if(!$build_stats{'indels_merged'});
-				$build_stats{'indels_tier1'} = "-" if(!$build_stats{'indels_tier1'});
-				$build_stats{'gatk_indels'} = "-" if(!$build_stats{'gatk_indels'});
-				$build_stats{'gatk_indels_tier1'} = "-" if(!$build_stats{'gatk_indels_tier1'});
-				
-				## Update model status for this build ##
-				$model_status = "$build_id\t$build_status\t$varscan_status\t$sniper_status";
-				$model_status .= "\t" . $build_stats{'snps_merged'};
-				$model_status .= "\t" . $build_stats{'snps_filtered'};
-				$model_status .= "\t" . $build_stats{'snps_novel'};
-				$model_status .= "\t" . $build_stats{'snps_tier1'};
-				$model_status .= "\t" . $build_stats{'indels_merged'};
-				$model_status .= "\t" . $build_stats{'indels_tier1'};
-				$model_status .= "\t" . $build_stats{'gatk_indels'};
-				$model_status .= "\t" . $build_stats{'gatk_indels_tier1'};
-				
-				print "$sample_name\t$model_id\t$model_status\n";#\t$build_dir\n";
-				
+				my $build_dir = $build->data_directory;
+				my $build_status = $build->status;
 				$stats{$build_status}++;
+
+				my %build_results = ();
+				## Determine paths to key files ##
+							
+				$build_results{'varscan_somatic_snv'} = get_file_status("$build_dir/varScan.output.snp.formatted.Somatic.hc");
+				$build_results{'sniper_somatic_snv'} = get_file_status("$build_dir/somaticSniper.output.snp.filter.hc.somatic");
+				$build_results{'merged_somatic_snv'} = get_file_status("$build_dir/merged.somatic.snp");
+				$build_results{'merged_somatic_snv_filt'} = get_file_status("$build_dir/merged.somatic.snp.filter");
+				$build_results{'merged_somatic_snv_filt_novel'} = get_file_status("$build_dir/merged.somatic.snp.filter.novel");
+				$build_results{'merged_somatic_snv_filt_novel_tier1'} = get_file_status("$build_dir/merged.somatic.snp.filter.novel.tier1");
+
+				print join("\t", $normal_sample_name, $tumor_sample_name, $model_id, $build->id, $build->status) . "\t"; #, $build->data_directory
+				print join("\t", $build_results{'varscan_somatic_snv'}, $build_results{'sniper_somatic_snv'}, $build_results{'merged_somatic_snv'}) . "\t";
+				print join("\t", $build_results{'merged_somatic_snv_filt'}, $build_results{'merged_somatic_snv_filt_novel'}, $build_results{'merged_somatic_snv_filt_novel_tier1'}) . "\t";
+				print "\n";
 			}
 
-			## End of build iteration
+#			exit(0);
 			
-			
+
 		}
 
 	}
@@ -326,6 +164,29 @@ sub execute {                               # replace with real execution logic.
 }
 
 
+
+
+
+#############################################################
+# ParseFile - takes input file and parses it
+#
+#############################################################
+
+sub get_file_status
+{
+	my $file = shift(@_);
+	
+	if(-e $file)
+	{
+		my $status = `cat $file | wc -l`;
+		chomp($status);
+		return($status);
+	}
+	else
+	{
+		return("-");
+	}
+}
 
 
 #############################################################

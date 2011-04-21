@@ -137,7 +137,8 @@ sub execute {                               # replace with real execution logic.
 		}
 		
 #		my $cmd = $self->java_command_line("copynumber <\($normal_pileup\) <\($tumor_pileup\) $output --data-ratio $normal_tumor_ratio $varscan_params");
-		my $cmd = "java -classpath ~dkoboldt/Software/VarScan/Test net.sf.varscan.VarScan copynumber <\($normal_pileup\) <\($tumor_pileup\) $output --data-ratio $normal_tumor_ratio $varscan_params";
+#		my $cmd = "java -classpath ~dkoboldt/Software/VarScan/Test net.sf.varscan.VarScan copynumber <\($normal_pileup\) <\($tumor_pileup\) $output --data-ratio $normal_tumor_ratio $varscan_params";
+		my $cmd = $self->java_command_line(" copynumber <\($normal_pileup\) <\($tumor_pileup\) $output --data-ratio $normal_tumor_ratio $varscan_params");
 
 		## Run Varscan ##
 		if($self->heap_space)

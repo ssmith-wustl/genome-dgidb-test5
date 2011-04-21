@@ -96,18 +96,28 @@ sub execute {                               # replace with real execution logic.
 		my $line = $_;
 		$lineCounter++;
 		
-		(my $sample_name, my $normal_model_id, my $tumor_model_id) = split(/\t/, $line);
+		(my $tumor_sample_name, my $normal_model_id, my $tumor_model_id, my $normal_sample_name) = split(/\t/, $line);
 		$stats{'num_pairs'}++;
 
-		my $model_name = $model_basename . "-" . $sample_name;
+		my @temp = split(/\-/, $tumor_sample_name);
+		my $patient_id = join("-", $temp[0], $temp[1], $temp[2]);
+		
+		if($normal_sample_name)
+		{
+			$normal_sample_name =~ s/\$patient_id\-//;
+		}
+
+		my $model_name = $model_basename . "-" . $tumor_sample_name;
+		$model_name .= "_" . $normal_sample_name if($normal_sample_name);
+
 		my $model_id = get_model_id($model_name);
 
-		print "$sample_name\t$model_name\n";
+		print "$tumor_sample_name\t$model_name\n";
 
 		## Build the somatic model ##
 		if(!$model_id)
 		{
-			my $cmd = "genome model define somatic-capture --processing-profile-name \"$processing_profile\" --subject-name \"$sample_name\" --subject-type \"$subject_type\" --data-directory $data_dir --model-name \"$model_name\" --normal-model-id $normal_model_id --tumor-model-id $tumor_model_id";
+			my $cmd = "genome model define somatic-capture --processing-profile-name \"$processing_profile\" --subject-name \"$tumor_sample_name\" --subject-type \"$subject_type\" --data-directory $data_dir --model-name \"$model_name\" --normal-model-id $normal_model_id --tumor-model-id $tumor_model_id";
 			if($self->use_bsub)
 			{
 				system("bsub -q short $cmd") if(!$self->report_only);				

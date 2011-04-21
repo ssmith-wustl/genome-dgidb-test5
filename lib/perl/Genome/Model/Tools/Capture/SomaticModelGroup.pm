@@ -23,6 +23,7 @@ use Genome;                                 # using the namespace authorizes Cla
 ## Declare global statistics hash ##
 
 my %stats = ();
+my %included_variants = ();
 
 my %already_reviewed = ();
 my %passed_sites = my %wildtype_sites = my %germline_sites = ();
@@ -169,14 +170,21 @@ sub execute {                               # replace with real execution logic.
 
 				if($self->output_review)
 				{
+					my $tumor_model = $model->tumor_model;
+					my $normal_model = $model->normal_model;
+					my $tumor_model_dir = $tumor_model->last_succeeded_build_directory;
+					my $normal_model_dir = $normal_model->last_succeeded_build_directory;
+					my $tumor_bam = `ls $tumor_model_dir/alignments/*.bam`; chomp($tumor_bam);
+					my $normal_bam = `ls $normal_model_dir/alignments/*.bam`; chomp($normal_bam);
+					
 					my $tier1_snvs = $last_build_dir . "/merged.somatic.snp.filter.novel.tier1";
 					my $output_tier1_snvs = $self->output_review . "/" . $subject_name . ".$model_id.SNVs.tsv";
-					output_snvs_for_review($model_id, $tier1_snvs, $output_tier1_snvs);
+					output_snvs_for_review($model_id, $tier1_snvs, $output_tier1_snvs, $subject_name, $normal_bam, $tumor_bam);
 
 					my $tier1_gatk = $last_build_dir . "/gatk.output.indel.formatted.Somatic.tier1";
 					my $tier1_indels = $last_build_dir . "/merged.somatic.indel.filter.tier1";
 					my $output_tier1_indels = $self->output_review . "/" . $subject_name . ".$model_id.Indels.tsv";
-					output_indels_for_review($model_id, $tier1_indels, $tier1_gatk, $output_tier1_indels);
+					output_indels_for_review($model_id, $tier1_indels, $tier1_gatk, $output_tier1_indels, $subject_name, $normal_bam, $tumor_bam);
 				}
 				
 				if($self->output_maf_file)
@@ -219,6 +227,7 @@ sub execute {                               # replace with real execution logic.
 		print $stats{'review_snvs_already_germline'} . " were germline in at least 3 other samples\n";
 		print $stats{'review_snvs_filtered'} . " were filtered as probable germline\n";
 		print $stats{'review_snvs_included'} . " were included for review\n";
+		print $stats{'review_snvs_already_included'} . " were duplicates and not counted twice\n";
 
 		print $stats{'review_indels_possible'} . " Tier 1 Indels could be reviewed\n";
 		print $stats{'review_indels_already'} . " were already reviewed\n";
@@ -458,8 +467,7 @@ sub load_review_database
 
 sub output_snvs_for_review
 {
-	my ($model_id, $variant_file, $output_file) = @_;
-	
+	my ($model_id, $variant_file, $output_file, $subject_name, $normal_bam, $tumor_bam) = @_;
 	
 	## Check for Tier 1 SNVs ##
 	
@@ -468,6 +476,8 @@ sub output_snvs_for_review
 		## Open the output file ##
 		
 		open(OUTFILE, ">$output_file") or die "Can't open output file: $!\n";
+		print OUTFILE join("\t", "TUMOR", $tumor_bam) . "\n";
+		print OUTFILE join("\t", "NORMAL", $normal_bam) . "\n";
 		print OUTFILE "chrom\tchr_start\tchr_stop\tref\tvar\tcode\tnote\n";
 		
 		## Parse the Tier 1 SNVs file ##
@@ -488,6 +498,7 @@ sub output_snvs_for_review
 			
 			my $key = join("\t", $model_id, $chrom, $chr_start, $chr_stop);
 			my $variant_key = join("\t", $chrom, $chr_start, $chr_stop, $ref, $var);
+			my $sample_variant_key = join("\t", $subject_name, $variant_key);
 			
 			$stats{'review_snvs_possible'}++;
 			
@@ -505,6 +516,11 @@ sub output_snvs_for_review
 			{
 				$include_flag = 0;
 				$stats{'review_snvs_already_germline'}++;
+			}
+			elsif($included_variants{$sample_variant_key})
+			{
+				$include_flag = 0;
+				$stats{'review_snvs_already_included'}++;				
 			}
 			else
 			{
@@ -547,6 +563,8 @@ sub output_snvs_for_review
 			{
 				print OUTFILE join("\t", $chrom, $chr_start, $chr_stop, $ref, $var) . "\n";
 				$stats{'review_snvs_included'}++;
+				my $key = join("\t", $subject_name, $chrom, $chr_start, $chr_stop, $ref, $var);
+				$included_variants{$sample_variant_key} = 1;
 			}
 
 
@@ -598,6 +616,28 @@ sub output_indels_for_review
 		close($input);		
 	}
 
+
+	if(-e $variant_file2)
+	{
+		## Parse the Tier 1 SNVs file ##
+	
+		my $input = new FileHandle ($variant_file2);
+		my $lineCounter = 0;
+	
+		while (<$input>)
+		{
+			chomp;
+			my $line = $_;
+			$lineCounter++;
+
+			my ($chrom, $chr_start) = split(/\t/, $line);
+		
+			$indels{"$chrom\t$chr_start"} .= "\n" if($indels{"$chrom\t$chr_start"});
+			$indels{"$chrom\t$chr_start"} .= $line;
+		}
+		
+		close($input);		
+	}
 
 
 	## Open the output file ##
