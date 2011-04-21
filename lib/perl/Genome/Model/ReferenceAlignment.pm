@@ -111,7 +111,7 @@ class Genome::Model::ReferenceAlignment {
             is => 'Text',
             via => 'inputs',
             to => 'value_id',
-            where => [ name => 'genotype_microarray_model', 'value_class_name' => 'Genome::Model::GenotypeMicroarray', ],
+            where => [ name => 'genotype_microarray', 'value_class_name' => 'Genome::Model::GenotypeMicroarray', ],
             is_mutable => 1,
             is_optional => 1,
             doc => 'Genotype Microarray model used for QC and Gold SNP Concordance report',
@@ -355,6 +355,7 @@ sub is_eliminate_all_duplicates {
     }
 }
 
+# Determines the correct genotype model to use via the official genotype data assigned to the subject
 sub default_genotype_model {
     my $self = shift;
     my $sample = $self->subject;
