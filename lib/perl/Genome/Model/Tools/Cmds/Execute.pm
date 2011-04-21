@@ -16,6 +16,20 @@ class Genome::Model::Tools::Cmds::Execute {
         is_output => 1,
         doc => 'Directory containing all of the input files for sample group (and nothing else!!).',
     },
+    window_size => {
+        type => 'String',
+        is_optional => 0,
+        is_input => 1,
+        default => 30,
+        doc => 'Window size (# of markers) for CMDS computations.',
+    },
+    step_size => {
+        type => 'String',
+        is_optional => 0,
+        is_input => 1,
+        default => 1,
+        doc => 'Window step size for CMDS computations.',
+    },
     output_directory => {
         type => 'String',
         is_optional => 1,
@@ -75,7 +89,7 @@ sub execute {
     opendir DATA_DIR,$data_dir;
     while (my $file = readdir DATA_DIR) {
         next if ($file eq "." || $file eq "..");
-        my $command = "cmds.focal.test(data.dir='$data_dir',wsize=30,wstep=1,analysis.ID='$index',chr.colname='CHR',pos.colname='POS',plot.dir='$plot_dir',result.dir='$test_dir');";
+        my $command = "cmds.focal.test(data.dir='$data_dir',wsize=" . $self->window_size . ",wstep=" . $self->step_size . ",analysis.ID='$index',chr.colname='CHR',pos.colname='POS',plot.dir='$plot_dir',result.dir='$test_dir');";
         my $callr = Genome::Model::Tools::R::CallR->create(
             command => $command,
             library => 'cmds_lib.R',

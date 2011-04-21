@@ -26,7 +26,9 @@ class Genome::Model::Tools::SnpArray::CompareCopySegments {
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		array_events	=> { is => 'Text', doc => "List of merged CNA events from SNP array data, e.g. snpArray.cbs.segments.events.tsv", is_optional => 0, is_input => 1 },
 		sequence_events	=> { is => 'Text', doc => "List of merged CNA events from SNP array data, e.g. varScan.output.copynumber.cbs.segments.events.tsv", is_optional => 0, is_input => 1 },
-		event_size	=> { is => 'Text', doc => "Specify large-scale or focal", is_optional => 1, is_input => 1},
+		min_event_size	=> { is => 'Text', doc => "Minimum size of events to compare", is_optional => 1, is_input => 1, default => 10000000},
+		amp_threshold	=> { is => 'Text', doc => "Minimum seg_mean threshold for amplification", is_optional => 1, is_input => 1, default => 0.10},
+		del_threshold	=> { is => 'Text', doc => "Maximum seg_mean threshold for deletion", is_optional => 1, is_input => 1, default => -0.10},
 		output_file	=> { is => 'Text', doc => "Output file for comparison result", is_optional => 1, is_input => 1},
 		output_hits	=> { is => 'Text', doc => "Output file shared events", is_optional => 1, is_input => 1},
 		output_misses	=> { is => 'Text', doc => "Output file for events from only one source", is_optional => 1, is_input => 1},
@@ -205,15 +207,21 @@ sub load_events
 		{
 #			my ($id, $sample, $chrom, $chr_start, $chr_stop, $num_mark, $seg_mean, $bstat, $p_value, $lcl, $ucl, $event_size, $event_type) = split(/\t/, $line);
 #chrom\tchr_start\tchr_stop\tseg_mean\tnum_segments\tnum_markers\tp_value\tevent_type\tevent_size\tsize_class\tchrom_arm\tarm_fraction\tchrom_fraction
-			my ($chrom, $chr_start, $chr_stop, $seg_mean, $num_segments, $num_markers, $p_value, $event_type, $event_size_bp, $event_size, $chrom_arm) = split(/\t/, $line);
+#			my ($chrom, $chr_start, $chr_stop, $seg_mean, $num_segments, $num_markers, $p_value, $event_type, $event_size_bp, $event_size, $chrom_arm) = split(/\t/, $line);
+			my ($id, $sample, $chrom, $chr_start, $chr_stop, $num_mark, $seg_mean, $bstat, $p_value, $lcl, $ucl) = split(/\t/, $line);
+			my $event_size = $chr_stop - $chr_start + 1;
+			my $event_type = "neutral";
 			
-			if($event_type ne "neutral")
+			$event_type = "deletion" if($seg_mean <= $self->del_threshold);
+			$event_type = "amplification" if($seg_mean >= $self->amp_threshold);
+
+			if($event_type ne "neutral" && $event_size >= $self->min_event_size)
 			{
-				if(!$self->event_size || $event_size eq $self->event_size)
-				{
+#				if(!$self->event_size || $event_size eq $self->event_size)
+#				{
 					$events{$chrom} .= "\n" if($events{$chrom});
-					$events{$chrom} .= join("\t", $chrom, $chr_start, $chr_stop, $num_markers, $seg_mean, $p_value, $event_size, $event_type, $num_segments);
-				}				
+					$events{$chrom} .= join("\t", $chrom, $chr_start, $chr_stop, $num_mark, $seg_mean, $p_value, $event_size, $event_type);
+#				}				
 			}
 
 
@@ -256,7 +264,7 @@ sub compare_events
 	
 	foreach my $sequence_event (@sequence_events)
 	{
-		my ($chrom, $chr_start, $chr_stop, $num_mark, $seg_mean, $p_value, $event_size, $event_type, $num_segments) = split(/\t/, $sequence_event);
+		my ($chrom, $chr_start, $chr_stop, $num_mark, $seg_mean, $p_value, $event_size, $event_type) = split(/\t/, $sequence_event);
 		
 		$chrom_stats{'num_events'}++;
 
@@ -274,6 +282,8 @@ sub compare_events
 		my $array_supported_flag = 0;		
 		my $array_overlaps = "";
 		
+		my $best_overlap_bp = my $best_overlap = 0;
+		
 		foreach my $array_event (@array_events)
 		{
 			my ($array_chrom, $array_chr_start, $array_chr_stop, $array_num_mark, $array_seg_mean, $array_p_value, $array_event_size, $array_event_type) = split(/\t/, $array_event);
@@ -286,17 +296,18 @@ sub compare_events
 				## Check Positional Overlap ##
 				if($array_chr_stop >= $chr_start && $array_chr_start <= $chr_stop)
 				{
-					if($array_event_type eq $event_type)
+					my $overlap = get_overlap($chr_start, $chr_stop, $array_chr_start, $array_chr_stop);
+
+					if($overlap > $best_overlap_bp)
 					{
-						$array_supported_flag++;
-						$array_overlaps .= "\n" if($array_overlaps);
-						$array_overlaps .= join("\t", "", $array_chrom, $array_chr_start, $array_chr_stop, $array_seg_mean, $array_event_size, $array_event_type);
+						$best_overlap = join("\t", "", $array_chrom, $array_chr_start, $array_chr_stop, $array_seg_mean, $array_event_size, $array_event_type);
+						$best_overlap_bp = $overlap;
 					}
 				}
 			}
 		}
 		
-		if($array_supported_flag)
+		if($best_overlap)
 		{
 			$chrom_stats{'num_supported'}++;
 
@@ -309,11 +320,10 @@ sub compare_events
 				$chrom_stats{'num_dels_supported'}++;
 			}
 
-			if($print_overlaps)
-			{
-				print join("\t", "EVENT", $chrom, $chr_start, $chr_stop, $seg_mean, $event_size, $event_type) . "\n";
-				print $array_overlaps . "\n";
-			}
+#			if($print_overlaps)
+#			{
+				print join("\t", $chrom, $chr_start, $chr_stop, $seg_mean, $event_type, $best_overlap, $best_overlap_bp) . "\n";				
+#			}
 
 			## Save hits ##
 			$chrom_stats{'hits'} .= "\n" if($chrom_stats{'hits'});
@@ -331,6 +341,51 @@ sub compare_events
 	return(%chrom_stats);
 }
 
+
+sub get_overlap
+{
+	my $overlap = 0;
+	my ($start1, $stop1, $start2, $stop2) = @_;
+	
+	## 1111111111111
+	##    22222222
+	if($start2 >= $start1 && $stop2 <= $stop1)
+	{
+		$overlap = $stop2 - $start2 + 1;	
+	}
+	##     111111
+	##    22222222		
+	elsif($start1 >= $start2 && $stop1 <= $stop2)
+	{
+		$overlap = $stop1 - $start1 + 1;
+	}
+	## 111111
+	##    22222222
+	elsif($start1 <= $start2 && $stop1 >= $start2)
+	{
+		$overlap = $stop1 - $start2 + 1;
+	}
+	##       1111111111111
+	##    22222222
+	elsif($start2 <= $start1 && $stop2 >= $start1)
+	{
+		$overlap = $stop2 - $start1 + 1;
+	}
+	##      1111111
+	##    22222222		
+	elsif($start1 <= $stop2 && $stop1 >= $stop2)
+	{
+		$overlap = $stop2 - $start1 + 1;
+	}
+	## 111111111
+	##    22222222		
+	elsif($start2 <= $stop1 && $stop2 >= $stop1)
+	{
+		$overlap = $stop1 - $start2 + 1;	
+	}
+	
+	return($overlap);
+}
 
 sub commify
 {
