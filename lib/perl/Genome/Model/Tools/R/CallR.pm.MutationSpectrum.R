@@ -4,7 +4,7 @@ plot_spectrum=function(spectrum_file="",output_file="",genome="") {
     spectrum = (spectrum[0:6,]/spectrum['SNVs',1])*100;
     spectrum$Synonomous=c();
     spectrum=as.matrix(t(spectrum));
-    pdf(file=output_file,width=4,height=4);
+    pdf(file=output_file,width=6,height=6);
     title = "Mutation Spectrum";
     if(genome!="") {
         title = paste(title,"For",genome);
