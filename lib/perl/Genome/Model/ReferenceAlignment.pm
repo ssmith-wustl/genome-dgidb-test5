@@ -377,30 +377,10 @@ sub default_genotype_model {
     }
 
     if (@genotype_models > 1) {
-        $self->warning_message("Found multiple compatiable genotype models for sample " . $sample->id .
+        $self->warning_message("Found multiple compatible genotype models for sample " . $sample->id .
             " and reference alignment model " . $self->id . ", choosing most recent.");
     }
     return $genotype_models[-1];
-}
-
-# Kept for backward compatibility only. Can be removed when all samples have had their genotype microarray
-# relationship backfilled.
-sub gold_snp_build {
-    my $self = shift;
-    my $genotype_model = $self->default_genotype_model;
-    return unless $genotype_model;
-    my $genotype_build = $genotype_model->last_succeeded_build;
-    $self->warning_message("No successful build found for default genotype model " . $genotype_model->id) unless $genotype_build;
-    return $genotype_build;
-}
-
-# Again, included only for backward compatibility. This should be removed as soon as genotype microarray
-# relationships are backfilled to samples.
-sub gold_snp_path {
-    my $self = shift;
-    my $genotype_build = $self->gold_snp_build;
-    return unless $genotype_build;
-    return $genotype_build->formatted_genotype_file_path;
 }
 
 sub build_subclass_name {
