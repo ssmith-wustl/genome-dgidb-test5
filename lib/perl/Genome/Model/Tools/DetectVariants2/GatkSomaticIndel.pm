@@ -40,13 +40,20 @@ sub _detect_variants {
         tumor_bam => $self->aligned_reads_input, 
         normal_bam => $self->control_aligned_reads_input,
         output_file => $self->_temp_staging_directory."/gatk_output_file",
-        somatic_file => $self->_temp_staging_directory."/indels.hq",
         mb_of_ram => $self->mb_of_ram,
         reference => $refseq,
     );
     unless($gatk_cmd->execute){
         $self->error_message("Failed to run GATK command.");
         die $self->error_message;
+    }
+
+    my $cmd = "grep SOMATIC ".$self->_temp_staging_directory."/gatk_output_file > ".$self->_temp_staging_directory."/indels.hq";
+
+    ## TODO This is not running in a shellcmd because shellcmd inexplicably bombs out when running this. It dies 
+    ## after receiving an exit code of 1. This should be addressed, and the system call replaced.    
+    unless(system($cmd)){
+        die $self->error_message("Could not execute grep to separate germline and somatic calls in gatk");
     }
     unless(-e $self->_temp_staging_directory."/indels.hq"){
         my $filename = $self->_temp_staging_directory."/indels.hq";
@@ -56,8 +63,17 @@ sub _detect_variants {
             die $self->error_message;
         }
     }
+
     return 1;
 }
+
+sub _create_temp_directories {
+    my $self = shift;
+    $self->_temp_staging_directory($self->output_directory);
+    $self->_temp_scratch_directory($self->output_directory);
+    return 1;
+}
+    
 
 sub has_version {
     return 1; #FIXME implement this when this module is filled out
