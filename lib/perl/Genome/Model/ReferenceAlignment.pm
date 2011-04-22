@@ -363,7 +363,7 @@ sub is_lane_qc {
     my $self = shift;
     my $pp = $self->processing_profile;
     # TODO Is there a better way to determine if this is a lane qc model?
-    if ($pp->append_event_steps && $pp->processing_profile->append_event_steps =~ /LaneQc/) {
+    if ($pp->append_event_steps && $pp->append_event_steps =~ /LaneQc/) {
         return 1;
     }
     return 0;
