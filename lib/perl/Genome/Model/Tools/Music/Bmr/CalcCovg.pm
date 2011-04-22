@@ -103,7 +103,7 @@ sub execute {
   print STDERR "Reference sequence file not found: $ref_seq\n" unless( -e $ref_seq );
   print STDERR "List of BAMs not found or is empty: $bam_list\n" unless( -s $bam_list );
   print STDERR "Output directory not found: $output_dir\n" unless( -e $output_dir );
-  return 1 unless( -s $roi_file && -e $ref_seq && -s $bam_list && -e $output_dir );
+  return undef unless( -s $roi_file && -e $ref_seq && -s $bam_list && -e $output_dir );
 
   # Outputs of this script will be written to these locations in the output directory
   $output_dir =~ s/(\/)+$//; # Remove trailing forward slashes if any
@@ -125,7 +125,7 @@ sub execute {
   {
     print STDERR "ROIs from the same chromosome must be listed adjacent to each other in file. ";
     print STDERR "If in UNIX, try:\nsort -k 1,1 $roi_file\n";
-    return 1;
+    return undef;
   }
 
   # If the reference sequence FASTA file hasn't been indexed, do it
