@@ -454,7 +454,7 @@ sub execute {                               # replace with real execution logic.
 		print OUTFILE $stats{'pct_hom_match'} . "%\t";		
 		print OUTFILE $stats{'pct_overall_match'} . "%\n";
 		
-		print OUTFILE "\nVERBOSE OUTPUT:\n$verbose_output\n";
+		print OUTFILE "\nVERBOSE OUTPUT:\n$verbose_output\n" if($self->verbose);
 	}
 
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
