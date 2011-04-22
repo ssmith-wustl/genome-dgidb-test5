@@ -71,8 +71,6 @@ sub execute {
             my @words = Genome::Utility::Text::camel_case_to_words($field);
             my $metric_name = join('_', 'compare_snps', map { lc $_ } @words);
 
-            $DB::single = 1;
-            print 'bleh';
             Genome::Model::Metric->create(
                 build_id => $build->id,
                 name => $metric_name,
