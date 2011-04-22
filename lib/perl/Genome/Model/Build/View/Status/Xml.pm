@@ -242,11 +242,14 @@ sub get_build_node {
             $buildnode->addChild( $doc->createAttribute("error-log",$err_log_file));
         }
     }
-    
+
     $buildnode->addChild( $doc->createAttribute("summary-report", $self->get_summary_report_location) );
+    if ($build->can('genotype_microarray_build') and $build->genotype_microarray_build) {
+        $buildnode->addChild( $doc->createAttribute("snp-array-concordance", $self->get_snp_array_concordance_url) );
+    }
 
     $buildnode->addChild($self->get_model_node);
-    
+
     $buildnode->addChild($self->get_inputs_node);
     $buildnode->addChild($self->get_links_node);
 
@@ -257,9 +260,17 @@ sub get_build_node {
 sub get_summary_report_location {
     my $self = shift;
     my $build = $self->subject;
-    
+
     #A default value equivalent to what was previously hardcoded in the XSL.
     return $build->reports_directory . '/Summary/report.html';
+}
+
+sub get_snp_array_concordance_url {
+    my $self = shift;
+    my $build = $self->subject;
+    my $url = "view/genome/model/build/set/intersect-snv.html?-" .
+              "standard_build_id=" . $build->genotype_microarray_build->id . "&id=" . $build->id;
+    return $url;
 }
 
 sub get_model_node {

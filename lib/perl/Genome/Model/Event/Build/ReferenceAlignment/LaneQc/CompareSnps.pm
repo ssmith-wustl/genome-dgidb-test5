@@ -24,7 +24,7 @@ sub execute {
         $self->status_message("No valid gold_snp_path for the build, aborting compare SNPs!");
     }
 
-    my $output_dir = $build->data_directory . '/qc';
+    my $output_dir = $build->qc_directory;
     File::Path::mkpath($output_dir) unless (-d $output_dir);
     unless (-d $output_dir) {
         die $self->error_message("Failed to create output_dir ($output_dir).");
@@ -42,7 +42,7 @@ sub execute {
 
     my $cmd = Genome::Model::Tools::Analysis::LaneQc::CompareSnps->create(
         genotype_file => $genotype_file, 
-        output_file => $output_dir . '/compare_snps',
+        output_file => $build->compare_snps_file,
         variant_file => $variant_file,
     );
     unless ($cmd) {
@@ -58,6 +58,11 @@ sub execute {
             die $self->error_message("Failed to execute CompareSnps QC analysis!");
         }
     }
+
+    my $metrics_rv = Genome::Model::ReferenceAlignment::Command::CreateMetrics::CompareSnps->execute(
+        build_id => $self->build_id,
+    );
+    Carp::confess "Could not create compare_snps metrics for build " . $self->build_id unless $metrics_rv;
 
     return 1;
 }
@@ -81,6 +86,9 @@ sub validate_gold_snp_path {
     return 1;
 }
 
+# FIXME This file should be created by genotype microarray builds if it's necessary for lane qc. Making the file here
+# introduces concurrency problems (since multiple lane qc models are typically started in a batch) and also makes the 
+# genotype microarray build's disk allocation inaccurate. 
 sub get_or_create_genotype_file {
     my $self = shift;
     my $build = $self->build;
