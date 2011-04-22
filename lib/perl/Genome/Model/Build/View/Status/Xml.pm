@@ -244,7 +244,7 @@ sub get_build_node {
     }
 
     $buildnode->addChild( $doc->createAttribute("summary-report", $self->get_summary_report_location) );
-    if ($build->genotype_microarray_build) {
+    if ($build->can('genotype_microarray_build') and $build->genotype_microarray_build) {
         $buildnode->addChild( $doc->createAttribute("snp-array-concordance", $self->get_snp_array_concordance_url) );
     }
 
