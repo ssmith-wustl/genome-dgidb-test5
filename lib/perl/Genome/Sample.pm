@@ -299,7 +299,7 @@ sub set_default_genotype_data_and_request_builds {
 
     if (defined $self->default_genotype_data_id) {
         $self->warning_message("Default genotype data already set to " . $self->default_genotype_data_id . " for sample " . 
-            $self->id . ", changing to " . $genotype_instrument_data->id) if defined $self->default_genotype_data_id;
+            $self->id . ", changing to " . $genotype_instrument_data->id); 
 
         # This attribute is not set as mutable in the class definition to prevent someone from changing it without
         # passing the above checks. Including it in the class definition at all makes for easy access and listing, though. 
