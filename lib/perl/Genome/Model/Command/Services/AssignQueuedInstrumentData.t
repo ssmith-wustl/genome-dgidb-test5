@@ -92,6 +92,7 @@ my $pse_1 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-12345',
     ps_id => $ps->ps_id,
+    ei_id => '464681',
 );
 
 $pse_1->add_param('instrument_data_type', 'solexa');
@@ -117,6 +118,7 @@ my $pse_2 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-12346',
     ps_id => $ps->ps_id,
+    ei_id => '464681',
 );
 
 $pse_2->add_param('instrument_data_type', 'solexa');
@@ -128,8 +130,11 @@ $pse_2->add_reference_sequence_build_param_for_processing_profile( $processing_p
 
 no warnings;
 sub GSC::PSE::QueueInstrumentDataForGenomeModeling::get_inherited_assigned_directed_setups_filter_on {
+    my $self = shift;
+    my $filter = shift;
     my @a;
-    push @a, $work_order;
+    push @a, $work_order if $filter eq 'setup work order';
+    push @a, $project if $filter eq 'setup project';
     return @a;
 }
 use warnings;
@@ -209,6 +214,7 @@ my $pse_3 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-12347',
     ps_id => $ps->ps_id,
+    ei_id => '464681',
 );
 $pse_3->add_param('instrument_data_type', 'solexa');
 $pse_3->add_param('instrument_data_id', $instrument_data_3->id);
@@ -264,6 +270,7 @@ my $pse_4 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-12348',
     ps_id => $ps->ps_id,
+    ei_id => '464681',
 );
 $pse_4->add_param('instrument_data_type', 'solexa');
 $pse_4->add_param('instrument_data_id', $instrument_data_4->id);
@@ -358,6 +365,7 @@ my $pse_5 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-12349',
     ps_id => $ps->ps_id,
+    ei_id => '464681',
 );
 $pse_5->add_param('instrument_data_type', 'solexa');
 $pse_5->add_param('instrument_data_id', $instrument_data_5->id);
@@ -407,13 +415,14 @@ my $de_novo_processing_profile = Genome::ProcessingProfile::DeNovoAssembly->crea
     assembler_name => 'velvet one-button',
     assembler_version => '0.7.57-64',
     sequencing_platform => 'solexa',
-    read_processor => 'trimmer bwa-style --trim-qual-level 9000 --metrics-file this_is_a_test',
+    read_processor => 'trimmer bwa-style --trim-qual-level 9000',
 );
 
 my $pse_6 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-12350',
     ps_id => $ps->ps_id,
+    ei_id => '464681',
 );
 $pse_6->add_param('instrument_data_type', 'solexa');
 $pse_6->add_param('instrument_data_id', $instrument_data_6->id);
@@ -510,6 +519,7 @@ my $pse_7 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-7675309',
     ps_id => $ps->ps_id,
+    ei_id => '464681',
 );
 
 $pse_7->add_param('instrument_data_type', 'solexa');
@@ -563,6 +573,7 @@ my $pse_8 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-7775309',
     ps_id => $ps->ps_id,
+    ei_id => '464681',
 );
 
 $pse_8->add_param('instrument_data_type', 'solexa');
@@ -647,6 +658,7 @@ my $pse_9 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-7600000',
     ps_id => $ps->ps_id,
+    ei_id => '464681',
 );
 $pse_9->add_param('instrument_data_type', 'solexa');
 $pse_9->add_param('instrument_data_id', $instrument_data_9->id);
@@ -659,6 +671,7 @@ my $pse_10 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-7600001',
     ps_id => $ps->ps_id,
+    ei_id => '464681',
 );
 $pse_10->add_param('instrument_data_type', 'solexa');
 $pse_10->add_param('instrument_data_id', $instrument_data_10->id);

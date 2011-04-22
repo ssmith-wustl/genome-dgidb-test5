@@ -43,10 +43,14 @@ sub _raw_reads_fasta_and_qual_writer {
     my $self = shift;
 
     unless ( $self->{_raw_reads_fasta_and_qual_writer} ) {
-        $self->{_raw_reads_fasta_and_qual_writer} = Genome::Utility::BioPerl::FastaAndQualWriter->create(
-            fasta_file => $self->build->raw_reads_fasta_file,
-            qual_file => $self->build->raw_reads_qual_file,
-        ) or return;
+        my $writer = Genome::Model::Tools::FastQual::PhredWriter->create(
+            files => [ $self->build->raw_reads_fasta_file, $self->build->raw_reads_qual_file, ],
+        );
+        if ( not $writer ) {
+            $self->error_message('Failed to create phred reader for raw reads');
+            return;
+        }
+        $self->{_raw_reads_fasta_and_qual_writer} = $writer;
     }
 
     return $self->{_raw_reads_fasta_and_qual_writer};
@@ -140,12 +144,11 @@ sub _prepare_instrument_data_for_phred_phrap {
     }
     
     # Write the 'raw' read fastas
-    my $reader = Genome::Utility::BioPerl::FastaAndQualReader->create(
-        fasta_file => $fasta_file,
-        qual_file => $qual_file,
+    my $reader = Genome::Model::Tools::FastQual::PhredReader->create(
+        files => [ $fasta_file, $qual_file ],
     ) or return;
-    while ( my $bioseq = $reader->next_seq ) {
-        $self->_raw_reads_fasta_and_qual_writer->write_seq($bioseq)
+    while ( my $seq = $reader->read ) {
+        $self->_raw_reads_fasta_and_qual_writer->write($seq)
             or return;
     }
     
@@ -154,5 +157,3 @@ sub _prepare_instrument_data_for_phred_phrap {
 
 1;
 
-#$HeadURL$
-#$Id$

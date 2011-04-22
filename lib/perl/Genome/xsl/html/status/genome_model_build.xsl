@@ -227,19 +227,19 @@
                                 <xsl:when test="contains($command_class, 'AlignReads') or contains($containing_command_class, 'AlignReads')">
                                   <xsl:variable name="inst_data_id" select="instrument_data_id" />
                                   <xsl:variable name="inst_data_count" select="count(//instrument_data[@id=$inst_data_id])"/>
-                                <xsl:choose>
-                                  <!-- if we have instrument data element(s), show flow cell and lane -->
-                                  <xsl:when test="$inst_data_count > 0">
-                                    <xsl:for-each select="//instrument_data[@id=$inst_data_id]" >
-                                      <xsl:value-of select="flow_cell_id"/><xsl:text disable-output-escaping="yes"> Lane: </xsl:text><xsl:value-of select="lane"/>
-                                    </xsl:for-each>
-                                    <xsl:if test="filter_desc"><xsl:text disable-output-escaping="yes"> </xsl:text>(<xsl:value-of select="filter_desc"/>)</xsl:if>
-                                  </xsl:when>
-                                  <xsl:otherwise>
-                                    <!-- no instrument data elements, show a warning message -->
-                                    <span style="color: #933; font-weight: bold;">No instrument data found for this lane.</span>
-                                  </xsl:otherwise>
-                                </xsl:choose>
+                                  <xsl:choose>
+                                    <!-- if we have instrument data element(s), show flow cell and lane -->
+                                    <xsl:when test="$inst_data_count > 0">
+                                      <xsl:for-each select="//instrument_data[@id=$inst_data_id]" >
+                                        <xsl:value-of select="flow_cell_id"/><xsl:text disable-output-escaping="yes"> Lane: </xsl:text><xsl:value-of select="lane"/>
+                                      </xsl:for-each>
+                                      <xsl:if test="filter_desc"><xsl:text disable-output-escaping="yes"> </xsl:text>(<xsl:value-of select="filter_desc"/>)</xsl:if>
+                                    </xsl:when>
+                                    <xsl:otherwise>
+                                      <!-- no instrument data elements, show a warning message -->
+                                      <span style="color: #933; font-weight: bold;">No instrument data found for this lane.</span>
+                                    </xsl:otherwise>
+                                  </xsl:choose>
                                 </xsl:when>
                                 <xsl:otherwise>
                                   <!-- event is not expected to have instrument data, so show command class -->
@@ -260,19 +260,24 @@
                             <td><xsl:value-of select="date_completed"/></td>
                             <td class="last"><xsl:value-of select="elapsed_time"/></td>
                             <td class="buttons">
+                              <xsl:comment>
+                                rest: <xsl:value-of select="$rest"/>
+                              </xsl:comment>
+
                               <a class="mini btn event-popup-ajax">
-	                            <!-- <xsl:attribute name="onclick">
-	                              <xsl:text>javascript:status_popup('</xsl:text><xsl:value-of select="@id"/><xsl:text>','</xsl:text><xsl:value-of select="$currentLink"/><xsl:text>','</xsl:text><xsl:value-of select="@id"/><xsl:text>');</xsl:text>
-	                            </xsl:attribute> -->
-	                            <xsl:attribute name="href">
-						          <xsl:call-template name="object_link_href">
-						            <xsl:with-param name="type" select="$command_class"/>
-						            <xsl:with-param name="key" select="'id'"/>
-						            <xsl:with-param name="id" select="@id"/>
-						            <xsl:with-param name="perspective" select="'statuspopup'"/>
-						            <xsl:with-param name="toolkit" select="'html'"/>
-						        </xsl:call-template>
-	                            </xsl:attribute>
+                                <!-- <xsl:attribute name="onclick">
+                                     <xsl:text>javascript:status_popup('</xsl:text><xsl:value-of select="@id"/><xsl:text>','</xsl:text><xsl:value-of select="$currentLink"/><xsl:text>','</xsl:text><xsl:value-of select="@id"/><xsl:text>');</xsl:text>
+                                     </xsl:attribute> -->
+                                <xsl:attribute name="href">
+                                  <xsl:call-template name="object_link_href">
+                                    <xsl:with-param name="type" select="$command_class"/>
+                                    <xsl:with-param name="rest" select="'/viewajax'" />
+                                    <xsl:with-param name="key" select="'id'"/>
+                                    <xsl:with-param name="id" select="@id"/>
+                                    <xsl:with-param name="perspective" select="'statuspopup'"/>
+                                    <xsl:with-param name="toolkit" select="'html'"/>
+                                  </xsl:call-template>
+                                </xsl:attribute>
                                 <xsl:attribute name="title">
                                   <xsl:value-of select="@id"/>
                                 </xsl:attribute>

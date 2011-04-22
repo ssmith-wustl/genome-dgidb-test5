@@ -1306,7 +1306,8 @@ sub _extract_input_fastq_filenames {
         );
 
         my @report_files = glob($temp_directory ."/*report*");
-        for my $report_file (@report_files) {
+        my @length_distributions = glob($temp_directory ."/*.lengthdist");
+        for my $report_file (@report_files, @length_distributions) {
             my $staged_path = $report_file;
             my $staging_directory = $self->temp_staging_directory;
             $staged_path =~ s/$temp_directory/$staging_directory/;

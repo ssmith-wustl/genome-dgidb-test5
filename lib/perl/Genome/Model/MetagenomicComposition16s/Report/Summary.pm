@@ -63,12 +63,12 @@ sub _create_metrics {
 sub _add_amplicon {
     my ($self, $amplicon) = @_;
 
-    # Bioseq
-    my $bioseq = $amplicon->oriented_bioseq
-        or return 1; # ok - bioseq only returned if assembled and oriented
+    # seq
+    my $seq = $amplicon->oriented_seq
+        or return 1; # ok - seq only returned if assembled and oriented
 
     # Length
-    push @{$self->{_metrix}->{lengths}}, $bioseq->length;
+    push @{$self->{_metrix}->{lengths}}, length $seq->{seq};
 
     # Reads
     $self->{_metrix}->{reads} += $amplicon->reads_count;

@@ -112,7 +112,7 @@
 
 <!-- MERGE FILTERED SNIPER SNPS AND VARSCAN SNPS -->
 
-  <link fromOperation="Varscan ProcessSomatic SNP" fromProperty="output_somatic" toOperation="Merge SNPs" toProperty="varscan_file" />
+  <link fromOperation="Varscan ProcessSomatic SNP" fromProperty="output_somatic_hc" toOperation="Merge SNPs" toProperty="varscan_file" />
   <link fromOperation="Filter Loh" fromProperty="output_file" toOperation="Merge SNPs" toProperty="glf_file" />
   <link fromOperation="input connector" fromProperty="merged_snp_output" toOperation="Merge SNPs" toProperty="output_file" />
 

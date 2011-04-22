@@ -5,6 +5,7 @@ package PAP::Command::InterProScan;
 use strict;
 use warnings;
 
+use Workflow;
 
 use Bio::Seq;
 use Bio::SeqFeature::Generic;
@@ -17,7 +18,11 @@ use IO::File;
 use IPC::Run;
 use File::Slurp;
 use Data::UUID;
+use Cwd;
+use Carp 'confess';
 
+
+my $debug_err = '';
 
 class PAP::Command::InterProScan {
     is => ['PAP::Command'],
@@ -49,13 +54,25 @@ class PAP::Command::InterProScan {
                                     doc         => 'directory to save a copy of the raw output to',
                                     is_input => 1,
                                 },
-                lsf_queue => { is_param => 1, 
+				lsf_queue => { is_param => 1, 
                                default_value => 'long',},
                 lsf_resource => { is_param => 1,
                                   default_value => 'rusage[tmp=100]' },
+                locus_tag  => {
+                                    is          => 'SCALAR',
+                                    doc         => 'locus tag for this genome',
+									is_input => 1,
+                                },
             ],
 };
 
+#operation PAP::Command::InterProScan {
+#   input        => [ 'fasta_file', 'report_save_dir', 'locus_tag' ],
+#  output       => [ 'bio_seq_feature' ],
+# lsf_queue    => 'long',
+#lsf_resource => 'rusage[tmp=100]',
+#   
+#};
 
 sub sub_command_sort_position { 10 }
 
@@ -91,7 +108,7 @@ sub execute {
     $self->iprscan_output($tmp_fh);
     
     my @iprscan_command = (
-                           '/gsc/scripts/pkg/bio/iprscan/iprscan-4.5/bin/iprscan',
+                           '/gsc/scripts/pkg/bio/iprscan/iprscan-4.7/bin/iprscan',
                            '-cli',
                            '-appl', 'hmmpfam',
                            '-appl', 'hmmtigr',
@@ -119,7 +136,10 @@ sub execute {
                   \$iprscan_stderr, 
                  );
 
-    write_file($self->report_save_dir."/debug.err.".$$,
+    $debug_err = $self->report_save_dir."/debug.err.".$$;
+    #write_file($self->report_save_dir."/debug.err.".$$,
+
+    write_file($debug_err,
                $iprscan_stdout."\n====\n".$iprscan_stderr);
     unless($rv) {
         die "iprscan failed: $CHILD_ERROR";
@@ -280,6 +300,7 @@ sub parse_result {
 sub archive_result {
 
     my $self = shift;
+    my $locus_tag = $self->locus_tag();
 
 
     my $report_save_dir = $self->report_save_dir();
@@ -316,6 +337,39 @@ sub archive_result {
         }
         
         $bz_file->bzclose();
+
+		if ( -s $target_file ) {
+
+			my $back_up_dir = "/gscmnt/gc2103/info/annotation/pap_tmp/iprscan";
+		    my $user = $ENV{USER};
+
+			my $fh = IO::File->new($debug_err, "r");
+			confess "Could not get handle: $!"unless $fh;
+
+			my $iprscan_dir = "/gsc/var/tmp/iprscan/";
+
+			while (my $line = $fh->getline) {
+				chomp $line;
+				if ($line =~ m/SUBMITTED iprscan-(\d+)-(\d+)/) {
+					$iprscan_dir .= "$1/iprscan-$1-$2";
+					confess "Cannot build iprscan_dir" unless( $1 && $2 );
+
+				}
+			}
+			
+			my $cwd = getcwd();
+			unless ( $cwd eq $back_up_dir )
+			{
+				chdir($back_up_dir)
+				|| confess "Failed to change to $back_up_dir...\n\n";
+			}
+
+			#my $tar_file_name = $params->{locus_tag}. ".tar.bz2";
+			my $tar_file_name = $locus_tag. "-". $user. ".tar.bz2";
+			print $tar_file_name."\n";
+			qx(tar -jcvf $tar_file_name $iprscan_dir);
+
+		}
         
     }
 

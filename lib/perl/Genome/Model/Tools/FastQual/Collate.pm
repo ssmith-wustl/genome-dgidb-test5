@@ -25,39 +25,29 @@ sub help_detail {
 HELP
 }
 
-sub execute {
+sub __errors__ {
     my $self = shift;
+    my @errors = $self->SUPER::__errors__(@_);
+    return @errors if @errors;
 
-    my $reader = $self->_open_reader
-        or return;
-    if ( $reader->isa('Genome::Utility::IO::StdinRefReader') ) {
-        $self->error_message('Cannot read from a PIPE! Can only collate files!');
-        return;
-    }
-    if ( scalar (@{$reader->files}) == 1 ) {
-        $self->error_message("Cannot collate from one input file!");
-        return;
-    }
-
-    my $writer = $self->_open_writer
-        or return;
-    if ( $writer->isa('Genome::Utility::IO::StdoutRefWriter') ) {
-        $self->error_message('Cannot write to a PIPE! Can only collate files!');
-        return;
-    }
-    unless ( scalar (@{$writer->files}) == 1 ) {
-        $self->error_message("Cannot collate to more than one output file!");
-        return;
+    if ( not $self->input or $self->input == 1 ) {
+        push @errors, UR::Object::Tag->create(
+            type => 'invalid',
+            properties => [qw/ input /],
+            desc => 'Can only collate from at least 2 inputs',
+        );
     }
 
-    while ( my $seqs = $reader->next ) {
-        $writer->write($seqs);
+    if ( not $self->output or $self->output != 1 ) {
+        push @errors, UR::Object::Tag->create(
+            type => 'invalid',
+            properties => [qw/ output /],
+            desc => 'Can only collate to one output',
+        );
     }
 
-    return 1;
+    return @errors;
 }
 
 1;
 
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Tools/Fastq/Base.pm $
-#$Id: Base.pm 60817 2010-07-09 16:10:34Z ebelter $

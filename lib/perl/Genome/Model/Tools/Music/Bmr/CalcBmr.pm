@@ -79,7 +79,7 @@ sub execute {
   print STDERR "List of BAMs not found or is empty: $bam_list\n" unless( -s $bam_list );
   print STDERR "Output directory not found: $output_dir\n" unless( -e $output_dir );
   print STDERR "MAF file not found or is empty: $maf_file\n" unless( -s $maf_file );
-  return 1 unless( -s $roi_file && -e $ref_seq && -s $bam_list && -e $output_dir && -s $maf_file );
+  return undef unless( -s $roi_file && -e $ref_seq && -s $bam_list && -e $output_dir && -s $maf_file );
 
   # Check on the files we expect to find within the provided output directory
   $output_dir =~ s/(\/)+$//; # Remove trailing forward slashes if any
@@ -87,7 +87,7 @@ sub execute {
   my $total_covgs_file = "$output_dir/total_covgs"; # Should contain overall coverages per sample
   print STDERR "Directory with per-gene coverages not found: $gene_covg_dir\n" unless( -e $gene_covg_dir );
   print STDERR "Total coverages file not found or is empty: $total_covgs_file\n" unless( -s $total_covgs_file );
-  return 1 unless( -e $gene_covg_dir && -s $total_covgs_file );
+  return undef unless( -e $gene_covg_dir && -s $total_covgs_file );
 
   # Outputs of this script will be written to these locations in the output directory
   my $overall_bmr_file = "$output_dir/overall_bmrs";
@@ -159,7 +159,7 @@ sub execute {
   unless( $sample_cnt_in_file == scalar( @all_sample_names ))
   {
     print STDERR "Mismatching number of samples in $total_covgs_file and $bam_list\n";
-    return 1;
+    return undef;
   }
 
   my %gene_mr; # Stores information regarding per-gene mutation rates
@@ -223,7 +223,7 @@ sub execute {
     {
       print STDERR "Unrecognized Variant_Classification $mutation_class in MAF file: $gene, chr$chr:$start-$stop\n";
       print STDERR "Please use TCGA MAF Specification v2.2.\n";
-      return 1;
+      return undef;
     }
 
     # Skip mutations that were consolidated into others (E.g. SNP consolidated into a TNP)
@@ -239,7 +239,7 @@ sub execute {
     {
       print STDERR "Unrecognized Variant_Type $mutation_type in MAF file: $gene, chr$chr:$start-$stop\n";
       print STDERR "Please use TCGA MAF Specification v2.2.\n";
-      return 1;
+      return undef;
     }
 
     # Skip mutations that fall completely outside any of the provided regions of interest
@@ -272,7 +272,7 @@ sub execute {
       {
         print STDERR "Unrecognized allele in column Reference_Allele, Tumor_Seq_Allele1, or Tumor_Seq_Allele2: $gene, chr$chr:$start-$stop\n";
         print STDERR "Please use TCGA MAF Specification v2.2.\n";
-        return 1;
+        return undef;
       }
 
       # Use the classify hash to find whether this SNV is an AT/CG Transition/Transversion

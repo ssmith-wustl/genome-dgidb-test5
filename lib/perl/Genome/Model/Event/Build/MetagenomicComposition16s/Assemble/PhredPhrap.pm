@@ -44,10 +44,10 @@ sub execute {
             $phrap->dump_status_messages(1);
             $phrap->execute;
 
-            $self->build->load_bioseq_for_amplicon($amplicon)
+            $self->build->load_seq_for_amplicon($amplicon)
                 or next; # ok
 
-            $writer->write_seq( $amplicon->bioseq );
+            $writer->write([$amplicon->seq]);
         }
     }
 

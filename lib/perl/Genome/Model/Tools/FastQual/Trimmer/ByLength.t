@@ -12,9 +12,11 @@ use Test::More;
 use_ok('Genome::Model::Tools::FastQual::Trimmer::ByLength') or die;
 
 # Create failures
-ok(scalar(Genome::Model::Tools::FastQual::Trimmer::ByLength->create()->__errors__), 'Create w/o trim length');
+ok(scalar(Genome::Model::Tools::FastQual::Trimmer::ByLength->create->__errors__), 'Create w/o lengths');
 ok(scalar(Genome::Model::Tools::FastQual::Trimmer::ByLength->create(trim_length => 'all')->__errors__), 'Create w/ trim length => all');
 ok(scalar(Genome::Model::Tools::FastQual::Trimmer::ByLength->create(trim_length => 0)->__errors__), 'Create w/ trim length => 0');
+ok(scalar(Genome::Model::Tools::FastQual::Trimmer::ByLength->create(read_length => 'all')->__errors__), 'Create w/ read length => all');
+ok(scalar(Genome::Model::Tools::FastQual::Trimmer::ByLength->create(read_length => 0)->__errors__), 'Create w/ read length => 0');
 
 # Files
 my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastQual';

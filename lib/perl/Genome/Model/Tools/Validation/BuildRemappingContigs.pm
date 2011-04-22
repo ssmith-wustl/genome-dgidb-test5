@@ -53,6 +53,12 @@ class Genome::Model::Tools::Validation::BuildRemappingContigs {
             default => 150, #force 100bp reads to align across the variant
             doc => 'The intended size of the contigs. If contigs overlap then they may be merged',
         },
+        minimum_local_overlap_size => {
+            type => 'Integer',
+            is_optional => 0,
+            default => 150, 
+            doc => 'During contig merging, the minimum length of the region around the indel to compare across contigs for similarity. Leave this alone unless read lengths are not 100',
+        },
         samtools_version => {
             type => 'String',
             is_optional => 1,
@@ -586,7 +592,28 @@ sub handle_overlap {
                 #do alignment
                 my $alignment = $alignment_factory->pairwise_alignment($contig1_seq, $contig2_seq);
                 my $alnout = new Bio::AlignIO(-format => 'pfam', -fh => \*STDERR);
-                if($alignment->percentage_identity >= 98 && $alignment->gap_line !~ /[-]/ && $alignment->length >= ($self->contig_size - 5)) {  
+                
+                #experimentally grab the key region and only assess the mismatches there...
+                #
+                #contig_location_of_variant microhomology_contig_endpoint
+                my ($contig1_var_start, $contig1_var_end) = @{$contig1}{qw(contig_location_of_variant microhomology_contig_endpoint)};
+                my ($contig2_var_start, $contig2_var_end) = @{$contig2}{qw(contig_location_of_variant microhomology_contig_endpoint)};
+                my $contig1_alignment_start = $alignment->column_from_residue_number(join("-",$contig1->{id},$contig1->{source}),$contig1_var_start);
+                my $contig1_alignment_end = $alignment->column_from_residue_number(join("-",$contig1->{id},$contig1->{source}),$contig1_var_end);
+                my $contig2_alignment_start = $alignment->column_from_residue_number(join("-",$contig2->{id},$contig2->{source}),$contig2_var_start);
+                my $contig2_alignment_end = $alignment->column_from_residue_number(join("-",$contig2->{id},$contig2->{source}),$contig2_var_end);
+                my $msa_start = $contig2_alignment_start > $contig1_alignment_start ? $contig1_alignment_start : $contig2_alignment_start;
+                my $msa_end = $contig2_alignment_end > $contig1_alignment_end ? $contig2_alignment_end : $contig1_alignment_end;
+                my $sub_alignment_length = $msa_end - $msa_start + 1;
+                my $critical_region_size = $self->minimum_local_overlap_size;
+                my $size_difference = $critical_region_size - $sub_alignment_length;
+                my $pad = ceil($size_difference / 2);
+                $msa_start -= $pad;
+                $msa_start = 0 if $msa_start < 0;
+                my $sub_alignment = $alignment->slice($msa_start, $msa_end + $pad); #going past the end seems ok. Just need to make sure we're not negative
+
+
+                if($sub_alignment->percentage_identity >= 98 && $sub_alignment->gap_line !~ /[-]/ && $alignment->length >= ($self->contig_size - 5)) {  
                     #this is the simple case, the contigs are nearly 100% identical and we do nothing. This is essentially disappearing contig2
                     $stats_hash->{near_perfect_merged_overlaps}++;
                 }

@@ -28,14 +28,12 @@ HELP
 sub execute {
     my $self = shift;
 
-    my $reader = $self->_open_reader
-        or return;
-    my $writer = $self->_open_writer
-        or return;
+    my ($reader, $writer) = $self->_open_reader_and_writer;
+    return if not $reader or not $writer;
     
     my $temp_fh = File::Temp->new() or die;
     no warnings 'uninitialized';
-    while ( my $seqs = $reader->next ) {
+    while ( my $seqs = $reader->read ) {
         for my $seq ( @$seqs ) { 
             $temp_fh->print(
                 join("\t", map { $seq->{$_} } (qw/ id desc seq qual /))."\n"
