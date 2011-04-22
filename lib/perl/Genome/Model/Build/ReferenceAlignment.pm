@@ -45,27 +45,6 @@ class Genome::Model::Build::ReferenceAlignment {
             is => 'Genome::Model::Build::GenotypeMicroarray',
             id_by => 'genotype_microarray_build_id',
         },
-        genotype_data => {
-            is => 'Genome::InstrumentData::Imported',
-            via => 'genotype_microarray_build',
-            to => 'instrument_data',
-        },
-        genotype_data_id => {
-            is => 'Number',
-            via => 'genotype_data',
-            to => 'id',
-        },
-        genotype => {
-            is => 'Genome::Site::WUGC::IlluminaGenotyping',
-            id_by => 'genotype_data_id',
-        },
-        genotype_source_barcode => {
-            via => 'genotype',
-            to => 'source_barcode',
-        },
-        default_genotype_data_id => {
-            via => 'subject',
-        },
         reference_sequence_build_id => {
             is => 'Text',
             via => 'inputs',
@@ -139,6 +118,16 @@ sub dbsnp_file_filtered {
 sub dbsnp_file_unfiltered {
     my $self = shift;
     return $self->data_directory . "/reports/dbsnp_concordance.txt"
+}
+
+sub qc_directory {
+    my $self = shift;
+    return $self->data_directory . '/qc/';
+}
+
+sub compare_snps_file {
+    my $self = shift;
+    return $self->qc_directory . 'compare_snps';
 }
 
 sub get_alignment_bams {
