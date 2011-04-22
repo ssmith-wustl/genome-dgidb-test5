@@ -56,6 +56,26 @@ sub help_detail {                           # this is what the user will see wit
 EOS
 }
 
+sub output_columns {
+    return qw/
+          Sample
+          SNPsCalled
+          WithGenotype
+          MetMinDepth
+          Reference
+          RefMatch
+          RefWasHet
+          RefWasHom
+          Variant
+          VarMatch
+          HomWasHet
+          HetWasHom
+          VarMismatch
+          VarConcord
+          RareHomConcord
+          OverallConcord
+    /;
+}
 
 ################################################################################################
 # Execute - the main program logic
