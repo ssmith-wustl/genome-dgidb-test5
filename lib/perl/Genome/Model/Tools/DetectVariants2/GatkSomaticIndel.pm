@@ -36,10 +36,13 @@ sub _detect_variants {
     my $self = shift;
     my $refseq = $self->reference_sequence_input;
     $refseq =~ s/\/opt\/fscache//;
+    my $gatk_raw_output = $self->_temp_staging_directory."/gatk_output_file";
+    my $gatk_somatic_output = $self->_temp_staging_directory."/indels.hq";
+
     my $gatk_cmd = Genome::Model::Tools::Gatk::SomaticIndel->create( 
         tumor_bam => $self->aligned_reads_input, 
         normal_bam => $self->control_aligned_reads_input,
-        output_file => $self->_temp_staging_directory."/gatk_output_file",
+        output_file => $gatk_raw_output,
         mb_of_ram => $self->mb_of_ram,
         reference => $refseq,
     );
@@ -48,11 +51,14 @@ sub _detect_variants {
         die $self->error_message;
     }
 
-    my $cmd = "grep SOMATIC ".$self->_temp_staging_directory."/gatk_output_file > ".$self->_temp_staging_directory."/indels.hq";
-
-    ## TODO This is not running in a shellcmd because shellcmd inexplicably bombs out when running this. It dies 
-    ## after receiving an exit code of 1. This should be addressed, and the system call replaced.    
-    unless(system($cmd)){
+    # Gatk outputs different types of variants. We want just the somatic stuff for now. So grep out somatic results.
+    my $cmd = "grep SOMATIC $gatk_raw_output > $gatk_somatic_output";
+    my $return = Genome::Sys->shellcmd( 
+        cmd => $cmd, 
+        allow_failed_exit_code => 1
+    );
+    # Grep will return 1 if nothing was found... and 2 if there was some error. So just make sure the return is 0 or 1.
+    unless( $return == 0 || $return == 1){
         die $self->error_message("Could not execute grep to separate germline and somatic calls in gatk");
     }
     unless(-e $self->_temp_staging_directory."/indels.hq"){

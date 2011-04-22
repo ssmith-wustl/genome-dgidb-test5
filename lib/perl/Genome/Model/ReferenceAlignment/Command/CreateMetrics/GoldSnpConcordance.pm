@@ -39,14 +39,15 @@ class Genome::Model::ReferenceAlignment::Command::CreateMetrics::GoldSnpConcorda
             doc => "instance variable: path to gold_snp build's snv bed file",
          },
     ],
-    doc => "Compute dbSNP concordance for a build and store the resulting metrics the the database",
+    doc => "Compute dbSNP concordance for a build and store the resulting metrics in the database",
 };
 
 sub _verify_build_and_set_paths {
     my ($self, $build) = @_;
 
     my $bname = $build->__display_name__;
-    my $gold_snp_build = $build->gold_snp_build;
+    my $gold_snp_build = $build->genotype_microarray_build;
+    $gold_snp_build ||= $build->gold_snp_build;
     if (!defined $gold_snp_build) {
         die "No gold_snp_build property found on build $bname.";
     }
@@ -93,6 +94,46 @@ sub _gen_concordance {
     $snvcmp_cmd->execute() or die "joinx failed!";
 }
 
+sub _flatten_hash {
+    my ($self, $maybe_hash, $out_hash, $key) = @_;
+
+    if ($maybe_hash !~ /^HASH/) {
+        $out_hash->{$key} = $maybe_hash;
+        return;
+    }
+
+    while (my($ki, $val) = each (%{$maybe_hash})) {
+        $self->_flatten_hash($val, $out_hash, "${key}:${ki}");
+    }
+}
+
+sub _create_metrics {
+    my ($self, $hash, $prefix) = @_;
+
+    my $flat_hash = {};
+    $self->_flatten_hash($hash, $flat_hash, $prefix);
+
+    my $build = $self->build;
+    while (my($key, $val) = each %{$flat_hash}) {
+        my $metric = Genome::Model::Metric->create(
+            build => $build,
+            name => $key,
+            value => $val,
+        );
+    }
+}
+
+sub _handle_metrics {
+    my ($self, $unfilt_path, $filt_path) = @_;
+
+    return unless defined $self->build->genotype_microarray_build_id;
+
+    my $unfiltered = Genome::Model::Tools::Joinx::SnvConcordance::parse_results_file($unfilt_path);
+    my $filtered = Genome::Model::Tools::Joinx::SnvConcordance::parse_results_file($filt_path);
+    $self->_create_metrics($unfiltered, "unfiltered");
+    $self->_create_metrics($filtered, "filtered");
+}
+
 sub execute {
     my $self = shift;
 
@@ -107,6 +148,7 @@ sub execute {
         }
         $self->_gen_concordance($self->_gold_snp_file, $self->_snvs_bed, $out_unfilt);
         $self->_gen_concordance($self->_gold_snp_file, $self->_filtered_snvs_bed, $out_filt);
+        $self->_handle_metrics($out_unfilt, $out_filt);
     };
     if ($@) {
         $self->error_message($@);
