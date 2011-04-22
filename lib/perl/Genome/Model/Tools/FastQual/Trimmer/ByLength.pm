@@ -24,6 +24,7 @@ class Genome::Model::Tools::FastQual::Trimmer::ByLength {
 sub __errors__ {
     my $self = shift;
     my @errors = $self->SUPER::__errors__(@_);
+    return @errors if @errors;
     if ($self->trim_length and $self->read_length) {
         push @errors, 
             UR::Object::Tag->create(
@@ -39,6 +40,20 @@ sub __errors__ {
                 properties => ['trim_length','read_length'],
                 desc => "either trim_length or read_length must be specified"
             );
+    }
+    if ( $self->trim_length and ( $self->trim_length !~ /^$RE{num}{int}$/ or $self->trim_length < 1 ) ) {
+        push @errors, UR::Object::Tag->create(
+            type => 'invalid',
+            properties => [qw/ trim_length /],
+            desc => 'Trim length is not a integer greater than 0 => '.$self->trim_length,
+        );
+    }
+    elsif ( $self->read_length and ( $self->read_length !~ /^$RE{num}{int}$/ or $self->read_length < 1 ) ) {
+        push @errors, UR::Object::Tag->create(
+            type => 'invalid',
+            properties => [qw/ read_length /],
+            desc => 'Read length is not a integer greater than 0 => '.$self->read_length,
+        );
     }
     return @errors;
 }

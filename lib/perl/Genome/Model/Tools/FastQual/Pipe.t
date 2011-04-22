@@ -53,7 +53,7 @@ my $pipe = Genome::Model::Tools::FastQual::Pipe->create(
     input  => [ $in_fastq ],
     output => [ $out_fastq ],
     commands => 'limit by-coverage --count 10 | rename illumina-to-pcap | limit by-coverage --bases 200',
-    metrics_file => $metrics_file,
+    metrics_file_out => $metrics_file,
 );
 ok($pipe, 'create pipe');
 isa_ok($pipe, 'Genome::Model::Tools::FastQual::Pipe');

@@ -26,12 +26,12 @@ my $failed_collate = Genome::Model::Tools::FastQual::Collate->execute(
     input => [ $forward_fastq ],
     output => [ $out_fastq ],
 );
-ok(!$failed_collate->result, 'execute failed w/ only one input file');
+ok(!$failed_collate, 'execute failed w/ only one input file');
 $failed_collate = Genome::Model::Tools::FastQual::Collate->execute(
     input => [ $forward_fastq, $reverse_fastq],
     output => [ $out_fastq, $out_fastq ],
 );
-ok(!$failed_collate->result, 'execute failed w/ 2 output file');
+ok(!$failed_collate, 'execute failed w/ 2 output file');
 
 # ok
 my $collate = Genome::Model::Tools::FastQual::Collate->create(
@@ -45,23 +45,4 @@ is(File::Compare::compare($collated_fastq, $out_fastq), 0, 'collated as expected
 #print "$tmp_dir\n"; <STDIN>;
 done_testing();
 exit;
-
-=pod
-
-=head1 Tests
-
-=head1 Disclaimer
-
- Copyright (C) 2010 Washington University Genome Sequencing Center
-
- This script is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
- License for more details.
-
-=head1 Author(s)
-
- Eddie Belter <ebelter@watson.wustl.edu>
-
-=cut
 

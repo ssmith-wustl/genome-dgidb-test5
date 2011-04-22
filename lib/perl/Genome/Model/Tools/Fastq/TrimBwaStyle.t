@@ -8,17 +8,10 @@ use File::Compare;
 
 use above 'Genome';
 
-BEGIN {
-    use_ok('Genome::Model::Tools::Fastq::TrimBwaStyle');
-};
+use_ok('Genome::Model::Tools::Fastq::TrimBwaStyle') or die;
 
+my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
 my $base_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fastq-TrimBwaStyle';
-
-my $tmp_dir = File::Temp::tempdir(
-    'Fastq-TrimBwaStyle-XXXXX', 
-    DIR => '/gsc/var/cache/testsuite/running_testsuites', 
-    CLEANUP => 1
-);
 my $fastq_file = "$base_dir/test.fastq";
 
 my $trim = Genome::Model::Tools::Fastq::TrimBwaStyle->create(

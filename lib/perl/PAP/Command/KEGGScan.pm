@@ -18,6 +18,9 @@ use File::chdir;
 use File::Temp;
 use IO::File;
 use IPC::Run;
+use Cwd;
+use File::Path qw(remove_tree);
+use DateTime;
 
 class PAP::Command::KEGGScan {
     is  => 'PAP::Command',
@@ -79,6 +82,12 @@ class PAP::Command::KEGGScan {
                 is => 'String',
                 valid_values => ['50', '52', '56'],
                 default => '56',
+		},
+		tar	=> {
+				is	=> 'Boolean',
+				is_input	=> 1,
+				default	=> 1,
+				doc	=> 'If set, tar/bz2 PAP_keggscan_* directory',
         },
     ],
     # These parameters tell workflow the requirements needed for this module 
@@ -226,6 +235,11 @@ sub parse_result {
         ## The values in the third column should be in this form:
         ## gene_name (N letters; record M).
         ($gene_name) = split /\s+/, $gene_name; 
+		unless ($main::locus_name) {
+			$self->status_message("gene_name: ". $gene_name);
+			($main::locus_name) = split(/_/, $gene_name);
+			$self->status_message("locus_name: ". $main::locus_name);
+		}
 
         ## Some descriptions have EC numbers embedded in them.
         ## Prat's removed them.
@@ -273,6 +287,8 @@ sub archive_result {
     
     my $report_save_dir = $self->report_save_dir();
     
+	my $tar_bz2 = $self->tar;
+    
     if (defined($report_save_dir)) {
         
         unless (-d $report_save_dir) {
@@ -305,6 +321,32 @@ sub archive_result {
         $full_bz_file->bzclose();
         
     }
+
+	## We will come here to tar ball PAP_keggscan_* directory
+	if (defined($tar_bz2)) {
+		my $parent_dir =  $self->_working_directory."/..";
+		chdir($parent_dir) || confess "Unable to change directory to $parent_dir: $?";
+		$self->status_message("Cwd: ". getcwd);
+
+		my $user = $ENV{USER};
+
+		my $now = DateTime->now(time_zone	=> 'America/Chicago');
+		my $date_code	= $now->ymd('_');
+
+#		my $tar_file_name = File::Basename::basename($self->fasta_file()). "-". $user. "-". $date_code. ".tar.bz2";
+		my $tar_file_name = $main::locus_name. "-". $user. "-". $date_code. ".tar.bz2";
+		my $tar_dir = $self->_working_directory;
+
+		my $tar_bz_cmd = "tar -C $tar_dir -jcvf $tar_file_name .";
+		$self->status_message("Cmd: ". $tar_bz_cmd);
+
+		system($tar_bz_cmd) == 0 
+			|| confess "system $tar_bz_cmd failed: $?";
+
+		$self->status_message("Removing PAP_tmp dir: ". $tar_dir);
+		remove_tree($tar_dir) || $self->status_message("Error removing $tar_dir: ". $?);	
+
+	}
 
     return 1;
     

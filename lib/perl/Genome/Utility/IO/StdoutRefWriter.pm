@@ -33,7 +33,7 @@ sub write {
     return 1;
 }
 
+sub flush { return 1; }
+
 1;
 
-#$HeadURL$
-#$Id$

@@ -75,7 +75,7 @@ sub execute
   print STDERR "Directory with gene coverages not found: $covg_dir\n" unless( -e $covg_dir );
   print STDERR "List of samples not found or is empty: $bam_list\n" unless( -s $bam_list );
   print STDERR "Pathway info file not found or is empty: $pathway_file\n" unless( -s $pathway_file );
-  return 1 unless( -s $maf_file && -e $covg_dir && -s $bam_list && -s $pathway_file );
+  return undef unless( -s $maf_file && -e $covg_dir && -s $bam_list && -s $pathway_file );
 
   # Build a hash to quickly lookup the genes whose mutations should be ignored
   my %ignored_genes = ();
@@ -136,14 +136,14 @@ sub execute
     {
       print STDERR "Unrecognized Variant_Classification $mutation_class in MAF file.\n";
       print STDERR "Please use TCGA MAF Specification v2.2.\n";
-      return 1;
+      return undef;
     }
 
     # Check that the user followed instructions and named each sample correctly
     unless( grep( /^$tumor_sample$/, @all_sample_names ))
     {
       print STDERR "Sample $tumor_sample in MAF file does not match any in $bam_list\n";
-      return 1;
+      return undef;
     }
 
     next if( defined $ignored_genes{$gene} ); # Ignore variants in genes that user wants ignored

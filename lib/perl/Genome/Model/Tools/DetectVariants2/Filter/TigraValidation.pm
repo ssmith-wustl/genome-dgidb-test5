@@ -66,11 +66,17 @@ class Genome::Model::Tools::DetectVariants2::Filter::TigraValidation {
             is => 'Text',
             default_value => 'svs.out',
         },
-        # TODO Need to point to a specific version of tigra that's not in a home dir
+        tigra_version => {
+            type => 'String',
+            doc  => 'tigra_sv version to use in this process',
+            default_value => '20110321', 
+            valid_values  => [Genome::Model::Tools::TigraSv->available_tigrasv_versions],
+        },
         tigra_path => {
-            is => 'FilePath',
-            #default => '/gscuser/xfan/kdevelop/TIGRA_SV/src/tigra_sv',
-            default => '/gsc/bin/tigra_sv',
+            is  => 'FilePath',
+            doc => 'tigra_sv executable path to use',
+            calculate_from => 'tigra_version',
+            calculate      => q{return Genome::Model::Tools::TigraSv->path_for_tigrasv_version($tigra_version);},
         },
         sv_merge_path => {
             is => 'FilePath',
@@ -237,7 +243,7 @@ class Genome::Model::Tools::DetectVariants2::Filter::TigraValidation {
     ],
     has_param => [
         lsf_resource => {
-            default_value => "-R 'select[mem>8000] rusage[mem=8000] -M 8000000'", 
+            default_value => "-R 'select[mem>8000] rusage[mem=8000]' -M 8000000", 
         },
     ],
     has_constant => [

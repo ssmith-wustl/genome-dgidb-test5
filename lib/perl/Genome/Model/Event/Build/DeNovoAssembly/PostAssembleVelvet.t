@@ -62,7 +62,7 @@ foreach my $file (@file_names_to_test) {
 }
 
 #test zipped files
-foreach ('collated.fasta.gz', 'collated.fasta.qual.gz') {
+foreach ('collated.fasta.gz') {#, 'collated.fasta.qual.gz') {
     my $test_file = $test_data_dir."/$_";
     my $temp_file = $build->data_directory."/edit_dir/$_";
 
@@ -73,6 +73,7 @@ foreach ('collated.fasta.gz', 'collated.fasta.qual.gz') {
     is(scalar (@diff), 0, "Zipped $_ file matches");
 }
 
+#print $build->data_directory."/edit_dir/";<STDIN>;
 done_testing();
 
 exit;

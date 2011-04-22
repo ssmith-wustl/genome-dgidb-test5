@@ -64,6 +64,11 @@ sub get_training_set {
     return $_[0]->{training_set};
 }
 
+sub create_parsed_seq {
+    my ($self, $seq) = @_;
+    return new edu::msu::cme::rdp::classifier::readseqwrapper::ParsedSequence($seq->{id}, $seq->{seq});
+}
+
 sub classify {
     my ($self, $seq) = @_;
 
@@ -73,49 +78,48 @@ sub classify {
     }
 
     if ($seq->length < 50) {
-        print STDERR "Can't classify sequence (".$seq->id."). Sequence length must be at least 50 bps.\n";
+        $self->error_message("Can't classify sequence (".$seq->id."). Sequence length must be at least 50 bps.");
         return;
     }
     
-    my $parsed_seq;
-    eval{
-        $parsed_seq = new edu::msu::cme::rdp::classifier::readseqwrapper::ParsedSequence($seq->display_name, $seq->seq);
+    my $parsed_seq = eval{
+        new edu::msu::cme::rdp::classifier::readseqwrapper::ParsedSequence($seq->display_name, $seq->seq);
     };
     unless ( $parsed_seq ) {
-        print STDERR "Can't classify sequence (".$seq->id."). Can't create rdp parsed sequence.\n";
+        $self->error_message("Can't classify sequence (".$seq->id."). Can't create rdp parsed sequence.");
         return;
     }
 
-    my $classification_result;
-    eval{
-        $classification_result = $self->{'classifier'}->classify($parsed_seq);
-    };
+    return $self->classify_parsed_seq($parsed_seq);
+}
+
+sub classify_parsed_seq {
+    my ($self, $parsed_seq) = @_;
+
+    unless ( $parsed_seq ) {
+        Carp::confess("No parsed sequence given to classify");
+        return;
+    }
+
+    my $classification_result = eval{ $self->{'classifier'}->classify($parsed_seq); };
     unless ( $classification_result ) {
-        print STDERR "Can't classify sequence (".$seq->id."). No classification result was returned from the classifier.\n";
+        $self->error_message("Can't classify sequence (".$parsed_seq->getName."). No classification result was returned from the classifier.");
         return;
     }
 
-    my $complemented = $self->_is_seq_reversed($parsed_seq);
+    my $complemented = $self->_is_reversed(
+        parsed_seq => $parsed_seq,
+        classification_result => $classification_result,
+    );
 
     my $taxon = $self->_build_taxon_from_classification_result($classification_result);
 
     return Genome::Utility::MetagenomicClassifier::SequenceClassification->new(
-        name => $seq->display_name,
+        name => $parsed_seq->getName,
         complemented => $complemented,
         classifier => 'rdp',
         taxon => $taxon,
     );
-}
-
-sub is_reversed {
-    my $self = shift;
-    my $seq = shift;
-    my $parsed_seq = new edu::msu::cme::rdp::classifier::readseqwrapper::ParsedSequence($seq->display_name, $seq->seq);
-    return $self->_is_seq_reversed($parsed_seq);
-}
-
-sub _is_seq_reversed {
-    die("abstract method.  define in inheriting class");
 }
 
 sub _build_taxon_from_classification_result {
@@ -144,5 +148,3 @@ sub _build_taxon_from_classification_result {
 
 1;
 
-#$HeadURL$
-#$Id$

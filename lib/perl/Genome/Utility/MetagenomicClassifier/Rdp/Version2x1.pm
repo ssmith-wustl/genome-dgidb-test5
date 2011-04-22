@@ -60,10 +60,9 @@ END
     JNI => 1,
 ) ;
 
-sub _is_seq_reversed()
-{
-    my ($self, $seq) = @_;
-    return $self->{'classifier'}->isSeqReversed($seq);
+sub _is_reversed {
+    my ($self, %params) = @_; 
+    return $self->{'classifier'}->isSeqReversed($params{parsed_seq});
 }
 
 1;
