@@ -387,6 +387,18 @@
                 </a>
               </td>
             </tr>
+            <xsl:variable name="snpArrayConcordance" select="build/@snp-array-concordance"/>
+            <xsl:if test="$status = 'Succeeded' and $snpArrayConcordance">
+              <tr>
+                <td class="name"><br/>
+                </td>
+                <td class="value">
+                  <a class="mini btn"><xsl:attribute name="href"><xsl:text>https://imp.gsc.wustl.edu/</xsl:text><xsl:value-of select="build/@snp-array-concordance"/></xsl:attribute>
+                  <span class="sm-icon sm-icon-extlink"><br/></span><xsl:text>snp array concordance report</xsl:text>
+                  </a>
+                </td>
+              </tr>
+            </xsl:if>
 
             <xsl:variable name="metricCount" select="build/@metric-count"/>
             <xsl:if test="$status = 'Succeeded' and $metricCount > 0">
