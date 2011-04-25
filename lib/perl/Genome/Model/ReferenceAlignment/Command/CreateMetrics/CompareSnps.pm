@@ -30,8 +30,8 @@ sub help_detail {
 # Fields in the compare snps file that should be made into metrics
 sub compare_snps_fields_to_metrics {
     return qw/
-        RefMatch
-        RefWasHet
+        SnpsCalled
+        WithGenotype
         OverallConcord
     /;
 }

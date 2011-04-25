@@ -22,16 +22,18 @@ class Genome::Model::ReferenceAlignment::Command::CompareSnpsSummary {
 sub summary_headers {
     return qw/
         instrument_data_id
-        reference_match
-        reference_was_heterozygous
+        flow_cell_id
+        lane_number
+        snps_called 
+        with_genotype
         overall_concordance
     /;
 }
 
 sub qc_metrics {
     return qw/
-        compare_snps_ref_match
-        compare_snps_ref_was_het
+        compare_snps_snps_called
+        compare_snps_with_genotype
         compare_snps_overall_concord
     /;
 }
@@ -45,6 +47,20 @@ sub execute {
     for my $instrument_data (@instrument_data) {
         my @info;
         push @info, $instrument_data->id;
+        
+        if ($instrument_data->can('flow_cell_id') and defined $instrument_data->flow_cell_id) {
+            push @info, $instrument_data->flow_cell_id;
+        }
+        else {
+            push @info, '-';
+        }
+
+        if ($instrument_data->can('lane') and defined $instrument_data->lane) {
+            push @info, $instrument_data->lane;
+        }
+        else {
+            push @info, '-';
+        }
 
         my $qc_build = $instrument_data->lane_qc_build;
         unless ($qc_build) {

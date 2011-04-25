@@ -59,7 +59,7 @@ EOS
 sub output_columns {
     return qw/
           Sample
-          SNPsCalled
+          SnpsCalled
           WithGenotype
           MetMinDepth
           Reference
