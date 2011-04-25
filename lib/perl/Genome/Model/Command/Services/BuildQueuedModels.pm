@@ -78,6 +78,8 @@ sub execute {
         return 1;
     }
 
+    @models = sort $model_sorter @models;
+
     my $builds_to_start = $self->max_builds;
     $builds_to_start = @models if @models < $builds_to_start;
     my $command = Genome::Model::Build::Command::Start->create(
