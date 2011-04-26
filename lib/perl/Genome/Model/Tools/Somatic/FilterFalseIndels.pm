@@ -295,11 +295,7 @@ sub execute {
 
     print "Running BAM Readcounts...\n";
 #    my $cmd = readcount_program() . " -b 15 " . $self->bam_file . " -l $temp_path";
-<<<<<<< Updated upstream
     my $cmd = $self->readcount_program . " -b 1 " . $self->bam_file . " -l $temp_path";
-=======
-    my $cmd = readcount_program($self) . " -b 1 " . $self->bam_file . " -l $temp_path";
->>>>>>> Stashed changes
     my $readcount_path = $self->output_file . ".readcounts";
 
     $cmd .= "> $readcount_path 2> /dev/null";

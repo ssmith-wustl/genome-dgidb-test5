@@ -34,7 +34,8 @@ sub execute {
         my @fastq_files = $self->fastqs_from_solexa( $inst_data );
         for my $fastq_file ( @fastq_files ) {
             my $reader = Genome::Model::Tools::FastQual::FastqReader->create( file => $fastq_file ); 
-            while ( my $fastq = $reader->next ) {
+            while ( my $fastqs = $reader->read ) {
+                my $fastq = $fastqs->[0];
                 $attempted++;
                 my $set_name = 'none';
                 my $seq = $fastq->{seq};
@@ -52,7 +53,7 @@ sub execute {
                 next unless length $seq >= $min_length;
                 delete $fastq->{desc} if $fastq->{desc};
                 my $writer = $self->_get_writer_for_set_name( $set_name );
-                $writer->write( $fastq );
+                $writer->write([$fastq]);
             }
             $self->status_message( 'DONE PROCESSING: '.$inst_data->id );
         }

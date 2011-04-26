@@ -32,9 +32,9 @@ class Genome::Model::Build::MetagenomicComposition16s::Amplicon {
             default_value => [],
             doc => 'Reads that were porcessed and incorporated into this amplicon\'s sequence.',
         },
-        bioseq => {
-            is => 'Bio::Seq',
-            doc => 'Amplicon\'s processed Bio::Seq object.  Not oriented.',
+        seq => {
+            is => 'Hash',
+            doc => 'Processed unoriented sequence.',
         },
     ],
 };
@@ -56,24 +56,22 @@ sub create {
     return $self;
 }
 
-#< Oriented Bioseq >#
-sub oriented_bioseq {
+#< Oriented Seq >#
+sub oriented_seq {
     my $self = shift;
 
-    my $bioseq = $self->bioseq
-        or return; # ok
+    my $seq = $self->seq;
+    return if not $seq;
 
-    my $classification = $self->classification
-        or return; # ok
+    my $classification = $self->classification;
+    return if not $classification;
 
     if ( $classification->is_complemented ) {
-        eval { $bioseq = $bioseq->revcom; };
-        unless ( $bioseq ) { # bad
-            die "Can't reverse complement biobioseq for amplicon (".$self->name."): $!";
-        }
+        $seq->{seq} = reverse $seq->{seq};
+        $seq->{seq} =~ tr/ATGCatgc/TACGtacg/;
     }
 
-    return $bioseq;
+    return $seq;
 }
 
 #< Read Counts >#
@@ -125,21 +123,3 @@ sub classification {
 
 1;
 
-=pod
-
-=head1 Disclaimer
-
-Copyright (C) 2010 Genome Center at Washington University in St. Louis
-
-This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied
- warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-for more details.
-
-=head1 Author(s)
-
-B<Eddie Belter> I<ebelter@genome.wustl.edu>
-
-=cut
-
-#$HeadURL$
-#$Id$

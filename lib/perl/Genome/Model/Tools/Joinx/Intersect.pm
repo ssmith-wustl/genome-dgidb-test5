@@ -52,6 +52,11 @@ class Genome::Model::Tools::Joinx::Intersect {
             default => 0,
             doc => 'require exact allele match. implies --exact-pos',
         },
+        iub_match => {
+            is => 'Boolean',
+            default => 0,
+            doc => 'when using --exact-allele, this enables expansion and partial matching of IUB codes',
+        },
         dbsnp_match => {
             is => 'Boolean',
             default => 0,
@@ -78,6 +83,7 @@ sub flags {
         'output_both',
         'exact_pos',
         'exact_allele',
+        'iub_match',
         'dbsnp_match',
     );
     for my $bf (@bool_flags) {

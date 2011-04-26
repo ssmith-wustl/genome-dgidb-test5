@@ -10,38 +10,36 @@ use warnings;
 
 use Genome;
 
-use Data::Dumper;
-
 class Genome::Utility::IO::SeparatedValueReader {
     is => 'Genome::Utility::IO::Reader', 
     has_optional => [
-    headers => {
-        type => 'Array',
-        doc => 'Headers for the file.  If none given, they will be retrieved from the input.'
-    },
-    separator => {
-        type => 'String',
-        default => ',',
-        doc => 'The value of the separator character.  Default: ","'
-    },
-    is_regex => {
-        type => 'Boolean',
-        default => 0,
-        doc => 'Interprets separator as regex'
-    },
-    ignore_extra_columns => {
-        type => 'Boolean',
-        default => 0,
-        doc => 'Rather than crash when extra columns are found, just drop/ignore them.'
-    },
-    ignore_lines_starting_with => {
-        type => 'Text',
-        doc => 'Ignore initial lines starting with character(s).'
-    },
-    current_line => {
-        type => 'Text',
-        doc => 'The current original line of input from the file, pre splitting.'
-    },
+        headers => {
+            type => 'Array',
+            doc => 'Headers for the file.  If none given, they will be retrieved from the input.'
+        },
+        separator => {
+            type => 'String',
+            default => ',',
+            doc => 'The value of the separator character.  Default: ","'
+        },
+        is_regex => {
+            type => 'Boolean',
+            default => 0,
+            doc => 'Interprets separator as regex'
+        },
+        ignore_extra_columns => {
+            type => 'Boolean',
+            default => 0,
+            doc => 'Rather than crash when extra columns are found, just drop/ignore them.'
+        },
+        ignore_lines_starting_with => {
+            type => 'Text',
+            doc => 'Ignore initial lines starting with character(s).'
+        },
+        current_line => {
+            type => 'Text',
+            doc => 'The current original line of input from the file, pre splitting.'
+        },
     ],
 };
 

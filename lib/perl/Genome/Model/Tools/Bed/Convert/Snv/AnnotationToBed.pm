@@ -32,6 +32,7 @@ sub process_source {
     my $input_fh = $self->_input_fh;
 
     while(my $line = <$input_fh>) {
+        chomp $line;
         my ($chromosome, $start, $stop, $reference, $consensus, @extra) = split("\t", $line);
         unless($start eq $stop) {
             $self->error_message('Start and stop positions do not match in line: ' . $line);

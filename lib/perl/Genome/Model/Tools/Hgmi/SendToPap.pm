@@ -15,6 +15,7 @@ use List::MoreUtils qw/ uniq /;
 use IPC::Run;
 use Workflow::Simple;
 use Data::Dumper;
+use PAP;
 
 class Genome::Model::Tools::Hgmi::SendToPap (
     is => 'Command',

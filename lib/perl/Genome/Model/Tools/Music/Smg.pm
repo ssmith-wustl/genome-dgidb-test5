@@ -34,7 +34,7 @@ sub execute {
 
   # Check on all the input data before starting work
   print STDERR "Gene mutation rate file not found or is empty: $gene_mr_file\n" unless( -s $gene_mr_file );
-  return 1 unless( -s $gene_mr_file );
+  return undef unless( -s $gene_mr_file );
 
   # Call R for Fisher combined test, Likelihood ratio test, and convolution test on each gene
   my $smg_cmd = "R --slave --args < " . __FILE__ . ".R $gene_mr_file $pval_file smg_test";
