@@ -23,7 +23,7 @@ class Genome::ProcessingProfile::DeNovoAssembly{
 	# Assembler
 	assembler_name => {
 	    doc => 'Name of the assembler.',
-	    valid_values => ['velvet one-button', 'soap de-novo-assemble', 'soap import'],
+	    valid_values => ['abyss parallel', 'velvet one-button', 'soap de-novo-assemble', 'soap import'],
 	},
 	assembler_version => {
 	    doc => 'Version of assembler.',
@@ -164,9 +164,8 @@ sub _validate_assembler_and_params {
     }
     
     my $assembler_class = $self->assembler_class;
-
+    
     my %assembler_params;
-
     $assembler_params{version} = $self->assembler_version;
 
     #below params are needed for assembly but must be derived/calculated from instrument data
@@ -214,6 +213,10 @@ sub valid_soap_import_seq_platforms {
 }
 
 sub valid_velvet_one_button_seq_platforms {
+    return ['solexa'];
+}
+
+sub valid_abyss_parallel_seq_platforms {
     return ['solexa'];
 }
 
@@ -276,6 +279,29 @@ sub soap_import_params {
     return %params;
 }
 
+sub abyss_parallel_params {
+    my ($self, $build) = @_;
+
+    my %params;
+    
+    #pp specified assembler params
+    if ( $self->assembler_params_as_hash ) {
+	%params = $self->assembler_params_as_hash;
+    }
+
+    #additional params needed from pp
+    $params{version} = $self->assembler_version;
+
+    #params that need to be derived
+    
+    ($params{fastq_a}, $params{fastq_b}) = $build->fastq_input_files;
+
+    my $output_dir = $build->data_directory;
+    $params{output_directory} = $output_dir;
+
+    return %params;
+}
+
 #velvet one-button params
 sub velvet_one_button_params {
     my ($self, $build) = @_;
@@ -296,7 +322,7 @@ sub velvet_one_button_params {
     $params{version} = $self->assembler_version;
 
     #die if these params are specified
-    for my $calculated_param (qw / genome_len ins_length /) {
+    for my $calculated_param (qw/genome_len ins_length/) {
 	if ( exists $params{$calculated_param} ) {
 	    Carp::confess (
 		$self->error_message("Can't specify $calculated_param as assembler_param .. it will be derived from input data")
