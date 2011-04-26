@@ -89,7 +89,7 @@ sub execute {
 	        $test_method = "cor";
         }
         elsif ($genetic_data_type =~ /^variant$/i) {
-	        $test_method = "anova";
+	        $test_method = "cor"; #cor over anova because we're assuming an additive model
         }
         else {
                 $self->error_message("Please enter either \"gene\" or \"variant\" for the --genetic-data-type parameter.");
