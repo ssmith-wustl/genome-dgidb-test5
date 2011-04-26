@@ -81,6 +81,23 @@ sub lane_info {
             push (@lane_reports, $file->file_name);
         }
 
+        if ($lane->gc_bias_path) {
+            my $pdf_file = $lane->gc_bias_path .'/gc-bias-chart.pdf';
+            if (-e $pdf_file) {
+                push @lane_reports, $pdf_file;
+            }
+        }
+
+        if ($lane->fastqc_path) {
+            my @dirs = grep { -d $_ } glob('/gscmnt/sata162/production/9006KACXX/L008/fastqc/s_*_sequence_fastqc');
+            for my $dir (@dirs) {
+                my $html_file = $dir .'/fastqc_report.html';
+                if (-e $html_file) {
+                    push @lane_reports, $html_file;
+                }
+            }
+        }
+
         # as some lanes have multiple identical (except for timestamp) reports, here we remove duplicates
         my %lane_reports_h = map { $_, 1 } @lane_reports;
         my @lane_reports_unique = keys %lane_reports_h;
