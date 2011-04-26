@@ -46,7 +46,6 @@ sub objects_to_sync {
         'Genome::Site::WUGC::Taxon' => 'Genome::Taxon',
         'Genome::Site::WUGC::Sample' => 'Genome::Sample',
         'Genome::Site::WUGC::Library' => 'Genome::Library',
-        'Genome::Site::WUGC::IlluminaGenotyping' => 'Genome::InstrumentData::Imported',
     );
 }
 
@@ -62,7 +61,6 @@ sub sync_order {
         Genome::Site::WUGC::InstrumentData::Sanger
         Genome::Site::WUGC::InstrumentData::454
         Genome::Site::WUGC::InstrumentData::Imported
-        Genome::Site::WUGC::IlluminaGenotyping
     /;
 }
 
@@ -277,15 +275,6 @@ sub _get_direct_and_indirect_properties_for_object {
     return (\%direct_properties, \%indirect_properties);
 }
 
-# Below are type-specific create methods. They are each responsible for taking an object and a class
-# and creating a new object of the given class based on the given object.
-sub _create_illuminagenotyping {
-    my ($self, $original_object, $new_object_class) = @_;
-    return 0;
-
-    # TODO Add sync logic here
-}
-
 sub _create_instrumentdata_imported {
     my ($self, $original_object, $new_object_class) = @_;
 
@@ -457,6 +446,14 @@ sub _create_sample {
     };
     confess "Could not create new object of type $new_object_class based on object of type " .
         $original_object->class . " with id " . $original_object->id . ":\n$@" unless $object;
+
+    # The genotype data link doesn't have the same name between LIMS/Apipe and it isn't set as mutable, so it
+    # can only be set expclitly as below.
+    my $genotype_id = delete $indirect_properties->{default_genotype_seq_id};
+    if (defined $genotype_id) {
+        my $genotype_data = Genome::InstrumentData->get($genotype_id);
+        $object->set_default_genotype_data($genotype_data) if $genotype_data;
+    }
 
     for my $property_name (sort keys %{$indirect_properties}) {
         Genome::SubjectAttribute->create(
