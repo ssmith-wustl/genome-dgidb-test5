@@ -33,13 +33,6 @@ sub execute {
     }
 
     my $output_file = $self->output_file || $self->assembly_directory . "/edit_dir/stats.txt";
-    unlink $output_file;
-    my $fh = Genome::Sys->open_file_for_writing($output_file) ||
-	die "Failed to open output file $output_file for writing.";
-    $fh->close;
-
-
-
     return 1;
 }
 
