@@ -53,27 +53,21 @@ sub abyss_pe_binary {
     return shift->bindir . "/abyss-pe";
 }
 
-sub job_count {
-    my $self = shift;
-    my ($processes) = $self->params =~ /\bnp=([0-9]+)\b/;
-    return $processes || 1;
-}
-
 # TODO: abstract job submission, it's bad to hard code bsub all over
 sub mpirun_cmd {
-    my $self = shift;
+    my ($self, $output_directory) = @_;
     my $rusage = 'span[ptile=1] select[fscache]';
-    my $log_file = $self->output_directory . '/abyss_parallel.log';
-    my $job_count = $self->job_count;
+    my $log_file = "$output_directory/abyss_parallel.log";
+    my $num_jobs = $self->num_jobs;
     my $job_queue = $self->job_queue;
-    return "bsub -K -oo $log_file -n $job_count -a openmpi -q $job_queue -R '$rusage' mpirun.lsf -x PATH";
+    return "bsub -K -oo $log_file -n $num_jobs -a openmpi -q $job_queue -R '$rusage' mpirun.lsf -x PATH";
 }
 
 sub parse_kmer_range {
     my ($self, $range) = @_;
 
     my @kmer_sizes;
-    if (my ($start, $end, $step) = $range =~ /^(\d+)-(\d+)/) {
+    if (my ($start, $end, $step) = $range =~ /^(\d+)\.\.(\d+)/) {
         die "invalid kmer size range '$range', end=$end < start=$start. abort." if $end < $start;
         if (my ($step) = $range =~ / step (.*)/) { # .* instead of \d+ so we can complain about bad input
             die "invalid kmer size range '$range', step=$step <= 0, abort." if $step <= 0;
@@ -112,11 +106,12 @@ sub execute {
         my $main_log_file = "$output_dir/abyss.log";
         my @cmd = (
             $self->abyss_pe_binary,
-            "k=" . $self->kmer_size,
+            "k=" . $kmer_size,
             "n=" . $self->min_pairs,
+            "np=" . $self->num_jobs,
             "in='" . $self->fastq_a . " " . $self->fastq_b . "'", 
             "name=".$self->name,
-            'mpirun="' . $self->mpirun_cmd.'"',
+            'mpirun="' . $self->mpirun_cmd($output_dir).'"',
             " > $main_log_file 2>&1"
             );
 

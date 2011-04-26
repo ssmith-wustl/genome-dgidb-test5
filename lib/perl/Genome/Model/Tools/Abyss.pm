@@ -39,8 +39,8 @@ EOS
 sub create {
     my $self = shift;
     my $obj = $self->SUPER::create(@_);
-    if (!exists $ABYSS_VERSIONS{$obj->version}) {
-        die "Invalid abyss version: " . $obj->version .
+    if (!defined $obj->version or !exists $ABYSS_VERSIONS{$obj->version}) {
+        die "Invalid abyss version: " . ($obj->version||"''") .
             ". Valid versions are: " . join(", ", keys %ABYSS_VERSIONS);
     }
     return $obj;
