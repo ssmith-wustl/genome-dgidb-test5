@@ -180,7 +180,7 @@ sub lane_qc_dir {
     my $self = shift;
     my $qc_build = $self->lane_qc_build;
     return unless ($qc_build);
-    my $qc_dir = $qc_build->data_directory . "/qc";
+    my $qc_dir = $qc_build->qc_directory;
     if (-d $qc_dir) {
         return $qc_dir;
     }

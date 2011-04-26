@@ -545,6 +545,9 @@ sub files_ignored_by_diff {
         reports/Composition/report.xml
         reports/Summary/report.html
         reports/Summary/report.xml
+        sys/.*classification.stor
+        classification/.*rdp2-1
+        reports/Composition/.*counts.tsv
     );
 }
 

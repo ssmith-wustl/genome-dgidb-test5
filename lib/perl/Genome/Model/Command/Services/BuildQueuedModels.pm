@@ -18,6 +18,12 @@ class Genome::Model::Command::Services::BuildQueuedModels {
             default     => 200,
             doc         => 'Max # of builds to launch in one invocation',   
         },
+        max_builds_to_try => {
+            is          => 'Number',
+            is_optional => 1,
+            default     => 600,
+            doc         => 'Max # of builds to attempt to launch in one invocation (even if more are queued)',
+        },
         newest_first => {
             is          => 'Boolean',
             is_optional => 1,
@@ -77,6 +83,9 @@ sub execute {
         $self->status_message("No models to build.");
         return 1;
     }
+
+    @models = sort $model_sorter @models;
+    @models = splice(@models, 0, $self->max_builds_to_try);
 
     my $builds_to_start = $self->max_builds;
     $builds_to_start = @models if @models < $builds_to_start;
