@@ -423,5 +423,15 @@ sub dependent_properties {
     return;
 }
 
+sub init_genotype_model {
+    my $self = shift;
+
+    my $gmodel = $self->genotype_microarray_model;
+    return if $gmodel;
+
+    $gmodel = $self->default_genotype_model;
+    return unless $gmodel;
+    $self->genotype_microarray_model_id($gmodel->id);
+}
 
 1;

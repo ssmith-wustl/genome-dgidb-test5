@@ -69,5 +69,10 @@ sub _get_name_part_from_tissue_desc {
     return Genome::Utility::Text::capitalize_words($tissue_desc);
 }
 
+sub additional_params_for_copy {
+    my $self = shift;
+    return 'center_name';
+}
+
 1;
 

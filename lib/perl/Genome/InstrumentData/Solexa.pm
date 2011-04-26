@@ -209,6 +209,18 @@ class Genome::InstrumentData::Solexa {
             where => [ attribute_label => 'index_sequence' ],
             is_mutable => 1,
         },
+        gc_bias_path => {
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'gc_bias_path' ],
+            is_mutable => 1,
+        },
+        fastqc_path => {
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'fastqc_path' ],
+            is_mutable => 1,
+        },
         
         #TODO These three columns will point to "read_length" or whatever name is decided
         #(see also https://gscweb.gsc.wustl.edu/wiki/Software_Development:Illumina_Indexed_Runs_Warehouse_Schema)

@@ -27,6 +27,7 @@ sub _example_directory_for_model {
     my %dirs_versions = (
         soap_solexa => '9',
         velvet_solexa => '0.3',
+        abyss_solexa => '1'
     );
 
     my $assembler_platform = $model->processing_profile->assembler_base_name.'_'.$model->sequencing_platform;
@@ -142,6 +143,24 @@ sub processing_profile_for_velvet {
     return $pp;
 }
 
+sub processing_profile_for_abyss {
+    my $class = shift;
+
+    my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(
+        name => 'De Novo Assembly Abyss Test',
+        sequencing_platform => 'solexa',
+        assembler_name => 'abyss parallel',
+        assembler_version => '1.2.7',
+        assembler_params => '-kmer_size 25,31..35 step 2,50 -num_jobs 4',
+    );
+
+    if ( not $pp ) {
+        Carp::confess('Cannot create de novo assembly processing profile for abyss');
+    }
+
+    return $pp;
+}
+
 sub _model_for_assembler {
     my ($class, $assembler) = @_;
 
@@ -186,6 +205,10 @@ sub model_for_soap {
 
 sub model_for_velvet {
     return $_[0]->_model_for_assembler('velvet');
+}
+
+sub model_for_abyss {
+    return $_[0]->_model_for_assembler('abyss');
 }
 
 sub example_build_for_model {

@@ -12,14 +12,15 @@ class Genome::UpdateHistory {
     ],
     has => [
         description => { is => 'VARCHAR2', len => 255, column_name => 'DESCRIPTION', doc => 'insert, update, or delete'},
-        app_user    => { is => 'VARCHAR2', len => 255, column_name => 'APP_USER'},
-        app_name    => { is => 'VARCHAR2', len => 255, column_name => 'APP_NAME'},
-        oracle_user => { is => 'VARCHAR2', len => 255, column_name => 'ORACLE_USER'},
-        oracle_session_id => { is => 'VARCHAR2', len => 15, column_name => 'ORACLE_SESSION_ID'}
+        is_reconciled => {is => 'Boolean', default => 0},
     ],
     has_optional => [
         old_value => { is => 'VARCHAR2', len => 1000, column_name => 'OLD_VALUE'},
-        new_value => { is => 'VARCHAR2', len => 1000, column_name => 'NEW_VALUE'}
+        new_value => { is => 'VARCHAR2', len => 1000, column_name => 'NEW_VALUE'},
+        app_user    => { is => 'VARCHAR2', len => 255, column_name => 'APP_USER'},
+        app_name    => { is => 'VARCHAR2', len => 255, column_name => 'APP_NAME'},
+        oracle_user => { is => 'VARCHAR2', len => 255, column_name => 'ORACLE_USER'},
+        oracle_session_id => { is => 'VARCHAR2', len => 15, column_name => 'ORACLE_SESSION_ID'},
     ],
     data_source => 'Genome::DataSource::GMSchema',
 };

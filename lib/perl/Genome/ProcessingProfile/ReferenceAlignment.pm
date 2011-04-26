@@ -500,7 +500,7 @@ $DB::single=1;
     my @stages = (
         reference_preparation => 1,
         alignment             => 1,
-        deduplication         => 1,
+        merge_and_deduplication         => 1,
         reference_coverage    => 1,
         variant_detection     => 1,
         transcript_annotation => 0,
@@ -569,12 +569,18 @@ sub variant_detection_job_classes {
     }
 }
 
-sub deduplication_job_classes {
+sub merge_and_deduplication_job_classes {
     my $self = shift;
+
+    # this is hackish, but maq is a special case right now and hopefully it won't be here long
+    if ($self->read_aligner_name eq 'maq') {
+        return ('Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries');
+    }
+
     my @steps = ( 
-        'Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries',
+        'Genome::Model::Event::Build::ReferenceAlignment::MergeAlignments',
     );
-    if(defined $self->duplication_handler_name) {
+    if(defined $self->merger_name) {
         return @steps;
     }
     else {
@@ -679,7 +685,7 @@ sub variant_detection_objects {
     return 'all_sequences';
 }
 
-sub deduplication_objects {
+sub merge_and_deduplication_objects {
     my $self = shift;
     my $model = shift;
     return 'all_sequences';
