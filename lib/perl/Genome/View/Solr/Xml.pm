@@ -240,6 +240,7 @@ sub _generate_timestamp_field_data {
                 $timestamp = $value;
             } else {
                 my ($a, $b) = split / /, $value;
+                $b =~ s/.\d{6}$//g;
                 $timestamp = sprintf("%sT%sZ", $a, $b);
             }
             
