@@ -65,6 +65,10 @@ class Genome::Site::WUGC::Sample {
 
     ],
     has_optional => [	
+        default_genotype_seq_id     => {
+            is => 'Text',
+            doc => 'Seq ID of corresponding genotype data',
+        },
         common_name                 => { is => 'Text', 
                                         doc => 'a name like "tumor1" for a given sample',                                        
                                     },
