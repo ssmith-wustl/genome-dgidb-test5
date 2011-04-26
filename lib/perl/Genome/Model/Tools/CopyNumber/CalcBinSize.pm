@@ -25,7 +25,7 @@ class Genome::Model::Tools::CopyNumber::CalcBinSize {
 	entrypoints => {
 	    is => 'String',
 	    is_optional => 0,
-	    doc => 'path to an entrypoints file containing chr, length and ploidy. See (~cmiller/annotations/entrypoints.hg18.[male|female])',
+	    doc => 'path to an entrypoints file containing chr, length and ploidy. See (/gscmnt/sata921/info/medseq/cmiller/annotations/entrypoints.hg18.[male|female])',
 	},
 	mapability => {
 	    is => 'String',
@@ -55,7 +55,7 @@ class Genome::Model::Tools::CopyNumber::CalcBinSize {
 	    is => 'Float',
 	    is_optional => 1,
 	    default => 0.05,
-	    doc => 'The fraction of the genome that is copy number deleted. A good estimation will help the tool choose a better bin size, but isn\'t strictly necessary.',
+	    doc => 'The fraction -of the genome that is copy number deleted. A good estimation will help the tool choose a better bin size, but isn\'t strictly necessary.',
 	},
 	overdispersion => {
 	    is => 'String',
@@ -79,7 +79,7 @@ sub help_brief {
 sub help_detail {
     "This script takes the number of reads you've got as input, models the reads using a negative binomial distribution, then calculates a bin size. This bin size will enable good separability between the diploid and triploid peaks without misclassifying a greater fraction of windows than specified by the input p-value. 
 
-It will also return info that gives you an idea of how many consecutive altered windows should be required during the segmentation step (CNAseg.pl: option -n) to maximize the resolution while minimizing the change of obtaining a false positive.
+It will also return info that gives you an idea of how many consecutive altered windows should be required during the segmentation step (CNAseg.pl: option -n) to maximize the resolution while minimizing the chance of obtaining a false positive alteration call.
 "
 }
 
