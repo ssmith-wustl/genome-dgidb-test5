@@ -151,21 +151,21 @@ sub execute {                               # replace with real execution logic.
         print R_COMMANDS 'legend(x="topright", paste("Filter","Cut-off",sep=" "),col=c("blue"),lty = c(1,1,1), lwd = 1);'."\n"; #top right will rarely have any points
 
         #TUMOR COVERAGE PLOT
-        print R_COMMANDS 'plot.default(x=(z1$V9+z1$V10),y=z1$V11,xlab="Tumor Coverage",ylab="Tumor Variant Allele Frequency", main=paste(genome,"Tumor SNV Coverage"), type="p",pch=19,cex=0.4,col="#FF000039",xlim=c(0,200),ylim=c(0,100));'."\n";
+        print R_COMMANDS 'plot.default(x=(z1$V9+z1$V10),y=z1$V11,xlab="Tumor Coverage",ylab="Variant Allele Frequency in Tumor", main=paste(genome,"Tumor SNV Coverage"), type="p",pch=19,cex=0.4,col="#FF000039",xlim=c(0,200),ylim=c(0,100));'."\n";
         print R_COMMANDS 'lines(c(20,20),c(1,100), col="black");'."\n";
         print R_COMMANDS 'lines(c(30,30),c(1,100), col="blue");'."\n";
         print R_COMMANDS 'lines(c(100,100),c(1,100), col="green4");'."\n";
         print R_COMMANDS 'legend(x="topright", title = "Coverage", c("20x", "30x", "100x"),col=c("black","blue","green4"),lty = c(1,1,1), lwd = 1);'."\n"; #top right will rarely have any points
 
         #NORMAL COVERAGE PLOT
-        print R_COMMANDS 'plot.default(x=(z1$V5+z1$V6),y=z1$V7,xlab="Normal Coverage",ylab="Normal Variant Allele Frequency", main=paste(genome,"Normal SNV Coverage"), type="p",pch=19,cex=0.4,col="#FF000039",xlim=c(0,200),ylim=c(0,100));'."\n";
+        print R_COMMANDS 'plot.default(x=(z1$V5+z1$V6),y=z1$V7,xlab="Normal Coverage",ylab="Variant Allele Frequency in Normal", main=paste(genome,"Normal SNV Coverage"), type="p",pch=19,cex=0.4,col="#FF000039",xlim=c(0,200),ylim=c(0,100));'."\n";
         print R_COMMANDS 'lines(c(20,20),c(1,100), col="black");'."\n";
         print R_COMMANDS 'lines(c(30,30),c(1,100), col="blue");'."\n";
         print R_COMMANDS 'lines(c(100,100),c(1,100), col="green4");'."\n";
         print R_COMMANDS 'legend(x="topright", title = "Coverage", c("20x", "30x", "100x"),col=c("black","blue","green4"),lty = c(1,1,1), lwd = 1);'."\n"; #top right will rarely have any points
 
         #TUMOR FREQ WITH CN DENSITY
-        #print R_COMMANDS 'plot.default(x=z1$V20,y=z1$V11,xlab="Copy Number",ylab="Tumor Variant Allele Frequency", main=paste(genome,"Copy Number"), type="p",pch=19,cex=0.4,col="#FF000055",xlim=c(0,5),ylim=c(0,100));'."\n";
+        #print R_COMMANDS 'plot.default(x=z1$V20,y=z1$V11,xlab="Copy Number",ylab="Variant Allele Frequency in Tumor", main=paste(genome,"Copy Number"), type="p",pch=19,cex=0.4,col="#FF000055",xlim=c(0,5),ylim=c(0,100));'."\n";
         #print R_COMMANDS 'plot(density(z1$V20, bw=0.5, from=0,to=5),xlab="Copy Number",ylab="Kernel Density", main=paste(genome,"Copy Number"),lwd=1.5,col="red");'."\n";
         print R_COMMANDS '
 cn1minus=subset(z1, z1$V20 >= 0 & z1$V20 <= 1.75);
@@ -187,7 +187,7 @@ print R_COMMANDS '
 maxden = max(c(den1factor,den2factor,den3factor,den4factor));
 finalfactor = 40 / maxden;
 #par(mar=c(5,4,8,2) + 0.1);
-plot.default(x=cn1minus$V7,y=cn1minus$V11,xlab="Normal Variant Allele Frequency",ylab="Tumor Variant Allele Frequency", main=paste(genome,"Variant Allele Frequency"), type="p",pch=19,cex=0.4,col="#FF000055",xlim=c(0,100),ylim=c(0,110));
+plot.default(x=cn1minus$V7,y=cn1minus$V11,xlab="Variant Allele Frequency in Normal",ylab="Variant Allele Frequency in Tumor", main=paste(genome,"Variant Allele Frequency"), type="p",pch=19,cex=0.4,col="#FF000055",xlim=c(0,100),ylim=c(0,110));
 points(x=cn2$V7,y=cn2$V11, type="p",pch=19,cex=0.4,col="#00FF0055");
 points(x=cn3$V7,y=cn3$V11, type="p",pch=19,cex=0.4,col="#0000FF55");
 points(x=cn4plus$V7,y=cn4plus$V11, type="p",pch=19,cex=0.4,col="#FFA500FF");
@@ -213,12 +213,12 @@ lines(c(60,60),c(107,104),col="black");
 lines(c(20,60),c(107,107),col="black");
 =cut
         #VARIANT FREQUENCY TUMOR VS. NORMAL
-        #print R_COMMANDS 'plot.default(x=z1$V7,y=z1$V11,xlab="Normal Variant Allele Frequency",ylab="Tumor Variant Allele Frequency", main=paste(genome,"Allele Frequency"), type="p",pch=19,cex=0.4, col="#FF000039",xlim=c(0,100),ylim=c(0,100));'."\n";
+        #print R_COMMANDS 'plot.default(x=z1$V7,y=z1$V11,xlab="Variant Allele Frequency in Normal",ylab="Variant Allele Frequency in Tumor", main=paste(genome,"Allele Frequency"), type="p",pch=19,cex=0.4, col="#FF000039",xlim=c(0,100),ylim=c(0,100));'."\n";
 
 
         #VARIANT FREQUENCY TUMOR VS. NORMAL WITH ALL FILTERS
         print R_COMMANDS 'z2_no_CN_events = subset(z2, z2$V20 == 2);' . "\n";
-        print R_COMMANDS 'plot.default(x=z2_no_CN_events$V7,y=z2_no_CN_events$V11,xlab="Normal Variant Allele Frequency",ylab="Tumor Variant Allele Frequency", main=paste(genome,"Allele Frequency With Filters"), type="p",pch=19,cex=0.4, col="#FF000039",xlim=c(0,100),ylim=c(0,100));'."\n";
+        print R_COMMANDS 'plot.default(x=z2_no_CN_events$V7,y=z2_no_CN_events$V11,xlab="Variant Allele Frequency in Normal",ylab="Variant Allele Frequency in Tumor", main=paste(genome,"Allele Frequency With Filters"), type="p",pch=19,cex=0.4, col="#FF000039",xlim=c(0,100),ylim=c(0,100));'."\n";
         print R_COMMANDS "mtext(\"Coverage > $readcount_cutoff, No Copy Number Events\",cex=0.7, padj=-0.5);"."\n";
 
         #PLOT the density plot
