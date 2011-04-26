@@ -11,12 +11,6 @@ use strict;
 
 class Genome::InstrumentData::IntermediateAlignmentResult::Bwa {
     is=>['Genome::InstrumentData::IntermediateAlignmentResult'],
-    has => [
-        sai_file => {
-            is => 'Text',
-            doc => 'name of sai file within data directory.',
-        }
-    ],
 };
 
 sub output_file_prefix {
@@ -56,8 +50,8 @@ sub _run_aligner {
     }
 
     my $output_file_prefix = $self->output_file_prefix;
-    my $sai_file = "$tmp_dir/$output_file_prefix.sai";
-    my $log_file = "$tmp_dir/$output_file_prefix.log";
+    my $sai_file = $self->sai_file;
+    my $log_file = $self->log_file;
 
     my $bwa = Genome::Model::Tools::Bwa->path_for_bwa_version($self->aligner_version);
 

@@ -16,6 +16,10 @@ class Genome::Model::Command::Define::ImportedReferenceSequence {
         }
     ],
     has_optional_input => [
+        append_to => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            doc => 'When specified, the newly created build will contain all sequences from the "append_to" build, followed by those from the fasta file specified.',
+        },
         sequence_uri => {
             is => 'Text',
             doc => 'URI to the sequence gzip file to write into BAM headers for alignments against this reference.'
