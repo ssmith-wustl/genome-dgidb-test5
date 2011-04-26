@@ -14,10 +14,6 @@ class Genome::InstrumentData::IntermediateAlignmentResult {
     is=>['Genome::SoftwareResult::Stageable'],
     sub_classification_method_name => '_resolve_subclass_name',   
     has => [
-        input_file              => {
-                                    is=>'Text',
-                                    doc=>'Path to the (potentially pre-processed) input fastq or bam file',
-                                },
         instrument_data         => {
                                     is => 'Genome::InstrumentData',
                                     id_by => 'instrument_data_id'
@@ -37,6 +33,10 @@ class Genome::InstrumentData::IntermediateAlignmentResult {
 
     ],
     has_input => [
+        input_file              => {
+                                    is=>'Text',
+                                    doc=>'Path to the (potentially pre-processed) input fastq or bam file',
+                                },
         instrument_data_id      => {
                                     is => 'Number',
                                     doc => 'the local database id of the instrument data (reads) to align',
