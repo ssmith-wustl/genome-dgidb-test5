@@ -246,7 +246,12 @@ sub _copy_model_inputs {
         if($params{value_class_name}->isa('Genome::Model')) {
             # Next if we already have a build defined (e.g., by create params).
             my $input_name = $input->name;
-            next if defined $self->$input_name and $self->$input_name->isa('Genome::Model::Build');
+
+            my $existing_input = $self->inputs(name => $input_name);
+            if ($existing_input) {
+                my $existing_input_value = $existing_input->value;
+                next if ($existing_input_value && $existing_input_value->isa('Genome::Model::Build'));
+            }
 
             my $input_model = $input->value;
             my $input_build = $self->_select_build_from_input_model($input_model);

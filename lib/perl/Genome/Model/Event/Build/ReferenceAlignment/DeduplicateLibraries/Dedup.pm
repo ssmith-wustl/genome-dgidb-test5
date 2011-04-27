@@ -177,11 +177,14 @@ sub execute {
             }
             print $log_fh "Library $library has $cnt map files"."\n";
             $maplist_fh->close;
-	    
-	       rename($working_library_maplist, $final_library_maplist);
-	    
-	    # db disconnect prior to map merge
-	    Genome::DataSource::GMSchema->disconnect_default_dbh; 
+
+            rename($working_library_maplist, $final_library_maplist);
+
+            # db disconnect prior to map merge
+            if (Genome::DataSource::GMSchema->has_default_handle) {
+                $self->status_message("Disconnecting GMSchema default handle.");
+                Genome::DataSource::GMSchema->disconnect_default_dbh();
+            }
 
             $now = UR::Time->now;
             print $log_fh ">>> Starting make_real_rmdupped_map_file() at $now for library: $library ."."\n";

@@ -175,8 +175,8 @@ sub data_set_path {
 sub calculate_estimated_kb_usage {
     my $self = shift;
 
-    # 15 gig... overestimating by 50% or so...
-    return 15728640;
+    # 30 gig -- a majority of builds (using the April processing profile) end up being 15-20gig with the usual max being 25+=. Extreme maximums of 45g are noted but rare.
+    return 31457280;
 }
 
 sub files_ignored_by_diff {

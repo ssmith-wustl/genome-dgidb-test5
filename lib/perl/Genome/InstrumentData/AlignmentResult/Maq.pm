@@ -230,7 +230,10 @@ sub _run_aligner {
     $aligner_params .= " -s $seed ";
 
     # disconnect the db handle before this long-running event
-    Genome::DataSource::GMSchema->disconnect_default_dbh; 
+    if (Genome::DataSource::GMSchema->has_default_handle) { # Prevents craziness when the child processes try to close the dbh
+        $self->status_message("Disconnecting GMSchema default handle.");
+        Genome::DataSource::GMSchema->disconnect_default_dbh();
+    }
 
 
     my $files_to_align = join ' ', @input_pathnames;

@@ -78,7 +78,10 @@ sub _execute_build {
     # the child process. This causes problems in this process, because it expects the handle to still be
     # open. Attempting to use that handle results in frustrating errors like this:
     # DBD::Oracle::db rollback failed: ORA-03113: end-of-file on communication channel (DBD ERROR: OCITransRollback)
-    Genome::DataSource::GMSchema->disconnect_default_dbh;
+    if (Genome::DataSource::GMSchema->has_default_handle) {
+        $self->status_message("Disconnecting GMSchema default handle.");
+        Genome::DataSource::GMSchema->disconnect_default_dbh();
+    }
 
     my $hap_rv = $hap_object->execute;
     unless ($hap_rv) {

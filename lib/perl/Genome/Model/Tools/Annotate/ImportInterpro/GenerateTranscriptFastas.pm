@@ -70,7 +70,10 @@ sub execute{
     die "Could not get tmp directory $tmp_dir" unless $tmp_dir; #TODO: Sanity check this
 
     # db disconnect to avoid Oracle failures killing our long running stuff
-    Genome::DataSource::GMSchema->disconnect_default_dbh;
+    if (Genome::DataSource::GMSchema->has_default_handle) {
+        $self->status_message("Disconnecting GMSchema default handle.");
+        Genome::DataSource::GMSchema->disconnect_default_dbh();
+    }
 
     my %fastas; 
     my ($fasta_temp, $fasta, $fasta_writer);

@@ -57,7 +57,10 @@ sub execute{
     die "Could not find interpro version ".$self->interpro_version unless -d $iprscan_dir; 
 
     # db disconnect to avoid Oracle failures killing our long running stuff
-    Genome::DataSource::GMSchema->disconnect_default_dbh;
+    if (Genome::DataSource::GMSchema->has_default_handle) {
+        $self->status_message("Disconnecting GMSchema default handle.");
+        Genome::DataSource::GMSchema->disconnect_default_dbh();
+    }
 
     #converter.pl requires this environment variable to be set to the iprscan directory.  It refuses to run if this isn't set
     my $old_iprscan_home = $ENV{'IPRSCAN_HOME'}; #save this value so it can be reset at the end of the script

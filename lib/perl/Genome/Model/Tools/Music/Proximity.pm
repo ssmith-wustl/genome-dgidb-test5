@@ -41,7 +41,7 @@ EOS
 sub help_synopsis {
     return <<EOS 
 This tool identifies snps in close proximity in amino acid space.
-EXAMPLE:  gmt music proximity --maf-file myMAF.tsv --max-proximity 10 --reference-sequence "path_to_reference_sequence" --outout-file myMAF.tsv.proximity_analysis
+EXAMPLE:  gmt music proximity --maf-file myMAF.tsv --max-proximity 10 --reference-sequence "path_to_reference_sequence" --output-file myMAF.tsv.proximity_analysis
 EOS
 }
 
