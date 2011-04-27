@@ -149,7 +149,10 @@ sub execute {
                   $self->log_file,
               );
     # db disconnect prior to alignment
-    Genome::DataSource::GMSchema->disconnect_default_dbh;
+    if (Genome::DataSource::GMSchema->has_default_handle) {
+        $self->status_message("Disconnecting GMSchema default handle.");
+        Genome::DataSource::GMSchema->disconnect_default_dbh();
+    }
     Genome::Sys->shellcmd(
         cmd                         => $cmdline,
         input_files                 => [$self->novoindex_file, @fastq_files],

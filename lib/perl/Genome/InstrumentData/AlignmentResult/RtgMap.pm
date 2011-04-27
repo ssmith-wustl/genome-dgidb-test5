@@ -70,7 +70,10 @@ sub _run_aligner {
     #   have to designate a destination directory
 
     # disconnect db before long-running action 
-    Genome::DataSource::GMSchema->disconnect_default_dbh; 
+    if (Genome::DataSource::GMSchema->has_default_handle) {
+        $self->status_message("Disconnecting GMSchema default handle.");
+        Genome::DataSource::GMSchema->disconnect_default_dbh();
+    }
     #STEP 1 - convert input to sdf
     my $prechunk_input_sdf = File::Temp::tempnam($scratch_directory, "input-XXX") . ".sdf"; #destination of converted input
     my $rtg_fmt = Genome::Model::Tools::Rtg->path_for_rtg_format($self->aligner_version);

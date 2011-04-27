@@ -106,7 +106,10 @@ sub execute {
     $op->parallel_by('library_alignments');
 
     # db disconnect prior to long operation
-    Genome::DataSource::GMSchema->disconnect_default_dbh; 
+    if (Genome::DataSource::GMSchema->has_default_handle) {
+        $self->status_message("Disconnecting GMSchema default handle.");
+        Genome::DataSource::GMSchema->disconnect_default_dbh();
+    }
 
     my $output = Workflow::Simple::run_workflow_lsf(
             $op,

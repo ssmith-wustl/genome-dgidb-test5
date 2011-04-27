@@ -135,7 +135,7 @@ sub generate_report_detail
 
     my $total_gb = sprintf("%.03f", $total_kb/1000000);
 
-    if ($model->read_trimmer_name =~ /^trimq2/) {
+    if ($model->read_trimmer_name && $model->read_trimmer_name =~ /^trimq2/) {
         my ($total_ct, $total_trim_ct) = $build->calculate_input_base_counts_after_trimq2;
         if ($total_ct and $total_trim_ct) {
             my $gb       = sprintf("%.03f", $total_ct/1000000000);
