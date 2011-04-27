@@ -157,11 +157,9 @@ sub dump_fastqs_from_bam {
 sub lane_qc_model {
     my $self = shift;
     my $instrument_data_id = $self->id;
-
     my @inputs = Genome::Model::Input->get(value_id => $instrument_data_id);
-    my @inputs_models = map { $_->model } @inputs;
-    my ($qc_model) = grep { $_->processing_profile->append_event_steps && $_->processing_profile->append_event_steps =~ /LaneQc/ } @inputs_models;
-
+    my @ref_align_models = grep { $_->class eq 'Genome::Model::ReferenceAlignment' } map { $_->model } @inputs;
+    my ($qc_model) = grep { $_->is_lane_qc } @ref_align_models;
     return $qc_model;
 }
 
