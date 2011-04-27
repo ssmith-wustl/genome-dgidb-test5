@@ -22,7 +22,10 @@ sub execute {
         merger_params => $self->parameters,
     );
 
-    Genome::DataSource::GMSchema->disconnect_default_dbh if Genome::DataSource::GMSchema->has_default_dbh;
+    if (Genome::DataSource::GMSchema->has_default_handle) {
+        $self->status_message("Disconnecting GMSchema default handle.");
+        Genome::DataSource::GMSchema->disconnect_default_dbh();
+    }
 
     my $merge_rv = $merge_cmd->execute();
 

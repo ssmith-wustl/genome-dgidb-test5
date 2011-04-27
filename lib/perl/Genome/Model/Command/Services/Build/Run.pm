@@ -147,7 +147,10 @@ sub execute {
         }
 
     } else {
-        Genome::DataSource::GMSchema->disconnect_default_dbh;
+        if (Genome::DataSource::GMSchema->has_default_handle) {
+            $self->status_message("Disconnecting GMSchema default handle.");
+            Genome::DataSource::GMSchema->disconnect_default_dbh();
+        }
 
         local $ENV{WF_TRACE_UR} = 1;
         local $ENV{WF_TRACE_HUB} = 1;
@@ -155,13 +158,19 @@ sub execute {
 
             $self->set_not_running($w);
             UR::Context->commit;
-            Workflow::DataSource::InstanceSchema->disconnect_default_dbh;
+            if (Workflow::DataSource::InstanceSchema->has_default_handle) {
+                $self->status_message("Disconnecting InstanceSchema default handle.");
+                Workflow::DataSource::InstanceSchema->disconnect_default_dbh();
+            }
 
             $success = Workflow::Simple::resume_lsf($w->id);
         } 
         else {
             my %inputs = $build->processing_profile->_map_workflow_inputs($build);
-            Workflow::DataSource::InstanceSchema->disconnect_default_dbh;
+            if (Workflow::DataSource::InstanceSchema->has_default_handle) {
+                $self->status_message("Disconnecting InstanceSchema default handle.");
+                Workflow::DataSource::InstanceSchema->disconnect_default_dbh();
+            }
 
             $success = Workflow::Simple::run_workflow_lsf(
                 $xmlfile,

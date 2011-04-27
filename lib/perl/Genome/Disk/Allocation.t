@@ -146,8 +146,14 @@ isa_ok($allocation, 'UR::DeletedRef', 'other allocation removed successfully');
 # Now do a big race condition test. Make a bunch of child processes, perform operations on some allocations, and
 # make sure that nothing gets stuck in a deadlock
 print "*** Starting race condition test\n";
-Genome::DataSource::GMSchema->disconnect_default_dbh; # Prevents craziness when the child processes try to close the dbh
-Genome::DataSource::Oltp->disconnect_default_dbh;
+if (Genome::DataSource::GMSchema->has_default_handle) { # Prevents craziness when the child processes try to close the dbh
+    $self->status_message("Disconnecting GMSchema default handle.");
+    Genome::DataSource::GMSchema->disconnect_default_dbh();
+}
+if (Genome::DataSource::Oltp->has_default_handle) { # Prevents craziness when the child processes try to close the dbh
+    $self->status_message("Disconnecting Oltp default handle.");
+    Genome::DataSource::Oltp->disconnect_default_dbh();
+}
 map { $_->can_allocate(1) } @volumes; # Turn on the volumes
 
 my @pids;

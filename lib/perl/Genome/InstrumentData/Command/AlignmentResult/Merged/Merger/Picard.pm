@@ -31,7 +31,10 @@ sub execute {
         max_jvm_heap_size => $self->max_jvm_heap_size,
     );
 
-    Genome::DataSource::GMSchema->disconnect_default_dbh if Genome::DataSource::GMSchema->has_default_dbh;
+    if (Genome::DataSource::GMSchema->has_default_handle) {
+        $self->status_message("Disconnecting GMSchema default handle.");
+        Genome::DataSource::GMSchema->disconnect_default_dbh();
+    }
 
     my $merge_rv = $merge_cmd->execute();
 
