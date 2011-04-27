@@ -61,6 +61,39 @@ sub log_command {
     return;
 }
 
+
+sub email_usage_info {    
+    my $command = $0 || 'unknown command';
+    my @argv = @ARGV;
+
+    my $user = getpwuid($<) || 'nnutter';
+    my $host = Sys::Hostname::hostname();
+    my $time = localtime(time);
+    my $package = (caller)[0];
+    my $program = join(' ', $command, @argv);
+
+    my $to = 'nnutter@genome.wustl.edu';
+    my $from = $user . '@genome.wustl.edu';
+    my $subject = "$user\@$host used $package";
+    my $message = join("\n",
+        "    User: $user",
+        "    Host: $host",
+        "    Time: $time",
+        " Package: $package",
+        " Program: $program"
+    );
+
+    App::Mail->mail(
+        To      => $to,
+        From    => $from,
+        Subject => $subject,
+        Message => $message,
+    );
+
+    return 1;
+}
+
+
 # Check if a svn repo is being used and contact apipe
 sub check_for_svn_repo {
     my $dir = $INC{"Genome.pm"};
