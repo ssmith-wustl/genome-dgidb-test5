@@ -154,24 +154,19 @@ sub dump_fastqs_from_bam {
     return @files; 
 }
 
-sub lane_qc_model {
+sub lane_qc_models {
     my $self = shift;
     my $instrument_data_id = $self->id;
     my @inputs = Genome::Model::Input->get(value_id => $instrument_data_id);
     my @ref_align_models = grep { $_->class eq 'Genome::Model::ReferenceAlignment' } map { $_->model } @inputs;
-    my ($qc_model) = grep { $_->is_lane_qc } @ref_align_models;
-    return $qc_model;
+    return grep { $_->is_lane_qc } @ref_align_models;
 }
 
 sub lane_qc_build {
     my $self = shift;
-    my $qc_model = $self->lane_qc_model;
-    if ($qc_model) {
-        return $qc_model->last_succeeded_build;
-    }
-    else {
-        return;
-    }
+    my @qc_models = $self->lane_qc_models;
+    my @builds = sort { $b->id <=> $a->id } map { $_->succeeded_builds } @qc_models;
+    return $builds[0];
 }
 
 sub lane_qc_dir {
