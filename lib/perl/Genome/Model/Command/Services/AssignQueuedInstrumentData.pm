@@ -465,8 +465,9 @@ sub is_tcga_reference_alignment {
     my $sample = $model->subject;
 
     return unless $model->isa('Genome::Model::ReferenceAlignment');
-    return 1 if $sample->nomenclature =~ m/^TCGA/i;
-    return grep{$_->nomenclature =~ m/^TCGA/i} $sample->attributes;
+
+    my @nomenclature = map { $_->nomenclature } ($sample, $sample->attributes);
+    return grep { /^TCGA/i } @nomenclature;
 }
 
 sub load_pses {
