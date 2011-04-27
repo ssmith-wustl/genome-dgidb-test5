@@ -51,18 +51,23 @@ sub _assign_members {
     #Shouldn't do this more than once
     return 1 if $self->members;
 
+    my $skipped_count;
+    my $added_count;
+
     my @member_models = $self->model->members;
 
     for my $member_model (@member_models) {
         my $last_succeeded_build = $member_model->last_complete_build;
         unless($last_succeeded_build) {
-            $self->status_message('Skipping model ' . $member_model->id . ' (' . $member_model->name . ') with no succeeded builds.');
+            ++$skipped_count;
             next;
         }
 
-        $self->status_message('Adding build ' . $last_succeeded_build->id . ' to convergence build.');
+        ++$added_count;
         $self->add_member( $last_succeeded_build );
     }
+    $self->status_message("Added $added_count build(s) to convergence build") if $added_count;
+    $self->status_message("Skipped $skipped_count model(s) with no succeeded builds") if $skipped_count;
 
     return 1;
 }
