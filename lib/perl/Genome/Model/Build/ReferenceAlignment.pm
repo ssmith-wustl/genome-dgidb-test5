@@ -114,8 +114,8 @@ sub gold_snp_path {
 sub deduce_genotype_microarray_build_via_heuristic {
     my $self = shift;
     my $subject = $self->model->subject;
-    unless ($subject->subclass_name eq 'Genome::Sample') {
-        $self->warning_message("Can only deduce genotype microarray build for samples, not " . $subject->subclass_name);
+    unless ($subject->class eq 'Genome::Sample') {
+        $self->warning_message("Can only deduce genotype microarray build for samples, not " . $subject->class);
         return;
     }
 
@@ -127,12 +127,18 @@ sub deduce_genotype_microarray_build_via_heuristic {
         return;
     }
 
+    # Only use models that have instrument data
+    @genotype_models = grep { defined $_->instrument_data } @genotype_models;
+    unless (@genotype_models) {
+        $self->warning_message("Found no genotype models with instrument data assigned for sample " . $subject->id . "!");
+        return;
+    }
+
     # Get rid of genotype models that aren't using internal data
     @genotype_models = grep { 
         my $import_source_name = $_->instrument_data->import_source_name;
         (defined $import_source_name and $import_source_name eq 'wugc');
     } @genotype_models;
-
     unless (@genotype_models) {
         $self->warning_message("Found no genotype microarray models using internal genotype data!");
         return;

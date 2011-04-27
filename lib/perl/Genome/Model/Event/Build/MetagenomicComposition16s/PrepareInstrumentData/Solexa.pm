@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Data::Dumper;
 
 require Genome::Model::Tools::FastQual::FastqReader;
 require Genome::Model::Tools::FastQual::FastqWriter;
@@ -27,36 +28,42 @@ sub execute {
 
     my %primers = $self->build->amplicon_set_names_and_primers;
     my $min_length = $self->processing_profile->amplicon_size;
+    $min_length = 40; #<-- temporarily for testing only .. real length is 200 and test data is only 50 bps
 
     my $attempted = 0;
 
     for my $inst_data ( @instrument_data ) {
-        my @fastq_files = $self->fastqs_from_solexa( $inst_data );
-        for my $fastq_file ( @fastq_files ) {
-            my $reader = Genome::Model::Tools::FastQual::FastqReader->create( file => $fastq_file ); 
-            while ( my $fastqs = $reader->read ) {
-                my $fastq = $fastqs->[0];
+        my @fastq_files = $self->_fastqs_from_solexa( $inst_data );
+        my $reader = Genome::Model::Tools::FastQual::FastqReader->create( files => \@fastq_files );
+        SEQ: while ( my $fastqs = $reader->read ) {
+            my $seq_match_primer = 0;
+            my @fastas_to_write;
+            my $set_name = 'none';
+            for my $fastq ( @$fastqs ) {
                 $attempted++;
-                my $set_name = 'none';
                 my $seq = $fastq->{seq};
-                next unless length $seq >= $min_length;
+                next SEQ unless length $seq >= $min_length;
+                delete $fastq->{desc} if $fastq->{desc};
                 REGION: for my $region ( keys %primers ) {
                     for my $primer ( @{$primers{$region}} ) {
                         if ( $seq =~ s/^$primer// ) {
+                            #check length again after primer clipped off
+                            next SEQ unless length $seq >= $min_length;
                             $fastq->{seq} = $seq;
                             $set_name = $region;
+                            $seq_match_primer = 1;
                             last REGION;
                         }
                     }
                 }
-                #check length again after primer clipped off
-                next unless length $seq >= $min_length;
-                delete $fastq->{desc} if $fastq->{desc};
-                my $writer = $self->_get_writer_for_set_name( $set_name );
-                $writer->write([$fastq]);
+                push @fastas_to_write, $fastq;
             }
-            $self->status_message( 'DONE PROCESSING: '.$inst_data->id );
+            next SEQ unless $seq_match_primer;
+            #print Dumper \@fastas_to_write;
+            my $writer = $self->_get_writer_for_set_name( $set_name );
+            $writer->write( \@fastas_to_write );
         }
+        $self->status_message( 'DONE PROCESSING: '.$inst_data->id );
     }
 
     $self->build->amplicons_attempted( $attempted );
@@ -91,7 +98,7 @@ sub _fastqs_from_solexa {
     }
     else {
         $self->error_message( "Could not get neither bam_path nor archive path for instrument data: ".$inst_data->id );
-        return;
+        return; #die here
     }
 
     return @fastq_files;
@@ -101,9 +108,10 @@ sub _get_writer_for_set_name {
     my ( $self, $set_name ) = @_;
 
     if ( not $self->{$set_name} ) {
-        my $fastq_file = $self->build->processed_fasta_file_for_set_name($set_name);
-        unlink $fastq_file if -e $fastq_file;
-        $self->{$set_name} = Genome::Model::Tools::FastQual::FastqWriter->create( file => $fastq_file );
+        my $fasta_file = $self->build->processed_fasta_file_for_set_name($set_name);
+        unlink $fasta_file if -e $fasta_file;
+        print $fasta_file."\n";
+        $self->{$set_name} = Genome::Model::Tools::FastQual::PhredWriter->create( files => [$fasta_file] );
     }
 
     return $self->{$set_name};

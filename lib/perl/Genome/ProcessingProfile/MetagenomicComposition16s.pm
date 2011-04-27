@@ -21,7 +21,7 @@ class Genome::ProcessingProfile::MetagenomicComposition16s {
         sequencing_platform => {
             is => 'Text',
             doc => 'Platform (machine) from whence the reads where created.',
-            valid_values => [qw/ sanger 454 /],
+            valid_values => [qw/ sanger 454 solexa /],
         },
         exclude_contaminated_amplicons => {
             is => 'Boolean',
