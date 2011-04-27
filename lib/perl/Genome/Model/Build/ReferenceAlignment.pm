@@ -65,12 +65,20 @@ class Genome::Model::Build::ReferenceAlignment {
 
 sub create {
     my $class = shift;
+
+    my $bool = $class->define_boolexpr(@_);
+    my $model_id = $bool->value_for('model_id');
+    return unless $model_id;
+    my $model = Genome::Model->get($model_id);
+    return unless $model;
+    $model->init_genotype_model;
+
     my $self = $class->SUPER::create(@_);
     unless ($self) {
         return;
     }
 
-    my $model = $self->model;
+    $model = $self->model;
     my @idas = $model->instrument_data_assignments;
     unless (scalar(@idas) && ref($idas[0])  &&  $idas[0]->isa('Genome::Model::InstrumentDataAssignment')) {
         $self->error_message('No instrument data have been added to model! '. $model->name);

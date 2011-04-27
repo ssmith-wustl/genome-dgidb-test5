@@ -57,7 +57,7 @@ class Genome::Model {
 
         type_name                   => { via => 'processing_profile' },
         user_name                   => { is => 'Text', len => 64, is_optional => 1 },
-        creation_date               => { is => 'TIMESTAMP', len => 6, is_optional => 1 },
+        creation_date               => { is => 'Timestamp', is_optional => 1 },
         
         inputs                      => { is => 'Genome::Model::Input', reverse_as => 'model', is_optional => 1, is_many => 1,
                                         doc => 'links to data currently assigned to the model for processing' },
