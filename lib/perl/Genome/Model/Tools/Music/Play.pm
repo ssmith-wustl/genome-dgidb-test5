@@ -135,7 +135,6 @@ EOS
 sub execute {
     my $self = shift;
 
-    #Proximity command left out until it has been implemented
     my @no_dependencies = ('Proximity', 'ClinicalCorrelation', 'CosmicOmim', 'MutationRelation', 'Pfam');
     my @bmr = ('Bmr::CalcCovg', 'Bmr::CalcBmr');
     my @depend_on_bmr = ('PathScan', 'Smg');
