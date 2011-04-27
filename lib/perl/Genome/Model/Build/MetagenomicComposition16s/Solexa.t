@@ -101,7 +101,7 @@ is(
 is($build->calculate_estimated_kb_usage, 500_000, 'estimated kb usage'); 
 
 # dirs
-my $existing_build_dir = '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16sSolexa/build_kk'; #just overwrite /build .. check w/ eddie
+my $existing_build_dir = '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16sSolexa/build_kk';
 ok(-d $existing_build_dir, 'existing build dir exists');
 
 my $classification_dir = $build->classification_dir;
@@ -121,71 +121,10 @@ ok(_link_dir_contents($existing_build_dir.'/fasta', $fasta_dir), "linked fasta_d
 # files
 my $file_base = $build->file_base_name;
 is($file_base, $build->subject_name, 'file base');
-#print $file_base.' '.$build->subject_name."\n";
 
-#<STDIN>;
-done_testing(); exit;
-
-#< CLASSIFY >#
-ok($build->classify_amplicons, 'classify amplicons');
-is($build->amplicons_classified, '15', 'amplicons classified');
-is($build->amplicons_classified_success, '1.00', 'amplicons classified success');
-is($build->amplicons_classification_error, 0, 'amplicons classified error');
-
-#< ORIENT >#
-ok($build->orient_amplicons, 'orient amplicons');
-
-my @standards = (
-    { name => 'V1_V3', amplicons => [qw/ FZ0V7MM01A01AQ FZ0V7MM01A01O4 FZ0V7MM01A02JE FZ0V7MM01A02T9 FZ0V7MM01A0327 /] },
-    { name => 'V3_V5', amplicons => [qw/ FZ0V7MM01A00L3 FZ0V7MM01A00YG FZ0V7MM01A02O2 FZ0V7MM01A03HG FZ0V7MM01A03PV /] },
-    { name => 'V6_V9', amplicons => [qw/ FZ0V7MM01A004O FZ0V7MM01A00FU FZ0V7MM01A00G0 FZ0V7MM01A00IA FZ0V7MM01A00XH /] },
-);
-
-#< Amplicon Set Names >#
-my @set_names = $build->amplicon_set_names;
-is_deeply(\@set_names, [ sort map { $_->{name} } @standards ], 'amplicon set names');
-my @amplicon_sets = $build->amplicon_sets;
-is(scalar(@amplicon_sets), 3, 'got 3 amplicon sets');
-my $cnt = 0;
-for my $amplicon_set ( @amplicon_sets ) {
-    # name
-    my $set_name = $amplicon_set->name;
-    is($set_name, $standards[$cnt]->{name}, 'amplicon set name');
-    # fastas
-    for my $type (qw/ processed oriented /) {
-        my $method = $type.'_fasta_file_for_set_name';
-        my $fasta_file = $build->$method($set_name);
-        is(
-            $fasta_file,
-            $fasta_dir.'/'.$file_base.'.'.$set_name.'.'.$type.'.fasta',
-            "$type fasta file for set name: $set_name"
-        );
-        ok(-s $fasta_file, "$type fasta file name exists for set $set_name")
-    }
-    # classification
-    my $classification_file = $build->classification_file_for_set_name($set_name);
-    is(
-        $classification_file,
-        $classification_dir.'/'.$file_base.'.'.$set_name.'.'.$build->classifier,
-        "classification file name for set name: $set_name"
-    );
-    # amplicons
-    my @amplicon_names;
-    while ( my $amplicon = $amplicon_set->next_amplicon ) {
-        my $classification_file = $build->classification_file_for_amplicon_name($amplicon->name);
-        is(
-            $classification_file,
-            $amplicon_classifications_dir.'/'.$amplicon->name.'.classification.stor',
-            "classification file for amplicon name: ".$amplicon->name,
-        );
-        push @amplicon_names, $amplicon->name;
-    }
-    is_deeply(\@amplicon_names, $standards[$cnt]->{amplicons}, "amplicons match for $set_name");
-    $cnt++;
-}
-
-#print $build->data_directory."\n";<STDIN>;
 done_testing();
+
+#TODO - add rest of the tests .. like 454 test
 
 exit;
 

@@ -143,6 +143,16 @@ sub processing_profile_for_sanger {
     return $pp;
 }
 
+sub processing_profile_for_solexa {
+    my $self = shift;
+
+    my $pp = Genome::ProcessingProfile->get( 2591278 );# exists and cannot recreate w/ same params
+    if ( not $pp ) {
+        Carp::confess('Can not get mc16s processing profile for solexa');
+    }
+    return $pp;
+}
+
 sub _model_for_sequencing_platform {
     my ($class, $sequencing_platform) = @_;
 
@@ -189,6 +199,10 @@ sub model_for_sanger {
     return $_[0]->_model_for_sequencing_platform('sanger');
 }
 
+sub model_for_solexa {
+    return $_[0]->_model_for_sequencing_platform('solexa');
+}
+
 sub example_build_for_model {
     my ($class, $model) = @_;
 
@@ -223,6 +237,28 @@ sub example_build_for_model {
 #<>#
 
 #< Instrument Data >#
+our $instrument_data_solexa;
+sub _instrument_data_solexa {
+    my $self = shift;
+
+    return $instrument_data_solexa if $instrument_data_solexa;
+
+    my $dir = $self->_instrument_data_dir_for_sequencing_platform(454) or die;
+    my $library = $self->library or die; # confesses on error
+    $instrument_data_solexa = Genome::InstrumentData::Solexa->create(
+        id => -7777,
+        flow_cell_id => 12345,
+        lane => 1,
+        run_type => 'paired',
+        bam_path => '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16sSolexa/inst_data/input.bam',
+    );
+    if ( not $instrument_data_solexa ) {
+        Carp::Confess( 'Could not creaste solexa instrument data' );
+    }
+    return $instrument_data_solexa;
+}
+
+
 our $instrument_data_454;
 sub _instrument_data_454 {
     my $self = shift;
@@ -306,6 +342,7 @@ sub _instrument_data_sanger {
 
     return $instrument_data_sanger;
 }
+
 #<>#
 
 1;

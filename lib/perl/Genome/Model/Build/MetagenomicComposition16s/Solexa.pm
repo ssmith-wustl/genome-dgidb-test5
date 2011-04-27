@@ -31,22 +31,23 @@ sub _sub_dirs {
 }
 
 #< Amplicons >#
-sub amplicon_set_names_and_primers { #TODO - these are 454 primer sets
+sub amplicon_set_names_and_primers { #TODO - these are mock primers
     return (
         V1_V3 => [qw/
-            ATTACCGCGGCTGCTGG 
+            TCAGA
+            TCAGG
+            TCAGC
         /],
-        V3_V5 => [qw/ 
-            CCGTCAATTCATTTAAGT
-            CCGTCAATTCATTTGAGT
-            CCGTCAATTCCTTTAAGT
-            CCGTCAATTCCTTTGAGT
+        V3_V5 => [qw/
+            CATATC
+            CATTTC
+            CATTTC
         /],
         V6_V9 => [qw/
-            TACGGCTACCTTGTTACGACTT
-            TACGGCTACCTTGTTATGACTT
-            TACGGTTACCTTGTTACGACTT
-            TACGGTTACCTTGTTATGACTT
+            TACGGCTACC
+            TACGGCTACC
+            TACGGTTACC
+            TACGGTTACC
         /],
     );
 }
