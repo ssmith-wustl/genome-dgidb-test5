@@ -1654,41 +1654,6 @@ sub _prepare_reference_sequences {
     return 1;
 }
 
-sub merge_sequence_dictionaries {
-    my ($class, $output_fh, $primary_file, @additional_files) = @_;
-    
-    my $primary_fh = new IO::File("<$primary_file") or confess "Failed to open sequence dictionary file $primary_file for reading.";
-    my $saw_sq = 0;
-    my $cached_line;
-    while (my $line = <$primary_fh>) {
-        if (substr($line, 0, 4) eq '@SQ ') {
-            $saw_sq = 1;
-        } elsif ($saw_sq) {
-            $cached_line = $line;
-            last;
-        } 
-        $output_fh->print($line);
-    }
-    
-    
-    for my $file (@additional_files) {
-        my $input_fh = new IO::File("<$file") or confess "Failed to open sequence dictionary file $file for reading.";
-        $saw_sq = 0;
-        while (my $line = <$input_fh>) {
-            if (substr($line, 0, 3) ne '@SQ') {
-                last if $saw_sq;
-            } else {
-                $saw_sq = 1;
-                $output_fh->print($line);
-            }
-        }
-        $input_fh->close();
-    }
-
-    $output_fh->print($cached_line);
-    $output_fh->print($_) while <$primary_fh>;
-}
-
 sub get_or_create_sequence_dictionary {
     my $self = shift;
 
@@ -1710,15 +1675,8 @@ sub get_or_create_sequence_dictionary {
     $self->status_message("Species from alignment: ".$species);
 
     my $ref_build = $self->reference_build;
-    my @seq_dicts;
-    while ($ref_build) {
-        unshift(@seq_dicts, $ref_build->get_sequence_dictionary("sam",$species,$self->picard_version));
-        $ref_build = $ref_build->append_to;
-    }
-    return $seq_dicts[0] if @seq_dicts == 1;
-    my ($fh, $path) = Genome::Sys->create_temp_file();
-    $self->merge_sequence_dictionaries($fh, @seq_dicts);
-    return $path;
+    my $seq_dict = $ref_build->get_sequence_dictionary("sam",$species,$self->picard_version);
+    return $seq_dict;
 }
 
 sub construct_groups_file {
