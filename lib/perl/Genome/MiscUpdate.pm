@@ -15,6 +15,7 @@ class Genome::MiscUpdate {
         editor_id               => { is => 'Text', len => 255, doc => 'the unix account that made the change' },
         subject_property_name   => { is => 'Text', len => 255, doc => 'the column whose value changed' },
         description             => { is => 'Text', len => 255, valid_values => ['INSERT', 'UPDATE', 'DELETE'], doc => 'the type of change (we do not currently track inserts)' },
+        is_reconciled           => { is => 'Boolean', default => 0, doc => 'Indicates if the update has been applied to our tables'},
     ],
     has_optional => [
         old_value               => { is => 'Text', len => 1000, doc => 'the value which was changed' },
