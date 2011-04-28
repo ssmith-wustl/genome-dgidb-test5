@@ -123,8 +123,7 @@ sub execute {
 
     ## Optionally append BED output file ##
 
-    my $bed_output_file = $self->output_file . ".bed";
-
+    my $bed_output_file = $self->output_file.".bed";
     if ($self->bed_output_file) {
         $bed_output_file = $self->bed_output_file;
     }
@@ -137,9 +136,9 @@ sub execute {
 
     }
     else {
-  #      system("touch $output_file"); # This will create an empty output file to help prevent GATK from crashing 
- #       system("touch $bed_output_file"); # This will create an empty output file to help prevent GATK from crashing 
-#        system("touch " . $self->somatic_file) if($self->somatic_file);
+        system("touch $output_file"); # This will create an empty output file to help prevent GATK from crashing 
+        system("touch $bed_output_file"); # This will create an empty output file to help prevent GATK from crashing 
+        system("touch " . $self->somatic_file);
         $return = Genome::Sys->shellcmd(
                 cmd => "$cmd",
                 output_files => [$output_file],

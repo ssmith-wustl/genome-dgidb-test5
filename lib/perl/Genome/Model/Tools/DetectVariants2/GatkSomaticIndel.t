@@ -18,11 +18,11 @@ else {
 }
 
 my $test_data = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-GatkSomaticIndel";
-my $expected_data = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-GatkSomaticIndel/expected_3";
-my $tumor =  $test_data."/flank_tumor_sorted.bam";
-my $normal = $test_data."/flank_normal_sorted.bam";
+my $expected_data = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-GatkSomaticIndel/expected_4";
+my $tumor =  $test_data.'/true_positive_tumor_validation.bam';
+my $normal = $test_data.'/true_positive_normal_validation.bam';
 
-my $tmpdir = File::Temp::tempdir('GatkSomaticIndelXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
+my $tmpdir =  File::Temp::tempdir('GatkSomaticIndelXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
 
 my $refbuild_id = 101947881;
 
