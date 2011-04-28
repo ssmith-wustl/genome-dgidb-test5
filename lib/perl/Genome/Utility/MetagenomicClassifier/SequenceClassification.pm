@@ -22,12 +22,42 @@ sub new {
     return $self;
 }
 
+sub new_from_classification_array {
+    my ($class, %params) = @_;
+
+    for my $req (qw/ name classifier classifications ranks /) {
+        _fatal_message("Required parameter ($req) not found.") unless $params{$req};
+    }
+
+    if ( @{$params{ranks}} != @{$params{classifications}} ) {
+        _fatal_message("Different number of ranks and classifications given: ".Dumper(\%params));
+    }
+
+    my @taxa;
+    for ( my $i = 0; $i < @{$params{ranks}}; $i++ ) {
+        my ($id, $conf) = split(':', $params{classifications}->[$i]);
+        $id =~ s/\s+/_/g;
+        push @taxa, Genome::Utility::MetagenomicClassifier->create_taxon(
+            id => $id,
+            rank => $params{ranks}->[$i],
+            tags => {
+                confidence => $conf,
+            },
+            ancestor => ( @taxa ? $taxa[$#taxa] : undef ),
+        );
+    }
+
+    $params{taxon} = $taxa[0];
+
+    return $class->new(%params);
+}
+
 sub _fatal_message {
     my ($msg) = @_;
 
     confess __PACKAGE__." ERROR: $msg\n";
 }
- 
+
 #< NAME >#
 sub get_name {
     return $_[0]->{name};
