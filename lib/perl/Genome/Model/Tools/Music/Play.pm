@@ -123,7 +123,7 @@ class Genome::Model::Tools::Music::Play {
             is_optional => 1,
         },
     ],
-    doc => 'Run the full suite of mutation analysis tools',
+    doc => 'Run the full suite of MuSiC tools sequentially.',
 };
 
 sub help_synopsis {

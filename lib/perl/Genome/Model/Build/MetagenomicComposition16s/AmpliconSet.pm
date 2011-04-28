@@ -7,7 +7,6 @@ use Genome;
 
 use Carp 'confess';
 use Data::Dumper 'Dumper';
-require Genome::Utility::MetagenomicClassifier::SequenceClassification;
 
 class Genome::Model::Build::MetagenomicComposition16s::AmpliconSet {
     is => 'UR::Object',

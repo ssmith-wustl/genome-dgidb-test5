@@ -36,7 +36,7 @@ sub execute {
 
             unless ( $phrap ) { # bad
                 $self->error_message(
-                    "Can't create phred phrap command for build's (".$self->build->id.") amplicon (".$amplicon->name.")"
+                    "Can't create phred phrap command for build's (".$self->build->id.") amplicon (".$amplicon->{name}.")"
                 );
                 return;
             }
@@ -47,7 +47,7 @@ sub execute {
             $self->build->load_seq_for_amplicon($amplicon)
                 or next; # ok
 
-            $writer->write([$amplicon->seq]);
+            $writer->write([$amplicon->{seq}]);
         }
     }
 

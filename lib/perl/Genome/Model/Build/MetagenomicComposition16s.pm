@@ -7,7 +7,6 @@ use Genome;
 
 use Carp 'confess';
 use Data::Dumper 'Dumper';
-require Genome::Utility::MetagenomicClassifier::SequenceClassification;
 
 class Genome::Model::Build::MetagenomicComposition16s {
     is => 'Genome::Model::Build',
@@ -187,17 +186,64 @@ sub amplicon_set_for_name {
     return Genome::Model::Build::MetagenomicComposition16s::AmpliconSet->create(%params);
 }
 
+sub _amplicon_iterator_for_name { # 454 and solexa for now
+    my ($self, $set_name) = @_;
+
+    my $reader = $self->fasta_and_qual_reader_for_type_and_set_name('processed', $set_name);
+    return unless $reader; # returns undef if no file exists OK or dies w/ error 
+
+    my $classification_file = $self->classification_file_for_set_name($set_name);
+    my ($classification_io, $classification_line);
+    if ( -s $classification_file ) {
+        $classification_io = eval{ Genome::Sys->open_file_for_reading($classification_file); };
+        if ( not $classification_io ) {
+            $self->error_message('Failed to open classification file: '.$classification_file);
+            return;
+        }
+        $classification_line = $classification_io->getline;
+        chomp $classification_line;
+    }
+
+    my $amplicon_iterator = sub{
+        my $seqs = $reader->read;
+        return unless $seqs;
+        my $seq = $seqs->[0];
+
+        my %amplicon = (
+            name => $seq->{id},
+            reads => [ $seq->{id} ],
+            reads_processed => [ $seq->{id} ],
+            seq => $seq,
+        );
+
+        return \%amplicon if not $classification_line;
+
+        my @classification = split(';', $classification_line); # 0 => id | 1 => ori
+        if ( not defined $classification[0] ) {
+            Carp::confess('Malformed classification line: '.$classification_line);
+        }
+        if ( $seq->{id} ne $classification[0] ) {
+            return \%amplicon;
+        }
+
+        $classification_line = $classification_io->getline;
+        chomp $classification_line if $classification_line;
+
+        $amplicon{classification} = \@classification;
+        print Dumper(\%amplicon);
+        return \%amplicon;
+    };
+
+    return $amplicon_iterator;
+}
+
 #< Dirs >#
 sub sub_dirs {
-    return (qw| classification amplicons fasta reports sys |), $_[0]->_sub_dirs;
+    return (qw| classification amplicons fasta reports |), $_[0]->_sub_dirs;
 }
 
 sub classification_dir {
     return $_[0]->data_directory.'/classification';
-}
-
-sub amplicon_classifications_dir {
-    return $_[0]->data_directory.'/sys';
 }
 
 sub fasta_dir {
@@ -301,7 +347,7 @@ sub classification_files_as_string {
 }
 
 sub classification_files {
-    return $_[0]->_files_for_amplicon_sets('classifcation');
+    return $_[0]->_files_for_amplicon_sets('classification');
 }
 
 #< Fasta/Qual Readers/Writers >#
@@ -387,16 +433,15 @@ sub orient_amplicons {
             or return;
 
         while ( my $amplicon = $amplicon_set->next_amplicon ) {
-            my $seq = $amplicon->seq;
-            next if not $seq; #OK
+            my $seq = $amplicon->{seq};
+            next if not $seq; #OK - for now...
 
-            my $classification = $amplicon->classification;
-            unless ( $classification ) {
-                warn "No classification for ".$amplicon->name;
+            if ( not defined $amplicon->{classification} ) {
+                $self->warning_message('No classification for '.$amplicon->{name});
                 next;
             }
 
-            if ( $classification->is_complemented ) {
+            if ( $amplicon->{classification}->[1] eq '-' ) {
                 $seq->{seq} = reverse $seq->{seq};
                 $seq->{seq} =~ tr/ATGCatgc/TACGtacg/;
             }
@@ -428,14 +473,6 @@ sub classification_file_for_set_name {
         ( $set_name eq '' ? '' : ".$set_name" ),
         lc($self->classifier),
     );
-}
-
-sub classification_file_for_amplicon_name {
-    my ($self, $name) = @_;
-
-    die "No amplicon name given to get classification file for ".$self->description unless defined $name;
-
-    return $self->amplicon_classifications_dir."/$name.classification.stor";
 }
 
 sub classify_amplicons {
@@ -478,7 +515,7 @@ sub classify_amplicons {
         }
 
         while ( my $amplicon = $amplicon_set->next_amplicon ) {
-            my $seq = $amplicon->seq
+            my $seq = $amplicon->{seq}
                 or next;
             $processed++;
 
@@ -488,24 +525,14 @@ sub classify_amplicons {
             unless ( $classification ) { # try again
                 $classification = $classifier->classify_parsed_seq($parsed_seq);
                 unless ( $classification ) { # warn , go on
-                    $self->error_message('Amplicon '.$amplicon->name.' length ('.length($seq->{seq}).') did not classify for '.$self->description."\n".$seq->{seq}."\n");
+                    $self->error_message('Amplicon '.$amplicon->{name}.' length ('.length($seq->{seq}).') did not classify for '.$self->description."\n".$seq->{seq}."\n");
                     $classification_error++;
                     next;
                 }
             }
 
-            $classified++;
-
-            # Save classification
-            unless ( $amplicon->classification($classification) ) {
-                $self->error_message(
-                    'Unable to save classification for amplicon '.$amplicon->name.' for '.$self->description
-                );
-                return; # next??
-            }
-
-            # Write classification to file
             $writer->write_one($classification);
+            $classified++;
         }
     }
 

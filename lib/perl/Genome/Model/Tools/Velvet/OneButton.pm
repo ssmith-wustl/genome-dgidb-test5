@@ -132,10 +132,6 @@ sub create {
         $self->hash_sizes([25,27,29]);
     }
 
-    unless ($self->dev_ins_length) {
-        $self->dev_ins_length($self->ins_length * 0.2);
-    }
-
     # ensure these lists of values are sorted
     for my $list (qw/hash_sizes exp_covs cov_cutoffs/) {
         if (my @list = $self->exp_covs) {
@@ -149,6 +145,10 @@ sub create {
 
 sub execute {
     my $self = shift;
+
+    unless ($self->dev_ins_length) {
+        $self->dev_ins_length( int($self->ins_length * 0.2) );
+    }
 
     unless (-s $self->file) {
         die $self->error_message("Failed to find file ".$self->file);
