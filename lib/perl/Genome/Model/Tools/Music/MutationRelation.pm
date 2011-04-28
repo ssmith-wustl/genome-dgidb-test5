@@ -19,12 +19,6 @@ class Genome::Model::Tools::Music::MutationRelation {
         maf_file => { 
             is => 'Text',
             doc => "list of mutations in MAF format",
-            is_optional => 1,
-        },
-        matrix_file => {
-            is => 'Text',
-            doc => "discrete matrix of samples (y) vs. genes with mutations (x)",
-            is_optional => 1,
         },
         permutations => {
             is => 'Number',
@@ -33,35 +27,27 @@ class Genome::Model::Tools::Music::MutationRelation {
             default => 100,
         },
     ],
-    doc => 'identify relationships between mutated genes'
+    doc => 'Identify relationships between mutated genes.'
 };
 
 sub help_synopsis {
     return <<EOS
- ... music mutation-relation --maf-file myMAF.tsv --permutations 1000 --output-file mut.rel.csv
+ ... music mutation-relation --maf-file /path/myMAF.tsv --permutations 1000 --output-file /path/mutation_relation.csv
 EOS
 }
 
-sub help_detail { #FIXME
+sub help_detail {
     return <<EOS
-This tool accepts either a MAF file or a matrix of samples vs. gene, where the values in the matrix are a 1 if the gene has a mutations for a particular sample, and a 0 if there are no mutations in that gene for that sample. If the matrix is provided, the MAF file is not needed. If only the MAF file is provided, the matrix will be created by the tool and saved to a file whose name will be the name of the MAF file appended with ".mutation_relation_matrix". 
+    This module parses a list of mutations in MAF format and attempts to determin relationships among mutated genes. The module employs a correlation test to see whether or not any two genes are mutated concurrently (positive correlation) or exclusively (negative correlation). Because of the possibility of largely varying numbers of mutations present in different genes, P-values are calculated using restricted permutations that take into account the distribution of mutation counts among the samples. In the output file, 'pand' is the P-value for concurrent mutation events, and 'pexc' is the P-value for exclusive mutation events.
 EOS
-# The matrix is fed to an R tool which ... 
 }
 
-=head1 FUNCTIONS
-
-=cut
-
-################################################################################
-
-=head2	execute
-
-Initializes a new analysis
-
-=cut
-
-################################################################################
+sub _doc_authors {
+    return ('',
+        'Nathan D. Dees, Ph.D.',
+        'Qunyuan Zhang, Ph.D.',
+    );
+}
 
 sub execute {
 
@@ -69,36 +55,18 @@ sub execute {
     my $self = shift;
     my $output_file = $self->output_file;
     my $permutations = $self->permutations;
-    my $matrix_file = $self->matrix_file;
     my $maf_file = $self->maf_file;
 
-    #create sample-gene matrix if necessary
-    unless (defined $matrix_file) {
-        unless (defined $maf_file) {
-            $self->error_message("Please supply either a MAF file or a sample-gene-matrix file.");
-            return;
-        }
-        $matrix_file = create_sample_gene_matrix($maf_file);
-    }
+    #create sample-gene matrix
+    my $matrix_file = create_sample_gene_matrix($maf_file);
 
     #perform mutation-relation test using R
     my $R_cmd = "R --slave --args < " . __FILE__ . ".R $matrix_file $permutations $output_file";
-    print "$R_cmd\n"; #FIXME
+    print "$R_cmd\n";
     WIFEXITED(system $R_cmd) or croak "Couldn't run: $R_cmd ($?)";
 
     return(1);
 }
-
-
-################################################################################
-
-=head2	create_sample_gene_matrix
-
-This subroutine takes a MAF and creates a matrix of samples vs. gene, where the values in the matrix are the number of mutations in each sample per gene.
-
-=cut
-
-################################################################################
 
 sub create_sample_gene_matrix {
 
@@ -144,7 +112,7 @@ sub create_sample_gene_matrix {
     @all_genes = sort keys %all_genes;
 
     #write the input matrix for R code to a file #FIXME HARD CODE FILE NAME, OR INPUT OPTION
-    my $matrix_file = $maf_file . ".mutation_relation_matrix";
+    my $matrix_file = Genome::Sys->create_temp_file_path();
     my $matrix_fh = new IO::File $matrix_file,"w";
 
     #print input matrix file header

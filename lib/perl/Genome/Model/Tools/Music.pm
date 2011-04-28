@@ -79,6 +79,7 @@ The MuSiC suite uses tabix, by Heng Li.  See http://samtools.sourceforge.net/tab
 
 MuSiC depends on copies of data from the following databases, packaged in a form useable for quick analysis:
 EOS
+        "* KEGG - http://www.genome.jp/kegg/",
         "* COSMIC - http://www.sanger.ac.uk/genetics/CGP/cosmic/",
         "* OMIM - http://www.ncbi.nlm.nih.gov/omim",
         "* Pfam - http://pfam.sanger.ac.uk/",

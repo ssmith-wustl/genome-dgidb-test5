@@ -23,7 +23,6 @@ class Genome::Model::Tools::Music::ClinicalCorrelation {
         doc => "List of mutations in MAF format",
         is_input => 1,
         file_format => 'maf',
-        is_optional => 1,
     },
     numeric_clinical_data_file => {
         is => 'Text',
@@ -53,12 +52,16 @@ EOS
 sub help_detail {
     return <<EOS
 This command identifies correlations between mutations recorded in a MAF and the particular phenotypic traits recorded for the same samples in separate clinical data files.
+
 The clinical data files must be separated between numeric and categoric data and must follow these conventions:
 - Headers are required
 - Each file must include at least 1 sample_id column and 1 attribute column, with the format being [sample_id  clinical_data_attribute  clinical_data_attribute  ...]
 - The sample ID must match the sample ID listed in the MAF under "Tumor_Sample_Barcode" for relating the mutations of this sample.
+
 Note the importance of the headers: the header for each clinical_data_attribute will appear in the output file to denote relationships with the mutation data from the MAF.
+
 Internally, the input data is fed into an R script which calculates a P-value representing the probability that the correlation seen between the mutations in each gene (or variant) and each phenotype trait are random. Lower P-values indicate lower randomness, or likely true correlations.
+
 The results are saved to the output filename given with a suffix appended; ".numeric" will be appended for results derived from numeric clinical data, and ".categ" will be appended for results derived from categorical clinical data.
 EOS
 }
@@ -67,6 +70,7 @@ sub _doc_authors {
     return ('',
         'Nathan D. Dees, Ph.D.',
         'Qunyuan Zhang, Ph.D.',
+        'William Schierding, M.S.',
     );
 }
 
