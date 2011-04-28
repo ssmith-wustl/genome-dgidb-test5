@@ -237,6 +237,10 @@ sub _qual_file_for_type_and_set_name{
     return $self->_fasta_file_for_type_and_set_name($type, $set_name).'.qual';
 }
 
+sub combined_input_fasta_file {
+    return $_[0]->fasta_dir.'/'.$_[0]->file_base_name.'.'.'input.fasta';
+}
+
 # processsed
 sub processed_fasta_file { # returns them as a string (legacy)
     return join(' ', $_[0]->processed_fasta_files);
