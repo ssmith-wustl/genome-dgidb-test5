@@ -815,13 +815,13 @@ sub _promote_staged_data {
                     }
                 }
 
-                # Create LQ links also
+                # Create LQ links also, if an lq file was produced 
                 (my $lq_output = $output) =~ s/hq/lq/;
                 (my $unversioned_lq_output = $lq_output) =~ s/\.v\d//;
                 (my $lq_v2_output = $lq_output) =~ s/\.bed/.v2.bed/;
                 (my $lq_v1_output = $lq_output) =~ s/\.bed/.v1.bed/;
                 for my $link_target ($unversioned_lq_output, $lq_v1_output, $lq_v2_output) {
-                    unless (-e $link_target) {
+                    if ( (-e $lq_output) && !(-e $link_target) ) {
                         Genome::Sys->create_symlink($lq_output, $link_target);
                     }
                 }
