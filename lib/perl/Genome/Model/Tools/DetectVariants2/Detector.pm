@@ -22,24 +22,14 @@ class Genome::Model::Tools::DetectVariants2::Detector {
             is_input => 1,
             doc => 'The version of the detector to run',
         },
-        capture_set_input => {
-            is => 'Text',
-            doc => 'Location of the file containing the regions of interest (if present, only variants in the set will be reported)',
-            is_input => 1,
+        region_of_interest => {
+            is => 'Genome::FeatureList',
+            doc => '',
+            id_by => 'region_of_interest_id',
         },
-        snv_params => {
+        region_of_interest_id => {
             is => 'Text',
-            doc => 'Parameters to pass through to SNV detection',
-            is_input => 1,
-        },
-        indel_params => {
-            is => 'Text',
-            doc => 'Parameters to pass through to small indel detection',
-            is_input => 1,
-        },
-        sv_params => {
-            is => 'Text',
-            doc => 'Parameters to pass through to structural variation detection',
+            doc => 'FeatureList for the region of interest (if present, only variants in the set will be reported)',
             is_input => 1,
         },
         _snv_base_name => {
@@ -117,11 +107,20 @@ class Genome::Model::Tools::DetectVariants2::Detector {
             calculate => q{ join("/", $_temp_staging_directory, $_filtered_indel_base_name); },
         },
     ],
-    has_constant => [
-        variant_types => {
-            is => 'ARRAY',
-            value => [('snv', 'indel', 'sv')],
+    has_optional_transient => [
+        _result => {
+            is => 'Genome::Model::Tools::DetectVariants2::Result',
+            doc => 'SoftwareResult for the run of this detector',
+            is_output => 1,
         },
+        _result_id => {
+            is => 'Number',
+            via => '_result',
+            to => 'id',
+            is_output => 1,
+        },
+    ],
+    has_constant => [
         #These can't be turned off--just pass no detector name to skip
         detect_snvs => { value => 1 },
         detect_indels => { value => 1 },
@@ -147,9 +146,49 @@ This is just an abstract base class for variant detector modules.
 EOS
 }
 
-sub execute {
-
+sub shortcut {
     my $self = shift;
+
+    #try to get using the lock in order to wait here in shortcut if another process is creating this alignment result
+    my ($params) = $self->params_for_result;
+    my $result = Genome::Model::Tools::DetectVariants2::Result->get_with_lock(%$params);
+    unless($result) {
+        $self->status_message('No existing result found.');
+        return;
+    }
+
+    $self->_result($result);
+    $self->status_message('Using existing result ' . $result->__display_name__);
+    $self->_link_output_directory_to_result;
+
+    return 1;
+}
+
+
+sub execute {
+    my $self = shift;
+
+    if(-e $self->output_directory) {
+        die $self->error_message('Output directory already exists!');
+    }
+
+    my ($params) = $self->params_for_result;
+    my $result = Genome::Model::Tools::DetectVariants2::Result->get_or_create(%$params, _instance => $self);
+
+    unless($result) {
+        die $self->error_message('Failed to create generate result!');
+    }
+
+    $self->_result($result);
+    $self->status_message('Generated result.');
+    $self->_link_output_directory_to_result;
+
+    return 1;
+}
+
+sub _generate_result {
+    my $self = shift;
+
     unless($self->_verify_inputs) {
         die $self->error_message('Failed to verify inputs.');
     }
@@ -201,3 +240,37 @@ sub _sort_detector_output {
 
     return 1;
 }   
+
+
+sub params_for_result {
+    my $self = shift;
+
+    my %params = (
+        detector_name => $self->class,
+        detector_params => $self->params,
+        detector_version => $self->version,
+        aligned_reads => $self->aligned_reads_input,
+        control_aligned_reads => $self->control_aligned_reads_input,
+        reference_build_id => $self->reference_build_id,
+        region_of_interest_id => $self->region_of_interest_id,
+        test_name => undef,
+        chromosome_list => undef,
+    );
+
+    return \%params;
+}
+
+sub _link_output_directory_to_result {
+    my $self = shift;
+
+    my $result = $self->_result;
+    return unless $result;
+
+    unless(-e $self->output_directory) {
+        Genome::Sys->create_symlink($result->output_dir, $self->output_directory);
+    }
+
+    return 1;
+}
+
+1;

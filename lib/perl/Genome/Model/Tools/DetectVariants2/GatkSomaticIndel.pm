@@ -9,11 +9,6 @@ use Genome;
 
 class Genome::Model::Tools::DetectVariants2::GatkSomaticIndel{
     is => ['Genome::Model::Tools::DetectVariants2::Detector'],
-    has_constant => [
-        detect_snvs => {},
-        detect_svs => {},
-        detect_indels => { value => 1 },
-    ],
     has => [
         mb_of_ram => {
             is => 'Text',

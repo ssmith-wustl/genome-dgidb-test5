@@ -37,6 +37,10 @@ my @expected_files = qw|    snvs.hq
                             snvs.lq.bed
                             samtools.normal.snvs.hq.bed |;
 
+# Override lock name because if people cancel tests locks don't get cleaned up.
+*Genome::SoftwareResult::_resolve_lock_name = sub {
+    return Genome::Sys->create_temp_file_path;
+};
 
 my $loh = Genome::Model::Tools::DetectVariants2::Filter::Loh->create(
     output_directory => $test_output_dir,

@@ -29,12 +29,17 @@ class Genome::Model::Tools::DetectVariants2::BamToCna{
             default => 1,
             doc => 'enable this flag to normalize by the whole genome median.',
         },
-    ],
-    has_constant => [
-        detect_snvs => {},
-        detect_svs => {},
-        detect_indels => {}, 
-        detect_cnvs => { value => 1 },
+        params => { #calculated for SoftwareResult for now--in the future should support this fully
+            is_optional => 1,
+            calculate_from => ['ratio', 'window_size', 'normalize_by_genome'],
+            calculate => q{
+                my $params  = '';
+                if(defined $ratio)                  { $params .= ' --ratio ' . $ratio; }
+                if(defined $window_size)            { $params .= ' --window-size ' . $window_size; }
+                if(defined $normalize_by_genome)    { $params .= ' --normalize-by-genome ' . $normalize_by_genome; }
+                return $params;
+            },
+        }
     ],
     has_param => [
          lsf_queue => {
