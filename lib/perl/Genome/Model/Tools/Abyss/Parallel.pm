@@ -22,6 +22,7 @@ class Genome::Model::Tools::Abyss::Parallel {
         min_sequence_identity => {
             is => 'Float',
             doc => 'Minimum sequence identity for PopBubbles and PathConsensus (real number in [0.0,1.0])',
+            is_optional => 1
         },
         num_jobs => {
             is => 'Number',
