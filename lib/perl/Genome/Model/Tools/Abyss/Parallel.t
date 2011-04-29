@@ -69,6 +69,4 @@ ok($@, 'create with no params fails');
 my $obj = $class->create(%create_params);
 ok($obj, 'created object');
 
-ok(-x $obj->abyss_pe_binary, "default executable exists at ".$obj->abyss_pe_binary);
-
 done_testing();
