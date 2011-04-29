@@ -11,9 +11,11 @@ class Genome::Site::WUGC::ReconcileSampleGenotypeData {
 
 sub execute {
     my $self = shift;
-    my @organism_samples = Genome::Site::WUGC::Sample->get();
-    my @imported_instrument_data = Genome::InstrumentData::Imported->get();
-    @organism_samples = grep($_->default_genotype_seq_id, @organism_samples);
+    my @organism_samples = Genome::Site::WUGC::Sample->get('default_genotype_seq_id >' => '0');
+    print "Found " . @organism_samples . " samples.\n";
+    my @default_genotype_seq_id = map { $_->default_genotype_seq_id } @organism_samples;
+    my @imported_instrument_data = Genome::InstrumentData::Imported->get(\@default_genotype_seq_id);
+    print "Found " . @imported_instrument_data. " instrument data.\n";
     for my $organism_sample (@organism_samples){
         my $genome_sample = Genome::Sample->get($organism_sample->id);
         print "No Genome::Sample for organism_sample: ", $organism_sample->id, "\n" and next unless $genome_sample;
