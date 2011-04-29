@@ -298,7 +298,7 @@ sub _validate_no_existing_processing_profiles_with_idential_params {
         my $qty = scalar @existing_pp;
         my $plural = $qty > 1 ? "s" : "";
         $subclass->error_message("Found $qty processing profile$plural with the same params as the one requested to create, but with a different name."
-            ."Please use an existing profile, or change a param.\nExisting profile$plural:\n\t" . join("\n\t", map { $_->__display_name__ } @existing_pp));
+            ." Please use an existing profile, or change a param.\nExisting profile$plural:\n\t" . join("\n\t", map { $_->__display_name__ } @existing_pp));
         return;
     }
 
