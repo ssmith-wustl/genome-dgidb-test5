@@ -38,6 +38,12 @@ class Genome::Model::Tools::Validation::CountContigs {
         doc => 'Maximum percentage of the read that has been soft-clipped in order for it to be counted',
         is_optional => 0,
     },
+    maximum_mismatch_quality_sum => {
+        type => "Integer",
+        default => 70,
+        doc => 'Maximum mismatch quality sum of a read in order for it to be counted',
+        is_optional => 0,
+    },
 
     ]
 };
@@ -133,15 +139,27 @@ sub _count_across_range {
 
     while( <SAMTOOLS> ) {
         chomp;
-        my ($qname, $flag, $rname, $pos_read, $mapq, $cigar, $mrnm, $mpos, $isize, $seq, $qual, $RG, $MF, @rest_of_fields) = split /\t/;
+        my ($qname, $flag, $rname, $pos_read, $mapq, $cigar, $mrnm, $mpos, $isize, $seq, $qual, @rest_of_fields) = split /\t/;
 
-        my (@bases_clipped) = $cigar =~ /(\d+)S/;   #assumes only one softclipped op in a row, generally true
+        #the following should grab out any MD tags on the read and strip out the MD:Z: prefix
+        #The evil regex is from the Samtools spec
+        my @MD_tags = grep { defined $_} map { my ($NM) = $_ =~ /^MD:Z:([0-9]+(?:(?:[A-Z]|\^[A-Z]+)[0-9]+)*)$/; $NM} @rest_of_fields;
+        if(@MD_tags > 1) {
+            $self->error_message("read $qname has multiple MD tags. Taking first.");
+        }
+        my $MD_tag = $MD_tags[0];
+
+        my (@bases_clipped) = $cigar =~ /(\d+)S/g;   #assumes only one softclipped op in a row, generally true
         my $read_length = length($seq); #should work unless hard clipped
         my $total_clipped_bases = 0;
         for my $bases (@bases_clipped) {
             $total_clipped_bases += $bases;
         }
         next if( $total_clipped_bases / $read_length > $self->maximum_clipping_fraction);
+
+        my $mismatch_qual_sum = $self->_calculate_mismatch_quality_sum($cigar,$MD_tag,$seq,$qual);
+        next if $mismatch_qual_sum > $self->maximum_mismatch_quality_sum;
+
 
         
         $stats{'total_reads'}+= 1;
@@ -235,4 +253,111 @@ sub _spans_range {
     }
     #position didn't cross the read
     return; 
+}
+
+sub _calculate_mismatch_quality_sum {
+    my ($self, $cigar, $md, $sequence, $base_quality) = @_;
+
+    #we need to
+    #parse the cigar to find the location of insertions and clippings as these aren't in the MD
+    #parse the MD to find mismatches and then combine with cigar info to pull the base quality
+    #yuck
+    
+    my $current_offset = 0; #this stores the offset into the sequence and base strings
+
+    my @cigar_ops = $cigar =~ /([0-9]+)([MIDNSHP])/g;
+    my @md_ops = grep { $_ } $md =~ /([0-9]+)|([A-Za-z])|(\^[A-Za-z]+)/g;
+    my $mmqs = 0;
+
+    OP:
+    while(my ($cigar_len, $cigar_op) = splice @cigar_ops, 0, 2) {
+        my $new_offset;
+        if($cigar_op eq 'I' || $cigar_op eq 'S') {
+            #these don't show up in the MD tag
+            $current_offset+=$cigar_len;
+            next OP;
+        }
+        elsif($cigar_op eq 'H' || $cigar_op eq 'N') {
+            #hard clipping means the bases are not in the read and the position of the read starts at the first unclipped base
+            #Shouldn't do anything in this case, but ignore it
+            next OP;
+        }
+        #we want to examine the MD op here
+        #MD region could span an insertion etc or may be broken up by a mismatch sooooo.....
+        MD: 
+        while(my $md_op = shift @md_ops) {
+
+            if($cigar_op eq 'D') {
+                if($md_op =~ /^\^[A-Za-z]/) {
+                    #both have deletions check the length
+                    unless($cigar_len eq (length($md_op) - 1)) {
+                        $self->error_message("Deletions do not match in length between cigar and md");
+                        die;
+                    }
+                    next OP;    #done parsing md
+                }
+                else {
+                    $self->error_message("Cigar indicates deletion, but md does not, $cigar, $md, $sequence, $base_quality");
+                    die;
+                }
+            }
+            #at this point the md_op should be:
+            #an erroneous deletion
+            #a number of some relation to the current M length
+            #a base indicating a mismatch
+            if($md_op =~ /^\^[A-Za-z]/) {
+                $self->error_message("MD indicates deletion, but cigar does not, $cigar, $md, $sequence, $base_quality");
+                die;
+            }
+            if($md_op =~ /^[A-Za-z]$/) {
+                #it's a mismatch!!!!!!!!!!!
+                my $base = substr($sequence, $current_offset,1);
+                my $bq = substr($base_quality, $current_offset, 1);
+                $mmqs += ord($bq) - 33;
+
+                #this consumes an offset
+                $current_offset += 1;
+                $cigar_len--;   #don't try to double count the cigar length
+                if($cigar_len) {
+                    next MD;
+                }
+                else {
+                    next OP;
+                }
+            }
+            #at this point the md should be a number
+
+            if($cigar_op eq 'M' && $cigar_len == $md_op) {   #use string equals to avoid the case where it's a mismatch
+                $current_offset += $cigar_len;
+                next OP;
+            }
+            elsif($cigar_op eq 'M' && $cigar_len < $md_op) {
+                $current_offset += $cigar_len;
+
+                #CIGAR = 5M1I1M
+                #MD = 6
+                $md_op -= $cigar_len;
+                unshift @md_ops, $md_op;  #push truncated length back on the stack
+                next OP;
+            }
+            elsif($cigar_op eq 'M' && $cigar_len > $md_op) {
+                #CIGAR = 100M
+                #MD = 20A79
+                $current_offset += $md_op;
+                $cigar_len -= $md_op;
+                if($cigar_len) {
+                    next MD;
+                }
+                else {
+                    next OP;
+                }
+
+            }
+            else {
+                $self->error_message("Horrible things have happened");
+                die;
+            }
+        }
+    }
+    return $mmqs;
 }
