@@ -73,6 +73,7 @@ sub _additional_parts_for_default_name {
 sub request_builds_for_dependent_ref_align {
     my $self = shift;
     my $sample = $self->subject;
+    return 1 unless $sample->class eq 'Genome::Sample';
 
     my $default_genotype_data = $sample->default_genotype_data;
     return 1 unless defined $default_genotype_data;
