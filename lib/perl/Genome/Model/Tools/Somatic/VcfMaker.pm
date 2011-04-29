@@ -94,7 +94,7 @@ class Genome::Model::Tools::Somatic::VcfMaker {
 	    is_optional => 1,
 	    is_input => 1,
 	    default => 0,
-	    doc => 'enable this to skip header output - useful for doing individual chromosomes, then catting the results together.',
+	    doc => 'enable this to skip header output - useful for doing individual chromosomes. Note that the output will be appended to the output file if this is enabled.',
     },
 
 	genome_build => {
@@ -147,7 +147,7 @@ sub execute {                               # replace with real execution logic.
     my $chrom = $self->chrom;
     my $tumor_snp_file = $self->tumor_snp_file;
     my $normal_snp_file = $self->normal_snp_file;
-    my $skip_header = $self->normal_snp_file;
+    my $skip_header = $self->skip_header;
 
     my $analysis_profile = "samtools pileup and/or somatic-sniper";
 
@@ -199,7 +199,7 @@ sub execute {                               # replace with real execution logic.
 	open(OUTFILE, ">$output_file") or die "Can't open output file: $!\n";
 	my $reference;
 	my $seqCenter;
-	my $file_date = "04202011";#strftime("%m/%d/%Y %H:%M:%S\n", localtime);
+	my $file_date = localtime();
 
 	#fix this to support build 37 when necessary
 	if ($genome_build ne "36"){
@@ -569,7 +569,6 @@ sub execute {                               # replace with real execution logic.
 
     sub addFilterInfo{
 	my ($filename,$filtername,$snvHashRef,$build_dir) = @_;
-	print STDERR $filtername . "\n";
 
 	#read in all the sites that passed the filter
 	my %passingSNVs;
@@ -732,7 +731,6 @@ sub execute {                               # replace with real execution logic.
 	    my @fields = ("GT","GQ","DP","BQ","MQ","AD","VAS","VAQ","VLS","VLQ");
 	    #collect format fields
 	    foreach my $field (@fields){
-#		print STDERR $field;
 		if(exists($snvhash{$key}{"normal"}{$field})){
 		    push(@normalFormat, $snvhash{$key}{"normal"}{$field});
 		} else {
@@ -745,7 +743,6 @@ sub execute {                               # replace with real execution logic.
 		}
 
 	    }
-#	    print STDERR "\n";
 	    push(@outline, join(":",@normalFormat));
 	    push(@outline, join(":",@tumorFormat));
 
@@ -754,8 +751,9 @@ sub execute {                               # replace with real execution logic.
     }
 
 #----------------------------------
-
-    print_header($tumor_bam, $normal_bam, $center, $genome_build, $individual_id, $file_source, $analysis_profile,$output_file);
+    unless ($skip_header){
+	print_header($tumor_bam, $normal_bam, $center, $genome_build, $individual_id, $file_source, $analysis_profile,$output_file);
+    }
     print_body($output_file, \%allSnvs);
     return 1;
 }
