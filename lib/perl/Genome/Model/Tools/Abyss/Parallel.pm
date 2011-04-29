@@ -19,6 +19,10 @@ class Genome::Model::Tools::Abyss::Parallel {
             doc => 'The minimum number of pairs needed to consider joining two contigs',
             default => 10,
         },
+        min_sequence_identity => {
+            is => 'Float',
+            doc => 'Minimum sequence identity for PopBubbles and PathConsensus (real number in [0.0,1.0])',
+        },
         num_jobs => {
             is => 'Number',
             doc => 'The number of jobs to run in parallel',
@@ -32,6 +36,11 @@ class Genome::Model::Tools::Abyss::Parallel {
             is => 'Text',
             doc => 'fastq file b',
         },
+        single_end_inputs => {
+            is => 'Text',
+            doc => 'Fasta or fastq files of single-end reads in addition to the paired inputs (space delimited, quote it!)',
+            is_optional => 1,
+        },
         name => {
             is => 'Text',
             doc => 'Name to prepend to output files',
@@ -42,8 +51,13 @@ class Genome::Model::Tools::Abyss::Parallel {
             doc => 'The job queue to schedule the work in.',
             default => 'apipe',
         },
+        min_coverage => {
+            is => 'Text',
+            doc => 'Remove contigs with mean k-mer coverage less than this value',
+            is_optional => 1,
+        },
         output_directory => {
-            is => 'String',
+            is => 'Text',
             doc => 'Directory to write output to',
         },
     ]
@@ -94,6 +108,25 @@ sub get_kmer_sizes {
     return @kmer_sizes;
 }
 
+sub make_cmdline_args {
+    my ($self, $kmer_size, $output_dir) = @_;
+
+    my @cmd = (
+        "k=" . $kmer_size,
+        "n=" . $self->min_pairs,
+        "np=" . $self->num_jobs,
+        "in='" . $self->fastq_a . " " . $self->fastq_b . "'", 
+        "name=".$self->name,
+        'mpirun="' . $self->mpirun_cmd($output_dir).'"',
+        );
+
+    push(@cmd, "c=".$self->min_coverage) if $self->min_coverage;
+    push(@cmd, "se='".$self->single_end_inputs."'") if $self->single_end_inputs;
+    push(@cmd, "p=".$self->min_sequence_identity."") if $self->min_sequence_identity;
+
+    return @cmd;
+}
+
 sub execute {
     my $self = shift;
     my $bindir = $self->bindir;
@@ -106,13 +139,8 @@ sub execute {
         my $main_log_file = "$output_dir/abyss.log";
         my @cmd = (
             $self->abyss_pe_binary,
-            "k=" . $kmer_size,
-            "n=" . $self->min_pairs,
-            "np=" . $self->num_jobs,
-            "in='" . $self->fastq_a . " " . $self->fastq_b . "'", 
-            "name=".$self->name,
-            'mpirun="' . $self->mpirun_cmd($output_dir).'"',
-            " > $main_log_file 2>&1"
+            $self->make_cmdline_args($kmer_size, $output_dir),
+            " > $main_log_file 2>&1",
             );
 
         make_path($output_dir);
