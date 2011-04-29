@@ -16,7 +16,7 @@ BEGIN {
     if ($archos !~ /64/) {
         plan skip_all => "Must run from a 64-bit machine";
     } else {
-        plan tests => 16;
+        plan tests => 17;
     }
     use_ok( 'Genome::Model::Tools::Validation::CountContigs');
 };

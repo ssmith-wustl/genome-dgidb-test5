@@ -44,9 +44,10 @@ EOS
 
 my %TIGRASV_VERSIONS = (
     20110321 => '/gsc/pkg/bio/tigrasv/TIGRA_SV-20110321/tigra_sv',     
+    '0.1' => '/usr/bin/tigra-sv0.1',
 );
 
-sub available_tigrasv_versions {
+sub available_versions {
     return keys(%TIGRASV_VERSIONS);
 }
 
