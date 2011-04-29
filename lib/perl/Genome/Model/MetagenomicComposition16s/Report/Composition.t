@@ -19,8 +19,9 @@ my $generator = Genome::Model::MetagenomicComposition16s::Report::Composition->c
 ok($generator, 'create');
 my $report = $generator->generate_report;
 ok($report, 'generate report');
-#print $report->xml_string."\n";
 
+#print $report->xml_string."\n";
+#print $example_build->classification_file_for_set_name('');<STDIN>;
 done_testing();
 exit;
 

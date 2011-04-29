@@ -22,11 +22,6 @@ class Genome::Model::Tools::DetectVariants2::Sniper {
             default_value => 'rusage[mem=4000] select[type==LINUX64 && maxtmp>100000] span[hosts=1]',
         },
     ],
-    # These are params from the superclass' standard API that we do not require for this class (dont show in the help)
-    has_constant_optional => [
-        sv_params=>{},
-        capture_set_input=>{},
-    ],
 };
 
 my %SNIPER_VERSIONS = (
@@ -56,31 +51,11 @@ sub _detect_variants {
 
     $self->status_message("beginning execute");
 
-    # Run sniper C program... run twice if we get different sets of params for snps and indels
-    my $snv_params = $self->params || $self->snv_params || "";
-    my $indel_params = $self->params || $self->indel_params || "";
-    my $result;
-    if ( ($self->detect_snvs && $self->detect_indels) && ($snv_params eq $indel_params) ) {
-        $result = $self->_run_sniper($snv_params, $self->_snv_staging_output, $self->_indel_staging_output);
-    } else {
-        # Run twice, since we have different parameters. Detect snps and throw away indels, then detect indels and throw away snps
-        if ($self->detect_snvs && $self->detect_indels) {
-            $self->status_message("Snp and indel params are different. Executing sniper twice: once each for snps and indels with their respective parameters");
-        }
-        my ($temp_fh, $temp_name) = Genome::Sys->create_temp_file();
+    my $snp_output = $self->_snv_staging_output;
+    my $indel_output = $self->_indel_staging_output;
+    my $cmd = $self->sniper_path . " " . $self->params . " -f ".$self->reference_sequence_input." ".$self->aligned_reads_input." ".$self->control_aligned_reads_input ." " . $snp_output . " " . $indel_output;
+    my $result = Genome::Sys->shellcmd( cmd=>$cmd, input_files=>[$self->aligned_reads_input,$self->control_aligned_reads_input], output_files=>[$snp_output], skip_if_output_is_present=>0, allow_zero_size_output_files => 1, );
 
-        if ($self->detect_snvs) {
-            $result = $self->_run_sniper($snv_params, $self->_snv_staging_output, $temp_name);
-        }
-        if ($self->detect_indels) {
-            if($self->detect_snps and not $result) {
-                $self->status_message('Sniper did not report success for snp detection. Skipping indel detection.')
-            } else {
-                $result = $self->_run_sniper($indel_params, $temp_name, $self->_indel_staging_output);
-            }
-        }
-    }
-    
     #Manually check for $self->_indel_staging_output as there might not be any indels and shellcmd()
     # chokes unless either all are present or all are empty.
     #(This means shellcmd() can check for the SNPs file on its own and still work given an empty result.)
@@ -99,15 +74,6 @@ sub _detect_variants {
 
     $self->status_message("ending execute");
     return $result; 
-}
-
-sub _run_sniper {
-    my ($self, $params, $snp_output, $indel_output) = @_;
-    
-    my $cmd = $self->sniper_path . " " . $params . " -f ".$self->reference_sequence_input." ".$self->aligned_reads_input." ".$self->control_aligned_reads_input ." " . $snp_output . " " . $indel_output; 
-    my $result = Genome::Sys->shellcmd( cmd=>$cmd, input_files=>[$self->aligned_reads_input,$self->control_aligned_reads_input], output_files=>[$snp_output], skip_if_output_is_present=>0, allow_zero_size_output_files => 1, );
-
-    return $result;
 }
 
 sub sniper_path {

@@ -42,35 +42,25 @@ This tool takes a MAF file, determines the location of each variant therein, and
 EOS
 }
 
+sub _doc_authors {
+    return ('',
+        'Nathan D. Dees, Ph.D.',
+    );
+}
 
-=head1 SYNOPSIS
+sub _doc_credits {
+    return (
+        <<EOS,
+This tool uses tabix, by Heng Li.  See http://samtools.sourceforge.net/tabix.shtml.
 
-Provides Pfam domains for variants in a MAF file.
-
-
-=head1 USAGE
-
-      music.pl pfam OPTIONS
-
-      OPTIONS:
-
-      --maf-file		List of mutations in MAF format
-      --output-file		Mutations in MAF format with Pfam annotation domain column appended at the end
-
-
-=head1 FUNCTIONS
-
-=cut
-
-################################################################################
-
-=head2	execute
-
-Initializes a new analysis
-
-=cut
-
-################################################################################
+This tool also depends on copies of data from the following databases, packaged in a form useable for quick analysis:
+EOS
+        "* Pfam - http://pfam.sanger.ac.uk/",
+        "* SMART - http://smart.embl-heidelberg.de/",
+        "* SUPERFAMILY - http://supfam.cs.bris.ac.uk/SUPERFAMILY/",
+        "* PatternScan - http://www.expasy.ch/prosite/",
+    );
+}
 
 sub execute {
 
@@ -142,25 +132,4 @@ sub execute {
     return(1);
 }
 
-=head1 AUTHOR
-
-The Genome Center at Washington University, C<< <software at genome.wustl.edu> >>
-
-
-=head1 SUPPORT
-
-You can find documentation for this module with the perldoc command.
-
-    perldoc Genome::Music::Pfam
-
-For more information, please visit http://genome.wustl.edu.
-
-=head1 COPYRIGHT & LICENSE
-
-Copyright 2010 The Genome Center at Washington University, all rights reserved.
-
-This program is free and open source under the GNU license, the BSD license, and the MIT license.
-
-=cut
-
-1; # End of Genome::Music::Pfam
+1;

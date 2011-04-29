@@ -1069,6 +1069,13 @@ sub success {
     # reallocate - always returns true (legacy behavior)
     $self->reallocate; 
 
+    # TODO Reconsider this method name
+    $self->perform_post_success_actions;
+
+    if ($self->model->class =~ /GenotypeMicroarray/) {
+        $self->model->request_builds_for_dependent_ref_align;
+    }
+
     # FIXME Don't know if this should go here, but then we would have to call success and abandon through the model
     my $last_complete_build = $self->model->resolve_last_complete_build;
     unless ( $last_complete_build ) {
@@ -1082,6 +1089,12 @@ sub success {
         #return;
     }
 
+    return 1;
+}
+
+# TODO Reconsider this name
+sub perform_post_success_actions {
+    my $self = shift;
     return 1;
 }
 

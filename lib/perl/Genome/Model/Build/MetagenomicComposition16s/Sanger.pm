@@ -113,7 +113,7 @@ sub processed_reads_qual_file {
 
 #< Amplicons >#
 sub _amplicon_iterator_for_name {
-    my $self = shift;
+    my ($self, $set_name) = @_;
 
     # open chromt_dir
     my $dh = Genome::Sys->open_directory( $self->chromat_dir );
@@ -153,6 +153,18 @@ sub _amplicon_iterator_for_name {
         push @filters, '_amplicon_is_not_contaminated';
     }
 
+    my $classification_file = $self->classification_file_for_set_name($set_name);
+    my ($classification_io, $classification_line);
+    if ( -s $classification_file ) {
+        $classification_io = eval{ Genome::Sys->open_file_for_reading($classification_file); };
+        if ( not $classification_io ) {
+            $self->error_message('Failed to open classification file: '.$classification_file);
+            return;
+        }
+        $classification_line = $classification_io->getline;
+        chomp $classification_line;
+    }
+
     my $amplicon_name_for_read_name = '_get_amplicon_name_for_'.$self->sequencing_center
     .'_read_name';
     my $pos = 0;
@@ -189,14 +201,12 @@ sub _amplicon_iterator_for_name {
                 }
                 push @read_names, $all_read_names[$pos]; # add read
             }
-            #print Dumper({$amplicon_name => \@read_names});
 
             # Create amplicon object
-            my $amplicon = Genome::Model::Build::MetagenomicComposition16s::Amplicon->create(
+            my $amplicon = {
                 name => $amplicon_name,
                 reads => \@read_names,
-                classification_file => $self->classification_file_for_amplicon_name($amplicon_name),
-            );
+            };
 
             # Filter
             for my $filter ( @filters ) {
@@ -206,6 +216,20 @@ sub _amplicon_iterator_for_name {
             # Processed oseq
             $self->load_seq_for_amplicon($amplicon); # dies on error
 
+            return $amplicon if not $classification_line;
+
+            my @classification = split(';', $classification_line); # 0 => id | 1 => ori
+            if ( not defined $classification[0] ) {
+                Carp::confess('Malformed classification line: '.$classification_line);
+            }
+            if ( $amplicon->{name} ne $classification[0] ) {
+                return $amplicon;
+            }
+
+            $classification_line = $classification_io->getline;
+            chomp $classification_line if $classification_line;
+
+            $amplicon->{classification} = \@classification;
             return $amplicon;
         }
     };
@@ -253,20 +277,20 @@ sub load_seq_for_amplicon {
     return unless $contig; # ok
 
     my $seq = {
-        id => $amplicon->name,
+        id => $amplicon->{name},
         seq => $contig->unpadded_base_string,
         qual => join('', map { chr($_ + 33) } @{$contig->qualities}),
     };
     if ( $seq->{seq} !~ /^[ATGCNX]+$/i ) {
-        Carp::confess('Illegal caharcters in sequence for amplicon: '.$amplicon->name."\n".$seq->{seq}); 
+        Carp::confess('Illegal caharcters in sequence for amplicon: '.$amplicon->{name}."\n".$seq->{seq}); 
     }
 
     if ( length $seq->{seq} !=  length $seq->{qual} ) {
-        Carp::confess('Unequal lengths of sequence and quality for amplicon: '.$amplicon->name."\n".$seq->{seq}."\n".$seq->{qual});
+        Carp::confess('Unequal lengths of sequence and quality for amplicon: '.$amplicon->{name}."\n".$seq->{seq}."\n".$seq->{qual});
     }
 
-    $amplicon->seq($seq);
-    $amplicon->reads_processed($reads);
+    $amplicon->{seq} = $seq;
+    $amplicon->{reads_processed} = $reads;
 
     $ace->disconnect;
     
@@ -277,11 +301,11 @@ sub _remove_old_read_iterations_from_amplicon {
     my ($self, $amplicon) = @_;
 
     my %reads;
-    for my $read_name ( @{$amplicon->reads} ) {
+    for my $read_name ( @{$amplicon->{reads}} ) {
         my $read = GSC::Sequence::Read->get(trace_name => $read_name);
         confess "Can't get GSC read ($read_name). This is required to remove old read iterations from an amplicon." unless $read;
 
-        my $read_id = $amplicon->name.$read->primer_code;
+        my $read_id = $amplicon->{name}.$read->primer_code;
         if ( exists $reads{$read_id} ) {
             my $date_compare = UR::Time->compare_dates(
                 '00:00:00 '.$read->run_date,
@@ -295,14 +319,13 @@ sub _remove_old_read_iterations_from_amplicon {
         }
     }
 
-    $amplicon->reads([
+    $amplicon->{reads} = [
         sort { 
             $a cmp $b 
         } map { 
             $_->trace_name 
         } values %reads 
-        ]);
-
+    ];
 
     return 1;
 }
@@ -310,7 +333,7 @@ sub _remove_old_read_iterations_from_amplicon {
 sub _amplicon_is_not_contaminated {
     my ($self, $amplicon) = @_;
 
-    for my $read_name ( @{$amplicon->reads} ) {
+    for my $read_name ( @{$amplicon->{reads}} ) {
         my $read = GSC::Sequence::Read->get(trace_name => $read_name);
         confess "Can't get GSC read ($read_name). This is required to check if an amplicon is contaminated." unless $read;
         my $screen_reads_stat = $read->get_screen_read_stat_hmp;
@@ -329,7 +352,7 @@ sub _get_gsc_sequence_read { # in sub to overload on test
 #< Amplicon Files >#
 sub scfs_file_for_amplicon {
     my ($self, $amplicon) = @_;
-    return $self->edit_dir.'/'.$amplicon->name.'.scfs';
+    return $self->edit_dir.'/'.$amplicon->{name}.'.scfs';
 }
 
 sub create_scfs_file_for_amplicon {
@@ -339,7 +362,7 @@ sub create_scfs_file_for_amplicon {
     unlink $scfs_file if -e $scfs_file;
     my $scfs_fh = Genome::Sys->open_file_for_writing($scfs_file)
         or return;
-    for my $scf ( @{$amplicon->reads} ) { 
+    for my $scf ( @{$amplicon->{reads}} ) { 
         $scfs_fh->print("$scf\n");
     }
     $scfs_fh->close;
@@ -355,12 +378,12 @@ sub create_scfs_file_for_amplicon {
 
 sub phds_file_for_amplicon {
     my ($self, $amplicon) = @_;
-    return $self->edit_dir.'/'.$amplicon->name.'.phds';
+    return $self->edit_dir.'/'.$amplicon->{name}.'.phds';
 }
 
 sub reads_fasta_file_for_amplicon { 
     my ($self, $amplicon) = @_;
-    return $self->edit_dir.'/'.$amplicon->name.'.fasta';
+    return $self->edit_dir.'/'.$amplicon->{name}.'.fasta';
 }
 
 sub reads_qual_file_for_amplicon {
@@ -369,7 +392,7 @@ sub reads_qual_file_for_amplicon {
 
 sub ace_file_for_amplicon { 
     my ($self, $amplicon) = @_;
-    return $self->edit_dir.'/'.$amplicon->name.'.fasta.ace';
+    return $self->edit_dir.'/'.$amplicon->{name}.'.fasta.ace';
 }
 
 #< Clean Up >#
@@ -394,7 +417,7 @@ sub clean_up {
     for my $amplicon_set ( @amplicon_sets ) {
         while ( my $amplicon = $amplicon_set->() ) {
             for my $ext ( @unneeded_file_exts ) {
-                my $file = sprintf('%s/%s.%s', $self->edit_dir, $amplicon->name, $ext);
+                my $file = sprintf('%s/%s.%s', $self->edit_dir, $amplicon->{name}, $ext);
                 unlink $file if -e $file;
             }
         }

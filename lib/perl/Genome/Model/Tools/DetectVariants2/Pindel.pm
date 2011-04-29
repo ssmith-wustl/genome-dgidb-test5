@@ -20,6 +20,7 @@ class Genome::Model::Tools::DetectVariants2::Pindel {
             is => 'ARRAY',
             is_optional => 1,
             doc => 'list of chromosomes to run on.',
+            default_value => [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,'X','Y'],
         },
         chr_mem_usage => {
             is => 'ARRAY',
@@ -27,12 +28,6 @@ class Genome::Model::Tools::DetectVariants2::Pindel {
             doc => 'list of mem to request per chromosomes to run on.',
         },
    ],
-    has_constant_optional => [
-        sv_params=>{},
-        detect_svs=>{},
-        snv_params=>{},
-        detect_snvs=>{},
-    ],
     has_transient_optional => [
         _workflow_result => {
             doc => 'Result of the workflow',
@@ -91,9 +86,6 @@ sub _detect_variants {
     }
 
     # Set default params
-    unless ($self->chromosome_list) { 
-        $self->chromosome_list([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,'X','Y']); 
-    }
     unless ($self->indel_bed_output) { 
         $self->indel_bed_output($self->_temp_staging_directory. '/indels.hq.bed'); 
     }
@@ -110,7 +102,6 @@ sub _detect_variants {
     for my $chr (@{$self->chromosome_list}){
         $input{"chr_$chr"}=$chr;
     }
-    $self->status_message("Generating workflow now.");
 
     my $workflow = $self->generate_workflow;
 
@@ -291,6 +282,14 @@ sub _add_chr_job {
     );
 
     return $workflow
+}
+
+sub params_for_result {
+    my $self = shift;
+    my ($params) = $self->SUPER::params_for_result;
+
+    $params->{chromosome_list} = join(',', $self->chromosome_list);
+    return $params;
 }
 
 1;

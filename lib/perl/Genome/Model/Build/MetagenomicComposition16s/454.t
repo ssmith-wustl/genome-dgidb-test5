@@ -5,6 +5,7 @@ use warnings;
 
 use above 'Genome';
 
+require File::Compare;
 use Data::Dumper 'Dumper';
 use Test::More;
 
@@ -104,10 +105,6 @@ my $classification_dir = $build->classification_dir;
 is($classification_dir, $build->data_directory.'/classification', 'classification_dir');
 ok(-d $classification_dir, 'classification_dir exists');
 
-my $amplicon_classifications_dir = $build->amplicon_classifications_dir;
-is($amplicon_classifications_dir, $build->data_directory.'/sys', 'amplicon_classifications_dir');
-ok(-d $amplicon_classifications_dir, 'amplicon_classifications_dir exists');
-
 my $fasta_dir = $build->fasta_dir;
 is($fasta_dir, $build->data_directory.'/fasta', 'fasta_dir');
 ok(-d $fasta_dir, 'fasta_dir exists');
@@ -152,6 +149,7 @@ for my $amplicon_set ( @amplicon_sets ) {
             "$type fasta file for set name: $set_name"
         );
         ok(-s $fasta_file, "$type fasta file name exists for set $set_name")
+        #is(File::Compare::compare($fasta_file, $EXAMPLE), 0, "$type fasta file name exists for set $set_name");
     }
     # classification
     my $classification_file = $build->classification_file_for_set_name($set_name);
@@ -163,13 +161,10 @@ for my $amplicon_set ( @amplicon_sets ) {
     # amplicons
     my @amplicon_names;
     while ( my $amplicon = $amplicon_set->next_amplicon ) {
-        my $classification_file = $build->classification_file_for_amplicon_name($amplicon->name);
-        is(
-            $classification_file,
-            $amplicon_classifications_dir.'/'.$amplicon->name.'.classification.stor',
-            "classification file for amplicon name: ".$amplicon->name,
-        );
-        push @amplicon_names, $amplicon->name;
+        ok($amplicon->{classification}, $amplicon->{name}.' has a classification');
+        is($amplicon->{classification}->[0], $amplicon->{name}, 'classification name matches');
+        is($amplicon->{classification}->[1], '-', 'is complemented');
+        push @amplicon_names, $amplicon->{name};
     }
     is_deeply(\@amplicon_names, $standards[$cnt]->{amplicons}, "amplicons match for $set_name");
     $cnt++;

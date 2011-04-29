@@ -15,7 +15,7 @@ class Genome::Model::Tools::Music::Base {
             is_optional => 1,
         }
     ],
-    doc => "cancer mutation analysis"
+    doc => "Mutational Significance In Cancer (Cancer Mutation Analysis)"
 };
 
 sub _doc_copyright_years {
@@ -39,7 +39,15 @@ EOS
 sub _doc_authors {
     # used to compose man pages 
     # (return a list of strings)
-    return ('','FILL ME _doc_authors','FILL ME _doc_authors');
+    return ('',
+        'Nathan D. Dees, Ph.D.',
+        'Cyriac Kandoth, Ph.D.',
+        'Dan Koboldt, M.S.',
+        'William Schierding, M.S.',
+        'Michael Wendl, Ph.D.',
+        'Qunyuan Zhang, Ph.D.',
+        'Thomas B. Mooney, M.S.',           
+    );
 }
 
 sub _doc_credits {
@@ -49,19 +57,17 @@ sub _doc_credits {
 }
 
 sub _doc_see_also {
-    return ('','B<genome-music>(1)','B<genome>(1)','FILL ME _doc_see_also')
+    return ('','B<genome-music>(1)','B<genome>(1)');
 }
 
 sub _doc_manual_body {
-    # TODO: replace this with more extensive text if you want the manual page
-    # to be bigger than the help
     return shift->help_detail;
 }
 
-sub help_detail { 
-    return <<EOS
-FILL ME _help_detail and _doc_manual_body
-EOS
+sub help_detail {
+    return "This tool is part of the MuSiC suite. See:\n" 
+        . join("\n",shift->_doc_see_also)
+        . "\n";
 }
 
 

@@ -63,16 +63,10 @@ sub _create_metrics {
 sub _add_amplicon {
     my ($self, $amplicon) = @_;
 
-    # seq
-    my $seq = $amplicon->oriented_seq
-        or return 1; # ok - seq only returned if assembled and oriented
-
-    # Length
-    push @{$self->{_metrix}->{lengths}}, length $seq->{seq};
-
-    # Reads
-    $self->{_metrix}->{reads} += $amplicon->reads_count;
-    $self->{_metrix}->{reads_processed} += $amplicon->reads_processed_count;
+    return 1 if not $amplicon->{classification}; # ok
+    push @{$self->{_metrix}->{lengths}}, length $amplicon->{seq}->{seq};
+    $self->{_metrix}->{reads} += scalar @{$amplicon->{reads}};
+    $self->{_metrix}->{reads_processed} += scalar @{$amplicon->{reads_processed}};
 
     return 1;
 }

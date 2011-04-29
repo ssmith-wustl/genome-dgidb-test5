@@ -58,6 +58,22 @@ ARGUMENTS:
 HELP
 }
 
+sub _doc_authors {
+    return ('',
+        'Cyriac Kandoth, Ph.D.',
+        'Michael Wendl, Ph.D.',
+    );
+}
+
+sub _doc_credits {
+    return (
+        <<EOS,
+        This module uses reformatted copies of data from the Kyoto Encyclopedia of Genes and Genomes (KEGG) database:
+EOS
+        "* KEGG - http://www.genome.jp/kegg/",
+    );
+}
+        
 sub execute
 {
   my $self = shift;
