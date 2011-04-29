@@ -12,7 +12,7 @@ class Genome::Model::Tools::Music::PathScan {
   is => 'Command::V2',
   has_input => [
     gene_covg_dir => { is => 'Text', doc => "Directory containing per-gene coverage files (Created using music bmr calc-covg)" },
-    bam_list => { is => 'Text', doc => "Tab delimited list of BAM files [sample_name normal_bam tumor_bam] (See Description)" },
+    bam_list => { is => 'Text', doc => "Tab delimited list of BAM files [sample_name, normal_bam, tumor_bam] (See Description)" },
     pathway_file => { is => 'Text', doc => "Tab-delimited file of pathway information (See Description)" },
     maf_file => { is => 'Text', doc => "List of mutations using TCGA MAF specifications v2.2" },
     output_file => { is => 'Text', doc => "Output file that will list the significant pathways and their p-values" },
@@ -21,6 +21,12 @@ class Genome::Model::Tools::Music::PathScan {
   ],
   doc => "find the various pathways significant to the cancer given a list of somatic mutations",
 };
+
+sub help_synopsis {
+  return <<HELP
+... music path-scan --bam-list brc_input/bam_list --gene-covg-dir brc_output/gene_covgs/ --maf-file brc_input/brc50.maf --output-file brc_output/sm_pathways --pathway-file brc_input/pathway_dbs/KEGG_120910 --bmr 8.7E-07
+HELP
+}
 
 sub help_detail {
   # TODO: merge those arugments up if they go in the --help
@@ -32,12 +38,22 @@ Col 2: Entrez_Gene_Id (Matching Entrez ID trump gene name matches between pathwa
 Col 9: Variant_Classification (PathScan ignores Silent|RNA|3'Flank|3'UTR|5'Flank|5'UTR|Intron)
 Col 16: Tumor_Sample_Barcode (Must match the name in sample-list, or contain it as a substring)
 
-The Entrez_Gene_Id can also be left blank, but it is highly recommended in case genes are named
-differently in the pathway file and the MAF file.
+The Entrez_Gene_Id can also be left blank (or set to 0), but it is highly recommended, in case
+genes are named differently in the pathway file and the MAF file.
 
 ARGUMENTS:
 --pathway-file
-  ::TODO::
+  This is a tab-delimited file prepared from a pathway database (such as KEGG), with the columns:
+  [path_id, path_name, class, gene_line, diseases, drugs, description] The latter three columns
+  are optional (but are available on KEGG). The gene_line contains the "entrez_id:gene_name" of
+  all genes involved in this pathway, each separated by a "|" symbol.
+
+  For example, a line in the pathway-file would look like:
+  hsa00061	Fatty acid biosynthesis	Lipid Metabolism	31:ACACA|32:ACACB|27349:MCAT|2194:FASN|54995:OXSM|55301:OLAH
+
+  Ensure that the gene names and entrez IDs used match those used in the MAF file. Entrez IDs are
+  not mandatory (use a 0 if Entrez ID unknown). But if a gene name in the MAF does not match any
+  gene name in this file, the entrez IDs are used to find a match (unless it's a 0).
 
 --gene-covg-dir
   This is usually the gene_covgs subdirectory created when you run "music bmr calc-covg". It
@@ -50,7 +66,7 @@ ARGUMENTS:
   in the MAF file (16th column, with the header Tumor_Sample_Barcode).
 
 --bmr
-  The overall background mutation rate that can be calculated using "music bmr calc-bmr".
+  The overall background mutation rate. This can be calculated using "music bmr calc-bmr".
 
 --genes-to-ignore
   A comma-delimited list of genes to ignore from the MAF file. This is useful when there are

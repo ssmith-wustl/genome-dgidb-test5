@@ -245,7 +245,7 @@ sub _generate_timestamp_field_data {
             }
             
             unless($timestamp =~ '\d{4}-\d{1,2}-\d{1,2}T\d{1,2}:\d{1,2}:\d{1,2}Z') {
-                $self->error_message('Could not parse timestamp into proper format: yyyy-mm-ddThh:mm:ssZ');
+                $self->error_message('Could not parse timestamp: ' . $timestamp . '(format should be yyyy-mm-ddThh:mm:ssZ)');
                 die $self->error_message;
             }
         }

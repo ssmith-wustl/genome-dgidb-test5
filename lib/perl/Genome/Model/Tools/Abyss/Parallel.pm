@@ -22,6 +22,7 @@ class Genome::Model::Tools::Abyss::Parallel {
         min_sequence_identity => {
             is => 'Float',
             doc => 'Minimum sequence identity for PopBubbles and PathConsensus (real number in [0.0,1.0])',
+            is_optional => 1
         },
         num_jobs => {
             is => 'Number',
@@ -81,15 +82,12 @@ sub parse_kmer_range {
     my ($self, $range) = @_;
 
     my @kmer_sizes;
-    if (my ($start, $end, $step) = $range =~ /^(\d+)\.\.(\d+)/) {
+    if (my ($start, $end, $junk, $step) = $range =~ /^(\d+)\.\.(\d+)(:(-{0,1}\d+)|)/) {
         die "invalid kmer size range '$range', end=$end < start=$start. abort." if $end < $start;
-        if (my ($step) = $range =~ / step (.*)/) { # .* instead of \d+ so we can complain about bad input
-            die "invalid kmer size range '$range', step=$step <= 0, abort." if $step <= 0;
-            for (my $i = $start; $i <= $end; $i += $step) {
-                push(@kmer_sizes, $i);
-            }    
-        } else {
-            push(@kmer_sizes, $start..$end); 
+        $step = 1 unless defined $step;
+        die "invalid kmer size range '$range', step=$step <= 0, abort." if $step <= 0;
+        for (my $i = $start; $i <= $end; $i += $step) {
+            push(@kmer_sizes, $i);
         }
     } else {
         die "Invalid number '$range'" unless $range =~ /^\d+$/;
