@@ -61,14 +61,12 @@ class Genome::Model::Tools::Somatic::VcfMakerTcga {
 	    is_optional => 0,
 	    is_input => 1},
 
-
 	center => {
 	    is => 'Text',
 	    doc => "Genome center name (WUSTL, Broad, Baylor)" ,
 	    is_optional => 1,
 	    default => "WUSTL",
 	    is_input => 1},
-
 
 	chrom => {
 	    is => 'Text',
@@ -77,6 +75,12 @@ class Genome::Model::Tools::Somatic::VcfMakerTcga {
 	    default => "",
 	    is_input => 1},
 
+	cp_score_to_qual => {
+	    is => 'Boolean',
+	    doc => "copy the somatic score to the qual field for Mutation WG comparisons" ,
+	    is_optional => 1,
+	    default => 0,
+	    is_input => 1},
 
 	genome_build => {
 	    is => 'Text',
@@ -131,6 +135,7 @@ sub execute {                               # replace with real execution logic.
     my $genome_build = $self->genome_build;
     my $dbsnp_file = $self->dbsnp_file;
     my $chrom = $self->chrom;
+    my $cp_score_to_qual = $self->cp_score_to_qual;
 
 
     my $analysis_profile = "somatic-sniper-and-varscan-capture";
@@ -219,6 +224,7 @@ sub execute {                               # replace with real execution logic.
 
 	#all the filter info
 	print OUTFILE "##FILTER=<ID=PASS,Description=\"Passed all filters\">" . "\n";
+	print OUTFILE "##FILTER=<ID=snpfilter,Description=\"snp filter - Discard\">" . "\n"
 	print OUTFILE "##FILTER=<ID=sniperhc,Description=\"Somatic Sniper Low Confidence - Discard\">" . "\n";
 	print OUTFILE "##FILTER=<ID=fp,Description=\"False Positive Filter - Discard\">" . "\n";
 	print OUTFILE "##FILTER=<ID=varscan,Description=\"Varscan Low Confidence - Discard\">" . "\n";
@@ -232,9 +238,9 @@ sub execute {                               # replace with real execution logic.
 	print OUTFILE "##FORMAT=<ID=BQ,Number=1,Type=Integer,Description=\"Average Base Quality corresponding to alleles 0/1/2/3... after software and quality filtering\">" . "\n";
 	print OUTFILE "##FORMAT=<ID=MQ,Number=1,Type=Integer,Description=\"Average Mapping Quality corresponding to alleles 0/1/2/3... after software and quality filtering\">" . "\n";
 	print OUTFILE "##FORMAT=<ID=AD,Number=1,Type=Integer,Description=\"Allele Depth corresponding to alleles 0/1/2/3... after software and quality filtering\">" . "\n";
-	print OUTFILE "##FORMAT=<ID=VAS,Number=1,Type=Integer,Description=\"Variant  Status relative to non-adjacent normal 0=Wildtype, 1=Germline, 2=Somatic, 3=LOH, 4=Post_Transcriptional_Modification, 5=Undefined \">" . "\n";
+	print OUTFILE "##FORMAT=<ID=VAS,Number=1,Type=Integer,Description=\"Variant  Status relative to non-adjacent normal 0=Wildtype, 1=Germline, 2=Somatic, 3=LOH, 4=Post_Transcriptional_Modification, 5=Undefined\">" . "\n";
 	print OUTFILE "##FORMAT=<ID=VAQ,Number=1,Type=Integer,Description=\"Quality score - sum of SomaticSniper and Varscan scores\">" . "\n";
-	print OUTFILE "##FORMAT=<ID=VLS,Number=1,Type=Integer,Description=\"Validation  Status relative to non-adjacent reference normal 0=Wildtype, 1=Germline, 2=Somatic, 3=LOH, 4=Post_Transcriptional_Modification, 5=Undefined \">" . "\n";
+	print OUTFILE "##FORMAT=<ID=VLS,Number=1,Type=Integer,Description=\"Validation  Status relative to non-adjacent reference normal 0=Wildtype, 1=Germline, 2=Somatic, 3=LOH, 4=Post_Transcriptional_Modification, 5=Undefined\">" . "\n";
 	print OUTFILE "##FORMAT=<ID=VLQ,Number=1,Type=Integer,Description=\"Validation Score / Confidence\">" . "\n";
     
 	#column header:
@@ -292,24 +298,28 @@ sub execute {                               # replace with real execution logic.
 		push(@alleles,$alt);
 	    }
 	}
-	$sniperSnvs{$id}{"ref"} = $col[2];
-	$sniperSnvs{$id}{"alt"} = join("/",@alleles[1..(@alleles-1)]);
+	if ($col[2] =~ /[ACGTN]/){
+	    $sniperSnvs{$id}{"ref"} = $col[2];
+	} else {
+	    $sniperSnvs{$id}{"ref"} = "N";
+	}
+	$sniperSnvs{$id}{"alt"} = join(",",@alleles[1..(@alleles-1)]);
 
 	#add the ref and alt alleles' positions in the allele array to the GT field
 	#ref
 	my @toSort = ((firstidx{ $_ eq $col[2] } @alleles),(firstidx{ $_ eq $col[2] } @alleles));
-	$sniperSnvs{$id}{"normal"}{"GT"} = join("/",sort(@toSort));
+	$sniperSnvs{$id}{"normal"}{"GT"} = join(",",sort(@toSort));
 
 
 	#alt
 	my @tumGT=split(",",convertIub($col[3]));
 	if (@tumGT > 1){
 	    my @toSort = ((firstidx{ $_ eq $tumGT[0] } @alleles),(firstidx{ $_ eq $tumGT[1] } @alleles));
-	    $sniperSnvs{$id}{"tumor"}{"GT"} = join("/",sort(@toSort));
+	    $sniperSnvs{$id}{"tumor"}{"GT"} = join(",",sort(@toSort));
 
 	} else {
 	    my @toSort = ((firstidx{ $_ eq $col[3] } @alleles),(firstidx{ $_ eq $col[3] } @alleles));
-	    $sniperSnvs{$id}{"tumor"}{"GT"} = join("/",sort(@toSort));
+	    $sniperSnvs{$id}{"tumor"}{"GT"} = join(",",sort(@toSort));
 	}
 
 
@@ -324,10 +334,10 @@ sub execute {                               # replace with real execution logic.
 	#these fields all change based on whether the ref matches the var
 #	if ($col[2] eq $col[3]){
 	#avg base quality ref/var
-	$sniperSnvs{$id}{"normal"}{"BQ"} =  "./.";
+	$sniperSnvs{$id}{"normal"}{"BQ"} =  ".";
 	$sniperSnvs{$id}{"tumor"}{"BQ"} =  $col[8] . "/.";
 	#avg mapping quality ref/var
-	$sniperSnvs{$id}{"normal"}{"MQ"} =  "./.";
+	$sniperSnvs{$id}{"normal"}{"MQ"} =  ".";
 	$sniperSnvs{$id}{"tumor"}{"MQ"} =  $col[7] . "/.";
 	#allele depth
 	$sniperSnvs{$id}{"normal"}{"AD"} =  ".";
@@ -653,7 +663,11 @@ sub execute {                               # replace with real execution logic.
 	    if (exists($snvhash{$key}{"qual"})){
 		push(@outline, $snvhash{$key}{"qual"});
 	    } else {
-		push(@outline, ".");
+		if ($cp_score_to_qual){
+		    push(@outline, $snvhash{$key}{"tumor"}{"VAQ"});
+		} else {		    
+		    push(@outline, ".");
+		}
 	    }
 
 	    #FILTER

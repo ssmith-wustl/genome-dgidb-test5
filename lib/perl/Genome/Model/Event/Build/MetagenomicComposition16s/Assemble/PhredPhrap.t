@@ -29,7 +29,7 @@ while ( my $amplicon = $amplicon_set->next_amplicon ) {
     my $ace_file = $build->ace_file_for_amplicon($amplicon);
     unlink $ace_file;
     for my $ext (qw/ log memlog phrap.out problems problems.qual singlets contigs contigs.qual view /) {
-        my $file = $build->edit_dir.'/'.$amplicon->name.'.fasta.'.$ext;
+        my $file = $build->edit_dir.'/'.$amplicon->{name}.'.fasta.'.$ext;
         unlink $file;
     }
 }

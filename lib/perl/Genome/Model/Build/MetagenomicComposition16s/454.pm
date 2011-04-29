@@ -63,34 +63,6 @@ sub amplicon_set_names {
     return sort keys %set_names_and_primers;
 }
 
-sub _amplicon_iterator_for_name {
-    my ($self, $set_name) = @_;
-
-    my $reader = $self->fasta_and_qual_reader_for_type_and_set_name('processed', $set_name);
-    return unless $reader; # returns undef if no file exists OK or dies w/ error 
-
-    my $amplicon_iterator = sub{
-        my $seqs = $reader->read;
-        return unless $seqs;
-        my $seq = $seqs->[0];
-
-        my $amplicon = Genome::Model::Build::MetagenomicComposition16s::Amplicon->create(
-            name => $seq->{id},
-            reads => [ $seq->{id} ],
-            seq => $seq,
-            classification_file => $self->classification_file_for_amplicon_name( $seq->{id} ),
-        );
-
-        unless ( $amplicon ) {
-            die $self->error_message("Can't create amplicon for ".$seq->{id});
-        }
-        
-        return $amplicon;
-    };
-    
-    return $amplicon_iterator;
-}
-
 #< Clean Up >#
 sub clean_up {
     my $self = shift;

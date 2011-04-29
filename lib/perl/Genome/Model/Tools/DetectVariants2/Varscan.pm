@@ -10,41 +10,14 @@ use Genome;
 class Genome::Model::Tools::DetectVariants2::Varscan {
     is => ['Genome::Model::Tools::DetectVariants2::Detector'],
     has => [
-        reference_sequence_input => {
-            default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa",
-        },
-    ],
-    has_optional => [
-        snv_params => {
+        params => {
             default => '--min-var-freq 0.10 --p-value 0.10 --somatic-p-value 0.01',
         },
-        indel_params => {
-            default => '--min-var-freq 0.10 --p-value 0.10 --somatic-p-value 0.01',
-        },
-        detect_snvs => {
-            default => '1',
-        },
-        detect_indels => {
-            default => '1',
-        },
     ],
-   
-    has_optional => [
-        detect_snvs => {
-            default => 1,
-        },
-        detect_indels => {
-            default => 1,
-        },
-    ],
-
     has_param => [
         lsf_resource => {
             default => "-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[mem=16000]' -M 1610612736",
         }
-    ],
-    has_constant_optional => [
-        sv_params=>{},
     ],
 };
 
@@ -72,47 +45,12 @@ sub _detect_variants {
     my $output_snp = $self->_temp_staging_directory."/snvs.hq";
     my $output_indel = $self->_temp_staging_directory."/indels.hq";
 
-    ## Get Varscan parameters ##
-    my $snv_params = $self->params || $self->snv_params || "";
-    my $indel_params = $self->params || $self->indel_params || "";
-    my $result;
-    if ( ($self->detect_snvs && $self->detect_indels) && ($snv_params eq $indel_params) ) {
-        $result = $self->_run_varscan($output_snp, $output_indel, $snv_params);
-    } else {
-        # Run twice, since we have different parameters. Detect snps and throw away indels, then detect indels and throw away snps
-        if ($self->detect_snvs && $self->detect_indels) {
-            $self->status_message("Snp and indel params are different. Executing Varscan twice: once each for snps and indels with their respective parameters");
-        }
-        my ($temp_fh, $temp_name) = Genome::Sys->create_temp_file();
-
-        if ($self->detect_snvs) {
-            $result = $self->_run_varscan($output_snp, $temp_name, $snv_params);
-        }
-        if ($self->detect_indels) {
-            if($self->detect_snvs and not $result) {
-                $self->status_message('Varscan did not report success for snv detection. Skipping indel detection.')
-            } else {
-                $result = $self->_run_varscan($temp_name, $output_indel, $indel_params);
-            }
-        }
-    }
-
-    return $result;
-}
-
-sub _run_varscan {
-    my $self = shift;
-    my ($output_snp, $output_indel, $varscan_params) = @_;
-
-    my $reference = $self->reference_sequence_input;
-    my $bam_file = $self->aligned_reads_input;
-
     my $varscan = Genome::Model::Tools::Varscan::Germline->create(
-        bam_file => $bam_file,
-        reference => $reference,
+        bam_file => $self->aligned_reads_input,
+        reference => $self->reference_sequence_input,
         output_snp => $output_snp,
         output_indel => $output_indel,
-        varscan_params => $varscan_params,
+        varscan_params => $self->params,
         no_headers => 1,
     );
 

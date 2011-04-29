@@ -131,10 +131,6 @@ my $classification_dir = $build->classification_dir;
 is($classification_dir, $build->data_directory.'/classification', 'classification_dir');
 ok(-d $classification_dir, 'classification_dir exists');
 
-my $amplicon_classifications_dir = $build->amplicon_classifications_dir;
-is($amplicon_classifications_dir, $build->data_directory.'/sys', 'amplicon_classifications_dir');
-ok(-d $amplicon_classifications_dir, 'amplicon_classifications_dir exists');
-
 my $fasta_dir = $build->fasta_dir;
 is($fasta_dir, $build->data_directory.'/fasta', 'fasta_dir');
 ok(-d $fasta_dir, 'fasta_dir exists');
@@ -161,14 +157,12 @@ for my $method ( keys %file_methods_and_results ) {
 my @amplicon_sets = $build->amplicon_sets;
 is(scalar(@amplicon_sets), 1, 'Got one amplicon set');
 my $amplicon_set = $amplicon_sets[0];
-my @amplicons;
+my @amplicon_names;
 while ( my $amplicon = $amplicon_set->next_amplicon ) {
-    push @amplicons, $amplicon;
+    push @amplicon_names, $amplicon->{name};
 }
-is(scalar(@amplicons), 5, 'Got 5 amplicons');
-
 is_deeply(
-    [ map { $_->name } @amplicons ],
+    \@amplicon_names,
     [qw/ HMPB-aad13a05 HMPB-aad13e12 HMPB-aad15e03 HMPB-aad16a01 HMPB-aad16c10 /],
     'Got 5 amplicons',
 );
@@ -186,17 +180,18 @@ is(
 );
 ok($build->classify_amplicons, 'classify amplicons');
 ok(-s $classification_file, 'created classification file');
-for my $amplicon ( @amplicons ) {
-    my $classification_file = $build->classification_file_for_amplicon_name($amplicon->name);
-    is(
-        $classification_file,
-        $amplicon_classifications_dir.'/'.$amplicon->name.'.classification.stor',
-        "classification file for amplicon name: ".$amplicon->name,
-    );
-    next unless -e $classification_file; # one does not classify cuz it didn't assemble
-    isa_ok($amplicon->classification, 'Genome::Utility::MetagenomicClassifier::SequenceClassification');
+@amplicon_sets = $build->amplicon_sets;
+is(@amplicon_sets, 1, 'Got one amplicon set');
+$amplicon_set = $amplicon_sets[0];
+my $classified_cnt = 0;
+while ( my $amplicon = $amplicon_set->next_amplicon ) {
+    next if not $amplicon->{seq}; # did not assemble, no classification
+    $classified_cnt++;
+    ok($amplicon->{classification}, $amplicon->{name}.' has a classification');
+    is($amplicon->{classification}->[0], $amplicon->{name}, 'classification name matches');
+    is($amplicon->{classification}->[1], '-', 'is not complemented');
 }
-is($build->amplicons_classified, 4, 'amplicons classified');
+is($build->amplicons_classified, $classified_cnt, 'amplicons classified correct');
 is($build->amplicons_classified_success, '1.00', 'amplicons classified success');
 is($build->amplicons_classification_error, 0, 'amplicons classified error');
 
@@ -226,7 +221,7 @@ while ( my $amplicon = $amplicon_set->next_amplicon ) {
     push @uncontaminated_amplicons, $amplicon;
 }
 is_deeply(
-    [ map { $_->name } @uncontaminated_amplicons ],
+    [ map { $_->{name} } @uncontaminated_amplicons ],
     [qw/ HMPB-aad13a05 HMPB-aad13e12 HMPB-aad16a01 HMPB-aad16c10 /],
     'Got 4 uncontaminated amplicons using all read iterations',
 );
@@ -240,12 +235,12 @@ while ( my $amplicon = $amplicon_set->next_amplicon ) {
     push @only_latest_reads_amplicons, $amplicon;
 }
 is_deeply(
-    [ map { $_->name } @only_latest_reads_amplicons ],
+    [ map { $_->{name} } @only_latest_reads_amplicons ],
     [qw/ HMPB-aad13a05 HMPB-aad13e12 HMPB-aad15e03 HMPB-aad16a01 HMPB-aad16c10 /],
     'Got 5 uncontaminated amplicons using only latest read iterations',
 );
 is_deeply(
-    $only_latest_reads_amplicons[0]->reads,
+    $only_latest_reads_amplicons[0]->{reads},
     [qw/ 
     HMPB-aad13a05.b3
     HMPB-aad13a05.b4
@@ -254,6 +249,7 @@ is_deeply(
     'Got latest iterations for reads'
 );
 
+#print $build->data_directory."\n";<STDIN>;
 done_testing();
 exit;
 

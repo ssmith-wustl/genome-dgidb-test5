@@ -116,9 +116,8 @@ sub _generate_indels_for_filtering {
     if (-s $indel_output_file) {
         my %indel_filter_params = ( indel_file => $indel_output_file, out_file => $filtered_indel_file );
         # for capture data we do not know the proper ceiling for depth
-        if ($self->capture_set_input) {
-            $indel_filter_params{max_read_depth} = 1000000;
-        }
+        # this was previously set if capture_set_input was. Capture set input is not currently supported, though
+        # $indel_filter_params{max_read_depth} = 1000000;
         my $indel_filter = Genome::Model::Tools::Sam::IndelFilter->create(%indel_filter_params);
         unless($indel_filter->execute) {
             $self->error_message("Running sam indel-filter failed.");
