@@ -23,17 +23,6 @@ my %create_params = (
     output_directory => $tmpdir,
 );
 
-eval { $class->create(); };
-ok($@, 'create with no params fails');
-
-my $obj = $class->create(%create_params);
-ok($obj, 'created object');
-
-SKIP: {
-    skip "waiting on install", 1;
-    ok(-x $obj->abyss_pe_binary, "default executable exists at ".$obj->abyss_pe_binary);
-}
-
 # valid kmer_sizes
 my @rv = $class->get_kmer_sizes(7);
 is_deeply(\@rv, [7], 'simple integer works');
@@ -72,5 +61,14 @@ ok($@, "range where step = 0 is error");
 
 eval { $class->get_kmer_sizes("3..9 step -1"); };
 ok($@, "range where step < 0 is error");
+
+# object creation
+eval { $class->create(); };
+ok($@, 'create with no params fails');
+
+my $obj = $class->create(%create_params);
+ok($obj, 'created object');
+
+ok(-x $obj->abyss_pe_binary, "default executable exists at ".$obj->abyss_pe_binary);
 
 done_testing();

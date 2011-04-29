@@ -70,7 +70,7 @@ class Genome::Model::Tools::DetectVariants2::Filter::TigraValidation {
             type => 'String',
             doc  => 'tigra_sv version to use in this process',
             default_value => '20110321', 
-            valid_values  => [Genome::Model::Tools::TigraSv->available_tigrasv_versions],
+            valid_values  => [Genome::Model::Tools::TigraSv->available_versions],
         },
         tigra_path => {
             is  => 'FilePath',

@@ -16,7 +16,7 @@ BEGIN {
     if ($archos !~ /64/) {
         plan skip_all => "Must run from a 64-bit machine";
     } else {
-        plan tests => 6;
+        plan tests => 16;
     }
     use_ok( 'Genome::Model::Tools::Validation::CountContigs');
 };
@@ -36,3 +36,67 @@ $spans_range = Genome::Model::Tools::Validation::CountContigs->_spans_range(232,
 ok(defined $spans_range);
 $spans_range = Genome::Model::Tools::Validation::CountContigs->_spans_range(232,237,$fake_read_pos, $fake_cigar);
 ok(!defined $spans_range);
+
+#these are to test the MD parsing functionality
+
+my $fake_base_quality = "?=;975";
+my $fake_cigar1 = "7M";
+my $fake_md1 = "C6";
+
+my $mmqs = Genome::Model::Tools::Validation::CountContigs->_calculate_mismatch_quality_sum($fake_cigar1, $fake_md1, $fake_read_seq, $fake_base_quality);
+ok($mmqs == 30);
+
+my $fake_md2 = "C2C3";
+$mmqs = Genome::Model::Tools::Validation::CountContigs->_calculate_mismatch_quality_sum($fake_cigar1, $fake_md2, $fake_read_seq, $fake_base_quality);
+ok($mmqs == 54);
+
+my $fake_md3 = "4T2";
+$mmqs = Genome::Model::Tools::Validation::CountContigs->_calculate_mismatch_quality_sum($fake_cigar1, $fake_md3, $fake_read_seq, $fake_base_quality);
+ok($mmqs == 22);
+
+my $fake_md4 = "3^G4";
+$mmqs = Genome::Model::Tools::Validation::CountContigs->_calculate_mismatch_quality_sum($fake_cigar, $fake_md4, $fake_read_seq, $fake_base_quality);
+ok($mmqs == 0);
+
+my $fake_md5 = "3^G1A2";
+$mmqs = Genome::Model::Tools::Validation::CountContigs->_calculate_mismatch_quality_sum($fake_cigar, $fake_md5, $fake_read_seq, $fake_base_quality);
+ok($mmqs == 22);
+
+my $fake_cigar2 = "3M1I3M";
+my $fake_md6 = "6";
+$mmqs = Genome::Model::Tools::Validation::CountContigs->_calculate_mismatch_quality_sum($fake_cigar2, $fake_md6, $fake_read_seq, $fake_base_quality);
+ok($mmqs == 0);
+
+my $fake_md7 = "2A3";
+$mmqs = Genome::Model::Tools::Validation::CountContigs->_calculate_mismatch_quality_sum($fake_cigar2, $fake_md7, $fake_read_seq, $fake_base_quality);
+ok($mmqs == 26);
+
+my $fake_md8 = "2A0A2";
+$mmqs = Genome::Model::Tools::Validation::CountContigs->_calculate_mismatch_quality_sum($fake_cigar2, $fake_md8, $fake_read_seq, $fake_base_quality);
+ok($mmqs == 48);
+
+my $fake_md9 = "2A1T1";
+$mmqs = Genome::Model::Tools::Validation::CountContigs->_calculate_mismatch_quality_sum($fake_cigar2, $fake_md9, $fake_read_seq, $fake_base_quality);
+ok($mmqs == 46);
+
+#real life example that is failing 100M, 0C1C97, TCTACCCACCTGGGTCCAGCCCCCTGCTGCACACTGATCTTATCACCTGTCACCAAGGTCAGGGCTGCCGGGGAGTTGGGTCACCTGCTCGAGGGCCCCG, ??94?2>:>=<B<??:E==EEEBEBCCACEC??C?CD=CCCC@D?CCCCBD;DDEEEEEEEFGGGGGGEGGGGGGGGGGGGGEFGGGGGGGGGGGGGGGG
+my $fake_cigar3 = "100M";
+my $fake_read_seq2 = "TCTACCCACCTGGGTCCAGCCCCCTGCTGCACACTGATCTTATCACCTGTCACCAAGGTCAGGGCTGCCGGGGAGTTGGGTCACCTGCTCGAGGGCCCCG";
+my $fake_md10 = "0C1C97";
+my $fake_base_quality2 = '??94?2>:>=<B<??:E==EEEBEBCCACEC??C?CD=CCCC@D?CCCCBD;DDEEEEEEEFGGGGGGEGGGGGGGGGGGGGEFGGGGGGGGGGGGGGGG';
+
+$mmqs = Genome::Model::Tools::Validation::CountContigs->_calculate_mismatch_quality_sum($fake_cigar3, $fake_md10, $fake_read_seq2, $fake_base_quality2);
+ok($mmqs == (ord('?')-33 + ord('9')-33));
+
+#5S38M1I1M2D50M5S, 17C0A12C7^AC19G22G2C4, GTCTTTGTGGATACTCTTTTCTGTTATCCTCCAGGCTGTGGCTGTGGGGAGGCATTGGTGGTTCCGTGGTAGCATTCTCGCCTCCCACGCGGGAGACACG, #A(A9;;785(=64:7C?=AA?>CA>-==>368>31ABBBA-BB6DEEECEDD?FBGBEGCC@C?EGGEFDFFEE?GFGDEGGGGGFFEGGGGGFGGGGG
+my $fake_cigar4 = "5S38M1I1M2D50M5S";
+my $fake_read_seq3 = "GTCTTTGTGGATACTCTTTTCTGTTATCCTCCAGGCTGTGGCTGTGGGGAGGCATTGGTGGTTCCGTGGTAGCATTCTCGCCTCCCACGCGGGAGACACG";
+my $fake_md11 = "17C0A12C7^AC19G22G2C4";
+my $fake_base_quality3 = q{#A(A9;;785(=64:7C?=AA?>CA>-==>368>31ABBBA-BB6DEEECEDD?FBGBEGCC@C?EGGEFDFFEE?GFGDEGGGGGFFEGGGGGFGGGGG};
+# q{>CAGGG};
+# q{SSSSSMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMIMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMSSSSS    #expanded CIGAR
+# q{#A(A9;;785(=64:7C?=AA?>CA>-==>368>31ABBBA-BB6DEEECEDD?FBGBEGCC@C?EGGEFDFFEE?GFGDEGGGGGFFEGGGGGFGGGGG}   #base qualities
+# q{     MMMMMMMMMMMMMMMMMCAMMMMMMMMMMMMCMMMMMM MMMMMMMMMMMMMMMMMMMMGMMMMMMMMMMMMMMMMMMMMMMGMMCMMMM}    #expanded MD
+
+$mmqs = Genome::Model::Tools::Validation::CountContigs->_calculate_mismatch_quality_sum($fake_cigar4, $fake_md11, $fake_read_seq3, $fake_base_quality3);
+ok($mmqs == (ord('>')-33 + ord('C')-33) + ord('A')-33 + ord('?') - 33 + ord('F')-33 + ord('G')-33);
