@@ -7,6 +7,7 @@ use Genome;
 
 use Data::Dumper 'Dumper';
 require Genome::Utility::MetagenomicClassifier::PopulationComposition;
+require Genome::Utility::MetagenomicClassifier::SequenceClassification;
 
 class Genome::Model::MetagenomicComposition16s::Report::Composition {
     is => 'Genome::Model::MetagenomicComposition16s::Report',
@@ -41,18 +42,24 @@ sub _add_to_report_xml {
     my @amplicon_set_names = $self->build->amplicon_set_names;
     Carp::confess('No amplicon set names for '.$self->build) if not @amplicon_set_names; # bad
 
+    my @domains = grep { $_ ne 'anamalia' } Genome::Utility::MetagenomicClassifier->domains;
+    my @ranks = grep { $_ ne 'kingdom' } Genome::Utility::MetagenomicClassifier->taxonomic_ranks;
+    pop @ranks; # remove species
+
     for my $name ( @amplicon_set_names ) {
         my $amplicon_set = $self->build->amplicon_set_for_name($name);
         next if not $amplicon_set; # ok
         while ( my $amplicon = $amplicon_set->next_amplicon ) {
-            my $classification = $amplicon->classification
-                or next;
+            next if not $amplicon->{classification}; # ok
+            my $classification = Genome::Utility::MetagenomicClassifier::SequenceClassification->new_from_classification_array(
+                name => $amplicon->{name},
+                classifier => $self->model->classifier,
+                ranks => [ 'root', @ranks ],
+                classifications => [ map { $amplicon->{classification}->[$_] } (2..8) ],
+            );
             $population_composition->add_classification($classification);
         }
 
-        my @domains = grep { $_ ne 'anamalia' } Genome::Utility::MetagenomicClassifier->domains;
-        my @ranks = grep { $_ ne 'kingdom' } Genome::Utility::MetagenomicClassifier->taxonomic_ranks;
-        pop @ranks; # remove species
         for my $domain ( @domains ) {
             my @headers = (qw/ taxonomy rank total /);
             my @ranks_involved;

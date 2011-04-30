@@ -13,10 +13,6 @@ class Genome::Model::Tools::DetectVariants2::Samtools {
             default => "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>1000 && mem>16000] span[hosts=1] rusage[tmp=1000:mem=16000]' -M 1610612736",
         }
     ],
-    has_constant_optional => [
-        sv_params=>{},
-        detect_svs=>{},
-    ],
     has => [
         _genotype_detail_base_name => {
             is => 'Text',
@@ -55,53 +51,20 @@ EOS
 sub _detect_variants {
     my $self = shift;
     
-    my $snv_params = $self->params || $self->snv_params || "";
-    my $indel_params = $self->params || $self->indel_params || "";
-    my $result;
-    if ( ($self->detect_snvs && $self->detect_indels) && ($snv_params eq $indel_params) ) {
-        $result = $self->_run_samtools($self->_snv_staging_output, $self->_indel_staging_output, $self->_filtered_indel_staging_output, $snv_params);
-    } else {
-        # Run twice, since we have different parameters. Detect snvs and throw away indels, then detect indels and throw away snvs
-        if ($self->detect_snvs && $self->detect_indels) {
-            $self->status_message("Snv and indel params are different. Executing Samtools twice: once each for snvs and indels with their respective parameters");
-        }
-        my ($temp_fh, $temp_name) = Genome::Sys->create_temp_file();
-        my ($filtered_temp_fh, $filtered_temp_name) = Genome::Sys->create_temp_file();
-
-        if ($self->detect_snvs) {
-            $result = $self->_run_samtools($self->_snv_staging_output, $temp_name, $filtered_temp_name, $snv_params);
-        }
-        if ($self->detect_indels) {
-            if($self->detect_snvs and not $result) {
-                $self->status_message('Samtools did not report success for snv detection. Skipping indel detection.')
-            } else {
-                $result = $self->_run_samtools($temp_name, $self->_indel_staging_output, $self->_filtered_indel_staging_output, $indel_params);
-            }
-        }
-    }
-
-    return $result;
-}
-
-sub _run_samtools {
-    my $self = shift;
-    my ($snv_output_file, $indel_output_file,$filtered_indel_file, $parameters) = @_;
-    
     my $ref_seq_file = $self->reference_sequence_input;
     my $bam_file = $self->aligned_reads_input;
     my $sam_pathname = Genome::Model::Tools::Sam->path_for_samtools_version($self->version);
+    my $parameters = $self->params;
+    my $snv_output_file = $self->_snv_staging_output;
+    my $indel_output_file = $self->_indel_staging_output;
+    my $filtered_indel_file = $self->_filtered_indel_staging_output;
 
-    # Remove the result files from any previous run
-    unlink($snv_output_file, $indel_output_file);
-
-    
     #two %s are switch to indicate snvs or indels and output file name
     my $samtools_cmd = "$sam_pathname pileup -c $parameters -f $ref_seq_file %s $bam_file > %s";
 
     #Originally "-S" was used as SNP calling. In r320wu1 version, "-v" is used to replace "-S" but with 
     #double indel lines embedded, this need sanitized
     #$rv = system "$samtools_cmd -S $bam_file > $snv_output_file"; 
-    
     
     my $snv_cmd = sprintf($samtools_cmd, '-v', $snv_output_file);
     
@@ -145,8 +108,8 @@ sub _run_samtools {
     }
 
     #for capture models we need to limit the snvs and indels to within the defined target regions
-    if ($self->capture_set_input) {
-        my $bed_file = $self->capture_set_input;
+    if ($self->region_of_interest) {
+        my $bed_file = $self->region_of_interest->merged_bed_file;
         for my $var_file ($snv_output_file, $indel_output_file) {
             unless (-s $var_file) {
                 $self->warning_message("Skip limiting $var_file to target regions because it is empty.");
@@ -177,7 +140,7 @@ sub _run_samtools {
     if (-s $indel_output_file) {
         my %indel_filter_params = ( indel_file => $indel_output_file, out_file => $filtered_indel_file );
         # for capture data we do not know the proper ceiling for depth
-        if ($self->capture_set_input) {
+        if ($self->region_of_interest) {
             $indel_filter_params{max_read_depth} = 1000000;
         }
         my $indel_filter = Genome::Model::Tools::Sam::IndelFilter->create(%indel_filter_params);

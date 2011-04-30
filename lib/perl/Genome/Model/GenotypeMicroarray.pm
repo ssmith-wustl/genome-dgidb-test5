@@ -70,5 +70,23 @@ sub _additional_parts_for_default_name {
     return ( $instrument_data->import_source_name, $instrument_data->sequencing_platform, $self->refseq_name );
 }
 
+sub request_builds_for_dependent_ref_align {
+    my $self = shift;
+    my $sample = $self->subject;
+    return 1 unless $sample->class eq 'Genome::Sample';
+
+    my $default_genotype_data = $sample->default_genotype_data;
+    return 1 unless defined $default_genotype_data;
+
+    my ($instrument_data) = $self->instrument_data;
+    return 1 unless $instrument_data->id eq $default_genotype_data->id;
+
+    my @ref_aligns = Genome::Model::ReferenceAlignment->get(subject_id => $sample->id);
+    for my $ref_align (@ref_aligns) {
+        $ref_align->build_requested(1);
+    }
+    return 1;
+}
+
 1;
 

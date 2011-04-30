@@ -20,6 +20,14 @@ class Genome::Sample {
         },
     ],
     has_optional => [	
+        genotype_instrument_data_id => {
+            is => 'Text',
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'genotype_instrument_data_id' ],
+            is_mutable => 1,
+            doc => 'Id of the corresponding genotype instrument data'
+        },
         common_name => { 
             is => 'Text',
             via => 'attributes',
@@ -216,6 +224,12 @@ class Genome::Sample {
             calculate_from => 'id',
             calculate => q{ return Genome::Library->get(sample_id => $id) },
         },
+        models => {
+            is => 'Genome::Model',
+            is_optional => 1,
+            calculate_from => 'id',
+            calculate => q{ return Genome::Model->get(subject_id => $id) },
+        },
         library_names => { via => 'libraries', to => 'name', is_optional => 1, },
         solexa_lanes                => { is => 'Genome::InstrumentData::Solexa', reverse_as => 'sample' },
         solexa_lane_names           => { via => 'solexa_lanes', to => 'full_name' },
@@ -234,19 +248,9 @@ sub sample_type {
     shift->extraction_type(@_);
 }
 
-sub models {
-    my $self = shift;
-    # only returns models who's subject are Genome::Sample
-    my @m = Genome::Model->get(subject_id => $self->id, subject_class_name => $self->class);
-    return @m;
-}
-
 sub canonical_model {
-
     # TODO: maybe this should use model is_default?
-
     my ($self) = @_;
-
     my @models = sort { $a->id <=> $b->id } $self->models();
     return $models[0];
 }
@@ -292,12 +296,21 @@ sub check_genotype_data {
     return 1;
 }
 
-sub set_default_genotype_data_and_request_builds {
-    my ($self, $genotype_instrument_data) = @_;
+sub set_default_genotype_data {
+    my ($self, $genotype_instrument_data, $allow_overwrite) = @_;
+    $allow_overwrite ||= 0;
+
+    Carp::confess 'Not given genotype instrument data to assign to sample ' . $self->id unless $genotype_instrument_data;
     Carp::confess 'Genotype instrument data ' . $genotype_instrument_data->id . ' is not valid!'
         unless $self->check_genotype_data($genotype_instrument_data);
 
     if (defined $self->default_genotype_data_id) {
+        unless ($allow_overwrite) {
+            Carp::confess "Attempted to overwrite current genotype instrument data id " . $self->default_genotype_data_id . 
+                " for sample " . $self->id . " with genotype data id " . $genotype_instrument_data->id .
+                " without setting the overwrite flag!";
+        }
+
         $self->warning_message("Default genotype data already set to " . $self->default_genotype_data_id . " for sample " . 
             $self->id . ", changing to " . $genotype_instrument_data->id); 
 
@@ -319,12 +332,8 @@ sub set_default_genotype_data_and_request_builds {
         Carp::confess 'Could not create default genotype data attribute for sample ' . $self->id unless $attribute;
     }
 
-    # Now check for existing reference alignment models that have this sample as their subject and request new builds.
-    # This will include both plain ol' reference alignment and lane QC models.
-    my @models = Genome::Model::ReferenceAlignment->get(subject_id => $self->id);
-    for my $model (@models) {
-        $model->genotype_microarray_model_id($model->default_genotype_model->id);
-        $model->build_requested(1);
+    for my $genotype_model ($self->default_genotype_models) {
+        $genotype_model->request_builds_for_dependent_ref_align;
     }
 
     return 1;

@@ -246,7 +246,12 @@ sub _copy_model_inputs {
         if($params{value_class_name}->isa('Genome::Model')) {
             # Next if we already have a build defined (e.g., by create params).
             my $input_name = $input->name;
-            next if defined $self->$input_name and $self->$input_name->isa('Genome::Model::Build');
+
+            my $existing_input = $self->inputs(name => $input_name);
+            if ($existing_input) {
+                my $existing_input_value = $existing_input->value;
+                next if ($existing_input_value && $existing_input_value->isa('Genome::Model::Build'));
+            }
 
             my $input_model = $input->value;
             my $input_build = $self->_select_build_from_input_model($input_model);
@@ -1064,6 +1069,13 @@ sub success {
     # reallocate - always returns true (legacy behavior)
     $self->reallocate; 
 
+    # TODO Reconsider this method name
+    $self->perform_post_success_actions;
+
+    if ($self->model->class =~ /GenotypeMicroarray/) {
+        $self->model->request_builds_for_dependent_ref_align;
+    }
+
     # FIXME Don't know if this should go here, but then we would have to call success and abandon through the model
     my $last_complete_build = $self->model->resolve_last_complete_build;
     unless ( $last_complete_build ) {
@@ -1077,6 +1089,12 @@ sub success {
         #return;
     }
 
+    return 1;
+}
+
+# TODO Reconsider this name
+sub perform_post_success_actions {
+    my $self = shift;
     return 1;
 }
 

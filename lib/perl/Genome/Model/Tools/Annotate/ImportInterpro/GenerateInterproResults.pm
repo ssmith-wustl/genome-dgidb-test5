@@ -94,7 +94,10 @@ sub execute{
                                  'ensembl' => $ensembl_results_data_dir,);
 
     # db disconnect to avoid Oracle failures killing our long running stuff
-    Genome::DataSource::GMSchema->disconnect_default_dbh;
+    if (Genome::DataSource::GMSchema->has_default_handle) {
+        $self->status_message("Disconnecting GMSchema default handle.");
+        Genome::DataSource::GMSchema->disconnect_default_dbh();
+    }
 
     #Merge the tab delimited temp files containing the results from the iprscan(s) into a single tab delimimted file
     my $pre_iprscan_merger = Benchmark->new; 

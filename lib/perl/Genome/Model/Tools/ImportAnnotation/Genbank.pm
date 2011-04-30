@@ -141,7 +141,10 @@ sub execute {
     my @genes;
 
     $self->set_reference_build unless $self->reference_build; #use this crappy logic if we don't have a ref seq. specified
-    Genome::DataSource::GMSchema->disconnect_default_dbh if Genome::DataSource::GMSchema->has_default_dbh;  
+    if (Genome::DataSource::GMSchema->has_default_handle) {
+        $self->status_message("Disconnecting GMSchema default handle.");
+        Genome::DataSource::GMSchema->disconnect_default_dbh();
+    }
     my $idx = $self->get_idx_file;
     $self->idx($idx); 
     

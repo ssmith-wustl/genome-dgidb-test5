@@ -50,42 +50,27 @@ class Genome::Model::Tools::DetectVariants2::Breakdancer{
             is_optional => 1,
             doc => 'workflow log directory of per chromosome breakdancer run',
         },
-        detect_svs => { value => 1, is_constant => 1, },
-        sv_params => {
-            is => 'Text',
-            is_input => 1,
-            is_optional => 1,
-            doc => "Parameters to pass to bam2cfg and breakdancer. The two should be separated by a ':'. i.e. 'bam2cfg params:breakdancer params'",
-        },
         _bam2cfg_params=> {
-            calculate_from => ['sv_params'],
+            calculate_from => ['params'],
             calculate => q{
-                return (split(':', $sv_params))[0];
+                return (split(':', $params))[0];
             },
             is_optional => 1,
-            doc => 'This is the property used internally by the tool for bam2cfg parameters. It splits sv_params.',
+            doc => 'This is the property used internally by the tool for bam2cfg parameters. It splits params.',
         },
         _breakdancer_params => {
-            calculate_from => ['sv_params'],
+            calculate_from => ['params'],
             calculate => q{
-                return (split(':', $sv_params))[1];
+                return (split(':', $params))[1];
             },
             is_optional => 1,
-            doc => 'This is the property used internally by the tool for breakdancer parameters. It splits sv_params.',
+            doc => 'This is the property used internally by the tool for breakdancer parameters. It splits params.',
         },
     ],
     has_param => [ 
         lsf_resource => {
             default_value => "-M 10000000 -R 'select[localdata && mem>10000] rusage[mem=10000]'",
         },
-    ],
-    # These are params from the superclass' standard API that we do not require for this class (dont show in the help)
-    has_constant_optional => [
-        snv_params=>{},
-        indel_params=>{},
-        capture_set_input =>{},
-        detect_snvs=>{},
-        detect_indels=>{},
     ],
 };
 
@@ -117,32 +102,21 @@ sub _create_temp_directories {
     return $self->SUPER::_create_temp_directories(@_);
 }
 
+# FIXME temporary hack to prevent breakdancer from using software results... fix this ASAP
+sub execute {
+    my $self = shift;
+    return $self->_generate_result;
+}
+
 
 sub _detect_variants {
     my $self = shift;
     
-    $self->set_params;
     $self->run_config;
     $self->run_breakdancer;
 
     return 1;
 }
-
-
-sub set_params {
-    my $self = shift;
-
-    unless ($self->sv_params) {
-        $self->warning_message ("No sv_params option provided. Now try params");
-        unless ($self->params) {
-            $self->error_message("Neither sv_params nor params is set");
-            die;
-        }
-        $self->sv_params($self->params);
-    }
-    return 1;
-}
-
 
 sub run_config {
     my $self = shift;
@@ -180,7 +154,7 @@ sub run_config {
 
 sub run_breakdancer {
     my $self = shift;
-    my $bd_params = $self->_breakdancer_params;
+    my $bd_params = $self->_breakdancer_params || "";
 
     #Allow 0 size of config, breakdancer output
     if (-z $self->config_file) {
@@ -236,7 +210,7 @@ sub run_breakdancer {
                 reference_build_id          => $self->reference_build_id,
                 output_directory            => $self->_temp_staging_directory,
                 config_file => $cfg_file,
-                sv_params   => $self->sv_params,
+                params   => $self->params,
                 version     => $self->version,
                 chromosome  => \@chr_list,
             );
@@ -341,6 +315,14 @@ sub has_version {
         }
     }
     return 0;  
+}
+
+sub params_for_result {
+    my $self = shift;
+    my ($params) = $self->SUPER::params_for_result;
+
+    $params->{chromosome_list} = $self->chromosome;
+    return $params;
 }
 
 1;

@@ -123,8 +123,15 @@ class Genome::Model::Tools::Music::Play {
             is_optional => 1,
         },
     ],
-    doc => 'Run the full suite of mutation analysis tools',
+    doc => 'Run the full suite of MuSiC tools sequentially.',
 };
+
+sub help_synopsis {
+    return <<EOS
+This tool takes as parameters all the information required of the individual tools.
+EXAMPLE:    gmt music play --bam-list input/bams_to_analyze.txt --clinical-data-file input/numeric_clinical_data.csv --clinical-data-type numeric --maf-file input/myMAF.tsv --output-dir play_output_dir --pathway-file input/pathway_db --reference-sequence input/refseq/all_sequences.fa --roi-file input/all_coding_regions.bed --genetic-data-type gene
+EOS
+}
 
 sub help_detail {
     return <<EOS
@@ -135,7 +142,6 @@ EOS
 sub execute {
     my $self = shift;
 
-    #Proximity command left out until it has been implemented
     my @no_dependencies = ('Proximity', 'ClinicalCorrelation', 'CosmicOmim', 'MutationRelation', 'Pfam');
     my @bmr = ('Bmr::CalcCovg', 'Bmr::CalcBmr');
     my @depend_on_bmr = ('PathScan', 'Smg');

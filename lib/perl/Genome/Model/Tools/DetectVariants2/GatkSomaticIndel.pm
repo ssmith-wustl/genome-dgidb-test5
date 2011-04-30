@@ -9,11 +9,6 @@ use Genome;
 
 class Genome::Model::Tools::DetectVariants2::GatkSomaticIndel{
     is => ['Genome::Model::Tools::DetectVariants2::Detector'],
-    has_constant => [
-        detect_snvs => {},
-        detect_svs => {},
-        detect_indels => { value => 1 },
-    ],
     has => [
         mb_of_ram => {
             is => 'Text',
@@ -73,16 +68,14 @@ sub _detect_variants {
     return 1;
 }
 
-sub _create_temp_directories {
-    my $self = shift;
-    $self->_temp_staging_directory($self->output_directory);
-    $self->_temp_scratch_directory($self->output_directory);
-    return 1;
-}
-    
-
 sub has_version {
-    return 1; #FIXME implement this when this module is filled out
+    my $self    = shift;
+    my $version = shift;
+
+    unless (defined $version) {
+        $version = $self->version;
+    }
+    return Genome::Model::Tools::Gatk::SomaticIndel->has_version($version);
 }
 
 1;

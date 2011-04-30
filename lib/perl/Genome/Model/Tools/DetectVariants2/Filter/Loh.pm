@@ -111,12 +111,13 @@ sub _generate_control_file {
     my $detector_params = "";
     my $detector_name = "samtools";
     my $normal_detector = "Genome::Model::Tools::DetectVariants2::" . ucfirst($detector_name);
+    my $detector_output_dir = $self->_temp_scratch_directory . "/normal_detector";
 
     # Detect snvs on the normal sample
     my $detector_command = $normal_detector->create(
         version => "$detector_version",
-        snv_params => "$detector_params",
-        output_directory => $self->_temp_scratch_directory,
+        params => "$detector_params",
+        output_directory => $detector_output_dir,
         aligned_reads_input => $self->control_aligned_reads_input,
         reference_build_id => $self->reference_build_id,
     );
@@ -129,7 +130,7 @@ sub _generate_control_file {
     my $filter_command = Genome::Model::Tools::DetectVariants2::Filter::SnpFilter->create(
         aligned_reads_input => $self->control_aligned_reads_input,
         reference_build_id => $self->reference_build_id,
-        input_directory => $self->_temp_scratch_directory,
+        input_directory => $detector_output_dir,
         detector_directory => $self->_temp_scratch_directory,
         output_directory => $filter_output,
         detector_name => $detector_name,

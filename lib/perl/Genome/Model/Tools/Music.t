@@ -41,25 +41,23 @@ else {
 my @cases = (
     {
         run => "music clinical-correlation \n"
-            . " --clinical-data-file $input_dir/clinical_data/tcga_OV_clinical_clean.csv.maf_samples.numeric.withNA.csv \n"
-            . " --clinical-data-type numeric \n"
+            . " --numeric-clinical-data-file $input_dir/clinical_data/tcga_OV_clinical_clean.csv.maf_samples.numeric.withNA.csv \n"
             . " --maf-file $input_dir/maf/tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent \n"
             . " --output-file $actual_output_dir/num_clin/tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent.num_cor \n"
             . " --genetic-data-type gene",
         expect => [
-            'num_clin/tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent.num_cor' 
+            'num_clin/tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent.num_cor.numeric' 
         ],
     },
     {
         run => "music clinical-correlation\n"
           # . " --clinical-data-file $input_dir/clinical_data/tcga_OV_clinical_clean.csv.maf_samples.categorical.withNA.csv \n"
-            . " --clinical-data-file $input_dir/clinical_data/tcga.categ.clin.data.vital.status \n"
-            . " --clinical-data-type class \n"
+            . " --categorical-clinical-data-file $input_dir/clinical_data/tcga.categ.clin.data.vital.status \n"
             . " --maf-file $input_dir/maf/tcga.categ.clin.data.vital.status.maf \n"
             . " --output-file $actual_output_dir/categ_clin/tcga.categ.clin.data.vital.status.class_correlation \n"
             . " --genetic-data-type gene",
         expect => [
-            'categ_clin/tcga.categ.clin.data.vital.status.class_correlation'
+            'categ_clin/tcga.categ.clin.data.vital.status.class_correlation.categorical'
         ],
     },
     {

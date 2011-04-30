@@ -85,7 +85,10 @@ sub execute {
     $op->parallel_by('library_alignments');
 
     # db disconnect prior to long operation
-    Genome::DataSource::GMSchema->disconnect_default_dbh;
+    if (Genome::DataSource::GMSchema->has_default_handle) {
+        $self->status_message("Disconnecting GMSchema default handle.");
+        Genome::DataSource::GMSchema->disconnect_default_dbh();
+    }
     
     my %extra_params = ();
     $extra_params{dedup_version} = $self->model->duplication_handler_version if $self->model->duplication_handler_version;

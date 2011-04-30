@@ -61,14 +61,12 @@ class Genome::Model::Tools::Somatic::VcfMakerTcga {
 	    is_optional => 0,
 	    is_input => 1},
 
-
 	center => {
 	    is => 'Text',
 	    doc => "Genome center name (WUSTL, Broad, Baylor)" ,
 	    is_optional => 1,
 	    default => "WUSTL",
 	    is_input => 1},
-
 
 	chrom => {
 	    is => 'Text',
@@ -77,6 +75,12 @@ class Genome::Model::Tools::Somatic::VcfMakerTcga {
 	    default => "",
 	    is_input => 1},
 
+	cp_score_to_qual => {
+	    is => 'Boolean',
+	    doc => "copy the somatic score to the qual field for Mutation WG comparisons" ,
+	    is_optional => 1,
+	    default => 0,
+	    is_input => 1},
 
 	genome_build => {
 	    is => 'Text',
@@ -131,6 +135,7 @@ sub execute {                               # replace with real execution logic.
     my $genome_build = $self->genome_build;
     my $dbsnp_file = $self->dbsnp_file;
     my $chrom = $self->chrom;
+    my $cp_score_to_qual = $self->cp_score_to_qual;
 
 
     my $analysis_profile = "somatic-sniper-and-varscan-capture";
@@ -161,6 +166,23 @@ sub execute {                               # replace with real execution logic.
 	return $iub_codes{$base}
     };
 
+#------------------------
+
+    sub genGT{
+	my ($base, @alleles) = @_;
+	my @bases = split(",",convertIub($base));
+	if (@bases > 1){
+	    my @pos;
+	    push(@pos, (firstidx{ $_ eq $bases[0] } @alleles));
+	    push(@pos, (firstidx{ $_ eq $bases[1] } @alleles));
+	    return(join("/", sort(@pos)));
+	} else { #only one base
+	    my @pos;
+	    push(@pos, (firstidx{ $_ eq $bases[0] } @alleles));
+	    push(@pos, (firstidx{ $_ eq $bases[0] } @alleles));
+	    return(join("/", sort(@pos)));
+	}
+    }
 
 #############################################################################
     sub print_header{
@@ -208,17 +230,18 @@ sub execute {                               # replace with real execution logic.
 	print OUTFILE "##INDIVIDUAL=$tcga_id" . "\n";
 
 	#first normal
-	print OUTFILE "##SAMPLE=<ID=" . $tcga_id . $seqType . "-normal,file=" . $normal_bam . "SeqCenter=" . $seqCenter . ",Accession=phs000178.v4.p4,FileSource=" . $file_source . ",SequenceSource=" . $file_source . ",AnalysisProfile=" . $analysis_profile . "Type=normal_DNA>" . "\n";
+	print OUTFILE "##SAMPLE=<ID=" . $tcga_id . $seqType . "-normal,file=" . $normal_bam . ",SeqCenter=" . $seqCenter . ",Accession=phs000178.v4.p4,FileSource=" . $file_source . ",SequenceSource=" . $file_source . ",AnalysisProfile=" . $analysis_profile . ",Type=normal_DNA>" . "\n";
 
 	#then tumor
-	print OUTFILE "##SAMPLE=<ID=" . $tcga_id . $seqType . "-tumor,file=" . $normal_bam . "SeqCenter=" . $seqCenter . ",Accession=phs000178.v4.p4,FileSource=" . $file_source . ",SequenceSource=" . $file_source . ",AnalysisProfile=" . $analysis_profile . "Type=tumor_DNA>" . "\n";
+	print OUTFILE "##SAMPLE=<ID=" . $tcga_id . $seqType . "-tumor,file=" . $normal_bam . ",SeqCenter=" . $seqCenter . ",Accession=phs000178.v4.p4,FileSource=" . $file_source . ",SequenceSource=" . $file_source . ",AnalysisProfile=" . $analysis_profile . ",Type=tumor_DNA>" . "\n";
 
 	# info lines
 	print OUTFILE "##INFO=<ID=DB,Number=0,Type=Flag,Description=\"dbSNP membership, build 130\">" . "\n";
-#	print OUTFILE "##INFO=<ID=VT,Number=1,Type=String,Description=\"Somatic variant type\">" . "\n";
+	print OUTFILE "##INFO=<ID=VT,Number=1,Type=String,Description=\"Somatic variant type\">" . "\n";
 
 	#all the filter info
 	print OUTFILE "##FILTER=<ID=PASS,Description=\"Passed all filters\">" . "\n";
+	print OUTFILE "##FILTER=<ID=snpfilter,Description=\"snp filter - Discard\">" . "\n";
 	print OUTFILE "##FILTER=<ID=sniperhc,Description=\"Somatic Sniper Low Confidence - Discard\">" . "\n";
 	print OUTFILE "##FILTER=<ID=fp,Description=\"False Positive Filter - Discard\">" . "\n";
 	print OUTFILE "##FILTER=<ID=varscan,Description=\"Varscan Low Confidence - Discard\">" . "\n";
@@ -230,11 +253,14 @@ sub execute {                               # replace with real execution logic.
 	print OUTFILE "##FORMAT=<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">" . "\n";
 	print OUTFILE "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Total Read Depth\">" . "\n";
 	print OUTFILE "##FORMAT=<ID=BQ,Number=1,Type=Integer,Description=\"Average Base Quality corresponding to alleles 0/1/2/3... after software and quality filtering\">" . "\n";
-	print OUTFILE "##FORMAT=<ID=MQ,Number=1,Type=Integer,Description=\"Average Mapping Quality corresponding to alleles 0/1/2/3... after software and quality filtering\">" . "\n";
-	print OUTFILE "##FORMAT=<ID=AD,Number=1,Type=Integer,Description=\"Allele Depth corresponding to alleles 0/1/2/3... after software and quality filtering\">" . "\n";
-	print OUTFILE "##FORMAT=<ID=VAS,Number=1,Type=Integer,Description=\"Variant  Status relative to non-adjacent normal 0=Wildtype, 1=Germline, 2=Somatic, 3=LOH, 4=Post_Transcriptional_Modification, 5=Undefined \">" . "\n";
-	print OUTFILE "##FORMAT=<ID=VAQ,Number=1,Type=Integer,Description=\"Quality score - sum of SomaticSniper and Varscan scores\">" . "\n";
-	print OUTFILE "##FORMAT=<ID=VLS,Number=1,Type=Integer,Description=\"Validation  Status relative to non-adjacent reference normal 0=Wildtype, 1=Germline, 2=Somatic, 3=LOH, 4=Post_Transcriptional_Modification, 5=Undefined \">" . "\n";
+
+	print OUTFILE "##FORMAT=<ID=MQ,Number=.,Type=Integer,Description=\"Average Mapping Quality corresponding to alleles 0/1/2/3... after software and quality filtering\">" . "\n";
+	print OUTFILE "##FORMAT=<ID=AD,Number=.,Type=Integer,Description=\"Allele Depth corresponding to alleles 0/1/2/3... after software and quality filtering\">" . "\n";
+	print OUTFILE "##FORMAT=<ID=FA,Number=1,Type=Float,Description=\"Fraction of reads supporting ALT\">" . "\n";
+
+#	print OUTFILE "##FORMAT=<ID=VAS,Number=1,Type=Integer,Description=\"Variant  Status relative to non-adjacent normal 0=Wildtype, 1=Germline, 2=Somatic, 3=LOH, 4=Post_Transcriptional_Modification, 5=Undefined\">" . "\n";
+	print OUTFILE "##FORMAT=<ID=VAQ,Number=1,Type=Float,Description=\"Quality score - sum of SomaticSniper and Varscan scores\">" . "\n";
+	print OUTFILE "##FORMAT=<ID=VLS,Number=1,Type=Integer,Description=\"Validation  Status relative to non-adjacent reference normal 0=Wildtype, 1=Germline, 2=Somatic, 3=LOH, 4=Post_Transcriptional_Modification, 5=Undefined\">" . "\n";
 	print OUTFILE "##FORMAT=<ID=VLQ,Number=1,Type=Integer,Description=\"Validation Score / Confidence\">" . "\n";
     
 	#column header:
@@ -282,36 +308,27 @@ sub execute {                               # replace with real execution logic.
 	$sniperSnvs{$id}{"chrom"} = $col[0];
 	$sniperSnvs{$id}{"pos"} = $col[1];
 
-	#get all the alleles together (necessary for the GT field)
-	my @alleles = ($col[2]);
 
+	#get all the alleles together (necessary for the GT field)
+	my @refAlleles = split(",", convertIub($col[2]));
+	my @allAlleles = split(",", convertIub($col[2]));
+	my @varAlleles;
 	my @tmp = split(",",convertIub($col[3]));
+
 	#only add non-reference alleles to the alt field
 	foreach my $alt (@tmp){
-	    unless ($alt eq $col[2]){
-		push(@alleles,$alt);
+	    unless (grep $_ eq $alt, @allAlleles){
+		push(@allAlleles,$alt);
+		push(@varAlleles,$alt);
 	    }
 	}
-	$sniperSnvs{$id}{"ref"} = $col[2];
-	$sniperSnvs{$id}{"alt"} = join("/",@alleles[1..(@alleles-1)]);
+
+	$sniperSnvs{$id}{"ref"} = convertIub($col[2]);
+	$sniperSnvs{$id}{"alt"} = join(",", @varAlleles);
 
 	#add the ref and alt alleles' positions in the allele array to the GT field
-	#ref
-	my @toSort = ((firstidx{ $_ eq $col[2] } @alleles),(firstidx{ $_ eq $col[2] } @alleles));
-	$sniperSnvs{$id}{"normal"}{"GT"} = join("/",sort(@toSort));
-
-
-	#alt
-	my @tumGT=split(",",convertIub($col[3]));
-	if (@tumGT > 1){
-	    my @toSort = ((firstidx{ $_ eq $tumGT[0] } @alleles),(firstidx{ $_ eq $tumGT[1] } @alleles));
-	    $sniperSnvs{$id}{"tumor"}{"GT"} = join("/",sort(@toSort));
-
-	} else {
-	    my @toSort = ((firstidx{ $_ eq $col[3] } @alleles),(firstidx{ $_ eq $col[3] } @alleles));
-	    $sniperSnvs{$id}{"tumor"}{"GT"} = join("/",sort(@toSort));
-	}
-
+	$sniperSnvs{$id}{"normal"}{"GT"} = ".";
+	$sniperSnvs{$id}{"tumor"}{"GT"} = genGT($col[3],@allAlleles);
 
 	#genotype quality
 	$sniperSnvs{$id}{"normal"}{"GQ"} = ".";
@@ -321,36 +338,29 @@ sub execute {                               # replace with real execution logic.
 	$sniperSnvs{$id}{"normal"}{"DP"} = $col[9];
 	$sniperSnvs{$id}{"tumor"}{"DP"} = $col[8];
 
-	#these fields all change based on whether the ref matches the var
-#	if ($col[2] eq $col[3]){
 	#avg base quality ref/var
-	$sniperSnvs{$id}{"normal"}{"BQ"} =  "./.";
-	$sniperSnvs{$id}{"tumor"}{"BQ"} =  $col[8] . "/.";
+	$sniperSnvs{$id}{"normal"}{"BQ"} =  ".";
+	$sniperSnvs{$id}{"tumor"}{"BQ"} =  $col[6];
+
 	#avg mapping quality ref/var
-	$sniperSnvs{$id}{"normal"}{"MQ"} =  "./.";
-	$sniperSnvs{$id}{"tumor"}{"MQ"} =  $col[7] . "/.";
+	$sniperSnvs{$id}{"normal"}{"MQ"} =  ".";
+	$sniperSnvs{$id}{"tumor"}{"MQ"} =  $col[7];
+
 	#allele depth
 	$sniperSnvs{$id}{"normal"}{"AD"} =  ".";
 	$sniperSnvs{$id}{"tumor"}{"AD"} =  ".";
-#	} else {
-#	    #avg base quality ref/var
-#	    $sniperSnvs{$id}{"normal"}{"BQ"} =  $col[20] . "/" . $col[23];
-#	    $sniperSnvs{$id}{"normal"}{"BQ"} =  $col[14] . "/" . $col[17];
-#	    #avg mapping quality ref/var
-#	    $sniperSnvs{$id}{"normal"}{"MQ"} =  $col[21] . "/" . $col[24];
-#	    $sniperSnvs{$id}{"normal"}{"MQ"} =  $col[15] . "/" . $col[18];
-#	    #allele depth
-#	    $sniperSnvs{$id}{"normal"}{"AD"} =  $col[22] . "/" . $col[25];
-#	    $sniperSnvs{$id}{"normal"}{"AD"} =  $col[16] . "/" . $col[19];
-#	}
 
-	#vas
-	$sniperSnvs{$id}{"normal"}{"VAS"} = 0;
-	$sniperSnvs{$id}{"tumor"}{"VAS"} = 2;
+	#fa
+	$sniperSnvs{$id}{"normal"}{"FA"} = ".";
+	$sniperSnvs{$id}{"tumor"}{"FA"} = ".";
+
+#	#vas
+#	$sniperSnvs{$id}{"normal"}{"VAS"} = 0;
+#	$sniperSnvs{$id}{"tumor"}{"VAS"} = 2;
 
 	#vaq
 	$sniperSnvs{$id}{"normal"}{"VAQ"} = ".";
-	$sniperSnvs{$id}{"tumor"}{"VAQ"} = $col[5];
+	$sniperSnvs{$id}{"tumor"}{"VAQ"} = $col[4];
 
 	#vls
 	$sniperSnvs{$id}{"normal"}{"VLS"} = ".";
@@ -360,7 +370,7 @@ sub execute {                               # replace with real execution logic.
 	$sniperSnvs{$id}{"tumor"}{"VLQ"} = ".";
     }
     $inFh->close();
-
+    
 
 #-----------------------------------------
 #next read in the complete Varscan file
@@ -397,76 +407,62 @@ sub execute {                               # replace with real execution logic.
 
 
 	#get all the alleles together (necessary for the GT field)
-	my @alleles = ($col[3]);
-
+	my @refAlleles = split(",", convertIub($col[3]));
+	my @allAlleles = split(",", convertIub($col[3]));
+	my @varAlleles;
 	my @tmp = split(",",convertIub($col[4]));
+
 	#only add non-reference alleles to the alt field
 	foreach my $alt (@tmp){
-	    unless ($alt eq $col[3]){
-		push(@alleles,$alt);
+	    unless (grep $_ eq $alt, @allAlleles){
+		push(@allAlleles,$alt);
+		push(@varAlleles,$alt);
 	    }
 	}
 
-	$varScanSnvs{$id}{"ref"} = $col[3];
-	$varScanSnvs{$id}{"alt"} = join("/",@alleles[1..(@alleles-1)]);
-
-
-	# #get all the alleles together (necessary for the GT field)
-	# my @alleles = split(",",convertIub($col[2]));
-	# my @tmp = split(",",convertIub($col[11]));
-	# @alleles = (@alleles,@tmp);
-	# @tmp = split(",",convertIub($col[7]));
-	# @alleles = (@alleles,@tmp);
-
-	# $varScanSnvs{$id}{"ref"} = convertIub($col[2]);
-	# $varScanSnvs{$id}{"alt"} = join("/",@alleles[1..(@alleles-1)]);
+	$varScanSnvs{$id}{"ref"} = convertIub($col[3]);
+	$varScanSnvs{$id}{"alt"} = join(",",@varAlleles);
 
 	#add the ref and alt alleles' positions in the allele array to the GT field
-	my @normGT=split(",",convertIub($col[8]));
-	if (@normGT > 1){
-	    my @toSort = ((firstidx{ $_ eq $normGT[0] } @alleles),(firstidx{ $_ eq $normGT[1] } @alleles));
-	    $varScanSnvs{$id}{"normal"}{"GT"} = join("/",sort(@toSort));
-	} else {
-	    $varScanSnvs{$id}{"normal"}{"GT"} = (firstidx{ $_ eq $col[8] } @alleles). "/" . (firstidx{ $_ eq $col[8] } @alleles);
-	}
-
-	my @tumGT=split(",",convertIub($col[12]));
-	if (@tumGT > 1){
-	    my @toSort = ((firstidx{ $_ eq $tumGT[0] } @alleles),(firstidx{ $_ eq $tumGT[1] } @alleles));
-	    $varScanSnvs{$id}{"tumor"}{"GT"} = join("/",sort(@toSort));
-	} else {
-	    $varScanSnvs{$id}{"tumor"}{"GT"} = (firstidx{ $_ eq $col[12] } @alleles). "/" . (firstidx{ $_ eq $col[12] } @alleles);
-	}
+	$varScanSnvs{$id}{"normal"}{"GT"} = ".";
+	$varScanSnvs{$id}{"tumor"}{"GT"} = genGT($col[12],@allAlleles);
 
 
 	#genotype quality
 	$varScanSnvs{$id}{"normal"}{"GQ"} = ".";
 	$varScanSnvs{$id}{"tumor"}{"GQ"} = ".";
-
+	
 	#total read depth
 	$varScanSnvs{$id}{"normal"}{"DP"} = $col[5]+$col[6];
 	$varScanSnvs{$id}{"tumor"}{"DP"} = $col[9]+$col[10];
-
+	
 	#avg base quality ref/var
 	$varScanSnvs{$id}{"normal"}{"BQ"} =  ".";
 	$varScanSnvs{$id}{"tumor"}{"BQ"} =  ".";
-
+	
 	#avg mapping quality ref/var
 	$varScanSnvs{$id}{"normal"}{"MQ"} =  ".";
 	$varScanSnvs{$id}{"tumor"}{"MQ"} =  ".";
-
+	
 	#allele depth  
-	$varScanSnvs{$id}{"normal"}{"AD"} =  $col[5] . "/" . $col[6];
-	$varScanSnvs{$id}{"tumor"}{"AD"} =  $col[9] . "/" . $col[10];
+	$varScanSnvs{$id}{"normal"}{"AD"} =  $col[5] . "," . $col[6];
+	$varScanSnvs{$id}{"tumor"}{"AD"} =  $col[9] . "," . $col[10];
+	
+	#fa
+	$col[7] =~ s/\%// ;
+	$col[11] =~ s/\%// ;
+	$varScanSnvs{$id}{"normal"}{"FA"} = $col[7]/100;
+	$varScanSnvs{$id}{"tumor"}{"FA"} =  $col[11]/100;
+	
 
-	#vas
-	if (($col[2] ne $col[7]) && ($col[3] eq $col[11])){
-	    $varScanSnvs{$id}{"normal"}{"VAS"} = 1;
-	    $varScanSnvs{$id}{"tumor"}{"VAS"} = 1;
-	} else {
-	    $varScanSnvs{$id}{"normal"}{"VAS"} = 0;
-	}
-	$varScanSnvs{$id}{"tumor"}{"VAS"} = 2;
+	# #vas
+	# if (($col[2] ne $col[7]) && ($col[3] eq $col[11])){
+	#     $varScanSnvs{$id}{"normal"}{"VAS"} = 1;
+	#     $varScanSnvs{$id}{"tumor"}{"VAS"} = 1;
+	# } else {
+	#     $varScanSnvs{$id}{"normal"}{"VAS"} = 0;
+	# }
+	# $varScanSnvs{$id}{"tumor"}{"VAS"} = 2;
 
 	#vaq
 	$varScanSnvs{$id}{"normal"}{"VAQ"} = ".";
@@ -488,12 +484,11 @@ sub execute {                               # replace with real execution logic.
 #and add a label to the filter field if it's removed
 
     sub addFilterInfo{
-	my ($filename,$filtername,$snvHashRef) = @_;
+	my ($filename,$filtername,$snvHashRef,$somatic_capture_dir) = @_;
 
 	#read in all the sites that passed the filter
 	my %passingSNVs;
-
-	my $inFh2 = IO::File->new( "$somatic_capture_dir/$filename" ) || die "can't open file\n";
+	my $inFh2 = IO::File->new( "$somatic_capture_dir/$filename" ) || die "can't open file $somatic_capture_dir/$filename\n";
 	while( my $line = $inFh2->getline )
 	{
 	    chomp($line);
@@ -502,27 +497,26 @@ sub execute {                               # replace with real execution logic.
 
 	    $passingSNVs{$id} = 1;
 	}
-	$inFh->close();
+	$inFh2->close();
 
 	#check each stored SNV
 	foreach my $key (keys( %{$snvHashRef} )){
 	    #if it did not pass this filter
 	    unless(exists($passingSNVs{$key})){
 		#and hasn't already been filtered out
-		unless(exists(%{$snvHashRef}->{$key}{"filter"})){
+		unless(exists($snvHashRef->{$key}{"filter"})){
 		    #add the filter name
-		    %{$snvHashRef}->{$key}{"filter"} = $filtername;
+		    $snvHashRef->{$key}{"filter"} = $filtername;
 		}
 	    }
 	}
     }
 
+    addFilterInfo("varScan.output.snp.formatted.Somatic.hc", "varscan", \%varScanSnvs, $somatic_capture_dir);
 
-    addFilterInfo("varScan.output.snp.formatted.Somatic.hc", "varscan", \%varScanSnvs);
-
-    addFilterInfo("somaticSniper.output.snp.filter","snpfilter",\%sniperSnvs);
-    addFilterInfo("somaticSniper.output.snp.filter.hc","sniperhc",\%sniperSnvs);
-    addFilterInfo("somaticSniper.output.snp.filter.hc.somatic","loh",\%sniperSnvs);
+    addFilterInfo("somaticSniper.output.snp.filter","snpfilter",\%sniperSnvs, $somatic_capture_dir);
+    addFilterInfo("somaticSniper.output.snp.filter.hc","sniperhc",\%sniperSnvs, $somatic_capture_dir);
+    addFilterInfo("somaticSniper.output.snp.filter.hc.somatic","loh",\%sniperSnvs, $somatic_capture_dir);
 
 
 #-------------------------------------------
@@ -556,8 +550,8 @@ sub execute {                               # replace with real execution logic.
 
 
 #finally, remove those in the novel filter
-    addFilterInfo("merged.somatic.snp.filter", "fp", \%varScanSnvs);
-    addFilterInfo("merged.somatic.snp.filter.novel", "novel", \%varScanSnvs);
+    addFilterInfo("merged.somatic.snp.filter", "fp", \%varScanSnvs, $somatic_capture_dir);
+    addFilterInfo("merged.somatic.snp.filter.novel", "novel", \%varScanSnvs,  $somatic_capture_dir);
 
 
 #---------------------------------------------
@@ -618,7 +612,7 @@ sub execute {                               # replace with real execution logic.
 
 #---------------------------------------------
     sub print_body{
-	my ($output_file,$snvHash) = @_;
+	my ($output_file, $cp_score_to_qual, $snvHash) = @_;
 
 	open(OUTFILE, ">>$output_file") or die "Can't open output file: $!\n";
 	my %snvhash = %{$snvHash};
@@ -649,11 +643,18 @@ sub execute {                               # replace with real execution logic.
 	    push(@outline, $snvhash{$key}{"ref"});
 	    push(@outline, $snvhash{$key}{"alt"});
 
+	    
+	    
+	    
 	    #QUAL
 	    if (exists($snvhash{$key}{"qual"})){
 		push(@outline, $snvhash{$key}{"qual"});
 	    } else {
-		push(@outline, ".");
+		if ($cp_score_to_qual){
+		    push(@outline, $snvhash{$key}{"tumor"}{"VAQ"});
+		} else {		    
+		    push(@outline, ".");
+		}
 	    }
 
 	    #FILTER
@@ -664,14 +665,14 @@ sub execute {                               # replace with real execution logic.
 	    }
 
 	    #INFO
-	    push(@outline, ".");
+	    push(@outline, "VT=SNP");
 
 	    #FORMAT
-	    push(@outline, "GT:GQ:DP:BQ:MQ:AD:VAS:VAQ:VLS:VLQ");
+	    push(@outline, "GT:GQ:DP:BQ:MQ:AD:FA:VAQ:VLS:VLQ");
 
 	    my @normalFormat;
 	    my @tumorFormat;
-	    my @fields = ("GT","GQ","DP","BQ","MQ","AD","VAS","VAQ","VLS","VLQ");
+	    my @fields = ("GT","GQ","DP","BQ","MQ","AD","FA","VAQ","VLS","VLQ");
 	    #collect format fields
 	    foreach my $field (@fields){
 		push(@normalFormat, $snvhash{$key}{"normal"}{$field});
@@ -687,6 +688,6 @@ sub execute {                               # replace with real execution logic.
 #----------------------------------
 
     print_header($tumor_bam, $normal_bam, $center, $genome_build, $tcga_id, $file_source, $analysis_profile,$output_file);
-    print_body($output_file, \%varScanSnvs);
+    print_body($output_file, $cp_score_to_qual, \%varScanSnvs);
     return 1;
 }
