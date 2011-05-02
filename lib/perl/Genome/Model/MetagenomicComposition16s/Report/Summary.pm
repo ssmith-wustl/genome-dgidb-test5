@@ -89,9 +89,6 @@ sub get_summary_stats {
 
     my @lengths = sort { $a <=> $b } @{ $self->{_metrix}->{lengths} };
     my $length = $sum->(@lengths);
-    my $reads_processed_success = ( $self->{_metrix}->{reads_processed} > 0 )
-    ? sprintf('%.2f', $self->{_metrix}->{reads_processed} / $self->{_metrix}->{reads})
-    : 'NA';
 
     my %totals = (
         # Amplicons
