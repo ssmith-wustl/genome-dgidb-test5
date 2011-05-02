@@ -365,7 +365,6 @@ sub is_eliminate_all_duplicates {
 sub is_lane_qc {
     my $self = shift;
     my $pp = $self->processing_profile;
-    # TODO Is there a better way to determine if this is a lane qc model?
     if ($pp->append_event_steps && $pp->append_event_steps =~ /LaneQc/) {
         return 1;
     }
@@ -433,5 +432,19 @@ sub init_genotype_model {
     return unless $gmodel;
     $self->genotype_microarray_model_id($gmodel->id);
 }
+
+sub verify_inputs { 
+    my $self = shift;
+    my $good_to_go = 1;
+
+    if ($self->is_lane_qc) {
+        $self->init_genotype_model;
+        unless ($self->genotype_microarray_model) {
+            $good_to_go = 0;
+            $self->error_message("Could not resolve genotype microarray model for reference alignment model " . $self->id);
+        }
+    }
+    return $good_to_go;
+}       
 
 1;
