@@ -56,8 +56,9 @@ The output of this script returns each row the original input MAF file with two 
 
 Also please note that this tool only compares to Build36 coordinates in the Cosmic database. Support for build 37 is coming, but as of this update the Cosmic database only has sparse entries in build 37 coordinates.
 
-Column headers in the MAF should also include the following annotation headers (must be exactly these names in header line in order for the tool to find them):
-chromosome_name, start, stop, reference, variant, type, gene_name, transcript_name, strand, transcript_status, amino_acid_change
+In addition to the standard version 2.2 MAF headers, there needs to be two columns appended. These column headers in the MAF must be exactly these names in header line in order for the tool to find them:
+transcript_name - the transcript name, such as NM_000028
+amino_acid_change - the amino acid change, such as p.E290V
 
 EOS
 }
@@ -319,13 +320,14 @@ foreach my $line_num (keys %{$mutation->{$hugo}->{$sample}}) {
 if ($verbose) {print ".";}   #report that we are starting a sample 
 
 #read in the alleles. The keys may change with future file formats. If so, a new version should be added to
-   my ($entrez_gene_id, $line, $aa_change,$transcript,$mstatus,$Variant_Type,$Chromosome,$Start_position,$End_position,$Reference_Allele,$Tumor_Seq_Allele1,$gene) =
+#   my ($entrez_gene_id, $line, $aa_change,$transcript,$mstatus,$Variant_Type,$Chromosome,$Start_position,$End_position,$Reference_Allele,$Tumor_Seq_Allele1,$gene) =
+   my ($entrez_gene_id, $line, $aa_change,$transcript,$Variant_Type,$Chromosome,$Start_position,$End_position,$Reference_Allele,$Tumor_Seq_Allele1,$gene) =
 	   (
 	    $mutation->{$hugo}->{$sample}->{$line_num}->{ENTREZ_GENE_ID},
 	    $mutation->{$hugo}->{$sample}->{$line_num}->{file_line},
 	    $mutation->{$hugo}->{$sample}->{$line_num}->{AA_CHANGE},
 	    $mutation->{$hugo}->{$sample}->{$line_num}->{TRANSCRIPT},
-	    $mutation->{$hugo}->{$sample}->{$line_num}->{MUTATION_STATUS},
+#	    $mutation->{$hugo}->{$sample}->{$line_num}->{MUTATION_STATUS},
 	    $mutation->{$hugo}->{$sample}->{$line_num}->{VARIANT_TYPE},
 	    $mutation->{$hugo}->{$sample}->{$line_num}->{CHROMOSOME},
 	    $mutation->{$hugo}->{$sample}->{$line_num}->{START_POSITION},
@@ -334,7 +336,7 @@ if ($verbose) {print ".";}   #report that we are starting a sample
 	    $mutation->{$hugo}->{$sample}->{$line_num}->{TUMOR_SEQ_ALLELE1},
 	    $mutation->{$hugo}->{$sample}->{$line_num}->{HUGO_SYMBOL},
 	   );
-   if ($mstatus){
+#   if ($mstatus){
 #Annotate the allele's effect on all known (ie transcript without the 'unknown' status) transcripts
 ##Alleles are listed in alphabetical order, find the one that actually is different               
 	my $proper_allele = $Tumor_Seq_Allele1;
@@ -519,7 +521,7 @@ if ($verbose) {print ".";}   #report that we are starting a sample
 
 	my $createspreadsheet = "$line_num\t$fileline{$line_num}\t$cosmic_results{$line_num}\t$omim_results{$line_num}";
 	print SUMMARY "$createspreadsheet\n";
-   }
+#   }
 }
 }
 }
@@ -793,17 +795,19 @@ sub ParseMutationFile {
 	my $keyfields = 'HUGO_SYMBOL:TUMOR_SAMPLE_ID:file_line_num';
 	my $field_subset_array = undef;
 	my $header_translation = {
-            'chromosome_name' => 'CHROMOSOME',
-            'start' => 'START_POSITION',
-            'stop' => 'END_POSITION',
-            'reference' => 'REFERENCE_ALLELE',
-            'variant' => 'TUMOR_SEQ_ALLELE1',
-            'type' => 'VARIANT_TYPE',
-            'gene_name' => 'HUGO_SYMBOL',
+            'Chromosome' => 'CHROMOSOME',
+            'Start_position' => 'START_POSITION',
+            'End_position' => 'END_POSITION',
+            'Reference_Allele' => 'REFERENCE_ALLELE',
+            'Tumor_Seq_Allele2' => 'TUMOR_SEQ_ALLELE1', #also consider Tumor_Seq_Allele1
+            'Variant_Type' => 'VARIANT_TYPE',
+            'Hugo_Symbol' => 'HUGO_SYMBOL',
             'transcript_name' => 'TRANSCRIPT',
-            'strand' => 'TUMOR_SAMPLE_ID', #meaningless proxy
-            'transcript_status' => 'MUTATION_STATUS',
+            'Strand' => 'TUMOR_SAMPLE_ID', #meaningless proxy
+#            'transcript_status' => 'MUTATION_STATUS',
             'amino_acid_change' => 'AA_CHANGE',
+#Variant_Classification
+#Mutation_Status
 	};
 	my $header_skip = 0;
 	my $no_header = 0;
