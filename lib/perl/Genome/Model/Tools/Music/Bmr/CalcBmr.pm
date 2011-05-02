@@ -21,7 +21,7 @@ class Genome::Model::Tools::Music::Bmr::CalcBmr {
 };
 
 sub help_brief {
-  "Uses output files of calc-covg, and a mutation list to calculate Background Mutation Rates";
+  "Calculates background mutation rates using output files of calc-covg and a mutation list.";
 }
 
 sub help_detail {
@@ -60,6 +60,12 @@ ARGUMENTS:
   A comma-delimited list of genes to ignore for overall BMR calculations. List genes that are
   known factors in this disease and whose mutations should not be classified as background.
 HELP
+}
+
+sub _doc_authors {
+    return ('',
+        'Cyriac Kandoth, Ph.D.',
+    );
 }
 
 sub execute {

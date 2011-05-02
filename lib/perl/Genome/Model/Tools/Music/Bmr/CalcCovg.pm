@@ -22,7 +22,7 @@ class Genome::Model::Tools::Music::Bmr::CalcCovg {
 };
 
 sub help_brief {
-  "Uses calcRoiCovg to count covered bases per-gene for each given tumor-normal pair of BAMs";
+  "Uses calcRoiCovg to count covered bases per-gene for each given tumor-normal pair of BAMs.";
 }
 
 sub help_detail {
@@ -85,9 +85,14 @@ ARGUMENTS:
 HELP
 }
 
+sub _doc_authors {
+    return ('',
+        'Cyriac Kandoth, Ph.D.',
+    );
+}
+
 sub execute {
   my $self = shift;
-  $DB::single = 1;
   my $roi_file = $self->roi_file;
   my $ref_seq = $self->reference_sequence;
   my $bam_list = $self->bam_list;

@@ -26,10 +26,12 @@ ok ( $pid->execute, 'execute' );
 my $input_fasta = $build->combined_input_fasta_file;
 ok( -s $input_fasta, "Combined input fasta file" );
 
+# metrics
 is($build->amplicons_attempted, 600, 'amplicons attempted is 600');
+is($build->reads_attempted, 600, 'reads attempted is 600');
+is($build->reads_processed, 600, 'reads processed is 600');
+is($build->reads_processed_success, '1.00', 'reads processed success is 1.00');
 
 #<STDIN>;
-
 done_testing();
-
 exit;

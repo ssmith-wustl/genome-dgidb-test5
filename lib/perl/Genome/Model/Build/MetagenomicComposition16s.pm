@@ -78,6 +78,30 @@ class Genome::Model::Build::MetagenomicComposition16s {
             to => 'value',
             doc => 'Number of amplicons that had a classification error, and did not classify.'
         },
+        reads_attempted => {
+            is => 'Integer',
+            via => 'metrics',
+            is_mutable => 1,
+            where => [ name => 'reads attempted' ],
+            to => 'value',
+            doc => 'Number of reads attempted.'
+        },
+        reads_processed => {
+            is => 'Integer',
+            via => 'metrics',
+            is_mutable => 1,
+            where => [ name => 'reads processed' ],
+            to => 'value',
+            doc => 'Number of reads that processed into amplicon sequence.'
+        },
+        reads_processed_success => {
+            is => 'Number',
+            via => 'metrics',
+            is_mutable => 1,
+            where => [ name => 'reads processed success' ],
+            to => 'value',
+            doc => 'Percentage of reads successfully processed into amplicon sequence.'
+        },
     ],
 };
 
@@ -230,7 +254,6 @@ sub _amplicon_iterator_for_name { # 454 and solexa for now
         chomp $classification_line if $classification_line;
 
         $amplicon{classification} = \@classification;
-        print Dumper(\%amplicon);
         return \%amplicon;
     };
 
