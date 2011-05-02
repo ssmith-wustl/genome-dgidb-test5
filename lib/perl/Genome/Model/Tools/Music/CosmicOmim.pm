@@ -42,7 +42,8 @@ class Genome::Model::Tools::Music::CosmicOmim {
 
 sub help_synopsis_FIXME {
     return <<EOS;
-... music cosmic-omim --maf-file input_dir/myMAF.tsv --output-file output_dir/myMAFoutput.tsv --omimaa-dir omim_dir/ --cosmic-dir cosmic_dir/ --verbose
+... music cosmic-omim --maf-file input_dir/myMAF.tsv --output-file output_dir/myMAF_output.tsv --no-verbose
+... music cosmic-omim --maf-file input_dir/myMAF.tsv --output-file output_dir/myMAF_output.tsv --omimaa-dir omim_dir/ --cosmic-dir cosmic_dir/ --no-verbose
 
 EOS
 }
@@ -51,9 +52,9 @@ sub help_detail {
     return <<EOS;
 This tool looks at the amino acid changes for the given set of mutations and compares the genomic coordinates as well as the affected amino acid to the coordinates and amino acids of all cancer-specific mutations listed in the Cosmic and OMIM databases. The database files are specially prepared for this task and provided with the MuSiC suite. The tool reports various types of matches, including matches within "near proximity", where "near proximity" is currently defined as a linear DNA distance of 5 bases or 2 amino acids. (This type of matching helps to account for the possibility of subtle differences in reported positions for variants due to differences in transcript definitions or other things of this nature.) Any site without a match in a particular databases is reported as "novel" with respect to that database.
 
-The output of this script returns each row the original input MAF file with two columns appended to the end of each, one per each of the databases. Also included is a STDOUT printout of a summary of what was found in the input MAF. Neither output can be suppressed in the current version. The verbose option is used primarily to display working notes that are useful for various purposes in debugging potential MAF problems. The omim and cosmic folders must point to the output of the downloader, named appropriately, as they don't recognize the OMIM database in the raw download format.
+The output of this script returns each row the original input MAF file with two columns appended to the end of each, one column for each of the databases. Also included is a STDOUT printout of a summary of what was found in the input MAF. Neither output can be suppressed in the current version. The --verbose option is used to display working notes that are useful for various purposes in debugging potential MAF problems. The Omim and Cosmic directories must point to the output of the downloader, named appropriately, as they don't recognize the OMIM database in the raw download format.
 
-Also, as a caution, this tool only compares to Build36 coordinates in the Cosmic database. Support for build 37 is coming, but as of this update the Cosmic database only has sparse entries in build 37 coordinates.
+Also please note that this tool only compares to Build36 coordinates in the Cosmic database. Support for build 37 is coming, but as of this update the Cosmic database only has sparse entries in build 37 coordinates.
 
 Column headers in the MAF should also include the following annotation headers (must be exactly these names in header line in order for the tool to find them):
 chromosome_name, start, stop, reference, variant, type, gene_name, transcript_name, strand, transcript_status, amino_acid_change
