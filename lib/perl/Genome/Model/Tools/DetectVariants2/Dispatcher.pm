@@ -805,8 +805,8 @@ sub _promote_staged_data {
             # Create v1 and v2 symlinks to the bed files
             if ($variant_type eq "snv" || $variant_type eq "indel") {
                 (my $unversioned_output = $output) =~ s/\.v\d//;
-                (my $v2_output = $output) =~ s/\.bed/.v2.bed/;
-                (my $v1_output = $output) =~ s/\.bed/.v1.bed/;
+                (my $v2_output = $unversioned_output) =~ s/\.bed/.v2.bed/;
+                (my $v1_output = $unversioned_output) =~ s/\.bed/.v1.bed/;
 
                 # Sometimes the .bed file exists already. Sometimes the v2.bed exists already. Make whatever two links do not exist.
                 for my $link_target ($unversioned_output, $v1_output, $v2_output) {
@@ -818,8 +818,8 @@ sub _promote_staged_data {
                 # Create LQ links also, if an lq file was produced 
                 (my $lq_output = $output) =~ s/hq/lq/;
                 (my $unversioned_lq_output = $lq_output) =~ s/\.v\d//;
-                (my $lq_v2_output = $lq_output) =~ s/\.bed/.v2.bed/;
-                (my $lq_v1_output = $lq_output) =~ s/\.bed/.v1.bed/;
+                (my $lq_v2_output = $unversioned_lq_output) =~ s/\.bed/.v2.bed/;
+                (my $lq_v1_output = $unversioned_lq_output) =~ s/\.bed/.v1.bed/;
                 for my $link_target ($unversioned_lq_output, $lq_v1_output, $lq_v2_output) {
                     if ( (-e $lq_output) && !(-e $link_target) ) {
                         Genome::Sys->create_symlink($lq_output, $link_target);

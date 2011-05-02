@@ -102,10 +102,20 @@ sub _create_temp_directories {
     return $self->SUPER::_create_temp_directories(@_);
 }
 
-# FIXME temporary hack to prevent breakdancer from using software results... fix this ASAP
 sub execute {
     my $self = shift;
-    return $self->_generate_result;
+
+    if($self->chromosome and $self->chromosome ne 'all') {
+        my $output_dir = $self->output_directory;
+        unless(-d $output_dir) {
+            #This should only happen if a single chromosome was executed directly
+            Genome::Sys->create_directory($output_dir);
+        }
+        #Put per-chromosome outputs in subdirectories to avoid collisions in SoftwareResults
+        $self->output_directory($output_dir . '/' . $self->chromosome);
+    }
+
+    return $self->SUPER::_execute_body;
 }
 
 
@@ -224,7 +234,7 @@ sub run_breakdancer {
             }
 
             my $merge_obj = Genome::Model::Tools::Breakdancer::MergeFiles->create(
-                input_files => join(',', map { $self->_temp_staging_directory . '/' . $self->_sv_base_name . '.' . $_ } @chr_list),
+                input_files => join(',', map { $self->_temp_staging_directory . '/' . $_ . '/' . $self->_sv_base_name . '.' . $_ } @chr_list),
                 output_file => $self->_sv_staging_output,
             );
             my $merge_rv = $merge_obj->execute;
