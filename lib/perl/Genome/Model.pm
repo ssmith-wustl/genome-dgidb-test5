@@ -170,7 +170,7 @@ class Genome::Model {
         },
         sample_names => {
             is => 'Array',
-            calculate => q {
+            calculate => q{
                 my @s = $self->get_all_possible_samples();
                 return sort map {$_->name()} @s;
             },
@@ -639,7 +639,6 @@ sub unassigned_instrument_data {
 
     return grep { not $assigned_instrument_data_ids{$_->id} } @compatible_instrument_data;
 }
-#<>#
 
 # These vary based on the current configuration, which could vary over
 # time.  This value is set when the model is created if not specified by the creator.
@@ -698,7 +697,6 @@ sub last_complete_build_id {
     return unless $last_complete_build;
     return $last_complete_build->id;
 }
-#<>#
 
 sub builds_with_status {
     my ($self, $status) = @_;
@@ -818,6 +816,7 @@ sub yaml_string {
     return $string;
 }
 
+# TODO Will be removed when model links are phased out
 # TODO please rename this -ss
 sub add_to_model{
     my $self = shift;
@@ -855,6 +854,7 @@ sub add_to_model{
     return $bridge;
 }
 
+# TODO Will be removed when model links are phased out
 # TODO please rename this -ss
 sub add_from_model{
     my $self = shift;
@@ -1003,6 +1003,26 @@ sub additional_params_for_copy {
 sub dependent_properties {
     my ($self, $property_name) = @_;
     return;
+}
+
+sub create_build {
+    my $self = shift;
+    unless ($self->verify_inputs) {
+        $self->error_message("Some model inputs for model " . $self->id . " are not ready, cannot start build. " .
+            "Build requested flag has been set, so another attempt at starting a build will be made later.");
+        $self->build_requested(1);
+        return;
+    }
+
+    my $build = eval { Genome::Model::Build->create(@_) };
+    Carp::confess "Could not create new build: $@" unless $build;
+    return $build;
+}
+
+# Makes sure that all model inputs are in place and returns true if so. This is called prior to starting a build
+# and should be overridden in subclasses for custom behavior.
+sub verify_inputs {
+    return 1;
 }
 
 1;
