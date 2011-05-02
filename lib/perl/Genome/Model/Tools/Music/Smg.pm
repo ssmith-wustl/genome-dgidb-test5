@@ -17,6 +17,13 @@ class Genome::Model::Tools::Music::Smg {
   doc => "Identifies significantly mutated genes."
 };
 
+sub help_synopsis {
+  return <<HELP
+... music smg --gene-mr-file output_dir/gene_mrs --output-file output_dir/smgs
+(gene_mrs is an output of "music bmr calc-bmr")
+HELP
+}
+
 sub help_detail {
   return <<HELP
 This script runs R-based statistical tools to calculate the significance of mutated genes, given
