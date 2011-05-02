@@ -953,9 +953,6 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             $self->error_message(
                 'Failed to execute instrument-data assign for model '
                 . $m->id . ' instrument data '.$genome_instrument_data->id );
-
-            # $m->delete;
-            # next;
             for my $model (@new_models) { $model->delete; }
             return;
         }
@@ -970,8 +967,6 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             $self->error_message(
                 'Failed to execute instrument-data assign --all for model '
                 . $m->id );
-            # $m->delete;
-            # next;
             for my $model (@new_models) { $model->delete; }
             return;
         }
@@ -986,8 +981,6 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             $self->error_message(
                 'instrument data ' . $genome_instrument_data->id . ' not assigned to model ????? (' . $m->id . ')'
             );
-            # $m->delete;
-            # next;
             for my $model (@new_models) { $model->delete; }
             return;
         }
@@ -997,6 +990,9 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
 
         if ($m->name =~ /\.wu-space$/) {
             for (@group_names) {$_ .= ".wu-space" if ($_)};
+        }
+        if ($m->name =~ /\.tcga-cds$/) {
+            for (@group_names) {$_ .= ".tcga-cds" if ($_)};
         }
         $self->add_model_to_default_modelgroups($m, @group_names);
 
