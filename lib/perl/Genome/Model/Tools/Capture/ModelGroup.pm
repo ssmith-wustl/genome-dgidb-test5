@@ -159,7 +159,7 @@ sub execute {                               # replace with real execution logic.
 		if($self->show_lanes)
 		{
 			## Get Assigned Instrument Data ##
-			my @instrument_data = $model->assigned_instrument_data;
+			my @instrument_data = $model->instrument_data;
 			
 			foreach my $instrument_data (@instrument_data)
 			{

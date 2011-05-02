@@ -332,6 +332,10 @@ sub set_default_genotype_data {
         Carp::confess 'Could not create default genotype data attribute for sample ' . $self->id unless $attribute;
     }
 
+    for my $genotype_model ($self->default_genotype_models) {
+        $genotype_model->request_builds_for_dependent_ref_align;
+    }
+
     return 1;
 }
 

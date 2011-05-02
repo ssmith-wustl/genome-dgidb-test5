@@ -63,8 +63,6 @@ class Genome::Model::Build {
                                     return $disk_allocation;
                                 ) },
         software_revision => { is => 'VARCHAR2', len => 1000 },
-        region_of_interest_set_value     => { is_many => 1, is => 'UR::Value', via => 'inputs', to => 'value', where => [ name => 'region_of_interest_set_name'] },
-        region_of_interest_set_name      => { via => 'region_of_interest_set_value', to => 'id', },
     ],
     has_many_optional => [
         inputs           => { is => 'Genome::Model::Build::Input', reverse_as => 'build', 

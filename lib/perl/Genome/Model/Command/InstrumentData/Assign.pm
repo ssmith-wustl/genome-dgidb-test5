@@ -420,7 +420,7 @@ sub _list_compatible_instrument_data {
     my $self = shift;
 
     my @compatible_instrument_data = $self->model->compatible_instrument_data;
-    my @assigned_instrument_data   = $self->model->assigned_instrument_data;
+    my @assigned_instrument_data   = $self->model->instrument_data;
     my @unassigned_instrument_data = $self->model->unassigned_instrument_data;
 
     $self->status_message(
