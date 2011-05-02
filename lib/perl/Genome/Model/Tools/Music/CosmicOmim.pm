@@ -33,11 +33,8 @@ class Genome::Model::Tools::Music::CosmicOmim {
            default => Genome::Sys->dbpath('cosmic','latest'),
        },
        verbose => {
-           # TODO: you probably want Boolean.  The cmdline standard is --no-verbose to turn it off (for free with Boolean)
-           # is => 'Boolean',
-           is => 'Path',
-           doc => 'turn on to display larger working output, default on',
-           default => '1',
+           is => 'Boolean',
+           doc => 'Use this to display the larger working output',
        },
     ],
     doc => 'Compare the amino acid changes of supplied mutations to COSMIC and OMIM databases.'
@@ -45,15 +42,19 @@ class Genome::Model::Tools::Music::CosmicOmim {
 
 sub help_synopsis_FIXME {
     return <<EOS;
-gmt annotate compare-mutations --mutation=/gscuser/wschierd/code/test_annotated/Test/06-02-2010_cosmic_omim_test.csv --omimaa=/gscmnt/200/medseq/analysis/software/resources/OMIM/OMIM_Will/OMIM_aa_will.csv --cosmic-dir=/gscmnt/sata180/info/medseq/biodb/shared/cosmic/cosmic_will/ --output-file=/gscuser/wschierd/code/test_annotated/Test/cosmic_OMIM_test_results_compare.csv 
+... music cosmic-omim --maf-file input_dir/myMAF.tsv --output-file output_dir/myMAFoutput.tsv --omimaa-dir omim_dir/ --cosmic-dir cosmic_dir/ --verbose
 
-gmt annotate compare-mutations-speedup --mutation=/gscuser/wschierd/code/test_annotated/Test/06-02-2010_cosmic_omim_test.csv --omimaa=/gscmnt/200/medseq/analysis/software/resources/OMIM/OMIM_Will/OMIM_aa_will.csv --cosmic-dir=/gscmnt/sata180/info/medseq/biodb/shared/cosmic/cosmic_will/ --output-file=/gscuser/wschierd/code/test_annotated/Test/cosmic_OMIM_test_results_compare_speedup.csv 
 EOS
 }
 
 sub help_detail {
     return <<EOS;
 This tool looks at the amino acid changes for the given set of mutations and compares the genomic coordinates as well as the affected amino acid to the coordinates and amino acids of all cancer-specific mutations listed in the Cosmic and OMIM databases. The database files are specially prepared for this task and provided with the MuSiC suite. The tool reports various types of matches, including matches within "near proximity", where "near proximity" is currently defined as a linear DNA distance of 5 bases or 2 amino acids. (This type of matching helps to account for the possibility of subtle differences in reported positions for variants due to differences in transcript definitions or other things of this nature.) Any site without a match in a particular databases is reported as "novel" with respect to that database.
+
+The output of this script returns each row the original input MAF file with two columns appended to the end of each, one per each of the databases. Also included is a STDOUT printout of a summary of what was found in the input MAF. Neither output can be suppressed in the current version. The verbose option is used primarily to display working notes that are useful for various purposes in debugging potential MAF problems. The omim and cosmic folders must point to the output of the downloader, named appropriately, as they don't recognize the OMIM database in the raw download format.
+
+Also, as a caution, this tool only compares to Build36 coordinates in the Cosmic database. Support for build 37 is coming, but as of this update the Cosmic database only has sparse entries in build 37 coordinates.
+
 EOS
 }
 
