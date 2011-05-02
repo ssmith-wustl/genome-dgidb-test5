@@ -29,20 +29,9 @@ class Genome::Wiki::Document {
                 default_value => Genome::Config::dev_mode() ? 'dev' : 'prod'
             },
         },
-        _wiki_server_url => {
+        wiki_server_url => {
             calculate => q{
                 default_value => 'https://gscweb.gsc.wustl.edu/mediawiki/api.php',
-            },
-        },
-        _dev_wiki_server_url => {
-            calculate => q{
-                    return 'https://gscweb-dev.gsc.wustl.edu/mediawiki/api.php',
-            },
-        },
-        wiki_server_url   => {
-            calculate_from => ['environment', '_wiki_server_url', '_dev_wiki_server_url',],
-            calculate => q{
-                    return $environment eq 'prod' ? $_wiki_server_url : $_dev_wiki_server_url
             },
         },
     },
