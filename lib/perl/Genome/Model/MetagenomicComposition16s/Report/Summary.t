@@ -28,6 +28,9 @@ $build->amplicons_processed(4);
 $build->amplicons_processed_success('0.80');
 $build->amplicons_classified(4);
 $build->amplicons_classified_success(1);
+$build->reads_attempted(30);
+$build->reads_processed(17);
+$build->reads_processed_success('0.57');
 
 # real report
 $generator = Genome::Model::MetagenomicComposition16s::Report::Summary->create(build_id => $build->id);
@@ -35,7 +38,7 @@ ok($generator, 'Created generator');
 $report = $generator->generate_report;
 ok($report, 'Generated report');
 
-#print $report->xml_string."\n";
+print $report->xml_string."\n";
 #print $build->classification_file_for_set_name('');<STDIN>;
 done_testing();
 exit;
