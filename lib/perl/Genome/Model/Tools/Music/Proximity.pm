@@ -40,7 +40,7 @@ EOS
 
 sub help_synopsis {
     return <<EOS 
-EXAMPLE:  ... music proximity --maf-file myMAF.tsv --max-proximity 10 --reference-sequence "path_to_reference_sequence" --output-file myMAF.tsv.proximity_analysis
+... music proximity --maf-file myMAF.tsv --max-proximity 10 --reference-sequence "path_to_reference_sequence" --output-file myMAF.tsv.proximity_analysis
 EOS
 }
 

@@ -14,15 +14,21 @@ class Genome::Model::Tools::Music::Smg {
     gene_mr_file => { is => 'Text', doc => "File with per-gene mutation rates (Created using music bmr calc-bmr)" },
     output_file => { is => 'Text', doc => "Output file that will list significantly mutated genes and their p-values" },
   ],
-  doc => "identifies significantly mutated genes, given their mutation rates (MR) and the background MR"
+  doc => "Identifies significantly mutated genes."
 };
 
 sub help_detail {
   return <<HELP
 This script runs R-based statistical tools to calculate the significance of mutated genes, given
-their individual mutation rates categorized by mutation type and the overall background mutations
+their individual mutation rates categorized by mutation type and the overall background mutation
 rates for each of those categories.
 HELP
+}
+
+sub _doc_authors {
+    return ('',
+        'Cyriac Kandoth, Ph.D.',
+    );
 }
 
 sub execute {

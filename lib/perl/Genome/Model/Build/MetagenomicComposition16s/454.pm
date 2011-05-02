@@ -127,7 +127,7 @@ sub filter_reads_by_primers {
     $self->amplicons_attempted($attempted);
     $self->reads_attempted($reads_attempted);
     $self->reads_processed($reads_processed);
-    $self->reads_processed_success( $reads_processed > 0 ?  sprintf('%.2f', $reads_processed / $reads_attempted) : 0 );
+    $self->reads_processed_success( $reads_attempted > 0 ?  sprintf('%.2f', $reads_processed / $reads_attempted) : 0 );
 
     return 1;
 }

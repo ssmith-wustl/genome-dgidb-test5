@@ -56,7 +56,7 @@ sub execute {
 
     $self->build->reads_attempted($reads_attempted);
     $self->build->reads_processed($reads_processed);
-    $self->build->reads_processed_success( $reads_processed > 0 ?  sprintf('%.2f', $reads_processed / $reads_attempted) : 0 );
+    $self->build->reads_processed_success( $reads_attempted > 0 ?  sprintf('%.2f', $reads_processed / $reads_attempted) : 0 );
 
     return 1;
 }

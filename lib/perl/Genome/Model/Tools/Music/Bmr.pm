@@ -39,7 +39,7 @@ sub _doc_credits {
 }
 
 sub _doc_see_also {
-    return ('','B<genome-music>(1)','B<genome>(1)')
+    return ('','B<genome-music-smg>(1)','<genome-music-path-scan>(1)','B<genome-music>(1)','B<genome>(1)')
 }
 
 sub _doc_manual_body {

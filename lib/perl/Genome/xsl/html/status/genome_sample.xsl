@@ -46,7 +46,7 @@
                   </tr>
 
                   <tr>
-                    <td class="name">Common Name:
+                    <td class="name">Patient Name:
                     </td>
                     <td class="value">
                       <xsl:choose>
