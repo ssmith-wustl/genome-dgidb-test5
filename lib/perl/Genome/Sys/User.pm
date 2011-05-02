@@ -28,11 +28,12 @@ class Genome::Sys::User {
 
 sub get {
 
-    my ($self, %p) = @_;
+    my ($self, @p) = @_;
 
-    if (scalar(keys %p) == 1) {
+    my %p = @p;
+    if (scalar(@p) == 1) {
         # Genome::Sys::User->get('yermom');
-        my $key = (%p)[0];
+        my $key = $p[0];
         delete $p{$key};
         $p{'email'} = $key;
     }
