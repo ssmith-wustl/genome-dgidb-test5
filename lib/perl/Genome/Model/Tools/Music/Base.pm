@@ -53,7 +53,7 @@ sub _doc_authors {
 sub _doc_credits {
     # used to compose man pages 
     # (return a list of strings)
-    return ('','FILL ME _doc_credits');
+    return ('','None at this time.');
 }
 
 sub _doc_see_also {

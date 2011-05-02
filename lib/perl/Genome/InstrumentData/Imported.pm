@@ -10,6 +10,9 @@ use File::Path;
 class Genome::InstrumentData::Imported {
     is => 'Genome::InstrumentData',
     has_optional => [
+        source => { is => 'Genome::Subject', via => 'sample', to => 'source', },
+        source_id => { is=> 'Text', via => 'source', to => 'id', },
+        source_name => { is=> 'Text', via => 'source', to => 'name', },
         import_date => {
             is => 'DateTime',
             via => 'attributes',

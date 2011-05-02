@@ -102,6 +102,12 @@ sub _create_temp_directories {
     return $self->SUPER::_create_temp_directories(@_);
 }
 
+# FIXME temporary hack to prevent breakdancer from using software results... fix this ASAP
+sub execute {
+    my $self = shift;
+    return $self->_generate_result;
+}
+
 
 sub _detect_variants {
     my $self = shift;
