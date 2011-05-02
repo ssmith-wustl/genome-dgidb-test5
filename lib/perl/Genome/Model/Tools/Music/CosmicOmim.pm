@@ -57,6 +57,16 @@ This tool looks at the amino acid changes for the given set of mutations and com
 EOS
 }
 
+sub _doc_credits {
+    return (
+        <<EOS,
+This tool depends on copies of data from the following databases, packaged in a form useable for quick analysis:
+EOS
+        "* COSMIC - http://www.sanger.ac.uk/genetics/CGP/cosmic/",
+        "* OMIM - http://www.ncbi.nlm.nih.gov/omim",
+    );
+}
+
 sub doc_authors {
     return (
         'Brian Dunford-Shore',
