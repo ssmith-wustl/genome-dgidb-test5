@@ -29,7 +29,7 @@ class Genome::Model::Tools::Music::Proximity {
             is_optional => 1,
         },
     ],
-    doc => "perform a proximity analysis on a list of mutations"                 
+    doc => "Perform a proximity analysis on a list of mutations."                 
 };
 
 sub help_detail {
@@ -40,9 +40,15 @@ EOS
 
 sub help_synopsis {
     return <<EOS 
-This tool identifies snps in close proximity in amino acid space.
-EXAMPLE:  gmt music proximity --maf-file myMAF.tsv --max-proximity 10 --reference-sequence "path_to_reference_sequence" --output-file myMAF.tsv.proximity_analysis
+EXAMPLE:  ... music proximity --maf-file myMAF.tsv --max-proximity 10 --reference-sequence "path_to_reference_sequence" --output-file myMAF.tsv.proximity_analysis
 EOS
+}
+
+sub _doc_authors {
+    return ('',
+        'Nathan D. Dees, Ph.D.',
+        'Dan Koboldt, M.S.',
+    );
 }
 
 sub execute {
