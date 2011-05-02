@@ -69,8 +69,8 @@ class Genome::Model::Tools::DetectVariants2::Filter::TigraValidation {
         tigra_version => {
             type => 'String',
             doc  => 'tigra_sv version to use in this process',
-            default_value => '20110321', 
-            valid_values  => [Genome::Model::Tools::TigraSv->available_versions],
+            default_value => '0.1', 
+            valid_values  => [Genome::Model::Tools::TigraSv->available_tigrasv_versions],
         },
         tigra_path => {
             is  => 'FilePath',

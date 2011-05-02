@@ -248,7 +248,7 @@ sub _filter_variants {
         die;
     }
 
-    $cmd = $bd_path . ' -t '. $out_file .' > '. $bd_out_hq_filtered;
+    $cmd = $bd_path . ' -t -a '. $out_file .' > '. $bd_out_hq_filtered; #-a to print out copy number per lib so tigra can skip normal lib
     $self->_run_cmd($cmd);
 
     #rename $bd_out_hq, $bd_out_hq_filtered;
