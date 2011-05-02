@@ -93,6 +93,8 @@ class Genome::WorkOrder {
         samples => {
             is => 'Genome::Sample',
             via => 'items',
+            to => 'sample',
+            is_many => 1,
         },
         models => {
             is => 'Genome::Model',
