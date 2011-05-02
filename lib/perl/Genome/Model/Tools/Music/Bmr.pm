@@ -26,34 +26,30 @@ EOS
 }
 
 
-# fill all of these in the subclasses
-
 sub _doc_authors {
-    # used to compose man pages 
-    # (return a list of strings)
-    return ('','FILL ME _doc_authors','FILL ME _doc_authors');
+    return ('',
+        'Cyriac Kandoth, Ph.D.'
+    );
 }
 
 sub _doc_credits {
     # used to compose man pages 
     # (return a list of strings)
-    return ('','FILL ME _doc_credits');
+    return ('','None at this time.');
 }
 
 sub _doc_see_also {
-    return ('','B<genome-music>(1)','B<genome>(1)','FILL ME _doc_see_also')
+    return ('','B<genome-music>(1)','B<genome>(1)')
 }
 
 sub _doc_manual_body {
-    # TODO: replace this with more extensive text if you want the manual page
-    # to be bigger than the help
     return shift->help_detail;
 }
 
 sub help_detail { 
-    return <<EOS
-FILL ME _doc_manual_body or _help_detail and _doc_manual_body
-EOS
+    return "This tool is part of the MuSiC suite. See:\n"
+    . join("\n",shift->_doc_see_also)
+    . "\n";
 }
 
 1;

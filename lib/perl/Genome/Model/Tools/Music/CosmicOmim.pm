@@ -40,7 +40,7 @@ class Genome::Model::Tools::Music::CosmicOmim {
            default => '1',
        },
     ],
-    doc => 'compare amino acide changes in MAF input to COSMIC and OMIM and add columns to the output'
+    doc => 'Compare the amino acid changes of supplied mutations to COSMIC and OMIM databases.'
 };
 
 sub help_synopsis_FIXME {
@@ -53,16 +53,26 @@ EOS
 
 sub help_detail {
     return <<EOS;
-This script takes a gmt annotated file, the directory where COSMIC files are stored, and the file containing amino acids in OMIM. The last two files are created by their respective importer scripts. It compares all possible annotations for every mutation in the file and outputs the results as a file with the input file columns and two columns of results appended.
+This tool looks at the amino acid changes for the given set of mutations and compares the genomic coordinates as well as the affected amino acid to the coordinates and amino acids of all cancer-specific mutations listed in the Cosmic and OMIM databases. The database files are specially prepared for this task and provided with the MuSiC suite. The tool reports various types of matches, including matches within "near proximity", where "near proximity" is currently defined as a linear DNA distance of 5 bases or 2 amino acids. (This type of matching helps to account for the possibility of subtle differences in reported positions for variants due to differences in transcript definitions or other things of this nature.) Any site without a match in a particular databases is reported as "novel" with respect to that database.
 EOS
+}
+
+sub _doc_credits {
+    return (
+        <<EOS,
+This tool depends on copies of data from the following databases, packaged in a form useable for quick analysis:
+EOS
+        "* COSMIC - http://www.sanger.ac.uk/genetics/CGP/cosmic/",
+        "* OMIM - http://www.ncbi.nlm.nih.gov/omim",
+    );
 }
 
 sub doc_authors {
     return (
-        'Brian Dunford-Shore, E<lt>bshore@watson.wustl.eduE<gt>',
-        'David Larson, E<lt>dlarson@watson.wustl.eduE<gt>',
-        'Michael C. Wendl, E<lt>mwendl@wustl.eduE<gt>',
-        'William Schierding, E<lt>wschierd@genome.wustl.eduE<gt>'
+        'Brian Dunford-Shore',
+        'David Larson, Ph.D.',
+        'Michael C. Wendl, Ph.D.',
+        'William Schierding, M.S.',
     )
 }
 
