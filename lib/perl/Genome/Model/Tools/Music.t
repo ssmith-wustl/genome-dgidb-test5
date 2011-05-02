@@ -64,7 +64,7 @@ my @cases = (
         run => "music cosmic-omim \n"
             . " --maf-file $input_dir/short.maf\n"
             . " --output-file $actual_output_dir/short_maf.cosmic_omim \n"
-            . " --verbose 0",
+            . " --no-verbose",
         expect => [
             'short_maf.cosmic_omim'
         ],
