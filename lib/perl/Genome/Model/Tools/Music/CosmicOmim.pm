@@ -321,7 +321,7 @@ if ($verbose) {print ".";}   #report that we are starting a sample
 
 #read in the alleles. The keys may change with future file formats. If so, a new version should be added to
 #   my ($entrez_gene_id, $line, $aa_change,$transcript,$mstatus,$Variant_Type,$Chromosome,$Start_position,$End_position,$Reference_Allele,$Tumor_Seq_Allele1,$gene) =
-   my ($entrez_gene_id, $line, $aa_change,$transcript,$Variant_Type,$Chromosome,$Start_position,$End_position,$Reference_Allele,$Tumor_Seq_Allele1,$gene) =
+   my ($entrez_gene_id, $line, $aa_change,$transcript,$Variant_Type,$Chromosome,$Start_position,$End_position,$Reference_Allele,$Tumor_Seq_Allele1,$Tumor_Seq_Allele2,$gene) =
 	   (
 	    $mutation->{$hugo}->{$sample}->{$line_num}->{ENTREZ_GENE_ID},
 	    $mutation->{$hugo}->{$sample}->{$line_num}->{file_line},
@@ -334,12 +334,24 @@ if ($verbose) {print ".";}   #report that we are starting a sample
 	    $mutation->{$hugo}->{$sample}->{$line_num}->{END_POSITION},
 	    $mutation->{$hugo}->{$sample}->{$line_num}->{REFERENCE_ALLELE},
 	    $mutation->{$hugo}->{$sample}->{$line_num}->{TUMOR_SEQ_ALLELE1},
+	    $mutation->{$hugo}->{$sample}->{$line_num}->{TUMOR_SEQ_ALLELE2},
 	    $mutation->{$hugo}->{$sample}->{$line_num}->{HUGO_SYMBOL},
 	   );
+
 #   if ($mstatus){
 #Annotate the allele's effect on all known (ie transcript without the 'unknown' status) transcripts
-##Alleles are listed in alphabetical order, find the one that actually is different               
-	my $proper_allele = $Tumor_Seq_Allele1;
+	my $proper_allele;
+	if ($Reference_Allele ne $Tumor_Seq_Allele1) {
+		$proper_allele = $Tumor_Seq_Allele1;
+	}
+	elsif($Reference_Allele ne $Tumor_Seq_Allele2) {
+		$proper_allele = $Tumor_Seq_Allele2;
+	}
+	else {
+		warn "line $line_num has both Tumor_Seq_Allele1 ($Tumor_Seq_Allele1) and Tumor_Seq_Allele2 ($Tumor_Seq_Allele2) as the Reference ($Reference_Allele)\n";
+		$proper_allele = $Tumor_Seq_Allele2;
+	}
+
 #LOOK FOR ONLY SINGLE CHARACTER PROPER ALLELE TYPES - A, C, T, G, 0, or -
 	unless($Reference_Allele ne $proper_allele) {
 		die "Ref allele: $Reference_Allele same as mutation allele: $proper_allele ('line num' $line_num)";
@@ -799,7 +811,8 @@ sub ParseMutationFile {
             'Start_position' => 'START_POSITION',
             'End_position' => 'END_POSITION',
             'Reference_Allele' => 'REFERENCE_ALLELE',
-            'Tumor_Seq_Allele2' => 'TUMOR_SEQ_ALLELE1', #also consider Tumor_Seq_Allele1
+            'Tumor_Seq_Allele1' => 'TUMOR_SEQ_ALLELE1',
+            'Tumor_Seq_Allele2' => 'TUMOR_SEQ_ALLELE2',
             'Variant_Type' => 'VARIANT_TYPE',
             'Hugo_Symbol' => 'HUGO_SYMBOL',
             'transcript_name' => 'TRANSCRIPT',
