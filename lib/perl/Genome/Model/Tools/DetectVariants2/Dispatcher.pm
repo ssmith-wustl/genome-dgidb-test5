@@ -820,9 +820,9 @@ sub _promote_staged_data {
                 (my $unversioned_lq_output = $lq_output) =~ s/\.v\d//;
                 (my $lq_v2_output = $unversioned_lq_output) =~ s/\.bed/.v2.bed/;
                 (my $lq_v1_output = $unversioned_lq_output) =~ s/\.bed/.v1.bed/;
-                for my $link_target ($unversioned_lq_output, $lq_v1_output, $lq_v2_output) {
-                    if ( (-e $lq_output) && !(-e $link_target) ) {
-                        Genome::Sys->create_symlink($lq_output, $link_target);
+                for my $link_target ($lq_v1_output, $lq_v2_output) {
+                    if ( (-e $unversioned_lq_output) && !(-e $link_target) ) {
+                        Genome::Sys->create_symlink($unversioned_lq_output, $link_target);
                     }
                 }
             }
