@@ -47,6 +47,11 @@ while ( my $amplicon = $amplicon_set->next_amplicon ) {
     ok(-s $build->ace_file_for_amplicon($amplicon), 'ace file');
 }
 
+# metrics
+is($build->reads_attempted, 30, 'reads attempted is 30');
+is($build->reads_processed, 17, 'reads processed is 17');
+is($build->reads_processed_success, '0.57', 'reads processed success is 0.57');
+
 #print $build->data_directory."\n";<STDIN>;
 done_testing();
 exit;
