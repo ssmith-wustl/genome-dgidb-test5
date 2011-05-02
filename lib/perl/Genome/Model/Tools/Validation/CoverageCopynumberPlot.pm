@@ -162,10 +162,10 @@ if(dim(cn2100x)[1] < 2) {den2100x\$x = den2100x\$y=1000} else {den2100x <- densi
 if(dim(cn3100x)[1] < 2) {den3100x\$x = den3100x\$y=1000} else {den3100x <- density(cn3100x\$V11, from=0,to=100,na.rm=TRUE);den3factor100 = dim(cn3100x)[1]/N100 * den3100x\$y;};
 if(dim(cn4plus100x)[1] < 2) {den4100x\$x = den4100x\$y=1000} else {den4100x <- density(cn4plus100x\$V11, from=0,to=100,na.rm=TRUE);den4factor100 = dim(cn4plus100x)[1]/N100 * den4100x\$y;};
 
-dennormcov <- density((z1\$V5+z1\$V6), bw=4, from=0,to=800,na.rm=TRUE);
-dennormcov100x <- density((z2\$V5+z2\$V6), bw=4, from=0,to=800,na.rm=TRUE);
-dentumcov <- density((z1\$V9+z1\$V10), bw=4, from=0,to=600,na.rm=TRUE);
-dentumcov100x <- density((z2\$V9+z2\$V10), bw=4, from=0,to=600,na.rm=TRUE);
+dennormcov <- density((z1\$V5+z1\$V6), bw=4, from=0,to=maxx,na.rm=TRUE);
+dennormcov100x <- density((z2\$V5+z2\$V6), bw=4, from=0,to=maxx,na.rm=TRUE);
+dentumcov <- density((z1\$V9+z1\$V10), bw=4, from=0,to=maxx,na.rm=TRUE);
+dentumcov100x <- density((z2\$V9+z2\$V10), bw=4, from=0,to=maxx,na.rm=TRUE);
 
 _END_OF_R_
         print R_COMMANDS "$R_command\n";
