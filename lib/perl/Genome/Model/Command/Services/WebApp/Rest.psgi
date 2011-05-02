@@ -156,6 +156,7 @@ dispatch {
             $view_special_args{substr($view_key,1,length($view_key))} = delete $args->{$view_key}; 
         }
 
+        my @matches;
         if ($class->isa("UR::Object::Set")) {
             $class =~ s/::Set$//;
             @matches = $class->define_set(%$args);
