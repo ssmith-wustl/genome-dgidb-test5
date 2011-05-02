@@ -135,11 +135,24 @@ EOS
 }
 
 sub _doc_credits {
-    return "See credits for B<genome-music>(1).";
+    return "Please see credits for B<genome-music>(1).";
 }
 
 sub _doc_authors {
     return('','Thomas B. Mooney, M.S.');
+}
+
+sub _doc_see_also {
+    return ('',
+        'B<genome-music>(1)',
+        'B<genome-music-path-scan>(1)',
+        'B<genome-music-smg>(1)',
+        'B<genome-music-clinical-correlation>(1)',
+        'B<genome-music-mutation-relation>(1)',
+        'B<genome-music-cosmic-omim>(1)',
+        'B<genome-music-proximity>(1)',
+        'B<genome-music-pfam>(1)',
+    );
 }
 
 sub execute {
