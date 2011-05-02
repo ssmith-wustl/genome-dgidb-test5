@@ -13,7 +13,7 @@ my $u0 = Genome::Sys::User->create(
 
 ok($u0,'create a user object');
 
-my $u1 = Genome::Sys::User->get('someone@somewhere.org');
+my $u1 = Genome::Sys::User->get(email => 'someone@somewhere.org');
 ok($u1, 'got a user object');
 
 is($u1->id,'someone@somewhere.org');

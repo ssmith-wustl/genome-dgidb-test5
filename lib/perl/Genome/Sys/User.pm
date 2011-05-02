@@ -30,6 +30,13 @@ sub get {
 
     my ($self, %p) = @_;
 
+    if (scalar(keys %p) == 1) {
+        # Genome::Sys::User->get('yermom');
+        my $key = (%p)[0];
+        delete $p{$key};
+        $p{'email'} = $key;
+    }
+
     if (defined($p{'email'}) 
         && $p{'email'} !~ /\@/) {
         my $old = $p{'email'};

@@ -81,13 +81,16 @@ my $allocation_path = tempdir(
     UNLINK => 1,
 );
 
+my $user = Genome::Sys::User->create(email => 'fakeguy@genome.wustl.edu', name => 'Fake McFakerton');
+ok($user, 'created user');
+
 my %params = ( 
     disk_group_name => 'testing_group',
     mount_path => $volumes[0]->mount_path,
     allocation_path => $allocation_path,
     kilobytes_requested => 100,
     owner_class_name => 'Genome::Sys::User',
-    owner_id => $ENV{USER},
+    owner_id => $user->username,
     group_subdirectory => 'testing',
 );
 my $allocation = Genome::Disk::Allocation->create(%params);
@@ -224,7 +227,7 @@ sub do_race_lock {
         allocation_path => $path,
         kilobytes_requested => 10,
         owner_class_name => 'Genome::Sys::User',
-        owner_id => $ENV{USER},
+        owner_id => $user->username,
         group_subdirectory => $group->subdirectory,
     );
 
