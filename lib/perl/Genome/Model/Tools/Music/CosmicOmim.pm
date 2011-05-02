@@ -55,6 +55,9 @@ The output of this script returns each row the original input MAF file with two 
 
 Also, as a caution, this tool only compares to Build36 coordinates in the Cosmic database. Support for build 37 is coming, but as of this update the Cosmic database only has sparse entries in build 37 coordinates.
 
+Column headers in the MAF should also include the following annotation headers (must be exactly these names in header line in order for the tool to find them):
+chromosome_name, start, stop, reference, variant, type, gene_name, transcript_name, strand, transcript_status, amino_acid_change
+
 EOS
 }
 
