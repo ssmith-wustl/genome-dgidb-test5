@@ -19,12 +19,12 @@ class Genome::Model::Tools::Music::PathScan {
     bmr => { is => 'Number', doc => "Background mutation rate in the targeted regions", is_optional => 1, default => 1.7E-6 },
     genes_to_ignore => { is => 'Text', doc => "Comma-delimited list of genes whose mutations should be ignored", is_optional => 1 },
   ],
-  doc => "find the various pathways significant to the cancer given a list of somatic mutations",
+  doc => "Find signifcantly mutated pathways in a cohort given a list of somatic mutations.",
 };
 
 sub help_synopsis {
   return <<HELP
-... music path-scan --bam-list brc_input/bam_list --gene-covg-dir brc_output/gene_covgs/ --maf-file brc_input/brc50.maf --output-file brc_output/sm_pathways --pathway-file brc_input/pathway_dbs/KEGG_120910 --bmr 8.7E-07
+... music path-scan --bam-list input_dir/bam_file_list --gene-covg-dir output_dir/gene_covgs/ --maf-file input_dir/myMAF.tsv --output-file output_dir/sm_pathways --pathway-file input_dir/pathway_dbs/KEGG.txt --bmr 8.7E-07
 HELP
 }
 
