@@ -102,11 +102,6 @@ class Genome::WorkOrder {
             is => 'Genome::Model::Build',
             via => 'models',
         },
-        items => {
-            is => 'Genome::WorkOrderItem',
-            is_many => 1,
-            reverse_as => 'work_order',
-        },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
