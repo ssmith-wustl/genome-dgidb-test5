@@ -190,9 +190,6 @@ is(@builds, 2, 'create builds');
 my @model_builds = $model->builds;
 is_deeply(\@model_builds, \@builds, 'model builds');
 
-my @built_instrument_data = $model->built_instrument_data;
-is_deeply(\@built_instrument_data, \@instrument_data, 'built instruemnt data');
-
 # one succeeded, one running
 $builds[0]->the_master_event->event_status('Succeeded');
 is($builds[0]->status, 'Succeeded', 'build 0 is succeeded');

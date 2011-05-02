@@ -246,6 +246,7 @@ sub execute {
 
                     } else {
                         # no model found for this PP, make one (or more) and assign all applicable data
+                        $DB::single = $DB::stopper;
                         my @new_models = $self->create_default_models_and_assign_all_applicable_instrument_data($genome_instrument_data, $subject, $processing_profile, $reference_sequence_build, $pse);
                         unless(@new_models) {
                             push @process_errors, $self->error_message;
@@ -380,6 +381,7 @@ sub find_or_create_somatic_variation_models{
             $mate_params{target_region_set_name} = $model->target_region_set_name if $model->can('target_region_set_name') and $model->target_region_set_name;
             $mate_params{region_of_interest_set_name} = $model->region_of_interest_set_name if $model->can('region_of_interest_set_name') and $model->region_of_interest_set_name;
 
+            $DB::single = $DB::stopper;
             my $mate = Genome::Model::ReferenceAlignment->get( %mate_params );
             unless ($mate){
                 my $copy = Genome::Model::Command::Copy->execute(

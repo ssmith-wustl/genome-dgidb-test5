@@ -181,11 +181,6 @@ sub test02_instrument_data : Tests() {
     $idas[0]->first_build_id(1);
     my @model_id = $model->instrument_data;
     is_deeply(\@model_id, \@instrument_data, 'instrument_data');
-    my @built_id = $model->built_instrument_data; # should by id[0]
-    is_deeply(\@built_id, [ $instrument_data[0] ], 'built_instrument_data');
-    my @unbuilt_id = $model->unbuilt_instrument_data; # should by id[1]
-    is_deeply(\@unbuilt_id, [ $instrument_data[1] ], "unbuilt_instrument_data");
-
     return 1;
 }
 
@@ -333,7 +328,7 @@ sub create_basic_mock_model {
             completed_builds last_complete_build last_complete_build_id 
             resolve_last_complete_build _last_complete_build_id 
             succeeded_builds last_succeeded_build last_succeeded_build_id
-            compatible_instrument_data assigned_instrument_data unassigned_instrument_data
+            compatible_instrument_data instrument_data unassigned_instrument_data
             notify_input_build_success
             /),
     ) or confess "Can't add mock methods to $type_name model";
@@ -895,7 +890,7 @@ sub get_mock_model {
             completed_builds last_complete_build last_complete_build_id 
             resolve_last_complete_build _last_complete_build_id 
             succeeded_builds last_succeeded_build last_succeeded_build_id
-            compatible_instrument_data assigned_instrument_data unassigned_instrument_data
+            compatible_instrument_data instrument_data unassigned_instrument_data
             /),
     ) or confess "Can't add mock methods to model ($class)";
 
