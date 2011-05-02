@@ -135,7 +135,7 @@ sub execute {                               # replace with real execution logic.
 		close($indel_input);
 	}
 	close($file_input);
-	my $bsub = 'bsub -q apipe -R "select[model!=Opteron250 && type==LINUX64 && mem>8000 && tmp>1000] rusage[mem=8000, tmp=1000]" -M 8000000 ';
+	my $bsub = 'bsub -q apipe -R "select[model!=Opteron250 && type==LINUX64 && mem>8000 && tmp>10000] rusage[mem=8000, tmp=10000]" -M 8000000 ';
 	my ($jobid1, $jobid2, $jobid3, $jobid4, $jobid5, $jobid6);
 	if ($skip_if_output_present && -s "$sorted_normal_bam_file.bam" && -s "$sorted_tumor_bam_file.bam") {
 		my $jobid1 = `$bsub -J varscan_validation \'gmt varscan validation --normal-bam $sorted_normal_bam_file.bam --tumor-bam $sorted_tumor_bam_file.bam --output-indel $output_indel --output-snp $output_snp\'`;
