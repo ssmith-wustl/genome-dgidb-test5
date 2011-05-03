@@ -353,7 +353,7 @@ sub default_genotype_models {
     return unless defined $genotype_data_id;
     return if $genotype_data_id eq 'none';
 
-    my $genotype_data = $self->genotype_data;
+    my $genotype_data = $self->default_genotype_data;
     return unless $genotype_data;
 
     my @inputs = Genome::Model::Input->get(
