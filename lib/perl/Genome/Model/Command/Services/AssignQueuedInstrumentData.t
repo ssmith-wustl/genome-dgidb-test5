@@ -534,7 +534,6 @@ my $command_4 = Genome::Model::Command::Services::AssignQueuedInstrumentData->cr
 );
 
 isa_ok($command_4, 'Genome::Model::Command::Services::AssignQueuedInstrumentData');
-$DB::single = 1;
 ok($command_4->execute(), 'assign-queued-instrument-data executed successfully.');
 
 my $new_models_4 = $command_4->_newly_created_models;
@@ -550,7 +549,6 @@ is($normal, $somatic_variation->normal_model, 'somatic variation has the correct
 
 @models = values %$new_models_4;
 push(@model_groups, $_->model_groups) for (@models);
-$DB::single = 1;
 ok((grep {$_->name =~ /\.tcga/} @model_groups), "found tcga-cds model_group");
 
 is($pse_7->pse_status, 'completed', 'seventh pse completed');
