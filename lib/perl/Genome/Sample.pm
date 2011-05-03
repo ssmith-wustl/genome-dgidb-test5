@@ -310,7 +310,7 @@ sub set_default_genotype_data {
     else {
         Carp::confess 'Genotype instrument data ' . $genotype_instrument_data->id . ' is not valid!'
             unless $self->check_genotype_data($genotype_instrument_data);
-        $genotype_data_id = $genotype_instrument_data;
+        $genotype_data_id = $genotype_instrument_data->id;
     }
 
     if (defined $self->default_genotype_data_id) {
