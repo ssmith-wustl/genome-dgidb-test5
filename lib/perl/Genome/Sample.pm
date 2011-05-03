@@ -350,6 +350,7 @@ sub default_genotype_models {
     my $self = shift;
     
     my $genotype_data_id = $self->default_genotype_data_id;
+    return unless defined $genotype_data_id;
     return if $genotype_data_id eq 'none';
 
     my $genotype_data = $self->genotype_data;
