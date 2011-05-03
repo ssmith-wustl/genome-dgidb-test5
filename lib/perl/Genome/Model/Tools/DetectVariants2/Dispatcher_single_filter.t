@@ -13,6 +13,13 @@ use Parse::RecDescent qw/RD_ERRORS RD_WARN RD_TRACE/;
 use Data::Dumper;
 use Test::More tests => 2;
 use above 'Genome';
+use Genome::SoftwareResult;
+
+# Override lock name because if people cancel tests locks don't get cleaned up.
+*Genome::SoftwareResult::_resolve_lock_name = sub {
+    return Genome::Sys->create_temp_file_path;
+};
+
 
 #Parsing tests
 my $det_class_base = 'Genome::Model::Tools::DetectVariants2';

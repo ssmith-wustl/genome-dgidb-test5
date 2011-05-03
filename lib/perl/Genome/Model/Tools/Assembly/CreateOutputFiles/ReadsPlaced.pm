@@ -129,7 +129,7 @@ sub _get_gap_sizes {
     
     my $gaps = {};
     my $fh = Genome::Sys->open_file_for_reading($self->gap_file) ||
-	return;
+	return; #this file is empty if no gaps, ie, assembly has no scaffolds
     while (my $line = $fh->getline) {
 	chomp $line;
 	my ($sctg, $ctg, $gap) = $line =~ /(Contig\d+)\.(\d+)\s+(\d+)/;
@@ -155,7 +155,7 @@ sub _validate_input_files {
     #gap file
     $self->gap_file( $self->gap_sizes_file ) unless $self->gap_file;
     $self->error_message("Failed to find file or file is zero size: ".$self->gap_file) and return
-	unless -s $self->gap_file;
+	unless -e $self->gap_file;
 
     #contigs.bases file
     $self->contigs_bases_file( $self->directory.'/edit_dir/contigs.bases' ) unless

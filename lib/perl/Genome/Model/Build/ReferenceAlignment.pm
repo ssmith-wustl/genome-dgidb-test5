@@ -360,23 +360,36 @@ sub rmdup_metrics_file {
 
     my $merged_alignment_result = $self->merged_alignment_result;
     if($merged_alignment_result) {
-        return glob($merged_alignment_result->output_dir."/*.metrics");
+	    my @files = glob($merged_alignment_result->output_dir."/*.metrics");
+        return @files;
     }
-
-    #location prior to merged alignment results
-    return $self->log_directory."/mark_duplicates.metrics";
+    elsif (-e $self->log_directory."/mark_duplicates.metrics") {
+	    #location prior to merged alignment results
+	    return $self->log_directory."/mark_duplicates.metrics";
+    }
+    else {
+        $self->warning_message('No rmdup metrics file found');
+	    return;
+    }
 }
+
 
 sub mark_duplicates_library_metrics_hash_ref {
     my $self = shift;
     my $subject = $self->model->subject_name;
     my @mark_duplicates_metrics = $self->rmdup_metrics_file;
 
+    unless (@mark_duplicates_metrics) {
+        $self->error_message('No valid mark_duplicate metrics files found');
+        die;
+    }
+
     my %library_metrics;
     for my $mark_duplicates_metrics (@mark_duplicates_metrics) {
         my $fh = Genome::Sys->open_file_for_reading($mark_duplicates_metrics);
         unless ($fh) {
-            die('Failed to open mark duplicates metrics file '. $mark_duplicates_metrics);
+            $self->warning_message('Failed to open mark duplicates metrics file '. $mark_duplicates_metrics);
+            next;
         }
 
         my @keys;
@@ -453,7 +466,7 @@ sub whole_rmdup_bam_file {
             return $not_symlinks[0];
         }
         else {
-                $self->error_message("Multiple merged rmdup bam file found.");
+            $self->error_message("Multiple merged rmdup bam file found.");
             return;
         }
     }
