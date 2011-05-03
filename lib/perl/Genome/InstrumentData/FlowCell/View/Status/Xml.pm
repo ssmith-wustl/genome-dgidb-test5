@@ -6,6 +6,7 @@ use Genome;
 use Data::Dumper;
 use XML::LibXML;
 use XML::LibXSLT;
+use Switch;
 
 class Genome::InstrumentData::FlowCell::View::Status::Xml {
     is => 'UR::Object::View::Default::Xml',
@@ -57,9 +58,32 @@ sub _generate_content {
             $instrument_data_node->addChild( $doc->createAttribute('gerald-directory', $gerald_directory) )
                 if ($gerald_directory and -e $gerald_directory);;
 
-            for my $file (@{ $lane->{lane_reports} }) {
+            for my $url (@{ $lane->{lane_reports} }) {
+                # determine report name from report file
+                my $name;
+
+                switch($url) {
+                    # quality report
+                    case m/quality\.html/ { $name = "quality" };
+
+                    # gc_bias report
+                    case m/gc-bias-chart\.pdf/ {
+                        $name = "gc bias"
+                    };
+
+                    #fastqc report
+                    case m/fastqc_report/ {
+                        $url =~ m/fastqc\/(.*)_sequence_fastqc/;
+                        $name = "fast qc (" . $1 . ")";
+                    };
+
+                }
+
+                if ($url =~ m/gscmnt/)  { $url = "https://gscweb.gsc.wustl.edu" . $url; }
+
                 my $report_node = $instrument_data_node->addChild( $doc->createElement('report'));
-                $report_node->addChild( $doc->createAttribute('name', $file) );
+                $report_node->addChild( $doc->createAttribute('name', $name) );
+                $report_node->addChild( $doc->createAttribute('url', $url) );
             }
         }
     }
