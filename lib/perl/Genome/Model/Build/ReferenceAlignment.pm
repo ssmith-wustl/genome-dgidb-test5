@@ -72,13 +72,6 @@ class Genome::Model::Build::ReferenceAlignment {
 sub create {
     my $class = shift;
 
-    my $bool = $class->define_boolexpr(@_);
-    my $model_id = $bool->value_for('model_id');
-    return unless $model_id;
-    my $model = Genome::Model->get($model_id);
-    return unless $model;
-    $model->init_genotype_model;
-
     my $self = $class->SUPER::create(@_);
     unless ($self) {
         return;
