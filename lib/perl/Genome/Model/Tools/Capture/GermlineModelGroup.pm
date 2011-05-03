@@ -204,7 +204,7 @@ sub execute {                               # replace with real execution logic.
 #FUTURE: Pull SNP array concordance here
 		}
 
-          UR::Context->commit();
+          UR::Context->commit() or die 'commit failed';
           UR::Context->clear_cache(dont_unload => ['Genome::ModelGroup', 'Genome::ModelGroupBridge']);
 	}	
 	close(OUTFILE);
