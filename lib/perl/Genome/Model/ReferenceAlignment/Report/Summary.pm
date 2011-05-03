@@ -324,18 +324,19 @@ sub get_summary_information
     # processing profile
     my $pp = $model->processing_profile;
 
-    my @unfiltered_files = $build->unfiltered_snp_file;
-    my $unfiltered_snp_calls = `wc -l @unfiltered_files | tail -n 1`;
-    $unfiltered_snp_calls =~ s/\s\S+\s*$//i;
-    $unfiltered_snp_calls =~ s/\s//g;
-
-    my @filtered_files = $build->filtered_snp_file;
+    my @filtered_files = $build->get_variant_bed_file('snvs.hq');
     my $filtered_snp_calls = `wc -l @filtered_files | tail -n 1`;
     $filtered_snp_calls =~ s/\s\S+\s*$//i;
     $filtered_snp_calls =~ s/\s//g;
 
+    my @lq_files = $build->get_variant_bed_file('snvs.lq');
+    my $lq_snp_calls = `wc -l @lq_files | tail -n 1`;
+    $lq_snp_calls =~ s/\s\S+\s*$//i;
+    $lq_snp_calls =~ s/\s//g;
+    my $unfiltered_snp_calls = $filtered_snp_calls + $lq_snp_calls;
+
     my $snp_chromosomes = $self->model->reference_sequence_build->description;
-    my $snp_caller = $self->model->snv_detector_name;
+    my $snp_caller = $self->model->snv_detection_strategy;
 
     my @stat = stat($filtered_files[-1]);
     my $time = POSIX::strftime("%Y-%m-%d %H:%M:%S", localtime($stat[10]));
@@ -402,7 +403,7 @@ sub get_summary_information
         filtered_snp_calls                            => commify($filtered_snp_calls),
 
         snp_chromosomes                               => $snp_chromosomes,
-        snp_caller                                    => $snp_caller . " SNPfilter",
+        snp_caller                                    => $snp_caller,
 
         total_filtered_snps                           => commify($total_filtered_snps),
         total_unfiltered_snps                         => commify($total_unfiltered_snps),

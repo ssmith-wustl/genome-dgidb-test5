@@ -12,7 +12,7 @@ class Genome::Model::Event::Build::ReferenceAlignment::AnnotateTranscriptVariant
             doc => "the path at which all analysis output is stored",
             calculate_from => ['build'],
             calculate      => q|
-            return $build->snp_related_metric_directory;
+            return $build->variants_directory;
             |,
             is_constant => 1,
         },

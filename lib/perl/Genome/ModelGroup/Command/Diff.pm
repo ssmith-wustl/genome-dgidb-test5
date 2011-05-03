@@ -34,7 +34,7 @@ class Genome::ModelGroup::Command::Diff {
 
 sub help_synopsis {
     return <<EOS
-genome model-group compare group1 group2 snp_related_metrics 
+genome model-group compare group1 group2 variants
 
 EOS
 }

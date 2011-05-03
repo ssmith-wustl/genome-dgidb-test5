@@ -559,9 +559,10 @@ sub reference_coverage_job_classes {
 sub variant_detection_job_classes {
     my $self = shift;
     my @steps = (
-        'Genome::Model::Event::Build::ReferenceAlignment::FindVariations'
+        'Genome::Model::Event::Build::ReferenceAlignment::DetectVariants'
     );
-    if(defined $self->snv_detector_name || defined $self->indel_detector_name) {
+    if(defined $self->snv_detection_strategy || defined $self->indel_detection_strategy ||
+            defined $self->sv_detection_strategy || defined $self->cnv_detection_strategy) {
         return @steps;
     }
     else {

@@ -61,6 +61,12 @@ class Genome::Model::Build::ReferenceAlignment {
             id_by => 'reference_sequence_build_id',
         },
     ],
+    has_transient_optional => [
+        _unfiltered_snv_file => {
+            is => 'HASH',
+            doc => 'file holding the merged filtered/unfiltered snv file'
+        },
+    ],
 };
 
 sub create {
@@ -246,32 +252,37 @@ sub calculate_input_base_counts_after_trimq2 {
     return ($total_ct, $total_trim_ct);
 }
 
-sub filtered_snp_file {
-    my ($self) = @_;
-    
-    my $expected_name = $self->unfiltered_snp_file . '.filtered';
-    
-    if(Genome::Sys->check_for_path_existence($expected_name)) {
-        return $expected_name;
+sub snv_file {
+    my $self = shift;
+    my $dir = $self->variants_directory;
+
+    if($dir =~ /snp_related_metrics/) {
+        my $file = $dir . '/snps_all_sequences.filtered';
+        return $file if -e $file;
+
+        my $old_file = $dir . '/filtered.indelpe.snps';
+        return $old_file if -e $old_file;
+
+        return $file;
+    } else {
+        return $dir . '/snvs.hq';
     }
-    
-    my $old_name = join('/', $self->snp_related_metric_directory(), 'filtered.indelpe.snps');
-    if(Genome::Sys->check_for_path_existence($old_name)) {
-        return $old_name;
-    }
-    
-    #Hasn't been created yet--if we're on this snapshot it would use this name
-    return $expected_name;
 }
 
+sub indel_file {
+    my $self = shift;
+    my $dir = $self->variants_directory;
 
-sub unfiltered_snp_file {
-    return shift->snp_related_metric_directory . '/snps_all_sequences';
+    if($dir =~ /snp_related_metrics/) {
+        return $dir . '/indels_all_sequences.filtered';
+    } else {
+        return $dir . '/indels.hq';
+    }
 }
 
 sub get_variant_bed_file {
     my ($self, $base, $ver) = @_;
-    my $filename = $self->snp_related_metric_directory . "/$base";
+    my $filename = $self->variants_directory . "/$base";
     $filename .= ".$ver" if defined $ver;
     $filename .= ".bed";
     if (! -e $filename) {
@@ -284,37 +295,59 @@ sub get_variant_bed_file {
 
 sub snvs_bed {
     my ($self, $ver) = @_;
-    return $self->get_variant_bed_file("snps_all_sequences", $ver);
+
+    my $dir = $self->variants_directory;
+    if($dir =~ /snp_related_metrics/) {
+        return $self->get_variant_bed_file("snps_all_sequences", $ver);
+    } else {
+        my $snv_files = $self->_unfiltered_snv_file;
+        unless($snv_files->{$ver}) {
+            my $hq_file = $self->get_variant_bed_file("snvs.hq", $ver);
+            my $lq_file = $self->get_variant_bed_file("snvs.lq", $ver);
+
+            my $combined_file_path = Genome::Sys->create_temp_file_path;
+            my $union_command = Genome::Model::Tools::Joinx::Sort->create(
+                input_files => [$hq_file, $lq_file],
+                merge_only => 1,
+                output_file => $combined_file_path,
+            );
+            unless($union_command->execute()) {
+                die $self->error_message('Failed to produce snvs_bed file!' . ($ver? ' for version ' . $ver : ''));
+            }
+
+            $snv_files->{$ver} = $combined_file_path;
+            $self->_unfiltered_snv_file($snv_files);
+        }
+
+        return $snv_files->{$ver};
+    }
 }
 
 sub filtered_snvs_bed {
     my ($self, $ver) = @_;
-    return $self->get_variant_bed_file("snps_all_sequences.filtered", $ver);
+
+    my $name = "snvs.hq";
+    my $dir = $self->variants_directory;
+    if($dir =~ /snp_related_metrics/) {
+        $name = "snps_all_sequences.filtered";
+    }
+    return $self->get_variant_bed_file($name, $ver);
 }
 
-sub filtered_indel_file {
+sub variants_directory {
     my $self = shift;
 
-    return $self->snp_related_metric_directory . '/indels_all_sequences.filtered';
-}
+    my $expected_directory = $self->data_directory . '/variants';
+    return $expected_directory if -d $expected_directory;
 
-sub unfiltered_indel_file {
-    my $self =shift;
-
-    return $self->snp_related_metric_directory . '/indels_all_sequences';
-}
-
-sub snp_related_metric_directory {
-    my $self = shift;
-
+    #for compatibility with previously existing builds
     my @dir_names = ('snp_related_metrics', 'sam_snp_related_metrics', 'maq_snp_related_metrics', 'var-scan_snp_related_metrics');
-
     for my $dir_name (@dir_names) {
         my $dir = $self->data_directory . '/' . $dir_name;
         return $dir if -d $dir;
     }
 
-    return $self->data_directory . '/' . $dir_names[0];
+    return $expected_directory; #new builds should use current location
 }
 
 sub log_directory {
@@ -766,11 +799,6 @@ sub accumulated_alignments_disk_allocation {
     my $disk_allocation = Genome::Disk::Allocation->get(owner_class_name=>ref($dedup_event), owner_id=>$dedup_event->id);
     
     return $disk_allocation;
-}
-
-sub variants_directory {
-    my $self = shift;
-    return $self->data_directory . '/variants';
 }
 
 sub delete {

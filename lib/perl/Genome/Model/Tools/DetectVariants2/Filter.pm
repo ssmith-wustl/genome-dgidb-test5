@@ -151,28 +151,50 @@ sub _validate_output {
     return 1;
 }
 
+#check that the bed file counts are reasonable given the input
+sub _check_bed_file_counts {
+    my $self = shift;
+    my $total_input = shift;
+
+    my $hq_output_file = $self->output_directory."/".$self->_variant_type.".hq.bed";
+    my $lq_output_file = $self->output_directory."/".$self->_variant_type.".lq.bed";
+
+    my $total_output = $self->line_count($hq_output_file) + $self->line_count($lq_output_file);
+
+    my $offset = $self->_validate_output_offset;
+    $total_input += $offset;
+    unless(($total_input - $total_output) == 0){
+        die $self->error_message("Total lines of bed-formatted output did not match total input lines. Input lines (including an offset of $offset): $total_input \t output lines: $total_output");
+    }
+
+    return 1;
+}
+
+#check that the natively formatted file matches expectation
+sub _check_native_file_counts {
+    my $self = shift;
+    my $total_input = shift;
+
+    my $hq_output_file = $self->output_directory."/".$self->_variant_type.".hq.bed";
+    my $detector_style_file = $self->output_directory."/".$self->_variant_type.".hq";
+
+    my $total_output = $self->line_count($hq_output_file);
+    my $detector_style_output = $self->line_count($detector_style_file);
+    unless(($total_output - $detector_style_output) == 0){
+        die $self->error_message("Total lines of detector-style output did not match total output lines. Output lines: $total_output \t Detector-style output lines: $detector_style_output");
+    }
+
+    return 1;
+}
+
+
 sub _check_file_counts {
     my $self = shift;
 
     my $input_file = $self->input_directory."/".$self->_variant_type.".hq.bed";
-    my $hq_output_file = $self->output_directory."/".$self->_variant_type.".hq.bed";
-    my $lq_output_file = $self->output_directory."/".$self->_variant_type.".lq.bed";
-    my $detector_style_file = $self->output_directory."/".$self->_variant_type.".hq";
     my $total_input = $self->line_count($input_file);
-    # Add the offset to the input (some filters output more or less lines than they take as input)
-    my $offset = $self->_validate_output_offset;
-    $total_input += $offset;
 
-    my $total_output = $self->line_count($hq_output_file) + $self->line_count($lq_output_file);
-    unless(($total_input - $total_output) == 0){
-        die $self->error_message("Total lines of bed-formatted output did not match total input lines. Input lines (including an offset of $offset): $total_input \t output lines: $total_output");
-    }
-    my $detector_style_output = $self->line_count($detector_style_file) + $self->line_count($lq_output_file);
-    unless(($total_input - $detector_style_output) == 0){
-        die $self->error_message("Total lines of detector-style output did not match total input lines. Input lines: $total_input \t output lines: $detector_style_output");
-    }
-
-    return 1;
+    return ($self->_check_bed_file_counts($total_input) && $self->_check_native_file_counts($total_input));
 }
 
 sub has_version {

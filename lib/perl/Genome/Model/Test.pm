@@ -760,7 +760,7 @@ sub _build_subclass_specifics_for_reference_alignment {
     if ( $build->model->sequencing_platform eq 'solexa' ) {
         $self->mock_methods(
             $build,
-            (qw/ snp_related_metric_directory /),
+            (qw/ variants_directory /),
         );
     }
     # else { # 454 

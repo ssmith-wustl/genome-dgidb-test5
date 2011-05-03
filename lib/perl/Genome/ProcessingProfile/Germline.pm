@@ -56,8 +56,8 @@ sub _execute_build {
 
     ## get the bam file ##
     my $bam_file = $last_complete_build->whole_rmdup_bam_file;
-    my $snp_file = $last_complete_build->filtered_snp_file;
-    my $indel_file = $last_complete_build->filtered_indel_file;
+    my $snp_file = $last_complete_build->snp_file;
+    my $indel_file = $last_complete_build->indel_file;
 
     if(-e $bam_file && -e $snp_file && -e $indel_file) {
 	my $cmd_obj = Genome::Model::Tools::Germline::CaptureBams->create(

@@ -880,7 +880,7 @@ sub _generate_standard_files {
     for my $variant_type (@{ $self->variant_types }) {
         my $strategy = $variant_type."_detection_strategy";
         if(defined( $self->$strategy)){
-            my $find_command = "find -L " . $self->output_directory . " -name $variant_type" . "s.lq.bed";
+            my $find_command = "find -L " . $self->output_directory . "/$variant_type -name $variant_type" . "s.lq.bed";
             my @lq_files = `$find_command`;
             chomp @lq_files;
 

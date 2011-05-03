@@ -249,7 +249,7 @@ sub _resolve_annotation_file {
     my $self = shift;
     my $build = shift;
 
-    my $variant_directory = $build->snp_related_metric_directory;
+    my $variant_directory = $build->variants_directory;
 
     for my $filename ('filtered.indelpe.snps.post_annotation', 'filtered.variants.post_annotation') {
         my $potential_annotation_path = join('/', $variant_directory, $filename);
