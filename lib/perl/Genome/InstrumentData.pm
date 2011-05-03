@@ -69,6 +69,34 @@ class Genome::InstrumentData {
 sub delete {
     my $self = shift;
 
+    my $instrument_data_id = $self->id;
+    my @inputs = Genome::Model::Input->get( name => 'instrument_data', value_id => $instrument_data_id );
+    my @models = map( $_->model, @inputs);
+
+    for my $model (@models) {
+        $model->remove_instrument_data($self);
+    }
+
+    #There may be builds using this instrument data even though it had previously been unassigned from the model
+    my @other_build_inputs = Genome::Model::Build::Input->get ( name => 'instrument_data', value_id => $instrument_data_id );
+
+    my @other_builds = map($_->build, @other_build_inputs);
+
+    for my $build (@other_builds) {
+        $build->abandon();
+        push @models, $build->model;
+    }
+
+    if(@models) {
+        my %affected_users;
+        for my $model (@models) {
+            $affected_users{$model->user_name} = 1;
+        }
+
+        my $to = join(', ', keys %affected_users);
+    }
+
+    #finally, clean up the instrument data
     for my $attr ( $self->attributes ) {
         $attr->delete;
     }
