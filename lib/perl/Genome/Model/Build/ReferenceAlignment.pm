@@ -77,7 +77,7 @@ sub create {
         return;
     }
 
-    $model = $self->model;
+    my $model = $self->model;
     my @idas = $model->instrument_data_assignments;
     unless (scalar(@idas) && ref($idas[0])  &&  $idas[0]->isa('Genome::Model::InstrumentDataAssignment')) {
         $self->error_message('No instrument data have been added to model! '. $model->name);
