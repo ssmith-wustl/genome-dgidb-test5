@@ -22,7 +22,6 @@ my @expect_same = (
     'subject_id',
     'user_name',
     'subclass_name',
-    'Xsubclass_name',
 );
 
 # This param will be overridden in the copy command.

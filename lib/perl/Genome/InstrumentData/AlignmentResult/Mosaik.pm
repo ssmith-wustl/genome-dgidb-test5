@@ -26,6 +26,9 @@ sub required_rusage {
     return "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>4000] span[hosts=1] rusage[tmp=90000, mem=4000]' -M 24000000 -n 4";
 }
 
+sub required_rusage_for_building_index { #NOT sure what appropriate reserve here is
+    return "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>4000] span[hosts=1] rusage[tmp=90000, mem=4000]' -M 24000000 -n 4";
+}
 # TODO should generate the reference index and jump databases using MosaikJump and MosaikBuild
 
 sub _run_aligner {
@@ -41,25 +44,20 @@ sub _run_aligner {
     my $tmp_sam_file = "$tmp_dir/aligned_mosaik.sam";
     my $staging_sam_file = "$tmp_dir/all_sequences.sam";
     
-    # get refseq info
-    my $reference_build = $self->reference_build;
-    my $ref_dirname = File::Basename::dirname($reference_build->full_consensus_path('fa'));
 
-    my $ref_file = sprintf("%s/%s", $ref_dirname, 'reference_mosaik.dat');
-    # yes the jump database is simply the prefix, not an actual filename
-    my $jump_file = sprintf("%s/%s", $ref_dirname, 'reference_mosaik_15');
-     
-    unless (-e $ref_file) {
-        $self->error_message("Index $ref_file does not exist. Please create Bfast indexes in the correct location, or implement Genome::InstrumentData::Alignment->resolve_reference_build() in this module.");
-        $self->die($self->error_message);
+    my $reference_build = $self->reference_build;
+    my $ref_file = $self->get_reference_sequence_index->output_dir.'/reference_mosaik.dat';
+    unless (-s $ref_file) {
+        $self->error_message("Failed to find reference sequence index file: $ref_file");
+        return;
     }
 
-    #TODO - it should ckeck to see if jump db files exist then append cmd line to use it instead of assuming it's there
-    unless (-e $jump_file) {
-        $self->error_message("Index $jump_file does not exist. Please create Bfast indexes in the correct location, or implement Genome::InstrumentData::Alignment->resolve_reference_build() in this module.");
-        #TODO - currently this doesn't work as inteneded .. aligner works w/o jump file and it
-        #appears that jump file is just a file prefix and doesn't, itself, exist.
-        #$self->die($self->error_message);
+    my $jump_db_root_name = $self->get_reference_sequence_index->output_dir.'/reference_mosaik_jump_15';
+    for my $jump_file_prefix ( qw/ _keys.jmp _meta.jmp _positions.jmp / ) {
+        if ( not -s $jump_db_root_name.$jump_file_prefix ) {
+            $self->error_message( "Failed to find jump file: ".$jump_db_root_name.$jump_file_prefix );
+            return;
+        }
     }
 
     my $mosaik_build_path = Genome::Model::Tools::Mosaik->path_for_mosaik_version($self->aligner_version)."Build";
@@ -88,7 +86,7 @@ sub _run_aligner {
 
         unless (-s $tmp_reads_file) {
             $self->error_message("Unable to convert reads at $input_pathnames[0] and $input_pathnames[1] into binary Mosaik file $tmp_reads_file");
-            $self->die($self->error_message);
+            die($self->error_message);
         }
 
     } elsif (scalar(@input_pathnames) == 1) {
@@ -104,12 +102,12 @@ sub _run_aligner {
         
         unless (-s $tmp_reads_file) {
             $self->error_message("Unable to convert reads at $input_pathnames[0] into binary Mosaik file $tmp_reads_file");
-            $self->die($self->error_message);
+            die($self->error_message);
         }
 
     } else {
         $self->error_message("number of input pathnames to Mosaik was not 1 or 2");
-        $self->die($self->error_message);
+        die($self->error_message);
     }
     
     #### STEP 2: Align
@@ -117,11 +115,11 @@ sub _run_aligner {
     {
         #$align_cmdline = $mosaik_align_path . sprintf(' -in %s -out %s -ia %s -rur %s %s -j %s',
         $align_cmdline = $mosaik_align_path . sprintf(' -in %s -out %s -ia %s -rur %s %s',
-            $tmp_reads_file, $tmp_align_file, $ref_file, $tmp_unalign_fq_file, $aligner_params{mosaik_align_params}, $jump_file);
+            $tmp_reads_file, $tmp_align_file, $ref_file, $tmp_unalign_fq_file, $aligner_params{mosaik_align_params}, $jump_db_root_name);
         
         Genome::Sys->shellcmd(
             cmd             => $align_cmdline,
-            input_files     => [ $tmp_reads_file, $ref_file, $jump_file."_keys.jmp", $jump_file."_meta.jmp", $jump_file."_positions.jmp" ],
+            input_files     => [ $tmp_reads_file, $ref_file, $jump_db_root_name."_keys.jmp", $jump_db_root_name."_meta.jmp", $jump_db_root_name."_positions.jmp" ],
             output_files    => [ $tmp_align_file, $tmp_unalign_fq_file ],
             skip_if_output_is_present => 0,
         );
@@ -133,7 +131,7 @@ sub _run_aligner {
 
         unless (-s $tmp_align_file) {
             $self->error_message("Unable to align. Alignment file $tmp_align_file is zero length, so something went wrong.");
-            $self->die($self->error_message);
+            die($self->error_message);
         }
 
     }
@@ -154,7 +152,7 @@ sub _run_aligner {
 
         unless (-s $tmp_sort_file) {
             $self->error_message("Unable to sort. Sorted file $tmp_sort_file is zero length, so something went wrong.");
-            $self->die($self->error_message);
+            die($self->error_message);
         }
 
     }
@@ -174,11 +172,11 @@ sub _run_aligner {
 
         unless (-s $tmp_sam_file) {
             $self->error_message("Unable to convert back to sam. Sam file $tmp_sam_file is zero length, so something went wrong.");
-            $self->die($self->error_message);
+            die($self->error_message);
         }
 
         # put your output file here, append to this file!
-            #my $output_file = $self->temp_staging_directory . "/all_sequences.sam"
+        #my $output_file = $self->temp_staging_directory . "/all_sequences.sam"
         die "Failed to process sam command line, error_message is ".$self->error_message unless $self->_filter_sam_output($tmp_sam_file, $tmp_unalign_sam_file, $staging_sam_file);
 
     }
@@ -216,20 +214,12 @@ sub _filter_sam_output {
     while (<$mosaik_fh>) {
         #write out the aligned map, excluding the default header- all lines starting with @.
         $all_seq_fh->print($_) unless $_ =~ /^@/;
-#        my $first_char = substr($_,0,1);
-#            if ($first_char ne '@') {
-#            $all_seq_fh->print($_);
-#        }
     }
 
     # TODO (iferguso) may already be filtered of header?
     while (<$unaligned_fh>) {
         #write out the aligned map, excluding the default header- all lines starting with @.
         $all_seq_fh->print($_) unless $_ =~ /^@/;
-#        my $first_char = substr($_,0,1);
-#            if ($first_char ne '@') {
-#            $all_seq_fh->print($_);
-#        }
     }
     $mosaik_fh->close;
     $unaligned_fh->close;
@@ -260,7 +250,9 @@ sub aligner_params_for_sam_header {
     my $self = shift;
     
     my %params = $self->decomposed_aligner_params;
-    return "MosaikBuild $params{mosaik_build_params}; MosaikAlign $params{mosaik_align_params}; MosaikSort $params{mosaik_sort_params}; MosaikText $params{mosaik_text_params}";
+    #return "MosaikBuild $params{mosaik_build_params}; MosaikAlign $params{mosaik_align_params}; MosaikSort $params{mosaik_sort_params}; MosaikText $params{mosaik_text_params}";
+    #TODO - Sort and Text params are null .. take em out
+    return "MosaikBuild $params{mosaik_build_params}; MosaikAlign $params{mosaik_align_params};";
 
     # for bwa this looks like "bwa aln -t4; bwa samse 12345'
 }
@@ -272,5 +264,58 @@ sub fillmd_for_sam {
 
 sub postprocess_bam_file {
     #will die in base class because bam:fastq read counts is NOT 1:1
+    return 1;
+}
+
+sub prepare_reference_sequence_index {
+    my $class = shift;
+    my $refindex = shift;
+
+    my $staging_dir = $refindex->temp_staging_directory;
+    $class->status_message( "Staging dir: $staging_dir" );
+    my $staged_fasta_file = sprintf("%s/all_sequences.fa", $staging_dir);
+    $class->status_message( "Staged fasta file: $staged_fasta_file" );
+    my $actual_fasta_file = $staged_fasta_file;
+
+    if (-l $staged_fasta_file) {
+        $class->status_message(sprintf("Following symlink for fasta file %s", $staged_fasta_file));
+        $actual_fasta_file = readlink($staged_fasta_file);
+        unless($actual_fasta_file) {
+            $class->error_message("Can't read target of symlink $staged_fasta_file");
+            return;
+        } 
+    }
+
+    $class->status_message("Building mosaik reference sequence index file");
+
+    #create mosaik reference.dat file
+    my $mosaik_path = Genome::Model::Tools::Mosaik->path_for_mosaik_version( $refindex->aligner_version );
+    my $ref_index_out_file = sprintf ( "%s/reference_mosaik.dat", $staging_dir );
+
+    my $ref_cmd = sprintf ("%sBuild -fr %s -oa %s", $mosaik_path, $staged_fasta_file, $ref_index_out_file);
+    $class->status_message( "Building mosaik reference sequences with command: $ref_cmd" );
+    my $ref_rv = Genome::Sys->shellcmd(
+        cmd => $ref_cmd,
+        );
+
+    unless ( $ref_rv ) {
+        $class->error_message( "Mosaik reference indexing failed at reference data creation with command: $ref_cmd" );
+        return;
+    }
+
+    #create mosaik jump db
+    my $hash_size = 15;
+    my $jump_file_base_name = sprintf ( "%s/reference_mosaik_jump_"."$hash_size", $staging_dir );
+
+    my $jump_cmd = sprintf ( "%sJump -ia %s -hs %s -out %s", $mosaik_path, $ref_index_out_file, $hash_size, $jump_file_base_name );
+    $class->status_message( "Building mosaik jump dbs with command: $jump_cmd" );
+    my $jump_rv = Genome::Sys->shellcmd(
+        cmd => $jump_cmd,
+        );
+    unless ( $jump_rv ) {
+        $class->error_message( "Mosaik reference indexing failed at jump db creation with command: $jump_cmd" );
+        return;
+    }
+
     return 1;
 }

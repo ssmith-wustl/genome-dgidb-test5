@@ -19,10 +19,18 @@ class Genome::Model::Tools::Music::Bmr::CalcCovg {
     tumor_min_depth => { is => 'Integer', doc => "The minimum read depth to consider a Tumor BAM base as covered", is_optional => 1, default => 8 },
     min_mapq => { is => 'Integer', doc => "The minimum mapping quality of reads to consider towards read depth counts", is_optional => 1, default => 20 },
   ],
+  doc => "Uses calcRoiCovg to count covered bases per-gene for each given tumor-normal pair of BAMs."
 };
 
-sub help_brief {
-  "Uses calcRoiCovg to count covered bases per-gene for each given tumor-normal pair of BAMs.";
+sub help_synopsis {
+  return <<HELP
+... music bmr calc-covg --bam-list input_dir/bam_list --output-dir output_dir --reference-sequence input_dir/all_sequences.fa --roi-file input_dir/all_coding_regions_with_2bpFlanks.bed
+
+To run parallelized per tumor-normal pair with an LSF job scheduler:
+... music bmr calc-covg --bam-list input_dir/bam_list --output-dir output_dir --reference-sequence input_dir/all_sequences.fa --roi-file input_dir/all_coding_regions_with_2bpFlanks.bed --cmd_list_file parallelizable_commands --cmd_prefix bsub
+(The commands in parallelizable_commands can be be run in parallel. After they complete, rerun this script without --cmd_list_file)
+... music bmr calc-covg --bam-list input_dir/bam_list --output-dir output_dir --reference-sequence input_dir/all_sequences.fa --roi-file input_dir/all_coding_regions_with_2bpFlanks.bed
+HELP
 }
 
 sub help_detail {

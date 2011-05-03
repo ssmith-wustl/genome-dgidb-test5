@@ -534,6 +534,7 @@ my $command_4 = Genome::Model::Command::Services::AssignQueuedInstrumentData->cr
 );
 
 isa_ok($command_4, 'Genome::Model::Command::Services::AssignQueuedInstrumentData');
+$DB::single = 1;
 ok($command_4->execute(), 'assign-queued-instrument-data executed successfully.');
 
 my $new_models_4 = $command_4->_newly_created_models;

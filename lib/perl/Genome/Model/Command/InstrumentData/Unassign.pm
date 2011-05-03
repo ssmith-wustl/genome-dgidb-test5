@@ -132,7 +132,7 @@ sub _unassign_all_instrument_data {
     # Unassign all unassigned if requested 
     $self->status_message("Attempting to unassign all available instrument data");
 
-    my @assigned_instrument_data = $self->model->assigned_instrument_data;
+    my @assigned_instrument_data = $self->model->instrument_data;
 
     unless ( @assigned_instrument_data ){
         $self->error_message("Attempted to unassign all instrument data that was assigned for model, but found none");
@@ -177,7 +177,7 @@ sub _list_compatible_instrument_data {
     my $self = shift;
 
     my @compatible_instrument_data = $self->model->compatible_instrument_data;
-    my @assigned_instrument_data = $self->model->assigned_instrument_data;
+    my @assigned_instrument_data = $self->model->instrument_data;
     my @unassigned_instrument_data = $self->model->unassigned_instrument_data;
 
     $self->status_message(
