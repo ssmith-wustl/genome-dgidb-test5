@@ -200,11 +200,6 @@ class Genome::Sample {
             where => [ attribute_label => 'subtype' ], 
             is_mutable => 1,
         },
-        models => { 
-            is => 'Genome::Model', 
-            reverse_as => 'subject', 
-            is_many => 1,
-        },
         # TODO These can be removed when project is refactored
         project_assignments          => { is => 'Genome::Sample::ProjectAssignment', reverse_as => 'sample', is_many => 1 },
         projects                     => { is => 'Genome::Site::WUGC::Project', via => 'project_assignments', to => 'project', is_many => 1},

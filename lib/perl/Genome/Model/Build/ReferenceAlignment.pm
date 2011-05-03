@@ -1242,12 +1242,15 @@ sub files_ignored_by_diff {
         reports/dbSNP_Concordance/report.html
         reports/Mapcheck/report.xml
         server_location.txt
+        variants/workflow.xml
+        variants/dispatcher.cmd
     );
 }
 
 sub dirs_ignored_by_diff {
     return qw(
         logs/
+        variants/\d+/
     );
 }
 
