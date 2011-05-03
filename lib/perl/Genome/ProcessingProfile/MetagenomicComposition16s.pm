@@ -121,20 +121,6 @@ sub one_job_classes {
     # Prepare
     push @subclasses, 'PrepareInstrumentData::'.$sequencing_platform_cc;
 
-    # Trim
-    if ( $self->trimmer ) {
-        push @subclasses, 'Trim::'.Genome::Utility::Text::string_to_camel_case(
-            $self->trimmer
-        );
-    }
-
-    # Assemble
-    if ( $self->assembler ) {
-        push @subclasses, 'Assemble::'.Genome::Utility::Text::string_to_camel_case(
-            $self->assembler
-        );
-    }
-
     # Classify, Orient, Reports and Clean Up work w/ all mc16s builds
     push @subclasses, (qw/ Classify Orient Reports CleanUp /);
 
