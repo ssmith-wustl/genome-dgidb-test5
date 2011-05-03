@@ -98,7 +98,7 @@ class Genome::Sample {
             via => 'attributes',
             to => 'attribute_value',
             where => [ attribute_label => 'default_genotype_data' ],
-            is_mutable => 0,
+            is_mutable => 1,
         },
         default_genotype_data => {
             is => 'Genome::InstrumentData::Imported',
@@ -299,33 +299,15 @@ sub set_default_genotype_data {
     }
 
     if (defined $self->default_genotype_data_id) {
+        return 1 if $self->default_genotype_data_id eq $genotype_data_id;
         unless ($allow_overwrite) {
             Carp::confess "Attempted to overwrite current genotype instrument data id " . $self->default_genotype_data_id . 
                 " for sample " . $self->id . " with genotype data id $genotype_data_id " .
                 " without setting the overwrite flag!";
         }
-
-        $self->warning_message("Default genotype data already set to " . $self->default_genotype_data_id . " for sample " . 
-            $self->id . ", changing to $genotype_data_id"); 
-
-        # This attribute is not set as mutable in the class definition to prevent someone from changing it without
-        # passing the above checks. Including it in the class definition at all makes for easy access and listing, though. 
-        my $attribute = Genome::SubjectAttribute->get(
-            subject_id => $self->id,
-            attribute_label => 'default_genotype_data',
-        );
-        Carp::confess 'Could not retrieve genotype data attribute for sample ' . $self->id unless $attribute;
-        $attribute->attribute_value($genotype_data_id);
-    }
-    else {
-        my $attribute = Genome::SubjectAttribute->create(
-            subject_id => $self->id,
-            attribute_label => 'default_genotype_data',
-            attribute_value => $genotype_data_id,
-        );
-        Carp::confess 'Could not create default genotype data attribute for sample ' . $self->id unless $attribute;
     }
 
+    $self->default_genotype_data_id($genotype_data_id);
     return 1;
 }
 
