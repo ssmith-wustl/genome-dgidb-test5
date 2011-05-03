@@ -20,14 +20,6 @@ class Genome::Sample {
         },
     ],
     has_optional => [	
-        genotype_instrument_data_id => {
-            is => 'Text',
-            via => 'attributes',
-            to => 'attribute_value',
-            where => [ attribute_label => 'genotype_instrument_data_id' ],
-            is_mutable => 1,
-            doc => 'Id of the corresponding genotype instrument data'
-        },
         common_name => { 
             is => 'Text',
             via => 'attributes',
@@ -293,6 +285,9 @@ sub check_genotype_data {
     Carp::confess $self->error_message("Instrument data is not a 'genotype file' format.")
        unless $genotype_instrument_data->import_format && $genotype_instrument_data->import_format eq 'genotype file';
 
+    Carp::confess $self->error_message("Instrument data does not come from sample " . $self->id)
+        unless $genotype_instrument_data->sample_id eq $self->id;
+
     return 1;
 }
 
@@ -362,7 +357,7 @@ sub default_genotype_models {
         name => 'instrument_data',
     );
     my @models = map { $_->model } @inputs;
-    @models = grep { $_->subclass_name eq 'Genome::Model::GenotypeMicroarray' } @models;
+    @models = grep { $_->subclass_name eq 'Genome::Model::GenotypeMicroarray' and $_->subject_id eq $self->id } @models;
 
     return @models;
 }
