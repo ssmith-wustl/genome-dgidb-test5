@@ -13,11 +13,10 @@ class Genome::Sample::Command::Update::DefaultGenotypeData {
             is_many => 0,
             doc => 'Sample for which default genotype data will be set. Resolved by Genome::Command::Base.',
         },
-        genotype => {
-            is => 'Genome::InstrumentData::Imported',
+        genotype_id => {
+            is => 'Text',
             is_many => 0,
-            doc => 'Genotype to use as the default genotype data for sample. Resolved by Genome::Command::Base.',
-            require_user_verify => 1,
+            doc => 'Used to identify a single genotype instrument data that will be set as the sample default',
         },
         overwrite => {
             is => 'Boolean',
@@ -40,7 +39,16 @@ sub execute {
     my $self = shift;
 
     my $sample = $self->sample;
-    my $genotype = $self->genotype;
+    my $genotype_id = $self->genotype_id;
+    my $genotype;
+    if ($genotype_id eq 'none') {
+        $genotype = $genotype_id;
+        $self->launch_builds(0); # Don't want to launch new builds if genotype is being set to none
+    }
+    else {
+        $genotype = Genome::InstrumentData::Imported->get($genotype_id);
+        Carp::confess "Could not find genotype data with id $genotype_id!" unless $genotype;
+    }
     
     my $rv = eval {
         $sample->set_default_genotype_data(
@@ -52,19 +60,13 @@ sub execute {
         Carp::confess 'Could not assign genotype data ' . $genotype->id . ' to sample ' . $sample->id . ": $@";
     }
     
-    return 1 unless $self->launch_builds;
-
-    my @models = Genome::Model::ReferenceAlignment->get(
-        subject_id => $sample->id,
-    );
-    for my $model (@models) {
-        my $genotype_model = $model->default_genotype_model;
-        next if $genotype_model->id eq $model->genotype_microarray_model_id;
-        $model->genotype_microarray_model_id($genotype_model->id);
-        $model->build_requested(1);
+    if ($self->launch_builds) {    
+        my @genotype_models = $sample->default_genotype_models;
+        for my $genotype_model (@genotype_models) {
+            $genotype_model->request_builds_for_dependent_ref_align;
+        }
     }
 
-    
     return 1;
 }
 1;
