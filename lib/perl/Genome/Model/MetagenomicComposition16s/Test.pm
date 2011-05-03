@@ -209,7 +209,7 @@ sub example_build_for_model {
     Carp::confess('No mc16s model to create example build') if not $model;
 
     my $dir = $class->_example_directory_for_model($model) or die;
-    my $build = Genome::Model::Build->create(
+    my $build = $model->create_build(
         model=> $model,
         data_directory => $dir,
     );

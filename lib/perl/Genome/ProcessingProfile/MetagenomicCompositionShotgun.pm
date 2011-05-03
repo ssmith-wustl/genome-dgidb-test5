@@ -681,7 +681,7 @@ sub run_ref_align_build {
     }
 
     $self->status_message("...creating build");
-    my $sub_build = Genome::Model::Build->create(
+    my $sub_build = $model->create_build(
         model_id => $model->id
     );
     unless ($sub_build){

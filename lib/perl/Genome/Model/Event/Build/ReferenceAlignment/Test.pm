@@ -213,7 +213,7 @@ sub run {
     my $model = $self->model;
 
     # Create and schedule a build
-    my $build = Genome::Model::Build->create(
+    my $build = $model->create_build(
         model_id => $model->id,
     );
     ok($build, 'Created build.');

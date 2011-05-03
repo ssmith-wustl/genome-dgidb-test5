@@ -12,7 +12,7 @@ use_ok('Genome::Model::Event::Build::MetagenomicComposition16s::CleanUp');
 
 my $model = Genome::Model::MetagenomicComposition16s::Test->model_for_sanger;
 ok($model, 'got mc16s sanger model');
-my $build = Genome::Model::Build->create(
+my $build = $model->create_build(
     model => $model,
     data_directory => $model->data_directory,
 );
