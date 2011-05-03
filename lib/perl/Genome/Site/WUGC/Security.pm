@@ -70,11 +70,11 @@ sub email_usage_info {
     my $command = $0 || 'unknown command';
     my @argv = @ARGV;
 
-    my $user = getpwuid($<) || 'nnutter';
-    my $host = Sys::Hostname::hostname();
-    my $time = localtime(time);
-    my $package = (caller)[0];
-    my $program = join(' ', $command, @argv);
+    my $user = getpwuid($<) || 'unknown-user';
+    my $host = Sys::Hostname::hostname() || 'unknown-hostname';
+    my $time = localtime(time) || 'Unknown Time';
+    my $package = (caller)[0] || 'Unknown Package';;
+    my $program = join(' ', $command, @argv) || 'Unknown Program';
 
     my $from = $user . '@genome.wustl.edu';
     my $subject = "$user\@$host used $package";
