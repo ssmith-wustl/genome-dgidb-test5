@@ -82,7 +82,7 @@ sub filter_reads_by_primers {
 
     my %primers = $self->amplicon_set_names_and_primers;
     my $min_length = $self->processing_profile->amplicon_size;
-    my $attempted = 0;
+    my ($attempted, $reads_attempted, $reads_processed) = (qw/ 0 0 0 /);
     for my $instrument_data ( @instrument_data ) {
         $self->status_message('PROCESSING: '.$instrument_data->id);
         unless ( $instrument_data->total_reads > 0 ) {
@@ -100,6 +100,7 @@ sub filter_reads_by_primers {
         while ( my $fastas = $reader->read ) {
             my $fasta = $fastas->[0];
             $attempted++;
+            $reads_attempted++;
             # check length here
             next unless length $fasta->{seq} >= $min_length;
             my $set_name = 'none';
@@ -118,11 +119,15 @@ sub filter_reads_by_primers {
             $fasta->{desc} = undef; # clear description
             my $writer = $self->_get_writer_for_set_name($set_name);
             $writer->write([$fasta]);
+            $reads_processed++;
         }
         $self->status_message('DONE PROCESSING: '.$instrument_data->id);
     }
 
     $self->amplicons_attempted($attempted);
+    $self->reads_attempted($reads_attempted);
+    $self->reads_processed($reads_processed);
+    $self->reads_processed_success( $reads_attempted > 0 ?  sprintf('%.2f', $reads_processed / $reads_attempted) : 0 );
 
     return 1;
 }

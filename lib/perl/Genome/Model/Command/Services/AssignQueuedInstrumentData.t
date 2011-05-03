@@ -12,7 +12,7 @@ BEGIN {
 use above 'Genome';
 
 require Genome::InstrumentData::Solexa;
-use Test::More tests => 105;
+use Test::More tests => 106;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
 
@@ -546,6 +546,10 @@ ok(@tumor, 'the cron created a tumor model for the first sample');
 ok($normal, 'the cron created a paired normal model');
 ok(grep($_ ==  $somatic_variation->tumor_model, @tumor), 'somatic variation has the correct tumor model');
 is($normal, $somatic_variation->normal_model, 'somatic variation has the correct normal model');
+
+@models = values %$new_models_4;
+push(@model_groups, $_->model_groups) for (@models);
+ok((grep {$_->name =~ /\.tcga/} @model_groups), "found tcga-cds model_group");
 
 is($pse_7->pse_status, 'completed', 'seventh pse completed');
 

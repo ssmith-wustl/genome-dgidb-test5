@@ -33,12 +33,7 @@ associated LICENSE file in this distribution.
 EOS
 }
 
-
-# fill all of these in the subclasses
-
 sub _doc_authors {
-    # used to compose man pages 
-    # (return a list of strings)
     return ('',
         'Nathan D. Dees, Ph.D.',
         'Cyriac Kandoth, Ph.D.',
@@ -51,9 +46,7 @@ sub _doc_authors {
 }
 
 sub _doc_credits {
-    # used to compose man pages 
-    # (return a list of strings)
-    return ('','FILL ME _doc_credits');
+    return ('','None at this time.');
 }
 
 sub _doc_see_also {
@@ -70,6 +63,4 @@ sub help_detail {
         . "\n";
 }
 
-
 1;
-

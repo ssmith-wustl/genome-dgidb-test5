@@ -24,13 +24,6 @@ class Genome::Model::View::Status::Xml {
                 # },
                 'is_default',
                 'data_directory',
-                'last_complete_build_flagstat',
-                {
-                    name => 'processing_profile',
-                    aspects => ['id', 'name', 'type_name'],
-                    perspective => 'default',
-                    toolkit => 'xml'
-                },
                 'creation_date',
                 'user_name',
                 {

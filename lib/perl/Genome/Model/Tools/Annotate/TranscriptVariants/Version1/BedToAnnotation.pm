@@ -45,7 +45,8 @@ sub execute{
 
     if (defined $snv_file and defined $indel_file){
         #Merge the two
-        Genome::Sys->shellcmd(cmd => "sort -k 1,1 -k 2,2n -k 3,3n  -o " . $self->output . " " . $indel_file->filename . " " . $snv_file->filename);
+        my $max_memory_kb = "3145728"; # 3 GB of memory, if sort needs more than this it uses temp files for sorting
+        Genome::Sys->shellcmd(cmd => "sort -k 1,1 -k 2,2n -k 3,3n -y$max_memory_kb -m -o " . $self->output . " " . $indel_file->filename . " " . $snv_file->filename);
     }elsif (defined $snv_file){
         Genome::Sys->shellcmd(cmd => "cp " . $snv_file->filename . "  " . $self->output) || ($self->error_message("Copy failed, exiting") and die); 
     }elsif (defined $indel_file){

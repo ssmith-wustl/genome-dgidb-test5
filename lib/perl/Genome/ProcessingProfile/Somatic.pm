@@ -163,12 +163,12 @@ sub _map_workflow_inputs {
     }
 
     # Get the snp file from the tumor and normal models
-    my $tumor_snp_file = $tumor_build->filtered_snp_file;
+    my $tumor_snp_file = $tumor_build->snv_file;
     unless (-e $tumor_snp_file) {
         $self->error_message("Tumor snp file $tumor_snp_file does not exist!");
         die $self->error_message;
     }
-    my $normal_snp_file = $normal_build->filtered_snp_file;
+    my $normal_snp_file = $normal_build->snv_file;
     unless (-e $normal_snp_file) {
         $self->error_message("Normal snp file $normal_snp_file does not exist!");
         die $self->error_message;

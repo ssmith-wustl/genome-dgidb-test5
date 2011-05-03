@@ -35,7 +35,11 @@ sub execute {
         die $self->error_message("Genotype file missing/empty: $genotype_file");
     }
 
-    my $variant_file = $build->data_directory . '/snp_related_metrics/snps_all_sequences';
+    my @variant_files = glob($build->variants_directory . '/snv/samtools-*/snvs.hq');
+    unless(scalar @variant_files eq 1) {
+        die $self->error_message("Could not find samtools output for run.");
+    }
+    my $variant_file = $variant_files[0];
     unless ( -s $variant_file ) {
         die $self->error_message("Variant file missing/empty: $variant_file");
     }

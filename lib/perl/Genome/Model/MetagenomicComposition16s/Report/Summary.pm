@@ -53,8 +53,6 @@ sub _create_metrics {
 
     $self->{_metrix} = {
         lengths => [],
-        reads => 0,
-        reads_processed => 0,
     };
 
     return 1;
@@ -65,8 +63,6 @@ sub _add_amplicon {
 
     return 1 if not $amplicon->{classification}; # ok
     push @{$self->{_metrix}->{lengths}}, length $amplicon->{seq}->{seq};
-    $self->{_metrix}->{reads} += scalar @{$amplicon->{reads}};
-    $self->{_metrix}->{reads_processed} += scalar @{$amplicon->{reads_processed}};
 
     return 1;
 }
@@ -93,9 +89,6 @@ sub get_summary_stats {
 
     my @lengths = sort { $a <=> $b } @{ $self->{_metrix}->{lengths} };
     my $length = $sum->(@lengths);
-    my $reads_processed_success = ( $self->{_metrix}->{reads_processed} > 0 )
-    ? sprintf('%.2f', $self->{_metrix}->{reads_processed} / $self->{_metrix}->{reads})
-    : 'NA';
 
     my %totals = (
         # Amplicons
@@ -114,9 +107,9 @@ sub get_summary_stats {
             $length / $processed,
         ),
         # Reads
-        reads => $self->{_metrix}->{reads},
-        'reads-processed' => $self->{_metrix}->{reads_processed},
-        'reads-processed-success' => $reads_processed_success,
+        reads => $build->reads_attempted,
+        'reads-processed' => $build->reads_processed,
+        'reads-processed-success' => $build->reads_processed_success,
     );
 
     return {

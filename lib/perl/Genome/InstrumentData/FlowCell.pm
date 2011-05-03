@@ -78,7 +78,7 @@ sub lane_info {
 
         for my $file (@files) {
             next unless $file->file_name =~ m/\.report\.xml$/;
-            push (@lane_reports, $file->file_name);
+            push (@lane_reports, "/view/genome/instrument-data/solexa/quality.html?id=" . $lane->id);
         }
 
         if ($lane->gc_bias_path) {

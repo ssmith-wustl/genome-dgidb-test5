@@ -111,12 +111,11 @@ class Genome::Model::Tools::DetectVariants2::Detector {
         _result => {
             is => 'Genome::Model::Tools::DetectVariants2::Result',
             doc => 'SoftwareResult for the run of this detector',
+            id_by => "_result_id",
             is_output => 1,
         },
         _result_id => {
             is => 'Number',
-            via => '_result',
-            to => 'id',
             is_output => 1,
         },
     ],

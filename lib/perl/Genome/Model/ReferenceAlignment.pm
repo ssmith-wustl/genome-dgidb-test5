@@ -365,7 +365,6 @@ sub is_eliminate_all_duplicates {
 sub is_lane_qc {
     my $self = shift;
     my $pp = $self->processing_profile;
-    # TODO Is there a better way to determine if this is a lane qc model?
     if ($pp->append_event_steps && $pp->append_event_steps =~ /LaneQc/) {
         return 1;
     }
@@ -423,15 +422,40 @@ sub dependent_properties {
     return;
 }
 
-sub init_genotype_model {
+sub verify_inputs { 
     my $self = shift;
+    my $good_to_go = 1;
 
-    my $gmodel = $self->genotype_microarray_model;
-    return if $gmodel;
+    $self->check_and_update_genotype_input;
 
-    $gmodel = $self->default_genotype_model;
-    return unless $gmodel;
-    $self->genotype_microarray_model_id($gmodel->id);
+    if ($self->is_lane_qc) {
+        unless ($self->genotype_microarray_model) {
+            $good_to_go = 0;
+            $self->error_message("Could not resolve genotype microarray model for reference alignment model " . $self->id);
+        }
+    }
+        
+    return $good_to_go;
+}       
+
+sub check_and_update_genotype_input {
+    my $self = shift;
+    my $default_genotype_model = $self->default_genotype_model;
+    return 1 unless $default_genotype_model;
+
+    if (defined $self->genotype_microarray_model_id and $self->genotype_microarray_model_id ne $default_genotype_model->id) {
+        if (defined $self->user_name and $self->user_name eq 'apipe-builder') {
+            $self->warning_message("Sample " . $self->subject_id . " points to genotype model " . $default_genotype_model->id .
+                ", which disagrees with the genotype model input of this model (" . $self->genotype_microarray_model_id . 
+                "), overwriting!");
+            $self->genotype_microarray_model_id($default_genotype_model->id);
+        }
+    }
+    elsif (not defined $self->genotype_microarray_model_id) {
+        $self->genotype_microarray_model_id($default_genotype_model->id);
+    }
+
+    return 1;
 }
 
 1;

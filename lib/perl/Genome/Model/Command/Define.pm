@@ -247,7 +247,6 @@ sub execute {
         $model_params{data_directory} = $self->data_directory;
     }
 
-    $DB::single = 1;
     my $model = Genome::Model->create(%model_params);
     unless ( $model ) {
         $self->error_message('Could not create a model for: '. $self->subject_name);
@@ -310,7 +309,6 @@ sub type_specific_parameters_for_create {
 sub compare_pp_and_model_type {
     my $self = shift;
 
-    $DB::single = 1;
     # Determine the subclass of model being defined
     my $model_subclass = $self->class;
     my $package = __PACKAGE__ . "::";

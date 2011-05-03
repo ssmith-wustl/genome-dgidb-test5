@@ -61,24 +61,23 @@ class Genome::Model::Build::ReferenceAlignment {
             id_by => 'reference_sequence_build_id',
         },
     ],
+    has_transient_optional => [
+        _unfiltered_snv_file => {
+            is => 'HASH',
+            doc => 'file holding the merged filtered/unfiltered snv file'
+        },
+    ],
 };
 
 sub create {
     my $class = shift;
-
-    my $bool = $class->define_boolexpr(@_);
-    my $model_id = $bool->value_for('model_id');
-    return unless $model_id;
-    my $model = Genome::Model->get($model_id);
-    return unless $model;
-    $model->init_genotype_model;
 
     my $self = $class->SUPER::create(@_);
     unless ($self) {
         return;
     }
 
-    $model = $self->model;
+    my $model = $self->model;
     my @idas = $model->instrument_data_assignments;
     unless (scalar(@idas) && ref($idas[0])  &&  $idas[0]->isa('Genome::Model::InstrumentDataAssignment')) {
         $self->error_message('No instrument data have been added to model! '. $model->name);
@@ -246,32 +245,37 @@ sub calculate_input_base_counts_after_trimq2 {
     return ($total_ct, $total_trim_ct);
 }
 
-sub filtered_snp_file {
-    my ($self) = @_;
-    
-    my $expected_name = $self->unfiltered_snp_file . '.filtered';
-    
-    if(Genome::Sys->check_for_path_existence($expected_name)) {
-        return $expected_name;
+sub snv_file {
+    my $self = shift;
+    my $dir = $self->variants_directory;
+
+    if($dir =~ /snp_related_metrics/) {
+        my $file = $dir . '/snps_all_sequences.filtered';
+        return $file if -e $file;
+
+        my $old_file = $dir . '/filtered.indelpe.snps';
+        return $old_file if -e $old_file;
+
+        return $file;
+    } else {
+        return $dir . '/snvs.hq';
     }
-    
-    my $old_name = join('/', $self->snp_related_metric_directory(), 'filtered.indelpe.snps');
-    if(Genome::Sys->check_for_path_existence($old_name)) {
-        return $old_name;
-    }
-    
-    #Hasn't been created yet--if we're on this snapshot it would use this name
-    return $expected_name;
 }
 
+sub indel_file {
+    my $self = shift;
+    my $dir = $self->variants_directory;
 
-sub unfiltered_snp_file {
-    return shift->snp_related_metric_directory . '/snps_all_sequences';
+    if($dir =~ /snp_related_metrics/) {
+        return $dir . '/indels_all_sequences.filtered';
+    } else {
+        return $dir . '/indels.hq';
+    }
 }
 
 sub get_variant_bed_file {
     my ($self, $base, $ver) = @_;
-    my $filename = $self->snp_related_metric_directory . "/$base";
+    my $filename = $self->variants_directory . "/$base";
     $filename .= ".$ver" if defined $ver;
     $filename .= ".bed";
     if (! -e $filename) {
@@ -284,37 +288,59 @@ sub get_variant_bed_file {
 
 sub snvs_bed {
     my ($self, $ver) = @_;
-    return $self->get_variant_bed_file("snps_all_sequences", $ver);
+
+    my $dir = $self->variants_directory;
+    if($dir =~ /snp_related_metrics/) {
+        return $self->get_variant_bed_file("snps_all_sequences", $ver);
+    } else {
+        my $snv_files = $self->_unfiltered_snv_file;
+        unless($snv_files->{$ver}) {
+            my $hq_file = $self->get_variant_bed_file("snvs.hq", $ver);
+            my $lq_file = $self->get_variant_bed_file("snvs.lq", $ver);
+
+            my $combined_file_path = Genome::Sys->create_temp_file_path;
+            my $union_command = Genome::Model::Tools::Joinx::Sort->create(
+                input_files => [$hq_file, $lq_file],
+                merge_only => 1,
+                output_file => $combined_file_path,
+            );
+            unless($union_command->execute()) {
+                die $self->error_message('Failed to produce snvs_bed file!' . ($ver? ' for version ' . $ver : ''));
+            }
+
+            $snv_files->{$ver} = $combined_file_path;
+            $self->_unfiltered_snv_file($snv_files);
+        }
+
+        return $snv_files->{$ver};
+    }
 }
 
 sub filtered_snvs_bed {
     my ($self, $ver) = @_;
-    return $self->get_variant_bed_file("snps_all_sequences.filtered", $ver);
+
+    my $name = "snvs.hq";
+    my $dir = $self->variants_directory;
+    if($dir =~ /snp_related_metrics/) {
+        $name = "snps_all_sequences.filtered";
+    }
+    return $self->get_variant_bed_file($name, $ver);
 }
 
-sub filtered_indel_file {
+sub variants_directory {
     my $self = shift;
 
-    return $self->snp_related_metric_directory . '/indels_all_sequences.filtered';
-}
+    my $expected_directory = $self->data_directory . '/variants';
+    return $expected_directory if -d $expected_directory;
 
-sub unfiltered_indel_file {
-    my $self =shift;
-
-    return $self->snp_related_metric_directory . '/indels_all_sequences';
-}
-
-sub snp_related_metric_directory {
-    my $self = shift;
-
+    #for compatibility with previously existing builds
     my @dir_names = ('snp_related_metrics', 'sam_snp_related_metrics', 'maq_snp_related_metrics', 'var-scan_snp_related_metrics');
-
     for my $dir_name (@dir_names) {
         my $dir = $self->data_directory . '/' . $dir_name;
         return $dir if -d $dir;
     }
 
-    return $self->data_directory . '/' . $dir_names[0];
+    return $expected_directory; #new builds should use current location
 }
 
 sub log_directory {
@@ -327,23 +353,36 @@ sub rmdup_metrics_file {
 
     my $merged_alignment_result = $self->merged_alignment_result;
     if($merged_alignment_result) {
-        return glob($merged_alignment_result->output_dir."/*.metrics");
+	    my @files = glob($merged_alignment_result->output_dir."/*.metrics");
+        return @files;
     }
-
-    #location prior to merged alignment results
-    return $self->log_directory."/mark_duplicates.metrics";
+    elsif (-e $self->log_directory."/mark_duplicates.metrics") {
+	    #location prior to merged alignment results
+	    return $self->log_directory."/mark_duplicates.metrics";
+    }
+    else {
+        $self->warning_message('No rmdup metrics file found');
+	    return;
+    }
 }
+
 
 sub mark_duplicates_library_metrics_hash_ref {
     my $self = shift;
     my $subject = $self->model->subject_name;
     my @mark_duplicates_metrics = $self->rmdup_metrics_file;
 
+    unless (@mark_duplicates_metrics) {
+        $self->error_message('No valid mark_duplicate metrics files found');
+        die;
+    }
+
     my %library_metrics;
     for my $mark_duplicates_metrics (@mark_duplicates_metrics) {
         my $fh = Genome::Sys->open_file_for_reading($mark_duplicates_metrics);
         unless ($fh) {
-            die('Failed to open mark duplicates metrics file '. $mark_duplicates_metrics);
+            $self->warning_message('Failed to open mark duplicates metrics file '. $mark_duplicates_metrics);
+            next;
         }
 
         my @keys;
@@ -420,7 +459,7 @@ sub whole_rmdup_bam_file {
             return $not_symlinks[0];
         }
         else {
-                $self->error_message("Multiple merged rmdup bam file found.");
+            $self->error_message("Multiple merged rmdup bam file found.");
             return;
         }
     }
@@ -766,11 +805,6 @@ sub accumulated_alignments_disk_allocation {
     my $disk_allocation = Genome::Disk::Allocation->get(owner_class_name=>ref($dedup_event), owner_id=>$dedup_event->id);
     
     return $disk_allocation;
-}
-
-sub variants_directory {
-    my $self = shift;
-    return $self->data_directory . '/variants';
 }
 
 sub delete {

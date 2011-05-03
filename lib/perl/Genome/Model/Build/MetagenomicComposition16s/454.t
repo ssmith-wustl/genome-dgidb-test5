@@ -93,6 +93,9 @@ is(
         $build->amplicons_processed / $build->amplicons_attempted
     ), .75, 'amplicons processed success'
 );
+is($build->reads_attempted(20), 20, 'amplicons attempted');
+is($build->reads_processed(15), 15, 'amplicons processed');
+is($build->reads_processed_success(15), 15, 'amplicons processed');
 
 # calculated kb
 is($build->calculate_estimated_kb_usage, 1024, 'estimated kb usage');

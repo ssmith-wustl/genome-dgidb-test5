@@ -93,7 +93,7 @@ sub setup_test_models {
     my $test_assignment = $test_model->add_instrument_data(value => $test_instrument_data);
     ok($test_assignment, 'assigned data to model');
     
-    my $test_build = Genome::Model::Build->create(
+    my $test_build = $test_model->create_build(
         model_id => $test_model->id,
         data_directory => $test_data_dir,
     );
@@ -122,7 +122,7 @@ sub setup_test_models {
     my $test_assignment_two = $test_model_two->add_instrument_data(value => $test_instrument_data);
     ok($test_assignment_two, 'assigned data to second model');
     
-    my $test_build_two = Genome::Model::Build->create(
+    my $test_build_two = $test_model_two->create_build(
         model_id => $test_model_two->id,
         data_directory => $test_data_dir,
     );

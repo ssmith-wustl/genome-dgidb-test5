@@ -18,10 +18,13 @@ class Genome::Model::Tools::Music::Bmr::CalcBmr {
     show_skipped => { is => 'Boolean', doc => "Report each skipped mutation, not just how many", is_optional => 1, default => 0 },
     genes_to_ignore => { is => 'Text', doc => "Comma-delimited list of genes to ignore for background mutation rates", is_optional => 1 },
   ],
+  doc => "Calculates background mutation rates using output files of calc-covg and a mutation list."
 };
 
-sub help_brief {
-  "Uses output files of calc-covg, and a mutation list to calculate Background Mutation Rates";
+sub help_synopsis {
+  return <<HELP
+... music bmr calc-bmr --bam-list input_dir/bam_list --maf-file input_dir/myMAF.tsv --output-dir output_dir --ref-seq input_dir/all_sequences.fa --roi-file input_dir/all_coding_regions_with_2bpFlanks.bed --genes-to-ignore PIK3CA,TP53
+HELP
 }
 
 sub help_detail {
@@ -60,6 +63,12 @@ ARGUMENTS:
   A comma-delimited list of genes to ignore for overall BMR calculations. List genes that are
   known factors in this disease and whose mutations should not be classified as background.
 HELP
+}
+
+sub _doc_authors {
+    return ('',
+        'Cyriac Kandoth, Ph.D.',
+    );
 }
 
 sub execute {

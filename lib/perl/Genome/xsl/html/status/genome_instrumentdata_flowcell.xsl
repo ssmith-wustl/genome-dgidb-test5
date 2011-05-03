@@ -246,20 +246,11 @@ window.chartMin = 0;
           <xsl:when test="report">
 
             <xsl:for-each select="report">
-              <xsl:variable select="@name" name="report_name_full"/>
-              <xsl:variable select="substring-before($report_name_full,'.')" name="report_name"/>
-              <xsl:variable select="../@id" name="instrument_data_id"/>
-
-              <!-- each report type requires its own view-->
-              <xsl:choose>
-                <xsl:when test="$report_name = 'quality'">
-                  <a class="mini btn"><xsl:attribute name="href">/view/genome/instrument-data/solexa/quality.html?id=<xsl:value-of select="$instrument_data_id"/></xsl:attribute>quality</a>
-
-                </xsl:when>
-                <xsl:otherwise>
-                  <span class="light"><xsl:value-of select="$report_name"/> (no view available)</span>
-                </xsl:otherwise>
-              </xsl:choose>
+              <xsl:sort select="@name" data-type="text" order="ascending"/>
+              <a class="mini btn">
+                <xsl:attribute name="href"><xsl:value-of select="@url"/></xsl:attribute>
+                <xsl:value-of select="@name"/>
+              </a>
             </xsl:for-each>
 
           </xsl:when>

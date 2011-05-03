@@ -170,7 +170,7 @@ is_deeply(\@model_instrument_data, \@instrument_data, 'model instrument data via
 # create these in reverse order because of negative ids
 my @builds;
 for my $i (1..2) {
-    unshift @builds, Genome::Model::Build->create(
+    unshift @builds, $model->create_build(
         model => $model,
         data_directory => $model->data_directory.'/build'.$i,
     );
@@ -189,9 +189,6 @@ for my $i (1..2) {
 is(@builds, 2, 'create builds');
 my @model_builds = $model->builds;
 is_deeply(\@model_builds, \@builds, 'model builds');
-
-my @built_instrument_data = $model->built_instrument_data;
-is_deeply(\@built_instrument_data, \@instrument_data, 'built instruemnt data');
 
 # one succeeded, one running
 $builds[0]->the_master_event->event_status('Succeeded');

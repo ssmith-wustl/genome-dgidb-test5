@@ -42,15 +42,19 @@ sub base_web_uri {
     }
 }
 
+sub domain {
+    return 'genome.wustl.edu';
+}
+
 sub user_email {
     my $self = shift;
     my $user = shift;
     $user ||= $ENV{USER};
-    return $user . '@genome.wustl.edu';
+    return join('@', $user, Genome::Config::domain());
 }
 
 sub current_user_id {
-    return $ENV{USER} . '@genome.wustl.edu';
+    return join('@', $ENV{USER}, Genome::Config::domain());
 }
 
 sub admin_notice_users {

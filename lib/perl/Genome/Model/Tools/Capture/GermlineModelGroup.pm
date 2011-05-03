@@ -34,6 +34,7 @@ class Genome::Model::Tools::Capture::GermlineModelGroup {
 		group_id		=> { is => 'Text', doc => "ID of model group" , is_optional => 0},
 		output_build_dirs	=> { is => 'Text', doc => "If specified, outputs last succeeded build directory for each sample to this file" , is_optional => 1},
 		output_coverage_stats	=> { is => 'Text', doc => "Specify a directory to output coverage stats" , is_optional => 1},
+		output_flowcell_information	=> { is => 'Text', doc => "Specify a directory to output flowcell information" , is_optional => 1},
 	],
 };
 
@@ -65,11 +66,8 @@ EOS
 sub execute {                               # replace with real execution logic.
 	my $self = shift;
 
-	my $group_id = $self->group_id;
 
-	## Save model ids by subject name ##
-	
-	my %succeeded_models_by_sample = ();
+	my $group_id = $self->group_id;
 
 	## Output build dirs##
 	
@@ -78,19 +76,23 @@ sub execute {                               # replace with real execution logic.
 		open(BUILDDIRS, ">" . $self->output_build_dirs) or die "Can't open outfile: $!\n";
 	}
 
-	## Open the output file ##
 	if($self->output_coverage_stats) {
 		open(OUTFILE, ">" . $self->output_coverage_stats) or die "Can't open output file: $!\n";
 		print OUTFILE "Model_id\tBuild_id\tSubject_name\tBuild_Dir\tCoverage_File\tCoverage_Wingspan0_Depth1x\tCoverage_Wingspan0_Depth5x\tCoverage_Wingspan0_Depth10x\tCoverage_Wingspan0_Depth15x\tCoverage_Wingspan0_Depth20x\tPercent_Target_Space_Covered_1x\tPercent_Target_Space_Covered_5x\tPercent_Target_Space_Covered_10x\tPercent_Target_Space_Covered_15x\tPercent_Target_Space_Covered_20x\tMapped_Reads\tPercent_Target_Space_Covered_20x_per1Gb\tPercent_Duplicates\tMapping_Rate\n";
 	}
 
+	if($self->output_flowcell_information) {
+		open(FLOWCELL, ">" . $self->output_flowcell_information) or die "Can't open output file: $!\n";
+	}
+
 	## Get the models in each model group ##
 
 	my $model_group = Genome::ModelGroup->get($group_id);
-	my @models = $model_group->models; 
+	my @model_bridges = $model_group->model_bridges;
 
-	foreach my $model (@models)
+	foreach my $model_bridge (@model_bridges)
 	{
+	     my $model = Genome::Model->get($model_bridge->model_id);
 		my $model_id = $model->genome_model_id;
 		my $subject_name = $model->subject_name;
 		$subject_name = "Model" . $model_id if(!$subject_name);
@@ -98,13 +100,25 @@ sub execute {                               # replace with real execution logic.
 		if($model->last_succeeded_build_directory) {
 			my $build = $model->last_succeeded_build;
 			my $build_id = $build->id;
-			$succeeded_models_by_sample{$subject_name} = $model_id;
 			my $last_build_dir = $model->last_succeeded_build_directory;
 			if($self->output_build_dirs) {
 				my $bam_file = $build->whole_rmdup_bam_file;
 				print BUILDDIRS join("\t", $model_id, $subject_name, $build_id, "Succeeded", $last_build_dir, $bam_file) . "\n";
 				unless($self->output_coverage_stats) {
 					next;
+				}
+			}
+
+			if($self->output_flowcell_information) {
+#				Genome::InstrumentData->get($RG_id), and then calling flowcell id on that.
+#				print $id->index_sequence
+				my @instrument_data = $build->instrument_data;
+				foreach my $instrument_data (@instrument_data) {
+					my $barcode = $instrument_data->index_sequence;
+					my $flowcell = $instrument_data->flow_cell_id;
+					my $lane = $instrument_data->lane;
+					my $read_length = $instrument_data->read_length;
+        				print FLOWCELL join("\t", $subject_name, $model_id, $build_id, $flowcell, $lane, $barcode, $read_length) . "\n";
 				}
 			}
 
@@ -206,6 +220,9 @@ sub execute {                               # replace with real execution logic.
 
 #FUTURE: Pull SNP array concordance here
 		}
+
+          UR::Context->commit() or die 'commit failed';
+          UR::Context->clear_cache(dont_unload => ['Genome::ModelGroup', 'Genome::ModelGroupBridge']);
 	}	
 	close(OUTFILE);
 

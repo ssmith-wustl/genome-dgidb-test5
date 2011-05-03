@@ -16,7 +16,7 @@ class Genome::Model::Event::Build::ReferenceAlignment::AnnotateAdaptor{
         doc => "the path at which all analysis output is stored",
         calculate_from => ['build'],
         calculate      => q|
-        return $build->snp_related_metric_directory;
+        return $build->variants_directory;
         |,
         is_constant => 1,
     },
@@ -24,14 +24,14 @@ class Genome::Model::Event::Build::ReferenceAlignment::AnnotateAdaptor{
         doc => "",
         calculate_from => ['analysis_base_path'],
         calculate      => q|
-        return $analysis_base_path .'/snps_all_sequences.filtered.bed';
+        return $analysis_base_path .'/snvs.hq.bed';
         |,
     },
     filtered_indel_output_file => {
         doc => "Location of filtered indels from variant detection",
         calculate_from => ['analysis_base_path'],
         calculate => q|
-        return $analysis_base_path . '/indels_all_sequences.filtered.bed';
+        return $analysis_base_path . '/indels.hq.bed';
         |,
     },
     pre_annotation_filtered_variant_file => {

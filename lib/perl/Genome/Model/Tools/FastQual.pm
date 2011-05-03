@@ -289,8 +289,8 @@ sub create {
 sub execute {
     my $self = shift;
 
-    if ( $self->input == $self->output and $self->type_in eq $self->type_out ) {
-        $self->error_message("Cannot read and write the same number of input/outputs and with the same type in/out");
+    if ( $self->input == $self->output and $self->type_in eq $self->type_out and !defined $self->metrics_file_out ) {
+        $self->error_message("Cannot read and write the same number of input/outputs and with the same type in/out when metrics_file_out is not defined");
         return;
     }
 

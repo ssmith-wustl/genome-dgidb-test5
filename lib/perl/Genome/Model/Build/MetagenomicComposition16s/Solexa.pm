@@ -76,7 +76,7 @@ sub filter_reads_by_primers {
     }
 
     my $min_length = $self->processing_profile->amplicon_size;
-    my $attempted = 0;
+    my ($attempted, $reads_attempted, $reads_processed) = (qw/ 0 0 0 /);
 
     my $fasta_file = $self->combined_input_fasta_file; #single fasta to of all input reads
     my $writer = Genome::Model::Tools::FastQual::PhredWriter->create(files => [ $fasta_file ]);
@@ -88,8 +88,10 @@ sub filter_reads_by_primers {
         SEQ: while ( my $fastqs = $reader->read ) {
             for my $fastq ( @$fastqs ) {
                 $attempted++;
+                $reads_attempted++;
                 next SEQ unless length $fastq->{seq} >= $min_length;
-                delete $fastq->{desc} if $fastq->{desc};
+                $fastq->{desc} = undef;
+                $reads_processed++;
             }
             $writer->write( $fastqs );
         }
@@ -97,6 +99,9 @@ sub filter_reads_by_primers {
     }
 
     $self->amplicons_attempted( $attempted );
+    $self->reads_attempted($reads_attempted);
+    $self->reads_processed($reads_processed);
+    $self->reads_processed_success( $reads_attempted > 0 ?  sprintf('%.2f', $reads_processed / $reads_attempted) : 0 );
 
     return 1;
 }

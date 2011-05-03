@@ -156,7 +156,14 @@ dispatch {
             $view_special_args{substr($view_key,1,length($view_key))} = delete $args->{$view_key}; 
         }
 
-        my @matches = $class->get(%$args);
+        my @matches;
+        if ($class->isa("UR::Object::Set")) {
+            $class =~ s/::Set$//;
+            @matches = $class->define_set(%$args);
+        }
+        else {
+            @matches = $class->get(%$args);
+        }
         unless (@matches) {
             return [ 404, [ 'Content-type', 'text/plain' ],
                 ['No object found'] ];

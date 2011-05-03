@@ -31,15 +31,6 @@ class Genome::Model::Tools::Music::Play {
             is => 'Text',
             doc => 'List of mutations using TCGA MAF specifications v2.2'
         },
-
-        clinical_data_file => {
-            is => 'Text',
-            doc => 'Table of samples (y) vs. clinical data category (x)',
-        },
-        clinical_data_type => {
-            is => 'Text',
-            doc => 'Data must be either "numeric" or "class" type data',
-        },
         genetic_data_type => {
             is => 'Text',
             doc => 'Data in matrix file must be either "gene" or "variant" type data',
@@ -50,9 +41,13 @@ class Genome::Model::Tools::Music::Play {
         },
     ],
     has_optional_input => [
-        matrix_file => {
+        numeric_clinical_data_file => {
             is => 'Text',
-            doc => 'Matrix of samples (y) vs. mutations (x)',
+            doc => 'Table of samples (y) vs. numeric clinical data category (x)',
+        },
+        categorical_clinical_data_file => {
+            is => 'Text',
+            doc => 'Table of samples (y) vs. categorical clinical data category (x)',
         },
         omimaa_dir => {
             is => 'Path',
@@ -129,14 +124,35 @@ class Genome::Model::Tools::Music::Play {
 sub help_synopsis {
     return <<EOS
 This tool takes as parameters all the information required of the individual tools.
-EXAMPLE:    gmt music play --bam-list input/bams_to_analyze.txt --clinical-data-file input/numeric_clinical_data.csv --clinical-data-type numeric --maf-file input/myMAF.tsv --output-dir play_output_dir --pathway-file input/pathway_db --reference-sequence input/refseq/all_sequences.fa --roi-file input/all_coding_regions.bed --genetic-data-type gene
+EXAMPLE:    ... music play --bam-list input/bams_to_analyze.txt --numeric-clinical-data-file input/numeric_clinical_data.csv --maf-file input/myMAF.tsv --output-dir play_output_dir --pathway-file input/pathway_db --reference-sequence input/refseq/all_sequences.fa --roi-file input/all_coding_regions.bed --genetic-data-type gene
 EOS
 }
 
 sub help_detail {
     return <<EOS
-This tool runs all of the analysis tools on a set of data.
+This command can be used to run all of the MuSiC analysis tools on a set of data. Please see the individual tools for further description of the parameters.
 EOS
+}
+
+sub _doc_credits {
+    return "Please see credits for B<genome-music>(1).";
+}
+
+sub _doc_authors {
+    return('','Thomas B. Mooney, M.S.');
+}
+
+sub _doc_see_also {
+    return ('',
+        'B<genome-music>(1)',
+        'B<genome-music-path-scan>(1)',
+        'B<genome-music-smg>(1)',
+        'B<genome-music-clinical-correlation>(1)',
+        'B<genome-music-mutation-relation>(1)',
+        'B<genome-music-cosmic-omim>(1)',
+        'B<genome-music-proximity>(1)',
+        'B<genome-music-pfam>(1)',
+    );
 }
 
 sub execute {

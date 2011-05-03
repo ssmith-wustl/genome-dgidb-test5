@@ -20,6 +20,10 @@ class Genome::Model::Tools::Sam::IndelFilter {
             is  => 'String',
             doc => 'The filtered output indel file',
         },
+        lq_file        => {
+            is => 'String',
+            doc => 'Lines from the indel file that failed the filter',
+        },
         max_read_depth => {
             is  => 'Integer',
             doc => 'maximum read depth, default 100',
@@ -71,26 +75,39 @@ sub execute {
     my @last = ();
 
     my $out_file = $self->out_file || $self->indel_file . '.filtered';
+    my $lq_file = $self->lq_file;
     my $out_fh   = Genome::Sys->open_file_for_writing($out_file)   or return;
     my $indel_fh = Genome::Sys->open_file_for_reading($indel_file) or return;
-    
+    my $lq_fh;
+    if($lq_file) {
+        $lq_fh = Genome::Sys->open_file_for_writing($lq_file) or return;
+    }
+
     while (my $indel = $indel_fh->getline) {
+
         my @items = split /\s+/, $indel;
         my ($chr, $pos, $id, $indel_detail, $score, $rd_depth, $indel_seq1, $indel_seq2, $subscore1, $subscore2) = map{$items[$_]}(0..3, 5, 7..11);
         
         next unless $id eq '*';
-        next if $rd_depth > $self->max_read_depth;
+
+        if($rd_depth > $self->max_read_depth) {
+            $lq_fh->print($indel) if $lq_fh;
+            next;
+        }
         
         #In rare case, indel line will get something like follows (RT#62927):
         #NT_113915	187072	*	-	/-		18	0	33	32	-		*	3	29	0	0	0
         if ($indel_detail eq '-') {
             $self->warning_message("Indel line: $indel gets invalid format. Skip");
+            $lq_fh->print($indel) if $lq_fh;
             next;
         }
 
         unless ($is_ref) {
-            next if $indel_detail eq '*/*';
-            next if $score == 0;
+            if($indel_detail eq '*/*' or $score == 0) {
+                $lq_fh->print($indel) if $lq_fh;
+                next;
+            }
         }
         
         $score += $self->scaling_factor * $subscore1 unless $indel_seq1 eq '*';
@@ -100,23 +117,28 @@ sub execute {
         my $do_swap = 1;
 
         if (defined $last[0]) {
-	        if ($curr[0] eq $last[0] && $last[1] + $self->min_win_size > $curr[1]) {
-		        $do_swap = 0 if $last[2] > $curr[2];
-	        } 
+            if ($curr[0] eq $last[0] && $last[1] + $self->min_win_size > $curr[1]) {
+    	           if($last[2] > $curr[2]) {
+    	               $do_swap = 0;
+    	               $lq_fh->print($curr[3]) if $lq_fh;
+    	           } else {
+    	               $lq_fh->print($last[3]) if $lq_fh;
+    	           }
+            } 
             else {
-		        $out_fh->print($last[3]);
+                $out_fh->print($last[3]);
             }
         }
-	    if ($do_swap) {
-	        my @tmp = @curr; 
+        if ($do_swap) {
+            my @tmp = @curr; 
             @curr = @last; 
             @last = @tmp;
-	    }
+        }
     }
     $out_fh->print($last[3]) if defined $last[0];
-    
     $indel_fh->close;
     $out_fh->close;
+    $lq_fh->close if $lq_fh;
     
     return 1;
 }

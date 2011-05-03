@@ -332,10 +332,10 @@ sub add_splice_sites_to_set {
     my ($set, $exon, $chromosome) = @_;
     my ($start, $end) = ($exon->structure_start, $exon->structure_stop);
     if(defined($start)){
-        $self->add_range_to_set($set, $chromosome, $start, $start+2 );
+        $self->add_range_to_set($set, $chromosome, $start, $start+1 );
     }
     if(defined($end)){
-        $self->add_range_to_set($set, $chromosome, $end-2, $end );
+        $self->add_range_to_set($set, $chromosome, $end-1, $end );
     }
 }
 

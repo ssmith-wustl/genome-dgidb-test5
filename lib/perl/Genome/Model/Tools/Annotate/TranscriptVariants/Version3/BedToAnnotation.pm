@@ -50,7 +50,7 @@ sub execute{
     if (defined $snv_file and defined $indel_file) {
         my $max_memory_kb = "3145728"; # 3 GB of memory, if sort needs more than this it uses temp files for sorting
         my $rv = Genome::Sys->shellcmd(
-            cmd => "sort -k 1,1 -k 2,2n -k 3,3 -y$max_memory_kb -m -o " . join(' ', $self->output, $indel_file->filename, $snv_file->filename)
+            cmd => "sort -k 1,1 -k 2,2n -k 3,3n -y$max_memory_kb -m -o " . join(' ', $self->output, $indel_file->filename, $snv_file->filename)
         );
         unless ($rv) {
             Carp::confess "Could not merge together indel file " . $indel_file->filename . " and " . $snv_file->filename;

@@ -246,6 +246,7 @@ sub execute {
 
                     } else {
                         # no model found for this PP, make one (or more) and assign all applicable data
+                        $DB::single = $DB::stopper;
                         my @new_models = $self->create_default_models_and_assign_all_applicable_instrument_data($genome_instrument_data, $subject, $processing_profile, $reference_sequence_build, $pse);
                         unless(@new_models) {
                             push @process_errors, $self->error_message;
@@ -380,6 +381,7 @@ sub find_or_create_somatic_variation_models{
             $mate_params{target_region_set_name} = $model->target_region_set_name if $model->can('target_region_set_name') and $model->target_region_set_name;
             $mate_params{region_of_interest_set_name} = $model->region_of_interest_set_name if $model->can('region_of_interest_set_name') and $model->region_of_interest_set_name;
 
+            $DB::single = $DB::stopper;
             my $mate = Genome::Model::ReferenceAlignment->get( %mate_params );
             unless ($mate){
                 my $copy = Genome::Model::Command::Copy->execute(
@@ -953,9 +955,6 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             $self->error_message(
                 'Failed to execute instrument-data assign for model '
                 . $m->id . ' instrument data '.$genome_instrument_data->id );
-
-            # $m->delete;
-            # next;
             for my $model (@new_models) { $model->delete; }
             return;
         }
@@ -970,8 +969,6 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             $self->error_message(
                 'Failed to execute instrument-data assign --all for model '
                 . $m->id );
-            # $m->delete;
-            # next;
             for my $model (@new_models) { $model->delete; }
             return;
         }
@@ -986,8 +983,6 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             $self->error_message(
                 'instrument data ' . $genome_instrument_data->id . ' not assigned to model ????? (' . $m->id . ')'
             );
-            # $m->delete;
-            # next;
             for my $model (@new_models) { $model->delete; }
             return;
         }
@@ -997,6 +992,9 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
 
         if ($m->name =~ /\.wu-space$/) {
             for (@group_names) {$_ .= ".wu-space" if ($_)};
+        }
+        if ($m->name =~ /\.tcga-cds$/) {
+            for (@group_names) {$_ .= ".tcga-cds" if ($_)};
         }
         $self->add_model_to_default_modelgroups($m, @group_names);
 

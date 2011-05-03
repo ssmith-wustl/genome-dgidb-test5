@@ -93,6 +93,8 @@ class Genome::WorkOrder {
         samples => {
             is => 'Genome::Sample',
             via => 'items',
+            to => 'sample',
+            is_many => 1,
         },
         models => {
             is => 'Genome::Model',
@@ -101,11 +103,6 @@ class Genome::WorkOrder {
         builds => {
             is => 'Genome::Model::Build',
             via => 'models',
-        },
-        items => {
-            is => 'Genome::WorkOrderItem',
-            is_many => 1,
-            reverse_as => 'work_order',
         },
     ],
     schema_name => 'GMSchema',
