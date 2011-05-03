@@ -70,13 +70,17 @@ sub _additional_parts_for_default_name {
     return ( $instrument_data->import_source_name, $instrument_data->sequencing_platform, $self->refseq_name );
 }
 
+sub dependent_ref_align {
+    my $self = shift;
+    return Genome::Model::ReferenceAlignment->get(subject_id => $self->subject_id);
+}
+
 sub request_builds_for_dependent_ref_align {
     my $self = shift;
     my $sample = $self->subject;
     return 1 unless $sample->class eq 'Genome::Sample';
 
-    my @ref_aligns = Genome::Model::ReferenceAlignment->get(subject_id => $sample->id);
-    for my $ref_align (@ref_aligns) {
+    for my $ref_align ($self->dependent_ref_align) {
         $ref_align->build_requested(1);
     }
     return 1;
