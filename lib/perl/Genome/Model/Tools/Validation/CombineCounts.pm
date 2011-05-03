@@ -37,7 +37,8 @@ sub execute {
 
     #info on the count headers/fields
     my @contig_specific_fields = qw( contig_id contigs_overlapping);
-    my @bam_specific_fields = qw( total_reads_crossing_ref_pos total_q1_reads_crossing_ref_pos total_q1_reads_spanning_ref_pos total_reads_crossing_contig_pos total_q1_reads_crossing_contig_pos total_q1_reads_spanning_contig_pos );
+    my @bam_specific_fields = qw( ref_clipped_reads_excluded ref_paralog_reads_excluded total_reads_crossing_ref_pos total_q1_reads_crossing_ref_pos total_q1_reads_spanning_ref_pos contig_clipped_reads_excluded contig_paralog_reads_excluded total_reads_crossing_contig_pos total_q1_reads_crossing_contig_pos total_q1_reads_spanning_contig_pos );
+    my @sample_calculated_fields = qw( coverage frequency excluded_freq clip_freq paralog_freq);
     
     for my $file (@files) {
         my $fh = IO::File->new($file, "r");
@@ -92,19 +93,44 @@ sub execute {
 
     #spit out a header, cause that's a good idea
 
+    my @labeled_calculated_header;
     print join("\t", @contig_specific_fields); 
     foreach my $label (@orig_labels) {
         my @labeled_fields =  map { "${label}_$_" } @bam_specific_fields;
         print "\t", join("\t", @labeled_fields);
+
+        push @labeled_calculated_header, map { "${label}_$_" } @sample_calculated_fields;
     }
+
+    print "\t",join("\t", @labeled_calculated_header);
+    print "\t", qw( contig_exclusion_freq );
     print "\n";
 
     #now print the data
     foreach my $contig_id (sort keys %counts) {
         print join("\t",$contig_id, $counts{$contig_id}{contigs_overlapping});
+        my @calculated_fields;
+        my $total_contig_reads = 0;
+        my $total_excluded_contig_reads = 0;
         foreach my $label (@orig_labels) {
-            print "\t",join("\t",@{$counts{$contig_id}{$label}}{@bam_specific_fields})
+            my @fields = @{$counts{$contig_id}{$label}}{@bam_specific_fields};
+            print "\t",join("\t",@fields);
+            
+            #calculate the per sample metrics
+            my $coverage = $counts{$contig_id}{$label}->{total_q1_reads_spanning_ref_pos} + $counts{$contig_id}{$label}->{total_q1_reads_spanning_contig_pos};
+            my $frequency = $coverage ? $counts{$contig_id}{$label}->{total_q1_reads_spanning_contig_pos} / ($counts{$contig_id}{$label}->{total_q1_reads_spanning_contig_pos} + $counts{$contig_id}{$label}->{total_q1_reads_spanning_ref_pos}) : '-';
+            my $total_reads = ($counts{$contig_id}{$label}->{contig_clipped_reads_excluded} + $counts{$contig_id}{$label}->{contig_paralog_reads_excluded} + $counts{$contig_id}{$label}->{total_reads_crossing_contig_pos});
+            my $excluded_contig_freq = $total_reads ? ($counts{$contig_id}{$label}->{contig_clipped_reads_excluded} + $counts{$contig_id}{$label}->{contig_paralog_reads_excluded}) / $total_reads : '-';
+            my $clip_freq = $total_reads ? $counts{$contig_id}{$label}->{contig_clipped_reads_excluded} / $total_reads : '-';
+            my $paralog_freq = $total_reads ? $counts{$contig_id}{$label}->{contig_paralog_reads_excluded} / $total_reads : '-';
+            push @calculated_fields, join("\t", join("\t",$coverage, $frequency, $excluded_contig_freq, $clip_freq, $paralog_freq));
+
+            $total_contig_reads += $total_reads;
+            $total_excluded_contig_reads += $counts{$contig_id}{$label}->{contig_clipped_reads_excluded} + $counts{$contig_id}{$label}->{contig_paralog_reads_excluded};
+
         }
+        print "\t",join("\t", @calculated_fields);
+        print "\t", $total_contig_reads ? $total_excluded_contig_reads / $total_contig_reads : '-';
         print "\n";
     }
     return 1;
