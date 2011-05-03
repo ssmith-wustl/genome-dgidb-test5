@@ -123,8 +123,9 @@ class Genome::Model::Tools::Music::Play {
 
 sub help_synopsis {
     return <<EOS
-This tool takes as parameters all the information required of the individual tools.
-EXAMPLE:    ... music play --bam-list input/bams_to_analyze.txt --numeric-clinical-data-file input/numeric_clinical_data.csv --maf-file input/myMAF.tsv --output-dir play_output_dir --pathway-file input/pathway_db --reference-sequence input/refseq/all_sequences.fa --roi-file input/all_coding_regions.bed --genetic-data-type gene
+This tool takes as parameters all the information required to run the individual tools. An example usage is:
+
+... music play --bam-list input/bams_to_analyze.txt --numeric-clinical-data-file input/numeric_clinical_data.csv --maf-file input/myMAF.tsv --output-dir play_output_dir --pathway-file input/pathway_db --reference-sequence input/refseq/all_sequences.fa --roi-file input/all_coding_regions.bed --genetic-data-type gene
 EOS
 }
 
@@ -135,7 +136,7 @@ EOS
 }
 
 sub _doc_credits {
-    return "Please see credits for B<genome-music>(1).";
+    return "Please see the credits for B<genome-music>(1).";
 }
 
 sub _doc_authors {
