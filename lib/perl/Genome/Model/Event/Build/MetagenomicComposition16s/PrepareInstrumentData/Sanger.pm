@@ -23,37 +23,43 @@ sub execute {
     $self->_raw_reads_fasta_and_qual_writer
         or return;
 
-    my $attempted = 0;
+    my %trimmer_params = $self->processing_profile->trimmer_params_as_hash;
+    my %assembler_params = $self->processing_profile->assembler_params_as_hash;
+
+    my ($attempted, $reads_attempted, $reads_processed) = (qw/ 0 0 0 /);
     for my $name ( @amplicon_set_names ) {
+
         my $amplicon_set = $self->build->amplicon_set_for_name($name);
         next if not $amplicon_set; # ok
+
+        my $writer = $self->build->fasta_and_qual_writer_for_type_and_set_name('processed', $amplicon_set->name);
+        return if not $writer;
+
         while ( my $amplicon = $amplicon_set->next_amplicon ) {
             $attempted++;
-            $self->_prepare_instrument_data_for_phred_phrap($amplicon)
-                or return;
+            $reads_attempted += @{$amplicon->{reads}};
+            my $prepare_ok = $self->_prepare($amplicon);
+            return if not $prepare_ok;
+
+            my $trim_ok = $self->_trim($amplicon, %trimmer_params);
+            return if not $trim_ok;
+
+            my $assemble_ok = $self->_assemble($amplicon, %assembler_params);
+            return if not $assemble_ok;
+
+            $self->build->load_seq_for_amplicon($amplicon)
+                or next; # ok
+            $writer->write([$amplicon->{seq}]);
+            $reads_processed += @{$amplicon->{reads_processed}};
         }
     }
 
     $self->build->amplicons_attempted($attempted);
+    $self->build->reads_attempted($reads_attempted);
+    $self->build->reads_processed($reads_processed);
+    $self->build->reads_processed_success( $reads_attempted > 0 ?  sprintf('%.2f', $reads_processed / $reads_attempted) : 0 );
 
     return 1;
-}
-
-sub _raw_reads_fasta_and_qual_writer {
-    my $self = shift;
-
-    unless ( $self->{_raw_reads_fasta_and_qual_writer} ) {
-        my $writer = Genome::Model::Tools::FastQual::PhredWriter->create(
-            files => [ $self->build->raw_reads_fasta_file, $self->build->raw_reads_qual_file, ],
-        );
-        if ( not $writer ) {
-            $self->error_message('Failed to create phred reader for raw reads');
-            return;
-        }
-        $self->{_raw_reads_fasta_and_qual_writer} = $writer;
-    }
-
-    return $self->{_raw_reads_fasta_and_qual_writer};
 }
 
 #< Dumping/Linking Instrument Data >#
@@ -104,7 +110,7 @@ sub _dump_and_link_instrument_data {
 }
 
 #< Phred, Phred to Fasta >#
-sub _prepare_instrument_data_for_phred_phrap {
+sub _prepare {
     my ($self, $amplicon) = @_;
 
     my $scfs_file = $self->build->create_scfs_file_for_amplicon($amplicon);
@@ -146,7 +152,8 @@ sub _prepare_instrument_data_for_phred_phrap {
     # Write the 'raw' read fastas
     my $reader = Genome::Model::Tools::FastQual::PhredReader->create(
         files => [ $fasta_file, $qual_file ],
-    ) or return;
+    );
+    return if not $reader;
     while ( my $seq = $reader->read ) {
         $self->_raw_reads_fasta_and_qual_writer->write($seq)
             or return;
@@ -154,6 +161,121 @@ sub _prepare_instrument_data_for_phred_phrap {
     
     return 1;
 }
+
+sub _raw_reads_fasta_and_qual_writer {
+    my $self = shift;
+
+    unless ( $self->{_raw_reads_fasta_and_qual_writer} ) {
+        my $fasta_file = $self->build->raw_reads_fasta_file;
+        unlink $fasta_file if -e $fasta_file;
+        my $qual_file = $self->build->raw_reads_qual_file;
+        unlink  $qual_file if -e $qual_file;
+        my $writer = Genome::Model::Tools::FastQual::PhredWriter->create(files => [ $fasta_file, $qual_file, ]);
+        if ( not $writer ) {
+            $self->error_message('Failed to create phred reader for raw reads');
+            return;
+        }
+        $self->{_raw_reads_fasta_and_qual_writer} = $writer;
+    }
+
+    return $self->{_raw_reads_fasta_and_qual_writer};
+}
+
+#<TRIM>
+sub _trim {
+    my ($self, $amplicon, %trimmer_params) = @_;
+
+    my $fasta_file = $self->build->reads_fasta_file_for_amplicon($amplicon);
+    next unless -s $fasta_file; # ok
+
+    my $trim3 = Genome::Model::Tools::Fasta::Trim::Trim3->create(
+        fasta_file => $fasta_file,
+        %trimmer_params,
+    );
+    unless ( $trim3 ) { # not ok
+        $self->error_message("Can't create trim3 command for amplicon: ".$amplicon->name);
+        return;
+    }
+    $trim3->execute; # ok
+
+    next unless -s $fasta_file; # ok
+
+    my $screen = Genome::Model::Tools::Fasta::ScreenVector->create(
+        fasta_file => $fasta_file,
+    );
+    unless ( $screen ) { # not ok
+        $self->error_message("Can't create screen vector command for amplicon: ".$amplicon->name);
+        return;
+    }
+    $screen->execute; # ok
+
+    next unless -s $fasta_file; # ok
+
+    my $qual_file = $self->build->reads_qual_file_for_amplicon($amplicon);
+    $self->_add_amplicon_reads_fasta_and_qual_to_build_processed_fasta_and_qual(
+        $fasta_file, $qual_file
+    )
+        or return;
+
+    return 1;
+}
+
+sub _add_amplicon_reads_fasta_and_qual_to_build_processed_fasta_and_qual {
+    my ($self, $fasta_file, $qual_file) = @_;
+
+    # Write the 'raw' read fastas
+    my $reader = Genome::Model::Tools::FastQual::PhredReader->create(
+        files => [ $fasta_file, $qual_file ],
+    );
+    return if not $reader;
+    while ( my $seqs = $reader->read ) {
+        $self->_processed_reads_fasta_and_qual_writer->write($seqs)
+            or return;
+    }
+ 
+    return 1;
+}
+
+sub _processed_reads_fasta_and_qual_writer {
+    my $self = shift;
+
+    unless ( $self->{_processed_reads_fasta_and_qual_writer} ) {
+        my $fasta_file = $self->build->processed_reads_fasta_file;
+        unlink $fasta_file if -e $fasta_file;
+        my $qual_file = $self->build->processed_reads_qual_file;
+        unlink  $qual_file if -e $qual_file;
+        my $writer = Genome::Model::Tools::FastQual::PhredWriter->create(files => [ $fasta_file, $qual_file ]);
+        return if not $writer;
+        $self->{_processed_reads_fasta_and_qual_writer} = $writer;
+    }
+
+    return $self->{_processed_reads_fasta_and_qual_writer};
+}
+#</TRIM>
+
+#<ASSEMBLE>
+sub _assemble {
+    my ($self, $amplicon, %assembler_params) = @_;
+
+    my $fasta_file = $self->build->reads_fasta_file_for_amplicon($amplicon);
+    next unless -s $fasta_file; # ok
+
+    my $phrap = Genome::Model::Tools::PhredPhrap::Fasta->create(
+        fasta_file => $fasta_file,
+        %assembler_params,
+    );
+    unless ( $phrap ) { # bad
+        $self->error_message(
+            "Can't create phred phrap command for build's (".$self->build->id.") amplicon (".$amplicon->{name}.")"
+        );
+        return;
+    }
+    $phrap->dump_status_messages(1);
+    $phrap->execute; # no check
+
+    return 1;
+}
+#</ASSEMBLE>
 
 1;
 

@@ -65,11 +65,8 @@ EOS
 sub execute {                               # replace with real execution logic.
 	my $self = shift;
 
-	my $group_id = $self->group_id;
 
-	## Save model ids by subject name ##
-	
-	my %succeeded_models_by_sample = ();
+	my $group_id = $self->group_id;
 
 	## Output build dirs##
 	
@@ -87,10 +84,11 @@ sub execute {                               # replace with real execution logic.
 	## Get the models in each model group ##
 
 	my $model_group = Genome::ModelGroup->get($group_id);
-	my @models = $model_group->models; 
+	my @model_bridges = $model_group->model_bridges;
 
-	foreach my $model (@models)
+	foreach my $model_bridge (@model_bridges)
 	{
+	     my $model = Genome::Model->get($model_bridge->model_id);
 		my $model_id = $model->genome_model_id;
 		my $subject_name = $model->subject_name;
 		$subject_name = "Model" . $model_id if(!$subject_name);
@@ -98,7 +96,6 @@ sub execute {                               # replace with real execution logic.
 		if($model->last_succeeded_build_directory) {
 			my $build = $model->last_succeeded_build;
 			my $build_id = $build->id;
-			$succeeded_models_by_sample{$subject_name} = $model_id;
 			my $last_build_dir = $model->last_succeeded_build_directory;
 			if($self->output_build_dirs) {
 				my $bam_file = $build->whole_rmdup_bam_file;
@@ -206,6 +203,9 @@ sub execute {                               # replace with real execution logic.
 
 #FUTURE: Pull SNP array concordance here
 		}
+
+          UR::Context->commit();
+          UR::Context->clear_cache(dont_unload => ['Genome::ModelGroup', 'Genome::ModelGroupBridge']);
 	}	
 	close(OUTFILE);
 
