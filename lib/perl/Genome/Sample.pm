@@ -292,31 +292,26 @@ sub check_genotype_data {
 }
 
 sub set_default_genotype_data {
-    # TODO Primitivize the genotype instrument data to just be an id, also simplifies the logic handling "none" and
-    # removes the need for the caller to get an object prior to calling this method
-    my ($self, $genotype_instrument_data, $allow_overwrite) = @_;
+    my ($self, $genotype_data_id, $allow_overwrite) = @_;
     $allow_overwrite ||= 0;
-    Carp::confess 'Not given genotype instrument data to assign to sample ' . $self->id unless $genotype_instrument_data;
+    Carp::confess 'Not given genotype instrument data to assign to sample ' . $self->id unless $genotype_data_id;
 
-    my $genotype_data_id;
-    if ($genotype_instrument_data eq 'none') {
-        $genotype_data_id = $genotype_instrument_data;
-    }
-    else {
-        Carp::confess 'Genotype instrument data ' . $genotype_instrument_data->id . ' is not valid!'
+    unless ($genotype_data_id eq 'none') {
+        my $genotype_instrument_data = Genome::InstrumentData::Imported->get($genotype_data_id);
+        Carp::confess "Could not find any instrument data with id $genotype_data_id!" unless $genotype_instrument_data;
+        Carp::confess "Genotype instrument data $genotype_data_id is not valid!"
             unless $self->check_genotype_data($genotype_instrument_data);
-        $genotype_data_id = $genotype_instrument_data->id;
     }
 
     if (defined $self->default_genotype_data_id) {
         unless ($allow_overwrite) {
             Carp::confess "Attempted to overwrite current genotype instrument data id " . $self->default_genotype_data_id . 
-                " for sample " . $self->id . " with genotype data id " . $genotype_data_id .
+                " for sample " . $self->id . " with genotype data id $genotype_data_id " .
                 " without setting the overwrite flag!";
         }
 
         $self->warning_message("Default genotype data already set to " . $self->default_genotype_data_id . " for sample " . 
-            $self->id . ", changing to " . $genotype_data_id); 
+            $self->id . ", changing to $genotype_data_id"); 
 
         # This attribute is not set as mutable in the class definition to prevent someone from changing it without
         # passing the above checks. Including it in the class definition at all makes for easy access and listing, though. 
@@ -339,8 +334,6 @@ sub set_default_genotype_data {
     return 1;
 }
 
-# TODO Don't really like that samples now have to be aware that models exist. Ideally, models would know about
-# samples and samples would know nothing of models.
 sub default_genotype_models {
     my $self = shift;
     
