@@ -45,9 +45,11 @@ sub _doc_authors {
     );
 }
 
+=cut
 sub _doc_credits {
     return ('','None at this time.');
 }
+=cut
 
 sub _doc_see_also {
     return ('','B<genome-music>(1)','B<genome>(1)');

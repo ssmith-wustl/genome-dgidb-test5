@@ -29,10 +29,8 @@ HELP
 }
 
 sub help_detail {
-  # TODO: merge those arugments up if they go in the --help
-  # for things which go ONLY in the manual page, put it into doc_manual.
   return <<HELP
-Only the following four columns in the MAF are used. All other columns may as well be blank.
+Only the following four columns in the MAF are used. All other columns may be left blank.
 Col 1: Hugo_Symbol (Need not be HUGO, but must match gene names used in the pathway file)
 Col 2: Entrez_Gene_Id (Matching Entrez ID trump gene name matches between pathway file and MAF)
 Col 9: Variant_Classification (PathScan ignores Silent|RNA|3'Flank|3'UTR|5'Flank|5'UTR|Intron)
@@ -84,7 +82,7 @@ sub _doc_authors {
 sub _doc_credits {
     return (
         <<EOS,
-        This module uses reformatted copies of data from the Kyoto Encyclopedia of Genes and Genomes (KEGG) database:
+This module uses reformatted copies of data from the Kyoto Encyclopedia of Genes and Genomes (KEGG) database:
 EOS
         "* KEGG - http://www.genome.jp/kegg/",
     );

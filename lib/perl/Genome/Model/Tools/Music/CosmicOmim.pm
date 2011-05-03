@@ -40,11 +40,11 @@ class Genome::Model::Tools::Music::CosmicOmim {
     doc => 'Compare the amino acid changes of supplied mutations to COSMIC and OMIM databases.'
 };
 
-sub help_synopsis_FIXME {
+sub help_synopsis {
     return <<EOS;
 ... music cosmic-omim --maf-file input_dir/myMAF.tsv --output-file output_dir/myMAF_output.tsv --no-verbose
-... music cosmic-omim --maf-file input_dir/myMAF.tsv --output-file output_dir/myMAF_output.tsv --omimaa-dir omim_dir/ --cosmic-dir cosmic_dir/ --no-verbose
 
+... music cosmic-omim --maf-file input_dir/myMAF.tsv --output-file output_dir/myMAF_output.tsv --omimaa-dir omim_dir/ --cosmic-dir cosmic_dir/ --no-verbose
 EOS
 }
 
