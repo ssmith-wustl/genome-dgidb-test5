@@ -422,30 +422,17 @@ sub dependent_properties {
     return;
 }
 
-sub init_genotype_model {
-    my $self = shift;
-
-    my $gmodel = $self->genotype_microarray_model;
-    return if $gmodel;
-
-    $gmodel = $self->default_genotype_model;
-    return unless $gmodel;
-    $self->genotype_microarray_model_id($gmodel->id);
-}
-
 sub verify_inputs { 
     my $self = shift;
     my $good_to_go = 1;
 
+    $self->check_and_update_genotype_input;
+
     if ($self->is_lane_qc) {
-        $self->init_genotype_model;
         unless ($self->genotype_microarray_model) {
             $good_to_go = 0;
             $self->error_message("Could not resolve genotype microarray model for reference alignment model " . $self->id);
         }
-    }
-    else {
-        $good_to_go = 0 unless $self->check_and_update_genotype_input;
     }
         
     return $good_to_go;
@@ -454,6 +441,8 @@ sub verify_inputs {
 sub check_and_update_genotype_input {
     my $self = shift;
     my $default_genotype_model = $self->default_genotype_model;
+    return 1 unless $default_genotype_model;
+
     if (defined $self->genotype_microarray_model_id and $self->genotype_microarray_model_id ne $default_genotype_model->id) {
         if (defined $self->user_name and $self->user_name eq 'apipe-builder') {
             $self->warning_message("Sample " . $self->subject_id . " points to genotype model " . $default_genotype_model->id .
