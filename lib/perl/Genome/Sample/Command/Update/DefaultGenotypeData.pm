@@ -39,11 +39,11 @@ sub execute {
     my $self = shift;
 
     my $sample = $self->sample;
+    Carp::confess 'Could not resolve a sample!' unless $sample and $sample->isa('Genome::Sample');
     my $genotype_id = $self->genotype_id;
     my $genotype;
     if ($genotype_id eq 'none') {
         $genotype = $genotype_id;
-        $self->launch_builds(0); # Don't want to launch new builds if genotype is being set to none
     }
     else {
         $genotype = Genome::InstrumentData::Imported->get($genotype_id);
@@ -57,7 +57,7 @@ sub execute {
         );
     };
     unless (defined $rv and $rv) {
-        Carp::confess 'Could not assign genotype data ' . $genotype->id . ' to sample ' . $sample->id . ": $@";
+        Carp::confess 'Could not assign genotype data ' . $genotype_id . ' to sample ' . $sample->id . ": $@";
     }
     
     if ($self->launch_builds) {    
