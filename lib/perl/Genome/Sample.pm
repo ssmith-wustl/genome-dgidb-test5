@@ -297,22 +297,31 @@ sub check_genotype_data {
 }
 
 sub set_default_genotype_data {
+    # TODO Primitivize the genotype instrument data to just be an id, also simplifies the logic handling "none" and
+    # removes the need for the caller to get an object prior to calling this method
     my ($self, $genotype_instrument_data, $allow_overwrite) = @_;
     $allow_overwrite ||= 0;
-
     Carp::confess 'Not given genotype instrument data to assign to sample ' . $self->id unless $genotype_instrument_data;
-    Carp::confess 'Genotype instrument data ' . $genotype_instrument_data->id . ' is not valid!'
-        unless $self->check_genotype_data($genotype_instrument_data);
+
+    my $genotype_data_id;
+    if ($genotype_instrument_data eq 'none') {
+        $genotype_data_id = $genotype_instrument_data;
+    }
+    else {
+        Carp::confess 'Genotype instrument data ' . $genotype_instrument_data->id . ' is not valid!'
+            unless $self->check_genotype_data($genotype_instrument_data);
+        $genotype_data_id = $genotype_instrument_data;
+    }
 
     if (defined $self->default_genotype_data_id) {
         unless ($allow_overwrite) {
             Carp::confess "Attempted to overwrite current genotype instrument data id " . $self->default_genotype_data_id . 
-                " for sample " . $self->id . " with genotype data id " . $genotype_instrument_data->id .
+                " for sample " . $self->id . " with genotype data id " . $genotype_data_id .
                 " without setting the overwrite flag!";
         }
 
         $self->warning_message("Default genotype data already set to " . $self->default_genotype_data_id . " for sample " . 
-            $self->id . ", changing to " . $genotype_instrument_data->id); 
+            $self->id . ", changing to " . $genotype_data_id); 
 
         # This attribute is not set as mutable in the class definition to prevent someone from changing it without
         # passing the above checks. Including it in the class definition at all makes for easy access and listing, though. 
@@ -321,27 +330,29 @@ sub set_default_genotype_data {
             attribute_label => 'default_genotype_data',
         );
         Carp::confess 'Could not retrieve genotype data attribute for sample ' . $self->id unless $attribute;
-        $attribute->attribute_value($genotype_instrument_data->id);
+        $attribute->attribute_value($genotype_data_id);
     }
     else {
         my $attribute = Genome::SubjectAttribute->create(
             subject_id => $self->id,
             attribute_label => 'default_genotype_data',
-            attribute_value => $genotype_instrument_data->id,
+            attribute_value => $genotype_data_id,
         );
         Carp::confess 'Could not create default genotype data attribute for sample ' . $self->id unless $attribute;
-    }
-
-    for my $genotype_model ($self->default_genotype_models) {
-        $genotype_model->request_builds_for_dependent_ref_align;
     }
 
     return 1;
 }
 
+# TODO Don't really like that samples now have to be aware that models exist. Ideally, models would know about
+# samples and samples would know nothing of models.
 sub default_genotype_models {
     my $self = shift;
     
+    my $genotype_data_id = $self->default_genotype_data_id;
+    return unless defined $genotype_data_id;
+    return if $genotype_data_id eq 'none';
+
     my $genotype_data = $self->default_genotype_data;
     return unless $genotype_data;
 
