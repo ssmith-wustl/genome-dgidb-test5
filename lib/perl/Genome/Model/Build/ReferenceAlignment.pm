@@ -360,11 +360,16 @@ sub rmdup_metrics_file {
 
     my $merged_alignment_result = $self->merged_alignment_result;
     if($merged_alignment_result) {
-        return glob($merged_alignment_result->output_dir."/*.metrics");
+	my @array = glob($merged_alignment_result->output_dir."/*.metrics");
+        return @array;
     }
-
-    #location prior to merged alignment results
-    return $self->log_directory."/mark_duplicates.metrics";
+    elsif (-e $self->log_directory."/mark_duplicates.metrics") {
+	#location prior to merged alignment results
+	return $self->log_directory."/mark_duplicates.metrics";
+    }
+    else {
+	return 0;
+    }
 }
 
 sub mark_duplicates_library_metrics_hash_ref {
@@ -376,7 +381,8 @@ sub mark_duplicates_library_metrics_hash_ref {
     for my $mark_duplicates_metrics (@mark_duplicates_metrics) {
         my $fh = Genome::Sys->open_file_for_reading($mark_duplicates_metrics);
         unless ($fh) {
-            die('Failed to open mark duplicates metrics file '. $mark_duplicates_metrics);
+            warn('Failed to open mark duplicates metrics file '. $mark_duplicates_metrics);
+	    next;
         }
 
         my @keys;
