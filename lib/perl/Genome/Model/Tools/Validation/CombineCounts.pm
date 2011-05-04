@@ -81,7 +81,7 @@ sub execute {
     #prepare for VarScan type scoring
     my %comparisons;
     my @comparison_specification = split /\s*,\s*|\s*=>\s*/, $self->somatic_comparisons;
-    unless(@comparison_specification % 2) {
+    if(@comparison_specification % 2) {
         $self->error_message("Number of samples in comparison string is not a multiple of two. Mismatching pairs?");
         return;
     }
