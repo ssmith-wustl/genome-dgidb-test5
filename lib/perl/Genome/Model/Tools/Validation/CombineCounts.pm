@@ -7,6 +7,7 @@ use Genome;
 use Genome::Info::IUB;
 use IO::File;
 use POSIX;
+use Genome::Statistics; #for fisher's exact test
 
 class Genome::Model::Tools::Validation::CombineCounts {
     is => 'Command',
@@ -22,6 +23,50 @@ class Genome::Model::Tools::Validation::CombineCounts {
         is_optional => 1,
         doc => 'Labels to assign the files passed in --count-files. Should be comma separated ie tumor,normal,relapse',
     },
+    minimum_coverage => {
+        type => 'Integer',
+        is_optional => 0,
+        default => 30,
+        doc => "minimum coverage to make a call. sites without this minimum will be called as NC (no coverage)"
+    },
+    maximum_contig_read_exclusion_rate => {
+        type => 'Float',
+        is_optional => 0,
+        default => 0.25,
+        doc => "Maximum fraction of covering reads excluded due to clipping or paralog content to make a call",
+    },
+    minimum_variant_supporting_reads => {
+        type => 'Integer',
+        is_optional => 0,
+        default => 2,
+        doc => "Number of variant reads required to report as a variant",
+    },
+    minimum_variant_frequency => {
+        type => 'Float',
+        is_optional => 0,
+        default => 0.08,
+        doc => "Minimum variant frequency to consider a site as a variant",
+    },
+    minimum_homozygous_frequency => {
+        type => 'Float',
+        is_optional => 0,
+        default => 0.7,
+        doc => "Minimum frequency to call a site as homozygous variant",
+    },
+    maximum_p_value => {
+        type => 'Float',
+        is_optional => 0,
+        default => 0.01,
+        doc => "The maximum p-value to report a site as somatic or germline",
+    },
+    somatic_comparisons => {
+        type => 'String',
+        is_optional => 0,
+        doc => "comma or big-comma separated string of pairs to calculate somatic p-values on e.g. normal,tumor or normal => tumor compares tumor to normal",
+    },
+    #some sort of pairwise comparison descriptor
+
+    #Genome::Statistics::calculate_p_value($normal_read_support, $normal_read_sw_support, $tumor_read_support, $tumor_read_sw_support);
 
     ]
 };
@@ -32,6 +77,16 @@ sub execute {
     my @files = split /\s*,\s*/, $self->count_files;
     my @orig_labels = split /\s*,\s*/, $self->file_labels if $self->file_labels;
     my @labels = @orig_labels;  #set this up so we can pop off labels during file parsing
+
+    #prepare for VarScan type scoring
+    my %comparisons;
+    my @comparison_specification = split /\s*,\s*|\s*=>\s*/, $self->somatic_comparisons;
+    unless(@comparison_specification % 2) {
+        $self->error_message("Number of samples in comparison string is not a multiple of two. Mismatching pairs?");
+        return;
+    }
+    %comparisons = @comparison_specification;
+
 
     my %counts; #counts of the contigs and their variants
 
@@ -146,4 +201,105 @@ sub help_brief {
 sub help_detail {
     <<'HELP';
 HELP
+}
+
+
+#this code generally borrowed from GMT::Gatk::VarscanIndel.pm
+#some corrections, re-working
+sub varscan_call {
+    my ($self, $normal_ref_reads, $normal_var_reads, $tumor_ref_reads, $tumor_var_reads) = @_;
+
+    #we don't yet have alleles included in the results, and we're not sure how good they really are, but proceed anyways.
+    my $normal_coverage = $normal_ref_reads + $normal_var_reads;
+    my $normal_freq = $normal_var_reads / $normal_coverage;
+    my $tumor_coverage = $tumor_ref_reads + $tumor_var_reads;
+    my $tumor_freq = $tumor_var_reads / $tumor_coverage;
+
+    my ($normal_genotype,$tumor_genotype);
+
+    #Call the genotype in normal
+    if($normal_var_reads >= $self->minimum_variant_supporting_reads && $normal_freq >= $self->minimum_variant_frequency) {
+        if($normal_freq >= $min_freq_for_hom) {
+            $normal_genotype = "I/I";
+        }
+        else {
+            $normal_genotype = "*/I";
+        }
+    }
+    else {
+        $normal_genotype = "*/*";
+    }
+
+    #call the genotype in the normal
+    if($tumor_var_reads >= $self->minimum_variant_supporting_reads && $tumor_freq >= $self->minimum_variant_frequency)
+    {
+        if($tumor_freq >= $self->minimum_homozygous_frequency) {
+            $tumor_genotype = "I/I";
+        }
+        else {
+            $tumor_genotype = "*/I";
+        }
+    }
+    else {
+        $tumor_genotype = "*/*";
+    }
+
+    ## Calculate P-value
+    my $variant_p_value = Genome::Statistics::calculate_p_value(($normal_coverage + $tumor_coverage), 0, ($normal_ref_reads + $tumor_ref_reads), ($normal_var_reads + $tumor_var_reads));
+    if($variant_p_value < 0.001) {
+        $variant_p_value = sprintf("%.3e", $variant_p_value);
+    }
+    else {
+        $variant_p_value = sprintf("%.5f", $variant_p_value);
+    }
+
+    my $somatic_p_value = Genome::Statistics::calculate_p_value($normal_reads1, $normal_reads2, $tumor_reads1, $tumor_reads2);
+    if($somatic_p_value < 0.001) {
+        $somatic_p_value = sprintf("%.3e", $somatic_p_value);
+    }
+    else {
+        $somatic_p_value = sprintf("%.5f", $somatic_p_value);
+    }
+
+
+    ## Determine Somatic Status ##
+
+    my $somatic_status = "";
+
+    if($normal_genotype eq "*/*") {
+        if($normal_coverage < $self->minimum_coverage || $tumor_coverage < $self->minimum_coverage) {
+            $somatic_status = "NC";
+        }
+        elsif($tumor_genotype ne "*/*" && $somatic_p_value <= $self->maximum_somatic_p_value) {
+            $somatic_status = "Somatic";
+        }
+        elsif($variant_p_value <= $self->maximum_somatic_p_value) {
+            $somatic_status = "Germline";
+        }
+        elsif($tumor_genotype eq "*/*") {
+            $somatic_status = "Reference";
+        }
+        else {
+            $somatic_status = "Unknown";
+        }
+
+    }
+    elsif($normal_genotype eq "*/I") {
+        if(($tumor_genotype eq "I/I" || $tumor_genotype eq "*/*") && $somatic_p_value <= $self->maximum_somatic_p_value) {
+            $somatic_status = "LOH";
+        }
+        else {
+            $somatic_status = "Germline";
+        }
+    }
+    else {
+        ## Normal is homozygous ##
+        $somatic_status = "Germline";
+    }
+    my %call = (    genotype => [ $normal_genotype, $tumor_genotype ],
+                    variant_p_value => $variant_p_value,
+                    somatic_p_value => $somatic_p_value,
+                    status => $somatic_status,
+    );
+    return %call;
 }
