@@ -119,7 +119,7 @@ is($build->calculate_estimated_kb_usage, 30000, 'Estimated kb usage');
 # dirs
 my $existing_build_dir = '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16sSanger/build';
 ok(-d $existing_build_dir, 'existing build dir exists');
-for my $subdir (qw/ chromat_dir edit_dir phd_dir /) {
+for my $subdir (qw/ chromat_dir edit_dir /) {
     my $dir = $build->$subdir;
     is($dir, $build->data_directory.'/'.$subdir, "$subdir is correct");
     ok(-d $dir, "$subdir was created");
