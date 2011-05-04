@@ -79,11 +79,10 @@ sub execute {
                 $DB::single=1 if ($start==67167422); 
             }
             elsif($bit) {
-                $start=$index+1;
+                $start=$index;
             }
             elsif(!$bit && $start) {
-                my $end=$index;
-                $start = $start -1;
+                my $end=$index-1;
                 $out_fh->print("$chr\t$start\t$end\n");
                 $start = 0;
             }
