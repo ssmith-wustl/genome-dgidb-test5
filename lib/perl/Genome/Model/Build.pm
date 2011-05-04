@@ -43,6 +43,7 @@ class Genome::Model::Build {
         subject_id              => { via => 'model' },
         subject_name            => { via => 'model' },
         processing_profile      => { via => 'model' },
+        processing_profile_id   => { via => 'model' },
         processing_profile_name => { via => 'model' },
         the_events              => { is => 'Genome::Model::Event', reverse_as => 'build', is_many => 1 },
         the_events_statuses     => { via => 'the_events', to => 'event_status' },
