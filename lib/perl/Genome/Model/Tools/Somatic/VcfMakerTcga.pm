@@ -249,7 +249,7 @@ sub execute {                               # replace with real execution logic.
 	#all the filter info
 	print OUTFILE "##FILTER=<ID=PASS,Description=\"Passed all filters\">" . "\n";
 	print OUTFILE "##FILTER=<ID=snpfilter,Description=\"snp filter - Discard\">" . "\n";
-	print OUTFILE "##FILTER=<ID=sniperhc,Description=\"Somatic Sniper High Confidence - Discard\">" . "\n"
+	print OUTFILE "##FILTER=<ID=sniperhc,Description=\"Somatic Sniper High Confidence - Discard\">" . "\n";
 	print OUTFILE "##FILTER=<ID=fp,Description=\"False Positive Filter - Discard\">" . "\n";
 	print OUTFILE "##FILTER=<ID=vsGermline,Description=\"Varscan Germline - Discard\">" . "\n";
 	print OUTFILE "##FILTER=<ID=vsLoh,Description=\"Varscan LOH - Discard\">" . "\n";
