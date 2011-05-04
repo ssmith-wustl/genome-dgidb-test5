@@ -83,6 +83,9 @@ sub execute {
             }
             elsif(!$bit && $start) {
                 my $end=$index-1;
+                if($start<0){
+                    $start = 0;
+                }
                 $out_fh->print("$chr\t$start\t$end\n");
                 $start = 0;
             }
