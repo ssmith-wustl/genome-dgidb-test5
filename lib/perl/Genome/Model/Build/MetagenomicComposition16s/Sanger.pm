@@ -27,42 +27,265 @@ sub calculate_estimated_kb_usage {
 }
 
 #< Prepare Inst Data >#
-# TODO move here
+sub prepare_instrument_data {
+    my $self = shift;
 
-#< INTR DATA >#
-sub link_instrument_data {
-    my ($self, $instrument_data) = @_;
+    $self->_dump_and_link_instrument_data
+        or return;
 
-    unless ( $instrument_data ) {
-        $self->error_message("No instument data to link");
+    my @amplicon_set_names = $self->amplicon_set_names;
+    Carp::confess('No amplicon set names for '.$self->description) if not @amplicon_set_names; # bad
+
+    $self->_raw_reads_fasta_and_qual_writer
+        or return;
+
+    my %trimmer_params = $self->processing_profile->trimmer_params_as_hash;
+    my %assembler_params = $self->processing_profile->assembler_params_as_hash;
+
+    my ($attempted, $reads_attempted, $reads_processed) = (qw/ 0 0 0 /);
+    for my $name ( @amplicon_set_names ) {
+
+        my $amplicon_set = $self->amplicon_set_for_name($name);
+        next if not $amplicon_set; # ok
+
+        my $writer = $self->fasta_and_qual_writer_for_type_and_set_name('processed', $amplicon_set->name);
+        return if not $writer;
+
+        while ( my $amplicon = $amplicon_set->next_amplicon ) {
+            $attempted++;
+            $reads_attempted += @{$amplicon->{reads}};
+            my $prepare_ok = $self->_prepare($amplicon);
+            return if not $prepare_ok;
+
+            my $trim_ok = $self->_trim($amplicon, %trimmer_params);
+            return if not $trim_ok;
+
+            my $assemble_ok = $self->_assemble($amplicon, %assembler_params);
+            return if not $assemble_ok;
+
+            $self->load_seq_for_amplicon($amplicon)
+                or next; # ok
+            $writer->write([$amplicon->{seq}]);
+            $reads_processed += @{$amplicon->{reads_processed}};
+        }
+    }
+
+    $self->amplicons_attempted($attempted);
+    $self->reads_attempted($reads_attempted);
+    $self->reads_processed($reads_processed);
+    $self->reads_processed_success( $reads_attempted > 0 ?  sprintf('%.2f', $reads_processed / $reads_attempted) : 0 );
+
+    return 1;
+}
+
+sub _dump_and_link_instrument_data {
+    my $self = shift;
+
+    my @instrument_data = $self->instrument_data;
+    unless ( @instrument_data ) { # should not happen
+        $self->error_message('No instrument data found for '.$self->description);
         return;
     }
 
     my $chromat_dir = $self->chromat_dir;
-    my $instrument_data_dir = $instrument_data->resolve_full_path;
-    my $dh = Genome::Sys->open_directory($instrument_data_dir)
-        or return;
+    for my $instrument_data ( @instrument_data ) {
+        # dump
+        unless ( $instrument_data->dump_to_file_system ) {
+            $self->error_message(
+                sprintf(
+                    'Error dumping instrument data (%s <Id> %s) assigned to model (%s <Id> %s)',
+                    $instrument_data->run_name,
+                    $instrument_data->id,
+                    $self->model->name,
+                    $self->model->id,
+                )
+            );
+            return;
+        }
+        # link
 
-    for (1..2) {  # . and ..
-        my $dot_dir = $dh->read;
-        confess("Expecting one of the dot directories, but got $dot_dir for ".$self->description) unless $dot_dir =~ /^\.{1,2}$/;
+        my $instrument_data_dir = $instrument_data->resolve_full_path;
+        my $dh = Genome::Sys->open_directory($instrument_data_dir);
+        return if not $dh;
+
+        for (1..2) {  # . and ..
+            my $dot_dir = $dh->read;
+            confess("Expecting one of the dot directories, but got $dot_dir for ".$self->description) unless $dot_dir =~ /^\.{1,2}$/;
+        }
+        my $cnt = 0;
+        while ( my $trace = $dh->read ) {
+            $cnt++;
+            my $target = sprintf('%s/%s', $instrument_data_dir, $trace);
+            my $link = sprintf('%s/%s', $chromat_dir, $trace);
+            next if -e $link; # link points to a target that exists
+            unlink $link if -l $link; # remove - link exists, but points to something that does not exist
+            Genome::Sys->create_symlink($target, $link)
+                or return;
+        }
+
+        unless ( $cnt ) {
+            $self->error_message("No traces found in instrument data directory ($instrument_data_dir)");
+            return;
+        }
     }
-    my $cnt = 0;
-    while ( my $trace = $dh->read ) {
-        $cnt++;
-        my $target = sprintf('%s/%s', $instrument_data_dir, $trace);
-        my $link = sprintf('%s/%s', $chromat_dir, $trace);
-        next if -e $link; # link points to a target that exists
-        unlink $link if -l $link; # remove - link exists, but points to something that does not exist
-        Genome::Sys->create_symlink($target, $link)
+
+    return 1;
+}
+
+sub _prepare {
+    #< Scf to Fasta via Phred >#
+    my ($self, $amplicon) = @_;
+
+    # scfs file
+    my $scfs_file = $self->edit_dir.'/'.$amplicon->{name}.'.scfs';
+    unlink $scfs_file;
+    my $scfs_fh = Genome::Sys->open_file_for_writing($scfs_file);
+    return if not $scfs_fh;
+    for my $scf ( @{$amplicon->{reads}} ) { 
+        $scfs_fh->print($self->chromat_dir."/$scf.gz\n");
+    }
+    $scfs_fh->close;
+
+    # scf 2 fasta
+    my $fasta_file = $self->edit_dir.'/'.$amplicon->{name}.'.fasta';
+    unlink $fasta_file;
+    my $qual_file =  $fasta_file.'.qual';
+    unlink $qual_file;
+    my $command = sprintf(
+        'phred -if %s -sa %s -qa %s -nocall -zt /tmp',
+        $scfs_file,
+        $fasta_file,
+        $qual_file,
+    );
+
+    my $rv = eval{ Genome::Sys->shellcmd(cmd => $command); };
+    if ( not $rv ) {
+        $self->error_message('Failed to convert '.$amplicon->{name}.' SCFs to FASTA: '.$@);
+        return;
+    }
+
+    # write the 'raw' read fastas
+    my $reader = Genome::Model::Tools::FastQual::PhredReader->create(
+        files => [ $fasta_file, $qual_file ],
+    );
+    return if not $reader;
+    while ( my $seq = $reader->read ) {
+        $self->_raw_reads_fasta_and_qual_writer->write($seq)
             or return;
     }
+    
+    return 1;
+}
 
-    unless ( $cnt ) {
-        $self->error_message("No traces found in instrument data directory ($instrument_data_dir)");
+sub _raw_reads_fasta_and_qual_writer {
+    my $self = shift;
+
+    unless ( $self->{_raw_reads_fasta_and_qual_writer} ) {
+        my $fasta_file = $self->raw_reads_fasta_file;
+        unlink $fasta_file if -e $fasta_file;
+        my $qual_file = $self->raw_reads_qual_file;
+        unlink  $qual_file if -e $qual_file;
+        my $writer = Genome::Model::Tools::FastQual::PhredWriter->create(files => [ $fasta_file, $qual_file, ]);
+        if ( not $writer ) {
+            $self->error_message('Failed to create phred reader for raw reads');
+            return;
+        }
+        $self->{_raw_reads_fasta_and_qual_writer} = $writer;
     }
 
-    return $cnt;
+    return $self->{_raw_reads_fasta_and_qual_writer};
+}
+
+sub _trim {
+    my ($self, $amplicon, %trimmer_params) = @_;
+
+    my $fasta_file = $self->edit_dir.'/'.$amplicon->{name}.'.fasta';
+    return unless -s $fasta_file; # ok
+
+    my $trim3 = Genome::Model::Tools::Fasta::Trim::Trim3->create(
+        fasta_file => $fasta_file,
+        %trimmer_params,
+    );
+    unless ( $trim3 ) { # not ok
+        $self->error_message("Can't create trim3 command for amplicon: ".$amplicon->name);
+        return;
+    }
+    $trim3->execute; # ok
+
+    next unless -s $fasta_file; # ok
+
+    my $screen = Genome::Model::Tools::Fasta::ScreenVector->create(
+        fasta_file => $fasta_file,
+    );
+    unless ( $screen ) { # not ok
+        $self->error_message("Can't create screen vector command for amplicon: ".$amplicon->name);
+        return;
+    }
+    $screen->execute; # ok
+
+    next unless -s $fasta_file; # ok
+
+    my $qual_file = $fasta_file.'.qual';
+    $self->_add_amplicon_reads_fasta_and_qual_to_build_processed_fasta_and_qual(
+        $fasta_file, $qual_file
+    )
+        or return;
+
+    return 1;
+}
+
+sub _add_amplicon_reads_fasta_and_qual_to_build_processed_fasta_and_qual {
+    my ($self, $fasta_file, $qual_file) = @_;
+
+    # Write the 'raw' read fastas
+    my $reader = Genome::Model::Tools::FastQual::PhredReader->create(
+        files => [ $fasta_file, $qual_file ],
+    );
+    return if not $reader;
+    while ( my $seqs = $reader->read ) {
+        $self->_processed_reads_fasta_and_qual_writer->write($seqs)
+            or return;
+    }
+ 
+    return 1;
+}
+
+sub _processed_reads_fasta_and_qual_writer {
+    my $self = shift;
+
+    unless ( $self->{_processed_reads_fasta_and_qual_writer} ) {
+        my $fasta_file = $self->processed_reads_fasta_file;
+        unlink $fasta_file if -e $fasta_file;
+        my $qual_file = $self->processed_reads_qual_file;
+        unlink  $qual_file if -e $qual_file;
+        my $writer = Genome::Model::Tools::FastQual::PhredWriter->create(files => [ $fasta_file, $qual_file ]);
+        return if not $writer;
+        $self->{_processed_reads_fasta_and_qual_writer} = $writer;
+    }
+
+    return $self->{_processed_reads_fasta_and_qual_writer};
+}
+
+sub _assemble {
+    my ($self, $amplicon, %assembler_params) = @_;
+
+    my $fasta_file = $self->edit_dir.'/'.$amplicon->{name}.'.fasta';
+    next unless -s $fasta_file; # ok
+
+    my $phrap = Genome::Model::Tools::PhredPhrap::Fasta->create(
+        fasta_file => $fasta_file,
+        %assembler_params,
+    );
+    unless ( $phrap ) { # bad
+        $self->error_message(
+            "Can't create phred phrap command for build's (".$self->id.") amplicon (".$amplicon->{name}.")"
+        );
+        return;
+    }
+    $phrap->dump_status_messages(1);
+    $phrap->execute; # no check
+
+    return 1;
 }
 
 #< DIRS >#
@@ -112,7 +335,7 @@ sub _amplicon_iterator_for_name {
     # collect the read names
     my @all_read_names;
     while ( my $read_name = $dh->read ) {
-        $read_name =~ s#\.gz$##;
+        $read_name =~ s/\.gz$//;
         push @all_read_names, $read_name;
     }
     # make sure we got some 
@@ -151,20 +374,14 @@ sub _amplicon_iterator_for_name {
         chomp $classification_line;
     }
 
-    my $amplicon_name_for_read_name = '_get_amplicon_name_for_'.$self->sequencing_center
-    .'_read_name';
+    my $amplicon_name_for_read_name = '_get_amplicon_name_for_'.$self->sequencing_center.'_read_name';
     my $pos = 0;
     return sub{
         AMPLICON: while ( $pos < $#all_read_names ) {
             # Get amplicon name
             my $amplicon_name = $self->$amplicon_name_for_read_name($all_read_names[$pos]);
             unless ( $amplicon_name ) {
-                confess sprintf(
-                    'Build determine amplicon name for %s read name (%s) for build (%s)',
-                    $all_read_names[$pos],
-                    $self->sequencing_center,
-                    $self->id,
-                );
+                Carp::confess('Could not determine amplicon name for read: '.$all_read_names[$pos]);
             }
             # Start reads list
             my @read_names = ( $all_read_names[$pos] );

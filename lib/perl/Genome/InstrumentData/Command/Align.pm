@@ -78,7 +78,8 @@ class Genome::InstrumentData::Command::Align {
         test_name                       => {
                                             is => 'Text',
                                             is_optional => 1,
-                                            doc => 'When set, makes alignments not used in pipelines for testing.',
+                                            doc => 'When set, makes alignments not used in pipelines for testing (defaults to value of GENOME_SOFTWARE_RESULT_TEST_NAME environment variable.',
+                                            default_value => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME},
                                         },
         output_dir                      => {
                                             is => 'Text',

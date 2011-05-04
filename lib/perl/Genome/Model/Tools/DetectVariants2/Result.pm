@@ -47,11 +47,6 @@ class Genome::Model::Tools::DetectVariants2::Result {
             is_optional => 1,
             doc => 'The chromosome(s) on which the detection was run',
         },
-        test_name => {
-            is => 'Text',
-            is_optional => 1,
-            doc => 'Assigns a testing tag to the result.  These will not be used in pipelines.',
-        },
     ],
     has_input => [
         aligned_reads => {
