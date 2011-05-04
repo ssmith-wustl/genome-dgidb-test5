@@ -262,8 +262,10 @@ sub _amplicon_iterator_for_name { # 454 and solexa for now
 
 #< Dirs >#
 sub sub_dirs {
-    return (qw| classification amplicons fasta reports |), $_[0]->_sub_dirs;
+    return (qw| classification fasta reports |), $_[0]->_sub_dirs;
 }
+
+sub _sub_dirs { return; }
 
 sub classification_dir {
     return $_[0]->data_directory.'/classification';
@@ -271,6 +273,10 @@ sub classification_dir {
 
 sub fasta_dir {
     return $_[0]->data_directory.'/fasta';
+}
+
+sub reports_dir {
+    return $_[0]->data_directory.'/reports';
 }
 
 #< Files >#

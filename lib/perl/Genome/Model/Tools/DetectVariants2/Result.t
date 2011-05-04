@@ -9,7 +9,7 @@ BEGIN{
 };
 
 use above "Genome";
-use Test::More tests => 15;
+use Test::More tests => 25;
 
 use_ok('Genome::Model::Tools::DetectVariants2::Result');
 
@@ -78,3 +78,30 @@ isnt($result3, $result, 'produced a different result with different parameter');
 
 my $output_dir3 = $command3->output_directory;
 is(readlink($output_dir3), $result3->output_dir, 'created symlink to third result');
+
+$ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} = 'dv2-result-test';
+$command_params{output_directory} = $test_working_dir . '/test4';
+
+my $command4 = Genome::Model::Tools::DetectVariants2::Samtools->create(%command_params);
+isa_ok($command4, 'Genome::Model::Tools::DetectVariants2::Samtools', 'created fourth samtools detector');
+$command4->dump_status_messages(1);
+ok($command4->execute, 'executed fourth samtools command');
+my $result4 = $command4->_result;
+isa_ok($result4, 'Genome::Model::Tools::DetectVariants2::Result', 'generated fourth result');
+isnt($result4, $result3, 'produced a different result when using test name');
+
+my $output_dir4 = $command4->output_directory;
+is(readlink($output_dir4), $result4->output_dir, 'created symlink to fourth result');
+
+$command_params{output_directory} = $test_working_dir . '/test5';
+
+my $command5 = Genome::Model::Tools::DetectVariants2::Samtools->create(%command_params);
+isa_ok($command5, 'Genome::Model::Tools::DetectVariants2::Samtools', 'created fifth samtools detector');
+$command5->dump_status_messages(1);
+ok($command5->execute, 'executed fifth samtools command');
+my $result5 = $command5->_result;
+isa_ok($result5, 'Genome::Model::Tools::DetectVariants2::Result', 'generated fifth result');
+is($result5, $result4, 'the same result when using the same test name');
+
+my $output_dir5 = $command5->output_directory;
+is(readlink($output_dir5), $result4->output_dir, 'created second symlink to fourth result');

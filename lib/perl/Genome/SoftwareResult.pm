@@ -28,6 +28,7 @@ class Genome::SoftwareResult {
         params_bx           => { is => 'UR::BoolExpr', id_by => 'params_id', is_optional => 1 },
         params_id           => { is => 'VARCHAR2', len => 4000, column_name => 'PARAMS_ID', implied_by => 'params_bx', is_optional => 1 },
         output_dir          => { is => 'VARCHAR2', len => 1000, column_name => 'OUTPUTS_PATH', is_optional => 1 },
+        test_name           => { is_param => 1, is_delegated => 1, is_mutable => 1, via => 'params', to => 'param_value', where => ['param_name' => 'test_name'], is => 'Text', doc => 'Assigns a testing tag to the result.  These will not be used in default processing', is_optional => 1 },
     ],
     has_many_optional => [
         params              => { is => 'Genome::SoftwareResult::Param', reverse_as => 'software_result'},

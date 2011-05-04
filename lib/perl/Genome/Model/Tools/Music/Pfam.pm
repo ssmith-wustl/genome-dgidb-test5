@@ -25,7 +25,7 @@ class Genome::Model::Tools::Music::Pfam {
             doc => "MAF file with Pfam domain column appended",
         },
     ],
-    doc => 'Add Pfam annotation to a MAF file',
+    doc => 'Add Pfam annotation to a MAF file.',
 };
 
 sub help_synopsis {

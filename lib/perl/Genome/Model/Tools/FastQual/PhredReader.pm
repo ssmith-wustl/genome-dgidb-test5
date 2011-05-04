@@ -61,8 +61,7 @@ sub _parse_io {
     my ($header, $data) = split(/\n/, $entry, 2);
     defined $data && $data =~ s/>//g;
 
-    my ($id, $desc) = split(/\s/, $header, 2);
-    print Data::Dumper::Dumper([$header,$id,$desc]);
+    my ($id, $desc) = split(/\s+/, $header, 2);
     if ( not defined $id or $id eq '' ) {
         Carp::confess("Cannot get id from header ($header) for entry:\n$entry");
     }
