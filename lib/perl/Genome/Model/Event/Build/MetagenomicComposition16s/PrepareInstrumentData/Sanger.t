@@ -17,13 +17,15 @@ use_ok('Genome::Model::Event::Build::MetagenomicComposition16s::PrepareInstrumen
 # model/builds
 my $model = Genome::Model::MetagenomicComposition16s::Test->model_for_sanger;
 ok($model, 'got mc16s sanger model') or die;
-my $build = $model->create_build(
+my $build = Genome::Model::Build->create(
+    id => -1199,
     model => $model,
     data_directory => $model->data_directory,
 );
 ok($build, 'created build') or die;
 my $example_build = $model->create_build(
     model=> $model,
+    id => -2288,
     data_directory => '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16sSanger/build',
 );
 ok($example_build, 'example build') or die;
@@ -54,7 +56,6 @@ is(
 
 while ( my $amplicon = $amplicon_sets[0]->next_amplicon ) {
     ok(-s $build->scfs_file_for_amplicon($amplicon), 'scfs file');
-    ok(-s $build->phds_file_for_amplicon($amplicon), 'phds file');
     ok(-s $build->reads_fasta_file_for_amplicon($amplicon), 'fasta file');
     ok(-s $build->reads_qual_file_for_amplicon($amplicon), 'qual file');
     ok(-s $build->ace_file_for_amplicon($amplicon), 'ace file');
