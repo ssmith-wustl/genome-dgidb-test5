@@ -8,8 +8,7 @@ use warnings;
 use IO::File;
 use IO::Handle;
 use Genome;
-require("/gscuser/dkoboldt/src/perl_modules/trunk/Varscan/Varscan/lib/Varscan/FisherTest.pm");  #using for FET. TODO move to genome model if this is going to be used
-
+use Genome::Model::Tools::Varscan;
 my %stats = ();
 
 class Genome::Model::Tools::Analysis::Indels::CompileSomatic {

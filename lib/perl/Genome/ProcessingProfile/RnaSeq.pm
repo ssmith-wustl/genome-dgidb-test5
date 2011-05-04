@@ -153,7 +153,7 @@ sub params_for_alignment {
                     picard_version => $self->picard_version || undef,
                     samtools_version => undef, #unused
                     filter_name => undef, #unused
-                    test_name => undef,
+                    test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
                 );
 
     my @param_set = (\%params);

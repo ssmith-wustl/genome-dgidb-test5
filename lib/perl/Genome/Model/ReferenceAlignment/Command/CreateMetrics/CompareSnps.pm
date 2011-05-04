@@ -62,7 +62,7 @@ sub execute {
         confess "Could not create separated value reader for $output_file!" unless $svr;
 
         $svr->next; # Skip headers
-        my $line = $svr->next;
+        my $line = $svr->next; # Report only has one line of output that we care about
 
         for my $field ($self->compare_snps_fields_to_metrics) {
             my $metric_value = $line->{$field};
@@ -71,11 +71,20 @@ sub execute {
             my @words = Genome::Utility::Text::camel_case_to_words($field);
             my $metric_name = join('_', 'compare_snps', map { lc $_ } @words);
 
-            Genome::Model::Metric->create(
+            my $metric = Genome::Model::Metric->get(
                 build_id => $build->id,
                 name => $metric_name,
-                value => $metric_value,
             );
+            if ($metric) {
+                $metric->value($metric_value);
+            }
+            else {
+                Genome::Model::Metric->create(
+                    build_id => $build->id,
+                    name => $metric_name,
+                    value => $metric_value,
+                );
+            }
         }
     }
 

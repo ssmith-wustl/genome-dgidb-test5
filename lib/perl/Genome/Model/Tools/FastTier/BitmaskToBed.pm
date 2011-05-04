@@ -83,6 +83,7 @@ sub execute {
             }
             elsif(!$bit && $start) {
                 my $end=$index-1;
+                $start = $start - 1;
                 if($start<0){
                     $start = 0;
                 }

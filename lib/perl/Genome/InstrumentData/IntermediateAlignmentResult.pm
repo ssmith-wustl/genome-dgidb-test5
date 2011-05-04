@@ -62,11 +62,6 @@ class Genome::InstrumentData::IntermediateAlignmentResult {
                                     doc => 'Specify 1 or 2 to indicate which set of reads to use for paired end reads in .bam files.',
                                     is_optional => 1,
                                 },
-        test_name               => {
-                                    is=>'Text',
-                                    is_optional=>1,
-                                    doc=>'Assigns a testing tag to the alignments.  These will not be used in pipelines.',
-                                },
         aligner_name            => {
                                     is => 'Text', default_value => 'maq',
                                     doc => 'the name of the aligner to use, maq, blat, newbler etc.',
