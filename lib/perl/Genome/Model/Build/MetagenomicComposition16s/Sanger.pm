@@ -66,30 +66,16 @@ sub link_instrument_data {
 }
 
 #< DIRS >#
-sub consed_directory {
-    my $self = shift;
-
-    unless ( $self->{_consed_directory} ) {
-        $self->{_consed_directory} = Genome::Model::Tools::Consed::Directory->create(directory => $self->data_directory);
-    }
-
-    return $self->{_consed_directory};
-}
-
 sub _sub_dirs {
-    return $_[0]->consed_directory->directories;
+    return (qw/ chromat_dir edit_dir /);
 }
 
 sub edit_dir {
-    return $_[0]->consed_directory->edit_dir;
-}
-    
-sub phd_dir {
-    return $_[0]->consed_directory->phd_dir;
+    return $_[0]->data_directory.'/edit_dir';
 }
     
 sub chromat_dir {
-    return $_[0]->consed_directory->chromat_dir;
+    return $_[0]->data_directory.'/chromat_dir';
 }
 
 #< Files >#
@@ -376,11 +362,6 @@ sub create_scfs_file_for_amplicon {
     }
 }
 
-sub phds_file_for_amplicon {
-    my ($self, $amplicon) = @_;
-    return $self->edit_dir.'/'.$amplicon->{name}.'.phds';
-}
-
 sub reads_fasta_file_for_amplicon { 
     my ($self, $amplicon) = @_;
     return $self->edit_dir.'/'.$amplicon->{name}.'.fasta';
@@ -411,7 +392,7 @@ sub clean_up {
         fasta.phrap.out fasta.memlog
         fasta.preclip fasta.qual.preclip 
         fasta.prescreen fasta.qual.prescreen
-        scfs phds
+        scfs
         /);
 
     for my $amplicon_set ( @amplicon_sets ) {
@@ -426,21 +407,22 @@ sub clean_up {
     return 1;
 }
 
+#< Diff >#
+sub files_ignored_by_diff {
+    return qw(
+        build.xml
+    );
+}
+
+sub dirs_ignored_by_diff {
+    return qw(
+        logs/
+        reports/
+        edit_dir/
+        chromat_dir/
+    );
+}
+#<>#
+
 1;
 
-=pod
-
-=head1 Disclaimer
-
-Copyright (C) 2005 - 2010 Genome Center at Washington University in St. Louis
-
-This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-=head1 Author(s)
-
-B<Eddie Belter> I<ebelter@genome.wustl.edu>
-
-=cut
-
-#$HeadURL$
-#$Id$

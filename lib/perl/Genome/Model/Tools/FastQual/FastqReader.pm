@@ -52,7 +52,7 @@ sub _get_seq_from_fh {
     return if not defined $line;
     chomp $line;
 
-    my ($id, $desc) = split(/\s/, $line, 2);
+    my ($id, $desc) = split(/\s+/, $line, 2);
     $id =~ s/^@//;
 
     my $seq = $fh->getline;
