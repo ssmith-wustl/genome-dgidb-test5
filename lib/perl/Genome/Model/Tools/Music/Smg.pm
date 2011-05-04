@@ -11,7 +11,7 @@ our $VERSION = $Genome::Model::Tools::Music::VERSION;
 class Genome::Model::Tools::Music::Smg {
   is => 'Command::V2',
   has_input => [
-    gene_mr_file => { is => 'Text', doc => "File with per-gene mutation rates (Created using B<music bmr calc-bmr>)" },
+    gene_mr_file => { is => 'Text', doc => "File with per-gene mutation rates (Created using \"music bmr calc-bmr\")" },
     output_file => { is => 'Text', doc => "Output file that will list significantly mutated genes and their p-values" },
   ],
   doc => "Identify significantly mutated genes."
@@ -21,7 +21,7 @@ sub help_synopsis {
   return <<HELP
 ... music smg --gene-mr-file output_dir/gene_mrs --output-file output_dir/smgs
 
-(Please note that "gene_mrs" is an output of B<music bmr calc-bmr>.)
+(Please note that "gene_mrs" is an output of "music bmr calc-bmr".)
 HELP
 }
 

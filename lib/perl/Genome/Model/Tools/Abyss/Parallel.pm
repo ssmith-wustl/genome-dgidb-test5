@@ -110,6 +110,7 @@ sub make_cmdline_args {
     my ($self, $kmer_size, $output_dir) = @_;
 
     my @cmd = (
+        "v=-v",
         "k=" . $kmer_size,
         "n=" . $self->min_pairs,
         "np=" . $self->num_jobs,

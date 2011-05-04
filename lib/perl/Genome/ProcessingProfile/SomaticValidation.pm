@@ -137,7 +137,7 @@ sub _map_workflow_inputs {
         $self->error_message("Failed to get a reference sequence build for this model!");
         die $self->error_message;
     }
-    my $reference_fasta = $reference_sequence_build->sequence_path('fa');
+    my $reference_fasta = $reference_sequence_build->full_consensus_path('fa');
     unless(Genome::Sys->check_for_path_existence($reference_fasta)) {
         $self->error_message('Could not find reference FASTA for specified reference sequence.');
         die $self->error_message;
