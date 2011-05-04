@@ -4,7 +4,6 @@ use strict;
 use warnings;
 use Genome;
 use File::stat;
-use Time::localtime;
 use IO::File;
 use File::Basename;
 use Getopt::Long;
@@ -192,7 +191,7 @@ sub execute {                               # replace with real execution logic.
 
 	my $reference;
 	my $seqCenter;
-	my $file_date = "04202011";#strftime("%m/%d/%Y %H:%M:%S\n", localtime);
+	my $file_date =  localtime();
 
 
 
@@ -238,13 +237,24 @@ sub execute {                               # replace with real execution logic.
 	# info lines
 	print OUTFILE "##INFO=<ID=DB,Number=0,Type=Flag,Description=\"dbSNP membership, build 130\">" . "\n";
 	print OUTFILE "##INFO=<ID=VT,Number=1,Type=String,Description=\"Somatic variant type\">" . "\n";
+	print OUTFILE "##INFO=<ID=SS,Number=1,Type=String,Description=\"Somatic status of sample\">" . "\n";
+
+
+#    addFilterInfo("$somatic_capture_dir/varScan.output.snp.formatted.Germline", "vsGermline", \%varScanSnvs
+#    addFilterInfo("$somatic_capture_dir/varScan.output.snp.formatted.LOH", "vsLoh", \%varScanSnvs);
+#    addFilterInfo("$somatic_capture_dir/varScan.output.snp.formatted.other", "vsOther", \%varScanSnvs);
+#    addFilterInfo("$somatic_capture_dir/varScan.output.snp.formatted.Somatic.hc", "vsHC", \%varScanSnvs);
+
 
 	#all the filter info
 	print OUTFILE "##FILTER=<ID=PASS,Description=\"Passed all filters\">" . "\n";
 	print OUTFILE "##FILTER=<ID=snpfilter,Description=\"snp filter - Discard\">" . "\n";
-	print OUTFILE "##FILTER=<ID=sniperhc,Description=\"Somatic Sniper Low Confidence - Discard\">" . "\n";
+	print OUTFILE "##FILTER=<ID=sniperhc,Description=\"Somatic Sniper High Confidence - Discard\">" . "\n"
 	print OUTFILE "##FILTER=<ID=fp,Description=\"False Positive Filter - Discard\">" . "\n";
-	print OUTFILE "##FILTER=<ID=varscan,Description=\"Varscan Low Confidence - Discard\">" . "\n";
+	print OUTFILE "##FILTER=<ID=vsGermline,Description=\"Varscan Germline - Discard\">" . "\n";
+	print OUTFILE "##FILTER=<ID=vsLoh,Description=\"Varscan LOH - Discard\">" . "\n";
+	print OUTFILE "##FILTER=<ID=vsOther,Description=\"Varscan Other - Discard\">" . "\n";
+	print OUTFILE "##FILTER=<ID=vsHC,Description=\"Varscan High Confidence - Discard\">" . "\n";
 	print OUTFILE "##FILTER=<ID=loh,Description=\"Loss of Heterozygosity filter - Discard\">" . "\n";
 	print OUTFILE "##FILTER=<ID=novel,Description=\"Novel event filter (inc. dbSNP) - Discard\">" . "\n";
 
@@ -368,6 +378,11 @@ sub execute {                               # replace with real execution logic.
 	#vlq
 	$sniperSnvs{$id}{"normal"}{"VLQ"} = ".";
 	$sniperSnvs{$id}{"tumor"}{"VLQ"} = ".";
+
+
+	#assume it's somatic for now
+	$sniperSnvs{$id}{"info"} = "VT=SNP";
+	
     }
     $inFh->close();
     
@@ -376,7 +391,7 @@ sub execute {                               # replace with real execution logic.
 #next read in the complete Varscan file
 
     my %varScanSnvs;
-    $inFh = IO::File->new( "$somatic_capture_dir/varScan.output.snp.formatted.Somatic" ) || die "can't open file\n";
+    $inFh = IO::File->new( "$somatic_capture_dir/varScan.output.snp.formatted" ) || die "can't open file\n";
 
     $inFh->getline; #skip header
     while(my $line = $inFh->getline )
@@ -454,6 +469,8 @@ sub execute {                               # replace with real execution logic.
 	$varScanSnvs{$id}{"normal"}{"FA"} = $col[7]/100;
 	$varScanSnvs{$id}{"tumor"}{"FA"} =  $col[11]/100;
 	
+	
+
 
 	# #vas
 	# if (($col[2] ne $col[7]) && ($col[3] eq $col[11])){
@@ -474,6 +491,10 @@ sub execute {                               # replace with real execution logic.
 	#vlq
 	$varScanSnvs{$id}{"normal"}{"VLQ"} = ".";
 	$varScanSnvs{$id}{"tumor"}{"VLQ"} = ".";
+
+
+
+	$varScanSnvs{$id}{"info"} = "VT=SNP";
     }
 
     $inFh->close();
@@ -484,11 +505,11 @@ sub execute {                               # replace with real execution logic.
 #and add a label to the filter field if it's removed
 
     sub addFilterInfo{
-	my ($filename,$filtername,$snvHashRef,$somatic_capture_dir) = @_;
+	my ($filename,$filtername,$snvHashRef) = @_;
 
 	#read in all the sites that passed the filter
 	my %passingSNVs;
-	my $inFh2 = IO::File->new( "$somatic_capture_dir/$filename" ) || die "can't open file $somatic_capture_dir/$filename\n";
+	my $inFh2 = IO::File->new( "$filename" ) || die "can't open file $somatic_capture_dir/$filename\n";
 	while( my $line = $inFh2->getline )
 	{
 	    chomp($line);
@@ -512,11 +533,14 @@ sub execute {                               # replace with real execution logic.
 	}
     }
 
-    addFilterInfo("varScan.output.snp.formatted.Somatic.hc", "varscan", \%varScanSnvs, $somatic_capture_dir);
+    addFilterInfo("$somatic_capture_dir/varScan.output.snp.formatted.Germline", "vsGermline", \%varScanSnvs);
+    addFilterInfo("$somatic_capture_dir/varScan.output.snp.formatted.LOH", "vsLoh", \%varScanSnvs);
+    addFilterInfo("$somatic_capture_dir/varScan.output.snp.formatted.other", "vsOther", \%varScanSnvs);
+    addFilterInfo("$somatic_capture_dir/varScan.output.snp.formatted.Somatic.hc", "vsHC", \%varScanSnvs);
 
-    addFilterInfo("somaticSniper.output.snp.filter","snpfilter",\%sniperSnvs, $somatic_capture_dir);
-    addFilterInfo("somaticSniper.output.snp.filter.hc","sniperhc",\%sniperSnvs, $somatic_capture_dir);
-    addFilterInfo("somaticSniper.output.snp.filter.hc.somatic","loh",\%sniperSnvs, $somatic_capture_dir);
+    addFilterInfo("$somatic_capture_dir/somaticSniper.output.snp.filter","snpfilter",\%sniperSnvs);
+    addFilterInfo("$somatic_capture_dir/somaticSniper.output.snp.filter.hc","sniperhc",\%sniperSnvs);
+    addFilterInfo("$somatic_capture_dir/somaticSniper.output.snp.filter.hc.somatic","loh",\%sniperSnvs);
 
 
 #-------------------------------------------
@@ -539,6 +563,11 @@ sub execute {                               # replace with real execution logic.
 	}
 
 
+	# mark those caught by loh or germline filters as LOH, not somatic
+	if (exists($varScanSnvs{$key}{"filter"}) && $varScanSnvs{$key}{"filter"} =~ /loh/){
+	    $varScanSnvs{$key}{"info"} =~ s/SS=Somatic/SS=LOH/;
+	}
+    
     }
 
     sub dedupFilterNames{
@@ -610,6 +639,9 @@ sub execute {                               # replace with real execution logic.
     }
 
 
+
+
+
 #---------------------------------------------
     sub print_body{
 	my ($output_file, $cp_score_to_qual, $snvHash) = @_;
@@ -665,7 +697,7 @@ sub execute {                               # replace with real execution logic.
 	    }
 
 	    #INFO
-	    push(@outline, "VT=SNP");
+	    push(@outline, $snvhash{$key}{"info"});
 
 	    #FORMAT
 	    push(@outline, "GT:GQ:DP:BQ:MQ:AD:FA:VAQ:VLS:VLQ");

@@ -1007,6 +1007,7 @@ sub dependent_properties {
 
 sub create_build {
     my $self = shift;
+
     unless ($self->verify_inputs) {
         $self->error_message("Some model inputs for model " . $self->id . " are not ready, cannot start build. " .
             "Build requested flag has been set, so another attempt at starting a build will be made later.");
@@ -1014,7 +1015,7 @@ sub create_build {
         return;
     }
 
-    my $build = eval { Genome::Model::Build->create(@_) };
+    my $build = eval { Genome::Model::Build->create(@_); };
     Carp::confess "Could not create new build: $@" unless $build;
     return $build;
 }

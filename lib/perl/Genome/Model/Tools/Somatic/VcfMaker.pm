@@ -4,15 +4,16 @@ use strict;
 use warnings;
 use Genome;
 use File::stat;
-use Time::localtime;
+#use Time::localtime;
 use IO::File;
 use File::Basename;
 use Getopt::Long;
 use FileHandle;
-use POSIX qw(log10);
-use POSIX qw(strftime);
+#use POSIX qw(log10);
 use List::MoreUtils qw(firstidx);
 use List::MoreUtils qw(uniq);
+use Data::Dumper;
+
 
 class Genome::Model::Tools::Somatic::VcfMaker {
     is => 'Command',
@@ -201,6 +202,7 @@ sub execute {                               # replace with real execution logic.
 	my $seqCenter;
 	my $file_date = localtime();
 
+
 	#fix this to support build 37 when necessary
 	if ($genome_build ne "36"){
 	    die("reference paths need to be added for other builds before using")
@@ -229,16 +231,18 @@ sub execute {                               # replace with real execution logic.
 	$seqType = "-illumina" if($tumor_bam =~ /illumina/i);
 
 	print OUTFILE "##fileformat=VCFv4.1" . "\n";
-	print OUTFILE "##fileDate=$file_date" . "\n";
+#	print OUTFILE "##fileDate=" . strftime("%Y/%m/%d %H:%M:%S\n", localtime) . "\n";
+	print OUTFILE "##fileDate=" . $file_date . "\n";
+
 	print OUTFILE "##reference=$reference" . "\n";
 	print OUTFILE "##phasing=none" . "\n";
 	print OUTFILE "##INDIVIDUAL=$individual_id" . "\n";
 
 	#first normal
-	print OUTFILE "##SAMPLE=<ID=" . $individual_id . $seqType . "-normal,file=" . $normal_bam . "SeqCenter=" . $seqCenter . ",Accession=phs000178.v4.p4,FileSource=" . $file_source . ",SequenceSource=" . $file_source . ",AnalysisProfile=" . $analysis_profile . "Type=normal_DNA>" . "\n";
+	print OUTFILE "##SAMPLE=<ID=" . $individual_id . $seqType . "-normal,file=" . $normal_bam . ",SeqCenter=" . $seqCenter . ",Accession=phs000178.v4.p4,FileSource=" . $file_source . ",SequenceSource=" . $file_source . ",AnalysisProfile=" . $analysis_profile . "Type=normal_DNA>" . "\n";
 
 	#then tumor
-	print OUTFILE "##SAMPLE=<ID=" . $individual_id . $seqType . "-tumor,file=" . $normal_bam . "SeqCenter=" . $seqCenter . ",Accession=phs000178.v4.p4,FileSource=" . $file_source . ",SequenceSource=" . $file_source . ",AnalysisProfile=" . $analysis_profile . "Type=tumor_DNA>" . "\n";
+	print OUTFILE "##SAMPLE=<ID=" . $individual_id . $seqType . "-tumor,file=" . $normal_bam . ",SeqCenter=" . $seqCenter . ",Accession=phs000178.v4.p4,FileSource=" . $file_source . ",SequenceSource=" . $file_source . ",AnalysisProfile=" . $analysis_profile . ",Type=tumor_DNA>" . "\n";
 
 	# info lines
 	print OUTFILE "##INFO=<ID=DB,Number=0,Type=Flag,Description=\"dbSNP membership, build 130\">" . "\n";
@@ -265,6 +269,17 @@ sub execute {                               # replace with real execution logic.
 	print OUTFILE  "#" . join("\t", ("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT","NORMAL","PRIMARY")) . "\n";
 	OUTFILE->close();
     }
+
+
+
+
+
+
+
+######REMOVE
+print_header($tumor_bam, $normal_bam, $center, $genome_build, $individual_id, $file_source, $analysis_profile,$output_file);
+
+
 
 
 

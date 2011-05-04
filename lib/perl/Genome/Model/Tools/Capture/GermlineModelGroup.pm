@@ -34,6 +34,7 @@ class Genome::Model::Tools::Capture::GermlineModelGroup {
 		group_id		=> { is => 'Text', doc => "ID of model group" , is_optional => 0},
 		output_build_dirs	=> { is => 'Text', doc => "If specified, outputs last succeeded build directory for each sample to this file" , is_optional => 1},
 		output_coverage_stats	=> { is => 'Text', doc => "Specify a directory to output coverage stats" , is_optional => 1},
+		output_flowcell_information	=> { is => 'Text', doc => "Specify a directory to output flowcell information" , is_optional => 1},
 	],
 };
 
@@ -75,10 +76,13 @@ sub execute {                               # replace with real execution logic.
 		open(BUILDDIRS, ">" . $self->output_build_dirs) or die "Can't open outfile: $!\n";
 	}
 
-	## Open the output file ##
 	if($self->output_coverage_stats) {
 		open(OUTFILE, ">" . $self->output_coverage_stats) or die "Can't open output file: $!\n";
 		print OUTFILE "Model_id\tBuild_id\tSubject_name\tBuild_Dir\tCoverage_File\tCoverage_Wingspan0_Depth1x\tCoverage_Wingspan0_Depth5x\tCoverage_Wingspan0_Depth10x\tCoverage_Wingspan0_Depth15x\tCoverage_Wingspan0_Depth20x\tPercent_Target_Space_Covered_1x\tPercent_Target_Space_Covered_5x\tPercent_Target_Space_Covered_10x\tPercent_Target_Space_Covered_15x\tPercent_Target_Space_Covered_20x\tMapped_Reads\tPercent_Target_Space_Covered_20x_per1Gb\tPercent_Duplicates\tMapping_Rate\n";
+	}
+
+	if($self->output_flowcell_information) {
+		open(FLOWCELL, ">" . $self->output_flowcell_information) or die "Can't open output file: $!\n";
 	}
 
 	## Get the models in each model group ##
@@ -102,6 +106,19 @@ sub execute {                               # replace with real execution logic.
 				print BUILDDIRS join("\t", $model_id, $subject_name, $build_id, "Succeeded", $last_build_dir, $bam_file) . "\n";
 				unless($self->output_coverage_stats) {
 					next;
+				}
+			}
+
+			if($self->output_flowcell_information) {
+#				Genome::InstrumentData->get($RG_id), and then calling flowcell id on that.
+#				print $id->index_sequence
+				my @instrument_data = $build->instrument_data;
+				foreach my $instrument_data (@instrument_data) {
+					my $barcode = $instrument_data->index_sequence;
+					my $flowcell = $instrument_data->flow_cell_id;
+					my $lane = $instrument_data->lane;
+					my $read_length = $instrument_data->read_length;
+        				print FLOWCELL join("\t", $subject_name, $model_id, $build_id, $flowcell, $lane, $barcode, $read_length) . "\n";
 				}
 			}
 

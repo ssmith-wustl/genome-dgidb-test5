@@ -329,7 +329,7 @@ sub create_basic_mock_model {
             resolve_last_complete_build _last_complete_build_id 
             succeeded_builds last_succeeded_build last_succeeded_build_id
             compatible_instrument_data instrument_data unassigned_instrument_data
-            notify_input_build_success
+            notify_input_build_success create_build
             /),
     ) or confess "Can't add mock methods to $type_name model";
 
