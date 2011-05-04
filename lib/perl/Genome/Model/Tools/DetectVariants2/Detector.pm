@@ -252,7 +252,7 @@ sub params_for_result {
         control_aligned_reads => $self->control_aligned_reads_input,
         reference_build_id => $self->reference_build_id,
         region_of_interest_id => $self->region_of_interest_id,
-        test_name => undef,
+        test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
         chromosome_list => undef,
     );
 
