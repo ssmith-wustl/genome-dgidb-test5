@@ -113,43 +113,35 @@ sub _dump_and_link_instrument_data {
 sub _prepare {
     my ($self, $amplicon) = @_;
 
-    my $scfs_file = $self->build->create_scfs_file_for_amplicon($amplicon);
-    my $phds_file = $self->build->phds_file_for_amplicon($amplicon);
-    my $fasta_file = $self->build->reads_fasta_file_for_amplicon($amplicon);
-    my $qual_file = $self->build->reads_qual_file_for_amplicon($amplicon);
-    
-    # Phred
-    my $scf2phd = Genome::Model::Tools::PhredPhrap::ScfToPhd->create(
-        chromat_dir => $self->build->chromat_dir,
-        phd_dir => $self->build->phd_dir,
-        phd_file => $phds_file,
-        scf_file => $scfs_file,
+    # scfs file
+    my $scfs_file = $self->build->edit_dir.'/'.$amplicon->{name}.'.scfs';
+    unlink $scfs_file;
+    my $scfs_fh = Genome::Sys->open_file_for_writing($scfs_file);
+    return if not $scfs_fh;
+    for my $scf ( @{$amplicon->{reads}} ) { 
+        $scfs_fh->print($self->build->chromat_dir."/$scf.gz\n");
+    }
+    $scfs_fh->close;
+
+    # scf 2 fasta
+    my $fasta_file = $self->build->edit_dir.'/'.$amplicon->{name}.'.fasta';
+    unlink $fasta_file;
+    my $qual_file =  $fasta_file.'.qual';
+    unlink $qual_file;
+    my $command = sprintf(
+        'phred -if %s -sa %s -qa %s -nocall -zt /tmp',
+        $scfs_file,
+        $fasta_file,
+        $qual_file,
     );
-    unless ( $scf2phd ) {
-        $self->error_message("Can't create scf to phd command");
+
+    my $rv = eval{ Genome::Sys->shellcmd(cmd => $command); };
+    if ( not $rv ) {
+        $self->error_message('Failed to convert '.$amplicon->{name}.' SCFs to FASTA: '.$@);
         return;
     }
-    unless ( $scf2phd->execute ) {
-        $self->error_message("Can't execute scf to phd command");
-        return;
-    } 
-    
-    # Phred to Fasta
-    my $phd2fasta = Genome::Model::Tools::PhredPhrap::PhdToFasta->create(
-        fasta_file => $fasta_file,
-        phd_dir => $self->build->phd_dir,
-        phd_file => $phds_file,
-    );
-    unless ( $phd2fasta ) {
-        $self->error_message("Can't create phd to fasta command");
-        return;
-    }
-    unless ( $phd2fasta->execute ) {
-        $self->error_message("Can't execute phd to fasta command");
-        return;
-    }
-    
-    # Write the 'raw' read fastas
+
+    # write the 'raw' read fastas
     my $reader = Genome::Model::Tools::FastQual::PhredReader->create(
         files => [ $fasta_file, $qual_file ],
     );
@@ -185,8 +177,8 @@ sub _raw_reads_fasta_and_qual_writer {
 sub _trim {
     my ($self, $amplicon, %trimmer_params) = @_;
 
-    my $fasta_file = $self->build->reads_fasta_file_for_amplicon($amplicon);
-    next unless -s $fasta_file; # ok
+    my $fasta_file = $self->build->edit_dir.'/'.$amplicon->{name}.'.fasta';
+    return unless -s $fasta_file; # ok
 
     my $trim3 = Genome::Model::Tools::Fasta::Trim::Trim3->create(
         fasta_file => $fasta_file,
@@ -211,7 +203,7 @@ sub _trim {
 
     next unless -s $fasta_file; # ok
 
-    my $qual_file = $self->build->reads_qual_file_for_amplicon($amplicon);
+    my $qual_file = $fasta_file.'.qual';
     $self->_add_amplicon_reads_fasta_and_qual_to_build_processed_fasta_and_qual(
         $fasta_file, $qual_file
     )
@@ -257,7 +249,7 @@ sub _processed_reads_fasta_and_qual_writer {
 sub _assemble {
     my ($self, $amplicon, %assembler_params) = @_;
 
-    my $fasta_file = $self->build->reads_fasta_file_for_amplicon($amplicon);
+    my $fasta_file = $self->build->edit_dir.'/'.$amplicon->{name}.'.fasta';
     next unless -s $fasta_file; # ok
 
     my $phrap = Genome::Model::Tools::PhredPhrap::Fasta->create(
