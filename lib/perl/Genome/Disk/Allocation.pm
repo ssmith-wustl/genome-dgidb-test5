@@ -170,6 +170,11 @@ sub allocate { return shift->create(@_); }
 sub create {
     my ($class, %params) = @_;
 
+    # TODO Switch from %params to BoolExpr and pass in BX to autogenerate_new_object_id
+    unless (exists $params{id}) {
+        $params{id} = $class->__meta__->autogenerate_new_object_id;
+    }
+
     # If no commit is on, make a dummy volume to allocate to and allocate without shelling out
     if ($ENV{UR_DBI_NO_COMMIT}) {
         if ($CREATE_DUMMY_VOLUMES_FOR_TESTING) {
@@ -297,6 +302,8 @@ sub _create {
     }
 
     # Make sure there aren't any extra params
+    my $id = delete $params{id};
+    $id = $class->__meta__->autogenerate_new_object_id unless defined $id; # TODO autogenerate_new_object_id should technically receive a BoolExpr
     my $kilobytes_requested = delete $params{kilobytes_requested};
     my $owner_class_name = delete $params{owner_class_name};
     my $owner_id = delete $params{owner_id};
@@ -378,6 +385,7 @@ sub _create {
         owner_class_name => $owner_class_name,
         owner_id => $owner_id,
         group_subdirectory => $group_subdirectory,
+        id => $id,
         creation_time => UR::Time->now,
     );
     unless ($self) {
