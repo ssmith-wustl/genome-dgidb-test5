@@ -332,7 +332,7 @@ sub params_for_alignment {
                     picard_version => $self->picard_version || undef,
                     samtools_version => $self->samtools_version || undef,
                     filter_name => $assignment->filter_desc || undef,
-                    test_name => undef,
+                    test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
                     instrument_data_segment_type => undef,
                     instrument_data_segment_id => undef,
                 );
@@ -398,7 +398,7 @@ sub params_for_merged_alignment {
         trimmer_params => $model->read_trimmer_params || undef,
         picard_version => $model->picard_version || undef,
         samtools_version => $model->samtools_version || undef,
-        test_name => undef,
+        test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
         #filter_name => undef,
         #instrument_data_segment => undef,
     );

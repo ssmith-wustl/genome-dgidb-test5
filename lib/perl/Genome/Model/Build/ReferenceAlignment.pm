@@ -72,19 +72,12 @@ class Genome::Model::Build::ReferenceAlignment {
 sub create {
     my $class = shift;
 
-    my $bool = $class->define_boolexpr(@_);
-    my $model_id = $bool->value_for('model_id');
-    return unless $model_id;
-    my $model = Genome::Model->get($model_id);
-    return unless $model;
-    $model->init_genotype_model;
-
     my $self = $class->SUPER::create(@_);
     unless ($self) {
         return;
     }
 
-    $model = $self->model;
+    my $model = $self->model;
     my @idas = $model->instrument_data_assignments;
     unless (scalar(@idas) && ref($idas[0])  &&  $idas[0]->isa('Genome::Model::InstrumentDataAssignment')) {
         $self->error_message('No instrument data have been added to model! '. $model->name);
@@ -360,29 +353,33 @@ sub rmdup_metrics_file {
 
     my $merged_alignment_result = $self->merged_alignment_result;
     if($merged_alignment_result) {
-	my @array = glob($merged_alignment_result->output_dir."/*.metrics");
-        return @array;
+	    my @files = glob($merged_alignment_result->output_dir."/*.metrics");
+        return @files;
     }
     elsif (-e $self->log_directory."/mark_duplicates.metrics") {
-	#location prior to merged alignment results
-	return $self->log_directory."/mark_duplicates.metrics";
+	    #location prior to merged alignment results
+	    return $self->log_directory."/mark_duplicates.metrics";
     }
     else {
-	return 0;
+        $self->warning_message('No rmdup metrics file found for build: '.$self->build_id);
+	    return;
     }
 }
+
 
 sub mark_duplicates_library_metrics_hash_ref {
     my $self = shift;
     my $subject = $self->model->subject_name;
     my @mark_duplicates_metrics = $self->rmdup_metrics_file;
 
+    return unless @mark_duplicates_metrics;
+
     my %library_metrics;
     for my $mark_duplicates_metrics (@mark_duplicates_metrics) {
         my $fh = Genome::Sys->open_file_for_reading($mark_duplicates_metrics);
         unless ($fh) {
-            warn('Failed to open mark duplicates metrics file '. $mark_duplicates_metrics);
-	    next;
+            $self->warning_message('Failed to open mark duplicates metrics file '. $mark_duplicates_metrics);
+            next;
         }
 
         my @keys;
@@ -410,7 +407,8 @@ sub mark_duplicates_library_metrics_hash_ref {
         $fh->close;
     }
     unless (keys %library_metrics) {
-        die('Failed to find a library that matches the subject name '. $subject); 
+        $self->warning_message('Failed to find a library that matches the subject name '. $subject); 
+        return;
     }
     return \%library_metrics;
 }
@@ -459,7 +457,7 @@ sub whole_rmdup_bam_file {
             return $not_symlinks[0];
         }
         else {
-                $self->error_message("Multiple merged rmdup bam file found.");
+            $self->error_message("Multiple merged rmdup bam file found.");
             return;
         }
     }
@@ -1242,12 +1240,15 @@ sub files_ignored_by_diff {
         reports/dbSNP_Concordance/report.html
         reports/Mapcheck/report.xml
         server_location.txt
+        variants/workflow.xml
+        variants/dispatcher.cmd
     );
 }
 
 sub dirs_ignored_by_diff {
     return qw(
         logs/
+        variants/\d+/
     );
 }
 

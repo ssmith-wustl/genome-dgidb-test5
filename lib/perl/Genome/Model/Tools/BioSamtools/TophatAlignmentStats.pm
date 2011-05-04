@@ -51,8 +51,9 @@ sub execute {
     my $unaligned_bam_file = $self->unaligned_bam_file;
     my $aligned_bam_file = $self->aligned_bam_file;
     my $merged_bam_file = $self->merged_bam_file;
+
     my $output_fh = Genome::Sys->open_file_for_writing($self->alignment_stats_file);
-    
+
     unless ($unaligned_bam_file && $aligned_bam_file && $merged_bam_file) {
         die('Usage:  tophat_alignment_summary.pl <FASTQ_BAM> <TOPHAT_BAM> <MERGED_BAM>');
     }
@@ -66,20 +67,36 @@ sub execute {
         die('Failed to open output BAM file: '. $merged_bam_file);
     }
 
+    # Bothe BAMs must be queryname sorted
     my ($unaligned_bam,$unaligned_header) = validate_sort_order($unaligned_bam_file);
-
     my ($aligned_bam,$aligned_header) = validate_sort_order($aligned_bam_file);
-    &validate_aligned_bam_header($aligned_header);
+
+    # The aligned BAM file should be output from Tophat
+    validate_aligned_bam_header($aligned_header);
+
+    # The query names can be changed depending on the versions of software used.
+    # If the query names do not match an expected format, fail until the exception is handled.
+    my $first_unaligned_query_name;
+    unless ($first_unaligned_query_name = validate_query_name_format($unaligned_bam)) {
+        die('Failed to validate query name format in unaligned BAM file: '. $unaligned_bam_file);
+    }
+    my $first_aligned_query_name;
+    unless ($first_aligned_query_name = validate_query_name_format($aligned_bam)) {
+        die('Failed to validate query name format in aligned BAM file: '. $aligned_bam_file);
+    }
+
+    # Write the aligned BAM header to the output BAM
     $merged_bam->header_write($aligned_header);
-    
+
     my $target_names = $aligned_header->target_name;
     my %chr_hits;
-    my $total_reads = 0;
-    my $unmapped_count = 0;
+    my %total_hits;
     my $previous_aligned_read_name = '';
+    # Iterate over every read in the Tophat aligned BAM file
     while (my $aligned_read = $aligned_bam->read1) {
         my $aligned_flag = $aligned_read->flag;
         my $aligned_read_qname = $aligned_read->qname;
+        # Determine the read end for paired-end sequence
         my $aligned_read_end = 0;
         if ($aligned_flag & 1) {
             if ($aligned_flag & 64) {
@@ -90,31 +107,51 @@ sub execute {
                 die ('Lost read pair info for: '. $aligned_read_qname);
             }
         }
+
+        # Add the read end to uniqify the query name;
+        my $aligned_read_name = $aligned_read_qname .'/'. $aligned_read_end;
+
+        # Only work with mapped reads
         unless ($aligned_flag & 4) {
+            # get the number of alignments per read
             my $num_hits  = $aligned_read->aux_get('NH');
             unless (defined($num_hits)) { die ('Failed to parse NH tag from BAM file: '. $aligned_bam_file); }
+
             # TODO: check mate chr and look for discordant pairs
             my $chr = $target_names->[$aligned_read->tid];
+
+            # Uniquely aligned reads
             if ($num_hits == 1) {
                 $chr_hits{$chr}{'top'}++;
+                $total_hits{'top'}++;
                 if ($aligned_read->cigar_str =~ /N/) {
                     $chr_hits{$chr}{'top_spliced'}++;
+                    $total_hits{'top_spliced'}++;
                 }
+            # Multiple hits for read
             } elsif ($num_hits > 1) {
-                $chr_hits{$chr}{'multi'}{$aligned_read_qname .'/'. $aligned_read_end} += $num_hits;
+                $chr_hits{$chr}{'multi'}{$aligned_read_name} = $num_hits;
+                $total_hits{'multi'}{$aligned_read_name} = $num_hits;
                 if ($aligned_read->cigar_str =~ /N/) {
-                    $chr_hits{$chr}{'multi_spliced'}{$aligned_read_qname .'/'. $aligned_read_end}++;
+                    $chr_hits{$chr}{'multi_spliced'}{$aligned_read_name}++;
+                    $total_hits{'multi_spliced'}{$aligned_read_name}++;
                 }
             } else {
                 die('No hits found for '. $aligned_read_qname .'!  Please add support for unaligned reads.');
             }
+        # This should never happen
         } else {
             die('Please add support for unaligned read found in Tophat BAM: '. $aligned_bam_file);
         }
-        my $aligned_read_name = $aligned_read_qname .'/'. $aligned_read_end;
+
+        $merged_bam->write1($aligned_read);
+
+        # This avoids duplicating an aligned read in the total read counts
+        # Also there is no need to get an unaligned read until we hit a new aligned read name
         if ($aligned_read_name eq $previous_aligned_read_name) {
             next;
         }
+
         my $unaligned_read = $unaligned_bam->read1;
         my $unaligned_flag = $unaligned_read->flag;
         my $unaligned_read_end;
@@ -124,9 +161,11 @@ sub execute {
             $unaligned_read_end = 2;
         }
         my $unaligned_read_name = $unaligned_read->qname .'/'. $unaligned_read_end;
+        # If the unaligned read is not the same as the aligned read, we have an unmapped read
+        # Loop over the unmapped reads until we get a name match, meaning it is aligned
         while ($unaligned_read_name ne $aligned_read_name) {
-            $unmapped_count++;
-            $total_reads++;
+            $total_hits{unmapped_count}++;
+            $total_hits{reads}++;
             $merged_bam->write1($unaligned_read);
             $unaligned_read = $unaligned_bam->read1;
             $unaligned_flag = $unaligned_read->flag;
@@ -137,15 +176,14 @@ sub execute {
             }
             $unaligned_read_name = $unaligned_read->qname .'/'. $unaligned_read_end;
         }
-        $total_reads++;
-        $merged_bam->write1($aligned_read);
+        $total_hits{reads}++;
         $previous_aligned_read_name = $aligned_read_name;
     }
 
     # Write the remaining unaligned reads
     while (my $unaligned_read = $unaligned_bam->read1) {
-        $unmapped_count++;
-        $total_reads++;
+        $total_hits{unmapped_count}++;
+        $total_hits{reads}++;
         $merged_bam->write1($unaligned_read);
     }
 
@@ -156,11 +194,9 @@ sub execute {
     
     print $output_fh "chr\ttop\ttop-spliced\tpct_top_spliced\tmulti_reads\tpct_multi_reads\tmulti_spliced_reads\tpct_multi_spliced_reads\tmulti_hits\n";
     my $total_mapped;
-    my $total_top_hits;
     for my $chr (sort keys %chr_hits) {
         my $top_hits = $chr_hits{$chr}{'top'} || 0;
         $total_mapped += $top_hits;
-        $total_top_hits += $top_hits;
         my $top_spliced = $chr_hits{$chr}{'top_spliced'} || 0;
         my $pct_top_spliced = 0;
         if ($top_hits) {
@@ -172,7 +208,6 @@ sub execute {
             $multi_reads++;
             $multi_hits += $chr_hits{$chr}{'multi'}{$read};
         }
-        $total_mapped += $multi_reads;
         my $multi_spliced_reads = scalar(keys %{$chr_hits{$chr}{'multi_spliced'}}) || 0;
         my $pct_multi_hit_reads = 0;
         my $pct_multi_spliced_reads = 0;
@@ -183,12 +218,24 @@ sub execute {
         print $output_fh $chr ."\t". $top_hits ."\t". $top_spliced ."\t". $pct_top_spliced ."\t". $multi_reads ."\t". $pct_multi_hit_reads
             ."\t". $multi_spliced_reads ."\t". $pct_multi_spliced_reads ."\t". $multi_hits ."\n";
     }
-
-    print $output_fh '##Total Reads: '. $total_reads ."\n";
-    print $output_fh '##Unmapped Reads: '. $unmapped_count ."\n";
-    print $output_fh '##Unique Alignments: '. $total_top_hits ."\n";
+    my $total_multi_reads = 0;
+    my $total_multi_hits = 0;
+    for my $read (keys %{$total_hits{'multi'}}) {
+        $total_mapped++;
+        $total_multi_reads++;
+        $total_multi_hits += $total_hits{'multi'}{$read};
+    }
+    my $expected_total_mapped = $total_hits{reads} - $total_hits{unmapped_count};
+    print $output_fh '##Total Reads: '. $total_hits{reads} ."\n";
+    print $output_fh '##Unmapped Reads: '. $total_hits{unmapped_count} ."\n";
+    print $output_fh '##Unique Alignments: '. $total_hits{top} ."\n";
+    print $output_fh '##Multiple Hit Reads: '. $total_multi_reads ."\n";
+    print $output_fh '##Multiple Hit Sum: '. $total_multi_hits ."\n";
     print $output_fh '##Total Reads Mapped: '. $total_mapped ."\n";
     $output_fh->close;
+    unless ($expected_total_mapped == $total_mapped) {
+        die('The expected number of mapped reads '. $expected_total_mapped .' does not match the sum '. $total_mapped);
+    }
     return 1;
 }
 
@@ -238,5 +285,17 @@ sub validate_aligned_bam_header {
     return 1;
 }
 
+sub validate_query_name_format {
+    my $bam = shift;
+    my $start_position = $bam->tell;
+    my $align = $bam->read1;
+    Bio::DB::Bam::seek($bam,$start_position,0);
+    my $query_name = $align->qname;
+    unless ($query_name =~ /^\S+:\d+:\d+:\d+:\d+[#ACTG]*$/) {
+        warn('Query name '. $query_name .' is invalid!');
+        return;
+    }
+    return $query_name;
+}
 
 1;

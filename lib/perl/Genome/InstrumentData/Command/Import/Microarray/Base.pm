@@ -377,7 +377,7 @@ sub _add_instrument_data_to_model_and_build {
     $self->status_message('Add instrument data OK');
 
     $self->status_message('Build model '.$model->__display_name__);
-    my $build = Genome::Model::Build->create(model => $model);
+    my $build = $model->create_build(model => $model);
     if ( not $build) {
         $self->error_message("Failed to create build for model (".$model->name.", ID: ".$model->id.").");
         return;

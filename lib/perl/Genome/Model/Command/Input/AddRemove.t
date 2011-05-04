@@ -58,7 +58,7 @@ ok(!$add->execute, 'execute');
 
 # BUILD
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
-my $build = Genome::Model::Build->create(
+my $build = $model->create_build(
     model => $model,
     data_directory => $tmpdir,
 );

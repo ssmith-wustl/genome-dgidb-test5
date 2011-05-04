@@ -23,11 +23,6 @@ class Genome::Sample::Command::Update::DefaultGenotypeData {
             default => 0,
             doc => 'Allow the current default genotype data to be overwrittern.',
         },
-        launch_builds => {
-            is => 'Boolean',
-            default => 1,
-            doc => 'If set, new reference alignment builds will be launched if their sample is updated',
-        },
     ],
 };
 
@@ -39,32 +34,22 @@ sub execute {
     my $self = shift;
 
     my $sample = $self->sample;
-    my $genotype_id = $self->genotype_id;
-    my $genotype;
-    if ($genotype_id eq 'none') {
-        $genotype = $genotype_id;
-        $self->launch_builds(0); # Don't want to launch new builds if genotype is being set to none
+    Carp::confess 'Could not resolve a sample!' unless $sample and $sample->isa('Genome::Sample');
+
+    # Default genotype models currently relying on the sample and those that will be after the sample is updated
+    # both need to be rebuilt. 
+    for my $genotype_model ($sample->default_genotype_models) {
+        $genotype_model->request_builds_for_dependent_ref_align;
     }
-    else {
-        $genotype = Genome::InstrumentData::Imported->get($genotype_id);
-        Carp::confess "Could not find genotype data with id $genotype_id!" unless $genotype;
-    }
-    
+
     my $rv = eval {
         $sample->set_default_genotype_data(
-            $genotype,
+            $self->genotype_id,
             $self->overwrite,
         );
     };
     unless (defined $rv and $rv) {
-        Carp::confess 'Could not assign genotype data ' . $genotype->id . ' to sample ' . $sample->id . ": $@";
-    }
-    
-    if ($self->launch_builds) {    
-        my @genotype_models = $sample->default_genotype_models;
-        for my $genotype_model (@genotype_models) {
-            $genotype_model->request_builds_for_dependent_ref_align;
-        }
+        Carp::confess 'Could not assign genotype data ' . $self->genotype_id . ' to sample ' . $sample->id . ": $@";
     }
 
     return 1;
