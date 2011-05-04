@@ -164,7 +164,7 @@ sub execute {
     #now print the data
     foreach my $contig_id (sort keys %counts) {
         print join("\t",$contig_id, $counts{$contig_id}{contigs_overlapping});
-        my @calculated_fields;
+        my %calculated_values;
         my $total_contig_reads = 0;
         my $total_excluded_contig_reads = 0;
         foreach my $label (@orig_labels) {
@@ -178,13 +178,13 @@ sub execute {
             my $excluded_contig_freq = $total_reads ? ($counts{$contig_id}{$label}->{contig_clipped_reads_excluded} + $counts{$contig_id}{$label}->{contig_paralog_reads_excluded}) / $total_reads : '-';
             my $clip_freq = $total_reads ? $counts{$contig_id}{$label}->{contig_clipped_reads_excluded} / $total_reads : '-';
             my $paralog_freq = $total_reads ? $counts{$contig_id}{$label}->{contig_paralog_reads_excluded} / $total_reads : '-';
-            push @calculated_fields, join("\t", join("\t",$coverage, $frequency, $excluded_contig_freq, $clip_freq, $paralog_freq));
+            @{$calculated_values{$label}}{@sample_calculated_fields} = ($coverage, $frequency, $excluded_contig_freq, $clip_freq, $paralog_freq);
 
             $total_contig_reads += $total_reads;
             $total_excluded_contig_reads += $counts{$contig_id}{$label}->{contig_clipped_reads_excluded} + $counts{$contig_id}{$label}->{contig_paralog_reads_excluded};
 
         }
-        print "\t",join("\t", @calculated_fields);
+        print "\t",join("\t", map { @$_{@sample_calculated_fields} } @calculated_values{@orig_labels});
         print "\t", $total_contig_reads ? $total_excluded_contig_reads / $total_contig_reads : '-';
         print "\n";
     }
@@ -219,7 +219,7 @@ sub varscan_call {
 
     #Call the genotype in normal
     if($normal_var_reads >= $self->minimum_variant_supporting_reads && $normal_freq >= $self->minimum_variant_frequency) {
-        if($normal_freq >= $min_freq_for_hom) {
+        if($normal_freq >= $self->minimum_homozygous_frequency) {
             $normal_genotype = "I/I";
         }
         else {
@@ -253,7 +253,7 @@ sub varscan_call {
         $variant_p_value = sprintf("%.5f", $variant_p_value);
     }
 
-    my $somatic_p_value = Genome::Statistics::calculate_p_value($normal_reads1, $normal_reads2, $tumor_reads1, $tumor_reads2);
+    my $somatic_p_value = Genome::Statistics::calculate_p_value($normal_ref_reads, $normal_var_reads, $tumor_ref_reads, $tumor_var_reads);
     if($somatic_p_value < 0.001) {
         $somatic_p_value = sprintf("%.3e", $somatic_p_value);
     }
