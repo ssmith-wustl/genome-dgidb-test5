@@ -85,9 +85,6 @@ sub execute {
         $self->error_message("Number of samples in comparison string is not a multiple of two. Mismatching pairs?");
         return;
     }
-    %comparisons = @comparison_specification;
-
-
     my %counts; #counts of the contigs and their variants
 
     #info on the count headers/fields
@@ -159,6 +156,13 @@ sub execute {
 
     print "\t",join("\t", @labeled_calculated_header);
     print "\t", qw( contig_exclusion_freq );
+    
+    for(my $i = 0; $i < @comparison_specification; $i += 2) {
+        my ($control, $experimental) = @comparison_specification[$i,$i+1];
+        my $comparison_label = "${experimental}_vs_${control}_";
+        print "\t", join("\t",map { $comparison_label . $_ } qw{ variant_p_value somatic_p_value status });
+    }
+
     print "\n";
 
     #now print the data
@@ -184,8 +188,17 @@ sub execute {
             $total_excluded_contig_reads += $counts{$contig_id}{$label}->{contig_clipped_reads_excluded} + $counts{$contig_id}{$label}->{contig_paralog_reads_excluded};
 
         }
+        #the following line just uses array slices to maintain the ordering of fields and labels (samples)
+        #It is too beautiful as is. Sorry.
         print "\t",join("\t", map { @$_{@sample_calculated_fields} } @calculated_values{@orig_labels});
         print "\t", $total_contig_reads ? $total_excluded_contig_reads / $total_contig_reads : '-';
+
+        #do varscan comparisons
+        for(my $i = 0; $i < @comparison_specification; $i += 2) {
+            my ($control, $experimental) = @comparison_specification[$i,$i+1];
+            my %call = $self->varscan_call($counts{$contig_id}{$control}->{total_q1_reads_spanning_ref_pos}, $counts{$contig_id}{$control}->{total_q1_reads_spanning_contig_pos}, $counts{$contig_id}{$experimental}->{total_q1_reads_spanning_ref_pos},$counts{$contig_id}{$experimental}->{total_q1_reads_spanning_contig_pos});
+            print "\t", join("\t", @call{ qw( variant_p_value somatic_p_value status ) });
+        }
         print "\n";
     }
     return 1;
@@ -211,8 +224,13 @@ sub varscan_call {
 
     #we don't yet have alleles included in the results, and we're not sure how good they really are, but proceed anyways.
     my $normal_coverage = $normal_ref_reads + $normal_var_reads;
-    my $normal_freq = $normal_var_reads / $normal_coverage;
     my $tumor_coverage = $tumor_ref_reads + $tumor_var_reads;
+
+    unless($normal_coverage && $tumor_coverage && $normal_coverage >= $self->minimum_coverage && $tumor_coverage >= $self->minimum_coverage) {
+        return (genotype => [], variant_p_value => '-', somatic_p_value => '-', status => 'NC',);
+    }
+
+    my $normal_freq = $normal_var_reads / $normal_coverage;
     my $tumor_freq = $tumor_var_reads / $tumor_coverage;
 
     my ($normal_genotype,$tumor_genotype);
@@ -267,13 +285,10 @@ sub varscan_call {
     my $somatic_status = "";
 
     if($normal_genotype eq "*/*") {
-        if($normal_coverage < $self->minimum_coverage || $tumor_coverage < $self->minimum_coverage) {
-            $somatic_status = "NC";
-        }
-        elsif($tumor_genotype ne "*/*" && $somatic_p_value <= $self->maximum_somatic_p_value) {
+        if($tumor_genotype ne "*/*" && $somatic_p_value <= $self->maximum_p_value) {
             $somatic_status = "Somatic";
         }
-        elsif($variant_p_value <= $self->maximum_somatic_p_value) {
+        elsif($variant_p_value <= $self->maximum_p_value) {
             $somatic_status = "Germline";
         }
         elsif($tumor_genotype eq "*/*") {
@@ -285,7 +300,7 @@ sub varscan_call {
 
     }
     elsif($normal_genotype eq "*/I") {
-        if(($tumor_genotype eq "I/I" || $tumor_genotype eq "*/*") && $somatic_p_value <= $self->maximum_somatic_p_value) {
+        if(($tumor_genotype eq "I/I" || $tumor_genotype eq "*/*") && $somatic_p_value <= $self->maximum_p_value) {
             $somatic_status = "LOH";
         }
         else {
