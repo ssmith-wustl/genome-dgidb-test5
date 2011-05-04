@@ -368,7 +368,7 @@ sub rmdup_metrics_file {
 	    return $self->log_directory."/mark_duplicates.metrics";
     }
     else {
-        $self->warning_message('No rmdup metrics file found');
+        $self->warning_message('No rmdup metrics file found for build: '.$self->build_id);
 	    return;
     }
 }
@@ -379,10 +379,7 @@ sub mark_duplicates_library_metrics_hash_ref {
     my $subject = $self->model->subject_name;
     my @mark_duplicates_metrics = $self->rmdup_metrics_file;
 
-    unless (@mark_duplicates_metrics) {
-        $self->error_message('No valid mark_duplicate metrics files found');
-        die;
-    }
+    return unless @mark_duplicates_metrics;
 
     my %library_metrics;
     for my $mark_duplicates_metrics (@mark_duplicates_metrics) {
@@ -417,7 +414,8 @@ sub mark_duplicates_library_metrics_hash_ref {
         $fh->close;
     }
     unless (keys %library_metrics) {
-        die('Failed to find a library that matches the subject name '. $subject); 
+        $self->warning_message('Failed to find a library that matches the subject name '. $subject); 
+        return;
     }
     return \%library_metrics;
 }
