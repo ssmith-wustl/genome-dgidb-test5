@@ -47,6 +47,12 @@ class Genome::Model::Tools::Validation::CombineCounts {
         default => 0.08,
         doc => "Minimum variant frequency to consider a site as a variant",
     },
+    normal_purity => {
+        type => 'Float',
+        is_optional => 0,
+        default => 1,
+        doc => "Purity of the normal sample. This dynamically adjusts the minimum allele frequency for the normal sample to be considered variant",
+    },
     minimum_homozygous_frequency => {
         type => 'Float',
         is_optional => 0,
@@ -56,7 +62,7 @@ class Genome::Model::Tools::Validation::CombineCounts {
     maximum_p_value => {
         type => 'Float',
         is_optional => 0,
-        default => 0.01,
+        default => 0.001,
         doc => "The maximum p-value to report a site as somatic or germline",
     },
     somatic_comparisons => {
@@ -191,12 +197,17 @@ sub execute {
         #the following line just uses array slices to maintain the ordering of fields and labels (samples)
         #It is too beautiful as is. Sorry.
         print "\t",join("\t", map { @$_{@sample_calculated_fields} } @calculated_values{@orig_labels});
-        print "\t", $total_contig_reads ? $total_excluded_contig_reads / $total_contig_reads : '-';
+        my $exclusion_rate = $total_contig_reads ? $total_excluded_contig_reads / $total_contig_reads : '-';
+        print "\t", $exclusion_rate;
 
         #do varscan comparisons
         for(my $i = 0; $i < @comparison_specification; $i += 2) {
             my ($control, $experimental) = @comparison_specification[$i,$i+1];
             my %call = $self->varscan_call($counts{$contig_id}{$control}->{total_q1_reads_spanning_ref_pos}, $counts{$contig_id}{$control}->{total_q1_reads_spanning_contig_pos}, $counts{$contig_id}{$experimental}->{total_q1_reads_spanning_ref_pos},$counts{$contig_id}{$experimental}->{total_q1_reads_spanning_contig_pos});
+            #here change the status based on the exclusion criterion
+            if($exclusion_rate ne '-' && $exclusion_rate > $self->maximum_contig_read_exclusion_rate) {
+                $call{status} = "ExclusionFiltered";
+            }
             print "\t", join("\t", @call{ qw( variant_p_value somatic_p_value status ) });
         }
         print "\n";
@@ -236,8 +247,8 @@ sub varscan_call {
     my ($normal_genotype,$tumor_genotype);
 
     #Call the genotype in normal
-    if($normal_var_reads >= $self->minimum_variant_supporting_reads && $normal_freq >= $self->minimum_variant_frequency) {
-        if($normal_freq >= $self->minimum_homozygous_frequency) {
+    if($normal_var_reads >= $self->minimum_variant_supporting_reads && $normal_freq >= ($self->minimum_variant_frequency / $self->normal_purity)) {
+        if($normal_freq >= ($self->minimum_homozygous_frequency / $self->normal_purity)) {
             $normal_genotype = "I/I";
         }
         else {
@@ -248,7 +259,7 @@ sub varscan_call {
         $normal_genotype = "*/*";
     }
 
-    #call the genotype in the normal
+    #call the genotype in the tumor
     if($tumor_var_reads >= $self->minimum_variant_supporting_reads && $tumor_freq >= $self->minimum_variant_frequency)
     {
         if($tumor_freq >= $self->minimum_homozygous_frequency) {
