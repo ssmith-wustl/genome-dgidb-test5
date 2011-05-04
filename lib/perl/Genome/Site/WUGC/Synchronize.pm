@@ -454,8 +454,7 @@ sub _create_sample {
         # TODO If LIMS ever figures out how to set default genotype data to none, this logic will need to be revised.
         # Currently, the organism_sample table's default_genotype_seq_id column is a foreign key, so it would be 
         # diffiult to elegantly allow none to be set.
-        my $genotype_data = Genome::InstrumentData->get($genotype_id);
-        $object->set_default_genotype_data($genotype_data) if $genotype_data;
+        $object->set_default_genotype_data($genotype_id);
     }
 
     for my $property_name (sort keys %{$indirect_properties}) {

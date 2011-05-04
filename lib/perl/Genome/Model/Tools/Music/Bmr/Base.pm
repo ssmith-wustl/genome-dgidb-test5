@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Music::Base;
+package Genome::Model::Tools::Music::Bmr::Base;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use Genome;
 
 our $VERSION = $Genome::Model::Tools::Music::VERSION;
 
-class Genome::Model::Tools::Music::Base {
+class Genome::Model::Tools::Music::Bmr::Base {
     is => ['Command::V2'],
     is_abstract => 1,
     attributes_have => [
@@ -15,7 +15,7 @@ class Genome::Model::Tools::Music::Base {
             is_optional => 1,
         }
     ],
-    doc => "Mutational Significance In Cancer (Cancer Mutation Analysis)"
+    doc => "Mutational Significance In Cancer, BMR Calculations"
 };
 
 sub _doc_copyright_years {
@@ -35,24 +35,15 @@ EOS
 
 sub _doc_authors {
     return ('',
-        'Nathan D. Dees, Ph.D.',
         'Cyriac Kandoth, Ph.D.',
-        'Dan Koboldt, M.S.',
-        'William Schierding, M.S.',
-        'Michael Wendl, Ph.D.',
-        'Qunyuan Zhang, Ph.D.',
-        'Thomas B. Mooney, M.S.',           
     );
 }
 
-=cut
-sub _doc_credits {
-    return ('','None at this time.');
-}
-=cut
-
 sub _doc_see_also {
-    return ('','B<genome-music>(1)','B<genome>(1)');
+    return ('',
+        'B<genome-music-bmr>(1)',
+        'B<genome-music>(1)',
+        'B<genome>(1)');
 }
 
 sub _doc_manual_body {

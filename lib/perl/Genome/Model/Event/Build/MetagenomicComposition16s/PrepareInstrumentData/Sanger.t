@@ -17,12 +17,12 @@ use_ok('Genome::Model::Event::Build::MetagenomicComposition16s::PrepareInstrumen
 # model/builds
 my $model = Genome::Model::MetagenomicComposition16s::Test->model_for_sanger;
 ok($model, 'got mc16s sanger model') or die;
-my $build = Genome::Model::Build->create(
+my $build = $model->create_build(
     model => $model,
     data_directory => $model->data_directory,
 );
 ok($build, 'created build') or die;
-my $example_build = Genome::Model::Build->create(
+my $example_build = $model->create_build(
     model=> $model,
     data_directory => '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16sSanger/build',
 );

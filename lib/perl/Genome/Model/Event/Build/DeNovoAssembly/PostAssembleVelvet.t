@@ -14,7 +14,7 @@ use_ok('Genome::Model::Event::Build::DeNovoAssembly::PostAssemble') or die;
 
 my $model = Genome::Model::DeNovoAssembly::Test->model_for_velvet;
 ok($model, 'Got de novo assembly model') or die;
-my $build = Genome::Model::Build->create(
+my $build = $model->create_build(
     model => $model,
     data_directory => $model->data_directory,
 );

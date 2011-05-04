@@ -12,7 +12,7 @@ use_ok('Genome::Model::Event::Build::MetagenomicComposition16s::PrepareInstrumen
 
 my $model = Genome::Model::MetagenomicComposition16s::Test->model_for_454;
 ok($model, 'got mc16s 454 model');
-my $build = Genome::Model::Build->create(
+my $build = $model->create_build(
     model => $model,
     data_directory => $model->data_directory,
 );

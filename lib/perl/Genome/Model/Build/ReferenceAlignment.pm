@@ -72,19 +72,12 @@ class Genome::Model::Build::ReferenceAlignment {
 sub create {
     my $class = shift;
 
-    my $bool = $class->define_boolexpr(@_);
-    my $model_id = $bool->value_for('model_id');
-    return unless $model_id;
-    my $model = Genome::Model->get($model_id);
-    return unless $model;
-    $model->init_genotype_model;
-
     my $self = $class->SUPER::create(@_);
     unless ($self) {
         return;
     }
 
-    $model = $self->model;
+    my $model = $self->model;
     my @idas = $model->instrument_data_assignments;
     unless (scalar(@idas) && ref($idas[0])  &&  $idas[0]->isa('Genome::Model::InstrumentDataAssignment')) {
         $self->error_message('No instrument data have been added to model! '. $model->name);
@@ -1249,12 +1242,15 @@ sub files_ignored_by_diff {
         reports/dbSNP_Concordance/report.html
         reports/Mapcheck/report.xml
         server_location.txt
+        variants/workflow.xml
+        variants/dispatcher.cmd
     );
 }
 
 sub dirs_ignored_by_diff {
     return qw(
         logs/
+        variants/\d+/
     );
 }
 

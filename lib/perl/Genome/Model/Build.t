@@ -29,7 +29,7 @@ is(scalar(@model_inputs), 2, 'Correct number of model inputs');
 is($model->center_name, 'WUGC', 'model center name');
 
 #< Real create >#
-my $build = Genome::Model::Build->create(
+my $build = $model->create_build(
     model_id => $model->id,
 );
 ok($build, 'Created build');
@@ -136,9 +136,11 @@ ok($build->delete, 'Deleted build');
 #(Ideally would test if commit() triggers the callback automatically, but does not fire when no_commit(1).)
 my $m1 = Genome::Model::Test->create_basic_mock_model(type_name => 'tester');
 my $m2 = Genome::Model::Test->create_basic_mock_model(type_name => 'tester');
+my $mock_build = Genome::Model::Build->create(model_id => $m1->id); 
+$m1->mock('create_build', sub { return $mock_build });
 $m1->add_to_model(to_model => $m2);
 $m2->auto_build_alignments(1);
-my $b1 = Genome::Model::Build->create(model_id => $m1->id);
+my $b1 = $m1->create_build(model_id => $m1->id);
 $b1->_initialize_workflow('inline');
 $b1->success();  #TODO Check that callback is at least registered successfully
 
