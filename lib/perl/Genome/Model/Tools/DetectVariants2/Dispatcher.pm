@@ -184,6 +184,7 @@ sub _dump_workflow {
     my $workflow = shift;
     my $xml = $workflow->save_to_xml;
     my $xml_location = $self->output_directory."/workflow.xml";
+    $self->_rotate_old_files($xml_location); #clean up any previous runs
     my $xml_file = Genome::Sys->open_file_for_writing($xml_location);
     print $xml_file $xml;
     $xml_file->close;
@@ -203,7 +204,11 @@ sub _dump_dv_cmd {
             $cmd .= " --".$strat." \'".$self->$strat->id."\'";
         }
     }
-    my $dfh = Genome::Sys->open_file_for_writing($self->output_directory."/dispatcher.cmd");
+
+    my $dispatcher_cmd_file = $self->output_directory."/dispatcher.cmd";
+    $self->_rotate_old_files($dispatcher_cmd_file); #clean up any previous runs
+
+    my $dfh = Genome::Sys->open_file_for_writing($dispatcher_cmd_file);
     print $dfh $cmd."\n";
     $dfh->close;
     return 1;
@@ -908,6 +913,30 @@ sub _generate_standard_files {
     return 1;
 }
 
+#if the dispatcher is restarted on the same directory--move the old file (e.g. workflow xml) out of the way
+sub _rotate_old_files {
+    my $self = shift;
+    my $file = shift;
+
+    unless(-e $file) {
+        return 1;
+    }
+
+    my $i = 1;
+    while(-e "$file.$i" && $i <= 20) {
+        $i++;
+    }
+
+    if($i > 20) {
+        die $self->error_message('Too many old files encountered! (Is there a systematic issue, or do old files just need cleaning up?)');
+    }
+
+    unless(rename($file, "$file.$i")) {
+        die $self->error_message('Failed to move old file out of the way ' . $!);
+    }
+
+    return 1;
+}
 
 
 1;

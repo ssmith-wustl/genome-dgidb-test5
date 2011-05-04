@@ -23,7 +23,7 @@ my $build = Genome::Model::Build->create(
     data_directory => $model->data_directory,
 );
 ok($build, 'created build') or die;
-my $example_build = Genome::Model::Build->create(
+my $example_build = $model->create_build(
     model=> $model,
     id => -2288,
     data_directory => '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16sSanger/build',
