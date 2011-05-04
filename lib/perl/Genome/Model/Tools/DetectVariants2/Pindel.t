@@ -48,7 +48,7 @@ my $pindel = Genome::Model::Tools::DetectVariants2::Pindel->create(aligned_reads
                                                                    control_aligned_reads_input=>$normal,
                                                                    reference_build_id => $refbuild_id,
                                                                    output_directory => $tmpdir, 
-                                                                   version => '0.4',);
+                                                                   version => '0.5',);
 ok($pindel, 'pindel command created');
 
 $ENV{NO_LSF}=1;
