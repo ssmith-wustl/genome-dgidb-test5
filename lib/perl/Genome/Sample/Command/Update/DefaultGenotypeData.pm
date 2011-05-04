@@ -23,11 +23,6 @@ class Genome::Sample::Command::Update::DefaultGenotypeData {
             default => 0,
             doc => 'Allow the current default genotype data to be overwrittern.',
         },
-        launch_builds => {
-            is => 'Boolean',
-            default => 1,
-            doc => 'If set, new reference alignment builds will be launched if their sample is updated',
-        },
     ],
 };
 
@@ -43,7 +38,9 @@ sub execute {
 
     # Default genotype models currently relying on the sample and those that will be after the sample is updated
     # both need to be rebuilt. 
-    my @genotype_models = $sample->default_genotype_models;
+    for my $genotype_model ($sample->default_genotype_models) {
+        $genotype_model->request_builds_for_dependent_ref_align;
+    }
 
     my $rv = eval {
         $sample->set_default_genotype_data(
@@ -53,13 +50,6 @@ sub execute {
     };
     unless (defined $rv and $rv) {
         Carp::confess 'Could not assign genotype data ' . $self->genotype_id . ' to sample ' . $sample->id . ": $@";
-    }
-    
-    if ($self->launch_builds) {    
-        push @genotype_models, $sample->default_genotype_models;
-        for my $genotype_model (@genotype_models) {
-            $genotype_model->request_builds_for_dependent_ref_align;
-        }
     }
 
     return 1;

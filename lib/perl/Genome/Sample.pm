@@ -308,6 +308,11 @@ sub set_default_genotype_data {
     }
 
     $self->default_genotype_data_id($genotype_data_id);
+
+    for my $genotype_model ($self->default_genotype_models) {
+        $genotype_model->request_builds_for_dependent_ref_align;
+    }
+
     return 1;
 }
 
