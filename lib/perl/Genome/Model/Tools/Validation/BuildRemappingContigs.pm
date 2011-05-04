@@ -50,7 +50,7 @@ class Genome::Model::Tools::Validation::BuildRemappingContigs {
         contig_size => {
             type => 'Integer',
             is_optional => 0,
-            default => 150, #force 100bp reads to align across the variant
+            default => 500, #force 100bp reads to align across the variant
             doc => 'The intended size of the contigs. If contigs overlap then they may be merged',
         },
         minimum_local_overlap_size => {
