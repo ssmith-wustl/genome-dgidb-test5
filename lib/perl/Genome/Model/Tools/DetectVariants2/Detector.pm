@@ -145,6 +145,25 @@ This is just an abstract base class for variant detector modules.
 EOS
 }
 
+sub create {
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_);
+
+    for my $input ('aligned_reads_input', 'control_aligned_reads_input') {
+        if($self->$input) {
+            my $canonical_path = Cwd::abs_path($self->$input);
+            unless($canonical_path) {
+                die $self->error_message('Failed to resolve real path to ' . $input);
+            }
+
+            $self->$input($canonical_path);
+        }
+    }
+
+    return $self;
+}
+
 sub shortcut {
     my $self = shift;
 
