@@ -32,7 +32,6 @@ class Genome::ProcessingProfile::Command {
 
 sub help_brief {
     my $class = ref($_[0]) || $_[0];
-	$DB::single = 1;
     return $class->__meta__->doc if not $class or $class eq __PACKAGE__;
     my ($func) = $class =~ /::(\w+)$/;
     return sprintf('%s a processing profile', ucfirst($func));
