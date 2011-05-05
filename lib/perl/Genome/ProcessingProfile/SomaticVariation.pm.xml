@@ -4,7 +4,9 @@
 
   <link fromOperation="input connector" fromProperty="build_id" toOperation="Detect Variants" toProperty="build_id" />
 
-  <link fromOperation="Detect Variants" fromProperty="build_id" toOperation="Identify Previously Discovered Variations" toProperty="build_id" />
+  <link fromOperation="Detect Variants" fromProperty="build_id" toOperation="Identify LOH" toProperty="build_id" />
+
+  <link fromOperation="Identify LOH" fromProperty="build_id" toOperation="Identify Previously Discovered Variations" toProperty="build_id" />
 
   <link fromOperation="Identify Previously Discovered Variations" fromProperty="build_id" toOperation="Tier Variants" toProperty="build_id" />
  
@@ -14,6 +16,10 @@
 
   <operation name="Detect Variants">
     <operationtype commandClass="Genome::Model::SomaticVariation::Command::DetectVariants" typeClass="Workflow::OperationType::Command" />
+  </operation>
+
+  <operation name="Identify LOH">
+    <operationtype commandClass="Genome::Model::SomaticVariation::Command::Loh" typeClass="Workflow::OperationType::Command" />
   </operation>
 
   <operation name="Identify Previously Discovered Variations">
