@@ -19,6 +19,11 @@ BEGIN {
     }
 };
 
+# Override lock name because if people cancel tests locks don't get cleaned up.
+*Genome::SoftwareResult::_resolve_lock_name = sub {
+    return Genome::Sys->create_temp_file_path;
+};
+
 use_ok( 'Genome::Model::Tools::DetectVariants2::Filter::SomaticScoreMappingQuality');
 
 my $test_data_dir  = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-SomaticScoreMappingQuality';
@@ -28,15 +33,22 @@ my $normal_bam_file  = $test_data_dir . '/flank_normal_sorted.bam';
 my $detector_directory = $test_data_dir."/sniper-0.7.3-";
 my $expected_output = $test_data_dir."/expected";
 
-my $test_output_dir = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Filter-SomaticScoreMappingQuality-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+my $test_output_base = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Filter-SomaticScoreMappingQuality-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+my $test_output_dir = $test_output_base . '/filter';
+
+my $detector_result = Genome::Model::Tools::DetectVariants2::Result->__define__(
+    output_dir => $detector_directory,
+    detector_name => 'test',
+    detector_params => '',
+    detector_version => 'awesome',
+    aligned_reads => $tumor_bam_file,
+    control_aligned_reads => $normal_bam_file,
+    reference_build_id => $refbuild_id,
+);
 
 my $ssmq_object = Genome::Model::Tools::DetectVariants2::Filter::SomaticScoreMappingQuality->create(
-    input_directory     => $detector_directory,
-    aligned_reads_input => $tumor_bam_file,
-    control_aligned_reads_input => $normal_bam_file,
+    previous_result_id => $detector_result->id,
     output_directory    => $test_output_dir,
-    detector_directory => $detector_directory,
-    reference_build_id => $refbuild_id,
 );
 
 ok($ssmq_object, 'created SomaticScoreMappingQuality object (default mapping & somatic quality)');
