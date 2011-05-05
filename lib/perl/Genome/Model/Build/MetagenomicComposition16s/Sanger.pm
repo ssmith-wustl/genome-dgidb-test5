@@ -636,6 +636,7 @@ sub dirs_ignored_by_diff {
         reports/
         edit_dir/
         chromat_dir/
+        classification/
     );
 }
 #<>#
