@@ -40,7 +40,7 @@ sub _filter_variants {
     my $hq_cnv_cmd = Genome::Model::Tools::Bed::Convert::Snv::VarscanSomaticToBed->create(
         source => $hq_output,
         output => $hq_output.".bed",
-        reference_sequence_input => $self->reference_sequence_input,
+        reference_build_id => $self->reference_build_id,
     );
 
     unless( $hq_cnv_cmd->execute ){
@@ -50,7 +50,7 @@ sub _filter_variants {
     my $lq_cnv_cmd = Genome::Model::Tools::Bed::Convert::Snv::VarscanSomaticToBed->create(
         source => $lq_output,
         output => $lq_output.".bed",
-        reference_sequence_input => $self->reference_sequence_input,
+        reference_build_id => $self->reference_build_id,
     );
 
     unless( $lq_cnv_cmd->execute ){

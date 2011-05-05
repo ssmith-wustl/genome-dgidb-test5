@@ -131,7 +131,6 @@ sub processing_profile_for_sanger {
         sequencing_center => 'gsc',
         assembler => 'phred_phrap',
         assembler_params => '-vector_bound 0 -trim_qual 0',
-        trimmer => 'finishing',
         classifier => 'rdp2-1',
         classifier_params => '-training_set broad',
     );
