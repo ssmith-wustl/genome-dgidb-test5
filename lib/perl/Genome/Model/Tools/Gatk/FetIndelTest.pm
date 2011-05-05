@@ -8,7 +8,7 @@ use Command;
 use IO::File;
 use Spreadsheet::WriteExcel;
 use Sort::Naturally qw( nsort );
-require("/gscuser/dkoboldt/src/perl_modules/trunk/Varscan/Varscan/lib/Varscan/FisherTest.pm");   #requiring this for now. should be replaced with a genome model version at some point if this becomes useful
+use Genome::Model::Tools::Varscan;
 
 class Genome::Model::Tools::Gatk::FetIndelTest {
     is => 'Command',

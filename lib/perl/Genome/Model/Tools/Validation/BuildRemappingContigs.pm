@@ -11,6 +11,7 @@ use Bio::PrimarySeq;    #necessary to do pairwise alignment with Bio::dpAlign
 use Bio::Tools::dpAlign;    #for pairwise alignment of the contigs
 use Bio::SimpleAlign;   #dpAlign returns alignments in this format
 use Bio::AlignIO;
+use Error qw(:try); #for BioPerl exception handling
 
 
 class Genome::Model::Tools::Validation::BuildRemappingContigs {
@@ -50,7 +51,7 @@ class Genome::Model::Tools::Validation::BuildRemappingContigs {
         contig_size => {
             type => 'Integer',
             is_optional => 0,
-            default => 150, #force 100bp reads to align across the variant
+            default => 500, #force 100bp reads to align across the variant
             doc => 'The intended size of the contigs. If contigs overlap then they may be merged',
         },
         minimum_local_overlap_size => {
@@ -598,33 +599,46 @@ sub handle_overlap {
                 #contig_location_of_variant microhomology_contig_endpoint
                 my ($contig1_var_start, $contig1_var_end) = @{$contig1}{qw(contig_location_of_variant microhomology_contig_endpoint)};
                 my ($contig2_var_start, $contig2_var_end) = @{$contig2}{qw(contig_location_of_variant microhomology_contig_endpoint)};
-                my $contig1_alignment_start = $alignment->column_from_residue_number(join("-",$contig1->{id},$contig1->{source}),$contig1_var_start);
-                my $contig1_alignment_end = $alignment->column_from_residue_number(join("-",$contig1->{id},$contig1->{source}),$contig1_var_end);
-                my $contig2_alignment_start = $alignment->column_from_residue_number(join("-",$contig2->{id},$contig2->{source}),$contig2_var_start);
-                my $contig2_alignment_end = $alignment->column_from_residue_number(join("-",$contig2->{id},$contig2->{source}),$contig2_var_end);
-                my $msa_start = $contig2_alignment_start > $contig1_alignment_start ? $contig1_alignment_start : $contig2_alignment_start;
-                my $msa_end = $contig2_alignment_end > $contig1_alignment_end ? $contig2_alignment_end : $contig1_alignment_end;
-                my $sub_alignment_length = $msa_end - $msa_start + 1;
-                my $critical_region_size = $self->minimum_local_overlap_size;
-                my $size_difference = $critical_region_size - $sub_alignment_length;
-                my $pad = ceil($size_difference / 2);
-                $msa_start -= $pad;
-                $msa_start = 0 if $msa_start < 0;
-                my $sub_alignment = $alignment->slice($msa_start, $msa_end + $pad); #going past the end seems ok. Just need to make sure we're not negative
+                try {
+                    my $contig1_alignment_start = $alignment->column_from_residue_number(join("-",$contig1->{id},$contig1->{source}),$contig1_var_start);
+                    my $contig1_alignment_end = $alignment->column_from_residue_number(join("-",$contig1->{id},$contig1->{source}),$contig1_var_end);
+                    my $contig2_alignment_start = $alignment->column_from_residue_number(join("-",$contig2->{id},$contig2->{source}),$contig2_var_start);
+                    my $contig2_alignment_end = $alignment->column_from_residue_number(join("-",$contig2->{id},$contig2->{source}),$contig2_var_end);
+                    my $msa_start = $contig2_alignment_start > $contig1_alignment_start ? $contig1_alignment_start : $contig2_alignment_start;
+                    my $msa_end = $contig2_alignment_end > $contig1_alignment_end ? $contig2_alignment_end : $contig1_alignment_end;
+                    my $sub_alignment_length = $msa_end - $msa_start + 1;
+                    my $critical_region_size = $self->minimum_local_overlap_size;
+                    my $size_difference = $critical_region_size - $sub_alignment_length;
+                    my $pad = ceil($size_difference / 2);
+                    $msa_start -= $pad;
+                    $msa_start = 0 if $msa_start < 0;
+                    my $sub_alignment = $alignment->slice($msa_start, $msa_end + $pad); #going past the end seems ok. Just need to make sure we're not negative
 
 
-                if($sub_alignment->percentage_identity >= 98 && $sub_alignment->gap_line !~ /[-]/ && $alignment->length >= ($self->contig_size - 5)) {  
-                    #this is the simple case, the contigs are nearly 100% identical and we do nothing. This is essentially disappearing contig2
-                    $stats_hash->{near_perfect_merged_overlaps}++;
+                    if($sub_alignment->percentage_identity >= 98 && $sub_alignment->gap_line !~ /[-]/ && $alignment->length >= ($self->contig_size - 5)) {  
+                        #this is the simple case, the contigs are nearly 100% identical and we do nothing. This is essentially disappearing contig2
+                        $stats_hash->{near_perfect_merged_overlaps}++;
+                    }
+                    else {
+                        push @contigs_to_continue_examining, $contig2;
+                        #write the alignment to stderr for debugging
+                        $self->status_message(join("",">",$contig1->{id},"\n",$contig1->{sequence}));
+                        $self->status_message(join("",">",$contig2->{id},"\n",$contig2->{sequence}));
+
+                        $alnout->write_aln($alignment);
+                    }
                 }
-                else {
+                otherwise {
+                    #some exception happened with the alignments.
+                    #we'll just refuse to merge the contigs
                     push @contigs_to_continue_examining, $contig2;
                     #write the alignment to stderr for debugging
                     $self->status_message(join("",">",$contig1->{id},"\n",$contig1->{sequence}));
                     $self->status_message(join("",">",$contig2->{id},"\n",$contig2->{sequence}));
 
                     $alnout->write_aln($alignment);
-                }
+                };
+
 
             }
             @contigs_considering = @contigs_to_continue_examining;
