@@ -291,15 +291,6 @@ sub __display_name__ {
     return $txt;
 }
 
-sub sequence_path {
-    my $self = shift;
-    my $format = shift || 'fasta';
-    my $dir = $self->data_directory;
-    my $path = $dir . '/' . 'all_sequences.' . $format;
-    return $path if -e $path;
-    Carp::confess("No $path found for build " . $self->__display_name__);
-}
-
 sub calculate_estimated_kb_usage {
     my $self = shift;
     for my $i ($self->inputs) {
