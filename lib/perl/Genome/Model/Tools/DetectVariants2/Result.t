@@ -37,8 +37,6 @@ my %command_params = (
     aligned_reads_input => $bam_input,
     version => $version,
     params => $detector_parameters,
-    detect_snvs => 1,
-    detect_indels => 1,
     output_directory => $test_working_dir . '/test',
 );
 
