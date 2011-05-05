@@ -393,8 +393,13 @@ sub _run_pindel_for_chromosome {
     $reference_sequence_for_chrom =~ s/fasta$/fa/;
     $reference_sequence_for_chrom =~ s/\/opt\/fscache//;
     unless (-e $reference_sequence_for_chrom) {
-        $self->error_message("Reference sequence file $reference_sequence_for_chrom does not exist");
-        die;
+        $self->status_message("No per-chromosome reference fasta found, falling back to all_sequences.fa");
+        $reference_sequence_for_chrom = $self->reference_sequence_input;
+        $reference_sequence_for_chrom =~ s/fasta$/fa/;
+        $reference_sequence_for_chrom =~ s/\/opt\/fscache//;
+        unless(-s $reference_sequence_for_chrom){
+            die $self->error_message("Unable to locate either a per chromosome fasta or the all_sequences fasta, shutting down.");
+        }
     }
     my $output_basename = $self->_output_basename_for_chrom($chromosome);
     my $window_size = $self->window_size;
