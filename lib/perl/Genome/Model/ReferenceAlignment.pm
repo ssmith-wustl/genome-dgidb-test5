@@ -459,4 +459,95 @@ sub check_and_update_genotype_input {
     return 1;
 }
 
+
+sub default_qc_model_name_for_instrument_data {
+    my $self = shift;
+    my $instrument_data = shift;
+
+    my $subset_name = $instrument_data->subset_name || 'unknown-subset';
+    my $run_name_method = $instrument_data->can('short_name') ? 'short_name' : 'run_name';
+    my $run_name = $instrument_data->$run_name_method || 'unknown-run';
+    my $lane_name = $run_name . '.' . $subset_name;
+    my $model_name = $lane_name . '.prod-qc';
+
+    if ($instrument_data->target_region_set_name) {
+        $model_name .= '.capture.' . $instrument_data->target_region_set_name;
+    }
+
+    return $model_name;
+}
+
+
+sub qc_processing_profile_id {
+    my $self = shift;
+
+    my %qc_pp_id = ( # Map alignment processing profile to lane QC version
+        2580856 => '2581081', # february 2011 default genome and exome reference alignment
+        2582616 => '2589389', # february 2011 default pcgp reference alignment
+        2580859 => '2589388', # february 2011 default genome and exome with build37 annotation
+        2586039 => '2589390', #    march 2011 default pcgp untrimmed genome and exome with build37 annotation
+    );
+
+    return $qc_pp_id{ $self->processing_profile_id };
+}
+
+
+sub get_or_create_lane_qc_models {
+    my $self = shift;
+
+    my $subject = $self->subject;
+
+    unless ($subject->default_genotype_data_id) {
+        $self->warning_message("Sample is missing default_genotype_data_id cannot create lane QC model.");
+        return;
+    }
+
+    my $qc_pp_id = $self->qc_processing_profile_id;
+    unless ($qc_pp_id) {
+        $self->warning_message("Unable to determine which processing profile to use for lane QC model.");
+        return;
+    }
+
+    my @lane_qc_models;
+    my @instrument_data = $self->instrument_data;
+    for my $instrument_data (@instrument_data) {
+        my $lane_qc_model_name = $self->default_qc_model_name_for_instrument_data($instrument_data);
+
+        my $existing_model = Genome::Model->get(name => $lane_qc_model_name);
+        if ($existing_model) {
+            $self->status_message("Default lane QC model ($lane_qc_model_name) already exists.");
+            push @lane_qc_models, $existing_model;
+            next;
+        }
+
+        my $copy_cmd = Genome::Model::Command::Copy->create(
+            from => $self,
+            to => $lane_qc_model_name,
+            skip_instrument_data_assignments => 1,
+            model_overrides => ["processing_profile_id=$qc_pp_id"],
+        );
+
+        unless ($copy_cmd->execute) {
+            $self->error_message("Failed to copy self to lane QC model.");
+            next;
+        }
+
+        my $qc_model = $copy_cmd->_copied_model;
+
+        $qc_model->add_instrument_data($instrument_data);
+
+        $qc_model->auto_assign_inst_data(0);
+        $qc_model->auto_build_alignments(0);
+        $qc_model->build_requested(0);
+
+        push @lane_qc_models, $qc_model;
+    }
+
+    if (@lane_qc_models == @instrument_data) {
+        return @lane_qc_models;
+    }
+    return;
+}
+
+
 1;
