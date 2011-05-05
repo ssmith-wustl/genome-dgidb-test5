@@ -180,7 +180,7 @@ sub help_brief {
 }
 
 sub help_detail {
-    "generate a plot of copy number alterations"
+    "generate a plot of copy number alterations from "
 }
 
 
