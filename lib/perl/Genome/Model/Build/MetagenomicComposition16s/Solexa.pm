@@ -51,12 +51,6 @@ sub amplicon_set_names {
     return sort keys %set_names_and_primers;
 }
 
-#< Clean Up >#
-sub clean_up {
-    my $self = shift;
-
-    return 1;
-}
 
 #< prepare instrument data >#
 #processing of solexa data is currently in beginning test phase so there is

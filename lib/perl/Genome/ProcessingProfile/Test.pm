@@ -336,7 +336,6 @@ my %TYPE_NAME_PARAMS = (
         sequencing_platform => 'sanger',
         assembler => 'phred_phrap',
         assembler_params => '-vector_bound 0 -trim_qual 0',
-        trimmer => 'finishing',
         classifier => 'rdp2-1',
         classifier_params => '-training_set broad',
     }, 
@@ -429,7 +428,7 @@ sub _add_mock_methods_to_metagenomic_composition_16s {
         $pp, 
         (qw/ 
             _operation_params_as_hash
-            assembler_params_as_hash classifier_params_as_hash trimmer_params_as_hash
+            assembler_params_as_hash classifier_params_as_hash 
             /),
     );
 

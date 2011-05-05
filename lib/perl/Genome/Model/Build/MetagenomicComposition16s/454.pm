@@ -58,13 +58,6 @@ sub amplicon_set_names {
     return sort keys %set_names_and_primers;
 }
 
-#< Clean Up >#
-sub clean_up {
-    my $self = shift;
-
-    return 1;
-}
-
 #< prepare instrument data >#
 sub filter_reads_by_primers {
     my $self = shift;

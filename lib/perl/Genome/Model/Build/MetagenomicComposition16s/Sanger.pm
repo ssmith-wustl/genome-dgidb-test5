@@ -39,12 +39,10 @@ sub prepare_instrument_data {
     $self->_raw_reads_fasta_and_qual_writer
         or return;
 
-    my %trimmer_params = $self->processing_profile->trimmer_params_as_hash;
     my %assembler_params = $self->processing_profile->assembler_params_as_hash;
 
     my ($attempted, $reads_attempted, $reads_processed) = (qw/ 0 0 0 /);
     for my $name ( @amplicon_set_names ) {
-
         my $amplicon_set = $self->amplicon_set_for_name($name);
         next if not $amplicon_set; # ok
 
@@ -57,7 +55,7 @@ sub prepare_instrument_data {
             my $prepare_ok = $self->_prepare($amplicon);
             return if not $prepare_ok;
 
-            my $trim_ok = $self->_trim($amplicon, %trimmer_params);
+            my $trim_ok = $self->_trim($amplicon);
             return if not $trim_ok;
 
             my $assemble_ok = $self->_assemble($amplicon, %assembler_params);
@@ -197,14 +195,15 @@ sub _raw_reads_fasta_and_qual_writer {
 }
 
 sub _trim {
-    my ($self, $amplicon, %trimmer_params) = @_;
+    my ($self, $amplicon) = @_;
 
     my $fasta_file = $self->edit_dir.'/'.$amplicon->{name}.'.fasta';
     return unless -s $fasta_file; # ok
 
     my $trim3 = Genome::Model::Tools::Fasta::Trim::Trim3->create(
         fasta_file => $fasta_file,
-        %trimmer_params,
+        min_trim_quality => 10,
+        min_trim_length => 100,
     );
     unless ( $trim3 ) { # not ok
         $self->error_message("Can't create trim3 command for amplicon: ".$amplicon->name);

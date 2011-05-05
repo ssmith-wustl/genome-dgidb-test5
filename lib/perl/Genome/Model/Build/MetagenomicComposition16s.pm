@@ -589,14 +589,10 @@ sub classify_amplicons {
     return 1;
 }
 
-#< Reports >#
-sub summary_report {
-    my $self = shift;
-}
+#< Clean Up >#
+sub clean_up { return 1; }
 
-sub composition_report {
-}
-
+#< Diff>
 sub files_ignored_by_diff {
     return qw(
         build.xml
