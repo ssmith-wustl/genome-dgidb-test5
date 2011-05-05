@@ -23,7 +23,7 @@ my $aligner_params = "-q 5 -t 4";
 my $reference_model = Genome::Model::ImportedReferenceSequence->get(name => 'TEST-human');
 ok($reference_model, "got reference model");
 
-my $reference_build = $reference_model->build_by_version('2');
+my $reference_build = $reference_model->build_by_version('4');
 ok($reference_build, "got reference build");
 
 my $dependency = $reference_build->append_to;
