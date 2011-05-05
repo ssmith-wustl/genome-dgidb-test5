@@ -66,7 +66,7 @@ sub clean_up {
 }
 
 #< prepare instrument data >#
-sub filter_reads_by_primers {
+sub prepare_instrument_data {
     my $self = shift;
 
     my @instrument_data = $self->instrument_data;
