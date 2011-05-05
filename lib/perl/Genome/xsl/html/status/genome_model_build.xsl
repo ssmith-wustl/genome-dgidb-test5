@@ -385,6 +385,9 @@
                 <a class="mini btn"><xsl:attribute name="href"><xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="build/@error-log"/></xsl:attribute>
                 <span class="sm-icon sm-icon-extlink"><br/></span><xsl:text>error log</xsl:text>
                 </a>
+                <a class="mini btn"><xsl:attribute name="href"><xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="build/@output-log"/></xsl:attribute>
+                <span class="sm-icon sm-icon-extlink"><br/></span><xsl:text>output log</xsl:text>
+                </a>
               </td>
             </tr>
             <xsl:variable name="snpArrayConcordance" select="build/@snp-array-concordance"/>
