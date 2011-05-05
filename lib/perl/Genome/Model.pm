@@ -57,6 +57,12 @@ class Genome::Model {
             column_name => 'last_complete_build_id', 
             doc => 'The last complete build id' ,
         },
+        apipe_cron_status => {
+            via => 'notes',
+            to => 'body_text',
+            where => [ header_text => 'apipe_cron_status' ],
+            is_mutable => 1,
+        },
     ],
     has_optional_many => [
         builds  => { 
