@@ -645,10 +645,18 @@ td.stage_name {
     float: left;
 }
 
+.icon_grip {
+    margin-left: -51px;
+    width: 11px;
+    height: 32px;
+    float: left;
+    background: transparent url("../img/icon_grip.png") no-repeat top left;
+}
 
 .search_result {
     margin-bottom: 20px;
     margin-left: 42px;
+    padding-left: 11px;
 }
 
 .result {

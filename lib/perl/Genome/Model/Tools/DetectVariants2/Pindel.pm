@@ -47,33 +47,6 @@ class Genome::Model::Tools::DetectVariants2::Pindel {
     ],
 };
 
-my %CHR_MEM_USAGE = (
-    '1' => 'Large',
-    '2' => 'Large',
-    '3' => 'Large',
-    '4' => 'Medium',
-    '5' => 'Medium',
-    '6' => 'Medium',
-    '7' => 'Medium',
-    '8' => 'Medium',
-    '9' => 'Medium',
-    '10' => 'Medium',
-    '11' => 'Medium',
-    '12' => 'Medium',
-    '13' => 'Regular',
-    '14' => 'Regular',
-    '15' => 'Regular',
-    '16' => 'Regular',
-    '17' => 'Regular',
-    '18' => 'Regular',
-    '19' => 'Regular',
-    '20' => 'Regular',
-    '21' => 'Regular',
-    '22' => 'Regular',
-    'X' => 'Medium',
-    'Y' => 'Regular',
-);
-
 sub _detect_variants {
     my $self = shift;
     # Obtain normal and tumor bams and check them. Either from somatic model id or from direct specification. 
@@ -81,41 +54,48 @@ sub _detect_variants {
     $tumor_bam = $self->aligned_reads_input;
     $normal_bam = $self->control_aligned_reads_input if defined $self->control_aligned_reads_input;
 
-    unless(defined($self->reference_sequence_input)){
-        $self->reference_sequence_input( Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa' );
-    }
+    #unless(defined($self->reference_sequence_input)){
+    #    $self->reference_sequence_input( Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa' );
+    #}
 
     # Set default params
     unless ($self->indel_bed_output) { 
         $self->indel_bed_output($self->_temp_staging_directory. '/indels.hq.bed'); 
     }
-    my $refseq = $self->reference_sequence_input;
-    $refseq =~ s/\/opt\/fscache//;
+    my $refbuild_id = $self->reference_build_id;
+    unless($refbuild_id){
+        die $self->error_message("Received no reference build id.");
+    }
+    print "refbuild_id = ".$refbuild_id."\n";
 
     my %input;
-    $input{reference_sequence_input}=$refseq;
-    $input{aligned_reads_input}=$self->aligned_reads_input;
-    $input{control_aligned_reads_input}=$self->control_aligned_reads_input if defined $self->control_aligned_reads_input;
-    $input{output_directory} = $self->output_directory;#$self->_temp_staging_directory;
-    $input{version}=$self->version;
+
+    # Define a workflow from the static XML at the bottom of this module
+    my $workflow = Workflow::Operation->create_from_xml(\*DATA);
     
-    for my $chr (@{$self->chromosome_list}){
-        $input{"chr_$chr"}=$chr;
-    }
-
-    my $workflow = $self->generate_workflow;
-
-    $self->_dump_workflow($workflow);
-
+    # Validate the workflow
     my @errors = $workflow->validate;
-
     if (@errors) {
         $self->error_message(@errors);
         die "Errors validating workflow\n";
     }
-    $self->status_message("Launching workflow now.");
 
+    # Collect and set input parameters
+    $input{chromosome_list}=$self->chromosome_list;
+    $input{reference_build_id}=$refbuild_id;
+    $input{tumor_bam}=$self->aligned_reads_input;
+    $input{normal_bam}=$self->control_aligned_reads_input if defined $self->control_aligned_reads_input;
+    $input{output_directory} = $self->output_directory;#$self->_temp_staging_directory;
+    $input{version}=$self->version;
+    
+    $self->_dump_workflow($workflow);
+    $workflow->log_dir($self->output_directory);
+
+    # Launch workflow
+    $self->status_message("Launching workflow now.");
     my $result = Workflow::Simple::run_workflow_lsf( $workflow, %input);
+
+    # Collect and analyze results
     unless($result){
         die $self->error_message("Workflow did not return correctly.");
     }
@@ -144,49 +124,25 @@ sub _create_temp_directories {
     return $self->SUPER::_create_temp_directories(@_);
 }
 
-sub _promote_staged_data {
+
+sub _generate_standard_files {
     my $self = shift;
     my $staging_dir = $self->_temp_staging_directory;
     my $output_dir  = $self->output_directory;
     my @chrom_list = @{$self->chromosome_list};
     my $test_chrom = $chrom_list[0];
-    my $bed = $self->output_directory."/".$test_chrom."/indels_all_sequences.bed";
-    $bed = readlink($bed);
-    my @stuff = split "\\.", $bed;
-    my $bed_version = $stuff[-2];
-
-    my $output_file = $output_dir."/indels.hq.".$bed_version.".bed";
-    my @inputs = map { $output_dir."/".$_."/indels_all_sequences.bed" } @chrom_list;
-    my $cat_cmd = Genome::Model::Tools::Cat->create( dest => $output_file, source => \@inputs);
-    unless($cat_cmd->execute){
-        $self->error_message("Cat command failed to execute.");
-        die $self->error_message;
+    my $raw_output_file = $output_dir."/indels.hq";
+    my @raw_inputs = map { $output_dir."/".$_."/indels.hq" } @chrom_list;
+    my $cat_raw = Genome::Model::Tools::Cat->create( dest => $raw_output_file, source => \@raw_inputs);
+    unless($cat_raw->execute){
+        die $self->error_message("Cat command failed to execute.");
     }
-    my $cwd = getcwd;
-    chdir $output_dir;
-    Genome::Sys->create_symlink("indels.hq.".$bed_version.".bed", "indels.hq.bed");
-    chdir $cwd; 
+    $self->SUPER::_generate_standard_files(@_);
     return 1;
 }
 
-sub _run_converter {
+sub _promote_staged_data {
     my $self = shift;
-    my $converter = shift;
-    my $source = shift;
-    
-    my $output = $source . '.bed'; 
-    
-    my $command = $converter->create(
-        source => $source,
-        output => $output, 
-        include_normal => 1,
-    );
-    
-    unless($command->execute) {
-        $self->error_message('Failed to convert ' . $source . ' to the standard format.');
-        return;
-    }
-
     return 1;
 }
 
@@ -196,7 +152,7 @@ sub has_version {
     unless(defined($version)){
         $version = $self->version;
     }
-    my @versions = Genome::Model::Tools::DetectVariants::Somatic::Pindel->available_pindel_versions;
+    my @versions = Genome::Model::Tools::Pindel::RunPindel->available_pindel_versions;
 
     for my $v (@versions){
         if($v eq $version){
@@ -207,89 +163,35 @@ sub has_version {
     return 0;
 }
 
-
-
-sub generate_workflow {
-    my $self = shift;
-    my @output_properties = map{ "Chr_".$_."_output" }  @{$self->chromosome_list};
-    my @input_properties,  map { "chr_$_" } @{$self->chromosome_list};
-    my $workflow_model = Workflow::Model->create(
-        name => 'Parallel Pindel by Chromosome',
-        input_properties => [
-            'reference_sequence_input',
-            'aligned_reads_input',
-            'control_aligned_reads_input',
-            'output_directory',
-            'version',
-            @input_properties,
-        ],
-        output_properties => [
-            @output_properties,
-        ],
-    
-    );
-    $workflow_model->log_dir($self->output_directory);
-
-    for my $chr  (@{$self->chromosome_list}) {
-        # Get the hashref that contains all versions to be run for a detector
-        $workflow_model = $self->_add_chr_job($workflow_model,$chr);
-    }
-
-    return $workflow_model;
-
-}
-
-sub _add_chr_job {
-    my $self = shift;
-    my ($workflow,$chr) = @_;
-    my $subclass = "::".$CHR_MEM_USAGE{$chr};
-    my $class = 'Genome::Model::Tools::DetectVariants::Somatic::Pindel'; 
-    unless($subclass =~ m/Regular/){
-        $class .= $subclass;
-    }
-    my $chr_job = $workflow->add_operation(
-            name => "Pindel Chromosome $chr",
-            operation_type => Workflow::OperationType::Command->get($class),
-    );
-    my @properties =  ( 'reference_sequence_input', 'aligned_reads_input', 'control_aligned_reads_input', 'output_directory','version', );
-    for my $property ( @properties) {
-        $workflow->add_link(
-            left_operation => $workflow->get_input_connector,
-            left_property => $property,
-            right_operation => $chr_job,
-            right_property => $property,
-        );
-    }
-    my $chr_property = "chr_$chr";
-
-    $workflow->add_link(
-        left_operation => $chr_job,
-        left_property => 'output_directory',
-        right_operation => $workflow->get_output_connector,
-        right_property => 'Chr_'.$chr."_output",
-    );
-
-    my $input_connector = $workflow->get_input_connector;
-    my $input_connector_properties = $input_connector->operation_type->output_properties;
-    push @{$input_connector_properties}, $chr_property;
-    $input_connector->operation_type->output_properties($input_connector_properties);
-
-    $workflow->add_link(
-        left_operation => $workflow->get_input_connector,
-        left_property => $chr_property,
-        right_operation => $chr_job,
-        right_property => 'chromosome',
-    );
-
-    return $workflow
-}
-
-sub params_for_result {
-    my $self = shift;
-    my ($params) = $self->SUPER::params_for_result;
-
-    $params->{chromosome_list} = join(',', $self->chromosome_list);
-    return $params;
-}
-
 1;
+
+__DATA__
+<?xml version='1.0' standalone='yes'?>
+
+<workflow name="Pindel Detect Variants Module">
+
+  <link fromOperation="input connector" fromProperty="normal_bam" toOperation="Pindel" toProperty="control_aligned_reads_input" />
+  <link fromOperation="input connector" fromProperty="tumor_bam" toOperation="Pindel" toProperty="aligned_reads_input" />
+  <link fromOperation="input connector" fromProperty="output_directory" toOperation="Pindel" toProperty="output_directory" />
+  <link fromOperation="input connector" fromProperty="chromosome_list" toOperation="Pindel" toProperty="chromosome" />
+  <link fromOperation="input connector" fromProperty="version" toOperation="Pindel" toProperty="version" />
+  <link fromOperation="input connector" fromProperty="reference_build_id" toOperation="Pindel" toProperty="reference_build_id" />
+
+  <link fromOperation="Pindel" fromProperty="output_directory" toOperation="output connector" toProperty="output" />
+
+  <operation name="Pindel" parallelBy="chromosome">
+    <operationtype commandClass="Genome::Model::Tools::Pindel::RunPindel" typeClass="Workflow::OperationType::Command" />
+  </operation>
+
+  <operationtype typeClass="Workflow::OperationType::Model">
+    <inputproperty isOptional="Y">normal_bam</inputproperty>
+    <inputproperty isOptional="Y">tumor_bam</inputproperty>
+    <inputproperty isOptional="Y">output_directory</inputproperty>
+    <inputproperty isOptional="Y">version</inputproperty>
+    <inputproperty isOptional="Y">chromosome_list</inputproperty>
+    <inputproperty isOptional="Y">reference_build_id</inputproperty>
+
+    <outputproperty>output</outputproperty>
+  </operationtype>
+
+</workflow>
