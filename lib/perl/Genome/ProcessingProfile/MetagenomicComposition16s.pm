@@ -35,19 +35,6 @@ class Genome::ProcessingProfile::MetagenomicComposition16s {
             default_value => 0,
             doc => 'When getting reads for amplicons, only use the most recent iteration for each primer. Currently, only for "gsc" sanger reads. Default is to include all reads for each amplicon.',
         },
-        #< Preprocessing >#
-        trimmer => {
-            is => 'Text',
-            is_optional => 1,
-            doc => 'Name of the trimmer to use.',
-            valid_values => [qw/ finishing lucy /],
-        },
-        trimmer_params => {
-            is => 'Text',
-            is_optional => 1,
-            doc => 'A string of parameters to pass to the read trimmer.',
-            is_optional => 1,
-        },
         #< Assembler >#
         assembler => {
             is => 'Text',
@@ -93,7 +80,7 @@ sub create {
         or return;
 
     # Validate params
-    for my $type (qw/ assembler trimmer classifier /) { 
+    for my $type (qw/ assembler classifier /) { 
         my $method = $type.'_params_as_hash';
         $self->$method; # dies if error
     }
@@ -155,11 +142,5 @@ sub classifier_params_as_hash {
     return $_[0]->_operation_params_as_hash('classifier');
 }
 
-sub trimmer_params_as_hash {
-    return $_[0]->_operation_params_as_hash('trimmer');
-}
-
 1;
 
-#$HeadURL$
-#$Id$

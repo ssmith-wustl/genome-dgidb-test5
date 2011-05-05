@@ -17,7 +17,6 @@ my $pp = Genome::ProcessingProfile->create(
     sequencing_platform => 'sanger',
     assembler => 'phred_phrap',
     assembler_params => '-vector_bound 0 -trim_qual 0',
-    trimmer => 'finishing',
     classifier => 'kroyer',
     classifier_params => '-training_set broad',
 );
@@ -29,13 +28,6 @@ is_deeply(
     \%assembler_params,
     { vector_bound => 0, trim_qual => 0 },
     'assembler params as hash'
-);
-
-my %trimmer_params = $pp->trimmer_params_as_hash;
-is_deeply(
-    \%trimmer_params,
-    {},
-    'trimmer params as hash'
 );
 
 my %classifier_params = $pp->classifier_params_as_hash;

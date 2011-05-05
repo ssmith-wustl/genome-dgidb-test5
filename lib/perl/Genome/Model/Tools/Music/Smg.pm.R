@@ -118,6 +118,8 @@ smg_fdr=function(pval_file,fdr_file)
   p.adjust(x[,3],method="BH")->fdr.lr
   p.adjust(x[,4],method="BH")->fdr.convol
   x=cbind(x,fdr.fisher,fdr.lr,fdr.convol)
+  #Rank SMGs starting with lowest convolution test FDR, and then by Likelihood Ratio FDR
+  x=x[order(fdr.convol,fdr.lr),];
   write.table(x,file=fdr_file,quote=FALSE,row.names=F,sep="\t")
 }
 

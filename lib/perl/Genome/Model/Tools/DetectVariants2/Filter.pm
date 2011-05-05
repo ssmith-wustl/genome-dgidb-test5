@@ -9,57 +9,81 @@ class Genome::Model::Tools::DetectVariants2::Filter {
     is  => ['Genome::Model::Tools::DetectVariants2::Base'],
     doc => 'Tools to filter variations that have been detected',
     is_abstract => 1,
-    has => [
-        input_directory => {
-           is => 'String',
-           is_input => 1,
-           doc => 'The directory to filter',
+    has_input => [
+        previous_result_id => {
+            is => 'Number',
+            doc => 'ID for the software result containing the data which to filter',
         },
         output_directory => {
             is => 'String',
-            is_input => 1,
             is_output => 1,
             doc => 'The directory containing the results of filtering',
-        },
-        detector_directory => {
-            is => 'String',
-            is_input => 1,
-            is_output => 1,
-            is_optional => 1,
-            doc => 'The directory containing the results of filtering',
-        },
-        detector_name => {
-            is => 'String',
-            is_input => 1,
-            is_output => 1,
-            is_optional => 1,
-            doc => 'The name of the detector this filter is running below',
-        },
-        detector_version => {
-            is => 'String',
-            is_input => 1,
-            is_output => 1,
-            is_optional => 1,
-            doc => 'The version of the detector this filter is running below',
-        },
-        detector_params => {
-            is => 'String',
-            is_input => 1,
-            is_output => 1,
-            is_optional => 1,
-            doc => 'The params of the detector this filter is running below',
         },
         params => {
             is => 'String',
-            is_input => 1,
             is_optional => 1,
             doc => 'The param string as passed in from the strategy',
         },
         version => {
             is => 'Version',
-            is_input => 1,
             is_optional => 1,
             doc => 'The version of the variant filter to use.',
+        },
+    ],
+    has => [
+        previous_result => {
+            is => 'Genome::Model::Tools::DetectVariants2::Result::Base',
+            doc => 'The software result containing the data which to filter',
+            id_by => 'previous_result_id',
+        },
+        detector_name => {
+            is => 'String',
+            via => 'previous_result',
+            to => 'detector_name',
+            doc => 'The name of the detector this filter is running below',
+        },
+        detector_version => {
+            is => 'String',
+            via => 'previous_result',
+            to => 'detector_version',
+            doc => 'The version of the detector this filter is running below',
+        },
+        detector_params => {
+            is => 'String',
+            via => 'previous_result',
+            to => 'detector_params',
+            is_optional => 1,
+            doc => 'The params of the detector this filter is running below',
+        },
+        input_directory => {
+            is => 'String',
+            via => 'previous_result',
+            to => 'output_dir',
+            doc => 'The data on which to operate--the result of a detector or previous filter',
+        },
+        aligned_reads_input => {
+            is => 'Text',
+            via => 'previous_result',
+            to => 'aligned_reads',
+            doc => 'Location of the aligned reads input file',
+            is_input => 1, #SHOULD NOT ACTUALLY BE AN INPUT
+            is_optional => 1,
+        },
+        reference_build_id => {
+            is => 'Text',
+            via => 'previous_result',
+            to => 'reference_build_id',
+            doc => 'The build-id of a reference sequence build',
+            is_input => 1, #SHOULD NOT ACTUALLY BE AN INPUT
+            is_optional => 1,
+        },
+        control_aligned_reads_input => {
+            is => 'Text',
+            via => 'previous_result',
+            to => 'control_aligned_reads',
+            doc => 'Location of the control aligned reads file to which the input aligned reads file should be compared (for detectors which can utilize a control)',
+            is_optional => 1,
+            is_input => 0,
         },
     ],
     has_constant => [
@@ -69,11 +93,25 @@ class Genome::Model::Tools::DetectVariants2::Filter {
             doc => 'variant type that this module operates on, overload this in submodules accordingly',
         },
     ],
-    has_transient_optional => [
+    has_optional_transient => [
         _validate_output_offset => {
             type => 'Integer',
             default => 0,
             doc => 'The offset added to the number of lines in input  when compared to the number of lines in output',
+        },
+        _result => {
+            is => 'Genome::Model::Tools::DetectVariants2::Result::Filter',
+            doc => 'SoftwareResult for the run of this filter',
+            id_by => "result_id",
+            is_output => 1,
+        },
+        result_id => {
+            is => 'Number',
+            is_output => 1,
+        },
+        _detector_directory => {
+            is => 'Text',
+            doc => 'Directory of the original detector run that is being filtered',
         },
     ],
 };
@@ -92,7 +130,46 @@ EOS
 }
 
 
+sub shortcut {
+    my $self = shift;
+
+    #try to get using the lock in order to wait here in shortcut if another process is creating this alignment result
+    my ($params) = $self->params_for_result;
+    my $result = Genome::Model::Tools::DetectVariants2::Result::Filter->get_with_lock(%$params);
+    unless($result) {
+        $self->status_message('No existing result found.');
+        return;
+    }
+
+    $self->_result($result);
+    $self->status_message('Using existing result ' . $result->__display_name__);
+    $self->_link_to_result;
+
+    return 1;
+}
+
 sub execute {
+    my $self = shift;
+
+    if(-e $self->output_directory) {
+        die $self->error_message('Output directory already exists!');
+    }
+
+    my ($params) = $self->params_for_result;
+    my $result = Genome::Model::Tools::DetectVariants2::Result::Filter->get_or_create(%$params, _instance => $self);
+
+    unless($result) {
+        die $self->error_message('Failed to create generate result!');
+    }
+
+    $self->_result($result);
+    $self->status_message('Generated result.');
+    $self->_link_to_result;
+
+    return 1;
+}
+
+sub _generate_result {
     my $self = shift;
        
     unless($self->_validate_input) {
@@ -122,6 +199,12 @@ sub _filter_variants {
 
 sub _validate_input {
     my $self = shift;
+
+    my $previous_result = $self->previous_result;
+    unless($previous_result) {
+        $self->error_message('No previous result found for basis of running this filter.');
+        return;
+    }
 
     my $input_directory = $self->input_directory;
     unless (Genome::Sys->check_for_path_existence($input_directory)) {
@@ -278,6 +361,93 @@ sub _convert_bed_to_detector {
     $ofh->close;
     $detector_fh->close;
     return 1;
+}
+
+
+sub params_for_result {
+    my $self = shift;
+
+    my $previous_result = $self->previous_result;
+    my $previous_filter_strategy;
+    if($previous_result->can('previous_filter_strategy') and $previous_result->previous_filter_strategy) {
+        $previous_filter_strategy = $previous_result->previous_filter_strategy;
+    }
+    if($previous_result->can('filter_name')) {
+        if($previous_filter_strategy) {
+            $previous_filter_strategy .= ' then ';
+        } else {
+            $previous_filter_strategy = '';
+        }
+        $previous_filter_strategy .= join(' ', $previous_result->filter_name, $previous_result->filter_version);
+        if($previous_result->filter_params) {
+            $previous_filter_strategy .= ' [' . $previous_result->filter_params . ']';
+        }
+    }
+
+    my %params = (
+        detector_name => $self->detector_name,
+        detector_params => $self->detector_params,
+        detector_version => $self->detector_version,
+        filter_name => $self->class,
+        filter_params => $self->params,
+        filter_version => $self->version,
+        previous_filter_strategy => $previous_filter_strategy,
+        aligned_reads => $self->aligned_reads_input,
+        control_aligned_reads => $self->control_aligned_reads_input,
+        reference_build_id => $self->reference_build_id,
+        region_of_interest_id => $previous_result->region_of_interest_id,
+        test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
+        chromosome_list => $previous_result->chromosome_list,
+    );
+
+    return \%params;
+}
+
+sub _link_to_result {
+    my $self = shift;
+
+    my $result = $self->_result;
+    return unless $result;
+
+    unless(-e $self->output_directory) {
+        Genome::Sys->create_symlink($result->output_dir, $self->output_directory);
+    }
+
+    my $previous_result = $self->previous_result;
+    my @users = $previous_result->users;
+    unless(grep($_->user eq $result, @users)) {
+        $previous_result->add_user($result);
+    }
+
+    return 1;
+}
+
+sub detector_directory {
+    my $self = shift;
+
+    my $previous_result = $self->previous_result;
+
+    unless($self->_detector_directory) {
+        my $detector_result = Genome::Model::Tools::DetectVariants2::Result->get(
+            detector_name => $self->detector_name,
+            detector_params => $self->detector_params,
+            detector_version => $self->detector_version,
+            aligned_reads => $self->aligned_reads_input,
+            control_aligned_reads => $self->control_aligned_reads_input,
+            reference_build_id => $self->reference_build_id,
+            region_of_interest_id => $previous_result->region_of_interest_id,
+            test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
+            chromosome_list => $previous_result->chromosome_list,
+        );
+
+        unless($detector_result) {
+            die $self->error_message('Could not find original detector result');
+        }
+
+        $self->_detector_directory($detector_result->output_dir);
+    }
+
+    return $self->_detector_directory;
 }
 
 
