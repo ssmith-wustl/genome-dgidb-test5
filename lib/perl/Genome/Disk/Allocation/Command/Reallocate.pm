@@ -60,7 +60,7 @@ sub execute {
         $params{allow_reallocate_with_move} = $self->allow_reallocate_with_move if $self->allow_reallocate_with_move;
 
         my $transaction = UR::Context::Transaction->begin();
-        my $successful = Genome::Disk::Allocation->reallocate(%params);
+        my $successful = eval {Genome::Disk::Allocation->reallocate(%params) };
         
         if ($successful) {
             $self->status_message("Successfully reallocated (" . $allocation->__display_name__ . ").");
