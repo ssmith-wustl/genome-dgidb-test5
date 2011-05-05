@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Somatic::VcfMaker;
+package Genome::Model::Tools::Somatic::VcfMakerSniperOldPipeline;
 
 use strict;
 use warnings;
@@ -15,7 +15,7 @@ use List::MoreUtils qw(uniq);
 use Data::Dumper;
 
 
-class Genome::Model::Tools::Somatic::VcfMaker {
+class Genome::Model::Tools::Somatic::VcfMakerSniperOldPipeline {
     is => 'Command',
     has => [
         output_file => {
@@ -98,6 +98,22 @@ class Genome::Model::Tools::Somatic::VcfMaker {
 	    doc => 'enable this to skip header output - useful for doing individual chromosomes. Note that the output will be appended to the output file if this is enabled.',
     },
 
+	filterOut => {
+	    is => 'Text',
+	    doc => "file containing SNVs to label as filtered out in format: filterName:description:file,filterName2,description2,file2,..." ,
+	    is_optional => 1,
+	    default => "",
+	    is_input => 1},
+
+
+	filterPass => {
+	    is => 'Text',
+	    doc => "file containing SNVs that pass filters (all SNVs not contained in the file will be marked filtered out) in format:  filterName:description:file,filterName2,description2:file2,... " ,
+	    is_optional => 1,
+	    default => "",
+	    is_input => 1},
+
+
 	genome_build => {
 	    is => 'Text',
 	    doc => "Reference genome build" ,
@@ -149,6 +165,8 @@ sub execute {                               # replace with real execution logic.
     my $tumor_snp_file = $self->tumor_snp_file;
     my $normal_snp_file = $self->normal_snp_file;
     my $skip_header = $self->skip_header;
+    my $filterPass = $self->filterPass;
+    my $filterOut = $self->filterOut;
 
     my $analysis_profile = "samtools pileup and/or somatic-sniper";
 
@@ -269,16 +287,6 @@ sub execute {                               # replace with real execution logic.
 	print OUTFILE  "#" . join("\t", ("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT","NORMAL","PRIMARY")) . "\n";
 	OUTFILE->close();
     }
-
-
-
-
-
-
-
-######REMOVE
-print_header($tumor_bam, $normal_bam, $center, $genome_build, $individual_id, $file_source, $analysis_profile,$output_file);
-
 
 
 
