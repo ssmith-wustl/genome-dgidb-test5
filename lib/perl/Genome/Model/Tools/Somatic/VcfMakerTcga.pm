@@ -88,6 +88,14 @@ class Genome::Model::Tools::Somatic::VcfMakerTcga {
 	    default => "36",
 	    is_input => 1},
 
+	skip_header => {
+	    is => 'Boolean',
+	    is_optional => 1,
+	    is_input => 1,
+	    default => 0,
+	    doc => 'enable this to skip header output - useful for doing individual chromosomes. Note that the output will be appended to the output file if this is enabled.'},
+	
+
 	],    
 };
 
@@ -135,8 +143,7 @@ sub execute {                               # replace with real execution logic.
     my $dbsnp_file = $self->dbsnp_file;
     my $chrom = $self->chrom;
     my $cp_score_to_qual = $self->cp_score_to_qual;
-
-
+    my $skip_header = $self->skip_header;
     my $analysis_profile = "somatic-sniper-and-varscan-capture";
 
 
@@ -144,6 +151,23 @@ sub execute {                               # replace with real execution logic.
 ###########################################################################
     sub convertIub{
 	my ($base) = @_;
+	#deal with cases like "A/T" or "C/T"
+	if ($base =~/\//){
+	    my @bases=split(/\//,$base);
+	    my %baseHash;
+	    foreach my $b (@bases){
+		my $res = convertIub($b);
+		my @bases2 = split(",",$res);
+		foreach my $b2 (@bases2){
+		    $baseHash{$b2} = 0;
+		}
+	    }
+	    return join(",",keys(%baseHash));
+	}
+
+	# use a lookup table to return the correct base
+	# there's a more efficient way than defining this
+	# every time, but meh.
 	my %iub_codes;
 	$iub_codes{"A"}="A";
 	$iub_codes{"C"}="C";
@@ -249,7 +273,7 @@ sub execute {                               # replace with real execution logic.
 	#all the filter info
 	print OUTFILE "##FILTER=<ID=PASS,Description=\"Passed all filters\">" . "\n";
 	print OUTFILE "##FILTER=<ID=snpfilter,Description=\"snp filter - Discard\">" . "\n";
-	print OUTFILE "##FILTER=<ID=sniperhc,Description=\"Somatic Sniper High Confidence - Discard\">" . "\n"
+	print OUTFILE "##FILTER=<ID=sniperhc,Description=\"Somatic Sniper High Confidence - Discard\">" . "\n";
 	print OUTFILE "##FILTER=<ID=fp,Description=\"False Positive Filter - Discard\">" . "\n";
 	print OUTFILE "##FILTER=<ID=vsGermline,Description=\"Varscan Germline - Discard\">" . "\n";
 	print OUTFILE "##FILTER=<ID=vsLoh,Description=\"Varscan LOH - Discard\">" . "\n";
@@ -333,12 +357,25 @@ sub execute {                               # replace with real execution logic.
 	    }
 	}
 
-	$sniperSnvs{$id}{"ref"} = convertIub($col[2]);
-	$sniperSnvs{$id}{"alt"} = join(",", @varAlleles);
 
 	#add the ref and alt alleles' positions in the allele array to the GT field
 	$sniperSnvs{$id}{"normal"}{"GT"} = ".";
 	$sniperSnvs{$id}{"tumor"}{"GT"} = genGT($col[3],@allAlleles);
+
+	#add ref and alt alleles
+	$sniperSnvs{$id}{"ref"} = $col[2];
+	# there's an edge case when the ref is not ACGT where no alt will be output,
+	# causing VCFtools to choke. deal with it here
+	if ((@varAlleles == 0) && ($col[2] !~ /[ACTG]/)){
+	    $sniperSnvs{$id}{"ref"} = "N";
+	    $sniperSnvs{$id}{"alt"} = convertIub($col[3]);
+	    my @arr = (("N"),(split(",",convertIub($col[3]))));
+	    $sniperSnvs{$id}{"tumor"}{"GT"} = genGT($col[3],@arr);
+	    print STDERR $id;
+	} else {
+	    $sniperSnvs{$id}{"alt"} = join(",",@varAlleles);
+	}
+
 
 	#genotype quality
 	$sniperSnvs{$id}{"normal"}{"GQ"} = ".";
@@ -381,7 +418,7 @@ sub execute {                               # replace with real execution logic.
 
 
 	#assume it's somatic for now
-	$sniperSnvs{$id}{"info"} = "VT=SNP";
+	$sniperSnvs{$id}{"info"} = "VT=SNP;SS=Somatic";
 	
     }
     $inFh->close();
@@ -411,7 +448,14 @@ sub execute {                               # replace with real execution logic.
 	$chr = "25" if $col[0] eq "MT";
 	my $id = $chr . ":" . $col[1];
 
-	my $score = sprintf "%.2f", -10*log10($col[15]);
+	my $score;
+	#edge case where a score of zero results in "inf"
+	if($col[15] == 0){
+	    $score = 99;
+	} else {
+	    $score = sprintf "%.2f", -10*log10($col[15]);
+	}
+
 
 	#skip MT and NT chrs
 	#next if $col[0] =~ /^MT/;
@@ -435,12 +479,25 @@ sub execute {                               # replace with real execution logic.
 	    }
 	}
 
-	$varScanSnvs{$id}{"ref"} = convertIub($col[3]);
-	$varScanSnvs{$id}{"alt"} = join(",",@varAlleles);
-
 	#add the ref and alt alleles' positions in the allele array to the GT field
 	$varScanSnvs{$id}{"normal"}{"GT"} = ".";
 	$varScanSnvs{$id}{"tumor"}{"GT"} = genGT($col[12],@allAlleles);
+
+
+	#add ref and alt alleles
+	$varScanSnvs{$id}{"ref"} = $col[3];
+	# there's an edge case when the ref is not ACGT where no alt will be output,
+	# causing VCFtools to choke. deal with it here
+	if ((@varAlleles == 0) && ($col[3] !~ /[ACTG]/)){
+	    $varScanSnvs{$id}{"ref"} = "N";
+	    $varScanSnvs{$id}{"alt"} = convertIub($col[4]);
+	    my @arr = (("N"),(split(",",convertIub($col[4]))));
+	    $varScanSnvs{$id}{"tumor"}{"GT"} = genGT($col[12],@arr);
+	    print STDERR $id;
+	} else {
+	    $varScanSnvs{$id}{"alt"} = join(",",@varAlleles);
+	}
+
 
 
 	#genotype quality
@@ -494,7 +551,7 @@ sub execute {                               # replace with real execution logic.
 
 
 
-	$varScanSnvs{$id}{"info"} = "VT=SNP";
+	$varScanSnvs{$id}{"info"} = "VT=SNP;SS=Somatic";
     }
 
     $inFh->close();
@@ -504,12 +561,41 @@ sub execute {                               # replace with real execution logic.
 #Next, go through all the filtered files, match up the snps,
 #and add a label to the filter field if it's removed
 
-    sub addFilterInfo{
+    sub filterOut{
+	my ($filename,$filtername,$snvHashRef) = @_;
+
+	#read in all the sites that did not pass the filter
+	my %failingSNVs;
+	my $inFh2 = IO::File->new( "$filename" ) || die "can't open file $filename\n";
+	while( my $line = $inFh2->getline )
+	{
+	    chomp($line);
+	    my @col = split("\t",$line);
+	    my $id = $col[0] . ":" . $col[1];
+
+	    $failingSNVs{$id} = 1;
+	}
+	$inFh2->close();
+
+	#check each stored SNV
+	foreach my $key (keys( %{$snvHashRef} )){
+	    #if it did not pass this filter
+	    if(exists($failingSNVs{$key})){
+		#and hasn't already been filtered out
+		unless(exists($snvHashRef->{$key}{"filter"})){
+		    #add the filter name
+		    $snvHashRef->{$key}{"filter"} = $filtername;
+		}
+	    }
+	}
+    }
+
+    sub filterKeep{
 	my ($filename,$filtername,$snvHashRef) = @_;
 
 	#read in all the sites that passed the filter
 	my %passingSNVs;
-	my $inFh2 = IO::File->new( "$filename" ) || die "can't open file $somatic_capture_dir/$filename\n";
+	my $inFh2 = IO::File->new( "$filename" ) || die "can't open file $filename\n";
 	while( my $line = $inFh2->getline )
 	{
 	    chomp($line);
@@ -533,14 +619,14 @@ sub execute {                               # replace with real execution logic.
 	}
     }
 
-    addFilterInfo("$somatic_capture_dir/varScan.output.snp.formatted.Germline", "vsGermline", \%varScanSnvs);
-    addFilterInfo("$somatic_capture_dir/varScan.output.snp.formatted.LOH", "vsLoh", \%varScanSnvs);
-    addFilterInfo("$somatic_capture_dir/varScan.output.snp.formatted.other", "vsOther", \%varScanSnvs);
-    addFilterInfo("$somatic_capture_dir/varScan.output.snp.formatted.Somatic.hc", "vsHC", \%varScanSnvs);
+    filterOut("$somatic_capture_dir/varScan.output.snp.formatted.Germline", "vsGermline", \%varScanSnvs);
+    filterOut("$somatic_capture_dir/varScan.output.snp.formatted.LOH", "vsLoh", \%varScanSnvs);
+    filterOut("$somatic_capture_dir/varScan.output.snp.formatted.other", "vsOther", \%varScanSnvs);
+    filterKeep("$somatic_capture_dir/varScan.output.snp.formatted.Somatic.hc", "vsHC", \%varScanSnvs);
 
-    addFilterInfo("$somatic_capture_dir/somaticSniper.output.snp.filter","snpfilter",\%sniperSnvs);
-    addFilterInfo("$somatic_capture_dir/somaticSniper.output.snp.filter.hc","sniperhc",\%sniperSnvs);
-    addFilterInfo("$somatic_capture_dir/somaticSniper.output.snp.filter.hc.somatic","loh",\%sniperSnvs);
+    filterKeep("$somatic_capture_dir/somaticSniper.output.snp.filter","snpfilter",\%sniperSnvs);
+    filterKeep("$somatic_capture_dir/somaticSniper.output.snp.filter.hc","sniperhc",\%sniperSnvs);
+    filterKeep("$somatic_capture_dir/somaticSniper.output.snp.filter.hc.somatic","loh",\%sniperSnvs);
 
 
 #-------------------------------------------
@@ -561,14 +647,22 @@ sub execute {                               # replace with real execution logic.
 	    #just add it
 	    $varScanSnvs{$key} = $sniperSnvs{$key}
 	}
-
-
-	# mark those caught by loh or germline filters as LOH, not somatic
-	if (exists($varScanSnvs{$key}{"filter"}) && $varScanSnvs{$key}{"filter"} =~ /loh/){
-	    $varScanSnvs{$key}{"info"} =~ s/SS=Somatic/SS=LOH/;
-	}
-    
     }
+
+
+    
+
+    # mark those caught by loh or germline filters as LOH, not somatic
+    foreach my $key (keys(%varScanSnvs)){
+	if (exists($varScanSnvs{$key}{"filter"})){
+	    if ($varScanSnvs{$key}{"filter"} =~ /loh/i){
+		$varScanSnvs{$key}{"info"} =~ s/SS=Somatic/SS=LOH/;
+	    } elsif ($varScanSnvs{$key}{"filter"} =~ /germline/i){
+		$varScanSnvs{$key}{"info"} =~ s/SS=Somatic/SS=Germline/;
+	    }
+	}	
+    }
+
 
     sub dedupFilterNames{
 	my ($names1,$names2) = @_;
@@ -579,8 +673,8 @@ sub execute {                               # replace with real execution logic.
 
 
 #finally, remove those in the novel filter
-    addFilterInfo("merged.somatic.snp.filter", "fp", \%varScanSnvs, $somatic_capture_dir);
-    addFilterInfo("merged.somatic.snp.filter.novel", "novel", \%varScanSnvs,  $somatic_capture_dir);
+    filterKeep("$somatic_capture_dir/merged.somatic.snp.filter", "fp", \%varScanSnvs);
+    filterKeep("$somatic_capture_dir/merged.somatic.snp.filter.novel", "novel", \%varScanSnvs);
 
 
 #---------------------------------------------
@@ -719,7 +813,9 @@ sub execute {                               # replace with real execution logic.
 
 #----------------------------------
 
-    print_header($tumor_bam, $normal_bam, $center, $genome_build, $tcga_id, $file_source, $analysis_profile,$output_file);
+    unless($skip_header){
+	print_header($tumor_bam, $normal_bam, $center, $genome_build, $tcga_id, $file_source, $analysis_profile,$output_file);
+    }
     print_body($output_file, $cp_score_to_qual, \%varScanSnvs);
     return 1;
 }
