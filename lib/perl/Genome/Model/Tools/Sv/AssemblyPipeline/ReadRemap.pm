@@ -16,7 +16,7 @@ use FindBin qw($Bin);
 use lib "$FindBin::Bin";
 use PostData;
 #use lib "/gscuser/jwallis/svn/perl_modules/test_project/jwallis";
-use Hits;
+use Genome::Model::Tools::Sv::AssemblyPipeline::Hits;
 
 # This is used to parse the cross_match hits
 my $number = "\\d+\\.?\\d*";
