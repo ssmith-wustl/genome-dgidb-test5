@@ -4,6 +4,7 @@ use warnings;
 use strict;
 
 use Genome;
+use File::Basename;
 
 my @FULL_CHR_LIST = (1..22, 'X', 'Y');
 
@@ -16,8 +17,6 @@ class Genome::Model::Tools::DetectVariants2::Breakdancer{
             is_constant => 1,
         },
         config_file => {
-            #calculate_from => ['_config_base_name', 'output_directory'],
-            #calculate => q{ join("/", $output_directory, $_config_base_name); },
             is_output   => 1,
             is_input    => 1,
             is_optional => 1,
@@ -46,7 +45,7 @@ class Genome::Model::Tools::DetectVariants2::Breakdancer{
         workflow_log_dir => {
             is => 'Text',
             calculate_from => 'output_directory',
-            calculate => q{ return $output_directory . '/workflow_log/'; },
+            calculate => q{ return File::Basename::dirname($output_directory) . '/breakdancer_by_chromosome_log/'; },
             is_optional => 1,
             doc => 'workflow log directory of per chromosome breakdancer run',
         },
