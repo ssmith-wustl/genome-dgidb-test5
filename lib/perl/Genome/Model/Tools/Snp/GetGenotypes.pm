@@ -17,10 +17,11 @@ use warnings;
 
 use IO::File;
 use Genome;
-use GSCApp;
+# GSCApp & App->init cause compile errors and don't appear to be used
+#use GSCApp;
 
-App::DB->db_access_level('rw');
-App->init;
+#App::DB->db_access_level('rw');
+#App->init;
 
 class Genome::Model::Tools::Snp::GetGenotypes {
   is => 'Command',

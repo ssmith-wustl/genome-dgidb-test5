@@ -171,6 +171,7 @@ sub _detect_variants {
     my $result = Workflow::Simple::run_workflow_lsf( $workflow, %{$input});
 
     unless($result){
+        $self->error_message( join("\n", map($_->name . ': ' . $_->error, @Workflow::Simple::ERROR)) );
         die $self->error_message("Workflow did not return correctly.");
     }
     $self->_workflow_result($result);
@@ -184,6 +185,7 @@ sub _dump_workflow {
     my $workflow = shift;
     my $xml = $workflow->save_to_xml;
     my $xml_location = $self->output_directory."/workflow.xml";
+    $self->_rotate_old_files($xml_location); #clean up any previous runs
     my $xml_file = Genome::Sys->open_file_for_writing($xml_location);
     print $xml_file $xml;
     $xml_file->close;
@@ -203,7 +205,11 @@ sub _dump_dv_cmd {
             $cmd .= " --".$strat." \'".$self->$strat->id."\'";
         }
     }
-    my $dfh = Genome::Sys->open_file_for_writing($self->output_directory."/dispatcher.cmd");
+
+    my $dispatcher_cmd_file = $self->output_directory."/dispatcher.cmd";
+    $self->_rotate_old_files($dispatcher_cmd_file); #clean up any previous runs
+
+    my $dfh = Genome::Sys->open_file_for_writing($dispatcher_cmd_file);
     print $dfh $cmd."\n";
     $dfh->close;
     return 1;
@@ -395,6 +401,13 @@ sub generate_workflow {
             right_operation => $workflow_model->get_output_connector,
             right_property => $variant_type."_output_directory",
         );
+#TODO Once combine functions have results, return the result as output
+#        $workflow_model->add_link(
+#            left_operation => $last_operation,
+#            left_property => 'result_id',
+#            right_operation => $workflow_mode->get_output_connector,
+#            right_property => $variant_type."_result_id",
+#        );
     }
     return $workflow_model;
 }
@@ -614,17 +627,15 @@ sub add_detectors_and_filters {
                     $filter->{operation} = $foperation;
                 }
 
-                # add links for properties which every operation has from input_connector to each operation
-                for my $op ($detector_operation, map{$_->{operation} } @filters){
-                    my @properties_to_each_operation =  ( 'reference_build_id', 'aligned_reads_input', 'control_aligned_reads_input');
-                    for my $property ( @properties_to_each_operation) {
-                        $workflow_model->add_link(
-                            left_operation => $workflow_model->get_input_connector,
-                            left_property => $property,
-                            right_operation => $op,
-                            right_property => $property,
-                        );
-                    }
+                # add links for properties which every detector has from input_connector
+                my @properties_to_each_operation =  ( 'reference_build_id', 'aligned_reads_input', 'control_aligned_reads_input');
+                for my $property ( @properties_to_each_operation) {
+                    $workflow_model->add_link(
+                        left_operation => $workflow_model->get_input_connector,
+                        left_property => $property,
+                        right_operation => $detector_operation,
+                        right_property => $property,
+                    );
                 }
                 
                 # compose a hash containing input_connector outputs and the operations to which they connect, then connect them
@@ -662,22 +673,6 @@ sub add_detectors_and_filters {
                     $inputs_to_store->{$unique_filter_name."_output_directory"}->{value} = $filter_output_directory;
                     $inputs_to_store->{$unique_filter_name."_output_directory"}->{right_property_name} = 'output_directory';
                     $inputs_to_store->{$unique_filter_name."_output_directory"}->{right_operation} = $filter->{operation};
-
-                    $inputs_to_store->{$unique_filter_name."_detector_directory"}->{value} = $detector_output_directory;
-                    $inputs_to_store->{$unique_filter_name."_detector_directory"}->{right_property_name} = 'detector_directory';
-                    $inputs_to_store->{$unique_filter_name."_detector_directory"}->{right_operation} = $filter->{operation};
-
-                    $inputs_to_store->{$unique_filter_name."_detector_name"}->{value} = $name;
-                    $inputs_to_store->{$unique_filter_name."_detector_name"}->{right_property_name} = 'detector_name';
-                    $inputs_to_store->{$unique_filter_name."_detector_name"}->{right_operation} = $filter->{operation};
-
-                    $inputs_to_store->{$unique_filter_name."_detector_version"}->{value} = $version;
-                    $inputs_to_store->{$unique_filter_name."_detector_version"}->{right_property_name} = 'detector_version';
-                    $inputs_to_store->{$unique_filter_name."_detector_version"}->{right_operation} = $filter->{operation};
-
-                    $inputs_to_store->{$unique_filter_name."_detector_params"}->{value} = $params;
-                    $inputs_to_store->{$unique_filter_name."_detector_params"}->{right_property_name} = 'detector_params';
-                    $inputs_to_store->{$unique_filter_name."_detector_params"}->{right_operation} = $filter->{operation};
 
                     $inputs_to_store->{$unique_detector_base_name."_output_directory"}->{last_operation} = $unique_filter_name;
                 }
@@ -721,9 +716,9 @@ sub add_detectors_and_filters {
                     $right_op = $filters[$index]->{operation};
                     $workflow_model->add_link(
                         left_operation => $left_op,
-                        left_property => 'output_directory',
+                        left_property => 'result_id',
                         right_operation => $right_op,
-                        right_property => 'input_directory',
+                        right_property => 'previous_result_id',
                     );
                     
                 }
@@ -908,6 +903,30 @@ sub _generate_standard_files {
     return 1;
 }
 
+#if the dispatcher is restarted on the same directory--move the old file (e.g. workflow xml) out of the way
+sub _rotate_old_files {
+    my $self = shift;
+    my $file = shift;
+
+    unless(-e $file) {
+        return 1;
+    }
+
+    my $i = 1;
+    while(-e "$file.$i" && $i <= 20) {
+        $i++;
+    }
+
+    if($i > 20) {
+        die $self->error_message('Too many old files encountered! (Is there a systematic issue, or do old files just need cleaning up?)');
+    }
+
+    unless(rename($file, "$file.$i")) {
+        die $self->error_message('Failed to move old file out of the way ' . $!);
+    }
+
+    return 1;
+}
 
 
 1;

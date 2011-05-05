@@ -61,7 +61,9 @@ sub execute {
             next;
         }
         my ($build) = sort { $b->id <=> $a->id } map { $_->build } @build_inputs;
-        push @row, map { $build->$_ } (qw/ model_id id status oriented_fasta_files /);
+        push @row, map { $build->$_ } (qw/ model_id id status /);
+        my $files_string = join ( ' ', map { $_ } $build->oriented_fasta_files );
+        push @row, $files_string;
     }
 
     my $report = $self->_generate_report_and_execute_functions(

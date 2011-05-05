@@ -323,6 +323,10 @@ sub _create_build {
         push(@build_parameters, derived_from => $self->derived_from);
     }
 
+    if ($self->append_to) {
+        push(@build_parameters, append_to => $self->append_to);
+    }
+
     if($self->version) {
         push @build_parameters,
             version => $self->version;

@@ -25,11 +25,6 @@ sub calculate_estimated_kb_usage {
     return ( $kb );
 }
 
-#< DIRS >#
-sub _sub_dirs {
-    return;
-}
-
 #< Amplicons >#
 sub amplicon_set_names_and_primers { #TODO - these are not real .. modified version of 454 .. for initial testing
     return (
@@ -56,12 +51,6 @@ sub amplicon_set_names {
     return sort keys %set_names_and_primers;
 }
 
-#< Clean Up >#
-sub clean_up {
-    my $self = shift;
-
-    return 1;
-}
 
 #< prepare instrument data >#
 #processing of solexa data is currently in beginning test phase so there is
@@ -155,19 +144,3 @@ sub _get_writer_for_set_name {
 
 1;
 
-=pod
-
-=head1 Disclaimer
-
-Copyright (C) 2010 Genome Center at Washington University in St. Louis
-
-This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-=head1 Author(s)
-
-B<Eddie Belter> I<ebelter@genome.wustl.edu>
-
-=cut
-
-#$HeadURL$
-#$Id$

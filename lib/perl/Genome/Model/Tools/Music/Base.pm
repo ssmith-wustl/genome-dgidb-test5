@@ -45,16 +45,21 @@ sub _doc_authors {
     );
 }
 
+=cut
 sub _doc_credits {
     return ('','None at this time.');
 }
+=cut
 
 sub _doc_see_also {
     return ('','B<genome-music>(1)','B<genome>(1)');
 }
 
 sub _doc_manual_body {
-    return shift->help_detail;
+    my $help = shift->help_detail;
+    my @rows = map { " $_" } split(/\n/,$help);
+    chomp @rows;
+    return join("\n",@rows);
 }
 
 sub help_detail {

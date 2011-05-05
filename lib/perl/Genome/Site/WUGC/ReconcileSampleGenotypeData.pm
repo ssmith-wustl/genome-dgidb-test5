@@ -22,21 +22,11 @@ sub execute {
         my $genome_sample = Genome::Sample->get($organism_sample->id);
         print "No Genome::Sample for organism_sample: ", $organism_sample->id, "\n" and next unless $genome_sample;
 
-        next if defined $genome_sample->default_genotype_data 
-            and $genome_sample->default_genotype_data->id eq $organism_sample->default_genotype_seq_id;
-
-        my $genotype_instrument_data = Genome::InstrumentData::Imported->get($organism_sample->default_genotype_seq_id);
-        print "No imported instrument data for id: ", $organism_sample->default_genotype_seq_id, "\n" and next unless $genotype_instrument_data;
-
         eval{
-            $genome_sample->set_default_genotype_data($genotype_instrument_data);
-            my @geno_models = $genome_sample->default_genotype_models;
-            for my $geno_model (@geno_models) {
-                $geno_model->request_builds_for_dependent_ref_align;
-            }
+            $genome_sample->set_default_genotype_data($organism_sample->default_genotype_seq_id);
         };
         if($@){
-            print "Failed to set default genotype data: " . $genotype_instrument_data->id . 
+            print "Failed to set default genotype data: " . $organism_sample->default_genotype_seq_id . 
                 " for Genome::Sample: " . $genome_sample->id . " (err: $@)\n";
         }else{
             print "Successfully updated Genome::Sample " . $genome_sample->id . "\n";

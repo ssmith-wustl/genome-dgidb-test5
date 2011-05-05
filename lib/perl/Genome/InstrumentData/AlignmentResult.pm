@@ -71,11 +71,6 @@ class Genome::InstrumentData::AlignmentResult {
                                 },
     ],
     has_param => [
-        test_name               => {
-                                    is=>'Text',
-                                    is_optional=>1,
-                                    doc=>'Assigns a testing tag to the alignments.  These will not be used in pipelines.',
-                                },
         aligner_name            => {
                                     is => 'Text', default_value => 'maq',
                                     doc => 'the name of the aligner to use, maq, blat, newbler etc.',
@@ -1015,7 +1010,7 @@ sub _promote_validated_data {
 
     unless ($rv == 0) {
         $self->error_message("Did not get a valid return from rsync, rv was $rv for call $call.  Cleaning up and bailing out");
-        rmpath($output_dir);
+        rmtree($output_dir);
         die $self->error_message;
     }
 

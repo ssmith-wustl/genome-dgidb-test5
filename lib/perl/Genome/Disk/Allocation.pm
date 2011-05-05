@@ -8,6 +8,7 @@ use File::Copy::Recursive 'dircopy';
 use Carp 'confess';
 
 class Genome::Disk::Allocation {
+    id_generator => '-uuid',
     id_by => [
         id => {
             is => 'Text',
@@ -156,10 +157,6 @@ sub has_valid_owner {
     return 1;
 }
 
-# This generates a unique text ID for the object. The format is <hostname> <PID> <time in seconds> <some number>
-sub Genome::Disk::Allocation::Type::autogenerate_new_object_id {
-    return $UR::Object::Type::autogenerate_id_base . ' ' . (++$UR::Object::Type::autogenerate_id_iter);
-}
 
 sub __display_name__ {
     my $self = shift;
@@ -172,8 +169,10 @@ sub __display_name__ {
 sub allocate { return shift->create(@_); }
 sub create {
     my ($class, %params) = @_;
+
+    # TODO Switch from %params to BoolExpr and pass in BX to autogenerate_new_object_id
     unless (exists $params{id}) {
-        $params{id} = Genome::Disk::Allocation::Type::autogenerate_new_object_id;
+        $params{id} = $class->__meta__->autogenerate_new_object_id;
     }
 
     # If no commit is on, make a dummy volume to allocate to and allocate without shelling out
@@ -304,7 +303,7 @@ sub _create {
 
     # Make sure there aren't any extra params
     my $id = delete $params{id};
-    $id = Genome::Disk::Allocation::Type::autogenerate_new_object_id unless defined $id;
+    $id = $class->__meta__->autogenerate_new_object_id unless defined $id; # TODO autogenerate_new_object_id should technically receive a BoolExpr
     my $kilobytes_requested = delete $params{kilobytes_requested};
     my $owner_class_name = delete $params{owner_class_name};
     my $owner_id = delete $params{owner_id};

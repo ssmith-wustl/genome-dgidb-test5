@@ -32,11 +32,6 @@ sub calculate_estimated_kb_usage {
     return ( $kb >= 1024 ? $kb : 1024 );
 }
 
-#< DIRS >#
-sub _sub_dirs {
-    return;
-}
-
 #< Amplicons >#
 sub amplicon_set_names_and_primers {
     return (
@@ -63,15 +58,8 @@ sub amplicon_set_names {
     return sort keys %set_names_and_primers;
 }
 
-#< Clean Up >#
-sub clean_up {
-    my $self = shift;
-
-    return 1;
-}
-
 #< prepare instrument data >#
-sub filter_reads_by_primers {
+sub prepare_instrument_data {
     my $self = shift;
 
     my @instrument_data = $self->instrument_data;

@@ -262,8 +262,10 @@ sub _amplicon_iterator_for_name { # 454 and solexa for now
 
 #< Dirs >#
 sub sub_dirs {
-    return (qw| classification amplicons fasta reports |), $_[0]->_sub_dirs;
+    return (qw| classification fasta reports |), $_[0]->_sub_dirs;
 }
+
+sub _sub_dirs { return; }
 
 sub classification_dir {
     return $_[0]->data_directory.'/classification';
@@ -271,6 +273,10 @@ sub classification_dir {
 
 sub fasta_dir {
     return $_[0]->data_directory.'/fasta';
+}
+
+sub reports_dir {
+    return $_[0]->data_directory.'/reports';
 }
 
 #< Files >#
@@ -583,14 +589,10 @@ sub classify_amplicons {
     return 1;
 }
 
-#< Reports >#
-sub summary_report {
-    my $self = shift;
-}
+#< Clean Up >#
+sub clean_up { return 1; }
 
-sub composition_report {
-}
-
+#< Diff>
 sub files_ignored_by_diff {
     return qw(
         build.xml
@@ -599,7 +601,6 @@ sub files_ignored_by_diff {
         reports/Composition/report.xml
         reports/Summary/report.html
         reports/Summary/report.xml
-        sys/.*classification.stor
         classification/.*rdp2-1
         reports/Composition/.*counts.tsv
     );

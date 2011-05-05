@@ -111,10 +111,10 @@ class Genome::Model::Tools::DetectVariants2::Detector {
         _result => {
             is => 'Genome::Model::Tools::DetectVariants2::Result',
             doc => 'SoftwareResult for the run of this detector',
-            id_by => "_result_id",
+            id_by => "result_id",
             is_output => 1,
         },
-        _result_id => {
+        result_id => {
             is => 'Number',
             is_output => 1,
         },
@@ -143,6 +143,25 @@ sub help_detail {
     return <<EOS 
 This is just an abstract base class for variant detector modules.
 EOS
+}
+
+sub create {
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_);
+
+    for my $input ('aligned_reads_input', 'control_aligned_reads_input') {
+        if($self->$input) {
+            my $canonical_path = Cwd::abs_path($self->$input);
+            unless($canonical_path) {
+                die $self->error_message('Failed to resolve real path to ' . $input);
+            }
+
+            $self->$input($canonical_path);
+        }
+    }
+
+    return $self;
 }
 
 sub shortcut {
@@ -252,7 +271,7 @@ sub params_for_result {
         control_aligned_reads => $self->control_aligned_reads_input,
         reference_build_id => $self->reference_build_id,
         region_of_interest_id => $self->region_of_interest_id,
-        test_name => undef,
+        test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
         chromosome_list => undef,
     );
 

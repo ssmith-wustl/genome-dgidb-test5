@@ -265,7 +265,7 @@
 														[% unfiltered_diploid_het_coverage_actual_number %]
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-style:normal;white-space:nowrap;padding:5px;font-weight:normal;text-align:left;">
-														gold heterozygous
+														heterozygous
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-style:normal;white-space:nowrap;padding:5px;font-weight:normal;text-align:left;">
 														unfiltered
@@ -279,7 +279,7 @@
 														[% unfiltered_diploid_hom_coverage_actual_number %]
 													</td>
 													<td style="background-color:#F6F6F6;font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-style:normal;white-space:nowrap;padding:5px;font-weight:normal;text-align:left;">
-														gold homozygous
+														homozygous
 													</td>
 													<td style="background-color:#F6F6F6;font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-style:normal;white-space:nowrap;padding:5px;font-weight:normal;text-align:left;">
 														unfiltered
@@ -293,7 +293,7 @@
 														[% filtered_diploid_het_coverage_actual_number %]
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-style:normal;white-space:nowrap;padding:5px;font-weight:normal;text-align:left;">
-														gold heterozygous
+														heterozygous
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-style:normal;white-space:nowrap;padding:5px;font-weight:normal;text-align:left;">
 														[% snp_caller %]
@@ -307,7 +307,7 @@
 														[% filtered_diploid_hom_coverage_actual_number %]
 													</td>
 													<td style="background-color:#F6F6F6;font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-style:normal;white-space:nowrap;padding:5px;font-weight:normal;text-align:left;">
-														gold homozygous
+														homozygous
 													</td>
 													<td style="background-color:#F6F6F6;font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;font-style:normal;white-space:nowrap;padding:5px;font-weight:normal;text-align:left;">
 														[% snp_caller %]
@@ -366,7 +366,7 @@
 					</tr>
 					<tr>
 						<td align="right" style="background-color: #f2f2f1;">
-							<img src="http://genome.wustl.edu/images/uploads/genome_center_logo.png" width="106" height="50" alt="The Genome Center at Washington University" style="margin: 10px;"/>
+							<img src="http://genome.wustl.edu/images/uploads/genome_institute_logo_H_sm.png" width="106" height="50" alt="The Genome Institute at Washington University School of Medicine" style="margin: 10px;"/>
 						</td>
 					</tr>
 				</tbody>

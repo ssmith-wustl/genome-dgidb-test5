@@ -45,6 +45,7 @@ class Genome::Model::Tools::Music::ClinicalCorrelation {
 sub help_synopsis {
     return <<EOS
 ... music clinical-correlation --maf-file /path/myMAF.tsv --numeric-clinical-data-file /path/myNumericData.tsv --genetic-data-type 'gene' --output-file /path/output_file
+
 ... music clinical-correlation --maf-file /path/myMAF.tsv --numeric-clinical-data-file /path/myNumericData.tsv --categorical-clinical-data-file /path/myClassData.tsv --genetic-data-type 'gene' --output-file /path/output_file
 EOS
 }
