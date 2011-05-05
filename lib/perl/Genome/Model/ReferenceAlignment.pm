@@ -203,7 +203,7 @@ class Genome::Model::ReferenceAlignment {
         target_region_set_value     => { is_many => 1, is_mutable => 1, is => 'UR::Value', via => 'inputs', to => 'value', where => [ name => 'target_region_set_name'] },
         target_region_set_name      => { via => 'target_region_set_value', to => 'id', },
     ],
-    doc => 'A genome model produced by aligning DNA reads to a reference sequence.' 
+    doc => 'A genome model produced by aligning DNA reads to a reference sequence.'
 };
 
 sub create {
@@ -318,7 +318,7 @@ sub complete_build_directory {
     }
     else
     {
-        return; 
+        return;
     }
 }
 
@@ -422,7 +422,7 @@ sub dependent_properties {
     return;
 }
 
-sub verify_inputs { 
+sub verify_inputs {
     my $self = shift;
     my $good_to_go = 1;
 
@@ -435,9 +435,9 @@ sub verify_inputs {
             $self->error_message("Could not resolve genotype microarray model for reference alignment model " . $self->id);
         }
     }
-        
+
     return $good_to_go;
-}       
+}
 
 sub check_and_update_genotype_input {
     my $self = shift;
@@ -447,7 +447,7 @@ sub check_and_update_genotype_input {
     if (defined $self->genotype_microarray_model_id and $self->genotype_microarray_model_id ne $default_genotype_model->id) {
         if (defined $self->user_name and $self->user_name eq 'apipe-builder') {
             $self->warning_message("Sample " . $self->subject_id . " points to genotype model " . $default_genotype_model->id .
-                ", which disagrees with the genotype model input of this model (" . $self->genotype_microarray_model_id . 
+                ", which disagrees with the genotype model input of this model (" . $self->genotype_microarray_model_id .
                 "), overwriting!");
             $self->genotype_microarray_model_id($default_genotype_model->id);
         }
