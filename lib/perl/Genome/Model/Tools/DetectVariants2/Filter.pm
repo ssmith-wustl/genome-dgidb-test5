@@ -214,27 +214,25 @@ sub _generate_standard_output {
     my $lq_detector_output = $self->output_directory."/".$self->_variant_type.".lq";
     my $lq_bed_output = $self->output_directory."/".$self->_variant_type.".lq.bed";
     my $original_detector_file = $self->input_directory."/".$self->_variant_type.".hq";
-
     my $hq_detector_file = -e $hq_detector_output;
     my $hq_bed_file = -e $hq_bed_output;
     my $lq_detector_file = -e $lq_detector_output;
     my $lq_bed_file = -e $lq_bed_output;
-
-    # If there is a hq_bed_file (bed format) and not a detector file, generate a detector file
+    # If there is an hq_bed_file (bed format) and not a detector file, generate a detector file
     if( $hq_bed_file && not $hq_detector_file){
         $self->_convert_bed_to_detector($original_detector_file,$hq_bed_output,$hq_detector_output);
         unless($lq_detector_file){
             $self->_convert_bed_to_detector($original_detector_file,$lq_bed_output,$lq_detector_output);
         }
     } 
-    # If there is a hq_detector_file and not a hq_bed_file, generate a hq_bed_file
+    # If there is an hq_detector_file and not an hq_bed_file, generate an hq_bed_file
     elsif ($hq_detector_file && not $hq_bed_file) {
-        $self->_create_bed_file($hq_detector_file,$hq_bed_file);
+        $self->_create_bed_file($hq_detector_output,$hq_bed_output);
         unless($lq_bed_file){
-            $self->_create_bed_file($lq_detector_file,$lq_bed_file);
+            $self->_create_bed_file($lq_detector_output,$lq_bed_output);
         }
     } 
-    # If there is neither a hq_detector_file nor a hq_bed_file, explode
+    # If there is neither an hq_detector_file nor an hq_bed_file, explode
     elsif ((not $hq_detector_file) &&( not $hq_bed_file)) {
         die $self->error_message("Could not locate output file of any type for this filter.");
     }
@@ -245,16 +243,7 @@ sub _generate_standard_output {
 # If the filter has no bed formatted output file, but does have a detector-style file, generate the bed formatt
 sub _create_bed_file {
     my $self = shift;
-    my $filter_file = shift;
-    my $detector_file = shift;
-    my $original_detector_file = $self->input_directory."/".$self->_variant_type.".hq";
-
-
-    unless(-e $detector_file){
-        die $self->error_message("Failed to create a bed-style output file");
-    }
-
-    return 1;
+    die $self->error_message(" gmt detect-variants filter->_create_bed_file must be defined by a subclass if it is to be used" );
 }
 
 sub _convert_bed_to_detector {

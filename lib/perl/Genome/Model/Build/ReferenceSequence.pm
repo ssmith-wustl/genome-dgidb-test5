@@ -163,7 +163,7 @@ class Genome::Model::Build::ReferenceSequence {
             where => [ name => 'append_to', value_class_name => 'Genome::Model::Build::ReferenceSequence' ],
             doc => 'If specified, the created reference will be logically appended to the one specified by this parameter for aligners that support it.',
             is_mutable => 1,
-            is_many => 1,
+            is_many => 0,
             is_optional => 1,
         },
         append_to => {
@@ -291,15 +291,6 @@ sub __display_name__ {
     return $txt;
 }
 
-sub sequence_path {
-    my $self = shift;
-    my $format = shift || 'fasta';
-    my $dir = $self->data_directory;
-    my $path = $dir . '/' . 'all_sequences.' . $format;
-    return $path if -e $path;
-    Carp::confess("No $path found for build " . $self->__display_name__);
-}
-
 sub calculate_estimated_kb_usage {
     my $self = shift;
     for my $i ($self->inputs) {
@@ -352,6 +343,19 @@ sub get_bases_file {
     my $bases_file = $bases_dir . "/" . $chromosome . ".bases";
 
     return $bases_file;
+}
+
+sub primary_consensus_path {
+    my ($self, $format) = @_;
+
+    return $self->full_consensus_path($format) unless $self->append_to;
+
+    $format ||= 'bfa';
+    my $file = $self->data_directory . '/appended_sequences.'. $format;
+    # check local cache for file
+    my $localfile = "/opt/fscache$file";
+    return $localfile if (-e $localfile);
+    return $file;
 }
 
 sub full_consensus_path {

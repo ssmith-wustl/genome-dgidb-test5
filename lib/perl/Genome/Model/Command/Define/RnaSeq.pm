@@ -10,8 +10,10 @@ class Genome::Model::Command::Define::RnaSeq {
     is => 'Genome::Model::Command::Define',
     has => [
         reference_sequence_build => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
             doc => 'ID or name of the reference sequence to align against',
             default_value => 'NCBI-human-build36',
+            is_input => 1,
         },
     ]
 };

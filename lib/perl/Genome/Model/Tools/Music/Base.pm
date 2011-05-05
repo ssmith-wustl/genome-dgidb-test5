@@ -56,7 +56,10 @@ sub _doc_see_also {
 }
 
 sub _doc_manual_body {
-    return shift->help_detail;
+    my $help = shift->help_detail;
+    my @rows = map { " $_" } split(/\n/,$help);
+    chomp @rows;
+    return join("\n",@rows);
 }
 
 sub help_detail {

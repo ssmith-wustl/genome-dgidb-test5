@@ -20,10 +20,77 @@ sub _resolve_disk_group_name_for_build {
     return 'info_apipe_ref';
 }
 
+sub _copy_fasta_file {
+    my ($self, $build, $output_directory) = @_;
+
+    my @fastas;
+    my $primary_fasta_path;
+    if ($build->append_to) {
+        $primary_fasta_path = File::Spec->catfile($output_directory, 'appended_sequences.fa');
+    } else {
+        $primary_fasta_path = File::Spec->catfile($output_directory, 'all_sequences.fa');
+    }
+
+    $self->status_message("Copying primary fasta file");
+    
+    #If an error occurs here about refusing to write to an existing file, that was most likely on a re-run of the build
+    #and the original error can be found earlier in the logs.  To restart, clear files out of the build directory.
+    unless (Genome::Sys->copy_file($build->fasta_file, $primary_fasta_path)) {
+        $self->error_message('Failed to copy "' . $build->fasta_file . '" to "' . $primary_fasta_path. '.');
+        return;
+    }
+    push(@fastas, $primary_fasta_path);
+
+    $self->status_message("Making bases files from fasta.");
+    my $rv = $self->_make_bases_files($primary_fasta_path, $output_directory);
+
+    unless($rv) {
+        $self->error_message('Making bases files failed.');
+        return;
+    }
+
+    if ($build->append_to) {
+        $self->status_message("Copying full fasta file");
+        my $full_fasta_path = File::Spec->catfile($output_directory, 'all_sequences.fa');
+        my $cmd = Genome::Model::Tools::Fasta::Concat->create(
+            input_files => [
+                $build->append_to->full_consensus_path('fa'),
+                $build->fasta_file,
+            ],
+            output_file => $full_fasta_path,
+        );
+        unless ($cmd->execute()) {
+            $self->error_message("Failed to concatenate fasta files");
+            return;
+        }
+
+        push(@fastas, $full_fasta_path);
+    }
+
+    $self->status_message("Doing samtools faidx.");
+    my $samtools_path = Genome::Model::Tools::Sam->path_for_samtools_version(); #uses default version if none passed
+
+    for my $fasta (@fastas) {
+        my $samtools_cmd = sprintf('%s faidx %s', $samtools_path, $fasta);
+        $rv = Genome::Sys->shellcmd(
+            cmd => $samtools_cmd,
+            input_files => [$fasta],
+        );
+
+        unless($rv) {
+            $self->error_message("samtools faidx failed for $fasta.");
+            return;
+        }
+    }
+    return 1;
+}
+
 sub _execute_build {
     my ($self, $build) = @_;
     my $model = $build->model;
 
+    $DB::single=1;
+    $self->status_message("Execute build\n");
     my $fasta_size = -s $build->fasta_file;
     unless(-e $build->fasta_file && $fasta_size > 0) {
         $self->error_message("Reference sequence fasta file \"" . $build->fasta_file . "\" is either inaccessible, empty, or non-existent.");
@@ -38,39 +105,10 @@ sub _execute_build {
     );
     chmod(0775, $output_directory); #so can be manually cleaned up by others if need be
 
-    $self->status_message("Copying fasta");
-    my $fasta_file_name = File::Spec->catfile($output_directory, 'all_sequences.fa');
-    
-    #If an error occurs here about refusing to write to an existing file, that was most likely on a re-run of the build
-    #and the original error can be found earlier in the logs.  To restart, clear files out of the build directory.
-    unless (Genome::Sys->copy_file($build->fasta_file, $fasta_file_name)) {
-        $self->error_message('Failed to copy "' . $build->fasta_file . '" to "' . $fasta_file_name . '.');
+    unless ($self->_copy_fasta_file($build, $output_directory)) {
+        $self->error_message("fasta copy failed.");
         return;
     }
-
-    $self->status_message("Making bases files from fasta.");
-    my $rv = $self->_make_bases_files($fasta_file_name, $output_directory);
-
-    unless($rv) {
-        $self->error_message('Making bases files failed.');
-        return;
-    }
-
-    $self->status_message("Doing samtools faidx.");
-
-    my $samtools_path = Genome::Model::Tools::Sam->path_for_samtools_version(); #uses default version if none passed
-
-    my $samtools_cmd = sprintf('%s faidx %s', $samtools_path, $fasta_file_name);
-    $rv = Genome::Sys->shellcmd(
-        cmd => $samtools_cmd,
-        input_files => [$fasta_file_name],
-    );
-
-    unless($rv) {
-        $self->error_message('samtools faidx failed.');
-        return;
-    }
-
 
     $self->status_message('Promoting files to final location.');
     for my $staged_file (glob($output_directory . '/*')) {
