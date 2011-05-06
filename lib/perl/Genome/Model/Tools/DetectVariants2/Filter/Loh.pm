@@ -128,14 +128,8 @@ sub _generate_control_file {
 
     my $filter_output = $self->_temp_scratch_directory . "/snpfilter";
     my $filter_command = Genome::Model::Tools::DetectVariants2::Filter::SnpFilter->create(
-        aligned_reads_input => $self->control_aligned_reads_input,
-        reference_build_id => $self->reference_build_id,
-        input_directory => $detector_output_dir,
-        detector_directory => $self->_temp_scratch_directory,
+        previous_result_id => $detector_command->result_id,
         output_directory => $filter_output,
-        detector_name => $detector_name,
-        detector_version => $detector_version,
-        detector_params => $detector_params,
     );
 
     unless($filter_command->execute) {

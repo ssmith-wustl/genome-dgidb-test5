@@ -33,6 +33,10 @@ class Genome::Model::Tools::Bed::Convert::Indel::PindelToBed {
             is => 'IO::File',
             doc => 'Filehandle for the output of large events',
         },
+        big_output_file => {
+            is => 'String',
+            doc => 'File containing large output',
+        },
     ],
     has_param => [
         # Make workflow choose 64 bit blades, this is needed for samtools faidx
@@ -78,23 +82,12 @@ sub execute {
 
 sub initialize_filehandles {
     my $self = shift;
-    
     if($self->_big_output_fh) {
         return 1; #Already initialized
     }
     
     my $big_output = $self->output . ".big_deletions";
-    
-    eval {
-        my $big_output_fh = Genome::Sys->open_file_for_writing($big_output);
-        $self->_big_output_fh($big_output_fh);
-    };
-    
-    if($@) {
-        $self->error_message('Failed to open file. ' . $@);
-        $self->close_filehandles;
-        return;
-    }
+    $self->big_output_file($big_output); 
 
     return $self->SUPER::initialize_filehandles(@_);
 }
@@ -111,6 +104,31 @@ sub close_filehandles {
 
 sub process_source { 
     my $self = shift;
+    $self->_input_fh->close;
+    my (undef,$temp_bed) = Genome::Sys->create_temp_file;
+    my $ppr_cmd = Genome::Model::Tools::Pindel::ProcessPindelReads->create(
+                    input_file => $self->source,
+                    output_file => $temp_bed,
+                    reference_build_id => $self->reference_build_id,
+                    mode => 'to_bed', 
+                    big_output_file => $self->big_output_file, );
+    unless( $ppr_cmd->execute ){
+        die $self->error_message( "Failed to run gmt pindel process-pindel-reads" );
+    }
+                   
+    my $bed_fh = Genome::Sys->open_file_for_reading($temp_bed);
+    while( my $line = $bed_fh->getline){
+        chomp $line;
+        $self->write_bed_line(split /\t/, $line);
+    }
+    $bed_fh->close;
+    my $ifh = Genome::Sys->open_file_for_reading($self->source);
+    $self->_input_fh($ifh);
+    return 1;
+}
+
+
+=cut
     my $input_fh = $self->_input_fh;
     my %events;
     my %ranges;
@@ -243,4 +261,4 @@ sub parse {
     }
     return ($chr,$start,$stop,$ref,$var);
 }
-
+=cut

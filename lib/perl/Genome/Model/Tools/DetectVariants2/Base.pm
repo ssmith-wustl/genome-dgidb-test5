@@ -171,7 +171,6 @@ sub _detect_variants {
 
 sub _generate_standard_files {
     my $self = shift;
-    
     my $class = ref $self || $self;
     my @words = split('::', $class);
     
@@ -219,6 +218,7 @@ sub _run_converter {
     my $command = $converter->create(
         source => $source,
         output => $output, 
+        reference_build_id => $self->reference_build_id,
     );
     
     unless($command->execute) {

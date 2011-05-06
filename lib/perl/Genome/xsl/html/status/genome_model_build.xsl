@@ -385,6 +385,9 @@
                 <a class="mini btn"><xsl:attribute name="href"><xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="build/@error-log"/></xsl:attribute>
                 <span class="sm-icon sm-icon-extlink"><br/></span><xsl:text>error log</xsl:text>
                 </a>
+                <a class="mini btn"><xsl:attribute name="href"><xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="build/@output-log"/></xsl:attribute>
+                <span class="sm-icon sm-icon-extlink"><br/></span><xsl:text>output log</xsl:text>
+                </a>
               </td>
             </tr>
             <xsl:variable name="snpArrayConcordance" select="build/@snp-array-concordance"/>
@@ -440,6 +443,22 @@
                     <xsl:with-param name="icon" select="'sm-icon-extlink'" />
                   </xsl:call-template>
                 </xsl:for-each>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="name">model subject:
+              </td>
+              <td class="value">
+                <xsl:for-each select="//build/model/aspect[@name='subject']/object">
+                  <xsl:call-template name="object_link_button">
+                    <xsl:with-param name="linktext">
+                      <xsl:value-of select="display_name"/>
+                    </xsl:with-param>
+                    <xsl:with-param name="icon" select="'sm-icon-extlink'" />
+                  </xsl:call-template>
+                </xsl:for-each>
+
               </td>
             </tr>
 

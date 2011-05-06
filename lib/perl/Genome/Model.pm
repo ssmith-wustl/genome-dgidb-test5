@@ -9,6 +9,7 @@ use File::Path;
 use YAML;
 
 class Genome::Model {
+    is => 'Genome::Notable',
     is_abstract => 1,
     subclassify_by => 'subclass_name',
     id_by => [
@@ -55,6 +56,12 @@ class Genome::Model {
             is => 'Number', 
             column_name => 'last_complete_build_id', 
             doc => 'The last complete build id' ,
+        },
+        apipe_cron_status => {
+            via => 'notes',
+            to => 'body_text',
+            where => [ header_text => 'apipe_cron_status' ],
+            is_mutable => 1,
         },
     ],
     has_optional_many => [

@@ -20,7 +20,7 @@ class Genome::Report::Command {
 #< Command >#
 sub help_brief {
     my $class = ref($_[0]) || $_[0];
-    return $class->get_class_object->doc if not $class or $class eq __PACKAGE__;
+    return $class->__meta__->doc if not $class or $class eq __PACKAGE__;
     my ($func) = $class =~ /::(\w+)$/;
     return sprintf('%s a report', ucfirst($func));
 }

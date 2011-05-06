@@ -210,6 +210,7 @@ sub get_build_node {
 
 
     $buildnode->addChild( $doc->createAttribute("model-name",$model->name) );
+    $buildnode->addChild( $doc->createAttribute("model-subject",$model->subject->__display_name__) );
     $buildnode->addChild( $doc->createAttribute("model-id",$model->id) );
     if ($source) {
         $buildnode->addChild(
@@ -282,10 +283,18 @@ sub get_model_node {
     my $model = $self->subject->model;
 
     #For generating links
-    $modelnode->addChild( $doc->createAttribute("id", $model->id));
-    $modelnode->addChild( $doc->createAttribute("type", $model->class));
-    my $namenode = $modelnode->addChild( $self->anode('aspect', 'name', 'name'));
+    $modelnode->addChild( $doc->createAttribute("id", $model->id) );
+    $modelnode->addChild( $doc->createAttribute("type", $model->class) );
+    my $namenode = $modelnode->addChild( $self->anode('aspect', 'name', 'name') );
     $namenode->addChild( $self->tnode('value', $model->name));
+
+    my $model_subject = $model->subject;
+    my $model_subject_aspect = $modelnode->addChild( $self->anode('aspect', 'name', 'subject') );
+    my $model_subject_object = $model_subject_aspect->addChild( $doc->createElement('object') );
+
+    $model_subject_object->addChild( $doc->createAttribute("id", $model_subject->id) );
+    $model_subject_object->addChild( $doc->createAttribute("type", $model_subject->class) );
+    $model_subject_object->addChild( $self->tnode('display_name', $model_subject->__display_name__) );
 
     return $modelnode;
 }
@@ -407,8 +416,8 @@ sub get_instrument_data_node {
         if ($object->class ne 'Genome::InstrumentData::Imported' && $object->can($_)) {
             $id->addChild($self->tnode($_, $object->$_));
         } else {
-            $id->addChild($self->tnode($_, "N/A")); 
-        }     
+            $id->addChild($self->tnode($_, "N/A"));
+        }
     }
 
     return $id;
@@ -419,12 +428,12 @@ sub get_inputs_node {
     my $self = shift;
     my $doc = $self->_doc;
     my $build = $self->subject;
-    
+
     my $aspect_node = $doc->createElement('aspect');
     $aspect_node->addChild( $doc->createAttribute('name', 'inputs') );
 
     my @inputs = $build->inputs;
-    
+
     for my $input (@inputs) {
         my $view = $input->create_view(
             perspective => 'default',
@@ -432,15 +441,15 @@ sub get_inputs_node {
             aspects => [ 'name', 'value_class_name', 'value_id', 'value' ],
             parent_view => $self,
         );
-        
+
         $view->_generate_content;
-        
+
         my $delegate_xml_doc = $view->_xml_doc;
         my $delegate_root = $delegate_xml_doc->documentElement;
         #cloneNode($deep = 1)
         $aspect_node->addChild( $delegate_root->cloneNode(1) );
     }
-    
+
     return $aspect_node;
 }
 
@@ -448,13 +457,13 @@ sub get_links_node {
     my $self = shift;
     my $doc = $self->_doc;
     my $build = $self->subject;
-    
+
     my $links_node = $doc->createElement('links');
-    
+
     my $to_aspect_node = $doc->createElement('aspect');
     $to_aspect_node->addChild( $doc->createAttribute('name', 'to_builds'));
     $links_node->addChild($to_aspect_node);
-    
+
     for my $to_build ( $build->to_builds ) {
         my $view = $to_build->create_view(
             perspective => 'default',
@@ -462,19 +471,19 @@ sub get_links_node {
             aspects => ['id'],
             parent_view => $self,
         );
-        
+
         $view->_generate_content;
-        
+
         my $delegate_xml_doc = $view->_xml_doc;
         my $delegate_root = $delegate_xml_doc->documentElement;
         #cloneNode($deep = 1)
         $to_aspect_node->addChild( $delegate_root->cloneNode(1) );
     }
-    
+
     my $from_aspect_node = $doc->createElement('aspect');
     $from_aspect_node->addChild( $doc->createAttribute('name', 'from_builds'));
     $links_node->addChild($from_aspect_node);
-    
+
     for my $from_build ( $build->from_builds ) {
         my $view = $from_build->create_view(
             perspective => 'default',
@@ -482,15 +491,15 @@ sub get_links_node {
             aspects => ['id'],
             parent_view => $self,
         );
-        
+
         $view->_generate_content;
-        
+
         my $delegate_xml_doc = $view->_xml_doc;
         my $delegate_root = $delegate_xml_doc->documentElement;
         #cloneNode($deep = 1)
         $from_aspect_node->addChild( $delegate_root->cloneNode(1) );
     }
-    
+
     return $links_node;
 }
 

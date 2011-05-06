@@ -12,6 +12,12 @@ use above 'Genome';
 
 use Test::More tests => 23;
 
+# Override lock name because if people cancel tests locks don't get cleaned up.
+*Genome::SoftwareResult::_resolve_lock_name = sub {
+    return Genome::Sys->create_temp_file_path;
+};
+
+
 use_ok('Genome::Model::Tools::DetectVariants2::Filter::FalsePositive');
 
 my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-FalsePositive';
@@ -30,7 +36,8 @@ ok(-s $expected_hq_file, "expected hq file output $expected_hq_file exists");
 ok(-s $expected_lq_file, "expected lq file output $expected_lq_file exists");
 ok(-s $expected_readcount_file, "expected readcount file output $expected_readcount_file exists");
 
-my $output_dir = File::Temp::tempdir('DetectVariants2-Filter-FalsePositiveXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
+my $output_base = File::Temp::tempdir('DetectVariants2-Filter-FalsePositiveXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
+my $output_dir = $output_base . '/filter';
 my $hq_output = join('/', $output_dir, 'snvs.hq');
 my $lq_output = join('/', $output_dir, 'snvs.lq');
 my $readcount_file = join('/', $output_dir, 'readcounts');
@@ -38,12 +45,18 @@ my $readcount_file = join('/', $output_dir, 'readcounts');
 my $reference = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
 is($reference->id,101947881, 'Found correct reference sequence');
 
-my $filter_command = Genome::Model::Tools::DetectVariants2::Filter::FalsePositive->create(
-    aligned_reads_input => $bam_file,
-    input_directory => $detector_directory,
-    output_directory => $output_dir,
+my $detector_result = Genome::Model::Tools::DetectVariants2::Result->__define__(
+    output_dir => $detector_directory,
+    detector_name => 'test',
+    detector_params => '',
+    detector_version => 'awesome',
+    aligned_reads => $bam_file,
     reference_build_id => $reference->id,
-    detector_directory => $detector_directory,
+);
+
+my $filter_command = Genome::Model::Tools::DetectVariants2::Filter::FalsePositive->create(
+    previous_result_id => $detector_result->id,
+    output_directory => $output_dir,
     min_strandedness => 0.01,
     min_var_freq => 0.05,
     min_var_count => 4,
@@ -70,16 +83,14 @@ my $filtered_diff = Genome::Sys->diff_file_vs_file($expected_lq_file, $lq_output
 ok(!$filtered_diff, 'filtered file matches expected result')
     or diag("diff:\n" . $filtered_diff);
 
-$output_dir = File::Temp::tempdir('DetectVariants2-Filter-FalsePositiveXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
+$output_base = File::Temp::tempdir('DetectVariants2-Filter-FalsePositiveXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
+$output_dir = $output_base . '/filter';
 $hq_output = join('/', $output_dir, 'snvs.hq');
 $lq_output = join('/', $output_dir, 'snvs.lq');
 $readcount_file = join('/', $output_dir, 'readcounts');
 my $filter_command2 = Genome::Model::Tools::DetectVariants2::Filter::FalsePositive->create(
-    aligned_reads_input => $bam_file,
-    input_directory => $detector_directory,
+    previous_result_id => $detector_result->id,
     output_directory => $output_dir,
-    reference_build_id => $reference->id,
-    detector_directory => $detector_directory,
     min_strandedness => 0.01,
     min_var_freq => 0.05,
     min_var_count => 4,
@@ -108,16 +119,14 @@ ok(!$filtered_diff2, 'filtered file matches expected result')
     or diag("diff:\n" . $filtered_diff2);
 
 #for this test readcount file was supplied, so nothing to compare to.
-$output_dir = File::Temp::tempdir('DetectVariants2-Filter-FalsePositiveXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
+$output_base = File::Temp::tempdir('DetectVariants2-Filter-FalsePositiveXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
+$output_dir = $output_base . '/filter';
 $hq_output = join('/', $output_dir, 'snvs.hq');
 $lq_output = join('/', $output_dir, 'snvs.lq');
 $readcount_file = join('/', $output_dir, 'readcounts');
 my $filter_command3 = Genome::Model::Tools::DetectVariants2::Filter::FalsePositive->create(
-    aligned_reads_input => $bam_file,
-    input_directory => $detector_directory,
+    previous_result_id => $detector_result->id,
     output_directory => $output_dir,
-    reference_build_id => $reference->id,
-    detector_directory => $detector_directory,
     min_strandedness => 0.01,
     min_var_freq => 0.05,
     min_var_count => 4,

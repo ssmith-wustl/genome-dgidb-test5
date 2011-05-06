@@ -12,6 +12,12 @@ use above 'Genome';
 
 use Test::More tests => 6;
 
+# Override lock name because if people cancel tests locks don't get cleaned up.
+*Genome::SoftwareResult::_resolve_lock_name = sub {
+    return Genome::Sys->create_temp_file_path;
+};
+
+
 use_ok('Genome::Model::Tools::Somatic::FilterFalseIndels');
 
 my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-FalseIndel';
@@ -32,11 +38,19 @@ my $readcount_file = $output_file . '.readcounts';
 my $reference = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
 isa_ok($reference, 'Genome::Model::Build::ImportedReferenceSequence', 'loaded reference sequence');
 
-my $filter_command = Genome::Model::Tools::DetectVariants2::Filter::FalseIndel->create(
-    aligned_reads_input => $bam_file,
-    input_directory => $test_data_dir,
-    output_directory => $tmpdir,
+my $detector_result = Genome::Model::Tools::DetectVariants2::Result->__define__(
+    output_dir => $test_data_dir,
+    detector_name => 'test',
+    detector_params => '',
+    detector_version => 'awesome',
+    aligned_reads => $bam_file,
     reference_build_id => $reference->id,
+);
+
+
+my $filter_command = Genome::Model::Tools::DetectVariants2::Filter::FalseIndel->create(
+    previous_result_id => $detector_result->id,
+    output_directory => $tmpdir . "/filter",
 
     min_strandedness => 0.01,
     min_var_freq => 0.05,

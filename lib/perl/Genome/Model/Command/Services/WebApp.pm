@@ -3,12 +3,14 @@ package Genome::Model::Command::Services::WebApp;
 use strict;
 use warnings;
 
+use Genome::Model::Command::Services::WebApp::Loader;
+use Genome::Model::Command::Services::WebApp::Runner;
+
 use Genome;
 use Workflow;
 use Sys::Hostname;
 use AnyEvent;
 use AnyEvent::Util;
-use Plack::Runner;
 use IO::Socket;
 
 # "Unassigned" ports from iana.org
@@ -101,14 +103,15 @@ sub determine_port {
 sub run_starman {
     my ($self) = @_;
 
-    my $runner = Plack::Runner->new(
-        server => 'Starman',
+    my $runner = Genome::Model::Command::Services::WebApp::Runner->new(
+        server => 'Genome::Model::Command::Services::WebApp::Starman',
+        loader => 'Genome::Model::Command::Services::WebApp::Loader',
         env    => 'development'
     );
 
     my $psgi_path = $self->psgi_path . '/Main.psgi';
     $runner->parse_options( '--app', $psgi_path, '--port', $self->port,
-        '--workers', 4, '-R', Genome->base_dir . ',' . Workflow->base_dir );
+        '--workers', 4, '--single_request', 1, '-R', Genome->base_dir . ',' . Workflow->base_dir );
 
     $runner->run;
 }
