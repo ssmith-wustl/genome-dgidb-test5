@@ -16,7 +16,7 @@ use strict;
 use Genome;
 use IO::File;
 use Statistics::R;
-use File::Temp;
+use File::Basename;
 use warnings;
 require Genome::Sys;
 
@@ -152,6 +152,13 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	    doc => 'width of each plot',
 	},
 
+	cnvhmm_input => {
+	    is => 'Boolean',
+	    is_optional => 1,
+	    doc => 'Flag indicating that input is in cnvhmm format, which requires extra parsing',
+	    default => 0,
+	},
+
 	# ylab => {
 	#     is => 'String',
 	#     is_optional => 1,
@@ -184,6 +191,55 @@ sub help_detail {
 }
 
 
+#########################################################################
+sub convertSegs{
+    my ($segfiles) = @_;    
+    my @newfiles;
+    my @infiles = split(",",$segfiles);
+    foreach my $file (@infiles){
+	my $cbsfile = cnvHmmToCbs($file);
+	push(@newfiles,$cbsfile);
+    }
+
+    return join(",",@newfiles);
+}
+
+
+sub log_base { 
+    my ($base, $value) = @_; 
+    return log($value)/log($base); 
+}
+
+
+sub cnvHmmToCbs{
+    my ($file) = @_;
+    my $newfile = "/tmp/" . basename($file) . `date +%s%N`;    
+    chomp($newfile);
+    my $inFh = IO::File->new( $file ) || die "can't open file: $file\n";
+    open(OUTFILE,">$newfile") || die "can't open temp segs file for writing ($newfile)\n";
+
+    my $inCoords = 0;
+    while( my $line = $inFh->getline )
+    {
+	chomp($line);	
+	if ($line =~ /^#CHR/){
+	    $inCoords = 1;
+	    next;
+	}
+	if ($line =~ /^---/){
+	    $inCoords = 0;
+	    next;
+	}
+	
+	if ($inCoords){
+	    my @fields = split("\t",$line);
+	    print OUTFILE join("\t",($fields[0],$fields[1],$fields[2],$fields[4],(log_base(2,$fields[6]/$fields[8])))) . "\n";
+	}	
+    }
+    close(OUTFILE);
+    $inFh->close;
+    return($newfile);
+}
 
 #########################################################################
 
@@ -207,13 +263,19 @@ sub execute {
     my $output_pdf = $self->output_pdf;
     my $rcommands_file = $self->rcommands_file;
     my $plot_height = $self->plot_height;
-    my $plot_width = $self->plot_width;
+    my $plot_width = $self->plot_width;   
+    my $cnvhmm_input = $self->cnvhmm_input; 
     # my $ylab = $self->ylab;
 
 
 
-    my @infiles = split(",",$segment_files);
-    
+    my @infiles;
+    if ($cnvhmm_input){
+	$segment_files = convertSegs($segment_files);
+	$log_input = 1;
+    } 
+
+    @infiles = split(",",$segment_files);
 
     #set up a temp file for the R commands (todo use real tmp methods)
     unless (defined($rcommands_file)){
@@ -309,7 +371,6 @@ sub execute {
     print R_COMMANDS "dev.off()\n";
     print R_COMMANDS "q()\n";
     close R_COMMANDS;
-    
 
     #now run the R command
     my $cmd = "R --vanilla --slave \< $rcommands_file";
