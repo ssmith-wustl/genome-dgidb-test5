@@ -5,33 +5,18 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More tests => 8;
+use Test::More;
 require Genome::ProcessingProfile::Test;
 
-BEGIN {
-    use_ok('Genome::ProcessingProfile::Command::Describe');
-}
+use_ok('Genome::ProcessingProfile::Command::Describe') or die;
 
-#< GOOD >#
-# Create a pp to describe
 my $pp = Genome::ProcessingProfile::Test->create_mock_processing_profile('tester');
-;
-ok($pp, "Created processing profile to test renaming");
-die unless $pp; # can't proceed
+ok($pp, "Created processing profile to test renaming") or die;
 
-my $describer = Genome::ProcessingProfile::Command::Describe->create(processing_profile => $pp);
+my $describer = Genome::ProcessingProfile::Command::Describe->create(processing_profiles => [$pp]);
 ok($describer, 'Created the describer');
 isa_ok($describer, 'Genome::ProcessingProfile::Command::Describe');
 ok($describer->execute, 'Executed the describer');
-
-#< BAD >#
-# invalid id - sanity check that we have a _verify_processing_profile method before executing
-my $bad1 = Genome::ProcessingProfile::Command::Describe->create(
-    processing_profile => -1,
-);
-ok($bad1, 'Created the describer w/ invalid id');
-isa_ok($bad1, 'Genome::ProcessingProfile::Command::Describe');
-ok(!$bad1->execute, 'Execute failed as expected');
 
 done_testing();
 exit;
