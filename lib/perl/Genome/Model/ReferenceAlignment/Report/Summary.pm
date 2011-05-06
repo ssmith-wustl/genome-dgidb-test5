@@ -324,12 +324,16 @@ sub get_summary_information
     # processing profile
     my $pp = $model->processing_profile;
 
-    my @filtered_files = $build->get_variant_bed_file('snvs.hq');
+    #my @filtered_files = $build->get_variant_bed_file('snvs.hq');
+    my @filtered_files = $build->filtered_snvs_bed;
     my $filtered_snp_calls = `wc -l @filtered_files | tail -n 1`;
     $filtered_snp_calls =~ s/\s\S+\s*$//i;
     $filtered_snp_calls =~ s/\s//g;
 
     my @lq_files = $build->get_variant_bed_file('snvs.lq');
+    unless (@lq_files) {
+        @lq_files = $build->get_variant_bed_file('snps_all_sequences');
+    }
     my $lq_snp_calls = `wc -l @lq_files | tail -n 1`;
     $lq_snp_calls =~ s/\s\S+\s*$//i;
     $lq_snp_calls =~ s/\s//g;
