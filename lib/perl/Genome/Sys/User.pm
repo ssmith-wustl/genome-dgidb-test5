@@ -24,18 +24,16 @@ class Genome::Sys::User {
     ]
 };
 
-
-
 sub get {
-
-    my ($self, @p) = @_;
-
-    my %p = @p;
+    my ($class, @p) = @_;
+    my %p;
     if (scalar(@p) == 1) {
         # Genome::Sys::User->get('yermom');
         my $key = $p[0];
-        delete $p{$key};
         $p{'email'} = $key;
+    }
+    else {
+        %p = @p;
     }
 
     if (defined($p{'email'}) 
@@ -46,7 +44,7 @@ sub get {
         $p{'email'} = $new;
     }
 
-    return $self->SUPER::get(%p);
+    return $class->SUPER::get(%p);
 }
 
 1;
