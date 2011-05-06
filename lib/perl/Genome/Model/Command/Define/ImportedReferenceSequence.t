@@ -9,7 +9,7 @@ BEGIN {
 }
 
 use above 'Genome';
-use Test::More tests => 27;
+use Test::More;
 
 my $cmd_class = 'Genome::Model::Command::Define::ImportedReferenceSequence';
 use_ok($cmd_class);
@@ -22,13 +22,18 @@ ok($sample, 'created sample');
 
 my $sequence_uri = "http://genome.wustl.edu/foo/bar/test.fa.gz";
 
-my $fasta_file = "$data_dir/data.fa";
-my $fasta_fh = new IO::File(">$fasta_file");
-$fasta_fh->write(">HI\nNACTGACTGNNACTGN");
+my $fasta_file1 = "$data_dir/data.fa";
+my $fasta_fh = new IO::File(">$fasta_file1");
+$fasta_fh->write(">HI\nNACTGACTGNNACTGN\n");
+$fasta_fh->close();
+
+my $fasta_file2 = "$data_dir/data2.fa";
+$fasta_fh = new IO::File(">$fasta_file2");
+$fasta_fh->write(">BYE\nNACTGACTGNNA\n");
 $fasta_fh->close();
 
 my @params = (
-    "--fasta-file=$fasta_file",
+    "--fasta-file=$fasta_file1",
     "--model-name=test-ref-seq-1",
     "--processing-profile-id=".$pp->id,
     "--species-name=human",
@@ -49,7 +54,7 @@ is($build->sequence_uri, $sequence_uri, "sequence uri matches");
 # specify derived_from
 @params = (
     "--derived-from=".$build->name,
-    "--fasta-file=$fasta_file",
+    "--fasta-file=$fasta_file1",
     "--model-name=test-ref-seq-2",
     "--processing-profile-id=".$pp->id,
     "--species-name=human",
@@ -73,7 +78,7 @@ ok($build->is_compatible_with($d1_build), 'parent build is_compatible_with coord
 # derive from d1_build
 @params = (
     "--derived-from=".$d1_build->id,
-    "--fasta-file=$fasta_file",
+    "--fasta-file=$fasta_file1",
     "--model-name=test-ref-seq-3",
     "--processing-profile-id=".$pp->id,
     "--species-name=human",
@@ -95,3 +100,37 @@ ok($d1_build->is_compatible_with($d2_build), 'derived build is_compatible_with p
 ok($d2_build->is_compatible_with($build), 'derived build is_compatible_with parent build');
 is($d2_build->sequence_uri, $sequence_uri, "sequence uri matches");
 ok($build->is_compatible_with($d2_build), 'parent build is_compatible_with derived build');
+
+@params = (
+    "--append-to=".$d1_build->id,
+    "--fasta-file=$fasta_file2",
+    "--model-name=test-ref-seq-4",
+    "--processing-profile-id=".$pp->id,
+    "--species-name=human",
+    "--subject-id=".$sample->id,
+    "--version=append",
+    "--sequence-uri=".$sequence_uri,
+    );
+$rv = $cmd_class->_execute_with_shell_params_and_return_exit_code(@params);
+is($rv, 0, 'executed command');
+my $append_model = Genome::Model::ImportedReferenceSequence->get(name => 'test-ref-seq-4');
+ok($append_model, 'Found newly created model');
+my $a_build = $append_model->last_complete_build;
+ok($a_build, 'Found a completed build');
+is($a_build->version, 'append', 'Build has correct version');
+is($a_build->derived_from->id, $d1_build->id, 'derived_from property is correct');
+is($a_build->append_to->id, $d1_build->id, 'append_to property is correct');
+is($a_build->coordinates_from->id, $build->id, 'coordinates_from property is correct');
+ok($a_build->is_compatible_with($d1_build), 'derived build is_compatible_with parent build');
+ok($d1_build->is_compatible_with($a_build), 'derived build is_compatible_with parent build');
+ok($a_build->is_compatible_with($build), 'derived build is_compatible_with parent build');
+is($a_build->sequence_uri, $sequence_uri, "sequence uri matches");
+ok($build->is_compatible_with($a_build), 'parent build is_compatible_with derived build');
+ok($a_build->primary_consensus_path('fa') ne $a_build->full_consensus_path('fa'), 'primary sequence != full sequence in appended build');
+my $primary_sz = -s $a_build->primary_consensus_path('fa');
+my $full_sz = -s $a_build->full_consensus_path('fa');
+is($primary_sz, -s $fasta_file2, 'primary sequence file has correct size');
+is($full_sz, (-s $fasta_file1) + (-s $fasta_file2), 'full sequence is correct size');
+
+
+done_testing();
