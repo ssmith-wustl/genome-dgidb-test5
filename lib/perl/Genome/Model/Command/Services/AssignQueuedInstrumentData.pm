@@ -468,8 +468,7 @@ sub is_tcga_reference_alignment {
 
     return unless $model->isa('Genome::Model::ReferenceAlignment');
 
-    my @nomenclature = map { $_->nomenclature } ($sample, $sample->attributes);
-    return grep { /^TCGA/i } @nomenclature;
+    return grep {$_->attribute_label eq 'extraction_label' and $_->attribute_value =~ m/^TCGA/} $sample->attributes;
 }
 
 sub load_pses {
@@ -907,7 +906,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         }
 
         #In addition, make a third model for TCGA against another standard ROI
-        if($self->is_tcga_reference_alignment($regular_model)){ #TODO: Determine if this is a TCGA model you want to make this model for
+        if($self->is_tcga_reference_alignment($regular_model)){ 
             my $tcga_cds_model = Genome::Model->create(%model_params);
             unless ( $tcga_cds_model ) {
                 $self->error_message('Failed to create tcga-cds model: ' . Dumper(\%model_params));
