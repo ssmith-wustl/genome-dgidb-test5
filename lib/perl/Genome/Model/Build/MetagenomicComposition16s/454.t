@@ -123,6 +123,8 @@ for my $set_name ( $build->amplicon_set_names, 'none' ) {
 
 # metrics
 is($build->amplicons_attempted, 20, 'amplicons attempted is 20');
+is($build->amplicons_processed, 19, 'amplicons processed is 19');
+is($build->amplicons_processed_success, '0.95', 'amplicons processed success is 0.95');
 is($build->reads_attempted, 20, 'reads attempted is 20');
 is($build->reads_processed, 19, 'reads processed is 19');
 is($build->reads_processed_success, '0.95', 'reads processed success is 0.95');

@@ -9,7 +9,7 @@ BEGIN{
 };
 
 use above "Genome";
-use Test::More tests => 25;
+use Test::More tests => 26;
 
 use_ok('Genome::Model::Tools::DetectVariants2::Result');
 
@@ -51,6 +51,11 @@ isa_ok($result, 'Genome::Model::Tools::DetectVariants2::Result', 'generated resu
 my $output_dir = $command->output_directory;
 is(readlink($output_dir), $result->output_dir, 'created symlink to result');
 
+my $bam_symlink = Genome::Sys->create_temp_file_path;
+ Genome::Sys->create_symlink($bam_input, $bam_symlink);
+is(readlink($bam_symlink), $bam_input, 'created symlink to bam');
+
+$command_params{aligned_reads_input} = $bam_symlink; #should get resolved to canonical path
 $command_params{output_directory} = $test_working_dir . '/test2';
 my $command2 = Genome::Model::Tools::DetectVariants2::Samtools->create(%command_params);
 

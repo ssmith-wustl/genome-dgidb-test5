@@ -259,7 +259,7 @@ sub _get_direct_and_indirect_properties_for_object {
     my @properties = $class->__meta__->properties;
     for my $property (@properties) {
         my $property_name = $property->property_name;
-        my $value = $original_object->{$property_name};
+        my $value = $original_object->$property_name;
         next if @ignore and grep { $property_name eq $_ } @ignore;
         next unless defined $value;
 

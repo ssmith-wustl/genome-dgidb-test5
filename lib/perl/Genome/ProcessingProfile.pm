@@ -277,7 +277,7 @@ sub _validate_name_and_uniqueness {
     my ($existing_name_pp) = $class->get(name => $name);
     if ( $existing_name_pp ) {
         Genome::ProcessingProfile::Command::Describe->execute(
-            processing_profile_id => $existing_name_pp->id,
+            processing_profiles => [ $existing_name_pp ],
         ) or confess "Can't create describe command to show existing processing profile";
         $class->error_message("Processing profile (above) with same name ($name) already exists.");
         return;
@@ -293,7 +293,7 @@ sub _validate_no_existing_processing_profiles_with_idential_params {
     if (@existing_pp) {
         # If we get here we have one that is identical, describe and return undef
         Genome::ProcessingProfile::Command::Describe->execute(
-            processing_profile_id => $existing_pp[0]->id,
+            processing_profiles => [ $existing_pp[0] ],
         ) or confess "Can't execute describe command to show existing processing profile";
         my $qty = scalar @existing_pp;
         my $plural = $qty > 1 ? "s" : "";

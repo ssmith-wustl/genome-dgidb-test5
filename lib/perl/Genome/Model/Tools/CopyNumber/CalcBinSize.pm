@@ -100,7 +100,7 @@ sub execute {
     my $matched_normal = 1;
     $matched_normal = 0 if($no_matched_normal);
 
-    my $tmpFile = $output_dir . "/" . `date +%s%N`;
+    my $tmpFile = "/tmp/" . `date +%s%N`;
     chomp($tmpFile);
     $tmpFile = $tmpFile . ".calcBinSize.R";
     chomp($tmpFile);

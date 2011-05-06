@@ -634,7 +634,7 @@ sub compatible_instrument_data {
 
     return @compatible_instrument_data;
 }
-
+sub assigned_instrument_data { return $_[0]->instrument_data; }
 sub available_instrument_data { return unassigned_instrument_data(@_); }
 sub unassigned_instrument_data {
     my $self = shift;

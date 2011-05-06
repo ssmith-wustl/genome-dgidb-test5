@@ -18,6 +18,8 @@ sub execute {
     my @imported_instrument_data = Genome::InstrumentData::Imported->get(\@default_genotype_seq_id);
     print "Found " . @imported_instrument_data. " instrument data.\n";
 
+    my $count = 0;
+
     for my $organism_sample (@organism_samples){
         my $genome_sample = Genome::Sample->get($organism_sample->id);
         print "No Genome::Sample for organism_sample: ", $organism_sample->id, "\n" and next unless $genome_sample;
@@ -28,10 +30,16 @@ sub execute {
         if($@){
             print "Failed to set default genotype data: " . $organism_sample->default_genotype_seq_id . 
                 " for Genome::Sample: " . $genome_sample->id . " (err: $@)\n";
-        }else{
-            print "Successfully updated Genome::Sample " . $genome_sample->id . "\n";
+            next;
+        }
+        print "Successfully updated Genome::Sample " . $genome_sample->id . "\n";
+        if (++$count % 100 == 0) {
+            print "Committing after $count successful updates\n";
+            UR::Context->commit;
         }
     }
+
+    UR::Context->commit;
 }
 
 1;

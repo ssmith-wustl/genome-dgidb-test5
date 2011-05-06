@@ -164,7 +164,7 @@ sub execute {
     $self->status_message('Created processing profile:');
     if($self->describe) {
         my $describer = Genome::ProcessingProfile::Command::Describe->create(
-            processing_profile_id => $processing_profile->id,
+            processing_profiles => [ $processing_profile] ,
         );
         $describer->execute;
     }

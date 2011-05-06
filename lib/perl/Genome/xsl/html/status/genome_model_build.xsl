@@ -446,6 +446,22 @@
               </td>
             </tr>
 
+            <tr>
+              <td class="name">model subject:
+              </td>
+              <td class="value">
+                <xsl:for-each select="//build/model/aspect[@name='subject']/object">
+                  <xsl:call-template name="object_link_button">
+                    <xsl:with-param name="linktext">
+                      <xsl:value-of select="display_name"/>
+                    </xsl:with-param>
+                    <xsl:with-param name="icon" select="'sm-icon-extlink'" />
+                  </xsl:call-template>
+                </xsl:for-each>
+
+              </td>
+            </tr>
+
           </tbody>
         </table>
       </div>

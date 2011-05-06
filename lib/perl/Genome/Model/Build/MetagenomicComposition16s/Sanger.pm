@@ -41,7 +41,7 @@ sub prepare_instrument_data {
 
     my %assembler_params = $self->processing_profile->assembler_params_as_hash;
 
-    my ($attempted, $reads_attempted, $reads_processed) = (qw/ 0 0 0 /);
+    my ($attempted, $processed, $reads_attempted, $reads_processed) = (qw/ 0 0 0 /);
     for my $name ( @amplicon_set_names ) {
         my $amplicon_set = $self->amplicon_set_for_name($name);
         next if not $amplicon_set; # ok
@@ -64,11 +64,14 @@ sub prepare_instrument_data {
             $self->load_seq_for_amplicon($amplicon)
                 or next; # ok
             $writer->write([$amplicon->{seq}]);
+            $processed++;
             $reads_processed += @{$amplicon->{reads_processed}};
         }
     }
 
     $self->amplicons_attempted($attempted);
+    $self->amplicons_processed($processed);
+    $self->amplicons_processed_success( $attempted > 0 ?  sprintf('%.2f', $processed / $attempted) : 0 );
     $self->reads_attempted($reads_attempted);
     $self->reads_processed($reads_processed);
     $self->reads_processed_success( $reads_attempted > 0 ?  sprintf('%.2f', $reads_processed / $reads_attempted) : 0 );
