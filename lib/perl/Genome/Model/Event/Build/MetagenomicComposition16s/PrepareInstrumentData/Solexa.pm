@@ -17,8 +17,8 @@ sub bsub {
 sub execute {
     my $self = shift;
 
-    unless ( $self->build->filter_reads_by_primers ) {
-        $self->error_message( "Failed to filter reads by primers" );
+    unless ( $self->build->prepare_instrument_data ) {
+        $self->error_message('Failed to prepare instrument data for '.$self->build->description);
         return;
     }
 
@@ -26,3 +26,4 @@ sub execute {
 }
 
 1;
+

@@ -187,6 +187,8 @@ ok(-s $build->processed_reads_qual_file, 'Created the processed reads qual file'
 
 # metrics
 is($build->amplicons_attempted, 5, 'amplicons attempted is 5');
+is($build->amplicons_processed, 4, 'amplicons processed is 4');
+is($build->amplicons_processed_success, '0.80', 'amplicons processed success is 0.80');
 is($build->reads_attempted, 30, 'reads attempted is 30');
 is($build->reads_processed, 17, 'reads processed is 17');
 is($build->reads_processed_success, '0.57', 'reads processed success is 0.57');
