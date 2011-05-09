@@ -64,7 +64,9 @@ sub _verify_build_and_set_paths {
             $gold_snp_build->__display_name__;
     }
 
-    $self->_gold_snp_file($gold_snp_build->snvs_bed("v2"));
+    my $gold_snp_file = $self->create_target_region_genotype_file($gold_snp_build->snvs_bed('v2'));
+    $self->_gold_snp_file($gold_snp_file);
+
     if (!defined $self->_gold_snp_file()) {
         die "Failed to get gold_snp file from gold_snp build " . $gold_snp_build->__display_name__;
     }
@@ -134,6 +136,35 @@ sub _handle_metrics {
     $self->_create_metrics($filtered, "filtered");
 }
 
+sub _create_target_region_genotype_file {
+    my $self = shift;
+    my $gold_snp_file = shift;
+    return $gold_snp_file unless $self->build->model->is_capture;
+
+    unless ($self->build->can('region_of_interest_set_bed_file') and defined $self->build->region_of_interest_set_bed_file) {
+        return $gold_snp_file;
+    }
+    my $roi_bed_file = $self->build->region_of_interest_set_bed_file;
+
+    my $roi_genotype_file = $self->build->region_of_interest_genotype_file;
+    if (-e $roi_genotype_file) {
+        return $roi_genotype_file;
+    }
+
+    my $intersect_rv = eval {
+        Genome::Model::Tools::Joinx::Intersect->execute(
+            input_file_a => $gold_snp_file,
+            input_file_b => $roi_bed_file,
+            output_file => $roi_genotype_file,
+        );
+    };
+    if ($intersect_rv and not $@ and -e $roi_genotype_file) {
+        return $roi_genotype_file;
+    }
+
+    return $gold_snp_file;
+}
+
 sub execute {
     my $self = shift;
 
@@ -146,6 +177,7 @@ sub execute {
             $out_filt = join('/', $self->output_dir, basename($out_filt));
             $out_unfilt = join('/', $self->output_dir, basename($out_unfilt));
         }
+
         $self->_gen_concordance($self->_gold_snp_file, $self->_snvs_bed, $out_unfilt);
         $self->_gen_concordance($self->_gold_snp_file, $self->_filtered_snvs_bed, $out_filt);
         $self->_handle_metrics($out_unfilt, $out_filt);
