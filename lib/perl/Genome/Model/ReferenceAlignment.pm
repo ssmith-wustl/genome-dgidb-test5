@@ -362,6 +362,14 @@ sub is_eliminate_all_duplicates {
     }
 }
 
+sub is_capture {
+    my $self = shift;
+    if (defined $self->target_region_set_name) {
+        return 1;
+    }
+    return 0;
+}
+
 sub is_lane_qc {
     my $self = shift;
     my $pp = $self->processing_profile;
