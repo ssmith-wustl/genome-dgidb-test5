@@ -418,7 +418,7 @@ sub _link_to_result {
     my $previous_result = $self->previous_result;
     my @users = $previous_result->users;
     unless(grep($_->user eq $result, @users)) {
-        $previous_result->add_user($result);
+        $previous_result->add_user(user => $result, label => 'uses');
     }
 
     return 1;
