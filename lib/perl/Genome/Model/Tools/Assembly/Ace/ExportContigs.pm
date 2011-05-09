@@ -11,12 +11,7 @@ use Data::Dumper;
 class Genome::Model::Tools::Assembly::Ace::ExportContigs {
     is => 'Genome::Model::Tools::Assembly::Ace',
     has => [
-	ace => {
-	    type => 'Text',
-	    is_optional => 1,
-	    doc => 'ace file to export contigs from',
-	},
-	acefile_names => { #TODO remove this
+	ace_files => {
 	    type => 'Text',
 	    is_optional => 1,
 	    is_many => 1,
@@ -27,8 +22,15 @@ class Genome::Model::Tools::Assembly::Ace::ExportContigs {
 	    is_optional => 1,
 	    doc => 'file of list of ace files to export contigs from',
 	},
+        contigs => {
+            type => 'Text',
+            is_optional => 1,
+            is_many => 1,
+            doc => 'Comma separated list of contigs to export',
+        },
 	contigs_list => {
 	    type => 'Text',
+            is_optional => 1,
 	    doc => 'file of list of contig names to export',
 	},
 	merge => {
@@ -41,11 +43,6 @@ class Genome::Model::Tools::Assembly::Ace::ExportContigs {
 	    is_optional => 1,
 	    doc => 'directory where ace files are located',
 	},
-	ace_out => {
-	    type => 'Text',
-	    is_optional => 1,
-	    doc => 'allow user to define ace file name if input is a single ace',
-	},
     ],
 };
 
@@ -55,9 +52,8 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-gmt assembly ace export-contigs --ace Felis_catus-3.0.pcap.ace --contigs-list contigs.txt
+gmt assembly ace export-contigs --ace-files Felis_catus-3.0.pcap.ace --contigs Contig2,Contig5.8
 gmt assembly ace export-contigs --ace-list acefiles.txt --contigs-list contigs.txt --merge
-gmt assembly ace export-contigs --acefile-names file.ace.0,file.ace.2,file.ace.3 --contigs-list contigs.txt --directory /gscmnt/999/assembly/my_assembly --ace-out awollam.exported.ace
 EOS
 }
 
@@ -85,11 +81,16 @@ sub execute {
     }
 
     $self->status_message("Validating contigs list");
+    unless ( $self->contigs_list or $self->contigs ) {
+        $self->error_message("You must supply a contig name or a list of contigs");
+        return;
+    }
     my $contig_names = {};
     unless (($contig_names) = $self->get_valid_contigs_from_list()) {
 	$self->error_message("Failed to validate contigs list");
 	return;
     }
+
     $self->status_message("Filtering contigs in ace file(s)");
     my $new_aces; #array ref
     unless (($new_aces) = $self->filter_ace_files($acefiles, $contig_names, 'export')) {
