@@ -19,6 +19,7 @@ use Statistics::R;
 use File::Basename;
 use warnings;
 require Genome::Sys;
+use FileHandle;
 
 class Genome::Model::Tools::CopyNumber::PlotSegments {
     is => 'Command',
@@ -141,7 +142,7 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	plot_height => {
 	    is => 'Float',
 	    is_optional => 1,
-	    default => 4, 
+	    default => 3, 
 	    doc => 'height of each plot',
 	},
 
@@ -193,11 +194,11 @@ sub help_detail {
 
 #########################################################################
 sub convertSegs{
-    my ($segfiles) = @_;    
+    my ($self, $segfiles) = @_;    
     my @newfiles;
     my @infiles = split(",",$segfiles);
     foreach my $file (@infiles){
-	my $cbsfile = cnvHmmToCbs($file);
+	my $cbsfile = cnvHmmToCbs($file,$self);
 	push(@newfiles,$cbsfile);
     }
 
@@ -205,19 +206,31 @@ sub convertSegs{
 }
 
 
+#-----------------------------------------------------
+#take the log with a different base
+#(log2 = log_base(2,values)
 sub log_base { 
     my ($base, $value) = @_; 
     return log($value)/log($base); 
 }
 
 
+#-----------------------------------------------------
+#convert cnvhmm output to a format we can use here
 sub cnvHmmToCbs{
-    my ($file) = @_;
-    my $newfile = "/tmp/" . basename($file) . `date +%s%N`;    
-    chomp($newfile);
-    my $inFh = IO::File->new( $file ) || die "can't open file: $file\n";
+    my ($file,$self) = @_;
+ 
+    #create a tmp file for this output
+    my ($tfh,$newfile) = Genome::Sys->create_temp_file;	
+    unless($tfh) {
+	$self->error_message("Unable to create temporary file $!");
+	die;
+    }
     open(OUTFILE,">$newfile") || die "can't open temp segs file for writing ($newfile)\n";
 
+
+    #read and convert the cnvhmm output
+    my $inFh = IO::File->new( $file ) || die "can't open file\n";
     my $inCoords = 0;
     while( my $line = $inFh->getline )
     {
@@ -271,30 +284,39 @@ sub execute {
 
     my @infiles;
     if ($cnvhmm_input){
-	$segment_files = convertSegs($segment_files);
+	$segment_files = convertSegs($self, $segment_files);
 	$log_input = 1;
     } 
 
     @infiles = split(",",$segment_files);
+    
+    #set up a temp file for the R commands (unless one is specified)
+    my $temp_path;
+    my $tfh;
+    my $outfile = "";
 
-    #set up a temp file for the R commands (todo use real tmp methods)
-    unless (defined($rcommands_file)){
-	$rcommands_file = "/tmp/" . `date +%s%N`;
-	chomp($rcommands_file);
-	$rcommands_file = $rcommands_file . ".R";
+    if (defined($rcommands_file)){      
+	$outfile = $rcommands_file;
+    } else {
+    	my ($tfh,$tfile) = Genome::Sys->create_temp_file;	
+    	unless($tfh) {
+    	    $self->error_message("Unable to create temporary file $!");
+    	    die;
+    	}
+	$outfile=$tfile;
     }
+    
 
     #open the R file
-    open(R_COMMANDS,">$rcommands_file") || die "can't open $rcommands_file for writing\n";
+    open(R_COMMANDS,">$outfile") || die "can't open $outfile for writing\n";
 
-    #todo - what's an easier way to source this R file?
+    #todo - what's an easier way to source this R file out of the user's git path (or stable)?
     print R_COMMANDS "source(\"~cmiller/gscCode/genome/lib/perl/Genome/Model/Tools/CopyNumber/PlotSegments.R\")\n";
 
 
     #set up pdf parameters
     my $docwidth = $plot_width;
     my $docheight = $plot_height * @infiles;
-    print "$docwidth x $docheight\n";
     print R_COMMANDS "pdf(file=\"" . $output_pdf . "\",width=" .$docwidth .",height=" . $docheight . ")\n";
 
 
@@ -373,7 +395,7 @@ sub execute {
     close R_COMMANDS;
 
     #now run the R command
-    my $cmd = "R --vanilla --slave \< $rcommands_file";
+    my $cmd = "R --vanilla --slave \< $outfile";
     my $return = Genome::Sys->shellcmd(
 	cmd => "$cmd",
         );
