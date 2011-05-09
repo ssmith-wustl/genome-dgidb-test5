@@ -35,7 +35,7 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	segment_files => {
 	    is => 'String',
 	    is_optional => 0,
-	    doc => 'comma-seperated list of files containing the segments to be plotted. Expects CBS-lite output, with columns: chr, start, stop, #bins, copyNumber',
+	    doc => 'comma-seperated list of files containing the segments to be plotted. Expects CBS output, (columns: chr, start, stop, #bins, copyNumber) unless the --cnvhmm_input flag is set, in which case it will take the output of cnvHMM directly',
 	},
 
 	gain_threshold => {
