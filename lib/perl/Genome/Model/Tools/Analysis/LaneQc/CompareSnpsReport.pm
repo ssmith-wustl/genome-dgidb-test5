@@ -8,6 +8,7 @@ class Genome::Model::Tools::Analysis::LaneQc::CompareSnpsReport {
         instrument_data => {
             is => 'Genome::InstrumentData',
             is_many => 1,
+            shell_args_position => 1,
             doc => 'Instrument data for which you want to see the compare SNPs lane QC. Resolved by Genome::Command::Base.',
         },
     ],
