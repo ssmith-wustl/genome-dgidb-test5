@@ -52,6 +52,8 @@ sub execute {
             die 'header mismatch: ' . $compare_snps_file . "\n";
         }
 
+        my $instrument_data_name = $instrument_data->__display_name__;
+        $compare_snps_values =~ s/^\S+/$instrument_data_name/;
         print $compare_snps_values . "\n";
     }
 
