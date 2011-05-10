@@ -39,6 +39,9 @@ sub get_file_counts {
     my $line_counts;
     
     my $can_get_files = $self->build->can('somatic_workflow_input');
+    if($can_get_files) {
+        $self->build->newest_workflow_instance->ordered_child_instances;
+    }
 
     for my $property_name ($self->files_to_report) {
         
