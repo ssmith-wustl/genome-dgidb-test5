@@ -27,6 +27,15 @@ class Genome::Model::View::Status::Xml {
                 'creation_date',
                 'user_name',
                 {
+                    name => 'processing_profile',
+                    aspects => [
+                        'id', 'name', 'type_name', 'subclass_name',
+                    ],
+                    perspective => 'default',
+                    toolkit => 'xml',
+                    subject_class_name => 'Genome::ProcessingProfile',
+                },
+                {
                     name => 'builds',
                     aspects => [
                         'id', 'data_directory', 'status', 'date_scheduled', 'date_completed',
