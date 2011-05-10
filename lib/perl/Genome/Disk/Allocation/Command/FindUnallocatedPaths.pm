@@ -43,9 +43,7 @@ sub execute{
     }
     $self->_allocated_paths(\%allocated_paths);
     
-    $DB::single = 1;
     my ($allocated_subpaths, @unallocated_paths) = $self->find_unallocated_paths($mount_path);
-    $DB::single = 1;
     $self->status_message("Unallocated paths: \n".join("\n", @unallocated_paths));
     $self->_unallocated_paths(\@unallocated_paths);
     return 1;
@@ -57,7 +55,10 @@ sub find_unallocated_paths{
     my @unallocated_children;
     my $has_allocated_children = 0;
     if ($self->_allocated_paths->{$path}){
-        return 1;
+        return 1, ;
+    }
+    if (-l $path){
+        return 0, $path;
     }
     if (-d $path){
         my $dh = IO::Dir->new($path);
@@ -65,7 +66,7 @@ sub find_unallocated_paths{
             die $self->error_message("Could not open directory handle for $path.");
         }
         while(my $subpath = $dh->read()){
-            next if $subpath =~ /^\.+$/;
+            next if $subpath =~ /^\.\.?$/;
             my ($allocated_subpaths, @unallocated_subpaths) = $self->find_unallocated_paths("$path/$subpath");
             if($allocated_subpaths) {
                 $has_allocated_children = 1;
@@ -80,5 +81,4 @@ sub find_unallocated_paths{
     }else{
         return 0, $path;
     }
-    return;
 }
