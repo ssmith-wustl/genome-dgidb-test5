@@ -1286,7 +1286,7 @@ sub add_processing_profiles_to_pses{
             }
             elsif ($instrument_data_type =~ /solexa/i) {
                 if ($taxon->species_latin_name =~ /homo sapiens/i) {
-                    if ($self->_is_st_jude($pse)) {
+                    if ($self->_is_pcgp($pse)) {
                         my $individual = $organism_sample->patient;
                         my $pp_id = '2586039';
                         my $common_name = $individual ? $individual->common_name : '';
@@ -1482,7 +1482,7 @@ sub _pipeline_prettyprint {
     return join(' <> ', sort keys %pipelines);
 }
 
-sub _is_st_jude {
+sub _is_pcgp {
     my $self = shift;
     my $pse = shift;
 
