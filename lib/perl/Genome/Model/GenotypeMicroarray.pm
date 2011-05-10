@@ -70,17 +70,20 @@ sub _additional_parts_for_default_name {
     return ( $instrument_data->import_source_name, $instrument_data->sequencing_platform, $self->refseq_name );
 }
 
-sub dependent_ref_align {
+sub dependent_cron_ref_align {
     my $self = shift;
-    return Genome::Model::ReferenceAlignment->get(subject_id => $self->subject_id);
+    return Genome::Model::ReferenceAlignment->get(
+        subject_id => $self->subject_id,
+        auto_assign_inst_data => 1,
+    );
 }
 
-sub request_builds_for_dependent_ref_align {
+sub request_builds_for_dependent_cron_ref_align {
     my $self = shift;
     my $sample = $self->subject;
     return 1 unless $sample->class eq 'Genome::Sample';
 
-    for my $ref_align ($self->dependent_ref_align) {
+    for my $ref_align ($self->dependent_cron_ref_align) {
         $ref_align->build_requested(1);
     }
     return 1;
