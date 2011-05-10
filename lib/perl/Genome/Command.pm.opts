@@ -53,6 +53,13 @@ $Genome::Command::OPTS_SPEC = [
         'help!',
         undef
       ],
+      '>find-unallocated-paths',
+      [
+        'disk-volume=s',
+        undef,
+        'help!',
+        undef
+      ],
       '>list',
       [
         'show=s',
@@ -3585,6 +3592,18 @@ $Genome::Command::OPTS_SPEC = [
         undef,
         'value=s',
         'files',
+        'help!',
+        undef
+      ],
+      '>auto-assign-instrument-data',
+      [
+        'models=s@',
+        undef,
+        'value=s',
+        [
+          '0',
+          '1'
+        ],
         'help!',
         undef
       ],
