@@ -35,8 +35,8 @@ sub execute {
 
     #my $version = gmt:bed:convert::version();  todo, something like this instead of hardcoding
     my $version = 2;
-    my $tiering_version = 2;
-    
+    my $tiering_version = $build->tiering_version;
+    $self->status_message("Using tiering_bed_files version ".$tiering_version);
     my $tier_file_location = $build->annotation_build->tiering_bed_files_by_version($tiering_version);
 
     unless (-d $tier_file_location){
