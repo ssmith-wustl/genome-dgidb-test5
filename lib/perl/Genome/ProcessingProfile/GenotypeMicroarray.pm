@@ -4,6 +4,14 @@ use Genome;
 
 class Genome::ProcessingProfile::GenotypeMicroarray {
     is => 'Genome::ProcessingProfile',
+    has => [
+        job_dispatch => {
+            is_constant => 1,
+            is_class_wide => 1,
+            value => 'inline',
+            doc => 'lsf queue to submit jobs or \'inline\' to run them in the launcher'
+        },
+    ],
     has_param => [
         input_format => {
             doc => 'file format, defaults to "wugc", which is currently the only format supported',
