@@ -38,13 +38,12 @@ my $tumor_bam  = $test_dir . '/tumor.bam';
 my $cfg_file   = $test_dir . '/breakdancer_config';
 
 my $chromosome = 22;
-my $expected_subdir = "expected.1";
-my $expected_output = join "/", ($test_dir, $expected_subdir, "svs.hq.$chromosome");
+my $expected_output = join "/", ($test_dir, "svs.hq.$chromosome".'_current');
 my $test_out   = $test_working_dir . '/' . $chromosome . '/svs.hq.'.$chromosome;
 
 my $refbuild_id = 101947881;
 
-my $version = '1.1';
+my $version = '1.2';
 note("use breakdancer version: $version");
 
 my $command = Genome::Model::Tools::DetectVariants2::Breakdancer->create(
@@ -52,7 +51,7 @@ my $command = Genome::Model::Tools::DetectVariants2::Breakdancer->create(
     aligned_reads_input => $tumor_bam,
     control_aligned_reads_input => $normal_bam,
     version => $version,
-    params  => '-g -h:-q 10 -o',
+    params  => '-g -h:-a -q 10 -o',  #breakdancer 1.2 and beyond need turn on "-a" flag to output lib info
     chromosome => $chromosome,
     output_directory => $test_working_dir,
     config_file => $cfg_file,
@@ -61,5 +60,3 @@ ok($command, 'Created `gmt detect-variants2 breakdancer` command');
 ok($command->execute, 'Executed `gmt detect-variants2 breakdancer` command');
 
 is(compare($expected_output, $test_out), 0, "svs.hq output as expected");
-
-print "comparing $expected_output and $test_out\n";

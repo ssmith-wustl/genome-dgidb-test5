@@ -63,7 +63,7 @@ sub execute {
         my @fields = split /\t/, $line;
         my ($chr,$start,$end,$ref,$var,$type) = @fields[0..5];
         next if $type =~ /NP/; #skip DNP and SNP
-        my $size = $ref eq '0' ? length $var : length $ref;
+        my $size = $ref =~ /[0-]/ ? length $var : length $ref;
         next if($size < $self->minimum_size);
 
         print $ofh join("\t",$chr,$start,"+",$chr,$end,'+',$type,$size),"\n";
