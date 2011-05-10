@@ -1072,7 +1072,7 @@ sub success {
     $self->perform_post_success_actions;
 
     if ($self->model->class =~ /GenotypeMicroarray/) {
-        $self->model->request_builds_for_dependent_ref_align;
+        $self->model->request_builds_for_dependent_cron_ref_align;
     }
 
     # FIXME Don't know if this should go here, but then we would have to call success and abandon through the model
