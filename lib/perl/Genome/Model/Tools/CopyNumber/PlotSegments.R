@@ -51,6 +51,16 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL,
   }
 
 
+  ##validate that we have entrypoints for all of our chromosomes
+  chrnames = names(table(segs$V1))
+  for(i in 1:length(chrnames)){    
+    #raise an error if 
+    if(length(which(entrypoints$chr==chrnames[i])) < 1){
+      cat("\nERROR - no entrypoint found for chromosome ",chrnames[i]," found in segs file\n")
+      cat("maybe you meant to use the male entrypoints?\n")
+      q(save="no")
+    }
+  }
 
 
   ## adjust the plot boundaries and the
@@ -94,7 +104,7 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL,
       xlim=c(1,sum(entrypoints$length))
     }else{
       a = segs[which(((segs$V3 >= xlim[1]) & (segs$V3 <= xlim[2])) | ((segs$V2 >= xlim[1]) & (segs$V2 <= xlim[2]))),]
-    }
+    }    
     
     ## outline the plot
     plot(0, 0, xlim=xlim, ylim=c(ymin,ymax), pch=".",
