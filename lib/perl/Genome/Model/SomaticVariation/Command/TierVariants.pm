@@ -24,7 +24,7 @@ class Genome::Model::SomaticVariation::Command::TierVariants{
     ],
 };
 
-sub execute{
+sub execute {
     my $self = shift;
     my $build = $self->build;
     unless ($build){
@@ -33,10 +33,11 @@ sub execute{
 
     $self->status_message("executing tier variants step on snvs and indels");
 
-    my $version = 2;
     #my $version = gmt:bed:convert::version();  todo, something like this instead of hardcoding
-    
-    my $tier_file_location = $build->annotation_build->tier_file_directory;
+    my $version = 2;
+    my $tiering_version = $build->tiering_version;
+    $self->status_message("Using tiering_bed_files version ".$tiering_version);
+    my $tier_file_location = $build->annotation_build->tiering_bed_files_by_version($tiering_version);
 
     unless (-d $tier_file_location){
         die $self->error_message("Couldn't find tiering bed files from annotation build");
@@ -67,7 +68,7 @@ sub execute{
 }
 
 
-sub run_fast_tier{
+sub run_fast_tier {
     my $self = shift;
     my ($name_set, $version, $format) =  @_;
 
@@ -111,5 +112,6 @@ sub run_fast_tier{
         die $self->error_message("SNV fast tier output not found with params:\n" . (%params?(Data::Dumper::Dumper(\%params)):''));
     }
 }
+
 1;
 

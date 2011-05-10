@@ -25,6 +25,11 @@ class Genome::Model::SomaticVariation {
             is => 'Text',
             via => 'processing_profile',
         },
+        tiering_version => {
+            is => 'Text',
+            via => 'processing_profile',
+            is_optional => 1,
+        },
         tumor_model_id => {
             is => 'Text',
             via => 'inputs',
