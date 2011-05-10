@@ -1292,7 +1292,7 @@ sub add_processing_profiles_to_pses{
                         my $common_name = $individual ? $individual->common_name : '';
 
                         push @processing_profile_ids_to_add, $pp_id;
-                        $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'NCBI-human-build36';
+                        $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
                     } 
                     else {
                         my $pp_id = '2580856';
