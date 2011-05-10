@@ -62,11 +62,12 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL,
     }
   }
 
+  ## match up the type of plot so that the values
+  ## and the axis are scaled the same way (log or abs)
 
-  ## adjust the plot boundaries and the
-  ## scores if logPlot is true
   ymin=0
   rectBottom = 2
+
   if(logPlot==TRUE){
     if (logInput == FALSE){
       segs[,5] = log2(segs[,5]/2)
@@ -76,6 +77,12 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL,
     lossThresh=log2(lossThresh/2)
     rectBottom = 0
   }
+  if(logPlot==FALSE){
+    if (logInput == TRUE){
+      segs[,5] = (2**segs[,5])*2
+    }
+  }
+
 
   
   ## function to expand the size of features
