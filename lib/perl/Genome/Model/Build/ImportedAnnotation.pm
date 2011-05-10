@@ -63,36 +63,36 @@ class Genome::Model::Build::ImportedAnnotation {
         },
     ],
     has_optional => [
-       tier_file_directory => {
+        tier_file_directory => {
             is => 'Path',
             calculate_from => ['data_directory'],
             calculate => q{return "$data_directory/annotation_data/tiering_bed_files";},
-       },
-       tier1_bed => {
+        },
+        tier1_bed => {
             is => 'Path',
             calculate_from => ['tier_file_directory'],
             calculate => q{return "$tier_file_directory/tier1.bed";},
-       },
-       tier2_bed => {
+        },
+        tier2_bed => {
             is => 'Path',
             calculate_from => ['tier_file_directory'],
             calculate => q{return "$tier_file_directory/tier2.bed";},
-       },
-       tier3_bed => {
+        },
+        tier3_bed => {
             is => 'Path',
             calculate_from => ['tier_file_directory'],
             calculate => q{return "$tier_file_directory/tier3.bed";},
-       },
-       tier4_bed => {
+        },
+        tier4_bed => {
             is => 'Path',
             calculate_from => ['tier_file_directory'],
             calculate => q{return "$tier_file_directory/tier4.bed";},
-       },
-       ucsc_conservation_directory => {
+        },
+        ucsc_conservation_directory => {
             is => 'Path',
             calculate_from => ['data_directory'],
             calculate => q{return "$data_directory/annotation_data/ucsc_conservation";},
-       }
+        }
     ],
 };
 
@@ -292,6 +292,15 @@ sub rRNA_MT_file {
         return $file_name;
     }
     return;
+}
+
+sub tiering_bed_files_by_version {
+    my $self = shift;
+    my $version = shift;
+    unless(defined($version)){
+        die $self->error_message("You must specify a version if you wish to obtain tiering_bed_files by version!");
+    }
+    return $self->data_directory."/annotation_data/tiering_bed_files_v".$version;
 }
 
 package Genome::Model::ImportedAnnotation::Iterator;

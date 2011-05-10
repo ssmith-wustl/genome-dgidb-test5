@@ -39,7 +39,7 @@ sub execute {
     # Default genotype models currently relying on the sample and those that will be after the sample is updated
     # both need to be rebuilt. 
     for my $genotype_model ($sample->default_genotype_models) {
-        $genotype_model->request_builds_for_dependent_ref_align;
+        $genotype_model->request_builds_for_dependent_cron_ref_align;
     }
 
     my $rv = eval {
