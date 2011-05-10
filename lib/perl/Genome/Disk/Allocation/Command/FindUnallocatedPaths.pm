@@ -16,7 +16,7 @@ class Genome::Disk::Allocation::Command::FindUnallocatedPaths{
     ],
     has_optional => [
         _allocated_paths => {
-            is => 'HashRef',
+            is => 'ArrayRef',
         },
         _unallocated_paths => {
             is => 'Text',
@@ -37,12 +37,12 @@ sub execute{
         $self->warning_message("No allocations on $mount_path.");
         return;
     }
-    my %allocated_paths;
+    my @allocated_paths;
     for my $allocation (@allocations) {
-        $allocated_paths{$allocation->absolute_path} = 1;
+        push @allocated_paths, $allocation->absolute_path;
     }
-    $self->_allocated_paths(\%allocated_paths);
-    
+    $self->_allocated_paths(\@allocated_paths);
+    $DB::single=1;
     my ($allocated_subpaths, @unallocated_paths) = $self->find_unallocated_paths($mount_path);
     $self->status_message("Unallocated paths: \n".join("\n", @unallocated_paths));
     $self->_unallocated_paths(\@unallocated_paths);
@@ -52,11 +52,24 @@ sub execute{
 sub find_unallocated_paths{
 
     my ($self, $path) = @_;
+    my $relevant = 0;
     my @unallocated_children;
     my $has_allocated_children = 0;
-    if ($self->_allocated_paths->{$path}){
-        return 1, ;
+    my $allocated_paths_ref = $self->_allocated_paths;
+    foreach my $allocation (@$allocated_paths_ref){
+        if($path eq $allocation){
+            return 1;
+        }
     }
+    foreach my $allocation (@$allocated_paths_ref){
+        if($allocation =~ /^\Q$path/){
+            $relevant = 1;
+        }
+    }
+    unless($relevant){
+        return 0, $path
+    }
+ 
     if (-l $path){
         return 0, $path;
     }
