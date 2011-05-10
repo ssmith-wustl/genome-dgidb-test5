@@ -413,8 +413,8 @@ sub find_or_create_somatic_variation_models{
             $somatic_params{previously_discovered_variations_build} = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($model->reference_sequence_build);
             $self->error_message('Failed to get previously_discovered_variations_build for somatic variation model with model: ' . $model->name) and next unless $somatic_params{previously_discovered_variations_build};
 
-            my $capture_somatic_processing_profile_id = '2589271'; #april 11 somatic-variation exome
-            my $somatic_processing_profile_id = '2589272'; #april 11 somatic-variation wgs
+            my $capture_somatic_processing_profile_id = '2595664'; #may 2011 somatic-variation exome
+            my $somatic_processing_profile_id = '2594193'; #may 2011 somatic-variation wgs
             my $capture_target = eval{$model->target_region_set_name}; 
             if($capture_target){
                 $somatic_params{processing_profile_id} = $capture_somatic_processing_profile_id;
@@ -468,8 +468,7 @@ sub is_tcga_reference_alignment {
 
     return unless $model->isa('Genome::Model::ReferenceAlignment');
 
-    my @nomenclature = map { $_->nomenclature } ($sample, $sample->attributes);
-    return grep { /^TCGA/i } @nomenclature;
+    return grep {$_->attribute_label eq 'extraction_label' and $_->attribute_value =~ m/^TCGA/} $sample->attributes;
 }
 
 sub load_pses {
@@ -907,7 +906,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         }
 
         #In addition, make a third model for TCGA against another standard ROI
-        if($self->is_tcga_reference_alignment($regular_model)){ #TODO: Determine if this is a TCGA model you want to make this model for
+        if($self->is_tcga_reference_alignment($regular_model)){ 
             my $tcga_cds_model = Genome::Model->create(%model_params);
             unless ( $tcga_cds_model ) {
                 $self->error_message('Failed to create tcga-cds model: ' . Dumper(\%model_params));
@@ -1287,13 +1286,13 @@ sub add_processing_profiles_to_pses{
             }
             elsif ($instrument_data_type =~ /solexa/i) {
                 if ($taxon->species_latin_name =~ /homo sapiens/i) {
-                    if ($self->_is_st_jude($pse)) {
+                    if ($self->_is_pcgp($pse)) {
                         my $individual = $organism_sample->patient;
                         my $pp_id = '2586039';
                         my $common_name = $individual ? $individual->common_name : '';
 
                         push @processing_profile_ids_to_add, $pp_id;
-                        $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'NCBI-human-build36';
+                        $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
                     } 
                     else {
                         my $pp_id = '2580856';
@@ -1483,7 +1482,7 @@ sub _pipeline_prettyprint {
     return join(' <> ', sort keys %pipelines);
 }
 
-sub _is_st_jude {
+sub _is_pcgp {
     my $self = shift;
     my $pse = shift;
 

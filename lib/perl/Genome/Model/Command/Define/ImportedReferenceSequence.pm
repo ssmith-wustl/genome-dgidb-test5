@@ -152,6 +152,10 @@ sub execute {
         return;
     }
 
+    if (defined $self->append_to and not defined $self->derived_from) {
+        $self->derived_from($self->append_to);
+    }
+
     # * Verify that species name matches a taxon
     my $taxon;
     if(defined($self->species_name)) {

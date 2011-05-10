@@ -9,7 +9,7 @@ BEGIN{
 };
 
 use above "Genome";
-use Test::More tests => 21;
+use Test::More tests => 24;
 
 use_ok('Genome::Model::Tools::DetectVariants2::Result::Filter');
 
@@ -68,6 +68,14 @@ $filter_command2->dump_status_messages(1);
 ok($filter_command2->execute, 'executed second snp-filter filter');
 my $filter_result2 = $filter_command2->_result;
 is($filter_result2, $filter_result, 'got back same result');
+
+my $filter_command2a = Genome::Model::Tools::DetectVariants2::Filter::SnpFilter->create(%filter_params);
+isa_ok($filter_command2a, 'Genome::Model::Tools::DetectVariants2::Filter::SnpFilter', 'created snp-filter filter to test shortcutting to same directory');
+$filter_command2a->dump_status_messages(1);
+ok($filter_command2a->execute, 'executed snp-filter filter to test shortcutting to same directory');
+my $filter_result2a = $filter_command2->_result;
+is($filter_result2a, $filter_result, 'got back same result');
+
 
 $filter_params{output_directory} = $test_working_dir . '/test/filter1/filter1a';
 $filter_params{previous_result_id} = $filter_result->id;

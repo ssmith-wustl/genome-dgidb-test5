@@ -444,19 +444,23 @@ sub fasta_and_qual_writer_for_type_and_set_name {
 sub orient_amplicons {
     my $self = shift;
 
-    my $amplicons_processed = $self->amplicons_processed;
-    if ( not defined $amplicons_processed ) {
-        $self->error_message('Cannot orient apmplicons because "amplicon processed" is not set on build '.$self->description);
+    $self->status_message('Orient amplicons...');
+
+    my $amplicons_classified = $self->amplicons_classified;
+    if ( not defined $amplicons_classified ) {
+        $self->error_message('Cannot orient apmplicons because "amplicons classified" metric is not set for '.$self->description);
         return;
     }
 
-    if ( $amplicons_processed == 0 ) {
+    if ( $amplicons_classified == 0 ) {
+        $self->status_message("No amplicons were successfully classified, skipping orient.");
         return 1;
     }
 
-    my @amplicon_sets = $self->amplicon_sets
-        or return;
+    my @amplicon_sets = $self->amplicon_sets;
+    return if not @amplicon_sets;
 
+    my $no_classification = 0;
     for my $amplicon_set ( @amplicon_sets ) {
         my $writer = $self->fasta_and_qual_writer_for_type_and_set_name('oriented', $amplicon_set->name)
             or return;
@@ -466,7 +470,7 @@ sub orient_amplicons {
             next if not $seq; #OK - for now...
 
             if ( not defined $amplicon->{classification} ) {
-                $self->warning_message('No classification for '.$amplicon->{name});
+                $no_classification++;
                 next;
             }
 
@@ -478,6 +482,13 @@ sub orient_amplicons {
             $writer->write([$seq]);
         }
     }
+
+    my $classification_error = $self->amplicons_classification_error;
+    if ( $no_classification != $classification_error ) {
+        $self->error_message("Found $no_classification amplicons without classifications, but $classification_error amplicons failed to classify.");
+    }
+
+    $self->status_message('Orient amplicons...OK');
 
     return 1;
 }
@@ -509,11 +520,23 @@ sub classify_amplicons {
    
     $self->status_message('Classify amplicons...');
 
-    my @amplicon_set_names = $self->amplicon_set_names;
-    Carp::confess('No amplicon set names for '.$self->description) if not @amplicon_set_names; # bad
+    my $attempted = $self->amplicons_attempted;
+    if ( not defined $attempted ) {
+        $self->error_message('No value for amplicons attempted set. Cannot classify.');
+        return;
+    }
 
-    my $classifier;
+    my @amplicon_set_names = $self->amplicon_set_names;
+    if ( not @amplicon_set_names ) {
+        $self->error_message('No amplicon set names for '.$self->description);
+        return;
+    }
+
+
     my %classifier_params = $self->processing_profile->classifier_params_as_hash;
+    $self->status_message('Classifier: '.$self->classifier);
+    $self->status_message('Classifier params: '.Dumper(\%classifier_params));
+    my $classifier;
     if ( $self->classifier eq 'rdp2-1' ) {
         $classifier = Genome::Utility::MetagenomicClassifier::Rdp::Version2x1->new(%classifier_params);
     }
@@ -525,9 +548,7 @@ sub classify_amplicons {
         return;
     }
 
-    my $processed = 0;
-    my $classified = 0;
-    my $classification_error = 0;
+    my ($processed, $classified, $classification_error) = (qw/ 0 0 0 /);
     for my $name ( @amplicon_set_names ) {
         my $amplicon_set = $self->amplicon_set_for_name($name);
         next if not $amplicon_set;
@@ -553,8 +574,7 @@ sub classify_amplicons {
             my $classification = $classifier->classify_parsed_seq($parsed_seq);
             unless ( $classification ) { # try again
                 $classification = $classifier->classify_parsed_seq($parsed_seq);
-                unless ( $classification ) { # warn , go on
-                    $self->error_message('Amplicon '.$amplicon->{name}.' length ('.length($seq->{seq}).') did not classify for '.$self->description."\n".$seq->{seq}."\n");
+                unless ( $classification ) { # go on
                     $classification_error++;
                     next;
                 }
@@ -565,7 +585,6 @@ sub classify_amplicons {
         }
     }
 
-    my $attempted = $self->amplicons_attempted;
     $self->amplicons_processed($processed);
     $self->amplicons_processed_success( 
         defined $attempted and $attempted > 0 ?  sprintf('%.2f', $processed / $attempted) : 0 
@@ -576,15 +595,12 @@ sub classify_amplicons {
     );
     $self->amplicons_classification_error($classification_error);
 
-    $self->status_message(
-        sprintf(
-            'Classified %s of %s (%s) amplicons',
-            $self->amplicons_processed,
-            $self->amplicons_processed,
-            $self->amplicons_classified,
-            $self->amplicons_classified_success * 100,
-        )
-    );
+    $self->status_message('Processed:  '.$self->amplicons_processed);
+    $self->status_message('Classified: '.$self->amplicons_classified);
+    $self->status_message('Error:      '.$self->amplicons_classification_error);
+    $self->status_message('Success:    '.($self->amplicons_classified_success * 100).'%');
+
+    $self->status_message('Classify amplicons...OK');
 
     return 1;
 }

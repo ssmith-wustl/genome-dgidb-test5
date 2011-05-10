@@ -33,6 +33,12 @@ class Genome::ProcessingProfile::SomaticVariation{
             is_optional =>1,
             doc => "Strategy to be used to detect cnvs.",
         },
+        tiering_version => {
+            is => "Text",
+            is_many => 0,
+            is_optional => 1,
+            doc => "Version of tiering bed files to grab from the associated annotation build",
+        },
     ],
 };
 

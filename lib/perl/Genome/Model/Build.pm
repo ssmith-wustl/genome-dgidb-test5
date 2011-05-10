@@ -762,6 +762,11 @@ sub _launch {
     else {
         my $user = getpwuid($<);
         $job_group_spec = ' -g /build2/' . $user;
+        # TODO: Remove the 'genotype microarray' special case. It's just meant to help track the fact that
+        # the models are running with job_dispatch => inline.
+        if ($self->type_name && $self->type_name eq 'genotype microarray') {
+            $job_group_spec = ' -g /build2/' . $user . '/genotype_microarray';
+        }
     }
 
     die "Bad params!  Expected server_dispatch and job_dispatch!" . Data::Dumper::Dumper(\%params) if %params;
@@ -1072,7 +1077,7 @@ sub success {
     $self->perform_post_success_actions;
 
     if ($self->model->class =~ /GenotypeMicroarray/) {
-        $self->model->request_builds_for_dependent_ref_align;
+        $self->model->request_builds_for_dependent_cron_ref_align;
     }
 
     # FIXME Don't know if this should go here, but then we would have to call success and abandon through the model

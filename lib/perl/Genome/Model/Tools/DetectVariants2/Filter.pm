@@ -151,15 +151,17 @@ sub shortcut {
 sub execute {
     my $self = shift;
 
-    if(-e $self->output_directory) {
-        die $self->error_message('Output directory already exists!');
-    }
-
     my ($params) = $self->params_for_result;
     my $result = Genome::Model::Tools::DetectVariants2::Result::Filter->get_or_create(%$params, _instance => $self);
 
     unless($result) {
         die $self->error_message('Failed to create generate result!');
+    }
+
+    if(-e $self->output_directory) {
+        unless(readlink($self->output_directory) eq $result->output_dir) {
+            die $self->error_message('Existing output directory ' . $self->output_directory . ' points to a different location!');
+        }
     }
 
     $self->_result($result);
@@ -171,7 +173,7 @@ sub execute {
 
 sub _generate_result {
     my $self = shift;
-       
+
     unless($self->_validate_input) {
         die $self->error_message('Failed to validate input.');
     }
@@ -416,7 +418,7 @@ sub _link_to_result {
     my $previous_result = $self->previous_result;
     my @users = $previous_result->users;
     unless(grep($_->user eq $result, @users)) {
-        $previous_result->add_user($result);
+        $previous_result->add_user(user => $result, label => 'uses');
     }
 
     return 1;

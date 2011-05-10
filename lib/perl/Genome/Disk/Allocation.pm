@@ -745,7 +745,8 @@ sub _verify_no_parent_allocation {
 # Checks for allocations beneath this one, which is also invalid
 sub _verify_no_child_allocations {
     my ($class, $path) = @_;
-    my ($allocation) = $class->get('allocation_path like' => $path . '%');
+    $path =~ s/\/+$//;
+    my ($allocation) = $class->get('allocation_path like' => $path . '/%');
     return 0 if $allocation;
     return 1;
 }

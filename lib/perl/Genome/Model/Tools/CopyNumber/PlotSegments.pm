@@ -16,9 +16,10 @@ use strict;
 use Genome;
 use IO::File;
 use Statistics::R;
-use File::Temp;
+use File::Basename;
 use warnings;
 require Genome::Sys;
+use FileHandle;
 
 class Genome::Model::Tools::CopyNumber::PlotSegments {
     is => 'Command',
@@ -34,7 +35,7 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	segment_files => {
 	    is => 'String',
 	    is_optional => 0,
-	    doc => 'comma-seperated list of files containing the segments to be plotted. Expects CBS-lite output, with columns: chr, start, stop, #bins, copyNumber',
+	    doc => 'comma-seperated list of files containing the segments to be plotted. Expects CBS output, (columns: chr, start, stop, #bins, copyNumber) unless the --cn[a|v]hmm_input flag is set, in which case it will take the output of cnvHMM directly',
 	},
 
 	gain_threshold => {
@@ -135,13 +136,13 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	    is => 'String',
 	    is_optional => 1,
 	    doc => 'entrypoints to be used for plotting - note that male/female needs to specified here',
-	    default => "/gscmnt/sata921/info/medseq/cmiller/annotations/entrypoints.hg18.female",
+	    default => "/gscmnt/sata921/info/medseq/cmiller/annotations/entrypoints.hg18.male",
 	},
 
 	plot_height => {
 	    is => 'Float',
 	    is_optional => 1,
-	    default => 4, 
+	    default => 3, 
 	    doc => 'height of each plot',
 	},
 
@@ -150,6 +151,20 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	    is_optional => 1,
 	    default => 8, 
 	    doc => 'width of each plot',
+	},
+
+	cnvhmm_input => {
+	    is => 'Boolean',
+	    is_optional => 1,
+	    doc => 'Flag indicating that input is in cnvhmm format, which requires extra parsing',
+	    default => 0,
+	},
+
+	cnahmm_input => {
+	    is => 'Boolean',
+	    is_optional => 1,
+	    doc => 'Flag indicating that input is in cnahmm format, which requires extra parsing',
+	    default => 0,
 	},
 
 	# ylab => {
@@ -184,6 +199,115 @@ sub help_detail {
 }
 
 
+#########################################################################
+sub convertSegs{
+    my ($self, $segfiles,$cnvhmm_input, $cnahmm_input) = @_;    
+    my @newfiles;
+    my @infiles = split(",",$segfiles);
+    foreach my $file (@infiles){
+        if ($cnvhmm_input){
+            my $cbsfile = cnvHmmToCbs($file,$self);
+            push(@newfiles,$cbsfile);
+        } elsif ($cnahmm_input){
+            my $cbsfile = cnaHmmToCbs($file,$self);
+            push(@newfiles,$cbsfile);
+        }
+    }
+
+    return join(",",@newfiles);
+}
+
+
+#-----------------------------------------------------
+#take the log with a different base
+#(log2 = log_base(2,values)
+sub log_base { 
+    my ($base, $value) = @_; 
+    return log($value)/log($base); 
+}
+
+
+#-----------------------------------------------------
+#convert cnvhmm output to a format we can use here
+sub cnvHmmToCbs{
+    my ($file,$self) = @_;
+ 
+    #create a tmp file for this output
+    my ($tfh,$newfile) = Genome::Sys->create_temp_file;	
+    unless($tfh) {
+	$self->error_message("Unable to create temporary file $!");
+	die;
+    }
+    
+    $newfile = "/tmp/output.dat";
+
+    open(OUTFILE,">$newfile") || die "can't open temp segs file for writing ($newfile)\n";
+
+
+    #read and convert the cnvhmm output
+    my $inFh = IO::File->new( $file ) || die "can't open file\n";
+    my $inCoords = 0;
+    while( my $line = $inFh->getline )
+    {
+	chomp($line);	
+	if ($line =~ /^#CHR/){
+	    $inCoords = 1;
+	    next;
+	}
+	if ($line =~ /^---/){
+	    $inCoords = 0;
+	    next;
+	}
+	
+	if ($inCoords){
+	    my @fields = split("\t",$line);
+	    print OUTFILE join("\t",($fields[0],$fields[1],$fields[2],$fields[4],log_base(2,$fields[6]/2))) . "\n";
+	}	
+    }
+    close(OUTFILE);
+    $inFh->close;
+    return($newfile);
+}
+
+#-----------------------------------------------------
+#convert cnvhmm output to a format we can use here
+sub cnaHmmToCbs{
+    my ($file,$self) = @_;
+ 
+    #create a tmp file for this output
+    my ($tfh,$newfile) = Genome::Sys->create_temp_file;	
+    unless($tfh) {
+	$self->error_message("Unable to create temporary file $!");
+	die;
+    }
+
+    open(OUTFILE,">$newfile") || die "can't open temp segs file for writing ($newfile)\n";
+
+
+    #read and convert the cnvhmm output
+    my $inFh = IO::File->new( $file ) || die "can't open file\n";
+    my $inCoords = 0;
+    while( my $line = $inFh->getline )
+    {
+	chomp($line);	
+	if ($line =~ /^#CHR/){
+	    $inCoords = 1;
+	    next;
+	}
+	if ($line =~ /^---/){
+	    $inCoords = 0;
+	    next;
+	}
+	
+	if ($inCoords){
+	    my @fields = split("\t",$line);
+	    print OUTFILE join("\t",($fields[0],$fields[1],$fields[2],$fields[4],(log_base(2,$fields[6]/$fields[8])))) . "\n";
+	}	
+    }
+    close(OUTFILE);
+    $inFh->close;
+    return($newfile);
+}
 
 #########################################################################
 
@@ -207,32 +331,52 @@ sub execute {
     my $output_pdf = $self->output_pdf;
     my $rcommands_file = $self->rcommands_file;
     my $plot_height = $self->plot_height;
-    my $plot_width = $self->plot_width;
+    my $plot_width = $self->plot_width;   
+    my $cnvhmm_input = $self->cnvhmm_input; 
+    my $cnahmm_input = $self->cnahmm_input; 
+
     # my $ylab = $self->ylab;
 
 
 
-    my @infiles = split(",",$segment_files);
-    
-
-    #set up a temp file for the R commands (todo use real tmp methods)
-    unless (defined($rcommands_file)){
-	$rcommands_file = "/tmp/" . `date +%s%N`;
-	chomp($rcommands_file);
-	$rcommands_file = $rcommands_file . ".R";
+    my @infiles;
+    if ($cnvhmm_input || $cnahmm_input){
+	$segment_files = convertSegs($self, $segment_files, $cnvhmm_input, $cnahmm_input);
+	$log_input = 1;
+    # } elsif ($cnahmm_input){
+    #     $segment_files = convertSegs($self, $segment_files, $cnvhmm_input, $cnahmm_input);
+    #     $log_input = 1;
     }
 
-    #open the R file
-    open(R_COMMANDS,">$rcommands_file") || die "can't open $rcommands_file for writing\n";
+    @infiles = split(",",$segment_files);
+    
+    #set up a temp file for the R commands (unless one is specified)
+    my $temp_path;
+    my $tfh;
+    my $outfile = "";
 
-    #todo - what's an easier way to source this R file?
+    if (defined($rcommands_file)){      
+	$outfile = $rcommands_file;
+    } else {
+    	my ($tfh,$tfile) = Genome::Sys->create_temp_file;	
+    	unless($tfh) {
+    	    $self->error_message("Unable to create temporary file $!");
+    	    die;
+    	}
+	$outfile=$tfile;
+    }
+    
+
+    #open the R file
+    open(R_COMMANDS,">$outfile") || die "can't open $outfile for writing\n";
+
+    #todo - what's an easier way to source this R file out of the user's git path (or stable)?
     print R_COMMANDS "source(\"~cmiller/gscCode/genome/lib/perl/Genome/Model/Tools/CopyNumber/PlotSegments.R\")\n";
 
 
     #set up pdf parameters
     my $docwidth = $plot_width;
     my $docheight = $plot_height * @infiles;
-    print "$docwidth x $docheight\n";
     print R_COMMANDS "pdf(file=\"" . $output_pdf . "\",width=" .$docwidth .",height=" . $docheight . ")\n";
 
 
@@ -309,10 +453,9 @@ sub execute {
     print R_COMMANDS "dev.off()\n";
     print R_COMMANDS "q()\n";
     close R_COMMANDS;
-    
 
     #now run the R command
-    my $cmd = "R --vanilla --slave \< $rcommands_file";
+    my $cmd = "R --vanilla --slave \< $outfile";
     my $return = Genome::Sys->shellcmd(
 	cmd => "$cmd",
         );

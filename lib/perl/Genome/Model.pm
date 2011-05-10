@@ -61,7 +61,7 @@ class Genome::Model {
             via => 'notes',
             to => 'body_text',
             where => [ header_text => 'apipe_cron_status' ],
-            is_mutable => 1,
+            is_mutable => 0,
         },
     ],
     has_optional_many => [
@@ -634,7 +634,7 @@ sub compatible_instrument_data {
 
     return @compatible_instrument_data;
 }
-
+sub assigned_instrument_data { return $_[0]->instrument_data; }
 sub available_instrument_data { return unassigned_instrument_data(@_); }
 sub unassigned_instrument_data {
     my $self = shift;
@@ -1031,6 +1031,19 @@ sub create_build {
 # and should be overridden in subclasses for custom behavior.
 sub verify_inputs {
     return 1;
+}
+
+
+sub set_apipe_cron_status {
+    my $self = shift;
+    my $body_text = shift;
+
+    my @header = (header_text => 'apipe_cron_status');
+
+    my $note = $self->notes(@header);
+    $note->delete if ($note);
+
+    $self->add_note(@header, body_text => $body_text);
 }
 
 1;
