@@ -25,6 +25,10 @@ class Genome::Model::Tools::Validation::AssembleSvInValidationBams {
         is => 'String',
         doc => 'Comma-delimited list of SquareDancer files to assemble',
     },
+    bam_files => {
+        is => 'String',
+        doc => 'Comma-delimited list of BAM files to assemble calls in',
+    },
 
 
     ],
@@ -47,7 +51,8 @@ sub execute {
     #parse input params
     my @bd_files = split(",",$self->breakdancer_files) if $self->breakdancer_files;
     my @sd_files = split(",",$self->squaredancer_files) if $self->squaredancer_files;
-    my $assembly_input = $self->output_filename_prefix . ".assembly_input";
+    my $file_prefix = $self->output_filename_prefix;
+    my $assembly_input = $file_prefix . ".assembly_input";
 
     #concatenate calls for assembly input
     #my $ass_in_fh = Genome::Sys->open_file_for_writing($assembly_input);
@@ -73,8 +78,8 @@ sub execute {
         }
     }
 
-    #add in BD calls (combinatorically)
-    #expected breakdancer format:
+    #add in BD calls (combinatorically using all combinations, due to the possibility of having 2 different start and 2 different stop coordinates)
+    #expected breakdancer input format:
     #ID     CHR1    OUTER_START     INNER_START     CHR2    INNER_END       OUTER_END       TYPE    ORIENTATION     MINSIZE MAXSIZE SOURCE  SCORES  Copy_Number
     #20.7    20      17185907        17185907        22      20429218        20429218        CTX     ++      332     332     tumor22 750     NA      NA      NA
     if (@bd_files) {
@@ -101,10 +106,24 @@ sub execute {
     }
     $ass_in_fh->close;
 
+    
 
 
+    #execute assembly command
+    my $user = $ENV{USER};
+    my $job_name = 
+    my $stdout = $file_prefix . ".stdout";
+    my $stderr = $file_prefix . ".stderr";
+    my $assembly_fasta_file = $file_prefix . ".fasta";
+    my $assembly_cm_file = $file_prefix . ".cm";
+    my $assembly_intermediate_read_dir = $file_prefix . "_inter_read_dir/";
+    unless (-e $assembly_intermediate_read_dir && -d 
 
+    
 
+    my $bams = $self->bam_files;
+    my $assembly_cmd = "gmt sv assembly-validation --bam-files $bams --breakpoint-seq-file $assembly_fasta_file --cm-aln-file $assembly_cm_file --intermediate-read-dir
+    my $bsub = "bsub -q long -N -u $user\@genome.wustl.edu -J $job_name -M 8000000 -R 'select[mem>8000] rusage[mem=8000]' -oo $stdout -eo $stderr $assembly_cmd";
 
 
     return 1;
