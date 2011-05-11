@@ -35,7 +35,7 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	segment_files => {
 	    is => 'String',
 	    is_optional => 0,
-	    doc => 'comma-seperated list of files containing the segments to be plotted. Expects CBS output, (columns: chr, start, stop, #bins, copyNumber) unless the --cn[a|v]hmm_input flag is set, in which case it will take the output of cnvHMM directly',
+	    doc => 'comma-seperated list of files containing the segments to be plotted. Expects CBS output, (columns: chr, start, stop, #bins, copyNumber) unless the --cn[a|v]hmm_input flag is set, in which case it will take the output of cnvHMM/cnaHMM directly',
 	},
         plot_title => {
             is => 'String',
@@ -47,13 +47,13 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	    is => 'Float',
 	    is_optional => 1,
 	    default => 2.5,
-	    doc => 'Threshold for coloring a segment as a gain',
+	    doc => 'CN threshold for coloring a segment as a gain',
 	},
 
 	loss_threshold => {
 	    is => 'Float',
 	    is_optional => 1,
-	    doc => 'Threshold for coloring a segment as a loss',
+	    doc => 'CN threshold for coloring a segment as a loss',
 	    default => 1.5,
 	},
 
@@ -75,7 +75,7 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	log_input => {
 	    is => 'Boolean',
 	    is_optional => 1,
-	    doc => 'Set this flag if input copy numbers are expressed as log-rations, as opposed to absolute copy number',
+	    doc => 'Set this flag if input copy numbers are expressed as log-ratios, as opposed to absolute copy number',
 	},
 
 	log_plot => {
@@ -128,13 +128,13 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	rcommands_file => {
 	    is => 'String',
 	    is_optional => 1,
-	    doc => 'an output file for your R commands - defaults to /tmp/<timestamp>.R',
+	    doc => 'an output file for your R commands',
 	},
 
 	output_pdf => {
 	    is => 'String',
 	    is_optional => 0,
-	    doc => 'pdf file to write output to',
+	    doc => 'pdf file containing your plots',
 	},
 
        	# entrypoints_file => {
@@ -154,7 +154,7 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
         sex => {
 	    is => 'String',
 	    is_optional => 1,
-	    doc => 'sex of the sample donor - male or female',
+	    doc => 'sex of the sample - male or female',
             default => 'male',
 	},   
 
