@@ -37,6 +37,11 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	    is_optional => 0,
 	    doc => 'comma-seperated list of files containing the segments to be plotted. Expects CBS output, (columns: chr, start, stop, #bins, copyNumber) unless the --cn[a|v]hmm_input flag is set, in which case it will take the output of cnvHMM directly',
 	},
+        plot_title => {
+            is => 'String',
+            is_optional => 1,
+            doc => 'plot title',
+        },
 
 	gain_threshold => {
 	    is => 'Float',
@@ -334,7 +339,7 @@ sub execute {
     my $plot_width = $self->plot_width;   
     my $cnvhmm_input = $self->cnvhmm_input; 
     my $cnahmm_input = $self->cnahmm_input; 
-
+    my $plot_title = $self->plot_title;
     # my $ylab = $self->ylab;
 
 
@@ -447,7 +452,8 @@ sub execute {
 
 	print R_COMMANDS ")\n";	
     }
-
+    #add title
+    print R_COMMANDS "title(main='" . $plot_title . "')\n";
 
     #close it out
     print R_COMMANDS "dev.off()\n";
