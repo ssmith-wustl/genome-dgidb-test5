@@ -47,7 +47,12 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
-    return 1 unless -s $self->input_file_a and -s $self->input_file_b;
+    return unless -e $self->input_file_a and -e $self->input_file_b;
+
+    unless (-s $self->input_file_a and -s $self->input_file_b) {
+        IO::File->new($self->output_file, "w") or die "Failed to create file " . $self->output_file;
+        return 1;
+    }
     my $cmd = $self->snvcmp_path . ' ' . $self->input_file_a . ' ' . $self->input_file_b . ' > ' . $self->output_file;
     Genome::Sys->shellcmd(
         cmd => $cmd,
