@@ -17,6 +17,9 @@ class Genome::Model::Command::Update::BuildRequested {
 };
 
 
+sub _is_hidden_in_docs { return 1; }
+
+
 sub help_detail {
     return 'Set build_requested to the value for the models.'
 }
@@ -24,6 +27,13 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
+
+    my $user = getpwuid($<);
+    my $apipe_members = (getgrnam("apipe"))[3];
+    if ($apipe_members !~ /\b$user\b/) {
+        print "You must be a member of APipe to use this command.\n";
+        return;
+    }
 
     my @models = $self->models;
     my $value = $self->value;
