@@ -24,6 +24,10 @@ class Genome::Model::SomaticVariation::Command::Loh {
 sub execute {
     my $self = shift;
     my $build = $self->build;
+    unless(defined($build->loh_version)){
+        $self->status_message("No LOH version was found, skipping LOH detection!");
+        return 1;
+    }
     unless ($build){
         die $self->error_message("no build provided!");
     }
