@@ -14,7 +14,7 @@ require Genome::Sys;
 
 my @subject_types = ();
 {
-    my $gm_class = Genome::Model->get_class_object;
+    my $gm_class = Genome::Model->__meta__;
     my $m = $gm_class->property_meta_for_name('subject_type');
     @subject_types = @{ $m->valid_values };
 }
