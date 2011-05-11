@@ -19,6 +19,18 @@ class Genome::Model::SomaticVariation::Command::Loh {
             id_by => 'build_id',
         }
     ],
+    has_optional => [
+        variant_bed_file => {
+            is => 'Text',
+            is_input => 1,
+            doc => 'use this to specify a specific file as an input',
+        },
+        output_directory => {
+            is => 'Text',
+            is_input => 1,
+            doc => 'use this to send the output of LOH to an alternate directory',
+        },
+    ],
 };
 
 sub execute {
@@ -53,8 +65,8 @@ sub execute {
 
     my $version = 2;
 
-    my $detected_snv_path = $build->data_set_path("variants/snvs.hq",$version,'bed'); 
-    my $output_dir = $build->data_directory."/loh";
+    my $detected_snv_path = defined($self->variant_bed_file) ? $self->variant_bed_file : $build->data_set_path("variants/snvs.hq",$version,'bed'); 
+    my $output_dir = defined($self->output_directory) ? $self->output_directory : $build->data_directory."/loh" ;
     unless(Genome::Sys->create_directory($output_dir)){
         die $self->error_message("Failed to create the ./loh subdir");
     }
