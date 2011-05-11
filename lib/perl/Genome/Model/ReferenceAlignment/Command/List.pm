@@ -14,7 +14,7 @@ class Genome::Model::ReferenceAlignment::Command::List {
             is_constant => 1, 
             value => 'Genome::Model::ReferenceAlignment' 
         },
-        show => { default_value => 'id,name,subject_name,reference_sequence_buid_id,processing_profile_name' },
+        show => { default_value => 'id,name,subject_name,reference_sequence_build_id,processing_profile_name' },
     ],
     doc => 'list genome models',
 };
