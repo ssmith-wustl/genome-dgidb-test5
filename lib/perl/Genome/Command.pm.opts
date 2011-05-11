@@ -53,6 +53,13 @@ $Genome::Command::OPTS_SPEC = [
         'help!',
         undef
       ],
+      '>find-unallocated-paths',
+      [
+        'disk-volume=s',
+        undef,
+        'help!',
+        undef
+      ],
       '>list',
       [
         'show=s',
@@ -3574,6 +3581,44 @@ $Genome::Command::OPTS_SPEC = [
     [
       'models=s@',
       undef,
+      'help!',
+      undef
+    ],
+    '>update',
+    [
+      '>apipe-cron-status',
+      [
+        'models=s@',
+        undef,
+        'value=s',
+        'files',
+        'help!',
+        undef
+      ],
+      '>auto-assign-instrument-data',
+      [
+        'models=s@',
+        undef,
+        'value=s',
+        [
+          '0',
+          '1'
+        ],
+        'help!',
+        undef
+      ],
+      '>build-requested',
+      [
+        'models=s@',
+        undef,
+        'value=s',
+        [
+          '0',
+          '1'
+        ],
+        'help!',
+        undef
+      ],
       'help!',
       undef
     ],
@@ -7559,15 +7604,13 @@ $Genome::Command::OPTS_SPEC = [
       [
         '>export-contigs',
         [
-          'contigs-list=s',
-          'files',
-          'ace=s',
+          'ace-files=s@',
           'files',
           'ace-list=s',
           'files',
-          'ace-out=s',
+          'contigs=s@',
           'files',
-          'acefile-names=s@',
+          'contigs-list=s',
           'files',
           'directory=s',
           'files',
@@ -7578,13 +7621,9 @@ $Genome::Command::OPTS_SPEC = [
         ],
         '>merge',
         [
-          'ace=s',
+          'ace-files=s@',
           'files',
           'ace-list=s',
-          'files',
-          'ace-out=s',
-          'files',
-          'acefile-names=s@',
           'files',
           'directory=s',
           'files',
@@ -7597,13 +7636,11 @@ $Genome::Command::OPTS_SPEC = [
         [
           'contigs-list=s',
           'files',
-          'ace=s',
+          'ace-files=s@',
           'files',
           'ace-list=s',
           'files',
-          'ace-out=s',
-          'files',
-          'acefile-names=s@',
+          'contigs=s@',
           'files',
           'directory=s',
           'files',

@@ -50,6 +50,7 @@ class Genome::Model::Tools::FastTier::FastTier {
         tier_file_location => {
             type => 'Text',
             is_input => 1,
+            default => '/gscmnt/ams1100/info/model_data/2771411739/build102550711/annotation_data/tiering_bed_files_v2',
             doc => 'Use this to point to a directory containing tier1.bed - tier4.bed in order to use different bed files for tiering',
         },
         intersect_bed_bin_location => {
@@ -60,19 +61,15 @@ class Genome::Model::Tools::FastTier::FastTier {
         },
         _tier1_bed => {
             type => 'Text',
-            default => "/gscmnt/sata921/info/medseq/make_tier_bed_files/NCBI-human-build36/tier1.bed",
         },
         _tier2_bed => {
             type => 'Text',
-            default => "/gscmnt/sata921/info/medseq/make_tier_bed_files/NCBI-human-build36/tier2.bed",
         },
         _tier3_bed => {
             type => 'Text',
-            default => "/gscmnt/sata921/info/medseq/make_tier_bed_files/NCBI-human-build36/tier3.bed",
         },
         _tier4_bed => {
             type => 'Text',
-            default => "/gscmnt/sata921/info/medseq/make_tier_bed_files/NCBI-human-build36/tier4.bed",
         }, 
     ]
 

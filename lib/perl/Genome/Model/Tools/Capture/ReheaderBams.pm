@@ -29,7 +29,7 @@ class Genome::Model::Tools::Capture::ReheaderBams {
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		input_bam_file	=> { is => 'Text', doc => "Bam File" , is_optional => 0},
 		output_bam_file	=> { is => 'Text', doc => "Bam File" , is_optional => 0},
-		old_as	=> { is => 'Text', doc => "Original AS Field to Change, ex: g1k-human-build37" , is_optional => 1},
+		old_as	=> { is => 'Text', doc => "Original AS Field to Change, ex: GRCh37-lite-build37" , is_optional => 1},
 		old_ur	=> { is => 'Text', doc => "Original UR Field to Change, ex: ftp://ftp.ncbi.nih.gov/genbank/genomes/Eukaryotes/vertebrates_mammals/Homo_sapiens/GRCh37/special_requests/GRCh37-lite.fa.gz" , is_optional => 1},
 #		old_sn	=> { is => 'Text', doc => "Original SN Field to Change" , is_optional => 1},
 #		old_ln	=> { is => 'Text', doc => "Original LN Field to Change" , is_optional => 1},

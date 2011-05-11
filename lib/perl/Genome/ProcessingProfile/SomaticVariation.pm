@@ -33,7 +33,19 @@ class Genome::ProcessingProfile::SomaticVariation{
             is_optional =>1,
             doc => "Strategy to be used to detect cnvs.",
         },
-    ],
+        tiering_version => {
+            is => "Text",
+            is_many => 0,
+            is_optional => 1,
+            doc => "Version of tiering bed files to grab from the associated annotation build",
+        },
+        loh_version => {
+            is => "Text",
+            is_many => 0,
+            is_optional => 1,
+            doc => "Version of loh used for this build. If none is specified, no loh detection will be done.",
+        },
+   ],
 };
 
 sub help_synopsis_for_create {

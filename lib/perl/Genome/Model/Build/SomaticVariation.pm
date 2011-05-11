@@ -71,7 +71,15 @@ class Genome::Model::Build::SomaticVariation {
             is => 'Text',
             via => 'model',
         },
-    ],
+        tiering_version => {
+            is => 'Text',
+            via => 'model',
+        },
+        loh_version => {
+            is => 'Text',
+            via => 'model',
+        },
+   ],
 };
 
 

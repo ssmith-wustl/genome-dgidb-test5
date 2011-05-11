@@ -31,7 +31,8 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL,
                          highlights=NULL, logPlot=FALSE, logInput=FALSE,
                          lowRes=FALSE, lowResMin=NULL, lowResMax=NULL,
                          showNorm=FALSE, gainThresh=2.5, lossThresh=1.5,
-                         ylabel=""){
+                         gainColor="red", lossColor="blue", ylabel="",
+                         plotTitle=""){
 
   ## add options for these later TODO
   xlabel=""
@@ -51,12 +52,23 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL,
   }
 
 
+  ##validate that we have entrypoints for all of our chromosomes
+  chrnames = names(table(segs$V1))
+  for(i in 1:length(chrnames)){    
+    #raise an error if 
+    if(length(which(entrypoints$chr==chrnames[i])) < 1){
+      cat("\nERROR - no entrypoint found for chromosome ",chrnames[i]," found in segs file\n")
+      cat("maybe you meant to use the male entrypoints?\n")
+      q(save="no")
+    }
+  }
 
+  ## match up the type of plot so that the values
+  ## and the axis are scaled the same way (log or abs)
 
-  ## adjust the plot boundaries and the
-  ## scores if logPlot is true
   ymin=0
   rectBottom = 2
+
   if(logPlot==TRUE){
     if (logInput == FALSE){
       segs[,5] = log2(segs[,5]/2)
@@ -66,6 +78,12 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL,
     lossThresh=log2(lossThresh/2)
     rectBottom = 0
   }
+  if(logPlot==FALSE){
+    if (logInput == TRUE){
+      segs[,5] = (2**segs[,5])*2
+    }
+  }
+
 
   
   ## function to expand the size of features
@@ -94,11 +112,16 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL,
       xlim=c(1,sum(entrypoints$length))
     }else{
       a = segs[which(((segs$V3 >= xlim[1]) & (segs$V3 <= xlim[2])) | ((segs$V2 >= xlim[1]) & (segs$V2 <= xlim[2]))),]
-    }
+    }    
     
     ## outline the plot
     plot(0, 0, xlim=xlim, ylim=c(ymin,ymax), pch=".",
          ylab=ylabel, xlab=xlabel, xaxt="n", cex.lab=1, cex.axis=1)
+
+    #add the title
+    if(!(is.null(plotTitle))){
+      title(main=plotTitle)
+    }
     
     
     ## draw baselines
@@ -166,12 +189,12 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL,
     ##plot gain
     a2=segs[which(segs[,5] > gainThresh),]
     if(length(a2[,1])>0){
-      drawSegs(a2,color="blue")
+      drawSegs(a2,color=gainColor)
     }
     ##plot loss
     a2=segs[which(segs[,5] < lossThresh),]
     if(length(a2[,1])>0){
-      drawSegs(a2,color="red")
+      drawSegs(a2,color=lossColor)
     }
 
     ## draw chromosome labels
@@ -207,6 +230,11 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL,
 
     ##draw the plot region
     plot(0,0,xlim=xlim,ylim=c(ymin,ymax),pch=".",ylab=ylabel, xlab="position (Mb)",xaxt="n",cex.lab=0.8, cex.axis=0.8)
+
+    ##add the title
+    if(!(is.null(plotTitle))){
+      title(main=plotTitle)
+    }
 
     ## draw baselines
     if(logPlot){
@@ -268,12 +296,12 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL,
     ##plot gain
     a2=segs[which(segs[,5] > gainThresh),]
     if(length(a2[,1])>0){
-      drawSegs(a2,color="blue")
+      drawSegs(a2,color=gainColor)
     }
     ##plot loss
     a2=segs[which(segs[,5] < lossThresh),]
     if(length(a2[,1])>0){
-      drawSegs(a2,color="red")
+      drawSegs(a2,color=lossColor)
     }  
   }
 }

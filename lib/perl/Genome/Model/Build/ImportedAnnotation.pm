@@ -300,7 +300,7 @@ sub tiering_bed_files_by_version {
     unless(defined($version)){
         die $self->error_message("You must specify a version if you wish to obtain tiering_bed_files by version!");
     }
-    return $self->data_directory."/tiering_bed_files_v".$version;
+    return $self->data_directory."/annotation_data/tiering_bed_files_v".$version;
 }
 
 package Genome::Model::ImportedAnnotation::Iterator;

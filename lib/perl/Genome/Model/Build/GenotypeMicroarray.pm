@@ -81,7 +81,7 @@ sub create {
 
 sub perform_post_success_actions {
     my $self = shift;
-    return $self->model->request_builds_for_dependent_ref_align;
+    return $self->model->request_builds_for_dependent_cron_ref_align;
 }
 
 sub copy_snp_array_file {
