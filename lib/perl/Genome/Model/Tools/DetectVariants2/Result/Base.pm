@@ -97,6 +97,7 @@ sub create {
         Genome::Sys->create_symlink($self->output_dir, $instance_output);
 
         $instance->_generate_result;
+        $self->_set_result_file_permissions;
     };
     if($@) {
         my $error = $@;
@@ -241,6 +242,21 @@ sub _resolve_subclass_name {
         return $filter_name ? 'Genome::Model::Tools::DetectVariants2::Result::Filter' : 'Genome::Model::Tools::DetectVariants2::Result';
     }
     return;
+}
+
+sub _set_result_file_permissions {
+    my $self = shift;
+    my $output_dir = $self->output_dir;
+
+    chmod 02775, $output_dir;
+    for my $subdir (grep { -d $_  } glob("$output_dir/*")) {
+        chmod 02775, $subdir;
+    }
+
+    # Make everything in here read-only
+    for my $file (grep { -f $_  } glob("$output_dir/*")) {
+        chmod 0444, $file;
+    }
 }
 
 
