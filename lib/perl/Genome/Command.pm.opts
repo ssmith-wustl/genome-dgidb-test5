@@ -1,23 +1,4 @@
 $Genome::Command::OPTS_SPEC = [
-  '>completion',
-  [
-    '>bash',
-    [
-      'help!',
-      undef
-    ],
-    '>update',
-    [
-      'git-add!',
-      undef,
-      'git-commit!',
-      undef,
-      'help!',
-      undef
-    ],
-    'help!',
-    undef
-  ],
   '>disk',
   [
     '>allocation',
@@ -6316,6 +6297,25 @@ $Genome::Command::OPTS_SPEC = [
   ],
   '>sys',
   [
+    '>completion',
+    [
+      '>bash',
+      [
+        'help!',
+        undef
+      ],
+      '>update',
+      [
+        'git-add!',
+        undef,
+        'git-commit!',
+        undef,
+        'help!',
+        undef
+      ],
+      'help!',
+      undef
+    ],
     'help!',
     undef
   ],
