@@ -92,7 +92,7 @@ sub create {
         my $instance = $self->_instance;
         my $instance_output = $instance->output_directory;
         if(-e $instance_output) {
-            die $self->error_message('Instance output directory already exists!');
+            die $self->error_message('Instance output directory (' . $instance_output . ') already exists!');
         }
         Genome::Sys->create_symlink($self->output_dir, $instance_output);
 
