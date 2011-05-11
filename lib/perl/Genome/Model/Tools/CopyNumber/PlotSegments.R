@@ -31,7 +31,7 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL,
                          highlights=NULL, logPlot=FALSE, logInput=FALSE,
                          lowRes=FALSE, lowResMin=NULL, lowResMax=NULL,
                          showNorm=FALSE, gainThresh=2.5, lossThresh=1.5,
-                         ylabel=""){
+                         ylabel="", plotTitle=""){
 
   ## add options for these later TODO
   xlabel=""
@@ -116,6 +116,11 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL,
     ## outline the plot
     plot(0, 0, xlim=xlim, ylim=c(ymin,ymax), pch=".",
          ylab=ylabel, xlab=xlabel, xaxt="n", cex.lab=1, cex.axis=1)
+
+    #add the title
+    if(!(is.null(plotTitle))){
+      title(main=plotTitle)
+    }
     
     
     ## draw baselines
@@ -224,6 +229,11 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL,
 
     ##draw the plot region
     plot(0,0,xlim=xlim,ylim=c(ymin,ymax),pch=".",ylab=ylabel, xlab="position (Mb)",xaxt="n",cex.lab=0.8, cex.axis=0.8)
+
+    ##add the title
+    if(!(is.null(plotTitle))){
+      title(main=plotTitle)
+    }
 
     ## draw baselines
     if(logPlot){

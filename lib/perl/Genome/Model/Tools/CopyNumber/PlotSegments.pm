@@ -40,7 +40,7 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
         plot_title => {
             is => 'String',
             is_optional => 1,
-            doc => 'plot title',
+            doc => 'plot title (also accepts csv list if multiple segment files are specified)',
         },
 
 	gain_threshold => {
@@ -386,6 +386,8 @@ sub execute {
     #set up the plotting space
     print R_COMMANDS "par(xaxs=\"i\", xpd=FALSE, mfrow=c(" . @infiles . ",1), oma=c(1,1,1,1), mar=c(1,3,1,1))\n";
 
+    my @titles = split(",",$plot_title);
+    my $counter = 0;
 
     #draw the plots for each set of segments
     foreach my $infile (@infiles){
@@ -438,6 +440,10 @@ sub execute {
 	print R_COMMANDS ", gainThresh=" . $gain_threshold;
 	print R_COMMANDS ", lossThresh=" . $loss_threshold;
 
+	if (defined($plot_title)){
+	    print R_COMMANDS ", plotTitle=\"" . $titles[$counter] . "\"";
+	}
+
 	# if (defined($ylab)){
 	#     print R_COMMANDS ", ylabel=\"" . $ylab . "\"";
 	# } else {
@@ -449,9 +455,8 @@ sub execute {
 	# }
 
 	print R_COMMANDS ")\n";	
+        $counter++;
     }
-    #add title
-    print R_COMMANDS "title(main='" . $plot_title . "')\n";
 
     #close it out
     print R_COMMANDS "dev.off()\n";
