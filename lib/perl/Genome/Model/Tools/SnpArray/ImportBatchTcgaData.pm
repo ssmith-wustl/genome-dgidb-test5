@@ -34,7 +34,7 @@ class Genome::Model::Tools::SnpArray::ImportBatchTcgaData {
 		import_format	=> { is => 'Text', doc => "Input format of the data. Currently only 'unknown' is allowed", is_optional => 0, is_input => 1, default => "unknown" },
 		description	=> { is => 'Text', doc => "Short description of the import data", is_optional => 1, is_input => 1 },
 		source_name	=> { is => 'Text', doc => "Source name for the data, e.g. \"Broad Institute\"", is_optional => 1, is_input => 1 },
-		reference_sequence_build	=> { is => 'Text', doc => "Reference sequence build [b36=101947881 b37=102671028]", is_optional => 0, is_input => 1 },
+		reference_sequence_build	=> { is => 'Text', doc => "Reference sequence build [b36=101947881 b37=106942997]", is_optional => 0, is_input => 1 },
 	],
 };
 
