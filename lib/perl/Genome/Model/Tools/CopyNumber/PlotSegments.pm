@@ -214,7 +214,6 @@ sub convertSegs{
         }
     }
 
-    print STDERR join(",",@newfiles) . "\n";
     return join(",",@newfiles);
 }
 
