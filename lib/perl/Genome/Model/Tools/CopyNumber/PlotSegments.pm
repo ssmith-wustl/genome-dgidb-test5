@@ -214,6 +214,7 @@ sub convertSegs{
         }
     }
 
+    print STDERR join(",",@newfiles) . "\n";
     return join(",",@newfiles);
 }
 
@@ -239,8 +240,6 @@ sub cnvHmmToCbs{
 	die;
     }
     
-    $newfile = "/tmp/output.dat";
-
     open(OUTFILE,">$newfile") || die "can't open temp segs file for writing ($newfile)\n";
 
 
