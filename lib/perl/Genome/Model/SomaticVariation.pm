@@ -30,7 +30,12 @@ class Genome::Model::SomaticVariation {
             via => 'processing_profile',
             is_optional => 1,
         },
-        tumor_model_id => {
+        loh_version => {
+            is => 'Text',
+            via => 'processing_profile',
+            is_optional => 1,
+        },
+       tumor_model_id => {
             is => 'Text',
             via => 'inputs',
             to => 'value_id',

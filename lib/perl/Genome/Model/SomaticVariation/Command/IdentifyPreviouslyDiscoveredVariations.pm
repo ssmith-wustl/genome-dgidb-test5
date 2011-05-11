@@ -50,7 +50,7 @@ sub execute{
     #my $version = GMT:BED:CONVERT::version();  TODO, something like this instead of hardcoding
 
     if ($build->snv_detection_strategy){
-        my $detected_snv_path = $build->data_set_path("loh/snvs.somatic",$version,'bed'); #$build->data_set_path("variants/snvs.hq",$version,"bed"); 
+        my $detected_snv_path = defined($build->loh_version) ? $build->data_set_path("loh/snvs.somatic",$version,'bed') : $build->data_set_path("variants/snvs.hq",$version,"bed"); 
         my $novel_detected_snv_path = $build->data_set_path("novel/snvs.hq.novel",$version,'bed');
         my $previously_detected_snv_path = $build->data_set_path("novel/snvs.hq.previously_detected",$version,'bed');
 

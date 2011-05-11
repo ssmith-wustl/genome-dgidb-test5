@@ -54,8 +54,7 @@ class Genome::InstrumentData {
         },
         allocations => { 
             is => 'Genome::Disk::Allocation',
-            calculate_from => ['subclass_name', 'id'],
-            calculate => q{ return Genome::Disk::Alocation->get(owner_class_name => $subclass_name, owner_id => $id); },
+            reverse_as => 'owner',
         },
     ],
     table_name => 'INSTRUMENT_DATA',

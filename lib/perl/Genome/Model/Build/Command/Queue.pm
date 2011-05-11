@@ -22,6 +22,8 @@ class Genome::Model::Build::Command::Queue {
 
 };
 
+sub _is_hidden_in_docs { return 1; }
+
 sub sub_command_sort_position { 1 }
 
 sub help_synopsis {
