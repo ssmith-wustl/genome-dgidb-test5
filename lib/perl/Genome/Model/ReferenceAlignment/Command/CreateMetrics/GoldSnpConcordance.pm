@@ -64,7 +64,7 @@ sub _verify_build_and_set_paths {
             $gold_snp_build->__display_name__;
     }
 
-    my $gold_snp_file = $self->create_target_region_genotype_file($gold_snp_build->snvs_bed('v2'));
+    my $gold_snp_file = $self->_create_target_region_genotype_file($gold_snp_build->snvs_bed('v2'));
     $self->_gold_snp_file($gold_snp_file);
 
     if (!defined $self->_gold_snp_file()) {
