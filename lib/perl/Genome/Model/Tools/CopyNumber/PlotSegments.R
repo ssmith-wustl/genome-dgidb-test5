@@ -188,12 +188,12 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL,
     ##plot gain
     a2=segs[which(segs[,5] > gainThresh),]
     if(length(a2[,1])>0){
-      drawSegs(a2,color="blue")
+      drawSegs(a2,color="red")
     }
     ##plot loss
     a2=segs[which(segs[,5] < lossThresh),]
     if(length(a2[,1])>0){
-      drawSegs(a2,color="red")
+      drawSegs(a2,color="blue")
     }
 
     ## draw chromosome labels
@@ -295,12 +295,12 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL,
     ##plot gain
     a2=segs[which(segs[,5] > gainThresh),]
     if(length(a2[,1])>0){
-      drawSegs(a2,color="blue")
+      drawSegs(a2,color="red")
     }
     ##plot loss
     a2=segs[which(segs[,5] < lossThresh),]
     if(length(a2[,1])>0){
-      drawSegs(a2,color="red")
+      drawSegs(a2,color="blue")
     }  
   }
 }
