@@ -20,9 +20,6 @@ use Genome;
 # GSCApp & App->init cause compile errors and don't appear to be used
 #use GSCApp;
 
-#App::DB->db_access_level('rw');
-#App->init;
-
 class Genome::Model::Tools::Snp::GetGenotypes {
   is => 'Command',
 
@@ -55,6 +52,12 @@ EOS
 
 sub execute {
   my $self = shift;
+
+  unless(App::Init->initialized) {  
+    App::DB->db_access_level('rw');
+    App->init;
+  }
+  
   my $sample_list = $self->sample_list;
   my $data_directory = $self->data_directory;
   my $reference = $self->reference;
