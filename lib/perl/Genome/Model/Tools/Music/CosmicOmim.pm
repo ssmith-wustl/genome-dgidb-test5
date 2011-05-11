@@ -36,6 +36,10 @@ class Genome::Model::Tools::Music::CosmicOmim {
            is => 'Boolean',
            doc => 'Use this to display the larger working output',
        },
+       wu_annotation_headers => {
+           is => 'Boolean',
+           doc => 'Use this to default to wustl annotation format headers',
+       },
     ],
     doc => 'Compare the amino acid changes of supplied mutations to COSMIC and OMIM databases.'
 };
@@ -110,6 +114,7 @@ sub execute {
 	$cosmic_database = "$cosmic_dir/$cosmic_database_file";
    }
    my $verbose = $self->verbose;
+   my $wuheaders = $self->wu_annotation_headers;
 
    $self->status_message("Using $omimaa as omima db file");
    $self->status_message("Using $cosmic_dir as cosmic db folder");
@@ -159,7 +164,7 @@ unless ($fh->open (qq{$mut_file})) { die "Could not open mutation project file '
 
 if ($verbose) {print "Parsing mutation file...\n";}
 $DB::single = 1;
-my $mutation = ParseMutationFile($fh, $mut_file);
+my $mutation = ParseMutationFile($fh, $mut_file, $wuheaders);
 $fh->close;
 if ($verbose) {print "Done Parsing Mutation File! Yippee!\n";}
 
@@ -802,26 +807,41 @@ sub parse_nucleotide {
 }
 
 sub ParseMutationFile {
-	my ($fh,$file) = @_;
+	my ($fh,$file,$wuheaders) = @_;
 	my $source = 'mutation_csv'; # 'CSV'
 	my $keyfields = 'HUGO_SYMBOL:TUMOR_SAMPLE_ID:file_line_num';
 	my $field_subset_array = undef;
-	my $header_translation = {
-            'Chromosome' => 'CHROMOSOME',
-            'Start_position' => 'START_POSITION',
-            'End_position' => 'END_POSITION',
-            'Reference_Allele' => 'REFERENCE_ALLELE',
-            'Tumor_Seq_Allele1' => 'TUMOR_SEQ_ALLELE1',
-            'Tumor_Seq_Allele2' => 'TUMOR_SEQ_ALLELE2',
-            'Variant_Type' => 'VARIANT_TYPE',
-            'Hugo_Symbol' => 'HUGO_SYMBOL',
-            'transcript_name' => 'TRANSCRIPT',
-            'Strand' => 'TUMOR_SAMPLE_ID', #meaningless proxy
-#            'transcript_status' => 'MUTATION_STATUS',
-            'amino_acid_change' => 'AA_CHANGE',
-#Variant_Classification
-#Mutation_Status
-	};
+	my $header_translation;
+	if ($wuheaders) {
+		$header_translation = {
+        	    'chromosome_name' => 'CHROMOSOME',
+        	    'start' => 'START_POSITION',
+        	    'stop' => 'END_POSITION',
+        	    'reference' => 'REFERENCE_ALLELE',
+        	    'variant' => 'TUMOR_SEQ_ALLELE1',
+#        	    'variant' => 'TUMOR_SEQ_ALLELE2',
+        	    'type' => 'VARIANT_TYPE',
+        	    'gene_name' => 'HUGO_SYMBOL',
+        	    'transcript_name' => 'TRANSCRIPT',
+        	    'strand' => 'TUMOR_SAMPLE_ID', #meaningless proxy
+        	    'amino_acid_change' => 'AA_CHANGE',
+		};
+	}
+	else {
+		$header_translation = {
+        	    'Chromosome' => 'CHROMOSOME',
+        	    'Start_position' => 'START_POSITION',
+        	    'End_position' => 'END_POSITION',
+        	    'Reference_Allele' => 'REFERENCE_ALLELE',
+        	    'Tumor_Seq_Allele1' => 'TUMOR_SEQ_ALLELE1',
+        	    'Tumor_Seq_Allele2' => 'TUMOR_SEQ_ALLELE2',
+        	    'Variant_Type' => 'VARIANT_TYPE',
+        	    'Hugo_Symbol' => 'HUGO_SYMBOL',
+        	    'transcript_name' => 'TRANSCRIPT',
+        	    'Strand' => 'TUMOR_SAMPLE_ID', #meaningless proxy
+        	    'amino_acid_change' => 'AA_CHANGE',
+		};
+	}
 	my $header_skip = 0;
 	my $no_header = 0;
 	my $header_fields = undef;

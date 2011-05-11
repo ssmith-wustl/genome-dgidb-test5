@@ -78,19 +78,19 @@ sub check_build {
 sub _generate_content {
     my $self = shift;
 
-    my $ids = $self->subject->id;
-    $ids = [$ids] if !ref $ids;
-    if (@$ids != 1) {
-        return $self->_format_error(sprintf("Error: expected one (and only one) build id.  I got %s ids.", scalar @$ids));
+    my @builds = $self->subject->members;
+    if (@builds != 1) {
+        return $self->_format_error(sprintf("Error: expected one (and only one) build id.  I got %s ids.", scalar @builds));
     }
     
     if (!$self->standard_build) {
         return $self->_format_error("Error: expected a standard build id but did not get one.");
     }
 
-    my $subject_build = Genome::Model::Build->get($ids->[0]);
+    my $subject_build = $builds[0];
+    print "Subject Build: " . $subject_build->id . " of " . $subject_build->model_name . "\n\n\n";
 
-    my @builds = ($self->standard_build, $subject_build);
+    unshift(@builds, $self->standard_build);
     for my $b (@builds) {
         eval { check_build($b); };
         if ($@) {

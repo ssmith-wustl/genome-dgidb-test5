@@ -45,7 +45,7 @@ sub help_synopsis {
 genome model define genotype-microarray 
   --subject-name MY_SAMPLE
   --processing-profile-name illumina/wugc
-  --reference g1k-human-build37
+  --reference GRCh37-lite-build37
   --file /my/snps
 EOS
 }
