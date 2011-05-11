@@ -374,7 +374,10 @@ sub execute {
     open(R_COMMANDS,">$outfile") || die "can't open $outfile for writing\n";
 
     #todo - what's an easier way to source this R file out of the user's git path (or stable)?
-    print R_COMMANDS "source(\"~cmiller/gscCode/genome/lib/perl/Genome/Model/Tools/CopyNumber/PlotSegments.R\")\n";
+
+
+    my $dir_name = dirname(__FILE__);
+    print R_COMMANDS "source(\"" . $dir_name . "/PlotSegments.R\")\n";
 
 
     #set up pdf parameters
