@@ -82,11 +82,11 @@ sub _verify_build_and_set_paths {
 }
 
 sub _gen_concordance {
-    my ($self, $f1, $f2, $output_path) = @_;
+    my ($self, $bed_file, $dbsnp_file, $output_path) = @_;
 
     my $snvcmp_cmd = Genome::Model::Tools::SnvCmp::Concordance->create(
-        input_file_a => $f1,
-        input_file_b => $f2,
+        input_file_a => $bed_file,
+        input_file_b => $dbsnp_file,
         output_file  => $output_path,
     );
     $snvcmp_cmd->execute() or die "snvcmp failed!";

@@ -189,7 +189,7 @@ sub execute {
                     }
                 }
                 else {
-                    $new_name = $old_name . " CHANGED by $ENV{USER} for $to_name";
+                    $new_name = $old_name . " CHANGED by " . Genome::Sys->username . " for $to_name";
                 }
                 my @used = Genome::ProcessingProfile->get(name => $new_name);
                 if (@used) {

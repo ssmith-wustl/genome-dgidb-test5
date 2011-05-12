@@ -1,9 +1,9 @@
-package Genome::Completion::Command::Update;
+package Genome::Sys::Command::Completion::Update;
 
 use strict;
 use warnings;
 
-class Genome::Completion::Command::Update {
+class Genome::Sys::Command::Completion::Update {
     is => 'Genome::Command::Base',
     doc => 'update the tab completion spec files (.opts)',
     has => [
@@ -57,7 +57,7 @@ sub execute {
             $self->status_message("Remember to commit the .opts file(s)!");
         }
         elsif ($self->git_commit) {
-            system("git commit -m 'genome completion updated opts files' $gmt_opts $genome_opts");
+            system("git commit -m 'genome sys completion updated opts files' $gmt_opts $genome_opts");
             $self->status_message("Committed .opts file(s): " . join(" ", $gmt_opts, $genome_opts));
         }
     }

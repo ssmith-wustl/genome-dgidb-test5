@@ -63,7 +63,7 @@ sub execute {
                    mkpath($path); 
                 }
                 unless (-d $path && -w $path) {
-                    $self->error_message("$path is not a valid directory or is not writable by you, $ENV{USER}.  Please check permissions.");
+                    $self->error_message("$path is not a valid directory or is not writable by you, " . Genome::Sys->username . ". Please check permissions.");
                     return;
                 }
                 my $handle = IO::File->new(sprintf("|%s view -S -b -o %s/%s.%s.bam -", $self->samtools_path, $path, $rg_info->{id}, $rg_info->{platform_unit}));

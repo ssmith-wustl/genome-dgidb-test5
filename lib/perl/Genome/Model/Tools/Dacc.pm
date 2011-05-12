@@ -188,7 +188,7 @@ sub _launch_to_lsf {
 
     $self->status_message("Launch to LSF");
 
-    my $logging = '-u '.$ENV{USER}.'@genome.wustl.edu';
+    my $logging = '-u '. Genome::Config->user_email;
     my @rusage = $self->rusage;
     my $cmd = sprintf(
         'bsub -q long %s -R \'rusage[%s]\' gmt dacc %s %s %s', 

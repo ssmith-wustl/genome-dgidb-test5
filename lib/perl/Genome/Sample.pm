@@ -309,8 +309,15 @@ sub set_default_genotype_data {
 
     $self->default_genotype_data_id($genotype_data_id);
 
-    for my $genotype_model ($self->default_genotype_models) {
-        $genotype_model->request_builds_for_dependent_cron_ref_align;
+    my @genotype_models = $self->default_genotype_models;
+    unless (@genotype_models) {
+        $self->warning_message("Found no default genotype models using sample " . $self->__display_name__);
+    }
+    else { 
+        for my $genotype_model ($self->default_genotype_models) {
+            $genotype_model->request_builds_for_dependent_cron_ref_align;
+            $self->status_message("Requested builds for reference alignment models dependent on genotype model " . $genotype_model->id);
+        }
     }
 
     return 1;

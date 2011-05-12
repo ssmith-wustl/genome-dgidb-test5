@@ -53,7 +53,7 @@ sub execute {
     $fh->close;
 
     #run blast
-    my $out = ($self->output_file) ? $self->output_file : $ENV{USER}.$$;
+    my $out = ($self->output_file) ? $self->output_file : Genome::Sys->username.$$;
     my $ec = system("blastn $db blast_sequence.fasta -V 100 -sort_by_highscore > $out");
 
     #just printing contents of blast output file

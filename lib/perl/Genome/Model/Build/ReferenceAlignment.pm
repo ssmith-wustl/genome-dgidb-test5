@@ -174,6 +174,11 @@ sub gold_snp_report_file_unfiltered {
     return $self->data_directory . "/reports/gold_snp_concordance.unfiltered.txt"
 }
 
+sub region_of_interest_genotype_file {
+    my $self = shift;
+    return $self->variants_directory . '/region_of_interest_genotype.bed';
+}
+
 sub dbsnp_file_filtered {
     my $self = shift;
     return $self->data_directory . "/reports/dbsnp_concordance.filtered.txt"
@@ -1239,6 +1244,8 @@ sub files_ignored_by_diff {
         reports/dbSNP_Concordance/report.xml
         reports/dbSNP_Concordance/report.html
         reports/Mapcheck/report.xml
+        reports/Gold_SNP_Concordance/report.html
+        reports/Gold_SNP_Concordance/report.xml
         server_location.txt
         variants/workflow.xml
         variants/dispatcher.cmd

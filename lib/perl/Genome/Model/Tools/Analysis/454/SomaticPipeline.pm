@@ -226,7 +226,7 @@ sub execute {                               # replace with real execution logic.
 
 			close(SCRIPT);
 
-			system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>6000 && tmp>20000] rusage[mem=6000]\" -M 6000000 -u \'" . $ENV{USER} . "\' -oo $varscan_output_dir/script_pipeline.sh.out sh $varscan_output_dir/script_pipeline.sh");		
+			system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>6000 && tmp>20000] rusage[mem=6000]\" -M 6000000 -u \'" . Genome::Sys->username . "\' -oo $varscan_output_dir/script_pipeline.sh.out sh $varscan_output_dir/script_pipeline.sh");		
 		}
 	}
 	
