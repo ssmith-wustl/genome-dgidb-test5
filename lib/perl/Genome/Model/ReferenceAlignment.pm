@@ -557,5 +557,24 @@ sub get_or_create_lane_qc_models {
     return;
 }
 
+sub latest_build_id {
+    my $self = shift;
+    my $build = $self->latest_build;
+    unless ($build) { return; }
+    return $build->id;
+}
+
+sub latest_build_bam_file {
+    my $self = shift;
+    my $build = $self->latest_build;
+    my @events = $build->the_events;
+    my ($merge) = grep {($_->class eq 'Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries::Picard') || ($_->class eq 'Genome::Model::Event::Build::ReferenceAlignment::MergeAlignments')} @events;
+    unless ($merge->event_status eq 'Succeeded') {
+        #print STDERR 'Merge not Succeeded: '. $build->id ."\n";
+        return;
+    }
+    my $bam_file = $build->whole_rmdup_bam_file;
+    return $bam_file;
+}
 
 1;
