@@ -78,7 +78,7 @@ sub execute {
     my $organism_sample = GSC::Organism::Sample->get( sample_name => $sample );
     unless ($organism_sample) {
         $self->warning_message("failed to find sample $sample by external name, trying internal name...");
-        $organism_sample = GSC::Organism::Sample->get( sample_name => $sample );
+        $organism_sample = GSC::Organism::Sample->get( full_name => $sample );
         unless( defined $organism_sample ) {
             warn "Skipping unrecognized sample name: $sample!\n";
             next;
