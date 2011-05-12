@@ -752,7 +752,7 @@ sub execute
 
     close(RTFILE);
 
-    my $user              = $ENV{USER};
+    my $user              = Genome::Sys->username;
     my $sequence_set_name = $sequence_set->sequence_set_name();
 
     unless ($self->no_mail) {

@@ -228,7 +228,7 @@ sub params_for_test_class {
         print_xml => 1,
         #print_datasets => 1,
         #datasets => 'rows',
-        #email => $ENV{USER}.'@genome.wustl.edu',
+        #email => Genome::Config->user_email,
     );
 }
 
@@ -413,7 +413,7 @@ sub test01_send_report : Test(5) {
 
     my %valid_params = (
         report => $report,
-        to => [$ENV{USER}.'@genome.wustl.edu'], # can be string or aryref
+        to => [Genome::Config->user_email], # can be string or aryref
         xsl_files => [ $report->generator->get_xsl_file_for_html ],
     );
 
@@ -669,7 +669,7 @@ sub valid_param_sets {
         {
             report_directory => Genome::Report::XSLT::Test->dir.'/Assembly_Stats',
             xsl_files => Genome::Report::XSLT::Test->xsl_file,
-            to => $ENV{USER}.'@genome.wustl.edu',
+            to => Genome::Config->user_email,
         },
     );
 }

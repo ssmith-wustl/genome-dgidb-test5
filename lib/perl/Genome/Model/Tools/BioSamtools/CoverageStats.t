@@ -16,7 +16,7 @@ map { print STDERR $_ . " => " . $ENV{$_} . "\n" } keys %ENV;
 
 use_ok('Genome::Model::Tools::BioSamtools::CoverageStats');
 
-my $tmp_dir = File::Temp::tempdir('BioSamtools-CoverageStats-'.$ENV{USER}.'-XXXX',DIR => '/gsc/var/cache/testsuite/running_testsuites',CLEANUP => 1);
+my $tmp_dir = File::Temp::tempdir('BioSamtools-CoverageStats-'.Genome::Sys->username.'-XXXX',DIR => '/gsc/var/cache/testsuite/running_testsuites',CLEANUP => 1);
 
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-BioSamtools/RefCov';
 

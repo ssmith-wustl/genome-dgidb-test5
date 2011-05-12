@@ -1244,6 +1244,8 @@ sub files_ignored_by_diff {
         reports/dbSNP_Concordance/report.xml
         reports/dbSNP_Concordance/report.html
         reports/Mapcheck/report.xml
+        reports/Gold_SNP_Concordance/report.html
+        reports/Gold_SNP_Concordance/report.xml
         server_location.txt
         variants/workflow.xml
         variants/dispatcher.cmd

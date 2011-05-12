@@ -657,7 +657,7 @@ sub create_fake_phds
             q       => 'long',
             J       => "$fasta.MAKE_PHD",
             n       => 1,
-            u       => $ENV{USER}.'@watson.wustl.edu',    
+            u       => Genome::Config->user_email,
         );
 
         $self->error_message("Unable to create LSF job for $cmd") and return

@@ -23,7 +23,7 @@ note "instrument data id is ". $i->import_instrument_data_id."\n";
 
 my $i_d = Genome::InstrumentData::Imported->get($i->import_instrument_data_id);
 is($i_d->sequencing_platform,'solexa','platform is correct');
-is($i_d->user_name, $ENV{USER}, "user name is correct");
+is($i_d->user_name, Genome::Sys->username, "user name is correct");
 ok($i_d->import_date, "date is set");
 is($i_d->reference_sequence_build_id, 103107618, "Reference sequence properly retreived, " . $i_d->reference_sequence_build_id. ".");
 

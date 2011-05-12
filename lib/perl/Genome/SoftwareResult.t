@@ -14,7 +14,7 @@ BEGIN {
         use_ok('Genome::SoftwareResult');
 }
 
-my $template = 'Genome-SoftwareResult-'. $ENV{USER} .'-XXXX';
+my $template = 'Genome-SoftwareResult-'. Genome::Sys->username .'-XXXX';
 my $tmp_dir = File::Temp::tempdir($template,CLEANUP => 1);
 
 my $mock_id = 0;

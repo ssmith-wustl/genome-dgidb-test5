@@ -16,7 +16,7 @@ plan tests => 5;
 use_ok('Genome::Model::Tools::BioSamtools');
 use_ok('Genome::Model::Tools::BioSamtools::StatsSummary');
 
-my $tmp_dir = File::Temp::tempdir('BioSamtools-StatsSummary-'.$ENV{USER}.'-XXXX',DIR => '/gsc/var/cache/testsuite/running_testsuites',CLEANUP => 1);
+my $tmp_dir = File::Temp::tempdir('BioSamtools-StatsSummary-'.Genome::Sys->username.'-XXXX',DIR => '/gsc/var/cache/testsuite/running_testsuites',CLEANUP => 1);
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-BioSamtools/StatsSummary';
 
 my $stats_file = $data_dir .'/test.stats';

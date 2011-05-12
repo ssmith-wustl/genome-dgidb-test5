@@ -34,7 +34,7 @@ my $i_d = Genome::InstrumentData::Imported->get($i->import_instrument_data_id);
 is($i_d->sample_id, $s->id, 'sample id is correct');
 is($i_d->library_id, $l->id, 'library id is correct');
 is($i_d->sequencing_platform,'solexa','platform is correct');
-is($i_d->user_name, $ENV{USER}, "user name is correct");
+is($i_d->user_name, Genome::Sys->username, "user name is correct");
 ok($i_d->import_date, "date is set");
 is($i_d->reference_sequence_build_id, 103107618, "Reference sequence properly retreived, " . $i_d->reference_sequence_build_id. ".");
 is($i_d->base_count, 274209200, "Base count is correct");

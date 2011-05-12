@@ -6,7 +6,7 @@ use warnings;
 use above 'Genome';
 use Test::More tests => 4;
 
-print "user:  " . $ENV{USER} . "\n";
+print "user:  " . Genome::Sys->username . "\n";
 
 BEGIN {use_ok('Genome::Model::Tools::GetSubDirectories');}
 

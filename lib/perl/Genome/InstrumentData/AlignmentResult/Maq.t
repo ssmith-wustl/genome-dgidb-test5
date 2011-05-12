@@ -148,7 +148,7 @@ $instrument_data2->set_always('is_paired_end',1);
 ok($instrument_data2->is_paired_end,'instrument data is paired end');
 
 my $tmp_dir = File::Temp::tempdir('Align-Maq-XXXXX', DIR => Genome::Sys->base_temp_directory, CLEANUP => 1);
-my $staging_base = sprintf("alignment-%s-%s-%s", hostname(), $ENV{USER}, $$);
+my $staging_base = sprintf("alignment-%s-%s-%s", hostname(), Genome::Sys->username, $$);
 
 my $tmp_allocation = Genome::Disk::Allocation->__define__(
     id                  => '-123459',
