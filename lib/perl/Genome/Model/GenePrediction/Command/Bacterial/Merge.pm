@@ -54,6 +54,11 @@ class Genome::Model::GenePrediction::Command::Bacterial::Merge {
             doc => "alternative path to iprscan",
             default => "/gsc/scripts/bin/iprscan",
         },
+		 ipr_version => {
+			is => 'String',
+            valid_values => ['4.5', '4.7', '4.8'],
+            default => '4.7',
+            },
         runner_count => {
             is  => 'Integer',
             doc => "number of runner jobs to spawn off to LSF; default 10",
@@ -187,7 +192,7 @@ sub execute
     my $self = shift;
     my $user = $ENV{USER};
 
-    $self->status_message("iprpath : ".$self->iprpath);
+    $self->status_message("iprpath : ". "/gsc/scripts/pkg/bio/iprscan/iprscan-". $self->ipr_version ."/bin/iprscan");
 
     my $runner_count = $self->runner_count;
 
@@ -1072,7 +1077,9 @@ sub iprscan
      #   '/gsc/scripts/bin/iprscan',
      #   '/gscmnt/temp212/info/annotation/InterProScan/iprscan16.1/iprscan/bin/iprscan.hacked',    
     my @cmd = (
-        $self->iprpath,
+        #$self->iprpath,
+		#"/gsc/scripts/pkg/bio/iprscan/iprscan-4.8/bin/iprscan",
+		"/gsc/scripts/pkg/bio/iprscan/iprscan-". $self->ipr_version ."/bin/iprscan",
         '-cli',
         '-appl hmmpfam',
         '-goterms',
