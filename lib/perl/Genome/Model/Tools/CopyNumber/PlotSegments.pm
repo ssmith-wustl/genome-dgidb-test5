@@ -1,15 +1,15 @@
 package Genome::Model::Tools::CopyNumber::PlotSegments;
 
 ##############################################################################
-# 
-#					
+#
+#
 #	AUTHOR:		Chris Miller (cmiller@genome.wustl.edu)
 #
 #	CREATED:	05/05/2011 by CAM.
 #	MODIFIED:
 #
-#	NOTES:	
-#			
+#	NOTES:
+#
 ##############################################################################
 
 use strict;
@@ -35,7 +35,7 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	segment_files => {
 	    is => 'String',
 	    is_optional => 0,
-	    doc => 'comma-seperated list of files containing the segments to be plotted. Expects CBS output, (columns: chr, start, stop, #bins, copyNumber) unless the --cn[a|v]hmm_input flag is set, in which case it will take the output of cnvHMM directly',
+	    doc => 'comma-seperated list of files containing the segments to be plotted. Expects CBS output, (columns: chr, start, stop, #bins, copyNumber) unless the --cn[a|v]hmm_input flag is set, in which case it will take the output of cnvHMM/cnaHMM directly',
 	},
         plot_title => {
             is => 'String',
@@ -46,15 +46,15 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	gain_threshold => {
 	    is => 'Float',
 	    is_optional => 1,
-	    default => 2.5, 
-	    doc => 'Threshold for coloring a segment as a gain',
+	    default => 2.5,
+	    doc => 'CN threshold for coloring a segment as a gain',
 	},
 
 	loss_threshold => {
 	    is => 'Float',
 	    is_optional => 1,
-	    doc => 'Threshold for coloring a segment as a loss',
-	    default => 1.5, 
+	    doc => 'CN threshold for coloring a segment as a loss',
+	    default => 1.5,
 	},
 
 	# male_sex_loss_threshold => {
@@ -75,7 +75,7 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	log_input => {
 	    is => 'Boolean',
 	    is_optional => 1,
-	    doc => 'Set this flag if input copy numbers are expressed as log-rations, as opposed to absolute copy number',
+	    doc => 'Set this flag if input copy numbers are expressed as log-ratios, as opposed to absolute copy number',
 	},
 
 	log_plot => {
@@ -128,35 +128,64 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	rcommands_file => {
 	    is => 'String',
 	    is_optional => 1,
-	    doc => 'an output file for your R commands - defaults to /tmp/<timestamp>.R',
+	    doc => 'an output file for your R commands',
 	},
 
 	output_pdf => {
 	    is => 'String',
 	    is_optional => 0,
-	    doc => 'pdf file to write output to',	    
+	    doc => 'pdf file containing your plots',
 	},
 
-       	entrypoints_file => {
+       	# entrypoints_file => {
+	#     is => 'String',
+	#     is_optional => 1,
+	#     doc => 'entrypoints to be used for plotting - note that male/female needs to specified here',
+	#     default => "/gscmnt/sata921/info/medseq/cmiller/annotations/entrypoints.hg18.male",
+	# },
+
+        genome_build => {
 	    is => 'String',
 	    is_optional => 1,
-	    doc => 'entrypoints to be used for plotting - note that male/female needs to specified here',
-	    default => "/gscmnt/sata921/info/medseq/cmiller/annotations/entrypoints.hg18.male",
+	    doc => 'genome build - 36 or 37',
+            default => '36',
 	},
+
+        sex => {
+	    is => 'String',
+	    is_optional => 1,
+	    doc => 'sex of the sample - male or female',
+            default => 'male',
+	},   
 
 	plot_height => {
 	    is => 'Float',
 	    is_optional => 1,
-	    default => 3, 
+	    default => 3,
 	    doc => 'height of each plot',
 	},
 
 	plot_width => {
 	    is => 'Float',
 	    is_optional => 1,
-	    default => 8, 
+	    default => 8,
 	    doc => 'width of each plot',
 	},
+
+	gain_color => {
+	    is => 'String',
+	    is_optional => 1,
+	    default => "red",
+	    doc => 'color of gains/amplifications',
+	},
+
+	loss_color => {
+	    is => 'String',
+	    is_optional => 1,
+	    default => "blue",
+	    doc => 'color of losses/deletions',
+	},
+
 
 	cnvhmm_input => {
 	    is => 'Boolean',
@@ -175,7 +204,7 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	# ylab => {
 	#     is => 'String',
 	#     is_optional => 1,
-	#     default => "Copy Number", 
+	#     default => "Copy Number",
 	#     doc => 'y-axis labels',
 	# },
 
@@ -206,7 +235,7 @@ sub help_detail {
 
 #########################################################################
 sub convertSegs{
-    my ($self, $segfiles,$cnvhmm_input, $cnahmm_input) = @_;    
+    my ($self, $segfiles,$cnvhmm_input, $cnahmm_input) = @_;
     my @newfiles;
     my @infiles = split(",",$segfiles);
     foreach my $file (@infiles){
@@ -226,9 +255,9 @@ sub convertSegs{
 #-----------------------------------------------------
 #take the log with a different base
 #(log2 = log_base(2,values)
-sub log_base { 
-    my ($base, $value) = @_; 
-    return log($value)/log($base); 
+sub log_base {
+    my ($base, $value) = @_;
+    return log($value)/log($base);
 }
 
 
@@ -236,14 +265,14 @@ sub log_base {
 #convert cnvhmm output to a format we can use here
 sub cnvHmmToCbs{
     my ($file,$self) = @_;
- 
+
     #create a tmp file for this output
-    my ($tfh,$newfile) = Genome::Sys->create_temp_file;	
+    my ($tfh,$newfile) = Genome::Sys->create_temp_file;
     unless($tfh) {
 	$self->error_message("Unable to create temporary file $!");
 	die;
     }
-    
+
     open(OUTFILE,">$newfile") || die "can't open temp segs file for writing ($newfile)\n";
 
 
@@ -252,7 +281,7 @@ sub cnvHmmToCbs{
     my $inCoords = 0;
     while( my $line = $inFh->getline )
     {
-	chomp($line);	
+	chomp($line);
 	if ($line =~ /^#CHR/){
 	    $inCoords = 1;
 	    next;
@@ -261,11 +290,11 @@ sub cnvHmmToCbs{
 	    $inCoords = 0;
 	    next;
 	}
-	
+
 	if ($inCoords){
 	    my @fields = split("\t",$line);
 	    print OUTFILE join("\t",($fields[0],$fields[1],$fields[2],$fields[4],log_base(2,$fields[6]/2))) . "\n";
-	}	
+	}
     }
     close(OUTFILE);
     $inFh->close;
@@ -276,9 +305,9 @@ sub cnvHmmToCbs{
 #convert cnvhmm output to a format we can use here
 sub cnaHmmToCbs{
     my ($file,$self) = @_;
- 
+
     #create a tmp file for this output
-    my ($tfh,$newfile) = Genome::Sys->create_temp_file;	
+    my ($tfh,$newfile) = Genome::Sys->create_temp_file;
     unless($tfh) {
 	$self->error_message("Unable to create temporary file $!");
 	die;
@@ -292,7 +321,7 @@ sub cnaHmmToCbs{
     my $inCoords = 0;
     while( my $line = $inFh->getline )
     {
-	chomp($line);	
+	chomp($line);
 	if ($line =~ /^#CHR/){
 	    $inCoords = 1;
 	    next;
@@ -301,21 +330,50 @@ sub cnaHmmToCbs{
 	    $inCoords = 0;
 	    next;
 	}
-	
+
 	if ($inCoords){
 	    my @fields = split("\t",$line);
 	    print OUTFILE join("\t",($fields[0],$fields[1],$fields[2],$fields[4],(log_base(2,$fields[6]/$fields[8])))) . "\n";
-	}	
+	}
     }
     close(OUTFILE);
     $inFh->close;
     return($newfile);
 }
 
+
+#-------------------------------------
+
+sub getEntrypointsFile{
+    my ($sex, $genome_build) = @_;
+    #set the appropriate entrypoints file so that we know the 
+    # chrs and lengths
+    my $entrypoints_file = "";
+    if($sex eq "male"){
+        if($genome_build eq "36"){
+            $entrypoints_file = "/gscmnt/sata921/info/medseq/cmiller/annotations/entrypoints.hg18.male"
+        } elsif ($genome_build eq "37"){
+            $entrypoints_file = "/gscmnt/sata921/info/medseq/cmiller/annotations/entrypoints.hg19.male"
+    }
+    } elsif ($sex eq "female"){
+        if($genome_build eq "36"){
+            $entrypoints_file = "/gscmnt/sata921/info/medseq/cmiller/annotations/entrypoints.hg18.female"
+        } elsif ($genome_build eq "37"){
+            $entrypoints_file = "/gscmnt/sata921/info/medseq/cmiller/annotations/entrypoints.hg19.female"
+    }
+    }
+
+    if ($entrypoints_file eq ""){
+        die "Specify a valid genome build and sex. Only genome builds 36/37 and male/female are currently supported";
+    }
+
+    return $entrypoints_file;
+}
+
 #########################################################################
 
 sub execute {
-    my $self = shift;   
+    my $self = shift;
     my $chr = $self->chr;
     my $segment_files = $self->segment_files;
     my $gain_threshold = $self->gain_threshold;
@@ -330,16 +388,21 @@ sub execute {
     my $lowres_max = $self->lowres_max;
     my $ymax = $self->ymax;
     my $hide_normal = $self->hide_normal;
-    my $entrypoints_file = $self->entrypoints_file;
+    my $genome_build = $self->genome_build;
+    my $sex = $self->sex;
     my $output_pdf = $self->output_pdf;
     my $rcommands_file = $self->rcommands_file;
     my $plot_height = $self->plot_height;
-    my $plot_width = $self->plot_width;   
-    my $cnvhmm_input = $self->cnvhmm_input; 
-    my $cnahmm_input = $self->cnahmm_input; 
+    my $plot_width = $self->plot_width;
+    my $gain_color = $self->gain_color;
+    my $loss_color = $self->loss_color;
+    my $cnvhmm_input = $self->cnvhmm_input;
+    my $cnahmm_input = $self->cnahmm_input;
     my $plot_title = $self->plot_title;
     # my $ylab = $self->ylab;
 
+
+    my $entrypoints_file = getEntrypointsFile($sex,$genome_build);
 
 
     my @infiles;
@@ -352,23 +415,23 @@ sub execute {
     }
 
     @infiles = split(",",$segment_files);
-    
+
     #set up a temp file for the R commands (unless one is specified)
     my $temp_path;
     my $tfh;
     my $outfile = "";
 
-    if (defined($rcommands_file)){      
+    if (defined($rcommands_file)){
 	$outfile = $rcommands_file;
     } else {
-    	my ($tfh,$tfile) = Genome::Sys->create_temp_file;	
+    	my ($tfh,$tfile) = Genome::Sys->create_temp_file;
     	unless($tfh) {
     	    $self->error_message("Unable to create temporary file $!");
     	    die;
     	}
 	$outfile=$tfile;
     }
-    
+
 
     #open the R file
     open(R_COMMANDS,">$outfile") || die "can't open $outfile for writing\n";
@@ -409,7 +472,7 @@ sub execute {
 	if(defined($ymax)){
 	    print R_COMMANDS ", ymax=" . $ymax;
 	}
-	
+
 	if (defined($highlights)){
 	    print R_COMMANDS ", highlights=\"" . $highlights . "\"";
 	}
@@ -423,7 +486,7 @@ sub execute {
 	}
 
 	if ($lowres){
-	    print R_COMMANDS ", lowRes=TRUE";	    
+	    print R_COMMANDS ", lowRes=TRUE";
 	}
 
 	if (defined($lowres_min)){
@@ -439,9 +502,12 @@ sub execute {
 	} else {
 	    print R_COMMANDS ", showNorm=TRUE";
 	}
-	
+
 	print R_COMMANDS ", gainThresh=" . $gain_threshold;
 	print R_COMMANDS ", lossThresh=" . $loss_threshold;
+
+	print R_COMMANDS ", gainColor=\"" . $gain_color . "\"";
+	print R_COMMANDS ", lossColor=\"" . $loss_color . "\"";
 
 	if (defined($plot_title)){
 	    print R_COMMANDS ", plotTitle=\"" . $titles[$counter] . "\"";
@@ -457,7 +523,7 @@ sub execute {
 	#     }
 	# }
 
-	print R_COMMANDS ")\n";	
+	print R_COMMANDS ")\n";
         $counter++;
     }
 
@@ -471,7 +537,7 @@ sub execute {
     my $return = Genome::Sys->shellcmd(
 	cmd => "$cmd",
         );
-    unless($return) { 
+    unless($return) {
 	$self->error_message("Failed to execute: Returned $return");
 	die $self->error_message;
     }

@@ -174,6 +174,11 @@ sub gold_snp_report_file_unfiltered {
     return $self->data_directory . "/reports/gold_snp_concordance.unfiltered.txt"
 }
 
+sub region_of_interest_genotype_file {
+    my $self = shift;
+    return $self->variants_directory . '/region_of_interest_genotype.bed';
+}
+
 sub dbsnp_file_filtered {
     my $self = shift;
     return $self->data_directory . "/reports/dbsnp_concordance.filtered.txt"

@@ -362,6 +362,14 @@ sub is_eliminate_all_duplicates {
     }
 }
 
+sub is_capture {
+    my $self = shift;
+    if (defined $self->target_region_set_name) {
+        return 1;
+    }
+    return 0;
+}
+
 sub is_lane_qc {
     my $self = shift;
     my $pp = $self->processing_profile;
@@ -550,5 +558,31 @@ sub get_or_create_lane_qc_models {
     return;
 }
 
+sub latest_build_id {
+    my $self = shift;
+    my $build = $self->latest_build;
+    unless ($build) { return; }
+    return $build->id;
+}
+
+sub latest_build_bam_file {
+    my $self = shift;
+
+    my $build = $self->latest_build;
+    unless ($build) { return; }
+
+    my @events = $build->the_events;
+    unless (@events) { return; }
+
+    my ($merge) = grep {($_->class eq 'Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries::Picard') || ($_->class eq 'Genome::Model::Event::Build::ReferenceAlignment::MergeAlignments')} @events;
+    unless ($merge) { return; }
+
+    unless ($merge->event_status eq 'Succeeded') {
+        #print STDERR 'Merge not Succeeded: '. $build->id ."\n";
+        return;
+    }
+    my $bam_file = $build->whole_rmdup_bam_file;
+    return $bam_file;
+}
 
 1;
