@@ -63,6 +63,7 @@ sub log_command {
 
 
 sub email_usage_info {    
+    my $class = shift;
     my $to = shift;
 
     return unless ($to);
