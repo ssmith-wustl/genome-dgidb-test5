@@ -68,7 +68,6 @@ my $pp = Genome::ProcessingProfile->create(
     sequencing_center => 'gsc',
     assembler => 'phred_phrap',
     assembler_params => '-vector_bound 0 -trim_qual 0',
-    trimmer => 'finishing',
     classifier => 'rdp2-1',
     classifier_params => '-training_set broad',
 );
@@ -188,6 +187,8 @@ ok(-s $build->processed_reads_qual_file, 'Created the processed reads qual file'
 
 # metrics
 is($build->amplicons_attempted, 5, 'amplicons attempted is 5');
+is($build->amplicons_processed, 4, 'amplicons processed is 4');
+is($build->amplicons_processed_success, '0.80', 'amplicons processed success is 0.80');
 is($build->reads_attempted, 30, 'reads attempted is 30');
 is($build->reads_processed, 17, 'reads processed is 17');
 is($build->reads_processed_success, '0.57', 'reads processed success is 0.57');

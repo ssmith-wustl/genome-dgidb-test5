@@ -25,43 +25,8 @@ sub calculate_estimated_kb_usage {
     return ( $kb );
 }
 
-#< Amplicons >#
-sub amplicon_set_names_and_primers { #TODO - these are not real .. modified version of 454 .. for initial testing
-    return (
-        V1_V3 => [qw/
-            CCGCGGCTGC
-        /],
-        V3_V5 => [qw/
-            TCATTTAAGT
-            TCATTTGAGT
-            TCCTTTAAGT
-            TCCTTTGAGT
-        /],
-        V6_V9 => [qw/
-            TACGGCTACC
-            TACGGCTACC
-            TACGGTTACC
-            TACGGTTACC
-        /],
-    );
-}
-
-sub amplicon_set_names {
-    my %set_names_and_primers = $_[0]->amplicon_set_names_and_primers;
-    return sort keys %set_names_and_primers;
-}
-
-#< Clean Up >#
-sub clean_up {
-    my $self = shift;
-
-    return 1;
-}
-
 #< prepare instrument data >#
-#processing of solexa data is currently in beginning test phase so there is
-#no filtering by primers yet
-sub filter_reads_by_primers {
+sub prepare_instrument_data {
     my $self = shift;
 
     my @instrument_data = $self->instrument_data;
@@ -71,9 +36,9 @@ sub filter_reads_by_primers {
     }
 
     my $min_length = $self->processing_profile->amplicon_size;
-    my ($attempted, $reads_attempted, $reads_processed) = (qw/ 0 0 0 /);
+    my ($attempted, $processed, $reads_attempted, $reads_processed) = (qw/ 0 0 0 /);
 
-    my $fasta_file = $self->combined_input_fasta_file; #single fasta to of all input reads
+    my $fasta_file = $self->processed_fasta_file_for_set_name('');
     my $writer = Genome::Model::Tools::FastQual::PhredWriter->create(files => [ $fasta_file ]);
 
     for my $inst_data ( @instrument_data ) {
@@ -86,14 +51,17 @@ sub filter_reads_by_primers {
                 $reads_attempted++;
                 next SEQ unless length $fastq->{seq} >= $min_length;
                 $fastq->{desc} = undef;
+                $processed++;
                 $reads_processed++;
             }
             $writer->write( $fastqs );
         }
-        $self->status_message( 'DONE PROCESSING: '.$inst_data->id );
+        $self->status_message('DONE PROCESSING: '.$inst_data->id);
     }
 
-    $self->amplicons_attempted( $attempted );
+    $self->amplicons_attempted($attempted);
+    $self->amplicons_processed($processed);
+    $self->amplicons_processed_success( $attempted > 0 ?  sprintf('%.2f', $processed / $attempted) : 0 );
     $self->reads_attempted($reads_attempted);
     $self->reads_processed($reads_processed);
     $self->reads_processed_success( $reads_attempted > 0 ?  sprintf('%.2f', $reads_processed / $reads_attempted) : 0 );

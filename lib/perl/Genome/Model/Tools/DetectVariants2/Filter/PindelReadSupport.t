@@ -16,14 +16,22 @@ BEGIN {
     use_ok( 'Genome::Model::Tools::DetectVariants2::Filter::PindelReadSupport')
 };
 
+
+# Override lock name because if people cancel tests locks don't get cleaned up.
+*Genome::SoftwareResult::_resolve_lock_name = sub {
+    return Genome::Sys->create_temp_file_path;
+};
+
 my $refbuild_id = 101947881;
 my $input_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-PindelReadSupport";
 
 # Updated to v2 to allow for new columns 
-my $expected_dir = $input_directory . "/expected_v2/mod/";
-my $tumor_bam_file  = $input_directory. '/flank_tumor_sorted.bam';
-my $normal_bam_file  = $input_directory. '/flank_normal_sorted.bam';
-my $test_output_dir = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Filter-PindelReadSupport-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+my $expected_dir = $input_directory . "/expected_v4/";
+my $tumor_bam_file  = $input_directory. '/true_positive_tumor_validation.bam';
+my $normal_bam_file  = $input_directory. '/true_positive_normal_validation.bam';
+my $test_output_base = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Filter-PindelReadSupport-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+my $test_output_dir = $test_output_base . '/filter';
+my $detector_directory = $input_directory."/pindel-somatic-calls-v1-";
 
 my $hq_output_bed = "$test_output_dir/indels.hq.bed";
 my $read_support_output_bed = "$test_output_dir/indels.hq.read_support.bed";
@@ -33,13 +41,19 @@ my $expected_hq_bed_output = "$expected_dir/indels.hq.bed";
 my $expected_lq_bed_output = "$expected_dir/indels.lq.bed";
 my $expected_read_support_output = "$expected_dir/indels.hq.read_support.bed";
 
-my $pindel_read_support = Genome::Model::Tools::DetectVariants2::Filter::PindelReadSupport->create(
-    input_directory => $input_directory."/old_input",#"/pindel-somatic-calls-v1-",
-    detector_directory => $input_directory,
-    output_directory => $test_output_dir,
-    aligned_reads_input => $tumor_bam_file,
-    control_aligned_reads_input => $normal_bam_file,
+my $detector_result = Genome::Model::Tools::DetectVariants2::Result->__define__(
+    output_dir => $detector_directory,
+    detector_name => 'test',
+    detector_params => '',
+    detector_version => 'awesome',
+    aligned_reads => $tumor_bam_file,
+    control_aligned_reads => $normal_bam_file,
     reference_build_id => $refbuild_id,
+);
+
+my $pindel_read_support = Genome::Model::Tools::DetectVariants2::Filter::PindelReadSupport->create(
+    previous_result_id => $detector_result->id,
+    output_directory => $test_output_dir,
 );
 
 ok($pindel_read_support, "created PindelReadSupport object");

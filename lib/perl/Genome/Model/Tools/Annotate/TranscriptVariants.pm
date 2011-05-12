@@ -16,9 +16,6 @@ use File::Basename;
 use Genome::Info::IUB;
 use Genome::Info::UCSCConservation;
 
-# keep this updated to be the latest blessed, non-experimental version
-sub default_annotator_version { 2 };
-
 class Genome::Model::Tools::Annotate::TranscriptVariants {
     is => 'Command',
     has => [ 
@@ -195,6 +192,10 @@ sub help_synopsis {
     return <<EOS
 gmt annotate transcript-variants --variant-file variants.tsv --output-file transcript-changes.tsv
 EOS
+}
+
+sub default_annotator_version {
+    return 2;
 }
 
 sub help_detail {

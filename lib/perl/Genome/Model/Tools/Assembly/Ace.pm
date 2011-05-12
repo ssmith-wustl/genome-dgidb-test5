@@ -31,55 +31,34 @@ EOS
 sub get_valid_contigs_from_list {
     my $self = shift;
     my $contigs_list = {}; #return a hash of contig names
-    unless (-s $self->contigs_list) {
-	$self->error_message("Failed to find list of contigs:".$self->contigs_list);
-	return;
+    if ( $self->contigs ) {
+        for my $contig ( $self->contigs ) {
+            $contigs_list->{$contig} = 1;
+        }
     }
-    my $fh = IO::File->new("<".$self->contigs_list) ||
-	die "Can not create file handle for list of contigs\n";
-    while (my $line = $fh->getline) {
-	next if $line =~ /^\s+$/;
-	chomp $line;
-	my @ar = split(/\s+/, $line); #Contig9.99 Contig10.1
-	foreach (@ar) {
-	    unless ($_ =~ /^contig\d+$/i or $_ =~ /^contig\d+\.\d+$/i) {
-		$self->error_message("Contig names must be in this format: Contig4 Contig4.5\n\t".
-				     "instead you have $_\n");
-		return;
-	    }
-	    if (exists $contigs_list->{$_}) {
-		$self->error_message("Warning: contig name: $_ is duplicated in list");
-	    }
-	    $contigs_list->{$_} = 1;
-	}
+    if ( $self->contigs_list) {
+        my $fh = Genome::Sys->open_file_for_reading( $self->contigs_list );
+        while (my $line = $fh->getline) {
+            next if $line =~ /^\s+$/;
+            chomp $line;
+            my @ar = split(/\s+/, $line); #Contig9.99 Contig10.1
+            foreach (@ar) {
+                $contigs_list->{$_} = 1;
+            }
+        }
+        $fh->close;
     }
-    $fh->close;
     return $contigs_list;
 }
 #validate ace files provided
 sub get_valid_input_acefiles {
     my $self = shift;
     #validate ace input params
-    unless ($self->ace or $self->ace_list or $self->acefile_names) {
+    unless ($self->ace_list or $self->ace_files) {
 	$self->error_message("ace or list of ace files must be supplied");
 	return;
     }
-    if ($self->ace and $self->ace_list and $self->acefile_names or $self->ace and $self->ace_list or $self->ace_list and $self->acefile_names or $self->ace and $self->acefile_names) {
-	$self->error_message("You must supply either an ace file, list of ace files or a string of ace file names".
-			     "and not all three of any combination of two");
-	return;
-    }
     my @acefiles;
-    #check ace file
-    if ($self->ace) {
-	my $acefile = (-s $self->ace) ? $self->ace : $self->directory.'/'.$self->ace;
-	unless (-s $acefile) {
-	    $self->error_message("Can not find ace file or file is zero size: ".$acefile);
-	    return;
-	}
-	push @acefiles, $acefile;
-    }
-    #check list of ace files
     if($self->ace_list) {
 	unless (-s $self->ace_list) {
 	    $self->error_message("Can not find ace list file or file is zero size: ".$self->ace_list);
@@ -102,22 +81,14 @@ sub get_valid_input_acefiles {
 	}
     }
     #check string of ace files
-    if ($self->acefile_names) {
-	my @files = $self->acefiles;
-	foreach (@files) {
+    if ($self->ace_files) {
+	foreach ( $self->ace_files ) {
 	    my $acefile = (-s $_) ? $_ : $self->directory.'/'.$_;
 	    unless (-s $acefile) {
 		$self->error_message("Can not find ace file or file is zero size: ".$acefile);
 		return;
 	    }
 	    push @acefiles, $acefile;
-	}
-    }
-    #validate ace file name
-    foreach my $acefile (@acefiles) {
-	unless ($acefile =~ /\.ace/) {
-	    $self->error_message("Invalid file name for ace file: ".$acefile);
-	    return;
 	}
     }
     return \@acefiles;
@@ -129,14 +100,13 @@ sub filter_ace_files {
     my @new_aces; #return ary ref of new ace names
     foreach my $acefile (@$acefiles) {
 	my $ace_name = File::Basename::basename($acefile);
-	my $int_file = $self->intermediate_file_name($ace_name);
-	my $int_ace_fh = IO::File->new("> $int_file") ||
-	    die "Can not create file handle for writing intmediate acefile\n";
+	my $int_file = $self->intermediate_file_name( $ace_name );
+        unlink $int_file;
+	my $int_ace_fh = Genome::Sys->open_file_for_writing( $int_file );
 	my $export_setting = 0; #set to print ace contents if == 1
 	my $contig_count = 0;
 	my $total_read_count = 0;
-	my $fh = IO::File->new("< $acefile") ||
-	    die "Can not create file handle to read $acefile\n";
+	my $fh = Genome::Sys->open_file_for_reading( $acefile );
 	while (my $line = $fh->getline) {
 	    next if $line =~ /^AS\s+/;
 	    if ($line =~ /^CO\s+/) {
@@ -177,17 +147,15 @@ sub merge_acefiles {
     my ($self, %params) = @_;
 
     my $int_file = $self->intermediate_file_name('merge');
-    my $int_fh = IO::File->new("> $int_file") ||
-	die "Can not create file handle for $int_file";
+    unlink $int_file;
+    my $int_fh = Genome::Sys->open_file_for_writing( $int_file );
     my $contig_count = 0;     my $read_count = 0;
     #incrementing contigs numbering by 1M for each acefile
     my $increment = ( defined $params{increment} ? $params{increment} : 1000000 );
     my $inc_count = 0;
-    foreach my $ace_in (@{$params{acefiles}}) {
-	my $fh = IO::File->new("< $ace_in") ||
-	    die "Can not create file handle to read $ace_in\n";
+    foreach my $ace_in (@{$params{ace_files}}) {
+	my $fh = Genome::Sys->open_file_for_reading( $ace_in );
 	while (my $line = $fh->getline) {
-	    #last if ($line =~ /^CT{/ or $line =~ /^WA{/); #reached end of contigs .. tags not transferred  
 	    if ($line =~ /^AS\s+/) {
 		chomp $line;
 		my ($c1, $c2) = $self->get_counts_from_ace_AS_line($line);
@@ -202,11 +170,11 @@ sub merge_acefiles {
 		#first ace file will retain same contig numbering
 		#following ace files will have contig numbers incremented by 1,000,000
 		#TODO - need intelligent way of doing this
-        my ($sc_num, $ct_num) = split(/\./, $contig_number);
+                my ($sc_num, $ct_num) = split(/\./, $contig_number);
 		my $new_contig_number = (($increment * $inc_count) + $sc_num);
-        if ( $ct_num ) {
-            $new_contig_number .= '.'.$ct_num;
-        }
+                if ( $ct_num ) {
+                    $new_contig_number .= '.'.$ct_num;
+                }
 		$line =~ /^CO\s+(\S+)/; #just to capture $'
 		$int_fh->print("CO Contig".$new_contig_number."$'"."\n");
 		next;
@@ -229,20 +197,13 @@ sub merge_acefiles {
 #writes updated ace file with correct contig and read counts
 sub rewrite_ace_file {
     my ($self, $ace_in, $contig_count, $read_count, $name) = @_;
+
     unless (-s $ace_in) {
 	$self->error_message("Can't find int ace file or file is zero size: ".$ace_in);
 	return;
     }
-
-    #if final output is a single ace file, allow users to defined own final ace name
-    my $ace_out;
-    if ($self->ace) {
-	$ace_out = ($self->ace_out) ? $self->ace_out : $self->directory.'/'.$name.'.ace';
-    }
-    else {
-	$ace_out = $self->directory.'/'.$name.'.ace';
-    }
-
+    my $ace_out = $name.'.ace';
+    $ace_out = $self->directory.'/'.$ace_out if $self->directory;
     $self->status_message("Writing final ace file: $ace_out");
 
     my $fh_in = Genome::Sys->open_file_for_reading($ace_in) ||
@@ -260,8 +221,6 @@ sub rewrite_ace_file {
 
     $fh_out->close;
     $fh_in->close;
-
-    #`cat $ace_in >> $ace_out`; #TODO - error check?/
 
     return $ace_out;
 }

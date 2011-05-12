@@ -11,12 +11,7 @@ use Data::Dumper;
 class Genome::Model::Tools::Assembly::Ace::RemoveContigs {
     is => 'Genome::Model::Tools::Assembly::Ace',
     has => [
-	ace => {
-	    type => 'Text',
-	    is_optional => 1,
-	    doc => 'ace file to export contigs from',
-	},
-	acefile_names => {
+	ace_files => {
 	    type => 'Text',
 	    is_optional => 1,
 	    is_many => 1,
@@ -27,6 +22,12 @@ class Genome::Model::Tools::Assembly::Ace::RemoveContigs {
 	    is_optional => 1,
 	    doc => 'file of list of ace files to export contigs from',
 	},
+        contigs => {
+            type => 'Text',
+            is_optional => 1,
+            is_many => 1,
+            doc => 'Comma separated list of contigs to export',
+        },
 	contigs_list => {
 	    type => 'Text',
 	    doc => 'file of list of contig names to export',
@@ -41,11 +42,6 @@ class Genome::Model::Tools::Assembly::Ace::RemoveContigs {
 	    is_optional => 1,
 	    doc => 'directory where ace files are located',
 	},
-	ace_out => {
-            type => 'Text',
-            is_optional => 1,
-            doc => 'allow user to define ace file name if input is a single ace',
-        },
     ],
 };
 

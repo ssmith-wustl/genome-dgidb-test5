@@ -164,7 +164,7 @@ sub execute {
     $self->status_message('Created processing profile:');
     if($self->describe) {
         my $describer = Genome::ProcessingProfile::Command::Describe->create(
-            processing_profile_id => $processing_profile->id,
+            processing_profiles => [ $processing_profile] ,
         );
         $describer->execute;
     }
@@ -189,7 +189,7 @@ sub _target_class {
 sub _properties_for_class {
     my ($self, $class) = @_;
 
-    my $class_meta = $class->get_class_object;
+    my $class_meta = $class->__meta__;
     unless ( $class_meta ) {
         $self->error_message("Can't get class meta object for class ($class)");
         return;

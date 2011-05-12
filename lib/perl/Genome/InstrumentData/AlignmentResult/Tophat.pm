@@ -308,25 +308,32 @@ sub _gather_input_fastqs {
 
         #needed for post-alignment statistics
         my $unaligned_bam = $directory .'/s_'. $instrument_data->subset_name .'_sequence.bam';
-        unless (Genome::Model::Tools::Picard::FastqToSam->execute(
-            fastq => $files[0],
-            fastq2 => $files[1],
-            output => $unaligned_bam,
-            quality_format => 'Standard',
-            sample_name => $instrument_data->sample_name,
-            library_name => $instrument_data->library_name,
-            log_file => $directory .'/s_'. $instrument_data->subset_name .'_sequence.log',
-            platform => 'illumina',
-            platform_unit => $instrument_data->flow_cell_id .'.'. $instrument_data->subset_name,
-            read_group_name => $instrument_data->id,
-            sort_order => 'queryname',
-            use_version => $self->picard_version,
-            maximum_memory => 12,
-            maximum_permgen_memory => 256,
-            max_records_in_ram => 3000000,
-        )) {
-            die $self->error_message('Failed to create per lane, unaligned BAM file: '. $self->temp_scratch_directory .'/s_'. $instrument_data->subset_name .'_sequence.bam');
+
+        if($self->trimmer_name or not $instrument_data->bam_path) {
+            unless (Genome::Model::Tools::Picard::FastqToSam->execute(
+                fastq => $files[0],
+                fastq2 => $files[1],
+                output => $unaligned_bam,
+                quality_format => 'Standard',
+                sample_name => $instrument_data->sample_name,
+                library_name => $instrument_data->library_name,
+                log_file => $directory .'/s_'. $instrument_data->subset_name .'_sequence.log',
+                platform => 'illumina',
+                platform_unit => $instrument_data->flow_cell_id .'.'. $instrument_data->subset_name,
+                read_group_name => $instrument_data->id,
+                sort_order => 'queryname',
+                use_version => $self->picard_version,
+                maximum_memory => 12,
+                maximum_permgen_memory => 256,
+                max_records_in_ram => 3000000,
+            )) {
+                die $self->error_message('Failed to create per lane, unaligned BAM file: '. $self->temp_scratch_directory .'/s_'. $instrument_data->subset_name .'_sequence.bam');
+            }
+        } else {
+            my $existing_bam = $instrument_data->bam_path;
+            Genome::Sys->create_symlink($existing_bam, $unaligned_bam);
         }
+
         push @unaligned_bams, $unaligned_bam;
     }
 

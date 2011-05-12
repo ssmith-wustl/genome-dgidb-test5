@@ -29,7 +29,7 @@ sub execute {
         'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA' => 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA_build36-build37_liftOver',
     );
 
-    # if($reference_sequence_build and $reference_sequence_build->name eq 'g1k-human-build37') {
+    # if($reference_sequence_build and $reference_sequence_build->name eq 'GRCh37-lite-build37') {
     #     $wuspace_roi_list = 'NCBI-human.combined-annotation-58_37c_cds_exon_and_rna_merged_by_gene';
     # } else {
     #     $wuspace_roi_list = 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA';
@@ -39,7 +39,7 @@ sub execute {
 
     my @models = $self->models;
 
-    my $root_build37_ref_seq = Genome::Model::Build::ImportedReferenceSequence->get(name => 'g1k-human-build37') || die;
+    my $root_build37_ref_seq = Genome::Model::Build::ImportedReferenceSequence->get(name => 'GRCh37-lite-build37') || die;
 
     for my $model (@models) {
         my $reference_sequence_build = $model->reference_sequence_build || die;

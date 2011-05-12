@@ -58,15 +58,8 @@ sub amplicon_set_names {
     return sort keys %set_names_and_primers;
 }
 
-#< Clean Up >#
-sub clean_up {
-    my $self = shift;
-
-    return 1;
-}
-
 #< prepare instrument data >#
-sub filter_reads_by_primers {
+sub prepare_instrument_data {
     my $self = shift;
 
     my @instrument_data = $self->instrument_data;
@@ -77,7 +70,7 @@ sub filter_reads_by_primers {
 
     my %primers = $self->amplicon_set_names_and_primers;
     my $min_length = $self->processing_profile->amplicon_size;
-    my ($attempted, $reads_attempted, $reads_processed) = (qw/ 0 0 0 /);
+    my ($attempted, $processed, $reads_attempted, $reads_processed) = (qw/ 0 0 0 0 /);
     for my $instrument_data ( @instrument_data ) {
         $self->status_message('PROCESSING: '.$instrument_data->id);
         unless ( $instrument_data->total_reads > 0 ) {
@@ -114,12 +107,15 @@ sub filter_reads_by_primers {
             $fasta->{desc} = undef; # clear description
             my $writer = $self->_get_writer_for_set_name($set_name);
             $writer->write([$fasta]);
+            $processed++;
             $reads_processed++;
         }
         $self->status_message('DONE PROCESSING: '.$instrument_data->id);
     }
 
     $self->amplicons_attempted($attempted);
+    $self->amplicons_processed($processed);
+    $self->amplicons_processed_success( $attempted > 0 ?  sprintf('%.2f', $processed / $attempted) : 0 );
     $self->reads_attempted($reads_attempted);
     $self->reads_processed($reads_processed);
     $self->reads_processed_success( $reads_attempted > 0 ?  sprintf('%.2f', $reads_processed / $reads_attempted) : 0 );
@@ -144,19 +140,3 @@ sub _get_writer_for_set_name {
 
 1;
 
-=pod
-
-=head1 Disclaimer
-
-Copyright (C) 2010 Genome Center at Washington University in St. Louis
-
-This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-=head1 Author(s)
-
-B<Eddie Belter> I<ebelter@genome.wustl.edu>
-
-=cut
-
-#$HeadURL$
-#$Id$

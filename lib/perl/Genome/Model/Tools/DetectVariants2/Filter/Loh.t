@@ -22,7 +22,8 @@ my $tumor_bam_file      = $test_input_dir. '/tumor.tiny.bam';
 my $normal_bam_file     = $test_input_dir. '/normal.tiny.bam';
 my $detector_directory  = $test_input_dir. '/varscan-somatic-2.2.4-';
 
-my $test_output_dir     = File::Temp::tempdir('Genome-Model-Tools-Somatic-FilterLoh-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+my $test_output_base     = File::Temp::tempdir('Genome-Model-Tools-Somatic-FilterLoh-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+my $test_output_dir = $test_output_base . '/filter';
 my $hq_output_file      = $test_output_dir . '/snvs.hq.bed';
 my $lq_output_file      = $test_output_dir . '/snvs.lq.bed';
 
@@ -42,13 +43,19 @@ my @expected_files = qw|    snvs.hq
     return Genome::Sys->create_temp_file_path;
 };
 
-my $loh = Genome::Model::Tools::DetectVariants2::Filter::Loh->create(
-    output_directory => $test_output_dir,
-    input_directory => $detector_directory,
-    detector_directory => $detector_directory,
-    aligned_reads_input => $tumor_bam_file,
-    control_aligned_reads_input => $normal_bam_file,
+my $detector_result = Genome::Model::Tools::DetectVariants2::Result->__define__(
+    output_dir => $detector_directory,
+    detector_name => 'test',
+    detector_params => '',
+    detector_version => 'awesome',
+    aligned_reads => $tumor_bam_file,
+    control_aligned_reads => $normal_bam_file,
     reference_build_id => $refbuild_id,
+);
+
+my $loh = Genome::Model::Tools::DetectVariants2::Filter::Loh->create(
+    previous_result_id => $detector_result->id,
+    output_directory => $test_output_dir,
 );
 
 ok($loh, 'created loh object');

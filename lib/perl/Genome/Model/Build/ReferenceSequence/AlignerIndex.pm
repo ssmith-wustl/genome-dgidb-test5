@@ -192,7 +192,7 @@ sub check_dependencies {
 sub _prepare_reference_index {
     my $self = shift;
 
-    my $reference_fasta_file = sprintf("%s/all_sequences.fa", $self->reference_build->data_directory);
+    my $reference_fasta_file = $self->reference_build->primary_consensus_path('fa', allow_cached => 0);
 
     unless (-s $reference_fasta_file) {
         $self->error_message(sprintf("Reference fasta file %s does not exist", $reference_fasta_file));

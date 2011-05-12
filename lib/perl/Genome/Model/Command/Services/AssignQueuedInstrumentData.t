@@ -481,7 +481,7 @@ my $sample_2 = Genome::Sample->create(
     common_name => 'normal',
     taxon_id => $taxon->id,
     source_id => $individual->id,
-    nomenclature => 'TCGA-Test',
+    extraction_label => 'TCGA-Test',
 );
 ok($sample_2, 'Created TCGA sample');
 
@@ -491,7 +491,7 @@ my $sample_3 = Genome::Sample->create(
     common_name => 'normal',
     taxon_id => $taxon->id,
     source_id => $individual->id,
-    nomenclature => 'TCGA-Test',
+    extraction_label => 'TCGA-Test',
 );
 ok($sample_3, 'Created TCGA sample pair');
 
@@ -606,7 +606,7 @@ my $sample_4 = Genome::Sample->create(
     common_name => 'normal',
     taxon_id => $taxon->id,
     source_id => $individual->id,
-    nomenclature => 'TCGA-Test',
+    extraction_label => 'TCGA-Test',
 );
 ok($sample_4, 'Created TCGA sample');
 
@@ -616,7 +616,7 @@ my $sample_5 = Genome::Sample->create(
     common_name => 'normal',
     taxon_id => $taxon->id,
     source_id => $individual->id,
-    nomenclature => 'TCGA-Test',
+    extraction_label => 'TCGA-Test',
 );
 ok($sample_5, 'Created TCGA sample pair');
 

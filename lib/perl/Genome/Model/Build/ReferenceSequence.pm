@@ -163,7 +163,7 @@ class Genome::Model::Build::ReferenceSequence {
             where => [ name => 'append_to', value_class_name => 'Genome::Model::Build::ReferenceSequence' ],
             doc => 'If specified, the created reference will be logically appended to the one specified by this parameter for aligners that support it.',
             is_mutable => 1,
-            is_many => 1,
+            is_many => 0,
             is_optional => 1,
         },
         append_to => {
@@ -343,6 +343,22 @@ sub get_bases_file {
     my $bases_file = $bases_dir . "/" . $chromosome . ".bases";
 
     return $bases_file;
+}
+
+sub primary_consensus_path {
+    my ($self, $format, %params) = @_;
+
+    # we want this to default to true, the old behavior
+    my $allow_cached = 1;
+    $allow_cached = $params{allow_cached} if exists $params{allow_cached};
+    return $self->full_consensus_path($format) unless $self->append_to;
+
+    $format ||= 'bfa';
+    my $file = $self->data_directory . '/appended_sequences.'. $format;
+    # check local cache for file
+    my $localfile = "/opt/fscache$file";
+    return $localfile if ($allow_cached and -e $localfile);
+    return $file;
 }
 
 sub full_consensus_path {

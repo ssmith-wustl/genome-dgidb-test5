@@ -5,7 +5,7 @@ use warnings;
 
 use above "Genome";
 use File::Temp;
-use Test::More tests => 7;
+use Test::More tests => 8;
 use Data::Dumper;
 use File::Compare;
 
@@ -16,26 +16,41 @@ BEGIN {
     use_ok( 'Genome::Model::Tools::DetectVariants2::Filter::PindelSomaticCalls')
 };
 
+# Override lock name because if people cancel tests locks don't get cleaned up.
+*Genome::SoftwareResult::_resolve_lock_name = sub {
+    return Genome::Sys->create_temp_file_path;
+};
+
 my $refbuild_id = 101947881;
 my $input_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-PindelSomaticCalls";
+my $detector_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-PindelSomaticCalls/pindel-0.5-";
 
 # Updated to .v2 for correcting an error with newlines
-my $expected_dir = $input_directory . "/expected/";
-my $tumor_bam_file  = $input_directory. '/flank_tumor_sorted.bam';
-my $test_output_dir = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Filter-PindelSomaticCalls-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+my $expected_dir = $input_directory . "/expected_4/";
+my $tumor_bam_file  = $input_directory. '/true_positive_tumor_validation.bam';
+my $test_output_base = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Filter-PindelSomaticCalls-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+my $test_output_dir = $test_output_base . '/filter';
 
 my $hq_output_bed = "$test_output_dir/indels.hq.bed";
 my $lq_output_bed = "$test_output_dir/indels.lq.bed";
+my $raw_output = "$test_output_dir/indels.hq";
 
-my $expected_hq_bed_output = "$expected_dir/indels.hq.expected.bed";
-my $expected_lq_bed_output = "$expected_dir/indels.lq.expected.bed";
+my $expected_hq_bed_output = "$expected_dir/indels.hq.bed";
+my $expected_lq_bed_output = "$expected_dir/indels.lq.bed";
+my $expected_raw_output = "$expected_dir/indels.hq";
+
+my $detector_result = Genome::Model::Tools::DetectVariants2::Result->__define__(
+    output_dir => $detector_directory,
+    detector_name => 'test',
+    detector_params => '',
+    detector_version => 'awesome',
+    aligned_reads => $tumor_bam_file,
+    reference_build_id => $refbuild_id,
+);
 
 my $pindel_somatic_calls = Genome::Model::Tools::DetectVariants2::Filter::PindelSomaticCalls->create(
-    input_directory => $input_directory."/pindel",
-    detector_directory => $input_directory."/pindel",
+    previous_result_id => $detector_result->id,
     output_directory => $test_output_dir,
-    aligned_reads_input => $tumor_bam_file,
-    reference_build_id => $refbuild_id,
 );
 
 ok($pindel_somatic_calls, "created PindelSomaticCalls object");
@@ -46,3 +61,4 @@ ok(-e $lq_output_bed,'LQ bed output exists');
 
 is(compare($hq_output_bed, $expected_hq_bed_output), 0, 'hq bed output matched expected output');
 is(compare($lq_output_bed, $expected_lq_bed_output), 0, 'lq bed output matched expected output');
+is(compare($raw_output, $expected_raw_output), 0, 'Raw output matched expected output');
