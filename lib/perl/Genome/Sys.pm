@@ -15,9 +15,9 @@ sub user_id {
     return $<;
 }
 
-sub user_name {
-    my $user_name = getpwuid($<);
-    return $user_name;
+sub username {
+    my $username = getpwuid($<);
+    return $username;
 }
 
 sub user_is_member_of_group {
