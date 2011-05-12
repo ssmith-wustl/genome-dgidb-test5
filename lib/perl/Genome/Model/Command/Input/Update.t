@@ -30,7 +30,7 @@ my $master_event = Genome::Model::Event->create(
     event_status => 'Succeeded',
     model => $model,
     build => $build,
-    user_name => $ENV{USER},
+    user_name => Genome::Sys->username,
     date_scheduled => UR::Time->now,
     date_completed => UR::Time->now,
 );

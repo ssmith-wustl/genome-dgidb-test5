@@ -99,7 +99,7 @@ sub execute {
                 return;
             }
             my $dir = $self->analysis_dir;
-            my $user = $ENV{USER};
+            my $user = Genome::Sys->username;
             if(-z "$dir/$lane_name.var" || !-e "$dir/$lane_name.var") {
                 my $command .= <<"COMMANDS";
 samtools pileup -vc -f $reference $alignment_file | perl -pe '\@F = split /\\t/; \\\$_=q{} unless(\\\$F[7] > 2);' > $dir/$lane_name.var

@@ -231,13 +231,13 @@ This is the last warning you will receive about this process.
 MESSAGE
 
                 undef $w;
-                my $from = '"' . __PACKAGE__ . sprintf('" <%s@genome.wustl.edu>', $ENV{USER});
+                my $from = '"' . __PACKAGE__ . sprintf('" <%s@genome.wustl.edu>', Genome::Sys->username);
 
                 my @to = split(' ', $self->_monitor_mail_to);
                 my $to = join(', ', map { "$_\@genome.wustl.edu" } @to);
                 my $subject = 'Slow ' . $self->class . ' happening right now';
                 my $data = sprintf($message,
-                    hostname,$$,$pid,$ENV{LSB_JOBID},$ENV{USER});
+                    hostname,$$,$pid,$ENV{LSB_JOBID},Genome::Sys->username);
 
                 my $msg = MIME::Lite->new(
                     From => $from,

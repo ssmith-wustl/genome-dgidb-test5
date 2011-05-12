@@ -52,8 +52,8 @@ else {
 
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Solexa-Integration-Test-2';
 my $message_flag = 1;  #set this to 1 to turn on verbose message output
-my $model_name = "test_solexa_maq_$ENV{USER}";
-my $processing_profile_name = "test_solexa_maq_pp_$ENV{USER}";
+my $model_name = "test_solexa_maq_" . Genome::Sys->username;
+my $processing_profile_name = "test_solexa_maq_pp_" . Genome::Sys->username;
 my $subject_name = 'H_GV-933124G-S.9017';
 my $subject_type = 'sample_name';
 my @instrument_data = setup_test_data($subject_name);

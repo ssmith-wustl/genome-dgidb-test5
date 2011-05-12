@@ -129,7 +129,7 @@ sub execute
     my $tmp_usage = $self->tmp_usage;
     my $runner_count = $self->runner_count;
     my $skip_mail_flag = $self->no_mail;
-    my $user = $ENV{USER};
+    my $user = Genome::Sys->username;
     my $dt_started = mark_time();
 
     if ($self->dev) { $BAP::DB::DBI::db_env = 'dev'; }
@@ -755,9 +755,9 @@ sub log_run
     {
         $host = $ENV{HOST};
     }
-    if ( exists( $ENV{USER} ) )
+    if (Genome::Sys->username)
     {
-        $user = $ENV{USER};
+        $user = Genome::Sys->username;
     }
     elsif ( exists( $ENV{LOGIN} ) )
     {

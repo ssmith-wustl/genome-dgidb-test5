@@ -67,7 +67,7 @@ sub execute {
     my $stdout_log = "$output_dir/varScan.out";
     my $stderr_log = "$output_dir/varScan.err";
 
-    my $user = $ENV{USER};
+    my $user = Genome::Sys->username;
     
     #Run varscan in validation mode, accounting for the tumor and normal purities. When this is done, then run gmt snp match to limit to our target regions
     my $command = qq{bsub -N -u $user\@genome.wustl.edu -R 'select[mem>2000 && type==LINUX64] rusage[mem=2000]' -o $stdout_log -e $stderr_log  'gmt varscan validation --samtools-version r544 --output $output_file --normal-bam $normal_bam --tumor-bam $tumor_bam --varscan-params="--min-coverage 8 --min-var-freq $min_var_freq --p-value 0.10 --somatic-p-value 1.0e-02 --validation --normal-purity $normal_purity";gmt snp match -f $target_file $output_file.snp > $output_file.snp.targeted'};
