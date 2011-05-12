@@ -17,12 +17,9 @@ use warnings;
 
 use IO::File;
 use Genome;
-# GSCApp & App->init cause compile errors and don't appear to be used
-#use GSCApp;
 
 class Genome::Model::Tools::Snp::GetGenotypes {
   is => 'Command',
-
   has => [ # specify the command's single-value properties (parameters)
     sample_list => { is => 'Text', doc => "Input file listing one sample name per line" , is_optional => 0 },
     data_directory => { is => 'Text', doc => "Output directory for genotype files" , is_optional => 0 },
@@ -30,11 +27,8 @@ class Genome::Model::Tools::Snp::GetGenotypes {
     dbsnp_build => { is => 'Text', doc => "dbSNP Version: 130 (for NCBI36) or 132 (for GRCh37)" , is_optional => 1, default => '132' },
     data_source => { is => 'Text', doc => "iscan or external" , is_optional => 1, default => 'iscan' },
   ],
+  doc => "Given a list of samples, output imported genotype files for each",
 };
-
-sub help_brief { # keep this to just a few words
-  "Given a list of samples, output imported genotype files for each"
-}
 
 sub help_detail { # this is what the user will see with the longer version of help
   return <<EOS
@@ -82,11 +76,13 @@ sub execute {
 
     # Query the sample name in the database
     my $organism_sample = GSC::Organism::Sample->get( sample_name => $sample );
-
-    unless( defined $organism_sample )
-    {
-      warn "Skipping unrecognized sample name: $sample\n";
-      next;
+    unless ($organism_sample) {
+        $self->warning_message("failed to find sample $sample by external name, trying internal name...");
+        $organism_sample = GSC::Organism::Sample->get( full_name => $sample );
+        unless( defined $organism_sample ) {
+            warn "Skipping unrecognized sample name: $sample!\n";
+            next;
+        }
     }
 
     print "Exporting data for $sample... ";

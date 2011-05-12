@@ -189,7 +189,7 @@ sub _target_class {
 sub _properties_for_class {
     my ($self, $class) = @_;
 
-    my $class_meta = $class->get_class_object;
+    my $class_meta = $class->__meta__;
     unless ( $class_meta ) {
         $self->error_message("Can't get class meta object for class ($class)");
         return;

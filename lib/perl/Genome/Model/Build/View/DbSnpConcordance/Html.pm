@@ -31,8 +31,8 @@ sub _generate_content {
         my $unfiltered_file = "$results_dir/dbsnp_concordance.txt";
         my $filtered_file = "$results_dir/dbsnp_concordance.filtered.txt";
         for my $f ($unfiltered_file, $filtered_file) {
-            if (! -s $f) {
-                die "Input file '$f' does not exist or is empty.\nTo generate the required data ".
+            if (! -e $f) {
+                die "Input file '$f' does not exist.\nTo generate the required data ".
                     "for this view, run:\n\n$DBSNP_METRICS_COMMAND " . $build->id . "\n";
             }
         }

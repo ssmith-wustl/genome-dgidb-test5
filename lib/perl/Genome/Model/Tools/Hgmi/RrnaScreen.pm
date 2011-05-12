@@ -74,14 +74,8 @@ EOS
 sub execute
 {
     my $self = shift;
-
-    $self->status_message("Skipping rrna screen!");
-    return 1;
-
     my $rrnascreen_script = $self->script_location();
     $self->run_screen();
-
-
     return 1;
 }
 
@@ -221,10 +215,11 @@ sub run_screen
         );
     }
     unlink($tmpblast);
-#    unlink($tmpblast."parsed"); # keep for now?
+    unlink($tmpblast."parsed"); # keep for now?
     unlink($tmpfasta);
     unlink($bsubout);
     unlink($bsuberr);
+    unlink($bsub);
 
     BAP::DB::DBI->dbi_commit();
     return 1;

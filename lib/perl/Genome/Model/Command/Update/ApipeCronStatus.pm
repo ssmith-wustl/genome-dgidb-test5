@@ -16,6 +16,9 @@ class Genome::Model::Command::Update::ApipeCronStatus {
 };
 
 
+sub _is_hidden_in_docs { return 1; }
+
+
 sub help_detail {
     return 'Sets the APipe Cron Status note for the models to the value provided.'
 }
@@ -23,6 +26,13 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
+
+    my $user = getpwuid($<);
+    my $apipe_members = (getgrnam("apipe"))[3];
+    if ($apipe_members !~ /\b$user\b/) {
+        print "You must be a member of APipe to use this command.\n";
+        return;
+    }
 
     my @models = $self->models;
     my $value = $self->value;

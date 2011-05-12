@@ -283,6 +283,9 @@ sub execute {
 
     $self->status_message("Done with finishing!");
 
+    chdir($next_dir);
+    $self->status_message("Changed directory to $next_dir");
+
     # Run the core gene check (unless the user says we shouldn't!)
     unless ($self->skip_core_check)
     {
