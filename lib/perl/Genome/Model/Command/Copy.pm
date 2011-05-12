@@ -172,6 +172,7 @@ sub execute {
                                                                                  instrument_data_id=>$_->id);
                unless ($assign_cmd->execute) {
                     $self->error_message("Couldn't assign instrument data id " . $_->id);
+                    $new_model->remove;
                     return;
                }
         }
@@ -179,11 +180,14 @@ sub execute {
 
     my @inputs_to_copy = $src_model->inputs_necessary_for_copy;
     for (@inputs_to_copy) {
-        unless(Genome::Model::Input->create(value_class_name=>$_->value_class_name,
-                                            value_id=>$_->value_id,
-                                            name=>$_->name,
-                                            model_id=>$new_model->id)) {
+        my $input = Genome::Model::Input->create(value_class_name=>$_->value_class_name,
+            value_id=>$_->value_id,
+            name=>$_->name,
+            model_id=>$new_model->id
+        );
+        unless($input) {
             $self->error_message(sprintf("Couldn't copy model input %s with value %s to the new model", $_->name, $_->value_id));
+            $new_model->remove;
             return;
         }
     }
