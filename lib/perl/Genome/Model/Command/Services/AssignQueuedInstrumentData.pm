@@ -468,7 +468,10 @@ sub is_tcga_reference_alignment {
 
     return unless $model->isa('Genome::Model::ReferenceAlignment');
 
-    return grep {$_->attribute_label eq 'extraction_label' and $_->attribute_value =~ m/^TCGA/} $sample->attributes;
+    my @results = grep {$_->attribute_label eq 'extraction_label' and $_->attribute_value =~ m/^TCGA/} $sample->attributes;
+    my @nomenclature = map { $_->nomenclature } ($sample, $sample->attributes);
+    return map($_, (@results,  grep { /^TCGA/i } @nomenclature));
+    
 }
 
 sub load_pses {
