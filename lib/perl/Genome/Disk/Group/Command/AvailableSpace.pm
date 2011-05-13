@@ -90,7 +90,7 @@ sub execute {
 
     if ($group_is_low and $self->send_alert) {
         my $msg = MIME::Lite->new(
-            From => $ENV{USER} . '@genome.wustl.edu',
+            From => Genome::Config->user_email,
             To => join(',', map { $_ . '@genome.wustl.edu' } split(',', $self->alert_recipients)),
             Subject => 'Disk Groups Running Low on Space!',
             Data => join("\n", @reports),

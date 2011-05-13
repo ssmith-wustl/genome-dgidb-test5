@@ -33,5 +33,15 @@ sub calculate_estimated_kb_usage {
     return 50_000_000;
 }
 
+sub sra_sample_id {
+    my $self = shift;
+    my @id = $self->instrument_data;
+    die "no instrument data unless id" unless @id;
+    my $sra_sample_id = $id[0]->sra_sample_id;
+    die "no sra_sample_id specified for instrument data" unless $sra_sample_id;
+    return $sra_sample_id;
+}
+
+
 1;
 

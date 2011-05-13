@@ -47,7 +47,7 @@ sub _init
 	$config->{password} = 'finfo_admin';
 	$config->{mysql_def_dsn} = 'dbi:mysql:database=finfo;host=mysql1';
 	$config->{sqlite_def_dsn} = 'dbi:SQLite:/gscmnt/936/info/jschindl/sqlite/assembly.db';
-	$config->{default_assembly} = "assembly.$ENV{USER}";
+	$config->{default_assembly} = "assembly." . Genome::Sys->username;
 	$self->{config} = $config;
 
 }

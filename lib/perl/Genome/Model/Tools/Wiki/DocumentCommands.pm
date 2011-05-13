@@ -47,8 +47,8 @@ sub execute {
     push @modules, @base_modules; #Do base_modules last in case child is mistaken about name
     
     my $edit_summary = 'gmt wiki document-commands: command auto-documentation upload';
-    if($ENV{USER}) {
-        $edit_summary .= ' by ' . $ENV{USER};
+    if(Genome::Sys->username) {
+        $edit_summary .= ' by ' . Genome::Sys->username;
     }
     
     if($self->svn_revision) {

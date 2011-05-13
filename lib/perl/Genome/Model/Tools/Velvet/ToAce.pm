@@ -389,7 +389,7 @@ sub execute {
             tag_type => 'comment',
             program  => 'VelvetToAce',
             date     => time2str('%y%m%d:%H%M%S', time),
-            data     => "Run by $ENV{USER}\n",
+            data     => "Run by " . Genome::Sys->username . "\n",
         });
     $out->close;
 

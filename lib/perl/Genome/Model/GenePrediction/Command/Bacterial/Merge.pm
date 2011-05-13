@@ -190,7 +190,7 @@ EOS
 sub execute
 {
     my $self = shift;
-    my $user = $ENV{USER};
+    my $user = Genome::Sys->username;
 
     $self->status_message("iprpath : ". "/gsc/scripts/pkg/bio/iprscan/iprscan-". $self->ipr_version ."/bin/iprscan");
 
@@ -1825,9 +1825,9 @@ sub log_run
         $host = $ENV{HOST};
     }
 
-    if ( exists( $ENV{USER} ) )
+    if (Genome::Sys->username)
     {
-        $user = $ENV{USER};
+        $user = Genome::Sys->username;
     }
     elsif ( exists( $ENV{LOGIN} ) )
     {

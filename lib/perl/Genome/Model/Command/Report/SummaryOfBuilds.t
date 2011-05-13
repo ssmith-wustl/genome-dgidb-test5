@@ -22,7 +22,7 @@ use warnings;
 
 my $sob = Genome::Model::Command::Report::SummaryOfBuilds->create(
     work_order_id => 2196657, 
-    #email => $ENV{USER}.'@genome.wustl.edu',
+    #email => Genome::Config->user_email,
     #all_datasets => 1,
 );
 ok($sob, 'create');

@@ -63,7 +63,7 @@ sub create {
 
     # TODO: Remove this once tests have been created and run successfully as any UNIX user
     # There are problems with sourcing the right setup.sh for environment variables necessary for running smrtanalyis software using the correct login shell(bash only)
-    my $user = $ENV{USER};
+    my $user = Genome::Sys->username;
     unless ($user eq 'smrtanalysis') {
         die('Currently running the SMRT Analysis package is limited to the smrtanalysis user!');
     }

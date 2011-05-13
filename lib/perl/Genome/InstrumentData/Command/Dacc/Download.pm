@@ -147,7 +147,7 @@ sub _launch_import {
         $logging = '-oo '.$self->import_log_file;
     }
     else {
-        $logging = '-u '.$ENV{USER}.'@genome.wustl.edu';
+        $logging = '-u '. Genome::Config->user_email;
     }
 
     my $cmd = "bsub -q long $logging genome instrument-data dacc import $sub_command_format $sra_sample_id";

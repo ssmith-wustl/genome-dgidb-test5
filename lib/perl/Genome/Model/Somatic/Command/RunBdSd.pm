@@ -127,7 +127,7 @@ sub execute {
         $self->error_message("Unable to retrieve sample name from tumor build");
         return unless $force;
     }
-    my $user = $ENV{USER}; 
+    my $user = Genome::Sys->username; 
     my $cfg_name = $dir . "/$genome_name.cfg";
     chdir $dir;
     unless(-e $cfg_name) {

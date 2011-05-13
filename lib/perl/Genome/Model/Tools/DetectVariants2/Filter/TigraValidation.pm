@@ -355,19 +355,13 @@ sub _filter_variants {
         $self->status_message("Running workflow");
 
         my %options = (
-            aligned_reads_input         => $self->aligned_reads_input,
-            control_aligned_reads_input => $self->control_aligned_reads_input,
-            reference_build_id          => $self->reference_build_id,
-            input_directory    => $self->input_directory,
+            previous_result_id => $self->previous_result_id,
             output_directory   => $self->_temp_staging_directory,
-            params             => $self->params,
-            version            => $self->version,
             specify_chr        => \@use_chr_list,
             _run_by_workflow   => 1,
         );
 
-        $options{skip_libraries}     = $skip_libs if $skip_libs;
-        $options{detector_directory} = $self->detector_directory if $self->detector_directory; 
+        $options{skip_libraries} = $skip_libs if $skip_libs;
 
         my $output = Workflow::Simple::run_workflow_lsf($op, %options);
 

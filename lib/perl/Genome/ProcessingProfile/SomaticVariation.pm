@@ -36,7 +36,7 @@ class Genome::ProcessingProfile::SomaticVariation{
         tiering_version => {
             is => "Text",
             is_many => 0,
-            is_optional => 1,
+            valid_values => ['1','2'],
             doc => "Version of tiering bed files to grab from the associated annotation build",
         },
         loh_version => {
