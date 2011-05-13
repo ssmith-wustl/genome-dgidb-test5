@@ -85,7 +85,7 @@ $dl = Genome::Model::Tools::Dacc::Download->create(
 );
 ok($dl, 'create');
 $dl->dump_status_messages(1);
-ok(!$dl->execute, 'execute');
+ok($dl->execute, 'execute');
 
 done_testing();
 exit;

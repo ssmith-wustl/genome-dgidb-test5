@@ -58,11 +58,14 @@ sub execute {
     my $files_string = join(' ', @files);
     $self->status_message("Files: $files_string");
 
-    my $files_exist = $self->validate_files_exist_in_dacc_directory(@files);
-    if ( not $files_exist ) {
-        $self->error_message('Some/All file(s) for download do not exists on the dacc directory. See above errors.');
-        return;
-    }
+    #This commented out because validation required sshing into the server
+    #to determine that file exists but we can no longer ssh into ther server 5/13/11
+
+    #my $files_exist = $self->validate_files_exist_in_dacc_directory(@files);
+    #if ( not $files_exist ) {
+    #    $self->error_message('Some/All file(s) for download do not exists on the dacc directory. See above errors.');
+    #    return;
+    #}
 
     my $destination = $self->destination;
     if ( not -d $destination ) {
@@ -86,8 +89,11 @@ sub execute {
         return;
     }
 
-    my $dl_ok = $self->validate_files_were_downloaded;
-    return if not $dl_ok;
+    #This commented out because validation required sshing into the server
+    #to determine that file exists but we can no longer ssh into ther server 5/13/11
+    
+    #my $dl_ok = $self->validate_files_were_downloaded;
+    #return if not $dl_ok;
 
     $self->status_message('Download...OK');
 

@@ -71,7 +71,7 @@ $up = Genome::Model::Tools::Dacc::Upload->create(
 );
 ok($up, 'create');
 $up->dump_status_messages(1);
-ok(!$up->execute, 'execute');
+ok($up->execute, 'execute');
 
 done_testing();
 exit;
