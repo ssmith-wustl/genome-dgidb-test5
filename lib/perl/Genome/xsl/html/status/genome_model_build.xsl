@@ -461,6 +461,13 @@
 
               </td>
             </tr>
+            <tr>
+              <td class="name">run by:
+              </td>
+              <td class="value">
+                <xsl:value-of select="build/@run-by"/>
+              </td>
+            </tr>
 
           </tbody>
         </table>
