@@ -93,7 +93,7 @@ sub _send_report {
 
     if ((keys %{$under_allocated_volumes}) and $self->send_alert) {
         my $msg = MIME::Lite->new(
-            From => $ENV{USER} . '@genome.wustl.edu',
+            From => Genome::Config->user_email,
             To => join(',', map { $_ . '@genome.wustl.edu' } split(',', $self->alert_recipients)),
             Subject => 'Underallocated Volumes Found!',
             Data => $report,

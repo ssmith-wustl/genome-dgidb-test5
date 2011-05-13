@@ -13,7 +13,7 @@ BEGIN {
 }
 
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sam-LimitVariants';
-my $tmp_dir  = Genome::Sys->create_temp_directory('Genome-Model-Tools-Sam-LimitVariants-'. $ENV{USER});
+my $tmp_dir  = Genome::Sys->create_temp_directory('Genome-Model-Tools-Sam-LimitVariants-'. Genome::Sys->username);
 
 my $bed_file = $data_dir .'/test_regions.bed';
 my $snp_file = $data_dir .'/test.snp';

@@ -139,6 +139,13 @@ class Genome::InstrumentData::Imported {
             is_mutable => 1,
             where => [ attribute_label => 'sra_sample_id' ],
         },
+        barcode => {
+            is => 'Text',
+            via => 'attributes',
+            to => 'attribute_value',
+            is_mutable => 1,
+            where => [ attribute_label => 'barcode' ],
+        },
         reference_sequence_build_id => {
             is => 'Number',
             via => 'attributes',

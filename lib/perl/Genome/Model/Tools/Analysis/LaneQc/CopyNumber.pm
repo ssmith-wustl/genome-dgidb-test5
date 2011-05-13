@@ -104,7 +104,7 @@ sub execute {
                 return;
             }
 
-            my $user = $ENV{USER};
+            my $user = Genome::Sys->username;
 
             my $lane_outfile = $outfile_prefix . $lane_name . ".cnqc";
 

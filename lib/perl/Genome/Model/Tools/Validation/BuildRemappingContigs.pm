@@ -338,8 +338,8 @@ sub read_in_breakpoints {
                     }
 
                     #check to make sure we didn't get back something crazy
-                    if($current_contig->{'assem_type'} !~ /INS|DEL/i) {
-                        $self->error_message("Skipping contig that assembled as a type other than insertion or deletion with variant starting at " . $current_contig->{'pred_pos1'});
+                    if($current_contig->{'assem_type'} !~ /INS|DEL|ITX/i) {
+                        $self->error_message("Skipping contig that assembled as a type other than insertion, tandem duplication (ITX) or deletion with variant starting at " . $current_contig->{'pred_pos1'});
                     }
                     else {
                         #check that Ins field makes sense
@@ -395,6 +395,11 @@ sub parse_breakpoint_contig_header {
             #remember that the reported coordinates include any microhomology
             #In the future Ken says variant supporting reads would be reads that overlap this region with at least N bases of overlap where N is the microhomology size
             @contig{ qw( assem_chr1 assem_pos1 assem_chr2 assem_pos2 assem_type assem_size assem_orientation) } = split /\./, $entry;
+
+            #convert ITX into INS
+            if($contig{assem_type} eq 'ITX') {
+                $contig{assem_type} = 'INS';
+            }
         }
         elsif($tag =~ /^Strand/) {
             #the strand of the contig. If minus then it needs to be reverse complemented

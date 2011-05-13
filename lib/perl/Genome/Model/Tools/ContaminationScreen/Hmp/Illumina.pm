@@ -152,7 +152,7 @@ sub execute {
                     "N Removal\t\t\t\t\t"                   . $output->{mismatch_removed_count1}    . "\t\t\t" . $output->{mismatch_removed_count2};
 
 print Data::Dumper->new([$output,\@Workflow::Simple::ERROR])->Dump;
-    my $mail_dest = $ENV{USER}.'@genome.wustl.edu';
+    my $mail_dest = Genome::Config->user_email;
     my $sender = Mail::Sender->new({
         smtp => 'gscsmtp.wustl.edu',
         from => 'illumina-bwa@genome.wustl.edu',

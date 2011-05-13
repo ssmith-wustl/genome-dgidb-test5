@@ -17,6 +17,8 @@ class Genome::Model::SomaticVariation::Command::ExtractValidationCandidates {
             is_output => 1,
             doc => 'Place validtion candidates output here',
         },
+    ],
+    has_optional => [
         dbsnp_bed_file => {
             is => 'String',
             is_input => 1,
@@ -79,7 +81,6 @@ sub execute {
         input_file_b => $filtered_samtools,
         output_file => $intersect_dir."/snvs.hq.bed",
         miss_a_file => $intersect_dir."/snvs.lq.a.bed",
-        miss_b_file => $intersect_dir."/snvs.lq.b.bed",
     );
     unless($intersect_cmd->execute){
         die $self->error_message("Failed to run joinx-intersect with samtools output!");
@@ -100,12 +101,15 @@ sub execute {
     my $dbsnp_dir = $output_directory."/dbsnp_intersection";
     Genome::Sys->create_directory($dbsnp_dir);
 
-    my $dbsnp_file = $self->dbsnp_bed_file;
+    my $pdv = $build->previously_discovered_variations_build;
+    my $snv_feature_list = $pdv->snv_feature_list;
+
+    my $dbsnp_file = defined($self->dbsnp_bed_file) ? $self->dbsnp_bed_file: $snv_feature_list->file_path ;
     unless(-e $dbsnp_file){
         die $self->error_message("DbSNP bed file does not exist at: ".$dbsnp_file);
     }
 
-    $self->status_message("Now performing dbsnp intersection.");
+    $self->status_message("Now performing dbsnp intersection with file: ".$dbsnp_file);
 
     my $dbsnp_intersect_cmd = Genome::Model::Tools::Joinx::Intersect->create(
         input_file_a => $loh_output."/snvs.somatic.v2.bed",

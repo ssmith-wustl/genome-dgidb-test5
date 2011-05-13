@@ -51,7 +51,7 @@ for (0..6) {
     my $picard_cmd = Genome::Model::Tools::Picard->create(
         _monitor_check_interval => 1,
         _monitor_stdout_interval => 5,
-        _monitor_mail_to => $ENV{USER},
+        _monitor_mail_to => Genome::Sys->username,
     );
 
     my $rv;

@@ -93,12 +93,8 @@ sub execute {
     my $loss_fraction = $self->loss_fraction;
     my $overdispersion = $self->overdispersion;
     my $verbose = $self->verbose;
-    my $no_matched_normal = $self->no_matched_normal;
+    my $matched_normal = $self->matched_normal;
     my $output_dir = $self->output_dir;
-
-
-    my $matched_normal = 1;
-    $matched_normal = 0 if($no_matched_normal);
 
 
     #create a temp file for the R command to run
