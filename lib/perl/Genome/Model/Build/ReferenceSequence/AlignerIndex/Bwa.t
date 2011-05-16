@@ -7,7 +7,7 @@ use above 'Genome';
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 7;
+        plan tests => 10;
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -43,9 +43,18 @@ ok(!$index, "index does not yet exist for dependency");
 
 $index = Genome::Model::Build::ReferenceSequence::AlignerIndex->create(%params);
 ok($index, "created index");
+my $path = readlink($index->full_consensus_path("fa"));
+like($path, qr/appended_sequences.fa/, "multi reference uses appended_sequences.fa");
 
 $index = Genome::Model::Build::ReferenceSequence::AlignerIndex->get(%params);
 ok($index, "got index");
 
 $index = Genome::Model::Build::ReferenceSequence::AlignerIndex->get(%dep_params);
 ok($index, "got index of dependency");
+
+# now test single reference version of bwa
+$params{aligner_version} = '0.5.9';
+$index = Genome::Model::Build::ReferenceSequence::AlignerIndex->create(%params);
+ok($index, "got single reference aligner index");
+$path = readlink($index->full_consensus_path("fa"));
+like($path, qr/all_sequences.fa/, "single reference uses all_sequences.fa");
