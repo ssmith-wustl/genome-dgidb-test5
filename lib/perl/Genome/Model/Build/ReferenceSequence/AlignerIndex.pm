@@ -93,6 +93,7 @@ sub _supports_multiple_reference {
     my $self = shift;
     my $aligner_name = $self->aligner_name;
     my $aligner_class = 'Genome::Model::Tools::'  . Genome::InstrumentData::AlignmentResult->_resolve_subclass_name_for_aligner_name($aligner_name);
+    return unless $aligner_class->can('supports_multiple_reference');
     return $aligner_class->supports_multiple_reference($self->aligner_version);
 }
 
@@ -113,6 +114,8 @@ sub get {
     return unless @objects;
 
     for my $obj (@objects) {
+        next unless ref($obj); # sometimes UR gives us back the package name when deleting?
+
         unless ($obj->check_dependencies()) {
             $obj->error_message("Failed to get AlignmentIndex objects for dependencies of " . $obj->__display_name__);
             return;
