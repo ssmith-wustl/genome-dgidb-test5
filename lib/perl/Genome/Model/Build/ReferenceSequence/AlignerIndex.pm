@@ -113,6 +113,8 @@ sub get {
     return unless @objects;
 
     for my $obj (@objects) {
+        next unless ref($obj); # sometimes UR gives us back the package name when deleting?
+
         unless ($obj->check_dependencies()) {
             $obj->error_message("Failed to get AlignmentIndex objects for dependencies of " . $obj->__display_name__);
             return;
