@@ -584,7 +584,7 @@ sub bsub_usage {
 
 sub soap_de_novo_assemble_bsub_rusage {
     my $mem = 30000;
-    return "-n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>$mem] rusage[mem=$mem]' -M $mem".'000';
+    return "-q bigmem -n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>$mem] rusage[mem=$mem]' -M $mem".'000';
 }
 
 sub soap_import_bsub_rusage {
@@ -592,7 +592,7 @@ sub soap_import_bsub_rusage {
 }
 
 sub velvet_one_button_bsub_rusage {
-    return "-R 'select[type==LINUX64 && mem>30000] rusage[mem=30000] span[hosts=1]' -M 30000000";
+    return "-q bigmem -R 'select[type==LINUX64 && mem>30000] rusage[mem=30000] span[hosts=1]' -M 30000000";
 }
 
 #< soap specific methods to run during build >#

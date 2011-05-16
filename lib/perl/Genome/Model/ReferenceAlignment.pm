@@ -518,7 +518,7 @@ sub get_or_create_lane_qc_models {
     }
 
     my @lane_qc_models;
-    my @instrument_data = $self->instrument_data;
+    my @instrument_data = sort { $a->run_name . $a->subset_name cmp $b->run_name . $b->subset_name } $self->instrument_data;
     for my $instrument_data (@instrument_data) {
         my $lane_qc_model_name = $self->default_qc_model_name_for_instrument_data($instrument_data);
 
