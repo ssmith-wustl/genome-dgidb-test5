@@ -89,6 +89,13 @@ sub aligner_requires_param_masking {
     return 1;
 }
 
+sub _supports_multiple_reference {
+    my $self = shift;
+    my $aligner_name = $self->aligner_name;
+    my $aligner_class = 'Genome::Model::Tools::'  . Genome::InstrumentData::AlignmentResult->_resolve_subclass_name_for_aligner_name($aligner_name);
+    return $aligner_class->supports_multiple_reference($self->aligner_version);
+}
+
 sub get {
     my $class = shift;
 
@@ -192,7 +199,12 @@ sub check_dependencies {
 sub _prepare_reference_index {
     my $self = shift;
 
-    my $reference_fasta_file = $self->reference_build->primary_consensus_path('fa', allow_cached => 0);
+    my $reference_fasta_file;
+    if ($self->_supports_multiple_reference) {
+        $reference_fasta_file = $self->reference_build->primary_consensus_path('fa', allow_cached => 0);
+    } else {
+        $reference_fasta_file = $self->reference_build->full_consensus_path('fa', allow_cached => 0);
+    }
 
     unless (-s $reference_fasta_file) {
         $self->error_message(sprintf("Reference fasta file %s does not exist", $reference_fasta_file));
