@@ -44,7 +44,7 @@ sub execute{
     $self->_allocated_paths(\@allocated_paths);
     $DB::single=1;
     my ($allocated_subpaths, @unallocated_paths) = $self->find_unallocated_paths($mount_path);
-    $self->status_message("Unallocated paths: \n".join("\n", @unallocated_paths));
+    print (join("\n", @unallocated_paths));
     $self->_unallocated_paths(\@unallocated_paths);
     return 1;
 }
