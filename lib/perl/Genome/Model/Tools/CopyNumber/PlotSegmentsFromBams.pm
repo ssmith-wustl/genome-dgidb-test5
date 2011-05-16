@@ -10,11 +10,12 @@ class Genome::Model::Tools::CopyNumber::PlotSegmentsFromBams {
     has_input => [
     bams => {
         is => 'String',
-        doc => 'Comma-delimited list of .bam files',
+        doc => 'Colon-delmited list of .bam files',
+        #doc => 'Comma-delimited list of .bam files',
     },
     names_of_bams => {
         is => 'String',
-        doc => 'Comma-delmited list of names to give .bam files (in same order as .bams)',
+        doc => 'Comma-delmited list of names to give .bam files (in same order as "bams")',
     },
     output_file => {
         is => 'String',
@@ -53,8 +54,9 @@ sub execute {
 
     #parse input arguments
     my $output_file = $self->output_file;
-    my $output_dir = dirname($output_file);
-    my @bams = split /,/,$self->bams;
+
+    my $output_dir = dirname($output_file) . "/";
+    my @bams = split /:/,$self->bams;
     my $bam_names = $self->names_of_bams;
     my @bam_names = split /,/,$bam_names;
     unless (scalar @bams == scalar @bam_names) {
