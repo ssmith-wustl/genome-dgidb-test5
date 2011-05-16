@@ -126,10 +126,19 @@ sub execute {
         }
     }
 
+    $self->display_builds_started();
     $self->display_summary_report($total_count, @errors);
 
     return !scalar(@errors);
 }
 
+sub display_builds_started {
+    my $self = shift;
+    my @builds = $self->builds;
+    if (@builds) {
+        $self->status_message("Started builds: " . join(' ', map { $_->id } @builds));
+    }
+    return 1;
+}
 1;
 
