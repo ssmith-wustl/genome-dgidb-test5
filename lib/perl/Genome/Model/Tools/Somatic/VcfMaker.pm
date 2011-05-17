@@ -348,6 +348,9 @@ sub execute {                               # replace with real execution logic.
 	    foreach my $filter (@out_filters){
 		#split out each element - filterName:filterDescription:file			  
 		my @fields = split(":",$filter);
+                unless (@fields == 3){
+                    die("\nERROR: each filter must be in the format: filterName:filterDescription:file\n$filter does not match")
+                }
 		#write out the line
 		print OUTFILE "##FILTER=<ID=" . $fields[0] . ",Description=\"" . $fields[1] . "\">" . "\n";
 	    }
@@ -361,6 +364,9 @@ sub execute {                               # replace with real execution logic.
 	    foreach my $filter (@keep_filters){
 		#split out each element - filterName:filterDescription:file			  
 		my @fields = split(":",$filter);
+                unless (@fields == 3){
+                    die("\nERROR: each filter must be in the format: filterName:filterDescription:file\n$filter does not match")
+                }
 		#write out the line
 		print OUTFILE "##FILTER=<ID=" . $fields[0] . ",Description=\"" . $fields[1] . "\">" . "\n";
 	    }
@@ -537,7 +543,7 @@ sub execute {                               # replace with real execution logic.
 		$sniperSnvs{$id}{"alt"} = convertIub($col[3]);
 		my @arr = (("N"),(split(",",convertIub($col[3]))));
 		$sniperSnvs{$id}{"tumor"}{"GT"} = genGT($col[3],@arr);
-		print STDERR $id;
+#		print STDERR $id;
 	    } else {
 		$sniperSnvs{$id}{"alt"} = join(",",@varAlleles);
 	    }
@@ -666,7 +672,7 @@ sub execute {                               # replace with real execution logic.
 		$varScanSnvs{$id}{"alt"} = convertIub($col[4]);
 		my @arr = (("N"),(split(",",convertIub($col[4]))));
 		$varScanSnvs{$id}{"tumor"}{"GT"} = genGT($col[12],@arr);
-		print STDERR $id;
+#		print STDERR $id;
 	    } else {
 		$varScanSnvs{$id}{"alt"} = join(",",@varAlleles);
 	    }
@@ -932,7 +938,7 @@ sub execute {                               # replace with real execution logic.
 	#then the filter keeps
 	unless ($filter_keep eq ""){
 	    # split out each filter from the comma-sep list
-	    my @keep_filters = split(",",$filter_out);
+	    my @keep_filters = split(",",$filter_keep);
 
 	    foreach my $filter (@keep_filters){
 		#split out each element - filterName:filterDescription:file			  
