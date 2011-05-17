@@ -201,6 +201,13 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	    default => 0,
 	},
 
+	cmds_input => {
+	    is => 'Boolean',
+	    is_optional => 1,
+	    doc => 'Flag indicating that input is in cmds format. Script will plot the probability that any give region is recurrent -log(z.p)',
+	    default => 0,
+	},
+
 	# ylab => {
 	#     is => 'String',
 	#     is_optional => 1,
@@ -235,7 +242,7 @@ sub help_detail {
 
 #########################################################################
 sub convertSegs{
-    my ($self, $segfiles,$cnvhmm_input, $cnahmm_input) = @_;
+    my ($self, $segfiles,$cnvhmm_input, $cnahmm_input, $cmds_input) = @_;
     my @newfiles;
     my @infiles = split(",",$segfiles);
     foreach my $file (@infiles){
@@ -244,6 +251,9 @@ sub convertSegs{
             push(@newfiles,$cbsfile);
         } elsif ($cnahmm_input){
             my $cbsfile = cnaHmmToCbs($file,$self);
+            push(@newfiles,$cbsfile);
+        } elsif ($cmds_input){
+            my $cbsfile = cmdsToCbs($file,$self);
             push(@newfiles,$cbsfile);
         }
     }
@@ -261,6 +271,50 @@ sub log_base {
 }
 
 
+#-----------------------------------------------------
+#convert cmds output to a format we can use in the plotter
+sub cmdsToCbs{
+    my ($file,$self) = @_;
+
+    #create a tmp file for this output
+    my ($tfh,$newfile) = Genome::Sys->create_temp_file;
+    unless($tfh) {
+	$self->error_message("Unable to create temporary file $!");
+	die;
+    }
+
+    open(OUTFILE,">$newfile") || die "can't open temp segs file for writing ($newfile)\n";
+
+
+    #read and convert the cnvhmm output
+    my $inFh = IO::File->new( $file ) || die "can't open file\n";
+    my $inCoords = 0;
+    while( my $line = $inFh->getline )
+    {
+	chomp($line);
+        #skip header
+        next if $line =~ /^chromosome/;
+
+        my @fields = split("\t",$line);
+
+        #convert p-val to -log(P)
+        #also determine amp vs del (m.sd > 0 is amp, m.sd < 0 is del)
+        my $logpval;
+        if($fields[7] > 0){
+            $logpval = -log_base(10,$fields[10]);
+        } else {#($fields[7] < 0){
+            $logpval = log_base(10,$fields[10]);
+        }
+           
+
+        print OUTFILE join("\t",($fields[0],$fields[2],$fields[4],1,$logpval)) . "\n";
+    }
+    close(OUTFILE);
+    $inFh->close;
+    print STDERR "$newfile\n";
+    `cp $newfile /tmp/asdf.seg`;
+    return($newfile);
+}
 #-----------------------------------------------------
 #convert cnvhmm output to a format we can use here
 sub cnvHmmToCbs{
@@ -302,7 +356,7 @@ sub cnvHmmToCbs{
 }
 
 #-----------------------------------------------------
-#convert cnvhmm output to a format we can use here
+#convert cnahmm output to a format we can use here
 sub cnaHmmToCbs{
     my ($file,$self) = @_;
 
@@ -398,6 +452,7 @@ sub execute {
     my $loss_color = $self->loss_color;
     my $cnvhmm_input = $self->cnvhmm_input;
     my $cnahmm_input = $self->cnahmm_input;
+    my $cmds_input = $self->cmds_input;
     my $plot_title = $self->plot_title;
     # my $ylab = $self->ylab;
 
@@ -406,12 +461,11 @@ sub execute {
 
 
     my @infiles;
+    if ($cnvhmm_input || $cnahmm_input || $cmds_input){
+	$segment_files = convertSegs($self, $segment_files, $cnvhmm_input, $cnahmm_input, $cmds_input);
+    }
     if ($cnvhmm_input || $cnahmm_input){
-	$segment_files = convertSegs($self, $segment_files, $cnvhmm_input, $cnahmm_input);
 	$log_input = 1;
-    # } elsif ($cnahmm_input){
-    #     $segment_files = convertSegs($self, $segment_files, $cnvhmm_input, $cnahmm_input);
-    #     $log_input = 1;
     }
 
     @infiles = split(",",$segment_files);
@@ -433,6 +487,16 @@ sub execute {
     }
 
 
+
+    #preset some params for cmds output
+    my $log10_plot=0;
+    if ($cmds_input){
+        $log10_plot = 1;
+        $gain_threshold = 0;
+        $loss_threshold = 0;
+    }
+
+
     #open the R file
     open(R_COMMANDS,">$outfile") || die "can't open $outfile for writing\n";
 
@@ -451,8 +515,10 @@ sub execute {
 
     #set up the plotting space
     print R_COMMANDS "par(xaxs=\"i\", xpd=FALSE, mfrow=c(" . @infiles . ",1), oma=c(1,1,1,1), mar=c(1,3,1,1))\n";
-
-    my @titles = split(",",$plot_title);
+    my @titles;
+    if(defined($plot_title)){
+        my @titles = split(",",$plot_title);
+    }
     my $counter = 0;
 
     #draw the plots for each set of segments
@@ -478,11 +544,15 @@ sub execute {
 	}
 
 	if ($log_plot){
-	    print R_COMMANDS ", logPlot=TRUE";
+	    print R_COMMANDS ", log2Plot=TRUE";
 	}
 
 	if ($log_input){
-	    print R_COMMANDS ", logInput=TRUE";
+	    print R_COMMANDS ", log2Input=TRUE";
+	}
+
+	if ($log10_plot){
+	    print R_COMMANDS ", log10Plot=TRUE";
 	}
 
 	if ($lowres){
