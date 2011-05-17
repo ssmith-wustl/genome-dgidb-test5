@@ -154,7 +154,7 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
         sex => {
 	    is => 'String',
 	    is_optional => 1,
-	    doc => 'sex of the sample - male or female',
+	    doc => 'sex of the sample - male, female, or autosomes',
             default => 'male',
 	},   
 
@@ -415,6 +415,13 @@ sub getEntrypointsFile{
         } elsif ($genome_build eq "37"){
             $entrypoints_file = "/gscmnt/sata921/info/medseq/cmiller/annotations/entrypoints.hg19.female"
     }
+    } elsif ($sex eq "autosomes"){
+        if($genome_build eq "36"){
+            $entrypoints_file = "/gscmnt/sata921/info/medseq/cmiller/annotations/entrypoints.hg18.autosomes"
+        } elsif ($genome_build eq "37"){
+            $entrypoints_file = "/gscmnt/sata921/info/medseq/cmiller/annotations/entrypoints.hg19.autosomes"
+    }
+
     }
 
     if ($entrypoints_file eq ""){
@@ -517,7 +524,7 @@ sub execute {
     print R_COMMANDS "par(xaxs=\"i\", xpd=FALSE, mfrow=c(" . @infiles . ",1), oma=c(1,1,1,1), mar=c(1,3,1,1))\n";
     my @titles;
     if(defined($plot_title)){
-        my @titles = split(",",$plot_title);
+        @titles = split(",",$plot_title);
     }
     my $counter = 0;
 
