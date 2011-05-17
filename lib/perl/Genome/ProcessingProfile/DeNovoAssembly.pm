@@ -16,7 +16,7 @@ class Genome::ProcessingProfile::DeNovoAssembly{
 	    valid_values => [qw/ 454 solexa /],
 	},
 	coverage => {
-	    is => 'Integer',
+	    is => 'Number',
 	    is_optional => 1,
 	    doc => 'Use genome size to limit the number of reads used in the assembly to obtain this coverage.',
 	},
