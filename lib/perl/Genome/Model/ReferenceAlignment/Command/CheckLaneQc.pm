@@ -25,10 +25,18 @@ sub execute {
         else {
             for my $lane_qc_model (@lane_qc_models) {
                 my @builds = $lane_qc_model->builds;
-                unless (@builds) {
-                    $self->print_message('Requesting build for ' . $lane_qc_model->__display_name__ . '.');
+                if (@builds) {
+                    $status = $lane_qc_model->latest_build->status;
+                }
+                elsif ($lane_qc_model->build_requested) {
+                    $status = 'Queued';
+                }
+                else {
+                    $status = 'Build Requested';
                     $lane_qc_model->build_requested(1);
                 }
+                $status .= ' ' x (15 - length($status));
+                $self->print_message(join "\t", $status, $lane_qc_model->__display_name__);
             }
         }
     }
