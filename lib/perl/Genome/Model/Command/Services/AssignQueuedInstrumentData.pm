@@ -1193,7 +1193,7 @@ sub add_processing_profiles_to_pses{
             }
             elsif ($instrument_data_type =~ /sanger/i) {
                 # this is only meant to work with 16s sanger instrument data at present
-                push @processing_profile_ids_to_add, '2067049';
+                push @processing_profile_ids_to_add, 2591277; # MC16s-WashU-Sanger-RDP2.2-ts6 was amplicon assembly 2067049
             }
             elsif ($instrument_data_type eq 'genotyper results' ) {
                 # Genotype Microarry PP as of 2011jan25
