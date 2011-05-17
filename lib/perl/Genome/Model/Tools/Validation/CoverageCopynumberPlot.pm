@@ -25,6 +25,7 @@ class Genome::Model::Tools::Validation::CoverageCopynumberPlot {
 		cnvhmm_file	=> { is => 'Text', doc => "File of cnvhmm whole genome predictions", is_optional => 0, is_input => 1 },
 		varscan_r_library	=> { is => 'Text', doc => "File of cnvhmm whole genome predictions", is_optional => 0, is_input => 1, default => '/gscmnt/sata423/info/medseq/analysis/CaptureValidationGraphs/VarScanGraphLib.R'},
 		sample_id	=> { is => 'Text', doc => "Sample ID to be put on graphs", is_optional => 1, is_input => 1, default => 'unspecified' },
+		chr_highlight      => { is => 'Text', doc => "Choose a Chromosome to Highlight with Purple Circles on Plot", is_optional => 1, is_input => 1, default => 'X'},
 		r_script_output_file     => { is => 'Text', doc => "R script built and run by this module", is_optional => 0, is_input => 1},
 		coverage_output_file     => { is => 'Text', doc => "PDF Coverage output file", is_optional => 0, is_input => 1, is_output => 1 },
 		copynumber_output_file     => { is => 'Text', doc => "PDF Copynumber output file", is_optional => 0, is_input => 1, is_output => 1 },
@@ -66,6 +67,7 @@ sub execute {                               # replace with real execution logic.
 	my $varscan_file = $self->varscan_file;
 	my $copynumber_file = $self->cnvhmm_file;
 	my $sample_id = $self->sample_id;
+	my $chr_highlight = $self->chr_highlight;
 	##outputs##
 	my $r_script_output_file = $self->r_script_output_file;
 	my $coverage_output_file = $self->coverage_output_file;
@@ -113,16 +115,18 @@ varscan.load_snp_output(\"$temp_path\",header=F)->xcopy;
 varscan.load_snp_output(\"$temp_path\",header=F,min_tumor_depth=$readcount_cutoff,min_normal_depth=$readcount_cutoff)->xcopy100;
 z1=subset(xcopy, xcopy\$V13 == "Somatic");
 z2=subset(xcopy100, xcopy100\$V13 == "Somatic");
+xchr=subset(z1,z1\$V1 == "$chr_highlight");
+xchr100=subset(z2,z2\$V1 == "$chr_highlight");
 covtum1=(z1\$V9+z1\$V10);
 covtum2=(z2\$V9+z2\$V10);
-maxx=max(c(covtum1,covtum2));
+absmaxx=maxx=max(c(covtum1,covtum2));
 covnorm1=(z1\$V5+z1\$V6);
 covnorm2=(z2\$V5+z2\$V6);
-maxx2=max(c(covnorm1,covnorm2));
-if (maxx >= 1000) {maxx = 1000};
-if (maxx2 >= 1000) {maxx2 = 1000};
-maxx = 800;
-maxx2 = 800;
+absmaxx2=maxx2=max(c(covnorm1,covnorm2));
+if (maxx >= 1200) {maxx = 1200};
+if (maxx2 >= 1200) {maxx2 = 1200};
+if (maxx <= 800) {maxx = 800};
+if (maxx2 <= 800) {maxx2 = 800};
 
 cn1minus=subset(z1, z1\$V20 >= 0 & z1\$V20 <= 1.75);
 cn2=subset(z1, z1\$V20 >= 1.75 & z1\$V20 <= 2.25);
@@ -192,10 +196,12 @@ points(x=(cn2\$V5+cn2\$V6),y=(cn2\$V7), type="p",pch=19,cex=0.4,col="#00FF0055")
 points(x=(cn3\$V5+cn3\$V6),y=(cn3\$V7), type="p",pch=19,cex=0.4,col="#0000FF55");
 points(x=(cn4plus\$V5+cn4plus\$V6),y=(cn4plus\$V7), type="p",pch=19,cex=0.4,col="#FFA500FF");
 points(dennormcov\$x,((dennormcov\$y * 1000)+20),col="#0000000F", type="p",pch=19,cex=0.4);
+#label x
+points(x=(xchr\$V5+xchr\$V6),y=(xchr\$V7), type="p",pch=1,cex=0.8,col="purple");
 lines(c(20,20),c(1,100), col="black");
 lines(c(30,30),c(1,100), col="blue");
 lines(c(100,100),c(1,100), col="green4");
-legend(x="topright", title = "Copy Number", c("1", "2", "3", "4+"),col=c("#FF0000","#00FF00","#0000FF","#FFA500"),pch=19);
+legend(x="topright", title = "Copy Number", xjust=0, c("1", "2", "3", "4+","Chr $chr_highlight"),col=c("#FF0000","#00FF00","#0000FF","#FFA500","purple"),pch=c(19,19,19,19,1),cex=0.7);
 legend(x="right", title = "Coverage", c("20x", "30x", "100x", "N"),col=c("black","blue","green4","#00000055"),lty = c(1,1,1,1), lwd = c(1,1,1,2));
 
         #TUMOR CN PLOT
@@ -205,6 +211,8 @@ plot.default(x=cn1minus\$V7,y=cn1minus\$V11,xlab="Variant Allele Frequency in No
 points(x=cn2\$V7,y=cn2\$V11, type="p",pch=19,cex=0.4,col="#00FF0055");
 points(x=cn3\$V7,y=cn3\$V11, type="p",pch=19,cex=0.4,col="#0000FF55");
 points(x=cn4plus\$V7,y=cn4plus\$V11, type="p",pch=19,cex=0.4,col="#FFA500FF");
+#label x
+points(x=xchr\$V7,y=xchr\$V11, type="p",pch=1,cex=0.8,col="purple");
 lines(c(60,60),c(10,100),lty=2,col="black");
 lines((100-(finalfactor * den1factor)),den1\$x,col="#FF0000AA",lwd=2);
 lines((100-(finalfactor * den2factor)),den2\$x,col="#00FF00AA",lwd=2);
@@ -215,49 +223,53 @@ axis(side=3,at=c(60,100),labels=c(sprintf("%.3f", maxden),0),col="black",tck=0.0
 mtext("CN Density         ",adj=1, cex=0.7, padj=-0.5);
 par(mgp = c(3,1,0));
 #par(mar=c(5,4,4,2) + 0.1);
-legend(x="topleft",horiz=TRUE,xjust=0, c("1", "2", "3", "4+"),col=c("#FF0000","#00FF00","#0000FF","#FFA500"),pch=19,cex=0.9);
+legend(x="topleft",horiz=TRUE,xjust=0, c("1", "2", "3", "4+","Chr $chr_highlight"),col=c("#FF0000","#00FF00","#0000FF","#FFA500","purple"),pch=c(19,19,19,19,1),cex=0.7);
 
         #TUMOR COVERAGE PLOT
 plot.default(x=(cn1minus\$V9+cn1minus\$V10),y=(cn1minus\$V11),xlab="Tumor Coverage",ylab="Tumor Variant Allele Frequency", main=paste(genome," Coverage"), type="p",pch=19,cex=0.4,col="#FF000039",xlim=c(0,maxx),ylim=c(0,110));
-points(x=(cn2\$V9+cn2\$V10),y=(cn2\$V11), type="p",pch=19,cex=0.4,col="#00FF0055");
-points(x=(cn3\$V9+cn3\$V10),y=(cn3\$V11), type="p",pch=19,cex=0.4,col="#0000FF55");
-points(x=(cn4plus\$V9+cn4plus\$V10),y=(cn4plus\$V11), type="p",pch=19,cex=0.4,col="#FFA500FF");
+points(x=(cn2\$V9+cn2\$V10),y=(cn2\$V11),type="p",pch=19,cex=0.4,col="#00FF0055");
+points(x=(cn3\$V9+cn3\$V10),y=(cn3\$V11),type="p",pch=19,cex=0.4,col="#0000FF55");
+points(x=(cn4plus\$V9+cn4plus\$V10),y=(cn4plus\$V11),type="p",pch=19,cex=0.4,col="#FFA500FF");
 points(dentumcov\$x,((dentumcov\$y * 1000)),col="#0000000F", type="p",pch=19,cex=0.4);
+#label x
+points(x=(xchr\$V9+xchr\$V10),y=(xchr\$V11),type="p",pch=1,cex=0.8,col="purple");
 lines(c(20,20),c(1,100), col="black");
 lines(c(30,30),c(1,100), col="blue");
 lines(c(100,100),c(1,100), col="green4");
-legend(x="topleft",horiz=TRUE,xjust=0, c("1", "2", "3", "4+"),col=c("#FF0000","#00FF00","#0000FF","#FFA500"),pch=19,cex=0.9);
+legend(x="topleft",horiz=TRUE,xjust=0, c("1", "2", "3", "4+","Chr $chr_highlight"),col=c("#FF0000","#00FF00","#0000FF","#FFA500","purple"),pch=c(19,19,19,19,1),cex=0.7);
 legend(x="topright", title = "Coverage", c("20x", "30x", "100x", "N"),col=c("black","blue","green4","#00000055"),lty = c(1,1,1,1), lwd = c(1,1,1,2));
-        #BEGIN COVERAGE > 100 PLOTS
         #SNP DROPOFF PLOT
         #code for making snp inclusion dropoff picture
 rc_cutoffs = 1:800; snps_passed_cutoff = NULL;
 for (i in rc_cutoffs) { snps_passed_cutoff[i] = dim(z1[(z1\$V9+z1\$V10) >= i & (z1\$V5+z1\$V6) >= i,])[1]; }
-	
 plot.default(x=rc_cutoffs,y=snps_passed_cutoff,xlab="Read-count Cut-off",ylab="Number of SNVs", main=paste(genome,"SNVs Passing Read Depth Filter"),cex=0.4);
 lines(c($readcount_cutoff,$readcount_cutoff),c(0,snps_passed_cutoff[1]), col=\"blue\");
 legend(x="topright", paste("Filter","Cut-off",sep=" "),col=c("blue"),lty = c(1,1,1), lwd = 1);
-        #TUMOR CN PLOT
-maxden = max(c(den1factor100,den2factor100,den3factor100,den4factor100));
-finalfactor = 40 / maxden;
+
+        #BEGIN COVERAGE > 100 PLOTS
+        #TUMOR CN PLOT 100x
+maxden100 = max(c(den1factor100,den2factor100,den3factor100,den4factor100));
+finalfactor = 40 / maxden100;
 plot.default(x=cn1minus100x\$V7,y=cn1minus100x\$V11,xlab="Normal Variant Allele Frequency",ylab="Tumor Variant Allele Frequency", main=paste(genome," Allele Frequency"),type="p",pch=19,cex=0.4,col="#FF000039",xlim=c(0,100),ylim=c(0,110));
 points(x=cn2100x\$V7,y=cn2100x\$V11, type="p",pch=19,cex=0.4,col="#00FF0055");
 points(x=cn3100x\$V7,y=cn3100x\$V11, type="p",pch=19,cex=0.4,col="#0000FF55");
 points(x=cn4plus100x\$V7,y=cn4plus100x\$V11, type="p",pch=19,cex=0.4,col="#FFA500FF");
+#label x
+points(x=xchr100\$V7,y=xchr100\$V11, type="p",pch=1,cex=0.8,col="purple");
 lines(c(60,60),c(10,100),lty=2,col="black");
 lines((100-(finalfactor * den1factor100)),den1100x\$x,col="#FF0000AA",lwd=2);
 lines((100-(finalfactor * den2factor100)),den2100x\$x,col="#00FF00AA",lwd=2);
 lines((100-(finalfactor * den3factor100)),den3100x\$x,col="#0000FFAA",lwd=2);
 lines((100-(finalfactor * den4factor100)),den4100x\$x,col="#FFA500AA",lwd=2);
 par(mgp = c(0, -1.4, 0));
-axis(side=3,at=c(60,100),labels=c(sprintf("%.3f", maxden),0),col="black",tck=0.01);
+axis(side=3,at=c(60,100),labels=c(sprintf("%.3f", maxden100),0),col="black",tck=0.01);
 #mtext("CN Density         ",adj=1, cex=0.7, padj=-0.5);
 par(mgp = c(3,1,0));
 #par(mar=c(5,4,4,2) + 0.1);
-legend(x="topleft",horiz=TRUE,xjust=0, c("1", "2", "3", "4+"),col=c("#FF0000","#00FF00","#0000FF","#FFA500"),pch=19,cex=0.9);
+legend(x="topleft",horiz=TRUE,xjust=0, c("1", "2", "3", "4+","Chr $chr_highlight"),col=c("#FF0000","#00FF00","#0000FF","#FFA500","purple"),pch=c(19,19,19,19,1),cex=0.7);
 mtext("Normal and Tumor Coverage > 100",cex=0.7, padj=-0.5);
 
-        #TUMOR COVERAGE PLOT
+        #COVERAGE PLOT
 #plot.default(x=cn1minus100x\$V7,y=cn1minus100x\$V11,xlab="Normal Variant Allele Frequency",ylab="Tumor Variant Allele Frequency", main=paste(genome," Allele Frequency"),type="p",pch=19,cex=0.4,col="#FF000039",xlim=c(0,100),ylim=c(0,100));
 #points(x=cn2100x\$V7,y=cn2100x\$V11, type="p",pch=19,cex=0.4,col="#00FF0055");
 #points(x=cn3100x\$V7,y=cn3100x\$V11, type="p",pch=19,cex=0.4,col="#0000FF55");
@@ -282,21 +294,113 @@ mtext("Normal and Tumor Coverage > 100",cex=0.7, padj=-0.5);
 #legend(x="topright", title = "Copy Number", c("1", "2", "3", "4+"),col=c("#FF0000","#00FF00","#0000FF","#FFA500"),pch=19);
 #legend(x="right", title = "Coverage", c("20x", "30x", "100x", "N"),col=c("black","blue","green4","#00000055"),lty = c(1,1,1,1), lwd = c(1,1,1,2));
 
-        #TUMOR COVERAGE PLOT
+        #TUMOR COVERAGE PLOT 100x
 plot.default(x=(cn1minus100x\$V9+cn1minus100x\$V10),y=(cn1minus100x\$V11),xlab="Tumor Coverage",ylab="Tumor Variant Allele Frequency", main=paste(genome," Coverage"), type="p",pch=19,cex=0.4,col="#FF000039",xlim=c(0,maxx),ylim=c(0,110));
 points(x=(cn2100x\$V9+cn2100x\$V10),y=(cn2100x\$V11), type="p",pch=19,cex=0.4,col="#00FF0055");
 points(x=(cn3100x\$V9+cn3100x\$V10),y=(cn3100x\$V11), type="p",pch=19,cex=0.4,col="#0000FF55");
 points(x=(cn4plus100x\$V9+cn4plus100x\$V10),y=(cn4plus100x\$V11), type="p",pch=19,cex=0.4,col="#FFA500FF");
 points(dentumcov100x\$x,((dentumcov100x\$y * 1000)),col="#0000000F", type="p",pch=19,cex=0.4);
+#label x
+points(x=(xchr100\$V9+xchr100\$V10),y=(xchr100\$V11),type="p",pch=1,cex=0.8,col="purple");
 mtext("Normal and Tumor Coverage > 100",cex=0.7, padj=-0.5);
 lines(c(20,20),c(1,100), col="black");
 lines(c(30,30),c(1,100), col="blue");
 lines(c(100,100),c(1,100), col="green4");
-legend(x="topleft",horiz=TRUE,xjust=0, c("1", "2", "3", "4+"),col=c("#FF0000","#00FF00","#0000FF","#FFA500"),pch=19,cex=0.9);
+legend(x="topleft",horiz=TRUE,xjust=0, c("1", "2", "3", "4+","Chr $chr_highlight"),col=c("#FF0000","#00FF00","#0000FF","#FFA500","purple"),pch=c(19,19,19,19,1),cex=0.7);
 legend(x="topright", title = "Coverage", c("20x", "30x", "100x", "N"),col=c("black","blue","green4","#00000055"),lty = c(1,1,1,1), lwd = c(1,1,1,2));
+
+
+        #TUMOR COVERAGE PLOT, SOME VARIATIONS
+#testing transparency
+plot.default(x=(z1\$V9+z1\$V10),y=(z1\$V11),log="x",xlab="Tumor Coverage",ylab="Tumor Variant Allele Frequency", main=paste(genome," Coverage"), type="p",pch=19,cex=0.4,col="#FF000011",ylim=c(0,110));
+plot.default(x=(z1\$V9+z1\$V10),y=(z1\$V11),log="x",xlab="Tumor Coverage",ylab="Tumor Variant Allele Frequency", main=paste(genome," Coverage"), type="p",pch=19,cex=0.4,col="#FF000022",ylim=c(0,110));
+plot.default(x=(z1\$V9+z1\$V10),y=(z1\$V11),log="x",xlab="Tumor Coverage",ylab="Tumor Variant Allele Frequency", main=paste(genome," Coverage"), type="p",pch=19,cex=0.4,col="#FF000033",ylim=c(0,110));
+plot.default(x=(z1\$V9+z1\$V10),y=(z1\$V11),log="x",xlab="Tumor Coverage",ylab="Tumor Variant Allele Frequency", main=paste(genome," Coverage"), type="p",pch=19,cex=0.4,col="#FF000044",ylim=c(0,110));
+plot.default(x=(z1\$V9+z1\$V10),y=(z1\$V11),log="x",xlab="Tumor Coverage",ylab="Tumor Variant Allele Frequency", main=paste(genome," Coverage"), type="p",pch=19,cex=0.4,col="#FF000055",ylim=c(0,110));
+plot.default(x=(z1\$V9+z1\$V10),y=(z1\$V11),log="x",xlab="Tumor Coverage",ylab="Tumor Variant Allele Frequency", main=paste(genome," Coverage"), type="p",pch=19,cex=0.4,col="#FF000066",ylim=c(0,110));
+
+#plotting coverage and copynumber on log scale
+plot.default(x=(z1\$V9+z1\$V10),y=(z1\$V11),log="x",xlab="Tumor Coverage",ylab="Tumor Variant Allele Frequency", main=paste(genome," Coverage"), type="p",pch=19,cex=0.4,col="#00000000",ylim=c(0,110),xlim=c(10,absmaxx));
+points(x=(cn1minus\$V9+cn1minus\$V10),y=(cn1minus\$V11),type="p",pch=19,cex=0.4,col="#FF000039");
+points(x=(cn2\$V9+cn2\$V10),y=(cn2\$V11),type="p",pch=19,cex=0.4,col="#00FF0055");
+points(x=(cn3\$V9+cn3\$V10),y=(cn3\$V11),type="p",pch=19,cex=0.4,col="#0000FF55");
+points(x=(cn4plus\$V9+cn4plus\$V10),y=(cn4plus\$V11),type="p",pch=19,cex=0.4,col="#FFA500FF");
+legend(x="topright",horiz=TRUE,xjust=0, c("1", "2", "3", "4+"),col=c("#FF0000","#00FF00","#0000FF","#FFA500"),pch=19,cex=0.9);
+
+#plotting coverage and copynumber on log scale with density plot incorporated
+finalfactor = 25 / maxden;
+plot.default(x=(z1\$V9+z1\$V10),y=(z1\$V11),log="x",xlab="Tumor Coverage",ylab="Tumor Variant Allele Frequency", main=paste(genome," Coverage"), type="p",pch=19,cex=0.4,col="#00000000",ylim=c(0,110),xlim=c(1,absmaxx));
+points(x=(cn1minus\$V9+cn1minus\$V10),y=(cn1minus\$V11),type="p",pch=19,cex=0.4,col="#FF000039");
+points(x=(cn2\$V9+cn2\$V10),y=(cn2\$V11),type="p",pch=19,cex=0.4,col="#00FF0055");
+points(x=(cn3\$V9+cn3\$V10),y=(cn3\$V11),type="p",pch=19,cex=0.4,col="#0000FF55");
+points(x=(cn4plus\$V9+cn4plus\$V10),y=(cn4plus\$V11),type="p",pch=19,cex=0.4,col="#FFA500FF");
+par(new=TRUE);
+plot.default(x=c(1:10),y=c(1:10),ylim=c(0,110),xlim=c(0,100),axes=FALSE, ann=FALSE,col="#00000000");
+lines(c(25,25),c(10,100),lty=2,col="black");
+lines(((finalfactor * den1factor)),den1\$x,col="#FF0000AA",lwd=2);
+lines(((finalfactor * den2factor)),den2\$x,col="#00FF00AA",lwd=2);
+lines(((finalfactor * den3factor)),den3\$x,col="#0000FFAA",lwd=2);
+lines(((finalfactor * den4factor)),den4\$x,col="#FFA500AA",lwd=2);
+par(mgp = c(0, -1.4, 0));
+axis(side=3,at=c(0,25),labels=c(0,sprintf("%.3f", maxden)),col="black",tck=0.01);
+mtext("         CN Density",adj=0, cex=0.7, padj=-0.5);
+par(mgp = c(3,1,0));
+legend(x="topright",horiz=TRUE,xjust=0, c("1", "2", "3", "4+"),col=c("#FF0000","#00FF00","#0000FF","#FFA500"),pch=19,cex=0.9);
+
+#plotting coverage and copynumber on log scale with x chr labels
+plot.default(x=(z1\$V9+z1\$V10),y=(z1\$V11),log="x",xlab="Tumor Coverage",ylab="Tumor Variant Allele Frequency", main=paste(genome," Coverage"), type="p",pch=19,cex=0.4,col="#00000000",ylim=c(0,110),xlim=c(10,absmaxx));
+points(x=(cn1minus\$V9+cn1minus\$V10),y=(cn1minus\$V11),type="p",pch=19,cex=0.4,col="#FF000039");
+points(x=(cn2\$V9+cn2\$V10),y=(cn2\$V11),type="p",pch=19,cex=0.4,col="#00FF0055");
+points(x=(cn3\$V9+cn3\$V10),y=(cn3\$V11),type="p",pch=19,cex=0.4,col="#0000FF55");
+points(x=(cn4plus\$V9+cn4plus\$V10),y=(cn4plus\$V11),type="p",pch=19,cex=0.4,col="#FFA500FF");
+#label x
+points(x=(xchr\$V9+xchr\$V10),y=(xchr\$V11),type="p",pch=1,cex=0.8,col="purple");
+legend(x="topright",horiz=TRUE,xjust=0, c("1", "2", "3", "4+","Chr $chr_highlight"),col=c("#FF0000","#00FF00","#0000FF","#FFA500","purple"),pch=c(19,19,19,19,1),cex=0.7);
+
+#100x coverage
+#plotting coverage and copynumber on log scale
+plot.default(x=(z2\$V9+z2\$V10),y=(z2\$V11),log="x",xlab="Tumor Coverage",ylab="Tumor Variant Allele Frequency", main=paste(genome," Coverage"), type="p",pch=19,cex=0.4,col="#00000000",ylim=c(0,110),xlim=c(10,absmaxx));
+points(x=(cn1minus100x\$V9+cn1minus100x\$V10),y=(cn1minus100x\$V11),type="p",pch=19,cex=0.4,col="#FF000039");
+points(x=(cn2100x\$V9+cn2100x\$V10),y=(cn2100x\$V11),type="p",pch=19,cex=0.4,col="#00FF0055");
+points(x=(cn3100x\$V9+cn3100x\$V10),y=(cn3100x\$V11),type="p",pch=19,cex=0.4,col="#0000FF55");
+points(x=(cn4plus100x\$V9+cn4plus100x\$V10),y=(cn4plus100x\$V11),type="p",pch=19,cex=0.4,col="#FFA500FF");
+mtext("Normal and Tumor Coverage > 100",cex=0.7, padj=-0.5);
+legend(x="topright",horiz=TRUE,xjust=0, c("1", "2", "3", "4+"),col=c("#FF0000","#00FF00","#0000FF","#FFA500"),pch=19,cex=0.9);
+
+#plotting coverage and copynumber on log scale with density plot incorporated
+#maxxlog = log10(maxx);
+finalfactor = 25 / maxden100;
+plot.default(x=(z1\$V9+z1\$V10),y=(z1\$V11),log="x",xlab="Tumor Coverage",ylab="Tumor Variant Allele Frequency", main=paste(genome," Coverage"), type="p",pch=19,cex=0.4,col="#00000000",ylim=c(0,110),xlim=c(1,absmaxx));
+points(x=(cn1minus100x\$V9+cn1minus100x\$V10),y=(cn1minus100x\$V11),type="p",pch=19,cex=0.4,col="#FF000039");
+points(x=(cn2100x\$V9+cn2100x\$V10),y=(cn2100x\$V11),type="p",pch=19,cex=0.4,col="#00FF0055");
+points(x=(cn3100x\$V9+cn3100x\$V10),y=(cn3100x\$V11),type="p",pch=19,cex=0.4,col="#0000FF55");
+points(x=(cn4plus100x\$V9+cn4plus100x\$V10),y=(cn4plus100x\$V11),type="p",pch=19,cex=0.4,col="#FFA500FF");
+par(new=TRUE);
+plot.default(x=c(1:10),y=c(1:10),ylim=c(0,110),xlim=c(0,100),axes=FALSE, ann=FALSE,col="#00000000");
+lines(c(25,25),c(10,100),lty=2,col="black");
+lines(((finalfactor * den1factor100)),den1100x\$x,col="#FF0000AA",lwd=2);
+lines(((finalfactor * den2factor100)),den2100x\$x,col="#00FF00AA",lwd=2);
+lines(((finalfactor * den3factor100)),den3100x\$x,col="#0000FFAA",lwd=2);
+lines(((finalfactor * den4factor100)),den4100x\$x,col="#FFA500AA",lwd=2);
+par(mgp = c(0, -1.4, 0));
+axis(side=3,at=c(0,25),labels=c(0,sprintf("%.3f", maxden100)),col="black",tck=0.01);
+par(mgp = c(3,1,0));
+legend(x="topright",horiz=TRUE,xjust=0, c("1", "2", "3", "4+"),col=c("#FF0000","#00FF00","#0000FF","#FFA500"),pch=19,cex=0.9);
+mtext("Normal and Tumor Coverage > 100",cex=0.7, padj=-0.5);
+
+#plotting coverage and copynumber on log scale with x chr labels
+plot.default(x=(z2\$V9+z2\$V10),y=(z2\$V11),log="x",xlab="Tumor Coverage",ylab="Tumor Variant Allele Frequency", main=paste(genome," Coverage"), type="p",pch=19,cex=0.4,col="#00000000",ylim=c(0,110),xlim=c(10,absmaxx));
+points(x=(cn1minus100x\$V9+cn1minus100x\$V10),y=(cn1minus100x\$V11),type="p",pch=19,cex=0.4,col="#FF000039");
+points(x=(cn2100x\$V9+cn2100x\$V10),y=(cn2100x\$V11),type="p",pch=19,cex=0.4,col="#00FF0055");
+points(x=(cn3100x\$V9+cn3100x\$V10),y=(cn3100x\$V11),type="p",pch=19,cex=0.4,col="#0000FF55");
+points(x=(cn4plus100x\$V9+cn4plus100x\$V10),y=(cn4plus100x\$V11),type="p",pch=19,cex=0.4,col="#FFA500FF");
+#label x
+points(x=(xchr100\$V9+xchr100\$V10),y=(xchr100\$V11),type="p",pch=1,cex=0.8,col="purple");
+mtext("Normal and Tumor Coverage > 100",cex=0.7, padj=-0.5);
+legend(x="topright",horiz=TRUE,xjust=0, c("1", "2", "3", "4+","Chr $chr_highlight"),col=c("#FF0000","#00FF00","#0000FF","#FFA500","purple"),pch=c(19,19,19,19,1),cex=0.7);
 devoff <- dev.off();
 
-#copy number
+#copy number pdf starts here
 pdf(file=\"$copynumber_output_file\",width=10,height=7.5);
 par(mfrow=c(2,2));
 cov1=(z1\$V20);
