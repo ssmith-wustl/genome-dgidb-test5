@@ -93,7 +93,7 @@ class Genome::Model::Tools::DetectVariants2::Filter::TigraValidation {
         },
         workflow_log_directory => {
             calculate_from => 'output_directory',
-            calculate => q{ return File::Basename::dirname($output_directory) . '/tigrasv_by_chromosome_log'; },
+            calculate => q{ return $output_directory . '/tigrasv_by_chromosome_log'; },
         },
         breakpoint_seq_file => {
             calculate_from => '_temp_staging_directory',
