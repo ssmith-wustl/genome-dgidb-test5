@@ -51,27 +51,10 @@ sub schedule_rebuild {
         $self->status_message('auto_build_alignments is false for this convergence model');
         return 1;
     }
-    
-    my @potential_members = grep(defined $_->last_complete_build, $self->members); 
-    unless(scalar @potential_members) {
-        $self->status_message('Skipping convergence rebuild--no succeeded builds found among members.');
+
+    unless($self->build_needed) {
+        $self->status_message('Skipping convergence rebuild--not needed.');
         return 1;
-    }
-    
-    #Check to see if our last build already used all the same builds as we're about to
-    if($self->last_complete_build) {
-        my $last_build = $self->last_complete_build;
-        
-        my @last_members = $last_build->members;
-        
-        my $comparator = Array::Compare->new;
-        if($comparator->perm(\@last_members, \@potential_members)) {
-            $self->status_message('Skipping convergence rebuild--list of members that would be included is identical to last build.');
-            return 1;
-            
-            #Potentially if some of the underlying builds in the $build->all_subbuilds_closure have changed, a rebuild might be desired
-            #For now this will require a manual rebuild (`genome model build start`)
-        }
     }
 
     my @builds_to_abandon = grep{ $_->status eq 'Scheduled' or $_->status eq 'Running' } $self->builds;
@@ -86,6 +69,34 @@ sub schedule_rebuild {
 
     $self->build_requested(1);
     $self->status_message('Convergence rebuild requested.');
+
+    return 1;
+}
+
+sub build_needed {
+    my $self = shift;
+
+    my @potential_members = grep(defined $_->last_complete_build, $self->members);
+    unless(scalar @potential_members) {
+        #$self->status_message('Skipping convergence rebuild--no succeeded builds found among members.');
+        return;
+    }
+
+    #Check to see if our last build already used all the same builds as we're about to
+    if($self->last_complete_build) {
+        my $last_build = $self->last_complete_build;
+
+        my @last_members = $last_build->members;
+
+        my $comparator = Array::Compare->new;
+        if($comparator->perm(\@last_members, \@potential_members)) {
+            #$self->status_message('Skipping convergence rebuild--list of members that would be included is identical to last build.');
+            return;
+
+            #Potentially if some of the underlying builds in the $build->all_subbuilds_closure have changed, a rebuild might be desired
+            #For now this will require a manual rebuild (`genome model build start`)
+        }
+    }
 
     return 1;
 }

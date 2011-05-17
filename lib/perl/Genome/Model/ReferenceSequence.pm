@@ -48,4 +48,12 @@ sub build_by_version {
     return $b[0];
 }
 
+sub build_needed {
+    my $self = shift;
+
+    #These models always have one build per "version" of the reference.
+    #The models themselves do not store information relevant to whether a future build is needed.
+    return 0;
+}
+
 1;

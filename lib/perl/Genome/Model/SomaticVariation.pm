@@ -226,4 +226,26 @@ sub inputs_necessary_for_copy {
     @inputs_to_copy = grep {my $input = $_->name; !(grep{$input eq $_->name} $self->inputs)} @inputs_to_copy;
     return @inputs_to_copy; 
 }
+
+sub _input_differences_are_ok {
+    my $self = shift;
+    my @inputs_not_found = @{shift()};
+    my @build_inputs_not_found = @{shift()};
+
+    return unless scalar(@inputs_not_found) == 2 and scalar(@build_inputs_not_found) == 2;
+
+    my $input_sorter = sub { $a->name cmp $b->name };
+
+    @inputs_not_found = sort $input_sorter @inputs_not_found;
+    @build_inputs_not_found = sort $input_sorter @build_inputs_not_found;
+
+    #these are expected to differ and no new build is needed as long as the build pointed to is the latest for the model
+    for(0..$#inputs_not_found) {
+        return unless $inputs_not_found[$_]->value && $inputs_not_found[$_]->value->isa('Genome::Model');
+        return unless $inputs_not_found[$_]->value->last_complete_build eq $build_inputs_not_found[$_]->value;
+    }
+
+    return 1;
+}
+
 1;
