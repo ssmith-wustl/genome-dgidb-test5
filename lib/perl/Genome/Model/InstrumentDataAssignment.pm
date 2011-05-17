@@ -55,6 +55,14 @@ class Genome::Model::InstrumentDataAssignment {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+
+sub __display_name__ {
+    my $self = shift;
+    my $data = $self->instrument_data;
+    return $data->__display_name__;
+}
+
+
 sub create {
     my $class = shift;
 
