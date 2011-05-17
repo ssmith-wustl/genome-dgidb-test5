@@ -15,7 +15,7 @@ class Genome::Model::Tools::CopyNumber::PlotSegmentsFromBams {
     },
     names_of_bams => {
         is => 'String',
-        doc => 'Comma-delmited list of names to give .bam files (in same order as "bams")',
+        doc => 'Comma-delmited list of names to give .bam files (in same order as "bams"). Do NOT use spaces.',
     },
     output_file => {
         is => 'String',
