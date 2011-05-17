@@ -80,7 +80,7 @@ sub execute {
 
     foreach my $ida (@idas) {
         my $lane_name = $ida->__display_name__;
-        my @alignments = $ida->results;
+        my @alignments = $ida->results($build);
         unless(@alignments) {
             $self->error_message("No alignment objects for $lane_name");
             return;
