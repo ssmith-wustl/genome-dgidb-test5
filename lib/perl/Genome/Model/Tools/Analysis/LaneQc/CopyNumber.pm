@@ -76,7 +76,7 @@ sub execute {
     }
     $self->status_message(sprintf "Checking %d lanes", scalar(@events));
     #Convert events to InstrumentDataAssignment objects
-    my @idas = map { $_->instrument_data_assignment } @events;
+    my @idas = _dedupe_objects(map { $_->instrument_data_assignment } @events);
 
     foreach my $ida (@idas) {
         my $lane_name = $ida->__display_name__;
@@ -131,14 +131,24 @@ sub execute {
 
 }
 
-1;
+
+sub _dedupe_objects {
+    my @objects = @_;
+    my %seen = ();
+    my @deduped_objects = grep { ! $seen{$_->id} ++ } @objects;
+    return @deduped_objects;
+}
+
 
 sub help_brief {
     "runs per-lane copy-number QC on every aligned lane in a build"
 }
+
 
 sub help_detail {
     <<'HELP';
     This script looks through a build, and for each aligned lane, submits a job to create a single-genome copy-number plot. (You do not need to bsub this command - it will bsub other jobs for you.) This plot can be compared to a snp-array copy-number plot from the same sample to determine if there are any lanes which appear to not coincide with the snp-array plot, and thus might not belong to the same sample.
 HELP
 }
+
+1;
