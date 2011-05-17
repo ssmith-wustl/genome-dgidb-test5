@@ -219,7 +219,7 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL,
     abline(v=0,col="gray75")
     for(i in 1:(length(offsets)-1)){
       abline(v=offsets[i+1],col="gray75")
-      text((offsets[i]+offsets[i+1])/2, ymax*0.9, labels= gsub("chr","",entrypoints[i,1]), cex=0.8)
+      text((offsets[i]+offsets[i+1])/2, ymax*0.9, labels= gsub("chr","",entrypoints[i,1]), cex=0.7)
     }
  
     
