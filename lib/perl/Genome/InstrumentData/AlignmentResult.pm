@@ -255,6 +255,17 @@ class Genome::InstrumentData::AlignmentResult {
     ],
 };
 
+
+sub __display_name__ {
+    my $self = shift;
+    my $data = $self->instrument_data;
+    my $display_name = $data->__display_name__;
+    if ($self->instrument_data_segment_id) {
+        $display_name .= ' ' . $self->instrument_data_segment_id;
+    }
+    return $display_name;
+}
+
 sub required_arch_os {
     # override in subclasses if 64-bit is not required
     'x86_64' 
