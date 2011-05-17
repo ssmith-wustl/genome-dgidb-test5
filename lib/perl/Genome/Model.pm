@@ -1104,8 +1104,6 @@ sub _input_differences_are_ok {
     my @inputs_not_found = @{shift()};
     my @build_inputs_not_found = @{shift()};
 
-    warn Data::Dumper::Dumper(( @inputs_not_found));
-    warn Data::Dumper::Dumper(( @build_inputs_not_found));
     return; #by default all differences are not ok
 }
 
@@ -1115,7 +1113,6 @@ sub _input_counts_are_ok {
     my $input_count = shift;
     my $build_input_count = shift;
 
-    warn "$input_count, $build_input_count" unless $input_count == $build_input_count;
     return ($input_count == $build_input_count);
 }
 
