@@ -110,20 +110,33 @@ sub execute {
 
 
     #execute assembly command
+    my $assembly_fasta_file = $file_prefix . ".fasta";
+    my $assembly_cm_file = $file_prefix . ".cm";
+    my $assembly_intermediate_read_dir = $file_prefix . "_inter_read_dir/";
+    #if read_dir exists, check to see that it's empty; otherwise, create it
+    if (-e $assembly_intermediate_read_dir && -d $assembly_intermediate_read_dir) {
+        my $glob = glob($assembly_intermediate_read_dir.'/*');
+        if ($glob) {
+            $self->error_message("Assembly intermediate read dir is not empty! Will not proceed.");
+            return;
+        }
+    }
+    else {
+        mkdir 'assembly_tumor' or die "Unable to make assembly_intermediate_read_dir $assembly_intermediate_read_dir.\n";
+    }
+    my $bams = $self->bam_files;
+    my $assembly_cmd = Genome::Model::Tools::Sv::AssemblyValidation->create(
+        bam_files => $bams,
+        breakpoint_seq_file => $assembly_fasta_file,
+        cm_aln_file => $assembly_cm_file,
+        intermediate_read_dir => $assembly_intermediate_read_dir,
+
+
+    my $bsub = "bsub -q long -N -u $user\@genome.wustl.edu -J $job_name -M 8000000 -R 'select[mem>8000] rusage[mem=8000]' -oo $stdout -eo $stderr $assembly_cmd";
     my $user = $ENV{USER};
     my $job_name = 
     my $stdout = $file_prefix . ".stdout";
     my $stderr = $file_prefix . ".stderr";
-    my $assembly_fasta_file = $file_prefix . ".fasta";
-    my $assembly_cm_file = $file_prefix . ".cm";
-    my $assembly_intermediate_read_dir = $file_prefix . "_inter_read_dir/";
-    unless (-e $assembly_intermediate_read_dir && -d 
-
-    
-
-    my $bams = $self->bam_files;
-    my $assembly_cmd = "gmt sv assembly-validation --bam-files $bams --breakpoint-seq-file $assembly_fasta_file --cm-aln-file $assembly_cm_file --intermediate-read-dir
-    my $bsub = "bsub -q long -N -u $user\@genome.wustl.edu -J $job_name -M 8000000 -R 'select[mem>8000] rusage[mem=8000]' -oo $stdout -eo $stderr $assembly_cmd";
 
 
     return 1;
