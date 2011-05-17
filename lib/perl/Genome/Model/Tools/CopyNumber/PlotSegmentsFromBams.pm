@@ -38,6 +38,16 @@ class Genome::Model::Tools::CopyNumber::PlotSegmentsFromBams {
         doc => 'set the max value of the y-axis on the CN plots',
         default => '6',
     },
+    bam2cn_window => {
+        is => 'Number',
+        doc => 'set the window-size used for the single-genome CN estimation',
+        default => '2000',
+    },
+    cnvseg_markers => {
+        is => 'Number',
+        doc => 'number of consecutive markers needed to make a CN gain/loss prediction',
+        default => '4',
+    },
     ],
 };
 
@@ -46,15 +56,15 @@ sub help_brief {
 }
 
 sub help_detail {
-    "This tool takes a list of any number of .bam files and the names you would like to give them (IN THE SAME ORDER), and then runs Ken Chen's scripts to determine single-genome read-depth based copy-number assessments (BAM2CN.pl) and also the single-genome segmentation script (CNVseg.pl), and then take the segmented output and feed into Chris Millers PlotSegments.pm which produces a graph of the predicted amplifications and deletions. The output directory of the output file will also be used for intermediate files for now."
+    "This tool takes a list of any number of .bam files and the names you would like to give them (IN THE SAME ORDER), and then runs Ken Chen's scripts to determine single-genome read-depth based copy-number assessments (BAM2CN.pl) and also the single-genome segmentation (CNVseg.pl). These jobs are bsub'ed simultaneously for each .bam file. Lastly, a command is printed to STDOUT which can be used to feed the segmented output into Chris Millers 'gmt copy-number plot-segments' in order to produce a graph of the predicted amplifications and deletions. The output directory of the output file will also be used for intermediate files until someone complains about this."
 }
 
 sub execute {
+
     my $self = shift;
 
     #parse input arguments
     my $output_file = $self->output_file;
-
     my $output_dir = dirname($output_file) . "/";
     my @bams = split /:/,$self->bams;
     my $bam_names = $self->names_of_bams;
@@ -63,36 +73,36 @@ sub execute {
         $self->error_message("Number of .bam files and names for .bam files must be the same (comma-delimited).");
         return;
     }
-    my @seg_filenames = ();
 
-    #run BAM2CN.pl and CNVseg.pl on each .bam
+    #needed declarations
+    my @seg_filenames = ();
+    my $user = $ENV{USER};
+
+    #run BAM2CN.pl and CNVseg.pl on each .bam using simultaneous bsubs
     for my $i (0 .. $#bams) {
         
+        #output filenames
         my $bam2cn_outfile = $output_dir . $bam_names[$i] . ".bam2cn";
-        my $bam2cn_cmd = "/gscuser/kchen/SNPHMM/SolexaCNV/scripts/BAM2CN.pl -w 1250 -p " . $bams[$i] . " > " . $bam2cn_outfile;
-        run($self,$bam2cn_cmd);
-
         my $cnvseg_outfile = $bam2cn_outfile . ".cnvseg";
-        my $cnvseg_cmd = "/gscuser/kchen/SNPHMM/SolexaCNV/scripts/CNVseg.pl -n 4 -y 4 " . $bam2cn_outfile . " > " . $cnvseg_outfile;
-        run($self,$cnvseg_cmd);
 
+        #commands
+        my $window = $self->bam2cn_window;
+        my $markers = $self->cnvseg_markers;
+        my $bam2cn_cmd = "/gscuser/kchen/SNPHMM/SolexaCNV/scripts/BAM2CN.pl -w $window -p " . $bams[$i] . " > " . $bam2cn_outfile . ";";
+        my $cnvseg_cmd = "/gscuser/kchen/SNPHMM/SolexaCNV/scripts/CNVseg.pl -n $markers -y 4 " . $bam2cn_outfile . " > " . $cnvseg_outfile . ";";
+        my $bsub_cmd = "bsub -u $user\@genome.wustl.edu -J " . $bam_names[$i] . "-cn-seg '$bam2cn_cmd $cnvseg_cmd'";
+
+        #run bsub
+        run($self,$bsub_cmd);
+
+        #save segment filenames for plotting script
         push @seg_filenames,$cnvseg_outfile;
     }
 
-    #plot CN output for all .bams on same plot
+    #print command which can be used to plot CN output for all .bams on same plot
     my $segment_files = join(",",@seg_filenames);
-    my $build = $self->genome_build;
-    my $plot_cmd = Genome::Model::Tools::CopyNumber::PlotSegments->create(
-        segment_files => $segment_files,
-        output_pdf => $output_file,
-        cnvhmm_input => '1',
-        genome_build => $build,
-        plot_title => $self->names_of_bams,
-        sex => $self->sex,
-        ymax => $self->plot_ymax,
-    );
-    $self->status_message("Running plotting tool.");
-    $plot_cmd->execute;
+    my $plot_cmd = "gmt copy-number plot-segments --segment-files $segment_files --output-pdf $output_file --cnvhmm-input --lowres --plot-title " . $self->names_of_bams . " --genome-build " . $self->genome_build . " --sex " . $self->sex . " --ymax " . $self->plot_ymax;
+    $self->status_message("\nREADME:\nRun this command when your bsubbed jobs are done:\n$plot_cmd\n");
 
     return 1;
 }
@@ -101,7 +111,7 @@ sub run {
     my $self = shift;
     my $cmd = shift;
 
-    $self->status_message("Running $cmd");
+    #$self->status_message("Running $cmd");
     my $shell_return = Genome::Sys->shellcmd(
         cmd => "$cmd",
     );
