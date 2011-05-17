@@ -524,7 +524,6 @@ sub get_or_create_lane_qc_models {
 
         my $existing_model = Genome::Model->get(name => $lane_qc_model_name);
         if ($existing_model) {
-            $self->status_message("Default lane QC model ($lane_qc_model_name) already exists.");
             push @lane_qc_models, $existing_model;
             next;
         }
