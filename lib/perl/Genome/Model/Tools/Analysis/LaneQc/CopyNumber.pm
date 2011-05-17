@@ -79,13 +79,14 @@ sub execute {
     my @idas = map { $_->instrument_data_assignment } @events;
 
     foreach my $ida (@idas) {
-        my $lane_name = $ida->short_name."_".$ida->subset_name;
+        my $lane_name = $ida->__display_name__;
         my @alignments = $ida->results;
         unless(@alignments) {
             $self->error_message("No alignment objects for $lane_name");
             return;
         }
         for my $alignment (@alignments) {
+            my $lane_name = $alignment->__display_name__;
             my $reference = $alignment->reference_build->full_consensus_path('fa');
             my $instrument_data_id = $alignment->instrument_data_id;    
             my @bams = $alignment->alignment_bam_file_paths;
