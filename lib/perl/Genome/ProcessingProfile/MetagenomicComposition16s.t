@@ -43,7 +43,7 @@ my @stage_one_classes = $pp->classes_for_stage($stages[0]);
 is_deeply(
     \@stage_one_classes, 
     [qw/
-    Genome::Model::Event::Build::MetagenomicComposition16s::PrepareInstrumentData::Sanger
+    Genome::Model::Event::Build::MetagenomicComposition16s::PrepareInstrumentData
     Genome::Model::Event::Build::MetagenomicComposition16s::Classify
     Genome::Model::Event::Build::MetagenomicComposition16s::Orient
     Genome::Model::Event::Build::MetagenomicComposition16s::Reports
