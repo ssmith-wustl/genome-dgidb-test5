@@ -605,9 +605,6 @@ sub classify_amplicons {
     return 1;
 }
 
-#< Clean Up >#
-sub clean_up { return 1; }
-
 #< Diff>
 sub files_ignored_by_diff {
     return qw(
