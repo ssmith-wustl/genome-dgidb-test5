@@ -26,8 +26,6 @@ class Genome::Disk::Allocation::Command::FindUnallocatedPaths{
     ]
 };
 
-$ENV{UR_COMMAND_DUMP_STATUS_MESSAGES}=1;
-
 sub execute{
 
     my $self = shift;
@@ -44,7 +42,7 @@ sub execute{
     $self->_allocated_paths(\@allocated_paths);
     $DB::single=1;
     my ($allocated_subpaths, @unallocated_paths) = $self->find_unallocated_paths($mount_path);
-    print (join("\n", @unallocated_paths));
+    print join("\n", @unallocated_paths);
     $self->_unallocated_paths(\@unallocated_paths);
     return 1;
 }
