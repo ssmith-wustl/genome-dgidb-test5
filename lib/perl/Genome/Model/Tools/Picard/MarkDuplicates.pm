@@ -64,6 +64,19 @@ sub help_detail {
 EOS
 }
 
+sub get_max_filehandles_param {
+    my $self = shift;
+
+    # MAX_FILE_HANDLES supported in v1.34+
+    if ($self->use_version =~ /1\.([0-9]+)/ and int($1) >= 34) {
+        # allow picard to use 95% of available file handles for caching reads
+        my $max_fh = int(0.95 * `sh -ec "ulimit -n"`);
+        return "MAX_FILE_HANDLES=$max_fh";
+    }
+
+    return "";
+}
+
 sub execute {
     my $self = shift;
 
@@ -83,14 +96,17 @@ sub execute {
     if (defined($self->max_sequences_for_disk_read_ends_map)) {
         $dedup_cmd .= ' MAX_SEQUENCES_FOR_DISK_READ_ENDS_MAP='. $self->max_sequences_for_disk_read_ends_map;
     }
+    my $version = $self->use_version;
     if ($self->max_records_in_ram) {
-        my $version = $self->use_version;
         if( grep($_ eq $version, ('r107', 'r104', 'r103wu0')) ) {
             $self->warning_message('Max. records in RAM parameter is not supported in this version of Picard (first available in 1.16).  Ignoring.');
         } else {
             $dedup_cmd .= ' MAX_RECORDS_IN_RAM='. $self->max_records_in_ram;
         }
     }
+    $dedup_cmd .= ' ' . $self->get_max_filehandles_param;
+
+    
     $self->run_java_vm(
         cmd => $dedup_cmd,
         input_files => [$self->input_file],

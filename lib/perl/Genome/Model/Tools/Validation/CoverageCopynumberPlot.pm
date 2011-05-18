@@ -137,6 +137,15 @@ cn2100x=subset(z2, z2\$V20 >= 1.75 & z2\$V20 <= 2.25);
 cn3100x=subset(z2, z2\$V20 >= 2.25 & z2\$V20 <= 3.5);
 cn4plus100x=subset(z2, z2\$V20 >= 3.5);
 
+cn1xchr=subset(xchr, xchr\$V20 >= 0 & xchr\$V20 <= 1.75);
+cn2xchr=subset(xchr, xchr\$V20 >= 1.75 & xchr\$V20 <= 2.25);
+cn3xchr=subset(xchr, xchr\$V20 >= 2.25 & xchr\$V20 <= 3.5);
+cn4xchr=subset(xchr, xchr\$V20 >= 3.5);
+cn1xchr100=subset(xchr100, xchr100\$V20 >= 0 & xchr100\$V20 <= 1.75);
+cn2xchr100=subset(xchr100, xchr100\$V20 >= 1.75 & xchr100\$V20 <= 2.25);
+cn3xchr100=subset(xchr100, xchr100\$V20 >= 2.25 & xchr100\$V20 <= 3.5);
+cn4xchr100=subset(xchr100, xchr100\$V20 >= 3.5);
+
 cov20x=subset(z1, (z1\$V9+z1\$V10) <= 20);
 cov50x=subset(z1, (z1\$V9+z1\$V10) >= 20 & (z1\$V9+z1\$V10) <= 50);
 cov100x=subset(z1, (z1\$V9+z1\$V10) >= 50 & (z1\$V9+z1\$V10) <= 100);
@@ -334,6 +343,11 @@ points(x=(cn1minus\$V9+cn1minus\$V10),y=(cn1minus\$V11),type="p",pch=19,cex=0.4,
 points(x=(cn2\$V9+cn2\$V10),y=(cn2\$V11),type="p",pch=19,cex=0.4,col="#00FF0055");
 points(x=(cn3\$V9+cn3\$V10),y=(cn3\$V11),type="p",pch=19,cex=0.4,col="#0000FF55");
 points(x=(cn4plus\$V9+cn4plus\$V10),y=(cn4plus\$V11),type="p",pch=19,cex=0.4,col="#FFA500FF");
+#label x
+points(x=(cn1xchr\$V9+cn1xchr\$V10),y=(cn1xchr\$V11),type="p",pch=2,cex=0.8,col="#FF000039");
+points(x=(cn2xchr\$V9+cn2xchr\$V10),y=(cn2xchr\$V11),type="p",pch=2,cex=0.8,col="#00FF0055");
+points(x=(cn3xchr\$V9+cn3xchr\$V10),y=(cn3xchr\$V11),type="p",pch=2,cex=0.8,col="#0000FF55");
+points(x=(cn4xchr\$V9+cn4xchr\$V10),y=(cn4xchr\$V11),type="p",pch=2,cex=0.8,col="#FFA500FF");
 par(new=TRUE);
 plot.default(x=c(1:10),y=c(1:10),ylim=c(0,110),xlim=c(0,100),axes=FALSE, ann=FALSE,col="#00000000");
 lines(c(25,25),c(10,100),lty=2,col="black");
@@ -345,7 +359,7 @@ par(mgp = c(0, -1.4, 0));
 axis(side=3,at=c(0,25),labels=c(0,sprintf("%.3f", maxden)),col="black",tck=0.01);
 mtext("         CN Density",adj=0, cex=0.7, padj=-0.5);
 par(mgp = c(3,1,0));
-legend(x="topright",horiz=TRUE,xjust=0, c("1", "2", "3", "4+"),col=c("#FF0000","#00FF00","#0000FF","#FFA500"),pch=19,cex=0.9);
+legend(x="topright",horiz=TRUE,xjust=0, c("1", "2", "3", "4+","Chr $chr_highlight"),col=c("#FF0000","#00FF00","#0000FF","#FFA500","purple"),pch=c(19,19,19,19,2),cex=0.6);
 
 #plotting coverage and copynumber on log scale with x chr labels
 plot.default(x=(z1\$V9+z1\$V10),y=(z1\$V11),log="x",xlab="Tumor Coverage",ylab="Tumor Variant Allele Frequency", main=paste(genome," Coverage"), type="p",pch=19,cex=0.4,col="#00000000",ylim=c(0,110),xlim=c(10,absmaxx));
@@ -355,7 +369,7 @@ points(x=(cn3\$V9+cn3\$V10),y=(cn3\$V11),type="p",pch=19,cex=0.4,col="#0000FF55"
 points(x=(cn4plus\$V9+cn4plus\$V10),y=(cn4plus\$V11),type="p",pch=19,cex=0.4,col="#FFA500FF");
 #label x
 points(x=(xchr\$V9+xchr\$V10),y=(xchr\$V11),type="p",pch=1,cex=0.8,col="purple");
-legend(x="topright",horiz=TRUE,xjust=0, c("1", "2", "3", "4+","Chr $chr_highlight"),col=c("#FF0000","#00FF00","#0000FF","#FFA500","purple"),pch=c(19,19,19,19,1),cex=0.7);
+legend(x="topright",horiz=TRUE,xjust=0, c("1", "2", "3", "4+","Chr $chr_highlight"),col=c("#FF0000","#00FF00","#0000FF","#FFA500","purple"),pch=c(19,19,19,19,1),cex=0.6);
 
 #100x coverage
 #plotting coverage and copynumber on log scale
@@ -375,6 +389,11 @@ points(x=(cn1minus100x\$V9+cn1minus100x\$V10),y=(cn1minus100x\$V11),type="p",pch
 points(x=(cn2100x\$V9+cn2100x\$V10),y=(cn2100x\$V11),type="p",pch=19,cex=0.4,col="#00FF0055");
 points(x=(cn3100x\$V9+cn3100x\$V10),y=(cn3100x\$V11),type="p",pch=19,cex=0.4,col="#0000FF55");
 points(x=(cn4plus100x\$V9+cn4plus100x\$V10),y=(cn4plus100x\$V11),type="p",pch=19,cex=0.4,col="#FFA500FF");
+#label x
+points(x=(cn1xchr100\$V9+cn1xchr100\$V10),y=(cn1xchr100\$V11),type="p",pch=2,cex=0.8,col="#FF000039");
+points(x=(cn2xchr100\$V9+cn2xchr100\$V10),y=(cn2xchr100\$V11),type="p",pch=2,cex=0.8,col="#00FF0055");
+points(x=(cn3xchr100\$V9+cn3xchr100\$V10),y=(cn3xchr100\$V11),type="p",pch=2,cex=0.8,col="#0000FF55");
+points(x=(cn4xchr100\$V9+cn4xchr100\$V10),y=(cn4xchr100\$V11),type="p",pch=2,cex=0.8,col="#FFA500FF");
 par(new=TRUE);
 plot.default(x=c(1:10),y=c(1:10),ylim=c(0,110),xlim=c(0,100),axes=FALSE, ann=FALSE,col="#00000000");
 lines(c(25,25),c(10,100),lty=2,col="black");
@@ -385,7 +404,7 @@ lines(((finalfactor * den4factor100)),den4100x\$x,col="#FFA500AA",lwd=2);
 par(mgp = c(0, -1.4, 0));
 axis(side=3,at=c(0,25),labels=c(0,sprintf("%.3f", maxden100)),col="black",tck=0.01);
 par(mgp = c(3,1,0));
-legend(x="topright",horiz=TRUE,xjust=0, c("1", "2", "3", "4+"),col=c("#FF0000","#00FF00","#0000FF","#FFA500"),pch=19,cex=0.9);
+legend(x="topright",horiz=TRUE,xjust=0, c("1", "2", "3", "4+","Chr $chr_highlight"),col=c("#FF0000","#00FF00","#0000FF","#FFA500","purple"),pch=c(19,19,19,19,2),cex=0.6);
 mtext("Normal and Tumor Coverage > 100",cex=0.7, padj=-0.5);
 
 #plotting coverage and copynumber on log scale with x chr labels
@@ -397,7 +416,7 @@ points(x=(cn4plus100x\$V9+cn4plus100x\$V10),y=(cn4plus100x\$V11),type="p",pch=19
 #label x
 points(x=(xchr100\$V9+xchr100\$V10),y=(xchr100\$V11),type="p",pch=1,cex=0.8,col="purple");
 mtext("Normal and Tumor Coverage > 100",cex=0.7, padj=-0.5);
-legend(x="topright",horiz=TRUE,xjust=0, c("1", "2", "3", "4+","Chr $chr_highlight"),col=c("#FF0000","#00FF00","#0000FF","#FFA500","purple"),pch=c(19,19,19,19,1),cex=0.7);
+legend(x="topright",horiz=TRUE,xjust=0, c("1", "2", "3", "4+","Chr $chr_highlight"),col=c("#FF0000","#00FF00","#0000FF","#FFA500","purple"),pch=c(19,19,19,19,1),cex=0.6);
 devoff <- dev.off();
 
 #copy number pdf starts here
