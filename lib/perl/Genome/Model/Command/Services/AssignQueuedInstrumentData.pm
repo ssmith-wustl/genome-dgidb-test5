@@ -943,13 +943,12 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     # Based of the ref-align models so that alignment can shortcut
     for my $model (@whole_genome_ref_align_models) {
         my @lane_qc_models = $model->get_or_create_lane_qc_models;
-        my @buildless_lane_qc_models = grep { not defined $_->builds } @lane_qc_models;
+        my @buildless_lane_qc_models = grep { not scalar @{[ $_->builds ]} } @lane_qc_models;
         push @new_models, @buildless_lane_qc_models;
     }
 
     return @new_models;
 }
-
 
 sub assign_capture_inputs {
     my $self = shift;
