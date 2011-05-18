@@ -152,9 +152,6 @@ class Genome::Site::WUGC::Sample {
         _sub_type2                  => { via => 'attributes', where => [ name => 'subtype' ], to => 'value' },
         
         models                      => { is => 'Genome::Model', reverse_as => 'subject', is_many => 1 },
-
-        project_assignments          => { is => 'Genome::Site::WUGC::Sample::ProjectAssignment', reverse_id_by => 'sample', is_many => 1 },
-        projects                     => { is => 'Genome::Site::WUGC::Project', via => 'project_assignments', to => 'project', is_many => 1},
     ],
     has_many => [
         attributes                  => { is => 'Genome::Site::WUGC::Sample::Attribute', reverse_as => 'sample', specify_by => 'name', is_optional => 1, is_many => 1, },
