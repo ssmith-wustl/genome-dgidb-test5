@@ -101,10 +101,12 @@ use warnings;
 ok($build->initialize, 'Initialize');
 is($build->status, 'Running', 'Status is Running');
 is($model->current_running_build_id, $build->id, 'Current running build id set to build id in initialize');
+ok(!$model->build_needed, 'This running build satisfies the model');
 
 # FAIL
 ok($build->fail([]), 'Fail');
 is($build->status, 'Failed', 'Status is Failed');
+ok($model->build_needed, 'This failed build does not satisfy the model');
 
 # SUCCESS
 isnt($model->_last_complete_build_id, $build->id, 'Model last complete build is not this build\'s id');
@@ -112,6 +114,7 @@ ok($build->success, 'Success');
 is($build->status, 'Succeeded', 'Status is Succeeded');
 ok(!$model->current_running_build_id, 'Current running build id set to undef in success');
 is($model->_last_complete_build_id, $build->id, 'Model last complete build is set to this build\'s id in success');
+ok(!$model->build_needed, 'This succeeded build satisfies the model');
 
 # ABANDON
 ok($build->abandon, 'Abandon');

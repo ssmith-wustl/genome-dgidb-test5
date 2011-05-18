@@ -1046,5 +1046,75 @@ sub set_apipe_cron_status {
     $self->add_note(@header, body_text => $body_text);
 }
 
+#The companion to build_requested--based on the model's state versus the last build, does this model need to be built?
+sub build_needed {
+    my $self = shift;
+
+    my $build = $self->last_complete_build;
+    $build ||= $self->current_running_build;
+
+    return 1 unless $build;
+
+    my @inputs = $self->inputs;
+    my @build_inputs = $build->inputs;
+
+    return 1 unless $self->_input_counts_are_ok(scalar(@inputs), scalar(@build_inputs));
+
+    #check that build links on the build are the last complete build for the models in question
+    my @from_builds = $build->from_builds;
+    for my $from_build (@from_builds) {
+        if($from_build->model->last_complete_build ne $from_build) {
+            return 1;
+        }
+    }
+
+    #build a list of inputs to check against
+    my %build_inputs;
+    for my $build_input (@build_inputs) {
+        $build_inputs{$build_input->name}{$build_input->value_class_name}{$build_input->value_id} = $build_input;
+    }
+
+    my @inputs_not_found;
+    for my $input (@inputs) {
+        my $build_input_found = delete($build_inputs{$input->name}{$input->value_class_name}{$input->value_id});
+
+        unless ($build_input_found) {
+            push @inputs_not_found, $input;
+        }
+    }
+
+    my @build_inputs_not_found;
+    for my $name (keys %build_inputs) {
+        for my $value_class_name (keys %{ $build_inputs{$name} }) {
+            push @build_inputs_not_found, values %{ $build_inputs{$name}{$value_class_name} };
+        }
+    }
+
+    if(scalar(@inputs_not_found) or scalar(@build_inputs_not_found)) {
+        #if the differences are not okay, then we need to rebuild)
+        return (not $self->_input_differences_are_ok(\@inputs_not_found, \@build_inputs_not_found));
+    } else {
+        return; #everything's fine
+    }
+}
+
+#To be overridden by subclasses--if there is a case where the build and model are expected to differ
+sub _input_differences_are_ok {
+    my $self = shift;
+    my @inputs_not_found = @{shift()};
+    my @build_inputs_not_found = @{shift()};
+
+    return; #by default all differences are not ok
+}
+
+#To be overridden by subclasses--this check is performed early so validating this may save other work
+sub _input_counts_are_ok {
+    my $self = shift;
+    my $input_count = shift;
+    my $build_input_count = shift;
+
+    return ($input_count == $build_input_count);
+}
+
 1;
 

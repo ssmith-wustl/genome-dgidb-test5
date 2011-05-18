@@ -57,7 +57,7 @@ sub execute {
 	'dir'         => $self->dir,
 	'logfile'     => $self->logfile,
 	);
-    my $mail_dest = $ENV{USER}.'@genome.wustl.edu';
+    my $mail_dest = Genome::Config->user_email;
     my $sender = Mail::Sender->new({
         smtp => 'gscsmtp.wustl.edu',
         from => 'virome-screen@genome.wustl.edu',

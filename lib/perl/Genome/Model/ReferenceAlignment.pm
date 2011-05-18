@@ -201,7 +201,7 @@ class Genome::Model::ReferenceAlignment {
         filter_ruleset_name   => { via => 'processing_profile' },
         filter_ruleset_params => { via => 'processing_profile' },
         target_region_set_value     => { is_many => 1, is_mutable => 1, is => 'UR::Value', via => 'inputs', to => 'value', where => [ name => 'target_region_set_name'] },
-        target_region_set_name      => { via => 'target_region_set_value', to => 'id', },
+        target_region_set_name      => { via => 'target_region_set_value', to => 'id', is_optional => 1 },
     ],
     doc => 'A genome model produced by aligning DNA reads to a reference sequence.'
 };
@@ -519,36 +519,33 @@ sub get_or_create_lane_qc_models {
     }
 
     my @lane_qc_models;
-    my @instrument_data = $self->instrument_data;
+    my @instrument_data = sort { $a->run_name . $a->subset_name cmp $b->run_name . $b->subset_name } $self->instrument_data;
     for my $instrument_data (@instrument_data) {
         my $lane_qc_model_name = $self->default_qc_model_name_for_instrument_data($instrument_data);
 
         my $existing_model = Genome::Model->get(name => $lane_qc_model_name);
         if ($existing_model) {
-            $self->status_message("Default lane QC model ($lane_qc_model_name) already exists.");
+            $self->status_message("Default lane QC model " . $existing_model->__display_name__ . " already exists.");
             push @lane_qc_models, $existing_model;
             next;
         }
 
-        my $copy_cmd = Genome::Model::Command::Copy->create(
-            from => $self,
-            to => $lane_qc_model_name,
-            skip_instrument_data_assignments => 1,
-            model_overrides => ["processing_profile_id=$qc_pp_id"],
+        my $qc_model = Genome::Model::ReferenceAlignment->create(
+            name => $lane_qc_model_name,
+            instrument_data => [$instrument_data],
+            subject_id => $self->subject_id,
+            subject_class_name => $self->subject_class_name,
+            processing_profile_id => $qc_pp_id,
+            auto_assign_inst_data => 0,
+            auto_build_alignments => 0,
+            build_requested => 0,
+            reference_sequence_build => $self->reference_sequence_build,
+            dbsnp_build => $self->dbsnp_build,
         );
-
-        unless ($copy_cmd->execute) {
-            $self->error_message("Failed to copy self to lane QC model.");
+        unless ($qc_model) {
+            $self->error_message("Could not create lane qc model for instrument data " . $instrument_data->id);
             next;
         }
-
-        my $qc_model = $copy_cmd->_copied_model;
-
-        $qc_model->add_instrument_data($instrument_data);
-
-        $qc_model->auto_assign_inst_data(0);
-        $qc_model->auto_build_alignments(0);
-        $qc_model->build_requested(0);
 
         push @lane_qc_models, $qc_model;
     }
@@ -584,6 +581,21 @@ sub latest_build_bam_file {
     }
     my $bam_file = $build->whole_rmdup_bam_file;
     return $bam_file;
+}
+
+sub _input_differences_are_ok {
+    my $self = shift;
+    my @inputs_not_found = @{shift()};
+    my @build_inputs_not_found = @{shift()};
+
+    unless(scalar(@inputs_not_found) == 1 and scalar(@build_inputs_not_found) == 1) {
+        return;
+    }
+
+    my $value = $inputs_not_found[0]->value;
+    my $build_value = $build_inputs_not_found[0]->value;
+
+    return ($build_value->isa('Genome::Model::Build::GenotypeMicroarray') and $build_value->model eq $value);
 }
 
 1;

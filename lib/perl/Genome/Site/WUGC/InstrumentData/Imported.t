@@ -30,7 +30,7 @@ ok($i, "created a new imported instrument data");
 isa_ok($i,"Genome::Site::WUGC::InstrumentData::Imported");
 is($i->id,-123, "id is set");
 is($i->sequencing_platform,'solexa','platform is correct');
-is($i->user_name, $ENV{USER}, "user name is correct");
+is($i->user_name, Genome::Sys->username, "user name is correct");
 ok($i->import_date, "date is set");
 is($i->library, $l, 'library');
 is($i->library_name, $l->name, 'library name');
@@ -59,7 +59,7 @@ ok($i2, "created a new imported instrument data");
 isa_ok($i2,"Genome::Site::WUGC::InstrumentData::Imported");
 is($i2->id, -456, "id is set");
 is($i2->sequencing_platform,'454','platform is correct');
-is($i2->user_name, $ENV{USER}, "user name is correct");
+is($i2->user_name, Genome::Sys->username, "user name is correct");
 ok($i2->import_date, "date is set");
 
 
@@ -82,7 +82,7 @@ ok($i3, "created a new imported instrument data");
 isa_ok($i3,"Genome::Site::WUGC::InstrumentData::Imported");
 is($i3->id,-789, "id is set");
 is($i3->sequencing_platform,'solexa','platform is correct');
-is($i3->user_name, $ENV{USER}, "user name is correct");
+is($i3->user_name, Genome::Sys->username, "user name is correct");
 is($i3->import_format, "fastq","import format = fastq");
 is($i3->original_data_path, "/gsc/var/cache/testsuite/data/Genome-InstrumentData-Command-Import-Fastq/s_5_1_sequence.txt,/gsc/var/cache/testsuite/data/Genome-InstrumentData-Command-Import-Fastq/s_5_2_sequence.txt", "original_data_path matches");
 is($i3->calculate_alignment_estimated_kb_usage, "585", "estimated kb usage is correct");

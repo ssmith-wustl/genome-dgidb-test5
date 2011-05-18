@@ -142,7 +142,7 @@ sub check_completed_parse {
 }
 
 sub clean_up_tmp_dir {
-    my $path = '/tmp/' . $ENV{USER};
+    my $path = '/tmp/' . Genome::Sys->username;
     unlink $path . 'nodes', $path . 'parents', $path . 'names2id', $path . 'id2names';
     return 1;
 }

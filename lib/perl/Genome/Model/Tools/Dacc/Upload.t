@@ -41,7 +41,7 @@ $up->dump_status_messages(1);
 ok(!$up->execute, 'execute: failed as expected');
 
 diag('Success: launch to LSF');
-$expected_cmd = "bsub -q long -u $ENV{USER}\@genome.wustl.edu -R 'rusage[internet_upload_mbps=100,aspera_upload_mbps=100]' gmt dacc upload /DACC_DIR/ $dir/a $dir/b";
+$expected_cmd = "bsub -q long -u " . Genome::Config->user_email . " -R 'rusage[internet_upload_mbps=100,aspera_upload_mbps=100]' gmt dacc upload /DACC_DIR/ $dir/a $dir/b";
 $up = Genome::Model::Tools::Dacc::Upload->create(
     dacc_directory => 'DACC_DIR',
     files => \@files_to_upload,
@@ -71,7 +71,7 @@ $up = Genome::Model::Tools::Dacc::Upload->create(
 );
 ok($up, 'create');
 $up->dump_status_messages(1);
-ok(!$up->execute, 'execute');
+ok($up->execute, 'execute');
 
 done_testing();
 exit;

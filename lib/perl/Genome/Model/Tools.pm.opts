@@ -6497,12 +6497,6 @@ $Genome::Model::Tools::OPTS_SPEC = [
     [
       'days-ago=s',
       'files',
-      'namespace-name=s',
-      'files',
-      'verbose!',
-      undef,
-      'classes-or-modules=s@',
-      'files',
       'help!',
       undef
     ],
@@ -6708,6 +6702,8 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'files',
       'possible-items=s',
       'files',
+      'trial-id=s',
+      undef,
       'wrong-items=s',
       'files',
       'help!',

@@ -8,7 +8,7 @@ use XML::Simple;
 
 
 class Genome::Model::Tools::Wiki::UpdateSolr {
-    is => ['UR::Namespace::Command::RunsOnModulesInTree', 'Genome::Model::Tools::Wiki'],
+    is => ['Genome::Model::Tools::Wiki'],
     has => {
         days_ago => { 
             is => 'Text', 

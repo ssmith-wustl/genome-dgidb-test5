@@ -35,7 +35,7 @@ my $i_d = $cmd->_inst_data;
 ok($i_d, 'created instrument data');
 is($i_d->sequencing_platform, 'solexa', 'platform');
 is($i_d->original_data_path, '/gsc/var/cache/testsuite/data/Genome-InstrumentData--Command-Import-Bam/test.bam', 'original data path');
-is($i_d->user_name, $ENV{USER}, "user name is correct");
+is($i_d->user_name, Genome::Sys->username, "user name is correct");
 ok($i_d->description,"description was created: ".$i_d->description);
 ok($i_d->import_date, "date is set");
 ok($i_d->is_paired_end, "is_paired_end is set");

@@ -36,7 +36,7 @@ class Genome::ProcessingProfile::SomaticVariation{
         tiering_version => {
             is => "Text",
             is_many => 0,
-            is_optional => 1,
+            valid_values => ['1','2'],
             doc => "Version of tiering bed files to grab from the associated annotation build",
         },
         loh_version => {
@@ -279,18 +279,6 @@ sub _map_workflow_inputs {
     my $normal_bam = $normal_build->whole_rmdup_bam_file;
     unless (-e $normal_bam) {
         $self->error_message("Normal bam file $normal_bam does not exist!");
-        die $self->error_message;
-    }
-
-    # Get the snp file from the tumor and normal models
-    my $tumor_snp_file = $tumor_build->snv_file;
-    unless (-e $tumor_snp_file) {
-        $self->error_message("Tumor snp file $tumor_snp_file does not exist!");
-        die $self->error_message;
-    }
-    my $normal_snp_file = $normal_build->snv_file;
-    unless (-e $normal_snp_file) {
-        $self->error_message("Normal snp file $normal_snp_file does not exist!");
         die $self->error_message;
     }
 

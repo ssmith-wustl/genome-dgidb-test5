@@ -131,7 +131,7 @@ sub processing_profile_for_velvet {
         coverage => 0.5,#25000,
         assembler_name => 'velvet one-button',
         assembler_version => '0.7.57-64',
-        assembler_params => '-hash_sizes 31 33 35',
+        assembler_params => '-hash_sizes 31 33 35 -min_contig_length 100',
         read_processor => 'trimmer by-length -trim-length 10 | rename illumina-to-pcap',
         post_assemble => 'standard-outputs',
     );

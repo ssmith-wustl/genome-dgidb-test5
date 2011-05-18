@@ -210,6 +210,7 @@ sub get_build_node {
 
 
     $buildnode->addChild( $doc->createAttribute("model-name",$model->name) );
+    $buildnode->addChild( $doc->createAttribute("run-by", $build->run_by) );
     $buildnode->addChild( $doc->createAttribute("model-subject",$model->subject->__display_name__) );
     $buildnode->addChild( $doc->createAttribute("model-id",$model->id) );
     if ($source) {

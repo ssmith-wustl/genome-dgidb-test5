@@ -28,7 +28,7 @@ my $message_flag = 0;
 
 
 my $tmp_dir = File::Temp::tempdir('TestAlignmentResultXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
-my $model_name = "test_454_$ENV{USER}";
+my $model_name = "test_454_" . Genome::Sys->username;
 my $subject_name = 'TCAM-090304_gDNA_tube1';
 my $subject_type = 'sample_name';
 my $pp_name = '454_ReferenceAlignment_test';
@@ -72,7 +72,7 @@ sub setup_test_data {
     my @run_dirs = grep { -d $_ } glob("$tmp_dir/R_2008_07_29_*");
     for my $run_dir (@run_dirs) {
         my $run_name = basename($run_dir);
-        my $analysis_name = $run_name . $ENV{USER} . $$;
+        my $analysis_name = $run_name . Genome::Sys->username . $$;
         $analysis_name =~ s/^R/D/;
         my @files = grep { -e $_ } glob("$run_dir/*.sff");
         for my $file (@files) {

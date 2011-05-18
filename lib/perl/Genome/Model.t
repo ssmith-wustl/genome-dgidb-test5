@@ -180,7 +180,7 @@ for my $i (1..2) {
         event_type => 'genome model build',
         date_scheduled => UR::Time->now,
         date_completed => UR::Time->now,
-        user_name => $ENV{USER},
+        user_name => Genome::Sys->username,
     );
     ok($event, 'create master event');
     my $master_event = $builds[0]->the_master_event;

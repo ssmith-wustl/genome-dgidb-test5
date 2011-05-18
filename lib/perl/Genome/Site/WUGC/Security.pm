@@ -26,7 +26,7 @@ sub log_command {
 
     my $log_dir = "/gsc/var/log/genome/command_line_usage/" . $dt->year . "/";
     my $log_file = $dt->month . "-" . $dt->day . ".log";
-    my $log_msg = join("\t", $date, $time, $ENV{USER}, $command, $params);
+    my $log_msg = join("\t", $date, $time, Genome::Sys->username, $command, $params);
 
     unless (-e $log_dir and -d $log_dir) {
         mkdir $log_dir;
@@ -38,7 +38,7 @@ sub log_command {
     unless ($log_fh) {
         print STDERR "Could not get file handle for log file at $log_path, command execution will continue!\n";
 
-        my $email_msg = "User: $ENV{USER}\n" .
+        my $email_msg = "User: " . Genome::Sys->username . "\n" .
                         "Date: $date\n" .
                         "Time: $time\n" .
                         "Host: $host\n" .
@@ -47,7 +47,7 @@ sub log_command {
 
         App::Mail->mail(
             To      => 'bdericks@genome.wustl.edu',
-            From    => "$ENV{USER}\@genome.wustl.edu",
+            From    => Genome::Config->user_email,
             Subject => "Error writing to log file",
             Message => $email_msg
         );
@@ -104,7 +104,7 @@ sub check_for_svn_repo {
     $dir =~ s/Genome.pm//;
    
     if (-e "$dir/.svn" or glob("$dir/Genome/*/.svn")) {
-        my $email_msg = "User: $ENV{USER}\n" .
+        my $email_msg = "User: " . Genome::Sys->username . "\n" .
                         "Working directory: $dir\n" .
                         "The current working directory contains a .svn directory, which I'm assuming means \n" .
                         "that this user is working out of an svn repository. Please contact the user to \n" .
@@ -112,7 +112,7 @@ sub check_for_svn_repo {
 
         App::Mail->mail(
             To => "apipebulk\@genome.wustl.edu",
-            From => "$ENV{USER}\@genome.wustl.edu",
+            From => Genome::Config->user_email,
             Subject => "SVN Repo In Use!",
             Message => $email_msg,
         );

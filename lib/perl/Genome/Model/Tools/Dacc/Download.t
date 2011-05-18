@@ -53,7 +53,7 @@ ok(!$dl->execute, 'execute: failed as expected');
 
 diag('Success: launch to LSF');
 $files{b} = 2;
-$expected_cmd = "bsub -q long -u $ENV{USER}\@genome.wustl.edu -R 'rusage[internet_download_mbps=100]' gmt dacc download /DACC_DIR/ $dir a b";
+$expected_cmd = "bsub -q long -u " . Genome::Config->user_email . " -R 'rusage[internet_download_mbps=100]' gmt dacc download /DACC_DIR/ $dir a b";
 $dl = Genome::Model::Tools::Dacc::Download->create(
     dacc_directory => 'DACC_DIR',
     destination => $dir,
@@ -85,7 +85,7 @@ $dl = Genome::Model::Tools::Dacc::Download->create(
 );
 ok($dl, 'create');
 $dl->dump_status_messages(1);
-ok(!$dl->execute, 'execute');
+ok($dl->execute, 'execute');
 
 done_testing();
 exit;

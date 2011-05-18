@@ -10,7 +10,7 @@
       window.page_data = function(){
       return {
       workflow: {
-      "id": <xsl:value-of select="//build/workflow/@id"/>
+      "id": "<xsl:value-of select="//build/workflow/@id"/>"
       },
       stages: {
       "count": <xsl:value-of select="count(build/stages/stage)"/>
@@ -459,6 +459,13 @@
                   </xsl:call-template>
                 </xsl:for-each>
 
+              </td>
+            </tr>
+            <tr>
+              <td class="name">run by:
+              </td>
+              <td class="value">
+                <xsl:value-of select="build/@run-by"/>
               </td>
             </tr>
 

@@ -93,7 +93,7 @@ class Genome::Model::Tools::DetectVariants2::Filter::TigraValidation {
         },
         workflow_log_directory => {
             calculate_from => 'output_directory',
-            calculate => q{ return $output_directory . '/workflow_log'; },
+            calculate => q{ return $output_directory . '/tigrasv_by_chromosome_log'; },
         },
         breakpoint_seq_file => {
             calculate_from => '_temp_staging_directory',
@@ -303,6 +303,23 @@ sub _create_temp_directories {
     return $self->SUPER::_create_temp_directories(@_);
 }
 
+sub execute {
+    my $self = shift;
+
+    if ($self->_run_by_workflow) {
+        my $output_dir = $self->output_directory;
+        unless (-d $output_dir) {
+            #This should only happen if a single chromosome was executed directly
+            Genome::Sys->create_directory($output_dir);
+        }
+        #Put per-chromosome outputs in subdirectories to avoid collisions in SoftwareResults
+        $self->output_directory($output_dir . '/' . $self->specify_chr);
+    }
+
+    return $self->SUPER::_execute_body;
+}
+
+
 sub _filter_variants {
     my $self = shift;
     my $variant_file = $self->_breakdancer_input;
@@ -428,9 +445,7 @@ sub _filter_variants {
 
     # If running as part of a workflow, need to update certain properties to contain the chromosome name
     if ($self->_run_by_workflow) {
-        #$self->breakdancer_input($self->output_directory . '/svs.hq.tigra.' . $self->specify_chr);
-        $variant_file = $self->output_directory . '/svs.hq.tigra.' . $self->specify_chr;
-        $self->output_directory($self->output_directory . '/' . $self->specify_chr);
+        $variant_file = dirname($self->output_directory) . '/svs.hq.tigra.' . $self->specify_chr; #since now svs.hq.tigra.chr is on upper level dir
         my $out_dir = $self->output_directory;
         unless (-d $out_dir) {
             unless (Genome::Sys->create_directory($out_dir)) {
@@ -451,13 +466,6 @@ sub _filter_variants {
     #for my $i (0..$#bam_files) {
     for my $type (keys %bam_files) {
         my $bam_file = $bam_files{$type};
-
-        #my $tmp_tigra_dir = $self->_temp_scratch_directory . "/$i";
-        #unless (Genome::Sys->create_directory($tmp_tigra_dir)) {
-        #    $self->error_message("Failed to create tmp_tigra_dir: $tmp_tigra_dir");
-        #    die;
-        #}
-        #my $tmp_tigra_dir = Genome::Sys->create_temp_directory('tigra_sv_out_'.$i);
 
         my $tmp_tigra_dir = File::Temp::tempdir('tigra_sv_out_'.$self->specify_chr.'_'.$type.'_XXXXXX', DIR => '/tmp', CLEANUP => 1);
         $self->_tigra_data_dir($tmp_tigra_dir); 
@@ -997,6 +1005,14 @@ sub _ComputeTigraWeightedAvgSize{
 
 sub _create_bed_file {
     return 1;
+}
+
+sub params_for_result {
+    my $self = shift;
+    my ($params) = $self->SUPER::params_for_result;
+
+    $params->{chromosome_list} = $self->specify_chr;
+    return $params;
 }
 
 1;

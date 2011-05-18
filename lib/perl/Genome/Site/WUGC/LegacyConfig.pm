@@ -49,13 +49,10 @@ sub domain {
 sub user_email {
     my $self = shift;
     my $user = shift;
-    $user ||= $ENV{USER};
+    $user ||= Genome::Sys->username;
     return join('@', $user, Genome::Config::domain());
 }
 
-sub current_user_id {
-    return join('@', $ENV{USER}, Genome::Config::domain());
-}
 
 sub admin_notice_users {
     qw/abrummet boberkfe jeldred jlolofie ssmith apipe-run/;

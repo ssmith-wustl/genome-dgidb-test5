@@ -10,6 +10,23 @@ class Genome::Sys {
     #is => 'UR::Singleton', 
 };
 
+
+sub user_id {
+    return $<;
+}
+
+sub username {
+    my $username = getpwuid($<);
+    return $username;
+}
+
+sub user_is_member_of_group {
+    my ($class, $group_name) = @_;
+    my $user = Genome::Sys->username;
+    my $members = (getgrnam($group_name))[3];
+    return ($members && $user && $members =~ /\b$user\b/);
+}
+
 sub dbpath {
     my ($class, $name, $version) = @_;
     unless ($version) {

@@ -362,8 +362,13 @@ sub primary_consensus_path {
 }
 
 sub full_consensus_path {
-    my ($self, $format) = @_;
+    my ($self, $format, %params) = @_;
     $format ||= 'bfa';
+
+    # we want this to default to true, the old behavior
+    my $allow_cached = 1;
+    $allow_cached = $params{allow_cached} if exists $params{allow_cached};
+
     my $file = $self->data_directory . '/all_sequences.'. $format;
     unless (-e $file){
         $file = $self->data_directory . '/ALL.'. $format;
@@ -374,7 +379,7 @@ sub full_consensus_path {
     }
     # check local cache for file
     my $localfile = "/opt/fscache$file";
-    return $localfile if (-e $localfile);
+    return $localfile if (-e $localfile and $allow_cached);
     return $file;
 }
 

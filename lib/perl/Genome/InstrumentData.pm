@@ -211,4 +211,12 @@ sub lane_qc_dir {
     }
 }
 
+
+sub __display_name__ {
+    my $self = shift;
+    my $subset_name = $self->subset_name || 'unknown-subset';
+    my $run_name = $self->run_name || 'unknown-run-name';
+    return join '.', $run_name, $subset_name;
+}
+
 1;
