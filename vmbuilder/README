@@ -1,7 +1,17 @@
-To use this to build a new VM, run the scripts in this order:
+To use this to build a new VM, follow these steps:
+
+1. $ sudo ./vm_builder.sh
+2. Configure Shared Folders (see shared folders below)
+3. Configure Networking (see LSF section below)
+4. $ sudo ./mount.sh
+5. $ ./user_script
+6. $ source ~/.bashrc
 
 Run these as root:
 $ sudo ./vm_builder.sh
+
+Configure Shared Folders
+Configure Networking
 $ sudo ./mount.sh
 
 Run these as your user:
