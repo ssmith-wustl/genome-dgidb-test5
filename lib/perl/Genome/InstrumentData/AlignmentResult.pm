@@ -258,12 +258,18 @@ class Genome::InstrumentData::AlignmentResult {
 
 sub __display_name__ {
     my $self = shift;
-    my $data = $self->instrument_data;
-    my $display_name = $data->__display_name__;
-    if ($self->instrument_data_segment_id) {
-        $display_name .= ' ' . $self->instrument_data_segment_id;
-    }
-    return $display_name;
+
+    my @parts;
+    my $instrument_data = $self->instrument_data;
+    my $subset_name = $instrument_data->subset_name;
+    my $run_name_method = $instrument_data->can('flow_cell_id') ? 'flow_cell_id' : 'run_name';
+    my $run_name = $instrument_data->$run_name_method;
+    my $instrument_data_segment_id = $self->instrument_data_segment_id;
+
+    push @parts, $run_name if $run_name;
+    push @parts, $subset_name if $subset_name;
+    push @parts, $instrument_data_segment_id if $instrument_data_segment_id;
+    return join '-', @parts;
 }
 
 sub required_arch_os {
