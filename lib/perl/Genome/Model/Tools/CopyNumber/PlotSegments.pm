@@ -268,6 +268,7 @@ sub convertSegs{
 #(log2 = log_base(2,values)
 sub log_base {
     my ($base, $value) = @_;
+    $value = 0.000001 if($value == 0);
     return log($value)/log($base);
 }
 
