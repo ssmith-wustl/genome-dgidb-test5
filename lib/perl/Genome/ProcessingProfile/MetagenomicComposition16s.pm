@@ -106,7 +106,7 @@ sub one_job_classes {
     );
 
     # Prepare
-    push @subclasses, 'PrepareInstrumentData::'.$sequencing_platform_cc;
+    push @subclasses, 'PrepareInstrumentData';
 
     # Classify, Orient, Reports and work w/ all mc16s builds
     push @subclasses, (qw/ Classify Orient Reports /);
