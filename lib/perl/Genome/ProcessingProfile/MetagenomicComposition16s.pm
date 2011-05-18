@@ -108,8 +108,8 @@ sub one_job_classes {
     # Prepare
     push @subclasses, 'PrepareInstrumentData::'.$sequencing_platform_cc;
 
-    # Classify, Orient, Reports and Clean Up work w/ all mc16s builds
-    push @subclasses, (qw/ Classify Orient Reports CleanUp /);
+    # Classify, Orient, Reports and work w/ all mc16s builds
+    push @subclasses, (qw/ Classify Orient Reports /);
 
     return map { 'Genome::Model::Event::Build::MetagenomicComposition16s::'.$_ } @subclasses;
 }

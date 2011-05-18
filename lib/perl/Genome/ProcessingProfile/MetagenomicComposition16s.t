@@ -47,7 +47,6 @@ is_deeply(
     Genome::Model::Event::Build::MetagenomicComposition16s::Classify
     Genome::Model::Event::Build::MetagenomicComposition16s::Orient
     Genome::Model::Event::Build::MetagenomicComposition16s::Reports
-    Genome::Model::Event::Build::MetagenomicComposition16s::CleanUp
     /], 
     'Stage one classes'
 );
