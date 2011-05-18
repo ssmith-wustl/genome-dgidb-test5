@@ -1,0 +1,11 @@
+To use this to build a new VM, run the scripts in this order:
+
+Run these as root:
+$ sudo ./vm_builder.sh
+$ sudo ./mount.sh
+
+Run these as your user:
+$ ./user_script.sh
+
+Set up your environment
+$ source ~/.bashrc
