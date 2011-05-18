@@ -12,7 +12,7 @@ fi
 
 # source lsf file if it exists
 cat <<EOF | tee -a $HOME/.bashrc
-if [-f /usr/local/lsf/conf/profile.lsf ]; then
+if [ -f /usr/local/lsf/conf/profile.lsf ]; then
     . /usr/local/lsf/conf/profile.lsf
 fi
 
