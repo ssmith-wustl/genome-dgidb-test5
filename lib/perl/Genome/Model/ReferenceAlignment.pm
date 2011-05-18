@@ -529,25 +529,22 @@ sub get_or_create_lane_qc_models {
             next;
         }
 
-        my $copy_cmd = Genome::Model::Command::Copy->create(
-            from => $self,
-            to => $lane_qc_model_name,
-            skip_instrument_data_assignments => 1,
-            model_overrides => ["processing_profile_id=$qc_pp_id"],
+        my $qc_model = Genome::Model::ReferenceAlignment->create(
+            name => $lane_qc_model_name,
+            instrument_data => [$instrument_data],
+            subject_id => $self->subject_id,
+            subject_class_name => $self->subject_class_name,
+            processing_profile_id => $qc_pp_id,
+            auto_assign_inst_data => 0,
+            auto_build_alignments => 0,
+            build_requested => 0,
+            reference_sequence_build => $self->reference_sequence_build,
+            dbsnp_build => $self->dbsnp_build,
         );
-
-        unless ($copy_cmd->execute) {
-            $self->error_message("Failed to copy self to lane QC model.");
+        unless ($qc_model) {
+            $self->error_message("Could not create lane qc model for instrument data " . $instrument_data->id);
             next;
         }
-
-        my $qc_model = $copy_cmd->_copied_model;
-
-        $qc_model->add_instrument_data($instrument_data);
-
-        $qc_model->auto_assign_inst_data(0);
-        $qc_model->auto_build_alignments(0);
-        $qc_model->build_requested(0);
 
         push @lane_qc_models, $qc_model;
     }
