@@ -525,7 +525,7 @@ sub execute {
     print R_COMMANDS "par(xaxs=\"i\", xpd=FALSE, mfrow=c(" . @infiles . ",1), oma=c(1,1,1,1), mar=c(1,3,1,1))\n";
     my @titles;
     if(defined($plot_title)){
-        my @titles = split(",",$plot_title);
+        @titles = split(",",$plot_title);
     }
     my $counter = 0;
 

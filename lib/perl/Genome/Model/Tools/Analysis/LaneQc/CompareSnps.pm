@@ -84,7 +84,7 @@ sub output_columns {
 
 sub execute {                               # replace with real execution logic.
 	my $self = shift;
-
+    $DB::single=1;
 	## Get required parameters ##
 	my $sample_name = "Sample";
 
@@ -202,17 +202,25 @@ sub execute {                               # replace with real execution logic.
 		$lineCounter++;
 		
 		my @lineContents = split(/\t/, $line);
+        my ($position, $ref_base, $cns_call, $depth);
+
 		my $chrom = $lineContents[0];
-		my $position = $lineContents[1];
-		my $ref_base = $lineContents[2];
-		my $cns_call = $lineContents[3];
+        if($self->variant_file =~ m/bed$/) {
+            $position = $lineContents[2];
+            ($ref_base, $cns_call)  = split /\//, $lineContents[3];
+            $depth = $lineContents[5];
+        } else {
+            $position = $lineContents[1];
+            $ref_base = $lineContents[2];
+            $cns_call = $lineContents[3];
+			$depth = $lineContents[7];
+        }
 		
 		if($self->fast && $chrom && $chrom ne "1")
 		{
 			close($input);
 		}
 		
-		my $depth = 0;
 		
 		if(lc($chrom) =~ "chrom")
 		{
@@ -261,7 +269,6 @@ sub execute {                               # replace with real execution logic.
 				
 				else
 				{
-					$depth = $lineContents[7];
 					$cons_gt = code_to_genotype($cns_call);
 				}
 	
