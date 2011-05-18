@@ -55,6 +55,14 @@ class Genome::Model::InstrumentDataAssignment {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+
+sub __display_name__ {
+    my $self = shift;
+    my $data = $self->instrument_data;
+    return $data->__display_name__;
+}
+
+
 sub create {
     my $class = shift;
 
@@ -93,8 +101,21 @@ sub results {
  
     my $model = $self->model;
     my $processing_profile = $model->processing_profile;
-    if ($processing_profile->can('results_for_instrument_data_assignment')) {
-        # support for some sort of per-instdata results is present
+    if ($build && $processing_profile->can('results_for_instrument_data_assignment')) {
+        my @results;
+        my @align_reads_events = Genome::Model::Event::Build::ReferenceAlignment::AlignReads->get(
+            build_id => $build->id,
+        );
+        for my $align_reads_event (@align_reads_events) {
+            my %segment_info = (
+                instrument_data_segment_type => $align_reads_event->instrument_data_segment_type,
+                instrument_data_segment_id => $align_reads_event->instrument_data_segment_id,
+            );
+            push @results, $processing_profile->results_for_instrument_data_assignment($self, %segment_info);
+        }
+        return @results;
+    }
+    elsif (!$build && $processing_profile->can('results_for_instrument_data_assignment')) {
         return $processing_profile->results_for_instrument_data_assignment($self);
     }
     else {

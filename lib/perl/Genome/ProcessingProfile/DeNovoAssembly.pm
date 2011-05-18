@@ -16,7 +16,7 @@ class Genome::ProcessingProfile::DeNovoAssembly{
 	    valid_values => [qw/ 454 solexa /],
 	},
 	coverage => {
-	    is => 'Integer',
+	    is => 'Number',
 	    is_optional => 1,
 	    doc => 'Use genome size to limit the number of reads used in the assembly to obtain this coverage.',
 	},
@@ -536,7 +536,7 @@ sub validate_post_assemble_class_params {
 sub post_assemble_parts {
     my $self = shift;
 
-    my @post_assemble_parts = split (/\;\s+?/, $self->post_assemble);
+    my @post_assemble_parts = split (/\;\s+|\;/, $self->post_assemble);
 
     unless ( @post_assemble_parts ) {
 	$self->error_message("Could not find any parts to run in string: ".$self->post_assemble);

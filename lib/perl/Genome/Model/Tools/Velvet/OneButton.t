@@ -32,8 +32,8 @@ my $version = 'v3';
 my @data_sub_dirs_orig = ("v1-a", "v1-b",);#"v1-c");
 
 my @data_sub_dirs = ("$version-a", "$version-b",);#"$version-c");
-my @params = ('-i 260 -g 4500000 --hash 31,33,35 --version 0.7.57-64 -o output-dir',
-	      '-i 260 -g 4500000 --hash 31,33,35  --bound-enumeration 2 --version 0.7.57-64 -o output-dir',);
+my @params = ('-i 260 -g 4500000 --hash 31,33,35 --version 0.7.57-64 --min-contig-length 100 -o output-dir',
+	      '-i 260 -g 4500000 --hash 31,33,35  --bound-enumeration 2 --min-contig-length 100 --version 0.7.57-64 -o output-dir',);
 	     # '-i 260 -g 4500000 --hash 31,33,35 --c 17,19,21 --bound-enumeration 2 --version 0.7.57-64 -o output-dir');
 
 #make sure @data_sub_dirs and @params contain same # of elements

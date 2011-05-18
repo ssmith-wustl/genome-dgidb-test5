@@ -3477,6 +3477,17 @@ $Genome::Command::OPTS_SPEC = [
       ],
       '>review',
       [
+        '>lane-qc',
+        [
+          'auto-action!',
+          undef,
+          'processing-profile=s',
+          undef,
+          'instrument-data=s@',
+          undef,
+          'help!',
+          undef
+        ],
         '>models',
         [
           'hide-statuses=s@',
@@ -3489,17 +3500,6 @@ $Genome::Command::OPTS_SPEC = [
         '>missing-builds',
         [
           'request-build!',
-          undef,
-          'help!',
-          undef
-        ],
-        '>lane-qc',
-        [
-          'auto-action!',
-          undef,
-          'processing-profile=s',
-          undef,
-          'instrument-data=s@',
           undef,
           'help!',
           undef
@@ -3813,6 +3813,12 @@ $Genome::Command::OPTS_SPEC = [
           'files',
           'dev!',
           undef,
+          'ipr-version=s',
+          [
+            '4.5',
+            '4.7',
+            '4.8'
+          ],
           'iprpath=s',
           undef,
           'job-stderr=s',
@@ -4185,6 +4191,13 @@ $Genome::Command::OPTS_SPEC = [
     ],
     '>reference-alignment',
     [
+      '>check-lane-qc',
+      [
+        'genome-models=s@',
+        undef,
+        'help!',
+        undef
+      ],
       '>compare-snps-summary',
       [
         'force-new-metrics!',
@@ -4553,9 +4566,9 @@ $Genome::Command::OPTS_SPEC = [
       [
         'build=s',
         undef,
-        'dbsnp-bed-file=s',
-        'files',
         'output-directory=s',
+        'files',
+        'dbsnp-bed-file=s',
         'files',
         'help!',
         undef
@@ -5519,6 +5532,8 @@ $Genome::Command::OPTS_SPEC = [
       [
         'name=s',
         'files',
+        'tiering-version=s',
+        'files',
         'based-on=s',
         'files',
         'cnv-detection-strategy=s',
@@ -5534,8 +5549,6 @@ $Genome::Command::OPTS_SPEC = [
         'supersedes=s',
         'files',
         'sv-detection-strategy=s',
-        'files',
-        'tiering-version=s',
         'files',
         'help!',
         undef
@@ -12907,12 +12920,6 @@ $Genome::Command::OPTS_SPEC = [
       [
         'days-ago=s',
         'files',
-        'namespace-name=s',
-        'files',
-        'verbose!',
-        undef,
-        'classes-or-modules=s@',
-        'files',
         'help!',
         undef
       ],
@@ -13118,6 +13125,8 @@ $Genome::Command::OPTS_SPEC = [
         'files',
         'possible-items=s',
         'files',
+        'trial-id=s',
+        undef,
         'wrong-items=s',
         'files',
         'help!',

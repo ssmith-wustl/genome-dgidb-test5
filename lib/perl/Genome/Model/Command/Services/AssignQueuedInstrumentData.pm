@@ -214,13 +214,6 @@ sub execute {
 
                 }
 
-                if ( $instrument_data_type ne 'genotyper results' ) {
-                    my $per_lane_qc = $self->create_default_per_lane_qc_model($genome_instrument_data, $subject, $reference_sequence_builds[0], $pse); # should only be one imp ref seq build for this pp 
-                    unless($per_lane_qc) {
-                        push @process_errors, $self->error_message;
-                    }
-                }
-
                 my @models = Genome::Model->get(
                     subject_id            => $subject_id,
                     subject_class_name    => $subject_class_name,
@@ -733,71 +726,6 @@ sub assign_instrument_data_to_models {
     return @models;
 }
 
-sub create_default_per_lane_qc_model {
-    my $self = shift;
-    my $genome_instrument_data = shift;
-    my $subject = shift;
-    my $reference_sequence_build = shift;
-    my $pse = shift;
-
-    my ($processing_profile, $model_name);
-    my $dbsnp_build;
-    my $ncbi_human_build36 = Genome::Model::Build->get(101947881);
-    if ($reference_sequence_build && $reference_sequence_build->is_compatible_with($ncbi_human_build36)) {
-        my $subset_name = $genome_instrument_data->subset_name || 'unknown-subset';
-        my $run_name_method = $genome_instrument_data->can('short_name') ? 'short_name' : 'run_name';
-        my $run_name = $genome_instrument_data->$run_name_method || 'unknown-run';
-        $model_name = $run_name . '.' . $subset_name . '.prod-qc';
-
-        $processing_profile = Genome::ProcessingProfile->get(2581081);
-        $dbsnp_build = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($reference_sequence_build); 
-    } else {
-        $self->status_message('Per lane QC only configured for human reference alignments');
-        return 1;
-    }
-
-    my %model_params = (
-        name                    => $model_name,
-        subject_id              => $subject->id,
-        subject_class_name      => $subject->class,
-        processing_profile_id   => $processing_profile->id,
-        reference_sequence_build => $reference_sequence_build,
-        auto_assign_inst_data   => 0,
-    );
-    $model_params{dbsnp_build} = $dbsnp_build if $dbsnp_build;
-
-    my @models = Genome::Model->get(name => $model_name);
-    if (@models) {
-        $self->status_message("Model already exists, not creating new per lane QC model.");
-        return 1;
-    }
-
-    my $model = Genome::Model->create(%model_params);
-    unless ( defined($model) ) {
-        $self->error_message("Failed to create model '$model_name'");
-        return;
-    }
-
-    my $assign_instrument_data = Genome::Model::Command::InstrumentData::Assign->create(
-        model_id => $model->id,
-        instrument_data_id => $genome_instrument_data->id,
-    );
-
-    unless ( $assign_instrument_data->execute ) {
-        $self->error_message('Failed to execute instrument-data assign for model ' . $model->__display_name__ . '.');
-        $model->delete;
-        return;
-    }
-
-    my $new_models = $self->_newly_created_models;
-    $new_models->{$model->id} = $model;
-
-    #singular value, don't want to override the "real" model
-    #$pse->add_param('genome_model_id', $model->id);
-
-    return 1;
-}
-
 sub create_default_models_and_assign_all_applicable_instrument_data {
     my $self = shift;
     my $genome_instrument_data = shift;
@@ -807,6 +735,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     my $pse = shift;
 
     my @new_models;
+    my @whole_genome_ref_align_models;
 
     my %model_params = (
         name                    => 'AQID-PLACE_HOLDER',
@@ -850,6 +779,10 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         return;
     }
     $regular_model->name($name);
+    
+    if ($regular_model->isa('Genome::Model::ReferenceAlignment')) {
+        push @whole_genome_ref_align_models, $regular_model;
+    }
 
     if ( $capture_target ) {
         my $roi_list;
@@ -1004,6 +937,14 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         $new_models->{$m->id} = $m;
 
         $pse->add_param('genome_model_id', $m->id);
+    }
+
+    # Now that they've had their instrument data assigned get_or_create_lane_qc_models
+    # Based of the ref-align models so that alignment can shortcut
+    for my $model (@whole_genome_ref_align_models) {
+        my @lane_qc_models = $model->get_or_create_lane_qc_models;
+        my @buildless_lane_qc_models = grep { not defined $_->builds } @lane_qc_models;
+        push @new_models, @buildless_lane_qc_models;
     }
 
     return @new_models;
@@ -1252,7 +1193,7 @@ sub add_processing_profiles_to_pses{
             }
             elsif ($instrument_data_type =~ /sanger/i) {
                 # this is only meant to work with 16s sanger instrument data at present
-                push @processing_profile_ids_to_add, '2067049';
+                push @processing_profile_ids_to_add, 2591277; # MC16s-WashU-Sanger-RDP2.2-ts6 was amplicon assembly 2067049
             }
             elsif ($instrument_data_type eq 'genotyper results' ) {
                 # Genotype Microarry PP as of 2011jan25

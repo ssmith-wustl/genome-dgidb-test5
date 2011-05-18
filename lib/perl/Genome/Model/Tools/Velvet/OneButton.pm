@@ -40,7 +40,11 @@ class Genome::Model::Tools::Velvet::OneButton {
 	    is => 'Integer',
 	    doc => 'estimated genome length in bases',
 	    #default_value => 3000000,
-	}, 
+	},
+        min_contig_length => {
+            is => 'Integer',
+            doc => 'Minimum contig length assembler outputs'
+        },
     ],
 
     has_optional => [
@@ -434,7 +438,7 @@ sub _do_final_velvet_runs {
     my $best_cov_cf = $self->_best_coverage_cutoff();
     my $ins_length_sd = $self->dev_ins_length();
 
-    my $g_cmd = $velvetg.' '.$self->output_dir.' -exp_cov '.$best_exp_cov.' -cov_cutoff '.$best_cov_cf.' -ins_length '.$self->ins_length.' -ins_length_sd '.$ins_length_sd.' -read_trkg yes -min_contig_lgth 100 -amos_file yes';
+    my $g_cmd = $velvetg.' '.$self->output_dir.' -exp_cov '.$best_exp_cov.' -cov_cutoff '.$best_cov_cf.' -ins_length '.$self->ins_length.' -ins_length_sd '.$ins_length_sd.' -read_trkg yes -min_contig_lgth '.$self->min_contig_length.' -amos_file yes';
 
     if (system("$g_cmd")) {
         $self->error_message("Failed to run final velvetg with command\n\t$g_cmd");

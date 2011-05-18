@@ -28,9 +28,10 @@ addOffsets <- function(df){
 ##
 
 plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL,
-                         highlights=NULL, logPlot=FALSE, logInput=FALSE,
-                         lowRes=FALSE, lowResMin=NULL, lowResMax=NULL,
-                         showNorm=FALSE, gainThresh=2.5, lossThresh=1.5,
+                         highlights=NULL, log2Plot=FALSE, log10Plot=FALSE,
+                         log2Input=FALSE, lowRes=FALSE, lowResMin=NULL,
+                         lowResMax=NULL, showNorm=FALSE,
+                         gainThresh=2.5, lossThresh=1.5,
                          gainColor="red", lossColor="blue", ylabel="",
                          plotTitle=""){
 
@@ -69,22 +70,35 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL,
   ymin=0
   rectBottom = 2
 
-  if(logPlot==TRUE){
-    if (logInput == FALSE){
+  if(log2Plot==TRUE){
+    if (log2Input == FALSE){
+      ##need to convert vals to log2
       segs[,5] = log2(segs[,5]/2)
     }
+    ##set up the log plot params
     ymin=-2
     gainThresh=log2(gainThresh/2)
     lossThresh=log2(lossThresh/2)
     rectBottom = 0
   }
-  if(logPlot==FALSE){
-    if (logInput == TRUE){
+  if(log2Plot==FALSE){
+    if (log2Input == TRUE){
+      ##need to convert log2 vals to abs CN
       segs[,5] = (2**segs[,5])*2
     }
   }
 
-
+  
+  if(log10Plot==TRUE){
+##    if(pvalInput== FALSE){
+##      ##need to convert input to log10      
+##      segs[,5] = -log10(segs[,5])
+##    }
+    ##set up log plot params    
+    rectBottom=0
+##    }
+  }
+  
   
   ## function to expand the size of features
   ## so that they exceed the minimum pixel size on small
@@ -107,6 +121,10 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL,
     if(is.null(ymax)){
       ymax=max(segs[,5])*1.1
     }
+    if(log10Plot){
+      ymin=-ymax
+    }
+
     ## set the xlim to the width of the genome
     if(is.null(xlim)){
       xlim=c(1,sum(entrypoints$length))
@@ -125,7 +143,7 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL,
     
     
     ## draw baselines
-    if(logPlot){
+    if(log2Plot || log10Plot){
       abline(h=0,col="grey25")
     } else {
       abline(h=2,col="grey25")
@@ -201,7 +219,7 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL,
     abline(v=0,col="gray75")
     for(i in 1:(length(offsets)-1)){
       abline(v=offsets[i+1],col="gray75")
-      text((offsets[i]+offsets[i+1])/2, ymax*0.9, labels= gsub("chr","",entrypoints[i,1]), cex=0.8)
+      text((offsets[i]+offsets[i+1])/2, ymax*0.9, labels= gsub("chr","",entrypoints[i,1]), cex=0.7)
     }
  
     
@@ -218,7 +236,10 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL,
     if(is.null(ymax)){
       ymax=max(segs[,5])*1.1
     }
-
+    if(log10Plot){
+      ymin=-ymax
+    }
+    
     ## if there wasn't an xlim value passed in, use the whole chromosome
     ## otherwise, find the sub-region
     if(is.null(xlim)){
@@ -237,7 +258,7 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL,
     }
 
     ## draw baselines
-    if(logPlot){
+    if(log2Plot || log10Plot){
       abline(h=0,col="grey25")
     } else {
       abline(h=2,col="grey25")
@@ -305,57 +326,4 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL,
     }  
   }
 }
-
-
-
-  ## ##use for pdf output
-## pdf(file="chrPlot.pdf",width=8,height=4)
-
-## change mfrow to change number of panels
-## par(xaxs="i",xpd=FALSE, mfrow=c(1,1), oma=c(1,1,1,1), mar=c(1,3,1,1))
-
-
-## offsets="/gscuser/cmiller/oneoffs/segPlot/offsets.hg18.txt"
-## ylab="copy number"     
-## log=TRUE
-## lowRes=100000
-## lr.min=5000000
-## showNorm=FALSE
-## ymax=6;
-
-
-## ## all chromosomes
-## plotSegments(filename="zz",
-##              offsets=offsets,
-##              ylab=ylab,      
-##              logPlot=TRUE,
-##              logInput=TRUE,
-##              lowRes=lowRes,
-##              lr.min=lr.min,
-##              ymax=ymax,
-##              showNorm=showNorm)
-
-## ## example of an individual chromosome's plot
-## plotSegments(filename="/Users/vsundaram/readDepth/Sheppard_aligned/d2_chr16/output/segs.dat",
-##              thresh="/Users/vsundaram/readDepth/Sheppard_aligned/d2_chr16/output/thresholds.dat",
-##              offsets="offsets.female.hg18.dat",
-##              ylab="log2 copy number",
-##              log=TRUE,
-##              showNorm=TRUE,
-##              chr="chr16")
-
-
-## ##example of a segment of an individual chromosome
-## plotSegments(filename="segs.dat",
-##              thresh="thresholds.dat",
-##              offsets="offsets.female.hg18.dat",
-##              ylab="log2 copy number",            
-##              log=TRUE,
-##              showNorm=TRUE,
-##              chr="chr20",
-##              xlim=c(3e7,5e7))
-
-
-#use for pdf output
-#dev.off()
 
