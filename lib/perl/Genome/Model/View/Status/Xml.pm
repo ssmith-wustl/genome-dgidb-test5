@@ -26,6 +26,9 @@ class Genome::Model::View::Status::Xml {
                 'data_directory',
                 'creation_date',
                 'user_name',
+                'build_requested',
+                'build_needed',
+                'region_of_interest_set_name',
                 {
                     name => 'processing_profile',
                     aspects => [
@@ -38,7 +41,13 @@ class Genome::Model::View::Status::Xml {
                 {
                     name => 'builds',
                     aspects => [
-                        'id', 'data_directory', 'status', 'date_scheduled', 'date_completed',
+                        'id', 'data_directory', 'status', 'date_scheduled', 'date_completed', 'model_id',
+                        {
+                            name => 'inputs',
+                            aspects => ['value_id', 'name', 'value', 'value_class_name'],
+                            perspective => 'default',
+                            toolkit => 'xml',
+                        },
                     ],
                     perspective => 'default',
                     toolkit => 'xml',
