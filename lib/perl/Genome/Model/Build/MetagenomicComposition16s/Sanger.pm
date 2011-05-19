@@ -61,6 +61,8 @@ sub prepare_instrument_data {
             my $assemble_ok = $self->_assemble($amplicon, %assembler_params);
             return if not $assemble_ok;
 
+            $self->_clean_up($amplicon);
+
             $self->load_seq_for_amplicon($amplicon)
                 or next; # ok
             $writer->write([$amplicon->{seq}]);
@@ -290,6 +292,26 @@ sub _assemble {
     return 1;
 }
 
+sub _clean_up {
+    my ($self, $amplicon) = @_;
+
+    for my $ext (qw/
+        fasta.contigs fasta.contigs.qual 
+        fasta.log fasta.singlets
+        fasta.phrap.out fasta.memlog
+        fasta.problems fasta.problems.qual
+        fasta.preclip fasta.qual.preclip 
+        fasta.prescreen fasta.qual.prescreen
+        scfs
+        /) {
+        my $file = sprintf('%s/%s.%s', $self->edit_dir, $amplicon->{name}, $ext);
+        unlink $file if -e $file;
+    }
+
+    return 1;
+}
+
+
 #< DIRS >#
 sub _sub_dirs {
     return (qw/ chromat_dir edit_dir /);
@@ -298,7 +320,7 @@ sub _sub_dirs {
 sub edit_dir {
     return $_[0]->data_directory.'/edit_dir';
 }
-    
+
 sub chromat_dir {
     return $_[0]->data_directory.'/chromat_dir';
 }
@@ -593,37 +615,6 @@ sub reads_qual_file_for_amplicon {
 sub ace_file_for_amplicon { 
     my ($self, $amplicon) = @_;
     return $self->edit_dir.'/'.$amplicon->{name}.'.fasta.ace';
-}
-
-#< Clean Up >#
-sub clean_up {
-    my $self = shift;
-
-    return 1;
-
-    my @amplicon_sets = $self->amplicon_sets
-        or return;
-    
-    my @unneeded_file_exts = (qw/
-        fasta.contigs fasta.contigs.qual 
-        fasta.view fasta.log fasta.singlets
-        fasta.problems fasta.problems.qual
-        fasta.phrap.out fasta.memlog
-        fasta.preclip fasta.qual.preclip 
-        fasta.prescreen fasta.qual.prescreen
-        scfs
-        /);
-
-    for my $amplicon_set ( @amplicon_sets ) {
-        while ( my $amplicon = $amplicon_set->() ) {
-            for my $ext ( @unneeded_file_exts ) {
-                my $file = sprintf('%s/%s.%s', $self->edit_dir, $amplicon->{name}, $ext);
-                unlink $file if -e $file;
-            }
-        }
-    }
-
-    return 1;
 }
 
 #< Diff >#
