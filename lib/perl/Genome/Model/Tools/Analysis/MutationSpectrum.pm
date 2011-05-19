@@ -114,6 +114,14 @@ class Genome::Model::Tools::Analysis::MutationSpectrum {
         default => "",
         doc => 'name to put into the title of the spectrum plot',
     },   
+    absolute_axis => {
+        is => 'Boolean',
+        is_optional => 1,
+        is_input => 1,
+        is_output => 1,
+        default => 1,
+        doc => 'Whether or not to force the plot y-axis to be 0-100',
+    },   
     #below here are variables with which to store results
     #hopefully these can then be judiciously used to write cross-comparison scripts
 
@@ -430,7 +438,15 @@ sub execute {
         my $abs_filename = abs_path($plot_spectrum_file_name);
         my $abs_output_trans = abs_path($output_trans);
         my $genome = $self->plot_spectrum_genome_name;
-        my $plot_cmd = qq{ plot_spectrum("$abs_output_trans",output_file="$abs_filename",genome="$genome") };
+        my $absolute_axis_boolean;
+        if($self->absolute_axis) {
+            $absolute_axis_boolean = "T";
+        }
+        else {
+            $absolute_axis_boolean = "F";
+        }
+
+        my $plot_cmd = qq{ plot_spectrum("$abs_output_trans",output_file="$abs_filename",genome="$genome",absolute_axis=$absolute_axis_boolean) };
         my $call = Genome::Model::Tools::R::CallR->create(command=>$plot_cmd, library=> "MutationSpectrum.R");
         $call->execute;
     }
