@@ -76,7 +76,8 @@ sub _process {
     my %params_for_reference = (aligner_name=>$processing_profile->read_aligner_name,
                                 aligner_params=>$processing_profile->read_aligner_params,
                                 aligner_version=>$processing_profile->read_aligner_version,
-                                reference_build=>$model->reference_sequence_build);
+                                reference_build=>$model->reference_sequence_build,
+                                test_name=>($ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef));
 
     $self->status_message(sprintf("Finding or generating reference build index for aligner %s version %s params %s refbuild %s ",
                                                 $processing_profile->read_aligner_name, $processing_profile->read_aligner_version,
