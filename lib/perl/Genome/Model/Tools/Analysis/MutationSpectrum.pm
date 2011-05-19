@@ -428,8 +428,9 @@ sub execute {
         }
         #statistics::R is horrible so try to prevent people from causing themselves problems
         my $abs_filename = abs_path($plot_spectrum_file_name);
+        my $abs_output_trans = abs_path($output_trans);
         my $genome = $self->plot_spectrum_genome_name;
-        my $plot_cmd = qq{ plot_spectrum("$output_trans",output_file="$abs_filename",genome="$genome") };
+        my $plot_cmd = qq{ plot_spectrum("$abs_output_trans",output_file="$abs_filename",genome="$genome") };
         my $call = Genome::Model::Tools::R::CallR->create(command=>$plot_cmd, library=> "MutationSpectrum.R");
         $call->execute;
     }
