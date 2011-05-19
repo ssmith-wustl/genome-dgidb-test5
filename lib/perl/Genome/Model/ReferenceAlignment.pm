@@ -476,10 +476,11 @@ sub qc_processing_profile_id {
     my $self = shift;
 
     my %qc_pp_id = ( # Map alignment processing profile to lane QC version
+        2574937 => '2597031', # bwa 0.5.5 untrimmed and samtools r453 and picard_align 1.17 and picard_dedup 1.29
         2580856 => '2581081', # february 2011 default genome and exome reference alignment
         2582616 => '2589389', # february 2011 default pcgp reference alignment
         2580859 => '2589388', # february 2011 default genome and exome with build37 annotation
-        2586039 => '2589390', #    march 2011 default pcgp untrimmed genome and exome with build37 annotation
+        2586039 => '2589390', # march 2011 default pcgp untrimmed genome and exome with build37 annotation
     );
 
     return $qc_pp_id{ $self->processing_profile_id };

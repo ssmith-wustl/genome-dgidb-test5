@@ -182,15 +182,23 @@ sub execute {                               # replace with real execution logic.
 				my $specific_stats_file = "NA";
 				if ($wingspan_zero_stats_file) {
 					$specific_stats_file = $wingspan_zero_stats_file;
-					# summary of the coverage stats:
-					my $wingspan_zero_summary_stats_file = $build->coverage_stats_summary_file($wingspan);
+#					# summary of the coverage stats:
+#					my $wingspan_zero_summary_stats_file = $build->coverage_stats_summary_file($wingspan);
 					# summary metrics for wingspan 0 and 20x minimum depth:
 					my $hash_ref = $build->coverage_stats_summary_hash_ref;
 					my @minimum_depth = qw(1 5 10 15 20);
-#					my @array_name_here = keys ($hash_ref{$wingspan});
-#					print "@array_name_here\n";
-#					exit;
 #					print Data::Dumper::Dumper($hash_ref);
+#					my @deletehash;
+#					foreach my $wing_level (%$hash_ref) {
+#						unless ($wing_level == $wingspan) {
+#							push(@deletehash,$wing_level);
+#						}
+#					}
+#					foreach my $wing_level (@deletehash) {
+#						delete($hash_ref->{$wing_level});
+#					}
+#					print Data::Dumper::Dumper($hash_ref);
+
 					my @depth_array1;
 					my @depth_array2;
 					my @depth_array3;
