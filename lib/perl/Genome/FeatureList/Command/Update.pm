@@ -55,10 +55,10 @@ sub help_detail{
 sub execute{
     my $self = shift;
     my @feature_lists = $self->feature_list;
-    my $properties = $self->__meta__->{__properties_in_class_definition_order};
+    my @property_names = map { $_->property_name } grep { $_->is_input } $self->__meta__->properties;
 
     for my $feature_list (@feature_lists) {
-        for my $property (@$properties){
+        for my $property (@property_names) {
             next if $property eq 'feature_list';
             if ($self->$property){
                 my $new_value = $self->$property;
