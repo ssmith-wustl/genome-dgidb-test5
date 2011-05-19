@@ -41,7 +41,7 @@ class Genome::Model::Tools::CopyNumber::PlotSegmentsFromBams {
     bam2cn_window => {
         is => 'Number',
         doc => 'set the window-size used for the single-genome CN estimation',
-        default => '2000',
+        default => '2500',
     },
     cnvseg_markers => {
         is => 'Number',
