@@ -365,17 +365,17 @@ sub delete {
     }
 
     #creating an anonymous sub to delete allocations when commit happens
+    my $id = $self->id;
     my $upon_delete_callback = sub { 
-        $self->status_message("Now Deleting Allocation with owner_id = ".$self->id."\n");
-        print $self->status_message;
-        my $allocation = Genome::Disk::Allocation->get(owner_id=>$self->id, owner_class_name=>ref($self));
+        print "Now Deleting Allocation with owner_id = $id\n";
+        my $allocation = Genome::Disk::Allocation->get(owner_id=>$id, owner_class_name=>$class_name);
         if ($allocation) {
             $allocation->deallocate; 
         }
     };
 
     #hook our anonymous sub into the commit callback
-    $self->create_subscription(method=>'commit', callback=>$upon_delete_callback);
+    $class_name->ghost_class->add_observer(aspect=>'commit', callback=>$upon_delete_callback);
     
     return $self->SUPER::delete(@_); 
 }
