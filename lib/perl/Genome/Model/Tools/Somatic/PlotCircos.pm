@@ -279,7 +279,7 @@ sub execute {
     my ($ctx_circos_fh, $ctx_temp_file) = Genome::Sys->create_temp_file();
     $self->_ctx_circos_file($ctx_temp_file);
     
-    $self->convert_breakdancer_file($ctx_fh, $ctx_circos_fh, "dgreen");
+    $self->convert_breakdancer_file($ctx_fh, $ctx_circos_fh, "dgreen2");
     $ctx_fh->close if $ctx_fh;
     $ctx_circos_fh->close;
     my $itx_fh;
@@ -293,7 +293,7 @@ sub execute {
     my ($itx_circos_fh, $itx_temp_file) = Genome::Sys->create_temp_file();
     $self->_itx_circos_file($itx_temp_file);
     
-    $self->convert_breakdancer_file($itx_fh, $itx_circos_fh, "lgreen");
+    $self->convert_breakdancer_file($itx_fh, $itx_circos_fh, "lgreen2");
     $itx_fh->close if $itx_fh;
     $itx_circos_fh->close;
     
@@ -308,7 +308,7 @@ sub execute {
     my ($ins_circos_fh, $ins_temp_file) = Genome::Sys->create_temp_file();
     $self->_ins_circos_file($ins_temp_file);
     
-    $self->convert_breakdancer_file($ins_fh, $ins_circos_fh, "orange");
+    $self->convert_breakdancer_file($ins_fh, $ins_circos_fh, "orange2");
     $ins_fh->close if $ins_fh;
     $ins_circos_fh->close;
     
@@ -323,7 +323,7 @@ sub execute {
     my ($inv_circos_fh, $inv_temp_file) = Genome::Sys->create_temp_file();
     $self->_inv_circos_file($inv_temp_file);
     
-    $self->convert_breakdancer_file($inv_fh, $inv_circos_fh, "purple");
+    $self->convert_breakdancer_file($inv_fh, $inv_circos_fh, "purple2");
     $inv_fh->close if $inv_fh;
     $inv_circos_fh->close;
 
@@ -338,7 +338,7 @@ sub execute {
     my ($del_circos_fh, $del_temp_file) = Genome::Sys->create_temp_file();
     $self->_del_circos_file($del_temp_file);
     
-    $self->convert_breakdancer_file($del_fh, $del_circos_fh, 'dblue');
+    $self->convert_breakdancer_file($del_fh, $del_circos_fh, 'dblue2');
     $del_fh->close if $del_fh;
     $del_circos_fh->close;
     
@@ -782,7 +782,7 @@ radius = 0.7r
 bezier_radius = 0.1r
 
 <link deletions>
-color = dblue
+color = dblue2
 thickness = 15
 radius = 0.73r
 bezier_radius = .7r
@@ -791,7 +791,7 @@ file = $del
 </link>
 
 <link inversions>
-color = purple
+color = purple2
 thickness = 15
 radius = 0.73r
 bezier_radius = .7r
@@ -801,7 +801,7 @@ record_limit = 10000
 </link>
 
 <link insertions>
-color = orange 
+color = orange2 
 thickness = 15
 radius = 0.73r
 bezier_radius = .7r
@@ -819,7 +819,7 @@ file = $ctx
 </link>
 
 <link intratranslocations>
-color = lgreen 
+color = lgreen2 
 thickness = 5
 radius = 0.73r
 bezier_radius = .7r
@@ -1091,6 +1091,7 @@ vlgreen_a7 =  204,255,218,90
 vlgreen_a8 =  204,255,218,102
 vlgreen_a9 =  204,255,218,114
 lgreen =  128,255,164,0
+lgreen2 = 127,254,163,0
 lgreen_a1 =  128,255,164,12
 lgreen_a2 =  128,255,164,24
 lgreen_a3 =  128,255,164,36
@@ -1111,6 +1112,7 @@ green_a7 =  51,204,94,90
 green_a8 =  51,204,94,102
 green_a9 =  51,204,94,114
 dgreen =  38,153,71,0
+dgreen2 =  37,152,70,0
 dgreen_a1 =  38,153,71,12
 dgreen_a2 =  38,153,71,24
 dgreen_a3 =  38,153,71,36
@@ -1151,6 +1153,7 @@ blue_a7 =  54,116,217,90
 blue_a8 =  54,116,217,102
 blue_a9 =  54,116,217,114
 dblue =  38,82,153,0
+dblue2 =  39,83,154,0
 dblue_a1 =  38,82,153,12
 dblue_a2 =  38,82,153,24
 dblue_a3 =  38,82,153,36
@@ -1171,6 +1174,7 @@ lpurple_a7 =  236,64,255,90
 lpurple_a8 =  236,64,255,102
 lpurple_a9 =  236,64,255,114
 purple =  189,51,204
+purple2 =  190,52,205,0
 purple_a1 =  189,51,204,12
 purple_a2 =  189,51,204,24
 purple_a3 =  189,51,204,36
@@ -1261,6 +1265,7 @@ lorange_a7 =  255,187,110,90
 lorange_a8 =  255,187,110,102
 lorange_a9 =  255,187,110,114
 orange =  255,136,0,0
+orange2 = 254,135,0,0
 orange_a1 =  255,136,0,12
 orange_a2 =  255,136,0,24
 orange_a3 =  255,136,0,36
