@@ -25,7 +25,7 @@ my %DEPENDENT_PROPERTIES = (
     # dbsnp_build and annotation depend on reference_sequence_build
     'reference_sequence_build' => [
         'dbsnp_build',
-        'annotation_reference_transcripts',
+        'annotation_reference_build',
     ],
 );
 
@@ -132,31 +132,16 @@ class Genome::Model::ReferenceAlignment {
         },
         annotation_reference_build => {
             is => 'Genome::Model::Build::ImportedAnnotation',
-            calculate_from => ['annotation_reference_build_id', 'annotation_reference_transcripts'],
-            calculate => q|
-                if ($annotation_reference_build_id) {
-                    my $b = Genome::Model::Build::ImportedAnnotation->get($annotation_reference_build_id);
-                    Carp::confess("Failed to find imported annotation build id '$annotation_reference_build_id'") unless $b;
-                    return $b;
-                }
-                my $art = $annotation_reference_transcripts;
-                return unless $art;
-                my ($model_name, $ver) = split('/', $art);
-                Carp::confess("Unable to determine model and build version from annotation transcripts string '$art'") unless $model_name and $ver;
-                my $b = Genome::Model::Build::ImportedAnnotation->get(model_name => $model_name, version => $ver);
-                Carp::confess("Failed to find annotation build version='$ver' for model_name='$model_name'") unless $b;
-                return $b;
-            |,
+            id_by => 'annotation_reference_build_id',
         },
         reference_sequence_name      => { via => 'reference_sequence_build', to => 'name' },
         annotation_reference_name    => { via => 'annotation_reference_build', to => 'name' },
         coverage_stats_params        => { via => 'processing_profile'},
-        annotation_reference_transcripts => { via => 'processing_profile'},
         assignment_events => {
             is => 'Genome::Model::Event::Build::ReferenceAlignment::AssignRun',
             is_many => 1,
             reverse_id_by => 'model',
-            doc => 'each case of an instrument data being assigned to the model',
+            doc => 'each case of an instrument datum being assigned to the model',
         },
         alignment_events => {
             is => 'Genome::Model::Event::Build::ReferenceAlignment::AlignReads',
@@ -269,8 +254,8 @@ sub __errors__ {
     if ($arb and !$arb->is_compatible_with_reference_sequence_build($rsb)) {
         push @tags, UR::Object::Tag->create(
             type => 'invalid',
-            properties => ['reference_sequence_name', 'annotation_reference_transcripts'],
-            desc => "reference sequence: " . $rsb->name . " is incompatible with annotation reference transcripts: " . $arb->name,
+            properties => ['reference_sequence_name', 'annotation_reference_build'],
+            desc => "reference sequence: " . $rsb->name . " is incompatible with annotation reference builds: " . $arb->name,
         );
     }
 

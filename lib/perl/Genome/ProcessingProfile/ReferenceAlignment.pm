@@ -187,11 +187,11 @@ class Genome::ProcessingProfile::ReferenceAlignment {
             doc => '',
             is_optional => 1,
         },
-        annotation_reference_transcripts => {
-            doc => 'DEPRECATED (use annotation_reference_build model input instead). The reference transcript set used for variant annotation',
-            is_optional => 1,
-            is_deprecated => 1,
-        },
+#        annotation_reference_transcripts => {
+#            doc => 'DEPRECATED (use annotation_reference_build model input instead). The reference transcript set used for variant annotation',
+#            is_optional => 1,
+#            is_deprecated => 1,
+#        },
     ],
 };
 
