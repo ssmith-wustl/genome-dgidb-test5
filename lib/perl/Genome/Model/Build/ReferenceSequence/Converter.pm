@@ -95,7 +95,7 @@ sub convert_bed {
     my $class = shift;
     my ($source_bed, $source_reference, $destination_bed, $destination_reference) = @_;
 
-    my $self = $class->get(source_reference_build => $source_reference, destination_reference_build => $destination_reference);
+    my $self = $class->get(source_reference_build => $source_reference, destination_reference_build => $destination_reference, test_name => ($ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef));
     unless($self) {
         $class->error_message('Could not find converter from ' . $source_reference->__display_name__ . ' to ' . $destination_reference->__display_name__);
         return;
