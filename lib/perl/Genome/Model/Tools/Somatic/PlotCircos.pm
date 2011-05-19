@@ -548,7 +548,7 @@ default = 10u
 thickness        = 300p
 stroke_thickness = 2
 # ideogram border color
-stroke_color     = black
+stroke_color     = black2
 fill             = yes
 # the default chromosome color is set here and any value
 # defined in the karyotype file overrides it
@@ -667,7 +667,7 @@ units_nounit = n
 <plots>
 <plot>
 type             = text
-color            = black
+color            = black2
 file       = $hc_label
 
 r0 = 1r
@@ -686,7 +686,7 @@ snuggle_refine            = yes
 show_links     = yes
 link_dims      = 6p,6p,70p,6p,6p
 link_thickness = 9p
-link_color     = black
+link_color     = black2
 
 label_size   = 90p
 label_font   = condensed
@@ -735,8 +735,8 @@ rpadding = 12p
  file  = $cna 
  glyph = circle
  glyph_size = 8
- fill_color = black
- stroke_color = black
+ fill_color = black2
+ stroke_color = black2
  stroke_thickness = 1
  min   = -4 
  max   = 4 
@@ -1031,6 +1031,7 @@ vvvvdgrey_a7 =  40,40,40,90
 vvvvdgrey_a8 =  40,40,40,102
 vvvvdgrey_a9 =  40,40,40,114
 black =  0,0,0
+black2 = 1,1,1,0
 black_a1 =  0,0,0,12
 black_a2 =  0,0,0,24
 black_a3 =  0,0,0,36

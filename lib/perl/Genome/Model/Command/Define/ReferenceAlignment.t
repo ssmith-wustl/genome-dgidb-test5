@@ -212,18 +212,13 @@ print "$@\n";
 ok($@, "command failed to execute with bad dbsnp data");
 
 
-# now test the legacy processing profile parameter annotation_reference_transcripts. once migration to the
-# model input is complete, this can go away.
-ok($pp->annotation_reference_transcripts($abuild->name));
-is($abuild->name, $pp->annotation_reference_transcripts($abuild->name),
-    "updated legacy annotation_reference_transcripts parameter on processing profile");
-
 my $model = create_direct(
     subject_name => $sample->name,
     processing_profile_id => $pp->id,
     reference_sequence_build => $rbuild->id,
+    annotation_reference_build => $abuild->id,
 );
-ok($model, 'created model with reference sequence id and legacy annotation_reference_transcripts from processing profile');
+ok($model, 'created model with reference sequence id from processing profile');
 is($model->reference_sequence_build->id, $rbuild->id, 'reference sequence id correct');
 ok($model->annotation_reference_build, 'annotation build is defined');
 is($model->annotation_reference_build->id, $abuild->id, 'annotation build id correct');
