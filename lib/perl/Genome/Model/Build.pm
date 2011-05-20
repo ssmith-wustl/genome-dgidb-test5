@@ -1770,10 +1770,11 @@ sub snapshot_revision {
     # assemble list of "important" libs
     @libs = map { File::Basename::dirname($_) } @libs;
     push @libs, UR::Util::used_libs_perl5lib_prefix();
-    @libs = $self->_uniq(@libs);
 
     # remove trailing slashes
     map { $_ =~ s/\/+$// } (@libs, @orig_inc);
+
+    @libs = $self->_uniq(@libs);
 
     # preserve the list order as appeared @INC
     my @inc;
