@@ -128,8 +128,8 @@ sub _execute_build {
             }
             else {
                 $screen_assignment = 
-                $screen_model->add_instrument_data_assignment(
-                    instrument_data_id => $assignment->instrument_data_id,
+                $screen_model->add_instrument_data(
+                    value => $instrument_data,
                     filter_desc => $assignment->filter_desc,
                 );
                 if ($screen_assignment) {
@@ -208,9 +208,10 @@ sub _execute_build {
                     $self->status_message("Instrument data " . $instrument_data->__display_name__ . " is already assigned to model " . $metagenomic_model->__display_name__);
                 }
                 else {
+                    $DB::single = 1;
                     $metagenomic_assignment = 
-                    $metagenomic_model->add_instrument_data_assignment(
-                        instrument_data_id => $instrument_data->id,
+                    $metagenomic_model->add_instrument_data(
+                        value => $instrument_data,
                         filter_desc => $prev_assignment->filter_desc,
                     );
                     if ($metagenomic_assignment) {

@@ -284,7 +284,11 @@ sub execute
 
         #FIXME: maybe we should check these directories, and make them
         # if they don't exist.
+		$acedb_installation_path = "/gscmnt/254/analysis/bacterial_analysis/CORE/Acedb/";
+		
         my $acedb_version_long = $self->version_lookup($self->acedb_version);
+		$acedb_installation_path .= $acedb_version_long;
+
         $hgmi_path = qq{/gscmnt/254/analysis/bacterial_analysis/CORE};   #CORE
         $acedb_scripts_path = qq{$hgmi_path/Acedb/Scripts};              #CORE
              #$acedb_path = qq{$hgmi_path/Acedb/Version_1.0}; #CORE

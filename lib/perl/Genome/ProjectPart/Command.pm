@@ -11,7 +11,7 @@ class Genome::ProjectPart::Command {
     doc => 'work with ProjectParts',
 };
 
-use Genome::Command::Crud;
+sub is_sub_command_delegator { return 1; }
 
 Genome::Command::Crud->init_sub_commands(
     target_class => 'Genome::ProjectPart',

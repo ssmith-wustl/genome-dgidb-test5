@@ -12,11 +12,36 @@ then
   exit 1
 fi
 
-mkdir /gscmnt
-mount -t vboxsf gscmnt /gscmnt -o uid=1000,gid=100,umask=007
+USERUID=$1
 
-mkdir -p /gsc/var
-mount -t vboxsf var /gsc/var -o uid=1000,gid=100,umask=007
+if [ -z "$1" ]
+then
+  echo "You must set the first arg to your UID."
+  echo "If you intend to use LSF, it must be the same"
+  echo "as on your workstation (e.g. echo \$UID)"
+  exit 1
+fi
 
-mkdir -p /usr/local/lsf
-mount -t vboxsf lsf /usr/local/lsf -o uid=1000,gid=100,umask=007
+if [ ! -d "/gscmnt" ]
+then
+  mkdir /gscmnt
+fi
+mount -t vboxsf gscmnt /gscmnt -o uid=$USERUID,gid=100,umask=007
+
+if [ ! -d "/gsc/var" ]
+then
+  mkdir -p /gsc/var
+fi
+mount -t vboxsf var /gsc/var -o uid=$USERUID,gid=100,umask=007
+
+if [ ! -d "/usr/local/lsf" ]
+then
+  mkdir -p /usr/local/lsf
+fi
+mount -t vboxsf lsf /usr/local/lsf -o uid=$USERUID,gid=100,umask=007
+
+if [ ! -d "/gsc/scripts" ]
+then
+  mkdir -p /gsc/scripts
+fi
+mount -t vboxsf scripts /gsc/scripts -o uid=$USERUID,gid=100,umask=007
