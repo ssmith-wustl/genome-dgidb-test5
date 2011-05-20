@@ -812,7 +812,6 @@ sub _launch {
             $model->id,
             $self->id,
         );
-        print $lsf_command."\n";
     
     
 
