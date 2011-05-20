@@ -279,7 +279,7 @@ sub execute {
     my ($ctx_circos_fh, $ctx_temp_file) = Genome::Sys->create_temp_file();
     $self->_ctx_circos_file($ctx_temp_file);
     
-    $self->convert_breakdancer_file($ctx_fh, $ctx_circos_fh, "dgreen");
+    $self->convert_breakdancer_file($ctx_fh, $ctx_circos_fh, "dgreen2");
     $ctx_fh->close if $ctx_fh;
     $ctx_circos_fh->close;
     my $itx_fh;
@@ -293,7 +293,7 @@ sub execute {
     my ($itx_circos_fh, $itx_temp_file) = Genome::Sys->create_temp_file();
     $self->_itx_circos_file($itx_temp_file);
     
-    $self->convert_breakdancer_file($itx_fh, $itx_circos_fh, "lgreen");
+    $self->convert_breakdancer_file($itx_fh, $itx_circos_fh, "lgreen2");
     $itx_fh->close if $itx_fh;
     $itx_circos_fh->close;
     
@@ -308,7 +308,7 @@ sub execute {
     my ($ins_circos_fh, $ins_temp_file) = Genome::Sys->create_temp_file();
     $self->_ins_circos_file($ins_temp_file);
     
-    $self->convert_breakdancer_file($ins_fh, $ins_circos_fh, "orange");
+    $self->convert_breakdancer_file($ins_fh, $ins_circos_fh, "orange2");
     $ins_fh->close if $ins_fh;
     $ins_circos_fh->close;
     
@@ -323,7 +323,7 @@ sub execute {
     my ($inv_circos_fh, $inv_temp_file) = Genome::Sys->create_temp_file();
     $self->_inv_circos_file($inv_temp_file);
     
-    $self->convert_breakdancer_file($inv_fh, $inv_circos_fh, "purple");
+    $self->convert_breakdancer_file($inv_fh, $inv_circos_fh, "purple2");
     $inv_fh->close if $inv_fh;
     $inv_circos_fh->close;
 
@@ -338,7 +338,7 @@ sub execute {
     my ($del_circos_fh, $del_temp_file) = Genome::Sys->create_temp_file();
     $self->_del_circos_file($del_temp_file);
     
-    $self->convert_breakdancer_file($del_fh, $del_circos_fh, 'dblue');
+    $self->convert_breakdancer_file($del_fh, $del_circos_fh, 'dblue2');
     $del_fh->close if $del_fh;
     $del_circos_fh->close;
     
@@ -477,31 +477,11 @@ sub convert_breakdancer_file {
             }
             # (score range - cutoff) / 100 = divisor
             my $bin;
-            if($type ne "CTX") {
-                my $divisor = (100 - $self->minimum_score_graphed) / 10;
-                my $modified_score = $score - $self->minimum_score_graphed;
-                $bin = 10 - int($modified_score / $divisor +.99); 
-                if($bin == 0) {
-                    $color_label = $color ;
-                }
-                else {
-                    $color_label= $color . "_a$bin";
-                }
-            }
-            else {
-                $bin = 10 - int($reads / 10 +.99);
-                if($bin < 1) { 
-                    $color_label=$color;
-                }
-                else{
-                    $color_label="$color\_a$bin";
-                }
-            }
 
-            print  "$type$label\ths$chr1\t$breakpoint1\t$breakpoint1\tcolor=$color_label\t$score\n";
+            print  "$type$label\ths$chr1\t$breakpoint1\t$breakpoint1\tcolor=$color\t$score\n";
 
-            print $output_fh "$type$label\ths$chr1\t$breakpoint1\t$breakpoint1\tcolor=$color_label\n";
-            print $output_fh "$type$label\ths$chr2\t$breakpoint2\t$breakpoint2\tcolor=$color_label\n";
+            print $output_fh "$type$label\ths$chr1\t$breakpoint1\t$breakpoint1\tcolor=$color\n";
+            print $output_fh "$type$label\ths$chr2\t$breakpoint2\t$breakpoint2\tcolor=$color\n";
         }
     }
     return 1;
@@ -548,7 +528,7 @@ default = 10u
 thickness        = 300p
 stroke_thickness = 2
 # ideogram border color
-stroke_color     = black
+stroke_color     = black2
 fill             = yes
 # the default chromosome color is set here and any value
 # defined in the karyotype file overrides it
@@ -561,7 +541,7 @@ label_font     = condensedbold
 label_center= yes
 label_radius = (dims(ideogram,radius_outer)+dims(ideogram,radius_inner))/2
 label_size     = 80 
-
+label_color     = black2
 # cytogenetic bands
 band_stroke_thickness = 2
 
@@ -647,7 +627,6 @@ radius         = 5400p
 # by default angle=0 is at 3 o'clock position
 angle_offset   = -90
 #angle_orientation = counterclockwise
-
 </image>
 
 chromosomes_units           = 1000000
@@ -667,7 +646,7 @@ units_nounit = n
 <plots>
 <plot>
 type             = text
-color            = black
+color            = black2
 file       = $hc_label
 
 r0 = 1r
@@ -686,7 +665,7 @@ snuggle_refine            = yes
 show_links     = yes
 link_dims      = 6p,6p,70p,6p,6p
 link_thickness = 9p
-link_color     = black
+link_color     = black2
 
 label_size   = 90p
 label_font   = condensed
@@ -735,8 +714,8 @@ rpadding = 12p
  file  = $cna 
  glyph = circle
  glyph_size = 8
- fill_color = black
- stroke_color = black
+ fill_color = black2
+ stroke_color = black2
  stroke_thickness = 1
  min   = -4 
  max   = 4 
@@ -783,7 +762,7 @@ radius = 0.7r
 bezier_radius = 0.1r
 
 <link deletions>
-color = dblue
+color = dblue2
 thickness = 15
 radius = 0.73r
 bezier_radius = .7r
@@ -792,7 +771,7 @@ file = $del
 </link>
 
 <link inversions>
-color = purple
+color = purple2
 thickness = 15
 radius = 0.73r
 bezier_radius = .7r
@@ -802,7 +781,7 @@ record_limit = 10000
 </link>
 
 <link insertions>
-color = orange 
+color = orange2 
 thickness = 15
 radius = 0.73r
 bezier_radius = .7r
@@ -820,7 +799,7 @@ file = $ctx
 </link>
 
 <link intratranslocations>
-color = lgreen 
+color = lgreen2 
 thickness = 5
 radius = 0.73r
 bezier_radius = .7r
@@ -900,7 +879,7 @@ optviolet_a6 =  145,55,221,78
 optviolet_a7 =  145,55,221,90
 optviolet_a8 =  145,55,221,102
 optviolet_a9 =  145,55,221,114
-optpurple =  219,55,221
+optpurple =  219,55,221,0
 optpurple_a1 =  219,55,221,12
 optpurple_a2 =  219,55,221,24
 optpurple_a3 =  219,55,221,36
@@ -1030,7 +1009,8 @@ vvvvdgrey_a6 =  40,40,40,78
 vvvvdgrey_a7 =  40,40,40,90
 vvvvdgrey_a8 =  40,40,40,102
 vvvvdgrey_a9 =  40,40,40,114
-black =  0,0,0
+black =  0,0,0,0
+black2 = 1,1,1,0
 black_a1 =  0,0,0,12
 black_a2 =  0,0,0,24
 black_a3 =  0,0,0,36
@@ -1080,7 +1060,7 @@ dred_a6 =  205,51,69,78
 dred_a7 =  205,51,69,90
 dred_a8 =  205,51,69,102
 dred_a9 =  205,51,69,114
-vlgreen =  204,255,218
+vlgreen =  204,255,218,0
 vlgreen_a1 =  204,255,218,12
 vlgreen_a2 =  204,255,218,24
 vlgreen_a3 =  204,255,218,36
@@ -1090,7 +1070,8 @@ vlgreen_a6 =  204,255,218,78
 vlgreen_a7 =  204,255,218,90
 vlgreen_a8 =  204,255,218,102
 vlgreen_a9 =  204,255,218,114
-lgreen =  128,255,164
+lgreen =  128,255,164,0
+lgreen2 = 127,254,163,0
 lgreen_a1 =  128,255,164,12
 lgreen_a2 =  128,255,164,24
 lgreen_a3 =  128,255,164,36
@@ -1100,7 +1081,7 @@ lgreen_a6 =  128,255,164,78
 lgreen_a7 =  128,255,164,90
 lgreen_a8 =  128,255,164,102
 lgreen_a9 =  128,255,164,114
-green =  51,204,94
+green =  51,204,94,0
 green_a1 =  51,204,94,12
 green_a2 =  51,204,94,24
 green_a3 =  51,204,94,36
@@ -1110,7 +1091,8 @@ green_a6 =  51,204,94,78
 green_a7 =  51,204,94,90
 green_a8 =  51,204,94,102
 green_a9 =  51,204,94,114
-dgreen =  38,153,71
+dgreen =  38,153,71,0
+dgreen2 =  37,152,70,0
 dgreen_a1 =  38,153,71,12
 dgreen_a2 =  38,153,71,24
 dgreen_a3 =  38,153,71,36
@@ -1140,7 +1122,7 @@ lblue_a6 =  64,137,255,78
 lblue_a7 =  64,137,255,90
 lblue_a8 =  64,137,255,102
 lblue_a9 =  64,137,255,114
-blue =  54,116,217
+blue =  54,116,217,0
 blue_a1 =  54,116,217,12
 blue_a2 =  54,116,217,24
 blue_a3 =  54,116,217,36
@@ -1150,7 +1132,8 @@ blue_a6 =  54,116,217,78
 blue_a7 =  54,116,217,90
 blue_a8 =  54,116,217,102
 blue_a9 =  54,116,217,114
-dblue =  38,82,153
+dblue =  38,82,153,0
+dblue2 =  39,83,154,0
 dblue_a1 =  38,82,153,12
 dblue_a2 =  38,82,153,24
 dblue_a3 =  38,82,153,36
@@ -1171,6 +1154,7 @@ lpurple_a7 =  236,64,255,90
 lpurple_a8 =  236,64,255,102
 lpurple_a9 =  236,64,255,114
 purple =  189,51,204
+purple2 =  190,52,205,0
 purple_a1 =  189,51,204,12
 purple_a2 =  189,51,204,24
 purple_a3 =  189,51,204,36
@@ -1260,7 +1244,8 @@ lorange_a6 =  255,187,110,78
 lorange_a7 =  255,187,110,90
 lorange_a8 =  255,187,110,102
 lorange_a9 =  255,187,110,114
-orange =  255,136,0
+orange =  255,136,0,0
+orange2 = 254,135,0,0
 orange_a1 =  255,136,0,12
 orange_a2 =  255,136,0,24
 orange_a3 =  255,136,0,36
@@ -1280,7 +1265,7 @@ dorange_a6 =  221,143,55,78
 dorange_a7 =  221,143,55,90
 dorange_a8 =  221,143,55,102
 dorange_a9 =  221,143,55,114
-gpos100 =  0,0,0
+gpos100 =  0,0,0,0
 gpos100_a1 =  0,0,0,12
 gpos100_a2 =  0,0,0,24
 gpos100_a3 =  0,0,0,36
@@ -1290,7 +1275,7 @@ gpos100_a6 =  0,0,0,78
 gpos100_a7 =  0,0,0,90
 gpos100_a8 =  0,0,0,102
 gpos100_a9 =  0,0,0,114
-gpos =  0,0,0
+gpos =  0,0,0,0
 gpos_a1 =  0,0,0,12
 gpos_a2 =  0,0,0,24
 gpos_a3 =  0,0,0,36

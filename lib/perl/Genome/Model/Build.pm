@@ -812,7 +812,6 @@ sub _launch {
             $model->id,
             $self->id,
         );
-        print $lsf_command."\n";
     
     
 
@@ -882,7 +881,7 @@ sub _initialize_workflow {
         return;
     }
 
-    $self->software_revision(UR::Util::used_libs_perl5lib_prefix());
+    $self->software_revision($self->snapshot_revision);
 
     my $build_event = Genome::Model::Event::Build->create(
         model_id => $self->model->id,
@@ -1753,5 +1752,47 @@ sub compare_output {
 
     return %diffs;
 }
+
+
+sub snapshot_revision {
+    my $self = shift;
+
+    # Previously we just used UR::Util::used_libs_perl5lib_prefix but this did not
+    # "detect" a software revision when using code from PERL5LIB or compile-time
+    # lib paths. Since it is common for developers to run just Genome from a Git
+    # checkout we really want to record what versions of UR, Genome, and Workflow
+    # were used.
+
+    my @orig_inc = @INC;
+    my @libs = ($INC{'UR.pm'}, $INC{'Genome.pm'}, $INC{'Workflow.pm'});
+    die $self->error_message('Did not find all three modules loaded (UR, Workflow, and Genome).') unless @libs == 3;
+
+    # assemble list of "important" libs
+    @libs = map { File::Basename::dirname($_) } @libs;
+    push @libs, UR::Util::used_libs_perl5lib_prefix();
+
+    # remove trailing slashes
+    map { $_ =~ s/\/+$// } (@libs, @orig_inc);
+
+    @libs = $self->_uniq(@libs);
+
+    # preserve the list order as appeared @INC
+    my @inc;
+    for my $inc (@orig_inc) {
+        push @inc, grep { $inc eq $_ } @libs;
+    }
+
+    return join(':', @inc);
+}
+
+
+sub _uniq {
+    my $self = shift;
+    my @list = @_;
+    my %seen = ();
+    my @unique = grep { ! $seen{$_} ++ } @list;
+    return @unique;
+}
+
 
 1;

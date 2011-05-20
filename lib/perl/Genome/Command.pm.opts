@@ -103,6 +103,13 @@ $Genome::Command::OPTS_SPEC = [
         'help!',
         undef
       ],
+      '>find-unallocated-paths',
+      [
+        'group=s',
+        undef,
+        'help!',
+        undef
+      ],
       '>list',
       [
         'filter=s',
@@ -3477,17 +3484,6 @@ $Genome::Command::OPTS_SPEC = [
       ],
       '>review',
       [
-        '>lane-qc',
-        [
-          'auto-action!',
-          undef,
-          'processing-profile=s',
-          undef,
-          'instrument-data=s@',
-          undef,
-          'help!',
-          undef
-        ],
         '>models',
         [
           'hide-statuses=s@',
@@ -6163,11 +6159,89 @@ $Genome::Command::OPTS_SPEC = [
   ],
   '>project',
   [
+    '>create',
+    [
+      'name=s',
+      'files',
+      'help!',
+      undef
+    ],
+    '>update',
+    [
+      'name=s',
+      'files',
+      'projects=s@',
+      undef,
+      'help!',
+      undef
+    ],
+    '>list',
+    [
+      'show=s',
+      'files',
+      'csv-delimiter=s',
+      'files',
+      'filter=s',
+      'files',
+      'noheaders!',
+      undef,
+      'style=s',
+      'files',
+      'help!',
+      undef
+    ],
     'help!',
     undef
   ],
   '>project-part',
   [
+    '>create',
+    [
+      'entity-class-name=s',
+      'files',
+      'entity-id=s',
+      'files',
+      'project=s',
+      undef,
+      'label=s',
+      'files',
+      'role=s',
+      'files',
+      'help!',
+      undef
+    ],
+    '>update',
+    [
+      'entity-class-name=s',
+      'files',
+      'entity-id=s',
+      'files',
+      'label=s',
+      'files',
+      'project=s',
+      undef,
+      'role=s',
+      'files',
+      'project-parts=s@',
+      undef,
+      'help!',
+      undef
+    ],
+    '>list',
+    [
+      'show=s',
+      'files',
+      'csv-delimiter=s',
+      'files',
+      'filter=s',
+      'files',
+      'noheaders!',
+      undef,
+      'style=s',
+      'files',
+      'help!',
+      undef
+    ],
     'help!',
     undef
   ],
@@ -6605,6 +6679,8 @@ $Genome::Command::OPTS_SPEC = [
         'varscan-file=s',
         'files',
         'varscan-r-library=s',
+        'files',
+        'chr-highlight=s',
         'files',
         'sample-id=s',
         'files',
@@ -7058,6 +7134,8 @@ $Genome::Command::OPTS_SPEC = [
         'files',
         'chr=s',
         'files',
+        'cmds-input!',
+        undef,
         'cnahmm-input!',
         undef,
         'cnvhmm-input!',
@@ -7098,6 +7176,27 @@ $Genome::Command::OPTS_SPEC = [
         'files',
         'ymax=s',
         undef,
+        'help!',
+        undef
+      ],
+      '>plot-segments-from-bams',
+      [
+        'bams=s',
+        'files',
+        'names-of-bams=s',
+        'files',
+        'output-file=s',
+        'files',
+        'bam2cn-window=s',
+        undef,
+        'cnvseg-markers=s',
+        undef,
+        'genome-build=s',
+        'files',
+        'plot-ymax=s',
+        undef,
+        'sex=s',
+        'files',
         'help!',
         undef
       ],
