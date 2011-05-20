@@ -34,10 +34,9 @@ sub create {
 sub add_classification {
     my ($self, $classification) = @_;
 
-    my ($root_taxon) = grep { $_->{rank} eq 'root' } @{$classification->{taxa}};
-    Carp::confess('No root taxon found in classification: '.Data::Dumper::Dumper($classification)) if not $root_taxon;
+    Carp::confess('No root taxon found in classification: '.Data::Dumper::Dumper($classification)) if not $classification->{root}->{id};
 
-    my $i = ( $root_taxon->{confidence} >= $self->confidence_threshold ) ? 1 : 0;
+    my $i = ( $classification->{root}->{confidence} >= $self->confidence_threshold ) ? 1 : 0;
     
     push @{$self->{_classifications}}, $classification;
     
@@ -66,17 +65,16 @@ sub get_counts_for_domain_down_to_rank {
     my %counts;
     my $threshold = $self->confidence_threshold;
     for my $classification ( @{$self->confident_classifications} ) {
-        my ($domain_taxon) = grep { $_->{rank} eq 'domain' } @{$classification->{taxa}};
-        next if not $domain_taxon or lc($domain_taxon->{id}) ne $domain;
+        next if lc($classification->{domain}->{id}) ne $domain;
         my $taxonomy = join(
             ':', 
-            grep { defined } map { $self->_get_name_from_classification_for_rank($classification, $_) } @ranks
+            grep { defined } map { $classification->{$_}->{id} } @ranks
         );
         # Increment total
         $counts{$taxonomy}->{total}++;
         # Go thru the ranks
         for my $rank ( @ranks ) {
-            my $confidence = $self->_get_confidence_from_classification_for_rank($classification, $rank)
+            my $confidence = $classification->{$rank}->{confidence}
                 or next;
             if ( $confidence >= $threshold ) {
                 $counts{$taxonomy}->{$rank}++;
@@ -88,18 +86,6 @@ sub get_counts_for_domain_down_to_rank {
     }
 
     return %counts;
-}
-
-sub _get_name_from_classification_for_rank {
-    my ($self, $classification, $rank) = @_;
-    my ($taxon) = grep { $_->{rank} eq $rank } @{$classification->{taxa}};
-    return $taxon->{id};
-}
-
-sub _get_confidence_from_classification_for_rank {
-    my ($self, $classification, $rank) = @_;
-    my ($taxon) = grep { $_->{rank} eq $rank } @{$classification->{taxa}};
-    return $taxon->{confidence};
 }
 
 1;

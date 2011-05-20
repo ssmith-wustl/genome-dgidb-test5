@@ -23,7 +23,7 @@ my $rdp = Genome::Model::Tools::MetagenomicClassifier::Rdp->create(
         input_file => $fasta,
         output_file => $tmp_rdp_file,
         training_set => 'broad',
-        version     => '2.1',
+        version => '2x1',
 );
 ok($rdp, 'Created rdp classifier');
 ok($rdp->execute, 'Execute rdp classifier');
@@ -42,5 +42,3 @@ $fh->close;
 done_testing();
 exit;
 
-#$HeadURL$
-#$Id$
