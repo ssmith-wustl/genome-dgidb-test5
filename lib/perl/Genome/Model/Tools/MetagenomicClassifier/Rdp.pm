@@ -10,7 +10,7 @@ class Genome::Model::Tools::MetagenomicClassifier::Rdp {
     has => [ 
         input_file => {
             type => 'String',
-            doc => "path to fasta file"
+            doc => "Path to fasta file"
         },
         output_file => { 
             type => 'String',
@@ -39,26 +39,24 @@ The format of the output.
     prints ALL taxa in classification
 DOC
         },
+        metrics => { 
+            is => 'Boolean',
+            is_optional => 1, 
+            doc => "Write metrics to file. File name is classification file w/ '.metrics' extension",
+        },
     ],
 };
-
-sub _get_classifier {
-    my $self = shift;
-
-    my $classifier_class = 'Genome::Model::Tools::MetagenomicClassifier::Rdp::Version'.$self->version;
-    my $classifier = $classifier_class->create(
-        training_set => $self->training_set,
-    );
-    
-    return $classifier;
-}
 
 sub execute {
     my $self = shift;
     
     #< CLASSIFER >#
-    my $classifier = $self->_get_classifier or return;
-    
+    my $classifier_class = 'Genome::Model::Tools::MetagenomicClassifier::Rdp::Version'.$self->version;
+    my $classifier = $classifier_class->create(
+        training_set => $self->training_set,
+    );
+    return if not $classifier;
+
     #< IN >#
     my $reader = eval {
         Genome::Model::Tools::FastQual::PhredReader->create(
@@ -74,11 +72,47 @@ sub execute {
     );
     return if not $writer;
 
+    my %metrics;
+    @metrics{qw/ total error success /} = (qw/ 0 0 0 /);
     while ( my $seqs = $reader->read ) {
+        $metrics{total}++;
+        # Try to classify 2X - per kathie 2009mar3
         my $classification = $classifier->classify($seqs->[0]);
-        next if not $classification;
-        $writer->write($classification);
+        if ( not $classification ) {
+            $classification = $classifier->classify($seqs->[0]);
+            if ( not $classification ) {
+                $metrics{error}++;
+                next;
+            }
+        }
+        $writer->write($classification); # TODO check?
+        $metrics{success}++;
     }
+
+    if ( $self->metrics ) {
+        $self->_write_metrics(\%metrics);
+    }
+
+    return 1;
+}
+
+sub _write_metrics {
+    my ($self, $metrics) = @_;
+
+    my $metrics_file = $self->output_file.'.metrics';
+    unlink $metrics_file if -e $metrics_file;
+
+    my $metrics_fh = eval{ Genome::Sys->open_file_for_writing($metrics_file); };
+    if ( not $metrics_fh ) {
+        $self->error_message("Failed to open metrics file ($metrics_file) for writing: $@");
+        return;
+    }
+
+    for my $metric ( keys %$metrics ) {
+        $metrics_fh->print($metric.'='.$metrics->{$metric}."\n");
+    }
+
+    $metrics_fh->close;
 
     return 1;
 }
