@@ -1,5 +1,9 @@
 package Genome::Statistics;
 
+# Reliance on Math::Pari should likely be removed.
+# Math::BigInt has similar functionality but
+# is better maintained and has better performance.
+
 use strict;
 use warnings;
 use Genome;
@@ -7,8 +11,6 @@ use Cwd;
 use Math::Pari;
 
 class Genome::Statistics { 
-    # TODO: remove all cases of inheritance 
-    #is => 'UR::Singleton', 
 
 };
 
