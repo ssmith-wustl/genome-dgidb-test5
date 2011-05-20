@@ -358,7 +358,7 @@ sub execute {                               # replace with real execution logic.
 
         #avg mapping quality ref/var
         $allSnvs{$id}{"normal"}{"MQ"} = ".";
-        $allSnvs{$id}{"tumor"}{"MQ"} = $col[6] . ".";
+        $allSnvs{$id}{"tumor"}{"MQ"} = ".";
 
         #avg mapping quality ref/var
         $allSnvs{$id}{"normal"}{"BQ"} = ".";
@@ -452,7 +452,7 @@ sub execute {                               # replace with real execution logic.
         #total read depth
         $allSnvs{$id}{"normal"}{"DP"} = $col[7];
         #avg mapping quality ref/var
-        $allSnvs{$id}{"normal"}{"MQ"} = $col[6] . ".";
+        $allSnvs{$id}{"normal"}{"MQ"} = ".";
         #avg mapping quality ref/var
         $allSnvs{$id}{"normal"}{"BQ"} = ".";
 
@@ -557,7 +557,7 @@ sub execute {                               # replace with real execution logic.
         $allSnvs{$id}{"normal"}{"BQ"} =  ".";
 
         #avg mapping quality ref/var
-        $allSnvs{$id}{"tumor"}{"MQ"} =  $col[7] . "/.";
+        $allSnvs{$id}{"tumor"}{"MQ"} =   ".";
         $allSnvs{$id}{"normal"}{"MQ"} =  ".";
 
         #allele depth
