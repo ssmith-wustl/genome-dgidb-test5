@@ -3,7 +3,11 @@ To use this to build a new VM, follow these steps:
 1. $ sudo ./vm_builder.sh
 2. Configure Shared Folders (see shared folders below)
 3. Configure Networking (see LSF section below)
-4. $ sudo ./mount.sh
+4. $ sudo ./mount.sh $UID
+    - The $UID arg is to allow your user to read the shared folders
+      after they are mounted. If you intend to use LSF, ensure your
+      UID is set via the instructions listed in the networking
+      section.
 5. $ ./user_script
 6. $ source ~/.bashrc
 
@@ -34,7 +38,7 @@ var     /gsc/var
 Before running the setup scripts above, you will need to ensure
 the guest modules are installed on your test vm.
 
-LSF
+LSF / Networking
 ---
 In order to use LSF at The Genome Institute,
 the VM must have an IP accessible elsewhere on the network
@@ -60,3 +64,13 @@ If you are sure /usr/local/lsf is mounted and the various
 lsf commands like bsub and bhosts are in your PATH, but you
 receive permission errors, you likely need systems to add
 your VM to the lsf cluster.
+
+In order to dispatch to LSF, you must have the same username
+and user number as on your workstation. In order to set the
+user number, on your workstation run:
+
+$ echo $UID
+
+To see your user number. Then, on the VM, run:
+
+$ sudo usermod -u (number from before) $USER
