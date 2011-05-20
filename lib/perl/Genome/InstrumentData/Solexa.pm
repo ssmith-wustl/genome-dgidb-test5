@@ -546,7 +546,7 @@ sub dump_trimmed_fastq_files {
             );
         }
         elsif ($trimmer_name eq 'bwa_style') {
-            my ($trim_qual) = $self->trimmer_params =~ /--trim-qual-level\s*=?\s*(\S+)/;
+            my ($trim_qual) = $trimmer_params =~ /--trim-qual-level\s*=?\s*(\S+)/;
             $trimmer = Genome::Model::Tools::Fastq::TrimBwaStyle->create(
                 trim_qual_level => $trim_qual,
                 fastq_file      => $input_fastq_pathname,
