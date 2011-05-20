@@ -55,8 +55,8 @@ sub read {
 
     my @ranks = (qw/ root domain phylum class order family genus species /);
     for ( my $i = 0; $i <= $#taxa_and_confs; $i++ ) {
-        my %taxon = ( rank => $ranks[$i] );
-        push @{$classification{taxa}}, \%taxon;
+        my %taxon;
+        $classification{$ranks[$i]} = \%taxon;
         next if not $taxa_and_confs[$i];
         @taxon{qw/ id confidence /} = split(':', $taxa_and_confs[$i]);
     }

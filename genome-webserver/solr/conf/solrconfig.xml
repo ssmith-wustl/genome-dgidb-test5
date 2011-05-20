@@ -263,31 +263,36 @@
 <!--       <str name="qf">text^0.5 title^1.5 id^3.0</str>
        <str name="pf">text^0.5 title^1.5 id^3.0</str>
 -->
-       <str name="qf">content^0.5 title^1.5 idAnalyzed^3.0</str>
-       <str name="pf">content^0.5 title^1.5 idAnalyzed^3.0</str>
+       <str name="qf">content^2.0 title^0.2 idAnalyzed^5.0</str>
+       <str name="pf">content^2.0 title^0.2 idAnalyzed^5.0</str>
        <str name="fl">*, score</str>
        <str name="facet">true</str>
        <str name="facet.field">type</str>
 
+        <str name="hl">true</str>
+        <str name="hl.fl">content,title</str>
+        <str name="h1.snippets">3</str>
+        <str name="hl.mergeContiguous">true</str>
+
 <!-- facet weight jtal -->
 
+    <str name="bq"> type:modelgroup^20.0 </str>
+    <str name="bq"> type:model^20.0 </str>
+    <str name="bq"> type:individual^19.0 </str>
+    <str name="bq"> type:population_group^19.0 </str>
+    <str name="bq"> type:taxon^18.0 </str>
+    <str name="bq"> type:sample^18.0 </str>
+    <str name="bq"> type:library^18.0 </str>
+    <str name="bq"> type:illumina_run^19.0 </str>
+    <str name="bq"> type:processing_profile^10.0 </str>
+    <str name="bq"> type:wiki-page^0.001 </str>
+
 <!--
-    <str name="bq"> type:modelgroup^1.0 </str>
-    <str name="bq"> type:individual^1.0 </str>
-    <str name="bq"> type:model^1.0 </str>
-    <str name="bq"> type:population_group^1.0 </str>
-    <str name="bq"> type:sample^1.0 </str>
-    <str name="bq"> type:processing_profile^0.5 </str>
-    <str name="bq"> type:taxon^0.5 </str>
-    <str name="bq"> type:illumina_run^0.3 </str>
+    <str name="bq"> type:project^0.2 </str>
     <str name="bq"> type:work-order^0.3 </str>
     <str name="bq"> type:disk_group^0.25 </str>
     <str name="bq"> type:disk_volume^0.25 </str>
-    <str name="bq"> type:library^0.2 </str>
-    <str name="bq"> type:project^0.2 </str>
-    <str name="bq"> type:wiki-page^0.1 </str>
     <str name="bq"> type:mail^0.1 </str>
-removed
 -->
 
        <!-- 

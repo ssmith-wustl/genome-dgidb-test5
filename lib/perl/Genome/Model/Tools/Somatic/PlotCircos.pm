@@ -477,31 +477,11 @@ sub convert_breakdancer_file {
             }
             # (score range - cutoff) / 100 = divisor
             my $bin;
-            if($type ne "CTX") {
-                my $divisor = (100 - $self->minimum_score_graphed) / 10;
-                my $modified_score = $score - $self->minimum_score_graphed;
-                $bin = 10 - int($modified_score / $divisor +.99); 
-                if($bin == 0) {
-                    $color_label = $color ;
-                }
-                else {
-                    $color_label= $color . "_a$bin";
-                }
-            }
-            else {
-                $bin = 10 - int($reads / 10 +.99);
-                if($bin < 1) { 
-                    $color_label=$color;
-                }
-                else{
-                    $color_label="$color\_a$bin";
-                }
-            }
 
-            print  "$type$label\ths$chr1\t$breakpoint1\t$breakpoint1\tcolor=$color_label\t$score\n";
+            print  "$type$label\ths$chr1\t$breakpoint1\t$breakpoint1\tcolor=$color\t$score\n";
 
-            print $output_fh "$type$label\ths$chr1\t$breakpoint1\t$breakpoint1\tcolor=$color_label\n";
-            print $output_fh "$type$label\ths$chr2\t$breakpoint2\t$breakpoint2\tcolor=$color_label\n";
+            print $output_fh "$type$label\ths$chr1\t$breakpoint1\t$breakpoint1\tcolor=$color\n";
+            print $output_fh "$type$label\ths$chr2\t$breakpoint2\t$breakpoint2\tcolor=$color\n";
         }
     }
     return 1;
@@ -1029,7 +1009,7 @@ vvvvdgrey_a6 =  40,40,40,78
 vvvvdgrey_a7 =  40,40,40,90
 vvvvdgrey_a8 =  40,40,40,102
 vvvvdgrey_a9 =  40,40,40,114
-black =  0,0,0,0,0
+black =  0,0,0,0
 black2 = 1,1,1,0
 black_a1 =  0,0,0,12
 black_a2 =  0,0,0,24

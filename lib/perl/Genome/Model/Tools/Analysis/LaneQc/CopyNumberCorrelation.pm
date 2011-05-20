@@ -23,6 +23,11 @@ class Genome::Model::Tools::Analysis::LaneQc::CopyNumberCorrelation {
             is_many => 1,
             doc => 'instrument data to correlate lane-qc for',
         },
+        lane_qc_models => {
+            is => 'Genome::Model::ReferenceAlignment',
+            is_many => 1,
+            doc => 'lane qc models to specifically use',
+        },
     ],
 };
 
@@ -35,16 +40,41 @@ sub help_detail {
 
 sub resolve_copy_number_laneqc_files {
     my $self = shift;
-    if ($self->copy_number_laneqc_file_glob && !$self->instrument_data) {
+    if    ( $self->copy_number_laneqc_file_glob && !$self->instrument_data && !$self->lane_qc_models) {
         my @files = sort glob($self->copy_number_laneqc_file_glob);
         return @files;
     }
-    elsif (!$self->copy_number_laneqc_file_glob && $self->instrument_data) {
+    elsif (!$self->copy_number_laneqc_file_glob &&  $self->instrument_data && !$self->lane_qc_models) {
         my @files;
         for my $instrument_data ($self->instrument_data) {
             my $dir = $instrument_data->lane_qc_dir;
             print "Instrument data " . $instrument_data->__display_name__ . " (" . $instrument_data->id . ") " . ($dir ? 'has' : 'is missing') . " lane QC.\n";
             next unless ($dir);
+            push @files, sort glob("$dir/*.cnqc");
+        }
+        print "\n";
+        return @files;
+    }
+    elsif (!$self->copy_number_laneqc_file_glob && !$self->instrument_data &&  $self->lane_qc_models) {
+        my @files;
+        for my $model ($self->lane_qc_models) {
+            unless ($model->is_lane_qc) {
+                print $model->__display_name__ . ' is not a lane QC model.' . "\n";
+                next;
+            }
+
+            my $build = $model->last_succeeded_build;
+            unless ($build) {
+                print $model->__display_name__ . ' does not have a succeeded build.' . "\n";
+                next;
+            }
+
+            my $dir = $build->qc_directory;
+            unless ($dir && -d $dir) {
+                print $model->__display_name__ . ' does not have a qc direcotry.' . "\n";
+                next;
+            }
+
             push @files, sort glob("$dir/*.cnqc");
         }
         print "\n";

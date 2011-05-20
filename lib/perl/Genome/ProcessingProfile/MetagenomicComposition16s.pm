@@ -54,14 +54,8 @@ class Genome::ProcessingProfile::MetagenomicComposition16s {
             is_optional => 1,
             doc => 'Classifier name for classifing the amplicons.',
             default_value => 'rdp2-1', 
-            valid_values => [qw/ rdp2-1 rdp2-2 kroyer /],
-            #valid_values => [qw/ rdp kroyer /],
-        },
-        classifier_version => {
-            is => 'Text',
-            is_optional => 1,
-            doc => 'The version of the classifier to use.',
-            is_optional => 1,
+            valid_values => [qw/ rdp2-1 rdp2-2 /],
+            #valid_values => [qw/ rdp /],
         },
         classifier_params => {
             is => 'Text',
