@@ -79,8 +79,8 @@ sub _string_for_hmp_fix_ranks_format {
     my $prev_conf = '';
     for my $rank (qw/ root domain phylum class order family genus /) {
         my ($taxon) = grep { $_->{rank} eq $rank } @{$classification->{taxa}};
-        my $taxon_id = $taxon->{id};
-        my $conf = $taxon->{confidence};
+        my $taxon_id = $classification->{$rank}->{id};
+        my $conf = $classification->{$rank}->{confidence};
         unless ( $taxon_id ) {
             $taxon_id = $prev_taxon_id.'_no_'.$rank;
             $conf = $prev_conf;
@@ -105,15 +105,21 @@ sub _string_for_hmp_all_ranks_format {
         ($classification->{complemented} ? '-' : ' '),
         '',
     );
-    for my $taxon ( @{$classification->{taxa}} ) {
-        if ( $taxon->{id} ) {
-            $string .= $taxon->{id}.':'.$taxon->{confidence}.';';
+
+    for my $rank (qw/ root domain phylum class order family genus /) {
+        if ( $classification->{$rank}->{id} ) {
+            $string .= $classification->{$rank}->{id}.':'.$classification->{$rank}->{confidence}.';';
         }
         else {
             $string .= ';';
         }
         
     }
+
+    if ( $classification->{species}->{id} ) { # old behavior
+        $string .= $classification->{species}->{id}.':'.$classification->{species}->{confidence}.';';
+    }
+
     $string .= "\n";
 
     return $string;
