@@ -368,23 +368,13 @@ sub is_lane_qc {
 sub default_genotype_model {
     my $self = shift;
     my $sample = $self->subject;
-    unless ($sample->isa('Genome::Sample')) {
-        $self->warning_message("Can only determine default genotype model if subject is a Genome::Sample, not " . $sample->class);
-        return;
-    }
+    return unless $sample->isa('Genome::Sample');
 
     my @genotype_models = sort { $a->id <=> $b->id } $sample->default_genotype_models;
-    unless (@genotype_models) {
-        $self->warning_message("Could not find any genotype microarray models associated with sample " . $sample->id);
-        return;
-    }
+    return unless @genotype_models;
 
     @genotype_models = grep { $_->reference_sequence_build->is_compatible_with($self->reference_sequence_build) } @genotype_models;
-    unless (@genotype_models) {
-        $self->warning_message("No genotype microarray models for sample " . $sample->id . " use a reference build " .
-            "that is compatible with " . $self->reference_sequence_build_id);
-        return;
-    }
+    return unless @genotype_models;
 
     if (@genotype_models > 1) {
         $self->warning_message("Found multiple compatible genotype models for sample " . $sample->id .
