@@ -129,6 +129,22 @@ Tools to run variant detector filters with a common API
 EOS
 }
 
+# Take all parameters from the "params" property and store them in individual properties for the class.
+# resolve_class_and_params_for_argv will check for us to make sure all the property names are valid
+sub _process_params { 
+    my $self = shift;
+
+    my @param_list = split(" ", $self->params);
+    my($cmd_class,$params) = $self->class->resolve_class_and_params_for_argv(@param_list);
+
+    # For each parameter set in params... use the class properties to assign the values
+    for my $param_name (keys %$params) {
+        $self->$param_name($params->{$param_name});
+    }
+
+    return 1;
+}
+
 
 sub shortcut {
     my $self = shift;
@@ -150,6 +166,8 @@ sub shortcut {
 
 sub execute {
     my $self = shift;
+
+    $self->_process_params;
 
     my ($params) = $self->params_for_result;
     my $result = Genome::Model::Tools::DetectVariants2::Result::Filter->get_or_create(%$params, _instance => $self);
