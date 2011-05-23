@@ -96,6 +96,9 @@ my $callback = sub {
     # GSCApp removes our overrides to can/isa for Class::Autoloader.  Tell it to put them back.
     App::Init->_restore_isa_can_hooks();
 
+    # call the init process to prepare the object cache if it needs being created.
+    App->init;
+
     $initialized = 'complete';
 
     return $class->can($method);
