@@ -256,6 +256,9 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL, ymin=NULL,
     if(is.null(ymax)){
       ymax=max(segs[,5])*1.1
     }
+    if(is.null(ymax)){
+      ymin=min(segs[,5])*1.1
+    }
 
     
     ## if there wasn't an xlim value passed in, use the whole chromosome
