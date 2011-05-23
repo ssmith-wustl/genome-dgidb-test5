@@ -369,11 +369,15 @@ sub _assign_all_instrument_data {
         return 1;
     }
 
-    my @inputs = Genome::Model::Input->get(model_id => $self->model_id(), name => 'target_region_set_name', ignored => 0);
+    my @inputs = Genome::Model::Input->get(model_id => $self->model_id(), name => 'target_region_set_name');
 
     my %model_capture_targets = map { $_->value_id() => 1 } @inputs;
 
     ID: for my $id ( @unassigned_instrument_data ) {
+
+        if($id->ignored() ){
+            next ID;
+        }
 
         # Skip imported, w/ warning
         unless($self->include_imported){
