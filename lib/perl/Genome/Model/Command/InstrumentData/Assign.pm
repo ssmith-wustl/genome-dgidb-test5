@@ -153,23 +153,6 @@ sub _assign_instrument_data {
         return 1;
     }
 
-    # Non imported solexa needs to have the copy sequences file pse run ok
-    if ( $instrument_data->sequencing_platform eq 'solexa' and $instrument_data->class !~ /imported/i ) {
-        my $index_illumina = $instrument_data->index_illumina;
-        if ( not $index_illumina ) {
-            $self->error_message('No index illumina for solexa instrument data '.$instrument_data->id);
-            return;
-        }
-        my $copy_sequence_files_pse = $index_illumina->get_copy_sequence_files_pse;
-        unless (grep { $copy_sequence_files_pse->pse_status eq $_ } qw/ completed inprogress /) {
-            $self->warning_message(
-                'SKIPPING instrument data ('.join(' ', map { $instrument_data->$_ } (qw/ id sequencing_platform /)).') because '
-                .'it does not have a successfully confirmed copy sequence files pse. This means it is not ready or may be corrupted. It cannot be assigned individually.'
-            );
-            return 1; # OK, just skipping
-        }
-    }
-
     my $add = $model->add_instrument_data(
         value => $instrument_data,
         filter_desc => $self->filter,
