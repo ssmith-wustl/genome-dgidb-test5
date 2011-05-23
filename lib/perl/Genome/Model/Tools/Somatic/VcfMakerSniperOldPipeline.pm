@@ -268,10 +268,11 @@ sub execute {                               # replace with real execution logic.
 
         #all the filter info
         print OUTFILE "##FILTER=<ID=PASS,Description=\"Passed all filters\">" . "\n";
-        print OUTFILE "##FILTER=<ID=snpfilter,Description=\"Somatic Sniper Low Confidence - Discard\">" . "\n";
+        print OUTFILE "##FILTER=<ID=snpfilter,Description=\"Failed Maq inspired SNPFilter - Discard\">" . "\n";
         print OUTFILE "##FILTER=<ID=loh,Description=\"Loss of Heterozygosity filter - Discard\">" . "\n";
         print OUTFILE "##FILTER=<ID=ceuyri,Description=\"Novel event filter (CEU and YRI) - Discard\">" . "\n";
         print OUTFILE "##FILTER=<ID=dbsnp,Description=\"found in dbSNP - Discard\">" . "\n";
+        print OUTFILE "##FILTER=<ID=sniper,Description=\"not called as potentially somatic by somatic sniper - Potentially germline\">" . "\n";
 
         #format info
         print OUTFILE "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">" . "\n";
@@ -385,7 +386,7 @@ sub execute {                               # replace with real execution logic.
         # $allSnvs{$id}{"normal"}{"VLQ"} = ".";
         # $allSnvs{$id}{"tumor"}{"VLQ"} = ".";
 
-        $allSnvs{$id}{"filter"} = "samtools";
+        $allSnvs{$id}{"filter"} = "sniper";
     }
     $inFh->close();
 
@@ -423,14 +424,15 @@ sub execute {                               # replace with real execution logic.
 
         my @refAlleles = split(",", convertIub($col[2]));
         my @allAlleles = split(",", convertIub($col[2]));
+        my @varAlleles;
         # if exists, we have to consider both tumor and variant alleles for gt positions
         #retrieve the ref/alt from the tumor call
-        if (!(exists($allSnvs{$id}))){
-            my @tmp = split(",", $allSnvs{$id}{"alt"} = $col[2]);
+        if (exists($allSnvs{$id}{"alt"})){
+            my @tmp = split(",", $allSnvs{$id}{"alt"});
             @allAlleles = (@allAlleles, @tmp);
+            @varAlleles = @tmp;
         }
 
-        my @varAlleles;
         my @tmp = split(",",convertIub($col[3]));
         #only add non-reference alleles to the alt field
         foreach my $alt (@tmp){
@@ -485,7 +487,7 @@ sub execute {                               # replace with real execution logic.
         # $allSnvs{$id}{"normal"}{"VLQ"} = ".";
         # $allSnvs{$id}{"tumor"}{"VLQ"} = ".";
 
-        $allSnvs{$id}{"filter"} = "samtools";
+        $allSnvs{$id}{"filter"} = "sniper";
     }
     $inFh->close();
 
@@ -627,7 +629,7 @@ sub execute {                               # replace with real execution logic.
     addFilterInfo("sfo_snp_filtered.csv","snpfilter",\%allSnvs, $build_dir);
     addFilterInfo("noloh.csv","loh",\%allSnvs, $build_dir);
     addFilterInfo("ceu_yri_filtered.csv","ceuyri",\%allSnvs, $build_dir);
-    addFilterInfo("dbsnp_filtered.csv","dbsnpfilter",\%allSnvs, $build_dir);
+    addFilterInfo("dbsnp_filtered.csv","dbsnp",\%allSnvs, $build_dir);
 
 
     # sub dedupFilterNames{
