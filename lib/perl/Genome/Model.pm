@@ -486,7 +486,7 @@ sub _resolve_subject {
         return $subject if $subject; #sample_name is the favoured default.  If we get one, use it.
     }
     if ($try_all_types or $subject_type eq 'species_name') {
-        push @subjects, Genome::Taxon->get(species_name => $subject_name);
+        push @subjects, Genome::Taxon->get(name => $subject_name);
     }
     if ($try_all_types or $subject_type eq 'library_name') {
         push @subjects, Genome::Library->get(name => $subject_name);
@@ -559,8 +559,8 @@ sub get_all_possible_samples {
 
     my @samples;
     if ( $self->subject_class_name eq 'Genome::Taxon' ) {
-        my $taxon = Genome::Taxon->get(species_name => $self->subject_name);
-        @samples = $taxon->samples;
+        my $taxon = Genome::Taxon->get(name => $self->subject_name);
+        @samples = $taxon->samples();
 
         #data tracking is incomplete, so sometimes these need to be looked up via the sources
         my @sources = ($taxon->individuals, $taxon->population_groups);
