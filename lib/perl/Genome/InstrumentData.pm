@@ -87,15 +87,6 @@ sub delete {
         push @models, $build->model;
     }
 
-    if(@models) {
-        my %affected_users;
-        for my $model (@models) {
-            $affected_users{$model->user_name} = 1;
-        }
-
-        my $to = join(', ', keys %affected_users);
-    }
-
     #finally, clean up the instrument data
     for my $attr ( $self->attributes ) {
         $attr->delete;
