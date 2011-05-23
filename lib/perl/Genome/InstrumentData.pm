@@ -38,12 +38,12 @@ class Genome::InstrumentData {
             is_mutable => 1,
             where => [ attribute_label => 'full_path' ],
         },
-        ignore => {
+        ignored => {
             is => 'Number',
             via => 'attributes',
             to => 'attribute_value',
             is_mutable => 1,
-            where => [attribute_label => 'ignore'],
+            where => [attribute_label => 'ignored'],
             default => '0',
         },
         sample_source => { via => 'sample', is => 'Genome::Subject', to => 'source' },

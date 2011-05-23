@@ -27,6 +27,6 @@ sub execute {
         $self->error_message("Ignore is not 1 or 0. (Got: $ignore).");
         return 0;
     }
-    $self->instrument_data->ignore($self->ignore() );
+    $self->instrument_data->ignored($self->ignore() );
     return 1;
 }
