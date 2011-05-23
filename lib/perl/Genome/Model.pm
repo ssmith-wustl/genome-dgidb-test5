@@ -1139,6 +1139,8 @@ sub duplicates {
         push @duplicates, $other_model if (@inputs == $matched_inputs);
     }
 
+    @duplicates = grep { $_->id ne $self->id } @duplicates;
+
     return @duplicates;
 }
 
