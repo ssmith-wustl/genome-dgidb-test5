@@ -13,16 +13,18 @@ class Genome::ProjectPart {
     has => [
         entity_class_name => { is => 'Text', column_name => 'PART_CLASS_NAME' },
         entity_id => { is => 'Text', column_name => 'PART_ID' },
+        entity => { is => 'entity_class_name', id_by => 'entity_id' },
         entity => {
-            calculate_from => [ 'entity_class_name', 'entity_id' ],
-            calculate => q{ return $entity_class_name->get($entity_id); },
+            is => 'UR::Object',
+            id_by => 'entity_id',
+            id_class_by => 'entity_class_name',
             doc => 'Actual object this project part represents',
         },
         project => {
             is => 'Genome::Project',
             id_by => 'project_id',
             doc => 'Project this part belongs to',
-        }
+        },
     ],
     has_optional => [
         label => { is => 'Text' },
