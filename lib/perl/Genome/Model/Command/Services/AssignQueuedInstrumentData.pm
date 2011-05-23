@@ -176,6 +176,10 @@ sub execute {
 
         my $genome_instrument_data = Genome::InstrumentData->get( id => $instrument_data_id );
 
+        if($genome_instrument_data->ignored() ) {
+            next;
+        }
+
         my @process_errors;
 
         if ($subject_class_name and $subject_id and @processing_profile_ids) {

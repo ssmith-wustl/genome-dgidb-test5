@@ -494,24 +494,23 @@ sub orient_amplicons {
 }
 
 #< Classify >#
-sub classifications_files {
-    my $self = shift;
-}
-
-sub classifications_files_as_string {
-}
-
 sub classification_file_for_set_name {
     my ($self, $set_name) = @_;
     
     die "No set name given to get classification file for ".$self->description unless defined $set_name;
+
+    my $classifier = $self->classifier;
+    my %classifier_params = $self->processing_profile->classifier_params_as_hash;
+    if ( $classifier_params{version} ) {
+        $classifier .= $classifier_params{version};
+    }
 
     return sprintf(
         '%s/%s%s.%s',
         $self->classification_dir,
         $self->subject_name,
         ( $set_name eq '' ? '' : ".$set_name" ),
-        lc($self->classifier),
+        lc($classifier),
     );
 }
 
@@ -532,68 +531,71 @@ sub classify_amplicons {
         return;
     }
 
+    my $classifier_params = $self->processing_profile->classifier_params;
+    # TEMP UTNIL THIS GOES STABLE, THEN FIX PARAMS
+    $classifier_params =~ s/_/\-/g;
+    if ( $classifier_params !~ /version/ ) {
+        if ( $self->classifier eq 'rdp2-1' ) {
+            $classifier_params .= ' --version 2x1';
+        }
+        elsif ( $self->classifier eq 'rdp2-2' ) {
+            $classifier_params .= ' --version 2x2';
+        }
+        else {
+            $self->error_message("Invalid classifier (".$self->classifier.") for ".$self->description);
+            return;
+        }
+    }
+    if ( $classifier_params !~ /format/ ) {
+        $classifier_params .= ' --format hmp_fix_ranks';
+    }
 
-    my %classifier_params = $self->processing_profile->classifier_params_as_hash;
     $self->status_message('Classifier: '.$self->classifier);
-    $self->status_message('Classifier params: '.Dumper(\%classifier_params));
-    my $classifier;
-    if ( $self->classifier eq 'rdp2-1' ) {
-        $classifier = Genome::Utility::MetagenomicClassifier::Rdp::Version2x1->new(%classifier_params);
-    }
-    elsif ( $self->classifier eq 'rdp2-2' ) {
-        $classifier = Genome::Utility::MetagenomicClassifier::Rdp::Version2x2->new(%classifier_params);
-    }
-    else {
-        $self->error_message("Invalid classifier (".$self->classifier.") for ".$self->description);
-        return;
-    }
+    $self->status_message('Classifier params: '.$classifier_params);
 
-    my ($processed, $classified, $classification_error) = (qw/ 0 0 0 /);
+    my %metrics;
+    @metrics{qw/ attempted success error/} = (qw/ 0 0 0 /);
     for my $name ( @amplicon_set_names ) {
         my $amplicon_set = $self->amplicon_set_for_name($name);
         next if not $amplicon_set;
 
+        my $fasta_file = $amplicon_set->processed_fasta_file;
+        next if not -s $fasta_file;
+
         my $classification_file = $amplicon_set->classification_file;
         unlink $classification_file if -e $classification_file;
-        my $writer =  Genome::Utility::MetagenomicClassifier::SequenceClassification::Writer->create(
-            output => $classification_file,
-            format => 'hmp_fix_ranks',
-        );
-        unless ( $writer ) {
-            $self->error_message("Could not create classification writer for file ($classification_file) for writing.");
-            return; # bad
+
+        # FIXME use $classifier
+        my $cmd = "gmt metagenomic-classifier rdp --input-file $fasta_file --output-file $classification_file $classifier_params --metrics"; 
+        my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
+        if ( not $rv ) {
+            $self->error_message('Failed to execute classifier command');
+            return;
         }
 
-        while ( my $amplicon = $amplicon_set->next_amplicon ) {
-            my $seq = $amplicon->{seq}
-                or next;
-            $processed++;
-
-            # Try to classify 2X - per kathie 2009mar3
-            my $parsed_seq = $classifier->create_parsed_seq($seq);
-            my $classification = $classifier->classify_parsed_seq($parsed_seq);
-            unless ( $classification ) { # try again
-                $classification = $classifier->classify_parsed_seq($parsed_seq);
-                unless ( $classification ) { # go on
-                    $classification_error++;
-                    next;
-                }
-            }
-
-            $writer->write_one($classification);
-            $classified++;
+        # metrics
+        my $metrics_file = $classification_file.'.metrics';
+        my $metrics_fh = eval{ Genome::Sys->open_file_for_reading($metrics_file); };
+        if ( not $metrics_fh ) {
+            $self->error_message("Failed to open metrics file ($metrics_file): $@");
+            return;
+        }
+        while ( my $line = $metrics_fh->getline ) {
+            chomp $line;
+            my ($key, $val) = split('=', $line);
+            $metrics{$key} += $val;
         }
     }
 
-    $self->amplicons_processed($processed);
+    $self->amplicons_processed($metrics{total});
     $self->amplicons_processed_success( 
-        defined $attempted and $attempted > 0 ?  sprintf('%.2f', $processed / $attempted) : 0 
+        defined $attempted and $attempted > 0 ?  sprintf('%.2f', $metrics{total} / $attempted) : 0 
     );
-    $self->amplicons_classified($classified);
+    $self->amplicons_classified($metrics{success});
     $self->amplicons_classified_success( 
-        $processed > 0 ?  sprintf('%.2f', $classified / $processed) : 0
+        $metrics{total} > 0 ?  sprintf('%.2f', $metrics{success} / $metrics{total}) : 0
     );
-    $self->amplicons_classification_error($classification_error);
+    $self->amplicons_classification_error($metrics{error});
 
     $self->status_message('Processed:  '.$self->amplicons_processed);
     $self->status_message('Classified: '.$self->amplicons_classified);

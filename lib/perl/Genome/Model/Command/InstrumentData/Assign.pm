@@ -45,7 +45,7 @@ class Genome::Model::Command::InstrumentData::Assign {
         all_within_maximum_allowed_error => {
              is => 'Boolean',
              default => 0,
-             doc => 'Assign all available unassigned instrument data withing maximum allowed error (default = 3.0) as paired/forward/reverse data.',
+             doc => 'Assign all available unassigned instrument data within maximum allowed error (default = 3.0) as paired/forward/reverse data.',
         },
         maximum_allowed_error => {
             type => 'Float',
@@ -302,6 +302,9 @@ sub _assign_all_within_maximum_allowed_error {
         my $libname     = $instdata->library_name;
         my $reverr      = $instdata->filt_error_rate_avg; #this is intentionally not rev_filt_error_rate_avg
         my $fwderr      = $instdata->fwd_filt_error_rate_avg;
+        if($instdata->ignored() ) {
+            next;
+        }
         if(($reverr < $self->maximum_allowed_error) && (!$fwderr || ($fwderr < $self->maximum_allowed_error))) {
             push(@allin, $instdata_id);
         }
@@ -371,6 +374,10 @@ sub _assign_all_instrument_data {
     my %model_capture_targets = map { $_->value_id() => 1 } @inputs;
 
     ID: for my $id ( @unassigned_instrument_data ) {
+
+        if($id->ignored() ){
+            next ID;
+        }
 
         # Skip imported, w/ warning
         unless($self->include_imported){
