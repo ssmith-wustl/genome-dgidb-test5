@@ -1126,7 +1126,7 @@ sub duplicates {
     # duplicates would have the same subject, processing profile, and inputs
     # but we have to compare the values of the inputs not the inputs themselves
     my @duplicates;
-    my @other_models = $class->get(subject_id => $subject->id, processing_profile => $pp->id);
+    my @other_models = $class->get(subject_id => $subject->id, processing_profile_id => $pp->id);
     for my $other_model (@other_models) {
         my @other_inputs = $other_model->inputs;
         next if (@other_inputs != @inputs); # mainly to catch case where one has inputs but other does not
