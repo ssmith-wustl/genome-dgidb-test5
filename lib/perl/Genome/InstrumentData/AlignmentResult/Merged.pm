@@ -45,7 +45,7 @@ class Genome::InstrumentData::AlignmentResult::Merged {
         #Note: samtools_version is used in this module, so if it is removed from AlignmentResult will need to be explicitly added below
         (map
             {$_->property_name => { is => $_->data_type, doc => $_->doc, is_optional => $_->is_optional} }
-            Genome::InstrumentData::AlignmentResult->__meta__->properties(via => 'params')
+            Genome::InstrumentData::AlignmentResult->__meta__->_legacy_properties(via => 'params')
         ),
         merger_name => {
             is => 'Text',
@@ -260,7 +260,7 @@ sub collect_individual_alignments {
 
     my @instrument_data = $self->instrument_data();
     my %params;
-    for my $property (Genome::InstrumentData::AlignmentResult->__meta__->properties(via => 'params')) {
+    for my $property (Genome::InstrumentData::AlignmentResult->__meta__->_legacy_properties(via => 'params')) {
         my $property_name = $property->property_name;
         next if grep($_ eq $property_name, ('filter_name')); #these are handled below
         $params{$property_name} = $self->$property_name;

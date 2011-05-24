@@ -254,8 +254,8 @@ sub _get_direct_and_indirect_properties_for_object {
     my %direct_properties;
     my %indirect_properties;
 
+    my @properties = $class->__meta__->_legacy_properties;
     my @properties = $class->__meta__->properties;
-
     for my $property (@properties) {
         next if $property->is_calculated;
         next if $property->is_constant;
@@ -478,7 +478,7 @@ sub _create_populationgroup {
 
     # No attributes/indirect properties, etc to worry about here (except members, below)
     my %params;
-    for my $property ($new_object_class->__meta__->properties) {
+    for my $property ($new_object_class->__meta__->_legacy_properties) {
         my $property_name = $property->property_name;
         $params{$property_name} = $original_object->{$property_name} if defined $original_object->{$property_name};
     }
@@ -504,7 +504,7 @@ sub _create_library {
     my ($self, $original_object, $new_object_class) = @_;
 
     my %params;
-    for my $property ($new_object_class->__meta__->properties) {
+    for my $property ($new_object_class->__meta__->_legacy_properties) {
         my $property_name = $property->property_name;
         $params{$property_name} = $original_object->{$property_name} if defined $original_object->{$property_name};
     }
@@ -530,7 +530,7 @@ sub _create_taxon {
     my ($self, $original_object, $new_object_class) = @_;
 
     my %params;
-    for my $property ($new_object_class->__meta__->properties) {
+    for my $property ($new_object_class->__meta__->_legacy_properties) {
         my $property_name = $property->property_name;
         $params{$property_name} = $original_object->{$property_name} if defined $original_object->{$property_name};
     }

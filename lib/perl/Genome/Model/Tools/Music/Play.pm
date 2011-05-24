@@ -181,7 +181,7 @@ sub _create_command {
     my $command_meta = $command_module->__meta__;
 
     my %params;
-    for my $property ($command_meta->properties()) {
+    for my $property ($command_meta->_legacy_properties()) {
         next unless exists $property->{is_input} and $property->{is_input};
         my $property_name = $property->property_name;
         if($property_name eq 'output_file') {

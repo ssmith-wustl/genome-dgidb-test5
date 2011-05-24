@@ -48,7 +48,7 @@ class Genome::InstrumentData::AlignmentResult::Tophat {
     has_param => [
         (map
             {$_->property_name => { is => $_->data_type, doc => $_->doc, is_optional => $_->is_optional} }
-            Genome::InstrumentData::AlignmentResult->__meta__->properties(via => 'params')
+            Genome::InstrumentData::AlignmentResult->__meta__->_legacy_properties(via => 'params')
         ),
     ],
 

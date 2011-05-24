@@ -59,7 +59,7 @@ sub execute {
     TYPE: for my $type ($self->prediction_types) {
         $self->status_message("*** Working on $type ***");
         my $meta = $type->__meta__;
-        my @attributes = map { $_->property_name } $meta->properties;
+        my @attributes = map { $_->property_name } $meta->_legacy_properties;
         @attributes = grep { $_ ne 'directory' } @attributes;
 
         TEMP_DIR: for my $temp_dir (@{$self->temp_prediction_directories}) {

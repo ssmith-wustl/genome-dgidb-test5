@@ -72,6 +72,9 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
         _workflow_model => {
             doc => "This is the workflow model",
         },
+        _expected_output_directories => {
+            doc => "This is a hash (by variant type) of lists of all detector, filter, and combine operation output directories",
+        },
     ],
     has_param => [
         lsf_queue => {
@@ -553,6 +556,9 @@ sub create_combine_operation {
     $workflow_links->{$unique_combine_name."_output_directory"}->{right_operation} = $combine_operation;
     $workflow_links->{$unique_combine_name."_output_directory"}->{last_operation} = $unique_combine_name;
 
+    # Add this output directory to the list of expected directories so we can compile all LQ variants later
+    push @{$self->{_expected_output_directories}->{$variant_type}}, $combine_directory;
+
     my @new_input_connector_properties = ($unique_combine_name."_output_directory");
     my $input_connector = $workflow_model->get_input_connector;
     my $input_connector_properties = $input_connector->operation_type->output_properties;
@@ -657,6 +663,9 @@ sub add_detectors_and_filters {
                 $inputs_to_store->{$unique_detector_base_name."_output_directory"}->{right_operation} = $detector_operation;
                 $inputs_to_store->{$unique_detector_base_name."_output_directory"}->{last_operation} = $unique_detector_base_name;
 
+                # Add this output directory to the list of expected directories so we can compile all LQ variants later
+                push @{$self->{_expected_output_directories}->{$variant_type}}, $detector_output_directory;
+
                 # adding in links from input_connector to filters to the hash
                 my $previous_output_directory = $detector_output_directory;
                 for my $filter (@filters){
@@ -673,6 +682,9 @@ sub add_detectors_and_filters {
                     $inputs_to_store->{$unique_filter_name."_output_directory"}->{value} = $filter_output_directory;
                     $inputs_to_store->{$unique_filter_name."_output_directory"}->{right_property_name} = 'output_directory';
                     $inputs_to_store->{$unique_filter_name."_output_directory"}->{right_operation} = $filter->{operation};
+
+                    # Add this output directory to the list of expected directories so we can compile all LQ variants later
+                    push @{$self->{_expected_output_directories}->{$variant_type}}, $filter_output_directory;
 
                     $inputs_to_store->{$unique_detector_base_name."_output_directory"}->{last_operation} = $unique_filter_name;
                 }
@@ -875,14 +887,17 @@ sub _generate_standard_files {
     for my $variant_type (@{ $self->variant_types }) {
         my $strategy = $variant_type."_detection_strategy";
         if(defined( $self->$strategy)){
-            my $find_command = "find -L " . $self->output_directory . "/$variant_type -name $variant_type" . "s.lq.bed";
-            my @lq_files = `$find_command`;
-            chomp @lq_files;
+            my @lq_files;
+            my @output_directories = @{$self->{_expected_output_directories}->{$variant_type}};
 
-            # If we find no LQ files, just skip this variant type. No filters were run.
-            unless (@lq_files) {
-                next;
+            # For each output directory the workflow knows about, look to see if there is an lq file there (there will not be if it was a detector)
+            for my $output_directory (@output_directories) {
+                my $lq_file = $output_directory . "/$variant_type" . "s.lq.bed";
+                if (-e $lq_file) {
+                    push @lq_files, $lq_file;
+                }
             }
+
             # Sort the files so they will go into joinx in a predictable order to produce results that will not vary
             my @sorted_lq_files = sort(@lq_files);
 
