@@ -45,7 +45,7 @@ class Genome::Model::Command::InstrumentData::Assign {
         all_within_maximum_allowed_error => {
              is => 'Boolean',
              default => 0,
-             doc => 'Assign all available unassigned instrument data withing maximum allowed error (default = 3.0) as paired/forward/reverse data.',
+             doc => 'Assign all available unassigned instrument data within maximum allowed error (default = 3.0) as paired/forward/reverse data.',
         },
         maximum_allowed_error => {
             type => 'Float',
@@ -151,23 +151,6 @@ sub _assign_instrument_data {
             )
         );
         return 1;
-    }
-
-    # Non imported solexa needs to have the copy sequences file pse run ok
-    if ( $instrument_data->sequencing_platform eq 'solexa' and $instrument_data->class !~ /imported/i ) {
-        my $index_illumina = $instrument_data->index_illumina;
-        if ( not $index_illumina ) {
-            $self->error_message('No index illumina for solexa instrument data '.$instrument_data->id);
-            return;
-        }
-        my $copy_sequence_files_pse = $index_illumina->get_copy_sequence_files_pse;
-        unless (grep { $copy_sequence_files_pse->pse_status eq $_ } qw/ completed inprogress /) {
-            $self->warning_message(
-                'SKIPPING instrument data ('.join(' ', map { $instrument_data->$_ } (qw/ id sequencing_platform /)).') because '
-                .'it does not have a successfully confirmed copy sequence files pse. This means it is not ready or may be corrupted. It cannot be assigned individually.'
-            );
-            return 1; # OK, just skipping
-        }
     }
 
     my $add = $model->add_instrument_data(
@@ -302,6 +285,9 @@ sub _assign_all_within_maximum_allowed_error {
         my $libname     = $instdata->library_name;
         my $reverr      = $instdata->filt_error_rate_avg; #this is intentionally not rev_filt_error_rate_avg
         my $fwderr      = $instdata->fwd_filt_error_rate_avg;
+        if($instdata->ignored() ) {
+            next;
+        }
         if(($reverr < $self->maximum_allowed_error) && (!$fwderr || ($fwderr < $self->maximum_allowed_error))) {
             push(@allin, $instdata_id);
         }
@@ -371,6 +357,10 @@ sub _assign_all_instrument_data {
     my %model_capture_targets = map { $_->value_id() => 1 } @inputs;
 
     ID: for my $id ( @unassigned_instrument_data ) {
+
+        if($id->ignored() ){
+            next ID;
+        }
 
         # Skip imported, w/ warning
         unless($self->include_imported){

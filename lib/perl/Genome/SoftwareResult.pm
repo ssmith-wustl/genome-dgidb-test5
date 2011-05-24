@@ -462,7 +462,7 @@ sub _resolve_lock_name {
 sub metric_names {
     my $class = shift;
     my $meta = $class->__meta__;
-    my @properties = grep { $_->{is_metric} } $meta->properties();
+    my @properties = grep { $_->{is_metric} } $meta->_legacy_properties();
     my @names = map { $_->property_name } @properties;
     return @names;
 }

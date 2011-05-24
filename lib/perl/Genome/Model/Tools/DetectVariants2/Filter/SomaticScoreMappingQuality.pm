@@ -36,7 +36,7 @@ class Genome::Model::Tools::DetectVariants2::Filter::SomaticScoreMappingQuality{
             is_input => 1,
             doc => 'minimum average mapping quality threshold for high confidence call',
         },
-        min_somatic_quality => {
+        min_somatic_score => {
             type => 'String',
             default => '40',
             is_optional => 1,
@@ -105,7 +105,7 @@ sub _filter_variants {
     $temp_path =~ s/\:/\\\:/g;
 
     #read sniper and skip indels
-    my $somatic_threshold = $self->min_somatic_quality;
+    my $somatic_threshold = $self->min_somatic_score;
     my @sniper_lines;
     while(my $line = $fh->getline) {
         chomp $line;

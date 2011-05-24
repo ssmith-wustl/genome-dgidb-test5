@@ -486,7 +486,7 @@ sub _resolve_subject {
         return $subject if $subject; #sample_name is the favoured default.  If we get one, use it.
     }
     if ($try_all_types or $subject_type eq 'species_name') {
-        push @subjects, Genome::Taxon->get(species_name => $subject_name);
+        push @subjects, Genome::Taxon->get(name => $subject_name);
     }
     if ($try_all_types or $subject_type eq 'library_name') {
         push @subjects, Genome::Library->get(name => $subject_name);
@@ -559,8 +559,8 @@ sub get_all_possible_samples {
 
     my @samples;
     if ( $self->subject_class_name eq 'Genome::Taxon' ) {
-        my $taxon = Genome::Taxon->get(species_name => $self->subject_name);
-        @samples = $taxon->samples;
+        my $taxon = Genome::Taxon->get(name => $self->subject_name);
+        @samples = $taxon->samples();
 
         #data tracking is incomplete, so sometimes these need to be looked up via the sources
         my @sources = ($taxon->individuals, $taxon->population_groups);
@@ -1114,6 +1114,34 @@ sub _input_counts_are_ok {
     my $build_input_count = shift;
 
     return ($input_count == $build_input_count);
+}
+
+sub duplicates {
+    my $self    = shift || die;
+    my $pp      = $self->processing_profile || die;
+    my $class   = $self->class || die;
+    my $subject = $self->subject || die;
+    my @inputs  = $self->inputs;
+
+    # duplicates would have the same subject, processing profile, and inputs
+    # but we have to compare the values of the inputs not the inputs themselves
+    my @duplicates;
+    my @other_models = $class->get(subject_id => $subject->id, processing_profile_id => $pp->id);
+    for my $other_model (@other_models) {
+        my @other_inputs = $other_model->inputs;
+        next if (@other_inputs != @inputs); # mainly to catch case where one has inputs but other does not
+
+        my $matched_inputs = 0;
+        for my $input (@inputs) {
+            my @other_duplicate_inputs = $other_model->inputs(name => $input->name, value_id => $input->value_id, value_class_name => $input->value_class_name);
+            $matched_inputs++ if (@other_duplicate_inputs);
+        }
+        push @duplicates, $other_model if (@inputs == $matched_inputs);
+    }
+
+    @duplicates = grep { $_->id ne $self->id } @duplicates;
+
+    return @duplicates;
 }
 
 1;

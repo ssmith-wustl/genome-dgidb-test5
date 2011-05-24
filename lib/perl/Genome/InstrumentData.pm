@@ -38,6 +38,14 @@ class Genome::InstrumentData {
             is_mutable => 1,
             where => [ attribute_label => 'full_path' ],
         },
+        ignored => {
+            is => 'Number',
+            via => 'attributes',
+            to => 'attribute_value',
+            is_mutable => 1,
+            where => [attribute_label => 'ignored'],
+            default => '0',
+        },
         sample_source => { via => 'sample', is => 'Genome::Subject', to => 'source' },
         sample_source_id => { via => 'sample_source', to => 'id' },
         sample_source_name => { via => 'sample_source', to => 'name' },
@@ -175,10 +183,20 @@ sub dump_fastqs_from_bam {
 
 sub lane_qc_models {
     my $self = shift;
+
+    # Find the Lane QC models that use this instrument data
     my $instrument_data_id = $self->id;
     my @inputs = Genome::Model::Input->get(value_id => $instrument_data_id);
-    my @ref_align_models = grep { $_->class eq 'Genome::Model::ReferenceAlignment' } map { $_->model } @inputs;
-    return grep { $_->is_lane_qc } @ref_align_models;
+    my @lane_qc_models = grep { $_->is_lane_qc }
+                         grep { $_->class eq 'Genome::Model::ReferenceAlignment' }
+                         map  { $_->model } @inputs;
+
+    # Find the Lane QC models that used the default genotype_microarray input
+    my $sample = $self->sample;
+    my @gm_model_ids = map { $_->id } ($sample->default_genotype_models);
+    @lane_qc_models = grep { $_->inputs(name => 'genotype_microarray', value_id => \@gm_model_ids) } @lane_qc_models;
+
+    return @lane_qc_models;;
 }
 
 sub lane_qc_build {

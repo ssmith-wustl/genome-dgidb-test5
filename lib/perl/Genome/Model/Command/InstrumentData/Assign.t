@@ -95,6 +95,20 @@ ok($assign->execute, 'execute');
 @assigned_inst_data = $model->instrument_data;
 is_deeply(\@assigned_inst_data, \@sanger_id, 'confirmed assigned inst data');
 
+#Add an ignored InstrumentData, and make sure Assign --all doesn't grab it.
+Genome::InstrumentData::Sanger->create(id => '05.jan00.101amaa');
+
+$assign = Genome::Model::Command::InstrumentData::Assign->create(
+    model_id => $model->id,
+    all => 1,
+);
+ok($assign, 'create to assign all available instrument data');
+$assign->dump_status_messages(1);
+ok($assign->execute, 'execute');
+@assigned_inst_data = $model->instrument_data;
+is_deeply(\@assigned_inst_data, \@sanger_id, 'confirmed skip ignored  inst data');
+
+
 $assign = Genome::Model::Command::InstrumentData::Assign->create(
     model_id => $model->id,
     flow_cell_id => $solexa_id->flow_cell_id,
