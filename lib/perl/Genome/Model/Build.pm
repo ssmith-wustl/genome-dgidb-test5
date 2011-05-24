@@ -257,9 +257,8 @@ sub _copy_model_inputs {
 
             unless($input_build) {
                 $self->error_message('Failed to select a build to copy for input model ' . 
-                    $input->name . '=' . $input_model->__display_name__ . 
-                    '. Try specifying one.');
-                return;
+                    $input->name . '=' . $input_model->__display_name__ . '.');
+                next;
             }
 
             $params{value_class_name} = $input_build->class;
