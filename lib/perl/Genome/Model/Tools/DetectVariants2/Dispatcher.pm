@@ -898,9 +898,9 @@ sub _generate_standard_files {
                 }
             }
 
-            # If we have no lq files, just skip this step. This means we only ran detectors (no filtering, or intersecting) and thus have no LQ files to merge/sort.
+            # If we have no lq files, just skip this variant type. This means we only ran detectors (no filtering, or intersecting) and thus have no LQ files to merge/sort.
             unless (@lq_files) {
-                return 1;
+                next;
             }
 
             # Sort the files so they will go into joinx in a predictable order to produce results that will not vary
