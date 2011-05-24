@@ -197,6 +197,7 @@ sub files_ignored_by_diff {
         workflow\.xml$
         \.png$
         readcounts$
+        variants/sv/breakdancer
     );
 }
 
