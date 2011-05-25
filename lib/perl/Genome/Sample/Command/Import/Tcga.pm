@@ -82,6 +82,11 @@ sub _validate_name_and_set_individual_name_and_extraction_type {
         $self->error_message("Invalid TCGA name ($name). It must start with TCGA.");
         return;
     }
+
+    if ( my @invalid_tokens = grep { $_ !~ /^[\w\d]+$/ } @tokens ) {
+        $self->error_message("Found invalid characters in TCGA name. Only letters and numbers are allowed: @invalid_tokens");
+        return;
+    }
     my $individual_name = join('-', @tokens[0..2]);
     $self->status_message('Individual name: '.$individual_name);
     $self->_individual_name($individual_name);
