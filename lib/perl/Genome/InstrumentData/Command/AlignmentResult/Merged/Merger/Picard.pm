@@ -38,7 +38,7 @@ sub execute {
 
     my $merge_rv = $merge_cmd->execute();
 
-    if ($merge_rv != 1)  {
+    if ( not $merge_rv )  {
         $self->error_message("Error merging: ".join("\n", $self->input_bams));
         $self->error_message("Output target: " . $self->output_path);
         $self->error_message("Using software: picard");
