@@ -496,7 +496,6 @@ sub genotype_microarray_raw_file {
 sub genotype_microarray_file_for_subject_and_version {
     my ($self, $subject_name, $version) = @_;
 
-    $self->status_message('inside');
     Carp::confess('No reference name given to get genotype microarray file') if not $subject_name;
     Carp::confess('No version given to get genotype microarray file') if not defined $version;
 
@@ -523,8 +522,9 @@ sub genotype_microarray_file_for_subject_and_version {
         die $self->status_message;
     }
     elsif (@files == 0) {
-        $self->status_message("No matching genotype files.");
-        die $self->status_message;
+        # previous behavior was to return this path always but now we give preference to
+        # existing files
+        return "$absolute_path/$sample_name.$subject_name-$version.genotype";
     }
     else {
         return $files[0];
