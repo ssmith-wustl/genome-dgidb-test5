@@ -33,10 +33,10 @@ is($classification->{complemented}, 0, 'not complemented');
 
 # classify fails
 eval{ $classifier->classify(); };
-diag($@);
 like($@, qr(No sequence given to classify), 'fail to classify w/ undef sequence');
-ok(!$classifier->classify({ id => 'Short Seq', seq => 'A' }), 'fail to classify short sequence');
-ok(!$classifier->classify({ id => 'Seq w/o 42 n free words', seq => 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAANAAAAAAAAAAAAAAAAA' }), 'fail to classify sequence w/o 42 n free words');
+eval{ $classifier->classify({seq => 'A'}); };
+like($@, qr(Seq does not have an id:), 'fail to classify w/o sequence id');
+ok(!$classifier->classify({ id => 'Seq w/o 49 n free words', seq => 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAANAAAAAAAAAAAAAAAAA' }), 'fail to classify sequence w/o 49 n free words');
 
 done_testing();
 exit;

@@ -38,8 +38,10 @@ is($classification->{complemented}, 1, 'complemented');
 
 # classify fails
 eval{ $classifier->classify(); };
-diag($@);
 like($@, qr(No sequence given to classify), 'fail to classify w/ undef sequence');
+diag($@);
+eval{ $classifier->classify({seq => 'A'}); };
+like($@, qr(Seq does not have an id:), 'fail to classify w/o sequence id');
 ok(!$classifier->classify({ id => 'Short Seq', -seq => 'A' }), 'fail to classify short sequence');
 
 done_testing();
