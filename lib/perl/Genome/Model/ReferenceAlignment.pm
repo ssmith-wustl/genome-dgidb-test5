@@ -277,6 +277,24 @@ sub __errors__ {
         }
     }
 
+    my $genotype = $self->genotype_microarray_model;
+    if ($genotype) {
+        if (not defined $genotype->reference_sequence_build) {
+            push @tags, UR::Object::Tag->create(
+                type => 'invalid',
+                properties => 'genotype_microarray_model',
+                desc => "Supplied genotype microarray model " . $genotype->__display_name__ . " does not specify a reference sequence");
+        }
+
+        if (not $rsb->is_compatible_with($genotype->reference_sequence_build)) {
+            push @tags, UR::Object::Tag->create(
+                type => 'invalid',
+                properties => 'genotype_microarray_model',
+                desc => "Supplied genotype microarray model " . $genotype->__display_name__ . " specifies incompatible reference sequence " .
+                    $genotype->reference_sequence_build->__display_name__);
+        }
+    }
+
     return @tags;
 }
 
