@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 #Compare the first file with the rest of the files in terms of overlap in coordinates
 use strict;
 use warnings;

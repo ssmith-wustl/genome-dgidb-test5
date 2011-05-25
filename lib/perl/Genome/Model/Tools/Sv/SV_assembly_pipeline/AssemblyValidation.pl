@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 #extract reads from a set of bams in breakdancer predicted regions
 
 use strict;

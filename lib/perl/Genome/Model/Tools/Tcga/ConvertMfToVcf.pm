@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 #convert from annot file format to VCF format
 package Genome::Model::Tools::Tcga::ConvertMfToVcf;
 

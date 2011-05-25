@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 package Genome::InstrumentData::Command::MoveAlignmentDirectory;
 use warnings;

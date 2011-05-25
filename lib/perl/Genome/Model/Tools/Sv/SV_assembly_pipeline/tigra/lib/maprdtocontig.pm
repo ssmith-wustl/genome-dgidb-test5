@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 #*****************************************************************************/
 # This software is part of a beta-test version of the TIGRA package,
 # a local de novo assembler that constructs all the alleles in the input reads
