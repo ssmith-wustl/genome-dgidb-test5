@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 # Currently, this tests G::M::T::A::TranscriptVariantsParallel.pm by comparing its output with 
 # G::M::T::A::TranscriptVariants, failing if there are any differences

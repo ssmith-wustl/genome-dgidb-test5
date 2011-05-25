@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -29,7 +29,7 @@ SKIP: {
     ok($test_subcmd = File::Temp->new(SUFFIX => ".pl"), 'opening temp pl');
     $test_subcmd->autoflush(1);
     ok($test_subcmd->print(q|
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;

@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 BEGIN {
     $ENV{UR_DBI_NO_COMMIT} = 1;

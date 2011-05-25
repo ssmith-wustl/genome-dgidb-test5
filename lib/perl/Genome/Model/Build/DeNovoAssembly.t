@@ -1,4 +1,4 @@
-#! /gsc/bin/perl
+#!/usr/bin/env perl
 #
 #
 # Tests base Genome::Model::Build::DeNovoAssembly w/ velvet solexa model

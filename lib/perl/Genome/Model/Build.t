@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 # FIXME Tests to cover:
 # Allocation - all allocation in builds are not tested

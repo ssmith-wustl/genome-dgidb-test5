@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 # Plot breakdancer SVs using pairoscope and Xian's copy number graph tool
 use strict;
 use warnings;
