@@ -13,13 +13,13 @@ class Genome::Gene {
         gene_id => { 
             is => 'Text' 
         },
-        species => { is => 'varchar',
+        species => { is => 'Text',
             is_optional => 1,
         },
-        source => { is => 'VARCHAR',
+        source => { is => 'Text',
             is_optional => 1,
         },
-        version => { is => 'VARCHAR',
+        version => { is => 'Text',
             is_optional => 1,
         },
     ],
