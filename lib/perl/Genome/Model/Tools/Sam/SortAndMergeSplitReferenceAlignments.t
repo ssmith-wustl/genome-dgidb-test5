@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use above "Genome";
 use Test::More skip_all => 'needs to have more reasonably sized test data before this runs in the suite, yell at adukes if you see this message a lot';
