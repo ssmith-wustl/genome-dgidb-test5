@@ -19,7 +19,6 @@ class Genome::Model::Tools::MetagenomicClassifier::Rdp {
         training_set => {
             type => 'String',
             valid_values => [qw/ 4 6 broad /],
-            is_optional => 1,
             doc => 'Name of training set.',
         },
         version => {
