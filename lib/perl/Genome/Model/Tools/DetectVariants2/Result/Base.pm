@@ -94,23 +94,22 @@ sub create {
 
         # if it's not a symlink then it was created before these became software results
         # so we should archive the directory and generate software result/symlink
-        if (-e $instance_output and not -l $instance_output and -d $instance_output) {
-            my ($parent_dir, $sub_dir) = $instance_output =~ /(.*)\/(.*)/;
-            die $self->error_message("Unable to determine parent directory from $instance_output.") unless $parent_dir;
-            die $self->error_message("Unable to determine sub-directory from $instance_output.") unless $sub_dir;
-            die $self->error_message("Parse error when determining parent directory and sub-directory from $instance_output.") unless ($instance_output eq "$parent_dir/$sub_dir");
+        if (-e $instance_output) {
+            if (not -l $instance_output and -d $instance_output) {
+                my ($parent_dir, $sub_dir) = $instance_output =~ /(.*)\/(.*)/;
+                die $self->error_message("Unable to determine parent directory from $instance_output.") unless $parent_dir;
+                die $self->error_message("Unable to determine sub-directory from $instance_output.") unless $sub_dir;
+                die $self->error_message("Parse error when determining parent directory and sub-directory from $instance_output.") unless ($instance_output eq "$parent_dir/$sub_dir");
 
-            my $archive_name = "old_$sub_dir.tar.gz";
-            die $self->error_message("Archive already exists, $parent_dir/$archive_name.") if (-e "$parent_dir/$archive_name");
+                my $archive_name = "old_$sub_dir.tar.gz";
+                die $self->error_message("Archive already exists, $parent_dir/$archive_name.") if (-e "$parent_dir/$archive_name");
 
-            $self->status_message('Archiving old non-software-result ' . $instance_output . " to $archive_name.");
-            system("cd $parent_dir && tar -zcvf $archive_name $sub_dir && rm -rf $sub_dir");
-        }
-        elsif (-e $instance_output) {
-            die $self->error_message('Instance output directory (' . $instance_output . ') already exists!');
-        }
-        else {
-            die $self->error_message("Unexpected condition reached when checking instance output_directory.");
+                $self->status_message('Archiving old non-software-result ' . $instance_output . " to $archive_name.");
+                system("cd $parent_dir && tar -zcvf $archive_name $sub_dir && rm -rf $sub_dir");
+            }
+            else {
+                die $self->error_message('Instance output directory (' . $instance_output . ') already exists!');
+            }
         }
 
         Genome::Sys->create_symlink($self->output_dir, $instance_output);
