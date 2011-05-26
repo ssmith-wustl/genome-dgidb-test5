@@ -355,9 +355,6 @@ sub primary_consensus_path {
 
     $format ||= 'bfa';
     my $file = $self->data_directory . '/appended_sequences.'. $format;
-    # check local cache for file
-    my $localfile = "/opt/fscache$file";
-    return $localfile if ($allow_cached and -e $localfile);
     return $file;
 }
 
@@ -377,9 +374,6 @@ sub full_consensus_path {
             return;
         }
     }
-    # check local cache for file
-    my $localfile = "/opt/fscache$file";
-    return $localfile if (-e $localfile and $allow_cached);
     return $file;
 }
 
@@ -454,9 +448,7 @@ sub get_sequence_dictionary {
 
     my $seqdict_dir_path = $self->data_directory.'/seqdict';
     my $path = "$seqdict_dir_path/seqdict.$file_type";
-    if (-s "/opt/fscache/" . $path) {
-       return "/opt/fscache/" . $path; 
-    } elsif (-s $path) {
+    if (-s $path) {
         return $path;
     } else {
 
