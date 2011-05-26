@@ -12,32 +12,6 @@ class Genome::Model::Build::MetagenomicComposition16s::454 {
     is => 'Genome::Model::Build::MetagenomicComposition16s',
 };
 
-#< Amplicons >#
-sub amplicon_set_names_and_primers {
-    return (
-        V1_V3 => [qw/
-            ATTACCGCGGCTGCTGG 
-        /],
-        V3_V5 => [qw/ 
-            CCGTCAATTCATTTAAGT
-            CCGTCAATTCATTTGAGT
-            CCGTCAATTCCTTTAAGT
-            CCGTCAATTCCTTTGAGT
-        /],
-        V6_V9 => [qw/
-            TACGGCTACCTTGTTACGACTT
-            TACGGCTACCTTGTTATGACTT
-            TACGGTTACCTTGTTACGACTT
-            TACGGTTACCTTGTTATGACTT
-        /],
-    );
-}
-
-sub amplicon_set_names {
-    my %set_names_and_primers = $_[0]->amplicon_set_names_and_primers;
-    return sort keys %set_names_and_primers;
-}
-
 #< prepare instrument data >#
 sub prepare_instrument_data {
     my $self = shift;

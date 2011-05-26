@@ -164,7 +164,44 @@ sub description {
 
 #< Amplicons >#
 sub amplicon_set_names {
-    return ( '' ) 
+    my $self = shift;
+    my $method = 'amplicon_set_names_and_primers_'.$self->processing_profile->sequencing_platform;
+    if ( $self->can( $method ) ) {
+        my %set_names_and_primers = $self->$method;
+        return sort keys %set_names_and_primers;
+    }
+    $self->warning_message( "No amplicon set primers for sequencing platform: ".$self->processing_profile->sequencing_platform );
+    return ( '' );
+}
+
+sub amplicon_set_names_and_primers {
+    my $self = shift;
+    my $method = 'amplicon_set_names_and_primers_'.$self->processing_profile->sequencing_platform;
+    if ( $self->can( $method ) ) {
+        return $self->$method;
+    }
+    $self->warning_message( "No amplicon set primers for sequencing platform: ".$self->processing_profile->sequencing_platform );
+    return ( '' ); 
+}
+
+sub amplicon_set_names_and_primers_454 {
+    return (
+        V1_V3 => [qw/
+            ATTACCGCGGCTGCTGG 
+        /],
+        V3_V5 => [qw/ 
+            CCGTCAATTCATTTAAGT
+            CCGTCAATTCATTTGAGT
+            CCGTCAATTCCTTTAAGT
+            CCGTCAATTCCTTTGAGT
+        /],
+        V6_V9 => [qw/
+            TACGGCTACCTTGTTACGACTT
+            TACGGCTACCTTGTTATGACTT
+            TACGGTTACCTTGTTACGACTT
+            TACGGTTACCTTGTTATGACTT
+        /],
+    );
 }
 
 sub amplicon_sets {
