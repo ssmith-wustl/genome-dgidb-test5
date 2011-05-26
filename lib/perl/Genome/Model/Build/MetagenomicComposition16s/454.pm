@@ -12,26 +12,6 @@ class Genome::Model::Build::MetagenomicComposition16s::454 {
     is => 'Genome::Model::Build::MetagenomicComposition16s',
 };
 
-sub calculate_estimated_kb_usage {
-    # Based on the total reads in the instrument data. The build needs about 3 kb (use 3.5) per read.
-    #  So request 5 per read or at least a MiB
-    #  If we don't keep the classifications around, then we will have to lower this number.
-    my $self = shift;
-
-    my @instrument_data = $self->instrument_data;
-    unless ( @instrument_data ) { # very bad; should be checked when the build is create
-        Carp::confess("No instrument data found for ".$self->description);
-    }
-
-    my $total_reads = 0;
-    for my $instrument_data ( @instrument_data ) {
-        $total_reads += $instrument_data->total_reads;
-    }
-
-    my $kb = $total_reads * 5;
-    return ( $kb >= 1024 ? $kb : 1024 );
-}
-
 #< Amplicons >#
 sub amplicon_set_names_and_primers {
     return (
