@@ -281,7 +281,7 @@ sub reports_dir {
 
 #< Files >#
 sub file_base_name {
-    return $_[0]->subject_name;
+    return Genome::Utility::Text::sanitize_string_for_filesystem( $_[0]->subject_name );
 }
 
 sub _files_for_amplicon_sets {
@@ -508,7 +508,7 @@ sub classification_file_for_set_name {
     return sprintf(
         '%s/%s%s.%s',
         $self->classification_dir,
-        $self->subject_name,
+        $self->file_base_name,
         ( $set_name eq '' ? '' : ".$set_name" ),
         lc($classifier),
     );

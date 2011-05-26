@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 #$ENV{UR_DBI_MONITOR_SQL}=1;
 

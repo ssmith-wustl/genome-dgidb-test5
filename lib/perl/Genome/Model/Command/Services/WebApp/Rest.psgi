@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use Web::Simple 'Genome::Model::Command::Services::WebApp::Rest';
 

@@ -76,6 +76,24 @@ is($import->_library->name, $name2.'-extlibs', 'library name');
 is_deeply($import->_library->sample, $import->_sample, 'library sample');
 is(@{$import->_created_objects}, 2, 'created 3 objects');
 
+# fail
+$import = Genome::Sample::Command::Import::Tcga->create(name => 'AGCT-00-0000-000-00R-0000-00');
+ok($import, 'create');
+$import->dump_status_messages(1);
+ok(!$import->execute, 'execute failed for name that does not start w/ TCGA');
+$import = Genome::Sample::Command::Import::Tcga->create(name => 'TCGA-00-0000-000-00R-0000');
+ok($import, 'create');
+$import->dump_status_messages(1);
+ok(!$import->execute, 'execute failed for name w/o 7 parts');
+$import = Genome::Sample::Command::Import::Tcga->create(name => 'TCGA-00-0000-000-00R-0000-00.5');
+ok($import, 'create');
+$import->dump_status_messages(1);
+ok(!$import->execute, 'execute failed for name w/ a decimal');
+$import = Genome::Sample::Command::Import::Tcga->create(name => 'TCGA-00-0000-000-00Z-0000-00');
+ok($import, 'create');
+$import->dump_status_messages(1);
+ok(!$import->execute, 'execute failed for name w/ invalid extrraction type');
+
 done_testing();
 exit();
 

@@ -1,7 +1,7 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 # TODO: May need to switch if we introduce a dependency on Bio::DB::Sam
-#/gsc/bin/perl5.12.1
+#/usr/bin/env perl5.12.1
 
 use strict;
 use warnings;
