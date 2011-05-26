@@ -260,6 +260,21 @@ sub _amplicon_iterator_for_name { # 454 and solexa for now
     return $amplicon_iterator;
 }
 
+sub get_writer_for_set_name {
+    my ($self, $set_name) = @_;
+
+    unless ( $self->{$set_name} ) {
+        my $fasta_file = $self->processed_fasta_file_for_set_name($set_name);
+        unlink $fasta_file if -e $fasta_file;
+        my $writer = Genome::Model::Tools::FastQual::PhredWriter->create(files => [ $fasta_file ]);
+        Carp::confess("Failed to create phred reader for amplicon set ($set_name)") if not $writer;
+        $self->{$set_name} = $writer;
+    }
+
+    return $self->{$set_name};
+}
+
+
 #< Dirs >#
 sub sub_dirs {
     return (qw| classification fasta reports |), $_[0]->_sub_dirs;

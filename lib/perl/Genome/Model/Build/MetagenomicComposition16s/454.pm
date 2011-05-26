@@ -85,7 +85,7 @@ sub prepare_instrument_data {
             }
             next unless length $fasta->{seq} >= $min_length;
             $fasta->{desc} = undef; # clear description
-            my $writer = $self->_get_writer_for_set_name($set_name);
+            my $writer = $self->get_writer_for_set_name($set_name);
             $writer->write([$fasta]);
             $processed++;
             $reads_processed++;
@@ -101,21 +101,6 @@ sub prepare_instrument_data {
     $self->reads_processed_success( $reads_attempted > 0 ?  sprintf('%.2f', $reads_processed / $reads_attempted) : 0 );
 
     return 1;
-}
-
-
-sub _get_writer_for_set_name {
-    my ($self, $set_name) = @_;
-
-    unless ( $self->{$set_name} ) {
-        my $fasta_file = $self->processed_fasta_file_for_set_name($set_name);
-        unlink $fasta_file if -e $fasta_file;
-        my $writer = Genome::Model::Tools::FastQual::PhredWriter->create(files => [ $fasta_file ]);
-        Carp::confess("Failed to create phred reader for amplicon set ($set_name)") if not $writer;
-        $self->{$set_name} = $writer;
-    }
-
-    return $self->{$set_name};
 }
 
 1;
