@@ -37,6 +37,7 @@ sub summary_headers {
     return qw/
         instrument_data_id
         flow_cell
+        qc_build
         lane
         snps_called 
         with_genotype
@@ -71,7 +72,13 @@ sub execute {
         $report_info{$instrument_data->id}{'lane'} = $self->get_lane_for_instrument_data($instrument_data);
 
         my $qc_build = $instrument_data->lane_qc_build;
-        next unless $qc_build;
+        if ($qc_build) {
+            $report_info{$instrument_data->id}{'qc_build'} = $qc_build->id;
+        }
+        else {
+            $report_info{$instrument_data->id}{'qc_build'} = 'not_found';
+            next;
+        }
 
         my @metrics = $self->get_compare_snps_metrics($qc_build);
         next unless @metrics;
