@@ -56,19 +56,5 @@ sub prepare_instrument_data {
     return 1;
 }
 
-sub _get_writer_for_set_name {
-    my ($self, $set_name) = @_;
-
-    unless ( $self->{$set_name} ) {
-        my $fasta_file = $self->processed_fasta_file_for_set_name($set_name);
-        unlink $fasta_file if -e $fasta_file;
-        my $writer = Genome::Model::Tools::FastQual::PhredWriter->create(files => [ $fasta_file ]);
-        Carp::confess("Failed to create phred reader for amplicon set ($set_name)") if not $writer;
-        $self->{$set_name} = $writer;
-    }
-
-    return $self->{$set_name};
-}
-
 1;
 
