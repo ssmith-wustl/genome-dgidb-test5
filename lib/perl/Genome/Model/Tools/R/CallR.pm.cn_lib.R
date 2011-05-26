@@ -86,8 +86,8 @@ for (fi in fs)
     {
     read.table(fi,header=F)->cn;
     colnames(cn) = c("CHR","POS","cn");
-    rFile=paste(OUTdir,fi,".swt",sep="");
-    cn.swt(x=cn,out.rdata=rFile,wsize=30,wby=10);
+    output_file=paste(OUTdir,fi,".swt",sep="");
+    cn.swt(x=cn,out.file=output_file,wsize=30,wby=10);
     }
 }
 ##################################################################
