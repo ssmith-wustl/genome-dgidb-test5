@@ -14,18 +14,6 @@ class Genome::Model::Build::MetagenomicComposition16s::Sanger {
     is => 'Genome::Model::Build::MetagenomicComposition16s',
 };
 
-sub calculate_estimated_kb_usage {
-    # Each piece of instrument data uses about 30Mb of space. Adjust if more files are removed
-    my $self = shift;
-
-    my $instrument_data_count = $self->instrument_data_count;
-    unless ( $instrument_data_count ) { # very bad; should be checked when the build is created
-        confess("No instrument data found for build ".$self->description);
-    }
-
-    return $instrument_data_count * 30000;
-}
-
 #< Prepare Inst Data >#
 sub prepare_instrument_data {
     my $self = shift;
