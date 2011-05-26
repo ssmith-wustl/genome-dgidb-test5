@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 package Genome::Model::Tools::Maq::RemovePcrArtifacts::Test;
 

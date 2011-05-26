@@ -12,26 +12,6 @@ class Genome::Model::Build::MetagenomicComposition16s::454 {
     is => 'Genome::Model::Build::MetagenomicComposition16s',
 };
 
-sub calculate_estimated_kb_usage {
-    # Based on the total reads in the instrument data. The build needs about 3 kb (use 3.5) per read.
-    #  So request 5 per read or at least a MiB
-    #  If we don't keep the classifications around, then we will have to lower this number.
-    my $self = shift;
-
-    my @instrument_data = $self->instrument_data;
-    unless ( @instrument_data ) { # very bad; should be checked when the build is create
-        Carp::confess("No instrument data found for ".$self->description);
-    }
-
-    my $total_reads = 0;
-    for my $instrument_data ( @instrument_data ) {
-        $total_reads += $instrument_data->total_reads;
-    }
-
-    my $kb = $total_reads * 5;
-    return ( $kb >= 1024 ? $kb : 1024 );
-}
-
 #< Amplicons >#
 sub amplicon_set_names_and_primers {
     return (
@@ -105,7 +85,7 @@ sub prepare_instrument_data {
             }
             next unless length $fasta->{seq} >= $min_length;
             $fasta->{desc} = undef; # clear description
-            my $writer = $self->_get_writer_for_set_name($set_name);
+            my $writer = $self->get_writer_for_set_name($set_name);
             $writer->write([$fasta]);
             $processed++;
             $reads_processed++;
@@ -121,21 +101,6 @@ sub prepare_instrument_data {
     $self->reads_processed_success( $reads_attempted > 0 ?  sprintf('%.2f', $reads_processed / $reads_attempted) : 0 );
 
     return 1;
-}
-
-
-sub _get_writer_for_set_name {
-    my ($self, $set_name) = @_;
-
-    unless ( $self->{$set_name} ) {
-        my $fasta_file = $self->processed_fasta_file_for_set_name($set_name);
-        unlink $fasta_file if -e $fasta_file;
-        my $writer = Genome::Model::Tools::FastQual::PhredWriter->create(files => [ $fasta_file ]);
-        Carp::confess("Failed to create phred reader for amplicon set ($set_name)") if not $writer;
-        $self->{$set_name} = $writer;
-    }
-
-    return $self->{$set_name};
 }
 
 1;

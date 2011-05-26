@@ -1,4 +1,4 @@
-#! /gsc/bin/perl
+#!/usr/bin/env perl
 
 # THIS TESTS Genome::Model::Test and MODEL MOCKING
 
