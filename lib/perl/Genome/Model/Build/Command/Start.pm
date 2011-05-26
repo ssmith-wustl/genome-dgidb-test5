@@ -94,8 +94,8 @@ sub execute {
         $self->status_message("Trying to start " . $model->__display_name__ . "...");
         my $transaction = UR::Context::Transaction->begin();
         my $build = eval {
-            if (!$self->force && $model->running_builds) {
-                die $self->error_message("Model (".$model->name.", ID: ".$model->id.") already has running builds. Use the '--force' param to override this and start a new build.");
+            if (!$self->force && ($model->running_builds or $model->scheduled_builds)) {
+                die $self->error_message("Model (".$model->name.", ID: ".$model->id.") already has running or scheduled builds. Use the '--force' param to override this and start a new build.");
             }
 
             my $build = $model->create_build(model_id => $model->id, %create_params);
