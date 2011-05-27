@@ -734,7 +734,6 @@ sub execute {
 	    print R_COMMANDS ", showNorm=TRUE";
 	}
 
-        print STDERR "$loss_threshold -- $gain_threshold\n";
 	print R_COMMANDS ", gainThresh=" . $gain_threshold;
 	print R_COMMANDS ", lossThresh=" . $loss_threshold;
 
