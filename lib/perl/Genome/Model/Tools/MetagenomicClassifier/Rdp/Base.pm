@@ -101,6 +101,7 @@ sub classify {
         # Methods are: getConfidence, getTaxid, getName, getRank	
         my $id = $assignment->getName;
         $id =~ s/\s+/_/g;
+        $id =~ s/['"]//g;
         $taxa{ $assignment->getRank || 'root' } = {
             id => $id,
             confidence => $assignment->getConfidence,
