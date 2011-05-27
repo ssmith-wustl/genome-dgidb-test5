@@ -37,7 +37,6 @@ sub execute{
         $self->error_message("snv-file and/or indel-file must be defined") and die; 
     }
 
-
     my ($snv_file, $indel_file);
     $snv_file   = $self->_convert_input_file($self->snv_file) if defined $self->snv_file;
     $indel_file = $self->_convert_input_file($self->indel_file) if defined $self->indel_file;

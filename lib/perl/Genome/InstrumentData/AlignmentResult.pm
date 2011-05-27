@@ -1131,10 +1131,6 @@ sub _process_sam_files {
         return;
     }
 
-    if (-e "/opt/fscache/" . $ref_list) {
-        $ref_list = "/opt/fscache/" . $ref_list;
-    }
-
     my $per_lane_bam_file = $self->temp_staging_directory . "/all_sequences.bam";
 
     my $to_bam = Genome::Model::Tools::Sam::SamToBam->create(

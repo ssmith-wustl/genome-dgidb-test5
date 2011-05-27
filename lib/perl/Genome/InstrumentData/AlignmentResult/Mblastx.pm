@@ -85,11 +85,6 @@ sub _run_aligner {
     my $reference_name = $reference_build->prefix;
     my $reference_mblastx_path = $reference_build->data_directory . '/mblastx';
 
-    # Check the local cache on the blade for the fasta if it exists.
-    if ( -e "/opt/fscache/" . $reference_mblastx_path ) {
-            $reference_mblastx_path = "/opt/fscache/" . $reference_mblastx_path;
-    }
-
     my $scratch_directory = $self->temp_scratch_directory;
     my $staging_directory = $self->temp_staging_directory;
 

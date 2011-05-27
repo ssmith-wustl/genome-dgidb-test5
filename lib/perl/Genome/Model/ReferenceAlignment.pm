@@ -518,7 +518,13 @@ sub get_or_create_lane_qc_models {
 
         my $existing_model = Genome::Model->get(name => $lane_qc_model_name);
         if ($existing_model) {
-            $self->status_message("Default lane QC model " . $existing_model->__display_name__ . " already exists.");
+            if ($existing_model->genotype_microarray_model_id) {
+                $self->status_message("Default lane QC model " . $existing_model->__display_name__ . " already exists.");
+            }
+            else {
+                $self->status_message("New build requested for lane QC model " . $existing_model->__display_name__ . " because it is missing the genotype_microarray input.");
+                $existing_model->build_requested(1);
+            }
             push @lane_qc_models, $existing_model;
             next;
         }
