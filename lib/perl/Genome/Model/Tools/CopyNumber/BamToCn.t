@@ -18,7 +18,7 @@ my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
 } else {
-    plan tests => 4;
+    plan skip_all => "This is still under construction"; #tests => 4;
 }
 
 use_ok('Genome::Model::Tools::CopyNumber::BamToCn');
