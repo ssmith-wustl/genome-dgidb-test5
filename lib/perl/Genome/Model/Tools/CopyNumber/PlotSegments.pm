@@ -543,7 +543,6 @@ sub getEntrypointsFile{
 
 sub execute {
     my $self = shift;
-    $DB::single =1 ;
     my $chr = $self->chr;
     my $segment_files = $self->segment_files;
     my $gain_threshold = $self->gain_threshold;
