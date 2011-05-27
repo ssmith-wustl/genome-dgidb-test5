@@ -13,7 +13,6 @@ class Genome::Command {
 };
          
 my @SUB_COMMANDS = qw/
-    completion
     disk
     feature-list
     individual

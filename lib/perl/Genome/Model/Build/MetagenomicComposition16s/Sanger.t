@@ -1,4 +1,4 @@
-#! /gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -163,7 +163,6 @@ is(
 );
 my @amplicon_names;
 while ( my $amplicon = $amplicon_set->next_amplicon ) {
-    ok(-s $build->scfs_file_for_amplicon($amplicon), 'scfs file');
     ok(-s $build->reads_fasta_file_for_amplicon($amplicon), 'fasta file');
     ok(-s $build->reads_qual_file_for_amplicon($amplicon), 'qual file');
     ok(-s $build->ace_file_for_amplicon($amplicon), 'ace file');

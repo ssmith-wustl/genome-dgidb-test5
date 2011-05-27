@@ -32,7 +32,7 @@ sub execute {
 
     my $alpha = Benchmark->new();
     my $user = $self->user;
-    $user ||= $ENV{USER};
+    $user ||= Genome::Sys->username;
     confess "Could not get user name from environment" unless defined $user;
 
     my @builds = map {$_->build} Genome::Model::Event->get(

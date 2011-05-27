@@ -1,4 +1,4 @@
-#!/gsc/bin/perl5.12.1
+#!/usr/bin/env perl5.12.1
 
 use strict;
 use warnings;
@@ -15,7 +15,7 @@ plan tests => 10;
 
 use_ok('Genome::Model::Tools::RefCov::Standard');
 
-my $tmp_dir = File::Temp::tempdir('BioSamtools-RefCov-'.$ENV{USER}.'-XXXX',DIR => '/gsc/var/cache/testsuite/running_testsuites',CLEANUP => 1);
+my $tmp_dir = File::Temp::tempdir('BioSamtools-RefCov-'.Genome::Sys->username.'-XXXX',DIR => '/gsc/var/cache/testsuite/running_testsuites',CLEANUP => 1);
 
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-RefCov-Standard';
 my $expected_data_dir = $data_dir;

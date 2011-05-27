@@ -58,21 +58,18 @@ sub sync_order {
         Genome::Site::WUGC::Sample
         Genome::Site::WUGC::Library
         Genome::Site::WUGC::InstrumentData::Solexa
-        Genome::Site::WUGC::InstrumentData::Sanger
-        Genome::Site::WUGC::InstrumentData::454
         Genome::Site::WUGC::InstrumentData::Imported
+        Genome::Site::WUGC::InstrumentData::454
     /;
+
+    # FIXME Currently not syncing sanger data due to a bug, needs to be fixed
+    #Genome::Site::WUGC::InstrumentData::Sanger
 }
 
 # For each pair of classes above, determine which objects exist in both the old and new schemas and
 # copy the old objects into the new schema and report the new objects that don't exist in the old schema
 sub execute {
     my $self = shift;
-
-    my $low = 20_000;
-    my $high = 200_000;
-    UR::Context->object_cache_size_highwater($high);
-    UR::Context->object_cache_size_lowwater($low);
 
     # Stores copied and missing IDs for each type
     my %report;
@@ -148,10 +145,11 @@ sub execute {
                 }
             }
 
+            print STDERR "\n" and $self->print_object_cache_summary if $self->show_object_cache_summary and $seen_objects % 1000 == 0;
+
             # Periodic commits to prevent lost progress in case of failure
             if ($created_objects != 0 and $created_objects % 1000 == 0 and $object_created) {
                 confess 'Could not commit!' unless UR::Context->commit;
-                print STDERR "\n" and $self->print_object_cache_summary if $self->show_object_cache_summary;
             }
 
             print STDERR "Looked at $seen_objects objects, created $created_objects\r";
@@ -256,15 +254,22 @@ sub _get_direct_and_indirect_properties_for_object {
     my %direct_properties;
     my %indirect_properties;
 
+    my @properties = $class->__meta__->_legacy_properties;
     my @properties = $class->__meta__->properties;
     for my $property (@properties) {
+        next if $property->is_calculated;
+        next if $property->is_constant;
+        next if $property->is_many;
+        next if $property->via and $property->via ne 'attributes';
+    
         my $property_name = $property->property_name;
-        my $value = $original_object->$property_name;
+        next unless $original_object->can($property_name);
         next if @ignore and grep { $property_name eq $_ } @ignore;
+
+        my $value = $original_object->$property_name;
         next unless defined $value;
 
-        my $via = $property->via;
-        if (defined $via and $via eq 'attributes') {
+        if ($property->via) {
             $indirect_properties{$property_name} = $value;
         }
         else {
@@ -473,7 +478,7 @@ sub _create_populationgroup {
 
     # No attributes/indirect properties, etc to worry about here (except members, below)
     my %params;
-    for my $property ($new_object_class->__meta__->properties) {
+    for my $property ($new_object_class->__meta__->_legacy_properties) {
         my $property_name = $property->property_name;
         $params{$property_name} = $original_object->{$property_name} if defined $original_object->{$property_name};
     }
@@ -499,7 +504,7 @@ sub _create_library {
     my ($self, $original_object, $new_object_class) = @_;
 
     my %params;
-    for my $property ($new_object_class->__meta__->properties) {
+    for my $property ($new_object_class->__meta__->_legacy_properties) {
         my $property_name = $property->property_name;
         $params{$property_name} = $original_object->{$property_name} if defined $original_object->{$property_name};
     }
@@ -525,7 +530,7 @@ sub _create_taxon {
     my ($self, $original_object, $new_object_class) = @_;
 
     my %params;
-    for my $property ($new_object_class->__meta__->properties) {
+    for my $property ($new_object_class->__meta__->_legacy_properties) {
         my $property_name = $property->property_name;
         $params{$property_name} = $original_object->{$property_name} if defined $original_object->{$property_name};
     }

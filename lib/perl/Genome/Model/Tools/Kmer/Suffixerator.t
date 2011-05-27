@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use above 'Genome';
 use Test::More tests => 3;
 
 use_ok('Genome::Model::Tools::Kmer::Suffixerator');
-my $tmp_dir = File::Temp::tempdir('Kmer-Suffixerator-'. $ENV{USER} .'-XXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+my $tmp_dir = File::Temp::tempdir('Kmer-Suffixerator-'. Genome::Sys->username .'-XXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fasta-ToTwoBit';
 my @fasta_files;
 for ( 11 .. 13) {

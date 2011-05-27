@@ -34,7 +34,7 @@ sub create {
     }
 
     unless ($self->editor_id) {
-        $self->editor_id(Genome::Config->current_user_id);
+        $self->editor_id(Genome::Sys->username);
     }
 
     return $self;

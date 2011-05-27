@@ -268,7 +268,7 @@ sub parse_sample_file_list
 
 	my %files_by_sample = ();
 
-	my $input = new FileHandle ($list_file);
+	my $input = Genome::Sys->open_file_for_reading($list_file);
 	my $lineCounter = 0;
 
 	while (<$input>)
@@ -318,7 +318,7 @@ sub parse_qc_results
 
 	if(-e $qc_file)
 	{	
-		my $input = new FileHandle ($qc_file);
+		my $input = Genome::Sys->open_file_for_reading($qc_file);
 		my $lineCounter = 0;
 	
 		while (<$input>)

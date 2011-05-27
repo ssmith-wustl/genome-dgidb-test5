@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -51,7 +51,7 @@ my $ref_model = Genome::Model::ImportedReferenceSequence->create(
 my $rbuild = Genome::Model::Build::ImportedReferenceSequence->get(name => "NCBI-human-build36");
 ok($rbuild, 'got reference sequence build');
 
-my $test_model_name = "genotype-ma-test-".$ENV{USER}."-".$$;
+my $test_model_name = "genotype-ma-test-".Genome::Sys->username."-".$$;
 my $ppid = 2166945;
 my $ppname = 'illumina wugc';
 

@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -20,7 +20,7 @@ for my $lane (@lanes) {
 my $expected_file = $root_dir .'/all.tsv';
 
 
-my $tmp_dir = File::Temp::tempdir('RepeatMasker-MergeTables-'. $ENV{USER} .'-XXXX',DIR=>'/gsc/var/cache/testsuite/running_testsuites',CLEANUP=>1);
+my $tmp_dir = File::Temp::tempdir('RepeatMasker-MergeTables-'. Genome::Sys->username .'-XXXX',DIR=>'/gsc/var/cache/testsuite/running_testsuites',CLEANUP=>1);
 my $merged_file = $tmp_dir .'/merged.tsv';
 my $merge = Genome::Model::Tools::RepeatMasker::MergeTables->create(
     input_tables => \@tables,

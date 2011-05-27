@@ -41,12 +41,12 @@ sub send_report {
         or return;
     my $from = ( defined $params{from} ) 
     ? delete $params{from}
-    : $ENV{USER}.'@genome.wustl.edu';
+    : Genome::Config->user_email;
     $class->_validate_email_address_string('from', $from)
         or return;
     my $reply_to = ( defined $params{replyto} ) 
     ? delete $params{replyto}
-    : $ENV{USER}.'@genome.wustl.edu';
+    : Genome::Config->user_email;
     $class->_validate_email_address_string('reply to', $reply_to)
         or return;
     

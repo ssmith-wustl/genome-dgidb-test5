@@ -301,7 +301,6 @@ sub _expand_param_and_input_properties {
                     unless(exists $desc->{has}{$md5_name}) {
                         my $md5_prop = {};
                         $md5_prop->{'is'} = 'Text';
-                        $md5_prop->{'data_type'} = 'Text';
                         $md5_prop->{'is_param'} = 1;
                         $md5_prop->{'is_delegated'} = 1;
                         $md5_prop->{'via'} = 'params';
@@ -323,7 +322,6 @@ sub _expand_param_and_input_properties {
                     unless(exists $desc->{has}{$count_name}) {
                         my $count_prop = {};
                         $count_prop->{'is'} = 'Number';
-                        $count_prop->{'data_type'} = 'Number';
                         $count_prop->{'is_param'} = 1;
                         $count_prop->{'is_delegated'} = 1;
                         $count_prop->{'via'} = 'params';
@@ -367,17 +365,17 @@ sub delete {
     }
 
     #creating an anonymous sub to delete allocations when commit happens
+    my $id = $self->id;
     my $upon_delete_callback = sub { 
-        $self->status_message("Now Deleting Allocation with owner_id = ".$self->id."\n");
-        print $self->status_message;
-        my $allocation = Genome::Disk::Allocation->get(owner_id=>$self->id, owner_class_name=>ref($self));
+        print "Now Deleting Allocation with owner_id = $id\n";
+        my $allocation = Genome::Disk::Allocation->get(owner_id=>$id, owner_class_name=>$class_name);
         if ($allocation) {
             $allocation->deallocate; 
         }
     };
 
     #hook our anonymous sub into the commit callback
-    $self->create_subscription(method=>'commit', callback=>$upon_delete_callback);
+    $class_name->ghost_class->add_observer(aspect=>'commit', callback=>$upon_delete_callback);
     
     return $self->SUPER::delete(@_); 
 }
@@ -464,7 +462,7 @@ sub _resolve_lock_name {
 sub metric_names {
     my $class = shift;
     my $meta = $class->__meta__;
-    my @properties = grep { $_->{is_metric} } $meta->properties();
+    my @properties = grep { $_->{is_metric} } $meta->_legacy_properties();
     my @names = map { $_->property_name } @properties;
     return @names;
 }

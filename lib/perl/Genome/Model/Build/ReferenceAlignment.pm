@@ -199,11 +199,15 @@ sub compare_snps_file {
     return $self->qc_directory . 'compare_snps';
 }
 
+sub get_alignments {
+    my $self = shift;
+    return map { $self->model->processing_profile->results_for_instrument_data_assignment($_) }
+        $self->instrument_data_assignments;
+}
+
 sub get_alignment_bams {
     my $self = shift;
-    my @alignments = map { $self->model->processing_profile->results_for_instrument_data_assignment($_) }
-        $self->instrument_data_assignments;
-    return map { $_->alignment_bam_file_paths } @alignments;
+    return map { $_->alignment_bam_file_paths } $self->get_alignments;
 }
 
 sub calculate_estimated_kb_usage {
@@ -1244,6 +1248,8 @@ sub files_ignored_by_diff {
         reports/dbSNP_Concordance/report.xml
         reports/dbSNP_Concordance/report.html
         reports/Mapcheck/report.xml
+        reports/Gold_SNP_Concordance/report.html
+        reports/Gold_SNP_Concordance/report.xml
         server_location.txt
         variants/workflow.xml
         variants/dispatcher.cmd

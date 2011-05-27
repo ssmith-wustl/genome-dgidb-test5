@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -27,7 +27,7 @@ my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
 # test create for a genome model with defined model_name
 test_model_from_params(
     model_params => {
-        model_name              => "test_model_$ENV{USER}",
+        model_name              => "test_model_" . Genome::Sys->username,
         subject_name            => $default_subject_name,
         subject_type            => $default_subject_type,
         processing_profile_name => $default_pp_name,
@@ -38,7 +38,7 @@ test_model_from_params(
 # test create with a different reference_sequence_build name
 test_model_from_params(
     model_params => {
-        model_name              => "test_model_$ENV{USER}",
+        model_name              => "test_model_" . Genome::Sys->username,
         subject_name            => $default_subject_name,
         subject_type            => $default_subject_type,
         processing_profile_name => $default_pp_name,
@@ -99,7 +99,7 @@ sub test_model_from_params_with_group {
     # test normal model and processing profile creation for reference alignment with a model group addition
     test_model_from_params(
         model_params => {
-            model_name              => "test_model_incomplete_data_dir_$ENV{USER}",
+            model_name              => "test_model_incomplete_data_dir_" . Genome::Sys->username,
             subject_name            => $default_subject_name,
             subject_type            => $default_subject_type,
             processing_profile_name => $default_pp_name,
@@ -134,7 +134,7 @@ sub successful_create_model {
     if (!$params{subject_name}) {
         $params{subject_name} = 'invalid_subject_name';
     }
-    my $expected_user_name = $ENV{USER};
+    my $expected_user_name = Genome::Sys->username;
     my $current_time = UR::Time->now;
     my ($expected_date) = split('\w',$current_time);
   

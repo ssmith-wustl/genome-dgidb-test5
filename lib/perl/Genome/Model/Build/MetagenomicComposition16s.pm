@@ -164,7 +164,44 @@ sub description {
 
 #< Amplicons >#
 sub amplicon_set_names {
-    return ( '' ) 
+    my $self = shift;
+    my $method = 'amplicon_set_names_and_primers_'.$self->processing_profile->sequencing_platform;
+    if ( $self->can( $method ) ) {
+        my %set_names_and_primers = $self->$method;
+        return sort keys %set_names_and_primers;
+    }
+    $self->warning_message( "No amplicon set primers for sequencing platform: ".$self->processing_profile->sequencing_platform );
+    return ( '' );
+}
+
+sub amplicon_set_names_and_primers {
+    my $self = shift;
+    my $method = 'amplicon_set_names_and_primers_'.$self->processing_profile->sequencing_platform;
+    if ( $self->can( $method ) ) {
+        return $self->$method;
+    }
+    $self->warning_message( "No amplicon set primers for sequencing platform: ".$self->processing_profile->sequencing_platform );
+    return ( '' ); 
+}
+
+sub amplicon_set_names_and_primers_454 {
+    return (
+        V1_V3 => [qw/
+            ATTACCGCGGCTGCTGG 
+        /],
+        V3_V5 => [qw/ 
+            CCGTCAATTCATTTAAGT
+            CCGTCAATTCATTTGAGT
+            CCGTCAATTCCTTTAAGT
+            CCGTCAATTCCTTTGAGT
+        /],
+        V6_V9 => [qw/
+            TACGGCTACCTTGTTACGACTT
+            TACGGCTACCTTGTTATGACTT
+            TACGGTTACCTTGTTACGACTT
+            TACGGTTACCTTGTTATGACTT
+        /],
+    );
 }
 
 sub amplicon_sets {
@@ -260,6 +297,21 @@ sub _amplicon_iterator_for_name { # 454 and solexa for now
     return $amplicon_iterator;
 }
 
+sub get_writer_for_set_name {
+    my ($self, $set_name) = @_;
+
+    unless ( $self->{$set_name} ) {
+        my $fasta_file = $self->processed_fasta_file_for_set_name($set_name);
+        unlink $fasta_file if -e $fasta_file;
+        my $writer = Genome::Model::Tools::FastQual::PhredWriter->create(files => [ $fasta_file ]);
+        Carp::confess("Failed to create phred reader for amplicon set ($set_name)") if not $writer;
+        $self->{$set_name} = $writer;
+    }
+
+    return $self->{$set_name};
+}
+
+
 #< Dirs >#
 sub sub_dirs {
     return (qw| classification fasta reports |), $_[0]->_sub_dirs;
@@ -281,7 +333,7 @@ sub reports_dir {
 
 #< Files >#
 sub file_base_name {
-    return $_[0]->subject_name;
+    return Genome::Utility::Text::sanitize_string_for_filesystem( $_[0]->subject_name );
 }
 
 sub _files_for_amplicon_sets {
@@ -494,24 +546,23 @@ sub orient_amplicons {
 }
 
 #< Classify >#
-sub classifications_files {
-    my $self = shift;
-}
-
-sub classifications_files_as_string {
-}
-
 sub classification_file_for_set_name {
     my ($self, $set_name) = @_;
     
     die "No set name given to get classification file for ".$self->description unless defined $set_name;
 
+    my $classifier = $self->classifier;
+    my %classifier_params = $self->processing_profile->classifier_params_as_hash;
+    if ( $classifier_params{version} ) {
+        $classifier .= $classifier_params{version};
+    }
+
     return sprintf(
         '%s/%s%s.%s',
         $self->classification_dir,
-        $self->subject_name,
+        $self->file_base_name,
         ( $set_name eq '' ? '' : ".$set_name" ),
-        lc($self->classifier),
+        lc($classifier),
     );
 }
 
@@ -532,68 +583,71 @@ sub classify_amplicons {
         return;
     }
 
+    my $classifier_params = $self->processing_profile->classifier_params;
+    # TEMP UTNIL THIS GOES STABLE, THEN FIX PARAMS
+    $classifier_params =~ s/_/\-/g;
+    if ( $classifier_params !~ /version/ ) {
+        if ( $self->classifier eq 'rdp2-1' ) {
+            $classifier_params .= ' --version 2x1';
+        }
+        elsif ( $self->classifier eq 'rdp2-2' ) {
+            $classifier_params .= ' --version 2x2';
+        }
+        else {
+            $self->error_message("Invalid classifier (".$self->classifier.") for ".$self->description);
+            return;
+        }
+    }
+    if ( $classifier_params !~ /format/ ) {
+        $classifier_params .= ' --format hmp_fix_ranks';
+    }
 
-    my %classifier_params = $self->processing_profile->classifier_params_as_hash;
     $self->status_message('Classifier: '.$self->classifier);
-    $self->status_message('Classifier params: '.Dumper(\%classifier_params));
-    my $classifier;
-    if ( $self->classifier eq 'rdp2-1' ) {
-        $classifier = Genome::Utility::MetagenomicClassifier::Rdp::Version2x1->new(%classifier_params);
-    }
-    elsif ( $self->classifier eq 'rdp2-2' ) {
-        $classifier = Genome::Utility::MetagenomicClassifier::Rdp::Version2x2->new(%classifier_params);
-    }
-    else {
-        $self->error_message("Invalid classifier (".$self->classifier.") for ".$self->description);
-        return;
-    }
+    $self->status_message('Classifier params: '.$classifier_params);
 
-    my ($processed, $classified, $classification_error) = (qw/ 0 0 0 /);
+    my %metrics;
+    @metrics{qw/ attempted success error/} = (qw/ 0 0 0 /);
     for my $name ( @amplicon_set_names ) {
         my $amplicon_set = $self->amplicon_set_for_name($name);
         next if not $amplicon_set;
 
+        my $fasta_file = $amplicon_set->processed_fasta_file;
+        next if not -s $fasta_file;
+
         my $classification_file = $amplicon_set->classification_file;
         unlink $classification_file if -e $classification_file;
-        my $writer =  Genome::Utility::MetagenomicClassifier::SequenceClassification::Writer->create(
-            output => $classification_file,
-            format => 'hmp_fix_ranks',
-        );
-        unless ( $writer ) {
-            $self->error_message("Could not create classification writer for file ($classification_file) for writing.");
-            return; # bad
+
+        # FIXME use $classifier
+        my $cmd = "gmt metagenomic-classifier rdp --input-file $fasta_file --output-file $classification_file $classifier_params --metrics"; 
+        my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
+        if ( not $rv ) {
+            $self->error_message('Failed to execute classifier command');
+            return;
         }
 
-        while ( my $amplicon = $amplicon_set->next_amplicon ) {
-            my $seq = $amplicon->{seq}
-                or next;
-            $processed++;
-
-            # Try to classify 2X - per kathie 2009mar3
-            my $parsed_seq = $classifier->create_parsed_seq($seq);
-            my $classification = $classifier->classify_parsed_seq($parsed_seq);
-            unless ( $classification ) { # try again
-                $classification = $classifier->classify_parsed_seq($parsed_seq);
-                unless ( $classification ) { # go on
-                    $classification_error++;
-                    next;
-                }
-            }
-
-            $writer->write_one($classification);
-            $classified++;
+        # metrics
+        my $metrics_file = $classification_file.'.metrics';
+        my $metrics_fh = eval{ Genome::Sys->open_file_for_reading($metrics_file); };
+        if ( not $metrics_fh ) {
+            $self->error_message("Failed to open metrics file ($metrics_file): $@");
+            return;
+        }
+        while ( my $line = $metrics_fh->getline ) {
+            chomp $line;
+            my ($key, $val) = split('=', $line);
+            $metrics{$key} += $val;
         }
     }
 
-    $self->amplicons_processed($processed);
+    $self->amplicons_processed($metrics{total});
     $self->amplicons_processed_success( 
-        defined $attempted and $attempted > 0 ?  sprintf('%.2f', $processed / $attempted) : 0 
+        defined $attempted and $attempted > 0 ?  sprintf('%.2f', $metrics{total} / $attempted) : 0 
     );
-    $self->amplicons_classified($classified);
+    $self->amplicons_classified($metrics{success});
     $self->amplicons_classified_success( 
-        $processed > 0 ?  sprintf('%.2f', $classified / $processed) : 0
+        $metrics{total} > 0 ?  sprintf('%.2f', $metrics{success} / $metrics{total}) : 0
     );
-    $self->amplicons_classification_error($classification_error);
+    $self->amplicons_classification_error($metrics{error});
 
     $self->status_message('Processed:  '.$self->amplicons_processed);
     $self->status_message('Classified: '.$self->amplicons_classified);
@@ -605,10 +659,101 @@ sub classify_amplicons {
     return 1;
 }
 
-#< Clean Up >#
-sub clean_up { return 1; }
+#< calculate est kb usage >#
+sub calculate_estimated_kb_usage {
+    my $self = shift;
 
-#< Diff>
+    #could also derive seq platform from inst data
+    my $method = 'calculate_estimated_kb_usage_'.$self->processing_profile->sequencing_platform;
+    unless ( $self->can( $method ) ) {
+         $self->error_message( "Failed to find method to estimate kb usage for sequencing platform: ".$self->processing_profile->sequencing_platform );
+         return;
+    }
+    return $self->$method;
+}
+
+sub calculate_estimated_kb_usage_solexa {
+    my $self = shift;
+
+    my $instrument_data_count = $self->instrument_data_count;
+    if ( not $instrument_data_count > 0 ) {
+        Carp::confess( "No instrument data found for ".$self->description );
+    }
+
+    my $kb = $instrument_data_count * 500_000; #TODO .. not sure what best value is
+
+    return ( $kb );
+}
+
+sub calculate_estimated_kb_usage_454 {
+    # Based on the total reads in the instrument data. The build needs about 3 kb (use 3.5) per read.
+    #  So request 5 per read or at least a MiB
+    #  If we don't keep the classifications around, then we will have to lower this number.
+    my $self = shift;
+
+    my @instrument_data = $self->instrument_data;
+    unless ( @instrument_data ) { # very bad; should be checked when the build is create
+        Carp::confess("No instrument data found for ".$self->description);
+    }
+
+    my $total_reads = 0;
+    for my $instrument_data ( @instrument_data ) {
+        $total_reads += $instrument_data->total_reads;
+    }
+
+    my $kb = $total_reads * 5;
+    return ( $kb >= 1024 ? $kb : 1024 );
+}
+
+sub calculate_estimated_kb_usage_sanger {
+    # Each piece of instrument data uses about 30Mb of space. Adjust if more files are removed
+    my $self = shift;
+
+    my $instrument_data_count = $self->instrument_data_count;
+    unless ( $instrument_data_count ) { # very bad; should be checked when the build is created
+        confess("No instrument data found for build ".$self->description);
+    }
+
+    return $instrument_data_count * 30000;
+}
+
+
+#< instrument data processing >#
+sub fastqs_from_solexa {
+    my ( $self, $inst_data ) = @_;
+
+    my @fastq_files;
+
+    if ( $inst_data->bam_path ) { #fastq from bam
+        $self->error_message("Bam file is zero size or does not exist: ".$inst_data->bam_path ) and return
+            if not -s $inst_data->bam_path;
+        my $temp_dir = Genome::Sys->create_temp_directory;
+        @fastq_files = $inst_data->dump_fastqs_from_bam( directory => $temp_dir );
+        $self->status_message( "Got fastq files from bam: ".join( ', ', @fastq_files ) );
+    }
+    elsif ( $inst_data->archive_path ) { #dump fastqs from archive
+        $self->error_message( "Archive file is missing or is zero size: ".$inst_data->archive_path ) and return
+            if not -s $inst_data->archive_path;
+        my $temp_dir = Genome::Sys->create_temp_directory;
+        my $tar_cmd = "tar zxf " . $inst_data->archive_path ." -C $temp_dir";
+        $self->status_message( "Running tar: $tar_cmd" );
+        unless ( Genome::Sys->shellcmd( cmd => $tar_cmd ) ) {
+            $self->error_message( "Failed to dump fastq files from archive path using cmd: $tar_cmd" );
+            return;
+        }
+        @fastq_files = glob $temp_dir .'/*';
+        $self->status_message( "Got fastq files from archive path: ".join (', ', @fastq_files) );
+    }
+    else {
+        $self->error_message( "Could not get neither bam_path nor archive path for instrument data: ".$inst_data->id );
+        return; #die here
+    }
+
+    return @fastq_files;
+}
+
+
+#< Diff >#
 sub files_ignored_by_diff {
     return qw(
         build.xml

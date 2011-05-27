@@ -89,8 +89,6 @@ sub _execute_build {
     my ($self, $build) = @_;
     my $model = $build->model;
 
-    $DB::single=1;
-    $self->status_message("Execute build\n");
     my $fasta_size = -s $build->fasta_file;
     unless(-e $build->fasta_file && $fasta_size > 0) {
         $self->error_message("Reference sequence fasta file \"" . $build->fasta_file . "\" is either inaccessible, empty, or non-existent.");

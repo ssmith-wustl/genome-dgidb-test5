@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -25,7 +25,7 @@ my @subdirs = qw/00 01 02 03 04 05 06 07/;
 my $data_file = 'progression2.dat';
 my $image_file = 'progression2.png';
 
-my $tmp_dir = File::Temp::tempdir('RefCov-Progression-'. $ENV{USER} .'-XXXX',DIR=>'/gsc/var/cache/testsuite/running_testsuites',CLEANUP=>1);
+my $tmp_dir = File::Temp::tempdir('RefCov-Progression-'. Genome::Sys->username .'-XXXX',DIR=>'/gsc/var/cache/testsuite/running_testsuites',CLEANUP=>1);
 
 my @stats_files;
 my $subdir_name;

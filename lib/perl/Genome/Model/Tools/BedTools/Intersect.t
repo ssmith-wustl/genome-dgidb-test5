@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -10,7 +10,7 @@ use above 'Genome';
 use_ok('Genome::Model::Tools::BedTools');
 use_ok('Genome::Model::Tools::BedTools::Intersect');
 
-my $tmp_dir = File::Temp::tempdir('BedTools-Intersect-'.$ENV{USER}.'-XXXX',DIR => '/gsc/var/cache/testsuite/running_testsuites',CLEANUP => 1);
+my $tmp_dir = File::Temp::tempdir('BedTools-Intersect-'.Genome::Sys->username.'-XXXX',DIR => '/gsc/var/cache/testsuite/running_testsuites',CLEANUP => 1);
 
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-BedTools-Intersect';
 

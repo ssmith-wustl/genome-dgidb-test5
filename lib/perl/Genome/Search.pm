@@ -193,8 +193,8 @@ sub update {
 
 sub delete {
     my $class = shift;
-    my @objects = @_;
-    
+    my @objects = grep { exists $_->{db_committed} } @_;   
+ 
     my $self = $class->_singleton_object;
     
     my @docs = $class->generate_document(@objects);

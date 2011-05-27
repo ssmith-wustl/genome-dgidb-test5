@@ -255,6 +255,23 @@ class Genome::InstrumentData::AlignmentResult {
     ],
 };
 
+
+sub __display_name__ {
+    my $self = shift;
+
+    my @parts;
+    my $instrument_data = $self->instrument_data;
+    my $subset_name = $instrument_data->subset_name;
+    my $run_name_method = $instrument_data->can('flow_cell_id') ? 'flow_cell_id' : 'run_name';
+    my $run_name = $instrument_data->$run_name_method;
+    my $instrument_data_segment_id = $self->instrument_data_segment_id;
+
+    push @parts, $run_name if $run_name;
+    push @parts, $subset_name if $subset_name;
+    push @parts, $instrument_data_segment_id if defined $instrument_data_segment_id;
+    return join '-', @parts;
+}
+
 sub required_arch_os {
     # override in subclasses if 64-bit is not required
     'x86_64' 
@@ -542,7 +559,7 @@ sub requires_fastqs_to_align {
     return 1 if ($self->n_remove_threshold);
     return 1 if ($self->filter_name && ($self->filter_name ne 'forward-only' && $self->filter_name ne 'reverse-only'));
     return 1 if ($self->trimmer_name);
-    return 1 if ($self->instrument_data_segment_id);
+    return 1 if (defined $self->instrument_data_segment_id);
    
     # obviously we need fastq if we don't have a bam 
     return 1 unless (defined $self->instrument_data->bam_path && -e $self->instrument_data->bam_path);
@@ -1112,10 +1129,6 @@ sub _process_sam_files {
     unless ($ref_list) {
         $self->error_message("Failed to get MapToBam ref list: $ref_list");
         return;
-    }
-
-    if (-e "/opt/fscache/" . $ref_list) {
-        $ref_list = "/opt/fscache/" . $ref_list;
     }
 
     my $per_lane_bam_file = $self->temp_staging_directory . "/all_sequences.bam";
@@ -1736,7 +1749,7 @@ sub read_and_platform_group_tag_id {
     my $self = shift;
     my $id = $self->instrument_data->id;
 
-    if ($self->instrument_data_segment_id) {
+    if (defined $self->instrument_data_segment_id) {
         $id .= "-". $self->instrument_data_segment_id;
     }
 

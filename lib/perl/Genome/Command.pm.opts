@@ -1,23 +1,4 @@
 $Genome::Command::OPTS_SPEC = [
-  '>completion',
-  [
-    '>bash',
-    [
-      'help!',
-      undef
-    ],
-    '>update',
-    [
-      'git-add!',
-      undef,
-      'git-commit!',
-      undef,
-      'help!',
-      undef
-    ],
-    'help!',
-    undef
-  ],
   '>disk',
   [
     '>allocation',
@@ -118,6 +99,13 @@ $Genome::Command::OPTS_SPEC = [
         'disk-group-names=s',
         'files',
         'send-alert!',
+        undef,
+        'help!',
+        undef
+      ],
+      '>find-unallocated-paths',
+      [
+        'group=s',
         undef,
         'help!',
         undef
@@ -3512,17 +3500,6 @@ $Genome::Command::OPTS_SPEC = [
           'help!',
           undef
         ],
-        '>lane-qc',
-        [
-          'auto-action!',
-          undef,
-          'processing-profile=s',
-          undef,
-          'instrument-data=s@',
-          undef,
-          'help!',
-          undef
-        ],
         '>cleanup-succeeded',
         [
           'models=s@',
@@ -3666,6 +3643,18 @@ $Genome::Command::OPTS_SPEC = [
       [
         'models=s@',
         undef,
+        'help!',
+        undef
+      ],
+      '>reference-alignment',
+      [
+        '>merged-alignment-bam',
+        [
+          'builds=s@',
+          undef,
+          'help!',
+          undef
+        ],
         'help!',
         undef
       ],
@@ -3820,6 +3809,12 @@ $Genome::Command::OPTS_SPEC = [
           'files',
           'dev!',
           undef,
+          'ipr-version=s',
+          [
+            '4.5',
+            '4.7',
+            '4.8'
+          ],
           'iprpath=s',
           undef,
           'job-stderr=s',
@@ -4192,6 +4187,13 @@ $Genome::Command::OPTS_SPEC = [
     ],
     '>reference-alignment',
     [
+      '>check-lane-qc',
+      [
+        'genome-models=s@',
+        undef,
+        'help!',
+        undef
+      ],
       '>compare-snps-summary',
       [
         'force-new-metrics!',
@@ -4556,6 +4558,17 @@ $Genome::Command::OPTS_SPEC = [
         'help!',
         undef
       ],
+      '>extract-validation-candidates',
+      [
+        'build=s',
+        undef,
+        'output-directory=s',
+        'files',
+        'dbsnp-bed-file=s',
+        'files',
+        'help!',
+        undef
+      ],
       '>identify-previously-discovered-variations',
       [
         'build=s',
@@ -4567,6 +4580,10 @@ $Genome::Command::OPTS_SPEC = [
       [
         'build=s',
         undef,
+        'output-directory=s',
+        'files',
+        'variant-bed-file=s',
+        'files',
         'help!',
         undef
       ],
@@ -5214,8 +5231,6 @@ $Genome::Command::OPTS_SPEC = [
         'files',
         'align-dist-threshold=s',
         'files',
-        'annotation-reference-transcripts=s',
-        'files',
         'append-event-steps=s',
         'files',
         'based-on=s',
@@ -5511,6 +5526,8 @@ $Genome::Command::OPTS_SPEC = [
       [
         'name=s',
         'files',
+        'tiering-version=s',
+        'files',
         'based-on=s',
         'files',
         'cnv-detection-strategy=s',
@@ -5518,6 +5535,8 @@ $Genome::Command::OPTS_SPEC = [
         'describe!',
         undef,
         'indel-detection-strategy=s',
+        'files',
+        'loh-version=s',
         'files',
         'snv-detection-strategy=s',
         'files',
@@ -6138,11 +6157,89 @@ $Genome::Command::OPTS_SPEC = [
   ],
   '>project',
   [
+    '>create',
+    [
+      'name=s',
+      'files',
+      'help!',
+      undef
+    ],
+    '>update',
+    [
+      'name=s',
+      'files',
+      'projects=s@',
+      undef,
+      'help!',
+      undef
+    ],
+    '>list',
+    [
+      'show=s',
+      'files',
+      'csv-delimiter=s',
+      'files',
+      'filter=s',
+      'files',
+      'noheaders!',
+      undef,
+      'style=s',
+      'files',
+      'help!',
+      undef
+    ],
     'help!',
     undef
   ],
   '>project-part',
   [
+    '>create',
+    [
+      'entity=s',
+      undef,
+      'entity-class-name=s',
+      'files',
+      'project=s',
+      undef,
+      'label=s',
+      'files',
+      'role=s',
+      'files',
+      'help!',
+      undef
+    ],
+    '>update',
+    [
+      'entity=s',
+      undef,
+      'entity-class-name=s',
+      'files',
+      'label=s',
+      'files',
+      'project=s',
+      undef,
+      'role=s',
+      'files',
+      'project-parts=s@',
+      undef,
+      'help!',
+      undef
+    ],
+    '>list',
+    [
+      'show=s',
+      'files',
+      'csv-delimiter=s',
+      'files',
+      'filter=s',
+      'files',
+      'noheaders!',
+      undef,
+      'style=s',
+      'files',
+      'help!',
+      undef
+    ],
     'help!',
     undef
   ],
@@ -6285,6 +6382,25 @@ $Genome::Command::OPTS_SPEC = [
   ],
   '>sys',
   [
+    '>completion',
+    [
+      '>bash',
+      [
+        'help!',
+        undef
+      ],
+      '>update',
+      [
+        'git-add!',
+        undef,
+        'git-commit!',
+        undef,
+        'help!',
+        undef
+      ],
+      'help!',
+      undef
+    ],
     'help!',
     undef
   ],
@@ -6561,6 +6677,8 @@ $Genome::Command::OPTS_SPEC = [
         'varscan-file=s',
         'files',
         'varscan-r-library=s',
+        'files',
+        'chr-highlight=s',
         'files',
         'sample-id=s',
         'files',
@@ -6911,7 +7029,7 @@ $Genome::Command::OPTS_SPEC = [
         undef,
         'loss-fraction=s',
         undef,
-        'no-matched-normal=s',
+        'matched-normal!',
         undef,
         'output-dir=s',
         'files',
@@ -6919,7 +7037,7 @@ $Genome::Command::OPTS_SPEC = [
         'files',
         'p-value=s',
         undef,
-        'verbose=s',
+        'verbose!',
         undef,
         'help!',
         undef
@@ -7014,12 +7132,18 @@ $Genome::Command::OPTS_SPEC = [
         'files',
         'chr=s',
         'files',
+        'cmds-input!',
+        undef,
+        'cnahmm-input!',
+        undef,
         'cnvhmm-input!',
         undef,
-        'entrypoints-file=s',
+        'gain-color=s',
         'files',
         'gain-threshold=s',
         undef,
+        'genome-build=s',
+        'files',
         'hide-normal!',
         undef,
         'highlights=s',
@@ -7028,6 +7152,8 @@ $Genome::Command::OPTS_SPEC = [
         undef,
         'log-plot!',
         undef,
+        'loss-color=s',
+        'files',
         'loss-threshold=s',
         undef,
         'lowres!',
@@ -7038,12 +7164,37 @@ $Genome::Command::OPTS_SPEC = [
         undef,
         'plot-height=s',
         undef,
+        'plot-title=s',
+        'files',
         'plot-width=s',
         undef,
         'rcommands-file=s',
         'files',
+        'sex=s',
+        'files',
         'ymax=s',
         undef,
+        'help!',
+        undef
+      ],
+      '>plot-segments-from-bams',
+      [
+        'bams=s',
+        'files',
+        'names-of-bams=s',
+        'files',
+        'output-file=s',
+        'files',
+        'bam2cn-window=s',
+        undef,
+        'cnvseg-markers=s',
+        undef,
+        'genome-build=s',
+        'files',
+        'plot-ymax=s',
+        undef,
+        'sex=s',
+        'files',
         'help!',
         undef
       ],
@@ -9258,6 +9409,31 @@ $Genome::Command::OPTS_SPEC = [
         'help!',
         undef
       ],
+      '>gatk-germline-indel-unified-genotyper',
+      [
+        'lsf-queue=s',
+        'files',
+        'lsf-resource=s',
+        'files',
+        'mb-of-ram=s',
+        'files',
+        'output-directory=s',
+        'files',
+        'reference-build-id=s',
+        'files',
+        'params=s',
+        'files',
+        'region-of-interest=s',
+        undef,
+        'version=s',
+        'files',
+        'aligned-reads-input=s',
+        'files',
+        'control-aligned-reads-input=s',
+        'files',
+        'help!',
+        undef
+      ],
       '>gatk-somatic-indel',
       [
         'lsf-queue=s',
@@ -10836,6 +11012,8 @@ $Genome::Command::OPTS_SPEC = [
           'files',
           'instrument-data=s@',
           undef,
+          'lane-qc-models=s@',
+          undef,
           'output-file=s',
           'files',
           'help!',
@@ -11084,6 +11262,8 @@ $Genome::Command::OPTS_SPEC = [
         'files',
         'output-trans-file=s',
         'files',
+        'absolute-axis!',
+        undef,
         'chr-col=s',
         'files',
         'inputs-id=s',
@@ -12840,12 +13020,6 @@ $Genome::Command::OPTS_SPEC = [
       '>update-solr',
       [
         'days-ago=s',
-        'files',
-        'namespace-name=s',
-        'files',
-        'verbose!',
-        undef,
-        'classes-or-modules=s@',
         'files',
         'help!',
         undef
@@ -15538,6 +15712,19 @@ $Genome::Command::OPTS_SPEC = [
           [
             'reference-sequence-input=s',
             'files',
+            'detector-style-input=s',
+            'files',
+            'reference-build-id=s',
+            'files',
+            'source=s',
+            'files',
+            'output=s',
+            'files',
+            'help!',
+            undef
+          ],
+          '>gatk-germline-indel-unified-genotyper-to-bed',
+          [
             'detector-style-input=s',
             'files',
             'reference-build-id=s',
@@ -18843,6 +19030,8 @@ $Genome::Command::OPTS_SPEC = [
         'omimaa-dir=s',
         undef,
         'verbose!',
+        undef,
+        'wu-annotation-headers!',
         undef,
         'help!',
         undef

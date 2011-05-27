@@ -212,9 +212,7 @@ sub execute {
 
     # unlink temp files. these really should be absolute path
     # and should go to a writable directory....
-    unlink("Cov_30_PID_30");
-    unlink("CoregeneTest_result");
-    #unlink($blastresults);
+    unlink($blastresults);
     unlink($bsubout);
     unlink($bsuberr);
     unlink($self->fasta_file."xpd");

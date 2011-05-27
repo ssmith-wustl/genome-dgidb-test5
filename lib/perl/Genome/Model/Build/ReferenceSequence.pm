@@ -355,15 +355,17 @@ sub primary_consensus_path {
 
     $format ||= 'bfa';
     my $file = $self->data_directory . '/appended_sequences.'. $format;
-    # check local cache for file
-    my $localfile = "/opt/fscache$file";
-    return $localfile if ($allow_cached and -e $localfile);
     return $file;
 }
 
 sub full_consensus_path {
-    my ($self, $format) = @_;
+    my ($self, $format, %params) = @_;
     $format ||= 'bfa';
+
+    # we want this to default to true, the old behavior
+    my $allow_cached = 1;
+    $allow_cached = $params{allow_cached} if exists $params{allow_cached};
+
     my $file = $self->data_directory . '/all_sequences.'. $format;
     unless (-e $file){
         $file = $self->data_directory . '/ALL.'. $format;
@@ -372,9 +374,6 @@ sub full_consensus_path {
             return;
         }
     }
-    # check local cache for file
-    my $localfile = "/opt/fscache$file";
-    return $localfile if (-e $localfile);
     return $file;
 }
 
@@ -449,9 +448,7 @@ sub get_sequence_dictionary {
 
     my $seqdict_dir_path = $self->data_directory.'/seqdict';
     my $path = "$seqdict_dir_path/seqdict.$file_type";
-    if (-s "/opt/fscache/" . $path) {
-       return "/opt/fscache/" . $path; 
-    } elsif (-s $path) {
+    if (-s $path) {
         return $path;
     } else {
 

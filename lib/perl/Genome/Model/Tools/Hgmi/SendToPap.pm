@@ -439,9 +439,9 @@ SQL
         $host = $ENV{HOST};
     }
 
-    if (exists($ENV{USER}) )
+    if (Genome::Sys->username)
     {
-        $user = $ENV{USER};
+        $user = Genome::Sys->username;
     }
     elsif (exists($ENV{LOGIN}) )
     {

@@ -19,8 +19,9 @@ class Genome::InstrumentData {
         library_id => { is => 'Number' },
         library => { is => 'Genome::Library', id_by => 'library_id' },
         library_name => { via => 'library', to => 'name' },
-        sample_id => { is => 'Number', via => 'library' },
-        sample => { is => 'Genome::Sample', id_by => 'sample_id' },
+        sample_id => { is => 'Number', via => 'library' }, 
+        #sample => { is => 'Genome::Sample', id_by => 'sample_id' }, # id_by that's delegated is inefficient
+        sample => { is => 'Genome::Sample', via => 'library' },
         sample_name => { via => 'sample', to => 'name' },
     ],
     has_optional => [
@@ -36,6 +37,14 @@ class Genome::InstrumentData {
             to => 'attribute_value',
             is_mutable => 1,
             where => [ attribute_label => 'full_path' ],
+        },
+        ignored => {
+            is => 'Number',
+            via => 'attributes',
+            to => 'attribute_value',
+            is_mutable => 1,
+            where => [attribute_label => 'ignored'],
+            default => '0',
         },
         sample_source => { via => 'sample', is => 'Genome::Subject', to => 'source' },
         sample_source_id => { via => 'sample_source', to => 'id' },
@@ -84,15 +93,6 @@ sub delete {
     for my $build (@other_builds) {
         $build->abandon();
         push @models, $build->model;
-    }
-
-    if(@models) {
-        my %affected_users;
-        for my $model (@models) {
-            $affected_users{$model->user_name} = 1;
-        }
-
-        my $to = join(', ', keys %affected_users);
     }
 
     #finally, clean up the instrument data
@@ -183,10 +183,20 @@ sub dump_fastqs_from_bam {
 
 sub lane_qc_models {
     my $self = shift;
+
+    # Find the Lane QC models that use this instrument data
     my $instrument_data_id = $self->id;
     my @inputs = Genome::Model::Input->get(value_id => $instrument_data_id);
-    my @ref_align_models = grep { $_->class eq 'Genome::Model::ReferenceAlignment' } map { $_->model } @inputs;
-    return grep { $_->is_lane_qc } @ref_align_models;
+    my @lane_qc_models = grep { $_->is_lane_qc }
+                         grep { $_->class eq 'Genome::Model::ReferenceAlignment' }
+                         map  { $_->model } @inputs;
+
+    # Find the Lane QC models that used the default genotype_microarray input
+    my $sample = $self->sample;
+    my @gm_model_ids = map { $_->id } ($sample->default_genotype_models);
+    @lane_qc_models = grep { $_->inputs(name => 'genotype_microarray', value_id => \@gm_model_ids) } @lane_qc_models;
+
+    return @lane_qc_models;;
 }
 
 sub lane_qc_build {
@@ -209,6 +219,14 @@ sub lane_qc_dir {
     else {
         return;
     }
+}
+
+
+sub __display_name__ {
+    my $self = shift;
+    my $subset_name = $self->subset_name || 'unknown-subset';
+    my $run_name = $self->run_name || 'unknown-run-name';
+    return join '.', $run_name, $subset_name;
 }
 
 1;

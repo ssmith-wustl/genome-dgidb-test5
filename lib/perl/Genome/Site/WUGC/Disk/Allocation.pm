@@ -363,7 +363,7 @@ This is the only warning you will receive about this process.  Action
 may be required.
 MESSAGE
 
-    my $from = '"' . __PACKAGE__ . sprintf('" <%s@genome.wustl.edu>', $ENV{USER});
+    my $from = '"' . __PACKAGE__ . sprintf('" <%s@genome.wustl.edu>', Genome::Sys->username);
 
     my $to = join(', ', map { Genome::Config->user_email($_) } Genome::Config->admin_notice_users());
     my $subject = 'Allocation problem on ' . hostname . ' pid ' . $pid . '. ' . $lock_msg;

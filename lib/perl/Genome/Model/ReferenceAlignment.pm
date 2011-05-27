@@ -25,7 +25,7 @@ my %DEPENDENT_PROPERTIES = (
     # dbsnp_build and annotation depend on reference_sequence_build
     'reference_sequence_build' => [
         'dbsnp_build',
-        'annotation_reference_transcripts',
+        'annotation_reference_build',
     ],
 );
 
@@ -132,31 +132,16 @@ class Genome::Model::ReferenceAlignment {
         },
         annotation_reference_build => {
             is => 'Genome::Model::Build::ImportedAnnotation',
-            calculate_from => ['annotation_reference_build_id', 'annotation_reference_transcripts'],
-            calculate => q|
-                if ($annotation_reference_build_id) {
-                    my $b = Genome::Model::Build::ImportedAnnotation->get($annotation_reference_build_id);
-                    Carp::confess("Failed to find imported annotation build id '$annotation_reference_build_id'") unless $b;
-                    return $b;
-                }
-                my $art = $annotation_reference_transcripts;
-                return unless $art;
-                my ($model_name, $ver) = split('/', $art);
-                Carp::confess("Unable to determine model and build version from annotation transcripts string '$art'") unless $model_name and $ver;
-                my $b = Genome::Model::Build::ImportedAnnotation->get(model_name => $model_name, version => $ver);
-                Carp::confess("Failed to find annotation build version='$ver' for model_name='$model_name'") unless $b;
-                return $b;
-            |,
+            id_by => 'annotation_reference_build_id',
         },
         reference_sequence_name      => { via => 'reference_sequence_build', to => 'name' },
         annotation_reference_name    => { via => 'annotation_reference_build', to => 'name' },
         coverage_stats_params        => { via => 'processing_profile'},
-        annotation_reference_transcripts => { via => 'processing_profile'},
         assignment_events => {
             is => 'Genome::Model::Event::Build::ReferenceAlignment::AssignRun',
             is_many => 1,
             reverse_id_by => 'model',
-            doc => 'each case of an instrument data being assigned to the model',
+            doc => 'each case of an instrument datum being assigned to the model',
         },
         alignment_events => {
             is => 'Genome::Model::Event::Build::ReferenceAlignment::AlignReads',
@@ -201,7 +186,7 @@ class Genome::Model::ReferenceAlignment {
         filter_ruleset_name   => { via => 'processing_profile' },
         filter_ruleset_params => { via => 'processing_profile' },
         target_region_set_value     => { is_many => 1, is_mutable => 1, is => 'UR::Value', via => 'inputs', to => 'value', where => [ name => 'target_region_set_name'] },
-        target_region_set_name      => { via => 'target_region_set_value', to => 'id', },
+        target_region_set_name      => { via => 'target_region_set_value', to => 'id', is_optional => 1 },
     ],
     doc => 'A genome model produced by aligning DNA reads to a reference sequence.'
 };
@@ -269,8 +254,8 @@ sub __errors__ {
     if ($arb and !$arb->is_compatible_with_reference_sequence_build($rsb)) {
         push @tags, UR::Object::Tag->create(
             type => 'invalid',
-            properties => ['reference_sequence_name', 'annotation_reference_transcripts'],
-            desc => "reference sequence: " . $rsb->name . " is incompatible with annotation reference transcripts: " . $arb->name,
+            properties => ['reference_sequence_name', 'annotation_reference_build'],
+            desc => "reference sequence: " . $rsb->name . " is incompatible with annotation reference builds: " . $arb->name,
         );
     }
 
@@ -289,6 +274,24 @@ sub __errors__ {
                 properties => 'dbsnp_build',
                 desc => "Supplied dbsnp build " . $dbsnp->__display_name__ . " specifies incompatible reference sequence " .
                 $dbsnp->reference->__display_name__);
+        }
+    }
+
+    my $genotype = $self->genotype_microarray_model;
+    if ($genotype) {
+        if (not defined $genotype->reference_sequence_build) {
+            push @tags, UR::Object::Tag->create(
+                type => 'invalid',
+                properties => 'genotype_microarray_model',
+                desc => "Supplied genotype microarray model " . $genotype->__display_name__ . " does not specify a reference sequence");
+        }
+
+        if (not $rsb->is_compatible_with($genotype->reference_sequence_build)) {
+            push @tags, UR::Object::Tag->create(
+                type => 'invalid',
+                properties => 'genotype_microarray_model',
+                desc => "Supplied genotype microarray model " . $genotype->__display_name__ . " specifies incompatible reference sequence " .
+                    $genotype->reference_sequence_build->__display_name__);
         }
     }
 
@@ -383,23 +386,13 @@ sub is_lane_qc {
 sub default_genotype_model {
     my $self = shift;
     my $sample = $self->subject;
-    unless ($sample->isa('Genome::Sample')) {
-        $self->warning_message("Can only determine default genotype model if subject is a Genome::Sample, not " . $sample->class);
-        return;
-    }
+    return unless $sample->isa('Genome::Sample');
 
     my @genotype_models = sort { $a->id <=> $b->id } $sample->default_genotype_models;
-    unless (@genotype_models) {
-        $self->warning_message("Could not find any genotype microarray models associated with sample " . $sample->id);
-        return;
-    }
+    return unless @genotype_models;
 
     @genotype_models = grep { $_->reference_sequence_build->is_compatible_with($self->reference_sequence_build) } @genotype_models;
-    unless (@genotype_models) {
-        $self->warning_message("No genotype microarray models for sample " . $sample->id . " use a reference build " .
-            "that is compatible with " . $self->reference_sequence_build_id);
-        return;
-    }
+    return unless @genotype_models;
 
     if (@genotype_models > 1) {
         $self->warning_message("Found multiple compatible genotype models for sample " . $sample->id .
@@ -419,6 +412,7 @@ sub inputs_necessary_for_copy {
         'reference_sequence_build' => 1,
         'annotation_reference_build' => 1,
         'dbsnp_build' => 1,
+        'genotype_microarray' => 1, # should be automatically set when the copy is created
     );
     my @inputs = grep { !exists $exclude{$_->name} } $self->SUPER::inputs_necessary_for_copy;
     return @inputs;
@@ -490,10 +484,11 @@ sub qc_processing_profile_id {
     my $self = shift;
 
     my %qc_pp_id = ( # Map alignment processing profile to lane QC version
-        2580856 => '2581081', # february 2011 default genome and exome reference alignment
-        2582616 => '2589389', # february 2011 default pcgp reference alignment
-        2580859 => '2589388', # february 2011 default genome and exome with build37 annotation
-        2586039 => '2589390', #    march 2011 default pcgp untrimmed genome and exome with build37 annotation
+        2574937 => '2597031', # bwa 0.5.5 untrimmed and samtools r453 and picard_align 1.17 and picard_dedup 1.29
+        2580856 => '2581081', # Feb 2011 Default Reference Alignment
+        2582616 => '2589389', # old february 2011 default genome and exome with build37 annotation
+        2580859 => '2589388', # Feb 2011 Default Reference Alignment (PCGP)
+        2586039 => '2589390', # Mar 2011 Default Reference Alignment (PCGP Untrimmed)
     );
 
     return $qc_pp_id{ $self->processing_profile_id };
@@ -517,36 +512,39 @@ sub get_or_create_lane_qc_models {
     }
 
     my @lane_qc_models;
-    my @instrument_data = $self->instrument_data;
+    my @instrument_data = sort { $a->run_name . $a->subset_name cmp $b->run_name . $b->subset_name } $self->instrument_data;
     for my $instrument_data (@instrument_data) {
         my $lane_qc_model_name = $self->default_qc_model_name_for_instrument_data($instrument_data);
 
         my $existing_model = Genome::Model->get(name => $lane_qc_model_name);
         if ($existing_model) {
-            $self->status_message("Default lane QC model ($lane_qc_model_name) already exists.");
+            if ($existing_model->genotype_microarray_model_id) {
+                $self->status_message("Default lane QC model " . $existing_model->__display_name__ . " already exists.");
+            }
+            else {
+                $self->status_message("New build requested for lane QC model " . $existing_model->__display_name__ . " because it is missing the genotype_microarray input.");
+                $existing_model->build_requested(1);
+            }
             push @lane_qc_models, $existing_model;
             next;
         }
 
-        my $copy_cmd = Genome::Model::Command::Copy->create(
-            from => $self,
-            to => $lane_qc_model_name,
-            skip_instrument_data_assignments => 1,
-            model_overrides => ["processing_profile_id=$qc_pp_id"],
+        my $qc_model = Genome::Model::ReferenceAlignment->create(
+            name => $lane_qc_model_name,
+            instrument_data => [$instrument_data],
+            subject_id => $self->subject_id,
+            subject_class_name => $self->subject_class_name,
+            processing_profile_id => $qc_pp_id,
+            auto_assign_inst_data => 0,
+            auto_build_alignments => 0,
+            build_requested => 0,
+            reference_sequence_build => $self->reference_sequence_build,
+            dbsnp_build => $self->dbsnp_build,
         );
-
-        unless ($copy_cmd->execute) {
-            $self->error_message("Failed to copy self to lane QC model.");
+        unless ($qc_model) {
+            $self->error_message("Could not create lane qc model for instrument data " . $instrument_data->id);
             next;
         }
-
-        my $qc_model = $copy_cmd->_copied_model;
-
-        $qc_model->add_instrument_data($instrument_data);
-
-        $qc_model->auto_assign_inst_data(0);
-        $qc_model->auto_build_alignments(0);
-        $qc_model->build_requested(0);
 
         push @lane_qc_models, $qc_model;
     }
@@ -557,5 +555,46 @@ sub get_or_create_lane_qc_models {
     return;
 }
 
+sub latest_build_id {
+    my $self = shift;
+    my $build = $self->latest_build;
+    unless ($build) { return; }
+    return $build->id;
+}
+
+sub latest_build_bam_file {
+    my $self = shift;
+
+    my $build = $self->latest_build;
+    unless ($build) { return; }
+
+    my @events = $build->the_events;
+    unless (@events) { return; }
+
+    my ($merge) = grep {($_->class eq 'Genome::Model::Event::Build::ReferenceAlignment::DeduplicateLibraries::Picard') || ($_->class eq 'Genome::Model::Event::Build::ReferenceAlignment::MergeAlignments')} @events;
+    unless ($merge) { return; }
+
+    unless ($merge->event_status eq 'Succeeded') {
+        #print STDERR 'Merge not Succeeded: '. $build->id ."\n";
+        return;
+    }
+    my $bam_file = $build->whole_rmdup_bam_file;
+    return $bam_file;
+}
+
+sub _input_differences_are_ok {
+    my $self = shift;
+    my @inputs_not_found = @{shift()};
+    my @build_inputs_not_found = @{shift()};
+
+    unless(scalar(@inputs_not_found) == 1 and scalar(@build_inputs_not_found) == 1) {
+        return;
+    }
+
+    my $value = $inputs_not_found[0]->value;
+    my $build_value = $build_inputs_not_found[0]->value;
+
+    return ($build_value->isa('Genome::Model::Build::GenotypeMicroarray') and $build_value->model eq $value);
+}
 
 1;

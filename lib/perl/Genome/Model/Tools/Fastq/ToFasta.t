@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -10,7 +10,7 @@ use Genome;
 
 use_ok('Genome::Model::Tools::Fastq::ToFasta');
 
-my $tmp_dir = Genome::Sys->create_temp_directory('Genome-Model-Tools-Fastq-ToFasta-'. $ENV{USER});
+my $tmp_dir = Genome::Sys->create_temp_directory('Genome-Model-Tools-Fastq-ToFasta-'. Genome::Sys->username);
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Fastq-To-Fasta';
 my $fastq_file = $data_dir .'/s_6_1_sequence.txt';
 my $expected_fasta_file = $data_dir .'/s_6_1_sequence.fa';

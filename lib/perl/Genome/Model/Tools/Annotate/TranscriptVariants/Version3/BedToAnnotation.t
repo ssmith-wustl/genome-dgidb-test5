@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -35,8 +35,8 @@ sub test_snvs{
     );
 
     ok(defined $adaptor, "created adaptor for snv test");
-    ok($adaptor->execute, "exectued snv adaptor");
-    my $diff_output = `diff $output_fh $annotation_file`;
+    ok($adaptor->execute, "executed snv adaptor");
+    my $diff_output = `diff $output_file $annotation_file`;
     ok(!$diff_output, "snv adaptor output diffed clean");
     $output_fh->close;
 }
@@ -60,8 +60,9 @@ sub test_indels{
     );
 
     ok(defined $adaptor, "created adaptor for indel test");
-    ok($adaptor->execute, "exectued indel adaptor");
-    my $diff_output = `diff $output_fh $annotation_file`;
+    ok($adaptor->execute, "executed indel adaptor");
+    my $diff_output = `diff $output_file $annotation_file`;
+    print "$diff_output\n";
     ok(!$diff_output, "indel adaptor output diffed clean");
     $output_fh->close;
 }
@@ -86,8 +87,8 @@ sub test_extra_columns{
     );
 
     ok(defined $adaptor, "created adaptor for extra_column test");
-    ok($adaptor->execute, "exectued extra_column adaptor");
-    my $diff_output = `diff $output_fh $annotation_file`;
+    ok($adaptor->execute, "executed extra_column adaptor");
+    my $diff_output = `diff $output_file $annotation_file`;
     ok(!$diff_output, "extra_column adaptor output diffed clean");
     $output_fh->close;
 }

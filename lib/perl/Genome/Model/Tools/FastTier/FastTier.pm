@@ -16,13 +16,6 @@ class Genome::Model::Tools::FastTier::FastTier {
         },
     ],
     has_optional => [
-        indels => {
-            type => 'Boolean',
-            is_input => 1,
-            default => 0,
-            doc => "Set this to true if you have any items in the bed file which have start_pos == stop_pos. It creates a temp file and dumps your input
-                    into it in order to get around bedtools silently failing when start==stop",
-        },
         tier1_output => {
             is => 'Text',
             is_optional => 1,

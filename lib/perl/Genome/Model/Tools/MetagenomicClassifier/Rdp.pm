@@ -5,34 +5,25 @@ use warnings;
 
 use Genome;
 
-use Bio::SeqIO;
-
 class Genome::Model::Tools::MetagenomicClassifier::Rdp {
     is => 'Command',
     has => [ 
         input_file => {
             type => 'String',
-            doc => "path to fasta file"
+            doc => "Path to fasta file"
         },
-    ],
-    has_optional => [
         output_file => { 
             type => 'String',
-            is_optional => 1, 
-            doc => "Path to output file.  Defaults to STDOUT."
+            doc => "Path to output file."
         },
         training_set => {
             type => 'String',
-            is_optional => 1,
-            default => '4',
             valid_values => [qw/ 4 6 broad /],
             doc => 'Name of training set.',
         },
         version => {
             type => 'String',
-            is_optional => 1,
-            default => '2.1',
-            valid_values => [qw/ 2.1 2.2 /],
+            valid_values => [qw/ 2x1 2x2 /],
             doc => 'Version of rdp to run.',
         },
         format => {
@@ -48,72 +39,76 @@ The format of the output.
     prints ALL taxa in classification
 DOC
         },
+        metrics => { 
+            is => 'Boolean',
+            is_optional => 1, 
+            doc => "Write metrics to file. File name is classification file w/ '.metrics' extension",
+        },
     ],
 };
-
-sub new {
-    my $class = shift;
-    return $class->create(@_);
-}
-
-sub create {
-    my $class = shift;
-
-    my $self = $class->SUPER::create(@_)
-        or return;
-
-    unless ( Genome::Sys->validate_file_for_reading( $self->input_file ) ) {
-        $self->delete;
-        return;
-    }
-
-    return $self;
-}
-
-sub _get_classifier
-{
-    my $self = shift;
-    my ($version, $training_set) = ($self->version, $self->training_set);
-    my $classifier;
-
-    if ($version == '2.2')
-    {
-        $classifier = Genome::Utility::MetagenomicClassifier::Rdp::Version2x2->new(training_set => $self->training_set);
-    }
-    else #2.1 or default
-    {
-        $classifier = Genome::Utility::MetagenomicClassifier::Rdp::Version2x1->new(training_set => $self->training_set);
-    }
-    
-    return $classifier;
-}
 
 sub execute {
     my $self = shift;
     
     #< CLASSIFER >#
-    my $classifier = $self->_get_classifier or return;
-    
+    my $classifier_class = 'Genome::Model::Tools::MetagenomicClassifier::Rdp::Version'.$self->version;
+    my $classifier = $classifier_class->create(
+        training_set => $self->training_set,
+    );
+    return if not $classifier;
+
     #< IN >#
-    my $bioseq_in = Bio::SeqIO->new(
-        -format => 'fasta',
-        -file => $self->input_file,
-    )
-        or return;
+    my $reader = eval {
+        Genome::Model::Tools::FastQual::PhredReader->create(
+            files => [ $self->input_file ],
+        );
+    };
+    return if not $reader;
 
     #< OUT >#
-    my $writer = Genome::Utility::MetagenomicClassifier::SequenceClassification::Writer->create(
-        output => $self->output_file,
+    my $writer = Genome::Model::Tools::MetagenomicClassifier::ClassificationWriter->create(
+        file => $self->output_file,
         format => $self->format,
-    )
-        or return;
+    );
+    return if not $writer;
 
-    while ( my $seq = $bioseq_in->next_seq ) {
-        my $classification = $classifier->classify($seq); # error is in sub
-        if ($classification) {
-            $writer->write_one($classification);
+    my %metrics;
+    @metrics{qw/ total error success /} = (qw/ 0 0 0 /);
+    while ( my $seqs = $reader->read ) {
+        $metrics{total}++;
+        my $classification = $classifier->classify($seqs->[0]);
+        if ( not $classification ) {
+            $metrics{error}++;
+            next;
         }
+        $writer->write($classification); # TODO check?
+        $metrics{success}++;
     }
+
+    if ( $self->metrics ) {
+        $self->_write_metrics(\%metrics);
+    }
+
+    return 1;
+}
+
+sub _write_metrics {
+    my ($self, $metrics) = @_;
+
+    my $metrics_file = $self->output_file.'.metrics';
+    unlink $metrics_file if -e $metrics_file;
+
+    my $metrics_fh = eval{ Genome::Sys->open_file_for_writing($metrics_file); };
+    if ( not $metrics_fh ) {
+        $self->error_message("Failed to open metrics file ($metrics_file) for writing: $@");
+        return;
+    }
+
+    for my $metric ( keys %$metrics ) {
+        $metrics_fh->print($metric.'='.$metrics->{$metric}."\n");
+    }
+
+    $metrics_fh->close;
 
     return 1;
 }
@@ -137,5 +132,3 @@ HELP
 
 1;
 
-#$HeadURL$
-#$Id$

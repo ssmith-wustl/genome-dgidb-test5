@@ -50,8 +50,8 @@ sub _run_aligner {
     }
 
     my $output_file_prefix = $self->output_file_prefix;
-    my $sai_file = $self->sai_file;
-    my $log_file = $self->log_file;
+    my $sai_file = "$tmp_dir/$output_file_prefix.sai";
+    my $log_file = "$tmp_dir/$output_file_prefix.log";
 
     my $bwa = Genome::Model::Tools::Bwa->path_for_bwa_version($self->aligner_version);
 

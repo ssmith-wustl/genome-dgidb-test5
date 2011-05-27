@@ -7,7 +7,7 @@ use above 'Genome';
 
 use Test::More;
 
-unless ($ENV{USER} eq 'smrtanalysis') {
+unless (Genome::Sys->username eq 'smrtanalysis') {
   plan skip_all => "this test is only runnable by user smrtanalysis"
 }
 plan tests => 1;

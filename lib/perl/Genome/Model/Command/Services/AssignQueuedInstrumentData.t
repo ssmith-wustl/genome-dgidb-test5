@@ -154,8 +154,8 @@ $ii->mock('get_copy_sequence_files_pse', sub { $copy_sequence_pse });
 ok($command_1->execute(), 'assign-queued-instrument-data executed successfully.');
 
 my $new_models = $command_1->_newly_created_models;
-is(scalar(keys %$new_models), 2, 'the cron created two models');
-is_deeply([sort map { $_->name } values %$new_models], [sort qw/ unknown-run.unknown-subset.prod-qc AQID-test-sample.prod-refalign /], 'the cron named the new models correctly');
+is(scalar(keys %$new_models), 1, 'the cron created one model');
+is_deeply([sort map { $_->name } values %$new_models], [sort qw/ AQID-test-sample.prod-refalign /], 'the cron named the new models correctly');
 
 my $models_changed = $command_1->_existing_models_assigned_to;
 is(scalar(keys %$models_changed), 0, 'the cron did no work for the second PSE, since the first assigns all on creation');
@@ -174,7 +174,7 @@ my @models_for_sample = Genome::Model->get(
     subject_class_name => 'Genome::Sample',
     subject_id => $sample->id,
 );
-is(scalar(@models_for_sample), 2, 'found two models created for the subject');
+is(scalar(@models_for_sample), 1, 'found one model created for the subject');
 is($models_for_sample[0], $new_model, 'that model is the same one the cron claims it created');
 
 my @instrument_data = $new_model->instrument_data;
@@ -195,6 +195,46 @@ ok($group, 'auto-generated model-group exists');
 
 my @members = $group->models;
 ok(grep($_ eq $new_model, @members), 'group contains the newly created model');
+
+my $instrument_data_ignored = Genome::InstrumentData::Solexa->create(
+    id => '-101',
+    library_id => $library->id,
+    flow_cell_id => 'TM-021',
+    lane => '2',
+    run_type => 'Paired',
+    fwd_read_length => 100,
+    rev_read_length => 100,
+    fwd_clusters => 65535,
+    rev_clusters => 65536,
+    ignored => 1,
+);
+
+my $pse_ignored = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
+    pse_status => 'inprogress',
+    pse_id => '-123456',
+    ps_id => $ps->ps_id,
+    ei_id => '464681',
+);
+
+
+
+$pse_ignored->add_param('instrument_data_type', 'solexa');
+$pse_ignored->add_param('instrument_data_id', $instrument_data_2->id);
+$pse_ignored->add_param('subject_class_name', 'Genome::Sample');
+$pse_ignored->add_param('subject_id', $sample->id);
+$pse_ignored->add_param('processing_profile_id', $processing_profile->id);
+$pse_ignored->add_reference_sequence_build_param_for_processing_profile( $processing_profile, $ref_seq_build);
+
+
+my $command_ignored = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
+    test => 1,
+);
+
+ok($command_ignored->execute(), 'assign-queued-instrument-data executed successfully.');
+
+my $new_models = $command_ignored->_newly_created_models;
+is(scalar(keys %$new_models), 0, 'the cron created no models from ignores.');
+
 
 my $instrument_data_3 = Genome::InstrumentData::Solexa->create(
     id => '-102',
@@ -286,7 +326,7 @@ isa_ok($command_2, 'Genome::Model::Command::Services::AssignQueuedInstrumentData
 ok($command_2->execute(), 'assign-queued-instrument-data executed successfully.');
 
 my $new_models_2 = $command_2->_newly_created_models;
-is(scalar(keys %$new_models_2), 4, 'the cron created four new models (capture data causes two models to be created, each has a per-lane QC)');
+is(scalar(keys %$new_models_2), 2, 'the cron created four new models (capture data causes two models to be created)');
 
 my @models = values %$new_models_2;
 my @model_groups;
@@ -329,7 +369,7 @@ for my $m (@new_refalign_models) {
     subject_id => $sample->id,
 );
 
-is(scalar(@models_for_sample), 6, 'found 6 models created for the subject');
+is(scalar(@models_for_sample), 3, 'found 3 models created for the subject');
 
 @instrument_data = $new_model->instrument_data;
 is(scalar(@instrument_data), 3, 'the new model has three instrument data assigned');

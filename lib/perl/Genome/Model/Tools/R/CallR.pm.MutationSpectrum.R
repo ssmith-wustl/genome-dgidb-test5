@@ -1,5 +1,5 @@
 #This file contains code to graph a small region of interest from BamToCna data
-plot_spectrum=function(spectrum_file="",output_file="",genome="") {
+plot_spectrum=function(spectrum_file="",output_file="",genome="",absolute_axis=T) {
     read.table(spectrum_file,fill=T,header=T,row.names=1)->spectrum;
     spectrum = (spectrum[0:6,]/spectrum['SNVs',1])*100;
     spectrum$Synonomous=c();
@@ -9,6 +9,11 @@ plot_spectrum=function(spectrum_file="",output_file="",genome="") {
     if(genome!="") {
         title = paste(title,"For",genome);
     }
-    barplot(spectrum,beside=T,xlab="Mutation Class",ylim=c(0,100),ylab="Percent of Total Mutations",main=title,col=c("darkorange","darkgreen","purple4","darkred","darkblue","tan4"),space=c(0,0.1));
+    if(absolute_axis) {
+        barplot(spectrum,beside=T,xlab="Mutation Class",ylim=c(0,100),ylab="Percent of Total Mutations",main=title,col=c("darkorange","darkgreen","purple4","darkred","darkblue","tan4"),space=c(0,0.1));
+    }
+    else {
+        barplot(spectrum,beside=T,xlab="Mutation Class",ylab="Percent of Total Mutations",main=title,col=c("darkorange","darkgreen","purple4","darkred","darkblue","tan4"),space=c(0,0.1));
+    }
     dev.off();
 }

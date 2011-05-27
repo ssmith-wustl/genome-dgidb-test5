@@ -139,6 +139,13 @@ class Genome::InstrumentData::Imported {
             is_mutable => 1,
             where => [ attribute_label => 'sra_sample_id' ],
         },
+        barcode => {
+            is => 'Text',
+            via => 'attributes',
+            to => 'attribute_value',
+            is_mutable => 1,
+            where => [ attribute_label => 'barcode' ],
+        },
         reference_sequence_build_id => {
             is => 'Number',
             via => 'attributes',
@@ -493,7 +500,10 @@ sub genotype_microarray_file_for_subject_and_version {
     Carp::confess('No version given to get genotype microarray file') if not defined $version;
 
     my $disk_allocation = $self->disk_allocations;
-    return if not $disk_allocation;
+    if (not $disk_allocation) {
+        $self->status_message('Missing disk allocation for genotype microarray file.');
+        return;
+    }
 
     my $absolute_path = $disk_allocation->absolute_path;
     Carp::confess('No absolute path for instrument data ('.$self->id.') disk allocation: '.$disk_allocation->id) if not $absolute_path;
@@ -504,7 +514,21 @@ sub genotype_microarray_file_for_subject_and_version {
     $subject_name =~ s/[^\w\-\.]/_/g;
     Carp::confess('No sample name for instrument data: '.$self->id) if not $sample_name;
 
-    return $absolute_path.'/'.$sample_name.'.'.$subject_name.'-'.$version.'.genotype';
+    my $file_glob = "$absolute_path/*.$subject_name-$version.genotype";
+    $self->status_message("Looking for genotype file like '$file_glob'.");
+    my @files = glob $file_glob;
+    if (@files > 1) {
+        $self->status_message("Found multiple matching genotype files.");
+        die $self->status_message;
+    }
+    elsif (@files == 0) {
+        # previous behavior was to return this path always but now we give preference to
+        # existing files
+        return "$absolute_path/$sample_name.$subject_name-$version.genotype";
+    }
+    else {
+        return $files[0];
+    }
 }
 
 sub genotype_microarray_file_for_human_version_37 {

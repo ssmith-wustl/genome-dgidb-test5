@@ -58,11 +58,6 @@ sub _run_aligner {
         die $self->error_message;
     }
     
-    # Check the local cache on the blade for the fasta if it exists.
-    if (-e "/opt/fscache/" . $reference_sdf_path) {
-        $reference_sdf_path = "/opt/fscache/" . $reference_sdf_path;
-    }
-
     my $scratch_directory = $self->temp_scratch_directory;
     my $staging_directory = $self->temp_staging_directory;
  

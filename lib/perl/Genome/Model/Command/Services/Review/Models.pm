@@ -23,73 +23,6 @@ use strict;
 use warnings;
 use Genome;
 
-sub old_execute {
-    my $self = shift;
-
-    my @models = $self->models;
-
-    my %models = map { my $model_id = $_->id; $model_id => $_; } @models;
-
-    my %action = map { $_ => '-' } keys %models;
-    for my $model_id (keys %models) {
-        my $model = $models{$model_id};
-
-        my @builds = $model->builds;
-        @builds = grep { $_->run_by eq 'apipe-builder' || $_->run_by eq 'ebelter' } @builds;
-        @builds = @builds[-3..-1] if (@builds > 3);
-
-        my @bad_builds = grep { $_->status eq 'Failed' or $_->status eq 'Abandoned' } @builds;
-        my $latest_build = $model->latest_build;
-        my $current_version = $self->current_version();
-        my @instrument_data = $model->instrument_data;
-
-        if (my $known_issue = $self->known_issue($model)) {
-            $self->print_action_for_model($model, $known_issue);
-            next;
-        }
-        if (@builds == 0) {
-            $self->print_action_for_model($model, 'start new build');
-            next;
-        }
-        if ($latest_build->status eq 'Succeeded') {
-            $self->print_action_for_model($model, 'remove old fails');
-            next;
-        }
-        if (@bad_builds >= 3) {
-            $self->print_action_for_model($model, 'investigate');
-            next;
-        }
-        if ($latest_build->status eq 'Scheduled') {
-            $self->print_action_for_model($model, 'already scheduled');
-            next;
-        }
-        if ($latest_build->status eq 'Running') {
-            $self->print_action_for_model($model, 'already running');
-            next;
-        }
-        if (@instrument_data == 0) {
-            $self->print_action_for_model($model, 'assign instrument data');
-            next;
-        }
-        if ($latest_build->status eq 'Abandoned') {
-            $self->print_action_for_model($model, 'start new build');
-            next;
-        }
-        if ($latest_build->status eq 'Failed') {
-            if ($latest_build->software_revision && $latest_build->software_revision =~ /$current_version/) {
-                $self->print_action_for_model($model, 'restart build');
-                next;
-            }
-            else {
-                $self->print_action_for_model($model, 'start new build');
-                next;
-            }
-        }
-    }
-
-    return 1;
-}
-
 sub execute {
     my $self = shift;
 
@@ -105,7 +38,6 @@ sub execute {
         my $fail_count   = ($model ? scalar $model->failed_builds     : undef);
         my $model_id     = ($model ? $model->id                       : '-');
         my $model_name   = ($model ? $model->name                     : '-');
-        my $model_class  = ($model ? $model->class                    : '-');
         my $pp_name      = ($model ? $model->processing_profile->name : '-');
 
         my $latest_build_revision = (($latest_build && $latest_build->software_revision) ? $latest_build->software_revision : '-');
@@ -116,13 +48,26 @@ sub execute {
         $latest_build_revision =~ s/\/lib\/perl\/?//;
         $latest_build_revision =~ s/:$//;
 
-        my $action = '-';
+        my $action;
+        if ($latest_build->status eq 'Scheduled' || $latest_build->status eq 'Running') {
+            $action = 'none';
+        }
+        elsif ($latest_build && $latest_build->status eq 'Succeeded') {
+            $action = 'cleanup';
+        }
+        elsif (should_review_model($model)) {
+            $action = 'review';
+        }
+        else {
+            $action = 'rebuild';
+        }
 
-        $self->print_message(join "\t", $model_id, $latest_build_status, $latest_build_revision, $model_name, $model_class, $pp_name, $fail_count, $action);
+        $self->print_message(join "\t", $model_id, $action, $latest_build_status, $latest_build_revision, $model_name, $pp_name, $fail_count);
     }
 
     return 1;
 }
+
 
 sub print_message {
     my $self = shift;
@@ -131,35 +76,115 @@ sub print_message {
     return 1;
 }
 
-sub print_action_for_model {
-    my $self = shift;
-    my $model = shift;
-    my $action = shift;
-    
-    my $model_id = $model->id;
-    my $pp_name = $model->processing_profile->name;
 
-    print "$model_id\t$pp_name\t" . $action . "\n";
-
-    return 1;
-}
-
-sub current_version {
-    my $self = shift;
-    my $symlink_path = readlink('/gsc/scripts/opt/genome/current/pipeline') || die;
-    my $version = (split('/', $symlink_path))[-1];
-}
-
-sub known_issue {
-    my $self = shift;
+sub should_review_model {
     my $model = shift;
 
-    if ($model->region_of_interest_set_name && $model->region_of_interest_set_name eq 'hg18 nimblegen exome version 2') {
-        return 'known issue: feature list, hg18 nimblegen exome version 2, contains chromosome not in human 36';
-    }
-    if ($model->region_of_interest_set_name && $model->region_of_interest_set_name eq 'hg19 nimblegen exome version 2') {
-        return 'known issue: feature list, hg19 nimblegen exome version 2, contains chromosome not in GRCh37-lite-build37';
-    }
+    # If the latest build succeeded then we're happy.
+    return if latest_build_succeeded($model);
+
+    my @builds = $model->builds;
+    return if @builds <= 1;
+
+    # If it has failed >3 times in a row then submit for review.
+    return 1 if model_has_failed_to_many_times($model);
+
+    # If it hasn't made progress since last time then submit for review.
+    return 1 unless model_has_progressed($model);
 
     return;
+}
+
+
+sub latest_build_succeeded {
+    my $model = shift;
+
+    my $latest_build = $model->latest_build;
+    return ($latest_build->status eq 'Succeeded');
+}
+
+
+my $max_fails = 5;
+sub model_has_failed_to_many_times {
+    my $model = shift;
+
+    my @builds = reverse $model->builds;
+    return unless @builds;
+
+    my $n = (@builds >= $max_fails ? ($max_fails - 1) : $#builds);
+    my @last_n_builds = @builds[0..$n];
+
+    my @failed_builds = grep { $_->status eq 'Failed' } @last_n_builds;
+    return (@failed_builds == $max_fails );
+}
+
+
+sub model_has_progressed {
+    my $model = shift;
+
+    my @builds = $model->builds;
+    die unless (@builds > 1);
+
+    my $latest_build = $model->latest_build;
+    my %latest_status = workflow_status($latest_build);
+
+    my $previous_build = previous_build($latest_build);
+    my %previous_status = workflow_status($previous_build);
+
+    my $status_are_different = status_compare(\%latest_status, \%previous_status);
+
+    return $status_are_different;
+}
+
+
+sub latest_build_is_succeeded {
+    my $model = shift;
+
+    my $latest_build = $model->latest_build;
+
+    return (
+        $latest_build
+        && $latest_build->status
+        && $latest_build->status eq 'Succeeded'
+    );
+}
+
+
+sub previous_build {
+    my $build = shift;
+
+    my $model = $build->model;
+    my @prior_builds = grep { $_->id < $build->id } $model->builds;
+
+    my $previous_build = @prior_builds ? $prior_builds[-1] : undef;
+    return $previous_build;
+}
+
+
+sub workflow_status {
+    my $build = shift;
+
+    my $build_instance = $build->newest_workflow_instance;
+    my @child_instances = $build_instance->sorted_child_instances if $build_instance;
+
+    my %status;
+    for my $child_instance (@child_instances) {
+        (my $name = $child_instance->name) =~ s/^[0-9]+\s+//;
+        $status{$name} = $child_instance->status;
+    }
+
+    return %status;
+}
+
+
+sub status_compare { # http://stackoverflow.com/q/540229
+    my %a = %{ shift @_ };
+    my %b = %{ shift @_ };
+    for my $key (keys %a) {
+          return 1 unless defined $b{$key} and $a{$key} eq $b{$key};
+          delete $a{$key};
+          delete $b{$key};
+    }
+    return 1 if keys %b;
+    return 0;
 }

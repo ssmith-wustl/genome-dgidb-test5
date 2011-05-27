@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -19,7 +19,7 @@ BEGIN {
 
 my $map_file = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-Map/2.map';
 my $expected_layers_file = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Maq-Map/3.map.layers';
-my $tmp_dir = File::Temp::tempdir('Map-To-Layers-'. $ENV{USER} .'-XXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+my $tmp_dir = File::Temp::tempdir('Map-To-Layers-'. Genome::Sys->username .'-XXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $cmd = Genome::Model::Tools::Maq::MapToLayers->create(
                                                          map_file => $map_file,
                                                          layers_file => $tmp_dir .'/2.layers',

@@ -30,7 +30,7 @@ EOS
 sub execute {
     my $self = shift;
 
-    my $user = $ENV{USER};
+    my $user = Genome::Sys->username;
     confess "Could not get user name from environment" unless defined $user;
 
     my @builds = map {$_->build} Genome::Model::Event->get(

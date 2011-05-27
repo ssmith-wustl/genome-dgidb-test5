@@ -24,8 +24,6 @@ use FileHandle;
 class Genome::Model::Tools::CopyNumber::PlotSegments {
     is => 'Command',
     has => [
-
-
 	chr => {
 	    is => 'String',
 	    is_optional => 1,
@@ -34,27 +32,39 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 
 	segment_files => {
 	    is => 'String',
-	    is_optional => 0,
-	    doc => 'comma-seperated list of files containing the segments to be plotted. Expects CBS output, (columns: chr, start, stop, #bins, copyNumber) unless the --cn[a|v]hmm_input flag is set, in which case it will take the output of cnvHMM/cnaHMM directly',
+	    is_optional => 1,
+	    doc => 'comma-seperated list of files containing the segments to be plotted. Expects CBS output - columns: chr, start, stop, #bins, copyNumber (unless the --cnahmm_input or --cnvhmm_input flags are set, in which case it will take the output of cnvHMM/cnaHMM directly',
 	},
+        tumor_segment_file => {
+            is => 'String',
+            is_optional => 1,
+            is_input => 1,
+            doc => 'Tumor segment file, specify tumor and normal segment files or use the segment_files param',
+        },
+        normal_segment_file => {
+            is => 'String',
+            is_optional => 1,
+            is_input => 1,
+            doc => 'Normal segment file, specify tumor and normal segment files or use the segment_files param',
+        },
+       
         plot_title => {
             is => 'String',
             is_optional => 1,
+            is_input => 1,
             doc => 'plot title (also accepts csv list if multiple segment files are specified)',
         },
 
 	gain_threshold => {
 	    is => 'Float',
 	    is_optional => 1,
-	    default => 2.5,
-	    doc => 'CN threshold for coloring a segment as a gain',
+	    doc => 'CN threshold for coloring a segment as a gain - defaults to 2.5 or the log2/10 equivalent',
 	},
 
 	loss_threshold => {
 	    is => 'Float',
 	    is_optional => 1,
-	    doc => 'CN threshold for coloring a segment as a loss',
-	    default => 1.5,
+	    doc => 'CN threshold for coloring a segment as a loss - defaults to 2.5 or the log2/10 equivalent',
 	},
 
 	# male_sex_loss_threshold => {
@@ -72,17 +82,23 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	# },
 
 
-	log_input => {
+	log2_input => {
 	    is => 'Boolean',
 	    is_optional => 1,
-	    doc => 'Set this flag if input copy numbers are expressed as log-ratios, as opposed to absolute copy number',
+	    doc => 'Set this flag if input copy numbers are expressed as log2-ratios, as opposed to absolute copy number',
 	},
 
-	log_plot => {
+	log2_plot => {
 	    is => 'Boolean',
 	    is_optional => 1,
-	    doc => 'Set this flag if you want a log-scaled plot, as opposed to absolute copy number',
+	    doc => 'Set this flag if you want a log2-scaled plot, as opposed to absolute copy number',
 	},
+
+        log10_plot => {
+            is => 'Boolean',
+            is_optional => 1,
+	    doc => 'Set this flag if you want a log10-scaled plot, as opposed to absolute copy number',
+        },
 
 	highlights => {
 	    is => 'String',
@@ -90,9 +106,23 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	    doc => 'file containing regions to highlight, in bed format',
 	},
 
+	annotations_top => {
+	    is => 'String',
+	    is_optional => 1,
+	    doc => 'file containing regions to label at the top of the graph. File is in bed format with 4th column as label text',
+	},
+
+	annotations_bottom => {
+	    is => 'String',
+	    is_optional => 1,
+	    doc => 'file containing regions to label at the bottom of the graph. File is in bed format with 4th column as label text',
+	},
+
+
 	lowres => {
 	    is => 'Boolean',
 	    is_optional => 1,
+            is_input => 1,
 	    doc => 'make CN segments appear larger than they actually are for visibility. Without this option, many focal CNs will not be visible on low res plots',
 	},
 
@@ -114,9 +144,16 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	ymax => {
 	    is => 'Float',
 	    is_optional => 1,
+            is_input => 1,
 	    doc => 'Set the max val of the y-axis',
 	},
 
+
+	ymin => {
+	    is => 'Float',
+	    is_optional => 1,
+	    doc => 'Set the min val of the y-axis',
+	},
 
 	hide_normal => {
 	    is => 'Boolean',
@@ -134,19 +171,15 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	output_pdf => {
 	    is => 'String',
 	    is_optional => 0,
+            is_output => 1,
+            is_input => 1,
 	    doc => 'pdf file containing your plots',
 	},
-
-       	# entrypoints_file => {
-	#     is => 'String',
-	#     is_optional => 1,
-	#     doc => 'entrypoints to be used for plotting - note that male/female needs to specified here',
-	#     default => "/gscmnt/sata921/info/medseq/cmiller/annotations/entrypoints.hg18.male",
-	# },
 
         genome_build => {
 	    is => 'String',
 	    is_optional => 1,
+            is_input => 1,
 	    doc => 'genome build - 36 or 37',
             default => '36',
 	},
@@ -154,9 +187,10 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
         sex => {
 	    is => 'String',
 	    is_optional => 1,
-	    doc => 'sex of the sample - male or female',
+            is_input => 1,
+	    doc => 'sex of the sample - male, female, or autosomes',
             default => 'male',
-	},   
+	},
 
 	plot_height => {
 	    is => 'Float',
@@ -186,10 +220,10 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	    doc => 'color of losses/deletions',
 	},
 
-
 	cnvhmm_input => {
 	    is => 'Boolean',
 	    is_optional => 1,
+            is_input => 1,
 	    doc => 'Flag indicating that input is in cnvhmm format, which requires extra parsing',
 	    default => 0,
 	},
@@ -201,12 +235,38 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	    default => 0,
 	},
 
-	# ylab => {
-	#     is => 'String',
+	baseline => {
+	    is => 'Float',
+	    is_optional => 1,
+	    doc => 'value seperating gains from losses. defaults to 2 for absolute plots or 0 for log plots',
+	},
+
+	# cnhmm_threshold => {
+	#     is => 'Float',
 	#     is_optional => 1,
-	#     default => "Copy Number",
-	#     doc => 'y-axis labels',
+	#     doc => 'keep ',
+	#     default => 30,
 	# },
+
+	# cmds_input => {
+	#     is => 'Boolean',
+	#     is_optional => 1,
+	#     doc => 'Flag indicating that input is in cmds format. Script will plot the probability that any give region is recurrent -log(z.p)',
+	#     default => 0,
+	# },
+
+        # cmds_summary_input => {
+	#     is => 'Boolean',
+	#     is_optional => 1,
+	#     doc => 'Flag indicating that input is in cmds summary table format. Script will plot the number of samples for which each recurrent region is gained or lost',
+	#     default => 0,
+        # }
+
+	ylabel => {
+	    is => 'String',
+            is_optional => 1,
+            doc => 'y-axis label',
+        },
 
 
 	# xmin => {
@@ -234,20 +294,57 @@ sub help_detail {
 
 
 #########################################################################
+
+#-----------------------------------------------------------
+# convert files between formats and write out a new file for
+# the R script to read in
 sub convertSegs{
-    my ($self, $segfiles,$cnvhmm_input, $cnahmm_input) = @_;
+    my ($self, $segfiles, $cnvhmm_input, $cnahmm_input) = @_;
     my @newfiles;
     my @infiles = split(",",$segfiles);
+
     foreach my $file (@infiles){
         if ($cnvhmm_input){
             my $cbsfile = cnvHmmToCbs($file,$self);
             push(@newfiles,$cbsfile);
+
         } elsif ($cnahmm_input){
             my $cbsfile = cnaHmmToCbs($file,$self);
             push(@newfiles,$cbsfile);
         }
     }
+    return join(",",@newfiles);
+}
 
+
+#-----------------------------------------------------------
+# convert scores between bases and write out a new file for
+# the R script to read in
+sub convertScores{
+    my ($self, $segfiles, $log2_input, $log2_plot, $log10_plot) = @_;
+    my @newfiles;
+    my @infiles = split(",",$segfiles);
+
+    foreach my $file (@infiles){
+        if ($log2_input && $log10_plot){
+            my $cbsfile = scoreConv(2, 10, $file, $self);
+            push(@newfiles,$cbsfile);
+
+        } elsif ($log2_input && (!($log2_plot))){
+            my $cbsfile = scoreConv(2, "abs", $file, $self);
+            push(@newfiles,$cbsfile);
+
+        } elsif (!($log2_input) && $log2_plot){
+            my $cbsfile = scoreConv("abs", 2, $file, $self);
+            push(@newfiles,$cbsfile);
+
+        } elsif (!($log2_input) && $log10_plot){
+            my $cbsfile = scoreConv("abs", 10, $file, $self);
+            push(@newfiles,$cbsfile);
+        } else {
+            return $segfiles;
+        }
+    }
     return join(",",@newfiles);
 }
 
@@ -257,8 +354,48 @@ sub convertSegs{
 #(log2 = log_base(2,values)
 sub log_base {
     my ($base, $value) = @_;
+    $value = 0.000001 if($value == 0);
     return log($value)/log($base);
 }
+
+
+#-----------------------------------------------------
+#convert scores from log to abs, vice-versa, or between different bases
+sub scoreConv{
+    my ($from, $to, $file, $self) = @_;
+
+    #create a tmp file for this output
+    my ($tfh,$newfile) = Genome::Sys->create_temp_file;
+    unless($tfh) {
+	$self->error_message("Unable to create temporary file $!");
+	die;
+    }
+    open(OUTFILE,">$newfile") || die "can't open temp segs file for writing ($newfile)\n";
+
+
+    #read and convert the output
+    my $inFh = IO::File->new( $file ) || die "can't open file\n";
+    while( my $line = $inFh->getline )
+    {
+        next if $line =~/^#/;
+        my @fields = split("\t",$line);
+
+        if( ($from eq 2) && ($to eq "abs")){
+            print OUTFILE join("\t",($fields[0],$fields[1],$fields[2],$fields[3],((2**$fields[4])*2))) . "\n";
+        } elsif( ($from eq 2) && ($to eq 10)){
+            print OUTFILE join("\t",($fields[0],$fields[1],$fields[2],$fields[3],$fields[4]/(log_base(2,10)))) . "\n";
+        } elsif( ($from eq "abs") && ($to eq 2)){
+            print OUTFILE join("\t",($fields[0],$fields[1],$fields[2],$fields[3],log_base(2,$fields[4]/2))) . "\n";
+        } elsif( ($from eq "abs") && ($to eq 10)){
+            print OUTFILE join("\t",($fields[0],$fields[1],$fields[2],$fields[3],log_base(10,$fields[4]/2))) . "\n";
+        }
+    }
+
+    close(OUTFILE);
+    $inFh->close;
+    return($newfile);
+}
+
 
 
 #-----------------------------------------------------
@@ -272,7 +409,6 @@ sub cnvHmmToCbs{
 	$self->error_message("Unable to create temporary file $!");
 	die;
     }
-
     open(OUTFILE,">$newfile") || die "can't open temp segs file for writing ($newfile)\n";
 
 
@@ -302,7 +438,7 @@ sub cnvHmmToCbs{
 }
 
 #-----------------------------------------------------
-#convert cnvhmm output to a format we can use here
+#convert cnahmm output to a format we can use here
 sub cnaHmmToCbs{
     my ($file,$self) = @_;
 
@@ -312,7 +448,6 @@ sub cnaHmmToCbs{
 	$self->error_message("Unable to create temporary file $!");
 	die;
     }
-
     open(OUTFILE,">$newfile") || die "can't open temp segs file for writing ($newfile)\n";
 
 
@@ -346,7 +481,7 @@ sub cnaHmmToCbs{
 
 sub getEntrypointsFile{
     my ($sex, $genome_build) = @_;
-    #set the appropriate entrypoints file so that we know the 
+    #set the appropriate entrypoints file so that we know the
     # chrs and lengths
     my $entrypoints_file = "";
     if($sex eq "male"){
@@ -361,6 +496,13 @@ sub getEntrypointsFile{
         } elsif ($genome_build eq "37"){
             $entrypoints_file = "/gscmnt/sata921/info/medseq/cmiller/annotations/entrypoints.hg19.female"
     }
+    } elsif ($sex eq "autosomes"){
+        if($genome_build eq "36"){
+            $entrypoints_file = "/gscmnt/sata921/info/medseq/cmiller/annotations/entrypoints.hg18.autosomes"
+        } elsif ($genome_build eq "37"){
+            $entrypoints_file = "/gscmnt/sata921/info/medseq/cmiller/annotations/entrypoints.hg19.autosomes"
+    }
+
     }
 
     if ($entrypoints_file eq ""){
@@ -371,6 +513,33 @@ sub getEntrypointsFile{
 }
 
 #########################################################################
+=cut
+             The Nate Dees School For Kids Who Can't Read Good
+                    And Want to do Other Stuff Good Too
+
+                           (   )
+                          (    )
+                           (    )
+                          (    )
+                            )  )
+                           (  (                  /\
+                            (_)                 /  \  /\
+                    ________[_]________      /\/    \/  \
+           /\      /\        ______    \    /   /\/\  /\/\
+          /  \    //_\       \    /\    \  /\/\/    \/    \
+   /\    / /\/\  //___\       \__/  \    \/
+  /  \  /\/    \//_____\       \ |[]|     \
+ /\/\/\/       //_______\       \|__|      \
+/      \      /XXXXXXXXXX\                  \
+        \    /_I_II  I__I_\__________________\
+               I_I|  I__I_____[]_|_[]_____I
+               I_II  I__I_____[]_|_[]_____I
+               I II__I  I     XXXXXXX     I
+            ~~~~~"   "~~~~~~~~~~~~~~~~~~~~~~~~
+
+=cut
+
+
 
 sub execute {
     my $self = shift;
@@ -378,15 +547,17 @@ sub execute {
     my $segment_files = $self->segment_files;
     my $gain_threshold = $self->gain_threshold;
     my $loss_threshold = $self->loss_threshold;
-    # my $male_sex_loss_threshold = $self->male_sex_loss_threshold;
-    # my $male_sex_gain_threshold = $self->male_sex_gain_threshold;
-    my $log_input = $self->log_input;
-    my $log_plot = $self->log_plot;
+    my $log2_input = $self->log2_input;
+    my $log2_plot = $self->log2_plot;
+    my $log10_plot = $self->log10_plot;
     my $highlights = $self->highlights;
+    my $annotations_top = $self->annotations_top;
+    my $annotations_bottom = $self->annotations_bottom;
     my $lowres = $self->lowres;
     my $lowres_min = $self->lowres_min;
     my $lowres_max = $self->lowres_max;
     my $ymax = $self->ymax;
+    my $ymin = $self->ymin;
     my $hide_normal = $self->hide_normal;
     my $genome_build = $self->genome_build;
     my $sex = $self->sex;
@@ -397,24 +568,37 @@ sub execute {
     my $gain_color = $self->gain_color;
     my $loss_color = $self->loss_color;
     my $cnvhmm_input = $self->cnvhmm_input;
+    my $baseline = $self->baseline;
     my $cnahmm_input = $self->cnahmm_input;
     my $plot_title = $self->plot_title;
-    # my $ylab = $self->ylab;
+    my $ylabel = $self->ylabel;
+    my $tumor_segment_file = $self->tumor_segment_file;
+    my $normal_segment_file = $self->normal_segment_file;
+
+    unless( (defined($segment_files)) xor (defined($tumor_segment_file) && defined($normal_segment_file))){
+        die $self->error_message("You must specify either the segment_files param OR both tumor_segment_file and normal_segment_file, but not all three.");
+    }
+
+    if(defined($tumor_segment_file) && defined($normal_segment_file)){
+        $segment_files = join(",",($tumor_segment_file,$normal_segment_file));
+    }
 
 
     my $entrypoints_file = getEntrypointsFile($sex,$genome_build);
 
 
     my @infiles;
+    #first do file conversion from cnv/aHMM output if necessary
     if ($cnvhmm_input || $cnahmm_input){
 	$segment_files = convertSegs($self, $segment_files, $cnvhmm_input, $cnahmm_input);
-	$log_input = 1;
-    # } elsif ($cnahmm_input){
-    #     $segment_files = convertSegs($self, $segment_files, $cnvhmm_input, $cnahmm_input);
-    #     $log_input = 1;
+        $log2_input = 1;
     }
 
+    #then do score conversion between log2/log10/absolute CN as necessary
+    $segment_files = convertScores($self, $segment_files, $log2_input, $log2_plot, $log10_plot);
+
     @infiles = split(",",$segment_files);
+
 
     #set up a temp file for the R commands (unless one is specified)
     my $temp_path;
@@ -433,12 +617,46 @@ sub execute {
     }
 
 
+    #preset some params for the different plot styles
+
+    unless(defined($gain_threshold)){
+        $gain_threshold = 2.5;
+        if ($log2_plot){
+            $gain_threshold = log_base(2,$gain_threshold/2);
+        } elsif ($log10_plot){
+            $gain_threshold = log_base(10,$gain_threshold/2);
+        }
+    }
+    unless(defined($loss_threshold)){
+        $loss_threshold = 1.5;
+        if ($log2_plot){
+            $loss_threshold = log_base(2,$loss_threshold/2);
+        } elsif ($log10_plot){
+            $loss_threshold = log_base(10,$loss_threshold/2);
+        }
+    }
+
+    unless(defined($baseline)){
+        if ($log2_plot){
+            $baseline = 0;
+        } elsif ($log10_plot){
+            $baseline = 0;
+        } else {
+            $baseline = 2;
+        }
+    }
+
+    unless(defined($ymin)){
+        unless($log2_plot || $log10_plot){
+            $ymin = -2;
+        }
+    }
+
+
     #open the R file
     open(R_COMMANDS,">$outfile") || die "can't open $outfile for writing\n";
 
-    #todo - what's an easier way to source this R file out of the user's git path (or stable)?
-
-
+    #source the R file
     my $dir_name = dirname(__FILE__);
     print R_COMMANDS "source(\"" . $dir_name . "/PlotSegments.R\")\n";
 
@@ -450,10 +668,19 @@ sub execute {
 
 
     #set up the plotting space
-    print R_COMMANDS "par(xaxs=\"i\", xpd=FALSE, mfrow=c(" . @infiles . ",1), oma=c(1,1,1,1), mar=c(1,3,1,1))\n";
+    if(defined($chr) && defined($plot_title)){
+        print R_COMMANDS "par(xaxs=\"i\", xpd=FALSE, mfrow=c(" . @infiles . ",1), oma=c(1,1,1,1), mar=c(3,3,1,1))\n";
+    } else {
+        print R_COMMANDS "par(xaxs=\"i\", xpd=FALSE, mfrow=c(" . @infiles . ",1), oma=c(1,1,1,1), mar=c(1,3,1,1))\n";
+    }
 
-    my @titles = split(",",$plot_title);
+    #set up the titles
+    my @titles;
+    if(defined($plot_title)){
+        @titles = split(",",$plot_title);
+    }
     my $counter = 0;
+
 
     #draw the plots for each set of segments
     foreach my $infile (@infiles){
@@ -473,16 +700,20 @@ sub execute {
 	    print R_COMMANDS ", ymax=" . $ymax;
 	}
 
+        if(defined($ymin)){
+	    print R_COMMANDS ", ymin=" . $ymin;
+        }
+
 	if (defined($highlights)){
 	    print R_COMMANDS ", highlights=\"" . $highlights . "\"";
 	}
 
-	if ($log_plot){
-	    print R_COMMANDS ", logPlot=TRUE";
+	if (defined($annotations_top)){
+	    print R_COMMANDS ", annotationsTop=\"" . $annotations_top . "\"";
 	}
 
-	if ($log_input){
-	    print R_COMMANDS ", logInput=TRUE";
+	if (defined($annotations_bottom)){
+	    print R_COMMANDS ", annotationsBottom=\"" . $annotations_bottom . "\"";
 	}
 
 	if ($lowres){
@@ -503,31 +734,38 @@ sub execute {
 	    print R_COMMANDS ", showNorm=TRUE";
 	}
 
+        print STDERR "$loss_threshold -- $gain_threshold\n";
 	print R_COMMANDS ", gainThresh=" . $gain_threshold;
 	print R_COMMANDS ", lossThresh=" . $loss_threshold;
 
 	print R_COMMANDS ", gainColor=\"" . $gain_color . "\"";
 	print R_COMMANDS ", lossColor=\"" . $loss_color . "\"";
 
+        if(defined($baseline)){
+            print R_COMMANDS ", baseline=\"" . $baseline . "\"";
+        }
+
 	if (defined($plot_title)){
 	    print R_COMMANDS ", plotTitle=\"" . $titles[$counter] . "\"";
 	}
 
-	# if (defined($ylab)){
-	#     print R_COMMANDS ", ylabel=\"" . $ylab . "\"";
-	# } else {
-	#     if($log_plot){
-	# 	print R_COMMANDS ", ylabel=\"Log2 Copy Number\"";
-	#     } else {
-	# 	print R_COMMANDS ", ylabel=\"Copy Number\"";
-	#     }
-	# }
+	if (defined($ylabel)){
+            print R_COMMANDS ", ylabel=\"" . $ylabel . "\"";
+        } else {
+            if($log2_plot){
+	 	print R_COMMANDS ", ylabel=\"Log2 Copy Number\"";
+            } elsif($log10_plot){
+	 	print R_COMMANDS ", ylabel=\"Log10 Copy Number\"";
+            } else {
+	 	print R_COMMANDS ", ylabel=\"Copy Number\"";
+            }
+        }
 
 	print R_COMMANDS ")\n";
         $counter++;
     }
 
-    #close it out
+    #close the file out
     print R_COMMANDS "dev.off()\n";
     print R_COMMANDS "q()\n";
     close R_COMMANDS;

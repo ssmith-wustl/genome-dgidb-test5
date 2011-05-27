@@ -26,7 +26,7 @@ my %properties = (
     user  => {
         type => 'String',
         is_optional => 1,
-        default => $ENV{USER},
+        default => qw(Genome::Sys->username),
         doc =>'User (default is current user)',
     }, 
 );

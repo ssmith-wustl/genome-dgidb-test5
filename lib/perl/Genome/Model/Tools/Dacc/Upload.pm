@@ -73,8 +73,10 @@ sub execute {
     }
     $self->status_message('Aspera command OK');
 
-    my $upload_ok = $self->validate_files_were_uploaded;
-    return if not $upload_ok;
+    #This commented out because validation required sshing into the server
+    #to determine that file exists but we can no longer ssh into ther server 5/13/11
+    #my $upload_ok = $self->validate_files_were_uploaded;
+    #return if not $upload_ok;
 
     $self->status_message('Upload...OK');
 

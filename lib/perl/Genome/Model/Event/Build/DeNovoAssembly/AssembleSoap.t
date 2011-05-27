@@ -1,4 +1,4 @@
-#! /gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -57,7 +57,7 @@ my @libraries = ( { fragment_fastq_file => 'fragment.fastq' } );
 # lsf params
 my $lsf_params = $assemble->bsub_rusage;
 diag($lsf_params);
-is($lsf_params, "-n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>30000] rusage[mem=30000]' -M 30000000", 'lsf params'); 
+is($lsf_params, "-q bigmem -n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>30000] rusage[mem=30000]' -M 30000000", 'lsf params'); 
 ok( $assemble->execute, "Executed soap assemble");
 
 # check files

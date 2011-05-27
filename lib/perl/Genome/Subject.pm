@@ -86,7 +86,8 @@ sub create {
     # class definitions. Instead of having UR catch these extra and die, they are captured here and later turned into
     # subject attributes.
     my %extra;
-    my @property_names = ('id', map { $_->property_name } ($class->__meta__->properties, $class->__meta__->all_id_by_property_metas));
+    my @property_names = ('id', map { $_->property_name } ($class->__meta__->_legacy_properties, $class->__meta__->all_id_by_property_metas));
+    #my @property_names = $class->__meta__->property_names;
     for my $param (sort keys %params) {
         unless (grep { $param eq $_ } @property_names) {
             $extra{$param} = delete $params{$param};

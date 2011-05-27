@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -23,7 +23,7 @@ else {
     plan tests => 8;
 }
 
-use_ok('Genome::Model::Tools::DetectVariants2::Pindel');
+use_ok('Genome::Model::Tools::DetectVariants2::GatkGermlineIndel');
 
 # Override lock name because if people cancel tests locks don't get cleaned up.
 *Genome::SoftwareResult::_resolve_lock_name = sub {

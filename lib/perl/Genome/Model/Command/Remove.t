@@ -11,7 +11,7 @@ BEGIN {
 
 my $archive_dir = File::Temp::tempdir(CLEANUP => 1);
 my $data_dir = File::Temp::tempdir(CLEANUP => 1);
-my $template = 'Genome-Model-Command-Remove-'. $ENV{USER} .'-XXXX';
+my $template = 'Genome-Model-Command-Remove-'. Genome::Sys->username .'-XXXX';
 my $hostname = Sys::Hostname::hostname;
 
 my (undef,$archive_file) = 
