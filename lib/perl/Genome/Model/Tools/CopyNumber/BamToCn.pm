@@ -15,6 +15,7 @@ class Genome::Model::Tools::CopyNumber::BamToCn {
         output_file => {
             is => 'String',
             doc => 'File to send output to',
+            is_output => 1,
         }
     ],
     has_optional_input => [
@@ -47,6 +48,12 @@ class Genome::Model::Tools::CopyNumber::BamToCn {
             doc => "use only properly matched reads",
         },
     ],
+    has_param => [
+        lsf_queue => {
+            default => "long",
+        },
+    ],
+
 };
 
 
