@@ -47,29 +47,17 @@ sub execute{
     $snv_file   = $self->_convert_input_file($self->snv_file) if defined $self->snv_file;
     $indel_file = $self->_convert_input_file($self->indel_file) if defined $self->indel_file;
 
-    if (defined $snv_file and defined $indel_file) {
-        my $max_memory_kb = "3145728"; # 3 GB of memory, if sort needs more than this it uses temp files for sorting
-        my $rv = Genome::Sys->shellcmd(
-            cmd => "sort -k 1,1 -k 2,2n -k 3,3n -y$max_memory_kb -m -o " . join(' ', $self->output, $indel_file->filename, $snv_file->filename)
-        );
-        unless ($rv) {
-            Carp::confess "Could not merge together indel file " . $indel_file->filename . " and " . $snv_file->filename;
-        }
-    } elsif (defined $snv_file) {
-        my $rv = Genome::Sys->shellcmd(cmd => "cp " . $snv_file->filename . "  " . $self->output);
-        unless ($rv) {
-            Carp::confess "Failed to copy " . $snv_file->filename . " to " . $self->output;
-        }
-    } elsif (defined $indel_file) {
-        my $rv = Genome::Sys->shellcmd(cmd => "cp " . $indel_file->filename . "  " . $self->output);
-        unless ($rv) {
-            Carp::confess "Failed to copy " . $indel_file->filename . " to " . $self->output;
-        }
-    } else {
-        #This should never happen, die if it does
-        Carp::confess "Neither converted file exists!";
+    my $cmd = "sort -k 1,1 -k 2,2n -k 3,3n -o " . $self->output;
+    if(defined $snv_file) {
+        $cmd .= " " . $snv_file->filename;
     }
-
+    if(defined $indel_file) {
+        $cmd .= " " . $indel_file->filename;
+    }
+    if(! Genome::Sys->shellcmd(cmd => $cmd)) {
+        Carp::confess "Failed to sort inputs.";
+        die;
+    }
     return 1;
 }
 
