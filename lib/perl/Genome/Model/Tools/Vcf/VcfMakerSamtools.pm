@@ -343,6 +343,9 @@ sub execute {                               # replace with real execution logic.
                 $allSnvs{$id}{"GT"} = genGT($col[4],@allAlleles);
                 $allSnvs{$id}{"INFO"} = "VT=SNP";
 
+
+
+
                 #handle indel genotype calls
             } elsif ($type eq "indel"){
                 #add the preceding base as an anchor position

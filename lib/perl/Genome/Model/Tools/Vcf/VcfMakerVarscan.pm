@@ -389,7 +389,7 @@ sub getPrecedingBase{
                 if($col[11] == 0){
                     $score = 99;
                 } else {
-                    $score = sprintf "%.2f", -10*log10($col[12]);
+                    $score = sprintf "%.2f", -10*log10($col[11]);
                 }
 
                 #genotype quality
