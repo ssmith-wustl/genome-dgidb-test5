@@ -1,4 +1,4 @@
-#! /gsc/bin/perl
+#!/usr/bin/env perl
 
 use above 'Genome';
 use Test::More tests => 1;

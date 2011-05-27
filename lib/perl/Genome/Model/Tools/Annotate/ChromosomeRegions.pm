@@ -7,6 +7,11 @@ use Genome;
 
 use Genome::RefCov::ROI::Bed;
 
+my $low  = 20000;
+my $high = 250000;
+UR::Context->object_cache_size_lowwater($low);
+UR::Context->object_cache_size_highwater($high);
+
 class Genome::Model::Tools::Annotate::ChromosomeRegions {
     is => ['Command'],
     has_input => [
@@ -32,6 +37,7 @@ class Genome::Model::Tools::Annotate::ChromosomeRegions {
 };
 
 sub execute {
+    $DB::single = 1;
     my $self = shift;
 
     my ($basename,$dirname,$suffix) = File::Basename::fileparse($self->bed_file,qw/.bed/);
@@ -67,20 +73,29 @@ sub execute {
                 }
                 my @sub_structure = $t->ordered_sub_structures;
                 for my $ss (@sub_structure){
-                    my $ss_region = Genome::RefCov::ROI::Region(
+                    my $ss_region = Genome::RefCov::ROI::Region->create(
                         start => $ss->structure_start,
                         end => $ss->structure_stop,
                         strand => $t->strand,
                     );
                     if ($ss_region->overlaps($region)) {
-                        print $fh $t->chrom_name ."\t". $ss->structure_start ."\t". $ss->structure_stop ."\t". $gene_name
-                            .':'. $ss->structure_type ."\t". $ss->ordinal ."\t". $t->strand ."\n";
+                        print $fh join("\t", $t->chrom_name, $ss->structure_start, $ss->structure_stop, "$gene_name:" . $ss->structure_type, $ss->ordinal, $t->strand), "\n";
                     }
+                    $ss_region->delete();
                 }
             }
         }
+        $transcript_window->iterator(undef);
+        $transcript_window->delete();
         $fh->close;
+        for my $class (qw/Genome::Transcript Genome::Gene Genome::TranscriptSubStructure/) {
+            my @o = $class->is_loaded;
+            for my $o (@o) {
+                $o->unload();
+            }
+        }
     }
+    return 1;
 }
 
 1;

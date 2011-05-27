@@ -60,11 +60,6 @@ sub _run_aligner {
     my $reference_build = $self->reference_build;
     
     my $reference_sdf_path = $self->get_reference_sequence_index->full_consensus_path('sdf'); 
-    
-    # Check the local cache on the blade for the fasta if it exists.
-    if (-e "/opt/fscache/" . $reference_sdf_path) {
-        $reference_sdf_path = "/opt/fscache/" . $reference_sdf_path;
-    }
 
     my $sam_file = $self->temp_scratch_directory . "/all_sequences.sam";
     my $sam_file_fh = IO::File->new(">>" . $sam_file );

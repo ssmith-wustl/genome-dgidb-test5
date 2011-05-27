@@ -277,6 +277,24 @@ sub __errors__ {
         }
     }
 
+    my $genotype = $self->genotype_microarray_model;
+    if ($genotype) {
+        if (not defined $genotype->reference_sequence_build) {
+            push @tags, UR::Object::Tag->create(
+                type => 'invalid',
+                properties => 'genotype_microarray_model',
+                desc => "Supplied genotype microarray model " . $genotype->__display_name__ . " does not specify a reference sequence");
+        }
+
+        if (not $rsb->is_compatible_with($genotype->reference_sequence_build)) {
+            push @tags, UR::Object::Tag->create(
+                type => 'invalid',
+                properties => 'genotype_microarray_model',
+                desc => "Supplied genotype microarray model " . $genotype->__display_name__ . " specifies incompatible reference sequence " .
+                    $genotype->reference_sequence_build->__display_name__);
+        }
+    }
+
     return @tags;
 }
 
@@ -368,23 +386,13 @@ sub is_lane_qc {
 sub default_genotype_model {
     my $self = shift;
     my $sample = $self->subject;
-    unless ($sample->isa('Genome::Sample')) {
-        $self->warning_message("Can only determine default genotype model if subject is a Genome::Sample, not " . $sample->class);
-        return;
-    }
+    return unless $sample->isa('Genome::Sample');
 
     my @genotype_models = sort { $a->id <=> $b->id } $sample->default_genotype_models;
-    unless (@genotype_models) {
-        $self->warning_message("Could not find any genotype microarray models associated with sample " . $sample->id);
-        return;
-    }
+    return unless @genotype_models;
 
     @genotype_models = grep { $_->reference_sequence_build->is_compatible_with($self->reference_sequence_build) } @genotype_models;
-    unless (@genotype_models) {
-        $self->warning_message("No genotype microarray models for sample " . $sample->id . " use a reference build " .
-            "that is compatible with " . $self->reference_sequence_build_id);
-        return;
-    }
+    return unless @genotype_models;
 
     if (@genotype_models > 1) {
         $self->warning_message("Found multiple compatible genotype models for sample " . $sample->id .
@@ -510,7 +518,13 @@ sub get_or_create_lane_qc_models {
 
         my $existing_model = Genome::Model->get(name => $lane_qc_model_name);
         if ($existing_model) {
-            $self->status_message("Default lane QC model " . $existing_model->__display_name__ . " already exists.");
+            if ($existing_model->genotype_microarray_model_id) {
+                $self->status_message("Default lane QC model " . $existing_model->__display_name__ . " already exists.");
+            }
+            else {
+                $self->status_message("New build requested for lane QC model " . $existing_model->__display_name__ . " because it is missing the genotype_microarray input.");
+                $existing_model->build_requested(1);
+            }
             push @lane_qc_models, $existing_model;
             next;
         }

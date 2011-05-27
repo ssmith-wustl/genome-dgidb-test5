@@ -51,9 +51,27 @@ END
     ],
     PACKAGE => 'main',
     DIRECTORY => Genome::InlineConfig::DIRECTORY(),
-    EXTRA_JAVA_ARGS => '-Xmx1000m',
+    EXTRA_JAVA_ARGS => '-Xmx2000m',
     JNI => 1,
 ) ;
+
+sub verify_seq {
+    my ($self, $seq) = @_;
+
+    if ( not $seq ) {
+        Carp::confess("No sequence given to classify");
+    }
+
+    if ( not $seq->{id} ) {
+        Carp::confess('Seq does not have an id: '.Data::Dumper::Dumper($seq));
+    }
+
+    if ( length $seq->{seq} < 50) {
+        return;
+    }
+
+    return 1;
+}
 
 sub _is_reversed {
     my ($self, %params) = @_; 

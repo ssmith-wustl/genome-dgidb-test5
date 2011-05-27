@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 # Merge call sets produced by AssemblyValidation.pl scripts
 use strict;
 use warnings;

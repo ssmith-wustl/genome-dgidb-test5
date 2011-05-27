@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 # Annotate Assembled SVs based UCSC gene table
 use strict;
 use warnings;

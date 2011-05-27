@@ -30,6 +30,22 @@ for (fi in fs)
     plotgenome(mapnew, y="z",cutoff=NULL,cutline=0,img=imgFile,yscale=c(-3,3),draw=TRUE,chrom=NULL,mbp=NULL,chr.col="CHR",pos.col="POS",tombp=T)
   }
 }
+############################################################################
+iscan_per_sample_cn_graph=function(workdir)
+{
+OUTdir=paste(workdir,'/raw_images/',sep="");
+dir.create(OUTdir,recursive=T);
+
+dir(workdir)->fs;
+for (fi in fs)
+    {
+    read.table(fi,header=F)->cn;
+    colnames(cn) = c("CHR","POS","cn");
+    imgFile=paste(OUTdir,fi,sep="/");
+
+    plotgenome(cn, y="cn",cutoff=NULL,cutline=0,img=imgFile,yscale=c(-3,3),draw=TRUE,chrom=NULL,mbp=NULL,chr.col="CHR",pos.col="POS",tombp=T)
+    }
+}
 ########################################################################
 run_swt_test=function(workdir)
 {
@@ -59,6 +75,21 @@ for (fi in fs)
   }
 
 }
+#######################################################################
+iscan_run_swt_test=function(workdir)
+{
+
+OUTdir = paste(workdir,'/SWT_30_10/',sep="");
+dir.create(OUTdir,recursive=T);
+dir(workdir)->fs;
+for (fi in fs)
+    {
+    read.table(fi,header=F)->cn;
+    colnames(cn) = c("CHR","POS","cn");
+    output_file=paste(OUTdir,fi,".swt",sep="");
+    cn.swt(x=cn,out.file=output_file,wsize=30,wby=10);
+    }
+}
 ##################################################################
 per_sample_swt_graphs=function(workdir)
 {
@@ -77,7 +108,23 @@ for(fi in fs)
     plotgenome(z,y="cn", yscale=c(0,6),chr.col="chrom",pos.col="pos1",img=graphFile)
 
   }
+}
+##################################################################
+iscan_per_sample_swt_graphs=function(workdir)
+{
+IMGdir=paste(workdir,'/swt_png_30_10/',sep="");
+dir.create(IMGdir,recursive=T);
+dir(paste(workdir,"/SWT_30_10/", sep=""))->fs;
+for(fi in fs)
+  {
+    swtfile = paste(workdir,"SWT_30_10", fi, sep="/")
+    load(swtfile)
 
+    z$cn=2*2^z$cn
+    graphFile=paste(workdir,"/swt_png_30_10/",fi, sep="")
+    plotgenome(z,y="cn", yscale=c(0,6),chr.col="chrom",pos.col="pos1",img=graphFile)
+
+  }
 }
 #######################################################
 p.correct=function(p)

@@ -76,14 +76,10 @@ sub execute {
     @metrics{qw/ total error success /} = (qw/ 0 0 0 /);
     while ( my $seqs = $reader->read ) {
         $metrics{total}++;
-        # Try to classify 2X - per kathie 2009mar3
         my $classification = $classifier->classify($seqs->[0]);
         if ( not $classification ) {
-            $classification = $classifier->classify($seqs->[0]);
-            if ( not $classification ) {
-                $metrics{error}++;
-                next;
-            }
+            $metrics{error}++;
+            next;
         }
         $writer->write($classification); # TODO check?
         $metrics{success}++;

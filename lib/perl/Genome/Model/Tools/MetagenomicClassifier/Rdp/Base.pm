@@ -61,19 +61,8 @@ sub get_training_set {
 sub classify {
     my ($self, $seq) = @_;
 
-    if ( not $seq ) {
-        Carp::confess("No sequence given to classify");
-    }
+    return if not $self->verify_seq($seq);
 
-    if ( not $seq->{id} ) {
-        Carp::confess('No id given for seq: '.Data::Dumper::Dumper($seq));
-    }
-
-    if ( length $seq->{seq} < 50) {
-        $self->error_message("Can't classify sequence (".$seq->{id}."). Sequence length must be at least 50 bps.");
-        return;
-    }
-    
     my $parsed_seq = eval{
         new edu::msu::cme::rdp::classifier::readseqwrapper::ParsedSequence($seq->{id}, $seq->{seq});
     };
@@ -82,10 +71,14 @@ sub classify {
         return;
     }
 
+    # Try to classify 2X - per kathie 2009mar3
     my $classification_result = eval{ $self->{'classifier'}->classify($parsed_seq); };
-    unless ( $classification_result ) {
-        $self->error_message("Can't classify sequence (".$parsed_seq->getName."). No classification result was returned from the classifier.");
-        return;
+    if ( not $classification_result ) {
+        $classification_result = eval{ $self->{'classifier'}->classify($parsed_seq); };
+        if ( not $classification_result ) {
+            $self->error_message("Can't classify sequence (".$seq->{seq}."). No classification result was returned from the classifier.");
+            return;
+        }
     }
 
     my $complemented = $self->_is_reversed(
@@ -108,6 +101,7 @@ sub classify {
         # Methods are: getConfidence, getTaxid, getName, getRank	
         my $id = $assignment->getName;
         $id =~ s/\s+/_/g;
+        $id =~ s/['"]//g;
         $taxa{ $assignment->getRank || 'root' } = {
             id => $id,
             confidence => $assignment->getConfidence,

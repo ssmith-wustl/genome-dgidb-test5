@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 # SVbreakpoint detects SVs from clusters of softclipped reads
 # This is my implementation based on the idea SJ Jude teams
 

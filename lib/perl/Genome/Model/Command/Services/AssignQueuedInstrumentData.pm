@@ -1244,7 +1244,7 @@ sub add_processing_profiles_to_pses{
                     else {
                         my $pp_id = '2580856';
                         push @processing_profile_ids_to_add, $pp_id;
-                        if ($self->_is_tcga_breast_cancer($pse) or $self->_is_tcga_endometrial_cancer($pse)) {
+                        if ($self->_is_tcga_breast_cancer($pse) or $self->_is_tcga_endometrial_cancer($pse) or $self->_is_asms($pse)) {
                             # NOTE: this is the _fixed_ build 37 with a correct external URI
                             $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
                         } 
@@ -1485,6 +1485,24 @@ sub _is_tcga_endometrial_cancer {
     my $name = $sample->name;
 
     return (substr($name,0,4) eq 'H_LR');   
+}
+
+sub _is_asms {
+    #For our purposes, ASMS instrument data is that which
+    #has a subject of a sample whose name is prefixed by "H_HY".
+    my $self = shift;
+    my $pse = shift;
+
+    my $instrument_data = $self->_instrument_data($pse);
+    my $sample = $instrument_data->sample;
+
+    unless($sample and $sample->isa('Genome::Sample')) {
+        return 0;
+    }
+
+    my $name = $sample->name;
+
+    return (substr($name,0,4) eq 'H_HY');   
 }
 
 1;
