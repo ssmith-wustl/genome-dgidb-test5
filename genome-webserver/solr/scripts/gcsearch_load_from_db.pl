@@ -1,7 +1,5 @@
 #!/gsc/bin/perl
 
-use lib '/gscuser/jlolofie/dev/git/genome/lib/perl';
-
 use Genome;
 
 #UR::Context->object_cache_size_highwater(200_000);
@@ -38,6 +36,7 @@ taxon
 library
 disk_group
 disk_volume
+imported_instrument_data
 );
 
 my @types_to_add;
@@ -275,6 +274,14 @@ sub get_functions {
         loading "disk volumes";
         my @disk_volumes = Genome::Disk::Volume->get( -hint => ['assignments']);
         Genome::Search->add(@disk_volumes);
+        done;
+    };
+
+    $f->{'imported_instrument_data'} = sub {
+        loading "imported_instrument_data";
+        my @iid = Genome::InstrumentData::Imported->get();
+        print 'adding ' . scalar(@iid) . ' imported_instrument_data';
+        Genome::Search->add(@iid);
         done;
     };
 
