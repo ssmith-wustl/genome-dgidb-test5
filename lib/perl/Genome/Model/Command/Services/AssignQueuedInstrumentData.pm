@@ -378,17 +378,13 @@ sub find_or_create_somatic_variation_models{
             $mate_params{target_region_set_name} = $model->target_region_set_name if $model->can('target_region_set_name') and $model->target_region_set_name;
             $mate_params{region_of_interest_set_name} = $model->region_of_interest_set_name if $model->can('region_of_interest_set_name') and $model->region_of_interest_set_name;
 
-            $DB::single = $DB::stopper;
             my $mate = Genome::Model::ReferenceAlignment->get( %mate_params );
+            $DB::single = $DB::stopper;
             unless ($mate){
-                my $copy = Genome::Model::Command::Copy->execute(
-                    from => $model,
-                    to => 'AQID-PLACE_HOLDER',
-                    skip_instrument_data_assignments => 1,
+                $mate = $model->copy(
+                    name => 'AQID-PLACE_HOLDER',
+                    do_not_copy_instrument_data => 1,
                 );
-                $self->error_message('Failed to create mate for model name: ' . $model->name) and next unless $copy;
-
-                $mate = $copy->_copied_model;
                 $self->error_message("Failed to find copied mate with subject name: $mate_name") and next unless $mate;
                 
                 $mate->subject_id($subject_for_mate->id);
@@ -397,6 +393,7 @@ sub find_or_create_somatic_variation_models{
                 my $mate_model_name = $mate->default_model_name(capture_target => $capture_target);
                 $self->error_message("Could not name mate model for with subject name: $mate_name") and next unless $mate_model_name;
                 $mate->name($mate_model_name);
+                $mate->auto_assign_inst_data(1);
                 
                 my $new_models = $self->_newly_created_models;
                 $new_models->{$mate->id} = $mate;
