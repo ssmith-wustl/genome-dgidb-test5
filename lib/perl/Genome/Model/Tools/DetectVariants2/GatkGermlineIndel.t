@@ -45,6 +45,7 @@ my $gatk_somatic_indel = Genome::Model::Tools::DetectVariants2::GatkGermlineInde
         reference_build_id => $refbuild_id,
         output_directory => $tmpdir, 
         mb_of_ram => 3000,
+        version => 5336,
 );
 
 ok($gatk_somatic_indel, 'gatk_germline_indel command created');
