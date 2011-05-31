@@ -78,9 +78,10 @@ sub existing_population_groups_with_hash {
     return Genome::PopulationGroup->get(%params);
 }
 
-# Generate an md5 hash based on the ids of the provided individuals
+# Generate an md5 hash based on the ids of the provided individuals, can be called as either an object or class method
 sub generate_hash_for_individuals {
     my ($self, @individuals) = @_;
+    @individuals = $self->remove_non_unique_individuals(@individuals);
     my @ids = sort map { $_->id } @individuals;
     my $hash = Digest::MD5::md5_hex(@ids); # Returns a valid answer even if individuals is undef
     return $hash;
@@ -93,6 +94,20 @@ sub remove_non_unique_individuals {
     my %unique;
     map { $unique{$_->id} = $_ } @individuals;
     return values %unique;
+}
+
+# Returns those members that don't have a matching individual in the provided list
+sub find_unmatched_members {
+    my ($self, @individuals) = @_;
+    return $self->members unless @individuals;
+
+    my %members;
+    map { $members{$_->id} = $_ } $self->members;
+
+    for my $individual (@individuals) {
+        delete $members{$individual->id} if exists $members{$individual->id};
+    }
+    return values %members;
 }
 
 # Remove individuals from the list that already belong to this group
@@ -135,6 +150,11 @@ sub add_members {
     return 1;
 }
 
+sub remove_member {
+    my ($self, $individual) = @_;
+    return $self->remove_members($individual);
+}
+
 # Removes members from the group
 sub remove_members {
     my ($self, @individuals) = @_;
@@ -153,6 +173,25 @@ sub remove_members {
 
     my $member_hash = $self->generate_hash_for_individuals($self->members);
     $self->member_hash($member_hash);
+    return 1;
+}
+
+# Make the groups membership match the provided list of individuals. Assumes that adding/removing
+# members from the group is cheap. If this is false, will need to smartly add/remove as needed.
+sub change_group_membership {
+    my ($self, @individuals) = @_;
+    return unless @individuals;
+    @individuals = $self->remove_non_unique_individuals(@individuals);
+    
+    unless ($self->remove_members($self->members)) {
+        Carp::confess "Failed to remove members from population group " . $self->__display_name__;
+    }
+
+    unless ($self->add_members(@individuals)) {
+        Carp::confess "Failed to add individuals " . join(' ', map { $_->__display_name__ } @individuals) .
+            " to population group " . $self->__display_name__;
+    }
+
     return 1;
 }
 
