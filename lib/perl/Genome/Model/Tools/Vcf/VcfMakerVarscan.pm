@@ -78,13 +78,13 @@ class Genome::Model::Tools::Vcf::VcfMakerVarscan {
 
 
 sub help_brief {                            # keep this to just a few words <---
-    "Generate Vcf File from Varscan (unformatted) output"
+    "Generate Vcf File from Varscan output - requires unformatted for SNVs, and formatted for INDELs"
 }
 
 
 sub help_synopsis {
 <<'HELP';
-Generate a VCF File from Varscan (unformatted) output
+Generate Vcf File from Varscan output - requires unformatted for SNVs, and formatted for INDELs
 HELP
 }
 
