@@ -171,13 +171,13 @@ sub add {
         return;
     }
     
-    if($self->refresh_cache_on_add) {
-        my $result_node = $self->generate_result_xml(\@docs, undef, 'html', 1);  
-    } else {
-        for my $doc (@docs) {
-            $self->_delete_cached_result($doc);
-        } 
-    }
+#    if($self->refresh_cache_on_add) {
+#        my $result_node = $self->generate_result_xml(\@docs, undef, 'html', 1);  
+#    } else {
+#        for my $doc (@docs) {
+#            $self->_delete_cached_result($doc);
+#        } 
+#    }
 
 
     #$self->status_message('Sent ' . (scalar @docs) . ' document(s) to Solr.');

@@ -71,7 +71,7 @@ sub abyss_pe_binary {
 # TODO: abstract job submission, it's bad to hard code bsub all over
 sub mpirun_cmd {
     my ($self, $output_directory) = @_;
-    my $rusage = 'span[ptile=1] select[fscache]';
+    my $rusage = 'span[ptile=1]';
     my $log_file = "$output_directory/abyss_parallel.log";
     my $num_jobs = $self->num_jobs;
     my $job_queue = $self->job_queue;
