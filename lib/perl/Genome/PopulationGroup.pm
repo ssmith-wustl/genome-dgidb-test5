@@ -73,33 +73,38 @@ sub create {
 # Return any other population groups that have the same member hash as the one provided
 sub existing_population_groups_with_hash {
     my ($self, $hash) = @_;
-    return Genome::PopulationGroup->get(
-        member_hash => $hash,
-        'id ne' => $self->id,
-    );
+    my %params = (member_hash => $hash);
+    $params{'id ne'} = $self->id if ref $self; # Exclude self if called as object method
+    return Genome::PopulationGroup->get(%params);
 }
 
 # Generate an md5 hash based on the ids of the provided individuals
 sub generate_hash_for_individuals {
     my ($self, @individuals) = @_;
     my @ids = sort map { $_->id } @individuals;
-    # Returns a valid answer even if individuals is undef
-    my $hash = Digest::MD5::md5_hex(@ids);
+    my $hash = Digest::MD5::md5_hex(@ids); # Returns a valid answer even if individuals is undef
     return $hash;
 }
 
-# Filter the provided list of individuals to include only unique individuals not already in the group
+# Filter the provided list of individuals to include only unique individuals
 sub remove_non_unique_individuals {
     my ($self, @individuals) = @_;
-
+    return unless @individuals;
     my %unique;
     map { $unique{$_->id} = $_ } @individuals;
-
-    for my $member_id ($self->member_ids) {
-        delete $unique{$member_id} if exists $unique{$member_id};
-    }
-
     return values %unique;
+}
+
+# Remove individuals from the list that already belong to this group
+sub remove_existing_members {
+    my ($self, @individuals) = @_;
+    return unless @individuals;
+    my %individuals;
+    map { $individuals{$_->id} = $_ } @individuals;
+    for my $member_id ($self->member_ids) {
+        delete $individuals{$member_id} if exists $individuals{$member_id};
+    }
+    return values %individuals;
 }
 
 sub add_member {
@@ -111,6 +116,7 @@ sub add_member {
 sub add_members {
     my ($self, @individuals) = @_;
     my @addable_individuals = $self->remove_non_unique_individuals(@individuals);
+    @addable_individuals = $self->remove_existing_members(@addable_individuals);
     return 1 unless @addable_individuals; # If all of the provided individuals are already added/redundant, just do nothing
 
     for my $addable (@addable_individuals) {
