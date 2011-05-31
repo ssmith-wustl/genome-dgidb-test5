@@ -198,7 +198,7 @@ sub execute {
                             $fields[6] = "PASS";
                         } else {
                             if($remove_filtered_lines){
-                                $remove_line = 0;
+                                $remove_line = 1;
                             } else {
                                 $fields[6] = $filter_name;
                             }
@@ -206,7 +206,7 @@ sub execute {
                     } else {
                         if (exists($filter{$key})){
                             if($remove_filtered_lines){
-                                $remove_line = 0;
+                                $remove_line = 1;
                             } else {
                                 $fields[6] = $filter_name;
                             }
