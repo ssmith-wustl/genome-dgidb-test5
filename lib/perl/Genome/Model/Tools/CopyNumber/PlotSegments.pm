@@ -6,7 +6,6 @@ package Genome::Model::Tools::CopyNumber::PlotSegments;
 #	AUTHOR:		Chris Miller (cmiller@genome.wustl.edu)
 #
 #	CREATED:	05/05/2011 by CAM.
-#	MODIFIED:
 #
 #	NOTES:
 #
@@ -109,13 +108,13 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	annotations_top => {
 	    is => 'String',
 	    is_optional => 1,
-	    doc => 'file containing regions to label at the top of the graph. File is in bed format with 4th column as label text',
+	    doc => 'file containing regions to label at the top of the graph. File is in bed format with 4th column (name) used label text. The 5th column (score) can be used to adjust annotations up and down to prevent overlap. For example, -4 moves a label down 4 y-axis units',
 	},
 
 	annotations_bottom => {
 	    is => 'String',
 	    is_optional => 1,
-	    doc => 'file containing regions to label at the bottom of the graph. File is in bed format with 4th column as label text',
+	    doc => 'file containing regions to label at the bottom of the graph. File is in bed format with 4th column (name) used label text. The 5th column (score) can be used to adjust annotations up and down to prevent overlap. For example, +4 moves a label up 4 y-axis units',
 	},
 
 
@@ -513,31 +512,47 @@ sub getEntrypointsFile{
 }
 
 #########################################################################
-=cut
-             The Nate Dees School For Kids Who Can't Read Good
-                    And Want to do Other Stuff Good Too
-
-                           (   )
-                          (    )
-                           (    )
-                          (    )
-                            )  )
-                           (  (                  /\
-                            (_)                 /  \  /\
-                    ________[_]________      /\/    \/  \
-           /\      /\        ______    \    /   /\/\  /\/\
-          /  \    //_\       \    /\    \  /\/\/    \/    \
-   /\    / /\/\  //___\       \__/  \    \/
-  /  \  /\/    \//_____\       \ |[]|     \
- /\/\/\/       //_______\       \|__|      \
-/      \      /XXXXXXXXXX\                  \
-        \    /_I_II  I__I_\__________________\
-               I_I|  I__I_____[]_|_[]_____I
-               I_II  I__I_____[]_|_[]_____I
-               I II__I  I     XXXXXXX     I
-            ~~~~~"   "~~~~~~~~~~~~~~~~~~~~~~~~
-
-=cut
+#
+#              The Nate Dees School For Kids Who Can't Read Good
+#                     And Want to do Other Stuff Good Too
+#
+#                            (   )
+#                           (    )
+#                            (    )
+#                           (    )
+#                             )  )
+#                            (  (                  /\
+#                             (_)                 /  \  /\
+#                     ________[_]________      /\/    \/  \
+#            /\      /\        ______    \    /   /\/\  /\/\
+#           /  \    //_\       \    /\    \  /\/\/    \/    \
+#    /\    / /\/\  //___\       \__/  \    \/
+#   /  \  /\/    \//_____\       \ |[]|     \
+#  /\/\/\/       //_______\       \|__|      \
+# /      \      /XXXXXXXXXX\                  \
+#         \    /_I_II  I__I_\__________________\
+#                I_I|  I__I_____[]_|_[]_____I
+#                I_II  I__I_____[]_|_[]_____I
+#                I II__I  I     XXXXXXX     I
+#             ~~~~~"   "~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#
+#
+#
+#  
+# Congratulations to the 2011 Graduating class
+# 
+#
+#       _.-'`'-._
+#    .-'    _    '-.
+#     `-.__  `\_.-'
+#       |  `-``\|
+#       `-.....-A
+#               #
+#
+#
+#
+#
 
 
 
@@ -596,9 +611,8 @@ sub execute {
 
     #then do score conversion between log2/log10/absolute CN as necessary
     $segment_files = convertScores($self, $segment_files, $log2_input, $log2_plot, $log10_plot);
-
+  
     @infiles = split(",",$segment_files);
-
 
     #set up a temp file for the R commands (unless one is specified)
     my $temp_path;
