@@ -21,6 +21,17 @@ sub Genome::ProcessingProfile::Tester::sequencing_platform { return 'solexa'; };
 
 class Genome::Model::Tester {
     is => 'Genome::Model',
+    has => [
+        foo => { 
+            is_optional => 1, is_mutable => 1,
+            via => 'inputs', to => 'value_id', where => [name => 'foo', value_class_name => 'UR::Value', ],
+        },
+        baz => { 
+            is_optional => 1, is_mutable => 1, is_many =>1,
+            via => 'inputs', to => 'value_id', 
+            where => [name => 'baz', value_class_name => 'UR::Value'],
+        },
+    ],
 };
 
 class Genome::Model::Build::Tester {
@@ -130,6 +141,14 @@ ok(!$model_fail, 'failed to recreate model');
 is($model->data_directory, $tmpdir, "data_directory == tmpdir");
 ok($model->resolve_data_directory, "resolve_data_directory == tmpdir");
 
+# INPUT
+$model->foo('bar');
+is($model->foo, 'bar', 'model foo');
+$model->add_baz('abc');
+$model->add_baz('xyz');
+is_deeply([$model->baz], [qw/ abc xyz /], 'model baz');
+is_deeply([sort map { $_->value_id } $model->inputs], [qw/ abc bar xyz /], 'model inputs');
+
 # INSTRUMENT DATA
 my @instrument_data;
 for my $i (1..2) {
@@ -223,6 +242,43 @@ is($model->_last_complete_build_id, $builds[1]->id, '_last completed build id');
 is_deeply(\@succeed_builds, \@builds, 'succeeded builds');
 is_deeply([$model->last_succeeded_build], [$builds[1]], 'last succeeded build');
 is($model->last_succeeded_build_id, $builds[1]->id, 'last succeeded build id');
+
+# COPY
+my $model2 = $model->copy(auto_build_alignments => 1);
+ok($model2, 'copy override auto_build_alignments');
+is_deeply([map { $_->value_id } $model2->inputs], [map { $_->value_id } $model->inputs], 'inputs match');
+ok(!$model2->auto_assign_inst_data, 'auto_assign_inst_data');
+ok($model2->auto_build_alignments, 'auto_build_alignments');
+
+$model->auto_assign_inst_data(1);
+my $model3 = $model->copy(do_not_copy_instrument_data => 1);
+ok($model3, 'copy w/o inst data');
+is_deeply(
+    [map { $_->value_id } $model3->inputs], 
+    [map { $_->value_id } grep { $_->name ne 'instrument_data' } $model->inputs],
+    'inputs match',
+);
+ok($model3->auto_assign_inst_data, 'auto_assign_inst_data');
+ok(!$model3->auto_build_alignments, 'auto_build_alignments');
+
+my $model4 = $model->copy(foo => 'BAR');
+ok($model4, 'copy w/ override single input foo');
+is_deeply([$model4->instrument_data], [$model->instrument_data], 'inst data matches');
+is($model4->foo, 'BAR', 'override foo');
+
+my $model5 = $model->copy(
+    name => 'BLAH!',
+    do_not_copy_instrument_data => 1,
+    baz => [qw/ pdq /],
+);
+ok($model5, 'copy w/ override multi input baz');
+is($model5->name, 'BLAH!', 'set model name');
+is_deeply([$model5->instrument_data], [], 'did not copy inst data');
+is($model5->foo, $model->foo, 'foo');
+is_deeply([$model5->baz], [qw/ pdq /], 'override baz');
+
+ok(!$model->copy(foo => [qw/ BAR baz /]), 'failed to copy model overriding single input w/ multiple values');
+ok(!$model->copy(unknown => [qw/ BAR baz /]), 'failed to copy model w/ unknown override');
 
 done_testing();
 exit;

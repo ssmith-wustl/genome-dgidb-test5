@@ -54,11 +54,11 @@ sub create {
     return if not $self;
 
     my $model = $self->model;
-    Carp::confess('No model to create input') if not $model;
+    Carp::confess('No model to create input: '.Data::Dumper::Dumper($self)) if not $model;
     my $name = $self->name;
-    Carp::confess('No name to create input') if not $name;
+    Carp::confess('No name to create input: '.Data::Dumper::Dumper($self)) if not $name;
     my $obj = $self->value;
-    Carp::confess('No value to create input') if not $obj;
+    Carp::confess('No value to create input: '.Data::Dumper::Dumper($self)) if not $obj;
 
     $self->status_message('Create input '.$self->name.' '.$self->value_id.' for model '.$model->id);
 

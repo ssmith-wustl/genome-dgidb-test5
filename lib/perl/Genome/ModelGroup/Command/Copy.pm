@@ -245,7 +245,7 @@ sub execute {
             Genome::Model::Command::Copy->execute(
                 from => $from_model, 
                 to => $new_name, 
-                model_overrides => ["processing_profile_name=" . $to_profile->name ]
+                overrides => ["processing_profile_name=" . $to_profile->name ]
             );
 
             $to_model = Genome::Model->get(name => $new_name);

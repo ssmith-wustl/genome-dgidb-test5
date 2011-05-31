@@ -216,6 +216,7 @@ sub create {
         return;
     }
 
+    $DB::single = 1;
     unless ($self->genotype_microarray_model_id) {
         my $genotype_model = $self->default_genotype_model;
         if ($genotype_model) {
@@ -264,14 +265,14 @@ sub __errors__ {
         if (!defined $dbsnp->reference) {
             push @tags, UR::Object::Tag->create(
                 type => 'invalid',
-                properties => 'dbsnp_build',
+                properties => [qw/ dbsnp_build /],
                 desc => "Supplied dbsnp build " . $dbsnp->__display_name__ . " does not specify a reference sequence");
         }
 
         if (!$rsb->is_compatible_with($dbsnp->reference)) {
             push @tags, UR::Object::Tag->create(
                 type => 'invalid',
-                properties => 'dbsnp_build',
+                properties => [qw/ dbsnp_build /],
                 desc => "Supplied dbsnp build " . $dbsnp->__display_name__ . " specifies incompatible reference sequence " .
                 $dbsnp->reference->__display_name__);
         }
@@ -282,14 +283,14 @@ sub __errors__ {
         if (not defined $genotype->reference_sequence_build) {
             push @tags, UR::Object::Tag->create(
                 type => 'invalid',
-                properties => 'genotype_microarray_model',
+                properties => [qw/ genotype_microarray_model /],
                 desc => "Supplied genotype microarray model " . $genotype->__display_name__ . " does not specify a reference sequence");
         }
 
         if (not $rsb->is_compatible_with($genotype->reference_sequence_build)) {
             push @tags, UR::Object::Tag->create(
                 type => 'invalid',
-                properties => 'genotype_microarray_model',
+                properties => [qw/ genotype_microarray_model /],
                 desc => "Supplied genotype microarray model " . $genotype->__display_name__ . " specifies incompatible reference sequence " .
                     $genotype->reference_sequence_build->__display_name__);
         }
@@ -403,19 +404,6 @@ sub default_genotype_model {
 
 sub build_subclass_name {
     return 'reference alignment';
-}
-
-sub inputs_necessary_for_copy {
-    my $self = shift;
-
-    my %exclude = (
-        'reference_sequence_build' => 1,
-        'annotation_reference_build' => 1,
-        'dbsnp_build' => 1,
-        'genotype_microarray' => 1, # should be automatically set when the copy is created
-    );
-    my @inputs = grep { !exists $exclude{$_->name} } $self->SUPER::inputs_necessary_for_copy;
-    return @inputs;
 }
 
 sub dependent_properties {
