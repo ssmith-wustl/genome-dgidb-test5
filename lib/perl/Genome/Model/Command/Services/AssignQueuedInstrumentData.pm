@@ -378,8 +378,8 @@ sub find_or_create_somatic_variation_models{
             $mate_params{target_region_set_name} = $model->target_region_set_name if $model->can('target_region_set_name') and $model->target_region_set_name;
             $mate_params{region_of_interest_set_name} = $model->region_of_interest_set_name if $model->can('region_of_interest_set_name') and $model->region_of_interest_set_name;
 
-            my $mate = Genome::Model::ReferenceAlignment->get( %mate_params );
             $DB::single = $DB::stopper;
+            my ($mate) = Genome::Model::ReferenceAlignment->get( %mate_params );
             unless ($mate){
                 $mate = $model->copy(
                     name => 'AQID-PLACE_HOLDER',

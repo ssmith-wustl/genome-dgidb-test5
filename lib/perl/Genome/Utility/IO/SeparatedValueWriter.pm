@@ -31,6 +31,11 @@ class Genome::Utility::IO::SeparatedValueWriter {
             doc => 'A flag to print the headers on the first line.',
             default_value => 1,
         },
+        ignore_extra_columns => {
+            is => 'Boolean',
+            doc => 'A flag to ignore extra data key/value pairs not in headers',
+            default_value => 0,
+        },
     ],
 };
 
@@ -97,9 +102,25 @@ sub _validate_data_to_write {
 
     my @headers = sort @{$self->headers};
     my @keys = sort keys %$data;
-    unless ( Compare(\@headers,\@keys) ) {
-        $self->error_message("Headers in data do not match headers being written:\n\tHEADERS:\n". Dumper(@headers) ."\tDATA_HASH_KEYS:\n". Dumper(@keys));
-        return;
+    unless ( @headers == @keys ) {
+        # If we dont care about extra columns, all is well... unless we dont at least have the minimum required
+        if ((!$self->ignore_extra_columns) || (@headers > @keys) ) {
+                #  Bomb out if we dont want extra columns
+                $self->error_message(
+                    sprintf(
+                        'Expected %d values, got %d in hash %s.',
+                        scalar @headers,
+                        scalar @keys,
+                        Data::Dumper::Dumper($data),
+                    )
+                );
+                return;
+        }
+    } else {
+        unless ( Compare(\@headers,\@keys) ) {
+            $self->error_message("Headers in data do not match headers being written:\n\tHEADERS:\n". Dumper(@headers) ."\tDATA_HASH_KEYS:\n". Dumper(@keys));
+            return;
+        }
     }
 
     return 1;

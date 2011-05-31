@@ -160,7 +160,7 @@ sub create {
 
             for my $library_id (keys %$bams_per_library) {
                 my $library = $libraries->{$library_id};
-                my $sanitized_library_name = Genome::Utility::Text::sanitize_string_for_filesystem($library->name);
+                my $sanitized_library_name = Genome::Utility::Text::sanitize_string_for_filesystem(join('-',$library->name, $library->id));
                 my $library_merged_bam = join('/', $self->temp_scratch_directory, $sanitized_library_name . '.bam');
                 my $per_library_post_duplication_bam = join('/', $self->temp_scratch_directory, $sanitized_library_name . '-post_dup.bam');
 

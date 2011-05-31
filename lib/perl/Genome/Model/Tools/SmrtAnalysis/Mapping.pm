@@ -160,7 +160,6 @@ sub execute {
         gff_to_bed_name => 'meanCoverage',
         gff_to_bed_description => 'Mean coverage of genome in fixed interval regions',
         pulse_metrics => $self->pulse_metrics,
-        full_input_fofn => $self->input_fofn,
     );
     my $module_path = $self->get_class_object->module_path;
     my $xml_path = $module_path;
