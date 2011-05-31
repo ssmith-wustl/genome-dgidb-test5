@@ -268,7 +268,7 @@ sub __display_name__ {
 
     push @parts, $run_name if $run_name;
     push @parts, $subset_name if $subset_name;
-    push @parts, $instrument_data_segment_id if $instrument_data_segment_id;
+    push @parts, $instrument_data_segment_id if defined $instrument_data_segment_id;
     return join '-', @parts;
 }
 
@@ -559,7 +559,7 @@ sub requires_fastqs_to_align {
     return 1 if ($self->n_remove_threshold);
     return 1 if ($self->filter_name && ($self->filter_name ne 'forward-only' && $self->filter_name ne 'reverse-only'));
     return 1 if ($self->trimmer_name);
-    return 1 if ($self->instrument_data_segment_id);
+    return 1 if (defined $self->instrument_data_segment_id);
    
     # obviously we need fastq if we don't have a bam 
     return 1 unless (defined $self->instrument_data->bam_path && -e $self->instrument_data->bam_path);
@@ -1749,7 +1749,7 @@ sub read_and_platform_group_tag_id {
     my $self = shift;
     my $id = $self->instrument_data->id;
 
-    if ($self->instrument_data_segment_id) {
+    if (defined $self->instrument_data_segment_id) {
         $id .= "-". $self->instrument_data_segment_id;
     }
 

@@ -378,17 +378,13 @@ sub find_or_create_somatic_variation_models{
             $mate_params{target_region_set_name} = $model->target_region_set_name if $model->can('target_region_set_name') and $model->target_region_set_name;
             $mate_params{region_of_interest_set_name} = $model->region_of_interest_set_name if $model->can('region_of_interest_set_name') and $model->region_of_interest_set_name;
 
-            $DB::single = $DB::stopper;
             my $mate = Genome::Model::ReferenceAlignment->get( %mate_params );
+            $DB::single = $DB::stopper;
             unless ($mate){
-                my $copy = Genome::Model::Command::Copy->execute(
-                    from => $model,
-                    to => 'AQID-PLACE_HOLDER',
-                    skip_instrument_data_assignments => 1,
+                $mate = $model->copy(
+                    name => 'AQID-PLACE_HOLDER',
+                    do_not_copy_instrument_data => 1,
                 );
-                $self->error_message('Failed to create mate for model name: ' . $model->name) and next unless $copy;
-
-                $mate = $copy->_copied_model;
                 $self->error_message("Failed to find copied mate with subject name: $mate_name") and next unless $mate;
                 
                 $mate->subject_id($subject_for_mate->id);
@@ -397,6 +393,7 @@ sub find_or_create_somatic_variation_models{
                 my $mate_model_name = $mate->default_model_name(capture_target => $capture_target);
                 $self->error_message("Could not name mate model for with subject name: $mate_name") and next unless $mate_model_name;
                 $mate->name($mate_model_name);
+                $mate->auto_assign_inst_data(1);
                 
                 my $new_models = $self->_newly_created_models;
                 $new_models->{$mate->id} = $mate;
@@ -1244,12 +1241,12 @@ sub add_processing_profiles_to_pses{
                     else {
                         my $pp_id = '2580856';
                         push @processing_profile_ids_to_add, $pp_id;
-                        if ($self->_is_tcga_breast_cancer($pse) or $self->_is_tcga_endometrial_cancer($pse) or $self->_is_asms($pse)) {
-                            # NOTE: this is the _fixed_ build 37 with a correct external URI
-                            $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
+                        if ($self->_is_build36_project($pse)) {
+                            $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'NCBI-human-build36';
                         } 
                         else {
-                            $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'NCBI-human-build36';
+                            # NOTE: this is the _fixed_ build 37 with a correct external URI
+                            $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
                         }
                     }
                 }
@@ -1451,11 +1448,33 @@ sub _is_pcgp {
     return 0;
 }
 
-sub _is_tcga_breast_cancer {
-    #For our purposes, TCGA breast cancer instrument data is that which
-    #has a subject of a sample whose name is prefixed by "H_LS".
+sub _is_build36_project {
     my $self = shift;
     my $pse = shift;
+
+    my %legacy_project_mapping = (
+            H_GP => 'OVC/GBM',
+            H_LK => 'COAD',
+            H_LN => 'READ',
+            H_LE => 'tAML',
+            H_LB => 'MDS sAML',
+            H_KU => 'BRC',
+            H_JG => 'LUC',
+            H_KZ => 'PRC',
+            H_LF => 'PNC',
+            H_KX => 'MMY',
+            H_LJ => 'ALS',
+            H_LY => 'ESC',
+            );
+
+    #these are build 37 until further notice
+    my %ambiguous_legacy_project_mapping = (
+            H_LX => 'MEL', 
+            H_KA => 'AML',  
+            H_GV => 'AML1', 
+            H_JM => 'AML2', 
+            H_LC => 'PCGP', 
+            );  
 
     my $instrument_data = $self->_instrument_data($pse);
     my $sample = $instrument_data->sample;
@@ -1465,44 +1484,10 @@ sub _is_tcga_breast_cancer {
     }
 
     my $name = $sample->name;
+    my $sample_prefix = substr($name,0,4);
 
-    return (substr($name,0,4) eq 'H_LS');
-}
-
-sub _is_tcga_endometrial_cancer {
-    #For our purposes, TCGA endometrial cancer instrument data is that which
-    #has a subject of a sample whose name is prefixed by "H_LR".
-    my $self = shift;
-    my $pse = shift;
-
-    my $instrument_data = $self->_instrument_data($pse);
-    my $sample = $instrument_data->sample;
-
-    unless($sample and $sample->isa('Genome::Sample')) {
-        return 0;
-    }
-
-    my $name = $sample->name;
-
-    return (substr($name,0,4) eq 'H_LR');   
-}
-
-sub _is_asms {
-    #For our purposes, ASMS instrument data is that which
-    #has a subject of a sample whose name is prefixed by "H_HY".
-    my $self = shift;
-    my $pse = shift;
-
-    my $instrument_data = $self->_instrument_data($pse);
-    my $sample = $instrument_data->sample;
-
-    unless($sample and $sample->isa('Genome::Sample')) {
-        return 0;
-    }
-
-    my $name = $sample->name;
-
-    return (substr($name,0,4) eq 'H_HY');   
+    return $legacy_project_mapping{$sample_prefix} if $legacy_project_mapping{$sample_prefix};
+    return 0;
 }
 
 1;

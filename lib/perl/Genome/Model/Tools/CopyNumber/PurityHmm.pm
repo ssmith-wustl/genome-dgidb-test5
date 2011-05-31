@@ -139,8 +139,7 @@ sub SegPloidy {
   #Compute ploidy
   my ($self,$data,$minsize,$Chr_Median_Readcount,$cmStart,$cmEnd)=@_;
   my ($LScore,$state)=$self->Viterbi($data);
-
-  my $T=$#{$data->{x}};
+  my $T=$#{$data->{x}} || 1;
   my $adjusted_meanreadcount=$self->purity*$self->mean2x;
   my $contamination_rate=1-$self->purity;
   my @adjusted_cns;

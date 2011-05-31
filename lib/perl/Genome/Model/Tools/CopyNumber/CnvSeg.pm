@@ -14,10 +14,12 @@ class Genome::Model::Tools::CopyNumber::CnvSeg {
         copy_number_file => {
             is => 'String',
             doc => 'Copy number file to operate on',
+            is_output => 1,
         },
         output_file => {
             is => 'String',
             doc => 'output file path',
+            is_output => 1,
         },
     ],
     has_optional_input => [
@@ -74,6 +76,11 @@ class Genome::Model::Tools::CopyNumber::CnvSeg {
             doc => 'output file handle',
         },
     ],
+    has_param => [
+        lsf_queue => {
+            default => "long",
+        }
+    ],
 };
 
 
@@ -96,8 +103,6 @@ sub execute {
     $opts{C} = $self->centromere_file;
     $opts{G} = $self->gap_file;
     $opts{p} = $self->purity;
-
-    print Data::Dumper::Dumper(\%opts);
 
     my $fcna = $self->copy_number_file;
     my $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
@@ -188,7 +193,7 @@ sub execute {
     my $median_cn2x=$self->Get_Median(\@cn);
     printf $output_fh "--- %d probes loaded\n",$#poses+1;
 
-    $cnv=Genome::Model::Tools::CopyNumber::PurityHmm->create(purity=>$opts{p},mean2x=>$median_cn2x,var=>$median_cn2x,max_cn=>$opts{y},cnv_rate=>0.001,cnv_size=>0.1);
+    $cnv=Genome::Model::Tools::CopyNumber::PurityHmm->create(purity=>$opts{p},mean2x=>$median_cn2x,var=>$median_cn2x,max_cn=>$opts{y},cnv_rate=>0.001,cnv_size=>0.1, copy_number_file => $self->copy_number_file);
     $cnv->init;
 
     my ($Dall,$Dall_n);
@@ -235,7 +240,6 @@ sub DetectCNV {
     my ($chr,$hmm,$data,$label,$cn_adjusted,$minNumMarker,$maxExtInterval,$minLLR)=@_;
     my @y_data = @{$data->{y}};
     my $n=$#y_data + 1;
-    print "\$n = ".$n."\n";
     my $extend=0;
     my $interval=0;
     my @CNVs;

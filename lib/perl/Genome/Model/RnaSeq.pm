@@ -73,15 +73,4 @@ sub build_subclass_name {
     return 'rna seq';
 }
 
-# reference sequence build is already copied as part of the model creation, no need to process this when the model is copied.
-sub inputs_necessary_for_copy {
-    my $self = shift;
-
-    my %exclude = (
-        'reference_sequence_build' => 1,
-    );
-    my @inputs = grep { !exists $exclude{$_->name} } $self->SUPER::inputs_necessary_for_copy;
-    return @inputs;
-}
-
 1;

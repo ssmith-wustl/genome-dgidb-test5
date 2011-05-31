@@ -190,10 +190,7 @@ sub _map_workflow_inputs {
         tumor_snp_file => $tumor_snp_file,
         normal_snp_file => $normal_snp_file; 
 
-    # sanitize this to not pass opt/fscache if we run the processing profile on a blade with the 
-    # fscache
     my $reference_fasta = $tumor_build->model->reference_sequence_build->full_consensus_path('fa');
-    $reference_fasta =~ s/\/opt\/fscache//;
 
     # Set (hardcoded) defaults for tools that have defaults that do not agree with somatic pipeline
     push @inputs,

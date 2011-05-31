@@ -6,7 +6,6 @@ package Genome::Model::Tools::CopyNumber::PlotSegments;
 #	AUTHOR:		Chris Miller (cmiller@genome.wustl.edu)
 #
 #	CREATED:	05/05/2011 by CAM.
-#	MODIFIED:
 #
 #	NOTES:
 #
@@ -24,8 +23,6 @@ use FileHandle;
 class Genome::Model::Tools::CopyNumber::PlotSegments {
     is => 'Command',
     has => [
-
-
 	chr => {
 	    is => 'String',
 	    is_optional => 1,
@@ -34,13 +31,26 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 
 	segment_files => {
 	    is => 'String',
-	    is_optional => 0,
+	    is_optional => 1,
 	    doc => 'comma-seperated list of files containing the segments to be plotted. Expects CBS output - columns: chr, start, stop, #bins, copyNumber (unless the --cnahmm_input or --cnvhmm_input flags are set, in which case it will take the output of cnvHMM/cnaHMM directly',
 	},
-
+        tumor_segment_file => {
+            is => 'String',
+            is_optional => 1,
+            is_input => 1,
+            doc => 'Tumor segment file, specify tumor and normal segment files or use the segment_files param',
+        },
+        normal_segment_file => {
+            is => 'String',
+            is_optional => 1,
+            is_input => 1,
+            doc => 'Normal segment file, specify tumor and normal segment files or use the segment_files param',
+        },
+       
         plot_title => {
             is => 'String',
             is_optional => 1,
+            is_input => 1,
             doc => 'plot title (also accepts csv list if multiple segment files are specified)',
         },
 
@@ -98,19 +108,20 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	annotations_top => {
 	    is => 'String',
 	    is_optional => 1,
-	    doc => 'file containing regions to label at the top of the graph. File is in bed format with 4th column as label text',
+	    doc => 'file containing regions to label at the top of the graph. File is in bed format with 4th column (name) used label text. The 5th column (score) can be used to adjust annotations up and down to prevent overlap. For example, -4 moves a label down 4 y-axis units',
 	},
 
 	annotations_bottom => {
 	    is => 'String',
 	    is_optional => 1,
-	    doc => 'file containing regions to label at the bottom of the graph. File is in bed format with 4th column as label text',
+	    doc => 'file containing regions to label at the bottom of the graph. File is in bed format with 4th column (name) used label text. The 5th column (score) can be used to adjust annotations up and down to prevent overlap. For example, +4 moves a label up 4 y-axis units',
 	},
 
 
 	lowres => {
 	    is => 'Boolean',
 	    is_optional => 1,
+            is_input => 1,
 	    doc => 'make CN segments appear larger than they actually are for visibility. Without this option, many focal CNs will not be visible on low res plots',
 	},
 
@@ -132,6 +143,7 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	ymax => {
 	    is => 'Float',
 	    is_optional => 1,
+            is_input => 1,
 	    doc => 'Set the max val of the y-axis',
 	},
 
@@ -158,12 +170,15 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	output_pdf => {
 	    is => 'String',
 	    is_optional => 0,
+            is_output => 1,
+            is_input => 1,
 	    doc => 'pdf file containing your plots',
 	},
 
         genome_build => {
 	    is => 'String',
 	    is_optional => 1,
+            is_input => 1,
 	    doc => 'genome build - 36 or 37',
             default => '36',
 	},
@@ -171,6 +186,7 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
         sex => {
 	    is => 'String',
 	    is_optional => 1,
+            is_input => 1,
 	    doc => 'sex of the sample - male, female, or autosomes',
             default => 'male',
 	},
@@ -206,6 +222,7 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	cnvhmm_input => {
 	    is => 'Boolean',
 	    is_optional => 1,
+            is_input => 1,
 	    doc => 'Flag indicating that input is in cnvhmm format, which requires extra parsing',
 	    default => 0,
 	},
@@ -495,6 +512,49 @@ sub getEntrypointsFile{
 }
 
 #########################################################################
+#
+#              The Nate Dees School For Kids Who Can't Read Good
+#                     And Want to do Other Stuff Good Too
+#
+#                            (   )
+#                           (    )
+#                            (    )
+#                           (    )
+#                             )  )
+#                            (  (                  /\
+#                             (_)                 /  \  /\
+#                     ________[_]________      /\/    \/  \
+#            /\      /\        ______    \    /   /\/\  /\/\
+#           /  \    //_\       \    /\    \  /\/\/    \/    \
+#    /\    / /\/\  //___\       \__/  \    \/
+#   /  \  /\/    \//_____\       \ |[]|     \
+#  /\/\/\/       //_______\       \|__|      \
+# /      \      /XXXXXXXXXX\                  \
+#         \    /_I_II  I__I_\__________________\
+#                I_I|  I__I_____[]_|_[]_____I
+#                I_II  I__I_____[]_|_[]_____I
+#                I II__I  I     XXXXXXX     I
+#             ~~~~~"   "~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#
+#
+#
+#  
+# Congratulations to the 2011 Graduating class
+# 
+#
+#       _.-'`'-._
+#    .-'    _    '-.
+#     `-.__  `\_.-'
+#       |  `-``\|
+#       `-.....-A
+#               #
+#
+#
+#
+#
+
+
 
 sub execute {
     my $self = shift;
@@ -527,7 +587,16 @@ sub execute {
     my $cnahmm_input = $self->cnahmm_input;
     my $plot_title = $self->plot_title;
     my $ylabel = $self->ylabel;
+    my $tumor_segment_file = $self->tumor_segment_file;
+    my $normal_segment_file = $self->normal_segment_file;
 
+    unless( (defined($segment_files)) xor (defined($tumor_segment_file) && defined($normal_segment_file))){
+        die $self->error_message("You must specify either the segment_files param OR both tumor_segment_file and normal_segment_file, but not all three.");
+    }
+
+    if(defined($tumor_segment_file) && defined($normal_segment_file)){
+        $segment_files = join(",",($tumor_segment_file,$normal_segment_file));
+    }
 
 
     my $entrypoints_file = getEntrypointsFile($sex,$genome_build);
@@ -542,9 +611,8 @@ sub execute {
 
     #then do score conversion between log2/log10/absolute CN as necessary
     $segment_files = convertScores($self, $segment_files, $log2_input, $log2_plot, $log10_plot);
-
+  
     @infiles = split(",",$segment_files);
-
 
     #set up a temp file for the R commands (unless one is specified)
     my $temp_path;
@@ -680,7 +748,6 @@ sub execute {
 	    print R_COMMANDS ", showNorm=TRUE";
 	}
 
-        print STDERR "$loss_threshold -- $gain_threshold\n";
 	print R_COMMANDS ", gainThresh=" . $gain_threshold;
 	print R_COMMANDS ", lossThresh=" . $loss_threshold;
 
