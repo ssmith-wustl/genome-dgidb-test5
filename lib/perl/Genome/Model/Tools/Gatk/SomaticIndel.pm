@@ -54,7 +54,7 @@ class Genome::Model::Tools::Gatk::SomaticIndel {
             is_optional => 1, 
             is_input => 1, 
             is_output => 1, 
-            default => "-T IndelGenotyperV2 --somatic --window_size 300", 
+            default => "-T IndelGenotyperV2 --somatic --window_size 300 -et NO_ET",
         },
         reference => { 
             is => 'Text', 
