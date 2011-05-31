@@ -5,9 +5,11 @@ use warnings;
 
 use Genome;
 use Statistics::Descriptive;
+use PDL;
+use PDL::NiceSlice;
 
-my $DEFAULT_MINIMUM_DEPTHS = '1,5,10,15,20';
-my $DEFAULT_OFFSET = 10_000_000;
+my $DEFAULT_MINIMUM_DEPTH = '1';
+my $DEFAULT_OFFSET = 50_000_000;
 
 class Genome::Model::Tools::BioSamtools::ClusterCoverage {
     is => 'Genome::Model::Tools::BioSamtools',
@@ -16,10 +18,10 @@ class Genome::Model::Tools::BioSamtools::ClusterCoverage {
             is => 'Text',
             doc => 'A path to a BAM format file of aligned capture reads',
         },
-        minimum_depths => {
+        minimum_depth => {
             is => 'Text',
             doc => 'A comma separated list of minimum depths to evaluate coverage',
-            default_value => $DEFAULT_MINIMUM_DEPTHS,
+            default_value => $DEFAULT_MINIMUM_DEPTH,
             is_optional => 1,
         },
         offset => {
@@ -40,9 +42,9 @@ class Genome::Model::Tools::BioSamtools::ClusterCoverage {
             is_deprecated => 1,
             is_optional => 1,
         },
-        output_directory => {
+        bed_file => {
             is => 'Text',
-            doc => 'The output directory to generate cluster files per min depth.',
+            doc => 'The output BED format file of clusters.',
         },
         print_mean_coverage => {
             is => 'Boolean',
@@ -54,11 +56,10 @@ class Genome::Model::Tools::BioSamtools::ClusterCoverage {
 
 sub execute {
     my $self = shift;
-    my $output_directory = $self->output_directory;
-    unless (-d $output_directory) {
-        unless (Genome::Sys->create_directory($output_directory)) {
-            die('Failed to create output_directory: '. $output_directory);
-        }
+    
+    my $bed_fh = Genome::Sys->open_file_for_writing($self->bed_file);
+    unless ($bed_fh) {
+        die('Failed to open file for writing: '. $self->bed_file);
     }
     my $refcov_bam  = Genome::RefCov::Bam->create(bam_file => $self->bam_file );
     unless ($refcov_bam) {
@@ -112,22 +113,18 @@ sub execute {
     };
     my $offset = $self->offset;
     my $genome_coverage_stats = Statistics::Descriptive::Sparse->new();
-    my %min_depth_clusters_fhs;
-    my @min_depths = split(',',$self->minimum_depths);
-    for my $min_depth (@min_depths) {
-        open (my $min_depth_clusters_fh, '>'. $output_directory .'/min_depth_'. $min_depth .'_clusters.bed');
-        $min_depth_clusters_fhs{$min_depth} = $min_depth_clusters_fh;
-    }
+    my $min_depth = $self->minimum_depth;
     for (my $tid = 0; $tid < $targets; $tid++) {
+        my @previous_clusters;
         my $chr = $header->target_name->[$tid];
+        #print 'Starting: '. $chr ."\n";
         my $chr_length = $header->target_len->[$tid];
-        my %min_depth_previous_clusters;
         for (my $start = 0; $start <= $chr_length; $start += $offset) {
             my $end = $start + $offset;
             if ($end > $chr_length) {
                 $end = $chr_length;
             }
-            
+
             # low-level API uses zero based coordinates
             # all regions should be zero based, but for some reason the correct length is never returned
             # the API must be expecting BED like inputs where the start is zero based and the end is 1-based
@@ -143,74 +140,67 @@ sub execute {
                 $coverage = $index->coverage( $bam, $tid, $start, $end);
                 #print $start ."\t". $end ."\n";
             }
-            for my $min_depth (@min_depths) {
-                my @clusters = $self->cluster_coverage($coverage,$min_depth,$start);
-                my $min_depth_clusters_fh = $min_depth_clusters_fhs{$min_depth};
-                if (@clusters) {
-                    if ($min_depth_previous_clusters{$min_depth}) {
-                        my $last_cluster = $min_depth_previous_clusters{$min_depth}->[-1];
-                        my $first_cluster = $clusters[0];
-                        #print Data::Dumper::Dumper($last_cluster, $first_cluster);
-                        if (($first_cluster->[0] == $last_cluster->[1])) {
-                            #Blunt end clusters: merge
-                            $last_cluster->[1] = $first_cluster->[1];
-                            #Merge the stats
-                            if ($self->print_mean_coverage) {
-                                my @last_data = $last_cluster->[2]->get_data;
-                                my @first_data = $first_cluster->[2]->get_data;
-                                my @data;
-                                push @data, @last_data;
-                                push @data, @first_data;
-                                my $new_stat = Statistics::Descriptive::Full->new();
-                                $new_stat->add_data(@data);
-                                $last_cluster->[2] = $new_stat;
-                            }
-                            shift(@clusters);
+            #my @clusters = $self->cluster_coverage($coverage,$min_depth,$start);
+            #print $chr ."\t". $start ."\t". scalar(@{$coverage}) ."\n";
+            my @clusters = $self->pdl_clusters($coverage,$min_depth,$start);
+            if (@clusters) {
+                if (@previous_clusters) {
+                    my $last_cluster = $previous_clusters[-1];
+                    my $first_cluster = $clusters[0];
+                    #print Data::Dumper::Dumper($last_cluster, $first_cluster);
+                    if (($first_cluster->[0] == $last_cluster->[1])) {
+                        #Blunt end clusters: merge
+                        $last_cluster->[1] = $first_cluster->[1];
+                        #Merge the stats
+                        if ($self->print_mean_coverage) {
+                            my $last_pdl = $last_cluster->[2];
+                            my $first_pdl = $first_cluster->[2];
+                            $last_pdl->append($first_pdl);
                         }
-                        for my $cluster (@{$min_depth_previous_clusters{$min_depth}}) {
-                            my $start = $cluster->[0];
-                            my $end = $cluster->[1];
-                            my $stat = $cluster->[2];
-                            print $min_depth_clusters_fh $chr ."\t". $start ."\t". $end ."\t". $chr .':'. $start .'-'. $end;
-                            if ($stat) {
-                                print $min_depth_clusters_fh "\t". $stat->mean;
-                            }
-                            print $min_depth_clusters_fh "\n";
-                        }
+                        shift(@clusters);
                     }
-                    $min_depth_previous_clusters{$min_depth} = \@clusters;
+                    for my $cluster (@previous_clusters) {
+                        my $start = $cluster->[0];
+                        my $end = $cluster->[1];
+                        my $pdl = $cluster->[2];
+                        print $bed_fh $chr ."\t". $start ."\t". $end ."\t". $chr .':'. $start .'-'. $end;
+                        if (defined($pdl)) {
+                            my ($mean,$prms,$med,$min,$max,$adev,$rms) = $pdl->stats;
+                            print $bed_fh "\t". $mean;
+                        }
+                        print $bed_fh "\n";
+                    }
                 }
+                @previous_clusters = @clusters;
             }
         }
-        for my $min_depth (keys %min_depth_previous_clusters) {
-            my $min_depth_clusters_fh = $min_depth_clusters_fhs{$min_depth};
-            for my $cluster (@{$min_depth_previous_clusters{$min_depth}}) {
-                my $start = $cluster->[0];
-                my $end = $cluster->[1];
-                my $stat = $cluster->[2];
-                print $min_depth_clusters_fh $chr ."\t". $start ."\t". $end ."\t". $chr .':'. $start .'-'. $end;
-                if ($stat) {
-                    print $min_depth_clusters_fh "\t". $stat->mean;
-                }
-                print $min_depth_clusters_fh "\n";
+        for my $cluster (@previous_clusters) {
+            my $start = $cluster->[0];
+            my $end = $cluster->[1];
+            my $pdl = $cluster->[2];
+            print $bed_fh $chr ."\t". $start ."\t". $end ."\t". $chr .':'. $start .'-'. $end;
+            if (defined($pdl)) {
+                my ($mean,$prms,$med,$min,$max,$adev,$rms) = $pdl->stats;
+            print $bed_fh "\t". $mean;
             }
-            $min_depth_previous_clusters{$min_depth} = undef;
+            print $bed_fh "\n";
         }
+        #print 'Finished: '. $chr ."\n";
     }
-    for my $min_depth (keys %min_depth_clusters_fhs) {
-        my $fh = $min_depth_clusters_fhs{$min_depth};
-        $fh->close;
-    }
+    $bed_fh->close;
     return 1;
 }
 
 sub cluster_coverage {
     my ($self, $coverage, $min_depth, $offset) = @_;
+
     my @clusters;
     # Populate the cluster data structure based on the coverage depth array.
-
     map {$_ = undef} my ($is_cluster, $start, $stop);
+
     my $last = scalar(@{ $coverage });
+    unless ($last) { return };
+
     my $stat;
     if ($self->print_mean_coverage) {
         $stat = Statistics::Descriptive::Full->new();
@@ -263,6 +253,61 @@ sub cluster_coverage {
             $start = undef;
             $stop = undef;
         }
+    }
+    return @clusters;
+}
+
+sub pdl_clusters {
+    my $self = shift;
+
+    my $coverage = shift;
+    my $min_depth = shift;
+    my $offset = shift;
+
+    unless (scalar(@{$coverage})) { return };
+
+    my $chr_pdl = pdl $coverage;
+    my ($quantity,$value) = rle($chr_pdl >= $min_depth);
+    my ($padded_quantity,$padded_value) = $quantity->where($value,$quantity!=0);
+    my $padded_quantity_cumsum = $padded_quantity->cumusumover;
+
+    my ($chr_gt_min_depth_idx,$chr_lt_min_depth_idx) = which_both($padded_value);
+    unless ($chr_gt_min_depth_idx->nelem) {
+        return;
+    }
+    my $gt_first = $chr_gt_min_depth_idx(0)->sclr;
+    my $lt_first = $chr_lt_min_depth_idx(0)->sclr;
+
+    my $gt_last = $chr_gt_min_depth_idx(-1)->sclr;
+    my $lt_last = $chr_lt_min_depth_idx(-1)->sclr;
+
+    my $start = $padded_quantity_cumsum->index($chr_lt_min_depth_idx);
+    my $end = $padded_quantity_cumsum->index($chr_gt_min_depth_idx);
+
+    if ($gt_first < $lt_first) {
+        # Coverage first because the first index is zero
+        # Add the initial start position(ie. zero)
+        $start = append(zeroes(1),$start);
+    }
+    if ($gt_last < $lt_last) {
+        # Gap on the end, remove the last value
+        $start = $start(0:-2);
+    }
+    my @clusters;
+    for (my $i = 0; $i < $start->getdim(0); $i++) {
+        # Start is zero-based and End is one-based, just like BED format
+        my $start_coordinate = $start($i)->sclr;
+        # The end position is really the start of the gap
+        my $end_coordinate = $end($i)->sclr - 1;
+        my $cluster_pdl = $chr_pdl($start_coordinate:$end_coordinate)->sever;
+        my ($gt_idx,$zero_idx) = which_both($cluster_pdl >= $min_depth);
+        # TODO: This can be removed once everything is validated
+        if ($zero_idx->getdim(0)) {
+            die('Unexpected number in PDL: '. $start_coordinate ."\t". $end_coordinate ."\t". $cluster_pdl);
+        }
+        my $start_pos = $start_coordinate + $offset;
+        my $end_pos = $end_coordinate + $offset + 1;
+        push @clusters, [ $start_pos, $end_pos, $cluster_pdl];
     }
     return @clusters;
 }

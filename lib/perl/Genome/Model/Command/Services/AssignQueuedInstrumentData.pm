@@ -1241,12 +1241,12 @@ sub add_processing_profiles_to_pses{
                     else {
                         my $pp_id = '2580856';
                         push @processing_profile_ids_to_add, $pp_id;
-                        if ($self->_is_tcga_breast_cancer($pse) or $self->_is_tcga_endometrial_cancer($pse) or $self->_is_asms($pse)) {
-                            # NOTE: this is the _fixed_ build 37 with a correct external URI
-                            $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
+                        if ($self->_is_build36_project($pse)) {
+                            $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'NCBI-human-build36';
                         } 
                         else {
-                            $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'NCBI-human-build36';
+                            # NOTE: this is the _fixed_ build 37 with a correct external URI
+                            $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
                         }
                     }
                 }
@@ -1448,11 +1448,33 @@ sub _is_pcgp {
     return 0;
 }
 
-sub _is_tcga_breast_cancer {
-    #For our purposes, TCGA breast cancer instrument data is that which
-    #has a subject of a sample whose name is prefixed by "H_LS".
+sub _is_build36_project {
     my $self = shift;
     my $pse = shift;
+
+    my %legacy_project_mapping = (
+            H_GP => 'OVC/GBM',
+            H_LK => 'COAD',
+            H_LN => 'READ',
+            H_LE => 'tAML',
+            H_LB => 'MDS sAML',
+            H_KU => 'BRC',
+            H_JG => 'LUC',
+            H_KZ => 'PRC',
+            H_LF => 'PNC',
+            H_KX => 'MMY',
+            H_LJ => 'ALS',
+            H_LY => 'ESC',
+            );
+
+    #these are build 37 until further notice
+    my %ambiguous_legacy_project_mapping = (
+            H_LX => 'MEL', 
+            H_KA => 'AML',  
+            H_GV => 'AML1', 
+            H_JM => 'AML2', 
+            H_LC => 'PCGP', 
+            );  
 
     my $instrument_data = $self->_instrument_data($pse);
     my $sample = $instrument_data->sample;
@@ -1462,44 +1484,10 @@ sub _is_tcga_breast_cancer {
     }
 
     my $name = $sample->name;
+    my $sample_prefix = substr($name,0,4);
 
-    return (substr($name,0,4) eq 'H_LS');
-}
-
-sub _is_tcga_endometrial_cancer {
-    #For our purposes, TCGA endometrial cancer instrument data is that which
-    #has a subject of a sample whose name is prefixed by "H_LR".
-    my $self = shift;
-    my $pse = shift;
-
-    my $instrument_data = $self->_instrument_data($pse);
-    my $sample = $instrument_data->sample;
-
-    unless($sample and $sample->isa('Genome::Sample')) {
-        return 0;
-    }
-
-    my $name = $sample->name;
-
-    return (substr($name,0,4) eq 'H_LR');   
-}
-
-sub _is_asms {
-    #For our purposes, ASMS instrument data is that which
-    #has a subject of a sample whose name is prefixed by "H_HY".
-    my $self = shift;
-    my $pse = shift;
-
-    my $instrument_data = $self->_instrument_data($pse);
-    my $sample = $instrument_data->sample;
-
-    unless($sample and $sample->isa('Genome::Sample')) {
-        return 0;
-    }
-
-    my $name = $sample->name;
-
-    return (substr($name,0,4) eq 'H_HY');   
+    return $legacy_project_mapping{$sample_prefix} if $legacy_project_mapping{$sample_prefix};
+    return 0;
 }
 
 1;

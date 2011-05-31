@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Somatic::VcfMakerSniperOldPipeline;
+package Genome::Model::Tools::Vcf::VcfMakerSniperOldPipeline;
 
 use strict;
 use warnings;
@@ -15,7 +15,7 @@ use List::MoreUtils qw(uniq);
 use Data::Dumper;
 
 
-class Genome::Model::Tools::Somatic::VcfMakerSniperOldPipeline {
+class Genome::Model::Tools::Vcf::VcfMakerSniperOldPipeline {
     is => 'Command',
     has => [
     output_file => {
