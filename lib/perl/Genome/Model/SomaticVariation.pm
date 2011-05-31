@@ -219,14 +219,6 @@ sub update_tumor_and_normal_build_inputs {
     return 1;
 }
 
-sub inputs_necessary_for_copy {
-    my $self = shift;
-    my @inputs_to_copy = $self->SUPER::inputs_necessary_for_copy;
-    # The 2nd grep is to skip all model inputs that have already been set. This avoids a crash problem when genome model copy will have already copied the input over via its accessor
-    @inputs_to_copy = grep {my $input = $_->name; !(grep{$input eq $_->name} $self->inputs)} @inputs_to_copy;
-    return @inputs_to_copy; 
-}
-
 sub _input_differences_are_ok {
     my $self = shift;
     my @inputs_not_found = @{shift()};

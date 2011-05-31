@@ -215,8 +215,11 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL, ymin=NULL,
       for(i in 1:length(chrNames)){
         ## offset is equal to whatever chromosome we're on
         offset = as.numeric(entrypoints[which(entrypoints$chr==chrNames[i]),4])
-        segs[which(segs[,1] == chrNames[i]),2] = segs[which(segs[,1] == chrNames[i]),2] + offset
-        segs[which(segs[,1] == chrNames[i]),3] = segs[which(segs[,1] == chrNames[i]),3] + offset
+        toAdj = which(segs[,1] == chrNames[i])
+        if(length(toAdj) > 0){
+          segs[toAdj,2] = segs[toAdj,2] + offset
+          segs[toAdj,3] = segs[toAdj,3] + offset
+        }
       }
 
       ## do the lowres expansion if specified

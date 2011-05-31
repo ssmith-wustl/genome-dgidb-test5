@@ -65,7 +65,7 @@ my %properties = (
     },
     reference_name  => {
         is => 'Text',
-        doc => 'reference name for imported data aligned against, if this is given, an alignment allocaiton will be created',
+        doc => 'reference name for imported data aligned against, if this is given, an alignment allocation will be created',
         is_optional => 1,
     },
     allocation => {

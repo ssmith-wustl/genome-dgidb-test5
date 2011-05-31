@@ -236,7 +236,16 @@ sub _execute_build {
             unless ($assignments_expected{$assignment->id}) {
                 my $instrument_data = $assignment->instrument_data;
                 if ($instrument_data) {
-                    my ($derived_from) = $instrument_data->original_data_path =~ /unaligned_reads\/(\d+)\//; 
+                    my ($derived_from) = $instrument_data->original_data_path =~ m{^/tmp/(?:unaligned_reads/)?(\d+)}; 
+                    #if unaligned reads is in the data path, the id may be an instrument data id(deprecated way of storing original data path), or an alignment result id, here we will figure out which and return the derived from instrument data id
+                    my $inst_data = Genome::InstrumentData->get($derived_from);
+                    unless($inst_data){
+                        my $alignment =Genome::InstrumentData::AlignmentResult->get($derived_from);
+                        unless ($alignment){
+                            die $self->error_message("Couldn't determine derived_from instrument data id from original data path ".$instrument_data->original_data_path);
+                        }
+                        $derived_from = $alignment->instrument_data->id;
+                    }
                     unless (grep {$derived_from eq $_} @mcs_instrument_data_ids){
                         $self->error_message(
                             "Odd assignment found on model " 
@@ -287,14 +296,14 @@ sub _execute_build {
         $counter++;
         my ($meta_bam, $meta_flagstat) = $self->get_bam_and_flagstat_from_build($meta_build);
         push @meta_bams, $meta_bam;
-        
+
         unless ($meta_bam and $meta_flagstat){ 
             die $self->error_message("Bam or flagstat undefined for metagenomic alignemnt build $counter(meta bam: $meta_bam, meta flagstat: $meta_flagstat) ");
         }
         unless (-e $meta_bam and -e $meta_flagstat){
             die $self->error_message("Bam or flagstat doesn't exist for metagenomic alignment build $counter(meta bam: $meta_bam, meta flagstat: $meta_flagstat) ");
         }
-        
+
         $self->symlink($meta_bam, "$data_directory/metagenomic_alignment$counter.bam");
         $self->symlink($meta_flagstat, "$data_directory/metagenomic_alignment$counter.bam.flagstat");
     }
@@ -330,19 +339,20 @@ sub _execute_build {
     if ($self->skip_contamination_screen){
         $meta_report_properties{include_fragments} = 1; 
     }
-    
+
     if ($self->include_taxonomy_report){
         $meta_report_properties{include_taxonomy_report} = 1;
         $meta_report_properties{taxonomy_file} = '/gscmnt/sata409/research/mmitreva/databases/Bact_Arch_Euky.taxonomy.txt';
         $meta_report_properties{viral_taxonomy_file} = '/gscmnt/sata409/research/mmitreva/databases/viruses_taxonomy_feb_25_2010.txt';
     }
 
-    my $meta_report = Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport->create(
-        %meta_report_properties,
-    );
-    unless($meta_report->execute()) {
-        die $self->error_message("metagenomic report execution died or did not return 1:$@");
-    }
+    # FIXME skipping b/c ref seq build does not have a regions bed file
+    #my $meta_report = Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport->create(
+    #    %meta_report_properties,
+    #);
+    #unless($meta_report->execute()) {
+    #    die $self->error_message("metagenomic report execution died or did not return 1:$@");
+    #}
 
     unless($self->skip_contamination_screen){ #TODO: update validate to deal with this arg
         my $validate_build = Genome::Model::MetagenomicCompositionShotgun::Command::Validate->create(build_id => $build->id);
@@ -598,7 +608,7 @@ sub symlink {
 sub get_bam_and_flagstat_from_build{
     my ($self, $build) = @_;
     $self->status_message("getting bam and flagstat from build: ".$build->id);
-    
+
     #we have to try two different methods to find the merged bam, one uses the <picard software result id>.bam which is the new way, and the old uses the <build_id>.bam
 
     my @swus = Genome::SoftwareResult::User->get(user_id=>$build->id);
@@ -815,53 +825,15 @@ sub _process_unaligned_reads {
     }
 
     my $tmp_dir = "$UNALIGNED_TEMPDIR/unaligned_reads";
-    unless ( -d $tmp_dir or mkdir $tmp_dir ) {
-        die "Failed to create temp directory $tmp_dir : $!";
-    }
     $tmp_dir .= "/".$alignment->id;
-
-    if (-e $tmp_dir) {
-        die $self->error_message("Temp directory $tmp_dir already exists?!?!");
-    }
-
-    unless (mkdir $tmp_dir) {
-        die "Failed to create temp directory $tmp_dir : $!";
-    }
-
     my @instrument_data = eval {
-
-        # TODO: dust, n-remove and set the sub-dir based on the formula
-        # and use a subdir name built from that formula
         my $subdir = 'n-remove_'.$self->n_removal_threshold;
-        unless (-d "$tmp_dir/$subdir" or mkdir "$tmp_dir/$subdir") {
-            die "Failed to create temp directory $subdir : $!";
-        }
-
         if ($self->dust_unaligned_reads){
             $subdir.='/dusted';
         }
-
-        unless (-d "$tmp_dir/$subdir" or mkdir "$tmp_dir/$subdir") {
-            die "Failed to create temp directory $subdir : $!";
-        }
-
-        # skip uploading if we've already uploaded this alignment data post-processed the same way
-        # TODO getting db ORA 00600 errors with this like matching multiple rows, going to skip
-        #my @unaligned = Genome::InstrumentData::Imported->get(
-        #    "original_data_path like" => "$tmp_dir/$subdir%",
-        #
-        #if (@unaligned) {
-        #    for my $unaligned (@unaligned) {
-        #        push @to_add2, $unaligned;
-        #    }
-        #    $self->status_message("Found previously imported instrument data under generated path \"$tmp_dir/$subdir\"");
-        #    next; #SKIP PROCESSING
-        #}else{
-
         $self->status_message("Preparing imported instrument data for import path $tmp_dir/$subdir");
 
         # proceed extracting and uploading unaligned reads into $tmp_dir/$subdir....
-
         # resolve the paths at which we will place processed instrument data
         # we're currently using these paths to find previous unaligned reads processed the same way
 
@@ -912,7 +884,7 @@ sub _process_unaligned_reads {
         if ($pe_instdata) {
             $self->status_message("imported instrument data already found for path $expected_pe_path, skipping");
         }
-        else {
+        elsif ( $instrument_data->is_paired_end ) {
             my $lock = basename($expected_pe_path);
             $lock = '/gsc/var/lock/' . $instrument_data_id . '/' . $lock;
 
@@ -929,7 +901,7 @@ sub _process_unaligned_reads {
 
         unless (@upload_paths) {
             $self->status_message("skipping read processing since all data is already processed and uploaded");
-            return ($se_instdata, $pe_instdata);
+            return grep { defined } ($se_instdata, $pe_instdata);
         }
 
         for my $path (@upload_paths) {
@@ -937,21 +909,36 @@ sub _process_unaligned_reads {
         }
 
         # extract
-        $self->status_message("Preparing imported instrument data for import path $tmp_dir/$subdir");
-        my $extract_unaligned = Genome::Model::Tools::BioSamtools::BamToUnalignedFastq->create(
-            bam_file => $bam,
-            output_directory =>$tmp_dir,
-        );
-        $self->status_message("Extracting unaligned reads: " . Data::Dumper::Dumper($extract_unaligned));
-        my $rv = $extract_unaligned->execute;
-        unless ($rv){
-            die $self->error_message("Couldn't extract unaligned reads from bam file $bam");
+        my $create_directory = eval{ Genome::Sys->create_directory($tmp_dir.'/'.$subdir); };
+        if ( not $create_directory ) {
+            die "Failed to create tmp directory ($tmp_dir/$subdir): $@";
         }
-        my @missing = grep {! -e $_} grep { defined($_) and length($_) } ($forward_unaligned_data_path, $reverse_unaligned_data_path, $fragment_unaligned_data_path);
+        $self->status_message("Preparing imported instrument data for import path $tmp_dir/$subdir");
+        $self->status_message("Extracting unaligned reads from $bam");
+        my $cmd = "gmt5.12.1 bio-samtools bam-to-unaligned-fastq --bam-file $bam --output-directory $tmp_dir";
+        my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
+        if ( not $rv ) {
+            die "Failed to extract unaligned reads: $@";
+        }
+
+        #$self->status_message("Perl version: $]");
+        #my $extract_unaligned = Genome::Model::Tools::BioSamtools::BamToUnalignedFastq->create(
+        #    bam_file => $bam,
+        #    output_directory =>$tmp_dir,
+        #);
+        #my $rv = $extract_unaligned->execute;
+        #unless ($rv){
+        #    die $self->error_message("Couldn't extract unaligned reads from bam file $bam");
+        #}
+
+        my @expected_output_fastqs = ( $instrument_data->is_paired_end )
+        ?  ($forward_unaligned_data_path, $reverse_unaligned_data_path, $fragment_unaligned_data_path)
+        :  ($fragment_unaligned_data_path);
+        my @missing = grep {! -e $_} grep { defined($_) and length($_) } @expected_output_fastqs;
         if (@missing){
             die $self->error_message(join(", ", @missing)." unaligned files missing after bam extraction");
         }
-        $self->status_message("Extracted unaligned reads from bam file(".join(", ", ($forward_unaligned_data_path, $reverse_unaligned_data_path, $fragment_unaligned_data_path)));
+        $self->status_message("Extracted unaligned reads from bam file (@expected_output_fastqs)");
 
         # process the fragment data
         if (-e $fragment_unaligned_data_path) {
@@ -1036,40 +1023,37 @@ sub _process_unaligned_reads {
             $self->status_message("UR_DBI_NO_COMMIT: ".$ENV{UR_DBI_NO_COMMIT});
             UR::Context->commit(); # warning: most code should NEVER do this in a pipeline
 
-            my $instrument_data = Genome::InstrumentData::Imported->get(
-                original_data_path => $original_data_path
-            );
-            unless ($instrument_data) {
+            my $new_instrument_data = Genome::InstrumentData::Imported->get($command->generated_instrument_data_id);
+            unless ($new_instrument_data) {
                 die $self->error_message( "Failed to find new instrument data $original_data_path!");
             }
-            if ($instrument_data->__changes__) {
-                die "Unsaved changes present on instrument data $instrument_data->{id} from $original_data_path!!!";
+            if ($new_instrument_data->__changes__) {
+                die "Unsaved changes present on instrument data $new_instrument_data->{id} from $original_data_path!!!";
             }
-            if (!$instrument_data->is_paired_end && $se_lock) {
+            if (!$new_instrument_data->is_paired_end && $se_lock) {
                 $self->status_message("Attempting to remove lock on $se_lock...");
                 unless(Genome::Sys->unlock_resource(resource_lock => $se_lock)) {
                     die $self->error_message("Failed to unlock $se_lock.");
                 }
                 undef($se_lock);
             }
-            if ($instrument_data->is_paired_end && $pe_lock) {
+            if ($new_instrument_data->is_paired_end && $pe_lock) {
                 $self->status_message("Attempting to remove lock on $pe_lock...");
                 unless(Genome::Sys->unlock_resource(resource_lock => $pe_lock)) {
                     die $self->error_message("Failed to unlock $pe_lock.");
                 }
                 undef($pe_lock);
             }
-            push @instrument_data, $instrument_data;
+            push @instrument_data, $new_instrument_data;
         }        
         return @instrument_data;
     };
 
-    # TODO: add directory removal to Genome::Sys
-    if ($@) {
-        system "/bin/rm -rf '$tmp_dir'";
-        die $self->error_message("Error processing unaligned reads! $@");
+    system "/bin/rm -rf $tmp_dir";
+
+    if ( not @instrument_data ) {
+        die $self->error_message("Error processing unaligned reads!");
     }
-    system "/bin/rm -rf '$tmp_dir'";
 
     return @instrument_data;
 }

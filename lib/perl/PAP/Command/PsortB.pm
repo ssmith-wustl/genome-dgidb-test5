@@ -39,11 +39,8 @@ class PAP::Command::PsortB {
         },
     ],
     has_param => [
-        lsf_queue => {
-            default_value => 'short', 
-        },
         lsf_resource => { 
-            default_value => "-R 'select[type==LINUX64] rusage[tmp=100]'", 
+            default_value => "-q short -R 'select[type==LINUX64] rusage[tmp=100]'", 
         },
     ],
 };
@@ -66,7 +63,6 @@ EOS
 sub execute {
     my $self = shift;
     
-    $DB::single = 1;
     my $fasta_file  = $self->fasta_file();
     my $gram_stain  = $self->gram_stain();
 

@@ -916,6 +916,62 @@ sub notify_input_build_success {
     return 1;
 }
 
+sub copy {
+    my ($self, %overrides) = @_;
+
+    my $do_not_copy_instrument_data = delete $overrides{do_not_copy_instrument_data};
+    my %new_params = (
+        subject_id => $self->subject_id,
+        subject_class_name => $self->subject_class_name,
+        subclass_name => $self->subclass_name,
+        processing_profile => ( defined $overrides{processing_profile} ? delete $overrides{processing_profile} : $self->processing_profile ),
+        auto_assign_inst_data => ( 
+            defined $overrides{auto_assign_inst_data} ? delete $overrides{auto_assign_inst_data} : $self->auto_assign_inst_data
+        ),
+        auto_build_alignments => (
+            defined $overrides{auto_build_alignments} ? delete $overrides{auto_build_alignments} : $self->auto_build_alignments
+        ),
+    );
+    $new_params{name} = delete $overrides{name} if $overrides{name};
+
+    my %input_properties = map { $_->property_name => $_ } grep { defined $_->via and $_->via eq 'inputs' } $self->__meta__->property_metas;
+    delete $input_properties{instrument_data} if $do_not_copy_instrument_data;
+    for my $input_property ( values %input_properties ) {
+        my $input_name = $input_property->property_name;
+        my @values = $self->$input_name; # current values
+        if ( defined $overrides{$input_name} ) { # override
+            my $values = delete $overrides{$input_name};
+            @values = ref $values ? @$values : $values;
+        }
+        @values = grep { defined } @values; # copy only defined
+        next if not @values;
+
+        if ( $input_property->is_many ) {
+            $new_params{$input_name} = \@values;
+        }
+        else {
+            if ( @values > 1 ) {
+                $self->error_message("Requested to copy '$input_name' with multiple values (@values), but it can only take one.");
+                return;
+            }
+            $new_params{$input_name} = $values[0];
+        }
+    }
+
+    if ( %overrides ) {
+        $self->error_message('Unrecognized overrides sent to Genome::Model::copy '.Data::Dumper::Dumper(\%overrides));
+        return;
+    }
+
+    my $new_model = $self->subclass_name->create(%new_params);
+    if ( not $new_model ) {
+        $self->error_message('Failed to copy model');
+        return;
+    }
+
+    return $new_model;
+}
+
 sub delete {
     my $self = shift;
     my %params = @_;
@@ -993,18 +1049,6 @@ sub _build_model_filesystem_paths {
     }
 
     return 1;
-}
-
-sub inputs_necessary_for_copy {
-    my $self = shift;
-    # skip instrument data assignments; these should be handled by applying the instrument data assign command
-    # to the target model
-    my @inputs_to_copy = grep {$_->name ne "instrument_data"} $self->inputs;
-    return @inputs_to_copy; 
-}
-
-sub additional_params_for_copy {
-    return();
 }
 
 sub dependent_properties {

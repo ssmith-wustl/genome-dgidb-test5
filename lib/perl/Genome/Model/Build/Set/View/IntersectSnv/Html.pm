@@ -88,7 +88,6 @@ sub _generate_content {
     }
 
     my $subject_build = $builds[0];
-    print "Subject Build: " . $subject_build->id . " of " . $subject_build->model_name . "\n\n\n";
 
     unshift(@builds, $self->standard_build);
     for my $b (@builds) {

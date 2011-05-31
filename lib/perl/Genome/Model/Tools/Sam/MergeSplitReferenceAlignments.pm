@@ -140,14 +140,17 @@ sub execute {
                 my $fh = $in_fh[$in_num];
                 my $line = <$fh>;
 
-                $finished_reading++ and last READ_NAME if not defined $line; 
-                
+                if ( not defined $line ) {
+                    $finished_reading++;
+                    last READ_NAME;
+                }
+
                 # skip headers (pass through to output) 
                 if(substr($line, 0, 1) eq '@') {
                     $out_fh->print($line);
                     redo;
                 }
-                
+
                 # parse columns
                 chomp $line;
                 my @s = split(/\t/,$line);
