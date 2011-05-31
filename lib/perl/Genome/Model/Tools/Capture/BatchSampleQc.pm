@@ -89,6 +89,33 @@ sub execute {                               # replace with real execution logic.
 
 		if($sample_genotype_files{$sample_name})
 		{
+			my $snp_file = $sample_snp_files{$sample_name};
+			my $genotype_file = my $genotype_source = "";
+			
+			## Choose sample genotype file ##
+			
+			my @genotype_files = split(/\n/, $sample_genotype_files{$sample_name});
+			
+			foreach my $possible_file (@genotype_files)
+			{
+				my ($file_path, $file_source) = split(/\t/, $possible_file);
+				
+				if(!$genotype_file)
+				{
+					$genotype_file = $file_path;
+					$genotype_source = $file_source if($file_source);
+				}
+				elsif($genotype_file)
+				{
+					## If secondary file, only take it if it's Affy ##
+					if($file_source && $file_source eq "Affy")
+					{
+						$genotype_file = $file_path;
+						$genotype_source = $file_source;
+					}
+				}
+			}
+			
 			$stats{'have_snp_and_genotype'}++;
 			
 			## Determine output file path ##
@@ -115,12 +142,16 @@ sub execute {                               # replace with real execution logic.
 				$stats{'qc_is_running'}++;
 				## Run the sample QC ##
 				my $label = "";
-				$label = $sample_bam_files{$sample_name} if($sample_bam_files{$sample_name});
-				run_genotype_qc($sample_name, $sample_genotype_files{$sample_name}, $sample_snp_files{$sample_name}, $sample_output_file);				
+#				$label = $sample_bam_files{$sample_name} if($sample_bam_files{$sample_name});
+				$label = $sample_name;
+				$label .= "," . $genotype_source if($genotype_source);
+#				$label .= ",$genotype_file,$snp_file";
+				run_genotype_qc($label, $genotype_file, $snp_file, $sample_output_file);				
 			}
 
 			## Print a sample with both SNP and QC files ##
-			print OUTFILE join("\t", $sample_name, $sample_genotype_files{$sample_name}, $sample_snp_files{$sample_name}, $sample_qc_result) . "\n";
+			$genotype_source = "Unknown" if(!$genotype_source);
+			print OUTFILE join("\t", $sample_name, $genotype_source . ":" . $genotype_file, $snp_file, $sample_qc_result) . "\n";
 			print join("\t", $sample_name, $sample_qc_result) . "\n";
 		}
 		else
@@ -190,7 +221,8 @@ sub run_genotype_qc
 {
 	my ($sample_name, $genotype_file, $snp_file, $output_file) = @_;
 
-	my $cmd = "gmt analysis lane-qc compare-snps --genotype $genotype_file --variant $snp_file --output-file $output_file";
+
+	my $cmd = "gmt analysis lane-qc compare-snps --sample-name $sample_name --genotype $genotype_file --variant $snp_file --output-file $output_file";
 #	print "RUN: $cmd\n";
 	
 	system("bsub -q short -R\"select[model != Opteron250 && mem>1000] rusage[mem=1000]\" \"$cmd\"");
@@ -245,13 +277,27 @@ sub parse_sample_file_list
 		my $line = $_;
 		$lineCounter++;		
 
-		my ($sample_name, $file_path) = split(/\t/, $line);
+		my ($sample_name, $file_path, my $file_source) = split(/\t/, $line);
 
 		my @temp = split(/\-/, $sample_name);
 		my $short_sample_name = join("-", $temp[0], $temp[1], $temp[2], $temp[3]);
 		
 #		$files_by_sample{$sample_name} = $file_path;
-		$files_by_sample{$short_sample_name} = $file_path;
+		if($files_by_sample{$short_sample_name})
+		{
+			$files_by_sample{$short_sample_name} .= "\n";
+			$files_by_sample{$short_sample_name} .= $file_path;
+		}
+		else
+		{
+			$files_by_sample{$short_sample_name} = $file_path;			
+		}
+
+		if($file_source)
+		{
+			$files_by_sample{$short_sample_name} .= "\t$file_source";
+		}
+
 	}
 
 	close($input);

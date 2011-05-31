@@ -636,6 +636,7 @@ my $command_5 = Genome::Model::Command::Services::AssignQueuedInstrumentData->cr
 isa_ok($command_5, 'Genome::Model::Command::Services::AssignQueuedInstrumentData');
 ok($command_5->execute(), 'assign-queued-instrument-data executed successfully.');
 my $new_models_5 = $command_5->_newly_created_models;
+print Data::Dumper::Dumper($new_models_5);
 is(scalar(keys %$new_models_5), 0, 'the cron created zero new models');
 ok(scalar($normal->instrument_data), 'the cron assigned the new instrument data to the empty paired model');
 
