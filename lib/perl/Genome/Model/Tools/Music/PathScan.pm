@@ -349,7 +349,7 @@ sub execute
   # Print two output files, one more detailed than the other
   my $out_fh = IO::File->new( $output_file, ">" );
   my $out_detailed_fh = IO::File->new( "$output_file\_detailed", ">" );
-  $out_fh->print( "Pathway\tName\tClass\tp-value\tFDR\n" );
+  $out_fh->print( "Pathway\tName\tClass\tSamples_Affected\tTotal_Variations\tp-value\tFDR\n" );
 
   foreach my $pval ( sort { $a <=> $b } keys %data )
   {
@@ -362,11 +362,12 @@ sub execute
       {
         foreach my $gene ( @{$path_sample_hits_hash{$path}{$sample}{mutated_genes}} )
         {
-          $mutated_gene_hash{$gene} = 1;
+          $mutated_gene_hash{$gene}++;
         }
       }
       next unless ( scalar( keys %mutated_gene_hash ) >= $min_mut_genes_per_path );
 
+      # Print detailed output to a separate output file
       $out_detailed_fh->print( "Pathway: $path\n" );
       $out_detailed_fh->print( "Name: ", $path_hash{$path}{name}, "\n" ) if( defined $path_hash{$path}{name} );
       $out_detailed_fh->print( "Class: ", $path_hash{$path}{class}, "\n" ) if( defined $path_hash{$path}{class} );
@@ -374,11 +375,6 @@ sub execute
       $out_detailed_fh->print( "Drugs: ", $path_hash{$path}{drugs}, "\n" ) if( defined $path_hash{$path}{drugs} );
       $out_detailed_fh->print( "P-value: $pval\n", "FDR: ", $fdr_hash{$pval}, "\n" );
       $out_detailed_fh->print( "Description: ", $path_hash{$path}{description}, "\n" );
-
-      my ( $path_name, $path_class ) = ( "-", "-" );
-      $path_name = $path_hash{$path}{name} if( defined $path_hash{$path}{name} );
-      $path_class = $path_hash{$path}{class} if( defined $path_hash{$path}{class} );
-      $out_fh->print( "$path\t$path_name\t$path_class\t$pval\t", $fdr_hash{$pval}, "\n" );
 
       my @hits = @{$data{$pval}{$path}{hits}};
       foreach my $sample ( @samples )
@@ -388,12 +384,25 @@ sub execute
         $out_detailed_fh->print( join ",", @mutated_genes );
         $out_detailed_fh->print( "\n" );
       }
+      my ( $mutSampleCnt, $totalMutGenes ) = ( 0, 0 );
       $out_detailed_fh->print( "Samples with mutations (#hits): " );
       for( my $i = 0; $i < scalar( @all_sample_names ); ++$i )
       {
-        $out_detailed_fh->print( "$all_sample_names[$i]($hits[$i]) " ) if( $hits[$i] > 0 );
+        if( $hits[$i] > 0 )
+        {
+          $out_detailed_fh->print( "$all_sample_names[$i]($hits[$i]) " );
+          $mutSampleCnt++;
+          $totalMutGenes += $hits[$i];
+        }
       }
       $out_detailed_fh->print( "\n\n" );
+
+      # Print tabulated output to the main output file
+      my ( $path_name, $path_class ) = ( "-", "-" );
+      $path_name = $path_hash{$path}{name} if( defined $path_hash{$path}{name} );
+      $path_class = $path_hash{$path}{class} if( defined $path_hash{$path}{class} );
+      $out_fh->print( "$path\t$path_name\t$path_class\t$mutSampleCnt\t$totalMutGenes\t",
+                      "$pval\t", $fdr_hash{$pval}, "\n" );
     }
   }
   $out_detailed_fh->close;
