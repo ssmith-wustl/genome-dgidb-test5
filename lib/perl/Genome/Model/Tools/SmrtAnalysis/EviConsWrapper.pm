@@ -8,7 +8,7 @@ use Genome;
 use File::Temp qw/tempfile/;
 
 my $DEFAULT_LSF_QUEUE = 'pacbio';
-my $DEFAULT_LSF_RESOURCE = "-g /pacbio/smrtanalysis -M 32000000 -R 'select[type==LINUX64 && mem>=32000 && tmp>=320000] rusage[mem=32000,tmp=20000] span[hosts=1]' -n 4";
+my $DEFAULT_LSF_RESOURCE = "-g /pacbio/smrtanalysis -M 8000000 -R 'select[type==LINUX64 && mem>=8000 && tmp>=40000] rusage[mem=8000,tmp=20000] span[hosts=1]' -n 4";
 
 class Genome::Model::Tools::SmrtAnalysis::EviConsWrapper {
     is => ['Genome::Model::Tools::SmrtAnalysis::Base'],
