@@ -78,13 +78,13 @@ class Genome::Model::Tools::Vcf::VcfMakerVarscan {
 
 
 sub help_brief {                            # keep this to just a few words <---
-    "Generate Vcf File from Varscan (unformatted) output"
+    "Generate Vcf File from Varscan output - requires unformatted for SNVs, and formatted for INDELs"
 }
 
 
 sub help_synopsis {
 <<'HELP';
-Generate a VCF File from Varscan (unformatted) output
+Generate Vcf File from Varscan output - requires unformatted for SNVs, and formatted for INDELs
 HELP
 }
 
@@ -188,7 +188,7 @@ sub execute {                               # replace with real execution logic.
 #get preceding base using samtools faidx
 sub getPrecedingBase{
     my ($chr,$pos) = @_;
-    my $base = `samtools faidx ~/sata921/NCBI-human-build36/$chr.fa $chr:$pos-$pos | tail -n 1`;
+    my $base = `samtools faidx /gscmnt/sata921/info/medseq/cmiller/NCBI-human-build36/$chr.fa $chr:$pos-$pos | tail -n 1`;
     chomp($base);
     return($base)
 }
@@ -436,8 +436,7 @@ sub getPrecedingBase{
 
 
                 #add the preceding base as an anchor position
-                my $pbase = getPrecedingBase($col[0],$col[1]-1);
-                $varScanSnvs{$id}{"pos"} = $col[1]-1;
+                my $pbase = getPrecedingBase($col[0],$col[1]);
 
                 #insertion
                 if ($col[3] eq "-"){

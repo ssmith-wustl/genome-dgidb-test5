@@ -309,7 +309,6 @@ sub mgap_to_biosql
 sub do_pap_workflow {
     my $self = shift;
 
-    #my $xml_file = $self->workflow_xml;
     my $xml_file = __FILE__ . '.xml';
     my $fasta_file = $self->pep_file;
     my $chunk_size = $self->chunk_size;
@@ -353,7 +352,6 @@ sub do_pap_workflow {
             'psortb archive dir' => $self->psortb_archive_dir(),
 			'locus tag'			  => $self->locus_tag(),
         );
-        # $workflow_params{'blastp archive dir'} = $self->blastp_archive_dir unless $xml_file =~ /noblastp/;
 
         $self->status_message("Kicking off PAP workflow!");
 

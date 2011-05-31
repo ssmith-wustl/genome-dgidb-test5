@@ -128,14 +128,4 @@ sub create {
     return $self;
 }
 
-sub inputs_necessary_for_copy {
-    my $self = shift;
-
-    my %exclude = (
-        'variant_list' => 1,
-    );
-    my @inputs = grep { !exists $exclude{$_->name} } $self->SUPER::inputs_necessary_for_copy;
-    return @inputs;
-}
-
 1;

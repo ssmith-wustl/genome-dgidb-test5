@@ -37,5 +37,41 @@ sub create {
     return $self;
 }
 
+sub next_with_attributes {
+    my $self = shift;
+
+    my $data = $self->next;
+    unless ($data) { return; }
+
+    my $attributes = $data->{attributes};
+    my @attributes = split(';',$attributes);
+    my %attributes;
+    for my $attribute (@attributes) {
+        unless ($attribute =~ /^\s*(\S+)\s*=?\"?(\S[^\"]+)\"?$/) {
+            die(Data::Dumper::Dumper($data));
+        }
+        $data->{$1} = $2;
+    }
+    return $data;
+}
+
+sub next_with_attributes_hash_ref {
+    my $self = shift;
+
+    my $data = $self->next;
+    unless ($data) { return; }
+
+    my $attributes = $data->{attributes};
+    my @attributes = split(';',$attributes);
+    my %attributes;
+    for my $attribute (@attributes) {
+        unless ($attribute =~ /^\s*(\S+)\s*=?\"?(\S[^\"]+)\"?$/) {
+            die(Data::Dumper::Dumper($data));
+        }
+        $attributes{$1} = $2;
+    }
+    $data->{attributes_hash_ref} = \%attributes;
+    return $data;
+}
 
 1;

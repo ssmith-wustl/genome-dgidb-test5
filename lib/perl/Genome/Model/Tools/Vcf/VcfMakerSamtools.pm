@@ -165,7 +165,7 @@ sub execute {                               # replace with real execution logic.
     #get preceding base using samtools faidx
     sub getPrecedingBase{
         my ($chr,$pos) = @_;
-        my $base = `samtools faidx ~/sata921/NCBI-human-build36/$chr.fa $chr:$pos-$pos | tail -n 1`;
+        my $base = `samtools faidx /gscmnt/sata921/info/medseq/cmiller/NCBI-human-build36/$chr.fa $chr:$pos-$pos | tail -n 1`;
         chomp($base);
         return($base)
     }
@@ -349,17 +349,9 @@ sub execute {                               # replace with real execution logic.
                 #handle indel genotype calls
             } elsif ($type eq "indel"){
                 #add the preceding base as an anchor position
-                my $pbase = getPrecedingBase($col[0],$col[1]-1);
-                $allSnvs{$id}{"pos"} = $col[1]-1;
+                my $pbase = getPrecedingBase($col[0],$col[1]);
 
-                #sanity check - one of the two alleles should match the reference
-                #otherwise, die since we don't handle this rare case currently
-                #(but should probably handle it in the future)
-                
 
-#            if (!($line =~ /\*/)){
-#                die("no allele matching * - we don't handle this case gracefully (or really, at all)\n$line\n")
-#            }            
 
                 #insertion
                 if ($col[3] eq "-"){  

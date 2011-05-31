@@ -43,13 +43,17 @@ sub create {
 
 sub _load {
     my $self = shift;
+    my $bai_file = $self->bai_file;
+    my $bai_file_sz = -s $bai_file;
+    if ( defined $bai_file_sz and $bai_file_sz == 0 ) {
+        unlink $bai_file;
+    }
     my $bam  = Bio::DB::Bam->open( $self->bam_file );
     unless ($bam) {
         die('Failed to open BAM file '. $self->bam_file);
     }
     $self->bio_db_bam($bam);
     $self->header($bam->header);
-    my $bai_file = $self->bai_file;
     my @symlinks;
     if (-e $bai_file) {
         while (-l $bai_file) {

@@ -33,8 +33,10 @@ my %READ_SCOPES = (
 
 my %SCOPE_TO_CHUNK = (
     'small' => -1,
-    'large' => 10_000,
-    'huge' => 100_000,
+    # 'large' => 10_000,
+    'large' => 100_000,
+    # 'huge' => 100_000,
+    'huge' => 1_000_000,
 );
 
 class Genome::Model::Tools::SmrtAnalysis::Consensus {
@@ -82,11 +84,11 @@ class Genome::Model::Tools::SmrtAnalysis::Consensus {
         decode_file => {
             is => 'Text',
             doc => 'File containing Decode matrix',
-            default_value => Genome::Model::Tools::SmrtAnalysis::Base->default_seymour_home .'/analysis/etc/defaultDecode.params',
+            is_optional => 1,
         },
         consensus_quality_path => {
             is => 'Text',
-            default_value => Genome::Model::Tools::SmrtAnalysis::Base->default_seymour_home .'/analysis/etc/consensusQual.tsv',
+            is_optional => 1,
         },
     ],
     has_optional => {
@@ -127,6 +129,18 @@ sub execute {
     unless (-d $output_directory) {
         Genome::Sys->create_directory($output_directory);
     }
+
+    unless ($self->decode_file) {
+        my $decode_file = $self->seymour_home .'/analysis/etc/defaultDecode.params';
+        $self->status_message('Using default decode file: '. $decode_file);
+        $self->decode_file($decode_file);
+    }
+    unless ($self->consensus_quality_path) {
+        my $consensus_quality_path = $self->seymour_home .'/analysis/etc/consensusQual.tsv';
+        $self->status_message('Using default consensus quality file: '. $consensus_quality_path);
+        $self->consensus_quality_path($consensus_quality_path);
+    }
+
     my $contigs = $self->contigs;
     $self->resolve_scope;
     my @evi_cons_params;

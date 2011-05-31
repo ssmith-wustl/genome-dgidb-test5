@@ -39,6 +39,9 @@ class Genome::Model::Tools::SmrtAnalysis::CmpH5Merge {
             default_value => 1,
         },
     },
+    has_optional_param => [
+        lsf_resource => { default_value => "-g /pacbio/smrtanalysis -M 32000000 -R 'select[type==LINUX64 && mem>=32000 && tmp>=200000] rusage[mem=32000,tmp=100000]'" },
+    ],
 };
 
 sub help_brief {

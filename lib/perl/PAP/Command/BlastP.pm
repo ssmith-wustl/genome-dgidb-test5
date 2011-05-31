@@ -21,62 +21,41 @@ use IPC::Run;
 
 
 class PAP::Command::BlastP {
-    is  => ['PAP::Command'],
+    is  => 'PAP::Command',
     has => [
-        fasta_file      => { 
-                            is  => 'SCALAR', 
-                            doc => 'fasta file name',
-                            is_input => 1,
-                           },
+        fasta_file => { 
+            is => 'SCALAR', 
+            doc => 'fasta file name',
+            is_input => 1,
+        },
+    ],
+    has_optional => [
         blast_report => {
-                         is          => 'SCALAR',
-                         is_optional => 1,
-                         doc         => 'instance of File::Temp pointing to raw blast output',
-                        },
+            is => 'SCALAR',
+            doc => 'instance of File::Temp pointing to raw blast output',
+        },
         bio_seq_feature => { 
-                            is          => 'ARRAY',  
-                            is_optional => 1,
-                            doc         => 'array of Bio::Seq::Feature' ,
-                            is_output => 1,
-                           },
+            is => 'ARRAY',  
+            doc => 'array of Bio::Seq::Feature' ,
+            is_output => 1,
+        },
         report_save_dir => {
-                            is          => 'SCALAR',
-                            is_optional => 1,
-                            doc         => 'directory to save a copy of the blast report to',
-                            is_input => 1,
-                           },
+            is => 'DirectoryPath',
+            doc => 'directory to save a copy of the blast report to',
+            is_input => 1,
+        },
         query_names => {
-                        is          => 'ARRAY',
-                        is_optional => 1,
-                        doc         => 'array of sequence (query) names seen in the results',
-                       },
-        lsf_queue => { is_param => 1, default_value => 'long', },
-        lsf_resource => { is_param => 1, default_value => 'rusage[tmp=100]', },
+            is => 'ARRAY',
+            doc => 'array of sequence (query) names seen in the results',
+        },
+    ],
+    has_param => [
+        lsf_resource => { default_value => '-q long rusage[tmp=100]', },
     ],
 };
 
-
-sub sub_command_sort_position { 10 }
-
-sub help_brief {
-    "Run blastp";
-}
-
-sub help_synopsis {
-    return <<"EOS"
-EOS
-}
-
-sub help_detail {
-    return <<"EOS"
-Need documenation here.
-EOS
-}
-
 sub execute {
-
     my $self = shift;
-
  
     my ($blastp_out, $blastp_err);
 
