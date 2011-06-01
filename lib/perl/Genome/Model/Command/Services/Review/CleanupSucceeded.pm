@@ -28,6 +28,7 @@ sub execute {
     my @builds_to_abandon;
     for my $model ($self->models) {
         my $latest_build = $model->latest_build;
+        next unless $latest_build;
         next unless ($latest_build->status eq 'Succeeded');
         my @builds = $model->builds;
         for my $build (@builds) {

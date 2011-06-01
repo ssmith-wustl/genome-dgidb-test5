@@ -23,9 +23,9 @@ class Genome::Model::Tools::Music::Bmr::CalcBmr {
 
 sub help_synopsis {
     return <<HELP
-... music bmr calc-bmr --bam-list input_dir/bam_list --maf-file input_dir/myMAF.tsv --output-dir output_dir/ --ref-seq input_dir/all_sequences.fa --roi-file input_dir/all_coding_exons.tsv
+... music bmr calc-bmr --bam-list input_dir/bam_list --maf-file input_dir/myMAF.tsv --output-dir output_dir/ --reference-sequence input_dir/all_sequences.fa --roi-file input_dir/all_coding_exons.tsv
 
-... music bmr calc-bmr --bam-list input_dir/bam_list --maf-file input_dir/myMAF.tsv --output-dir output_dir/ --ref-seq input_dir/all_sequences.fa --roi-file input_dir/all_coding_exons.tsv --genes-to-ignore GENE1,GENE2
+... music bmr calc-bmr --bam-list input_dir/bam_list --maf-file input_dir/myMAF.tsv --output-dir output_dir/ --reference-sequence input_dir/all_sequences.fa --roi-file input_dir/all_coding_exons.tsv --genes-to-ignore GENE1,GENE2
 HELP
 }
 

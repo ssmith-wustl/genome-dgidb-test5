@@ -1,4 +1,4 @@
-package Genome::Model::Tools::DetectVariants2::GatkGermlineIndel;
+package Genome::Model::Tools::DetectVariants2::GatkGermlineSnv;
 
 use strict;
 use warnings;
@@ -7,12 +7,12 @@ use Cwd;
 
 use Genome;
 
-class Genome::Model::Tools::DetectVariants2::GatkGermlineIndel{
+class Genome::Model::Tools::DetectVariants2::GatkGermlineSnv{
     is => ['Genome::Model::Tools::DetectVariants2::Detector'],
     has_constant => [
-        detect_snvs => {},
+        detect_snvs => { value => 1 },
         detect_svs => {},
-        detect_indels => { value => 1 },
+        detect_indels => {},
     ],
     has => [
         mb_of_ram => {
@@ -35,23 +35,24 @@ sub _detect_variants {
     my $self = shift;
     my $refseq = $self->reference_sequence_input;
     $refseq =~ s/\/opt\/fscache//;
-    my $gatk_cmd = Genome::Model::Tools::Gatk::GermlineIndel->create( 
+    my $gatk_cmd = Genome::Model::Tools::Gatk::GermlineSnv->create( 
         bam_file => $self->aligned_reads_input, 
-        output_file => $self->_temp_staging_directory."/gatk_output_file",
-        bed_output_file => $self->_temp_staging_directory."/indels.hq",
+        verbose_output_file => $self->_temp_staging_directory."/gatk_output_file",
+        vcf_output_file => $self->_temp_staging_directory."/snvs.hq",
         mb_of_ram => $self->mb_of_ram,
-        gatk_params => '-R ' . $refseq . ' -T IndelGenotyperV2 --window_size 300 -et NO_ET',
+        reference_fasta => $refseq,
         version => $self->version,
     );
+
     unless($gatk_cmd->execute){
         $self->error_message("Failed to run GATK command.");
         die $self->error_message;
     }
-    unless(-s $self->_temp_staging_directory."/indels.hq"){
-        my $filename = $self->_temp_staging_directory."/indels.hq";
+    unless(-s $self->_temp_staging_directory."/snvs.hq"){
+        my $filename = $self->_temp_staging_directory."/snvs.hq";
         my $output = `touch $filename`;
         unless($output){
-            $self->error_message("creating an empty indels.hq file failed.");
+            $self->error_message("creating an empty snvs.hq file failed.");
             die $self->error_message;
         }
     }

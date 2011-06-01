@@ -39,6 +39,7 @@ sub _detect_variants {
         output_file => $gatk_raw_output,
         mb_of_ram => $self->mb_of_ram,
         reference => $refseq,
+        version => $self->version,
     );
     unless($gatk_cmd->execute){
         $self->error_message("Failed to run GATK command.");
