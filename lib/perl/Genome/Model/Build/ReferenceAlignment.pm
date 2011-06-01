@@ -266,7 +266,19 @@ sub snv_file {
         return $old_file if -e $old_file;
 
         return $file;
-    } else {
+    } 
+    elsif($dir =~ /variants/)
+    {
+        if(-e ($dir . '/snv/samtools-r599-/snvs.hq'))
+        {
+            return $dir . '/snv/samtools-r599-/snvs.hq';
+        }
+	else
+	{
+	    return $dir . '/snvs.hq';
+	}
+    }
+    else {
         return $dir . '/snvs.hq';
     }
 }

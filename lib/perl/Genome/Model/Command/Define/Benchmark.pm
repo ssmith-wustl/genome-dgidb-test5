@@ -13,14 +13,14 @@ class Genome::Model::Command::Define::Benchmark {
             len => 15,
             is_input => 1,
             doc => '(unused for benchmark)',
-            value => '42'  
+            value => '2875295544'  
         },
         subject_class_name => {
             is => 'Text',
             len => 500,
             is_input => 1,
             doc => '(unused for benchmark)', 
-            value => 'UR::Value'
+            value => 'Genome::Individual'
         },
         subject_name => {
             is => 'Text',

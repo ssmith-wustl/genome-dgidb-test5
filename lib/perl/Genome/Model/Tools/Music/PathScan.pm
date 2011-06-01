@@ -16,8 +16,9 @@ class Genome::Model::Tools::Music::PathScan {
     pathway_file => { is => 'Text', doc => "Tab-delimited file of pathway information (See Description)" },
     maf_file => { is => 'Text', doc => "List of mutations using TCGA MAF specifications v2.2" },
     output_file => { is => 'Text', doc => "Output file that will list the significant pathways and their p-values" },
-    bmr => { is => 'Number', doc => "Background mutation rate in the targeted regions", is_optional => 1, default => 1.7E-6 },
+    bmr => { is => 'Number', doc => "Background mutation rate in the targeted regions", is_optional => 1, default => 1.0E-6 },
     genes_to_ignore => { is => 'Text', doc => "Comma-delimited list of genes whose mutations should be ignored", is_optional => 1 },
+    min_mut_genes_per_path => { is => 'Number', doc => "Pathways with fewer mutated genes than this, will be ignored", is_optional => 1, default => 1 },
   ],
   doc => "Find signifcantly mutated pathways in a cohort given a list of somatic mutations.",
 };
@@ -87,7 +88,7 @@ EOS
         "* KEGG - http://www.genome.jp/kegg/",
     );
 }
-        
+
 sub execute
 {
   my $self = shift;
@@ -99,6 +100,7 @@ sub execute
   my $output_file = $self->output_file;
   my $bgd_mut_rate = $self->bmr;
   my $genes_to_ignore = $self->genes_to_ignore;
+  my $min_mut_genes_per_path = $self->min_mut_genes_per_path;
 
   # Check on all the input data before starting work
   print STDERR "MAF file not found or is empty: $maf_file\n" unless( -s $maf_file );
@@ -255,9 +257,9 @@ sub execute
     }
   }
 
-  my $out_fh = IO::File->new( $output_file, ">" );
   #Calculation of p value
   my %data; #For printing
+  my @pvals;
   foreach my $path ( sort keys %path_hash )
   {
     my @pathway_genes = @{$path_hash{$path}{gene}};
@@ -331,37 +333,79 @@ sub execute
     my $pval = $pop_obj->population_pval_approx($hits_ref);
     $data{$pval}{$path}{samples} = \@mutated_samples;
     $data{$pval}{$path}{hits} = $hits_ref;
+    push( @pvals, $pval ); # For calculation of FDR
   }
 
-  #printing
+  # Calculate False Discovery Rates (Benjamini-Hochberg FDR) for the p-values
+  my $pval_cnt = scalar( @pvals );
+  my %fdr_hash;
+  for( my $i = 0; $i < $pval_cnt; $i++ )
+  {
+    my $fdr = $pvals[$i] * $pval_cnt / ( $pval_cnt - $i );
+    $fdr = 1 if $fdr > 1;
+    $fdr_hash{$pvals[$i]} = $fdr;
+  }
+
+  # Print two output files, one more detailed than the other
+  my $out_fh = IO::File->new( $output_file, ">" );
+  my $out_detailed_fh = IO::File->new( "$output_file\_detailed", ">" );
+  $out_fh->print( "Pathway\tName\tClass\tSamples_Affected\tTotal_Variations\tp-value\tFDR\n" );
+
   foreach my $pval ( sort { $a <=> $b } keys %data )
   {
     foreach my $path ( sort keys %{$data{$pval}} )
     {
-      $out_fh->print( "Pathway: $path\n" );
-      $out_fh->print( "Name: ", $path_hash{$path}{name}, "\n" ) if( defined $path_hash{$path}{name} );
-      $out_fh->print( "Class: ", $path_hash{$path}{class}, "\n" ) if( defined $path_hash{$path}{class} );
-      $out_fh->print( "Diseases: ", $path_hash{$path}{diseases}, "\n" ) if( defined $path_hash{$path}{diseases} );
-      $out_fh->print( "Drugs: ", $path_hash{$path}{drugs}, "\n" ) if( defined $path_hash{$path}{drugs} );
-      $out_fh->print( "P-value: $pval\nDescription: ", $path_hash{$path}{description}, "\n" );
-
+      # Skip this pathway if it has fewer affected genes than the user wants
+      my %mutated_gene_hash;
       my @samples = @{$data{$pval}{$path}{samples}};
+      foreach my $sample ( @samples )
+      {
+        foreach my $gene ( @{$path_sample_hits_hash{$path}{$sample}{mutated_genes}} )
+        {
+          $mutated_gene_hash{$gene}++;
+        }
+      }
+      next unless ( scalar( keys %mutated_gene_hash ) >= $min_mut_genes_per_path );
+
+      # Print detailed output to a separate output file
+      $out_detailed_fh->print( "Pathway: $path\n" );
+      $out_detailed_fh->print( "Name: ", $path_hash{$path}{name}, "\n" ) if( defined $path_hash{$path}{name} );
+      $out_detailed_fh->print( "Class: ", $path_hash{$path}{class}, "\n" ) if( defined $path_hash{$path}{class} );
+      $out_detailed_fh->print( "Diseases: ", $path_hash{$path}{diseases}, "\n" ) if( defined $path_hash{$path}{diseases} );
+      $out_detailed_fh->print( "Drugs: ", $path_hash{$path}{drugs}, "\n" ) if( defined $path_hash{$path}{drugs} );
+      $out_detailed_fh->print( "P-value: $pval\n", "FDR: ", $fdr_hash{$pval}, "\n" );
+      $out_detailed_fh->print( "Description: ", $path_hash{$path}{description}, "\n" );
+
       my @hits = @{$data{$pval}{$path}{hits}};
       foreach my $sample ( @samples )
       {
         my @mutated_genes = @{$path_sample_hits_hash{$path}{$sample}{mutated_genes}};
-        $out_fh->print( "$sample:" );
-        $out_fh->print( join ",", @mutated_genes );
-        $out_fh->print( "\n" );
+        $out_detailed_fh->print( "$sample:" );
+        $out_detailed_fh->print( join ",", @mutated_genes );
+        $out_detailed_fh->print( "\n" );
       }
-      $out_fh->print( "Samples with mutations (#hits): " );
+      my ( $mutSampleCnt, $totalMutGenes ) = ( 0, 0 );
+      $out_detailed_fh->print( "Samples with mutations (#hits): " );
       for( my $i = 0; $i < scalar( @all_sample_names ); ++$i )
       {
-        $out_fh->print( "$all_sample_names[$i]($hits[$i]) " ) if( $hits[$i] > 0 );
+        if( $hits[$i] > 0 )
+        {
+          $out_detailed_fh->print( "$all_sample_names[$i]($hits[$i]) " );
+          $mutSampleCnt++;
+          $totalMutGenes += $hits[$i];
+        }
       }
-      $out_fh->print( "\n\n" );
+      $out_detailed_fh->print( "\n\n" );
+
+      # Print tabulated output to the main output file
+      my ( $path_name, $path_class ) = ( "-", "-" );
+      $path_name = $path_hash{$path}{name} if( defined $path_hash{$path}{name} );
+      $path_class = $path_hash{$path}{class} if( defined $path_hash{$path}{class} );
+      $out_fh->print( "$path\t$path_name\t$path_class\t$mutSampleCnt\t$totalMutGenes\t",
+                      "$pval\t", $fdr_hash{$pval}, "\n" );
     }
   }
+  $out_detailed_fh->close;
   $out_fh->close;
   return 1;
 }

@@ -5,33 +5,35 @@ use warnings;
 
 use Genome;
 
-my $SEYMOUR_HOME = '/gscmnt/pacbio/production/smrtanalysis';
-my $SH_SETUP = $SEYMOUR_HOME .'/etc/setup.sh';
+my $DEFAULT_VERSION = '1.2.0';
 
-my $DEFAULT_LSF_QUEUE = 'pacbio';
+my $DEFAULT_LSF_QUEUE = 'techd';
 my $DEFAULT_LSF_RESOURCE = "-g /pacbio/smrtanalysis -M 4000000 -R 'select[type==LINUX64 && mem>=4000 && tmp>=40000] rusage[mem=4000,tmp=20000]'";
 
 class Genome::Model::Tools::SmrtAnalysis::Base {
     is  => 'Command::V2',
     is_abstract => 1,
     has => [
-        seymour_home => {
-            is => 'Text',
-            doc => 'The base directory for the SMRT Analysis install',
-            is_optional => 1,
-            default_value => Genome::Model::Tools::SmrtAnalysis::Base->default_seymour_home,
+        use_version => {
+            default_value => Genome::Model::Tools::SmrtAnalysis::Base->default_version,
         },
-        sh_setup => {
-            is => 'Text',
-            doc => 'The sh script that is sourced before running each command',
-            is_optional => 1,
-            default_value => $SH_SETUP,
-        },
-        analysis_bin => {
-            is_calculated => 1,
-            calculate_from => ['seymour_home',],
-            calculate => q{ $seymour_home .'/analysis/bin'; },
-        },
+        #seymour_home => {
+        #    is => 'Text',
+        #    doc => 'The base directory for the SMRT Analysis install',
+        #    is_optional => 1,
+        #    default_value => Genome::Model::Tools::SmrtAnalysis::Base->default_seymour_home,
+        #},
+        #sh_setup => {
+        #    is => 'Text',
+        #    doc => 'The sh script that is sourced before running each command',
+        #    is_optional => 1,
+        #    default_value => $SH_SETUP,
+        #},
+        #analysis_bin => {
+        #    is_calculated => 1,
+        #    calculate_from => ['seymour_home',],
+        #    calculate => q{ $seymour_home .'/analysis/bin'; },
+        #},
     ],
     has_optional_param => [
         lsf_queue => { default_value => $DEFAULT_LSF_QUEUE },
@@ -39,8 +41,37 @@ class Genome::Model::Tools::SmrtAnalysis::Base {
     ],
 };
 
-sub default_seymour_home {
-    return $SEYMOUR_HOME;
+sub default_version {
+    return $DEFAULT_VERSION;
+}
+
+sub seymour_home {
+    my $self = shift;
+    my $seymour_home = '/gscmnt/pacbio/production/git/pacbio/smrtanalysis-'. $self->use_version;
+    unless (-d $seymour_home) {
+        die('Failed to find seymour home: '. $seymour_home);
+    }
+    return $seymour_home;
+}
+
+sub sh_setup {
+    my $self = shift;
+    my $seymour_home = $self->seymour_home;
+    my $sh_setup = $seymour_home .'/etc/setup.sh';
+    unless (-f $sh_setup) {
+        die('Failed to find sh setup: '. $sh_setup);
+    }
+    return $sh_setup;
+}
+
+sub analysis_bin {
+    my $self = shift;
+    my $seymour_home = $self->seymour_home;
+    my $analysis_bin = $seymour_home .'/analysis/bin';
+    unless (-d $analysis_bin) {
+        die('Failed to find analysis/bin: '. $analysis_bin);
+    }
+    return $analysis_bin;
 }
 
 sub shellcmd {

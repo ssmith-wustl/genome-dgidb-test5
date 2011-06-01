@@ -26,7 +26,7 @@ class Genome::Model::Tools::Gatk::GermlineSnv {
 		vcf_output_file     => { is => 'Text', doc => "Output file to receive GATK vcf format lines", is_optional => 0, is_input => 1, is_output => 1 },
 		verbose_output_file     => { is => 'Text', doc => "STDOUT from GATK", is_optional => 1, is_input => 1, is_output => 1 },
 		dbSNP_version     => { is => 'Text', doc => "Version of dbSNP bed file to use", is_optional => 1, is_input => 1, is_output => 1, default => 130 },
-		gatk_params => { is => 'Text', doc => "Parameters for GATK", is_optional => 1, is_input => 1, is_output => 1, default => "-T UnifiedGenotyper" },
+		gatk_params => { is => 'Text', doc => "Parameters for GATK", is_optional => 1, is_input => 1, is_output => 1, default => "-T UnifiedGenotyper -et NO_ET" },
 		reference_fasta => { is => 'Text', doc => "Parameters for GATK", is_optional => 1, is_input => 1, is_output => 1, default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa" },
 		run_unsafe_mode => { is => 'Text', doc => "Make GATK print errors instead of dying", is_optional => 1, is_input => 1, default => 1 },
 	        mb_of_ram => {
@@ -125,11 +125,10 @@ sub execute {                               # replace with real execution logic.
 	}
 	else
 	{
-		my $touchcmd = "touch " . $self->vcf_output_file;
-		system("$touchcmd"); # This will create an empty output file to help prevent GATK from crashing 
+		Genome::Sys->write_file($self->vcf_output_file, ''); # This will create an empty output file to help prevent GATK from crashing
 		$return = Genome::Sys->shellcmd(
                            cmd => "$cmd",
-                           output_files => [$output_file],
+                           output_files => [$self->vcf_output_file],
                            skip_if_output_is_present => 0,
                        );
 		unless($return) { 

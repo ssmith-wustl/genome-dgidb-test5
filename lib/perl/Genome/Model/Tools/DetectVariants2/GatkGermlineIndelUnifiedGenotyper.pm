@@ -26,7 +26,6 @@ class Genome::Model::Tools::DetectVariants2::GatkGermlineIndelUnifiedGenotyper{
              default_value => 'long',
          },
          lsf_resource => {
-             # fscache will select blades with fscaching of the human reference directory
              default_value => "-R 'rusage[mem=6000] select[type==LINUX64 && model != Opteron250 && mem>6000 && maxtmp>100000] span[hosts=1]' -M 6000000",
          },
      ],
@@ -41,6 +40,7 @@ sub _detect_variants {
         vcf_output_file => $self->_temp_staging_directory."/indels.hq",
         mb_of_ram => $self->mb_of_ram,
         reference_fasta => $refseq,
+        version => $self->version,
     );
     unless($gatk_cmd->execute){
         $self->error_message("Failed to run GATK command.");
@@ -54,7 +54,9 @@ sub _detect_variants {
 }
 
 sub has_version {
-    return 1; #FIXME implement this when this module is filled out
+    my $self = shift;
+
+    return Genome::Model::Tools::Gatk->has_version(@_);
 }
 
 1;

@@ -1,7 +1,5 @@
 #!/gsc/bin/perl
 
-use lib '/gscuser/jlolofie/dev/git/genome/lib/perl';
-
 use Genome;
 
 #UR::Context->object_cache_size_highwater(200_000);
@@ -26,18 +24,19 @@ GetOptions(
 );
 
 my @types = qw(
-processing_profile 
-work_order 
-model 
-model_group 
-individual 
-flowcell 
-sample 
-population_group 
-taxon 
-library 
-disk_group 
-disk_volume 
+processing_profile
+work_order
+model
+model_group
+individual
+flowcell
+sample
+population_group
+taxon
+library
+disk_group
+disk_volume
+imported_instrument_data
 );
 
 my @types_to_add;
@@ -58,14 +57,14 @@ if (!$add) {
     }
 } else {
     @types_to_add = split(/,/, $add);
-   
+
     for my $t (@types_to_add) {
         if (! grep /$t/, @types) {
             my $type_str = join("\n",@types);
             print "\nError: \'$t\' is not a valid type:\n$type_str\n\n";
             exit 1;
         }
-    } 
+    }
 }
 
 #Just clear the cache for each entry instead of building all the search result views for now
@@ -111,14 +110,14 @@ exit;
 
 
 sub status($) {
-    my $msg = shift;    
+    my $msg = shift;
     print STDERR $msg;
 }
 
 sub loading($) {
     my $type = shift;
     status 'Loading ' . $type . '...';
-    
+
     $time = time;
 }
 
@@ -166,25 +165,25 @@ sub get_functions {
         loading "models";
         my @models;
 
-        eval { 
-            @models = Genome::Model->get(type_name => 
-            {operator => 'IN', 
+        eval {
+            @models = Genome::Model->get(type_name =>
+            {operator => 'IN',
                 value => [  'rna seq',
-                            'reference alignment', 
-                            'somatic', 
+                            'reference alignment',
+                            'somatic',
                             'convergence',
                             'metagenomic composition shotgun',
-                            'assembly', 
-                            'amplicon assembly', 
-                            'de novo assembly', 
-                            'genotype microarray' ] 
-            });    
+                            'assembly',
+                            'amplicon assembly',
+                            'de novo assembly',
+                            'genotype microarray' ]
+            });
 
         };
 
         if($@) {
             #Somebody currently has a model in the DB without having deployed the module.  Fall back on a safe set of model types
-            @models = Genome::Model->get(type_name => {operator => 'IN', value => ['reference alignment', 'somatic', 'assembly', 'amplicon assembly', 'de novo assembly', 'genotype microarray', 'virome screen', 'convergence'] });    
+            @models = Genome::Model->get(type_name => {operator => 'IN', value => ['reference alignment', 'somatic', 'assembly', 'amplicon assembly', 'de novo assembly', 'genotype microarray', 'virome screen', 'convergence'] });
         }
 
 #        Genome::Model::Build->get(-hint => ['events', 'status']); #Load these all at once rather than letting each model query for its own in turn (but do this after the models are loaded)
@@ -275,6 +274,14 @@ sub get_functions {
         loading "disk volumes";
         my @disk_volumes = Genome::Disk::Volume->get( -hint => ['assignments']);
         Genome::Search->add(@disk_volumes);
+        done;
+    };
+
+    $f->{'imported_instrument_data'} = sub {
+        loading "imported_instrument_data";
+        my @iid = Genome::InstrumentData::Imported->get();
+        print 'adding ' . scalar(@iid) . ' imported_instrument_data';
+        Genome::Search->add(@iid);
         done;
     };
 

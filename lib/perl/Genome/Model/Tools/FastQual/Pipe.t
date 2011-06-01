@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 $ENV{GENOME_DEV_MODE} = 0;
 

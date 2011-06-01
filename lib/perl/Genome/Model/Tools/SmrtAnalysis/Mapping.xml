@@ -11,6 +11,7 @@
   <link fromOperation="input connector" fromProperty="min_length" toOperation="Align" toProperty="min_length" />
   <link fromOperation="input connector" fromProperty="xml" toOperation="Align" toProperty="xml" />
   <link fromOperation="input connector" fromProperty="hdf5_mode" toOperation="Align" toProperty="hdf5_mode" />
+  <link fromOperation="input connector" fromProperty="pulse_metrics" toOperation="Align" toProperty="pulse_metrics" />
   
   <link fromOperation="Align" fromProperty="cmp_hdf5_file" toOperation="MergeCmpH5" toProperty="input_cmp_hdf5_files" />
 
@@ -21,11 +22,10 @@
   <link fromOperation="MergeCmpH5" fromProperty="output_cmp_hdf5_file" toOperation="SortCmpH5" toProperty="input_cmp_hdf5_file" />
 
   <link fromOperation="SortCmpH5" fromProperty="input_cmp_hdf5_file" toOperation="CmpH5ToBAM" toProperty="cmp_hdf5_file" />
-
+  
   <link fromOperation="input connector" fromProperty="reference_directory" toOperation="CmpH5ToBAM" toProperty="reference_repository" />
   
   <link fromOperation="SortCmpH5" fromProperty="input_cmp_hdf5_file" toOperation="SummarizeCoverage" toProperty="cmp_hdf5_file" />
-  <link fromOperation="SortCmpH5" fromProperty="input_cmp_hdf5_file" toOperation="LoadPulses" toProperty="cmp_hdf5_file" />
   
   <link fromOperation="input connector" fromProperty="reference_directory" toOperation="SummarizeCoverage" toProperty="reference_repository" />
   <link fromOperation="input connector" fromProperty="alignment_summary_gff" toOperation="SummarizeCoverage" toProperty="summary_file" />
@@ -37,17 +37,13 @@
   <link fromOperation="input connector" fromProperty="gff_to_bed_purpose" toOperation="GffToBed" toProperty="purpose" />
   <link fromOperation="input connector" fromProperty="gff_to_bed_name" toOperation="GffToBed" toProperty="name" />
   <link fromOperation="input connector" fromProperty="gff_to_bed_description" toOperation="GffToBed" toProperty="description" />
-
-  <link fromOperation="input connector" fromProperty="pulse_metrics" toOperation="LoadPulses" toProperty="metrics" />
-  <link fromOperation="input connector" fromProperty="full_input_fofn" toOperation="LoadPulses" toProperty="input_fofn" />
-  
+    
+  <link fromOperation="SortCmpH5" fromProperty="input_cmp_hdf5_file" toOperation="output connector" toProperty="cmp_hdf5_file" />
   <link fromOperation="CmpH5ToBAM" fromProperty="output_file" toOperation="output connector" toProperty="sam_file" />
   <link fromOperation="GffToBed" fromProperty="gff_file" toOperation="output connector" toProperty="alignment_summary_gff" />
   <link fromOperation="GffToBed" fromProperty="bed_file" toOperation="output connector" toProperty="coverage_bed_file" />
-  <link fromOperation="LoadPulses" fromProperty="cmp_hdf5_file" toOperation="output connector" toProperty="cmp_hdf5_file" />
 
   <link fromOperation="GffToBed" fromProperty="result" toOperation="output connector" toProperty="result" />
-  <link fromOperation="LoadPulses" fromProperty="result" toOperation="output connector" toProperty="result" />
 
   <operation name="Align" parallelBy="input_fofn">
     <link fromOperation="input connector" fromProperty="input_fofn" toOperation="CompareSequences" toProperty="query" />
@@ -61,16 +57,23 @@
     <link fromOperation="input connector" fromProperty="min_length" toOperation="CompareSequences" toProperty="min_length" />
     <link fromOperation="input connector" fromProperty="xml" toOperation="CompareSequences" toProperty="xml" />
     <link fromOperation="input connector" fromProperty="hdf5_mode" toOperation="CompareSequences" toProperty="hdf5_mode" />
-
-    <link fromOperation="CompareSequences" fromProperty="hdf5_file" toOperation="output connector" toProperty="cmp_hdf5_file" />
-
     
-    <link fromOperation="CompareSequences" fromProperty="result" toOperation="output connector" toProperty="result" />
-    
+    <link fromOperation="input connector" fromProperty="pulse_metrics" toOperation="LoadPulses" toProperty="metrics" />
+    <link fromOperation="input connector" fromProperty="input_fofn" toOperation="LoadPulses" toProperty="input_fofn" />
+  
+    <link fromOperation="CompareSequences" fromProperty="hdf5_file" toOperation="LoadPulses" toProperty="cmp_hdf5_file" />
+
+    <link fromOperation="LoadPulses" fromProperty="cmp_hdf5_file" toOperation="output connector" toProperty="cmp_hdf5_file" />
+    <link fromOperation="LoadPulses" fromProperty="result" toOperation="output connector" toProperty="result" />
+  
     <operation name="CompareSequences">
       <operationtype commandClass="Genome::Model::Tools::SmrtAnalysis::CompareSequences" typeClass="Workflow::OperationType::Command" />
     </operation>
-
+    
+    <operation name="LoadPulses">
+      <operationtype commandClass="Genome::Model::Tools::SmrtAnalysis::LoadPulses" typeClass="Workflow::OperationType::Command" />
+    </operation>
+    
     <operationtype typeClass="Workflow::OperationType::Model">
       <inputproperty>input_fofn</inputproperty>
       <inputproperty>reference_directory</inputproperty>
@@ -83,6 +86,7 @@
       <inputproperty>min_length</inputproperty>
       <inputproperty>xml</inputproperty>
       <inputproperty>hdf5_mode</inputproperty>
+      <inputproperty>pulse_metrics</inputproperty>
       <outputproperty>cmp_hdf5_file</outputproperty>
       <outputproperty>result</outputproperty>
     </operationtype>
@@ -108,10 +112,6 @@
       <operationtype commandClass="Genome::Model::Tools::SmrtAnalysis::GffToBed" typeClass="Workflow::OperationType::Command" />
   </operation>
   
-  <operation name="LoadPulses">
-    <operationtype commandClass="Genome::Model::Tools::SmrtAnalysis::LoadPulses" typeClass="Workflow::OperationType::Command" />
-  </operation>
-  
   <operationtype typeClass="Workflow::OperationType::Model">
     <inputproperty>input_fofns</inputproperty>
     <inputproperty>cmp_hdf5_file</inputproperty>
@@ -132,7 +132,6 @@
     <inputproperty>gff_to_bed_name</inputproperty>
     <inputproperty>gff_to_bed_description</inputproperty>
     <inputproperty>pulse_metrics</inputproperty>
-    <inputproperty>full_input_fofn</inputproperty>
     <outputproperty>cmp_hdf5_file</outputproperty>
     <outputproperty>sam_file</outputproperty>
     <outputproperty>alignment_summary_gff</outputproperty>

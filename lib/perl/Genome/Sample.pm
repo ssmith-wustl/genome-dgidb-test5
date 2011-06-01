@@ -211,6 +211,11 @@ class Genome::Sample {
             calculate_from => 'id',
             calculate => q{ return Genome::Library->get(sample_id => $id) },
         },
+        library_ids => { 
+            is => 'Integer',
+            is_optional => 1,
+            calculate => q| return map { $_->id } $self->libraries |,
+        },
         models => {
             is => 'Genome::Model',
             is_optional => 1,

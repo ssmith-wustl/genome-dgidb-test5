@@ -1,4 +1,4 @@
-#! /gsc/bin/perl
+#!/usr/bin/env perl
 #
 #
 # All methods in the build are tested in the subclasses - only use_ok here

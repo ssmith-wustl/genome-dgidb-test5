@@ -459,6 +459,7 @@ sub _reallocate {
     my $kilobytes_requested = delete $params{kilobytes_requested};
     my $kilobytes_requested_is_actual_disk_usage = 0;
     my $allow_reallocate_with_move = delete $params{allow_reallocate_with_move};
+    my $force_move = delete $params{force_move};
     if (%params) {
         confess "Found extra params: " . Data::Dumper::Dumper(\%params);
     }
@@ -517,7 +518,12 @@ sub _reallocate {
 
     # If there's enough space, just change the size, no worries!
     my $available_space = $volume->unallocated_kb - $volume->unusable_reserve_size;
-    if ($kilobytes_requested == 0 or $diff < 0 or ($diff <= $available_space)) {
+    if ($force_move) {
+        $self->status_message("Forcefully moving allocation to new volume!");
+        Genome::Sys->unlock_resource(resource_lock => $volume_lock);
+        return $self->_reallocate_with_move($allocation_lock, $kilobytes_requested);
+    }
+    elsif ($kilobytes_requested == 0 or $diff < 0 or ($diff <= $available_space)) {
         $self->kilobytes_requested($kilobytes_requested);
         $volume->unallocated_kb($volume->unallocated_kb - $diff);
         $self->reallocation_time(UR::Time->now);
@@ -553,9 +559,9 @@ sub _reallocate {
 sub _reallocate_with_move {
     my ($self, $allocation_lock, $kilobytes_requested) = @_;
     my $original_allocation_size = $self->kilobytes_requested;
-    $self->status_message("Current volume " . $self->mount_path . " doesn't have enough space to reallocate, moving to new volume");
-
     my $old_volume = $self->volume;
+
+    $self->status_message("Moving allocation " . $self->id . " from volume " . $old_volume->mount_path . " to a new volume");
 
     # First, need to figure out which volume we want to move to, lock it, and update it
     my @candidate_volumes = $self->_get_candidate_volumes(
@@ -564,6 +570,8 @@ sub _reallocate_with_move {
         reallocating => 1,
     );
     my ($new_volume, $new_volume_lock) = $self->_lock_volume_from_list($kilobytes_requested, @candidate_volumes);
+
+    $self->status_message("Selected volume " . $new_volume->mount_path . " as target");
 
     $new_volume->unallocated_kb($new_volume->unallocated_kb - $kilobytes_requested);
     $self->_create_observer($self->_unlock_closure($new_volume_lock));

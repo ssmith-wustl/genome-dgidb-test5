@@ -12,7 +12,7 @@ BEGIN {
 use above 'Genome';
 
 require Genome::InstrumentData::Solexa;
-use Test::More tests => 104;
+use Test::More tests => 106;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
 
@@ -195,6 +195,46 @@ ok($group, 'auto-generated model-group exists');
 
 my @members = $group->models;
 ok(grep($_ eq $new_model, @members), 'group contains the newly created model');
+
+my $instrument_data_ignored = Genome::InstrumentData::Solexa->create(
+    id => '-101',
+    library_id => $library->id,
+    flow_cell_id => 'TM-021',
+    lane => '2',
+    run_type => 'Paired',
+    fwd_read_length => 100,
+    rev_read_length => 100,
+    fwd_clusters => 65535,
+    rev_clusters => 65536,
+    ignored => 1,
+);
+
+my $pse_ignored = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
+    pse_status => 'inprogress',
+    pse_id => '-123456',
+    ps_id => $ps->ps_id,
+    ei_id => '464681',
+);
+
+
+
+$pse_ignored->add_param('instrument_data_type', 'solexa');
+$pse_ignored->add_param('instrument_data_id', $instrument_data_2->id);
+$pse_ignored->add_param('subject_class_name', 'Genome::Sample');
+$pse_ignored->add_param('subject_id', $sample->id);
+$pse_ignored->add_param('processing_profile_id', $processing_profile->id);
+$pse_ignored->add_reference_sequence_build_param_for_processing_profile( $processing_profile, $ref_seq_build);
+
+
+my $command_ignored = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
+    test => 1,
+);
+
+ok($command_ignored->execute(), 'assign-queued-instrument-data executed successfully.');
+
+my $new_models = $command_ignored->_newly_created_models;
+is(scalar(keys %$new_models), 0, 'the cron created no models from ignores.');
+
 
 my $instrument_data_3 = Genome::InstrumentData::Solexa->create(
     id => '-102',
@@ -596,6 +636,7 @@ my $command_5 = Genome::Model::Command::Services::AssignQueuedInstrumentData->cr
 isa_ok($command_5, 'Genome::Model::Command::Services::AssignQueuedInstrumentData');
 ok($command_5->execute(), 'assign-queued-instrument-data executed successfully.');
 my $new_models_5 = $command_5->_newly_created_models;
+print Data::Dumper::Dumper($new_models_5);
 is(scalar(keys %$new_models_5), 0, 'the cron created zero new models');
 ok(scalar($normal->instrument_data), 'the cron assigned the new instrument data to the empty paired model');
 

@@ -512,7 +512,7 @@ sub validate_post_assemble_class_params {
     }
 
     #check for missing required param
-    for my $property ( $class_meta->properties ) {
+    for my $property ( $class_meta->_legacy_properties ) {
         if ( not $property->is_optional ) {
 
             my $property_name = $property->property_name;

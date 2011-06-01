@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 #construct heterozygous alleles
 
 use strict;

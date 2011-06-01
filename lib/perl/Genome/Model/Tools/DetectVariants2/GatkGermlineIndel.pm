@@ -26,8 +26,7 @@ class Genome::Model::Tools::DetectVariants2::GatkGermlineIndel{
              default_value => 'long',
          },
          lsf_resource => {
-             # fscache will select blades with fscaching of the human reference directory
-             default_value => "-M 8000000 -R 'select[type==LINUX64 && mem>8000 && fscache] rusage[mem=8000]'",
+             default_value => "-M 8000000 -R 'select[type==LINUX64 && mem>8000] rusage[mem=8000]'",
          },
      ],
 };
@@ -42,6 +41,7 @@ sub _detect_variants {
         bed_output_file => $self->_temp_staging_directory."/indels.hq",
         mb_of_ram => $self->mb_of_ram,
         gatk_params => '-R ' . $refseq . ' -T IndelGenotyperV2 --window_size 300 -et NO_ET',
+        version => $self->version,
     );
     unless($gatk_cmd->execute){
         $self->error_message("Failed to run GATK command.");
@@ -59,7 +59,9 @@ sub _detect_variants {
 }
 
 sub has_version {
-    return 1; #FIXME implement this when this module is filled out
+    my $self = shift;
+
+    return Genome::Model::Tools::Gatk->has_version(@_);
 }
 
 1;

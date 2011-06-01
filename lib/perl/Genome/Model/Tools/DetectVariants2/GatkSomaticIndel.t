@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -46,6 +46,7 @@ my $gatk_somatic_indel = Genome::Model::Tools::DetectVariants2::GatkSomaticIndel
         reference_build_id => $refbuild_id,
         output_directory => $tmpdir, 
         mb_of_ram => 3500,
+        version => 5336,
 );
 
 ok($gatk_somatic_indel, 'gatk_somatic_indel command created');

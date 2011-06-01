@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -37,6 +37,7 @@ my $gatk_somatic_indel = Genome::Model::Tools::DetectVariants2::GatkGermlineInde
         reference_build_id => $refbuild_id,
         output_directory => $tmpdir, 
         mb_of_ram => 3000,
+        version => 5336,
 );
 
 ok($gatk_somatic_indel, 'gatk_germline_indel command created');
@@ -52,5 +53,6 @@ my @files = qw|
 for my $file (@files){
     my $expected_file = "$expected_data/$file";
     my $actual_file = "$tmpdir/$file";
-    is(compare($actual_file,$expected_file),0,"Actual file is the same as the expected file: $file");
+    is(compare($actual_file,$expected_file),0,"Actual file is the same as the expected file: $file")
+        || system("diff -u $expected_file $actual_file");
 }
