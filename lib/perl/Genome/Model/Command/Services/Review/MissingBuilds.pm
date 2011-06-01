@@ -4,6 +4,11 @@ class Genome::Model::Command::Services::Review::MissingBuilds {
     is => 'Genome::Command::Base',
     doc => 'Identify models that are missing builds.',
     has => [
+        models => {
+            is => 'Genome::Model',
+            is_many => 1,
+            is_optional => 1,
+        },
         request_build => {
             is => 'Boolean',
             default => 0,
@@ -18,12 +23,16 @@ use Genome;
 sub execute {
     my $self = shift;
 
-    my @m = Genome::Model->get(
-        _last_complete_build_id => '',
-        'build_requested !=' => '1',
-        user_name => ['apipe-builder', 'ebelter'],
-    );
-    print STDERR "Found " . @m . " models.\n";
+    my @m = $self->models;
+    unless (@m) {
+        print STDERR "Using default search for models created by apipe-builder or ebelter...\n";
+        @m = Genome::Model->get(
+            _last_complete_build_id => '',
+            'build_requested !=' => '1',
+            user_name => ['apipe-builder', 'ebelter'],
+        );
+        print STDERR "Found " . @m . " models.\n";
+    }
 
     my @m_need_build;
     for my $m (@m) {
