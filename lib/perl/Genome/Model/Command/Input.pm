@@ -72,12 +72,15 @@ sub _get_input_property_for_name {
         return;
     }
 
-    unless ( $property->via eq 'inputs' ) {
-        $self->error_message("Property ($name) is not a model input, and  cannot be modified by this command.");
-        return;
+    while ($property->via) {
+        if ($property->via eq 'inputs') {
+            return $property;
+        }
+        $property = $model_class_meta->property_meta_for_name($property->via);
     }
-    
-    return $property;
+
+    $self->error_message("Property ($name) is not a model input, and  cannot be modified by this command.");
+    return;
 }
 
 sub _get_singular_input_property_for_name { # this requires that the input property is 'is_many'
