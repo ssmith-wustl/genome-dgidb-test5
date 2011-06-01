@@ -488,7 +488,6 @@ sub _resolve_sequencing_platform_for_class {
 
 sub stages {
     my $self = shift;
-$DB::single=1;
     ## second parameter of each pair is the required flag
     ## if it is 1 and no job events are made at start time
     ## a warning will be printed to the user
@@ -617,9 +616,6 @@ sub alignment_objects {
 
     my @assignments = $model->instrument_data_assignments();
 
-    $DB::single = 1;
-    
-    
     my @instrument_data_ids = map { $_->instrument_data_id() } @assignments;
     my @solexa_instrument_data = Genome::InstrumentData->get( \@instrument_data_ids );
 
