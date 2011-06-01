@@ -810,6 +810,7 @@ sub start {
 
 sub accumulated_alignments_directory {
     my $self = shift;
+    return unless ($self->data_directory);
     return $self->data_directory . '/alignments';
 }
 

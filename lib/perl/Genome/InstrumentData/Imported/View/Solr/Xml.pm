@@ -18,7 +18,7 @@ class Genome::InstrumentData::Imported::View::Solr::Xml {
         },
         display_icon_url => {
             is  => 'Text',
-            default => 'genome_instrumentdata_imported',
+            default => 'genome_instrumentdata_imported_32',
         },
         display_url0 => {
             is => 'Text',

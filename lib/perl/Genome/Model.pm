@@ -585,10 +585,12 @@ sub unbuilt_instrument_data {
     my %model_data;
     map { $model_data{$_} = 1 } $self->instrument_data_ids;
     my @unbuilt_data;
-    for my $build_data ($self->build->instrument_data_ids) {
-        my $model_data = delete $model_data{$build_data};
-        next if defined $model_data;
-        push @unbuilt_data, $build_data;
+    for my $build ($self->builds) {
+        for my $build_data ($build->instrument_data_ids) {
+            my $model_data = delete $model_data{$build_data};
+            next if defined $model_data;
+            push @unbuilt_data, $build_data;
+        }
     }
     push @unbuilt_data, keys %model_data;
     return @unbuilt_data;

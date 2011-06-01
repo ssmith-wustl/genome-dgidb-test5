@@ -180,7 +180,6 @@ sub _generate_events_for_build_stage {
         my $object_class;
         my $object_id;
         my $segment_identifier;
-        $DB::single = 1;
         if (ref($object)) {
             #if we get a segment passed in instead, extract the object & segment id
             if (ref($object) eq 'HASH' && exists $object->{segment}) {
@@ -260,7 +259,6 @@ sub _generate_events_for_object {
                     );
                 }
             } elsif ($command_class =~ /ReferenceAlignment::AlignReads|TrimReadSet|AssignReadSetToModel|AddReadSetToProject|FilterReadSet|RnaSeq::PrepareReads/) {
-                $DB::single = 1;
                 if ($object->isa('Genome::InstrumentData')) {
                     my $ida = Genome::Model::InstrumentDataAssignment->get(
                         model_id => $build->model_id,
