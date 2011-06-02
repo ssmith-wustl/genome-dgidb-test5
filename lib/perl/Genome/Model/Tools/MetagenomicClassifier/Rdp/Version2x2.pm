@@ -73,11 +73,11 @@ sub verify_seq {
         Carp::confess("No sequence given to classify");
     }
 
-    if ( not $seq->{id} ) {
+    unless ( $seq->{id} ) {
         Carp::confess('Seq does not have an id: '.Data::Dumper::Dumper($seq));
     }
 
-    if ( length $seq->{seq} < 50) {
+    unless ( length $seq->{seq} >= 50) {
         return;
     }
 
@@ -90,4 +90,4 @@ sub _is_reversed {
 }
 
 1;
-#ebelter
+
