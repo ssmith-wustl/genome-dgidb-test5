@@ -14,10 +14,12 @@ use_ok('Genome::Model::Command::Copy') or die;
 
 my $model = Genome::Model->get(2862809551); # apipe-test-04-ref_align
 ok($model, 'model');
+$model->target_region_set_name('BULLS_EYE');
+is($model->target_region_set_name, 'BULLS_EYE', 'set target region set name');
 my $copy = Genome::Model::Command::Copy->create( # use 37 instead of 36
     from => $model,
     to => '__COPY_TEST1__',
-    overrides => [qw/ processing_profile=2580856 reference_sequence_build_id=102671028 dbsnp_build_id=106375969 annotation_reference_build_id=105407461 /],
+    overrides => [qw/ processing_profile=2580856 reference_sequence_build_id=102671028 dbsnp_build_id=106375969 annotation_reference_build_id=105407461  target_region_set_name= /],
     do_not_copy_instrument_data => 1,
 );
 ok($copy, 'create');
@@ -29,9 +31,10 @@ is($new_model->processing_profile_id, 2580856, 'override pp id');
 is($new_model->reference_sequence_build_id, 102671028, 'override ref seq build');
 is($new_model->annotation_reference_build_id, 105407461, 'override annotation build');
 is($new_model->dbsnp_build_id, 106375969, 'override dbsnp build');
+ok(!$new_model->target_region_set_name, 'override target region set name ro undef');
 is_deeply([$new_model->instrument_data], [], 'did not copy inst data');
 
-my $rv = system('genome model copy 2862809551 __COPY_TEST2__ processing_profile=2580856');
+my $rv = system('genome model copy 2862809551 __COPY_TEST2__ processing_profile=2580856 target_region_set_name="CAMBRIDGE"');
 is($rv, 0, 'command line');
 
 done_testing();
