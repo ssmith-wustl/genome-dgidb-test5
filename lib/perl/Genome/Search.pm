@@ -52,21 +52,21 @@ class Genome::Search {
             is => 'Boolean',
             default_value => 1,
             doc => 'If set, will cache the search result HTML when adding the item to the index.  If false, will clear the cache for the matching key but not update it.',
+        },
+        genome_path  => {
+            is => 'Text',
+            calculate => q| return $INC{'Genome.pm'}; |,
+        },
+        ur_path => {
+            is => 'Text',
+            calculate => q| return $INC{'UR.pm'}; |,
+        },
+        workflow_path => {
+            is => 'Text',
+            calculate => q| return $INC{'Workflow.pm'}; |,
         }
     ],
 };
-
-sub genome_path {
-    return $INC{'Genome.pm'};
-}
-
-sub ur_path {
-    return $INC{'UR.pm'};
-}
-
-sub workflow_path {
-    return $INC{'Workflow.pm'};
-}
 
 
 #What classes are searchable is actually determined automatically by the existence of the relevant views.
