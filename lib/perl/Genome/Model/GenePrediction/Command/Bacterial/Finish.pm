@@ -458,7 +458,8 @@ sub execute
         my $locus_id = $self->locus_id;
 
         # FIXME: don't use backtics
-        my $pACEDBcmd = `$parse_ACEDB`;
+        #my $pACEDBcmd = `$parse_ACEDB`;
+        IPC::Run::run([$parse_ACEDB]);
 
         # get p5_hybrid and acedb counts
         opendir( ACEDIR2, $acedb_acefile_path )
