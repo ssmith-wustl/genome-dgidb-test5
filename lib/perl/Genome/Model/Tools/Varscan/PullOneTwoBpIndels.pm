@@ -31,7 +31,8 @@ class Genome::Model::Tools::Varscan::PullOneTwoBpIndels {
 		output_indel	=> { is => 'Text', doc => "gmt varscan validate input" , is_optional => 0},
 		output_snp	=> { is => 'Text', doc => "gmt varscan validate input" , is_optional => 0},
 		final_output_file	=> { is => 'Text', doc => "process-validation-indels output file" , is_optional => 0},
-		skip_if_output_present	=> { is => 'Text', doc => "Skip Creating new Bam Files if they exist" , is_optional => 1, default => "0"},
+		skip_if_output_present	=> { is => 'Boolean', doc => "Skip Creating new Bam Files if they exist" , is_optional => 1, default => ""},
+        realigned_bam_file_directory => { is => 'Text', doc => "Where to dump the realigned bam file", is_optional => 0},
 	],
 };
 
@@ -73,7 +74,6 @@ sub execute {                               # replace with real execution logic.
 	my $final_output_file = $self->final_output_file;
 	my $skip_if_output_present = $self->skip_if_output_present;
 
-
 	unless ($small_indel_list =~ m/\.bed/i) {
 		die "Indel File Must end in .bed";
 	}
@@ -104,9 +104,19 @@ sub execute {                               # replace with real execution logic.
 
 
 	my $file_input = new FileHandle ($file_list_file);
+    unless($file_input) {
+        $self->error_message("Unable to open $file_list_file");
+        return;
+    }
+
 	while (my $file = <$file_input>) {
 		chomp($file);
 		my $indel_input = new FileHandle ($file);
+        unless($indel_input) {
+            $self->error_message("Unable to open $file");
+            return;
+        }
+
 		while (my $line = <$indel_input>) {
 			chomp($line);
 			my ($chr, $start, $stop, $ref, $var, @everything_else) = split(/\t/, $line);
@@ -117,16 +127,16 @@ sub execute {                               # replace with real execution logic.
 			}
 			if ($ref eq '-' || $ref eq '0') { #ins
 				#count number of bases inserted
-				$size = length($var) - 1;
+				$size = length($var);
 			}
 			elsif ($var eq '-' || $var eq '0') { #del
-				$size = ($stop - $start);
+				$size = ($stop - $start + 1);
 			}
 			else {
-				print "Line $line in file $file has wrong insertion or deletion nomenclature. Either ref or var should be 0";
-				$size = 0;
+				print "Line $line in file $file has wrong insertion or deletion nomenclature. Either ref or var should be 0 or -";
+				$size = 0;  #this will include this indel despite its wrongness
 			}
-			if ($size <= 1) {
+			if ( $size > 0 && $size <= 2) {
 				my $bedstart = ($start - 1);
 				print INDELS_OUT "$chr\t$bedstart\t$stop\t$ref\t$var\n";
 				print NOBED_INDELS_OUT "$chr\t$start\t$stop\t$ref\t$var\n";
@@ -135,7 +145,8 @@ sub execute {                               # replace with real execution logic.
 		close($indel_input);
 	}
 	close($file_input);
-	my $bsub = 'bsub -q apipe -R "select[model!=Opteron250 && type==LINUX64 && mem>8000 && tmp>10000] rusage[mem=8000, tmp=10000]" -M 8000000 ';
+
+	my $bsub = 'bsub -q long -R "select[model!=Opteron250 && type==LINUX64 && mem>8000 && tmp>10000] rusage[mem=8000, tmp=10000]" -M 8000000 ';
 	my ($jobid1, $jobid2, $jobid3, $jobid4, $jobid5, $jobid6);
 	if ($skip_if_output_present && -s "$sorted_normal_bam_file.bam" && -s "$sorted_tumor_bam_file.bam") {
 		my $jobid1 = `$bsub -J varscan_validation \'gmt varscan validation --normal-bam $sorted_normal_bam_file.bam --tumor-bam $sorted_tumor_bam_file.bam --output-indel $output_indel --output-snp $output_snp\'`;
