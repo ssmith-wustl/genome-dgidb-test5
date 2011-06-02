@@ -40,8 +40,9 @@ sub execute {
         my $name = $obj->__display_name__;
         my $deleted = eval{ $obj->delete; };
         if ( $deleted ) {
-            $self->status_message("Deleted $name");
-            $transaction->commit;
+            if ($transaction->commit) {
+                $self->status_message("Deleted $name");
+            }
         }
         else {
             push @errors, "Failed to delete $name";

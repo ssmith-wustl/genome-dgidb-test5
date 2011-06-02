@@ -73,6 +73,22 @@ sub schedule_rebuild {
     return 1;
 }
 
+# Updates the convergence model immediately prior to a build starting. In this case, makes sure
+# that the convergence model's subject is correct.
+sub check_for_updates {
+    my $self = shift;
+    my $subject = $self->subject;
+    my $group_subject = $self->group->infer_group_subject;
+
+    if ($group_subject->class eq $subject->class and $group_subject->id eq $subject->id) {
+        return 1;
+    }
+
+    $self->subject_id($group_subject->id);
+    $self->subject_class_name($group_subject->class);
+    return 1;
+}
+
 sub build_needed {
     my $self = shift;
 

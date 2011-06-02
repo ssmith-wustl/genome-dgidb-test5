@@ -110,15 +110,14 @@ sub execute {
             return $build;
         };
         if ($build) {
-            $self->status_message("Successfully started build (" . $build->__display_name__ . ").");
-            $transaction->commit;
-            $builds_started++;
-            
-            # Record newly created build so other tools can access them.
-            # TODO: should possibly be part of the object class
-            my @builds = $self->builds;
-            push @builds, $build;
-            $self->builds(\@builds);
+            if ($transaction->commit) {
+                $self->status_message("Successfully started build (" . $build->__display_name__ . ").");
+                $builds_started++;
+
+                # Record newly created build so other tools can access them.
+                # TODO: should possibly be part of the object class
+                $self->add_build($build);
+            }
         }
         else {
             push @errors, $model->__display_name__ . ": " . $@;

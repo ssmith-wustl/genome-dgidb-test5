@@ -1058,12 +1058,22 @@ sub dependent_properties {
     return;
 }
 
+# Performs a number of checks/updates of the model prior to starting a build.
 sub create_build {
     my $self = shift;
 
-    unless ($self->verify_inputs) {
-        $self->error_message("Some model inputs for model " . $self->id . " are not ready, cannot start build. " .
-            "Build requested flag has been set, so another attempt at starting a build will be made later.");
+    unless (eval { $self->check_for_updates }) {
+        my $msg = "Model " . $self->__display_name__ . " failed to update itself!";
+        $msg .= " Reason: $@" if $@;
+        $self->warning_message($msg);
+        return;
+    }
+
+    unless (eval {$self->verify_inputs }) {
+        my $msg = "Some model inputs for model " . $self->__display_name__ . " are not ready, cannot start build. " .
+            "Build requested flag has been set, so another attempt at starting a build will be made later.";
+        $msg .= " Reason: $@" if $@;
+        $self->warning_message($msg);
         $self->build_requested(1);
         return;
     }
@@ -1079,6 +1089,11 @@ sub verify_inputs {
     return 1;
 }
 
+# Updates the model as necessary prior to starting a build. Useful for ensuring that the build is incorporating
+# all of the latest information. Override in subclasses for custom behavior.
+sub check_for_updates {
+    return 1;
+}
 
 sub set_apipe_cron_status {
     my $self = shift;
