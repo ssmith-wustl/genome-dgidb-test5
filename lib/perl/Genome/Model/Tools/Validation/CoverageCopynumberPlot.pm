@@ -398,7 +398,7 @@ axis(side=3,at=c(60,100),labels=c(sprintf("%.3f", maxden100),0),col="black",tck=
 par(mgp = c(3,1,0));
 #par(mar=c(5,4,4,2) + 0.1);
 legend(x="topleft",horiz=TRUE,xjust=0, c("1", "2", "3", "4+","Chr $chr_highlight"),col=c("#1C3660","#67B32E","#F49819","#E52420","#A020F0"),pch=c(19,19,19,19,1),cex=0.6);
-mtext("Normal and Tumor Coverage > 100",cex=0.7, padj=-0.5);
+mtext("Normal and Tumor Coverage > $readcount_cutoff",cex=0.7, padj=-0.5);
 
         #TUMOR COVERAGE PLOT 100x
 #plotting coverage and copynumber on log scale with density plot incorporated with x chr labels
@@ -428,7 +428,7 @@ par(mgp = c(0, -1.4, 0));
 axis(side=3,at=c(0,25),labels=c(0,sprintf("%.3f", maxden100)),col="black",tck=0.01);
 par(mgp = c(3,1,0));
 legend(x="topright",horiz=TRUE,xjust=0, c("1", "2", "3", "4+","Chr $chr_highlight"),col=c("#1C3660","#67B32E","#F49819","#E52420","#A020F0"),pch=c(19,19,19,19,2),cex=0.6);
-mtext("Normal and Tumor Coverage > 100",cex=0.7, padj=-0.5);
+mtext("Normal and Tumor Coverage > $readcount_cutoff",cex=0.7, padj=-0.5);
 
         #TUMOR COVERAGE PLOT, OLD STYLE VARIATIONS
 plot.default(x=(cn1minus\$V9+cn1minus\$V10),y=(cn1minus\$V11),xlab="Tumor Coverage",ylab="Tumor Variant Allele Frequency", main=paste(genome," Coverage"), type="p",pch=19,cex=0.4,col="#1C366044",xlim=c(0,maxx),ylim=c(0,110));
