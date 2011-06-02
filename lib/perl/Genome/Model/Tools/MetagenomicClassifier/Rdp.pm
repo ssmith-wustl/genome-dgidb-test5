@@ -66,18 +66,18 @@ sub execute {
     $self->_metrics_file; # set
 
     my $batch_cnt = 0;
-    my $batch_sz = 50000;
+    my $batch_sz = 3;
     while ( 1 ) {
-        $batch_cnt++;
         my @seqs;
-        while ( @seqs <= $batch_sz ) {
+        while ( @seqs < $batch_sz ) {
             my $seqs = $reader->read;
             last if not $seqs;
             push @seqs, $seqs;
         }
         last if not @seqs;
-        my $batch_start = ($batch_cnt - 1) * $batch_sz + 1;
-        $self->status_message('Batch '.$batch_cnt.' from '.$batch_start.' to '.($batch_start + @seqs - 1));
+        my $batch_pos = $batch_cnt * $batch_sz;
+        $batch_cnt++;
+        $self->status_message('Batch '.$batch_cnt.' from '.($batch_pos + 1).' to '.($batch_pos + @seqs));
         my $pid = fork();
         if ( not defined $pid ) {
             die 'Cannot fork!';
