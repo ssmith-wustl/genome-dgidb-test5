@@ -23,20 +23,10 @@ class Genome::Model::Command::Define::Convergence {
             len => 255,
             doc => 'User meaningful name for this model (defaults to the model group name with "_convergence" appended',
         },
-        subject_type => {
-            is => 'Text',
-            len => 255,
-            doc => 'The type of subject all the reads originate from',
-            default => 'sample_group',
-        },
         processing_profile_name => {
             is => 'Text',
             doc => 'identifies the processing profile by name',
             default => 'convergence default',
-        },
-        subject_name => {
-            is => 'Text',
-            doc => 'The name of the subject the reads originate from',
         },
         auto_build_alignments => { #TODO Yeah, they're not really "alignments", but that's what the parameter is in the parent class
             is => 'Boolean',
@@ -75,14 +65,11 @@ sub create {
     unless($self->model_name) {
         $self->model_name($self->_model_group->name . '_convergence');
     }
-    
-    unless($self->subject_name) {
-        $self->subject_name($self->_model_group->name);
-    }
-    
-    #Set up subject parameters
-    $self->subject_id($self->_model_group->id);
-    $self->subject_class_name(ref $self->_model_group);
+
+    my $subject = $self->_model_group->infer_group_subject;
+    $self->subject_id($subject->id);
+    $self->subject_class_name($subject->class);
+    $self->subject_name($subject->name);
 
     return $self;
 }
@@ -111,8 +98,6 @@ sub execute {
         $self->error_message('Could not set group for model.');
         return;
     }
-    
-
     
     return 1;
 }

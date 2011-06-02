@@ -28,6 +28,10 @@ class Genome::SubjectAttribute {
             is => 'Genome::Subject',
             id_by => 'subject_id',
         },
+        _individual => {
+            is => 'Genome::Individual',
+            id_by => 'attribute_value',
+        },
     ],
 };
 
