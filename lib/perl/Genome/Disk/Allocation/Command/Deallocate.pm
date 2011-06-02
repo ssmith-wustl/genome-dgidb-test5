@@ -42,8 +42,9 @@ sub execute {
         my $successful = Genome::Disk::Allocation->delete(allocation_id => $allocation->id);
 
         if ($successful) {
-            $self->status_message("Successfully deallocated ($display_name).");
-            $transaction->commit;
+            if ($transaction->commit) {
+                $self->status_message("Successfully deallocated ($display_name).");
+            }
         }
         else {
             push @errors, "Failed to deallocate ($display_name): $@.";  
