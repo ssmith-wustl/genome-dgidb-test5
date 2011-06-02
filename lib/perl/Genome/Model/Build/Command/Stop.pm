@@ -28,10 +28,8 @@ sub execute {
     for my $build (@builds) {
         my $transaction = UR::Context::Transaction->begin();
         my $successful = eval {$build->stop};
-        if ($successful) {
-            if ($transaction->commit) {
-                $self->status_message("Successfully stopped build (" . $build->__display_name__ . ").");
-            }
+        if ($successful and $transaction->commit) {
+            $self->status_message("Successfully stopped build (" . $build->__display_name__ . ").");
         }
         else {
             push @errors, "Failed to stop build (" . $build->__display_name__ . "): $@.";

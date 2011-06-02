@@ -128,9 +128,9 @@ sub execute {
         $command .= " --stats-file ".$refcov_output;
         $command .= " --min-depth-filter 0";
 
-        my $rv = system($command);
-        if ($rv){
-            die $self->error_message("refcov command died with error code $rv");
+        my $rv = eval{Genome::Sys->shellcmd(cmd=>$command, output_files=>[$refcov_output], input_files=>[$sorted_bam, $self->regions_file])};
+        if (!$rv){
+            die $self->error_message("refcov command died with error code $rv, $@");
         }
         unless ( -e $refcov_output ){
             die $self->error_message("expected refcov output file $refcov_output does not exist");

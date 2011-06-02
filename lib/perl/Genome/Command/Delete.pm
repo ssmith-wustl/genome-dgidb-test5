@@ -39,10 +39,8 @@ sub execute {
         my $transaction = UR::Context::Transaction->begin();
         my $name = $obj->__display_name__;
         my $deleted = eval{ $obj->delete; };
-        if ( $deleted ) {
-            if ($transaction->commit) {
-                $self->status_message("Deleted $name");
-            }
+        if ($deleted and $transaction->commit) {
+            $self->status_message("Deleted $name");
         }
         else {
             push @errors, "Failed to delete $name";
