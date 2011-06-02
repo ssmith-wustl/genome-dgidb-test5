@@ -16,6 +16,7 @@ use strict;
 use warnings;
 
 use FileHandle;
+use File::Basename; #for file name parsing
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
 class Genome::Model::Tools::Varscan::PullOneTwoBpIndels {
@@ -62,6 +63,7 @@ EOS
 ################################################################################################
 
 sub execute {                               # replace with real execution logic.
+    $DB::single = 1;
 	my $self = shift;
 	my $project_name = $self->project_name;
 	my $small_indel_list = $self->small_indel_outfile;
@@ -82,19 +84,13 @@ sub execute {                               # replace with real execution logic.
 	$small_indel_list_nobed =~ s/\.bed//;
 	$small_indel_list_nobed = "$small_indel_list_nobed.txt";
 
-	my $realigned_normal_bam_file = $normal_bam;
-	$realigned_normal_bam_file =~ s/\.bam//;
-	$realigned_normal_bam_file = "$realigned_normal_bam_file.realigned.bam";
-	my $sorted_normal_bam_file = $realigned_normal_bam_file;
-	$sorted_normal_bam_file =~ s/\.bam//;
-	$sorted_normal_bam_file = "$sorted_normal_bam_file.sorted";
+    my $realigned_bam_file_directory = $self->realigned_bam_file_directory;
+	my $realigned_normal_bam_file = basename($normal_bam,qr{\.bam});
+    
+	$realigned_normal_bam_file = "$realigned_bam_file_directory/$realigned_normal_bam_file.realigned.bam";
 
-	my $realigned_tumor_bam_file = $tumor_bam;
-	$realigned_tumor_bam_file =~ s/\.bam//;
-	$realigned_tumor_bam_file = "$realigned_tumor_bam_file.realigned.bam";
-	my $sorted_tumor_bam_file = $realigned_tumor_bam_file;
-	$sorted_tumor_bam_file =~ s/\.bam//;
-	$sorted_tumor_bam_file = "$sorted_tumor_bam_file.sorted";
+	my $realigned_tumor_bam_file = basename($tumor_bam,qr{\.bam});
+	$realigned_tumor_bam_file = "$realigned_bam_file_directory/$realigned_tumor_bam_file.realigned.bam";
 
 	## Open the outfiles ##
 	my $bed_indel_outfile = $small_indel_list;
@@ -148,8 +144,8 @@ sub execute {                               # replace with real execution logic.
 
 	my $bsub = 'bsub -q long -R "select[model!=Opteron250 && type==LINUX64 && mem>8000 && tmp>10000] rusage[mem=8000, tmp=10000]" -M 8000000 ';
 	my ($jobid1, $jobid2, $jobid3, $jobid4, $jobid5, $jobid6);
-	if ($skip_if_output_present && -s "$sorted_normal_bam_file.bam" && -s "$sorted_tumor_bam_file.bam") {
-		my $jobid1 = `$bsub -J varscan_validation \'gmt varscan validation --normal-bam $sorted_normal_bam_file.bam --tumor-bam $sorted_tumor_bam_file.bam --output-indel $output_indel --output-snp $output_snp\'`;
+	if ($skip_if_output_present && -s $realigned_normal_bam_file && -s $realigned_tumor_bam_file) {
+		my $jobid1 = `$bsub -J varscan_validation \'gmt varscan validation --normal-bam $realigned_normal_bam_file --tumor-bam $realigned_tumor_bam_file --output-indel $output_indel --output-snp $output_snp\'`;
 		   $jobid1=~/<(\d+)>/;
 		   $jobid1= $1;
 		   print "$jobid1\n";
@@ -170,24 +166,15 @@ sub execute {                               # replace with real execution logic.
 		   $jobid2= $1;
 		   print "$jobid2\n";
 
-		my $jobid3 = `$bsub -J bamsort_normal -w \'ended($jobid1)\' \'samtools sort $realigned_normal_bam_file $sorted_normal_bam_file\'`;
-		   $jobid3=~/<(\d+)>/;
-		   $jobid3= $1;
-		   print "$jobid3\n";
-		my $jobid4 = `$bsub -J bamsort_tumor -w \'ended($jobid2)\' \'samtools sort $realigned_tumor_bam_file $sorted_tumor_bam_file\'`;
-		   $jobid4=~/<(\d+)>/;
-		   $jobid4= $1;
-		   print "$jobid4\n";
-
-		my $jobid5 = `$bsub -J bamindex_normal -w \'ended($jobid3)\' \'samtools index $sorted_normal_bam_file.bam\'`;
+		my $jobid5 = `$bsub -J bamindex_normal -w \'ended($jobid1)\' \'samtools index $realigned_normal_bam_file\'`;
 		   $jobid5=~/<(\d+)>/;
 		   $jobid5= $1;
 		   print "$jobid5\n";
-		my $jobid6 = `$bsub -J bamindex_tumor -w \'ended($jobid4)\' \'samtools index $sorted_tumor_bam_file.bam\'`;
+		my $jobid6 = `$bsub -J bamindex_tumor -w \'ended($jobid2)\' \'samtools index $realigned_tumor_bam_file\'`;
 		   $jobid6=~/<(\d+)>/;
 		   $jobid6= $1;
 		   print "$jobid6\n";
-		my $jobid7 = `$bsub -J varscan_validation -w \'ended($jobid5) && ended($jobid6)\' \'gmt varscan validation --normal-bam $sorted_normal_bam_file.bam --tumor-bam $sorted_tumor_bam_file.bam --output-indel $output_indel --output-snp $output_snp\'`;
+		my $jobid7 = `$bsub -J varscan_validation -w \'ended($jobid5) && ended($jobid6)\' \'gmt varscan validation --normal-bam $realigned_normal_bam_file --tumor-bam $realigned_tumor_bam_file --output-indel $output_indel --output-snp $output_snp\'`;
 		   $jobid7=~/<(\d+)>/;
 		   $jobid7= $1;
 		   print "$jobid7\n";
