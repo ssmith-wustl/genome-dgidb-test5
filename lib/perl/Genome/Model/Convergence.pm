@@ -73,7 +73,7 @@ sub schedule_rebuild {
     return 1;
 }
 
-# Updates the convergence model immediately prior to a build starting. In this case, make sures
+# Updates the convergence model immediately prior to a build starting. In this case, makes sure
 # that the convergence model's subject is correct.
 sub check_for_updates {
     my $self = shift;
