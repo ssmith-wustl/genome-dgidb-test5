@@ -77,8 +77,7 @@ sub verify_seq {
         Carp::confess('Seq does not have an id: '.Data::Dumper::Dumper($seq));
     }
 
-    my ($n_free_seq) = split(/n/i, $seq->{seq});
-    if ( length $n_free_seq < 49 ) {
+    if ( length $seq->{seq} < 50) {
         return;
     }
 
