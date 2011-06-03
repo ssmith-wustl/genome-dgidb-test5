@@ -231,6 +231,7 @@ sub infer_group_subject {
 
     for my $model ($self->models) {
         my $subject = $model->subject;
+        next unless $subject;
 
         if ($subject->isa('Genome::Sample')) {
             my $indiv = $subject->patient;
