@@ -145,6 +145,13 @@ sub execute {
             $self->error_message("could not lock, another instance must be running.");
             return;
         }
+
+        UR::Context->add_observer(
+            aspect => 'commit', 
+            callback => sub{
+                Genome::Sys->unlock_resource(resource_lock=>$lock);
+            }
+        )
     }
 
     my @pses = $self->load_pses;
@@ -335,10 +342,6 @@ sub execute {
     $self->status_message("Completing PSEs...");
     for my $pse (@completable_pses) {
         $pse->pse_status("completed");  
-    }
-
-    unless($self->test) {
-        Genome::Sys->unlock_resource(resource_lock=>$lock);
     }
 
     return 1;    
