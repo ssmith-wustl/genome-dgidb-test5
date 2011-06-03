@@ -76,15 +76,7 @@ sub execute {
     for my $model (@models) {
         next if $model->isa("UR::DeletedRef");
 
-        my $subject = $model->subject;
-        my $subject_name = ($subject->can('name') ? $subject->name : $model->subject_name);
-        my $subject_id = ($subject->can('id') ? $subject->id : $model->subject_id);
-
-        $self->status_message(
-            "Removing model " . $model->name . " (" . $model->id 
-            . ") for " . $subject_name . " (" . $subject_id . ")\n"
-        );
-
+        $self->status_message("Removing model " . $model->__display_name__);
 
         if ($self->archive) {
             my $data_directory = $model->data_directory;
