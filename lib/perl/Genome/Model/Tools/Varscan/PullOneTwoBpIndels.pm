@@ -156,6 +156,9 @@ sub execute {                               # replace with real execution logic.
 		   $jobid1= $1;
 		   print "$jobid1\n";
 
+           #add in email of final job completion. cause I like those
+           my $user = $ENV{USER};
+
 		my $jobid2 = `$bsub -N -u $user\@genome.wustl.edu -J varscan_process_validation -w \'ended($jobid1)\' \'gmt varscan process-validation-indels --validation-indel-file $output_indel --validation-snp-file $output_snp --variants-file $small_indel_list_nobed --output-file $final_output_file\'`;
 		   $jobid2=~/<(\d+)>/;
 		   $jobid2= $1;
