@@ -87,6 +87,9 @@ sub _run_aligner {
     } elsif (@input_pathnames == 2) {
         $self->status_message("_run_aligner called in paired-end mode.");
 	$paired_end=1;
+
+        ## TODO - Here's where we need the min/max insert size params
+        ## I'm not sure where to get those at the moment.
 	die("paired end data requires insert size params - not implemented yet (talk to Chris M.)");
 	my $min_insert_size = $self->min_insert_size;	
 	my $max_insert_size = $self->max_insert_size;
@@ -115,18 +118,16 @@ sub _run_aligner {
 ##    my $ref_dir = dirname($reference_fasta_path);
 ##    print "ref_dir: $ref_dir\n";
 
-    # for now, we hardcode the directory
+    # for now, we hardcode the directory containing the fastas and such
     my $ref_dir = "/gscmnt/sata420/info/model_data/2741951221/build101947881";
     
     #find all the individual fastas
     opendir(DIR, $ref_dir) or die $!;
     while (my $filename = readdir(DIR)){
 	# if the filename matches this regex, output it to the list
-	# should match 1.fa - 22.fa, along with X.fa, x.fa, Y.fa, Y.fa
-	# will fail on remnants (22_random.fa) or other formats (chr22.fa)
-	#print "file: $filename\n";
+	# should match 1.fa - 22.fa, along with X.fa, x.fa, Y.fa, y.fa
+	# will fail on contigs (NT_113956.fa) or other formats (chr22.fa)
 	if ($filename =~ /^(([1-2]?[0-9])|([XYxy]))\.fa$/)
-#	if ($filename =~ /^20.fa$/)
 	{
 	    $ref_fh->print($ref_dir . "/" . $filename . "\n");
 	}
@@ -150,7 +151,7 @@ sub _run_aligner {
     }
 
 ###-------
-### I don't think this is necessary right now
+### This shouldn't be necessary right now - defaults work fine
 ##
 ##    #determine which type of quality score we're using:
 ##    if ($import_format eq "solexa fastq") {
@@ -168,7 +169,6 @@ sub _run_aligner {
 
     ###################################################
     # run the read mapping
-    #                "/gscmnt/sata921/info/medseq/cmiller/methylSeq/bratMod/trim"
     my $align_cmd = "/gscmnt/sata921/info/medseq/cmiller/methylSeq/bratMod/brat-large";
 
     #use pre-computed index instead
@@ -198,12 +198,14 @@ sub _run_aligner {
 
     ###################################################
     # deduplicate reads,
+
     $self->status_message("deduplicating reads");    
     my $dup_cmd = "/gscmnt/sata921/info/medseq/cmiller/methylSeq/bratMod/remove-dupl";
     $dup_cmd = $dup_cmd . " -r $refs_file"; #reference fastas
 
     # create a list file with paths to the aligned reads
-    # for the record, this is stupid, since there's only one file
+    # for the record, it's stupid that we have to do this, 
+    # since there's only one file
     my ($list_fh, $list_file) = Genome::Sys->create_temp_file();
     $list_fh->print("$scratch_directory/bratout.dat\n");
     $list_fh->close;
@@ -211,8 +213,7 @@ sub _run_aligner {
 
     if ($paired_end)
     {
-#    	$dup_cmd = $dup_cmd . " -p $list_file";
-###TODO!!
+    	$dup_cmd = $dup_cmd . " -p $list_file";
     } else {
     	$dup_cmd = $dup_cmd . " -s $list_file";
     }
@@ -221,8 +222,9 @@ sub _run_aligner {
 
 
 
-    #this is fun too. 
+    #sort the reads prior to sam conversion
     system("sort -nk1 $scratch_directory/bratout.dat.nodupl >$scratch_directory/bratout.dat.nodupl.sorted");
+
 
     ###################################################
     # convert to sam format
@@ -329,7 +331,7 @@ sub _run_aligner {
 	$prevNum++;
 	while($prevNum < $fields[0])
 	{
-#	    $self->status_message("missing $prevNum");
+	    # $self->status_message("missing $prevNum");
 	    $missing{$prevNum} = 0;
 	    $prevNum++;
 	}
@@ -478,19 +480,18 @@ sub _run_aligner {
 
     $samfile->close;
 
+
     #finally, sort that temporary samfile and append it to the output one
     system("sort -nk 1 $scratch_directory/mapped_reads.sam >> $scratch_directory/all_sequences.sam");
 
-
-
-    ##for testing
-    system("cp $scratch_directory/* /gscmnt/sata921/info/medseq/cmiller/methylSeq/tmp/scratch1/");
-    system("cp $refs_file /gscmnt/sata921/info/medseq/cmiller/methylSeq/tmp/scratch1/");
+    ##for testing - copy the output so I can look at it
+    ##system("cp $scratch_directory/* /gscmnt/sata921/info/medseq/cmiller/methylSeq/tmp/scratch1/");
+    ##system("cp $refs_file /gscmnt/sata921/info/medseq/cmiller/methylSeq/tmp/scratch1/");
 
 
 
     ###################################################
-    # create a methylation map
+    # create the methylation map
     my $count_cmd = "/gscmnt/sata921/info/medseq/cmiller/methylSeq/bratMod/acgt-count";
     $count_cmd = $count_cmd . " -r $refs_file"; #reference fastas
     $count_cmd = $count_cmd . " -P $scratch_directory/map"; #output prefix
@@ -517,10 +518,10 @@ sub _run_aligner {
 
 
     ##for testing
-    system("cp $scratch_directory/* /gscmnt/sata921/info/medseq/cmiller/methylSeq/tmp/scratch2/");
-    system("cp $list_file /gscmnt/sata921/info/medseq/cmiller/methylSeq/tmp/scratch2/");
-    system("cp $list2_file /gscmnt/sata921/info/medseq/cmiller/methylSeq/tmp/scratch2/");
-    system("cp $refs_file /gscmnt/sata921/info/medseq/cmiller/methylSeq/tmp/scratch2/");
+    # system("cp $scratch_directory/* /gscmnt/sata921/info/medseq/cmiller/methylSeq/tmp/scratch2/");
+    # system("cp $list_file /gscmnt/sata921/info/medseq/cmiller/methylSeq/tmp/scratch2/");
+    # system("cp $list2_file /gscmnt/sata921/info/medseq/cmiller/methylSeq/tmp/scratch2/");
+    # system("cp $refs_file /gscmnt/sata921/info/medseq/cmiller/methylSeq/tmp/scratch2/");
 
 
     #move the methMap output files to the staging dir
