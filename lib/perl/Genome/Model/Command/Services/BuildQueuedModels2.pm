@@ -90,7 +90,7 @@ sub num_builds_to_start {
     );
     
     my $scheduled_build_count = 0;
-    while ($scheduled_builds->next && ++$scheduled_build_count < $self->max_scheduled_builds) { print "check\n"; }
+    while ($scheduled_builds->next && ++$scheduled_build_count < $self->max_scheduled_builds) { 1; }
     
     return ($self->max_scheduled_builds - $scheduled_build_count);
 }
