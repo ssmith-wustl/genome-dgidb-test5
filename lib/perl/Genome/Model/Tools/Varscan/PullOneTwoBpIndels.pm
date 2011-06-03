@@ -148,7 +148,7 @@ sub execute {                               # replace with real execution logic.
     my $normal_purity = $self->normal_purity;
     my $varscan_params = "--validation 1 --somatic-p-value 1.0e-02 --p-value 0.10 --min-coverage 8 --min-var-freq $min_freq --normal-purity $normal_purity";
 
-	my $bsub = 'bsub -q long -R "select[model!=Opteron250 && type==LINUX64 && mem>8000 && tmp>10000] rusage[mem=8000, tmp=10000]" -M 8000000 ';
+	my $bsub = 'bsub -q long -R "select[model!=Opteron250 && type==LINUX64 && mem>16000 && tmp>10000] rusage[mem=16000, tmp=10000]" -M 16000000 ';
 	my ($jobid1, $jobid2, $jobid3, $jobid4, $jobid5, $jobid6);
 	if ($skip_if_output_present && -s $realigned_normal_bam_file && -s $realigned_tumor_bam_file) {
 		my $jobid1 = `$bsub -J varscan_validation \'gmt varscan validation --normal-bam $realigned_normal_bam_file --tumor-bam $realigned_tumor_bam_file --output-indel $output_indel --output-snp $output_snp --varscan-params "$varscan_params"\'`;
@@ -166,11 +166,15 @@ sub execute {                               # replace with real execution logic.
 	}
 	else{
 #/gscuser/dkoboldt/Software/GATK/GenomeAnalysisTK-1.0.4418/GenomeAnalysisTK.jar /gsc/scripts/pkg/bio/gatk/GenomeAnalysisTK-1.0.5336/GenomeAnalysisTK.jar
-		my $jobid1 = `$bsub -J $realigned_normal_bam_file \'java -Xmx4g -Djava.io.tmpdir=/tmp -jar /gsc/scripts/pkg/bio/gatk/GenomeAnalysisTK-1.0.5336/GenomeAnalysisTK.jar -T IndelRealigner -targetIntervals $small_indel_list -o $realigned_normal_bam_file -I $normal_bam -R $reference  --targetIntervalsAreNotSorted\'`;
+		my $bsub_normal_output = "$realigned_bam_file_directory/realignment_normal.out";
+		my $bsub_normal_error = "$realigned_bam_file_directory/realignment_normal.err";
+		my $jobid1 = `$bsub -J $realigned_normal_bam_file -o $bsub_normal_output -e $bsub_normal_error \'java -Xmx16g -Djava.io.tmpdir=/tmp -jar /gsc/scripts/pkg/bio/gatk/GenomeAnalysisTK-1.0.5336/GenomeAnalysisTK.jar -T IndelRealigner -targetIntervals $small_indel_list -o $realigned_normal_bam_file -I $normal_bam -R $reference  --targetIntervalsAreNotSorted\'`;
 		   $jobid1=~/<(\d+)>/;
 		   $jobid1= $1;
 		   print "$jobid1\n";
-		my $jobid2 = `$bsub -J $realigned_tumor_bam_file \'java -Xmx4g -Djava.io.tmpdir=/tmp -jar /gsc/scripts/pkg/bio/gatk/GenomeAnalysisTK-1.0.5336/GenomeAnalysisTK.jar -T IndelRealigner -targetIntervals $small_indel_list -o $realigned_tumor_bam_file -I $tumor_bam -R $reference --targetIntervalsAreNotSorted\'`;
+		my $bsub_tumor_output = "$realigned_bam_file_directory/realignment_tumor.out";
+		my $bsub_tumor_error = "$realigned_bam_file_directory/realignment_tumor.err";
+		my $jobid2 = `$bsub -J $realigned_tumor_bam_file -o $bsub_tumor_output -e $bsub_tumor_error \'java -Xmx16g -Djava.io.tmpdir=/tmp -jar /gsc/scripts/pkg/bio/gatk/GenomeAnalysisTK-1.0.5336/GenomeAnalysisTK.jar -T IndelRealigner -targetIntervals $small_indel_list -o $realigned_tumor_bam_file -I $tumor_bam -R $reference --targetIntervalsAreNotSorted\'`;
 		   $jobid2=~/<(\d+)>/;
 		   $jobid2= $1;
 		   print "$jobid2\n";
