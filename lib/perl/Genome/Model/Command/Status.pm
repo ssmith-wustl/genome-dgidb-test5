@@ -27,11 +27,18 @@ sub execute {
         my $build = $model->latest_build;
         my $model_name = $model->name;
         my $build_id = ($build ? $build->id : 'N/A      ');
-        my $build_status = ($build ? $build->status : 'Buildless');
-        $status{$build_status}++;
-        if ($build_status ne 'Succeeded') {
-            $self->status_message("$model_name\t".$build_id."\t$build_status");
+        my $status;
+        if ($model->build_requested) {
+            $status = 'Build Requested';
         }
+        elsif ($build) {
+            $status = $build->status;
+        }
+        else {
+            $status = 'Buildless';
+        }
+        $status{$status}++;
+        print join("\t", $model_name, $build_id, $status) . "\n";
     }
 
     my $total;
