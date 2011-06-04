@@ -30,7 +30,20 @@ EOS
 
 sub execute {
     my $self = shift;
-    
+
+    my $lock_resource = '/gsc/var/lock/genome_model_services_builed_queued_models_2';
+
+    my $lock = Genome::Sys->lock_resource(resource_lock => $lock_resource, max_try => 1);
+    unless ($lock) {
+        $self->error_message("Could not lock, another instance of BQM must be running.");
+        return;
+    }
+
+    UR::Context->add_observer(
+        aspect => 'commit',
+        callback => sub{ Genome::Sys->unlock_resource(resource_lock => $lock) },
+    );
+
     my $max_builds_to_start = $self->num_builds_to_start;
     unless ($max_builds_to_start) {
         $self->status_message("There are already " . $self->max_scheduled_builds . " builds scheduled.");
