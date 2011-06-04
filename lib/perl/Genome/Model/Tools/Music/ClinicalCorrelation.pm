@@ -10,57 +10,61 @@ use POSIX qw( WIFEXITED );
 our $VERSION = $Genome::Model::Tools::Music::VERSION;
 
 class Genome::Model::Tools::Music::ClinicalCorrelation {
-  is => 'Genome::Model::Tools::Music::Base',
-  has_input => [
-    bam_list => { is => 'Text', doc => "Tab delimited list of BAM files [sample_name, normal_bam, tumor_bam] (See Description)" },
-    maf_file => { is => 'Text', doc => "List of mutations in MAF format" },
-    output_file => { is => 'Text', doc => "Results of clinical-correlation tool. Will have suffix added for data type." },
-    genetic_data_type => { is => 'Text', doc => "Correlate clinical data to \"gene\" or \"variant\" level data", is_optional => 1, default => "gene" },
-    numeric_clinical_data_file => { is => 'Text', doc => "Table of samples (y) vs. numeric clinical data category (x)", is_optional => 1 },
-    categorical_clinical_data_file => { is => 'Text', doc => "Table of samples (y) vs. categorical clinical data category (x)", is_optional => 1 },
-  ],
-  doc => "Correlate phenotypic traits against mutated genes, or against individual variants.",
+    is => 'Genome::Model::Tools::Music::Base',                       
+    has_input => [ 
+    output_file => {
+        is => 'Text',
+        is_output => 1,
+        file_format => 'text',
+        doc => "Results of clinical-correlation tool. Will have suffix added for data type.",
+    },
+    maf_file => { 
+        is => 'Text',
+        doc => "List of mutations in MAF format",
+        is_input => 1,
+        file_format => 'maf',
+    },
+    numeric_clinical_data_file => {
+        is => 'Text',
+        doc => "Table of samples (y) vs. numeric clinical data category (x)",
+        is_optional => 1,
+    },
+    categorical_clinical_data_file => {
+        is => 'Text',
+        doc => "Table of samples (y) vs. categorical clinical data category (x)",
+        is_optional => 1,
+    },
+    genetic_data_type => {
+        is => 'Text',
+        doc => "Data in matrix file must be either \"gene\" or \"variant\" type data",
+    },
+    ],
+    doc => "Identify correlations between mutations and phenotypic traits."
 };
 
 sub help_synopsis {
-  return <<HELP
+    return <<EOS
 ... music clinical-correlation --maf-file /path/myMAF.tsv --numeric-clinical-data-file /path/myNumericData.tsv --genetic-data-type 'gene' --output-file /path/output_file
 
 ... music clinical-correlation --maf-file /path/myMAF.tsv --numeric-clinical-data-file /path/myNumericData.tsv --categorical-clinical-data-file /path/myClassData.tsv --genetic-data-type 'gene' --output-file /path/output_file
-HELP
+EOS
 }
 
 sub help_detail {
-  return <<HELP
-This command identifies correlations between mutations recorded in a MAF and the particular
-phenotypic traits recorded for the same samples in separate clinical data files.
+    return <<EOS
+This command identifies correlations between mutations recorded in a MAF and the particular phenotypic traits recorded for the same samples in separate clinical data files.
 
-The clinical data files must be separated between numeric and categoric data and must follow these
-conventions:
+The clinical data files must be separated between numeric and categoric data and must follow these conventions:
 - Headers are required
-- Each file must include at least 1 sample_id column and 1 attribute column, with the format being
-  [sample_id  clinical_data_attribute_1 clinical_data_attribute_2 ...]
-- The sample ID must match the sample ID listed in the MAF under "Tumor_Sample_Barcode" for
-  relating the mutations of this sample.
+- Each file must include at least 1 sample_id column and 1 attribute column, with the format being [sample_id  clinical_data_attribute  clinical_data_attribute  ...]
+- The sample ID must match the sample ID listed in the MAF under "Tumor_Sample_Barcode" for relating the mutations of this sample.
 
-Note the importance of the headers: the header for each clinical_data_attribute will appear in the
-output file to denote relationships with the mutation data from the MAF.
+Note the importance of the headers: the header for each clinical_data_attribute will appear in the output file to denote relationships with the mutation data from the MAF.
 
-Internally, the input data is fed into an R script which calculates a P-value representing the
-probability that the correlation seen between the mutations in each gene (or variant) and each
-phenotype trait are random. Lower P-values indicate lower randomness, or likely true correlations.
+Internally, the input data is fed into an R script which calculates a P-value representing the probability that the correlation seen between the mutations in each gene (or variant) and each phenotype trait are random. Lower P-values indicate lower randomness, or likely true correlations.
 
-The results are saved to the output filename given with a suffix appended; ".numeric" will be
-appended for results derived from numeric clinical data, and ".categ" will be appended for results
-derived from categorical clinical data.
-
-ARGUMENTS:
---bam-list
-  Provide a file containing sample names and normal/tumor BAM locations for each. Use the tab-
-  delimited format [sample_name normal_bam tumor_bam] per line. This tool only needs sample_name,
-  so all other columns can be skipped. The sample_name must be the same as the tumor sample names
-  used in the MAF file (16th column, with the header Tumor_Sample_Barcode).
-HELP
+The results are saved to the output filename given with a suffix appended; ".numeric" will be appended for results derived from numeric clinical data, and ".categ" will be appended for results derived from categorical clinical data.
+EOS
 }
 
 sub _doc_authors {
@@ -75,11 +79,9 @@ sub execute {
 
     #parse input arguments
     my $self = shift;
-    my $bam_list = $self->bam_list;
-    my $maf_file = $self->maf_file;
     my $output_file = $self->output_file;
+    my $maf_file = $self->maf_file;
     my $genetic_data_type = $self->genetic_data_type;
-    my @all_sample_names; # names of all the samples, no matter if it's mutated or not
     my %clinical_data;
     if ($self->numeric_clinical_data_file) {
         $clinical_data{'numeric'} = $self->numeric_clinical_data_file;
@@ -87,17 +89,6 @@ sub execute {
     if ($self->categorical_clinical_data_file) {
         $clinical_data{'categ'} = $self->categorical_clinical_data_file;
     }
-
-    # Parse out the names of the samples which should match the names in the MAF file
-    my $sampleFh = IO::File->new( $bam_list ) or die "Couldn't open $bam_list. $!\n";
-    while( my $line = $sampleFh->getline )
-    {
-      next if ( $line =~ m/^#/ );
-      chomp( $line );
-      my ( $sample ) = split( /\t/, $line );
-      push( @all_sample_names, $sample );
-    }
-    $sampleFh->close;
 
     #loop through clinical data files
     for my $datatype (keys %clinical_data) {
@@ -107,9 +98,11 @@ sub execute {
 
         if ($datatype =~ /numeric/i) {
             $full_output_filename = $output_file . ".numeric";
-            if ($genetic_data_type =~ /^gene|variant$/i) {
-                $test_method = "cor"; # cor instead of anova because we're assuming additive effect
-                #$test_method = "wilcox"; # wilcoxon rank-sum is a better option here (for MuSiC v2)
+            if ($genetic_data_type =~ /^gene$/i) {
+                $test_method = "cor";
+            }
+            elsif ($genetic_data_type =~ /^variant$/i) {
+                $test_method = "cor"; #cor instead of anova because we're assuming additive effect
             }
             else {
                 $self->error_message("Please enter either \"gene\" or \"variant\" for the --genetic-data-type parameter.");
@@ -138,10 +131,10 @@ sub execute {
         }
         #create correlation matrix
         if ($genetic_data_type =~ /^gene$/i) {
-            $matrix_file = create_sample_gene_matrix_gene($samples,$clinical_data{$datatype},$maf_file,@all_sample_names);
+            $matrix_file = create_sample_gene_matrix_gene($samples,$clinical_data{$datatype},$maf_file);
         }
         elsif ($genetic_data_type =~ /^variant$/i) {
-            $matrix_file = create_sample_gene_matrix_variant($samples,$clinical_data{$datatype},$maf_file,@all_sample_names);
+            $matrix_file = create_sample_gene_matrix_variant($samples,$clinical_data{$datatype},$maf_file);
         }
         else {
             $self->error_message("Please enter either \"gene\" or \"variant\" for the --genetic-data-type parameter.");
@@ -158,7 +151,7 @@ sub execute {
 
 sub create_sample_gene_matrix_gene {
 
-    my ($samples,$clinical_data_file,$maf_file,@all_sample_names) = @_;
+    my ($samples,$clinical_data_file,$maf_file) = @_;
 
     #create hash of mutations from the MAF file
     my %mutations;
@@ -215,7 +208,7 @@ sub create_sample_gene_matrix_gene {
     $matrix_fh->print("$header\n");
 
     #print mutation relation input matrix
-    for my $sample (sort @all_sample_names) {
+    for my $sample (sort keys %mutations) {
         $matrix_fh->print($sample);
         for my $gene (@all_genes) {
             if (exists $mutations{$sample}{$gene}) {
@@ -233,7 +226,7 @@ sub create_sample_gene_matrix_gene {
 
 sub create_sample_gene_matrix_variant {
 
-    my ($samples,$clinical_data_file,$maf_file,@all_sample_names) = @_;
+    my ($samples,$clinical_data_file,$maf_file) = @_;
 
     #create hash of mutations from the MAF file
     my %variants_hash;
@@ -300,6 +293,7 @@ sub create_sample_gene_matrix_variant {
             $variants_hash{$sample}{$variant_name}++;
             $all_variants{$variant_name}++;
         }
+
     }
     $maf_fh->close;
 
@@ -315,7 +309,7 @@ sub create_sample_gene_matrix_variant {
     $matrix_fh->print("$header\n");
 
     #print mutation relation input matrix
-    for my $sample (sort @all_sample_names) {
+    for my $sample (sort keys %variants_hash) {
         $matrix_fh->print($sample);
         for my $variant (@variant_names) {
             if (exists $variants_hash{$sample}{$variant}) {
@@ -332,3 +326,4 @@ sub create_sample_gene_matrix_variant {
 }
 
 1;
+

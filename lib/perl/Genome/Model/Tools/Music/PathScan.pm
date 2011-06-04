@@ -60,9 +60,9 @@ ARGUMENTS:
 
 --bam-list
   Provide a file containing sample names and normal/tumor BAM locations for each. Use the tab-
-  delimited format [sample_name normal_bam tumor_bam] per line. This tool only needs sample_name,
-  so all other columns can be skipped. The sample_name must be the same as the tumor sample names
-  used in the MAF file (16th column, with the header Tumor_Sample_Barcode).
+  delimited format [sample_name normal_bam tumor_bam] per line. Additional columns like clinical
+  data are allowed, but ignored. The sample_name must be the same as the tumor sample names used
+  in the MAF file (16th column, with the header Tumor_Sample_Barcode).
 
 --bmr
   The overall background mutation rate. This can be calculated using "music bmr calc-bmr".
@@ -126,7 +126,7 @@ sub execute
   my @all_sample_names; # names of all the samples, no matter if it's mutated or not
   my %id_gene_hash; # entrez id => gene (based on first two columns in MAF)
 
-  # Parse out the names of the samples which should match the names in the MAF file
+  # Parse out the names of the samples which should match the names of the coverage files needed
   my $sampleFh = IO::File->new( $bam_list ) or die "Couldn't open $bam_list. $!\n";
   while( my $line = $sampleFh->getline )
   {
