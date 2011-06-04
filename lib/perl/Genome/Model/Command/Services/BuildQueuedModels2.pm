@@ -32,6 +32,10 @@ sub execute {
     my $self = shift;
     
     my $max_builds_to_start = $self->num_builds_to_start;
+    unless ($max_builds_to_start) {
+        $self->status_message("There are already " . $self->max_scheduled_builds . " builds scheduled.");
+        return 1;
+    }
     $self->status_message("Will try to start up to $max_builds_to_start builds.");
     
     my $models = Genome::Model->create_iterator(
