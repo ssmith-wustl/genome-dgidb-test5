@@ -95,10 +95,12 @@ sub execute {                               # replace with real execution logic.
 	else {
 		die "analysis type: $analysis_type not supported, choose either wgs or capture";
 	}
+	my $position_added = 0;
 	my %position_highlight_hash;
 	if ($positions_highlight && -s $positions_highlight) {
 		my $positions_input = new FileHandle ($positions_highlight);
 		while (my $line2 = <$positions_input>) {
+			$position_added++;
 			chomp($line2);
 			my ($chr, $pos) = split(/\t/, $line2);
 			my $matcher = "$chr\t$pos";
@@ -134,6 +136,7 @@ sub execute {                               # replace with real execution logic.
 		if ($positions_highlight && -s $positions_highlight) {
 			my $matcher = "$chr\t$pos";
 			if (defined $position_highlight_hash{$matcher}) {
+				$position_added--;
 				my $depth = $tumor_ref + $tumor_var;
 				my $varallelefreq = $tumor_var_pct;
 				$varallelefreq =~ s/%//;
@@ -143,6 +146,12 @@ sub execute {                               # replace with real execution logic.
 	}
 	$tfh->close;
 	$tfh2->close;
+
+	if ($positions_highlight) {
+		unless($position_added == 0) {
+			warn "There are positions in positions_highlight file that aren't present in varscan file...check files for accuracy for missing positions";
+		}
+	}
 
 	# Open Output
 	unless (open(R_COMMANDS,">$r_script_output_file")) {
