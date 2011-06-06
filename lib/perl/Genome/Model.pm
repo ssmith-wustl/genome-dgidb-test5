@@ -498,19 +498,15 @@ sub _resolve_subject {
 # TODO Can be removed when all subjects are Genome::Subject
 sub _verify_subject {
     my $self = shift;
-
-    my $subject = $self->subject;
-
-    unless($subject) {
-        my $null = '<NULL>';
-        $self->error_message('Could not verify subject given ' . join(', ',
-            'subject_id: ' . ($self->subject_id || $null),
-            'subject_class_name: ' . ($self->subject_class_name || $null),
-        ));
-        return;
+    unless ($self->subject) {
+        Carp::confess "Could not retrieve subject object for model " . $self->__display_name__ . " with ID " . $self->subject_id . 
+            " and class " . $self->subject_class_name;
     }
 
-    return $subject;
+    unless ($self->subject->isa('Genome::Subject')) {
+        Carp::confess "Subject of model  " . $self->__display_name__ . " is not a Genome::Subject, it's a " . $subject->class;
+    }
+    return 1;
 }
 
 sub get_all_possible_samples {
