@@ -504,7 +504,7 @@ sub _verify_subject {
     }
 
     unless ($self->subject->isa('Genome::Subject')) {
-        Carp::confess "Subject of model  " . $self->__display_name__ . " is not a Genome::Subject, it's a " . $subject->class;
+        Carp::confess "Subject of model  " . $self->__display_name__ . " is not a Genome::Subject, it's a " . $self->subject->class;
     }
     return 1;
 }
