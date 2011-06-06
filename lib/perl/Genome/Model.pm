@@ -40,6 +40,7 @@ class Genome::Model {
         },
         subject_type => {
             via => 'subject',
+            to => 'subject_type',
         },
         processing_profile => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
         processing_profile_name => { via => 'processing_profile', to => 'name' },
