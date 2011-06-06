@@ -810,6 +810,7 @@ sub start {
 
 sub accumulated_alignments_directory {
     my $self = shift;
+    return unless ($self->data_directory);
     return $self->data_directory . '/alignments';
 }
 
@@ -830,7 +831,7 @@ sub delete {
     my $self = shift;
     
     # if we have an alignments directory, nuke it first since it has its own allocation
-    if (-e $self->accumulated_alignments_directory) {
+    if ($self->accumulated_alignments_directory && -e $self->accumulated_alignments_directory) {
         unless($self->eviscerate()) {
             my $eviscerate_error = $self->error_message();
             $self->error_message("Eviscerate failed: $eviscerate_error");

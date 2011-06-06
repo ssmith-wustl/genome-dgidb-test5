@@ -19,6 +19,13 @@ s=tst$est;
 p=tst$p.value;
 }
 
+if(method=="wilcox")  #x must be (0,1) mutation data
+{
+tst=wilcox.test(x=ty[tx==0],y=ty[tx>=1])
+s=tst$stat
+p=tst$p.value
+}
+
 if(method=="chisq")
 {
 tst=chisq.test(tx,ty);

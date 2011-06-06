@@ -68,9 +68,8 @@ sub execute {
         my $transaction = UR::Context::Transaction->begin();
         my $successful = eval {Genome::Disk::Allocation->reallocate(%params) };
         
-        if ($successful) {
+        if ($successful and $transaction->commit) {
             $self->status_message("Successfully reallocated (" . $allocation->__display_name__ . ").");
-            $transaction->commit();
         }
         else {
             push @errors, "Failed to reallocate (" . $allocation->__display_name__ . "): $@.";

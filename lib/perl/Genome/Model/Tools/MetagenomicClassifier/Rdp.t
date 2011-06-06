@@ -5,6 +5,7 @@ use warnings;
 
 use above "Genome";
 
+use Data::Dumper 'Dumper';
 use File::Grep 'fgrep';
 require File::Temp;
 use Test::More;
@@ -27,22 +28,44 @@ my $rdp = Genome::Model::Tools::MetagenomicClassifier::Rdp->create(
         metrics => 1,
 );
 ok($rdp, 'Created rdp classifier');
+$rdp->dump_status_messages(1);
 ok($rdp->execute, 'Execute rdp classifier');
 
 # compare output
-my $fh = eval{ Genome::Sys->open_file_for_reading($tmp_rdp_file); };
-die "Failed to open classification file ($tmp_rdp_file): $@" if not $fh;
-while ( my $line = $fh->getline ) {
-    chomp $line;
-    my ($seq_id) = split(/;/, $line);
-    my ($match) = fgrep { /^>$seq_id/ } $fasta;
-    cmp_ok($match->{count}, '==', 1, "Got an rdp output for seq ($seq_id)");
+my $fa_reader = Genome::Model::Tools::FastQual::PhredReader->create(
+    files => [ $fasta ],
+);
+ok($fa_reader, 'create fasta reader');
+my $cl_reader = Genome::Model::Tools::MetagenomicClassifier::ClassificationReader->create(
+    file => $tmp_rdp_file,
+);
+ok($cl_reader, 'create reader') or die;
+my @classifications;
+while ( my $fastas = $fa_reader->read ) {
+    my $classification = $cl_reader->read;
+    is($fastas->[0]->{id}, $classification->{id}, 'id matches');
+    push @classifications, join('-', map { $classification->{$_}->{id} } (qw/ domain phylum order class /));
 }
-$fh->close;
+is_deeply(
+    \@classifications, 
+    [qw/
+        Bacteria-Bacteroidetes-Bacteroidales-Bacteroidetes
+        Bacteria-Firmicutes-Clostridiales-Clostridia
+        Bacteria-Firmicutes-Clostridiales-Clostridia
+        Bacteria-Verrucomicrobia-Verrucomicrobiales-Verrucomicrobiae
+        Bacteria-Firmicutes-Clostridiales-Clostridia
+        Bacteria-Firmicutes-Clostridiales-Clostridia
+        Bacteria-Verrucomicrobia-Verrucomicrobiales-Verrucomicrobiae
+        Bacteria-Firmicutes-Clostridiales-Clostridia
+        Bacteria-Firmicutes-Clostridiales-Clostridia
+        Bacteria-Firmicutes-Clostridiales-Clostridia
+    /],
+    'classifications match',
+);
 
-# compare output
+# compare metrics
 my $metrics_file = $tmp_rdp_file.'.metrics';
-$fh = eval{ Genome::Sys->open_file_for_reading($tmp_rdp_file.'.metrics'); };
+my $fh = eval{ Genome::Sys->open_file_for_reading($tmp_rdp_file.'.metrics'); };
 die "Failed to open metrics file ($metrics_file): $@" if not $fh;
 my %metrics;
 while ( my $line = $fh->getline ) {

@@ -56,9 +56,8 @@ sub execute {
     for my $build (@builds) {
         my $transaction = UR::Context::Transaction->begin();
         my $successful = eval {$build->restart(%params)};
-        if ($successful) {
+        if ($successful and $transaction->commit) {
             $self->status_message("Build (".$build->__display_name__.") launched to LSF.\nAn initialization email will be sent once the build begins running.");
-            $transaction->commit();
         }
         else {
             push @errors, "Failed to restart build (" . $build->__display_name__ . "): $@.";

@@ -55,9 +55,8 @@ sub execute {
             }
             $remove_build->execute;
         };
-        if ($successful) {
+        if ($successful and $transaction->commit) {
             $self->status_message("Successfully removed build (" . $display_name . ").");
-            $transaction->commit();
         }
         else {
             push @errors, "Failed to remove build (" . $display_name . "): $@.";

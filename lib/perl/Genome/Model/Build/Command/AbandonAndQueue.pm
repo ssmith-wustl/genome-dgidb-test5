@@ -28,10 +28,9 @@ sub execute {
     for my $build (@builds) {
         my $transaction = UR::Context::Transaction->begin();
         my $successful = eval { $build->abandon; };
-        if ( $successful ) {
+        if ($successful and $transaction->commit) {
             $build->model->build_requested(1);
             $self->status_message("Abandoned build (" . $build->__display_name__ . ") and queued model.");
-            $transaction->commit();
         }
         else {
             push @errors, "Failed to abandon build (" . $build->__display_name__ . "): $@.";

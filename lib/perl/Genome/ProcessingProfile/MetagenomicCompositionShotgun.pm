@@ -346,13 +346,12 @@ sub _execute_build {
         $meta_report_properties{viral_taxonomy_file} = '/gscmnt/sata409/research/mmitreva/databases/viruses_taxonomy_feb_25_2010.txt';
     }
 
-    # FIXME skipping b/c ref seq build does not have a regions bed file
-    #my $meta_report = Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport->create(
-    #    %meta_report_properties,
-    #);
-    #unless($meta_report->execute()) {
-    #    die $self->error_message("metagenomic report execution died or did not return 1:$@");
-    #}
+    my $meta_report = Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport->create(
+        %meta_report_properties,
+    );
+    unless($meta_report->execute()) {
+        die $self->error_message("metagenomic report execution died or did not return 1:$@");
+    }
 
     unless($self->skip_contamination_screen){ #TODO: update validate to deal with this arg
         my $validate_build = Genome::Model::MetagenomicCompositionShotgun::Command::Validate->create(build_id => $build->id);

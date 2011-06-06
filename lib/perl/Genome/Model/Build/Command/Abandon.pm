@@ -37,11 +37,8 @@ sub execute {
     for my $build (@builds) {
         my $transaction = UR::Context::Transaction->begin();
         my $successful = eval { $build->abandon };
-        if ($successful) {
-            $self->status_message( "Successfully abandoned build ("
-                  . $build->__display_name__
-                  . ")." );
-            $transaction->commit();
+        if ($successful and $transaction->commit) {
+            $self->status_message( "Successfully abandoned build (" . $build->__display_name__ . ")." );
         }
         else {
             push @errors,

@@ -35,7 +35,6 @@ class Genome::ModelGroup {
 
 sub __display_name__ {
     my $self = shift;
-
     my @models = $self->models();
     return join(' ' ,$self->name, '('. scalar(@models), 'models)');
 }
@@ -63,7 +62,6 @@ sub create {
     
     return $self;
 }
-
 
 sub assign_models {
     my ($self, @models) = @_;
@@ -163,7 +161,6 @@ sub map_builds {
 }
 
 sub reduce_builds {
-
     # apply $reduce function on results of $map or list 
     # of builds for this model group
     
@@ -181,7 +178,6 @@ sub reduce_builds {
 }
 
 sub builds {
-
     my ($self) = @_;
     my @models = $self->models();
     my @builds;
@@ -221,6 +217,83 @@ sub delete {
 
     # delete self
     return $self->SUPER::delete;
+}
+
+# Attempts to infer what the overarching subject of the group is. If no pattern is found, assumes unknown taxon.
+# The most specific this can get is the population group level.
+sub infer_group_subject {
+    my $self = shift;
+
+    my @individuals;
+    my @taxons;
+    my $use_taxon = 0;
+    my $use_unknown_taxon = 0;
+
+    for my $model ($self->models) {
+        my $subject = $model->subject;
+        next unless $subject;
+
+        if ($subject->isa('Genome::Sample')) {
+            my $indiv = $subject->patient;
+            unless ($indiv) {
+                $use_taxon = 1;
+                next;
+            }
+            push @individuals, $indiv;
+        }
+        elsif ($subject->isa('Genome::PopulationGroup')) {
+            push @individuals, $subject->members;
+        }
+        elsif ($subject->isa('Genome::Taxon')) {
+            $use_taxon = 1;
+            push @taxons, $subject;
+        }
+        elsif ($subject->isa('Genome::Individual')) {
+            push @individuals, $subject;
+        }
+        else {
+            $use_unknown_taxon = 1;
+            last;
+        }
+    }
+
+    my $group_subject;
+    if (not $use_taxon and not $use_unknown_taxon) {
+        $group_subject = Genome::PopulationGroup->get(name => $self->default_population_group_name);
+        if ($group_subject) {
+            $group_subject->change_group_membership(@individuals);
+        }
+        else {
+            $group_subject = Genome::PopulationGroup->create(
+                name => $self->default_population_group_name,
+                members => \@individuals,
+            );
+            $use_taxon = 1 unless $group_subject;
+        }
+    }
+
+    if (not $group_subject and $use_taxon and not $use_unknown_taxon) {
+        push @taxons, map { $_->taxon } @individuals;
+        my %taxons;
+        map { $taxons{$_->id}++ } @taxons;
+        if ((keys %taxons) == 1) {
+            $group_subject = $taxons[0];
+        }
+    }
+
+    if (not $group_subject) {
+        $group_subject = Genome::Taxon->get(name => 'unknown');
+        unless ($group_subject) {
+            Carp::confess 'Could not infer subject for model group ' . $self->id . ' and could not find unknown taxon!';
+        }
+    }
+
+    return $group_subject;
+}
+    
+sub default_population_group_name {
+    my $self = shift;
+    return 'population group for model group ' . $self->name;
 }
 
 sub tags_for_model {

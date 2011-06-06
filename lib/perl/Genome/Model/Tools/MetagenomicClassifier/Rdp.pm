@@ -50,14 +50,6 @@ DOC
 sub execute {
     my $self = shift;
     
-    #< CLASSIFER >#
-    my $classifier_class = 'Genome::Model::Tools::MetagenomicClassifier::Rdp::Version'.$self->version;
-    my $classifier = $classifier_class->create(
-        training_set => $self->training_set,
-    );
-    return if not $classifier;
-
-    #< IN >#
     my $reader = eval {
         Genome::Model::Tools::FastQual::PhredReader->create(
             files => [ $self->input_file ],
@@ -65,37 +57,115 @@ sub execute {
     };
     return if not $reader;
 
-    #< OUT >#
     my $writer = Genome::Model::Tools::MetagenomicClassifier::ClassificationWriter->create(
         file => $self->output_file,
         format => $self->format,
     );
     return if not $writer;
 
-    my %metrics;
-    @metrics{qw/ total error success /} = (qw/ 0 0 0 /);
-    while ( my $seqs = $reader->read ) {
-        $metrics{total}++;
-        my $classification = $classifier->classify($seqs->[0]);
-        if ( not $classification ) {
-            $metrics{error}++;
-            next;
-        }
-        $writer->write($classification); # TODO check?
-        $metrics{success}++;
-    }
+    $self->_metrics_file; # set
 
-    if ( $self->metrics ) {
-        $self->_write_metrics(\%metrics);
+    my $batch_cnt = 0;
+    my $batch_sz = 50000;
+    while ( 1 ) {
+        my @seqs;
+        while ( @seqs < $batch_sz ) {
+            my $seqs = $reader->read;
+            last if not $seqs;
+            push @seqs, $seqs;
+        }
+        last if not @seqs;
+        my $batch_pos = $batch_cnt * $batch_sz;
+        $batch_cnt++;
+        $self->status_message('Batch '.$batch_cnt.' from '.($batch_pos + 1).' to '.($batch_pos + @seqs));
+        my $pid = fork();
+        if ( not defined $pid ) {
+            die 'Cannot fork!';
+        }
+        elsif ( $pid == 0 ) {
+            #child
+            my $classifier_class = 'Genome::Model::Tools::MetagenomicClassifier::Rdp::Version'.$self->version;
+            my $classifier = $classifier_class->create(
+                training_set => $self->training_set,
+            );
+            #die $self->error_message("DIED HERE");
+            die $self->error_message('Failed to create classifier') if not $classifier;
+            my $metrics = $self->_load_metrics;
+            die $self->error_message('Failed to load metrics') if not $metrics;
+            for my $seqs ( @seqs ) {
+                #print $seqs->[0]->{id}."\n";
+                $metrics->{total}++;
+                my $classification = $classifier->classify($seqs->[0]);
+                if ( not $classification ) {
+                    $metrics->{error}++;
+                    next;
+                }
+                $writer->write($classification); # TODO check?
+                $metrics->{success}++;
+            }
+            my $write_metrics = $self->_write_metrics($metrics);
+            die $self->error_message('Failed to write metrics') if not $write_metrics;
+            exit 0;
+        }
+        else {
+            # parent
+            waitpid($pid, 0);
+            my $exit_code = $? >> 8;
+            if(  $exit_code != 0 ) {
+                $self->error_message('Error in running child RDP process.');
+                return;
+            }
+        }
     }
 
     return 1;
 }
 
+sub _metrics_file {
+    my $self = shift;
+
+    if ( not $self->{_metrics_file} ) {
+        if ( $self->metrics ) {
+            $self->{_metrics_file} = $self->output_file.'.metrics';
+            unlink $self->{_metrics_file};
+        }
+        else { # use tmp file that is cleaned up
+            my $tmpdir = File::Temp::tempdir(CLEANUP => 1); 
+            $self->{_metrics_file} = $tmpdir.'/metrics';
+        }
+    }
+
+    return $self->{_metrics_file};
+}
+
+sub _load_metrics {
+    my $self = shift;
+
+    my $metrics_file = $self->_metrics_file;
+    my %metrics;
+    @metrics{qw/ total success error /} = (qw/ 0 0 0 /);
+    return \%metrics if not -e $metrics_file;
+
+    my $metrics_fh = eval{ Genome::Sys->open_file_for_reading($metrics_file); };
+    if ( not $metrics_fh ) {
+        $self->error_message("Failed to open metrics file ($metrics_file) for reading: $@");
+        return;
+    }
+
+    while ( my $line = $metrics_fh->getline ) {
+        chomp $line;
+        my ($key, $value) = split('=', $line);
+        $metrics{$key} = $value;
+    }
+
+    return \%metrics;
+}
+
+
 sub _write_metrics {
     my ($self, $metrics) = @_;
 
-    my $metrics_file = $self->output_file.'.metrics';
+    my $metrics_file = $self->_metrics_file;
     unlink $metrics_file if -e $metrics_file;
 
     my $metrics_fh = eval{ Genome::Sys->open_file_for_writing($metrics_file); };

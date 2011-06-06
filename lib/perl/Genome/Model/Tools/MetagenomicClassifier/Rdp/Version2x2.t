@@ -36,7 +36,7 @@ eval{ $classifier->classify(); };
 like($@, qr(No sequence given to classify), 'fail to classify w/ undef sequence');
 eval{ $classifier->classify({seq => 'A'}); };
 like($@, qr(Seq does not have an id:), 'fail to classify w/o sequence id');
-ok(!$classifier->classify({ id => 'Seq w/o 49 n free words', seq => 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAANAAAAAAAAAAAAAAAAA' }), 'fail to classify sequence w/o 49 n free words');
+#ok(!$classifier->classify({ id => 'Seq w/o 49 n free words', seq => 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAANAAAAAAAAAAAAAAAAA' }), 'fail to classify sequence w/o 49 n free words');
 
 done_testing();
 exit;
