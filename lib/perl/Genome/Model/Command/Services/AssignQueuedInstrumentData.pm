@@ -350,7 +350,7 @@ sub execute {
 sub find_or_create_somatic_variation_models{
     my ($self, @models) = @_;
     #only want sample-based models
-    @models = grep {$_->subject_type eq "sample_name"} @models;
+    @models = grep { $_->subject_class_name eq 'Genome::Sample' } @models;
     #only want TCGA models
     @models = grep {$self->is_tcga_reference_alignment($_) } @models;
     #We want capture models with one of the given roi_set_names and all non capture models here.  Filter the rest out
