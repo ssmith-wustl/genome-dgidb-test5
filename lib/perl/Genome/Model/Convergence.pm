@@ -57,7 +57,7 @@ sub schedule_rebuild {
         return 1;
     }
 
-    my @builds_to_abandon = grep{ $_->status eq 'Scheduled' or $_->status eq 'Running' } $self->builds;
+    my @builds_to_abandon = $self->builds(status => ['Scheduled', 'Running']);
     if (@builds_to_abandon){
         Genome::Model::Build::Command::Abandon->execute(builds => [@builds_to_abandon]);
 
