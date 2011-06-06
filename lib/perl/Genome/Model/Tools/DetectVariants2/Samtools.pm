@@ -249,4 +249,23 @@ sub has_version {
     return 0;
 }
 
+# Override the base method so we can skip using control_aligned_reads...  this was we can shortcut between somatic-variation and ref-align runs 
+sub params_for_result {
+    my $self = shift;
+
+    my %params = (
+        detector_name => $self->class,
+        detector_params => $self->params,
+        detector_version => $self->version,
+        aligned_reads => $self->aligned_reads_input,
+        control_aligned_reads => undef,
+        reference_build_id => $self->reference_build_id,
+        region_of_interest_id => $self->region_of_interest_id,
+        test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
+        chromosome_list => undef,
+    );
+
+    return \%params;
+}
+
 1;
