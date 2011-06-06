@@ -289,14 +289,14 @@ sub _assign_all_within_maximum_allowed_error {
             next;
         }
         if(($reverr < $self->maximum_allowed_error) && (!$fwderr || ($fwderr < $self->maximum_allowed_error))) {
-            push(@allin, $instdata_id);
+            push(@allin, $instdata);
         }
         elsif($reverr < $self->maximum_allowed_error) {
-            push(@reverse, $instdata_id);
+            push(@reverse, $instdata);
             $self->status_message("Excluding forward read of $flowcell lane $lane with id $instdata_id due to error rate of $fwderr%"); 
         }
         elsif($fwderr && $fwderr < $self->maximum_allowed_error) {
-            push(@forward, $instdata_id);
+            push(@forward, $instdata);
             $self->status_message("Excluding reverse read of $flowcell lane $lane with id $instdata_id due to error rate of $reverr%"); 
         }
         else {
@@ -310,30 +310,9 @@ sub _assign_all_within_maximum_allowed_error {
     $self->status_message(sprintf("%d forward only\n",scalar(@forward)));
     $self->status_message(sprintf("%d reverse only\n",scalar(@reverse)));
 
-    for my $allin ( @allin ) {
-        my $add = $model->add_instrument_data(
-            value => $allin,
-        );
-        if ( not $add ) {
-            $self->error_message('Failed to add instrument data ('.$allin->id.') to model '.$model->__display_name__);
-        }
-    }
-    for my $fwd ( @forward ) {
-        my $add = $model->add_instrument_data(
-            value => $fwd,
-            filter => 'forward-only',
-        );
-        if ( not $add ) {
-            $self->error_message('Failed to add instrument data ('.$fwd->id.') to model '.$model->__display_name__);
-        }
-    }
-    for my $rev ( @reverse ) {
-        my $add = $model->add_instrument_data(
-            value => $rev,
-            filter => 'reverse-only',
-        );
-        if ( not $add ) {
-            $self->error_message('Failed to add instrument data ('.$rev->id.') to model '.$model->__display_name__);
+    for my $instrument_data( @allin, @forward, @reverse ) {
+        unless ($self->_assign_instrument_data($instrument_data)) {
+            return;
         }
     }
     return 1;
