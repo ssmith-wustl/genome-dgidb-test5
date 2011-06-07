@@ -141,10 +141,14 @@ class Genome::Model {
         reports_directory       => { via => 'last_succeeded_build' },
         
         # these go on refalign models
-        region_of_interest_set_value => { 
-            is_many => 1, is_mutable => 1, is => 'UR::Value', via => 'inputs', to => 'value', where => [ name => 'region_of_interest_set_name'] 
+        region_of_interest_set_name => { 
+            is => 'Text',
+            is_many => 1, 
+            is_mutable => 1,
+            via => 'inputs', 
+            to => 'value_id',
+            where => [ name => 'region_of_interest_set_name', value_class_name => 'UR::Value' ], 
         },
-        region_of_interest_set_name => { via => 'region_of_interest_set_value', to => 'id', },
     ],
     has_optional_calculated => [
         individual_common_name => {
