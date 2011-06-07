@@ -504,12 +504,15 @@ sub _resolve_subject {
 sub _verify_subject {
     my $self = shift;
     unless ($self->subject) {
-        Carp::confess "Could not retrieve subject object for model " . $self->__display_name__ . " with ID " . $self->subject_id . 
-            " and class " . $self->subject_class_name;
+        $self->error_message("Could not retrieve subject object for model " . $self->__display_name__ 
+            . " with ID " . $self->subject_id . " and class " . $self->subject_class_name);
+        return 0;
     }
 
     unless ($self->subject->isa('Genome::Subject')) {
-        Carp::confess "Subject of model  " . $self->__display_name__ . " is not a Genome::Subject, it's a " . $self->subject->class;
+        $self->error_message("Subject of model  " . $self->__display_name__ . 
+            " is not a Genome::Subject, it's a " . $self->subject->class);
+        return 0;
     }
     return 1;
 }
