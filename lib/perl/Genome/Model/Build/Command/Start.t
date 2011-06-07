@@ -20,34 +20,86 @@ ok($ENV{UR_DBI_NO_COMMIT}, 'No commit');
 my $s = Genome::Sample->create(name => 'TEST-' . __FILE__ . "-$$");
 ok($s, "made a test sample");
 
+# tmpdir
+my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
+ok(-d $tmpdir, 'Created temp dir');
+
 my $p = Genome::ProcessingProfile::TestPipeline->create(
     name => "test " . __FILE__ . " on host ".hostname." process $$",
     some_command_name => 'ls',
 );
 ok($p, "made a test processing profile");
 
-my $m = Genome::Model::TestPipeline->create(
-    processing_profile_id => $p->id,
-    subject_class_name => ref($s),
-    subject_id => $s->id,
-);
-ok($m, "made a test model");
-my $model_id = $m->id;
-
-# tmpdir
-my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
-ok(-d $tmpdir, 'Created temp dir');
-
-# ok
-my $rv = eval { 
-    my $model_start = Genome::Model::Build::Command::Start->create(
-        models => [$m],
-        data_directory => $tmpdir,
+{ # Test success
+    my $m = Genome::Model::TestPipeline->create(
+        processing_profile_id => $p->id,
+        subject_class_name => ref($s),
+        subject_id => $s->id,
     );
-    return $model_start->execute;
-};
-ok(!$@, "the command did not crash");
-is($rv, 1, "command believes it succeeded");
+    ok($m, "made a test model");
+
+    # ok
+    my $rv = eval { 
+        my $model_start = Genome::Model::Build::Command::Start->create(
+            models => [$m],
+            data_directory => $tmpdir,
+        );
+        return $model_start->execute;
+    };
+    ok(!$@, "the command did not crash");
+    is($rv, 1, "command believes it succeeded");
+}
+
+
+{ # Test start_build fails
+    class Genome::ProcessingProfile::TesterNoBuilds {
+        is => 'Genome::ProcessingProfile',
+    };
+
+    class Genome::Model::TesterNoBuilds {
+        is => 'Genome::Model',
+    };
+
+    my $ppnb = Genome::ProcessingProfile->create(
+        name => 'Tester PP No Builds',
+        type_name => 'tester_no_builds',
+    );
+    ok($ppnb, 'create processing profile for no-build model') or die;
+
+    my $model = Genome::Model::TestPipeline->create(
+        processing_profile_id => $p->id,
+        subject_class_name => ref($s),
+        subject_id => $s->id,
+    );
+    ok($model, "made a test model");
+
+    my $model_no_builds = Genome::Model->create(
+        name => 'Tester Model With No Builds',
+        processing_profile => $ppnb,
+        subject_id => $s->id,
+        subject_class_name => ref($s),
+    );
+    ok($model_no_builds, "made a test model with no builds");
+
+    # add a model with no builds so the build will fail to start
+    $model->add_input(
+        name => 'tester_no_builds',
+        value_class_name => 'Genome::Model::TesterNoBuilds', 
+        value_id => $model_no_builds->id,
+    );
+
+    my $model_start;
+    my $rv = eval { 
+        $model_start = Genome::Model::Build::Command::Start->create(
+            models => [$model],
+            data_directory => $tmpdir,
+        );
+        return $model_start->execute;
+    };
+    ok(!$@, "the command did not crash");
+    ok(!$rv, "command believes it failed");
+    like($model_start->error_message, qr/Failed to start build/, "build failed to start");
+}
 
 done_testing();
 exit;

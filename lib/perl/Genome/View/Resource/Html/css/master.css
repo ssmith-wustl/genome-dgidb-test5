@@ -431,6 +431,7 @@ td.new, td.scheduled {
 }
 
 td.failed,
+td.unstartable,
 td.crashed {
     color: #451616;
     background-color: #ff9292 !important;

@@ -56,14 +56,16 @@ sub _execute_build {
 
     $DB::single=1;
 
-    my $cmd = $self->some_command_name;
-    my $args = $self->some_args;
+    my $cmd_name = $self->some_command_name;
+    my $args = ($self->some_args) ? $self->some_args : "";
 
     my @inputs = $build->inputs();
 
     my $dir = $build->data_directory;
+    
+    my $cmd = "$cmd_name $args @inputs >$dir/output 2>$dir/errors";
 
-    my $exit_code = system "$cmd $args @inputs >$dir/output 2>$dir/errors";
+    my $exit_code = system $cmd;
     $exit_code = $exit_code >> 8;
     if ($exit_code != 0) {
         $self->error_message("Failed to run $cmd with args $args!  Exit code: $exit_code.");

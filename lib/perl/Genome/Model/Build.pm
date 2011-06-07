@@ -179,12 +179,6 @@ sub create {
         $ida->first_build_id( $self->id )
     }
     
-    # inputs
-    unless ( $self->_copy_model_inputs ) {
-        $self->delete;
-        return;
-    }
-
     # data directory
     unless ($self->data_directory) {
         my $dir;
@@ -202,6 +196,21 @@ sub create {
     my $processing_profile = $self->processing_profile;
     unless ($processing_profile->_initialize_build($self)) {
         $class->error_message($processing_profile->error_message);
+        $self->delete;
+        return;
+    }
+
+    my $build_event = Genome::Model::Event::Build->create(
+        model_id => $self->model->id,
+        build_id => $self->id,
+        event_type => 'genome model build',
+        event_status => 'New',
+    );
+
+    unless ( $build_event ) {
+        $self->error_message(
+            sprintf("Can't create build for model (%s %s)", $self->model->id, $self->model->name)
+        );
         $self->delete;
         return;
     }
@@ -551,19 +560,31 @@ sub start {
     my $self = shift;
     my %params = @_;
 
-    # TODO make it so we don't need to pass anything to init the workflow.
-    my $workflow = $self->_initialize_workflow($params{job_dispatch} || 'apipe');
-    unless ($workflow) {
-        my $msg = $self->error_message("Failed to initialize a workflow!");
-        croak $msg;
+    eval {
+        unless ( $self->_copy_model_inputs ) {
+            my $msg = $self->error_message("Failed to copy model inputs");
+            croak $msg;
+        }
+
+        # TODO make it so we don't need to pass anything to init the workflow.
+        my $workflow = $self->_initialize_workflow($params{job_dispatch} || 'apipe');
+        unless ($workflow) {
+            my $msg = $self->error_message("Failed to initialize a workflow!");
+            croak $msg;
+        }
+
+        $self->the_master_event->schedule; # in G:M:Event, sets status, times, etc.
+
+        return unless $self->_launch(%params);
+
+        #If a build has been requested, this build starting fulfills that request.
+        $self->model->build_requested(0);
+    };
+    if ($@) {
+        my $err = $@;
+        $self->status('Unstartable');
+        croak $err;
     }
-
-#    $params{workflow} = $workflow;
-
-    return unless $self->_launch(%params);
-
-    #If a build has been requested, this build starting fulfills that request.
-    $self->model->build_requested(0);
     return 1;
 }
 
@@ -873,31 +894,7 @@ sub _initialize_workflow {
     Genome::Sys->create_directory( $self->log_directory )
         or return;
 
-    if ( my $existing_build_event = $self->build_event ) {
-        $self->error_message(
-            "Can't schedule this build (".$self->id."), it a already has a main build event: ".
-            Data::Dumper::Dumper($existing_build_event)
-        );
-        return;
-    }
-
     $self->software_revision($self->snapshot_revision);
-
-    my $build_event = Genome::Model::Event::Build->create(
-        model_id => $self->model->id,
-        build_id => $self->id,
-        event_type => 'genome model build',
-    );
-
-    unless ( $build_event ) {
-        $self->error_message( 
-            sprintf("Can't create build for model (%s %s)", $self->model->id, $self->model->name) 
-        );
-        $self->delete;
-        return;
-    }
-
-    $build_event->schedule; # in G:M:Event, sets status, times, etc.
 
     my $model = $self->model;
     my $processing_profile = $self->processing_profile;
