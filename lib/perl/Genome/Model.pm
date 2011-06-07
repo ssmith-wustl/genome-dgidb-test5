@@ -13,7 +13,7 @@ class Genome::Model {
     is_abstract => 1,
     subclassify_by => 'subclass_name',
     id_by => [
-        genome_model_id => { is => 'Number', len => 11 },
+        genome_model_id => { is => 'Number', },
     ],
     has => [
         name => { is => 'Text' },
