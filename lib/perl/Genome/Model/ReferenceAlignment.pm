@@ -218,7 +218,6 @@ sub create {
         return;
     }
 
-    $DB::single = 1;
     unless ($self->genotype_microarray_model_id) {
         my $genotype_model = $self->default_genotype_model;
         if ($genotype_model) {
