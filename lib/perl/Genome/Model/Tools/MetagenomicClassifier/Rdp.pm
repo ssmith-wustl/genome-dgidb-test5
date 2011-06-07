@@ -66,7 +66,7 @@ sub execute {
     $self->_metrics_file; # set
 
     my $batch_cnt = 0;
-    my $batch_sz = 3;
+    my $batch_sz = 50000;
     while ( 1 ) {
         my @seqs;
         while ( @seqs < $batch_sz ) {

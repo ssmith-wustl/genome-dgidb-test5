@@ -22,11 +22,7 @@ sub get_build_node {
     my $doc = $self->_doc;
     my $build = $self->subject;
 
-
-
-    my $base_model = $build->model->subject;
-
-    my $base_build = $base_model->last_complete_build;
+    my $base_build = $build->source_build;
     my $accumulated_alns = $base_build->accumulated_alignments_directory;
 
     $node->addChild($doc->createAttribute('base-alignment-path', $accumulated_alns));

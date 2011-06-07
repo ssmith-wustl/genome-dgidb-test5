@@ -209,7 +209,13 @@ sub amplicon_sets {
 
     my @amplicon_sets;
     for my $set_name ( $self->amplicon_set_names ) {
-        my $amplicon_set = $self->amplicon_set_for_name($set_name);
+        my $amplicon_set;
+        if ( $self->sequencing_platform eq 'sanger' ) { #TODO - make it so it auto recognizes sanger
+            my $cmd = Genome::Model::MetagenomicComposition16s::Command::ProcessSangerInstrumentData->create( build_id => $self->id );
+            $amplicon_set = $cmd->amplicon_set_for_name( $set_name );
+        } else {
+            $amplicon_set = $self->amplicon_set_for_name($set_name); #call command for sanger
+        }
         next unless $amplicon_set; # undef ok, dies on error
         push @amplicon_sets, $amplicon_set;
     }
@@ -249,6 +255,8 @@ sub amplicon_set_for_name {
 
 sub _amplicon_iterator_for_name { # 454 and solexa for now
     my ($self, $set_name) = @_;
+
+    #print "iterator from base\n"; <STDIN>;
 
     my $reader = $self->fasta_and_qual_reader_for_type_and_set_name('processed', $set_name);
     return unless $reader; # returns undef if no file exists OK or dies w/ error 
@@ -317,7 +325,13 @@ sub sub_dirs {
     return (qw| classification fasta reports |), $_[0]->_sub_dirs;
 }
 
-sub _sub_dirs { return; }
+sub _sub_dirs {
+    my $self = shift;
+    if ( $self->sequencing_platform eq 'sanger' ) {
+        return (qw/ chromat_dir edit_dir /);
+    }
+    return;
+}
 
 sub classification_dir {
     return $_[0]->data_directory.'/classification';
@@ -329,6 +343,14 @@ sub fasta_dir {
 
 sub reports_dir {
     return $_[0]->data_directory.'/reports';
+}
+
+sub edit_dir {
+    return $_[0]->data_directory.'/edit_dir';
+}
+
+sub chromat_dir {
+    return $_[0]->data_directory.'/chromat_dir';
 }
 
 #< Files >#
@@ -368,6 +390,54 @@ sub combined_input_fasta_file {
     return $_[0]->fasta_dir.'/'.$_[0]->file_base_name.'.'.'input.fasta';
 }
 
+# sanger files
+sub raw_reads_fasta_file {
+    return $_[0]->fasta_dir.'/'.$_[0]->file_base_name.'.reads.raw.fasta';
+}
+
+sub raw_reads_qual_file {
+    return $_[0]->raw_reads_fasta_file.'.qual';
+}
+
+sub reads_fasta_file_for_amplicon { 
+    my ($self, $amplicon) = @_;
+    return $self->edit_dir.'/'.$amplicon->{name}.'.fasta';
+}
+
+sub reads_qual_file_for_amplicon {
+    return reads_fasta_file_for_amplicon(@_).'.qual';
+}
+
+sub ace_file_for_amplicon { 
+    my ($self, $amplicon) = @_;
+    return $self->edit_dir.'/'.$amplicon->{name}.'.fasta.ace';
+}
+sub scfs_file_for_amplicon {
+    my ($self, $amplicon) = @_;
+    return $self->edit_dir.'/'.$amplicon->{name}.'.scfs';
+}
+
+sub create_scfs_file_for_amplicon {
+    my ($self, $amplicon) = @_;
+
+    my $scfs_file = $self->scfs_file_for_amplicon($amplicon);
+    unlink $scfs_file if -e $scfs_file;
+    my $scfs_fh = Genome::Sys->open_file_for_writing($scfs_file)
+        or return;
+    for my $scf ( @{$amplicon->{reads}} ) { 
+        $scfs_fh->print("$scf\n");
+    }
+    $scfs_fh->close;
+
+    if ( -s $scfs_file ) {
+        return $scfs_file;
+    }
+    else {
+        unlink $scfs_file;
+        return;
+    }
+}
+
 # processsed
 sub processed_fasta_file { # returns them as a string (legacy)
     return join(' ', $_[0]->processed_fasta_files);
@@ -393,6 +463,14 @@ sub processed_qual_files {
 sub processed_qual_file_for_set_name {
     my ($self, $set_name) = @_;
     return $self->processed_fasta_file_for_set_name($set_name).'.qual';
+}
+
+sub processed_reads_fasta_file { #sanger
+    return $_[0]->fasta_dir.'/'.$_[0]->file_base_name.'.reads.processed.fasta';
+}
+
+sub processed_reads_qual_file { #sanger
+    return $_[0]->processed_reads_fasta_file.'.qual';
 }
 
 # oriented
@@ -429,6 +507,23 @@ sub classification_files_as_string {
 
 sub classification_files {
     return $_[0]->_files_for_amplicon_sets('classification');
+}
+
+#< Prepare instrument data >#
+sub prepare_instrument_data {
+    my $self = shift;
+
+    #call a separate command for sanger
+    #if ..sanger
+    my $cmd = Genome::Model::MetagenomicComposition16s::Command::ProcessSangerInstrumentData->create(
+        build_id => $self->id,
+    );
+    unless ( $cmd->prepare_instrument_data ) {
+        $self->error_message("Failed to execute mc16s process sanger");
+        return;
+    }
+
+    return 1;
 }
 
 #< Fasta/Qual Readers/Writers >#
@@ -568,7 +663,7 @@ sub classification_file_for_set_name {
 
 sub classify_amplicons {
     my $self = shift;
-   
+
     $self->status_message('Classify amplicons...');
 
     my $attempted = $self->amplicons_attempted;
@@ -755,6 +850,10 @@ sub fastqs_from_solexa {
 
 #< Diff >#
 sub files_ignored_by_diff {
+    my $self = shift;
+    if ( $self->sequencing_platform eq 'sanger') {
+        return qw( build.xml );
+    }
     return qw(
         build.xml
         reports/Build_Initialized/report.xml
@@ -768,6 +867,16 @@ sub files_ignored_by_diff {
 }
 
 sub dirs_ignored_by_diff {
+    my $self = shift;
+    if ( $self->sequencing_platform eq 'sanger' ) {
+        return qw(
+            logs/
+            reports/
+            edit_dir/
+            chromat_dir/
+            classification/
+        );
+    }
     return qw(
         logs/
     );

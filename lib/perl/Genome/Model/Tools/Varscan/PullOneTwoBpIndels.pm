@@ -34,6 +34,8 @@ class Genome::Model::Tools::Varscan::PullOneTwoBpIndels {
 		final_output_file	=> { is => 'Text', doc => "process-validation-indels output file" , is_optional => 0},
 		skip_if_output_present	=> { is => 'Boolean', doc => "Skip Creating new Bam Files if they exist" , is_optional => 1, default => ""},
         realigned_bam_file_directory => { is => 'Text', doc => "Where to dump the realigned bam file", is_optional => 0},
+        normal_purity => { is => 'Float', doc => "Normal purity param to pass to varscan", is_optional => 0, default => 1},
+        min_var_frequency => { is => 'Float', doc => "Minimum variant frequency to pass to varscan", is_optional => 0, default => 0.08},
 	],
 };
 
@@ -142,26 +144,37 @@ sub execute {                               # replace with real execution logic.
 	}
 	close($file_input);
 
-	my $bsub = 'bsub -q long -R "select[model!=Opteron250 && type==LINUX64 && mem>8000 && tmp>10000] rusage[mem=8000, tmp=10000]" -M 8000000 ';
+    my $min_freq = $self->min_var_frequency;
+    my $normal_purity = $self->normal_purity;
+    my $varscan_params = "--validation 1 --somatic-p-value 1.0e-02 --p-value 0.10 --min-coverage 8 --min-var-freq $min_freq --normal-purity $normal_purity";
+
+	my $bsub = 'bsub -q long -R "select[model!=Opteron250 && type==LINUX64 && mem>16000 && tmp>10000] rusage[mem=16000, tmp=10000]" -M 16000000 ';
 	my ($jobid1, $jobid2, $jobid3, $jobid4, $jobid5, $jobid6);
 	if ($skip_if_output_present && -s $realigned_normal_bam_file && -s $realigned_tumor_bam_file) {
-		my $jobid1 = `$bsub -J varscan_validation \'gmt varscan validation --normal-bam $realigned_normal_bam_file --tumor-bam $realigned_tumor_bam_file --output-indel $output_indel --output-snp $output_snp\'`;
+		my $jobid1 = `$bsub -J varscan_validation \'gmt varscan validation --normal-bam $realigned_normal_bam_file --tumor-bam $realigned_tumor_bam_file --output-indel $output_indel --output-snp $output_snp --varscan-params "$varscan_params"\'`;
 		   $jobid1=~/<(\d+)>/;
 		   $jobid1= $1;
 		   print "$jobid1\n";
 
-		my $jobid2 = `$bsub -J varscan_process_validation -w \'ended($jobid1)\' \'gmt varscan process-validation-indels --validation-indel-file $output_indel --validation-snp-file $output_snp --variants-file $small_indel_list_nobed --output-file $final_output_file\'`;
+           #add in email of final job completion. cause I like those
+           my $user = $ENV{USER};
+
+		my $jobid2 = `$bsub -N -u $user\@genome.wustl.edu -J varscan_process_validation -w \'ended($jobid1)\' \'gmt varscan process-validation-indels --validation-indel-file $output_indel --validation-snp-file $output_snp --variants-file $small_indel_list_nobed --output-file $final_output_file\'`;
 		   $jobid2=~/<(\d+)>/;
 		   $jobid2= $1;
 		   print "$jobid2\n";
 	}
 	else{
 #/gscuser/dkoboldt/Software/GATK/GenomeAnalysisTK-1.0.4418/GenomeAnalysisTK.jar /gsc/scripts/pkg/bio/gatk/GenomeAnalysisTK-1.0.5336/GenomeAnalysisTK.jar
-		my $jobid1 = `$bsub -J $realigned_normal_bam_file \'java -Xmx4g -Djava.io.tmpdir=/tmp -jar /gsc/scripts/pkg/bio/gatk/GenomeAnalysisTK-1.0.5336/GenomeAnalysisTK.jar -T IndelRealigner -targetIntervals $small_indel_list -o $realigned_normal_bam_file -I $normal_bam -R $reference  --targetIntervalsAreNotSorted\'`;
+		my $bsub_normal_output = "$realigned_bam_file_directory/realignment_normal.out";
+		my $bsub_normal_error = "$realigned_bam_file_directory/realignment_normal.err";
+		my $jobid1 = `$bsub -J $realigned_normal_bam_file -o $bsub_normal_output -e $bsub_normal_error \'java -Xmx16g -Djava.io.tmpdir=/tmp -jar /gsc/scripts/pkg/bio/gatk/GenomeAnalysisTK-1.0.5336/GenomeAnalysisTK.jar -et NO_ET -T IndelRealigner -targetIntervals $small_indel_list -o $realigned_normal_bam_file -I $normal_bam -R $reference  --targetIntervalsAreNotSorted\'`;
 		   $jobid1=~/<(\d+)>/;
 		   $jobid1= $1;
 		   print "$jobid1\n";
-		my $jobid2 = `$bsub -J $realigned_tumor_bam_file \'java -Xmx4g -Djava.io.tmpdir=/tmp -jar /gsc/scripts/pkg/bio/gatk/GenomeAnalysisTK-1.0.5336/GenomeAnalysisTK.jar -T IndelRealigner -targetIntervals $small_indel_list -o $realigned_tumor_bam_file -I $tumor_bam -R $reference --targetIntervalsAreNotSorted\'`;
+		my $bsub_tumor_output = "$realigned_bam_file_directory/realignment_tumor.out";
+		my $bsub_tumor_error = "$realigned_bam_file_directory/realignment_tumor.err";
+		my $jobid2 = `$bsub -J $realigned_tumor_bam_file -o $bsub_tumor_output -e $bsub_tumor_error \'java -Xmx16g -Djava.io.tmpdir=/tmp -jar /gsc/scripts/pkg/bio/gatk/GenomeAnalysisTK-1.0.5336/GenomeAnalysisTK.jar -et NO_ET -T IndelRealigner -targetIntervals $small_indel_list -o $realigned_tumor_bam_file -I $tumor_bam -R $reference --targetIntervalsAreNotSorted\'`;
 		   $jobid2=~/<(\d+)>/;
 		   $jobid2= $1;
 		   print "$jobid2\n";
@@ -174,7 +187,7 @@ sub execute {                               # replace with real execution logic.
 		   $jobid6=~/<(\d+)>/;
 		   $jobid6= $1;
 		   print "$jobid6\n";
-		my $jobid7 = `$bsub -J varscan_validation -w \'ended($jobid5) && ended($jobid6)\' \'gmt varscan validation --normal-bam $realigned_normal_bam_file --tumor-bam $realigned_tumor_bam_file --output-indel $output_indel --output-snp $output_snp\'`;
+		my $jobid7 = `$bsub -J varscan_validation -w \'ended($jobid5) && ended($jobid6)\' \'gmt varscan validation --normal-bam $realigned_normal_bam_file --tumor-bam $realigned_tumor_bam_file --output-indel $output_indel --output-snp $output_snp --varscan-params "$varscan_params"\'`;
 		   $jobid7=~/<(\d+)>/;
 		   $jobid7= $1;
 		   print "$jobid7\n";

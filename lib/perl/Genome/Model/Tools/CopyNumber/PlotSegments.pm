@@ -63,7 +63,7 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	loss_threshold => {
 	    is => 'Float',
 	    is_optional => 1,
-	    doc => 'CN threshold for coloring a segment as a loss - defaults to 2.5 or the log2/10 equivalent',
+	    doc => 'CN threshold for coloring a segment as a loss - defaults to 1.5 or the log2/10 equivalent',
 	},
 
 	# male_sex_loss_threshold => {
@@ -114,7 +114,7 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	annotations_bottom => {
 	    is => 'String',
 	    is_optional => 1,
-	    doc => 'file containing regions to label at the bottom of the graph. File is in bed format with 4th column (name) used label text. The 5th column (score) can be used to adjust annotations up and down to prevent overlap. For example, +4 moves a label up 4 y-axis units',
+	    doc => 'file containing regions to label at the bottom of the graph. File is in bed format with 4th column (name) used label text. The 5th column (score) can be used to adjust annotations up and down to prevent overlap. For example, 4 moves a label up 4 y-axis units',
 	},
 
 
@@ -139,7 +139,6 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	    default => '5000000'
 	},
 
-
 	ymax => {
 	    is => 'Float',
 	    is_optional => 1,
@@ -147,8 +146,20 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	    doc => 'Set the max val of the y-axis',
 	},
 
-
 	ymin => {
+	    is => 'Float',
+	    is_optional => 1,
+	    doc => 'Set the min val of the y-axis',
+	},
+
+	xmax => {
+	    is => 'Float',
+	    is_optional => 1,
+            is_input => 1,
+	    doc => 'Set the max val of the y-axis',
+	},
+
+	xmin => {
 	    is => 'Float',
 	    is_optional => 1,
 	    doc => 'Set the min val of the y-axis',
@@ -240,45 +251,11 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	    doc => 'value seperating gains from losses. defaults to 2 for absolute plots or 0 for log plots',
 	},
 
-	# cnhmm_threshold => {
-	#     is => 'Float',
-	#     is_optional => 1,
-	#     doc => 'keep ',
-	#     default => 30,
-	# },
-
-	# cmds_input => {
-	#     is => 'Boolean',
-	#     is_optional => 1,
-	#     doc => 'Flag indicating that input is in cmds format. Script will plot the probability that any give region is recurrent -log(z.p)',
-	#     default => 0,
-	# },
-
-        # cmds_summary_input => {
-	#     is => 'Boolean',
-	#     is_optional => 1,
-	#     doc => 'Flag indicating that input is in cmds summary table format. Script will plot the number of samples for which each recurrent region is gained or lost',
-	#     default => 0,
-        # }
-
 	ylabel => {
 	    is => 'String',
             is_optional => 1,
             doc => 'y-axis label',
         },
-
-
-	# xmin => {
-	#     is => 'String',
-	#     is_optional => 1,
-	#     doc => '',
-	# },
-
-	# xmax => {
-	#     is => 'String',
-	#     is_optional => 1,
-	#     doc => '',
-	# },
 
     ]
 };
@@ -288,7 +265,7 @@ sub help_brief {
 }
 
 sub help_detail {
-    "generate a plot of copy number alterations from "
+    "generate a plot of copy number alterations"
 }
 
 
@@ -573,6 +550,8 @@ sub execute {
     my $lowres_max = $self->lowres_max;
     my $ymax = $self->ymax;
     my $ymin = $self->ymin;
+    my $xmax = $self->xmax;
+    my $xmin = $self->xmin;
     my $hide_normal = $self->hide_normal;
     my $genome_build = $self->genome_build;
     my $sex = $self->sex;
@@ -590,14 +569,21 @@ sub execute {
     my $tumor_segment_file = $self->tumor_segment_file;
     my $normal_segment_file = $self->normal_segment_file;
 
+
+    #sanity checks
     unless( (defined($segment_files)) xor (defined($tumor_segment_file) && defined($normal_segment_file))){
         die $self->error_message("You must specify either the segment_files param OR both tumor_segment_file and normal_segment_file, but not all three.");
     }
 
+    if ((defined($xmax) || defined($xmin)) && !(defined($chr))){
+        die $self->error_message("xmin and xmax can only be used on individual chromosome views");
+    }
+
+
+
     if(defined($tumor_segment_file) && defined($normal_segment_file)){
         $segment_files = join(",",($tumor_segment_file,$normal_segment_file));
     }
-
 
     my $entrypoints_file = getEntrypointsFile($sex,$genome_build);
 
@@ -716,6 +702,14 @@ sub execute {
 
         if(defined($ymin)){
 	    print R_COMMANDS ", ymin=" . $ymin;
+        }
+
+	if(defined($xmax)){
+	    print R_COMMANDS ", xmax=" . $xmax;
+	}
+
+        if(defined($xmin)){
+	    print R_COMMANDS ", xmin=" . $xmin;
         }
 
 	if (defined($highlights)){

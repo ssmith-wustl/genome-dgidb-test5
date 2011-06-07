@@ -58,6 +58,17 @@
     background-position: left center;
 }
 
+.genome_instrumentdata_imported_16 {
+    background-image: url("../img/icons/genome_instrumentdata_imported_16.png");
+    background-repeat: no-repeat;
+    background-position: left center;
+}
+
+.genome_instrumentdata_imported_32 {
+    background-image: url("../img/icons/genome_instrumentdata_imported_32.png");
+    background-repeat: no-repeat;
+    background-position: left center;
+}
 
 .genome_disk_group_16 {
     background-image: url("../img/icons/genome_disk_group_16.png");

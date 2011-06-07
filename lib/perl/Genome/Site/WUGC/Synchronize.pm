@@ -254,7 +254,6 @@ sub _get_direct_and_indirect_properties_for_object {
     my %direct_properties;
     my %indirect_properties;
 
-    my @properties = $class->__meta__->_legacy_properties;
     my @properties = $class->__meta__->properties;
     for my $property (@properties) {
         next if $property->is_calculated;

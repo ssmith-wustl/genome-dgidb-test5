@@ -12,13 +12,6 @@ use File::Path;
 use Data::Dumper;
 require Genome::Sys;
 
-my @subject_types = ();
-{
-    my $gm_class = Genome::Model->__meta__;
-    my $m = $gm_class->property_meta_for_name('subject_type');
-    @subject_types = @{ $m->valid_values };
-}
-
 ###################################################
 
 class Genome::Model::Command::Define {
@@ -55,18 +48,11 @@ class Genome::Model::Command::Define {
             is_input => 1,
             doc => 'Optional parameter representing the data directory the model should use. Will use a default if none specified.'
         },
-        subject_type => {
-            is => 'Text',
-            len => 255,
-            is_input => 1,
-            doc => 'The type of subject all the reads originate from (sample_name is assumed if none given)',
-            valid_values => \@subject_types
-        },
         subject_id => {
             is => 'Number',
             len => 15,
             is_input => 1,
-            doc => 'The ID of the subject all the reads originate from (may specify this and subject_class_name in lieu of subject_type)',  
+            doc => 'The ID of the subject all the reads originate from (may specify this and subject_class_name in lieu of subject_name)',  
         },
         subject_class_name => {
             is => 'Text',
@@ -189,9 +175,7 @@ sub execute {
 
     $self->compare_pp_and_model_type;
 
-    #attempt derive subject_type if not passed as an arg
-    #die if subject type isnt sample_name for now
-    my ($subject_type, $subject_id, $subject_class_name);
+    my ($subject_id, $subject_class_name);
     if ($self->subject_id and $self->subject_class_name) {
         $subject_class_name = $self->subject_class_name;
         $subject_id = $self->subject_id;
@@ -209,7 +193,6 @@ sub execute {
         name => $self->model_name,
         processing_profile_id => $self->processing_profile_id,
         subject_name => $self->subject_name,
-        subject_type => $self->subject_type,
         subject_id => $subject_id,
         subject_class_name => $subject_class_name,
         auto_assign_inst_data => $self->auto_assign_inst_data,
@@ -297,7 +280,7 @@ sub execute {
 }
 
 sub listed_params {
-    return qw/ id name data_directory subject_name subject_type processing_profile_id processing_profile_name /;
+    return qw/ id name data_directory subject_name processing_profile_id processing_profile_name /;
 }
 
 sub type_specific_parameters_for_create {
