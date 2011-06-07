@@ -67,8 +67,20 @@ class Genome::Model::Tools::Somatic::BamToCna {
     chromosome_list => {
         type => 'String',
         is_optional => 1,
-        default => '',
-        doc => 'List of chromosomes (comma separated) to use for calculation of median coverage (default = all).'
+        default => '1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,X',
+        doc => 'List of chromosomes (comma separated) to calculate copy number.'
+    },
+    chromosomes_to_plot => {
+        type => 'String',
+        is_optional => 1,
+        default => '1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,X',
+        doc => 'List of chromosomes (comma separated) to plot.'
+    },
+    chromosomes_to_use_for_median => {
+        type => 'String',
+        is_optional => 1,
+        default => '1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,X',
+        doc => 'List of chromosomes (comma separated) to use to calculate the median coverage value.'
     },
     tumor_downsample_percentage => {
         type => 'Number',
@@ -153,16 +165,16 @@ sub execute {
 
     my $plot_only = $self->plot_only;
     if($plot_only) {
-	if(-s $outfile) {
-	    #my $graph_output = "${outfile}.png";
-	    my @chrs = (1 .. 22,'X');
-	    print "plotting $outfile...\n";
-	    $self->plot_output($outfile,\@chrs);
-	    return 1;
-	}else {
-	    print "$outfile NOT found!  Aborting...\n";
-	    return 2;
-	}
+        if(-s $outfile) {
+            #my $graph_output = "${outfile}.png";
+            my @chrs = split /\s*,\s*/, $self->chromosomes_to_plot;
+            print "plotting $outfile...\n";
+            $self->plot_output($outfile,\@chrs);
+            return 1;
+        }else {
+            print "$outfile NOT found!  Aborting...\n";
+            return 2;
+        }
     }
 
 
@@ -200,19 +212,13 @@ sub execute {
         close(MAP);
     }
 
-    my @chrs;
-    unless($self->chromosome_list) {
-        @chrs=(1..22,'X');
-    }
-    else {
-        @chrs = split /,/, $self->chromosome_list;
-    }
+    my @chrs_for_median = split /\s*,\s*/, $self->chromosomes_to_use_for_median;
 
     #Estimate genome-wide tumor/normal 2X read count
     my %medians;
     for my $sample (@samples){
         my $median=Statistics::Descriptive::Full->new();
-        foreach my $chr(@chrs){
+        foreach my $chr (@chrs_for_median) {
             next unless (defined $data{$sample}{$chr});
             my $md = $self->get_median($data{$sample}{$chr});   #calculate the chromosomal median
             $median->add_data($md); #calculate the median of the chromosomal medians
@@ -220,10 +226,10 @@ sub execute {
         $medians{$sample} = $median->median();
     }
 
-    @chrs = (1..22,'X');
+    my @chrs = split /\s*,\s*/, $self->chromosome_list;
     my %num_CN_neutral_pos;
     my %NReads_CN_neutral;
-    foreach my $chr(@chrs){
+    foreach my $chr (@chrs){
         next unless (defined $data{tumor}{$chr} && defined $data{normal}{$chr});
         my $tumor_window_count = $#{$data{tumor}{$chr}};
         my $normal_window_count = $#{$data{normal}{$chr}};
@@ -249,7 +255,7 @@ sub execute {
     #subtract the normal from the tumor
     open(OUT, ">$outfile") || die "Unable to open output file $outfile: $!";
     my %depth2x;
-    foreach my $chr(@chrs,'allchr'){
+    foreach my $chr (@chrs,'allchr'){
         printf OUT "#Chr%s median read count",$chr;
         for my $sample (@samples){
             if($num_CN_neutral_pos{$chr} && $num_CN_neutral_pos{$chr} > 10 && !$self->normalize_by_genome){
@@ -277,7 +283,7 @@ sub execute {
 
 
     my @included_chrs = ();
-    for my $chr(1..22,'X'){
+    for my $chr (@chrs){
         next unless (defined $data{tumor}{$chr} && defined $data{normal}{$chr});
         my $cov_ratio=1;
         if($NReads_CN_neutral{$chr}{tumor} && $NReads_CN_neutral{$chr}{normal} && !$self->normalize_by_genome) {

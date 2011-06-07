@@ -32,7 +32,8 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL, ymin=NULL,
                          lowResMax=NULL, showNorm=FALSE, baseline=2,
                          gainThresh=2.5, lossThresh=1.5, annotationsTop=NULL,
                          annotationsBottom = NULL, plotTitle="",
-                         gainColor="red", lossColor="blue", ylabel=""){
+                         gainColor="red", lossColor="blue", ylabel="",
+                         xmin=NULL, xmax=NULL){
 
   ## add options for plotting just a smaller region - TODO
   xlim = NULL
@@ -346,9 +347,14 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL, ymin=NULL,
 
     ## if there wasn't an xlim value passed in, use the whole chromosome
     ## otherwise, find the sub-region
-    if(is.null(xlim)){
+    if(is.null(xmax)){
       xlim=c(1,entry$length)
     }else{
+      if(!(is.null(xmin))){
+        xlim=c(xmin,xmax)
+      } else {
+        xlim=c(1,xmax)
+      }  
       segs = segs[which(((segs$V3 >= xlim[1]) & (segs$V3 <= xlim[2])) | ((segs$V2 >= xlim[1]) & (segs$V2 <= xlim[2]))),]
     }
 
