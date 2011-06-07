@@ -17,7 +17,6 @@ class Genome::Model::Tools::Music::Bmr::CalcBmr {
     maf_file => { is => 'Text', doc => "List of mutations using TCGA MAF specifications v2.2" },
     show_skipped => { is => 'Boolean', doc => "Report each skipped mutation, not just how many", is_optional => 1, default => 0 },
     genes_to_ignore => { is => 'Text', doc => "Comma-delimited list of genes to ignore for background mutation rates", is_optional => 1 },
-    include_intronic => { is => 'Text', doc => "Don't skip mutations of the noncoding variety (silent, rna, intronic, etc)", is_optional => 1, default => 0 },
     ],
     doc => "Calculates background mutation rates using output files of calc-covg and a mutation list.",
 };
@@ -78,7 +77,6 @@ sub execute {
     my $maf_file = $self->maf_file;
     my $show_skipped = $self->show_skipped;
     my $genes_to_ignore = $self->genes_to_ignore;
-    my $include_intronic = $self->include_intronic;
 
     # Check on all the input data before starting work
     print STDERR "ROI file not found or is empty: $roi_file\n" unless( -s $roi_file );
@@ -217,40 +215,22 @@ sub execute {
         ( $cols[0], $cols[4], $cols[5], $cols[6], $cols[8], $cols[9], $cols[10], $cols[11], $cols[12] );
         $chr =~ s/chr//; # Remove chr prefixes from chrom names if any
 
-	if ($include_intronic) {
-	        # Skip Silent mutations and those in Introns, RNA, UTRs, Flanks, IGRs, or the ubiquitous Targeted_Region
-        	if( $mutation_class =~ m/^(Targeted_Region)$/ )
-        	{
-        	    $skip_cnts{"are classified as $mutation_class"}++;
-        	    print "Skipping $mutation_class mutation: $gene, chr$chr:$start-$stop\n" if( $show_skipped );
-        	    next;
-        	}
-	
-        	# If the mutation classification is odd, quit with error
-        	if( $mutation_class !~ m/^(Missense_Mutation|Nonsense_Mutation|Nonstop_Mutation|Splice_Site|Translation_Start_Site|Frame_Shift_Del|Frame_Shift_Ins|In_Frame_Del|In_Frame_Ins|Silent|Intron|RNA|3'Flank|3'UTR|5'Flank|5'UTR|IGR)$/ )
-        	{
-	            print STDERR "Unrecognized Variant_Classification $mutation_class in MAF file: $gene, chr$chr:$start-$stop\n";
-	            print STDERR "Please use TCGA MAF Specification v2.2.\n";
-	            return undef;
-	        }
-		}
-	else {
-	        # Skip Silent mutations and those in Introns, RNA, UTRs, Flanks, IGRs, or the ubiquitous Targeted_Region
-	        if( $mutation_class =~ m/^(Silent|Intron|RNA|3'Flank|3'UTR|5'Flank|5'UTR|IGR|Targeted_Region)$/ )
-	        {
-	            $skip_cnts{"are classified as $mutation_class"}++;
-	            print "Skipping $mutation_class mutation: $gene, chr$chr:$start-$stop\n" if( $show_skipped );
-	            next;
-	        }
-	
-	        # If the mutation classification is odd, quit with error
-	        if( $mutation_class !~ m/^(Missense_Mutation|Nonsense_Mutation|Nonstop_Mutation|Splice_Site|Translation_Start_Site|Frame_Shift_Del|Frame_Shift_Ins|In_Frame_Del|In_Frame_Ins)$/ )
-	        {
-	            print STDERR "Unrecognized Variant_Classification $mutation_class in MAF file: $gene, chr$chr:$start-$stop\n";
-	            print STDERR "Please use TCGA MAF Specification v2.2.\n";
-	            return undef;
-	        }
-	}
+        # Skip Silent mutations and those in Introns, RNA, UTRs, Flanks, IGRs, or the ubiquitous Targeted_Region
+        if( $mutation_class =~ m/^(Silent|Intron|RNA|3'Flank|3'UTR|5'Flank|5'UTR|IGR|Targeted_Region)$/ )
+        {
+            $skip_cnts{"are classified as $mutation_class"}++;
+            print "Skipping $mutation_class mutation: $gene, chr$chr:$start-$stop\n" if( $show_skipped );
+            next;
+        }
+
+        # If the mutation classification is odd, quit with error
+        if( $mutation_class !~ m/^(Missense_Mutation|Nonsense_Mutation|Nonstop_Mutation|Splice_Site|Translation_Start_Site|Frame_Shift_Del|Frame_Shift_Ins|In_Frame_Del|In_Frame_Ins)$/ )
+        {
+            print STDERR "Unrecognized Variant_Classification $mutation_class in MAF file: $gene, chr$chr:$start-$stop\n";
+            print STDERR "Please use TCGA MAF Specification v2.2.\n";
+            return undef;
+        }
+
         # Skip mutations that were consolidated into others (E.g. SNP consolidated into a TNP)
         if( $mutation_type =~ m/^Consolidated$/ )
         {
