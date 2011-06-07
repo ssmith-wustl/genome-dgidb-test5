@@ -134,6 +134,11 @@ class Genome::Model {
         
         # refactor to use the inputs entirely
         instrument_data_assignments => { is => 'Genome::Model::InstrumentDataAssignment', reverse_as => 'model' },
+        instrument_data_inputs => {
+            is => 'Genome::Model::Input',
+            reverse_as => 'model',
+            where => [ name => 'instrument_data' ],
+        },
         instrument_data => {
             is => 'Genome::InstrumentData',
             via => 'inputs',
@@ -561,6 +566,21 @@ sub get_all_possible_samples {
 }
 
 #< Instrument Data >#
+sub input_for_instrument_data_id {
+    my ($self, $id) = @_;
+    return unless $id;
+    for my $input ($self->instrument_data_inputs) {
+        return $input if $input->value_id eq $id;
+    }
+    return;
+}
+
+sub input_for_instrument_data {
+    my ($self, $instrument_data) = @_;
+    return unless $instrument_data;
+    return $self->input_for_instrument_data_id($instrument_data->id);
+}
+
 sub unbuilt_instrument_data {
     my $self = shift;
     my %model_data;
