@@ -39,7 +39,8 @@ sub execute {
         return;
     }
 
-    UR::Context->add_observer(
+    my $context = UR::Context->current;
+    $context->add_observer(
         aspect => 'commit',
         callback => sub{ Genome::Sys->unlock_resource(resource_lock => $lock) },
     );
