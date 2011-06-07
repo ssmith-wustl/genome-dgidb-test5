@@ -103,14 +103,22 @@ sub execute {
                 die $self->error_message("Failed to create build for model (".$model->name.", ID: ".$model->id.").");
             }
 
-            my $build_started = $build->start(%start_params);
-            unless ($build_started) {
-                die $self->error_message("Failed to start build (" . $build->__display_name__ . "): $@.");
+            eval {$build->start(%start_params);};
+            if ($@) {
+                push @errors, $model->__display_name__ . ": " . $@;
+                $self->error_message("Failed to start build (" . $build->__display_name__ . "): $@.");
+            } else {
+                $self->status_message("Successfully started build (" . $build->__display_name__ . ").");
             }
             return $build;
         };
-        if ($build and $transaction->commit) {
-            $self->status_message("Successfully started build (" . $build->__display_name__ . ").");
+        if ($build) {
+            if (!$transaction->commit) {
+                push @errors, $model->__display_name__ . ": " . $@;
+                $self->error_message("Failed to commit build (" . $build->__display_name__ . ").");
+                $transaction->rollback;
+                next;
+            }
             $builds_started++;
 
             # Record newly created build so other tools can access them.

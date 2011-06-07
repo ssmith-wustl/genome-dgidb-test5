@@ -27,7 +27,7 @@ my $tumor_bam_file  = $test_data_dir . '/flank_tumor_sorted.bam';
 my $normal_bam_file  = $test_data_dir . '/flank_normal_sorted.bam';
 my $input_directory_a = $test_data_dir."/pindel-0.4-";
 my $input_directory_b = $test_data_dir."/gatk-somatic-indel-v1-";
-my $expected_output = $test_data_dir."/expected";
+my $expected_output = $test_data_dir."/expected.v2";
 
 my $test_output_dir = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Combine-IntersectIndel-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 

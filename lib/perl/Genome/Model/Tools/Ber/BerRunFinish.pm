@@ -26,6 +26,7 @@ use MIME::Lite;
 use File::Slurp;    # to replace IO::File access...
 use File::Copy;
 use File::Basename;
+use File::stat;
 
 use Cwd;
 
@@ -236,39 +237,57 @@ sub execute
         }
         closedir(DIR);
         my ( $readlock_fh, $session, $machine, $gsc, $wustl, $edu, $process );
+
+	    my $current_time = time;
+		my $index = 1;
         if (@readlock)
         {
-            foreach my $lockfile (@readlock)
-            {
-                ( $session, $machine, $gsc, $wustl, $edu, $process )
-                    = split /\./, $lockfile;
-                $machine = join( '.', $machine, $gsc, $wustl, $edu );
-                $readlock_fh = IO::File->new();
-                $readlock_fh->open("< $lockfile")
-                    or die
-                    "Can't open '$readlock_fh', readlock_fh for reading ...from BerRunFinish.pm: $OS_ERROR\n\n";
-            }
-            my %readlock = ();
-            while (<$readlock_fh>)
-            {
-                chomp $ARG;
-                if (   $ARG !~ /^[\#\s\t\n]/
-                    && $ARG =~ /^([^\:]+)\:([^\n\#]*)/ )
-                {
-                    my $key   = $1;
-                    my $value = $2;
+			foreach my $lockfile (@readlock)
+			{
+				my $stat = stat($lockfile);
+				#my $diff = ($current_time - $stat->mtime) / 3600;
+				my $diff = ($current_time - $stat->mtime) / 60;
 
-                    #remove preceding and trailing whitespace
-                    $value =~ s/^[\s\t]+|[\s\t]+$//g;
+				#if ($diff > 2) { ## 2 hours
+				if ($diff > 15) { ## 15 minutes
+					$self->status_message("Removing lockfile: $lockfile");
+					unlink $lockfile or die "Can't delete lock file: $lockfile...- $OS_ERROR\n\n";
+				} else {
+					( $session, $machine, $gsc, $wustl, $edu, $process )
+						= split /\./, $lockfile;
+					$machine = join( '.', $machine, $gsc, $wustl, $edu );
+					$readlock_fh = IO::File->new();
+					$readlock_fh->open("< $lockfile")
+						or die
+						"Can't open '$readlock_fh', readlock_fh for reading ...from BerRunFinish.pm: $OS_ERROR\n\n";
+				}
+			}
 
-                    #set value
-                    $readlock{$key} = defined($value) ? $value : '';
-                }
-            }
-            print
-                qq{\n\nACeDB Session number: $session is currently readlocked by: $readlock{User} on $readlock{Created} using machine:$machine (process ID is: $process)\n};
-            sleep(300);
-            next;
+			if (defined ($readlock_fh)) {
+
+					my %readlock = ();
+
+					while (<$readlock_fh>)
+					{
+						chomp $ARG;
+						if (   $ARG !~ /^[\#\s\t\n]/
+								&& $ARG =~ /^([^\:]+)\:([^\n\#]*)/ )
+						{
+							my $key   = $1;
+							my $value = $2;
+
+							#remove preceding and trailing whitespace
+							$value =~ s/^[\s\t]+|[\s\t]+$//g;
+
+							#set value
+							$readlock{$key} = defined($value) ? $value : '';
+						}
+					}
+					print
+						qq{\n\nACeDB Session number: $session is currently readlocked by: $readlock{User} on $readlock{Created} using machine:$machine (process ID is: $process)\n};
+					sleep(300);
+					next;
+			}
         }
         else
         {

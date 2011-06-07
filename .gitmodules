@@ -52,3 +52,6 @@
 [submodule "bassovac"]
 	path = bassovac
 	url = ssh://git/srv/git/bassovac.git
+[submodule "graphite"]
+    path = graphite
+    url = https://github.com/genome/graphite.git

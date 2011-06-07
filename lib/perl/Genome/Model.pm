@@ -13,7 +13,7 @@ class Genome::Model {
     is_abstract => 1,
     subclassify_by => 'subclass_name',
     id_by => [
-        genome_model_id => { is => 'Number', len => 11 },
+        genome_model_id => { is => 'Number', },
     ],
     has => [
         name => { is => 'Text' },
@@ -28,12 +28,20 @@ class Genome::Model {
                 return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($pp->type_name);
             },
         },
+        subject_id => { is => 'Text' },
+        subject_class_name => { is => 'Text' }, # FIXME This isn't really necessary anymore, should be refactored away
         subject => { 
-            calculate_from => [ 'subject_id', 'subject_class_name' ],
-            calculate => q|return unless $subject_class_name; return $subject_class_name->get($subject_id); |
+            is => 'Genome::Subject',
+            id_by => 'subject_id',
         },
-        subject_class_name => { is => 'Text' },
-        subject_id => { is => 'Number' },
+        subject_name => {
+            via => 'subject',
+            to => 'name',
+        },
+        subject_type => {
+            via => 'subject',
+            to => 'subject_type',
+        },
         processing_profile => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
         processing_profile_name => { via => 'processing_profile', to => 'name' },
         type_name => { via => 'processing_profile' },
@@ -133,35 +141,16 @@ class Genome::Model {
         reports_directory       => { via => 'last_succeeded_build' },
         
         # these go on refalign models
-        region_of_interest_set_value => { 
-            is_many => 1, is_mutable => 1, is => 'UR::Value', via => 'inputs', to => 'value', where => [ name => 'region_of_interest_set_name'] 
+        region_of_interest_set_name => { 
+            is => 'Text',
+            is_many => 1, 
+            is_mutable => 1,
+            via => 'inputs', 
+            to => 'value_id',
+            where => [ name => 'region_of_interest_set_name', value_class_name => 'UR::Value' ], 
         },
-        region_of_interest_set_name => { via => 'region_of_interest_set_value', to => 'id', },
     ],
     has_optional_calculated => [
-        # TODO Once all models have Genome::Subject as their subject, this can be turned into a simple indirect property
-        subject_name => { 
-            is => 'Text', 
-            calculate_from => 'subject',
-            calculate => q|
-                unless ($subject) {
-                    return;
-                }
-                if ($subject->class eq 'GSC::Equipment::Solexa::Run') {
-                    return $subject->flow_cell_id;
-                } elsif ($subject->class eq 'Genome::Sample') {
-                    return $subject->name or $subject->common_name;
-                } elsif ($subject->class eq 'Genome::Individual') {
-                    return $subject->name or $subject->common_name;
-                } elsif ($subject->isa('GSC::DNA')) {
-                    return $subject->dna_name;
-                } elsif ($subject->can('name')) {
-                    return $subject->name;
-                } else {
-                    return;
-                }
-            |,
-        },
         individual_common_name => {
             is => 'Text',
             calculate_from => 'subject',
@@ -181,31 +170,6 @@ class Genome::Model {
                 my @s = $self->get_all_possible_samples();
                 return sort map {$_->name()} @s;
             },
-        },
-        # TODO Once all model subjects are subclasses of Genome::Subject, this can be turned into a simple indirect property
-        subject_type => { 
-            is => 'Text', 
-            valid_values => ["species_name","sample_group","flow_cell_id","genomic_dna","library_name","sample_name","dna_resource_item_name"], 
-            calculate_from => 'subject_class_name',
-            calculate => q|
-                if($subject_class_name->class and $subject_class_name->isa('GSC::DNA')) {
-                    $subject_class_name = 'GSC::DNA'; #Avoid needing to list entire DNA heirarchy
-                }
-                #This could potentially live someplace else like the previous giant hash
-                my %types = (
-                    'Genome::Sample' => 'sample_name',
-                    'GSC::DNA' => 'dna_resource_item_name',
-                    'GSC::DNAResourceItem' => 'dna_resource_item_name',
-                    'GSC::Equipment::Solexa::Run' => 'flow_cell_id',
-                    'Genome::ModelGroup' => 'sample_group',
-                    'Genome::PopulationGroup' => 'sample_group',
-                    'Genome::Individual' => 'sample_group',
-                    'Genome::Taxon' => 'species_name',
-                    'Genome::Library' => 'library_name',
-                    'Genome::Sample::Genomic' => 'genomic_dna',
-                );
-                return $types{$subject_class_name};
-            |, 
         },
     ],
     has_deprecated_optional => [
@@ -539,19 +503,18 @@ sub _resolve_subject {
 # TODO Can be removed when all subjects are Genome::Subject
 sub _verify_subject {
     my $self = shift;
-
-    my $subject = $self->subject;
-
-    unless($subject) {
-        my $null = '<NULL>';
-        $self->error_message('Could not verify subject given ' . join(', ',
-            'subject_id: ' . ($self->subject_id || $null),
-            'subject_class_name: ' . ($self->subject_class_name || $null),
-        ));
-        return;
+    unless ($self->subject) {
+        $self->error_message("Could not retrieve subject object for model " . $self->__display_name__ 
+            . " with ID " . $self->subject_id . " and class " . $self->subject_class_name);
+        return 0;
     }
 
-    return $subject;
+    unless ($self->subject->isa('Genome::Subject')) {
+        $self->error_message("Subject of model  " . $self->__display_name__ . 
+            " is not a Genome::Subject, it's a " . $self->subject->class);
+        return 0;
+    }
+    return 1;
 }
 
 sub get_all_possible_samples {
