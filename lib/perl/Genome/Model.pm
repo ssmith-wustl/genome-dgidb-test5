@@ -581,6 +581,14 @@ sub input_for_instrument_data {
     return $self->input_for_instrument_data_id($instrument_data->id);
 }
 
+sub has_instrument_data {
+    my ($self, $instrument_data) = @_;
+    if ($self->input_for_instrument_data($instrument_data)) {
+        return 1;
+    }
+    return 0;
+}
+
 sub unbuilt_instrument_data {
     my $self = shift;
     my %model_data;
