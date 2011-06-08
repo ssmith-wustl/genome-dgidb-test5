@@ -583,10 +583,14 @@ sub input_for_instrument_data {
 
 sub has_instrument_data {
     my ($self, $instrument_data) = @_;
-    if ($self->input_for_instrument_data($instrument_data)) {
-        return 1;
+    my $input;
+    if (ref $instrument_data) {
+        $input = $self->input_for_instrument_data($instrument_data);
     }
-    return 0;
+    else {
+        $input = $self->input_for_instrument_data_id($instrument_data);
+    }
+    return $input;
 }
 
 sub unbuilt_instrument_data {
