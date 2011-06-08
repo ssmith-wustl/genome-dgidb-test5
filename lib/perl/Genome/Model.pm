@@ -893,24 +893,22 @@ sub notify_input_build_success {
     return 1;
 }
 
-sub request_build {
-    my ($self, $reason) = @_;
-    unless ($self->build_requested) {
-        $self->build_requested(1);
+sub build_requested {
+    my ($self, $value, $reason) = @_;
+    # No additional action needed if just retrieving current 
+    # value of column or if setting flag to false
+    return $self->_build_requested($value) unless $value;
 
-        my $event = Genome::Model::Event->create(
-            event_type => 'build_requested',
-            model_id => $self->id,
-        );
-        if ($event) {
-            $event->status_detail($reason);
-        }
-        else {
-            $self->warning_message("Could not create build_requested event!");
-        }
+    my $event = Genome::Model::Event->create(
+        event_type => 'build_requested',
+        model_id => $self->id,
+    );
+    if ($event and $reason) {
+        $event->status_detail($reason);
     }
 
-    return 1;
+    # Call UR mutator to set value and return
+    return $self->_build_requested($value);
 }
 
 sub copy {
