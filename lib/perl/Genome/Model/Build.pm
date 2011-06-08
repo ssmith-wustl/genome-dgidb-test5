@@ -1795,5 +1795,64 @@ sub _uniq {
     return @unique;
 }
 
+sub input_differences_from_model {
+    my $self = shift;
+
+    my @build_inputs = $self->inputs;
+    my @model_inputs = $self->model->inputs;
+
+    #build a list of inputs to check against
+    my %build_inputs;
+    for my $build_input (@build_inputs) {
+        $build_inputs{$build_input->name}{$build_input->value_class_name}{$build_input->value_id} = $build_input;
+    }
+
+    my @model_inputs_not_found;
+    for my $model_input (@model_inputs) {
+        my $build_input_found = delete($build_inputs{$model_input->name}{$model_input->value_class_name}{$model_input->value_id});
+
+        unless ($build_input_found) {
+            push @model_inputs_not_found, $model_input;
+        }
+    }
+
+    my @build_inputs_not_found;
+    for my $name (keys %build_inputs) {
+        for my $value_class_name (keys %{ $build_inputs{$name} }) {
+            for my $build_input_not_found (values %{ $build_inputs{$name}{$value_class_name} }) {
+                my $value = $build_input_not_found->value;
+                if($value->isa('Genome::Model::Build') and $value->model and my $model_input = grep($_->value->model eq $value->model, @model_inputs_not_found)) {
+                    @model_inputs_not_found = grep($_ != $model_input, @model_inputs_not_found);
+                } else {
+                    push @build_inputs_not_found, $build_input_not_found;
+                }
+            }
+        }
+    } 
+
+    return (\@model_inputs_not_found, \@build_inputs_not_found);
+}
+
+sub build_input_differences_from_model {
+    return @{ ($_[0]->input_differences_from_model)[1] };
+}
+
+sub model_input_differences_from_model {
+    return @{ ($_[0]->input_differences_from_model)[0] };
+}
+
+#a cheap convenience method for views
+sub delta_model_input_differences_from_model {
+    my $self = shift;
+
+    my ($model_inputs, $build_inputs) = $self->input_differences_from_model;
+    my @model_inputs_to_include;
+    for my $model_input (@$model_inputs) {
+        unless( grep{ $_->name eq $model_input->name } @$build_inputs ) {
+            push @model_inputs_to_include, $model_input;
+        }
+    }
+    return @model_inputs_to_include;
+}
 
 1;
