@@ -893,6 +893,26 @@ sub notify_input_build_success {
     return 1;
 }
 
+sub request_build {
+    my ($self, $reason) = @_;
+    unless ($self->build_requested) {
+        $self->build_requested(1);
+
+        my $event = Genome::Model::Event->create(
+            event_type => 'build_requested',
+            model_id => $self->id,
+        );
+        if ($event) {
+            $event->status_detail($reason);
+        }
+        else {
+            $self->warning_message("Could not create build_requested event!");
+        }
+    }
+
+    return 1;
+}
+
 sub copy {
     my ($self, %overrides) = @_;
 
