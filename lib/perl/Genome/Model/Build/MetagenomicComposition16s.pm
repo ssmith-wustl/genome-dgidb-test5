@@ -125,7 +125,7 @@ sub create {
         $self->delete;
         return 1;
     }
-    
+
     unless ( $self->model->type_name eq 'metagenomic composition 16s' ) {
         $self->error_message( 
             sprintf(
@@ -849,37 +849,67 @@ sub fastqs_from_solexa {
 
 
 #< Diff >#
-sub files_ignored_by_diff {
-    my $self = shift;
-    if ( $self->sequencing_platform eq 'sanger') {
-        return qw( build.xml );
-    }
-    return qw(
-        build.xml
-        reports/Build_Initialized/report.xml
-        reports/Build_Succeeded/report.xml
-        reports/Composition/report.xml
-        reports/Summary/report.html
-        reports/Summary/report.xml
-        classification/.*rdp2-1
-        reports/Composition/.*counts.tsv
-    );
+sub dirs_ignored_by_diff {
+    return (qw{
+        logs/
+        reports/
+        edit_dir/
+        chromat_dir/
+        classification/
+    });
 }
 
-sub dirs_ignored_by_diff {
-    my $self = shift;
-    if ( $self->sequencing_platform eq 'sanger' ) {
-        return qw(
-            logs/
-            reports/
-            edit_dir/
-            chromat_dir/
-            classification/
-        );
-    }
-    return qw(
-        logs/
+sub files_ignored_by_diff {
+    return (qw/ build.xml /);
+}
+
+sub special_suffixes {
+    return (qw/ gz rdp2-1 rdp2-2 /);
+}
+
+sub diff_rdp2_1 { return diff_rdp(@_); }
+sub diff_rdp2_2 { return diff_rdp(@_); }
+sub diff_rdp {
+    my ($self, $file1, $file2) = @_;
+
+    my $reader1 = Genome::Model::Tools::MetagenomicClassifier::ClassificationReader->create(
+        file => $file1,
     );
+    return if not $reader1;
+
+    my $reader2 = Genome::Model::Tools::MetagenomicClassifier::ClassificationReader->create(
+        file => $file2,
+    );
+    return if not $reader2;
+
+    my ($classification1_cnt, $classification2_cnt) = (qw/ 0 0 /);
+    while ( my $classification1 = $reader1->read ) {
+        $classification1_cnt++;
+        my $classification2 = $reader2->read;
+        last if not $classification2;
+        $classification2_cnt++;
+        if ( $classification1->{id} ne $classification2->{id} ) {
+            $self->status_message("RDP differs at id: ".$classification1->{id}.' <=> '.$classification2->{id});
+            return;
+        }
+        if ( $classification1->{complemented} ne $classification2->{complemented} ) {
+            $self->status_message("RDP differs at complemented: ".$classification1->{complemented}.' <=> '.$classification2->{complemented});
+            return;
+        }
+        for my $rank (qw/ domain phylum order class family genus /) {
+            if ( $classification1->{$rank}->{id} ne $classification2->{$rank}->{id} ) {
+                $self->status_message("RDP differs at $rank: ".$classification1->{$rank}->{id}.' <=> '.$classification2->{$rank}->{id});
+                return;
+            }
+        }
+    }
+
+    if ( $classification1_cnt != $classification2_cnt ) {
+        $self->error_message('Classification counts differ: '.$classification1_cnt.' <=> '.$classification2_cnt);
+        return;
+    }
+
+    return 1;
 }
 
 1;

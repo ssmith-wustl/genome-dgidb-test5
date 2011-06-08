@@ -22,7 +22,7 @@ class Genome::Model::Event {
         event_type   => { is => 'VARCHAR2', len => 255 },
         event_status => { is => 'VARCHAR2', len => 32, is_optional => 1 },
         user_name    => { is => 'VARCHAR2', len => 64, is_optional => 1 },
-        build_id     => { is => 'NUMBER', len => 10, implied_by => 'build', is_optional => 1 },
+        build_id     => { is => 'NUMBER', implied_by => 'build', is_optional => 1 },
         run_id       => { is => 'NUMBER', len => 11, is_optional => 1 },
     ],
     has_optional => [

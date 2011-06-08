@@ -20,7 +20,7 @@ class Genome::Model::Build {
     is_abstract => 1,
     subclassify_by => 'subclass_name',
     id_by => [
-        build_id => { is => 'NUMBER', len => 10 },
+        build_id => { is => 'NUMBER', },
     ],
     has => [
         subclass_name           => { is => 'VARCHAR2', len => 255, is_mutable => 0, column_name => 'SUBCLASS_NAME',
@@ -36,7 +36,7 @@ class Genome::Model::Build {
                                    },
         data_directory          => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
         model                   => { is => 'Genome::Model', id_by => 'model_id' },
-        model_id                => { is => 'NUMBER', len => 10, implied_by => 'model', constraint_name => 'GMB_GMM_FK' },
+        model_id                => { is => 'NUMBER', implied_by => 'model', constraint_name => 'GMB_GMM_FK' },
         model_name              => { via => 'model', to => 'name' },
         type_name               => { via => 'model' },
         subject                 => { via => 'model' },
@@ -1693,6 +1693,7 @@ sub compare_output {
         my (undef, undef, $other_suffix) = fileparse($other_abs_path, $self->special_suffixes);
         if ($suffix ne '' and $other_suffix ne '' and $suffix eq $other_suffix) {
             my $method = "diff_$suffix";
+            $method =~ s/\-/\_/; # replace dashes, can't declare a method w/ dashes
             $diff_result = $self->$method($abs_path, $other_abs_path);
         }
         else {

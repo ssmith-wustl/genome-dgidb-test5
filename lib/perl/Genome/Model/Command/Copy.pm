@@ -44,9 +44,9 @@ sub sub_command_sort_position { 2 }
 
 sub help_synopsis {
     return <<"EOS"
- genome model copy --from 123456789 --to "copy_of_my_model" --model-overrides processing_profile_name="use this processing profile instead" --model-overrides auto_build_alignments=0
+ genome model copy --from 123456789 --to "copy_of_my_model" --overrides processing_profile="use this processing profile instead" --overrides auto_build_alignments=0
     
- genome model copy 123456789 copy_of_my_model processing_profile_name="use this processing profile instead" auto_build_alignments=0
+ genome model copy 123456789 copy_of_my_model processing_profile="use this processing profile instead" auto_build_alignments=0
 EOS
 }
 
@@ -63,7 +63,7 @@ For example, use
    processing_profile="example profile" # id or name
 
 to have the resulting model be defined using <example profile> instead of the processing profile
-assigned to the source model.  If named (rather than positional) arguments are used, "--model-overrides" must precede each key-value pair.
+assigned to the source model.  If named (rather than positional) arguments are used, "--overrides" must precede each key-value pair.
 
 The copy command only copies the definitions.  It does not copy any underlying model data.
 
@@ -92,11 +92,20 @@ sub execute {
     for my $override ( $self->overrides ) {
         my ($key, $value_str) = split('=', $override, 2);
         my @values = split(',', $value_str);
-        $overrides{$key} = \@values;
+        if ($model->__meta__->property($key)->is_many) {
+            $overrides{$key} = \@values;
+        } else {
+            if (scalar(@values) > 1) {
+                $self->error_message('Multiple values passed for single property: '.$key);
+                return;
+            } else {
+                $overrides{$key} = $values[0];
+            }
+        }
     }
 
     if ( $overrides{processing_profile} ) {
-        my $override_pp = $self->_get_override_processing_profile($model->processing_profile->class, @{$overrides{processing_profile}});
+        my $override_pp = $self->_get_override_processing_profile($model->processing_profile->class, $overrides{processing_profile});
         return if not $override_pp;
         $overrides{processing_profile} = $override_pp;
     }

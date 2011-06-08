@@ -136,6 +136,11 @@ ok($build->classify_amplicons, 'classify amplicons');
 is($build->amplicons_classified, 432, 'amplicons classified');
 is($build->amplicons_classification_error, 168, 'amplicons classified error');
 is($build->amplicons_classified_success, '0.72', 'amplicons classified success');
+my $diff_ok = Genome::Model::Build::MetagenomicComposition16s->diff_rdp(
+    $example_build->classification_file_for_set_name(''),
+    $build->classification_file_for_set_name(''),
+);
+ok($diff_ok, 'diff rdp files');
 
 #< ORIENT >#
 ok($build->orient_amplicons, 'orient amplicons');
