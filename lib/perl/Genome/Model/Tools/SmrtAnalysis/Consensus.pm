@@ -70,7 +70,7 @@ class Genome::Model::Tools::SmrtAnalysis::Consensus {
         },
         nproc => {
             is => 'Number',
-            default_value => 4,
+            default_value => 1,
         },
         scope => {
             is => 'Text',
