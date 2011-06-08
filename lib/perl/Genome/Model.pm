@@ -1114,27 +1114,7 @@ sub build_needed {
         }
     }
 
-    #build a list of inputs to check against
-    my %build_inputs;
-    for my $build_input (@build_inputs) {
-        $build_inputs{$build_input->name}{$build_input->value_class_name}{$build_input->value_id} = $build_input;
-    }
-
-    my @inputs_not_found;
-    for my $input (@inputs) {
-        my $build_input_found = delete($build_inputs{$input->name}{$input->value_class_name}{$input->value_id});
-
-        unless ($build_input_found) {
-            push @inputs_not_found, $input;
-        }
-    }
-
-    my @build_inputs_not_found;
-    for my $name (keys %build_inputs) {
-        for my $value_class_name (keys %{ $build_inputs{$name} }) {
-            push @build_inputs_not_found, values %{ $build_inputs{$name}{$value_class_name} };
-        }
-    }
+    my (@inputs_not_found, @build_inputs_not_found) = $build->input_differences_from_model;
 
     if(scalar(@inputs_not_found) or scalar(@build_inputs_not_found)) {
         #if the differences are not okay, then we need to rebuild)

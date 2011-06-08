@@ -43,10 +43,18 @@ class Genome::Model::View::Status::Xml {
                     aspects => [
                         'id', 'data_directory', 'status', 'date_scheduled', 'date_completed', 'model_id',
                         {
-                            name => 'inputs',
+                            name => 'delta_model_input_differences_from_model',
                             aspects => ['value_id', 'name', 'value', 'value_class_name'],
                             perspective => 'default',
                             toolkit => 'xml',
+                            subject_class_name => 'Genome::Model::Input',
+                        },
+                        {
+                            name => 'build_input_differences_from_model',
+                            aspects => ['value_id', 'name', 'value', 'value_class_name'],
+                            perspective => 'default',
+                            toolkit => 'xml',
+                            subject_class_name => 'Genome::Model::Build::Input',
                         },
                     ],
                     perspective => 'default',
