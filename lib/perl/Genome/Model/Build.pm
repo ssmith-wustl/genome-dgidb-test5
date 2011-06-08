@@ -1693,6 +1693,7 @@ sub compare_output {
         my (undef, undef, $other_suffix) = fileparse($other_abs_path, $self->special_suffixes);
         if ($suffix ne '' and $other_suffix ne '' and $suffix eq $other_suffix) {
             my $method = "diff_$suffix";
+            $method =~ s/\-/\_/; # replace dashes, can't declare a method w/ dashes
             $diff_result = $self->$method($abs_path, $other_abs_path);
         }
         else {

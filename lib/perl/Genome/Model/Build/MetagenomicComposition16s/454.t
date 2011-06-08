@@ -174,6 +174,11 @@ for my $amplicon_set ( @amplicon_sets ) {
         $classification_dir.'/'.$file_base.'.'.$set_name.'.'.$build->classifier,
         "classification file name for set name: $set_name"
     );
+    my $diff_ok = Genome::Model::Build::MetagenomicComposition16s->diff_rdp(
+        $example_build->classification_file_for_set_name($set_name),
+        $classification_file,
+    );
+    ok($diff_ok, 'diff rdp files');
     # amplicons
     my @amplicon_names;
     while ( my $amplicon = $amplicon_set->next_amplicon ) {

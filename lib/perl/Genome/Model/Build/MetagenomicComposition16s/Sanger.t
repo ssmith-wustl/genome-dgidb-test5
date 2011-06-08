@@ -220,6 +220,11 @@ while ( my $amplicon = $amplicon_set->next_amplicon ) {
 is($build->amplicons_classified, $classified_cnt, 'amplicons classified correct');
 is($build->amplicons_classified_success, '1.00', 'amplicons classified success');
 is($build->amplicons_classification_error, 0, 'amplicons classified error');
+my $diff_ok = Genome::Model::Build::MetagenomicComposition16s->diff_rdp(
+    $example_build->classification_file_for_set_name(''),
+    $build->classification_file_for_set_name(''),
+);
+ok($diff_ok, 'diff rdp files');
 
 #< ORIENT ># rm files, orient, check
 ok($build->orient_amplicons, 'orient amplicons');
