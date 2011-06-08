@@ -70,10 +70,18 @@ sub execute {
 
     my $model_sorter;
     if ($self->newest_first) {
-        $model_sorter = sub { $b->id <=> $a->id };
+        $model_sorter = sub { 
+            defined $b->latest_build_request_note &&
+            defined $a->latest_build_request_note &&
+            $b->time_of_last_build_request cmp $a->time_of_last_build_request
+        };
     }
     else {
-        $model_sorter = sub { $a->id <=> $b->id };
+        $model_sorter = sub { 
+            defined $a->latest_build_request_note &&
+            defined $b->latest_build_request_note &&
+            $a->time_of_last_build_request cmp $b->time_of_last_build_request
+        };
     }
 
     my @models = Genome::Model->get(
