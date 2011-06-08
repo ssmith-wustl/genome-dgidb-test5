@@ -376,8 +376,8 @@ sub compare_snps_file {
 
 sub get_alignments {
     my $self = shift;
-    return map { $self->model->processing_profile->results_for_instrument_data_assignment($_) }
-        $self->instrument_data_assignments;
+    return map { $self->model->processing_profile->results_for_instrument_data_inputs($_) }
+        $self->instrument_data_inputs;
 }
 
 sub get_alignment_bams {
@@ -414,11 +414,11 @@ sub calculate_estimated_kb_usage {
 
 sub calculate_input_base_counts_after_trimq2 {
     my $self = shift;
-    my @idas = $self->instrument_data_assignments;
+    my @instrument_data = $self->instrument_data;
     my ($total_ct, $total_trim_ct) = (0, 0);
     
-    for my $ida (@idas) {
-        for my $res ($ida->results) {
+    for my $data (@instrument_data) {
+        for my $res ($self->alignment_results_for_instrument_data($data)) {
             my ($ct, $trim_ct) = $res->calculate_base_counts_after_trimq2;
             return unless $ct and $trim_ct;
             $total_ct += $ct;
@@ -690,9 +690,8 @@ sub _fetch_merged_alignment_result {
     my $self = shift;
     my $mode = shift;
 
-    my @idas = $self->instrument_data_assignments;
-
-    my ($params) = $self->processing_profile->params_for_merged_alignment($self, @idas);
+    my @instrument_data_inputs = $self->instrument_data_inputs;
+    my ($params) = $self->processing_profile->params_for_merged_alignment($self, @instrument_data_inputs);
     my $alignment = Genome::InstrumentData::AlignmentResult::Merged->$mode(
         %$params,
     );
