@@ -1137,8 +1137,10 @@ sub request_builds {
     $self->status_message("Requesting builds...");
 
     for my $model (values %models_to_build) {
-        #Will be picked up by next run of `genome model services build-queued-models`
-        $model->build_requested(1);
+        unless(defined $model->build_requested) {
+            #Will be picked up by next run of `genome model services build-queued-models`
+            $model->build_requested(1);
+        }
     }
 
     return 1;
