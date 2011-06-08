@@ -458,6 +458,52 @@ sub find_or_create_somatic_variation_models{
     }
 }
 
+
+sub root_build37_ref_seq {
+    my $self = shift;
+    my $root_build37_ref_seq = Genome::Model::Build::ImportedReferenceSequence->get(name => 'GRCh37-lite-build37') || die;
+    return $root_build37_ref_seq;
+}
+
+
+sub tcga_roi_for_model {
+    my $self = shift;
+    my $model = shift;
+
+    my $reference_sequence_build = $model->reference_sequence_build;
+
+    my $root_build37_ref_seq = $self->root_build37_ref_seq;
+    my $tcga_cds_roi_list;
+    if($reference_sequence_build and $reference_sequence_build->is_compatible_with($root_build37_ref_seq)) {
+        $tcga_cds_roi_list = 'agilent_sureselect_exome_version_2_broad_refseq_cds_only_hs37';
+    }
+    else {
+        $tcga_cds_roi_list = 'agilent sureselect exome version 2 broad refseq cds only';
+    }
+
+    return $tcga_cds_roi_list;
+}
+
+
+sub needs_tcga_reference_alignment {
+    my $self = shift;
+    my $model = shift;
+    my %model_params = @_;
+
+    return unless $self->is_tcga_reference_alignment($model);
+
+    my %tcga_model_params = %model_params;
+    delete $tcga_model_params{name};
+    delete $tcga_model_params{region_of_interest_set_name};
+
+    my $tcga_cds_roi_list = $self->tcga_roi_for_model($model);
+
+    my @existing_tcga_models = Genome::Model::ReferenceAlignment->get(%tcga_model_params, region_of_interest_set_name => $tcga_cds_roi_list);
+
+    return not @existing_tcga_models;
+}
+
+
 sub is_tcga_reference_alignment {
     my $self = shift;
     my $model = shift;
@@ -802,7 +848,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             'Freimer Pool of original (4k001L) plus gapfill (4k0026)' => 'Freimer-Boehnke capture-targets.set1_build37',
         );
 
-        my $root_build37_ref_seq = Genome::Model::Build::ImportedReferenceSequence->get(name => 'GRCh37-lite-build37') || die;
+        my $root_build37_ref_seq = $self->root_build37_ref_seq;
 
         if($reference_sequence_build and $reference_sequence_build->is_compatible_with($root_build37_ref_seq) 
                 and exists $build36_to_37_rois{$capture_target}) {
@@ -850,7 +896,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         }
 
         #In addition, make a third model for TCGA against another standard ROI
-        if($self->is_tcga_reference_alignment($regular_model)){ 
+        if($self->needs_tcga_reference_alignment($regular_model, %model_params)){ 
             my $tcga_cds_model = Genome::Model->create(%model_params);
             unless ( $tcga_cds_model ) {
                 $self->error_message('Failed to create tcga-cds model: ' . Dumper(\%model_params));
@@ -871,12 +917,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             }
             $tcga_cds_model->name($tcga_cds_name);
 
-            my $tcga_cds_roi_list;
-            if($reference_sequence_build and $reference_sequence_build->is_compatible_with($root_build37_ref_seq)) {
-                $tcga_cds_roi_list = 'agilent_sureselect_exome_version_2_broad_refseq_cds_only_hs37';
-            } else {
-                $tcga_cds_roi_list = 'agilent sureselect exome version 2 broad refseq cds only';
-            }
+            my $tcga_cds_roi_list = $self->tcga_roi_for_model($tcga_cds_model);
 
             unless($self->assign_capture_inputs($tcga_cds_model, $capture_target, $tcga_cds_roi_list)) {
                 for my $model (@new_models) { $model->delete; }
