@@ -901,20 +901,18 @@ sub notify_input_build_success {
 
 sub build_requested {
     my ($self, $value, $reason) = @_;
-    # No additional action needed if just retrieving current 
-    # value of column or if setting flag to false
-    return $self->_build_requested($value) unless $value;
-
-    my $event = Genome::Model::Event->create(
-        event_type => 'build_requested',
-        model_id => $self->id,
-    );
-    if ($event and $reason) {
-        $event->status_detail($reason);
+    if ($value) {
+        $self->add_note(
+            header_text => 'build_requested',
+            body_text => defined $reason ? $reason : 'no reason given',
+        );
     }
 
     # Call UR mutator to set value and return
-    return $self->_build_requested($value);
+    if (defined $value) {
+        return $self->__build_requested($value);
+    }
+    return $self->__build_requested;
 }
 
 sub copy {
