@@ -48,59 +48,55 @@ sub execute {
     my $model = Genome::Model->get($model_id);
     die "Model $model_id is not defined. Quitting." unless defined($model);
      
-    my @idas = $model->instrument_data_assignments;
-    $self->status_message("There are ".scalar(@idas)." id assignemnts for model id $model_id\n");
-    
+    my @instrument_data = $model->instrument_data;
+    $self->status_message("There are " . scalar(@instrument_data) . " id assignemnts for model id $model_id\n");
     my $build = $model->last_complete_build;
-
+    unless ($build) {
+        die "No successful build of model " . $model->__display_name;
+    }
     my $count=0;
+
     my @alignments;
-    for my $ida (@idas) {
-        my $idid = $ida->instrument_data->id;
-        my $alignment = $ida->results;
+    for my $instrument_data (@instrument_data) {
+        my $idid = $instrument_data->id;
+        my $alignment = $build->alignment_results_for_instrument_data($instrument_data);
         my $alignment_directory = $alignment->alignment_directory;
         
-        #testing data 
         push (@alignments, "$idid|$alignment_directory");
-        #if ($seq_id == 2792545037 || $seq_id == 2792546284 ) {
-        #    push (@alignments, "$seq_id|$alignment_directory");
-            #$count++;
-       # }
-
     }
-  
-        $self->status_message("Alignment info sent to workers: ".join("\n",@alignments));
-        $self->status_message("Working dir sent to workers: ".$self->working_directory);
 
-        require Workflow::Simple;
-            
-        my $op = Workflow::Operation->create(
-            name => 'Generate per lane sams',
-            operation_type => Workflow::OperationType::Command->get('Genome::Model::Tools::Tcga::ConvertAlignedMapsToSamFilesWorker')
-        );
+    $self->status_message("Alignment info sent to workers: ".join("\n",@alignments));
+    $self->status_message("Working dir sent to workers: ".$self->working_directory);
 
-        $op->parallel_by('alignment_info');
+    require Workflow::Simple;
 
-        my $output = Workflow::Simple::run_workflow_lsf(
-            $op,
-            'alignment_info'  => \@alignments,
-            'working_directory' => $self->working_directory, 
-        );
+    my $op = Workflow::Operation->create(
+        name => 'Generate per lane sams',
+        operation_type => Workflow::OperationType::Command->get('Genome::Model::Tools::Tcga::ConvertAlignedMapsToSamFilesWorker')
+    );
 
-        #check workflow for errors 
-        if (!defined $output) {
-           foreach my $error (@Workflow::Simple::ERROR) {
-               $self->error_message($error->error);
-           }
-           return;
-        } else {
-           $self->status_message("Workflow completed with no errors.");
+    $op->parallel_by('alignment_info');
+
+    my $output = Workflow::Simple::run_workflow_lsf(
+        $op,
+        'alignment_info'  => \@alignments,
+        'working_directory' => $self->working_directory, 
+    );
+
+    #check workflow for errors 
+    if (!defined $output) {
+        foreach my $error (@Workflow::Simple::ERROR) {
+            $self->error_message($error->error);
         }
+        return;
+    } else {
+        $self->status_message("Workflow completed with no errors.");
+    }
 
 
     $self->aligned_sam_file_directory($self->working_directory."/aligned/");
 
     return 1;
- 
-    }
+
+}
 1;
