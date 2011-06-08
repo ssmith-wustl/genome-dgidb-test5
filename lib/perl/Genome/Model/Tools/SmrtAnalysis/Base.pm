@@ -5,7 +5,7 @@ use warnings;
 
 use Genome;
 
-my $DEFAULT_VERSION = '1.2.0';
+my $DEFAULT_VERSION = '1.2.1';
 
 my $DEFAULT_LSF_QUEUE = 'techd';
 my $DEFAULT_LSF_RESOURCE = "-g /pacbio/smrtanalysis -M 4000000 -R 'select[type==LINUX64 && mem>=4000 && tmp>=40000] rusage[mem=4000,tmp=20000]'";
