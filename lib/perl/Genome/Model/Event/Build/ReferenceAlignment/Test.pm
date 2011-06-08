@@ -199,12 +199,11 @@ sub add_instrument_data {
         isa_ok($assign_command,'Genome::Model::Command::InstrumentData::Assign');
         ok($assign_command->execute(),'execute '. $assign_command->command_name);
 
-        my $ida = Genome::Model::InstrumentDataAssignment->get(
-                                                               model_id => $model->id,
-                                                               instrument_data_id => $instrument_data->id,
-                                                           );
-        isa_ok($ida,'Genome::Model::InstrumentDataAssignment');
-        ok(!$ida->first_build_id,'undef first_build_id for InstrumentDataAssignment');
+        my $input = Genome::Model::Input->get(
+            model_id => $model->id,
+            value_id => $instrument_data->id,
+        );
+        isa_ok($input, 'Genome::Model::Input');
     }
 }
 
@@ -377,10 +376,10 @@ sub set_event_status {
 
 sub remove_data {
     my $self = shift;
-
     my $model = $self->model;
-    my @idas = $model->instrument_data_assignments;
-    my @alignment_dirs = map { $_->alignment_directory } @idas;
+    my $build = $self->model->last_complete_build;
+    my @instrument_data = $build->instrument_data;
+    my @alignment_dirs = map { $_->alignment_directory_for_instrument_data($_) } @instrument_data;
     
     # we now rely on tempdir to cause cleanup
     # there is an override, and that should NOT get cleaned-up

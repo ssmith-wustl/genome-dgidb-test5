@@ -221,16 +221,9 @@ sub get_summary_information
     }
 
     ##the number of instrument data assignments is:
-    my @inst_data_ass = $build->instrument_data_assignments;
-
-    my @inst_data;
-    eval { @inst_data = $build->instrument_data };
-    @inst_data = Genome::InstrumentData->get(id => [ map { $_->instrument_data_id } @inst_data_ass ]);
-
+    my @inst_data = $build->instrument_data;
     my $total_bases = 0;
-    for (@inst_data_ass) {
-        my $inst_data = Genome::InstrumentData->get($_->instrument_data_id);
-
+    for my $inst_data (@inst_data) {
         if ($inst_data->can('total_bases_read'))  {
             $total_bases += $inst_data->total_bases_read($_->filter_desc);
         }
@@ -396,7 +389,7 @@ sub get_summary_information
         build_date                                    => $time,
         data_directory                                => $data_directory,
 
-        total_number_of_lanes                         => scalar(@inst_data_ass),
+        total_number_of_lanes                         => scalar(@inst_data),
         total_gigabases                               => $total_gigabases,
         libraries                                     => [ sort keys %library_lane_counts ],
         lanes_by_library                              => \%library_lane_counts,

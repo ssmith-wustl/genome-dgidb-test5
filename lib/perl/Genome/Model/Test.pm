@@ -175,12 +175,6 @@ sub test02_instrument_data : Tests() {
         "available_instrument_data"
     );
 
-    ## Can't get instrument_data_assignments to work...so overwrite 
-    my @idas = $self->create_mock_instrument_data_assignments($model, @instrument_data);
-    local *Genome::Model::instrument_data_assignments = sub{ return @idas; };
-    $idas[0]->first_build_id(1);
-    my @model_id = $model->instrument_data;
-    is_deeply(\@model_id, \@instrument_data, 'instrument_data');
     return 1;
 }
 

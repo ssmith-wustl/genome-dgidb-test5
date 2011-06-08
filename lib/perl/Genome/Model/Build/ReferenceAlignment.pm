@@ -257,6 +257,13 @@ sub alignment_results_for_instrument_data {
     return;
 }
 
+sub alignment_directory_for_instrument_data {
+    my ($self, $instrument_data) = @_;
+    my ($result) = $self->alignment_results_for_instrument_data($instrument_data);
+    return unless $result;
+    return $result->output_dir;
+}
+
 sub gold_snp_build {
     my $self = shift;
     if ($self->genotype_microarray_build_id) {
