@@ -85,59 +85,6 @@ sub delete {
     return $self->SUPER::delete;
 }
 
-# Replace alignments() and alignment_sets() with something generic.
-# The only requirement is that it returns Genome::SoftwareResults objects,
-# so they can be introspected, and have an ->output directory.
-
-# This returns any isolated, per-instrument-data results which
-# are produced for a model across builds, if they exist.
-# This may be alignment data, trimming results, or fully empty 
-# when the instrument data is not processed in isolation at all.
-
-sub results { 
-    my $self  = shift;
-    my $build = shift;  # refalign doesn't vary for instdata per build
-                        # but other pipelines might
- 
-    my $model = $self->model;
-    my $processing_profile = $model->processing_profile;
-    if ($build && $processing_profile->can('results_for_instrument_data_assignment')) {
-        my @results;
-        my @align_reads_events = Genome::Model::Event::Build::ReferenceAlignment::AlignReads->get(
-            instrument_data_id=>$self->instrument_data_id,
-            build_id => $build->id,
-        );
-
-        if (@align_reads_events) {
-            for my $align_reads_event (@align_reads_events) {
-                my %segment_info = ();
-                if ($align_reads_event->instrument_data_segment_type) {
-                    $segment_info{instrument_data_segment_type} = $align_reads_event->instrument_data_segment_type;
-                    $segment_info{instrument_data_segment_id} = $align_reads_event->instrument_data_segment_id;
-                };
-                push @results, $processing_profile->results_for_instrument_data_assignment($self, %segment_info);
-            }
-            return @results;
-        } else {
-            return $processing_profile->results_for_instrument_data_assignment($self);
-        }
-    }
-    elsif (!$build && $processing_profile->can('results_for_instrument_data_assignment')) {
-        return $processing_profile->results_for_instrument_data_assignment($self);
-    }
-    else {
-        # this profile doesn't have any per-instdata results
-        return;
-    }
-}
-
-sub alignment_directory {
-    my $self = shift;
-    my ($results) = $self->results;
-    return unless $results;
-    return $results->output_dir;
-}
-
 # TODO: remove this.  There may be multiple read length per instdata.
 sub read_length {
     my $self = shift;
