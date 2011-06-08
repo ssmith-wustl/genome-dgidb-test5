@@ -908,11 +908,24 @@ sub build_requested {
         );
     }
 
-    # Call UR mutator to set value and return
     if (defined $value) {
         return $self->__build_requested($value);
     }
     return $self->__build_requested;
+}
+
+sub latest_build_request_note {
+    my $self = shift;
+    my @notes = sort { $b->entry_date cmp $a->entry_date } grep { $_->header_text eq 'build_requested' } $self->notes;
+    return unless @notes;
+    return $notes[0];
+}
+    
+sub time_of_last_build_request {
+    my $self = shift;
+    my $note = $self->latest_build_request_note;
+    return unless $note;
+    return $note->entry_date;
 }
 
 sub copy {
