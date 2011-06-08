@@ -58,10 +58,10 @@ is($model->build_requested, 1, 'set build requested with reason provided');
 
 @notes = $model->notes;
 ok(@notes == 2, 'retrieved two build requested notes, as expected');
-is($notes[-1]->header_text, 'build_requested', 'header of new note is build_requested');
-is($notes[-1]->body_text, 'test build', 'body of new note set to expected value');
 
-is_deeply($notes[-1], $model->latest_build_request_note, 'latest_build_request_note returns expected note');
+my $note = $model->latest_build_request_note;
+is($note->header_text, 'build_requested', 'header of new note is build_requested');
+is($note->body_text, 'test build', 'body of new note set to expected value');
 
 done_testing();
 
