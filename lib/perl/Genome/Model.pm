@@ -1092,11 +1092,11 @@ sub build_needed {
         }
     }
 
-    my (@inputs_not_found, @build_inputs_not_found) = $build->input_differences_from_model;
+    my ($inputs_not_found, $build_inputs_not_found) = $build->input_differences_from_model;
 
-    if(scalar(@inputs_not_found) or scalar(@build_inputs_not_found)) {
+    if(scalar(@$inputs_not_found) or scalar(@$build_inputs_not_found)) {
         #if the differences are not okay, then we need to rebuild)
-        return (not $self->_input_differences_are_ok(\@inputs_not_found, \@build_inputs_not_found));
+        return (not $self->_input_differences_are_ok($inputs_not_found, $build_inputs_not_found));
     } else {
         return; #everything's fine
     }
