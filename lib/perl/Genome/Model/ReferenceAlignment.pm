@@ -252,7 +252,7 @@ sub __errors__ {
     my @tags = $self->SUPER::__errors__(@_);
 
     my $arb = $self->annotation_reference_build;
-    if($arb->status ne 'Succeeded') {
+    if($arb and $arb->status ne 'Succeeded') {
         push @tags, UR::Object::Tag->create(
             type => 'invalid',
             properties => ['annotation_reference_build'],
