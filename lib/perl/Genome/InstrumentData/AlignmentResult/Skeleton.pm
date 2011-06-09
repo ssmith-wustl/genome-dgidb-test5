@@ -75,6 +75,8 @@ sub _run_aligner {
 
     # Or if your aligner outputs SAM natively and you can capture it from standard out, you can
     # write uncompressed SAM straight to $self->_sam_output_fh and the wrapper will convert it to BAM. 
+    # This saves a ton of disk space!
+    
     # to do this, you must update the supports_streaming_to_bam to return 1
     # my $output_sam_fh = $self->_sam_output_fh;
     # NOTE: if you do this, requires_read_group_addition must return 0.  In this case you must ensure
@@ -82,11 +84,15 @@ sub _run_aligner {
     # itself.
     # You can get the required ID for the read group by calling $self->read_and_platform_group_tag_id.
 
+    # The AddReadGroupTag command supports pipes, if you want to use streaming,
+    # you can use code like this to read from the aligner, add the tag, and write down to the SAM output
+    # handle to be converted to BAM.
+
 =cut
     my $output_sam_fh = $self->_sam_output_fh;
     my $add_rg_cmd = Genome::Model::Tools::Sam::AddReadGroupTag->create(
             input_filehandle     => $fh_output_pipe_from_your_aligner
-            output_filehandle    => $_sam_output_fh;
+            output_filehandle    => $output_sam_fh;
             read_group_tag => $self->read_and_platform_group_tag_id,
             pass_sam_headers => 0,
         );
