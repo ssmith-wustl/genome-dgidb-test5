@@ -1089,7 +1089,11 @@ sub create_build {
     }
 
     my $build = eval { Genome::Model::Build->create(@_); };
-    Carp::confess "Could not create new build: $@" unless $build;
+    my $error = $@;
+    unless($build) {
+        $error ||= Genome::Model::Build->error_message;
+        Carp::confess "Could not create new build: $error";
+    }
     return $build;
 }
 
