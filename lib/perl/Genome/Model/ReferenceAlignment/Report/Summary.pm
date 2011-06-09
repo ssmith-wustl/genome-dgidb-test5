@@ -221,11 +221,12 @@ sub get_summary_information
     }
 
     ##the number of instrument data assignments is:
-    my @inst_data = $build->instrument_data;
+    my @inputs = $build->model->instrument_data_inputs;
     my $total_bases = 0;
-    for my $inst_data (@inst_data) {
+    for my $input (@inputs) {
+        my $inst_data = $input->value;
         if ($inst_data->can('total_bases_read'))  {
-            $total_bases += $inst_data->total_bases_read($_->filter_desc);
+            $total_bases += $inst_data->total_bases_read($input->filter_desc);
         }
     }
     my $total_gigabases = sprintf("%.03f", $total_bases/1000000000);
@@ -245,6 +246,7 @@ sub get_summary_information
     # summarize the instrument data
     my %library_lane_counts;
 
+    my @inst_data = map { $_->value } @inputs;
     unless ($model->read_aligner_name =~ /Imported$/i) {
         my %library_lanes;
         for my $i (@inst_data) {
