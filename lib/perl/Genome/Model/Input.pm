@@ -37,76 +37,42 @@ sub __display_name__ {
     return $self->value_class_name . ': ' . $self->value_id;
 }
 
-sub create {
-    my $class = shift;
-
-    my $self = $class->SUPER::create(@_);
-    return if not $self;
-
-    my $model = $self->model;
-    Carp::confess('No model to create input: '.Data::Dumper::Dumper($self)) if not $model;
-    my $name = $self->name;
-    Carp::confess('No name to create input: '.Data::Dumper::Dumper($self)) if not $name;
-    my $obj = $self->value;
-    Carp::confess('No value to create input: '.Data::Dumper::Dumper($self)) if not $obj;
-
-    $self->status_message('Create input '.$self->name.' '.$self->value_id.' for model '.$model->id);
-
-    if ( $self->name ne 'instrument_data' ) {
-        return $self;
-    }
-
-    my $ida = Genome::Model::InstrumentDataAssignment->create(
-        model => $model,
-        instrument_data => $obj,
-    );
-    if ( not $ida ) {
-        $self->status_message('Cannot create ida for input '.$self->name.' '.$self->value_id.' for model '.$model->__display_name__);
-        return;
-    }
-    $ida->filter_desc( $self->filter_desc ) if $self->filter_desc;
-
-    return $self;
-}
-
 sub delete {
     my $self = shift;
+    my $input_name = $self->__display_name__;
 
-    my $model = $self->model;
-    Carp::confess('No model to delete input') if not $model;
-    my $name = $self->name;
-
-    $self->status_message("Delete input $name ".$self->value_id.' for model '.$model->__display_name__);
-
-    return $self->SUPER::delete if $self->name ne 'instrument_data';
-
-    my $ida = Genome::Model::InstrumentDataAssignment->get(
-        model => $model,
-        instrument_data_id => $self->value_id,
-    );
-    if ( $ida ) { # ignore if not found
-        my $delete = $ida->delete;
-        if ( not $delete ) {
-            Carp::confess('Could not delete instrument data assignment');
+    for my $build ($self->builds_with_input) {
+        $self->status_message("Abandoning build " . $build->__display_name__ . " that uses input $input_name");
+        my $abandon_rv = eval { $build->abandon };
+        unless ($abandon_rv) {
+            Carp::confess "Could not abandon build " . $build->__display_name__ . " while deleting input";
         }
     }
 
-    my @builds = $model->builds;
-    for my $build ( @builds ) {
-        my ($build_has_input) = grep { 
-            $_->name eq $name 
-                and $_->value_id eq $self->value_id 
-        } $build->inputs;
-        next if not $build_has_input;
-        $self->status_message('Abandoning build with this input: '.$build->__display_name__);
-        my $abandon = eval{ $build->abandon; };
-        if ( not $abandon ) {
-            Carp::confess('Failed to abandon build ('.$build->__display_name__.') while deleting input');
-        }
-    }
+    my $delete_rv = $self->SUPER::delete;
+    unless ($delete_rv) {
+        Carp::confess "Could not delete input $input_name!";
+    } 
 
-    return $self->SUPER::delete;
+    return 1;
 }
 
+sub builds_with_input {
+    my $self = shift;
+    return unless $self->model;
+
+    my @builds;
+    for my $build ($self->model->builds) {
+        next unless grep { 
+            $_->name eq $self->name and
+            $_->value_id eq $self->value_id and
+            $_->value_class_name eq $self->value_class_name
+        } $build->inputs;
+        push @builds, $build;
+    }
+
+    return @builds;
+}
+    
 1;
 
