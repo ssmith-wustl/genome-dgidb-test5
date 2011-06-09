@@ -305,6 +305,27 @@ sub __errors__ {
         }
     }
 
+    my $roi_name = $self->region_of_interest_set_name;
+    if ($roi_name) {
+        my $roi_list = eval { $self->region_of_interest_set; };
+        if($roi_list) {
+            if(not $rsb->is_compatible_with($roi_list->reference)) {
+                push @tags, UR::Object::Tag->create(
+                    type => 'invalid',
+                    properties => [qw/ region_of_interest_set_name /],
+                    desc => "Supplied region_of_interest_set_name " . $roi_name . " specifies incompatible reference sequence " .
+                        $roi_list->reference->__display_name__,
+                );
+            }
+        } else {
+            push @tags, UR::Object::Tag->create(
+                type => 'invalid',
+                properties => [qw/ region_of_interest_set_name /],
+                desc => "Supplied region_of_interest_set_name " . $roi_name . " could not be matched to a corresponding feature-list.",
+            );
+        }
+    }
+
     return @tags;
 }
 
