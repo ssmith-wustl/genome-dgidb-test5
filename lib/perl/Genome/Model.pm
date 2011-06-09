@@ -38,10 +38,22 @@ class Genome::Model {
             via => 'subject',
             to => 'name',
         },
-        subject_type => {
-            via => 'subject',
-            to => 'subject_type',
+        subject_type => { 
+            is => 'Text', 
+            valid_values => ["species_name","sample_group","sample_name"], 
+            calculate_from => 'subject_class_name',
+            calculate => q|
+                #This could potentially live someplace else like the previous giant hash
+                my %types = (
+                    'Genome::Sample' => 'sample_name',
+                    'Genome::PopulationGroup' => 'sample_group',
+                    'Genome::Individual' => 'sample_group',
+                    'Genome::Taxon' => 'species_name',
+                );
+                return $types{$subject_class_name};
+            |, 
         },
+
         processing_profile => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
         processing_profile_name => { via => 'processing_profile', to => 'name' },
         type_name => { via => 'processing_profile' },
