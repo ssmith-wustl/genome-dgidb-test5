@@ -366,7 +366,9 @@ sub do_pap_workflow {
     }
     else {
         for my $error (@Workflow::Simple::ERROR) {
-            $self->status_message(join("\t", grep { defined $error->$_ } qw/ dispatch_identifier name start_time end_type exit_code /));
+            my @attributes = grep { defined $error->$_ } qw/ dispatch_identifier name start_time end_time exit_code /;
+            $self->status_message(join("\t", @attributes));
+            $self->status_message(join("\t", map {$error->$_} @attributes));
             $self->status_message($error->stdout);
             $self->status_message($error->stderr);
         }
