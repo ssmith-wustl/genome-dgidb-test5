@@ -252,6 +252,14 @@ sub __errors__ {
     my @tags = $self->SUPER::__errors__(@_);
 
     my $arb = $self->annotation_reference_build;
+    if($arb->status ne 'Succeeded') {
+        push @tags, UR::Object::Tag->create(
+            type => 'invalid',
+            properties => ['annotation_reference_build'],
+            desc => 'annotation reference build ' . $arb->name . ' is not succeeded and thus cannot be used.',
+        );
+    }
+
     my $rsb = $self->reference_sequence_build;
     if ($arb and !$arb->is_compatible_with_reference_sequence_build($rsb)) {
         push @tags, UR::Object::Tag->create(
