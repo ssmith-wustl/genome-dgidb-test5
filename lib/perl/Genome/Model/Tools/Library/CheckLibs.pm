@@ -111,20 +111,20 @@ sub execute {
         printf STDERR "%d lanes in build\n", scalar(@align_events);
         
         #Convert events to InstrumentDataAssignment objects
-        my @idas = map { $_->instrument_data_assignment } @align_events;
+        my @inputs = map { $_->instrument_data_input } @align_events;
 
         my %bad_lanes;
         my %total_lanes;
         
-        foreach my $ida (@idas) {
-            my $library = $ida->library_name;
+        foreach my $input (@inputs) {
+            my $instrument_data = $input->value;
+            my $library = $instrument_data->library_name;
             unless(defined($library)) {
-                $self->error_message("No library defined for ".$ida->instrument_data_id);
+                $self->error_message("No library defined for " . $instrument_data->__display_name__);
                 next;
             }
 
-            my $instrument_data = $ida->instrument_data;
-            my $ispe = ($instrument_data->is_paired_end && ! defined($ida->filter_desc));
+            my $ispe = ($instrument_data->is_paired_end && ! defined($input->filter_desc));
             next unless $ispe;
 
             $total_lanes{$library}++;
@@ -132,12 +132,11 @@ sub execute {
                 $bad_lanes{$library} = 0;
             }
 
-            my $instrument_data_id = $ida->instrument_data_id;
-            my $lane_name = $ida->short_name."_".$ida->subset_name;
-            my $median_insert_size = $ida->median_insert_size;
+            my $lane_name = $instrument_data->short_name."_".$instrument_data->subset_name;
+            my $median_insert_size = $instrument_data->median_insert_size;
             $median_insert_size ||= 0;
-            my $sd_above_insert_size = $ida->sd_above_insert_size;
-            my $sd_below_insert_size = $ida->sd_below_insert_size;
+            my $sd_above_insert_size = $instrument_data->sd_above_insert_size;
+            my $sd_below_insert_size = $instrument_data->sd_below_insert_size;
             if(!$median_insert_size || ($sd_below_insert_size/$median_insert_size) > 0.3 || ($sd_above_insert_size/$median_insert_size) > 0.2) {
                 printf $output_fh "%s\t%s\t%s\t%0.2f\t%0.2f\t%0.2f\n","$common_name.$type",$lane_name,$library,$median_insert_size, $median_insert_size ? $sd_below_insert_size/$median_insert_size : 0, $median_insert_size ? $sd_above_insert_size/$median_insert_size : 0;
                 $bad_lanes{$library}++;
