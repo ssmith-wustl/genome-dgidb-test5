@@ -32,7 +32,8 @@ sub required_rusage {
     my $tmp_gb = $tmp_mb/1024;
 
     my $user = getpwuid($<);
-    my $queue = ($user eq 'apipe-builder' ? 'alignment-pd' : 'alignment');
+    my $queue = 'alignment';
+    $queue = 'alignment-pd' if (Genome::Sys->username =~ /^apipe-/);
 
     my $host_groups;
     $host_groups = qx(bqueues -l $queue | grep ^HOSTS:);
