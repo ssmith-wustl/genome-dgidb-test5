@@ -67,9 +67,35 @@ sub _run_aligner {
     # This is the alignment output directory.  Whatever you put here will be synced up to the
     # final alignment directory that gets a disk allocation.
     my $staging_directory = $self->temp_staging_directory;
- 
+
+
+    ### YOU HAVE A CHOICE HERE! READ THIS CAREFULLY.  ##### 
     # This is the SAM file you should be appending to.  Dont forget, no headers!
-    my $sam_file = $scratch_directory . "/all_sequences.bam";
+    my $sam_file = $scratch_directory . "/all_sequences.sam";
+
+    # Or if your aligner outputs SAM natively and you can capture it from standard out, you can
+    # write uncompressed SAM straight to $self->_sam_output_fh and the wrapper will convert it to BAM. 
+    # to do this, you must update the supports_streaming_to_bam to return 1
+    # my $output_sam_fh = $self->_sam_output_fh;
+    # NOTE: if you do this, requires_read_group_addition must return 0.  In this case you must ensure
+    # read group tags are applied to each read, either by the aligner you're wrapping or by this wrapper
+    # itself.
+    # You can get the required ID for the read group by calling $self->read_and_platform_group_tag_id.
+
+=cut
+    my $output_sam_fh = $self->_sam_output_fh;
+    my $add_rg_cmd = Genome::Model::Tools::Sam::AddReadGroupTag->create(
+            input_filehandle     => $fh_output_pipe_from_your_aligner
+            output_filehandle    => $_sam_output_fh;
+            read_group_tag => $self->read_and_platform_group_tag_id,
+            pass_sam_headers => 0,
+        );
+
+    unless ($add_rg_cmd->execute) {
+        $self->error_message("Adding read group to sam file failed!");
+        die $self->error_message;
+    }
+=cut
 
     
     # TODO: implement your aligner logic here.  If you need to condition on whether the
@@ -92,6 +118,7 @@ sub _run_aligner {
 
     # confirm that at the end we have a nonzero sam file, this is what'll get turned into a bam and
     # copied out.
+    # if you're using streaming straight to bam, remove this.
     unless (-s $sam_file) {
         die "The sam output file $sam_file is zero length; something went wrong.";
     }
@@ -122,3 +149,55 @@ sub aligner_params_for_sam_header {
     return "skeleton aln " . $self->aligner_params;
 }
 
+# Does your aligner set MD tags?  If so this should return 0, otherwise 1
+sub fillmd_for_sam {
+    return 0;
+}
+
+# If your aligner adds read group tags, or you are handling it in the wrapper, this needs to be 0
+# otherwise 1.  If you are streaming output straight to BAM then you need to take care of adding RG
+# tags with either the wrapper or the aligner itself, and this needs to be 0.
+sub requires_read_group_addition {
+    return 1;
+}
+
+# if you are streaming to bam, set this to 1.  Beware of read groups.
+sub supports_streaming_to_bam {
+    return 0;
+}
+
+# If your aligner accepts BAM files as inputs, return 1.  You'll get a set of BAM files as input, with
+# suffixes to define whether it's paired or unparied.
+# [input_file.bam:0] implies SE, [input_file.bam:1, input_file.bam:2] implies paired.
+sub accepts_bam_input {
+    return 0;
+}
+
+# Use this to prep the index.  Indexes are saved for each combo of aligner params & version, as runtime
+# params for some aligners also call for specific params when building the index.
+sub prepare_reference_sequence_index {
+    my $class = shift;
+    my $refindex = shift;
+
+    # If you need the parameters the aligner is being run with, in order to customize the index, here they are.
+    my $aligner_params = $refindex->aligner_params;
+
+    my $staging_dir = $refindex->temp_staging_directory;
+    my $staged_fasta_file = sprintf("%s/all_sequences.fa", $staging_dir);
+
+    my $actual_fasta_file = $staged_fasta_file;
+
+    if (-l $staged_fasta_file) {
+        $class->status_message(sprintf("Following symlink for fasta file %s", $staged_fasta_file));
+        $actual_fasta_file = readlink($staged_fasta_file);
+        unless($actual_fasta_file) {
+            $class->error_message("Can't read target of symlink $staged_fasta_file");
+            return;
+        } 
+    }
+
+    # Do whatever it takes here to put the index into $staging_dir.
+
+    # If you return 1 then this reference will be copied up from $staging_dir into a software result for future use.
+    return 1;
+}
