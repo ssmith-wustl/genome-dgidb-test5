@@ -85,7 +85,7 @@ sub execute {
         
         my $transaction = UR::Context::Transaction->begin();
         my $build = eval {
-            my $build = $model->create_build(model_id => $model->id);
+            my $build = Genome::Model::Build->create(model_id => $model->id);
             unless ($build) {
                 die $self->error_message("Failed to create build for model (".$model->name.", ID: ".$model->id.").");
             }

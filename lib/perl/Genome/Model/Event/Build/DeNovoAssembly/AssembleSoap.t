@@ -17,7 +17,7 @@ use_ok('Genome::Model::Event::Build::DeNovoAssembly::Assemble') or die;
 
 my $model = Genome::Model::DeNovoAssembly::Test->model_for_soap;
 ok($model, "Got de novo assembly model") or die;
-my $build = $model->create_build(
+my $build = Genome::Model::Build->create(
     model => $model,
     data_directory => $model->data_directory,
 );

@@ -19,7 +19,7 @@ my $model = Genome::Model->get(2857912274); # apipe-test-05-de_novo_velvet_solex
 ok($model, 'got model') or die;
 
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
-my $build = $model->create_build( # make sure we don't abandon builds
+my $build = Genome::Model::Build->create( 
     model => $model,
     data_directory => $tmpdir,
 );

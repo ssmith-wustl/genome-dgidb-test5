@@ -78,7 +78,7 @@ my $model = Genome::Model::MetagenomicComposition16s->create(
 ok($model, 'MC16s solexa model') or die;
 ok($model->add_instrument_data($instrument_data), 'add inst data to model');
 
-my $example_build = $model->create_build(
+my $example_build = Genome::Model::Build->create( 
     model=> $model,
     id => -2288,
     data_directory => '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16sSolexa/build',

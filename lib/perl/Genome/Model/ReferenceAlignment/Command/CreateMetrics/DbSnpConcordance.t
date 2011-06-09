@@ -95,7 +95,7 @@ sub setup_test_builds {
     ok($test_model, 'created test model');
     ok($test_model->add_instrument_data($test_instrument_data), 'added inst data');
     
-    my $test_build = $test_model->create_build(
+    my $test_build = Genome::Model::Build->create( 
         model_id => $test_model->id,
         data_directory => $tmpdir,
     );

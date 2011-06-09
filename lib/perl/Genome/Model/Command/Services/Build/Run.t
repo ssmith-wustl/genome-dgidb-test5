@@ -22,7 +22,7 @@ my $model = Genome::Model->create(
     data_directory => $tmpdir,
 );
 ok($model, 'create model');
-my $build = $model->create_build(
+my $build = Genome::Model::Build->create(
     id => -7777,
     model => $model,
     data_directory => $model->data_directory,

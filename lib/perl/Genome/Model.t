@@ -189,7 +189,7 @@ is_deeply(\@model_instrument_data, \@instrument_data, 'model instrument data via
 # create these in reverse order because of negative ids
 my @builds;
 for my $i (1..2) {
-    unshift @builds, $model->create_build(
+    unshift @builds, Genome::Model::Build->create( 
         model => $model,
         data_directory => $model->data_directory.'/build'.$i,
     );

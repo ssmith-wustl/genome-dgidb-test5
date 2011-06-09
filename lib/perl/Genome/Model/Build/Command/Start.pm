@@ -98,7 +98,7 @@ sub execute {
                 die $self->error_message("Model (".$model->name.", ID: ".$model->id.") already has running or scheduled builds. Use the '--force' param to override this and start a new build.");
             }
 
-            my $build = $model->create_build(model_id => $model->id, %create_params);
+            my $build = Genome::Model::Build->create(model_id => $model->id, %create_params);
             unless ($build) {
                 die $self->error_message("Failed to create build for model (".$model->name.", ID: ".$model->id.").");
             }

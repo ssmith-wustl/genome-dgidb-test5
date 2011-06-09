@@ -73,7 +73,7 @@ sub setup_test_build {
     #TODO Once we're using inputs, just use this line instead
     #ok($test_model->add_inst_data($test_instrument_data), 'assigned data to model');
     
-    my $test_build = $test_model->create_build(
+    my $test_build = Genome::Model::Build->create(
         model_id => $test_model->id,
         data_directory => TEST_DATA_DIR . '/build_dir',
     );

@@ -8,7 +8,7 @@ use Test::More tests => 8;
 my $m1 = Genome::Model->get(2851746104);
 ok($m1, "$m1");
 
-my $b1_1 = $m1->create_build(model_id => $m1->id);
+my $b1_1 = Genome::Model::Build->create(model_id => $m1->id);
 isa_ok($b1_1,"Genome::Model::Build::MetagenomicComposition16s::Sanger");
 UR::Context->commit();
 
@@ -19,7 +19,7 @@ UR::Context->commit();
 my $m2 = Genome::Model->get(2850972264);
 ok($m2, "$m2");
 
-my $b2_1 = $m2->create_build(model_id => $m2->id);
+my $b2_1 = Genome::Model::Build->create(model_id => $m2->id);
 isa_ok($b2_1,"Genome::Model::Build::ReferenceAlignment::Solexa");
 UR::Context->commit();
 
