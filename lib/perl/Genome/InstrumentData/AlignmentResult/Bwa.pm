@@ -295,7 +295,7 @@ sub _filter_samxe_output {
     my $sam_out_fh; 
     # UGLY HACK: the multi-aligner code redefines this to zero so it can extract sam files.
     if ($self->supports_streaming_to_bam) { 
-        $sam_out_fh = $self->_bam_output_fh; 
+        $sam_out_fh = $self->_sam_output_fh; 
     } else {
         $sam_out_fh = IO::File->new(">>" . $self->temp_scratch_directory . "/all_sequences.sam");
     }
