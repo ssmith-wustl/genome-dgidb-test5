@@ -230,6 +230,7 @@ sub alignment_results_for_instrument_data {
     my $instrument_data = shift;
     my $model = $self->model;
     my $processing_profile = $model->processing_profile;
+    my $input = $model->input_for_instrument_data($instrument_data);
 
     if ($processing_profile->can('results_for_instrument_data_input')) {
         my @results;
@@ -246,11 +247,11 @@ sub alignment_results_for_instrument_data {
                     $segment_info{instrument_data_segment_type} = $align_reads_event->instrument_data_segment_type;
                     $segment_info{instrument_data_segment_id} = $align_reads_event->instrument_data_segment_id;
                 };
-                push @results, $processing_profile->results_for_instrument_data_input($self, %segment_info);
+                push @results, $processing_profile->results_for_instrument_data_input($input, %segment_info);
             }
             return @results;
         } else {
-            return $processing_profile->results_for_instrument_data_input($self);
+            return $processing_profile->results_for_instrument_data_input($input);
         }
     }
 
