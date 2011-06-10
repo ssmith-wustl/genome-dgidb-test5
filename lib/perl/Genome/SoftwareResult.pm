@@ -458,6 +458,13 @@ sub _resolve_lock_name {
 
     my $resource_lock_name = "/gsc/var/lock/genome/$class_string/" .  $params_and_inputs_list_hash;
 }
+# override _resolve_lock_name for testing
+if ($ENV{UR_DBI_NO_COMMIT}) {
+    warn 'Overriding Genome::SoftwareResult::_resolve_lock_name since UR_DBI_NO_COMMIT is on.' . "\n";
+    *Genome::SoftwareResult::_resolve_lock_name = sub {
+        return Genome::Sys->create_temp_file_path;
+    };
+}
 
 sub metric_names {
     my $class = shift;
@@ -551,5 +558,3 @@ sub _available_cpu_count {
 
 
 1;
-
-    
