@@ -881,7 +881,7 @@ sub _initialize_workflow {
         return;
     }
 
-    $self->software_revision($self->snapshot_revision);
+    $self->software_revision($self->snapshot_revision) unless $self->software_revision;
 
     my $build_event = Genome::Model::Event::Build->create(
         model_id => $self->model->id,
