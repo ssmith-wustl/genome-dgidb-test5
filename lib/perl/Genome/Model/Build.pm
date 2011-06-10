@@ -881,7 +881,7 @@ sub _initialize_workflow {
         return;
     }
 
-    $self->software_revision($self->snapshot_revision);
+    $self->software_revision($self->snapshot_revision) unless $self->software_revision;
 
     my $build_event = Genome::Model::Event::Build->create(
         model_id => $self->model->id,
@@ -1693,6 +1693,7 @@ sub compare_output {
         my (undef, undef, $other_suffix) = fileparse($other_abs_path, $self->special_suffixes);
         if ($suffix ne '' and $other_suffix ne '' and $suffix eq $other_suffix) {
             my $method = "diff_$suffix";
+            $method =~ s/\-/\_/; # replace dashes, can't declare a method w/ dashes
             $diff_result = $self->$method($abs_path, $other_abs_path);
         }
         else {
@@ -1792,6 +1793,131 @@ sub _uniq {
     my %seen = ();
     my @unique = grep { ! $seen{$_} ++ } @list;
     return @unique;
+}
+
+sub input_differences_from_model {
+    my $self = shift;
+
+    my @build_inputs = $self->inputs;
+    my @model_inputs = $self->model->inputs;
+
+    #build a list of inputs to check against
+    my %build_inputs;
+    for my $build_input (@build_inputs) {
+        $build_inputs{$build_input->name}{$build_input->value_class_name}{$build_input->value_id} = $build_input;
+    }
+
+    my @model_inputs_not_found;
+    for my $model_input (@model_inputs) {
+        my $build_input_found = delete($build_inputs{$model_input->name}{$model_input->value_class_name}{$model_input->value_id});
+
+        unless ($build_input_found) {
+            push @model_inputs_not_found, $model_input;
+        }
+    }
+
+    my @build_inputs_not_found;
+    for my $name (keys %build_inputs) {
+        for my $value_class_name (keys %{ $build_inputs{$name} }) {
+            for my $build_input_not_found (values %{ $build_inputs{$name}{$value_class_name} }) {
+                my $value = $build_input_not_found->value;
+                if($value->isa('Genome::Model::Build') and $value->model and my $model_input = grep($_->value->model eq $value->model, @model_inputs_not_found)) {
+                    @model_inputs_not_found = grep($_ != $model_input, @model_inputs_not_found);
+                } else {
+                    push @build_inputs_not_found, $build_input_not_found;
+                }
+            }
+        }
+    } 
+
+    return (\@model_inputs_not_found, \@build_inputs_not_found);
+}
+
+sub build_input_differences_from_model {
+    return @{ ($_[0]->input_differences_from_model)[1] };
+}
+
+sub model_input_differences_from_model {
+    return @{ ($_[0]->input_differences_from_model)[0] };
+}
+
+#a cheap convenience method for views
+sub delta_model_input_differences_from_model {
+    my $self = shift;
+
+    my ($model_inputs, $build_inputs) = $self->input_differences_from_model;
+    my @model_inputs_to_include;
+    for my $model_input (@$model_inputs) {
+        unless( grep{ $_->name eq $model_input->name } @$build_inputs ) {
+            push @model_inputs_to_include, $model_input;
+        }
+    }
+    return @model_inputs_to_include;
+}
+
+
+sub is_buildable_methods {
+    # each method should return ($ok, $tag)
+    my @methods = (
+        'inputs_have_compatible_reference',
+    );
+    return @methods;
+}
+
+
+sub is_buildable {
+    my $self = shift || die;
+
+    my @tags;
+    my $is_buildable = 1;
+    my @methods = $self->is_buildable_methods;
+    for my $method (@methods) {
+        my ($ok, $tag) = $self->$method;
+        $is_buildable = 0 unless $ok;
+        push @tags, $tag;
+    }
+
+    for my $tag (@tags) {
+        $self->status_message($tag->__display_name__);
+    }
+
+    return $is_buildable;
+}
+
+
+sub inputs_have_compatible_reference {
+    my $self = shift;
+
+    # We really should standardize what we call reference sequence...
+    my @reference_sequence_methods = ('reference_sequence', 'reference', 'reference_sequence_build');
+
+    my ($method) = grep { $self->can($_) } @reference_sequence_methods;
+    return 1 unless $method;
+    my $model_reference_sequence = $self->$method;
+
+    my @inputs = $self->inputs;
+    my @objects = map { $_->value } @inputs;
+    my @incompatible_properties;
+    for my $object (@objects) {
+        my ($method) = grep { $self->can($_) } @reference_sequence_methods;
+        next unless $method;
+        my $object_reference_sequence = $object->$method;
+        unless($object_reference_sequence->is_compatible_with($model_reference_sequence)) {
+            push @incompatible_properties, $object->name;
+        }
+    }
+
+    my $tag;
+    if (@incompatible_properties) {
+        $tag = UR::Object::Tag->create(
+            type => 'error',
+            properties => \@incompatible_properties,
+            desc => "Not compatible with model's reference sequence '" . $model_reference_sequence->__display_name__ . "'.",
+        );
+    }
+
+    my $ok = not $tag;
+    return $ok, (wantarray ? $tag : undef);
 }
 
 

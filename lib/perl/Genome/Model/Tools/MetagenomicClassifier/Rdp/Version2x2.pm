@@ -73,11 +73,11 @@ sub verify_seq {
         Carp::confess("No sequence given to classify");
     }
 
-    unless ( $seq->{id} ) {
+    if ( not $seq->{id} ) {
         Carp::confess('Seq does not have an id: '.Data::Dumper::Dumper($seq));
     }
 
-    unless ( length $seq->{seq} >= 50) {
+    if ( length $seq->{seq} < 50) {
         return;
     }
 

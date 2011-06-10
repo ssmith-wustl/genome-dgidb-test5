@@ -63,7 +63,7 @@ For example, use
    processing_profile="example profile" # id or name
 
 to have the resulting model be defined using <example profile> instead of the processing profile
-assigned to the source model.  If named (rather than positional) arguments are used, "--overrides" must precede each key-value pair.
+assigned to the source model.  (See the corresponding lister for a list of properties that can be overridden in this way.) If named (rather than positional) arguments are used, "--overrides" must precede each key-value pair.
 
 The copy command only copies the definitions.  It does not copy any underlying model data.
 

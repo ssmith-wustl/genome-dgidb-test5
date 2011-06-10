@@ -19,16 +19,15 @@ class Genome::Model::Tools::Music::Bmr::Base {
 };
 
 sub _doc_authors {
-    return ('',
-        'Cyriac Kandoth, Ph.D.',
-    );
+    return " Cyriac Kandoth, Ph.D.";
 }
 
 sub _doc_see_also {
-    return ('',
-        'B<genome-music-bmr>(1)',
-        'B<genome-music>(1)',
-        'B<genome>(1)');
+    return <<EOS
+B<genome-music-bmr>(1),
+B<genome-music>(1),
+B<genome>(1)
+EOS
 }
 
 1;

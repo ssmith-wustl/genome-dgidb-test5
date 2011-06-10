@@ -42,6 +42,7 @@ my @cases = (
     {
         run => "music clinical-correlation \n"
             . " --numeric-clinical-data-file $input_dir/clinical_data/tcga_OV_clinical_clean.csv.maf_samples.numeric.withNA.csv \n"
+            . " --bam-list $input_dir/316_sample_list \n"
             . " --maf-file $input_dir/maf/tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent \n"
             . " --output-file $actual_output_dir/num_clin/tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent.num_cor \n"
             . " --genetic-data-type gene",
@@ -53,6 +54,7 @@ my @cases = (
         run => "music clinical-correlation\n"
           # . " --clinical-data-file $input_dir/clinical_data/tcga_OV_clinical_clean.csv.maf_samples.categorical.withNA.csv \n"
             . " --categorical-clinical-data-file $input_dir/clinical_data/tcga.categ.clin.data.vital.status \n"
+            . " --bam-list $input_dir/50_sample_list \n"
             . " --maf-file $input_dir/maf/tcga.categ.clin.data.vital.status.maf \n"
             . " --output-file $actual_output_dir/categ_clin/tcga.categ.clin.data.vital.status.class_correlation \n"
             . " --genetic-data-type gene",
@@ -62,7 +64,7 @@ my @cases = (
     },
     {
         run => "music cosmic-omim \n"
-            . " --maf-file $input_dir/short.maf\n"
+            . " --maf-file $input_dir/maf/short.maf\n"
             . " --output-file $actual_output_dir/short_maf.cosmic_omim \n"
             . " --no-verbose",
         expect => [

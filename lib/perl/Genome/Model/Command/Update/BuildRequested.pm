@@ -10,7 +10,7 @@ class Genome::Model::Command::Update::BuildRequested {
         },
         value => {
             is => 'Text',
-            valid_values => ['0', '1'],
+            valid_values => ['-1', '0', '1'],
             doc => 'Enable or disable the build_requested flag.',
         },
     ],

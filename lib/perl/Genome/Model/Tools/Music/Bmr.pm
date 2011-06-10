@@ -28,9 +28,7 @@ EOS
 
 
 sub _doc_authors {
-    return ('',
-        'Cyriac Kandoth, Ph.D.'
-    );
+    return " Cyriac Kandoth, Ph.D.";
 }
 
 =cut
@@ -42,12 +40,12 @@ sub _doc_credits {
 =cut
 
 sub _doc_see_also {
-    return ('',
-        'B<genome-music-bmr-calc-covg>(1)',
-        'B<genome-music-bmr-calc-bmr>(1)',
-        'B<genome-music>(1)',
-        'B<genome>(1)',
-    );
+    return <<EOS
+B<genome-music-bmr-calc-covg>(1),
+B<genome-music-bmr-calc-bmr>(1),
+B<genome-music>(1),
+B<genome>(1)
+EOS
 }
 
 sub _doc_manual_body {

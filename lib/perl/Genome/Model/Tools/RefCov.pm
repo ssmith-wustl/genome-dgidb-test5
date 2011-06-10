@@ -42,6 +42,7 @@ my %MERGE_STATS_OPERATION = (
     intervals => 'intervals',
 );
 
+
 class Genome::Model::Tools::RefCov {
     is => ['Command'],
     has_input => [
@@ -675,6 +676,7 @@ sub resolve_stats_file_headers {
 
 sub validate_chromosomes {
     my $self = shift;
+    $self->status_message('Validate chromosomes...');
     my $roi = $self->roi;
     my $refcov_bam = $self->alignments;
     for my $chr ($roi->chromosomes) {
@@ -685,11 +687,13 @@ sub validate_chromosomes {
             die('Failed to validate chromsomes in ROI '. $self->roi_file_format .' file '. $self->roi_file_path .' with alignment '. $self->alignment_file_format .' file '. $self->alignment_file_path .' with error:' ."\n". $@);
         }
     }
+    $self->status_message('Validate chromosomes...OK');
     return 1;
 }
 
 sub print_roi_coverage {
     my $self = shift;
+    $self->status_message('Print ROI Coverage...');
 
     $self->validate_chromosomes;
 
@@ -708,6 +712,7 @@ sub print_roi_coverage {
     my $stat = $self->region_coverage_stat;
     my @min_depths = split(',',$self->min_depth_filter);
     while (my $region = $roi->next_region) {
+        $self->status_message("Region ".$region->{name}." for chrom ".$region->{chrom}.' is longer than 10M bases. This could cause the stats to run out of memory') if $region->{length} > 10000000;
         my $coverage_array_ref = $self->region_coverage_array_ref($region);
         my $sequence_array_ref;
         if ($self->evaluate_gc_content) {
@@ -721,7 +726,6 @@ sub print_roi_coverage {
             );
             my $data = $stat->stats_hash_ref;
             if ($self->evaluate_gc_content) {
-                #$self->status_message('Evaluating GC content of '. $data->{name} .' '. $region->{id});
                 my $gc_data = $self->evaluate_region_gc_content($sequence_array_ref,$coverage_array_ref);
                 for my $key (keys %{$gc_data}) {
                     $data->{$key} = $gc_data->{$key};
@@ -748,6 +752,8 @@ sub print_roi_coverage {
     if ($self->merge_by && $self->merged_stats_file) {
         $self->merge_stats_by($self->merge_by,$self->merged_stats_file);
     }
+
+    $self->status_message('Print ROI Coverage...OK');
     return 1;
 }
 

@@ -61,29 +61,29 @@ The output of this script returns each row the original input MAF file with two 
 Also please note that this tool only compares to Build36 coordinates in the Cosmic database. Support for build 37 is coming, but as of this update the Cosmic database only has sparse entries in build 37 coordinates.
 
 In addition to the standard version 2.2 MAF headers, there needs to be two columns appended. These column headers in the MAF must be exactly these names in header line in order for the tool to find them:
-transcript_name - the transcript name, such as NM_000028
-amino_acid_change - the amino acid change, such as p.E290V
+
+   transcript_name - the transcript name, such as NM_000028
+ amino_acid_change - the amino acid change, such as p.E290V
 
 EOS
 }
 
 sub _doc_credits {
-    return (
-        <<EOS,
+    return <<EOS
 This tool depends on copies of data from the following databases, packaged in a form useable for quick analysis:
+
+ * COSMIC - http://www.sanger.ac.uk/genetics/CGP/cosmic/
+ * OMIM - http://www.ncbi.nlm.nih.gov/omim
 EOS
-        "* COSMIC - http://www.sanger.ac.uk/genetics/CGP/cosmic/",
-        "* OMIM - http://www.ncbi.nlm.nih.gov/omim",
-    );
 }
 
-sub doc_authors {
-    return (
-        'Brian Dunford-Shore',
-        'David Larson, Ph.D.',
-        'Michael C. Wendl, Ph.D.',
-        'William Schierding, M.S.',
-    )
+sub _doc_authors {
+    return <<EOS
+ Brian Dunford-Shore
+ David Larson, Ph.D.
+ Michael C. Wendl, Ph.D.
+ William Schierding, M.S.
+EOS
 }
 
 sub doc_copyright_years {

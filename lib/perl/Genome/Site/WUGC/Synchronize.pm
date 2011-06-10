@@ -259,6 +259,7 @@ sub _get_direct_and_indirect_properties_for_object {
         next if $property->is_calculated;
         next if $property->is_constant;
         next if $property->is_many;
+        next if $property->id_by;
         next if $property->via and $property->via ne 'attributes';
     
         my $property_name = $property->property_name;
@@ -316,8 +317,7 @@ sub _create_instrumentdata_imported {
 sub _create_instrumentdata_solexa {
     my ($self, $original_object, $new_object_class) = @_;
 
-    my $ii = $original_object->index_illumina;
-    return 0 unless $ii->copy_sequence_files_confirmed_successfully; #wait for the bam_path to be available
+    return 0 unless $original_object->bam_path;
     
     my ($direct_properties, $indirect_properties) = $self->_get_direct_and_indirect_properties_for_object(
         $original_object,
