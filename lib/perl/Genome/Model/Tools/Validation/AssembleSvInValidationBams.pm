@@ -14,6 +14,14 @@ class Genome::Model::Tools::Validation::AssembleSvInValidationBams {
         is => 'String',
         doc => 'path and prefix to specify output files (which will include *.csv, *.fasta, etc.)',
     },
+    bam_files => {
+        is => 'String',
+        doc => 'Comma-delimited list of BAM files to assemble calls in',
+    },
+    bam_names => {
+        is => 'String',
+        doc => 'Comma-delimited list of labels for BAM files. MUST BE IN SAME ORDER AS BAM_FILES. Also, one of the names MUST have /normal/i in the name.',
+    },
     ],
     has_optional_input => [
     assembled_call_files => {
@@ -23,14 +31,6 @@ class Genome::Model::Tools::Validation::AssembleSvInValidationBams {
     squaredancer_files => {
         is => 'String',
         doc => 'Comma-delimited list of SquareDancer files to assemble',
-    },
-    bam_files => {
-        is => 'String',
-        doc => 'Comma-delimited list of BAM files to assemble calls in',
-    },
-    bam_names => {
-        is => 'String',
-        doc => 'Comma-delimited list of labels for BAM files. MUST BE IN SAME ORDER AS BAM_FILES. Also, one of the names MUST have /normal/i in the name.',
     },
     ],
     doc => 'Assemble SV predictions in validation .bam files.',
