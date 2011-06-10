@@ -488,51 +488,6 @@ sub getEntrypointsFile{
     return $entrypoints_file;
 }
 
-#########################################################################
-#
-#              The Nate Dees School For Kids Who Can't Read Good
-#                     And Want to do Other Stuff Good Too
-#
-#                            (   )
-#                           (    )
-#                            (    )
-#                           (    )
-#                             )  )
-#                            (  (                  /\
-#                             (_)                 /  \  /\
-#                     ________[_]________      /\/    \/  \
-#            /\      /\        ______    \    /   /\/\  /\/\
-#           /  \    //_\       \    /\    \  /\/\/    \/    \
-#    /\    / /\/\  //___\       \__/  \    \/
-#   /  \  /\/    \//_____\       \ |[]|     \
-#  /\/\/\/       //_______\       \|__|      \
-# /      \      /XXXXXXXXXX\                  \
-#         \    /_I_II  I__I_\__________________\
-#                I_I|  I__I_____[]_|_[]_____I
-#                I_II  I__I_____[]_|_[]_____I
-#                I II__I  I     XXXXXXX     I
-#             ~~~~~"   "~~~~~~~~~~~~~~~~~~~~~~~~
-#
-#
-#
-#
-#  
-# Congratulations to the 2011 Graduating class
-# 
-#
-#       _.-'`'-._
-#    .-'    _    '-.
-#     `-.__  `\_.-'
-#       |  `-``\|
-#       `-.....-A
-#               #
-#
-#
-#
-#
-
-
-
 sub execute {
     my $self = shift;
     my $chr = $self->chr;
@@ -788,3 +743,5 @@ sub execute {
     }
     return $return;
 }
+
+1;
