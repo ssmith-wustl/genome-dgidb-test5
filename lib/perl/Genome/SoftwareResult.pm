@@ -458,11 +458,15 @@ sub _resolve_lock_name {
 
     my $resource_lock_name = "/gsc/var/lock/genome/$class_string/" .  $params_and_inputs_list_hash;
 }
-# override _resolve_lock_name for testing
+# override _resolve_lock_name (for testing) to append username and time
 if ($ENV{UR_DBI_NO_COMMIT}) {
     warn 'Overriding Genome::SoftwareResult::_resolve_lock_name since UR_DBI_NO_COMMIT is on.' . "\n";
+    my $suffix = Genome::Sys->username . '_' . time;
+    my $original_resolve_lock_name_sub = \&Genome::SoftwareResult::_resolve_lock_name;
     *Genome::SoftwareResult::_resolve_lock_name = sub {
-        return Genome::Sys->create_temp_file_path;
+        my $lock_name = &$original_resolve_lock_name_sub(@_);
+        $lock_name .= "_$suffix" unless $lock_name =~ /$suffix/;
+        return $lock_name;
     };
 }
 
