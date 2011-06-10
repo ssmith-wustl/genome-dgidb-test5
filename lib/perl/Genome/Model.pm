@@ -1181,8 +1181,18 @@ sub duplicates {
     # duplicates would have the same subject, processing profile, and inputs
     # but we have to compare the values of the inputs not the inputs themselves
     my @duplicates;
-    my @other_models = $class->get(subject_id => $subject->id, processing_profile_id => $pp->id);
+    my @other_models;
+    if (@_) {
+        @other_models = grep { $_->subject_id eq $subject->id} @_;
+    } else {
+        @other_models = $class->get(subject_id => $subject->id, processing_profile_id => $pp->id);
+    }
+
+    my $instrument_data_ids = join(",", sort $self->instrument_data);
     for my $other_model (@other_models) {
+        my $other_instrument_data_ids = join(",", sort $other_model->instrument_data);
+        next unless $instrument_data_ids eq $other_instrument_data_ids;
+
         my @other_inputs = $other_model->inputs;
         next if (@other_inputs != @inputs); # mainly to catch case where one has inputs but other does not
 
@@ -1198,6 +1208,5 @@ sub duplicates {
 
     return @duplicates;
 }
-
 1;
 
