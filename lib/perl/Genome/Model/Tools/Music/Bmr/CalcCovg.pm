@@ -26,18 +26,32 @@ sub help_synopsis {
   return <<HELP
 General usage:
 
-... music bmr calc-covg --bam-list input_dir/bam_list --output-dir output_dir/ --reference-sequence input_dir/all_sequences.fa --roi-file input_dir/all_coding_exons.tsv
+ ... music bmr calc-covg \\
+    --bam-list input_dir/bam_list \\
+    --output-dir output_dir/ \\
+    --reference-sequence input_dir/all_sequences.fa \\
+    --roi-file input_dir/all_coding_exons.tsv
 
 To create a list of commands that will allow the processing of each tumor-normal pair in parallel
 with an LSF job scheduler:
 
-... music bmr calc-covg --bam-list input_dir/bam_list --output-dir output_dir/ --reference-sequence input_dir/all_sequences.fa --roi-file input_dir/all_coding_exons.tsv --cmd_list_file parallelizable_commands --cmd_prefix bsub
+ ... music bmr calc-covg \\
+    --bam-list input_dir/bam_list \\
+    --output-dir output_dir/ \\
+    --reference-sequence input_dir/all_sequences.fa \\
+    --roi-file input_dir/all_coding_exons.tsv \\
+    --cmd_list_file parallelizable_commands \\
+    --cmd_prefix bsub
 
 In the above case, the commands printed into the output file "parallelizable_commands" can be run
 in parallel. After they complete, rerun this script as printed directly below (--cmd_list_file
 and --cmd_prefix have been removed) to merge the parallelized calculations:
 
-... music bmr calc-covg --bam-list input_dir/bam_list --output-dir output_dir/ --reference-sequence input_dir/all_sequences.fa --roi-file input_dir/all_coding_exons.tsv
+ ... music bmr calc-covg \\
+    --bam-list input_dir/bam_list \\
+    --output-dir output_dir/ \\
+    --reference-sequence input_dir/all_sequences.fa \\
+    --roi-file input_dir/all_coding_exons.tsv
 HELP
 }
 
@@ -55,14 +69,21 @@ allows you to run your own calcRoiCovg jobs in parallel or on multiple machines 
 
 Speed things up by running calcRoiCovg jobs in parallel:
 If a compute cluster or multiple machines are available, run this script twice as follows:
-- Define cmd-list-file and cmd-prefix to generate a file with commands that can be submitted to a
-  cluster or run manually. These jobs will write per-ROI base counts in a subdirectory roi_covgs.
-- After all the parallelized calcRoiCovg jobs are completed, run this script again to add them up
-  and generate the final per-gene base counts in a subdirectory gene_covgs. Remember to remove the
-  cmd-list-file and cmd-prefix arguments or you will just be re-creating a list of commands.
+
+=over 4
+
+=item * Define cmd-list-file and cmd-prefix to generate a file with commands that can be submitted to a
+cluster or run manually. These jobs will write per-ROI base counts in a subdirectory roi_covgs.
+
+=item * After all the parallelized calcRoiCovg jobs are completed, run this script again to add them up
+and generate the final per-gene base counts in a subdirectory gene_covgs. Remember to remove the
+cmd-list-file and cmd-prefix arguments or you will just be re-creating a list of commands.
+
+=back
 
 ARGUMENTS:
---roi-file
+
+ --roi-file
   The regions of interest (ROIs) of each gene are typically regions targeted for sequencing or are
   merged exon loci (from multiple transcripts) of genes with 2-bp flanks (splice junctions). ROIs
   from the same chromosome must be listed adjacent to each other in this file. This allows the
@@ -71,29 +92,29 @@ ARGUMENTS:
   base will be counted each time it appears in an ROI of the same gene. To avoid this, be sure to
   merge together overlapping ROIs of the same gene. BEDtools' mergeBed can help if used per gene.
 
---reference-sequence
+ --reference-sequence
   The reference sequence in FASTA format. If a reference sequence index is not found next to this
   file (a .fai file), it will be created.
 
---bam-list
+ --bam-list
   Provide a file containing sample names and normal/tumor BAM locations for each. Use the tab-
   delimited format [sample_name normal_bam tumor_bam] per line. Additional columns like clinical
   data are allowed, but ignored. The sample_name must be the same as the tumor sample names used
   in the MAF file (16th column, with the header Tumor_Sample_Barcode).
 
---output-dir
+ --output-dir
   Specify an output directory where the following will be created/written:
   roi_covgs: Subdirectory containing per-ROI covered base counts for each sample.
   gene_covgs: Subdirectory containing per-gene covered base counts for each sample.
   total_covgs: File containing the overall non-overlapping coverages per sample.
 
---cmd-list-file
+ --cmd-list-file
   Specify a file into which a list of calcRoiCovg jobs will be written to. These can be scheduled
   in parallel, and will write per-ROI covered base-counts into the output subdirectory roi_covgs.
   If cmd-list-file is left unspecified, this script runs calcRoiCovg per sample one after another,
   taking ~30 mins per sample, but it skips samples whose output is already in roi_covgs.
 
---cmd-prefix
+ --cmd-prefix
   Specify a job submission command that will be prefixed to each command in cmd-list-file. This
   makes batch submission easier. Just run the cmd-list-file file as a shell script to submit jobs.
   cmd-prefix is "bsub" if your cluster uses the LSF job scheduler, or "qsub" in Torque. Add
@@ -101,21 +122,17 @@ ARGUMENTS:
 HELP
 }
 
-=cut
 sub _doc_authors {
-  return ('',
-    'Cyriac Kandoth, Ph.D.',
-  );
+  return " Cyriac Kandoth, Ph.D.";
 }
 
 sub _doc_see_also {
-  return ('',
-    'B<genome-music-bmr>(1)',
-    'B<genome-music>(1)',
-    'B<genome>(1)'
-  );
+  return <<EOS
+B<genome-music-bmr>(1),
+B<genome-music>(1),
+B<genome>(1)
+EOS
 }
-=cut
 
 sub execute {
   my $self = shift;

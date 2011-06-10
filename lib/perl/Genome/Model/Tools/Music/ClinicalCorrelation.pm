@@ -24,24 +24,39 @@ class Genome::Model::Tools::Music::ClinicalCorrelation {
 
 sub help_synopsis {
   return <<HELP
-... music clinical-correlation --maf-file /path/myMAF.tsv --numeric-clinical-data-file /path/myNumericData.tsv --genetic-data-type 'gene' --output-file /path/output_file
+ ... music clinical-correlation \\
+        --maf-file /path/myMAF.tsv \\
+        --numeric-clinical-data-file /path/myNumericData.tsv \\
+        --genetic-data-type 'gene' \\
+        --output-file /path/output_file
 
-... music clinical-correlation --maf-file /path/myMAF.tsv --numeric-clinical-data-file /path/myNumericData.tsv --categorical-clinical-data-file /path/myClassData.tsv --genetic-data-type 'gene' --output-file /path/output_file
+ ... music clinical-correlation \\
+        --maf-file /path/myMAF.tsv \\
+        --numeric-clinical-data-file /path/myNumericData.tsv \\
+        --categorical-clinical-data-file /path/myClassData.tsv \\
+        --genetic-data-type 'gene' \\
+        --output-file /path/output_file
 HELP
 }
 
 sub help_detail {
   return <<HELP
+
 This command identifies correlations between mutations recorded in a MAF and the particular
 phenotypic traits recorded for the same samples in separate clinical data files.
 
 The clinical data files must be separated between numeric and categoric data and must follow these
 conventions:
-- Headers are required
-- Each file must include at least 1 sample_id column and 1 attribute column, with the format being
-  [sample_id  clinical_data_attribute_1 clinical_data_attribute_2 ...]
-- The sample ID must match the sample ID listed in the MAF under "Tumor_Sample_Barcode" for
-  relating the mutations of this sample.
+
+=over 4
+
+=item * Headers are required
+
+=item * Each file must include at least 1 sample_id column and 1 attribute column, with the format being [sample_id  clinical_data_attribute_1 clinical_data_attribute_2 ...]
+
+=item * The sample ID must match the sample ID listed in the MAF under "Tumor_Sample_Barcode" for relating the mutations of this sample.
+
+=back
 
 Note the importance of the headers: the header for each clinical_data_attribute will appear in the
 output file to denote relationships with the mutation data from the MAF.
@@ -55,20 +70,22 @@ appended for results derived from numeric clinical data, and ".categ" will be ap
 derived from categorical clinical data.
 
 ARGUMENTS:
---bam-list
+
+ --bam-list
   Provide a file containing sample names and normal/tumor BAM locations for each. Use the tab-
   delimited format [sample_name normal_bam tumor_bam] per line. This tool only needs sample_name,
   so all other columns can be skipped. The sample_name must be the same as the tumor sample names
   used in the MAF file (16th column, with the header Tumor_Sample_Barcode).
+
 HELP
 }
 
 sub _doc_authors {
-    return ('',
-        'Nathan D. Dees, Ph.D.',
-        'Qunyuan Zhang, Ph.D.',
-        'William Schierding, M.S.',
-    );
+    return <<EOS
+ Nathan D. Dees, Ph.D.
+ Qunyuan Zhang, Ph.D.
+ William Schierding, M.S.
+EOS
 }
 
 sub execute {

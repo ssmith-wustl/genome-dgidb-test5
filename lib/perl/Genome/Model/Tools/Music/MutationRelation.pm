@@ -37,7 +37,8 @@ counts among the samples. In the output file, 'pand' is the P-value for concurre
 events, and 'pexc' is the P-value for exclusive mutation events.
 
 ARGUMENTS:
---bam-list
+
+ --bam-list
   Provide a file containing sample names and normal/tumor BAM locations for each. Use the tab-
   delimited format [sample_name normal_bam tumor_bam] per line. This tool only needs sample_name,
   so all other columns can be skipped. The sample_name must be the same as the tumor sample names
@@ -46,10 +47,10 @@ HELP
 }
 
 sub _doc_authors {
-    return ('',
-        'Nathan D. Dees, Ph.D.',
-        'Qunyuan Zhang, Ph.D.',
-    );
+    return <<EOS
+ Nathan D. Dees, Ph.D.
+ Qunyuan Zhang, Ph.D.
+EOS
 }
 
 sub execute {

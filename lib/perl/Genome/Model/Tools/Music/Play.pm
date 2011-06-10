@@ -125,7 +125,15 @@ sub help_synopsis {
     return <<EOS
 This tool takes as parameters all the information required to run the individual tools. An example usage is:
 
-... music play --bam-list input/bams_to_analyze.txt --numeric-clinical-data-file input/numeric_clinical_data.csv --maf-file input/myMAF.tsv --output-dir play_output_dir --pathway-file input/pathway_db --reference-sequence input/refseq/all_sequences.fa --roi-file input/all_coding_regions.bed --genetic-data-type gene
+ ... music play \\
+        --bam-list input/bams_to_analyze.txt \\
+        --numeric-clinical-data-file input/numeric_clinical_data.csv \\
+        --maf-file input/myMAF.tsv \\
+        --output-dir play_output_dir \\
+        --pathway-file input/pathway_db \\
+        --reference-sequence input/refseq/all_sequences.fa \\
+        --roi-file input/all_coding_regions.bed \\
+        --genetic-data-type gene
 EOS
 }
 
@@ -140,20 +148,20 @@ sub _doc_credits {
 }
 
 sub _doc_authors {
-    return('','Thomas B. Mooney, M.S.');
+    return " Thomas B. Mooney, M.S.";
 }
 
 sub _doc_see_also {
-    return ('',
-        'B<genome-music>(1)',
-        'B<genome-music-path-scan>(1)',
-        'B<genome-music-smg>(1)',
-        'B<genome-music-clinical-correlation>(1)',
-        'B<genome-music-mutation-relation>(1)',
-        'B<genome-music-cosmic-omim>(1)',
-        'B<genome-music-proximity>(1)',
-        'B<genome-music-pfam>(1)',
-    );
+    return <<EOS
+B<genome-music>(1),
+B<genome-music-path-scan>(1),
+B<genome-music-smg>(1),
+B<genome-music-clinical-correlation>(1),
+B<genome-music-mutation-relation>(1),
+B<genome-music-cosmic-omim>(1),
+B<genome-music-proximity>(1),
+B<genome-music-pfam>(1)
+EOS
 }
 
 sub execute {

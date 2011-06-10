@@ -25,23 +25,31 @@ class Genome::Model::Tools::Music::PathScan {
 
 sub help_synopsis {
   return <<HELP
-... music path-scan --bam-list input_dir/bam_file_list --gene-covg-dir output_dir/gene_covgs/ --maf-file input_dir/myMAF.tsv --output-file output_dir/sm_pathways --pathway-file input_dir/pathway_dbs/KEGG.txt --bmr 8.7E-07
+ ... music path-scan \\
+  --bam-list input_dir/bam_file_list \\
+  --gene-covg-dir output_dir/gene_covgs/ \\
+  --maf-file input_dir/myMAF.tsv \\
+  --output-file output_dir/sm_pathways \\
+  --pathway-file input_dir/pathway_dbs/KEGG.txt \\
+  --bmr 8.7E-07
 HELP
 }
 
 sub help_detail {
   return <<HELP
 Only the following four columns in the MAF are used. All other columns may be left blank.
-Col 1: Hugo_Symbol (Need not be HUGO, but must match gene names used in the pathway file)
-Col 2: Entrez_Gene_Id (Matching Entrez ID trump gene name matches between pathway file and MAF)
-Col 9: Variant_Classification (PathScan ignores Silent|RNA|3'Flank|3'UTR|5'Flank|5'UTR|Intron)
-Col 16: Tumor_Sample_Barcode (Must match the name in sample-list, or contain it as a substring)
+
+ Col 1: Hugo_Symbol (Need not be HUGO, but must match gene names used in the pathway file)
+ Col 2: Entrez_Gene_Id (Matching Entrez ID trump gene name matches between pathway file and MAF)
+ Col 9: Variant_Classification (PathScan ignores Silent|RNA|3'Flank|3'UTR|5'Flank|5'UTR|Intron)
+ Col 16: Tumor_Sample_Barcode (Must match the name in sample-list, or contain it as a substring)
 
 The Entrez_Gene_Id can also be left blank (or set to 0), but it is highly recommended, in case
 genes are named differently in the pathway file and the MAF file.
 
 ARGUMENTS:
---pathway-file
+
+ --pathway-file
   This is a tab-delimited file prepared from a pathway database (such as KEGG), with the columns:
   [path_id, path_name, class, gene_line, diseases, drugs, description] The latter three columns
   are optional (but are available on KEGG). The gene_line contains the "entrez_id:gene_name" of
@@ -54,39 +62,38 @@ ARGUMENTS:
   not mandatory (use a 0 if Entrez ID unknown). But if a gene name in the MAF does not match any
   gene name in this file, the entrez IDs are used to find a match (unless it's a 0).
 
---gene-covg-dir
+ --gene-covg-dir
   This is usually the gene_covgs subdirectory created when you run "music bmr calc-covg". It
   should contain files for each sample that report per-gene covered base counts.
 
---bam-list
+ --bam-list
   Provide a file containing sample names and normal/tumor BAM locations for each. Use the tab-
   delimited format [sample_name normal_bam tumor_bam] per line. This tool only needs sample_name,
   so all other columns can be skipped. The sample_name must be the same as the tumor sample names
   used in the MAF file (16th column, with the header Tumor_Sample_Barcode).
 
---bmr
+ --bmr
   The overall background mutation rate. This can be calculated using "music bmr calc-bmr".
 
---genes-to-ignore
+ --genes-to-ignore
   A comma-delimited list of genes to ignore from the MAF file. This is useful when there are
   recurrently mutated genes like TP53 which might mask the significance of other genes.
 HELP
 }
 
 sub _doc_authors {
-    return ('',
-        'Cyriac Kandoth, Ph.D.',
-        'Michael Wendl, Ph.D.',
-    );
+    return <<EOS
+ Cyriac Kandoth, Ph.D.
+ Michael Wendl, Ph.D.
+EOS
 }
 
 sub _doc_credits {
-    return (
-        <<EOS,
+    return <<EOS
 This module uses reformatted copies of data from the Kyoto Encyclopedia of Genes and Genomes (KEGG) database:
+
+ * KEGG - http://www.genome.jp/kegg/
 EOS
-        "* KEGG - http://www.genome.jp/kegg/",
-    );
 }
 
 sub execute
