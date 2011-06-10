@@ -38,9 +38,7 @@ class Genome::Model::Tools::Validation::AssembleSvInValidationBams {
 
 sub help_detail {
     return <<EOS
-    This tool combines SquareDancer and BreakDancer predictions into one file, annotates this file with BreakAnnot.pl, and then feeds the calls into the 'gmt sv assembly-validation' script for producing assemblies based on validation .bam files.
-
-    For BreakDancer files, which have an inner- and outer-start and stop position, all four combinations of these starts and stopsare used to fabricate 4 separate calls in the combined file. This usually leads to duplicate assembly contings, so all assemblies are later merged to produce final output files. These output files may be fed into John Wallis' svCaptureValidation.pl for final evaluation of the real-ness of the calls.
+    This tool combines SquareDancer and BreakDancer (assembled) predictions into one file and then feeds the calls into the 'gmt sv assembly-validation' script for producing assemblies based on validation .bam files. For BreakDancer files, which have an inner- and outer-start and stop position, all four combinations of these starts and stopsare used to fabricate 4 separate calls in the combined file. This usually leads to duplicate assembly contings, so all assemblies are then merged to produce final output csv and fasta files. These output files are fed into John Wallis' svCaptureValidation.pl for final evaluation of readcounts of support for the calls in each .bam file, and then into his processSvReadRemapOutFiles.pl, which will make a call regarding the somatic status. One note - JW is updating this last step, and it will be improved in the future.
 EOS
 }
 
