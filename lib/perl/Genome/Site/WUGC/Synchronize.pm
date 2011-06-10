@@ -259,6 +259,7 @@ sub _get_direct_and_indirect_properties_for_object {
         next if $property->is_calculated;
         next if $property->is_constant;
         next if $property->is_many;
+        next if $property->id_by;
         next if $property->via and $property->via ne 'attributes';
     
         my $property_name = $property->property_name;
