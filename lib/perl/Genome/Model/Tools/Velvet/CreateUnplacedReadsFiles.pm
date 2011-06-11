@@ -85,32 +85,31 @@ sub _print_unplaced_reads {
 
     unlink $self->reads_unplaced_file;
     my $unplaced_fh = Genome::Sys->open_file_for_writing($self->reads_unplaced_file) ||
-	return;
+        return;
     my $fasta_out = Bio::SeqIO->new(-format => 'fasta', -file => '>'.$self->reads_unplaced_fasta_file) ||
-	die;
+        die;
+    my $seq_fh = Genome::Sys->open_file_for_reading( $sequences_file ) || 
+        return;
+    my $bio_seqio_fh = Bio::SeqIO->new(-fh => $seq_fh, -format => 'fasta', -noclose => 1);
     for (0 .. $#$unplaced_reads) {
-	next unless defined @$unplaced_reads[$_];
-	my $read_name = ${$unplaced_reads}[$_][1];
-	unless ($read_name) {
-	    $self->error_message("Failed to get read name for afg read index $_");
-	    return;
-	}
-	$unplaced_fh->print("$read_name unused\n");
-	my $seek_pos = ${$unplaced_reads}[$_][0];
-	unless (defined $seek_pos) {
-	    $self->error_message("Failed to get read seek position for afg read index $_");
-	    return;
-	}
-	#This doesn't seek to work properly if fh is held open constantly
-	my $seq_fh = Genome::Sys->open_file_for_reading( $sequences_file ) || 
-	    return;
-	$seq_fh->seek($seek_pos, 0);
-	my $io = Bio::SeqIO->new(-fh => $seq_fh, -format => 'fasta');
-	my $seq = $io->next_seq;
-	my $seq_obj = Bio::Seq->new(-display_id => $seq->primary_id, -seq => $seq->seq);
-	$fasta_out->write_seq($seq_obj);
-	$seq_fh->close;
+        next unless defined @$unplaced_reads[$_];
+        my $read_name = ${$unplaced_reads}[$_][1];
+        unless ($read_name) {
+            $self->error_message("Failed to get read name for afg read index $_");
+            return;
+        }
+        $unplaced_fh->print("$read_name unused\n");
+        my $seek_pos = ${$unplaced_reads}[$_][0];
+        unless (defined $seek_pos) {
+            $self->error_message("Failed to get read seek position for afg read index $_");
+            return;
+        }
+        $seq_fh->seek($seek_pos, 0);
+        my $seq = $bio_seqio_fh->next_seq;
+        my $seq_obj = Bio::Seq->new(-display_id => $seq->primary_id, -seq => $seq->seq);
+        $fasta_out->write_seq($seq_obj);
     }
+    $seq_fh->close;
     $unplaced_fh->close;
 
     return 1;
