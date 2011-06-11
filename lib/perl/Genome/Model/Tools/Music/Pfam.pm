@@ -30,7 +30,7 @@ class Genome::Model::Tools::Music::Pfam {
 
 sub help_synopsis {
     return <<EOS
-... music pfam --maf-file myMAF.tsv --output-file myMAF.tsv.pfam
+ ... music pfam --maf-file myMAF.tsv --output-file myMAF.tsv.pfam
 EOS
 }
 
@@ -43,23 +43,20 @@ EOS
 }
 
 sub _doc_authors {
-    return ('',
-        'Nathan D. Dees, Ph.D.',
-    );
+    return " Nathan D. Dees, Ph.D.";
 }
 
 sub _doc_credits {
-    return (
-        <<EOS,
+    return <<EOS,
 This tool uses tabix, by Heng Li.  See http://samtools.sourceforge.net/tabix.shtml.
 
 This tool also depends on copies of data from the following databases, packaged in a form useable for quick analysis:
+
+ * Pfam - http://pfam.sanger.ac.uk/
+ * SMART - http://smart.embl-heidelberg.de/
+ * SUPERFAMILY - http://supfam.cs.bris.ac.uk/SUPERFAMILY/
+ * PatternScan - http://www.expasy.ch/prosite/
 EOS
-        "* Pfam - http://pfam.sanger.ac.uk/",
-        "* SMART - http://smart.embl-heidelberg.de/",
-        "* SUPERFAMILY - http://supfam.cs.bris.ac.uk/SUPERFAMILY/",
-        "* PatternScan - http://www.expasy.ch/prosite/",
-    );
 }
 
 sub execute {

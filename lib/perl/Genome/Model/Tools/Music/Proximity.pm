@@ -34,21 +34,38 @@ class Genome::Model::Tools::Music::Proximity {
 
 sub help_detail {
     return <<EOS
-This module first calculates the amino acid position of each mutation in the MAF file within its respective transcript. Then, for each mutation, two values are calculated: 1) the number of other mutations on the same transcript within the proximity limit set by the max-proximity input parameter, and 2) the distance to the closest other mutation in this nearby set. Only mutations which have another mutation within close proximity are reported in the output-file. The output consists of [Gene  Transcipt  AA_position  Chr  Genomic_start  Genomic_stop  Ref  Var  Sample  #_Close_Mutations  AA_distance_to_closest_mutation].
+This module first calculates the amino acid position of each mutation in the MAF file within its respective transcript. Then, for each mutation, two values are calculated: 1) the number of other mutations on the same transcript within the proximity limit set by the max-proximity input parameter, and 2) the distance to the closest other mutation in this nearby set. Only mutations which have another mutation within close proximity are reported in the output-file. The output consists of the folowing columns:
+
+    1. Gene 
+    2. Transcipt
+    3. AA_position
+    4. Chr 
+    5. Genomic_start 
+    6. Genomic_stop 
+    7. Ref
+    8. Var
+    9. Sample 
+   10. #_Close_Mutations 
+   11. AA_distance_to_closest_mutation
+
 EOS
 }
 
 sub help_synopsis {
     return <<EOS 
-... music proximity --maf-file myMAF.tsv --max-proximity 10 --reference-sequence "path_to_reference_sequence" --output-file myMAF.tsv.proximity_analysis
+ ... music proximity \\
+        --maf-file myMAF.tsv \\
+        --max-proximity 10 \\
+        --reference-sequence "path_to_reference_sequence" \\
+        --output-file myMAF.tsv.proximity_analysis
 EOS
 }
 
 sub _doc_authors {
-    return ('',
-        'Nathan D. Dees, Ph.D.',
-        'Dan Koboldt, M.S.',
-    );
+    return <<EOS
+ Nathan D. Dees, Ph.D.
+ Dan Koboldt, M.S.
+EOS
 }
 
 sub execute {

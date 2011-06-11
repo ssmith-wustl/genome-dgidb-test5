@@ -9,6 +9,7 @@ use Genome;
 use JSON;
 use Sort::Naturally;
 use Template;
+use File::Temp qw/tempdir/;
 
 class Genome::Model::Build::Set::View::IntersectSnv::Html {
     is => 'UR::Object::View::Default::Html',
@@ -118,7 +119,8 @@ sub _generate_content {
     for my $filt ( keys %filter_methods ) {
         my $fn = $filter_methods{$filt};
         my @files = map { $_->$fn("v1") } @builds;
-        my $tmpfile = Genome::Sys->create_temp_file_path;
+        my $tmpdir = tempdir(CLEANUP => 1);
+        my $tmpfile = "$tmpdir/snv_concordance.out";
         my $cmd = Genome::Model::Tools::Joinx::SnvConcordance->create(
             input_file_a => $files[0],
             input_file_b => $files[1],

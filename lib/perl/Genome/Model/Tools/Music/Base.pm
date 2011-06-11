@@ -34,15 +34,15 @@ EOS
 }
 
 sub _doc_authors {
-    return ('',
-        'Nathan D. Dees, Ph.D.',
-        'Cyriac Kandoth, Ph.D.',
-        'Dan Koboldt, M.S.',
-        'William Schierding, M.S.',
-        'Michael Wendl, Ph.D.',
-        'Qunyuan Zhang, Ph.D.',
-        'Thomas B. Mooney, M.S.',           
-    );
+    return <<EOS
+ Nathan D. Dees, Ph.D.
+ Cyriac Kandoth, Ph.D.
+ Dan Koboldt, M.S.
+ William Schierding, M.S.
+ Michael Wendl, Ph.D.
+ Qunyuan Zhang, Ph.D.
+ Thomas B. Mooney, M.S.           
+EOS
 }
 
 =cut
@@ -52,14 +52,15 @@ sub _doc_credits {
 =cut
 
 sub _doc_see_also {
-    return ('','B<genome-music>(1)','B<genome>(1)');
+    return <<EOS
+B<genome-music>(1), B<genome>(1)
+EOS
 }
 
 sub _doc_manual_body {
     my $help = shift->help_detail;
-    my @rows = map { " $_" } split(/\n/,$help);
-    chomp @rows;
-    return join("\n",@rows);
+    $help =~ s/\n+$/\n/g;
+    return $help;
 }
 
 sub help_detail {

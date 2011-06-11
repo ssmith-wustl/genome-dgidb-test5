@@ -100,14 +100,17 @@ sub help_detail {
 sub execute {
 
     my $self = shift;
-
+    my $output_dir = $self->output_directory;
+    unless(-d $output_dir){
+        Genome::Sys->create_directory($output_dir);
+    }
     unless(-e $self->normal_bam){
         die $self->error_message("Could not locate normal bam file at: ".$self->normal_bam);
     }
     unless(-e $self->tumor_bam){
         die $self->error_message("Could not locate tumor bam file at: ".$self->tumor_bam);
     }
-    unless(-d $self->output_directory){
+    unless(-d $output_dir){
         die $self->error_message("Could not locate output directory.");
     }
     my $normal_bam_name = basename($self->normal_bam);
@@ -124,7 +127,7 @@ sub execute {
 
     my %input;    
 
-    my $output_dir = $self->output_directory;
+    
     $workflow->log_dir($self->output_directory);
 
     $input{normal_bam} =  $self->normal_bam;

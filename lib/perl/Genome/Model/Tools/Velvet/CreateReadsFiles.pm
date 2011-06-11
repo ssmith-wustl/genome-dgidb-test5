@@ -69,6 +69,8 @@ sub execute {
 
     #velvet output Sequences file
     my $sequences_file = ( $self->sequences_file ) ? $self->sequences_file : $self->velvet_sequences_file;
+    my $seq_fh = Genome::Sys->open_file_for_reading( $sequences_file ) or return;
+    my $bio_seqio_fh = Bio::SeqIO->new(-fh => $seq_fh, -format => 'fasta', -noclose => 1);
 
     #velvet output afg file
     my $afg_file = ($self->afg_file ) ? $self->afg_file : $self->velvet_afg_file;
@@ -155,7 +157,7 @@ sub execute {
 		    }
 
 		    #TODO - look into storing read length too so this can be avoided
-		    my $read_length = $self->_read_length_from_sequences_file($seek_pos, $sequences_file);
+		    my $read_length = $self->_read_length_from_sequences_file($seek_pos, $seq_fh, $bio_seqio_fh);
 
 		    #print to readinfo.txt file
 		    $ri_fh->print("$read_name $contig_name $c_or_u $ctg_start $read_length\n");
@@ -173,6 +175,7 @@ sub execute {
 	}
     }
 
+    $seq_fh->close;
     $afg_fh->close;
     $ri_fh->close;
     $rp_fh->close;
@@ -276,19 +279,16 @@ sub _get_supercontig_position {
 }
 
 sub _read_length_from_sequences_file {
-    my ($self, $seek_pos, $file) = @_;
+    my ($self, $seek_pos, $seq_fh, $bio_seqio_fh) = @_;
 
-    my $seq_fh = Genome::Sys->open_file_for_reading( $file ) or return;
     $seq_fh->seek($seek_pos, 0);
-    my $io = Bio::SeqIO->new(-fh => $seq_fh, -format => 'fasta');
-
-    my $read_length = length ($io->next_seq->seq);
+    my $read_length = length ($bio_seqio_fh->next_seq->seq);
 
     unless ($read_length > 0) {
-	$self->error_message("Read length must be a number greater than zero and not ".$read_length);
-	return;
+        $self->error_message("Read length must be a number greater than zero and not ".$read_length);
+        return;
     }
-    $seq_fh->close;
+
     return $read_length;
 }
 

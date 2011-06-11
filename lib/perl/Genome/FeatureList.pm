@@ -7,6 +7,7 @@ use Genome;
 
 class Genome::FeatureList {
     is => 'UR::Object',
+    id_generator => '-uuid',
     table_name => 'FEATURE_LIST',
     has => [
         id => { is => 'Text', len => 64 },
@@ -74,10 +75,8 @@ sub create {
     my %params = @_;
 
     my $file = delete $params{file_path};
-    my $id = delete $params{id};
-    $id ||= $class->_next_id;
 
-    my $self = $class->SUPER::create(%params, id => $id);
+    my $self = $class->SUPER::create(%params);
 
     if($file and Genome::Sys->check_for_path_existence($file)) {
         my $allocation = Genome::Disk::Allocation->allocate(
@@ -111,21 +110,6 @@ sub create {
     }
 
     return $self; 
-}
-
-#FIXME When a UR::Object has a datasource that is an RDBMS, UR assumes that we want to use a DB sequence to get our
-#auto-generated IDs.  This is not the case here, so for now bring back a variation of the default ID generator from
-#<UR/Object/Type/InternalAPI.pm>.
-#
-#Spaces are problematic so they have been replaced.  A few extra sources of numbers have been added to the IDs as well.
-sub _next_id {
-    my $class = shift;
-
-    my $id_base = $UR::Object::Type::autogenerate_id_base;
-    $id_base =~ s/\s/-/g;
-    
-    my $id = join('-', $id_base, time(), int(9999*rand), ++$UR::Object::Type::autogenerate_id_iter);
-    return $id;
 }
 
 sub delete {

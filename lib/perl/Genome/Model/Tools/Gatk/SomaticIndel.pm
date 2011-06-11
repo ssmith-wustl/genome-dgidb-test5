@@ -4,6 +4,8 @@ use strict;
 use warnings;
 use FileHandle;
 use Genome;
+use File::Basename qw/dirname/;
+use File::Spec::Functions;
 
 class Genome::Model::Tools::Gatk::SomaticIndel {
     is => 'Genome::Model::Tools::Gatk',                       
@@ -119,7 +121,10 @@ sub execute {
     my $vcf_output_file = $output_file . ".vcf";
     my $ram = $self->mb_of_ram;
     my $cmd = 'java -Xms'.$ram.'m -Xmx'.$ram.'m -jar ';
-    $cmd .= join(" ", $path_to_gatk, $gatk_params, "-I:normal", $self->normal_bam, "-I:tumor", $self->tumor_bam, "--verboseOutput", $output_file, "--out", $vcf_output_file);
+    my @args = ($path_to_gatk, $gatk_params, "-I:normal", $self->normal_bam, "-I:tumor", $self->tumor_bam, "--verboseOutput", $output_file, "--out", $vcf_output_file);
+    my $whitelist_args = _infer_whitelist_args($reference);
+    push(@args, $whitelist_args) if $whitelist_args;
+    $cmd .= join(" ", @args);
 
     ## Optionally append BED output file ##
 
@@ -180,6 +185,24 @@ sub execute {
     return 1;
 }
 
+
+sub _infer_whitelist_args {
+    my $reference = shift;
+
+    my $seqdict = catfile(dirname($reference), "seqdict", "seqdict.sam");
+    return unless -f $seqdict;
+    my @sequences;
+    open(FH, "<$seqdict") or return;
+    while (<FH>) {
+        next unless /^\@SQ/;
+        chomp;
+        my @fields = split(/[\t:]/);
+        push(@sequences, $fields[2]);
+    }
+    close(FH);
+
+    return "-L '" . join(";", @sequences) . "'" if @sequences;
+}
 
 
 ################################################################################################

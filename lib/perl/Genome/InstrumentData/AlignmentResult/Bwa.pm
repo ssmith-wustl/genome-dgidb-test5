@@ -32,7 +32,8 @@ sub required_rusage {
     my $tmp_gb = $tmp_mb/1024;
 
     my $user = getpwuid($<);
-    my $queue = ($user eq 'apipe-builder' ? 'alignment-pd' : 'alignment');
+    my $queue = 'alignment';
+    $queue = 'alignment-pd' if (Genome::Sys->username =~ /^apipe-/);
 
     my $host_groups;
     $host_groups = qx(bqueues -l $queue | grep ^HOSTS:);
@@ -294,7 +295,7 @@ sub _filter_samxe_output {
     my $sam_out_fh; 
     # UGLY HACK: the multi-aligner code redefines this to zero so it can extract sam files.
     if ($self->supports_streaming_to_bam) { 
-        $sam_out_fh = $self->_bam_output_fh; 
+        $sam_out_fh = $self->_sam_output_fh; 
     } else {
         $sam_out_fh = IO::File->new(">>" . $self->temp_scratch_directory . "/all_sequences.sam");
     }
