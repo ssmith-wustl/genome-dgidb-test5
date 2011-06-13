@@ -18,6 +18,8 @@ my $build = Genome::Model::Build->create(
     data_directory => $model->data_directory,
 );
 ok($build, 'created build');
+$build->create_subdirectories;
+
 my $example_build = Genome::Model::MetagenomicComposition16s::Test->example_build_for_model($model);
 ok($example_build, 'got example build');
 ok(_link_example_data($build, $example_build), 'linked example data');
