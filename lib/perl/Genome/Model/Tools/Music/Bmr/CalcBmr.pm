@@ -46,11 +46,21 @@ sub help_detail {
   return <<HELP;
 This script calculates overall Background Mutation Rate (BMR) and BMRs in the categories of
 AT/CG/CpG Transitions, AT/CG/CpG Transversions, and Indels. It also generates a file with per-gene mutation rates that can be used for significantly mutated gene tests (music smg).
+HELP
+}
 
-ARGUMENTS:
+sub _additional_help_sections {
+  return (
+    "ARGUMENTS",
+<<EOS
 
- --roi-file
-  The regions of interest (ROIs) of each gene are typically regions targeted for sequencing or are
+=over 4
+
+=item --roi-file
+
+=over 8
+
+=item The regions of interest (ROIs) of each gene are typically regions targeted for sequencing or are
   merged exon loci (from multiple transcripts) of genes with 2-bp flanks (splice junctions). ROIs
   from the same chromosome must be listed adjacent to each other in this file. This allows the
   underlying C-based code to run much more efficiently and avoid re-counting bases seen in
@@ -58,26 +68,52 @@ ARGUMENTS:
   base will be counted each time it appears in an ROI of the same gene. To avoid this, be sure to
   merge together overlapping ROIs of the same gene. BEDtools' mergeBed can help if used per gene.
 
- --reference-sequence
-  The reference sequence in FASTA format. If a reference sequence index is not found next to this
+=back
+
+=item --reference-sequence
+
+=over 8
+
+=item The reference sequence in FASTA format. If a reference sequence index is not found next to this
   file (a .fai file), it will be created.
 
- --bam-list
-  Provide a file containing sample names and normal/tumor BAM locations for each. Use the tab-
+=back
+
+=item --bam-list
+
+=over 8
+
+=item Provide a file containing sample names and normal/tumor BAM locations for each. Use the tab-
   delimited format [sample_name normal_bam tumor_bam] per line. Additional columns like clinical
   data are allowed, but ignored. The sample_name must be the same as the tumor sample names used
   in the MAF file (16th column, with the header Tumor_Sample_Barcode).
 
- --output-dir
-  This should be the same output directory used when running "music bmr calc-covg". The following
+=back
+
+=item --output-dir
+
+=over 8
+
+=item This should be the same output directory used when running "music bmr calc-covg". The following
   outputs of this script will also be created/written:
   overall_bmrs: File containing categorized overall background mutation rates.
   gene_mrs: File containing categorized per-gene mutation rates.
 
- --genes-to-ignore
-  A comma-delimited list of genes to ignore for overall BMR calculations. List genes that are
+=back
+
+=item --genes-to-ignore
+
+=over 8
+
+=item A comma-delimited list of genes to ignore for overall BMR calculations. List genes that are
   known factors in this disease and whose mutations should not be classified as background.
-HELP
+
+=back
+
+=back
+
+EOS
+  );
 }
 
 sub _doc_authors {

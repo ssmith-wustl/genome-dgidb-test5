@@ -68,16 +68,31 @@ phenotype trait are random. Lower P-values indicate lower randomness, or likely 
 The results are saved to the output filename given with a suffix appended; ".numeric" will be
 appended for results derived from numeric clinical data, and ".categ" will be appended for results
 derived from categorical clinical data.
+HELP
+}
 
-ARGUMENTS:
+sub _additional_help_sections {
+  return (
+    "ARGUMENTS",
+<<EOS
 
- --bam-list
-  Provide a file containing sample names and normal/tumor BAM locations for each. Use the tab-
+=over 4
+
+=item --bam-list
+
+=over 8
+
+=item Provide a file containing sample names and normal/tumor BAM locations for each. Use the tab-
   delimited format [sample_name normal_bam tumor_bam] per line. This tool only needs sample_name,
   so all other columns can be skipped. The sample_name must be the same as the tumor sample names
   used in the MAF file (16th column, with the header Tumor_Sample_Barcode).
 
-HELP
+=back
+
+=back
+
+EOS
+    );
 }
 
 sub _doc_authors {
