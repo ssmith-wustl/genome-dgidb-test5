@@ -80,11 +80,21 @@ and generate the final per-gene base counts in a subdirectory gene_covgs. Rememb
 cmd-list-file and cmd-prefix arguments or you will just be re-creating a list of commands.
 
 =back
+HELP
+}
 
-ARGUMENTS:
+sub _additional_help_sections {
+  return (
+    "ARGUMENTS",
+<<EOS
 
- --roi-file
-  The regions of interest (ROIs) of each gene are typically regions targeted for sequencing or are
+=over 4
+
+=item --roi-file
+
+=over 8
+
+=item The regions of interest (ROIs) of each gene are typically regions targeted for sequencing or are
   merged exon loci (from multiple transcripts) of genes with 2-bp flanks (splice junctions). ROIs
   from the same chromosome must be listed adjacent to each other in this file. This allows the
   underlying C-based code to run much more efficiently and avoid re-counting bases seen in
@@ -92,34 +102,65 @@ ARGUMENTS:
   base will be counted each time it appears in an ROI of the same gene. To avoid this, be sure to
   merge together overlapping ROIs of the same gene. BEDtools' mergeBed can help if used per gene.
 
- --reference-sequence
-  The reference sequence in FASTA format. If a reference sequence index is not found next to this
+=back
+
+=item --reference-sequence
+
+=over 8
+
+=item The reference sequence in FASTA format. If a reference sequence index is not found next to this
   file (a .fai file), it will be created.
 
- --bam-list
-  Provide a file containing sample names and normal/tumor BAM locations for each. Use the tab-
+=back
+
+=item --bam-list
+
+=over 8
+
+=item Provide a file containing sample names and normal/tumor BAM locations for each. Use the tab-
   delimited format [sample_name normal_bam tumor_bam] per line. Additional columns like clinical
   data are allowed, but ignored. The sample_name must be the same as the tumor sample names used
   in the MAF file (16th column, with the header Tumor_Sample_Barcode).
 
- --output-dir
-  Specify an output directory where the following will be created/written:
+=back
+
+=item --output-dir
+
+=over 8
+
+=item Specify an output directory where the following will be created/written:
   roi_covgs: Subdirectory containing per-ROI covered base counts for each sample.
   gene_covgs: Subdirectory containing per-gene covered base counts for each sample.
   total_covgs: File containing the overall non-overlapping coverages per sample.
 
- --cmd-list-file
-  Specify a file into which a list of calcRoiCovg jobs will be written to. These can be scheduled
+=back
+
+=item --cmd-list-file
+
+=over 8
+
+=item Specify a file into which a list of calcRoiCovg jobs will be written to. These can be scheduled
   in parallel, and will write per-ROI covered base-counts into the output subdirectory roi_covgs.
   If cmd-list-file is left unspecified, this script runs calcRoiCovg per sample one after another,
   taking ~30 mins per sample, but it skips samples whose output is already in roi_covgs.
 
- --cmd-prefix
-  Specify a job submission command that will be prefixed to each command in cmd-list-file. This
+=back
+
+=item --cmd-prefix
+
+=over 8
+
+=item Specify a job submission command that will be prefixed to each command in cmd-list-file. This
   makes batch submission easier. Just run the cmd-list-file file as a shell script to submit jobs.
   cmd-prefix is "bsub" if your cluster uses the LSF job scheduler, or "qsub" in Torque. Add
   arguments as necessary. For example, "bsub -M 4GB" sets a soft memory limit of 4GB.
-HELP
+
+=back
+
+=back
+
+EOS
+  );
 }
 
 sub _doc_authors {

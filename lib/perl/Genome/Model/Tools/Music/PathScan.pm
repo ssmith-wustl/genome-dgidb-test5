@@ -47,38 +47,75 @@ Only the following four columns in the MAF are used. All other columns may be le
 The Entrez_Gene_Id can also be left blank (or set to 0), but it is highly recommended, in case
 genes are named differently in the pathway file and the MAF file.
 
-ARGUMENTS:
+HELP
+}
 
- --pathway-file
-  This is a tab-delimited file prepared from a pathway database (such as KEGG), with the columns:
+sub _additional_help_sections {
+  return (
+    "ARGUMENTS",
+<<EOS
+
+=over 4
+
+=item --pathway-file
+
+=over 8
+
+=item This is a tab-delimited file prepared from a pathway database (such as KEGG), with the columns:
   [path_id, path_name, class, gene_line, diseases, drugs, description] The latter three columns
   are optional (but are available on KEGG). The gene_line contains the "entrez_id:gene_name" of
   all genes involved in this pathway, each separated by a "|" symbol.
 
-  For example, a line in the pathway-file would look like:
+For example, a line in the pathway-file would look like:
+
   hsa00061	Fatty acid biosynthesis	Lipid Metabolism	31:ACACA|32:ACACB|27349:MCAT|2194:FASN|54995:OXSM|55301:OLAH
 
-  Ensure that the gene names and entrez IDs used match those used in the MAF file. Entrez IDs are
-  not mandatory (use a 0 if Entrez ID unknown). But if a gene name in the MAF does not match any
-  gene name in this file, the entrez IDs are used to find a match (unless it's a 0).
+Ensure that the gene names and entrez IDs used match those used in the MAF file. Entrez IDs are
+not mandatory (use a 0 if Entrez ID unknown). But if a gene name in the MAF does not match any
+gene name in this file, the entrez IDs are used to find a match (unless it's a 0).
 
- --gene-covg-dir
-  This is usually the gene_covgs subdirectory created when you run "music bmr calc-covg". It
+=back
+
+=item --gene-covg-dir
+
+=over 8
+
+=item This is usually the gene_covgs subdirectory created when you run "music bmr calc-covg". It
   should contain files for each sample that report per-gene covered base counts.
 
- --bam-list
-  Provide a file containing sample names and normal/tumor BAM locations for each. Use the tab-
+=back
+
+=item --bam-list
+
+=over 8
+
+=item Provide a file containing sample names and normal/tumor BAM locations for each. Use the tab-
   delimited format [sample_name normal_bam tumor_bam] per line. This tool only needs sample_name,
   so all other columns can be skipped. The sample_name must be the same as the tumor sample names
   used in the MAF file (16th column, with the header Tumor_Sample_Barcode).
 
- --bmr
-  The overall background mutation rate. This can be calculated using "music bmr calc-bmr".
+=back
 
- --genes-to-ignore
-  A comma-delimited list of genes to ignore from the MAF file. This is useful when there are
+=item --bmr
+
+=over 8
+
+=item The overall background mutation rate. This can be calculated using "music bmr calc-bmr".
+
+=back
+
+=item --genes-to-ignore
+
+=over 8
+
+=item A comma-delimited list of genes to ignore from the MAF file. This is useful when there are
   recurrently mutated genes like TP53 which might mask the significance of other genes.
-HELP
+
+=back
+
+=back
+EOS
+  );
 }
 
 sub _doc_authors {
