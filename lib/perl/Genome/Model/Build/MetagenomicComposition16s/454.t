@@ -99,6 +99,8 @@ is($build->calculate_estimated_kb_usage, 1024, 'estimated kb usage');
 my $existing_build_dir = '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16s454/build';
 ok(-d $existing_build_dir, 'existing build dir exists');
 
+ok($build->create_subdirectories, 'created subdirectories');
+
 my $classification_dir = $build->classification_dir;
 is($classification_dir, $build->data_directory.'/classification', 'classification_dir');
 ok(-d $classification_dir, 'classification_dir exists');

@@ -92,6 +92,8 @@ my $build = Genome::Model::Build::MetagenomicComposition16s->create(
 );
 isa_ok($build, 'Genome::Model::Build::MetagenomicComposition16s::Solexa');
 
+ok($build->create_subdirectories, 'created subdirectories');
+
 # calculated kb
 is($build->calculate_estimated_kb_usage, 500_000, 'estimated kb usage'); 
 

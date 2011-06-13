@@ -40,6 +40,7 @@ my $abuild = Genome::Model::Build::ImportedAnnotation->create(
     data_directory      => $data_dir,
     version             => $versions[0],
 );
+
 my @tags = $abuild->validate_for_start;
 ok(@tags, 'received errors when validating build, as expected');
 $abuild->delete;

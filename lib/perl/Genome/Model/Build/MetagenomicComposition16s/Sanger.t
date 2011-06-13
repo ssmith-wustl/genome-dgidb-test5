@@ -117,6 +117,7 @@ is($build->calculate_estimated_kb_usage, 30000, 'Estimated kb usage');
 # dirs
 my $existing_build_dir = '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16sSanger/build';
 ok(-d $existing_build_dir, 'existing build dir exists');
+ok($build->create_subdirectories, 'created subdirectories');
 for my $subdir ( $build->sub_dirs ) {
     my $method = $subdir;
     $method .= '_dir' if $subdir !~ /_dir$/;

@@ -3,7 +3,7 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More tests => 31;
+use Test::More tests => 30;
 
 BEGIN {
     $ENV{UR_DBI_NO_COMMIT} = 1;
