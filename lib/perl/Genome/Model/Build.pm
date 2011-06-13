@@ -233,15 +233,15 @@ sub _copy_model_inputs {
                 my $existing_input = $self->inputs(name => $input_name);
                 if ($existing_input) {
                     my $existing_input_value = $existing_input->value;
-                    next if ($existing_input_value && $existing_input_value->isa('Genome::Model::Build'));
+                    if ($existing_input_value && $existing_input_value->isa('Genome::Model::Build')) {
+                        die "Input with name $input_name already exists for build!";
+                    }
                 }
 
                 my $input_model = $input->value;
                 my $input_build = $self->select_build_from_input_model($input_model);
                 unless($input_build) {
-                    $self->error_message("Could not resolve a build of model " . $input_model->__display_name__ .
-                        " while copying inputs to new build of model " . $self->model->__display_name__);
-                    next;
+                    die "Could not resolve a build of model " . $input_model->__display_name__; 
                 }
 
                 $params{value_class_name} = $input_build->class;
@@ -249,9 +249,8 @@ sub _copy_model_inputs {
             }
 
             unless ($self->add_input(%params)) {
-                $self->error_message("Could not copy model input " . $params{name} . " with ID " . $params{value_id} .
-                    " and class " . $params{value_class_name} . " to new build of model " . $self->__display_name__);
-                next;
+                die "Could not copy model input " . $params{name} . " with ID " . $params{value_id} .
+                    " and class " . $params{value_class_name} . " to new build"; 
             }
         };
         if ($@) {
@@ -551,13 +550,29 @@ sub start {
 
     eval {
         # Can be overridden by subclasses, performs a number of checks to ensure the build can start
-        unless ($self->validate_for_start) {
-            Carp::confess "Build " . $self->__display_name__ . " could not be validated for start!";
+        my @tags = $self->validate_for_start;
+        if (@tags) {
+            my @msgs;
+            for my $tag (@tags) {
+                push @msgs, $tag->__display_name__; 
+            }
+            Carp::confess "Build " . $self->__display_name__ . " could not be validated for start!\n" . join("\n", @msgs);
         }
 
-        # Creates an allocation that'll be used as the build's data directory
-        unless ($self->data_directory($self->resolve_data_directory)) {
-            Carp::confess "Build " . $self->__display_name__ . " could not resolve a data directory!";
+        # Creates an allocation that'll be used as the build's data directory (unless a data directory has been provided)
+        # TODO This logic should all be contained in resolve_data_directory, which should just return a path
+        unless ($self->data_directory) {
+            my $data_directory = $self->resolve_data_directory;
+            $self->data_directory($data_directory);
+            unless ($self->data_directory) {
+                Carp::confess "Build " . $self->__display_name__ . " could not resolve a data directory!";
+            }
+        }
+
+        # For now, this method can be overridden in subclasses to create custom directory structures for the build
+        # TODO Have this method be called by resolve_data_directory, or perhaps as part of a initialize_directories method
+        unless ($self->create_subdirectories) {
+            Carp::confess 'Could not create subdirectories of build directory ' . $self->data_directory;
         }
 
         $self->software_revision($self->snapshot_revision);
@@ -586,10 +601,18 @@ sub start {
         $self->error_message("Could not start build " . $self->__display_name__ . ", reason: $error");
         return;
     }
+
+    return 1;
 }
 
-# Override in subclasses, should return false if something is not in place that's necessary for build start
+# Override in subclasses, should return a list of UR::Object::Tag objects, each of which represent
+# a problem with the build that prevents it from starting. Returning undef means the build is cool.
 sub validate_for_start {
+    my $self = shift;
+    return $self->__errors__;
+}
+
+sub create_subdirectories {
     return 1;
 }
 
