@@ -85,7 +85,7 @@ sub execute {
         $self->builds([@builds]);
 
     } elsif ($self->builds) {
-
+        $self->status_message("Using user-supplied set of builds...");
        
     } else {
         $self->error_message("You must provide either a flow cell id or a set of builds.  ");
