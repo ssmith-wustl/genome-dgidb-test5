@@ -88,7 +88,8 @@ is_deeply(\@build_inst_data, \@model_inst_data, 'Build instrument data matches m
 
 # Make sure build start fails when validate_for_start returns false
 no warnings 'redefine';
-*Genome::Model::Build::Test::validate_for_start = sub { return 0 };
+my $tag = UR::Object::Tag->create(properties => ['foo'], desc => 'test tag');
+*Genome::Model::Build::Test::validate_for_start = sub { return $tag };
 use warnings;
 
 ok(!$build->start, 'build failed to start, as expected');
@@ -103,11 +104,11 @@ is($build->status, 'Unstartable', 'build status set to unstartable');
 
 # Now set validate_for_start to return true
 no warnings 'redefine';
-*Genome::Model::Build::Test::validate_for_start = sub { return 1 };
+*Genome::Model::Build::Test::validate_for_start = sub { return };
 use warnings;
 
 $model->build_requested(1);
-ok(!$build->start(job_dispatch => 'inline', server_dispatch => 'inline'), 'build started!');
+ok($build->start(job_dispatch => 'inline', server_dispatch => 'inline'), 'build started!');
 is($build->status, 'Succeeded', 'build completed successfully');
 ok($build->data_directory, 'data directory resolved');
 ok($build->software_revision, 'software revision set on build');
