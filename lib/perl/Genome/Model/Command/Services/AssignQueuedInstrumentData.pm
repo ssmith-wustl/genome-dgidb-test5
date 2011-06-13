@@ -510,6 +510,7 @@ sub is_tcga_reference_alignment {
     my $sample = $model->subject;
 
     return unless $model->isa('Genome::Model::ReferenceAlignment');
+    return if ($model->isa('Genome::Model::ReferenceAlignment') && $model->is_lane_qc);
 
     #try the extraction label
     my @results = grep {$_->attribute_label eq 'extraction_label' and $_->attribute_value =~ m/^TCGA/} $sample->attributes;
