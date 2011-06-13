@@ -309,13 +309,16 @@ sub __errors__ {
     if ($roi_name) {
         my $roi_list = eval { $self->region_of_interest_set; };
         if($roi_list) {
-            if(not $rsb->is_compatible_with($roi_list->reference)) {
-                push @tags, UR::Object::Tag->create(
-                    type => 'invalid',
-                    properties => [qw/ region_of_interest_set_name /],
-                    desc => "Supplied region_of_interest_set_name " . $roi_name . " specifies incompatible reference sequence " .
-                        $roi_list->reference->__display_name__,
-                );
+            my $roi_reference = $roi_list->reference;
+            if(not $rsb->is_compatible_with($roi_reference)) {
+                if(not Genome::Model::Build::ReferenceSequence::Converter->get(source_reference_build => $roi_reference, destination_reference_build => $rsb)) {
+                    push @tags, UR::Object::Tag->create(
+                        type => 'invalid',
+                        properties => [qw/ region_of_interest_set_name /],
+                        desc => "Supplied region_of_interest_set_name " . $roi_name . " specifies incompatible reference sequence " .
+                            $roi_list->reference->__display_name__,
+                    );
+                }
             }
         } else {
             push @tags, UR::Object::Tag->create(
