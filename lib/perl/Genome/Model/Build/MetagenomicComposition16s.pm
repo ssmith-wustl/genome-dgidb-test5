@@ -181,7 +181,7 @@ sub amplicon_set_names_and_primers {
         return $self->$method;
     }
     $self->warning_message( "No amplicon set primers for sequencing platform: ".$self->processing_profile->sequencing_platform );
-    return ( '' ); 
+    return; 
 }
 
 sub amplicon_set_names_and_primers_454 {
@@ -473,6 +473,21 @@ sub processed_reads_qual_file { #sanger
     return $_[0]->processed_reads_fasta_file.'.qual';
 }
 
+# original/unprocessed file .. maybe name it unprocessed
+sub combined_original_fasta_file {
+    my $self = shift;
+    return sprintf(
+        '%s/%s.%s.fasta',
+        $self->fasta_dir,
+        $self->file_base_name,
+        'original',
+    );
+}
+
+sub original_qual_file_for_all_data {
+    return $_[0]->combined_original_fasta_file.'.qual';
+}
+
 # oriented
 sub oriented_fasta_file { # returns them as a string
     return join(' ', $_[0]->oriented_fasta_files);
@@ -514,19 +529,203 @@ sub prepare_instrument_data {
     my $self = shift;
 
     #call a separate command for sanger
-    #if ..sanger
-    my $cmd = Genome::Model::MetagenomicComposition16s::Command::ProcessSangerInstrumentData->create(
-        build_id => $self->id,
-    );
-    unless ( $cmd->prepare_instrument_data ) {
-        $self->error_message("Failed to execute mc16s process sanger");
+    if ( $self->sequencing_platform eq 'sanger' ) {
+        my $cmd = Genome::Model::MetagenomicComposition16s::Command::ProcessSangerInstrumentData->create(
+            build_id => $self->id,
+            );
+        unless ( $cmd->prepare_instrument_data ) {
+            $self->error_message("Failed to execute mc16s process sanger");
+            return;
+        }
+        return 1;
+    }
+
+    my @instrument_data = $self->instrument_data;
+    unless ( @instrument_data ) {
+        $self->error_message("No instrument data found for ".$self->description);
         return;
     }
+
+    #write a original/unprocessed/combined fasta file
+    if ( not $self->fasta_from_instrument_data ) {
+        Carp::confess( "Failed to get fasta from instrument data" );
+    }
+
+    #read in orig file
+    my $orig_fasta = $self->combined_original_fasta_file;
+    if ( not -s $orig_fasta ) {
+        Carp::confess( "Original fasta file did not get created or is blank" );
+    }
+    my $reader =  Genome::Model::Tools::FastQual::PhredReader->create(files => [ $orig_fasta ]);
+    if ( not $reader ) {
+        Carp::confess( "Could not create reader for original fasta file" );
+    }
+    my $min_length = $self->processing_profile->amplicon_size;
+    my ($attempted, $processed, $reads_attempted, $reads_processed) = (qw/ 0 0 0 0 /);
+
+    if ( $self->amplicon_set_names_and_primers ) {
+        my %primers = $self->amplicon_set_names_and_primers;
+        while ( my $fastas = $reader->read ) {
+            my $fasta = $fastas->[0];
+            $attempted++;
+            $reads_attempted++;
+            # check length here
+            next unless length $fasta->{seq} >= $min_length;
+            my $set_name = 'none';
+            my $seq = $fasta->{seq};
+            REGION: for my $region ( keys %primers ) {
+                for my $primer ( @{$primers{$region}} ) {
+                    if ( $seq =~ s/^$primer// ) {
+                        # check length again
+                        $fasta->{seq} = $seq; # set new seq w/o primer
+                        $set_name = $region;
+                        last REGION; # go on to write 
+                    }
+                }
+            }
+            next unless length $fasta->{seq} >= $min_length;
+            $fasta->{desc} = undef; # clear description
+            my $writer = $self->get_writer_for_set_name($set_name);
+            $writer->write([$fasta]);
+            $processed++;
+            $reads_processed++;
+        }
+    }
+    else {
+        my $fasta_file = $self->processed_fasta_file_for_set_name('');
+        my $writer = Genome::Model::Tools::FastQual::PhredWriter->create(files => [ $fasta_file ]);
+        while ( my $seqs = $reader->read ) {
+            my $seq = $seqs->[0];
+            $attempted++;
+            $reads_attempted++;
+            next unless length $seq->{seq} >= $min_length; #seems the read iterator returns array of array of hash
+            $processed++;
+            $reads_processed++;
+            $writer->write( [$seq] );
+
+            #######################################
+            # REMOVE .. FOR QUICK BUILD TEST ONLY #
+            #######################################
+            last if $processed == 100_000;
+        }
+    }
+
+    $self->status_message( 'DONE processing original fasta file' );
+
+    $self->amplicons_attempted($attempted);
+    $self->amplicons_processed($processed);
+    $self->amplicons_processed_success( $attempted > 0 ?  sprintf('%.2f', $processed / $attempted) : 0 );
+    $self->reads_attempted($reads_attempted);
+    $self->reads_processed($reads_processed);
+    $self->reads_processed_success( $reads_attempted > 0 ?  sprintf('%.2f', $reads_processed / $reads_attempted) : 0 );
 
     return 1;
 }
 
 #< Fasta/Qual Readers/Writers >#
+sub fasta_from_instrument_data { #dump orig fasta file
+    my $self = shift;
+
+    for my $inst_data ( $self->instrument_data ) {
+        my $temp_dir = Genome::Sys->create_temp_directory;
+        if ( my @fastq_files = eval {$inst_data->dump_fastqs_from_bam( $temp_dir );} ) {
+            #solexa bam
+            if ( not @fastq_files ) {
+                Carp::confess( "Did not get any fastq files from instrument data bam path" );
+            }
+            $self->status_message( "Got fastqs from bam" );
+            #write fasta to original.fasta.file
+            if ( not $self->append_fastq_to_orig_fasta_file( @fastq_files ) ) {
+                Carp::confess( "Attempt to get fasta from fastq via bam failed" );
+            }
+        }
+        elsif (  my $rv = eval {Genome::Sys->shellcmd( cmd => "tar zxf " . $inst_data->archive_path ." -C $temp_dir" );} ) {
+            #solexa archive
+            my @fastq_files = glob $temp_dir.'/*';
+            if ( not @fastq_files ) {
+                Carp::confess( "Did not get any fastq files from instrument data archive path" );
+            }
+            $self->status_message( "Untarred fastqs from archive path" );
+            if ( not $self->append_fastq_to_orig_fasta_file( @fastq_files ) ) {
+                Carp::confess( "Attempt to get fasta from fastq via archive path failed" );
+            }
+        }
+        elsif ( my @fasta_files = eval{$inst_data->dump_fasta_file;} ) {
+            #fasta from sff files .. 454
+            if ( not @fasta_files ) {
+                Carp::confess( "Did not get fasta files from inst data dump_fasta_method" );
+            }
+            $self->status_message( "Got fasta from sff files" ); #better message?
+            if ( not $self->append_fasta_to_original_fasta_file( @fasta_files ) ) {
+                Carp::confess( "Attempt to append to original fasta with with new fasta failed" );
+            }
+        }
+        else {
+            Carp::confess( "Failed to get fasta from instrument data, id: ".$inst_data->id.' format: '.$inst_data->sequencing_platform );
+            #maybe just skip?? probably not
+        }
+    }
+    return 1;
+}
+
+sub append_fasta_to_original_fasta_file {
+    my ( $self, @fasta_files ) = @_;
+
+    my $writer = $self->original_fasta_writer;
+    unless ( $writer ) {
+        Carp::confess( "Failed to get fasta writer to write original fasta file" );
+    }
+
+    for my $file ( @fasta_files ) { #read in one file at a time .. not likely for paired reads to be in sparate files
+        my $reader =  Genome::Model::Tools::FastQual::PhredReader->create(files => [ $file ]);
+        if ( not $reader ) {
+            Carp::confess( "Did not get fasta reader for file: $file" );
+        }
+        while ( my @seqs = $reader->read ) {
+            for my $seq ( @seqs ) {
+                $writer->write( $seq );
+            }
+        }
+    }
+    $self->status_message( "Finished writing to original fasta file, file: ".join(' ', @fasta_files) );
+
+    return 1;
+}
+
+sub append_fastq_to_orig_fasta_file {
+    my ( $self, @fastq_files ) = @_;
+
+    my $writer = $self->original_fasta_writer;
+    unless ( $writer ) {
+        Carp::confess( "Failed to get fasta writer to write original fasta file" );
+    }
+
+    my $reader = Genome::Model::Tools::FastQual::FastqReader->create( files => \@fastq_files );
+
+    while ( my $fastqs = $reader->read ) {
+        $writer->write( $fastqs );
+    }
+
+    $self->status_message( "Finished writing to original fasta file, files: ".join(' ', @fastq_files) );
+    return 1;
+}
+
+sub original_fasta_writer {
+    my $self = shift;
+
+    return $self->{_fasta_writer} if $self->{_fasta_writer};
+
+    my $fasta_file = $self->combined_original_fasta_file;
+    unlink $fasta_file if -e $fasta_file;
+
+    my $writer = Genome::Model::Tools::FastQual::PhredWriter->create(files => [ $fasta_file ]); #make sure this is right
+    Carp::confess("Failed to create fasta writer to write original fasta file") if not $writer;
+
+    $self->{_fasta_writer} = $writer;
+
+    return $self->{_fasta_writer};
+}
+
 sub fasta_and_qual_reader_for_type_and_set_name {
     my ($self, $type, $set_name) = @_;
     
