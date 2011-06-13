@@ -1224,13 +1224,17 @@ sub add_processing_profiles_to_pses{
 
                     my $pipeline_string = $self->_pipeline_prettyprint($pse);
 
-                    App::Mail->mail(
-                            From    => 'Apipe <apipe-builder@genome.wustl.edu>',
-                            To      => 'Analysis Pipeline <apipebulk@genome.wustl.edu>, Apipe Builder <apipe-builder@genome.wustl.edu>',
-                            Cc      => 'Scott Smith <ssmith@genome.wustl.edu>, Jim Eldred <jeldred@genome.wustl.edu>, Justin Lolofie <jlolofie@genome.wustl.edu>, Thomas Mooney <tmooney@genome.wustl.edu>',
-                            Subject => "ecountered unknown workorder pipeline '$pipeline_string' in QIDFGM PSE",
-                            Message => 'no PP assigned to 454 data ' . $instrument_data_id . ' please check out it (see AQID)',
-                            );
+                    my $sender = Mail::Sender->new({
+                            smtp    => 'gscsmtp.wustl.edu',
+                            from    => 'Apipe <apipe-builder@genome.wustl.edu>'
+                        });
+                    $sender->MailMsg( {
+
+                            to      => 'Analysis Pipeline <apipebulk@genome.wustl.edu>, Apipe Builder <apipe-builder@genome.wustl.edu>',
+                            cc      => 'Scott Smith <ssmith@genome.wustl.edu>, Jim Eldred <jeldred@genome.wustl.edu>, Justin Lolofie <jlolofie@genome.wustl.edu>, Thomas Mooney <tmooney@genome.wustl.edu>',
+                            subject => "ecountered unknown workorder pipeline '$pipeline_string' in QIDFGM PSE",
+                            msg     => 'no PP assigned to 454 data ' . $instrument_data_id . ' please check out it (see AQID)'
+                    });
 
                     $self->error_message("unknown 454 workorder pipeline '$pipeline_string' encountered");
                     die $self->error_message;
@@ -1260,13 +1264,19 @@ sub add_processing_profiles_to_pses{
                         );
                 if ( not $pp ) {
                     my $msg = "Unknown platform ($sequencing_platform) for genotyper result ($instrument_data_id)";
-                    App::Mail->mail(
-                            From    => 'Apipe <apipe-builder@genome.wustl.edu>',
-                            To      => 'Analysis Pipeline <apipebulk@genome.wustl.edu>, Apipe Builder <apipe-builder@genome.wustl.edu>',
-                            Cc      => 'Scott Smith <ssmith@genome.wustl.edu>, Jim Eldred <jeldred@genome.wustl.edu>, Eddie Belter <ebelter@genome.wustl.edu>, Thomas Mooney <tmooney@genome.wustl.edu>',
-                            Subject => "QIDFGM PSE ERROR: $msg",
-                            Message => "Could not find a genotype microarray processing profile for genotyper results instrument data ($instrument_data_id) sequencing platform ($sequencing_platform) in QIDFGM PSE (see AQID)".$self->id,
-                            );
+
+                    my $sender = Mail::Sender->new({
+                            smtp    => 'gscsmtp.wustl.edu',
+                            from    => 'Apipe <apipe-builder@genome.wustl.edu>'
+                        });
+                    $sender->MailMsg( {
+
+                            to      => 'Analysis Pipeline <apipebulk@genome.wustl.edu>, Apipe Builder <apipe-builder@genome.wustl.edu>',
+                            cc      => 'Scott Smith <ssmith@genome.wustl.edu>, Jim Eldred <jeldred@genome.wustl.edu>, Eddie Belter <ebelter@genome.wustl.edu>, Thomas Mooney <tmooney@genome.wustl.edu>',
+                            subject => "QIDFGM PSE ERROR: $msg",
+                            msg     => "Could not find a genotype microarray processing profile for genotyper results instrument data ($instrument_data_id) sequencing platform ($sequencing_platform) in QIDFGM PSE (see AQID)".$self->id
+                    });
+
                     die $self->error_message($msg);
                 }
                 # build w/ 36 and 37
