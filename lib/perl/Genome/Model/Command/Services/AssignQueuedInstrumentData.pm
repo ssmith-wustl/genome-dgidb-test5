@@ -1233,10 +1233,9 @@ sub add_processing_profiles_to_pses{
                     $sender->MailMsg( {
 
                             to      => 'Analysis Pipeline <apipebulk@genome.wustl.edu>, Apipe Builder <apipe-builder@genome.wustl.edu>',
-                            # cc      => 'Scott Smith <ssmith@genome.wustl.edu>, Jim Eldred <jeldred@genome.wustl.edu>, Justin Lolofie <jlolofie@genome.wustl.edu>, Thomas Mooney <tmooney@genome.wustl.edu>',
-                            cc      => 'Jim Weible <jweible@genome.wustl.edu>', #TODO: test code, delete me
+                            cc      => 'Scott Smith <ssmith@genome.wustl.edu>, Jim Eldred <jeldred@genome.wustl.edu>, Justin Lolofie <jlolofie@genome.wustl.edu>, Thomas Mooney <tmooney@genome.wustl.edu>',
                             subject => "ecountered unknown workorder pipeline '$pipeline_string' in QIDFGM PSE",
-                            msg     => 'no PP assigned to 454 data ' . $instrument_data_id . ' please check out it (see AQID)'
+                            msg     => 'no PP assigned to 454 data ' . $instrument_data_id . ' please check out it (see AQID)' . "\n\nWork Order Information:\n$workorder_string",
                     });
 
                     $self->error_message("unknown 454 workorder pipeline '$pipeline_string' encountered");
