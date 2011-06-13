@@ -602,11 +602,6 @@ sub prepare_instrument_data {
             $processed++;
             $reads_processed++;
             $writer->write( [$seq] );
-
-            #######################################
-            # REMOVE .. FOR QUICK BUILD TEST ONLY #
-            #######################################
-            last if $processed == 100_000;
         }
     }
 
