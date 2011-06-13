@@ -600,19 +600,4 @@ sub latest_build_bam_file {
     return $bam_file;
 }
 
-sub _input_differences_are_ok {
-    my $self = shift;
-    my @inputs_not_found = @{shift()};
-    my @build_inputs_not_found = @{shift()};
-
-    unless(scalar(@inputs_not_found) == 1 and scalar(@build_inputs_not_found) == 1) {
-        return;
-    }
-
-    my $value = $inputs_not_found[0]->value;
-    my $build_value = $build_inputs_not_found[0]->value;
-
-    return ($build_value->isa('Genome::Model::Build::GenotypeMicroarray') and $build_value->model eq $value);
-}
-
 1;
