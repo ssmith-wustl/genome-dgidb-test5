@@ -697,7 +697,7 @@ sub collect_inputs_and_run_aligner {
             }
         }
     } else {
-        $fastq_rd_ct = $self->determine_input_read_count_from_bam;       
+        $fastq_rd_ct = $self->determine_input_read_count_from_bam;
     }
     unless ($fastq_rd_ct) {
         $self->error_message("Failed to get a read count before aligning.");
