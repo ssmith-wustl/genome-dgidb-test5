@@ -1822,7 +1822,7 @@ sub input_differences_from_model {
         for my $value_class_name (keys %{ $build_inputs{$name} }) {
             for my $build_input_not_found (values %{ $build_inputs{$name}{$value_class_name} }) {
                 my $value = $build_input_not_found->value;
-                if($value->isa('Genome::Model::Build') and $value->model and my ($model_input) = grep($_->value eq $value->model, @model_inputs_not_found) ) {
+                if($value and $value->isa('Genome::Model::Build') and $value->model and my ($model_input) = grep($_->value eq $value->model, @model_inputs_not_found) ) {
                     @model_inputs_not_found = grep($_ ne $model_input, @model_inputs_not_found);
                 } else {
                     push @build_inputs_not_found, $build_input_not_found;
