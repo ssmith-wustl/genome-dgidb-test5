@@ -1650,6 +1650,7 @@ sub compare_output {
         my $dir = $self->full_path_to_relative(dirname($abs_path));
        
         next FILE if -d $abs_path;
+        next FILE if $rel_path =~ /server_location.txt/;
         next FILE if grep { $dir =~ /$_/ } $self->dirs_ignored_by_diff;
         next FILE if grep { $rel_path =~ /$_/ } $self->files_ignored_by_diff;
 
