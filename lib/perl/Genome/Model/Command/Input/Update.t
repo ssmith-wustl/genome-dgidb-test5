@@ -25,17 +25,8 @@ my $build = Genome::Model::Build->create(
 );
 ok($build, 'create build');
 is_deeply([$build->instrument_data], [$model->instrument_data], 'copied instrument data');
-my $master_event = Genome::Model::Event->create(
-    event_type => 'genome model build',
-    event_status => 'Succeeded',
-    model => $model,
-    build => $build,
-    user_name => Genome::Sys->username,
-    date_scheduled => UR::Time->now,
-    date_completed => UR::Time->now,
-);
-ok($master_event, 'created master event');
-is_deeply($build->the_master_event, $master_event, 'got master event from build');
+
+$build->status('Succeeded');
 
 my $update = Genome::Model::Command::Input::Update->create(
     model => $model,

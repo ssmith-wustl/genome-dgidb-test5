@@ -6,7 +6,7 @@ use warnings;
 use above "Genome";
 
 # init the test harness, and declare the number of tests we will run
-use Test::More tests => 9;
+use Test::More tests => 8;
 
 # this ensures we don't talk to the database just to get new ID values for objects
 # it will just use negative numbers instead of real IDs
@@ -40,9 +40,6 @@ ok($m, "made a test model");
 
 my $b1 = $m->add_build();
 ok($b1, "made test build 1");
-
-my $b1_dir = $b1->data_directory;
-ok(-d $b1_dir, "build directory is present: $b1_dir");
 
 # run the command, and capture the exit code
 # this way invokes the command right in this process, with an array of command-line arguments
