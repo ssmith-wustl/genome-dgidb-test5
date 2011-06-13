@@ -64,17 +64,20 @@ sub description {
     );
 }
 
-sub validate_for_start {
+sub __errors__ {
     my $self = shift;
+    my @tags = $self->SUPER::__errors__();
 
     # Must have instrument data unless soap import
     my @instrument_data = $self->instrument_data;
     unless (@instrument_data or $self->processing_profile->assembler_name =~ /import/) {
-        $self->error_message("No instrument data for build, can't start!");
-        return 0;
+        push @tags, UR::Object::Tag->create(
+            properties => ['instrument_data'],
+            desc => 'No instrument for build',
+        );
     }
-
-    return 1;
+    
+    return @tags;
 }
 
 sub calculate_estimated_kb_usage {
