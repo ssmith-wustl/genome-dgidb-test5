@@ -510,6 +510,7 @@ sub is_tcga_reference_alignment {
     my $sample = $model->subject;
 
     return unless $model->isa('Genome::Model::ReferenceAlignment');
+    return if ($model->isa('Genome::Model::ReferenceAlignment') && $model->is_lane_qc);
 
     #try the extraction label
     my @results = grep {$_->attribute_label eq 'extraction_label' and $_->attribute_value =~ m/^TCGA/} $sample->attributes;
@@ -1220,17 +1221,23 @@ sub add_processing_profiles_to_pses{
             }
 
             if ($instrument_data_type =~ /454/) {
-                unless ($self->_is_known_454_pipeline($pse)) {
+                my @unknown_work_orders = $self->_is_unknown_454_pipeline($pse);
+                if (@unknown_work_orders) {
 
-                    my $pipeline_string = $self->_pipeline_prettyprint($pse);
+                    my $pipeline_string  = $self->_pipeline_prettyprint(@unknown_work_orders);
+                    my $workorder_string = $self->_workorder_prettyprint(@unknown_work_orders);
 
-                    App::Mail->mail(
-                            From    => 'Apipe <apipe-builder@genome.wustl.edu>',
-                            To      => 'Analysis Pipeline <apipebulk@genome.wustl.edu>, Apipe Builder <apipe-builder@genome.wustl.edu>',
-                            Cc      => 'Scott Smith <ssmith@genome.wustl.edu>, Jim Eldred <jeldred@genome.wustl.edu>, Justin Lolofie <jlolofie@genome.wustl.edu>, Thomas Mooney <tmooney@genome.wustl.edu>',
-                            Subject => "ecountered unknown workorder pipeline '$pipeline_string' in QIDFGM PSE",
-                            Message => 'no PP assigned to 454 data ' . $instrument_data_id . ' please check out it (see AQID)',
-                            );
+                    my $sender = Mail::Sender->new({
+                            smtp    => 'gscsmtp.wustl.edu',
+                            from    => 'Apipe <apipe-builder@genome.wustl.edu>'
+                        });
+                    $sender->MailMsg( {
+
+                            to      => 'Analysis Pipeline <apipebulk@genome.wustl.edu>, Apipe Builder <apipe-builder@genome.wustl.edu>',
+                            cc      => 'Scott Smith <ssmith@genome.wustl.edu>, Jim Eldred <jeldred@genome.wustl.edu>, Justin Lolofie <jlolofie@genome.wustl.edu>, Thomas Mooney <tmooney@genome.wustl.edu>',
+                            subject => "ecountered unknown workorder pipeline '$pipeline_string' in QIDFGM PSE",
+                            msg     => 'no PP assigned to 454 data ' . $instrument_data_id . ' please check out it (see AQID)' . "\n\nWork Order Information:\n$workorder_string",
+                    });
 
                     $self->error_message("unknown 454 workorder pipeline '$pipeline_string' encountered");
                     die $self->error_message;
@@ -1260,13 +1267,19 @@ sub add_processing_profiles_to_pses{
                         );
                 if ( not $pp ) {
                     my $msg = "Unknown platform ($sequencing_platform) for genotyper result ($instrument_data_id)";
-                    App::Mail->mail(
-                            From    => 'Apipe <apipe-builder@genome.wustl.edu>',
-                            To      => 'Analysis Pipeline <apipebulk@genome.wustl.edu>, Apipe Builder <apipe-builder@genome.wustl.edu>',
-                            Cc      => 'Scott Smith <ssmith@genome.wustl.edu>, Jim Eldred <jeldred@genome.wustl.edu>, Eddie Belter <ebelter@genome.wustl.edu>, Thomas Mooney <tmooney@genome.wustl.edu>',
-                            Subject => "QIDFGM PSE ERROR: $msg",
-                            Message => "Could not find a genotype microarray processing profile for genotyper results instrument data ($instrument_data_id) sequencing platform ($sequencing_platform) in QIDFGM PSE (see AQID)".$self->id,
-                            );
+
+                    my $sender = Mail::Sender->new({
+                            smtp    => 'gscsmtp.wustl.edu',
+                            from    => 'Apipe <apipe-builder@genome.wustl.edu>'
+                        });
+                    $sender->MailMsg( {
+
+                            to      => 'Analysis Pipeline <apipebulk@genome.wustl.edu>, Apipe Builder <apipe-builder@genome.wustl.edu>',
+                            cc      => 'Scott Smith <ssmith@genome.wustl.edu>, Jim Eldred <jeldred@genome.wustl.edu>, Eddie Belter <ebelter@genome.wustl.edu>, Thomas Mooney <tmooney@genome.wustl.edu>',
+                            subject => "QIDFGM PSE ERROR: $msg",
+                            msg     => "Could not find a genotype microarray processing profile for genotyper results instrument data ($instrument_data_id) sequencing platform ($sequencing_platform) in QIDFGM PSE (see AQID)".$self->id
+                    });
+
                     die $self->error_message($msg);
                 }
                 # build w/ 36 and 37
@@ -1430,10 +1443,10 @@ sub _is_454_16s {
     return 0;
 }
 
-sub _is_known_454_pipeline {
+sub _is_unknown_454_pipeline {
     my $self = shift;
     my $pse = shift;
-    
+
     my @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
 
     unless (@work_orders > 0) {
@@ -1443,6 +1456,8 @@ sub _is_known_454_pipeline {
 
     my $pipelines_found = 0;
 
+    my @workorders_with_unknown_pipelines;
+
     foreach my $work_order (@work_orders) {
         my $pipeline_string = $work_order->pipeline();
         unless (defined($pipeline_string)) { next; }
@@ -1450,30 +1465,32 @@ sub _is_known_454_pipeline {
         my @pipelines = split(',', $pipeline_string);
         for my $pipeline (@pipelines) {
             if (not exists($known_454_pipelines{$pipeline})) {
-                return 0;
+                push @workorders_with_unknown_pipelines, $work_order; 
             }
-
-            $pipelines_found++;
         }
     }
 
-    return $pipelines_found ? 1 : 0;
+    return @workorders_with_unknown_pipelines; #return the workorder so we can construct nice error messages
 }
 
 sub _pipeline_prettyprint {
     my $self = shift;
-    my $pse = shift;
-    
-    my @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
+    my @work_orders = @_;
+    return join("<>", map($_->pipeline, @work_orders));
+}
 
-    my @pipelines = map { $_->pipeline() } @work_orders;
+sub _workorder_prettyprint {
+    my $self = shift;
+    my @work_orders = @_;
 
-    my %pipelines;
-    for(@pipelines) {
-        $pipelines{$_} = 1;
+    my $detailed_string = "";
+
+    for my $work_order (@work_orders){ 
+        $detailed_string .= join("\n", map($_ .": " .$work_order->$_, (qw/ id pipeline facilitator_unix_login setup_status /)));
+        $detailed_string .= "\n\n";
     }
-    
-    return join(' <> ', sort keys %pipelines);
+
+    return $detailed_string;
 }
 
 sub _is_pcgp {
