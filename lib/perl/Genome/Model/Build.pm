@@ -881,7 +881,7 @@ sub _initialize_workflow {
         return;
     }
 
-    $self->software_revision($self->snapshot_revision);
+    $self->software_revision($self->snapshot_revision) unless $self->software_revision;
 
     my $build_event = Genome::Model::Event::Build->create(
         model_id => $self->model->id,
@@ -1854,5 +1854,71 @@ sub delta_model_input_differences_from_model {
     }
     return @model_inputs_to_include;
 }
+
+
+sub is_buildable_methods {
+    # each method should return ($ok, $tag)
+    my @methods = (
+        'inputs_have_compatible_reference',
+    );
+    return @methods;
+}
+
+
+sub is_buildable {
+    my $self = shift || die;
+
+    my @tags;
+    my $is_buildable = 1;
+    my @methods = $self->is_buildable_methods;
+    for my $method (@methods) {
+        my ($ok, $tag) = $self->$method;
+        $is_buildable = 0 unless $ok;
+        push @tags, $tag;
+    }
+
+    for my $tag (@tags) {
+        $self->status_message($tag->__display_name__);
+    }
+
+    return $is_buildable;
+}
+
+
+sub inputs_have_compatible_reference {
+    my $self = shift;
+
+    # We really should standardize what we call reference sequence...
+    my @reference_sequence_methods = ('reference_sequence', 'reference', 'reference_sequence_build');
+
+    my ($method) = grep { $self->can($_) } @reference_sequence_methods;
+    return 1 unless $method;
+    my $model_reference_sequence = $self->$method;
+
+    my @inputs = $self->inputs;
+    my @objects = map { $_->value } @inputs;
+    my @incompatible_properties;
+    for my $object (@objects) {
+        my ($method) = grep { $self->can($_) } @reference_sequence_methods;
+        next unless $method;
+        my $object_reference_sequence = $object->$method;
+        unless($object_reference_sequence->is_compatible_with($model_reference_sequence)) {
+            push @incompatible_properties, $object->name;
+        }
+    }
+
+    my $tag;
+    if (@incompatible_properties) {
+        $tag = UR::Object::Tag->create(
+            type => 'error',
+            properties => \@incompatible_properties,
+            desc => "Not compatible with model's reference sequence '" . $model_reference_sequence->__display_name__ . "'.",
+        );
+    }
+
+    my $ok = not $tag;
+    return $ok, (wantarray ? $tag : undef);
+}
+
 
 1;

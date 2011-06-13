@@ -19,7 +19,7 @@ class Genome::Model::Tools::Music::Smg {
 
 sub help_synopsis {
   return <<HELP
-... music smg --gene-mr-file output_dir/gene_mrs --output-file output_dir/smgs
+ ... music smg --gene-mr-file output_dir/gene_mrs --output-file output_dir/smgs
 
 (Please note that "gene_mrs" is an output of "music bmr calc-bmr".)
 HELP
@@ -34,11 +34,11 @@ HELP
 }
 
 sub _doc_authors {
-    return ('',
-        'Qunyuan Zhang, Ph.D.',
-        'Cyriac Kandoth, Ph.D.',
-        'Nathan D. Dees, Ph.D.',
-    );
+    return <<EOS
+ Qunyuan Zhang, Ph.D.
+ Cyriac Kandoth, Ph.D.
+ Nathan D. Dees, Ph.D.
+EOS
 }
 
 sub execute {

@@ -25,9 +25,20 @@ class Genome::Model::Tools::Music::Bmr::CalcBmr {
 
 sub help_synopsis {
   return <<HELP
-... music bmr calc-bmr --bam-list input_dir/bam_list --maf-file input_dir/myMAF.tsv --output-dir output_dir/ --reference-sequence input_dir/all_sequences.fa --roi-file input_dir/all_coding_exons.tsv
+ ... music bmr calc-bmr \\
+    --bam-list input_dir/bam_list \\
+    --maf-file input_dir/myMAF.tsv \\
+    --output-dir output_dir/ \\
+    --reference-sequence input_dir/all_sequences.fa \\
+    --roi-file input_dir/all_coding_exons.tsv
 
-... music bmr calc-bmr --bam-list input_dir/bam_list --maf-file input_dir/myMAF.tsv --output-dir output_dir/ --reference-sequence input_dir/all_sequences.fa --roi-file input_dir/all_coding_exons.tsv --genes-to-ignore GENE1,GENE2
+ ... music bmr calc-bmr \\
+    --bam-list input_dir/bam_list \\
+    --maf-file input_dir/myMAF.tsv \\
+    --output-dir output_dir/ \\
+    --reference-sequence input_dir/all_sequences.fa \\
+    --roi-file input_dir/all_coding_exons.tsv \\
+    --genes-to-ignore GENE1,GENE2
 HELP
 }
 
@@ -37,7 +48,8 @@ This script calculates overall Background Mutation Rate (BMR) and BMRs in the ca
 AT/CG/CpG Transitions, AT/CG/CpG Transversions, and Indels. It also generates a file with per-gene mutation rates that can be used for significantly mutated gene tests (music smg).
 
 ARGUMENTS:
---roi-file
+
+ --roi-file
   The regions of interest (ROIs) of each gene are typically regions targeted for sequencing or are
   merged exon loci (from multiple transcripts) of genes with 2-bp flanks (splice junctions). ROIs
   from the same chromosome must be listed adjacent to each other in this file. This allows the
@@ -46,45 +58,42 @@ ARGUMENTS:
   base will be counted each time it appears in an ROI of the same gene. To avoid this, be sure to
   merge together overlapping ROIs of the same gene. BEDtools' mergeBed can help if used per gene.
 
---reference-sequence
+ --reference-sequence
   The reference sequence in FASTA format. If a reference sequence index is not found next to this
   file (a .fai file), it will be created.
 
---bam-list
+ --bam-list
   Provide a file containing sample names and normal/tumor BAM locations for each. Use the tab-
   delimited format [sample_name normal_bam tumor_bam] per line. Additional columns like clinical
   data are allowed, but ignored. The sample_name must be the same as the tumor sample names used
   in the MAF file (16th column, with the header Tumor_Sample_Barcode).
 
---output-dir
+ --output-dir
   This should be the same output directory used when running "music bmr calc-covg". The following
   outputs of this script will also be created/written:
   overall_bmrs: File containing categorized overall background mutation rates.
   gene_mrs: File containing categorized per-gene mutation rates.
 
---genes-to-ignore
+ --genes-to-ignore
   A comma-delimited list of genes to ignore for overall BMR calculations. List genes that are
   known factors in this disease and whose mutations should not be classified as background.
 HELP
 }
 
 sub _doc_authors {
-  return ('',
-    'Cyriac Kandoth, Ph.D.',
-  );
+  return " Cyriac Kandoth, Ph.D.";
 }
 
 sub _doc_see_also {
-  return ('',
-    'B<genome-music-bmr>(1)',
-    'B<genome-music>(1)',
-    'B<genome>(1)',
-  );
+  return <<EOS
+B<genome-music-bmr>(1),
+B<genome-music>(1),
+B<genome>(1)
+EOS
 }
 
 sub execute {
   my $self = shift;
-  $DB::single = 1;
   my $roi_file = $self->roi_file;
   my $ref_seq = $self->reference_sequence;
   my $bam_list = $self->bam_list;

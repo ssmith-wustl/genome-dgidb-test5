@@ -38,10 +38,22 @@ class Genome::Model {
             via => 'subject',
             to => 'name',
         },
-        subject_type => {
-            via => 'subject',
-            to => 'subject_type',
+        subject_type => { 
+            is => 'Text', 
+            valid_values => ["species_name","sample_group","sample_name"], 
+            calculate_from => 'subject_class_name',
+            calculate => q|
+                #This could potentially live someplace else like the previous giant hash
+                my %types = (
+                    'Genome::Sample' => 'sample_name',
+                    'Genome::PopulationGroup' => 'sample_group',
+                    'Genome::Individual' => 'sample_group',
+                    'Genome::Taxon' => 'species_name',
+                );
+                return $types{$subject_class_name};
+            |, 
         },
+
         processing_profile => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
         processing_profile_name => { via => 'processing_profile', to => 'name' },
         type_name => { via => 'processing_profile' },
@@ -267,8 +279,7 @@ sub create {
     $class->_validate_processing_profile_id($processing_profile_id)
         or Carp::confess();
 
-    my $self = $class->SUPER::create($params)
-        or return;
+    my $self = $class->SUPER::create($params) or return;
 
     # Make sure the subject we got is really an object
     unless ( $self->_verify_subject ) {
@@ -286,8 +297,7 @@ sub create {
         $self->creation_date(UR::Time->now);
     }
 
-    #<model name>#
-    # set default if none given
+    # Set model name to default is none given
     if ( not defined $self->name ) {
         my $default_name = $self->default_model_name;
         if ( not defined $default_name ) {
@@ -297,14 +307,15 @@ sub create {
         }
         $self->name($default_name);
     }
+
     # Check that this model doen't already exist.  If other models with the same name
     #  and type name exist, this method lists them, errors and deletes this model.
     #  Checking after subject verification to catch that error first.
     $self->_verify_no_other_models_with_same_name_and_type_name_exist
         or return;
-    #</model name>
 
     # If data directory has not been supplied, figure it out
+    # TODO Remove model data directories
     unless ($self->data_directory) {
         $self->data_directory( $self->resolve_data_directory );
     }
@@ -321,6 +332,13 @@ sub create {
             . $processing_profile->error_message);
         $self->delete;
         return;
+    }
+
+    # If build requested was set as part of model creation, it didn't use the mutator method that's been
+    # overridden. Re-set it here so the require actions take place
+    # TODO Rather than directly creating a model with build_requested set, should probably just start a build
+    if ($self->build_requested) {
+        $self->build_requested($self->build_requested, 'model created with build requested set');
     }
 
     return $self;
@@ -881,6 +899,35 @@ sub notify_input_build_success {
     return 1;
 }
 
+sub build_requested {
+    my ($self, $value, $reason) = @_;
+    if ($value) {
+        $self->add_note(
+            header_text => 'build_requested',
+            body_text => defined $reason ? $reason : 'no reason given',
+        );
+    }
+
+    if (defined $value) {
+        return $self->__build_requested($value);
+    }
+    return $self->__build_requested;
+}
+
+sub latest_build_request_note {
+    my $self = shift;
+    my @notes = sort { $b->entry_date cmp $a->entry_date } grep { $_->header_text eq 'build_requested' } $self->notes;
+    return unless @notes;
+    return $notes[0];
+}
+    
+sub time_of_last_build_request {
+    my $self = shift;
+    my $note = $self->latest_build_request_note;
+    return unless $note;
+    return $note->entry_date;
+}
+
 sub copy {
     my ($self, %overrides) = @_;
 
@@ -1042,7 +1089,11 @@ sub create_build {
     }
 
     my $build = eval { Genome::Model::Build->create(@_); };
-    Carp::confess "Could not create new build: $@" unless $build;
+    my $error = $@;
+    unless($build) {
+        $error ||= Genome::Model::Build->error_message;
+        Carp::confess "Could not create new build: $error";
+    }
     return $build;
 }
 
@@ -1130,8 +1181,18 @@ sub duplicates {
     # duplicates would have the same subject, processing profile, and inputs
     # but we have to compare the values of the inputs not the inputs themselves
     my @duplicates;
-    my @other_models = $class->get(subject_id => $subject->id, processing_profile_id => $pp->id);
+    my @other_models;
+    if (@_) {
+        @other_models = grep { $_->subject_id eq $subject->id} @_;
+    } else {
+        @other_models = $class->get(subject_id => $subject->id, processing_profile_id => $pp->id);
+    }
+
+    my $instrument_data_ids = join(",", sort $self->instrument_data);
     for my $other_model (@other_models) {
+        my $other_instrument_data_ids = join(",", sort $other_model->instrument_data);
+        next unless $instrument_data_ids eq $other_instrument_data_ids;
+
         my @other_inputs = $other_model->inputs;
         next if (@other_inputs != @inputs); # mainly to catch case where one has inputs but other does not
 
@@ -1147,6 +1208,5 @@ sub duplicates {
 
     return @duplicates;
 }
-
 1;
 

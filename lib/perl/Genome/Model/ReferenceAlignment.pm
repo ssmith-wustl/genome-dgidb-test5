@@ -252,6 +252,14 @@ sub __errors__ {
     my @tags = $self->SUPER::__errors__(@_);
 
     my $arb = $self->annotation_reference_build;
+    if($arb and $arb->status ne 'Succeeded') {
+        push @tags, UR::Object::Tag->create(
+            type => 'invalid',
+            properties => ['annotation_reference_build'],
+            desc => 'annotation reference build ' . $arb->name . ' is not succeeded and thus cannot be used.',
+        );
+    }
+
     my $rsb = $self->reference_sequence_build;
     if ($arb and !$arb->is_compatible_with_reference_sequence_build($rsb)) {
         push @tags, UR::Object::Tag->create(
@@ -294,6 +302,27 @@ sub __errors__ {
                 properties => [qw/ genotype_microarray_model /],
                 desc => "Supplied genotype microarray model " . $genotype->__display_name__ . " specifies incompatible reference sequence " .
                     $genotype->reference_sequence_build->__display_name__);
+        }
+    }
+
+    my $roi_name = $self->region_of_interest_set_name;
+    if ($roi_name) {
+        my $roi_list = eval { $self->region_of_interest_set; };
+        if($roi_list) {
+            if(not $rsb->is_compatible_with($roi_list->reference)) {
+                push @tags, UR::Object::Tag->create(
+                    type => 'invalid',
+                    properties => [qw/ region_of_interest_set_name /],
+                    desc => "Supplied region_of_interest_set_name " . $roi_name . " specifies incompatible reference sequence " .
+                        $roi_list->reference->__display_name__,
+                );
+            }
+        } else {
+            push @tags, UR::Object::Tag->create(
+                type => 'invalid',
+                properties => [qw/ region_of_interest_set_name /],
+                desc => "Supplied region_of_interest_set_name " . $roi_name . " could not be matched to a corresponding feature-list.",
+            );
         }
     }
 

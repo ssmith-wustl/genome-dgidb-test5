@@ -251,7 +251,7 @@ class Genome::InstrumentData::AlignmentResult {
         _input_fastq_pathnames => { is => 'ARRAY', is_optional => 1 },
         _input_bfq_pathnames   => { is => 'ARRAY', is_optional => 1 },
         _fastq_read_count      => { is => 'Number',is_optional => 1 },
-        _bam_output_fh         => { is => 'IO::File',is_optional => 1 },
+        _sam_output_fh         => { is => 'IO::File',is_optional => 1 },
     ],
 };
 
@@ -420,9 +420,9 @@ sub create {
     if ($@) {
         my $error = $@;
         $self->status_message("Oh no!  Caught an exception while in the critical point where the BAM pipe was open: $@");
-        if (defined $self->_bam_output_fh) {
+        if (defined $self->_sam_output_fh) {
             eval {
-                $self->_bam_output_fh->close;
+                $self->_sam_output_fh->close;
             };
             if ($@) {
                 $error .= " ... and the input filehandle failed to close due to $@";
@@ -528,8 +528,8 @@ sub prepare_scratch_sam_file {
         my $sam_cmd = sprintf("| %s view -S -b -o %s - ", Genome::Model::Tools::Sam->path_for_samtools_version($self->samtools_version), $self->temp_scratch_directory . "/raw_all_sequences.bam");
         $self->status_message("Opening $sam_cmd");
 
-        $self->_bam_output_fh(IO::File->new($sam_cmd));
-        unless ($self->_bam_output_fh()) {
+        $self->_sam_output_fh(IO::File->new($sam_cmd));
+        unless ($self->_sam_output_fh()) {
             $self->error_message("We support streaming for this alignment module, but can't open a pipe to $sam_cmd");
             die $self->error_message;
         }
@@ -542,7 +542,7 @@ sub prepare_scratch_sam_file {
 
         binmode $temp_fh;
         while (my $line = <$temp_fh>) {
-            $self->_bam_output_fh->print($line);
+            $self->_sam_output_fh->print($line);
         }
 
 
@@ -788,9 +788,9 @@ sub determine_input_read_count_from_bam {
 sub close_out_streamed_bam_file {
     my $self = shift;
     $self->status_message("Closing bam file...");
-    $self->_bam_output_fh->flush;
-    $self->_bam_output_fh->close;
-    $self->_bam_output_fh(undef);
+    $self->_sam_output_fh->flush;
+    $self->_sam_output_fh->close;
+    $self->_sam_output_fh(undef);
 
     $self->status_message("Sorting by name to do fixmate...");
     my $bam_file = $self->temp_scratch_directory . "/raw_all_sequences.bam";

@@ -57,7 +57,9 @@ my @libraries = ( { fragment_fastq_file => 'fragment.fastq' } );
 # lsf params
 my $lsf_params = $assemble->bsub_rusage;
 diag($lsf_params);
-is($lsf_params, "-q alignment -n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>30000] rusage[mem=30000]' -M 30000000", 'lsf params'); 
+my $queue = 'alignment';
+$queue = 'alignment-pd' if (Genome::Sys->username =~ /^apipe-/);
+is($lsf_params, "-q $queue -n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>30000] rusage[mem=30000]' -M 30000000", 'lsf params'); 
 ok( $assemble->execute, "Executed soap assemble");
 
 # check files

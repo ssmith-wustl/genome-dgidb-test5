@@ -70,8 +70,12 @@ sub execute {
         my $model_id = $model->genome_model_id;
         my $type = $model->class;
         $type =~ s/Genome::Model:://;
-        next if $type =~ /Convergence/; # Talk to Tom for details... basically, there's no expectation that the output be
-                                        # the same between builds, so diffing the output at all is pointless.
+        if ($type =~ /Convergence/) {
+            # Talk to Tom for details... basically, there's no expectation that the output be
+            # the same between builds, so diffing the output at all is pointless.
+            $self->status_message("This is a convergence model. Skipping...");
+            next;
+        }
                                         
         my $type_string = Genome::Utility::Text::camel_case_to_string($type, '_');
         $self->status_message("\nWorking on model " . $model->name . " ($model_id), type $type_string");
