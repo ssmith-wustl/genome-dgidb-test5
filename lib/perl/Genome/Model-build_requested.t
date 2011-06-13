@@ -51,13 +51,15 @@ is($notes[0]->body_text, 'no reason given', 'note body is default, as expected w
 # Set build requested back to false
 $model->build_requested(0);
 is($model->build_requested, 0, 'unset build requested');
+@notes = $model->notes;
+ok(@notes == 2, 'retrieved two build requested notes, as expected');
 
 # Now set it again with a reason provided
 $model->build_requested(1, 'test build');
 is($model->build_requested, 1, 'set build requested with reason provided');
 
 @notes = $model->notes;
-ok(@notes == 2, 'retrieved two build requested notes, as expected');
+ok(@notes == 3, 'retrieved two build requested notes, as expected');
 
 my $note = $model->latest_build_request_note;
 is($note->header_text, 'build_requested', 'header of new note is build_requested');
