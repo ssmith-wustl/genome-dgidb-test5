@@ -128,7 +128,7 @@ sub validate_for_start_methods {
 
 sub instrument_data_assigned {
     my $self = shift;
-    my @tags
+    my @tags;
     my @instrument_data = $self->instrument_data;
     unless (@instrument_data) {
         push @tags, UR::Object::Tag->create(
