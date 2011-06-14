@@ -445,21 +445,10 @@ sub dependent_properties {
     return;
 }
 
-sub verify_inputs {
+sub check_for_updates {
     my $self = shift;
-    my $good_to_go = 1;
-
     $self->check_and_update_genotype_input;
-
-    if ($self->is_lane_qc) {
-        # Lane QC models MUST have a genotype model input, regular ref align can do without
-        unless ($self->genotype_microarray_model) {
-            $good_to_go = 0;
-            $self->error_message("Could not resolve genotype microarray model for reference alignment model " . $self->id);
-        }
-    }
-
-    return $good_to_go;
+    return 1;
 }
 
 sub check_and_update_genotype_input {
