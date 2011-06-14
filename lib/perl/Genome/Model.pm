@@ -1067,12 +1067,6 @@ sub dependent_properties {
     return;
 }
 
-# Makes sure that all model inputs are in place and returns true if so. This is called prior to starting a build
-# and should be overridden in subclasses for custom behavior.
-sub verify_inputs {
-    return 1;
-}
-
 # Updates the model as necessary prior to starting a build. Useful for ensuring that the build is incorporating
 # all of the latest information. Override in subclasses for custom behavior.
 sub check_for_updates {
