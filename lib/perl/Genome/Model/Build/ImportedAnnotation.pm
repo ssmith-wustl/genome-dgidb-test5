@@ -98,31 +98,6 @@ class Genome::Model::Build::ImportedAnnotation {
 
 sub _select_build_from_model_input { undef; }
 
-sub __errors__ {
-    my $self = shift;
-    my @tags = $self->SUPER::__errors__();
-
-    # TODO: when having the reference_sequence parameter becomes mandatory, change all of this
-    # to just generate an error if it is not defined or doesn't match the model instead.
-    if (!defined $self->reference_sequence) {
-        push @tags, UR::Object::Tag->create(
-            type => 'warning',
-            properties => ['reference_sequence'],
-            desc => "ImportedAnnotation has no reference_sequence, this will soon be an error",
-        );
-    } elsif (defined $self->model->reference_sequence and $self->model->reference_sequence->id != $self->reference_sequence->model->id) {
-        push @tags, UR::Object::Tag->create(
-            type => 'error',
-            properties => ['reference_sequence'],
-            desc => "reference_sequence " . $self->reference_sequence->__display_name__ . " is not a build of model " .
-                $self->model->reference_sequence->__display_name__ . " as expected."
-        );
-    }
-
-
-    return @tags;
-}
-
 sub create {
     my $self = shift;
     my $build = $self->SUPER::create(@_);
