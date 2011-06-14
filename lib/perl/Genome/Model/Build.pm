@@ -558,13 +558,15 @@ sub start {
 
     eval {
         # Validate build for start and collect tags that represent problems.
+        # Croak is used here instead of confess to limit error message length. The entire message must fit into the
+        # body text of a note, and can cause commit problems if the length exceeds what the db column can accept.
         my @tags = $self->validate_for_start;
         if (@tags) {
             my @msgs;
             for my $tag (@tags) {
                 push @msgs, $tag->__display_name__; 
             }
-            Carp::confess "Build " . $self->__display_name__ . " could not be validated for start!\n" . join("\n", @msgs);
+            Carp::croak "Build " . $self->__display_name__ . " could not be validated for start!\n" . join("\n", @msgs);
         }
 
         # Creates an allocation that'll be used as the build's data directory (unless a data directory has been provided)
@@ -573,14 +575,14 @@ sub start {
             my $data_directory = $self->resolve_data_directory;
             $self->data_directory($data_directory);
             unless ($self->data_directory) {
-                Carp::confess "Build " . $self->__display_name__ . " could not resolve a data directory!";
+                Carp::croak "Build " . $self->__display_name__ . " could not resolve a data directory!";
             }
         }
 
         # For now, this method can be overridden in subclasses to create custom directory structures for the build
         # TODO Have this method be called by resolve_data_directory, or perhaps as part of a initialize_directories method
         unless ($self->create_subdirectories) {
-            Carp::confess 'Could not create subdirectories of build directory ' . $self->data_directory;
+            Carp::croak 'Could not create subdirectories of build directory ' . $self->data_directory;
         }
 
         $self->the_master_event->schedule;
@@ -588,12 +590,12 @@ sub start {
         # Creates a workflow for the build
         # TODO Initialize workflow shouldn't take arguments
         unless ($self->_initialize_workflow($params{job_dispatch} || 'apipe')) {
-            Carp::confess "Build " . $self->__display_name__ . " could not initialize workflow!";
+            Carp::croak "Build " . $self->__display_name__ . " could not initialize workflow!";
         }
 
         # Launches the workflow (in a pend state, it's resumed by a commit hook)
         unless ($self->_launch(%params)) {
-            Carp::confess "Build " . $self->__display_name__ . " could not be launched!";
+            Carp::croak "Build " . $self->__display_name__ . " could not be launched!";
         }
     };
 
@@ -630,7 +632,8 @@ sub validate_for_start {
             $self->warning_message("Validation method $method not found!");
             next;
         }
-        push @tags, $self->$method;
+        my @returned_tags = grep { defined $_ } $self->$method(); # Prevents undef from being pushed to tags list
+        push @tags, @returned_tags if @returned_tags; 
     }
 
     return @tags;
@@ -642,18 +645,18 @@ sub inputs_have_compatible_reference {
     # We really should standardize what we call reference sequence...
     my @reference_sequence_methods = ('reference_sequence', 'reference', 'reference_sequence_build');
 
-    my ($method) = grep { $self->can($_) } @reference_sequence_methods;
-    return 1 unless $method;
-    my $model_reference_sequence = $self->$method;
+    my ($build_reference_method) = grep { $self->can($_) } @reference_sequence_methods;
+    return unless $build_reference_method;
+    my $build_reference_sequence = $self->$build_reference_method;
 
     my @inputs = $self->inputs;
     my @objects = map { $_->value } @inputs;
     my @incompatible_properties;
     for my $object (@objects) {
-        my ($method) = grep { $self->can($_) } @reference_sequence_methods;
-        next unless $method;
-        my $object_reference_sequence = $object->$method;
-        unless($object_reference_sequence->is_compatible_with($model_reference_sequence)) {
+        my ($input_reference_method) = grep { $object->can($_) } @reference_sequence_methods;
+        next unless $input_reference_method;
+        my $object_reference_sequence = $object->$input_reference_method;
+        unless($object_reference_sequence->is_compatible_with($build_reference_sequence)) {
             push @incompatible_properties, $object->name;
         }
     }
@@ -663,7 +666,7 @@ sub inputs_have_compatible_reference {
         $tag = UR::Object::Tag->create(
             type => 'error',
             properties => \@incompatible_properties,
-            desc => "Not compatible with model's reference sequence '" . $model_reference_sequence->__display_name__ . "'.",
+            desc => "Not compatible with build's reference sequence '" . $build_reference_sequence->__display_name__ . "'.",
         );
     }
 
