@@ -94,7 +94,7 @@ sub execute {                               # replace with real execution logic.
 	## Optionally run in unsafe mode ##
 
 	if($self->run_unsafe_mode) {
-		$cmd .= " -U ALL";
+		$cmd .= " -U ALL --validation_strictness SILENT ";
 	}
 
 	## Run GATK Command ##
