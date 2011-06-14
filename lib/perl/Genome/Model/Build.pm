@@ -1922,4 +1922,15 @@ sub inputs_have_compatible_reference {
 }
 
 
+sub all_allocations {
+    my $self = shift;
+    my @input_values = map { $_->value } $self->inputs;
+    my @allocations;
+    for my $object ($self, @input_values) {
+        push @allocations, Genome::Disk::Allocation->get(owner_id => $object->id, owner_class_name => $object->class);
+    }
+    return @allocations;
+}
+
+
 1;

@@ -28,9 +28,15 @@ class Genome::SubjectAttribute {
             is => 'Genome::Subject',
             id_by => 'subject_id',
         },
+    ],
+    has_optional => [
         _individual => {
             is => 'Genome::Individual',
             id_by => 'attribute_value',
+        },
+        sample => {
+            is => 'Genome::Sample',
+            id_by => 'subject_id',
         },
     ],
 };
