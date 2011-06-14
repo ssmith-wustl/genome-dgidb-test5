@@ -504,7 +504,7 @@ sub check_last_read {
     unless($lines[0] =~ /^@/){
         return;
     }
-    my ($read_name) = split "/",$lines[0];
+    my ($read_name) = split m![/ ]!,$lines[0];
     my $read_length = length $lines[1];
     if(defined $self->read_length){
         unless($read_length <= $self->read_length){
