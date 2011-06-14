@@ -10,12 +10,12 @@ class Genome::Model::Variant {
     type_name => 'genome model variant',
     table_name => 'GENOME_MODEL_VARIANT',
     id_by => [
-        variant_id => { is => 'NUMBER', len => 10 },
+        variant_id => { is => 'UR::Value::Number', len => 10 },
     ],
     has => [
         chromosome         => { is => 'VARCHAR2', len => 255 },
-        start_pos          => { is => 'NUMBER', len => 12 },
-        stop_pos           => { is => 'NUMBER', len => 12 },
+        start_pos          => { is => 'UR::Value::Number', len => 12 },
+        stop_pos           => { is => 'UR::Value::Number', len => 12 },
         reference_allele   => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         variant_allele     => { is => 'VARCHAR2', len => 255, is_optional => 1 },
         amino_acid_change  => { is => 'VARCHAR2', len => 255, is_optional => 1 },

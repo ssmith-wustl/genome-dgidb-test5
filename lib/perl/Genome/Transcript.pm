@@ -15,11 +15,11 @@ class Genome::Transcript {
             is => 'Text', 
         },
         transcript_start => { 
-            is => 'NUMBER', 
+            is => 'UR::Value::Number', 
             is_optional => 1 
         },
         transcript_stop => { 
-            is => 'NUMBER', 
+            is => 'UR::Value::Number', 
             is_optional => 1,
         },
         species => { is => 'varchar',
@@ -32,7 +32,7 @@ class Genome::Transcript {
             is_optional => 1,
         },
         transcript_id => { 
-            is => 'NUMBER', 
+            is => 'UR::Value::Number', 
         },
     ],
     has => [

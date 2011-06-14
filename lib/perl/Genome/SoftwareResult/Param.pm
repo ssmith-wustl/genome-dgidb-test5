@@ -9,7 +9,7 @@ class Genome::SoftwareResult::Param {
     table_name => 'SOFTWARE_RESULT_PARAM',
     id_by => [
         param_name         => { is => 'VARCHAR2', len => 100 },
-        software_result_id => { is => 'NUMBER', len => 20 },
+        software_result_id => { is => 'UR::Value::Number', len => 20 },
     ],
     has => [
         param_value                     => { is => 'VARCHAR2', len => 1000 },

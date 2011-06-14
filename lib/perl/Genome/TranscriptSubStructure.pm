@@ -20,7 +20,7 @@ class Genome::TranscriptSubStructure {
     table_name => 'TRANSCRIPT_SUB_STRUCTURE',
     id_by => [
         transcript_structure_id => { 
-            is => 'NUMBER', 
+            is => 'UR::Value::Number', 
         },
         species => { is => 'varchar',
             is_optional => 1,
@@ -41,19 +41,19 @@ class Genome::TranscriptSubStructure {
             is_optional => 1 
         },
         structure_start => { 
-            is => 'NUMBER', 
+            is => 'UR::Value::Number', 
             is_optional => 1 
         },
         structure_stop => { 
-            is => 'NUMBER', 
+            is => 'UR::Value::Number', 
             is_optional => 1 
         },
         ordinal => { 
-            is => 'NUMBER', 
+            is => 'UR::Value::Number', 
             is_optional => 1
         },
         phase => { 
-            is => 'NUMBER', 
+            is => 'UR::Value::Number', 
             is_optional => 1
         },
         nucleotide_seq => { 

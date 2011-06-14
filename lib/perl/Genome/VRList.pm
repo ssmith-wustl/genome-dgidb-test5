@@ -12,13 +12,13 @@ class Genome::VRList {
     type_name => 'genome vr list',
     table_name => 'GENOME_VR_LIST',
     id_by => [
-        id => { is => 'NUMBER', len => 10 },
+        id => { is => 'UR::Value::Number', len => 10 },
     ],
     has => [
         author         => { is => 'VARCHAR2', len => 256, is_optional => 1 },
         name           => { is => 'VARCHAR2', len => 256, is_optional => 1 },
         position_lists => { is => 'VARCHAR2', len => 1024, is_optional => 1 },
-        rt_ticket      => { is => 'NUMBER', len => 10, is_optional => 1 },
+        rt_ticket      => { is => 'UR::Value::Number', len => 10, is_optional => 1 },
         source_maps    => { is => 'VARCHAR2', len => 1024, is_optional => 1 },
     ],
     has_many => [

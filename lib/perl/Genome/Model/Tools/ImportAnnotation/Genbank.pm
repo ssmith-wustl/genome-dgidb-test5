@@ -44,7 +44,7 @@ class Genome::Model::Tools::ImportAnnotation::Genbank {
             doc => 'We are stashing this objectified idx file to speed this up...',
         },
         reference_id => { 
-            is => 'NUMBER', 
+            is => 'UR::Value::Number', 
             is_input => 1, 
             doc => 'Reference sequence build to use for sequence lookups' 
         },

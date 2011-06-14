@@ -18,7 +18,7 @@ class Genome::Model::InstrumentDataAssignment {
         },
     ],
     has => [
-        first_build_id => { is => 'NUMBER', len => 10, is_optional => 1 },
+        first_build_id => { is => 'UR::Value::Number', len => 10, is_optional => 1 },
         filter_desc         => { is => 'Text', is_optional => 1, 
                                 valid_values => ['forward-only','reverse-only',undef],
                                 doc => 'limit the reads to use from this instrument data set' },

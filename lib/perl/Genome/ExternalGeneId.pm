@@ -9,7 +9,7 @@ class Genome::ExternalGeneId {
     type_name => 'genome external gene id',
     table_name => 'EXTERNAL_GENE_ID',
     id_by => [
-        egi_id => { is => 'NUMBER' },
+        egi_id => { is => 'UR::Value::Number' },
         species => { is => 'varchar',
             is_optional => 1,
         },

@@ -8,7 +8,7 @@ class Genome::VariantSource {
     type_name => 'genome variant source',
     table_name => 'GENOME_VARIANT_SOURCE',
     id_by => [
-        source_id => { is => 'NUMBER', len => 10 },
+        source_id => { is => 'UR::Value::Number', len => 10 },
     ],
     has => [
         source_name => { is => 'VARCHAR2', len => 255 },
