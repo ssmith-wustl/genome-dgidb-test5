@@ -6,7 +6,6 @@ use warnings;
 use Genome;
 use Command;
 use IO::File;
-use Genome::Model::InstrumentDataAssignment;
 
 class Genome::Model::Tools::Analysis::LaneQc::CompareSnpsBuildLanes {
     is => 'Command',
@@ -121,7 +120,6 @@ sub execute {
         return;
     }
     printf STDERR "Using %d lanes to calculate metrics\n", scalar(@events);
-    #Convert events to InstrumentDataAssignment objects
     my @instrument_data = $build->instrument_data;
 
 # find reference sequences

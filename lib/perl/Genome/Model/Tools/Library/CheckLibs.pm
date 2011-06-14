@@ -110,7 +110,6 @@ sub execute {
         );
         printf STDERR "%d lanes in build\n", scalar(@align_events);
         
-        #Convert events to InstrumentDataAssignment objects
         my @inputs = map { $_->instrument_data_input } @align_events;
 
         my %bad_lanes;
