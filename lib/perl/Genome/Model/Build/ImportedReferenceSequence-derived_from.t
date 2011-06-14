@@ -46,23 +46,23 @@ ok($rbuilds{'human'}[0]->is_compatible_with($rbuilds{'human'}[2]), 'build is com
 is($rbuilds{'human'}[2]->derived_from_root(), $rbuilds{'human'}[0], 'build w/2 lvl of parent gets coordinates_from grandparent');
 
 # attempt to derive from another model's build
-my @errs =$rbuilds{'human'}[0]->__errors__ ;
+my @errs =$rbuilds{'human'}[0]->validate_for_start() ;
 ok(!@errs, "no errors so far...")
     or die "Unexpected errors:\n\t" . join("\n\t", map{$_->__display_name__} @errs);
 
 #allowing derived_from builds from other models
 #$rbuilds{'human'}[0]->derived_from($rbuilds{'mouse'}[0]);
-#@errs = $rbuilds{'human'}[0]->__errors__;
+#@errs = $rbuilds{'human'}[0]->validate_for_start();
 #ok(@errs, "deriving from another model's build is an error");
 #ok($errs[0]->type, 'error type is correct');
 #is($errs[0]->{properties}->[0], 'derived_from', 'error references derived_from property');
 
 # attempt to derive from self
-@errs = $rbuilds{'human'}[1]->__errors__;
+@errs = $rbuilds{'human'}[1]->validate_for_start();
 ok(!@errs, "no errors so far...")
     or die "Unexpected errors:\n\t" . join("\n\t", map{$_->__display_name__} @errs);
 $rbuilds{'human'}[1]->derived_from($rbuilds{'human'}[1]);
-@errs = $rbuilds{'human'}[1]->__errors__;
+@errs = $rbuilds{'human'}[1]->validate_for_start();
 ok(@errs, "deriving from self is an error");
 ok($errs[0]->type, 'error type is correct');
 is($errs[0]->{properties}->[0], 'derived_from', 'error references derived_from property');
@@ -70,8 +70,8 @@ is($errs[0]->{properties}->[0], 'derived_from', 'error references derived_from p
 # set up circular link
 $rbuilds{'human'}[0]->derived_from($rbuilds{'human'}[1]);
 $rbuilds{'human'}[1]->derived_from($rbuilds{'human'}[0]);
-@errs = $rbuilds{'human'}[1]->__errors__();
-ok(@errs, "circular links are reported in __errors__()");
+@errs = $rbuilds{'human'}[1]->validate_for_start();
+ok(@errs, "circular links are reported in validate_for_start()");
 is($errs[0]->{properties}->[0], 'derived_from', 'error references derived_from property');
 like($errs[0]->{desc}, '/Circular/', 'error mentions "circular"');
 eval { $rbuilds{'human'}[1]->is_derived_from($rbuilds{'human'}[3]); };

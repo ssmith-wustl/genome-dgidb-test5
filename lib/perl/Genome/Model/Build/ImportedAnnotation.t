@@ -71,9 +71,9 @@ for my $invalid (@invalid_status) {
     ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'human'}->[0]), "Build status '$invalid' not allowed as annotation build");
 }
 
-ok(!$abuild->__errors__, "annotation build has no __errors__");
+ok(!$abuild->validate_for_start, "annotation build has no validate_for_start");
 $abuild->reference_sequence($rbuilds{'mouse'}[0]);
-my @errs = $abuild->__errors__;
+my @errs = $abuild->validate_for_start;
 is(scalar @errs, 1, "attempting to specify a reference build from the wrong model is an error");
 like($errs[0]->desc, qr/is not a build of model/, "error string looks correct");
 
