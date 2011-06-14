@@ -13,7 +13,7 @@ class Genome::SequenceDiff {
     type_name => 'sequence diff',
     table_name => 'SEQUENCE_DIFF',
     id_by => [
-        diff_id => { is => 'UR::Value::Number', len => 10 },
+        diff_id => { is => 'NUMBER', len => 10 },
     ],
     has => [
         description => { is => 'VARCHAR2', len => 256, is_optional => 1 },

@@ -17,7 +17,7 @@ class Genome::ProcessingProfile {
     subclass_description_preprocessor => 'Genome::ProcessingProfile::_expand_param_properties',
     subclassify_by => 'subclass_name',
     id_by => [
-        id => { is => 'UR::Value::Number', len => 11 },
+        id => { is => 'NUMBER', len => 11 },
     ],
     has => [
         name          => { is => 'VARCHAR2', len => 255, is_optional => 1, 

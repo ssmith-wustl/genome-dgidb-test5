@@ -16,7 +16,7 @@ class Genome::InstrumentData::FlowCell {
                 machine_name      => { is => 'VARCHAR2', len => 64 },
                 run_name          => { is => 'VARCHAR2', len => 64 },
                 run_type          => { is => 'VARCHAR2', len => 25 },
-                creation_event_id => => { is => 'UR::Value::Number', len => 15 },
+                creation_event_id => => { is => 'NUMBER', len => 15 },
                 team_name         => { is => 'VARCHAR2', len => 64 },
                 group_name        => { is => 'VARCHAR2', len => 64 },
                 production_started => {

@@ -10,8 +10,8 @@ class Genome::ModelGroupBridge {
     table_name => 'GENOME_MODEL_GROUP',
     er_role    => 'bridge',
     id_by      => [
-        model_group_id => { is => 'UR::Value::Number', len => 11 },
-        model_id       => { is => 'UR::Value::Number', len => 11 },
+        model_group_id => { is => 'NUMBER', len => 11 },
+        model_id       => { is => 'NUMBER', len => 11 },
     ],
     has => [
         model => {

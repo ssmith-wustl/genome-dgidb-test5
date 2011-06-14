@@ -21,11 +21,11 @@ UR::Object::Type->define(
             is => "Path",
         },
         structure_start => {
-            is => 'UR::Value::Number',
+            is => 'NUMBER',
             is_optional => 1,
         },
         transcript_structure_id => { 
-            is => 'UR::Value::Number', 
+            is => 'NUMBER', 
         },
     ],
     has => [
@@ -37,7 +37,7 @@ UR::Object::Type->define(
             is_optional => 1 
         },
         structure_stop => { 
-            is => 'UR::Value::Number', 
+            is => 'NUMBER', 
             is_optional => 1 
         },
         species => { is => 'varchar',
@@ -50,11 +50,11 @@ UR::Object::Type->define(
             is_optional => 1,
         },
         ordinal => { 
-            is => 'UR::Value::Number', 
+            is => 'NUMBER', 
             is_optional => 1
         },
         phase => { 
-            is => 'UR::Value::Number', 
+            is => 'NUMBER', 
             is_optional => 1
         },
         nucleotide_seq => { 
@@ -109,8 +109,8 @@ UR::Object::Type->define(
         # Info duplicated from the transcript data
         transcript_transcript_id => { is => 'Text', },
         transcript_gene_id       => { is => 'Text', is_optional => 1, },
-        transcript_transcript_start => { is => 'UR::Value::Number', is_optional => 1 },
-        transcript_transcript_stop  => { is => 'UR::Value::Number', is_optional => 1 },
+        transcript_transcript_start => { is => 'NUMBER', is_optional => 1 },
+        transcript_transcript_stop  => { is => 'NUMBER', is_optional => 1 },
         transcript_transcript_name  => { is => 'VARCHAR', is_optional => 1 },
         transcript_transcript_status => { is => 'VARCHAR', is_optional => 1,
             valid_values => ['reviewed', 'unknown', 'model', 'validated', 'predicted', 'inferred', 'provisional', 'unknown', 'known', 'novel'],

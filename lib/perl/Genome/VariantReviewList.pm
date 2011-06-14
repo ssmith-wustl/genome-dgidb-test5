@@ -12,13 +12,13 @@ class Genome::VariantReviewList {
     type_name => 'variant review list',
     table_name => 'VARIANT_REVIEW_LIST',
     id_by => [
-        id => { is => 'UR::Value::Number', len => 10 },
+        id => { is => 'NUMBER', len => 10 },
     ],
     has => [
         author         => { is => 'VARCHAR2', len => 256, is_optional => 1 },
         name           => { is => 'VARCHAR2', len => 256, is_optional => 1 },
         position_lists => { is => 'VARCHAR2', len => 1024, is_optional => 1 },
-        rt_ticket      => { is => 'UR::Value::Number', len => 10, is_optional => 1 },
+        rt_ticket      => { is => 'NUMBER', len => 10, is_optional => 1 },
         source_maps    => { is => 'VARCHAR2', len => 1024, is_optional => 1 },
     ],
     schema_name => 'GMSchema',
