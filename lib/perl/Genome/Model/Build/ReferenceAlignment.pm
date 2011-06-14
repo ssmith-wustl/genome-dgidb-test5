@@ -89,6 +89,30 @@ sub create {
     return $self;
 }
 
+sub validate_for_start_methods {
+    my $self = shift;
+    my @methods = $self->SUPER::validate_for_start_methods();
+    push @methods, 'check_genotype_input';
+    return @methods;
+}
+
+sub check_genotype_input {
+    my $self = shift;
+    my @tags;
+
+    if ($self->is_lane_qc) {
+        unless ($self->genotype_microarray_build) {
+            push @tags, UR::Object::Tag->create(
+                type => 'error',
+                properties => 'genotype_microarray_build',
+                desc => 'No genotype microarray build input found',
+            );
+        }
+    }
+
+    return @tags;
+}
+
 sub gold_snp_build {
     my $self = shift;
     if ($self->genotype_microarray_build_id) {
