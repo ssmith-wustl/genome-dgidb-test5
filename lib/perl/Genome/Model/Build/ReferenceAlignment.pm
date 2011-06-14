@@ -69,31 +69,27 @@ class Genome::Model::Build::ReferenceAlignment {
     ],
 };
 
-sub create {
-    my $class = shift;
-
-    my $self = $class->SUPER::create(@_);
-    unless ($self) {
-        return;
-    }
-
-    my $model = $self->model;
-    my @idas = $model->instrument_data_assignments;
-    unless (scalar(@idas) && ref($idas[0])  &&  $idas[0]->isa('Genome::Model::InstrumentDataAssignment')) {
-        $self->error_message('No instrument data have been added to model! '. $model->name);
-        $self->error_message("The following command will add all available instrument data:\ngenome model instrument-data assign  --model-id=". $model->id .' --all');
-        $self->delete;
-        return;
-    }
-
-    return $self;
-}
-
 sub validate_for_start_methods {
     my $self = shift;
     my @methods = $self->SUPER::validate_for_start_methods();
-    push @methods, 'check_genotype_input';
+    push @methods, qw/ check_genotype_input instrument_data_assigned /;
     return @methods;
+}
+
+sub instrument_data_assigned {
+    my $self = shift;
+    my @tags;
+
+    my @instrument_data = $self->instrument_data;
+    unless (@instrument_data) {
+        push @tags, UR::Object::Tag->create(
+            type => 'error',
+            properties => 'instrument_data',
+            desc => 'No instrument data assigned to build',
+        );
+    }
+
+    return @tags;
 }
 
 sub check_genotype_input {
