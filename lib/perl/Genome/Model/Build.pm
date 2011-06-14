@@ -102,6 +102,7 @@ sub __display_name__ {
     return $self->id . ' of ' . $self->model->name;
 }
 
+# TODO Remove this
 sub _resolve_subclass_name_by_sequencing_platform { # only temporary, subclass will soon be stored
     my $class = shift;
 
@@ -197,8 +198,7 @@ sub create {
     };
 
     if ($@) {
-        $self->error_message("Could not create new build of model " . $self->__display_name__ . 
-            ", reason: $@");
+        $self->error_message("Could not create new build of model " . $self->__display_name__ . ", reason: $@");
         $self->delete;
         return;
     }
@@ -492,6 +492,10 @@ sub reallocate {
     return 1;
 }
 
+sub create_subdirectories {
+    return 1;
+}
+
 sub log_directory { 
     return  $_[0]->data_directory . '/logs/';
 }
@@ -548,8 +552,12 @@ sub start {
     my $self = shift;
     my %params = @_;
 
+    # Regardless of how this goes, build requested should be unset. And we also want to know what software was used.
+    $self->model->build_requested(0);
+    $self->software_revision($self->snapshot_revision);
+
     eval {
-        # Can be overridden by subclasses, performs a number of checks to ensure the build can start
+        # Validate build for start and collect tags that represent problems.
         my @tags = $self->validate_for_start;
         if (@tags) {
             my @msgs;
@@ -575,8 +583,6 @@ sub start {
             Carp::confess 'Could not create subdirectories of build directory ' . $self->data_directory;
         }
 
-        $self->software_revision($self->snapshot_revision);
-        $self->model->build_requested(0);
         $self->the_master_event->schedule;
 
         # Creates a workflow for the build
@@ -605,16 +611,65 @@ sub start {
     return 1;
 }
 
-# Override in subclasses, should return a list of UR::Object::Tag objects, each of which represent
-# a problem with the build that prevents it from starting. Returning undef means the build is cool.
-sub validate_for_start {
-    my $self = shift;
-    return $self->__errors__;
+sub validate_for_start_methods {
+    # Each method should return tags
+    my @methods = (
+        'inputs_have_compatible_reference',
+    );
+    return @methods;
 }
 
-sub create_subdirectories {
-    return 1;
+sub validate_for_start {
+    my $self = shift;
+
+    my @tags;
+    my @methods = $self->validate_for_start_methods;
+
+    for my $method (@methods) {
+        unless ($self->can($method)) {
+            $self->warning_message("Validation method $method not found!");
+            next;
+        }
+        push @tags, $self->$method;
+    }
+
+    return @tags;
 }
+
+sub inputs_have_compatible_reference {
+    my $self = shift;
+
+    # We really should standardize what we call reference sequence...
+    my @reference_sequence_methods = ('reference_sequence', 'reference', 'reference_sequence_build');
+
+    my ($method) = grep { $self->can($_) } @reference_sequence_methods;
+    return 1 unless $method;
+    my $model_reference_sequence = $self->$method;
+
+    my @inputs = $self->inputs;
+    my @objects = map { $_->value } @inputs;
+    my @incompatible_properties;
+    for my $object (@objects) {
+        my ($method) = grep { $self->can($_) } @reference_sequence_methods;
+        next unless $method;
+        my $object_reference_sequence = $object->$method;
+        unless($object_reference_sequence->is_compatible_with($model_reference_sequence)) {
+            push @incompatible_properties, $object->name;
+        }
+    }
+
+    my $tag;
+    if (@incompatible_properties) {
+        $tag = UR::Object::Tag->create(
+            type => 'error',
+            properties => \@incompatible_properties,
+            desc => "Not compatible with model's reference sequence '" . $model_reference_sequence->__display_name__ . "'.",
+        );
+    }
+
+    return $tag;
+}
+
 
 sub stop {
     my $self = shift;
@@ -1880,69 +1935,6 @@ sub delta_model_input_differences_from_model {
 }
 
 
-sub is_buildable_methods {
-    # each method should return ($ok, $tag)
-    my @methods = (
-        'inputs_have_compatible_reference',
-    );
-    return @methods;
-}
-
-
-sub is_buildable {
-    my $self = shift || die;
-
-    my @tags;
-    my $is_buildable = 1;
-    my @methods = $self->is_buildable_methods;
-    for my $method (@methods) {
-        my ($ok, $tag) = $self->$method;
-        $is_buildable = 0 unless $ok;
-        push @tags, $tag;
-    }
-
-    for my $tag (@tags) {
-        $self->status_message($tag->__display_name__);
-    }
-
-    return $is_buildable;
-}
-
-
-sub inputs_have_compatible_reference {
-    my $self = shift;
-
-    # We really should standardize what we call reference sequence...
-    my @reference_sequence_methods = ('reference_sequence', 'reference', 'reference_sequence_build');
-
-    my ($method) = grep { $self->can($_) } @reference_sequence_methods;
-    return 1 unless $method;
-    my $model_reference_sequence = $self->$method;
-
-    my @inputs = $self->inputs;
-    my @objects = map { $_->value } @inputs;
-    my @incompatible_properties;
-    for my $object (@objects) {
-        my ($method) = grep { $self->can($_) } @reference_sequence_methods;
-        next unless $method;
-        my $object_reference_sequence = $object->$method;
-        unless($object_reference_sequence->is_compatible_with($model_reference_sequence)) {
-            push @incompatible_properties, $object->name;
-        }
-    }
-
-    my $tag;
-    if (@incompatible_properties) {
-        $tag = UR::Object::Tag->create(
-            type => 'error',
-            properties => \@incompatible_properties,
-            desc => "Not compatible with model's reference sequence '" . $model_reference_sequence->__display_name__ . "'.",
-        );
-    }
-
-    my $ok = not $tag;
-    return $ok, (wantarray ? $tag : undef);
-}
 
 
 sub all_allocations {
