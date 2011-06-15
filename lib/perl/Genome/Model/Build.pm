@@ -550,7 +550,7 @@ sub start {
 
     # Regardless of how this goes, build requested should be unset. And we also want to know what software was used.
     $self->model->build_requested(0);
-    $self->software_revision($self->snapshot_revision);
+    $self->software_revision($self->snapshot_revision) unless $self->software_revision;
 
     eval {
         # Validate build for start and collect tags that represent problems.
