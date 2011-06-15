@@ -21,7 +21,7 @@ class Genome::Model::Build {
     is_abstract => 1,
     subclassify_by => 'subclass_name',
     id_by => [
-        build_id => { is => 'UR::Value::Number', },
+        build_id => { is => 'NUMBER', },
     ],
     has => [
         subclass_name           => { is => 'VARCHAR2', len => 255, is_mutable => 0, column_name => 'SUBCLASS_NAME',
@@ -37,7 +37,7 @@ class Genome::Model::Build {
                                    },
         data_directory          => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
         model                   => { is => 'Genome::Model', id_by => 'model_id' },
-        model_id                => { is => 'UR::Value::Number', implied_by => 'model', constraint_name => 'GMB_GMM_FK' },
+        model_id                => { is => 'NUMBER', implied_by => 'model', constraint_name => 'GMB_GMM_FK' },
         model_name              => { via => 'model', to => 'name' },
         type_name               => { via => 'model' },
         subject                 => { via => 'model' },

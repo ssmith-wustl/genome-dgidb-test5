@@ -119,6 +119,13 @@ class Genome::Model::SomaticVariation {
             is => 'Genome::Model::Build::ImportedVariationList',
             id_by => 'previously_discovered_variations_build_id',
         },
+        force => {
+            is => 'Boolean',
+            is_optional => 1,
+            is_many => 0,
+            default => 0,
+            doc => 'Allow creation of somatic variation models where --tumor_model and --normal_model do not have matching Genome::Individuals',
+        },
     ],
 };
 
@@ -164,7 +171,13 @@ sub create {
         unless ($tumor_source eq $normal_source) {
             my $tumor_common_name = $tumor_source->common_name || "unknown";
             my $normal_common_name = $normal_source->common_name || "unknown";
-            die $class->error_message("Tumor model and normal model samples do not come from the same individual.  Tumor common name is $tumor_common_name. Normal common name is $normal_common_name.");
+            my $message = "Tumor model and normal model samples do not come from the same individual.  Tumor common name is $tumor_common_name. Normal common name is $normal_common_name.";
+            if (defined $params{force} and $params{force} == 1){
+                $class->warning_message($message);
+            }
+            else{
+                die $class->error_message($message . " Use --force to allow this anyway.");
+            }
         }
         $params{subject_id} = $tumor_subject->id;
         $params{subject_class_name} = $tumor_subject->class;
