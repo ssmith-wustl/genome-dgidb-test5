@@ -88,6 +88,7 @@ sub execute{
                 File::Copy::copy($previously_detected_output_tmp_file, $previously_detected_snv_path);
             }else{
                 $self->status_message("high confidence snv output is empty, skipping intersection");
+                Genome::Sys->create_directory($build->data_directory."/novel");
                 File::Copy::copy($detected_snv_path, $novel_detected_snv_path);
                 File::Copy::copy($detected_snv_path, $previously_detected_snv_path);
             }
@@ -139,6 +140,7 @@ sub execute{
                 File::Copy::copy($previously_detected_output_tmp_file, $previously_detected_indel_path);
             }else{
                 $self->status_message("high confidence indel output is empty, skipping intersection");
+                Genome::Sys->create_directory($build->data_directory."/novel");
                 File::Copy::copy($detected_indel_path, $novel_detected_indel_path);
                 File::Copy::copy($detected_indel_path, $previously_detected_indel_path);
             }
