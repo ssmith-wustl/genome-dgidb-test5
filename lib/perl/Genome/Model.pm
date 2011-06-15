@@ -892,7 +892,7 @@ sub notify_input_build_success {
 
         #all input models have a succeeded build
         if(scalar @from_models eq scalar @last_complete_builds) {
-            $self->build_requested(1);
+            $self->build_requested(1, 'all input models are ready');
         }
     }
 
