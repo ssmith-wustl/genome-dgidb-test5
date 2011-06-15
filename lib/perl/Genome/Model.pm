@@ -900,17 +900,16 @@ sub notify_input_build_success {
 }
 
 sub build_requested {
-    my ($self, $value, $reason) = @_;
-    if ($value) {
+    my ($self, $value, $reason) = @_; 
+    # Writing the if like this allows someone to do build_requested(undef)
+    if (@_ > 1) {
         $self->add_note(
-            header_text => 'build_requested',
+            header_text => $value ? 'build_requested' : 'build_unrequested',
             body_text => defined $reason ? $reason : 'no reason given',
         );
-    }
-
-    if (defined $value) {
         return $self->__build_requested($value);
     }
+
     return $self->__build_requested;
 }
 

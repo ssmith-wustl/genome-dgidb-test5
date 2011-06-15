@@ -256,9 +256,10 @@ sub execute {
     }
     else {
         my $subset_name = $self->get_subset_name;
-        unless($subset_name eq $params{subset_name}){
+        my ($subset_name_to_compare) = $params{subset_name} =~ m/^(\d+)(?:$|[-.])/; #ignore indices or other subsets of lanes
+        unless($subset_name eq $subset_name_to_compare){
             $self->error_message("Subset name is incorrectly specified. The specified name must match the first digit after s_ in the filenames. 
-                                    You specified ".$params{subset_name}." and the files indicate that the subset name should be ".$subset_name);
+                                    You specified ".$params{subset_name}." which suggests the files should have " . $subset_name_to_compare . " but they instead have ".$subset_name);
             die $self->error_message;
         }
         $self->status_message("Subset name verified to jibe with file names.");
@@ -503,7 +504,7 @@ sub check_last_read {
     unless($lines[0] =~ /^@/){
         return;
     }
-    my ($read_name) = split "/",$lines[0];
+    my ($read_name) = split m![/ ]!,$lines[0];
     my $read_length = length $lines[1];
     if(defined $self->read_length){
         unless($read_length <= $self->read_length){

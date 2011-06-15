@@ -119,6 +119,13 @@ class Genome::Model::SomaticVariation {
             is => 'Genome::Model::Build::ImportedVariationList',
             id_by => 'previously_discovered_variations_build_id',
         },
+        force => {
+            is => 'Boolean',
+            is_optional => 1,
+            is_many => 0,
+            default => 0,
+            doc => 'Allow creation of somatic variation models where --tumor_model and --normal_model do not have matching Genome::Individuals',
+        },
     ],
 };
 
@@ -128,10 +135,10 @@ sub create {
 
     $DB::single = 1;
 
-    my $tumor_model = $params{tumor_model};
-    my $normal_model =  $params{normal_model};
-    my $annotation_build = $params{annotation_build};
-    my $previously_discovered_variations_build = $params{previously_discovered_variations_build};
+    my $tumor_model = $params{tumor_model} || Genome::Model->get($params{tumor_model_id});
+    my $normal_model =  $params{normal_model}  || Genome::Model->get($params{normal_model_id});;
+    my $annotation_build = $params{annotation_build} || Genome::Model::Build->get($params{annotation_build_id});
+    my $previously_discovered_variations_build = $params{previously_discovered_variations_build} || Genome::Model::Build->get($params{previously_discovered_variations_build_id});
 
     unless($tumor_model) {
         $class->error_message('No tumor model provided.' );
@@ -164,7 +171,13 @@ sub create {
         unless ($tumor_source eq $normal_source) {
             my $tumor_common_name = $tumor_source->common_name || "unknown";
             my $normal_common_name = $normal_source->common_name || "unknown";
-            die $class->error_message("Tumor model and normal model samples do not come from the same individual.  Tumor common name is $tumor_common_name. Normal common name is $normal_common_name.");
+            my $message = "Tumor model and normal model samples do not come from the same individual.  Tumor common name is $tumor_common_name. Normal common name is $normal_common_name.";
+            if (defined $params{force} and $params{force} == 1){
+                $class->warning_message($message);
+            }
+            else{
+                die $class->error_message($message . " Use --force to allow this anyway.");
+            }
         }
         $params{subject_id} = $tumor_subject->id;
         $params{subject_class_name} = $tumor_subject->class;

@@ -94,7 +94,17 @@ sub execute {                               # replace with real execution logic.
 
 	## Run GATK ##
 	my $path_to_gatk = $self->gatk_path;
-	my $gatk_params = $self->gatk_params;
+	my $version = $self->version;
+	my $gatk_params;
+	if ($version le 5500) {
+		$gatk_params = $self->gatk_params;
+	}
+	elsif ($version ge 5500) {
+		$gatk_params = $self->gatk_params .  " -glm SNP";
+	}
+	else {
+		die "cannot determine gatk version to set proper parameter names";
+	}
 	my $reference_fasta = "-R " . $self->reference_fasta;
 	my $output_file = "-o " . $self->vcf_output_file;	
 	my $bam_input = "-I ".$self->bam_file;
@@ -113,7 +123,7 @@ sub execute {                               # replace with real execution logic.
 	## Optionally run in unsafe mode ##
 
 	if($self->run_unsafe_mode) {
-		$cmd .= " -U ALL";
+		$cmd .= " -U ALL --validation_strictness SILENT ";
 	}
 
 

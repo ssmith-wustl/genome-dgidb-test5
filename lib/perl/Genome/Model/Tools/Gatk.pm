@@ -44,6 +44,7 @@ my %GATK_VERSIONS = (
     '3471' => '/gsc/scripts/pkg/bio/gatk/GenomeAnalysisTK-1.0.3471/' . $GATK_COMMAND,
     '4168' => '/gsc/scripts/pkg/bio/gatk/GenomeAnalysisTK-1.0.4168/' . $GATK_COMMAND,
     '5336' => '/gsc/scripts/pkg/bio/gatk/GenomeAnalysisTK-1.0.5336/' . $GATK_COMMAND,
+    '5777' => '/gsc/pkg/bio/gatk/GenomeAnalysisTK-1.0.5777/' . $GATK_COMMAND,
 );
 
 sub create {
