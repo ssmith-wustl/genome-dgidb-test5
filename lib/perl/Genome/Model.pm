@@ -904,7 +904,8 @@ sub build_requested {
     # Writing the if like this allows someone to do build_requested(undef)
     if (@_ > 1) {
         my ($calling_package, $calling_subroutine) = (caller(1))[0,3];
-        my $default_reason = 'no reason given called by ' . $calling_package . '::' . $calling_subroutine;
+        my $default_reason = 'no reason given';
+        $default_reason .= 'called by ' . $calling_package . '::' . $calling_subroutine if $calling_package;
         $self->add_note(
             header_text => $value ? 'build_requested' : 'build_unrequested',
             body_text => defined $reason ? $reason : $default_reason,
