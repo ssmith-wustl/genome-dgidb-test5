@@ -222,7 +222,7 @@ sub run_genotype_qc
 	my ($sample_name, $genotype_file, $snp_file, $output_file) = @_;
 
 
-	my $cmd = "gmt analysis lane-qc compare-snps --sample-name '$sample_name' --genotype $genotype_file --variant $snp_file --output-file $output_file";
+	my $cmd = "gmt analysis lane-qc compare-snps --sample-name '$sample_name' --genotype $genotype_file --variant $snp_file --output-file '$output_file'";
 #	print "RUN: $cmd\n";
 	
 	system("bsub -q short -R\"select[model != Opteron250 && mem>1000] rusage[mem=1000]\" \"$cmd\"");
