@@ -105,7 +105,6 @@ sub execute {
         };
 
         if ($build and $transaction->commit) {
-            $self->status_message("Successfully started build (" . $build->__display_name__ . ").");
             $builds_started++;
 
             # Record newly created build so other tools can access them.
@@ -116,7 +115,10 @@ sub execute {
             my $build_started = eval { $build->start(%start_params) };
             $start_transaction->commit;
 
-            unless ($build_started) {
+            if ($build_started) {
+                $self->status_message("Successfully started build (" . $build->__display_name__ . ").");
+            }
+            else {
                 push @errors, $model->__display_name__ . ": " . $@;
             }
         }
