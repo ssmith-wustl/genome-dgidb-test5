@@ -109,13 +109,17 @@ sub length_of_16s_region {
     return 1542;
 }
 
+sub post_allocation_initialization {
+    my $self = shift;
+    return $self->create_subdirectories;
+}
+
 sub create_subdirectories {
     my $self = shift;
     for my $dir ( $self->sub_dirs ) {
         Genome::Sys->create_directory( $self->data_directory."/$dir" )
             or return;
     }
-
     return 1;
 }
 
