@@ -235,7 +235,7 @@ sub get{
     return $self->SUPER::get(@_) if @results;
 
     my @caller = caller(1);
-    if($caller[3] =~ m/Genome::Model::Build::ImportedReferenceSequence::get/){
+    if($caller[3] && $caller[3] =~ m/Genome::Model::Build::ImportedReferenceSequence::get/){
         return;
     }else{
         return Genome::Model::Build::ImportedReferenceSequence->get(@_);
