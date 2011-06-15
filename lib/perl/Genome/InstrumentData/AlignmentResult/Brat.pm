@@ -830,7 +830,7 @@ sub printUnmappedReadToSam {
     #              "$scratch_directory/trimmed_mates2.seq", "$scratch_directory/trimmed_badMate2.seq",
     #              "$scratch_directory/trimmed_err1.seq", "$scratch_directory/trimmed_err2.seq");
     # paired end read thing
-    # install package
-    # gmt
     # clean up conver_mapped_reads_to_sam
-    
+    ### LATER: 
+    # streaming to bam
+    # check gmt: install package and review other todo
