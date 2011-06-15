@@ -650,16 +650,16 @@ sub inputs_have_compatible_reference {
     my $build_reference_sequence = $self->$build_reference_method;
 
     my @inputs = $self->inputs;
-    my @objects = map { $_->value } @inputs;
     my @incompatible_properties;
-    for my $object (@objects) {
+    for my $input (@inputs) {
+        my $object = $input->value;
         my ($input_reference_method) = grep { $object->can($_) } @reference_sequence_methods;
         next unless $input_reference_method;
         my $object_reference_sequence = $object->$input_reference_method;
         next unless $object_reference_sequence;
 
         unless($object_reference_sequence->is_compatible_with($build_reference_sequence)) {
-            push @incompatible_properties, $object->name;
+            push @incompatible_properties, $input->name;
         }
     }
 
