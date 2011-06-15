@@ -609,6 +609,10 @@ sub start {
     return 1;
 }
 
+sub post_allocation_initialization {
+    return 1;
+}
+
 sub validate_for_start_methods {
     # Each method should return tags
     my @methods = (
