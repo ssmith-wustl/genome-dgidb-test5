@@ -1314,8 +1314,8 @@ sub add_processing_profiles_to_pses{
                     }
                 }
                 elsif ($taxon->domain =~ /bacteria/i) {
-                    # updated by request, see RT 66557
-                    push @processing_profile_ids_to_add, '2509648';
+                    # updated 2011jun15 RT 72143 ctomlins
+                    push @processing_profile_ids_to_add, '2599969';
                 }
 
             }
