@@ -113,13 +113,13 @@ sub validate_for_start_methods {
 sub genotype_microarray_has_reference {
     my $self = shift;
     my @tags;
-    my $genotype = $self->genotype_microarray_model;
+    my $genotype = $self->genotype_microarray_build;
     if ($genotype) {
         if (not defined $genotype->reference_sequence_build) {
             push @tags, UR::Object::Tag->create(
                 type => 'invalid',
-                properties => [qw/ genotype_microarray_model /],
-                desc => "Supplied genotype microarray model " . $genotype->__display_name__ . " does not specify a reference sequence"
+                properties => [qw/ genotype_microarray_build /],
+                desc => "Supplied genotype microarray build " . $genotype->__display_name__ . " does not specify a reference sequence"
             );
         }
     }
@@ -176,9 +176,9 @@ sub check_region_of_interest {
     my @tags;
 
     my $rsb = $self->reference_sequence_build;
-    my $roi_name = $self->region_of_interest_set_name;
+    my $roi_name = $self->model->region_of_interest_set_name;
     if ($roi_name) {
-        my $roi_list = eval { $self->region_of_interest_set; };
+        my $roi_list = eval { $self->model->region_of_interest_set; };
         if($roi_list) {
             my $roi_reference = $roi_list->reference;
             unless ($rsb->is_compatible_with($roi_reference)) {
@@ -212,7 +212,7 @@ sub check_genotype_input {
     my $self = shift;
     my @tags;
 
-    if ($self->is_lane_qc) {
+    if ($self->model->is_lane_qc) {
         unless ($self->genotype_microarray_build) {
             push @tags, UR::Object::Tag->create(
                 type => 'error',
