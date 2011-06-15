@@ -18,6 +18,10 @@ class Genome::Model::Build::Command::Queue {
             doc => 'Model(s) to build. Resolved from command line via text string.',
             shell_args_position => 1,
         },
+        reason => {
+            is => 'Text',
+            doc => 'Why the models are having a build requested',
+        },
     ],
 
 };
@@ -28,9 +32,9 @@ sub sub_command_sort_position { 1 }
 
 sub help_synopsis {
     return <<EOS;
-genome model build queue 1234
+genome model build queue --reason 'new data assigned' 1234
 
-genome model build queue somename
+genome model build queue --reason 'changed annotation input' somename
 
 
 
@@ -47,7 +51,7 @@ sub execute {
     my $self = shift;
 
     my @models = $self->models;
-    map($_->build_requested(1), @models);
+    map($_->build_requested(1, $self->reason), @models);
 
     return 1;
 }
