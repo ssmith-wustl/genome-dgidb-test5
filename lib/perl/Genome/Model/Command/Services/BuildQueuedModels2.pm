@@ -125,7 +125,16 @@ sub num_builds_to_start {
     my $scheduled_build_count = 0;
     while ($scheduled_builds->next && ++$scheduled_build_count < $self->max_scheduled_builds) { 1; }
     
-    return int ( ($self->max_scheduled_builds - $scheduled_build_count) / $self->channels);
+    my $max_per_channel = int($self->max_scheduled_builds / $self->channels);
+    if ($scheduled_build_count > $self->max_scheduled_builds) {
+        return 0;
+    }
+    elsif (($scheduled_build_count + $max_per_channel) > $self->max_scheduled_builds) {
+        return $max_per_channel / $self->channels;
+    }
+    else {
+        return $max_per_channel;
+    }
 }
 
 
