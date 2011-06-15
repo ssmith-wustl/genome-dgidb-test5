@@ -135,10 +135,10 @@ sub create {
 
     $DB::single = 1;
 
-    my $tumor_model = $params{tumor_model};
-    my $normal_model =  $params{normal_model};
-    my $annotation_build = $params{annotation_build};
-    my $previously_discovered_variations_build = $params{previously_discovered_variations_build};
+    my $tumor_model = $params{tumor_model} || Genome::Model->get($params{tumor_model_id});
+    my $normal_model =  $params{normal_model}  || Genome::Model->get($params{normal_model_id});;
+    my $annotation_build = $params{annotation_build} || Genome::Model::Build->get($params{annotation_build_id});
+    my $previously_discovered_variations_build = $params{previously_discovered_variations_build} || Genome::Model::Build->get($params{previously_discovered_variations_build_id});
 
     unless($tumor_model) {
         $class->error_message('No tumor model provided.' );
