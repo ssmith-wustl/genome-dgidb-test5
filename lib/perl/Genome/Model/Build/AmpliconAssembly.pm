@@ -21,30 +21,9 @@ class Genome::Model::Build::AmpliconAssembly {
     ],
 };
 
-#< UR >#
-sub create {
-    my $class = shift;
-
-    my $self = $class->SUPER::create(@_)
-        or return;
-
-    unless ( $self->model->type_name eq 'amplicon assembly' ) {
-        $self->error_message( 
-            sprintf(
-                'Incompatible model type (%s) to build as an amplicon assembly',
-                $self->model->type_name,
-            )
-        );
-        $self->delete;
-        return;
-    }
-
-    mkdir $self->data_directory unless -e $self->data_directory;
-
-    $self->amplicon_assembly
-        or return;
-    
-    return $self;
+sub post_allocation_initialization {
+    my $self = shift;
+    $self->amplicon_assembly or return 0;
 }
 
 #< AA >#
