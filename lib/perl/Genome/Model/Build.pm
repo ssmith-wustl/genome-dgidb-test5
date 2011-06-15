@@ -492,10 +492,6 @@ sub reallocate {
     return 1;
 }
 
-sub create_subdirectories {
-    return 1;
-}
-
 sub log_directory { 
     return  $_[0]->data_directory . '/logs/';
 }
@@ -560,6 +556,7 @@ sub start {
         # Validate build for start and collect tags that represent problems.
         # Croak is used here instead of confess to limit error message length. The entire message must fit into the
         # body text of a note, and can cause commit problems if the length exceeds what the db column can accept.
+        # TODO Delegate to some other method to create the error message
         my @tags = $self->validate_for_start;
         if (@tags) {
             my @msgs;
@@ -579,12 +576,11 @@ sub start {
             }
         }
 
-        # For now, this method can be overridden in subclasses to create custom directory structures for the build
-        # TODO Have this method be called by resolve_data_directory, or perhaps as part of a initialize_directories method
-        unless ($self->create_subdirectories) {
-            Carp::croak 'Could not create subdirectories of build directory ' . $self->data_directory;
+        # Give builds an opportunity to do some initialization after the data directory has been resolved
+        unless ($self->post_allocation_initialization) {
+            Carp::croak "Build " . $self->__display_name__ . " failed to initialize after resolving data directory!";
         }
-
+        
         $self->the_master_event->schedule;
 
         # Creates a workflow for the build
