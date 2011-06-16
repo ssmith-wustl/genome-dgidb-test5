@@ -134,12 +134,14 @@ EOS
 sub _process_params { 
     my $self = shift;
 
-    my @param_list = split(" ", $self->params);
-    my($cmd_class,$params) = $self->class->resolve_class_and_params_for_argv(@param_list);
+    if ($self->params) {
+        my @param_list = split(" ", $self->params);
+        my($cmd_class,$params) = $self->class->resolve_class_and_params_for_argv(@param_list);
 
-    # For each parameter set in params... use the class properties to assign the values
-    for my $param_name (keys %$params) {
-        $self->$param_name($params->{$param_name});
+        # For each parameter set in params... use the class properties to assign the values
+        for my $param_name (keys %$params) {
+            $self->$param_name($params->{$param_name});
+        }
     }
 
     return 1;
