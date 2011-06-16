@@ -18,7 +18,7 @@ use Test::More tests => 6;
 };
 
 
-use_ok('Genome::Model::Tools::Somatic::FilterFalseIndels');
+use_ok('Genome::Model::Tools::DetectVariants2::Filter::FalseIndel');
 
 my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-FalseIndel';
 
