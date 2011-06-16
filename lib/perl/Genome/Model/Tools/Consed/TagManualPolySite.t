@@ -12,13 +12,13 @@ my $tag_ace = '/gsc/var/cache/testsuite/running_testsuites/Genome-Model-Tools-Co
 if (-f $tag_ace) { unlink($tag_ace) };
 `cp $ace_file $tag_ace && chmod +w $tag_ace`;
 ok (-f "$tag_ace");
-my $refseq_fasta = "/gscmnt/sata420/info/testsuite_data/Genome-Model-Tools-Consed-TagManualPolySite/AML_Validation_22_Trios-H_20_00jlH-Ensembl.c1.refseq.fasta";
+my $refseq_fasta = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TagManualPolySite/AML_Validation_22_Trios-H_20_00jlH-Ensembl.c1.refseq.fasta";
 ok (-f $refseq_fasta);
-my $polyscan_file = "/gscmnt/sata420/info/testsuite_data/Genome-Model-Tools-Consed-TagManualPolySite/AML_Validation_22_Trios-H_20_00jlH-Ensembl.polyscan";
+my $polyscan_file = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TagManualPolySite/AML_Validation_22_Trios-H_20_00jlH-Ensembl.polyscan";
 ok (-f $polyscan_file);
 my $snp_gff = "/gsc/var/cache/testsuite/running_testsuites/Genome-Model-Tools-Consed-TagManualPolySite/AML_Validation_22_Trios-H_20_00jlH-Ensembl.snp.gff";
 if (-f $snp_gff) { unlink($snp_gff) }
-my $force_file = "/gscmnt/sata420/info/testsuite_data/Genome-Model-Tools-Consed-TagManualPolySite/force_file";
+my $force_file = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TagManualPolySite/force_file";
 ok (-f $force_file);
 
 my ($info) = Genome::Model::Tools::Consed::TagManualPolySite->execute(ace_file => $tag_ace, refseq_fasta => $refseq_fasta, force_genotype_coords => $force_file, polyscan_snp => $polyscan_file, snp_gff => $snp_gff);
