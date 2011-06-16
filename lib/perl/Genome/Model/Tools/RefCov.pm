@@ -5,6 +5,11 @@ use warnings;
 
 use Genome;
 
+use Devel::Size qw/size total_size/;
+
+my $DEFAULT_MAXIMUM_ROI_LENGTH = 10_000_000;
+my $DEFAULT_WINDOW_SIZE = 10_000_000;
+
 my @GC_HEADERS = qw/
                        gc_reflen_bp
                        gc_reflen_percent
@@ -40,6 +45,7 @@ my %MERGE_STATS_OPERATION = (
     roi_normalized_depth => 'weighted_mean',
     genome_normalized_depth => 'weighted_mean',
     intervals => 'intervals',
+    alignment_count => '+',
 );
 
 
@@ -109,6 +115,18 @@ class Genome::Model::Tools::RefCov {
             default_value => 0,
             is_optional => 1,
         },
+        alignment_count => {
+            is => 'Boolean',
+            doc => 'Calculate the number of alignments that overlap region.',
+            default_value => 0,
+            is_optional => 1,
+        },
+        print_min_max => {
+            is => 'Boolean',
+            doc => 'Print the minimum and maximum depth of coverage.',
+            default_value => 0,
+            is_optional => 1,
+        },
         reference_fasta => {
             is => 'String',
             doc => 'The path to the reference genome fasta file',
@@ -134,6 +152,18 @@ class Genome::Model::Tools::RefCov {
             doc => 'The level of granularity to merge coverage statistics.  Requires ROI file uses interval names like $GENE:$TRANSCRIPT:$TYPE:$ORDINAL:$DIRECTION',
             is_optional => 1,
             valid_values => ['exome','gene','transcript'],
+        },
+        window_size => {
+            is => 'Number',
+            doc => 'The size of a reference window when calculating coverage of ROI greater than maximum_roi_length.',
+            default_value => $DEFAULT_WINDOW_SIZE,
+            is_optional => 1,
+        },
+        maximum_roi_length => {
+            is => 'Number',
+            doc => 'The maximum length of an ROI(region-of-interest) before using a window approach',
+            default_value => $DEFAULT_MAXIMUM_ROI_LENGTH,
+            is_optional => 1,
         },
     ],
     has_output => [
@@ -166,6 +196,7 @@ class Genome::Model::Tools::RefCov {
         _genome_stats => {},
         _nuc_cov => {},
         _roi_cov => {},
+        _brief_roi_cov => {},
     ],
 };
 
@@ -212,6 +243,13 @@ OPTIONAL ROI NORMALIZED COVERAGE FIELD:
 
 OPTIONAL GENOME NORMALIZED COVERAGE FIELD:
 [1] Genome Normalized Depth
+
+OPTIONAL ALIGNMENT COUNT FIELD:
+[1] Count of Overlapping Alignments
+
+OPTIONAL MIN/MAX FIELD:
+[1] Minimum Coverage Depth
+[2] Maximum Coverage Depth
 ';
 }
 
@@ -307,6 +345,15 @@ sub region_coverage_stat {
         $self->_roi_cov($stat);
     }
     return $self->_roi_cov;
+}
+
+sub brief_region_coverage_stat {
+    my $self = shift;
+    unless ($self->_brief_roi_cov) {
+        my $stat = Genome::RefCov::Stats->create( stats_mode => 'brief' );
+        $self->_brief_roi_cov($stat);
+    }
+    return $self->_brief_roi_cov;
 }
 
 sub _load_fai {
@@ -430,9 +477,26 @@ sub region_sequence_array_ref {
     my $dna_string = $fai->fetch($id);
     my @dna = split('',$dna_string);
     unless (scalar(@dna) == $region->{length}) {
-        die('Failed to fetch the proper length ('. $region->{length} .') dna.  Fetched '. scalar(@dna) .' bases!');
+        die('Failed to fetch the proper length ('. $region->{length} .') dna.  Fetched '. scalar(@dna) .' bases for region: '. $region->{id});
     }
     return \@dna;
+}
+
+sub region_alignment_count {
+    my $self = shift;
+    my $region = shift;
+
+    my $alignments = $self->alignments;
+    my $bam = $alignments->bio_db_bam;
+    my $index = $alignments->bio_db_index;
+    my $tid = $alignments->tid_for_chr($region->{chrom});
+    my $alignment_count = 0;
+    my $alignment_count_callback = sub {
+        my ($alignment,$data) = @_;
+        $alignment_count++;
+    };
+    $index->fetch( $bam, $tid, ($region->{start} - 1), $region->{end},$alignment_count_callback);
+    return $alignment_count;
 }
 
 sub region_coverage_array_ref {
@@ -671,6 +735,13 @@ sub resolve_stats_file_headers {
     if ($self->genome_normalized_coverage) {
         push @headers, 'genome_normalized_depth';
     }
+    if ($self->alignment_count) {
+        push @headers, 'alignment_count';
+    }
+    if ($self->print_min_max) {
+        push @headers, 'minimum_coverage_depth';
+        push @headers, 'maximum_coverage_depth';
+    }
     return @headers;
 }
 
@@ -691,6 +762,144 @@ sub validate_chromosomes {
     return 1;
 }
 
+sub generate_coverage_stats {
+    my $self = shift;
+    my $region = shift;
+    my $min_depth = shift;
+
+    my $stat = $self->region_coverage_stat;
+    my $length = $region->{length};
+    if ($length < $self->maximum_roi_length) {
+        my $coverage_array_ref = $self->region_coverage_array_ref($region);
+        $stat->calculate_coverage_stats(
+            coverage => $coverage_array_ref,
+            min_depth => $min_depth,
+            name => $region->{name},
+        );
+    } else {
+        $self->status_message('Region '. $region->{name} .' for chr/reference '. $region->{chrom} .' is longer than the defined maximum_roi_length '. $self->maximum_roi_length. '!  A window approach will be used with a '. $self->window_size .' offset.');
+        my @region_gaps;
+        my $offset = $self->window_size;
+
+        # 1-based coordinates
+        my $start = $region->{start};
+        my $end = $region->{end};
+
+        my $seq_id = $region->{chrom};
+        my $bases_covered = 0;
+        my $discarded_bases = 0;
+        my $coverage_stats = Statistics::Descriptive::Sparse->new();
+        # This is only used when a region is larger than the maximum_roi_length
+        my $brief_stat = $self->brief_region_coverage_stat;
+        for (my $new_start = $start; $new_start <= $end; $new_start += $offset) {
+            my $new_end = $new_start + $offset - 1;
+            if ($new_end > $end) {
+                $new_end = $end;
+            }
+            my $id = $seq_id .':'. $new_start .'-'. $new_end;
+            $self->status_message('Evaluating new sub-region: '. $id);
+            #$self->status_message(arena_table());
+            #$self->status_message('Total Coverage Stats Size: '. total_size($coverage_stats));
+            #$self->status_message('Total Region Gaps Size: '. total_size(\@region_gaps));
+            my $new_region = {
+                name => $id,
+                start => $new_start,
+                end => $new_end,
+                chrom => $seq_id,
+                id => $id,
+                length => (($new_end - $new_start) + 1),
+            };
+            my $coverage_array_ref = $self->region_coverage_array_ref($new_region);
+            #$self->status_message('Total Coverage Size: '. total_size($coverage_array_ref));
+            $brief_stat->calculate_coverage_stats(
+                min_depth => $min_depth,
+                coverage => $coverage_array_ref,
+                name => $new_region->{name},
+            );
+            #$self->status_message('Total Window Stat Size: '. total_size($brief_stat));
+            $bases_covered += $brief_stat->total_covered_bases;
+            $discarded_bases += $brief_stat->min_depth_discarded_bases;
+            my $filtered_coverage = $brief_stat->min_depth_filtered_coverage;
+            #$self->status_message('Total Window Stat with Min Depth Filter Size: '. total_size($brief_stat));
+            $coverage_stats->add_data($filtered_coverage);
+
+            #The offset should be zero-based start coordinate
+            my @window_gaps = $brief_stat->generate_gaps( ($new_start - 1) );
+            #$self->status_message('Total Window Stat with Gaps Size: '. total_size($brief_stat));
+            if (@window_gaps) {
+                if (@region_gaps) {
+                    my $last_gap = $region_gaps[-1];
+                    my $first_gap = $window_gaps[0];
+                    if (($first_gap->[0] == $last_gap->[1])) {
+                        #Blunt end clusters: merge
+                        $last_gap->[1] = $first_gap->[1];
+                        shift(@window_gaps);
+                    }
+                }
+                push @region_gaps, @window_gaps;
+            }
+        }
+        my $gap_stats = Statistics::Descriptive::Full->new();
+        for my $gap (@region_gaps) {
+            my $gap_length = $gap->[1] - $gap->[0];
+            $gap_stats->add_data($gap_length);
+        }
+        #$self->status_message('Total Gap Stats Size: '. total_size($gap_stats));
+        $stat->{_coverage_pdl} = undef;
+        $stat->name($region->{name});
+        # [0] Percent of Reference Bases Covered
+        $stat->percent_ref_bases_covered( $self->_round( ( $bases_covered / $coverage_stats->count ) * 100 ) );
+
+        # [1] Total Number of Reference Bases
+        $stat->total_ref_bases( $coverage_stats->count );
+
+        # [2] Total Number of Covered Bases
+        $stat->total_covered_bases( $bases_covered ) ;
+
+        # [3] Number of Missing Bases
+        $stat->missing_bases( $stat->total_ref_bases - $stat->total_covered_bases() );
+
+        # [4] Average Coverage Depth
+        $stat->ave_cov_depth( $self->_round( $coverage_stats->mean ) );
+
+        # [5] Standard Deviation Average Coverage Depth
+        $stat->sdev_ave_cov_depth( $self->_round( $coverage_stats->standard_deviation ) );
+
+        # [6] Median Coverage Depth
+        $stat->med_cov_depth( 'n/a' );
+
+        # [7] Number of Gaps
+        if ($gap_stats->count) {
+            $stat->gap_number( $gap_stats->count() );
+        } else {
+            $stat->gap_number( '0' );
+        }
+
+        # [8] Average Gap Length
+        $stat->ave_gap_length( $self->_round( $gap_stats->mean ) );
+
+        # [9] Standard Deviation Average Gap Length
+        $stat->sdev_ave_gap_length( $self->_round( $gap_stats->standard_deviation ) );
+
+        # [10] Median Gap Length
+        $stat->med_gap_length( $self->_round( $gap_stats->median ) );
+
+        # [11] Min. Depth Filter
+        $stat->min_depth_filter( $min_depth );
+
+        # [12] Discarded Bases (Min. Depth Filter)
+        $stat->min_depth_discarded_bases( $discarded_bases );
+
+        # [13] Percent Discarded Bases (Min. Depth Filter)
+        $stat->percent_min_depth_discarded( $self->_round( ($stat->min_depth_discarded_bases() / $stat->total_ref_bases()) * 100 ) );
+
+        # OPTIONAL COLUMNS
+        $stat->minimum_coverage_depth($coverage_stats->min);
+        $stat->maximum_coverage_depth($coverage_stats->max);
+    }
+    return $stat;
+}
+
 sub print_roi_coverage {
     my $self = shift;
     $self->status_message('Print ROI Coverage...');
@@ -709,23 +918,23 @@ sub print_roi_coverage {
         die 'Failed to open stats file for writing '. $temp_stats_file;
     }
     my $roi = $self->roi;
-    my $stat = $self->region_coverage_stat;
     my @min_depths = split(',',$self->min_depth_filter);
     while (my $region = $roi->next_region) {
-        $self->status_message("Region ".$region->{name}." for chrom ".$region->{chrom}.' is longer than 10M bases. This could cause the stats to run out of memory') if $region->{length} > 10000000;
-        my $coverage_array_ref = $self->region_coverage_array_ref($region);
         my $sequence_array_ref;
+        # TODO: Add a windowing method for gc content, G+C evaluation will fail at ~50Mb regions..
         if ($self->evaluate_gc_content) {
+            if ($region->{length} >= $self->maximum_roi_length) {
+                die('Evaluate G+C content is not supported for regions '. $region->{length} .' and a maximum_roi_length of '. $self->maximum_roi_length);
+            }
             $sequence_array_ref = $self->region_sequence_array_ref($region);
         }
         for my $min_depth (@min_depths) {
-            $stat->calculate_coverage_stats(
-                coverage => $coverage_array_ref,
-                min_depth => $min_depth,
-                name => $region->{name},
-            );
+            my $stat = $self->generate_coverage_stats($region,$min_depth);
             my $data = $stat->stats_hash_ref;
             if ($self->evaluate_gc_content) {
+                #$self->status_message('Evaluating GC content of '. $data->{name} .' '. $region->{id});
+                # TODO: getting the coverage array ref back from the stat object will not work with windows
+                my $coverage_array_ref = $stat->min_depth_filtered_coverage;
                 my $gc_data = $self->evaluate_region_gc_content($sequence_array_ref,$coverage_array_ref);
                 for my $key (keys %{$gc_data}) {
                     $data->{$key} = $gc_data->{$key};
@@ -740,6 +949,13 @@ sub print_roi_coverage {
                 my $genome_stats = $self->genome_stats;
                 my $genome_normalized_depth = $self->_round( ($stat->ave_cov_depth / $genome_stats->mean_coverage) );
                 $data->{'genome_normalized_depth'} = $genome_normalized_depth;
+            }
+            if ($self->alignment_count) {
+                $data->{'alignment_count'} = $self->region_alignment_count($region);
+            }
+            if ($self->print_min_max) {
+                $data->{'minimum_coverage_depth'} = $stat->minimum_coverage_depth;
+                $data->{'maximum_coverage_depth'} = $stat->maximum_coverage_depth;
             }
             unless ($writer->write_one($data)) {
                 die($writer->error_message);
