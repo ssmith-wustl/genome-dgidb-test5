@@ -18,10 +18,11 @@ sub _write {
     my $max = 10_000_000;
     for my $seq ( @$seqs ) {
         my $length = length $seq->{seq};
-        for ( my $i = 0; $i <= $length; $i += $max ) {
-            my $end =  $i + $max;
+        my $cnt = $length / $max;
+        for ( my $i = 0; $i <= $cnt; $i++ ) {
+            my $end =  ($i + 1) * $max;
             if ( $end > $length ) { $end = $length; }
-            ($self->_fhs)[0]->print( join( "\t", $seq->{id}, $i, $end, ( $length > $max ? $seq->{id}.'part'.(int($end / $max)): $seq->{id} ))."\n" );
+            ($self->_fhs)[0]->print( join( "\t", $seq->{id}, ( $i * $max), $end, ( $length > $max ? $seq->{id}.'part'.($i + 1): $seq->{id} ))."\n" );
         }
     }
 
