@@ -255,17 +255,17 @@ sub _create_underlying_metagenomic_models {
 
 sub _create_unaligned_metagenomic_alignment_model {
     my $self = shift;
-    return $self->_create_model_for_type("unaligned_metagenomic_alignment");
+    return $self->_create_model_for_type("unaligned_metagenomic");
 }
 
 sub _create_first_viral_verification_alignment_model {
     my $self = shift;
-    return $self->_create_model_for_type("first_viral_verification_alignment");
+    return $self->_create_model_for_type("first_viral_verification");
 }
 
 sub _create_second_viral_verification_alignment_model {
     my $self = shift;
-    return $self->_create_model_for_type("second_viral_verification_alignment");
+    return $self->_create_model_for_type("second_viral_verification");
 }
 
 sub _create_model_for_type {
