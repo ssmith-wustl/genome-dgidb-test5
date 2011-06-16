@@ -850,7 +850,7 @@ sub run_ref_align_build {
     }
 
     $self->status_message("...creating build");
-    my $sub_build = Genome::Model::Build->get(
+    my $sub_build = Genome::Model::Build->create(
         model_id => $model->id
     );
     unless ($sub_build){
