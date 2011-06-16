@@ -12,12 +12,14 @@ use_ok('Genome::Model::Event::Build::MetagenomicComposition16s::Reports');
 
 my $model = Genome::Model::MetagenomicComposition16s::Test->model_for_sanger;
 ok($model, 'got mc16s sanger model');
-my $build = $model->create_build(
+my $build = Genome::Model::Build->create( 
     id => -3388, 
     model => $model,
     data_directory => $model->data_directory,
 );
 ok($build, 'created build');
+$build->create_subdirectories;
+
 my $example_build = Genome::Model::MetagenomicComposition16s::Test->example_build_for_model($model);
 ok($example_build, 'got example build');
 ok(_link_example_data($build, $example_build), 'linked example data');

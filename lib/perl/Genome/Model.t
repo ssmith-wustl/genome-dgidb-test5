@@ -189,28 +189,19 @@ is_deeply(\@model_instrument_data, \@instrument_data, 'model instrument data via
 # create these in reverse order because of negative ids
 my @builds;
 for my $i (1..2) {
-    unshift @builds, $model->create_build(
+    unshift @builds, Genome::Model::Build->create( 
         model => $model,
         data_directory => $model->data_directory.'/build'.$i,
     );
-    my $event = Genome::Model::Event->create(
-        model => $model,
-        build => $builds[0],
-        event_type => 'genome model build',
-        date_scheduled => UR::Time->now,
-        date_completed => UR::Time->now,
-        user_name => Genome::Sys->username,
-    );
-    ok($event, 'create master event');
-    my $master_event = $builds[0]->the_master_event;
-    is_deeply($master_event, $event, 'got master event from build');
 }
+
 is(@builds, 2, 'create builds');
 my @model_builds = $model->builds;
 is_deeply(\@model_builds, \@builds, 'model builds');
 
 # one succeeded, one running
 $builds[0]->the_master_event->event_status('Succeeded');
+$builds[0]->the_master_event->date_completed(UR::Time->now);
 is($builds[0]->status, 'Succeeded', 'build 0 is succeeded');
 $builds[1]->the_master_event->event_status('Running');
 is($builds[1]->status, 'Running', 'build 1 is running');
@@ -231,6 +222,7 @@ is_deeply(\@running_builds, [$builds[1]], 'running builds');
 
 # both succeeded
 $builds[1]->the_master_event->event_status('Succeeded');
+$builds[1]->the_master_event->date_completed(UR::Time->now);
 is($builds[1]->status, 'Succeeded', 'build 1 is now succeeded');
 
 @completed_builds = $model->completed_builds;

@@ -3,119 +3,139 @@ package Genome::Model::Command::Services::BuildQueuedModels;
 use strict;
 use warnings;
 
-use Data::Dumper;
-
 use Genome;
 
-
 class Genome::Model::Command::Services::BuildQueuedModels {
-    is  => 'Command',
-    has => [
-        max_builds => {
-            is          => 'Number',
-            is_optional => 1,
-            len         => 5,
-            default     => 200,
-            doc         => 'Max # of builds to launch in one invocation',   
+    is => 'Genome::Command::Base',
+    doc => "Build queued models.",
+    has_optional => [
+        max_scheduled_builds => {
+            is => 'Integer',
+            default => 50,
         },
-        max_builds_to_try => {
-            is          => 'Number',
-            is_optional => 1,
-            default     => 600,
-            doc         => 'Max # of builds to attempt to launch in one invocation (even if more are queued)',
+        channels => {
+            is => 'Integer',
+            default => 1,
+            doc => 'number of "channels" to parallelize models by',
         },
-        newest_first => {
-            is          => 'Boolean',
-            is_optional => 1,
-            default     => 0,
-            doc         => 'Process newest models first',
+        channel => {
+            is => 'Integer',
+            default => 0,
+            doc => 'zero-based channel to use',
         },
-        _builds_started => {
-            is          => 'Number',
-            is_output   => 1,
-            default     => 0,
-            doc         => 'Number of builds successfully launched',
-        }
     ],
 };
 
-sub help_brief {
-'Find models with the build_requested flag set and launch builds for them';
-}
-
 sub help_synopsis {
-    return <<'EOS'
+    return <<EOS;
+genome model services build-queued-models
 EOS
 }
 
 sub help_detail {
-    return <<EOS
+    return <<EOS;
+Builds queued models.
 EOS
 }
 
 sub execute {
-    $DB::single = $DB::stopper;
     my $self = shift;
 
-    # lock
-    my $lock_resource = '/gsc/var/lock/genome_model_command_services_build-queued-models/loader';
-    my $lock = Genome::Sys->lock_resource(
-        resource_lock => $lock_resource,
-        max_try => 1
-    ); 
+    unless ($self->channel < $self->channels) {
+        die $self->error_message('--channel must be less than --channels');
+    }
+
+    my $lock_resource = '/gsc/var/lock/genome_model_services_builed_queued_models_' . $self->channel . '_' . $self->channels;
+
+    my $lock = Genome::Sys->lock_resource(resource_lock => $lock_resource, max_try => 1);
     unless ($lock) {
-        $self->error_message("Could not acquire lock, another instance must be running.");
+        $self->error_message("Could not lock, another instance of BQM must be running.");
         return;
     }
 
-    my $model_sorter;
-    if ($self->newest_first) {
-        $model_sorter = sub { 
-            defined $b->latest_build_request_note &&
-            defined $a->latest_build_request_note &&
-            $b->time_of_last_build_request cmp $a->time_of_last_build_request
-        };
-    }
-    else {
-        $model_sorter = sub { 
-            defined $a->latest_build_request_note &&
-            defined $b->latest_build_request_note &&
-            $a->time_of_last_build_request cmp $b->time_of_last_build_request
-        };
-    }
-
-    my @models = Genome::Model->get(
-        build_requested => 1,
+    my $context = UR::Context->current;
+    $context->add_observer(
+        aspect => 'commit',
+        callback => sub{ Genome::Sys->unlock_resource(resource_lock => $lock) },
     );
-    unless (@models) {
-        $self->status_message("No models to build.");
+
+    my $max_builds_to_start = $self->num_builds_to_start;
+    unless ($max_builds_to_start) {
+        $self->status_message("There are already " . $self->max_scheduled_builds . " builds scheduled.");
         return 1;
     }
-
-    @models = sort $model_sorter @models;
-    @models = splice(@models, 0, $self->max_builds_to_try);
-
-    my $builds_to_start = $self->max_builds;
-    $builds_to_start = @models if @models < $builds_to_start;
-    my $command = Genome::Model::Build::Command::Start->create(
-        max_builds => $self->max_builds,
-        models => \@models,
-        force => 1,
+    $self->status_message("Will try to start up to $max_builds_to_start builds.");
+    
+    my $models = Genome::Model->create_iterator(
+        build_requested => '1',
     );
-    my $rv = $command->execute;
-    my $err = $@;
 
-    my @builds = $command->builds;
-    unless (@builds == $builds_to_start){
-        $self->error_message("Failed to start expected number of builds. $builds_to_start expected, ".scalar @builds." built.");
+    my @errors;
+    my $builds_started = 0;
+    my $total_count = 0;
+    while (my $model = $models->next) {
+        next unless ($model->id % $self->channels == $self->channel);
+        if ($builds_started >= $max_builds_to_start){
+            $self->status_message("Already started max builds $builds_started, quitting...");
+            last; 
+        }
+
+        $self->status_message("Trying to start #" . ($builds_started + 1) . ': ' . $model->__display_name__ . "...");
+        $total_count++;
+        
+        my $transaction = UR::Context::Transaction->begin();
+        my $build = eval {
+            my $build = Genome::Model::Build->create(model_id => $model->id);
+            unless ($build) {
+                die $self->error_message("Failed to create build for model (".$model->name.", ID: ".$model->id.").");
+            }
+
+            my $build_started = $build->start;
+            unless ($build_started) {
+                die $self->error_message("Failed to start build (" . $build->__display_name__ . "): $@.");
+            }
+            return $build;
+        };
+        if ($build and $transaction->commit) {
+            $self->status_message("Successfully started build (" . $build->__display_name__ . ").");
+            $builds_started++;
+        }
+        else {
+            push @errors, $model->__display_name__ . ": " . $@;
+            $transaction->rollback;
+        }
     }
-    elsif (!$rv){
-        $self->error_message("Built expected number of builds, but had some failures:\nErr:$err");
-    }
 
-    Genome::Sys->unlock_resource(resource_lock=>$lock);
+    my $expected_count = ($max_builds_to_start > $total_count ? $total_count : $max_builds_to_start);
+    $self->display_summary_report($total_count, @errors);
+    $self->status_message('   Expected: ' . $expected_count);
 
-    return 1;
+    return !scalar(@errors);
 }
+
+
+sub num_builds_to_start {
+    my $self = shift;
+    
+    my $scheduled_builds = Genome::Model::Build->create_iterator(
+        run_by => Genome::Sys->username,
+        status => 'Scheduled',
+    );
+    
+    my $scheduled_build_count = 0;
+    while ($scheduled_builds->next && ++$scheduled_build_count < $self->max_scheduled_builds) { 1; }
+    
+    my $max_per_channel = int($self->max_scheduled_builds / $self->channels);
+    if ($scheduled_build_count > $self->max_scheduled_builds) {
+        return 0;
+    }
+    elsif (($scheduled_build_count + $max_per_channel) > $self->max_scheduled_builds) {
+        return $max_per_channel / $self->channels;
+    }
+    else {
+        return $max_per_channel;
+    }
+}
+
 
 1;

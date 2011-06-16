@@ -142,7 +142,6 @@ sub setup_test_data {
     my $tumor_build = Genome::Model::Build::ReferenceAlignment->create(
         model_id => $tumor_refalign_model->id
     );
-    $tumor_build->_initialize_workflow;
     $tumor_build->status('Succeeded');
     $tumor_build->the_master_event->date_completed(UR::Time->now());
 
@@ -158,7 +157,6 @@ sub setup_test_data {
     my $normal_build = Genome::Model::Build::ReferenceAlignment->create(
         model_id => $normal_refalign_model->id
     );
-    $normal_build->_initialize_workflow;
     $normal_build->status('Succeeded');
     $normal_build->the_master_event->date_completed(UR::Time->now());
 

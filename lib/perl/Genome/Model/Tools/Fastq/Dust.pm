@@ -76,6 +76,9 @@ sub execute{
         $fasta_output_fh->print($header, $seq);
         $qual_output_fh->print($sep, $qual);
     }
+    $fasta_output_fh->close();
+    $fastq_fh->close;
+    $qual_output_fh->close();
 
     unless (-s $fasta_file){
         die $self->error_message("fasta file($fasta_file) separated for dusting has no size!");
@@ -83,10 +86,6 @@ sub execute{
     unless (-s $qual_file){
         die $self->error_message("qual file($qual_file) separated from fastq has no size!");
     }
-
-    $fastq_fh->close;
-    $fasta_output_fh->close;
-    $qual_output_fh->close; 
 
     #2. run dust command
     my $cmd = "dust $fasta_file > $dusted_file";

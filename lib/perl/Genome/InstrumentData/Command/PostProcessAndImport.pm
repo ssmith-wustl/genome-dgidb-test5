@@ -11,7 +11,7 @@ class Genome::InstrumentData::Command::PostProcessAndImport{
     is => "Genome::Command::Base",
     has => {
         instrument_data => {
-            is => 'Genome::InstrumentData::Imported',
+            is => 'Genome::InstrumentData',
             doc => 'Instrument Data to dust, n-remove and import as new instrument data',
         },
         n_removal_threshold => {
@@ -189,7 +189,6 @@ sub execute {
         $self->status_message("uploading new instrument data from the post-processed unaligned reads...");    
         my @properties_from_prior = qw/
         run_name 
-        subset_name 
         sequencing_platform 
         median_insert_size 
         sd_above_insert_size
@@ -204,6 +203,7 @@ sub execute {
             $self->status_message("Value for $property_name is $value");
             $properties_from_prior{$property_name} = $value;
         }
+        $properties_from_prior{subset_name} = $instrument_data->lane;
 
         if ($upload_path =~ /,/){  #technically this can go in the @properties_prior_array above, but i'm trying to keep as much in common with processed_unaligned_reads as possible to simplify refactoring
             $properties_from_prior{is_paired_end} = 1;
@@ -251,7 +251,7 @@ sub execute {
 
         my @return_inst_data;
 
-        my $new_instrument_data = Genome::InstrumentData::Imported->get(
+        my $new_instrument_data = UR::Context->current->reload("Genome::InstrumentData::Imported",
             original_data_path => $upload_path
         );
         unless ($new_instrument_data) {
@@ -358,8 +358,8 @@ sub _process_unaligned_fastq_pair {
         return ($forward_out, $reverse_out, $fragment_out);
     }else{
         $self->status_message("skipping n-removal");
-        Genome::Sys::copy_file($forward_dusted, $forward_out);
-        Genome::Sys::copy_file($reverse_dusted, $reverse_out);
+        Genome::Sys->copy_file($forward_dusted, $forward_out);
+        Genome::Sys->copy_file($reverse_dusted, $reverse_out);
         if ($self->dust){
             #only need to do this if we actually dusted
             unlink $forward_dusted;

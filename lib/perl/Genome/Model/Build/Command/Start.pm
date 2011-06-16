@@ -98,24 +98,29 @@ sub execute {
                 die $self->error_message("Model (".$model->name.", ID: ".$model->id.") already has running or scheduled builds. Use the '--force' param to override this and start a new build.");
             }
 
-            my $build = $model->create_build(model_id => $model->id, %create_params);
+            my $build = Genome::Model::Build->create(model_id => $model->id, %create_params);
             unless ($build) {
                 die $self->error_message("Failed to create build for model (".$model->name.", ID: ".$model->id.").");
             }
-
-            my $build_started = $build->start(%start_params);
-            unless ($build_started) {
-                die $self->error_message("Failed to start build (" . $build->__display_name__ . "): $@.");
-            }
-            return $build;
         };
+
         if ($build and $transaction->commit) {
-            $self->status_message("Successfully started build (" . $build->__display_name__ . ").");
             $builds_started++;
 
             # Record newly created build so other tools can access them.
             # TODO: should possibly be part of the object class
             $self->add_build($build);
+
+            my $start_transaction = UR::Context::Transaction->begin();
+            my $build_started = eval { $build->start(%start_params) };
+            $start_transaction->commit;
+
+            if ($build_started) {
+                $self->status_message("Successfully started build (" . $build->__display_name__ . ").");
+            }
+            else {
+                push @errors, $model->__display_name__ . ": " . $@;
+            }
         }
         else {
             push @errors, $model->__display_name__ . ": " . $@;

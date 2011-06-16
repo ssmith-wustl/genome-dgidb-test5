@@ -109,44 +109,39 @@ sub length_of_16s_region {
     return 1542;
 }
 
-#< UR >#
-sub create {
-    my $class = shift;
-    if ($class eq __PACKAGE__) {
-        return $class->SUPER::create(@_);
-    }
+sub post_allocation_initialization {
+    my $self = shift;
+    return $self->create_subdirectories;
+}
 
-    my $self = $class->SUPER::create(@_);
-    return unless $self;
-
-    my @instrument_data = $self->instrument_data;
-    unless ( @instrument_data ) {
-        $self->error_message("No instrument data was found for model (".$self->model->id."), and cannot be built");
-        $self->delete;
-        return 1;
-    }
-
-    unless ( $self->model->type_name eq 'metagenomic composition 16s' ) {
-        $self->error_message( 
-            sprintf(
-                'Incompatible model type (%s) to build as an metagenomic composition.',
-                $self->model->type_name,
-            )
-        );
-        $self->delete;
-        return;
-    }
-
-    # Create directory structure
-    Genome::Sys->create_directory($self->data_directory )
-        or return;
-
+sub create_subdirectories {
+    my $self = shift;
     for my $dir ( $self->sub_dirs ) {
         Genome::Sys->create_directory( $self->data_directory."/$dir" )
             or return;
     }
+    return 1;
+}
 
-    return $self;
+sub validate_for_start_methods {
+    my $self = shift;
+    my @methods = $self->SUPER::validate_for_start_methods;
+    push @methods, 'instrument_data_assigned';
+    return @methods;
+}
+
+sub instrument_data_assigned {
+    my $self = shift;
+    my @tags;
+    my @instrument_data = $self->instrument_data;
+    unless (@instrument_data) {
+        push @tags, UR::Object::Tag->create(
+            type => 'error',
+            properties => ['instrument_data'],
+            desc => 'Build has no instrument data',
+        );
+    }
+    return @tags;
 }
 
 #< Description >#

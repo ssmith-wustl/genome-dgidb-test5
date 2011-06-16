@@ -39,9 +39,6 @@ ok($m, "made a test model");
 my $b1 = $m->add_build();
 ok($b1, "made test build 1");
 
-my $b1_dir = $b1->data_directory;
-ok(-d $b1_dir, "build directory is present: $b1_dir");
-
 # run the command, and capture the exit code
 # this way invokes the command right in this process, with an array of command-line arguments
 # to test that we parse correctly

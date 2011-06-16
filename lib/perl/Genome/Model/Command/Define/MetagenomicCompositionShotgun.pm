@@ -6,43 +6,36 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command::Define::MetagenomicCompositionShotgun {
-    is => 'Genome::Model::Command::Define',
+    is => ['Genome::Model::Command::Define', 'Genome::Command::Base', ],
     has => [
-        subject_class_name => {
-            is => 'Text',
+        contamination_reference_build => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
             is_optional => 1,
             is_input => 1,
-            default_value => 'Genome::Sample',
-            doc => 'The Perl class name of the subject whose ID is subject_id'  
-        },
-        processing_profile_name => {
-            is => 'Text',
-            is_optional => 1,
-            is_input => 1,
-            doc => 'identifies the processing profile by name',
-        },
-        contamination_reference => {
-            is => 'Text',
-            is_optional => 1,
-            is_input => 1,
-            default_value => 'contamination-human',
             doc => 'the reference sequence to use for the contamination screen alignment',
         },
-        metagenomic_references => {
-            is => 'Text',
+        metagenomic_reference_builds => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            is_input => 1,
+            doc => 'the reference sequence to use for the metagenomic reference alignment, use a comma separated list for multiple metagenomic references',
+        },
+        unaligned_metagenomic_alignment_reference_build => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
             is_optional => 1,
             is_input => 1,
-            default_value => 'microbial reference part 1 of 2,microbial reference part 2 of 2',
-            doc => 'the reference sequence to use for the metagenomic reference alignment',
+            doc => 'the reference sequence to use for the unaligned metagenomic alignment',
         },
-        # TODO: move these up, and make this subclass default to true for both values        
-        assign_all_instrument_data => {
-            default_value => 0,
-            doc => 'assigns all available instrument data for the subject immediately',
+        first_viral_verification_alignment_reference_build => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            is_optional => 1,
+            is_input => 1,
+            doc => 'the reference sequence to use for the first viral verification alignment',
         },
-        build => {
-            default_value => 0,
-            doc => 'start building immediately',
+        second_viral_verification_alignment_reference_build => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            is_optional => 1,
+            is_input => 1,
+            doc => 'the reference sequence to use for the second viral verification alignment',
         },
    ],
 };
@@ -78,43 +71,95 @@ sub help_detail {
     return "" 
 }
 
+sub _shell_args_property_meta {
+    my $self = shift;
+    return $self->Genome::Command::Base::_shell_args_property_meta(@_);
+}
+
+sub _resolve_param {
+    my ($self, $param) = @_;
+
+    my $param_meta = $self->__meta__->property($param);
+    Carp::confess("Request to resolve unknown property '$param'.") if (!$param_meta);
+    my $param_class = $param_meta->data_type;
+
+    my $value = $self->$param;
+    return unless $value; # not specified
+    return $value if ref($value); # already an object
+
+    my @objs = $self->resolve_param_value_from_text($value, $param_class);
+    if (@objs != 1) {
+        Carp::confess("Unable to find unique $param_class identified by '$value'. Results were:\n" .
+            join('\n', map { $_->__display_name__ . '"' } @objs ));
+    }
+    $self->$param($objs[0]);
+    return $self->$param;
+}
+
+
+
 sub type_specific_parameters_for_create {
     my $self = shift;
 
-    my $contamination_screen_reference = Genome::Model->get(name => $self->contamination_reference);
-    unless ($contamination_screen_reference){
-        $self->error_message("Couldn't grab imported-reference-sequence model " . $self->contamination_reference . " to set default contamination_screen_reference");
-        return;
-    }
-    my $contamination_screen_reference_build = $contamination_screen_reference->last_complete_build;
-    unless($contamination_screen_reference_build){
-        $self->error_message("Couldn't grab latest complete build from " . $self->contamination_reference . " the default contamination_screen_reference");
-        return;
-    }
-    $self->status_message("Set contamination_reference build to " . $self->contamination_reference . " model's latest build");
-
-    my @metagenomic_references = split(',', $self->metagenomic_references);
-    my @metagenomic_reference_models = map { Genome::Model->get(name => $_) } @metagenomic_references;
-    @metagenomic_reference_models = grep { $_->isa('Genome::Model::ImportedReferenceSequence') } @metagenomic_reference_models;
-    unless ( @metagenomic_reference_models == @metagenomic_references && @metagenomic_reference_models > 0) {
-        $self->error_message("Couldn't grab imported-reference-sequence models (".join(', ', @metagenomic_references).") to set default metagenomic_screen_references");
-        return;
-    }
-    my @metagenomic_reference_builds = map { $_->last_complete_build } @metagenomic_reference_models;
-    @metagenomic_reference_builds = grep { $_->isa('Genome::Model::Build::ImportedReferenceSequence') } @metagenomic_reference_builds;
-    unless ( @metagenomic_reference_builds == @metagenomic_references && @metagenomic_reference_builds > 0) {
-        $self->error_message("Couldn't grab imported-reference-sequence builds (".join(', ', @metagenomic_references).") to set default metagenomic_screen_references");
-        return;
-    }
-    $self->status_message("Set metagenomic reference builds to ".join(', ', @metagenomic_references)." models latest builds");
-
     my @params = (
-        contamination_screen_reference => $contamination_screen_reference_build,
-        metagenomic_references => \@metagenomic_reference_builds,
+        contamination_screen_reference => $self->contamination_reference_build,
+        metagenomic_references => [$self->metagenomic_reference_builds],
+        unaligned_metagenomic_alignment_reference => $self->unaligned_metagenomic_alignment_reference_build,
+        first_viral_verification_alignment_reference => $self->first_viral_verification_alignment_reference_build,
+        second_viral_verification_alignment_reference => $self->second_viral_verification_alignment_reference_build,
     );
 
     return @params;
 }
+
+sub execute {
+    my $self = shift;
+    $DB::single = 1;
+
+    $self->metagenomic_reference_builds($self->_resolve_param('metagenomic_reference_builds'));
+    unless(defined $self->metagenomic_reference_builds) {
+        $self->error_message("Could not get a build for the metagenomic reference build provided");
+        return;
+    }
+
+    if ($self->contamination_reference_build) {
+        $self->contamination_reference_build($self->_resolve_param('contamination_reference_build'));
+        unless(defined $self->contamination_reference_build) {
+            $self->error_message("Could not get a build for the contamination reference build provided"); 
+            return;
+        }
+    }
+
+    if ($self->unaligned_metagenomic_alignment_reference_build) {
+        $self->unaligned_metagenomic_alignment_reference_build($self->_resolve_param('unaligned_metagenomic_alignment_reference_build'));
+        unless(defined $self->unaligned_metagenomic_alignment_reference_build) {
+            $self->error_message("Could not get a build for the unaligned metagenomic alignment reference build provided");
+            return;
+        }
+    }
+
+    if ($self->first_viral_verification_alignment_reference_build) {
+        $self->first_viral_verification_alignment_reference_build($self->_resolve_param('first_viral_verification_alignment_reference_build'));
+        unless(defined $self->first_viral_verification_alignment_reference_build) {
+            $self->error_message("Could not get a build for the first viral verification alignment reference build provided");
+            return;
+        }
+    }
+
+    if ($self->second_viral_verification_alignment_reference_build) {
+        $self->second_viral_verification_alignment_reference_build($self->_resolve_param('second_viral_verification_alignment_reference_build'));
+        unless(defined $self->second_viral_verification_alignment_reference_build) {
+            $self->error_message("Could not get a build for the second viral verification alignment reference build provided");
+            return;
+        }
+    }
+
+    # run Genome::Model::Command::Define execute
+    my $super = $self->super_can('_execute_body');
+    return $super->($self,@_);
+}
+
+
 
 1;
 

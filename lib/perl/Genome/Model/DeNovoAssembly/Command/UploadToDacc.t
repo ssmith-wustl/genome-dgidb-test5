@@ -16,6 +16,8 @@ my $build = Genome::Model::DeNovoAssembly::Test->example_build_for_model($model)
 ok($build, 'Got example de novo assembly build') or die;
 $build->assembly_length(100000);
 
+$build->status('Succeeded');
+$build->the_master_event->date_completed(UR::Time->now);
 no warnings;
 *Genome::Sys::shellcmd = sub{ return 1; };
 use warnings;

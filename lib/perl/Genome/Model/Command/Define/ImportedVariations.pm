@@ -241,7 +241,7 @@ sub _execute_try {
     {
         $buildParams{'data_directory'} = $self->data_directory;
     }
-    my $build = $model->create_build(%buildParams);
+    my $build = Genome::Model::Build->create(%buildParams);
     if($build)
     {
         $self->status_message('Created build of id ' . $build->build_id . ' with data directory "' . $build->data_directory . '".');

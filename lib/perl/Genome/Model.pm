@@ -892,7 +892,7 @@ sub notify_input_build_success {
 
         #all input models have a succeeded build
         if(scalar @from_models eq scalar @last_complete_builds) {
-            $self->build_requested(1);
+            $self->build_requested(1, 'all input models are ready');
         }
     }
 
@@ -903,9 +903,12 @@ sub build_requested {
     my ($self, $value, $reason) = @_; 
     # Writing the if like this allows someone to do build_requested(undef)
     if (@_ > 1) {
+        my ($calling_package, $calling_subroutine) = (caller(1))[0,3];
+        my $default_reason = 'no reason given';
+        $default_reason .= 'called by ' . $calling_package . '::' . $calling_subroutine if $calling_package;
         $self->add_note(
             header_text => $value ? 'build_requested' : 'build_unrequested',
-            body_text => defined $reason ? $reason : 'no reason given',
+            body_text => defined $reason ? $reason : $default_reason,
         );
         return $self->__build_requested($value);
     }
@@ -1065,41 +1068,6 @@ sub _build_model_filesystem_paths {
 sub dependent_properties {
     my ($self, $property_name) = @_;
     return;
-}
-
-# Performs a number of checks/updates of the model prior to starting a build.
-sub create_build {
-    my $self = shift;
-
-    unless (eval { $self->check_for_updates }) {
-        my $msg = "Model " . $self->__display_name__ . " failed to update itself!";
-        $msg .= " Reason: $@" if $@;
-        $self->warning_message($msg);
-        return;
-    }
-
-    unless (eval {$self->verify_inputs }) {
-        my $msg = "Some model inputs for model " . $self->__display_name__ . " are not ready, cannot start build. " .
-            "Build requested flag has been set, so another attempt at starting a build will be made later.";
-        $msg .= " Reason: $@" if $@;
-        $self->warning_message($msg);
-        $self->build_requested(1);
-        return;
-    }
-
-    my $build = eval { Genome::Model::Build->create(@_); };
-    my $error = $@;
-    unless($build) {
-        $error ||= Genome::Model::Build->error_message;
-        Carp::confess "Could not create new build: $error";
-    }
-    return $build;
-}
-
-# Makes sure that all model inputs are in place and returns true if so. This is called prior to starting a build
-# and should be overridden in subclasses for custom behavior.
-sub verify_inputs {
-    return 1;
 }
 
 # Updates the model as necessary prior to starting a build. Useful for ensuring that the build is incorporating

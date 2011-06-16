@@ -3,7 +3,7 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More tests => 31;
+use Test::More tests => 30;
 
 BEGIN {
     $ENV{UR_DBI_NO_COMMIT} = 1;
@@ -95,18 +95,12 @@ sub setup_test_builds {
     ok($test_model, 'created test model');
     ok($test_model->add_instrument_data($test_instrument_data), 'added inst data');
     
-    my $test_build = $test_model->create_build(
+    my $test_build = Genome::Model::Build->create( 
         model_id => $test_model->id,
         data_directory => $tmpdir,
     );
     ok($test_build, 'created test build');
     
-    my $test_build_event = Genome::Model::Event::Build->create(
-        model_id => $test_model->id,
-        build_id => $test_build->id,
-        event_type => 'genome model build',
-    );
-    ok($test_build_event, 'created test build event');
     $test_build->_verify_build_is_not_abandoned_and_set_status_to('Succeeded', 1);
     
     is_deeply($test_model->last_complete_build, $test_build, 'last succeeded build is the test build');

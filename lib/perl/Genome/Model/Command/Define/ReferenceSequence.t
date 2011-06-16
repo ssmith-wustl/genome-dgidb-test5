@@ -46,6 +46,7 @@ my $first_define_command = Genome::Model::Command::Define::ImportedReferenceSequ
 );
 
 ok($first_define_command, 'created define command');
+$DB::single = 1;
 ok($first_define_command->execute, 'executed define command');
 
 my $first_model_id = $first_define_command->result_model_id;

@@ -19,23 +19,14 @@ my $model = Genome::Model->get(2857912274); # apipe-test-05-de_novo_velvet_solex
 ok($model, 'got model') or die;
 
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
-my $build = $model->create_build( # make sure we don't abandon builds
+my $build = Genome::Model::Build->create( 
     model => $model,
     data_directory => $tmpdir,
 );
 ok($build, 'create build');
 is_deeply([$build->instrument_data], [$model->instrument_data], 'copied instrument data');
-my $master_event = Genome::Model::Event->create(
-    event_type => 'genome model build',
-    event_status => 'Succeeded',
-    model => $model,
-    build => $build,
-    user_name => Genome::Sys->username,
-    date_scheduled => UR::Time->now,
-    date_completed => UR::Time->now,
-);
-ok($master_event, 'created master event');
-is_deeply($build->the_master_event, $master_event, 'got master event from build');
+
+$build->status('Succeeded');
 
 my $update = Genome::Model::Command::Input::Update->create(
     model => $model,

@@ -64,35 +64,26 @@ sub description {
     );
 }
 
-sub create {
-    my $class = shift;
-    $DB::single=1;
+sub validate_for_start_methods {
+    my $self = shift;
+    my @methods = $self->SUPER::validate_for_start_methods;
+    push @methods, 'instrument_data_assigned';
+    return @methods;
+}
 
-    my $self = $class->SUPER::create(@_)
-        or return;
+sub instrument_data_assigned {
+    my $self = shift;
+    my @tags;
 
-    unless ( $self->model->type_name eq 'de novo assembly' ) {
-        $self->error_message( 
-            sprintf(
-                'Incompatible model type (%s) to build as an de novo assembly',
-                $self->model->type_name,
-            )
+    my @instrument_data = $self->instrument_data;
+    unless (@instrument_data or $self->processing_profile->assembler_name =~ /import/) {
+        push @tags, UR::Object::Tag->create(
+            properties => ['instrument_data'],
+            desc => 'No instrument for build',
         );
-        #$self->delete;
-        return;
     }
 
-    my @ins_data = $self->instrument_data;
-    #okay for soap import to not have an instrument data
-    if (not @ins_data and not $self->processing_profile->assembler_name =~ /import/) {
-        $self->error_message("Build does not have any instrument data");
-        #$self->delete;
-        return;
-    }
-
-    mkdir $self->data_directory unless -d $self->data_directory;
-
-    return $self;
+    return @tags;
 }
 
 sub calculate_estimated_kb_usage {

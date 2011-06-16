@@ -98,9 +98,16 @@ class Genome::Model::Build::ImportedAnnotation {
 
 sub _select_build_from_model_input { undef; }
 
-sub __errors__ {
+sub validate_for_start_methods {
     my $self = shift;
-    my @tags = $self->SUPER::__errors__();
+    my @methods = $self->SUPER::validate_for_start_methods;
+    push @methods, 'check_reference_sequence';
+    return @methods;
+}
+
+sub check_reference_sequence {
+    my $self = shift;
+    my @tags;
 
     # TODO: when having the reference_sequence parameter becomes mandatory, change all of this
     # to just generate an error if it is not defined or doesn't match the model instead.
@@ -118,7 +125,6 @@ sub __errors__ {
                 $self->model->reference_sequence->__display_name__ . " as expected."
         );
     }
-
 
     return @tags;
 }

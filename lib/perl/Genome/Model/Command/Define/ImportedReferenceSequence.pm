@@ -341,7 +341,7 @@ sub _create_build {
             prefix => $self->prefix;
     }
 
-    my $build = $model->create_build(@build_parameters);
+    my $build = Genome::Model::Build->create(@build_parameters);
     if($build) {
         $self->status_message('Created build of id ' . $build->build_id . ' with data directory "' . $build->data_directory . '".');
     } else {

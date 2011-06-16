@@ -78,7 +78,7 @@ my $model = Genome::Model::MetagenomicComposition16s->create(
 ok($model, 'MC16s solexa model') or die;
 ok($model->add_instrument_data($instrument_data), 'add inst data to model');
 
-my $example_build = $model->create_build(
+my $example_build = Genome::Model::Build->create( 
     model=> $model,
     id => -2288,
     data_directory => '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16sSolexa/build',
@@ -91,6 +91,8 @@ my $build = Genome::Model::Build::MetagenomicComposition16s->create(
     data_directory => $model->data_directory.'/build',
 );
 isa_ok($build, 'Genome::Model::Build::MetagenomicComposition16s::Solexa');
+
+ok($build->create_subdirectories, 'created subdirectories');
 
 # calculated kb
 is($build->calculate_estimated_kb_usage, 500_000, 'estimated kb usage'); 

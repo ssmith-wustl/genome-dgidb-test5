@@ -397,7 +397,8 @@ sub find_or_create_somatic_variation_models{
                 $self->error_message("Could not name mate model for with subject name: $mate_name") and next unless $mate_model_name;
                 $mate->name($mate_model_name);
                 $mate->auto_assign_inst_data(1);
-                
+                $mate->build_requested(0, 'AQID: newly created mate for creating somatic-variation model--has no instrument data');
+
                 my $new_models = $self->_newly_created_models;
                 $new_models->{$mate->id} = $mate;
             }
@@ -441,7 +442,7 @@ sub find_or_create_somatic_variation_models{
                 $somatic_variation = Genome::Model::SomaticVariation->get(%somatic_params);
                 $self->error_message("Failed to find new somatic variation model with component model: " . $model->name) and next unless $somatic_variation;
 
-                $somatic_variation->build_requested(0);
+                $somatic_variation->build_requested(0, 'AQID: somatic variation build is not ready until ref. align. builds finish');
                 my $somatic_variation_model_name = $somatic_variation->default_model_name(capture_target => $capture_target);
                 $self->error_message("Failed to name new somatic variation model with component model: " . $model->name) and next unless $somatic_variation_model_name;
                 $somatic_variation->name($somatic_variation_model_name);
@@ -1143,19 +1144,31 @@ sub request_builds {
 
     my $new_models = $self->_newly_created_models;
     my $assigned_to = $self->_existing_models_assigned_to;
-    my %models_to_build = (%$new_models, %$assigned_to);
+    my %models_to_build;
+    for my $model (values %$new_models) {
+        #some models are explicitly not being built right away
+        #but they might be picked up in other categories if instrument data is picked up in same AQID run
+        next if defined $model->build_requested;
+        $models_to_build{$model->id} = [$model, 'it is newly created'];
+    }
+    for my $model (values %$assigned_to) {
+        next if exists $models_to_build{$model->id}; #already added above
+        $models_to_build{$model->id} = [$model, 'it has been assigned to'];
+    }
 
     $self->status_message("Finding models which need to build...");   
     my $possibly_build = ($self->_existing_models_with_existing_assignments);
     for my $model (values %$possibly_build) {
+        next if exists $models_to_build{$model->id}; #already added above
         my @builds = $model->builds;
 
         my $last_build = $builds[-1];
 
         unless(defined $last_build) {
             #no builds--can't possibly have built with all data
-            $self->status_message('Requesting build of model ' . $model->__display_name__ . ' because it has no builds.');
-            $models_to_build{$model->id} = $model;
+            my $reason = 'it has no builds';
+            $self->status_message('Requesting build of model ' . $model->__display_name__ . " because $reason.");
+            $models_to_build{$model->id} = [$model, $reason];
         } else {
 
             my %last_build_instdata = ( );
@@ -1168,8 +1181,9 @@ sub request_builds {
             my @missing_assignments_in_last_build = grep { not $last_build_instdata{$_->instrument_data_id} } @assignments;
 
             if (@missing_assignments_in_last_build) {
-                $self->status_message("Requesting build of model " . $model->__display_name__ . " because it does not have a final build with all assignments");
-                $models_to_build{$model->id} = $model;
+                my $reason = 'it does not have a final build with all assignments';
+                $self->status_message("Requesting build of model " . $model->__display_name__ . " because $reason");
+                $models_to_build{$model->id} = [$model, $reason];
             } else {
                 $self->status_message("skipping rebuild of model " . $model->__display_name__ . " because all instrument data assignments are on the last build");
             }
@@ -1178,11 +1192,11 @@ sub request_builds {
 
     $self->status_message("Requesting builds...");
 
-    for my $model (values %models_to_build) {
-        unless(defined $model->build_requested) {
-            #Will be picked up by next run of `genome model services build-queued-models`
-            $model->build_requested(1);
-        }
+    for my $model_and_reason (values %models_to_build) {
+        my ($model, $reason) = @$model_and_reason;
+
+        #Will be picked up by next run of `genome model services build-queued-models`
+        $model->build_requested(1, 'AQID: ' .$reason);
     }
 
     return 1;
@@ -1314,8 +1328,8 @@ sub add_processing_profiles_to_pses{
                     }
                 }
                 elsif ($taxon->domain =~ /bacteria/i) {
-                    # updated by request, see RT 66557
-                    push @processing_profile_ids_to_add, '2509648';
+                    # updated 2011jun15 RT 72143 ctomlins
+                    push @processing_profile_ids_to_add, '2599969';
                 }
 
             }
