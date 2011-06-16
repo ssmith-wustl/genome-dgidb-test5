@@ -814,9 +814,11 @@ sub restart {
     }
 
     my $build_event = $self->build_event;
-    if($build_event->event_status eq 'Abandoned') {
-        $self->error_message("Can't restart a build that was abandoned.  Start a new build instead.");
-        return 0;
+    for my $unrestartable_status ('Abandoned', 'Unstartable') {
+        if($build_event->event_status eq $unrestartable_status) {
+            $self->error_message("Can't restart a build that was " . lc($unrestartable_status) . ".  Start a new build instead.");
+            return 0;
+        }
     }
 
     $build_event->event_status('Scheduled');
