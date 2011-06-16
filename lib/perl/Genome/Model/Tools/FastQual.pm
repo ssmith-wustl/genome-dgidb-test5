@@ -29,7 +29,7 @@ class Genome::Model::Tools::FastQual {
         },
         type_in => {
             is  => 'Text',
-            valid_values => [ valid_types() ],
+            valid_values => [ valid_type_ins() ],
             is_optional => 1,
             doc => 'The sequence and quality type for the input. Optional for files, and if not given, will be based on the extension of the first file (.fastq => sanger | .fasta .fna .fa => phred). Required for reading from STDIN. Do not use this option when piping from fast-qual commands.',
         },
@@ -54,7 +54,7 @@ class Genome::Model::Tools::FastQual {
         },
         type_out => {
             is  => 'Text',
-            valid_values => [ valid_types() ],
+            valid_values => [ valid_type_outs() ],
             is_optional => 1,
             doc => 'The sequence and quality type for the output. Optional for files, and if not given, will be based on the extension of the first file (.fastq => sanger | .fasta .fna .fa => phred). Defaults to sanger (fastq) for writing to STDOUT. Do not use this option when piping to fast-qual commands.',
         },
@@ -129,7 +129,7 @@ sub help_detail {
     ** from singleton fastq file
     gmt fast-qual cmd1 --cmd1-options --input sanger.fastq | gmt fast-qual cmd2 --cmd2-options --output sanger.fastq
     ** from paired STDIN to paired fastq and singleton (assuming the sub commands filter singletons)
-    cat collated_fastq | gmt fast-qual cmd1 --cmd1-options --input - --paired-input | gmt fast-qual cmd2 --cmd2-options --output pairs.fastq<STDIN>ng.fastq
+    cat collated_fastq | gmt fast-qual cmd1 --cmd1-options --input - --paired-input | gmt fast-qual cmd2 --cmd2-options --output pairs.fastq
 
 HELP
 }
@@ -138,16 +138,22 @@ my %supported_types = (
     sanger => { format => 'fastq', reader_subclass => 'FastqReader', writer_subclass => 'FastqWriter', },
     illumina => { format => 'fastq', reader_subclass => 'IlluminaFastqReader', writer_subclass => 'IlluminaFastqWriter', },
     phred => { format => 'fasta', reader_subclass => 'PhredReader', writer_subclass => 'PhredWriter', },
+    bed => { format => 'bed', writer_subclass => 'BedWriter', },
 );
+sub valid_type_ins {
+    return (qw/ sanger illumina phred /);
+}
 
-sub valid_types {
-    return (qw/ sanger illumina phred/);
+sub valid_type_outs {
+    return (qw/ sanger illumina phred bed /);
 }
 
 sub _resolve_type_for_file {
     my ($self, $file) = @_;
 
     Carp::Confess('No file to resolve type') if not $file;
+
+    $self->status_message('Resolving type for file: '.$file);
 
     my ($ext) = $file =~ /\.(\w+)$/;
     if ( not $ext ) {
@@ -156,12 +162,16 @@ sub _resolve_type_for_file {
     }
 
     my %file_exts_and_formats = (
+        bed => 'bed',
         fastq => 'sanger',
         fasta => 'phred',
         fna => 'phred',
         fa => 'phred',
     );
-    return $file_exts_and_formats{$ext} if $file_exts_and_formats{$ext};
+    if ( $file_exts_and_formats{$ext} ) {
+        $self->status_message('Type: '.$file_exts_and_formats{$ext});
+        return $file_exts_and_formats{$ext};
+    }
     $self->error_message('Failed to resolve type for file: '.$file);
     return;
 }
@@ -188,20 +198,6 @@ sub _writer_class {
         return;
     }
     return 'Genome::Model::Tools::FastQual::'.$supported_types{ $self->type_out }->{writer_subclass};
-}
-
-sub _enforce_type {
-    my ($self, $type) = @_;
-
-    Carp::confess('No type given to validate') if not $type;
-
-    my @valid_types = $self->valid_types;
-    if ( not grep { $type eq $_ } @valid_types ) {
-        $self->error_message("Invalid type ($type). Must be ".join(', ', @valid_types));
-        return;
-    }
-
-    return $type;
 }
 
 sub create {
@@ -254,7 +250,7 @@ sub create {
     my $type_out = $self->type_out;
     if ( @output ) {
         if ( $output[0] eq '-' ) { # STDOUT
-            if ( @output > 1 ) { # Cannot have morethan one STDOUT
+            if ( @output > 1 ) { # Cannot have more than one STDOUT
                 $self->error_message('Multiple STDOUT outputs given: '.$self->_output_to_string);
                 return;
             }
