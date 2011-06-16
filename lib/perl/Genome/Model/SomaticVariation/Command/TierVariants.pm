@@ -45,6 +45,11 @@ sub execute {
 
     $self->_tier_file_location($tier_file_location);
 
+    my $effects_dir = $self->build->data_directory."/effects";
+    unless(-d $effects_dir){
+        Genome::Sys->create_directory($effects_dir);
+    }
+
     if ($build->snv_detection_strategy){
         for my $name_set (["novel","snvs.hq.novel"], ["novel","snvs.hq.previously_detected"], ["variants","snvs.lq"]){ #want to tier lq, previously_discovered, and novel snvs 
             $self->run_fast_tier($name_set, $version, 'bed');
@@ -71,7 +76,6 @@ sub execute {
 sub run_fast_tier {
     my $self = shift;
     my ($name_set, $version, $format) =  @_;
-
     #breaking up filename and subdir parts of the data set path so we can put the output tiering files in the effects directory
     my $dir = $$name_set[0];
     my $name = $$name_set[1];
