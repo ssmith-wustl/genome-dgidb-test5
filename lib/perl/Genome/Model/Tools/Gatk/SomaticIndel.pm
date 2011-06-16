@@ -197,7 +197,7 @@ sub _infer_whitelist_args {
         next unless /^\@SQ/;
         chomp;
         my @fields = split(/[\t:]/);
-        push(@sequences, $fields[2]);
+        push(@sequences, $fields[2] . ':1-' . $fields[4]);
     }
     close(FH);
 
