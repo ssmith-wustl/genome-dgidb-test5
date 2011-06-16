@@ -39,7 +39,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
- gmt model reference-sequence converter ...
+ gmt model reference-sequence set-derived-from --child-build my-ref-seq --parent-build NCBI-human-build36
 EOS
 }
 
