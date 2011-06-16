@@ -10,7 +10,7 @@ require File::Compare;
 use_ok ('Genome::Model::Tools::Soap::StandardOutputs') or die;
 
 #check for test suite dir
-my $data_dir = '/gscmnt/sata420/info/testsuite_data/Genome-Model/DeNovoAssembly/soap_solexa_build_v8';
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly/soap_solexa_build_v8';
 ok (-d $data_dir, "Test suite data dir exists") or die;
 
 #create temp test dir .. tool creates edit_dir above it
