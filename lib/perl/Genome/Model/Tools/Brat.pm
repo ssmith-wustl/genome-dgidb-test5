@@ -35,7 +35,7 @@ EOS
 }
 
 # TODO install this to /gsc/pkg/bio/brat/brat-1.2.1-mod/
-my %BWA_VERSIONS = (
+my %BRAT_VERSIONS = (
     '1.2.1-mod' => '/gscmnt/sata921/info/medseq/cmiller/methylSeq/bratMod/brat',
     'brat'   => 'brat',
 );
@@ -62,7 +62,7 @@ sub path_for_brat_version {
 }
 
 sub default_brat_version {
-    die "default brat version: $DEFAULT is not valid" unless $BWA_VERSIONS{$DEFAULT};
+    die "default brat version: $DEFAULT is not valid" unless $BRAT_VERSIONS{$DEFAULT};
     return $DEFAULT;
 }
         

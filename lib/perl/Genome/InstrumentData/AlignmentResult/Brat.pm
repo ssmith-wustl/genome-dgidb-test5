@@ -425,23 +425,6 @@ sub aligner_params_for_sam_header {
 
     my %aligner_params = $self->decomposed_aligner_params;
     
-    # the following attemps to compact and sort command-line arguments
-    for my $step (keys %aligner_params) {
-        # compact white space
-        $aligner_params{$step} =~ s/\s+/ /g;
-        
-        # creating an array of arguments is a three step process:
-        # first, split by dashes (also removing whitespace before the dash)
-        my @step_params = split(/\s*-/, $aligner_params{$step});
-        # then, there should be an empty element at the beginning of the array; drop it
-        if ($step_params[0] eq "") {shift @step_params;}
-        # finally, put the dash back and remove any trailing whitespace (there could still be some on the last element)
-        @step_params = map {$_ =~ s/\s*$//g; "-".$_} @step_params;
-
-        # join back together a sorted list
-        $aligner_params{$step} = join(" ", sort(@step_params));
-    }
-    
     return sprintf("trim %s ; brat-large %s ; acgt-count %s",
         $aligner_params{'trim_options'},
         $aligner_params{'align_options'},
@@ -451,24 +434,30 @@ sub aligner_params_for_sam_header {
 
 sub decomposed_aligner_params {
     my $self = shift;
-    my $params = $self->aligner_params || "::";
-    
-    # compact white space
-    $params =~ s/\s+/ /g;
-    
-    my @spar = split /\:/, $params;
-    
+    # split a colon-delimited list of arguments
+    my @params = split(":", $self->aligner_params || "::");
+
     my @defaults = ("-q 20 -m 2", "-m 10 -bs -S", "-B");
-    # Defaults:
-    #   trim_options: should be -q 20 and -m 2
-    #   align_options: -m 10 (number of mismatches) -bs (bisulfite option) -S (faster, at the expense of more mem)
-    #   count_options: should be -B (get a map of methylation events, not a count of every base)
+    # trim_options: default to -q 20 and -m 2
+    # align_options: default to -m 10 (number of mismatches) -bs (bisulfite option) -S (faster, at the expense of more mem)
+    # count_options: default to -B (get a map of methylation events, not a count of every base)
     
-    return (
-        'trim_options' => $spar[0] ? $spar[0] : $defaults[0],
-        'align_options' => $spar[1] ? $spar[1] : $defaults[1],
-        'count_options' => $spar[2] ? $spar[2] : $defaults[2]
+    # create our params hash, using default arguments if none were supplied
+    my %aligner_params = (
+        'trim_options' => $params[0] || $defaults[0],
+        'align_options' => $params[1] || $defaults[1],
+        'count_options' => $params[2] || $defaults[2]
     );
+
+    # attemp to compact and sort command-line arguments for consistency
+    for my $step (keys %aligner_params) {
+        # compacts strings of whitespace down to a single character; strips all white space from beginning and end of string
+        $aligner_params{$step} =~ s/(^)?(?(1)\s+|\s+(?=\s|$))//g;
+        # split by each argument, sort, rejoin
+        $aligner_params{$step} = join(" ",sort(split(/\s(?=-)/, $aligner_params{$step})));
+    }
+    
+    return %aligner_params;
 }
 
 sub prepare_reference_sequence_index {
@@ -719,7 +708,7 @@ sub _convert_mapped_reads_to_sam {
             } elsif ($count > $prevNum) {
                 chomp($line);
                 my @splitline = split("\t",$line);		    
-                printUnmappedReadToSam($splitline[0], ("n_" .  $count . "/2"), $samfile);
+                printUnmappedReadToSam($splitline[0], ("n_" .  $count . "/2"), $samfile); # TODO this line also looks dubious
             }	    
 #	    }
             $count++;
