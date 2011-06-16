@@ -892,7 +892,7 @@ sub notify_input_build_success {
 
         #all input models have a succeeded build
         if(scalar @from_models eq scalar @last_complete_builds) {
-            $self->build_requested(1);
+            $self->build_requested(1, 'all input models are ready');
         }
     }
 
@@ -903,9 +903,12 @@ sub build_requested {
     my ($self, $value, $reason) = @_; 
     # Writing the if like this allows someone to do build_requested(undef)
     if (@_ > 1) {
+        my ($calling_package, $calling_subroutine) = (caller(1))[0,3];
+        my $default_reason = 'no reason given';
+        $default_reason .= 'called by ' . $calling_package . '::' . $calling_subroutine if $calling_package;
         $self->add_note(
             header_text => $value ? 'build_requested' : 'build_unrequested',
-            body_text => defined $reason ? $reason : 'no reason given',
+            body_text => defined $reason ? $reason : $default_reason,
         );
         return $self->__build_requested($value);
     }
