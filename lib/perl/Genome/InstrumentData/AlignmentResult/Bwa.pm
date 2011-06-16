@@ -72,7 +72,7 @@ sub tmp_megabytes_estimated {
 
         my $bam_bytes = -s $bam_path;
         unless ($bam_bytes) {
-            die $class->error_message("Instrument Data has BAM ($bam_path) but has no size!");
+            die $class->error_message("Instrument Data " . $instrument_data->id  . " has BAM ($bam_path) but has no size!");
         }
 
         if ($instrument_data->can('get_segments')) {
