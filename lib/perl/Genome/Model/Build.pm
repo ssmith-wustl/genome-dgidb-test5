@@ -906,21 +906,22 @@ sub _launch {
             $add_args .= ' --restart';
         }
 
-        my $lsf_project = "build" . $self->id;
 
         # bsub into the queue specified by the dispatch spec
-        my $user = getpwuid($<);
-        my $lsf_command = sprintf(
-            'bsub -P %s -N -H -q %s %s -u %s@genome.wustl.edu -o %s -e %s annotate-log genome model services build run%s --model-id %s --build-id %s',
-            $lsf_project,
-            $server_dispatch, ## lsf queue
+        my $lsf_project = "build" . $self->id;
+        my $user = Genome::Sys->username;
+        my $lsf_command  = join(' ',
+            'bsub -N -H',
+            '-P', $lsf_project,
+            '-q', $server_dispatch,
             $job_group_spec,
-            $user, 
-            $build_event->output_log_file,
-            $build_event->error_log_file,
+            '-u', $user . '@genome.wustl.edu',
+            '-o', $build_event->output_log_file,
+            '-e', $build_event->error_log_file,
+            'annotate-log genome model services build run',
             $add_args,
-            $model->id,
-            $self->id,
+            '--model-id', $model->id,
+            '--build-id', $self->id,
         );
     
     
