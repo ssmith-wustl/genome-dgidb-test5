@@ -814,9 +814,11 @@ sub restart {
     }
 
     my $build_event = $self->build_event;
-    if($build_event->event_status eq 'Abandoned') {
-        $self->error_message("Can't restart a build that was abandoned.  Start a new build instead.");
-        return 0;
+    for my $unrestartable_status ('Abandoned', 'Unstartable') {
+        if($build_event->event_status eq $unrestartable_status) {
+            $self->error_message("Can't restart a build that was " . lc($unrestartable_status) . ".  Start a new build instead.");
+            return 0;
+        }
     }
 
     $build_event->event_status('Scheduled');
@@ -906,72 +908,65 @@ sub _launch {
             $add_args .= ' --restart';
         }
 
-        my $lsf_project = "build" . $self->id;
+        my $lock = $self->_lock_model_for_start;
+        return unless $lock;
 
         # bsub into the queue specified by the dispatch spec
-        my $user = getpwuid($<);
-        my $lsf_command = sprintf(
-            'bsub -P %s -N -H -q %s %s -u %s@genome.wustl.edu -o %s -e %s annotate-log genome model services build run%s --model-id %s --build-id %s',
-            $lsf_project,
-            $server_dispatch, ## lsf queue
+        my $lsf_project = "build" . $self->id;
+        my $user = Genome::Sys->username;
+        my $lsf_command  = join(' ',
+            'bsub -N -H',
+            '-P', $lsf_project,
+            '-q', $server_dispatch,
             $job_group_spec,
-            $user, 
-            $build_event->output_log_file,
-            $build_event->error_log_file,
+            '-u', $user . '@genome.wustl.edu',
+            '-o', $build_event->output_log_file,
+            '-e', $build_event->error_log_file,
+            'annotate-log genome model services build run',
             $add_args,
-            $model->id,
-            $self->id,
+            '--model-id', $model->id,
+            '--build-id', $self->id,
         );
-    
-    
-
-        # lock model
-        my $model_id = $self->model->id;
-        my $lock_id = '/gsc/var/lock/build_start/'.$model_id;
-        my $lock = Genome::Sys->lock_resource(
-            resource_lock => $lock_id, 
-            block_sleep => 3,
-            max_try => 3,
-        );
-        if ($lock) {
-            $self->status_message("Locked model ($model_id) while launching " . $self->__display_name__ . ".");
-        }
-        else {
-            print STDERR "Failed to get build start lock for model $model_id. This means someone|thing else is attempting to build this model. Please wait a moment, and try again. If you think that this model is incorrectly locked, please put a ticket into the apipe support queue.";
-            return;
-        }
-
         my $job_id = $self->_execute_bsub_command($lsf_command);
-        unless ($job_id) {
-            Genome::Sys->lock_resource(resource_lock => $lock) if ($lock);
-            return;
-        }
-        
-        # create a commit observer to resume the job when build is committed to database
-        my $commit_observer = $build_event->add_observer(
-            aspect => 'commit',
-            callback => sub {
-                #$self->status_message("Resuming LSF job ($job_id) for build " . $self->__display_name__ . ".");
-                my $bresume_output = `bresume $job_id`; chomp $bresume_output;
-                unless ( $bresume_output =~ /^Job <$job_id> is being resumed$/ ) {
-                    $self->status_message($bresume_output);
-                }
-                Genome::Sys->unlock_resource(resource_lock => $lock_id);
-            }
-        );
-        if ($commit_observer) {
-            $self->status_message("Added commit observer to resume LSF job ($job_id).");
-        }
-        else {
-            $self->error_message("Failed to add commit observer to resume LSF job ($job_id).");
-        }
+        return unless $job_id;
 
         $build_event->lsf_job_id($job_id);
-
 
         return 1;
     }
 }
+
+
+sub _lock_model_for_start {
+    my $self = shift;
+
+    my $model_id = $self->model->id;
+    my $lock_path = '/gsc/var/lock/build_start/' . $model_id;
+
+    my $lock = Genome::Sys->lock_resource(
+        resource_lock => $lock_path, 
+        block_sleep => 3,
+        max_try => 3,
+    );
+    unless ($lock) {
+        print STDERR "Failed to get build start lock for model $model_id. This means someone|thing else is attempting to build this model. Please wait a moment, and try again. If you think that this model is incorrectly locked, please put a ticket into the apipe support queue.";
+        return;
+    }
+
+    # create a change record so that if it is "undone" it will kill the job
+    # create a commit observer to resume the job when build is committed to database
+    my $process = UR::Context->process;
+    my $unlock_sub = sub { Genome::Sys->unlock_resource(resource_lock => $lock) };
+    my $lock_change = UR::Context::Transaction->log_change($self, 'UR::Value', $lock, 'external_change', $unlock_sub);
+    my $commit_observer = $process->add_observer(aspect => 'commit', callback => $unlock_sub);
+    unless ($commit_observer) {
+        $self->error_message("Failed to add commit observer to unlock $lock.");
+    }
+
+    $self->status_message("Locked model ($model_id) while launching " . $self->__display_name__ . ".");
+    return $lock;
+}
+
 
 sub _initialize_workflow {
     my $self = shift;
@@ -1037,6 +1032,22 @@ sub _execute_bsub_command { # here to overload in testing
         }
         else {
             die $self->error_message("Failed to record LSF job submission ($job_id).");
+        }
+
+        # create a commit observer to resume the job when build is committed to database
+        my $process = UR::Context->process;
+        my $commit_observer = $process->add_observer(
+            aspect => 'commit',
+            callback => sub {
+                my $bresume_output = `bresume $job_id`; chomp $bresume_output;
+                $self->status_message($bresume_output) unless ( $bresume_output =~ /^Job <$job_id> is being resumed$/ );
+            },
+        );
+        if ($commit_observer) {
+            $self->status_message("Added commit observer to resume LSF job ($job_id).");
+        }
+        else {
+            $self->error_message("Failed to add commit observer to resume LSF job ($job_id).");
         }
 
         return "$job_id";

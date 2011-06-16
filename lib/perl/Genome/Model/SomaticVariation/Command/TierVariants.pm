@@ -110,7 +110,7 @@ sub run_fast_tier {
         }
     }else{
         $self->status_message("No detected variants for $name, skipping tiering");
-        map {File::Copy::copy($path_to_tier, $_)}($tier1_path, $tier2_path, $tier3_path, $tier4_path);
+        map {Genome::Sys->copy_file($path_to_tier, $_)}($tier1_path, $tier2_path, $tier3_path, $tier4_path);
     }
     unless(-e "$tier1_path" and -e "$tier2_path" and -e "$tier3_path" and -e "$tier4_path"){
         die $self->error_message("SNV fast tier output not found with params:\n" . (%params?(Data::Dumper::Dumper(\%params)):''));

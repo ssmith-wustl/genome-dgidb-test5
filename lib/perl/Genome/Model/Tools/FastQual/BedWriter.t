@@ -16,7 +16,7 @@ ok(-d $tmpdir, 'temp dir');
 my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastQual/';
 my $fasta = $dir.'/bed_writer.fasta';
 ok(-s $fasta, 'fasta exists') or die;
-my $example_bed_file = $dir.'/bed_writer.bed';
+my $example_bed_file = $dir.'/bed_writer.v2.bed';
 ok(-s $example_bed_file, 'example bed file exists');
 
 my $reader = Genome::Model::Tools::FastQual::PhredReader->create(
