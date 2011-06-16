@@ -182,9 +182,9 @@ sub _run_aligner {
     my $trim_prefix = $scratch_directory . "/trimmed";
 
     # output files consist of the following filenames prefixed with $trim_prefix
-    my @trim_output_files = map{sprintf("%s_%s",$trim_prefix,$_)} $paired_end ?
+    my @trimemd_files = map{sprintf("%s_%s",$trim_prefix,$_)} $paired_end ?
         qw(reads1.txt reads2.txt mates1.txt mates2.txt mates1.seq mates2.seq pair1.fastq pair2.fastq err1.seq err2.seq badMate1.seq badMate2.seq) :
-        qw(err1.seq mates1.seq mates1.txt pair1.fastq reads1.txt);
+        qw(reads1.txt mates1.txt mates1.seq pair1.fastq err1.seq);
 
     # define the trim command and run it
     my $trim_cmd = sprintf("%s %s -P %s %s",
@@ -198,8 +198,8 @@ sub _run_aligner {
 
     my $rv = Genome::Sys->shellcmd(
         cmd => $trim_cmd,
-        input_files => @input_pathnames,
-        output_files => @trim_output_files
+        input_files => [@input_pathnames],
+        output_files => [@trimemd_files]
     );
     unless($rv) { die $self->error_message("Trimming failed."); }
 
@@ -215,38 +215,23 @@ sub _run_aligner {
     # the file for aligned reads
     my @aligned_reads = $scratch_directory . "/bratout.dat";
 
-    # create a temporary list file that contains the paths in @aligned_reads
-    # this is needed in a later step
-    # for the record, it's stupid that we have to do this, since there's only one file
-    my ($aligned_reads_list_fh, $aligned_reads_list_file) = Genome::Sys->create_temp_file();
-    $aligned_reads_list_fh->print(join("\n",@aligned_reads) . "\n");
-    $aligned_reads_list_fh->close;
-
-    # input files consist of the readsX.txt files from the trim step, and all the index files
-    my @align_input_files = map{sprintf("%s_%s",$trim_prefix,$_)} $paired_end ?
-        qw(reads1.txt reads2.txt) :
-        qw(reads1.txt);
-    push @align_input_files, @all_index_files;
-
-    # the only output file is bratout.dat
-    my @align_output_files = @aligned_reads;
-
     # TODO verify that this is correct (diff with original)
     # uses precomputed index; alternatively you could do something like -r $refs_file instead of -P $index_dir
+    
     my $align_cmd = sprintf("%s -P %s %s -o %s %s",
         $brat_cmd_path . "brat-large",
         $reference_index_directory,
         $paired_end ?
-            "-1 $align_input_files[0] -2 $align_input_files[1] -pe -i $min_insert_size -a $max_insert_size" :
-            "-s $align_input_files[0]",
-        $align_output_files[0],
+            "-1 $trimmed_files[0] -2 $trimmed_files[1] -pe -i $min_insert_size -a $max_insert_size" :
+            "-s $trimmed_files[0]",
+        $aligned_reads[0],
         $aligner_params{'align_options'} # -m 10 (number of mismatches) -bs (bisulfite option) -S (faster, at the expense of more mem)
     );
 
     $rv = Genome::Sys->shellcmd(
         cmd => $align_cmd,
-        input_files => @align_input_files,
-        output_files => @align_output_files
+        input_files => [@trimmed_files, @all_index_files], # the aligner actually only uses reads1.txt and reads2.txt
+        output_files => [@aligned_reads]
     );
     unless($rv) { die $self->error_message("Alignment failed."); }
 
@@ -258,31 +243,38 @@ sub _run_aligner {
     ###################################################
     $self->status_message("Deduplicating reads.");    
 
+    # for every file of aligned reads, have one that is deduped
+    # once again, we must create a file that lists these .nodupl files
     my @deduped_reads = map{$_ . ".nodupl"} @aligned_reads;
-    # create a temporary list file that contains the paths in @deduped_reads (just like above)
-    # this is needed in a later step
-    # for the record, it's stupid that we have to do this, since there's only one file
-    my ($deduped_reads_list_fh, $deduped_reads_list_file) = Genome::Sys->create_temp_file();
-    $deduped_reads_list_fh->print(join("\n",@deduped_reads) . "\n");
-    $deduped_reads_list_fh->close;
 
-    # input files consist of aligned reads (bratout.dat) from previous step (listed in a file) and reference fastas (listed in a file)
-    my @dedup_input_files = (@aligned_reads, $aligned_reads_list_file, @all_ref_files, $refs_file);
-    # output files consist of a .nodupl file for every file of aligned reads (so, bratout.dat.nodupl)
-    my @dedup_output_files = @deduped_reads;
+    # we must create a file that lists every file of aligned reads
+    # currently this file will only have one line (since our only output is bratout.dat)
+    # but, you could conceivably loop over multiple outputs for multiple sets of inputs
+    my ($aligned_reads_list_fh, $aligned_reads_list_file) = Genome::Sys->create_temp_file();
+    $aligned_reads_list_fh->print(join("\n",@aligned_reads) . "\n");
+    $aligned_reads_list_fh->close;
+
+    # the same must be done for both mates files in paired end mode
+    my ($mates1_list_fh, $mates1_list_file) = Genome::Sys->create_temp_file();
+    $mates1_list_fh->print(join("\n",($trimmed_files[2])) . "\n");
+    $mates1_list_fh->close;
+    my ($mates2_list_fh, $mates2_list_file) = Genome::Sys->create_temp_file();
+    $mates2_list_fh->print(join("\n",($trimmed_files[3])) . "\n");
+    $mates2_list_fh->close;
+
 
     my $dedup_cmd = sprintf("%s -r %s %s",
         $brat_cmd_path . "remove-dupl",
         $refs_file, # reference fastas.
         $paired_end ?
-            "-p $aligned_reads_list_file" :
+            "-p $aligned_reads_list_file -1 $mates1_list_file -2 $mates2_list_file" : # TODO or is it just -p?
             "-s $aligned_reads_list_file"
     );
 
     $rv = Genome::Sys->shellcmd(
         cmd => $dedup_cmd,
-        input_files => @dedup_input_files,
-        output_files => @dedup_output_files
+        input_files => [@aligned_reads, $aligned_reads_list_file, @all_ref_files, $refs_file, $trimmed_files[2], $trimmed_files[3], $mates1_list_file, $mates2_list_file],
+        output_files => [@deduped_reads]
     );
     unless($rv) { die $self->error_message("Deduping failed."); }
 
@@ -294,16 +286,14 @@ sub _run_aligner {
     ###################################################
     $self->status_message("Sorting reads.");
 
-    # input files consist of all .nodupl files from previous step (so, bratout.dat.nodupl)
-    my @sort_input_files = @deduped_reads;
-    # output files consist of new .nodupl.sorted files for each input (so, bratout.dat.nodupl.sorted)
-    my @sort_output_files = map{$_ . ".nodupl.sorted"} @aligned_reads;
-    my $sort_cmd = "sort -nk1 $sort_input_files[0] >$sort_output_files[0]";
+    my @sorted_deduped_reads = map{$_ . ".sorted"} @deduped_reads;
+
+    my $sort_cmd = "sort -nk1 $deduped_reads[0] >$sorted_deduped_reads[0]";
 
     $rv = Genome::Sys->shellcmd(
         cmd => $sort_cmd,
-        input_files => @sort_input_files,
-        output_files => @sort_output_files
+        input_files => [@deduped_reads],
+        output_files => [@sorted_deduped_reads]
     );
     unless($rv) { die $self->error_message("Sorting deduped files failed."); }
 
@@ -317,7 +307,7 @@ sub _run_aligner {
 
     my $temp_sam_output = "$scratch_directory/mapped_reads.sam";
     # TODO not all files that this is using are passed in as parameters
-    $self->_convert_reads_to_sam($paired_end, $sort_output_files[0], $temp_sam_output, $trim_prefix);
+    $self->_convert_reads_to_sam($paired_end, $sorted_deduped_reads[0], $temp_sam_output, $trim_prefix);
 
 
 
@@ -327,16 +317,12 @@ sub _run_aligner {
     ###################################################
     $self->status_message("Sorting SAM file and appending to all_sequences.sam.");
 
-    # input file is the temp sam file
-    my @append_input_files = ($temp_sam_output);
-    # output is all_sequences.sam
-    my @append_output_files = ($sam_file);
-    my $append_cmd = "sort -nk 1 $append_input_files[0] >> $append_output_files[0]";
+    my $append_cmd = "sort -nk 1 $temp_sam_output >> $sam_file";
 
     $rv = Genome::Sys->shellcmd(
         cmd => $append_cmd,
-        input_files => @append_input_files,
-        output_files => @append_output_files
+        input_files => [$temp_sam_output],
+        output_files => [$sam_file]
     );
     unless($rv) { die $self->error_message("Sorting temporary sam file and appending to all_sequences.sam failed."); }
 
@@ -353,17 +339,27 @@ sub _run_aligner {
     $self->status_message("Creating methylation map.");
 
     my $count_prefix = $scratch_directory . "/map";
-
-    # TODO do we really use dedup output, NOT sorted output? and NOT non-deduped output??
-    # input consists of deduped reads file (listed in temp file) and all reference fastas (listed in a temp file)
-    my @count_input_files = (@deduped_reads, $deduped_reads_list_file, @all_ref_files, $refs_file);
     
-    # for every reference file, we output $prefix_forw_refname and $prefix_rev_refname
-    my @count_output_files = map{
-            my $filename = basename($_);
-            # TODO confirm that the following is the actual output filename format; move code below suggests otherwise
-            map{ sprintf("%s_%s_%s",$count_prefix,$_,$filename) } qw(forw rev);
-        } @all_ref_files;
+    # like in the dedup step, this step needs a file that lists all deduped reads files
+    my ($deduped_reads_list_fh, $deduped_reads_list_file) = Genome::Sys->create_temp_file();
+    $deduped_reads_list_fh->print(join("\n",@deduped_reads) . "\n");
+    $deduped_reads_list_fh->close;
+    
+    my @counted_reads = ();
+
+    if ($aligner_params{'count_options'} =~ /-B/) {
+        @counted_reads = map{sprintf("%s_%s.txt",$count_prefix,$_)} qw(forw rev);
+    } else {
+        die $self->error_message("Unimplemented: acgt-count should be run with the -B option.");
+        # if the user doesn't use the -B switch, acgt-count creates a count of every base instead of a methylation map
+        # in this case, acgt-count outputs $prefix_forw_refname and $prefix_rev_refname for every reference file
+        # the following code creates this list of output files:
+        #@counted_reads = map{
+        #        my $filename = basename($_);
+        #        # TODO confirm that the following is the actual output filename format; move code below suggests otherwise
+        #        map{ sprintf("%s_%s_%s",$count_prefix,$_,$filename) } qw(forw rev);
+        #    } @all_ref_files;
+    }
 
     my $count_cmd = sprintf("%s -r %s -P %s %s",
         $brat_cmd_path . "acgt-count",
@@ -371,14 +367,14 @@ sub _run_aligner {
         $count_prefix,
         $paired_end ?
             "-p $deduped_reads_list_file" :
-            "-s $deduped_reads_list_file",
+            "-s $deduped_reads_list_file", # TODO might be very wrong; manual says we might need to use -1 -2 instead of -p
         $aligner_params{'count_options'} # -B (get a map of methylation events, not a count of every base)
     );
 
     $rv = Genome::Sys->shellcmd(
         cmd => $count_cmd,
-        input_files => @count_input_files,
-        output_files => @count_output_files
+        input_files => [@deduped_reads, $deduped_reads_list_file, @all_ref_files, $refs_file],
+        output_files => [@counted_reads]
     );
     unless($rv) { die $self->error_message("Methylation mapping failed."); }
 
@@ -434,8 +430,17 @@ sub aligner_params_for_sam_header {
 
 sub decomposed_aligner_params {
     my $self = shift;
+    
+    my $full_params;
+
+    if (ref($self)) { # if this is an instance of AlignmentResult
+        $full_params = $self->aligner_params;
+    } else {
+        $full_params = shift;
+    }
+
     # split a colon-delimited list of arguments
-    my @params = split(":", $self->aligner_params || "::");
+    my @params = split(":", $full_params || "::");
 
     my @defaults = ("-q 20 -m 2", "-m 10 -bs -S", "-B");
     # trim_options: default to -q 20 and -m 2
@@ -461,13 +466,14 @@ sub decomposed_aligner_params {
 }
 
 sub prepare_reference_sequence_index {
-    my $self = shift;
+    my $class = shift;
     my $reference_index = shift;
+    $DB::single = 1;
 
-    $self->status_message("Creating reference index.");    
+    $class->status_message("Creating reference index.");    
 
     # get refseq info and fasta files
-    my $reference_build = $self->reference_build;
+    my $reference_build = $reference_index->reference_build;
     my $reference_fasta_path = $reference_build->full_consensus_path('fa');
     my $reference_directory = dirname($reference_fasta_path); # TODO there may be a more proper way of doing this
 
@@ -476,13 +482,14 @@ sub prepare_reference_sequence_index {
 
     # decompose aligner params for each stage of alignment
     # TODO will this work in this context?
-    my %aligner_params = $self->decomposed_aligner_params;
+    my %aligner_params = $class->decomposed_aligner_params($reference_index->aligner_params);
 
     # get the command path
-    my $brat_cmd_path = dirname(Genome::Model::Tools::Brat->path_for_brat_version($self->aligner_version));
+    my $brat_cmd_path = dirname(Genome::Model::Tools::Brat->path_for_brat_version($reference_index->aligner_version));
 
 
     # find all the individual reference fastas and load them into an array
+    print "Ref dir: $reference_directory.";
     my @all_ref_files;
     opendir(DIR, $reference_directory) or die $!;
     while (my $filename = readdir(DIR)) {
@@ -490,7 +497,7 @@ sub prepare_reference_sequence_index {
         # should match 1.fa - 22.fa, along with X.fa, x.fa, Y.fa, y.fa
         # XXX will fail on contigs (NT_113956.fa) or other formats (chr22.fa)
         # TODO is it true that we want 1-22.fa, and not all_sequences.fa?
-        if ($filename =~ /^(([1-2]?[0-9])|([XYxy]))\.fa$/) {
+        if ($filename =~ /^(([1-2]?[0-9])|([XYxy]))\.(fa|fasta)$/) {
             #my $cur_ref_file = $reference_directory . "/" . $filename;
             push @all_ref_files, "$reference_directory/$filename";
             #$ref_fh->print($cur_ref_file . "\n");
@@ -524,11 +531,11 @@ sub prepare_reference_sequence_index {
 
     my $rv = Genome::Sys->shellcmd(
         cmd => $index_cmd,
-        input_files => @index_input_files,
-        output_files => @index_output_files
+        input_files => \@index_input_files,
+        output_files => \@index_output_files
     );
 
-    unless($rv) { die $self->error_message("Index creation failed."); }
+    unless($rv) { die $class->error_message("Index creation failed."); }
 
     return 1;
 }
