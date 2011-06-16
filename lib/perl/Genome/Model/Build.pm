@@ -1865,7 +1865,7 @@ sub snapshot_revision {
 
     # assemble list of "important" libs
     @libs = map { File::Basename::dirname($_) } @libs;
-    push @libs, UR::Util::used_libs_perl5lib_prefix();
+    push @libs, UR::Util->used_libs;
 
     # remove trailing slashes
     map { $_ =~ s/\/+$// } (@libs, @orig_inc);
