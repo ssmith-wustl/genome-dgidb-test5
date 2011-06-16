@@ -152,7 +152,7 @@ is_deeply([sort map { $_->value_id } $model->inputs], [qw/ abc bar xyz /], 'mode
 # INSTRUMENT DATA
 my @instrument_data;
 for my $i (1..2) {
-    unshift @instrument_data, Genome::InstrumentData::Solexa->create( # keep in reverse order
+    push @instrument_data, Genome::InstrumentData::Solexa->create(
         sequencing_platform => 'solexa',
         library_id => $library->id,
         read_length => 100,
