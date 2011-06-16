@@ -36,17 +36,6 @@ class Genome::Model::Build::SomaticVariation {
             where => [ name => 'normal_build', value_class_name => 'Genome::Model::Build::ReferenceAlignment' ],
             is_mutable => 1,
         },
-#        normal_build_id => {
-#            is => 'Text',
-#            via => 'inputs',
-#            to => 'value_id',
-#            where => [ name => 'normal_build', value_class_name => 'Genome::Model::Build::ReferenceAlignment' ],
-#            is_mutable => 1,
-#        },
-        #normal_build => {
-        #    is => 'Genome::Model::Build::ReferenceAlignment',
-        #    id_by => 'normal_build_id',
-        #},
         annotation_build => {
             is => 'Genome::Model::Build::ImportedAnnotation',
             via => 'model',
@@ -88,7 +77,6 @@ sub create {
 
     #This updates the model's tumor and normal build inputs so they are the latest complete build for copying to build inputs
     my $bx = $class->define_boolexpr(@_);
-    $DB::single = 1; #TODO:delete me
     my $model_id = $bx->value_for('model_id');
     my $model = Genome::Model->get($model_id);
     $model->update_tumor_and_normal_build_inputs;
@@ -128,17 +116,22 @@ sub create {
         $self->error_message("Failed to get a normal build!");
         return;
     }
+    return $self;
+}
+
+sub post_allocation_initialization {
+    my $self = shift;
 
     my @result_subfolders;
-    for ('variants', 'novel', 'effects'){
-        push @result_subfolders, $self->data_directory."/$_";
+    for my $subdir ('variants', 'novel', 'effects') {
+        push @result_subfolders, $self->data_directory."/".$subdir;
     }
 
-    for (@result_subfolders){
-        mkdir $_ unless -d $_;
+    for my $subdir (@result_subfolders){
+        Genome::Sys->create_directory($subdir) unless -d $subdir;
     }
 
-    return $self;
+    return 1;
 }
 
 sub tumor_bam {

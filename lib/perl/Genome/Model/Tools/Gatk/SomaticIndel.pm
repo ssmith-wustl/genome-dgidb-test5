@@ -199,11 +199,13 @@ sub _infer_whitelist_args {
         next unless /^\@SQ/;
         chomp;
         my @fields = split(/[\t:]/);
-        push(@sequences, $fields[2] . ':1-' . $fields[4]);
+        push(@sequences, $fields[2] . ':1-' . $fields[4] . "\n");
     }
     close(FH);
 
-    return "-L '" . join(";", @sequences) . "'" if @sequences;
+    my $whitelist_file = Genome::Sys->create_temp_file_path() . '.interval_list';
+    Genome::Sys->write_file($whitelist_file, @sequences);
+    return "-L $whitelist_file";
 }
 
 
