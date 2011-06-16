@@ -906,6 +906,8 @@ sub _launch {
             $add_args .= ' --restart';
         }
 
+        my $lock = $self->_lock_model_for_start;
+        return unless $lock;
 
         # bsub into the queue specified by the dispatch spec
         my $lsf_project = "build" . $self->id;
@@ -923,56 +925,46 @@ sub _launch {
             '--model-id', $model->id,
             '--build-id', $self->id,
         );
-    
-    
-
-        # lock model
-        my $model_id = $self->model->id;
-        my $lock_id = '/gsc/var/lock/build_start/'.$model_id;
-        my $lock = Genome::Sys->lock_resource(
-            resource_lock => $lock_id, 
-            block_sleep => 3,
-            max_try => 3,
-        );
-        if ($lock) {
-            $self->status_message("Locked model ($model_id) while launching " . $self->__display_name__ . ".");
-        }
-        else {
-            print STDERR "Failed to get build start lock for model $model_id. This means someone|thing else is attempting to build this model. Please wait a moment, and try again. If you think that this model is incorrectly locked, please put a ticket into the apipe support queue.";
-            return;
-        }
-
         my $job_id = $self->_execute_bsub_command($lsf_command);
-        unless ($job_id) {
-            Genome::Sys->lock_resource(resource_lock => $lock) if ($lock);
-            return;
-        }
-        
-        # create a commit observer to resume the job when build is committed to database
-        my $commit_observer = $build_event->add_observer(
-            aspect => 'commit',
-            callback => sub {
-                #$self->status_message("Resuming LSF job ($job_id) for build " . $self->__display_name__ . ".");
-                my $bresume_output = `bresume $job_id`; chomp $bresume_output;
-                unless ( $bresume_output =~ /^Job <$job_id> is being resumed$/ ) {
-                    $self->status_message($bresume_output);
-                }
-                Genome::Sys->unlock_resource(resource_lock => $lock_id);
-            }
-        );
-        if ($commit_observer) {
-            $self->status_message("Added commit observer to resume LSF job ($job_id).");
-        }
-        else {
-            $self->error_message("Failed to add commit observer to resume LSF job ($job_id).");
-        }
+        return unless $job_id;
 
         $build_event->lsf_job_id($job_id);
-
 
         return 1;
     }
 }
+
+
+sub _lock_model_for_start {
+    my $self = shift;
+
+    my $model_id = $self->model->id;
+    my $lock_path = '/gsc/var/lock/build_start/' . $model_id;
+
+    my $lock = Genome::Sys->lock_resource(
+        resource_lock => $lock_path, 
+        block_sleep => 3,
+        max_try => 3,
+    );
+    unless ($lock) {
+        print STDERR "Failed to get build start lock for model $model_id. This means someone|thing else is attempting to build this model. Please wait a moment, and try again. If you think that this model is incorrectly locked, please put a ticket into the apipe support queue.";
+        return;
+    }
+
+    # create a change record so that if it is "undone" it will kill the job
+    # create a commit observer to resume the job when build is committed to database
+    my $process = UR::Context->process;
+    my $unlock_sub = sub { Genome::Sys->unlock_resource(resource_lock => $lock) };
+    my $lock_change = UR::Context::Transaction->log_change($self, 'UR::Value', $lock, 'external_change', $unlock_sub);
+    my $commit_observer = $process->add_observer(aspect => 'commit', callback => $unlock_sub);
+    unless ($commit_observer) {
+        $self->error_message("Failed to add commit observer to unlock $lock.");
+    }
+
+    $self->status_message("Locked model ($model_id) while launching " . $self->__display_name__ . ".");
+    return $lock;
+}
+
 
 sub _initialize_workflow {
     my $self = shift;
@@ -1038,6 +1030,22 @@ sub _execute_bsub_command { # here to overload in testing
         }
         else {
             die $self->error_message("Failed to record LSF job submission ($job_id).");
+        }
+
+        # create a commit observer to resume the job when build is committed to database
+        my $process = UR::Context->process;
+        my $commit_observer = $process->add_observer(
+            aspect => 'commit',
+            callback => sub {
+                my $bresume_output = `bresume $job_id`; chomp $bresume_output;
+                $self->status_message($bresume_output) unless ( $bresume_output =~ /^Job <$job_id> is being resumed$/ );
+            },
+        );
+        if ($commit_observer) {
+            $self->status_message("Added commit observer to resume LSF job ($job_id).");
+        }
+        else {
+            $self->error_message("Failed to add commit observer to resume LSF job ($job_id).");
         }
 
         return "$job_id";
