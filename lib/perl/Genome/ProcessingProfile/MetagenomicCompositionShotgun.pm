@@ -370,11 +370,11 @@ sub _execute_build {
     my %metagenomic_instrument_data_to_alignment;
     if ($self->_unaligned_metagenomic_alignment_pp) {
         for my $metagenomic_alignment_build ($build->_metagenomic_alignment_builds){
-            for my $alignment_result ($metagenomic_alignment_build->alignment_results){
+            for my $alignment_result ($metagenomic_alignment_build->get_alignments){
                 my $instrument_data_id = $alignment_result->instrument_data->id;
                 $metagenomic_instrument_data_to_alignment{$instrument_data_id} ||= [];
                 push @{$metagenomic_instrument_data_to_alignment{$instrument_data_id}}, $alignment_result->id;
-            }           
+            }
         }
 
         #EXTRACT UNALIGNED READS FROM METAGENOMIC ALIGNMENT AND IMPORT NEW INSTRUMENT DATA(1)
@@ -564,12 +564,20 @@ sub extract_reads_from_bam {
     }
 
     $self->status_message("Preparing imported instrument data for import path $output_dir");
-    my $extract_unaligned = Genome::Model::Tools::BioSamtools::BamToUnalignedFastq->create(
-        bam_file => $bam,
-        output_directory => $output_dir,
-        print_aligned => $extract_aligned_reads,
-    );
-    $self->execute_or_die($extract_unaligned);
+#    my $extract_unaligned = Genome::Model::Tools::BioSamtools::BamToUnalignedFastq->create(
+#        bam_file => $bam,
+#        output_directory => $output_dir,
+#        print_aligned => $extract_aligned_reads,
+#        );
+#    $self->execute_or_die($extract_unaligned);
+
+    my $cmd = "gmt5.12.1 bio-samtools bam-to-unaligned-fastq --bam-file $bam --output-directory $output_dir";
+    if($extract_aligned_reads) {
+        $cmd .= " --print-aligned";
+    }
+    if(system($cmd)) {
+        die("$cmd failed: $?");
+    }
 
     my @files = glob("$output_dir/*/*_sequence.txt");
     
@@ -644,7 +652,8 @@ sub get_imported_instrument_data_or_upload_paths {  #TODO not finished, not curr
 
 sub upload_instrument_data_and_unlock {
     my ($self, $orig_data_paths_to_fastq_files, $locks_ref);
-    my @locks = @$locks_ref;
+    #TODO: Actually use locks.
+    my @locks;# = @$locks_ref;
 
     my @properties_from_prior = qw/ run_name subset_name sequencing_platform median_insert_size sd_above_insert_size library_name sample_name /;
     my @instrument_data;
